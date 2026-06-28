@@ -73,8 +73,8 @@ describe('PalDetailSheet', () => {
     );
     // Reset downloadPalsHubPal to resolve successfully
     (palStore.downloadPalsHubPal as jest.Mock).mockResolvedValue(undefined);
-    // Reset isUSRegion to false (default non-US)
-    (palStore as any).isUSRegion = false;
+    // Reset isCheckoutEligible to false (default ineligible)
+    (palStore as any).isCheckoutEligible = false;
     // Default to logged-out; authenticated tests opt in explicitly.
     (authService as any).isAuthenticated = false;
     // Reset checkout flow state between tests
@@ -560,7 +560,7 @@ describe('PalDetailSheet', () => {
     });
 
     it('shows buy button for US users viewing unowned premium pals', async () => {
-      (palStore as any).isUSRegion = true;
+      (palStore as any).isCheckoutEligible = true;
 
       const {getByTestId} = render(
         <PalDetailSheet {...defaultProps} pal={mockPremiumPalsHubPal} />,
@@ -572,7 +572,7 @@ describe('PalDetailSheet', () => {
     });
 
     it('shows info text (not buy button) for non-US users viewing unowned premium pals', async () => {
-      (palStore as any).isUSRegion = false;
+      (palStore as any).isCheckoutEligible = false;
 
       const {queryByTestId} = render(
         <PalDetailSheet {...defaultProps} pal={mockPremiumPalsHubPal} />,
@@ -584,7 +584,7 @@ describe('PalDetailSheet', () => {
     });
 
     it('starts the in-app checkout on iOS when buy button is pressed', async () => {
-      (palStore as any).isUSRegion = true;
+      (palStore as any).isCheckoutEligible = true;
       (authService as any).isAuthenticated = true;
 
       const {getByTestId} = render(
@@ -606,7 +606,7 @@ describe('PalDetailSheet', () => {
     });
 
     it('opens sign-in instead of checkout when logged out', async () => {
-      (palStore as any).isUSRegion = true;
+      (palStore as any).isCheckoutEligible = true;
       (authService as any).isAuthenticated = false;
       const onSignInPress = jest.fn();
 
@@ -631,7 +631,7 @@ describe('PalDetailSheet', () => {
     it('opens sign-in on Android when logged out', async () => {
       const original = Platform.OS;
       Platform.OS = 'android';
-      (palStore as any).isUSRegion = true;
+      (palStore as any).isCheckoutEligible = true;
       (authService as any).isAuthenticated = false;
       const onSignInPress = jest.fn();
 
@@ -656,7 +656,7 @@ describe('PalDetailSheet', () => {
     });
 
     it('flips Buy to Download after the purchase reconciles to owned', async () => {
-      (palStore as any).isUSRegion = true;
+      (palStore as any).isCheckoutEligible = true;
       (authService as any).isAuthenticated = true;
       // Initially not owned -> buy button shows.
       (palsHubService.getPal as jest.Mock).mockResolvedValue(
@@ -687,7 +687,7 @@ describe('PalDetailSheet', () => {
     });
 
     it('does not show buy button for owned premium pals', async () => {
-      (palStore as any).isUSRegion = true;
+      (palStore as any).isCheckoutEligible = true;
       (palsHubService.getPal as jest.Mock).mockResolvedValue(
         mockOwnedPremiumPal,
       );
@@ -702,7 +702,7 @@ describe('PalDetailSheet', () => {
     });
 
     it('does not show buy button for free pals', async () => {
-      (palStore as any).isUSRegion = true;
+      (palStore as any).isCheckoutEligible = true;
       (palsHubService.getPal as jest.Mock).mockResolvedValue(mockPalsHubPal);
 
       const {queryByTestId} = render(
@@ -717,7 +717,7 @@ describe('PalDetailSheet', () => {
     it('starts checkout directly on Android (no app disclosure; Play renders it)', async () => {
       const original = Platform.OS;
       Platform.OS = 'android';
-      (palStore as any).isUSRegion = true;
+      (palStore as any).isCheckoutEligible = true;
       (authService as any).isAuthenticated = true;
       (palsHubService.getPal as jest.Mock).mockResolvedValue(
         mockPremiumPalsHubPal,
@@ -745,7 +745,7 @@ describe('PalDetailSheet', () => {
     });
 
     it('starts checkout directly on iOS (no app disclosure gate)', async () => {
-      (palStore as any).isUSRegion = true;
+      (palStore as any).isCheckoutEligible = true;
       (authService as any).isAuthenticated = true;
       (palsHubService.getPal as jest.Mock).mockResolvedValue(
         mockPremiumPalsHubPal,
@@ -768,7 +768,7 @@ describe('PalDetailSheet', () => {
     });
 
     it('shows the finalizing indicator while the purchase settles', async () => {
-      (palStore as any).isUSRegion = true;
+      (palStore as any).isCheckoutEligible = true;
       runInAction(() => {
         checkoutFlowStore.status = 'finalizing';
         checkoutFlowStore.palId = mockPremiumPalsHubPal.id;
@@ -784,7 +784,7 @@ describe('PalDetailSheet', () => {
     });
 
     it('shows the processing-deferred message after webhook lag', async () => {
-      (palStore as any).isUSRegion = true;
+      (palStore as any).isCheckoutEligible = true;
       runInAction(() => {
         checkoutFlowStore.status = 'processing_deferred';
         checkoutFlowStore.palId = mockPremiumPalsHubPal.id;
@@ -800,7 +800,7 @@ describe('PalDetailSheet', () => {
     });
 
     it('shows the not-available message on a 404 error without a sign-in control', async () => {
-      (palStore as any).isUSRegion = true;
+      (palStore as any).isCheckoutEligible = true;
       runInAction(() => {
         checkoutFlowStore.status = 'error';
         checkoutFlowStore.errorKind = '404';
@@ -819,7 +819,7 @@ describe('PalDetailSheet', () => {
     });
 
     it('disables the buy button while a checkout is creating', async () => {
-      (palStore as any).isUSRegion = true;
+      (palStore as any).isCheckoutEligible = true;
       runInAction(() => {
         checkoutFlowStore.status = 'creating';
         checkoutFlowStore.palId = mockPremiumPalsHubPal.id;
@@ -841,7 +841,7 @@ describe('PalDetailSheet', () => {
     });
 
     it('resets the checkout flow when the sheet is closed', async () => {
-      (palStore as any).isUSRegion = true;
+      (palStore as any).isCheckoutEligible = true;
 
       const {getByTestId} = render(
         <PalDetailSheet {...defaultProps} pal={mockPremiumPalsHubPal} />,
@@ -857,7 +857,7 @@ describe('PalDetailSheet', () => {
     });
 
     it('renders "Sign in again" on a 401 error and calls onSignInPress', async () => {
-      (palStore as any).isUSRegion = true;
+      (palStore as any).isCheckoutEligible = true;
       (palsHubService.getPal as jest.Mock).mockResolvedValue(
         mockPremiumPalsHubPal,
       );

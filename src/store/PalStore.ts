@@ -58,8 +58,8 @@ class PalStore {
   searchFilters: SearchFilters = {};
   syncState: SyncState = {status: 'idle'};
 
-  // Region state
-  isUSRegion: boolean = false;
+  // Checkout eligibility state
+  isCheckoutEligible: boolean = false;
 
   // Migration state
   isMigrating: boolean = false;
@@ -94,8 +94,8 @@ class PalStore {
       // Register talent engines (idempotent)
       registerDefaultTalents();
 
-      // Check storefront region for buy button gating
-      this.checkRegion();
+      // Check checkout eligibility for buy button gating
+      this.checkCheckoutEligibility();
 
       console.log('Pal store initialization completed');
 
@@ -112,12 +112,12 @@ class PalStore {
     }
   }
 
-  private async checkRegion() {
-    // E2E builds have no App Store storefront, so force the US branch to
+  private async checkCheckoutEligibility() {
+    // E2E builds have no App Store storefront, so force eligibility to
     // exercise the buy button. Compiled out of prod (`__E2E__` is false).
     if (__E2E__) {
       runInAction(() => {
-        this.isUSRegion = true;
+        this.isCheckoutEligible = true;
       });
       return;
     }
@@ -125,7 +125,7 @@ class PalStore {
     try {
       const isUS = await isUSStorefront();
       runInAction(() => {
-        this.isUSRegion = isUS;
+        this.isCheckoutEligible = isUS;
       });
     } catch (error) {
       console.warn('Failed to check storefront region:', error);
