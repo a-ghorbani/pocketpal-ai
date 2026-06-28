@@ -64,9 +64,8 @@ const makeExternalContentLink = () => ({
   prepareExternalLink: jest.fn(),
   reportExternalContentLink: jest.fn(),
 });
-let mockExternalContentLink: ReturnType<
-  typeof makeExternalContentLink
-> | null = makeExternalContentLink();
+let mockExternalContentLink: ReturnType<typeof makeExternalContentLink> | null =
+  makeExternalContentLink();
 jest.mock('../../specs/NativeExternalContentLink', () => ({
   __esModule: true,
   get default() {
@@ -249,7 +248,9 @@ describe('PalStore', () => {
       expect(isUSStorefront).not.toHaveBeenCalled();
       // The probe is side-effect-free: it never mints a token, launches a
       // link-out, or reports (I-E1 / scenario D, JS-observable portion).
-      expect(mockExternalContentLink!.prepareExternalLink).not.toHaveBeenCalled();
+      expect(
+        mockExternalContentLink!.prepareExternalLink,
+      ).not.toHaveBeenCalled();
       expect(
         mockExternalContentLink!.reportExternalContentLink,
       ).not.toHaveBeenCalled();

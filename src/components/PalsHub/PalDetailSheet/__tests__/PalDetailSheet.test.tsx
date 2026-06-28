@@ -552,14 +552,14 @@ describe('PalDetailSheet', () => {
     });
   });
 
-  describe('Premium Buy Button (US region)', () => {
+  describe('Premium Buy Button (eligible vs ineligible)', () => {
     beforeEach(() => {
       (palsHubService.getPal as jest.Mock).mockResolvedValue(
         mockPremiumPalsHubPal,
       );
     });
 
-    it('shows buy button for US users viewing unowned premium pals', async () => {
+    it('shows buy button for eligible users viewing unowned premium pals', async () => {
       (palStore as any).isCheckoutEligible = true;
 
       const {getByTestId} = render(
@@ -571,7 +571,7 @@ describe('PalDetailSheet', () => {
       });
     });
 
-    it('shows info text (not buy button) for non-US users viewing unowned premium pals', async () => {
+    it('shows info text (not buy button) for ineligible users viewing unowned premium pals', async () => {
       (palStore as any).isCheckoutEligible = false;
 
       const {queryByTestId} = render(
