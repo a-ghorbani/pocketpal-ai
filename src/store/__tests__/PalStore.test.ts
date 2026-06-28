@@ -56,9 +56,17 @@ jest.mock('../../utils/region', () => ({
 
 // Toggle the Android external-content-link module per test through a getter so
 // the null-module fail-closed path can be exercised in the same file.
-let mockExternalContentLink: {
-  isExternalContentLinkAvailable: jest.Mock;
-} | null = {isExternalContentLinkAvailable: jest.fn()};
+// prepareExternalLink / reportExternalContentLink are stubbed so a test can
+// assert the eligibility probe is side-effect-free (never mints a token,
+// launches a link-out, or reports — I-E1).
+const makeExternalContentLink = () => ({
+  isExternalContentLinkAvailable: jest.fn(),
+  prepareExternalLink: jest.fn(),
+  reportExternalContentLink: jest.fn(),
+});
+let mockExternalContentLink: ReturnType<
+  typeof makeExternalContentLink
+> | null = makeExternalContentLink();
 jest.mock('../../specs/NativeExternalContentLink', () => ({
   __esModule: true,
   get default() {
@@ -215,7 +223,7 @@ describe('PalStore', () => {
     beforeEach(() => {
       // Exercise the real per-platform branch (prod path), not the E2E override.
       (global as any).__E2E__ = false;
-      mockExternalContentLink = {isExternalContentLinkAvailable: jest.fn()};
+      mockExternalContentLink = makeExternalContentLink();
       (isUSStorefront as jest.Mock).mockReset();
       runInAction(() => {
         (palStore as any).isCheckoutEligible = false;
@@ -239,6 +247,12 @@ describe('PalStore', () => {
         mockExternalContentLink!.isExternalContentLinkAvailable,
       ).toHaveBeenCalledTimes(1);
       expect(isUSStorefront).not.toHaveBeenCalled();
+      // The probe is side-effect-free: it never mints a token, launches a
+      // link-out, or reports (I-E1 / scenario D, JS-observable portion).
+      expect(mockExternalContentLink!.prepareExternalLink).not.toHaveBeenCalled();
+      expect(
+        mockExternalContentLink!.reportExternalContentLink,
+      ).not.toHaveBeenCalled();
       expect(palStore.isCheckoutEligible).toBe(true);
     });
 
@@ -274,6 +288,19 @@ describe('PalStore', () => {
 
       expect(palStore.isCheckoutEligible).toBe(false);
       warnSpy.mockRestore();
+    });
+
+    it('E2E build: forces eligibility without probing the platform', async () => {
+      Platform.OS = 'android';
+      (global as any).__E2E__ = true;
+
+      await runWriter();
+
+      expect(palStore.isCheckoutEligible).toBe(true);
+      expect(
+        mockExternalContentLink!.isExternalContentLinkAvailable,
+      ).not.toHaveBeenCalled();
+      expect(isUSStorefront).not.toHaveBeenCalled();
     });
 
     it('iOS: keeps StoreKit storefront signal, never probes Play', async () => {
