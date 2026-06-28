@@ -1,6 +1,8 @@
 import {runInAction} from 'mobx';
+import {Platform} from 'react-native';
 import {palStore} from '../PalStore';
 import {palsHubService} from '../../services';
+import {isUSStorefront} from '../../utils/region';
 import {palRepository} from '../../repositories/PalRepository';
 import type {Pal} from '../../types/pal';
 import type {PalsHubPal} from '../../types/palshub';
@@ -45,6 +47,23 @@ jest.mock('../../services', () => ({
 // Mock MobX persist
 jest.mock('mobx-persist-store', () => ({
   makePersistable: jest.fn(),
+}));
+
+// Eligibility writer dependencies: iOS StoreKit storefront + Android probe.
+jest.mock('../../utils/region', () => ({
+  isUSStorefront: jest.fn(),
+}));
+
+// Toggle the Android external-content-link module per test through a getter so
+// the null-module fail-closed path can be exercised in the same file.
+let mockExternalContentLink: {
+  isExternalContentLinkAvailable: jest.Mock;
+} | null = {isExternalContentLinkAvailable: jest.fn()};
+jest.mock('../../specs/NativeExternalContentLink', () => ({
+  __esModule: true,
+  get default() {
+    return mockExternalContentLink;
+  },
 }));
 
 describe('PalStore', () => {
@@ -184,6 +203,90 @@ describe('PalStore', () => {
       ).mock.calls.find(call => call[0]?.name === 'Lookie');
       expect(lookieCreate).toBeUndefined();
       expect(resolveHFModelForDownload).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('checkout eligibility writer', () => {
+    const originalOS = Platform.OS;
+    const originalE2E = (global as any).__E2E__;
+
+    const runWriter = () => (palStore as any).checkCheckoutEligibility();
+
+    beforeEach(() => {
+      // Exercise the real per-platform branch (prod path), not the E2E override.
+      (global as any).__E2E__ = false;
+      mockExternalContentLink = {isExternalContentLinkAvailable: jest.fn()};
+      (isUSStorefront as jest.Mock).mockReset();
+      runInAction(() => {
+        (palStore as any).isCheckoutEligible = false;
+      });
+    });
+
+    afterEach(() => {
+      Platform.OS = originalOS;
+      (global as any).__E2E__ = originalE2E;
+    });
+
+    it('Android: EXTERNAL_CONTENT_LINK available -> eligible (locale irrelevant)', async () => {
+      Platform.OS = 'android';
+      mockExternalContentLink!.isExternalContentLinkAvailable.mockResolvedValue(
+        true,
+      );
+
+      await runWriter();
+
+      expect(
+        mockExternalContentLink!.isExternalContentLinkAvailable,
+      ).toHaveBeenCalledTimes(1);
+      expect(isUSStorefront).not.toHaveBeenCalled();
+      expect(palStore.isCheckoutEligible).toBe(true);
+    });
+
+    it('Android: program unavailable -> ineligible (info text)', async () => {
+      Platform.OS = 'android';
+      mockExternalContentLink!.isExternalContentLinkAvailable.mockResolvedValue(
+        false,
+      );
+
+      await runWriter();
+
+      expect(palStore.isCheckoutEligible).toBe(false);
+    });
+
+    it('Android: null module -> ineligible (fail-closed)', async () => {
+      Platform.OS = 'android';
+      mockExternalContentLink = null;
+
+      await runWriter();
+
+      expect(isUSStorefront).not.toHaveBeenCalled();
+      expect(palStore.isCheckoutEligible).toBe(false);
+    });
+
+    it('Android: probe throws -> ineligible (fail-closed)', async () => {
+      Platform.OS = 'android';
+      mockExternalContentLink!.isExternalContentLinkAvailable.mockRejectedValue(
+        new Error('billing setup failed'),
+      );
+      const warnSpy = jest.spyOn(console, 'warn').mockImplementation();
+
+      await runWriter();
+
+      expect(palStore.isCheckoutEligible).toBe(false);
+      warnSpy.mockRestore();
+    });
+
+    it('iOS: keeps StoreKit storefront signal, never probes Play', async () => {
+      Platform.OS = 'ios';
+      (isUSStorefront as jest.Mock).mockResolvedValue(true);
+
+      await runWriter();
+
+      expect(isUSStorefront).toHaveBeenCalledTimes(1);
+      expect(
+        mockExternalContentLink!.isExternalContentLinkAvailable,
+      ).not.toHaveBeenCalled();
+      expect(palStore.isCheckoutEligible).toBe(true);
     });
   });
 
