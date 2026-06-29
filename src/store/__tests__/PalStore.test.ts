@@ -275,8 +275,10 @@ describe('PalStore', () => {
       expect(palStore.isCheckoutEligible).toBe(false);
     });
 
-    it('Android: probe throws -> ineligible (fail-closed)', async () => {
+    it('Android: probe throws -> ineligible (fail-closed, resets a stale true)', async () => {
       Platform.OS = 'android';
+      // Pre-seed true so this guards the catch resetting the flag, not the default.
+      (palStore as any).isCheckoutEligible = true;
       mockExternalContentLink!.isExternalContentLinkAvailable.mockRejectedValue(
         new Error('billing setup failed'),
       );

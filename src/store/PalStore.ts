@@ -138,6 +138,9 @@ class PalStore {
       });
     } catch (error) {
       console.warn('Failed to check checkout eligibility:', error);
+      runInAction(() => {
+        this.isCheckoutEligible = false;
+      });
     }
   }
 
