@@ -54,11 +54,9 @@ jest.mock('../../utils/region', () => ({
   isUSStorefront: jest.fn(),
 }));
 
-// Toggle the Android external-content-link module per test through a getter so
-// the null-module fail-closed path can be exercised in the same file.
-// prepareExternalLink / reportExternalContentLink are stubbed so a test can
-// assert the eligibility probe is side-effect-free (never mints a token,
-// launches a link-out, or reports — I-E1).
+// Toggle the module per test via a getter so the null-module fail-closed path
+// can be exercised here. prepareExternalLink / reportExternalContentLink are
+// stubbed so a test can assert the probe never mints a token, launches, or reports.
 const makeExternalContentLink = () => ({
   isExternalContentLinkAvailable: jest.fn(),
   prepareExternalLink: jest.fn(),
@@ -246,8 +244,7 @@ describe('PalStore', () => {
         mockExternalContentLink!.isExternalContentLinkAvailable,
       ).toHaveBeenCalledTimes(1);
       expect(isUSStorefront).not.toHaveBeenCalled();
-      // The probe is side-effect-free: it never mints a token, launches a
-      // link-out, or reports (I-E1 / scenario D, JS-observable portion).
+      // Probe is side-effect-free: never mints a token, launches, or reports.
       expect(
         mockExternalContentLink!.prepareExternalLink,
       ).not.toHaveBeenCalled();

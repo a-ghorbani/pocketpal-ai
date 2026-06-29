@@ -70,14 +70,8 @@ class ExternalContentLinkModule(reactContext: ReactApplicationContext) :
         })
   }
 
-  /**
-   * Side-effect-free render-time eligibility probe. Connects, queries
-   * EXTERNAL_CONTENT_LINK availability, resolves the boolean, and disconnects.
-   * It never mints a token, launches a link-out, or shows a disclosure (that
-   * stays exclusively in prepareExternalLink), and takes no currentActivity —
-   * there is nothing to launch, so there is no Activity to gate on. Any setup
-   * failure / disconnect / unavailable result resolves false (fail-closed).
-   */
+  // Availability-only eligibility probe: no token/launch/disclosure, no Activity.
+  // Any setup failure or unavailable result resolves false.
   override fun isExternalContentLinkAvailable(promise: Promise) {
     val settled = AtomicBoolean(false)
     connectAndCheckAvailability(
@@ -95,14 +89,10 @@ class ExternalContentLinkModule(reactContext: ReactApplicationContext) :
         })
   }
 
-  /**
-   * Shared connect + availability query for the prep link-out and the render-time
-   * probe. Builds a BillingClient with EXTERNAL_CONTENT_LINK enabled, starts the
-   * connection, gates on a successful setup, then runs
-   * isBillingProgramAvailableAsync and hands the result (with the still-open
-   * client) to [onAvailability]. A failed setup or a disconnect routes to
-   * [onConnectionError]. Callers own closing the connection (via endAndResolve*).
-   */
+  // Shared connect + availability query for prepareExternalLink and the probe.
+  // On setup OK, runs isBillingProgramAvailableAsync and hands the result plus
+  // the still-open client to onAvailability; setup failure/disconnect routes to
+  // onConnectionError. Callers close the connection (via endAndResolve*).
   private fun connectAndCheckAvailability(
       onAvailability: (client: BillingClient, result: BillingResult) -> Unit,
       onConnectionError: (client: BillingClient) -> Unit
