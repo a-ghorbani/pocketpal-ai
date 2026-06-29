@@ -2,6 +2,10 @@ import type {TurboModule} from 'react-native';
 import {TurboModuleRegistry} from 'react-native';
 
 export interface Spec extends TurboModule {
+  // Side-effect-free render-time eligibility probe: connect ->
+  // isBillingProgramAvailableAsync(EXTERNAL_CONTENT_LINK) -> resolve boolean ->
+  // disconnect. Never mints a token, launches a link-out, or shows a disclosure.
+  isExternalContentLinkAvailable(): Promise<boolean>;
   // Eligibility gate -> fresh external-transaction token -> Play link-out.
   // outcome: 'launched' (open the URL), 'user_canceled', 'ineligible', 'error'.
   prepareExternalLink(checkoutUrl: string): Promise<{
