@@ -66,6 +66,16 @@ class MockModelStore {
   setCacheTypeV: jest.Mock;
   setUseMmap: jest.Mock;
   setNoExtraBufts: jest.Mock;
+  setSpeculativeEnabled: jest.Mock;
+  setSelectedDraftModel: jest.Mock;
+  setSpecDraftNMax: jest.Mock;
+  setSpecDraftNMin: jest.Mock;
+  setSpecDraftPMin: jest.Mock;
+  setSpecDraftPSplit: jest.Mock;
+  setSpecDraftNGpuLayers: jest.Mock;
+  setSpecDraftCacheTypeK: jest.Mock;
+  setSpecDraftCacheTypeV: jest.Mock;
+  setDefaultDraftModel: jest.Mock;
   enterBenchmarkMode: jest.Mock;
   exitBenchmarkMode: jest.Mock;
   recordReasoningObserved: jest.Mock;
@@ -115,6 +125,16 @@ class MockModelStore {
       setCacheTypeV: false,
       setUseMmap: false,
       setNoExtraBufts: false,
+      setSpeculativeEnabled: false,
+      setSelectedDraftModel: false,
+      setSpecDraftNMax: false,
+      setSpecDraftNMin: false,
+      setSpecDraftPMin: false,
+      setSpecDraftPSplit: false,
+      setSpecDraftNGpuLayers: false,
+      setSpecDraftCacheTypeK: false,
+      setSpecDraftCacheTypeV: false,
+      setDefaultDraftModel: false,
       enterBenchmarkMode: false,
       exitBenchmarkMode: false,
       recordReasoningObserved: false,
@@ -187,6 +207,16 @@ class MockModelStore {
     this.setCacheTypeV = jest.fn();
     this.setUseMmap = jest.fn();
     this.setNoExtraBufts = jest.fn();
+    this.setSpeculativeEnabled = jest.fn();
+    this.setSelectedDraftModel = jest.fn();
+    this.setSpecDraftNMax = jest.fn();
+    this.setSpecDraftNMin = jest.fn();
+    this.setSpecDraftPMin = jest.fn();
+    this.setSpecDraftPSplit = jest.fn();
+    this.setSpecDraftNGpuLayers = jest.fn();
+    this.setSpecDraftCacheTypeK = jest.fn();
+    this.setSpecDraftCacheTypeV = jest.fn();
+    this.setDefaultDraftModel = jest.fn();
     this.enterBenchmarkMode = jest.fn().mockResolvedValue(undefined);
     this.exitBenchmarkMode = jest.fn();
     this.recordReasoningObserved = jest.fn();

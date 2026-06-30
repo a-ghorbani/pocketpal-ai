@@ -41,6 +41,11 @@ export class LocalCompletionEngine implements CompletionEngine {
       timings: result.timings,
       tokens_predicted: result.tokens_predicted,
       tokens_evaluated: result.tokens_evaluated,
+      // Speculative-decoding (MTP) engagement counters — top-level on the
+      // native result, dropped by the default mapping. Surfaced so the chat
+      // UI can show draft acceptance on speculative turns.
+      draft_tokens: result.draft_tokens,
+      draft_tokens_accepted: result.draft_tokens_accepted,
       truncated: result.truncated,
       stopped_eos: result.stopped_eos,
       stopped_limit: result.stopped_limit,

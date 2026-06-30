@@ -1725,6 +1725,18 @@
   dependencies:
     "@standard-schema/utils" "^0.3.0"
 
+"@huggingface/gguf@0.4.2":
+  version "0.4.2"
+  resolved "https://registry.yarnpkg.com/@huggingface/gguf/-/gguf-0.4.2.tgz#4d4e959e1fedfc2b7736c4c73548eab924e767e8"
+  integrity sha512-pog57zGj/u8uZ6cFi2vH9MkWvq+ZtFDa5iUeNxggDSle+04htJQFbl31TcauGUhnxTBJokFexWK9WL2BakLR0Q==
+  dependencies:
+    "@huggingface/tasks" "^0.20.12"
+
+"@huggingface/tasks@^0.20.12":
+  version "0.20.25"
+  resolved "https://registry.yarnpkg.com/@huggingface/tasks/-/tasks-0.20.25.tgz#c00dec13b07fc06afe8b2960709d0b8871a5f5fb"
+  integrity sha512-id1Yp40dLFh2Hqy6PFN+9+PEXyKCB13hq6JSe0AkHfq3XVGjQGEO8C0UFVFUlHWCzB7FgI+u/hXn6aeRs/SE9w==
+
 "@humanwhocodes/config-array@^0.13.0":
   version "0.13.0"
   resolved "https://registry.yarnpkg.com/@humanwhocodes/config-array/-/config-array-0.13.0.tgz#fb907624df3256d04b9aa2df50d7aa97ec648748"
@@ -6520,10 +6532,10 @@ lines-and-columns@^1.1.6:
   resolved "https://registry.yarnpkg.com/lines-and-columns/-/lines-and-columns-1.2.4.tgz#eca284f75d2965079309dc0ad9255abb2ebc1632"
   integrity sha512-7ylylesZQ/PV29jhEDl3Ufjo6ZX7gCqJr5F7PKrqc93v7fzSymt1BpwEU8nAUXs8qzzvqhbjhK5QZg6Mt/HkBg==
 
-llama.rn@0.12.4:
-  version "0.12.4"
-  resolved "https://registry.yarnpkg.com/llama.rn/-/llama.rn-0.12.4.tgz#3bb0fca305f1c2d03827359afc6ee04d65cf6818"
-  integrity sha512-53oQKv2rzYbsSfFMONcj+KnFfAJ9S5gO9l1FyRi35Zmh8PeLUa7Zzh0FUQ6/+LwZH5SYnCulMeA94GS+ls/y7w==
+llama.rn@0.12.5:
+  version "0.12.5"
+  resolved "https://registry.yarnpkg.com/llama.rn/-/llama.rn-0.12.5.tgz#9327a15a069d888570d90f84905a35c17ca9026a"
+  integrity sha512-XCGrmf39Mh0Roo97Rwq+8j34xrAPw3faYdaFZl6GCKGbrcEdoxPGZWy+44GjAK44M399+qjFHJzVrmzYrlX6LQ==
 
 locate-path@^5.0.0:
   version "5.0.0"

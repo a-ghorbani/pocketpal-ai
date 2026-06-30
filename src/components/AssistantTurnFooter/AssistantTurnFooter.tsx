@@ -90,6 +90,20 @@ export const AssistantTurnFooter: React.FC<AssistantTurnFooterProps> = observer(
     }
     const fullTimingsString = timingParts.join(', ');
 
+    // Speculative-decoding (MTP) engagement, surfaced only when the draft path
+    // actually ran (draft_tokens > 0). Renders draft acceptance as
+    // "draft: <accepted>/<total> (<pct>%)" so it's readable manually and by
+    // e2e. Non-speculative turns carry no draft_tokens and render nothing.
+    const draftTokens = timings?.draft_tokens;
+    const draftAccepted = timings?.draft_tokens_accepted ?? 0;
+    const showDraft = draftTokens != null && draftTokens > 0;
+    const draftPct = showDraft
+      ? Math.round((draftAccepted / draftTokens) * 100)
+      : 0;
+    const draftString = showDraft
+      ? `draft: ${draftAccepted}/${draftTokens} (${draftPct}%)`
+      : '';
+
     const copyToClipboard = () => {
       if (message.type !== 'text' && message.type !== 'assistant_turn') {
         return;
@@ -113,6 +127,11 @@ export const AssistantTurnFooter: React.FC<AssistantTurnFooterProps> = observer(
         {timings && fullTimingsString ? (
           <Text style={componentStyles.timing} testID="footer-timing">
             {fullTimingsString}
+          </Text>
+        ) : null}
+        {showDraft ? (
+          <Text style={componentStyles.timing} testID="message-draft-tokens">
+            {draftString}
           </Text>
         ) : null}
         {interrupted ? (
