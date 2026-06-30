@@ -24,6 +24,7 @@ export * from './FileMessage';
 export * from './HeaderRight';
 export * from './HeaderLeft';
 export * from './HFTokenSheet';
+export * from './SearchProviderKeySheet';
 export * from './IncreaseContextSheet';
 export * from './GreetingBubble';
 export * from './HtmlPreviewBubble';
@@ -67,6 +68,7 @@ export * from './UsageStats';
 export * from './VideoPalEmptyPlaceholder';
 export * from './VoiceChip';
 export * from './VisionDownloadSheet';
+export * from './WebSearchResultCard';
 
 export * from './PalHeaderRight';
 export * from './InputSlider';
