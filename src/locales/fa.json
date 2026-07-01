@@ -161,7 +161,9 @@
     "ttsAvailabilityLowMemoryWarning": "حافظه دستگاه شما کم است — ممکن است این قابلیت به‌درستی کار نکند.",
     "requestTimeout": "مهلت درخواست (ثانیه)",
     "requestTimeoutHelp": "حداکثر زمان انتظار برای پاسخ سرور کند. برای مقدار پیش‌فرض خالی بگذارید.",
-    "requestTimeoutPlaceholder": "اختیاری - برای مقدار پیش‌فرض خالی بگذارید"
+    "requestTimeoutPlaceholder": "اختیاری - برای مقدار پیش‌فرض خالی بگذارید",
+    "serverType": "نوع سرور",
+    "serverTypeHelp": "به‌صورت خودکار تشخیص داده می‌شود؛ اگر درست نیست تغییرش بدهید."
   },
   "memory": {
     "shortWarning": "هشدار حافظه",
@@ -551,7 +553,8 @@
         "disableThinking": "غیرفعال‌سازی حالت تفکر",
         "thinkingEnabled": "حالت تفکر فعال شد",
         "thinkingDisabled": "حالت تفکر غیرفعال شد",
-        "thinkText": "تفکر"
+        "thinkText": "تفکر",
+        "cycleEffort": "میزان استدلال: {{level}}. برای تغییر میزان دوبار ضربه بزنید"
       }
     },
     "contentReportSheet": {
@@ -734,7 +737,20 @@
     },
     "modelSettingsSheet": {
       "modelSettings": "تنظیمات مدل",
-      "saveChanges": "ذخیره تغییرات"
+      "saveChanges": "ذخیره تغییرات",
+      "reasoningSection": "استدلال",
+      "isReasoningModel": "مدل استدلالی",
+      "isReasoningModelHelp": "نمایش کنترل تفکر برای این مدل، حتی اگر به‌صورت خودکار تشخیص داده نشده باشد.",
+      "supportsEffort": "پشتیبانی از میزان استدلال درجه‌بندی‌شده",
+      "effortValues": "میزان‌های استدلالی که این مدل پشتیبانی می‌کند",
+      "effortLevels": {
+        "minimal": "حداقل",
+        "low": "کم",
+        "medium": "متوسط",
+        "high": "زیاد",
+        "xhigh": "خیلی زیاد",
+        "max": "حداکثر"
+      }
     },
     "modelsHeaderRight": {
       "menuTitleHf": "مدل‌های Hugging Face",

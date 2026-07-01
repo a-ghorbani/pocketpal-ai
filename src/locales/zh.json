@@ -161,7 +161,9 @@
     "ttsAvailabilityLowMemoryWarning": "你的设备内存较低——这可能无法稳定运行",
     "requestTimeout": "请求超时（秒）",
     "requestTimeoutHelp": "等待服务器响应的最长时间。留空则使用默认值。",
-    "requestTimeoutPlaceholder": "可选 - 留空则使用默认值"
+    "requestTimeoutPlaceholder": "可选 - 留空则使用默认值",
+    "serverType": "服务器类型",
+    "serverTypeHelp": "已自动检测；如有误请手动更改。"
   },
   "memory": {
     "shortWarning": "内存警告",
@@ -551,7 +553,8 @@
         "disableThinking": "禁用思考模式",
         "thinkingEnabled": "思考模式已启用",
         "thinkingDisabled": "思考模式已禁用",
-        "thinkText": "思考"
+        "thinkText": "思考",
+        "cycleEffort": "推理强度：{{level}}。双击可切换强度级别"
       }
     },
     "contentReportSheet": {
@@ -734,7 +737,20 @@
     },
     "modelSettingsSheet": {
       "modelSettings": "模型设置",
-      "saveChanges": "保存更改"
+      "saveChanges": "保存更改",
+      "reasoningSection": "推理",
+      "isReasoningModel": "推理模型",
+      "isReasoningModelHelp": "即使未自动检测到，也为此模型显示思考控件。",
+      "supportsEffort": "支持分级推理强度",
+      "effortValues": "此模型支持的推理强度级别",
+      "effortLevels": {
+        "minimal": "极低",
+        "low": "低",
+        "medium": "中",
+        "high": "高",
+        "xhigh": "极高",
+        "max": "最高"
+      }
     },
     "modelsHeaderRight": {
       "menuTitleHf": "Hugging Face模型",

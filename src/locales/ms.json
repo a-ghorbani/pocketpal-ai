@@ -161,7 +161,9 @@
     "manageServers": "Urus Pelayan",
     "requestTimeout": "Had Masa Permintaan (saat)",
     "requestTimeoutHelp": "Tempoh maksimum menunggu pelayan yang perlahan untuk membalas. Biarkan kosong untuk nilai lalai.",
-    "requestTimeoutPlaceholder": "Pilihan - biarkan kosong untuk nilai lalai"
+    "requestTimeoutPlaceholder": "Pilihan - biarkan kosong untuk nilai lalai",
+    "serverType": "Jenis Pelayan",
+    "serverTypeHelp": "Dikesan secara automatik; tukar jika salah."
   },
   "memory": {
     "shortWarning": "Amaran Memori",
@@ -551,7 +553,8 @@
         "disableThinking": "Lumpuhkan mod berfikir",
         "thinkingEnabled": "Mod berfikir didayakan",
         "thinkingDisabled": "Mod berfikir dilumpuhkan",
-        "thinkText": "Berpikir"
+        "thinkText": "Berpikir",
+        "cycleEffort": "Tahap penaakulan: {{level}}. Ketik dua kali untuk menukar tahap penaakulan"
       }
     },
     "contentReportSheet": {
@@ -734,7 +737,20 @@
     },
     "modelSettingsSheet": {
       "modelSettings": "Tetapan Model",
-      "saveChanges": "Simpan Perubahan"
+      "saveChanges": "Simpan Perubahan",
+      "reasoningSection": "Penaakulan",
+      "isReasoningModel": "Model penaakulan",
+      "isReasoningModelHelp": "Papar kawalan berfikir untuk model ini, walaupun ia tidak dikesan secara automatik.",
+      "supportsEffort": "Menyokong tahap penaakulan bergred",
+      "effortValues": "Tahap penaakulan yang disokong model ini",
+      "effortLevels": {
+        "minimal": "Minimum",
+        "low": "Rendah",
+        "medium": "Sederhana",
+        "high": "Tinggi",
+        "xhigh": "Sangat tinggi",
+        "max": "Maksimum"
+      }
     },
     "modelsHeaderRight": {
       "menuTitleHf": "Model Hugging Face",

@@ -161,7 +161,9 @@
     "ttsAvailabilityLowMemoryWarning": "Memori perangkat Anda rendah — fitur ini mungkin tidak bekerja dengan baik.",
     "requestTimeout": "Batas Waktu Permintaan (detik)",
     "requestTimeoutHelp": "Waktu tunggu maksimal untuk server yang lambat merespons. Kosongkan untuk pakai bawaan.",
-    "requestTimeoutPlaceholder": "Opsional - kosongkan untuk pakai bawaan"
+    "requestTimeoutPlaceholder": "Opsional - kosongkan untuk pakai bawaan",
+    "serverType": "Jenis Server",
+    "serverTypeHelp": "Terdeteksi otomatis; ubah jika keliru."
   },
   "memory": {
     "shortWarning": "Peringatan Memori",
@@ -551,7 +553,8 @@
         "disableThinking": "Nonaktifkan mode berpikir",
         "thinkingEnabled": "Mode berpikir diaktifkan",
         "thinkingDisabled": "Mode berpikir dinonaktifkan",
-        "thinkText": "Berpikir"
+        "thinkText": "Berpikir",
+        "cycleEffort": "Tingkat penalaran: {{level}}. Ketuk dua kali untuk mengganti tingkat penalaran"
       }
     },
     "contentReportSheet": {
@@ -734,7 +737,20 @@
     },
     "modelSettingsSheet": {
       "modelSettings": "Pengaturan Model",
-      "saveChanges": "Simpan Perubahan"
+      "saveChanges": "Simpan Perubahan",
+      "reasoningSection": "Penalaran",
+      "isReasoningModel": "Model penalaran",
+      "isReasoningModelHelp": "Tampilkan kontrol berpikir untuk model ini, meskipun tidak terdeteksi otomatis.",
+      "supportsEffort": "Mendukung tingkat penalaran bertingkat",
+      "effortValues": "Tingkat penalaran yang didukung model ini",
+      "effortLevels": {
+        "minimal": "Minimal",
+        "low": "Rendah",
+        "medium": "Sedang",
+        "high": "Tinggi",
+        "xhigh": "Sangat tinggi",
+        "max": "Maksimal"
+      }
     },
     "modelsHeaderRight": {
       "menuTitleHf": "Model Hugging Face",
