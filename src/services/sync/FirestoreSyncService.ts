@@ -314,8 +314,7 @@ export class FirestoreSyncService implements ISyncService {
             }
             onData(results);
           } catch (error) {
-              console.error(`[FirestoreSync] Snapshot error for ${collection}:`, error);
-            }
+            console.error(`[FirestoreSync] Snapshot error for ${collection}:`, error);
           }
         },
         (error) => {
