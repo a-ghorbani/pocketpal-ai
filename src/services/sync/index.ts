@@ -12,6 +12,8 @@ export * from './ISyncService';
 // Implementations
 export { MockSyncService } from './MockSyncService';
 export { getMockSyncService } from './MockSyncService';
+export { FirestoreSyncService } from './FirestoreSyncService';
+export { getFirestoreSyncService } from './FirestoreSyncService';
 
 // Store
 export { SyncStore, syncStore } from './SyncStore';

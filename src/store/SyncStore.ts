@@ -11,8 +11,10 @@ import { makeAutoObservable, runInAction } from 'mobx';
 import { makePersistable } from 'mobx-persist-store';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
-import { SyncStatus, SyncResult, SyncDirection } from './ISyncService';
-import { getMockSyncService } from './MockSyncService';
+import { SyncStatus, SyncResult, SyncDirection } from '../services/sync/ISyncService';
+import { getMockSyncService } from '../services/sync/MockSyncService';
+import { getFirestoreSyncService } from '../services/sync/FirestoreSyncService';
+import { isFirebaseConfigured } from '../../firebase.config';
 
 export type SyncMode = 'auto' | 'manual';
 
@@ -93,6 +95,13 @@ export class SyncStore {
     });
   }
 
+  private getSyncService() {
+    if (isFirebaseConfigured()) {
+      return getFirestoreSyncService();
+    }
+    return getMockSyncService();
+  }
+
   // ========== Actions ==========
 
   /**
@@ -170,7 +179,7 @@ export class SyncStore {
     });
 
     try {
-      const syncService = getMockSyncService();
+      const syncService = this.getSyncService();
       const result = await syncService.sync(direction);
 
       runInAction(() => {
@@ -206,7 +215,7 @@ export class SyncStore {
    * @param data - Data to upload
    */
   async upload(collection: string, data: any): Promise<void> {
-    const syncService = getMockSyncService();
+    const syncService = this.getSyncService();
     await syncService.uploadData(collection, data);
 
     runInAction(() => {
@@ -220,7 +229,7 @@ export class SyncStore {
    * @returns Promise<any[]> - Downloaded data
    */
   async download(collection: string): Promise<any[]> {
-    const syncService = getMockSyncService();
+    const syncService = this.getSyncService();
     const data = await syncService.downloadData(collection);
     return data;
   }
