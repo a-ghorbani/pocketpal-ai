@@ -11,6 +11,7 @@
 import { IAuthService } from './IAuthService';
 import { MockAuthService } from './MockAuthService';
 import { getMockAuthService } from './MockAuthService';
+import { FirebaseAuthService, getFirebaseAuthService } from './FirebaseAuthService';
 import { isFirebaseConfigured } from '../../../firebase.config';
 
 export type AuthServiceType = 'mock' | 'firebase';
@@ -94,10 +95,10 @@ export class AuthServiceFactory {
       }
       AuthServiceFactory.instance = getMockAuthService();
     } else {
-      // TODO: Implement FirebaseAuthService
-      // For now, fall back to mock
-      console.warn('[AuthFactory] Firebase not implemented, falling back to mock');
-      AuthServiceFactory.instance = getMockAuthService();
+      if (AuthServiceFactory.config.debug) {
+        console.log('[AuthFactory] Creating FirebaseAuthService');
+      }
+      AuthServiceFactory.instance = getFirebaseAuthService();
     }
 
     return AuthServiceFactory.instance;

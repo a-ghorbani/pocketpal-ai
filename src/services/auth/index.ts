@@ -12,6 +12,8 @@ export * from './IAuthService';
 // Implementations
 export { MockAuthService } from './MockAuthService';
 export { getMockAuthService } from './MockAuthService';
+export { FirebaseAuthService } from './FirebaseAuthService';
+export { getFirebaseAuthService } from './FirebaseAuthService';
 
 // Factory
 export { AuthServiceFactory, authService } from './AuthServiceFactory';
