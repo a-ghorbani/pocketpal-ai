@@ -13,6 +13,23 @@ import {getAbsoluteThumbnailPath, isLocalThumbnailPath} from './imageUtils';
 import type {Pal} from '../types/pal';
 import type {Message} from '../database';
 
+import {getE2EEService} from '../services/encryption';
+
+/**
+ * Schema version for individual chat-session export DTOs.
+ * Bumped whenever the shape of an exported session changes so future
+ * importers can migrate older files. Additive field — older importers
+ * that don't know about it simply ignore it.
+ */
+export const CHAT_EXPORT_SCHEMA_VERSION = 1;
+
+/**
+ * Envelope format + schema version for full encrypted backups
+ * (all chats + all pals bundled into one password-protected file).
+ */
+export const BACKUP_FORMAT = 'pocketpal-backup';
+export const BACKUP_SCHEMA_VERSION = 1;
+
 /**
  * Project a WatermelonDB Message into the export DTO. For
  * `assistant_turn` rows the `text` column is empty by design — we
@@ -46,6 +63,7 @@ export const exportChatSession = async (sessionId: string): Promise<void> => {
     const {session, messages, completionSettings} = sessionData;
 
     const exportData = {
+      schemaVersion: CHAT_EXPORT_SCHEMA_VERSION,
       id: session.id,
       title: session.title,
       date: session.date,
@@ -98,6 +116,7 @@ export const exportAllChatSessions = async (): Promise<void> => {
         } = sessionData;
 
         exportData.push({
+          schemaVersion: CHAT_EXPORT_SCHEMA_VERSION,
           id: sessionInfo.id,
           title: sessionInfo.title,
           date: sessionInfo.date,
@@ -450,5 +469,99 @@ const getSaveDirectory = (): string => {
     return RNFS.DocumentDirectoryPath;
   } else {
     return RNFS.DownloadDirectoryPath;
+  }
+};
+
+/**
+ * Bundle every chat session and every pal into a single
+ * password-protected (E2EE / AES-GCM + PBKDF2) JSON file and share it.
+ *
+ * Envelope shape:
+ * ```
+ * {
+ *   format: 'pocketpal-backup',
+ *   schemaVersion: 1,
+ *   encrypted: true,
+ *   createdAt: ISO string,
+ *   encryption: { version, salt, iv, ciphertext }
+ * }
+ * ```
+ * where `ciphertext` is AES-GCM(JSON.stringify({ chats, pals }), key)
+ * and `key` is derived from the user's password via PBKDF2.
+ *
+ * This is the privacy-preserving replacement for cloud sync: the file
+ * can be freely shared/stored (AirDrop, email, USB) because it is
+ * useless without the password.
+ *
+ * @param password The user-supplied password. Must be non-empty.
+ */
+export const exportEncryptedBackup = async (
+  password: string,
+): Promise<void> => {
+  if (!password) {
+    throw new Error('Password is required for encrypted backup');
+  }
+
+  try {
+    // Gather all chat sessions (same projection as plain export).
+    const sessions = await chatSessionRepository.getAllSessions();
+    const chats: any[] = [];
+    for (const session of sessions) {
+      const sessionData = await chatSessionRepository.getSessionById(
+        session.id,
+      );
+      if (!sessionData) {
+        continue;
+      }
+      const {session: sessionInfo, messages, completionSettings} = sessionData;
+
+      chats.push({
+        schemaVersion: CHAT_EXPORT_SCHEMA_VERSION,
+        id: sessionInfo.id,
+        title: sessionInfo.title,
+        date: sessionInfo.date,
+        messages: messages.map(toExportedMessage),
+        completionSettings: completionSettings
+          ? JSON.parse(completionSettings.settings)
+          : {},
+        activePalId: sessionInfo.activePalId,
+      });
+    }
+
+    // Gather all pals (transformExportPal handles thumbnail → base64).
+    const pals: any[] = [];
+    for (const pal of palStore.getPals()) {
+      pals.push(await transformExportPal(pal));
+    }
+
+    const payload = {chats, pals};
+
+    // Derive a key from the password and encrypt the payload.
+    const e2ee = getE2EEService();
+    const salt = e2ee.generateSalt();
+    const keyBase64 = await e2ee.deriveKeyFromPassword(password, salt);
+    const encrypted = await e2ee.encrypt(JSON.stringify(payload), keyBase64);
+
+    const envelope = {
+      format: BACKUP_FORMAT,
+      schemaVersion: BACKUP_SCHEMA_VERSION,
+      encrypted: true,
+      createdAt: new Date().toISOString(),
+      encryption: {
+        version: encrypted.version,
+        salt,
+        iv: encrypted.iv,
+        ciphertext: encrypted.ciphertext,
+      },
+    };
+
+    const timestamp = format(new Date(), 'yyyy-MM-dd_HH-mm-ss');
+    const filename = `pocketpal_backup_${timestamp}.json`;
+    const jsonData = JSON.stringify(envelope, null, 2);
+
+    await shareJsonData(jsonData, filename);
+  } catch (error) {
+    console.error('Error exporting encrypted backup:', error);
+    throw error;
   }
 };

@@ -17,6 +17,9 @@ import {
   exportAllChatSessions,
   exportPal,
   exportAllPals,
+  exportEncryptedBackup,
+  CHAT_EXPORT_SCHEMA_VERSION,
+  BACKUP_FORMAT,
 } from '../exportUtils';
 import {ensureLegacyStoragePermission} from '../androidPermission';
 
@@ -28,6 +31,19 @@ jest.mock('react-native', () => ({
   Alert: {
     alert: jest.fn(),
   },
+}));
+
+// Mock E2EE service so exportEncryptedBackup is deterministic and does
+// not touch real WebCrypto in the jest environment.
+const mockEncrypt = jest.fn();
+const mockDecrypt = jest.fn();
+jest.mock('../../services/encryption', () => ({
+  getE2EEService: () => ({
+    generateSalt: jest.fn().mockReturnValue('mock-salt'),
+    deriveKeyFromPassword: jest.fn().mockResolvedValue('mock-key'),
+    encrypt: mockEncrypt,
+    decrypt: mockDecrypt,
+  }),
 }));
 
 // Mock react-native-share
@@ -621,6 +637,170 @@ describe('exportUtils', () => {
       const filename = 'test_thumbnail.jpg';
       const expected = `/mock/document/path/pal-images/test_thumbnail.jpg`;
       expect(getAbsoluteThumbnailPath(filename)).toBe(expected);
+    });
+  });
+
+  describe('schemaVersion', () => {
+    const mockSessionData = {
+      session: {
+        id: 'session-1',
+        title: 'Test Session',
+        date: '2024-01-01T00:00:00Z',
+        activePalId: 'pal-1',
+      },
+      messages: [
+        {
+          id: 'msg-1',
+          author: 'user',
+          text: 'Hello',
+          type: 'text',
+          metadata: '{"test": true}',
+          createdAt: 1704067200000,
+          toMessageObject: () => ({
+            id: 'msg-1',
+            type: 'text',
+            text: 'Hello',
+            author: {id: 'user'},
+            createdAt: 1704067200000,
+            metadata: {test: true},
+          }),
+        },
+      ],
+      completionSettings: {
+        settings: '{"temperature": 0.7}',
+      },
+    };
+
+    beforeEach(() => {
+      chatSessionRepository.getSessionById = jest
+        .fn()
+        .mockResolvedValue(mockSessionData as any);
+    });
+
+    it('stamps schemaVersion onto a single exported session', async () => {
+      await exportChatSession('session-1');
+
+      const writtenJson = (RNFS.writeFile as jest.Mock).mock.calls[0][1];
+      const parsed = JSON.parse(writtenJson);
+      expect(parsed.schemaVersion).toBe(CHAT_EXPORT_SCHEMA_VERSION);
+    });
+
+    it('stamps schemaVersion onto every session in exportAllChatSessions', async () => {
+      const sessions = [
+        {id: 'a', title: 'A', date: '2024-01-01T00:00:00Z'},
+        {id: 'b', title: 'B', date: '2024-01-02T00:00:00Z'},
+      ];
+      chatSessionRepository.getAllSessions = jest
+        .fn()
+        .mockResolvedValue(sessions as any);
+
+      await exportAllChatSessions();
+
+      const writtenJson = (RNFS.writeFile as jest.Mock).mock.calls[0][1];
+      const parsed = JSON.parse(writtenJson);
+      expect(Array.isArray(parsed)).toBe(true);
+      expect(parsed).toHaveLength(2);
+      for (const s of parsed) {
+        expect(s.schemaVersion).toBe(CHAT_EXPORT_SCHEMA_VERSION);
+      }
+    });
+  });
+
+  describe('exportEncryptedBackup', () => {
+    const mockSessionData = {
+      session: {
+        id: 'session-1',
+        title: 'Test Session',
+        date: '2024-01-01T00:00:00Z',
+        activePalId: 'pal-1',
+      },
+      messages: [],
+      completionSettings: null,
+    };
+
+    beforeEach(() => {
+      mockEncrypt.mockReset();
+      mockEncrypt.mockResolvedValue({
+        iv: 'mock-iv',
+        ciphertext: 'mock-ciphertext',
+        version: 1,
+      });
+      chatSessionRepository.getAllSessions = jest
+        .fn()
+        .mockResolvedValue([{id: 'session-1'}] as any);
+      chatSessionRepository.getSessionById = jest
+        .fn()
+        .mockResolvedValue(mockSessionData as any);
+      palStore.pals = [];
+    });
+
+    afterEach(() => {
+      palStore.pals = [];
+    });
+
+    it('throws when no password is provided', async () => {
+      await expect(exportEncryptedBackup('')).rejects.toThrow(
+        'Password is required',
+      );
+    });
+
+    it('produces a pocketpal-backup envelope with encryption metadata', async () => {
+      await exportEncryptedBackup('hunter2');
+
+      // E2EE.encrypt was called with the serialized payload and derived key.
+      expect(mockEncrypt).toHaveBeenCalledWith(expect.any(String), 'mock-key');
+
+      // The written file is the envelope, not the plaintext payload.
+      const writtenJson = (RNFS.writeFile as jest.Mock).mock.calls[0][1];
+      const envelope = JSON.parse(writtenJson);
+      expect(envelope.format).toBe(BACKUP_FORMAT);
+      expect(envelope.encrypted).toBe(true);
+      expect(envelope.encryption.salt).toBe('mock-salt');
+      expect(envelope.encryption.iv).toBe('mock-iv');
+      expect(envelope.encryption.ciphertext).toBe('mock-ciphertext');
+
+      // The plaintext payload must NOT leak into the envelope.
+      expect(JSON.stringify(envelope)).not.toContain('Test Session');
+
+      // And the file was shared.
+      expect(Share.open).toHaveBeenCalled();
+    });
+
+    it('includes chats and pals in the encrypted payload', async () => {
+      // Capture the plaintext payload passed to encrypt().
+      let capturedPayload: any;
+      mockEncrypt.mockImplementation(async (data: string) => {
+        capturedPayload = JSON.parse(data);
+        return {iv: 'iv', ciphertext: 'ct', version: 1};
+      });
+      palStore.pals = [
+        {
+          id: 'pal-1',
+          name: 'Test Pal',
+          description: '',
+          thumbnail_url: 'https://example.com/x.jpg',
+          systemPrompt: 'sp',
+          originalSystemPrompt: 'sp',
+          isSystemPromptChanged: false,
+          useAIPrompt: false,
+          defaultModel: 'm',
+          created_at: '2024-01-01T00:00:00Z',
+          updated_at: '2024-01-01T00:00:00Z',
+          type: 'local',
+          parameters: {},
+          parameterSchema: [],
+          source: 'local',
+        } as any,
+      ];
+
+      await exportEncryptedBackup('hunter2');
+
+      expect(capturedPayload.chats).toHaveLength(1);
+      expect(capturedPayload.chats[0].schemaVersion).toBe(
+        CHAT_EXPORT_SCHEMA_VERSION,
+      );
+      expect(capturedPayload.pals).toHaveLength(1);
+      expect(capturedPayload.pals[0].name).toBe('Test Pal');
     });
   });
 });

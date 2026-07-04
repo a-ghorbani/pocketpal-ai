@@ -41,13 +41,20 @@ import {
   Divider,
   HFTokenSheet,
   InputSlider,
+  Dialog,
 } from '../../components';
 
 import {useTheme} from '../../hooks';
 
 import {createStyles} from './styles';
 
-import {modelStore, uiStore, hfStore, ttsStore} from '../../store';
+import {
+  modelStore,
+  uiStore,
+  hfStore,
+  ttsStore,
+  chatSessionStore,
+} from '../../store';
 import {languageDisplayNames} from '../../locales';
 
 import {CacheType} from '../../utils/types';
@@ -59,7 +66,13 @@ import {
 } from '../../utils';
 import {t} from '../../locales';
 import {checkGpuSupport} from '../../utils/deviceCapabilities';
-import {exportLegacyChatSessions} from '../../utils/exportUtils';
+import {
+  exportLegacyChatSessions,
+  exportAllChatSessions,
+  exportAllPals,
+  exportEncryptedBackup,
+} from '../../utils/exportUtils';
+import {pickAndReadBackup, restoreBackup} from '../../utils/importUtils';
 import {getDeviceOptions, DeviceOption} from '../../utils/deviceSelection';
 import {
   inferBackendType,
@@ -103,6 +116,17 @@ export const SettingsScreen: React.FC = observer(() => {
   const [currentBackend, setCurrentBackend] = useState<
     'metal' | 'opencl' | 'hexagon' | 'cpu' | 'blas'
   >(Platform.OS === 'ios' ? 'metal' : 'cpu');
+
+  // Backup & Restore state.
+  const [backupBusy, setBackupBusy] = useState(false);
+  const [showExportPasswordDialog, setShowExportPasswordDialog] =
+    useState(false);
+  const [exportPassword, setExportPassword] = useState('');
+  const [exportPasswordConfirm, setExportPasswordConfirm] = useState('');
+  const [showImportPasswordDialog, setShowImportPasswordDialog] =
+    useState(false);
+  const [importPassword, setImportPassword] = useState('');
+  const [pendingBackupData, setPendingBackupData] = useState<any>(null);
   const keyCacheButtonRef = useRef<View>(null);
   const valueCacheButtonRef = useRef<View>(null);
   const languageButtonRef = useRef<View>(null);
@@ -283,6 +307,111 @@ export const SettingsScreen: React.FC = observer(() => {
       setLanguageAnchor({x: pageX, y: pageY + height});
       setShowLanguageMenu(true);
     });
+  };
+
+  // ─── Backup & Restore handlers ───────────────────────────────────────────
+
+  const handleExportAllChats = async () => {
+    setBackupBusy(true);
+    try {
+      await exportAllChatSessions();
+    } catch (error) {
+      console.error('Export all chats failed:', error);
+      Alert.alert(
+        l10n.common.error,
+        l10n.components.exportUtils.exportErrorMessage,
+      );
+    } finally {
+      setBackupBusy(false);
+    }
+  };
+
+  const handleExportAllPals = async () => {
+    setBackupBusy(true);
+    try {
+      await exportAllPals();
+    } catch (error) {
+      console.error('Export all pals failed:', error);
+      Alert.alert(
+        l10n.common.error,
+        l10n.components.exportUtils.exportErrorMessage,
+      );
+    } finally {
+      setBackupBusy(false);
+    }
+  };
+
+  const handleEncryptedBackupPress = () => {
+    setExportPassword('');
+    setExportPasswordConfirm('');
+    setShowExportPasswordDialog(true);
+  };
+
+  const handleConfirmExportPassword = async () => {
+    if (!exportPassword) {
+      Alert.alert('', l10n.settings.passwordRequired);
+      return;
+    }
+    if (exportPassword !== exportPasswordConfirm) {
+      Alert.alert('', l10n.settings.passwordMismatch);
+      return;
+    }
+    setShowExportPasswordDialog(false);
+    setBackupBusy(true);
+    try {
+      await exportEncryptedBackup(exportPassword);
+    } catch (error) {
+      console.error('Encrypted backup failed:', error);
+      Alert.alert(l10n.common.error, l10n.settings.importBackupError);
+    } finally {
+      setBackupBusy(false);
+    }
+  };
+
+  const runRestore = async (data: any, password?: string) => {
+    setBackupBusy(true);
+    try {
+      const {chats, pals} = await restoreBackup(data, password);
+      Alert.alert(
+        t(l10n.settings.importBackupSuccess, {
+          chats: String(chats),
+          pals: String(pals),
+        }),
+      );
+      // Refresh the chat list so newly-imported sessions show up.
+      await chatSessionStore.loadSessionList();
+    } catch (error) {
+      console.error('Restore backup failed:', error);
+      Alert.alert('', l10n.settings.importBackupError);
+    } finally {
+      setBackupBusy(false);
+    }
+  };
+
+  const handleImportData = async () => {
+    try {
+      const {data, needsPassword} = await pickAndReadBackup();
+      if (!data) {
+        return; // user cancelled the picker
+      }
+      if (needsPassword) {
+        setPendingBackupData(data);
+        setImportPassword('');
+        setShowImportPasswordDialog(true);
+      } else {
+        await runRestore(data, undefined);
+      }
+    } catch (error) {
+      console.error('Pick/read backup failed:', error);
+      Alert.alert('', l10n.settings.importBackupError);
+    }
+  };
+
+  const handleConfirmImportPassword = async () => {
+    setShowImportPasswordDialog(false);
+    const data = pendingBackupData;
+    setPendingBackupData(null);
+    await runRestore(data, importPassword);
   };
 
   return (
@@ -1185,6 +1314,140 @@ export const SettingsScreen: React.FC = observer(() => {
             </Card>
           )}
 
+          {/* Backup & Restore — unified entry for data sovereignty:
+              plain export of chats/pals, encrypted full backup, and
+              smart import (auto-detects encrypted vs plain). */}
+          <Card elevation={0} style={styles.card}>
+            <Card.Title title={l10n.settings.backupRestore} />
+            <Card.Content>
+              {/* Export all chats */}
+              <View style={styles.settingItemContainer}>
+                <View style={styles.switchContainer}>
+                  <View style={styles.textContainer}>
+                    <View style={styles.labelWithIconContainer}>
+                      <ShareIcon
+                        width={20}
+                        height={20}
+                        style={styles.settingIcon}
+                        stroke={theme.colors.onSurface}
+                      />
+                      <Text variant="titleMedium" style={styles.textLabel}>
+                        {l10n.settings.exportAllChats}
+                      </Text>
+                    </View>
+                    <Text variant="labelSmall" style={styles.textDescription}>
+                      {l10n.settings.exportAllChatsDescription}
+                    </Text>
+                  </View>
+                  <Button
+                    mode="outlined"
+                    onPress={handleExportAllChats}
+                    loading={backupBusy}
+                    disabled={backupBusy}
+                    style={styles.menuButton}>
+                    {l10n.settings.exportButton}
+                  </Button>
+                </View>
+              </View>
+
+              <Divider style={styles.divider} />
+
+              {/* Export all pals */}
+              <View style={styles.settingItemContainer}>
+                <View style={styles.switchContainer}>
+                  <View style={styles.textContainer}>
+                    <View style={styles.labelWithIconContainer}>
+                      <ShareIcon
+                        width={20}
+                        height={20}
+                        style={styles.settingIcon}
+                        stroke={theme.colors.onSurface}
+                      />
+                      <Text variant="titleMedium" style={styles.textLabel}>
+                        {l10n.settings.exportAllPals}
+                      </Text>
+                    </View>
+                    <Text variant="labelSmall" style={styles.textDescription}>
+                      {l10n.settings.exportAllPalsDescription}
+                    </Text>
+                  </View>
+                  <Button
+                    mode="outlined"
+                    onPress={handleExportAllPals}
+                    loading={backupBusy}
+                    disabled={backupBusy}
+                    style={styles.menuButton}>
+                    {l10n.settings.exportButton}
+                  </Button>
+                </View>
+              </View>
+
+              <Divider style={styles.divider} />
+
+              {/* Encrypted backup (chats + pals, password-protected) */}
+              <View style={styles.settingItemContainer}>
+                <View style={styles.switchContainer}>
+                  <View style={styles.textContainer}>
+                    <View style={styles.labelWithIconContainer}>
+                      <ShareIcon
+                        width={20}
+                        height={20}
+                        style={styles.settingIcon}
+                        stroke={theme.colors.onSurface}
+                      />
+                      <Text variant="titleMedium" style={styles.textLabel}>
+                        {l10n.settings.exportEncryptedBackup}
+                      </Text>
+                    </View>
+                    <Text variant="labelSmall" style={styles.textDescription}>
+                      {l10n.settings.exportEncryptedBackupDescription}
+                    </Text>
+                  </View>
+                  <Button
+                    mode="contained"
+                    onPress={handleEncryptedBackupPress}
+                    loading={backupBusy}
+                    disabled={backupBusy}
+                    style={styles.menuButton}>
+                    {l10n.settings.exportButton}
+                  </Button>
+                </View>
+              </View>
+
+              <Divider style={styles.divider} />
+
+              {/* Import data (auto-detects encrypted vs plain, chats vs pals) */}
+              <View style={styles.settingItemContainer}>
+                <View style={styles.switchContainer}>
+                  <View style={styles.textContainer}>
+                    <View style={styles.labelWithIconContainer}>
+                      <ShareIcon
+                        width={20}
+                        height={20}
+                        style={styles.settingIcon}
+                        stroke={theme.colors.onSurface}
+                      />
+                      <Text variant="titleMedium" style={styles.textLabel}>
+                        {l10n.settings.importData}
+                      </Text>
+                    </View>
+                    <Text variant="labelSmall" style={styles.textDescription}>
+                      {l10n.settings.importDataDescription}
+                    </Text>
+                  </View>
+                  <Button
+                    mode="outlined"
+                    onPress={handleImportData}
+                    loading={backupBusy}
+                    disabled={backupBusy}
+                    style={styles.menuButton}>
+                    {l10n.settings.importButton}
+                  </Button>
+                </View>
+              </View>
+            </Card.Content>
+          </Card>
+
           {/* Export Options */}
           <Card elevation={0} style={styles.card}>
             <Card.Title title={l10n.settings.exportOptions} />
@@ -1234,6 +1497,77 @@ export const SettingsScreen: React.FC = observer(() => {
         onDismiss={() => setShowHfTokenDialog(false)}
         onSave={() => setShowHfTokenDialog(false)}
       />
+
+      {/* Encrypted-backup export: collect + confirm a password */}
+      <Dialog
+        visible={showExportPasswordDialog}
+        onDismiss={() => setShowExportPasswordDialog(false)}
+        title={l10n.settings.backupPasswordTitle}
+        actions={[
+          {
+            label: l10n.common.cancel,
+            onPress: () => setShowExportPasswordDialog(false),
+          },
+          {
+            label: l10n.settings.exportButton,
+            mode: 'contained',
+            onPress: handleConfirmExportPassword,
+            loading: backupBusy,
+            disabled: backupBusy,
+          },
+        ]}>
+        <TextInput
+          label={l10n.settings.passwordLabel}
+          value={exportPassword}
+          onChangeText={setExportPassword}
+          secureTextEntry
+          autoCapitalize="none"
+          autoCorrect={false}
+        />
+        <TextInput
+          label={l10n.settings.passwordConfirmLabel}
+          value={exportPasswordConfirm}
+          onChangeText={setExportPasswordConfirm}
+          secureTextEntry
+          autoCapitalize="none"
+          autoCorrect={false}
+        />
+      </Dialog>
+
+      {/* Encrypted-backup import: prompt for the decryption password */}
+      <Dialog
+        visible={showImportPasswordDialog}
+        onDismiss={() => {
+          setShowImportPasswordDialog(false);
+          setPendingBackupData(null);
+        }}
+        title={l10n.settings.backupPasswordTitle}
+        actions={[
+          {
+            label: l10n.common.cancel,
+            onPress: () => {
+              setShowImportPasswordDialog(false);
+              setPendingBackupData(null);
+            },
+          },
+          {
+            label: l10n.settings.importButton,
+            mode: 'contained',
+            onPress: handleConfirmImportPassword,
+            loading: backupBusy,
+            disabled: backupBusy,
+          },
+        ]}>
+        <TextInput
+          label={l10n.settings.passwordLabel}
+          value={importPassword}
+          onChangeText={setImportPassword}
+          secureTextEntry
+          autoCapitalize="none"
+          autoCorrect={false}
+          helperText={l10n.settings.enterPasswordToDecrypt}
+        />
+      </Dialog>
     </SafeAreaView>
   );
 });

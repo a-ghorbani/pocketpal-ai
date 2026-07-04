@@ -46,11 +46,11 @@
 
 | 工作项 | 说明 | 架构影响 | 已有基础 |
 |--------|------|----------|----------|
-| 聊天记录 JSON 导出 | 所有会话 + 消息 → 加密 JSON 文件 | `exportUtils.ts` 已有 | ✅ 代码已有 |
-| Pal 配置导出 | Pal 设置 + Prompt + 颜色 → JSON | 复用导出管线 | 🟡 需扩展 |
-| 加密导出 | E2EE 加密后再写文件 | 复用 `E2EEService` | ✅ 代码已有 |
-| 导入恢复 | 选择文件 → 解密 → 写入数据库 | 新增导入验证逻辑 | 🔴 待开发 |
-| 导出 UI | 设置页面"导出数据"/"导入数据"按钮 | Settings 扩展 | 🔴 待开发 |
+| 聊天记录 JSON 导出 | 所有会话 + 消息 → JSON 文件（带 `schemaVersion`） | `exportUtils.ts` | ✅ 已完成 |
+| Pal 配置导出 | Pal 设置 + Prompt + 颜色 → JSON | 复用导出管线 | ✅ 已完成 |
+| 加密导出 | E2EE (AES-GCM + PBKDF2) 加密后再写文件 | 复用 `E2EEService` + `exportEncryptedBackup` | ✅ 已完成 |
+| 导入恢复 | 选择文件 → 自动识别明文/密文 → 解密 → 写入数据库 | `importUtils.restoreBackup` + `pickAndReadBackup` | ✅ 已完成 |
+| 导出 UI | 设置页面"备份与恢复"卡片（导出/加密备份/导入） | SettingsScreen 新增卡片 + 密码弹窗 | ✅ 已完成 |
 | 导出分享集成 | 系统分享菜单 (AirDrop/文件/邮件) | 复用 `react-native-share` | ✅ 依赖已安装 |
 
 **关键原则**: 不搞云同步，不给用户画饼。导出 = 你的数据你做主。

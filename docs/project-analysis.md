@@ -46,7 +46,7 @@ PocketPal 不是"移动端的 LLM 客户端"，它就是**手机作为推理设�
 | **状态管理层** | ✅ | 14 个 MobX Store，职责划分明确，覆盖所有业务领域 |
 | **服务层** | ✅ | 接口抽象良好（IAuthService、ISyncService、IPaymentService），易于替换实现 |
 | **数据层** | 🟡 | WatermelonDB schema v7，Repository 模式，但 SQLite 未充分利用（无 FTS5） |
-| **测试层** | 🟡 | 239 个测试文件，但缺少 CI 覆盖率报告，E2E 覆盖度高 |
+| **测试层** | 🟡 | 239 个测试文件，CI 已配置 `coverageThreshold`（全局 60%）但未按文件细化阈值，E2E 覆盖度高 |
 | **CI/CD** | ✅ | GitHub Actions 全自动编译 + 多设备 E2E 测试 farm |
 | **安全层** | 🟡 | E2EE 基础设施就绪，但整体安全审计尚未执行 |
 
@@ -65,7 +65,7 @@ PocketPal 不是"移动端的 LLM 客户端"，它就是**手机作为推理设�
 | Yarn v1 (Classic, 已停止维护) | 安全补丁缺失、未来兼容风险 | 迁移至 Yarn v4 |
 | 14 个 MobX Store 缺乏分层 | 部分 Store 职责过重（UIStore 同时管语言/主题/E2E） | 引入 Service 层承接 Store 中的业务逻辑 |
 | 远程推理仅支持 OpenAI API | 无法接入 Anthropic/Gemini 等新模型 | Phase 3 中多 Provider 方案 |
-| 无代码覆盖率门禁 | 无法量化测试质量 | CI 中添加覆盖率阈值 |
+| 无代码覆盖率门禁 | ~~无法量化测试质量~~ | ✅ `jest.config.js` 已配置 `coverageThreshold`（全局 60%），CI 运行 `yarn test --coverage`；后续可考虑按文件细化阈值 |
 
 ---
 
@@ -99,7 +99,7 @@ PocketPal 不是"移动端的 LLM 客户端"，它就是**手机作为推理设�
 
 | 功能 | 优先级 | 方案 |
 |------|--------|------|
-| 数据导入功能 | P0 | 解析 JSON → 解密 → 写入 WatermelonDB |
+| ~~数据导入功能~~ | ~~P0~~ | ✅ 已完成：`importUtils.restoreBackup` 自动识别明文/密文，解密后写入 WatermelonDB；含聊天与 Pal 导入 |
 | Android IAP 联调 | P0 | 客户端直连 Google Play，无服务端 |
 | 联网搜索 MCP Tool | P1 | 客户端直连 DuckDuckGo，无需 API Key |
 | STT 语音输入 | P1 | 本地 Whisper + 系统 API |
@@ -112,7 +112,7 @@ PocketPal 不是"移动端的 LLM 客户端"，它就是**手机作为推理设�
 | 维度 | 评分 | 评估 |
 |------|------|------|
 | **代码质量** | 8/10 | ESLint + Prettier + Husky + Commitlint，工具链完备；TS 版本偏旧 |
-| **测试覆盖** | 7/10 | 239 测试文件，但缺少覆盖率报告；E2E 覆盖是亮点 |
+| **测试覆盖** | 7/10 | 239 测试文件，CI 已有全局覆盖率阈值（60%）但未按文件细化；E2E 覆盖是亮点 |
 | **文档完备度** | 7/10 | README、CONTRIBUTING、CODE_OF_CONDUCT 齐全；API 文档欠缺 |
 | **CI/CD 成熟度** | 9/10 | 完整 CI 管线 + 自动构建 + 多设备 E2E farm + Fastlane 发布 |
 | **架构可扩展性** | 8/10 | 接口抽象 + 注册模式 + 分层清晰；插件缺失 |

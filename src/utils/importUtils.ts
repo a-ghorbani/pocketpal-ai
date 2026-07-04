@@ -16,6 +16,9 @@ import {migrateCompletionSettings} from './completionSettingsVersions';
 import {palStore} from '../store';
 import type {Pal, ParameterDefinition} from '../types/pal';
 
+import {getE2EEService} from '../services/encryption';
+import {BACKUP_FORMAT} from './exportUtils';
+
 /**
  * Interface for imported chat session data
  */
@@ -471,4 +474,169 @@ const importSinglePal = async (pal: ImportedPal): Promise<void> => {
     console.error('Error importing single pal:', error);
     throw error;
   }
+};
+
+// ──────────────────────────────────────────────────────────────────────────
+// Encrypted backup restore (paired with exportUtils.exportEncryptedBackup)
+// ──────────────────────────────────────────────────────────────────────────
+
+/**
+ * Result of restoring a backup file. Counts are reported separately so
+ * the UI can tell the user exactly what was restored.
+ */
+export interface RestoreResult {
+  chats: number;
+  pals: number;
+}
+
+/**
+ * Detect whether a parsed JSON object is a PocketPal encrypted backup
+ * envelope (as produced by `exportEncryptedBackup`).
+ */
+export const isEncryptedBackup = (data: any): boolean => {
+  return (
+    !!data &&
+    typeof data === 'object' &&
+    data.format === BACKUP_FORMAT &&
+    data.encrypted === true &&
+    !!data.encryption &&
+    typeof data.encryption.salt === 'string' &&
+    typeof data.encryption.iv === 'string' &&
+    typeof data.encryption.ciphertext === 'string'
+  );
+};
+
+/**
+ * Result of the file-pick + read step. `data` is `null` when the user
+ * cancelled the picker. `needsPassword` is `true` when the picked file
+ * is an encrypted envelope and the caller must prompt for a password
+ * before calling `restoreBackup`.
+ */
+export interface BackupPickResult {
+  data: any;
+  needsPassword: boolean;
+}
+
+/**
+ * Pick a JSON file and read+parse it, reporting whether it is an
+ * encrypted backup that needs a password. Returns `{ data: null }` when
+ * the user cancels the picker.
+ */
+export const pickAndReadBackup = async (): Promise<BackupPickResult> => {
+  const fileUri = await pickJsonFile();
+  if (!fileUri) {
+    return {data: null, needsPassword: false};
+  }
+  const data = await readJsonFile(fileUri);
+  return {data, needsPassword: isEncryptedBackup(data)};
+};
+
+/**
+ * Route an already-parsed payload (decrypted or plain) to the right
+ * importer. Recognises, in order:
+ *   1. backup payload  → `{ chats: [...], pals: [...] }`
+ *   2. array           → pal array if first item has `systemPrompt`, else chat array
+ *   3. single object   → pal if it has `systemPrompt`, else chat
+ * Throws on unrecognized shapes.
+ */
+const importPayload = async (data: any): Promise<RestoreResult> => {
+  // 1. Backup payload (chats + pals bundled)
+  if (
+    data &&
+    !Array.isArray(data) &&
+    typeof data === 'object' &&
+    Array.isArray(data.chats)
+  ) {
+    let chats = 0;
+    for (const session of data.chats) {
+      await importSingleSession(validateSingleSession(session));
+      chats++;
+    }
+    let pals = 0;
+    if (Array.isArray(data.pals)) {
+      for (const pal of data.pals) {
+        await importSinglePal(validateSinglePal(pal));
+        pals++;
+      }
+    }
+    return {chats, pals};
+  }
+
+  // 2. Array — peek at the first element to detect pals vs chats
+  if (Array.isArray(data)) {
+    const sample = data[0];
+    if (sample && typeof sample === 'object' && 'systemPrompt' in sample) {
+      const validated = validateImportedPalData(data) as ImportedPal[];
+      for (const pal of validated) {
+        await importSinglePal(pal);
+      }
+      return {chats: 0, pals: validated.length};
+    }
+    const validated = validateImportedData(data) as ImportedChatSession[];
+    for (const session of validated) {
+      await importSingleSession(session);
+    }
+    return {chats: validated.length, pals: 0};
+  }
+
+  // 3. Single object
+  if (data && typeof data === 'object') {
+    if ('systemPrompt' in data) {
+      const validated = validateSinglePal(data);
+      await importSinglePal(validated);
+      return {chats: 0, pals: 1};
+    }
+    if ('title' in data) {
+      const validated = validateSingleSession(data);
+      await importSingleSession(validated);
+      return {chats: 1, pals: 0};
+    }
+  }
+
+  throw new Error('Unrecognized backup format');
+};
+
+/**
+ * Restore a backup from already-parsed data.
+ *
+ * - If `data` is an encrypted envelope, `password` is required: it is
+ *   used to derive a key (PBKDF2) and decrypt the payload before import.
+ *   A wrong password surfaces as a thrown
+ *   `'Failed to decrypt backup. Incorrect password or corrupted file.'`.
+ * - If `data` is plain (chats and/or pals), `password` is ignored and
+ *   the data is routed by shape.
+ *
+ * Returns counts of restored chats and pals.
+ */
+export const restoreBackup = async (
+  data: any,
+  password?: string,
+): Promise<RestoreResult> => {
+  if (isEncryptedBackup(data)) {
+    if (!password) {
+      throw new Error('Password is required to decrypt this backup');
+    }
+    const enc = data.encryption;
+    const e2ee = getE2EEService();
+    const keyBase64 = await e2ee.deriveKeyFromPassword(password, enc.salt);
+    let payloadJson: string;
+    try {
+      payloadJson = await e2ee.decrypt(
+        {
+          iv: enc.iv,
+          ciphertext: enc.ciphertext,
+          version: enc.version,
+        },
+        keyBase64,
+      );
+    } catch {
+      throw new Error(
+        'Failed to decrypt backup. Incorrect password or corrupted file.',
+      );
+    }
+    const payload = JSON.parse(payloadJson);
+    return importPayload(payload);
+  }
+
+  return importPayload(data);
 };
