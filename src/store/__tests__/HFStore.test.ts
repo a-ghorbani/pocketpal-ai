@@ -1,3 +1,4 @@
+import * as Keychain from 'react-native-keychain';
 import {
   mockHFModel1,
   mockHFModel2,
@@ -14,6 +15,7 @@ import {
 
 // Mock the API calls
 jest.mock('../../api/hf');
+jest.mock('react-native-keychain');
 
 describe('HFStore', () => {
   beforeEach(() => {
@@ -277,6 +279,178 @@ describe('HFStore', () => {
 
       expect(fetchModelFilesDetails).toHaveBeenCalled();
       // Should not throw error
+    });
+  });
+
+  describe('token management', () => {
+    beforeEach(() => {
+      hfStore.hfToken = null;
+      hfStore.useHfToken = true;
+      jest.clearAllMocks();
+    });
+
+    describe('isTokenPresent', () => {
+      it('should return false when token is null', () => {
+        hfStore.hfToken = null;
+        expect(hfStore.isTokenPresent).toBe(false);
+      });
+
+      it('should return false when token is empty string', () => {
+        hfStore.hfToken = '';
+        expect(hfStore.isTokenPresent).toBe(false);
+      });
+
+      it('should return false when token is only whitespace', () => {
+        hfStore.hfToken = '   ';
+        expect(hfStore.isTokenPresent).toBe(false);
+      });
+
+      it('should return true when token is set', () => {
+        hfStore.hfToken = 'hf_abc123';
+        expect(hfStore.isTokenPresent).toBe(true);
+      });
+    });
+
+    describe('shouldUseToken', () => {
+      it('should return false when no token is present', () => {
+        hfStore.hfToken = null;
+        hfStore.useHfToken = true;
+        expect(hfStore.shouldUseToken).toBe(false);
+      });
+
+      it('should return false when useHfToken is false', () => {
+        hfStore.hfToken = 'hf_abc123';
+        hfStore.useHfToken = false;
+        expect(hfStore.shouldUseToken).toBe(false);
+      });
+
+      it('should return true when token is present and useHfToken is true', () => {
+        hfStore.hfToken = 'hf_abc123';
+        hfStore.useHfToken = true;
+        expect(hfStore.shouldUseToken).toBe(true);
+      });
+    });
+
+    describe('setUseHfToken', () => {
+      it('should update useHfToken to true', () => {
+        hfStore.useHfToken = false;
+        hfStore.setUseHfToken(true);
+        expect(hfStore.useHfToken).toBe(true);
+      });
+
+      it('should update useHfToken to false', () => {
+        hfStore.useHfToken = true;
+        hfStore.setUseHfToken(false);
+        expect(hfStore.useHfToken).toBe(false);
+      });
+    });
+
+    describe('setToken', () => {
+      it('should save token to keychain and update hfToken', async () => {
+        const testToken = 'hf_test_token_123';
+        (Keychain.setGenericPassword as jest.Mock).mockResolvedValueOnce(true);
+
+        const result = await hfStore.setToken(testToken);
+
+        expect(Keychain.setGenericPassword).toHaveBeenCalledWith(
+          'hf_token',
+          testToken,
+          {service: 'hf_token_service'},
+        );
+        expect(hfStore.hfToken).toBe(testToken);
+        expect(result).toBe(true);
+      });
+
+      it('should return false when keychain save fails', async () => {
+        const testToken = 'hf_test_token_123';
+        (Keychain.setGenericPassword as jest.Mock).mockRejectedValueOnce(
+          new Error('Keychain error'),
+        );
+
+        const result = await hfStore.setToken(testToken);
+
+        expect(result).toBe(false);
+      });
+    });
+
+    describe('clearToken', () => {
+      it('should remove token from keychain and set hfToken to null', async () => {
+        hfStore.hfToken = 'hf_test_token_123';
+        (Keychain.resetGenericPassword as jest.Mock).mockResolvedValueOnce(true);
+
+        const result = await hfStore.clearToken();
+
+        expect(Keychain.resetGenericPassword).toHaveBeenCalledWith({
+          service: 'hf_token_service',
+        });
+        expect(hfStore.hfToken).toBeNull();
+        expect(result).toBe(true);
+      });
+
+      it('should return false when keychain reset fails', async () => {
+        (Keychain.resetGenericPassword as jest.Mock).mockRejectedValueOnce(
+          new Error('Keychain error'),
+        );
+
+        const result = await hfStore.clearToken();
+
+        expect(result).toBe(false);
+      });
+    });
+
+    describe('token usage in API calls', () => {
+      it('should pass auth token to fetchModels when shouldUseToken is true', async () => {
+        hfStore.hfToken = 'hf_test_token';
+        hfStore.useHfToken = true;
+        const mockResponse = {
+          models: [mockHFModel1],
+          nextLink: null,
+        };
+        (fetchModels as jest.Mock).mockResolvedValueOnce(mockResponse);
+
+        await hfStore.fetchModels();
+
+        expect(fetchModels).toHaveBeenCalledWith(
+          expect.objectContaining({
+            authToken: 'hf_test_token',
+          }),
+        );
+      });
+
+      it('should pass null auth token when useHfToken is false', async () => {
+        hfStore.hfToken = 'hf_test_token';
+        hfStore.useHfToken = false;
+        const mockResponse = {
+          models: [mockHFModel1],
+          nextLink: null,
+        };
+        (fetchModels as jest.Mock).mockResolvedValueOnce(mockResponse);
+
+        await hfStore.fetchModels();
+
+        expect(fetchModels).toHaveBeenCalledWith(
+          expect.objectContaining({
+            authToken: null,
+          }),
+        );
+      });
+
+      it('should pass auth token to fetchGGUFSpecs when token is set', async () => {
+        hfStore.hfToken = 'hf_test_token';
+        hfStore.useHfToken = true;
+        hfStore.models = [mockHFModel1];
+        (fetchGGUFSpecs as jest.Mock).mockResolvedValueOnce(mockGGUFSpecs1);
+        (fetchModelFilesDetails as jest.Mock).mockResolvedValueOnce(
+          mockHFModelFiles1,
+        );
+
+        await hfStore.fetchModelData(mockHFModel1.id);
+
+        expect(fetchGGUFSpecs).toHaveBeenCalledWith(
+          mockHFModel1.id,
+          'hf_test_token',
+        );
+      });
     });
   });
 });
