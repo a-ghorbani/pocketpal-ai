@@ -1060,7 +1060,9 @@
       "checkoutSessionExpired": "Your session expired. Sign in again to continue.",
       "signInAgain": "Sign in again",
       "palNotAvailable": "This pal is not available for purchase right now.",
-      "checkoutFailed": "Something went wrong. Please try again."
+      "checkoutFailed": "Something went wrong. Please try again.",
+      "purchaseSuccessful": "Purchase successful!",
+      "purchaseFailed": "Purchase failed. Please try again."
     }
   },
   "validation": {

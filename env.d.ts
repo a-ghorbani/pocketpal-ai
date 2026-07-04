@@ -27,4 +27,7 @@ declare module '@env' {
   // Google Sign-In Configuration
   export const GOOGLE_IOS_CLIENT_ID: string;
   export const GOOGLE_WEB_CLIENT_ID: string;
+
+  // Android IAP Configuration
+  export const GOOGLE_PLAY_PUBLIC_KEY: string;
 }

@@ -46,3 +46,4 @@ export const FIREBASE_APP_ID = '1:000000000001:web:test-app-id';
 export const PALSHUB_API_BASE_URL = 'https://palshub.ai';
 export const APPCHECK_DEBUG_TOKEN_ANDROID = 'test-android-token';
 export const APPCHECK_DEBUG_TOKEN_IOS = 'test-ios-token';
+export const GOOGLE_PLAY_PUBLIC_KEY = '';

@@ -1,4 +1,4 @@
-import { Platform } from 'react-native';
+import {Platform} from 'react-native';
 import {
   IPaymentService,
   Product,
@@ -8,35 +8,8 @@ import {
   ReceiptValidationResult,
   PurchaseType,
 } from './IPaymentService';
-import { GOOGLE_PLAY_PUBLIC_KEY } from '@env';
 
-const RSA_SHA256_ALGORITHM = 'RSA-SHA256';
-
-function verifySignature(
-  publicKeyPem: string,
-  data: string,
-  signature: string,
-): boolean {
-  try {
-    const buffer = Buffer.from(data, 'utf8');
-    const signatureBuffer = Buffer.from(signature, 'base64');
-
-    const crypto = require('crypto');
-    const verifier = crypto.createVerify(RSA_SHA256_ALGORITHM);
-    verifier.update(buffer);
-
-    let formattedKey = publicKeyPem;
-    if (!formattedKey.startsWith('-----BEGIN PUBLIC KEY-----')) {
-      formattedKey = '-----BEGIN PUBLIC KEY-----\n' + formattedKey + '\n-----END PUBLIC KEY-----';
-    }
-
-    return verifier.verify(formattedKey, signatureBuffer);
-  } catch {
-    return false;
-  }
-}
-
-export class AndroidIAPService implements IPaymentService {
+export class IOSIAPService implements IPaymentService {
   private _isReady: boolean = false;
   private purchaseUpdatedListener: any = null;
   private purchaseErrorListener: any = null;
@@ -50,49 +23,32 @@ export class AndroidIAPService implements IPaymentService {
   }
 
   async initialize(): Promise<boolean> {
-    if (Platform.OS !== 'android') {
-      console.warn('[AndroidIAP] Not on Android, skipping init');
+    if (Platform.OS !== 'ios') {
+      console.warn('[iOSIAP] Not on iOS, skipping init');
       return false;
     }
 
     try {
       const RNIap = this.getRNIapModule();
       if (!RNIap) {
-        console.warn('[AndroidIAP] react-native-iap not available');
+        console.warn('[iOSIAP] react-native-iap not available');
         return false;
       }
 
       await RNIap.initConnection();
 
-      // Register purchase event listeners so that purchase flows
-      // resolve even when the purchase is delivered asynchronously
-      // (e.g. pending transactions flushed on app launch).
       this.setupPurchaseListeners(RNIap);
 
-      // Flush any pending transactions from previous sessions.
-      try {
-        const flushed = await RNIap.flushFailedPurchasesCachedAsPending();
-        if (flushed && flushed.length > 0) {
-          console.log(
-            `[AndroidIAP] Flushed ${flushed.length} pending purchases`,
-          );
-        }
-      } catch (flushError) {
-        // Non-fatal: some devices don't have cached pending purchases.
-        console.warn('[AndroidIAP] flushFailedPurchases error:', flushError);
-      }
-
       this._isReady = true;
-      console.log('[AndroidIAP] Initialized successfully');
+      console.log('[iOSIAP] Initialized successfully');
       return true;
     } catch (error) {
-      console.error('[AndroidIAP] Init failed:', error);
+      console.error('[iOSIAP] Init failed:', error);
       return false;
     }
   }
 
   private setupPurchaseListeners(RNIap: any): void {
-    // Clean up any existing listeners first.
     this.removePurchaseListeners();
 
     this.purchaseUpdatedListener = RNIap.purchaseUpdatedListener(
@@ -109,7 +65,6 @@ export class AndroidIAPService implements IPaymentService {
 
     this.purchaseErrorListener = RNIap.purchaseErrorListener(
       (error: any) => {
-        // Resolve all pending purchase promises with the error.
         for (const [, resolver] of this.pendingPurchaseResolvers) {
           resolver({
             success: false,
@@ -138,7 +93,6 @@ export class AndroidIAPService implements IPaymentService {
 
   private getRNIapModule(): any {
     try {
-      // Dynamic import so the app doesn't crash if the library isn't installed
       // @ts-ignore
       return require('react-native-iap');
     } catch (e) {
@@ -158,9 +112,9 @@ export class AndroidIAPService implements IPaymentService {
       let products: any[] = [];
 
       if (type === 'subscription') {
-        products = await RNIap.getSubscriptions({ skus: productIds });
+        products = await RNIap.getSubscriptions({skus: productIds});
       } else {
-        products = await RNIap.getProducts({ skus: productIds });
+        products = await RNIap.getProducts({skus: productIds});
       }
 
       return products.map(p => ({
@@ -174,7 +128,7 @@ export class AndroidIAPService implements IPaymentService {
         localizedPrice: p.localizedPrice || p.price || '',
       }));
     } catch (error) {
-      console.error('[AndroidIAP] Failed to get products:', error);
+      console.error('[iOSIAP] Failed to get products:', error);
       return [];
     }
   }
@@ -183,7 +137,7 @@ export class AndroidIAPService implements IPaymentService {
     if (!this._isReady) {
       return {
         success: false,
-        error: { code: 'NOT_READY', message: 'Payment service not initialized' },
+        error: {code: 'NOT_READY', message: 'Payment service not initialized'},
       };
     }
 
@@ -192,43 +146,36 @@ export class AndroidIAPService implements IPaymentService {
       if (!RNIap) {
         return {
           success: false,
-          error: { code: 'NOT_AVAILABLE', message: 'IAP module not available' },
+          error: {code: 'NOT_AVAILABLE', message: 'IAP module not available'},
         };
       }
 
-      // For subscriptions, use requestSubscription instead of requestPurchase.
-      // The listener-based flow handles async purchase delivery; we also
-      // fall back to the synchronous return for older API versions.
       const purchasePromise = new Promise<PurchaseResult>((resolve) => {
         this.pendingPurchaseResolvers.set(productId, resolve);
-        // Safety timeout: if no listener fires within 60s, resolve with error.
         setTimeout(() => {
           if (this.pendingPurchaseResolvers.has(productId)) {
             this.pendingPurchaseResolvers.delete(productId);
             resolve({
               success: false,
-              error: { code: 'PURCHASE_TIMEOUT', message: 'Purchase timed out' },
+              error: {code: 'PURCHASE_TIMEOUT', message: 'Purchase timed out'},
             });
           }
         }, 60000);
       });
 
       const requestFn = isSubscription
-        ? RNIap.requestSubscription({ skus: [productId] })
-        : RNIap.requestPurchase({ skus: [productId] });
+        ? RNIap.requestSubscription({skus: [productId]})
+        : RNIap.requestPurchase({skus: [productId]});
 
-      // Race between the listener callback and the direct return.
-      // On most Android devices requestPurchase resolves after the listener
-      // fires, so the listener wins; on older versions it resolves directly.
       requestFn
         .then((result: any) => {
           if (result && !this.pendingPurchaseResolvers.has(productId)) {
-            return; // Already resolved by listener
+            return;
           }
           if (result) {
             const resolver = this.pendingPurchaseResolvers.get(productId);
             if (resolver) {
-              resolver({ success: true, purchase: this.mapPurchase(result) });
+              resolver({success: true, purchase: this.mapPurchase(result)});
               this.pendingPurchaseResolvers.delete(productId);
             }
           }
@@ -239,7 +186,7 @@ export class AndroidIAPService implements IPaymentService {
             if (error?.code === 'E_USER_CANCELLED') {
               resolver({
                 success: false,
-                error: { code: 'USER_CANCELLED', message: 'User cancelled purchase' },
+                error: {code: 'USER_CANCELLED', message: 'User cancelled purchase'},
               });
             } else {
               resolver({
@@ -257,12 +204,12 @@ export class AndroidIAPService implements IPaymentService {
       return purchasePromise;
     } catch (error: any) {
       this.pendingPurchaseResolvers.delete(productId);
-      console.error('[AndroidIAP] Purchase error:', error);
+      console.error('[iOSIAP] Purchase error:', error);
 
       if (error.code === 'E_USER_CANCELLED') {
         return {
           success: false,
-          error: { code: 'USER_CANCELLED', message: 'User cancelled purchase' },
+          error: {code: 'USER_CANCELLED', message: 'User cancelled purchase'},
         };
       }
 
@@ -286,7 +233,7 @@ export class AndroidIAPService implements IPaymentService {
       const purchases = await RNIap.getAvailablePurchases();
       return purchases.map((p: any) => this.mapPurchase(p));
     } catch (error) {
-      console.error('[AndroidIAP] Failed to get purchases:', error);
+      console.error('[iOSIAP] Failed to get purchases:', error);
       return [];
     }
   }
@@ -307,7 +254,7 @@ export class AndroidIAPService implements IPaymentService {
 
       return true;
     } catch (error) {
-      console.error('[AndroidIAP] Failed to finish transaction:', error);
+      console.error('[iOSIAP] Failed to finish transaction:', error);
       return false;
     }
   }
@@ -322,70 +269,20 @@ export class AndroidIAPService implements IPaymentService {
       const purchases = await RNIap.getAvailablePurchases();
       return purchases.map((p: any) => this.mapPurchase(p));
     } catch (error) {
-      console.error('[AndroidIAP] Failed to restore purchases:', error);
+      console.error('[iOSIAP] Failed to restore purchases:', error);
       return [];
     }
   }
 
   async validateReceipt(purchase: Purchase): Promise<ReceiptValidationResult> {
     try {
-      if (!GOOGLE_PLAY_PUBLIC_KEY) {
-        console.warn('[AndroidIAP] GOOGLE_PLAY_PUBLIC_KEY not configured, skipping signature verification');
-        return {
-          valid: true,
-          productId: purchase.productId,
-          purchaseTime: purchase.transactionDate,
-        };
-      }
-
-      const verificationData = purchase.verificationData;
-      if (!verificationData || !verificationData.verificationData) {
-        console.warn('[AndroidIAP] No verification data available');
-        return {
-          valid: true,
-          productId: purchase.productId,
-          purchaseTime: purchase.transactionDate,
-        };
-      }
-
-      try {
-        const parsed = JSON.parse(verificationData.verificationData);
-        if (parsed.signedData && parsed.signature) {
-          const isValid = verifySignature(
-            GOOGLE_PLAY_PUBLIC_KEY,
-            parsed.signedData,
-            parsed.signature,
-          );
-
-          if (!isValid) {
-            return {
-              valid: false,
-              error: 'Signature verification failed',
-            };
-          }
-
-          const signedData = JSON.parse(parsed.signedData);
-          return {
-            valid: true,
-            productId: signedData.productId || purchase.productId,
-            purchaseTime: signedData.purchaseTime || purchase.transactionDate,
-            expirationTime: signedData.purchaseTime
-              ? signedData.purchaseTime + (signedData.purchaseState === 0 ? 0 : undefined)
-              : undefined,
-            autoRenewing: signedData.autoRenewing || false,
-          };
-        }
-      } catch {
-        console.warn('[AndroidIAP] Failed to parse verification data, skipping signature verification');
-      }
-
       return {
         valid: true,
         productId: purchase.productId,
         purchaseTime: purchase.transactionDate,
       };
     } catch (error) {
-      console.error('[AndroidIAP] Receipt validation failed:', error);
+      console.error('[iOSIAP] Receipt validation failed:', error);
       return {
         valid: false,
         error: error instanceof Error ? error.message : 'Validation error',
@@ -399,12 +296,12 @@ export class AndroidIAPService implements IPaymentService {
       purchaseToken: raw.purchaseToken || raw.transactionReceipt || '',
       transactionId: raw.orderId || raw.transactionId || raw.transactionIdentifier || '',
       transactionDate: raw.transactionDate || raw.transactionTimestamp || Date.now(),
-      platform: 'android',
+      platform: 'ios',
       isAcknowledged: raw.isAcknowledged ?? false,
       isConsumed: false,
       verificationData: raw.transactionReceipt
         ? {
-            source: 'google_play',
+            source: 'app_store',
             verificationData: raw.transactionReceipt,
           }
         : undefined,
@@ -420,20 +317,20 @@ export class AndroidIAPService implements IPaymentService {
         RNIap.endConnection();
       }
       this._isReady = false;
-      console.log('[AndroidIAP] Shut down');
+      console.log('[iOSIAP] Shut down');
     } catch (error) {
-      console.error('[AndroidIAP] Shutdown error:', error);
+      console.error('[iOSIAP] Shutdown error:', error);
     }
   }
 }
 
-let androidIapInstance: AndroidIAPService | null = null;
+let iosIapInstance: IOSIAPService | null = null;
 
-export function getAndroidIAPService(): AndroidIAPService {
-  if (!androidIapInstance) {
-    androidIapInstance = new AndroidIAPService();
+export function getIOSIAPService(): IOSIAPService {
+  if (!iosIapInstance) {
+    iosIapInstance = new IOSIAPService();
   }
-  return androidIapInstance;
+  return iosIapInstance;
 }
 
-export default AndroidIAPService;
+export default IOSIAPService;

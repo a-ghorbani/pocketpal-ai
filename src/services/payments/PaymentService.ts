@@ -7,7 +7,8 @@ import {
   ReceiptValidationResult,
   PurchaseType,
 } from './IPaymentService';
-import { AndroidIAPService, getAndroidIAPService } from './AndroidIAPService';
+import { getAndroidIAPService } from './AndroidIAPService';
+import { getIOSIAPService } from './iOSIAPService';
 import { getMockPaymentService } from './MockPaymentService';
 import { PALSHUB_API_BASE_URL } from '@env';
 
@@ -32,6 +33,10 @@ export class PaymentService implements IPaymentService {
 
     if (platform === 'android' || (platform === 'auto' && Platform.OS === 'android')) {
       return getAndroidIAPService();
+    }
+
+    if (platform === 'ios' || (platform === 'auto' && Platform.OS === 'ios')) {
+      return getIOSIAPService();
     }
 
     return getMockPaymentService();

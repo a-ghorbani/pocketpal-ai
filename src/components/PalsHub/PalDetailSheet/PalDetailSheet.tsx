@@ -15,6 +15,7 @@ import {Sheet} from '../../Sheet';
 import {createStyles} from './styles';
 
 import {authService, palsHubService} from '../../../services';
+import {getPaymentService} from '../../../services/payments';
 
 import {palStore, checkoutFlowStore} from '../../../store';
 
@@ -132,12 +133,53 @@ export const PalDetailSheet: React.FC<PalDetailSheetProps> = observer(
       onClose();
     };
 
-    const handleBuyPress = () => {
+    const handleBuyPress = async () => {
+      if (Platform.OS === 'android') {
+        try {
+          const paymentService = getPaymentService();
+          if (!paymentService.isReady) {
+            await paymentService.initialize();
+          }
+
+          const result = await paymentService.purchaseProduct(
+            displayPal.id,
+          );
+
+          if (result.success && result.purchase) {
+            Alert.alert(
+              l10n.palsScreen.palDetailSheet.success,
+              l10n.palsScreen.palDetailSheet.purchaseSuccessful,
+              [{text: l10n.common.ok}],
+            );
+
+            palsHubService
+              .getPal(displayPal.id)
+              .then(setDetailedPal)
+              .catch(() => {});
+          } else {
+            Alert.alert(
+              l10n.palsScreen.palDetailSheet.error,
+              result.error?.message ||
+                l10n.palsScreen.palDetailSheet.purchaseFailed,
+              [{text: l10n.common.ok}],
+            );
+          }
+        } catch (error) {
+          console.error('Android IAP purchase error:', error);
+          Alert.alert(
+            l10n.palsScreen.palDetailSheet.error,
+            l10n.palsScreen.palDetailSheet.purchaseFailed,
+            [{text: l10n.common.ok}],
+          );
+        }
+        return;
+      }
+
       if (Platform.OS !== 'ios') {
         Linking.openURL(getPalBuyUrl(displayPal.id)).catch(() => {});
         return;
       }
-      // Send the user to sign-in rather than a 401 error when logged out.
+
       if (!authService.isAuthenticated) {
         onSignInPress?.();
         return;
