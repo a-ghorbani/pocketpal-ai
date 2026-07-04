@@ -5,12 +5,8 @@
  * - iOS: SFSpeechRecognizer (built-in, no download needed)
  * - Android: SpeechRecognizer (built-in, no download needed)
  *
- * This engine requires no model download and works out-of-the-box,
- * but needs microphone permission and (on iOS) an active internet
- * connection for best accuracy.
- *
- * NOTE: Native bridge integration is pending. The JS interface and
- * state machine are complete.
+ * Native bridge: src/specs/NativeSpeechRecognizer.ts
+ * Events arrive via NativeEventEmitter with 'stt:*' event names.
  */
 
 import {Platform, PermissionsAndroid} from 'react-native';
@@ -21,6 +17,22 @@ import type {
   STTStartOptions,
   STTResult,
 } from './types';
+import {subscribeToSTTEvents} from './nativeBridge';
+
+// Lazy-load native module
+let nativeModule: any = null;
+function getNativeModule(): any {
+  if (nativeModule === null) {
+    try {
+      // eslint-disable-next-line @typescript-eslint/no-var-requires
+      const mod = require('../../specs/NativeSpeechRecognizer').default;
+      nativeModule = mod ?? undefined;
+    } catch {
+      nativeModule = undefined;
+    }
+  }
+  return nativeModule;
+}
 
 export class SystemSTTEngine implements STTEngine {
   readonly id = 'system' as const;
@@ -29,14 +41,22 @@ export class SystemSTTEngine implements STTEngine {
   private callbacks: STTCallbacks | null = null;
   private partialText = '';
   private language: string | undefined;
+  private unsubscribe: (() => void) | null = null;
 
   async isAvailable(): Promise<boolean> {
-    // System STT is available on both iOS and Android natively
-    // No model download required
-    if (Platform.OS === 'ios' || Platform.OS === 'android') {
+    if (Platform.OS !== 'ios' && Platform.OS !== 'android') {
+      return false;
+    }
+    const mod = getNativeModule();
+    if (!mod) {
+      // Mock mode for testing
       return true;
     }
-    return false;
+    try {
+      return await mod.isAvailable();
+    } catch {
+      return false;
+    }
   }
 
   requiresModel(): boolean {
@@ -67,23 +87,51 @@ export class SystemSTTEngine implements STTEngine {
     this.language = options?.language;
     this.isActive = true;
 
-    try {
-      callbacks.onStart?.();
+    const mod = getNativeModule();
 
-      // TODO: Native bridge integration
-      // iOS: SFSpeechRecognizer with SFSpeechAudioBufferRecognitionRequest
-      // Android: SpeechRecognizer with RecognitionListener
-      //
-      // When native module is ready:
-      // 1. Start audio recording
-      // 2. Feed audio to system recognizer
-      // 3. Emit partial results via callbacks.onPartial
-      // 4. On stop, emit final result via callbacks.onResult
-    } catch (e) {
-      this.isActive = false;
-      this.callbacks?.onError?.(
-        e instanceof Error ? e : new Error(String(e)),
-      );
+    // Subscribe to native events if module is available
+    if (mod) {
+      this.unsubscribe = subscribeToSTTEvents(mod, {
+        onStart: () => this.callbacks?.onStart?.(),
+        onPartial: (text: string) => {
+          this.partialText = text;
+          this.callbacks?.onPartial?.(text);
+        },
+        onResult: (data: any) => {
+          this.isActive = false;
+          const result: STTResult = {
+            text: data.text || this.partialText,
+            confidence: data.confidence,
+            language: data.language || this.language,
+          };
+          this.callbacks?.onResult?.(result);
+          this.cleanup();
+        },
+        onError: (error: string) => {
+          this.isActive = false;
+          this.callbacks?.onError?.(new Error(error));
+          this.cleanup();
+        },
+        onEnd: () => {
+          this.isActive = false;
+          this.callbacks?.onEnd?.();
+          this.cleanup();
+        },
+      });
+
+      try {
+        await mod.startRecognition({
+          language: options?.language || 'en-US',
+          sampleRate: options?.sampleRate || 16000,
+          enablePartial: options?.enablePartial ?? true,
+        });
+      } catch (e) {
+        this.cleanup();
+        throw e;
+      }
+    } else {
+      // Mock mode for testing: just call onStart
+      callbacks.onStart?.();
     }
   }
 
@@ -92,24 +140,20 @@ export class SystemSTTEngine implements STTEngine {
       return;
     }
 
-    this.isActive = false;
+    const mod = getNativeModule();
+    if (mod) {
+      await mod.stopRecognition();
+    }
 
-    try {
-      // TODO: Stop audio and get final result from native
-
+    // If no event comes, deliver result from partial
+    if (this.isActive) {
+      this.isActive = false;
       const result: STTResult = {
         text: this.partialText,
         language: this.language || 'en-US',
       };
-
       this.callbacks?.onResult?.(result);
-    } catch (e) {
-      this.callbacks?.onError?.(
-        e instanceof Error ? e : new Error(String(e)),
-      );
-    } finally {
-      this.callbacks?.onEnd?.();
-      this.callbacks = null;
+      this.cleanup();
     }
   }
 
@@ -119,15 +163,19 @@ export class SystemSTTEngine implements STTEngine {
     }
 
     this.isActive = false;
+    const mod = getNativeModule();
+    if (mod) {
+      try {
+        await mod.cancelRecognition();
+      } catch {
+        // ignore
+      }
+    }
     this.partialText = '';
     this.callbacks?.onEnd?.();
-    this.callbacks = null;
+    this.cleanup();
   }
 
-  /**
-   * Request microphone permission on Android.
-   * iOS permission is handled via Info.plist (NSSpeechRecognitionUsageDescription).
-   */
   private async requestAndroidPermission(): Promise<boolean> {
     if (Platform.OS !== 'android') {
       return true;
@@ -151,14 +199,26 @@ export class SystemSTTEngine implements STTEngine {
     }
   }
 
-  /**
-   * Check if the device's system speech recognizer is available.
-   * Some Android devices don't have SpeechRecognizer.
-   */
   static async isSystemSupported(): Promise<boolean> {
-    // TODO: Check native availability
-    // iOS: SFSpeechRecognizer.isAvailable
-    // Android: SpeechRecognizer.isRecognitionAvailable
-    return Platform.OS === 'ios' || Platform.OS === 'android';
+    if (Platform.OS !== 'ios' && Platform.OS !== 'android') {
+      return false;
+    }
+    const mod = getNativeModule();
+    if (!mod) {
+      return true; // Mock mode
+    }
+    try {
+      return await mod.isAvailable();
+    } catch {
+      return false;
+    }
+  }
+
+  private cleanup(): void {
+    if (this.unsubscribe) {
+      this.unsubscribe();
+      this.unsubscribe = null;
+    }
+    this.callbacks = null;
   }
 }

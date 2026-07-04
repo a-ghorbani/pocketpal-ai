@@ -8,3 +8,5 @@ export {
   resetSTTEngines,
 } from './engineRegistry';
 export {sttRuntime} from './sttRuntime';
+export {subscribeToSTTEvents} from './nativeBridge';
+export type {STTEventName, STTEventData} from './nativeBridge';

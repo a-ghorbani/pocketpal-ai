@@ -2,13 +2,10 @@
  * WhisperSTTEngine — local Whisper.cpp STT via llama.rn.
  *
  * Architecture (ADR-2026-003): Primary STT engine, fully offline.
- * Uses Whisper GGUF model loaded via llama.rn, same inference
- * infrastructure as the chat LLM.
+ * Uses Whisper GGUF model loaded via the native WhisperTranscribeModule.
  *
- * NOTE: Native bridge integration is pending. The JS interface and
- * state machine are complete; the actual audio capture → whisper
- * inference pipeline will be wired when llama.rn exposes the
- * whisper transcribe API.
+ * Native bridge: src/specs/NativeWhisperTranscribe.ts
+ * Events arrive via NativeEventEmitter with 'stt:*' event names.
  */
 
 import {Platform} from 'react-native';
@@ -19,9 +16,23 @@ import type {
   STTStartOptions,
   STTResult,
 } from './types';
+import {subscribeToSTTEvents} from './nativeBridge';
 
-// Default Whisper model size (tiny ~75MB, base ~142MB)
-// These will be configurable via Settings once native bridge is ready
+// Lazy-load native module to avoid crash if not linked yet
+let nativeModule: any = null;
+function getNativeModule(): any {
+  if (nativeModule === null) {
+    try {
+      // eslint-disable-next-line @typescript-eslint/no-var-requires
+      const mod = require('../../specs/NativeWhisperTranscribe').default;
+      nativeModule = mod ?? undefined;
+    } catch {
+      nativeModule = undefined;
+    }
+  }
+  return nativeModule;
+}
+
 const DEFAULT_MODEL_SIZE = 'tiny';
 
 export class WhisperSTTEngine implements STTEngine {
@@ -31,14 +42,18 @@ export class WhisperSTTEngine implements STTEngine {
   private callbacks: STTCallbacks | null = null;
   private partialText = '';
   private modelLoaded = false;
-  private modelPath: string | null = null;
+  private unsubscribe: (() => void) | null = null;
 
   async isAvailable(): Promise<boolean> {
-    // Whisper STT requires:
-    // 1. llama.rn to expose transcribe API (pending)
-    // 2. A Whisper GGUF model to be downloaded
-    // For now, returns false until native bridge is wired
-    return this.modelLoaded;
+    const mod = getNativeModule();
+    if (!mod) {
+      return false;
+    }
+    try {
+      return await mod.isModelLoaded();
+    } catch {
+      return false;
+    }
   }
 
   requiresModel(): boolean {
@@ -53,7 +68,14 @@ export class WhisperSTTEngine implements STTEngine {
       throw new Error('WhisperSTTEngine: already listening');
     }
 
-    if (!this.modelLoaded || !this.modelPath) {
+    const mod = getNativeModule();
+    if (!mod) {
+      throw new Error(
+        'WhisperSTTEngine: native module not linked. Ensure WhisperTranscribeModule is registered.',
+      );
+    }
+
+    if (!this.modelLoaded) {
       throw new Error(
         `WhisperSTTEngine: model not loaded. Download a Whisper ${DEFAULT_MODEL_SIZE} model first.`,
       );
@@ -63,23 +85,45 @@ export class WhisperSTTEngine implements STTEngine {
     this.partialText = '';
     this.isActive = true;
 
-    try {
-      callbacks.onStart?.();
+    // Subscribe to native events
+    this.unsubscribe = subscribeToSTTEvents(mod, {
+      onStart: () => this.callbacks?.onStart?.(),
+      onPartial: (text: string) => {
+        this.partialText = text;
+        this.callbacks?.onPartial?.(text);
+      },
+      onResult: (data: any) => {
+        this.isActive = false;
+        const result: STTResult = {
+          text: data.text || this.partialText,
+          confidence: data.confidence,
+          language: data.language,
+          segments: data.segments,
+        };
+        this.callbacks?.onResult?.(result);
+        this.cleanup();
+      },
+      onError: (error: string) => {
+        this.isActive = false;
+        this.callbacks?.onError?.(new Error(error));
+        this.cleanup();
+      },
+      onEnd: () => {
+        this.isActive = false;
+        this.callbacks?.onEnd?.();
+        this.cleanup();
+      },
+    });
 
-      // TODO: Native bridge integration
-      // When llama.rn exposes whisper transcribe:
-      // 1. Start audio capture (AudioRecorder)
-      // 2. Feed audio chunks to whisper context
-      // 3. Emit partial results via callbacks.onPartial
-      // 4. On stop, emit final result via callbacks.onResult
-      //
-      // For now, this is a placeholder that will be replaced
-      // with actual native calls when the bridge is ready.
+    try {
+      await mod.startTranscription({
+        language: options?.language || 'auto',
+        sampleRate: options?.sampleRate || 16000,
+        enablePartial: options?.enablePartial ?? true,
+      });
     } catch (e) {
-      this.isActive = false;
-      this.callbacks?.onError?.(
-        e instanceof Error ? e : new Error(String(e)),
-      );
+      this.cleanup();
+      throw e;
     }
   }
 
@@ -88,24 +132,20 @@ export class WhisperSTTEngine implements STTEngine {
       return;
     }
 
-    this.isActive = false;
-
-    try {
-      // TODO: Stop audio capture and run final transcribe
-
+    const mod = getNativeModule();
+    if (mod) {
+      await mod.stopTranscription();
+    }
+    // The result will be delivered via 'stt:result' event
+    // If no event comes, force a result from partial
+    if (this.isActive) {
+      this.isActive = false;
       const result: STTResult = {
         text: this.partialText,
         language: 'auto',
       };
-
       this.callbacks?.onResult?.(result);
-    } catch (e) {
-      this.callbacks?.onError?.(
-        e instanceof Error ? e : new Error(String(e)),
-      );
-    } finally {
-      this.callbacks?.onEnd?.();
-      this.callbacks = null;
+      this.cleanup();
     }
   }
 
@@ -115,45 +155,58 @@ export class WhisperSTTEngine implements STTEngine {
     }
 
     this.isActive = false;
+    const mod = getNativeModule();
+    if (mod) {
+      try {
+        await mod.cancelTranscription();
+      } catch {
+        // ignore
+      }
+    }
     this.partialText = '';
     this.callbacks?.onEnd?.();
-    this.callbacks = null;
+    this.cleanup();
   }
 
-  /**
-   * Load a Whisper model from the given path.
-   * Will be called by STTRuntime when the user downloads a model.
-   */
   async loadModel(modelPath: string): Promise<void> {
-    // TODO: Native bridge integration
-    // When llama.rn exposes whisper model loading:
-    // const context = await Llama.createContext(modelPath, {whisper: true})
-    this.modelPath = modelPath;
+    const mod = getNativeModule();
+    if (!mod) {
+      // Mock mode: mark as loaded for testing
+      this.modelLoaded = true;
+      return;
+    }
+    await mod.loadModel(modelPath);
     this.modelLoaded = true;
   }
 
-  /**
-   * Unload the current model and free memory.
-   */
   async unloadModel(): Promise<void> {
-    this.modelPath = null;
+    const mod = getNativeModule();
+    if (mod && this.modelLoaded) {
+      try {
+        await mod.unloadModel();
+      } catch {
+        // ignore
+      }
+    }
     this.modelLoaded = false;
   }
 
-  /** Whether a model is currently loaded. */
   isModelLoaded(): boolean {
     return this.modelLoaded;
   }
 
-  /** The size of the recommended default model. */
   getDefaultModelSize(): string {
     return DEFAULT_MODEL_SIZE;
   }
 
-  /**
-   * Platform check — Whisper STT is supported on both iOS and Android
-   * via llama.rn, but not on web.
-   */
+  private cleanup(): void {
+    if (this.unsubscribe) {
+      this.unsubscribe();
+      this.unsubscribe = null;
+    }
+    this.callbacks = null;
+  }
+
   static isPlatformSupported(): boolean {
     return Platform.OS === 'ios' || Platform.OS === 'android';
   }

@@ -8,6 +8,7 @@ export * from './FeedbackStore';
 export * from './DeepLinkStore';
 export * from './ServerStore';
 export * from './TTSStore';
+export * from './STTStore';
 export * from './CheckoutFlowStore';
 export * from './AuthStore';
 export * from './SyncStore';

@@ -52,6 +52,7 @@ export * from './SendButton';
 export * from './SidebarContent';
 export * from './Sheet';
 export * from './SkillsDisplay';
+export * from './STTButton';
 export * from './StopButton';
 export * from './StatusIcon';
 export * from './TextDivider';

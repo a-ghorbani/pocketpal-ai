@@ -34,7 +34,7 @@ import {chatSessionStore, modelStore, palStore, uiStore} from '../../store';
 import {MessageType} from '../../utils/types';
 import {L10nContext, UserContext} from '../../utils';
 
-import {SendButton, StopButton, Menu, VoiceChip} from '..';
+import {SendButton, StopButton, Menu, VoiceChip, STTButton} from '..';
 
 export interface ChatInputTopLevelProps {
   /** Whether the AI is currently streaming tokens */
@@ -595,6 +595,10 @@ export const ChatInput = observer(
                   audio independently of text generation. Self-gates:
                   returns null when TTS is unavailable. */}
               <VoiceChip />
+
+              {/* STT button — microphone for voice input.
+                  Self-gates: returns null when STT is disabled. */}
+              <STTButton />
 
               {/* Send/Stop Button */}
               {isStopVisible ? (

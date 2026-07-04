@@ -581,6 +581,14 @@
         "thinkingEnabled": "Thinking mode enabled",
         "thinkingDisabled": "Thinking mode disabled",
         "thinkText": "Think"
+      },
+      "stt": {
+        "startListening": "Start voice input",
+        "stopListening": "Stop voice input",
+        "listening": "Listening...",
+        "notAvailable": "Speech recognition is not available on this device",
+        "permissionDenied": "Microphone permission denied",
+        "error": "Speech recognition error"
       }
     },
     "contentReportSheet": {
