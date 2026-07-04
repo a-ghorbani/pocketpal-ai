@@ -2,6 +2,10 @@ declare const __E2E__: boolean;
 
 declare module '@env' {
   export const FIREBASE_FUNCTIONS_URL: string;
+  export const FIREBASE_API_KEY: string;
+  export const FIREBASE_PROJECT_ID: string;
+  export const FIREBASE_MESSAGING_SENDER_ID: string;
+  export const FIREBASE_APP_ID: string;
   export const APPCHECK_DEBUG_TOKEN_ANDROID: string;
   export const APPCHECK_DEBUG_TOKEN_IOS: string;
 

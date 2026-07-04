@@ -39,6 +39,10 @@ export const GOOGLE_IOS_CLIENT_ID =
 export const GOOGLE_WEB_CLIENT_ID =
   'test-google-web-client-id.apps.googleusercontent.com';
 export const FIREBASE_FUNCTIONS_URL = 'https://test-firebase-functions.com';
+export const FIREBASE_API_KEY = 'test-firebase-api-key';
+export const FIREBASE_PROJECT_ID = 'test-pocketpal-project';
+export const FIREBASE_MESSAGING_SENDER_ID = '000000000001';
+export const FIREBASE_APP_ID = '1:000000000001:web:test-app-id';
 export const PALSHUB_API_BASE_URL = 'https://palshub.ai';
 export const APPCHECK_DEBUG_TOKEN_ANDROID = 'test-android-token';
 export const APPCHECK_DEBUG_TOKEN_IOS = 'test-ios-token';
