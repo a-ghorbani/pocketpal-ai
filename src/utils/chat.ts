@@ -244,7 +244,10 @@ export async function applyChatTemplate(
       }) as string;
     }
   } catch (error) {
-    console.error('Error applying chat template:', error); // TODO: handle error
+    console.error('Error applying chat template:', error);
+    // Fall through to return the fallback formattedChat (or a space)
+    // so the caller gets a non-empty string and inference can proceed
+    // with the raw message text as a last resort.
   }
 
   return formattedChat || ' ';

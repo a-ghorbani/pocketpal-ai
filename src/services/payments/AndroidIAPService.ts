@@ -14,6 +14,10 @@ export class AndroidIAPService implements IPaymentService {
   private _isReady: boolean = false;
   private purchaseUpdatedListener: any = null;
   private purchaseErrorListener: any = null;
+  private pendingPurchaseResolvers: Map<
+    string,
+    (result: PurchaseResult) => void
+  > = new Map();
 
   get isReady(): boolean {
     return this._isReady;
@@ -33,12 +37,76 @@ export class AndroidIAPService implements IPaymentService {
       }
 
       await RNIap.initConnection();
+
+      // Register purchase event listeners so that purchase flows
+      // resolve even when the purchase is delivered asynchronously
+      // (e.g. pending transactions flushed on app launch).
+      this.setupPurchaseListeners(RNIap);
+
+      // Flush any pending transactions from previous sessions.
+      try {
+        const flushed = await RNIap.flushFailedPurchasesCachedAsPending();
+        if (flushed && flushed.length > 0) {
+          console.log(
+            `[AndroidIAP] Flushed ${flushed.length} pending purchases`,
+          );
+        }
+      } catch (flushError) {
+        // Non-fatal: some devices don't have cached pending purchases.
+        console.warn('[AndroidIAP] flushFailedPurchases error:', flushError);
+      }
+
       this._isReady = true;
       console.log('[AndroidIAP] Initialized successfully');
       return true;
     } catch (error) {
       console.error('[AndroidIAP] Init failed:', error);
       return false;
+    }
+  }
+
+  private setupPurchaseListeners(RNIap: any): void {
+    // Clean up any existing listeners first.
+    this.removePurchaseListeners();
+
+    this.purchaseUpdatedListener = RNIap.purchaseUpdatedListener(
+      (purchase: any) => {
+        const productId =
+          purchase.productId || purchase.skus?.[0] || '';
+        const resolver = this.pendingPurchaseResolvers.get(productId);
+        if (resolver) {
+          resolver({success: true, purchase: this.mapPurchase(purchase)});
+          this.pendingPurchaseResolvers.delete(productId);
+        }
+      },
+    );
+
+    this.purchaseErrorListener = RNIap.purchaseErrorListener(
+      (error: any) => {
+        // Resolve all pending purchase promises with the error.
+        for (const [, resolver] of this.pendingPurchaseResolvers) {
+          resolver({
+            success: false,
+            error: {
+              code: error.code || 'PURCHASE_ERROR',
+              message: error.message || 'Purchase failed',
+              domain: error.domain,
+            },
+          });
+        }
+        this.pendingPurchaseResolvers.clear();
+      },
+    );
+  }
+
+  private removePurchaseListeners(): void {
+    if (this.purchaseUpdatedListener) {
+      this.purchaseUpdatedListener.remove();
+      this.purchaseUpdatedListener = null;
+    }
+    if (this.purchaseErrorListener) {
+      this.purchaseErrorListener.remove();
+      this.purchaseErrorListener = null;
     }
   }
 
@@ -85,7 +153,7 @@ export class AndroidIAPService implements IPaymentService {
     }
   }
 
-  async purchaseProduct(productId: string): Promise<PurchaseResult> {
+  async purchaseProduct(productId: string, isSubscription: boolean = false): Promise<PurchaseResult> {
     if (!this._isReady) {
       return {
         success: false,
@@ -102,18 +170,67 @@ export class AndroidIAPService implements IPaymentService {
         };
       }
 
-      const result = await RNIap.requestPurchase({ sku: productId });
+      // For subscriptions, use requestSubscription instead of requestPurchase.
+      // The listener-based flow handles async purchase delivery; we also
+      // fall back to the synchronous return for older API versions.
+      const purchasePromise = new Promise<PurchaseResult>((resolve) => {
+        this.pendingPurchaseResolvers.set(productId, resolve);
+        // Safety timeout: if no listener fires within 60s, resolve with error.
+        setTimeout(() => {
+          if (this.pendingPurchaseResolvers.has(productId)) {
+            this.pendingPurchaseResolvers.delete(productId);
+            resolve({
+              success: false,
+              error: { code: 'PURCHASE_TIMEOUT', message: 'Purchase timed out' },
+            });
+          }
+        }, 60000);
+      });
 
-      if (result) {
-        const purchase = this.mapPurchase(result);
-        return { success: true, purchase };
-      }
+      const requestFn = isSubscription
+        ? RNIap.requestSubscription({ skus: [productId] })
+        : RNIap.requestPurchase({ skus: [productId] });
 
-      return {
-        success: false,
-        error: { code: 'PURCHASE_FAILED', message: 'Purchase failed' },
-      };
+      // Race between the listener callback and the direct return.
+      // On most Android devices requestPurchase resolves after the listener
+      // fires, so the listener wins; on older versions it resolves directly.
+      requestFn
+        .then((result: any) => {
+          if (result && !this.pendingPurchaseResolvers.has(productId)) {
+            return; // Already resolved by listener
+          }
+          if (result) {
+            const resolver = this.pendingPurchaseResolvers.get(productId);
+            if (resolver) {
+              resolver({ success: true, purchase: this.mapPurchase(result) });
+              this.pendingPurchaseResolvers.delete(productId);
+            }
+          }
+        })
+        .catch((error: any) => {
+          const resolver = this.pendingPurchaseResolvers.get(productId);
+          if (resolver) {
+            if (error?.code === 'E_USER_CANCELLED') {
+              resolver({
+                success: false,
+                error: { code: 'USER_CANCELLED', message: 'User cancelled purchase' },
+              });
+            } else {
+              resolver({
+                success: false,
+                error: {
+                  code: error?.code || 'PURCHASE_ERROR',
+                  message: error?.message || 'Purchase failed',
+                },
+              });
+            }
+            this.pendingPurchaseResolvers.delete(productId);
+          }
+        });
+
+      return purchasePromise;
     } catch (error: any) {
+      this.pendingPurchaseResolvers.delete(productId);
       console.error('[AndroidIAP] Purchase error:', error);
 
       if (error.code === 'E_USER_CANCELLED') {
@@ -241,6 +358,8 @@ export class AndroidIAPService implements IPaymentService {
   }
 
   shutdown(): void {
+    this.removePurchaseListeners();
+    this.pendingPurchaseResolvers.clear();
     try {
       const RNIap = this.getRNIapModule();
       if (RNIap) {
