@@ -11,6 +11,7 @@ import {
   fetchGGUFSpecs,
   fetchModelFilesDetails,
   fetchModels,
+  validateToken,
 } from '../../api/hf';
 
 // Mock the API calls
@@ -450,6 +451,60 @@ describe('HFStore', () => {
           mockHFModel1.id,
           'hf_test_token',
         );
+      });
+    });
+
+    describe('validateToken', () => {
+      it('should validate a token successfully', async () => {
+        const testToken = 'hf_valid_token';
+        (validateToken as jest.Mock).mockResolvedValueOnce({
+          valid: true,
+          username: 'testuser',
+        });
+
+        const result = await hfStore.validateToken(testToken);
+
+        expect(validateToken).toHaveBeenCalledWith(testToken);
+        expect(result.valid).toBe(true);
+        expect(result.username).toBe('testuser');
+      });
+
+      it('should return invalid for bad token', async () => {
+        const testToken = 'hf_bad_token';
+        (validateToken as jest.Mock).mockResolvedValueOnce({
+          valid: false,
+          error: 'Invalid or expired token',
+        });
+
+        const result = await hfStore.validateToken(testToken);
+
+        expect(validateToken).toHaveBeenCalledWith(testToken);
+        expect(result.valid).toBe(false);
+      });
+    });
+
+    describe('validateCurrentToken', () => {
+      it('should return invalid when no token is set', async () => {
+        hfStore.hfToken = null;
+
+        const result = await hfStore.validateCurrentToken();
+
+        expect(result.valid).toBe(false);
+        expect(result.error).toBe('No token set');
+      });
+
+      it('should validate current token when set', async () => {
+        hfStore.hfToken = 'hf_current_token';
+        (validateToken as jest.Mock).mockResolvedValueOnce({
+          valid: true,
+          username: 'currentuser',
+        });
+
+        const result = await hfStore.validateCurrentToken();
+
+        expect(validateToken).toHaveBeenCalledWith('hf_current_token');
+        expect(result.valid).toBe(true);
+        expect(result.username).toBe('currentuser');
       });
     });
   });

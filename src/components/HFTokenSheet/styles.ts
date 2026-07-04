@@ -34,6 +34,25 @@ export const createStyles = (theme: Theme) => {
     input: {
       marginBottom: 8,
     },
+    validateButton: {
+      marginTop: 8,
+      marginBottom: 12,
+    },
+    validationResult: {
+      marginTop: 8,
+      marginBottom: 16,
+      padding: 12,
+      borderRadius: 8,
+      textAlign: 'center',
+    },
+    validationSuccess: {
+      backgroundColor: theme.colors.primaryContainer,
+      color: theme.colors.onPrimaryContainer,
+    },
+    validationError: {
+      backgroundColor: theme.colors.errorContainer,
+      color: theme.colors.onErrorContainer,
+    },
     buttonsContainer: {
       flexDirection: 'row',
       justifyContent: 'space-between',

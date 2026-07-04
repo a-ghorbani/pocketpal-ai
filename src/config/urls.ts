@@ -13,6 +13,7 @@ export const urls = {
   modelsList: () => `${HF_API_BASE}`,
   modelTree: (modelId: string) => `${HF_API_BASE}/${modelId}/tree/main`,
   modelSpecs: (modelId: string) => `${HF_API_BASE}/${modelId}`,
+  whoami: () => `${HF_DOMAIN}/api/whoami-v2`,
 
   // Web URLs
   modelDownloadFile: (modelId: string, filename: string, useMirror = false) =>

@@ -750,6 +750,12 @@
         "Copy the token and paste it below"
       ],
       "getTokenLink": "Get a token from huggingface.co ↗",
+      "validate": "Validate Token",
+      "validating": "Validating...",
+      "validationSuccess": "Token is valid",
+      "validationFailed": "Token is invalid",
+      "validationError": "Validation error",
+      "validatedAs": "Signed in as {username}",
       "error": {
         "saving": "Error saving token",
         "missing": "Hugging Face token required",

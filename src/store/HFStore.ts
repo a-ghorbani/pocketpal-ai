@@ -3,7 +3,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import {makePersistable} from 'mobx-persist-store';
 import * as Keychain from 'react-native-keychain';
 
-import {fetchGGUFSpecs, fetchModelFilesDetails, fetchModels} from '../api/hf';
+import {fetchGGUFSpecs, fetchModelFilesDetails, fetchModels, validateToken} from '../api/hf';
 
 import {enrichSiblingsWithStorage} from '../utils';
 import {processHFSearchResults} from '../utils/hf';
@@ -126,6 +126,17 @@ class HFStore {
       console.error('Failed to clear HF token:', error);
       return false;
     }
+  }
+
+  async validateCurrentToken() {
+    if (!this.hfToken) {
+      return {valid: false, error: 'No token set'};
+    }
+    return validateToken(this.hfToken);
+  }
+
+  async validateToken(token: string) {
+    return validateToken(token);
   }
 
   setSearchQuery(query: string) {

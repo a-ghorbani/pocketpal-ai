@@ -221,3 +221,43 @@ export async function fetchModelInfo({
     throw error;
   }
 }
+
+export interface HFTokenValidationResult {
+  valid: boolean;
+  username?: string;
+  email?: string;
+  error?: string;
+}
+
+export async function validateToken(
+  authToken: string,
+): Promise<HFTokenValidationResult> {
+  try {
+    const headers: Record<string, string> = {
+      'User-Agent': hfUserAgent(),
+      Authorization: `Bearer ${authToken}`,
+    };
+
+    const response = await fetch(urls.whoami(), {headers});
+
+    if (!response.ok) {
+      if (response.status === 401) {
+        return {valid: false, error: 'Invalid or expired token'};
+      }
+      return {valid: false, error: `HTTP ${response.status}: ${response.statusText}`};
+    }
+
+    const data = await response.json();
+    return {
+      valid: true,
+      username: data.name || data.username,
+      email: data.email,
+    };
+  } catch (error) {
+    console.error('Failed to validate HF token:', error);
+    return {
+      valid: false,
+      error: error instanceof Error ? error.message : 'Unknown error',
+    };
+  }
+}

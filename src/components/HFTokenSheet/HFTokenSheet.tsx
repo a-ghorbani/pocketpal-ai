@@ -31,6 +31,12 @@ export const HFTokenSheet: React.FC<HFTokenSheetProps> = observer(
     const [token, setToken] = useState(hfStore.hfToken || '');
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [isResetting, setIsResetting] = useState(false);
+    const [isValidating, setIsValidating] = useState(false);
+    const [validationResult, setValidationResult] = useState<{
+      valid: boolean;
+      username?: string;
+      message?: string;
+    } | null>(null);
     const [showSuccess, setShowSuccess] = useState(false);
     const [showError, setShowError] = useState(false);
     const [successMessage, setSuccessMessage] = useState('');
@@ -39,6 +45,7 @@ export const HFTokenSheet: React.FC<HFTokenSheetProps> = observer(
     useEffect(() => {
       if (isVisible) {
         setToken(hfStore.hfToken || '');
+        setValidationResult(null);
       }
     }, [isVisible, hfStore.hfToken]);
 
@@ -105,6 +112,38 @@ export const HFTokenSheet: React.FC<HFTokenSheetProps> = observer(
       setSecureTextEntry(!secureTextEntry);
     };
 
+    const handleValidateToken = async () => {
+      if (!token.trim()) {
+        return;
+      }
+
+      setIsValidating(true);
+      setValidationResult(null);
+
+      try {
+        const result = await hfStore.validateToken(token.trim());
+
+        if (result.valid) {
+          setValidationResult({
+            valid: true,
+            username: result.username,
+          });
+        } else {
+          setValidationResult({
+            valid: false,
+            message: result.error,
+          });
+        }
+      } catch (error) {
+        setValidationResult({
+          valid: false,
+          message: error instanceof Error ? error.message : 'Unknown error',
+        });
+      } finally {
+        setIsValidating(false);
+      }
+    };
+
     return (
       <>
         <Sheet
@@ -162,6 +201,36 @@ export const HFTokenSheet: React.FC<HFTokenSheetProps> = observer(
                 />
               }
             />
+
+            <Button
+              testID="hf-token-validate-button"
+              mode="outlined"
+              onPress={handleValidateToken}
+              loading={isValidating}
+              disabled={isValidating || isSubmitting || isResetting || !token.trim()}
+              style={styles.validateButton}>
+              {l10n.components.hfTokenSheet.validate}
+            </Button>
+
+            {validationResult && (
+              <Text
+                style={[
+                  styles.validationResult,
+                  validationResult.valid
+                    ? styles.validationSuccess
+                    : styles.validationError,
+                ]}>
+                {validationResult.valid
+                  ? validationResult.username
+                    ? l10n.components.hfTokenSheet.validatedAs.replace(
+                        '{username}',
+                        validationResult.username,
+                      )
+                    : l10n.components.hfTokenSheet.validationSuccess
+                  : validationResult.message ||
+                    l10n.components.hfTokenSheet.validationFailed}
+              </Text>
+            )}
           </Sheet.ScrollView>
           <Sheet.Actions>
             <View style={styles.buttonsContainer}>
