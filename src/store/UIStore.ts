@@ -67,9 +67,20 @@ export class UIStore {
     });
   }
 
+  // Transient error message surfaced to the user via ErrorSnackbar.
+  errorMessage: string | null = null;
+
   showError(message: string) {
-    // TODO: Implement error display logic (e.g., toast, alert, etc.)
     console.error(message);
+    runInAction(() => {
+      this.errorMessage = message;
+    });
+  }
+
+  clearError() {
+    runInAction(() => {
+      this.errorMessage = null;
+    });
   }
 
   setChatWarning(warning: ErrorState | null) {

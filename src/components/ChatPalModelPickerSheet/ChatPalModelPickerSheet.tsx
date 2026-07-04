@@ -255,8 +255,10 @@ export const ChatPalModelPickerSheet = observer(
           return l10n.components.chatPalModelPickerSheet.videoType;
         }
 
-        // TODO: Add support for other capabilities
-        // Use assistant for now.
+        if (pal.capabilities?.roleplay) {
+          return l10n.components.chatPalModelPickerSheet.roleplayType;
+        }
+
         return l10n.components.chatPalModelPickerSheet.assistantType;
       },
       [l10n.components.chatPalModelPickerSheet],
