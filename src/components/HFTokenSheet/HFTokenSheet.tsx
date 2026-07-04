@@ -36,12 +36,11 @@ export const HFTokenSheet: React.FC<HFTokenSheetProps> = observer(
     const [successMessage, setSuccessMessage] = useState('');
     const [secureTextEntry, setSecureTextEntry] = useState(true);
 
-    // Update token state when hfToken changes in store
     useEffect(() => {
-      if (hfStore.hfToken) {
-        setToken(hfStore.hfToken);
+      if (isVisible) {
+        setToken(hfStore.hfToken || '');
       }
-    }, []);
+    }, [isVisible, hfStore.hfToken]);
 
     const handleSaveToken = async () => {
       if (!token.trim()) {
