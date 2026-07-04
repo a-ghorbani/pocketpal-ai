@@ -29,7 +29,7 @@ PocketPal AI is a pocket-sized AI assistant powered by small language models (SL
     - [Scripts](#scripts)
   - [Contributing](#contributing)
     - [Quick Start for Contributors](#quick-start-for-contributors)
-  - [Roadmap](#roadmap)
+  - [Roadmap / 未来方向](#roadmap--未来方向)
   - [License](#license)
   - [Contact](#contact)
   - [Acknowledgements](#acknowledgements)
@@ -299,16 +299,23 @@ We welcome all contributions! Please read our [Contributing Guidelines](CONTRIBU
    git push origin feature/your-feature-name
    ```
 
-## Roadmap
+## Roadmap / 未来方向
 
-- **New Models**: Add support for more tiny LLMs.
-- **UI/UX Enhancements**: Continue improving the overall user interface and user experience.
-- **Improved Documentation**: Enhance the documentation of the project.
-- **Performance Optimization**: Further optimize performance across different device types.
-- **More Languages**: Add support for additional languages through localization.
-- **Enhanced Error Handling**: Improve error handling and recovery mechanisms.
+**PocketPal AI 的目标：把手机本地推理做到极致。**
 
-Feel free to open issues to suggest features or report bugs.
+- 所有核心处理都在手机上完成：LLM 推理、TTS、STT、RAG、MCP 工具。
+- 联网是按需增强，不是依赖。需要联网时，手机直接通过 Wi-Fi 连接搜索引擎或 API，不经过任何中间服务器。
+- 不建后端、不上云同步。数据通过本地导出/导入 + E2EE 加密由用户自己掌控。
+- 桌面端不做，服务器不做。手机就是全部。
+- 未来可探索多台手机通过热点/P2P 组成分布式推理集群。
+
+详细规划请查看：
+
+- 📊 [`docs/project-analysis.md`](docs/project-analysis.md) — 项目深度分析与架构评价
+- 🗓️ [`docs/roadmap-quarterly.md`](docs/roadmap-quarterly.md) — 未来 12 个月季度路线图
+- 🗓️ [`docs/roadmap-monthly.md`](docs/roadmap-monthly.md) — 月度计划明细与 ADR 列表
+
+欢迎通过 Issue 提出功能建议或报告问题。
 
 ## License
 
