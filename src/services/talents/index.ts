@@ -4,6 +4,8 @@ import {CalculateEngine} from './CalculateEngine';
 import {DatetimeEngine} from './DatetimeEngine';
 import {ReminderEngine} from './ReminderEngine';
 import {UnitConvertEngine} from './UnitConvertEngine';
+import {WebSearchEngine} from './WebSearchEngine';
+import {WebSummaryEngine} from './WebSummaryEngine';
 import {talentRegistry} from './TalentRegistry';
 import {talentUIRegistry} from './TalentUIRegistry';
 import type {ToolDefinition} from './types';
@@ -17,6 +19,8 @@ export {CalculateEngine} from './CalculateEngine';
 export {DatetimeEngine} from './DatetimeEngine';
 export {ReminderEngine} from './ReminderEngine';
 export {UnitConvertEngine} from './UnitConvertEngine';
+export {WebSearchEngine} from './WebSearchEngine';
+export {WebSummaryEngine} from './WebSummaryEngine';
 export type {TalentEngine, TalentResult, ToolDefinition} from './types';
 
 let registered = false;
@@ -35,6 +39,8 @@ export function registerDefaultTalents(): void {
   talentRegistry.register(new DatetimeEngine());
   talentRegistry.register(new ReminderEngine());
   talentRegistry.register(new UnitConvertEngine());
+  talentRegistry.register(new WebSearchEngine());
+  talentRegistry.register(new WebSummaryEngine());
   // UIs
   talentUIRegistry.register(new RenderHtmlTalentUI());
   registered = true;
