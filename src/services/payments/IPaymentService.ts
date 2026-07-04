@@ -32,8 +32,16 @@ export interface PurchaseResult {
   error?: PurchaseError;
 }
 
+export type PurchaseErrorCode =
+  | 'NOT_READY'
+  | 'NOT_AVAILABLE'
+  | 'PURCHASE_ERROR'
+  | 'PURCHASE_TIMEOUT'
+  | 'USER_CANCELLED'
+  | 'ALREADY_OWNED';
+
 export interface PurchaseError {
-  code: string;
+  code: PurchaseErrorCode;
   message: string;
   domain?: string;
 }

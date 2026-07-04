@@ -196,12 +196,19 @@ export class AndroidIAPService implements IPaymentService {
         };
       }
 
-      // For subscriptions, use requestSubscription instead of requestPurchase.
-      // The listener-based flow handles async purchase delivery; we also
-      // fall back to the synchronous return for older API versions.
+      const availablePurchases = await this.getPurchases();
+      const alreadyPurchased = availablePurchases.find(
+        (p) => p.productId === productId && p.isAcknowledged,
+      );
+      if (alreadyPurchased) {
+        return {
+          success: true,
+          purchase: alreadyPurchased,
+        };
+      }
+
       const purchasePromise = new Promise<PurchaseResult>((resolve) => {
         this.pendingPurchaseResolvers.set(productId, resolve);
-        // Safety timeout: if no listener fires within 60s, resolve with error.
         setTimeout(() => {
           if (this.pendingPurchaseResolvers.has(productId)) {
             this.pendingPurchaseResolvers.delete(productId);
@@ -217,13 +224,10 @@ export class AndroidIAPService implements IPaymentService {
         ? RNIap.requestSubscription({ skus: [productId] })
         : RNIap.requestPurchase({ skus: [productId] });
 
-      // Race between the listener callback and the direct return.
-      // On most Android devices requestPurchase resolves after the listener
-      // fires, so the listener wins; on older versions it resolves directly.
       requestFn
         .then((result: any) => {
           if (result && !this.pendingPurchaseResolvers.has(productId)) {
-            return; // Already resolved by listener
+            return;
           }
           if (result) {
             const resolver = this.pendingPurchaseResolvers.get(productId);
@@ -240,6 +244,11 @@ export class AndroidIAPService implements IPaymentService {
               resolver({
                 success: false,
                 error: { code: 'USER_CANCELLED', message: 'User cancelled purchase' },
+              });
+            } else if (error?.code === 'E_ALREADY_OWNED') {
+              resolver({
+                success: false,
+                error: { code: 'ALREADY_OWNED', message: 'Product already owned' },
               });
             } else {
               resolver({
@@ -263,6 +272,13 @@ export class AndroidIAPService implements IPaymentService {
         return {
           success: false,
           error: { code: 'USER_CANCELLED', message: 'User cancelled purchase' },
+        };
+      }
+
+      if (error.code === 'E_ALREADY_OWNED') {
+        return {
+          success: false,
+          error: { code: 'ALREADY_OWNED', message: 'Product already owned' },
         };
       }
 

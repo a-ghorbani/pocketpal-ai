@@ -1,9 +1,8 @@
 import { makeAutoObservable, observable } from 'mobx';
 import { Model, ModelType, ModelOrigin } from '../../utils/types';
-import { downloadQueueManager } from './downloads/DownloadQueueManager';
 import { getDownloadQueueManager } from './downloads/DownloadQueueManager';
 
-export type ModelCategory = 'all' | 'downloaded' | 'llm' | 'vision' | 'projection' | 'preset' | 'local' | 'hf' | 'remote';
+export type ModelCategory = 'all' | 'downloaded' | 'base' | 'llm' | 'tts' | 'vision' | 'projection' | 'preset' | 'local' | 'hf' | 'remote';
 export type ModelSortBy = 'name' | 'size' | 'params' | 'downloads' | 'recent';
 
 export interface ModelCategoryInfo {
@@ -60,8 +59,12 @@ export class ModelManager {
         return all;
       case 'downloaded':
         return all.filter(m => m.isDownloaded);
+      case 'base':
+        return all.filter(m => m.modelType === ModelType.BASE);
       case 'llm':
         return all.filter(m => !m.modelType || m.modelType === ModelType.LLM);
+      case 'tts':
+        return all.filter(m => m.modelType === ModelType.TTS);
       case 'vision':
         return all.filter(m => m.modelType === ModelType.VISION || m.supportsMultimodal);
       case 'projection':
@@ -84,7 +87,9 @@ export class ModelManager {
     return [
       { key: 'all', label: 'All Models', count: all.length },
       { key: 'downloaded', label: 'Downloaded', count: all.filter(m => m.isDownloaded).length },
+      { key: 'base', label: 'Base', count: all.filter(m => m.modelType === ModelType.BASE).length },
       { key: 'llm', label: 'LLM', count: all.filter(m => !m.modelType || m.modelType === ModelType.LLM).length },
+      { key: 'tts', label: 'TTS', count: all.filter(m => m.modelType === ModelType.TTS).length },
       { key: 'vision', label: 'Vision', count: all.filter(m => m.modelType === ModelType.VISION || m.supportsMultimodal).length },
       { key: 'projection', label: 'Projection', count: all.filter(m => m.modelType === ModelType.PROJECTION).length },
     ];

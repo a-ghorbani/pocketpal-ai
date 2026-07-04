@@ -1062,7 +1062,8 @@
       "palNotAvailable": "This pal is not available for purchase right now.",
       "checkoutFailed": "Something went wrong. Please try again.",
       "purchaseSuccessful": "Purchase successful!",
-      "purchaseFailed": "Purchase failed. Please try again."
+      "purchaseFailed": "Purchase failed. Please try again.",
+      "alreadyOwned": "You already own this pal!"
     }
   },
   "validation": {

@@ -136,14 +136,15 @@ export const PalDetailSheet: React.FC<PalDetailSheetProps> = observer(
     const handleBuyPress = async () => {
       if (Platform.OS === 'android') {
         try {
+          setIsLoading(true);
+          setError(null);
+
           const paymentService = getPaymentService();
           if (!paymentService.isReady) {
             await paymentService.initialize();
           }
 
-          const result = await paymentService.purchaseProduct(
-            displayPal.id,
-          );
+          const result = await paymentService.purchaseProduct(displayPal.id);
 
           if (result.success && result.purchase) {
             Alert.alert(
@@ -152,6 +153,16 @@ export const PalDetailSheet: React.FC<PalDetailSheetProps> = observer(
               [{text: l10n.common.ok}],
             );
 
+            palsHubService
+              .getPal(displayPal.id)
+              .then(setDetailedPal)
+              .catch(() => {});
+          } else if (result.error?.code === 'ALREADY_OWNED') {
+            Alert.alert(
+              l10n.palsScreen.palDetailSheet.success,
+              l10n.palsScreen.palDetailSheet.alreadyOwned,
+              [{text: l10n.common.ok}],
+            );
             palsHubService
               .getPal(displayPal.id)
               .then(setDetailedPal)
@@ -171,6 +182,8 @@ export const PalDetailSheet: React.FC<PalDetailSheetProps> = observer(
             l10n.palsScreen.palDetailSheet.purchaseFailed,
             [{text: l10n.common.ok}],
           );
+        } finally {
+          setIsLoading(false);
         }
         return;
       }
@@ -444,27 +457,42 @@ export const PalDetailSheet: React.FC<PalDetailSheetProps> = observer(
               </>
             )}
 
-          {/* Show buy button (US) or informational text (non-US) for premium pals */}
+          {/* Show buy button for premium pals */}
           {palLabel.type === 'premium' &&
-            !displayPal.is_owned &&
-            (palStore.isUSRegion ? (
-              <View style={styles.buyActionColumn}>
-                <Button
-                  testID="buy-button"
-                  mode="contained"
-                  onPress={handleBuyPress}
-                  loading={checkoutStatus === 'creating'}
-                  disabled={isCheckoutInFlight}
-                  style={styles.buyButton}>
-                  {l10n.palsScreen.palDetailSheet.buyOnPalshub}
-                </Button>
-                {renderCheckoutFeedback()}
-              </View>
-            ) : (
-              <View style={styles.infoTextContainer}>
-                <Text style={styles.infoText}>{getPremiumInfoText()}</Text>
-              </View>
-            ))}
+            !displayPal.is_owned && (
+              <>
+                {Platform.OS === 'android' ? (
+                  <View style={styles.buyActionColumn}>
+                    <Button
+                      testID="buy-button"
+                      mode="contained"
+                      onPress={handleBuyPress}
+                      loading={isLoading}
+                      disabled={isLoading}
+                      style={styles.buyButton}>
+                      {l10n.palsScreen.palDetailSheet.buyOnPalshub}
+                    </Button>
+                  </View>
+                ) : palStore.isUSRegion ? (
+                  <View style={styles.buyActionColumn}>
+                    <Button
+                      testID="buy-button"
+                      mode="contained"
+                      onPress={handleBuyPress}
+                      loading={checkoutStatus === 'creating'}
+                      disabled={isCheckoutInFlight}
+                      style={styles.buyButton}>
+                      {l10n.palsScreen.palDetailSheet.buyOnPalshub}
+                    </Button>
+                    {renderCheckoutFeedback()}
+                  </View>
+                ) : (
+                  <View style={styles.infoTextContainer}>
+                    <Text style={styles.infoText}>{getPremiumInfoText()}</Text>
+                  </View>
+                )}
+              </>
+            )}
         </Sheet.Actions>
       </Sheet>
     );

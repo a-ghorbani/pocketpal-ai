@@ -457,9 +457,11 @@ export interface ServerConfig {
 }
 
 export enum ModelType {
-  PROJECTION = 'projection',
-  VISION = 'vision',
+  BASE = 'base',
   LLM = 'llm',
+  TTS = 'tts',
+  VISION = 'vision',
+  PROJECTION = 'projection',
 }
 
 /**

@@ -23,15 +23,17 @@ export interface LRUCleanupCandidate {
 }
 
 export interface StorageAlert {
-  level: 'normal' | 'warning' | 'critical';
+  level: 'normal' | 'low' | 'warning' | 'critical';
   message: string;
   freeSpace: number;
   threshold: number;
 }
 
 const LRU_STORAGE_KEY = '@pocketpal_model_lru';
+const ALERT_STORAGE_KEY = '@pocketpal_storage_alert';
 const WARNING_THRESHOLD_BYTES = 1024 * 1024 * 1024; // 1 GB
 const CRITICAL_THRESHOLD_BYTES = 500 * 1024 * 1024; // 500 MB
+const LOW_THRESHOLD_BYTES = 2 * 1024 * 1024 * 1024; // 2 GB
 const DEFAULT_UNUSED_DAYS_THRESHOLD = 30;
 
 export class StorageOptimizer {
@@ -117,6 +119,7 @@ export class StorageOptimizer {
 
       this._storageInfo = info;
       this._alert = this.checkStorageAlert(info);
+      await this.storeAlert(this._alert);
 
       return info;
     } catch (error) {
@@ -203,7 +206,40 @@ export class StorageOptimizer {
       };
     }
 
+    if (freeSpace <= LOW_THRESHOLD_BYTES) {
+      return {
+        level: 'low',
+        message: `Storage getting low: ${formatBytes(freeSpace)} free. You may want to manage your models.`,
+        freeSpace,
+        threshold: LOW_THRESHOLD_BYTES,
+      };
+    }
+
     return null;
+  }
+
+  async getStoredAlert(): Promise<StorageAlert | null> {
+    try {
+      const stored = await AsyncStorage.getItem(ALERT_STORAGE_KEY);
+      if (stored) {
+        return JSON.parse(stored) as StorageAlert;
+      }
+    } catch (error) {
+      console.error('[StorageOptimizer] Failed to get stored alert:', error);
+    }
+    return null;
+  }
+
+  async storeAlert(alert: StorageAlert | null): Promise<void> {
+    try {
+      if (alert) {
+        await AsyncStorage.setItem(ALERT_STORAGE_KEY, JSON.stringify(alert));
+      } else {
+        await AsyncStorage.removeItem(ALERT_STORAGE_KEY);
+      }
+    } catch (error) {
+      console.error('[StorageOptimizer] Failed to store alert:', error);
+    }
   }
 
   getLRUCleanupCandidates(

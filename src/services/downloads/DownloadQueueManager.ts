@@ -21,6 +21,8 @@ export interface DownloadQueueItem {
   authToken?: string | null;
   retryCount: number;
   maxRetries: number;
+  bytesDownloaded: number;
+  bytesTotal: number;
 }
 
 const QUEUE_STORAGE_KEY = '@pocketpal_download_queue';
@@ -116,6 +118,8 @@ export class DownloadQueueManager {
       authToken,
       retryCount: 0,
       maxRetries: DEFAULT_MAX_RETRIES,
+      bytesDownloaded: 0,
+      bytesTotal: model.size || 0,
     };
 
     this.queue.push(item);
@@ -195,6 +199,8 @@ export class DownloadQueueManager {
     const item = this.queue.find(i => i.id === itemId);
     if (item) {
       item.progress = progress;
+      item.bytesDownloaded = progress.bytesDownloaded || item.bytesDownloaded;
+      item.bytesTotal = progress.bytesTotal || item.bytesTotal;
     }
   }
 
