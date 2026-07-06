@@ -12,3 +12,4 @@ export * from './STTStore';
 export * from './CheckoutFlowStore';
 export * from './AuthStore';
 export * from './SyncStore';
+export * from './DependencyStore';

@@ -9,12 +9,13 @@
  */
 
 import React from 'react';
-import {View, StyleSheet, ActivityIndicator} from 'react-native';
+import {View, Text, StyleSheet, ActivityIndicator} from 'react-native';
 import {observer} from 'mobx-react';
 import {IconButton, useTheme} from 'react-native-paper';
 import ReactNativeHapticFeedback from 'react-native-haptic-feedback';
 
 import {sttStore} from '../../store';
+import {dependencyStore} from '../../store';
 import {useL10n} from '../../utils/l10n';
 
 export const STTButton = observer(function STTButton() {
@@ -28,6 +29,9 @@ export const STTButton = observer(function STTButton() {
 
   const isListening = sttStore.isListening;
   const isError = sttStore.status === 'error';
+  // Surface the graceful fallback to system speech recognition when the
+  // Whisper native module is missing (no local transcription available).
+  const whisperMissing = dependencyStore.status.whisperNative === 'missing';
 
   const handlePress = () => {
     ReactNativeHapticFeedback.trigger('impactLight');
@@ -63,6 +67,14 @@ export const STTButton = observer(function STTButton() {
           style={styles.indicator}
         />
       )}
+      {whisperMissing && (
+        <Text
+          testID="stt-system-fallback-hint"
+          style={styles.fallbackHint}
+          numberOfLines={1}>
+          系统语音识别
+        </Text>
+      )}
     </View>
   );
 });
@@ -76,5 +88,11 @@ const styles = StyleSheet.create({
     position: 'absolute',
     right: 4,
     top: 4,
+  },
+  fallbackHint: {
+    fontSize: 10,
+    color: theme.colors.onSurfaceVariant,
+    opacity: 0.75,
+    marginLeft: 2,
   },
 });

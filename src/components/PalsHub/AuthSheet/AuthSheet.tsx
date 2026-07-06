@@ -14,6 +14,8 @@ import {createStyles} from './styles';
 
 import {authService, PalsHubErrorHandler} from '../../../services';
 
+import {dependencyStore} from '../../../store';
+
 interface AuthSheetProps {
   isVisible: boolean;
   onClose: () => void;
@@ -162,6 +164,28 @@ export const AuthSheet: React.FC<AuthSheetProps> = observer(
             <Text style={[styles.authSubtitle, styles.authErrorText]}>
               {authState.error}
             </Text>
+          )}
+
+          {/* Fail-fast notice: cloud sync backend (Firebase) not configured.
+              Local usage is NOT blocked — this only informs the user that
+              cloud sync / E2EE are dormant and a Mock session would be used. */}
+          {dependencyStore.status.firebase === 'not_configured' && (
+            <View
+              testID="firebase-not-configured-notice"
+              style={{
+                backgroundColor: theme.colors.errorContainer ?? '#FCE8E6',
+                borderRadius: 8,
+                paddingVertical: 10,
+                paddingHorizontal: 12,
+                marginBottom: 16,
+              }}>
+              <Text
+                style={{
+                  color: theme.colors.onErrorContainer ?? '#C5221F',
+                }}>
+                云同步未配置：请在 .env 配置 Firebase 后重启
+              </Text>
+            </View>
           )}
 
           {/* Email/Password Form */}

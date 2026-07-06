@@ -44,6 +44,8 @@ import {
   Dialog,
 } from '../../components';
 
+import {DependencyStatusSection} from '../../components/settings/DependencyStatusSection';
+
 import {useTheme} from '../../hooks';
 
 import {createStyles} from './styles';
@@ -1216,6 +1218,9 @@ export const SettingsScreen: React.FC = observer(() => {
               </View>
             </Card.Content>
           </Card>
+
+          {/* Dependency Health — surface silently-missing external/native deps */}
+          <DependencyStatusSection />
 
           {/* Cache & Storage Settings - iOS only (for Shortcuts) */}
           {Platform.OS === 'ios' && (
