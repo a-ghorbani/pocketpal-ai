@@ -2326,6 +2326,55 @@ describe('ModelStore', () => {
       consoleErrorSpy.mockRestore();
     });
 
+    describe('remote model vision (server /props self-report)', () => {
+      const setRemoteActive = (supportsVision?: boolean) => {
+        runInAction(() => {
+          modelStore.context = undefined;
+          modelStore.isMultimodalActive = false;
+          modelStore.models = [
+            {
+              id: 'srv-1/remote-model',
+              origin: ModelOrigin.REMOTE,
+              serverId: 'srv-1',
+            } as any,
+          ];
+          modelStore.activeModelId = 'srv-1/remote-model';
+          serverStore.servers = [
+            {
+              id: 'srv-1',
+              name: 'llama',
+              url: 'http://localhost:8080',
+              serverType: 'llama.cpp',
+              supportsVision,
+            },
+          ];
+        });
+      };
+
+      afterEach(() => {
+        runInAction(() => {
+          serverStore.servers = [];
+          modelStore.models = [];
+          modelStore.activeModelId = undefined;
+        });
+      });
+
+      it('returns true when the active server reports vision', async () => {
+        setRemoteActive(true);
+        await expect(modelStore.isMultimodalEnabled()).resolves.toBe(true);
+      });
+
+      it('returns false when the active server does not report vision', async () => {
+        setRemoteActive(false);
+        await expect(modelStore.isMultimodalEnabled()).resolves.toBe(false);
+      });
+
+      it('returns false when the server capability is unprobed', async () => {
+        setRemoteActive(undefined);
+        await expect(modelStore.isMultimodalEnabled()).resolves.toBe(false);
+      });
+    });
+
     it('should get compatible projection models from explicit list', () => {
       const llmModel = {
         id: 'test-llm',

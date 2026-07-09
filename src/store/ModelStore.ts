@@ -2855,6 +2855,19 @@ class ModelStore {
       return true;
     }
 
+    // Remote models have no local context; their vision capability comes from
+    // the active server's /props self-report. releaseContext clears both
+    // context and the cached flag on switch, so this is never stale-true for a
+    // remote model. Placed before the !context early-return so a remote model
+    // is not shadowed into that dead branch.
+    if (!this.context && this.activeModel?.origin === ModelOrigin.REMOTE) {
+      const serverId = this.activeModel?.serverId;
+      return (
+        serverStore.servers.find(s => s.id === serverId)?.supportsVision ===
+        true
+      );
+    }
+
     // Avoid "Context not found" errors during transitions
     if (!this.context || this.isContextLoading) {
       return false;
