@@ -177,6 +177,56 @@ describe('BannerRow', () => {
     expect(getByText(l10n.en.chat.contextFullEscalated)).toBeTruthy();
   });
 
+  it('keeps the remote copy (no increase clause) for a remote model at the escalated failure count', () => {
+    runInAction(() => {
+      modelStore.activeModelId = 'remote-1';
+      modelStore.models = [
+        {id: 'remote-1', origin: ModelOrigin.REMOTE, serverId: 'srv-1'} as any,
+      ];
+      (modelStore as any).activeContextSettings = undefined;
+      serverStore.servers = [
+        {
+          id: 'srv-1',
+          name: 'llama',
+          url: 'http://localhost:8080',
+          serverType: 'llama.cpp',
+          contextLength: 4096,
+        } as any,
+      ];
+      // A remote session can reach >=2 consecutive full turns (the counter is
+      // remote-agnostic), but must not re-surface the escalated increase advice.
+      chatSessionStore.consecutiveFullFailures = 2;
+      chatSessionStore.lastCompletionResult = {
+        used: 4096,
+        contextFull: true,
+        isRemote: true,
+        finishReason: 'length',
+      };
+    });
+    const {getByText, queryByText} = renderBanner({canIncrease: false});
+    expect(getByText(l10n.en.chat.contextFullRemote)).toBeTruthy();
+    expect(queryByText(l10n.en.chat.contextFullEscalated)).toBeNull();
+
+    runInAction(() => {
+      modelStore.models = [];
+      serverStore.servers = [];
+    });
+  });
+
+  it('keeps the escalated copy for a local model at the escalated failure count', () => {
+    runInAction(() => {
+      chatSessionStore.consecutiveFullFailures = 2;
+      chatSessionStore.lastCompletionResult = {
+        used: 4096,
+        contextFull: true,
+        isRemote: false,
+      };
+    });
+    const {getByText, queryByText} = renderBanner();
+    expect(getByText(l10n.en.chat.contextFullEscalated)).toBeTruthy();
+    expect(queryByText(l10n.en.chat.contextFullRemote)).toBeNull();
+  });
+
   it('renders the remote hedged advisory for a remote model with no runtime n_ctx', () => {
     runInAction(() => {
       modelStore.activeModelId = 'remote-1';

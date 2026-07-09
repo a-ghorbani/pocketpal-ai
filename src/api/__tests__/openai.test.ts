@@ -781,6 +781,68 @@ describe('streamChatCompletion', () => {
     expect(RNFS.readFile).toHaveBeenCalledTimes(1);
   });
 
+  it('evicts oldest-first once cached bytes exceed the 24MB budget', async () => {
+    const RNFS = require('@dr.pogodin/react-native-fs');
+    // ~9MB base64 per image; three exceed the 24MB cache budget, so caching the
+    // third evicts the oldest (first) entry.
+    const big = 'A'.repeat(9 * 1024 * 1024);
+    (RNFS.readFile as jest.Mock).mockResolvedValue(big);
+
+    const send = async (path: string) => {
+      const p = streamChatCompletion(
+        {messages: [imageMessage(path)], model: 'm'},
+        'http://localhost:1234',
+      );
+      await new Promise(r => setImmediate(r));
+      await finishStream(MockXHR.instances[MockXHR.instances.length - 1], p);
+    };
+
+    // Fill: A (oldest) → B → C. Caching C pushes bytes over budget and evicts A.
+    await send('file:///tmp/a.png');
+    await send('file:///tmp/b.png');
+    await send('file:///tmp/c.png');
+    expect(RNFS.readFile).toHaveBeenCalledTimes(3);
+
+    // The two newest paths are still resident — re-sending them is a cache hit.
+    await send('file:///tmp/c.png');
+    await send('file:///tmp/b.png');
+    expect(RNFS.readFile).toHaveBeenCalledTimes(3);
+
+    // The oldest path was evicted, so re-sending it re-reads from disk.
+    await send('file:///tmp/a.png');
+    expect(RNFS.readFile).toHaveBeenCalledTimes(4);
+  });
+
+  it('dedups a concurrent double-encode of the same path (race-safe cache set)', async () => {
+    const RNFS = require('@dr.pogodin/react-native-fs');
+    (RNFS.readFile as jest.Mock).mockResolvedValue('QUJD');
+
+    // Two sends of the same new path start before either populates the cache, so
+    // both miss the read-side lookup and both call the cache setter; the second
+    // set hits the `has()` guard and does not double-count the entry.
+    const p1 = streamChatCompletion(
+      {messages: [imageMessage('file:///tmp/race.png')], model: 'm'},
+      'http://localhost:1234',
+    );
+    const p2 = streamChatCompletion(
+      {messages: [imageMessage('file:///tmp/race.png')], model: 'm'},
+      'http://localhost:1234',
+    );
+    await new Promise(r => setImmediate(r));
+    await finishStream(MockXHR.instances[0], p1);
+    await finishStream(MockXHR.instances[1], p2);
+    expect(RNFS.readFile).toHaveBeenCalledTimes(2);
+
+    // A subsequent send is a plain cache hit — the raced entry cached cleanly.
+    const p3 = streamChatCompletion(
+      {messages: [imageMessage('file:///tmp/race.png')], model: 'm'},
+      'http://localhost:1234',
+    );
+    await new Promise(r => setImmediate(r));
+    await finishStream(MockXHR.instances[2], p3);
+    expect(RNFS.readFile).toHaveBeenCalledTimes(2);
+  });
+
   it('maps a dotless path to image/jpeg (no invalid image// MIME)', async () => {
     const RNFS = require('@dr.pogodin/react-native-fs');
     (RNFS.readFile as jest.Mock).mockResolvedValueOnce('QUJD');
