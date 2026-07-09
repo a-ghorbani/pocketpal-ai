@@ -392,14 +392,30 @@ describe('fetchServerProps', () => {
     expect(props).toEqual({contextLength: 4096, supportsVision: true});
   });
 
-  it('falls back to top-level n_ctx and omits vision when not reported', async () => {
+  it('falls back to top-level n_ctx and reports vision false when not present', async () => {
     global.fetch = jest.fn().mockResolvedValueOnce({
       ok: true,
       json: () => Promise.resolve({n_ctx: 8192}),
     });
 
     const props = await fetchServerProps('http://localhost:8080');
-    expect(props).toEqual({contextLength: 8192});
+    expect(props).toEqual({contextLength: 8192, supportsVision: false});
+  });
+
+  it('returns supportsVision false (defined, not omitted) when vision is off', async () => {
+    global.fetch = jest.fn().mockResolvedValueOnce({
+      ok: true,
+      json: () =>
+        Promise.resolve({
+          default_generation_settings: {n_ctx: 4096},
+          modalities: {vision: false},
+        }),
+    });
+
+    const props = await fetchServerProps('http://localhost:8080');
+    // Defined false on a 2xx probe clears a stale true on a model swap; a
+    // failed probe would return {} instead.
+    expect(props).toEqual({contextLength: 4096, supportsVision: false});
   });
 
   it('resolves to empty caps on a non-2xx response', async () => {

@@ -621,6 +621,37 @@ describe('ServerStore', () => {
       expect(server!.supportsVision).toBeUndefined();
     });
 
+    it('clears a stale supportsVision true when a later probe reports false', async () => {
+      const id = serverStore.addServer({
+        name: 'llama server',
+        url: 'http://localhost:8080',
+        serverType: 'llama.cpp',
+      });
+      jest.clearAllMocks();
+
+      mockedFetchModels.mockResolvedValue([]);
+      (Keychain.getGenericPassword as jest.Mock).mockResolvedValue(false);
+
+      mockedFetchServerProps.mockResolvedValueOnce({
+        contextLength: 4096,
+        supportsVision: true,
+      });
+      await serverStore.fetchModelsForServer(id);
+      await new Promise(setImmediate);
+      expect(serverStore.servers.find(s => s.id === id)!.supportsVision).toBe(
+        true,
+      );
+
+      // A model swap drops vision: the always-defined false overwrites the
+      // stale true so attach disables.
+      mockedFetchServerProps.mockResolvedValueOnce({supportsVision: false});
+      await serverStore.fetchModelsForServer(id);
+      await new Promise(setImmediate);
+      const server = serverStore.servers.find(s => s.id === id);
+      expect(server!.supportsVision).toBe(false);
+      expect(server!.contextLength).toBe(4096);
+    });
+
     it('leaves caps unchanged and models intact when /props yields nothing', async () => {
       const id = serverStore.addServer({
         name: 'llama server',

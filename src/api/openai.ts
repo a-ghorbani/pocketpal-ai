@@ -7,6 +7,7 @@ import {
   ReasoningIntent,
   ToolCall,
 } from '../utils/completionTypes';
+import {ServerConfig} from '../utils/types';
 
 /** Raw API response shape from OpenAI /v1/models */
 export interface RemoteModelInfo {
@@ -276,11 +277,15 @@ export async function fetchModels(
   return models;
 }
 
-/** Server capabilities discovered from llama.cpp GET /props. */
-export interface ServerProps {
-  contextLength?: number;
-  supportsVision?: boolean;
-}
+/**
+ * Server capabilities discovered from llama.cpp GET /props. Coupled to
+ * ServerConfig so a field rename breaks compile instead of silently
+ * no-opping the ServerStore write.
+ */
+export type ServerProps = Pick<
+  ServerConfig,
+  'contextLength' | 'supportsVision'
+>;
 
 /**
  * Fetch server capabilities from a llama.cpp server's GET /props endpoint.
@@ -317,12 +322,14 @@ export async function fetchServerProps(
     const data = await response.json();
     const contextLength: unknown =
       data?.default_generation_settings?.n_ctx ?? data?.n_ctx;
-    const props: ServerProps = {};
+    // supportsVision is always defined (true or false) on a 2xx probe so a
+    // model swap that drops vision overwrites a stale true; a failed probe
+    // returns {} below and leaves caps untouched.
+    const props: ServerProps = {
+      supportsVision: data?.modalities?.vision === true,
+    };
     if (typeof contextLength === 'number') {
       props.contextLength = contextLength;
-    }
-    if (data?.modalities?.vision === true) {
-      props.supportsVision = true;
     }
     return props;
   } catch {
