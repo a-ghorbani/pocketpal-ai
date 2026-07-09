@@ -6,6 +6,7 @@ import {
   testConnection,
   streamChatCompletion,
   buildReasoningPayload,
+  __clearRemoteImageCache,
 } from '../openai';
 
 /** Build a minimal Headers-like object for fetch mocks. */
@@ -536,6 +537,7 @@ describe('streamChatCompletion', () => {
 
   beforeEach(() => {
     jest.clearAllMocks();
+    __clearRemoteImageCache();
     MockXHR.instances = [];
     originalXHR = global.XMLHttpRequest;
     (global as any).XMLHttpRequest = MockXHR;
@@ -728,6 +730,157 @@ describe('streamChatCompletion', () => {
     );
     xhr.simulateLoad();
     await resultPromise;
+  });
+
+  // Drive a stream to completion so its promise settles after the request
+  // body has been inspected.
+  const finishStream = async (
+    xhr: MockXHR,
+    resultPromise: Promise<unknown>,
+  ) => {
+    xhr.simulateHeaders(200);
+    xhr.simulateProgress(
+      'data: {"choices":[{"delta":{},"finish_reason":"stop"}]}\n\ndata: [DONE]\n\n',
+    );
+    xhr.simulateLoad();
+    await resultPromise;
+  };
+
+  const imageMessage = (url: string) => ({
+    role: 'user',
+    content: [{type: 'image_url', image_url: {url}}],
+  });
+
+  it('encodes a local image once and re-uses the cache on the next send', async () => {
+    const RNFS = require('@dr.pogodin/react-native-fs');
+    (RNFS.readFile as jest.Mock).mockResolvedValue('QUJD');
+
+    const p1 = streamChatCompletion(
+      {messages: [imageMessage('file:///tmp/cached.png')], model: 'm'},
+      'http://localhost:1234',
+    );
+    await new Promise(r => setImmediate(r));
+    const body1 = JSON.parse(MockXHR.instances[0].requestBody);
+    expect(body1.messages[0].content[0].image_url.url).toBe(
+      'data:image/png;base64,QUJD',
+    );
+    await finishStream(MockXHR.instances[0], p1);
+
+    const p2 = streamChatCompletion(
+      {messages: [imageMessage('file:///tmp/cached.png')], model: 'm'},
+      'http://localhost:1234',
+    );
+    await new Promise(r => setImmediate(r));
+    const body2 = JSON.parse(MockXHR.instances[1].requestBody);
+    expect(body2.messages[0].content[0].image_url.url).toBe(
+      'data:image/png;base64,QUJD',
+    );
+    await finishStream(MockXHR.instances[1], p2);
+
+    // The second send hit the cache — the file was read from disk only once.
+    expect(RNFS.readFile).toHaveBeenCalledTimes(1);
+  });
+
+  it('maps a dotless path to image/jpeg (no invalid image// MIME)', async () => {
+    const RNFS = require('@dr.pogodin/react-native-fs');
+    (RNFS.readFile as jest.Mock).mockResolvedValueOnce('QUJD');
+
+    const p = streamChatCompletion(
+      {messages: [imageMessage('content://media/1234')], model: 'm'},
+      'http://localhost:1234',
+    );
+    await new Promise(r => setImmediate(r));
+    const body = JSON.parse(MockXHR.instances[0].requestBody);
+    expect(body.messages[0].content[0].image_url.url).toBe(
+      'data:image/jpeg;base64,QUJD',
+    );
+    await finishStream(MockXHR.instances[0], p);
+  });
+
+  it('skips inlining a file whose successful stat exceeds the size cap', async () => {
+    const RNFS = require('@dr.pogodin/react-native-fs');
+    (RNFS.stat as jest.Mock).mockResolvedValueOnce({size: 20 * 1024 * 1024});
+
+    const p = streamChatCompletion(
+      {messages: [imageMessage('file:///tmp/huge.png')], model: 'm'},
+      'http://localhost:1234',
+    );
+    await new Promise(r => setImmediate(r));
+    const body = JSON.parse(MockXHR.instances[0].requestBody);
+    // Left unchanged; the server surfaces the failure.
+    expect(body.messages[0].content[0].image_url.url).toBe(
+      'file:///tmp/huge.png',
+    );
+    expect(RNFS.readFile).not.toHaveBeenCalled();
+    await finishStream(MockXHR.instances[0], p);
+  });
+
+  it('encodes anyway when stat is unavailable (undefined result)', async () => {
+    const RNFS = require('@dr.pogodin/react-native-fs');
+    // stat is an unconfigured jest.fn() → resolves undefined.
+    (RNFS.readFile as jest.Mock).mockResolvedValueOnce('QUJD');
+
+    const p = streamChatCompletion(
+      {messages: [imageMessage('file:///tmp/nostat.png')], model: 'm'},
+      'http://localhost:1234',
+    );
+    await new Promise(r => setImmediate(r));
+    const body = JSON.parse(MockXHR.instances[0].requestBody);
+    expect(body.messages[0].content[0].image_url.url).toBe(
+      'data:image/png;base64,QUJD',
+    );
+    await finishStream(MockXHR.instances[0], p);
+  });
+
+  it('encodes anyway when stat rejects (healthy image not dropped)', async () => {
+    const RNFS = require('@dr.pogodin/react-native-fs');
+    (RNFS.stat as jest.Mock).mockRejectedValueOnce(new Error('stat failed'));
+    (RNFS.readFile as jest.Mock).mockResolvedValueOnce('QUJD');
+
+    const p = streamChatCompletion(
+      {messages: [imageMessage('file:///tmp/statfail.png')], model: 'm'},
+      'http://localhost:1234',
+    );
+    await new Promise(r => setImmediate(r));
+    const body = JSON.parse(MockXHR.instances[0].requestBody);
+    expect(body.messages[0].content[0].image_url.url).toBe(
+      'data:image/png;base64,QUJD',
+    );
+    await finishStream(MockXHR.instances[0], p);
+  });
+
+  it('degrades per-image: a read failure leaves that part but encodes siblings', async () => {
+    const RNFS = require('@dr.pogodin/react-native-fs');
+    (RNFS.readFile as jest.Mock)
+      .mockRejectedValueOnce(new Error('read failed'))
+      .mockResolvedValueOnce('QUJD');
+
+    const p = streamChatCompletion(
+      {
+        messages: [
+          {
+            role: 'user',
+            content: [
+              {type: 'image_url', image_url: {url: 'file:///tmp/bad.png'}},
+              {type: 'image_url', image_url: {url: 'file:///tmp/ok.png'}},
+            ],
+          },
+        ],
+        model: 'm',
+      },
+      'http://localhost:1234',
+    );
+    await new Promise(r => setImmediate(r));
+    const body = JSON.parse(MockXHR.instances[0].requestBody);
+    // The failed image is left unchanged; the sibling still encodes and the
+    // completion promise does not reject.
+    expect(body.messages[0].content[0].image_url.url).toBe(
+      'file:///tmp/bad.png',
+    );
+    expect(body.messages[0].content[1].image_url.url).toBe(
+      'data:image/png;base64,QUJD',
+    );
+    await finishStream(MockXHR.instances[0], p);
   });
 
   it('forwards response_format and injects json_schema.name for OpenAI compatibility', async () => {
