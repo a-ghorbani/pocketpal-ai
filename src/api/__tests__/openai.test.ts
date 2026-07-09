@@ -1038,6 +1038,30 @@ describe('streamChatCompletion', () => {
     expect(result.tokens_predicted).toBe(7);
   });
 
+  it('guards each timings token key independently (only prompt_n)', async () => {
+    const resultPromise = streamChatCompletion(
+      {messages: [{role: 'user', content: 'Hi'}], model: 'test-model'},
+      'http://localhost:1234',
+    );
+
+    const xhr = MockXHR.instances[0];
+    xhr.simulateHeaders(200);
+    xhr.simulateProgress(
+      'data: {"choices":[{"delta":{"content":"Hello"},"finish_reason":null}]}\n\n',
+    );
+    xhr.simulateProgress(
+      'data: {"choices":[{"delta":{},"finish_reason":"stop"}],"timings":{"prompt_n":3000}}\n\n',
+    );
+    xhr.simulateProgress('data: [DONE]\n\n');
+    xhr.simulateLoad();
+
+    const result = await resultPromise;
+    // prompt_n sets tokens_evaluated; absent predicted_n must NOT zero the
+    // per-event tally — it keeps the single content-bearing event count.
+    expect(result.tokens_evaluated).toBe(3000);
+    expect(result.tokens_predicted).toBe(1);
+  });
+
   it('returns no timings when server does not provide them', async () => {
     const resultPromise = streamChatCompletion(
       {messages: [{role: 'user', content: 'Hi'}], model: 'test-model'},
