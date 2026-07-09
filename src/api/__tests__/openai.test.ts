@@ -616,6 +616,104 @@ describe('streamChatCompletion', () => {
     await resultPromise;
   });
 
+  it('encodes a local image path to a data URI on the remote wire', async () => {
+    const RNFS = require('@dr.pogodin/react-native-fs');
+    (RNFS.readFile as jest.Mock).mockResolvedValueOnce('QUJD');
+
+    const resultPromise = streamChatCompletion(
+      {
+        messages: [
+          {
+            role: 'user',
+            content: [
+              {type: 'text', text: 'what is this?'},
+              {type: 'image_url', image_url: {url: 'file:///tmp/photo.png'}},
+            ],
+          },
+        ],
+        model: 'test-model',
+      },
+      'http://localhost:1234',
+    );
+
+    await new Promise(r => setImmediate(r));
+    const xhr = MockXHR.instances[0];
+    const body = JSON.parse(xhr.requestBody);
+    expect(body.messages[0].content[1].image_url.url).toBe(
+      'data:image/png;base64,QUJD',
+    );
+
+    xhr.simulateHeaders(200);
+    xhr.simulateProgress(
+      'data: {"choices":[{"delta":{},"finish_reason":"stop"}]}\n\ndata: [DONE]\n\n',
+    );
+    xhr.simulateLoad();
+    await resultPromise;
+  });
+
+  it('passes through data: and http image urls unchanged', async () => {
+    const RNFS = require('@dr.pogodin/react-native-fs');
+
+    const resultPromise = streamChatCompletion(
+      {
+        messages: [
+          {
+            role: 'user',
+            content: [
+              {
+                type: 'image_url',
+                image_url: {url: 'data:image/jpeg;base64,ZZ'},
+              },
+              {type: 'image_url', image_url: {url: 'https://ex.com/a.png'}},
+            ],
+          },
+        ],
+        model: 'test-model',
+      },
+      'http://localhost:1234',
+    );
+
+    await new Promise(r => setImmediate(r));
+    const xhr = MockXHR.instances[0];
+    const body = JSON.parse(xhr.requestBody);
+    expect(body.messages[0].content[0].image_url.url).toBe(
+      'data:image/jpeg;base64,ZZ',
+    );
+    expect(body.messages[0].content[1].image_url.url).toBe(
+      'https://ex.com/a.png',
+    );
+    expect(RNFS.readFile).not.toHaveBeenCalled();
+
+    xhr.simulateHeaders(200);
+    xhr.simulateProgress(
+      'data: {"choices":[{"delta":{},"finish_reason":"stop"}]}\n\ndata: [DONE]\n\n',
+    );
+    xhr.simulateLoad();
+    await resultPromise;
+  });
+
+  it('leaves a text-only message array untouched', async () => {
+    const RNFS = require('@dr.pogodin/react-native-fs');
+
+    const resultPromise = streamChatCompletion(
+      {messages: [{role: 'user', content: 'plain text'}], model: 'test-model'},
+      'http://localhost:1234',
+    );
+
+    await new Promise(r => setImmediate(r));
+    const xhr = MockXHR.instances[0];
+    const body = JSON.parse(xhr.requestBody);
+    expect(body.messages[0].content).toBe('plain text');
+    expect(RNFS.readFile).not.toHaveBeenCalled();
+
+    xhr.simulateHeaders(200);
+    xhr.simulateProgress(
+      'data: {"choices":[{"delta":{},"finish_reason":"stop"}]}\n\ndata: [DONE]\n\n',
+    );
+    xhr.simulateLoad();
+    await resultPromise;
+  });
+
   it('forwards response_format and injects json_schema.name for OpenAI compatibility', async () => {
     const schema = {type: 'object', properties: {name: {type: 'string'}}};
     const resultPromise = streamChatCompletion(

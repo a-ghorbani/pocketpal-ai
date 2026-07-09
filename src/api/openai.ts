@@ -1,3 +1,5 @@
+import * as RNFS from '@dr.pogodin/react-native-fs';
+
 import {SSEParser} from './sseParser';
 import {
   CompletionResult,
@@ -469,6 +471,67 @@ export function buildReasoningPayload(
   }
 }
 
+/** A local image path needs inlining: not already a data: or http(s): url. */
+function isLocalImageUrl(url: string | undefined): url is string {
+  return (
+    !!url &&
+    !url.startsWith('data:') &&
+    !url.startsWith('http://') &&
+    !url.startsWith('https://')
+  );
+}
+
+/** True when any message carries a local-path image that must be encoded. */
+function hasLocalImageAttachment(messages: OpenAIChatMessage[]): boolean {
+  return messages.some(
+    m =>
+      Array.isArray(m.content) &&
+      m.content.some(part => isLocalImageUrl(part.image_url?.url)),
+  );
+}
+
+/**
+ * Encode local image attachments to data: URIs for the remote wire. A remote
+ * server cannot read the device filesystem, so any image_url pointing at a
+ * local path is read and inlined as base64. Already-remote (http/https) or
+ * already-inlined (data:) urls pass through unchanged. Remote-only: the local
+ * llama.rn engine reads the file path natively and never routes through here.
+ */
+async function encodeMessagesForRemote(
+  messages: OpenAIChatMessage[],
+): Promise<OpenAIChatMessage[]> {
+  return Promise.all(
+    messages.map(async message => {
+      if (!Array.isArray(message.content)) {
+        return message;
+      }
+      const content = await Promise.all(
+        message.content.map(async part => {
+          const url = part.image_url?.url;
+          if (!isLocalImageUrl(url)) {
+            return part;
+          }
+          const path = url.replace(/^file:\/\//, '');
+          try {
+            const base64 = await RNFS.readFile(path, 'base64');
+            const ext = path.toLowerCase().split('.').pop() || 'jpg';
+            return {
+              ...part,
+              image_url: {url: `data:image/${ext};base64,${base64}`},
+            };
+          } catch (error) {
+            // Leave the part unchanged; the server surfaces the failure on the
+            // existing completion-error path.
+            console.warn('Failed to encode image for remote server:', error);
+            return part;
+          }
+        }),
+      );
+      return {...message, content};
+    }),
+  );
+}
+
 export async function streamChatCompletion(
   params: StreamChatParams,
   serverUrl: string,
@@ -481,6 +544,12 @@ export async function streamChatCompletion(
   const url = `${normalizeUrl(serverUrl)}/v1/chat/completions`;
   const connectionTimeoutMs = resolveTimeout(timeoutMs, CONNECTION_TIMEOUT_MS);
   const idleTimeoutMs = resolveTimeout(timeoutMs, IDLE_TIMEOUT_MS);
+  // Only pay the async encode when a local image is actually attached; the
+  // common text path stays synchronous so callers see the request built in the
+  // same tick.
+  const encodedMessages = hasLocalImageAttachment(params.messages)
+    ? await encodeMessagesForRemote(params.messages)
+    : params.messages;
 
   return new Promise<CompletionResult>((resolve, reject) => {
     const xhr = new XMLHttpRequest();
@@ -823,7 +892,7 @@ export async function streamChatCompletion(
     // with newer models) reject unsupported or empty params with 400 errors.
     const requestBody: Record<string, any> = {
       model: params.model,
-      messages: params.messages,
+      messages: encodedMessages,
       stream: true,
     };
     if (params.temperature != null) {
