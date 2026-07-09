@@ -9,6 +9,7 @@ import {
   fetchServerProps,
   testConnection,
   RemoteModelInfo,
+  PROPS_TIMEOUT_MS,
 } from '../api/openai';
 import {ServerConfig} from '../utils/types';
 import {ReasoningCapability} from '../utils/reasoningCapability';
@@ -223,25 +224,32 @@ class ServerStore {
       });
 
       // llama.cpp serves GET /props with the context window and vision
-      // capability. Fetch is best-effort and llama.cpp-only: fetchServerProps
-      // never throws, so a /props failure cannot break the models path or the
-      // connection. Other server types skip it entirely (no request).
+      // capability. Detached (fire-and-forget) so a slow/hung probe can't hold
+      // the add-server sheet in the saving state: fetchModelsForServer resolves
+      // as soon as the models list is stored. Best-effort and llama.cpp-only;
+      // the bounded PROPS_TIMEOUT_MS caps the detached probe. Other server
+      // types skip it entirely (no request).
       if (server.serverType === 'llama.cpp') {
-        const props = await fetchServerProps(
-          server.url,
-          apiKey,
-          server.requestTimeoutMs,
-        );
-        if (
-          props.contextLength !== undefined ||
-          props.supportsVision !== undefined
-        ) {
-          runInAction(() => {
-            // updateServer re-finds by id, so a delete-during-fetch race is a
-            // no-op rather than a stale write to a removed server.
-            this.updateServer(serverId, props);
-          });
-        }
+        (async () => {
+          const props = await fetchServerProps(
+            server.url,
+            apiKey,
+            PROPS_TIMEOUT_MS,
+          );
+          if (
+            props.contextLength !== undefined ||
+            props.supportsVision !== undefined
+          ) {
+            runInAction(() => {
+              // updateServer re-finds by id, so a delete-during-fetch race is a
+              // no-op rather than a stale write to a removed server.
+              this.updateServer(serverId, props);
+            });
+          }
+        })().catch(() => {
+          // Defense-in-depth: fetchServerProps never throws today; swallow to
+          // satisfy no-floating-promises on the detached probe.
+        });
       }
     } catch (error: any) {
       runInAction(() => {

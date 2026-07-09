@@ -358,6 +358,12 @@ export async function testConnection(
 
 const DETECT_TIMEOUT_MS = 5000;
 
+// Bound the detached /props capability probe. /props is a tiny local JSON that
+// llama.cpp serves instantly, so 5 s is generous; it mirrors the server-type
+// detect probe. Passed explicitly rather than omitted — omitting resolves to
+// CONNECTION_TIMEOUT_MS (30 s), which would not bound a fire-and-forget probe.
+export const PROPS_TIMEOUT_MS = 5000;
+
 /**
  * Detect server type from response headers and model metadata.
  * Checks (cheapest first):

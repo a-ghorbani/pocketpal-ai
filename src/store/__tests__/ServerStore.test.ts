@@ -14,6 +14,7 @@ jest.mock('../../api/openai', () => ({
   fetchModels: jest.fn(),
   fetchServerProps: jest.fn(),
   testConnection: jest.fn(),
+  PROPS_TIMEOUT_MS: 5000,
 }));
 
 // Mock AppState.addEventListener
@@ -592,14 +593,45 @@ describe('ServerStore', () => {
 
       await serverStore.fetchModelsForServer(id);
 
+      // The /props probe is bounded by PROPS_TIMEOUT_MS (5000), not the
+      // server's requestTimeoutMs or the omitted 30 s default.
       expect(mockedFetchServerProps).toHaveBeenCalledWith(
         'http://localhost:8080',
         undefined,
-        undefined,
+        5000,
       );
+      // The probe is detached: fetchModelsForServer resolves before caps land,
+      // so the write is only observable after a microtask flush.
+      await new Promise(setImmediate);
       const server = serverStore.servers.find(s => s.id === id);
       expect(server!.contextLength).toBe(4096);
       expect(server!.supportsVision).toBe(true);
+    });
+
+    it('resolves fetchModelsForServer without waiting on the /props probe', async () => {
+      const id = serverStore.addServer({
+        name: 'llama server',
+        url: 'http://localhost:8080',
+        serverType: 'llama.cpp',
+      });
+      jest.clearAllMocks();
+
+      const mockModels = [{id: 'm', object: 'model', owned_by: 'system'}];
+      mockedFetchModels.mockResolvedValueOnce(mockModels);
+      // A /props probe that never settles must not block the resolution.
+      let released: (v: {supportsVision: boolean}) => void = () => {};
+      mockedFetchServerProps.mockReturnValueOnce(
+        new Promise(resolve => {
+          released = resolve;
+        }),
+      );
+      (Keychain.getGenericPassword as jest.Mock).mockResolvedValueOnce(false);
+
+      await serverStore.fetchModelsForServer(id);
+
+      // Models are present immediately even though the probe is still pending.
+      expect(serverStore.serverModels.get(id)).toEqual(mockModels);
+      released({supportsVision: true});
     });
 
     it('does not fetch /props for a non-llama.cpp server', async () => {
