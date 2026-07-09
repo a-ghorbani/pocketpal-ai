@@ -4,7 +4,12 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import {makePersistable} from 'mobx-persist-store';
 import * as Keychain from 'react-native-keychain';
 
-import {fetchModels, testConnection, RemoteModelInfo} from '../api/openai';
+import {
+  fetchModels,
+  fetchServerProps,
+  testConnection,
+  RemoteModelInfo,
+} from '../api/openai';
 import {ServerConfig} from '../utils/types';
 import {ReasoningCapability} from '../utils/reasoningCapability';
 
@@ -216,6 +221,28 @@ class ServerStore {
           s.lastConnected = Date.now();
         }
       });
+
+      // llama.cpp serves GET /props with the context window and vision
+      // capability. Fetch is best-effort and llama.cpp-only: fetchServerProps
+      // never throws, so a /props failure cannot break the models path or the
+      // connection. Other server types skip it entirely (no request).
+      if (server.serverType === 'llama.cpp') {
+        const props = await fetchServerProps(
+          server.url,
+          apiKey,
+          server.requestTimeoutMs,
+        );
+        if (
+          props.contextLength !== undefined ||
+          props.supportsVision !== undefined
+        ) {
+          runInAction(() => {
+            // updateServer re-finds by id, so a delete-during-fetch race is a
+            // no-op rather than a stale write to a removed server.
+            this.updateServer(serverId, props);
+          });
+        }
+      }
     } catch (error: any) {
       runInAction(() => {
         this.error = error.message || 'Failed to fetch models';

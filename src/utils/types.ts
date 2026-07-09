@@ -478,6 +478,10 @@ export interface ServerConfig {
     | 'OpenAI'
     | 'vLLM'
     | string;
+  // Server-reported capabilities discovered from llama.cpp GET /props.
+  // ServerStore is the sole writer; undefined = unknown/not probed.
+  contextLength?: number; // /props n_ctx
+  supportsVision?: boolean; // /props modalities.vision
 }
 
 export enum ModelType {

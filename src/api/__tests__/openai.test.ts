@@ -1,6 +1,7 @@
 import {
   fetchModels,
   fetchModelsWithHeaders,
+  fetchServerProps,
   detectServerType,
   testConnection,
   streamChatCompletion,
@@ -364,6 +365,68 @@ describe('testConnection', () => {
     await expect(
       testConnection('http://localhost:1234', undefined, undefined),
     ).resolves.toEqual({ok: true, modelCount: 1});
+  });
+});
+
+describe('fetchServerProps', () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+  });
+
+  it('parses contextLength from default_generation_settings.n_ctx and vision', async () => {
+    global.fetch = jest.fn().mockResolvedValueOnce({
+      ok: true,
+      json: () =>
+        Promise.resolve({
+          default_generation_settings: {n_ctx: 4096},
+          modalities: {vision: true, audio: false},
+        }),
+    });
+
+    const props = await fetchServerProps('http://localhost:8080');
+
+    expect(global.fetch).toHaveBeenCalledWith(
+      'http://localhost:8080/props',
+      expect.objectContaining({method: 'GET'}),
+    );
+    expect(props).toEqual({contextLength: 4096, supportsVision: true});
+  });
+
+  it('falls back to top-level n_ctx and omits vision when not reported', async () => {
+    global.fetch = jest.fn().mockResolvedValueOnce({
+      ok: true,
+      json: () => Promise.resolve({n_ctx: 8192}),
+    });
+
+    const props = await fetchServerProps('http://localhost:8080');
+    expect(props).toEqual({contextLength: 8192});
+  });
+
+  it('resolves to empty caps on a non-2xx response', async () => {
+    global.fetch = jest.fn().mockResolvedValueOnce({ok: false, status: 404});
+
+    await expect(fetchServerProps('http://localhost:8080')).resolves.toEqual(
+      {},
+    );
+  });
+
+  it('resolves to empty caps on a network error (never throws)', async () => {
+    global.fetch = jest.fn().mockRejectedValueOnce(new Error('boom'));
+
+    await expect(fetchServerProps('http://localhost:8080')).resolves.toEqual(
+      {},
+    );
+  });
+
+  it('resolves to empty caps on malformed JSON', async () => {
+    global.fetch = jest.fn().mockResolvedValueOnce({
+      ok: true,
+      json: () => Promise.reject(new Error('bad json')),
+    });
+
+    await expect(fetchServerProps('http://localhost:8080')).resolves.toEqual(
+      {},
+    );
   });
 });
 

@@ -274,6 +274,62 @@ export async function fetchModels(
   return models;
 }
 
+/** Server capabilities discovered from llama.cpp GET /props. */
+export interface ServerProps {
+  contextLength?: number;
+  supportsVision?: boolean;
+}
+
+/**
+ * Fetch server capabilities from a llama.cpp server's GET /props endpoint.
+ * Pure: parses the response into caps and never throws — a timeout, non-2xx,
+ * or malformed body resolves to `{}` so the caller's models path and
+ * connection are never affected. `/props` is llama.cpp-specific; callers gate
+ * on serverType before invoking.
+ *
+ * Key names verified against a live llama.cpp build (b9910): context window is
+ * `default_generation_settings.n_ctx` (top-level `n_ctx` is an older-build
+ * fallback); vision is `modalities.vision`.
+ */
+export async function fetchServerProps(
+  serverUrl: string,
+  apiKey?: string,
+  timeoutMs?: number,
+): Promise<ServerProps> {
+  const url = `${normalizeUrl(serverUrl)}/props`;
+  const controller = new AbortController();
+  const timeout = setTimeout(
+    () => controller.abort(),
+    resolveTimeout(timeoutMs, CONNECTION_TIMEOUT_MS),
+  );
+
+  try {
+    const response = await fetch(url, {
+      method: 'GET',
+      headers: buildHeaders(apiKey),
+      signal: controller.signal,
+    });
+    if (!response.ok) {
+      return {};
+    }
+    const data = await response.json();
+    const contextLength: unknown =
+      data?.default_generation_settings?.n_ctx ?? data?.n_ctx;
+    const props: ServerProps = {};
+    if (typeof contextLength === 'number') {
+      props.contextLength = contextLength;
+    }
+    if (data?.modalities?.vision === true) {
+      props.supportsVision = true;
+    }
+    return props;
+  } catch {
+    return {};
+  } finally {
+    clearTimeout(timeout);
+  }
+}
+
 /**
  * Test connection to an OpenAI-compatible server.
  * Returns ok status and model count.
