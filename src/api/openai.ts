@@ -698,7 +698,11 @@ export async function streamChatCompletion(
         content: fullContent,
         reasoning_content: fullReasoningContent || undefined,
         tool_calls: finalToolCalls,
-        tokens_predicted: tokensPredicted,
+        // llama.cpp reports authoritative token counts on `timings`; the server
+        // count wins over the per-event tally. Each field is guarded on its own
+        // key so a server that emits only one does not zero the other.
+        tokens_evaluated: serverTimings?.prompt_n,
+        tokens_predicted: serverTimings?.predicted_n ?? tokensPredicted,
         timings: serverTimings,
       };
 

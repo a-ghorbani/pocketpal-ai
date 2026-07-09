@@ -831,6 +831,52 @@ describe('streamChatCompletion', () => {
     expect(result.stopped_eos).toBe(true);
   });
 
+  it('reconciles token counts from timings prompt_n/predicted_n', async () => {
+    const resultPromise = streamChatCompletion(
+      {messages: [{role: 'user', content: 'Hi'}], model: 'test-model'},
+      'http://localhost:1234',
+    );
+
+    const xhr = MockXHR.instances[0];
+    xhr.simulateHeaders(200);
+    xhr.simulateProgress(
+      'data: {"choices":[{"delta":{"content":"Hello"},"finish_reason":null}]}\n\n',
+    );
+    xhr.simulateProgress(
+      'data: {"choices":[{"delta":{},"finish_reason":"stop"}],"timings":{"prompt_n":3000,"predicted_n":500}}\n\n',
+    );
+    xhr.simulateProgress('data: [DONE]\n\n');
+    xhr.simulateLoad();
+
+    const result = await resultPromise;
+    // Server counts win over the single content-bearing per-event tally.
+    expect(result.tokens_evaluated).toBe(3000);
+    expect(result.tokens_predicted).toBe(500);
+  });
+
+  it('guards each timings token key independently (only predicted_n)', async () => {
+    const resultPromise = streamChatCompletion(
+      {messages: [{role: 'user', content: 'Hi'}], model: 'test-model'},
+      'http://localhost:1234',
+    );
+
+    const xhr = MockXHR.instances[0];
+    xhr.simulateHeaders(200);
+    xhr.simulateProgress(
+      'data: {"choices":[{"delta":{"content":"Hello"},"finish_reason":null}]}\n\n',
+    );
+    xhr.simulateProgress(
+      'data: {"choices":[{"delta":{},"finish_reason":"stop"}],"timings":{"predicted_n":7}}\n\n',
+    );
+    xhr.simulateProgress('data: [DONE]\n\n');
+    xhr.simulateLoad();
+
+    const result = await resultPromise;
+    // Missing prompt_n stays unset; predicted_n still wins.
+    expect(result.tokens_evaluated).toBeUndefined();
+    expect(result.tokens_predicted).toBe(7);
+  });
+
   it('returns no timings when server does not provide them', async () => {
     const resultPromise = streamChatCompletion(
       {messages: [{role: 'user', content: 'Hi'}], model: 'test-model'},
@@ -849,6 +895,9 @@ describe('streamChatCompletion', () => {
 
     const result = await resultPromise;
     expect(result.timings).toBeUndefined();
+    // No timings → prompt count unset, predicted keeps the per-event tally.
+    expect(result.tokens_evaluated).toBeUndefined();
+    expect(result.tokens_predicted).toBe(1);
   });
 
   it('rejects immediately if signal already aborted', async () => {
