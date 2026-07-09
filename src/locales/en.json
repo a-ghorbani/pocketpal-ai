@@ -1145,6 +1145,7 @@
     "contextWarning": "This conversation is getting long and may soon run out of room.",
     "contextRemoteHedged": "This reply may have been cut off. Try sending again or shortening the request.",
     "contextFull": "The conversation ran out of room. Start a new chat or increase the context size.",
+    "contextFullRemote": "The conversation ran out of room. Start a new chat.",
     "contextFullEscalated": "Still out of room. Start a new chat, or increase the context size to keep going.",
     "contextFullHeavyTalent": "The conversation ran out of room — {{talent}} tends to need more. Start a new chat or increase the context size.",
     "contextBannerDismiss": "Dismiss",

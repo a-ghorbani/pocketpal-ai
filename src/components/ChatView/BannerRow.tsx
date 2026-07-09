@@ -219,7 +219,9 @@ export const BannerRow: React.FC<BannerRowProps> = observer(
       ? t(l10n.chat.contextFullHeavyTalent, {talent: heavyTalentLabel})
       : chatSessionStore.consecutiveFullFailures >= 2
         ? l10n.chat.contextFullEscalated
-        : l10n.chat.contextFull;
+        : isRemote
+          ? l10n.chat.contextFullRemote
+          : l10n.chat.contextFull;
 
     return (
       <View

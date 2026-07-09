@@ -248,6 +248,54 @@ describe('BannerRow', () => {
     });
   });
 
+  it('uses the remote context-full copy (no increase clause) for a remote model', () => {
+    runInAction(() => {
+      modelStore.activeModelId = 'remote-1';
+      modelStore.models = [
+        {id: 'remote-1', origin: ModelOrigin.REMOTE, serverId: 'srv-1'} as any,
+      ];
+      (modelStore as any).activeContextSettings = undefined;
+      serverStore.servers = [
+        {
+          id: 'srv-1',
+          name: 'llama',
+          url: 'http://localhost:8080',
+          serverType: 'llama.cpp',
+          contextLength: 4096,
+        } as any,
+      ];
+      chatSessionStore.lastCompletionResult = {
+        used: 4096,
+        contextFull: true,
+        isRemote: true,
+        finishReason: 'length',
+      };
+    });
+    const {getByText, queryByText} = renderBanner({canIncrease: false});
+    // Remote copy drops "or increase the context size" — the increase CTA is
+    // hidden for remote (no client-side control).
+    expect(getByText(l10n.en.chat.contextFullRemote)).toBeTruthy();
+    expect(queryByText(l10n.en.chat.contextFull)).toBeNull();
+
+    runInAction(() => {
+      modelStore.models = [];
+      serverStore.servers = [];
+    });
+  });
+
+  it('keeps the device context-full copy for a local model', () => {
+    runInAction(() => {
+      chatSessionStore.lastCompletionResult = {
+        used: 4096,
+        contextFull: true,
+        isRemote: false,
+      };
+    });
+    const {getByText, queryByText} = renderBanner({canIncrease: true});
+    expect(getByText(l10n.en.chat.contextFull)).toBeTruthy();
+    expect(queryByText(l10n.en.chat.contextFullRemote)).toBeNull();
+  });
+
   it('resolves the near-limit warning + meter percent for a remote model', () => {
     runInAction(() => {
       modelStore.activeModelId = 'remote-1';
