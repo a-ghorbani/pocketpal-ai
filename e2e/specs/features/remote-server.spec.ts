@@ -96,6 +96,11 @@ describe('Remote Server Features', () => {
     await urlInput.setValue(SERVER_CONFIG.url);
     console.log(`Entered server URL: ${SERVER_CONFIG.url}`);
 
+    // Dismiss the keyboard so it does not cover the lower sheet (#783 added a
+    // Server Type dropdown that makes the sheet taller; the keyboard blocks
+    // both the probe-revealed fields and scrolling to the model list).
+    await modelsPage.hideKeyboard();
+
     // Wait for auto-probe to fire (800ms debounce + network time)
     await browser.pause(3000);
 
@@ -156,33 +161,41 @@ describe('Remote Server Features', () => {
     );
     expect(isConnected).toBe(true);
 
-    // Select a model — either by hint or tap the first radio button
+    // Select a model. With #783 the sheet is taller (Server Type dropdown), so
+    // the model list sits below the fold — scroll by existence (controls deep
+    // in a bottom sheet report isDisplayed=false on iOS) before selecting.
     if (REMOTE_MODEL_HINT) {
+      await Gestures.scrollInSheetToElementExists(
+        byPartialText(REMOTE_MODEL_HINT),
+        12,
+      );
       const modelEl = browser.$(byPartialText(REMOTE_MODEL_HINT));
-      const visible = await modelEl
-        .waitForDisplayed({timeout: 5000})
+      const exists = await modelEl
+        .waitForExist({timeout: 8000})
         .then(() => true)
         .catch(() => false);
-      if (visible) {
+      if (exists) {
         await modelEl.click();
         console.log(`Selected model matching "${REMOTE_MODEL_HINT}"`);
+        await browser.pause(500);
       }
     } else {
-      // If only one model, it's auto-selected.
-      // If multiple models, select the first unchecked radio button.
+      // No hint: a single returned model auto-selects. Otherwise scroll the
+      // first unchecked radio into view and tap it.
       const addBtn = browser.$(Selectors.remoteModel.addModelButton);
       const alreadyEnabled = await addBtn.isEnabled().catch(() => false);
       if (!alreadyEnabled) {
         // react-native-paper RadioButton renders as XCUIElementTypeOther
         // with value="radio button, unchecked"
-        const firstRadio = browser.$(
-          '-ios predicate string:value == "radio button, unchecked"',
-        );
-        const radioVisible = await firstRadio
-          .waitForDisplayed({timeout: 3000})
+        const radioSelector =
+          '-ios predicate string:value == "radio button, unchecked"';
+        await Gestures.scrollInSheetToElementExists(radioSelector, 12);
+        const firstRadio = browser.$(radioSelector);
+        const radioExists = await firstRadio
+          .waitForExist({timeout: 3000})
           .then(() => true)
           .catch(() => false);
-        if (radioVisible) {
+        if (radioExists) {
           await firstRadio.click();
           console.log('Selected first model from radio list');
           await browser.pause(500);
@@ -190,15 +203,14 @@ describe('Remote Server Features', () => {
       }
     }
 
-    // Scroll to and tap "Add Model" button
+    // Scroll to and tap "Add Model" (enabled once a model is selected).
+    await Gestures.scrollInSheetToElementExists(
+      Selectors.remoteModel.addModelButton,
+      6,
+    );
     const addButton = browser.$(Selectors.remoteModel.addModelButton);
-    const addVisible = await addButton.isDisplayed().catch(() => false);
-    if (!addVisible) {
-      await Gestures.swipeUpInSheet();
-      await browser.pause(300);
-    }
-    await addButton.waitForDisplayed({timeout: 5000});
-    await addButton.waitForEnabled({timeout: 5000});
+    await addButton.waitForExist({timeout: 5000});
+    await addButton.waitForEnabled({timeout: 8000});
     await addButton.click();
     await browser.pause(1000);
 

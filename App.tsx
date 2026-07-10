@@ -30,6 +30,7 @@ import {
   HeaderLeft,
   AppWithMigration,
   TTSSetupSheet,
+  DownloadOverlay,
   HubRunSheetHost,
 } from './src/components';
 import {MarkdownProvider} from './src/components/MarkdownView';
@@ -45,6 +46,7 @@ import {
   DevToolsScreen,
 } from './src/screens';
 import PalsScreen from './src/screens/PalsScreen';
+import {OnboardingStack} from './src/screens/OnboardingScreens';
 
 // Check if app is in debug mode
 const isDebugMode = __DEV__;
@@ -58,6 +60,25 @@ const DeepLinkHandler = () => {
   useDeepLinking();
   return null;
 };
+
+// Branches between the OnboardingStack (first-launch flow) and the main
+// Drawer.Navigator. Both children mount under the same provider tree —
+// switching does NOT remount providers above this point.
+//
+// The hydration check is belt-and-suspenders. AppWithMigrationWrapper
+// already gates render on `isHydrated(uiStore)`, but reading the same
+// observable here keeps the contract local and survives refactors of the
+// outer gate.
+type SwitchPointProps = {drawer: React.ReactNode};
+const SwitchPoint: React.FC<SwitchPointProps> = observer(({drawer}) => {
+  if (!isHydrated(uiStore)) {
+    return null;
+  }
+  if (!uiStore.hasCompletedOnboarding) {
+    return <OnboardingStack />;
+  }
+  return <>{drawer}</>;
+});
 
 const App = observer(() => {
   const theme = useTheme();
@@ -88,82 +109,87 @@ const App = observer(() => {
                 <NavigationContainer>
                   <DeepLinkHandler />
                   <BottomSheetModalProvider>
-                    <Drawer.Navigator
-                      screenOptions={{
-                        headerLeft: () => <HeaderLeft />,
-                        drawerStyle: {
-                          width: screenWidth > 400 ? 320 : screenWidth * 0.8,
-                        },
-                        headerStyle: {
-                          backgroundColor: theme.colors.background,
-                        },
-                        headerTintColor: theme.colors.onBackground,
-                        headerTitleStyle: styles.headerTitle,
-                      }}
-                      drawerContent={props => <SidebarContent {...props} />}>
-                      <Drawer.Screen
-                        name={ROUTES.CHAT}
-                        component={gestureHandlerRootHOC(ChatScreen)}
-                        options={{
-                          headerShown: false,
-                        }}
-                      />
-                      <Drawer.Screen
-                        name={ROUTES.PALS}
-                        component={gestureHandlerRootHOC(PalsScreen)}
-                        options={{
-                          headerRight: () => <PalHeaderRight />,
-                          headerStyle: styles.headerWithoutDivider,
-                          title: currentL10n.screenTitles.pals,
-                        }}
-                      />
-                      <Drawer.Screen
-                        name={ROUTES.MODELS}
-                        component={gestureHandlerRootHOC(ModelsScreen)}
-                        options={{
-                          headerRight: () => <ModelsHeaderRight />,
-                          headerStyle: styles.headerWithoutDivider,
-                          title: currentL10n.screenTitles.models,
-                        }}
-                      />
-                      <Drawer.Screen
-                        name={ROUTES.BENCHMARK}
-                        component={gestureHandlerRootHOC(BenchmarkScreen)}
-                        options={{
-                          headerStyle: styles.headerWithoutDivider,
-                          title: currentL10n.screenTitles.benchmark,
-                        }}
-                      />
-                      <Drawer.Screen
-                        name={ROUTES.SETTINGS}
-                        component={gestureHandlerRootHOC(SettingsScreen)}
-                        options={{
-                          headerStyle: styles.headerWithoutDivider,
-                          title: currentL10n.screenTitles.settings,
-                        }}
-                      />
-                      <Drawer.Screen
-                        name={ROUTES.APP_INFO}
-                        component={gestureHandlerRootHOC(AboutScreen)}
-                        options={{
-                          headerStyle: styles.headerWithoutDivider,
-                          title: currentL10n.screenTitles.appInfo,
-                        }}
-                      />
-
-                      {/* Only show Dev Tools screen in debug mode */}
-                      {isDebugMode && (
-                        <Drawer.Screen
-                          name={ROUTES.DEV_TOOLS}
-                          component={gestureHandlerRootHOC(DevToolsScreen)}
-                          options={{
-                            headerStyle: styles.headerWithoutDivider,
-                            title: 'Dev Tools',
+                    <SwitchPoint
+                      drawer={
+                        <Drawer.Navigator
+                          screenOptions={{
+                            headerLeft: () => <HeaderLeft />,
+                            drawerStyle: {
+                              width:
+                                screenWidth > 400 ? 320 : screenWidth * 0.8,
+                            },
+                            headerStyle: {
+                              backgroundColor: theme.colors.background,
+                            },
+                            headerTintColor: theme.colors.onBackground,
+                            headerTitleStyle: styles.headerTitle,
                           }}
-                        />
-                      )}
+                          drawerContent={props => (
+                            <SidebarContent {...props} />
+                          )}>
+                          <Drawer.Screen
+                            name={ROUTES.CHAT}
+                            component={gestureHandlerRootHOC(ChatScreen)}
+                            options={{
+                              headerShown: false,
+                            }}
+                          />
+                          <Drawer.Screen
+                            name={ROUTES.PALS}
+                            component={gestureHandlerRootHOC(PalsScreen)}
+                            options={{
+                              headerRight: () => <PalHeaderRight />,
+                              headerStyle: styles.headerWithoutDivider,
+                              title: currentL10n.screenTitles.pals,
+                            }}
+                          />
+                          <Drawer.Screen
+                            name={ROUTES.MODELS}
+                            component={gestureHandlerRootHOC(ModelsScreen)}
+                            options={{
+                              headerRight: () => <ModelsHeaderRight />,
+                              headerStyle: styles.headerWithoutDivider,
+                              title: currentL10n.screenTitles.models,
+                            }}
+                          />
+                          <Drawer.Screen
+                            name={ROUTES.BENCHMARK}
+                            component={gestureHandlerRootHOC(BenchmarkScreen)}
+                            options={{
+                              headerStyle: styles.headerWithoutDivider,
+                              title: currentL10n.screenTitles.benchmark,
+                            }}
+                          />
+                          <Drawer.Screen
+                            name={ROUTES.SETTINGS}
+                            component={gestureHandlerRootHOC(SettingsScreen)}
+                            options={{
+                              headerStyle: styles.headerWithoutDivider,
+                              title: currentL10n.screenTitles.settings,
+                            }}
+                          />
+                          <Drawer.Screen
+                            name={ROUTES.APP_INFO}
+                            component={gestureHandlerRootHOC(AboutScreen)}
+                            options={{
+                              headerStyle: styles.headerWithoutDivider,
+                              title: currentL10n.screenTitles.appInfo,
+                            }}
+                          />
 
-                      {/*
+                          {/* Only show Dev Tools screen in debug mode */}
+                          {isDebugMode && (
+                            <Drawer.Screen
+                              name={ROUTES.DEV_TOOLS}
+                              component={gestureHandlerRootHOC(DevToolsScreen)}
+                              options={{
+                                headerStyle: styles.headerWithoutDivider,
+                                title: 'Dev Tools',
+                              }}
+                            />
+                          )}
+
+                          {/*
                       E2E-only deep-link-driven benchmark matrix runner.
                       Hidden from the drawer sidebar via
                       drawerItemStyle:{display:'none'}; reachable only by
@@ -171,21 +197,24 @@ const App = observer(() => {
                       flavor build (see useDeepLinking cold-launch effect
                       and android/app/src/e2e/AndroidManifest.xml).
                     */}
-                      {__E2E__ && (
-                        <Drawer.Screen
-                          name={ROUTES.BENCHMARK_RUNNER}
-                          component={gestureHandlerRootHOC(
-                            BenchmarkRunnerScreen,
+                          {__E2E__ && (
+                            <Drawer.Screen
+                              name={ROUTES.BENCHMARK_RUNNER}
+                              component={gestureHandlerRootHOC(
+                                BenchmarkRunnerScreen,
+                              )}
+                              options={{
+                                headerStyle: styles.headerWithoutDivider,
+                                title: 'Benchmark Runner',
+                                drawerItemStyle: {display: 'none'},
+                              }}
+                            />
                           )}
-                          options={{
-                            headerStyle: styles.headerWithoutDivider,
-                            title: 'Benchmark Runner',
-                            drawerItemStyle: {display: 'none'},
-                          }}
-                        />
-                      )}
-                    </Drawer.Navigator>
+                        </Drawer.Navigator>
+                      }
+                    />
                     <TTSSetupSheet />
+                    <DownloadOverlay />
                     <HubRunSheetHost />
                   </BottomSheetModalProvider>
                 </NavigationContainer>

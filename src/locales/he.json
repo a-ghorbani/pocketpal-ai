@@ -30,7 +30,8 @@
     "ok": "אישור",
     "close": "סגור",
     "clear": "נקה הכל",
-    "gallery": "גלריה"
+    "gallery": "גלריה",
+    "stop": "עצור"
   },
   "settings": {
     "modelInitializationSettings": "הגדרות איתחול מודל",
@@ -157,7 +158,10 @@
     "manageServers": "ניהול שרתים",
     "ttsAvailability": "טקסט לדיבור",
     "ttsAvailabilityDescription": "קרא את תשובות העוזר בקול רם.",
-    "ttsAvailabilityLowMemoryWarning": "זיכרון המכשיר שלך נמוך - ייתכן שזה לא יעבוד בצורה אמינה."
+    "ttsAvailabilityLowMemoryWarning": "זיכרון המכשיר שלך נמוך - ייתכן שזה לא יעבוד בצורה אמינה.",
+    "requestTimeout": "זמן קצוב לבקשה (בשניות)",
+    "requestTimeoutHelp": "כמה זמן לחכות לתגובה משרת איטי. אפשר להשאיר ריק לערך ברירת המחדל.",
+    "requestTimeoutPlaceholder": "אופציונלי - אפשר להשאיר ריק לברירת המחדל"
   },
   "memory": {
     "shortWarning": "אזהרת זיכרון",
@@ -459,7 +463,10 @@
     "versionCopiedTitle": "הגרסה הועתקה",
     "versionCopiedDescription": "פרטי הגרסה הועתקו ללוח",
     "privacyPolicy": "מדיניות הפרטיות",
-    "termsOfService": "תנאי השירות"
+    "termsOfService": "תנאי השירות",
+    "tour": "סיור",
+    "tourDescription": "צפה שוב במסכי הפתיחה כדי לגלות מה PocketPal AI מציע.",
+    "showIntroButton": "הצג שוב את ההקדמה"
   },
   "feedback": {
     "title": "שלח משוב",
@@ -533,7 +540,9 @@
       "activateModelTitle": "טען מודל כדי להתחיל",
       "activateModelDescription": "בחר את המודל והורד אותו. לאחר ההורדה, הקש על \"טען\" ליד המודל והתחל לשוחח בצ'אט.",
       "activateModelButton": "בחר מודל",
-      "loading": "טוען..."
+      "loading": "טוען...",
+      "gettingReadyTitle": "{{name}} מתכונן",
+      "gettingReadyDescription": "נודיע לך ברגע שה-pal שלך יהיה מוכן לשיחה. הקש על הבאנר למעלה כדי לראות איך מתקדם."
     },
     "chatInput": {
       "inputPlaceholder": "הודעה",
@@ -942,7 +951,7 @@
       "tokensPerSec": "{{value}} טוקנים/שנ'",
       "ttft": "{{value}}מ.ש. TTFT",
       "interrupted": "הופסק",
-      "truncated": "קטיעה — ככל הנראה ההקשר מלא"
+      "truncated": "נקטע — ככל הנראה ההקשר מלא"
     },
     "pendingIndicator": {
       "preparingTool": "מכין כלי",
@@ -1114,14 +1123,14 @@
     "pleaseLoadModel": "טען מודל כדי לשוחח.",
     "multimodalNotEnabled": "רב-מודאליות אינה מופעלת עבור מודל זה. תמונות יוצגו אך לא יעובדו על ידי ה-AI.",
     "cannotSendWithoutModel": "טען מודל תחילה",
-    "toolCallTruncated": "קריאת הכלי נקטעה — ככל הנראה אזל המקום בהקשר של המודל. נסה להשתמש בהקשר (Context) גדול יותר או שלח בקשה קטנה יותר.",
+    "toolCallTruncated": "קריאת הכלי נקטעה — ככל הנראה הקשר המודל התמלא. נסה להשתמש בהקשר גדול יותר או שלח בקשה קטנה יותר.",
     "toolCompatWarning": "מודל זה עשוי שלא לתמוך בקריאה לכלי. התוצאות עלולות להיות לא אמינות.",
     "softCapWarning": "פתח צ'אט חדש לביצועים מיטביים.",
     "generatingPreview": "מייצר תצוגה מקדימה... ({{tokens}} טוקנים)",
     "generatingPreviewPending": "מייצר תצוגה מקדימה…",
     "toolUsedChip": "נעשה שימוש ב-{{name}}",
     "toolErrorBlock": "{{name}} נכשל",
-    "contextWarning": "השיחה הזו מתארכת ועלולה בקרוב להיגמר במקום.",
+    "contextWarning": "השיחה הזאת הולכת ומתארכת וייתכן שבקרוב ייגמר לה המקום.",
     "contextRemoteHedged": "ייתכן שתשובה זו נקטעה. נסה לשלוח שוב או לקצר את הבקשה.",
     "contextFull": "נגמר המקום בשיחה. פתח צ'אט חדש או הגדל את אורך ההקשר.",
     "contextFullEscalated": "עדיין אין מקום. פתח צ'אט חדש, או הגדל את אורך ההקשר כדי להמשיך.",
@@ -1312,7 +1321,7 @@
   },
   "htmlPreview": {
     "defaultTitle": "תצוגה מקדימה",
-    "showPreview": "הצג תצוגה מקדימה מעובדת",
+    "showPreview": "הצג תצוגה מקדימה מרונדרת",
     "showCode": "הצג קוד HTML",
     "copyHtml": "העתק HTML",
     "closePreview": "סגור תצוגה מקדימה",
@@ -1338,7 +1347,7 @@
     "engineChipSupertonic": "Supertonic",
     "engineChipSystem": "מערכת",
     "stepsCount": "{{steps}} צעדים",
-    "engineKittenTagline": "טביעת הרגל הקטנה ביותר. אמין. הכי טוב במכשירים חלשים.",
+    "engineKittenTagline": "תפיסת הזיכרון הקטנה ביותר. אמין. הכי טוב במכשירים ישנים.",
     "engineKokoroTagline": "האיכות הגבוהה ביותר. איטי יותר להפעלה. ייתכן שחלק מהקולות לא יעבדו בכל המכשירים.",
     "engineSupertonicTagline": "המהיר ביותר להפעלה. צורך יותר זיכרון RAM. עלול להשמיט מילים מדי פעם.",
     "engineSystemTagline": "קולות מובנים של מערכת ההפעלה. זמינים תמיד, ללא צורך בהתקנה.",
@@ -1359,6 +1368,139 @@
     "engineRetryCta": "נסה שוב",
     "voicesEmptyState": "לא נמצאו קולות.",
     "kokoroDeviceNote": "ייתכן שחלק מהקולות לא יעבדו בכל המכשירים.",
-    "insufficientStorage": "אין מספיק מקום — פנה {{requiredMb}} MB כדי להתקין מנוע זה ({{freeMb}} MB זמינים)."
+    "insufficientStorage": "אין מספיק מקום — פנה {{requiredMb}} MB כדי להתקין מנוע זה ({{freeMb}} MB זמינים).",
+    "supertonicLanguageLabel": "שפה",
+    "supertonicLanguageAuto": "אוטומטי",
+    "supertonicLanguageSheetTitle": "שפה",
+    "supertonicLanguageSearchPlaceholder": "חפש שפות",
+    "supertonicLanguageNames": {
+      "ar": "ערבית",
+      "bg": "בולגרית",
+      "hr": "קרואטית",
+      "cs": "צ'כית",
+      "da": "דנית",
+      "nl": "הולנדית",
+      "en": "אנגלית",
+      "et": "אסטונית",
+      "fi": "פינית",
+      "fr": "צרפתית",
+      "de": "גרמנית",
+      "el": "יוונית",
+      "hi": "הינדי",
+      "hu": "הונגרית",
+      "id": "אינדונזית",
+      "it": "איטלקית",
+      "ja": "יפנית",
+      "ko": "קוריאנית",
+      "lv": "לטבית",
+      "lt": "ליטאית",
+      "pl": "פולנית",
+      "pt": "פורטוגזית",
+      "ro": "רומנית",
+      "ru": "רוסית",
+      "sk": "סלובקית",
+      "sl": "סלובנית",
+      "es": "ספרדית",
+      "sv": "שוודית",
+      "tr": "טורקית",
+      "uk": "אוקראינית",
+      "vi": "וייטנאמית"
+    }
+  },
+  "onboarding": {
+    "back": "חזרה",
+    "skip": "דלג",
+    "skipForNow": "דלג בינתיים",
+    "splash": {
+      "brand": "PocketPal"
+    },
+    "screen1": {
+      "title": "הכירו את ה-pals שלכם.",
+      "titleAccent": "pals.",
+      "body": "חברים קטנים וחכמים שגרים בתוך הטלפון שלכם.\nבואו נסדר לכם הכל - זה ייקח רק רגע.",
+      "cta": "סיור קצר",
+      "eyebrow": "ברוכים הבאים ל-PocketPal"
+    },
+    "screen2": {
+      "title": "בכל זמן,\nבכל מקום.",
+      "body": "ה-pals שלכם גרים בתוך הטלפון.\nבלי אינטרנט, בלי קליטה - הם עובדים במטוס, מחוץ לרשת, בכפרים מרוחקים.",
+      "highlight": "בלי אינטרנט, בלי קליטה",
+      "cta": "הבא",
+      "eyebrow": "הרעיון",
+      "titleAccent": "בכל זמן,"
+    },
+    "screen3": {
+      "title": "קטנים יותר,\nאבל שלכם.",
+      "titleAccent": "קטנים יותר,",
+      "body": "ה-pals בטלפון שלכם מהירים ופרטיים - אבל קלים יותר מ-AI בענן. תחשבו עליהם כחבר בכיס, לא כאורקל יודע-כל.",
+      "highlight": "מהירים ופרטיים",
+      "cta": "הבנתי",
+      "eyebrow": "שימו לב"
+    },
+    "screen4": {
+      "title": "שום דבר לא יוצא מהטלפון שלכם.",
+      "titleAccent": "יוצא",
+      "body": "בלי חשבונות. בלי ענן. בלי מעקב. השיחות שלכם נשארות שלכם.",
+      "highlight": "בלי חשבונות. בלי ענן. בלי מעקב.",
+      "cta": "בואו נתחיל",
+      "eyebrow": "פרטיות מובטחת"
+    },
+    "screen5": {
+      "title": "לְמה ה-pal שלכם?",
+      "body": "בחרו על מה תרצו לדבר - נתאים לכם pal שמתאים לטלפון שלכם.",
+      "topic": {
+        "smartchat": "צ'אט חכם",
+        "coding": "תכנות",
+        "education": "לימודים",
+        "roleplay": "משחק תפקידים",
+        "creative_writing": "כתיבה יצירתית",
+        "else": "מחפשים משהו אחר?"
+      },
+      "topicDescription": {
+        "smartchat": "חבר ידידותי לכל יום",
+        "coding": "כתיבת קוד, ניפוי באגים, הסברים",
+        "education": "ללמוד, להסביר, להיבחן",
+        "roleplay": "דמויות ותרחישים",
+        "creative_writing": "סיפורים, רעיונות, טיוטות",
+        "else": "עיינו בכל ה-pals מאוחר יותר באפליקציה"
+      }
+    },
+    "screen6": {
+      "cta": "הורד את {{name}}",
+      "ctaTemplate": "הורד את {{name}} ({{size}})",
+      "useTemplate": "השתמש ב-{{name}}",
+      "deviceRamSuffix": "GB RAM",
+      "deviceFreeSuffix": "GB פנוי",
+      "recommended": "מומלץ",
+      "downloaded": "הורד",
+      "modelTier": {
+        "quick": "מהיר",
+        "balanced": "מאוזן",
+        "best": "הטוב ביותר"
+      },
+      "subtitleTemplate": "{{name}} חושב בעזרת מודל AI קטן בטלפון שלכם - בחרו אחד שמתאים.",
+      "pal": {
+        "pip": {
+          "body": "מצאנו לכם pal מושלם - חבר ידידותי לכל יום. חכם מספיק לרוב הדברים, קל מספיק לכל טלפון."
+        },
+        "codie": {
+          "body": "הכירו את Codie — שותף התכנות המקומי שלכם. קורא קוד, כותב קוד ומסביר את החלקים המסובכים, בלי לצאת מהטלפון."
+        },
+        "sage": {
+          "body": "Sage סבלני, סקרן ומלווה אתכם דרך רעיונות צעד אחר צעד. שותף ללימודים שתמיד בכיס."
+        },
+        "echo": {
+          "body": "Echo הוא בן לוויה מגוון למשחקי תפקידים — נשאר בדמות, מצייר סצנות והולך לכל מקום שהסיפור שלכם מוביל אליו."
+        },
+        "muse": {
+          "body": "Muse עוזר לכם לכתוב. מציע ניסוחים, מוצא את הקצב ושומר על הסגנון שלכם."
+        }
+      }
+    }
+  },
+  "downloadBanner": {
+    "titleByPal": "{{name}} בהורדה",
+    "titleByModel": "{{name}} בהורדה",
+    "extraInProgress": "+{{count}} נוספים בתהליך"
   }
 }

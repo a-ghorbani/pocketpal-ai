@@ -38,6 +38,10 @@ export interface TokenColors {
   onSurfaceVariant: string;
   outline: string;
   outlineVariant: string;
+  // Subtle border / divider colour. Maps to design-system muted/light.
+  mutedLight: string;
+  // Design-system `Color/Secondary/Default` — small DS button surface.
+  secondaryDefault: string;
 
   // MD3 extras
   surfaceDisabled: string;
@@ -121,6 +125,14 @@ export interface TokenColors {
   iconModelTypeText: string;
   iconModelTypeVision: string;
   iconModelTypeAudio: string;
+
+  // Accent — peach pill / recommended-tier highlight (canonical Figma
+  // `Color/Accent/Peach`; see `accent.peach` consumers in onboarding).
+  // `accent.greenStrong` powers the download progress-bar fill.
+  accent: {
+    peach: string;
+    greenStrong: string;
+  };
 }
 
 /**
@@ -167,6 +179,7 @@ export interface TokenSpacing {
   ml: 20;
   l: 24;
   xl: 32;
+  xxl: 40;
 }
 
 // Key names mirror canonical Figma `Radius/*` (None/XXS/XS/S/M/ML/L/XL/XXL)

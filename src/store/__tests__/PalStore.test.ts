@@ -1,12 +1,19 @@
 import {runInAction} from 'mobx';
+import {Platform} from 'react-native';
 import {palStore} from '../PalStore';
 import {palsHubService} from '../../services';
+import {isUSStorefront} from '../../utils/region';
 import {palRepository} from '../../repositories/PalRepository';
 import type {Pal} from '../../types/pal';
 import type {PalsHubPal} from '../../types/palshub';
 import * as imageUtils from '../../utils/imageUtils';
+import {resolveHFModelForDownload} from '../../utils/hfResolve';
+import {LOOKIE_DEFAULT_MODEL} from '../builtinPalModels';
 
 // Mock dependencies
+jest.mock('../../utils/hfResolve', () => ({
+  resolveHFModelForDownload: jest.fn(),
+}));
 jest.mock('../../repositories/PalRepository', () => ({
   palRepository: {
     getAllPals: jest.fn(),
@@ -40,6 +47,28 @@ jest.mock('../../services', () => ({
 // Mock MobX persist
 jest.mock('mobx-persist-store', () => ({
   makePersistable: jest.fn(),
+}));
+
+// Eligibility writer dependencies: iOS StoreKit storefront + Android probe.
+jest.mock('../../utils/region', () => ({
+  isUSStorefront: jest.fn(),
+}));
+
+// Toggle the module per test via a getter so the null-module fail-closed path
+// can be exercised here. prepareExternalLink / reportExternalContentLink are
+// stubbed so a test can assert the probe never mints a token, launches, or reports.
+const makeExternalContentLink = () => ({
+  isExternalContentLinkAvailable: jest.fn(),
+  prepareExternalLink: jest.fn(),
+  reportExternalContentLink: jest.fn(),
+});
+let mockExternalContentLink: ReturnType<typeof makeExternalContentLink> | null =
+  makeExternalContentLink();
+jest.mock('../../specs/NativeExternalContentLink', () => ({
+  __esModule: true,
+  get default() {
+    return mockExternalContentLink;
+  },
 }));
 
 describe('PalStore', () => {
@@ -132,6 +161,251 @@ describe('PalStore', () => {
       );
 
       consoleSpy.mockRestore();
+    });
+
+    it('creates the Lookie pal from the offline constant without a network resolve', async () => {
+      (palRepository.getAllPals as jest.Mock).mockResolvedValue([]);
+      (palRepository.createPal as jest.Mock).mockImplementation(
+        async (palData: any) => ({
+          ...palData,
+          id: 'lookie-id',
+          created_at: 'now',
+          updated_at: 'now',
+        }),
+      );
+
+      // eslint-disable-next-line no-new
+      new (palStore.constructor as any)();
+      await new Promise(resolve => setTimeout(resolve, 100));
+
+      const lookieCall = (palRepository.createPal as jest.Mock).mock.calls.find(
+        call => call[0]?.name === 'Lookie',
+      );
+
+      expect(lookieCall).toBeDefined();
+      expect(lookieCall![0].defaultModel).toBe(LOOKIE_DEFAULT_MODEL);
+      // No HF resolve / network call at pal init.
+      expect(resolveHFModelForDownload).not.toHaveBeenCalled();
+    });
+
+    it('does not recreate the Lookie pal if one already exists', async () => {
+      const existingLookie: Pal = {
+        ...mockPal,
+        id: 'existing-lookie',
+        name: 'Lookie',
+        capabilities: {video: true},
+      } as Pal;
+      (palRepository.getAllPals as jest.Mock).mockResolvedValue([
+        existingLookie,
+      ]);
+
+      // eslint-disable-next-line no-new
+      new (palStore.constructor as any)();
+      await new Promise(resolve => setTimeout(resolve, 100));
+
+      const lookieCreate = (
+        palRepository.createPal as jest.Mock
+      ).mock.calls.find(call => call[0]?.name === 'Lookie');
+      expect(lookieCreate).toBeUndefined();
+      expect(resolveHFModelForDownload).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('checkout eligibility writer', () => {
+    const originalOS = Platform.OS;
+    const originalE2E = (global as any).__E2E__;
+
+    const runWriter = () => (palStore as any).checkCheckoutEligibility();
+
+    beforeEach(() => {
+      // Exercise the real per-platform branch (prod path), not the E2E override.
+      (global as any).__E2E__ = false;
+      mockExternalContentLink = makeExternalContentLink();
+      (isUSStorefront as jest.Mock).mockReset();
+      runInAction(() => {
+        (palStore as any).isCheckoutEligible = false;
+      });
+    });
+
+    afterEach(() => {
+      Platform.OS = originalOS;
+      (global as any).__E2E__ = originalE2E;
+    });
+
+    it('Android: EXTERNAL_CONTENT_LINK available -> eligible (locale irrelevant)', async () => {
+      Platform.OS = 'android';
+      mockExternalContentLink!.isExternalContentLinkAvailable.mockResolvedValue(
+        true,
+      );
+
+      await runWriter();
+
+      expect(
+        mockExternalContentLink!.isExternalContentLinkAvailable,
+      ).toHaveBeenCalledTimes(1);
+      expect(isUSStorefront).not.toHaveBeenCalled();
+      // Probe is side-effect-free: never mints a token, launches, or reports.
+      expect(
+        mockExternalContentLink!.prepareExternalLink,
+      ).not.toHaveBeenCalled();
+      expect(
+        mockExternalContentLink!.reportExternalContentLink,
+      ).not.toHaveBeenCalled();
+      expect(palStore.isCheckoutEligible).toBe(true);
+    });
+
+    it('Android: program unavailable -> ineligible (info text)', async () => {
+      Platform.OS = 'android';
+      mockExternalContentLink!.isExternalContentLinkAvailable.mockResolvedValue(
+        false,
+      );
+
+      await runWriter();
+
+      expect(palStore.isCheckoutEligible).toBe(false);
+    });
+
+    it('Android: null module -> ineligible (fail-closed)', async () => {
+      Platform.OS = 'android';
+      mockExternalContentLink = null;
+
+      await runWriter();
+
+      expect(isUSStorefront).not.toHaveBeenCalled();
+      expect(palStore.isCheckoutEligible).toBe(false);
+    });
+
+    it('Android: probe throws -> ineligible (fail-closed, resets a stale true)', async () => {
+      Platform.OS = 'android';
+      // Pre-seed true so this guards the catch resetting the flag, not the default.
+      (palStore as any).isCheckoutEligible = true;
+      mockExternalContentLink!.isExternalContentLinkAvailable.mockRejectedValue(
+        new Error('billing setup failed'),
+      );
+      const warnSpy = jest.spyOn(console, 'warn').mockImplementation();
+
+      await runWriter();
+
+      expect(palStore.isCheckoutEligible).toBe(false);
+      warnSpy.mockRestore();
+    });
+
+    it('E2E build: forces eligibility without probing the platform', async () => {
+      Platform.OS = 'android';
+      (global as any).__E2E__ = true;
+
+      await runWriter();
+
+      expect(palStore.isCheckoutEligible).toBe(true);
+      expect(
+        mockExternalContentLink!.isExternalContentLinkAvailable,
+      ).not.toHaveBeenCalled();
+      expect(isUSStorefront).not.toHaveBeenCalled();
+    });
+
+    it('iOS: keeps StoreKit storefront signal, never probes Play', async () => {
+      Platform.OS = 'ios';
+      (isUSStorefront as jest.Mock).mockResolvedValue(true);
+
+      await runWriter();
+
+      expect(isUSStorefront).toHaveBeenCalledTimes(1);
+      expect(
+        mockExternalContentLink!.isExternalContentLinkAvailable,
+      ).not.toHaveBeenCalled();
+      expect(palStore.isCheckoutEligible).toBe(true);
+    });
+  });
+
+  describe('Pip seeding', () => {
+    const callInitializePipPal = async () =>
+      (palStore as any).initializePipPal();
+
+    beforeEach(() => {
+      runInAction(() => {
+        palStore.pals = [];
+      });
+      (palRepository.createPal as jest.Mock).mockImplementation(
+        async (palData: any) => ({
+          ...palData,
+          id: `pip-${Math.random().toString(36).slice(2, 8)}`,
+          created_at: '2026-05-26T00:00:00Z',
+          updated_at: '2026-05-26T00:00:00Z',
+        }),
+      );
+    });
+
+    it('seeds Pip when absent', async () => {
+      await callInitializePipPal();
+      const pip = palStore.pals.find(
+        p => p.name === 'Pip' && p.source === 'local',
+      );
+      expect(pip).toBeDefined();
+      expect(pip?.type).toBe('local');
+      expect(pip?.defaultModel).toBeUndefined();
+      expect(palRepository.createPal).toHaveBeenCalledTimes(1);
+    });
+
+    it('is a no-op when Pip is already present', async () => {
+      await callInitializePipPal();
+      (palRepository.createPal as jest.Mock).mockClear();
+      await callInitializePipPal();
+      const pipCount = palStore.pals.filter(
+        p => p.name === 'Pip' && p.source === 'local',
+      ).length;
+      expect(pipCount).toBe(1);
+      expect(palRepository.createPal).not.toHaveBeenCalled();
+    });
+
+    it('preserves an existing Pip record (including defaultModel) on re-init', async () => {
+      const boundModel = {
+        id: 'some-bound-model',
+        name: 'Some Bound Model',
+      } as any;
+      const existingPip: Pal = {
+        ...mockPal,
+        id: 'pip-existing',
+        name: 'Pip',
+        source: 'local',
+        type: 'local',
+        defaultModel: boundModel,
+      } as any;
+      runInAction(() => {
+        palStore.pals = [existingPip];
+      });
+
+      await callInitializePipPal();
+
+      const pip = palStore.pals.find(
+        p => p.name === 'Pip' && p.source === 'local',
+      );
+      expect(pip).toBeDefined();
+      expect(pip?.id).toBe('pip-existing');
+      // defaultModel content is preserved across re-init (MobX wraps
+      // observed objects in Proxies, so Object.is equality is brittle;
+      // value equality verifies the field wasn't cleared or rewritten).
+      expect(pip?.defaultModel).toEqual(boundModel);
+      expect(palRepository.createPal).not.toHaveBeenCalled();
+    });
+
+    it('coexists with Lookie regardless of order (idempotent)', async () => {
+      const lookie: Pal = {
+        ...mockPal,
+        id: 'lookie-1',
+        name: 'Lookie',
+        source: 'local',
+        type: 'local',
+        capabilities: {video: true},
+      } as any;
+      runInAction(() => {
+        palStore.pals = [lookie];
+      });
+
+      await callInitializePipPal();
+      await callInitializePipPal();
+
+      const names = palStore.pals.map(p => p.name).sort();
+      expect(names).toEqual(['Lookie', 'Pip']);
     });
   });
 

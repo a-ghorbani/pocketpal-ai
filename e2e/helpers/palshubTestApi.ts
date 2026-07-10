@@ -21,7 +21,10 @@ export const palshubTestConfig = {
   password: process.env.E2E_BUYER_PASSWORD || '',
   palId:
     process.env.E2E_PALSHUB_PAL_ID ||
-    'f0c0ffee-cafe-4000-8000-000000000001',
+    // The seeded PREMIUM fixture pal ("Immeria Driver"); the purchase flow
+    // needs a premium pal (Buy → checkout → Download flip). The free
+    // dev-fixture pals (f0c0ffee-de40-…) have no Buy button.
+    'deadbeef-0000-4000-8000-000000000099',
 };
 
 const ENSURE_USER_PATH = '/api/test/e2e/users/ensure';

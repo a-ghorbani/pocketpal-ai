@@ -14,6 +14,7 @@ import {
   ActivityIndicator,
   Icon,
 } from 'react-native-paper';
+import {Dropdown} from '../ui';
 import {observer} from 'mobx-react';
 import debounce from 'lodash/debounce';
 
@@ -21,6 +22,8 @@ import {Sheet, TextInput} from '..';
 import {useTheme} from '../../hooks';
 import {serverStore} from '../../store';
 import {L10nContext} from '../../utils';
+import {parseTimeoutMs} from '../../utils/timeout';
+import {SERVER_TYPE_DROPDOWN_OPTIONS} from '../../utils/serverTypes';
 import {testConnection} from '../../api/openai';
 import {t} from '../../locales';
 
@@ -41,6 +44,8 @@ export const ServerDetailsSheet: React.FC<ServerDetailsSheetProps> = observer(
 
     const [url, setUrl] = useState('');
     const [apiKey, setApiKey] = useState('');
+    const [timeoutSeconds, setTimeoutSeconds] = useState('');
+    const [serverType, setServerType] = useState('unknown');
     const [secureTextEntry, setSecureTextEntry] = useState(true);
     const [isProbing, setIsProbing] = useState(false);
     const [probeResult, setProbeResult] = useState<{
@@ -54,12 +59,24 @@ export const ServerDetailsSheet: React.FC<ServerDetailsSheetProps> = observer(
       apiKeyRef.current = apiKey;
     }, [apiKey]);
 
+    const timeoutSecondsRef = useRef(timeoutSeconds);
+    useEffect(() => {
+      timeoutSecondsRef.current = timeoutSeconds;
+    }, [timeoutSeconds]);
+
     // Load server data when sheet opens
     useEffect(() => {
       if (isVisible && serverId) {
         const server = serverStore.servers.find(s => s.id === serverId);
         if (server) {
           setUrl(server.url);
+          const seconds =
+            server.requestTimeoutMs != null
+              ? String(server.requestTimeoutMs / 1000)
+              : '';
+          setTimeoutSeconds(seconds);
+          timeoutSecondsRef.current = seconds;
+          setServerType(server.serverType || 'unknown');
         }
         serverStore.getApiKey(serverId).then(key => {
           setApiKey(key || '');
@@ -79,32 +96,41 @@ export const ServerDetailsSheet: React.FC<ServerDetailsSheetProps> = observer(
       ? serverStore.getUserSelectedModelsForServer(serverId)
       : [];
 
-    const probeServer = useCallback(async (probeUrl: string) => {
-      const trimmedUrl = probeUrl.trim();
-      if (!trimmedUrl) {
-        return;
-      }
-      try {
-        // Validate URL format — throws on invalid
-        const parsed = new URL(trimmedUrl);
-        if (!parsed.hostname) {
-          throw new Error('No hostname');
+    const probeServer = useCallback(
+      async (probeUrl: string) => {
+        const trimmedUrl = probeUrl.trim();
+        if (!trimmedUrl) {
+          return;
         }
-      } catch {
-        return;
-      }
-      setIsProbing(true);
-      setProbeResult(null);
-      try {
-        const key = apiKeyRef.current.trim() || undefined;
-        const result = await testConnection(trimmedUrl, key);
-        setProbeResult({ok: result.ok, error: result.error});
-      } catch (error: any) {
-        setProbeResult({ok: false, error: error.message});
-      } finally {
-        setIsProbing(false);
-      }
-    }, []);
+        try {
+          // Validate URL format — throws on invalid
+          const parsed = new URL(trimmedUrl);
+          if (!parsed.hostname) {
+            throw new Error('No hostname');
+          }
+        } catch {
+          return;
+        }
+        setIsProbing(true);
+        setProbeResult(null);
+        try {
+          const key = apiKeyRef.current.trim() || undefined;
+          const savedServer = serverId
+            ? serverStore.servers.find(s => s.id === serverId)
+            : undefined;
+          const timeoutMs =
+            parseTimeoutMs(timeoutSecondsRef.current) ??
+            savedServer?.requestTimeoutMs;
+          const result = await testConnection(trimmedUrl, key, timeoutMs);
+          setProbeResult({ok: result.ok, error: result.error});
+        } catch (error: any) {
+          setProbeResult({ok: false, error: error.message});
+        } finally {
+          setIsProbing(false);
+        }
+      },
+      [serverId],
+    );
 
     const debouncedProbe = useMemo(
       () => debounce(probeServer, 800),
@@ -130,6 +156,8 @@ export const ServerDetailsSheet: React.FC<ServerDetailsSheetProps> = observer(
       try {
         serverStore.updateServer(serverId, {
           url: url.trim(),
+          requestTimeoutMs: parseTimeoutMs(timeoutSeconds),
+          serverType,
         });
         if (apiKey.trim()) {
           await serverStore.setApiKey(serverId, apiKey.trim());
@@ -140,7 +168,7 @@ export const ServerDetailsSheet: React.FC<ServerDetailsSheetProps> = observer(
       } finally {
         setIsSaving(false);
       }
-    }, [serverId, server, url, apiKey, onDismiss]);
+    }, [serverId, server, url, apiKey, timeoutSeconds, serverType, onDismiss]);
 
     const handleRemoveServer = useCallback(() => {
       if (!serverId || !server) {
@@ -199,6 +227,35 @@ export const ServerDetailsSheet: React.FC<ServerDetailsSheetProps> = observer(
               autoCorrect={false}
               keyboardType="url"
             />
+          </View>
+
+          {/* Request Timeout Input */}
+          <View style={styles.inputSpacing}>
+            <TextInput
+              testID="server-details-timeout-input"
+              label={l10n.settings.requestTimeout}
+              defaultValue={timeoutSeconds}
+              onChangeText={setTimeoutSeconds}
+              placeholder={l10n.settings.requestTimeoutPlaceholder}
+              keyboardType="numeric"
+            />
+            <Text style={styles.apiKeyDescription}>
+              {l10n.settings.requestTimeoutHelp}
+            </Text>
+          </View>
+
+          {/* Server Type selector */}
+          <View style={styles.inputSpacing}>
+            <Text>{l10n.settings.serverType}</Text>
+            <Dropdown
+              testID="server-type-dropdown"
+              value={serverType}
+              options={SERVER_TYPE_DROPDOWN_OPTIONS}
+              onChange={setServerType}
+            />
+            <Text style={styles.apiKeyDescription}>
+              {l10n.settings.serverTypeHelp}
+            </Text>
           </View>
 
           {/* Probe status */}

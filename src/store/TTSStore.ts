@@ -4,6 +4,7 @@ import {makeAutoObservable, reaction, runInAction} from 'mobx';
 import {makePersistable} from 'mobx-persist-store';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import DeviceInfo from 'react-native-device-info';
+import type {SupertonicLanguage} from '@pocketpalai/react-native-speech';
 
 import {
   getEngine,
@@ -55,6 +56,13 @@ export type SupertonicDownloadState = NeuralDownloadState;
 export type NeuralEngineId = 'supertonic' | 'kokoro' | 'kitten';
 
 const DEFAULT_SUPERTONIC_STEPS: SupertonicSteps = 5;
+
+/**
+ * Default Supertonic synthesis language: `na` ("Auto"), the trained
+ * language-agnostic tag in the v3 model. New and existing users start here
+ * (existing users have no persisted key, so hydration leaves it at `na`).
+ */
+const DEFAULT_SUPERTONIC_LANGUAGE: SupertonicLanguage = 'na';
 
 const previewMessageId = (voice: Voice): string =>
   `preview:${voice.engine}:${voice.id}`;
@@ -113,6 +121,13 @@ export class TTSStore {
    * preference survives restart. Missing values default to 5 on first load.
    */
   supertonicSteps: SupertonicSteps = DEFAULT_SUPERTONIC_STEPS;
+  /**
+   * Supertonic synthesis language. Persisted so the user's choice survives
+   * restart. Defaults to `na` ("Auto", language-agnostic). Read at every
+   * Supertonic synthesis entry point and passed explicitly so the engine
+   * default never governs. See architecture/tts.md §4a.
+   */
+  supertonicLanguage: SupertonicLanguage = DEFAULT_SUPERTONIC_LANGUAGE;
 
   // UI state
   isSetupSheetOpen: boolean = false;
@@ -159,6 +174,7 @@ export class TTSStore {
         'autoSpeakEnabled',
         'currentVoice',
         'supertonicSteps',
+        'supertonicLanguage',
         'userTTSOverride',
       ],
       storage: AsyncStorage,
@@ -298,6 +314,14 @@ export class TTSStore {
     this.supertonicSteps = steps;
   }
 
+  /**
+   * The sole explicit writer of `supertonicLanguage` (the language picker).
+   * Takes effect on the next utterance; in-flight playback is not restarted.
+   */
+  setSupertonicLanguage(language: SupertonicLanguage) {
+    this.supertonicLanguage = language;
+  }
+
   openSetupSheet() {
     this.isSetupSheetOpen = true;
     this.refreshFreeDisk();
@@ -424,6 +448,7 @@ export class TTSStore {
       const engine = getEngine(voice.engine);
       if (voice.engine === 'supertonic') {
         await (engine as SupertonicEngine).play(spokenText, voice, {
+          language: this.supertonicLanguage,
           inferenceSteps: this.supertonicSteps,
         });
       } else {
@@ -467,6 +492,7 @@ export class TTSStore {
       const engine = getEngine(voice.engine);
       if (voice.engine === 'supertonic') {
         await (engine as SupertonicEngine).play(TTS_PREVIEW_SAMPLE, voice, {
+          language: this.supertonicLanguage,
           inferenceSteps: this.supertonicSteps,
         });
       } else {
@@ -525,6 +551,7 @@ export class TTSStore {
     const handle =
       voice.engine === 'supertonic'
         ? (engine as SupertonicEngine).playStreaming(voice, stopDone, {
+            language: this.supertonicLanguage,
             inferenceSteps: this.supertonicSteps,
           })
         : engine.playStreaming(voice, stopDone);

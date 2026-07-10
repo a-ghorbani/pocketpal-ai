@@ -8,6 +8,10 @@ import 'react-native-gesture-handler/jestSetup';
 // global. Default to true so adapter tests render their components; tests
 // that assert the DCE gate override with `(global as any).__E2E__ = false`.
 (global as any).__E2E__ = true;
+// Onboarding bypass flag: default off in Jest so the AutomationBridge
+// adapter renders but no-ops; tests that need the bypass-on path override
+// with `(global as any).__E2E_SKIP_ONBOARDING__ = true`.
+(global as any).__E2E_SKIP_ONBOARDING__ = false;
 
 jest.mock('react-native-haptic-feedback');
 

@@ -17,6 +17,8 @@ export interface CPUInfo {
   hasSve?: boolean;
   hasI8mm?: boolean;
   socModel?: string;
+  hardware?: string;
+  maxFreqMhz?: number;
 }
 
 export interface GPUInfo {

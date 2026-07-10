@@ -51,6 +51,15 @@
             <category android:name="android.intent.category.BROWSABLE" />
             <data android:scheme="pocketpal" android:host="hub" />
         </intent-filter>
+        <!-- Checkout callback for the in-app PalsHub purchase flow. Scoped to
+             host=checkout so it is routed to AuthSessionModule, not the
+             hub deep-link path. -->
+        <intent-filter>
+            <action android:name="android.intent.action.VIEW" />
+            <category android:name="android.intent.category.DEFAULT" />
+            <category android:name="android.intent.category.BROWSABLE" />
+            <data android:scheme="pocketpal" android:host="checkout" />
+        </intent-filter>
       </activity>
 
         <!-- Optional native library for OpenCL (GPU acceleration) -->

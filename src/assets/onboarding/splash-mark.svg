@@ -1,0 +1,34 @@
+<svg preserveAspectRatio="none" width="100%" height="100%" overflow="visible" style="display: block;" viewBox="0 0 112 112" fill="none" xmlns="http://www.w3.org/2000/svg">
+<g id="Frame 2608365">
+<g clip-path="url(#clip0_0_14)">
+<rect width="112" height="112" rx="25.7471" fill="white"/>
+<path id="Vector 3" d="M1.28736 113.287C41.6469 90.0347 95.446 40.4339 112.644 1.28736V113.287H1.28736Z" fill="#717171"/>
+<g id="Group 11">
+<g id="Rectangle 5">
+<path d="M25.1408 68.3751C16.2327 53.406 21.1461 34.0497 36.1152 25.1416C51.0843 16.2335 70.4406 21.1469 79.3487 36.116L95.4783 63.2199L41.2704 95.479L25.1408 68.3751Z" fill="url(#paint0_linear_0_14)"/>
+<path d="M25.1408 68.3751C16.2327 53.406 21.1461 34.0497 36.1152 25.1416C51.0843 16.2335 70.4406 21.1469 79.3487 36.116L95.4783 63.2199L41.2704 95.479L25.1408 68.3751Z" fill="#F5DBBC"/>
+</g>
+<path id="Intersect" d="M85.7529 46.8772L95.4783 63.2196L41.2704 95.4787L38.5546 90.915C57.7322 79.2255 76.7443 61.859 85.7123 46.9234C85.7259 46.908 85.7394 46.8926 85.7529 46.8772Z" fill="#FFA920"/>
+<g id="Group 12">
+<path id="Rectangle 9" d="M53.9791 62.7819L61.1699 58.5027L61.9928 59.8855C63.1745 61.8712 62.5228 64.4389 60.5371 65.6206C58.5514 66.8023 55.9837 66.1505 54.802 64.1648L53.9791 62.7819Z" fill="black"/>
+<rect id="Rectangle 7" x="33.4706" y="53.4932" width="5.14943" height="21.2414" rx="2.57471" transform="rotate(-30.7569 33.4706 53.4932)" fill="black"/>
+<rect id="Rectangle 8" x="58.3622" y="38.6805" width="5.14943" height="21.2414" rx="2.57471" transform="rotate(-30.7569 58.3622 38.6805)" fill="black"/>
+</g>
+</g>
+<path id="Vector 1" d="M0.643678 112C51.0157 100.937 105.422 48.4766 112 0V112H0.643678Z" fill="black"/>
+<path id="Vector 4" d="M11.5862 122.943C61.4713 110.713 114.575 59.2184 122.943 10.9425V122.943H11.5862Z" stroke="#343434" stroke-width="5.7931" stroke-linecap="round" stroke-dasharray="9.01 13.52"/>
+<path id="Vector 2" opacity="0" d="M11.5862 122.943C61.4713 110.713 114.575 59.2184 122.943 10.9425V122.943H11.5862Z" stroke="#262626" stroke-width="5.7931" stroke-linecap="round" stroke-dasharray="9.01 13.52"/>
+<path id="Vector 12" d="M27.7677 64.8505C25.1036 59.2185 23.4943 52.7816 26.069 46.0231" stroke="white" stroke-opacity="0.4" stroke-width="5.26763" stroke-linecap="round"/>
+<path id="Vector 13" d="M28.3218 39.908C28.6957 38.5092 30.2529 35.4023 32.1839 34.4368" stroke="white" stroke-opacity="0.4" stroke-width="4.38969" stroke-linecap="round"/>
+</g>
+</g>
+<defs>
+<linearGradient id="paint0_linear_0_14" x1="30.6172" y1="37.6112" x2="88.7811" y2="74.3164" gradientUnits="userSpaceOnUse">
+<stop stop-color="#FFEA2D"/>
+<stop offset="1" stop-color="#FFB623"/>
+</linearGradient>
+<clipPath id="clip0_0_14">
+<rect width="112" height="112" rx="25.7471" fill="white"/>
+</clipPath>
+</defs>
+</svg>

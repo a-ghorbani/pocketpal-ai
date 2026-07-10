@@ -87,14 +87,14 @@ describe('useTheme', () => {
     it('headlineH1 swaps Fraunces → Inter when language changes to fa', () => {
       const {result, rerender} = renderHook(() => useTheme());
       expect(result.current.typography.headlineH1.fontFamily).toBe(
-        FONT_FAMILIES.FRAUNCES_REGULAR,
+        FONT_FAMILIES.FRAUNCES_MEDIUM,
       );
 
       uiStore.setLanguage('fa');
       rerender({});
 
       expect(result.current.typography.headlineH1.fontFamily).toBe(
-        FONT_FAMILIES.INTER_REGULAR,
+        FONT_FAMILIES.INTER_MEDIUM,
       );
     });
 
@@ -104,7 +104,7 @@ describe('useTheme', () => {
         uiStore.setLanguage(lang);
         const {result} = renderHook(() => useTheme());
         expect(result.current.typography.headlineH1.fontFamily).toBe(
-          FONT_FAMILIES.INTER_REGULAR,
+          FONT_FAMILIES.INTER_MEDIUM,
         );
       }
     });
@@ -117,7 +117,7 @@ describe('useTheme', () => {
         uiStore.setLanguage(lang);
         const {result} = renderHook(() => useTheme());
         expect(result.current.typography.headlineH1.fontFamily).toBe(
-          FONT_FAMILIES.INTER_REGULAR,
+          FONT_FAMILIES.INTER_MEDIUM,
         );
       }
     });

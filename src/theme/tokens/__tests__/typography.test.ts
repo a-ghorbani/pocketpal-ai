@@ -20,10 +20,10 @@ describe('typography tokens', () => {
   describe('absolute line-heights', () => {
     it('headlineH1 has lineHeight resolved to absolute px (36 × 1.4 = 50)', () => {
       expect(typography.headlineH1).toMatchObject({
-        fontFamily: FONT_FAMILIES.FRAUNCES_REGULAR,
+        fontFamily: FONT_FAMILIES.FRAUNCES_MEDIUM,
         fontSize: 36,
         lineHeight: 50,
-        fontWeight: '400',
+        fontWeight: '500',
       });
     });
 
@@ -50,13 +50,13 @@ describe('typography tokens', () => {
     const latinLocales: AvailableLanguage[] = ['en', 'id', 'ms'];
 
     it.each(latinLocales)(
-      'headlineH1 in %s resolves to Fraunces-Regular at 36 / 50',
+      'headlineH1 in %s resolves to Fraunces-Medium at 36 / 50',
       locale => {
         const resolved = typographyForLocale('headlineH1', locale);
-        expect(resolved.fontFamily).toBe(FONT_FAMILIES.FRAUNCES_REGULAR);
+        expect(resolved.fontFamily).toBe(FONT_FAMILIES.FRAUNCES_MEDIUM);
         expect(resolved.fontSize).toBe(36);
         expect(resolved.lineHeight).toBe(50);
-        expect(resolved.fontWeight).toBe('400');
+        expect(resolved.fontWeight).toBe('500');
       },
     );
 
@@ -69,13 +69,13 @@ describe('typography tokens', () => {
 
   describe('non-Latin locales fall back to Inter', () => {
     it.each(NON_LATIN_LOCALES)(
-      'headlineH1 in %s falls back to Inter-Regular at 36 / 50',
+      'headlineH1 in %s falls back to Inter-Medium at 36 / 50',
       locale => {
         const resolved = typographyForLocale('headlineH1', locale);
-        expect(resolved.fontFamily).toBe(FONT_FAMILIES.INTER_REGULAR);
+        expect(resolved.fontFamily).toBe(FONT_FAMILIES.INTER_MEDIUM);
         expect(resolved.fontSize).toBe(36);
         expect(resolved.lineHeight).toBe(50);
-        expect(resolved.fontWeight).toBe('400');
+        expect(resolved.fontWeight).toBe('500');
       },
     );
 

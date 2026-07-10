@@ -36,6 +36,7 @@ export const mockChatSessionStore = {
   activeSessionId: 'session-1',
   newChatCompletionSettings: mockDefaultCompletionSettings,
   newChatThinkingOverride: undefined as boolean | undefined,
+  newChatReasoningEffort: undefined as string | undefined,
   isMigrating: false,
   migrationComplete: true,
   // Draft autosave

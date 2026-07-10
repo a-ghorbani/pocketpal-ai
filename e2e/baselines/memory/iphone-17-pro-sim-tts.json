@@ -1,0 +1,172 @@
+{
+  "version": "1.0",
+  "commit": "6a340dc1",
+  "device": "iPhone 17 Pro",
+  "os_version": "26.0",
+  "platform": "ios",
+  "timestamp": "2026-06-19T15:43:42.621Z",
+  "engines": {
+    "kitten": {
+      "peak_memory_mb": 270.05,
+      "checkpoints": [
+        {
+          "label": "tts_kitten_loaded",
+          "memory_mb": 115.46
+        },
+        {
+          "label": "tts_kitten_active",
+          "memory_mb": 270.05
+        },
+        {
+          "label": "tts_kitten_idle",
+          "memory_mb": 169.77
+        }
+      ]
+    },
+    "supertonic": {
+      "peak_memory_mb": 453.18,
+      "checkpoints": [
+        {
+          "label": "tts_supertonic_loaded",
+          "memory_mb": 176.28
+        },
+        {
+          "label": "tts_supertonic_active",
+          "memory_mb": 453.18
+        },
+        {
+          "label": "tts_supertonic_idle",
+          "memory_mb": 195.52
+        }
+      ]
+    },
+    "kokoro": {
+      "peak_memory_mb": 626.16,
+      "checkpoints": [
+        {
+          "label": "tts_kokoro_loaded",
+          "memory_mb": 198.36
+        },
+        {
+          "label": "tts_kokoro_active",
+          "memory_mb": 626.16
+        },
+        {
+          "label": "tts_kokoro_idle",
+          "memory_mb": 195.25
+        }
+      ]
+    }
+  },
+  "checkpoints": [
+    {
+      "label": "tts_kitten_loaded",
+      "timestamp": "2026-06-19T15:42:10Z",
+      "native": {
+        "resident_size": 408764416,
+        "compressed": 0,
+        "phys_footprint": 121064784,
+        "internal": 119160832,
+        "metal_allocated": 0,
+        "available_memory": 0
+      }
+    },
+    {
+      "label": "tts_kitten_active",
+      "timestamp": "2026-06-19T15:42:23Z",
+      "native": {
+        "resident_size": 695762944,
+        "compressed": 0,
+        "phys_footprint": 283168320,
+        "internal": 280920064,
+        "metal_allocated": 0,
+        "available_memory": 0
+      }
+    },
+    {
+      "label": "tts_kitten_idle",
+      "timestamp": "2026-06-19T15:42:33Z",
+      "native": {
+        "resident_size": 674611200,
+        "compressed": 0,
+        "phys_footprint": 178015808,
+        "internal": 175767552,
+        "metal_allocated": 0,
+        "available_memory": 0
+      }
+    },
+    {
+      "label": "tts_supertonic_loaded",
+      "timestamp": "2026-06-19T15:42:46Z",
+      "native": {
+        "resident_size": 700350464,
+        "compressed": 0,
+        "phys_footprint": 184847936,
+        "internal": 182599680,
+        "metal_allocated": 0,
+        "available_memory": 0
+      }
+    },
+    {
+      "label": "tts_supertonic_active",
+      "timestamp": "2026-06-19T15:42:54Z",
+      "native": {
+        "resident_size": 1176272896,
+        "compressed": 5308416,
+        "phys_footprint": 475189136,
+        "internal": 467419136,
+        "metal_allocated": 0,
+        "available_memory": 0
+      }
+    },
+    {
+      "label": "tts_supertonic_idle",
+      "timestamp": "2026-06-19T15:43:04Z",
+      "native": {
+        "resident_size": 994328576,
+        "compressed": 30343168,
+        "phys_footprint": 205016976,
+        "internal": 172163072,
+        "metal_allocated": 0,
+        "available_memory": 0
+      }
+    },
+    {
+      "label": "tts_kokoro_loaded",
+      "timestamp": "2026-06-19T15:43:22Z",
+      "native": {
+        "resident_size": 1002471424,
+        "compressed": 30162944,
+        "phys_footprint": 207998864,
+        "internal": 175243264,
+        "metal_allocated": 0,
+        "available_memory": 0
+      }
+    },
+    {
+      "label": "tts_kokoro_active",
+      "timestamp": "2026-06-19T15:43:30Z",
+      "native": {
+        "resident_size": 931676160,
+        "compressed": 61079552,
+        "phys_footprint": 656576592,
+        "internal": 592773120,
+        "metal_allocated": 0,
+        "available_memory": 0
+      }
+    },
+    {
+      "label": "tts_kokoro_idle",
+      "timestamp": "2026-06-19T15:43:40Z",
+      "native": {
+        "resident_size": 756301824,
+        "compressed": 49922048,
+        "phys_footprint": 204738496,
+        "internal": 152158208,
+        "metal_allocated": 0,
+        "available_memory": 0
+      }
+    }
+  ],
+  "peak_memory_mb": 626.16
+}
