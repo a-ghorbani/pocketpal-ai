@@ -186,14 +186,14 @@ describe('Theme builder — new token surface', () => {
 describe('Theme builder — locale-aware typography', () => {
   // buildTheme is a pure function. Direct invocation does not depend on
   // MobX / store mocks — this is the unit-level contract.
-  it('en locale leaves headlineH1 in Fraunces-Regular', () => {
+  it('en locale leaves headlineH1 in Fraunces-Medium', () => {
     const theme = buildTheme({mode: 'light', language: 'en'});
-    expect(theme.typography.headlineH1.fontFamily).toBe('Fraunces-Regular');
+    expect(theme.typography.headlineH1.fontFamily).toBe('Fraunces-Medium');
   });
 
-  it('ja locale swaps headlineH1 to Inter-Regular', () => {
+  it('ja locale swaps headlineH1 to Inter-Medium', () => {
     const theme = buildTheme({mode: 'light', language: 'ja'});
-    expect(theme.typography.headlineH1.fontFamily).toBe('Inter-Regular');
+    expect(theme.typography.headlineH1.fontFamily).toBe('Inter-Medium');
   });
 
   it('codeM remains JetBrainsMono for non-Latin locales', () => {

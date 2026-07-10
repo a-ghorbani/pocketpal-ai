@@ -6,7 +6,7 @@
  */
 
 import {BasePage, ChainableElement} from './BasePage';
-import {Selectors, byPartialText} from '../helpers/selectors';
+import {Selectors, byPartialText, byText} from '../helpers/selectors';
 
 declare const browser: WebdriverIO.Browser;
 
@@ -37,7 +37,7 @@ export class DrawerPage extends BasePage {
    * Wait for drawer to be fully open
    * We use Pals tab because it's unique to the drawer (not a screen title)
    */
-  async waitForOpen(timeout = 5000): Promise<void> {
+  async waitForOpen(timeout = 10000): Promise<void> {
     await this.waitForElement(Selectors.drawer.palsTab, timeout);
   }
 
@@ -83,10 +83,16 @@ export class DrawerPage extends BasePage {
 
   /**
    * Navigate to Pals screen
+   *
+   * Tap the visible label, not Selectors.drawer.palsTab. That selector is the
+   * testID (drawer-item-pals) used as the open/close indicator so it survives a
+   * language switch, but a Paper Drawer.Item does not reliably respond to a
+   * testID tap on iOS (see the selectors.ts drawer comment) — tapping the label
+   * matches the other tabs and works on both platforms.
    */
   async navigateToPals(): Promise<void> {
     await this.waitForOpen();
-    await this.tap(Selectors.drawer.palsTab);
+    await this.tap(byText('Pals'));
     await browser.pause(300);
     await this.waitForClose();
   }

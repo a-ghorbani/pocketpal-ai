@@ -1,5 +1,4 @@
 import {
-  getPalBuyUrl,
   getPalDisplayLabel,
   getPalActionText,
   isPalFree,
@@ -15,19 +14,6 @@ import {
 } from '../../../jest/fixtures/pals';
 
 describe('palshub-display', () => {
-  describe('getPalBuyUrl', () => {
-    it('returns URL using PALSHUB_API_BASE_URL from env', () => {
-      // PALSHUB_API_BASE_URL is 'https://palshub.ai' in __mocks__/external/@env.js
-      expect(getPalBuyUrl('abc-123')).toBe('https://palshub.ai/pals/abc-123');
-    });
-
-    it('handles special characters in pal ID', () => {
-      expect(getPalBuyUrl('pal-with-dashes')).toBe(
-        'https://palshub.ai/pals/pal-with-dashes',
-      );
-    });
-  });
-
   describe('getPalDisplayLabel', () => {
     it('returns free label for free pals', () => {
       const label = getPalDisplayLabel(mockPalsHubPal);

@@ -29,6 +29,7 @@ class MockTTSStore {
   supertonicDownloadProgress = 0;
   supertonicDownloadError: string | null = null;
   supertonicSteps: 1 | 2 | 3 | 5 | 10 = 3;
+  supertonicLanguage: string = 'na';
 
   kokoroDownloadState: DownloadState = 'not_installed';
   kokoroDownloadProgress = 0;
@@ -47,6 +48,7 @@ class MockTTSStore {
   setUserTTSOverride: jest.Mock;
   setCurrentVoice: jest.Mock;
   setSupertonicSteps: jest.Mock;
+  setSupertonicLanguage: jest.Mock;
   openSetupSheet: jest.Mock;
   closeSetupSheet: jest.Mock;
   onAssistantMessageStart: jest.Mock;
@@ -73,6 +75,7 @@ class MockTTSStore {
       setUserTTSOverride: false,
       setCurrentVoice: false,
       setSupertonicSteps: false,
+      setSupertonicLanguage: false,
       openSetupSheet: false,
       closeSetupSheet: false,
       onAssistantMessageStart: false,
@@ -97,6 +100,7 @@ class MockTTSStore {
     this.setUserTTSOverride = jest.fn();
     this.setCurrentVoice = jest.fn();
     this.setSupertonicSteps = jest.fn();
+    this.setSupertonicLanguage = jest.fn();
     this.openSetupSheet = jest.fn();
     this.closeSetupSheet = jest.fn();
     this.onAssistantMessageStart = jest.fn();

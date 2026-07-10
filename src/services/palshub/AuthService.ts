@@ -23,9 +23,9 @@ export interface Profile {
   avatar_url?: string;
   provider_user_id?: string;
   provider_profile_url?: string;
-  provider: string;
-  created_at: string;
-  updated_at: string;
+  provider?: string;
+  created_at?: string;
+  updated_at?: string;
 }
 
 export interface AuthState {
@@ -173,7 +173,7 @@ class AuthService {
     try {
       const {data: profile, error} = await supabase
         .from('profiles')
-        .select('*')
+        .select('id, username, full_name, avatar_url')
         .eq('id', userId)
         .single();
 

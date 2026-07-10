@@ -27,6 +27,7 @@ import {Sheet, TextInput} from '../../components';
 import {useTheme} from '../../hooks';
 import {createStyles} from './styles';
 import {L10nContext} from '../../utils';
+import {uiStore} from '../../store';
 
 const GithubButtonIcon = ({color}: {color: string}) => (
   <GithubIcon stroke={color} />
@@ -172,6 +173,20 @@ export const AboutScreen: React.FC = () => {
               icon={ChevronRightButtonIcon}
               onPress={() => setShowFeedback(true)}>
               {l10n.feedback.shareThoughtsButton}
+            </Button>
+          </View>
+
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>{l10n.about.tour}</Text>
+            <Text variant="bodyMedium" style={styles.description}>
+              {l10n.about.tourDescription}
+            </Text>
+            <Button
+              mode="outlined"
+              onPress={() => uiStore.replayOnboarding()}
+              style={styles.actionButton}
+              icon={ChevronRightButtonIcon}>
+              {l10n.about.showIntroButton}
             </Button>
           </View>
 

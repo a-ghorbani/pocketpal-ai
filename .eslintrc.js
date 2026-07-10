@@ -9,6 +9,7 @@ module.exports = {
     // Compile-time-defined flag (see babel.config.js `transform-define`).
     // Declared as a global so ESLint's no-undef rule doesn't trip.
     __E2E__: 'readonly',
+    __E2E_SKIP_ONBOARDING__: 'readonly',
   },
   ignorePatterns: [
     'coverage/',

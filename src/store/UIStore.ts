@@ -9,6 +9,12 @@ import {
   type AvailableLanguage,
 } from '../locales';
 import {ErrorState} from '../utils/errors';
+import {
+  INITIAL_ONBOARDING_STATE,
+  type OnboardingState,
+  type OnboardingStep,
+  type TopicKey,
+} from './onboarding/types';
 
 export class UIStore {
   static readonly GROUP_KEYS = {
@@ -55,6 +61,24 @@ export class UIStore {
   // Persisted so each model warns at most once per device.
   toolCompatWarnedModels: string[] = [];
 
+  // Onboarding flow gating: persisted; default false on a fresh install.
+  // Once flipped true, the OnboardingStack never re-mounts in this app
+  // lifetime.
+  hasCompletedOnboarding: boolean = false;
+
+  // Frozen at onboarding completion; consumed by future Homepage
+  // pal-suggestion surfaces. Never re-edited after the single write in
+  // `completeOnboarding`.
+  onboardingTopicsSnapshot: TopicKey[] = [];
+
+  // Per-session, in-memory only. Reset on completion. Not persisted.
+  onboardingState: OnboardingState = {...INITIAL_ONBOARDING_STATE};
+
+  // Per-modelId dismissal of the download banner. Per-session — once the
+  // download completes, the entry can be cleared so a fresh ready-to-load
+  // state isn't pre-dismissed.
+  dismissedDownloadIds: string[] = [];
+
   hasWarnedToolCompat(modelId: string): boolean {
     return this.toolCompatWarnedModels.includes(modelId);
   }
@@ -96,6 +120,8 @@ export class UIStore {
         'benchmarkShareDialog',
         '_language',
         'toolCompatWarnedModels',
+        'hasCompletedOnboarding',
+        'onboardingTopicsSnapshot',
       ],
       storage: AsyncStorage,
     });
@@ -160,6 +186,79 @@ export class UIStore {
   setBenchmarkShareDialogPreference(shouldShow: boolean) {
     runInAction(() => {
       this.benchmarkShareDialog.shouldShow = shouldShow;
+    });
+  }
+
+  setOnboardingStep(step: OnboardingStep) {
+    runInAction(() => {
+      this.onboardingState.currentStep = step;
+    });
+  }
+
+  setOnboardingTopic(key: TopicKey | null) {
+    runInAction(() => {
+      this.onboardingState.selectedTopic = key;
+    });
+  }
+
+  setOnboardingModelId(modelId: string | null) {
+    runInAction(() => {
+      this.onboardingState.selectedModelId = modelId;
+    });
+  }
+
+  completeOnboarding({
+    topic,
+    modelId: _modelId,
+  }: {
+    topic: TopicKey | null;
+    modelId: string | null;
+  }) {
+    runInAction(() => {
+      this.hasCompletedOnboarding = true;
+      // Persisted snapshot stays as `TopicKey[]` for multi-tag headroom.
+      // Derive from the new scalar: null → [], else [topic].
+      this.onboardingTopicsSnapshot = topic === null ? [] : [topic];
+      this.onboardingState = {...INITIAL_ONBOARDING_STATE};
+    });
+  }
+
+  // Test / E2E only — callers MUST gate with `__DEV__ || __E2E__`.
+  resetOnboarding() {
+    runInAction(() => {
+      this.hasCompletedOnboarding = false;
+      this.onboardingTopicsSnapshot = [];
+      this.onboardingState = {...INITIAL_ONBOARDING_STATE};
+    });
+  }
+
+  // User-triggered replay (About → Show intro again). Re-enters the flow
+  // without nuking the persisted topic snapshot; the user's next finish
+  // will overwrite it. Distinct from `resetOnboarding` (dev/E2E nuke).
+  replayOnboarding() {
+    runInAction(() => {
+      this.hasCompletedOnboarding = false;
+      this.onboardingState = {...INITIAL_ONBOARDING_STATE};
+    });
+  }
+
+  isDownloadBannerDismissed(modelId: string): boolean {
+    return this.dismissedDownloadIds.includes(modelId);
+  }
+
+  dismissDownloadBanner(modelId: string) {
+    runInAction(() => {
+      if (!this.dismissedDownloadIds.includes(modelId)) {
+        this.dismissedDownloadIds.push(modelId);
+      }
+    });
+  }
+
+  clearDownloadBannerDismissal(modelId: string) {
+    runInAction(() => {
+      this.dismissedDownloadIds = this.dismissedDownloadIds.filter(
+        id => id !== modelId,
+      );
     });
   }
 }

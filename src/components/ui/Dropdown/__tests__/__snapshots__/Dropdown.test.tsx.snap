@@ -54,6 +54,7 @@ exports[`Dropdown — snapshot matrix baseline (variant x size x {default,disabl
             "borderRadius": 8,
             "flexDirection": "row",
             "gap": 4,
+            "minHeight": 44,
             "paddingHorizontal": 16,
             "paddingVertical": 8,
           },
@@ -75,6 +76,11 @@ exports[`Dropdown — snapshot matrix baseline (variant x size x {default,disabl
       >
         Alpha
       </Text>
+      <SvgMock
+        height={16}
+        stroke="#333333"
+        width={16}
+      />
     </View>
   </View>
 </View>
@@ -134,6 +140,7 @@ exports[`Dropdown — snapshot matrix baseline (variant x size x {default,disabl
             "borderRadius": 8,
             "flexDirection": "row",
             "gap": 4,
+            "minHeight": 44,
             "paddingHorizontal": 16,
             "paddingVertical": 8,
           },
@@ -155,6 +162,11 @@ exports[`Dropdown — snapshot matrix baseline (variant x size x {default,disabl
       >
         Alpha
       </Text>
+      <SvgMock
+        height={16}
+        stroke="#333333"
+        width={16}
+      />
     </View>
   </View>
 </View>
@@ -214,6 +226,7 @@ exports[`Dropdown — snapshot matrix baseline (variant x size x {default,disabl
             "borderRadius": 8,
             "flexDirection": "row",
             "gap": 4,
+            "minHeight": 44,
             "paddingHorizontal": 16,
             "paddingVertical": 8,
           },
@@ -235,6 +248,11 @@ exports[`Dropdown — snapshot matrix baseline (variant x size x {default,disabl
       >
         Alpha
       </Text>
+      <SvgMock
+        height={16}
+        stroke="#646466"
+        width={16}
+      />
     </View>
   </View>
 </View>
@@ -294,6 +312,7 @@ exports[`Dropdown — snapshot matrix baseline (variant x size x {default,disabl
             "borderRadius": 8,
             "flexDirection": "row",
             "gap": 4,
+            "minHeight": 44,
             "paddingHorizontal": 16,
             "paddingVertical": 8,
           },
@@ -315,6 +334,11 @@ exports[`Dropdown — snapshot matrix baseline (variant x size x {default,disabl
       >
         Alpha
       </Text>
+      <SvgMock
+        height={16}
+        stroke="#646466"
+        width={16}
+      />
     </View>
   </View>
 </View>
@@ -374,6 +398,7 @@ exports[`Dropdown — snapshot matrix baseline (variant x size x {default,disabl
             "borderRadius": 8,
             "flexDirection": "row",
             "gap": 4,
+            "minHeight": 44,
             "paddingHorizontal": 8,
             "paddingVertical": 4,
           },
@@ -395,6 +420,11 @@ exports[`Dropdown — snapshot matrix baseline (variant x size x {default,disabl
       >
         Alpha
       </Text>
+      <SvgMock
+        height={16}
+        stroke="#333333"
+        width={16}
+      />
     </View>
   </View>
 </View>
@@ -454,6 +484,7 @@ exports[`Dropdown — snapshot matrix baseline (variant x size x {default,disabl
             "borderRadius": 8,
             "flexDirection": "row",
             "gap": 4,
+            "minHeight": 44,
             "paddingHorizontal": 8,
             "paddingVertical": 4,
           },
@@ -475,6 +506,11 @@ exports[`Dropdown — snapshot matrix baseline (variant x size x {default,disabl
       >
         Alpha
       </Text>
+      <SvgMock
+        height={16}
+        stroke="#333333"
+        width={16}
+      />
     </View>
   </View>
 </View>
@@ -534,6 +570,7 @@ exports[`Dropdown — snapshot matrix baseline (variant x size x {default,disabl
             "borderRadius": 8,
             "flexDirection": "row",
             "gap": 4,
+            "minHeight": 44,
             "paddingHorizontal": 8,
             "paddingVertical": 4,
           },
@@ -555,6 +592,11 @@ exports[`Dropdown — snapshot matrix baseline (variant x size x {default,disabl
       >
         Alpha
       </Text>
+      <SvgMock
+        height={16}
+        stroke="#646466"
+        width={16}
+      />
     </View>
   </View>
 </View>
@@ -614,6 +656,7 @@ exports[`Dropdown — snapshot matrix baseline (variant x size x {default,disabl
             "borderRadius": 8,
             "flexDirection": "row",
             "gap": 4,
+            "minHeight": 44,
             "paddingHorizontal": 8,
             "paddingVertical": 4,
           },
@@ -635,6 +678,11 @@ exports[`Dropdown — snapshot matrix baseline (variant x size x {default,disabl
       >
         Alpha
       </Text>
+      <SvgMock
+        height={16}
+        stroke="#646466"
+        width={16}
+      />
     </View>
   </View>
 </View>
@@ -694,6 +742,7 @@ exports[`Dropdown — snapshot matrix baseline (variant x size x {default,disabl
             "borderRadius": 8,
             "flexDirection": "row",
             "gap": 4,
+            "minHeight": 44,
             "paddingHorizontal": 8,
             "paddingVertical": 4,
           },
@@ -715,6 +764,11 @@ exports[`Dropdown — snapshot matrix baseline (variant x size x {default,disabl
       >
         Alpha
       </Text>
+      <SvgMock
+        height={16}
+        stroke="#333333"
+        width={16}
+      />
     </View>
   </View>
 </View>
@@ -774,6 +828,7 @@ exports[`Dropdown — snapshot matrix baseline (variant x size x {default,disabl
             "borderRadius": 8,
             "flexDirection": "row",
             "gap": 4,
+            "minHeight": 44,
             "paddingHorizontal": 8,
             "paddingVertical": 4,
           },
@@ -795,6 +850,11 @@ exports[`Dropdown — snapshot matrix baseline (variant x size x {default,disabl
       >
         Alpha
       </Text>
+      <SvgMock
+        height={16}
+        stroke="#333333"
+        width={16}
+      />
     </View>
   </View>
 </View>
@@ -854,6 +914,7 @@ exports[`Dropdown — snapshot matrix baseline (variant x size x {default,disabl
             "borderRadius": 8,
             "flexDirection": "row",
             "gap": 4,
+            "minHeight": 44,
             "paddingHorizontal": 8,
             "paddingVertical": 4,
           },
@@ -875,6 +936,11 @@ exports[`Dropdown — snapshot matrix baseline (variant x size x {default,disabl
       >
         Alpha
       </Text>
+      <SvgMock
+        height={16}
+        stroke="#646466"
+        width={16}
+      />
     </View>
   </View>
 </View>
@@ -934,6 +1000,7 @@ exports[`Dropdown — snapshot matrix baseline (variant x size x {default,disabl
             "borderRadius": 8,
             "flexDirection": "row",
             "gap": 4,
+            "minHeight": 44,
             "paddingHorizontal": 8,
             "paddingVertical": 4,
           },
@@ -955,6 +1022,11 @@ exports[`Dropdown — snapshot matrix baseline (variant x size x {default,disabl
       >
         Alpha
       </Text>
+      <SvgMock
+        height={16}
+        stroke="#646466"
+        width={16}
+      />
     </View>
   </View>
 </View>
@@ -1014,6 +1086,7 @@ exports[`Dropdown — snapshot matrix non-Latin font-fallback canary (canaryVari
             "borderRadius": 8,
             "flexDirection": "row",
             "gap": 4,
+            "minHeight": 44,
             "paddingHorizontal": 8,
             "paddingVertical": 4,
           },
@@ -1035,6 +1108,11 @@ exports[`Dropdown — snapshot matrix non-Latin font-fallback canary (canaryVari
       >
         Alpha
       </Text>
+      <SvgMock
+        height={16}
+        stroke="#333333"
+        width={16}
+      />
     </View>
   </View>
 </View>

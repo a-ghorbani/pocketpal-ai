@@ -39,6 +39,7 @@ export const createStyles = (
 ) => {
   const s = sizeTokens(theme, size);
   const trigger: ViewStyle = {
+    minHeight: 44,
     paddingHorizontal: s.paddingHorizontal,
     paddingVertical: s.paddingVertical,
     borderRadius: theme.radius.s,

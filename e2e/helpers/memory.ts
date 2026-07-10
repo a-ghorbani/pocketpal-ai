@@ -28,6 +28,7 @@ export interface MemorySnapshot {
   timestamp: string;
   native: {
     phys_footprint?: number;
+    metal_allocated?: number;
     pss_total?: number;
     native_heap_allocated?: number;
     available_memory: number;
@@ -104,9 +105,11 @@ export async function readSnapshots(): Promise<MemorySnapshot[]> {
       /^[0-9A-F]{8}-[0-9A-F]{4}-[0-9A-F]{4}-[0-9A-F]{4}-[0-9A-F]{12}$/i.test(udid);
 
     if (isSimulator) {
-      // Simulator: read directly from filesystem via simctl
+      // Simulator: read directly from filesystem via simctl. Prefer the
+      // explicit UDID — `booted` is ambiguous with several sims running.
+      const target = udid || 'booted';
       const container = execSync(
-        `xcrun simctl get_app_container booted ${IOS_BUNDLE_ID} data`,
+        `xcrun simctl get_app_container ${target} ${IOS_BUNDLE_ID} data`,
         {encoding: 'utf8', timeout: 5000},
       ).trim();
       const filePath = path.join(container, 'Documents', SNAPSHOTS_FILENAME);

@@ -10,6 +10,7 @@ import {MD3Colors, MD3Typescale} from 'react-native-paper/lib/typescript/types';
 import type {TokenRadius, TokenStroke, TokenTypography} from '../theme/tokens';
 import {SkillKey} from '.';
 import type {TalentResult} from '../services/talents/types';
+import type {ReasoningCapability} from './reasoningCapability';
 
 /**
  * One model-emitted tool call within an `AgentStep`. The `arguments` field
@@ -285,6 +286,10 @@ export interface SemanticColors {
 
   border: string;
   placeholder: string;
+  // Subtle border / divider — Figma `Color/muted/light` (#e5e3e1).
+  mutedLight: string;
+  // Figma `Color/Secondary/Default` — small DS button surface.
+  secondaryDefault: string;
 
   // Interactive states
   stateLayerOpacity: number;
@@ -339,6 +344,13 @@ export interface SemanticColors {
   iconModelTypeText: string;
   iconModelTypeVision: string;
   iconModelTypeAudio: string;
+
+  // Accent — peach pill / Recommended-tier card highlight; greenStrong
+  // powers the download progress-bar fill.
+  accent: {
+    peach: string;
+    greenStrong: string;
+  };
 }
 
 export interface ThemeBorders {
@@ -385,6 +397,8 @@ export interface ThemeSpacing {
   m: 16;
   ml: 20;
   l: 24;
+  xl: 32;
+  xxl: 40;
 }
 
 /**
@@ -454,6 +468,16 @@ export interface ServerConfig {
   name: string;
   url: string; // Base URL e.g. "http://192.168.1.100:1234"
   lastConnected?: number; // Timestamp
+  requestTimeoutMs?: number; // Per-server network timeout in ms; undefined = API default
+  // User-selectable server type; gates the per-server reasoning wire payload.
+  // detectServerType seeds it best-effort; user selection wins. undefined = unknown.
+  serverType?:
+    | 'llama.cpp'
+    | 'LM Studio'
+    | 'Ollama'
+    | 'OpenAI'
+    | 'vLLM'
+    | string;
 }
 
 export enum ModelType {
@@ -509,9 +533,12 @@ export interface Model {
   visionEnabled?: boolean; // User preference for enabling vision capabilities (defaults to true for backward compatibility)
 
   // Thinking capabilities
+  /** @deprecated Read via resolveReasoningCapability; kept as a fallback for old records. */
   supportsThinking?: boolean; // Whether this model supports thinking/reasoning mode
   thinkingStartTag?: string; // Thinking start tag from getFormattedChat (e.g., '<think>')
   thinkingEndTag?: string; // Thinking end tag from getFormattedChat (e.g., '</think>')
+  // Reasoning capability (two axes). Local home; persisted with the model.
+  reasoning?: ReasoningCapability;
 
   // GGUF metadata (for memory estimation)
   ggufMetadata?: GGUFMetadata;
@@ -525,6 +552,11 @@ export interface Model {
   hfModelFile?: ModelFile;
   hfModel?: HuggingFaceModel;
   hash?: string;
+
+  // Provenance marker: set on models materialized from the device-rule preset
+  // list. Lets reconcile prune stale, non-downloaded rule stubs without touching
+  // user-added HF/LOCAL or downloaded models.
+  isRulePreset?: boolean;
 
   // Remote model fields (for models from OpenAI-compatible servers)
   serverId?: string; // Reference to ServerConfig.id for remote models

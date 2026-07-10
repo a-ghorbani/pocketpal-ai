@@ -61,6 +61,10 @@ export const lightColors: TokenColors = {
   onSurfaceVariant: '#646466',
   outline: withOpacity(LIGHT_PRIMARY, 0.05),
   outlineVariant: '#a1a1a1',
+  mutedLight: '#e5e3e1',
+  // Figma `Color/Secondary/Default` — the secondary surface used by
+  // small DS buttons (back chevron, audio glyph) over the muted canvas.
+  secondaryDefault: '#f3f2f2',
   // MD3 extras
   surfaceDisabled: withOpacity('#fcfcfc', 0.12),
   onSurfaceDisabled: withOpacity('#333333', 0.38),
@@ -147,6 +151,13 @@ export const lightColors: TokenColors = {
   iconModelTypeText: '#3b82f6',
   iconModelTypeVision: '#9810fa',
   iconModelTypeAudio: '#f97316',
+
+  // Accent — peach pill background (canonical Figma `Color/Accent/Peach`).
+  accent: {
+    peach: '#FCE7CF',
+    // Progress-bar fill (canonical Figma `Color/Green/Strong`).
+    greenStrong: '#7c8e8a',
+  },
 };
 
 // Dark base values from canonical Figma. Where the canonical dark binding
@@ -188,6 +199,9 @@ export const darkColors: TokenColors = {
   onSurfaceVariant: '#e3e4e6',
   outline: '#444444',
   outlineVariant: '#a1a1a1',
+  mutedLight: '#3a3937',
+  // Figma `Color/Secondary/Default` — dark binding from canonical file.
+  secondaryDefault: '#2a2928',
   // MD3 extras
   surfaceDisabled: withOpacity('#333333', 0.12),
   onSurfaceDisabled: withOpacity('#e5e5e6', 0.38),
@@ -275,4 +289,11 @@ export const darkColors: TokenColors = {
   iconModelTypeText: '#93c5fd',
   iconModelTypeVision: '#c4b5fd',
   iconModelTypeAudio: '#fdba74',
+
+  // Accent — peach pill background (dark binding from canonical Figma).
+  accent: {
+    peach: '#7A4A1F',
+    // Progress-bar fill — dark binding mirrors the light token (same hue).
+    greenStrong: '#7c8e8a',
+  },
 };

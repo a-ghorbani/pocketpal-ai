@@ -57,6 +57,10 @@ const LANGUAGE_ASSERTIONS: Record<
     screenTitle: 'Tetapan',
     firstCardTitle: 'Tetapan Permulaan Model',
   },
+  pt_BR: {
+    screenTitle: 'Configurações',
+    firstCardTitle: 'Configurações de Inicialização do Modelo',
+  },
   ru: {
     screenTitle: 'Настройки',
     firstCardTitle: 'Настройки инициализации модели',
@@ -76,7 +80,7 @@ const LANGUAGE_ASSERTIONS: Record<
 };
 
 // Order: start with non-English, end with English to restore default state
-const LANGUAGE_ORDER = ['fa', 'he', 'id', 'ja', 'ko', 'ms', 'ru', 'uk', 'zh', 'zh_Hant', 'en'];
+const LANGUAGE_ORDER = ['fa', 'he', 'id', 'ja', 'ko', 'ms', 'pt_BR', 'ru', 'uk', 'zh', 'zh_Hant', 'en'];
 
 describe('Language Switching', () => {
   let chatPage: ChatPage;

@@ -44,6 +44,10 @@ const THINKING_MODEL = {
   searchQuery: 'bartowski Qwen_Qwen3-0.6B',
   selectorText: 'Qwen_Qwen3-0.6B',
   downloadFile: 'Qwen_Qwen3-0.6B-Q4_0.gguf',
+  // Android reinstalls (fullReset) every run and re-downloads the model; the
+  // 300s TIMEOUTS.download default is too tight under that pressure late in a
+  // long suite. Give the download 10 min.
+  downloadTimeout: 600000,
   prompts: [{input: "What's up?", description: 'Casual greeting'}],
 };
 

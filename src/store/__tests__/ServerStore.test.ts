@@ -39,6 +39,7 @@ describe('ServerStore', () => {
       serverStore.isLoading = false;
       serverStore.error = null;
       serverStore.privacyNoticeAcknowledged = false;
+      serverStore.remoteReasoning = {};
     });
   });
 
@@ -513,6 +514,48 @@ describe('ServerStore', () => {
       expect(mockedFetchModels).not.toHaveBeenCalled();
     });
 
+    it('forwards the server requestTimeoutMs to fetchModels', async () => {
+      const id = serverStore.addServer({
+        name: 'Slow Server',
+        url: 'http://localhost:1234',
+        requestTimeoutMs: 600000,
+      });
+      jest.clearAllMocks();
+
+      mockedFetchModels.mockResolvedValueOnce([]);
+      (Keychain.getGenericPassword as jest.Mock).mockResolvedValueOnce(false);
+
+      await serverStore.fetchModelsForServer(id);
+
+      expect(mockedFetchModels).toHaveBeenCalledWith(
+        'http://localhost:1234',
+        undefined,
+        600000,
+      );
+    });
+
+    // A server persisted without requestTimeoutMs forwards undefined (raw)
+    // without crashing; defaults apply downstream in openai.ts.
+    it('forwards undefined requestTimeoutMs without crashing', async () => {
+      const id = serverStore.addServer({
+        name: 'Legacy Server',
+        url: 'http://localhost:1234',
+      });
+      jest.clearAllMocks();
+
+      mockedFetchModels.mockResolvedValueOnce([]);
+      (Keychain.getGenericPassword as jest.Mock).mockResolvedValueOnce(false);
+
+      await serverStore.fetchModelsForServer(id);
+
+      expect(mockedFetchModels).toHaveBeenCalledWith(
+        'http://localhost:1234',
+        undefined,
+        undefined,
+      );
+      expect(serverStore.error).toBeNull();
+    });
+
     it('updates lastConnected timestamp on success', async () => {
       const id = serverStore.addServer({
         name: 'Server',
@@ -580,6 +623,7 @@ describe('ServerStore', () => {
       expect(mockedTestConnection).toHaveBeenCalledWith(
         'http://localhost:1234',
         undefined,
+        undefined,
       );
     });
 
@@ -591,6 +635,25 @@ describe('ServerStore', () => {
         modelCount: 0,
         error: 'Server not found',
       });
+    });
+
+    it('forwards the server requestTimeoutMs to testConnection', async () => {
+      const id = serverStore.addServer({
+        name: 'Slow Server',
+        url: 'http://localhost:1234',
+        requestTimeoutMs: 600000,
+      });
+
+      (Keychain.getGenericPassword as jest.Mock).mockResolvedValueOnce(false);
+      mockedTestConnection.mockResolvedValueOnce({ok: true, modelCount: 2});
+
+      await serverStore.testServerConnection(id);
+
+      expect(mockedTestConnection).toHaveBeenCalledWith(
+        'http://localhost:1234',
+        undefined,
+        600000,
+      );
     });
 
     it('passes API key to testConnection', async () => {
@@ -610,6 +673,7 @@ describe('ServerStore', () => {
       expect(mockedTestConnection).toHaveBeenCalledWith(
         'http://localhost:1234',
         'sk-key',
+        undefined,
       );
     });
   });
@@ -631,6 +695,93 @@ describe('ServerStore', () => {
       // we verify indirectly that the store has the subscription set up.
       // The constructor calls setupAppStateListener() which creates the subscription.
       expect(serverStore).toBeDefined();
+    });
+  });
+
+  describe('remote reasoning capability', () => {
+    const key = 'server-1/gpt-x';
+
+    it('starts empty and hydrating without the field does not crash', () => {
+      expect(serverStore.remoteReasoning).toEqual({});
+    });
+
+    it('recordRemoteReasoningObserved flips axis-1 to learned yes', () => {
+      serverStore.recordRemoteReasoningObserved(key);
+      expect(serverStore.remoteReasoning[key]).toMatchObject({
+        isReasoning: 'yes',
+        source: 'learned',
+        supportsEffort: false,
+      });
+    });
+
+    it('recordRemoteReasoningObserved is idempotent once yes', () => {
+      serverStore.recordRemoteReasoningObserved(key);
+      const first = serverStore.remoteReasoning[key];
+      serverStore.recordRemoteReasoningObserved(key);
+      expect(serverStore.remoteReasoning[key]).toBe(first);
+    });
+
+    it('recordRemoteReasoningObserved never overrides a user declaration', () => {
+      runInAction(() => {
+        serverStore.remoteReasoning[key] = {
+          isReasoning: 'no',
+          source: 'user',
+          supportsEffort: false,
+          effortValues: [],
+          effortSource: 'none',
+        };
+      });
+      serverStore.recordRemoteReasoningObserved(key);
+      expect(serverStore.remoteReasoning[key].source).toBe('user');
+      expect(serverStore.remoteReasoning[key].isReasoning).toBe('no');
+    });
+
+    it('setRemoteReasoningOverride writes a user-sourced capability', () => {
+      serverStore.setRemoteReasoningOverride(key, {
+        isReasoning: 'yes',
+        source: 'user',
+        supportsEffort: true,
+        effortValues: ['low', 'high'],
+        effortSource: 'user',
+      });
+      expect(serverStore.remoteReasoning[key]).toMatchObject({
+        source: 'user',
+        supportsEffort: true,
+      });
+    });
+
+    it('removeServer drops reasoning entries keyed by that server', () => {
+      const id = serverStore.addServer({name: 'A', url: 'http://x'});
+      runInAction(() => {
+        serverStore.remoteReasoning[`${id}/m1`] = {
+          isReasoning: 'yes',
+          source: 'learned',
+          supportsEffort: false,
+          effortValues: [],
+          effortSource: 'none',
+        };
+        serverStore.remoteReasoning['other-server/m2'] = {
+          isReasoning: 'yes',
+          source: 'learned',
+          supportsEffort: false,
+          effortValues: [],
+          effortSource: 'none',
+        };
+      });
+      serverStore.removeServer(id);
+      expect(serverStore.remoteReasoning[`${id}/m1`]).toBeUndefined();
+      expect(serverStore.remoteReasoning['other-server/m2']).toBeDefined();
+    });
+
+    it('addServer persists a user-selected serverType pass-through', () => {
+      const id = serverStore.addServer({
+        name: 'A',
+        url: 'http://x',
+        serverType: 'Ollama',
+      });
+      expect(serverStore.servers.find(s => s.id === id)?.serverType).toBe(
+        'Ollama',
+      );
     });
   });
 });

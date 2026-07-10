@@ -4,7 +4,6 @@ import {
   getDisplayNameFromFilename,
   getOriginalModelName,
 } from '../formatters';
-import {defaultModels} from '../../store/defaultModels';
 import {ModelOrigin} from '../types';
 
 describe('formatBytes', () => {
@@ -42,14 +41,14 @@ describe('getDisplayNameFromFilename', () => {
 });
 
 describe('getOriginalModelName', () => {
-  it('should return original name for preset models', () => {
+  it('should return the filename-derived name for preset models', () => {
     const presetModel = {
-      id: defaultModels[0].id,
-      filename: defaultModels[0].filename,
+      id: 'some/preset/gemma-2-2b-it-Q6_K.gguf',
+      filename: 'gemma-2-2b-it-Q6_K.gguf',
       origin: ModelOrigin.PRESET,
     };
 
-    expect(getOriginalModelName(presetModel)).toBe(defaultModels[0].name);
+    expect(getOriginalModelName(presetModel)).toBe('gemma-2-2b-it-Q6_K');
   });
 
   it('should strip .gguf for local models', () => {
@@ -62,7 +61,7 @@ describe('getOriginalModelName', () => {
     expect(getOriginalModelName(localModel)).toBe('my-model');
   });
 
-  it('should fallback to stripped filename if preset not found in defaultModels', () => {
+  it('should derive the name from the filename for any preset', () => {
     const orphanPreset = {
       id: 'unknown-preset-id',
       filename: 'orphan.gguf',

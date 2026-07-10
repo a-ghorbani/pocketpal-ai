@@ -29,6 +29,7 @@ function runWithLocales(overrides = {}) {
       'ja.json',
       'ko.json',
       'ms.json',
+      'pt_BR.json',
       'ru.json',
       'uk.json',
       'zh.json',
@@ -88,6 +89,7 @@ describe('validate-l10n.js', () => {
     expect(result.output).toContain('ja.json: valid JSON');
     expect(result.output).toContain('ko.json: valid JSON');
     expect(result.output).toContain('ms.json: valid JSON');
+    expect(result.output).toContain('pt_BR.json: valid JSON');
     expect(result.output).toContain('ru.json: valid JSON');
     expect(result.output).toContain('uk.json: valid JSON');
     expect(result.output).toContain('zh.json: valid JSON');

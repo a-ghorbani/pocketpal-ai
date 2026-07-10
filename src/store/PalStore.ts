@@ -18,6 +18,7 @@
 
 import {v4 as uuidv4} from 'uuid';
 import {makeAutoObservable, runInAction} from 'mobx';
+import {Platform} from 'react-native';
 
 import {HF_DOMAIN} from '../config/urls';
 
@@ -26,9 +27,12 @@ import {palRepository} from '../repositories/PalRepository';
 import {hfAsModel} from '../utils';
 import {resolveHFModelForDownload} from '../utils/hfResolve';
 import {isUSStorefront} from '../utils/region';
+import NativeExternalContentLink from '../specs/NativeExternalContentLink';
 import {palsHubService} from '../services';
 import {registerDefaultTalents} from '../services/talents';
-import {defaultModels} from './defaultModels';
+import {LOOKIE_DEFAULT_MODEL} from './builtinPalModels';
+import {chatTemplates} from '../utils/chat';
+import {defaultCompletionParams} from '../utils/completionSettingsVersions';
 import {parsePalsHubTemplate} from '../utils/palshub-template-parser';
 import {getDisplayNameFromFilename} from '../utils/formatters';
 
@@ -56,8 +60,8 @@ class PalStore {
   searchFilters: SearchFilters = {};
   syncState: SyncState = {status: 'idle'};
 
-  // Region state
-  isUSRegion: boolean = false;
+  // Checkout eligibility state
+  isCheckoutEligible: boolean = false;
 
   // Migration state
   isMigrating: boolean = false;
@@ -86,11 +90,14 @@ class PalStore {
       // Initialize Lookie pal after database is loaded
       await this.initializeLookiePal();
 
+      // Initialize Pip pal (idempotent — see initializePipPal).
+      await this.initializePipPal();
+
       // Register talent engines (idempotent)
       registerDefaultTalents();
 
-      // Check storefront region for buy button gating
-      this.checkRegion();
+      // Check checkout eligibility for buy button gating
+      this.checkCheckoutEligibility();
 
       console.log('Pal store initialization completed');
 
@@ -107,23 +114,33 @@ class PalStore {
     }
   }
 
-  private async checkRegion() {
-    // E2E builds have no App Store storefront, so force the US branch to
+  private async checkCheckoutEligibility() {
+    // E2E builds have no App Store storefront, so force eligibility to
     // exercise the buy button. Compiled out of prod (`__E2E__` is false).
     if (__E2E__) {
       runInAction(() => {
-        this.isUSRegion = true;
+        this.isCheckoutEligible = true;
       });
       return;
     }
 
     try {
-      const isUS = await isUSStorefront();
+      // Gate on real purchase eligibility per platform, not device locale:
+      // Android queries Play EXTERNAL_CONTENT_LINK availability; iOS keeps the
+      // StoreKit storefront signal. A null Android module or a thrown probe
+      // leaves the flag false (fail-closed → info-text fallback).
+      const eligible =
+        Platform.OS === 'android'
+          ? await NativeExternalContentLink?.isExternalContentLinkAvailable()
+          : await isUSStorefront();
       runInAction(() => {
-        this.isUSRegion = isUS;
+        this.isCheckoutEligible = eligible === true;
       });
     } catch (error) {
-      console.warn('Failed to check storefront region:', error);
+      console.warn('Failed to check checkout eligibility:', error);
+      runInAction(() => {
+        this.isCheckoutEligible = false;
+      });
     }
   }
 
@@ -342,11 +359,14 @@ class PalStore {
    * Creates a basic Model object from ModelReference (fallback when HF API fails)
    */
   private createBasicModelFromReference = (modelRef: any): Model => {
-    // Use default model as template for settings
-    const defaultModel = defaultModels[0];
-
     // Extract model name from filename (remove .gguf extension)
     const modelName = getDisplayNameFromFilename(modelRef.filename);
+
+    // Degraded fallback path: use the generic default chat template and
+    // completion params (the GGUF-embedded template is applied at load time).
+    const chatTemplate = {...chatTemplates.default};
+    const completionSettings = {...defaultCompletionParams};
+    const stopWords = completionSettings.stop ?? [];
 
     return {
       id: `${modelRef.repo_id}/${modelRef.filename}`,
@@ -361,12 +381,12 @@ class PalStore {
       filename: modelRef.filename,
       isLocal: false,
       origin: ModelOrigin.HF,
-      defaultChatTemplate: {...defaultModel.defaultChatTemplate},
-      chatTemplate: {...defaultModel.chatTemplate},
-      defaultCompletionSettings: {...defaultModel.defaultCompletionSettings},
-      completionSettings: {...defaultModel.completionSettings},
-      defaultStopWords: [...(defaultModel.defaultStopWords || [])],
-      stopWords: [...(defaultModel.stopWords || [])],
+      defaultChatTemplate: {...chatTemplate},
+      chatTemplate: {...chatTemplate},
+      defaultCompletionSettings: {...completionSettings},
+      completionSettings: {...completionSettings},
+      defaultStopWords: [...stopWords],
+      stopWords: [...stopWords],
     };
   };
 
@@ -690,13 +710,8 @@ class PalStore {
       if (!lookiePal) {
         console.log('Creating default Lookie pal...');
 
-        // Find the default SmolVLM model directly from defaultModels
-        // This avoids timing issues with ModelStore initialization
-        const defaultModelId =
-          'ggml-org/SmolVLM-500M-Instruct-GGUF/SmolVLM-500M-Instruct-Q8_0.gguf';
-        const defaultModel = defaultModels.find(
-          model => model.id === defaultModelId,
-        );
+        // Offline constant — no network resolve at pal init.
+        const defaultModel = LOOKIE_DEFAULT_MODEL;
 
         // Create the Lookie pal with all the original properties
         const palData: Omit<Pal, 'id' | 'created_at' | 'updated_at'> = {
@@ -731,6 +746,45 @@ class PalStore {
       }
     } catch (error) {
       console.error('Error initializing Lookie pal:', error);
+    }
+  }
+
+  /**
+   * Initialize the default "Pip" recommended pal if it doesn't exist.
+   *
+   * Idempotent: a re-entry never overwrites an existing Pip record, so a
+   * `defaultModel` bound from a prior session (e.g. by the onboarding
+   * recommended-pal picker) survives subsequent app starts.
+   */
+  private async initializePipPal(): Promise<void> {
+    try {
+      const existing = this.pals.find(
+        p => p.name === 'Pip' && p.source === 'local',
+      );
+      if (existing) {
+        return;
+      }
+
+      const palData: Omit<Pal, 'id' | 'created_at' | 'updated_at'> = {
+        type: 'local',
+        name: 'Pip',
+        description:
+          'A friendly general-purpose pal that runs entirely on your phone.',
+        systemPrompt:
+          'You are Pip, a friendly and helpful assistant who runs locally on the user’s phone. Keep replies concise and warm.',
+        isSystemPromptChanged: false,
+        useAIPrompt: false,
+        defaultModel: undefined,
+        parameters: {},
+        parameterSchema: [],
+        capabilities: {},
+        color: ['#0E0D0C', '#FAFAFA'],
+        source: 'local',
+      };
+
+      await this.addPal(palData);
+    } catch (error) {
+      console.error('Error initializing Pip pal:', error);
     }
   }
 }

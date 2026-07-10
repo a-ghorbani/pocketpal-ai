@@ -140,11 +140,14 @@ describe('OpenAICompletionEngine', () => {
         max_tokens: 200,
         stop: ['</s>'],
         stream: true,
+        reasoning: undefined,
       },
       'http://localhost:1234',
       'sk-key',
       expect.any(Object), // AbortSignal
       onToken,
+      undefined, // timeoutMs
+      undefined, // serverType
     );
 
     expect(result).toEqual(mockResult);
@@ -186,6 +189,8 @@ describe('OpenAICompletionEngine', () => {
       'sk-key',
       expect.any(Object),
       undefined,
+      undefined,
+      undefined,
     );
   });
 
@@ -214,6 +219,8 @@ describe('OpenAICompletionEngine', () => {
       'http://localhost:1234',
       'sk-key',
       expect.any(Object),
+      undefined,
+      undefined,
       undefined,
     );
   });
@@ -244,6 +251,8 @@ describe('OpenAICompletionEngine', () => {
       'sk-key',
       expect.any(Object),
       undefined,
+      undefined,
+      undefined,
     );
   });
 
@@ -272,6 +281,33 @@ describe('OpenAICompletionEngine', () => {
     await engine.stopCompletion();
   });
 
+  // The engine carries the timeoutMs it was constructed with and forwards it
+  // raw (no normalization here) to streamChatCompletion. A rebuilt engine (on
+  // the next setRemoteModel) therefore applies an edited value.
+  it('forwards the constructed timeoutMs to streamChatCompletion', async () => {
+    const timedEngine = new OpenAICompletionEngine(
+      'http://localhost:1234',
+      'test-model',
+      'sk-key',
+      600000,
+    );
+    mockedStreamChat.mockResolvedValueOnce({text: '', content: ''});
+
+    await timedEngine.completion({
+      messages: [{role: 'user', content: 'Hi'}],
+    } as any);
+
+    expect(mockedStreamChat).toHaveBeenCalledWith(
+      expect.any(Object),
+      'http://localhost:1234',
+      'sk-key',
+      expect.any(Object), // AbortSignal
+      undefined, // callback
+      600000, // raw timeoutMs forwarded, not normalized
+      undefined, // serverType
+    );
+  });
+
   it('creates engine without api key', () => {
     const noKeyEngine = new OpenAICompletionEngine(
       'http://localhost:1234',
@@ -288,6 +324,34 @@ describe('OpenAICompletionEngine', () => {
       undefined,
       expect.any(Object),
       undefined,
+      undefined,
+      undefined,
+    );
+  });
+
+  it('forwards params.reasoning and the constructed serverType', async () => {
+    const typedEngine = new OpenAICompletionEngine(
+      'http://localhost:1234',
+      'test-model',
+      'sk-key',
+      undefined,
+      'Ollama',
+    );
+    mockedStreamChat.mockResolvedValueOnce({text: '', content: ''});
+
+    await typedEngine.completion({
+      messages: [{role: 'user', content: 'Hi'}],
+      reasoning: {enabled: false},
+    } as any);
+
+    expect(mockedStreamChat).toHaveBeenCalledWith(
+      expect.objectContaining({reasoning: {enabled: false}}),
+      'http://localhost:1234',
+      'sk-key',
+      expect.any(Object),
+      undefined,
+      undefined,
+      'Ollama',
     );
   });
 });

@@ -4,6 +4,7 @@ import {
   detectServerType,
   testConnection,
   streamChatCompletion,
+  buildReasoningPayload,
 } from '../openai';
 
 /** Build a minimal Headers-like object for fetch mocks. */
@@ -113,6 +114,27 @@ describe('fetchModels', () => {
       expect.any(Object),
     );
   });
+
+  // fetchModels forwards a supplied timeoutMs down to the underlying request:
+  // a slow server that never answers aborts at the configured deadline.
+  it('forwards timeoutMs to the underlying request (aborts at configured value)', async () => {
+    jest.useFakeTimers();
+    global.fetch = jest.fn().mockImplementation(
+      (_url: string, opts: {signal: AbortSignal}) =>
+        new Promise((_resolve, reject) => {
+          opts.signal.addEventListener('abort', () => {
+            const err = new Error('aborted');
+            err.name = 'AbortError';
+            reject(err);
+          });
+        }),
+    );
+
+    const promise = fetchModels('http://localhost:1234', undefined, 7000);
+    jest.advanceTimersByTime(7000);
+    await expect(promise).rejects.toThrow('Connection timed out');
+    jest.useRealTimers();
+  });
 });
 
 describe('fetchModelsWithHeaders', () => {
@@ -133,6 +155,51 @@ describe('fetchModelsWithHeaders', () => {
 
     expect(result.models).toEqual(mockModels);
     expect(result.headers.server).toBe('llama.cpp');
+  });
+
+  // An undefined timeoutMs (e.g. a persisted ServerConfig from a prior version
+  // with no requestTimeoutMs) is forwarded raw and must not crash; it behaves
+  // identically to today (default applies).
+  it('accepts an undefined timeoutMs without crashing', async () => {
+    global.fetch = jest.fn().mockResolvedValueOnce({
+      ok: true,
+      headers: mockHeaders(),
+      json: () => Promise.resolve({data: []}),
+    });
+
+    await expect(
+      fetchModelsWithHeaders('http://localhost:8080', undefined, undefined),
+    ).resolves.toEqual({models: [], headers: {}});
+  });
+
+  // The connection-phase guard on the models probe honours a supplied
+  // timeoutMs: an unanswered request aborts at the configured deadline.
+  it('aborts the models request at the configured timeout', async () => {
+    jest.useFakeTimers();
+    const abortSpy = jest.spyOn(AbortController.prototype, 'abort');
+    // fetch never resolves — only the timeout can settle this.
+    global.fetch = jest.fn().mockImplementation(
+      (_url: string, opts: {signal: AbortSignal}) =>
+        new Promise((_resolve, reject) => {
+          opts.signal.addEventListener('abort', () => {
+            const err = new Error('aborted');
+            err.name = 'AbortError';
+            reject(err);
+          });
+        }),
+    );
+
+    const promise = fetchModelsWithHeaders(
+      'http://localhost:8080',
+      undefined,
+      5000,
+    );
+    jest.advanceTimersByTime(5000);
+    await expect(promise).rejects.toThrow('Connection timed out');
+
+    expect(abortSpy).toHaveBeenCalled();
+    abortSpy.mockRestore();
+    jest.useRealTimers();
   });
 });
 
@@ -256,6 +323,47 @@ describe('testConnection', () => {
       modelCount: 0,
       error: 'Network error',
     });
+  });
+
+  // testConnection forwards a supplied timeoutMs and reports the timeout as a
+  // connection failure (rather than red-X-ing early) when the server is slow.
+  it('forwards timeoutMs and reports a timeout as a failed probe', async () => {
+    jest.useFakeTimers();
+    global.fetch = jest.fn().mockImplementation(
+      (_url: string, opts: {signal: AbortSignal}) =>
+        new Promise((_resolve, reject) => {
+          opts.signal.addEventListener('abort', () => {
+            const err = new Error('aborted');
+            err.name = 'AbortError';
+            reject(err);
+          });
+        }),
+    );
+
+    const promise = testConnection('http://localhost:1234', undefined, 8000);
+    jest.advanceTimersByTime(8000);
+
+    await expect(promise).resolves.toEqual({
+      ok: false,
+      modelCount: 0,
+      error: 'Connection timed out',
+    });
+    jest.useRealTimers();
+  });
+
+  // An undefined timeoutMs (old persisted config) is forwarded raw and the
+  // probe still succeeds, identical to today.
+  it('accepts an undefined timeoutMs without crashing', async () => {
+    global.fetch = jest.fn().mockResolvedValueOnce({
+      ok: true,
+      headers: mockHeaders(),
+      json: () =>
+        Promise.resolve({data: [{id: 'm', object: 'model', owned_by: 'x'}]}),
+    });
+
+    await expect(
+      testConnection('http://localhost:1234', undefined, undefined),
+    ).resolves.toEqual({ok: true, modelCount: 1});
   });
 });
 
@@ -935,5 +1043,364 @@ describe('streamChatCompletion', () => {
       expect(result.tool_calls?.[0].id).toBe('call_a');
       expect(result.tool_calls?.[1].id).toBe('call_b');
     });
+  });
+
+  // Per-server configurable timeout: a single timeoutMs overrides BOTH the
+  // connection-phase guard (default 30s) and the idle-between-chunks guard
+  // (default 60s). The two-phase structure stays intact — only the durations
+  // change. Driven with fake timers so we assert on the configured deadline.
+  describe('configurable timeout', () => {
+    beforeEach(() => {
+      jest.useFakeTimers();
+    });
+
+    afterEach(() => {
+      jest.clearAllTimers();
+      jest.useRealTimers();
+    });
+
+    // A raised connection timeout lets a slow cold-start server deliver
+    // headers well past the 30s default without a premature reject.
+    it('honours a raised connection timeout (does not abort before configured value)', async () => {
+      const resultPromise = streamChatCompletion(
+        {messages: [{role: 'user', content: 'Hi'}], model: 'test-model'},
+        'http://localhost:1234',
+        undefined,
+        undefined,
+        undefined,
+        600000,
+      );
+      // Surface any rejection deterministically without an unhandled promise.
+      let rejected: Error | null = null;
+      resultPromise.catch((e: Error) => {
+        rejected = e;
+      });
+
+      const xhr = MockXHR.instances[0];
+
+      // Past the 30s default, but well within the configured 600s window.
+      jest.advanceTimersByTime(31000);
+      await Promise.resolve();
+      expect(rejected).toBeNull();
+      expect(xhr.status).toBe(0); // never aborted yet
+
+      // Headers finally arrive at ~200s — stream proceeds.
+      jest.advanceTimersByTime(170000);
+      xhr.simulateHeaders(200);
+      xhr.simulateProgress(
+        'data: {"choices":[{"delta":{"content":"ok"},"finish_reason":null}]}\n\n',
+      );
+      xhr.simulateProgress(
+        'data: {"choices":[{"delta":{},"finish_reason":"stop"}]}\n\ndata: [DONE]\n\n',
+      );
+      xhr.simulateLoad();
+
+      const result = await resultPromise;
+      expect(result.content).toBe('ok');
+      expect(rejected).toBeNull();
+    });
+
+    // With no timeoutMs supplied, the connection guard still fires at the
+    // existing 30s default.
+    it('aborts at the 30s default connection timeout when timeoutMs is omitted', async () => {
+      const resultPromise = streamChatCompletion(
+        {messages: [{role: 'user', content: 'Hi'}], model: 'test-model'},
+        'http://localhost:1234',
+      );
+
+      // Drive past the 30s default — no headers received.
+      jest.advanceTimersByTime(30000);
+
+      await expect(resultPromise).rejects.toThrow('Connection timed out');
+    });
+
+    // Once connected, an idle stall longer than the configured value aborts
+    // via the idle guard (not the connection guard).
+    it('aborts at the configured idle timeout after connecting', async () => {
+      const resultPromise = streamChatCompletion(
+        {messages: [{role: 'user', content: 'Hi'}], model: 'test-model'},
+        'http://localhost:1234',
+        undefined,
+        undefined,
+        undefined,
+        120000,
+      );
+
+      const xhr = MockXHR.instances[0];
+      // Connect (clears the connection guard, arms the idle guard at 120s).
+      xhr.simulateHeaders(200);
+      xhr.simulateProgress(
+        'data: {"choices":[{"delta":{"content":"first"},"finish_reason":null}]}\n\n',
+      );
+
+      // No further chunks for >120s → idle guard fires.
+      jest.advanceTimersByTime(120000);
+
+      await expect(resultPromise).rejects.toThrow(
+        'Idle timeout: no data received',
+      );
+    });
+
+    // The idle timer resets on each chunk; a healthy stream emitting within
+    // the interval runs past the total wall-clock of the timeout. Only the
+    // durations changed, not the per-chunk reset structure.
+    it('resets the idle timer on each chunk (healthy stream outlives total timeout)', async () => {
+      const resultPromise = streamChatCompletion(
+        {messages: [{role: 'user', content: 'Hi'}], model: 'test-model'},
+        'http://localhost:1234',
+        undefined,
+        undefined,
+        undefined,
+        100000,
+      );
+      let rejected: Error | null = null;
+      resultPromise.catch((e: Error) => {
+        rejected = e;
+      });
+
+      const xhr = MockXHR.instances[0];
+      xhr.simulateHeaders(200);
+
+      // Emit a chunk every 80s (under the 100s idle window) five times —
+      // total 400s, far beyond the 100s timeout, yet no idle abort because
+      // each chunk resets the timer.
+      for (let i = 0; i < 5; i++) {
+        xhr.simulateProgress(
+          `data: {"choices":[{"delta":{"content":"t${i}"},"finish_reason":null}]}\n\n`,
+        );
+        jest.advanceTimersByTime(80000);
+        await Promise.resolve();
+        expect(rejected).toBeNull();
+      }
+
+      xhr.simulateProgress(
+        'data: {"choices":[{"delta":{},"finish_reason":"stop"}]}\n\ndata: [DONE]\n\n',
+      );
+      xhr.simulateLoad();
+
+      const result = await resultPromise;
+      expect(result.content).toBe('t0t1t2t3t4');
+      expect(rejected).toBeNull();
+    });
+
+    // Normalization happens exactly once inside openai.ts: a timeoutMs that is
+    // undefined, NaN, non-finite, or <= 0 falls back to the default (here the
+    // 30s connection guard); a positive finite value passes through. Asserted
+    // via the observable connection-deadline behaviour.
+    describe('normalization of invalid timeoutMs', () => {
+      // For each invalid input, the connection guard must still fire at the
+      // 30s default — i.e. the API never sets a 0/negative/NaN deadline.
+      it.each([
+        ['undefined', undefined],
+        ['zero', 0],
+        ['negative', -5000],
+        ['NaN', NaN],
+        ['Infinity', Infinity],
+      ])(
+        'falls back to the 30s default when timeoutMs is %s',
+        async (_label, badValue) => {
+          const resultPromise = streamChatCompletion(
+            {messages: [{role: 'user', content: 'Hi'}], model: 'test-model'},
+            'http://localhost:1234',
+            undefined,
+            undefined,
+            undefined,
+            badValue as number | undefined,
+          );
+          let rejected: Error | null = null;
+          resultPromise.catch((e: Error) => {
+            rejected = e;
+          });
+
+          // Just before the default deadline: still pending (not aborted at 0).
+          jest.advanceTimersByTime(29000);
+          await Promise.resolve();
+          expect(rejected).toBeNull();
+
+          // Crossing the 30s default fires the guard.
+          jest.advanceTimersByTime(1000);
+          await expect(resultPromise).rejects.toThrow('Connection timed out');
+        },
+      );
+
+      // A positive finite value passes through untouched — the guard fires at
+      // the configured value, not the default.
+      it('passes a positive finite timeoutMs through (guard fires at configured value)', async () => {
+        const resultPromise = streamChatCompletion(
+          {messages: [{role: 'user', content: 'Hi'}], model: 'test-model'},
+          'http://localhost:1234',
+          undefined,
+          undefined,
+          undefined,
+          5000,
+        );
+        let rejected: Error | null = null;
+        resultPromise.catch((e: Error) => {
+          rejected = e;
+        });
+
+        // Before the configured 5s: pending.
+        jest.advanceTimersByTime(4000);
+        await Promise.resolve();
+        expect(rejected).toBeNull();
+
+        // At the configured 5s (well before the 30s default): aborts.
+        jest.advanceTimersByTime(1000);
+        await expect(resultPromise).rejects.toThrow('Connection timed out');
+      });
+    });
+  });
+});
+
+describe('buildReasoningPayload (per-serverType gating)', () => {
+  it('returns empty when no reasoning intent', () => {
+    expect(buildReasoningPayload('llama.cpp', undefined)).toEqual({});
+  });
+
+  it('llama.cpp ON sends reasoning_format auto', () => {
+    expect(buildReasoningPayload('llama.cpp', {enabled: true})).toEqual({
+      reasoning_format: 'auto',
+    });
+  });
+
+  it('llama.cpp ON+effort sends reasoning_format auto + reasoning_effort', () => {
+    expect(
+      buildReasoningPayload('llama.cpp', {enabled: true, effort: 'high'}),
+    ).toEqual({
+      reasoning_format: 'auto',
+      chat_template_kwargs: {reasoning_effort: 'high'},
+    });
+  });
+
+  it('llama.cpp OFF sends enable_thinking:false + reasoning_format auto', () => {
+    expect(buildReasoningPayload('llama.cpp', {enabled: false})).toEqual({
+      reasoning_format: 'auto',
+      chat_template_kwargs: {enable_thinking: false},
+    });
+  });
+
+  it('LM Studio is on/off only — no graded effort', () => {
+    expect(buildReasoningPayload('LM Studio', {enabled: false})).toEqual({
+      chat_template_kwargs: {enable_thinking: false},
+    });
+    expect(buildReasoningPayload('LM Studio', {enabled: true})).toEqual({});
+    // Even when an effort is set, LM Studio never sends reasoning_effort.
+    const onEffort = buildReasoningPayload('LM Studio', {
+      enabled: true,
+      effort: 'high',
+    });
+    expect(onEffort).toEqual({});
+    expect(onEffort).not.toHaveProperty('reasoning_effort');
+  });
+
+  it('vLLM ON+effort sends chat_template_kwargs.reasoning_effort', () => {
+    expect(
+      buildReasoningPayload('vLLM', {enabled: true, effort: 'max'}),
+    ).toEqual({chat_template_kwargs: {reasoning_effort: 'max'}});
+    // ON without an effort sends nothing.
+    expect(buildReasoningPayload('vLLM', {enabled: true})).toEqual({});
+  });
+
+  it('vLLM OFF sends enable_thinking:false', () => {
+    expect(buildReasoningPayload('vLLM', {enabled: false})).toEqual({
+      chat_template_kwargs: {enable_thinking: false},
+    });
+  });
+
+  it('Ollama OFF sends only reasoning_effort none and never think:true', () => {
+    const off = buildReasoningPayload('Ollama', {enabled: false});
+    expect(off).toEqual({reasoning_effort: 'none'});
+    expect(off).not.toHaveProperty('think');
+    // ON sends nothing — never think:true, never a non-none effort.
+    const on = buildReasoningPayload('Ollama', {enabled: true, effort: 'high'});
+    expect(on).toEqual({});
+    expect(on).not.toHaveProperty('think');
+    expect(on).not.toHaveProperty('reasoning_effort');
+  });
+
+  it('OpenAI sends reasoning_effort only when effort is known', () => {
+    expect(
+      buildReasoningPayload('OpenAI', {enabled: true, effort: 'medium'}),
+    ).toEqual({reasoning_effort: 'medium'});
+    // No effort known → omit everything (no enable_thinking, no 400 bait).
+    expect(buildReasoningPayload('OpenAI', {enabled: true})).toEqual({});
+    expect(buildReasoningPayload('OpenAI', {enabled: false})).toEqual({});
+  });
+
+  it('unknown serverType omits everything', () => {
+    expect(buildReasoningPayload(undefined, {enabled: false})).toEqual({});
+    expect(
+      buildReasoningPayload('something-else', {enabled: false, effort: 'low'}),
+    ).toEqual({});
+  });
+});
+
+describe('streamChatCompletion reasoning payload', () => {
+  let originalXHR: typeof XMLHttpRequest;
+  beforeEach(() => {
+    originalXHR = global.XMLHttpRequest;
+    (global as any).XMLHttpRequest = MockXHR;
+    MockXHR.instances = [];
+  });
+  afterEach(() => {
+    global.XMLHttpRequest = originalXHR;
+  });
+
+  it('attaches the gated payload by serverType', async () => {
+    const resultPromise = streamChatCompletion(
+      {
+        messages: [{role: 'user', content: 'Hi'}],
+        model: 'm',
+        reasoning: {enabled: false},
+      },
+      'http://localhost:1234',
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      'llama.cpp',
+    );
+    const xhr = MockXHR.instances[0];
+    const body = JSON.parse(xhr.requestBody);
+    expect(body.reasoning_format).toBe('auto');
+    expect(body.chat_template_kwargs).toEqual({enable_thinking: false});
+    // The internal carrier is never sent on the wire.
+    expect(body).not.toHaveProperty('reasoning');
+
+    xhr.simulateHeaders(200);
+    xhr.simulateProgress(
+      'data: {"choices":[{"delta":{},"finish_reason":"stop"}]}\n\ndata: [DONE]\n\n',
+    );
+    xhr.simulateLoad();
+    await resultPromise;
+  });
+
+  it('omits reasoning controls for an unknown serverType', async () => {
+    const resultPromise = streamChatCompletion(
+      {
+        messages: [{role: 'user', content: 'Hi'}],
+        model: 'm',
+        reasoning: {enabled: false, effort: 'high'},
+      },
+      'http://localhost:1234',
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+    );
+    const xhr = MockXHR.instances[0];
+    const body = JSON.parse(xhr.requestBody);
+    expect(body).not.toHaveProperty('reasoning_format');
+    expect(body).not.toHaveProperty('chat_template_kwargs');
+    expect(body).not.toHaveProperty('reasoning_effort');
+    expect(body).not.toHaveProperty('think');
+
+    xhr.simulateHeaders(200);
+    xhr.simulateProgress(
+      'data: {"choices":[{"delta":{},"finish_reason":"stop"}]}\n\ndata: [DONE]\n\n',
+    );
+    xhr.simulateLoad();
+    await resultPromise;
   });
 });

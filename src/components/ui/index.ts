@@ -19,6 +19,9 @@ export type {CardProps, CardListProps} from './Card';
 export {Chip} from './Chip';
 export type {ChipProps} from './Chip';
 
+export {Stepper} from './Stepper';
+export type {StepperProps} from './Stepper';
+
 export {Divider} from './Divider';
 export type {DividerProps} from './Divider';
 
