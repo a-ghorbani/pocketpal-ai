@@ -15,6 +15,8 @@ jest.mock('@react-native-async-storage/async-storage', () => ({
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import {RAGManager} from '../RAGManager';
 import {vectorStore} from '../VectorStore';
+import {LexicalEmbeddingEngine} from '../embeddings/LexicalEmbeddingEngine';
+import {NoopEmbeddingEngine} from '../embeddings/NoopEmbeddingEngine';
 
 const mockStorage: Record<string, string> = {};
 
@@ -313,6 +315,38 @@ describe('RAGManager', () => {
       const docs = await manager2.listDocuments();
       expect(docs).toHaveLength(1);
       expect(docs[0].title).toBe('Persisted');
+    });
+  });
+
+  describe('local embeddings', () => {
+    it('uses cosine retrieval via the default lexical engine', async () => {
+      await manager.importDocument(
+        'Python Guide',
+        'Python is a versatile programming language used for web development',
+        'txt',
+      );
+      await manager.importDocument(
+        'Cooking',
+        'a recipe for tomato pasta with basil',
+        'txt',
+      );
+
+      const results = await manager.search('Python programming');
+      expect(results.length).toBeGreaterThanOrEqual(1);
+      expect(results[0].document.title).toBe('Python Guide');
+    });
+
+    it('falls back to keyword search when engine is swapped to Noop', async () => {
+      manager.setEmbeddingEngine(new NoopEmbeddingEngine());
+
+      await manager.importDocument('Kw', 'python keyword here', 'txt');
+      const results = await manager.search('python');
+      expect(results.length).toBeGreaterThanOrEqual(1);
+      expect(results[0].document.title).toBe('Kw');
+    });
+
+    it('exposes the active embedding engine', () => {
+      expect(manager.embeddingEngine).toBeInstanceOf(LexicalEmbeddingEngine);
     });
   });
 });

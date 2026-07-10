@@ -14,6 +14,11 @@ export {DocumentParser} from './DocumentParser';
 export {TextChunker} from './TextChunker';
 export {vectorStore, VectorStore} from './VectorStore';
 export {ragManager, RAGManager} from './RAGManager';
+export {
+  LexicalEmbeddingEngine,
+  NoopEmbeddingEngine,
+} from './embeddings';
+export type {IEmbeddingEngine, EmbeddingKind} from './embeddings';
 
 export type {
   DocumentFormat,

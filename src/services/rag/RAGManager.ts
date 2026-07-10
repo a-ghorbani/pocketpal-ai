@@ -4,15 +4,20 @@
  * Combines:
  * - DocumentParser: text extraction
  * - TextChunker: chunk splitting
- * - VectorStore: storage and similarity search
+ * - VectorStore: storage and cosine similarity search
+ * - EmbeddingEngine: local vectorization (LexicalEmbeddingEngine by default)
  *
  * Architecture (ADR-2026-005): Fully local RAG pipeline.
- * No external embedding API or vector database required.
+ * No external embedding API or vector database required. Retrieval now uses
+ * real on-device vectors (graded cosine similarity) instead of the old binary
+ * keyword match, and stays 100% offline.
  */
 
 import {DocumentParser} from './DocumentParser';
 import {TextChunker} from './TextChunker';
 import {vectorStore} from './VectorStore';
+import {LexicalEmbeddingEngine} from './embeddings/LexicalEmbeddingEngine';
+import type {IEmbeddingEngine} from './embeddings/IEmbeddingEngine';
 import type {
   KnowledgeDocument,
   DocumentChunk,
@@ -24,6 +29,17 @@ import {DEFAULT_RAG_CONFIG} from './types';
 
 export class RAGManager {
   private config: RAGConfig = DEFAULT_RAG_CONFIG;
+  private engine: IEmbeddingEngine;
+
+  /**
+   * @param engine Optional embedding engine. Defaults to the on-device
+   *   LexicalEmbeddingEngine (no model download, no network). Swap in a dense
+   *   local model engine later via `setEmbeddingEngine`.
+   */
+  constructor(engine?: IEmbeddingEngine) {
+    this.engine =
+      engine ?? new LexicalEmbeddingEngine(this.config.embeddingDimension);
+  }
 
   /**
    * Import a document into the knowledge base.
@@ -70,7 +86,14 @@ export class RAGManager {
 
     document.chunkCount = chunks.length;
 
-    // Store chunks (embeddings will be computed when embedding model is available)
+    // Compute local embeddings for each chunk. Lexical by default; a dense
+    // local model engine can be swapped in via setEmbeddingEngine without
+    // touching this pipeline. When the engine returns null (e.g. Noop), the
+    // chunk simply falls back to keyword matching at search time.
+    for (const chunk of chunks) {
+      chunk.embedding = await this.engine.embed(chunk.text);
+    }
+
     await vectorStore.addChunks(chunks, document);
 
     return document;
@@ -84,8 +107,9 @@ export class RAGManager {
    * @returns Search results sorted by relevance
    */
   async search(query: string, topK?: number): Promise<SearchResult[]> {
+    const queryEmbedding = await this.engine.embed(query);
     return vectorStore.search(
-      null, // No embedding yet (keyword fallback)
+      queryEmbedding,
       query,
       topK || this.config.topK,
       this.config.minScore,
@@ -154,6 +178,21 @@ export class RAGManager {
    */
   setConfig(config: Partial<RAGConfig>): void {
     this.config = {...this.config, ...config};
+  }
+
+  /**
+   * Swap the embedding engine (e.g. to a local dense model engine such as a
+   * GGUF embedding model via llama.rn). The rest of the pipeline is unchanged.
+   */
+  setEmbeddingEngine(engine: IEmbeddingEngine): void {
+    this.engine = engine;
+  }
+
+  /**
+   * Current embedding engine (for diagnostics / UI status).
+   */
+  get embeddingEngine(): IEmbeddingEngine {
+    return this.engine;
   }
 
   /**
