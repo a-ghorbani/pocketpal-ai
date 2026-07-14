@@ -119,6 +119,8 @@ export class UIStore {
     });
   }
 
+  enableNetworkAccess = true;
+
   constructor() {
     makeAutoObservable(this);
     makePersistable(this, {
@@ -133,6 +135,7 @@ export class UIStore {
         'toolCompatWarnedModels',
         'hasCompletedOnboarding',
         'onboardingTopicsSnapshot',
+        'enableNetworkAccess',
       ],
       storage: AsyncStorage,
     });
@@ -185,6 +188,12 @@ export class UIStore {
   setDisplayMemUsage(value: boolean) {
     runInAction(() => {
       this.displayMemUsage = value;
+    });
+  }
+
+  setEnableNetworkAccess(value: boolean) {
+    runInAction(() => {
+      this.enableNetworkAccess = value;
     });
   }
 

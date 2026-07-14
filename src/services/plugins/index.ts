@@ -32,6 +32,8 @@ export type {
   PluginResult,
   PluginRecord,
   ManifestValidation,
+  PluginFetchOptions,
+  PluginFetchResult,
 } from './types';
 
 import {pluginRegistry} from './PluginRegistry';

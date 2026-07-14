@@ -57,6 +57,7 @@ import {
   ttsStore,
   chatSessionStore,
 } from '../../store';
+
 import {languageDisplayNames} from '../../locales';
 
 import {CacheType} from '../../utils/types';
@@ -1152,11 +1153,39 @@ export const SettingsScreen: React.FC = observer(() => {
             </Card.Content>
           </Card>
 
-          {/* API Settings */}
+          {/* Network & API Settings */}
           <Card elevation={0} style={styles.card}>
             <Card.Title title={l10n.settings.apiSettingsTitle} />
             <Card.Content>
               <View style={styles.settingItemContainer}>
+                {/* Network Access Toggle */}
+                <View style={styles.switchContainer}>
+                  <View style={styles.textContainer}>
+                    <View style={styles.labelWithIconContainer}>
+                      <GlobeIcon
+                        width={20}
+                        height={20}
+                        style={styles.settingIcon}
+                        stroke={theme.colors.onSurface}
+                      />
+                      <Text variant="titleMedium" style={styles.textLabel}>
+                        {l10n.settings.networkAccess}
+                      </Text>
+                    </View>
+                    <Text variant="labelSmall" style={styles.textDescription}>
+                      {l10n.settings.networkAccessDescription}
+                    </Text>
+                  </View>
+                  <Switch
+                    testID="network-access-switch"
+                    value={uiStore.enableNetworkAccess}
+                    onValueChange={value =>
+                      uiStore.setEnableNetworkAccess(value)
+                    }
+                  />
+                </View>
+                <Divider style={styles.divider} />
+
                 {/* Hugging Face Token */}
                 <View style={styles.switchContainer}>
                   <View style={styles.textContainer}>

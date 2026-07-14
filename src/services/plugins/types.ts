@@ -68,6 +68,24 @@ export interface PluginStorage {
   clear(): Promise<void>;
 }
 
+/** Options for plugin network.fetch. Subset of standard RequestInit. */
+export interface PluginFetchOptions {
+  method?: 'GET' | 'POST' | 'PUT' | 'DELETE' | 'PATCH' | 'HEAD';
+  headers?: Record<string, string>;
+  body?: string;
+  timeoutMs?: number;
+}
+
+/** Result wrapper for plugin network.fetch. */
+export interface PluginFetchResult {
+  ok: boolean;
+  status: number;
+  statusText: string;
+  headers: Record<string, string>;
+  text(): Promise<string>;
+  json<T = any>(): Promise<T>;
+}
+
 /** Sandbox API handed to a plugin's entry function. */
 export interface PluginContext {
   /** The manifest of the running plugin. */
@@ -80,6 +98,10 @@ export interface PluginContext {
   talents: {
     call(name: string, args: Record<string, any>): Promise<TalentResult>;
     list(): string[];
+  };
+  /** Fetch remote URLs (requires `network.fetch`). */
+  network: {
+    fetch(url: string, options?: PluginFetchOptions): Promise<PluginFetchResult>;
   };
   /** Read design tokens for the requested mode (no permission needed). */
   tokens: {

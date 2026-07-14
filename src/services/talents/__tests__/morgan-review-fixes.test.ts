@@ -32,7 +32,7 @@ describe('deriveToolSchemas strict-subset filtering', () => {
 
   it('returns all schemas when talentNames is undefined', () => {
     const schemas = deriveToolSchemas();
-    expect(schemas).toHaveLength(3);
+    expect(schemas).toHaveLength(10);
   });
 
   it('ignores unknown names and returns only matched ones', () => {

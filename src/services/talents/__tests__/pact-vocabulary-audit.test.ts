@@ -15,6 +15,13 @@ import {
   RenderHtmlEngine,
   CalculateEngine,
   DatetimeEngine,
+  ReminderEngine,
+  UnitConvertEngine,
+  WebSearchEngine,
+  WebSummaryEngine,
+  WeatherEngine,
+  TranslationEngine,
+  StockEngine,
 } from '../index';
 import type {TalentEngine, TalentResult, ToolDefinition} from '../types';
 
@@ -24,6 +31,13 @@ describe('PACT vocabulary audit', () => {
       new RenderHtmlEngine(),
       new CalculateEngine(),
       new DatetimeEngine(),
+      new ReminderEngine(),
+      new UnitConvertEngine(),
+      new WebSearchEngine(),
+      new WebSummaryEngine(),
+      new WeatherEngine(),
+      new TranslationEngine(),
+      new StockEngine(),
     ];
 
     it.each(engines.map(e => [e.name, e]))(
@@ -83,17 +97,24 @@ describe('PACT vocabulary audit', () => {
     });
   });
 
-  describe('registerDefaultTalents populates all three engines', () => {
+  describe('registerDefaultTalents populates all talent engines', () => {
     beforeEach(() => {
       talentRegistry.reset();
       resetRegisteredFlag();
     });
 
-    it('registers exactly render_html, calculate, and datetime', () => {
+    it('registers all default talent engines', () => {
       registerDefaultTalents();
       expect(talentRegistry.has('render_html')).toBe(true);
       expect(talentRegistry.has('calculate')).toBe(true);
       expect(talentRegistry.has('datetime')).toBe(true);
+      expect(talentRegistry.has('set_reminder')).toBe(true);
+      expect(talentRegistry.has('convert_unit')).toBe(true);
+      expect(talentRegistry.has('web_search')).toBe(true);
+      expect(talentRegistry.has('web_summary')).toBe(true);
+      expect(talentRegistry.has('weather')).toBe(true);
+      expect(talentRegistry.has('translate')).toBe(true);
+      expect(talentRegistry.has('stock')).toBe(true);
     });
 
     it('engines retrieved by name are executable', async () => {
@@ -124,19 +145,24 @@ describe('PACT vocabulary audit', () => {
 
     it('returns ToolDefinition array for all registered engines', () => {
       const schemas = deriveToolSchemas();
-      expect(schemas).toHaveLength(3);
+      expect(schemas).toHaveLength(10);
       const names = schemas.map(s => s.function.name);
       expect(names).toContain('render_html');
       expect(names).toContain('calculate');
       expect(names).toContain('datetime');
+      expect(names).toContain('set_reminder');
+      expect(names).toContain('convert_unit');
+      expect(names).toContain('web_search');
+      expect(names).toContain('web_summary');
+      expect(names).toContain('weather');
+      expect(names).toContain('translate');
+      expect(names).toContain('stock');
     });
 
     it('works without prior registerDefaultTalents call', () => {
-      // Registry is reset in beforeEach — deriveToolSchemas calls
-      // registerDefaultTalents internally.
       expect(talentRegistry.has('render_html')).toBe(false);
       const schemas = deriveToolSchemas();
-      expect(schemas).toHaveLength(3);
+      expect(schemas).toHaveLength(10);
       expect(talentRegistry.has('render_html')).toBe(true);
     });
   });

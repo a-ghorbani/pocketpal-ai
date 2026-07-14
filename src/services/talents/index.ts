@@ -6,6 +6,9 @@ import {ReminderEngine} from './ReminderEngine';
 import {UnitConvertEngine} from './UnitConvertEngine';
 import {WebSearchEngine} from './WebSearchEngine';
 import {WebSummaryEngine} from './WebSummaryEngine';
+import {WeatherEngine} from './WeatherEngine';
+import {TranslationEngine} from './TranslationEngine';
+import {StockEngine} from './StockEngine';
 import {talentRegistry} from './TalentRegistry';
 import {talentUIRegistry} from './TalentUIRegistry';
 import type {ToolDefinition} from './types';
@@ -21,6 +24,9 @@ export {ReminderEngine} from './ReminderEngine';
 export {UnitConvertEngine} from './UnitConvertEngine';
 export {WebSearchEngine} from './WebSearchEngine';
 export {WebSummaryEngine} from './WebSummaryEngine';
+export {WeatherEngine} from './WeatherEngine';
+export {TranslationEngine} from './TranslationEngine';
+export {StockEngine} from './StockEngine';
 export type {TalentEngine, TalentResult, ToolDefinition} from './types';
 
 let registered = false;
@@ -41,6 +47,9 @@ export function registerDefaultTalents(): void {
   talentRegistry.register(new UnitConvertEngine());
   talentRegistry.register(new WebSearchEngine());
   talentRegistry.register(new WebSummaryEngine());
+  talentRegistry.register(new WeatherEngine());
+  talentRegistry.register(new TranslationEngine());
+  talentRegistry.register(new StockEngine());
   // UIs
   talentUIRegistry.register(new RenderHtmlTalentUI());
   registered = true;
