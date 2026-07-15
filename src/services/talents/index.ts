@@ -1,12 +1,9 @@
 import {RenderHtmlEngine} from './RenderHtmlEngine';
-import {RenderHtmlTalentUI} from './RenderHtmlTalentUI';
-import {WebSearchTalentUI} from './WebSearchTalentUI';
 import {CalculateEngine} from './CalculateEngine';
 import {DatetimeEngine} from './DatetimeEngine';
 import {WebSearchEngine} from './WebSearchEngine';
 import {ReadUrlEngine} from './ReadUrlEngine';
 import {talentRegistry} from './TalentRegistry';
-import {talentUIRegistry} from './TalentUIRegistry';
 import type {SearchAccess} from './searchAccess';
 import type {ToolDefinition, SystemPromptContext} from './types';
 import {searchProviderStore} from '../../store';
@@ -16,8 +13,6 @@ export {TalentRegistry, talentRegistry} from './TalentRegistry';
 export {TalentUIRegistry, talentUIRegistry} from './TalentUIRegistry';
 export type {TalentUI} from './TalentUIRegistry';
 export {RenderHtmlEngine} from './RenderHtmlEngine';
-export {RenderHtmlTalentUI} from './RenderHtmlTalentUI';
-export {WebSearchTalentUI} from './WebSearchTalentUI';
 export {CalculateEngine} from './CalculateEngine';
 export {DatetimeEngine} from './DatetimeEngine';
 export {WebSearchEngine} from './WebSearchEngine';
@@ -49,23 +44,20 @@ function createSearchAccess(): SearchAccess {
 let registered = false;
 
 /**
- * Register the built-in talent engines and UI renderers. Idempotent — safe to
- * call from any app-init path.
+ * Register built-in talent engines. UI renderers register separately via
+ * `registerDefaultTalentUIs` — keeps the talent UI out of this service module's
+ * graph so engine-logic consumers don't load the bottom-sheet tree.
  */
 export function registerDefaultTalents(): void {
   if (registered) {
     return;
   }
-  // Engines
   talentRegistry.register(new RenderHtmlEngine());
   talentRegistry.register(new CalculateEngine());
   talentRegistry.register(new DatetimeEngine());
   const searchAccess = createSearchAccess();
   talentRegistry.register(new WebSearchEngine(searchAccess));
   talentRegistry.register(new ReadUrlEngine(searchAccess));
-  // UIs
-  talentUIRegistry.register(new RenderHtmlTalentUI());
-  talentUIRegistry.register(new WebSearchTalentUI());
   registered = true;
 }
 

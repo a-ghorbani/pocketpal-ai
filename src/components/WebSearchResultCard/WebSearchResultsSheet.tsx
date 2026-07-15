@@ -3,7 +3,7 @@ import {Linking, TouchableOpacity, View} from 'react-native';
 
 import {Text} from 'react-native-paper';
 
-import {Sheet} from '..';
+import {Sheet} from '../Sheet';
 import {useTheme} from '../../hooks';
 
 import {sheetStyles} from './styles';
