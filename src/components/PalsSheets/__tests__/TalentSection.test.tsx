@@ -68,7 +68,7 @@ describe('TalentSection', () => {
       expect(getByTestId('talent-section')).toBeTruthy();
     });
 
-    it('renders all 3 talent switches (render_html, calculate, datetime)', () => {
+    it('renders a switch for each registered talent', () => {
       const {getByTestId} = render(
         <FormWrapper>
           <TalentSection />
@@ -78,6 +78,8 @@ describe('TalentSection', () => {
       expect(getByTestId('talent-switch-render_html')).toBeTruthy();
       expect(getByTestId('talent-switch-calculate')).toBeTruthy();
       expect(getByTestId('talent-switch-datetime')).toBeTruthy();
+      expect(getByTestId('talent-switch-web_search')).toBeTruthy();
+      expect(getByTestId('talent-switch-read_url')).toBeTruthy();
     });
 
     it('renders talent item containers for each talent', () => {
