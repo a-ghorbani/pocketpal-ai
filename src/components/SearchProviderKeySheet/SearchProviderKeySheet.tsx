@@ -102,6 +102,11 @@ export const SearchProviderKeySheet: React.FC<SearchProviderKeySheetProps> =
               right={
                 <PaperTextInput.Icon
                   testID="search-provider-key-input-icon"
+                  accessibilityLabel={
+                    secureTextEntry
+                      ? strings.showKeyAccessibilityLabel
+                      : strings.hideKeyAccessibilityLabel
+                  }
                   icon={({color}) =>
                     secureTextEntry ? (
                       <EyeIcon width={24} height={24} stroke={color} />

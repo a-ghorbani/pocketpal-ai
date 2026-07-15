@@ -122,6 +122,8 @@
       "updateKeyButton": "Update Key",
       "clearKeyButton": "Clear Key",
       "keyInputPlaceholder": "Paste your {{provider}} API key",
+      "showKeyAccessibilityLabel": "Show API key",
+      "hideKeyAccessibilityLabel": "Hide API key",
       "resultCountLabel": "Results per search",
       "resultCountDescription": "Fewer results keep more room in the model's context.",
       "consentTitle": "Searches leave your device",

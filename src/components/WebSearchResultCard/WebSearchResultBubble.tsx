@@ -47,6 +47,7 @@ export const WebSearchResultBubble: React.FC<WebSearchResultBubbleProps> = ({
     <>
       <TouchableOpacity
         style={componentStyles.row}
+        hitSlop={{top: 12, bottom: 12}}
         onPress={() => setSheetVisible(true)}
         accessibilityRole="button"
         accessibilityLabel={t(

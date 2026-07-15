@@ -2,7 +2,11 @@ import {BraveProvider} from '../brave';
 import type {SearchProvider} from '../../types';
 
 const okJson = (body: unknown) =>
-  Promise.resolve({ok: true, status: 200, json: () => Promise.resolve(body)});
+  Promise.resolve({
+    ok: true,
+    status: 200,
+    text: () => Promise.resolve(JSON.stringify(body)),
+  });
 
 describe('BraveProvider', () => {
   beforeEach(() => {

@@ -80,7 +80,9 @@ export class WebSearchEngine implements TalentEngine {
     }
 
     if (hits.length === 0) {
-      console.log('[web_search]', {query, provider: provider.id, count: 0});
+      if (__DEV__) {
+        console.log('[web_search]', {query, provider: provider.id, count: 0});
+      }
       // Don't cache an empty result — a transient empty must not lock out retries.
       const summary = `web_search: no results for "${query}". Try a shorter or less restrictive query.`;
       return {type: 'error', summary, errorMessage: summary};
@@ -98,12 +100,14 @@ export class WebSearchEngine implements TalentEngine {
       formatHit,
     );
 
-    console.log('[web_search]', {
-      query,
-      provider: provider.id,
-      count: budgeted.length,
-      results: budgeted.map(h => ({title: h.title, url: h.url})),
-    });
+    if (__DEV__) {
+      console.log('[web_search]', {
+        query,
+        provider: provider.id,
+        count: budgeted.length,
+        results: budgeted.map(h => ({title: h.title, url: h.url})),
+      });
+    }
 
     return {
       type: 'search',

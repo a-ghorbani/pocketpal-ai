@@ -53,7 +53,13 @@ export const fetchJson = async <T>(
     throw new Error(`request failed (${res.status})`);
   }
   assertWithinDeclaredSize(res);
-  return (await res.json()) as T;
+  // RN fetch can't stream-cap; bound the text before JSON.parse so an unsized
+  // over-cap body isn't parsed into an even larger object.
+  const text = await res.text();
+  if (text.length > MAX_BODY_BYTES) {
+    throw new Error('response too large');
+  }
+  return JSON.parse(text) as T;
 };
 
 export const fetchText = async (

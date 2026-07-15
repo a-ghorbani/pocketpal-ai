@@ -62,6 +62,7 @@ export const WebSearchResultsSheet: React.FC<WebSearchResultsSheetProps> = ({
             <TouchableOpacity
               key={`${item.url}-${i}`}
               style={styles.result}
+              hitSlop={{top: 8, bottom: 8}}
               onPress={() => openUrl(item.url)}
               accessibilityRole="button"
               testID="web-search-result-row">

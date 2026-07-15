@@ -67,4 +67,31 @@ describe('response body cap', () => {
       'short body!',
     );
   });
+
+  it('rejects an unsized over-cap JSON body before parsing (fetchJson)', async () => {
+    const huge = JSON.stringify({data: 'x'.repeat(3 * 1024 * 1024)});
+    (global.fetch as jest.Mock).mockResolvedValue({
+      ok: true,
+      status: 200,
+      headers: headers({}),
+      text: () => Promise.resolve(huge),
+    });
+    await expect(
+      fetchJson('https://api.example.com/s', {method: 'GET'}),
+    ).rejects.toThrow(/too large/i);
+  });
+
+  it('parses a within-cap JSON body via the bounded text path', async () => {
+    (global.fetch as jest.Mock).mockResolvedValue({
+      ok: true,
+      status: 200,
+      headers: headers({}),
+      text: () => Promise.resolve(JSON.stringify({a: 1})),
+    });
+    expect(
+      await fetchJson<{a: number}>('https://api.example.com/s', {
+        method: 'GET',
+      }),
+    ).toEqual({a: 1});
+  });
 });
