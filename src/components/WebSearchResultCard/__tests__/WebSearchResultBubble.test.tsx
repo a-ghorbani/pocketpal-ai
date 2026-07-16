@@ -1,7 +1,7 @@
 import React from 'react';
 import {Linking} from 'react-native';
 
-import {fireEvent, render} from '../../../../jest/test-utils';
+import {fireEvent, render, waitFor} from '../../../../jest/test-utils';
 
 import {WebSearchResultBubble} from '../WebSearchResultBubble';
 import {WebSearchResultsSheet} from '../WebSearchResultsSheet';
@@ -144,6 +144,28 @@ describe('WebSearchResultsSheet', () => {
 
     fireEvent.press(getByTestId('web-search-result-row'));
     expect(openURL).not.toHaveBeenCalled();
+
+    openURL.mockRestore();
+  });
+
+  it('shows failure feedback when opening the link rejects', async () => {
+    const openURL = jest
+      .spyOn(Linking, 'openURL')
+      .mockRejectedValue(new Error('no handler'));
+
+    const {getAllByTestId, getByText} = render(
+      <WebSearchResultsSheet
+        isVisible
+        query="mars rover"
+        results={results}
+        onDismiss={jest.fn()}
+      />,
+    );
+
+    fireEvent.press(getAllByTestId('web-search-result-row')[0]);
+    await waitFor(() =>
+      expect(getByText("Couldn't open this link.")).toBeTruthy(),
+    );
 
     openURL.mockRestore();
   });

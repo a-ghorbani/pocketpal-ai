@@ -63,13 +63,20 @@ export class ReadUrlEngine implements TalentEngine {
       return {type: 'error', summary, errorMessage: summary};
     }
 
+    // Fetch the canonical URL, not the raw argument: allowlist matching
+    // ignores fragments, so a smuggled `#data` must never reach a provider
+    // that transmits the URL verbatim (Exa sends it in a JSON body).
+    const canonical = new URL(url);
+    canonical.hash = '';
+    const targetUrl = canonical.toString();
+
     const provider = this.access.getActiveProvider();
 
     let page: PageContent;
     try {
       page = provider.read
-        ? await provider.read(url)
-        : await this.access.readWithDefaultReader(url);
+        ? await provider.read(targetUrl)
+        : await this.access.readWithDefaultReader(targetUrl);
     } catch (e) {
       const errMsg = e instanceof Error ? e.message : String(e);
       return {
@@ -82,17 +89,17 @@ export class ReadUrlEngine implements TalentEngine {
     const bounded = budgetPage(page, this.recommendedContextTokens);
     if (__DEV__) {
       console.log('[read_url]', {
-        url,
+        url: targetUrl,
         provider: provider.read ? provider.id : 'default-reader',
         textLength: bounded.text.length,
       });
     }
     if (!bounded.text) {
-      const summary = `read_url: no readable content at ${url}`;
+      const summary = `read_url: no readable content at ${targetUrl}`;
       return {type: 'error', summary, errorMessage: summary};
     }
 
-    const header = bounded.title ? `${bounded.title}\n${url}` : url;
+    const header = bounded.title ? `${bounded.title}\n${targetUrl}` : targetUrl;
     return {
       type: 'text',
       summary: wrapUntrusted(`${header}\n\n${bounded.text}`),

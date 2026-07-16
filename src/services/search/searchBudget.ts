@@ -49,6 +49,12 @@ const truncateOnWordBoundary = (text: string, maxChars: number): string => {
   return `${cut.trimEnd()}…`;
 };
 
+// Per-field caps so no single provider-controlled field (title/URL) can blow
+// the token ceiling; a clamped legit hit always fits. URLs are dropped rather
+// than truncated — a cut URL would be uncopyable for read_url.
+const TITLE_MAX_CHARS = 200;
+const URL_MAX_CHARS = 2048;
+
 /**
  * `renderHit` must be the exact renderer fed to the model: the token ceiling is
  * charged against rendered text (markup/indentation count).
@@ -58,10 +64,12 @@ export const budgetHits = (
   budget: SearchBudget,
   renderHit: (hit: SearchHit) => string,
 ): SearchHit[] => {
-  const capped = hits.slice(0, Math.max(0, budget.maxResults));
+  const capped = hits
+    .filter(hit => hit.url.length <= URL_MAX_CHARS)
+    .slice(0, Math.max(0, budget.maxResults));
 
   const cleaned: SearchHit[] = capped.map(hit => ({
-    title: toPlainText(hit.title),
+    title: truncateOnWordBoundary(toPlainText(hit.title), TITLE_MAX_CHARS),
     url: hit.url,
     snippet: truncateOnWordBoundary(
       toPlainText(hit.snippet),
@@ -74,8 +82,8 @@ export const budgetHits = (
   let usedTokens = 0;
   for (const hit of cleaned) {
     const hitTokens = estimateTokens(renderHit(hit));
-    if (out.length > 0 && usedTokens + hitTokens > budget.tokenCeiling) {
-      break; // drop trailing hits whole — never truncate a hit mid-fact
+    if (usedTokens + hitTokens > budget.tokenCeiling) {
+      break; // drop hits whole (even the first) — never truncate mid-fact
     }
     out.push(hit);
     usedTokens += hitTokens;

@@ -200,6 +200,26 @@ describe('ReadUrlEngine', () => {
       expect(read).not.toHaveBeenCalled();
     });
 
+    it('strips a smuggled fragment before the URL reaches the provider', async () => {
+      // Allowlist matching ignores fragments, so `#data` passes the guard —
+      // but the outbound read must carry the canonical URL (Exa transmits it
+      // verbatim in a JSON body).
+      const read = jest.fn().mockResolvedValue({
+        url: 'https://e.com/p',
+        text: 'body',
+      } as PageContent);
+      const provider: SearchProvider = {id: 'exa', search: jest.fn(), read};
+      const access = makeAccess({getActiveProvider: () => provider});
+      const result = await new ReadUrlEngine(access).execute({
+        url: 'https://e.com/p#conversation-secret',
+      });
+      expect(result.type).toBe('text');
+      expect(read).toHaveBeenCalledWith('https://e.com/p');
+      expect(read).not.toHaveBeenCalledWith(
+        expect.stringContaining('conversation-secret'),
+      );
+    });
+
     it('accepts the same URL once allowlisted', async () => {
       const read = jest.fn().mockResolvedValue({
         url: 'https://fresh.example.org/a',

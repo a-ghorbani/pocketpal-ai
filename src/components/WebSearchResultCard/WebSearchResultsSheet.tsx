@@ -47,65 +47,64 @@ export const WebSearchResultsSheet: React.FC<WebSearchResultsSheetProps> = ({
   };
 
   return (
-    <>
-      <Sheet
-        isVisible={isVisible}
-        onClose={onDismiss}
-        title={l10n.chat.webSearch.searchResultsTitle}
-        snapPoints={['60%']}>
-        <Sheet.ScrollView
-          contentContainerStyle={styles.container}
-          testID="web-search-results-sheet">
-          <Text style={styles.subtitle} numberOfLines={1}>
-            {t(l10n.chat.webSearch.searched, {query})}
+    <Sheet
+      isVisible={isVisible}
+      onClose={onDismiss}
+      title={l10n.chat.webSearch.searchResultsTitle}
+      snapPoints={['60%']}>
+      <Sheet.ScrollView
+        contentContainerStyle={styles.container}
+        testID="web-search-results-sheet">
+        <Text style={styles.subtitle} numberOfLines={1}>
+          {t(l10n.chat.webSearch.searched, {query})}
+        </Text>
+
+        {results.length === 0 ? (
+          <Text style={styles.empty} testID="web-search-results-sheet-empty">
+            {l10n.chat.webSearch.noResults}
           </Text>
-
-          {results.length === 0 ? (
-            <Text style={styles.empty} testID="web-search-results-sheet-empty">
-              {l10n.chat.webSearch.noResults}
-            </Text>
-          ) : (
-            results.map((item, i) => {
-              const rowContent = (
-                <>
-                  <Text variant="labelMedium" style={styles.title}>
-                    {item.title || item.url}
+        ) : (
+          results.map((item, i) => {
+            const rowContent = (
+              <>
+                <Text variant="labelMedium" style={styles.title}>
+                  {item.title || item.url}
+                </Text>
+                <Text style={styles.url} numberOfLines={1}>
+                  {item.url}
+                </Text>
+                {item.snippet ? (
+                  <Text style={styles.snippet} numberOfLines={3}>
+                    {item.snippet}
                   </Text>
-                  <Text style={styles.url} numberOfLines={1}>
-                    {item.url}
-                  </Text>
-                  {item.snippet ? (
-                    <Text style={styles.snippet} numberOfLines={3}>
-                      {item.snippet}
-                    </Text>
-                  ) : null}
-                </>
-              );
-              // A non-openable URL must not present as a tappable button.
-              return isOpenableUrl(item.url) ? (
-                <TouchableOpacity
-                  key={`${item.url}-${i}`}
-                  style={styles.result}
-                  hitSlop={{top: 8, bottom: 8}}
-                  onPress={() => openUrl(item.url)}
-                  accessibilityRole="button"
-                  testID="web-search-result-row">
-                  {rowContent}
-                </TouchableOpacity>
-              ) : (
-                <View
-                  key={`${item.url}-${i}`}
-                  style={styles.result}
-                  testID="web-search-result-row">
-                  {rowContent}
-                </View>
-              );
-            })
-          )}
-          <View style={styles.bottomSpacer} />
-        </Sheet.ScrollView>
-      </Sheet>
-
+                ) : null}
+              </>
+            );
+            // A non-openable URL must not present as a tappable button.
+            return isOpenableUrl(item.url) ? (
+              <TouchableOpacity
+                key={`${item.url}-${i}`}
+                style={styles.result}
+                hitSlop={{top: 8, bottom: 8}}
+                onPress={() => openUrl(item.url)}
+                accessibilityRole="button"
+                testID="web-search-result-row">
+                {rowContent}
+              </TouchableOpacity>
+            ) : (
+              <View
+                key={`${item.url}-${i}`}
+                style={styles.result}
+                testID="web-search-result-row">
+                {rowContent}
+              </View>
+            );
+          })
+        )}
+        <View style={styles.bottomSpacer} />
+      </Sheet.ScrollView>
+      {/* Inside the sheet's modal layer — the gorhom portal paints above
+            siblings and paper Portals, which would hide this feedback. */}
       <Snackbar
         visible={showOpenError}
         onDismiss={() => setShowOpenError(false)}
@@ -116,6 +115,6 @@ export const WebSearchResultsSheet: React.FC<WebSearchResultsSheetProps> = ({
         }}>
         {l10n.chat.webSearch.openLinkError}
       </Snackbar>
-    </>
+    </Sheet>
   );
 };

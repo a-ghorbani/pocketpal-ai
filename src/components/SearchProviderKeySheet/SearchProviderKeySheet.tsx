@@ -143,19 +143,20 @@ export const SearchProviderKeySheet: React.FC<SearchProviderKeySheetProps> =
               </Button>
             </View>
           </Sheet.Actions>
+          {/* Inside the sheet's modal layer — the gorhom portal paints above
+              siblings and paper Portals, which would hide this feedback. */}
+          <Snackbar
+            visible={showError}
+            onDismiss={() => setShowError(false)}
+            duration={3000}
+            style={styles.errorSnackbar}
+            action={{
+              label: l10n.common.dismiss,
+              onPress: () => setShowError(false),
+            }}>
+            {strings.keyUpdateError}
+          </Snackbar>
         </Sheet>
-
-        <Snackbar
-          visible={showError}
-          onDismiss={() => setShowError(false)}
-          duration={3000}
-          style={styles.errorSnackbar}
-          action={{
-            label: l10n.common.dismiss,
-            onPress: () => setShowError(false),
-          }}>
-          {strings.keyUpdateError}
-        </Snackbar>
       </>
     );
   });

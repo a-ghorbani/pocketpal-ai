@@ -106,14 +106,32 @@ describe('budgetHits', () => {
     expect(renderedTokens).toBeLessThanOrEqual(27);
   });
 
-  it('always keeps at least the first hit even if it exceeds the ceiling', () => {
+  it('drops even the first hit when it exceeds the ceiling (hostile-payload guard)', () => {
     const big = 'word '.repeat(200).trim();
     const out = budgetHits(
       [hit({snippet: big})],
       budget({perSnippetChars: 2000, tokenCeiling: 1}),
       renderHit,
     );
+    expect(out).toHaveLength(0);
+  });
+
+  it('clamps an oversized provider title so one field cannot blow the ceiling', () => {
+    const hugeTitle = 'word '.repeat(1000).trim();
+    const out = budgetHits([hit({title: hugeTitle})], budget(), renderHit);
     expect(out).toHaveLength(1);
+    expect(out[0].title.length).toBeLessThanOrEqual(201); // cap + ellipsis
+  });
+
+  it('drops a hit with an absurdly long URL instead of truncating it', () => {
+    const hugeUrl = `https://example.com/${'x'.repeat(5000)}`;
+    const out = budgetHits(
+      [hit({url: hugeUrl}), hit({url: 'https://example.com/ok'})],
+      budget(),
+      renderHit,
+    );
+    expect(out).toHaveLength(1);
+    expect(out[0].url).toBe('https://example.com/ok');
   });
 
   it('preserves publishedAt when present and keeps url on empty snippet', () => {
