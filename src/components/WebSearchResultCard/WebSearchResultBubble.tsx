@@ -60,9 +60,12 @@ export const WebSearchResultBubble: React.FC<WebSearchResultBubbleProps> = ({
           height={14}
           stroke={theme.colors.textSecondary}
         />
+        {/* Split so a long query truncates but the count never does. */}
         <Text style={componentStyles.label} numberOfLines={1}>
           {t(l10n.chat.webSearch.searched, {query})}
-          {'  ·  '}
+        </Text>
+        <Text style={componentStyles.count} numberOfLines={1}>
+          {'·  '}
           {results.length === 1
             ? l10n.chat.webSearch.resultsCountOne
             : t(l10n.chat.webSearch.resultsCount, {count: results.length})}

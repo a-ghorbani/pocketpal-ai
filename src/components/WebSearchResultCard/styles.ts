@@ -16,6 +16,13 @@ export const styles = ({theme}: {theme: Theme}) =>
       color: theme.colors.textSecondary,
       opacity: 0.85,
     },
+    count: {
+      flexShrink: 0,
+      marginRight: 6,
+      fontSize: 12,
+      color: theme.colors.textSecondary,
+      opacity: 0.85,
+    },
   });
 
 export const sheetStyles = ({theme}: {theme: Theme}) =>
