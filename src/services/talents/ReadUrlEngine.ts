@@ -59,7 +59,7 @@ export class ReadUrlEngine implements TalentEngine {
     // results or the user's own messages may be fetched.
     if (!isReadUrlAllowed(url)) {
       const summary =
-        'read_url: this URL is not from a web_search result or a user message in this conversation. Copy the URL exactly as shown in web_search results, or run web_search first.';
+        'read_url: this URL is not from a web_search result or a user message in this conversation. Copy the URL exactly as the user wrote it or as shown in web_search results, or run web_search first.';
       return {type: 'error', summary, errorMessage: summary};
     }
 
@@ -112,13 +112,14 @@ export class ReadUrlEngine implements TalentEngine {
       function: {
         name: 'read_url',
         description:
-          'Fetch the full text of one web page. Use this after web_search when a snippet mentions the answer but does not fully contain it. Pass the exact URL copied from a web_search result. Do not invent URLs.',
+          'Fetch the full text of one web page. Use this directly when the user gives you a URL to read — no search needed first. Also use it after web_search when a snippet mentions the answer but does not fully contain it. Pass the exact URL as the user wrote it or as shown in a web_search result. Do not invent URLs.',
         parameters: {
           type: 'object',
           properties: {
             url: {
               type: 'string',
-              description: 'Exact URL copied from a web_search result.',
+              description:
+                "Exact URL from the user's message or a web_search result.",
             },
           },
           required: ['url'],
