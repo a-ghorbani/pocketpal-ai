@@ -141,6 +141,35 @@ describe('SearchProviderStore', () => {
     });
   });
 
+  describe('post-hydration normalization (persisted prefs bypass setters)', () => {
+    it('resets a persisted gated/unknown provider to the default', async () => {
+      const store = await newStore();
+      store.activeProviderId = 'parallel'; // gated; only reachable via stale storage
+      store.normalizeHydratedPrefs();
+      expect(store.activeProviderId).toBe('brave');
+    });
+
+    it('clamps a persisted out-of-range result count', async () => {
+      const store = await newStore();
+      store.resultCount = 99;
+      store.normalizeHydratedPrefs();
+      expect(store.resultCount).toBe(8);
+
+      store.resultCount = 0;
+      store.normalizeHydratedPrefs();
+      expect(store.resultCount).toBe(1);
+    });
+
+    it('leaves valid persisted prefs unchanged', async () => {
+      const store = await newStore();
+      store.activeProviderId = 'tavily';
+      store.resultCount = 4;
+      store.normalizeHydratedPrefs();
+      expect(store.activeProviderId).toBe('tavily');
+      expect(store.resultCount).toBe(4);
+    });
+  });
+
   describe('isProviderConfigured', () => {
     it('is false with no key and true once the active provider has a key', async () => {
       const store = await newStore();

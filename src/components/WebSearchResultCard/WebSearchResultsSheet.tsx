@@ -58,27 +58,42 @@ export const WebSearchResultsSheet: React.FC<WebSearchResultsSheetProps> = ({
             {l10n.chat.webSearch.noResults}
           </Text>
         ) : (
-          results.map((item, i) => (
-            <TouchableOpacity
-              key={`${item.url}-${i}`}
-              style={styles.result}
-              hitSlop={{top: 8, bottom: 8}}
-              onPress={() => openUrl(item.url)}
-              accessibilityRole="button"
-              testID="web-search-result-row">
-              <Text variant="labelMedium" style={styles.title}>
-                {item.title || item.url}
-              </Text>
-              <Text style={styles.url} numberOfLines={1}>
-                {item.url}
-              </Text>
-              {item.snippet ? (
-                <Text style={styles.snippet} numberOfLines={3}>
-                  {item.snippet}
+          results.map((item, i) => {
+            const rowContent = (
+              <>
+                <Text variant="labelMedium" style={styles.title}>
+                  {item.title || item.url}
                 </Text>
-              ) : null}
-            </TouchableOpacity>
-          ))
+                <Text style={styles.url} numberOfLines={1}>
+                  {item.url}
+                </Text>
+                {item.snippet ? (
+                  <Text style={styles.snippet} numberOfLines={3}>
+                    {item.snippet}
+                  </Text>
+                ) : null}
+              </>
+            );
+            // A non-openable URL must not present as a tappable button.
+            return isOpenableUrl(item.url) ? (
+              <TouchableOpacity
+                key={`${item.url}-${i}`}
+                style={styles.result}
+                hitSlop={{top: 8, bottom: 8}}
+                onPress={() => openUrl(item.url)}
+                accessibilityRole="button"
+                testID="web-search-result-row">
+                {rowContent}
+              </TouchableOpacity>
+            ) : (
+              <View
+                key={`${item.url}-${i}`}
+                style={styles.result}
+                testID="web-search-result-row">
+                {rowContent}
+              </View>
+            );
+          })
         )}
         <View style={styles.bottomSpacer} />
       </Sheet.ScrollView>

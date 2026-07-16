@@ -6,7 +6,7 @@ import {ReadUrlEngine} from './ReadUrlEngine';
 import {talentRegistry} from './TalentRegistry';
 import type {SearchAccess} from './searchAccess';
 import type {ToolDefinition, SystemPromptContext} from './types';
-import {searchProviderStore} from '../../store';
+import {searchProviderStore} from '../../store/SearchProviderStore';
 import {createSearchProvider, readWithDefaultReader} from '../search';
 
 export {TalentRegistry, talentRegistry} from './TalentRegistry';

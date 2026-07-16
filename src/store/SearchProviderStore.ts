@@ -45,9 +45,25 @@ class SearchProviderStore {
       name: 'SearchProviderStore',
       properties: ['activeProviderId', 'resultCount', 'hasConsentedToSearch'],
       storage: AsyncStorage,
-    });
+    }).then(() => this.normalizeHydratedPrefs());
 
     this.loadKeysFromSecureStorage();
+  }
+
+  // Persisted prefs skip the setters — re-validate after hydration so a stale
+  // gated/unknown provider or out-of-range count can't survive a reload.
+  normalizeHydratedPrefs() {
+    const meta = SEARCH_PROVIDERS.find(p => p.id === this.activeProviderId);
+    const provider =
+      meta && meta.selectable ? this.activeProviderId : DEFAULT_PROVIDER;
+    const count = Math.min(
+      MAX_RESULT_COUNT,
+      Math.max(MIN_RESULT_COUNT, Math.round(this.resultCount)),
+    );
+    runInAction(() => {
+      this.activeProviderId = provider;
+      this.resultCount = count;
+    });
   }
 
   private async loadKeysFromSecureStorage() {

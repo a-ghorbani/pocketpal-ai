@@ -1195,6 +1195,9 @@ export const SettingsScreen: React.FC = observer(() => {
                   </Text>
                   <InputSlider
                     testID="search-result-count-slider"
+                    accessibilityLabel={
+                      l10n.settings.internetSearch.resultCountLabel
+                    }
                     value={searchProviderStore.resultCount}
                     onValueChange={value =>
                       searchProviderStore.setResultCount(Math.round(value))
