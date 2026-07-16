@@ -3,6 +3,7 @@ import {
   extractUrls,
   isReadUrlAllowed,
   resetReadUrlAllowlist,
+  seedReadUrlAllowlist,
 } from '../readUrlAllowlist';
 
 describe('readUrlAllowlist', () => {
@@ -48,6 +49,71 @@ describe('readUrlAllowlist', () => {
   it('ignores unparseable and non-http(s) seeds', () => {
     allowReadUrls(['not a url', 'file:///etc/passwd', '']);
     expect(isReadUrlAllowed('file:///etc/passwd')).toBe(false);
+  });
+
+  describe('seedReadUrlAllowlist', () => {
+    it('seeds URLs from user text, including multimodal text parts', () => {
+      seedReadUrlAllowlist(
+        [
+          {role: 'user', content: 'read https://a.com/doc'},
+          {
+            role: 'user',
+            content: [{type: 'text', text: 'and https://b.com/page'}],
+          },
+        ],
+        [],
+      );
+      expect(isReadUrlAllowed('https://a.com/doc')).toBe(true);
+      expect(isReadUrlAllowed('https://b.com/page')).toBe(true);
+    });
+
+    it('never seeds from assistant or tool message text', () => {
+      seedReadUrlAllowlist(
+        [
+          {role: 'assistant', content: 'see https://laundered.com/x'},
+          {role: 'tool', content: 'page body says https://evil.com/y'},
+          {role: 'system', content: 'https://sys.com/z'},
+        ],
+        [],
+      );
+      expect(isReadUrlAllowed('https://laundered.com/x')).toBe(false);
+      expect(isReadUrlAllowed('https://evil.com/y')).toBe(false);
+      expect(isReadUrlAllowed('https://sys.com/z')).toBe(false);
+    });
+
+    it("seeds structured search-hit URLs from the session's persisted turns", () => {
+      seedReadUrlAllowlist(
+        [],
+        [
+          {
+            type: 'assistant_turn',
+            steps: [
+              {
+                toolOutcomes: [
+                  {
+                    result: {
+                      type: 'search',
+                      results: [{url: 'https://hit.com/a'}],
+                    },
+                  },
+                  // A read_url outcome (page text) must not seed anything.
+                  {result: {type: 'text'}},
+                ],
+              },
+            ],
+          },
+          {type: 'text'},
+        ],
+      );
+      expect(isReadUrlAllowed('https://hit.com/a')).toBe(true);
+    });
+
+    it('replaces the previous run entirely (reset semantics)', () => {
+      allowReadUrls(['https://stale.com/old']);
+      seedReadUrlAllowlist([{role: 'user', content: 'https://new.com/n'}], []);
+      expect(isReadUrlAllowed('https://stale.com/old')).toBe(false);
+      expect(isReadUrlAllowed('https://new.com/n')).toBe(true);
+    });
   });
 
   describe('extractUrls', () => {

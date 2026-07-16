@@ -18,12 +18,10 @@ export {DatetimeEngine} from './DatetimeEngine';
 export {WebSearchEngine} from './WebSearchEngine';
 export {ReadUrlEngine} from './ReadUrlEngine';
 export type {SearchAccess} from './searchAccess';
-export {
-  resetReadUrlAllowlist,
-  allowReadUrls,
-  isReadUrlAllowed,
-  extractUrls,
-} from './readUrlAllowlist';
+// Deliberately narrow: the raw allowlist writers stay module-internal so all
+// writes happen inside services/talents (seed at run start, WebSearchEngine
+// per search).
+export {seedReadUrlAllowlist, isReadUrlAllowed} from './readUrlAllowlist';
 export type {
   TalentEngine,
   TalentResult,
