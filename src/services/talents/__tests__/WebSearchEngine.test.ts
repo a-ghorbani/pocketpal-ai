@@ -235,6 +235,39 @@ describe('WebSearchEngine', () => {
     }
   });
 
+  it('allowlists its budgeted hit URLs for read_url', async () => {
+    const allowlist = require('../readUrlAllowlist');
+    allowlist.resetReadUrlAllowlist();
+    const provider: SearchProvider = {
+      id: 'tavily',
+      search: jest
+        .fn()
+        .mockResolvedValue([hit({url: 'https://found.example.com/a'})]),
+    };
+    const access = makeAccess({getActiveProvider: () => provider});
+    expect(allowlist.isReadUrlAllowed('https://found.example.com/a')).toBe(
+      false,
+    );
+    await new WebSearchEngine(access).execute({query: 'mars'});
+    expect(allowlist.isReadUrlAllowed('https://found.example.com/a')).toBe(
+      true,
+    );
+  });
+
+  it('caches the budgeted hits, not the raw provider payload', async () => {
+    const spy = jest.spyOn(budget, 'setCachedHits');
+    const oversized = 'x'.repeat(5000);
+    const provider: SearchProvider = {
+      id: 'tavily',
+      search: jest.fn().mockResolvedValue([hit({snippet: oversized})]),
+    };
+    const access = makeAccess({getActiveProvider: () => provider});
+    await new WebSearchEngine(access).execute({query: 'mars'});
+    const stored = spy.mock.calls[0][3];
+    expect(stored[0].snippet.length).toBeLessThan(oversized.length);
+    spy.mockRestore();
+  });
+
   describe('systemPromptFragment', () => {
     it("grounds today's date, the tool budget, and search guidance", () => {
       const fragment = new WebSearchEngine(makeAccess()).systemPromptFragment({

@@ -154,7 +154,7 @@ export const SearchProviderKeySheet: React.FC<SearchProviderKeySheetProps> =
             label: l10n.common.dismiss,
             onPress: () => setShowError(false),
           }}>
-          {l10n.common.networkError}
+          {strings.keyUpdateError}
         </Snackbar>
       </>
     );

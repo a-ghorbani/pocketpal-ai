@@ -33,7 +33,10 @@ import {
   CompletionResultSnapshot,
 } from '../utils/completionTypes';
 import {
+  allowReadUrls,
   collectSystemPromptFragments,
+  extractUrls,
+  resetReadUrlAllowlist,
   talentRegistry,
 } from '../services/talents';
 import type {ToolDefinition} from '../services/talents/types';
@@ -143,6 +146,37 @@ const prepareCompletion = async ({
     ...chatMessages,
     {role: 'user', content: userMessageContent},
   ]);
+
+  // Reseed the read_url exfiltration allowlist for this run: URLs the user
+  // wrote plus hits from this session's earlier web_search outcomes. New hits
+  // register inside WebSearchEngine as searches complete.
+  resetReadUrlAllowlist();
+  for (const msg of messages) {
+    if (msg.role !== 'user') {
+      continue;
+    }
+    if (typeof msg.content === 'string') {
+      allowReadUrls(extractUrls(msg.content));
+    } else if (Array.isArray(msg.content)) {
+      for (const part of msg.content) {
+        if (part?.type === 'text' && typeof part.text === 'string') {
+          allowReadUrls(extractUrls(part.text));
+        }
+      }
+    }
+  }
+  for (const msg of currentMessages) {
+    if (msg.type !== 'assistant_turn') {
+      continue;
+    }
+    for (const step of msg.steps ?? []) {
+      for (const outcome of step.toolOutcomes ?? []) {
+        if (outcome.result?.type === 'search') {
+          allowReadUrls(outcome.result.results.map(r => r.url));
+        }
+      }
+    }
+  }
 
   const completionParamsWithAppProps = {
     ...sessionCompletionSettings,

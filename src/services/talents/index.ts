@@ -18,6 +18,12 @@ export {DatetimeEngine} from './DatetimeEngine';
 export {WebSearchEngine} from './WebSearchEngine';
 export {ReadUrlEngine} from './ReadUrlEngine';
 export type {SearchAccess} from './searchAccess';
+export {
+  resetReadUrlAllowlist,
+  allowReadUrls,
+  isReadUrlAllowed,
+  extractUrls,
+} from './readUrlAllowlist';
 export type {
   TalentEngine,
   TalentResult,

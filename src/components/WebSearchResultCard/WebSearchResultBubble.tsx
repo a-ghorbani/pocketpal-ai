@@ -63,7 +63,9 @@ export const WebSearchResultBubble: React.FC<WebSearchResultBubbleProps> = ({
         <Text style={componentStyles.label} numberOfLines={1}>
           {t(l10n.chat.webSearch.searched, {query})}
           {'  ·  '}
-          {t(l10n.chat.webSearch.resultsCount, {count: results.length})}
+          {results.length === 1
+            ? l10n.chat.webSearch.resultsCountOne
+            : t(l10n.chat.webSearch.resultsCount, {count: results.length})}
         </Text>
         <ChevronRightIcon
           width={14}

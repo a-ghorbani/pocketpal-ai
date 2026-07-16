@@ -8,6 +8,7 @@ import type {SearchAccess} from './searchAccess';
 import type {SearchHit} from '../search/types';
 import {budgetHits, getCachedHits, setCachedHits} from '../search/searchBudget';
 import {wrapUntrusted} from './untrustedContent';
+import {allowReadUrls} from './readUrlAllowlist';
 
 const PER_SNIPPET_CHARS = 280;
 
@@ -88,8 +89,6 @@ export class WebSearchEngine implements TalentEngine {
       return {type: 'error', summary, errorMessage: summary};
     }
 
-    setCachedHits(provider.id, query, maxResults, hits);
-
     const budgeted = budgetHits(
       hits,
       {
@@ -99,6 +98,11 @@ export class WebSearchEngine implements TalentEngine {
       },
       formatHit,
     );
+
+    // Cache the budgeted hits, not the raw payload — same model-visible result
+    // on replay, without retaining oversized provider snippets.
+    setCachedHits(provider.id, query, maxResults, budgeted);
+    allowReadUrls(budgeted.map(h => h.url));
 
     if (__DEV__) {
       console.log('[web_search]', {

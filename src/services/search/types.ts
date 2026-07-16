@@ -35,7 +35,7 @@ export interface SearchProvider {
 }
 
 export interface SearchBudget {
-  /** From settings (default 3). */
+  /** From settings (default 5). */
   maxResults: number;
   /** ~280 chars per snippet. */
   perSnippetChars: number;

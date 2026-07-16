@@ -4,8 +4,8 @@ import {SEARCH_PROVIDERS} from '../../src/store/SearchProviderStore';
 import type {SearchProviderId} from '../../src/services/search/types';
 
 class MockSearchProviderStore {
-  activeProviderId: SearchProviderId = 'tavily';
-  resultCount = 3;
+  activeProviderId: SearchProviderId = 'brave';
+  resultCount = 5;
   hasConsentedToSearch = false;
 
   private keys: Partial<Record<SearchProviderId, string>> = {};

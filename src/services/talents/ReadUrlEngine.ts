@@ -3,6 +3,7 @@ import type {SearchAccess} from './searchAccess';
 import type {PageContent} from '../search/types';
 import {budgetPage} from '../search/searchBudget';
 import {wrapUntrusted} from './untrustedContent';
+import {isReadUrlAllowed} from './readUrlAllowlist';
 
 /**
  * Reject non-http(s) schemes and embedded credentials so a malicious page
@@ -52,6 +53,14 @@ export class ReadUrlEngine implements TalentEngine {
         summary: `read_url: ${provider.id} not enabled`,
         errorMessage: `Internet search is not enabled. Accept the disclosure and set an API key for ${provider.id} in Settings → Internet Search.`,
       };
+    }
+
+    // Exfiltration guard: only URLs from this conversation's web_search
+    // results or the user's own messages may be fetched.
+    if (!isReadUrlAllowed(url)) {
+      const summary =
+        'read_url: this URL is not from a web_search result or a user message in this conversation. Copy the URL exactly as shown in web_search results, or run web_search first.';
+      return {type: 'error', summary, errorMessage: summary};
     }
 
     const provider = this.access.getActiveProvider();

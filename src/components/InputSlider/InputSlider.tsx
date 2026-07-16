@@ -179,6 +179,7 @@ export const InputSlider: React.FC<InputSliderProps> = ({
         {showInput && (
           <TextInput
             testID={`${testID}-input`}
+            accessibilityLabel={accessibilityLabel}
             style={[styles.textInput, disabled && styles.disabledTextInput]}
             value={textValue}
             onChangeText={handleTextChange}

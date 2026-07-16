@@ -164,9 +164,28 @@ describe('SearchProviderStore', () => {
       const store = await newStore();
       store.activeProviderId = 'tavily';
       store.resultCount = 4;
+      store.hasConsentedToSearch = true;
       store.normalizeHydratedPrefs();
       expect(store.activeProviderId).toBe('tavily');
       expect(store.resultCount).toBe(4);
+      expect(store.hasConsentedToSearch).toBe(true);
+    });
+
+    it('treats a non-boolean persisted consent as no consent', async () => {
+      const store = await newStore();
+      (store as any).hasConsentedToSearch = 'false'; // truthy string from tampered storage
+      store.normalizeHydratedPrefs();
+      expect(store.hasConsentedToSearch).toBe(false);
+      expect(store.canSearch).toBe(false);
+    });
+
+    it('restores the default on a non-numeric or non-finite persisted count', async () => {
+      const store = await newStore();
+      for (const bad of ['bad', NaN, null, {}, Infinity]) {
+        (store as any).resultCount = bad;
+        store.normalizeHydratedPrefs();
+        expect(store.resultCount).toBe(5);
+      }
     });
   });
 

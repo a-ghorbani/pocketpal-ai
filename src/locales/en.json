@@ -122,6 +122,7 @@
       "updateKeyButton": "Update Key",
       "clearKeyButton": "Clear Key",
       "keyInputPlaceholder": "Paste your {{provider}} API key",
+      "keyUpdateError": "Couldn't update the key. Please try again.",
       "showKeyAccessibilityLabel": "Show API key",
       "hideKeyAccessibilityLabel": "Hide API key",
       "resultCountLabel": "Results per search",
@@ -1213,8 +1214,10 @@
       "noResults": "No results",
       "noResultsFor": "No results for {{query}}",
       "resultsCount": "{{count}} results",
+      "resultsCountOne": "1 result",
       "searchResultsTitle": "Search results",
-      "showResultsAccessibilityLabel": "Show web search results for {{query}}"
+      "showResultsAccessibilityLabel": "Show web search results for {{query}}",
+      "openLinkError": "Couldn't open this link."
     }
   },
   "htmlPreview": {

@@ -51,18 +51,25 @@ class SearchProviderStore {
   }
 
   // Persisted prefs skip the setters — re-validate after hydration so a stale
-  // gated/unknown provider or out-of-range count can't survive a reload.
+  // gated/unknown provider, malformed type, or out-of-range count can't
+  // survive a reload. Consent is a privacy gate: only a literal true counts.
   normalizeHydratedPrefs() {
     const meta = SEARCH_PROVIDERS.find(p => p.id === this.activeProviderId);
     const provider =
       meta && meta.selectable ? this.activeProviderId : DEFAULT_PROVIDER;
-    const count = Math.min(
-      MAX_RESULT_COUNT,
-      Math.max(MIN_RESULT_COUNT, Math.round(this.resultCount)),
-    );
+    const rawCount: unknown = this.resultCount;
+    const count =
+      typeof rawCount === 'number' && Number.isFinite(rawCount)
+        ? Math.min(
+            MAX_RESULT_COUNT,
+            Math.max(MIN_RESULT_COUNT, Math.round(rawCount)),
+          )
+        : DEFAULT_RESULT_COUNT;
+    const consent = (this.hasConsentedToSearch as unknown) === true;
     runInAction(() => {
       this.activeProviderId = provider;
       this.resultCount = count;
+      this.hasConsentedToSearch = consent;
     });
   }
 

@@ -11,6 +11,7 @@ import {
 } from '../../../jest/fixtures/models';
 
 import {useChatSession} from '../useChatSession';
+import {isReadUrlAllowed} from '../../services/talents';
 
 import {
   chatSessionStore,
@@ -530,6 +531,25 @@ describe('useChatSession', () => {
       );
       expect(systemMessages).toHaveLength(1);
       expect(systemMessages[0].content).toBe('You are a research assistant.');
+    });
+
+    it('seeds the read_url allowlist from URLs the user wrote', async () => {
+      useSessionWithPal('');
+      await activateSearchTools();
+      captureMessages();
+
+      const {result} = renderHook(() =>
+        useChatSession({current: null}, textMessage.author, mockAssistant),
+      );
+      await act(async () => {
+        await result.current.handleSendPress({
+          ...textMessage,
+          text: 'summarize https://user.example.com/doc please',
+        });
+      });
+
+      expect(isReadUrlAllowed('https://user.example.com/doc')).toBe(true);
+      expect(isReadUrlAllowed('https://other.example.com/x')).toBe(false);
     });
   });
 
