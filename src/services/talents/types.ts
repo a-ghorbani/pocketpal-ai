@@ -44,6 +44,9 @@ export interface ToolDefinition {
 export interface SystemPromptContext {
   now: Date;
   maxToolTurns: number;
+  /** Talents active for this request, so a fragment references a sibling tool
+   *  (e.g. web_search → read_url) only when it is actually enabled. */
+  activeTalents: ReadonlySet<string>;
 }
 
 export interface TalentEngine {

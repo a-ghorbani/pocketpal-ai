@@ -1,7 +1,8 @@
 import {collectSystemPromptFragments} from '../index';
 import type {SystemPromptContext} from '../types';
 
-const ctx: SystemPromptContext = {
+// activeTalents is derived by the collector from the talent names.
+const ctx: Omit<SystemPromptContext, 'activeTalents'> = {
   now: new Date('2026-07-15T12:00:00Z'),
   maxToolTurns: 5,
 };
@@ -16,12 +17,15 @@ describe('collectSystemPromptFragments', () => {
     expect(fragments[0]).toContain('web_search');
   });
 
-  it('does not duplicate the fragment when read_url rides alongside web_search', () => {
-    // read_url contributes no fragment of its own, so the assembled grounding
-    // for the common both-enabled Pal stays byte-identical to web_search alone.
-    expect(
-      collectSystemPromptFragments(['web_search', 'read_url'], ctx),
-    ).toEqual(collectSystemPromptFragments(['web_search'], ctx));
+  it('references read_url in the web_search fragment only when read_url is active', () => {
+    // read_url contributes no fragment of its own, but the web_search fragment
+    // names it as a sibling tool — and must not when read_url is disabled.
+    const both = collectSystemPromptFragments(['web_search', 'read_url'], ctx);
+    const searchOnly = collectSystemPromptFragments(['web_search'], ctx);
+    expect(both).toHaveLength(1);
+    expect(searchOnly).toHaveLength(1);
+    expect(both[0]).toContain('read_url');
+    expect(searchOnly[0]).not.toContain('read_url');
   });
 
   it('returns nothing for talents that contribute no fragment', () => {

@@ -93,14 +93,15 @@ export function deriveToolSchemas(talentNames?: string[]): ToolDefinition[] {
  */
 export function collectSystemPromptFragments(
   talentNames: string[],
-  ctx: SystemPromptContext,
+  ctx: Omit<SystemPromptContext, 'activeTalents'>,
 ): string[] {
   registerDefaultTalents();
   const wanted = new Set(talentNames);
+  const engineCtx: SystemPromptContext = {...ctx, activeTalents: wanted};
   return talentRegistry
     .getAll()
     .filter(engine => wanted.has(engine.name))
-    .map(engine => engine.systemPromptFragment?.(ctx))
+    .map(engine => engine.systemPromptFragment?.(engineCtx))
     .filter((fragment): fragment is string => !!fragment && !!fragment.trim());
 }
 

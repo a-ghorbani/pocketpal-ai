@@ -269,16 +269,24 @@ describe('WebSearchEngine', () => {
   });
 
   describe('systemPromptFragment', () => {
-    it("grounds today's date, the tool budget, and search guidance", () => {
-      const fragment = new WebSearchEngine(makeAccess()).systemPromptFragment({
+    const frag = (active: string[]) =>
+      new WebSearchEngine(makeAccess()).systemPromptFragment({
         now: new Date('2026-07-15T12:00:00Z'),
         maxToolTurns: 5,
+        activeTalents: new Set(active),
       });
 
+    it("grounds today's date, the tool budget, and search guidance", () => {
+      const fragment = frag(['web_search', 'read_url']);
       expect(fragment).toContain("Today's date is 2026-07-15");
       expect(fragment).toContain('budget of 4 tool calls');
       expect(fragment).toContain('web_search');
       expect(fragment).toContain('cite');
+    });
+
+    it('mentions read_url only when read_url is also active', () => {
+      expect(frag(['web_search', 'read_url'])).toContain('read_url');
+      expect(frag(['web_search'])).not.toContain('read_url');
     });
   });
 });
