@@ -102,7 +102,12 @@ export const budgetPage = (
     // Clamp the provider-controlled title like search hits do, so no single
     // untrusted field can blow the page's rendered size.
     ...(page.title
-      ? {title: truncateOnWordBoundary(toPlainText(page.title), TITLE_MAX_CHARS)}
+      ? {
+          title: truncateOnWordBoundary(
+            toPlainText(page.title),
+            TITLE_MAX_CHARS,
+          ),
+        }
       : {}),
     text: truncateOnWordBoundary(text, maxChars),
   };
