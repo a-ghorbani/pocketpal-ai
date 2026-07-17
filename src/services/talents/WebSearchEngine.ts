@@ -80,15 +80,6 @@ export class WebSearchEngine implements TalentEngine {
       };
     }
 
-    if (hits.length === 0) {
-      if (__DEV__) {
-        console.log('[web_search]', {query, provider: provider.id, count: 0});
-      }
-      // Don't cache an empty result — a transient empty must not lock out retries.
-      const summary = `web_search: no results for "${query}". Try a shorter or less restrictive query.`;
-      return {type: 'error', summary, errorMessage: summary};
-    }
-
     const budgeted = budgetHits(
       hits,
       {
@@ -98,6 +89,17 @@ export class WebSearchEngine implements TalentEngine {
       },
       formatHit,
     );
+
+    if (budgeted.length === 0) {
+      if (__DEV__) {
+        console.log('[web_search]', {query, provider: provider.id, count: 0});
+      }
+      // No usable hits — provider returned none, or budgeting rejected them all.
+      // Don't cache: a transient/all-rejected empty must not lock out retries or
+      // flip the same input between success and error on replay.
+      const summary = `web_search: no results for "${query}". Try a shorter or less restrictive query.`;
+      return {type: 'error', summary, errorMessage: summary};
+    }
 
     // Cache the budgeted hits, not the raw payload — same model-visible result
     // on replay, without retaining oversized provider snippets.

@@ -99,7 +99,11 @@ export const budgetPage = (
   const maxChars = Math.max(0, tokenCeiling) * CHARS_PER_TOKEN;
   return {
     url: page.url,
-    ...(page.title ? {title: toPlainText(page.title)} : {}),
+    // Clamp the provider-controlled title like search hits do, so no single
+    // untrusted field can blow the page's rendered size.
+    ...(page.title
+      ? {title: truncateOnWordBoundary(toPlainText(page.title), TITLE_MAX_CHARS)}
+      : {}),
     text: truncateOnWordBoundary(text, maxChars),
   };
 };

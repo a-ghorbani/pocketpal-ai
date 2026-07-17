@@ -182,6 +182,17 @@ describe('budgetPage', () => {
     const out = budgetPage(page, 1000);
     expect(out.text).toBe('short body');
   });
+
+  it('clamps a provider-controlled over-long title', () => {
+    const page = {
+      url: 'https://example.com/a',
+      title: 'word '.repeat(100), // 500 chars, well over the title cap
+      text: 'body',
+    };
+    const out = budgetPage(page, 1000);
+    expect(out.title!.length).toBeLessThanOrEqual(201); // cap + ellipsis
+    expect(out.title!.endsWith('…')).toBe(true);
+  });
 });
 
 describe('in-session cache', () => {

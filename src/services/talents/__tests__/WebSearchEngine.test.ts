@@ -175,6 +175,27 @@ describe('WebSearchEngine', () => {
     }
   });
 
+  it('treats an all-rejected budget as no-results and does not cache it', async () => {
+    // Every URL exceeds the 2048-char cap, so budgeting drops them all. The
+    // first call must report no-results (not a hollow empty success), and the
+    // identical retry must re-hit the provider rather than read a cached empty.
+    const longUrl = `https://e.com/${'a'.repeat(2100)}`;
+    const search = jest
+      .fn()
+      .mockResolvedValueOnce([hit({url: longUrl})])
+      .mockResolvedValueOnce([hit({title: 'Mars', url: 'https://m.com'})]);
+    const provider: SearchProvider = {id: 'tavily', search};
+    const access = makeAccess({getActiveProvider: () => provider});
+    const engine = new WebSearchEngine(access);
+
+    const first = await engine.execute({query: 'mars'});
+    expect(first.type).toBe('error');
+
+    const second = await engine.execute({query: 'mars'});
+    expect(search).toHaveBeenCalledTimes(2);
+    expect(second.type).toBe('search');
+  });
+
   it('anchors recency by stamping the retrieval date in the results header', async () => {
     const provider: SearchProvider = {
       id: 'tavily',
