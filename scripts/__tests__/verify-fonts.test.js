@@ -177,6 +177,23 @@ describe('verify-fonts.js', () => {
     expect(result.output).toContain("add 'pl' to NON_LATIN_LOCALES");
   });
 
+  it('refuses to declare success when NON_LATIN_LOCALES cannot be parsed', () => {
+    // The glyph check is regex-driven, so the parse-failure branch is the
+    // safety net for the whole design: it must exit non-zero rather than
+    // quietly skipping coverage.
+    const src = fs.readFileSync(TYPOGRAPHY_PATH, 'utf-8');
+    const mangled = src.replace(
+      'NON_LATIN_LOCALES: ReadonlyArray<AvailableLanguage> = [',
+      'NON_LATIN_LOCALES = [',
+    );
+    expect(mangled).not.toBe(src);
+    const result = runWithOverrides({
+      files: {'src/theme/tokens/typography.ts': mangled},
+    });
+    expect(result.exitCode).not.toBe(0);
+    expect(result.output).toContain('refusing to declare success');
+  });
+
   it('fails when typography.ts references an unknown family', () => {
     // Inject a reference to 'Comic-Sans-Regular' (or any name) by
     // appending a fake constant assignment. The script's regex will pick

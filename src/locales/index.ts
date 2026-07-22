@@ -7,7 +7,12 @@ import type {Translations} from './types';
 
 // ─── Language Registry (single source of truth) ──────────────────────
 // To add a language: 1) add entry here, 2) place JSON in src/locales/,
-// 3) add case to requireLanguageData(), 4) add getter to l10n object.
+// 3) add case to requireLanguageData(), 4) add getter to l10n object,
+// 5) add the dayjs locale to initLocale(), 6) run `yarn verify:fonts` — if it
+// reports letters missing from the bundled Fraunces subset, add the locale to
+// NON_LATIN_LOCALES in src/theme/tokens/typography.ts so headlines fall back
+// to Inter. Step 6 is not optional and not decidable by eye: Polish is Latin
+// script but still needs the fallback.
 const languageRegistry = {
   en: {displayName: 'English (EN)'},
   fa: {displayName: 'فارسی (FA)'},
