@@ -40,6 +40,7 @@ import {
   Menu,
   Divider,
   HFTokenSheet,
+  LanguageSelector,
   SearchProviderKeySheet,
   InputSlider,
 } from '../../components';
@@ -55,7 +56,6 @@ import {
   ttsStore,
   searchProviderStore,
 } from '../../store';
-import {languageDisplayNames} from '../../locales';
 import type {SearchProviderId} from '../../services/search/types';
 
 import {CacheType} from '../../utils/types';
@@ -92,7 +92,6 @@ export const SettingsScreen: React.FC = observer(() => {
   const inputRef = useRef<RNTextInput>(null);
   const [showKeyCacheMenu, setShowKeyCacheMenu] = useState(false);
   const [showValueCacheMenu, setShowValueCacheMenu] = useState(false);
-  const [showLanguageMenu, setShowLanguageMenu] = useState(false);
   const [showHfTokenDialog, setShowHfTokenDialog] = useState(false);
   const [showSearchProviderMenu, setShowSearchProviderMenu] = useState(false);
   const [searchProviderAnchor, setSearchProviderAnchor] = useState<{
@@ -110,17 +109,12 @@ export const SettingsScreen: React.FC = observer(() => {
     x: number;
     y: number;
   }>({x: 0, y: 0});
-  const [languageAnchor, setLanguageAnchor] = useState<{x: number; y: number}>({
-    x: 0.0,
-    y: 0.0,
-  });
   const [deviceOptions, setDeviceOptions] = useState<DeviceOption[]>([]);
   const [currentBackend, setCurrentBackend] = useState<
     'metal' | 'opencl' | 'hexagon' | 'cpu' | 'blas'
   >(Platform.OS === 'ios' ? 'metal' : 'cpu');
   const keyCacheButtonRef = useRef<View>(null);
   const valueCacheButtonRef = useRef<View>(null);
-  const languageButtonRef = useRef<View>(null);
   const debouncedUpdateStore = useRef(
     debounce((value: number) => {
       modelStore.setNContext(value);
@@ -193,7 +187,6 @@ export const SettingsScreen: React.FC = observer(() => {
     setIsValidInput(true);
     setShowKeyCacheMenu(false);
     setShowValueCacheMenu(false);
-    setShowLanguageMenu(false);
   };
 
   const handleContextSizeChange = (text: string) => {
@@ -291,13 +284,6 @@ export const SettingsScreen: React.FC = observer(() => {
         setShowValueCacheMenu(true);
       },
     );
-  };
-
-  const handleLanguagePress = () => {
-    languageButtonRef.current?.measure((x, y, width, height, pageX, pageY) => {
-      setLanguageAnchor({x: pageX, y: pageY + height});
-      setShowLanguageMenu(true);
-    });
   };
 
   const handleSearchProviderPress = () => {
@@ -921,39 +907,7 @@ export const SettingsScreen: React.FC = observer(() => {
                       </Text>
                     </View>
                   </View>
-                  <View style={styles.menuContainer}>
-                    <Button
-                      ref={languageButtonRef}
-                      testID="language-selector-button"
-                      mode="outlined"
-                      onPress={handleLanguagePress}
-                      style={styles.menuButton}
-                      contentStyle={styles.buttonContent}
-                      icon={({size, color}) => (
-                        <Icon source="chevron-down" size={size} color={color} />
-                      )}>
-                      {languageDisplayNames[uiStore.language]}
-                    </Button>
-                    <Menu
-                      visible={showLanguageMenu}
-                      onDismiss={() => setShowLanguageMenu(false)}
-                      anchor={languageAnchor}
-                      selectable>
-                      {uiStore.supportedLanguages.map(lang => (
-                        <Menu.Item
-                          key={lang}
-                          testID={`language-option-${lang}`}
-                          style={styles.menu}
-                          label={languageDisplayNames[lang]}
-                          selected={lang === uiStore.language}
-                          onPress={() => {
-                            uiStore.setLanguage(lang);
-                            setShowLanguageMenu(false);
-                          }}
-                        />
-                      ))}
-                    </Menu>
-                  </View>
+                  <LanguageSelector />
                 </View>
                 <Divider />
 
