@@ -139,6 +139,71 @@ describe('ServerStore', () => {
 
       expect(serverStore.servers[0].url).toBe('http://localhost:5678');
     });
+
+    describe('capability invalidation', () => {
+      const addProbedServer = () => {
+        const id = serverStore.addServer({
+          name: 'llama',
+          url: 'http://localhost:8080',
+          serverType: 'llama.cpp',
+        });
+        runInAction(() => {
+          serverStore.remoteCaps[`${id}/m`] = {
+            contextLength: 8192,
+            supportsVision: true,
+          };
+          serverStore.remoteCaps['other/m'] = {contextLength: 4096};
+          serverStore.remoteReasoning[`${id}/m`] = {
+            isReasoning: 'yes',
+            source: 'user',
+            supportsEffort: false,
+            effortValues: [],
+            effortSource: 'none',
+          };
+        });
+        return id;
+      };
+
+      it('drops this server caps when the url is repointed', () => {
+        const id = addProbedServer();
+
+        serverStore.updateServer(id, {url: 'http://localhost:9090'});
+
+        expect(serverStore.remoteCaps[`${id}/m`]).toBeUndefined();
+        expect(serverStore.remoteCaps['other/m']).toBeDefined();
+      });
+
+      it('drops this server caps when the server type changes', () => {
+        const id = addProbedServer();
+
+        serverStore.updateServer(id, {serverType: 'LM Studio'});
+
+        expect(serverStore.remoteCaps[`${id}/m`]).toBeUndefined();
+      });
+
+      it('keeps reasoning state, which is user-declarable', () => {
+        const id = addProbedServer();
+
+        serverStore.updateServer(id, {serverType: 'LM Studio'});
+
+        expect(serverStore.remoteReasoning[`${id}/m`]).toBeDefined();
+      });
+
+      it('keeps caps when neither the url nor the server type changes', () => {
+        const id = addProbedServer();
+
+        serverStore.updateServer(id, {
+          name: 'renamed',
+          url: 'http://localhost:8080',
+          requestTimeoutMs: 60000,
+        });
+
+        expect(serverStore.remoteCaps[`${id}/m`]).toEqual({
+          contextLength: 8192,
+          supportsVision: true,
+        });
+      });
+    });
   });
 
   describe('removeServer', () => {

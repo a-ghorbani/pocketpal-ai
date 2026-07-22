@@ -19,6 +19,21 @@ const KEYCHAIN_SERVICE_PREFIX = 'pocketpal-server-';
 /** Minimum interval between auto-fetch cycles (ms) */
 const FETCH_THROTTLE_MS = 60000;
 
+/**
+ * Drop every entry of a per-model map (keyed `${serverId}/${remoteModelId}`)
+ * that belongs to one server. Shared by every path that invalidates per-model
+ * state, so a new map cannot be added to one and forgotten in the other.
+ */
+function dropServerEntries<T>(
+  map: Record<string, T>,
+  serverId: string,
+): Record<string, T> {
+  const prefix = `${serverId}/`;
+  return Object.fromEntries(
+    Object.entries(map).filter(([k]) => !k.startsWith(prefix)),
+  );
+}
+
 class ServerStore {
   servers: ServerConfig[] = [];
   // Remote reasoning capability keyed by full model id (`${serverId}/${remoteModelId}`).
@@ -73,8 +88,23 @@ class ServerStore {
 
   updateServer(id: string, updates: Partial<ServerConfig>): void {
     const server = this.servers.find(s => s.id === id);
-    if (server) {
-      Object.assign(server, updates);
+    if (!server) {
+      return;
+    }
+    // Caps describe what the configured backend reported. Repointing the url or
+    // switching the server type makes them describe something else, and
+    // resolveRemoteCaps has no way to tell — so drop them and let the next
+    // activation re-probe. Reasoning state survives: it carries user
+    // declarations, and it is not server-reported.
+    const invalidatesCaps =
+      (updates.url !== undefined && updates.url !== server.url) ||
+      (updates.serverType !== undefined &&
+        updates.serverType !== server.serverType);
+
+    Object.assign(server, updates);
+
+    if (invalidatesCaps) {
+      this.remoteCaps = dropServerEntries(this.remoteCaps, id);
     }
   }
 
@@ -86,15 +116,8 @@ class ServerStore {
       m => m.serverId !== id,
     );
     // Drop per-model state keyed by this server's model ids.
-    const prefix = `${id}/`;
-    this.remoteReasoning = Object.fromEntries(
-      Object.entries(this.remoteReasoning).filter(
-        ([k]) => !k.startsWith(prefix),
-      ),
-    );
-    this.remoteCaps = Object.fromEntries(
-      Object.entries(this.remoteCaps).filter(([k]) => !k.startsWith(prefix)),
-    );
+    this.remoteReasoning = dropServerEntries(this.remoteReasoning, id);
+    this.remoteCaps = dropServerEntries(this.remoteCaps, id);
     // Clean up API key from keychain
     this.removeApiKey(id);
   }
