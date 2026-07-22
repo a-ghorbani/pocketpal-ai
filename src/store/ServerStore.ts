@@ -11,7 +11,7 @@ import {
   RemoteModelInfo,
   PROPS_TIMEOUT_MS,
 } from '../api/openai';
-import {ServerConfig} from '../utils/types';
+import {RemoteModelCaps, ServerConfig} from '../utils/types';
 import {ReasoningCapability} from '../utils/reasoningCapability';
 
 const KEYCHAIN_SERVICE_PREFIX = 'pocketpal-server-';
@@ -25,6 +25,9 @@ class ServerStore {
   // Remote Models are rebuilt each launch and not persisted, so their capability
   // lives here and persists with the store.
   remoteReasoning: Record<string, ReasoningCapability> = {};
+  // Server-reported capabilities keyed by the same full model id. /props
+  // answers per model on a multi-model server, so caps cannot live per server.
+  remoteCaps: Record<string, RemoteModelCaps> = {};
   serverModels: Map<string, RemoteModelInfo[]> = observable.map();
   userSelectedModels: Array<{serverId: string; remoteModelId: string}> = [];
   isLoading = false;
@@ -46,6 +49,7 @@ class ServerStore {
         'privacyNoticeAcknowledged',
         'userSelectedModels',
         'remoteReasoning',
+        'remoteCaps',
       ],
       storage: AsyncStorage,
     }).then(() => {
