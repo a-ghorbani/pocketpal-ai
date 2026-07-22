@@ -298,6 +298,81 @@ describe('BannerRow', () => {
     });
   });
 
+  it('prefers the per-model window over the per-server one', () => {
+    runInAction(() => {
+      modelStore.activeModelId = 'srv-1/gemma-4-e2b';
+      modelStore.models = [
+        {
+          id: 'srv-1/gemma-4-e2b',
+          origin: ModelOrigin.REMOTE,
+          serverId: 'srv-1',
+        } as any,
+      ];
+      (modelStore as any).activeContextSettings = undefined;
+      serverStore.servers = [
+        {
+          id: 'srv-1',
+          name: 'llama',
+          url: 'http://localhost:8080',
+          serverType: 'llama.cpp',
+          contextLength: 4096,
+        } as any,
+      ];
+      serverStore.remoteCaps = {
+        'srv-1/gemma-4-e2b': {contextLength: 8192, supportsVision: true},
+      };
+      // Half of the per-model window, but full against the per-server one.
+      chatSessionStore.lastCompletionResult = {
+        used: 4096,
+        contextFull: false,
+        isRemote: true,
+      };
+    });
+    const {queryByTestId} = renderBanner();
+    expect(queryByTestId('context-full-banner')).toBeNull();
+    expect(queryByTestId('context-warning-banner')).toBeNull();
+
+    runInAction(() => {
+      modelStore.models = [];
+      serverStore.servers = [];
+      serverStore.remoteCaps = {};
+    });
+  });
+
+  it('does not treat a reported window of 0 as a full context', () => {
+    runInAction(() => {
+      modelStore.activeModelId = 'remote-1';
+      modelStore.models = [
+        {id: 'remote-1', origin: ModelOrigin.REMOTE, serverId: 'srv-1'} as any,
+      ];
+      (modelStore as any).activeContextSettings = undefined;
+      // A router placeholder persisted 0 before capabilities went per model.
+      // 0 is an unknown window, not an exhausted one.
+      serverStore.servers = [
+        {
+          id: 'srv-1',
+          name: 'llama',
+          url: 'http://localhost:8080',
+          serverType: 'llama.cpp',
+          contextLength: 0,
+        } as any,
+      ];
+      chatSessionStore.lastCompletionResult = {
+        used: 120,
+        contextFull: false,
+        isRemote: true,
+      };
+    });
+    const {queryByTestId} = renderBanner();
+    expect(queryByTestId('context-full-banner')).toBeNull();
+    expect(queryByTestId('context-warning-banner')).toBeNull();
+
+    runInAction(() => {
+      modelStore.models = [];
+      serverStore.servers = [];
+    });
+  });
+
   it('uses the remote context-full copy (no increase clause) for a remote model', () => {
     runInAction(() => {
       modelStore.activeModelId = 'remote-1';

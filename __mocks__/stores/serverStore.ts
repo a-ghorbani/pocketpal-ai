@@ -1,6 +1,6 @@
 import {makeAutoObservable, observable} from 'mobx';
 
-import {ServerConfig} from '../../src/utils/types';
+import {RemoteModelCaps, ServerConfig} from '../../src/utils/types';
 import {ReasoningCapability} from '../../src/utils/reasoningCapability';
 import {RemoteModelInfo} from '../../src/api/openai';
 
@@ -9,6 +9,7 @@ class MockServerStore {
   serverModels: Map<string, RemoteModelInfo[]> = observable.map();
   userSelectedModels: Array<{serverId: string; remoteModelId: string}> = [];
   remoteReasoning: Record<string, ReasoningCapability> = {};
+  remoteCaps: Record<string, RemoteModelCaps> = {};
   isLoading = false;
   error: string | null = null;
   privacyNoticeAcknowledged = false;

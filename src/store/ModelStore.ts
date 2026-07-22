@@ -82,6 +82,7 @@ import {
 } from '../utils/deviceCapabilities';
 import {detectThinkingCapability} from '../utils/thinkingCapabilityDetection';
 import {ReasoningCapability} from '../utils/reasoningCapability';
+import {resolveRemoteCaps} from '../utils/remoteCaps';
 import {t} from '../locales';
 import {resolveUseMmap} from '../utils/memorySettings';
 import {
@@ -2856,15 +2857,17 @@ class ModelStore {
     }
 
     // Remote models have no local context; their vision capability comes from
-    // the active server's /props self-report. releaseContext clears both
-    // context and the cached flag on switch, so this is never stale-true for a
-    // remote model. Placed before the !context early-return so a remote model
-    // is not shadowed into that dead branch.
+    // the /props self-report for that model, resolved through the same
+    // selector the chat UI uses so the send path cannot disagree with the
+    // attach affordance. Placed before the !context early-return so a remote
+    // model is not shadowed into that dead branch.
     if (!this.context && this.activeModel?.origin === ModelOrigin.REMOTE) {
-      const serverId = this.activeModel?.serverId;
       return (
-        serverStore.servers.find(s => s.id === serverId)?.supportsVision ===
-        true
+        resolveRemoteCaps(
+          this.activeModel,
+          serverStore.remoteCaps,
+          serverStore.servers,
+        ).supportsVision === true
       );
     }
 

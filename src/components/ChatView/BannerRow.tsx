@@ -12,6 +12,7 @@ import {chatSessionStore, modelStore, serverStore} from '../../store';
 import {L10nContext} from '../../utils';
 import {MessageType, ModelOrigin} from '../../utils/types';
 import {resolveBannerVariant} from '../../utils/bannerVariantResolver';
+import {resolveRemoteCaps} from '../../utils/remoteCaps';
 import {talentRegistry} from '../../services/talents';
 import {t} from '../../locales';
 
@@ -104,15 +105,19 @@ export const BannerRow: React.FC<BannerRowProps> = observer(
     const isRemote = activeModel?.origin === ModelOrigin.REMOTE;
 
     // activeContextSettings.n_ctx is local-only (set by a LlamaContext). For a
-    // remote model fall back to the server's /props-reported contextLength so
-    // the context banners can measure against a real window.
+    // remote model fall back to the /props-reported window for that model so
+    // the context banners can measure against a real one. A window of 0 is
+    // unknown, not full — leave it undefined so no banner is triggered.
     const localNCtx = modelStore.activeContextSettings?.n_ctx;
-    const effectiveNCtx =
+    const resolvedNCtx =
       localNCtx ??
-      (isRemote
-        ? serverStore.servers.find(s => s.id === activeModel?.serverId)
-            ?.contextLength
-        : undefined);
+      resolveRemoteCaps(
+        activeModel,
+        serverStore.remoteCaps,
+        serverStore.servers,
+      ).contextLength;
+    const effectiveNCtx =
+      resolvedNCtx !== undefined && resolvedNCtx > 0 ? resolvedNCtx : undefined;
 
     const {variant, heavyTalentName, ratio} = resolveBannerVariant(
       chatSessionStore.lastCompletionResult,
