@@ -2162,6 +2162,13 @@ class ModelStore {
       this.setActiveModel(model.id);
       // Do NOT set lastUsedModelId for remote models -- server may be offline on next launch
     });
+
+    // Capabilities are per model, so they are probed on activation. Detached:
+    // a lazily-started server can take seconds to answer, and neither the
+    // engine nor the chat screen may wait on it. ServerStore owns the write.
+    serverStore
+      .fetchRemoteModelCaps(model.serverId, model.remoteModelId)
+      .catch(() => {});
   };
 
   /**

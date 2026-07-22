@@ -4215,6 +4215,68 @@ describe('ModelStore', () => {
     });
   });
 
+  describe('setRemoteModel capability probe', () => {
+    const remoteModel = {
+      id: 'srv-1/llama-7b',
+      name: 'llama-7b',
+      origin: ModelOrigin.REMOTE,
+      serverId: 'srv-1',
+      remoteModelId: 'llama-7b',
+    } as any;
+
+    beforeEach(() => {
+      runInAction(() => {
+        modelStore.context = undefined;
+        serverStore.servers = [
+          {id: 'srv-1', name: 'llama', url: 'http://localhost:8080'},
+        ];
+      });
+    });
+
+    it('probes capabilities for the model being activated', async () => {
+      const probe = jest
+        .spyOn(serverStore, 'fetchRemoteModelCaps')
+        .mockResolvedValue(undefined);
+
+      await modelStore.setRemoteModel(remoteModel);
+
+      expect(probe).toHaveBeenCalledWith('srv-1', 'llama-7b');
+      probe.mockRestore();
+    });
+
+    it('resolves without waiting on a probe that never settles', async () => {
+      let release: () => void = () => {};
+      const probe = jest
+        .spyOn(serverStore, 'fetchRemoteModelCaps')
+        .mockReturnValue(
+          new Promise<void>(resolve => {
+            release = resolve;
+          }),
+        );
+
+      await modelStore.setRemoteModel(remoteModel);
+
+      // The engine is live and the model active while the probe is pending, so
+      // a lazily-starting server can never delay a send.
+      expect(modelStore.activeModelId).toBe('srv-1/llama-7b');
+      expect(modelStore.engine).toBeTruthy();
+      release();
+      probe.mockRestore();
+    });
+
+    it('survives a probe that rejects', async () => {
+      const probe = jest
+        .spyOn(serverStore, 'fetchRemoteModelCaps')
+        .mockRejectedValue(new Error('boom'));
+
+      await expect(
+        modelStore.setRemoteModel(remoteModel),
+      ).resolves.toBeUndefined();
+      await new Promise(setImmediate);
+      probe.mockRestore();
+    });
+  });
+
   describe('fetchAndPersistGGUFMetadata error handling', () => {
     const {loadLlamaModelInfo} = require('llama.rn');
 
