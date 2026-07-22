@@ -31,7 +31,8 @@
     "ok": "OK",
     "close": "Close",
     "clear": "Clear All",
-    "gallery": "Gallery"
+    "gallery": "Gallery",
+    "noResults": "No results"
   },
   "settings": {
     "modelInitializationSettings": "Model Initialization Settings",
@@ -98,6 +99,8 @@
     "autoNavigateToChatDescription": "Navigate to chat when loading starts.",
     "appSettings": "App Settings",
     "language": "Language",
+    "languageSheetTitle": "Language",
+    "languageSearchPlaceholder": "Search languages",
     "darkMode": "Dark Mode",
     "displayMemoryUsage": "Display Memory Usage",
     "displayMemoryUsageDescription": "Display memory usage in the chat page.",
