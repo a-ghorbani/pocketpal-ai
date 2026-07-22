@@ -1,4 +1,4 @@
-import {StyleSheet} from 'react-native';
+import {I18nManager, StyleSheet} from 'react-native';
 
 import {Theme} from '../../utils/types';
 
@@ -25,6 +25,10 @@ export const createStyles = (theme: Theme) =>
       color: theme.colors.onSurface,
       fontSize: 16,
       padding: 0,
+      // Follow the layout direction, not the content's first strong character:
+      // 'auto' would flip the field as soon as a Latin query is typed in an
+      // RTL UI.
+      textAlign: I18nManager.isRTL ? 'right' : 'left',
     },
     list: {
       flex: 1,
@@ -44,6 +48,7 @@ export const createStyles = (theme: Theme) =>
       flex: 1,
       color: theme.colors.onSurface,
       fontSize: 16,
+      textAlign: I18nManager.isRTL ? 'right' : 'left',
     },
     rowLabelSelected: {
       fontWeight: '700',
