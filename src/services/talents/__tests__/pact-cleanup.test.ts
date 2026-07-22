@@ -137,15 +137,21 @@ describe('PACT cleanup: deriveToolSchemas()', () => {
     resetRegisteredFlag();
   });
 
-  it('returns all 3 schemas without prior registration', () => {
+  it('returns all schemas without prior registration', () => {
     // Registry is completely empty
     expect(talentRegistry.getAll()).toHaveLength(0);
 
     const schemas = deriveToolSchemas();
-    expect(schemas).toHaveLength(3);
+    expect(schemas).toHaveLength(5);
 
     const names = schemas.map(s => s.function.name).sort();
-    expect(names).toEqual(['calculate', 'datetime', 'render_html']);
+    expect(names).toEqual([
+      'calculate',
+      'datetime',
+      'read_url',
+      'render_html',
+      'web_search',
+    ]);
   });
 
   it('each schema has the OpenAI function-calling shape', () => {
@@ -169,7 +175,7 @@ describe('PACT cleanup: deriveToolSchemas()', () => {
       tool_choice: 'auto' as const,
       jinja: true,
     };
-    expect(completionSettings.tools).toHaveLength(3);
+    expect(completionSettings.tools).toHaveLength(5);
     expect(completionSettings.tools[0].type).toBe('function');
   });
 });

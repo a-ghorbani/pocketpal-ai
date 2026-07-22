@@ -12,7 +12,9 @@ jest.mock('mobx-persist-store', () => ({
 
 jest.mock('../../api/openai', () => ({
   fetchModels: jest.fn(),
+  fetchServerProps: jest.fn(),
   testConnection: jest.fn(),
+  PROPS_TIMEOUT_MS: 5000,
 }));
 
 // Mock AppState.addEventListener
@@ -25,6 +27,7 @@ jest
 import {serverStore} from '../ServerStore';
 
 const mockedFetchModels = openaiModule.fetchModels as jest.Mock;
+const mockedFetchServerProps = openaiModule.fetchServerProps as jest.Mock;
 const mockedTestConnection = openaiModule.testConnection as jest.Mock;
 
 describe('ServerStore', () => {
@@ -571,6 +574,137 @@ describe('ServerStore', () => {
 
       const server = serverStore.servers.find(s => s.id === id);
       expect(server!.lastConnected).toBeGreaterThanOrEqual(before);
+    });
+
+    it('fetches /props and writes discovered caps for a llama.cpp server', async () => {
+      const id = serverStore.addServer({
+        name: 'llama server',
+        url: 'http://localhost:8080',
+        serverType: 'llama.cpp',
+      });
+      jest.clearAllMocks();
+
+      mockedFetchModels.mockResolvedValueOnce([]);
+      mockedFetchServerProps.mockResolvedValueOnce({
+        contextLength: 4096,
+        supportsVision: true,
+      });
+      (Keychain.getGenericPassword as jest.Mock).mockResolvedValueOnce(false);
+
+      await serverStore.fetchModelsForServer(id);
+
+      // The /props probe is bounded by PROPS_TIMEOUT_MS (5000), not the
+      // server's requestTimeoutMs or the omitted 30 s default.
+      expect(mockedFetchServerProps).toHaveBeenCalledWith(
+        'http://localhost:8080',
+        undefined,
+        5000,
+      );
+      // The probe is detached: fetchModelsForServer resolves before caps land,
+      // so the write is only observable after a microtask flush.
+      await new Promise(setImmediate);
+      const server = serverStore.servers.find(s => s.id === id);
+      expect(server!.contextLength).toBe(4096);
+      expect(server!.supportsVision).toBe(true);
+    });
+
+    it('resolves fetchModelsForServer without waiting on the /props probe', async () => {
+      const id = serverStore.addServer({
+        name: 'llama server',
+        url: 'http://localhost:8080',
+        serverType: 'llama.cpp',
+      });
+      jest.clearAllMocks();
+
+      const mockModels = [{id: 'm', object: 'model', owned_by: 'system'}];
+      mockedFetchModels.mockResolvedValueOnce(mockModels);
+      // A /props probe that never settles must not block the resolution.
+      let released: (v: {supportsVision: boolean}) => void = () => {};
+      mockedFetchServerProps.mockReturnValueOnce(
+        new Promise(resolve => {
+          released = resolve;
+        }),
+      );
+      (Keychain.getGenericPassword as jest.Mock).mockResolvedValueOnce(false);
+
+      await serverStore.fetchModelsForServer(id);
+
+      // Models are present immediately even though the probe is still pending.
+      expect(serverStore.serverModels.get(id)).toEqual(mockModels);
+      released({supportsVision: true});
+    });
+
+    it('does not fetch /props for a non-llama.cpp server', async () => {
+      const id = serverStore.addServer({
+        name: 'LM Studio',
+        url: 'http://localhost:1234',
+        serverType: 'LM Studio',
+      });
+      jest.clearAllMocks();
+
+      mockedFetchModels.mockResolvedValueOnce([]);
+      (Keychain.getGenericPassword as jest.Mock).mockResolvedValueOnce(false);
+
+      await serverStore.fetchModelsForServer(id);
+
+      expect(mockedFetchServerProps).not.toHaveBeenCalled();
+      const server = serverStore.servers.find(s => s.id === id);
+      expect(server!.contextLength).toBeUndefined();
+      expect(server!.supportsVision).toBeUndefined();
+    });
+
+    it('clears a stale supportsVision true when a later probe reports false', async () => {
+      const id = serverStore.addServer({
+        name: 'llama server',
+        url: 'http://localhost:8080',
+        serverType: 'llama.cpp',
+      });
+      jest.clearAllMocks();
+
+      mockedFetchModels.mockResolvedValue([]);
+      (Keychain.getGenericPassword as jest.Mock).mockResolvedValue(false);
+
+      mockedFetchServerProps.mockResolvedValueOnce({
+        contextLength: 4096,
+        supportsVision: true,
+      });
+      await serverStore.fetchModelsForServer(id);
+      await new Promise(setImmediate);
+      expect(serverStore.servers.find(s => s.id === id)!.supportsVision).toBe(
+        true,
+      );
+
+      // A model swap drops vision: the always-defined false overwrites the
+      // stale true so attach disables.
+      mockedFetchServerProps.mockResolvedValueOnce({supportsVision: false});
+      await serverStore.fetchModelsForServer(id);
+      await new Promise(setImmediate);
+      const server = serverStore.servers.find(s => s.id === id);
+      expect(server!.supportsVision).toBe(false);
+      expect(server!.contextLength).toBe(4096);
+    });
+
+    it('leaves caps unchanged and models intact when /props yields nothing', async () => {
+      const id = serverStore.addServer({
+        name: 'llama server',
+        url: 'http://localhost:8080',
+        serverType: 'llama.cpp',
+      });
+      jest.clearAllMocks();
+
+      const mockModels = [{id: 'm', object: 'model', owned_by: 'system'}];
+      mockedFetchModels.mockResolvedValueOnce(mockModels);
+      // Silent no-op: fetchServerProps swallows timeout/500/bad-JSON into {}.
+      mockedFetchServerProps.mockResolvedValueOnce({});
+      (Keychain.getGenericPassword as jest.Mock).mockResolvedValueOnce(false);
+
+      await serverStore.fetchModelsForServer(id);
+
+      expect(serverStore.serverModels.get(id)).toEqual(mockModels);
+      expect(serverStore.error).toBeNull();
+      const server = serverStore.servers.find(s => s.id === id);
+      expect(server!.contextLength).toBeUndefined();
+      expect(server!.supportsVision).toBeUndefined();
     });
   });
 

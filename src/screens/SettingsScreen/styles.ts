@@ -72,6 +72,13 @@ export const createStyles = (theme: Theme) =>
     menuButton: {
       minWidth: 100,
     },
+    consentContainer: {
+      marginVertical: 8,
+    },
+    consentButton: {
+      alignSelf: 'flex-end',
+      marginTop: 12,
+    },
     buttonContent: {
       flexDirection: 'row-reverse',
       justifyContent: 'space-between',

@@ -161,7 +161,34 @@
     "ttsAvailabilityLowMemoryWarning": "Memori perangkat Anda rendah — fitur ini mungkin tidak bekerja dengan baik.",
     "requestTimeout": "Batas Waktu Permintaan (detik)",
     "requestTimeoutHelp": "Waktu tunggu maksimal untuk server yang lambat merespons. Kosongkan untuk pakai bawaan.",
-    "requestTimeoutPlaceholder": "Opsional - kosongkan untuk pakai bawaan"
+    "requestTimeoutPlaceholder": "Opsional - kosongkan untuk pakai bawaan",
+    "serverType": "Jenis Server",
+    "serverTypeHelp": "Terdeteksi otomatis; ubah jika keliru.",
+    "internetSearch": {
+      "title": "Pencarian Internet",
+      "description": "Biarkan Pals mencari di web dengan alat mereka sendiri. Bawa Kunci API Anda sendiri — PocketPal tidak pernah menyimpan kunci atau meneruskan kueri Anda.",
+      "providerLabel": "Penyedia Pencarian",
+      "providerGated": "Segera hadir",
+      "keyLabel": "Kunci API",
+      "keyIsSet": "Kunci sudah diatur untuk {{provider}}.",
+      "keyNotSet": "Belum ada kunci untuk {{provider}}.",
+      "setKeyButton": "Atur Kunci",
+      "updateKeyButton": "Perbarui Kunci",
+      "clearKeyButton": "Hapus Kunci",
+      "keyInputPlaceholder": "Tempel Kunci API {{provider}} Anda",
+      "keyUpdateError": "Gagal memperbarui kunci. Silakan coba lagi.",
+      "showKeyAccessibilityLabel": "Tampilkan Kunci API",
+      "hideKeyAccessibilityLabel": "Sembunyikan Kunci API",
+      "resultCountLabel": "Hasil per Pencarian",
+      "resultCountDescription": "Semakin sedikit hasil, semakin banyak ruang tersisa di konteks model.",
+      "consentTitle": "Pencarian meninggalkan perangkat Anda",
+      "consentDescription": "Saat sebuah Pal mencari di web, kueri Anda dikirim ke penyedia yang dipilih melalui internet. Saat sebuah Pal membaca halaman, URL dan konten halaman mungkin dikirim ke layanan pembaca default (r.jina.ai) jika penyedia yang dipilih tidak memiliki pembaca bawaan. Kunci dan kueri tidak pernah dikirim ke PocketPal.",
+      "consentAccept": "Saya mengerti",
+      "consentRequired": "Setujui pemberitahuan di atas untuk mengatur kunci dan mengaktifkan pencarian.",
+      "consentGivenTitle": "Pencarian web diaktifkan",
+      "consentGivenDescription": "Kueri dan pembacaan halaman mungkin meninggalkan perangkat Anda seperti dijelaskan di atas.",
+      "consentRevoke": "Cabut"
+    }
   },
   "memory": {
     "shortWarning": "Peringatan Memori",
@@ -551,7 +578,8 @@
         "disableThinking": "Nonaktifkan mode berpikir",
         "thinkingEnabled": "Mode berpikir diaktifkan",
         "thinkingDisabled": "Mode berpikir dinonaktifkan",
-        "thinkText": "Berpikir"
+        "thinkText": "Berpikir",
+        "cycleEffort": "Tingkat penalaran: {{level}}. Ketuk dua kali untuk mengganti tingkat penalaran"
       }
     },
     "contentReportSheet": {
@@ -734,7 +762,20 @@
     },
     "modelSettingsSheet": {
       "modelSettings": "Pengaturan Model",
-      "saveChanges": "Simpan Perubahan"
+      "saveChanges": "Simpan Perubahan",
+      "reasoningSection": "Penalaran",
+      "isReasoningModel": "Model penalaran",
+      "isReasoningModelHelp": "Tampilkan kontrol berpikir untuk model ini, meskipun tidak terdeteksi otomatis.",
+      "supportsEffort": "Mendukung tingkat penalaran bertingkat",
+      "effortValues": "Tingkat penalaran yang didukung model ini",
+      "effortLevels": {
+        "minimal": "Minimal",
+        "low": "Rendah",
+        "medium": "Sedang",
+        "high": "Tinggi",
+        "xhigh": "Sangat tinggi",
+        "max": "Maksimal"
+      }
     },
     "modelsHeaderRight": {
       "menuTitleHf": "Model Hugging Face",
@@ -766,12 +807,16 @@
       "talentNames": {
         "render_html": "Pratinjau HTML",
         "calculate": "Ekspresi matematika",
-        "datetime": "Tanggal & waktu"
+        "datetime": "Tanggal & waktu",
+        "web_search": "Pencarian web",
+        "read_url": "Baca halaman web"
       },
       "talentDescriptions": {
         "render_html": "Render dokumen HTML secara inline di chat",
         "calculate": "Evaluasi ekspresi matematika",
-        "datetime": "Dapatkan tanggal dan waktu saat ini"
+        "datetime": "Dapatkan tanggal dan waktu saat ini",
+        "web_search": "Cari informasi terkini di internet (memerlukan Kunci API di Pengaturan)",
+        "read_url": "Baca seluruh konten halaman web (memerlukan Kunci API di Pengaturan)"
       },
       "greeting": {
         "sectionLabel": "Sapaan",
@@ -1163,7 +1208,17 @@
     "increaseContextReloading": "Memuat ulang model dengan konteks yang lebih besar…",
     "increaseContextSuccess": "Konteks ditingkatkan menjadi {{target}} token.",
     "increaseContextFailure": "Gagal meningkatkan ukuran konteks. Pengaturan sebelumnya telah dipulihkan.",
-    "palLoadHint": "Pal ini cenderung membutuhkan lebih banyak ruang daripada yang diizinkan ukuran konteks saat ini."
+    "palLoadHint": "Pal ini cenderung membutuhkan lebih banyak ruang daripada yang diizinkan ukuran konteks saat ini.",
+    "webSearch": {
+      "searched": "Dicari: {{query}}",
+      "noResults": "Tidak ada hasil",
+      "noResultsFor": "Tidak ada hasil untuk {{query}}",
+      "resultsCount": "{{count}} hasil",
+      "resultsCountOne": "1 hasil",
+      "searchResultsTitle": "Hasil Pencarian",
+      "showResultsAccessibilityLabel": "Tampilkan hasil pencarian web untuk {{query}}",
+      "openLinkError": "Gagal membuka tautan ini."
+    }
   },
   "benchmark": {
     "title": "Benchmark",

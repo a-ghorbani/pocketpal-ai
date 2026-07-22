@@ -163,7 +163,32 @@
     "enterUrlManually": "Inserir URL manualmente",
     "manageServers": "Gerenciar Servidores",
     "serverType": "Tipo de Servidor",
-    "serverTypeHelp": "Detectado automaticamente; altere se estiver errado."
+    "serverTypeHelp": "Detectado automaticamente; altere se estiver errado.",
+    "internetSearch": {
+      "title": "Busca na internet",
+      "description": "Deixe os Pals pesquisarem na web com as próprias ferramentas. Use sua própria chave de API — o PocketPal nunca guarda suas chaves nem encaminha suas consultas.",
+      "providerLabel": "Provedor de busca",
+      "providerGated": "Em breve",
+      "keyLabel": "Chave de API",
+      "keyIsSet": "Chave configurada para {{provider}}.",
+      "keyNotSet": "Nenhuma chave configurada para {{provider}}.",
+      "setKeyButton": "Definir chave",
+      "updateKeyButton": "Atualizar chave",
+      "clearKeyButton": "Limpar chave",
+      "keyInputPlaceholder": "Cole sua chave de API do {{provider}}",
+      "keyUpdateError": "Não foi possível atualizar a chave. Tente novamente.",
+      "showKeyAccessibilityLabel": "Mostrar chave de API",
+      "hideKeyAccessibilityLabel": "Ocultar chave de API",
+      "resultCountLabel": "Resultados por busca",
+      "resultCountDescription": "Menos resultados deixam mais espaço no contexto do modelo.",
+      "consentTitle": "As buscas saem do seu dispositivo",
+      "consentDescription": "Quando um Pal faz uma busca na web, sua consulta é enviada ao provedor selecionado pela internet. Quando um Pal lê uma página, a URL e o conteúdo da página podem, em vez disso, ser enviados a um serviço de leitura padrão (r.jina.ai) caso o provedor selecionado não tenha um leitor nativo. Chaves e consultas nunca são enviadas ao PocketPal.",
+      "consentAccept": "Entendi",
+      "consentRequired": "Aceite o aviso acima para definir uma chave e ativar a busca.",
+      "consentGivenTitle": "A busca na web está ativada",
+      "consentGivenDescription": "As consultas e leituras de página podem sair do seu dispositivo, conforme descrito acima.",
+      "consentRevoke": "Revogar"
+    }
   },
   "memory": {
     "shortWarning": "Aviso de Memória",
@@ -800,12 +825,16 @@
       "talentNames": {
         "render_html": "Pré-visualização de HTML",
         "calculate": "Expressões matemáticas",
-        "datetime": "Data e hora"
+        "datetime": "Data e hora",
+        "web_search": "Busca na web",
+        "read_url": "Ler página da web"
       },
       "talentDescriptions": {
         "render_html": "Renderizar documentos HTML diretamente no chat",
         "calculate": "Avaliar expressões matemáticas",
-        "datetime": "Obter a data e hora atuais"
+        "datetime": "Obter a data e hora atuais",
+        "web_search": "Pesquisar informações atualizadas na internet (requer chave de API nas Configurações)",
+        "read_url": "Ler o conteúdo completo de uma página da web (requer chave de API nas Configurações)"
       },
       "greeting": {
         "sectionLabel": "Saudação",
@@ -1179,7 +1208,17 @@
     "generatingPreview": "Gerando pré-visualização… ({{tokens}} tokens)",
     "generatingPreviewPending": "Gerando pré-visualização…",
     "toolUsedChip": "usou {{name}}",
-    "toolErrorBlock": "{{name}} falhou"
+    "toolErrorBlock": "{{name}} falhou",
+    "webSearch": {
+      "searched": "Pesquisou: {{query}}",
+      "noResults": "Nenhum resultado",
+      "noResultsFor": "Nenhum resultado para {{query}}",
+      "resultsCount": "{{count}} resultados",
+      "resultsCountOne": "1 resultado",
+      "searchResultsTitle": "Resultados da busca",
+      "showResultsAccessibilityLabel": "Mostrar resultados da busca na web para {{query}}",
+      "openLinkError": "Não foi possível abrir este link."
+    }
   },
   "htmlPreview": {
     "defaultTitle": "Pré-visualização",

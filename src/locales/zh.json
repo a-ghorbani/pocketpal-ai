@@ -161,7 +161,34 @@
     "ttsAvailabilityLowMemoryWarning": "你的设备内存较低——这可能无法稳定运行",
     "requestTimeout": "请求超时（秒）",
     "requestTimeoutHelp": "等待服务器响应的最长时间。留空则使用默认值。",
-    "requestTimeoutPlaceholder": "可选 - 留空则使用默认值"
+    "requestTimeoutPlaceholder": "可选 - 留空则使用默认值",
+    "serverType": "服务器类型",
+    "serverTypeHelp": "已自动检测；如有误请手动更改。",
+    "internetSearch": {
+      "title": "联网搜索",
+      "description": "让 Pal 用自己的工具搜索网络。自备 API 密钥——PocketPal 绝不保存你的密钥，也不会转发你的查询。",
+      "providerLabel": "搜索服务商",
+      "providerGated": "即将推出",
+      "keyLabel": "API 密钥",
+      "keyIsSet": "已为 {{provider}} 设置密钥。",
+      "keyNotSet": "尚未为 {{provider}} 设置密钥。",
+      "setKeyButton": "设置密钥",
+      "updateKeyButton": "更新密钥",
+      "clearKeyButton": "清除密钥",
+      "keyInputPlaceholder": "粘贴你的 {{provider}} API 密钥",
+      "keyUpdateError": "无法更新密钥，请重试。",
+      "showKeyAccessibilityLabel": "显示 API 密钥",
+      "hideKeyAccessibilityLabel": "隐藏 API 密钥",
+      "resultCountLabel": "每次搜索的结果数",
+      "resultCountDescription": "结果越少，模型上下文中保留的空间越多。",
+      "consentTitle": "搜索会离开你的设备",
+      "consentDescription": "当 Pal 搜索网络时，你的查询会通过互联网发送给所选服务商。当 Pal 读取网页时，如果所选服务商没有自带的阅读器，网址和网页内容可能会改为发送给默认阅读服务（r.jina.ai）。密钥和查询绝不会发送给 PocketPal。",
+      "consentAccept": "我明白了",
+      "consentRequired": "接受上述说明后，才能设置密钥并启用搜索。",
+      "consentGivenTitle": "联网搜索已启用",
+      "consentGivenDescription": "如上所述，查询和网页读取可能会离开你的设备。",
+      "consentRevoke": "撤销"
+    }
   },
   "memory": {
     "shortWarning": "内存警告",
@@ -551,7 +578,8 @@
         "disableThinking": "禁用思考模式",
         "thinkingEnabled": "思考模式已启用",
         "thinkingDisabled": "思考模式已禁用",
-        "thinkText": "思考"
+        "thinkText": "思考",
+        "cycleEffort": "推理强度：{{level}}。双击可切换强度级别"
       }
     },
     "contentReportSheet": {
@@ -734,7 +762,20 @@
     },
     "modelSettingsSheet": {
       "modelSettings": "模型设置",
-      "saveChanges": "保存更改"
+      "saveChanges": "保存更改",
+      "reasoningSection": "推理",
+      "isReasoningModel": "推理模型",
+      "isReasoningModelHelp": "即使未自动检测到，也为此模型显示思考控件。",
+      "supportsEffort": "支持分级推理强度",
+      "effortValues": "此模型支持的推理强度级别",
+      "effortLevels": {
+        "minimal": "极低",
+        "low": "低",
+        "medium": "中",
+        "high": "高",
+        "xhigh": "极高",
+        "max": "最高"
+      }
     },
     "modelsHeaderRight": {
       "menuTitleHf": "Hugging Face模型",
@@ -766,12 +807,16 @@
       "talentNames": {
         "render_html": "HTML预览",
         "calculate": "数学表达式",
-        "datetime": "日期和时间"
+        "datetime": "日期和时间",
+        "web_search": "网络搜索",
+        "read_url": "读取网页"
       },
       "talentDescriptions": {
         "render_html": "在聊天中内联渲染HTML文档",
         "calculate": "计算数学表达式",
-        "datetime": "获取当前日期和时间"
+        "datetime": "获取当前日期和时间",
+        "web_search": "在互联网上搜索最新信息（需在设置中填写 API 密钥）",
+        "read_url": "读取网页的完整内容（需在设置中填写 API 密钥）"
       },
       "greeting": {
         "sectionLabel": "问候语",
@@ -1163,7 +1208,17 @@
     "generatingPreview": "正在生成预览…（{{tokens}} 个token）",
     "generatingPreviewPending": "正在生成预览…",
     "toolUsedChip": "已使用{{name}}",
-    "toolErrorBlock": "{{name}}失败"
+    "toolErrorBlock": "{{name}}失败",
+    "webSearch": {
+      "searched": "已搜索：{{query}}",
+      "noResults": "无结果",
+      "noResultsFor": "找不到 {{query}} 的结果",
+      "resultsCount": "{{count}} 条结果",
+      "resultsCountOne": "1 条结果",
+      "searchResultsTitle": "搜索结果",
+      "showResultsAccessibilityLabel": "显示 {{query}} 的网络搜索结果",
+      "openLinkError": "无法打开此链接。"
+    }
   },
   "benchmark": {
     "title": "基准测试",

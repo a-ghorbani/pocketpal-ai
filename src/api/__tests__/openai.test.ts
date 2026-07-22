@@ -1,10 +1,12 @@
 import {
   fetchModels,
   fetchModelsWithHeaders,
+  fetchServerProps,
   detectServerType,
   testConnection,
   streamChatCompletion,
   buildReasoningPayload,
+  __clearRemoteImageCache,
 } from '../openai';
 
 /** Build a minimal Headers-like object for fetch mocks. */
@@ -367,6 +369,84 @@ describe('testConnection', () => {
   });
 });
 
+describe('fetchServerProps', () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+  });
+
+  it('parses contextLength from default_generation_settings.n_ctx and vision', async () => {
+    global.fetch = jest.fn().mockResolvedValueOnce({
+      ok: true,
+      json: () =>
+        Promise.resolve({
+          default_generation_settings: {n_ctx: 4096},
+          modalities: {vision: true, audio: false},
+        }),
+    });
+
+    const props = await fetchServerProps('http://localhost:8080');
+
+    expect(global.fetch).toHaveBeenCalledWith(
+      'http://localhost:8080/props',
+      expect.objectContaining({method: 'GET'}),
+    );
+    expect(props).toEqual({contextLength: 4096, supportsVision: true});
+  });
+
+  it('falls back to top-level n_ctx and reports vision false when not present', async () => {
+    global.fetch = jest.fn().mockResolvedValueOnce({
+      ok: true,
+      json: () => Promise.resolve({n_ctx: 8192}),
+    });
+
+    const props = await fetchServerProps('http://localhost:8080');
+    expect(props).toEqual({contextLength: 8192, supportsVision: false});
+  });
+
+  it('returns supportsVision false (defined, not omitted) when vision is off', async () => {
+    global.fetch = jest.fn().mockResolvedValueOnce({
+      ok: true,
+      json: () =>
+        Promise.resolve({
+          default_generation_settings: {n_ctx: 4096},
+          modalities: {vision: false},
+        }),
+    });
+
+    const props = await fetchServerProps('http://localhost:8080');
+    // Defined false on a 2xx probe clears a stale true on a model swap; a
+    // failed probe would return {} instead.
+    expect(props).toEqual({contextLength: 4096, supportsVision: false});
+  });
+
+  it('resolves to empty caps on a non-2xx response', async () => {
+    global.fetch = jest.fn().mockResolvedValueOnce({ok: false, status: 404});
+
+    await expect(fetchServerProps('http://localhost:8080')).resolves.toEqual(
+      {},
+    );
+  });
+
+  it('resolves to empty caps on a network error (never throws)', async () => {
+    global.fetch = jest.fn().mockRejectedValueOnce(new Error('boom'));
+
+    await expect(fetchServerProps('http://localhost:8080')).resolves.toEqual(
+      {},
+    );
+  });
+
+  it('resolves to empty caps on malformed JSON', async () => {
+    global.fetch = jest.fn().mockResolvedValueOnce({
+      ok: true,
+      json: () => Promise.reject(new Error('bad json')),
+    });
+
+    await expect(fetchServerProps('http://localhost:8080')).resolves.toEqual(
+      {},
+    );
+  });
+});
+
 // Mock XMLHttpRequest for streaming tests
 type XHREventHandler = (() => void) | null;
 
@@ -457,6 +537,7 @@ describe('streamChatCompletion', () => {
 
   beforeEach(() => {
     jest.clearAllMocks();
+    __clearRemoteImageCache();
     MockXHR.instances = [];
     originalXHR = global.XMLHttpRequest;
     (global as any).XMLHttpRequest = MockXHR;
@@ -551,6 +632,317 @@ describe('streamChatCompletion', () => {
     xhr.simulateLoad();
 
     await resultPromise;
+  });
+
+  it('encodes a local image path to a data URI on the remote wire', async () => {
+    const RNFS = require('@dr.pogodin/react-native-fs');
+    (RNFS.readFile as jest.Mock).mockResolvedValueOnce('QUJD');
+
+    const resultPromise = streamChatCompletion(
+      {
+        messages: [
+          {
+            role: 'user',
+            content: [
+              {type: 'text', text: 'what is this?'},
+              {type: 'image_url', image_url: {url: 'file:///tmp/photo.png'}},
+            ],
+          },
+        ],
+        model: 'test-model',
+      },
+      'http://localhost:1234',
+    );
+
+    await new Promise(r => setImmediate(r));
+    const xhr = MockXHR.instances[0];
+    const body = JSON.parse(xhr.requestBody);
+    expect(body.messages[0].content[1].image_url.url).toBe(
+      'data:image/png;base64,QUJD',
+    );
+
+    xhr.simulateHeaders(200);
+    xhr.simulateProgress(
+      'data: {"choices":[{"delta":{},"finish_reason":"stop"}]}\n\ndata: [DONE]\n\n',
+    );
+    xhr.simulateLoad();
+    await resultPromise;
+  });
+
+  it('passes through data: and http image urls unchanged', async () => {
+    const RNFS = require('@dr.pogodin/react-native-fs');
+
+    const resultPromise = streamChatCompletion(
+      {
+        messages: [
+          {
+            role: 'user',
+            content: [
+              {
+                type: 'image_url',
+                image_url: {url: 'data:image/jpeg;base64,ZZ'},
+              },
+              {type: 'image_url', image_url: {url: 'https://ex.com/a.png'}},
+            ],
+          },
+        ],
+        model: 'test-model',
+      },
+      'http://localhost:1234',
+    );
+
+    await new Promise(r => setImmediate(r));
+    const xhr = MockXHR.instances[0];
+    const body = JSON.parse(xhr.requestBody);
+    expect(body.messages[0].content[0].image_url.url).toBe(
+      'data:image/jpeg;base64,ZZ',
+    );
+    expect(body.messages[0].content[1].image_url.url).toBe(
+      'https://ex.com/a.png',
+    );
+    expect(RNFS.readFile).not.toHaveBeenCalled();
+
+    xhr.simulateHeaders(200);
+    xhr.simulateProgress(
+      'data: {"choices":[{"delta":{},"finish_reason":"stop"}]}\n\ndata: [DONE]\n\n',
+    );
+    xhr.simulateLoad();
+    await resultPromise;
+  });
+
+  it('leaves a text-only message array untouched', async () => {
+    const RNFS = require('@dr.pogodin/react-native-fs');
+
+    const resultPromise = streamChatCompletion(
+      {messages: [{role: 'user', content: 'plain text'}], model: 'test-model'},
+      'http://localhost:1234',
+    );
+
+    await new Promise(r => setImmediate(r));
+    const xhr = MockXHR.instances[0];
+    const body = JSON.parse(xhr.requestBody);
+    expect(body.messages[0].content).toBe('plain text');
+    expect(RNFS.readFile).not.toHaveBeenCalled();
+
+    xhr.simulateHeaders(200);
+    xhr.simulateProgress(
+      'data: {"choices":[{"delta":{},"finish_reason":"stop"}]}\n\ndata: [DONE]\n\n',
+    );
+    xhr.simulateLoad();
+    await resultPromise;
+  });
+
+  // Drive a stream to completion so its promise settles after the request
+  // body has been inspected.
+  const finishStream = async (
+    xhr: MockXHR,
+    resultPromise: Promise<unknown>,
+  ) => {
+    xhr.simulateHeaders(200);
+    xhr.simulateProgress(
+      'data: {"choices":[{"delta":{},"finish_reason":"stop"}]}\n\ndata: [DONE]\n\n',
+    );
+    xhr.simulateLoad();
+    await resultPromise;
+  };
+
+  const imageMessage = (url: string) => ({
+    role: 'user',
+    content: [{type: 'image_url', image_url: {url}}],
+  });
+
+  it('encodes a local image once and re-uses the cache on the next send', async () => {
+    const RNFS = require('@dr.pogodin/react-native-fs');
+    (RNFS.readFile as jest.Mock).mockResolvedValue('QUJD');
+
+    const p1 = streamChatCompletion(
+      {messages: [imageMessage('file:///tmp/cached.png')], model: 'm'},
+      'http://localhost:1234',
+    );
+    await new Promise(r => setImmediate(r));
+    const body1 = JSON.parse(MockXHR.instances[0].requestBody);
+    expect(body1.messages[0].content[0].image_url.url).toBe(
+      'data:image/png;base64,QUJD',
+    );
+    await finishStream(MockXHR.instances[0], p1);
+
+    const p2 = streamChatCompletion(
+      {messages: [imageMessage('file:///tmp/cached.png')], model: 'm'},
+      'http://localhost:1234',
+    );
+    await new Promise(r => setImmediate(r));
+    const body2 = JSON.parse(MockXHR.instances[1].requestBody);
+    expect(body2.messages[0].content[0].image_url.url).toBe(
+      'data:image/png;base64,QUJD',
+    );
+    await finishStream(MockXHR.instances[1], p2);
+
+    // The second send hit the cache — the file was read from disk only once.
+    expect(RNFS.readFile).toHaveBeenCalledTimes(1);
+  });
+
+  it('evicts oldest-first once cached bytes exceed the 24MB budget', async () => {
+    const RNFS = require('@dr.pogodin/react-native-fs');
+    // ~9MB base64 per image; three exceed the 24MB cache budget, so caching the
+    // third evicts the oldest (first) entry.
+    const big = 'A'.repeat(9 * 1024 * 1024);
+    (RNFS.readFile as jest.Mock).mockResolvedValue(big);
+
+    const send = async (path: string) => {
+      const p = streamChatCompletion(
+        {messages: [imageMessage(path)], model: 'm'},
+        'http://localhost:1234',
+      );
+      await new Promise(r => setImmediate(r));
+      await finishStream(MockXHR.instances[MockXHR.instances.length - 1], p);
+    };
+
+    // Fill: A (oldest) → B → C. Caching C pushes bytes over budget and evicts A.
+    await send('file:///tmp/a.png');
+    await send('file:///tmp/b.png');
+    await send('file:///tmp/c.png');
+    expect(RNFS.readFile).toHaveBeenCalledTimes(3);
+
+    // The two newest paths are still resident — re-sending them is a cache hit.
+    await send('file:///tmp/c.png');
+    await send('file:///tmp/b.png');
+    expect(RNFS.readFile).toHaveBeenCalledTimes(3);
+
+    // The oldest path was evicted, so re-sending it re-reads from disk.
+    await send('file:///tmp/a.png');
+    expect(RNFS.readFile).toHaveBeenCalledTimes(4);
+  });
+
+  it('dedups a concurrent double-encode of the same path (race-safe cache set)', async () => {
+    const RNFS = require('@dr.pogodin/react-native-fs');
+    (RNFS.readFile as jest.Mock).mockResolvedValue('QUJD');
+
+    // Two sends of the same new path start before either populates the cache, so
+    // both miss the read-side lookup and both call the cache setter; the second
+    // set hits the `has()` guard and does not double-count the entry.
+    const p1 = streamChatCompletion(
+      {messages: [imageMessage('file:///tmp/race.png')], model: 'm'},
+      'http://localhost:1234',
+    );
+    const p2 = streamChatCompletion(
+      {messages: [imageMessage('file:///tmp/race.png')], model: 'm'},
+      'http://localhost:1234',
+    );
+    await new Promise(r => setImmediate(r));
+    await finishStream(MockXHR.instances[0], p1);
+    await finishStream(MockXHR.instances[1], p2);
+    expect(RNFS.readFile).toHaveBeenCalledTimes(2);
+
+    // A subsequent send is a plain cache hit — the raced entry cached cleanly.
+    const p3 = streamChatCompletion(
+      {messages: [imageMessage('file:///tmp/race.png')], model: 'm'},
+      'http://localhost:1234',
+    );
+    await new Promise(r => setImmediate(r));
+    await finishStream(MockXHR.instances[2], p3);
+    expect(RNFS.readFile).toHaveBeenCalledTimes(2);
+  });
+
+  it('maps a dotless path to image/jpeg (no invalid image// MIME)', async () => {
+    const RNFS = require('@dr.pogodin/react-native-fs');
+    (RNFS.readFile as jest.Mock).mockResolvedValueOnce('QUJD');
+
+    const p = streamChatCompletion(
+      {messages: [imageMessage('content://media/1234')], model: 'm'},
+      'http://localhost:1234',
+    );
+    await new Promise(r => setImmediate(r));
+    const body = JSON.parse(MockXHR.instances[0].requestBody);
+    expect(body.messages[0].content[0].image_url.url).toBe(
+      'data:image/jpeg;base64,QUJD',
+    );
+    await finishStream(MockXHR.instances[0], p);
+  });
+
+  it('skips inlining a file whose successful stat exceeds the size cap', async () => {
+    const RNFS = require('@dr.pogodin/react-native-fs');
+    (RNFS.stat as jest.Mock).mockResolvedValueOnce({size: 20 * 1024 * 1024});
+
+    const p = streamChatCompletion(
+      {messages: [imageMessage('file:///tmp/huge.png')], model: 'm'},
+      'http://localhost:1234',
+    );
+    await new Promise(r => setImmediate(r));
+    const body = JSON.parse(MockXHR.instances[0].requestBody);
+    // Left unchanged; the server surfaces the failure.
+    expect(body.messages[0].content[0].image_url.url).toBe(
+      'file:///tmp/huge.png',
+    );
+    expect(RNFS.readFile).not.toHaveBeenCalled();
+    await finishStream(MockXHR.instances[0], p);
+  });
+
+  it('encodes anyway when stat is unavailable (undefined result)', async () => {
+    const RNFS = require('@dr.pogodin/react-native-fs');
+    // stat is an unconfigured jest.fn() → resolves undefined.
+    (RNFS.readFile as jest.Mock).mockResolvedValueOnce('QUJD');
+
+    const p = streamChatCompletion(
+      {messages: [imageMessage('file:///tmp/nostat.png')], model: 'm'},
+      'http://localhost:1234',
+    );
+    await new Promise(r => setImmediate(r));
+    const body = JSON.parse(MockXHR.instances[0].requestBody);
+    expect(body.messages[0].content[0].image_url.url).toBe(
+      'data:image/png;base64,QUJD',
+    );
+    await finishStream(MockXHR.instances[0], p);
+  });
+
+  it('encodes anyway when stat rejects (healthy image not dropped)', async () => {
+    const RNFS = require('@dr.pogodin/react-native-fs');
+    (RNFS.stat as jest.Mock).mockRejectedValueOnce(new Error('stat failed'));
+    (RNFS.readFile as jest.Mock).mockResolvedValueOnce('QUJD');
+
+    const p = streamChatCompletion(
+      {messages: [imageMessage('file:///tmp/statfail.png')], model: 'm'},
+      'http://localhost:1234',
+    );
+    await new Promise(r => setImmediate(r));
+    const body = JSON.parse(MockXHR.instances[0].requestBody);
+    expect(body.messages[0].content[0].image_url.url).toBe(
+      'data:image/png;base64,QUJD',
+    );
+    await finishStream(MockXHR.instances[0], p);
+  });
+
+  it('degrades per-image: a read failure leaves that part but encodes siblings', async () => {
+    const RNFS = require('@dr.pogodin/react-native-fs');
+    (RNFS.readFile as jest.Mock)
+      .mockRejectedValueOnce(new Error('read failed'))
+      .mockResolvedValueOnce('QUJD');
+
+    const p = streamChatCompletion(
+      {
+        messages: [
+          {
+            role: 'user',
+            content: [
+              {type: 'image_url', image_url: {url: 'file:///tmp/bad.png'}},
+              {type: 'image_url', image_url: {url: 'file:///tmp/ok.png'}},
+            ],
+          },
+        ],
+        model: 'm',
+      },
+      'http://localhost:1234',
+    );
+    await new Promise(r => setImmediate(r));
+    const body = JSON.parse(MockXHR.instances[0].requestBody);
+    // The failed image is left unchanged; the sibling still encodes and the
+    // completion promise does not reject.
+    expect(body.messages[0].content[0].image_url.url).toBe(
+      'file:///tmp/bad.png',
+    );
+    expect(body.messages[0].content[1].image_url.url).toBe(
+      'data:image/png;base64,QUJD',
+    );
+    await finishStream(MockXHR.instances[0], p);
   });
 
   it('forwards response_format and injects json_schema.name for OpenAI compatibility', async () => {
@@ -831,6 +1223,76 @@ describe('streamChatCompletion', () => {
     expect(result.stopped_eos).toBe(true);
   });
 
+  it('reconciles token counts from timings prompt_n/predicted_n', async () => {
+    const resultPromise = streamChatCompletion(
+      {messages: [{role: 'user', content: 'Hi'}], model: 'test-model'},
+      'http://localhost:1234',
+    );
+
+    const xhr = MockXHR.instances[0];
+    xhr.simulateHeaders(200);
+    xhr.simulateProgress(
+      'data: {"choices":[{"delta":{"content":"Hello"},"finish_reason":null}]}\n\n',
+    );
+    xhr.simulateProgress(
+      'data: {"choices":[{"delta":{},"finish_reason":"stop"}],"timings":{"prompt_n":3000,"predicted_n":500}}\n\n',
+    );
+    xhr.simulateProgress('data: [DONE]\n\n');
+    xhr.simulateLoad();
+
+    const result = await resultPromise;
+    // Server counts win over the single content-bearing per-event tally.
+    expect(result.tokens_evaluated).toBe(3000);
+    expect(result.tokens_predicted).toBe(500);
+  });
+
+  it('guards each timings token key independently (only predicted_n)', async () => {
+    const resultPromise = streamChatCompletion(
+      {messages: [{role: 'user', content: 'Hi'}], model: 'test-model'},
+      'http://localhost:1234',
+    );
+
+    const xhr = MockXHR.instances[0];
+    xhr.simulateHeaders(200);
+    xhr.simulateProgress(
+      'data: {"choices":[{"delta":{"content":"Hello"},"finish_reason":null}]}\n\n',
+    );
+    xhr.simulateProgress(
+      'data: {"choices":[{"delta":{},"finish_reason":"stop"}],"timings":{"predicted_n":7}}\n\n',
+    );
+    xhr.simulateProgress('data: [DONE]\n\n');
+    xhr.simulateLoad();
+
+    const result = await resultPromise;
+    // Missing prompt_n stays unset; predicted_n still wins.
+    expect(result.tokens_evaluated).toBeUndefined();
+    expect(result.tokens_predicted).toBe(7);
+  });
+
+  it('guards each timings token key independently (only prompt_n)', async () => {
+    const resultPromise = streamChatCompletion(
+      {messages: [{role: 'user', content: 'Hi'}], model: 'test-model'},
+      'http://localhost:1234',
+    );
+
+    const xhr = MockXHR.instances[0];
+    xhr.simulateHeaders(200);
+    xhr.simulateProgress(
+      'data: {"choices":[{"delta":{"content":"Hello"},"finish_reason":null}]}\n\n',
+    );
+    xhr.simulateProgress(
+      'data: {"choices":[{"delta":{},"finish_reason":"stop"}],"timings":{"prompt_n":3000}}\n\n',
+    );
+    xhr.simulateProgress('data: [DONE]\n\n');
+    xhr.simulateLoad();
+
+    const result = await resultPromise;
+    // prompt_n sets tokens_evaluated; absent predicted_n must NOT zero the
+    // per-event tally — it keeps the single content-bearing event count.
+    expect(result.tokens_evaluated).toBe(3000);
+    expect(result.tokens_predicted).toBe(1);
+  });
+
   it('returns no timings when server does not provide them', async () => {
     const resultPromise = streamChatCompletion(
       {messages: [{role: 'user', content: 'Hi'}], model: 'test-model'},
@@ -849,6 +1311,9 @@ describe('streamChatCompletion', () => {
 
     const result = await resultPromise;
     expect(result.timings).toBeUndefined();
+    // No timings → prompt count unset, predicted keeps the per-event tally.
+    expect(result.tokens_evaluated).toBeUndefined();
+    expect(result.tokens_predicted).toBe(1);
   });
 
   it('rejects immediately if signal already aborted', async () => {

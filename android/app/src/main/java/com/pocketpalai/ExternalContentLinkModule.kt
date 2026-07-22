@@ -54,6 +54,49 @@ class ExternalContentLinkModule(reactContext: ReactApplicationContext) :
         }
 
     val settled = AtomicBoolean(false)
+    connectAndCheckAvailability(
+        onAvailability = { client, result ->
+          if (result.responseCode != BillingClient.BillingResponseCode.OK) {
+            Log.w(
+                TAG,
+                "program unavailable: code=${result.responseCode} msg=${result.debugMessage}")
+            endAndResolve(client, promise, settled, OUTCOME_INELIGIBLE)
+          } else {
+            mintToken(client, activity, linkUri, promise, settled)
+          }
+        },
+        onConnectionError = { client ->
+          endAndResolve(client, promise, settled, OUTCOME_ERROR)
+        })
+  }
+
+  // Availability-only eligibility probe: no token/launch/disclosure, no Activity.
+  // Any setup failure or unavailable result resolves false.
+  override fun isExternalContentLinkAvailable(promise: Promise) {
+    val settled = AtomicBoolean(false)
+    connectAndCheckAvailability(
+        onAvailability = { client, result ->
+          val available = result.responseCode == BillingClient.BillingResponseCode.OK
+          if (!available) {
+            Log.w(
+                TAG,
+                "availability probe: program unavailable code=${result.responseCode} msg=${result.debugMessage}")
+          }
+          endAndResolveBoolean(client, promise, settled, available)
+        },
+        onConnectionError = { client ->
+          endAndResolveBoolean(client, promise, settled, false)
+        })
+  }
+
+  // Shared connect + availability query for prepareExternalLink and the probe.
+  // On setup OK, runs isBillingProgramAvailableAsync and hands the result plus
+  // the still-open client to onAvailability; setup failure/disconnect routes to
+  // onConnectionError. Callers close the connection (via endAndResolve*).
+  private fun connectAndCheckAvailability(
+      onAvailability: (client: BillingClient, result: BillingResult) -> Unit,
+      onConnectionError: (client: BillingClient) -> Unit
+  ) {
     val client =
         BillingClient.newBuilder(appContext)
             .enableBillingProgram(BillingProgram.EXTERNAL_CONTENT_LINK)
@@ -66,38 +109,21 @@ class ExternalContentLinkModule(reactContext: ReactApplicationContext) :
               Log.w(
                   TAG,
                   "billing setup failed: code=${result.responseCode} msg=${result.debugMessage}")
-              endAndResolve(client, promise, settled, OUTCOME_ERROR)
+              onConnectionError(client)
               return
             }
-            checkEligibility(client, activity, linkUri, promise, settled)
+            client.isBillingProgramAvailableAsync(BillingProgram.EXTERNAL_CONTENT_LINK) {
+                availabilityResult,
+                _ ->
+              onAvailability(client, availabilityResult)
+            }
           }
 
           override fun onBillingServiceDisconnected() {
             Log.w(TAG, "billing service disconnected during setup")
-            endAndResolve(client, promise, settled, OUTCOME_ERROR)
+            onConnectionError(client)
           }
         })
-  }
-
-  private fun checkEligibility(
-      client: BillingClient,
-      activity: android.app.Activity,
-      linkUri: Uri,
-      promise: Promise,
-      settled: AtomicBoolean
-  ) {
-    client.isBillingProgramAvailableAsync(BillingProgram.EXTERNAL_CONTENT_LINK) {
-        result,
-        _ ->
-      if (result.responseCode != BillingClient.BillingResponseCode.OK) {
-        Log.w(
-            TAG,
-            "program unavailable: code=${result.responseCode} msg=${result.debugMessage}")
-        endAndResolve(client, promise, settled, OUTCOME_INELIGIBLE)
-        return@isBillingProgramAvailableAsync
-      }
-      mintToken(client, activity, linkUri, promise, settled)
-    }
   }
 
   private fun mintToken(
@@ -206,6 +232,21 @@ class ExternalContentLinkModule(reactContext: ReactApplicationContext) :
       client.endConnection()
     } catch (_: Exception) {}
     promise.resolve(map)
+  }
+
+  private fun endAndResolveBoolean(
+      client: BillingClient,
+      promise: Promise,
+      settled: AtomicBoolean,
+      available: Boolean
+  ) {
+    if (!settled.compareAndSet(false, true)) {
+      return
+    }
+    try {
+      client.endConnection()
+    } catch (_: Exception) {}
+    promise.resolve(available)
   }
 
   companion object {

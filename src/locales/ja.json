@@ -161,7 +161,34 @@
     "manageServers": "サーバーを管理",
     "requestTimeout": "リクエストのタイムアウト（秒）",
     "requestTimeoutHelp": "応答が遅いサーバーを待つ最大時間です。空欄にするとデフォルトが使われます。",
-    "requestTimeoutPlaceholder": "任意 - 空欄でデフォルト"
+    "requestTimeoutPlaceholder": "任意 - 空欄でデフォルト",
+    "serverType": "サーバータイプ",
+    "serverTypeHelp": "自動検出されます。誤っている場合は変更してください。",
+    "internetSearch": {
+      "title": "インターネット検索",
+      "description": "Palが自分のツールでウェブを検索できるようにします。APIキーはご自身のものをご用意ください。PocketPalがキーを保持したり、クエリを中継したりすることは一切ありません。",
+      "providerLabel": "検索プロバイダー",
+      "providerGated": "近日公開",
+      "keyLabel": "APIキー",
+      "keyIsSet": "{{provider}}のキーが設定されています。",
+      "keyNotSet": "{{provider}}のキーは設定されていません。",
+      "setKeyButton": "キーを設定",
+      "updateKeyButton": "キーを更新",
+      "clearKeyButton": "キーをクリア",
+      "keyInputPlaceholder": "{{provider}}のAPIキーを貼り付けてください",
+      "keyUpdateError": "キーを更新できませんでした。もう一度お試しください。",
+      "showKeyAccessibilityLabel": "APIキーを表示",
+      "hideKeyAccessibilityLabel": "APIキーを非表示",
+      "resultCountLabel": "検索ごとの結果数",
+      "resultCountDescription": "結果数を減らすと、モデルのコンテキストに余裕が生まれます。",
+      "consentTitle": "検索はデバイスの外に送信されます",
+      "consentDescription": "Palがウェブを検索すると、クエリはインターネット経由で選択したプロバイダーに送信されます。Palがページを読み取る際、選択したプロバイダーに独自のリーダーがない場合は、代わりにURLとページの内容がデフォルトのリーダーサービス（r.jina.ai）に送信されることがあります。キーとクエリがPocketPalに送信されることは一切ありません。",
+      "consentAccept": "理解しました",
+      "consentRequired": "キーを設定して検索を有効にするには、上記の説明に同意してください。",
+      "consentGivenTitle": "ウェブ検索が有効になっています",
+      "consentGivenDescription": "上記のとおり、クエリとページの読み取りがデバイスの外に送信されることがあります。",
+      "consentRevoke": "取り消す"
+    }
   },
   "memory": {
     "shortWarning": "メモリ警告",
@@ -551,7 +578,8 @@
         "disableThinking": "思考モードを無効にする",
         "thinkingEnabled": "思考モードが有効",
         "thinkingDisabled": "思考モードが無効",
-        "thinkText": "思考"
+        "thinkText": "思考",
+        "cycleEffort": "推論の努力レベル：{{level}}。ダブルタップで努力レベルを切り替えます"
       }
     },
     "contentReportSheet": {
@@ -734,7 +762,20 @@
     },
     "modelSettingsSheet": {
       "modelSettings": "モデル設定",
-      "saveChanges": "変更を保存"
+      "saveChanges": "変更を保存",
+      "reasoningSection": "推論",
+      "isReasoningModel": "推論モデル",
+      "isReasoningModelHelp": "自動検出されなかった場合でも、このモデルで思考コントロールを表示します。",
+      "supportsEffort": "段階的な努力レベルに対応",
+      "effortValues": "このモデルが対応する努力レベル",
+      "effortLevels": {
+        "minimal": "最小",
+        "low": "低",
+        "medium": "中",
+        "high": "高",
+        "xhigh": "非常に高",
+        "max": "最大"
+      }
     },
     "modelsHeaderRight": {
       "menuTitleHf": "Hugging Faceモデル",
@@ -766,12 +807,16 @@
       "talentNames": {
         "render_html": "HTMLプレビュー",
         "calculate": "数式",
-        "datetime": "日付と時刻"
+        "datetime": "日付と時刻",
+        "web_search": "ウェブ検索",
+        "read_url": "ウェブページを読み取る"
       },
       "talentDescriptions": {
         "render_html": "HTMLドキュメントをチャット内にインライン表示します",
         "calculate": "数式を計算します",
-        "datetime": "現在の日付と時刻を取得します"
+        "datetime": "現在の日付と時刻を取得します",
+        "web_search": "最新情報をインターネットで検索します（設定でAPIキーが必要です）",
+        "read_url": "ウェブページの全内容を読み取ります（設定でAPIキーが必要です）"
       },
       "greeting": {
         "sectionLabel": "あいさつ",
@@ -1163,7 +1208,17 @@
     "generatingPreview": "プレビューを生成中...（{{tokens}}トークン）",
     "generatingPreviewPending": "プレビューを生成中…",
     "toolUsedChip": "{{name}}を使用",
-    "toolErrorBlock": "{{name}}が失敗しました"
+    "toolErrorBlock": "{{name}}が失敗しました",
+    "webSearch": {
+      "searched": "検索しました：{{query}}",
+      "noResults": "結果なし",
+      "noResultsFor": "{{query}}の結果が見つかりません",
+      "resultsCount": "{{count}}件の結果",
+      "resultsCountOne": "1件の結果",
+      "searchResultsTitle": "検索結果",
+      "showResultsAccessibilityLabel": "{{query}}のウェブ検索結果を表示",
+      "openLinkError": "このリンクを開けませんでした。"
+    }
   },
   "benchmark": {
     "title": "ベンチマーク",

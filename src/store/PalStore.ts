@@ -18,6 +18,7 @@
 
 import {v4 as uuidv4} from 'uuid';
 import {makeAutoObservable, runInAction} from 'mobx';
+import {Platform} from 'react-native';
 
 import {HF_DOMAIN} from '../config/urls';
 
@@ -26,6 +27,7 @@ import {palRepository} from '../repositories/PalRepository';
 import {hfAsModel} from '../utils';
 import {resolveHFModelForDownload} from '../utils/hfResolve';
 import {isUSStorefront} from '../utils/region';
+import NativeExternalContentLink from '../specs/NativeExternalContentLink';
 import {palsHubService} from '../services';
 import {registerDefaultTalents} from '../services/talents';
 import {LOOKIE_DEFAULT_MODEL} from './builtinPalModels';
@@ -58,8 +60,8 @@ class PalStore {
   searchFilters: SearchFilters = {};
   syncState: SyncState = {status: 'idle'};
 
-  // Region state
-  isUSRegion: boolean = false;
+  // Checkout eligibility state
+  isCheckoutEligible: boolean = false;
 
   // Migration state
   isMigrating: boolean = false;
@@ -94,8 +96,8 @@ class PalStore {
       // Register talent engines (idempotent)
       registerDefaultTalents();
 
-      // Check storefront region for buy button gating
-      this.checkRegion();
+      // Check checkout eligibility for buy button gating
+      this.checkCheckoutEligibility();
 
       console.log('Pal store initialization completed');
 
@@ -112,23 +114,33 @@ class PalStore {
     }
   }
 
-  private async checkRegion() {
-    // E2E builds have no App Store storefront, so force the US branch to
+  private async checkCheckoutEligibility() {
+    // E2E builds have no App Store storefront, so force eligibility to
     // exercise the buy button. Compiled out of prod (`__E2E__` is false).
     if (__E2E__) {
       runInAction(() => {
-        this.isUSRegion = true;
+        this.isCheckoutEligible = true;
       });
       return;
     }
 
     try {
-      const isUS = await isUSStorefront();
+      // Gate on real purchase eligibility per platform, not device locale:
+      // Android queries Play EXTERNAL_CONTENT_LINK availability; iOS keeps the
+      // StoreKit storefront signal. A null Android module or a thrown probe
+      // leaves the flag false (fail-closed → info-text fallback).
+      const eligible =
+        Platform.OS === 'android'
+          ? await NativeExternalContentLink?.isExternalContentLinkAvailable()
+          : await isUSStorefront();
       runInAction(() => {
-        this.isUSRegion = isUS;
+        this.isCheckoutEligible = eligible === true;
       });
     } catch (error) {
-      console.warn('Failed to check storefront region:', error);
+      console.warn('Failed to check checkout eligibility:', error);
+      runInAction(() => {
+        this.isCheckoutEligible = false;
+      });
     }
   }
 

@@ -1,3 +1,5 @@
+import * as RNFS from '@dr.pogodin/react-native-fs';
+
 import {SSEParser} from './sseParser';
 import {
   CompletionResult,
@@ -5,6 +7,7 @@ import {
   ReasoningIntent,
   ToolCall,
 } from '../utils/completionTypes';
+import {ServerConfig} from '../utils/types';
 
 /** Raw API response shape from OpenAI /v1/models */
 export interface RemoteModelInfo {
@@ -275,6 +278,68 @@ export async function fetchModels(
 }
 
 /**
+ * Server capabilities discovered from llama.cpp GET /props. Coupled to
+ * ServerConfig so a field rename breaks compile instead of silently
+ * no-opping the ServerStore write.
+ */
+export type ServerProps = Pick<
+  ServerConfig,
+  'contextLength' | 'supportsVision'
+>;
+
+/**
+ * Fetch server capabilities from a llama.cpp server's GET /props endpoint.
+ * Pure: parses the response into caps and never throws — a timeout, non-2xx,
+ * or malformed body resolves to `{}` so the caller's models path and
+ * connection are never affected. `/props` is llama.cpp-specific; callers gate
+ * on serverType before invoking.
+ *
+ * Key names verified against a live llama.cpp build (b9910): context window is
+ * `default_generation_settings.n_ctx` (top-level `n_ctx` is an older-build
+ * fallback); vision is `modalities.vision`.
+ */
+export async function fetchServerProps(
+  serverUrl: string,
+  apiKey?: string,
+  timeoutMs?: number,
+): Promise<ServerProps> {
+  const url = `${normalizeUrl(serverUrl)}/props`;
+  const controller = new AbortController();
+  const timeout = setTimeout(
+    () => controller.abort(),
+    resolveTimeout(timeoutMs, CONNECTION_TIMEOUT_MS),
+  );
+
+  try {
+    const response = await fetch(url, {
+      method: 'GET',
+      headers: buildHeaders(apiKey),
+      signal: controller.signal,
+    });
+    if (!response.ok) {
+      return {};
+    }
+    const data = await response.json();
+    const contextLength: unknown =
+      data?.default_generation_settings?.n_ctx ?? data?.n_ctx;
+    // supportsVision is always defined (true or false) on a 2xx probe so a
+    // model swap that drops vision overwrites a stale true; a failed probe
+    // returns {} below and leaves caps untouched.
+    const props: ServerProps = {
+      supportsVision: data?.modalities?.vision === true,
+    };
+    if (typeof contextLength === 'number') {
+      props.contextLength = contextLength;
+    }
+    return props;
+  } catch {
+    return {};
+  } finally {
+    clearTimeout(timeout);
+  }
+}
+
+/**
  * Test connection to an OpenAI-compatible server.
  * Returns ok status and model count.
  */
@@ -292,6 +357,12 @@ export async function testConnection(
 }
 
 const DETECT_TIMEOUT_MS = 5000;
+
+// Bound the detached /props capability probe. /props is a tiny local JSON that
+// llama.cpp serves instantly, so 5 s is generous; it mirrors the server-type
+// detect probe. Passed explicitly rather than omitted — omitting resolves to
+// CONNECTION_TIMEOUT_MS (30 s), which would not bound a fire-and-forget probe.
+export const PROPS_TIMEOUT_MS = 5000;
 
 /**
  * Detect server type from response headers and model metadata.
@@ -413,6 +484,154 @@ export function buildReasoningPayload(
   }
 }
 
+/** A local image path needs inlining: not already a data: or http(s): url. */
+function isLocalImageUrl(url: string | undefined): url is string {
+  return (
+    !!url &&
+    !url.startsWith('data:') &&
+    !url.startsWith('http://') &&
+    !url.startsWith('https://')
+  );
+}
+
+/** True when any message carries a local-path image that must be encoded. */
+function hasLocalImageAttachment(messages: OpenAIChatMessage[]): boolean {
+  return messages.some(
+    m =>
+      Array.isArray(m.content) &&
+      m.content.some(part => isLocalImageUrl(part.image_url?.url)),
+  );
+}
+
+// Skip inlining a file larger than this — base64 inflates ~33% and the whole
+// buffer is held in memory, so a huge attachment would spike heap on low-RAM
+// devices. The image is left unchanged and the server surfaces the failure.
+const REMOTE_IMAGE_MAX_BYTES = 12 * 1024 * 1024;
+
+// Bound the encode-once cache by total encoded-string bytes (evict-oldest)
+// rather than entry count: a handful of large base64 buffers must not pin
+// excessive resident heap.
+const REMOTE_IMAGE_CACHE_BYTES = 24 * 1024 * 1024;
+
+// Extension → data-URI MIME. A bare `image/${ext}` produced invalid types
+// (image/jpg, image// for dotless / content:// paths). Unknown extensions fall
+// back to image/jpeg.
+const EXT_MIME: Record<string, string> = {
+  jpg: 'image/jpeg',
+  jpeg: 'image/jpeg',
+  png: 'image/png',
+  gif: 'image/gif',
+  webp: 'image/webp',
+  heic: 'image/heic',
+  heif: 'image/heif',
+  bmp: 'image/bmp',
+};
+
+function mimeForPath(path: string): string {
+  const ext = path.toLowerCase().split('.').pop() ?? '';
+  return EXT_MIME[ext] ?? 'image/jpeg';
+}
+
+// Encoded local images keyed by path so a multi-turn history re-sends without
+// re-reading each file from disk (chat.ts re-emits the same stored path across
+// turns, so a history image encodes at most once).
+const remoteImageCache = new Map<string, string>();
+let remoteImageCacheBytes = 0;
+
+function cacheRemoteImage(path: string, dataUri: string): void {
+  if (remoteImageCache.has(path)) {
+    return;
+  }
+  remoteImageCache.set(path, dataUri);
+  remoteImageCacheBytes += dataUri.length;
+  for (const [oldestPath, oldestUri] of remoteImageCache) {
+    if (remoteImageCacheBytes <= REMOTE_IMAGE_CACHE_BYTES) {
+      break;
+    }
+    remoteImageCache.delete(oldestPath);
+    remoteImageCacheBytes -= oldestUri.length;
+  }
+}
+
+/** Test-only: reset the encode-once remote-image cache between cases. */
+export function __clearRemoteImageCache(): void {
+  remoteImageCache.clear();
+  remoteImageCacheBytes = 0;
+}
+
+/**
+ * Encode a single content part's local image path to a data URI. Returns the
+ * part unchanged when it is not a local image, when a successful stat reports
+ * an over-cap file, or when the read fails. A stat throw or a size-less result
+ * FALLS THROUGH to encoding so a healthy image is never dropped on a stat
+ * hiccup — only a successful over-cap stat skips.
+ */
+async function encodeImagePart(part: {
+  type: string;
+  text?: string;
+  image_url?: {url?: string};
+}): Promise<typeof part> {
+  const url = part.image_url?.url;
+  if (!isLocalImageUrl(url)) {
+    return part;
+  }
+  const path = url.replace(/^file:\/\//, '');
+
+  const cached = remoteImageCache.get(path);
+  if (cached) {
+    return {...part, image_url: {url: cached}};
+  }
+
+  try {
+    const info = await RNFS.stat(path);
+    if (typeof info?.size === 'number' && info.size > REMOTE_IMAGE_MAX_BYTES) {
+      return part;
+    }
+  } catch {
+    // stat unavailable — encode anyway rather than drop a healthy image.
+  }
+
+  try {
+    const base64 = await RNFS.readFile(path, 'base64');
+    const dataUri = `data:${mimeForPath(path)};base64,${base64}`;
+    cacheRemoteImage(path, dataUri);
+    return {...part, image_url: {url: dataUri}};
+  } catch (error) {
+    // Leave the part unchanged; the server surfaces the failure on the
+    // existing completion-error path.
+    console.warn('Failed to encode image for remote server:', error);
+    return part;
+  }
+}
+
+/**
+ * Encode local image attachments to data: URIs for the remote wire. A remote
+ * server cannot read the device filesystem, so any image_url pointing at a
+ * local path is read and inlined as base64. Already-remote (http/https) or
+ * already-inlined (data:) urls pass through unchanged. Remote-only: the local
+ * llama.rn engine reads the file path natively and never routes through here.
+ *
+ * Encodes sequentially (outer messages and inner parts) so peak heap is one
+ * base64 buffer at a time on a long or multi-image history.
+ */
+async function encodeMessagesForRemote(
+  messages: OpenAIChatMessage[],
+): Promise<OpenAIChatMessage[]> {
+  const encoded: OpenAIChatMessage[] = [];
+  for (const message of messages) {
+    if (!Array.isArray(message.content)) {
+      encoded.push(message);
+      continue;
+    }
+    const content: typeof message.content = [];
+    for (const part of message.content) {
+      content.push(await encodeImagePart(part));
+    }
+    encoded.push({...message, content});
+  }
+  return encoded;
+}
+
 export async function streamChatCompletion(
   params: StreamChatParams,
   serverUrl: string,
@@ -425,6 +644,12 @@ export async function streamChatCompletion(
   const url = `${normalizeUrl(serverUrl)}/v1/chat/completions`;
   const connectionTimeoutMs = resolveTimeout(timeoutMs, CONNECTION_TIMEOUT_MS);
   const idleTimeoutMs = resolveTimeout(timeoutMs, IDLE_TIMEOUT_MS);
+  // Only pay the async encode when a local image is actually attached; the
+  // common text path stays synchronous so callers see the request built in the
+  // same tick.
+  const encodedMessages = hasLocalImageAttachment(params.messages)
+    ? await encodeMessagesForRemote(params.messages)
+    : params.messages;
 
   return new Promise<CompletionResult>((resolve, reject) => {
     const xhr = new XMLHttpRequest();
@@ -698,7 +923,11 @@ export async function streamChatCompletion(
         content: fullContent,
         reasoning_content: fullReasoningContent || undefined,
         tool_calls: finalToolCalls,
-        tokens_predicted: tokensPredicted,
+        // llama.cpp reports authoritative token counts on `timings`; the server
+        // count wins over the per-event tally. Each field is guarded on its own
+        // key so a server that emits only one does not zero the other.
+        tokens_evaluated: serverTimings?.prompt_n,
+        tokens_predicted: serverTimings?.predicted_n ?? tokensPredicted,
         timings: serverTimings,
       };
 
@@ -763,7 +992,7 @@ export async function streamChatCompletion(
     // with newer models) reject unsupported or empty params with 400 errors.
     const requestBody: Record<string, any> = {
       model: params.model,
-      messages: params.messages,
+      messages: encodedMessages,
       stream: true,
     };
     if (params.temperature != null) {

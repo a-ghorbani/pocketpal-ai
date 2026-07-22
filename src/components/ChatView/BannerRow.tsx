@@ -8,7 +8,7 @@ import {createStyles} from './styles';
 
 import {AlertIcon} from '../../assets/icons';
 import {useTheme} from '../../hooks';
-import {chatSessionStore, modelStore} from '../../store';
+import {chatSessionStore, modelStore, serverStore} from '../../store';
 import {L10nContext} from '../../utils';
 import {MessageType, ModelOrigin} from '../../utils/types';
 import {resolveBannerVariant} from '../../utils/bannerVariantResolver';
@@ -101,12 +101,24 @@ export const BannerRow: React.FC<BannerRowProps> = observer(
     };
 
     const activeModel = modelStore.activeModel;
+    const isRemote = activeModel?.origin === ModelOrigin.REMOTE;
+
+    // activeContextSettings.n_ctx is local-only (set by a LlamaContext). For a
+    // remote model fall back to the server's /props-reported contextLength so
+    // the context banners can measure against a real window.
+    const localNCtx = modelStore.activeContextSettings?.n_ctx;
+    const effectiveNCtx =
+      localNCtx ??
+      (isRemote
+        ? serverStore.servers.find(s => s.id === activeModel?.serverId)
+            ?.contextLength
+        : undefined);
 
     const {variant, heavyTalentName, ratio} = resolveBannerVariant(
       chatSessionStore.lastCompletionResult,
       {
-        effectiveNCtx: modelStore.activeContextSettings?.n_ctx,
-        isRemote: activeModel?.origin === ModelOrigin.REMOTE,
+        effectiveNCtx,
+        isRemote,
         htmlPreviewCount,
         activeModelId: modelStore.activeModelId,
         dismissed: chatSessionStore.dismissedBannerVariants,
@@ -203,11 +215,17 @@ export const BannerRow: React.FC<BannerRowProps> = observer(
       ? (talentNames[heavyTalentName as keyof typeof talentNames] ??
         heavyTalentName)
       : undefined;
-    const fullText = heavyTalentLabel
-      ? t(l10n.chat.contextFullHeavyTalent, {talent: heavyTalentLabel})
-      : chatSessionStore.consecutiveFullFailures >= 2
-        ? l10n.chat.contextFullEscalated
-        : l10n.chat.contextFull;
+    // Remote wins over every local variant: the escalated and heavy-talent
+    // copies both carry the "increase the context size" advice, but a remote
+    // model has no in-app context control, so remote always gets the single
+    // remote copy (no increase clause) regardless of failure count / talent.
+    const fullText = isRemote
+      ? l10n.chat.contextFullRemote
+      : heavyTalentLabel
+        ? t(l10n.chat.contextFullHeavyTalent, {talent: heavyTalentLabel})
+        : chatSessionStore.consecutiveFullFailures >= 2
+          ? l10n.chat.contextFullEscalated
+          : l10n.chat.contextFull;
 
     return (
       <View

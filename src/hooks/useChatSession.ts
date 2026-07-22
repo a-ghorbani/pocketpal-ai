@@ -19,7 +19,10 @@ import {resolveReasoningCapability} from '../utils/reasoningCapability';
 
 import {MessageType, ModelOrigin, User} from '../utils/types';
 import {createMultimodalWarning} from '../utils/errors';
-import {resolveSystemMessages} from '../utils/systemPromptResolver';
+import {
+  assembleMessages,
+  resolveSystemMessages,
+} from '../utils/systemPromptResolver';
 import {convertToChatMessages, removeThinkingParts} from '../utils/chat';
 import {activateKeepAwake, deactivateKeepAwake} from '../utils/keepAwake';
 import {
@@ -29,11 +32,16 @@ import {
   CompletionResult,
   CompletionResultSnapshot,
 } from '../utils/completionTypes';
-import {talentRegistry} from '../services/talents';
+import {
+  collectSystemPromptFragments,
+  seedReadUrlAllowlist,
+  talentRegistry,
+} from '../services/talents';
 import type {ToolDefinition} from '../services/talents/types';
 import {
   agentStateReducer,
   createTriggerMarkerCache,
+  DEFAULT_MAX_TURNS,
   initialAgentUiState,
   runAgent,
   type AgentEvent,
@@ -122,14 +130,24 @@ const prepareCompletion = async ({
     });
   }
 
-  const messages = [
-    ...systemMessages,
+  // Talent-contributed system-prompt fragments (e.g. search grounding). Kept on
+  // the initial messages array so they persist across every follow-up tool turn.
+  const sessionToolNames = (
+    (sessionCompletionSettings?.tools as ToolDefinition[] | undefined) ?? []
+  ).map(tool => tool.function?.name ?? '');
+  const systemPromptFragments = collectSystemPromptFragments(sessionToolNames, {
+    now: new Date(),
+    maxToolTurns: DEFAULT_MAX_TURNS,
+  });
+
+  const messages = assembleMessages(systemMessages, systemPromptFragments, [
     ...chatMessages,
-    {
-      role: 'user',
-      content: userMessageContent,
-    },
-  ];
+    {role: 'user', content: userMessageContent},
+  ]);
+
+  // Reseed the read_url exfiltration allowlist for this run; the trust policy
+  // (which sources count) lives in the talents module.
+  seedReadUrlAllowlist(messages, currentMessages);
 
   const completionParamsWithAppProps = {
     ...sessionCompletionSettings,

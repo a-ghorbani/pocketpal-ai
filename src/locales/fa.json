@@ -161,7 +161,34 @@
     "ttsAvailabilityLowMemoryWarning": "حافظه دستگاه شما کم است — ممکن است این قابلیت به‌درستی کار نکند.",
     "requestTimeout": "مهلت درخواست (ثانیه)",
     "requestTimeoutHelp": "حداکثر زمان انتظار برای پاسخ سرور کند. برای مقدار پیش‌فرض خالی بگذارید.",
-    "requestTimeoutPlaceholder": "اختیاری - برای مقدار پیش‌فرض خالی بگذارید"
+    "requestTimeoutPlaceholder": "اختیاری - برای مقدار پیش‌فرض خالی بگذارید",
+    "serverType": "نوع سرور",
+    "serverTypeHelp": "به‌صورت خودکار تشخیص داده می‌شود؛ اگر درست نیست تغییرش بدهید.",
+    "internetSearch": {
+      "title": "جستجوی اینترنتی",
+      "description": "بگذارید پَل‌ها با ابزارهای خودشان در وب جستجو کنند. کلید API خودتان را بیاورید — PocketPal هرگز کلیدهای شما را نگه نمی‌دارد و درخواست‌هایتان را هدایت نمی‌کند.",
+      "providerLabel": "ارائه‌دهنده جستجو",
+      "providerGated": "به‌زودی",
+      "keyLabel": "کلید API",
+      "keyIsSet": "کلید برای {{provider}} تنظیم شده است.",
+      "keyNotSet": "کلیدی برای {{provider}} تنظیم نشده است.",
+      "setKeyButton": "تنظیم کلید",
+      "updateKeyButton": "به‌روزرسانی کلید",
+      "clearKeyButton": "پاک کردن کلید",
+      "keyInputPlaceholder": "کلید API {{provider}} خود را جای‌گذاری کنید",
+      "keyUpdateError": "به‌روزرسانی کلید ممکن نشد. لطفاً دوباره تلاش کنید.",
+      "showKeyAccessibilityLabel": "نمایش کلید API",
+      "hideKeyAccessibilityLabel": "مخفی کردن کلید API",
+      "resultCountLabel": "تعداد نتایج در هر جستجو",
+      "resultCountDescription": "نتایج کمتر فضای بیشتری در context مدل باقی می‌گذارد.",
+      "consentTitle": "جستجوها از دستگاه شما خارج می‌شوند",
+      "consentDescription": "وقتی یک پَل در وب جستجو می‌کند، درخواست شما از طریق اینترنت به ارائه‌دهنده انتخاب‌شده ارسال می‌شود. وقتی یک پَل صفحه‌ای را می‌خواند، اگر ارائه‌دهنده انتخاب‌شده خواننده اختصاصی نداشته باشد، ممکن است به‌جای آن آدرس و محتوای صفحه به یک سرویس خواننده پیش‌فرض (r.jina.ai) ارسال شود. کلیدها و درخواست‌ها هرگز به PocketPal ارسال نمی‌شوند.",
+      "consentAccept": "متوجه شدم",
+      "consentRequired": "برای تنظیم کلید و فعال‌سازی جستجو، توضیحات بالا را بپذیرید.",
+      "consentGivenTitle": "جستجوی وب فعال است",
+      "consentGivenDescription": "همان‌طور که در بالا توضیح داده شد، درخواست‌ها و خواندن صفحات ممکن است از دستگاه شما خارج شوند.",
+      "consentRevoke": "لغو دسترسی"
+    }
   },
   "memory": {
     "shortWarning": "هشدار حافظه",
@@ -551,7 +578,8 @@
         "disableThinking": "غیرفعال‌سازی حالت تفکر",
         "thinkingEnabled": "حالت تفکر فعال شد",
         "thinkingDisabled": "حالت تفکر غیرفعال شد",
-        "thinkText": "تفکر"
+        "thinkText": "تفکر",
+        "cycleEffort": "میزان استدلال: {{level}}. برای تغییر میزان دوبار ضربه بزنید"
       }
     },
     "contentReportSheet": {
@@ -734,7 +762,20 @@
     },
     "modelSettingsSheet": {
       "modelSettings": "تنظیمات مدل",
-      "saveChanges": "ذخیره تغییرات"
+      "saveChanges": "ذخیره تغییرات",
+      "reasoningSection": "استدلال",
+      "isReasoningModel": "مدل استدلالی",
+      "isReasoningModelHelp": "نمایش کنترل تفکر برای این مدل، حتی اگر به‌صورت خودکار تشخیص داده نشده باشد.",
+      "supportsEffort": "پشتیبانی از میزان استدلال درجه‌بندی‌شده",
+      "effortValues": "میزان‌های استدلالی که این مدل پشتیبانی می‌کند",
+      "effortLevels": {
+        "minimal": "حداقل",
+        "low": "کم",
+        "medium": "متوسط",
+        "high": "زیاد",
+        "xhigh": "خیلی زیاد",
+        "max": "حداکثر"
+      }
     },
     "modelsHeaderRight": {
       "menuTitleHf": "مدل‌های Hugging Face",
@@ -766,12 +807,16 @@
       "talentNames": {
         "render_html": "پیش‌نمایش HTML",
         "calculate": "عبارت‌های ریاضی",
-        "datetime": "تاریخ و زمان"
+        "datetime": "تاریخ و زمان",
+        "web_search": "جستجوی وب",
+        "read_url": "خواندن صفحه وب"
       },
       "talentDescriptions": {
         "render_html": "نمایش اسناد HTML به‌صورت درون‌خطی در چت",
         "calculate": "محاسبه عبارت‌های ریاضی",
-        "datetime": "دریافت تاریخ و زمان فعلی"
+        "datetime": "دریافت تاریخ و زمان فعلی",
+        "web_search": "جستجوی اینترنت برای اطلاعات به‌روز (به کلید API در تنظیمات نیاز دارد)",
+        "read_url": "خواندن کامل محتوای یک صفحه وب (به کلید API در تنظیمات نیاز دارد)"
       },
       "greeting": {
         "sectionLabel": "خوش‌آمدگویی",
@@ -1163,7 +1208,17 @@
     "generatingPreview": "در حال تولید پیش‌نمایش… ({{tokens}} توکن)",
     "generatingPreviewPending": "در حال تولید پیش‌نمایش…",
     "toolUsedChip": "از {{name}} استفاده شد",
-    "toolErrorBlock": "{{name}} ناموفق بود"
+    "toolErrorBlock": "{{name}} ناموفق بود",
+    "webSearch": {
+      "searched": "جستجو شد: {{query}}",
+      "noResults": "نتیجه‌ای یافت نشد",
+      "noResultsFor": "نتیجه‌ای برای {{query}} یافت نشد",
+      "resultsCount": "{{count}} نتیجه",
+      "resultsCountOne": "۱ نتیجه",
+      "searchResultsTitle": "نتایج جستجو",
+      "showResultsAccessibilityLabel": "نمایش نتایج جستجوی وب برای {{query}}",
+      "openLinkError": "باز کردن این لینک ممکن نشد."
+    }
   },
   "benchmark": {
     "title": "بنچمارک",

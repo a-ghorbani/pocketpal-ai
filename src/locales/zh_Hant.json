@@ -199,7 +199,17 @@
     "increaseContextReloading": "正在以較大的內容長度重新載入模型…",
     "increaseContextSuccess": "內容長度已增加至 {{target}} 詞元。",
     "increaseContextFailure": "無法增加內容長度。您的先前設定已恢復。",
-    "palLoadHint": "此夥伴傾向於需要超過目前內容長度所允許的空間。"
+    "palLoadHint": "此夥伴傾向於需要超過目前內容長度所允許的空間。",
+    "webSearch": {
+      "searched": "已搜尋：{{query}}",
+      "noResults": "沒有結果",
+      "noResultsFor": "找不到 {{query}} 的結果",
+      "resultsCount": "{{count}} 筆結果",
+      "resultsCountOne": "1 筆結果",
+      "searchResultsTitle": "搜尋結果",
+      "showResultsAccessibilityLabel": "顯示 {{query}} 的網路搜尋結果",
+      "openLinkError": "無法開啟此連結。"
+    }
   },
   "common": {
     "cancel": "取消",
@@ -287,7 +297,8 @@
         "disableThinking": "停用思考模式",
         "thinkingEnabled": "思考模式已啟用",
         "thinkingDisabled": "思考模式已停用",
-        "thinkText": "思考"
+        "thinkText": "思考",
+        "cycleEffort": "推理強度：{{level}}。連按兩次可切換強度層級"
       }
     },
     "chatGenerationSettingsSheet": {
@@ -404,7 +415,7 @@
     "chatPalModelPickerSheet": {
       "palsTab": "Pal",
       "modelsTab": "模型",
-      "noPal": "沒好友",
+      "noPal": "沒 Pal",
       "disablePal": "停用活躍 pal",
       "noDescription": "未提供描述",
       "assistantType": "助手",
@@ -430,7 +441,20 @@
     },
     "modelSettingsSheet": {
       "modelSettings": "模型設定",
-      "saveChanges": "儲存更改"
+      "saveChanges": "儲存更改",
+      "reasoningSection": "推理",
+      "isReasoningModel": "推理模型",
+      "effortLevels": {
+        "minimal": "最小",
+        "low": "低",
+        "medium": "中",
+        "high": "高",
+        "xhigh": "超高",
+        "max": "最高"
+      },
+      "isReasoningModelHelp": "顯示此模型的思考控制，即使未自動偵測到。",
+      "supportsEffort": "支援漸進式強度",
+      "effortValues": "此模型支援的強度層級"
     },
     "assistantPalSheet": {
       "title": {
@@ -450,7 +474,7 @@
     "modelNotAvailable": {
       "noModelsDownloaded": "您尚未下載任何模型。請先下載一個模型。",
       "downloadAModel": "下載模型",
-      "defaultModelNotDownloaded": "預設模型尚未下載。請先下載。",
+      "defaultModelNotDownloaded": "此 pal 推薦一個需要下載的特定模型，或者您可以選擇不同的模型。",
       "cancelDownload": "取消下載",
       "download": "下載",
       "modelNotDownloadedShort": "模型未下載",
@@ -612,7 +636,7 @@
         "newVideoPal": "新建影片 Pal"
       },
       "description": "描述",
-      "descriptionPlaceholder": "輸入您 Pal 的簡短描述",
+      "descriptionPlaceholder": "輸入您 pal 的簡短描述",
       "parameters": "參數",
       "generationSettings": "生成設定",
       "configureGenerationSettings": "配置生成設定",
@@ -625,12 +649,16 @@
       "talentNames": {
         "render_html": "HTML 預覽",
         "calculate": "數學算式",
-        "datetime": "日期與時間"
+        "datetime": "日期與時間",
+        "web_search": "網路搜尋",
+        "read_url": "讀取網頁"
       },
       "talentDescriptions": {
         "render_html": "在聊天室內行內渲染 HTML 文件",
         "calculate": "評估數學表達式",
-        "datetime": "取得目前的日期與時間"
+        "datetime": "取得目前的日期與時間",
+        "web_search": "搜尋網路上的最新資訊（需在設定中提供 API 金鑰）",
+        "read_url": "讀取網頁的完整內容（需在設定中提供 API 金鑰）"
       },
       "greeting": {
         "sectionLabel": "問候語",
@@ -1153,7 +1181,34 @@
     "ttsAvailabilityLowMemoryWarning": "您的裝置記憶體不足 — 這可能會影響功能運作的穩定性。",
     "requestTimeout": "請求逾時（秒）",
     "requestTimeoutHelp": "等待較慢的伺服器回應的最長時間。留空則使用預設值。",
-    "requestTimeoutPlaceholder": "可選 – 留空則使用預設值"
+    "requestTimeoutPlaceholder": "可選 – 留空則使用預設值",
+    "serverType": "伺服器類型",
+    "serverTypeHelp": "自動偵測；若有誤請修改。",
+    "internetSearch": {
+      "title": "網路搜尋",
+      "description": "讓 Pals 用自己的工具搜尋網路。請自備 API 金鑰 — PocketPal 絕不會保存你的金鑰，也不會轉送你的查詢。",
+      "providerLabel": "搜尋服務供應商",
+      "providerGated": "即將推出",
+      "keyLabel": "API 金鑰",
+      "keyIsSet": "已為 {{provider}} 設定金鑰。",
+      "keyNotSet": "尚未為 {{provider}} 設定金鑰。",
+      "setKeyButton": "設定金鑰",
+      "updateKeyButton": "更新金鑰",
+      "clearKeyButton": "清除金鑰",
+      "keyInputPlaceholder": "貼上你的 {{provider}} API 金鑰",
+      "keyUpdateError": "無法更新金鑰。請再試一次。",
+      "showKeyAccessibilityLabel": "顯示 API 金鑰",
+      "hideKeyAccessibilityLabel": "隱藏 API 金鑰",
+      "resultCountLabel": "每次搜尋的結果數",
+      "resultCountDescription": "結果越少，模型的上下文就能保留更多空間。",
+      "consentTitle": "搜尋會離開你的裝置",
+      "consentDescription": "當 Pal 搜尋網路時，你的查詢會透過網際網路傳送給所選的供應商。當 Pal 讀取網頁時，若所選供應商沒有內建的閱讀器，網址與頁面內容可能會改為傳送給預設的閱讀器服務（r.jina.ai）。金鑰與查詢絕不會傳送給 PocketPal。",
+      "consentAccept": "我了解",
+      "consentRequired": "請接受上方的說明，以設定金鑰並啟用搜尋。",
+      "consentGivenTitle": "網路搜尋已啟用",
+      "consentGivenDescription": "如上所述，查詢與網頁讀取可能會離開你的裝置。",
+      "consentRevoke": "撤銷"
+    }
   },
   "storage": {
     "checkFailed": "無法檢查存儲",
@@ -1257,7 +1312,7 @@
       "processingPurchase": "處理中 — 稍後將解鎖。",
       "checkoutSessionExpired": "您的連線已過期。請重新登入以繼續。",
       "signInAgain": "重新登入",
-      "palNotAvailable": "此夥伴目前無法購買。",
+      "palNotAvailable": "此 pal 目前無法購買。",
       "checkoutFailed": "發生錯誤。請重試。"
     },
     "filters": {
@@ -1419,13 +1474,13 @@
         "balanced": "平衡",
         "best": "最佳"
       },
-      "subtitleTemplate": "{{name}} 透過手機上的小型 AI 模型進行思考 - 請選一個適合您的模型。",
+      "subtitleTemplate": "{{name}} 透過手機上的小型 AI 模型進行推理——請選擇適合的選項。",
       "pal": {
         "pip": {
-          "body": "我們為您找到了完美的夥伴 - 一位友善的日常夥伴。它聰明到足以應對大多數事務，又輕量到適用於任何手機。"
+          "body": "我們為您找到了完美的 Pal - 一位親切的日常伴侶。它足夠聰明以應對大多數需求，且運作輕巧，適合任何手機使用。"
         },
         "codie": {
-          "body": "認識 Codie - 您的在地開發夥伴。它可以讀取程式碼、編寫程式碼，並在不離開手機的情況下為您解釋複雜的部分。"
+          "body": "認識 Codie — 您的本地配對程式設計師。它能讀取與編寫程式碼，並在不離開手機的情況下解釋各種棘手的細節。"
         },
         "sage": {
           "body": "Sage 很有耐心且充滿好奇心，會引導您逐步實踐想法。它是您隨身攜帶的學習夥伴。"
@@ -1447,15 +1502,15 @@
       "brand": "PocketPal"
     },
     "screen1": {
-      "title": "認識您的夥伴。",
-      "titleAccent": "夥伴。",
+      "title": "認識您的 pal。",
+      "titleAccent": "pal。",
       "body": "住在您手機裡的聰明小夥伴。\n讓我們開始設定吧——只需花一點時間即可。",
       "cta": "帶我導覽",
       "eyebrow": "歡迎來到 PocketPal"
     },
     "screen2": {
       "title": "隨時，\n隨地。",
-      "body": "您的夥伴住在您的手機裡。\n無需網路、無需訊號 - 無論在飛機上、野外地區，還是偏遠村莊，他們都能運作。",
+      "body": "您的 pal 住在您的手機裡。\n即使沒有網路或訊號，它們也能在飛機上、離線環境或偏遠村莊中運作。",
       "highlight": "無需網路，無需訊號",
       "cta": "下一步",
       "eyebrow": "概念",
@@ -1464,7 +1519,7 @@
     "screen3": {
       "title": "更小，\n但屬於你。",
       "titleAccent": "更小，",
-      "body": "您手機中的夥伴反應迅速且保有隱私 - 但比雲端 AI 更輕量。把它當作隨身的夥伴，而非無所不知的神諭。",
+      "body": "手機上的 Pal 快速且具備隱私性——但比雲端 AI 更輕量。將它們想像成隨身伴侶，而非無所不知的神諭。",
       "highlight": "快速且保有隱私",
       "cta": "了解",
       "eyebrow": "事先告知"
@@ -1478,8 +1533,8 @@
       "eyebrow": "承諾隱私"
     },
     "screen5": {
-      "title": "您的夥伴是為了什麼用途？",
-      "body": "選擇您想要討論的主題 - 我們將為您配對一個適合您手機的夥伴。",
+      "title": "您的 Pal 是為了什麼用途？",
+      "body": "選擇您想要討論的主題 - 我們將為您配對一個適合您手機的 Pal。",
       "topic": {
         "smartchat": "智慧對話",
         "coding": "程式開發",
@@ -1494,7 +1549,7 @@
         "education": "學習、解釋、測驗",
         "roleplay": "角色、場景",
         "creative_writing": "故事、創意、草稿",
-        "else": "稍後可在應用程式中瀏覽所有夥伴"
+        "else": "稍後可在應用程式中瀏覽所有 Pal"
       }
     }
   },

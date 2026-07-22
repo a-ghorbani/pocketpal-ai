@@ -1,11 +1,9 @@
-import {TalentUIRegistry} from '../TalentUIRegistry';
+import {TalentUIRegistry, talentUIRegistry} from '../TalentUIRegistry';
 import {RenderHtmlTalentUI} from '../RenderHtmlTalentUI';
 import {
-  registerDefaultTalents,
-  resetRegisteredFlag,
-  talentUIRegistry,
-} from '../index';
-import {talentRegistry} from '../TalentRegistry';
+  registerDefaultTalentUIs,
+  resetRegisteredTalentUIsFlag,
+} from '../registerTalentUIs';
 
 describe('TalentUIRegistry', () => {
   it('registers and retrieves UIs by name', () => {
@@ -38,33 +36,31 @@ describe('TalentUIRegistry', () => {
     expect(reg.has('render_html')).toBe(false);
   });
 
-  describe('registerDefaultTalents registers UIs', () => {
+  describe('registerDefaultTalentUIs registers UIs', () => {
     beforeEach(() => {
-      talentRegistry.reset();
       talentUIRegistry.reset();
-      resetRegisteredFlag();
+      resetRegisteredTalentUIsFlag();
     });
 
-    it('registers render_html UI alongside engines', () => {
-      registerDefaultTalents();
+    it('registers the render_html UI', () => {
+      registerDefaultTalentUIs();
       expect(talentUIRegistry.has('render_html')).toBe(true);
     });
 
     it('is idempotent across calls — same UI instance', () => {
-      registerDefaultTalents();
+      registerDefaultTalentUIs();
       const firstInstance = talentUIRegistry.get('render_html');
-      registerDefaultTalents();
+      registerDefaultTalentUIs();
       const secondInstance = talentUIRegistry.get('render_html');
       expect(firstInstance).toBe(secondInstance);
       expect(talentUIRegistry.has('render_html')).toBe(true);
     });
 
-    it('re-registers after reset + resetRegisteredFlag', () => {
-      registerDefaultTalents();
+    it('re-registers after reset + resetRegisteredTalentUIsFlag', () => {
+      registerDefaultTalentUIs();
       talentUIRegistry.reset();
-      talentRegistry.reset();
-      resetRegisteredFlag();
-      registerDefaultTalents();
+      resetRegisteredTalentUIsFlag();
+      registerDefaultTalentUIs();
       expect(talentUIRegistry.has('render_html')).toBe(true);
     });
   });

@@ -161,7 +161,34 @@
     "manageServers": "Urus Pelayan",
     "requestTimeout": "Had Masa Permintaan (saat)",
     "requestTimeoutHelp": "Tempoh maksimum menunggu pelayan yang perlahan untuk membalas. Biarkan kosong untuk nilai lalai.",
-    "requestTimeoutPlaceholder": "Pilihan - biarkan kosong untuk nilai lalai"
+    "requestTimeoutPlaceholder": "Pilihan - biarkan kosong untuk nilai lalai",
+    "serverType": "Jenis Pelayan",
+    "serverTypeHelp": "Dikesan secara automatik; tukar jika salah.",
+    "internetSearch": {
+      "title": "Carian Internet",
+      "description": "Biarkan Pals mencari di web dengan alat mereka sendiri. Bawa kunci API anda sendiri — PocketPal tidak sekali-kali menyimpan kunci atau menghalakan pertanyaan anda.",
+      "providerLabel": "Penyedia carian",
+      "providerGated": "Akan datang",
+      "keyLabel": "Kunci API",
+      "keyIsSet": "Kunci telah ditetapkan untuk {{provider}}.",
+      "keyNotSet": "Tiada kunci ditetapkan untuk {{provider}}.",
+      "setKeyButton": "Tetapkan Kunci",
+      "updateKeyButton": "Kemas Kini Kunci",
+      "clearKeyButton": "Kosongkan Kunci",
+      "keyInputPlaceholder": "Tampalkan kunci API {{provider}} anda",
+      "keyUpdateError": "Tidak dapat mengemas kini kunci. Sila cuba lagi.",
+      "showKeyAccessibilityLabel": "Papar kunci API",
+      "hideKeyAccessibilityLabel": "Sembunyikan kunci API",
+      "resultCountLabel": "Bilangan hasil setiap carian",
+      "resultCountDescription": "Lebih sedikit hasil mengekalkan lebih banyak ruang dalam konteks model.",
+      "consentTitle": "Carian meninggalkan peranti anda",
+      "consentDescription": "Apabila Pal mencari di web, pertanyaan anda dihantar ke penyedia yang dipilih melalui internet. Apabila Pal membaca sesuatu halaman, URL dan kandungan halaman mungkin dihantar ke perkhidmatan pembaca lalai (r.jina.ai) sebaliknya jika penyedia yang dipilih tiada pembaca natif. Kunci dan pertanyaan tidak sekali-kali dihantar ke PocketPal.",
+      "consentAccept": "Saya faham",
+      "consentRequired": "Terima pendedahan di atas untuk menetapkan kunci dan mendayakan carian.",
+      "consentGivenTitle": "Carian web telah didayakan",
+      "consentGivenDescription": "Pertanyaan dan bacaan halaman mungkin meninggalkan peranti anda seperti yang diterangkan di atas.",
+      "consentRevoke": "Batalkan"
+    }
   },
   "memory": {
     "shortWarning": "Amaran Memori",
@@ -551,7 +578,8 @@
         "disableThinking": "Lumpuhkan mod berfikir",
         "thinkingEnabled": "Mod berfikir didayakan",
         "thinkingDisabled": "Mod berfikir dilumpuhkan",
-        "thinkText": "Berpikir"
+        "thinkText": "Berpikir",
+        "cycleEffort": "Tahap penaakulan: {{level}}. Ketik dua kali untuk menukar tahap penaakulan"
       }
     },
     "contentReportSheet": {
@@ -734,7 +762,20 @@
     },
     "modelSettingsSheet": {
       "modelSettings": "Tetapan Model",
-      "saveChanges": "Simpan Perubahan"
+      "saveChanges": "Simpan Perubahan",
+      "reasoningSection": "Penaakulan",
+      "isReasoningModel": "Model penaakulan",
+      "isReasoningModelHelp": "Papar kawalan berfikir untuk model ini, walaupun ia tidak dikesan secara automatik.",
+      "supportsEffort": "Menyokong tahap penaakulan bergred",
+      "effortValues": "Tahap penaakulan yang disokong model ini",
+      "effortLevels": {
+        "minimal": "Minimum",
+        "low": "Rendah",
+        "medium": "Sederhana",
+        "high": "Tinggi",
+        "xhigh": "Sangat tinggi",
+        "max": "Maksimum"
+      }
     },
     "modelsHeaderRight": {
       "menuTitleHf": "Model Hugging Face",
@@ -766,12 +807,16 @@
       "talentNames": {
         "render_html": "Pratonton HTML",
         "calculate": "Ungkapan matematik",
-        "datetime": "Tarikh & masa"
+        "datetime": "Tarikh & masa",
+        "web_search": "Carian web",
+        "read_url": "Baca halaman web"
       },
       "talentDescriptions": {
         "render_html": "Paparkan dokumen HTML secara sebaris dalam sembang",
         "calculate": "Nilaikan ungkapan matematik",
-        "datetime": "Dapatkan tarikh dan masa semasa"
+        "datetime": "Dapatkan tarikh dan masa semasa",
+        "web_search": "Cari di internet untuk maklumat terkini (memerlukan kunci API dalam Tetapan)",
+        "read_url": "Baca keseluruhan kandungan sesuatu halaman web (memerlukan kunci API dalam Tetapan)"
       },
       "greeting": {
         "sectionLabel": "Sapaan",
@@ -1163,7 +1208,17 @@
     "generatingPreview": "Menjana pratonton… ({{tokens}} token)",
     "generatingPreviewPending": "Menjana pratonton…",
     "toolUsedChip": "menggunakan {{name}}",
-    "toolErrorBlock": "{{name}} gagal"
+    "toolErrorBlock": "{{name}} gagal",
+    "webSearch": {
+      "searched": "Dicari: {{query}}",
+      "noResults": "Tiada hasil",
+      "noResultsFor": "Tiada hasil untuk {{query}}",
+      "resultsCount": "{{count}} hasil",
+      "resultsCountOne": "1 hasil",
+      "searchResultsTitle": "Hasil carian",
+      "showResultsAccessibilityLabel": "Papar hasil carian web untuk {{query}}",
+      "openLinkError": "Tidak dapat membuka pautan ini."
+    }
   },
   "benchmark": {
     "title": "Tolok Ukur",

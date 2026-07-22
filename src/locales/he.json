@@ -161,7 +161,34 @@
     "ttsAvailabilityLowMemoryWarning": "זיכרון המכשיר שלך נמוך - ייתכן שזה לא יעבוד בצורה אמינה.",
     "requestTimeout": "זמן קצוב לבקשה (בשניות)",
     "requestTimeoutHelp": "כמה זמן לחכות לתגובה משרת איטי. אפשר להשאיר ריק לערך ברירת המחדל.",
-    "requestTimeoutPlaceholder": "אופציונלי - אפשר להשאיר ריק לברירת המחדל"
+    "requestTimeoutPlaceholder": "אופציונלי - אפשר להשאיר ריק לברירת המחדל",
+    "serverType": "סוג שרת",
+    "serverTypeHelp": "מזוהה אוטומטית; שנה אם זה לא נכון.",
+    "internetSearch": {
+      "title": "חיפוש באינטרנט",
+      "description": "אפשר ל-Pals לחפש ברשת באמצעות הכלים שלהם. השתמש במפתח API משלך — PocketPal לעולם לא שומר את המפתחות שלך ולא מנתב את השאילתות שלך.",
+      "providerLabel": "ספק חיפוש",
+      "providerGated": "בקרוב",
+      "keyLabel": "מפתח API",
+      "keyIsSet": "מפתח הוגדר עבור {{provider}}.",
+      "keyNotSet": "לא הוגדר מפתח עבור {{provider}}.",
+      "setKeyButton": "הגדר מפתח",
+      "updateKeyButton": "עדכן מפתח",
+      "clearKeyButton": "נקה מפתח",
+      "keyInputPlaceholder": "הדבק את מפתח ה-API של {{provider}}",
+      "keyUpdateError": "עדכון המפתח נכשל. אנא נסה שוב.",
+      "showKeyAccessibilityLabel": "הצג מפתח API",
+      "hideKeyAccessibilityLabel": "הסתר מפתח API",
+      "resultCountLabel": "תוצאות לכל חיפוש",
+      "resultCountDescription": "פחות תוצאות משאירות יותר מקום בהקשר של המודל.",
+      "consentTitle": "החיפושים יוצאים מהמכשיר שלך",
+      "consentDescription": "כאשר Pal מחפש ברשת, השאילתה שלך נשלחת לספק שנבחר דרך האינטרנט. כאשר Pal קורא דף, ייתכן שכתובת ה-URL ותוכן הדף יישלחו במקום זאת לשירות קריאה כברירת מחדל (r.jina.ai) אם לספק שנבחר אין קורא מובנה. מפתחות ושאילתות לעולם אינם נשלחים ל-PocketPal.",
+      "consentAccept": "הבנתי",
+      "consentRequired": "אשר את הגילוי שלמעלה כדי להגדיר מפתח ולהפעיל חיפוש.",
+      "consentGivenTitle": "חיפוש ברשת מופעל",
+      "consentGivenDescription": "שאילתות וקריאות של דפים עשויות לצאת מהמכשיר שלך כמתואר למעלה.",
+      "consentRevoke": "בטל הסכמה"
+    }
   },
   "memory": {
     "shortWarning": "אזהרת זיכרון",
@@ -551,7 +578,8 @@
         "disableThinking": "השבת מצב חשיבה",
         "thinkingEnabled": "מצב חשיבה הופעל",
         "thinkingDisabled": "מצב חשיבה הושבת",
-        "thinkText": "חשיבה"
+        "thinkText": "חשיבה",
+        "cycleEffort": "מאמץ חשיבה: {{level}}. הקש פעמיים כדי לעבור בין רמות המאמץ"
       }
     },
     "contentReportSheet": {
@@ -734,7 +762,20 @@
     },
     "modelSettingsSheet": {
       "modelSettings": "הגדרות מודל",
-      "saveChanges": "שמור שינויים"
+      "saveChanges": "שמור שינויים",
+      "reasoningSection": "חשיבה",
+      "isReasoningModel": "מודל חשיבה",
+      "isReasoningModelHelp": "הצג את פקד החשיבה עבור מודל זה, גם אם הוא לא זוהה אוטומטית.",
+      "supportsEffort": "תומך במאמץ מדורג",
+      "effortValues": "רמות המאמץ שמודל זה תומך בהן",
+      "effortLevels": {
+        "minimal": "מינימלי",
+        "low": "נמוך",
+        "medium": "בינוני",
+        "high": "גבוה",
+        "xhigh": "גבוה מאוד",
+        "max": "מרבי"
+      }
     },
     "modelsHeaderRight": {
       "menuTitleHf": "מודלי Hugging Face",
@@ -766,12 +807,16 @@
       "talentNames": {
         "render_html": "תצוגה מקדימה של HTML",
         "calculate": "ביטויים מתמטיים",
-        "datetime": "תאריך ושעה"
+        "datetime": "תאריך ושעה",
+        "web_search": "חיפוש ברשת",
+        "read_url": "קריאת דף אינטרנט"
       },
       "talentDescriptions": {
         "render_html": "הצג מסמכי HTML ישירות בצ'אט",
         "calculate": "הערך ביטויים מתמטיים",
-        "datetime": "הצג את התאריך והשעה הנוכחיים"
+        "datetime": "הצג את התאריך והשעה הנוכחיים",
+        "web_search": "חפש באינטרנט מידע עדכני (דורש מפתח API בהגדרות)",
+        "read_url": "קרא את התוכן המלא של דף אינטרנט (דורש מפתח API בהגדרות)"
       },
       "greeting": {
         "sectionLabel": "ברכה",
@@ -1163,7 +1208,17 @@
     "increaseContextReloading": "טוען מחדש את המודל עם הקשר גדול יותר…",
     "increaseContextSuccess": "ההקשר הוגדל ל-{{target}} טוקנים.",
     "increaseContextFailure": "לא ניתן להגדיל את אורך ההקשר. ההגדרה הקודמת שלך שוחזרה.",
-    "palLoadHint": "ה-Pal הזה בדרך כלל זקוק ליותר מקום ממה שאורך ההקשר הנוכחי מאפשר."
+    "palLoadHint": "ה-Pal הזה בדרך כלל זקוק ליותר מקום ממה שאורך ההקשר הנוכחי מאפשר.",
+    "webSearch": {
+      "searched": "חיפוש: {{query}}",
+      "noResults": "אין תוצאות",
+      "noResultsFor": "אין תוצאות עבור {{query}}",
+      "resultsCount": "{{count}} תוצאות",
+      "resultsCountOne": "תוצאה אחת",
+      "searchResultsTitle": "תוצאות חיפוש",
+      "showResultsAccessibilityLabel": "הצג תוצאות חיפוש ברשת עבור {{query}}",
+      "openLinkError": "לא ניתן היה לפתוח את הקישור הזה."
+    }
   },
   "benchmark": {
     "title": "מבחן ביצועים",

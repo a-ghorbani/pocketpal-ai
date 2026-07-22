@@ -199,7 +199,17 @@
     "increaseContextReloading": "더 큰 컨텍스트로 모델을 다시 불러오는 중…",
     "increaseContextSuccess": "컨텍스트가 {{target}} 토큰으로 늘어났습니다.",
     "increaseContextFailure": "컨텍스트 크기를 늘릴 수 없습니다. 이전 설정으로 복원되었습니다.",
-    "palLoadHint": "이 Pal은 현재 컨텍스트 크기보다 더 많은 공간이 필요한 편입니다."
+    "palLoadHint": "이 Pal은 현재 컨텍스트 크기보다 더 많은 공간이 필요한 편입니다.",
+    "webSearch": {
+      "searched": "검색함: {{query}}",
+      "noResults": "결과 없음",
+      "noResultsFor": "{{query}}에 대한 결과 없음",
+      "resultsCount": "{{count}}개 결과",
+      "resultsCountOne": "결과 1개",
+      "searchResultsTitle": "검색 결과",
+      "showResultsAccessibilityLabel": "{{query}}에 대한 웹 검색 결과 표시",
+      "openLinkError": "이 링크를 열 수 없어요."
+    }
   },
   "common": {
     "cancel": "취소",
@@ -287,7 +297,8 @@
         "disableThinking": "사고 모드 비활성화",
         "thinkingEnabled": "사고 모드 활성화됨",
         "thinkingDisabled": "사고 모드 비활성화됨",
-        "thinkText": "사고"
+        "thinkText": "사고",
+        "cycleEffort": "추론 강도: {{level}}. 두 번 탭하면 강도 단계가 바뀌어요"
       }
     },
     "chatGenerationSettingsSheet": {
@@ -353,7 +364,20 @@
     },
     "modelSettingsSheet": {
       "modelSettings": "모델 설정",
-      "saveChanges": "변경 사항 저장"
+      "saveChanges": "변경 사항 저장",
+      "reasoningSection": "추론",
+      "isReasoningModel": "추론 모델",
+      "isReasoningModelHelp": "자동으로 감지되지 않았더라도 이 모델의 사고 제어를 표시해요.",
+      "supportsEffort": "단계별 강도 지원",
+      "effortValues": "이 모델이 지원하는 강도 단계",
+      "effortLevels": {
+        "minimal": "최소",
+        "low": "낮음",
+        "medium": "보통",
+        "high": "높음",
+        "xhigh": "매우 높음",
+        "max": "최대"
+      }
     },
     "assistantPalSheet": {
       "title": {
@@ -659,12 +683,16 @@
       "talentNames": {
         "render_html": "HTML 미리보기",
         "calculate": "수학 표현식",
-        "datetime": "날짜와 시간"
+        "datetime": "날짜와 시간",
+        "web_search": "웹 검색",
+        "read_url": "웹 페이지 읽기"
       },
       "talentDescriptions": {
         "render_html": "채팅 내 HTML 문서 인라인 렌더링",
         "calculate": "수학 표현식 계산",
-        "datetime": "현재 날짜와 시간 가져오기"
+        "datetime": "현재 날짜와 시간 가져오기",
+        "web_search": "최신 정보를 인터넷에서 검색 (설정에서 API 키 필요)",
+        "read_url": "웹 페이지의 전체 내용 읽기 (설정에서 API 키 필요)"
       },
       "greeting": {
         "removePromptLabel": "프롬프트 제거",
@@ -1153,7 +1181,34 @@
     "ttsAvailabilityLowMemoryWarning": "귀하의 기기 메모리가 낮습니다 — 신뢰성 있게 작동하지 않을 수 있습니다.",
     "requestTimeout": "요청 제한 시간(초)",
     "requestTimeoutHelp": "서버 응답을 기다리는 최대 시간입니다. 비워 두면 기본값이 적용됩니다.",
-    "requestTimeoutPlaceholder": "선택 사항 - 비워 두면 기본값 적용"
+    "requestTimeoutPlaceholder": "선택 사항 - 비워 두면 기본값 적용",
+    "serverType": "서버 유형",
+    "serverTypeHelp": "자동으로 감지된 설정입니다. 틀린 부분이 있다면 변경해 주세요.",
+    "internetSearch": {
+      "title": "인터넷 검색",
+      "description": "Pal이 자체 도구로 웹을 검색할 수 있도록 해보세요. 본인의 API 키만 가져오시면 됩니다 — PocketPal은 사용자의 키를 저장하거나 쿼리를 라우팅하지 않습니다.",
+      "providerLabel": "검색 제공자",
+      "providerGated": "출시 예정",
+      "keyLabel": "API 키",
+      "keyIsSet": "{{provider}}의 키가 설정되었습니다.",
+      "keyNotSet": "{{provider}}의 키가 설정되지 않았습니다.",
+      "setKeyButton": "키 설정",
+      "updateKeyButton": "키 업데이트",
+      "clearKeyButton": "키 삭제",
+      "keyInputPlaceholder": "{{provider}}의 API 키를 붙여넣으세요",
+      "keyUpdateError": "키를 업데이트하지 못했어요. 다시 시도해 주세요.",
+      "showKeyAccessibilityLabel": "API 키 표시",
+      "hideKeyAccessibilityLabel": "API 키 숨기기",
+      "resultCountLabel": "검색당 결과 수",
+      "resultCountDescription": "결과가 적을수록 모델의 컨텍스트에 더 많은 공간이 유지됩니다.",
+      "consentTitle": "검색어는 기기 외부로 전송됩니다",
+      "consentDescription": "Pal이 웹을 검색하면 여러분의 검색어가 인터넷을 통해 선택한 제공자로 전송돼요. Pal이 페이지를 읽을 때, 선택한 제공자에 자체 리더가 없으면 URL과 페이지 내용이 대신 기본 리더 서비스(r.jina.ai)로 전송될 수 있어요. 키와 검색어는 절대 PocketPal로 전송되지 않아요.",
+      "consentAccept": "확인했습니다",
+      "consentRequired": "키를 설정하고 검색을 활성화하려면 위 고지에 동의해 주세요.",
+      "consentGivenTitle": "웹 검색이 활성화됨",
+      "consentGivenDescription": "위에서 설명한 대로 쿼리와 페이지 읽기 결과가 기기를 벗어날 수 있습니다.",
+      "consentRevoke": "동의 철회"
+    }
   },
   "storage": {
     "checkFailed": "저장공간 확인 실패",

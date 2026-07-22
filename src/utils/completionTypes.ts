@@ -100,6 +100,10 @@ export interface CompletionResult {
     predicted_ms?: number;
     prompt_per_second?: number;
     prompt_ms?: number;
+    // llama.cpp token counts: prompt (eval) and generated. Source the remote
+    // snapshot's used-token total from these.
+    prompt_n?: number;
+    predicted_n?: number;
     [key: string]: number | undefined;
   };
   tokens_predicted?: number;
