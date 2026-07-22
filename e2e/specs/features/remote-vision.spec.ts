@@ -4,8 +4,12 @@
  * Exercises the llama.cpp GET /props capability-discovery path end to end:
  * a remote server that reports `modalities.vision` enables the chat image
  * attachment affordance; a server that does not keeps it disabled. This is the
- * user-visible surface of the /props -> ServerConfig.supportsVision ->
- * ModelStore.isMultimodalEnabled -> ChatInput isVisionEnabled chain.
+ * user-visible surface of the /props -> ServerStore.remoteCaps ->
+ * resolveRemoteCaps -> ChatInput isVisionEnabled chain.
+ *
+ * Capabilities are discovered per model, on model activation, so the assertion
+ * is valid against a multi-model router too: selecting a vision model enables
+ * attach, selecting a text-only sibling on the same server disables it again.
  *
  * The attach button is always rendered (ChatScreen showImageUpload={true}); only
  * its enabled state flips with the discovered capability, so isEnabled() on the
@@ -18,6 +22,11 @@
  *     modalities.vision === true (e.g. a SmolVLM build).
  *   - REMOTE_NONVISION_URL (optional) points at a text-only server (no vision in
  *     /props). When unset, the negative test is skipped.
+ *   - REMOTE_SERVER_API_KEY must be EMPTY when either URL points at llama.cpp:
+ *     the suite sends the key unconditionally and llama.cpp rejects a request
+ *     carrying one it was not started with.
+ *   - Use a LAN address for a plain-HTTP server. iOS ATS blocks cleartext to a
+ *     Tailscale CGNAT address.
  *
  * Environment variables:
  *   REMOTE_VISION_URL         - vision-capable server (default http://192.168.0.62:1234)
