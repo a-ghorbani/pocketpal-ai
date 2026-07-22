@@ -2193,8 +2193,10 @@ class ModelStore {
     // Capabilities are per model, so they are probed on activation. Detached:
     // a lazily-started server can take seconds to answer, and neither the
     // engine nor the chat screen may wait on it. ServerStore owns the write.
+    // The api key is already resolved here, so the probe skips a second
+    // Keychain read.
     serverStore
-      .fetchRemoteModelCaps(model.serverId, model.remoteModelId)
+      .fetchRemoteModelCaps(model.serverId, model.remoteModelId, apiKey)
       .catch(() => {});
   };
 

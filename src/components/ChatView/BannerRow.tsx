@@ -106,8 +106,12 @@ export const BannerRow: React.FC<BannerRowProps> = observer(
 
     // activeContextSettings.n_ctx is local-only (set by a LlamaContext). For a
     // remote model fall back to the /props-reported window for that model so
-    // the context banners can measure against a real one. A window of 0 is
-    // unknown, not full — leave it undefined so no banner is triggered.
+    // the context banners can measure against a real one.
+    //
+    // The `> 0` filter is defence in depth: both writers (openai.ts parse,
+    // resolveRemoteCaps legacy fallback) already drop a non-positive window,
+    // and 0 means unknown, not exhausted — a banner measured against it would
+    // read every turn as context-full.
     const localNCtx = modelStore.activeContextSettings?.n_ctx;
     const resolvedNCtx =
       localNCtx ??

@@ -4240,8 +4240,30 @@ describe('ModelStore', () => {
 
       await modelStore.setRemoteModel(remoteModel);
 
-      expect(probe).toHaveBeenCalledWith('srv-1', 'llama-7b');
+      // The api key resolved for the engine is handed to the probe, which
+      // therefore makes no second Keychain read.
+      expect(probe).toHaveBeenCalledWith(
+        'srv-1',
+        'llama-7b',
+        expect.anything(),
+      );
       probe.mockRestore();
+    });
+
+    it('hands the resolved api key to the probe', async () => {
+      const getApiKey = jest
+        .spyOn(serverStore, 'getApiKey')
+        .mockResolvedValue('sk-test');
+      const probe = jest
+        .spyOn(serverStore, 'fetchRemoteModelCaps')
+        .mockResolvedValue(undefined);
+
+      await modelStore.setRemoteModel(remoteModel);
+
+      expect(probe).toHaveBeenCalledWith('srv-1', 'llama-7b', 'sk-test');
+      expect(getApiKey).toHaveBeenCalledTimes(1);
+      probe.mockRestore();
+      getApiKey.mockRestore();
     });
 
     it('resolves without waiting on a probe that never settles', async () => {
@@ -4318,6 +4340,16 @@ describe('ModelStore', () => {
 
       expect(probe).toHaveBeenCalledTimes(1);
       expect(probe).toHaveBeenCalledWith('srv-1', 'llama-7b');
+    });
+
+    it('probes again on a later foreground while caps stay unknown', async () => {
+      await modelStore.handleAppStateChange('active');
+      runInAction(() => {
+        modelStore.appState = 'background';
+      });
+      await modelStore.handleAppStateChange('active');
+
+      expect(probe).toHaveBeenCalledTimes(2);
     });
 
     it('issues no probe when capabilities are already known', async () => {

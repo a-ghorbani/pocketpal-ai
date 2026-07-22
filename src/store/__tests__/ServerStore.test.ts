@@ -1064,6 +1064,50 @@ describe('ServerStore', () => {
       expect(serverStore.remoteCaps[`${id}/m0`]).toBeUndefined();
     });
 
+    it('uses a supplied api key instead of reading the keychain', async () => {
+      const id = addLlamaServer();
+      jest.clearAllMocks();
+      const getApiKey = jest.spyOn(serverStore, 'getApiKey');
+      mockedFetchServerProps.mockResolvedValueOnce({contextLength: 8192});
+
+      await serverStore.fetchRemoteModelCaps(id, 'm', 'sk-test');
+
+      expect(getApiKey).not.toHaveBeenCalled();
+      expect(mockedFetchServerProps).toHaveBeenCalledWith(
+        'http://localhost:8080',
+        'sk-test',
+        PROPS_TIMEOUT_MS,
+        'm',
+      );
+      getApiKey.mockRestore();
+    });
+
+    it('does not resurrect caps for a server removed mid-probe', async () => {
+      const id = addLlamaServer();
+      jest.clearAllMocks();
+      mockedFetchServerProps.mockImplementationOnce(async () => {
+        serverStore.removeServer(id);
+        return {contextLength: 8192, supportsVision: true};
+      });
+
+      await serverStore.fetchRemoteModelCaps(id, 'm');
+
+      expect(serverStore.remoteCaps[`${id}/m`]).toBeUndefined();
+    });
+
+    it('does not write caps probed against a url that has since changed', async () => {
+      const id = addLlamaServer();
+      jest.clearAllMocks();
+      mockedFetchServerProps.mockImplementationOnce(async () => {
+        serverStore.updateServer(id, {url: 'http://localhost:9090'});
+        return {contextLength: 8192, supportsVision: true};
+      });
+
+      await serverStore.fetchRemoteModelCaps(id, 'm');
+
+      expect(serverStore.remoteCaps[`${id}/m`]).toBeUndefined();
+    });
+
     it('issues no request at all for a non-llama.cpp server', async () => {
       const id = serverStore.addServer({
         name: 'LM Studio',

@@ -929,7 +929,7 @@ describe('ChatScreen remote vision reactivity', () => {
     );
   });
 
-  it('keeps attach disabled for a sibling model that reports no vision', () => {
+  it('does not let the active model inherit a sibling model vision flag', () => {
     act(() => {
       runInAction(() => {
         serverStore.remoteCaps['srv-1/gemma-3-4b'] = {supportsVision: true};

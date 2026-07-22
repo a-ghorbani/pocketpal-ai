@@ -281,6 +281,7 @@ class ServerStore {
   async fetchRemoteModelCaps(
     serverId: string,
     remoteModelId: string,
+    resolvedApiKey?: string,
   ): Promise<void> {
     const server = this.servers.find(s => s.id === serverId);
     if (!server || server.serverType !== 'llama.cpp') {
@@ -290,21 +291,26 @@ class ServerStore {
     const isUnusable = (caps: RemoteModelCaps) =>
       caps.contextLength === undefined && caps.supportsVision === undefined;
 
+    // Snapshot: `server` is the live observable, so updateServer mutates it
+    // in place while the probe is in flight.
+    const probedUrl = server.url;
+    const probedType = server.serverType;
+
     const timeoutMs = Math.min(
       server.requestTimeoutMs ?? PROPS_TIMEOUT_MS,
       PROPS_TIMEOUT_MS,
     );
 
-    const apiKey = await this.getApiKey(serverId);
+    const apiKey = resolvedApiKey ?? (await this.getApiKey(serverId));
     let caps = await fetchServerProps(
-      server.url,
+      probedUrl,
       apiKey,
       timeoutMs,
       remoteModelId,
     );
 
     if (isUnusable(caps) && this.servesOnlyModel(serverId, remoteModelId)) {
-      caps = await fetchServerProps(server.url, apiKey, timeoutMs);
+      caps = await fetchServerProps(probedUrl, apiKey, timeoutMs);
     }
 
     if (isUnusable(caps)) {
@@ -312,15 +318,39 @@ class ServerStore {
     }
 
     runInAction(() => {
+      // The probe is detached, so the server may have been removed or
+      // repointed while it was in flight. Both prune this key, and both make
+      // the answer describe a backend that is no longer configured — writing
+      // now would resurrect it.
+      const current = this.servers.find(s => s.id === serverId);
+      if (
+        !current ||
+        current.url !== probedUrl ||
+        current.serverType !== probedType
+      ) {
+        return;
+      }
       const key = `${serverId}/${remoteModelId}`;
-      this.remoteCaps[key] = {...this.remoteCaps[key], ...caps};
+      const prior = this.remoteCaps[key];
+      const merged = {...prior, ...caps};
+      if (
+        prior &&
+        prior.contextLength === merged.contextLength &&
+        prior.supportsVision === merged.supportsVision
+      ) {
+        return;
+      }
+      this.remoteCaps[key] = merged;
     });
   }
 
   /**
    * True only when the server's model list is known and holds exactly this one
-   * model. The list is not persisted, so an absent one means unknown — and
-   * unknown is precisely the multi-model case after a failed model fetch.
+   * model. The list is not persisted, so an absent one means unknown, and
+   * unknown does not pass: a genuine single-model server that was offline
+   * during the post-hydration fetch is skipped here too. Losing a bare retry
+   * costs nothing but an unknown capability; taking one on a multi-model
+   * server would attribute the resident model's props to this one.
    */
   private servesOnlyModel(serverId: string, remoteModelId: string): boolean {
     const models = this.serverModels.get(serverId);

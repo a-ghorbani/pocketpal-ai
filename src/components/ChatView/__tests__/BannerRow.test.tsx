@@ -339,7 +339,7 @@ describe('BannerRow', () => {
     });
   });
 
-  it('does not treat a reported window of 0 as a full context', () => {
+  it('does not treat a legacy per-server window of 0 as a full context', () => {
     runInAction(() => {
       modelStore.activeModelId = 'remote-1';
       modelStore.models = [
@@ -370,6 +370,40 @@ describe('BannerRow', () => {
     runInAction(() => {
       modelStore.models = [];
       serverStore.servers = [];
+    });
+  });
+
+  it('does not treat a per-model window of 0 as a full context', () => {
+    runInAction(() => {
+      modelStore.activeModelId = 'remote-1';
+      modelStore.models = [
+        {id: 'remote-1', origin: ModelOrigin.REMOTE, serverId: 'srv-1'} as any,
+      ];
+      (modelStore as any).activeContextSettings = undefined;
+      serverStore.servers = [
+        {
+          id: 'srv-1',
+          name: 'llama',
+          url: 'http://localhost:8080',
+          serverType: 'llama.cpp',
+        } as any,
+      ];
+      // No writer produces this today; the gate is what keeps it that way.
+      serverStore.remoteCaps = {'remote-1': {contextLength: 0}};
+      chatSessionStore.lastCompletionResult = {
+        used: 120,
+        contextFull: false,
+        isRemote: true,
+      };
+    });
+    const {queryByTestId} = renderBanner();
+    expect(queryByTestId('context-full-banner')).toBeNull();
+    expect(queryByTestId('context-warning-banner')).toBeNull();
+
+    runInAction(() => {
+      modelStore.models = [];
+      serverStore.servers = [];
+      serverStore.remoteCaps = {};
     });
   });
 
