@@ -85,12 +85,15 @@ class ServerStore {
     this.userSelectedModels = this.userSelectedModels.filter(
       m => m.serverId !== id,
     );
-    // Drop remote reasoning entries keyed by this server's model ids.
+    // Drop per-model state keyed by this server's model ids.
     const prefix = `${id}/`;
     this.remoteReasoning = Object.fromEntries(
       Object.entries(this.remoteReasoning).filter(
         ([k]) => !k.startsWith(prefix),
       ),
+    );
+    this.remoteCaps = Object.fromEntries(
+      Object.entries(this.remoteCaps).filter(([k]) => !k.startsWith(prefix)),
     );
     // Clean up API key from keychain
     this.removeApiKey(id);
@@ -261,6 +264,68 @@ class ServerStore {
         this.isLoading = false;
       });
     }
+  }
+
+  /**
+   * Probe GET /props for one remote model and merge what it reports into
+   * remoteCaps. llama.cpp only; callers invoke it detached, and it never
+   * throws or rejects.
+   *
+   * At most two requests: the scoped one, and — only when the server is
+   * provably serving this one model — a bare retry, which is what a
+   * single-model llama-server has always answered correctly. On a multi-model
+   * server the bare form describes whichever model happens to be resident, so
+   * it is never issued there and the caps simply stay unknown.
+   *
+   * Merges field-wise: a response that resolves only one field must not blank
+   * a known other, and a probe that resolves nothing writes nothing.
+   */
+  async fetchRemoteModelCaps(
+    serverId: string,
+    remoteModelId: string,
+  ): Promise<void> {
+    const server = this.servers.find(s => s.id === serverId);
+    if (!server || server.serverType !== 'llama.cpp') {
+      return;
+    }
+
+    const isUnusable = (caps: RemoteModelCaps) =>
+      caps.contextLength === undefined && caps.supportsVision === undefined;
+
+    const apiKey = await this.getApiKey(serverId);
+    let caps = await fetchServerProps(
+      server.url,
+      apiKey,
+      server.requestTimeoutMs,
+      remoteModelId,
+    );
+
+    if (isUnusable(caps) && this.servesOnlyModel(serverId, remoteModelId)) {
+      caps = await fetchServerProps(
+        server.url,
+        apiKey,
+        server.requestTimeoutMs,
+      );
+    }
+
+    if (isUnusable(caps)) {
+      return;
+    }
+
+    runInAction(() => {
+      const key = `${serverId}/${remoteModelId}`;
+      this.remoteCaps[key] = {...this.remoteCaps[key], ...caps};
+    });
+  }
+
+  /**
+   * True only when the server's model list is known and holds exactly this one
+   * model. The list is not persisted, so an absent one means unknown — and
+   * unknown is precisely the multi-model case after a failed model fetch.
+   */
+  private servesOnlyModel(serverId: string, remoteModelId: string): boolean {
+    const models = this.serverModels.get(serverId);
+    return models?.length === 1 && models[0].id === remoteModelId;
   }
 
   async fetchAllRemoteModels(): Promise<void> {
