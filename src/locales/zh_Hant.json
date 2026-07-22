@@ -209,7 +209,8 @@
       "searchResultsTitle": "搜尋結果",
       "showResultsAccessibilityLabel": "顯示 {{query}} 的網路搜尋結果",
       "openLinkError": "無法開啟此連結。"
-    }
+    },
+    "contextFullRemote": "對話空間不足。請開始新對話。"
   },
   "common": {
     "cancel": "取消",
