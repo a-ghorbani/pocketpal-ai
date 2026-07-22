@@ -11,6 +11,7 @@ import {
 } from '../../../jest/fixtures/models';
 
 import {useChatSession} from '../useChatSession';
+import {isReadUrlAllowed} from '../../services/talents';
 
 import {
   chatSessionStore,
@@ -411,6 +412,174 @@ describe('useChatSession', () => {
     expect(capturedMessages.some(msg => msg.role === 'system')).toBe(true);
     const systemMessage = capturedMessages.find(msg => msg.role === 'system');
     expect(systemMessage.content).toBe('You are a helpful assistant.');
+  });
+
+  describe('search grounding', () => {
+    const webSearchTool = {
+      type: 'function',
+      function: {name: 'web_search', description: '', parameters: {}},
+    };
+
+    const activateSearchTools = async () => {
+      const baseSettings =
+        await chatSessionStore.getCurrentCompletionSettings();
+      (
+        chatSessionStore.getCurrentCompletionSettings as jest.Mock
+      ).mockResolvedValueOnce({...baseSettings, tools: [webSearchTool]});
+    };
+
+    const useSessionWithPal = (systemPrompt: string) => {
+      const pal = {
+        id: 'search-pal-id',
+        type: 'local' as const,
+        name: 'Search Pal',
+        systemPrompt,
+        parameters: {},
+        parameterSchema: [],
+        isSystemPromptChanged: false,
+        useAIPrompt: false,
+        source: 'local' as const,
+      };
+      palStore.pals = [pal];
+      chatSessionStore.sessions = [
+        {
+          id: 'search-session-id',
+          activePalId: pal.id,
+          title: 'Search Session',
+          date: new Date().toISOString().split('T')[0],
+          messages: [],
+          completionSettings: mockDefaultCompletionParams,
+          settingsSource: 'pal' as const,
+        },
+      ];
+      chatSessionStore.activeSessionId = 'search-session-id';
+      return pal;
+    };
+
+    const captureMessages = () => {
+      const captured: {messages: any[]} = {messages: []};
+      if (modelStore.context) {
+        modelStore.context.completion = jest
+          .fn()
+          .mockImplementation((params, _onData) => {
+            captured.messages = params.messages || [];
+            return Promise.resolve({timings: {total: 100}, usage: {}});
+          });
+      }
+      return captured;
+    };
+
+    const send = async () => {
+      const {result} = renderHook(() =>
+        useChatSession({current: null}, textMessage.author, mockAssistant),
+      );
+      await act(async () => {
+        await result.current.handleSendPress(textMessage);
+      });
+    };
+
+    // Strict templates reject a second system message ("must be at the
+    // beginning"), so grounding folds into the pal's system message.
+    it('sends exactly one system message carrying both the pal prompt and the grounding', async () => {
+      const pal = useSessionWithPal('You are a research assistant.');
+      await activateSearchTools();
+      const captured = captureMessages();
+
+      await send();
+
+      const systemMessages = captured.messages.filter(
+        msg => msg.role === 'system',
+      );
+      expect(systemMessages).toHaveLength(1);
+
+      const today = new Date().toISOString().slice(0, 10);
+      expect(systemMessages[0].content).toContain(
+        'You are a research assistant.',
+      );
+      expect(systemMessages[0].content).toContain(`Today's date is ${today}`);
+      expect(systemMessages[0].content).toContain('web_search');
+
+      // Composition happens at assembly time only.
+      expect(pal.systemPrompt).toBe('You are a research assistant.');
+    });
+
+    it('sends the grounding as the sole system message when the pal has no system prompt', async () => {
+      useSessionWithPal('');
+      await activateSearchTools();
+      const captured = captureMessages();
+
+      await send();
+
+      const systemMessages = captured.messages.filter(
+        msg => msg.role === 'system',
+      );
+      expect(systemMessages).toHaveLength(1);
+
+      const today = new Date().toISOString().slice(0, 10);
+      expect(systemMessages[0].content).toContain(`Today's date is ${today}`);
+      expect(systemMessages[0].content).toContain('web_search');
+    });
+
+    it('leaves the pal system message alone when no search tools are active', async () => {
+      useSessionWithPal('You are a research assistant.');
+      const captured = captureMessages();
+
+      await send();
+
+      const systemMessages = captured.messages.filter(
+        msg => msg.role === 'system',
+      );
+      expect(systemMessages).toHaveLength(1);
+      expect(systemMessages[0].content).toBe('You are a research assistant.');
+    });
+
+    it('seeds the read_url allowlist from URLs the user wrote', async () => {
+      useSessionWithPal('');
+      await activateSearchTools();
+      captureMessages();
+
+      const {result} = renderHook(() =>
+        useChatSession({current: null}, textMessage.author, mockAssistant),
+      );
+      await act(async () => {
+        await result.current.handleSendPress({
+          ...textMessage,
+          text: 'summarize https://user.example.com/doc please',
+        });
+      });
+
+      expect(isReadUrlAllowed('https://user.example.com/doc')).toBe(true);
+      expect(isReadUrlAllowed('https://other.example.com/x')).toBe(false);
+    });
+  });
+
+  it('omits the search grounding line when no search tools are active', async () => {
+    let capturedMessages: any[] = [];
+    if (modelStore.context) {
+      modelStore.context.completion = jest
+        .fn()
+        .mockImplementation((params, _onData) => {
+          capturedMessages = params.messages || [];
+          return Promise.resolve({timings: {total: 100}, usage: {}});
+        });
+    }
+
+    const {result} = renderHook(() =>
+      useChatSession({current: null}, textMessage.author, mockAssistant),
+    );
+
+    await act(async () => {
+      await result.current.handleSendPress(textMessage);
+    });
+
+    expect(
+      capturedMessages.some(
+        msg =>
+          msg.role === 'system' &&
+          typeof msg.content === 'string' &&
+          msg.content.includes("Today's date is"),
+      ),
+    ).toBe(false);
   });
 
   describe('TTS streaming wiring', () => {
