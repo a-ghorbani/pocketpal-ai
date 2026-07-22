@@ -29,6 +29,7 @@ import {serverStore} from '../ServerStore';
 const mockedFetchModels = openaiModule.fetchModels as jest.Mock;
 const mockedFetchServerProps = openaiModule.fetchServerProps as jest.Mock;
 const mockedTestConnection = openaiModule.testConnection as jest.Mock;
+const {PROPS_TIMEOUT_MS} = openaiModule;
 
 describe('ServerStore', () => {
   beforeEach(() => {
@@ -830,18 +831,33 @@ describe('ServerStore', () => {
 
       await serverStore.fetchRemoteModelCaps(id, 'gemma-4-e2b');
 
-      // The server's own timeout is forwarded raw; the API layer owns the floor.
+      // A server timeout longer than the probe bound is clamped down to it.
       expect(mockedFetchServerProps).toHaveBeenCalledTimes(1);
       expect(mockedFetchServerProps).toHaveBeenCalledWith(
         'http://localhost:8080',
         undefined,
-        20000,
+        PROPS_TIMEOUT_MS,
         'gemma-4-e2b',
       );
       expect(serverStore.remoteCaps[`${id}/gemma-4-e2b`]).toEqual({
         contextLength: 8192,
         supportsVision: true,
       });
+    });
+
+    it('honours a server timeout shorter than the probe bound', async () => {
+      const id = addLlamaServer({requestTimeoutMs: 1500});
+      jest.clearAllMocks();
+      mockedFetchServerProps.mockResolvedValueOnce({contextLength: 8192});
+
+      await serverStore.fetchRemoteModelCaps(id, 'm');
+
+      expect(mockedFetchServerProps).toHaveBeenCalledWith(
+        'http://localhost:8080',
+        undefined,
+        1500,
+        'm',
+      );
     });
 
     it('keys by the raw model id even when it contains a slash', async () => {
@@ -942,7 +958,7 @@ describe('ServerStore', () => {
       expect(mockedFetchServerProps).toHaveBeenLastCalledWith(
         'http://localhost:8080',
         undefined,
-        undefined,
+        PROPS_TIMEOUT_MS,
       );
       expect(serverStore.remoteCaps[`${id}/m`]).toEqual({
         contextLength: 4096,

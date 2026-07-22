@@ -367,9 +367,11 @@ export async function testConnection(
 
 const DETECT_TIMEOUT_MS = 5000;
 
-// Default bound for the detached /props capability probe, applied inside
-// fetchServerProps whenever the server sets no usable requestTimeoutMs. A
-// fire-and-forget probe must not inherit the 30 s connection default.
+// Bound for the detached /props capability probe: the fallback applied inside
+// fetchServerProps whenever the server sets no usable requestTimeoutMs, and
+// the ceiling ServerStore clamps a server-set value to. A fire-and-forget
+// probe must neither inherit the 30 s connection default nor an arbitrarily
+// large user-set timeout.
 export const PROPS_TIMEOUT_MS = 5000;
 
 /**

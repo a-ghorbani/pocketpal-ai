@@ -8,6 +8,7 @@ import {
   fetchModels,
   fetchServerProps,
   testConnection,
+  PROPS_TIMEOUT_MS,
   RemoteModelInfo,
 } from '../api/openai';
 import {RemoteModelCaps, ServerConfig} from '../utils/types';
@@ -249,6 +250,10 @@ class ServerStore {
    *
    * Merges field-wise: a response that resolves only one field must not blank
    * a known other, and a probe that resolves nothing writes nothing.
+   *
+   * A shorter server timeout is honoured, a longer one is not:
+   * `requestTimeoutMs` is a free numeric input, and detached work must stay
+   * bounded by `PROPS_TIMEOUT_MS` per request.
    */
   async fetchRemoteModelCaps(
     serverId: string,
@@ -262,20 +267,21 @@ class ServerStore {
     const isUnusable = (caps: RemoteModelCaps) =>
       caps.contextLength === undefined && caps.supportsVision === undefined;
 
+    const timeoutMs = Math.min(
+      server.requestTimeoutMs ?? PROPS_TIMEOUT_MS,
+      PROPS_TIMEOUT_MS,
+    );
+
     const apiKey = await this.getApiKey(serverId);
     let caps = await fetchServerProps(
       server.url,
       apiKey,
-      server.requestTimeoutMs,
+      timeoutMs,
       remoteModelId,
     );
 
     if (isUnusable(caps) && this.servesOnlyModel(serverId, remoteModelId)) {
-      caps = await fetchServerProps(
-        server.url,
-        apiKey,
-        server.requestTimeoutMs,
-      );
+      caps = await fetchServerProps(server.url, apiKey, timeoutMs);
     }
 
     if (isUnusable(caps)) {
