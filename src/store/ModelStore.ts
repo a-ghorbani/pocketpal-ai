@@ -900,6 +900,7 @@ class ModelStore {
     ) {
       // Coming to foreground - check if we need to reload auto-released model
       await this.checkAndReloadAutoReleasedModel();
+      this.reprobeRemoteCapsIfUnknown();
     } else if (this.appState === 'active' && nextAppState === 'inactive') {
       // active → inactive: NO action (per requirements)
       console.log('Active → Inactive: No auto-release action');
@@ -933,6 +934,32 @@ class ModelStore {
     runInAction(() => {
       this.appState = nextAppState;
     });
+  };
+
+  /**
+   * Remote models are exempt from auto-release, so a session survives
+   * backgrounding — but the capability probe behind it may not have: iOS can
+   * tear the request down, and the first probe is the request that raises the
+   * local-network prompt, so a grant always arrives after it already failed.
+   * Without this, caps stay unknown for the rest of the session and the only
+   * recovery is re-selecting the model by hand.
+   *
+   * Fires only while the active remote model has no caps entry, so a populated
+   * one is never re-fetched. Detached, and `ServerStore` still owns the write.
+   */
+  private reprobeRemoteCapsIfUnknown = () => {
+    const model = this.activeModel;
+    if (
+      model?.origin !== ModelOrigin.REMOTE ||
+      !model.serverId ||
+      !model.remoteModelId ||
+      serverStore.remoteCaps[model.id]
+    ) {
+      return;
+    }
+    serverStore
+      .fetchRemoteModelCaps(model.serverId, model.remoteModelId)
+      .catch(() => {});
   };
 
   reinitializeContext = async () => {

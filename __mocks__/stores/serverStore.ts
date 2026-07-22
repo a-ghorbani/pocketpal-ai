@@ -21,6 +21,7 @@ class MockServerStore {
   getApiKey: jest.Mock;
   removeApiKey: jest.Mock;
   fetchModelsForServer: jest.Mock;
+  fetchRemoteModelCaps: jest.Mock;
   fetchAllRemoteModels: jest.Mock;
   testServerConnection: jest.Mock;
   acknowledgePrivacyNotice: jest.Mock;
@@ -41,6 +42,7 @@ class MockServerStore {
       getApiKey: false,
       removeApiKey: false,
       fetchModelsForServer: false,
+      fetchRemoteModelCaps: false,
       fetchAllRemoteModels: false,
       testServerConnection: false,
       acknowledgePrivacyNotice: false,
@@ -59,6 +61,7 @@ class MockServerStore {
     this.getApiKey = jest.fn().mockResolvedValue(undefined);
     this.removeApiKey = jest.fn().mockResolvedValue(undefined);
     this.fetchModelsForServer = jest.fn().mockResolvedValue(undefined);
+    this.fetchRemoteModelCaps = jest.fn().mockResolvedValue(undefined);
     this.fetchAllRemoteModels = jest.fn().mockResolvedValue(undefined);
     this.testServerConnection = jest
       .fn()

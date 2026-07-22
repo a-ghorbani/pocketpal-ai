@@ -4277,6 +4277,81 @@ describe('ModelStore', () => {
     });
   });
 
+  describe('foreground capability re-probe', () => {
+    let probe: jest.SpyInstance;
+
+    beforeEach(() => {
+      runInAction(() => {
+        modelStore.context = undefined;
+        modelStore.appState = 'background';
+        modelStore.activeModelId = 'srv-1/llama-7b';
+        modelStore.models = [];
+        serverStore.servers = [
+          {id: 'srv-1', name: 'llama', url: 'http://localhost:8080'},
+        ];
+        serverStore.serverModels.set('srv-1', [
+          {id: 'llama-7b', object: 'model', owned_by: 'system'},
+        ]);
+        serverStore.userSelectedModels = [
+          {serverId: 'srv-1', remoteModelId: 'llama-7b'},
+        ];
+        serverStore.remoteCaps = {};
+      });
+      probe = jest
+        .spyOn(serverStore, 'fetchRemoteModelCaps')
+        .mockResolvedValue(undefined);
+    });
+
+    afterEach(() => {
+      probe.mockRestore();
+      runInAction(() => {
+        modelStore.activeModelId = undefined;
+        serverStore.servers = [];
+        serverStore.serverModels.clear();
+        serverStore.userSelectedModels = [];
+        serverStore.remoteCaps = {};
+      });
+    });
+
+    it('probes once for an active remote model with no capabilities', async () => {
+      await modelStore.handleAppStateChange('active');
+
+      expect(probe).toHaveBeenCalledTimes(1);
+      expect(probe).toHaveBeenCalledWith('srv-1', 'llama-7b');
+    });
+
+    it('issues no probe when capabilities are already known', async () => {
+      runInAction(() => {
+        serverStore.remoteCaps['srv-1/llama-7b'] = {contextLength: 8192};
+      });
+
+      await modelStore.handleAppStateChange('active');
+
+      expect(probe).not.toHaveBeenCalled();
+    });
+
+    it('issues no probe for an active local model', async () => {
+      const model = {...presetModelFixture, isDownloaded: true};
+      runInAction(() => {
+        modelStore.models = [model];
+        modelStore.activeModelId = model.id;
+      });
+
+      await modelStore.handleAppStateChange('active');
+
+      expect(probe).not.toHaveBeenCalled();
+    });
+
+    it('survives a re-probe that rejects', async () => {
+      probe.mockRejectedValue(new Error('boom'));
+
+      await expect(
+        modelStore.handleAppStateChange('active'),
+      ).resolves.toBeUndefined();
+      await new Promise(setImmediate);
+    });
+  });
+
   describe('fetchAndPersistGGUFMetadata error handling', () => {
     const {loadLlamaModelInfo} = require('llama.rn');
 
