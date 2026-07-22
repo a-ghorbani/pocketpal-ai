@@ -317,7 +317,7 @@
         "sortRelevance": "Relevância",
         "sortDownloads": "Descargas",
         "sortRecent": "Atualizados Recentemente",
-        "sortLikes": "Mais Curtidos"
+        "sortLikes": "Com Mais Gostos"
       }
     },
     "hubRun": {
@@ -380,12 +380,12 @@
         "editButton": "Editar",
         "dialogTitle": "Editar Modelo de Chat",
         "note1": "Nota: Alterar o modelo pode mudar o BOS, EOS e o prompt de sistema.",
-        "note2": "Usa Nunjucks. Deixe vazio para usar o modelo do próprio model.",
+        "note2": "Usa Nunjucks. Deixe vazio para usar o modelo de chat do próprio modelo.",
         "placeholder": "Insira o seu modelo de chat aqui...",
         "closeButton": "Fechar"
       },
       "stopWords": {
-        "label": "PALAVRAS DE PARADA",
+        "label": "PALAVRAS DE PARAGEM",
         "placeholder": "Adicionar nova palavra de paragem"
       },
       "tokenSettings": {
@@ -427,7 +427,7 @@
     "top_k": "Controle a criatividade a limitar as escolhas de palavras às K opções mais prováveis. Valores menores fazem as respostas mais focadas",
     "top_p": "Equilibre criatividade e coerência. Valores mais altos (próximos de 1.0) permitem respostas mais criativas, mas potencialmente menos focadas",
     "min_p": "A probabilidade mínima para um token ser considerado. Filtra palavras improváveis para reduzir respostas sem sentido ou fora de contexto",
-    "temperature": "Controlo a criatividade versus a previsibilidade. Valores mais altos fazem as respostas mais criativas, mas menos focadas",
+    "temperature": "Controle a criatividade versus a previsibilidade. Valores mais altos tornam as respostas mais criativas, mas menos focadas",
     "penalty_last_n": "Até quão longe verificar repetição. Valores maiores ajudam a evitar repetição de longo prazo",
     "penalty_repeat": "Desencoraja a repetição de palavras. Valores mais altos fazem as respostas usarem uma linguagem mais diversa",
     "penalty_freq": "Penaliza palavras usadas em excesso. Valores mais altos incentivam um vocabulário mais amplo",
@@ -455,11 +455,11 @@
     "githubButton": "Dar uma estrela no GitHub",
     "orText": "ou",
     "orBy": "ou por",
-    "sponsorButton": "Fazer-se um Patrocinador",
+    "sponsorButton": "Tornar-se Patrocinador",
     "versionCopiedTitle": "Versão copiada",
     "versionCopiedDescription": "As informações de versão foram copiadas para a área de transferência",
     "tour": "Tour",
-    "tourDescription": "Reveja as ecrãs de boas-vindas para ver o que o PocketPal AI oferece.",
+    "tourDescription": "Reveja os ecrãs de boas-vindas para ver o que o PocketPal AI oferece.",
     "showIntroButton": "Mostrar introdução novamente",
     "privacyPolicy": "Política de Privacidade",
     "termsOfService": "Termos de Serviço"
@@ -504,7 +504,7 @@
   },
   "components": {
     "attachmentButton": {
-      "attachmentButtonAccessibilityLabel": "Enviar média"
+      "attachmentButtonAccessibilityLabel": "Enviar multimédia"
     },
     "bubble": {
       "msPerToken": "{{value}}ms/token",
@@ -1114,7 +1114,7 @@
     "cannotSendWithoutModel": "Carregue um modelo primeiro",
     "toolCompatWarning": "Este modelo pode não suportar chamadas de ferramentas. Os resultados podem ser inconsistentes.",
     "softCapWarning": "Inicie um novo chat para melhor desempenho.",
-    "contextWarning": "Esta conversa está a ficars longa e pode ficar sem espaço em breve.",
+    "contextWarning": "Esta conversa está a ficar longa e pode ficar sem espaço em breve.",
     "contextRemoteHedged": "Esta resposta pode ter sido cortada. Tente enviar novamente ou encurtar a requisição.",
     "contextFull": "A conversa ficou sem espaço. Inicie um novo chat ou aumente o tamanho do contexto.",
     "contextFullEscalated": "Ainda sem espaço. Inicie um novo chat ou aumente o tamanho do contexto para continuar.",
@@ -1326,7 +1326,7 @@
       "ar": "Árabe",
       "bg": "Búlgaro",
       "hr": "Croata",
-      "cs": "Tcheco",
+      "cs": "Checo",
       "da": "Dinamarquês",
       "nl": "Holandês",
       "en": "Inglês",
@@ -1343,7 +1343,7 @@
       "ko": "Coreano",
       "lv": "Letão",
       "lt": "Lituano",
-      "pl": "Polonês",
+      "pl": "Polaco",
       "pt": "Português",
       "ro": "Romeno",
       "ru": "Russo",
@@ -1388,8 +1388,8 @@
   },
   "onboarding": {
     "back": "Voltar",
-    "skip": "Pular",
-    "skipForNow": "Pular por agora",
+    "skip": "Ignorar",
+    "skipForNow": "Ignorar por agora",
     "splash": {
       "brand": "PocketPal"
     },
@@ -1465,7 +1465,7 @@
           "body": "Conheça o Codie — o seu programador-parceiro local. Lê código, escreve código, explica partes complicadas sem nunca sair do seu telemóvel."
         },
         "sage": {
-          "body": "Sage é utente, curioso e guia-o pelas ideias passo a passo. Um parceiro de estudos que carrega no bolso."
+          "body": "Sage é paciente, curioso e guia-o pelas ideias passo a passo. Um parceiro de estudos que carrega no bolso."
         },
         "echo": {
           "body": "Echo é um companheiro de interpretação versátil — mantém a personagem, pinta cenas, segue para onde a sua história o levar."

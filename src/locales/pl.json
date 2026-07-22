@@ -403,7 +403,7 @@
     "seed": "Ustaw wartość początkową generatora liczb losowych. Przydatne w celu uzyskania powtarzalnych wyników",
     "xtc_probability": "Ustaw prawdopodobieństwo usunięcia tokenu za pomocą samplera XTC. Wartość 0 oznacza wyłączenie tej funkcji",
     "xtc_threshold": "Ustaw minimalny próg prawdopodobieństwa dla tokenów, które mają zostać usunięte za pomocą modułu XTC. (Wartość > 0,5 wyłącza moduł XTC)",
-    "typical_p": "Włącz próbkowanie typowe dla danego regionu przy parametrze p. Wartość 1,0 oznacza wyłączenie tej funkcji",
+    "typical_p": "Włącz lokalnie typowe próbkowanie (locally typical sampling) z parametrem p. Wartość 1,0 oznacza wyłączenie tej funkcji",
     "dry_multiplier": "Siła działania zasady DRY (Nie Powtarzaj Się). Wyższe wartości zdecydowanie ograniczają powtórzenia",
     "dry_base": "Podstawowa kara za powtórzenia w trybie DRY. Wyższe wartości skuteczniej zapobiegają powtórzeniom",
     "dry_allowed_length": "Ile razy mogą powtórzyć się te same słowa, zanim zadziała mechanizm karny DRY",
@@ -415,14 +415,14 @@
     "stop": "Określ konkretne frazy, które spowodują zatrzymanie generowania tekstu",
     "n_predict": "Maksymalna liczba tokenów do wygenerowania. Ustaw opcję „Nieograniczona”, aby zrezygnować z ograniczeń, lub „Niestandardowa”, aby podać konkretną wartość.",
     "n_probs": "Pokaż oceny prawdopodobieństwa dla alternatywnych słów.",
-    "top_k": "Ogranicz kreatywność, wybierając spośród K najbardziej prawdopodobnych opcji. Niższe wartości sprawiają, że odpowiedzi są bardziej konkretne",
+    "top_k": "Kontroluj kreatywność, ograniczając wybór słów do K najbardziej prawdopodobnych opcji. Niższe wartości sprawiają, że odpowiedzi są bardziej konkretne",
     "top_p": "Znajdź równowagę między kreatywnością a spójnością. Wyższe wartości (bliskie 1,0) pozwalają na uzyskanie bardziej kreatywnych, ale potencjalnie mniej konkretnych odpowiedzi",
     "min_p": "Minimalne prawdopodobieństwo, przy którym token zostanie uwzględniony. Odfiltrowanie mało prawdopodobnych słów w celu ograniczenia odpowiedzi bezsensownych lub niepasujących do kontekstu",
     "temperature": "Kreatywność a przewidywalność. Wyższe wartości sprawiają, że odpowiedzi są bardziej kreatywne, ale mniej konkretne",
     "penalty_last_n": "Jak daleko wstecz należy sprawdzać pod kątem powtórzeń. Wyższe wartości pomagają zapobiegać powtórzeniom w dłuższej perspektywie",
     "penalty_repeat": "Zniechęcaj do powtarzania słów. Wyższe wartości sprawiają, że odpowiedzi zawierają bardziej zróżnicowane sformułowania",
     "penalty_freq": "Karaj za nadużywanie tych samych słów. Wyższe wartości zachęcają do korzystania z bogatszego słownictwa",
-    "penalty_present": "Ogranicz powtarzanie się motywów i pomysłów. Wyższe oceny sprzyjają większej różnorodności treści",
+    "penalty_present": "Ogranicz powtarzanie się motywów i pomysłów. Wyższe wartości sprzyjają większej różnorodności treści",
     "mirostat": "Włącz zaawansowaną kontrolę nad kreatywnością odpowiedzi. Ustaw wartość 1 lub 2 (płynniejsza), aby uzyskać inteligentne dostosowywanie losowości i spójności w czasie rzeczywistym.",
     "mirostat_tau": "Ustaw docelowy poziom kreatywności dla Mirostat. Wyższe wartości pozwalają na uzyskanie bardziej zróżnicowanych i pomysłowych odpowiedzi, natomiast niższe wartości zapewniają bardziej ukierunkowane wyniki.",
     "mirostat_eta": "Jak szybko Mirostat dostosowuje poziom kreatywności. Wyższe wartości oznaczają szybsze dostosowania"
@@ -552,7 +552,7 @@
       "includeModelInfoDescription": "Podaj nazwę modelu i identyfikatora, aby pomóc nam zbadać sprawę",
       "noActiveModelNote": "Żaden model nie jest obecnie aktywny",
       "privacyNote": "Nie przesyłamy treści wiadomości ani szczegółów rozmów. Prosimy o opisanie konkretnego problemu, z którym się Państwo spotkali.",
-      "categoryLabel": "Zgłoś Kategorię"
+      "categoryLabel": "Kategoria zgłoszenia"
     },
     "modelErrorReportSheet": {
       "title": "Zgłoś Problem z Ładowaniem Modelu",
@@ -583,7 +583,7 @@
     },
     "chatGenerationSettingsSheet": {
       "invalidValues": "Nieprawidłowe Wartości",
-      "invalidNumericValuesMessage": "Musi to być prawidłowy numer",
+      "invalidNumericValuesMessage": "Musi to być prawidłowa liczba",
       "pleaseCorrect": "Proszę poprawić poniższe fragmenty:",
       "ok": "OK",
       "saveChanges": "Zapisz Zmiany",
@@ -602,7 +602,7 @@
     "palGenerationSettingsSheet": {
       "title": "Ustawienia Generowania - {{palName}}",
       "invalidValues": "Nieprawidłowe Wartości",
-      "invalidNumericValuesMessage": "Musi to być prawidłowy numer",
+      "invalidNumericValuesMessage": "Musi to być prawidłowa liczba",
       "pleaseCorrect": "Proszę poprawić następujące elementy:",
       "ok": "OK",
       "error": "Błąd",
@@ -707,7 +707,7 @@
       "reasoningSection": "Rozumowanie",
       "isReasoningModel": "Model rozumowania",
       "isReasoningModelHelp": "Pokaż element sterujący rozumowania dla tego modelu, nawet jeśli nie został on wykryty automatycznie.",
-      "supportsEffort": "Obsługuje stopniowane obciążenie",
+      "supportsEffort": "Obsługuje stopniowany wysiłek rozumowania",
       "effortValues": "Poziomy obciążenia obsługiwane przez ten model",
       "effortLevels": {
         "minimal": "Minimalny",
@@ -837,7 +837,7 @@
       "visionModelPlaceholder": "Wybierz model wizji",
       "requiredModelsSection": "Wymagane Modele",
       "captureInterval": "Częstotliwość Rejestrowania",
-      "captureIntervalHelper": "Czas między automatycznymi pomiarami w milisekundach",
+      "captureIntervalHelper": "Czas między automatycznymi zdjęciami w milisekundach",
       "create": "Utwórz"
     },
     "sendButton": {
@@ -879,7 +879,7 @@
         "benchmark": "Benchmark",
         "settings": "Ustawienia",
         "appInfo": "Informacje o Aplikacji",
-        "testCompletion": "Zakończenie Testu"
+        "testCompletion": "Test generowania"
       },
       "deleteChatTitle": "Usuń Czat",
       "deleteChatMessage": "Czy na pewno chcesz usunąć tę rozmowę?",
@@ -1043,7 +1043,7 @@
     "world": "Świat"
   },
   "validation": {
-    "nameRequired": "Imię jest wymagane",
+    "nameRequired": "Nazwa jest wymagana",
     "systemPromptRequired": "Prompt systemowy jest wymagany",
     "worldRequired": "Świat jest wymagany",
     "locationRequired": "Lokalizacja jest wymagana",
@@ -1272,7 +1272,7 @@
       "fr": "Francuski",
       "de": "Niemiecki",
       "el": "Grecki",
-      "hi": "Hinduski",
+      "hi": "Hindi",
       "hu": "Węgierski",
       "id": "Indonezyjski",
       "it": "Włoski",
@@ -1450,7 +1450,7 @@
     "benchmark": "Benchmark",
     "settings": "Ustawienia",
     "appInfo": "Informacje o Aplikacji",
-    "testCompletion": "Zakończenie Testu"
+    "testCompletion": "Test generowania"
   },
   "chat": {
     "conversationReset": "Rozmowa zresetowana!",
