@@ -46,6 +46,8 @@ const ALL_LANGUAGES: AvailableLanguage[] = [
   'ja',
   'ko',
   'ms',
+  'pl',
+  'pt',
   'pt_BR',
   'ru',
   'uk',
@@ -85,6 +87,8 @@ describe('l10n object', () => {
     'ja',
     'ko',
     'ms',
+    'pl',
+    'pt',
     'pt_BR',
     'ru',
     'uk',
@@ -106,6 +110,8 @@ describe('l10n object', () => {
     'ja',
     'ko',
     'ms',
+    'pl',
+    'pt',
     'pt_BR',
     'ru',
     'uk',
@@ -156,6 +162,8 @@ describe('l10n object', () => {
     expect('ja' in l10n).toBe(true);
     expect('ko' in l10n).toBe(true);
     expect('ms' in l10n).toBe(true);
+    expect('pl' in l10n).toBe(true);
+    expect('pt' in l10n).toBe(true);
     expect('pt_BR' in l10n).toBe(true);
     expect('ru' in l10n).toBe(true);
     expect('uk' in l10n).toBe(true);
@@ -221,6 +229,8 @@ describe('exports', () => {
     expect(languageDisplayNames.ja).toBe('\u65E5\u672C\u8A9E (JA)');
     expect(languageDisplayNames.ko).toBe('\uD55C\uAD6D\uC5B4 (KO)');
     expect(languageDisplayNames.ms).toBe('Melayu (MS)');
+    expect(languageDisplayNames.pl).toBe('Polski (PL)');
+    expect(languageDisplayNames.pt).toBe('Português (PT)');
     expect(languageDisplayNames.pt_BR).toBe('Português (PT_BR)');
     expect(languageDisplayNames.ru).toBe(
       '\u0420\u0443\u0441\u0441\u043A\u0438\u0439 (RU)',
@@ -231,6 +241,15 @@ describe('exports', () => {
     expect(languageDisplayNames.zh).toBe('\u4E2D\u6587 (ZH)');
     expect(languageDisplayNames.zh_Hant).toBe(
       '\u7E41\u9AD4\u4E2D\u6587 (ZH_HANT)',
+    );
+  });
+
+  it('resolves pt and pt_BR to different translations', () => {
+    // European vs Brazilian Portuguese are separate locales, and their
+    // Settings header strings happen to be identical — so a wiring mistake
+    // that pointed both at one JSON would not show up on screen.
+    expect(l10n.pt.settings.useMmapDescription).not.toBe(
+      l10n.pt_BR.settings.useMmapDescription,
     );
   });
 
@@ -267,6 +286,8 @@ describe('lazy loading', () => {
     'ja',
     'ko',
     'ms',
+    'pl',
+    'pt',
     'pt_BR',
     'ru',
     'uk',
@@ -326,6 +347,8 @@ describe('type safety', () => {
       'ja',
       'ko',
       'ms',
+      'pl',
+      'pt',
       'pt_BR',
       'ru',
       'uk',

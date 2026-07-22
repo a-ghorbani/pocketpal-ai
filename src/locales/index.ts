@@ -16,6 +16,8 @@ const languageRegistry = {
   ja: {displayName: '日本語 (JA)'},
   ko: {displayName: '한국어 (KO)'},
   ms: {displayName: 'Melayu (MS)'},
+  pl: {displayName: 'Polski (PL)'},
+  pt: {displayName: 'Português (PT)'},
   pt_BR: {displayName: 'Português (PT_BR)'},
   ru: {displayName: 'Русский (RU)'},
   uk: {displayName: 'Українська (UK)'},
@@ -36,6 +38,8 @@ export const languageDisplayNames: Record<AvailableLanguage, string> = {
   ja: languageRegistry.ja.displayName,
   ko: languageRegistry.ko.displayName,
   ms: languageRegistry.ms.displayName,
+  pl: languageRegistry.pl.displayName,
+  pt: languageRegistry.pt.displayName,
   pt_BR: languageRegistry.pt_BR.displayName,
   ru: languageRegistry.ru.displayName,
   uk: languageRegistry.uk.displayName,
@@ -63,6 +67,10 @@ function requireLanguageData(lang: AvailableLanguage): object | null {
       return require('./ko.json');
     case 'ms':
       return require('./ms.json');
+    case 'pl':
+      return require('./pl.json');
+    case 'pt':
+      return require('./pt.json');
     case 'pt_BR':
       return require('./pt_BR.json');
     case 'ru':
@@ -120,6 +128,12 @@ export const l10n = {
   get ms(): Translations {
     return getTranslations('ms');
   },
+  get pl(): Translations {
+    return getTranslations('pl');
+  },
+  get pt(): Translations {
+    return getTranslations('pt');
+  },
   get pt_BR(): Translations {
     return getTranslations('pt_BR');
   },
@@ -165,6 +179,8 @@ export const initLocale = (locale?: AvailableLanguage) => {
     ja: require('dayjs/locale/ja'),
     ko: require('dayjs/locale/ko'),
     ms: require('dayjs/locale/ms'),
+    pl: require('dayjs/locale/pl'),
+    pt: require('dayjs/locale/pt'),
     pt_BR: require('dayjs/locale/pt-br'),
     ru: require('dayjs/locale/ru'),
     uk: require('dayjs/locale/uk'),
