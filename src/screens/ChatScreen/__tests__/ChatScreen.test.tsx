@@ -858,3 +858,88 @@ describe('ChatScreen on/off toggle → reasoning carrier (remote)', () => {
     });
   });
 });
+
+// The image-attach affordance must reflect a capability that lands after the
+// screen is already on screen: the probe is detached and a lazily-started
+// server can take seconds to answer. This only holds while the flag is derived
+// in the render body — resolving it in an effect or a promise body would leave
+// the button stuck disabled, which is the whole defect.
+describe('ChatScreen remote vision reactivity', () => {
+  const modelId = 'srv-1/gemma-4-e2b';
+  let savedModels: any[];
+
+  beforeEach(() => {
+    jest.clearAllMocks();
+    savedModels = modelStore.models;
+    modelStore.models = [
+      ...savedModels,
+      {
+        ...savedModels[0],
+        id: modelId,
+        origin: ModelOrigin.REMOTE,
+        serverId: 'srv-1',
+        remoteModelId: 'gemma-4-e2b',
+      },
+    ];
+    runInAction(() => {
+      modelStore.context = undefined;
+      modelStore.activeModelId = modelId;
+      serverStore.servers = [
+        {
+          id: 'srv-1',
+          name: 'llama',
+          url: 'http://localhost:8080',
+          serverType: 'llama.cpp',
+        } as any,
+      ];
+      serverStore.remoteCaps = {};
+    });
+    modelStore.engine = {
+      completion: jest.fn(),
+      stopCompletion: jest.fn(),
+    } as any;
+  });
+
+  afterEach(() => {
+    modelStore.models = savedModels;
+    runInAction(() => {
+      modelStore.activeModelId = undefined;
+      serverStore.servers = [];
+      serverStore.remoteCaps = {};
+    });
+  });
+
+  it('enables attach when capabilities land, with no further user action', () => {
+    const {getByLabelText} = render(<ChatScreen />, {withNavigation: true});
+
+    // Unknown capabilities fail closed.
+    expect(getByLabelText('Add image').props.accessibilityState.disabled).toBe(
+      true,
+    );
+
+    act(() => {
+      runInAction(() => {
+        serverStore.remoteCaps[modelId] = {supportsVision: true};
+      });
+    });
+
+    // No navigation, no press, no prop change in between.
+    expect(getByLabelText('Add image').props.accessibilityState.disabled).toBe(
+      false,
+    );
+  });
+
+  it('keeps attach disabled for a sibling model that reports no vision', () => {
+    act(() => {
+      runInAction(() => {
+        serverStore.remoteCaps['srv-1/gemma-3-4b'] = {supportsVision: true};
+      });
+    });
+
+    const {getByLabelText} = render(<ChatScreen />, {withNavigation: true});
+
+    expect(getByLabelText('Add image').props.accessibilityState.disabled).toBe(
+      true,
+    );
+  });
+});
