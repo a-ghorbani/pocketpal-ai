@@ -7,7 +7,7 @@ import {
   ReasoningIntent,
   ToolCall,
 } from '../utils/completionTypes';
-import {ServerConfig} from '../utils/types';
+import {RemoteModelCaps} from '../utils/types';
 
 /** Raw API response shape from OpenAI /v1/models */
 export interface RemoteModelInfo {
@@ -278,36 +278,35 @@ export async function fetchModels(
 }
 
 /**
- * Server capabilities discovered from llama.cpp GET /props. Coupled to
- * ServerConfig so a field rename breaks compile instead of silently
- * no-opping the ServerStore write.
- */
-export type ServerProps = Pick<
-  ServerConfig,
-  'contextLength' | 'supportsVision'
->;
-
-/**
- * Fetch server capabilities from a llama.cpp server's GET /props endpoint.
+ * Fetch model capabilities from a llama.cpp server's GET /props endpoint.
  * Pure: parses the response into caps and never throws — a timeout, non-2xx,
  * or malformed body resolves to `{}` so the caller's models path and
  * connection are never affected. `/props` is llama.cpp-specific; callers gate
  * on serverType before invoking.
  *
- * Key names verified against a live llama.cpp build (b9910): context window is
- * `default_generation_settings.n_ctx` (top-level `n_ctx` is an older-build
- * fallback); vision is `modalities.vision`.
+ * `modelId` scopes the request (`?model=<id>`). A multi-model router answers
+ * the bare form with a placeholder (`model_path: 'none'`, `n_ctx: 0`,
+ * `modalities` absent) that describes no model, so a field is only ever
+ * returned when the body describes an actually loaded model. Absent field =
+ * unknown; the caller merges field-wise and never blanks a known value.
+ *
+ * Key names verified against live llama.cpp builds (b9910, b9976): context
+ * window is `default_generation_settings.n_ctx` (top-level `n_ctx` is an
+ * older-build fallback); vision is `modalities.vision`.
  */
 export async function fetchServerProps(
   serverUrl: string,
   apiKey?: string,
   timeoutMs?: number,
-): Promise<ServerProps> {
-  const url = `${normalizeUrl(serverUrl)}/props`;
+  modelId?: string,
+): Promise<RemoteModelCaps> {
+  const url =
+    `${normalizeUrl(serverUrl)}/props` +
+    (modelId ? `?model=${encodeURIComponent(modelId)}` : '');
   const controller = new AbortController();
   const timeout = setTimeout(
     () => controller.abort(),
-    resolveTimeout(timeoutMs, CONNECTION_TIMEOUT_MS),
+    resolveTimeout(timeoutMs, PROPS_TIMEOUT_MS),
   );
 
   try {
@@ -320,18 +319,28 @@ export async function fetchServerProps(
       return {};
     }
     const data = await response.json();
-    const contextLength: unknown =
+    const caps: RemoteModelCaps = {};
+
+    const nCtx: unknown =
       data?.default_generation_settings?.n_ctx ?? data?.n_ctx;
-    // supportsVision is always defined (true or false) on a 2xx probe so a
-    // model swap that drops vision overwrites a stale true; a failed probe
-    // returns {} below and leaves caps untouched.
-    const props: ServerProps = {
-      supportsVision: data?.modalities?.vision === true,
-    };
-    if (typeof contextLength === 'number') {
-      props.contextLength = contextLength;
+    if (typeof nCtx === 'number' && Number.isFinite(nCtx) && nCtx > 0) {
+      caps.contextLength = nCtx;
     }
-    return props;
+
+    // A router placeholder reports model_path 'none' and no window. Anything
+    // else names a loaded model, and there a missing `modalities` key means
+    // the build has no vision — a definite false, not unknown.
+    const modelPath: unknown = data?.model_path;
+    const describesModel =
+      (typeof modelPath === 'string' &&
+        modelPath !== '' &&
+        modelPath !== 'none') ||
+      caps.contextLength !== undefined;
+    if (describesModel) {
+      caps.supportsVision = data?.modalities?.vision === true;
+    }
+
+    return caps;
   } catch {
     return {};
   } finally {
@@ -358,10 +367,9 @@ export async function testConnection(
 
 const DETECT_TIMEOUT_MS = 5000;
 
-// Bound the detached /props capability probe. /props is a tiny local JSON that
-// llama.cpp serves instantly, so 5 s is generous; it mirrors the server-type
-// detect probe. Passed explicitly rather than omitted — omitting resolves to
-// CONNECTION_TIMEOUT_MS (30 s), which would not bound a fire-and-forget probe.
+// Default bound for the detached /props capability probe, applied inside
+// fetchServerProps whenever the server sets no usable requestTimeoutMs. A
+// fire-and-forget probe must not inherit the 30 s connection default.
 export const PROPS_TIMEOUT_MS = 5000;
 
 /**

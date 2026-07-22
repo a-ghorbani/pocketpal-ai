@@ -445,6 +445,152 @@ describe('fetchServerProps', () => {
       {},
     );
   });
+
+  it('scopes the request to a model id when one is supplied', async () => {
+    global.fetch = jest.fn().mockResolvedValueOnce({
+      ok: true,
+      json: () =>
+        Promise.resolve({
+          model_path: '/models/gemma-4-e2b.gguf',
+          default_generation_settings: {n_ctx: 8192},
+          modalities: {vision: true, video: true, audio: true},
+        }),
+    });
+
+    const props = await fetchServerProps(
+      'http://localhost:8080',
+      undefined,
+      undefined,
+      'gemma-4-e2b',
+    );
+
+    expect(global.fetch).toHaveBeenCalledWith(
+      'http://localhost:8080/props?model=gemma-4-e2b',
+      expect.objectContaining({method: 'GET'}),
+    );
+    expect(props).toEqual({contextLength: 8192, supportsVision: true});
+  });
+
+  it('url-encodes a model id containing a slash', async () => {
+    global.fetch = jest.fn().mockResolvedValueOnce({
+      ok: true,
+      json: () => Promise.resolve({n_ctx: 4096}),
+    });
+
+    await fetchServerProps(
+      'http://localhost:8080',
+      undefined,
+      undefined,
+      'unsloth/gemma-3-4b',
+    );
+
+    expect(global.fetch).toHaveBeenCalledWith(
+      'http://localhost:8080/props?model=unsloth%2Fgemma-3-4b',
+      expect.objectContaining({method: 'GET'}),
+    );
+  });
+
+  it('returns empty caps for a router placeholder body', async () => {
+    global.fetch = jest.fn().mockResolvedValueOnce({
+      ok: true,
+      json: () =>
+        Promise.resolve({
+          role: 'router',
+          model_path: 'none',
+          default_generation_settings: {n_ctx: 0},
+          modalities: null,
+        }),
+    });
+
+    const props = await fetchServerProps('http://localhost:8080');
+
+    // n_ctx 0 is "unknown", not a window, and vision is undecidable on a body
+    // that describes no model — both fields stay absent.
+    expect(props).toEqual({});
+  });
+
+  it('omits contextLength when n_ctx is zero, negative, or not a number', async () => {
+    for (const n_ctx of [0, -1, NaN, '4096']) {
+      global.fetch = jest.fn().mockResolvedValueOnce({
+        ok: true,
+        json: () =>
+          Promise.resolve({
+            model_path: '/models/m.gguf',
+            n_ctx,
+            modalities: {},
+          }),
+      });
+
+      const props = await fetchServerProps('http://localhost:8080');
+      expect(props.contextLength).toBeUndefined();
+    }
+  });
+
+  it('reports vision false when a real model body carries no modalities key', async () => {
+    global.fetch = jest.fn().mockResolvedValueOnce({
+      ok: true,
+      json: () =>
+        Promise.resolve({
+          model_path: '/models/old-build.gguf',
+          default_generation_settings: {n_ctx: 2048},
+        }),
+    });
+
+    const props = await fetchServerProps('http://localhost:8080');
+    expect(props).toEqual({contextLength: 2048, supportsVision: false});
+  });
+
+  it('decides vision from model_path alone when no window is reported', async () => {
+    global.fetch = jest.fn().mockResolvedValueOnce({
+      ok: true,
+      json: () =>
+        Promise.resolve({
+          model_path: '/models/m.gguf',
+          n_ctx: 0,
+          modalities: {vision: true},
+        }),
+    });
+
+    const props = await fetchServerProps('http://localhost:8080');
+    expect(props).toEqual({supportsVision: true});
+  });
+
+  it('bounds an omitted timeout at the props default, not the connection default', async () => {
+    jest.useFakeTimers();
+    const setTimeoutSpy = jest.spyOn(global, 'setTimeout');
+    global.fetch = jest.fn().mockResolvedValueOnce({
+      ok: true,
+      json: () => Promise.resolve({}),
+    });
+
+    await fetchServerProps('http://localhost:8080');
+
+    expect(setTimeoutSpy).toHaveBeenCalledWith(expect.any(Function), 5000);
+    setTimeoutSpy.mockRestore();
+    jest.useRealTimers();
+  });
+
+  it('falls back to the props default when the server timeout is unusable', async () => {
+    jest.useFakeTimers();
+    const setTimeoutSpy = jest.spyOn(global, 'setTimeout');
+    global.fetch = jest.fn().mockResolvedValue({
+      ok: true,
+      json: () => Promise.resolve({}),
+    });
+
+    for (const timeout of [0, -1, NaN]) {
+      setTimeoutSpy.mockClear();
+      await fetchServerProps('http://localhost:8080', undefined, timeout);
+      expect(setTimeoutSpy).toHaveBeenCalledWith(expect.any(Function), 5000);
+    }
+
+    setTimeoutSpy.mockClear();
+    await fetchServerProps('http://localhost:8080', undefined, 20000);
+    expect(setTimeoutSpy).toHaveBeenCalledWith(expect.any(Function), 20000);
+
+    setTimeoutSpy.mockRestore();
+    jest.useRealTimers();
+  });
 });
 
 // Mock XMLHttpRequest for streaming tests

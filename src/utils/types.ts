@@ -478,9 +478,20 @@ export interface ServerConfig {
     | 'OpenAI'
     | 'vLLM'
     | string;
-  // Server-reported capabilities discovered from llama.cpp GET /props.
-  // ServerStore is the sole writer; undefined = unknown/not probed.
-  contextLength?: number; // /props n_ctx
+  // Legacy per-server caps. No writer: capabilities are per model and live in
+  // ServerStore.remoteCaps. Persisted values are read as a fallback only.
+  contextLength?: number;
+  supportsVision?: boolean;
+}
+
+/**
+ * Capabilities a llama.cpp server reports for one model via GET /props.
+ * Keyed per full model id (`${serverId}/${remoteModelId}`) in ServerStore.
+ * An absent field means unknown; a field is only ever set from a response that
+ * describes an actually loaded model, never from a router placeholder.
+ */
+export interface RemoteModelCaps {
+  contextLength?: number; // /props n_ctx; only ever a finite number > 0
   supportsVision?: boolean; // /props modalities.vision
 }
 
