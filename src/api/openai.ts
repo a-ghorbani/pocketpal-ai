@@ -9,11 +9,19 @@ import {
 } from '../utils/completionTypes';
 import {RemoteModelCaps} from '../utils/types';
 
-/** Raw API response shape from OpenAI /v1/models */
+/**
+ * Raw API response shape from OpenAI /v1/models. The optional fields are what
+ * a llama.cpp server adds: the first three arrive on the row itself, the last
+ * is lifted from the sibling `models[]` array a single-model server emits.
+ */
 export interface RemoteModelInfo {
   id: string;
   object: string;
   owned_by: string;
+  status?: {value?: string; args?: string[]};
+  architecture?: {input_modalities?: string[]; output_modalities?: string[]};
+  meta?: {n_ctx?: number; n_ctx_train?: number; [key: string]: unknown};
+  capabilities?: string[];
 }
 
 /** Chat message type compatible with OpenAI API format */
@@ -213,6 +221,31 @@ export interface FetchModelsResult {
 }
 
 /**
+ * A single-model llama.cpp server describes its model twice: once in `data[]`
+ * and once in a sibling `models[]` array, which is the only one carrying
+ * `capabilities`. Joining them here keeps the two halves of one row together
+ * for every caller. Servers that emit no `models[]` are unaffected.
+ */
+function liftModelEntryCapabilities(
+  rows: RemoteModelInfo[],
+  entries: unknown,
+): RemoteModelInfo[] {
+  if (!Array.isArray(entries) || entries.length === 0) {
+    return rows;
+  }
+  return rows.map(row => {
+    const entry =
+      entries.find(e => (e?.name ?? e?.model) === row.id) ??
+      // One row and one entry can only describe each other, whatever the
+      // entry happens to call itself.
+      (rows.length === 1 && entries.length === 1 ? entries[0] : undefined);
+    return entry?.capabilities
+      ? {...row, capabilities: entry.capabilities}
+      : row;
+  });
+}
+
+/**
  * Fetch available models and response headers from an OpenAI-compatible server.
  * GET /v1/models
  */
@@ -251,7 +284,10 @@ export async function fetchModelsWithHeaders(
 
     const data = await response.json();
     return {
-      models: (data.data || []) as RemoteModelInfo[],
+      models: liftModelEntryCapabilities(
+        (data.data || []) as RemoteModelInfo[],
+        data.models,
+      ),
       headers: responseHeaders,
     };
   } catch (error: any) {

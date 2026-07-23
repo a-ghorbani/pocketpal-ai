@@ -8,6 +8,11 @@ import {
   buildReasoningPayload,
   __clearRemoteImageCache,
 } from '../openai';
+import {
+  directTextModelsBody,
+  directVisionModelsBody,
+  routerModelsBody,
+} from '../../../jest/fixtures/remoteModelList';
 
 /** Build a minimal Headers-like object for fetch mocks. */
 function mockHeaders(entries: Record<string, string> = {}) {
@@ -202,6 +207,80 @@ describe('fetchModelsWithHeaders', () => {
     expect(abortSpy).toHaveBeenCalled();
     abortSpy.mockRestore();
     jest.useRealTimers();
+  });
+
+  describe('models[] capabilities', () => {
+    const serve = (body: unknown) => {
+      global.fetch = jest.fn().mockResolvedValueOnce({
+        ok: true,
+        headers: mockHeaders({server: 'llama.cpp'}),
+        json: () => Promise.resolve(body),
+      });
+    };
+
+    it('carries a direct server capabilities onto its data row', async () => {
+      serve(directVisionModelsBody);
+
+      const {models} = await fetchModelsWithHeaders('http://localhost:8080');
+
+      expect(models).toHaveLength(1);
+      expect(models[0].id).toBe('gemma-4-e2b');
+      expect(models[0].capabilities).toEqual(['completion', 'multimodal']);
+      expect(models[0].meta?.n_ctx).toBe(8192);
+    });
+
+    it('distinguishes a text-only direct server by the same field', async () => {
+      serve(directTextModelsBody);
+
+      const {models} = await fetchModelsWithHeaders('http://localhost:8080');
+
+      expect(models[0].capabilities).toEqual(['completion']);
+    });
+
+    it('returns a router body untouched, models[] being absent there', async () => {
+      serve(routerModelsBody);
+
+      const {models} = await fetchModelsWithHeaders('http://localhost:8080');
+
+      expect(models).toEqual(routerModelsBody.data);
+      expect(models.some(m => 'capabilities' in m)).toBe(false);
+    });
+
+    it('leaves rows alone when no entry names them', async () => {
+      serve({
+        data: [
+          {id: 'a', object: 'model', owned_by: 'x'},
+          {id: 'b', object: 'model', owned_by: 'x'},
+        ],
+        models: [{name: 'c', model: 'c', capabilities: ['completion']}],
+      });
+
+      const {models} = await fetchModelsWithHeaders('http://localhost:8080');
+
+      expect(models.some(m => 'capabilities' in m)).toBe(false);
+    });
+
+    it('pairs a lone row with a lone entry whatever the entry calls itself', async () => {
+      serve({
+        data: [{id: 'a', object: 'model', owned_by: 'x'}],
+        models: [{name: 'something-else', capabilities: ['completion']}],
+      });
+
+      const {models} = await fetchModelsWithHeaders('http://localhost:8080');
+
+      expect(models[0].capabilities).toEqual(['completion']);
+    });
+
+    it('ignores a models field that is not an array', async () => {
+      serve({
+        data: [{id: 'a', object: 'model', owned_by: 'x'}],
+        models: {name: 'a', capabilities: ['completion']},
+      });
+
+      const {models} = await fetchModelsWithHeaders('http://localhost:8080');
+
+      expect(models[0].capabilities).toBeUndefined();
+    });
   });
 });
 
