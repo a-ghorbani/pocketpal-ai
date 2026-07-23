@@ -917,6 +917,69 @@ describe('SettingsScreen', () => {
     });
   });
 
+  describe('key/value cache menus', () => {
+    afterEach(() => {
+      runInAction(() => {
+        modelStore.contextInitParams.flash_attn_type = undefined;
+      });
+    });
+
+    const openAdvanced = async (getByTestId: any, getByText: any) => {
+      fireEvent.press(getByText('Advanced Settings'));
+      await waitFor(() => {
+        expect(getByTestId('key-cache-type-button')).toBeTruthy();
+      });
+    };
+
+    it('flash attention off disables both cache menus with an explanation', async () => {
+      jest.useFakeTimers();
+      runInAction(() => {
+        modelStore.contextInitParams.flash_attn_type = 'off';
+      });
+      const {getByTestId, getByText, getAllByText} = render(<SettingsScreen />, {
+        withSafeArea: true,
+        withNavigation: true,
+      });
+
+      await openAdvanced(getByTestId, getByText);
+
+      expect(
+        getByTestId('key-cache-type-button').props.accessibilityState?.disabled,
+      ).toBe(true);
+      expect(
+        getByTestId('value-cache-type-button').props.accessibilityState
+          ?.disabled,
+      ).toBe(true);
+      // Key and value rows share the same disabled explanation.
+      expect(
+        getAllByText(l10n.en.settings.keyCacheTypeDisabledDescription).length,
+      ).toBe(2);
+    });
+
+    it('flash attention on enables both cache menus', async () => {
+      jest.useFakeTimers();
+      runInAction(() => {
+        modelStore.contextInitParams.flash_attn_type = 'on';
+      });
+      const {getByTestId, getByText} = render(<SettingsScreen />, {
+        withSafeArea: true,
+        withNavigation: true,
+      });
+
+      await openAdvanced(getByTestId, getByText);
+
+      expect(
+        getByTestId('key-cache-type-button').props.accessibilityState?.disabled,
+      ).toBeFalsy();
+      expect(
+        getByTestId('value-cache-type-button').props.accessibilityState
+          ?.disabled,
+      ).toBeFalsy();
+      expect(
+        getByText(l10n.en.settings.keyCacheTypeDescription),
+      ).toBeTruthy();
+    });
+  });
 
   describe('speculative no-effect advisory note', () => {
     const mtpMeta = {nextn_predict_layers: 1} as any;

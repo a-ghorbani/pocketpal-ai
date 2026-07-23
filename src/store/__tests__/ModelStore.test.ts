@@ -5524,5 +5524,26 @@ describe('ModelStore', () => {
         expect(modelStore.activeProjectionModelId).toBeUndefined();
       });
     });
+
+    describe('remote-engine release path', () => {
+      it('clears the engine and its multimodal state when there is no context', async () => {
+        const stopCompletion = jest.fn().mockResolvedValue(undefined);
+        runInAction(() => {
+          modelStore.context = undefined;
+          modelStore.engine = {stopCompletion} as any;
+          modelStore.activeModelId = 'server-1/remote.gguf';
+          modelStore.isMultimodalActive = true;
+          modelStore.activeProjectionModelId = 'proj';
+        });
+
+        await (modelStore as any)._releaseContextInternal(true);
+
+        expect(stopCompletion).toHaveBeenCalled();
+        expect(modelStore.engine).toBeUndefined();
+        expect(modelStore.activeModelId).toBeUndefined();
+        expect(modelStore.isMultimodalActive).toBe(false);
+        expect(modelStore.activeProjectionModelId).toBeUndefined();
+      });
+    });
   });
 });

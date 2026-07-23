@@ -689,6 +689,7 @@ export const SettingsScreen: React.FC = observer(() => {
                   <CacheTypeMenuRow
                     menu={keyCacheMenu}
                     styles={styles}
+                    testID="key-cache-type-button"
                     label={l10n.settings.keyCacheType}
                     description={
                       flashAttnOff
@@ -709,6 +710,7 @@ export const SettingsScreen: React.FC = observer(() => {
                   <CacheTypeMenuRow
                     menu={valueCacheMenu}
                     styles={styles}
+                    testID="value-cache-type-button"
                     label={l10n.settings.valueCacheType}
                     description={
                       flashAttnOff
