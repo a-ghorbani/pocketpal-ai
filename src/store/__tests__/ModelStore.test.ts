@@ -4751,7 +4751,6 @@ describe('ModelStore', () => {
           spec_draft_cache_type_k: undefined,
           spec_draft_cache_type_v: undefined,
         };
-        modelStore.activeDraftModelId = undefined;
       });
     });
 
@@ -4915,10 +4914,9 @@ describe('ModelStore', () => {
       });
 
       it('spec_draft_* setters update only their own field', () => {
-        modelStore.setSpecDraftNMax(5);
         modelStore.setSpecDraftNGpuLayers(10);
-        expect(modelStore.contextInitParams.spec_draft_n_max).toBe(5);
         expect(modelStore.contextInitParams.spec_draft_n_gpu_layers).toBe(10);
+        expect(modelStore.contextInitParams.spec_draft_n_max).toBeUndefined();
       });
 
       it('setSelectedDraftModel is the sole writer of the global pick', () => {
@@ -5037,20 +5035,6 @@ describe('ModelStore', () => {
         const cfg = await (modelStore as any).resolveDraftConfig(target);
 
         expect(cfg.mode).toBe('off');
-      });
-    });
-
-    describe('activeDraftModelId reset on release', () => {
-      it('clears activeDraftModelId on context release', async () => {
-        runInAction(() => {
-          modelStore.activeDraftModelId = 'c/d/dr.gguf';
-          modelStore.context = undefined;
-          modelStore.engine = {stopCompletion: jest.fn()} as any;
-        });
-
-        await (modelStore as any)._releaseContextInternal(true);
-
-        expect(modelStore.activeDraftModelId).toBeUndefined();
       });
     });
 
@@ -5220,10 +5204,7 @@ describe('ModelStore', () => {
       });
     });
 
-    describe('paired load through initContext (writer + crash guard)', () => {
-      // A downloaded target paired with a downloaded draft drives the real
-      // initContext → proceedWithInitialization path, the only writer of
-      // activeDraftModelId and the only native-load entry point.
+    describe('paired load through initContext', () => {
       const setupPairedDownloadedModels = () => {
         runInAction(() => {
           modelStore.models = [
@@ -5260,7 +5241,7 @@ describe('ModelStore', () => {
         });
       };
 
-      it('proceedWithInitialization writes activeDraftModelId when a paired draft loads', async () => {
+      it('forwards the resolved draft path to initLlama when a paired draft loads', async () => {
         modelStore.setSpeculativeEnabled(true);
         setupPairedDownloadedModels();
 
@@ -5274,9 +5255,6 @@ describe('ModelStore', () => {
         const target = modelStore.models.find(m => m.id === 'a/b/t.gguf')!;
         await modelStore.initContext(target);
 
-        // Sole writer set the paired draft id alongside the active context.
-        expect(modelStore.activeDraftModelId).toBe('c/d/dr.gguf');
-        // And the draft path was forwarded to the single native-load entry.
         const params = (initLlama as jest.Mock).mock.calls[0][0];
         expect(params.model_draft).toBe('/path/to/dr.gguf');
         expect(params.is_model_draft_asset).toBe(false);
@@ -5304,15 +5282,14 @@ describe('ModelStore', () => {
       });
     });
 
-    describe('activeDraftModelId reset at the main-context release path', () => {
-      it('clears activeDraftModelId in the finally branch when a real context is released', async () => {
+    describe('main-context release path', () => {
+      it('clears activeProjectionModelId in the finally branch when a real context is released', async () => {
         const releasedCtx = {
           release: jest.fn().mockResolvedValue(undefined),
           stopCompletion: jest.fn().mockResolvedValue(undefined),
           isMultimodalEnabled: jest.fn().mockResolvedValue(false),
         };
         runInAction(() => {
-          modelStore.activeDraftModelId = 'c/d/dr.gguf';
           modelStore.activeProjectionModelId = 'proj';
           modelStore.context = releasedCtx as any;
           modelStore.engine = {stopCompletion: jest.fn()} as any;
@@ -5322,11 +5299,7 @@ describe('ModelStore', () => {
 
         await (modelStore as any)._releaseContextInternal(false);
 
-        // The main-context release path (finally block) must clear the draft id
-        // alongside the projection id, guarding against a stale-state reset
-        // omission on switch/release.
         expect(releasedCtx.release).toHaveBeenCalled();
-        expect(modelStore.activeDraftModelId).toBeUndefined();
         expect(modelStore.activeProjectionModelId).toBeUndefined();
       });
     });

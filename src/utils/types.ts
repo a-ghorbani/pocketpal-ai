@@ -539,9 +539,6 @@ export interface Model {
   defaultProjectionModel?: string; // Default mmproj model ID to use with this model
   visionEnabled?: boolean; // User preference for enabling vision capabilities (defaults to true for backward compatibility)
 
-  // Speculative-decoding draft pairing (runtime pairing mirrors projection; the
-  // draft is authored as a cross-repo device-rules block, not an hfAsModel sibling)
-  compatibleDraftModels?: string[]; // Array of draft model IDs valid for this target
   defaultDraftModel?: string; // Default draft model ID to auto-pair / auto-download
 
   // Thinking capabilities
@@ -700,21 +697,12 @@ export interface ContextInitParams
    * Reduces memory usage at the cost of slower prompt processing. Default: false */
   no_extra_bufts?: boolean;
 
-  // v2.3+ speculative decoding / draft model (global engine knobs).
-  // spec_draft_* are also carried by the underlying ContextParams; re-declared
-  // here so the persisted contract is explicit and pinned to this slice.
+  // v2.3+ speculative decoding / draft model (spec_draft_* come from ContextParams)
   /** Master switch for speculative decoding; default false (feature OFF). */
   speculativeEnabled?: boolean;
   /** User-picked global draft Model ID, used when a target has no per-target
-   * defaultDraftModel; undefined = none. Optional (no migration, no version bump). */
+   * defaultDraftModel; undefined = none. */
   selectedDraftModelId?: string;
-  spec_draft_n_max?: number;
-  spec_draft_n_min?: number;
-  spec_draft_p_min?: number;
-  spec_draft_p_split?: number;
-  spec_draft_n_gpu_layers?: number;
-  spec_draft_cache_type_k?: string;
-  spec_draft_cache_type_v?: string;
 
   // Deprecated (kept for migration)
   /** @deprecated Use devices instead */

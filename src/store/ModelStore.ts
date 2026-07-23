@@ -169,11 +169,6 @@ class ModelStore {
   isMultimodalActive: boolean = false;
   activeProjectionModelId: string | undefined = undefined;
 
-  // Draft model paired with the active context (runtime only; mirrors
-  // activeProjectionModelId). Set by proceedWithInitialization, cleared on every
-  // context release.
-  activeDraftModelId: string | undefined = undefined;
-
   // Track initialization settings for the active context
   activeContextSettings: ContextInitParams | undefined = undefined;
 
@@ -443,7 +438,6 @@ class ModelStore {
     });
   };
 
-  // Sole writers of the speculative-decoding engine knobs (single-writer rule).
   setSpeculativeEnabled = (speculativeEnabled: boolean) => {
     runInAction(() => {
       this.contextInitParams = {
@@ -460,30 +454,6 @@ class ModelStore {
         ...this.contextInitParams,
         selectedDraftModelId,
       };
-    });
-  };
-
-  setSpecDraftNMax = (spec_draft_n_max: number) => {
-    runInAction(() => {
-      this.contextInitParams = {...this.contextInitParams, spec_draft_n_max};
-    });
-  };
-
-  setSpecDraftNMin = (spec_draft_n_min: number) => {
-    runInAction(() => {
-      this.contextInitParams = {...this.contextInitParams, spec_draft_n_min};
-    });
-  };
-
-  setSpecDraftPMin = (spec_draft_p_min: number) => {
-    runInAction(() => {
-      this.contextInitParams = {...this.contextInitParams, spec_draft_p_min};
-    });
-  };
-
-  setSpecDraftPSplit = (spec_draft_p_split: number) => {
-    runInAction(() => {
-      this.contextInitParams = {...this.contextInitParams, spec_draft_p_split};
     });
   };
 
@@ -511,17 +481,6 @@ class ModelStore {
         ...this.contextInitParams,
         spec_draft_cache_type_v,
       };
-    });
-  };
-
-  setDefaultDraftModel = (
-    modelId: string,
-    draftModelId: string | undefined,
-  ) => {
-    runInAction(() => {
-      this.models = this.models.map(m =>
-        m.id === modelId ? {...m, defaultDraftModel: draftModelId} : m,
-      );
     });
   };
 
@@ -840,11 +799,7 @@ class ModelStore {
       // via the standalone draftToStub path, not an hfAsModel sibling.
       if (candidate.draft) {
         const draftStub = this.draftToStub(candidate.draft);
-        named = {
-          ...named,
-          defaultDraftModel: draftStub.id,
-          compatibleDraftModels: [draftStub.id],
-        };
+        named = {...named, defaultDraftModel: draftStub.id};
         extras.push(draftStub);
       }
       return [named, ...extras];
@@ -2114,9 +2069,6 @@ class ModelStore {
     runInAction(() => {
       this.isMultimodalActive = false; // Reset until we confirm it's enabled
       this.activeProjectionModelId = projectionModel?.id;
-      // Sole writer of activeDraftModelId (paired with this context). Set only
-      // when a draft is actually paired; cleared on every context release.
-      this.activeDraftModelId = draftConfig?.draftModel?.id;
     });
 
     // Get all effective initialization settings BEFORE try block
@@ -2269,7 +2221,6 @@ class ModelStore {
           }
           this.isMultimodalActive = false;
           this.activeProjectionModelId = undefined;
-          this.activeDraftModelId = undefined;
         });
       }
       if (!this.engine && !clearActiveModel) {
@@ -2327,7 +2278,6 @@ class ModelStore {
           runInAction(() => {
             this.isMultimodalActive = false;
             this.activeProjectionModelId = undefined;
-            this.activeDraftModelId = undefined;
           });
           console.log('Multimodal context released and state cleared');
         } catch (error) {
@@ -2336,7 +2286,6 @@ class ModelStore {
           runInAction(() => {
             this.isMultimodalActive = false;
             this.activeProjectionModelId = undefined;
-            this.activeDraftModelId = undefined;
           });
         }
       }
@@ -2354,7 +2303,6 @@ class ModelStore {
         // Ensure multimodal state is cleared even if something went wrong above
         this.isMultimodalActive = false;
         this.activeProjectionModelId = undefined;
-        this.activeDraftModelId = undefined;
         // Clear active model if requested (for deletion scenarios)
         if (clearActiveModel) {
           this.activeModelId = undefined;
