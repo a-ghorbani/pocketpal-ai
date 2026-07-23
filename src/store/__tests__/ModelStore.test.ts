@@ -2404,6 +2404,66 @@ describe('ModelStore', () => {
       });
     });
 
+    describe('capability resolution', () => {
+      afterEach(() => {
+        runInAction(() => {
+          serverStore.servers = [];
+          serverStore.remoteCaps = {};
+          modelStore.models = [];
+          modelStore.activeModelId = undefined;
+          modelStore.activeRemoteBinding = undefined;
+          modelStore.isMultimodalActive = false;
+        });
+      });
+
+      it('resolves an active remote model against the stored capabilities', () => {
+        runInAction(() => {
+          modelStore.models = [
+            {
+              id: 'srv-1/remote-model',
+              origin: ModelOrigin.REMOTE,
+              serverId: 'srv-1',
+            } as any,
+          ];
+          modelStore.activeModelId = 'srv-1/remote-model';
+          serverStore.remoteCaps = {
+            'srv-1/remote-model': {supportsVision: true, contextLength: 8192},
+          };
+        });
+
+        expect(modelStore.activeModelCaps).toEqual({
+          vision: 'yes',
+          visionActive: true,
+          contextLength: 8192,
+          effectiveContextLength: 8192,
+        });
+      });
+
+      it('does not report another model as vision-active', () => {
+        const other = {
+          id: 'other-local',
+          origin: ModelOrigin.PRESET,
+          supportsMultimodal: true,
+        } as any;
+        runInAction(() => {
+          modelStore.models = [
+            {id: 'active-local', origin: ModelOrigin.PRESET} as any,
+            other,
+          ];
+          modelStore.activeModelId = 'active-local';
+          modelStore.isMultimodalActive = true;
+          modelStore.activeContextSettings = {n_ctx: 4096} as any;
+        });
+
+        expect(modelStore.capsFor(other).vision).toBe('yes');
+        expect(modelStore.capsFor(other).visionActive).toBe(false);
+        expect(
+          modelStore.capsFor(other).effectiveContextLength,
+        ).toBeUndefined();
+        expect(modelStore.activeModelCaps.effectiveContextLength).toBe(4096);
+      });
+    });
+
     it('should get compatible projection models from explicit list', () => {
       const llmModel = {
         id: 'test-llm',

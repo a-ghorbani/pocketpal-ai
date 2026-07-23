@@ -84,6 +84,8 @@ import {
 import {detectThinkingCapability} from '../utils/thinkingCapabilityDetection';
 import {ReasoningCapability} from '../utils/reasoningCapability';
 import {capsMatchBinding, resolveRemoteCaps} from '../utils/remoteCaps';
+import {resolveModelCaps} from '../utils/modelCaps';
+import type {CapabilityEnv, ModelCapabilityView} from '../utils/modelCaps';
 import {t} from '../locales';
 import {resolveUseMmap} from '../utils/memorySettings';
 import {
@@ -223,6 +225,7 @@ class ModelStore {
   constructor() {
     makeAutoObservable(this, {
       activeModel: computed,
+      activeModelCaps: computed,
       contextId: computed,
       remoteModels: computed,
       activeDownloads: computed,
@@ -2136,6 +2139,33 @@ class ModelStore {
       this.models.find(model => model.id === this.activeModelId) ||
       this.remoteModels.find(model => model.id === this.activeModelId)
     );
+  }
+
+  /**
+   * The resolver env, assembled here and nowhere else. Kept private so no
+   * caller can build its own and answer a capability question a different way.
+   */
+  private get capabilityEnv(): CapabilityEnv {
+    return {
+      remoteCaps: serverStore.remoteCaps,
+      binding: this.activeRemoteBinding,
+      isMultimodalActive: this.isMultimodalActive,
+      activeContextSettings: this.activeContextSettings,
+      activeModelId: this.activeModelId,
+    };
+  }
+
+  /**
+   * Capabilities of any model, active or not — the model card's entry point.
+   * An arrow property so `makeAutoObservable` annotates it `autoAction`, which
+   * keeps the observable reads tracked inside an `observer` render body.
+   */
+  capsFor = (model: Model | undefined): ModelCapabilityView =>
+    resolveModelCaps(model, this.capabilityEnv);
+
+  /** Capabilities of the live session — chat's entry point. */
+  get activeModelCaps(): ModelCapabilityView {
+    return this.capsFor(this.activeModel);
   }
 
   get lastUsedModel(): Model | undefined {
