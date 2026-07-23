@@ -125,6 +125,14 @@ export const ModelCard: React.FC<ModelCardProps> = observer(
     const isHfModel = model.origin === ModelOrigin.HF;
     const isRemoteModel = model.origin === ModelOrigin.REMOTE;
 
+    const modelCaps = modelStore.capsFor(model);
+    const visionLabel =
+      modelCaps.vision === 'yes'
+        ? l10n.models.modelCard.labels.visionSupported
+        : modelCaps.vision === 'no'
+          ? l10n.models.modelCard.labels.visionNotSupported
+          : l10n.models.modelCard.labels.capabilityUnknown;
+
     // Check projection model status for downloaded vision models
     const projectionModelStatus = modelStore.getProjectionModelStatus(model);
     const hasProjectionModelWarning =
@@ -389,6 +397,30 @@ export const ModelCard: React.FC<ModelCardProps> = observer(
               accessibilityLabel={l10n.common.delete}>
               <TrashIcon width={16} height={16} stroke={theme.colors.error} />
             </TouchableOpacity>
+            <TouchableOpacity
+              testID="expand-details-button"
+              onPress={toggleExpanded}
+              style={styles.iconButton}
+              accessibilityRole="button"
+              accessibilityLabel={
+                isExpanded
+                  ? l10n.models.modelCard.accessibility.collapseDetails
+                  : l10n.models.modelCard.accessibility.expandDetails
+              }>
+              {isExpanded ? (
+                <ChevronSelectorExpandedVerticalIcon
+                  width={16}
+                  height={16}
+                  stroke={theme.colors.onSurfaceVariant}
+                />
+              ) : (
+                <ChevronSelectorVerticalIcon
+                  width={16}
+                  height={16}
+                  stroke={theme.colors.onSurfaceVariant}
+                />
+              )}
+            </TouchableOpacity>
           </View>
         );
       }
@@ -633,7 +665,7 @@ export const ModelCard: React.FC<ModelCardProps> = observer(
         <Card
           elevation={0}
           style={styles.card}
-          testID={`model-card-${model.filename}`}>
+          testID={`model-card-${model.filename || model.id}`}>
           {/* Compact Header */}
           <View style={styles.compactHeader}>
             <View style={styles.headerContent}>
@@ -770,7 +802,7 @@ export const ModelCard: React.FC<ModelCardProps> = observer(
                 </View>
 
                 {/* Memory Requirement */}
-                {model.isDownloaded && (
+                {model.isDownloaded && !isRemoteModel && (
                   <MemoryRequirement
                     model={model}
                     projectionModel={projectionModelForCheck}
@@ -862,17 +894,15 @@ export const ModelCard: React.FC<ModelCardProps> = observer(
                   )}
 
                   {/* Context Length */}
-                  {(model.hfModel?.specs?.gguf?.context_length ||
-                    model.ggufMetadata?.context_length) && (
-                    <View style={styles.technicalDetailCard}>
+                  {modelCaps.contextLength && (
+                    <View
+                      style={styles.technicalDetailCard}
+                      testID="model-card-context-length">
                       <Text style={styles.technicalDetailLabel}>
                         {l10n.models.modelCard.labels.contextLength}
                       </Text>
                       <Text style={styles.technicalDetailValue}>
-                        {(
-                          model.hfModel?.specs?.gguf?.context_length ||
-                          model.ggufMetadata?.context_length
-                        )?.toLocaleString()}
+                        {modelCaps.contextLength.toLocaleString()}
                       </Text>
                     </View>
                   )}
@@ -892,13 +922,30 @@ export const ModelCard: React.FC<ModelCardProps> = observer(
                   )}
 
                   {/* Author */}
-                  {model.author && (
+                  {model.author && !isRemoteModel && (
                     <View style={styles.technicalDetailCard}>
                       <Text style={styles.technicalDetailLabel}>
                         {l10n.models.modelCard.labels.author}
                       </Text>
                       <Text style={styles.technicalDetailValue}>
                         {model.author}
+                      </Text>
+                    </View>
+                  )}
+
+                  {/* Vision — remote only; local models have the toggle above,
+                      which shows the same state and lets the user change it. */}
+                  {isRemoteModel && (
+                    <View
+                      style={styles.technicalDetailCard}
+                      testID="model-card-vision-capability"
+                      accessible={true}
+                      accessibilityLabel={`${l10n.models.modelCard.labels.vision}: ${visionLabel}`}>
+                      <Text style={styles.technicalDetailLabel}>
+                        {l10n.models.modelCard.labels.vision}
+                      </Text>
+                      <Text style={styles.technicalDetailValue}>
+                        {visionLabel}
                       </Text>
                     </View>
                   )}
