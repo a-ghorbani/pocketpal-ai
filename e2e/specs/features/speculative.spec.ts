@@ -100,6 +100,7 @@ const SPEC_GPU_LAYERS = byTestId('speculative-draft-gpu-layers-slider');
  * when the completion reported draft_tokens > 0 (speculative engagement).
  */
 const DRAFT_TOKENS_EL = byTestId('message-draft-tokens');
+const TIMING_EL = byTestId('footer-timing');
 
 async function saveShot(name: string): Promise<void> {
   try {
@@ -246,6 +247,18 @@ describe('Speculative Decoding / MTP draft model', () => {
     const m = draftText.match(/(\d+)\s*\/\s*(\d+)/);
     expect(m).not.toBeNull();
     expect(Number(m && m[2])).toBeGreaterThan(0);
+
+    // The generation rate comes straight from llama.rn's own wall clock. It read
+    // 0.00 on speculative turns before 0.12.7, so assert it is a real rate.
+    const timingText =
+      (await browser
+        .$(TIMING_EL)
+        .getAttribute(attrName)
+        .catch(() => '')) || '';
+    console.log(`[V1'] timings surfaced: ${timingText}`);
+    const rate = timingText.match(/([\d.]+)\s*tokens?\/sec/i);
+    expect(rate).not.toBeNull();
+    expect(Number(rate && rate[1])).toBeGreaterThan(0);
     await saveShot('speculative-v1-engagement');
   });
 });
