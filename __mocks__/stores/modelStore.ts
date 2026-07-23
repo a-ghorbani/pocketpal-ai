@@ -262,6 +262,7 @@ class MockModelStore {
   private get capabilityEnv(): CapabilityEnv {
     return {
       remoteCaps: mockServerStore.remoteCaps,
+      listCaps: mockServerStore.listCaps,
       binding: this.activeRemoteBinding,
       isMultimodalActive: this.isMultimodalActive,
       activeContextSettings: this.activeContextSettings,

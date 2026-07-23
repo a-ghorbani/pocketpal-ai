@@ -2147,6 +2147,7 @@ class ModelStore {
   private get capabilityEnv(): CapabilityEnv {
     return {
       remoteCaps: serverStore.remoteCaps,
+      listCaps: serverStore.listCaps,
       binding: this.activeRemoteBinding,
       isMultimodalActive: this.isMultimodalActive,
       activeContextSettings: this.activeContextSettings,

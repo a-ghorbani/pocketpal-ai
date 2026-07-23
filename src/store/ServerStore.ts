@@ -13,6 +13,8 @@ import {
 } from '../api/openai';
 import {RemoteModelCaps, ServerConfig} from '../utils/types';
 import {ReasoningCapability} from '../utils/reasoningCapability';
+import {deriveListCapsMap} from '../utils/listCaps';
+import type {ListDerivedCaps} from '../utils/listCaps';
 
 const KEYCHAIN_SERVICE_PREFIX = 'pocketpal-server-';
 
@@ -178,6 +180,16 @@ class ServerStore {
     if (!hasModels) {
       this.removeServer(serverId);
     }
+  }
+
+  /**
+   * What the fetched model lists say about each model, keyed by full model id.
+   * A computed with no writer and no persistence: `serverModels` is already
+   * replaced by every fetch, dropped when a server url or type changes and
+   * dropped with the server, so these cannot outlive the url they came from.
+   */
+  get listCaps(): Record<string, ListDerivedCaps> {
+    return deriveListCapsMap(this.servers, this.serverModels);
   }
 
   getModelsNotYetAdded(serverId: string): RemoteModelInfo[] {

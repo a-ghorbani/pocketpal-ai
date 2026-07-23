@@ -1,5 +1,6 @@
 import {resolveRemoteCaps} from './remoteCaps';
 import {ModelOrigin} from './types';
+import type {ListDerivedCaps} from './listCaps';
 import type {
   ContextInitParams,
   Model,
@@ -28,6 +29,7 @@ export interface ModelCapabilityView {
 /** Resolver inputs. Assembled in one place — `ModelStore`. */
 export interface CapabilityEnv {
   remoteCaps: Record<string, RemoteModelCaps>;
+  listCaps: Record<string, ListDerivedCaps>;
   binding: RemoteSessionBinding | undefined;
   isMultimodalActive: boolean;
   activeContextSettings: ContextInitParams | undefined;
@@ -68,13 +70,22 @@ export function resolveModelCaps(
   const isActiveModel = model.id === env.activeModelId;
 
   if (model.origin === ModelOrigin.REMOTE) {
-    const caps = resolveRemoteCaps(model, env.remoteCaps, env.binding);
-    const contextLength = positive(caps.contextLength);
+    // Two tiers, merged field by field rather than entry by entry: a probe
+    // answers about a loaded model, the models list about a configured one, so
+    // one can answer where the other is silent. `positive` runs per tier — a
+    // legacy zero in a probe entry must not discard a usable listed window.
+    const confirmed = resolveRemoteCaps(model, env.remoteCaps, env.binding);
+    const listed = env.listCaps[model.id];
     return {
-      vision: triState(caps.supportsVision),
-      visionActive: isActiveModel && caps.supportsVision === true,
-      contextLength,
-      effectiveContextLength: isActiveModel ? contextLength : undefined,
+      vision: triState(confirmed.supportsVision ?? listed?.supportsVision),
+      contextLength:
+        positive(confirmed.contextLength) ?? positive(listed?.contextLength),
+      // The session axis reads the probe alone: a listed value describes how
+      // the server is configured, never what the live session can do.
+      visionActive: isActiveModel && confirmed.supportsVision === true,
+      effectiveContextLength: isActiveModel
+        ? positive(confirmed.contextLength)
+        : undefined,
     };
   }
 

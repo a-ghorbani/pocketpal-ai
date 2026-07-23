@@ -25,6 +25,14 @@ jest
 
 // Import the singleton after mocks
 import {serverStore} from '../ServerStore';
+import {routerModelsBody} from '../../../jest/fixtures/remoteModelList';
+import type {RemoteModelInfo} from '../../api/openai';
+
+// Captured at import time: the constructor runs once, and `clearAllMocks`
+// between tests would otherwise erase the only call there ever is.
+const persistedProperties: string[] = (
+  jest.requireMock('mobx-persist-store').makePersistable as jest.Mock
+).mock.calls[0][1].properties;
 
 const mockedFetchModels = openaiModule.fetchModels as jest.Mock;
 const mockedFetchServerProps = openaiModule.fetchServerProps as jest.Mock;
@@ -427,6 +435,64 @@ describe('ServerStore', () => {
       expect(Keychain.resetGenericPassword).toHaveBeenCalledWith({
         service: `pocketpal-server-${id}`,
       });
+    });
+  });
+
+  describe('listCaps', () => {
+    const addRouter = (serverType = 'llama.cpp') => {
+      const id = serverStore.addServer({
+        name: 'router',
+        url: 'http://localhost:8080',
+        serverType,
+      });
+      runInAction(() => {
+        serverStore.serverModels.set(
+          id,
+          routerModelsBody.data as RemoteModelInfo[],
+        );
+      });
+      return id;
+    };
+
+    it('answers for every fetched model, keyed as a remote model id is', () => {
+      const id = addRouter();
+
+      expect(serverStore.listCaps[`${id}/gemma-4-e2b`]).toEqual({
+        tier: 'list',
+        supportsVision: true,
+        contextLength: 8192,
+      });
+    });
+
+    it('recomputes when a fetch replaces the list', () => {
+      const id = addRouter();
+      expect(Object.keys(serverStore.listCaps)).toHaveLength(5);
+
+      runInAction(() => {
+        serverStore.serverModels.set(id, []);
+      });
+
+      expect(Object.keys(serverStore.listCaps)).toHaveLength(0);
+    });
+
+    it('reads nothing off a server that is not llama.cpp', () => {
+      const id = addRouter('Ollama');
+
+      expect(serverStore.listCaps[`${id}/gemma-4-e2b`]).toEqual({
+        tier: 'list',
+      });
+    });
+
+    it('empties when the url changes, along with the models it derived from', () => {
+      const id = addRouter();
+
+      serverStore.updateServer(id, {url: 'http://localhost:9090'});
+
+      expect(serverStore.listCaps).toEqual({});
+    });
+
+    it('is not persisted', () => {
+      expect(persistedProperties).not.toContain('listCaps');
     });
   });
 

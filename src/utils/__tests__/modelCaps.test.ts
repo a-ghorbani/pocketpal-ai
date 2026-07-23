@@ -1,8 +1,10 @@
 import {CapabilityEnv, resolveModelCaps} from '../modelCaps';
 import {Model, ModelOrigin} from '../types';
+import type {ListDerivedCaps} from '../listCaps';
 
 const env = (overrides: Partial<CapabilityEnv> = {}): CapabilityEnv => ({
   remoteCaps: {},
+  listCaps: {},
   binding: undefined,
   isMultimodalActive: false,
   activeContextSettings: undefined,
@@ -115,6 +117,104 @@ describe('resolveModelCaps', () => {
       );
       expect(caps.vision).toBe('unknown');
       expect(caps.contextLength).toBeUndefined();
+    });
+
+    describe('the list tier', () => {
+      const listed = (caps: Partial<ListDerivedCaps>) => ({
+        'srv/gemma-4-e2b': {tier: 'list' as const, ...caps},
+      });
+
+      it('answers the declared axis when nothing has been probed', () => {
+        const caps = resolveModelCaps(
+          remoteModel(),
+          env({listCaps: listed({supportsVision: true, contextLength: 8192})}),
+        );
+        expect(caps.vision).toBe('yes');
+        expect(caps.contextLength).toBe(8192);
+      });
+
+      it('loses to the probe field by field', () => {
+        const caps = resolveModelCaps(
+          remoteModel(),
+          env({
+            remoteCaps: {
+              'srv/gemma-4-e2b': {supportsVision: false, contextLength: 4096},
+            },
+            listCaps: listed({supportsVision: true, contextLength: 8192}),
+          }),
+        );
+        expect(caps.vision).toBe('no');
+        expect(caps.contextLength).toBe(4096);
+      });
+
+      it('still answers the field the probe left empty', () => {
+        const caps = resolveModelCaps(
+          remoteModel(),
+          env({
+            remoteCaps: {'srv/gemma-4-e2b': {supportsVision: true}},
+            listCaps: listed({contextLength: 8192}),
+          }),
+        );
+        expect(caps.vision).toBe('yes');
+        expect(caps.contextLength).toBe(8192);
+      });
+
+      it('survives a probe entry carrying a legacy zero window', () => {
+        const caps = resolveModelCaps(
+          remoteModel(),
+          env({
+            remoteCaps: {'srv/gemma-4-e2b': {contextLength: 0}},
+            listCaps: listed({contextLength: 8192}),
+          }),
+        );
+        expect(caps.contextLength).toBe(8192);
+      });
+
+      it('never reaches the session axis, even for the active model', () => {
+        // The card describes the configured server; attach, the send gate and
+        // the context banner describe the bound session, which is only ever
+        // answered by a probe. A model can therefore read Vision: Supported
+        // while attach stays disabled — fail-closed, and self-correcting on
+        // the next successful probe.
+        const caps = resolveModelCaps(
+          remoteModel(),
+          env({
+            listCaps: listed({supportsVision: true, contextLength: 8192}),
+            activeModelId: 'srv/gemma-4-e2b',
+          }),
+        );
+        expect(caps.vision).toBe('yes');
+        expect(caps.visionActive).toBe(false);
+        expect(caps.effectiveContextLength).toBeUndefined();
+      });
+
+      it('answers the declared axis when a probe entry describes another backend', () => {
+        // Defensive only: a url edit drops the probe entry and the list
+        // together, and the write guard refuses a probe whose url has moved,
+        // so nothing normally leaves a mismatched entry behind.
+        const caps = resolveModelCaps(
+          remoteModel(),
+          env({
+            remoteCaps: {
+              'srv/gemma-4-e2b': {
+                supportsVision: false,
+                probedUrl: 'http://localhost:8080',
+              },
+            },
+            binding: {
+              modelId: 'srv/gemma-4-e2b',
+              serverId: 'srv',
+              remoteModelId: 'gemma-4-e2b',
+              url: 'http://localhost:9090',
+              serverType: 'llama.cpp',
+            },
+            listCaps: listed({supportsVision: true}),
+            activeModelId: 'srv/gemma-4-e2b',
+          }),
+        );
+        expect(caps.vision).toBe('yes');
+        expect(caps.visionActive).toBe(false);
+      });
     });
 
     it('ignores local session state', () => {
