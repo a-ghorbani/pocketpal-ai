@@ -929,6 +929,44 @@ describe('ChatScreen remote vision reactivity', () => {
     );
   });
 
+  it('enables attach when a local model finishes loading its projection', () => {
+    const localId = 'local-mm-1';
+    runInAction(() => {
+      modelStore.models = [
+        ...savedModels,
+        {
+          ...savedModels[0],
+          id: localId,
+          origin: ModelOrigin.PRESET,
+          supportsMultimodal: true,
+        },
+      ];
+      modelStore.activeModelId = localId;
+      modelStore.isMultimodalActive = false;
+    });
+
+    const {getByLabelText} = render(<ChatScreen />, {withNavigation: true});
+
+    expect(getByLabelText('Add image').props.accessibilityState.disabled).toBe(
+      true,
+    );
+
+    // What `proceedWithInitialization` writes once the native init verifies.
+    act(() => {
+      runInAction(() => {
+        modelStore.isMultimodalActive = true;
+      });
+    });
+
+    expect(getByLabelText('Add image').props.accessibilityState.disabled).toBe(
+      false,
+    );
+
+    runInAction(() => {
+      modelStore.isMultimodalActive = false;
+    });
+  });
+
   it('does not let the active model inherit a sibling model vision flag', () => {
     act(() => {
       runInAction(() => {

@@ -1,5 +1,6 @@
 import {LlamaContext} from 'llama.rn';
 import {renderHook, act, waitFor} from '@testing-library/react-native';
+import {runInAction} from 'mobx';
 
 import {textMessage} from '../../../jest/fixtures';
 import {sessionFixtures} from '../../../jest/fixtures/chatSessions';
@@ -17,12 +18,14 @@ import {
   chatSessionStore,
   modelStore,
   palStore,
+  serverStore,
   ttsStore,
   uiStore,
 } from '../../store';
 
 import {l10n} from '../../locales';
 import {assistant} from '../../utils/chat';
+import {ModelOrigin} from '../../utils/types';
 
 const mockAssistant = {
   id: 'h3o3lc5xj',
@@ -354,6 +357,51 @@ describe('useChatSession', () => {
     const arg = (uiStore.setChatWarning as jest.Mock).mock.calls[0][0];
     // The warning carries the multimodalNotEnabled message text.
     expect(JSON.stringify(arg)).toContain(l10n.en.chat.multimodalNotEnabled);
+  });
+
+  it('sends an image on a remote model whose probe reported vision', async () => {
+    runInAction(() => {
+      modelStore.models = [
+        {
+          id: 'srv-1/gemma-4-e2b',
+          origin: ModelOrigin.REMOTE,
+          serverId: 'srv-1',
+          remoteModelId: 'gemma-4-e2b',
+        } as any,
+      ];
+      modelStore.activeModelId = 'srv-1/gemma-4-e2b';
+      serverStore.remoteCaps = {'srv-1/gemma-4-e2b': {supportsVision: true}};
+    });
+    if (modelStore.context) {
+      modelStore.context.completion = jest
+        .fn()
+        .mockResolvedValue({text: 'ok', content: 'ok', timings: {}});
+    }
+
+    const {result} = renderHook(() =>
+      useChatSession({current: null}, textMessage.author, mockAssistant),
+    );
+    await act(async () => {
+      await result.current.handleSendPress({
+        text: 'look at this',
+        type: 'text',
+        imageUris: ['file:///photo.jpg'],
+      });
+    });
+
+    // The attach affordance and the send gate read the same field of the same
+    // call, so a capability good enough to enable attach also delivers.
+    const warnings = (uiStore.setChatWarning as jest.Mock).mock.calls;
+    expect(
+      warnings.some(call =>
+        JSON.stringify(call[0]).includes(l10n.en.chat.multimodalNotEnabled),
+      ),
+    ).toBe(false);
+
+    runInAction(() => {
+      serverStore.remoteCaps = {};
+      modelStore.activeModelId = undefined;
+    });
   });
 
   it('should use system prompt as-is when pal has no parameters', async () => {

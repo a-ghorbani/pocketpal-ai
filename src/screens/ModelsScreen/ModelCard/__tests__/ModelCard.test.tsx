@@ -1,6 +1,8 @@
 import React from 'react';
 import {Linking, Alert} from 'react-native';
 
+import {runInAction} from 'mobx';
+
 import {render, fireEvent, waitFor, act} from '../../../../../jest/test-utils';
 import {
   basicModel,
@@ -8,6 +10,7 @@ import {
   downloadingModel,
   largeMemoryModel,
   remoteModel,
+  remoteModelSibling,
 } from '../../../../../jest/fixtures/models';
 
 // Unmock useMemoryCheck for memory warning tests
@@ -632,5 +635,166 @@ describe('ModelCard', () => {
         remoteModel.serverId,
       );
     });
+  });
+
+  describe('Remote model capabilities', () => {
+    const expand = (getByTestId: any) => {
+      act(() => {
+        fireEvent.press(getByTestId('expand-details-button'));
+      });
+    };
+
+    afterEach(() => {
+      runInAction(() => {
+        serverStore.remoteCaps = {};
+      });
+    });
+
+    it('offers the expand affordance and opens the details block', async () => {
+      const {getByTestId} = customRender(<ModelCard model={remoteModel} />);
+
+      expect(getByTestId('expand-details-button')).toBeTruthy();
+      expand(getByTestId);
+
+      await waitFor(() => {
+        expect(getByTestId('model-card-vision-capability')).toBeTruthy();
+      });
+    });
+
+    it('renders no on-device or local-file value in the expanded block', async () => {
+      runInAction(() => {
+        serverStore.remoteCaps = {
+          [remoteModel.id]: {supportsVision: true, contextLength: 8192},
+        };
+      });
+      const {getByTestId, queryByTestId, queryByText} = customRender(
+        <ModelCard model={remoteModel} />,
+      );
+      expand(getByTestId);
+
+      await waitFor(() => {
+        expect(getByTestId('model-card-vision-capability')).toBeTruthy();
+      });
+
+      // The estimator has no local file to measure, so this row would read
+      // "Estimated memory: 0 B" — a device claim about someone else's hardware.
+      expect(queryByTestId('memory-requirement')).toBeNull();
+      // `author` is the server name, already in the header chip.
+      expect(queryByText(l10n.en.models.modelCard.labels.author)).toBeNull();
+      expect(
+        queryByText(l10n.en.models.modelDescription.parameters),
+      ).toBeNull();
+      expect(
+        queryByText(l10n.en.models.modelCard.labels.architecture),
+      ).toBeNull();
+      expect(queryByTestId('open-huggingface-url')).toBeNull();
+      expect(queryByTestId('vision-skill-touchable')).toBeNull();
+
+      // What does render: the server-reported facts.
+      expect(getByTestId('model-card-context-length')).toBeTruthy();
+      expect(
+        queryByText(l10n.en.models.modelCard.labels.visionSupported),
+      ).toBeTruthy();
+    });
+
+    it('reports vision as unknown, never unsupported, when the server has no /props', async () => {
+      const {getByTestId, queryByTestId, queryByText} = customRender(
+        <ModelCard model={remoteModel} />,
+      );
+      expand(getByTestId);
+
+      await waitFor(() => {
+        expect(getByTestId('model-card-vision-capability')).toBeTruthy();
+      });
+
+      expect(
+        queryByText(l10n.en.models.modelCard.labels.capabilityUnknown),
+      ).toBeTruthy();
+      expect(
+        queryByText(l10n.en.models.modelCard.labels.visionNotSupported),
+      ).toBeNull();
+      expect(queryByTestId('model-card-context-length')).toBeNull();
+    });
+
+    it('reflects capabilities that land while the card is already open', async () => {
+      const {getByTestId, queryByTestId, queryByText} = customRender(
+        <ModelCard model={remoteModel} />,
+      );
+      expand(getByTestId);
+
+      await waitFor(() => {
+        expect(
+          queryByText(l10n.en.models.modelCard.labels.capabilityUnknown),
+        ).toBeTruthy();
+      });
+      expect(queryByTestId('model-card-context-length')).toBeNull();
+
+      act(() => {
+        runInAction(() => {
+          serverStore.remoteCaps = {
+            [remoteModel.id]: {supportsVision: true, contextLength: 8192},
+          };
+        });
+      });
+
+      // No press, no navigation, no prop change in between.
+      expect(
+        queryByText(l10n.en.models.modelCard.labels.visionSupported),
+      ).toBeTruthy();
+      expect(getByTestId('model-card-context-length')).toBeTruthy();
+    });
+
+    it('keeps capability entries per model, not per server', async () => {
+      runInAction(() => {
+        serverStore.remoteCaps = {
+          [remoteModel.id]: {supportsVision: true},
+          [remoteModelSibling.id]: {supportsVision: false},
+        };
+      });
+      const {getByTestId, queryByText} = customRender(
+        <ModelCard model={remoteModelSibling} />,
+      );
+      expand(getByTestId);
+
+      await waitFor(() => {
+        expect(
+          queryByText(l10n.en.models.modelCard.labels.visionNotSupported),
+        ).toBeTruthy();
+      });
+    });
+
+    it('carries the capability value in the accessibility label', async () => {
+      runInAction(() => {
+        serverStore.remoteCaps = {[remoteModel.id]: {supportsVision: true}};
+      });
+      const {getByTestId, getByLabelText} = customRender(
+        <ModelCard model={remoteModel} />,
+      );
+      expand(getByTestId);
+
+      await waitFor(() => {
+        expect(getByLabelText('Vision: Supported')).toBeTruthy();
+      });
+    });
+
+    it('gives every remote card an addressable root', () => {
+      const {getByTestId} = customRender(<ModelCard model={remoteModel} />);
+      expect(getByTestId(`model-card-${remoteModel.id}`)).toBeTruthy();
+    });
+  });
+
+  it('renders no vision cell on a local card', async () => {
+    const {getByTestId, queryByTestId} = customRender(
+      <ModelCard model={downloadedModel} />,
+    );
+
+    act(() => {
+      fireEvent.press(getByTestId('expand-details-button'));
+    });
+
+    await waitFor(() => {
+      expect(getByTestId('memory-requirement')).toBeTruthy();
+    });
+    expect(queryByTestId('model-card-vision-capability')).toBeNull();
   });
 });
