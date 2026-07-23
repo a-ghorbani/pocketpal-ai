@@ -12,24 +12,9 @@ import {
 import {SettingsScreen} from '../SettingsScreen';
 
 import {modelStore, uiStore, ttsStore} from '../../../store';
-import {
-  draftCacheDefaults,
-  effectiveDraftModeOf,
-} from '../../../store/draftResolution';
 import {l10n} from '../../../locales';
 
 jest.useFakeTimers();
-
-// The shared mock store predates these derived getters; delegate them to the
-// same resolver the real store uses.
-Object.defineProperty(modelStore, 'effectiveDraftMode', {
-  configurable: true,
-  get: () => effectiveDraftModeOf(modelStore as any),
-});
-Object.defineProperty(modelStore, 'effectiveDraftCacheDefaults', {
-  configurable: true,
-  get: () => draftCacheDefaults(effectiveDraftModeOf(modelStore as any)),
-});
 
 const render = (ui: React.ReactElement, options: any = {}) =>
   baseRender(ui, {withBottomSheetProvider: true, ...options});

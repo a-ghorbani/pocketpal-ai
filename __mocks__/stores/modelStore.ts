@@ -8,6 +8,10 @@ import {Model, ContextInitParams} from '../../src/utils/types';
 import {LlamaContext} from 'llama.rn';
 import {CompletionEngine} from '../../src/utils/completionTypes';
 import {createDefaultContextInitParams} from '../../src/utils/contextInitParamsVersions';
+import {
+  draftCacheDefaults,
+  effectiveDraftModeOf,
+} from '../../src/store/draftResolution';
 
 class MockModelStore {
   models = modelsList;
@@ -134,6 +138,8 @@ class MockModelStore {
       activeModel: computed,
       displayModels: computed,
       availableModels: computed,
+      effectiveDraftMode: computed,
+      effectiveDraftCacheDefaults: computed,
       isDownloading: computed,
       activeDownloads: computed,
     });
@@ -268,6 +274,14 @@ class MockModelStore {
 
   get availableModels() {
     return this.models.filter(model => model.isDownloaded);
+  }
+
+  get effectiveDraftMode() {
+    return effectiveDraftModeOf(this as any);
+  }
+
+  get effectiveDraftCacheDefaults() {
+    return draftCacheDefaults(this.effectiveDraftMode);
   }
 
   isModelAvailable(modelId: string) {
