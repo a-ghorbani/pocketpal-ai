@@ -277,7 +277,7 @@ class MockModelStore {
   }
 
   get effectiveDraftMode() {
-    return effectiveDraftModeOf(this as any);
+    return effectiveDraftModeOf(this);
   }
 
   get effectiveDraftCacheDefaults() {

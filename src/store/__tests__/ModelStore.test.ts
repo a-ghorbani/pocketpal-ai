@@ -4997,6 +4997,37 @@ describe('ModelStore', () => {
         expect(cfg.draftModel?.id).toBe('rules/draft.gguf');
       });
 
+      it('a model picked as its own draft never pairs with itself', async () => {
+        modelStore.setSpeculativeEnabled(true);
+        const self = downloadedDraft('a/b/t.gguf', '/path/t.gguf');
+        runInAction(() => {
+          modelStore.models = [self];
+        });
+        modelStore.setSelectedDraftModel('a/b/t.gguf');
+
+        const cfg = await (modelStore as any).resolveDraftConfig(self);
+
+        // It carries its own MTP layers, so it runs embedded — never twice.
+        expect(cfg.mode).toBe('embedded');
+        expect(cfg.resolvedDraftPath).toBeUndefined();
+        expect(cfg.draftModel).toBeUndefined();
+      });
+
+      it('a per-target defaultDraftModel pointing at itself never pairs', async () => {
+        modelStore.setSpeculativeEnabled(true);
+        modelStore.setSelectedDraftModel(undefined);
+        const self = downloadedDraft('a/b/t.gguf', '/path/t.gguf');
+        self.defaultDraftModel = 'a/b/t.gguf';
+        runInAction(() => {
+          modelStore.models = [self];
+        });
+
+        const cfg = await (modelStore as any).resolveDraftConfig(self);
+
+        expect(cfg.mode).toBe('embedded');
+        expect(cfg.resolvedDraftPath).toBeUndefined();
+      });
+
       it('global pick not downloaded, non-MTP target → off, no error', async () => {
         modelStore.setSpeculativeEnabled(true);
         runInAction(() => {
@@ -5083,8 +5114,9 @@ describe('ModelStore', () => {
         });
       });
 
-      it('no active model → off with embedded cache defaults', () => {
+      it('no active model, nothing picked → off with embedded cache defaults', () => {
         modelStore.setSpeculativeEnabled(true);
+        modelStore.setSelectedDraftModel(undefined);
         runInAction(() => {
           modelStore.activeModelId = undefined;
         });
@@ -5094,6 +5126,61 @@ describe('ModelStore', () => {
           k: 'q8_0',
           v: 'q8_0',
         });
+      });
+
+      it('no active model, valid global pick → paired with f16 defaults', () => {
+        modelStore.setSpeculativeEnabled(true);
+        modelStore.setSelectedDraftModel('c/d/dr.gguf');
+        runInAction(() => {
+          modelStore.models = [draft()];
+          modelStore.activeModelId = undefined;
+        });
+
+        expect(modelStore.effectiveDraftMode).toBe('paired');
+        expect(modelStore.effectiveDraftCacheDefaults).toEqual({
+          k: 'f16',
+          v: 'f16',
+        });
+      });
+
+      it('no active model, picked draft not downloaded → off', () => {
+        modelStore.setSpeculativeEnabled(true);
+        modelStore.setSelectedDraftModel('c/d/dr.gguf');
+        runInAction(() => {
+          modelStore.models = [draft({isDownloaded: false})];
+          modelStore.activeModelId = undefined;
+        });
+
+        expect(modelStore.effectiveDraftMode).toBe('off');
+      });
+
+      it('no active model, picked draft without MTP layers → off', () => {
+        modelStore.setSpeculativeEnabled(true);
+        modelStore.setSelectedDraftModel('c/d/dr.gguf');
+        runInAction(() => {
+          modelStore.models = [draft({ggufMetadata: specMeta()})];
+          modelStore.activeModelId = undefined;
+        });
+
+        expect(modelStore.effectiveDraftMode).toBe('off');
+      });
+
+      it('a remote active model resolves against the global pick', () => {
+        modelStore.setSpeculativeEnabled(true);
+        modelStore.setSelectedDraftModel('c/d/dr.gguf');
+        runInAction(() => {
+          modelStore.models = [
+            {
+              id: 'server-1/remote.gguf',
+              isDownloaded: true,
+              origin: ModelOrigin.REMOTE,
+            } as any,
+            draft(),
+          ];
+          modelStore.activeModelId = 'server-1/remote.gguf';
+        });
+
+        expect(modelStore.effectiveDraftMode).toBe('paired');
       });
 
       it('speculative off → off even with a resolvable draft', () => {
