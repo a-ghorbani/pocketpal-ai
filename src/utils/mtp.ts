@@ -2,43 +2,16 @@ import {gguf} from '@huggingface/gguf';
 
 import {GGUFMetadata} from './types';
 
-/**
- * MTP (multi-token-prediction) / speculative-decoding capability detection.
- *
- * A model is MTP-capable when its GGUF carries embedded draft layers, signalled
- * by the `<arch>.nextn_predict_layers` KV being > 0. This drives whether the
- * speculative feature can engage (embedded MTP target or a valid paired draft).
- *
- * Detection has two surfaces:
- *  - local / post-download: derived from the cached `ggufMetadata` (KV-only; a
- *    converter that omits the KV but writes nextn tensors false-negatives, which
- *    degrades safely to "off" — the target still loads).
- *  - remote / pre-download: a `@huggingface/gguf` header range-fetch that has
- *    tensor names too, so it can fall back to a `nextn.` tensor-name probe.
- */
-
-/**
- * Local (post-download) capability, derived purely from the cached GGUF metadata.
- * KV-only: a missing `nextn_predict_layers` reads as not capable (safe default).
- */
+// MTP-capable = the GGUF carries embedded draft layers.
 export const isMTPCapable = (model: {ggufMetadata?: GGUFMetadata}): boolean =>
   (model.ggufMetadata?.nextn_predict_layers ?? 0) > 0;
 
-/**
- * The output embedding width the native paired assert compares
- * (`n_embd_out(draft) == n_embd(target)`). Mirrors llama.cpp's n_embd_out: use
- * `embedding_length_out` when present, otherwise fall back to `n_embd`.
- * Returns undefined when neither width is known (caller must treat as unknown).
- */
+// Width the native paired assert compares: n_embd_out(draft) == n_embd(target).
 export const nEmbdOut = (meta?: GGUFMetadata): number | undefined =>
   meta?.embedding_length_out ?? meta?.n_embd;
 
-/**
- * Remote (pre-download) capability via a GGUF header range-fetch. Reads the
- * `<arch>.nextn_predict_layers` KV first, then falls back to a tensor-name probe
- * (`nextn.` blocks) to catch converters that omit the KV. Any fetch/parse
- * failure resolves to false (unknown ≠ incapable; the caller shows no badge).
- */
+// Range-fetches the GGUF header. Some converters omit the KV but still write
+// `nextn.*` tensors, hence the tensor-name fallback.
 export const isMTPCapableRemote = async (ggufUrl: string): Promise<boolean> => {
   try {
     const {metadata, tensorInfos} = await gguf(ggufUrl);

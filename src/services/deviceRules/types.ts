@@ -58,9 +58,8 @@ export interface RuleMmproj {
   modalities?: string[]; // forward-compat hint; engine reports actual support at load
 }
 
-// Explicit speculative-decoding draft reference for a candidate. Unlike mmproj,
-// the draft is usually a DIFFERENT repo, so it is parsed via its own path (not
-// hfAsModel sibling pairing) and gets its own download stub.
+// Unlike mmproj, the draft is usually a DIFFERENT repo, so it does not ride
+// hfAsModel sibling pairing and gets its own download stub.
 export interface RuleDraft {
   hfRepo: string;
   hfFilename: string;

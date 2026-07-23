@@ -31,15 +31,10 @@ export const DetailsView = ({hfModel}: DetailsViewProps) => {
   const styles = createStyles(theme);
   const l10n = useContext(L10nContext);
 
-  // Check if this is a vision repository
   const isVision = isVisionRepo(hfModel.siblings || []);
 
-  // Get LLM files (non-mmproj files) - projection models are hidden from UI
   const llmFiles = getLLMFiles(hfModel.siblings || []);
 
-  // Lazy MTP (speculative) capability probe via a GGUF header range-fetch on the
-  // first LLM file, fired once when details open (not per search row). Unknown /
-  // fetch failure shows no badge (unknown ≠ incapable).
   const [isMTP, setIsMTP] = useState(false);
   useEffect(() => {
     const firstLLM = llmFiles[0];

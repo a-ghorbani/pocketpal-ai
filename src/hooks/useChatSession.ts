@@ -424,9 +424,6 @@ async function applyEventToStore(
         modelStore.activeContextSettings?.n_ctx,
         modelStore.activeModel?.origin === ModelOrigin.REMOTE,
       );
-      // Speculative-decoding (MTP) engagement: carry the draft counters into
-      // the timings bag only when the draft path actually ran (draft_tokens>0),
-      // so non-speculative turns are unchanged.
       const draftTimings =
         finalResult.draft_tokens != null && finalResult.draft_tokens > 0
           ? {

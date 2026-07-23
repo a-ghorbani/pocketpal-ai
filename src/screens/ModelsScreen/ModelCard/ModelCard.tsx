@@ -91,8 +91,7 @@ export const ModelCard: React.FC<ModelCardProps> = observer(
     const [integrityError, setIntegrityError] = useState<string | null>(null);
     const [isExpanded, setIsExpanded] = useState(false);
 
-    // Resolve projection model for memory check (same logic as ModelStore.checkMemoryAndConfirm)
-    // Resolve projection model for memory check (same logic as ModelStore.checkMemoryAndConfirm)
+    // Mirrors ModelStore.checkMemoryAndConfirm's projection-model resolution.
     const projectionModelForCheck = useMemo(
       () => {
         if (
@@ -620,7 +619,6 @@ export const ModelCard: React.FC<ModelCardProps> = observer(
           testID={isActiveModel ? 'offload-button' : 'load-button'}
           accessibilityLabel={isActiveModel ? 'Offload model' : 'Load model'}
           icon={isActiveModel ? 'eject' : 'play-circle-outline'}
-          //mode="contained-tonal"
           onPress={handlePress}
           style={[styles.primaryActionButton, getButtonStyle()]}
           textColor={getTextColor()}>
@@ -778,9 +776,7 @@ export const ModelCard: React.FC<ModelCardProps> = observer(
                   />
                 )}
 
-                {/* Description - matching updated React example. MTP (speculative)
-                    capability is derived from ggufMetadata, not model.capabilities,
-                    so it's appended explicitly and renders the line on its own. */}
+                {/* Description */}
                 {((model.capabilities && model.capabilities.length > 0) ||
                   isMTPCapable(model)) && (
                   <View style={styles.descriptionContainer}>

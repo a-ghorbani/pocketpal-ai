@@ -262,11 +262,6 @@ const parseMmproj = (v: unknown, candidateRepo: string): RuleMmproj | null => {
   };
 };
 
-// A speculative-decoding draft model. Unlike mmproj it is usually a DIFFERENT
-// repo, so it does NOT ride hfAsModel sibling pairing (which requires the same
-// repo) and there is no same-repo / projector-name check. The same parse-time
-// path guard as model/mmproj still applies (untrusted JSON drives the draft
-// download URL too), and size_bytes is required so the stub is downloadable.
 const parseDraft = (v: unknown): RuleDraft | null => {
   if (!isObject(v)) {
     return null;
