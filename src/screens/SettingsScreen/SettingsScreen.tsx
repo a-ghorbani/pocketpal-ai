@@ -47,6 +47,7 @@ import {
 import {useTheme} from '../../hooks';
 
 import {createStyles} from './styles';
+import {CacheTypeMenuRow, useMenuAnchor} from './CacheTypeMenuRow';
 
 import {
   modelStore,
@@ -90,10 +91,10 @@ export const SettingsScreen: React.FC = observer(() => {
   const [isValidInput, setIsValidInput] = useState(true);
   const [showAdvancedSettings, setShowAdvancedSettings] = useState(false);
   const inputRef = useRef<RNTextInput>(null);
-  const [showKeyCacheMenu, setShowKeyCacheMenu] = useState(false);
-  const [showValueCacheMenu, setShowValueCacheMenu] = useState(false);
-  const [showDraftKeyCacheMenu, setShowDraftKeyCacheMenu] = useState(false);
-  const [showDraftValueCacheMenu, setShowDraftValueCacheMenu] = useState(false);
+  const keyCacheMenu = useMenuAnchor();
+  const valueCacheMenu = useMenuAnchor();
+  const draftKeyCacheMenu = useMenuAnchor();
+  const draftValueCacheMenu = useMenuAnchor();
   const [showDraftModelMenu, setShowDraftModelMenu] = useState(false);
   const [showLanguageMenu, setShowLanguageMenu] = useState(false);
   const [showHfTokenDialog, setShowHfTokenDialog] = useState(false);
@@ -105,22 +106,6 @@ export const SettingsScreen: React.FC = observer(() => {
   const [showSearchKeySheet, setShowSearchKeySheet] = useState(false);
   const searchProviderButtonRef = useRef<View>(null);
   const [gpuSupported, setGpuSupported] = useState(false);
-  const [keyCacheAnchor, setKeyCacheAnchor] = useState<{x: number; y: number}>({
-    x: 0,
-    y: 0,
-  });
-  const [valueCacheAnchor, setValueCacheAnchor] = useState<{
-    x: number;
-    y: number;
-  }>({x: 0, y: 0});
-  const [draftKeyCacheAnchor, setDraftKeyCacheAnchor] = useState<{
-    x: number;
-    y: number;
-  }>({x: 0, y: 0});
-  const [draftValueCacheAnchor, setDraftValueCacheAnchor] = useState<{
-    x: number;
-    y: number;
-  }>({x: 0, y: 0});
   const [draftModelAnchor, setDraftModelAnchor] = useState<{
     x: number;
     y: number;
@@ -133,10 +118,6 @@ export const SettingsScreen: React.FC = observer(() => {
   const [currentBackend, setCurrentBackend] = useState<
     'metal' | 'opencl' | 'hexagon' | 'cpu' | 'blas'
   >(Platform.OS === 'ios' ? 'metal' : 'cpu');
-  const keyCacheButtonRef = useRef<View>(null);
-  const valueCacheButtonRef = useRef<View>(null);
-  const draftKeyCacheButtonRef = useRef<View>(null);
-  const draftValueCacheButtonRef = useRef<View>(null);
   const draftModelButtonRef = useRef<View>(null);
   const languageButtonRef = useRef<View>(null);
   const debouncedUpdateStore = useRef(
@@ -207,10 +188,10 @@ export const SettingsScreen: React.FC = observer(() => {
     inputRef.current?.blur();
     setContextSize(modelStore.contextInitParams.n_ctx.toString());
     setIsValidInput(true);
-    setShowKeyCacheMenu(false);
-    setShowValueCacheMenu(false);
-    setShowDraftKeyCacheMenu(false);
-    setShowDraftValueCacheMenu(false);
+    keyCacheMenu.close();
+    valueCacheMenu.close();
+    draftKeyCacheMenu.close();
+    draftValueCacheMenu.close();
     setShowDraftModelMenu(false);
     setShowLanguageMenu(false);
   };
@@ -229,6 +210,9 @@ export const SettingsScreen: React.FC = observer(() => {
   const currentFlashAttnType =
     modelStore.contextInitParams.flash_attn_type ??
     (Platform.OS === 'ios' ? 'auto' : 'off');
+  const flashAttnOff =
+    !modelStore.contextInitParams.flash_attn_type ||
+    modelStore.contextInitParams.flash_attn_type === 'off';
 
   // Get dynamic cache type options based on flash attention compatibility
   const cacheTypeKOptions = getAllowedCacheTypeKOptions(
@@ -340,40 +324,6 @@ export const SettingsScreen: React.FC = observer(() => {
       modelStore.setFlashAttnType(option.default_flash_attn_type);
     }
     // Otherwise, keep the user's current flash attention preference
-  };
-
-  const handleKeyCachePress = () => {
-    keyCacheButtonRef.current?.measure((x, y, width, height, pageX, pageY) => {
-      setKeyCacheAnchor({x: pageX, y: pageY + height});
-      setShowKeyCacheMenu(true);
-    });
-  };
-
-  const handleValueCachePress = () => {
-    valueCacheButtonRef.current?.measure(
-      (x, y, width, height, pageX, pageY) => {
-        setValueCacheAnchor({x: pageX, y: pageY + height});
-        setShowValueCacheMenu(true);
-      },
-    );
-  };
-
-  const handleDraftKeyCachePress = () => {
-    draftKeyCacheButtonRef.current?.measure(
-      (x, y, width, height, pageX, pageY) => {
-        setDraftKeyCacheAnchor({x: pageX, y: pageY + height});
-        setShowDraftKeyCacheMenu(true);
-      },
-    );
-  };
-
-  const handleDraftValueCachePress = () => {
-    draftValueCacheButtonRef.current?.measure(
-      (x, y, width, height, pageX, pageY) => {
-        setDraftValueCacheAnchor({x: pageX, y: pageY + height});
-        setShowDraftValueCacheMenu(true);
-      },
-    );
   };
 
   const handleDraftModelPress = () => {
@@ -725,142 +675,44 @@ export const SettingsScreen: React.FC = observer(() => {
                   </View>
                   <Divider />
 
-                  {/* Cache Type K Selection */}
-                  <View style={styles.settingItemContainer}>
-                    <View style={styles.switchContainer}>
-                      <View style={styles.textContainer}>
-                        <Text variant="titleMedium" style={styles.textLabel}>
-                          {l10n.settings.keyCacheType}
-                        </Text>
-                        <Text
-                          variant="labelSmall"
-                          style={styles.textDescription}>
-                          {modelStore.contextInitParams.flash_attn_type &&
-                          modelStore.contextInitParams.flash_attn_type !== 'off'
-                            ? l10n.settings.keyCacheTypeDescription
-                            : l10n.settings.keyCacheTypeDisabledDescription}
-                        </Text>
-                      </View>
-                      <View style={styles.menuContainer}>
-                        <Button
-                          ref={keyCacheButtonRef}
-                          mode="outlined"
-                          onPress={handleKeyCachePress}
-                          style={styles.menuButton}
-                          contentStyle={styles.buttonContent}
-                          disabled={
-                            !modelStore.contextInitParams.flash_attn_type ||
-                            modelStore.contextInitParams.flash_attn_type ===
-                              'off'
-                          }
-                          icon={({size, color}) => (
-                            <Icon
-                              source="chevron-down"
-                              size={size}
-                              color={color}
-                            />
-                          )}>
-                          {getCacheTypeLabel(
-                            modelStore.contextInitParams.cache_type_k,
-                            false,
-                          )}
-                        </Button>
-                        <Menu
-                          visible={showKeyCacheMenu}
-                          onDismiss={() => setShowKeyCacheMenu(false)}
-                          anchor={keyCacheAnchor}
-                          selectable>
-                          {cacheTypeKOptions.map(option => (
-                            <Menu.Item
-                              key={option.value}
-                              style={styles.menu}
-                              label={option.label}
-                              selected={
-                                option.value ===
-                                modelStore.contextInitParams.cache_type_k
-                              }
-                              disabled={option.disabled}
-                              onPress={() => {
-                                if (!option.disabled) {
-                                  modelStore.setCacheTypeK(option.value);
-                                  setShowKeyCacheMenu(false);
-                                }
-                              }}
-                            />
-                          ))}
-                        </Menu>
-                      </View>
-                    </View>
-                  </View>
+                  <CacheTypeMenuRow
+                    menu={keyCacheMenu}
+                    styles={styles}
+                    label={l10n.settings.keyCacheType}
+                    description={
+                      flashAttnOff
+                        ? l10n.settings.keyCacheTypeDisabledDescription
+                        : l10n.settings.keyCacheTypeDescription
+                    }
+                    value={modelStore.contextInitParams.cache_type_k}
+                    valueLabel={getCacheTypeLabel(
+                      modelStore.contextInitParams.cache_type_k,
+                      false,
+                    )}
+                    options={cacheTypeKOptions}
+                    disabled={flashAttnOff}
+                    onSelect={value => modelStore.setCacheTypeK(value)}
+                  />
                   <Divider />
 
-                  {/* Cache Type V Selection */}
-                  <View style={styles.settingItemContainer}>
-                    <View style={styles.switchContainer}>
-                      <View style={styles.textContainer}>
-                        <Text variant="titleMedium" style={styles.textLabel}>
-                          {l10n.settings.valueCacheType}
-                        </Text>
-                        <Text
-                          variant="labelSmall"
-                          style={styles.textDescription}>
-                          {modelStore.contextInitParams.flash_attn_type &&
-                          modelStore.contextInitParams.flash_attn_type !== 'off'
-                            ? l10n.settings.valueCacheTypeDescription
-                            : l10n.settings.valueCacheTypeDisabledDescription}
-                        </Text>
-                      </View>
-                      <View style={styles.menuContainer}>
-                        <Button
-                          ref={valueCacheButtonRef}
-                          mode="outlined"
-                          onPress={handleValueCachePress}
-                          style={styles.menuButton}
-                          contentStyle={styles.buttonContent}
-                          disabled={
-                            !modelStore.contextInitParams.flash_attn_type ||
-                            modelStore.contextInitParams.flash_attn_type ===
-                              'off'
-                          }
-                          icon={({size, color}) => (
-                            <Icon
-                              source="chevron-down"
-                              size={size}
-                              color={color}
-                            />
-                          )}>
-                          {getCacheTypeLabel(
-                            modelStore.contextInitParams.cache_type_v,
-                            true,
-                          )}
-                        </Button>
-                        <Menu
-                          visible={showValueCacheMenu}
-                          onDismiss={() => setShowValueCacheMenu(false)}
-                          anchor={valueCacheAnchor}
-                          selectable>
-                          {cacheTypeVOptions.map(option => (
-                            <Menu.Item
-                              key={option.value}
-                              label={option.label}
-                              style={styles.menu}
-                              selected={
-                                option.value ===
-                                modelStore.contextInitParams.cache_type_v
-                              }
-                              disabled={option.disabled}
-                              onPress={() => {
-                                if (!option.disabled) {
-                                  modelStore.setCacheTypeV(option.value);
-                                  setShowValueCacheMenu(false);
-                                }
-                              }}
-                            />
-                          ))}
-                        </Menu>
-                      </View>
-                    </View>
-                  </View>
+                  <CacheTypeMenuRow
+                    menu={valueCacheMenu}
+                    styles={styles}
+                    label={l10n.settings.valueCacheType}
+                    description={
+                      flashAttnOff
+                        ? l10n.settings.valueCacheTypeDisabledDescription
+                        : l10n.settings.valueCacheTypeDescription
+                    }
+                    value={modelStore.contextInitParams.cache_type_v}
+                    valueLabel={getCacheTypeLabel(
+                      modelStore.contextInitParams.cache_type_v,
+                      true,
+                    )}
+                    options={cacheTypeVOptions}
+                    disabled={flashAttnOff}
+                    onSelect={value => modelStore.setCacheTypeV(value)}
+                  />
                   <Divider />
 
                   {/* Speculative Decoding (draft model) */}
@@ -989,154 +841,56 @@ export const SettingsScreen: React.FC = observer(() => {
                       </View>
                       <Divider />
 
-                      {/* Draft Key Cache Type */}
-                      <View style={styles.settingItemContainer}>
-                        <View style={styles.switchContainer}>
-                          <View style={styles.textContainer}>
-                            <Text
-                              variant="titleMedium"
-                              style={styles.textLabel}>
-                              {l10n.settings.speculativeDraftKeyCacheType}
-                            </Text>
-                            {!isDraftPaired && (
-                              <Text
-                                variant="labelSmall"
-                                style={styles.textDescription}>
-                                {
-                                  l10n.settings
-                                    .speculativeDraftCacheTypeDisabledDescription
-                                }
-                              </Text>
-                            )}
-                          </View>
-                          <View style={styles.menuContainer}>
-                            <Button
-                              ref={draftKeyCacheButtonRef}
-                              mode="outlined"
-                              onPress={handleDraftKeyCachePress}
-                              style={styles.menuButton}
-                              contentStyle={styles.buttonContent}
-                              testID="speculative-draft-key-cache-button"
-                              disabled={!isDraftPaired}
-                              icon={({size, color}) => (
-                                <Icon
-                                  source="chevron-down"
-                                  size={size}
-                                  color={color}
-                                />
-                              )}>
-                              {getDraftCacheTypeLabel(
-                                modelStore.contextInitParams
-                                  .spec_draft_cache_type_k,
-                                false,
-                              )}
-                            </Button>
-                            <Menu
-                              visible={showDraftKeyCacheMenu}
-                              onDismiss={() => setShowDraftKeyCacheMenu(false)}
-                              anchor={draftKeyCacheAnchor}
-                              selectable>
-                              {draftCacheTypeKOptions.map(option => (
-                                <Menu.Item
-                                  key={option.value}
-                                  style={styles.menu}
-                                  label={option.label}
-                                  selected={
-                                    option.value ===
-                                    modelStore.contextInitParams
-                                      .spec_draft_cache_type_k
-                                  }
-                                  disabled={option.disabled}
-                                  onPress={() => {
-                                    if (!option.disabled) {
-                                      modelStore.setSpecDraftCacheTypeK(
-                                        option.value,
-                                      );
-                                      setShowDraftKeyCacheMenu(false);
-                                    }
-                                  }}
-                                />
-                              ))}
-                            </Menu>
-                          </View>
-                        </View>
-                      </View>
+                      <CacheTypeMenuRow
+                        menu={draftKeyCacheMenu}
+                        styles={styles}
+                        testID="speculative-draft-key-cache-button"
+                        label={l10n.settings.speculativeDraftKeyCacheType}
+                        description={
+                          isDraftPaired
+                            ? undefined
+                            : l10n.settings
+                                .speculativeDraftCacheTypeDisabledDescription
+                        }
+                        value={
+                          modelStore.contextInitParams.spec_draft_cache_type_k
+                        }
+                        valueLabel={getDraftCacheTypeLabel(
+                          modelStore.contextInitParams.spec_draft_cache_type_k,
+                          false,
+                        )}
+                        options={draftCacheTypeKOptions}
+                        disabled={!isDraftPaired}
+                        onSelect={value =>
+                          modelStore.setSpecDraftCacheTypeK(value)
+                        }
+                      />
                       <Divider />
 
-                      {/* Draft Value Cache Type */}
-                      <View style={styles.settingItemContainer}>
-                        <View style={styles.switchContainer}>
-                          <View style={styles.textContainer}>
-                            <Text
-                              variant="titleMedium"
-                              style={styles.textLabel}>
-                              {l10n.settings.speculativeDraftValueCacheType}
-                            </Text>
-                            {!isDraftPaired && (
-                              <Text
-                                variant="labelSmall"
-                                style={styles.textDescription}>
-                                {
-                                  l10n.settings
-                                    .speculativeDraftCacheTypeDisabledDescription
-                                }
-                              </Text>
-                            )}
-                          </View>
-                          <View style={styles.menuContainer}>
-                            <Button
-                              ref={draftValueCacheButtonRef}
-                              mode="outlined"
-                              onPress={handleDraftValueCachePress}
-                              style={styles.menuButton}
-                              contentStyle={styles.buttonContent}
-                              testID="speculative-draft-value-cache-button"
-                              disabled={!isDraftPaired}
-                              icon={({size, color}) => (
-                                <Icon
-                                  source="chevron-down"
-                                  size={size}
-                                  color={color}
-                                />
-                              )}>
-                              {getDraftCacheTypeLabel(
-                                modelStore.contextInitParams
-                                  .spec_draft_cache_type_v,
-                                true,
-                              )}
-                            </Button>
-                            <Menu
-                              visible={showDraftValueCacheMenu}
-                              onDismiss={() =>
-                                setShowDraftValueCacheMenu(false)
-                              }
-                              anchor={draftValueCacheAnchor}
-                              selectable>
-                              {draftCacheTypeVOptions.map(option => (
-                                <Menu.Item
-                                  key={option.value}
-                                  style={styles.menu}
-                                  label={option.label}
-                                  selected={
-                                    option.value ===
-                                    modelStore.contextInitParams
-                                      .spec_draft_cache_type_v
-                                  }
-                                  disabled={option.disabled}
-                                  onPress={() => {
-                                    if (!option.disabled) {
-                                      modelStore.setSpecDraftCacheTypeV(
-                                        option.value,
-                                      );
-                                      setShowDraftValueCacheMenu(false);
-                                    }
-                                  }}
-                                />
-                              ))}
-                            </Menu>
-                          </View>
-                        </View>
-                      </View>
+                      <CacheTypeMenuRow
+                        menu={draftValueCacheMenu}
+                        styles={styles}
+                        testID="speculative-draft-value-cache-button"
+                        label={l10n.settings.speculativeDraftValueCacheType}
+                        description={
+                          isDraftPaired
+                            ? undefined
+                            : l10n.settings
+                                .speculativeDraftCacheTypeDisabledDescription
+                        }
+                        value={
+                          modelStore.contextInitParams.spec_draft_cache_type_v
+                        }
+                        valueLabel={getDraftCacheTypeLabel(
+                          modelStore.contextInitParams.spec_draft_cache_type_v,
+                          true,
+                        )}
+                        options={draftCacheTypeVOptions}
+                        disabled={!isDraftPaired}
+                        onSelect={value =>
+                          modelStore.setSpecDraftCacheTypeV(value)
+                        }
+                      />
                     </>
                   )}
                 </View>
