@@ -19,7 +19,7 @@ import {
   timeAgo,
   isVisionRepo,
   getLLMFiles,
-  isMTPCapableRemote,
+  probeRemoteMTPCapability,
 } from '../../../../utils';
 
 interface DetailsViewProps {
@@ -43,9 +43,10 @@ export const DetailsView = ({hfModel}: DetailsViewProps) => {
     }
     let cancelled = false;
     const ggufUrl = `https://huggingface.co/${hfModel.id}/resolve/main/${firstLLM.rfilename}`;
-    isMTPCapableRemote(ggufUrl).then(capable => {
+    // A probe that could not run stays silent rather than claiming a capability.
+    probeRemoteMTPCapability(ggufUrl).then(capability => {
       if (!cancelled) {
-        setIsMTP(capable);
+        setIsMTP(capability === 'capable');
       }
     });
     return () => {
