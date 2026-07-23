@@ -573,6 +573,11 @@ export interface Model {
   remoteModelId?: string; // The model ID as reported by the server's /v1/models
 }
 
+export type DraftConfig =
+  | {mode: 'off'}
+  | {mode: 'embedded'}
+  | {mode: 'paired'; resolvedDraftPath: string; draftModel: Model};
+
 export type RootDrawerParamList = {
   Chat: undefined;
   Models: undefined;

@@ -68,6 +68,7 @@ import {
   CacheType,
   ChatTemplateConfig,
   ContextInitParams,
+  DraftConfig,
   HuggingFaceModel,
   Model,
   ModelFile,
@@ -138,6 +139,9 @@ function createRemoteModel(params: {
     remoteModelId: params.remoteModelId,
   };
 }
+
+const pairedDraftModel = (config?: DraftConfig): Model | undefined =>
+  config?.mode === 'paired' ? config.draftModel : undefined;
 
 class ModelStore {
   models: Model[] = [];
@@ -447,7 +451,6 @@ class ModelStore {
     });
   };
 
-  // Sole writer of the global user-picked draft (undefined clears it).
   setSelectedDraftModel = (selectedDraftModelId?: string) => {
     runInAction(() => {
       this.contextInitParams = {
@@ -490,10 +493,7 @@ class ModelStore {
    */
   getEffectiveContextInitParams = async (
     filePath?: string,
-    draftConfig?: {
-      mode: 'off' | 'paired' | 'embedded';
-      resolvedDraftPath?: string;
-    },
+    draftConfig?: DraftConfig,
   ): Promise<Omit<ContextParams, 'model'>> => {
     // Apply batch constraints
     const effectiveContext = this.contextInitParams.n_ctx;
@@ -524,15 +524,10 @@ class ModelStore {
       effectiveUseMmap = true;
     }
 
-    // Speculative-decoding mode. Defaults to 'off' when no draftConfig is
-    // passed, so callers that don't resolve a draft (e.g. benchmark) are
-    // unaffected. Mode defaults are applied as ?? fallbacks over user-set
-    // contextInitParams — an explicit user value is never overwritten.
     const mode = draftConfig?.mode ?? 'off';
     const speculative = mode !== 'off';
 
-    // Handle flash_attn_type (v2.0) - platform-specific default. Paired draft
-    // mode defaults it 'off', embedded-MTP mode defaults it 'auto'.
+    // Handle flash_attn_type (v2.0) - platform-specific default
     const flashAttnModeDefault =
       mode === 'paired'
         ? 'off'
@@ -563,17 +558,10 @@ class ModelStore {
     };
 
     if (speculative) {
-      // Activator (the inertness fix): without spec_type, llama.rn's speculative
-      // type set stays empty and nothing engages. Emitted ONLY for paired/embedded
-      // (mode === 'off' skips this whole block), so spec_type leaves PocketPal
-      // exactly when capability is real. Constant at the call site, never persisted.
+      // llama.rn's speculative type set stays empty without spec_type — nothing engages.
       params.spec_type = 'draft-mtp';
 
-      // Forwarded in both speculative modes (paired + embedded). Pass through any
-      // user-set tuning verbatim; only the cache-type/gpu-layer defaults differ
-      // per mode below. spec_draft_n_max is coerced to ≥1 when the user set it —
-      // llama.rn throws on n_max ≤ 0 with DRAFT_MTP; leaving it undefined inherits
-      // the cpp default (3).
+      // llama.rn throws on spec_draft_n_max <= 0 with DRAFT_MTP.
       params.spec_draft_n_max =
         this.contextInitParams.spec_draft_n_max !== undefined
           ? Math.max(1, this.contextInitParams.spec_draft_n_max)
@@ -582,10 +570,9 @@ class ModelStore {
       params.spec_draft_p_min = this.contextInitParams.spec_draft_p_min;
       params.spec_draft_p_split = this.contextInitParams.spec_draft_p_split;
 
-      if (mode === 'paired' && draftConfig?.resolvedDraftPath) {
-        // Separate draft pairing: set the draft path; apply paired defaults.
+      if (draftConfig?.mode === 'paired') {
         params.model_draft = draftConfig.resolvedDraftPath;
-        params.is_model_draft_asset = false; // downloaded file, not bundled asset
+        params.is_model_draft_asset = false;
         params.spec_draft_n_gpu_layers =
           this.contextInitParams.spec_draft_n_gpu_layers ?? 99;
         params.spec_draft_cache_type_k =
@@ -593,7 +580,6 @@ class ModelStore {
         params.spec_draft_cache_type_v =
           this.contextInitParams.spec_draft_cache_type_v ?? 'f16';
       } else {
-        // Embedded / hybrid MTP (or no-op): leave model_draft unset; MTP defaults.
         params.spec_draft_n_gpu_layers =
           this.contextInitParams.spec_draft_n_gpu_layers;
         params.spec_draft_cache_type_k =
@@ -744,11 +730,8 @@ class ModelStore {
     return {hfModel, modelFile};
   };
 
-  // Build a standalone draft-model stub from a candidate's cross-repo draft
-  // block. Unlike mmproj, the draft is usually a different repo, so it cannot be
-  // an hfAsModel sibling of the target — it gets its own minimal {hfModel,
-  // modelFile} pair (own repo + deterministic download URL) and is tagged
-  // modelType: DRAFT. The resulting id is draftRepo/draftFilename.
+  // A draft usually lives in a repo other than its target's, so unlike mmproj it
+  // cannot be an hfAsModel sibling and needs its own {hfModel, modelFile} pair.
   private draftToStub = (draft: RuleDraft): Model => {
     const modelFile: ModelFile = {
       rfilename: draft.hfFilename,
@@ -794,9 +777,6 @@ class ModelStore {
         );
         extras.push(...projModels);
       }
-      // Pair an authored cross-repo draft model: push its own stub and point the
-      // target at it (auto-pair / auto-download). Mirrors projection pairing but
-      // via the standalone draftToStub path, not an hfAsModel sibling.
       if (candidate.draft) {
         const draftStub = this.draftToStub(candidate.draft);
         named = {...named, defaultDraftModel: draftStub.id};
@@ -1280,17 +1260,8 @@ class ModelStore {
     }
   };
 
-  /**
-   * Auto-download a paired speculative draft model for a target. Best-effort:
-   * a draft download failure must NOT fail the target download (mirrors the
-   * projection auto-download swallow-and-continue). Gated on speculativeEnabled
-   * so drafts aren't pulled when the feature is off.
-   */
   private _downloadDraftModelIfNeeded = async (model: Model) => {
-    // Same precedence as resolveDraftConfig: per-target authored draft wins,
-    // the global user-picked draft is the fallback.
-    const draftModelId =
-      model.defaultDraftModel ?? this.contextInitParams.selectedDraftModelId;
+    const draftModelId = this.resolveDraftModelId(model);
     if (
       !draftModelId ||
       model.modelType === ModelType.DRAFT ||
@@ -1341,7 +1312,6 @@ class ModelStore {
 
       // For vision models, automatically download the projection model
       await this._downloadProjectionModelIfNeeded(model);
-      // For speculative targets, automatically download the paired draft model
       await this._downloadDraftModelIfNeeded(model);
     } catch (err) {
       if (err instanceof DownloadCancelledError) {
@@ -1545,10 +1515,6 @@ class ModelStore {
       await this.cleanupOrphanedProjectionModels(projectionModelIds);
     }
 
-    // If the deleted model was the globally-picked speculative draft, clear the
-    // selection via the sole writer so no dangling id persists. (Local models
-    // are spliced out; non-local ones just become not-downloaded — either way
-    // the picked draft is no longer usable, so drop the global pick.)
     if (this.contextInitParams.selectedDraftModelId === _model.id) {
       this.setSelectedDraftModel(undefined);
     }
@@ -1641,10 +1607,6 @@ class ModelStore {
       // Context length from GGUF
       const context_length = getArchValue('context_length');
 
-      // MTP / speculative capability signals (optional; absent KV ⇒ undefined).
-      // nextn_predict_layers > 0 marks an embedded MTP target / valid draft.
-      // embedding_length_out is the draft output width the native paired assert
-      // compares (n_embd_out); falls back to n_embd when unset at resolve time.
       const nextn_predict_layers = getArchValue('nextn_predict_layers');
       const embedding_length_out = getArchValue('embedding_length_out');
 
@@ -1762,40 +1724,20 @@ class ModelStore {
     return {isMultimodalInit: false};
   };
 
-  // Resolve the speculative-decoding mode for a target load by MTP CAPABILITY
-  // (not merely draft-path presence). Read-only; runs outside the mutex
-  // (mirrors resolveMultimodalConfig). Modes:
-  //  - 'off':      speculative disabled, OR enabled but neither the target nor a
-  //                valid paired draft is MTP-capable. Emits nothing speculative.
-  //  - 'paired':   a resolved draft is itself MTP-capable AND its output width
-  //                matches the target → model_draft set.
-  //  - 'embedded': the target carries embedded MTP draft layers (no model_draft).
-  //
-  // Crash-safety: emitting a paired draft whose width does not match the target
-  // is an UNCATCHABLE native abort (LM_GGML_ASSERT → SIGABRT) inside init_mtp —
-  // there is no native fallback to degrade. So this JS pre-check is the only
-  // guard: pair ONLY when both widths are known and equal; an unknown/unreadable
-  // width resolves to NOT paired ("unknown ⇒ not paired"). An invalid draft
-  // falls through to embedded (if the target is MTP-capable) and then to off.
-  private resolveDraftConfig = async (
-    model: Model,
-  ): Promise<{
-    mode: 'off' | 'paired' | 'embedded';
-    resolvedDraftPath?: string;
-    draftModel?: Model;
-  }> => {
+  private resolveDraftModelId = (model: Model): string | undefined =>
+    model.defaultDraftModel ?? this.contextInitParams.selectedDraftModelId;
+
+  // Width mismatch on a paired draft is an uncatchable native abort
+  // (LM_GGML_ASSERT → SIGABRT in init_mtp); unknown width ⇒ not paired.
+  private resolveDraftConfig = async (model: Model): Promise<DraftConfig> => {
     if (!this.contextInitParams.speculativeEnabled) {
       return {mode: 'off'};
     }
 
-    // Precedence: per-target authored draft wins; the global user-picked draft
-    // is the fallback when the target has none.
-    const draftId =
-      model.defaultDraftModel ?? this.contextInitParams.selectedDraftModelId;
+    const draftId = this.resolveDraftModelId(model);
     if (draftId) {
       const draftModel = this.models.find(m => m.id === draftId);
       if (draftModel?.isDownloaded && isMTPCapable(draftModel)) {
-        // Width gate (the only crash guard). Both widths must be known and equal.
         const draftWidth = nEmbdOut(draftModel.ggufMetadata);
         const targetWidth = model.ggufMetadata?.n_embd;
         if (
@@ -1809,18 +1751,9 @@ class ModelStore {
           }
         }
       }
-      // A resolved-but-invalid draft (not downloaded / not MTP / width mismatch
-      // or unknown) falls through — never paired.
     }
 
-    // Embedded MTP: the target itself carries draft layers.
-    if (isMTPCapable(model)) {
-      return {mode: 'embedded'};
-    }
-
-    // Speculative enabled but nothing MTP-capable → off (dodges the non-MTP
-    // native error; PocketPal never sends spec_type).
-    return {mode: 'off'};
+    return isMTPCapable(model) ? {mode: 'embedded'} : {mode: 'off'};
   };
 
   /**
@@ -1963,7 +1896,6 @@ class ModelStore {
       const {isMultimodalInit, resolvedMmProjPath, projectionModel} =
         await this.resolveMultimodalConfig(model, mmProjPath);
 
-      // Resolve speculative-decoding mode (read-only, pre-mutex like multimodal).
       const draftConfig = await this.resolveDraftConfig(model);
 
       // Check memory and get user confirmation if needed (no mutex - UI interaction)
@@ -1971,7 +1903,7 @@ class ModelStore {
         model,
         isMultimodalInit,
         projectionModel,
-        draftConfig.draftModel,
+        pairedDraftModel(draftConfig),
       );
 
       if (!shouldProceed) {
@@ -2055,11 +1987,7 @@ class ModelStore {
     mmProjPath?: string,
     isMultimodalInit: boolean = false,
     projectionModel?: Model,
-    draftConfig?: {
-      mode: 'off' | 'paired' | 'embedded';
-      resolvedDraftPath?: string;
-      draftModel?: Model;
-    },
+    draftConfig?: DraftConfig,
   ): Promise<LlamaContext> {
     const filePath = await this.getModelFullPath(model);
     if (!filePath) {
@@ -2153,7 +2081,7 @@ class ModelStore {
           model,
           projectionModel,
           contextInitParams,
-          draftConfig?.draftModel,
+          pairedDraftModel(draftConfig),
         );
         runInAction(() => {
           if (

@@ -8,7 +8,13 @@ import {
   DownloadCancelledError,
 } from '../../services/downloads';
 
-import {GGUFMetadata, Model, ModelOrigin, ModelType} from '../../utils/types';
+import {
+  DraftConfig,
+  GGUFMetadata,
+  Model,
+  ModelOrigin,
+  ModelType,
+} from '../../utils/types';
 import {getDisplayNameFromFilename} from '../../utils/formatters';
 import {
   basicModel,
@@ -2320,11 +2326,7 @@ describe('ModelStore', () => {
       }) as Model;
 
     const resolve = (model: Model) =>
-      (modelStore as any).resolveDraftConfig(model) as Promise<{
-        mode: 'off' | 'paired' | 'embedded';
-        resolvedDraftPath?: string;
-        draftModel?: Model;
-      }>;
+      (modelStore as any).resolveDraftConfig(model) as Promise<DraftConfig>;
 
     beforeEach(() => {
       runInAction(() => {
@@ -2373,10 +2375,11 @@ describe('ModelStore', () => {
           modelStore.contextInitParams.speculativeEnabled = true;
           modelStore.models = [draft, target];
         });
-        const result = await resolve(target);
-        expect(result.mode).toBe('paired');
-        expect(result.resolvedDraftPath).toBe('/tmp/draft.gguf');
-        expect(result.draftModel?.id).toBe('draft');
+        await expect(resolve(target)).resolves.toEqual({
+          mode: 'paired',
+          resolvedDraftPath: '/tmp/draft.gguf',
+          draftModel: draft,
+        });
       });
 
       it('off when speculative is on but the target is not MTP-capable and no draft (scenario C)', async () => {
@@ -2504,9 +2507,11 @@ describe('ModelStore', () => {
           modelStore.contextInitParams.selectedDraftModelId = 'global';
           modelStore.models = [perTargetDraft, globalDraft, target];
         });
-        const result = await resolve(target);
-        expect(result.mode).toBe('paired');
-        expect(result.draftModel?.id).toBe('per-target');
+        await expect(resolve(target)).resolves.toEqual({
+          mode: 'paired',
+          resolvedDraftPath: '/tmp/per-target.gguf',
+          draftModel: perTargetDraft,
+        });
       });
     });
 
@@ -2527,6 +2532,7 @@ describe('ModelStore', () => {
           {
             mode: 'paired',
             resolvedDraftPath: '/tmp/draft.gguf',
+            draftModel: localModel({id: 'draft'}),
           },
         );
         expect(params.spec_type).toBe('draft-mtp');
@@ -4754,6 +4760,12 @@ describe('ModelStore', () => {
       });
     });
 
+    const pairedTo = (path: string): DraftConfig => ({
+      mode: 'paired',
+      resolvedDraftPath: path,
+      draftModel: {...basicModel, id: 'c/d/dr.gguf'} as Model,
+    });
+
     describe('getEffectiveContextInitParams speculative mode', () => {
       it('embedded mode: speculative on, no draft → MTP defaults, no model_draft', async () => {
         modelStore.setSpeculativeEnabled(true);
@@ -4772,7 +4784,7 @@ describe('ModelStore', () => {
         modelStore.setSpeculativeEnabled(true);
         const params: any = await modelStore.getEffectiveContextInitParams(
           undefined,
-          {mode: 'paired', resolvedDraftPath: '/path/to/draft.gguf'},
+          pairedTo('/path/to/draft.gguf'),
         );
 
         expect(params.model_draft).toBe('/path/to/draft.gguf');
@@ -4798,7 +4810,7 @@ describe('ModelStore', () => {
 
         const params: any = await modelStore.getEffectiveContextInitParams(
           undefined,
-          {mode: 'paired', resolvedDraftPath: '/path/to/draft.gguf'},
+          pairedTo('/path/to/draft.gguf'),
         );
 
         // Paired mode default is f16, but the user explicitly chose q4_0.
@@ -4813,7 +4825,7 @@ describe('ModelStore', () => {
 
         const paired: any = await modelStore.getEffectiveContextInitParams(
           undefined,
-          {mode: 'paired', resolvedDraftPath: '/path/to/draft.gguf'},
+          pairedTo('/path/to/draft.gguf'),
         );
         expect(paired.flash_attn_type).toBe('on');
 
