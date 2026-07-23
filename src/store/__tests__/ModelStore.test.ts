@@ -4262,24 +4262,7 @@ describe('ModelStore', () => {
       });
     });
 
-    it('probes capabilities for the model being activated', async () => {
-      const probe = jest
-        .spyOn(serverStore, 'fetchRemoteModelCaps')
-        .mockResolvedValue(undefined);
-
-      await modelStore.setRemoteModel(remoteModel);
-
-      // The api key resolved for the engine is handed to the probe, which
-      // therefore makes no second Keychain read.
-      expect(probe).toHaveBeenCalledWith(
-        'srv-1',
-        'llama-7b',
-        expect.anything(),
-      );
-      probe.mockRestore();
-    });
-
-    it('hands the resolved api key to the probe', async () => {
+    it('probes the activated model, forwarding the key resolved for the engine', async () => {
       const getApiKey = jest
         .spyOn(serverStore, 'getApiKey')
         .mockResolvedValue('sk-test');
@@ -4291,6 +4274,23 @@ describe('ModelStore', () => {
 
       expect(probe).toHaveBeenCalledWith('srv-1', 'llama-7b', 'sk-test');
       expect(getApiKey).toHaveBeenCalledTimes(1);
+      probe.mockRestore();
+      getApiKey.mockRestore();
+    });
+
+    it('forwards undefined for a keyless server', async () => {
+      const getApiKey = jest
+        .spyOn(serverStore, 'getApiKey')
+        .mockResolvedValue(undefined);
+      const probe = jest
+        .spyOn(serverStore, 'fetchRemoteModelCaps')
+        .mockResolvedValue(undefined);
+
+      await modelStore.setRemoteModel(remoteModel);
+
+      // Nothing is forwarded when there is no key, so the probe falls back to
+      // its own Keychain read — the common local llama.cpp case.
+      expect(probe).toHaveBeenCalledWith('srv-1', 'llama-7b', undefined);
       probe.mockRestore();
       getApiKey.mockRestore();
     });

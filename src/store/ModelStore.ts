@@ -2231,8 +2231,9 @@ class ModelStore {
     // Capabilities are per model, so they are probed on activation. Detached:
     // a lazily-started server can take seconds to answer, and neither the
     // engine nor the chat screen may wait on it. ServerStore owns the write.
-    // The api key is already resolved here, so the probe skips a second
-    // Keychain read.
+    // The key resolved for the engine is forwarded; a keyless server resolves
+    // to undefined, which the probe cannot tell from "not supplied", so it
+    // reads the Keychain itself in that case.
     serverStore
       .fetchRemoteModelCaps(model.serverId, model.remoteModelId, apiKey)
       .catch(() => {});

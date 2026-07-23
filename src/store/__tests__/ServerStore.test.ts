@@ -1158,6 +1158,28 @@ describe('ServerStore', () => {
       getApiKey.mockRestore();
     });
 
+    it('reads the keychain when the caller supplies no key', async () => {
+      const id = addLlamaServer();
+      jest.clearAllMocks();
+      // A keyless server resolves to undefined, which is indistinguishable
+      // from "not supplied" — the read happens either way.
+      const getApiKey = jest
+        .spyOn(serverStore, 'getApiKey')
+        .mockResolvedValue(undefined);
+      mockedFetchServerProps.mockResolvedValueOnce({contextLength: 8192});
+
+      await serverStore.fetchRemoteModelCaps(id, 'm', undefined);
+
+      expect(getApiKey).toHaveBeenCalledWith(id);
+      expect(mockedFetchServerProps).toHaveBeenCalledWith(
+        'http://localhost:8080',
+        undefined,
+        PROPS_TIMEOUT_MS,
+        'm',
+      );
+      getApiKey.mockRestore();
+    });
+
     it('does not resurrect caps for a server removed mid-probe', async () => {
       const id = addLlamaServer();
       jest.clearAllMocks();
