@@ -487,6 +487,10 @@ export interface ServerConfig {
  * describes an actually loaded model, never from a router placeholder.
  */
 export interface RemoteModelCaps {
+  // Never written or read. Every other field here is optional, so without a
+  // discriminant the weaker list-derived type would be silently assignable to
+  // this one and could be passed wherever a probed answer is expected.
+  tier?: 'probe';
   contextLength?: number; // /props n_ctx; only ever a finite number > 0
   supportsVision?: boolean; // /props modalities.vision
   // The backend these describe. ServerConfig.url is mutable and a live session
