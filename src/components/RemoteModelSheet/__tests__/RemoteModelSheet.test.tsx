@@ -2,10 +2,16 @@ import React from 'react';
 import {render, fireEvent, waitFor} from '../../../../jest/test-utils';
 import {RemoteModelSheet} from '../RemoteModelSheet';
 import {serverStore} from '../../../store';
-import {fetchModels, fetchModelsWithHeaders} from '../../../api/openai';
+import {
+  detectServerType,
+  fetchModels,
+  fetchModelsWithHeaders,
+} from '../../../api/openai';
+import {routerModelsBody} from '../../../../jest/fixtures/remoteModelList';
 
 const mockedFetchModels = fetchModels as jest.Mock;
 const mockedFetchModelsWithHeaders = fetchModelsWithHeaders as jest.Mock;
+const mockedDetectServerType = detectServerType as jest.Mock;
 
 // Mock the Sheet component following HFTokenSheet test pattern
 jest.mock('../../Sheet', () => {
@@ -362,6 +368,93 @@ describe('RemoteModelSheet', () => {
           undefined,
         );
       });
+    });
+  });
+  describe('the row vision slot', () => {
+    const ROUTER_ROWS = routerModelsBody.data as any[];
+    const VISION = 'gemma-4-e2b';
+    const TEXT = 'gemma-3-4b';
+
+    const openViaChip = async (
+      serverType: string | undefined,
+      rows: any[] = ROUTER_ROWS,
+    ) => {
+      serverStore.servers = [
+        {
+          id: 'srv-1',
+          name: 'router',
+          url: 'http://localhost:8080',
+          serverType,
+        },
+      ];
+      (serverStore.getApiKey as jest.Mock).mockResolvedValue(undefined);
+      mockedFetchModels.mockResolvedValueOnce(rows);
+
+      const view = render(
+        <RemoteModelSheet isVisible={true} onDismiss={jest.fn()} />,
+      );
+      fireEvent.press(view.getByTestId('server-chip-srv-1'));
+      await waitFor(() => {
+        expect(view.queryByText(VISION)).toBeTruthy();
+      });
+      return view;
+    };
+
+    const slot = (id: string) => `remote-model-row-vision-${id}`;
+
+    it('tells the three states apart in one list', async () => {
+      // The row the router build cannot describe has to read differently from
+      // the row it describes as text-only, or 42 rows collapse into one state.
+      const unknownRow = {...ROUTER_ROWS[0], id: 'mystery-model'};
+      delete unknownRow.architecture;
+      const {getByTestId} = await openViaChip('llama.cpp', [
+        ...ROUTER_ROWS,
+        unknownRow,
+      ]);
+
+      const labels = [VISION, TEXT, 'mystery-model'].map(
+        id => getByTestId(slot(id)).props.accessibilityLabel,
+      );
+
+      expect(labels).toEqual([
+        'Vision: Supported',
+        'Vision: Not supported',
+        'Vision: Unknown',
+      ]);
+      expect(new Set(labels).size).toBe(3);
+    });
+
+    it('reads the persisted server type, not the type this sheet detected', async () => {
+      const {getByTestId} = await openViaChip('llama.cpp');
+
+      // The chip path never detects a type, so the sheet own serverType state
+      // is still its initial 'unknown'. The slot renders anyway, which is the
+      // whole point: gating on that state would suppress it on exactly the
+      // routers this exists for.
+      expect(mockedDetectServerType).not.toHaveBeenCalled();
+      expect(getByTestId(slot(VISION))).toBeTruthy();
+    });
+
+    it('renders no slot at all on a server of another type', async () => {
+      const {queryByTestId} = await openViaChip('Ollama');
+
+      expect(queryByTestId(slot(VISION))).toBeNull();
+      expect(queryByTestId(slot(TEXT))).toBeNull();
+    });
+
+    it('renders no slot for a server whose type is unknown', async () => {
+      const {queryByTestId} = await openViaChip(undefined);
+
+      expect(queryByTestId(slot(VISION))).toBeNull();
+    });
+
+    it('issues no request of its own to answer', async () => {
+      await openViaChip('llama.cpp');
+
+      // One models fetch for the chip press, and nothing else: the slot reads
+      // a body the sheet already had.
+      expect(mockedFetchModels).toHaveBeenCalledTimes(1);
+      expect(mockedFetchModelsWithHeaders).not.toHaveBeenCalled();
     });
   });
 });

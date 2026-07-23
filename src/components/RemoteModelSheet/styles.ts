@@ -114,6 +114,15 @@ export const createStyles = (theme: Theme) => {
       color: theme.colors.onSurface,
       marginLeft: 8,
     },
+    modelVisionSlot: {
+      marginLeft: 4,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    modelVisionUnknown: {
+      fontSize: 14,
+      color: theme.colors.onSurfaceVariant,
+    },
     alreadyAddedText: {
       fontSize: 12,
       color: theme.colors.onSurfaceVariant,
