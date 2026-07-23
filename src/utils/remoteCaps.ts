@@ -30,12 +30,8 @@ export function capsMatchBinding(
 }
 
 /**
- * Resolve the effective capabilities of a remote model. Single source of truth
- * for both the chat UI and the send path, so the attach affordance and
- * isMultimodalEnabled can never disagree.
- *
- * Pure and synchronous by design: callers resolve inside an `observer` render
- * body, so a capability landing from a detached probe re-renders on its own.
+ * Resolve the effective capabilities of a remote model. The remote leg of
+ * `resolveModelCaps`, which is what every caller goes through.
  *
  * Capabilities that describe a different backend than the session is bound to
  * resolve to unknown, which fails closed.

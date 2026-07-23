@@ -1842,6 +1842,23 @@ describe('ModelStore', () => {
       expect(modelStore.context).toBeUndefined();
       expect(modelStore.activeModelId).toBeUndefined();
     });
+
+    it('releases the multimodal context first when one is active', async () => {
+      const releaseMultimodal = jest.fn();
+      modelStore.context = {
+        release: jest.fn(),
+        releaseMultimodal,
+      } as any;
+      modelStore.activeModelId = 'test-id';
+      runInAction(() => {
+        modelStore.isMultimodalActive = true;
+      });
+
+      await modelStore.manualReleaseContext();
+
+      expect(releaseMultimodal).toHaveBeenCalled();
+      expect(modelStore.isMultimodalActive).toBe(false);
+    });
   });
 
   // Add tests for HF model handling
@@ -2282,50 +2299,6 @@ describe('ModelStore', () => {
       modelStore.isMultimodalActive = false;
     });
 
-    it('should return true for isMultimodalEnabled when cached flag is true', async () => {
-      modelStore.isMultimodalActive = true;
-      const result = await modelStore.isMultimodalEnabled();
-      expect(result).toBe(true);
-    });
-
-    it('should return false for isMultimodalEnabled when no context', async () => {
-      modelStore.context = undefined;
-      const result = await modelStore.isMultimodalEnabled();
-      expect(result).toBe(false);
-    });
-
-    it('should check context and update cached flag for isMultimodalEnabled', async () => {
-      const mockContext = {
-        isMultimodalEnabled: jest.fn().mockResolvedValue(true),
-      };
-      modelStore.context = mockContext as any;
-
-      const result = await modelStore.isMultimodalEnabled();
-      expect(result).toBe(true);
-      expect(mockContext.isMultimodalEnabled).toHaveBeenCalled();
-      expect(modelStore.isMultimodalActive).toBe(true);
-    });
-
-    it('should handle error in isMultimodalEnabled', async () => {
-      const mockContext = {
-        isMultimodalEnabled: jest
-          .fn()
-          .mockRejectedValue(new Error('Test error')),
-      };
-      modelStore.context = mockContext as any;
-
-      const consoleErrorSpy = jest.spyOn(console, 'error').mockImplementation();
-
-      const result = await modelStore.isMultimodalEnabled();
-      expect(result).toBe(false);
-      expect(consoleErrorSpy).toHaveBeenCalledWith(
-        'Error checking multimodal capability:',
-        expect.any(Error),
-      );
-
-      consoleErrorSpy.mockRestore();
-    });
-
     describe('remote model vision (server /props self-report)', () => {
       const setRemoteActive = (supportsVision?: boolean) => {
         runInAction(() => {
@@ -2376,22 +2349,24 @@ describe('ModelStore', () => {
         });
       });
 
-      it('returns true when the probe reported vision', async () => {
+      it('is vision-active when the probe reported vision', () => {
         setRemoteActive(true);
-        await expect(modelStore.isMultimodalEnabled()).resolves.toBe(true);
+        expect(modelStore.activeModelCaps.visionActive).toBe(true);
       });
 
-      it('returns false when the probe reported no vision', async () => {
+      it('is not vision-active when the probe reported no vision', () => {
         setRemoteActive(false);
-        await expect(modelStore.isMultimodalEnabled()).resolves.toBe(false);
+        expect(modelStore.activeModelCaps.vision).toBe('no');
+        expect(modelStore.activeModelCaps.visionActive).toBe(false);
       });
 
-      it('returns false when the capability is unprobed', async () => {
+      it('is not vision-active when the capability is unprobed', () => {
         setRemoteActive(undefined);
-        await expect(modelStore.isMultimodalEnabled()).resolves.toBe(false);
+        expect(modelStore.activeModelCaps.vision).toBe('unknown');
+        expect(modelStore.activeModelCaps.visionActive).toBe(false);
       });
 
-      it('returns false when the capabilities describe another backend', async () => {
+      it('is not vision-active when the capabilities describe another backend', () => {
         setRemoteActive(true);
         runInAction(() => {
           serverStore.remoteCaps['srv-1/remote-model'].probedUrl =
@@ -2400,7 +2375,8 @@ describe('ModelStore', () => {
 
         // The session still posts to :8080; a capability read from :9090 says
         // nothing about it, so vision stays unknown and fails closed.
-        await expect(modelStore.isMultimodalEnabled()).resolves.toBe(false);
+        expect(modelStore.activeModelCaps.vision).toBe('unknown');
+        expect(modelStore.activeModelCaps.visionActive).toBe(false);
       });
     });
 
@@ -3135,6 +3111,15 @@ describe('ModelStore', () => {
       modelStore.context = undefined;
       modelStore.inferencing = false;
       modelStore.isStreaming = false;
+      runInAction(() => {
+        modelStore.isMultimodalActive = true;
+      });
+    });
+
+    afterEach(() => {
+      runInAction(() => {
+        modelStore.isMultimodalActive = false;
+      });
     });
 
     it('should throw error when no context available', async () => {
@@ -3149,10 +3134,10 @@ describe('ModelStore', () => {
     });
 
     it('should throw error when multimodal is not enabled', async () => {
-      const mockContext = {
-        isMultimodalEnabled: jest.fn().mockResolvedValue(false),
-      };
-      modelStore.context = mockContext as any;
+      modelStore.context = {} as any;
+      runInAction(() => {
+        modelStore.isMultimodalActive = false;
+      });
 
       await expect(
         modelStore.startImageCompletion({
@@ -3163,32 +3148,20 @@ describe('ModelStore', () => {
     });
 
     it('should call onError when no images provided', async () => {
-      const mockContext = {
-        isMultimodalEnabled: jest.fn().mockResolvedValue(true),
-      };
-      modelStore.context = mockContext as any;
-
-      // Mock the isMultimodalEnabled method on the store to return true
-      const originalIsMultimodalEnabled = modelStore.isMultimodalEnabled;
-      modelStore.isMultimodalEnabled = jest.fn().mockResolvedValue(true);
+      modelStore.context = {} as any;
 
       const onError = jest.fn();
 
-      try {
-        await modelStore.startImageCompletion({
-          prompt: 'Test prompt',
-          onError,
-        });
+      await modelStore.startImageCompletion({
+        prompt: 'Test prompt',
+        onError,
+      });
 
-        expect(onError).toHaveBeenCalledWith(
-          expect.objectContaining({
-            message: 'No images provided for multimodal completion',
-          }),
-        );
-      } finally {
-        // Restore original method
-        modelStore.isMultimodalEnabled = originalIsMultimodalEnabled;
-      }
+      expect(onError).toHaveBeenCalledWith(
+        expect.objectContaining({
+          message: 'No images provided for multimodal completion',
+        }),
+      );
     });
 
     it('should handle single image completion successfully', async () => {

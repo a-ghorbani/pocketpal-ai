@@ -83,7 +83,7 @@ import {
 } from '../utils/deviceCapabilities';
 import {detectThinkingCapability} from '../utils/thinkingCapabilityDetection';
 import {ReasoningCapability} from '../utils/reasoningCapability';
-import {capsMatchBinding, resolveRemoteCaps} from '../utils/remoteCaps';
+import {capsMatchBinding} from '../utils/remoteCaps';
 import {resolveModelCaps} from '../utils/modelCaps';
 import type {CapabilityEnv, ModelCapabilityView} from '../utils/modelCaps';
 import {t} from '../locales';
@@ -2053,8 +2053,7 @@ class ModelStore {
       }
 
       // Step 3: Now safe to release - First check if multimodal is enabled and release it if needed
-      const isMultimodalEnabled = await this.isMultimodalEnabled();
-      if (isMultimodalEnabled) {
+      if (this.isMultimodalActive) {
         console.log('Releasing multimodal context first');
         try {
           await this.context.releaseMultimodal();
@@ -2952,53 +2951,6 @@ class ModelStore {
   }
 
   /**
-   * Checks if the current context supports multimodal input
-   * @returns Promise<boolean> - True if multimodal is enabled, false otherwise
-   */
-  isMultimodalEnabled = async (): Promise<boolean> => {
-    // First check our cached flag for quick responses
-    if (this.isMultimodalActive) {
-      return true;
-    }
-
-    // Remote models have no local context; their vision capability comes from
-    // the /props self-report for that model, resolved through the same
-    // selector the chat UI uses so the send path cannot disagree with the
-    // attach affordance. Placed before the !context early-return so a remote
-    // model is not shadowed into that dead branch.
-    if (!this.context && this.activeModel?.origin === ModelOrigin.REMOTE) {
-      return (
-        resolveRemoteCaps(
-          this.activeModel,
-          serverStore.remoteCaps,
-          this.activeRemoteBinding,
-        ).supportsVision === true
-      );
-    }
-
-    // Avoid "Context not found" errors during transitions
-    if (!this.context || this.isContextLoading) {
-      return false;
-    }
-
-    try {
-      const isEnabled = await this.context.isMultimodalEnabled();
-
-      // Update our cached flag
-      if (isEnabled !== this.isMultimodalActive) {
-        runInAction(() => {
-          this.isMultimodalActive = isEnabled;
-        });
-      }
-
-      return isEnabled;
-    } catch (error) {
-      console.error('Error checking multimodal capability:', error);
-      return false;
-    }
-  };
-
-  /**
    * Get compatible projection models for a given LLM
    * @param modelId The ID of the LLM model
    * @returns Array of compatible projection models
@@ -3362,8 +3314,7 @@ class ModelStore {
     }
 
     // Check if multimodal is enabled
-    const isMultimodalEnabled = await this.isMultimodalEnabled();
-    if (!isMultimodalEnabled) {
+    if (!this.isMultimodalActive) {
       throw new Error('Multimodal is not enabled for this model');
     }
 

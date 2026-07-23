@@ -293,11 +293,6 @@ class MockModelStore {
     return this.availableModels.some(model => model.id === modelId);
   }
 
-  async isMultimodalEnabled(): Promise<boolean> {
-    // Mock implementation - return false by default for tests
-    return false;
-  }
-
   async getModelFullPath(model: Model): Promise<string> {
     // Mock implementation - return a simple path for tests
     return `/mock/path/${model.filename || model.name}`;
