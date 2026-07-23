@@ -26,8 +26,7 @@ import {hasVideoCapability} from '../../utils/pal-capabilities';
 
 import {L10nContext} from '../../utils';
 import {resolveReasoningCapability} from '../../utils/reasoningCapability';
-import {resolveRemoteCaps} from '../../utils/remoteCaps';
-import {MessageType, ModelOrigin} from '../../utils/types';
+import {MessageType} from '../../utils/types';
 import {ErrorState} from '../../utils/errors';
 import {user, assistant} from '../../utils/chat';
 
@@ -73,8 +72,11 @@ export const ChatScreen: React.FC = observer(() => {
   const [isErrorReportVisible, setIsErrorReportVisible] = useState(false);
   const [errorToReport, setErrorToReport] = useState<ErrorState | null>(null);
 
-  const {handleSendPress, handleStopPress, isMultimodalEnabled} =
-    useChatSession(currentMessageInfo, user, assistant);
+  const {handleSendPress, handleStopPress} = useChatSession(
+    currentMessageInfo,
+    user,
+    assistant,
+  );
 
   // Handle deep linking for message prefill
   const {pendingMessage, clearPendingMessage} = usePendingMessage();
@@ -102,30 +104,10 @@ export const ChatScreen: React.FC = observer(() => {
     setErrorToReport(null);
   }, []);
 
-  // Local vision needs the loaded context, so it is resolved asynchronously.
-  const [multimodalEnabled, setMultimodalEnabled] = React.useState(false);
-
-  React.useEffect(() => {
-    const checkMultimodal = async () => {
-      const enabled = await isMultimodalEnabled();
-      setMultimodalEnabled(enabled);
-    };
-
-    checkMultimodal();
-  }, [isMultimodalEnabled]);
-
-  // Remote vision is resolved here in the render body, not in the effect above:
-  // caps land from a detached probe, and only a tracked read re-renders the
+  // Resolved in the render body, not an effect: capabilities land from a
+  // detached probe or a model load, and only a tracked read re-renders the
   // attach affordance when they do. Unknown stays disabled.
-  const activeModel = modelStore.activeModel;
-  const isRemoteModel = activeModel?.origin === ModelOrigin.REMOTE;
-  const visionEnabled = isRemoteModel
-    ? resolveRemoteCaps(
-        activeModel,
-        serverStore.remoteCaps,
-        modelStore.activeRemoteBinding,
-      ).supportsVision === true
-    : multimodalEnabled;
+  const visionEnabled = modelStore.activeModelCaps.visionActive;
 
   // Resolver is the single source of truth for reasoning capability.
   // Pill is reachable whenever the model is not known to be non-reasoning

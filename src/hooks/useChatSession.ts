@@ -520,7 +520,7 @@ export const useChatSession = (
     const imageUris = message.imageUris;
     const hasImages = !!(imageUris && imageUris.length > 0);
 
-    const isMultimodalEnabled = await modelStore.isMultimodalEnabled();
+    const isMultimodalEnabled = modelStore.activeModelCaps.visionActive;
 
     const currentMessages = toJS(chatSessionStore.currentSessionMessages);
 
@@ -920,6 +920,5 @@ export const useChatSession = (
     handleSendPress,
     handleResetConversation,
     handleStopPress,
-    isMultimodalEnabled: async () => await modelStore.isMultimodalEnabled(),
   };
 };

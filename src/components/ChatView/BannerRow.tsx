@@ -8,11 +8,10 @@ import {createStyles} from './styles';
 
 import {AlertIcon} from '../../assets/icons';
 import {useTheme} from '../../hooks';
-import {chatSessionStore, modelStore, serverStore} from '../../store';
+import {chatSessionStore, modelStore} from '../../store';
 import {L10nContext} from '../../utils';
 import {MessageType, ModelOrigin} from '../../utils/types';
 import {resolveBannerVariant} from '../../utils/bannerVariantResolver';
-import {resolveRemoteCaps} from '../../utils/remoteCaps';
 import {talentRegistry} from '../../services/talents';
 import {t} from '../../locales';
 
@@ -101,26 +100,12 @@ export const BannerRow: React.FC<BannerRowProps> = observer(
       },
     };
 
-    const activeModel = modelStore.activeModel;
-    const isRemote = activeModel?.origin === ModelOrigin.REMOTE;
+    const isRemote = modelStore.activeModel?.origin === ModelOrigin.REMOTE;
 
-    // activeContextSettings.n_ctx is local-only (set by a LlamaContext). For a
-    // remote model fall back to the /props-reported window for that model so
-    // the context banners can measure against a real one.
-    //
-    // The `> 0` filter is defence in depth: the openai.ts parse already drops
-    // a non-positive window, and 0 means unknown, not exhausted — a banner
-    // measured against it would read every turn as context-full.
-    const localNCtx = modelStore.activeContextSettings?.n_ctx;
-    const resolvedNCtx =
-      localNCtx ??
-      resolveRemoteCaps(
-        activeModel,
-        serverStore.remoteCaps,
-        modelStore.activeRemoteBinding,
-      ).contextLength;
-    const effectiveNCtx =
-      resolvedNCtx !== undefined && resolvedNCtx > 0 ? resolvedNCtx : undefined;
+    // The window the live session measures against — local `n_ctx` or the
+    // /props-reported one, picked by the resolver. Already `> 0` or absent, so
+    // 0 (unknown, not exhausted) can never read as context-full here.
+    const effectiveNCtx = modelStore.activeModelCaps.effectiveContextLength;
 
     const {variant, heavyTalentName, ratio} = resolveBannerVariant(
       chatSessionStore.lastCompletionResult,

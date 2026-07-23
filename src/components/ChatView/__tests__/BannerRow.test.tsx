@@ -2,6 +2,7 @@ import React from 'react';
 import {runInAction} from 'mobx';
 
 import {fireEvent, render} from '../../../../jest/test-utils';
+import {modelsList} from '../../../../jest/fixtures/models';
 
 import {L10nContext} from '../../../utils';
 import {ModelOrigin} from '../../../utils/types';
@@ -30,6 +31,9 @@ describe('BannerRow', () => {
   beforeEach(() => {
     jest.clearAllMocks();
     runInAction(() => {
+      // Cases that swap in a remote model leave the list empty, so restore it:
+      // the local window resolves against the active model, not the id alone.
+      modelStore.models = modelsList;
       modelStore.activeModelId = 'model-1';
       (modelStore as any).activeContextSettings = {n_ctx: 4096};
       modelStore.availableMemoryCeiling = 5 * 1e9;
@@ -424,6 +428,29 @@ describe('BannerRow', () => {
     const {getByText, queryByText} = renderBanner({canIncrease: true});
     expect(getByText(l10n.en.chat.contextFull)).toBeTruthy();
     expect(queryByText(l10n.en.chat.contextFullRemote)).toBeNull();
+  });
+
+  it('measures against the session window, not the window the model declares', () => {
+    runInAction(() => {
+      modelStore.models = [
+        {
+          id: 'model-1',
+          origin: ModelOrigin.PRESET,
+          ggufMetadata: {context_length: 32768},
+        } as any,
+      ];
+      (modelStore as any).activeContextSettings = {n_ctx: 4096};
+      chatSessionStore.lastCompletionResult = {
+        used: 3300,
+        contextFull: false,
+        isRemote: false,
+      };
+    });
+    const {getByTestId} = renderBanner();
+    // 3300 / 4096 ≈ 81%; against the declared 32768 it would be 10% and no
+    // banner would render at all.
+    expect(getByTestId('context-warning-banner')).toBeTruthy();
+    expect(getByTestId('banner-percent')).toHaveTextContent('81%');
   });
 
   it('resolves the near-limit warning + meter percent for a remote model', () => {
