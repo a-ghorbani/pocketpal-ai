@@ -389,8 +389,15 @@ describe('useChatSession', () => {
       });
     });
 
-    // The attach affordance and the send gate read the same field of the same
-    // call, so a capability good enough to enable attach also delivers.
+    const sent = (modelStore.engine!.completion as jest.Mock).mock
+      .calls[0][0] as {messages: Array<{role: string; content: any}>};
+    const lastUser = [...sent.messages].reverse().find(m => m.role === 'user')!;
+    expect(lastUser.content).toEqual(
+      expect.arrayContaining([
+        {type: 'image_url', image_url: {url: 'file:///photo.jpg'}},
+      ]),
+    );
+
     const warnings = (uiStore.setChatWarning as jest.Mock).mock.calls;
     expect(
       warnings.some(call =>

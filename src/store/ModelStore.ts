@@ -2156,8 +2156,8 @@ class ModelStore {
 
   /**
    * Capabilities of any model, active or not — the model card's entry point.
-   * An arrow property so `makeAutoObservable` annotates it `autoAction`, which
-   * keeps the observable reads tracked inside an `observer` render body.
+   * Must stay unannotated: `action` untracks the observable reads, so every
+   * card would freeze on its first value while the suite stayed green.
    */
   capsFor = (model: Model | undefined): ModelCapabilityView =>
     resolveModelCaps(model, this.capabilityEnv);
@@ -2190,8 +2190,10 @@ class ModelStore {
   }
 
   /**
-   * Computed property that derives remote models from serverStore.serverModels.
-   * Remote models are never stored in the models array (which is persisted).
+   * Derived from `serverStore.userSelectedModels` and `serverStore.servers` —
+   * not from `serverModels`, so the list a server currently advertises does not
+   * change which cards exist. Remote models are never stored in the persisted
+   * `models` array.
    */
   get remoteModels(): Model[] {
     const models: Model[] = [];
