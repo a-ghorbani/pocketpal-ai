@@ -124,6 +124,7 @@ export const ModelCard: React.FC<ModelCardProps> = observer(
     const isDownloading = modelStore.isDownloading(model.id);
     const isHfModel = model.origin === ModelOrigin.HF;
     const isRemoteModel = model.origin === ModelOrigin.REMOTE;
+    const cardId = model.filename || model.id;
 
     const modelCaps = modelStore.capsFor(model);
     const visionLabel =
@@ -286,7 +287,7 @@ export const ModelCard: React.FC<ModelCardProps> = observer(
 
     // Helper function to get model type icon - updated sizes
     const getModelTypeIcon = () => {
-      if (model.supportsMultimodal) {
+      if (modelCaps.vision === 'yes') {
         return (
           <EyeIcon
             width={16}
@@ -662,15 +663,20 @@ export const ModelCard: React.FC<ModelCardProps> = observer(
 
     return (
       <>
-        <Card
-          elevation={0}
-          style={styles.card}
-          testID={`model-card-${model.filename || model.id}`}>
+        <Card elevation={0} style={styles.card} testID={`model-card-${cardId}`}>
           {/* Compact Header */}
           <View style={styles.compactHeader}>
             <View style={styles.headerContent}>
               <View style={styles.headerLeft}>
-                <View style={styles.modelTypeIcon}>{getModelTypeIcon()}</View>
+                <View
+                  style={styles.modelTypeIcon}
+                  {...(isRemoteModel && {
+                    accessible: true,
+                    accessibilityLabel: `${l10n.models.modelCard.labels.vision}: ${visionLabel}`,
+                    testID: `model-card-vision-${cardId}`,
+                  })}>
+                  {getModelTypeIcon()}
+                </View>
                 <Text
                   variant="titleSmall"
                   style={styles.compactModelName}
@@ -897,7 +903,7 @@ export const ModelCard: React.FC<ModelCardProps> = observer(
                   {modelCaps.contextLength && (
                     <View
                       style={styles.technicalDetailCard}
-                      testID="model-card-context-length">
+                      testID={`model-card-context-length-${cardId}`}>
                       <Text style={styles.technicalDetailLabel}>
                         {l10n.models.modelCard.labels.contextLength}
                       </Text>
@@ -938,7 +944,7 @@ export const ModelCard: React.FC<ModelCardProps> = observer(
                   {isRemoteModel && (
                     <View
                       style={styles.technicalDetailCard}
-                      testID="model-card-vision-capability"
+                      testID={`model-card-vision-capability-${cardId}`}
                       accessible={true}
                       accessibilityLabel={`${l10n.models.modelCard.labels.vision}: ${visionLabel}`}>
                       <Text style={styles.technicalDetailLabel}>
