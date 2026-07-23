@@ -246,11 +246,25 @@ export const SettingsScreen: React.FC = observer(() => {
     m => m.id === selectedDraftModelId,
   );
 
-  const isDraftPaired = modelStore.effectiveDraftMode === 'paired';
+  const draftMode = modelStore.effectiveDraftMode;
   const showSpeculativeNoEffectNote =
-    speculativeEnabled &&
-    !!modelStore.activeModel &&
-    modelStore.effectiveDraftMode === 'off';
+    speculativeEnabled && !!modelStore.activeModel && draftMode === 'off';
+
+  const draftPickIgnoredNote = (() => {
+    if (!selectedDraftModel) {
+      return undefined;
+    }
+    const activeDefaultDraft = modelStore.activeModel?.defaultDraftModel;
+    if (activeDefaultDraft && activeDefaultDraft !== selectedDraftModel.id) {
+      return l10n.settings.speculativeDraftModelIgnoredOverridden;
+    }
+    if (draftMode === 'paired' || showSpeculativeNoEffectNote) {
+      return undefined;
+    }
+    return modelStore.activeModel
+      ? l10n.settings.speculativeDraftModelIgnoredIncompatible
+      : l10n.settings.speculativeDraftModelIgnoredNotCapable;
+  })();
 
   // Draft cache compatibility is the draft's own, not the target's flash-attn.
   const draftCacheTypeKOptions = getAllowedCacheTypeKOptions(
@@ -809,6 +823,14 @@ export const SettingsScreen: React.FC = observer(() => {
                             </Menu>
                           </View>
                         </View>
+                        {draftPickIgnoredNote !== undefined && (
+                          <Text
+                            variant="labelSmall"
+                            style={styles.textDescription}
+                            testID="speculative-draft-model-ignored-note">
+                            {draftPickIgnoredNote}
+                          </Text>
+                        )}
                       </View>
                       <Divider />
 
@@ -844,10 +866,10 @@ export const SettingsScreen: React.FC = observer(() => {
                         testID="speculative-draft-key-cache-button"
                         label={l10n.settings.speculativeDraftKeyCacheType}
                         description={
-                          isDraftPaired
-                            ? undefined
-                            : l10n.settings
-                                .speculativeDraftCacheTypeDisabledDescription
+                          draftMode === 'off'
+                            ? l10n.settings
+                                .speculativeDraftCacheTypeInactiveDescription
+                            : undefined
                         }
                         value={
                           modelStore.contextInitParams.spec_draft_cache_type_k
@@ -857,7 +879,7 @@ export const SettingsScreen: React.FC = observer(() => {
                           false,
                         )}
                         options={draftCacheTypeKOptions}
-                        disabled={!isDraftPaired}
+                        disabled={draftMode === 'off'}
                         onSelect={value =>
                           modelStore.setSpecDraftCacheTypeK(value)
                         }
@@ -870,10 +892,10 @@ export const SettingsScreen: React.FC = observer(() => {
                         testID="speculative-draft-value-cache-button"
                         label={l10n.settings.speculativeDraftValueCacheType}
                         description={
-                          isDraftPaired
-                            ? undefined
-                            : l10n.settings
-                                .speculativeDraftCacheTypeDisabledDescription
+                          draftMode === 'off'
+                            ? l10n.settings
+                                .speculativeDraftCacheTypeInactiveDescription
+                            : undefined
                         }
                         value={
                           modelStore.contextInitParams.spec_draft_cache_type_v
@@ -883,7 +905,7 @@ export const SettingsScreen: React.FC = observer(() => {
                           true,
                         )}
                         options={draftCacheTypeVOptions}
-                        disabled={!isDraftPaired}
+                        disabled={draftMode === 'off'}
                         onSelect={value =>
                           modelStore.setSpecDraftCacheTypeV(value)
                         }

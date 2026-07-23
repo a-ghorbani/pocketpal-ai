@@ -473,7 +473,7 @@ describe('SettingsScreen', () => {
       expect(keyCacheButton.props.accessibilityState?.disabled).toBeFalsy();
     });
 
-    it('draft cache menus are disabled with an explanation when no draft is paired (embedded)', async () => {
+    it('draft cache menus are disabled with an explanation when nothing resolves to a draft', async () => {
       jest.useFakeTimers();
       runInAction(() => {
         modelStore.contextInitParams.speculativeEnabled = true;
@@ -498,7 +498,7 @@ describe('SettingsScreen', () => {
       // The explanation appears on both the key and value cache rows.
       expect(
         getAllByText(
-          l10n.en.settings.speculativeDraftCacheTypeDisabledDescription,
+          l10n.en.settings.speculativeDraftCacheTypeInactiveDescription,
         ).length,
       ).toBeGreaterThanOrEqual(1);
     });
@@ -583,7 +583,7 @@ describe('SettingsScreen', () => {
           } as any,
         ];
       });
-      const {getByTestId, getByText, getAllByText} = render(
+      const {getByTestId, getByText, queryAllByText} = render(
         <SettingsScreen />,
         {
           withSafeArea: true,
@@ -601,15 +601,15 @@ describe('SettingsScreen', () => {
       expect(getByTestId('speculative-draft-model-picker')).toHaveTextContent(
         /None \(embedded MTP\)/,
       );
-      // Cache rows are gated as embedded (q8_0 default, disabled + explained).
+      // Embedded still forwards the draft cache types, so the rows stay editable.
       const keyCacheButton = getByTestId('speculative-draft-key-cache-button');
-      expect(keyCacheButton.props.accessibilityState?.disabled).toBe(true);
+      expect(keyCacheButton.props.accessibilityState?.disabled).toBeFalsy();
       expect(keyCacheButton).toHaveTextContent(/Q8_0/);
       expect(
-        getAllByText(
-          l10n.en.settings.speculativeDraftCacheTypeDisabledDescription,
+        queryAllByText(
+          l10n.en.settings.speculativeDraftCacheTypeInactiveDescription,
         ).length,
-      ).toBeGreaterThanOrEqual(1);
+      ).toBe(0);
     });
 
     it('resolvable selection (set id present and downloaded) is treated as paired', async () => {
@@ -681,7 +681,7 @@ describe('SettingsScreen', () => {
       ).toBe(true);
       expect(
         getAllByText(
-          l10n.en.settings.speculativeDraftCacheTypeDisabledDescription,
+          l10n.en.settings.speculativeDraftCacheTypeInactiveDescription,
         ).length,
       ).toBe(2);
       expect(getByTestId('speculative-no-effect-note')).toBeTruthy();
@@ -756,9 +756,15 @@ describe('SettingsScreen', () => {
       // The target still carries embedded MTP layers, so the load runs
       // embedded rather than off.
       const keyCacheButton = getByTestId('speculative-draft-key-cache-button');
-      expect(keyCacheButton.props.accessibilityState?.disabled).toBe(true);
+      expect(keyCacheButton.props.accessibilityState?.disabled).toBeFalsy();
       expect(keyCacheButton).toHaveTextContent(/Q8_0/);
       expect(queryByTestId('speculative-no-effect-note')).toBeNull();
+      // The picked draft was dropped, so the picker row says why.
+      expect(
+        getByTestId('speculative-draft-model-ignored-note'),
+      ).toHaveTextContent(
+        l10n.en.settings.speculativeDraftModelIgnoredIncompatible,
+      );
     });
 
     it("the active model's own defaultDraftModel pairs it without a global pick", async () => {
@@ -795,8 +801,122 @@ describe('SettingsScreen', () => {
       expect(keyCacheButton.props.accessibilityState?.disabled).toBeFalsy();
       expect(keyCacheButton).toHaveTextContent(/F16 \(Default\)/);
       expect(queryByTestId('speculative-no-effect-note')).toBeNull();
+      expect(
+        queryByTestId('speculative-draft-model-ignored-note'),
+      ).toBeNull();
+    });
+
+    it("the active model's own draft wins over the global pick, and the picker says so", async () => {
+      jest.useFakeTimers();
+      runInAction(() => {
+        modelStore.contextInitParams.speculativeEnabled = true;
+        modelStore.contextInitParams.selectedDraftModelId = 'user/pick.gguf';
+        modelStore.activeModelId = 'active/target.gguf';
+        modelStore.models = [
+          {
+            id: 'active/target.gguf',
+            name: 'Target',
+            isDownloaded: true,
+            defaultDraftModel: 'a/b/draft.gguf',
+            ggufMetadata: {n_embd: 1024},
+          } as any,
+          {
+            id: 'a/b/draft.gguf',
+            name: 'Tiny Draft',
+            isDownloaded: true,
+            ggufMetadata: {nextn_predict_layers: 1, n_embd: 1024},
+          } as any,
+          {
+            id: 'user/pick.gguf',
+            name: 'User Pick',
+            isDownloaded: true,
+            ggufMetadata: {nextn_predict_layers: 1, n_embd: 1024},
+          } as any,
+        ];
+      });
+      const {getByTestId, getByText} = render(<SettingsScreen />, {
+        withSafeArea: true,
+        withNavigation: true,
+      });
+
+      await openSpeculative(getByTestId, getByText);
+
+      expect(getByTestId('speculative-draft-model-picker')).toHaveTextContent(
+        /User Pick/,
+      );
+      expect(
+        getByTestId('speculative-draft-model-ignored-note'),
+      ).toHaveTextContent(
+        l10n.en.settings.speculativeDraftModelIgnoredOverridden,
+      );
+    });
+
+    it('with no active model a valid pick drives the cache rows, no ignored note', async () => {
+      jest.useFakeTimers();
+      runInAction(() => {
+        modelStore.contextInitParams.speculativeEnabled = true;
+        modelStore.contextInitParams.selectedDraftModelId = 'a/b/draft.gguf';
+        modelStore.contextInitParams.spec_draft_cache_type_k = undefined;
+        modelStore.contextInitParams.spec_draft_cache_type_v = undefined;
+        modelStore.activeModelId = undefined;
+        modelStore.models = [
+          {
+            id: 'a/b/draft.gguf',
+            name: 'Tiny Draft',
+            isDownloaded: true,
+            ggufMetadata: {nextn_predict_layers: 1, n_embd: 1024},
+          } as any,
+        ];
+      });
+      const {getByTestId, getByText, queryByTestId} = render(
+        <SettingsScreen />,
+        {withSafeArea: true, withNavigation: true},
+      );
+
+      await openSpeculative(getByTestId, getByText);
+
+      const keyCacheButton = getByTestId('speculative-draft-key-cache-button');
+      expect(keyCacheButton.props.accessibilityState?.disabled).toBeFalsy();
+      expect(keyCacheButton).toHaveTextContent(/F16 \(Default\)/);
+      expect(
+        queryByTestId('speculative-draft-model-ignored-note'),
+      ).toBeNull();
+    });
+
+    it('with no active model a pick without draft layers is refused and explained', async () => {
+      jest.useFakeTimers();
+      runInAction(() => {
+        modelStore.contextInitParams.speculativeEnabled = true;
+        modelStore.contextInitParams.selectedDraftModelId = 'a/b/plain.gguf';
+        modelStore.activeModelId = undefined;
+        modelStore.models = [
+          {
+            id: 'a/b/plain.gguf',
+            name: 'Plain Model',
+            isDownloaded: true,
+            ggufMetadata: {n_embd: 1024},
+          } as any,
+        ];
+      });
+      const {getByTestId, getByText} = render(<SettingsScreen />, {
+        withSafeArea: true,
+        withNavigation: true,
+      });
+
+      await openSpeculative(getByTestId, getByText);
+
+      expect(
+        getByTestId('speculative-draft-key-cache-button').props
+          .accessibilityState?.disabled,
+      ).toBe(true);
+      expect(
+        getByTestId('speculative-draft-model-ignored-note'),
+      ).toHaveTextContent(
+        l10n.en.settings.speculativeDraftModelIgnoredNotCapable,
+      );
     });
   });
+
 
   describe('speculative no-effect advisory note', () => {
     const mtpMeta = {nextn_predict_layers: 1} as any;
