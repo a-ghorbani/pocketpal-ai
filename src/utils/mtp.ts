@@ -2,7 +2,6 @@ import {gguf} from '@huggingface/gguf';
 
 import {GGUFMetadata} from './types';
 
-// MTP-capable = the GGUF carries embedded draft layers.
 export const isMTPCapable = (model: {ggufMetadata?: GGUFMetadata}): boolean =>
   (model.ggufMetadata?.nextn_predict_layers ?? 0) > 0;
 

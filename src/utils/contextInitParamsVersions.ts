@@ -50,7 +50,6 @@ export const createContextInitParams = (
     // v2.2+
     no_extra_bufts: (params as any).no_extra_bufts ?? false, // Default ON: repack enabled (mmap OFF + repack ON is optimal on Android)
 
-    // v2.3+
     speculativeEnabled: (params as any).speculativeEnabled ?? false,
   };
 };
@@ -179,7 +178,6 @@ export function migrateContextInitParams(
     migratedParams.version = '2.2';
   }
 
-  // Migration from 2.2 to 2.3: speculative decoding
   if (migratedParams.version === '2.2') {
     if (migratedParams.speculativeEnabled === undefined) {
       migratedParams.speculativeEnabled = false;
@@ -213,7 +211,6 @@ export function validateContextInitParams(
   return requiredFields.every(field => field in params);
 }
 
-// Fallback when the persisted params are corrupted or missing.
 export function createDefaultContextInitParams(): ContextInitParams {
   return {
     version: CURRENT_CONTEXT_INIT_PARAMS_VERSION,
@@ -239,7 +236,6 @@ export function createDefaultContextInitParams(): ContextInitParams {
     // v2.2 parameters
     no_extra_bufts: false, // Repack ON: mmap OFF + repack ON is optimal on Android
 
-    // v2.3 parameters
     speculativeEnabled: false,
   };
 }

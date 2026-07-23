@@ -702,7 +702,8 @@ export interface ContextInitParams
    * Reduces memory usage at the cost of slower prompt processing. Default: false */
   no_extra_bufts?: boolean;
 
-  // v2.3+ speculative decoding / draft model (spec_draft_* come from ContextParams)
+  // v2.3+ speculative decoding / draft model. This shape is persisted, so an
+  // upstream rename of the inherited spec_draft_* fields needs a migration.
   /** Master switch for speculative decoding; default false (feature OFF). */
   speculativeEnabled?: boolean;
   /** User-picked global draft Model ID, used when a target has no per-target

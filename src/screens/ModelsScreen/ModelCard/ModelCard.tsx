@@ -776,7 +776,6 @@ export const ModelCard: React.FC<ModelCardProps> = observer(
                   />
                 )}
 
-                {/* Description */}
                 {((model.capabilities && model.capabilities.length > 0) ||
                   isMTPCapable(model)) && (
                   <View style={styles.descriptionContainer}>

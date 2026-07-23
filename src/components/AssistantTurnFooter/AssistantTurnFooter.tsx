@@ -27,7 +27,6 @@ interface AssistantTurnFooterProps {
   message: MessageType.Any;
 }
 
-// Renders once per assistant row, below all step blocks.
 export const AssistantTurnFooter: React.FC<AssistantTurnFooterProps> = observer(
   ({message}) => {
     const theme = useTheme();
