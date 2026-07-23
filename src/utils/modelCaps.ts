@@ -63,21 +63,20 @@ export function resolveModelCaps(
     return UNKNOWN;
   }
 
+  // Context facts describe the live session, so they apply to the active model
+  // alone — a card must never borrow another model's load state.
+  const isActiveModel = model.id === env.activeModelId;
+
   if (model.origin === ModelOrigin.REMOTE) {
     const caps = resolveRemoteCaps(model, env.remoteCaps, env.binding);
-    const vision = triState(caps.supportsVision);
     const contextLength = positive(caps.contextLength);
     return {
-      vision,
-      visionActive: vision === 'yes',
+      vision: triState(caps.supportsVision),
+      visionActive: isActiveModel && caps.supportsVision === true,
       contextLength,
-      effectiveContextLength: contextLength,
+      effectiveContextLength: isActiveModel ? contextLength : undefined,
     };
   }
-
-  // Local context facts describe the live session, so they apply to the active
-  // model alone — a card must never borrow another model's load state.
-  const isActiveModel = model.id === env.activeModelId;
 
   return {
     vision: triState(model.supportsMultimodal),

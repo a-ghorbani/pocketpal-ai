@@ -43,7 +43,10 @@ describe('resolveModelCaps', () => {
       (supportsVision, vision, visionActive) => {
         const caps = resolveModelCaps(
           remoteModel(),
-          env({remoteCaps: {'srv/gemma-4-e2b': {supportsVision}}}),
+          env({
+            remoteCaps: {'srv/gemma-4-e2b': {supportsVision}},
+            activeModelId: 'srv/gemma-4-e2b',
+          }),
         );
         expect(caps.vision).toBe(vision);
         expect(caps.visionActive).toBe(visionActive);
@@ -53,7 +56,10 @@ describe('resolveModelCaps', () => {
     it('populates both length fields from the probed window', () => {
       const caps = resolveModelCaps(
         remoteModel(),
-        env({remoteCaps: {'srv/gemma-4-e2b': {contextLength: 8192}}}),
+        env({
+          remoteCaps: {'srv/gemma-4-e2b': {contextLength: 8192}},
+          activeModelId: 'srv/gemma-4-e2b',
+        }),
       );
       expect(caps.contextLength).toBe(8192);
       expect(caps.effectiveContextLength).toBe(8192);
@@ -62,9 +68,28 @@ describe('resolveModelCaps', () => {
     it('treats a zero window as absent', () => {
       const caps = resolveModelCaps(
         remoteModel(),
-        env({remoteCaps: {'srv/gemma-4-e2b': {contextLength: 0}}}),
+        env({
+          remoteCaps: {'srv/gemma-4-e2b': {contextLength: 0}},
+          activeModelId: 'srv/gemma-4-e2b',
+        }),
       );
       expect(caps.contextLength).toBeUndefined();
+      expect(caps.effectiveContextLength).toBeUndefined();
+    });
+
+    it('keeps the session axis empty for a model that is not active', () => {
+      const caps = resolveModelCaps(
+        remoteModel(),
+        env({
+          remoteCaps: {
+            'srv/gemma-4-e2b': {supportsVision: true, contextLength: 8192},
+          },
+          activeModelId: 'srv/other-model',
+        }),
+      );
+      expect(caps.vision).toBe('yes');
+      expect(caps.contextLength).toBe(8192);
+      expect(caps.visionActive).toBe(false);
       expect(caps.effectiveContextLength).toBeUndefined();
     });
 
