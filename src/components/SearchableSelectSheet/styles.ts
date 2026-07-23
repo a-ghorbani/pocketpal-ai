@@ -25,10 +25,8 @@ export const createStyles = (theme: Theme) =>
       color: theme.colors.onSurface,
       fontSize: 16,
       padding: 0,
-      // Ternary required: unlike <Text>, <TextInput> is not auto-mirrored, so
-      // 'left' would stay left under RTL. ('start' is not a legal textAlign
-      // value in RN.) 'auto' is wrong too — it aligns by first strong
-      // character, flipping the field as soon as a Latin query is typed.
+      // TextInput is not auto-mirrored the way Text is, so this needs the
+      // explicit ternary. See rowLabel.
       textAlign: I18nManager.isRTL ? 'right' : 'left',
     },
     list: {
@@ -49,12 +47,9 @@ export const createStyles = (theme: Theme) =>
       flex: 1,
       color: theme.colors.onSurface,
       fontSize: 16,
-      // 'left' means "start" here. RN's textAlign has no start/end (unlike
-      // CSS, and unlike RN's own paddingStart/marginStart), but it mirrors
-      // left/right for <Text> under RTL, so 'left' lands at the layout start
-      // in both directions. Writing isRTL ? 'right' : 'left' mirrors a second
-      // time and pushes rows to the layout end. <TextInput> gets no such
-      // mirroring, so searchInput does need the ternary.
+      // 'left' is how "start" is spelled: RN has no textAlign start/end, and
+      // auto-mirrors left/right for Text. An isRTL ternary mirrors twice and
+      // lands at the end.
       textAlign: 'left',
     },
     rowLabelSelected: {
@@ -63,8 +58,6 @@ export const createStyles = (theme: Theme) =>
     emptyText: {
       color: theme.colors.onSurfaceVariant,
       fontSize: 14,
-      // Same mirroring rule as rowLabel — this string is localized, so
-      // leaving it unset would natural-align it by first strong character.
       textAlign: 'left',
       paddingHorizontal: 16,
       paddingVertical: 16,

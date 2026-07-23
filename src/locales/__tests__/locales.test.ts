@@ -223,8 +223,6 @@ describe('exports', () => {
   });
 
   it('every display name carries its parenthesised locale code', () => {
-    // The Latin code is the only part of an endonym a user stranded in an
-    // unreadable locale can type into the picker's search field.
     for (const lang of supportedLanguages) {
       expect(languageDisplayNames[lang]).toContain(`(${lang.toUpperCase()})`);
     }

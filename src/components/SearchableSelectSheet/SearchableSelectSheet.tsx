@@ -61,7 +61,6 @@ export const SearchableSelectSheet: React.FC<SearchableSelectSheetProps> = ({
     return options.filter(o => o.label.toLowerCase().includes(q));
   }, [options, query]);
 
-  // Reset the query on every close path so a reopen starts unfiltered.
   const handleClose = () => {
     setQuery('');
     onClose();
@@ -100,10 +99,8 @@ export const SearchableSelectSheet: React.FC<SearchableSelectSheetProps> = ({
       onClose={handleClose}
       title={title}
       snapPoints={['75%']}
-      // Keep the header on screen when the keyboard opens. The default
-      // ("interactive") translates the whole sheet up by the keyboard height,
-      // which pushes the title and search field under the status bar; the list
-      // scrolls on its own, so extending is what we want.
+      // Default "interactive" slides the whole sheet up by the keyboard
+      // height, putting the header under the status bar.
       keyboardBehavior="extend"
       enablePanDownToClose
       enableContentPanningGesture={false}>
