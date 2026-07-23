@@ -173,9 +173,12 @@ describe('resolveModelCaps', () => {
       it('never reaches the session axis, even for the active model', () => {
         // The card describes the configured server; attach, the send gate and
         // the context banner describe the bound session, which is only ever
-        // answered by a probe. A model can therefore read Vision: Supported
-        // while attach stays disabled — fail-closed, and self-correcting on
-        // the next successful probe.
+        // answered by a probe. So the active model can read Vision: Supported
+        // with attach still disabled — whenever the list has an answer and the
+        // probe has no entry, because it timed out, answered non-2xx, or was
+        // dropped with the models list by a url edit and only the list came
+        // back. Activating *attempts* confirmation; it does not guarantee it.
+        // Fail-closed, and self-correcting on the next successful probe.
         const caps = resolveModelCaps(
           remoteModel(),
           env({

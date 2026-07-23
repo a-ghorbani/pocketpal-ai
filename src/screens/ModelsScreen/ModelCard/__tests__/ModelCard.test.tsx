@@ -13,6 +13,7 @@ import {
   remoteModelSibling,
 } from '../../../../../jest/fixtures/models';
 import {themeFixtures} from '../../../../../jest/fixtures/theme';
+import {routerModelsBody} from '../../../../../jest/fixtures/remoteModelList';
 
 // Unmock useMemoryCheck for memory warning tests
 jest.unmock('../../../../hooks/useMemoryCheck');
@@ -823,6 +824,174 @@ describe('ModelCard', () => {
       expect(glyphStroke(getByTestId(headerGlyph))).toBe(
         themeFixtures.lightTheme.colors.iconModelTypeText,
       );
+    });
+
+    describe('capabilities the models list already carried', () => {
+      // The card fixture id and the captured row are joined here so the store
+      // derivation runs over a real body: `${serverId}/${row.id}` is the key a
+      // remote card looks itself up by.
+      const rowFor = (id: string, sourceId: string) => ({
+        ...(routerModelsBody.data.find(r => r.id === sourceId) as any),
+        id,
+      });
+
+      const listServer = (serverType?: string, rows?: any[]) => {
+        runInAction(() => {
+          serverStore.servers = [
+            {
+              id: remoteModel.serverId!,
+              name: 'router',
+              url: 'http://localhost:8080',
+              serverType,
+            },
+          ];
+          serverStore.serverModels.set(
+            remoteModel.serverId!,
+            rows ?? [rowFor(remoteModel.remoteModelId!, 'gemma-4-e2b')],
+          );
+        });
+      };
+
+      afterEach(() => {
+        runInAction(() => {
+          serverStore.servers = [];
+          serverStore.serverModels.clear();
+        });
+      });
+
+      it('states vision and the window without the model ever being activated', async () => {
+        listServer('llama.cpp');
+
+        const {getByTestId, queryByText} = customRender(
+          <ModelCard model={remoteModel} />,
+        );
+
+        expect(glyphStroke(getByTestId(headerGlyph))).toBe(
+          themeFixtures.lightTheme.colors.iconModelTypeVision,
+        );
+        expand(getByTestId);
+        await waitFor(() => {
+          expect(
+            queryByText(l10n.en.models.modelCard.labels.visionSupported),
+          ).toBeTruthy();
+        });
+        expect(getByTestId(contextCell)).toBeTruthy();
+        // Nothing was asked of the server to say any of that.
+        expect(serverStore.fetchRemoteModelCaps).not.toHaveBeenCalled();
+      });
+
+      it('says not supported for a sibling the same list describes as text-only', async () => {
+        listServer('llama.cpp', [
+          rowFor(remoteModel.remoteModelId!, 'gemma-4-e2b'),
+          rowFor(remoteModelSibling.remoteModelId!, 'gemma-3-4b'),
+        ]);
+
+        const {getByTestId, queryByText} = customRender(
+          <ModelCard model={remoteModelSibling} />,
+        );
+        expand(getByTestId);
+
+        await waitFor(() => {
+          expect(
+            queryByText(l10n.en.models.modelCard.labels.visionNotSupported),
+          ).toBeTruthy();
+        });
+      });
+
+      it('changes nothing visible when the model is then activated', async () => {
+        listServer('llama.cpp');
+
+        const {getByTestId, queryByText} = customRender(
+          <ModelCard model={remoteModel} />,
+        );
+        expand(getByTestId);
+        await waitFor(() => {
+          expect(getByTestId(contextCell)).toBeTruthy();
+        });
+        const before = [
+          glyphStroke(getByTestId(headerGlyph)),
+          getByTestId(visionCell).props.accessibilityLabel,
+          getByTestId(contextCell).props.children,
+        ];
+
+        act(() => {
+          runInAction(() => {
+            serverStore.remoteCaps = {
+              [remoteModel.id]: {supportsVision: true, contextLength: 8192},
+            };
+          });
+        });
+
+        expect([
+          glyphStroke(getByTestId(headerGlyph)),
+          getByTestId(visionCell).props.accessibilityLabel,
+          getByTestId(contextCell).props.children,
+        ]).toEqual(before);
+        expect(
+          queryByText(l10n.en.models.modelCard.labels.visionSupported),
+        ).toBeTruthy();
+      });
+
+      it('fills in when the first fetch lands, with no user action', async () => {
+        // Cold start: hydration has restored the server but no list yet.
+        runInAction(() => {
+          serverStore.servers = [
+            {
+              id: remoteModel.serverId!,
+              name: 'router',
+              url: 'http://localhost:8080',
+              serverType: 'llama.cpp',
+            },
+          ];
+        });
+
+        const {getByTestId, queryByTestId, queryByText} = customRender(
+          <ModelCard model={remoteModel} />,
+        );
+        expand(getByTestId);
+        await waitFor(() => {
+          expect(
+            queryByText(l10n.en.models.modelCard.labels.capabilityUnknown),
+          ).toBeTruthy();
+        });
+        expect(queryByTestId(contextCell)).toBeNull();
+
+        act(() => {
+          runInAction(() => {
+            serverStore.serverModels.set(remoteModel.serverId!, [
+              rowFor(remoteModel.remoteModelId!, 'gemma-4-e2b'),
+            ]);
+          });
+        });
+
+        // No press, no navigation, no prop change in between.
+        expect(
+          queryByText(l10n.en.models.modelCard.labels.visionSupported),
+        ).toBeTruthy();
+        expect(getByTestId(contextCell)).toBeTruthy();
+        expect(glyphStroke(getByTestId(headerGlyph))).toBe(
+          themeFixtures.lightTheme.colors.iconModelTypeVision,
+        );
+      });
+
+      it('reads nothing off a server of another type', async () => {
+        listServer('Ollama');
+
+        const {getByTestId, queryByTestId, queryByText} = customRender(
+          <ModelCard model={remoteModel} />,
+        );
+
+        expect(glyphStroke(getByTestId(headerGlyph))).toBe(
+          themeFixtures.lightTheme.colors.iconModelTypeText,
+        );
+        expand(getByTestId);
+        await waitFor(() => {
+          expect(
+            queryByText(l10n.en.models.modelCard.labels.capabilityUnknown),
+          ).toBeTruthy();
+        });
+        expect(queryByTestId(contextCell)).toBeNull();
+      });
     });
 
     it('gives every remote card an addressable root', () => {
