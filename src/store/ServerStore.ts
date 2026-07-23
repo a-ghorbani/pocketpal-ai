@@ -20,6 +20,13 @@ const KEYCHAIN_SERVICE_PREFIX = 'pocketpal-server-';
 const FETCH_THROTTLE_MS = 60000;
 
 /**
+ * The capability fields of a `RemoteModelCaps` entry — everything except the
+ * provenance the entry carries. Enumerated once so the usability check and the
+ * no-op write check cannot drift apart when a field is added.
+ */
+const CAPS_FIELDS = ['contextLength', 'supportsVision'] as const;
+
+/**
  * Drop every entry of a per-model map (keyed `${serverId}/${remoteModelId}`)
  * that belongs to one server. Shared by every path that invalidates per-model
  * state, so a new map cannot be added to one and forgotten in the other.
@@ -271,8 +278,13 @@ class ServerStore {
    * server the bare form describes whichever model happens to be resident, so
    * it is never issued there and the caps simply stay unknown.
    *
-   * Merges field-wise: a response that resolves only one field must not blank
-   * a known other, and a probe that resolves nothing writes nothing.
+   * Merges field-wise within one backend: a response that resolves only one
+   * field must not blank a known other, and a probe that resolves nothing
+   * writes nothing. Across backends there is nothing to merge — an entry
+   * probed against another url is replaced, not blended.
+   *
+   * The written entry carries the url it was probed against, so a reader can
+   * tell whether it describes the backend a live session is bound to.
    *
    * A shorter server timeout is honoured, a longer one is not:
    * `requestTimeoutMs` is a free numeric input, and detached work must stay
@@ -289,7 +301,7 @@ class ServerStore {
     }
 
     const isUnusable = (caps: RemoteModelCaps) =>
-      caps.contextLength === undefined && caps.supportsVision === undefined;
+      CAPS_FIELDS.every(f => caps[f] === undefined);
 
     // Snapshot: `server` is the live observable, so updateServer mutates it
     // in place while the probe is in flight.
@@ -332,11 +344,16 @@ class ServerStore {
       }
       const key = `${serverId}/${remoteModelId}`;
       const prior = this.remoteCaps[key];
-      const merged = {...prior, ...caps};
+      const sameBackend = prior?.probedUrl === probedUrl;
+      const merged: RemoteModelCaps = {
+        ...(sameBackend ? prior : undefined),
+        ...caps,
+        probedUrl,
+      };
       if (
         prior &&
-        prior.contextLength === merged.contextLength &&
-        prior.supportsVision === merged.supportsVision
+        prior.probedUrl === merged.probedUrl &&
+        CAPS_FIELDS.every(f => prior[f] === merged[f])
       ) {
         return;
       }

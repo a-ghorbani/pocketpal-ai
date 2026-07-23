@@ -907,6 +907,7 @@ describe('ServerStore', () => {
       expect(serverStore.remoteCaps[`${id}/gemma-4-e2b`]).toEqual({
         contextLength: 8192,
         supportsVision: true,
+        probedUrl: 'http://localhost:8080',
       });
     });
 
@@ -935,6 +936,7 @@ describe('ServerStore', () => {
       // Encoding belongs to the request, not the key.
       expect(serverStore.remoteCaps[`${id}/unsloth/gemma-3-4b`]).toEqual({
         supportsVision: false,
+        probedUrl: 'http://localhost:8080',
       });
     });
 
@@ -956,10 +958,12 @@ describe('ServerStore', () => {
       expect(serverStore.remoteCaps[`${id}/gemma-4-e2b`]).toEqual({
         contextLength: 8192,
         supportsVision: true,
+        probedUrl: 'http://localhost:8080',
       });
       expect(serverStore.remoteCaps[`${id}/gemma-3-4b`]).toEqual({
         contextLength: 4096,
         supportsVision: false,
+        probedUrl: 'http://localhost:8080',
       });
     });
 
@@ -970,6 +974,7 @@ describe('ServerStore', () => {
         serverStore.remoteCaps[`${id}/m`] = {
           contextLength: 8192,
           supportsVision: true,
+          probedUrl: 'http://localhost:8080',
         };
       });
       mockedFetchServerProps.mockResolvedValueOnce({supportsVision: false});
@@ -979,6 +984,50 @@ describe('ServerStore', () => {
       expect(serverStore.remoteCaps[`${id}/m`]).toEqual({
         contextLength: 8192,
         supportsVision: false,
+        probedUrl: 'http://localhost:8080',
+      });
+    });
+
+    it('replaces, not merges, an entry probed against another backend', async () => {
+      const id = addLlamaServer();
+      jest.clearAllMocks();
+      runInAction(() => {
+        serverStore.remoteCaps[`${id}/m`] = {
+          contextLength: 8192,
+          supportsVision: true,
+          probedUrl: 'http://localhost:9090',
+        };
+      });
+      mockedFetchServerProps.mockResolvedValueOnce({supportsVision: false});
+
+      await serverStore.fetchRemoteModelCaps(id, 'm');
+
+      // Carrying the old context length across would leave one entry
+      // describing two backends and labelled as one of them.
+      expect(serverStore.remoteCaps[`${id}/m`]).toEqual({
+        supportsVision: false,
+        probedUrl: 'http://localhost:8080',
+      });
+    });
+
+    it('writes when only the probed backend changed', async () => {
+      const id = addLlamaServer();
+      jest.clearAllMocks();
+      runInAction(() => {
+        serverStore.remoteCaps[`${id}/m`] = {
+          contextLength: 8192,
+          probedUrl: 'http://localhost:9090',
+        };
+      });
+      mockedFetchServerProps.mockResolvedValueOnce({contextLength: 8192});
+
+      await serverStore.fetchRemoteModelCaps(id, 'm');
+
+      // Same numbers, different backend — the no-op short-circuit must not
+      // swallow this or the entry keeps claiming the old url.
+      expect(serverStore.remoteCaps[`${id}/m`]).toEqual({
+        contextLength: 8192,
+        probedUrl: 'http://localhost:8080',
       });
     });
 
@@ -1028,6 +1077,7 @@ describe('ServerStore', () => {
       expect(serverStore.remoteCaps[`${id}/m`]).toEqual({
         contextLength: 4096,
         supportsVision: true,
+        probedUrl: 'http://localhost:8080',
       });
     });
 

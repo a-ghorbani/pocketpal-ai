@@ -108,17 +108,16 @@ export const BannerRow: React.FC<BannerRowProps> = observer(
     // remote model fall back to the /props-reported window for that model so
     // the context banners can measure against a real one.
     //
-    // The `> 0` filter is defence in depth: both writers (openai.ts parse,
-    // resolveRemoteCaps legacy fallback) already drop a non-positive window,
-    // and 0 means unknown, not exhausted — a banner measured against it would
-    // read every turn as context-full.
+    // The `> 0` filter is defence in depth: the openai.ts parse already drops
+    // a non-positive window, and 0 means unknown, not exhausted — a banner
+    // measured against it would read every turn as context-full.
     const localNCtx = modelStore.activeContextSettings?.n_ctx;
     const resolvedNCtx =
       localNCtx ??
       resolveRemoteCaps(
         activeModel,
         serverStore.remoteCaps,
-        serverStore.servers,
+        modelStore.activeRemoteBinding,
       ).contextLength;
     const effectiveNCtx =
       resolvedNCtx !== undefined && resolvedNCtx > 0 ? resolvedNCtx : undefined;

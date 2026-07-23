@@ -123,7 +123,7 @@ export const ChatScreen: React.FC = observer(() => {
     ? resolveRemoteCaps(
         activeModel,
         serverStore.remoteCaps,
-        serverStore.servers,
+        modelStore.activeRemoteBinding,
       ).supportsVision === true
     : multimodalEnabled;
 

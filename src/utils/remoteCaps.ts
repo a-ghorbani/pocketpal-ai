@@ -1,4 +1,33 @@
-import {Model, ModelOrigin, RemoteModelCaps, ServerConfig} from './types';
+import {
+  Model,
+  ModelOrigin,
+  RemoteModelCaps,
+  RemoteSessionBinding,
+} from './types';
+
+/**
+ * Whether stored capabilities describe the backend the live session is bound
+ * to. Caps carry the url they were probed against; the session carries the url
+ * it was built with. A server edit moves neither, so this is the only
+ * comparison that answers "do these describe what we are talking to".
+ *
+ * No binding (or one for another model) means there is no live session to
+ * contradict, and an entry with no `probedUrl` predates the field — both are
+ * taken at face value.
+ */
+export function capsMatchBinding(
+  caps: RemoteModelCaps | undefined,
+  binding: RemoteSessionBinding | undefined,
+  modelId: string,
+): boolean {
+  if (!caps) {
+    return false;
+  }
+  if (!binding || binding.modelId !== modelId) {
+    return true;
+  }
+  return caps.probedUrl === undefined || caps.probedUrl === binding.url;
+}
 
 /**
  * Resolve the effective capabilities of a remote model. Single source of truth
@@ -8,39 +37,29 @@ import {Model, ModelOrigin, RemoteModelCaps, ServerConfig} from './types';
  * Pure and synchronous by design: callers resolve inside an `observer` render
  * body, so a capability landing from a detached probe re-renders on its own.
  *
- * Per-model caps win. The per-server fields are pre-per-model leftovers with no
- * writer left; they are read only as a fallback, and a persisted context length
- * of 0 is ignored because it came from a router placeholder, not a real window.
+ * Capabilities that describe a different backend than the session is bound to
+ * resolve to unknown, which fails closed.
  */
 export function resolveRemoteCaps(
   model: Model | undefined,
   remoteCaps: Record<string, RemoteModelCaps>,
-  servers: ServerConfig[],
+  binding: RemoteSessionBinding | undefined,
 ): RemoteModelCaps {
   if (!model || model.origin !== ModelOrigin.REMOTE) {
     return {};
   }
 
   const perModel = remoteCaps[model.id];
-  const server = servers.find(s => s.id === model.serverId);
+  if (!capsMatchBinding(perModel, binding, model.id)) {
+    return {};
+  }
 
   const resolved: RemoteModelCaps = {};
-
-  const legacyContextLength =
-    typeof server?.contextLength === 'number' &&
-    Number.isFinite(server.contextLength) &&
-    server.contextLength > 0
-      ? server.contextLength
-      : undefined;
-  const contextLength = perModel?.contextLength ?? legacyContextLength;
-  if (contextLength !== undefined) {
-    resolved.contextLength = contextLength;
+  if (perModel.contextLength !== undefined) {
+    resolved.contextLength = perModel.contextLength;
   }
-
-  const supportsVision = perModel?.supportsVision ?? server?.supportsVision;
-  if (supportsVision !== undefined) {
-    resolved.supportsVision = supportsVision;
+  if (perModel.supportsVision !== undefined) {
+    resolved.supportsVision = perModel.supportsVision;
   }
-
   return resolved;
 }

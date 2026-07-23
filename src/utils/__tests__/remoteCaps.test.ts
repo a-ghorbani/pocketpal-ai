@@ -1,10 +1,16 @@
-import {resolveRemoteCaps} from '../remoteCaps';
-import {Model, ModelOrigin, ServerConfig} from '../types';
+import {capsMatchBinding, resolveRemoteCaps} from '../remoteCaps';
+import {Model, ModelOrigin, RemoteSessionBinding} from '../types';
 
-const server = (overrides: Partial<ServerConfig> = {}): ServerConfig => ({
-  id: 'srv',
-  name: 'llama server',
-  url: 'http://localhost:8080',
+const URL_A = 'http://localhost:8080';
+const URL_B = 'http://localhost:9090';
+
+const binding = (
+  overrides: Partial<RemoteSessionBinding> = {},
+): RemoteSessionBinding => ({
+  modelId: 'srv/gemma-4-e2b',
+  serverId: 'srv',
+  remoteModelId: 'gemma-4-e2b',
+  url: URL_A,
   serverType: 'llama.cpp',
   ...overrides,
 });
@@ -25,8 +31,14 @@ describe('resolveRemoteCaps', () => {
     expect(
       resolveRemoteCaps(
         remoteModel(),
-        {'srv/gemma-4-e2b': {contextLength: 8192, supportsVision: true}},
-        [server()],
+        {
+          'srv/gemma-4-e2b': {
+            contextLength: 8192,
+            supportsVision: true,
+            probedUrl: URL_A,
+          },
+        },
+        binding(),
       ),
     ).toEqual({contextLength: 8192, supportsVision: true});
   });
@@ -36,51 +48,82 @@ describe('resolveRemoteCaps', () => {
       resolveRemoteCaps(
         remoteModel('gemma-3-4b'),
         {'srv/gemma-4-e2b': {contextLength: 8192, supportsVision: true}},
-        [server()],
+        binding(),
       ),
     ).toEqual({});
-  });
-
-  it('prefers the per-model entry over the legacy per-server fields', () => {
-    expect(
-      resolveRemoteCaps(
-        remoteModel(),
-        {'srv/gemma-4-e2b': {contextLength: 8192, supportsVision: true}},
-        [server({contextLength: 2048, supportsVision: false})],
-      ),
-    ).toEqual({contextLength: 8192, supportsVision: true});
-  });
-
-  it('falls back to legacy per-server fields when no entry exists', () => {
-    expect(
-      resolveRemoteCaps(remoteModel(), {}, [
-        server({contextLength: 4096, supportsVision: false}),
-      ]),
-    ).toEqual({contextLength: 4096, supportsVision: false});
-  });
-
-  it('ignores a legacy context length of 0 left by a router probe', () => {
-    expect(
-      resolveRemoteCaps(remoteModel(), {}, [
-        server({contextLength: 0, supportsVision: false}),
-      ]),
-    ).toEqual({supportsVision: false});
   });
 
   it('resolves fields independently when the entry is partial', () => {
     expect(
       resolveRemoteCaps(
         remoteModel(),
-        {'srv/gemma-4-e2b': {contextLength: 8192}},
-        [server({contextLength: 2048, supportsVision: true})],
+        {'srv/gemma-4-e2b': {contextLength: 8192, probedUrl: URL_A}},
+        binding(),
       ),
-    ).toEqual({contextLength: 8192, supportsVision: true});
+    ).toEqual({contextLength: 8192});
   });
 
-  it('resolves nothing for a local model, an absent model, or an unknown server', () => {
+  it('drops an entry probed against a different backend', () => {
+    expect(
+      resolveRemoteCaps(
+        remoteModel(),
+        {
+          'srv/gemma-4-e2b': {
+            contextLength: 8192,
+            supportsVision: true,
+            probedUrl: URL_B,
+          },
+        },
+        binding({url: URL_A}),
+      ),
+    ).toEqual({});
+  });
+
+  it('keeps an entry that predates probedUrl', () => {
+    expect(
+      resolveRemoteCaps(
+        remoteModel(),
+        {'srv/gemma-4-e2b': {contextLength: 8192}},
+        binding(),
+      ),
+    ).toEqual({contextLength: 8192});
+  });
+
+  it('keeps an entry when no session is bound to that model', () => {
+    const caps = {'srv/gemma-4-e2b': {contextLength: 8192, probedUrl: URL_B}};
+    expect(resolveRemoteCaps(remoteModel(), caps, undefined)).toEqual({
+      contextLength: 8192,
+    });
+    expect(
+      resolveRemoteCaps(
+        remoteModel(),
+        caps,
+        binding({modelId: 'srv/other-model'}),
+      ),
+    ).toEqual({contextLength: 8192});
+  });
+
+  it('resolves nothing for a local model, an absent model, or an absent entry', () => {
     const caps = {'srv/gemma-4-e2b': {contextLength: 8192}};
-    expect(resolveRemoteCaps(localModel(), caps, [server()])).toEqual({});
-    expect(resolveRemoteCaps(undefined, caps, [server()])).toEqual({});
-    expect(resolveRemoteCaps(remoteModel(), {}, [])).toEqual({});
+    expect(resolveRemoteCaps(localModel(), caps, binding())).toEqual({});
+    expect(resolveRemoteCaps(undefined, caps, binding())).toEqual({});
+    expect(resolveRemoteCaps(remoteModel(), {}, binding())).toEqual({});
+  });
+});
+
+describe('capsMatchBinding', () => {
+  it('is false for an absent entry, so callers probe', () => {
+    expect(capsMatchBinding(undefined, binding(), 'srv/gemma-4-e2b')).toBe(
+      false,
+    );
+  });
+
+  it('matches on the url the entry was probed against', () => {
+    expect(
+      capsMatchBinding({probedUrl: URL_A}, binding(), 'srv/gemma-4-e2b'),
+    ).toBe(true);
+    expect(
+      capsMatchBinding({probedUrl: URL_B}, binding(), 'srv/gemma-4-e2b'),
+    ).toBe(false);
   });
 });

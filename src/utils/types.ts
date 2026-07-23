@@ -478,10 +478,6 @@ export interface ServerConfig {
     | 'OpenAI'
     | 'vLLM'
     | string;
-  // Legacy per-server caps. No writer: capabilities are per model and live in
-  // ServerStore.remoteCaps. Persisted values are read as a fallback only.
-  contextLength?: number;
-  supportsVision?: boolean;
 }
 
 /**
@@ -493,6 +489,25 @@ export interface ServerConfig {
 export interface RemoteModelCaps {
   contextLength?: number; // /props n_ctx; only ever a finite number > 0
   supportsVision?: boolean; // /props modalities.vision
+  // The backend these describe. ServerConfig.url is mutable and a live session
+  // does not follow it, so caps that do not carry their own url cannot be
+  // matched against the session. Absent on an entry written before this field
+  // existed: taken at face value, no migration.
+  probedUrl?: string;
+}
+
+/**
+ * The backend a live remote chat session is actually talking to. Captured when
+ * the completion engine is built and never repointed, unlike the ServerConfig
+ * it was built from — editing a server url leaves the session on the old
+ * backend until the model is re-selected. Owned by ModelStore, not persisted.
+ */
+export interface RemoteSessionBinding {
+  modelId: string; // `${serverId}/${remoteModelId}`
+  serverId: string;
+  remoteModelId: string;
+  url: string;
+  serverType?: string;
 }
 
 export enum ModelType {

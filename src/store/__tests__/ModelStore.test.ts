@@ -2345,32 +2345,61 @@ describe('ModelStore', () => {
               name: 'llama',
               url: 'http://localhost:8080',
               serverType: 'llama.cpp',
-              supportsVision,
             },
           ];
+          serverStore.remoteCaps =
+            supportsVision === undefined
+              ? {}
+              : {
+                  'srv-1/remote-model': {
+                    supportsVision,
+                    probedUrl: 'http://localhost:8080',
+                  },
+                };
+          modelStore.activeRemoteBinding = {
+            modelId: 'srv-1/remote-model',
+            serverId: 'srv-1',
+            remoteModelId: 'remote-model',
+            url: 'http://localhost:8080',
+            serverType: 'llama.cpp',
+          };
         });
       };
 
       afterEach(() => {
         runInAction(() => {
           serverStore.servers = [];
+          serverStore.remoteCaps = {};
           modelStore.models = [];
           modelStore.activeModelId = undefined;
+          modelStore.activeRemoteBinding = undefined;
         });
       });
 
-      it('returns true when the active server reports vision', async () => {
+      it('returns true when the probe reported vision', async () => {
         setRemoteActive(true);
         await expect(modelStore.isMultimodalEnabled()).resolves.toBe(true);
       });
 
-      it('returns false when the active server does not report vision', async () => {
+      it('returns false when the probe reported no vision', async () => {
         setRemoteActive(false);
         await expect(modelStore.isMultimodalEnabled()).resolves.toBe(false);
       });
 
-      it('returns false when the server capability is unprobed', async () => {
+      it('returns false when the capability is unprobed', async () => {
         setRemoteActive(undefined);
+        await expect(modelStore.isMultimodalEnabled()).resolves.toBe(false);
+      });
+
+      it('returns false when the capabilities describe another backend', async () => {
+        setRemoteActive(true);
+        runInAction(() => {
+          serverStore.remoteCaps['srv-1/remote-model'].probedUrl =
+            'http://localhost:9090';
+        });
+
+        // The session still posts to :8080; a capability read from :9090 says
+        // nothing about it, so vision stays unknown and fails closed.
         await expect(modelStore.isMultimodalEnabled()).resolves.toBe(false);
       });
     });
@@ -4305,6 +4334,8 @@ describe('ModelStore', () => {
     beforeEach(() => {
       runInAction(() => {
         modelStore.context = undefined;
+        modelStore.engine = undefined;
+        modelStore.activeRemoteBinding = undefined;
         modelStore.appState = 'background';
         modelStore.activeModelId = 'srv-1/llama-7b';
         modelStore.models = [];
@@ -4328,6 +4359,8 @@ describe('ModelStore', () => {
       probe.mockRestore();
       runInAction(() => {
         modelStore.activeModelId = undefined;
+        modelStore.engine = undefined;
+        modelStore.activeRemoteBinding = undefined;
         serverStore.servers = [];
         serverStore.serverModels.clear();
         serverStore.userSelectedModels = [];
@@ -4362,6 +4395,27 @@ describe('ModelStore', () => {
       expect(probe).not.toHaveBeenCalled();
     });
 
+    it('probes again when the stored capabilities describe another backend', async () => {
+      runInAction(() => {
+        serverStore.remoteCaps['srv-1/llama-7b'] = {
+          contextLength: 8192,
+          probedUrl: 'http://localhost:9090',
+        };
+        modelStore.activeRemoteBinding = {
+          modelId: 'srv-1/llama-7b',
+          serverId: 'srv-1',
+          remoteModelId: 'llama-7b',
+          url: 'http://localhost:8080',
+        };
+      });
+
+      await modelStore.handleAppStateChange('active');
+
+      // Populated is not the same as usable: that entry is unusable for this
+      // session, and the server still serves the url the session is bound to.
+      expect(probe).toHaveBeenCalledWith('srv-1', 'llama-7b');
+    });
+
     it('issues no probe for an active local model', async () => {
       const model = {...presetModelFixture, isDownloaded: true};
       runInAction(() => {
@@ -4381,6 +4435,66 @@ describe('ModelStore', () => {
         modelStore.handleAppStateChange('active'),
       ).resolves.toBeUndefined();
       await new Promise(setImmediate);
+    });
+
+    describe('after an in-session url edit', () => {
+      const remoteModel = {
+        id: 'srv-1/llama-7b',
+        name: 'llama-7b',
+        origin: ModelOrigin.REMOTE,
+        serverId: 'srv-1',
+        remoteModelId: 'llama-7b',
+      } as any;
+
+      // Activate for real so the binding is built from the url of the moment,
+      // the way updateServer leaves it.
+      const activateThenBackground = async () => {
+        await modelStore.setRemoteModel(remoteModel);
+        runInAction(() => {
+          modelStore.appState = 'background';
+          serverStore.remoteCaps = {};
+        });
+        probe.mockClear();
+      };
+
+      it('issues no probe while the session is bound to the old url', async () => {
+        await activateThenBackground();
+        serverStore.updateServer('srv-1', {url: 'http://localhost:9090'});
+
+        await modelStore.handleAppStateChange('active');
+
+        // The session still posts to :8080, so :9090 cannot answer for it.
+        expect(modelStore.activeRemoteBinding?.url).toBe(
+          'http://localhost:8080',
+        );
+        expect(probe).not.toHaveBeenCalled();
+        expect(serverStore.remoteCaps['srv-1/llama-7b']).toBeUndefined();
+      });
+
+      it('probes when the edit left the url untouched', async () => {
+        await activateThenBackground();
+        serverStore.updateServer('srv-1', {requestTimeoutMs: 30000});
+
+        await modelStore.handleAppStateChange('active');
+
+        expect(probe).toHaveBeenCalledWith('srv-1', 'llama-7b');
+      });
+
+      it('probes again once the model is re-selected on the new url', async () => {
+        await activateThenBackground();
+        serverStore.updateServer('srv-1', {url: 'http://localhost:9090'});
+
+        await modelStore.setRemoteModel(remoteModel);
+
+        // Re-selection is what moves the session, and the probe goes with it.
+        expect(modelStore.activeRemoteBinding?.url).toBe(
+          'http://localhost:9090',
+        );
+        expect(probe.mock.calls.at(-1)?.slice(0, 2)).toEqual([
+          'srv-1',
+          'llama-7b',
+        ]);
+      });
     });
   });
 
