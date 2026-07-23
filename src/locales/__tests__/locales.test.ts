@@ -222,8 +222,15 @@ describe('exports', () => {
     }
   });
 
+  it('every display name carries its parenthesised locale code', () => {
+    for (const lang of supportedLanguages) {
+      expect(languageDisplayNames[lang]).toContain(`(${lang.toUpperCase()})`);
+    }
+  });
+
   it('languageDisplayNames contains expected values', () => {
     expect(languageDisplayNames.en).toBe('English (EN)');
+    expect(languageDisplayNames.fa).toBe('\u0641\u0627\u0631\u0633\u06CC (FA)');
     expect(languageDisplayNames.he).toBe('\u05E2\u05D1\u05E8\u05D9\u05EA (HE)');
     expect(languageDisplayNames.id).toBe('Indonesia (ID)');
     expect(languageDisplayNames.ja).toBe('\u65E5\u672C\u8A9E (JA)');

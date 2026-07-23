@@ -384,6 +384,12 @@ export const Selectors = {
     get languageSelectorButton(): string {
       return byTestId('language-selector-button');
     },
+    get languageSheet(): string {
+      return byTestId('language-sheet');
+    },
+    get languageSearch(): string {
+      return byTestId('language-search');
+    },
     get displayMemoryUsageSwitch(): string {
       return byTestId('display-memory-usage-switch');
     },

@@ -78,6 +78,39 @@ describe('SearchableSelectSheet', () => {
     expect(onClose).toHaveBeenCalled();
   });
 
+  it('clears the query on the selection path so a reopen is unfiltered', () => {
+    const {getByTestId, queryByTestId, rerender} = renderSheet();
+    fireEvent.changeText(getByTestId('searchable-select-search'), 'JAP');
+    expect(queryByTestId('searchable-select-option-ar')).toBeNull();
+
+    fireEvent.press(getByTestId('searchable-select-option-ja'));
+
+    rerender(
+      <SearchableSelectSheet
+        isVisible
+        onClose={jest.fn()}
+        title="Language"
+        searchPlaceholder="Search languages"
+        options={options}
+        value="ja"
+        onSelect={jest.fn()}
+      />,
+    );
+    expect(getByTestId('searchable-select-search').props.value).toBe('');
+    expect(getByTestId('searchable-select-option-na')).toBeTruthy();
+    expect(getByTestId('searchable-select-option-ar')).toBeTruthy();
+    expect(getByTestId('searchable-select-option-ja')).toBeTruthy();
+  });
+
+  it('renders an empty state when the query matches nothing', () => {
+    const {getByTestId, queryByTestId} = renderSheet();
+    fireEvent.changeText(getByTestId('searchable-select-search'), 'zzz');
+    expect(getByTestId('searchable-select-sheet-empty')).toBeTruthy();
+    expect(queryByTestId('searchable-select-option-na')).toBeNull();
+    expect(queryByTestId('searchable-select-option-ar')).toBeNull();
+    expect(queryByTestId('searchable-select-option-ja')).toBeNull();
+  });
+
   it('honours custom testID prefixes', () => {
     const {getByTestId} = renderSheet({
       testID: 'tts-language-sheet',
