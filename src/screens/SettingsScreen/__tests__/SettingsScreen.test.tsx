@@ -12,9 +12,24 @@ import {
 import {SettingsScreen} from '../SettingsScreen';
 
 import {modelStore, uiStore, ttsStore} from '../../../store';
+import {
+  draftCacheDefaults,
+  effectiveDraftModeOf,
+} from '../../../store/draftResolution';
 import {l10n} from '../../../locales';
 
 jest.useFakeTimers();
+
+// The shared mock store predates these derived getters; delegate them to the
+// same resolver the real store uses.
+Object.defineProperty(modelStore, 'effectiveDraftMode', {
+  configurable: true,
+  get: () => effectiveDraftModeOf(modelStore as any),
+});
+Object.defineProperty(modelStore, 'effectiveDraftCacheDefaults', {
+  configurable: true,
+  get: () => draftCacheDefaults(effectiveDraftModeOf(modelStore as any)),
+});
 
 const render = (ui: React.ReactElement, options: any = {}) =>
   baseRender(ui, {withBottomSheetProvider: true, ...options});
@@ -345,10 +360,35 @@ describe('SettingsScreen', () => {
       });
     };
 
+    // Pairing needs an MTP-capable draft whose width matches the ACTIVE target;
+    // anything else runs embedded or off.
+    const setupPairedDraft = () => {
+      runInAction(() => {
+        modelStore.contextInitParams.speculativeEnabled = true;
+        modelStore.contextInitParams.selectedDraftModelId = 'a/b/draft.gguf';
+        modelStore.activeModelId = 'active/target.gguf';
+        modelStore.models = [
+          {
+            id: 'active/target.gguf',
+            name: 'Target',
+            isDownloaded: true,
+            ggufMetadata: {n_embd: 1024},
+          } as any,
+          {
+            id: 'a/b/draft.gguf',
+            name: 'Tiny Draft',
+            isDownloaded: true,
+            ggufMetadata: {nextn_predict_layers: 1, n_embd: 1024},
+          } as any,
+        ];
+      });
+    };
+
     afterEach(() => {
       runInAction(() => {
         modelStore.contextInitParams.speculativeEnabled = false;
         modelStore.contextInitParams.selectedDraftModelId = undefined;
+        modelStore.activeModelId = undefined;
       });
     });
 
@@ -424,11 +464,10 @@ describe('SettingsScreen', () => {
       expect(modelStore.setSpecDraftNGpuLayers).toHaveBeenCalledWith(42);
     });
 
-    it('draft cache label shows the effective default (f16 when a draft is picked)', async () => {
+    it('draft cache label shows the effective default (f16 when a draft is paired)', async () => {
       jest.useFakeTimers();
-      setupDraftModels();
+      setupPairedDraft();
       runInAction(() => {
-        modelStore.contextInitParams.selectedDraftModelId = 'a/b/draft.gguf';
         modelStore.contextInitParams.spec_draft_cache_type_k = undefined;
       });
       const {getByTestId, getByText, queryByText} = render(<SettingsScreen />, {
@@ -481,12 +520,8 @@ describe('SettingsScreen', () => {
 
     it('paired draft renders the f16 effective-default label (positive assertion)', async () => {
       jest.useFakeTimers();
-      setupDraftModels();
+      setupPairedDraft();
       runInAction(() => {
-        // A draft is picked but no explicit cache type set → label must resolve
-        // to the EFFECTIVE paired default (f16), not the "None" string and not
-        // an empty/wrong value.
-        modelStore.contextInitParams.selectedDraftModelId = 'a/b/draft.gguf';
         modelStore.contextInitParams.spec_draft_cache_type_k = undefined;
         modelStore.contextInitParams.spec_draft_cache_type_v = undefined;
       });
@@ -514,14 +549,19 @@ describe('SettingsScreen', () => {
     it('embedded mode renders the q8_0 effective-default label (positive assertion)', async () => {
       jest.useFakeTimers();
       runInAction(() => {
-        // No global pick and no per-target draft → effectively embedded; the
-        // draft cache rows must show the embedded default (q8_0), not f16 and
-        // not the "None" string.
         modelStore.contextInitParams.speculativeEnabled = true;
         modelStore.contextInitParams.selectedDraftModelId = undefined;
         modelStore.contextInitParams.spec_draft_cache_type_k = undefined;
         modelStore.contextInitParams.spec_draft_cache_type_v = undefined;
-        modelStore.models = [];
+        modelStore.activeModelId = 'active/mtp.gguf';
+        modelStore.models = [
+          {
+            id: 'active/mtp.gguf',
+            name: 'MTP Active',
+            isDownloaded: true,
+            ggufMetadata: {nextn_predict_layers: 1, n_embd: 1024},
+          } as any,
+        ];
       });
       const {getByTestId, getByText} = render(<SettingsScreen />, {
         withSafeArea: true,
@@ -544,15 +584,19 @@ describe('SettingsScreen', () => {
     it('stale selection (set id that does not resolve to a downloaded model) is treated as embedded/None', async () => {
       jest.useFakeTimers();
       runInAction(() => {
-        // The picked id points to a model that is NOT present/downloaded
-        // (e.g. it was deleted). The selection must be treated as None: the
-        // button shows "None", the cache rows are disabled (embedded), and the
-        // disabled explanation is shown — all consistent, no phantom pairing.
         modelStore.contextInitParams.speculativeEnabled = true;
         modelStore.contextInitParams.selectedDraftModelId = 'gone/draft.gguf';
         modelStore.contextInitParams.spec_draft_cache_type_k = undefined;
         modelStore.contextInitParams.spec_draft_cache_type_v = undefined;
-        modelStore.models = [];
+        modelStore.activeModelId = 'active/mtp.gguf';
+        modelStore.models = [
+          {
+            id: 'active/mtp.gguf',
+            name: 'MTP Active',
+            isDownloaded: true,
+            ggufMetadata: {nextn_predict_layers: 1, n_embd: 1024},
+          } as any,
+        ];
       });
       const {getByTestId, getByText, getAllByText} = render(
         <SettingsScreen />,
@@ -585,11 +629,8 @@ describe('SettingsScreen', () => {
 
     it('resolvable selection (set id present and downloaded) is treated as paired', async () => {
       jest.useFakeTimers();
-      setupDraftModels();
+      setupPairedDraft();
       runInAction(() => {
-        // The picked id resolves to a downloaded model → paired: button shows
-        // the model name and the cache rows are enabled (f16 default).
-        modelStore.contextInitParams.selectedDraftModelId = 'a/b/draft.gguf';
         modelStore.contextInitParams.spec_draft_cache_type_k = undefined;
       });
       const {getByTestId, getByText} = render(<SettingsScreen />, {
@@ -608,6 +649,167 @@ describe('SettingsScreen', () => {
       );
       const keyCacheButton = getByTestId('speculative-draft-key-cache-button');
       expect(keyCacheButton.props.accessibilityState?.disabled).toBeFalsy();
+    });
+
+    it('a draft carried by some other downloaded model does not pair the active one', async () => {
+      jest.useFakeTimers();
+      runInAction(() => {
+        modelStore.contextInitParams.speculativeEnabled = true;
+        modelStore.contextInitParams.selectedDraftModelId = undefined;
+        modelStore.activeModelId = 'active/plain.gguf';
+        modelStore.models = [
+          {
+            id: 'active/plain.gguf',
+            name: 'Plain Active',
+            isDownloaded: true,
+            ggufMetadata: {n_embd: 1024},
+          } as any,
+          {
+            id: 'other/target.gguf',
+            name: 'Other Target',
+            isDownloaded: true,
+            defaultDraftModel: 'a/b/draft.gguf',
+            ggufMetadata: {n_embd: 1024},
+          } as any,
+          {
+            id: 'a/b/draft.gguf',
+            name: 'Tiny Draft',
+            isDownloaded: true,
+            ggufMetadata: {nextn_predict_layers: 1, n_embd: 1024},
+          } as any,
+        ];
+      });
+      const {getByTestId, getByText, getAllByText} = render(
+        <SettingsScreen />,
+        {withSafeArea: true, withNavigation: true},
+      );
+
+      await openSpeculative(getByTestId, getByText);
+
+      expect(
+        getByTestId('speculative-draft-key-cache-button').props
+          .accessibilityState?.disabled,
+      ).toBe(true);
+      expect(
+        getByTestId('speculative-draft-value-cache-button').props
+          .accessibilityState?.disabled,
+      ).toBe(true);
+      expect(
+        getAllByText(
+          l10n.en.settings.speculativeDraftCacheTypeDisabledDescription,
+        ).length,
+      ).toBe(2);
+      expect(getByTestId('speculative-no-effect-note')).toBeTruthy();
+    });
+
+    it('a non-MTP active target with a globally-picked incompatible draft disables the menus and shows the note', async () => {
+      jest.useFakeTimers();
+      runInAction(() => {
+        modelStore.contextInitParams.speculativeEnabled = true;
+        modelStore.contextInitParams.selectedDraftModelId = 'a/b/draft.gguf';
+        modelStore.activeModelId = 'active/plain.gguf';
+        modelStore.models = [
+          {
+            id: 'active/plain.gguf',
+            name: 'Plain Active',
+            isDownloaded: true,
+            ggufMetadata: {n_embd: 1024},
+          } as any,
+          {
+            id: 'a/b/draft.gguf',
+            name: 'Plain Draft',
+            isDownloaded: true,
+          } as any,
+        ];
+      });
+      const {getByTestId, getByText} = render(<SettingsScreen />, {
+        withSafeArea: true,
+        withNavigation: true,
+      });
+
+      await openSpeculative(getByTestId, getByText);
+
+      expect(
+        getByTestId('speculative-draft-key-cache-button').props
+          .accessibilityState?.disabled,
+      ).toBe(true);
+      expect(
+        getByTestId('speculative-draft-value-cache-button').props
+          .accessibilityState?.disabled,
+      ).toBe(true);
+      expect(getByTestId('speculative-no-effect-note')).toBeTruthy();
+    });
+
+    it('an MTP-capable draft whose width differs from the active target does not pair', async () => {
+      jest.useFakeTimers();
+      runInAction(() => {
+        modelStore.contextInitParams.speculativeEnabled = true;
+        modelStore.contextInitParams.selectedDraftModelId = 'a/b/draft.gguf';
+        modelStore.activeModelId = 'active/target.gguf';
+        modelStore.models = [
+          {
+            id: 'active/target.gguf',
+            name: 'Target',
+            isDownloaded: true,
+            ggufMetadata: {nextn_predict_layers: 1, n_embd: 1024},
+          } as any,
+          {
+            id: 'a/b/draft.gguf',
+            name: 'Wide Draft',
+            isDownloaded: true,
+            ggufMetadata: {nextn_predict_layers: 1, n_embd: 2048},
+          } as any,
+        ];
+      });
+      const {getByTestId, getByText, queryByTestId} = render(
+        <SettingsScreen />,
+        {withSafeArea: true, withNavigation: true},
+      );
+
+      await openSpeculative(getByTestId, getByText);
+
+      // The target still carries embedded MTP layers, so the load runs
+      // embedded rather than off.
+      const keyCacheButton = getByTestId('speculative-draft-key-cache-button');
+      expect(keyCacheButton.props.accessibilityState?.disabled).toBe(true);
+      expect(keyCacheButton).toHaveTextContent(/Q8_0/);
+      expect(queryByTestId('speculative-no-effect-note')).toBeNull();
+    });
+
+    it("the active model's own defaultDraftModel pairs it without a global pick", async () => {
+      jest.useFakeTimers();
+      runInAction(() => {
+        modelStore.contextInitParams.speculativeEnabled = true;
+        modelStore.contextInitParams.selectedDraftModelId = undefined;
+        modelStore.contextInitParams.spec_draft_cache_type_k = undefined;
+        modelStore.activeModelId = 'active/target.gguf';
+        modelStore.models = [
+          {
+            id: 'active/target.gguf',
+            name: 'Target',
+            isDownloaded: true,
+            defaultDraftModel: 'a/b/draft.gguf',
+            ggufMetadata: {n_embd: 1024},
+          } as any,
+          {
+            id: 'a/b/draft.gguf',
+            name: 'Tiny Draft',
+            isDownloaded: true,
+            ggufMetadata: {nextn_predict_layers: 1, n_embd: 1024},
+          } as any,
+        ];
+      });
+      const {getByTestId, getByText, queryByTestId} = render(
+        <SettingsScreen />,
+        {withSafeArea: true, withNavigation: true},
+      );
+
+      await openSpeculative(getByTestId, getByText);
+
+      const keyCacheButton = getByTestId('speculative-draft-key-cache-button');
+      expect(keyCacheButton.props.accessibilityState?.disabled).toBeFalsy();
+      expect(keyCacheButton).toHaveTextContent(/F16 \(Default\)/);
+      expect(queryByTestId('speculative-no-effect-note')).toBeNull();
     });
   });
 
@@ -708,7 +910,7 @@ describe('SettingsScreen', () => {
       expect(queryByTestId('speculative-no-effect-note')).toBeNull();
     });
 
-    it('hides the note when a capable draft is selected for a non-MTP active model', async () => {
+    it('hides the note when a width-compatible draft is paired to a non-MTP active model', async () => {
       jest.useFakeTimers();
       runInAction(() => {
         modelStore.contextInitParams.speculativeEnabled = true;
@@ -719,12 +921,13 @@ describe('SettingsScreen', () => {
             id: 'active/plain.gguf',
             name: 'Plain Active',
             isDownloaded: true,
+            ggufMetadata: {n_embd: 1024},
           } as any,
           {
             id: 'a/b/capable.gguf',
             name: 'Capable Draft',
             isDownloaded: true,
-            ggufMetadata: mtpMeta,
+            ggufMetadata: {...mtpMeta, n_embd: 1024},
           } as any,
         ];
       });

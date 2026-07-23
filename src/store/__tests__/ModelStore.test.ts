@@ -5050,6 +5050,128 @@ describe('ModelStore', () => {
       });
     });
 
+    describe('effectiveDraftMode / effectiveDraftCacheDefaults', () => {
+      const draft = (over = {}) =>
+        ({
+          id: 'c/d/dr.gguf',
+          isDownloaded: true,
+          origin: ModelOrigin.LOCAL,
+          fullPath: '/path/dr.gguf',
+          modelType: ModelType.DRAFT,
+          ggufMetadata: specMeta({nextn_predict_layers: 1, n_embd: 1024}),
+          ...over,
+        }) as any;
+
+      const activeTarget = (over = {}) =>
+        ({
+          id: 'a/b/t.gguf',
+          isDownloaded: true,
+          ggufMetadata: specMeta({n_embd: 1024}),
+          ...over,
+        }) as any;
+
+      const activate = (models: any[]) =>
+        runInAction(() => {
+          modelStore.models = models;
+          modelStore.activeModelId = 'a/b/t.gguf';
+        });
+
+      afterEach(() => {
+        runInAction(() => {
+          modelStore.activeModelId = undefined;
+          modelStore.models = [];
+        });
+      });
+
+      it('no active model → off with embedded cache defaults', () => {
+        modelStore.setSpeculativeEnabled(true);
+        runInAction(() => {
+          modelStore.activeModelId = undefined;
+        });
+
+        expect(modelStore.effectiveDraftMode).toBe('off');
+        expect(modelStore.effectiveDraftCacheDefaults).toEqual({
+          k: 'q8_0',
+          v: 'q8_0',
+        });
+      });
+
+      it('speculative off → off even with a resolvable draft', () => {
+        modelStore.setSpeculativeEnabled(false);
+        modelStore.setSelectedDraftModel('c/d/dr.gguf');
+        activate([activeTarget(), draft()]);
+
+        expect(modelStore.effectiveDraftMode).toBe('off');
+      });
+
+      it('MTP-capable active target, no draft → embedded with q8_0 defaults', () => {
+        modelStore.setSpeculativeEnabled(true);
+        modelStore.setSelectedDraftModel(undefined);
+        activate([
+          activeTarget({
+            ggufMetadata: specMeta({nextn_predict_layers: 1, n_embd: 1024}),
+          }),
+        ]);
+
+        expect(modelStore.effectiveDraftMode).toBe('embedded');
+        expect(modelStore.effectiveDraftCacheDefaults).toEqual({
+          k: 'q8_0',
+          v: 'q8_0',
+        });
+      });
+
+      it('width-compatible draft picked globally → paired with f16 defaults', () => {
+        modelStore.setSpeculativeEnabled(true);
+        modelStore.setSelectedDraftModel('c/d/dr.gguf');
+        activate([activeTarget(), draft()]);
+
+        expect(modelStore.effectiveDraftMode).toBe('paired');
+        expect(modelStore.effectiveDraftCacheDefaults).toEqual({
+          k: 'f16',
+          v: 'f16',
+        });
+      });
+
+      it('a defaultDraftModel on some other model does not pair the active one', () => {
+        modelStore.setSpeculativeEnabled(true);
+        modelStore.setSelectedDraftModel(undefined);
+        activate([
+          activeTarget(),
+          {id: 'x/y/other.gguf', defaultDraftModel: 'c/d/dr.gguf'} as any,
+          draft(),
+        ]);
+
+        expect(modelStore.effectiveDraftMode).toBe('off');
+      });
+
+      it('width mismatch on a capable draft falls back to the target capability', () => {
+        modelStore.setSpeculativeEnabled(true);
+        modelStore.setSelectedDraftModel('c/d/dr.gguf');
+        activate([
+          activeTarget({
+            ggufMetadata: specMeta({nextn_predict_layers: 1, n_embd: 1024}),
+          }),
+          draft({
+            ggufMetadata: specMeta({nextn_predict_layers: 1, n_embd: 2048}),
+          }),
+        ]);
+
+        expect(modelStore.effectiveDraftMode).toBe('embedded');
+      });
+
+      it('agrees with resolveDraftConfig for the active model', async () => {
+        modelStore.setSpeculativeEnabled(true);
+        modelStore.setSelectedDraftModel('c/d/dr.gguf');
+        activate([activeTarget(), draft()]);
+
+        const cfg = await (modelStore as any).resolveDraftConfig(
+          modelStore.activeModel,
+        );
+
+        expect(cfg.mode).toBe(modelStore.effectiveDraftMode);
+      });
+    });
+
     describe('draft auto-download', () => {
       const makeDownloadPair = () => {
         runInAction(() => {

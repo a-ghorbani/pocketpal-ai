@@ -64,7 +64,6 @@ import {
   formatBytes,
   clearAllSessionCaches,
   getSessionCacheInfo,
-  isMTPCapable,
 } from '../../utils';
 import {t} from '../../locales';
 import {checkGpuSupport} from '../../utils/deviceCapabilities';
@@ -173,9 +172,7 @@ export const SettingsScreen: React.FC = observer(() => {
     loadDeviceOptions();
   }, []);
 
-  // Re-sync the displayed context size when the screen regains focus or the
-  // global n_ctx changes elsewhere (e.g. the chat banner's increase-context
-  // flow). Skipped while the input is actively edited so it never fights typing.
+  // Skipped while the input is focused so the re-sync never fights typing.
   const configuredNCtx = modelStore.contextInitParams.n_ctx;
   useEffect(() => {
     if (isFocused && !inputRef.current?.isFocused()) {
@@ -257,10 +254,6 @@ export const SettingsScreen: React.FC = observer(() => {
   const selectedDraftModelId =
     modelStore.contextInitParams.selectedDraftModelId;
 
-  // Eligible draft models: downloaded, non-projection, and not the currently
-  // active model itself (a model can't be its own draft). availableModels
-  // already excludes projection models, but the explicit filter keeps the
-  // contract clear.
   const activeModelId = modelStore.activeModel?.id;
   const eligibleDraftModels = modelStore.availableModels.filter(
     m =>
@@ -268,46 +261,17 @@ export const SettingsScreen: React.FC = observer(() => {
       m.modelType !== ModelType.PROJECTION &&
       m.id !== activeModelId,
   );
-  // The picked draft, resolved against the eligible source. A set-but-stale id
-  // (deleted/unavailable model) resolves to undefined and is treated as None.
   const selectedDraftModel = eligibleDraftModels.find(
     m => m.id === selectedDraftModelId,
   );
 
-  // Effective draft mode, mirroring resolveDraftConfig from a global vantage: a
-  // draft is effectively PAIRED when the user picked one globally, or any
-  // downloaded model carries a per-target defaultDraftModel; otherwise the
-  // load runs EMBEDDED. getEffectiveContextInitParams forwards the draft cache
-  // type in BOTH modes (paired default f16, embedded default q8_0) regardless
-  // of the target flash-attn setting, so the draft cache menus are applicable
-  // whenever speculative decoding is enabled.
-  // Resolve-aware: a stale global pick (set id that no longer resolves to a
-  // downloaded model) must NOT count as paired, so the button, the cache-row
-  // gating, and the disabled-reason all agree the load runs embedded.
-  const isEffectivelyPaired =
-    !!selectedDraftModel ||
-    modelStore.availableModels.some(m => !!m.defaultDraftModel);
-  const effectiveDraftCacheDefault = isEffectivelyPaired ? 'f16' : 'q8_0';
-
-  // Informative-only: when speculative is on but the ACTIVE load won't actually
-  // speculate, the load resolves to OFF for it (no effect, no error). That is
-  // the case when the active target is not MTP-capable (no embedded draft) AND
-  // the selected draft (if any) is itself not MTP-capable — keyed off the active
-  // model's real capability rather than the coarse "any draft picked anywhere"
-  // signal, which hides the note for a globally-picked incompatible draft.
-  // Capability is checked synchronously; exact width-pairing is async and out of
-  // scope for advisory copy. The toggle stays available (global intent); we just
-  // note the no-effect case so "globally on" isn't mistaken for "active here".
-  const activeModel = modelStore.activeModel;
+  const isDraftPaired = modelStore.effectiveDraftMode === 'paired';
   const showSpeculativeNoEffectNote =
     speculativeEnabled &&
-    !!activeModel &&
-    !isMTPCapable(activeModel) &&
-    !(selectedDraftModel && isMTPCapable(selectedDraftModel));
+    !!modelStore.activeModel &&
+    modelStore.effectiveDraftMode === 'off';
 
-  // Draft cache options track the draft's own cache compatibility. The draft
-  // cache type applies whenever speculative is on, so these are not gated on
-  // the target flash-attn (unlike the main cache menus).
+  // Draft cache compatibility is the draft's own, not the target's flash-attn.
   const draftCacheTypeKOptions = getAllowedCacheTypeKOptions(
     'on',
     currentBackend,
@@ -320,9 +284,8 @@ export const SettingsScreen: React.FC = observer(() => {
     value: CacheType | string | undefined,
     isValueCache = false,
   ) => {
-    // No explicit user value → show the EFFECTIVE resolved default (f16 when a
-    // draft is effectively paired, q8_0 when embedded), not a "None" string.
-    const effectiveValue = value ?? effectiveDraftCacheDefault;
+    const defaults = modelStore.effectiveDraftCacheDefaults;
+    const effectiveValue = value ?? (isValueCache ? defaults.v : defaults.k);
     const options = isValueCache
       ? draftCacheTypeVOptions
       : draftCacheTypeKOptions;
@@ -1035,7 +998,7 @@ export const SettingsScreen: React.FC = observer(() => {
                               style={styles.textLabel}>
                               {l10n.settings.speculativeDraftKeyCacheType}
                             </Text>
-                            {!isEffectivelyPaired && (
+                            {!isDraftPaired && (
                               <Text
                                 variant="labelSmall"
                                 style={styles.textDescription}>
@@ -1054,7 +1017,7 @@ export const SettingsScreen: React.FC = observer(() => {
                               style={styles.menuButton}
                               contentStyle={styles.buttonContent}
                               testID="speculative-draft-key-cache-button"
-                              disabled={!isEffectivelyPaired}
+                              disabled={!isDraftPaired}
                               icon={({size, color}) => (
                                 <Icon
                                   source="chevron-down"
@@ -1109,7 +1072,7 @@ export const SettingsScreen: React.FC = observer(() => {
                               style={styles.textLabel}>
                               {l10n.settings.speculativeDraftValueCacheType}
                             </Text>
-                            {!isEffectivelyPaired && (
+                            {!isDraftPaired && (
                               <Text
                                 variant="labelSmall"
                                 style={styles.textDescription}>
@@ -1128,7 +1091,7 @@ export const SettingsScreen: React.FC = observer(() => {
                               style={styles.menuButton}
                               contentStyle={styles.buttonContent}
                               testID="speculative-draft-value-cache-button"
-                              disabled={!isEffectivelyPaired}
+                              disabled={!isDraftPaired}
                               icon={({size, color}) => (
                                 <Icon
                                   source="chevron-down"

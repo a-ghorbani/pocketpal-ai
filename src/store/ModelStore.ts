@@ -23,6 +23,12 @@ import {
 import {uiStore, hfStore} from '.';
 import {serverStore} from './ServerStore';
 import {chatSessionStore} from './ChatSessionStore';
+import {
+  draftCacheDefaults,
+  effectiveDraftModeOf,
+  resolveDraftCandidate,
+  resolveDraftModelId,
+} from './draftResolution';
 import {checkGpuSupport} from '../utils/deviceCapabilities';
 import {
   deepMerge,
@@ -33,7 +39,6 @@ import {
   inferRepoFromModelId,
   parseSizeLabel,
   isMTPCapable,
-  nEmbdOut,
 } from '../utils';
 import {getRecommendedProjectionModel} from '../utils/multimodalHelpers';
 import {getOriginalModelName} from '../utils/formatters';
@@ -570,22 +575,20 @@ class ModelStore {
       params.spec_draft_p_min = this.contextInitParams.spec_draft_p_min;
       params.spec_draft_p_split = this.contextInitParams.spec_draft_p_split;
 
+      const cacheDefaults = draftCacheDefaults(mode);
+      params.spec_draft_cache_type_k =
+        this.contextInitParams.spec_draft_cache_type_k ?? cacheDefaults.k;
+      params.spec_draft_cache_type_v =
+        this.contextInitParams.spec_draft_cache_type_v ?? cacheDefaults.v;
+
       if (draftConfig?.mode === 'paired') {
         params.model_draft = draftConfig.resolvedDraftPath;
         params.is_model_draft_asset = false;
         params.spec_draft_n_gpu_layers =
           this.contextInitParams.spec_draft_n_gpu_layers ?? 99;
-        params.spec_draft_cache_type_k =
-          this.contextInitParams.spec_draft_cache_type_k ?? 'f16';
-        params.spec_draft_cache_type_v =
-          this.contextInitParams.spec_draft_cache_type_v ?? 'f16';
       } else {
         params.spec_draft_n_gpu_layers =
           this.contextInitParams.spec_draft_n_gpu_layers;
-        params.spec_draft_cache_type_k =
-          this.contextInitParams.spec_draft_cache_type_k ?? 'q8_0';
-        params.spec_draft_cache_type_v =
-          this.contextInitParams.spec_draft_cache_type_v ?? 'q8_0';
       }
     }
 
@@ -1261,7 +1264,10 @@ class ModelStore {
   };
 
   private _downloadDraftModelIfNeeded = async (model: Model) => {
-    const draftModelId = this.resolveDraftModelId(model);
+    const draftModelId = resolveDraftModelId(
+      model,
+      this.contextInitParams.selectedDraftModelId,
+    );
     if (
       !draftModelId ||
       model.modelType === ModelType.DRAFT ||
@@ -1724,37 +1730,35 @@ class ModelStore {
     return {isMultimodalInit: false};
   };
 
-  private resolveDraftModelId = (model: Model): string | undefined =>
-    model.defaultDraftModel ?? this.contextInitParams.selectedDraftModelId;
-
-  // Width mismatch on a paired draft is an uncatchable native abort
-  // (LM_GGML_ASSERT → SIGABRT in init_mtp); unknown width ⇒ not paired.
   private resolveDraftConfig = async (model: Model): Promise<DraftConfig> => {
-    if (!this.contextInitParams.speculativeEnabled) {
-      return {mode: 'off'};
+    const candidate = resolveDraftCandidate(
+      model,
+      this.models,
+      this.contextInitParams,
+    );
+    if (candidate.mode !== 'paired') {
+      return candidate;
     }
 
-    const draftId = this.resolveDraftModelId(model);
-    if (draftId) {
-      const draftModel = this.models.find(m => m.id === draftId);
-      if (draftModel?.isDownloaded && isMTPCapable(draftModel)) {
-        const draftWidth = nEmbdOut(draftModel.ggufMetadata);
-        const targetWidth = model.ggufMetadata?.n_embd;
-        if (
-          draftWidth !== undefined &&
-          targetWidth !== undefined &&
-          draftWidth === targetWidth
-        ) {
-          const resolvedDraftPath = await this.getModelFullPath(draftModel);
-          if (resolvedDraftPath) {
-            return {mode: 'paired', resolvedDraftPath, draftModel};
-          }
-        }
-      }
+    const resolvedDraftPath = await this.getModelFullPath(candidate.draftModel);
+    if (resolvedDraftPath) {
+      return {
+        mode: 'paired',
+        resolvedDraftPath,
+        draftModel: candidate.draftModel,
+      };
     }
 
     return isMTPCapable(model) ? {mode: 'embedded'} : {mode: 'off'};
   };
+
+  get effectiveDraftMode(): DraftConfig['mode'] {
+    return effectiveDraftModeOf(this);
+  }
+
+  get effectiveDraftCacheDefaults(): {k: CacheType; v: CacheType} {
+    return draftCacheDefaults(this.effectiveDraftMode);
+  }
 
   /**
    * Check memory/capability requirements and show warning alert if needed.
