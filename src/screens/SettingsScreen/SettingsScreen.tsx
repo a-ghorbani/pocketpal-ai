@@ -140,7 +140,6 @@ export const SettingsScreen: React.FC = observer(() => {
       setGpuSupported(false);
     });
 
-    // Load available device options
     const loadDeviceOptions = async () => {
       try {
         const options = await getDeviceOptions();
@@ -162,7 +161,6 @@ export const SettingsScreen: React.FC = observer(() => {
     }
   }, [isFocused, configuredNCtx]);
 
-  // Compute current backend type based on device selection
   // Convert MobX observable to plain JS for dependency tracking
   const devicesKey = JSON.stringify(toJS(modelStore.contextInitParams.devices));
 
@@ -214,7 +212,6 @@ export const SettingsScreen: React.FC = observer(() => {
     !modelStore.contextInitParams.flash_attn_type ||
     modelStore.contextInitParams.flash_attn_type === 'off';
 
-  // Get dynamic cache type options based on flash attention compatibility
   const cacheTypeKOptions = getAllowedCacheTypeKOptions(
     currentFlashAttnType as 'auto' | 'on' | 'off',
     currentBackend,
@@ -1408,7 +1405,6 @@ export const SettingsScreen: React.FC = observer(() => {
                       mode="outlined"
                       onPress={async () => {
                         try {
-                          // Get cache info first
                           const cacheInfo = await getSessionCacheInfo();
 
                           if (cacheInfo.fileCount === 0) {
@@ -1419,7 +1415,6 @@ export const SettingsScreen: React.FC = observer(() => {
                             return;
                           }
 
-                          // Show confirmation dialog with cache info
                           const formattedSize = formatBytes(
                             cacheInfo.totalSizeBytes,
                           );
