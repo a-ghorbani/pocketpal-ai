@@ -28,6 +28,7 @@ import {
   effectiveDraftModeOf,
   resolveDraftCandidate,
   resolveDraftModelId,
+  unpairedDraftCandidate,
 } from './draftResolution';
 import {checkGpuSupport} from '../utils/deviceCapabilities';
 import {
@@ -38,7 +39,6 @@ import {
   filterProjectionModels,
   inferRepoFromModelId,
   parseSizeLabel,
-  isMTPCapable,
 } from '../utils';
 import {getRecommendedProjectionModel} from '../utils/multimodalHelpers';
 import {getOriginalModelName} from '../utils/formatters';
@@ -1749,7 +1749,7 @@ class ModelStore {
       };
     }
 
-    return isMTPCapable(model) ? {mode: 'embedded'} : {mode: 'off'};
+    return unpairedDraftCandidate(model);
   };
 
   get effectiveDraftMode(): DraftConfig['mode'] {

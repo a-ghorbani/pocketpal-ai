@@ -11,6 +11,11 @@ export const resolveDraftModelId = (
   selectedDraftModelId?: string,
 ): string | undefined => target.defaultDraftModel ?? selectedDraftModelId;
 
+export const unpairedDraftCandidate = (
+  target: Model,
+): Exclude<DraftCandidate, {mode: 'paired'}> =>
+  isMTPCapable(target) ? {mode: 'embedded'} : {mode: 'off'};
+
 // A width mismatch on a paired draft is an uncatchable native abort
 // (LM_GGML_ASSERT → SIGABRT in init_mtp), so an unknown width is not paired.
 export const resolveDraftCandidate = (
@@ -36,7 +41,7 @@ export const resolveDraftCandidate = (
     }
   }
 
-  return isMTPCapable(target) ? {mode: 'embedded'} : {mode: 'off'};
+  return unpairedDraftCandidate(target);
 };
 
 export interface DraftResolutionSource {
