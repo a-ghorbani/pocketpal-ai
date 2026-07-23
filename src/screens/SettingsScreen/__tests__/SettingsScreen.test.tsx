@@ -801,9 +801,7 @@ describe('SettingsScreen', () => {
       expect(keyCacheButton.props.accessibilityState?.disabled).toBeFalsy();
       expect(keyCacheButton).toHaveTextContent(/F16 \(Default\)/);
       expect(queryByTestId('speculative-no-effect-note')).toBeNull();
-      expect(
-        queryByTestId('speculative-draft-model-ignored-note'),
-      ).toBeNull();
+      expect(queryByTestId('speculative-draft-model-ignored-note')).toBeNull();
     });
 
     it("the active model's own draft wins over the global pick, and the picker says so", async () => {
@@ -878,9 +876,7 @@ describe('SettingsScreen', () => {
       const keyCacheButton = getByTestId('speculative-draft-key-cache-button');
       expect(keyCacheButton.props.accessibilityState?.disabled).toBeFalsy();
       expect(keyCacheButton).toHaveTextContent(/F16 \(Default\)/);
-      expect(
-        queryByTestId('speculative-draft-model-ignored-note'),
-      ).toBeNull();
+      expect(queryByTestId('speculative-draft-model-ignored-note')).toBeNull();
     });
 
     it('with no active model a pick without draft layers is refused and explained', async () => {
@@ -936,10 +932,13 @@ describe('SettingsScreen', () => {
       runInAction(() => {
         modelStore.contextInitParams.flash_attn_type = 'off';
       });
-      const {getByTestId, getByText, getAllByText} = render(<SettingsScreen />, {
-        withSafeArea: true,
-        withNavigation: true,
-      });
+      const {getByTestId, getByText, getAllByText} = render(
+        <SettingsScreen />,
+        {
+          withSafeArea: true,
+          withNavigation: true,
+        },
+      );
 
       await openAdvanced(getByTestId, getByText);
 
@@ -954,6 +953,14 @@ describe('SettingsScreen', () => {
       expect(
         getAllByText(l10n.en.settings.keyCacheTypeDisabledDescription).length,
       ).toBe(2);
+      // The row title and the reason are siblings of the button, so a screen
+      // reader only gets them through the button's own label and hint.
+      expect(
+        getByTestId('key-cache-type-button').props.accessibilityLabel,
+      ).toContain(l10n.en.settings.keyCacheType);
+      expect(getByTestId('key-cache-type-button').props.accessibilityHint).toBe(
+        l10n.en.settings.keyCacheTypeDisabledDescription,
+      );
     });
 
     it('flash attention on enables both cache menus', async () => {
@@ -975,9 +982,7 @@ describe('SettingsScreen', () => {
         getByTestId('value-cache-type-button').props.accessibilityState
           ?.disabled,
       ).toBeFalsy();
-      expect(
-        getByText(l10n.en.settings.keyCacheTypeDescription),
-      ).toBeTruthy();
+      expect(getByText(l10n.en.settings.keyCacheTypeDescription)).toBeTruthy();
     });
   });
 

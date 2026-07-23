@@ -75,6 +75,8 @@ export const CacheTypeMenuRow: React.FC<CacheTypeMenuRowProps> = ({
           contentStyle={styles.buttonContent}
           testID={testID}
           disabled={disabled}
+          accessibilityLabel={`${label}, ${valueLabel}`}
+          accessibilityHint={description}
           icon={chevronDown}>
           {valueLabel}
         </Button>
