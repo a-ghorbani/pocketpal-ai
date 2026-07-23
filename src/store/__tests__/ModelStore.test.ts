@@ -2338,7 +2338,7 @@ describe('ModelStore', () => {
     });
 
     describe('resolveDraftConfig', () => {
-      it('off when speculative is disabled (scenario E)', async () => {
+      it('off when speculative is disabled', async () => {
         runInAction(() => {
           modelStore.contextInitParams.speculativeEnabled = false;
         });
@@ -2349,7 +2349,7 @@ describe('ModelStore', () => {
         await expect(resolve(target)).resolves.toEqual({mode: 'off'});
       });
 
-      it('embedded when the target is MTP-capable and no draft (scenario A)', async () => {
+      it('embedded when the target is MTP-capable and no draft', async () => {
         runInAction(() => {
           modelStore.contextInitParams.speculativeEnabled = true;
         });
@@ -2360,7 +2360,7 @@ describe('ModelStore', () => {
         await expect(resolve(target)).resolves.toEqual({mode: 'embedded'});
       });
 
-      it('paired when a valid MTP draft matches the target width (scenario B)', async () => {
+      it('paired when a valid MTP draft matches the target width', async () => {
         const draft = localModel({
           id: 'draft',
           fullPath: '/tmp/draft.gguf',
@@ -2382,7 +2382,7 @@ describe('ModelStore', () => {
         });
       });
 
-      it('off when speculative is on but the target is not MTP-capable and no draft (scenario C)', async () => {
+      it('off when speculative is on but the target is not MTP-capable and no draft', async () => {
         runInAction(() => {
           modelStore.contextInitParams.speculativeEnabled = true;
         });
@@ -2390,7 +2390,7 @@ describe('ModelStore', () => {
         await expect(resolve(target)).resolves.toEqual({mode: 'off'});
       });
 
-      it('not paired for a plain (non-MTP) draft → off when target not capable (scenario D)', async () => {
+      it('not paired for a plain (non-MTP) draft → off when target not capable', async () => {
         const draft = localModel({
           id: 'draft',
           ggufMetadata: mtpMeta({n_embd: 1024}), // no nextn → not MTP
@@ -2407,7 +2407,7 @@ describe('ModelStore', () => {
         await expect(resolve(target)).resolves.toEqual({mode: 'off'});
       });
 
-      it('not paired on a width mismatch → falls through to embedded when target capable (scenario D)', async () => {
+      it('not paired on a width mismatch → falls through to embedded when target capable', async () => {
         const draft = localModel({
           id: 'draft',
           ggufMetadata: mtpMeta({nextn_predict_layers: 1, n_embd: 2048}),
