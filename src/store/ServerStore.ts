@@ -98,20 +98,23 @@ class ServerStore {
     if (!server) {
       return;
     }
-    // Caps describe what the configured backend reported. Repointing the url or
-    // switching the server type makes them describe something else, and
-    // resolveRemoteCaps has no way to tell — so drop them and let the next
-    // activation re-probe. Reasoning state survives: it carries user
-    // declarations, and it is not server-reported.
-    const invalidatesCaps =
+    // Caps and the model list are both what the configured backend reported.
+    // Repointing the url or switching the server type makes them describe
+    // something else: resolveRemoteCaps has no way to tell, and a stale
+    // single-entry list would let servesOnlyModel clear the bare-retry gate
+    // against a router. Drop both and let the next probe / fetch repopulate.
+    // Reasoning state survives: it carries user declarations, and it is not
+    // server-reported.
+    const invalidatesDiscovery =
       (updates.url !== undefined && updates.url !== server.url) ||
       (updates.serverType !== undefined &&
         updates.serverType !== server.serverType);
 
     Object.assign(server, updates);
 
-    if (invalidatesCaps) {
+    if (invalidatesDiscovery) {
       this.remoteCaps = dropServerEntries(this.remoteCaps, id);
+      this.serverModels.delete(id);
     }
   }
 

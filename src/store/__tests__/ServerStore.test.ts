@@ -153,6 +153,12 @@ describe('ServerStore', () => {
             supportsVision: true,
           };
           serverStore.remoteCaps['other/m'] = {contextLength: 4096};
+          serverStore.serverModels.set(id, [
+            {id: 'm', object: 'model', owned_by: 'system'},
+          ]);
+          serverStore.serverModels.set('other', [
+            {id: 'm', object: 'model', owned_by: 'system'},
+          ]);
           serverStore.remoteReasoning[`${id}/m`] = {
             isReasoning: 'yes',
             source: 'user',
@@ -181,6 +187,25 @@ describe('ServerStore', () => {
         expect(serverStore.remoteCaps[`${id}/m`]).toBeUndefined();
       });
 
+      it('drops this server model list when the url is repointed', () => {
+        const id = addProbedServer();
+
+        serverStore.updateServer(id, {url: 'http://localhost:9090'});
+
+        // A single-entry list from the old backend would clear the bare-retry
+        // gate against a router that serves many models.
+        expect(serverStore.serverModels.has(id)).toBe(false);
+        expect(serverStore.serverModels.has('other')).toBe(true);
+      });
+
+      it('drops this server model list when the server type changes', () => {
+        const id = addProbedServer();
+
+        serverStore.updateServer(id, {serverType: 'LM Studio'});
+
+        expect(serverStore.serverModels.has(id)).toBe(false);
+      });
+
       it('keeps reasoning state, which is user-declarable', () => {
         const id = addProbedServer();
 
@@ -202,6 +227,7 @@ describe('ServerStore', () => {
           contextLength: 8192,
           supportsVision: true,
         });
+        expect(serverStore.serverModels.has(id)).toBe(true);
       });
     });
   });
