@@ -209,7 +209,8 @@
       "searchResultsTitle": "검색 결과",
       "showResultsAccessibilityLabel": "{{query}}에 대한 웹 검색 결과 표시",
       "openLinkError": "이 링크를 열 수 없어요."
-    }
+    },
+    "contextFullRemote": "대화 공간이 가득 찼습니다. 새 채팅을 시작해 주세요."
   },
   "common": {
     "cancel": "취소",
@@ -243,7 +244,8 @@
     "clear": "모두 삭제",
     "gallery": "갤러리",
     "error": "오류",
-    "stop": "중지"
+    "stop": "중지",
+    "noResults": "결과 없음"
   },
   "completionParams": {
     "grammar": "특정 문법 규칙을 적용하여 생성된 텍스트가 정해진 구조나 형식을 따르도록 강제합니다.",
@@ -1208,7 +1210,9 @@
       "consentGivenTitle": "웹 검색이 활성화됨",
       "consentGivenDescription": "위에서 설명한 대로 쿼리와 페이지 읽기 결과가 기기를 벗어날 수 있습니다.",
       "consentRevoke": "동의 철회"
-    }
+    },
+    "languageSheetTitle": "언어",
+    "languageSearchPlaceholder": "언어 검색"
   },
   "storage": {
     "checkFailed": "저장공간 확인 실패",
