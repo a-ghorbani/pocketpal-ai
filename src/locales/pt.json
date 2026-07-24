@@ -31,7 +31,8 @@
     "ok": "OK",
     "close": "Fechar",
     "clear": "Limpar Tudo",
-    "gallery": "Galeria"
+    "gallery": "Galeria",
+    "noResults": "Sem resultados"
   },
   "settings": {
     "modelInitializationSettings": "Configurações de Inicialização do Modelo",
@@ -157,7 +158,40 @@
     "removeRemoteModel": "Remover {{modelName}} ({{serverName}})?",
     "retryConnection": "Tentar Novamente",
     "enterUrlManually": "Inserir URL manualmente",
-    "manageServers": "Gerir Servidores"
+    "manageServers": "Gerir Servidores",
+    "openCL": "OpenCL (Experimental)",
+    "flashAttention": "Flash Attention",
+    "flashAttentionOff": "Desativado",
+    "useMmapFalse": "Desativado",
+    "languageSheetTitle": "Idioma",
+    "languageSearchPlaceholder": "Pesquisar idiomas",
+    "internetSearch": {
+      "title": "Pesquisa na Internet",
+      "description": "Permita que os Pals pesquisem na web com as suas próprias ferramentas. Traga a sua própria chave de API — o PocketPal nunca guarda as suas chaves nem encaminha as suas pesquisas.",
+      "providerLabel": "Fornecedor de pesquisa",
+      "providerGated": "Em breve",
+      "keyLabel": "Chave de API",
+      "keyIsSet": "Chave definida para {{provider}}.",
+      "keyNotSet": "Nenhuma chave definida para {{provider}}.",
+      "setKeyButton": "Definir Chave",
+      "updateKeyButton": "Atualizar Chave",
+      "clearKeyButton": "Limpar Chave",
+      "keyInputPlaceholder": "Cole a sua chave de API {{provider}}",
+      "keyUpdateError": "Não foi possível atualizar a chave. Tente novamente.",
+      "showKeyAccessibilityLabel": "Mostrar chave de API",
+      "hideKeyAccessibilityLabel": "Ocultar chave de API",
+      "resultCountLabel": "Resultados por pesquisa",
+      "resultCountDescription": "Menos resultados deixam mais espaço no contexto do modelo.",
+      "consentTitle": "As pesquisas saem do seu dispositivo",
+      "consentDescription": "Quando um Pal pesquisa na web, a sua pesquisa é enviada ao fornecedor selecionado através da internet. Quando um Pal lê uma página, o URL e o conteúdo da página podem, em alternativa, ser enviados a um serviço de leitura predefinido (r.jina.ai) caso o fornecedor selecionado não tenha leitor nativo. As chaves e as pesquisas nunca são enviadas ao PocketPal.",
+      "consentAccept": "Compreendo",
+      "consentRequired": "Aceite o aviso acima para definir uma chave e ativar a pesquisa.",
+      "consentGivenTitle": "A pesquisa na web está ativada",
+      "consentGivenDescription": "As pesquisas e as leituras de páginas podem sair do seu dispositivo conforme descrito acima.",
+      "consentRevoke": "Revogar"
+    },
+    "serverType": "Tipo de Servidor",
+    "serverTypeHelp": "Detetado automaticamente; altere se estiver errado."
   },
   "memory": {
     "shortWarning": "Aviso de Memória",
@@ -510,7 +544,8 @@
       "msPerToken": "{{value}}ms/token",
       "tokensPerSec": "{{value}} tokens/seg",
       "interrupted": "Interrompido",
-      "truncated": "Cortado — provavelmente o contexto está cheio"
+      "truncated": "Cortado — provavelmente o contexto está cheio",
+      "ttft": "{{value}}ms TTFT"
     },
     "exportUtils": {
       "fileSaved": "Ficheiro Gravado",
@@ -543,7 +578,8 @@
       "stopping": "A parar…"
     },
     "toolMetrics": {
-      "elapsed": "{{seconds}}s"
+      "elapsed": "{{seconds}}s",
+      "tokens": "{{count}} tokens"
     },
     "chatEmptyPlaceholder": {
       "noModelsTitle": "Nenhum Modelo Disponível",
@@ -563,7 +599,8 @@
         "disableThinking": "Desativar modo de raciocínio",
         "thinkingEnabled": "Modo de raciocínio ativado",
         "thinkingDisabled": "Modo de raciocínio desativado",
-        "thinkText": "Pensar"
+        "thinkText": "Pensar",
+        "cycleEffort": "Esforço de raciocínio: {{level}}. Toque duas vezes para alternar o nível de esforço"
       }
     },
     "contentReportSheet": {
@@ -673,7 +710,8 @@
       "confirmationTitle": "Confirmação",
       "modelSwitchMessage": "Este pal tem um modelo padrão diferente ({{modelName}}). Deseja mudar para o modelo padrão do pal?",
       "keepButton": "Manter",
-      "switchButton": "Mudar"
+      "switchButton": "Mudar",
+      "palsTab": "Pals"
     },
     "downloadErrorDialog": {
       "downloadFailedTitle": "Falha ao descarregar",
@@ -745,7 +783,20 @@
     },
     "modelSettingsSheet": {
       "modelSettings": "Configurações do Modelo",
-      "saveChanges": "Gravar Alterações"
+      "saveChanges": "Gravar Alterações",
+      "reasoningSection": "Raciocínio",
+      "isReasoningModel": "Modelo de raciocínio",
+      "isReasoningModelHelp": "Mostrar o controlo de raciocínio para este modelo, mesmo que não tenha sido detetado automaticamente.",
+      "supportsEffort": "Suporta esforço graduado",
+      "effortValues": "Níveis de esforço que este modelo suporta",
+      "effortLevels": {
+        "minimal": "Mínimo",
+        "low": "Baixo",
+        "medium": "Médio",
+        "high": "Alto",
+        "xhigh": "Muito alto",
+        "max": "Máximo"
+      }
     },
     "modelsHeaderRight": {
       "menuTitleHf": "Modelos do Hugging Face",
@@ -777,12 +828,16 @@
       "talentNames": {
         "render_html": "Pré-visualização de HTML",
         "calculate": "Expressões matemáticas",
-        "datetime": "Data e hora"
+        "datetime": "Data e hora",
+        "web_search": "Pesquisa na web",
+        "read_url": "Ler página web"
       },
       "talentDescriptions": {
         "render_html": "Renderizar documentos HTML diretamente no chat",
         "calculate": "Avaliar expressões matemáticas",
-        "datetime": "Obter a data e hora atuais"
+        "datetime": "Obter a data e hora atuais",
+        "web_search": "Pesquisar na internet por informações atuais (requer chave de API nas Configurações)",
+        "read_url": "Ler o conteúdo completo de uma página web (requer chave de API nas Configurações)"
       },
       "greeting": {
         "sectionLabel": "Saudação",
@@ -899,7 +954,9 @@
         "models": "Modelos",
         "settings": "Configurações",
         "appInfo": "Sobre a App",
-        "testCompletion": "Testar Completação"
+        "testCompletion": "Testar Completação",
+        "pals": "Pals",
+        "benchmark": "Benchmark"
       },
       "deleteChatTitle": "Apagar Chat",
       "deleteChatMessage": "Tem certeza que deseja apagar este chat?",
@@ -1040,7 +1097,8 @@
       "signInAgain": "Entrar novamente",
       "palNotAvailable": "Este pal não está disponível para compra no momento.",
       "checkoutFailed": "Algo deu errado. Tente novamente."
-    }
+    },
+    "prompt": "Prompt"
   },
   "validation": {
     "nameRequired": "O nome é obrigatório",
@@ -1097,7 +1155,9 @@
     "models": "Modelos",
     "settings": "Configurações",
     "appInfo": "Sobre a App",
-    "testCompletion": "Testar Completação"
+    "testCompletion": "Testar Completação",
+    "pals": "Pals (experimental)",
+    "benchmark": "Benchmark"
   },
   "chat": {
     "conversationReset": "Conversa reiniciada!",
@@ -1149,7 +1209,20 @@
     "generatingPreview": "A gerar a pré-visualização… ({{tokens}} tokens)",
     "generatingPreviewPending": "A gerar a pré-visualização…",
     "toolUsedChip": "usou {{name}}",
-    "toolErrorBlock": "{{name}} falhou"
+    "toolErrorBlock": "{{name}} falhou",
+    "contextFullRemote": "A conversa ficou sem espaço. Inicie um novo chat.",
+    "increaseContextTokensUnit": "tokens",
+    "increaseContextSliderA11yValue": "{{tokens}} tokens",
+    "webSearch": {
+      "searched": "Pesquisado: {{query}}",
+      "noResults": "Sem resultados",
+      "noResultsFor": "Sem resultados para {{query}}",
+      "resultsCount": "{{count}} resultados",
+      "resultsCountOne": "1 resultado",
+      "searchResultsTitle": "Resultados da pesquisa",
+      "showResultsAccessibilityLabel": "Mostrar resultados da pesquisa na web para {{query}}",
+      "openLinkError": "Não foi possível abrir esta ligação."
+    }
   },
   "htmlPreview": {
     "defaultTitle": "Pré-visualização",
@@ -1215,7 +1288,8 @@
         "params": "parâmetros"
       },
       "config": {
-        "title": "Configuração do Benchmark"
+        "title": "Configuração do Benchmark",
+        "format": "PP: {{pp}} • TG: {{tg}} • PL: {{pl}} • Rep: {{nr}}"
       },
       "modelSettings": {
         "title": "Configurações do Modelo",
@@ -1277,14 +1351,17 @@
         "gpuVendor": "Fabricante",
         "metalSupport": "Apoio a Metal",
         "openclSupport": "Apoio a OpenCL",
-        "openclRequirement": "Requer i8mm e dotprod"
+        "openclRequirement": "Requer i8mm e dotprod",
+        "chipset": "Chipset"
       },
       "instructions": {
         "yes": "✓",
-        "no": "✗"
+        "no": "✗",
+        "format": "FP16: {{fp16}}, DotProd: {{dotProd}}, SVE: {{sve}}, I8MM: {{i8mm}}"
       },
       "versionFormat": "{{version}} ({{buildNumber}})"
-    }
+    },
+    "title": "Benchmark"
   },
   "errors": {
     "unexpectedError": "Ocorreu um erro inesperado",
@@ -1384,7 +1461,10 @@
     "engineRetryCta": "Tentar novamente",
     "voicesEmptyState": "Nenhuma voz encontrada.",
     "kokoroDeviceNote": "Algumas vozes podem não funcionar em todos os dispositivos.",
-    "insufficientStorage": "Espaço insuficiente — libere {{requiredMb}} MB para instalar este mecanismo ({{freeMb}} MB disponíveis)."
+    "insufficientStorage": "Espaço insuficiente — libere {{requiredMb}} MB para instalar este mecanismo ({{freeMb}} MB disponíveis).",
+    "engineChipKitten": "Kitten",
+    "engineChipKokoro": "Kokoro",
+    "engineChipSupertonic": "Supertonic"
   },
   "onboarding": {
     "back": "Voltar",
@@ -1397,7 +1477,8 @@
       "title": "Conheça os seus pals.",
       "body": "Pequenos amigos inteligentes que vivem dentro do seu telemóvel.\nVamos ajudá-lo a configurar - vai levar só um minuto.",
       "cta": "Mostre-me Como Funciona",
-      "eyebrow": "Bem-vindo ao PocketPal"
+      "eyebrow": "Bem-vindo ao PocketPal",
+      "titleAccent": "pals."
     },
     "screen2": {
       "title": "A Qualquer Hora,\nEm Qualquer Lugar.",
