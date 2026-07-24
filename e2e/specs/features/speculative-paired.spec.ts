@@ -151,23 +151,26 @@ async function scrollSettingsToTop(): Promise<void> {
  * context-size-input to be *displayed*, but a repeat visit keeps the previous
  * scroll offset so the input is off-screen and the wait times out.
  */
-async function goToSettings(): Promise<void> {
-  const chatPage = new ChatPage();
-  const drawerPage = new DrawerPage();
-  await chatPage.openDrawer();
-  await drawerPage.waitForOpen();
-  await drawerPage.navigateToSettings();
-  await scrollSettingsToTop();
-  await browser
-    .$(byTestId('context-size-input'))
-    .waitForDisplayed({timeout: TIMEOUTS.element});
+async function goToSettings(settingsPage: SettingsPage): Promise<void> {
+  try {
+    await settingsPage.navigateTo();
+    return;
+  } catch {
+    // The drawer keeps Settings mounted, so a repeat visit restores the previous
+    // scroll offset and navigateTo's "context-size-input displayed" wait times
+    // out even though the screen is up. Rewind to the top and re-check.
+    await scrollSettingsToTop();
+    await browser
+      .$(byTestId('context-size-input'))
+      .waitForDisplayed({timeout: TIMEOUTS.element});
+  }
 }
 
 /** Enable speculative decoding globally in Settings -> Advanced. */
 async function enableSpeculativeGlobally(
-  _settingsPage: SettingsPage,
+  settingsPage: SettingsPage,
 ): Promise<void> {
-  await goToSettings();
+  await goToSettings(settingsPage);
   await Gestures.scrollToElement(SPEC_ACCORDION, 8);
   if (!(await browser.$(SPEC_PICKER).isExisting())) {
     await browser.$(SPEC_ACCORDION).click();
@@ -283,10 +286,10 @@ async function downloadAndLoadTarget(model: ModelTestConfig): Promise<void> {
 
 /** Open the draft-model picker in Settings and select the separate MTP draft. */
 async function pickDraftModel(
-  _settingsPage: SettingsPage,
+  settingsPage: SettingsPage,
   titleFragment: string,
 ): Promise<void> {
-  await goToSettings();
+  await goToSettings(settingsPage);
   await Gestures.scrollToElement(SPEC_ACCORDION, 8);
   if (!(await browser.$(SPEC_PICKER).isExisting())) {
     await browser.$(SPEC_ACCORDION).click();
@@ -338,7 +341,7 @@ describe('Speculative Decoding / separate-draft (paired) MTP', () => {
     await chatPage.waitForReady(TIMEOUTS.appReady);
 
     // n_ctx before any load (read at initLlama time); then speculative on.
-    await goToSettings();
+    await goToSettings(settingsPage);
     await settingsPage.setContextSize(SPEC_CONTEXT_SIZE);
     await enableSpeculativeGlobally(settingsPage);
     await saveShot('speculative-paired-settings-enabled');
