@@ -125,6 +125,50 @@ describe('DetailsView', () => {
       expect(toJSON()).toBeNull();
     });
 
+    it('drops a stale probe when the model switches while it is in flight', async () => {
+      // Model A's probe is slow; the user switches to model B before it lands.
+      // A's late 'capable' must not paint B's badge.
+      let resolveA: (capability: MTPRemoteCapability) => void = () => {};
+      mockProbe.mockReturnValueOnce(
+        new Promise<MTPRemoteCapability>(res => {
+          resolveA = res;
+        }),
+      );
+      const {rerender, queryByTestId} = render(
+        <DetailsView hfModel={mockHFModel1} />,
+      );
+
+      mockProbe.mockResolvedValueOnce('not-capable');
+      rerender(<DetailsView hfModel={mockHFModel2} />);
+      await act(async () => {
+        await Promise.resolve();
+      });
+
+      await act(async () => {
+        resolveA('capable');
+        await Promise.resolve();
+      });
+
+      expect(queryByTestId('mtp-capability-badge')).toBeNull();
+    });
+
+    it('clears the previous badge while the new model probe is in flight', async () => {
+      // Model A resolved capable BEFORE the switch; model B's probe is still
+      // pending. B must not wear A's badge in the interim.
+      mockProbe.mockResolvedValueOnce('capable');
+      const {rerender, getByTestId, queryByTestId} = render(
+        <DetailsView hfModel={mockHFModel1} />,
+      );
+      await waitFor(() => {
+        expect(getByTestId('mtp-capability-badge')).toBeDefined();
+      });
+
+      mockProbe.mockReturnValueOnce(new Promise<MTPRemoteCapability>(() => {}));
+      rerender(<DetailsView hfModel={mockHFModel2} />);
+
+      expect(queryByTestId('mtp-capability-badge')).toBeNull();
+    });
+
     it('re-mounting after a cancelled probe starts from no badge (no stale leak)', async () => {
       // A probe deferred past the first unmount must not bleed into the next
       // mount: the fresh instance owns its own cancelled flag and pending probe.

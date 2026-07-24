@@ -37,6 +37,9 @@ export const DetailsView = ({hfModel}: DetailsViewProps) => {
 
   const [isMTP, setIsMTP] = useState(false);
   useEffect(() => {
+    // A new model must not wear the previous model's badge while its own
+    // probe is in flight.
+    setIsMTP(false);
     const firstLLM = llmFiles[0];
     if (!firstLLM) {
       return;
