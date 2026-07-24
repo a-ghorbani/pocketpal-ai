@@ -209,7 +209,8 @@
       "searchResultsTitle": "Результаты поиска",
       "showResultsAccessibilityLabel": "Показать результаты поиска в интернете по запросу {{query}}",
       "openLinkError": "Не удалось открыть эту ссылку."
-    }
+    },
+    "contextFullRemote": "В диалоге закончилось место. Начните новый чат."
   },
   "common": {
     "cancel": "Отмена",
@@ -243,7 +244,8 @@
     "close": "Закрыть",
     "clear": "Очистить всё",
     "gallery": "Галерея",
-    "stop": "Остановить"
+    "stop": "Остановить",
+    "noResults": "Ничего не найдено"
   },
   "completionParams": {
     "grammar": "Принудительное соблюдение грамматических правил, чтобы текст следовал строгой структуре или формату",
@@ -1208,7 +1210,9 @@
       "consentGivenTitle": "Поиск в интернете включён",
       "consentGivenDescription": "Запросы и чтение страниц могут покидать ваше устройство, как описано выше.",
       "consentRevoke": "Отозвать"
-    }
+    },
+    "languageSheetTitle": "Язык",
+    "languageSearchPlaceholder": "Поиск языков"
   },
   "storage": {
     "checkFailed": "Не удалось проверить хранилище",
