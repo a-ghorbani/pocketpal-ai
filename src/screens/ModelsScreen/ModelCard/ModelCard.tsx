@@ -47,6 +47,7 @@ import {
   getModelSkills,
   formatNumber,
   isMTPCapable,
+  isDraftOnlyModel,
 } from '../../../utils';
 
 import {
@@ -120,6 +121,7 @@ export const ModelCard: React.FC<ModelCardProps> = observer(
     );
 
     const isActiveModel = activeModelId === model.id;
+    const isDraftOnly = isDraftOnlyModel(model);
     const isDownloaded = model.isDownloaded;
     const isDownloading = modelStore.isDownloading(model.id);
     const isHfModel = model.origin === ModelOrigin.HF;
@@ -614,6 +616,25 @@ export const ModelCard: React.FC<ModelCardProps> = observer(
         return theme.colors.btnPrimaryText;
       };
 
+      // llama.rn cannot open a draft as a context; loading one only ever fails.
+      if (isDraftOnly) {
+        return (
+          <View style={styles.primaryActionButton}>
+            <Button
+              testID="draft-only-load-disabled"
+              accessibilityLabel={l10n.models.modelCard.labels.draftOnlyReason}
+              icon="play-circle-outline"
+              disabled
+              style={getButtonStyle()}>
+              {getButtonText()}
+            </Button>
+            <Text style={styles.descriptionText}>
+              {l10n.models.modelCard.labels.draftOnlyReason}
+            </Text>
+          </View>
+        );
+      }
+
       return (
         <Button
           testID={isActiveModel ? 'offload-button' : 'load-button'}
@@ -788,7 +809,11 @@ export const ModelCard: React.FC<ModelCardProps> = observer(
                             ] || skill.labelKey,
                         ),
                         ...(isMTPCapable(model)
-                          ? [l10n.models.modelCapabilities.mtp]
+                          ? [
+                              isDraftOnly
+                                ? l10n.models.modelCapabilities.mtpDraft
+                                : l10n.models.modelCapabilities.mtp,
+                            ]
                           : []),
                       ].join(', ')}{' '}
                       {l10n.models.modelCard.labels.capabilities}

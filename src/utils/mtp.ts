@@ -5,6 +5,30 @@ import {GGUFMetadata} from './types';
 export const isMTPCapable = (model: {ggufMetadata?: GGUFMetadata}): boolean =>
   (model.ggufMetadata?.nextn_predict_layers ?? 0) > 0;
 
+/**
+ * A draft-only artifact speculates for a target but cannot be a chat model:
+ * loading one fails in llama.rn with "Failed to load model". Embedded-MTP
+ * models also carry `nextn_predict_layers`, so the arch suffix — not the layer
+ * count — is what separates the two.
+ */
+export const isDraftOnlyArch = (architecture?: string): boolean =>
+  !!architecture && architecture.toLowerCase().endsWith('-assistant');
+
+// Pre-download only: the HF search has filenames but no GGUF header yet.
+// ggml-org publishes drafts as `mtp-<target>`; converters also use `assistant`.
+export const isDraftOnlyFilename = (filename?: string): boolean => {
+  const name = (filename ?? '').toLowerCase().split('/').pop() ?? '';
+  return name.startsWith('mtp-') || name.includes('assistant');
+};
+
+export const isDraftOnlyModel = (model: {
+  ggufMetadata?: GGUFMetadata;
+  filename?: string;
+}): boolean =>
+  model.ggufMetadata?.architecture
+    ? isDraftOnlyArch(model.ggufMetadata.architecture)
+    : isDraftOnlyFilename(model.filename);
+
 // Width the native paired assert compares: n_embd_out(draft) == n_embd(target).
 export const nEmbdOut = (meta?: GGUFMetadata): number | undefined =>
   meta?.embedding_length_out ?? meta?.n_embd;

@@ -1,6 +1,13 @@
 import {gguf} from '@huggingface/gguf';
 
-import {isMTPCapable, probeRemoteMTPCapability, nEmbdOut} from '../mtp';
+import {
+  isMTPCapable,
+  probeRemoteMTPCapability,
+  nEmbdOut,
+  isDraftOnlyArch,
+  isDraftOnlyFilename,
+  isDraftOnlyModel,
+} from '../mtp';
 import {installTextDecoder} from '../textDecoder';
 import {GGUFMetadata} from '../types';
 
@@ -134,5 +141,48 @@ describe('mtp utils', () => {
 
       await expect(probeRemoteMTPCapability(URL)).resolves.toBe('capable');
     });
+  });
+});
+
+describe('draft-only detection', () => {
+  const dmeta = (architecture: string, nextn?: number) =>
+    ({architecture, nextn_predict_layers: nextn}) as any;
+
+  it('treats an assistant-arch file as draft-only', () => {
+    expect(isDraftOnlyArch('gemma4-assistant')).toBe(true);
+    expect(isDraftOnlyModel({ggufMetadata: dmeta('gemma4-assistant', 4)})).toBe(
+      true,
+    );
+  });
+
+  it('does NOT treat an embedded-MTP model as draft-only', () => {
+    // Qwen3.5-0.8B-MTP: nextn > 0 but a normal arch, and it loads and
+    // generates on device — gating it would break a shipped mode.
+    expect(isDraftOnlyArch('qwen35')).toBe(false);
+    expect(isDraftOnlyModel({ggufMetadata: dmeta('qwen35', 1)})).toBe(false);
+    expect(isMTPCapable({ggufMetadata: dmeta('qwen35', 1)})).toBe(true);
+  });
+
+  it('leaves a plain target alone', () => {
+    expect(isDraftOnlyArch('gemma4')).toBe(false);
+    expect(isDraftOnlyModel({ggufMetadata: dmeta('gemma4')})).toBe(false);
+  });
+
+  it('falls back to the filename before the header is available', () => {
+    expect(isDraftOnlyFilename('mtp-gemma-4-E2B-it-Q8_0.gguf')).toBe(true);
+    expect(isDraftOnlyFilename('gemma-4-E2B-it-Q4_0.gguf')).toBe(false);
+    expect(isDraftOnlyFilename('Qwen3.5-0.8B-Q4_0.gguf')).toBe(false);
+    expect(isDraftOnlyModel({filename: 'mtp-gemma-4-E2B-it-Q8_0.gguf'})).toBe(
+      true,
+    );
+  });
+
+  it('prefers the header arch over the filename', () => {
+    expect(
+      isDraftOnlyModel({
+        ggufMetadata: dmeta('qwen35', 1),
+        filename: 'mtp-confusingly-named.gguf',
+      }),
+    ).toBe(false);
   });
 });

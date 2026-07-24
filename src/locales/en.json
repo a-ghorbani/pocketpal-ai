@@ -401,7 +401,8 @@
         "author": "Author",
         "requiresProjectionModel": "Requires projection model",
         "downloadProjectionModel": "Download projection model",
-        "viewModelCardOnHuggingFace": "View Model Card on Hugging Face"
+        "viewModelCardOnHuggingFace": "View Model Card on Hugging Face",
+        "draftOnlyReason": "Draft-only model. Pick it under Settings → Speculative decoding."
       },
       "accessibility": {
         "expandDetails": "Expand details",
@@ -463,7 +464,8 @@
       "rewriting": "Rewriting",
       "creativity": "Creative writing",
       "vision": "Vision",
-      "mtp": "Speculative (MTP)"
+      "mtp": "Speculative (MTP)",
+      "mtpDraft": "Speculative draft"
     }
   },
   "completionParams": {
@@ -1005,12 +1007,7 @@
         "total": "Total: ",
         "usage": "Usage: "
       },
-      "byteSizes": [
-        "Bytes",
-        "KB",
-        "MB",
-        "GB"
-      ]
+      "byteSizes": ["Bytes", "KB", "MB", "GB"]
     },
     "chatView": {
       "menuItems": {
