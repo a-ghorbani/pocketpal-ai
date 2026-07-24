@@ -31,7 +31,8 @@
     "close": "Tutup",
     "clear": "Kosongkan",
     "gallery": "Galeri",
-    "stop": "Henti"
+    "stop": "Henti",
+    "noResults": "Tiada hasil"
   },
   "settings": {
     "modelInitializationSettings": "Tetapan Permulaan Model",
@@ -188,7 +189,9 @@
       "consentGivenTitle": "Carian web telah didayakan",
       "consentGivenDescription": "Pertanyaan dan bacaan halaman mungkin meninggalkan peranti anda seperti yang diterangkan di atas.",
       "consentRevoke": "Batalkan"
-    }
+    },
+    "languageSheetTitle": "Bahasa",
+    "languageSearchPlaceholder": "Cari bahasa"
   },
   "memory": {
     "shortWarning": "Amaran Memori",
@@ -1218,7 +1221,8 @@
       "searchResultsTitle": "Hasil carian",
       "showResultsAccessibilityLabel": "Papar hasil carian web untuk {{query}}",
       "openLinkError": "Tidak dapat membuka pautan ini."
-    }
+    },
+    "contextFullRemote": "Perbualan ini sudah kehabisan ruang. Mulakan sembang baharu."
   },
   "benchmark": {
     "title": "Tolok Ukur",
