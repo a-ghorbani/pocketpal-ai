@@ -177,11 +177,33 @@ describe('draft-only detection', () => {
     );
   });
 
-  it('prefers the header arch over the filename', () => {
+  it('accepts the separator and suffix spellings converters actually ship', () => {
+    // Seen in the wild: ggml-org uses `-assistant`, AtomicChat `_assistant`,
+    // Radamanthys11 the older `_mtp`.
+    expect(isDraftOnlyArch('gemma4-assistant')).toBe(true);
+    expect(isDraftOnlyArch('gemma4_assistant')).toBe(true);
+    expect(isDraftOnlyArch('gemma4_mtp')).toBe(true);
+    // A target whose name merely contains the word must not match.
+    expect(isDraftOnlyArch('assistant-gemma4')).toBe(false);
+  });
+
+  it('flags a draft when either the arch or the filename says so', () => {
+    expect(
+      isDraftOnlyModel({
+        ggufMetadata: dmeta('gemma4', undefined),
+        filename: 'mtp-gemma-4-E2B-it-Q8_0.gguf',
+      }),
+    ).toBe(true);
+    expect(
+      isDraftOnlyModel({
+        ggufMetadata: dmeta('gemma4-assistant', 4),
+        filename: 'oddly-named.gguf',
+      }),
+    ).toBe(true);
     expect(
       isDraftOnlyModel({
         ggufMetadata: dmeta('qwen35', 1),
-        filename: 'mtp-confusingly-named.gguf',
+        filename: 'Qwen3.5-0.8B-Q4_0.gguf',
       }),
     ).toBe(false);
   });

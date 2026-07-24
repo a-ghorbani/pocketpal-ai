@@ -11,8 +11,10 @@ export const isMTPCapable = (model: {ggufMetadata?: GGUFMetadata}): boolean =>
  * models also carry `nextn_predict_layers`, so the arch suffix — not the layer
  * count — is what separates the two.
  */
+// Converters disagree on the separator (`gemma4-assistant`, `gemma4_assistant`)
+// and some older ones tag the draft `*_mtp`, so match on the suffix word.
 export const isDraftOnlyArch = (architecture?: string): boolean =>
-  !!architecture && architecture.toLowerCase().endsWith('-assistant');
+  /[-_](assistant|mtp)$/.test((architecture ?? '').toLowerCase());
 
 // Pre-download only: the HF search has filenames but no GGUF header yet.
 // ggml-org publishes drafts as `mtp-<target>`; converters also use `assistant`.
@@ -21,13 +23,14 @@ export const isDraftOnlyFilename = (filename?: string): boolean => {
   return name.startsWith('mtp-') || name.includes('assistant');
 };
 
+// Either signal is sufficient: a converter may spell the arch in a way we do
+// not recognise, and a draft named by convention is still a draft.
 export const isDraftOnlyModel = (model: {
   ggufMetadata?: GGUFMetadata;
   filename?: string;
 }): boolean =>
-  model.ggufMetadata?.architecture
-    ? isDraftOnlyArch(model.ggufMetadata.architecture)
-    : isDraftOnlyFilename(model.filename);
+  isDraftOnlyArch(model.ggufMetadata?.architecture) ||
+  isDraftOnlyFilename(model.filename);
 
 // Width the native paired assert compares: n_embd_out(draft) == n_embd(target).
 export const nEmbdOut = (meta?: GGUFMetadata): number | undefined =>
