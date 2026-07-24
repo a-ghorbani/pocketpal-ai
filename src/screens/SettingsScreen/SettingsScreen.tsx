@@ -730,6 +730,10 @@ export const SettingsScreen: React.FC = observer(() => {
                       <Switch
                         testID="speculative-decoding-switch"
                         value={speculativeEnabled}
+                        accessibilityLabel={l10n.settings.speculativeDecoding}
+                        accessibilityHint={
+                          l10n.settings.speculativeDecodingDescription
+                        }
                         onValueChange={value =>
                           modelStore.setSpeculativeEnabled(value)
                         }
@@ -772,6 +776,15 @@ export const SettingsScreen: React.FC = observer(() => {
                               style={styles.menuButton}
                               contentStyle={styles.buttonContent}
                               testID="speculative-draft-model-picker"
+                              accessibilityLabel={`${
+                                l10n.settings.speculativeDraftModel
+                              }, ${
+                                selectedDraftModel?.name ??
+                                l10n.settings.speculativeDraftModelNone
+                              }`}
+                              accessibilityHint={
+                                l10n.settings.speculativeDraftModelDescription
+                              }
                               icon={({size, color}) => (
                                 <Icon
                                   source="chevron-down"
@@ -834,6 +847,9 @@ export const SettingsScreen: React.FC = observer(() => {
                         </Text>
                         <InputSlider
                           testID="speculative-draft-gpu-layers-slider"
+                          accessibilityLabel={
+                            l10n.settings.speculativeDraftNGpuLayers
+                          }
                           value={
                             modelStore.contextInitParams
                               .spec_draft_n_gpu_layers ?? 99

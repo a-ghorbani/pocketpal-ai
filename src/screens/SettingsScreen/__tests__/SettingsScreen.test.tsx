@@ -449,6 +449,41 @@ describe('SettingsScreen', () => {
       expect(modelStore.setSpecDraftNGpuLayers).toHaveBeenCalledWith(42);
     });
 
+    it('names the switch, draft picker, and GPU-layers slider for screen readers', async () => {
+      jest.useFakeTimers();
+      setupDraftModels();
+      const {getByTestId, getByText} = render(<SettingsScreen />, {
+        withSafeArea: true,
+        withNavigation: true,
+      });
+
+      await openSpeculative(getByTestId, getByText);
+
+      const spec = getByTestId('speculative-decoding-switch');
+      expect(spec.props.accessibilityLabel).toBe(
+        l10n.en.settings.speculativeDecoding,
+      );
+      expect(spec.props.accessibilityHint).toBe(
+        l10n.en.settings.speculativeDecodingDescription,
+      );
+      // The row title and description are siblings of the control, so a
+      // screen reader only reaches them through the control's own label.
+      const picker = getByTestId('speculative-draft-model-picker');
+      expect(picker.props.accessibilityLabel).toContain(
+        l10n.en.settings.speculativeDraftModel,
+      );
+      expect(picker.props.accessibilityLabel).toContain(
+        l10n.en.settings.speculativeDraftModelNone,
+      );
+      expect(picker.props.accessibilityHint).toBe(
+        l10n.en.settings.speculativeDraftModelDescription,
+      );
+      const slider = getByTestId('speculative-draft-gpu-layers-slider');
+      expect(slider.props.accessibilityLabel).toBe(
+        l10n.en.settings.speculativeDraftNGpuLayers,
+      );
+    });
+
     it('draft cache label shows the effective default (f16 when a draft is paired)', async () => {
       jest.useFakeTimers();
       setupPairedDraft();
