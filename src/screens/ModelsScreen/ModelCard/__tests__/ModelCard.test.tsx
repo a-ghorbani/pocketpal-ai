@@ -721,7 +721,7 @@ describe('ModelCard', () => {
       });
 
       expect(
-        queryByText(l10n.en.models.modelCard.labels.capabilityUnknown),
+        queryByText(l10n.en.models.modelCard.labels.visionUnknown),
       ).toBeTruthy();
       expect(
         queryByText(l10n.en.models.modelCard.labels.visionNotSupported),
@@ -737,7 +737,7 @@ describe('ModelCard', () => {
 
       await waitFor(() => {
         expect(
-          queryByText(l10n.en.models.modelCard.labels.capabilityUnknown),
+          queryByText(l10n.en.models.modelCard.labels.visionUnknown),
         ).toBeTruthy();
       });
       expect(queryByTestId(contextCell)).toBeNull();
@@ -951,7 +951,7 @@ describe('ModelCard', () => {
         expand(getByTestId);
         await waitFor(() => {
           expect(
-            queryByText(l10n.en.models.modelCard.labels.capabilityUnknown),
+            queryByText(l10n.en.models.modelCard.labels.visionUnknown),
           ).toBeTruthy();
         });
         expect(queryByTestId(contextCell)).toBeNull();
@@ -987,7 +987,7 @@ describe('ModelCard', () => {
         expand(getByTestId);
         await waitFor(() => {
           expect(
-            queryByText(l10n.en.models.modelCard.labels.capabilityUnknown),
+            queryByText(l10n.en.models.modelCard.labels.visionUnknown),
           ).toBeTruthy();
         });
         expect(queryByTestId(contextCell)).toBeNull();

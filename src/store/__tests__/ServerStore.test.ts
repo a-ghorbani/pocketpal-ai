@@ -464,6 +464,26 @@ describe('ServerStore', () => {
       });
     });
 
+    it('derives from the fetch alone for a newly added llama.cpp server', async () => {
+      mockedFetchModels.mockResolvedValue(
+        routerModelsBody.data as RemoteModelInfo[],
+      );
+      const id = serverStore.addServer({
+        name: 'router',
+        url: 'http://localhost:8080',
+        serverType: 'llama.cpp',
+      });
+
+      await serverStore.fetchModelsForServer(id);
+
+      expect(serverStore.listCaps[`${id}/gemma-4-e2b`]).toEqual({
+        tier: 'list',
+        supportsVision: true,
+        contextLength: 8192,
+      });
+      expect(mockedFetchServerProps).not.toHaveBeenCalled();
+    });
+
     it('recomputes when a fetch replaces the list', () => {
       const id = addRouter();
       expect(Object.keys(serverStore.listCaps)).toHaveLength(5);
@@ -492,7 +512,13 @@ describe('ServerStore', () => {
     });
 
     it('is not persisted', () => {
-      expect(persistedProperties).not.toContain('listCaps');
+      expect(persistedProperties).toEqual([
+        'servers',
+        'privacyNoticeAcknowledged',
+        'userSelectedModels',
+        'remoteReasoning',
+        'remoteCaps',
+      ]);
     });
   });
 

@@ -2157,8 +2157,9 @@ class ModelStore {
 
   /**
    * Capabilities of any model, active or not — the model card's entry point.
-   * Must stay unannotated: `action` untracks the observable reads, so every
-   * card would freeze on its first value while the suite stayed green.
+   * Never annotate it explicitly as `action`: that untracks the observable
+   * reads, so every card would freeze on its first value while the suite
+   * stayed green.
    */
   capsFor = (model: Model | undefined): ModelCapabilityView =>
     resolveModelCaps(model, this.capabilityEnv);

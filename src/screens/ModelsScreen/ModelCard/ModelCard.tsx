@@ -132,7 +132,7 @@ export const ModelCard: React.FC<ModelCardProps> = observer(
         ? l10n.models.modelCard.labels.visionSupported
         : modelCaps.vision === 'no'
           ? l10n.models.modelCard.labels.visionNotSupported
-          : l10n.models.modelCard.labels.capabilityUnknown;
+          : l10n.models.modelCard.labels.visionUnknown;
 
     // Check projection model status for downloaded vision models
     const projectionModelStatus = modelStore.getProjectionModelStatus(model);

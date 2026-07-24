@@ -51,8 +51,7 @@ const triState = (value: boolean | undefined): 'yes' | 'no' | 'unknown' => {
 /**
  * Resolve the effective capabilities of a model. Single source of truth — the
  * only place `model.origin` is branched on to answer a capability question, so
- * the attach affordance, the send path, the context banner and the model card
- * cannot structurally disagree.
+ * its consumers cannot structurally disagree.
  *
  * Pure and synchronous by design: callers resolve inside an `observer` render
  * body, so a capability landing from a detached probe re-renders on its own.

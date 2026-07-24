@@ -271,6 +271,23 @@ describe('fetchModelsWithHeaders', () => {
       expect(models[0].capabilities).toEqual(['completion']);
     });
 
+    it('never pairs an id-less row with a nameless entry', async () => {
+      serve({
+        data: [
+          {object: 'model', owned_by: 'x'},
+          {id: 'b', object: 'model', owned_by: 'x'},
+        ],
+        models: [
+          {capabilities: ['multimodal']},
+          {name: 'other', capabilities: ['completion']},
+        ],
+      });
+
+      const {models} = await fetchModelsWithHeaders('http://localhost:8080');
+
+      expect(models.some(m => 'capabilities' in m)).toBe(false);
+    });
+
     it('ignores a models field that is not an array', async () => {
       serve({
         data: [{id: 'a', object: 'model', owned_by: 'x'}],

@@ -622,7 +622,7 @@ export const RemoteModelSheet: React.FC<RemoteModelSheetProps> = observer(
                             ? l10n.models.modelCard.labels.visionSupported
                             : listCaps.supportsVision === false
                               ? l10n.models.modelCard.labels.visionNotSupported
-                              : l10n.models.modelCard.labels.capabilityUnknown
+                              : l10n.models.modelCard.labels.visionUnknown
                         }`}>
                         {listCaps.supportsVision === true ? (
                           <EyeIcon
@@ -637,10 +637,8 @@ export const RemoteModelSheet: React.FC<RemoteModelSheetProps> = observer(
                             stroke={theme.colors.iconModelTypeText}
                           />
                         ) : (
-                          // Three states, not two: "no vision" and "this build
-                          // does not say" land on 42 rows and one row
-                          // respectively, and absence alone cannot tell them
-                          // apart — a screen reader would hear nothing at all.
+                          // Without a visible placeholder a screen reader
+                          // would hear nothing at all here.
                           <Text style={styles.modelVisionUnknown}>—</Text>
                         )}
                       </View>

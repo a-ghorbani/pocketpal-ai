@@ -23,7 +23,7 @@ const positiveInt = (raw: string | undefined): number | undefined => {
     return undefined;
   }
   const value = parseInt(raw, 10);
-  return value > 0 ? value : undefined;
+  return Number.isSafeInteger(value) && value > 0 ? value : undefined;
 };
 
 /**
@@ -88,7 +88,7 @@ export function deriveListCaps(
   }
 
   const reported =
-    typeof row.meta?.n_ctx === 'number' && Number.isFinite(row.meta.n_ctx)
+    typeof row.meta?.n_ctx === 'number' && Number.isSafeInteger(row.meta.n_ctx)
       ? row.meta.n_ctx
       : undefined;
   // A loaded child's own report beats the command that launched it.

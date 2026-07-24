@@ -235,7 +235,9 @@ function liftModelEntryCapabilities(
   }
   return rows.map(row => {
     const entry =
-      entries.find(e => (e?.name ?? e?.model) === row.id) ??
+      (row.id
+        ? entries.find(e => (e?.name ?? e?.model) === row.id)
+        : undefined) ??
       // One row and one entry can only describe each other, whatever the
       // entry happens to call itself.
       (rows.length === 1 && entries.length === 1 ? entries[0] : undefined);

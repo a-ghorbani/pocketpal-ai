@@ -138,10 +138,42 @@ describe('deriveListCaps', () => {
       ['a trailing flag with no value', ['--jinja', '--ctx-size']],
       ['a flag that only looks similar', ['--ctx-size-foo', '4096']],
       ['no window argument at all', ['--jinja', '--flash-attn', 'auto']],
+      [
+        'a value beyond the safe-integer range',
+        ['--ctx-size', '9'.repeat(400)],
+      ],
     ])('reports no window for %s', (_label, args) => {
       const caps = deriveListCaps(withArgs(args), 'llama.cpp');
 
       expect('contextLength' in caps).toBe(false);
+    });
+
+    it('reports no window when the argument list is not an array', () => {
+      const row = routerRow(VISION_UNLOADED);
+      const mangled = {
+        ...row,
+        status: {...row.status, args: '--ctx-size 8192' as any},
+      };
+
+      expect('contextLength' in deriveListCaps(mangled, 'llama.cpp')).toBe(
+        false,
+      );
+    });
+
+    it('reports no window when the flag is followed by a non-string', () => {
+      const caps = deriveListCaps(
+        withArgs(['--ctx-size', 4096 as any]),
+        'llama.cpp',
+      );
+
+      expect('contextLength' in caps).toBe(false);
+    });
+
+    it('ignores a fractional report and falls through to the launch window', () => {
+      const row = routerRow(VISION);
+      const fractional = {...row, meta: {...row.meta, n_ctx: 8192.5}};
+
+      expect(deriveListCaps(fractional, 'llama.cpp').contextLength).toBe(8192);
     });
 
     it('does not let a later bad value revive an earlier good one', () => {

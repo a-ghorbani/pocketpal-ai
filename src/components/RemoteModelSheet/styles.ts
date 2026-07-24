@@ -115,7 +115,7 @@ export const createStyles = (theme: Theme) => {
       marginLeft: 8,
     },
     modelVisionSlot: {
-      marginLeft: 4,
+      marginStart: 4,
       alignItems: 'center',
       justifyContent: 'center',
     },
