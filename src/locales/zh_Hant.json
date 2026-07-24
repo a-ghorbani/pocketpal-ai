@@ -244,7 +244,8 @@
     "close": "關閉",
     "clear": "全部清除",
     "gallery": "圖庫",
-    "stop": "停止"
+    "stop": "停止",
+    "noResults": "沒有結果"
   },
   "completionParams": {
     "grammar": "如何在生成文字本時強制執行特定語法規則（快速指南）",
@@ -1209,7 +1210,9 @@
       "consentGivenTitle": "網路搜尋已啟用",
       "consentGivenDescription": "如上所述，查詢與網頁讀取可能會離開你的裝置。",
       "consentRevoke": "撤銷"
-    }
+    },
+    "languageSheetTitle": "語言",
+    "languageSearchPlaceholder": "搜尋語言"
   },
   "storage": {
     "checkFailed": "無法檢查存儲",
