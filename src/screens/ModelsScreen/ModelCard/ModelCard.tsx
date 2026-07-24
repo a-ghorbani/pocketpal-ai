@@ -498,56 +498,63 @@ export const ModelCard: React.FC<ModelCardProps> = observer(
 
       // Downloaded state - soft blue styling
       return (
-        <View style={styles.actionButtonsRow}>
-          {renderModelLoadButton()}
+        <>
+          <View style={styles.actionButtonsRow}>
+            {renderModelLoadButton()}
 
-          <TouchableOpacity
-            testID="settings-button"
-            onPress={onOpenSettings}
-            style={styles.iconButton}
-            accessibilityRole="button"
-            accessibilityLabel={l10n.models.modelCard.buttons.settings}>
-            <SettingsIcon
-              width={16}
-              height={16}
-              stroke={theme.colors.onSurfaceVariant}
-            />
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            testID="delete-button"
-            onPress={() => handleDelete()}
-            style={styles.iconButton}
-            accessibilityRole="button"
-            accessibilityLabel={l10n.common.delete}>
-            <TrashIcon width={16} height={16} stroke={theme.colors.error} />
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            testID="expand-details-button"
-            onPress={toggleExpanded}
-            style={styles.iconButton}
-            accessibilityRole="button"
-            accessibilityLabel={
-              isExpanded
-                ? l10n.models.modelCard.accessibility.collapseDetails
-                : l10n.models.modelCard.accessibility.expandDetails
-            }>
-            {isExpanded ? (
-              <ChevronSelectorExpandedVerticalIcon
+            <TouchableOpacity
+              testID="settings-button"
+              onPress={onOpenSettings}
+              style={styles.iconButton}
+              accessibilityRole="button"
+              accessibilityLabel={l10n.models.modelCard.buttons.settings}>
+              <SettingsIcon
                 width={16}
                 height={16}
                 stroke={theme.colors.onSurfaceVariant}
               />
-            ) : (
-              <ChevronSelectorVerticalIcon
-                width={16}
-                height={16}
-                stroke={theme.colors.onSurfaceVariant}
-              />
-            )}
-          </TouchableOpacity>
-        </View>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              testID="delete-button"
+              onPress={() => handleDelete()}
+              style={styles.iconButton}
+              accessibilityRole="button"
+              accessibilityLabel={l10n.common.delete}>
+              <TrashIcon width={16} height={16} stroke={theme.colors.error} />
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              testID="expand-details-button"
+              onPress={toggleExpanded}
+              style={styles.iconButton}
+              accessibilityRole="button"
+              accessibilityLabel={
+                isExpanded
+                  ? l10n.models.modelCard.accessibility.collapseDetails
+                  : l10n.models.modelCard.accessibility.expandDetails
+              }>
+              {isExpanded ? (
+                <ChevronSelectorExpandedVerticalIcon
+                  width={16}
+                  height={16}
+                  stroke={theme.colors.onSurfaceVariant}
+                />
+              ) : (
+                <ChevronSelectorVerticalIcon
+                  width={16}
+                  height={16}
+                  stroke={theme.colors.onSurfaceVariant}
+                />
+              )}
+            </TouchableOpacity>
+          </View>
+          {isDraftOnly && (
+            <Text style={styles.draftOnlyHint}>
+              {l10n.models.modelCard.labels.draftOnlyReason}
+            </Text>
+          )}
+        </>
       );
     };
 
@@ -619,19 +626,14 @@ export const ModelCard: React.FC<ModelCardProps> = observer(
       // llama.rn cannot open a draft as a context; loading one only ever fails.
       if (isDraftOnly) {
         return (
-          <View style={styles.primaryActionButton}>
-            <Button
-              testID="draft-only-load-disabled"
-              accessibilityLabel={l10n.models.modelCard.labels.draftOnlyReason}
-              icon="play-circle-outline"
-              disabled
-              style={getButtonStyle()}>
-              {getButtonText()}
-            </Button>
-            <Text style={styles.descriptionText}>
-              {l10n.models.modelCard.labels.draftOnlyReason}
-            </Text>
-          </View>
+          <Button
+            testID="draft-only-load-disabled"
+            accessibilityLabel={l10n.models.modelCard.labels.draftOnlyReason}
+            icon="play-circle-outline"
+            disabled
+            style={[styles.primaryActionButton, getButtonStyle()]}>
+            {getButtonText()}
+          </Button>
         );
       }
 

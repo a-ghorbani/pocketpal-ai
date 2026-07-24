@@ -208,6 +208,49 @@ describe('ModelStore', () => {
     });
   });
 
+  describe('healDraftVisionClassification', () => {
+    it('strips the vision classification a draft acquired before draft detection', () => {
+      const staleDraft = {
+        ...presetModelFixture,
+        id: 'ggml-org/gemma-4-E2B-it-GGUF/mtp-gemma-4-E2B-it-Q8_0.gguf',
+        filename: 'mtp-gemma-4-E2B-it-Q8_0.gguf',
+        origin: ModelOrigin.HF,
+        isDownloaded: true,
+        hfModel: mockHFModel1,
+        supportsMultimodal: true,
+        capabilities: ['vision' as const],
+        compatibleProjectionModels: [
+          'ggml-org/gemma-4-E2B-it-GGUF/mmproj.gguf',
+        ],
+        defaultProjectionModel: 'ggml-org/gemma-4-E2B-it-GGUF/mmproj.gguf',
+        visionEnabled: true,
+      };
+      const visionModel = {
+        ...presetModelFixture,
+        id: 'hf/repo/vision.gguf',
+        filename: 'vision.gguf',
+        origin: ModelOrigin.HF,
+        isDownloaded: true,
+        hfModel: mockHFModel1,
+        supportsMultimodal: true,
+        capabilities: ['vision' as const],
+      };
+      modelStore.models = [staleDraft, visionModel];
+
+      runInAction(() => {
+        modelStore.healDraftVisionClassification();
+      });
+
+      const healed = modelStore.models.find(m => m.id === staleDraft.id);
+      expect(healed?.supportsMultimodal).toBe(false);
+      expect(healed?.capabilities).toEqual([]);
+      expect(healed?.defaultProjectionModel).toBeUndefined();
+      const untouched = modelStore.models.find(m => m.id === visionModel.id);
+      expect(untouched?.supportsMultimodal).toBe(true);
+      expect(untouched?.capabilities).toEqual(['vision']);
+    });
+  });
+
   describe('resolvePresetModels', () => {
     let savedOS: typeof Platform.OS;
     beforeAll(() => {

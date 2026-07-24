@@ -41,6 +41,7 @@ import {
   parseSizeLabel,
 } from '../utils';
 import {getRecommendedProjectionModel} from '../utils/multimodalHelpers';
+import {isDraftOnlyModel} from '../utils/mtp';
 import {getOriginalModelName} from '../utils/formatters';
 import type {OnboardingPalModelEntry} from './onboarding/onboardingPals';
 
@@ -631,9 +632,25 @@ class ModelStore {
     return this.getEffectiveBatchValues();
   };
 
+  // Drafts downloaded before draft detection existed were classified as
+  // vision models (their repo carries an mmproj); re-derive so they heal.
+  healDraftVisionClassification = () => {
+    this.models.forEach(model => {
+      if (model.supportsMultimodal && isDraftOnlyModel(model)) {
+        model.supportsMultimodal = false;
+        model.capabilities = model.capabilities?.filter(c => c !== 'vision');
+        model.compatibleProjectionModels = undefined;
+        model.defaultProjectionModel = undefined;
+        model.visionEnabled = undefined;
+      }
+    });
+  };
+
   initializeStore = async () => {
     const storedVersion = this.version || 0;
     console.log('models: ', this.models);
+
+    this.healDraftVisionClassification();
 
     // Sync download manager with active downloads
     await downloadManager.syncWithActiveDownloads(this.models);

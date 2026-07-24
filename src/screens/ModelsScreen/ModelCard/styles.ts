@@ -186,6 +186,11 @@ export const createStyles = (theme: Theme) =>
       borderWidth: 1,
       height: 40,
     },
+    draftOnlyHint: {
+      fontSize: 12,
+      color: theme.colors.onSurfaceVariant,
+      marginTop: 8,
+    },
     iconButton: {
       padding: 10, // p-2.5 equivalent
       borderRadius: 16, // rounded-2xl
