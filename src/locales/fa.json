@@ -31,7 +31,8 @@
     "close": "بستن",
     "clear": "پاک کردن همه",
     "gallery": "گالری",
-    "stop": "توقف"
+    "stop": "توقف",
+    "noResults": "نتیجه‌ای یافت نشد"
   },
   "settings": {
     "modelInitializationSettings": "تنظیمات راه‌اندازی مدل",
@@ -188,7 +189,9 @@
       "consentGivenTitle": "جستجوی وب فعال است",
       "consentGivenDescription": "همان‌طور که در بالا توضیح داده شد، درخواست‌ها و خواندن صفحات ممکن است از دستگاه شما خارج شوند.",
       "consentRevoke": "لغو دسترسی"
-    }
+    },
+    "languageSheetTitle": "زبان",
+    "languageSearchPlaceholder": "جستجوی زبان‌ها"
   },
   "memory": {
     "shortWarning": "هشدار حافظه",
@@ -1218,7 +1221,8 @@
       "searchResultsTitle": "نتایج جستجو",
       "showResultsAccessibilityLabel": "نمایش نتایج جستجوی وب برای {{query}}",
       "openLinkError": "باز کردن این لینک ممکن نشد."
-    }
+    },
+    "contextFullRemote": "گنجایش گفتگو پر شد. یک چت جدید شروع کنید."
   },
   "benchmark": {
     "title": "بنچمارک",
