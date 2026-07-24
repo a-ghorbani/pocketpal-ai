@@ -4519,7 +4519,6 @@ describe('ModelStore', () => {
 
         await modelStore.setRemoteModel(remoteModel);
 
-        // Re-selection is what moves the session, and the probe goes with it.
         expect(modelStore.activeRemoteBinding?.url).toBe(
           'http://localhost:9090',
         );

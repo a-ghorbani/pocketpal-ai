@@ -238,8 +238,6 @@ function liftModelEntryCapabilities(
       (row.id
         ? entries.find(e => (e?.name ?? e?.model) === row.id)
         : undefined) ??
-      // One row and one entry can only describe each other, whatever the
-      // entry happens to call itself.
       (rows.length === 1 && entries.length === 1 ? entries[0] : undefined);
     return entry?.capabilities
       ? {...row, capabilities: entry.capabilities}
@@ -365,9 +363,6 @@ export async function fetchServerProps(
       caps.contextLength = nCtx;
     }
 
-    // A router placeholder reports model_path 'none' and no window. Anything
-    // else names a loaded model, and there a missing `modalities` key means
-    // the build has no vision — a definite false, not unknown.
     const modelPath: unknown = data?.model_path;
     const describesModel =
       (typeof modelPath === 'string' &&
@@ -405,11 +400,8 @@ export async function testConnection(
 
 const DETECT_TIMEOUT_MS = 5000;
 
-// Bound for the detached /props capability probe: the fallback applied inside
-// fetchServerProps whenever the server sets no usable requestTimeoutMs, and
-// the ceiling ServerStore clamps a server-set value to. A fire-and-forget
-// probe must neither inherit the 30 s connection default nor an arbitrarily
-// large user-set timeout.
+// A fire-and-forget probe must neither inherit the 30 s connection default nor
+// an arbitrarily large user-set timeout.
 export const PROPS_TIMEOUT_MS = 5000;
 
 /**

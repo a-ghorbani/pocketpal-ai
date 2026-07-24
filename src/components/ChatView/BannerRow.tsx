@@ -102,9 +102,6 @@ export const BannerRow: React.FC<BannerRowProps> = observer(
 
     const isRemote = modelStore.activeModel?.origin === ModelOrigin.REMOTE;
 
-    // The window the live session measures against — local `n_ctx` or the
-    // /props-reported one, picked by the resolver. Already `> 0` or absent, so
-    // 0 (unknown, not exhausted) can never read as context-full here.
     const effectiveNCtx = modelStore.activeModelCaps.effectiveContextLength;
 
     const {variant, heavyTalentName, ratio} = resolveBannerVariant(

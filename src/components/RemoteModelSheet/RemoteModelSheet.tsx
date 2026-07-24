@@ -642,8 +642,6 @@ export const RemoteModelSheet: React.FC<RemoteModelSheetProps> = observer(
                             stroke={theme.colors.iconModelTypeText}
                           />
                         ) : (
-                          // Without a visible placeholder a screen reader
-                          // would hear nothing at all here.
                           <Text style={styles.modelVisionUnknown}>—</Text>
                         )}
                       </View>

@@ -336,8 +336,6 @@ describe('useChatSession', () => {
   });
 
   it('emits multimodal warning when user sends an image but multimodal is disabled', async () => {
-    // No model is vision-active, so the hook should call uiStore.setChatWarning
-    // with the multimodal-not-enabled message.
     if (modelStore.context) {
       modelStore.context.completion = jest
         .fn()

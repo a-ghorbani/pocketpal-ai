@@ -29,9 +29,8 @@ const FETCH_THROTTLE_MS = 60000;
 const CAPS_FIELDS = ['contextLength', 'supportsVision'] as const;
 
 /**
- * Drop every entry of a per-model map (keyed `${serverId}/${remoteModelId}`)
- * that belongs to one server. Shared by every path that invalidates per-model
- * state, so a new map cannot be added to one and forgotten in the other.
+ * Shared by every path that invalidates per-model state, so a new map cannot
+ * be added to one and forgotten in the other.
  */
 function dropServerEntries<T>(
   map: Record<string, T>,
@@ -127,7 +126,6 @@ class ServerStore {
     this.userSelectedModels = this.userSelectedModels.filter(
       m => m.serverId !== id,
     );
-    // Drop per-model state keyed by this server's model ids.
     this.remoteReasoning = dropServerEntries(this.remoteReasoning, id);
     this.remoteCaps = dropServerEntries(this.remoteCaps, id);
     // Clean up API key from keychain
@@ -304,6 +302,9 @@ class ServerStore {
    * A shorter server timeout is honoured, a longer one is not:
    * `requestTimeoutMs` is a free numeric input, and detached work must stay
    * bounded by `PROPS_TIMEOUT_MS` per request.
+   *
+   * `resolvedApiKey` undefined is indistinguishable from a keyless server, so
+   * the probe re-reads the Keychain in that case.
    */
   async fetchRemoteModelCaps(
     serverId: string,

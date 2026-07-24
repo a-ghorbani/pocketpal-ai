@@ -861,9 +861,7 @@ describe('ChatScreen on/off toggle → reasoning carrier (remote)', () => {
 
 // The image-attach affordance must reflect a capability that lands after the
 // screen is already on screen: the probe is detached and a lazily-started
-// server can take seconds to answer. This only holds while the flag is derived
-// in the render body — resolving it in an effect or a promise body would leave
-// the button stuck disabled, which is the whole defect.
+// server can take seconds to answer.
 describe('ChatScreen remote vision reactivity', () => {
   const modelId = 'srv-1/gemma-4-e2b';
   let savedModels: any[];
@@ -912,7 +910,6 @@ describe('ChatScreen remote vision reactivity', () => {
   it('enables attach when capabilities land, with no further user action', () => {
     const {getByLabelText} = render(<ChatScreen />, {withNavigation: true});
 
-    // Unknown capabilities fail closed.
     expect(getByLabelText('Add image').props.accessibilityState.disabled).toBe(
       true,
     );
@@ -923,7 +920,6 @@ describe('ChatScreen remote vision reactivity', () => {
       });
     });
 
-    // No navigation, no press, no prop change in between.
     expect(getByLabelText('Add image').props.accessibilityState.disabled).toBe(
       false,
     );

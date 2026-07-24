@@ -703,7 +703,6 @@ describe('ModelCard', () => {
       expect(queryByTestId('open-huggingface-url')).toBeNull();
       expect(queryByTestId('vision-skill-touchable')).toBeNull();
 
-      // What does render: the server-reported facts.
       expect(getByTestId(contextCell)).toBeTruthy();
       expect(
         queryByText(l10n.en.models.modelCard.labels.visionSupported),
@@ -750,7 +749,6 @@ describe('ModelCard', () => {
         });
       });
 
-      // No press, no navigation, no prop change in between.
       expect(
         queryByText(l10n.en.models.modelCard.labels.visionSupported),
       ).toBeTruthy();
@@ -876,7 +874,6 @@ describe('ModelCard', () => {
           ).toBeTruthy();
         });
         expect(getByTestId(contextCell)).toBeTruthy();
-        // Nothing was asked of the server to say any of that.
         expect(serverStore.fetchRemoteModelCaps).not.toHaveBeenCalled();
       });
 
@@ -964,7 +961,6 @@ describe('ModelCard', () => {
           });
         });
 
-        // No press, no navigation, no prop change in between.
         expect(
           queryByText(l10n.en.models.modelCard.labels.visionSupported),
         ).toBeTruthy();

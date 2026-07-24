@@ -104,9 +104,6 @@ export const ChatScreen: React.FC = observer(() => {
     setErrorToReport(null);
   }, []);
 
-  // Resolved in the render body, not an effect: capabilities land from a
-  // detached probe or a model load, and only a tracked read re-renders the
-  // attach affordance when they do. Unknown stays disabled.
   const visionEnabled = modelStore.activeModelCaps.visionActive;
 
   // Resolver is the single source of truth for reasoning capability.

@@ -427,10 +427,8 @@ describe('RemoteModelSheet', () => {
     it('reads the persisted server type, not the type this sheet detected', async () => {
       const {getByTestId} = await openViaChip('llama.cpp');
 
-      // The chip path never detects a type, so the sheet own serverType state
-      // is still its initial 'unknown'. The slot renders anyway, which is the
-      // whole point: gating on that state would suppress it on exactly the
-      // routers this exists for.
+      // The chip path never detects a type, so the sheet's own serverType
+      // state is still its initial 'unknown'.
       expect(mockedDetectServerType).not.toHaveBeenCalled();
       expect(getByTestId(slot(VISION))).toBeTruthy();
     });
@@ -451,8 +449,6 @@ describe('RemoteModelSheet', () => {
     it('issues no request of its own to answer', async () => {
       await openViaChip('llama.cpp');
 
-      // One models fetch for the chip press, and nothing else: the slot reads
-      // a body the sheet already had.
       expect(mockedFetchModels).toHaveBeenCalledTimes(1);
       expect(mockedFetchModelsWithHeaders).not.toHaveBeenCalled();
     });

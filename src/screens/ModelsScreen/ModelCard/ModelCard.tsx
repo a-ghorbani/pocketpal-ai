@@ -939,8 +939,7 @@ export const ModelCard: React.FC<ModelCardProps> = observer(
                     </View>
                   )}
 
-                  {/* Vision — remote only; local models have the toggle above,
-                      which shows the same state and lets the user change it. */}
+                  {/* Vision */}
                   {isRemoteModel && (
                     <View
                       style={styles.technicalDetailCard}

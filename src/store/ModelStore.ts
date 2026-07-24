@@ -177,9 +177,6 @@ class ModelStore {
 
   engine: CompletionEngine | undefined = undefined;
 
-  // Which backend the live remote session talks to. Set with the engine and
-  // cleared with it, so it is defined exactly while a remote session exists.
-  // Not persisted: a session does not survive a launch.
   activeRemoteBinding: RemoteSessionBinding | undefined = undefined;
 
   lastUsedModelId: string | undefined = undefined;
@@ -952,10 +949,6 @@ class ModelStore {
    * local-network prompt, so a grant always arrives after it already failed.
    * Without this, caps stay unknown for the rest of the session and the only
    * recovery is re-selecting the model by hand.
-   *
-   * Fires only while the active remote model has no caps for the backend the
-   * session is bound to, so a valid entry is never re-fetched. Detached, and
-   * `ServerStore` still owns the write.
    *
    * Also skipped once the server record has been repointed away from that
    * backend: the probe would read a backend this session never talks to, and
@@ -2140,10 +2133,6 @@ class ModelStore {
     );
   }
 
-  /**
-   * The resolver env, assembled here and nowhere else. Kept private so no
-   * caller can build its own and answer a capability question a different way.
-   */
   private get capabilityEnv(): CapabilityEnv {
     return {
       remoteCaps: serverStore.remoteCaps,
@@ -2247,9 +2236,6 @@ class ModelStore {
         server.requestTimeoutMs,
         server.serverType,
       );
-      // Same values the engine was built from. The server record is mutable
-      // and the engine is not rebuilt when it changes, so this is what the
-      // session is talking to until the model is selected again.
       this.activeRemoteBinding = {
         modelId: model.id,
         serverId: model.serverId!,
@@ -2261,12 +2247,6 @@ class ModelStore {
       // Do NOT set lastUsedModelId for remote models -- server may be offline on next launch
     });
 
-    // Capabilities are per model, so they are probed on activation. Detached:
-    // a lazily-started server can take seconds to answer, and neither the
-    // engine nor the chat screen may wait on it. ServerStore owns the write.
-    // The key resolved for the engine is forwarded; a keyless server resolves
-    // to undefined, which the probe cannot tell from "not supplied", so it
-    // reads the Keychain itself in that case.
     serverStore
       .fetchRemoteModelCaps(model.serverId, model.remoteModelId, apiKey)
       .catch(() => {});
