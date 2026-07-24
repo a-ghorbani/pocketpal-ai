@@ -1,5 +1,5 @@
 import React from 'react';
-import {ScrollView} from 'react-native';
+import {ScrollView, StyleSheet} from 'react-native';
 
 // Use the project's custom render which mounts MarkdownProvider — required
 // because MarkdownView now relies on the ambient TRenderEngineProvider
@@ -110,6 +110,33 @@ describe('MarkdownView Component', () => {
     );
 
     expect(getByText(/console\.log/)).toBeTruthy();
+  });
+
+  describe('Link Rendering', () => {
+    // Light theme secondary color (see src/theme/tokens/colors.ts).
+    const LINK_COLOR = '#1E4DF6';
+
+    it('renders link text from a markdown link', () => {
+      const markdownText = '[Example](https://example.com)';
+      const {getByText} = render(
+        <MarkdownView markdownText={markdownText} maxMessageWidth={300} />,
+      );
+
+      expect(getByText('Example')).toBeTruthy();
+    });
+
+    it('styles links with a distinct color and underline', () => {
+      const markdownText = '[Example](https://example.com)';
+      const {getByText} = render(
+        <MarkdownView markdownText={markdownText} maxMessageWidth={300} />,
+      );
+
+      const linkNode = getByText('Example');
+      const flattened = StyleSheet.flatten(linkNode.props.style) || {};
+
+      expect(flattened.color).toBe(LINK_COLOR);
+      expect(flattened.textDecorationLine).toBe('underline');
+    });
   });
 
   describe('Table Rendering', () => {
