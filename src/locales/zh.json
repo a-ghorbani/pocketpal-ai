@@ -31,7 +31,8 @@
     "close": "关闭",
     "clear": "全部清除",
     "gallery": "图库",
-    "stop": "停止"
+    "stop": "停止",
+    "noResults": "无结果"
   },
   "settings": {
     "modelInitializationSettings": "模型初始化设置",
@@ -188,7 +189,9 @@
       "consentGivenTitle": "联网搜索已启用",
       "consentGivenDescription": "如上所述，查询和网页读取可能会离开你的设备。",
       "consentRevoke": "撤销"
-    }
+    },
+    "languageSheetTitle": "语言",
+    "languageSearchPlaceholder": "搜索语言"
   },
   "memory": {
     "shortWarning": "内存警告",
@@ -1218,7 +1221,8 @@
       "searchResultsTitle": "搜索结果",
       "showResultsAccessibilityLabel": "显示 {{query}} 的网络搜索结果",
       "openLinkError": "无法打开此链接。"
-    }
+    },
+    "contextFullRemote": "对话空间已满，请新建聊天。"
   },
   "benchmark": {
     "title": "基准测试",
