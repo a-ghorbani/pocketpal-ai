@@ -31,7 +31,8 @@
     "ok": "OK",
     "close": "Fechar",
     "clear": "Limpar Tudo",
-    "gallery": "Galeria"
+    "gallery": "Galeria",
+    "noResults": "Nenhum resultado"
   },
   "settings": {
     "modelInitializationSettings": "Configurações de Inicialização do Modelo",
@@ -188,7 +189,9 @@
       "consentGivenTitle": "A busca na web está ativada",
       "consentGivenDescription": "As consultas e leituras de página podem sair do seu dispositivo, conforme descrito acima.",
       "consentRevoke": "Revogar"
-    }
+    },
+    "languageSheetTitle": "Idioma",
+    "languageSearchPlaceholder": "Pesquisar idiomas"
   },
   "memory": {
     "shortWarning": "Aviso de Memória",
@@ -1218,7 +1221,8 @@
       "searchResultsTitle": "Resultados da busca",
       "showResultsAccessibilityLabel": "Mostrar resultados da busca na web para {{query}}",
       "openLinkError": "Não foi possível abrir este link."
-    }
+    },
+    "contextFullRemote": "A conversa ficou sem espaço. Comece um novo chat."
   },
   "htmlPreview": {
     "defaultTitle": "Pré-visualização",
