@@ -561,6 +561,7 @@
       "msPerToken": "{{value}}ms/token",
       "tokensPerSec": "{{value}} tokens/sec",
       "ttft": "{{value}}ms TTFT",
+      "draftAccepted": "draft: {{accepted}}/{{total}} ({{pct}}%)",
       "interrupted": "Interrupted",
       "truncated": "Cut off — likely context full"
     },

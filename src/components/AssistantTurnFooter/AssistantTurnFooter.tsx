@@ -79,7 +79,11 @@ export const AssistantTurnFooter: React.FC<AssistantTurnFooterProps> = observer(
       ? Math.round((draftAccepted / draftTokens) * 100)
       : 0;
     const draftString = showDraft
-      ? `draft: ${draftAccepted}/${draftTokens} (${draftPct}%)`
+      ? t(l10n.components.bubble.draftAccepted, {
+          accepted: String(draftAccepted),
+          total: String(draftTokens),
+          pct: String(draftPct),
+        })
       : '';
 
     const copyToClipboard = () => {
