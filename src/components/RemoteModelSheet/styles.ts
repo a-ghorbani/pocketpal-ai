@@ -115,7 +115,8 @@ export const createStyles = (theme: Theme) => {
       marginLeft: 8,
     },
     modelVisionSlot: {
-      marginStart: 4,
+      width: 20,
+      marginStart: 12,
       alignItems: 'center',
       justifyContent: 'center',
     },
@@ -127,7 +128,7 @@ export const createStyles = (theme: Theme) => {
       fontSize: 12,
       color: theme.colors.onSurfaceVariant,
       fontStyle: 'italic',
-      marginLeft: 4,
+      marginStart: 4,
     },
     noModelsText: {
       fontSize: 14,

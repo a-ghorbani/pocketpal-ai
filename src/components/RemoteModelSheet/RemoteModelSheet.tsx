@@ -612,6 +612,11 @@ export const RemoteModelSheet: React.FC<RemoteModelSheetProps> = observer(
                       uncheckedColor={theme.colors.onSurfaceVariant}
                     />
                     <Text style={styles.modelName}>{model.id}</Text>
+                    {alreadyAdded && (
+                      <Text style={styles.alreadyAddedText}>
+                        {l10n.settings.alreadyAdded}
+                      </Text>
+                    )}
                     {serverTypeInEffect === 'llama.cpp' && (
                       <View
                         style={styles.modelVisionSlot}
@@ -642,11 +647,6 @@ export const RemoteModelSheet: React.FC<RemoteModelSheetProps> = observer(
                           <Text style={styles.modelVisionUnknown}>—</Text>
                         )}
                       </View>
-                    )}
-                    {alreadyAdded && (
-                      <Text style={styles.alreadyAddedText}>
-                        {l10n.settings.alreadyAdded}
-                      </Text>
                     )}
                   </TouchableOpacity>
                 );
