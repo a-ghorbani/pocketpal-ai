@@ -8,14 +8,14 @@
  * speculative — so it never hits the non-MTP native error.
  *
  * Three gates:
- *  - V1' (engagement): a REAL MTP-capable model with speculative on must produce
+ *  - Engagement: a REAL MTP-capable model with speculative on must produce
  *    `draft_tokens > 0` at completion. This is the ONLY proof the feature is not
  *    inert — unit/UI tests cannot observe engagement. `draft_tokens` is a
  *    TOP-LEVEL field on the native completion result (sibling of `timings`).
- *  - V2-C (off-safety / negative control): a NON-MTP model with speculative on
+ *  - Off-safety (negative control): a NON-MTP model with speculative on
  *    and no valid draft loads with NO native error, produces output, and
  *    `draft_tokens === 0` (PocketPal resolved to OFF and never sent spec_type).
- *  - V2-D (crash-safety): a width-mismatched paired draft must NOT abort the
+ *  - Crash-safety: a width-mismatched paired draft must NOT abort the
  *    process — a mismatched pair, had it reached init_mtp, would SIGABRT
  *    uncatchably. The gate is "process survives + target loads", not draft count.
  *
@@ -26,8 +26,8 @@
  * ── draft_tokens read surface ────────────────────────────────────────────────
  * The chat now surfaces speculative engagement in the assistant turn footer:
  * when `draft_tokens > 0`, a `message-draft-tokens` element renders
- * "draft: <accepted>/<total> (<pct>%)". V1' asserts that element is present
- * (engagement, draft_tokens > 0); V2-C asserts it is ABSENT (PocketPal resolved
+ * "draft: <accepted>/<total> (<pct>%)". The engagement test asserts that
+ * element is present (draft_tokens > 0); off-safety asserts it is ABSENT (PocketPal resolved
  * to OFF, draft_tokens === 0). The verify stage runs this spec on a real MTP
  * GGUF fixture (iOS + Android, `--devices virtual-only`); the MTP_MODEL fixture
  * repo below must be confirmed available at run time.
@@ -65,7 +65,7 @@ const NON_MTP_MODEL = {
 
 /**
  * A small MTP-capable GGUF (embedded nextn draft layers) for the engagement
- * gate (V1'). Confirmed available + MTP-signalled: header range-fetch shows
+ * engagement gate. Confirmed available + MTP-signalled: header range-fetch shows
  * `qwen35.nextn_predict_layers = 1` and `blk.*.nextn.*` tensors, and the pinned
  * llama.rn@0.12.5 registers LLM_ARCH_QWEN35 + the nextn KV/tensors, so it loads
  * and resolves to embedded MTP. ~0.8B Q4_0 (~0.5GB) — sim-runnable.
@@ -86,7 +86,7 @@ const MTP_MODEL = {
  * "ran out of room" false negative). The feature generates fine manually with
  * adequate context, so the spec raises n_ctx up front to replicate that. n_ctx
  * is read from the global store at initLlama time, so it must be set before the
- * model loads. Non-MTP (V2-C) is unaffected by the larger context.
+ * model loads. The non-MTP off-safety model is unaffected by the larger context.
  */
 const SPEC_CONTEXT_SIZE = '4096';
 
@@ -190,7 +190,7 @@ describe('Speculative Decoding / MTP draft model', () => {
     }
   });
 
-  it('V2-C off-safety: non-MTP model + speculative on loads, outputs, no native error', async () => {
+  it('off-safety: non-MTP model + speculative on loads, outputs, no native error', async () => {
     // PocketPal must resolve this to OFF (target is non-MTP, no valid draft) and
     // emit NO spec_type -- proving the P0-2 dodge. Output produced + no crash is
     // the UI-observable proof. The draft-tokens footer element must be ABSENT
@@ -198,26 +198,29 @@ describe('Speculative Decoding / MTP draft model', () => {
     await downloadAndLoadModel(NON_MTP_MODEL);
 
     const responseText = await runPromptAndReadResponse(chatPage, 'Hi');
-    console.log(`[V2-C] non-MTP off-safety response: ${responseText}`);
+    console.log(`[off-safety] non-MTP response: ${responseText}`);
     expect(responseText).not.toBe('Unable to extract');
     expect(responseText.length).toBeGreaterThan(0);
     await expect(browser.$(DRAFT_TOKENS_EL)).not.toBeExisting();
     await saveShot('speculative-v2c-off-safety');
   });
 
-  it('V2-D crash-safety: a width-mismatched paired draft does not abort the process', async () => {
+  it('crash-safety: a width-mismatched paired draft does not abort the process', async () => {
     // A mismatched pair, had it reached init_mtp, would SIGABRT uncatchably.
     // PocketPal must decline paired (unknown/mismatched width => not paired) and
     // fall through to embedded/off, so the process survives and the target loads.
     // The gate is "no SIGABRT + target loads", not a draft count.
     //
     // UI-observable proxy: the non-MTP model is ALREADY loaded with speculative
-    // on (from V2-C) -- PocketPal's width gate resolved it to off (no valid paired
+    // on (from the off-safety test) -- PocketPal's width gate resolved it to off (no valid paired
     // MTP draft). A fresh completion that returns + a responsive app == no native
     // abort/SIGABRT. (No re-load: the model is loaded, so there is no load-button;
-    // runs right after V2-C while that model is still the active context.)
-    const responseText = await runPromptAndReadResponse(chatPage, 'Still there?');
-    console.log(`[V2-D] crash-safety probe response: ${responseText}`);
+    // runs right after the off-safety test while that model is still the active context.)
+    const responseText = await runPromptAndReadResponse(
+      chatPage,
+      'Still there?',
+    );
+    console.log(`[crash-safety] probe response: ${responseText}`);
     expect(responseText).not.toBe('Unable to extract');
     expect(responseText.length).toBeGreaterThan(0);
     // App still responsive + producing output after a speculative-on load == no SIGABRT.
@@ -225,7 +228,7 @@ describe('Speculative Decoding / MTP draft model', () => {
     await saveShot('speculative-v2d-crash-safety');
   });
 
-  it('V1′ engagement: MTP model + speculative on produces draft tokens (draft_tokens > 0)', async () => {
+  it('engagement: MTP model + speculative on produces draft tokens (draft_tokens > 0)', async () => {
     // Engagement gate -- the proof the feature is not inert. With a real
     // MTP-capable target, resolveDraftConfig returns embedded, spec_type=draft-mtp
     // is emitted, and the completion reports draft_tokens > 0, surfaced by the
@@ -241,8 +244,9 @@ describe('Speculative Decoding / MTP draft model', () => {
     const draftEl = browser.$(DRAFT_TOKENS_EL);
     await draftEl.waitForExist({timeout: TIMEOUTS.inference});
     const attrName = (browser as any).isAndroid ? 'content-desc' : 'label';
-    const draftText = (await draftEl.getAttribute(attrName).catch(() => '')) || '';
-    console.log(`[V1'] draft tokens surfaced: ${draftText}`);
+    const draftText =
+      (await draftEl.getAttribute(attrName).catch(() => '')) || '';
+    console.log(`[engagement] draft tokens surfaced: ${draftText}`);
     // "draft: <accepted>/<total> (<pct>%)" -- total is draft_tokens; > 0 == engaged.
     const m = draftText.match(/(\d+)\s*\/\s*(\d+)/);
     expect(m).not.toBeNull();
@@ -255,7 +259,7 @@ describe('Speculative Decoding / MTP draft model', () => {
         .$(TIMING_EL)
         .getAttribute(attrName)
         .catch(() => '')) || '';
-    console.log(`[V1'] timings surfaced: ${timingText}`);
+    console.log(`[engagement] timings surfaced: ${timingText}`);
     const rate = timingText.match(/([\d.]+)\s*tokens?\/sec/i);
     expect(rate).not.toBeNull();
     expect(Number(rate && rate[1])).toBeGreaterThan(0);

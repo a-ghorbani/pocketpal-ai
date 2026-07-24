@@ -2,7 +2,7 @@
  * Separate-Draft (mem-shared / "assistant" MTP) Speculative Decoding — engagement
  *
  * The sibling `speculative.spec.ts` proves EMBEDDED MTP (a self-contained MTP
- * target, V1') and the crash-SAFETY of a width-MISMATCHED paired draft (V2-D).
+ * target) and the crash-SAFETY of a width-MISMATCHED paired draft.
  * Neither proves the OTHER headline mode: a WORKING separate draft model paired
  * to a distinct target, resolving to `mode: 'paired'` and actually producing
  * draft tokens. This spec is exactly that missing proof.
@@ -36,6 +36,8 @@
  *
  * Usage:
  *   yarn e2e:ios --spec speculative-paired --devices virtual-only
+ *   (long downloads: prefix with E2E_MOCHA_TIMEOUT=1800000 — a per-test
+ *   this.timeout() cannot raise wdio's mochaOpts ceiling)
  */
 
 import * as fs from 'fs';
@@ -48,11 +50,7 @@ import {ModelsPage} from '../../pages/ModelsPage';
 import {HFSearchSheet} from '../../pages/HFSearchSheet';
 import {ModelDetailsSheet} from '../../pages/ModelDetailsSheet';
 import {SettingsPage} from '../../pages/SettingsPage';
-import {
-  Selectors,
-  byTestId,
-  byPartialText,
-} from '../../helpers/selectors';
+import {Selectors, byTestId, byPartialText} from '../../helpers/selectors';
 import {Gestures} from '../../helpers/gestures';
 import {
   dismissPerformanceWarningIfPresent,
@@ -311,19 +309,29 @@ async function pickDraftModel(
   await browser.pause(700);
 
   const pickerLabel =
-    (await browser.$(SPEC_PICKER).getAttribute('label').catch(() => '')) || '';
-  console.log(`[V3] draft picker after selection: ${pickerLabel}`);
+    (await browser
+      .$(SPEC_PICKER)
+      .getAttribute('label')
+      .catch(() => '')) || '';
+  console.log(`[paired] draft picker after selection: ${pickerLabel}`);
 }
 
 /**
  * Wait for the draft-tokens footer, dismissing the "more room" sheet on each
  * poll so a mid-turn context sheet cannot swallow the completion.
  */
-async function waitForDraftFooter(maxWaitMs = TIMEOUTS.inference): Promise<void> {
+async function waitForDraftFooter(
+  maxWaitMs = TIMEOUTS.inference,
+): Promise<void> {
   const start = Date.now();
   while (Date.now() - start < maxWaitMs) {
     await dismissContextRoomSheetIfPresent();
-    if (await browser.$(DRAFT_TOKENS_EL).isExisting().catch(() => false)) {
+    if (
+      await browser
+        .$(DRAFT_TOKENS_EL)
+        .isExisting()
+        .catch(() => false)
+    ) {
       return;
     }
     await browser.pause(1500);
@@ -359,10 +367,11 @@ describe('Speculative Decoding / separate-draft (paired) MTP', () => {
     }
   });
 
-  it('V3 paired engagement: a separate MTP draft paired to a target produces draft tokens', async function (this: Mocha.Context) {
-    // Two sequential downloads (98 MB draft + ~1.7 GB target) plus load and
-    // generation exceed the 10-min suite default; the download helpers already
-    // allow 15-min waits, so lift the test budget to cover both.
+  it('paired engagement: a separate MTP draft paired to a target produces draft tokens', async function (this: Mocha.Context) {
+    // Two sequential downloads (98 MB draft + ~3.5 GB target) plus load and
+    // generation exceed the 10-min suite default. this.timeout() does not
+    // override wdio's mochaOpts.timeout, so long runs must ALSO raise
+    // E2E_MOCHA_TIMEOUT (see usage header); this call covers plain mocha.
     this.timeout(1_800_000);
 
     // 1) Download the separate MTP draft (not loaded) so it is pickable and its
@@ -385,7 +394,7 @@ describe('Speculative Decoding / separate-draft (paired) MTP', () => {
       const crashes = freshCrashReports(loadStart);
       if (crashes.length > 0) {
         console.log(
-          `[V3] target load aborted; fresh crash report(s): ${crashes.join(
+          `[paired] target load aborted; fresh crash report(s): ${crashes.join(
             ', ',
           )}`,
         );
@@ -407,7 +416,7 @@ describe('Speculative Decoding / separate-draft (paired) MTP', () => {
       const crashes = freshCrashReports(loadStart);
       if (crashes.length > 0) {
         console.log(
-          `[V3] generation aborted; fresh crash report(s): ${crashes.join(
+          `[paired] generation aborted; fresh crash report(s): ${crashes.join(
             ', ',
           )}`,
         );
@@ -420,7 +429,7 @@ describe('Speculative Decoding / separate-draft (paired) MTP', () => {
     const draftEl = browser.$(DRAFT_TOKENS_EL);
     const draftText =
       (await draftEl.getAttribute('label').catch(() => '')) || '';
-    console.log(`[V3] draft tokens surfaced: ${draftText}`);
+    console.log(`[paired] draft tokens surfaced: ${draftText}`);
 
     // "draft: <accepted>/<total> (<pct>%)" -- total is draft_tokens; > 0 == engaged.
     const m = draftText.match(/(\d+)\s*\/\s*(\d+)/);
@@ -429,8 +438,11 @@ describe('Speculative Decoding / separate-draft (paired) MTP', () => {
     expect(Number(m && m[2])).toBeGreaterThan(0);
 
     const timingText =
-      (await browser.$(TIMING_EL).getAttribute('label').catch(() => '')) || '';
-    console.log(`[V3] timings surfaced: ${timingText}`);
+      (await browser
+        .$(TIMING_EL)
+        .getAttribute('label')
+        .catch(() => '')) || '';
+    console.log(`[paired] timings surfaced: ${timingText}`);
     const rate = timingText.match(/([\d.]+)\s*tokens?\/sec/i);
     expect(rate).not.toBeNull();
     expect(Number(rate && rate[1])).toBeGreaterThan(0);
