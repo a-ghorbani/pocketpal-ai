@@ -634,23 +634,38 @@ class ModelStore {
 
   // Drafts downloaded before draft detection existed were classified as
   // vision models (their repo carries an mmproj); re-derive so they heal.
-  healDraftVisionClassification = () => {
-    this.models.forEach(model => {
-      if (model.supportsMultimodal && isDraftOnlyModel(model)) {
-        model.supportsMultimodal = false;
-        model.capabilities = model.capabilities?.filter(c => c !== 'vision');
-        model.compatibleProjectionModels = undefined;
-        model.defaultProjectionModel = undefined;
-        model.visionEnabled = undefined;
-      }
+  // The pairing may have auto-downloaded that mmproj, and projection models
+  // are only reachable through a multimodal model's UI — which the heal
+  // removes — so the cleared ids must go through orphan cleanup here.
+  healDraftVisionClassification = async () => {
+    const clearedProjectionIds = new Set<string>();
+    runInAction(() => {
+      this.models.forEach(model => {
+        if (model.supportsMultimodal && isDraftOnlyModel(model)) {
+          model.compatibleProjectionModels?.forEach(id =>
+            clearedProjectionIds.add(id),
+          );
+          if (model.defaultProjectionModel) {
+            clearedProjectionIds.add(model.defaultProjectionModel);
+          }
+          model.supportsMultimodal = false;
+          model.capabilities = model.capabilities?.filter(c => c !== 'vision');
+          model.compatibleProjectionModels = undefined;
+          model.defaultProjectionModel = undefined;
+          model.visionEnabled = undefined;
+        }
+      });
     });
+    if (clearedProjectionIds.size > 0) {
+      await this.cleanupOrphanedProjectionModels([...clearedProjectionIds]);
+    }
   };
 
   initializeStore = async () => {
     const storedVersion = this.version || 0;
     console.log('models: ', this.models);
 
-    this.healDraftVisionClassification();
+    await this.healDraftVisionClassification();
 
     // Sync download manager with active downloads
     await downloadManager.syncWithActiveDownloads(this.models);

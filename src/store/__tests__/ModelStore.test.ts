@@ -209,7 +209,7 @@ describe('ModelStore', () => {
   });
 
   describe('healDraftVisionClassification', () => {
-    it('strips the vision classification a draft acquired before draft detection', () => {
+    it('strips the vision classification a draft acquired before draft detection', async () => {
       const staleDraft = {
         ...presetModelFixture,
         id: 'ggml-org/gemma-4-E2B-it-GGUF/mtp-gemma-4-E2B-it-Q8_0.gguf',
@@ -235,11 +235,23 @@ describe('ModelStore', () => {
         supportsMultimodal: true,
         capabilities: ['vision' as const],
       };
-      modelStore.models = [staleDraft, visionModel];
+      const mmprojId = 'ggml-org/gemma-4-E2B-it-GGUF/mmproj.gguf';
+      const mmproj = {
+        ...presetModelFixture,
+        id: mmprojId,
+        filename: 'mmproj.gguf',
+        origin: ModelOrigin.HF,
+        modelType: ModelType.PROJECTION,
+        isDownloaded: true,
+        hfModel: mockHFModel1,
+      };
+      modelStore.models = [staleDraft, visionModel, mmproj];
+      const existsMock = RNFS.exists as jest.Mock;
+      const statefulExists = existsMock.getMockImplementation();
+      existsMock.mockResolvedValue(false);
 
-      runInAction(() => {
-        modelStore.healDraftVisionClassification();
-      });
+      await modelStore.healDraftVisionClassification();
+      existsMock.mockImplementation(statefulExists);
 
       const healed = modelStore.models.find(m => m.id === staleDraft.id);
       expect(healed?.supportsMultimodal).toBe(false);
@@ -248,6 +260,31 @@ describe('ModelStore', () => {
       const untouched = modelStore.models.find(m => m.id === visionModel.id);
       expect(untouched?.supportsMultimodal).toBe(true);
       expect(untouched?.capabilities).toEqual(['vision']);
+      // The pairing auto-downloaded the mmproj; once the heal removes the
+      // pairing the projection model has no UI left, so it must be orphan-
+      // cleaned rather than stranded.
+      const cleaned = modelStore.models.find(m => m.id === mmprojId);
+      expect(cleaned?.isDownloaded).toBe(false);
+    });
+
+    it('does not strip a chat model whose filename merely contains assistant', async () => {
+      const openAssistant = {
+        ...presetModelFixture,
+        id: 'hf/repo/openassistant-llama2-13b-orca-8k-3319.Q4_K_M.gguf',
+        filename: 'openassistant-llama2-13b-orca-8k-3319.Q4_K_M.gguf',
+        origin: ModelOrigin.HF,
+        isDownloaded: true,
+        hfModel: mockHFModel1,
+        supportsMultimodal: true,
+        capabilities: ['vision' as const],
+        ggufMetadata: {architecture: 'llama'} as any,
+      };
+      modelStore.models = [openAssistant];
+
+      await modelStore.healDraftVisionClassification();
+
+      expect(modelStore.models[0].supportsMultimodal).toBe(true);
+      expect(modelStore.models[0].capabilities).toEqual(['vision']);
     });
   });
 

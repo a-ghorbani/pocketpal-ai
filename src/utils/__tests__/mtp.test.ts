@@ -23,12 +23,16 @@ const meta = (over: Partial<GGUFMetadata> = {}): GGUFMetadata => ({
   ...over,
 });
 
-const URL = 'http://x/m.gguf';
+// The probe caches definitive results per URL, so every test uses its own.
+let urlSeq = 0;
+const nextUrl = () => `http://x/m${++urlSeq}.gguf`;
+let URL = '';
 
 describe('mtp utils', () => {
   beforeEach(() => {
     jest.clearAllMocks();
     jest.spyOn(console, 'warn').mockImplementation(() => {});
+    URL = nextUrl();
   });
 
   describe('isMTPCapable (local-derived, KV-only)', () => {
@@ -101,6 +105,34 @@ describe('mtp utils', () => {
     it('is unknown, not not-capable, when the fetch rejects', async () => {
       (gguf as jest.Mock).mockRejectedValueOnce(new Error('network'));
       await expect(probeRemoteMTPCapability(URL)).resolves.toBe('unknown');
+    });
+
+    it('parses a given header once and serves repeat probes from cache', async () => {
+      (gguf as jest.Mock).mockResolvedValueOnce({
+        metadata: {
+          'general.architecture': 'qwen3',
+          'qwen3.nextn_predict_layers': 2,
+        },
+        tensorInfos: [],
+      });
+      await expect(probeRemoteMTPCapability(URL)).resolves.toBe('capable');
+      await expect(probeRemoteMTPCapability(URL)).resolves.toBe('capable');
+      expect(gguf).toHaveBeenCalledTimes(1);
+    });
+
+    it('does not cache unknown, so a failed probe can retry', async () => {
+      (gguf as jest.Mock)
+        .mockRejectedValueOnce(new Error('network'))
+        .mockResolvedValueOnce({
+          metadata: {
+            'general.architecture': 'qwen3',
+            'qwen3.nextn_predict_layers': 2,
+          },
+          tensorInfos: [],
+        });
+      await expect(probeRemoteMTPCapability(URL)).resolves.toBe('unknown');
+      await expect(probeRemoteMTPCapability(URL)).resolves.toBe('capable');
+      expect(gguf).toHaveBeenCalledTimes(2);
     });
   });
 
@@ -187,13 +219,34 @@ describe('draft-only detection', () => {
     expect(isDraftOnlyArch('assistant-gemma4')).toBe(false);
   });
 
-  it('flags a draft when either the arch or the filename says so', () => {
+  it('requires a delimited assistant token in the filename', () => {
+    // "assistant" as a substring of a longer word is a chat model, not a
+    // draft (openassistant-*, and every mmproj/target that mentions it).
+    expect(
+      isDraftOnlyFilename('openassistant-llama2-13b-orca-8k-3319.Q4_K_M.gguf'),
+    ).toBe(false);
+    expect(isDraftOnlyFilename('gemma4-assistant-Q8_0.gguf')).toBe(true);
+    expect(isDraftOnlyFilename('gemma4_assistant.Q8_0.gguf')).toBe(true);
+  });
+
+  it('lets a valid chat architecture override a draft-looking filename', () => {
+    // The header is authoritative: once metadata exists, a name that merely
+    // contains a draft token must not disable Load or strip vision.
     expect(
       isDraftOnlyModel({
-        ggufMetadata: dmeta('gemma4', undefined),
+        ggufMetadata: dmeta('llama'),
+        filename: 'openassistant-llama2-13b-orca-8k-3319.Q4_K_M.gguf',
+      }),
+    ).toBe(false);
+    expect(
+      isDraftOnlyModel({
+        ggufMetadata: dmeta('gemma4'),
         filename: 'mtp-gemma-4-E2B-it-Q8_0.gguf',
       }),
-    ).toBe(true);
+    ).toBe(false);
+  });
+
+  it('classifies by header when present, by filename only when absent', () => {
     expect(
       isDraftOnlyModel({
         ggufMetadata: dmeta('gemma4-assistant', 4),
@@ -206,5 +259,9 @@ describe('draft-only detection', () => {
         filename: 'Qwen3.5-0.8B-Q4_0.gguf',
       }),
     ).toBe(false);
+    // No metadata yet (pre-download): naming convention decides.
+    expect(isDraftOnlyModel({filename: 'gemma4-assistant-Q8_0.gguf'})).toBe(
+      true,
+    );
   });
 });
