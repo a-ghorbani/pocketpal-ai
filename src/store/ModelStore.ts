@@ -545,7 +545,7 @@ class ModelStore {
     const presets = await this.resolvePresets();
 
     if (storedVersion < MODEL_LIST_VERSION) {
-      this.mergeModelLists(presets);
+      await this.mergeModelLists(presets);
       // Only finalize the one-time migration once presets actually resolved.
       // An empty result signals a transient resolve failure (e.g. the RAM read
       // rejected); leave the version unbumped so the migration retries next
@@ -818,7 +818,9 @@ class ModelStore {
 
     this.reconcilePresets(presets);
 
-    this.initializeDownloadStatus();
+    // Returned (not awaited) so callers inside runInAction can stay sync while
+    // initializeStore can still await settlement before pruning local models.
+    return this.initializeDownloadStatus();
   };
 
   setupAppStateListener = () => {
@@ -970,7 +972,7 @@ class ModelStore {
       if (!model.fullPath) {
         throw new Error('Full path is undefined for local model');
       }
-      return model.fullPath;
+      return this.resolveLocalModelPath(model);
     }
 
     if (!model.filename) {
@@ -1048,6 +1050,51 @@ class ModelStore {
     return `${RNFS.DocumentDirectoryPath}/${model.filename}`;
   };
 
+  /**
+   * Re-anchors a LOCAL model's stored absolute path onto the current app
+   * container.
+   *
+   * `fullPath` is persisted verbatim when the file is imported. On iOS the app
+   * container UUID can change (OS upgrade, backup/restore, reinstall), which
+   * invalidates every stored absolute path even though the file is still on
+   * disk under the new container. Imported models are copied into
+   * `<DocumentDirectoryPath>/models/local`, so the segment from `models/local`
+   * onward is stable and can be re-joined to the *current* documents path.
+   *
+   * Returns the recovered path (and persists it) when the original is missing
+   * but the re-anchored one exists; otherwise returns the stored path unchanged
+   * so existing not-found handling still applies.
+   */
+  resolveLocalModelPath = async (model: Model): Promise<string> => {
+    const storedPath = model.fullPath!;
+
+    if (await RNFS.exists(storedPath)) {
+      return storedPath;
+    }
+
+    const marker = '/models/local/';
+    const markerIndex = storedPath.indexOf(marker);
+    if (markerIndex === -1) {
+      return storedPath;
+    }
+
+    const recoveredPath = `${RNFS.DocumentDirectoryPath}${storedPath.slice(
+      markerIndex,
+    )}`;
+    if (recoveredPath === storedPath || !(await RNFS.exists(recoveredPath))) {
+      return storedPath;
+    }
+
+    console.log(
+      '[ModelStore] Recovered local model path after container change:',
+      {modelId: model.id, from: storedPath, to: recoveredPath},
+    );
+    runInAction(() => {
+      model.fullPath = recoveredPath;
+    });
+    return recoveredPath;
+  };
+
   async checkFileExists(model: Model) {
     const filePath = await this.getModelFullPath(model);
     const exists = await RNFS.exists(filePath);
@@ -1071,9 +1118,25 @@ class ModelStore {
   }
 
   refreshDownloadStatuses = async () => {
-    this.models.forEach(model => {
-      this.checkFileExists(model);
-    });
+    // Await every check: callers (notably initializeStore, which then runs
+    // removeInvalidLocalModels) depend on isDownloaded being settled. A bare
+    // forEach resolved immediately and left the checks in flight.
+    //
+    // Each check is isolated: a single failure (e.g. an RNFS error, or a local
+    // model with no fullPath) must not abort the others, and must leave
+    // isDownloaded untouched rather than defaulting it to false — an
+    // indeterminate result is not evidence the file is gone.
+    await Promise.all(
+      this.models.map(model =>
+        this.checkFileExists(model).catch(error => {
+          console.warn(
+            '[ModelStore] Could not determine file status for model:',
+            model.id,
+            error,
+          );
+        }),
+      ),
+    );
   };
 
   initializeDownloadStatus = async () => {
@@ -1082,14 +1145,26 @@ class ModelStore {
 
   removeInvalidLocalModels = () => {
     runInAction(() => {
-      this.models = this.models.filter(
-        model =>
-          // Keep all non-local models (preset and HF)
-          !(model.isLocal || model.origin === ModelOrigin.LOCAL) ||
-          // This condition ensures that we keep models that are downloaded.
-          // For local models, isDownloaded==true means the file exists, otherwise it's invalid.
-          model.isDownloaded,
-      );
+      this.models = this.models.filter(model => {
+        // Keep all non-local models (preset and HF)
+        if (!(model.isLocal || model.origin === ModelOrigin.LOCAL)) {
+          return true;
+        }
+        // For local models, isDownloaded==true means the file exists, otherwise
+        // it's invalid. Callers must let refreshDownloadStatuses settle first —
+        // it re-anchors stale container paths (resolveLocalModelPath) so a
+        // recoverable model is not treated as missing here.
+        if (model.isDownloaded) {
+          return true;
+        }
+        // Dropping a local model is unrecoverable (there is no download URL to
+        // re-fetch from), so make it visible rather than silent.
+        console.warn(
+          '[ModelStore] Removing local model whose file is no longer present:',
+          {modelId: model.id, name: model.name, fullPath: model.fullPath},
+        );
+        return false;
+      });
     });
   };
 
