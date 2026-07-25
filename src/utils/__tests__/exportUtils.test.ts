@@ -17,7 +17,9 @@ import {
   exportAllChatSessions,
   exportPal,
   exportAllPals,
+  exportChatSessionAsMarkdown,
 } from '../exportUtils';
+import {userId} from '../chat';
 import {ensureLegacyStoragePermission} from '../androidPermission';
 
 // Mock dependencies
@@ -621,6 +623,154 @@ describe('exportUtils', () => {
       const filename = 'test_thumbnail.jpg';
       const expected = `/mock/document/path/pal-images/test_thumbnail.jpg`;
       expect(getAbsoluteThumbnailPath(filename)).toBe(expected);
+    });
+  });
+
+  describe('exportChatSessionAsMarkdown', () => {
+    const makeTextMessage = (
+      id: string,
+      author: string,
+      text: string,
+    ): any => ({
+      id,
+      author,
+      text,
+      type: 'text',
+      metadata: null,
+      createdAt: 1704067200000,
+      toMessageObject: () => ({
+        id,
+        type: 'text',
+        text,
+        author: {id: author},
+        createdAt: 1704067200000,
+        metadata: {},
+      }),
+    });
+
+    const writtenMarkdown = () => {
+      const call = (RNFS.writeFile as jest.Mock).mock.calls.at(-1);
+      return {path: call?.[0] as string, content: call?.[1] as string};
+    };
+
+    beforeEach(() => {
+      chatSessionRepository.getSessionById = jest.fn().mockResolvedValue({
+        session: {
+          id: 'session-1',
+          title: 'My Chat',
+          date: '2024-01-01T00:00:00Z',
+          activePalId: null,
+        },
+        messages: [
+          makeTextMessage('m1', userId, 'What is 2+2?'),
+          makeTextMessage('m2', 'assistant-1', 'It is 4.'),
+        ],
+        completionSettings: {settings: '{}'},
+      } as any);
+    });
+
+    it('writes a .md file and shares it with a markdown mime type', async () => {
+      await exportChatSessionAsMarkdown('session-1');
+
+      const {path} = writtenMarkdown();
+      expect(path).toMatch(/\.md$/);
+      expect(Share.open).toHaveBeenCalledWith(
+        expect.objectContaining({type: 'text/markdown'}),
+      );
+    });
+
+    it('renders the title, headings and message text as markdown', async () => {
+      await exportChatSessionAsMarkdown('session-1');
+
+      const {content} = writtenMarkdown();
+      expect(content).toContain('# My Chat');
+      expect(content).toContain('### User');
+      expect(content).toContain('What is 2+2?');
+      expect(content).toContain('### Assistant');
+      expect(content).toContain('It is 4.');
+    });
+
+    it('attributes authorship by user id rather than message order', async () => {
+      // Assistant speaks first here; role must follow the author id.
+      (chatSessionRepository.getSessionById as jest.Mock).mockResolvedValueOnce(
+        {
+          session: {
+            id: 'session-2',
+            title: 'Greeting',
+            date: '2024-01-01T00:00:00Z',
+            activePalId: null,
+          },
+          messages: [
+            makeTextMessage('m1', 'assistant-1', 'Hi there!'),
+            makeTextMessage('m2', userId, 'Hello.'),
+          ],
+          completionSettings: {settings: '{}'},
+        } as any,
+      );
+
+      await exportChatSessionAsMarkdown('session-2');
+
+      const {content} = writtenMarkdown();
+      expect(content.indexOf('### Assistant')).toBeLessThan(
+        content.indexOf('### User'),
+      );
+    });
+
+    it('exports assistant_turn content, whose text column is empty by design', async () => {
+      (chatSessionRepository.getSessionById as jest.Mock).mockResolvedValueOnce(
+        {
+          session: {
+            id: 'session-3',
+            title: 'Turn Based',
+            date: '2024-01-01T00:00:00Z',
+            activePalId: null,
+          },
+          messages: [
+            {
+              id: 'm1',
+              author: 'assistant-1',
+              text: '',
+              type: 'assistant_turn',
+              metadata: null,
+              createdAt: 1704067200000,
+              toMessageObject: () => ({
+                id: 'm1',
+                type: 'assistant_turn',
+                author: {id: 'assistant-1'},
+                createdAt: 1704067200000,
+                metadata: {},
+                steps: [{content: 'First part.'}, {content: 'Second part.'}],
+              }),
+            },
+          ],
+          completionSettings: {settings: '{}'},
+        } as any,
+      );
+
+      await exportChatSessionAsMarkdown('session-3');
+
+      const {content} = writtenMarkdown();
+      expect(content).toContain('First part.');
+      expect(content).toContain('Second part.');
+    });
+
+    it('throws when the session does not exist', async () => {
+      (chatSessionRepository.getSessionById as jest.Mock).mockResolvedValueOnce(
+        null,
+      );
+
+      await expect(exportChatSessionAsMarkdown('nonexistent')).rejects.toThrow(
+        'Session not found',
+      );
+    });
+
+    it('still shares the JSON export as application/json', async () => {
+      // The mimeType parameter defaults, so the existing export is unchanged.
+      await exportChatSession('session-1');
+
+      expect(Share.open).toHaveBeenCalledWith(
+        expect.objectContaining({type: 'application/json'}),
+      );
     });
   });
 });
