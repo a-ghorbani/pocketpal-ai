@@ -844,6 +844,8 @@ export const ModelCard: React.FC<ModelCardProps> = observer(
                         </Text>
                       </View>
                       <Switch
+                        testID="vision-toggle-switch"
+                        accessibilityLabel={l10n.models.modelCard.labels.vision}
                         value={modelStore.getModelVisionPreference(model)}
                         onValueChange={handleVisionToggle}
                         disabled={
