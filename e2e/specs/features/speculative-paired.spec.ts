@@ -150,6 +150,11 @@ async function scrollSettingsToTop(): Promise<void> {
  * scroll offset so the input is off-screen and the wait times out.
  */
 async function goToSettings(settingsPage: SettingsPage): Promise<void> {
+  // Already on Settings: a redundant drawer round-trip has raced the drawer
+  // close on the emulator, dropping the screen from the accessibility tree.
+  if (await browser.$(byTestId('context-size-input')).isExisting()) {
+    return;
+  }
   try {
     await settingsPage.navigateTo();
     return;

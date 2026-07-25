@@ -64,10 +64,10 @@ const NON_MTP_MODEL = {
 };
 
 /**
- * A small MTP-capable GGUF (embedded nextn draft layers) for the engagement
+ * A small MTP-capable GGUF (embedded nextn draft layers) for the
  * engagement gate. Confirmed available + MTP-signalled: header range-fetch shows
- * `qwen35.nextn_predict_layers = 1` and `blk.*.nextn.*` tensors, and the pinned
- * llama.rn@0.12.5 registers LLM_ARCH_QWEN35 + the nextn KV/tensors, so it loads
+ * `qwen35.nextn_predict_layers = 1` and `blk.*.nextn.*` tensors, and llama.rn (0.12.5+)
+ * registers LLM_ARCH_QWEN35 + the nextn KV/tensors, so it loads
  * and resolves to embedded MTP. ~0.8B Q4_0 (~0.5GB) — sim-runnable.
  */
 const MTP_MODEL = {
@@ -76,6 +76,11 @@ const MTP_MODEL = {
   selectorText: 'Qwen3.5-0.8B-MTP',
   downloadFile: 'Qwen3.5-0.8B-Q4_0.gguf',
   prompts: [{input: 'Hi', description: 'Basic greeting'}],
+  // The repo carries a BF16 mmproj that auto-downloads with the model. On a
+  // low-RAM virtual device the projector + main context crowd out the MTP
+  // draft context ("failed to create MTP draft context"); the engagement gate
+  // is about speculation, not vision, so load text-only.
+  disableVisionBeforeLoad: true,
 };
 
 /**
@@ -113,11 +118,24 @@ async function saveShot(name: string): Promise<void> {
   }
 }
 
+/**
+ * Navigate to Settings only when not already there. A redundant drawer
+ * round-trip from Settings back to Settings has raced the drawer close on the
+ * emulator, leaving the screen content out of the accessibility tree and
+ * failing the ready-wait even though the screen renders.
+ */
+async function goToSettings(settingsPage: SettingsPage): Promise<void> {
+  if (await browser.$(byTestId('context-size-input')).isExisting()) {
+    return;
+  }
+  await settingsPage.navigateTo();
+}
+
 /** Enable speculative decoding globally in Settings -> Advanced. */
 async function enableSpeculativeGlobally(
   settingsPage: SettingsPage,
 ): Promise<void> {
-  await settingsPage.navigateTo();
+  await goToSettings(settingsPage);
   await Gestures.scrollToElement(SPEC_ACCORDION, 8);
   await browser.$(SPEC_ACCORDION).click();
   await browser.pause(500);
@@ -167,7 +185,7 @@ describe('Speculative Decoding / MTP draft model', () => {
     // Raise the global context size BEFORE loading a model so the MTP model has
     // enough room to generate to completion (see SPEC_CONTEXT_SIZE). n_ctx is
     // read at initLlama time, so it must be committed before the load.
-    await settingsPage.navigateTo();
+    await goToSettings(settingsPage);
     await settingsPage.setContextSize(SPEC_CONTEXT_SIZE);
 
     // Enable speculative globally BEFORE loading a model -- the flag is read

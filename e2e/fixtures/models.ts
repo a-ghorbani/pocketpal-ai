@@ -43,6 +43,13 @@ export interface ModelTestConfig {
   /** Whether this is a vision/multimodal model */
   isVision?: boolean;
   /**
+   * Turn the card's Vision toggle off after download, before Load. For a
+   * vision repo this skips the mmproj at init — on low-RAM virtual devices
+   * the projector plus the main context can crowd out the rest of the load
+   * (e.g. the MTP draft context), failing a test about something else.
+   */
+  disableVisionBeforeLoad?: boolean;
+  /**
    * Optional quant variants used by benchmark-matrix spec only.
    * Other specs continue to use `downloadFile`.
    */
@@ -166,7 +173,10 @@ export const CRASH_REPRO_MODELS: ModelTestConfig[] = [
 /**
  * All available models (TEST_MODELS + CRASH_REPRO_MODELS)
  */
-export const ALL_MODELS: ModelTestConfig[] = [...TEST_MODELS, ...CRASH_REPRO_MODELS];
+export const ALL_MODELS: ModelTestConfig[] = [
+  ...TEST_MODELS,
+  ...CRASH_REPRO_MODELS,
+];
 
 /**
  * Get models to test based on environment variable filter

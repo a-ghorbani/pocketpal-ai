@@ -10,7 +10,8 @@ import {DrawerPage} from '../pages/DrawerPage';
 import {ModelsPage} from '../pages/ModelsPage';
 import {HFSearchSheet} from '../pages/HFSearchSheet';
 import {ModelDetailsSheet} from '../pages/ModelDetailsSheet';
-import {Selectors} from './selectors';
+import {Selectors, byTestId} from './selectors';
+import {Gestures} from './gestures';
 import {TIMEOUTS, ModelTestConfig, ModelQuantVariant} from '../fixtures/models';
 
 declare const browser: WebdriverIO.Browser;
@@ -89,6 +90,42 @@ export async function waitForAiMessage(
 }
 
 /**
+ * Expand a downloaded model card and switch its Vision toggle off. No-op when
+ * the card exposes no vision row (non-multimodal model) or the toggle already
+ * reads off.
+ */
+async function disableVisionOnCard(filename: string): Promise<void> {
+  const card = browser.$(Selectors.modelCard.cardContainer(filename));
+  const expand = card.$(byTestId('expand-details-button'));
+  await expand.waitForExist({timeout: 10000});
+  await expand.click();
+  await browser.pause(600);
+
+  // The switch carries its own testID: RN view-flattening turns the row
+  // container into a leaf in the a11y tree, so a child query under the row
+  // can never match.
+  const visionSwitch = browser.$(byTestId('vision-toggle-switch'));
+  if (!(await visionSwitch.isExisting().catch(() => false))) {
+    console.log(`[disableVision] no vision toggle on ${filename}; skipping`);
+    return;
+  }
+  await Gestures.scrollToElement(byTestId('vision-toggle-switch'), 5);
+  // Android exposes `checked`, iOS `value` ("1"/"0"); anything unreadable
+  // falls through to a click, which is correct for the fresh-install default.
+  const isAndroid = (browser as any).isAndroid;
+  const state = isAndroid
+    ? await visionSwitch.getAttribute('checked').catch(() => null)
+    : await visionSwitch.getAttribute('value').catch(() => null);
+  if (state === 'false' || state === '0') {
+    console.log(`[disableVision] already off on ${filename}`);
+    return;
+  }
+  await visionSwitch.click();
+  await browser.pause(400);
+  console.log(`[disableVision] vision switched off on ${filename}`);
+}
+
+/**
  * Download a model from HuggingFace and load it.
  * After completion, the app auto-navigates to the Chat screen.
  *
@@ -134,6 +171,10 @@ export async function downloadAndLoadModel(
   );
   const modelCardContainer = browser.$(containerSelector);
   await modelCardContainer.waitForDisplayed({timeout: downloadTimeout});
+
+  if (model.disableVisionBeforeLoad) {
+    await disableVisionOnCard(model.downloadFile);
+  }
 
   // Find and click load button
   const loadBtn = modelCardContainer.$(Selectors.modelCard.loadButtonElement);
