@@ -21,14 +21,9 @@ export const createTagsStyles = (theme: Theme) => ({
     backgroundColor: 'transparent',
     // display: 'inline-block',
   },
-  // The `body` color above takes precedence over the render engine's UA anchor
-  // styles, so without an explicit rule links inherit the body text color and
-  // render indistinguishably from surrounding prose. Bind them to the theme's
-  // secondary color (plus an underline) so they read as links in both themes.
   a: {
     color: theme.colors.secondary,
     textDecorationLine: 'underline' as const,
-    textDecorationColor: theme.colors.secondary,
   },
   code: {
     fontFamily: 'Courier', // Change the font for code snippets
