@@ -749,7 +749,7 @@
       "makeChatTemporary": "Make chat temporary",
       "export": "Export/Import",
       "exportCurrentSession": "Export current session",
-      "exportCurrentSessionMarkdown": "Export current session as Markdown",
+      "exportCurrentSessionMarkdown": "Export as Markdown",
       "exportAllSessions": "Export all sessions",
       "exportChatSession": "Export chat session",
       "importSessions": "Import sessions"

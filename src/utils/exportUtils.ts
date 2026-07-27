@@ -288,7 +288,7 @@ export const exportChatSessionAsMarkdown = async (
     }
 
     const {session, messages} = sessionData;
-    const exportedAt = format(new Date(session.date), 'yyyy-MM-dd HH:mm');
+    const exportedAt = format(new Date(), 'yyyy-MM-dd HH:mm');
 
     const lines: string[] = [
       `# ${session.title}`,
@@ -299,7 +299,10 @@ export const exportChatSessionAsMarkdown = async (
       '',
     ];
 
-    for (const msg of messages) {
+    // `getSessionById` returns `position DESC` (newest first) to match the
+    // inverted chat FlatList. A human-readable transcript needs chronological
+    // order, so walk a reversed copy — never mutate the repository's array.
+    for (const msg of [...messages].reverse()) {
       const exported = toExportedMessage(msg);
       const role = exported.author === userId ? 'User' : 'Assistant';
       lines.push(`### ${role}`, '', exported.text ?? '', '', '---', '');
