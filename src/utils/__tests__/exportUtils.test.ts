@@ -820,6 +820,60 @@ describe('exportUtils', () => {
       expect(content).toContain('Second part.');
     });
 
+    it('collapses a multi-line title so it stays a single heading', async () => {
+      // Titles are derived from the user's first message, so they can contain
+      // newlines — and a `#` starting the second line shifts the structure.
+      (chatSessionRepository.getSessionById as jest.Mock).mockResolvedValueOnce(
+        {
+          session: {
+            id: 'session-4',
+            title: 'Multi\nline # title',
+            date: '2024-01-01T00:00:00Z',
+            activePalId: null,
+          },
+          messages: [makeTextMessage('m1', userId, 'Hi')],
+          completionSettings: {settings: '{}'},
+        } as any,
+      );
+
+      await exportChatSessionAsMarkdown('session-4');
+
+      const {content} = writtenMarkdown();
+      expect(content).toContain('# Multi line # title');
+      expect(content.match(/^#[^#]/gm)).toHaveLength(1);
+    });
+
+    it('notes attached images instead of dropping them silently', async () => {
+      const withImages = makeTextMessage('m1', userId, 'Look at this');
+      // `toExportedMessage` reads the raw `metadata` column, not the in-memory
+      // object, so the URIs have to be on the JSON string.
+      withImages.metadata = JSON.stringify({
+        imageUris: ['file:///a.png', 'file:///b.png'],
+      });
+      (chatSessionRepository.getSessionById as jest.Mock).mockResolvedValueOnce(
+        {
+          session: {
+            id: 'session-5',
+            title: 'With Images',
+            date: '2024-01-01T00:00:00Z',
+            activePalId: null,
+          },
+          messages: [withImages],
+          completionSettings: {settings: '{}'},
+        } as any,
+      );
+
+      await exportChatSessionAsMarkdown('session-5');
+
+      const {content} = writtenMarkdown();
+      expect(content).toContain('_[image: file:///a.png]_');
+      expect(content).toContain('_[image: file:///b.png]_');
+      // The note follows the text it belongs to, inside the same section.
+      expect(content.indexOf('Look at this')).toBeLessThan(
+        content.indexOf('_[image: file:///a.png]_'),
+      );
+    });
+
     it('throws when the session does not exist', async () => {
       (chatSessionRepository.getSessionById as jest.Mock).mockResolvedValueOnce(
         null,

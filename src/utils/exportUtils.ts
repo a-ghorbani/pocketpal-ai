@@ -274,9 +274,7 @@ export const exportLegacyChatSessions = async (): Promise<void> => {
  * Export a single chat session as a human-readable Markdown file.
  *
  * The JSON export is for re-importing; this one is for reading and sharing
- * outside the app. Message content is routed through the same
- * `toExportedMessage` projection so `assistant_turn` rows (whose `text` column
- * is empty by design) carry their visible joined content.
+ * outside the app.
  */
 export const exportChatSessionAsMarkdown = async (
   sessionId: string,
@@ -290,8 +288,13 @@ export const exportChatSessionAsMarkdown = async (
     const {session, messages} = sessionData;
     const exportedAt = format(new Date(), 'yyyy-MM-dd HH:mm');
 
+    // Titles are derived from the user's own first message, so a multi-line
+    // one would otherwise break out of the `#` heading and be re-parsed as
+    // body markdown.
+    const title = session.title.replace(/\s+/g, ' ').trim();
+
     const lines: string[] = [
-      `# ${session.title}`,
+      `# ${title}`,
       '',
       `*Exported: ${exportedAt}*`,
       '',
@@ -305,7 +308,20 @@ export const exportChatSessionAsMarkdown = async (
     for (const msg of [...messages].reverse()) {
       const exported = toExportedMessage(msg);
       const role = exported.author === userId ? 'User' : 'Assistant';
-      lines.push(`### ${role}`, '', exported.text ?? '', '', '---', '');
+      lines.push(`### ${role}`, '', exported.text ?? '');
+
+      // Multimodal messages keep their attachments in `metadata.imageUris`.
+      // Note the URI rather than embedding it: these point at on-device app
+      // storage, so an `![...]()` embed would render broken everywhere the
+      // transcript is actually read.
+      const imageUris: unknown = exported.metadata?.imageUris;
+      if (Array.isArray(imageUris)) {
+        for (const uri of imageUris) {
+          lines.push('', `_[image: ${uri}]_`);
+        }
+      }
+
+      lines.push('', '---', '');
     }
 
     const timestamp = format(new Date(), 'yyyy-MM-dd_HH-mm-ss');
