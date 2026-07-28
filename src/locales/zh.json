@@ -112,7 +112,7 @@
     "setTokenDescription": "设置令牌以从 Hugging Face 访问受限模型。",
     "setTokenButton": "设置令牌",
     "useHfTokenLabel": "使用HF令牌",
-    "useHfTokenDescription": "使用HF令牌访问受限模型。",
+    "useHfTokenDescription": "启用后使用令牌进行 API 请求。若令牌导致身份验证问题，请将其禁用。",
     "cacheStorageTitle": "缓存与存储",
     "clearPalCaches": "清除快捷指令缓存",
     "clearPalCachesDescription": "清除用于加速快捷指令的缓存数据。这不会影响您的 Pal 或聊天历史记录。",
