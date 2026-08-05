@@ -31,7 +31,8 @@
     "close": "Закрити",
     "clear": "Очистити все",
     "gallery": "Галерея",
-    "stop": "Зупинити"
+    "stop": "Зупинити",
+    "noResults": "Нічого не знайдено"
   },
   "settings": {
     "modelInitializationSettings": "Налаштування ініціалізації моделі",
@@ -188,7 +189,9 @@
       "consentGivenTitle": "Пошук в інтернеті ввімкнено",
       "consentGivenDescription": "Запити та читання сторінок можуть залишати ваш пристрій, як описано вище.",
       "consentRevoke": "Відкликати"
-    }
+    },
+    "languageSheetTitle": "Мова",
+    "languageSearchPlaceholder": "Пошук мов"
   },
   "memory": {
     "shortWarning": "Попередження про пам'ять",
@@ -1218,7 +1221,8 @@
       "searchResultsTitle": "Результати пошуку",
       "showResultsAccessibilityLabel": "Показати результати веб-пошуку для {{query}}",
       "openLinkError": "Не вдалося відкрити це посилання."
-    }
+    },
+    "contextFullRemote": "У розмові закінчилося місце. Почніть новий чат."
   },
   "benchmark": {
     "title": "Бенчмарк",

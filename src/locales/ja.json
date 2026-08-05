@@ -31,7 +31,8 @@
     "close": "閉じる",
     "clear": "すべてクリア",
     "gallery": "ギャラリー",
-    "stop": "停止"
+    "stop": "停止",
+    "noResults": "結果がありません"
   },
   "settings": {
     "modelInitializationSettings": "モデル初期化設定",
@@ -188,7 +189,9 @@
       "consentGivenTitle": "ウェブ検索が有効になっています",
       "consentGivenDescription": "上記のとおり、クエリとページの読み取りがデバイスの外に送信されることがあります。",
       "consentRevoke": "取り消す"
-    }
+    },
+    "languageSheetTitle": "言語",
+    "languageSearchPlaceholder": "言語を検索"
   },
   "memory": {
     "shortWarning": "メモリ警告",
@@ -1218,7 +1221,8 @@
       "searchResultsTitle": "検索結果",
       "showResultsAccessibilityLabel": "{{query}}のウェブ検索結果を表示",
       "openLinkError": "このリンクを開けませんでした。"
-    }
+    },
+    "contextFullRemote": "会話の余裕がなくなりました。新しいチャットを始めてください。"
   },
   "benchmark": {
     "title": "ベンチマーク",

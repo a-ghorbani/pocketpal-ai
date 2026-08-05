@@ -31,7 +31,8 @@
     "close": "Tutup",
     "clear": "Bersihkan",
     "gallery": "Galeri",
-    "stop": "Berhenti"
+    "stop": "Berhenti",
+    "noResults": "Tidak ada hasil"
   },
   "settings": {
     "modelInitializationSettings": "Pengaturan Inisialisasi Model",
@@ -188,7 +189,9 @@
       "consentGivenTitle": "Pencarian web diaktifkan",
       "consentGivenDescription": "Kueri dan pembacaan halaman mungkin meninggalkan perangkat Anda seperti dijelaskan di atas.",
       "consentRevoke": "Cabut"
-    }
+    },
+    "languageSheetTitle": "Bahasa",
+    "languageSearchPlaceholder": "Cari bahasa"
   },
   "memory": {
     "shortWarning": "Peringatan Memori",
@@ -1218,7 +1221,8 @@
       "searchResultsTitle": "Hasil Pencarian",
       "showResultsAccessibilityLabel": "Tampilkan hasil pencarian web untuk {{query}}",
       "openLinkError": "Gagal membuka tautan ini."
-    }
+    },
+    "contextFullRemote": "Percakapan sudah penuh. Mulai obrolan baru."
   },
   "benchmark": {
     "title": "Benchmark",

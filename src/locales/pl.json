@@ -31,7 +31,8 @@
     "ok": "OK",
     "close": "Zamknij",
     "clear": "Wyczyść wszystko",
-    "gallery": "Galeria"
+    "gallery": "Galeria",
+    "noResults": "Brak wyników"
   },
   "settings": {
     "modelInitializationSettings": "Ustawienia Inicjalizacji Modelu",
@@ -163,7 +164,34 @@
     "flashAttentionOff": "Wył.",
     "valueCacheTypeDisabledDescription": "Włącz opcję „Flash Attention”, aby zmienić typ pamięci podręcznej",
     "physicalBatchSizeDescription": "Fizyczny rozmiar partii: {{physicalBatchSize}}{{effectivePhysicalBatch}}",
-    "remoteIndicator": "Zdalny"
+    "remoteIndicator": "Zdalny",
+    "languageSheetTitle": "Język",
+    "languageSearchPlaceholder": "Wyszukaj języki",
+    "internetSearch": {
+      "title": "Wyszukiwanie w internecie",
+      "description": "Pozwól Kumplom przeszukiwać internet za pomocą własnych narzędzi. Użyj własnego klucza API — PocketPal nigdy nie przechowuje Twoich kluczy ani nie przekazuje Twoich zapytań.",
+      "providerLabel": "Dostawca wyszukiwania",
+      "providerGated": "Wkrótce",
+      "keyLabel": "Klucz API",
+      "keyIsSet": "Klucz dla {{provider}} jest ustawiony.",
+      "keyNotSet": "Brak klucza dla {{provider}}.",
+      "setKeyButton": "Ustaw klucz",
+      "updateKeyButton": "Zaktualizuj klucz",
+      "clearKeyButton": "Wyczyść klucz",
+      "keyInputPlaceholder": "Wklej swój klucz API dla {{provider}}",
+      "keyUpdateError": "Nie udało się zaktualizować klucza. Spróbuj ponownie.",
+      "showKeyAccessibilityLabel": "Pokaż klucz API",
+      "hideKeyAccessibilityLabel": "Ukryj klucz API",
+      "resultCountLabel": "Liczba wyników na wyszukiwanie",
+      "resultCountDescription": "Mniej wyników zostawia więcej miejsca w kontekście modelu.",
+      "consentTitle": "Wyszukiwania opuszczają Twoje urządzenie",
+      "consentDescription": "Gdy Kumpel przeszukuje internet, Twoje zapytanie jest wysyłane przez internet do wybranego dostawcy. Gdy Kumpel odczytuje stronę, jej adres URL i zawartość mogą zostać wysłane do domyślnej usługi odczytu (r.jina.ai), jeśli wybrany dostawca nie ma własnego mechanizmu odczytu. Klucze i zapytania nigdy nie są wysyłane do PocketPal.",
+      "consentAccept": "Rozumiem",
+      "consentRequired": "Zaakceptuj powyższą informację, aby ustawić klucz i włączyć wyszukiwanie.",
+      "consentGivenTitle": "Wyszukiwanie w internecie jest włączone",
+      "consentGivenDescription": "Zapytania i odczyty stron mogą opuszczać Twoje urządzenie w sposób opisany powyżej.",
+      "consentRevoke": "Cofnij zgodę"
+    }
   },
   "models": {
     "labels": {
@@ -737,7 +765,9 @@
       "talentNames": {
         "datetime": "Data i czas",
         "render_html": "Podgląd HTML",
-        "calculate": "Wyrażenia matematyczne"
+        "calculate": "Wyrażenia matematyczne",
+        "web_search": "Wyszukiwanie w internecie",
+        "read_url": "Odczyt strony internetowej"
       },
       "validation": {
         "promptModelRequired": "Do skorzystania z funkcji Promptu AI niezbędny jest model generujący podpowiedzi",
@@ -748,7 +778,9 @@
       "talentDescriptions": {
         "render_html": "Wyświetlanie dokumentów HTML bezpośrednio w czacie",
         "calculate": "Obliczanie wyrażeń matematycznych",
-        "datetime": "Pobierz aktualną datę i godzinę"
+        "datetime": "Pobierz aktualną datę i godzinę",
+        "web_search": "Przeszukiwanie internetu w poszukiwaniu aktualnych informacji (wymaga klucza API w Ustawieniach)",
+        "read_url": "Odczyt pełnej zawartości strony internetowej (wymaga klucza API w Ustawieniach)"
       },
       "greeting": {
         "sectionLabel": "Przywitanie",
@@ -1504,7 +1536,18 @@
     "increaseContextAdvancedBody": "Rozmiar kontekstu dla tej rozmowy: {{from}} → {{to}} tokenów (maksymalna wartość modelu {{max}}). Limit urządzenia jest wartością szacunkową i rośnie wraz z pomyślnym ładowaniem większych kontekstów.",
     "increaseContextSliderA11yLabel": "Rozmiar kontekstu",
     "increaseContextSliderA11yValue": "{{tokens}} tokenów",
-    "increaseContextConfirmSize": "Ustaw na {{size}}"
+    "increaseContextConfirmSize": "Ustaw na {{size}}",
+    "contextFullRemote": "W rozmowie zabrakło miejsca. Rozpocznij nowy czat.",
+    "webSearch": {
+      "searched": "Wyszukano: {{query}}",
+      "noResults": "Brak wyników",
+      "noResultsFor": "Brak wyników dla {{query}}",
+      "resultsCount": "Wyniki: {{count}}",
+      "resultsCountOne": "1 wynik",
+      "searchResultsTitle": "Wyniki wyszukiwania",
+      "showResultsAccessibilityLabel": "Pokaż wyniki wyszukiwania w internecie dla {{query}}",
+      "openLinkError": "Nie udało się otworzyć tego linku."
+    }
   },
   "htmlPreview": {
     "defaultTitle": "Podgląd",
