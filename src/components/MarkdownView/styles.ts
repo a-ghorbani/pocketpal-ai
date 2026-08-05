@@ -21,6 +21,10 @@ export const createTagsStyles = (theme: Theme) => ({
     backgroundColor: 'transparent',
     // display: 'inline-block',
   },
+  a: {
+    color: theme.colors.secondary,
+    textDecorationLine: 'underline' as const,
+  },
   code: {
     fontFamily: 'Courier', // Change the font for code snippets
     backgroundColor: theme.colors.surface, // Custom background for code blocks
