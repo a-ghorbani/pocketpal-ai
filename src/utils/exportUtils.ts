@@ -311,14 +311,14 @@ export const exportChatSessionAsMarkdown = async (
       lines.push(`### ${role}`, '', exported.text ?? '');
 
       // Multimodal messages keep their attachments in `metadata.imageUris`.
-      // Note the URI rather than embedding it: these point at on-device app
-      // storage, so an `![...]()` embed would render broken everywhere the
-      // transcript is actually read.
+      // Note that an attachment existed, but drop the URI itself: these come
+      // from react-native-image-picker's OS temp dir (Android `getCacheDir`,
+      // iOS `NSTemporaryDirectory`), which is evictable — so the path resolves
+      // for no reader — and on iOS embeds the app-install container UUID, which
+      // has no place in a document whose purpose is being shared off-device.
       const imageUris: unknown = exported.metadata?.imageUris;
       if (Array.isArray(imageUris)) {
-        for (const uri of imageUris) {
-          lines.push('', `_[image: ${uri}]_`);
-        }
+        imageUris.forEach(() => lines.push('', '_[image]_'));
       }
 
       lines.push('', '---', '');

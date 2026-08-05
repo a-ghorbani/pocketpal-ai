@@ -49,9 +49,10 @@ jest.mock('@dr.pogodin/react-native-fs', () => ({
 }));
 
 jest.mock('date-fns', () => ({
-  // Keep the fixed return value every existing test relies on for filenames,
-  // but stay input-aware so a test can assert WHICH date was formatted. A
-  // return-only mock makes "export time vs session date" unobservable.
+  // Return-only mock with the fixed value the filename tests rely on. Tests
+  // that need to assert WHICH date was formatted (export time vs session date)
+  // read `format.mock.calls` — `jest.fn()` records arguments regardless of
+  // return value.
   format: jest.fn().mockReturnValue('2024-01-01_12-00-00'),
 }));
 
@@ -866,12 +867,16 @@ describe('exportUtils', () => {
       await exportChatSessionAsMarkdown('session-5');
 
       const {content} = writtenMarkdown();
-      expect(content).toContain('_[image: file:///a.png]_');
-      expect(content).toContain('_[image: file:///b.png]_');
+      // One note per attachment, none dropped silently.
+      const noteCount = content.split('_[image]_').length - 1;
+      expect(noteCount).toBe(2);
       // The note follows the text it belongs to, inside the same section.
       expect(content.indexOf('Look at this')).toBeLessThan(
-        content.indexOf('_[image: file:///a.png]_'),
+        content.indexOf('_[image]_'),
       );
+      // The on-device temp URI must never leak into a shared transcript.
+      expect(content).not.toContain('file:///a.png');
+      expect(content).not.toContain('file:///b.png');
     });
 
     it('throws when the session does not exist', async () => {
