@@ -124,6 +124,15 @@ export const ModelCard: React.FC<ModelCardProps> = observer(
     const isDownloading = modelStore.isDownloading(model.id);
     const isHfModel = model.origin === ModelOrigin.HF;
     const isRemoteModel = model.origin === ModelOrigin.REMOTE;
+    const cardId = model.filename || model.id;
+
+    const modelCaps = modelStore.capsFor(model);
+    const visionLabel =
+      modelCaps.vision === 'yes'
+        ? l10n.models.modelCard.labels.visionSupported
+        : modelCaps.vision === 'no'
+          ? l10n.models.modelCard.labels.visionNotSupported
+          : l10n.models.modelCard.labels.visionUnknown;
 
     // Check projection model status for downloaded vision models
     const projectionModelStatus = modelStore.getProjectionModelStatus(model);
@@ -278,7 +287,7 @@ export const ModelCard: React.FC<ModelCardProps> = observer(
 
     // Helper function to get model type icon - updated sizes
     const getModelTypeIcon = () => {
-      if (model.supportsMultimodal) {
+      if (modelCaps.vision === 'yes') {
         return (
           <EyeIcon
             width={16}
@@ -388,6 +397,30 @@ export const ModelCard: React.FC<ModelCardProps> = observer(
               accessibilityRole="button"
               accessibilityLabel={l10n.common.delete}>
               <TrashIcon width={16} height={16} stroke={theme.colors.error} />
+            </TouchableOpacity>
+            <TouchableOpacity
+              testID="expand-details-button"
+              onPress={toggleExpanded}
+              style={styles.iconButton}
+              accessibilityRole="button"
+              accessibilityLabel={
+                isExpanded
+                  ? l10n.models.modelCard.accessibility.collapseDetails
+                  : l10n.models.modelCard.accessibility.expandDetails
+              }>
+              {isExpanded ? (
+                <ChevronSelectorExpandedVerticalIcon
+                  width={16}
+                  height={16}
+                  stroke={theme.colors.onSurfaceVariant}
+                />
+              ) : (
+                <ChevronSelectorVerticalIcon
+                  width={16}
+                  height={16}
+                  stroke={theme.colors.onSurfaceVariant}
+                />
+              )}
             </TouchableOpacity>
           </View>
         );
@@ -630,15 +663,20 @@ export const ModelCard: React.FC<ModelCardProps> = observer(
 
     return (
       <>
-        <Card
-          elevation={0}
-          style={styles.card}
-          testID={`model-card-${model.filename}`}>
+        <Card elevation={0} style={styles.card} testID={`model-card-${cardId}`}>
           {/* Compact Header */}
           <View style={styles.compactHeader}>
             <View style={styles.headerContent}>
               <View style={styles.headerLeft}>
-                <View style={styles.modelTypeIcon}>{getModelTypeIcon()}</View>
+                <View
+                  style={styles.modelTypeIcon}
+                  {...(isRemoteModel && {
+                    accessible: true,
+                    accessibilityLabel: `${l10n.models.modelCard.labels.vision}: ${visionLabel}`,
+                    testID: `model-card-vision-${cardId}`,
+                  })}>
+                  {getModelTypeIcon()}
+                </View>
                 <Text
                   variant="titleSmall"
                   style={styles.compactModelName}
@@ -770,7 +808,7 @@ export const ModelCard: React.FC<ModelCardProps> = observer(
                 </View>
 
                 {/* Memory Requirement */}
-                {model.isDownloaded && (
+                {model.isDownloaded && !isRemoteModel && (
                   <MemoryRequirement
                     model={model}
                     projectionModel={projectionModelForCheck}
@@ -862,17 +900,15 @@ export const ModelCard: React.FC<ModelCardProps> = observer(
                   )}
 
                   {/* Context Length */}
-                  {(model.hfModel?.specs?.gguf?.context_length ||
-                    model.ggufMetadata?.context_length) && (
-                    <View style={styles.technicalDetailCard}>
+                  {modelCaps.contextLength && (
+                    <View
+                      style={styles.technicalDetailCard}
+                      testID={`model-card-context-length-${cardId}`}>
                       <Text style={styles.technicalDetailLabel}>
                         {l10n.models.modelCard.labels.contextLength}
                       </Text>
                       <Text style={styles.technicalDetailValue}>
-                        {(
-                          model.hfModel?.specs?.gguf?.context_length ||
-                          model.ggufMetadata?.context_length
-                        )?.toLocaleString()}
+                        {modelCaps.contextLength.toLocaleString()}
                       </Text>
                     </View>
                   )}
@@ -892,13 +928,29 @@ export const ModelCard: React.FC<ModelCardProps> = observer(
                   )}
 
                   {/* Author */}
-                  {model.author && (
+                  {model.author && !isRemoteModel && (
                     <View style={styles.technicalDetailCard}>
                       <Text style={styles.technicalDetailLabel}>
                         {l10n.models.modelCard.labels.author}
                       </Text>
                       <Text style={styles.technicalDetailValue}>
                         {model.author}
+                      </Text>
+                    </View>
+                  )}
+
+                  {/* Vision */}
+                  {isRemoteModel && (
+                    <View
+                      style={styles.technicalDetailCard}
+                      testID={`model-card-vision-capability-${cardId}`}
+                      accessible={true}
+                      accessibilityLabel={`${l10n.models.modelCard.labels.vision}: ${visionLabel}`}>
+                      <Text style={styles.technicalDetailLabel}>
+                        {l10n.models.modelCard.labels.vision}
+                      </Text>
+                      <Text style={styles.technicalDetailValue}>
+                        {visionLabel}
                       </Text>
                     </View>
                   )}

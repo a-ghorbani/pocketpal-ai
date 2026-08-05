@@ -1,6 +1,8 @@
 import React from 'react';
 import {Linking, Alert} from 'react-native';
 
+import {runInAction} from 'mobx';
+
 import {render, fireEvent, waitFor, act} from '../../../../../jest/test-utils';
 import {
   basicModel,
@@ -8,7 +10,10 @@ import {
   downloadingModel,
   largeMemoryModel,
   remoteModel,
+  remoteModelSibling,
 } from '../../../../../jest/fixtures/models';
+import {themeFixtures} from '../../../../../jest/fixtures/theme';
+import {routerModelsBody} from '../../../../../jest/fixtures/remoteModelList';
 
 // Unmock useMemoryCheck for memory warning tests
 jest.unmock('../../../../hooks/useMemoryCheck');
@@ -38,6 +43,13 @@ jest.mock('@react-navigation/native', () => ({
 
 const customRender = (ui: React.ReactElement, options: any = {}) =>
   render(ui, {withBottomSheetProvider: true, withNavigation: true, ...options});
+
+/**
+ * Every `.svg` resolves to the same mock component, so the two header glyphs
+ * are told apart by the stroke they are given, not by their type.
+ */
+const glyphStroke = (glyphWrapper: any): string =>
+  glyphWrapper.props.children.props.stroke;
 
 describe('ModelCard', () => {
   beforeEach(() => {
@@ -632,5 +644,390 @@ describe('ModelCard', () => {
         remoteModel.serverId,
       );
     });
+  });
+
+  describe('Remote model capabilities', () => {
+    const visionCell = `model-card-vision-capability-${remoteModel.id}`;
+    const contextCell = `model-card-context-length-${remoteModel.id}`;
+    const headerGlyph = `model-card-vision-${remoteModel.id}`;
+
+    const expand = (getByTestId: any) => {
+      act(() => {
+        fireEvent.press(getByTestId('expand-details-button'));
+      });
+    };
+
+    afterEach(() => {
+      runInAction(() => {
+        serverStore.remoteCaps = {};
+      });
+    });
+
+    it('offers the expand affordance and opens the details block', async () => {
+      const {getByTestId} = customRender(<ModelCard model={remoteModel} />);
+
+      expect(getByTestId('expand-details-button')).toBeTruthy();
+      expand(getByTestId);
+
+      await waitFor(() => {
+        expect(getByTestId(visionCell)).toBeTruthy();
+      });
+    });
+
+    it('renders no on-device or local-file value in the expanded block', async () => {
+      runInAction(() => {
+        serverStore.remoteCaps = {
+          [remoteModel.id]: {supportsVision: true, contextLength: 8192},
+        };
+      });
+      const {getByTestId, queryByTestId, queryByText} = customRender(
+        <ModelCard model={remoteModel} />,
+      );
+      expand(getByTestId);
+
+      await waitFor(() => {
+        expect(getByTestId(visionCell)).toBeTruthy();
+      });
+
+      // The estimator has no local file to measure, so this row would read
+      // "Estimated memory: 0 B" — a device claim about someone else's hardware.
+      expect(queryByTestId('memory-requirement')).toBeNull();
+      // `author` is the server name, already in the header chip.
+      expect(queryByText(l10n.en.models.modelCard.labels.author)).toBeNull();
+      expect(
+        queryByText(l10n.en.models.modelDescription.parameters),
+      ).toBeNull();
+      expect(
+        queryByText(l10n.en.models.modelCard.labels.architecture),
+      ).toBeNull();
+      expect(queryByTestId('open-huggingface-url')).toBeNull();
+      expect(queryByTestId('vision-skill-touchable')).toBeNull();
+
+      expect(getByTestId(contextCell)).toBeTruthy();
+      expect(
+        queryByText(l10n.en.models.modelCard.labels.visionSupported),
+      ).toBeTruthy();
+    });
+
+    it('reports vision as unknown, never unsupported, when the server has no /props', async () => {
+      const {getByTestId, queryByTestId, queryByText} = customRender(
+        <ModelCard model={remoteModel} />,
+      );
+      expand(getByTestId);
+
+      await waitFor(() => {
+        expect(getByTestId(visionCell)).toBeTruthy();
+      });
+
+      expect(
+        queryByText(l10n.en.models.modelCard.labels.visionUnknown),
+      ).toBeTruthy();
+      expect(
+        queryByText(l10n.en.models.modelCard.labels.visionNotSupported),
+      ).toBeNull();
+      expect(queryByTestId(contextCell)).toBeNull();
+    });
+
+    it('reflects capabilities that land while the card is already open', async () => {
+      const {getByTestId, queryByTestId, queryByText} = customRender(
+        <ModelCard model={remoteModel} />,
+      );
+      expand(getByTestId);
+
+      await waitFor(() => {
+        expect(
+          queryByText(l10n.en.models.modelCard.labels.visionUnknown),
+        ).toBeTruthy();
+      });
+      expect(queryByTestId(contextCell)).toBeNull();
+
+      act(() => {
+        runInAction(() => {
+          serverStore.remoteCaps = {
+            [remoteModel.id]: {supportsVision: true, contextLength: 8192},
+          };
+        });
+      });
+
+      expect(
+        queryByText(l10n.en.models.modelCard.labels.visionSupported),
+      ).toBeTruthy();
+      expect(getByTestId(contextCell)).toBeTruthy();
+    });
+
+    it('keeps capability entries per model, not per server', async () => {
+      runInAction(() => {
+        serverStore.remoteCaps = {
+          [remoteModel.id]: {supportsVision: true},
+          [remoteModelSibling.id]: {supportsVision: false},
+        };
+      });
+      const {getByTestId, queryByText} = customRender(
+        <ModelCard model={remoteModelSibling} />,
+      );
+      expand(getByTestId);
+
+      await waitFor(() => {
+        expect(
+          queryByText(l10n.en.models.modelCard.labels.visionNotSupported),
+        ).toBeTruthy();
+      });
+    });
+
+    it('carries the capability value in the accessibility label', async () => {
+      runInAction(() => {
+        serverStore.remoteCaps = {[remoteModel.id]: {supportsVision: true}};
+      });
+      const {getByTestId, getAllByLabelText} = customRender(
+        <ModelCard model={remoteModel} />,
+      );
+      expand(getByTestId);
+
+      // Header glyph and expanded cell, reading the same value — the pair is
+      // the assertion, since a header that disagreed with the body would
+      // otherwise still satisfy a single-match query.
+      await waitFor(() => {
+        expect(getAllByLabelText('Vision: Supported')).toHaveLength(2);
+      });
+    });
+
+    it('announces an unresolved capability as unknown in both places', async () => {
+      const {getByTestId, getAllByLabelText} = customRender(
+        <ModelCard model={remoteModel} />,
+      );
+      expand(getByTestId);
+
+      await waitFor(() => {
+        expect(getAllByLabelText('Vision: Unknown')).toHaveLength(2);
+      });
+    });
+
+    it('shows the vision glyph without the model ever being activated', () => {
+      runInAction(() => {
+        serverStore.remoteCaps = {[remoteModel.id]: {supportsVision: true}};
+      });
+      const {getByTestId} = customRender(<ModelCard model={remoteModel} />);
+
+      expect(glyphStroke(getByTestId(headerGlyph))).toBe(
+        themeFixtures.lightTheme.colors.iconModelTypeVision,
+      );
+    });
+
+    it('keeps the text glyph when the server reports no vision', () => {
+      runInAction(() => {
+        serverStore.remoteCaps = {[remoteModel.id]: {supportsVision: false}};
+      });
+      const {getByTestId} = customRender(<ModelCard model={remoteModel} />);
+
+      expect(glyphStroke(getByTestId(headerGlyph))).toBe(
+        themeFixtures.lightTheme.colors.iconModelTypeText,
+      );
+    });
+
+    describe('capabilities the models list already carried', () => {
+      // The card fixture id and the captured row are joined here so the store
+      // derivation runs over a real body: `${serverId}/${row.id}` is the key a
+      // remote card looks itself up by.
+      const rowFor = (id: string, sourceId: string) => ({
+        ...(routerModelsBody.data.find(r => r.id === sourceId) as any),
+        id,
+      });
+
+      const listServer = (serverType?: string, rows?: any[]) => {
+        runInAction(() => {
+          serverStore.servers = [
+            {
+              id: remoteModel.serverId!,
+              name: 'router',
+              url: 'http://localhost:8080',
+              serverType,
+            },
+          ];
+          serverStore.serverModels.set(
+            remoteModel.serverId!,
+            rows ?? [rowFor(remoteModel.remoteModelId!, 'gemma-4-e2b')],
+          );
+        });
+      };
+
+      afterEach(() => {
+        runInAction(() => {
+          serverStore.servers = [];
+          serverStore.serverModels.clear();
+        });
+      });
+
+      it('states vision and the window without the model ever being activated', async () => {
+        listServer('llama.cpp');
+
+        const {getByTestId, queryByText} = customRender(
+          <ModelCard model={remoteModel} />,
+        );
+
+        expect(glyphStroke(getByTestId(headerGlyph))).toBe(
+          themeFixtures.lightTheme.colors.iconModelTypeVision,
+        );
+        expand(getByTestId);
+        await waitFor(() => {
+          expect(
+            queryByText(l10n.en.models.modelCard.labels.visionSupported),
+          ).toBeTruthy();
+        });
+        expect(getByTestId(contextCell)).toBeTruthy();
+        expect(serverStore.fetchRemoteModelCaps).not.toHaveBeenCalled();
+      });
+
+      it('says not supported for a sibling the same list describes as text-only', async () => {
+        listServer('llama.cpp', [
+          rowFor(remoteModel.remoteModelId!, 'gemma-4-e2b'),
+          rowFor(remoteModelSibling.remoteModelId!, 'gemma-3-4b'),
+        ]);
+
+        const {getByTestId, queryByText} = customRender(
+          <ModelCard model={remoteModelSibling} />,
+        );
+        expand(getByTestId);
+
+        await waitFor(() => {
+          expect(
+            queryByText(l10n.en.models.modelCard.labels.visionNotSupported),
+          ).toBeTruthy();
+        });
+      });
+
+      it('changes nothing visible when the model is then activated', async () => {
+        listServer('llama.cpp');
+
+        const {getByTestId, queryByText} = customRender(
+          <ModelCard model={remoteModel} />,
+        );
+        expand(getByTestId);
+        await waitFor(() => {
+          expect(getByTestId(contextCell)).toBeTruthy();
+        });
+        const before = [
+          glyphStroke(getByTestId(headerGlyph)),
+          getByTestId(visionCell).props.accessibilityLabel,
+          getByTestId(contextCell).props.children,
+        ];
+
+        act(() => {
+          runInAction(() => {
+            serverStore.remoteCaps = {
+              [remoteModel.id]: {supportsVision: true, contextLength: 8192},
+            };
+          });
+        });
+
+        expect([
+          glyphStroke(getByTestId(headerGlyph)),
+          getByTestId(visionCell).props.accessibilityLabel,
+          getByTestId(contextCell).props.children,
+        ]).toEqual(before);
+        expect(
+          queryByText(l10n.en.models.modelCard.labels.visionSupported),
+        ).toBeTruthy();
+      });
+
+      it('fills in when the first fetch lands, with no user action', async () => {
+        // Cold start: hydration has restored the server but no list yet.
+        runInAction(() => {
+          serverStore.servers = [
+            {
+              id: remoteModel.serverId!,
+              name: 'router',
+              url: 'http://localhost:8080',
+              serverType: 'llama.cpp',
+            },
+          ];
+        });
+
+        const {getByTestId, queryByTestId, queryByText} = customRender(
+          <ModelCard model={remoteModel} />,
+        );
+        expand(getByTestId);
+        await waitFor(() => {
+          expect(
+            queryByText(l10n.en.models.modelCard.labels.visionUnknown),
+          ).toBeTruthy();
+        });
+        expect(queryByTestId(contextCell)).toBeNull();
+
+        act(() => {
+          runInAction(() => {
+            serverStore.serverModels.set(remoteModel.serverId!, [
+              rowFor(remoteModel.remoteModelId!, 'gemma-4-e2b'),
+            ]);
+          });
+        });
+
+        expect(
+          queryByText(l10n.en.models.modelCard.labels.visionSupported),
+        ).toBeTruthy();
+        expect(getByTestId(contextCell)).toBeTruthy();
+        expect(glyphStroke(getByTestId(headerGlyph))).toBe(
+          themeFixtures.lightTheme.colors.iconModelTypeVision,
+        );
+      });
+
+      it('reads nothing off a server of another type', async () => {
+        listServer('Ollama');
+
+        const {getByTestId, queryByTestId, queryByText} = customRender(
+          <ModelCard model={remoteModel} />,
+        );
+
+        expect(glyphStroke(getByTestId(headerGlyph))).toBe(
+          themeFixtures.lightTheme.colors.iconModelTypeText,
+        );
+        expand(getByTestId);
+        await waitFor(() => {
+          expect(
+            queryByText(l10n.en.models.modelCard.labels.visionUnknown),
+          ).toBeTruthy();
+        });
+        expect(queryByTestId(contextCell)).toBeNull();
+      });
+    });
+
+    it('gives every remote card an addressable root', () => {
+      const {getByTestId} = customRender(<ModelCard model={remoteModel} />);
+      expect(getByTestId(`model-card-${remoteModel.id}`)).toBeTruthy();
+    });
+  });
+
+  it('renders no vision cell on a local card', async () => {
+    const {getByTestId, queryByTestId} = customRender(
+      <ModelCard model={downloadedModel} />,
+    );
+
+    act(() => {
+      fireEvent.press(getByTestId('expand-details-button'));
+    });
+
+    await waitFor(() => {
+      expect(getByTestId('memory-requirement')).toBeTruthy();
+    });
+    expect(
+      queryByTestId(`model-card-vision-capability-${downloadedModel.filename}`),
+    ).toBeNull();
+  });
+
+  it('gives a local card no spoken vision stop at all', async () => {
+    const {getByTestId, queryAllByLabelText} = customRender(
+      <ModelCard model={downloadedModel} />,
+    );
+
+    act(() => {
+      fireEvent.press(getByTestId('expand-details-button'));
+    });
+
+    await waitFor(() => {
+      expect(getByTestId('memory-requirement')).toBeTruthy();
+    });
+    // The local card states vision through the toggle, which is its own
+    // labelled control; a second unlabelled-value announcement on the header
+    // glyph would be new noise on every text model.
+    expect(queryAllByLabelText(/^Vision:/)).toHaveLength(0);
   });
 });

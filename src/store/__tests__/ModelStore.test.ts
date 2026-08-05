@@ -1842,6 +1842,23 @@ describe('ModelStore', () => {
       expect(modelStore.context).toBeUndefined();
       expect(modelStore.activeModelId).toBeUndefined();
     });
+
+    it('releases the multimodal context first when one is active', async () => {
+      const releaseMultimodal = jest.fn();
+      modelStore.context = {
+        release: jest.fn(),
+        releaseMultimodal,
+      } as any;
+      modelStore.activeModelId = 'test-id';
+      runInAction(() => {
+        modelStore.isMultimodalActive = true;
+      });
+
+      await modelStore.manualReleaseContext();
+
+      expect(releaseMultimodal).toHaveBeenCalled();
+      expect(modelStore.isMultimodalActive).toBe(false);
+    });
   });
 
   // Add tests for HF model handling
@@ -2282,50 +2299,6 @@ describe('ModelStore', () => {
       modelStore.isMultimodalActive = false;
     });
 
-    it('should return true for isMultimodalEnabled when cached flag is true', async () => {
-      modelStore.isMultimodalActive = true;
-      const result = await modelStore.isMultimodalEnabled();
-      expect(result).toBe(true);
-    });
-
-    it('should return false for isMultimodalEnabled when no context', async () => {
-      modelStore.context = undefined;
-      const result = await modelStore.isMultimodalEnabled();
-      expect(result).toBe(false);
-    });
-
-    it('should check context and update cached flag for isMultimodalEnabled', async () => {
-      const mockContext = {
-        isMultimodalEnabled: jest.fn().mockResolvedValue(true),
-      };
-      modelStore.context = mockContext as any;
-
-      const result = await modelStore.isMultimodalEnabled();
-      expect(result).toBe(true);
-      expect(mockContext.isMultimodalEnabled).toHaveBeenCalled();
-      expect(modelStore.isMultimodalActive).toBe(true);
-    });
-
-    it('should handle error in isMultimodalEnabled', async () => {
-      const mockContext = {
-        isMultimodalEnabled: jest
-          .fn()
-          .mockRejectedValue(new Error('Test error')),
-      };
-      modelStore.context = mockContext as any;
-
-      const consoleErrorSpy = jest.spyOn(console, 'error').mockImplementation();
-
-      const result = await modelStore.isMultimodalEnabled();
-      expect(result).toBe(false);
-      expect(consoleErrorSpy).toHaveBeenCalledWith(
-        'Error checking multimodal capability:',
-        expect.any(Error),
-      );
-
-      consoleErrorSpy.mockRestore();
-    });
-
     describe('remote model vision (server /props self-report)', () => {
       const setRemoteActive = (supportsVision?: boolean) => {
         runInAction(() => {
@@ -2345,33 +2318,125 @@ describe('ModelStore', () => {
               name: 'llama',
               url: 'http://localhost:8080',
               serverType: 'llama.cpp',
-              supportsVision,
             },
           ];
+          serverStore.remoteCaps =
+            supportsVision === undefined
+              ? {}
+              : {
+                  'srv-1/remote-model': {
+                    supportsVision,
+                    probedUrl: 'http://localhost:8080',
+                  },
+                };
+          modelStore.activeRemoteBinding = {
+            modelId: 'srv-1/remote-model',
+            serverId: 'srv-1',
+            remoteModelId: 'remote-model',
+            url: 'http://localhost:8080',
+            serverType: 'llama.cpp',
+          };
         });
       };
 
       afterEach(() => {
         runInAction(() => {
           serverStore.servers = [];
+          serverStore.remoteCaps = {};
           modelStore.models = [];
           modelStore.activeModelId = undefined;
+          modelStore.activeRemoteBinding = undefined;
         });
       });
 
-      it('returns true when the active server reports vision', async () => {
+      it('is vision-active when the probe reported vision', () => {
         setRemoteActive(true);
-        await expect(modelStore.isMultimodalEnabled()).resolves.toBe(true);
+        expect(modelStore.activeModelCaps.visionActive).toBe(true);
       });
 
-      it('returns false when the active server does not report vision', async () => {
+      it('is not vision-active when the probe reported no vision', () => {
         setRemoteActive(false);
-        await expect(modelStore.isMultimodalEnabled()).resolves.toBe(false);
+        expect(modelStore.activeModelCaps.vision).toBe('no');
+        expect(modelStore.activeModelCaps.visionActive).toBe(false);
       });
 
-      it('returns false when the server capability is unprobed', async () => {
+      it('is not vision-active when the capability is unprobed', () => {
         setRemoteActive(undefined);
-        await expect(modelStore.isMultimodalEnabled()).resolves.toBe(false);
+        expect(modelStore.activeModelCaps.vision).toBe('unknown');
+        expect(modelStore.activeModelCaps.visionActive).toBe(false);
+      });
+
+      it('is not vision-active when the capabilities describe another backend', () => {
+        setRemoteActive(true);
+        runInAction(() => {
+          serverStore.remoteCaps['srv-1/remote-model'].probedUrl =
+            'http://localhost:9090';
+        });
+
+        // The session still posts to :8080; a capability read from :9090 says
+        // nothing about it, so vision stays unknown and fails closed.
+        expect(modelStore.activeModelCaps.vision).toBe('unknown');
+        expect(modelStore.activeModelCaps.visionActive).toBe(false);
+      });
+    });
+
+    describe('capability resolution', () => {
+      afterEach(() => {
+        runInAction(() => {
+          serverStore.servers = [];
+          serverStore.remoteCaps = {};
+          modelStore.models = [];
+          modelStore.activeModelId = undefined;
+          modelStore.activeRemoteBinding = undefined;
+          modelStore.isMultimodalActive = false;
+        });
+      });
+
+      it('resolves an active remote model against the stored capabilities', () => {
+        runInAction(() => {
+          modelStore.models = [
+            {
+              id: 'srv-1/remote-model',
+              origin: ModelOrigin.REMOTE,
+              serverId: 'srv-1',
+            } as any,
+          ];
+          modelStore.activeModelId = 'srv-1/remote-model';
+          serverStore.remoteCaps = {
+            'srv-1/remote-model': {supportsVision: true, contextLength: 8192},
+          };
+        });
+
+        expect(modelStore.activeModelCaps).toEqual({
+          vision: 'yes',
+          visionActive: true,
+          contextLength: 8192,
+          effectiveContextLength: 8192,
+        });
+      });
+
+      it('does not report another model as vision-active', () => {
+        const other = {
+          id: 'other-local',
+          origin: ModelOrigin.PRESET,
+          supportsMultimodal: true,
+        } as any;
+        runInAction(() => {
+          modelStore.models = [
+            {id: 'active-local', origin: ModelOrigin.PRESET} as any,
+            other,
+          ];
+          modelStore.activeModelId = 'active-local';
+          modelStore.isMultimodalActive = true;
+          modelStore.activeContextSettings = {n_ctx: 4096} as any;
+        });
+
+        expect(modelStore.capsFor(other).vision).toBe('yes');
+        expect(modelStore.capsFor(other).visionActive).toBe(false);
+        expect(
+          modelStore.capsFor(other).effectiveContextLength,
+        ).toBeUndefined();
+        expect(modelStore.activeModelCaps.effectiveContextLength).toBe(4096);
       });
     });
 
@@ -3046,6 +3111,15 @@ describe('ModelStore', () => {
       modelStore.context = undefined;
       modelStore.inferencing = false;
       modelStore.isStreaming = false;
+      runInAction(() => {
+        modelStore.isMultimodalActive = true;
+      });
+    });
+
+    afterEach(() => {
+      runInAction(() => {
+        modelStore.isMultimodalActive = false;
+      });
     });
 
     it('should throw error when no context available', async () => {
@@ -3060,10 +3134,10 @@ describe('ModelStore', () => {
     });
 
     it('should throw error when multimodal is not enabled', async () => {
-      const mockContext = {
-        isMultimodalEnabled: jest.fn().mockResolvedValue(false),
-      };
-      modelStore.context = mockContext as any;
+      modelStore.context = {} as any;
+      runInAction(() => {
+        modelStore.isMultimodalActive = false;
+      });
 
       await expect(
         modelStore.startImageCompletion({
@@ -3074,32 +3148,20 @@ describe('ModelStore', () => {
     });
 
     it('should call onError when no images provided', async () => {
-      const mockContext = {
-        isMultimodalEnabled: jest.fn().mockResolvedValue(true),
-      };
-      modelStore.context = mockContext as any;
-
-      // Mock the isMultimodalEnabled method on the store to return true
-      const originalIsMultimodalEnabled = modelStore.isMultimodalEnabled;
-      modelStore.isMultimodalEnabled = jest.fn().mockResolvedValue(true);
+      modelStore.context = {} as any;
 
       const onError = jest.fn();
 
-      try {
-        await modelStore.startImageCompletion({
-          prompt: 'Test prompt',
-          onError,
-        });
+      await modelStore.startImageCompletion({
+        prompt: 'Test prompt',
+        onError,
+      });
 
-        expect(onError).toHaveBeenCalledWith(
-          expect.objectContaining({
-            message: 'No images provided for multimodal completion',
-          }),
-        );
-      } finally {
-        // Restore original method
-        modelStore.isMultimodalEnabled = originalIsMultimodalEnabled;
-      }
+      expect(onError).toHaveBeenCalledWith(
+        expect.objectContaining({
+          message: 'No images provided for multimodal completion',
+        }),
+      );
     });
 
     it('should handle single image completion successfully', async () => {
@@ -4212,6 +4274,259 @@ describe('ModelStore', () => {
       await modelStore.setRemoteModel(remoteModel);
 
       expect((modelStore.engine as any).serverType).toBe('Ollama');
+    });
+  });
+
+  describe('setRemoteModel capability probe', () => {
+    const remoteModel = {
+      id: 'srv-1/llama-7b',
+      name: 'llama-7b',
+      origin: ModelOrigin.REMOTE,
+      serverId: 'srv-1',
+      remoteModelId: 'llama-7b',
+    } as any;
+
+    beforeEach(() => {
+      runInAction(() => {
+        modelStore.context = undefined;
+        serverStore.servers = [
+          {id: 'srv-1', name: 'llama', url: 'http://localhost:8080'},
+        ];
+      });
+    });
+
+    it('probes the activated model, forwarding the key resolved for the engine', async () => {
+      const getApiKey = jest
+        .spyOn(serverStore, 'getApiKey')
+        .mockResolvedValue('sk-test');
+      const probe = jest
+        .spyOn(serverStore, 'fetchRemoteModelCaps')
+        .mockResolvedValue(undefined);
+
+      await modelStore.setRemoteModel(remoteModel);
+
+      expect(probe).toHaveBeenCalledWith('srv-1', 'llama-7b', 'sk-test');
+      expect(getApiKey).toHaveBeenCalledTimes(1);
+      probe.mockRestore();
+      getApiKey.mockRestore();
+    });
+
+    it('forwards undefined for a keyless server', async () => {
+      const getApiKey = jest
+        .spyOn(serverStore, 'getApiKey')
+        .mockResolvedValue(undefined);
+      const probe = jest
+        .spyOn(serverStore, 'fetchRemoteModelCaps')
+        .mockResolvedValue(undefined);
+
+      await modelStore.setRemoteModel(remoteModel);
+
+      // Nothing is forwarded when there is no key, so the probe falls back to
+      // its own Keychain read — the common local llama.cpp case.
+      expect(probe).toHaveBeenCalledWith('srv-1', 'llama-7b', undefined);
+      probe.mockRestore();
+      getApiKey.mockRestore();
+    });
+
+    it('resolves without waiting on a probe that never settles', async () => {
+      let release: () => void = () => {};
+      const probe = jest
+        .spyOn(serverStore, 'fetchRemoteModelCaps')
+        .mockReturnValue(
+          new Promise<void>(resolve => {
+            release = resolve;
+          }),
+        );
+
+      await modelStore.setRemoteModel(remoteModel);
+
+      // The engine is live and the model active while the probe is pending, so
+      // a lazily-starting server can never delay a send.
+      expect(modelStore.activeModelId).toBe('srv-1/llama-7b');
+      expect(modelStore.engine).toBeTruthy();
+      release();
+      probe.mockRestore();
+    });
+
+    it('survives a probe that rejects', async () => {
+      const probe = jest
+        .spyOn(serverStore, 'fetchRemoteModelCaps')
+        .mockRejectedValue(new Error('boom'));
+
+      await expect(
+        modelStore.setRemoteModel(remoteModel),
+      ).resolves.toBeUndefined();
+      await new Promise(setImmediate);
+      probe.mockRestore();
+    });
+  });
+
+  describe('foreground capability re-probe', () => {
+    let probe: jest.SpyInstance;
+
+    beforeEach(() => {
+      runInAction(() => {
+        modelStore.context = undefined;
+        modelStore.engine = undefined;
+        modelStore.activeRemoteBinding = undefined;
+        modelStore.appState = 'background';
+        modelStore.activeModelId = 'srv-1/llama-7b';
+        modelStore.models = [];
+        serverStore.servers = [
+          {id: 'srv-1', name: 'llama', url: 'http://localhost:8080'},
+        ];
+        serverStore.serverModels.set('srv-1', [
+          {id: 'llama-7b', object: 'model', owned_by: 'system'},
+        ]);
+        serverStore.userSelectedModels = [
+          {serverId: 'srv-1', remoteModelId: 'llama-7b'},
+        ];
+        serverStore.remoteCaps = {};
+      });
+      probe = jest
+        .spyOn(serverStore, 'fetchRemoteModelCaps')
+        .mockResolvedValue(undefined);
+    });
+
+    afterEach(() => {
+      probe.mockRestore();
+      runInAction(() => {
+        modelStore.activeModelId = undefined;
+        modelStore.engine = undefined;
+        modelStore.activeRemoteBinding = undefined;
+        serverStore.servers = [];
+        serverStore.serverModels.clear();
+        serverStore.userSelectedModels = [];
+        serverStore.remoteCaps = {};
+      });
+    });
+
+    it('probes once for an active remote model with no capabilities', async () => {
+      await modelStore.handleAppStateChange('active');
+
+      expect(probe).toHaveBeenCalledTimes(1);
+      expect(probe).toHaveBeenCalledWith('srv-1', 'llama-7b');
+    });
+
+    it('probes again on a later foreground while caps stay unknown', async () => {
+      await modelStore.handleAppStateChange('active');
+      runInAction(() => {
+        modelStore.appState = 'background';
+      });
+      await modelStore.handleAppStateChange('active');
+
+      expect(probe).toHaveBeenCalledTimes(2);
+    });
+
+    it('issues no probe when capabilities are already known', async () => {
+      runInAction(() => {
+        serverStore.remoteCaps['srv-1/llama-7b'] = {contextLength: 8192};
+      });
+
+      await modelStore.handleAppStateChange('active');
+
+      expect(probe).not.toHaveBeenCalled();
+    });
+
+    it('probes again when the stored capabilities describe another backend', async () => {
+      runInAction(() => {
+        serverStore.remoteCaps['srv-1/llama-7b'] = {
+          contextLength: 8192,
+          probedUrl: 'http://localhost:9090',
+        };
+        modelStore.activeRemoteBinding = {
+          modelId: 'srv-1/llama-7b',
+          serverId: 'srv-1',
+          remoteModelId: 'llama-7b',
+          url: 'http://localhost:8080',
+        };
+      });
+
+      await modelStore.handleAppStateChange('active');
+
+      // Populated is not the same as usable: that entry is unusable for this
+      // session, and the server still serves the url the session is bound to.
+      expect(probe).toHaveBeenCalledWith('srv-1', 'llama-7b');
+    });
+
+    it('issues no probe for an active local model', async () => {
+      const model = {...presetModelFixture, isDownloaded: true};
+      runInAction(() => {
+        modelStore.models = [model];
+        modelStore.activeModelId = model.id;
+      });
+
+      await modelStore.handleAppStateChange('active');
+
+      expect(probe).not.toHaveBeenCalled();
+    });
+
+    it('survives a re-probe that rejects', async () => {
+      probe.mockRejectedValue(new Error('boom'));
+
+      await expect(
+        modelStore.handleAppStateChange('active'),
+      ).resolves.toBeUndefined();
+      await new Promise(setImmediate);
+    });
+
+    describe('after an in-session url edit', () => {
+      const remoteModel = {
+        id: 'srv-1/llama-7b',
+        name: 'llama-7b',
+        origin: ModelOrigin.REMOTE,
+        serverId: 'srv-1',
+        remoteModelId: 'llama-7b',
+      } as any;
+
+      // Activate for real so the binding is built from the url of the moment,
+      // the way updateServer leaves it.
+      const activateThenBackground = async () => {
+        await modelStore.setRemoteModel(remoteModel);
+        runInAction(() => {
+          modelStore.appState = 'background';
+          serverStore.remoteCaps = {};
+        });
+        probe.mockClear();
+      };
+
+      it('issues no probe while the session is bound to the old url', async () => {
+        await activateThenBackground();
+        serverStore.updateServer('srv-1', {url: 'http://localhost:9090'});
+
+        await modelStore.handleAppStateChange('active');
+
+        // The session still posts to :8080, so :9090 cannot answer for it.
+        expect(modelStore.activeRemoteBinding?.url).toBe(
+          'http://localhost:8080',
+        );
+        expect(probe).not.toHaveBeenCalled();
+        expect(serverStore.remoteCaps['srv-1/llama-7b']).toBeUndefined();
+      });
+
+      it('probes when the edit left the url untouched', async () => {
+        await activateThenBackground();
+        serverStore.updateServer('srv-1', {requestTimeoutMs: 30000});
+
+        await modelStore.handleAppStateChange('active');
+
+        expect(probe).toHaveBeenCalledWith('srv-1', 'llama-7b');
+      });
+
+      it('probes again once the model is re-selected on the new url', async () => {
+        await activateThenBackground();
+        serverStore.updateServer('srv-1', {url: 'http://localhost:9090'});
+
+        await modelStore.setRemoteModel(remoteModel);
+
+        expect(modelStore.activeRemoteBinding?.url).toBe(
+          'http://localhost:9090',
+        );
+        expect(probe.mock.calls.at(-1)?.slice(0, 2)).toEqual([
+          'srv-1',
+          'llama-7b',
+        ]);
+      });
     });
   });
 

@@ -38,10 +38,11 @@ import {
   fetchModelsWithHeaders,
   detectServerType,
 } from '../../api/openai';
+import {deriveListCaps} from '../../utils/listCaps';
 import {t} from '../../locales';
 
 import {createStyles} from './styles';
-import {EyeIcon, EyeOffIcon} from '../../assets/icons';
+import {ChatIcon, EyeIcon, EyeOffIcon} from '../../assets/icons';
 
 interface RemoteModelSheetProps {
   isVisible: boolean;
@@ -304,6 +305,11 @@ export const RemoteModelSheet: React.FC<RemoteModelSheetProps> = observer(
     const selectedServer = selectedServerId
       ? serverStore.servers.find(s => s.id === selectedServerId)
       : null;
+
+    // The type in effect, which is not always the type this sheet detected:
+    // pressing a known-server chip never calls setServerType, so on the very
+    // routers this exists for the local state is still 'unknown'.
+    const serverTypeInEffect = selectedServer?.serverType ?? serverType;
 
     const showPostConnection = probeResult?.ok === true;
     // Show API key + server name fields when probe attempted (success OR auth failure)
@@ -574,6 +580,7 @@ export const RemoteModelSheet: React.FC<RemoteModelSheetProps> = observer(
                 const servId = selectedServerId || '';
                 const alreadyAdded =
                   !!selectedServerId && isModelAlreadyAdded(servId, model.id);
+                const listCaps = deriveListCaps(model, serverTypeInEffect);
                 return (
                   <TouchableOpacity
                     key={model.id}
@@ -609,6 +616,35 @@ export const RemoteModelSheet: React.FC<RemoteModelSheetProps> = observer(
                       <Text style={styles.alreadyAddedText}>
                         {l10n.settings.alreadyAdded}
                       </Text>
+                    )}
+                    {serverTypeInEffect === 'llama.cpp' && (
+                      <View
+                        style={styles.modelVisionSlot}
+                        testID={`remote-model-row-vision-${model.id}`}
+                        accessible={true}
+                        accessibilityLabel={`${l10n.models.modelCard.labels.vision}: ${
+                          listCaps.supportsVision === true
+                            ? l10n.models.modelCard.labels.visionSupported
+                            : listCaps.supportsVision === false
+                              ? l10n.models.modelCard.labels.visionNotSupported
+                              : l10n.models.modelCard.labels.visionUnknown
+                        }`}>
+                        {listCaps.supportsVision === true ? (
+                          <EyeIcon
+                            width={16}
+                            height={16}
+                            stroke={theme.colors.iconModelTypeVision}
+                          />
+                        ) : listCaps.supportsVision === false ? (
+                          <ChatIcon
+                            width={16}
+                            height={16}
+                            stroke={theme.colors.iconModelTypeText}
+                          />
+                        ) : (
+                          <Text style={styles.modelVisionUnknown}>—</Text>
+                        )}
+                      </View>
                     )}
                   </TouchableOpacity>
                 );

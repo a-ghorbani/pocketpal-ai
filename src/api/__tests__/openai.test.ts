@@ -8,6 +8,11 @@ import {
   buildReasoningPayload,
   __clearRemoteImageCache,
 } from '../openai';
+import {
+  directTextModelsBody,
+  directVisionModelsBody,
+  routerModelsBody,
+} from '../../../jest/fixtures/remoteModelList';
 
 /** Build a minimal Headers-like object for fetch mocks. */
 function mockHeaders(entries: Record<string, string> = {}) {
@@ -202,6 +207,97 @@ describe('fetchModelsWithHeaders', () => {
     expect(abortSpy).toHaveBeenCalled();
     abortSpy.mockRestore();
     jest.useRealTimers();
+  });
+
+  describe('models[] capabilities', () => {
+    const serve = (body: unknown) => {
+      global.fetch = jest.fn().mockResolvedValueOnce({
+        ok: true,
+        headers: mockHeaders({server: 'llama.cpp'}),
+        json: () => Promise.resolve(body),
+      });
+    };
+
+    it('carries a direct server capabilities onto its data row', async () => {
+      serve(directVisionModelsBody);
+
+      const {models} = await fetchModelsWithHeaders('http://localhost:8080');
+
+      expect(models).toHaveLength(1);
+      expect(models[0].id).toBe('gemma-4-e2b');
+      expect(models[0].capabilities).toEqual(['completion', 'multimodal']);
+      expect(models[0].meta?.n_ctx).toBe(8192);
+    });
+
+    it('distinguishes a text-only direct server by the same field', async () => {
+      serve(directTextModelsBody);
+
+      const {models} = await fetchModelsWithHeaders('http://localhost:8080');
+
+      expect(models[0].capabilities).toEqual(['completion']);
+    });
+
+    it('returns a router body untouched, models[] being absent there', async () => {
+      serve(routerModelsBody);
+
+      const {models} = await fetchModelsWithHeaders('http://localhost:8080');
+
+      expect(models).toEqual(routerModelsBody.data);
+      expect(models.some(m => 'capabilities' in m)).toBe(false);
+    });
+
+    it('leaves rows alone when no entry names them', async () => {
+      serve({
+        data: [
+          {id: 'a', object: 'model', owned_by: 'x'},
+          {id: 'b', object: 'model', owned_by: 'x'},
+        ],
+        models: [{name: 'c', model: 'c', capabilities: ['completion']}],
+      });
+
+      const {models} = await fetchModelsWithHeaders('http://localhost:8080');
+
+      expect(models.some(m => 'capabilities' in m)).toBe(false);
+    });
+
+    it('pairs a lone row with a lone entry whatever the entry calls itself', async () => {
+      serve({
+        data: [{id: 'a', object: 'model', owned_by: 'x'}],
+        models: [{name: 'something-else', capabilities: ['completion']}],
+      });
+
+      const {models} = await fetchModelsWithHeaders('http://localhost:8080');
+
+      expect(models[0].capabilities).toEqual(['completion']);
+    });
+
+    it('never pairs an id-less row with a nameless entry', async () => {
+      serve({
+        data: [
+          {object: 'model', owned_by: 'x'},
+          {id: 'b', object: 'model', owned_by: 'x'},
+        ],
+        models: [
+          {capabilities: ['multimodal']},
+          {name: 'other', capabilities: ['completion']},
+        ],
+      });
+
+      const {models} = await fetchModelsWithHeaders('http://localhost:8080');
+
+      expect(models.some(m => 'capabilities' in m)).toBe(false);
+    });
+
+    it('ignores a models field that is not an array', async () => {
+      serve({
+        data: [{id: 'a', object: 'model', owned_by: 'x'}],
+        models: {name: 'a', capabilities: ['completion']},
+      });
+
+      const {models} = await fetchModelsWithHeaders('http://localhost:8080');
+
+      expect(models[0].capabilities).toBeUndefined();
+    });
   });
 });
 
@@ -444,6 +540,152 @@ describe('fetchServerProps', () => {
     await expect(fetchServerProps('http://localhost:8080')).resolves.toEqual(
       {},
     );
+  });
+
+  it('scopes the request to a model id when one is supplied', async () => {
+    global.fetch = jest.fn().mockResolvedValueOnce({
+      ok: true,
+      json: () =>
+        Promise.resolve({
+          model_path: '/models/gemma-4-e2b.gguf',
+          default_generation_settings: {n_ctx: 8192},
+          modalities: {vision: true, video: true, audio: true},
+        }),
+    });
+
+    const props = await fetchServerProps(
+      'http://localhost:8080',
+      undefined,
+      undefined,
+      'gemma-4-e2b',
+    );
+
+    expect(global.fetch).toHaveBeenCalledWith(
+      'http://localhost:8080/props?model=gemma-4-e2b',
+      expect.objectContaining({method: 'GET'}),
+    );
+    expect(props).toEqual({contextLength: 8192, supportsVision: true});
+  });
+
+  it('url-encodes a model id containing a slash', async () => {
+    global.fetch = jest.fn().mockResolvedValueOnce({
+      ok: true,
+      json: () => Promise.resolve({n_ctx: 4096}),
+    });
+
+    await fetchServerProps(
+      'http://localhost:8080',
+      undefined,
+      undefined,
+      'unsloth/gemma-3-4b',
+    );
+
+    expect(global.fetch).toHaveBeenCalledWith(
+      'http://localhost:8080/props?model=unsloth%2Fgemma-3-4b',
+      expect.objectContaining({method: 'GET'}),
+    );
+  });
+
+  it('returns empty caps for a router placeholder body', async () => {
+    global.fetch = jest.fn().mockResolvedValueOnce({
+      ok: true,
+      json: () =>
+        Promise.resolve({
+          role: 'router',
+          model_path: 'none',
+          default_generation_settings: {n_ctx: 0},
+          modalities: null,
+        }),
+    });
+
+    const props = await fetchServerProps('http://localhost:8080');
+
+    // n_ctx 0 is "unknown", not a window, and vision is undecidable on a body
+    // that describes no model — both fields stay absent.
+    expect(props).toEqual({});
+  });
+
+  it('omits contextLength when n_ctx is zero, negative, or not a number', async () => {
+    for (const n_ctx of [0, -1, NaN, '4096']) {
+      global.fetch = jest.fn().mockResolvedValueOnce({
+        ok: true,
+        json: () =>
+          Promise.resolve({
+            model_path: '/models/m.gguf',
+            n_ctx,
+            modalities: {},
+          }),
+      });
+
+      const props = await fetchServerProps('http://localhost:8080');
+      expect(props.contextLength).toBeUndefined();
+    }
+  });
+
+  it('reports vision false when a real model body carries no modalities key', async () => {
+    global.fetch = jest.fn().mockResolvedValueOnce({
+      ok: true,
+      json: () =>
+        Promise.resolve({
+          model_path: '/models/old-build.gguf',
+          default_generation_settings: {n_ctx: 2048},
+        }),
+    });
+
+    const props = await fetchServerProps('http://localhost:8080');
+    expect(props).toEqual({contextLength: 2048, supportsVision: false});
+  });
+
+  it('decides vision from model_path alone when no window is reported', async () => {
+    global.fetch = jest.fn().mockResolvedValueOnce({
+      ok: true,
+      json: () =>
+        Promise.resolve({
+          model_path: '/models/m.gguf',
+          n_ctx: 0,
+          modalities: {vision: true},
+        }),
+    });
+
+    const props = await fetchServerProps('http://localhost:8080');
+    expect(props).toEqual({supportsVision: true});
+  });
+
+  it('bounds an omitted timeout at the props default, not the connection default', async () => {
+    jest.useFakeTimers();
+    const setTimeoutSpy = jest.spyOn(global, 'setTimeout');
+    global.fetch = jest.fn().mockResolvedValueOnce({
+      ok: true,
+      json: () => Promise.resolve({}),
+    });
+
+    await fetchServerProps('http://localhost:8080');
+
+    expect(setTimeoutSpy).toHaveBeenCalledWith(expect.any(Function), 5000);
+    setTimeoutSpy.mockRestore();
+    jest.useRealTimers();
+  });
+
+  it('falls back to the props default when the server timeout is unusable', async () => {
+    jest.useFakeTimers();
+    const setTimeoutSpy = jest.spyOn(global, 'setTimeout');
+    global.fetch = jest.fn().mockResolvedValue({
+      ok: true,
+      json: () => Promise.resolve({}),
+    });
+
+    for (const timeout of [0, -1, NaN]) {
+      setTimeoutSpy.mockClear();
+      await fetchServerProps('http://localhost:8080', undefined, timeout);
+      expect(setTimeoutSpy).toHaveBeenCalledWith(expect.any(Function), 5000);
+    }
+
+    setTimeoutSpy.mockClear();
+    await fetchServerProps('http://localhost:8080', undefined, 20000);
+    expect(setTimeoutSpy).toHaveBeenCalledWith(expect.any(Function), 20000);
+
+    setTimeoutSpy.mockRestore();
+    jest.useRealTimers();
   });
 });
 

@@ -380,6 +380,9 @@
       "labels": {
         "skills": "Skills: ",
         "vision": "Vision",
+        "visionSupported": "Supported",
+        "visionNotSupported": "Not supported",
+        "visionUnknown": "Unknown",
         "capabilities": "capabilities.",
         "modelName": "Model Name",
         "contextLength": "Context Length",

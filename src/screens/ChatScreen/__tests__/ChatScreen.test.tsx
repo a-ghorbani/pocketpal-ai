@@ -858,3 +858,122 @@ describe('ChatScreen on/off toggle → reasoning carrier (remote)', () => {
     });
   });
 });
+
+// The image-attach affordance must reflect a capability that lands after the
+// screen is already on screen: the probe is detached and a lazily-started
+// server can take seconds to answer.
+describe('ChatScreen remote vision reactivity', () => {
+  const modelId = 'srv-1/gemma-4-e2b';
+  let savedModels: any[];
+
+  beforeEach(() => {
+    jest.clearAllMocks();
+    savedModels = modelStore.models;
+    modelStore.models = [
+      ...savedModels,
+      {
+        ...savedModels[0],
+        id: modelId,
+        origin: ModelOrigin.REMOTE,
+        serverId: 'srv-1',
+        remoteModelId: 'gemma-4-e2b',
+      },
+    ];
+    runInAction(() => {
+      modelStore.context = undefined;
+      modelStore.activeModelId = modelId;
+      serverStore.servers = [
+        {
+          id: 'srv-1',
+          name: 'llama',
+          url: 'http://localhost:8080',
+          serverType: 'llama.cpp',
+        } as any,
+      ];
+      serverStore.remoteCaps = {};
+    });
+    modelStore.engine = {
+      completion: jest.fn(),
+      stopCompletion: jest.fn(),
+    } as any;
+  });
+
+  afterEach(() => {
+    modelStore.models = savedModels;
+    runInAction(() => {
+      modelStore.activeModelId = undefined;
+      serverStore.servers = [];
+      serverStore.remoteCaps = {};
+    });
+  });
+
+  it('enables attach when capabilities land, with no further user action', () => {
+    const {getByLabelText} = render(<ChatScreen />, {withNavigation: true});
+
+    expect(getByLabelText('Add image').props.accessibilityState.disabled).toBe(
+      true,
+    );
+
+    act(() => {
+      runInAction(() => {
+        serverStore.remoteCaps[modelId] = {supportsVision: true};
+      });
+    });
+
+    expect(getByLabelText('Add image').props.accessibilityState.disabled).toBe(
+      false,
+    );
+  });
+
+  it('enables attach when a local model finishes loading its projection', () => {
+    const localId = 'local-mm-1';
+    runInAction(() => {
+      modelStore.models = [
+        ...savedModels,
+        {
+          ...savedModels[0],
+          id: localId,
+          origin: ModelOrigin.PRESET,
+          supportsMultimodal: true,
+        },
+      ];
+      modelStore.activeModelId = localId;
+      modelStore.isMultimodalActive = false;
+    });
+
+    const {getByLabelText} = render(<ChatScreen />, {withNavigation: true});
+
+    expect(getByLabelText('Add image').props.accessibilityState.disabled).toBe(
+      true,
+    );
+
+    // What `proceedWithInitialization` writes once the native init verifies.
+    act(() => {
+      runInAction(() => {
+        modelStore.isMultimodalActive = true;
+      });
+    });
+
+    expect(getByLabelText('Add image').props.accessibilityState.disabled).toBe(
+      false,
+    );
+
+    runInAction(() => {
+      modelStore.isMultimodalActive = false;
+    });
+  });
+
+  it('does not let the active model inherit a sibling model vision flag', () => {
+    act(() => {
+      runInAction(() => {
+        serverStore.remoteCaps['srv-1/gemma-3-4b'] = {supportsVision: true};
+      });
+    });
+
+    const {getByLabelText} = render(<ChatScreen />, {withNavigation: true});
+
+    expect(getByLabelText('Add image').props.accessibilityState.disabled).toBe(
+      true,
+    );
+  });
+});
