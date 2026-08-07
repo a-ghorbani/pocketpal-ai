@@ -378,7 +378,10 @@
         "author": "Penulis",
         "requiresProjectionModel": "Memerlukan model proyeksi",
         "downloadProjectionModel": "Unduh model proyeksi",
-        "viewModelCardOnHuggingFace": "Lihat Kartu Model di Hugging Face"
+        "viewModelCardOnHuggingFace": "Lihat Kartu Model di Hugging Face",
+        "visionSupported": "Didukung",
+        "visionNotSupported": "Tidak didukung",
+        "visionUnknown": "Tidak diketahui"
       },
       "accessibility": {
         "expandDetails": "Perluas detail",
