@@ -387,7 +387,10 @@
         "author": "Autor",
         "requiresProjectionModel": "Requer modelo de projeção",
         "downloadProjectionModel": "Baixar modelo de projeção",
-        "viewModelCardOnHuggingFace": "Ver Ficha do Modelo no Hugging Face"
+        "viewModelCardOnHuggingFace": "Ver Ficha do Modelo no Hugging Face",
+        "visionSupported": "Compatível",
+        "visionNotSupported": "Não compatível",
+        "visionUnknown": "Desconhecido"
       },
       "accessibility": {
         "expandDetails": "Expandir detalhes",
