@@ -378,7 +378,10 @@
         "author": "作者",
         "requiresProjectionModel": "投影モデルが必要",
         "downloadProjectionModel": "投影モデルをダウンロード",
-        "viewModelCardOnHuggingFace": "Hugging Faceでモデルカードを表示"
+        "viewModelCardOnHuggingFace": "Hugging Faceでモデルカードを表示",
+        "visionSupported": "対応",
+        "visionNotSupported": "非対応",
+        "visionUnknown": "不明"
       },
       "accessibility": {
         "expandDetails": "詳細を展開",
