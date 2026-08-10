@@ -378,7 +378,10 @@
         "author": "Pengarang",
         "requiresProjectionModel": "Memerlukan model unjuran",
         "downloadProjectionModel": "Muat turun model unjuran",
-        "viewModelCardOnHuggingFace": "Lihat Kad Model di Hugging Face"
+        "viewModelCardOnHuggingFace": "Lihat Kad Model di Hugging Face",
+        "visionSupported": "Disokong",
+        "visionNotSupported": "Tidak disokong",
+        "visionUnknown": "Tidak diketahui"
       },
       "accessibility": {
         "expandDetails": "Kembangkan butiran",

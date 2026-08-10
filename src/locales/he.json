@@ -378,7 +378,10 @@
         "author": "בעלים",
         "requiresProjectionModel": "דורש מודל שכבת התאמה",
         "downloadProjectionModel": "הורד מודל שכבת התאמה",
-        "viewModelCardOnHuggingFace": "הצג כרטיס מודל ב-Hugging Face"
+        "viewModelCardOnHuggingFace": "הצג כרטיס מודל ב-Hugging Face",
+        "visionSupported": "נתמך",
+        "visionNotSupported": "לא נתמך",
+        "visionUnknown": "לא ידוע"
       },
       "accessibility": {
         "expandDetails": "הרחב פרטים",

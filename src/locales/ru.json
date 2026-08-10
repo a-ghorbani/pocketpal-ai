@@ -932,7 +932,10 @@
         "author": "Автор",
         "requiresProjectionModel": "Требуется модель проекции",
         "downloadProjectionModel": "Загрузить модель проекции",
-        "viewModelCardOnHuggingFace": "Открыть карточку модели на Hugging Face"
+        "viewModelCardOnHuggingFace": "Открыть карточку модели на Hugging Face",
+        "visionSupported": "Поддерживается",
+        "visionNotSupported": "Не поддерживается",
+        "visionUnknown": "Неизвестно"
       },
       "accessibility": {
         "expandDetails": "Развернуть детали",

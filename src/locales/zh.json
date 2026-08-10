@@ -123,7 +123,7 @@
     "clearCachesError": "清除缓存失败，请重试。",
     "noCachesToClear": "没有可清除的缓存。",
     "weightRepacking": "启用权重重新打包",
-    "weightRepackingDescription": "禁用内存映射时，提示词处理更快且内存占用更低，Token 生成速度不受影响。",
+    "weightRepackingDescription": "禁用内存映射时，提示词处理更快，且额外内存开销极小；Token 生成速度不受影响。",
     "serverName": "服务器名称",
     "serverUrl": "服务器URL",
     "serverUrlPlaceholder": "例如：http://192.168.1.100:1234",
@@ -378,7 +378,10 @@
         "author": "作者",
         "requiresProjectionModel": "需要投影模型",
         "downloadProjectionModel": "下载投影模型",
-        "viewModelCardOnHuggingFace": "在 Hugging Face 上查看模型卡片"
+        "viewModelCardOnHuggingFace": "在 Hugging Face 上查看模型卡片",
+        "visionSupported": "支持",
+        "visionNotSupported": "不支持",
+        "visionUnknown": "未知"
       },
       "accessibility": {
         "expandDetails": "展开详情",

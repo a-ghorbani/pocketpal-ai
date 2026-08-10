@@ -378,7 +378,10 @@
         "author": "نویسنده",
         "requiresProjectionModel": "نیاز به مدل پروجکشن",
         "downloadProjectionModel": "دانلود مدل پروجکشن",
-        "viewModelCardOnHuggingFace": "مشاهده کارت مدل در Hugging Face"
+        "viewModelCardOnHuggingFace": "مشاهده کارت مدل در Hugging Face",
+        "visionSupported": "پشتیبانی می‌شود",
+        "visionNotSupported": "پشتیبانی نمی‌شود",
+        "visionUnknown": "نامشخص"
       },
       "accessibility": {
         "expandDetails": "نمایش جزئیات",

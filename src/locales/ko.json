@@ -932,7 +932,10 @@
         "author": "제작자",
         "requiresProjectionModel": "프로젝션 모델 필요",
         "downloadProjectionModel": "프로젝션 모델 다운로드",
-        "viewModelCardOnHuggingFace": "Hugging Face에서 모델 카드 보기"
+        "viewModelCardOnHuggingFace": "Hugging Face에서 모델 카드 보기",
+        "visionSupported": "지원함",
+        "visionNotSupported": "지원 안 함",
+        "visionUnknown": "알 수 없음"
       },
       "accessibility": {
         "expandDetails": "세부정보 펼치기",

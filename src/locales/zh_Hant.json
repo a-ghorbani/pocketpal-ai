@@ -932,7 +932,10 @@
         "author": "作者",
         "requiresProjectionModel": "需要投影模型",
         "downloadProjectionModel": "下載投影模型",
-        "viewModelCardOnHuggingFace": "在 Hugging Face 觀看模型卡"
+        "viewModelCardOnHuggingFace": "在 Hugging Face 觀看模型卡",
+        "visionSupported": "支援",
+        "visionNotSupported": "不支援",
+        "visionUnknown": "未知"
       },
       "accessibility": {
         "loadingIndicator": "正在載入",
