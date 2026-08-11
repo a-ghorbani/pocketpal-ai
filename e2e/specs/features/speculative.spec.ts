@@ -19,22 +19,22 @@
  *    process — a mismatched pair, had it reached init_mtp, would SIGABRT
  *    uncatchably. The gate is "process survives + target loads", not draft count.
  *
- * This is a normal RN Settings + model-load surface and runs on a
- * simulator/emulator via the standard pipeline -- it is NOT an App-Intents /
- * Shortcuts path and needs no physical device.
+ * Off-safety and crash-safety run green on a simulator/emulator. The
+ * engagement test needs a PHYSICAL device: a 2 GB AVD cannot allocate the MTP
+ * draft context for the hybrid Qwen3.5 ("failed to create MTP draft context"
+ * under GC pressure), while the identical build engages on real hardware.
  *
  * ── draft_tokens read surface ────────────────────────────────────────────────
  * The chat now surfaces speculative engagement in the assistant turn footer:
  * when `draft_tokens > 0`, a `message-draft-tokens` element renders
  * "draft: <accepted>/<total> (<pct>%)". The engagement test asserts that
  * element is present (draft_tokens > 0); off-safety asserts it is ABSENT (PocketPal resolved
- * to OFF, draft_tokens === 0). The verify stage runs this spec on a real MTP
- * GGUF fixture (iOS + Android, `--devices virtual-only`); the MTP_MODEL fixture
- * repo below must be confirmed available at run time.
+ * to OFF, draft_tokens === 0). The MTP_MODEL fixture repo below must be
+ * confirmed available at run time.
  *
  * Usage:
- *   yarn e2e:ios --spec speculative --devices virtual-only
- *   yarn e2e:android --spec speculative --devices virtual-only
+ *   yarn e2e:android --spec speculative --devices <physical-device-id>
+ *   (off-safety + crash-safety only: --devices virtual-only)
  */
 
 import * as fs from 'fs';
@@ -220,7 +220,7 @@ describe('Speculative Decoding / MTP draft model', () => {
     expect(responseText).not.toBe('Unable to extract');
     expect(responseText.length).toBeGreaterThan(0);
     await expect(browser.$(DRAFT_TOKENS_EL)).not.toBeExisting();
-    await saveShot('speculative-v2c-off-safety');
+    await saveShot('speculative-off-safety');
   });
 
   it('crash-safety: a width-mismatched paired draft does not abort the process', async () => {
@@ -243,7 +243,7 @@ describe('Speculative Decoding / MTP draft model', () => {
     expect(responseText.length).toBeGreaterThan(0);
     // App still responsive + producing output after a speculative-on load == no SIGABRT.
     await expect(browser.$(Selectors.chat.input)).toBeExisting();
-    await saveShot('speculative-v2d-crash-safety');
+    await saveShot('speculative-crash-safety');
   });
 
   it('engagement: MTP model + speculative on produces draft tokens (draft_tokens > 0)', async () => {
@@ -281,6 +281,6 @@ describe('Speculative Decoding / MTP draft model', () => {
     const rate = timingText.match(/([\d.]+)\s*tokens?\/sec/i);
     expect(rate).not.toBeNull();
     expect(Number(rate && rate[1])).toBeGreaterThan(0);
-    await saveShot('speculative-v1-engagement');
+    await saveShot('speculative-engagement');
   });
 });

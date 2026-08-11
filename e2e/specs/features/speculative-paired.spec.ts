@@ -452,6 +452,6 @@ describe('Speculative Decoding / separate-draft (paired) MTP', () => {
     expect(rate).not.toBeNull();
     expect(Number(rate && rate[1])).toBeGreaterThan(0);
 
-    await saveShot('speculative-paired-v3-engagement');
+    await saveShot('speculative-paired-engagement');
   });
 });

@@ -96,20 +96,29 @@ export async function waitForAiMessage(
  */
 async function disableVisionOnCard(filename: string): Promise<void> {
   const card = browser.$(Selectors.modelCard.cardContainer(filename));
-  const expand = card.$(byTestId('expand-details-button'));
+  // `.//`-scoped so Android evaluates the child query against THIS card —
+  // an absolute testID XPath is document-global and can expand a sibling.
+  const expand = (browser as any).isAndroid
+    ? card.$('.//*[contains(@resource-id, "expand-details-button")]')
+    : card.$('~expand-details-button');
   await expand.waitForExist({timeout: 10000});
   await expand.click();
   await browser.pause(600);
 
   // The switch carries its own testID: RN view-flattening turns the row
   // container into a leaf in the a11y tree, so a child query under the row
-  // can never match.
+  // can never match. Scroll BEFORE concluding it is absent — an off-screen
+  // toggle also reads as not existing, and skipping then silently leaves
+  // vision ON (the failure this helper exists to prevent).
   const visionSwitch = browser.$(byTestId('vision-toggle-switch'));
-  if (!(await visionSwitch.isExisting().catch(() => false))) {
+  const reachable = await Gestures.scrollToElement(
+    byTestId('vision-toggle-switch'),
+    5,
+  );
+  if (!reachable && !(await visionSwitch.isExisting().catch(() => false))) {
     console.log(`[disableVision] no vision toggle on ${filename}; skipping`);
     return;
   }
-  await Gestures.scrollToElement(byTestId('vision-toggle-switch'), 5);
   // Android exposes `checked`, iOS `value` ("1"/"0"); anything unreadable
   // falls through to a click, which is correct for the fresh-install default.
   const isAndroid = (browser as any).isAndroid;
