@@ -217,6 +217,10 @@ describe('ModelStore', () => {
         origin: ModelOrigin.HF,
         isDownloaded: true,
         hfModel: mockHFModel1,
+        ggufMetadata: {
+          architecture: 'gemma4-assistant',
+          nextn_predict_layers: 4,
+        } as any,
         supportsMultimodal: true,
         capabilities: ['vision' as const],
         compatibleProjectionModels: [
@@ -250,7 +254,11 @@ describe('ModelStore', () => {
       const statefulExists = existsMock.getMockImplementation();
       existsMock.mockResolvedValue(false);
 
-      await modelStore.healDraftVisionClassification();
+      modelStore.healDraftVisionClassification();
+      // The heal records the orphaned mmproj in the persisted queue; the
+      // per-launch drain performs the deletion.
+      expect(modelStore.pendingProjectionCleanupIds).toEqual([mmprojId]);
+      await modelStore.drainPendingProjectionCleanup();
       existsMock.mockImplementation(statefulExists);
 
       const healed = modelStore.models.find(m => m.id === staleDraft.id);
@@ -265,6 +273,78 @@ describe('ModelStore', () => {
       // cleaned rather than stranded.
       const cleaned = modelStore.models.find(m => m.id === mmprojId);
       expect(cleaned?.isDownloaded).toBe(false);
+      expect(modelStore.pendingProjectionCleanupIds).toEqual([]);
+    });
+
+    it('keeps a queued id while its download is in flight, drops a shared one', async () => {
+      const inFlightId = 'a/b/mmproj-downloading.gguf';
+      const sharedId = 'a/b/mmproj-shared.gguf';
+      modelStore.models = [
+        {
+          ...presetModelFixture,
+          id: inFlightId,
+          filename: 'mmproj-downloading.gguf',
+          modelType: ModelType.PROJECTION,
+          isDownloaded: false,
+        },
+        {
+          ...presetModelFixture,
+          id: sharedId,
+          filename: 'mmproj-shared.gguf',
+          modelType: ModelType.PROJECTION,
+          isDownloaded: true,
+        },
+        {
+          ...presetModelFixture,
+          id: 'hf/repo/still-vision.gguf',
+          filename: 'still-vision.gguf',
+          isDownloaded: true,
+          supportsMultimodal: true,
+          defaultProjectionModel: sharedId,
+        },
+      ];
+      runInAction(() => {
+        modelStore.pendingProjectionCleanupIds = [inFlightId, sharedId];
+      });
+      const {downloadManager} = require('../../services/downloads');
+      (downloadManager.isDownloading as jest.Mock).mockImplementation(
+        (id: string) => id === inFlightId,
+      );
+
+      await modelStore.drainPendingProjectionCleanup();
+
+      // In-flight: wait for the download; a later launch collects the file.
+      // Shared: another vision model still uses it — never delete, stop
+      // tracking.
+      expect(modelStore.pendingProjectionCleanupIds).toEqual([inFlightId]);
+      expect(modelStore.models.find(m => m.id === sharedId)?.isDownloaded).toBe(
+        true,
+      );
+      (downloadManager.isDownloading as jest.Mock).mockReturnValue(false);
+    });
+
+    it('defers a downloaded record until its header has been read', async () => {
+      // Only the filename says draft; the header could veto but has not been
+      // fetched yet. Stripping now would repeat the R1 damage class inside
+      // the metadata-missing window — wait for the backfill instead.
+      const pendingMetadata = {
+        ...presetModelFixture,
+        id: 'x/y/mtp-something.gguf',
+        filename: 'mtp-something.gguf',
+        origin: ModelOrigin.HF,
+        isDownloaded: true,
+        hfModel: mockHFModel1,
+        ggufMetadata: undefined,
+        supportsMultimodal: true,
+        capabilities: ['vision' as const],
+        visionEnabled: true,
+      };
+      modelStore.models = [pendingMetadata];
+
+      await modelStore.healDraftVisionClassification();
+
+      expect(modelStore.models[0].supportsMultimodal).toBe(true);
+      expect(modelStore.models[0].capabilities).toEqual(['vision']);
     });
 
     it('does not strip a chat model whose filename merely contains assistant', async () => {

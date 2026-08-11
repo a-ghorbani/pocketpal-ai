@@ -225,6 +225,9 @@ class ModelStore {
   availableMemoryCeiling: number | undefined = undefined;
   // Updated after successful model load using GGUF estimator
   largestSuccessfulLoad: number | undefined = undefined;
+  // Projection models orphaned by the vision heal, awaiting deletion; drained
+  // every launch (see drainPendingProjectionCleanup).
+  pendingProjectionCleanupIds: string[] = [];
 
   constructor() {
     makeAutoObservable(this, {
@@ -247,6 +250,7 @@ class ModelStore {
         'lastAutoReleasedModelId',
         'availableMemoryCeiling',
         'largestSuccessfulLoad',
+        'pendingProjectionCleanupIds',
       ],
       storage: AsyncStorage,
     }).then(async () => {
@@ -636,18 +640,23 @@ class ModelStore {
   // vision models (their repo carries an mmproj); re-derive so they heal.
   // The pairing may have auto-downloaded that mmproj, and projection models
   // are only reachable through a multimodal model's UI — which the heal
-  // removes — so the cleared ids must go through orphan cleanup here.
-  healDraftVisionClassification = async () => {
-    const clearedProjectionIds = new Set<string>();
+  // removes — so the cleared ids are recorded (persisted with the same write
+  // that strips the pairing) and drained after download state is synced.
+  healDraftVisionClassification = () => {
     runInAction(() => {
       this.models.forEach(model => {
+        // A downloaded record without ggufMetadata is only draft-classified by
+        // its filename; wait for the header backfill so it can veto first.
+        if (model.isDownloaded && !model.ggufMetadata) {
+          return;
+        }
         if (model.supportsMultimodal && isDraftOnlyModel(model)) {
-          model.compatibleProjectionModels?.forEach(id =>
-            clearedProjectionIds.add(id),
-          );
+          const cleared = new Set(this.pendingProjectionCleanupIds);
+          model.compatibleProjectionModels?.forEach(id => cleared.add(id));
           if (model.defaultProjectionModel) {
-            clearedProjectionIds.add(model.defaultProjectionModel);
+            cleared.add(model.defaultProjectionModel);
           }
+          this.pendingProjectionCleanupIds = [...cleared];
           model.supportsMultimodal = false;
           model.capabilities = model.capabilities?.filter(c => c !== 'vision');
           model.compatibleProjectionModels = undefined;
@@ -656,19 +665,66 @@ class ModelStore {
         }
       });
     });
-    if (clearedProjectionIds.size > 0) {
-      await this.cleanupOrphanedProjectionModels([...clearedProjectionIds]);
+  };
+
+  /**
+   * Delete projection models the heal orphaned. Runs every launch: an id
+   * stays queued while its download is still in flight or its deletion
+   * fails, so a kill or an unfinished mmproj download cannot strand the
+   * file forever. An id whose projection model has downloaded dependents is
+   * legitimately shared — dropped, never deleted.
+   */
+  drainPendingProjectionCleanup = async () => {
+    if (this.pendingProjectionCleanupIds.length === 0) {
+      return;
     }
+    const remaining: string[] = [];
+    for (const id of this.pendingProjectionCleanupIds) {
+      const projection = this.models.find(m => m.id === id);
+      if (!projection || projection.modelType !== ModelType.PROJECTION) {
+        continue;
+      }
+      if (this.getDownloadedLLMsUsingProjectionModel(id).length > 0) {
+        continue;
+      }
+      if (downloadManager.isDownloading(id)) {
+        remaining.push(id);
+        continue;
+      }
+      if (!projection.isDownloaded) {
+        continue;
+      }
+      try {
+        await this.deleteModel(projection);
+        if (this.models.find(m => m.id === id)?.isDownloaded) {
+          remaining.push(id);
+        }
+      } catch (error) {
+        console.warn('[ModelStore] orphaned projection cleanup failed:', error);
+        remaining.push(id);
+      }
+    }
+    runInAction(() => {
+      this.pendingProjectionCleanupIds = remaining;
+    });
   };
 
   initializeStore = async () => {
     const storedVersion = this.version || 0;
     console.log('models: ', this.models);
 
-    await this.healDraftVisionClassification();
+    this.healDraftVisionClassification();
 
     // Sync download manager with active downloads
     await downloadManager.syncWithActiveDownloads(this.models);
+
+    // After the sync so an in-flight mmproj download is visible and waits. A
+    // failure retries next launch; it must not abort the rest of init.
+    try {
+      await this.drainPendingProjectionCleanup();
+    } catch (error) {
+      console.warn('[ModelStore] projection cleanup drain failed:', error);
+    }
 
     // Apply the bundled offline floor immediately (no network) so the list is
     // never empty while a slow rules fetch is in flight, then merge/reconcile.
