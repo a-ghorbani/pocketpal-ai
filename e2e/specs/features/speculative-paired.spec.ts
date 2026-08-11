@@ -21,8 +21,10 @@
  * reported draft_tokens > 0. This spec asserts that element is present with
  * total > 0, and that `footer-timing` shows a real tokens/sec.
  *
- * Fixture pair (verified in llama.rn's own C++ harness, draft-accept 0.57-0.89):
- *   target: bartowski/google_gemma-4-E2B-it-GGUF (google_gemma-4-E2B-it-Q4_K_M.gguf)
+ * Fixture pair (device-proven: paired engagement with real draft acceptance
+ * on a Pixel 9, both files from the same repo):
+ *   target: ggml-org/gemma-4-E2B-it-GGUF (gemma-4-E2B-it-Q4_0.gguf, arch
+ *           gemma4, no nextn KV)
  *   draft:  ggml-org/gemma-4-E2B-it-GGUF (mtp-gemma-4-E2B-it-Q8_0.gguf, arch
  *           gemma4-assistant, nextn_predict_layers=4)
  *
@@ -75,14 +77,19 @@ const DRAFT_MODEL: ModelTestConfig = {
   prompts: [{input: 'Hi', description: 'Basic greeting'}],
 };
 
-/** The chat target paired with the draft. Loaded TEXT-ONLY (no mmproj). */
+/**
+ * The chat target paired with the draft. Loaded TEXT-ONLY (no mmproj). Same
+ * repo as the draft (arch `gemma4`, no nextn KV — genuinely non-MTP), and the
+ * exact pair the Pixel 9 engagement evidence was captured with.
+ */
 const TARGET_MODEL: ModelTestConfig = {
   id: 'gemma-4-e2b-target',
-  searchQuery: 'bartowski google_gemma-4-E2B-it-GGUF',
-  selectorText: 'google_gemma-4-E2B-it',
-  downloadFile: 'google_gemma-4-E2B-it-Q4_K_M.gguf',
+  searchQuery: 'ggml-org gemma-4-E2B-it-GGUF',
+  selectorText: 'gemma-4-E2B-it',
+  downloadFile: 'gemma-4-E2B-it-Q4_0.gguf',
   downloadTimeout: 900000,
   prompts: [{input: 'Hi', description: 'Basic greeting'}],
+  disableVisionBeforeLoad: true,
 };
 
 /** Fragment of the draft's display name (extractHFModelTitle == filename). */
