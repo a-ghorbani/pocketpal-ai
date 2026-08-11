@@ -373,6 +373,7 @@ describe('SettingsScreen', () => {
       runInAction(() => {
         modelStore.contextInitParams.speculativeEnabled = false;
         modelStore.contextInitParams.selectedDraftModelId = undefined;
+        modelStore.contextInitParams.flash_attn_type = undefined;
         modelStore.activeModelId = undefined;
       });
     });
@@ -566,13 +567,17 @@ describe('SettingsScreen', () => {
       ).toHaveTextContent(/F16 \(Default\)/);
     });
 
-    it('embedded mode renders the q8_0 effective-default label (positive assertion)', async () => {
+    it('embedded + forced flash attn renders the q8_0 effective-default label', async () => {
       jest.useFakeTimers();
       runInAction(() => {
         modelStore.contextInitParams.speculativeEnabled = true;
         modelStore.contextInitParams.selectedDraftModelId = undefined;
         modelStore.contextInitParams.spec_draft_cache_type_k = undefined;
         modelStore.contextInitParams.spec_draft_cache_type_v = undefined;
+        // q8_0 is only the default when flash attention is explicitly on —
+        // `auto` can resolve off per backend, where a quantized V draft
+        // cache is fatal.
+        modelStore.contextInitParams.flash_attn_type = 'on';
         modelStore.activeModelId = 'active/mtp.gguf';
         modelStore.models = [
           {
@@ -639,7 +644,7 @@ describe('SettingsScreen', () => {
       // Embedded still forwards the draft cache types, so the rows stay editable.
       const keyCacheButton = getByTestId('speculative-draft-key-cache-button');
       expect(keyCacheButton.props.accessibilityState?.disabled).toBeFalsy();
-      expect(keyCacheButton).toHaveTextContent(/Q8_0/);
+      expect(keyCacheButton).toHaveTextContent(/F16/);
       expect(
         queryAllByText(
           l10n.en.settings.speculativeDraftCacheTypeInactiveDescription,
@@ -792,7 +797,7 @@ describe('SettingsScreen', () => {
       // embedded rather than off.
       const keyCacheButton = getByTestId('speculative-draft-key-cache-button');
       expect(keyCacheButton.props.accessibilityState?.disabled).toBeFalsy();
-      expect(keyCacheButton).toHaveTextContent(/Q8_0/);
+      expect(keyCacheButton).toHaveTextContent(/F16/);
       expect(queryByTestId('speculative-no-effect-note')).toBeNull();
       // The picked draft was dropped, so the picker row says why.
       expect(

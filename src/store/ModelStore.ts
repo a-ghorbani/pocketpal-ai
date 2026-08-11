@@ -580,11 +580,17 @@ class ModelStore {
       params.spec_draft_p_min = this.contextInitParams.spec_draft_p_min;
       params.spec_draft_p_split = this.contextInitParams.spec_draft_p_split;
 
-      const cacheDefaults = draftCacheDefaults(mode);
+      const cacheDefaults = draftCacheDefaults(mode, flash_attn_type === 'on');
       params.spec_draft_cache_type_k =
         this.contextInitParams.spec_draft_cache_type_k ?? cacheDefaults.k;
-      params.spec_draft_cache_type_v =
+      // With flash attention explicitly off a quantized draft V cache can
+      // never load (llama.cpp hard-refuses it) — clamp even an explicit pick.
+      const draftV =
         this.contextInitParams.spec_draft_cache_type_v ?? cacheDefaults.v;
+      params.spec_draft_cache_type_v =
+        flash_attn_type === 'off' && draftV !== CacheType.F16
+          ? CacheType.F16
+          : draftV;
 
       if (draftConfig?.mode === 'paired') {
         params.model_draft = draftConfig.resolvedDraftPath;
@@ -1845,7 +1851,10 @@ class ModelStore {
   }
 
   get effectiveDraftCacheDefaults(): {k: CacheType; v: CacheType} {
-    return draftCacheDefaults(this.effectiveDraftMode);
+    return draftCacheDefaults(
+      this.effectiveDraftMode,
+      this.contextInitParams.flash_attn_type === 'on',
+    );
   }
 
   /**

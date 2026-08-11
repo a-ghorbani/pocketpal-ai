@@ -281,7 +281,10 @@ class MockModelStore {
   }
 
   get effectiveDraftCacheDefaults() {
-    return draftCacheDefaults(this.effectiveDraftMode);
+    return draftCacheDefaults(
+      this.effectiveDraftMode,
+      this.contextInitParams.flash_attn_type === 'on',
+    );
   }
 
   isModelAvailable(modelId: string) {

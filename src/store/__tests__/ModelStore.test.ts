@@ -9,6 +9,7 @@ import {
 } from '../../services/downloads';
 
 import {
+  CacheType,
   DraftConfig,
   GGUFMetadata,
   Model,
@@ -2699,6 +2700,55 @@ describe('ModelStore', () => {
         expect(params.model_draft).toBe('/tmp/draft.gguf');
       });
 
+      it('defaults the embedded draft cache to F16 unless flash attn is forced on', async () => {
+        // llama.cpp refuses a quantized draft V cache whenever flash
+        // attention resolves off, and `auto` resolves per backend AFTER init
+        // (off on Android CPU) — so Q8_0 is only safe when the user forced
+        // flash attention on.
+        runInAction(() => {
+          modelStore.contextInitParams.flash_attn_type = undefined;
+        });
+        const params = await modelStore.getEffectiveContextInitParams(
+          undefined,
+          {mode: 'embedded'},
+        );
+        expect(params.spec_draft_cache_type_k).toBe(CacheType.F16);
+        expect(params.spec_draft_cache_type_v).toBe(CacheType.F16);
+
+        runInAction(() => {
+          modelStore.contextInitParams.flash_attn_type = 'on';
+        });
+        const withFa = await modelStore.getEffectiveContextInitParams(
+          undefined,
+          {mode: 'embedded'},
+        );
+        expect(withFa.spec_draft_cache_type_k).toBe(CacheType.Q8_0);
+        expect(withFa.spec_draft_cache_type_v).toBe(CacheType.Q8_0);
+        runInAction(() => {
+          modelStore.contextInitParams.flash_attn_type = undefined;
+        });
+      });
+
+      it('clamps an explicit quantized draft V cache when flash attn is off', async () => {
+        runInAction(() => {
+          modelStore.contextInitParams.flash_attn_type = 'off';
+          modelStore.contextInitParams.spec_draft_cache_type_v = CacheType.Q8_0;
+          modelStore.contextInitParams.spec_draft_cache_type_k = CacheType.Q8_0;
+        });
+        const params = await modelStore.getEffectiveContextInitParams(
+          undefined,
+          {mode: 'embedded'},
+        );
+        // V would make the native context refuse to load; K is legal.
+        expect(params.spec_draft_cache_type_v).toBe(CacheType.F16);
+        expect(params.spec_draft_cache_type_k).toBe(CacheType.Q8_0);
+        runInAction(() => {
+          modelStore.contextInitParams.flash_attn_type = undefined;
+          modelStore.contextInitParams.spec_draft_cache_type_v = undefined;
+          modelStore.contextInitParams.spec_draft_cache_type_k = undefined;
+        });
+      });
+
       it('emits nothing speculative for off mode', async () => {
         const params = await modelStore.getEffectiveContextInitParams(
           undefined,
@@ -4935,8 +4985,10 @@ describe('ModelStore', () => {
         );
 
         expect(params.model_draft).toBeUndefined();
-        expect(params.spec_draft_cache_type_k).toBe('q8_0');
-        expect(params.spec_draft_cache_type_v).toBe('q8_0');
+        // f16 unless flash attn is forced on: `auto` resolves per backend
+        // after init and a quantized V draft cache is fatal when it lands off.
+        expect(params.spec_draft_cache_type_k).toBe('f16');
+        expect(params.spec_draft_cache_type_v).toBe('f16');
         expect(params.flash_attn_type).toBe('auto');
       });
 
@@ -5274,7 +5326,7 @@ describe('ModelStore', () => {
         });
       });
 
-      it('no active model, nothing picked → off with embedded cache defaults', () => {
+      it('no active model, nothing picked → off with safe f16 cache defaults', () => {
         modelStore.setSpeculativeEnabled(true);
         modelStore.setSelectedDraftModel(undefined);
         runInAction(() => {
@@ -5283,8 +5335,8 @@ describe('ModelStore', () => {
 
         expect(modelStore.effectiveDraftMode).toBe('off');
         expect(modelStore.effectiveDraftCacheDefaults).toEqual({
-          k: 'q8_0',
-          v: 'q8_0',
+          k: 'f16',
+          v: 'f16',
         });
       });
 
@@ -5351,7 +5403,7 @@ describe('ModelStore', () => {
         expect(modelStore.effectiveDraftMode).toBe('off');
       });
 
-      it('MTP-capable active target, no draft → embedded with q8_0 defaults', () => {
+      it('MTP-capable active target, no draft → embedded; q8_0 only with forced flash attn', () => {
         modelStore.setSpeculativeEnabled(true);
         modelStore.setSelectedDraftModel(undefined);
         activate([
@@ -5361,9 +5413,21 @@ describe('ModelStore', () => {
         ]);
 
         expect(modelStore.effectiveDraftMode).toBe('embedded');
+        // Flash attn unset resolves per backend after init, so the safe
+        // default is f16; forcing it on unlocks the quantized draft cache.
+        expect(modelStore.effectiveDraftCacheDefaults).toEqual({
+          k: 'f16',
+          v: 'f16',
+        });
+        runInAction(() => {
+          modelStore.contextInitParams.flash_attn_type = 'on';
+        });
         expect(modelStore.effectiveDraftCacheDefaults).toEqual({
           k: 'q8_0',
           v: 'q8_0',
+        });
+        runInAction(() => {
+          modelStore.contextInitParams.flash_attn_type = undefined;
         });
       });
 
