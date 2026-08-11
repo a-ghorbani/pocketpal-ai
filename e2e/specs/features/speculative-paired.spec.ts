@@ -181,17 +181,38 @@ async function enableSpeculativeGlobally(
   settingsPage: SettingsPage,
 ): Promise<void> {
   await goToSettings(settingsPage);
+  // A revisit restores the previous scroll offset, and scrollToElement only
+  // searches downward — start every pass from the top. Try to reach the
+  // switch first: off-viewport content is absent from the a11y tree, so an
+  // existence probe cannot tell "accordion collapsed" from "row below the
+  // fold", and a blind accordion click can collapse an open section.
+  await scrollSettingsToTop();
   await Gestures.scrollToElement(SPEC_ACCORDION, 8);
-  if (!(await browser.$(SPEC_PICKER).isExisting())) {
+  let switchReachable = await Gestures.scrollToElement(SPEC_SWITCH, 8);
+  if (!switchReachable) {
+    await scrollSettingsToTop();
+    await Gestures.scrollToElement(SPEC_ACCORDION, 8);
     await browser.$(SPEC_ACCORDION).click();
     await browser.pause(500);
+    switchReachable = await Gestures.scrollToElement(SPEC_SWITCH, 8);
   }
-  await Gestures.scrollToElement(SPEC_SWITCH, 8);
   await browser.$(SPEC_SWITCH).waitForExist({timeout: TIMEOUTS.element});
 
-  // The DS Switch carries its testID on a wrapper view; the draft-model picker
-  // only renders once speculative is on, so its presence is the enabled signal.
-  if (!(await browser.$(SPEC_PICKER).isExisting())) {
+  // Read the switch itself: with app state persisted between runs
+  // (E2E_NO_RESET) speculative may already be on, and the previous
+  // "picker exists" heuristic misreads an off-viewport picker as OFF —
+  // clicking then toggles the feature off. Android exposes `checked`,
+  // iOS `value`; only click when it reads unchecked.
+  const state = (browser as any).isAndroid
+    ? await browser
+        .$(SPEC_SWITCH)
+        .getAttribute('checked')
+        .catch(() => null)
+    : await browser
+        .$(SPEC_SWITCH)
+        .getAttribute('value')
+        .catch(() => null);
+  if (state !== 'true' && state !== '1') {
     await browser.$(SPEC_SWITCH).click();
     await browser.pause(700);
   }
@@ -216,6 +237,14 @@ async function downloadModelOnly(model: ModelTestConfig): Promise<void> {
   await drawerPage.waitForOpen();
   await drawerPage.navigateToModels();
   await modelsPage.waitForReady();
+
+  // Persisted-state rerun (E2E_NO_RESET): the card already exists, so the
+  // whole HF search flow is a no-op — skip it.
+  const cardSelector = Selectors.modelCard.cardContainer(model.downloadFile);
+  if (await browser.$(cardSelector).isExisting().catch(() => false)) {
+    console.log(`Model already present (not re-downloading): ${model.id}`);
+    return;
+  }
 
   await modelsPage.openHuggingFaceSearch();
   await hfSearchSheet.waitForReady();
@@ -262,19 +291,32 @@ async function downloadAndLoadTarget(model: ModelTestConfig): Promise<void> {
   await drawerPage.navigateToModels();
   await modelsPage.waitForReady();
 
-  await modelsPage.openHuggingFaceSearch();
-  await hfSearchSheet.waitForReady();
+  // Persisted-state rerun (E2E_NO_RESET): skip the HF flow when the card
+  // already exists and go straight to the load.
+  const presentSelector = Selectors.modelCard.cardContainer(
+    model.downloadFile,
+  );
+  const alreadyPresent = await browser
+    .$(presentSelector)
+    .isExisting()
+    .catch(() => false);
+  if (!alreadyPresent) {
+    await modelsPage.openHuggingFaceSearch();
+    await hfSearchSheet.waitForReady();
 
-  await hfSearchSheet.search(model.searchQuery);
-  await hfSearchSheet.selectModel(model.selectorText);
-  await modelDetailsSheet.waitForReady();
+    await hfSearchSheet.search(model.searchQuery);
+    await hfSearchSheet.selectModel(model.selectorText);
+    await modelDetailsSheet.waitForReady();
 
-  await modelDetailsSheet.scrollToFile(model.downloadFile);
-  await modelDetailsSheet.tapDownloadForFile(model.downloadFile);
+    await modelDetailsSheet.scrollToFile(model.downloadFile);
+    await modelDetailsSheet.tapDownloadForFile(model.downloadFile);
 
-  await modelDetailsSheet.close();
-  await hfSearchSheet.close();
-  await modelsPage.waitForReady();
+    await modelDetailsSheet.close();
+    await hfSearchSheet.close();
+    await modelsPage.waitForReady();
+  } else {
+    console.log(`Target already present (not re-downloading): ${model.id}`);
+  }
 
   const downloadTimeout = model.downloadTimeout ?? TIMEOUTS.download;
   const containerSelector = Selectors.modelCard.cardContainer(
@@ -299,19 +341,9 @@ async function pickDraftModel(
   settingsPage: SettingsPage,
   titleFragment: string,
 ): Promise<void> {
-  await goToSettings(settingsPage);
-  await Gestures.scrollToElement(SPEC_ACCORDION, 8);
-  if (!(await browser.$(SPEC_PICKER).isExisting())) {
-    await browser.$(SPEC_ACCORDION).click();
-    await browser.pause(500);
-  }
-  await Gestures.scrollToElement(SPEC_SWITCH, 8);
-  if (!(await browser.$(SPEC_PICKER).isExisting())) {
-    await browser.$(SPEC_SWITCH).click();
-    await browser.pause(700);
-  }
-  await Gestures.scrollToElement(SPEC_PICKER, 4);
-  await browser.$(SPEC_PICKER).waitForExist({timeout: TIMEOUTS.element});
+  // Idempotent: reads the switch state, so a re-entry with speculative
+  // already on cannot toggle it off.
+  await enableSpeculativeGlobally(settingsPage);
   await browser.$(SPEC_PICKER).click();
   await browser.pause(500);
 

@@ -137,15 +137,28 @@ async function enableSpeculativeGlobally(
 ): Promise<void> {
   await goToSettings(settingsPage);
   await Gestures.scrollToElement(SPEC_ACCORDION, 8);
-  await browser.$(SPEC_ACCORDION).click();
-  await browser.pause(500);
+  if (!(await browser.$(SPEC_SWITCH).isExisting())) {
+    await browser.$(SPEC_ACCORDION).click();
+    await browser.pause(500);
+  }
   await Gestures.scrollToElement(SPEC_SWITCH, 8);
   await browser.$(SPEC_SWITCH).waitForExist({timeout: TIMEOUTS.element});
 
-  // The DS Switch carries its testID on a wrapper view; click rather than
-  // relying on a `value` attribute. The draft-model picker only renders once
-  // speculative is on, so its presence is the reliable "enabled" signal.
-  if (!(await browser.$(SPEC_PICKER).isExisting())) {
+  // Read the switch itself: with app state persisted between runs
+  // (E2E_NO_RESET) speculative may already be on, and a
+  // "picker exists" heuristic misreads an off-viewport picker as OFF —
+  // clicking then toggles the feature off. Android exposes `checked`,
+  // iOS `value`; only click when it reads unchecked.
+  const state = (browser as any).isAndroid
+    ? await browser
+        .$(SPEC_SWITCH)
+        .getAttribute('checked')
+        .catch(() => null)
+    : await browser
+        .$(SPEC_SWITCH)
+        .getAttribute('value')
+        .catch(() => null);
+  if (state !== 'true' && state !== '1') {
     await browser.$(SPEC_SWITCH).click();
     await browser.pause(700);
   }
