@@ -1,5 +1,3 @@
-import {gguf} from '@huggingface/gguf';
-
 import {
   isMTPCapable,
   probeRemoteMTPCapability,
@@ -8,8 +6,8 @@ import {
   isDraftOnlyFilename,
   isDraftOnlyModel,
 } from '../mtp';
-import {installTextDecoder} from '../textDecoder';
 import {GGUFMetadata} from '../types';
+import {FixtureType, GGUFFixture, rangeFetchFor} from './ggufFixture';
 
 const meta = (over: Partial<GGUFMetadata> = {}): GGUFMetadata => ({
   architecture: 'qwen3',
@@ -72,105 +70,84 @@ describe('mtp utils', () => {
   });
 
   describe('probeRemoteMTPCapability (header fetch)', () => {
+    const mtpFixture = () =>
+      new GGUFFixture()
+        .kv('general.architecture', {type: FixtureType.STRING, value: 'qwen35'})
+        .kv('qwen35.nextn_predict_layers', {
+          type: FixtureType.UINT32,
+          value: 2,
+        });
+
+    const serveFixture = (fixture: GGUFFixture) => {
+      const impl = rangeFetchFor(fixture.build());
+      (globalThis.fetch as jest.Mock).mockImplementation(impl);
+      return impl;
+    };
+
+    const nativeFetch = globalThis.fetch;
+    beforeEach(() => {
+      globalThis.fetch = jest.fn() as unknown as typeof fetch;
+    });
+    afterEach(() => {
+      globalThis.fetch = nativeFetch;
+    });
+
     it('is capable on a positive nextn_predict_layers KV', async () => {
-      (gguf as jest.Mock).mockResolvedValueOnce({
-        metadata: {
-          'general.architecture': 'qwen3',
-          'qwen3.nextn_predict_layers': 2,
-        },
-        tensorInfos: [],
-      });
+      serveFixture(mtpFixture());
       await expect(probeRemoteMTPCapability(URL)).resolves.toBe('capable');
     });
 
     it('falls back to a nextn tensor-name probe when the KV is absent', async () => {
-      (gguf as jest.Mock).mockResolvedValueOnce({
-        metadata: {'general.architecture': 'qwen3'},
-        tensorInfos: [
-          {name: 'blk.0.attn_q.weight'},
-          {name: 'blk.0.nextn.embed_tokens.weight'},
-        ],
-      });
+      serveFixture(
+        new GGUFFixture()
+          .kv('general.architecture', {
+            type: FixtureType.STRING,
+            value: 'qwen35',
+          })
+          .tensor('blk.0.attn_q.weight')
+          .tensor('blk.0.nextn.embed_tokens.weight'),
+      );
       await expect(probeRemoteMTPCapability(URL)).resolves.toBe('capable');
     });
 
     it('is not-capable when neither the KV nor nextn tensors are present', async () => {
-      (gguf as jest.Mock).mockResolvedValueOnce({
-        metadata: {'general.architecture': 'qwen3'},
-        tensorInfos: [{name: 'blk.0.attn_q.weight'}],
-      });
+      serveFixture(
+        new GGUFFixture()
+          .kv('general.architecture', {
+            type: FixtureType.STRING,
+            value: 'qwen35',
+          })
+          .tensor('blk.0.attn_q.weight'),
+      );
       await expect(probeRemoteMTPCapability(URL)).resolves.toBe('not-capable');
     });
 
     it('is unknown, not not-capable, when the fetch rejects', async () => {
-      (gguf as jest.Mock).mockRejectedValueOnce(new Error('network'));
+      (globalThis.fetch as jest.Mock).mockRejectedValue(new Error('network'));
+      await expect(probeRemoteMTPCapability(URL)).resolves.toBe('unknown');
+    });
+
+    it('is unknown on a payload that is not GGUF at all', async () => {
+      (globalThis.fetch as jest.Mock).mockImplementation(
+        rangeFetchFor(new TextEncoder().encode('<html>rate limited</html>')),
+      );
       await expect(probeRemoteMTPCapability(URL)).resolves.toBe('unknown');
     });
 
     it('parses a given header once and serves repeat probes from cache', async () => {
-      (gguf as jest.Mock).mockResolvedValueOnce({
-        metadata: {
-          'general.architecture': 'qwen3',
-          'qwen3.nextn_predict_layers': 2,
-        },
-        tensorInfos: [],
-      });
+      const impl = serveFixture(mtpFixture());
       await expect(probeRemoteMTPCapability(URL)).resolves.toBe('capable');
+      const callsAfterFirst = impl.mock.calls.length;
       await expect(probeRemoteMTPCapability(URL)).resolves.toBe('capable');
-      expect(gguf).toHaveBeenCalledTimes(1);
+      expect(impl.mock.calls.length).toBe(callsAfterFirst);
     });
 
     it('does not cache unknown, so a failed probe can retry', async () => {
-      (gguf as jest.Mock)
-        .mockRejectedValueOnce(new Error('network'))
-        .mockResolvedValueOnce({
-          metadata: {
-            'general.architecture': 'qwen3',
-            'qwen3.nextn_predict_layers': 2,
-          },
-          tensorInfos: [],
-        });
+      (globalThis.fetch as jest.Mock).mockRejectedValueOnce(
+        new Error('network'),
+      );
       await expect(probeRemoteMTPCapability(URL)).resolves.toBe('unknown');
-      await expect(probeRemoteMTPCapability(URL)).resolves.toBe('capable');
-      expect(gguf).toHaveBeenCalledTimes(2);
-    });
-  });
-
-  describe('probeRemoteMTPCapability on a runtime without TextDecoder', () => {
-    const nativeTextDecoder = globalThis.TextDecoder;
-
-    beforeEach(() => {
-      // The real reader builds every GGUF string through TextDecoder, so the
-      // probe only works on a runtime that has one. Hermes does not.
-      (gguf as jest.Mock).mockImplementation(async () => {
-        const raw = new TextEncoder().encode('qwen35');
-        const arch = new TextDecoder().decode(
-          raw.buffer.slice(0, raw.byteLength),
-        );
-        return {
-          metadata: {
-            'general.architecture': arch,
-            [`${arch}.nextn_predict_layers`]: 1,
-          },
-          tensorInfos: [],
-        };
-      });
-      // @ts-expect-error deleting a global to simulate the Hermes runtime
-      delete globalThis.TextDecoder;
-    });
-
-    afterEach(() => {
-      globalThis.TextDecoder = nativeTextDecoder;
-      (gguf as jest.Mock).mockReset();
-    });
-
-    it('reports unknown rather than passing a dead probe off as a negative', async () => {
-      await expect(probeRemoteMTPCapability(URL)).resolves.toBe('unknown');
-    });
-
-    it('reads the header once the polyfill is installed', async () => {
-      installTextDecoder();
-
+      serveFixture(mtpFixture());
       await expect(probeRemoteMTPCapability(URL)).resolves.toBe('capable');
     });
   });

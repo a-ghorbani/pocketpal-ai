@@ -2,10 +2,8 @@
  * @format
  */
 
-// Hermes/React Native ship neither URL nor TextDecoder; both must exist before
-// the app graph loads.
+// Hermes/React Native ship no URL; it must exist before the app graph loads.
 import 'react-native-url-polyfill/auto';
-import './src/utils/textDecoder';
 
 import {AppRegistry, LogBox} from 'react-native';
 

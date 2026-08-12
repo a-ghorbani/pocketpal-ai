@@ -1,5 +1,4 @@
-import {gguf} from '@huggingface/gguf';
-
+import {readGGUFHeaderForMTP} from './ggufHeader';
 import {GGUFMetadata} from './types';
 
 export const isMTPCapable = (model: {ggufMetadata?: GGUFMetadata}): boolean =>
@@ -47,15 +46,14 @@ export const nEmbdOut = (meta?: GGUFMetadata): number | undefined =>
  */
 export type MTPRemoteCapability = 'capable' | 'not-capable' | 'unknown';
 
-// Parsing a header means decoding the full metadata block — megabytes and
-// ~10^5 strings on large-vocab repos — on the JS thread, so a reopened
+// A probe still costs a few range requests and a header walk, so a reopened
 // details sheet must not pay it twice. `unknown` is not cached: it marks a
 // probe that could not run, and a retry may succeed.
 const probeCache = new Map<string, MTPRemoteCapability>();
 const PROBE_CACHE_MAX = 64;
 
 // Range-fetches the GGUF header. Some converters omit the KV but still write
-// `nextn.*` tensors, hence the tensor-name fallback.
+// `nextn.*` tensors, hence the tensor-name fallback inside the reader.
 export const probeRemoteMTPCapability = async (
   ggufUrl: string,
 ): Promise<MTPRemoteCapability> => {
@@ -64,14 +62,10 @@ export const probeRemoteMTPCapability = async (
     return cached;
   }
   try {
-    const {metadata, tensorInfos} = await gguf(ggufUrl);
-    const arch = metadata['general.architecture'] as string | undefined;
-    const kv = arch ? Number(metadata[`${arch}.nextn_predict_layers`] ?? 0) : 0;
+    const {nextnPredictLayers, hasNextnTensor} =
+      await readGGUFHeaderForMTP(ggufUrl);
     const result: MTPRemoteCapability =
-      (Number.isFinite(kv) && kv > 0) ||
-      (tensorInfos ?? []).some(t => /(^|\.)nextn\./.test(t.name))
-        ? 'capable'
-        : 'not-capable';
+      nextnPredictLayers > 0 || hasNextnTensor ? 'capable' : 'not-capable';
     if (probeCache.size >= PROBE_CACHE_MAX) {
       probeCache.delete(probeCache.keys().next().value as string);
     }
