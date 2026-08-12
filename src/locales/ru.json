@@ -170,7 +170,7 @@
     "contextRemoteHedged": "Этот ответ мог быть обрезан. Попробуйте отправить запрос еще раз или сократите его.",
     "contextFull": "В рабочей памяти модели не хватило места для контекста диалога. Начните новый чат или увеличьте размер контекста.",
     "contextFullEscalated": "Всё ещё не хватает рабочей памяти модели. Начните новый чат или увеличьте размер контекста, чтобы продолжить работу.",
-    "contextFullHeavyTalent": "В рабочей памяти модели не хватило места для контекста диалога – {{talent}} обычно требует больше. Начните новый чат или увеличьте размер контекста.",
+    "contextFullHeavyTalent": "Лимит контекста диалога исчерпан — {{talent}} обычно требует больше. Начните новый чат или увеличьте размер контекста.",
     "contextBannerDismiss": "Отклонить",
     "contextNewChat": "Новый чат",
     "contextIncrease": "Увеличить контекст",
@@ -209,7 +209,8 @@
       "searchResultsTitle": "Результаты поиска",
       "showResultsAccessibilityLabel": "Показать результаты поиска в интернете по запросу {{query}}",
       "openLinkError": "Не удалось открыть эту ссылку."
-    }
+    },
+    "contextFullRemote": "Лимит контекста диалога исчерпан. Начните новый чат."
   },
   "common": {
     "cancel": "Отмена",
@@ -243,7 +244,8 @@
     "close": "Закрыть",
     "clear": "Очистить всё",
     "gallery": "Галерея",
-    "stop": "Остановить"
+    "stop": "Остановить",
+    "noResults": "Ничего не найдено"
   },
   "completionParams": {
     "grammar": "Принудительное соблюдение грамматических правил, чтобы текст следовал строгой структуре или формату",
@@ -930,7 +932,10 @@
         "author": "Автор",
         "requiresProjectionModel": "Требуется модель проекции",
         "downloadProjectionModel": "Загрузить модель проекции",
-        "viewModelCardOnHuggingFace": "Открыть карточку модели на Hugging Face"
+        "viewModelCardOnHuggingFace": "Открыть карточку модели на Hugging Face",
+        "visionSupported": "Поддерживается",
+        "visionNotSupported": "Не поддерживается",
+        "visionUnknown": "Неизвестно"
       },
       "accessibility": {
         "expandDetails": "Развернуть детали",
@@ -1208,7 +1213,9 @@
       "consentGivenTitle": "Поиск в интернете включён",
       "consentGivenDescription": "Запросы и чтение страниц могут покидать ваше устройство, как описано выше.",
       "consentRevoke": "Отозвать"
-    }
+    },
+    "languageSheetTitle": "Язык",
+    "languageSearchPlaceholder": "Поиск языков"
   },
   "storage": {
     "checkFailed": "Не удалось проверить хранилище",

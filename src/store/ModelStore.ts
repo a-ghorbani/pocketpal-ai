@@ -80,6 +80,7 @@ import {
   ModelFile,
   ModelOrigin,
   ModelType,
+  RemoteSessionBinding,
 } from '../utils/types';
 
 import {ErrorState, createErrorState} from '../utils/errors';
@@ -92,6 +93,9 @@ import {
 } from '../utils/deviceCapabilities';
 import {detectThinkingCapability} from '../utils/thinkingCapabilityDetection';
 import {ReasoningCapability} from '../utils/reasoningCapability';
+import {capsMatchBinding} from '../utils/remoteCaps';
+import {resolveModelCaps} from '../utils/modelCaps';
+import type {CapabilityEnv, ModelCapabilityView} from '../utils/modelCaps';
 import {t} from '../locales';
 import {resolveUseMmap} from '../utils/memorySettings';
 import {
@@ -186,6 +190,8 @@ class ModelStore {
 
   engine: CompletionEngine | undefined = undefined;
 
+  activeRemoteBinding: RemoteSessionBinding | undefined = undefined;
+
   lastUsedModelId: string | undefined = undefined;
 
   // Auto-release tracking (persistent)
@@ -232,6 +238,7 @@ class ModelStore {
   constructor() {
     makeAutoObservable(this, {
       activeModel: computed,
+      activeModelCaps: computed,
       contextId: computed,
       remoteModels: computed,
       activeDownloads: computed,
@@ -1116,6 +1123,7 @@ class ModelStore {
     ) {
       // Coming to foreground - check if we need to reload auto-released model
       await this.checkAndReloadAutoReleasedModel();
+      this.reprobeRemoteCapsIfUnknown();
     } else if (this.appState === 'active' && nextAppState === 'inactive') {
       // active → inactive: NO action (per requirements)
       console.log('Active → Inactive: No auto-release action');
@@ -1149,6 +1157,47 @@ class ModelStore {
     runInAction(() => {
       this.appState = nextAppState;
     });
+  };
+
+  /**
+   * Remote models are exempt from auto-release, so a session survives
+   * backgrounding — but the capability probe behind it may not have: iOS can
+   * tear the request down, and the first probe is the request that raises the
+   * local-network prompt, so a grant always arrives after it already failed.
+   * Without this, caps stay unknown for the rest of the session and the only
+   * recovery is re-selecting the model by hand.
+   *
+   * Also skipped once the server record has been repointed away from that
+   * backend: the probe would read a backend this session never talks to, and
+   * it cannot produce caps this session could use. The next activation
+   * rebuilds the binding and probes the url it is built from.
+   */
+  private reprobeRemoteCapsIfUnknown = () => {
+    const model = this.activeModel;
+    if (
+      model?.origin !== ModelOrigin.REMOTE ||
+      !model.serverId ||
+      !model.remoteModelId ||
+      capsMatchBinding(
+        serverStore.remoteCaps[model.id],
+        this.activeRemoteBinding,
+        model.id,
+      )
+    ) {
+      return;
+    }
+    const binding = this.activeRemoteBinding;
+    if (binding?.modelId === model.id) {
+      const configuredUrl = serverStore.servers.find(
+        s => s.id === model.serverId,
+      )?.url;
+      if (configuredUrl !== undefined && configuredUrl !== binding.url) {
+        return;
+      }
+    }
+    serverStore
+      .fetchRemoteModelCaps(model.serverId, model.remoteModelId)
+      .catch(() => {});
   };
 
   reinitializeContext = async () => {
@@ -2171,6 +2220,7 @@ class ModelStore {
       runInAction(() => {
         this.context = ctx;
         this.engine = new LocalCompletionEngine(ctx);
+        this.activeRemoteBinding = undefined;
         this.activeContextSettings = contextInitParams;
         this.setActiveModel(model.id);
         this.pendingModelId = null;
@@ -2245,6 +2295,7 @@ class ModelStore {
         }
         runInAction(() => {
           this.engine = undefined;
+          this.activeRemoteBinding = undefined;
           if (clearActiveModel) {
             this.activeModelId = undefined;
           }
@@ -2298,8 +2349,7 @@ class ModelStore {
       }
 
       // Step 3: Now safe to release - First check if multimodal is enabled and release it if needed
-      const isMultimodalEnabled = await this.isMultimodalEnabled();
-      if (isMultimodalEnabled) {
+      if (this.isMultimodalActive) {
         console.log('Releasing multimodal context first');
         try {
           await this.context.releaseMultimodal();
@@ -2328,6 +2378,7 @@ class ModelStore {
       runInAction(() => {
         this.context = undefined;
         this.engine = undefined;
+        this.activeRemoteBinding = undefined;
         this.activeContextSettings = undefined;
         // Ensure multimodal state is cleared even if something went wrong above
         this.isMultimodalActive = false;
@@ -2385,6 +2436,31 @@ class ModelStore {
     );
   }
 
+  private get capabilityEnv(): CapabilityEnv {
+    return {
+      remoteCaps: serverStore.remoteCaps,
+      listCaps: serverStore.listCaps,
+      binding: this.activeRemoteBinding,
+      isMultimodalActive: this.isMultimodalActive,
+      activeContextSettings: this.activeContextSettings,
+      activeModelId: this.activeModelId,
+    };
+  }
+
+  /**
+   * Capabilities of any model, active or not — the model card's entry point.
+   * Never annotate it explicitly as `action`: that untracks the observable
+   * reads, so every card would freeze on its first value while the suite
+   * stayed green.
+   */
+  capsFor = (model: Model | undefined): ModelCapabilityView =>
+    resolveModelCaps(model, this.capabilityEnv);
+
+  /** Capabilities of the live session — chat's entry point. */
+  get activeModelCaps(): ModelCapabilityView {
+    return this.capsFor(this.activeModel);
+  }
+
   get lastUsedModel(): Model | undefined {
     return this.lastUsedModelId
       ? this.models.find(m => m.id === this.lastUsedModelId && m.isDownloaded)
@@ -2408,8 +2484,10 @@ class ModelStore {
   }
 
   /**
-   * Computed property that derives remote models from serverStore.serverModels.
-   * Remote models are never stored in the models array (which is persisted).
+   * Derived from `serverStore.userSelectedModels` and `serverStore.servers` —
+   * not from `serverModels`, so the list a server currently advertises does not
+   * change which cards exist. Remote models are never stored in the persisted
+   * `models` array.
    */
   get remoteModels(): Model[] {
     const models: Model[] = [];
@@ -2461,9 +2539,20 @@ class ModelStore {
         server.requestTimeoutMs,
         server.serverType,
       );
+      this.activeRemoteBinding = {
+        modelId: model.id,
+        serverId: model.serverId!,
+        remoteModelId: model.remoteModelId!,
+        url: server.url,
+        serverType: server.serverType,
+      };
       this.setActiveModel(model.id);
       // Do NOT set lastUsedModelId for remote models -- server may be offline on next launch
     });
+
+    serverStore
+      .fetchRemoteModelCaps(model.serverId, model.remoteModelId, apiKey)
+      .catch(() => {});
   };
 
   /**
@@ -3149,51 +3238,6 @@ class ModelStore {
   }
 
   /**
-   * Checks if the current context supports multimodal input
-   * @returns Promise<boolean> - True if multimodal is enabled, false otherwise
-   */
-  isMultimodalEnabled = async (): Promise<boolean> => {
-    // First check our cached flag for quick responses
-    if (this.isMultimodalActive) {
-      return true;
-    }
-
-    // Remote models have no local context; their vision capability comes from
-    // the active server's /props self-report. releaseContext clears both
-    // context and the cached flag on switch, so this is never stale-true for a
-    // remote model. Placed before the !context early-return so a remote model
-    // is not shadowed into that dead branch.
-    if (!this.context && this.activeModel?.origin === ModelOrigin.REMOTE) {
-      const serverId = this.activeModel?.serverId;
-      return (
-        serverStore.servers.find(s => s.id === serverId)?.supportsVision ===
-        true
-      );
-    }
-
-    // Avoid "Context not found" errors during transitions
-    if (!this.context || this.isContextLoading) {
-      return false;
-    }
-
-    try {
-      const isEnabled = await this.context.isMultimodalEnabled();
-
-      // Update our cached flag
-      if (isEnabled !== this.isMultimodalActive) {
-        runInAction(() => {
-          this.isMultimodalActive = isEnabled;
-        });
-      }
-
-      return isEnabled;
-    } catch (error) {
-      console.error('Error checking multimodal capability:', error);
-      return false;
-    }
-  };
-
-  /**
    * Get compatible projection models for a given LLM
    * @param modelId The ID of the LLM model
    * @returns Array of compatible projection models
@@ -3557,8 +3601,7 @@ class ModelStore {
     }
 
     // Check if multimodal is enabled
-    const isMultimodalEnabled = await this.isMultimodalEnabled();
-    if (!isMultimodalEnabled) {
+    if (!this.isMultimodalActive) {
       throw new Error('Multimodal is not enabled for this model');
     }
 

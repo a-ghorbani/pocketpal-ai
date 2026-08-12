@@ -3,8 +3,13 @@ import {computed, makeAutoObservable, observable} from 'mobx';
 import {modelsList} from '../../jest/fixtures/models';
 
 import {downloadManager} from '../services/downloads';
+import {mockServerStore} from './serverStore';
 
-import {Model, ContextInitParams} from '../../src/utils/types';
+import {
+  Model,
+  ContextInitParams,
+  RemoteSessionBinding,
+} from '../../src/utils/types';
 import {LlamaContext} from 'llama.rn';
 import {CompletionEngine} from '../../src/utils/completionTypes';
 import {createDefaultContextInitParams} from '../../src/utils/contextInitParamsVersions';
@@ -12,6 +17,11 @@ import {
   draftCacheDefaults,
   effectiveDraftModeOf,
 } from '../../src/store/draftResolution';
+import {resolveModelCaps} from '../../src/utils/modelCaps';
+import type {
+  CapabilityEnv,
+  ModelCapabilityView,
+} from '../../src/utils/modelCaps';
 
 class MockModelStore {
   models = modelsList;
@@ -24,6 +34,9 @@ class MockModelStore {
   isStreaming = false;
   context: LlamaContext | undefined = undefined;
   engine: CompletionEngine | undefined = undefined;
+  isMultimodalActive: boolean = false;
+  activeContextSettings: ContextInitParams | undefined = undefined;
+  activeRemoteBinding: RemoteSessionBinding | undefined = undefined;
 
   // Memory calibration variables
   availableMemoryCeiling: number | undefined = 5 * 1e9; // 5GB ceiling
@@ -136,6 +149,7 @@ class MockModelStore {
       contextId: computed,
       lastUsedModel: computed,
       activeModel: computed,
+      activeModelCaps: computed,
       displayModels: computed,
       availableModels: computed,
       effectiveDraftMode: computed,
@@ -263,6 +277,27 @@ class MockModelStore {
     return this.models.find(model => model.id === this.activeModelId);
   }
 
+  // Delegates to the real resolver over the live mock stores rather than
+  // returning a fixed answer, so consumer suites exercise the actual
+  // capability chain and stay reactive to store mutations.
+  private get capabilityEnv(): CapabilityEnv {
+    return {
+      remoteCaps: mockServerStore.remoteCaps,
+      listCaps: mockServerStore.listCaps,
+      binding: this.activeRemoteBinding,
+      isMultimodalActive: this.isMultimodalActive,
+      activeContextSettings: this.activeContextSettings,
+      activeModelId: this.activeModelId,
+    };
+  }
+
+  capsFor = (model: Model | undefined): ModelCapabilityView =>
+    resolveModelCaps(model, this.capabilityEnv);
+
+  get activeModelCaps(): ModelCapabilityView {
+    return this.capsFor(this.activeModel);
+  }
+
   get displayModels(): Model[] {
     // Filter out projection models for display purposes
     return this.models.filter(model => model.modelType !== 'projection');
@@ -289,11 +324,6 @@ class MockModelStore {
 
   isModelAvailable(modelId: string) {
     return this.availableModels.some(model => model.id === modelId);
-  }
-
-  async isMultimodalEnabled(): Promise<boolean> {
-    // Mock implementation - return false by default for tests
-    return false;
   }
 
   async getModelFullPath(model: Model): Promise<string> {

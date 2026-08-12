@@ -394,6 +394,9 @@
       "labels": {
         "skills": "Skills: ",
         "vision": "Vision",
+        "visionSupported": "Supported",
+        "visionNotSupported": "Not supported",
+        "visionUnknown": "Unknown",
         "capabilities": "capabilities.",
         "modelName": "Model Name",
         "contextLength": "Context Length",
@@ -767,6 +770,7 @@
       "makeChatTemporary": "Make chat temporary",
       "export": "Export/Import",
       "exportCurrentSession": "Export current session",
+      "exportCurrentSessionMarkdown": "Export as Markdown",
       "exportAllSessions": "Export all sessions",
       "exportChatSession": "Export chat session",
       "importSessions": "Import sessions"

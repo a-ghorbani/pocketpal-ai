@@ -2,6 +2,7 @@ import React from 'react';
 import {runInAction} from 'mobx';
 
 import {fireEvent, render} from '../../../../jest/test-utils';
+import {modelsList} from '../../../../jest/fixtures/models';
 
 import {L10nContext} from '../../../utils';
 import {ModelOrigin} from '../../../utils/types';
@@ -30,6 +31,9 @@ describe('BannerRow', () => {
   beforeEach(() => {
     jest.clearAllMocks();
     runInAction(() => {
+      // Cases that swap in a remote model leave the list empty, so restore it:
+      // the local window resolves against the active model, not the id alone.
+      modelStore.models = modelsList;
       modelStore.activeModelId = 'model-1';
       (modelStore as any).activeContextSettings = {n_ctx: 4096};
       modelStore.availableMemoryCeiling = 5 * 1e9;
@@ -190,9 +194,9 @@ describe('BannerRow', () => {
           name: 'llama',
           url: 'http://localhost:8080',
           serverType: 'llama.cpp',
-          contextLength: 4096,
         } as any,
       ];
+      serverStore.remoteCaps = {'remote-1': {contextLength: 4096}};
       // A remote session can reach >=2 consecutive full turns (the counter is
       // remote-agnostic), but must not re-surface the escalated increase advice.
       chatSessionStore.consecutiveFullFailures = 2;
@@ -210,6 +214,7 @@ describe('BannerRow', () => {
     runInAction(() => {
       modelStore.models = [];
       serverStore.servers = [];
+      serverStore.remoteCaps = {};
     });
   });
 
@@ -274,9 +279,9 @@ describe('BannerRow', () => {
           name: 'llama',
           url: 'http://localhost:8080',
           serverType: 'llama.cpp',
-          contextLength: 4096,
         } as any,
       ];
+      serverStore.remoteCaps = {'remote-1': {contextLength: 4096}};
       chatSessionStore.lastCompletionResult = {
         used: 4096,
         contextFull: true,
@@ -295,6 +300,84 @@ describe('BannerRow', () => {
     runInAction(() => {
       modelStore.models = [];
       serverStore.servers = [];
+      serverStore.remoteCaps = {};
+    });
+  });
+
+  it('ignores a window probed against another backend', () => {
+    runInAction(() => {
+      modelStore.activeModelId = 'remote-1';
+      modelStore.models = [
+        {id: 'remote-1', origin: ModelOrigin.REMOTE, serverId: 'srv-1'} as any,
+      ];
+      (modelStore as any).activeContextSettings = undefined;
+      serverStore.servers = [
+        {
+          id: 'srv-1',
+          name: 'llama',
+          url: 'http://localhost:9090',
+        } as any,
+      ];
+      // The session is still on :8080; the entry describes :9090, so there is
+      // no window to measure against and the banners stay silent.
+      modelStore.activeRemoteBinding = {
+        modelId: 'remote-1',
+        serverId: 'srv-1',
+        remoteModelId: 'remote-1',
+        url: 'http://localhost:8080',
+      };
+      serverStore.remoteCaps = {
+        'remote-1': {contextLength: 4096, probedUrl: 'http://localhost:9090'},
+      };
+      chatSessionStore.lastCompletionResult = {
+        used: 4096,
+        contextFull: false,
+        isRemote: true,
+      };
+    });
+    const {queryByTestId} = renderBanner();
+    expect(queryByTestId('context-full-banner')).toBeNull();
+    expect(queryByTestId('context-warning-banner')).toBeNull();
+
+    runInAction(() => {
+      modelStore.models = [];
+      modelStore.activeRemoteBinding = undefined;
+      serverStore.servers = [];
+      serverStore.remoteCaps = {};
+    });
+  });
+
+  it('does not treat a per-model window of 0 as a full context', () => {
+    runInAction(() => {
+      modelStore.activeModelId = 'remote-1';
+      modelStore.models = [
+        {id: 'remote-1', origin: ModelOrigin.REMOTE, serverId: 'srv-1'} as any,
+      ];
+      (modelStore as any).activeContextSettings = undefined;
+      serverStore.servers = [
+        {
+          id: 'srv-1',
+          name: 'llama',
+          url: 'http://localhost:8080',
+          serverType: 'llama.cpp',
+        } as any,
+      ];
+      // No writer produces this today; the gate is what keeps it that way.
+      serverStore.remoteCaps = {'remote-1': {contextLength: 0}};
+      chatSessionStore.lastCompletionResult = {
+        used: 120,
+        contextFull: false,
+        isRemote: true,
+      };
+    });
+    const {queryByTestId} = renderBanner();
+    expect(queryByTestId('context-full-banner')).toBeNull();
+    expect(queryByTestId('context-warning-banner')).toBeNull();
+
+    runInAction(() => {
+      modelStore.models = [];
+      serverStore.servers = [];
+      serverStore.remoteCaps = {};
     });
   });
 
@@ -311,9 +394,9 @@ describe('BannerRow', () => {
           name: 'llama',
           url: 'http://localhost:8080',
           serverType: 'llama.cpp',
-          contextLength: 4096,
         } as any,
       ];
+      serverStore.remoteCaps = {'remote-1': {contextLength: 4096}};
       chatSessionStore.lastCompletionResult = {
         used: 4096,
         contextFull: true,
@@ -330,6 +413,7 @@ describe('BannerRow', () => {
     runInAction(() => {
       modelStore.models = [];
       serverStore.servers = [];
+      serverStore.remoteCaps = {};
     });
   });
 
@@ -346,6 +430,29 @@ describe('BannerRow', () => {
     expect(queryByText(l10n.en.chat.contextFullRemote)).toBeNull();
   });
 
+  it('measures against the session window, not the window the model declares', () => {
+    runInAction(() => {
+      modelStore.models = [
+        {
+          id: 'model-1',
+          origin: ModelOrigin.PRESET,
+          ggufMetadata: {context_length: 32768},
+        } as any,
+      ];
+      (modelStore as any).activeContextSettings = {n_ctx: 4096};
+      chatSessionStore.lastCompletionResult = {
+        used: 3300,
+        contextFull: false,
+        isRemote: false,
+      };
+    });
+    const {getByTestId} = renderBanner();
+    // 3300 / 4096 ≈ 81%; against the declared 32768 it would be 10% and no
+    // banner would render at all.
+    expect(getByTestId('context-warning-banner')).toBeTruthy();
+    expect(getByTestId('banner-percent')).toHaveTextContent('81%');
+  });
+
   it('resolves the near-limit warning + meter percent for a remote model', () => {
     runInAction(() => {
       modelStore.activeModelId = 'remote-1';
@@ -359,9 +466,9 @@ describe('BannerRow', () => {
           name: 'llama',
           url: 'http://localhost:8080',
           serverType: 'llama.cpp',
-          contextLength: 4096,
         } as any,
       ];
+      serverStore.remoteCaps = {'remote-1': {contextLength: 4096}};
       chatSessionStore.lastCompletionResult = {
         used: 3300,
         contextFull: false,
@@ -377,6 +484,7 @@ describe('BannerRow', () => {
     runInAction(() => {
       modelStore.models = [];
       serverStore.servers = [];
+      serverStore.remoteCaps = {};
     });
   });
 

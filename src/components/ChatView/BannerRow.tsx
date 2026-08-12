@@ -8,7 +8,7 @@ import {createStyles} from './styles';
 
 import {AlertIcon} from '../../assets/icons';
 import {useTheme} from '../../hooks';
-import {chatSessionStore, modelStore, serverStore} from '../../store';
+import {chatSessionStore, modelStore} from '../../store';
 import {L10nContext} from '../../utils';
 import {MessageType, ModelOrigin} from '../../utils/types';
 import {resolveBannerVariant} from '../../utils/bannerVariantResolver';
@@ -100,19 +100,9 @@ export const BannerRow: React.FC<BannerRowProps> = observer(
       },
     };
 
-    const activeModel = modelStore.activeModel;
-    const isRemote = activeModel?.origin === ModelOrigin.REMOTE;
+    const isRemote = modelStore.activeModel?.origin === ModelOrigin.REMOTE;
 
-    // activeContextSettings.n_ctx is local-only (set by a LlamaContext). For a
-    // remote model fall back to the server's /props-reported contextLength so
-    // the context banners can measure against a real window.
-    const localNCtx = modelStore.activeContextSettings?.n_ctx;
-    const effectiveNCtx =
-      localNCtx ??
-      (isRemote
-        ? serverStore.servers.find(s => s.id === activeModel?.serverId)
-            ?.contextLength
-        : undefined);
+    const effectiveNCtx = modelStore.activeModelCaps.effectiveContextLength;
 
     const {variant, heavyTalentName, ratio} = resolveBannerVariant(
       chatSessionStore.lastCompletionResult,

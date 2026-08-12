@@ -31,7 +31,8 @@
     "close": "סגור",
     "clear": "נקה הכל",
     "gallery": "גלריה",
-    "stop": "עצור"
+    "stop": "עצור",
+    "noResults": "אין תוצאות"
   },
   "settings": {
     "modelInitializationSettings": "הגדרות איתחול מודל",
@@ -188,7 +189,9 @@
       "consentGivenTitle": "חיפוש ברשת מופעל",
       "consentGivenDescription": "שאילתות וקריאות של דפים עשויות לצאת מהמכשיר שלך כמתואר למעלה.",
       "consentRevoke": "בטל הסכמה"
-    }
+    },
+    "languageSheetTitle": "שפה",
+    "languageSearchPlaceholder": "חפש שפות"
   },
   "memory": {
     "shortWarning": "אזהרת זיכרון",
@@ -375,7 +378,10 @@
         "author": "בעלים",
         "requiresProjectionModel": "דורש מודל שכבת התאמה",
         "downloadProjectionModel": "הורד מודל שכבת התאמה",
-        "viewModelCardOnHuggingFace": "הצג כרטיס מודל ב-Hugging Face"
+        "viewModelCardOnHuggingFace": "הצג כרטיס מודל ב-Hugging Face",
+        "visionSupported": "נתמך",
+        "visionNotSupported": "לא נתמך",
+        "visionUnknown": "לא ידוע"
       },
       "accessibility": {
         "expandDetails": "הרחב פרטים",
@@ -1218,7 +1224,8 @@
       "searchResultsTitle": "תוצאות חיפוש",
       "showResultsAccessibilityLabel": "הצג תוצאות חיפוש ברשת עבור {{query}}",
       "openLinkError": "לא ניתן היה לפתוח את הקישור הזה."
-    }
+    },
+    "contextFullRemote": "נגמר המקום בשיחה. פתח צ'אט חדש."
   },
   "benchmark": {
     "title": "מבחן ביצועים",
