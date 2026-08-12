@@ -1,5 +1,5 @@
 import {makeAutoObservable, runInAction} from 'mobx';
-import {format, isToday, isYesterday} from 'date-fns';
+import {isToday, isYesterday} from 'date-fns';
 import * as RNFS from '@dr.pogodin/react-native-fs';
 
 import {
@@ -43,6 +43,7 @@ export interface SessionMetaData {
   messages: MessageType.Any[];
   completionSettings: CompletionParams;
   activePalId?: string;
+  pinned?: boolean;
   settingsSource: 'pal' | 'custom'; // Explicit choice: use pal settings or custom settings
   messagesLoaded?: boolean; // Track if messages are loaded for lazy loading
 }
@@ -53,6 +54,7 @@ interface SessionGroup {
 
 // Default group names in English as fallback
 const DEFAULT_GROUP_NAMES = {
+  pinned: 'Pinned',
   today: 'Today',
   yesterday: 'Yesterday',
   thisWeek: 'This week',
@@ -304,6 +306,7 @@ class ChatSessionStore {
           completionSettings,
           activePalId: session.activePalId,
           settingsSource: (session.settingsSource as 'pal' | 'custom') || 'pal',
+          pinned: session.pinned || false,
           messagesLoaded: false, // Mark as not loaded for lazy loading
         });
       }
@@ -598,6 +601,7 @@ class ChatSessionStore {
         messages,
         completionSettings: settings,
         settingsSource: birthSource, // 'custom' if a thinking override was staged, else stored source
+        pinned: false,
         messagesLoaded: true, // Mark as loaded since we have the messages
       };
 
@@ -1131,10 +1135,13 @@ class ChatSessionStore {
   }
 
   get groupedSessions(): SessionGroup {
-    const groups: SessionGroup = this.sessions.reduce(
+    const pinnedSessions = this.sessions.filter(s => s.pinned);
+    const unpinnedSessions = this.sessions.filter(s => !s.pinned);
+
+    const groups: SessionGroup = unpinnedSessions.reduce(
       (acc: SessionGroup, session) => {
         const date = new Date(session.date);
-        let dateKey: string = format(date, 'MMMM dd, yyyy');
+        let dateKey: string;
         const today = new Date();
         const daysAgo = Math.ceil(
           (today.getTime() - date.getTime()) / (1000 * 3600 * 24),
@@ -1182,8 +1189,14 @@ class ChatSessionStore {
       this.dateGroupNames.older,
     ];
 
-    // Create a new object with keys in the desired order
     const orderedGroups: SessionGroup = {};
+
+    if (pinnedSessions.length > 0) {
+      orderedGroups[this.dateGroupNames.pinned] = pinnedSessions.sort(
+        (a, b) => new Date(b.date).getTime() - new Date(a.date).getTime(),
+      );
+    }
+
     orderedKeys.forEach(key => {
       if (groups[key]) {
         orderedGroups[key] = groups[key].sort(
@@ -1436,6 +1449,24 @@ class ChatSessionStore {
       }
     } else {
       this.newChatPalId = palId;
+    }
+  }
+
+  async togglePinSession(sessionId: string): Promise<void> {
+    const session = this.sessions.find(s => s.id === sessionId);
+    if (!session) {
+      return;
+    }
+
+    const pinned = !session.pinned;
+
+    try {
+      await chatSessionRepository.setSessionPinned(sessionId, pinned);
+      runInAction(() => {
+        session.pinned = pinned;
+      });
+    } catch (error) {
+      console.error('Failed to toggle pin session:', error);
     }
   }
 
