@@ -197,6 +197,13 @@ class ModelStore {
   // Last requested model ID - enables "last one wins" during rapid switching
   private pendingModelId: string | null = null;
 
+  // Recovered local-model paths awaiting persistence. resolveLocalModelPath
+  // collects (model -> re-anchored path) here instead of writing each one in
+  // its own runInAction; a container change invalidates every local path at
+  // once, so the batch flush turns N full store serializations into one.
+  // Not in the persist list, so it is never serialized itself.
+  private pendingLocalPathRecoveries: Map<Model, string> = new Map();
+
   // When true, the e2e benchmark runner owns the native context lifecycle.
   // Other callers (ChatView auto-load, selectModel, initContext) must defer
   // to keep the matrix's per-cell devices/n_gpu_layers from being shadowed
@@ -546,6 +553,11 @@ class ModelStore {
 
     if (storedVersion < MODEL_LIST_VERSION) {
       await this.mergeModelLists(presets);
+      // mergeModelLists awaits the download-status checks (which re-anchor stale
+      // container paths), so pruning here — as the non-migration branch does —
+      // is now safe: a recoverable local model has already been settled and will
+      // not be dropped as missing.
+      this.removeInvalidLocalModels();
       // Only finalize the one-time migration once presets actually resolved.
       // An empty result signals a transient resolve failure (e.g. the RAM read
       // rejected); leave the version unbumped so the migration retries next
@@ -1061,17 +1073,45 @@ class ModelStore {
    * `<DocumentDirectoryPath>/models/local`, so the segment from `models/local`
    * onward is stable and can be re-joined to the *current* documents path.
    *
-   * Returns the recovered path (and persists it) when the original is missing
-   * but the re-anchored one exists; otherwise returns the stored path unchanged
-   * so existing not-found handling still applies.
+   * Returns the recovered path (persistence is batched via
+   * flushPendingLocalPathRecoveries) when the original is missing but the
+   * re-anchored one exists; otherwise returns the stored path unchanged so
+   * existing not-found handling still applies.
+   *
+   * IMPORTANT: this re-anchoring is duplicated in native Swift for iOS
+   * Shortcuts — see the LOCAL branch of resolveModelPath() in
+   * ios/PocketPal/AppIntents/PalDataProvider.swift. Keep the two in sync; the
+   * shared '/models/local/' marker must match on both sides.
    */
   resolveLocalModelPath = async (model: Model): Promise<string> => {
     const storedPath = model.fullPath!;
 
-    if (await RNFS.exists(storedPath)) {
+    // A rejected exists() must not escape: getModelFullPath is treated as
+    // non-throwing by every consumer, and deleteModel awaits it *outside* its
+    // try (a throw would abort the delete before the unlink). An indeterminate
+    // check is degraded to "not present" — recovery is attempted, and if it is
+    // also indeterminate we fall through to the stored path so the existing
+    // not-found handling still applies.
+    const pathExists = async (path: string): Promise<boolean> => {
+      try {
+        return await RNFS.exists(path);
+      } catch (err) {
+        console.warn(
+          '[ModelStore] exists() check failed while resolving local path:',
+          {modelId: model.id, path, err},
+        );
+        return false;
+      }
+    };
+
+    if (await pathExists(storedPath)) {
       return storedPath;
     }
 
+    // Imported models are copied under <Documents>/models/local, so the segment
+    // from that marker onward is stable across container-UUID churn (iOS OS
+    // upgrade, backup/restore, reinstall) and can be re-joined to the current
+    // documents path.
     const marker = '/models/local/';
     const markerIndex = storedPath.indexOf(marker);
     if (markerIndex === -1) {
@@ -1081,7 +1121,7 @@ class ModelStore {
     const recoveredPath = `${RNFS.DocumentDirectoryPath}${storedPath.slice(
       markerIndex,
     )}`;
-    if (recoveredPath === storedPath || !(await RNFS.exists(recoveredPath))) {
+    if (recoveredPath === storedPath || !(await pathExists(recoveredPath))) {
       return storedPath;
     }
 
@@ -1089,10 +1129,32 @@ class ModelStore {
       '[ModelStore] Recovered local model path after container change:',
       {modelId: model.id, from: storedPath, to: recoveredPath},
     );
-    runInAction(() => {
-      model.fullPath = recoveredPath;
-    });
+    // Defer the write: flushPendingLocalPathRecoveries applies every recovery
+    // from a refresh pass in a single runInAction. Callers use the returned
+    // path immediately, so deferring persistence changes nothing they observe.
+    this.pendingLocalPathRecoveries.set(model, recoveredPath);
     return recoveredPath;
+  };
+
+  /**
+   * Applies every path recovered since the last flush in one runInAction, so a
+   * container change that invalidates N local paths persists once rather than N
+   * times. Called after refreshDownloadStatuses settles; entries for models no
+   * longer in the store are dropped.
+   */
+  private flushPendingLocalPathRecoveries = () => {
+    if (this.pendingLocalPathRecoveries.size === 0) {
+      return;
+    }
+    const recoveries = Array.from(this.pendingLocalPathRecoveries.entries());
+    this.pendingLocalPathRecoveries.clear();
+    runInAction(() => {
+      for (const [model, recoveredPath] of recoveries) {
+        if (this.models.includes(model)) {
+          model.fullPath = recoveredPath;
+        }
+      }
+    });
   };
 
   async checkFileExists(model: Model) {
@@ -1119,8 +1181,8 @@ class ModelStore {
 
   refreshDownloadStatuses = async () => {
     // Await every check: callers (notably initializeStore, which then runs
-    // removeInvalidLocalModels) depend on isDownloaded being settled. A bare
-    // forEach resolved immediately and left the checks in flight.
+    // removeInvalidLocalModels) depend on isDownloaded being settled before they
+    // prune.
     //
     // Each check is isolated: a single failure (e.g. an RNFS error, or a local
     // model with no fullPath) must not abort the others, and must leave
@@ -1137,6 +1199,8 @@ class ModelStore {
         }),
       ),
     );
+    // Persist every path re-anchored during the pass in a single write.
+    this.flushPendingLocalPathRecoveries();
   };
 
   initializeDownloadStatus = async () => {

@@ -88,8 +88,10 @@ describe('ModelStore local model path handling (#684)', () => {
       const resolved = await modelStore.resolveLocalModelPath(model);
 
       expect(resolved).toBe(recoveredPath);
-      // The recovered path is persisted so later launches skip the recovery.
-      expect(model.fullPath).toBe(recoveredPath);
+      // Persistence is batched and flushed by refreshDownloadStatuses, so the
+      // resolve call itself does not rewrite the stored path (the "survives a
+      // reload" persistence is proven through refreshDownloadStatuses below).
+      expect(model.fullPath).toBe(stalePath);
     });
 
     it('returns the stored path when the file is absent at both locations', async () => {
@@ -151,7 +153,11 @@ describe('ModelStore local model path handling (#684)', () => {
       expect(modelStore.models[0].isDownloaded).toBe(true);
     });
 
-    it('isolates a failing check so other models are still evaluated', async () => {
+    it('leaves isDownloaded untouched when a check throws, and still evaluates the rest', async () => {
+      // The broken model starts present. A rejected exists() is indeterminate,
+      // not proof the file is gone, so isDownloaded must survive the failure —
+      // flipping it to false in the catch (the exact regression this guards)
+      // would make this go red.
       const broken = createLocalModel(`${DOCS}/models/local/broken.gguf`);
       const healthyPath = `${DOCS}/models/local/healthy.gguf`;
       const healthy = createLocalModel(healthyPath);
@@ -159,7 +165,7 @@ describe('ModelStore local model path handling (#684)', () => {
 
       runInAction(() => {
         modelStore.models = [
-          {...broken, isDownloaded: false} as Model,
+          {...broken, isDownloaded: true} as Model,
           {...healthy, isDownloaded: false} as Model,
         ];
       });
@@ -175,6 +181,8 @@ describe('ModelStore local model path handling (#684)', () => {
         modelStore.refreshDownloadStatuses(),
       ).resolves.toBeUndefined();
 
+      // Indeterminate check → left as seeded; the healthy check still ran.
+      expect(modelStore.models[0].isDownloaded).toBe(true);
       expect(modelStore.models[1].isDownloaded).toBe(true);
     });
   });
@@ -202,6 +210,23 @@ describe('ModelStore local model path handling (#684)', () => {
 
       expect(modelStore.models).toHaveLength(1);
       expect(modelStore.models[0].fullPath).toBe(recoveredPath);
+    });
+
+    it('keeps a local model whose file check could not be determined', async () => {
+      // An RNFS failure is indeterminate, not absence: the model stays
+      // downloaded and must not be pruned as if the file were gone. If the
+      // failing check flipped isDownloaded to false, this model would be
+      // dropped here and the length assertion would fail.
+      const model = createLocalModel(`${DOCS}/models/local/indeterminate.gguf`);
+      runInAction(() => {
+        modelStore.models = [{...model, isDownloaded: true} as Model];
+      });
+      (RNFS.exists as jest.Mock).mockRejectedValue(new Error('RNFS blew up'));
+
+      await modelStore.refreshDownloadStatuses();
+      modelStore.removeInvalidLocalModels();
+
+      expect(modelStore.models).toHaveLength(1);
     });
 
     it('still removes a local model whose file is genuinely gone', async () => {
