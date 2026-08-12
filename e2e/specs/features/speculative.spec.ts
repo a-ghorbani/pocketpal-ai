@@ -19,10 +19,12 @@
  *    process — a mismatched pair, had it reached init_mtp, would SIGABRT
  *    uncatchably. The gate is "process survives + target loads", not draft count.
  *
- * Off-safety and crash-safety run green on a simulator/emulator. The
- * engagement test needs a PHYSICAL device: a 2 GB AVD cannot allocate the MTP
- * draft context for the hybrid Qwen3.5 ("failed to create MTP draft context"
- * under GC pressure), while the identical build engages on real hardware.
+ * All three tests are emulator-runnable. (An earlier revision blamed a 2 GB
+ * AVD for the draft-context failure; the real cause was the q8_0 draft
+ * V-cache default colliding with flash attention resolving off on Android
+ * CPU — fixed in the store's draft cache defaults.) Reasoning models on a
+ * virtual device can spend minutes in the think-phase, hence the raised
+ * inference budget below.
  *
  * ── draft_tokens read surface ────────────────────────────────────────────────
  * The chat now surfaces speculative engagement in the assistant turn footer:
@@ -61,6 +63,7 @@ const NON_MTP_MODEL = {
   selectorText: 'Qwen_Qwen3-0.6B',
   downloadFile: 'Qwen_Qwen3-0.6B-Q4_0.gguf',
   prompts: [{input: 'Hi', description: 'Basic greeting'}],
+  downloadTimeout: 900000,
 };
 
 /**
@@ -76,10 +79,10 @@ const MTP_MODEL = {
   selectorText: 'Qwen3.5-0.8B-MTP',
   downloadFile: 'Qwen3.5-0.8B-Q4_0.gguf',
   prompts: [{input: 'Hi', description: 'Basic greeting'}],
-  // The repo carries a BF16 mmproj that auto-downloads with the model. On a
-  // low-RAM virtual device the projector + main context crowd out the MTP
-  // draft context ("failed to create MTP draft context"); the engagement gate
-  // is about speculation, not vision, so load text-only.
+  downloadTimeout: 900000,
+  // The repo carries a BF16 mmproj that auto-downloads with the model; the
+  // engagement gate is about speculation, not vision, so load text-only and
+  // keep the projector out of memory on small devices.
   disableVisionBeforeLoad: true,
 };
 
@@ -94,6 +97,11 @@ const MTP_MODEL = {
  * model loads. The non-MTP off-safety model is unaffected by the larger context.
  */
 const SPEC_CONTEXT_SIZE = '4096';
+
+// A reasoning model on a slow virtual device can spend minutes inside the
+// think-phase before the first content token; the shared 2-minute inference
+// timeout expires mid-generation.
+const SPEC_INFERENCE_TIMEOUT = 420000;
 
 const SPEC_ACCORDION = byTestId('advanced-settings-accordion');
 const SPEC_SWITCH = byTestId('speculative-decoding-switch');
@@ -179,8 +187,8 @@ async function runPromptAndReadResponse(
   await chatPage.sendMessage(prompt);
 
   const aiMessageEl = browser.$(Selectors.chat.aiMessage);
-  await aiMessageEl.waitForExist({timeout: TIMEOUTS.inference});
-  await waitForInferenceComplete();
+  await aiMessageEl.waitForExist({timeout: SPEC_INFERENCE_TIMEOUT});
+  await waitForInferenceComplete(SPEC_INFERENCE_TIMEOUT);
 
   const textView = aiMessageEl.$(nativeTextElement());
   return textView.getText().catch(() => 'Unable to extract');
@@ -273,7 +281,7 @@ describe('Speculative Decoding / MTP draft model', () => {
     await chatPage.sendMessage('Hi');
 
     const draftEl = browser.$(DRAFT_TOKENS_EL);
-    await draftEl.waitForExist({timeout: TIMEOUTS.inference});
+    await draftEl.waitForExist({timeout: SPEC_INFERENCE_TIMEOUT});
     const attrName = (browser as any).isAndroid ? 'content-desc' : 'label';
     const draftText =
       (await draftEl.getAttribute(attrName).catch(() => '')) || '';

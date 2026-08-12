@@ -241,7 +241,12 @@ async function downloadModelOnly(model: ModelTestConfig): Promise<void> {
   // Persisted-state rerun (E2E_NO_RESET): the card already exists, so the
   // whole HF search flow is a no-op — skip it.
   const cardSelector = Selectors.modelCard.cardContainer(model.downloadFile);
-  if (await browser.$(cardSelector).isExisting().catch(() => false)) {
+  if (
+    await browser
+      .$(cardSelector)
+      .isExisting()
+      .catch(() => false)
+  ) {
     console.log(`Model already present (not re-downloading): ${model.id}`);
     return;
   }
@@ -293,9 +298,7 @@ async function downloadAndLoadTarget(model: ModelTestConfig): Promise<void> {
 
   // Persisted-state rerun (E2E_NO_RESET): skip the HF flow when the card
   // already exists and go straight to the load.
-  const presentSelector = Selectors.modelCard.cardContainer(
-    model.downloadFile,
-  );
+  const presentSelector = Selectors.modelCard.cardContainer(model.downloadFile);
   const alreadyPresent = await browser
     .$(presentSelector)
     .isExisting()
