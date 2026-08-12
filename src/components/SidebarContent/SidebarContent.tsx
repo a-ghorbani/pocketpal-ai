@@ -109,6 +109,17 @@ const SessionItem = React.memo<SessionItemProps>(
             active={isActive}
             label={session.title}
             style={styles.sessionDrawerItem}
+            right={
+              isPinned
+                ? () => (
+                    <StarIcon
+                      width={14}
+                      height={14}
+                      fill={theme.colors.primary}
+                    />
+                  )
+                : undefined
+            }
           />
         </TouchableOpacity>
         {!isSelectionMode && (
@@ -120,6 +131,7 @@ const SessionItem = React.memo<SessionItemProps>(
             contentStyle={{}}
             anchorPosition="bottom">
             <Menu.Item
+              testID={`session-pin-${session.id}`}
               onPress={() => {
                 onPressPin(session.id);
                 onMenuDismiss();
@@ -131,11 +143,18 @@ const SessionItem = React.memo<SessionItemProps>(
               }
               leadingIcon={() => (
                 <StarIcon
-                  stroke={theme.colors.primary}
-                  fill={isPinned ? theme.colors.primary : 'none'}
+                  width={20}
+                  height={20}
+                  // star.svg is stroke-only and .svgrrc binds that stroke to the
+                  // fill prop, so fill='none' paints nothing. Omitting fill is
+                  // what yields an outline; no test can catch this (svg is mocked).
+                  {...(isPinned
+                    ? {fill: theme.colors.primary}
+                    : {stroke: theme.colors.primary})}
                 />
               )}
             />
+            <Divider style={styles.menuDivider} />
             <Menu.Item
               onPress={() => {
                 onPressRename(session);

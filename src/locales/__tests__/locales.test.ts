@@ -434,3 +434,23 @@ describe('t() interpolation helper', () => {
     expect(result).toBe('{{a}} and {{b}}');
   });
 });
+
+// ChatSessionStore.groupedSessions keys its result map by these translated
+// labels, so two equal values silently drop a whole group from the sidebar and
+// an empty one renders a blank header. Nothing else guards that.
+describe('sidebar date-group labels stay usable as map keys', () => {
+  it.each(ALL_LANGUAGES)(
+    'l10n.%s dateGroups are distinct and non-empty',
+    lang => {
+      const dateGroups = l10n[lang].components.sidebarContent.dateGroups;
+      const values = Object.values(dateGroups);
+
+      for (const value of values) {
+        expect(typeof value).toBe('string');
+        expect(value.trim()).not.toBe('');
+      }
+
+      expect(new Set(values).size).toBe(values.length);
+    },
+  );
+});

@@ -1,5 +1,5 @@
 import {makeAutoObservable, runInAction} from 'mobx';
-import {format, isToday, isYesterday} from 'date-fns';
+import {isToday, isYesterday} from 'date-fns';
 import * as RNFS from '@dr.pogodin/react-native-fs';
 
 import {
@@ -1135,14 +1135,13 @@ class ChatSessionStore {
   }
 
   get groupedSessions(): SessionGroup {
-    // Separate pinned and unpinned sessions
     const pinnedSessions = this.sessions.filter(s => s.pinned);
     const unpinnedSessions = this.sessions.filter(s => !s.pinned);
 
     const groups: SessionGroup = unpinnedSessions.reduce(
       (acc: SessionGroup, session) => {
         const date = new Date(session.date);
-        let dateKey: string = format(date, 'MMMM dd, yyyy');
+        let dateKey: string;
         const today = new Date();
         const daysAgo = Math.ceil(
           (today.getTime() - date.getTime()) / (1000 * 3600 * 24),
@@ -1190,7 +1189,6 @@ class ChatSessionStore {
       this.dateGroupNames.older,
     ];
 
-    // Build ordered result, starting with Pinned if any exist
     const orderedGroups: SessionGroup = {};
 
     if (pinnedSessions.length > 0) {
@@ -1455,16 +1453,18 @@ class ChatSessionStore {
   }
 
   async togglePinSession(sessionId: string): Promise<void> {
-    try {
-      const newPinned =
-        await chatSessionRepository.toggleSessionPinned(sessionId);
+    const session = this.sessions.find(s => s.id === sessionId);
+    if (!session) {
+      return;
+    }
 
-      const session = this.sessions.find(s => s.id === sessionId);
-      if (session) {
-        runInAction(() => {
-          session.pinned = newPinned;
-        });
-      }
+    const pinned = !session.pinned;
+
+    try {
+      await chatSessionRepository.setSessionPinned(sessionId, pinned);
+      runInAction(() => {
+        session.pinned = pinned;
+      });
     } catch (error) {
       console.error('Failed to toggle pin session:', error);
     }
