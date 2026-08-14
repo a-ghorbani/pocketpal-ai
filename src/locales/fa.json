@@ -736,7 +736,8 @@
       "exportCurrentSession": "خروجی جلسه فعلی",
       "exportAllSessions": "خروجی همه جلسات",
       "exportChatSession": "خروجی جلسه چت",
-      "importSessions": "ورود جلسات"
+      "importSessions": "ورود جلسات",
+      "exportCurrentSessionMarkdown": "خروجی به صورت Markdown"
     },
     "hfTokenSheet": {
       "title": "توکن Hugging Face",
@@ -965,8 +966,11 @@
         "threeWeeksAgo": "۳ هفته پیش",
         "fourWeeksAgo": "۴ هفته پیش",
         "lastMonth": "ماه گذشته",
-        "older": "قدیمی‌تر"
-      }
+        "older": "قدیمی‌تر",
+        "pinned": "سنجاق‌شده"
+      },
+      "pin": "سنجاق کردن",
+      "unpin": "لغو سنجاق"
     },
     "usageStats": {
       "tooltip": {
