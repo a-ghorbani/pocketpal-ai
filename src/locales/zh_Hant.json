@@ -361,7 +361,8 @@
         "lastWeek": "上週",
         "thisWeek": "本週",
         "yesterday": "昨天",
-        "today": "今天"
+        "today": "今天",
+        "pinned": "已釘選"
       },
       "deleteChatMessage": "您確定要刪除此聊天嗎？",
       "deleteChatTitle": "刪除聊天",
@@ -384,7 +385,9 @@
       "bulkDeleteMessage": "刪除 {{count}} 個聊天會話？此操作無法復原。",
       "bulkDeleteError": "刪除聊天會話失敗。請再試一次。",
       "exportError": "匯出聊天會話失敗。請再試一次。",
-      "bulkExportError": "匯出聊天會話失敗。請再試一次。"
+      "bulkExportError": "匯出聊天會話失敗。請再試一次。",
+      "pin": "釘選",
+      "unpin": "取消釘選"
     },
     "systemPromptSection": {
       "warnings": {
