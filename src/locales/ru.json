@@ -352,7 +352,8 @@
       "export": "Экспорт/Импорт",
       "exportCurrentSession": "Экспорт текущей сессии",
       "exportAllSessions": "Экспорт всех сессий",
-      "importSessions": "Импорт сессий"
+      "importSessions": "Импорт сессий",
+      "exportCurrentSessionMarkdown": "Экспорт в Markdown"
     },
     "modelSettingsSheet": {
       "modelSettings": "Настройки модели",

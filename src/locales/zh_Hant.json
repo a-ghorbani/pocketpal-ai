@@ -439,7 +439,8 @@
       "export": "匯出 / 匯入",
       "exportCurrentSession": "匯出目前會話",
       "exportAllSessions": "匯出所有會話",
-      "importSessions": "匯入會話"
+      "importSessions": "匯入會話",
+      "exportCurrentSessionMarkdown": "匯出為 Markdown 格式"
     },
     "modelSettingsSheet": {
       "modelSettings": "模型設定",
