@@ -66,9 +66,9 @@ export const createStyles = (theme: Theme) =>
       color: theme.colors.error,
       marginTop: 4,
     },
-    // Cap the value side of a settings row so a long value label ("None
-    // (embedded MTP)", a draft filename) ellipsizes inside the button instead
-    // of squeezing the flex title/description column into a sliver.
+    // Cap the value side of a settings row so a long value label ellipsizes
+    // inside the button instead of squeezing the flex title/description
+    // column into a sliver.
     menuContainer: {
       position: 'relative',
       flexShrink: 1,
@@ -76,6 +76,14 @@ export const createStyles = (theme: Theme) =>
     },
     menuButton: {
       minWidth: 100,
+      maxWidth: '100%',
+    },
+    // A control too wide to share its row (e.g. the draft-model picker, whose
+    // values are model filenames) sits under the title/description instead.
+    // Also keeps the menu anchor at the row's left edge, on-screen.
+    fullRowControl: {
+      marginTop: 8,
+      alignSelf: 'flex-start',
       maxWidth: '100%',
     },
     consentContainer: {

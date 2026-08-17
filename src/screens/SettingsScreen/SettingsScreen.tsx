@@ -753,22 +753,19 @@ export const SettingsScreen: React.FC = observer(() => {
                     <>
                       <Divider />
 
-                      {/* Draft Model Picker */}
+                      {/* Draft Model Picker: full-row control — model names
+                          are too long to share a row with the title. */}
                       <View style={styles.settingItemContainer}>
-                        <View style={styles.switchContainer}>
-                          <View style={styles.textContainer}>
-                            <Text
-                              variant="titleMedium"
-                              style={styles.textLabel}>
-                              {l10n.settings.speculativeDraftModel}
-                            </Text>
-                            <Text
-                              variant="labelSmall"
-                              style={styles.textDescription}>
-                              {l10n.settings.speculativeDraftModelDescription}
-                            </Text>
-                          </View>
-                          <View style={styles.menuContainer}>
+                        <Text variant="titleMedium" style={styles.textLabel}>
+                          {l10n.settings.speculativeDraftModel}
+                        </Text>
+                        <Text
+                          variant="labelSmall"
+                          style={styles.textDescription}>
+                          {l10n.settings.speculativeDraftModelDescription}
+                        </Text>
+                        <View style={styles.fullRowControl}>
+                          <View>
                             <Button
                               ref={draftModelButtonRef}
                               mode="outlined"
