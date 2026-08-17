@@ -66,11 +66,17 @@ export const createStyles = (theme: Theme) =>
       color: theme.colors.error,
       marginTop: 4,
     },
+    // Cap the value side of a settings row so a long value label ("None
+    // (embedded MTP)", a draft filename) ellipsizes inside the button instead
+    // of squeezing the flex title/description column into a sliver.
     menuContainer: {
       position: 'relative',
+      flexShrink: 1,
+      maxWidth: '55%',
     },
     menuButton: {
       minWidth: 100,
+      maxWidth: '100%',
     },
     consentContainer: {
       marginVertical: 8,
@@ -97,8 +103,10 @@ export const createStyles = (theme: Theme) =>
       fontSize: 14,
       color: theme.colors.secondary,
     },
+    // Floor, not a fixed width: dropdown items size to their longest label
+    // (the outer menu clamps at 90% screen and item titles ellipsize past it).
     menu: {
-      width: 170,
+      minWidth: 170,
     },
     linkContainer: {
       flexDirection: 'row',
