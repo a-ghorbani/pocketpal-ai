@@ -1079,7 +1079,7 @@ class ModelStore {
    * existing not-found handling still applies.
    *
    * IMPORTANT: this re-anchoring is duplicated in native Swift for iOS
-   * Shortcuts — see the LOCAL branch of resolveModelPath() in
+   * Shortcuts — see the LOCAL branch of parseModelPath() in
    * ios/PocketPal/AppIntents/PalDataProvider.swift. Keep the two in sync; the
    * shared '/models/local/' marker must match on both sides.
    */
@@ -1108,10 +1108,6 @@ class ModelStore {
       return storedPath;
     }
 
-    // Imported models are copied under <Documents>/models/local, so the segment
-    // from that marker onward is stable across container-UUID churn (iOS OS
-    // upgrade, backup/restore, reinstall) and can be re-joined to the current
-    // documents path.
     const marker = '/models/local/';
     const markerIndex = storedPath.indexOf(marker);
     if (markerIndex === -1) {

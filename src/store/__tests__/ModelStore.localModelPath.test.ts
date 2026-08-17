@@ -6,6 +6,7 @@ import {createModel} from '../../../jest/fixtures/models';
 import * as RNFS from '@dr.pogodin/react-native-fs';
 
 import {modelStore} from '..';
+import {MODEL_LIST_VERSION} from '../ModelStore';
 
 // Mock the download manager: checkFileExists consults isDownloading before
 // marking a model as present.
@@ -260,6 +261,47 @@ describe('ModelStore local model path handling (#684)', () => {
       modelStore.removeInvalidLocalModels();
 
       expect(modelStore.models).toHaveLength(1);
+    });
+  });
+
+  describe('initializeStore steady-state launch', () => {
+    afterEach(async () => {
+      // initializeStore fires several un-awaited background tasks; let them
+      // settle so they cannot bleed into the next test.
+      await new Promise(resolve => setTimeout(resolve, 50));
+      runInAction(() => {
+        modelStore.models = [];
+        modelStore.version = undefined;
+      });
+    });
+
+    it('settles the status checks before pruning, so a recoverable local model survives a launch', async () => {
+      // The branch every launch after the one-time migration takes. The tests
+      // above drive refreshDownloadStatuses and removeInvalidLocalModels by
+      // hand, which proves they compose — not that initializeStore calls them
+      // in that order. Pruning before the checks settle is exactly the reported
+      // bug, so assert the ordering where production actually performs it.
+      const stalePath =
+        '/var/mobile/Containers/Data/Application/OLD-UUID/Documents/models/local/my-local-model.gguf';
+      const recoveredPath = `${DOCS}/models/local/my-local-model.gguf`;
+
+      runInAction(() => {
+        modelStore.version = MODEL_LIST_VERSION;
+        modelStore.availableMemoryCeiling = 1;
+        modelStore.models = [
+          {...createLocalModel(stalePath), isDownloaded: false} as Model,
+        ];
+      });
+
+      (RNFS.exists as jest.Mock).mockImplementation((path: string) =>
+        Promise.resolve(path === recoveredPath),
+      );
+
+      await modelStore.initializeStore();
+
+      const local = modelStore.models.find(m => m.id === 'local-1');
+      expect(local).toBeDefined();
+      expect(local?.fullPath).toBe(recoveredPath);
     });
   });
 });
