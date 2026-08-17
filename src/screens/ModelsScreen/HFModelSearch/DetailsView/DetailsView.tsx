@@ -6,6 +6,7 @@ import {BottomSheetFlatList} from '@gorhom/bottom-sheet';
 
 import {ModelTypeTag, Sheet} from '../../../../components';
 
+import {urls} from '../../../../config';
 import {useTheme} from '../../../../hooks';
 
 import {createStyles} from './styles';
@@ -45,7 +46,7 @@ export const DetailsView = ({hfModel}: DetailsViewProps) => {
       return;
     }
     let cancelled = false;
-    const ggufUrl = `https://huggingface.co/${hfModel.id}/resolve/main/${firstLLM.rfilename}`;
+    const ggufUrl = urls.modelDownloadFile(hfModel.id, firstLLM.rfilename);
     // A probe that could not run stays silent rather than claiming a capability.
     probeRemoteMTPCapability(ggufUrl).then(capability => {
       if (!cancelled) {
