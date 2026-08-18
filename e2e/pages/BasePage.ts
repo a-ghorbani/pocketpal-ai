@@ -145,11 +145,21 @@ export abstract class BasePage {
         await browser.pause(300);
       }
     } else {
-      // Android: hideKeyboard() works reliably
+      // Android: ESC hides the keyboard without emitting a back event.
+      // hideKeyboard() falls back to a back-press, which React Navigation
+      // consumes and pops the screen behind an open sheet.
       try {
-        await (
-          browser as unknown as {hideKeyboard: () => Promise<void>}
-        ).hideKeyboard();
+        const isShown = await (
+          browser as unknown as {isKeyboardShown: () => Promise<boolean>}
+        ).isKeyboardShown();
+        if (isShown) {
+          await (
+            browser as unknown as {
+              pressKeyCode: (code: number) => Promise<void>;
+            }
+          ).pressKeyCode(111);
+          await browser.pause(300);
+        }
       } catch {
         // Keyboard might not be visible
       }
