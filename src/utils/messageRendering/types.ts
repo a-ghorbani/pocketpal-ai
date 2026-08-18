@@ -73,8 +73,9 @@ export interface ParsedAssistantMessage {
 }
 
 export interface MessageWithRenderingMetadata {
-  text: string;
+  text?: string;
   metadata?: Record<string, any>;
+  steps?: Array<{content?: string; reasoningContent?: string}>;
 }
 
 export interface MessageRenderingCacheStats {

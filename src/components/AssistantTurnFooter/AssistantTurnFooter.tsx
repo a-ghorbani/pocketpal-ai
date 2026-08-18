@@ -12,9 +12,9 @@ import {PlayButton} from '../TextMessage/PlayButton';
 
 import {styles} from './styles';
 
-import {chatSessionStore} from '../../store';
+import {chatSessionStore, uiStore} from '../../store';
 import {L10nContext} from '../../utils';
-import {derivedText} from '../../utils/chat';
+import {buildMessageCopyTextFromMessage} from '../../utils/messageRendering';
 import {MessageType} from '../../utils/types';
 import {t} from '../../locales';
 
@@ -95,7 +95,12 @@ export const AssistantTurnFooter: React.FC<AssistantTurnFooterProps> = observer(
         return;
       }
       ReactNativeHapticFeedback.trigger('impactLight', hapticOptions);
-      Clipboard.setString(derivedText(message).trim());
+      Clipboard.setString(
+        buildMessageCopyTextFromMessage(
+          message,
+          uiStore.messageRenderingSettings.defaultCopyMode ?? 'clean',
+        ).trim(),
+      );
     };
 
     return (

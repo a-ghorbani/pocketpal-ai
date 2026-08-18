@@ -420,10 +420,6 @@ export const AssistantMessageRenderer: React.FC<AssistantMessageRendererProps> =
                 renderMarkdown={settings.renderMarkdown}
                 renderLatex={settings.renderLatex}
                 renderTables={settings.renderTables}
-                wrapCodeLines={settings.wrapCodeLines}
-                useSyntaxHighlighting={settings.useSyntaxHighlighting}
-                useCompactTables={settings.useCompactTables}
-                showThinkingBlocks={false}
               />
             </ThinkingBubble>
           )}
@@ -466,10 +462,6 @@ export const AssistantMessageRenderer: React.FC<AssistantMessageRendererProps> =
                   renderMarkdown={settings.renderMarkdown}
                   renderLatex={settings.renderLatex}
                   renderTables={settings.renderTables}
-                  wrapCodeLines={settings.wrapCodeLines}
-                  useSyntaxHighlighting={settings.useSyntaxHighlighting}
-                  useCompactTables={settings.useCompactTables}
-                  showThinkingBlocks={false}
                 />
               );
 
@@ -502,10 +494,6 @@ export const AssistantMessageRenderer: React.FC<AssistantMessageRendererProps> =
                 renderMarkdown={settings.renderMarkdown}
                 renderLatex={settings.renderLatex}
                 renderTables={settings.renderTables}
-                wrapCodeLines={settings.wrapCodeLines}
-                useSyntaxHighlighting={settings.useSyntaxHighlighting}
-                useCompactTables={settings.useCompactTables}
-                showThinkingBlocks={false}
               />
             ))
           )}

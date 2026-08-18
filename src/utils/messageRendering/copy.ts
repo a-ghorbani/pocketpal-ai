@@ -9,11 +9,33 @@ import {
 export function getMessageRawContent(
   message: MessageWithRenderingMetadata,
 ): string {
+  const stepContent = message.steps
+    ?.map(step => {
+      const reasoning = step.reasoningContent?.trim();
+      const content = step.content?.trim();
+      const parts: string[] = [];
+
+      // AgentStep stores reasoning separately from generated content. When
+      // no engine-level raw response was persisted, reconstruct a complete
+      // copy representation so Raw includes it while Clean still excludes it.
+      if (reasoning) {
+        parts.push(`<think>\n${reasoning}\n</think>`);
+      }
+      if (content) {
+        parts.push(content);
+      }
+      return parts.join('\n');
+    })
+    .filter((content): content is string => !!content)
+    .join('\n\n');
+
   return (
     message.metadata?.completionResult?.raw_content ||
     message.metadata?.partialCompletionResult?.raw_content ||
     message.metadata?.raw_content ||
-    message.text
+    message.text ||
+    stepContent ||
+    ''
   );
 }
 

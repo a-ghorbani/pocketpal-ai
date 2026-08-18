@@ -45,6 +45,24 @@ describe('message rendering copy helpers', () => {
     expect(buildMessageCopyTextFromMessage(message, 'clean')).toBe('Visible');
   });
 
+  it('includes native AgentStep reasoning only in the raw copy fallback', () => {
+    const message = {
+      steps: [
+        {
+          reasoningContent: 'Check the units first.',
+          content: 'The result is 42.',
+        },
+      ],
+    };
+
+    expect(buildMessageCopyTextFromMessage(message, 'raw')).toBe(
+      '<think>\nCheck the units first.\n</think>\nThe result is 42.',
+    );
+    expect(buildMessageCopyTextFromMessage(message, 'clean')).toBe(
+      'The result is 42.',
+    );
+  });
+
   it('pretty prints valid JSON and falls back for malformed JSON', () => {
     expect(prettyPrintJson('{"a":1}')).toBe('{\n  "a": 1\n}');
     expect(prettyPrintJson('{"a":')).toBe('{"a":');
