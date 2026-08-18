@@ -87,7 +87,9 @@ const TARGET_MODEL: ModelTestConfig = {
   searchQuery: 'ggml-org gemma-4-E2B-it-GGUF',
   selectorText: 'gemma-4-E2B-it',
   downloadFile: 'gemma-4-E2B-it-Q4_0.gguf',
-  downloadTimeout: 900000,
+  // ~3.5 GB; HF often serves large files at only a few MB/s, so the wait is
+  // overridable for slow lanes the way E2E_MOCHA_TIMEOUT is.
+  downloadTimeout: Number(process.env.E2E_DOWNLOAD_TIMEOUT) || 900000,
   prompts: [{input: 'Hi', description: 'Basic greeting'}],
   disableVisionBeforeLoad: true,
 };
@@ -419,7 +421,7 @@ describe('Speculative Decoding / separate-draft (paired) MTP', () => {
     // generation exceed the 10-min suite default. this.timeout() does not
     // override wdio's mochaOpts.timeout, so long runs must ALSO raise
     // E2E_MOCHA_TIMEOUT (see usage header); this call covers plain mocha.
-    this.timeout(1_800_000);
+    this.timeout(Number(process.env.E2E_MOCHA_TIMEOUT) || 1_800_000);
 
     // 1) Download the separate MTP draft (not loaded) so it is pickable and its
     //    width/MTP metadata is known.
