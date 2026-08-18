@@ -282,9 +282,17 @@ describe('Speculative Decoding / MTP draft model', () => {
 
     const draftEl = browser.$(DRAFT_TOKENS_EL);
     await draftEl.waitForExist({timeout: SPEC_INFERENCE_TIMEOUT});
+    // iOS exposes the text as `label`; Android only sets content-desc when an
+    // accessibilityLabel exists — and uiautomator2 reports a MISSING attribute
+    // as the literal string "null", so sanitize before falling back to the
+    // rendered text.
     const attrName = (browser as any).isAndroid ? 'content-desc' : 'label';
+    const attrValue =
+      (await draftEl.getAttribute(attrName).catch(() => '')) ?? '';
     const draftText =
-      (await draftEl.getAttribute(attrName).catch(() => '')) || '';
+      (attrValue !== 'null' ? attrValue : '') ||
+      (await draftEl.getText().catch(() => '')) ||
+      '';
     console.log(`[engagement] draft tokens surfaced: ${draftText}`);
     // "draft: <accepted>/<total> (<pct>%)" -- total is draft_tokens; > 0 == engaged.
     const m = draftText.match(/(\d+)\s*\/\s*(\d+)/);
@@ -293,11 +301,18 @@ describe('Speculative Decoding / MTP draft model', () => {
 
     // The generation rate comes straight from llama.rn's own wall clock. It read
     // 0.00 on speculative turns before 0.12.7, so assert it is a real rate.
-    const timingText =
+    const timingAttr =
       (await browser
         .$(TIMING_EL)
         .getAttribute(attrName)
-        .catch(() => '')) || '';
+        .catch(() => '')) ?? '';
+    const timingText =
+      (timingAttr !== 'null' ? timingAttr : '') ||
+      (await browser
+        .$(TIMING_EL)
+        .getText()
+        .catch(() => '')) ||
+      '';
     console.log(`[engagement] timings surfaced: ${timingText}`);
     const rate = timingText.match(/([\d.]+)\s*tokens?\/sec/i);
     expect(rate).not.toBeNull();
