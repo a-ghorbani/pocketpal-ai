@@ -89,6 +89,20 @@
     "useMmapFalseDescription": "Disabled is recommended when weight repacking is enabled to avoid doubling memory usage",
     "weightRepacking": "Enable Weight Repacking",
     "weightRepackingDescription": "Faster prompt processing with minimal memory overhead when memory mapping is disabled. Token generation is unaffected.",
+    "speculativeDecoding": "Speculative Decoding",
+    "speculativeDecodingDescription": "Use a small draft model (or an embedded MTP model) to predict tokens and speed up generation. Experimental.",
+    "speculativeNotMTPCapable": "The active model isn't speculative-capable and no compatible draft is paired, so this stays off for it with no effect. It applies automatically to capable models.",
+    "speculativeDraftModel": "Draft Model",
+    "speculativeDraftModelDescription": "Drafts tokens for the active model.",
+    "speculativeDraftModelNone": "None (embedded MTP)",
+    "speculativeDraftModelIgnoredOverridden": "The active model comes with its own draft model, so this pick is ignored.",
+    "speculativeDraftModelIgnoredIncompatible": "This draft isn't compatible with the active model, so it's ignored.",
+    "speculativeDraftModelIgnoredNotCapable": "This model carries no draft layers, so it can't be used as a draft model.",
+    "speculativeDraftKeyCacheType": "Draft Key Cache Type",
+    "speculativeDraftValueCacheType": "Draft Value Cache Type",
+    "speculativeDraftNGpuLayers": "Draft GPU Layers",
+    "speculativeDraftNGpuLayersDescription": "Number of draft-model layers to offload to the GPU.",
+    "speculativeDraftCacheTypeInactiveDescription": "Applies once speculative decoding runs.",
     "ttsAvailability": "Text-to-speech",
     "ttsAvailabilityDescription": "Read assistant replies aloud.",
     "ttsAvailabilityLowMemoryWarning": "Your device's memory is low — this may not work reliably.",
@@ -390,7 +404,8 @@
         "author": "Author",
         "requiresProjectionModel": "Requires projection model",
         "downloadProjectionModel": "Download projection model",
-        "viewModelCardOnHuggingFace": "View Model Card on Hugging Face"
+        "viewModelCardOnHuggingFace": "View Model Card on Hugging Face",
+        "draftOnlyReason": "Draft-only model. Pick it under Settings → Speculative decoding."
       },
       "accessibility": {
         "expandDetails": "Expand details",
@@ -451,7 +466,9 @@
       "multilingual": "Multilingual",
       "rewriting": "Rewriting",
       "creativity": "Creative writing",
-      "vision": "Vision"
+      "vision": "Vision",
+      "mtp": "Speculative (MTP)",
+      "mtpDraft": "Speculative draft"
     }
   },
   "completionParams": {
@@ -547,6 +564,7 @@
       "msPerToken": "{{value}}ms/token",
       "tokensPerSec": "{{value}} tokens/sec",
       "ttft": "{{value}}ms TTFT",
+      "draftAccepted": "draft: {{accepted}}/{{total}} ({{pct}}%)",
       "interrupted": "Interrupted",
       "truncated": "Cut off — likely context full"
     },
@@ -997,12 +1015,7 @@
         "total": "Total: ",
         "usage": "Usage: "
       },
-      "byteSizes": [
-        "Bytes",
-        "KB",
-        "MB",
-        "GB"
-      ]
+      "byteSizes": ["Bytes", "KB", "MB", "GB"]
     },
     "chatView": {
       "menuItems": {
@@ -1171,6 +1184,7 @@
     "modelNotLoaded": "Model not loaded. Please initialize the model.",
     "completionFailed": "Completion failed: ",
     "toolCallTruncated": "Tool call cut off — the model likely ran out of room. Try a larger context or a smaller request.",
+    "speculativeInitFailed": "This device could not start speculative decoding for this model — most likely there is not enough memory for the draft context. Turn off Speculative decoding under Settings → Advanced Settings and try again.",
     "loadingModel": "Loading model ...",
     "typeYourMessage": "Type your message here",
     "load": "Load",

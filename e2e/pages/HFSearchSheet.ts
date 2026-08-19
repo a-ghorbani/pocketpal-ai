@@ -79,13 +79,20 @@ export class HFSearchSheet extends BasePage {
   }
 
   /**
-   * Close the sheet by tapping the close button
+   * Close the sheet by tapping the close button. The tap can land while the
+   * sheet is still settling and get swallowed; fall back to the system back
+   * action, which dismisses bottom sheets regardless of geometry.
    */
   async close(): Promise<void> {
     const closeBtn = await this.waitForEnabled(
       Selectors.common.sheetCloseButton,
     );
     await closeBtn.click();
-    await this.waitForClose();
+    try {
+      await this.waitForClose();
+    } catch {
+      await driver.back();
+      await this.waitForClose();
+    }
   }
 }

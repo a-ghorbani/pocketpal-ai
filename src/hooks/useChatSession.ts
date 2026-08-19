@@ -298,11 +298,10 @@ async function applyEventToStore(
       });
       return;
     case 'token': {
-      // Capture time-to-first-token on the first content/reasoning token.
-      if (
-        ctx.timeToFirstTokenMs.value === null &&
-        (event.delta.content || event.delta.reasoningContent)
-      ) {
+      const hasFirstTokenSignal = !!(
+        event.delta.content || event.delta.reasoningContent
+      );
+      if (ctx.timeToFirstTokenMs.value === null && hasFirstTokenSignal) {
         ctx.timeToFirstTokenMs.value = Date.now() - ctx.completionStartTime;
       }
       if (!modelStore.isStreaming) {
@@ -425,11 +424,19 @@ async function applyEventToStore(
         modelStore.activeContextSettings?.n_ctx,
         modelStore.activeModel?.origin === ModelOrigin.REMOTE,
       );
+      const draftTimings =
+        finalResult.draft_tokens != null && finalResult.draft_tokens > 0
+          ? {
+              draft_tokens: finalResult.draft_tokens,
+              draft_tokens_accepted: finalResult.draft_tokens_accepted,
+            }
+          : {};
       await chatSessionStore.updateMessage(ctx.messageId, ctx.sessionId, {
         metadata: {
           timings: {
             ...(finalResult.timings ?? {}),
             time_to_first_token_ms: ctx.timeToFirstTokenMs.value,
+            ...draftTimings,
           },
           copyable: true,
           multimodal: ctx.hasImages && ctx.isMultimodalEnabled,
@@ -754,6 +761,13 @@ export const useChatSession = (
       // CompletionResult flag upstream when available.
       const isContextFullError = /context is full/i.test(errorMessage);
       const treatAsContextFull = isToolArgsParseError || isContextFullError;
+      // Low-RAM devices can fail to allocate the speculative draft context at
+      // first completion (the load-time memory check has no term for it).
+      // LLAMARN-DEP: string-coupled to the throw in rn-completion.cpp; a
+      // reword would silently demote this back to the raw dump.
+      const isSpeculativeInitError = /failed to create MTP draft context/i.test(
+        errorMessage,
+      );
 
       // Error rollback path. The empty/in-flight AssistantTurn row
       // already exists; preserve any partial steps and tag with
@@ -857,6 +871,8 @@ export const useChatSession = (
         // No turn content to attach the hint to — fall back to a
         // friendly system message instead of the raw native error dump.
         await addSystemMessage(l10n.chat.toolCallTruncated);
+      } else if (isSpeculativeInitError) {
+        await addSystemMessage(l10n.chat.speculativeInitFailed);
       } else if (isContextFullError) {
         // No turn to attach to; surface the banner via a store snapshot
         // rather than dumping the raw "Context is full" native error.

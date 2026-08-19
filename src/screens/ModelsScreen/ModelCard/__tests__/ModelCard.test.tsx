@@ -6,6 +6,7 @@ import {runInAction} from 'mobx';
 import {render, fireEvent, waitFor, act} from '../../../../../jest/test-utils';
 import {
   basicModel,
+  createModel,
   downloadedModel,
   downloadingModel,
   largeMemoryModel,
@@ -646,6 +647,56 @@ describe('ModelCard', () => {
     });
   });
 
+  describe('MTP (speculative) capability skill', () => {
+    const mtpModel = createModel({
+      id: 'mtp-model',
+      name: 'mtp model',
+      isDownloaded: true,
+      ggufMetadata: {nextn_predict_layers: 1},
+    });
+
+    const plainModel = createModel({
+      id: 'plain-model',
+      name: 'plain model',
+      isDownloaded: true,
+      ggufMetadata: {nextn_predict_layers: 0},
+    });
+
+    // The capabilities line joins labels with ', ' in a single Text node, so a
+    // substring match is enough. Escape regex metacharacters in the label
+    // ("Speculative (MTP)") before building the matcher.
+    const mtpLabelPattern = new RegExp(
+      l10n.en.models.modelCapabilities.mtp.replace(
+        /[.*+?^${}()|[\]\\]/g,
+        '\\$&',
+      ),
+    );
+
+    it('appends the MTP skill in the expanded details when the model is MTP-capable', async () => {
+      const {getByTestId, getByText} = customRender(
+        <ModelCard model={mtpModel} />,
+      );
+
+      fireEvent.press(getByTestId('expand-details-button'));
+
+      await waitFor(() => {
+        expect(getByText(mtpLabelPattern)).toBeTruthy();
+      });
+    });
+
+    it('omits the MTP skill when the model is not MTP-capable', async () => {
+      const {getByTestId, queryByText} = customRender(
+        <ModelCard model={plainModel} />,
+      );
+
+      fireEvent.press(getByTestId('expand-details-button'));
+
+      await waitFor(() => {
+        expect(getByTestId('expand-details-button')).toBeTruthy();
+      });
+      expect(queryByText(mtpLabelPattern)).toBeNull();
+    });
+  });
   describe('Remote model capabilities', () => {
     const visionCell = `model-card-vision-capability-${remoteModel.id}`;
     const contextCell = `model-card-context-length-${remoteModel.id}`;

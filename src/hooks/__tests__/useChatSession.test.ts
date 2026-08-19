@@ -127,6 +127,31 @@ describe('useChatSession', () => {
     );
   });
 
+  it('maps the speculative draft-context failure to friendly copy', async () => {
+    // Low-RAM devices throw this at first completion; the raw native string
+    // must not reach the chat.
+    if (modelStore.context) {
+      modelStore.context.completion = jest
+        .fn()
+        .mockRejectedValueOnce(new Error('failed to create MTP draft context'));
+    }
+
+    const {result} = renderHook(() =>
+      useChatSession({current: null}, textMessage.author, mockAssistant),
+    );
+
+    await act(async () => {
+      await result.current.handleSendPress(textMessage);
+    });
+
+    expect(chatSessionStore.addMessageToCurrentSession).toHaveBeenCalledWith(
+      expect.objectContaining({
+        text: l10n.en.chat.speculativeInitFailed,
+        author: assistant,
+      }),
+    );
+  });
+
   it('should reset the conversation', () => {
     const {result} = renderHook(() =>
       useChatSession({current: null}, textMessage.author, mockAssistant),

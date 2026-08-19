@@ -13,6 +13,10 @@ import {
 import {LlamaContext} from 'llama.rn';
 import {CompletionEngine} from '../../src/utils/completionTypes';
 import {createDefaultContextInitParams} from '../../src/utils/contextInitParamsVersions';
+import {
+  draftCacheDefaults,
+  effectiveDraftModeOf,
+} from '../../src/store/draftResolution';
 import {resolveModelCaps} from '../../src/utils/modelCaps';
 import type {
   CapabilityEnv,
@@ -79,6 +83,11 @@ class MockModelStore {
   setCacheTypeV: jest.Mock;
   setUseMmap: jest.Mock;
   setNoExtraBufts: jest.Mock;
+  setSpeculativeEnabled: jest.Mock;
+  setSelectedDraftModel: jest.Mock;
+  setSpecDraftNGpuLayers: jest.Mock;
+  setSpecDraftCacheTypeK: jest.Mock;
+  setSpecDraftCacheTypeV: jest.Mock;
   enterBenchmarkMode: jest.Mock;
   exitBenchmarkMode: jest.Mock;
   recordReasoningObserved: jest.Mock;
@@ -128,6 +137,11 @@ class MockModelStore {
       setCacheTypeV: false,
       setUseMmap: false,
       setNoExtraBufts: false,
+      setSpeculativeEnabled: false,
+      setSelectedDraftModel: false,
+      setSpecDraftNGpuLayers: false,
+      setSpecDraftCacheTypeK: false,
+      setSpecDraftCacheTypeV: false,
       enterBenchmarkMode: false,
       exitBenchmarkMode: false,
       recordReasoningObserved: false,
@@ -138,6 +152,8 @@ class MockModelStore {
       activeModelCaps: computed,
       displayModels: computed,
       availableModels: computed,
+      effectiveDraftMode: computed,
+      effectiveDraftCacheDefaults: computed,
       isDownloading: computed,
       activeDownloads: computed,
     });
@@ -201,6 +217,11 @@ class MockModelStore {
     this.setCacheTypeV = jest.fn();
     this.setUseMmap = jest.fn();
     this.setNoExtraBufts = jest.fn();
+    this.setSpeculativeEnabled = jest.fn();
+    this.setSelectedDraftModel = jest.fn();
+    this.setSpecDraftNGpuLayers = jest.fn();
+    this.setSpecDraftCacheTypeK = jest.fn();
+    this.setSpecDraftCacheTypeV = jest.fn();
     this.enterBenchmarkMode = jest.fn().mockResolvedValue(undefined);
     this.exitBenchmarkMode = jest.fn();
     this.recordReasoningObserved = jest.fn();
@@ -288,6 +309,17 @@ class MockModelStore {
 
   get availableModels() {
     return this.models.filter(model => model.isDownloaded);
+  }
+
+  get effectiveDraftMode() {
+    return effectiveDraftModeOf(this);
+  }
+
+  get effectiveDraftCacheDefaults() {
+    return draftCacheDefaults(
+      this.effectiveDraftMode,
+      this.contextInitParams.flash_attn_type === 'on',
+    );
   }
 
   isModelAvailable(modelId: string) {

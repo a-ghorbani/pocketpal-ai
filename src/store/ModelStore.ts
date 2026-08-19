@@ -23,6 +23,13 @@ import {
 import {uiStore, hfStore} from '.';
 import {serverStore} from './ServerStore';
 import {chatSessionStore} from './ChatSessionStore';
+import {
+  draftCacheDefaults,
+  effectiveDraftModeOf,
+  resolveDraftCandidate,
+  resolveDraftModelId,
+  unpairedDraftCandidate,
+} from './draftResolution';
 import {checkGpuSupport} from '../utils/deviceCapabilities';
 import {
   deepMerge,
@@ -34,6 +41,7 @@ import {
   parseSizeLabel,
 } from '../utils';
 import {getRecommendedProjectionModel} from '../utils/multimodalHelpers';
+import {isDraftOnlyModel} from '../utils/mtp';
 import {getOriginalModelName} from '../utils/formatters';
 import type {OnboardingPalModelEntry} from './onboarding/onboardingPals';
 
@@ -46,6 +54,7 @@ import {
   DeviceRules,
   DeviceSignals,
   RuleCandidate,
+  RuleDraft,
   Tier,
 } from '../services/deviceRules/types';
 
@@ -65,6 +74,7 @@ import {
   CacheType,
   ChatTemplateConfig,
   ContextInitParams,
+  DraftConfig,
   HuggingFaceModel,
   Model,
   ModelFile,
@@ -139,6 +149,9 @@ function createRemoteModel(params: {
     remoteModelId: params.remoteModelId,
   };
 }
+
+const pairedDraftModel = (config?: DraftConfig): Model | undefined =>
+  config?.mode === 'paired' ? config.draftModel : undefined;
 
 class ModelStore {
   models: Model[] = [];
@@ -218,6 +231,9 @@ class ModelStore {
   availableMemoryCeiling: number | undefined = undefined;
   // Updated after successful model load using GGUF estimator
   largestSuccessfulLoad: number | undefined = undefined;
+  // Projection models orphaned by the vision heal, awaiting deletion; drained
+  // every launch (see drainPendingProjectionCleanup).
+  pendingProjectionCleanupIds: string[] = [];
 
   constructor() {
     makeAutoObservable(this, {
@@ -241,6 +257,7 @@ class ModelStore {
         'lastAutoReleasedModelId',
         'availableMemoryCeiling',
         'largestSuccessfulLoad',
+        'pendingProjectionCleanupIds',
       ],
       storage: AsyncStorage,
     }).then(async () => {
@@ -442,12 +459,58 @@ class ModelStore {
     });
   };
 
+  setSpeculativeEnabled = (speculativeEnabled: boolean) => {
+    runInAction(() => {
+      this.contextInitParams = {
+        ...this.contextInitParams,
+        speculativeEnabled,
+      };
+    });
+  };
+
+  setSelectedDraftModel = (selectedDraftModelId?: string) => {
+    runInAction(() => {
+      this.contextInitParams = {
+        ...this.contextInitParams,
+        selectedDraftModelId,
+      };
+    });
+  };
+
+  setSpecDraftNGpuLayers = (spec_draft_n_gpu_layers: number) => {
+    runInAction(() => {
+      this.contextInitParams = {
+        ...this.contextInitParams,
+        spec_draft_n_gpu_layers,
+      };
+    });
+  };
+
+  setSpecDraftCacheTypeK = (spec_draft_cache_type_k: CacheType) => {
+    runInAction(() => {
+      this.contextInitParams = {
+        ...this.contextInitParams,
+        spec_draft_cache_type_k,
+      };
+    });
+  };
+
+  setSpecDraftCacheTypeV = (spec_draft_cache_type_v: CacheType) => {
+    runInAction(() => {
+      this.contextInitParams = {
+        ...this.contextInitParams,
+        spec_draft_cache_type_v,
+      };
+    });
+  };
+
   /**
    * Get effective context initialization parameters with constraints applied
    * This is the unified method that replaces both getEffectiveBatchValues and getEffectiveInitSettings
    */
   getEffectiveContextInitParams = async (
     filePath?: string,
+    draftConfig?: DraftConfig,
   ): Promise<Omit<ContextParams, 'model'>> => {
     // Apply batch constraints
     const effectiveContext = this.contextInitParams.n_ctx;
@@ -478,10 +541,20 @@ class ModelStore {
       effectiveUseMmap = true;
     }
 
+    const mode = draftConfig?.mode ?? 'off';
+    const speculative = mode !== 'off';
+
     // Handle flash_attn_type (v2.0) - platform-specific default
+    const flashAttnModeDefault =
+      mode === 'paired'
+        ? 'off'
+        : mode === 'embedded'
+          ? 'auto'
+          : Platform.OS === 'ios'
+            ? 'auto'
+            : 'off';
     const flash_attn_type =
-      this.contextInitParams.flash_attn_type ??
-      (Platform.OS === 'ios' ? 'auto' : 'off');
+      this.contextInitParams.flash_attn_type ?? flashAttnModeDefault;
 
     // Build the params object, filtering out undefined values
     const params: Partial<Omit<ContextParams, 'model'>> = {
@@ -500,6 +573,42 @@ class ModelStore {
       use_mmap: effectiveUseMmap,
       no_extra_bufts: this.contextInitParams.no_extra_bufts,
     };
+
+    if (speculative) {
+      // llama.rn's speculative type set stays empty without spec_type — nothing engages.
+      params.spec_type = 'draft-mtp';
+
+      // llama.rn throws on spec_draft_n_max <= 0 with DRAFT_MTP.
+      params.spec_draft_n_max =
+        this.contextInitParams.spec_draft_n_max !== undefined
+          ? Math.max(1, this.contextInitParams.spec_draft_n_max)
+          : undefined;
+      params.spec_draft_n_min = this.contextInitParams.spec_draft_n_min;
+      params.spec_draft_p_min = this.contextInitParams.spec_draft_p_min;
+      params.spec_draft_p_split = this.contextInitParams.spec_draft_p_split;
+
+      const cacheDefaults = draftCacheDefaults(mode, flash_attn_type === 'on');
+      params.spec_draft_cache_type_k =
+        this.contextInitParams.spec_draft_cache_type_k ?? cacheDefaults.k;
+      // With flash attention explicitly off a quantized draft V cache can
+      // never load (llama.cpp hard-refuses it) — clamp even an explicit pick.
+      const draftV =
+        this.contextInitParams.spec_draft_cache_type_v ?? cacheDefaults.v;
+      params.spec_draft_cache_type_v =
+        flash_attn_type === 'off' && draftV !== CacheType.F16
+          ? CacheType.F16
+          : draftV;
+
+      if (draftConfig?.mode === 'paired') {
+        params.model_draft = draftConfig.resolvedDraftPath;
+        params.is_model_draft_asset = false;
+        params.spec_draft_n_gpu_layers =
+          this.contextInitParams.spec_draft_n_gpu_layers ?? 99;
+      } else {
+        params.spec_draft_n_gpu_layers =
+          this.contextInitParams.spec_draft_n_gpu_layers;
+      }
+    }
 
     // Remove undefined values from the params object
     return Object.fromEntries(
@@ -540,12 +649,95 @@ class ModelStore {
     return this.getEffectiveBatchValues();
   };
 
+  // Drafts downloaded before draft detection existed were classified as
+  // vision models (their repo carries an mmproj); re-derive so they heal.
+  // The pairing may have auto-downloaded that mmproj, and projection models
+  // are only reachable through a multimodal model's UI — which the heal
+  // removes — so the cleared ids are recorded (persisted with the same write
+  // that strips the pairing) and drained after download state is synced.
+  healDraftVisionClassification = () => {
+    runInAction(() => {
+      this.models.forEach(model => {
+        // A downloaded record without ggufMetadata is only draft-classified by
+        // its filename; wait for the header backfill so it can veto first.
+        if (model.isDownloaded && !model.ggufMetadata) {
+          return;
+        }
+        if (model.supportsMultimodal && isDraftOnlyModel(model)) {
+          const cleared = new Set(this.pendingProjectionCleanupIds);
+          model.compatibleProjectionModels?.forEach(id => cleared.add(id));
+          if (model.defaultProjectionModel) {
+            cleared.add(model.defaultProjectionModel);
+          }
+          this.pendingProjectionCleanupIds = [...cleared];
+          model.supportsMultimodal = false;
+          model.capabilities = model.capabilities?.filter(c => c !== 'vision');
+          model.compatibleProjectionModels = undefined;
+          model.defaultProjectionModel = undefined;
+          model.visionEnabled = undefined;
+        }
+      });
+    });
+  };
+
+  /**
+   * Delete projection models the heal orphaned. Runs every launch: an id
+   * stays queued while its download is still in flight or its deletion
+   * fails, so a kill or an unfinished mmproj download cannot strand the
+   * file forever. An id whose projection model has downloaded dependents is
+   * legitimately shared — dropped, never deleted.
+   */
+  drainPendingProjectionCleanup = async () => {
+    if (this.pendingProjectionCleanupIds.length === 0) {
+      return;
+    }
+    const remaining: string[] = [];
+    for (const id of this.pendingProjectionCleanupIds) {
+      const projection = this.models.find(m => m.id === id);
+      if (!projection || projection.modelType !== ModelType.PROJECTION) {
+        continue;
+      }
+      if (this.getDownloadedLLMsUsingProjectionModel(id).length > 0) {
+        continue;
+      }
+      if (downloadManager.isDownloading(id)) {
+        remaining.push(id);
+        continue;
+      }
+      if (!projection.isDownloaded) {
+        continue;
+      }
+      try {
+        await this.deleteModel(projection);
+        if (this.models.find(m => m.id === id)?.isDownloaded) {
+          remaining.push(id);
+        }
+      } catch (error) {
+        console.warn('[ModelStore] orphaned projection cleanup failed:', error);
+        remaining.push(id);
+      }
+    }
+    runInAction(() => {
+      this.pendingProjectionCleanupIds = remaining;
+    });
+  };
+
   initializeStore = async () => {
     const storedVersion = this.version || 0;
     console.log('models: ', this.models);
 
+    this.healDraftVisionClassification();
+
     // Sync download manager with active downloads
     await downloadManager.syncWithActiveDownloads(this.models);
+
+    // After the sync so an in-flight mmproj download is visible and waits. A
+    // failure retries next launch; it must not abort the rest of init.
+    try {
+      await this.drainPendingProjectionCleanup();
+    } catch (error) {
+      console.warn('[ModelStore] projection cleanup drain failed:', error);
+    }
 
     // Apply the bundled offline floor immediately (no network) so the list is
     // never empty while a slow rules fetch is in flight, then merge/reconcile.
@@ -642,6 +834,24 @@ class ModelStore {
     return {hfModel, modelFile};
   };
 
+  // A draft usually lives in a repo other than its target's, so unlike mmproj it
+  // cannot be an hfAsModel sibling and needs its own {hfModel, modelFile} pair.
+  private draftToStub = (draft: RuleDraft): Model => {
+    const modelFile: ModelFile = {
+      rfilename: draft.hfFilename,
+      url: deriveUrl(draft.hfRepo, draft.hfFilename),
+      size: draft.sizeBytes,
+    };
+    const hfModel = {
+      id: draft.hfRepo,
+      author: draft.hfRepo.split('/')[0],
+      url: `https://huggingface.co/${draft.hfRepo}`,
+      specs: {gguf: {total: 0}},
+      siblings: undefined,
+    } as unknown as HuggingFaceModel;
+    return {...hfAsModel(hfModel, modelFile), modelType: ModelType.DRAFT};
+  };
+
   // Materialize the device-tier preset list from rules. Each thin candidate is
   // turned into the minimal pair hfAsModel reads (candidateToPair), so the
   // result is origin:HF, identical to an HF-browser add. Multimodal candidates
@@ -660,16 +870,23 @@ class ModelStore {
     const flat = rules.tiers[tier].models.flatMap(candidate => {
       const {hfModel, modelFile} = this.candidateToPair(candidate);
       const llm = hfAsModel(hfModel, modelFile);
-      const named = candidate.displayName
+      let named = candidate.displayName
         ? {...llm, name: candidate.displayName}
         : llm;
+
+      const extras: Model[] = [];
       if (named.supportsMultimodal) {
         const projModels = getMmprojFiles(hfModel.siblings || []).map(file =>
           hfAsModel(hfModel, file),
         );
-        return [named, ...projModels];
+        extras.push(...projModels);
       }
-      return [named];
+      if (candidate.draft) {
+        const draftStub = this.draftToStub(candidate.draft);
+        named = {...named, defaultDraftModel: draftStub.id};
+        extras.push(draftStub);
+      }
+      return [named, ...extras];
     });
 
     // Dedup on the full model id (author/repo/filename) so two authors sharing a
@@ -1189,6 +1406,40 @@ class ModelStore {
     }
   };
 
+  private _downloadDraftModelIfNeeded = async (model: Model) => {
+    const draftModelId = resolveDraftModelId(
+      model,
+      this.contextInitParams.selectedDraftModelId,
+    );
+    if (
+      !draftModelId ||
+      model.modelType === ModelType.DRAFT ||
+      !this.contextInitParams.speculativeEnabled
+    ) {
+      return;
+    }
+
+    const draftModel = this.models.find(m => m.id === draftModelId);
+
+    if (
+      draftModel &&
+      !draftModel.isDownloaded &&
+      !downloadManager.isDownloading(draftModelId)
+    ) {
+      console.log('Auto-downloading draft model for speculative target:', {
+        target: model.id,
+        draft: draftModelId,
+      });
+
+      try {
+        await this.checkSpaceAndDownload(draftModelId);
+      } catch (error) {
+        console.error('Failed to auto-download draft model:', error);
+        // Don't re-throw - draft download failure shouldn't fail the target download.
+      }
+    }
+  };
+
   checkSpaceAndDownload = async (modelId: string) => {
     const model = this.models.find(m => m.id === modelId);
     // Skip if model is undefined, already downloaded, local or doesn't have a download URL
@@ -1210,6 +1461,7 @@ class ModelStore {
 
       // For vision models, automatically download the projection model
       await this._downloadProjectionModelIfNeeded(model);
+      await this._downloadDraftModelIfNeeded(model);
     } catch (err) {
       if (err instanceof DownloadCancelledError) {
         // User cancelled — not a failure. Don't surface an error and don't
@@ -1411,6 +1663,10 @@ class ModelStore {
     ) {
       await this.cleanupOrphanedProjectionModels(projectionModelIds);
     }
+
+    if (this.contextInitParams.selectedDraftModelId === _model.id) {
+      this.setSelectedDraftModel(undefined);
+    }
   };
 
   /**
@@ -1500,6 +1756,9 @@ class ModelStore {
       // Context length from GGUF
       const context_length = getArchValue('context_length');
 
+      const nextn_predict_layers = getArchValue('nextn_predict_layers');
+      const embedding_length_out = getArchValue('embedding_length_out');
+
       const metadata = {
         architecture,
         n_layers,
@@ -1511,6 +1770,8 @@ class ModelStore {
         n_embd_head_v,
         sliding_window,
         context_length,
+        nextn_predict_layers,
+        embedding_length_out,
       };
 
       const paramCount = parseSizeLabel(
@@ -1612,6 +1873,39 @@ class ModelStore {
     return {isMultimodalInit: false};
   };
 
+  private resolveDraftConfig = async (model: Model): Promise<DraftConfig> => {
+    const candidate = resolveDraftCandidate(
+      model,
+      this.models,
+      this.contextInitParams,
+    );
+    if (candidate.mode !== 'paired') {
+      return candidate;
+    }
+
+    const resolvedDraftPath = await this.getModelFullPath(candidate.draftModel);
+    if (resolvedDraftPath) {
+      return {
+        mode: 'paired',
+        resolvedDraftPath,
+        draftModel: candidate.draftModel,
+      };
+    }
+
+    return unpairedDraftCandidate(model);
+  };
+
+  get effectiveDraftMode(): DraftConfig['mode'] {
+    return effectiveDraftModeOf(this);
+  }
+
+  get effectiveDraftCacheDefaults(): {k: CacheType; v: CacheType} {
+    return draftCacheDefaults(
+      this.effectiveDraftMode,
+      this.contextInitParams.flash_attn_type === 'on',
+    );
+  }
+
   /**
    * Check memory/capability requirements and show warning alert if needed.
    * Returns true if user confirms or no warning needed, false if cancelled.
@@ -1620,10 +1914,11 @@ class ModelStore {
     model: Model,
     isMultimodalInit: boolean,
     projectionModel?: Model,
+    draftModel?: Model,
   ): Promise<boolean> => {
     let hasMemory = true;
     try {
-      hasMemory = await hasEnoughMemory(model, projectionModel);
+      hasMemory = await hasEnoughMemory(model, projectionModel, draftModel);
     } catch (error) {
       console.error('Memory check failed:', error);
       return false;
@@ -1751,11 +2046,14 @@ class ModelStore {
       const {isMultimodalInit, resolvedMmProjPath, projectionModel} =
         await this.resolveMultimodalConfig(model, mmProjPath);
 
+      const draftConfig = await this.resolveDraftConfig(model);
+
       // Check memory and get user confirmation if needed (no mutex - UI interaction)
       const shouldProceed = await this.checkMemoryAndConfirm(
         model,
         isMultimodalInit,
         projectionModel,
+        pairedDraftModel(draftConfig),
       );
 
       if (!shouldProceed) {
@@ -1813,6 +2111,7 @@ class ModelStore {
           resolvedMmProjPath,
           isMultimodalInit,
           projectionModel,
+          draftConfig,
         );
       });
 
@@ -1838,6 +2137,7 @@ class ModelStore {
     mmProjPath?: string,
     isMultimodalInit: boolean = false,
     projectionModel?: Model,
+    draftConfig?: DraftConfig,
   ): Promise<LlamaContext> {
     const filePath = await this.getModelFullPath(model);
     if (!filePath) {
@@ -1851,8 +2151,10 @@ class ModelStore {
 
     // Get all effective initialization settings BEFORE try block
     // so they're available for error reporting if initialization fails
-    const effectiveSettings =
-      await this.getEffectiveContextInitParams(filePath);
+    const effectiveSettings = await this.getEffectiveContextInitParams(
+      filePath,
+      draftConfig,
+    );
 
     try {
       // Create properly versioned ContextInitParams
@@ -1930,6 +2232,7 @@ class ModelStore {
           model,
           projectionModel,
           contextInitParams,
+          pairedDraftModel(draftConfig),
         );
         runInAction(() => {
           if (
