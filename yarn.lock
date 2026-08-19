@@ -6520,10 +6520,10 @@ lines-and-columns@^1.1.6:
   resolved "https://registry.yarnpkg.com/lines-and-columns/-/lines-and-columns-1.2.4.tgz#eca284f75d2965079309dc0ad9255abb2ebc1632"
   integrity sha512-7ylylesZQ/PV29jhEDl3Ufjo6ZX7gCqJr5F7PKrqc93v7fzSymt1BpwEU8nAUXs8qzzvqhbjhK5QZg6Mt/HkBg==
 
-llama.rn@0.12.7:
-  version "0.12.7"
-  resolved "https://registry.yarnpkg.com/llama.rn/-/llama.rn-0.12.7.tgz#20f90bebb3c4f1d26594948a088fec3e32efd416"
-  integrity sha512-n18BLz9g2OuxIyZ9p2Y4ml8C1e0c8xrvNGPL3DIK9pKDp56sZtDSWLOzDMUWfsyVYSVRnbCMmQvGkIX/8YV6Og==
+llama.rn@0.13.0-rc.0:
+  version "0.13.0-rc.0"
+  resolved "https://registry.yarnpkg.com/llama.rn/-/llama.rn-0.13.0-rc.0.tgz#5381c6cb874afe49d84ac5083e77f485a12f59f8"
+  integrity sha512-6VWkmFzcPBX+Xv2gqKm+o0kWpa4gPhNJ74EM89iL2zaxruxmu/eApTHDjGRzX3dMPHhDJWyloJ+d00xhg+9FeA==
 
 locate-path@^5.0.0:
   version "5.0.0"
