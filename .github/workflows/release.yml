@@ -135,16 +135,16 @@ jobs:
           GOOGLE_WEB_CLIENT_ID=${{ vars.GOOGLE_WEB_CLIENT_ID }}
           EOL
 
-      # Step 10: Build and upload Android app to Alpha track (includes building APK and Bundle)
-      - name: Build and upload Android app
+      # Step 10a: Build the Android APK and Bundle. Building and uploading are
+      # separate steps so the payload check below sits between them in the
+      # workflow graph and the upload cannot outrun it.
+      - name: Build Android app
         working-directory: android
         env:
           KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
           KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
           KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
           GRADLE_USER_HOME: ${{ runner.temp }}/.gradle
-          #  GOOGLE_APPLICATION_CREDENTIALS: ${{ steps.auth.outputs.credentials_file_path }} # This is not supported by fastlane, we need to replace it with PLAY_STORE_JSON_KEY in the future.
-          PLAY_STORE_JSON_KEY: ${{ secrets.PLAY_STORE_SERVICE_ACCOUNT_JSON }}
           GOOGLE_SERVICES_JSON: ${{ secrets.GOOGLE_SERVICES_JSON }}
         run: |
           set -euo pipefail
@@ -152,8 +152,7 @@ jobs:
             echo "::error::ORG_GRADLE_PROJECT_rnllamaBuildFromSource is not set, so the build mode would be whatever llama.rn happens to ship."
             exit 1
           fi
-          echo "$PLAY_STORE_JSON_KEY" > play-store-key.json
-          bundle exec fastlane release_android_alpha 2>&1 | tee android-build.log
+          bundle exec fastlane build_android_release 2>&1 | tee android-build.log
 
       - name: Verify the variant allowlist reached the llama.rn build
         run: |
@@ -167,6 +166,34 @@ jobs:
             exit 1
           fi
           echo "OK: llama.rn built exactly the declared variants."
+
+      # Step 10b: Both shipped forms are checked — the APK goes to the GitHub
+      # Release, the AAB goes to Play, and they are packaged separately.
+      - name: Verify the Android payload
+        run: |
+          node scripts/verify-android-payload.js \
+            --apk android/app/build/outputs/apk/prod/release/app-prod-release.apk \
+            --aab android/app/build/outputs/bundle/prodRelease/app-prod-release.aab \
+            --report payload-report.txt
+
+      - name: Upload payload report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: payload-report
+          path: payload-report.txt
+          if-no-files-found: ignore
+
+      # Step 10c: Upload the checked bundle to the Alpha track
+      - name: Upload Android app to Alpha track
+        working-directory: android
+        env:
+          #  GOOGLE_APPLICATION_CREDENTIALS: ${{ steps.auth.outputs.credentials_file_path }} # This is not supported by fastlane, we need to replace it with PLAY_STORE_JSON_KEY in the future.
+          PLAY_STORE_JSON_KEY: ${{ secrets.PLAY_STORE_SERVICE_ACCOUNT_JSON }}
+        run: |
+          set -euo pipefail
+          echo "$PLAY_STORE_JSON_KEY" > play-store-key.json
+          bundle exec fastlane upload_android_alpha
 
       # Step 11: Create GitHub Release with APK
       - name: Create GitHub Release

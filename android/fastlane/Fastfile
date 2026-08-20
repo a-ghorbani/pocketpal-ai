@@ -1,16 +1,16 @@
 default_platform :android
 
 platform :android do
-  desc "Release Android app to Alpha track"
-  lane :release_android_alpha do
+  desc "Build the Android release APK and AAB"
+  lane :build_android_release do
     android_dir = File.expand_path('..', Dir.pwd)
-    
+
     # Create google-services.json from GitHub secret
     File.write(
       File.join(android_dir, "app/google-services.json"),
       ENV["GOOGLE_SERVICES_JSON"]
     )
-    
+
     # Build APK for GitHub Release.
     # flavor: "prod" is MANDATORY — task: "assemble" is a gradle meta-task
     # that, post-flavor, would build both prodRelease AND e2eRelease
@@ -41,10 +41,22 @@ platform :android do
         "android.injected.signing.key.password" => ENV["KEY_PASSWORD"]
       }
     )
+  end
+
+  desc "Upload the built Android bundle to the Alpha track"
+  lane :upload_android_alpha do
+    android_dir = File.expand_path('..', Dir.pwd)
 
     upload_to_play_store(
       track: "alpha",
       package_name: "com.pocketpalai",
+      # Passed explicitly, and must stay that way. supply otherwise takes the
+      # bundle from lane_context[SharedValues::GRADLE_AAB_OUTPUT_PATH], which
+      # only exists in the process that ran `gradle(task: "bundle")` — a
+      # separate one from this lane's. Its fallback globs do not match this
+      # project's flavored output path, so an absent value uploads the
+      # metadata, no binary, and reports success.
+      aab: File.join(android_dir, "app/build/outputs/bundle/prodRelease/app-prod-release.aab"),
       skip_upload_metadata: false,
       skip_upload_images: true,
       skip_upload_screenshots: true,
