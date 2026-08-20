@@ -461,6 +461,55 @@ describe('a check that cannot run', () => {
     expect(output).toContain('declares no symbol rules');
   });
 
+  // The regression that motivated this check satisfied every library and asset
+  // rule; the symbol rule was the only thing that caught it. A rule that names
+  // a library but asserts nothing about it therefore restores the incident with
+  // CI green, and counting rules rather than reading them would not notice.
+  it.each([
+    [
+      'a rule that asserts nothing',
+      rule => {
+        delete rule.mustExport;
+        delete rule.expectedMatchCount;
+      },
+    ],
+    [
+      'a rule whose mustExport has been emptied',
+      rule => {
+        rule.mustExport = [];
+        delete rule.expectedMatchCount;
+      },
+    ],
+    ['a rule naming no library', rule => delete rule.lib],
+  ])('fails on %s', (_label, weaken) => {
+    const weakened = path.join(workspace, 'weakened.json');
+    const edited = JSON.parse(JSON.stringify(manifest));
+    weaken(edited.abis[0].requiredSymbols[0]);
+    fs.writeFileSync(weakened, JSON.stringify(edited));
+
+    const entries = conformingEntries();
+    entries['lib/arm64-v8a/librnllama_v8_2_dotprod_i8mm_hexagon_opencl.so'] =
+      hexagonDynsym(0, {withRequired: false});
+    const archive = writeArchive('app-prod-release.apk', entries);
+
+    const {status, output} = runGate([
+      '--apk',
+      archive,
+      '--manifest',
+      weakened,
+    ]);
+    expect(status).toBe(1);
+    expect(output).toContain('asserts nothing');
+  });
+
+  it('refuses a repeated --apk rather than checking only the last one', () => {
+    const first = writeArchive('first.apk', conformingEntries());
+    const second = writeArchive('second.apk', conformingEntries());
+    const {status, output} = runGate(['--apk', first, '--apk', second]);
+    expect(status).toBe(1);
+    expect(output).toContain('given twice');
+  });
+
   it('fails when the manifest declares no ABIs', () => {
     const emptyManifest = path.join(workspace, 'empty-manifest.json');
     fs.writeFileSync(emptyManifest, JSON.stringify({abis: []}));

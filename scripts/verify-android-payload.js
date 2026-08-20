@@ -49,7 +49,7 @@ function usage() {
 }
 
 function parseArgs(argv) {
-  const args = {manifest: DEFAULT_MANIFEST};
+  const args = {};
   for (let i = 0; i < argv.length; i++) {
     const flag = argv[i];
     switch (flag) {
@@ -63,6 +63,11 @@ function parseArgs(argv) {
         const value = argv[++i];
         if (!value || value.startsWith('--')) {
           throw new Error(`${flag} needs a path.\n\n${usage()}`);
+        }
+        // Refused rather than last-one-wins: a repeated flag would otherwise
+        // check one artifact while reporting on the whole invocation.
+        if (args[flag.slice(2)]) {
+          throw new Error(`${flag} was given twice.\n\n${usage()}`);
         }
         args[flag.slice(2)] = value;
         break;
@@ -81,6 +86,7 @@ function parseArgs(argv) {
       `--print-variants does not check an artifact; do not pass it with --apk/--aab.\n\n${usage()}`,
     );
   }
+  args.manifest = args.manifest || DEFAULT_MANIFEST;
   return args;
 }
 
@@ -109,6 +115,19 @@ function loadManifest(manifestPath) {
       throw new Error(
         `${manifestPath} declares no required libraries for ${abi.abi || '(unnamed ABI)'}.`,
       );
+    }
+    // A rule naming a library but asserting nothing about it is the shape a
+    // weakening edit takes — emptying mustExport during an upgrade rather than
+    // re-declaring it. The library is still present, so nothing else fails.
+    for (const rule of abi.requiredSymbols || []) {
+      if (
+        !rule.lib ||
+        ((rule.mustExport || []).length === 0 && !rule.expectedMatchCount)
+      ) {
+        throw new Error(
+          `${manifestPath} declares a symbol rule for ${rule.lib || '(unnamed library)'} that asserts nothing, so its backend would not be checked.`,
+        );
+      }
     }
   }
   const symbolRules = manifest.abis.reduce(
