@@ -229,6 +229,22 @@ describe('a conforming artifact', () => {
     expect(runGate(['--aab', archive]).status).toBe(1);
   });
 
+  // The bundle path must judge the library it found, not merely find one. A
+  // prefix that matched nothing would report the same "PASS" as a sound build.
+  it('fails as an app bundle whose backend library is the broken one', () => {
+    const entries = conformingEntries('base/');
+    entries[
+      'base/lib/arm64-v8a/librnllama_v8_2_dotprod_i8mm_hexagon_opencl.so'
+    ] = hexagonDynsym(0, {withRequired: false});
+    const archive = writeArchive('app-prod-release.aab', entries);
+    const {status, output} = runGate(['--aab', archive]);
+    expect(status).toBe(1);
+    expect(output).toContain(
+      'base/lib/arm64-v8a/librnllama_v8_2_dotprod_i8mm_hexagon_opencl.so',
+    );
+    expect(output).toContain('does not export');
+  });
+
   it('writes the same report to --report', () => {
     const reportPath = path.join(workspace, 'payload-report.txt');
     const {output} = gateApk(conformingEntries(), ['--report', reportPath]);
@@ -369,6 +385,80 @@ describe('a check that cannot run', () => {
     const {status, output} = runGate(['--print-variants', '--apk', archive]);
     expect(status).toBe(1);
     expect(output).toContain('does not check an artifact');
+  });
+
+  it('fails when the artifact is not there at all', () => {
+    const {status, output} = runGate([
+      '--apk',
+      path.join(workspace, 'never-built.apk'),
+    ]);
+    expect(status).toBe(1);
+    expect(output).toContain('proven nothing about it');
+  });
+
+  it('fails when the artifact is a readable archive holding nothing', () => {
+    const archive = writeArchive('app-prod-release.apk', {
+      'META-INF/placeholder': Buffer.from('x'),
+    });
+    expect(runGate(['--apk', archive]).status).toBe(1);
+  });
+
+  it('fails when the library has had its section headers stripped', () => {
+    const stripped = Buffer.from(PLAIN_ELF);
+    stripped.writeBigUInt64LE(0n, 0x28); // e_shoff
+    stripped.writeUInt16LE(0, 0x3c); // e_shnum
+    const entries = conformingEntries();
+    entries['lib/arm64-v8a/librnllama_v8_2_dotprod_i8mm_hexagon_opencl.so'] =
+      stripped;
+    const {status, output} = gateApk(entries);
+    expect(status).toBe(1);
+    expect(output).toContain('section headers are absent');
+  });
+
+  // The report is the evidence the check ran. Failing to write it while
+  // reporting success would leave a pass nobody can audit.
+  it('fails when it cannot write the report, even if the artifact is sound', () => {
+    const {status, output} = gateApk(conformingEntries(), [
+      '--report',
+      path.join(workspace, 'no-such-directory', 'payload-report.txt'),
+    ]);
+    expect(status).toBe(1);
+    expect(output).toContain('FAIL');
+  });
+
+  it('fails when the manifest declares no libraries for an ABI', () => {
+    const weakened = path.join(workspace, 'no-libs.json');
+    fs.writeFileSync(
+      weakened,
+      JSON.stringify({abis: [{abi: 'arm64-v8a', requiredLibs: []}]}),
+    );
+    const archive = writeArchive('app-prod-release.apk', conformingEntries());
+    const {status, output} = runGate([
+      '--apk',
+      archive,
+      '--manifest',
+      weakened,
+    ]);
+    expect(status).toBe(1);
+    expect(output).toContain('declares no required libraries');
+  });
+
+  it('fails when the manifest declares no symbol rules', () => {
+    const weakened = path.join(workspace, 'no-symbol-rules.json');
+    const stripped = JSON.parse(JSON.stringify(manifest));
+    for (const abi of stripped.abis) {
+      abi.requiredSymbols = [];
+    }
+    fs.writeFileSync(weakened, JSON.stringify(stripped));
+    const archive = writeArchive('app-prod-release.apk', conformingEntries());
+    const {status, output} = runGate([
+      '--apk',
+      archive,
+      '--manifest',
+      weakened,
+    ]);
+    expect(status).toBe(1);
+    expect(output).toContain('declares no symbol rules');
   });
 
   it('fails when the manifest declares no ABIs', () => {
