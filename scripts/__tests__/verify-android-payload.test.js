@@ -364,6 +364,13 @@ describe('a check that cannot run', () => {
     expect(runGate([]).status).toBe(1);
   });
 
+  it('refuses --print-variants alongside an artifact rather than skipping the check', () => {
+    const archive = writeArchive('app-prod-release.apk', conformingEntries());
+    const {status, output} = runGate(['--print-variants', '--apk', archive]);
+    expect(status).toBe(1);
+    expect(output).toContain('does not check an artifact');
+  });
+
   it('fails when the manifest declares no ABIs', () => {
     const emptyManifest = path.join(workspace, 'empty-manifest.json');
     fs.writeFileSync(emptyManifest, JSON.stringify({abis: []}));

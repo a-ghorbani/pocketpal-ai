@@ -74,6 +74,13 @@ function parseArgs(argv) {
   if (!args.printVariants && !args.apk && !args.aab) {
     throw new Error(`Nothing to check.\n\n${usage()}`);
   }
+  // Refused rather than ignored: --print-variants returns before reading any
+  // artifact, so accepting both would silently pass whatever it was given.
+  if (args.printVariants && (args.apk || args.aab)) {
+    throw new Error(
+      `--print-variants does not check an artifact; do not pass it with --apk/--aab.\n\n${usage()}`,
+    );
+  }
   return args;
 }
 
