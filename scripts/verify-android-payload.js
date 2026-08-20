@@ -365,7 +365,9 @@ function checkArtifact({archive, kind, manifest, report, failures}) {
       fail(
         [
           `${artifactName} is missing ${prefix}${asset}.`,
-          'The Hexagon backend cannot run without its DSP libraries. They are synced from',
+          'All four DSP libraries are required, not only the one a given device uses:',
+          'RNLlama.java extracts them as a set and disables the Hexagon backend entirely',
+          'if any one is absent. They are synced into the artifact from',
           "node_modules/llama.rn/bin/arm64-v8a by llama.rn's syncRNLlamaHtpAssets task —",
           'check that the dependency installed completely.',
         ].join('\n      '),
