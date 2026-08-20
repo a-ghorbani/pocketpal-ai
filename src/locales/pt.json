@@ -754,7 +754,8 @@
       "exportCurrentSession": "Exportar sessão atual",
       "exportAllSessions": "Exportar todas as sessões",
       "exportChatSession": "Exportar sessão de chat",
-      "importSessions": "Importar sessões"
+      "importSessions": "Importar sessões",
+      "exportCurrentSessionMarkdown": "Exportar como Markdown"
     },
     "hfTokenSheet": {
       "title": "Token do Hugging Face",
@@ -983,8 +984,11 @@
         "threeWeeksAgo": "Há 3 semanas",
         "fourWeeksAgo": "Há 4 semanas",
         "lastMonth": "Mês passado",
-        "older": "Mais antigos"
-      }
+        "older": "Mais antigos",
+        "pinned": "Fixadas"
+      },
+      "pin": "Fixar",
+      "unpin": "Desafixar"
     },
     "usageStats": {
       "tooltip": {

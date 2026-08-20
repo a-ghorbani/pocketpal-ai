@@ -736,7 +736,8 @@
       "exportCurrentSession": "ייצוא הסשן הנוכחי",
       "exportAllSessions": "ייצוא כל הסשנים",
       "exportChatSession": "ייצוא סשן צ'אט",
-      "importSessions": "ייבוא סשנים"
+      "importSessions": "ייבוא סשנים",
+      "exportCurrentSessionMarkdown": "ייצוא כ-Markdown"
     },
     "hfTokenSheet": {
       "title": "טוקן Hugging Face",
@@ -965,8 +966,11 @@
         "threeWeeksAgo": "לפני 3 שבועות",
         "fourWeeksAgo": "לפני 4 שבועות",
         "lastMonth": "בחודש שעבר",
-        "older": "לפני זמן רב"
-      }
+        "older": "לפני זמן רב",
+        "pinned": "מוצמדים"
+      },
+      "pin": "הצמד",
+      "unpin": "בטל הצמדה"
     },
     "usageStats": {
       "tooltip": {

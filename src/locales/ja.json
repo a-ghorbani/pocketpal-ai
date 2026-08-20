@@ -736,7 +736,8 @@
       "exportCurrentSession": "現在のセッションをエクスポート",
       "exportAllSessions": "すべてのセッションをエクスポート",
       "exportChatSession": "チャットをエクスポート",
-      "importSessions": "セッションをインポート"
+      "importSessions": "セッションをインポート",
+      "exportCurrentSessionMarkdown": "Markdown形式でエクスポート"
     },
     "hfTokenSheet": {
       "title": "Hugging Face トークン",
@@ -965,8 +966,11 @@
         "threeWeeksAgo": "3週間前",
         "fourWeeksAgo": "4週間前",
         "lastMonth": "先月",
-        "older": "それ以前"
-      }
+        "older": "それ以前",
+        "pinned": "ピン留め済み"
+      },
+      "pin": "ピン留め",
+      "unpin": "ピン留めを解除"
     },
     "usageStats": {
       "tooltip": {

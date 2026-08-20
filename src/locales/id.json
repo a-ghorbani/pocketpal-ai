@@ -736,7 +736,8 @@
       "exportCurrentSession": "Ekspor sesi saat ini",
       "exportAllSessions": "Ekspor semua sesi",
       "exportChatSession": "Ekspor sesi obrolan",
-      "importSessions": "Impor sesi"
+      "importSessions": "Impor sesi",
+      "exportCurrentSessionMarkdown": "Ekspor sebagai Markdown"
     },
     "hfTokenSheet": {
       "title": "Token Hugging Face",
@@ -965,8 +966,11 @@
         "threeWeeksAgo": "3 Minggu Lalu",
         "fourWeeksAgo": "4 Minggu Lalu",
         "lastMonth": "Bulan Lalu",
-        "older": "Lebih Lama"
-      }
+        "older": "Lebih Lama",
+        "pinned": "Disematkan"
+      },
+      "pin": "Sematkan",
+      "unpin": "Lepas sematan"
     },
     "usageStats": {
       "tooltip": {

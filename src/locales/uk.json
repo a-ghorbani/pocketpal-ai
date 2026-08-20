@@ -743,7 +743,8 @@
       "exportCurrentSession": "Експортувати поточну сесію",
       "exportAllSessions": "Експортувати всі сесії",
       "exportChatSession": "Експортувати сеанс чату",
-      "importSessions": "Імпортувати сесії"
+      "importSessions": "Імпортувати сесії",
+      "exportCurrentSessionMarkdown": "Експортувати як Markdown"
     },
     "hfTokenSheet": {
       "title": "Токен Hugging Face",
@@ -972,8 +973,11 @@
         "threeWeeksAgo": "3 тижні тому",
         "fourWeeksAgo": "4 тижні тому",
         "lastMonth": "Минулого місяця",
-        "older": "Старші"
-      }
+        "older": "Старші",
+        "pinned": "Закріплені"
+      },
+      "pin": "Закріпити",
+      "unpin": "Відкріпити"
     },
     "usageStats": {
       "tooltip": {

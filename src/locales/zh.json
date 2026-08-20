@@ -736,7 +736,8 @@
       "exportCurrentSession": "导出当前会话",
       "exportAllSessions": "导出所有会话",
       "exportChatSession": "导出聊天会话",
-      "importSessions": "导入会话"
+      "importSessions": "导入会话",
+      "exportCurrentSessionMarkdown": "导出为 Markdown"
     },
     "hfTokenSheet": {
       "title": "Hugging Face 令牌",
@@ -965,8 +966,11 @@
         "threeWeeksAgo": "3周前",
         "fourWeeksAgo": "4周前",
         "lastMonth": "上个月",
-        "older": "以前"
-      }
+        "older": "以前",
+        "pinned": "已置顶"
+      },
+      "pin": "置顶",
+      "unpin": "取消置顶"
     },
     "usageStats": {
       "tooltip": {

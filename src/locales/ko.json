@@ -362,7 +362,8 @@
       "export": "내보내기/가져오기",
       "exportCurrentSession": "현재 세션 내보내기",
       "exportAllSessions": "모든 세션 내보내기",
-      "importSessions": "세션 가져오기"
+      "importSessions": "세션 가져오기",
+      "exportCurrentSessionMarkdown": "Markdown으로 내보내기"
     },
     "modelSettingsSheet": {
       "modelSettings": "모델 설정",
@@ -487,7 +488,8 @@
         "threeWeeksAgo": "3주 전",
         "fourWeeksAgo": "4주 전",
         "lastMonth": "지난 달",
-        "older": "오래된 항목"
+        "older": "오래된 항목",
+        "pinned": "고정됨"
       },
       "select": "선택",
       "nSelected": "{{count}}개 선택됨",
@@ -499,7 +501,9 @@
       "bulkDeleteMessage": "{{count}}개의 채팅 세션을 삭제하시겠습니까? 이 작업은 되돌릴 수 없습니다.",
       "bulkDeleteError": "채팅 세션 삭제에 실패했습니다. 다시 시도해 주세요.",
       "exportError": "채팅 세션 내보내기에 실패했습니다. 다시 시도해 주세요.",
-      "bulkExportError": "채팅 세션 내보내기에 실패했습니다. 다시 시도해 주세요."
+      "bulkExportError": "채팅 세션 내보내기에 실패했습니다. 다시 시도해 주세요.",
+      "pin": "고정",
+      "unpin": "고정 해제"
     },
     "usageStats": {
       "tooltip": {
