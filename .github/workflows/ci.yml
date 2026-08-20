@@ -110,9 +110,25 @@ jobs:
       # android/gradle.properties sets rnllamaBuildFromSource, and a subproject's
       # value beats the root project's, so only an environment property or -P wins.
       ORG_GRADLE_PROJECT_rnllamaBuildFromSource: 'true'
+      HEXAGON_SDK_VERSION: 6.4.0.2
+      HEXAGON_TOOLS_VERSION: 19.0.04
+      CCACHE_MAXSIZE: 2G
+      # The NDK is reinstalled on every run, so hash the compiler rather than
+      # stat it, and do not let regenerated mtimes under node_modules count as
+      # a change. Left at the defaults, nearly every object would miss.
+      CCACHE_COMPILERCHECK: content
+      CCACHE_SLOPPINESS: time_macros,include_file_mtime,include_file_ctime
     steps:
       - name: Check out code
         uses: actions/checkout@v3
+
+      # Must precede setup-node and setup-java: /opt/hostedtoolcache is where
+      # those install. The Hexagon SDK adds ~3.1 GB on top of a from-source build.
+      - name: Maximize build space
+        run: |
+          df -h /
+          sudo rm -rf /usr/share/dotnet /opt/ghc /opt/hostedtoolcache
+          df -h /
 
       # Set up Node.js environment
       - name: Set up Node.js
@@ -141,12 +157,86 @@ jobs:
           echo "Declared allowlist: $VARIANTS"
           echo "ORG_GRADLE_PROJECT_rnllamaVariants=$VARIANTS" >> "$GITHUB_ENV"
 
+      # Keyed on the manifest as well as yarn.lock: the manifest decides the
+      # variant set, so changing it must invalidate the configured build tree.
+      - name: Cache llama.rn native build tree
+        uses: actions/cache@v4
+        with:
+          path: node_modules/llama.rn/android/.cxx
+          key: ${{ runner.os }}-cxx-${{ hashFiles('yarn.lock', 'scripts/android-payload-manifest.json') }}
+
       - name: Set up JDK 17
         uses: actions/setup-java@v3
         with:
           java-version: '17'
           distribution: 'temurin'
           cache: 'gradle'
+
+      - name: Cache Hexagon SDK
+        uses: actions/cache@v4
+        with:
+          path: ~/.hexagon-sdk
+          key: hexagon-sdk-${{ env.HEXAGON_SDK_VERSION }}
+
+      - name: Provision the Hexagon SDK
+        run: |
+          set -euo pipefail
+          SDK_ROOT="$HOME/.hexagon-sdk/$HEXAGON_SDK_VERSION"
+          TOOLS_ROOT="$SDK_ROOT/tools/HEXAGON_Tools/$HEXAGON_TOOLS_VERSION"
+
+          if [ ! -d "$SDK_ROOT" ]; then
+            STAGE=$(mktemp -d)
+            curl -fsSL -o "$STAGE/sdk.tar.xz" \
+              "https://github.com/snapdragon-toolchain/hexagon-sdk/releases/download/v${HEXAGON_SDK_VERSION}/hexagon-sdk-v${HEXAGON_SDK_VERSION}-amd64-lnx.tar.xz"
+            mkdir -p "$STAGE/unpacked"
+            tar --use-compress-program='xz -T0 -d' -xf "$STAGE/sdk.tar.xz" -C "$STAGE/unpacked"
+            rm -f "$STAGE/sdk.tar.xz"
+
+            mkdir -p "$HOME/.hexagon-sdk"
+            if [ -d "$STAGE/unpacked/incs" ]; then
+              mv "$STAGE/unpacked" "$SDK_ROOT"
+            else
+              INNER=$(find "$STAGE/unpacked" -maxdepth 1 -mindepth 1 -type d)
+              if [ "$(printf '%s\n' "$INNER" | wc -l)" -ne 1 ] || [ ! -d "$INNER/incs" ]; then
+                echo "::error::Unexpected Hexagon SDK archive layout; could not find the SDK root."
+                exit 1
+              fi
+              mv "$INNER" "$SDK_ROOT"
+            fi
+          fi
+
+          # A partially present SDK is the failure this job exists to prevent:
+          # gradle and CMake both downgrade a missing Hexagon SDK to a warning.
+          for required in \
+            "$SDK_ROOT/incs" \
+            "$TOOLS_ROOT" \
+            "$SDK_ROOT/ipc/fastrpc/remote/ship/android_aarch64/libcdsprpc.so"
+          do
+            if [ ! -e "$required" ]; then
+              echo "::error::Hexagon SDK is incomplete: $required is missing, so the build would omit the NPU backend."
+              exit 1
+            fi
+          done
+
+          echo "HEXAGON_SDK_ROOT=$SDK_ROOT" >> "$GITHUB_ENV"
+          echo "HEXAGON_TOOLS_ROOT=$TOOLS_ROOT" >> "$GITHUB_ENV"
+
+      - name: Cache ccache
+        uses: actions/cache@v4
+        with:
+          path: ~/.ccache
+          key: ccache-android-${{ github.sha }}
+          restore-keys: ccache-android-
+
+      # llama.rn's CMake picks ccache up on its own if the binary is on PATH.
+      - name: Set up ccache
+        run: |
+          set -euo pipefail
+          if ! command -v ccache >/dev/null 2>&1; then
+            sudo apt-get update && sudo apt-get install -y ccache
+          fi
+          echo "CCACHE_DIR=$HOME/.ccache" >> "$GITHUB_ENV"
+          CCACHE_DIR="$HOME/.ccache" ccache --zero-stats
 
       - name: Create dummy google-services.json for CI
         run: |
@@ -221,6 +311,10 @@ jobs:
             exit 1
           fi
           ./gradlew assembleProdRelease 2>&1 | tee android-build.log
+
+      - name: ccache statistics
+        if: always()
+        run: ccache --show-stats || echo "ccache unavailable (its setup step did not complete)"
 
       - name: Verify the variant allowlist reached the llama.rn build
         run: |
