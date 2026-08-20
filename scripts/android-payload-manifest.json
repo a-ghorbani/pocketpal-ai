@@ -1,0 +1,57 @@
+{
+  "$comment": "What a shipped Android artifact must contain. Read by scripts/verify-android-payload.js. See https://github.com/a-ghorbani/pocketpal-ai/issues/858 for why the Hexagon symbol rules exist.",
+  "matching": {
+    "countRule": "expectedMatchCount counts every .dynsym entry whose name contains the pattern, case-insensitively, including undefined imports. The declared numbers were measured with `llvm-nm -D <lib> | grep -ci <pattern>`, so the reader must match that convention or the two are calibrated differently.",
+    "mustExportRule": "mustExport names must be DEFINED in .dynsym (st_shndx != SHN_UNDEF). An undefined import proves only that something references the symbol, not that it was compiled in.",
+    "extraLibsRule": "librnllama* libraries beyond requiredLibs are reported and permitted, not failed: forcing prebuilts (ORG_GRADLE_PROJECT_rnllamaBuildFromSource=false) legitimately produces all seven arm64 variants."
+  },
+  "abis": [
+    {
+      "abi": "arm64-v8a",
+      "requiredLibs": [
+        "librnllama.so",
+        "librnllama_jni.so",
+        "librnllama_v8.so",
+        "librnllama_jni_v8.so",
+        "librnllama_v8_2.so",
+        "librnllama_jni_v8_2.so",
+        "librnllama_v8_2_dotprod.so",
+        "librnllama_jni_v8_2_dotprod.so",
+        "librnllama_v8_2_dotprod_i8mm.so",
+        "librnllama_jni_v8_2_dotprod_i8mm.so",
+        "librnllama_v8_2_dotprod_i8mm_hexagon_opencl.so",
+        "librnllama_jni_v8_2_dotprod_i8mm_hexagon_opencl.so"
+      ],
+      "requiredAssets": [
+        "assets/ggml-hexagon/libggml-htp-v73.so",
+        "assets/ggml-hexagon/libggml-htp-v75.so",
+        "assets/ggml-hexagon/libggml-htp-v79.so",
+        "assets/ggml-hexagon/libggml-htp-v81.so"
+      ],
+      "requiredSymbols": [
+        {
+          "lib": "librnllama_v8_2_dotprod_i8mm_hexagon_opencl.so",
+          "mustExport": [
+            "lm_ggml_backend_hexagon_reg",
+            "lm_ggml_backend_is_hexagon"
+          ],
+          "expectedMatchCount": {
+            "pattern": "hexagon",
+            "count": 16
+          }
+        }
+      ]
+    },
+    {
+      "abi": "x86_64",
+      "requiredLibs": [
+        "librnllama.so",
+        "librnllama_jni.so",
+        "librnllama_x86_64.so",
+        "librnllama_jni_x86_64.so"
+      ],
+      "requiredAssets": [],
+      "requiredSymbols": []
+    }
+  ]
+}

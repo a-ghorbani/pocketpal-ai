@@ -1,0 +1,439 @@
+#!/usr/bin/env node
+/**
+ * verify-android-payload.js — checks a built Android APK/AAB against
+ * scripts/android-payload-manifest.json before it can be published.
+ *
+ * Usage:
+ *   node scripts/verify-android-payload.js --apk <path> [--aab <path>] [--report <path>]
+ *   node scripts/verify-android-payload.js --print-variants
+ *
+ * `--print-variants` reads only the manifest and writes the gradle variant
+ * allowlist to stdout, so it is safe inside `$(...)`.
+ *
+ * Two things here are deliberate and would otherwise look arbitrary:
+ *
+ * - Backend presence is decided from `.dynsym`, never from `strings` or file
+ *   size. `strings` false-positives on unrelated `codec_*_ht` symbols, and two
+ *   builds that differ in whether the Hexagon backend is compiled in have
+ *   identical `opencl` string counts. `.dynsym` also survives stripping.
+ * - The ELF reader is in-process rather than a call out to `readelf`/`llvm-nm`.
+ *   macOS ships no `readelf`, and the NDK's `llvm-nm` sits at a host-specific
+ *   path, so shelling out would make the check unrunnable on exactly the
+ *   machines that need to run it locally.
+ *
+ * Exit 0 when every declared requirement holds, non-zero otherwise —
+ * including when the check could not read what it was asked to judge.
+ *
+ * Pattern mirrors scripts/verify-fonts.js.
+ */
+const {execFileSync} = require('child_process');
+const fs = require('fs');
+const path = require('path');
+
+const DEFAULT_MANIFEST = path.join(__dirname, 'android-payload-manifest.json');
+const ISSUE_URL = 'https://github.com/a-ghorbani/pocketpal-ai/issues/858';
+
+const SHT_DYNSYM = 11;
+const SHN_UNDEF = 0;
+const ELF64_SYM_SIZE = 24;
+const ELF64_SHDR_SIZE = 64;
+
+function usage() {
+  return [
+    'Usage:',
+    '  node scripts/verify-android-payload.js --apk <path> [--aab <path>] [--report <path>]',
+    '  node scripts/verify-android-payload.js --print-variants',
+    '',
+    'At least one of --apk / --aab is required unless --print-variants is given.',
+  ].join('\n');
+}
+
+function parseArgs(argv) {
+  const args = {manifest: DEFAULT_MANIFEST};
+  for (let i = 0; i < argv.length; i++) {
+    const flag = argv[i];
+    switch (flag) {
+      case '--print-variants':
+        args.printVariants = true;
+        break;
+      case '--apk':
+      case '--aab':
+      case '--manifest':
+      case '--report': {
+        const value = argv[++i];
+        if (!value || value.startsWith('--')) {
+          throw new Error(`${flag} needs a path.\n\n${usage()}`);
+        }
+        args[flag.slice(2)] = value;
+        break;
+      }
+      default:
+        throw new Error(`Unknown argument: ${flag}\n\n${usage()}`);
+    }
+  }
+  if (!args.printVariants && !args.apk && !args.aab) {
+    throw new Error(`Nothing to check.\n\n${usage()}`);
+  }
+  return args;
+}
+
+function loadManifest(manifestPath) {
+  let manifest;
+  try {
+    manifest = JSON.parse(fs.readFileSync(manifestPath, 'utf-8'));
+  } catch (err) {
+    throw new Error(
+      `Could not read the manifest ${manifestPath}: ${err.message}`,
+    );
+  }
+  // A manifest that declares nothing would let every artifact pass, which is
+  // the failure mode this check exists to prevent.
+  if (!Array.isArray(manifest.abis) || manifest.abis.length === 0) {
+    throw new Error(
+      `${manifestPath} declares no ABIs, so it would pass any artifact.`,
+    );
+  }
+  for (const abi of manifest.abis) {
+    if (
+      !abi.abi ||
+      !Array.isArray(abi.requiredLibs) ||
+      abi.requiredLibs.length === 0
+    ) {
+      throw new Error(
+        `${manifestPath} declares no required libraries for ${abi.abi || '(unnamed ABI)'}.`,
+      );
+    }
+  }
+  const symbolRules = manifest.abis.reduce(
+    (total, abi) => total + (abi.requiredSymbols || []).length,
+    0,
+  );
+  if (symbolRules === 0) {
+    throw new Error(
+      `${manifestPath} declares no symbol rules, so no backend would be checked.`,
+    );
+  }
+  return manifest;
+}
+
+function variantsFromManifest(manifest) {
+  const variants = [];
+  for (const abi of manifest.abis) {
+    for (const lib of abi.requiredLibs) {
+      if (lib.startsWith('librnllama_jni')) {
+        continue;
+      }
+      const variant = lib.replace(/^lib/, '').replace(/\.so$/, '');
+      if (!variants.includes(variant)) {
+        variants.push(variant);
+      }
+    }
+  }
+  return variants;
+}
+
+function listZipEntries(archive) {
+  let out;
+  try {
+    out = execFileSync('unzip', ['-Z1', archive], {
+      encoding: 'utf-8',
+      maxBuffer: 64 * 1024 * 1024,
+    });
+  } catch (err) {
+    throw new Error(`could not list ${archive}: ${err.message.trim()}`);
+  }
+  const entries = out.split('\n').filter(Boolean);
+  if (entries.length === 0) {
+    throw new Error(`${archive} contains no entries`);
+  }
+  return entries;
+}
+
+function readZipEntry(archive, entry) {
+  let buf;
+  try {
+    buf = execFileSync('unzip', ['-p', archive, entry], {
+      maxBuffer: 512 * 1024 * 1024,
+    });
+  } catch (err) {
+    throw new Error(`could not extract ${entry}: ${err.message.trim()}`);
+  }
+  if (buf.length === 0) {
+    throw new Error(`${entry} extracted as zero bytes`);
+  }
+  return buf;
+}
+
+function readCString(buf, offset) {
+  if (offset < 0 || offset >= buf.length) {
+    throw new Error('a .dynsym name points outside the file');
+  }
+  const end = buf.indexOf(0, offset);
+  return buf.toString('utf-8', offset, end === -1 ? buf.length : end);
+}
+
+/**
+ * Every `.dynsym` entry, in file order, skipping the reserved null entry —
+ * the same set `llvm-nm -D` prints, which is what the manifest counts were
+ * calibrated against.
+ */
+function readDynsym(buf) {
+  if (buf.length < ELF64_SHDR_SIZE) {
+    throw new Error('file is too short to be an ELF object');
+  }
+  if (buf.readUInt32BE(0) !== 0x7f454c46) {
+    throw new Error('file is not an ELF object');
+  }
+  if (buf[4] !== 2 || buf[5] !== 1) {
+    throw new Error('file is not a little-endian 64-bit ELF object');
+  }
+
+  const shoff = Number(buf.readBigUInt64LE(0x28));
+  const shentsize = buf.readUInt16LE(0x3a);
+  const shnum = buf.readUInt16LE(0x3c);
+  if (shoff === 0 || shnum === 0) {
+    throw new Error('ELF section headers are absent');
+  }
+  if (shentsize < ELF64_SHDR_SIZE || shoff + shnum * shentsize > buf.length) {
+    throw new Error('ELF section header table is malformed or truncated');
+  }
+
+  const sections = [];
+  for (let i = 0; i < shnum; i++) {
+    const at = shoff + i * shentsize;
+    sections.push({
+      type: buf.readUInt32LE(at + 4),
+      offset: Number(buf.readBigUInt64LE(at + 24)),
+      size: Number(buf.readBigUInt64LE(at + 32)),
+      link: buf.readUInt32LE(at + 40),
+      entsize: Number(buf.readBigUInt64LE(at + 56)),
+    });
+  }
+
+  const dynsym = sections.find(section => section.type === SHT_DYNSYM);
+  if (!dynsym) {
+    throw new Error('the file has no .dynsym section');
+  }
+  if (dynsym.entsize !== ELF64_SYM_SIZE) {
+    throw new Error(`.dynsym has an unexpected entry size (${dynsym.entsize})`);
+  }
+  if (dynsym.offset + dynsym.size > buf.length) {
+    throw new Error('.dynsym runs past the end of the file');
+  }
+  const strtab = sections[dynsym.link];
+  if (!strtab) {
+    throw new Error(
+      '.dynsym points at a string table the file does not contain',
+    );
+  }
+
+  const count = Math.floor(dynsym.size / dynsym.entsize);
+  if (count < 2) {
+    throw new Error('.dynsym is empty');
+  }
+
+  const symbols = [];
+  for (let i = 1; i < count; i++) {
+    const at = dynsym.offset + i * dynsym.entsize;
+    symbols.push({
+      name: readCString(buf, strtab.offset + buf.readUInt32LE(at)),
+      defined: buf.readUInt16LE(at + 6) !== SHN_UNDEF,
+    });
+  }
+  return symbols;
+}
+
+function checkSymbolRule({rule, archive, artifactName, entry, report, fail}) {
+  let symbols;
+  try {
+    symbols = readDynsym(readZipEntry(archive, entry));
+  } catch (err) {
+    report.push(`    ${rule.lib}: UNREADABLE — ${err.message}`);
+    fail(
+      [
+        `could not read the exported symbols of ${entry} in ${artifactName}: ${err.message}.`,
+        'The payload check could not run, so it reports failure rather than success —',
+        'a check that cannot read the artifact has proven nothing about it.',
+      ].join('\n      '),
+    );
+    return;
+  }
+
+  report.push(`    ${rule.lib}: ${symbols.length} .dynsym entries`);
+
+  const missing = (rule.mustExport || []).filter(
+    name => !symbols.some(symbol => symbol.name === name && symbol.defined),
+  );
+  for (const name of rule.mustExport || []) {
+    report.push(
+      `      ${missing.includes(name) ? 'MISSING' : 'present'}  ${name}`,
+    );
+  }
+  if (missing.length > 0) {
+    fail(
+      [
+        `${entry} in ${artifactName} does not export ${missing.join(', ')}.`,
+        'The Hexagon (NPU) backend was not compiled into this build, so Snapdragon devices',
+        'will fall back to the CPU. Point HEXAGON_SDK_ROOT and HEXAGON_TOOLS_ROOT at an SDK',
+        'containing ipc/fastrpc/remote/ship/android_aarch64/libcdsprpc.so and rebuild.',
+        `Background: ${ISSUE_URL}`,
+      ].join('\n      '),
+    );
+  }
+
+  const expected = rule.expectedMatchCount;
+  if (!expected) {
+    return;
+  }
+  const pattern = expected.pattern.toLowerCase();
+  const matched = symbols.filter(symbol =>
+    symbol.name.toLowerCase().includes(pattern),
+  ).length;
+  report.push(
+    `      ${matched} .dynsym entries matching "${expected.pattern}" (declared ${expected.count})`,
+  );
+  if (matched !== expected.count && missing.length === 0) {
+    fail(
+      [
+        `${entry} in ${artifactName} has ${matched} .dynsym entries matching "${expected.pattern}";`,
+        `scripts/android-payload-manifest.json declares ${expected.count}.`,
+        'The required symbols are all present, so the backend is compiled in — this is a drift',
+        'tripwire, not a breakage. If the change is expected (a llama.rn upgrade, say), re-declare',
+        `expectedMatchCount as ${matched} in the same pull request so the diff is reviewed.`,
+      ].join('\n      '),
+    );
+  }
+}
+
+function checkArtifact({archive, kind, manifest, report, failures}) {
+  const artifactName = path.basename(archive);
+  const prefix = kind === 'aab' ? 'base/' : '';
+  const fail = message => failures.push(`FAIL: ${message}`);
+
+  report.push(`artifact: ${archive} (${kind})`);
+
+  let entries;
+  try {
+    entries = new Set(listZipEntries(archive));
+  } catch (err) {
+    report.push(`  UNREADABLE — ${err.message}`);
+    fail(
+      [
+        `${err.message}.`,
+        'The payload check could not run, so it reports failure rather than success —',
+        'a check that cannot read the artifact has proven nothing about it.',
+      ].join('\n      '),
+    );
+    return;
+  }
+
+  for (const abi of manifest.abis) {
+    report.push(`  ${abi.abi}`);
+
+    const missingLibs = [];
+    for (const lib of abi.requiredLibs) {
+      const entry = `${prefix}lib/${abi.abi}/${lib}`;
+      if (!entries.has(entry)) {
+        missingLibs.push(entry);
+      }
+    }
+    report.push(
+      `    libraries: ${abi.requiredLibs.length - missingLibs.length}/${abi.requiredLibs.length} present`,
+    );
+    for (const entry of missingLibs) {
+      report.push(`      MISSING  ${entry}`);
+      fail(
+        [
+          `${artifactName} is missing ${entry}.`,
+          'The build did not produce every library the manifest requires. If the variant allowlist',
+          '(ORG_GRADLE_PROJECT_rnllamaVariants) was narrowed, widen it to match the manifest; if the',
+          'manifest is what changed, update scripts/android-payload-manifest.json in the same pull request.',
+        ].join('\n      '),
+      );
+    }
+
+    const missingAssets = (abi.requiredAssets || []).filter(
+      asset => !entries.has(`${prefix}${asset}`),
+    );
+    if ((abi.requiredAssets || []).length > 0) {
+      report.push(
+        `    assets: ${abi.requiredAssets.length - missingAssets.length}/${abi.requiredAssets.length} present`,
+      );
+    }
+    for (const asset of missingAssets) {
+      report.push(`      MISSING  ${prefix}${asset}`);
+      fail(
+        [
+          `${artifactName} is missing ${prefix}${asset}.`,
+          'The Hexagon backend cannot run without its DSP libraries. They are synced from',
+          "node_modules/llama.rn/bin/arm64-v8a by llama.rn's syncRNLlamaHtpAssets task —",
+          'check that the dependency installed completely.',
+        ].join('\n      '),
+      );
+    }
+
+    const extras = [...entries]
+      .filter(entry => entry.startsWith(`${prefix}lib/${abi.abi}/librnllama`))
+      .map(entry => path.basename(entry))
+      .filter(lib => !abi.requiredLibs.includes(lib))
+      .sort();
+    report.push(
+      `    extra rnllama libraries: ${extras.length > 0 ? extras.join(', ') : 'none'}`,
+    );
+
+    for (const rule of abi.requiredSymbols || []) {
+      const entry = `${prefix}lib/${abi.abi}/${rule.lib}`;
+      if (missingLibs.includes(entry)) {
+        continue;
+      }
+      checkSymbolRule({rule, archive, artifactName, entry, report, fail});
+    }
+  }
+}
+
+function main() {
+  const args = parseArgs(process.argv.slice(2));
+  const manifest = loadManifest(args.manifest);
+
+  if (args.printVariants) {
+    process.stdout.write(`${variantsFromManifest(manifest).join(',')}\n`);
+    return 0;
+  }
+
+  const report = ['Android payload check', `manifest: ${args.manifest}`, ''];
+  const failures = [];
+
+  for (const [flag, kind] of [
+    ['apk', 'apk'],
+    ['aab', 'aab'],
+  ]) {
+    if (args[flag]) {
+      checkArtifact({archive: args[flag], kind, manifest, report, failures});
+      report.push('');
+    }
+  }
+
+  report.push(
+    failures.length === 0
+      ? 'PASS: every declared library, asset and backend symbol is present.'
+      : failures.join('\n\n'),
+  );
+
+  const text = `${report.join('\n')}\n`;
+  process.stdout.write(text);
+  if (args.report) {
+    fs.writeFileSync(args.report, text);
+  }
+  return failures.length === 0 ? 0 : 1;
+}
+
+if (require.main === module) {
+  try {
+    process.exit(main());
+  } catch (err) {
+    console.error(`FAIL: ${err.message}`);
+    process.exit(1);
+  }
+}
+
+module.exports = {readDynsym, variantsFromManifest};
