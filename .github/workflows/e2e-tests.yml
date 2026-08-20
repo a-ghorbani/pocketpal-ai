@@ -16,6 +16,14 @@ env:
 jobs:
   build-android:
     runs-on: ubuntu-latest
+    env:
+      # Declared here rather than in android/gradle.properties: llama.rn's own
+      # android/gradle.properties sets rnllamaBuildFromSource, and a subproject's
+      # value beats the root project's, so only an environment property or -P wins.
+      #
+      # This APK is never published and emulators have no DSP, so this job takes
+      # the variant allowlist but provisions no Hexagon SDK and runs no payload gate.
+      ORG_GRADLE_PROJECT_rnllamaBuildFromSource: 'true'
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -36,6 +44,13 @@ jobs:
 
       - name: Install dependencies
         run: yarn install --frozen-lockfile
+
+      - name: Derive the rnllama variant allowlist from the payload manifest
+        run: |
+          set -euo pipefail
+          VARIANTS=$(node scripts/verify-android-payload.js --print-variants)
+          echo "Declared allowlist: $VARIANTS"
+          echo "ORG_GRADLE_PROJECT_rnllamaVariants=$VARIANTS" >> "$GITHUB_ENV"
 
       - name: Create dummy google-services.json for CI
         run: |

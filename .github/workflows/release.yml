@@ -30,6 +30,11 @@ jobs:
     permissions:
       contents: 'write' # Allows workflow to checkout repository code
       id-token: 'write' # Required for Google Cloud Workload Identity Federation authentication (OIDC token generation)
+    env:
+      # Declared here rather than in android/gradle.properties: llama.rn's own
+      # android/gradle.properties sets rnllamaBuildFromSource, and a subproject's
+      # value beats the root project's, so only an environment property or -P wins.
+      ORG_GRADLE_PROJECT_rnllamaBuildFromSource: 'true'
 
     steps:
       # Step 1: Checkout the code
@@ -56,6 +61,15 @@ jobs:
       # Step 4: Install dependencies using Yarn
       - name: Install dependencies
         run: yarn install
+
+      # Step 4b: The manifest that the payload gate enforces also decides which
+      # rnllama variants are worth compiling — one declaration, both uses.
+      - name: Derive the rnllama variant allowlist from the payload manifest
+        run: |
+          set -euo pipefail
+          VARIANTS=$(node scripts/verify-android-payload.js --print-variants)
+          echo "Declared allowlist: $VARIANTS"
+          echo "ORG_GRADLE_PROJECT_rnllamaVariants=$VARIANTS" >> "$GITHUB_ENV"
 
       # Step 5: Set up Ruby and Bundler
       - name: Set up Ruby
@@ -133,8 +147,26 @@ jobs:
           PLAY_STORE_JSON_KEY: ${{ secrets.PLAY_STORE_SERVICE_ACCOUNT_JSON }}
           GOOGLE_SERVICES_JSON: ${{ secrets.GOOGLE_SERVICES_JSON }}
         run: |
+          set -euo pipefail
+          if [ -z "${ORG_GRADLE_PROJECT_rnllamaBuildFromSource:-}" ]; then
+            echo "::error::ORG_GRADLE_PROJECT_rnllamaBuildFromSource is not set, so the build mode would be whatever llama.rn happens to ship."
+            exit 1
+          fi
           echo "$PLAY_STORE_JSON_KEY" > play-store-key.json
-          bundle exec fastlane release_android_alpha
+          bundle exec fastlane release_android_alpha 2>&1 | tee android-build.log
+
+      - name: Verify the variant allowlist reached the llama.rn build
+        run: |
+          set -euo pipefail
+          VARIANTS=$(node scripts/verify-android-payload.js --print-variants)
+          if ! grep -qF "Building rnllama variants: $VARIANTS" android/android-build.log; then
+            echo "::error::llama.rn did not report building the declared variant set."
+            echo "Expected: $VARIANTS"
+            echo "In the build log:"
+            grep -F "rnllama variants" android/android-build.log || echo "  (no variant line at all — ORG_GRADLE_PROJECT_rnllamaVariants never reached the subproject)"
+            exit 1
+          fi
+          echo "OK: llama.rn built exactly the declared variants."
 
       # Step 11: Create GitHub Release with APK
       - name: Create GitHub Release
