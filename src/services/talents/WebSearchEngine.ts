@@ -25,6 +25,8 @@ export class WebSearchEngine implements TalentEngine {
 
     const provider = await getSearchProvider();
     switch (provider) {
+      case 'langsearch':
+        return this.executeLangSearch(query);
       case 'tavily':
         return this.executeTavily(query);
       case 'brave':
@@ -60,6 +62,43 @@ export class WebSearchEngine implements TalentEngine {
             title: r.title,
             url: r.url,
             snippet: r.content,
+          }),
+        ),
+    );
+  }
+
+  private async executeLangSearch(query: string): Promise<TalentResult> {
+    const apiKey = await getApiKey('langsearch');
+
+    if (!apiKey) {
+      return this.missingKey('langsearch');
+    }
+
+    return this.doFetch(
+      'https://api.langsearch.com/v1/web-search',
+      {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${apiKey}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          query,
+          freshness: 'noLimit',
+          summary: true,
+          count: 5,
+        }),
+      },
+      'LangSearch',
+      data =>
+        (Array.isArray(data?.data?.webPages?.value)
+          ? data.data.webPages.value
+          : []
+        ).map(
+          (r: any): AdapterItem => ({
+            title: r.name,
+            url: r.url,
+            snippet: r.summary ?? r.snippet,
           }),
         ),
     );

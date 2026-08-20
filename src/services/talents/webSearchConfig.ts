@@ -2,6 +2,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as Keychain from 'react-native-keychain';
 
 export type WebSearchProvider =
+  | 'langsearch'
   | 'searxng'
   | 'tavily'
   | 'brave'
@@ -11,6 +12,7 @@ export type WebSearchProvider =
 
 // Providers that need a secret API key stored in the keychain.
 export const KEY_BASED_PROVIDERS: WebSearchProvider[] = [
+  'langsearch',
   'tavily',
   'brave',
   'serper',
@@ -25,6 +27,7 @@ const KEYCHAIN_SERVICE_PREFIX = 'pocketpalnet.websearch.';
 
 export async function getSearchProvider(): Promise<WebSearchProvider> {
   const valid: WebSearchProvider[] = [
+    'langsearch',
     'searxng',
     'tavily',
     'brave',

@@ -144,6 +144,7 @@ const [providerAnchor, setProviderAnchor] = useState<{x: number; y: number}>({
 const providerButtonRef = useRef<View>(null);
 
 const PROVIDER_LABELS: Record<WebSearchProvider, string> = {
+  langsearch: 'LangSearch',
   searxng: 'SearXNG (self-hosted)',
   tavily: 'Tavily',
   brave: 'Brave Search',
