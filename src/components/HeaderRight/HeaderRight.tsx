@@ -11,6 +11,7 @@ import {
   EditBoxIcon,
   EditIcon,
   GridIcon,
+  SearchIcon,
   SettingsIcon,
   ShareIcon,
   TrashIcon,
@@ -158,6 +159,21 @@ export const HeaderRight: React.FC = observer(() => {
   return (
     <View style={styles.headerRightContainer}>
       {uiStore.displayMemUsage && <UsageStats width={40} height={20} />}
+      {session?.id && (
+        <IconButton
+          icon={() => <SearchIcon stroke={theme.colors.primary} />}
+          testID="search-button"
+          accessibilityLabel={l10n.chat.searchMessages}
+          style={styles.chatBtn}
+          onPress={() => {
+            if (chatSessionStore.isSearchMode) {
+              chatSessionStore.exitSearchMode();
+            } else {
+              chatSessionStore.enterSearchMode();
+            }
+          }}
+        />
+      )}
       <IconButton
         icon={() => <EditBoxIcon stroke={theme.colors.primary} />}
         testID="reset-button"

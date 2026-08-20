@@ -6,6 +6,7 @@ import {runInAction} from 'mobx';
 import {
   Bubble,
   ChatView,
+  ChatSearchBar,
   ErrorSnackbar,
   ModelErrorReportSheet,
 } from '../../components';
@@ -24,7 +25,7 @@ import {
 } from '../../store';
 import {hasVideoCapability} from '../../utils/pal-capabilities';
 
-import {L10nContext} from '../../utils';
+import {L10nContext, SearchQueryContext} from '../../utils';
 import {resolveReasoningCapability} from '../../utils/reasoningCapability';
 import {MessageType} from '../../utils/types';
 import {ErrorState} from '../../utils/errors';
@@ -253,41 +254,58 @@ export const ChatScreen: React.FC = observer(() => {
     return <VideoPalScreen activePal={activePal} />;
   }
 
+  // Compute messages and search match count
+  // Search highlights matches in place (find-in-page); it never swaps the
+  // render list, so ChatView's message-derived state — empty-state, banners,
+  // suggested prompts — stays anchored to the real conversation.
+  const messages = chatSessionStore.currentSessionMessages;
+  const matchCount =
+    chatSessionStore.isSearchMode && chatSessionStore.searchQuery.trim()
+      ? chatSessionStore.searchMatchCount
+      : 0;
+
   // Otherwise, show the regular chat view
   return (
     <>
-      <ChatView
-        renderBubble={renderBubble}
-        messages={chatSessionStore.currentSessionMessages}
-        activePal={activePal}
-        onSendPress={handleSendPress}
-        onStopPress={handleStopPress}
-        onPalSettingsSelect={handleOpenPalSheet}
-        user={user}
-        isStopVisible={modelStore.inferencing}
-        isStreaming={modelStore.isStreaming}
-        sendButtonVisibilityMode="always"
-        showImageUpload={true}
-        isVisionEnabled={visionEnabled}
-        initialInputText={pendingMessage || undefined}
-        onInitialTextConsumed={clearPendingMessage}
-        inputProps={{
-          showThinkingToggle: thinkingSupported,
-          isThinkingEnabled: thinkingEnabled,
-          onThinkingToggle: handleThinkingToggle,
-          supportsEffort: reasoningCapability.supportsEffort,
-          effortValues: reasoningCapability.effortValues,
-          reasoningEffort,
-          onEffortCycle: handleEffortCycle,
-        }}
-        textInputProps={{
-          placeholder: !modelStore.engine
-            ? modelStore.isContextLoading
-              ? l10n.chat.loadingModel
-              : l10n.chat.modelNotLoaded
-            : l10n.chat.typeYourMessage,
-        }}
-      />
+      <SearchQueryContext.Provider value={chatSessionStore.searchQuery}>
+        <ChatView
+          renderBubble={renderBubble}
+          messages={messages}
+          customContent={
+            chatSessionStore.isSearchMode ? (
+              <ChatSearchBar matchCount={matchCount} />
+            ) : undefined
+          }
+          activePal={activePal}
+          onSendPress={handleSendPress}
+          onStopPress={handleStopPress}
+          onPalSettingsSelect={handleOpenPalSheet}
+          user={user}
+          isStopVisible={modelStore.inferencing}
+          isStreaming={modelStore.isStreaming}
+          sendButtonVisibilityMode="always"
+          showImageUpload={true}
+          isVisionEnabled={visionEnabled}
+          initialInputText={pendingMessage || undefined}
+          onInitialTextConsumed={clearPendingMessage}
+          inputProps={{
+            showThinkingToggle: thinkingSupported,
+            isThinkingEnabled: thinkingEnabled,
+            onThinkingToggle: handleThinkingToggle,
+            supportsEffort: reasoningCapability.supportsEffort,
+            effortValues: reasoningCapability.effortValues,
+            reasoningEffort,
+            onEffortCycle: handleEffortCycle,
+          }}
+          textInputProps={{
+            placeholder: !modelStore.engine
+              ? modelStore.isContextLoading
+                ? l10n.chat.loadingModel
+                : l10n.chat.modelNotLoaded
+              : l10n.chat.typeYourMessage,
+          }}
+        />
+      </SearchQueryContext.Provider>
       {uiStore.chatWarning && (
         <ErrorSnackbar
           error={uiStore.chatWarning}
