@@ -2779,6 +2779,169 @@ describe('chatSessionStore', () => {
         chatSessionStore.setSearchQuery('energy');
         expect(chatSessionStore.searchMatchCount).toBe(2);
       });
+
+      // The count is what the user reads next to a set of highlights, so it
+      // counts occurrences. Counting messages instead returns 1 here.
+      it('counts every occurrence within a single message', () => {
+        setupSessionWithMessages([
+          userText('msg1', 'Each cell, the cell wall, the cell membrane.'),
+        ]);
+        chatSessionStore.enterSearchMode();
+        chatSessionStore.setSearchQuery('cell');
+        expect(chatSessionStore.searchMatchCount).toBe(3);
+      });
+
+      it('counts occurrences across every step of an assistant turn', () => {
+        setupSessionWithMessages([
+          {
+            id: 'msg1',
+            type: 'assistant_turn',
+            text: '',
+            steps: [
+              {content: 'Stored energy moves to the roots.'},
+              {content: 'Excess energy is dissipated as heat.'},
+            ],
+            author: {id: 'assistant'},
+            createdAt: Date.now(),
+          } as unknown as MessageType.Any,
+        ]);
+        chatSessionStore.enterSearchMode();
+        chatSessionStore.setSearchQuery('energy');
+        expect(chatSessionStore.searchMatchCount).toBe(2);
+      });
+
+      // An indented chunk parses as a markdown code block, which search
+      // excludes — but TextMessage trims before rendering, so the view
+      // highlights it. The count must follow the view.
+      it('counts a match in an indented message the view still highlights', () => {
+        setupSessionWithMessages([userText('msg1', '    hello world')]);
+        chatSessionStore.enterSearchMode();
+        chatSessionStore.setSearchQuery('hello');
+        expect(chatSessionStore.searchMatchCount).toBe(1);
+      });
+
+      // Fenced code is excluded from the projection because CodeRenderer
+      // re-reads rawHTML, so a match there could never be highlighted.
+      it('does not count matches inside a fenced code block', () => {
+        setupSessionWithMessages([
+          assistantTurn('msg1', 'Run it:\n\n```\nconst energy = 1;\n```'),
+        ]);
+        chatSessionStore.enterSearchMode();
+        chatSessionStore.setSearchQuery('energy');
+        expect(chatSessionStore.searchMatchCount).toBe(0);
+      });
+    });
+
+    describe('match navigation', () => {
+      // currentSessionMessages is newest-first; the navigator walks the
+      // conversation the way the user reads it, top (oldest) downwards.
+      const seedThreeMatches = () => {
+        setupSessionWithMessages([
+          userText('newest', 'energy again'),
+          assistantTurn('middle', 'more energy here'),
+          userText('oldest', 'energy first'),
+        ]);
+        chatSessionStore.enterSearchMode();
+        chatSessionStore.setSearchQuery('energy');
+      };
+
+      it('orders matches from the top of the conversation downwards', () => {
+        seedThreeMatches();
+        expect(chatSessionStore.searchMatches.map(m => m.messageId)).toEqual([
+          'oldest',
+          'middle',
+          'newest',
+        ]);
+      });
+
+      it('starts on the first match', () => {
+        seedThreeMatches();
+        expect(chatSessionStore.activeMatchPosition).toBe(1);
+        expect(chatSessionStore.activeMatch?.messageId).toBe('oldest');
+      });
+
+      it('steps forward and wraps at the end', () => {
+        seedThreeMatches();
+        chatSessionStore.goToNextMatch();
+        expect(chatSessionStore.activeMatch?.messageId).toBe('middle');
+        chatSessionStore.goToNextMatch();
+        expect(chatSessionStore.activeMatch?.messageId).toBe('newest');
+        chatSessionStore.goToNextMatch();
+        expect(chatSessionStore.activeMatchPosition).toBe(1);
+        // The stored index wraps too — the getters clamp, so asserting only
+        // the position would pass with an index that grows without bound.
+        expect(chatSessionStore.activeMatchIndex).toBe(0);
+      });
+
+      it('steps backward and wraps at the start', () => {
+        seedThreeMatches();
+        chatSessionStore.goToPreviousMatch();
+        expect(chatSessionStore.activeMatchPosition).toBe(3);
+        expect(chatSessionStore.activeMatch?.messageId).toBe('newest');
+      });
+
+      it('addresses each occurrence within a message separately', () => {
+        setupSessionWithMessages([userText('m', 'cell and cell and cell')]);
+        chatSessionStore.enterSearchMode();
+        chatSessionStore.setSearchQuery('cell');
+        expect(chatSessionStore.searchMatches.map(m => m.ordinal)).toEqual([
+          0, 1, 2,
+        ]);
+      });
+
+      it('addresses matches per step of an assistant turn', () => {
+        setupSessionWithMessages([
+          {
+            id: 'turn',
+            type: 'assistant_turn',
+            text: '',
+            steps: [{content: 'energy one'}, {content: 'energy two'}],
+            author: {id: 'assistant'},
+            createdAt: Date.now(),
+          } as unknown as MessageType.Any,
+        ]);
+        chatSessionStore.enterSearchMode();
+        chatSessionStore.setSearchQuery('energy');
+        expect(chatSessionStore.searchMatches.map(m => m.stepIndex)).toEqual([
+          0, 1,
+        ]);
+      });
+
+      it('returns to the first match when the query changes', () => {
+        seedThreeMatches();
+        chatSessionStore.goToNextMatch();
+        expect(chatSessionStore.activeMatchPosition).toBe(2);
+
+        // Narrowing to a query with the SAME number of matches: if the reset
+        // were dropped, the clamp would not hide it.
+        chatSessionStore.setSearchQuery('energ');
+        expect(chatSessionStore.searchMatchCount).toBe(3);
+        expect(chatSessionStore.activeMatchPosition).toBe(1);
+        expect(chatSessionStore.activeMatchIndex).toBe(0);
+      });
+
+      // The selection can outlive the matches when the conversation streams or
+      // the query narrows, so the getters clamp rather than read out of range.
+      it('clamps the active match when the match set shrinks', () => {
+        seedThreeMatches();
+        chatSessionStore.goToNextMatch();
+        chatSessionStore.goToNextMatch();
+        expect(chatSessionStore.activeMatchPosition).toBe(3);
+
+        setupSessionWithMessages([userText('only', 'energy alone')]);
+        expect(chatSessionStore.searchMatchCount).toBe(1);
+        expect(chatSessionStore.activeMatchPosition).toBe(1);
+        expect(chatSessionStore.activeMatch?.messageId).toBe('only');
+      });
+
+      it('does nothing when there are no matches', () => {
+        setupSessionWithMessages([userText('m', 'nothing here')]);
+        chatSessionStore.enterSearchMode();
+        chatSessionStore.setSearchQuery('zzz');
+        chatSessionStore.goToNextMatch();
+        expect(chatSessionStore.activeMatch).toBeUndefined();
+        expect(chatSessionStore.activeMatchPosition).toBe(0);
+      });
     });
 
     describe('per-session reset', () => {

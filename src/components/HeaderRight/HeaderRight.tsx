@@ -159,21 +159,6 @@ export const HeaderRight: React.FC = observer(() => {
   return (
     <View style={styles.headerRightContainer}>
       {uiStore.displayMemUsage && <UsageStats width={40} height={20} />}
-      {session?.id && (
-        <IconButton
-          icon={() => <SearchIcon stroke={theme.colors.primary} />}
-          testID="search-button"
-          accessibilityLabel={l10n.chat.searchMessages}
-          style={styles.chatBtn}
-          onPress={() => {
-            if (chatSessionStore.isSearchMode) {
-              chatSessionStore.exitSearchMode();
-            } else {
-              chatSessionStore.enterSearchMode();
-            }
-          }}
-        />
-      )}
       <IconButton
         icon={() => <EditBoxIcon stroke={theme.colors.primary} />}
         testID="reset-button"
@@ -194,6 +179,17 @@ export const HeaderRight: React.FC = observer(() => {
             testID="menu-button"
           />
         }>
+        {session?.id && (
+          <Menu.Item
+            onPress={() => {
+              closeMenu();
+              chatSessionStore.enterSearchMode();
+            }}
+            label={l10n.chat.search.open}
+            leadingIcon={() => <SearchIcon stroke={theme.colors.primary} />}
+            testID="search-menu-item"
+          />
+        )}
         <Menu.Item
           onPress={onPressGenerationSettings}
           label={l10n.components.headerRight.generationSettings}

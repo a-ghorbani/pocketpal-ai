@@ -293,6 +293,8 @@ export interface SemanticColors {
   // In-conversation search highlight (find-in-page).
   searchHighlight: string;
   onSearchHighlight: string;
+  searchHighlightActive: string;
+  onSearchHighlightActive: string;
 
   // Interactive states
   stateLayerOpacity: number;

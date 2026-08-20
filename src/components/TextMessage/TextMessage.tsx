@@ -25,6 +25,7 @@ import {AgentStep, MessageType} from '../../utils/types';
 import {
   excludeDerivedMessageProps,
   getUserName,
+  SearchActiveMatchContext,
   UserContext,
 } from '../../utils';
 
@@ -59,6 +60,12 @@ export interface TextMessageProps extends TextMessageTopLevelProps {
    * Reasoning is rendered separately via ReasoningBlock.
    */
   step?: AgentStep;
+  /**
+   * Index of `step` within the turn, used to tell whether the search
+   * navigator's active match lives in this block. Defaults to 0, which is
+   * also the address a legacy `Text` message is stored under.
+   */
+  stepIndex?: number;
 }
 
 export const TextMessage = ({
@@ -69,6 +76,7 @@ export const TextMessage = ({
   showName,
   usePreviewData,
   step,
+  stepIndex = 0,
 }: TextMessageProps) => {
   // For AssistantTurn rendering, the per-step `content` is the
   // authoritative source. For legacy `Text` messages, fall back to
@@ -81,6 +89,13 @@ export const TextMessage = ({
       : '';
   const theme = useTheme();
   const user = React.useContext(UserContext);
+  const activeMatch = React.useContext(SearchActiveMatchContext);
+  const activeMatchOrdinal =
+    activeMatch &&
+    activeMatch.messageId === message.id &&
+    activeMatch.stepIndex === stepIndex
+      ? activeMatch.ordinal
+      : undefined;
   const [previewData, setPreviewData] = React.useState(
     'previewData' in message ? message.previewData : undefined,
   );
@@ -277,6 +292,7 @@ export const TextMessage = ({
             markdownText={visibleText.trim()}
             maxMessageWidth={messageWidth}
             selectable={false}
+            activeMatchOrdinal={activeMatchOrdinal}
           />
         </View>
       )}

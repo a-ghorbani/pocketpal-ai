@@ -15,7 +15,8 @@ import {
 } from '../utils/completionTypes';
 import {chatSessionRepository} from '../repositories/ChatSessionRepository';
 import {defaultCompletionParams} from '../utils/completionSettingsVersions';
-import {derivedText} from '../utils/chat';
+import {derivedText, searchableUnits} from '../utils/chat';
+import {countMatches} from '../utils/searchIndex';
 import {palStore} from './PalStore';
 import {deriveToolSchemas} from '../services/talents';
 import {AgentUiState, initialAgentUiState} from '../services/agent';
@@ -29,6 +30,13 @@ import {AgentUiState, initialAgentUiState} from '../services/agent';
 type MessageUpdate =
   | Partial<MessageType.Text>
   | Partial<Omit<MessageType.AssistantTurn, 'type' | 'id' | 'author'>>;
+
+/** Address of one search occurrence, in the coordinates `Message` renders by. */
+export interface SearchMatchRef {
+  messageId: string;
+  stepIndex: number;
+  ordinal: number;
+}
 
 const NEW_SESSION_TITLE = 'New Session';
 const TITLE_LIMIT = 40;
@@ -116,6 +124,7 @@ class ChatSessionStore {
   // Search mode state
   isSearchMode: boolean = false;
   searchQuery: string = '';
+  activeMatchIndex: number = 0;
 
   // UX state for the active agent run. Driven by `agentStateReducer`
   // from `AgentEvent`s emitted by the runner. The only writer is
@@ -376,6 +385,7 @@ class ChatSessionStore {
       // Search is a per-session view; don't carry it into a new chat.
       this.isSearchMode = false;
       this.searchQuery = '';
+      this.activeMatchIndex = 0;
       this.activeSessionId = null;
       this.lastCompletionResult = undefined;
       this.dismissedBannerVariants = new Set();
@@ -422,6 +432,7 @@ class ChatSessionStore {
       // Search is a per-session view; don't carry a stale query across sessions.
       this.isSearchMode = false;
       this.searchQuery = '';
+      this.activeMatchIndex = 0;
       this.activeSessionId = sessionId;
       // Don't modify global settings when changing sessions
       this.newChatPalId = undefined;
@@ -630,6 +641,7 @@ class ChatSessionStore {
         // session (reachable one tap away via Duplicate → createNewSession).
         this.isSearchMode = false;
         this.searchQuery = '';
+        this.activeMatchIndex = 0;
       });
     } catch (error) {
       console.error('Failed to create new session:', error);
@@ -1454,6 +1466,7 @@ class ChatSessionStore {
       this.exitEditMode();
       this.isSearchMode = true;
       this.searchQuery = '';
+      this.activeMatchIndex = 0;
     });
   }
 
@@ -1461,30 +1474,93 @@ class ChatSessionStore {
     runInAction(() => {
       this.isSearchMode = false;
       this.searchQuery = '';
+      this.activeMatchIndex = 0;
     });
   }
 
   setSearchQuery(query: string) {
-    this.searchQuery = query;
+    runInAction(() => {
+      this.searchQuery = query;
+      this.activeMatchIndex = 0;
+    });
   }
 
   /**
-   * Number of messages in the active session whose text matches the current
-   * query. Search highlights in place (find-in-page) rather than filtering the
-   * message list, so this is a count only — the render list is never swapped.
+   * Every occurrence of the current query, in visual order (top of the
+   * conversation downwards). `currentSessionMessages` is newest-first, so this
+   * walks it in reverse.
    *
-   * Matches on `derivedText`, so assistant replies (`assistant_turn` rows,
-   * whose `text` column is empty by design) are searched via their step
-   * content, not skipped.
+   * Matches are addressed as (messageId, stepIndex, ordinal) — the coordinates
+   * `Message` renders by — so the navigator, the count and the in-place
+   * highlight all describe the same occurrences. Counting runs through the same
+   * projection the highlighter splices into, so for anything rendered by
+   * `MarkdownView` the number and the marks agree. The exception is a legacy
+   * `Text` message carrying a URL: `TextMessage` routes those through
+   * `LinkPreview`/`ParsedText`, which never sees a `<mark>` — those count but
+   * do not highlight.
+   *
+   * Assistant replies are `assistant_turn` rows whose `text` column is empty by
+   * design; their step content is what gets searched.
    */
-  get searchMatchCount(): number {
+  get searchMatches(): SearchMatchRef[] {
     if (!this.isSearchMode || !this.searchQuery.trim()) {
-      return 0;
+      return [];
     }
-    const query = this.searchQuery.toLowerCase().trim();
-    return this.currentSessionMessages.filter(msg =>
-      derivedText(msg).toLowerCase().includes(query),
-    ).length;
+    const matches: SearchMatchRef[] = [];
+    const messages = this.currentSessionMessages;
+    for (let i = messages.length - 1; i >= 0; i--) {
+      const message = messages[i];
+      for (const unit of searchableUnits(message)) {
+        const total = countMatches(unit.text, this.searchQuery);
+        for (let ordinal = 0; ordinal < total; ordinal++) {
+          matches.push({
+            messageId: message.id,
+            stepIndex: unit.stepIndex,
+            ordinal,
+          });
+        }
+      }
+    }
+    return matches;
+  }
+
+  get searchMatchCount(): number {
+    return this.searchMatches.length;
+  }
+
+  /**
+   * Clamped rather than stored blind: the conversation can stream or the query
+   * can narrow while a later match is selected.
+   */
+  get activeMatch(): SearchMatchRef | undefined {
+    const matches = this.searchMatches;
+    return matches.length
+      ? matches[this.activeMatchIndex % matches.length]
+      : undefined;
+  }
+
+  /** 1-based position of the active match, for display. 0 when there are none. */
+  get activeMatchPosition(): number {
+    const matches = this.searchMatches;
+    return matches.length ? (this.activeMatchIndex % matches.length) + 1 : 0;
+  }
+
+  goToNextMatch() {
+    const total = this.searchMatchCount;
+    if (total > 0) {
+      runInAction(() => {
+        this.activeMatchIndex = (this.activeMatchIndex + 1) % total;
+      });
+    }
+  }
+
+  goToPreviousMatch() {
+    const total = this.searchMatchCount;
+    if (total > 0) {
+      runInAction(() => {
+        this.activeMatchIndex = (this.activeMatchIndex - 1 + total) % total;
+      });
+    }
   }
 
   async setActivePal(palId: string | undefined): Promise<void> {

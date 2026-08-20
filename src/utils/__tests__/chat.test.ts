@@ -3,6 +3,7 @@ import {
   applyChatTemplate,
   convertToChatMessages,
   derivedText,
+  searchableChunks,
   user,
   assistant,
 } from '../chat';
@@ -572,6 +573,42 @@ describe('convertToChatMessages — AssistantTurn', () => {
     expect((result[0] as any).content).toBe('What is 2+2?');
     expect((result[1] as any).content).toBe('It is 4');
     expect((result[2] as any).content).toBe('thanks');
+  });
+});
+
+describe('searchableChunks', () => {
+  // TextMessage renders `visibleText.trim()`, and leading indentation turns a
+  // chunk into a markdown code block, which search excludes. Untrimmed, the
+  // count would read 0 for a message the view visibly highlights.
+  it('trims each chunk so it matches what MarkdownView is handed', () => {
+    const msg: MessageType.Text = {
+      id: '1',
+      author: user,
+      text: '    hello world',
+      type: 'text',
+    };
+    expect(searchableChunks(msg)).toEqual(['hello world']);
+  });
+
+  it('drops chunks that are only whitespace', () => {
+    const turn: MessageType.AssistantTurn = {
+      id: 't',
+      type: 'assistant_turn',
+      author: assistant,
+      steps: [{content: '   '}, {content: '\tanswer  '}],
+    };
+    expect(searchableChunks(turn)).toEqual(['answer']);
+  });
+
+  // derivedText feeds exports, titles, TTS and copy — it must stay verbatim.
+  it('does not change what derivedText returns', () => {
+    const msg: MessageType.Text = {
+      id: '1',
+      author: user,
+      text: '    hello world  ',
+      type: 'text',
+    };
+    expect(derivedText(msg)).toBe('    hello world  ');
   });
 });
 

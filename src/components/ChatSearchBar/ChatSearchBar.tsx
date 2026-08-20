@@ -1,5 +1,5 @@
-import React, {useContext, useRef, useEffect} from 'react';
-import {View, TextInput, TouchableOpacity, StyleSheet} from 'react-native';
+import React, {useContext, useRef} from 'react';
+import {View, TextInput, TouchableOpacity} from 'react-native';
 
 import {observer} from 'mobx-react';
 import {Text} from 'react-native-paper';
@@ -7,105 +7,126 @@ import {Text} from 'react-native-paper';
 import {useTheme} from '../../hooks';
 import {chatSessionStore} from '../../store';
 
-import {SearchIcon, CloseIcon} from '../../assets/icons';
+import {
+  ChevronDownIcon,
+  ChevronUpIcon,
+  CloseIcon,
+  SearchIcon,
+} from '../../assets/icons';
 import {L10nContext} from '../../utils';
 
-interface ChatSearchBarProps {
-  matchCount: number;
-}
+import {createStyles} from './styles';
 
-export const ChatSearchBar: React.FC<ChatSearchBarProps> = observer(
-  ({matchCount}) => {
-    const theme = useTheme();
-    const l10n = useContext(L10nContext);
-    const inputRef = useRef<TextInput>(null);
+const HIT_SLOP = {top: 8, bottom: 8, left: 8, right: 8};
 
-    useEffect(() => {
-      // Auto-focus when search bar appears
-      const timer = setTimeout(() => {
-        inputRef.current?.focus();
-      }, 100);
-      return () => clearTimeout(timer);
-    }, []);
+export const ChatSearchBar: React.FC = observer(() => {
+  const theme = useTheme();
+  const styles = createStyles(theme);
+  const l10n = useContext(L10nContext);
+  const inputRef = useRef<TextInput>(null);
 
-    const hasQuery = chatSessionStore.searchQuery.trim().length > 0;
+  const query = chatSessionStore.searchQuery;
+  const hasQuery = query.trim().length > 0;
+  const total = chatSessionStore.searchMatchCount;
+  const position = chatSessionStore.activeMatchPosition;
+  const canNavigate = total > 0;
 
-    return (
-      <View
-        style={[
-          styles.container,
-          {
-            backgroundColor: theme.colors.surface,
-            borderBottomColor: theme.colors.outlineVariant,
-          },
-        ]}>
-        <View style={styles.inputRow}>
-          <SearchIcon
+  return (
+    <View style={styles.container}>
+      <View style={styles.inputRow}>
+        <SearchIcon
+          width={18}
+          height={18}
+          stroke={theme.colors.onSurfaceVariant}
+        />
+        <TextInput
+          ref={inputRef}
+          style={styles.input}
+          placeholder={l10n.chat.search.placeholder}
+          placeholderTextColor={theme.colors.onSurfaceVariant}
+          value={query}
+          onChangeText={next => chatSessionStore.setSearchQuery(next)}
+          autoCapitalize="none"
+          autoCorrect={false}
+          spellCheck={false}
+          autoFocus
+          returnKeyType="search"
+          onSubmitEditing={() => chatSessionStore.goToNextMatch()}
+          accessibilityLabel={l10n.chat.search.placeholder}
+          testID="chat-search-input"
+        />
+
+        {hasQuery && (
+          <Text
+            variant="bodySmall"
+            style={styles.matchCount}
+            accessibilityLiveRegion="polite"
+            accessibilityLabel={
+              canNavigate
+                ? l10n.chat.search.matchPosition
+                    .replace('{{position}}', String(position))
+                    .replace('{{total}}', String(total))
+                : l10n.chat.search.noResults
+            }
+            testID="search-match-count">
+            {canNavigate ? `${position}/${total}` : l10n.chat.search.noResults}
+          </Text>
+        )}
+
+        <TouchableOpacity
+          onPress={() => chatSessionStore.goToPreviousMatch()}
+          disabled={!canNavigate}
+          hitSlop={HIT_SLOP}
+          style={styles.navButton}
+          accessibilityRole="button"
+          accessibilityState={{disabled: !canNavigate}}
+          accessibilityLabel={l10n.chat.search.previousMatch}
+          testID="search-previous-button">
+          <ChevronUpIcon
+            width={18}
+            height={18}
+            stroke={
+              canNavigate
+                ? theme.colors.onSurfaceVariant
+                : theme.colors.onSurfaceDisabled
+            }
+          />
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          onPress={() => chatSessionStore.goToNextMatch()}
+          disabled={!canNavigate}
+          hitSlop={HIT_SLOP}
+          style={styles.navButton}
+          accessibilityRole="button"
+          accessibilityState={{disabled: !canNavigate}}
+          accessibilityLabel={l10n.chat.search.nextMatch}
+          testID="search-next-button">
+          <ChevronDownIcon
+            width={18}
+            height={18}
+            stroke={
+              canNavigate
+                ? theme.colors.onSurfaceVariant
+                : theme.colors.onSurfaceDisabled
+            }
+          />
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          onPress={() => chatSessionStore.exitSearchMode()}
+          hitSlop={HIT_SLOP}
+          style={styles.navButton}
+          accessibilityRole="button"
+          accessibilityLabel={l10n.chat.search.close}
+          testID="search-close-button">
+          <CloseIcon
             width={18}
             height={18}
             stroke={theme.colors.onSurfaceVariant}
           />
-          <TextInput
-            ref={inputRef}
-            style={[styles.input, {color: theme.colors.onSurface}]}
-            placeholder={l10n.chat.searchMessages}
-            placeholderTextColor={theme.colors.onSurfaceVariant}
-            value={chatSessionStore.searchQuery}
-            onChangeText={query => chatSessionStore.setSearchQuery(query)}
-            autoCapitalize="none"
-            autoCorrect={false}
-            returnKeyType="search"
-            accessibilityLabel={l10n.chat.searchMessages}
-            testID="chat-search-input"
-          />
-          {hasQuery && (
-            <Text
-              variant="bodySmall"
-              style={[
-                styles.matchCount,
-                {color: theme.colors.onSurfaceVariant},
-              ]}>
-              {matchCount > 0 ? `${matchCount}` : l10n.chat.noResults}
-            </Text>
-          )}
-          <TouchableOpacity
-            onPress={() => chatSessionStore.exitSearchMode()}
-            style={styles.closeButton}
-            accessibilityRole="button"
-            accessibilityLabel={l10n.chat.closeSearch}
-            testID="search-close-button">
-            <CloseIcon
-              width={18}
-              height={18}
-              stroke={theme.colors.onSurfaceVariant}
-            />
-          </TouchableOpacity>
-        </View>
+        </TouchableOpacity>
       </View>
-    );
-  },
-);
-
-const styles = StyleSheet.create({
-  container: {
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    borderBottomWidth: StyleSheet.hairlineWidth,
-  },
-  inputRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-  },
-  input: {
-    flex: 1,
-    fontSize: 15,
-    paddingVertical: 4,
-  },
-  matchCount: {
-    marginHorizontal: 4,
-  },
-  closeButton: {
-    padding: 4,
-  },
+    </View>
+  );
 });

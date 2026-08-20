@@ -51,8 +51,8 @@ const renderers = {
 };
 
 // Element models include the `mark` tag used for in-conversation search
-// highlighting (injected by MarkdownView.highlightSearchMatches). Stable
-// at module scope so it never invalidates the render engine.
+// highlighting (injected by utils/searchIndex). Stable at module scope so it
+// never invalidates the render engine.
 const customHTMLElementModels = {
   ...tableHTMLElementModels,
   mark: HTMLElementModel.fromCustomModel({
@@ -79,8 +79,19 @@ export const MarkdownProvider: React.FC<React.PropsWithChildren> = ({
     [theme],
   );
 
+  const classesStyles = useMemo(
+    () => ({
+      'search-active': {
+        backgroundColor: theme.colors.searchHighlightActive,
+        color: theme.colors.onSearchHighlightActive,
+      },
+    }),
+    [theme],
+  );
+
   return (
     <TRenderEngineProvider
+      classesStyles={classesStyles}
       tagsStyles={tagsStyles}
       customHTMLElementModels={customHTMLElementModels}
       systemFonts={SYSTEM_FONTS}>

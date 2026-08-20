@@ -70,6 +70,10 @@ export const lightColors: TokenColors = {
   // text keeps the highlighted term readable.
   searchHighlight: '#C77700',
   onSearchHighlight: '#000000',
+  // The navigator's current match: a deeper burnt orange that reads as
+  // "selected" against the other matches without losing text contrast.
+  searchHighlightActive: '#8A4B00',
+  onSearchHighlightActive: '#FFFFFF',
   // MD3 extras
   surfaceDisabled: withOpacity('#fcfcfc', 0.12),
   onSurfaceDisabled: withOpacity('#333333', 0.38),
@@ -211,6 +215,9 @@ export const darkColors: TokenColors = {
   // background (~7:1); black text stays readable on it.
   searchHighlight: '#FFB300',
   onSearchHighlight: '#000000',
+  // Brighter than the resting match so the current one stands out on dark.
+  searchHighlightActive: '#FFE082',
+  onSearchHighlightActive: '#000000',
   // MD3 extras
   surfaceDisabled: withOpacity('#333333', 0.12),
   onSurfaceDisabled: withOpacity('#e5e5e6', 0.38),

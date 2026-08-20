@@ -126,6 +126,11 @@ export interface ChatProps extends ChatTopLevelProps {
   customDateHeaderText?: (dateTime: number) => string;
   /** Custom content to display between the header and chat list */
   customContent?: React.ReactNode;
+  /**
+   * Scrolls this message into view whenever it changes. Used by search to
+   * bring the navigator's current match on screen without touching `messages`.
+   */
+  focusedMessageId?: string;
   /** Allows you to customize the date format. IMPORTANT: only for the date,
    * do not return time here. @see {@link ChatProps.timeFormat} to customize the time format.
    * @see {@link ChatProps.customDateHeaderText} for more customization. */
@@ -202,6 +207,7 @@ const PendingIndicatorView: React.FC = observer(() => (
 export const ChatView = observer(
   ({
     customContent,
+    focusedMessageId,
     customDateHeaderText,
     dateFormat,
     disableImageGallery,
@@ -661,6 +667,34 @@ export const ChatView = observer(
       [],
     );
 
+    // `chatMessages` carries injected rows (date headers), so the index has to
+    // come from the rendered list rather than from `messages`.
+    React.useEffect(() => {
+      if (!focusedMessageId) {
+        return;
+      }
+      const index = chatMessages.findIndex(m => m.id === focusedMessageId);
+      if (index < 0) {
+        return;
+      }
+      try {
+        list.current?.scrollToIndex({index, animated: true, viewPosition: 0.5});
+      } catch {
+        // scrollToIndex throws when the row has not been measured yet; the
+        // failure handler below retries once the list has laid it out.
+      }
+    }, [focusedMessageId, chatMessages]);
+
+    const handleScrollToIndexFailed = React.useCallback(
+      (info: {index: number; averageItemLength: number}) => {
+        list.current?.scrollToOffset({
+          offset: info.averageItemLength * info.index,
+          animated: true,
+        });
+      },
+      [],
+    );
+
     // ============ CONTEXT MENU CONFIGURATION ============
     const {
       copy: copyLabel,
@@ -1017,6 +1051,7 @@ export const ChatView = observer(
               }
               keyExtractor={keyExtractor}
               onEndReached={handleEndReached}
+              onScrollToIndexFailed={handleScrollToIndexFailed}
               ref={list}
               renderItem={renderMessage}
               maintainVisibleContentPosition={
@@ -1061,6 +1096,7 @@ export const ChatView = observer(
         styles.flatList,
         styles.scrollToBottomButton,
         chatMessages,
+        handleScrollToIndexFailed,
         renderListEmptyComponent,
         renderListFooterComponent,
         renderListHeaderComponent,

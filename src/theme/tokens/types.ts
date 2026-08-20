@@ -48,6 +48,9 @@ export interface TokenColors {
   // both themes.
   searchHighlight: string;
   onSearchHighlight: string;
+  // The occurrence the search navigator is currently on.
+  searchHighlightActive: string;
+  onSearchHighlightActive: string;
 
   // MD3 extras
   surfaceDisabled: string;

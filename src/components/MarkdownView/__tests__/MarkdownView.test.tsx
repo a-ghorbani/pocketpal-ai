@@ -8,7 +8,8 @@ import {render, fireEvent} from '../../../../jest/test-utils';
 import {themeFixtures} from '../../../../jest/fixtures/theme';
 import {useTheme} from '../../../hooks';
 
-import {MarkdownView, highlightSearchMatches} from '../MarkdownView';
+import {MarkdownView} from '../MarkdownView';
+import {countMatches, highlightMatches} from '../../../utils/searchIndex';
 import {SearchQueryContext} from '../../../utils';
 
 describe('MarkdownView Component', () => {
@@ -350,80 +351,118 @@ describe('MarkdownView Component', () => {
     });
   });
 
-  describe('highlightSearchMatches', () => {
+  describe('highlightMatches', () => {
     it('returns html unchanged for an empty or whitespace query', () => {
-      const html = '<p>Hello world</p>';
-      expect(highlightSearchMatches(html, '')).toBe(html);
-      expect(highlightSearchMatches(html, '   ')).toBe(html);
+      const html = highlightMatches('Hello world', '');
+      expect(html).toBe('<p>Hello world</p>\n');
+      expect(highlightMatches('Hello world', '   ')).toBe(html);
     });
 
     it('wraps a plain text match in a mark tag', () => {
-      expect(highlightSearchMatches('<p>Hello world</p>', 'world')).toBe(
-        '<p>Hello <mark>world</mark></p>',
+      expect(highlightMatches('Hello world', 'world')).toBe(
+        '<p>Hello <mark>world</mark></p>\n',
       );
     });
 
     it('matches case-insensitively', () => {
-      expect(highlightSearchMatches('<p>HELLO world</p>', 'hello')).toBe(
-        '<p><mark>HELLO</mark> world</p>',
+      expect(highlightMatches('HELLO world', 'hello')).toBe(
+        '<p><mark>HELLO</mark> world</p>\n',
       );
     });
 
     it('highlights every occurrence', () => {
-      expect(highlightSearchMatches('<p>ab ab ab</p>', 'ab')).toBe(
-        '<p><mark>ab</mark> <mark>ab</mark> <mark>ab</mark></p>',
+      expect(highlightMatches('ab ab ab', 'ab')).toBe(
+        '<p><mark>ab</mark> <mark>ab</mark> <mark>ab</mark></p>\n',
       );
     });
 
     it('treats regex special characters in the query literally', () => {
-      expect(highlightSearchMatches('<p>a.b and axb</p>', 'a.b')).toBe(
-        '<p><mark>a.b</mark> and axb</p>',
+      expect(highlightMatches('a.b and axb', 'a.b')).toBe(
+        '<p><mark>a.b</mark> and axb</p>\n',
       );
     });
 
-    it('does not highlight an entity spelling that is not in the text', () => {
-      // The text is "Tom & Jerry"; "amp" only appears in the &amp; spelling,
-      // so it must not match, and the entity must stay intact.
-      const html = '<p>Tom &amp; Jerry</p>';
-      expect(highlightSearchMatches(html, 'amp')).toBe(html);
-    });
-
-    it('highlights around an entity without corrupting it', () => {
-      expect(highlightSearchMatches('<p>a &amp; apple</p>', 'a')).toBe(
-        '<p><mark>a</mark> &amp; <mark>a</mark>pple</p>',
+    // The projection only ever splices into the original html, so entities it
+    // does not decode are copied verbatim rather than re-escaped.
+    it('leaves entities outside the escaped set intact', () => {
+      const source = 'The caf&eacute; opens at 9&nbsp;am &#8212; ok.';
+      expect(highlightMatches(source, 'zzz')).toBe(`<p>${source}</p>\n`);
+      expect(highlightMatches(source, 'opens')).toBe(
+        '<p>The caf&eacute; <mark>opens</mark> at 9&nbsp;am &#8212; ok.</p>\n',
       );
     });
 
-    it('highlights a query containing an escaped character (apostrophe)', () => {
-      // marked() escapes ' to &#39;; the store counted this match on the raw
-      // text, so the highlight must agree by matching the decoded character.
-      expect(highlightSearchMatches('<p>I don&#39;t recall</p>', "don't")).toBe(
-        '<p>I <mark>don&#39;t</mark> recall</p>',
+    it('matches the decoded character, however the source spelled it', () => {
+      expect(highlightMatches('The caf&eacute; downstairs', 'café')).toBe(
+        '<p>The <mark>caf&eacute;</mark> downstairs</p>\n',
+      );
+      expect(highlightMatches('The café downstairs', 'café')).toBe(
+        '<p>The <mark>café</mark> downstairs</p>\n',
+      );
+    });
+
+    it('does not match an entity spelling that is not visible text', () => {
+      expect(highlightMatches('Tom & Jerry', 'amp')).toBe(
+        '<p>Tom &amp; Jerry</p>\n',
+      );
+    });
+
+    it('highlights a query containing an escaped character', () => {
+      expect(highlightMatches("I don't recall", "don't")).toBe(
+        '<p>I <mark>don&#39;t</mark> recall</p>\n',
+      );
+      expect(highlightMatches('Tom & Jerry', 'tom & jerry')).toBe(
+        '<p><mark>Tom &amp; Jerry</mark></p>\n',
       );
     });
 
     it('highlights past a self-closing <code/> instead of disabling the rest', () => {
-      // A self-closing <code/> has no closing tag; counting it would leak
-      // codeDepth and suppress every later match in the message.
-      expect(
-        highlightSearchMatches(
-          '<p><code/>hello world and more hello</p>',
-          'hello',
-        ),
-      ).toBe(
-        '<p><code/><mark>hello</mark> world and more <mark>hello</mark></p>',
+      expect(highlightMatches('<code/>hello world', 'hello')).toBe(
+        '<p><code/><mark>hello</mark> world</p>\n',
       );
     });
 
-    it('does not inject marks inside code blocks', () => {
-      const html = '<pre><code>const amp = 1;</code></pre>';
-      expect(highlightSearchMatches(html, 'amp')).toBe(html);
+    it('does not inject marks inside fenced code blocks', () => {
+      const html = highlightMatches('```\nconst amp = 1;\n```', 'amp');
+      expect(html).not.toContain('<mark>');
     });
 
-    it('does not match across tag boundaries', () => {
-      // "hello world" is split by a <strong> tag, so it must not match.
-      const html = '<p>hello <strong>world</strong></p>';
-      expect(highlightSearchMatches(html, 'hello world')).toBe(html);
+    it('highlights inline code, which renders through the default renderer', () => {
+      expect(highlightMatches('run `energy --check` now', 'energy')).toBe(
+        '<p>run <code><mark>energy</mark> --check</code> now</p>\n',
+      );
+    });
+
+    // Inline tags do not break a match; the match is emitted as one mark per
+    // contiguous run so the surrounding markup stays balanced.
+    it('matches across an inline tag boundary', () => {
+      expect(highlightMatches('hello **world** here', 'hello world')).toBe(
+        '<p><mark>hello </mark><strong><mark>world</mark></strong> here</p>\n',
+      );
+    });
+
+    it('does not match across a block boundary', () => {
+      const html = highlightMatches('first para\n\nsecond para', 'para second');
+      expect(html).not.toContain('<mark>');
+    });
+  });
+
+  describe('countMatches', () => {
+    it('counts occurrences, not messages', () => {
+      expect(
+        countMatches('Each cell, the cell wall, the cell membrane.', 'cell'),
+      ).toBe(3);
+    });
+
+    it('agrees with the marks emitted when no inline markup splits a match', () => {
+      const source = 'Each cell, the cell wall, the cell membrane.';
+      const marks = (highlightMatches(source, 'cell').match(/<mark>/g) || [])
+        .length;
+      expect(marks).toBe(countMatches(source, 'cell'));
+    });
+
+    it('is zero for an empty query', () => {
+      expect(countMatches('Hello world', '  ')).toBe(0);
     });
   });
 });

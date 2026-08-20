@@ -37,6 +37,15 @@ export const L10nContext = React.createContext<
 export const UserContext = React.createContext<User | undefined>(undefined);
 export const SearchQueryContext = React.createContext<string>('');
 
+/**
+ * The occurrence the search navigator is currently on, addressed the way
+ * `Message` renders — `TextMessage` compares it against its own identity and
+ * tells `MarkdownView` which of its matches to render as active.
+ */
+export const SearchActiveMatchContext = React.createContext<
+  {messageId: string; stepIndex: number; ordinal: number} | undefined
+>(undefined);
+
 /** Returns size in bytes of the provided text */
 export const getTextSizeInBytes = (text: string) => new Blob([text]).size;
 

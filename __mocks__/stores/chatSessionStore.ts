@@ -1,5 +1,6 @@
 import {sessionFixtures} from '../../jest/fixtures/chatSessions';
-import {derivedText} from '../../src/utils/chat';
+import {searchableUnits} from '../../src/utils/chat';
+import {countMatches} from '../../src/utils/searchIndex';
 import type {
   BannerVariant,
   CompletionResultSnapshot,
@@ -51,6 +52,7 @@ export const mockChatSessionStore = {
   // Search mode state
   isSearchMode: false,
   searchQuery: '',
+  activeMatchIndex: 0,
   loadSessionList: jest.fn().mockResolvedValue(undefined),
   loadGlobalSettings: jest.fn().mockResolvedValue(undefined),
   deleteSession: jest.fn().mockResolvedValue(undefined),
@@ -89,6 +91,8 @@ export const mockChatSessionStore = {
   enterSearchMode: jest.fn(),
   exitSearchMode: jest.fn(),
   setSearchQuery: jest.fn(),
+  goToNextMatch: jest.fn(),
+  goToPreviousMatch: jest.fn(),
   // Selection mode methods
   enterSelectionMode: jest.fn(),
   exitSelectionMode: jest.fn(),
@@ -170,22 +174,61 @@ Object.defineProperty(mockChatSessionStore, 'selectedCount', {
   configurable: true,
 });
 
-// Derive from state (like selectedCount / allSelected) rather than a frozen
-// constant, so search tests can't pass vacuously.
-Object.defineProperty(mockChatSessionStore, 'searchMatchCount', {
+// Derive from state (like selectedCount / allSelected) rather than frozen
+// constants, so search tests can't pass vacuously.
+Object.defineProperty(mockChatSessionStore, 'searchMatches', {
   get: jest.fn(() => {
     if (
       !mockChatSessionStore.isSearchMode ||
       !mockChatSessionStore.searchQuery.trim()
     ) {
-      return 0;
+      return [];
     }
-    const query = mockChatSessionStore.searchQuery.toLowerCase().trim();
     const messages = (mockChatSessionStore as any)
       .currentSessionMessages as any[];
-    return messages.filter(msg =>
-      derivedText(msg).toLowerCase().includes(query),
-    ).length;
+    const matches: Array<{
+      messageId: string;
+      stepIndex: number;
+      ordinal: number;
+    }> = [];
+    for (let i = messages.length - 1; i >= 0; i--) {
+      for (const unit of searchableUnits(messages[i])) {
+        const total = countMatches(unit.text, mockChatSessionStore.searchQuery);
+        for (let ordinal = 0; ordinal < total; ordinal++) {
+          matches.push({
+            messageId: messages[i].id,
+            stepIndex: unit.stepIndex,
+            ordinal,
+          });
+        }
+      }
+    }
+    return matches;
+  }),
+  configurable: true,
+});
+
+Object.defineProperty(mockChatSessionStore, 'searchMatchCount', {
+  get: jest.fn(() => (mockChatSessionStore as any).searchMatches.length),
+  configurable: true,
+});
+
+Object.defineProperty(mockChatSessionStore, 'activeMatch', {
+  get: jest.fn(() => {
+    const matches = (mockChatSessionStore as any).searchMatches;
+    return matches.length
+      ? matches[mockChatSessionStore.activeMatchIndex % matches.length]
+      : undefined;
+  }),
+  configurable: true,
+});
+
+Object.defineProperty(mockChatSessionStore, 'activeMatchPosition', {
+  get: jest.fn(() => {
+    const matches = (mockChatSessionStore as any).searchMatches;
+    return matches.length
+      ? (mockChatSessionStore.activeMatchIndex % matches.length) + 1
+      : 0;
   }),
   configurable: true,
 });

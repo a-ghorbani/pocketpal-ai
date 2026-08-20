@@ -273,6 +273,7 @@ export const Message = observer(
       const wrapTextBlock = (
         keySuffix: string,
         stepFragment: (typeof steps)[number],
+        stepIndex: number,
       ) => {
         const showNameForBlock = showName && !nameShown;
         const child = (
@@ -284,6 +285,7 @@ export const Message = observer(
             showName={showNameForBlock}
             usePreviewData={usePreviewData}
             step={stepFragment}
+            stepIndex={stepIndex}
           />
         );
         const wrapped = oneOf(
@@ -365,7 +367,7 @@ export const Message = observer(
         }
 
         if (hasContent) {
-          blocks.push(wrapTextBlock(`step-${stepIdx}-text`, step));
+          blocks.push(wrapTextBlock(`step-${stepIdx}-text`, step, stepIdx));
           isFirstBlock = false;
         }
 

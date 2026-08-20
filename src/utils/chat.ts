@@ -30,13 +30,54 @@ export const assistant = {id: assistantId};
  * (e.g. tool-call-only steps) are skipped.
  */
 export function derivedText(message: MessageType.Any): string {
+  return messageChunks(message).join('\n\n');
+}
+
+/**
+ * The message's text split into the units that render as separate markdown
+ * blocks — one per `AssistantTurn` step, one for a `Text` message.
+ */
+function messageChunks(message: MessageType.Any): string[] {
   if (message.type === 'assistant_turn') {
     return ((message as MessageType.AssistantTurn).steps ?? [])
       .map(s => s.content)
-      .filter((c): c is string => !!c && c.length > 0)
-      .join('\n\n');
+      .filter((c): c is string => !!c && c.length > 0);
   }
-  return 'text' in message && message.text ? message.text : '';
+  return 'text' in message && message.text ? [message.text] : [];
+}
+
+/**
+ * The chunks in-conversation search runs against, trimmed to match what
+ * `TextMessage` actually hands to `MarkdownView`. The trim is load-bearing:
+ * leading indentation turns a chunk into a markdown code block, which search
+ * excludes — so counting the untrimmed text would report no match on a
+ * message the view visibly highlights.
+ *
+ * Reasoning content is excluded, matching both `derivedText` and the fact that
+ * `ReasoningBlock` renders through its own engine with no `mark` model.
+ */
+export function searchableChunks(message: MessageType.Any): string[] {
+  return searchableUnits(message).map(unit => unit.text);
+}
+
+/**
+ * Searchable chunks paired with the step index they render under, so a match
+ * can be addressed as (messageId, stepIndex, ordinal) — the same coordinates
+ * `Message` uses when it renders one `TextMessage` per step.
+ */
+export function searchableUnits(
+  message: MessageType.Any,
+): Array<{stepIndex: number; text: string}> {
+  if (message.type === 'assistant_turn') {
+    return ((message as MessageType.AssistantTurn).steps ?? [])
+      .map((step, stepIndex) => ({
+        stepIndex,
+        text: (step.content ?? '').trim(),
+      }))
+      .filter(unit => unit.text.length > 0);
+  }
+  const text = 'text' in message && message.text ? message.text.trim() : '';
+  return text ? [{stepIndex: 0, text}] : [];
 }
 
 /**
