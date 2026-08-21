@@ -191,7 +191,21 @@
       "consentRevoke": "Відкликати"
     },
     "languageSheetTitle": "Мова",
-    "languageSearchPlaceholder": "Пошук мов"
+    "languageSearchPlaceholder": "Пошук мов",
+    "speculativeDecoding": "Спекулятивне декодування",
+    "speculativeDecodingDescription": "Використовуйте невелику модель-чернетку (або вбудовану модель MTP) для передбачення токенів і прискорення генерації. Експериментальна функція.",
+    "speculativeNotMTPCapable": "Активна модель не підтримує спекулятивне декодування, і сумісної моделі-чернетки не додано, тож для неї воно лишається вимкненим і не діє. До моделей із підтримкою воно застосовується автоматично.",
+    "speculativeDraftModel": "Модель-чернетка",
+    "speculativeDraftModelDescription": "Створює чернетки токенів для активної моделі.",
+    "speculativeDraftModelNone": "Немає (вбудована MTP)",
+    "speculativeDraftModelIgnoredOverridden": "Активна модель має власну модель-чернетку, тож цей вибір ігнорується.",
+    "speculativeDraftModelIgnoredIncompatible": "Ця чернетка несумісна з активною моделлю, тож вона ігнорується.",
+    "speculativeDraftModelIgnoredNotCapable": "Ця модель не містить шарів-чернеток, тож її не можна використати як модель-чернетку.",
+    "speculativeDraftKeyCacheType": "Тип кешу ключів чернетки",
+    "speculativeDraftValueCacheType": "Тип кешу значень чернетки",
+    "speculativeDraftNGpuLayers": "Шари GPU для чернетки",
+    "speculativeDraftNGpuLayersDescription": "Кількість шарів моделі-чернетки, які буде вивантажено на GPU.",
+    "speculativeDraftCacheTypeInactiveDescription": "Застосовується, щойно запрацює спекулятивне декодування."
   },
   "memory": {
     "shortWarning": "Попередження про пам'ять",
@@ -381,7 +395,8 @@
         "viewModelCardOnHuggingFace": "Переглянути картку моделі на Hugging Face",
         "visionSupported": "Підтримується",
         "visionNotSupported": "Не підтримується",
-        "visionUnknown": "Невідомо"
+        "visionUnknown": "Невідомо",
+        "draftOnlyReason": "Модель лише для чернеток. Виберіть її в розділі «Налаштування» → «Спекулятивне декодування»."
       },
       "accessibility": {
         "expandDetails": "Розгорнути детальну інформацію",
@@ -442,7 +457,9 @@
       "multilingual": "Багатомовний",
       "rewriting": "Переписання",
       "creativity": "Творче письмо",
-      "vision": "Бачення"
+      "vision": "Бачення",
+      "mtp": "Спекулятивна (MTP)",
+      "mtpDraft": "Спекулятивна чернетка"
     },
     "hubRun": {
       "title": "Завантажити Модель",
@@ -548,7 +565,8 @@
       "tokensPerSec": "{{value}} токенів/сек",
       "ttft": "{{value}} мс TTFT",
       "interrupted": "Перервано",
-      "truncated": "Перервано — ймовірно, контекст вичерпано"
+      "truncated": "Перервано — ймовірно, контекст вичерпано",
+      "draftAccepted": "чернетка: {{accepted}}/{{total}} ({{pct}}%)"
     },
     "exportUtils": {
       "fileSaved": "Файл збережено",
@@ -1229,7 +1247,8 @@
       "showResultsAccessibilityLabel": "Показати результати веб-пошуку для {{query}}",
       "openLinkError": "Не вдалося відкрити це посилання."
     },
-    "contextFullRemote": "У розмові закінчилося місце. Почніть новий чат."
+    "contextFullRemote": "У розмові закінчилося місце. Почніть новий чат.",
+    "speculativeInitFailed": "Цьому пристрою не вдалося запустити спекулятивне декодування для цієї моделі — найімовірніше, бракує пам'яті для контексту чернетки. Вимкніть спекулятивне декодування в розділі «Налаштування» → «Розширені налаштування» та спробуйте ще раз."
   },
   "benchmark": {
     "title": "Бенчмарк",
