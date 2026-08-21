@@ -211,7 +211,7 @@
       "openLinkError": "無法開啟此連結。"
     },
     "contextFullRemote": "對話空間不足。請開始新對話。",
-    "speculativeInitFailed": "此裝置無法為此模型啟動投機解碼 — 最有可能的原因是草稿上下文的記憶體不足。請在「設定 → 進階設定」中關閉投機解碼，然後再試一次。"
+    "speculativeInitFailed": "此裝置無法為此模型啟動推測解碼，很可能是草稿內容的記憶體不足。請在「設定 → 進階設定」中關閉推測解碼後再試一次。"
   },
   "common": {
     "cancel": "取消",
@@ -706,7 +706,7 @@
       "ttft": "{{value}}毫秒 TTFT",
       "interrupted": "被打斷",
       "truncated": "已截斷 — 可能是上下文已滿",
-      "draftAccepted": "草稿：{{accepted}}/{{total}} ({{pct}}%)"
+      "draftAccepted": "草稿：{{accepted}}/{{total}}（{{pct}}%）"
     },
     "thinkingBubble": {
       "reasoning": "推理"
@@ -942,7 +942,7 @@
         "visionSupported": "支援",
         "visionNotSupported": "不支援",
         "visionUnknown": "未知",
-        "draftOnlyReason": "純草稿模型。請在「設定 → 投機解碼」中選擇。"
+        "draftOnlyReason": "僅供草稿使用的模型。請在「設定 → 推測解碼」中選擇。"
       },
       "accessibility": {
         "loadingIndicator": "正在載入",
@@ -1004,8 +1004,8 @@
       "rewriting": "重新撰寫",
       "creativity": "創意寫作",
       "vision": "視覺",
-      "mtp": "投機 (MTP)",
-      "mtpDraft": "投機草稿"
+      "mtp": "推測（MTP）",
+      "mtpDraft": "推測草稿"
     },
     "vision": "視覺",
     "mmproj": "投影機",
@@ -1225,20 +1225,20 @@
     },
     "languageSheetTitle": "語言",
     "languageSearchPlaceholder": "搜尋語言",
-    "speculativeDecoding": "投機解碼",
-    "speculativeDecodingDescription": "使用小型草稿模型（或嵌入式 MTP 模型）來預測 token 並加速生成過程。此為實驗性功能。",
-    "speculativeNotMTPCapable": "當前模型不支援投機解碼且未配對相容的草稿模型，因此此功能將保持關閉且無任何影響。此功能會自動套用於支援該功能的模型。",
+    "speculativeDecoding": "推測解碼",
+    "speculativeDecodingDescription": "使用小型草稿模型（或內嵌的 MTP 模型）預測詞元，加速生成。實驗性功能。",
+    "speculativeNotMTPCapable": "目前使用的模型不支援推測解碼，也未搭配相容的草稿模型，因此此設定對它無效並維持關閉。對支援的模型會自動套用。",
     "speculativeDraftModel": "草稿模型",
-    "speculativeDraftModelDescription": "為當前模型產出草稿 Token。",
-    "speculativeDraftModelNone": "無（嵌入式 MTP）",
-    "speculativeDraftModelIgnoredOverridden": "當前模型已內建草稿模型，因此此選擇將被忽略。",
-    "speculativeDraftModelIgnoredIncompatible": "此草稿與當前模型不相容，因此將被忽略。",
-    "speculativeDraftModelIgnoredNotCapable": "此模型不包含草稿層，因此無法作為草稿模型使用。",
-    "speculativeDraftKeyCacheType": "草稿 Key 快取類型",
-    "speculativeDraftValueCacheType": "草稿 Value 快取類型",
-    "speculativeDraftNGpuLayers": "草稿 GPU 層",
-    "speculativeDraftNGpuLayersDescription": "可卸載至 GPU 的草稿模型層數。",
-    "speculativeDraftCacheTypeInactiveDescription": "當投機解碼執行時套用。"
+    "speculativeDraftModelDescription": "為目前使用的模型草擬詞元。",
+    "speculativeDraftModelNone": "無（內嵌 MTP）",
+    "speculativeDraftModelIgnoredOverridden": "目前使用的模型自帶草稿模型，因此會忽略此選擇。",
+    "speculativeDraftModelIgnoredIncompatible": "此草稿模型與目前使用的模型不相容，因此會被忽略。",
+    "speculativeDraftModelIgnoredNotCapable": "此模型不含草稿層，因此無法用作草稿模型。",
+    "speculativeDraftKeyCacheType": "草稿鍵快取類型",
+    "speculativeDraftValueCacheType": "草稿值快取類型",
+    "speculativeDraftNGpuLayers": "草稿 GPU 層數",
+    "speculativeDraftNGpuLayersDescription": "要卸載到 GPU 的草稿模型層數。",
+    "speculativeDraftCacheTypeInactiveDescription": "推測解碼啟動後即會套用。"
   },
   "storage": {
     "checkFailed": "無法檢查存儲",
