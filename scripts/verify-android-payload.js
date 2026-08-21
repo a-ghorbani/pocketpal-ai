@@ -179,12 +179,18 @@ function assertAcceleratorFloors(abi, manifestPath) {
   if (!abi.requiredLibs.some(lib => /_hexagon/.test(lib))) {
     return;
   }
-  // Not merely "a rule", but a rule that looks at the accelerator library. A
-  // rule pointing at librnllama.so and demanding a symbol every build exports
-  // satisfies every other floor, leaves the derived allowlist byte-identical,
-  // and passes an artifact with no backend at all.
+  // Not merely "a rule", but a rule that looks at the accelerator library
+  // itself. Two near-misses both pass every other floor and both accept an
+  // artifact with no backend: a rule pointing at librnllama.so, and a rule
+  // pointing at the accelerator's own JNI wrapper — whose name also contains
+  // "_hexagon", but which is a thin shim exporting stable Java_* entry points
+  // and none of the backend symbols.
   if (
-    !(abi.requiredSymbols || []).some(rule => /_hexagon/.test(rule.lib || ''))
+    !(abi.requiredSymbols || []).some(
+      rule =>
+        /_hexagon/.test(rule.lib || '') &&
+        !/^librnllama_jni/.test(rule.lib || ''),
+    )
   ) {
     refuseAbi(
       abi,
@@ -200,6 +206,13 @@ function assertAcceleratorFloors(abi, manifestPath) {
       abi,
       manifestPath,
       'an accelerator library but no required assets',
+    );
+  }
+  if (!Number.isInteger(abi.requiredAssetElfMachine)) {
+    refuseAbi(
+      abi,
+      manifestPath,
+      'required assets but no requiredAssetElfMachine to check them against',
     );
   }
 }
@@ -232,6 +245,21 @@ function loadManifest(manifestPath) {
   if (symbolRules === 0) {
     throw new Error(
       `${manifestPath} declares no symbol rules, so no backend would be checked.`,
+    );
+  }
+  // Every accelerator floor below is conditional on an ABI declaring an
+  // accelerator library, so a manifest declaring none would satisfy all of
+  // them vacuously — and the ABI enumeration only compares against what the
+  // manifest names, so a tree carrying no ladder at all would pass.
+  if (
+    !manifest.abis.some(abi =>
+      abi.requiredLibs.some(
+        lib => /_hexagon/.test(lib) && !/^librnllama_jni/.test(lib),
+      ),
+    )
+  ) {
+    throw new Error(
+      `${manifestPath} declares no accelerator library for any ABI, so no backend would be checked.`,
     );
   }
   for (const abi of manifest.abis) {
@@ -297,6 +325,22 @@ function readZipEntry(archive, entry) {
     throw new Error(`${entry} extracted as zero bytes`);
   }
   return buf;
+}
+
+/**
+ * The ELF machine an object targets. Shares the header layout between ELF32
+ * and ELF64 — `e_machine` sits at the same offset in both — so this works for
+ * the DSP libraries, which are ELF32, as well as the arm64 libraries.
+ */
+function readElfMachine(buf) {
+  if (buf.length < 20) {
+    throw new Error('file is too short to be an ELF object');
+  }
+  if (buf.readUInt32BE(0) !== 0x7f454c46) {
+    throw new Error('file is not an ELF object');
+  }
+  const littleEndian = buf[5] === 1;
+  return littleEndian ? buf.readUInt16LE(18) : buf.readUInt16BE(18);
 }
 
 /**
@@ -536,6 +580,42 @@ function checkArtifact({archive, kind, manifest, report, failures}) {
     report.push(
       `    assets: ${requiredAssets.length - missingAssets.length}/${requiredAssets.length} present`,
     );
+    // Presence by filename is not enough: a file of the right name that is not
+    // a DSP library leaves the backend as dead on the device as a missing one,
+    // and would report PASS.
+    for (const asset of (abi.requiredAssets || []).filter(
+      candidate => !missingAssets.includes(candidate),
+    )) {
+      const entry = `${prefix}${asset}`;
+      let machine;
+      try {
+        machine = readElfMachine(readZipEntry(archive, entry));
+      } catch (err) {
+        report.push(`      UNREADABLE  ${entry} — ${err.message}`);
+        fail(
+          [
+            `could not read ${entry} in ${artifactName}: ${err.message}.`,
+            'The payload check could not run, so it reports failure rather than success —',
+            'a check that cannot read the artifact has proven nothing about it.',
+          ].join('\n      '),
+        );
+        continue;
+      }
+      if (machine !== abi.requiredAssetElfMachine) {
+        report.push(
+          `      WRONG MACHINE  ${entry} (e_machine ${machine}, expected ${abi.requiredAssetElfMachine})`,
+        );
+        fail(
+          [
+            `${entry} in ${artifactName} is not a DSP library: its ELF e_machine is ${machine},`,
+            `and the manifest requires ${abi.requiredAssetElfMachine}.`,
+            'A file of the right name that the DSP cannot load disables the Hexagon backend just as',
+            'surely as a missing one. Check that llama.rn shipped real bin/arm64-v8a payloads.',
+          ].join('\n      '),
+        );
+      }
+    }
+
     for (const asset of missingAssets) {
       report.push(`      MISSING  ${prefix}${asset}`);
       fail(

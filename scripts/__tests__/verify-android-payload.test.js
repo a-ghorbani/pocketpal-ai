@@ -120,6 +120,22 @@ function hexagonDynsym(matchCount, {withRequired = true} = {}) {
   return buildElf(symbols);
 }
 
+/**
+ * A DSP library as far as the check is concerned: ELF32, little-endian, and
+ * targeting EM_QDSP6. The real ones are 650-730 KB of Hexagon code; only the
+ * header is asserted, so only the header is built.
+ */
+function buildDspStub(machine = 164) {
+  const out = Buffer.alloc(52);
+  out.writeUInt32BE(0x7f454c46, 0);
+  out.writeUInt8(1, 4); // ELFCLASS32
+  out.writeUInt8(1, 5); // ELFDATA2LSB
+  out.writeUInt8(1, 6);
+  out.writeUInt16LE(3, 16); // ET_DYN
+  out.writeUInt16LE(machine, 18);
+  return out;
+}
+
 const PLAIN_ELF = buildElf([
   {name: 'lm_ggml_backend_reg_count', defined: true},
   {name: 'malloc', defined: false},
@@ -133,7 +149,7 @@ function conformingEntries(prefix = '') {
       entries[`${prefix}lib/${abi.abi}/${lib}`] = PLAIN_ELF;
     }
     for (const asset of abi.requiredAssets) {
-      entries[`${prefix}${asset}`] = Buffer.from('dsp');
+      entries[`${prefix}${asset}`] = buildDspStub();
     }
     for (const rule of abi.requiredSymbols) {
       entries[`${prefix}lib/${abi.abi}/${rule.lib}`] = hexagonDynsym(
@@ -558,6 +574,25 @@ describe('a check that cannot run', () => {
       'no symbol rule examining it',
     ],
     [
+      "an accelerator ABI whose only rule examines the accelerator's JNI wrapper",
+      abis => {
+        abis[0].requiredSymbols = [
+          {
+            lib: 'librnllama_jni_v8_2_dotprod_i8mm_hexagon_opencl.so',
+            mustExport: ['Java_com_rnllama_RNLlama_nativeSetLoadedLibrary'],
+          },
+        ];
+      },
+      'no symbol rule examining it',
+    ],
+    [
+      'an accelerator ABI declaring assets with no machine to check them against',
+      abis => {
+        delete abis[0].requiredAssetElfMachine;
+      },
+      'no requiredAssetElfMachine',
+    ],
+    [
       'an accelerator ABI with no symbol rule, even when another ABI has one',
       abis => {
         abis[0].requiredSymbols = [];
@@ -590,22 +625,91 @@ describe('a check that cannot run', () => {
   it('reports the assets row even when none are declared', () => {
     // The summary claims assets were checked, so a manifest declaring none
     // must be visible in the report rather than simply omitting the line.
-    const weakened = path.join(workspace, 'no-accelerator.json');
-    const edited = JSON.parse(JSON.stringify(manifest));
-    // x86_64 only: no accelerator, so no assets are required — but it still
-    // carries a symbol rule, which is a legitimate shape.
-    edited.abis = [edited.abis[1]];
-    edited.abis[0].requiredSymbols = [
-      {lib: 'librnllama_x86_64.so', mustExport: ['lm_ggml_backend_reg_count']},
-    ];
-    fs.writeFileSync(weakened, JSON.stringify(edited));
-
-    const archive = writeArchive('app-prod-release.apk', conformingEntries());
-    const {output} = runGate(['--apk', archive, '--manifest', weakened]);
+    // x86_64 declares no assets, which is legitimate — it carries no
+    // accelerator. The committed manifest already has this shape.
+    const {output} = gateApk(conformingEntries());
     expect(output).toContain('assets: 0/0 present');
   });
 
-  it('refuses a manifest that yields an empty variant allowlist', () => {
+  // A new fail-closed assertion with no test is how the previous holes became
+  // possible: it works today, and nothing holds it there.
+  it('fails on an ABI tree the manifest never declared', () => {
+    const entries = conformingEntries();
+    entries['lib/armeabi-v7a/librnllama.so'] = PLAIN_ELF;
+    const {status, output} = gateApk(entries);
+    expect(status).toBe(1);
+    expect(output).toContain('UNDECLARED  lib/armeabi-v7a/');
+    expect(output).toContain('which the manifest does not declare');
+  });
+
+  it('reports the ABI trees it found, so the enumeration is visible', () => {
+    const {output} = gateApk(conformingEntries());
+    expect(output).toContain('ABIs in the artifact: arm64-v8a, x86_64');
+  });
+
+  it('enumerates ABI trees in a bundle too, under its base/ prefix', () => {
+    const entries = conformingEntries('base/');
+    entries['base/lib/armeabi-v7a/librnllama.so'] = PLAIN_ELF;
+    const archive = writeArchive('app-prod-release.aab', entries);
+    const {status, output} = runGate(['--aab', archive]);
+    expect(status).toBe(1);
+    expect(output).toContain('UNDECLARED  base/lib/armeabi-v7a/');
+  });
+
+  it('fails when a DSP asset is present but is not a DSP object', () => {
+    const entries = conformingEntries();
+    entries['assets/ggml-hexagon/libggml-htp-v73.so'] = buildDspStub(183); // EM_AARCH64
+    const {status, output} = gateApk(entries);
+    expect(status).toBe(1);
+    expect(output).toContain('WRONG MACHINE');
+    expect(output).toContain('is not a DSP library');
+  });
+
+  it('fails when a DSP asset is not an ELF object at all', () => {
+    const entries = conformingEntries();
+    entries['assets/ggml-hexagon/libggml-htp-v73.so'] = Buffer.alloc(64, 0x41);
+    const {status, output} = gateApk(entries);
+    expect(status).toBe(1);
+    expect(output).toContain('proven nothing about it');
+  });
+
+  it('refuses a manifest declaring no accelerator ABI at all', () => {
+    // Otherwise every accelerator floor is satisfied vacuously, and the ABI
+    // enumeration compares only against what the manifest names.
+    const weakened = path.join(workspace, 'no-accelerator-abi.json');
+    fs.writeFileSync(
+      weakened,
+      JSON.stringify({
+        abis: [
+          {
+            abi: 'armeabi-v7a',
+            requiredLibs: ['librnllama.so', 'librnllama_jni.so'],
+            requiredAssets: [],
+            requiredSymbols: [
+              {lib: 'librnllama.so', mustExport: ['lm_ggml_backend_reg_count']},
+            ],
+          },
+        ],
+      }),
+    );
+    const entries = {
+      'lib/armeabi-v7a/librnllama.so': buildElf([
+        {name: 'lm_ggml_backend_reg_count', defined: true},
+      ]),
+      'lib/armeabi-v7a/librnllama_jni.so': PLAIN_ELF,
+    };
+    const archive = writeArchive('app-prod-release.apk', entries);
+    const {status, output} = runGate([
+      '--apk',
+      archive,
+      '--manifest',
+      weakened,
+    ]);
+    expect(status).toBe(1);
+    expect(output).toContain('no accelerator library');
+  });
+
+  it('refuses a wrappers-only manifest before it can yield an empty allowlist', () => {
     const weakened = path.join(workspace, 'wrappers-only.json');
     const edited = JSON.parse(JSON.stringify(manifest));
     for (const abi of edited.abis) {
@@ -615,16 +719,17 @@ describe('a check that cannot run', () => {
     }
     fs.writeFileSync(weakened, JSON.stringify(edited));
 
-    // An empty allowlist un-narrows the build: gradle passes no
-    // -DRNLLAMA_ANDROID_VARIANTS for an empty value, and CMake reads the empty
-    // variable as "every variant enabled".
+    // Stripping the libraries also strips the accelerator, so this is refused
+    // by the accelerator floor. variantsFromManifest keeps its own empty-list
+    // guard as a backstop: an empty value would make gradle pass no
+    // -DRNLLAMA_ANDROID_VARIANTS, and CMake reads that as "build everything".
     const {status, output} = runGate([
       '--print-variants',
       '--manifest',
       weakened,
     ]);
     expect(status).toBe(1);
-    expect(output).toContain('empty variant allowlist');
+    expect(output).toContain('no accelerator library');
   });
 
   it('refuses a repeated --apk rather than checking only the last one', () => {
