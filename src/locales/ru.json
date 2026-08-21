@@ -210,7 +210,8 @@
       "showResultsAccessibilityLabel": "Показать результаты поиска в интернете по запросу {{query}}",
       "openLinkError": "Не удалось открыть эту ссылку."
     },
-    "contextFullRemote": "Лимит контекста диалога исчерпан. Начните новый чат."
+    "contextFullRemote": "Лимит контекста диалога исчерпан. Начните новый чат.",
+    "speculativeInitFailed": "На этом устройстве не удалось запустить спекулятивное декодирование для этой модели — скорее всего, не хватает памяти для чернового контекста. Отключите спекулятивное декодирование в разделе Настройки → Дополнительные настройки и попробуйте снова."
   },
   "common": {
     "cancel": "Отмена",
@@ -744,7 +745,8 @@
       "tokensPerSec": "{{value}} ток/сек",
       "ttft": "{{value}} мс TTFT",
       "interrupted": "Прервано",
-      "truncated": "Прервано – вероятно, контекст исчерпан"
+      "truncated": "Прервано – вероятно, контекст исчерпан",
+      "draftAccepted": "черновик: {{accepted}}/{{total}} ({{pct}}%)"
     },
     "pendingIndicator": {
       "preparingTool": "Подготовка инструмента",
@@ -939,7 +941,8 @@
         "viewModelCardOnHuggingFace": "Открыть карточку модели на Hugging Face",
         "visionSupported": "Поддерживается",
         "visionNotSupported": "Не поддерживается",
-        "visionUnknown": "Неизвестно"
+        "visionUnknown": "Неизвестно",
+        "draftOnlyReason": "Модель только для черновика. Выберите её в разделе Настройки → Спекулятивное декодирование."
       },
       "accessibility": {
         "expandDetails": "Развернуть детали",
@@ -1000,7 +1003,9 @@
       "multilingual": "Мультиязычность",
       "rewriting": "Рерайтинг",
       "creativity": "Творчество",
-      "vision": "Зрение"
+      "vision": "Зрение",
+      "mtp": "Спекулятивная (MTP)",
+      "mtpDraft": "Спекулятивный черновик"
     },
     "vision": "Зрение",
     "mmproj": "Проектор",
@@ -1219,7 +1224,21 @@
       "consentRevoke": "Отозвать"
     },
     "languageSheetTitle": "Язык",
-    "languageSearchPlaceholder": "Поиск языков"
+    "languageSearchPlaceholder": "Поиск языков",
+    "speculativeDecoding": "Спекулятивное декодирование",
+    "speculativeDecodingDescription": "Используйте небольшую черновую модель (или встроенную модель MTP) для предсказания токенов и ускорения генерации. Экспериментально.",
+    "speculativeNotMTPCapable": "Активная модель не поддерживает спекулятивное декодирование, и совместимая черновая модель не выбрана, поэтому для неё эта функция отключена и ни на что не влияет. Она применяется автоматически к моделям, которые её поддерживают.",
+    "speculativeDraftModel": "Черновая модель",
+    "speculativeDraftModelDescription": "Предлагает черновые токены для активной модели.",
+    "speculativeDraftModelNone": "Нет (встроенный MTP)",
+    "speculativeDraftModelIgnoredOverridden": "У активной модели есть собственная черновая модель, поэтому этот выбор игнорируется.",
+    "speculativeDraftModelIgnoredIncompatible": "Эта черновая модель несовместима с активной, поэтому она игнорируется.",
+    "speculativeDraftModelIgnoredNotCapable": "В этой модели нет черновых слоёв, поэтому её нельзя использовать как черновую модель.",
+    "speculativeDraftKeyCacheType": "Тип кэша ключей черновой модели",
+    "speculativeDraftValueCacheType": "Тип кэша значений черновой модели",
+    "speculativeDraftNGpuLayers": "Слои GPU черновой модели",
+    "speculativeDraftNGpuLayersDescription": "Количество слоёв черновой модели для выгрузки на GPU.",
+    "speculativeDraftCacheTypeInactiveDescription": "Применяется, когда запускается спекулятивное декодирование."
   },
   "storage": {
     "checkFailed": "Не удалось проверить хранилище",
