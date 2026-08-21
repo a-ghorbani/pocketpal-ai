@@ -16,6 +16,13 @@ const LLAMA_RN_ANDROID = path.join(
   'main',
 );
 const LIBRARY_CMAKE = path.join(LLAMA_RN_ANDROID, 'rnllama', 'CMakeLists.txt');
+const RNLLAMA_JAVA = path.join(
+  LLAMA_RN_ANDROID,
+  'java',
+  'com',
+  'rnllama',
+  'RNLlama.java',
+);
 const JNI_CMAKE = path.join(LLAMA_RN_ANDROID, 'CMakeLists.txt');
 
 const manifest = JSON.parse(fs.readFileSync(MANIFEST_PATH, 'utf-8'));
@@ -198,5 +205,39 @@ describe('the ladder loads JNI wrappers, so their call sites must track the libr
         );
       }
     }
+  });
+});
+
+describe('the DSP asset list tracks the runtime loader', () => {
+  // The manifest hand-mirrors RNLlama.java's HTP_LIBS. Nothing else notices if
+  // upstream adds or removes one: a new library ships un-gated, and a later
+  // upgrade that drops it kills the backend outright, because the loader
+  // returns false on the first asset it cannot open.
+  const source = fs.readFileSync(RNLLAMA_JAVA, 'utf-8');
+
+  function parseHtpLibs() {
+    const block = source.match(/String\[\]\s+HTP_LIBS\s*=\s*\{([^}]*)\}/);
+    if (!block) {
+      return null;
+    }
+    return [...block[1].matchAll(/"([^"]+)"/g)].map(match => match[1]);
+  }
+
+  const assetDir = source.match(/getAssets\(\)\.open\("([^"]*?)"\s*\+/);
+  const htpLibs = parseHtpLibs();
+
+  it('parses the loader, rather than passing because it matched nothing', () => {
+    expect(htpLibs).not.toBeNull();
+    expect(htpLibs.length).toBeGreaterThan(0);
+    expect(assetDir).not.toBeNull();
+  });
+
+  it('declares exactly the assets the loader extracts, at the path it reads', () => {
+    const declared = manifest.abis
+      .flatMap(abi => abi.requiredAssets || [])
+      .sort();
+    const expected = htpLibs.map(lib => `assets/${assetDir[1]}${lib}`).sort();
+
+    expect(declared).toEqual(expected);
   });
 });
