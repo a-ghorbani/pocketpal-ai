@@ -24,6 +24,11 @@ jobs:
       # This APK is never published and emulators have no DSP, so this job takes
       # the variant allowlist but provisions no Hexagon SDK and runs no payload gate.
       ORG_GRADLE_PROJECT_rnllamaBuildFromSource: 'true'
+      # This job caches no node_modules, so llama.rn's postinstall runs every
+      # time and downloads ~100 MB of prebuilt jniLibs plus the iOS xcframework.
+      # A from-source Android build uses neither. The DSP libraries under bin/
+      # are tarball content and arrive regardless.
+      RNLLAMA_SKIP_POSTINSTALL: '1'
     steps:
       - name: Checkout
         uses: actions/checkout@v4
