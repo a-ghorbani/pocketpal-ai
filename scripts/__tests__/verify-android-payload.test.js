@@ -335,7 +335,10 @@ describe('a check that cannot run', () => {
     expect(output).toContain('proven nothing about it');
   });
 
-  it('fails when a required library extracts as zero bytes', () => {
+  // Titled for the outcome, not the mechanism: an empty entry trips the
+  // zero-byte guard and the ELF length check alike, so this asserts that an
+  // unreadable library fails, not which of the two guards caught it.
+  it('fails when a required library holds nothing readable', () => {
     const entries = conformingEntries();
     entries['lib/arm64-v8a/librnllama_v8_2_dotprod_i8mm_hexagon_opencl.so'] =
       Buffer.alloc(0);
@@ -424,6 +427,8 @@ describe('a check that cannot run', () => {
     ]);
     expect(status).toBe(1);
     expect(output).toContain('FAIL');
+    // Exit code aside, a human scanning the log must not see a pass.
+    expect(output).not.toContain('PASS:');
   });
 
   it('fails when the manifest declares no libraries for an ABI', () => {
@@ -544,6 +549,15 @@ describe('a check that cannot run', () => {
       'no required assets',
     ],
     [
+      'an accelerator ABI whose only rule examines a different library',
+      abis => {
+        abis[0].requiredSymbols = [
+          {lib: 'librnllama.so', mustExport: ['lm_ggml_backend_reg_count']},
+        ];
+      },
+      'no symbol rule examining it',
+    ],
+    [
       'an accelerator ABI with no symbol rule, even when another ABI has one',
       abis => {
         abis[0].requiredSymbols = [];
@@ -601,8 +615,9 @@ describe('a check that cannot run', () => {
     }
     fs.writeFileSync(weakened, JSON.stringify(edited));
 
-    // An empty allowlist would be exported as ORG_GRADLE_PROJECT_rnllamaVariants=
-    // and the build-log assertion would then grep for a bare prefix.
+    // An empty allowlist un-narrows the build: gradle passes no
+    // -DRNLLAMA_ANDROID_VARIANTS for an empty value, and CMake reads the empty
+    // variable as "every variant enabled".
     const {status, output} = runGate([
       '--print-variants',
       '--manifest',

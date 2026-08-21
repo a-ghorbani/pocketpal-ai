@@ -179,8 +179,18 @@ function assertAcceleratorFloors(abi, manifestPath) {
   if (!abi.requiredLibs.some(lib => /_hexagon/.test(lib))) {
     return;
   }
-  if ((abi.requiredSymbols || []).length === 0) {
-    refuseAbi(abi, manifestPath, 'an accelerator library but no symbol rule');
+  // Not merely "a rule", but a rule that looks at the accelerator library. A
+  // rule pointing at librnllama.so and demanding a symbol every build exports
+  // satisfies every other floor, leaves the derived allowlist byte-identical,
+  // and passes an artifact with no backend at all.
+  if (
+    !(abi.requiredSymbols || []).some(rule => /_hexagon/.test(rule.lib || ''))
+  ) {
+    refuseAbi(
+      abi,
+      manifestPath,
+      'an accelerator library but no symbol rule examining it',
+    );
   }
   // The DSP libraries are extracted as a set at runtime and the backend is
   // disabled outright if any one is missing, so a compiled-in backend with no
@@ -243,9 +253,12 @@ function variantsFromManifest(manifest, manifestPath) {
       }
     }
   }
-  // An empty allowlist is not "build everything", it is a workflow that exports
-  // ORG_GRADLE_PROJECT_rnllamaVariants= and an assertion that then greps for a
-  // bare prefix and matches any build.
+  // An empty allowlist silently un-narrows the build: gradle skips passing
+  // -DRNLLAMA_ANDROID_VARIANTS at all for an empty value, and CMake reads the
+  // resulting empty variable as "every variant enabled"
+  // (cmake/rnllama-build-options.cmake). The build-log assertion would also
+  // fail, since gradle prints nothing either — this just fails earlier, and
+  // says which of the two it is.
   if (variants.length === 0) {
     throw new Error(
       `${manifestPath} yields an empty variant allowlist; every required library is a JNI wrapper.`,
@@ -286,12 +299,20 @@ function readZipEntry(archive, entry) {
   return buf;
 }
 
-function readCString(buf, offset) {
-  if (offset < 0 || offset >= buf.length) {
-    throw new Error('a .dynsym name points outside the file');
+/**
+ * Bounded by the string table, not by the file: a `.dynstr` region containing
+ * no NUL would otherwise make every lookup scan to EOF, turning a malformed
+ * artifact into an O(symbols x filesize) scan rather than a prompt failure.
+ */
+function readCString(buf, offset, limit) {
+  if (offset < 0 || offset >= limit || limit > buf.length) {
+    throw new Error('a .dynsym name points outside its string table');
   }
   const end = buf.indexOf(0, offset);
-  return buf.toString('utf-8', offset, end === -1 ? buf.length : end);
+  if (end === -1 || end >= limit) {
+    throw new Error('a .dynsym name is not terminated inside its string table');
+  }
+  return buf.toString('utf-8', offset, end);
 }
 
 /**
@@ -358,7 +379,11 @@ function readDynsym(buf) {
   for (let i = 1; i < count; i++) {
     const at = dynsym.offset + i * dynsym.entsize;
     symbols.push({
-      name: readCString(buf, strtab.offset + buf.readUInt32LE(at)),
+      name: readCString(
+        buf,
+        strtab.offset + buf.readUInt32LE(at),
+        strtab.offset + strtab.size,
+      ),
       defined: buf.readUInt16LE(at + 6) !== SHN_UNDEF,
     });
   }
@@ -447,6 +472,34 @@ function checkArtifact({archive, kind, manifest, report, failures}) {
       ].join('\n      '),
     );
     return;
+  }
+
+  // The manifest says what each declared ABI must contain; it cannot say
+  // anything about an ABI nobody declared. Adding one to abiFilters or
+  // reactNativeArchitectures would otherwise ship a tree this check never
+  // opens — and the variant allowlist is matched by exact name, so that tree
+  // would carry only the generic portable-C pair.
+  const declaredAbis = new Set(manifest.abis.map(entry => entry.abi));
+  const libPrefix = `${prefix}lib/`;
+  const shippedAbis = [
+    ...new Set(
+      [...entries]
+        .filter(entry => entry.startsWith(libPrefix))
+        .map(entry => entry.slice(libPrefix.length).split('/')[0])
+        .filter(Boolean),
+    ),
+  ].sort();
+  report.push(`  ABIs in the artifact: ${shippedAbis.join(', ') || 'none'}`);
+  for (const abi of shippedAbis.filter(name => !declaredAbis.has(name))) {
+    report.push(`    UNDECLARED  ${libPrefix}${abi}/`);
+    fail(
+      [
+        `${artifactName} ships ${libPrefix}${abi}/, which the manifest does not declare.`,
+        'Nothing checked that tree, so its native payload is unverified. Either declare the ABI in',
+        'scripts/android-payload-manifest.json, or drop it from reactNativeArchitectures and the',
+        "app's abiFilters so it is not shipped.",
+      ].join('\n      '),
+    );
   }
 
   for (const abi of manifest.abis) {
@@ -546,11 +599,22 @@ function main() {
       : failures.join('\n\n'),
   );
 
+  // The report file is written before the verdict is printed. It is the
+  // evidence that the check ran, so a pass nobody can audit is not a pass —
+  // and a run that printed PASS and then failed on the write would read, to a
+  // human scanning the log, as a pass.
   const text = `${report.join('\n')}\n`;
-  process.stdout.write(text);
   if (args.report) {
-    fs.writeFileSync(args.report, text);
+    try {
+      fs.writeFileSync(args.report, text);
+    } catch (err) {
+      process.stdout.write(`${report.slice(0, -1).join('\n')}\n`);
+      throw new Error(
+        `could not write the report to ${args.report}: ${err.message}. The check ran, but its evidence could not be recorded.`,
+      );
+    }
   }
+  process.stdout.write(text);
   return failures.length === 0 ? 0 : 1;
 }
 

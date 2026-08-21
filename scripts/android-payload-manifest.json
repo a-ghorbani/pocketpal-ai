@@ -3,7 +3,8 @@
   "matching": {
     "countRule": "expectedMatchCount counts every .dynsym entry whose name contains the pattern, case-insensitively, including undefined imports. The declared numbers were measured with `llvm-nm -D <lib> | grep -ci <pattern>`, so the reader must match that convention or the two are calibrated differently.",
     "mustExportRule": "mustExport names must be DEFINED in .dynsym (st_shndx != SHN_UNDEF). An undefined import proves only that something references the symbol, not that it was compiled in.",
-    "extraLibsRule": "librnllama* libraries beyond requiredLibs are reported and permitted, not failed: forcing prebuilts (ORG_GRADLE_PROJECT_rnllamaBuildFromSource=false) legitimately produces all seven arm64 variants."
+    "extraLibsRule": "librnllama* libraries beyond requiredLibs are reported and permitted, not failed: forcing prebuilts (ORG_GRADLE_PROJECT_rnllamaBuildFromSource=false) legitimately produces all seven arm64 variants.",
+    "assetScopeRule": "requiredAssets paths are NOT ABI-scoped: Android packages assets/ once per artifact, not per ABI (verified against a built APK). They are declared under the ABI whose libraries need them, which is what ties the accelerator floor to the right ABI, but the path is resolved from the artifact root."
   },
   "abis": [
     {
