@@ -66,12 +66,32 @@ runs:
         SDK_ROOT="$HOME/.hexagon-sdk/$HEXAGON_SDK_VERSION"
         TOOLS_ROOT="$SDK_ROOT/tools/HEXAGON_Tools/$HEXAGON_TOOLS_VERSION"
 
-        if [ ! -d "$SDK_ROOT" ]; then
+        # Consumed by the Android build: the include roots CMake adds and the
+        # library it links. Everything else in the ~3 GB tree is unused.
+        #
+        # CMake also adds ${HEXAGON_SDK_ROOT}/utils/examples as an include
+        # directory, but this repackaging does not ship it — a compiler ignores
+        # a missing include dir, so nothing is consumed from it and listing it
+        # here would only make `find` return non-zero.
+        CONSUMED_PATHS="incs ipc/fastrpc/rpcmem/inc ipc/fastrpc/remote/ship/android_aarch64/libcdsprpc.so"
+
+        # Every stage announces itself. An earlier version of this step could
+        # exit non-zero with no output at all, which is the one thing a
+        # provisioning check must never do.
+        if [ -d "$SDK_ROOT" ]; then
+          echo "Hexagon SDK restored from cache at $SDK_ROOT"
+        else
           STAGE=$(mktemp -d)
-          curl -fsSL -o "$STAGE/sdk.tar.xz" \
+          echo "Downloading Hexagon SDK $HEXAGON_SDK_VERSION"
+          if ! curl -fsSL -o "$STAGE/sdk.tar.xz" \
             "https://github.com/snapdragon-toolchain/hexagon-sdk/releases/download/v${HEXAGON_SDK_VERSION}/hexagon-sdk-v${HEXAGON_SDK_VERSION}-amd64-lnx.tar.xz"
+          then
+            echo "::error::Could not download the Hexagon SDK tarball."
+            exit 1
+          fi
 
           ACTUAL=$(sha256sum "$STAGE/sdk.tar.xz" | cut -d' ' -f1)
+          echo "Tarball sha256: $ACTUAL"
           if [ "$ACTUAL" != "$EXPECTED_SDK_SHA256" ]; then
             echo "::error::Hexagon SDK tarball digest mismatch. Expected $EXPECTED_SDK_SHA256, got $ACTUAL."
             echo "The release asset is mutable and this publisher is not Qualcomm, so a changed digest"
@@ -80,8 +100,12 @@ runs:
             exit 1
           fi
 
+          echo "Extracting"
           mkdir -p "$STAGE/unpacked"
-          tar --use-compress-program='xz -T0 -d' -xf "$STAGE/sdk.tar.xz" -C "$STAGE/unpacked"
+          if ! tar --use-compress-program='xz -T0 -d' -xf "$STAGE/sdk.tar.xz" -C "$STAGE/unpacked"; then
+            echo "::error::Could not extract the Hexagon SDK tarball."
+            exit 1
+          fi
           rm -f "$STAGE/sdk.tar.xz"
 
           # The archive wraps everything in a single <version> directory.
@@ -89,13 +113,15 @@ runs:
           if [ -d "$STAGE/unpacked/incs" ]; then
             mv "$STAGE/unpacked" "$SDK_ROOT"
           else
-            INNER=$(find "$STAGE/unpacked" -maxdepth 1 -mindepth 1 -type d)
+            INNER=$(find "$STAGE/unpacked" -maxdepth 1 -mindepth 1 -type d || true)
             if [ "$(printf '%s\n' "$INNER" | wc -l)" -ne 1 ] || [ ! -d "$INNER/incs" ]; then
-              echo "::error::Unexpected Hexagon SDK archive layout; could not find the SDK root."
+              echo "::error::Unexpected Hexagon SDK archive layout. Top level:"
+              ls -la "$STAGE/unpacked" || true
               exit 1
             fi
             mv "$INNER" "$SDK_ROOT"
           fi
+          echo "Installed to $SDK_ROOT"
         fi
 
         # A partially present SDK is the failure this action exists to prevent:
@@ -111,19 +137,27 @@ runs:
           fi
         done
 
-        # Runs on every job, cache hit or miss: the digest above only witnesses
-        # a fresh download, and a restored tree is never otherwise re-checked.
-        # Scoped to what the build reads and links — well under 1 MB of a ~3 GB
-        # tree, so this is cheap enough to do unconditionally.
-        # LC_ALL=C so the sort order is byte order everywhere, and the file
-        # list is fed to one sha256sum invocation so its output — hashes and
-        # relative paths — is the same stream on any host.
-        CONSUMED=$( cd "$SDK_ROOT" && LC_ALL=C find \
-            incs \
-            ipc/fastrpc/rpcmem/inc \
-            utils/examples \
-            ipc/fastrpc/remote/ship/android_aarch64/libcdsprpc.so \
-            -type f 2>/dev/null | LC_ALL=C sort | xargs sha256sum | sha256sum | cut -d' ' -f1 )
+        MISSING=""
+        for consumed in $CONSUMED_PATHS; do
+          [ -e "$SDK_ROOT/$consumed" ] || MISSING="$MISSING $consumed"
+        done
+        if [ -n "$MISSING" ]; then
+          echo "::error::Hexagon SDK is missing paths the build consumes:$MISSING"
+          exit 1
+        fi
+
+        # Runs on every job, cache hit or miss: the tarball digest only
+        # witnesses a fresh download, and a restored tree is never otherwise
+        # re-checked. Scoped to what the build reads and links — well under
+        # 1 MB of a ~3 GB tree, so this is cheap enough to do unconditionally.
+        # LC_ALL=C so sort order is byte order on any host, and the list is fed
+        # to one sha256sum so its output stream is host-independent.
+        CONSUMED=$(
+          cd "$SDK_ROOT" || exit 1
+          # shellcheck disable=SC2086
+          LC_ALL=C find $CONSUMED_PATHS -type f | LC_ALL=C sort | xargs sha256sum | sha256sum | cut -d' ' -f1
+        )
+        echo "Consumed-subset sha256: $CONSUMED"
         if [ "$CONSUMED" != "$EXPECTED_CONSUMED_SHA256" ]; then
           echo "::error::The Hexagon SDK files this build consumes do not match the expected digest."
           echo "Expected $EXPECTED_CONSUMED_SHA256, got $CONSUMED."
