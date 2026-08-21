@@ -525,6 +525,72 @@ describe('a check that cannot run', () => {
     expect(output).toContain('its backend would not be checked');
   });
 
+  // Every list in the manifest needs a floor. An emptied list is the cheapest
+  // edit that unblocks a build, and it degrades silently: the rule simply
+  // stops being checked and nothing else covers it.
+  it.each([
+    [
+      'an accelerator ABI with no required assets',
+      abis => {
+        abis[0].requiredAssets = [];
+      },
+      'no required assets',
+    ],
+    [
+      'an accelerator ABI whose requiredAssets is absent',
+      abis => {
+        delete abis[0].requiredAssets;
+      },
+      'no required assets',
+    ],
+    [
+      'an accelerator ABI with no symbol rule, even when another ABI has one',
+      abis => {
+        abis[0].requiredSymbols = [];
+        abis[1].requiredSymbols = [
+          {
+            lib: 'librnllama_x86_64.so',
+            mustExport: ['lm_ggml_backend_reg_count'],
+          },
+        ];
+      },
+      'no symbol rule',
+    ],
+  ])('fails on %s', (_label, weaken, fragment) => {
+    const weakened = path.join(workspace, 'weakened-abi.json');
+    const edited = JSON.parse(JSON.stringify(manifest));
+    weaken(edited.abis);
+    fs.writeFileSync(weakened, JSON.stringify(edited));
+
+    const archive = writeArchive('app-prod-release.apk', conformingEntries());
+    const {status, output} = runGate([
+      '--apk',
+      archive,
+      '--manifest',
+      weakened,
+    ]);
+    expect(status).toBe(1);
+    expect(output).toContain(fragment);
+  });
+
+  it('reports the assets row even when none are declared', () => {
+    // The summary claims assets were checked, so a manifest declaring none
+    // must be visible in the report rather than simply omitting the line.
+    const weakened = path.join(workspace, 'no-accelerator.json');
+    const edited = JSON.parse(JSON.stringify(manifest));
+    // x86_64 only: no accelerator, so no assets are required — but it still
+    // carries a symbol rule, which is a legitimate shape.
+    edited.abis = [edited.abis[1]];
+    edited.abis[0].requiredSymbols = [
+      {lib: 'librnllama_x86_64.so', mustExport: ['lm_ggml_backend_reg_count']},
+    ];
+    fs.writeFileSync(weakened, JSON.stringify(edited));
+
+    const archive = writeArchive('app-prod-release.apk', conformingEntries());
+    const {output} = runGate(['--apk', archive, '--manifest', weakened]);
+    expect(output).toContain('assets: 0/0 present');
+  });
+
   it('refuses a manifest that yields an empty variant allowlist', () => {
     const weakened = path.join(workspace, 'wrappers-only.json');
     const edited = JSON.parse(JSON.stringify(manifest));

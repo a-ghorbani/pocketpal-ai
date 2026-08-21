@@ -135,6 +135,65 @@ function assertRuleDemandsSomething(rule, manifestPath) {
   }
 }
 
+function refuseAbi(abi, manifestPath, why) {
+  throw new Error(
+    `${manifestPath} declares ${why} for ${abi.abi || '(unnamed ABI)'}.`,
+  );
+}
+
+/** Shape and the one floor every ABI has, accelerator or not. */
+function assertAbiStructure(abi, manifestPath) {
+  if (
+    !abi.abi ||
+    !Array.isArray(abi.requiredLibs) ||
+    abi.requiredLibs.length === 0
+  ) {
+    refuseAbi(abi, manifestPath, 'no required libraries');
+  }
+  if (abi.requiredAssets !== undefined && !Array.isArray(abi.requiredAssets)) {
+    refuseAbi(abi, manifestPath, 'a requiredAssets that is not a list');
+  }
+  if (
+    abi.requiredSymbols !== undefined &&
+    !Array.isArray(abi.requiredSymbols)
+  ) {
+    refuseAbi(abi, manifestPath, 'a requiredSymbols that is not a list');
+  }
+  for (const rule of abi.requiredSymbols || []) {
+    assertRuleDemandsSomething(rule, manifestPath);
+  }
+}
+
+/**
+ * An ABI that carries an accelerator variant has to demand the things that
+ * make it work. Both lists degrade the same silent way: emptying one is the
+ * cheapest edit that unblocks a build, the rule simply stops being checked,
+ * and nothing else in the manifest covers it.
+ *
+ * Conditional because an ABI without an accelerator legitimately declares
+ * neither. The `_hexagon` test mirrors the name convention llama.rn's own
+ * CMake uses to decide which variant gets the backend; were upstream to rename
+ * it, the ladder-coverage test fails first.
+ */
+function assertAcceleratorFloors(abi, manifestPath) {
+  if (!abi.requiredLibs.some(lib => /_hexagon/.test(lib))) {
+    return;
+  }
+  if ((abi.requiredSymbols || []).length === 0) {
+    refuseAbi(abi, manifestPath, 'an accelerator library but no symbol rule');
+  }
+  // The DSP libraries are extracted as a set at runtime and the backend is
+  // disabled outright if any one is missing, so a compiled-in backend with no
+  // assets is dead on the device.
+  if ((abi.requiredAssets || []).length === 0) {
+    refuseAbi(
+      abi,
+      manifestPath,
+      'an accelerator library but no required assets',
+    );
+  }
+}
+
 function loadManifest(manifestPath) {
   let manifest;
   try {
@@ -152,19 +211,10 @@ function loadManifest(manifestPath) {
     );
   }
   for (const abi of manifest.abis) {
-    if (
-      !abi.abi ||
-      !Array.isArray(abi.requiredLibs) ||
-      abi.requiredLibs.length === 0
-    ) {
-      throw new Error(
-        `${manifestPath} declares no required libraries for ${abi.abi || '(unnamed ABI)'}.`,
-      );
-    }
-    for (const rule of abi.requiredSymbols || []) {
-      assertRuleDemandsSomething(rule, manifestPath);
-    }
+    assertAbiStructure(abi, manifestPath);
   }
+  // Between the two per-ABI passes so the broadest weakening gets the broadest
+  // message instead of being reported as one ABI's problem.
   const symbolRules = manifest.abis.reduce(
     (total, abi) => total + (abi.requiredSymbols || []).length,
     0,
@@ -173,6 +223,9 @@ function loadManifest(manifestPath) {
     throw new Error(
       `${manifestPath} declares no symbol rules, so no backend would be checked.`,
     );
+  }
+  for (const abi of manifest.abis) {
+    assertAcceleratorFloors(abi, manifestPath);
   }
   return manifest;
 }
@@ -424,11 +477,12 @@ function checkArtifact({archive, kind, manifest, report, failures}) {
     const missingAssets = (abi.requiredAssets || []).filter(
       asset => !entries.has(`${prefix}${asset}`),
     );
-    if ((abi.requiredAssets || []).length > 0) {
-      report.push(
-        `    assets: ${abi.requiredAssets.length - missingAssets.length}/${abi.requiredAssets.length} present`,
-      );
-    }
+    // Printed even when nothing is declared: the summary line claims assets
+    // were checked, so a manifest that declares none has to be visible here.
+    const requiredAssets = abi.requiredAssets || [];
+    report.push(
+      `    assets: ${requiredAssets.length - missingAssets.length}/${requiredAssets.length} present`,
+    );
     for (const asset of missingAssets) {
       report.push(`      MISSING  ${prefix}${asset}`);
       fail(
