@@ -88,8 +88,12 @@ jobs:
       - name: Set up the Hexagon SDK
         uses: ./.github/actions/setup-hexagon-sdk
 
-      - name: Set up ccache
-        uses: ./.github/actions/setup-ccache
+      # No ccache on the release path, deliberately. Its key is the commit
+      # SHA, and a release builds a fresh version-bump commit, so the only way
+      # it could ever hit is the `ccache-android-` prefix restore — which would
+      # link objects of unreviewed provenance into the artifact that ships.
+      # Keeping it would cost the shipped binary's provenance to save build
+      # minutes on the least frequent workflow we run.
 
       # Step 5: Set up Ruby and Bundler
       - name: Set up Ruby
@@ -178,10 +182,6 @@ jobs:
             exit 1
           fi
           bundle exec fastlane build_android_release 2>&1 | tee android-build.log
-
-      - name: ccache statistics
-        if: always()
-        run: ccache --show-stats || echo "ccache unavailable (its setup step did not complete)"
 
       # COUPLING: the string grepped for below is upstream's, printed by
       # node_modules/llama.rn/android/build.gradle next to its rnllamaVariants

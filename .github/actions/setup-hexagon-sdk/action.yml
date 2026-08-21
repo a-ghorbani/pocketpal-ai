@@ -155,7 +155,11 @@ runs:
         CONSUMED=$(
           cd "$SDK_ROOT" || exit 1
           # shellcheck disable=SC2086
-          LC_ALL=C find $CONSUMED_PATHS -type f | LC_ALL=C sort | xargs sha256sum | sha256sum | cut -d' ' -f1
+          # `! -type d` rather than `-type f`: a symlink added under incs/
+          # would be followed by the compiler and could shadow an NDK header,
+          # so it must be inside the digest. Today the set holds no
+          # non-regular entries, and this predicate yields the same value.
+          LC_ALL=C find $CONSUMED_PATHS ! -type d | LC_ALL=C sort | xargs sha256sum | sha256sum | cut -d' ' -f1
         )
         echo "Consumed-subset sha256: $CONSUMED"
         if [ "$CONSUMED" != "$EXPECTED_CONSUMED_SHA256" ]; then
