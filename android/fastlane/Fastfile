@@ -21,6 +21,11 @@ platform :android do
       task: "assemble",
       flavor: "prod",
       build_type: "Release",
+      # The properties below are rendered into the command line fastlane echoes
+      # before running it, and that echo is what put the signing passwords in
+      # plaintext into android-build.log. Output stays on — the payload check's
+      # allowlist assertion reads gradle's stdout.
+      print_command: false,
       properties: {
         "android.injected.signing.store.file" => File.join(android_dir, "app/pocketpal-release-key.keystore"),
         "android.injected.signing.store.password" => ENV["KEYSTORE_PASSWORD"],
@@ -34,6 +39,11 @@ platform :android do
       task: "bundle",
       flavor: "prod",
       build_type: "Release",
+      # The properties below are rendered into the command line fastlane echoes
+      # before running it, and that echo is what put the signing passwords in
+      # plaintext into android-build.log. Output stays on — the payload check's
+      # allowlist assertion reads gradle's stdout.
+      print_command: false,
       properties: {
         "android.injected.signing.store.file" => File.join(android_dir, "app/pocketpal-release-key.keystore"),
         "android.injected.signing.store.password" => ENV["KEYSTORE_PASSWORD"],
