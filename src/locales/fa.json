@@ -191,7 +191,21 @@
       "consentRevoke": "لغو دسترسی"
     },
     "languageSheetTitle": "زبان",
-    "languageSearchPlaceholder": "جستجوی زبان‌ها"
+    "languageSearchPlaceholder": "جستجوی زبان‌ها",
+    "speculativeDecoding": "رمزگشایی گمانه‌زنانه",
+    "speculativeDecodingDescription": "از یک مدل پیش‌نویس کوچک (یا یک مدل MTP توکار) برای پیش‌بینی توکن‌ها و سریع‌تر کردن تولید استفاده کنید. آزمایشی.",
+    "speculativeNotMTPCapable": "مدل فعال از رمزگشایی گمانه‌زنانه پشتیبانی نمی‌کند و مدل پیش‌نویس سازگاری هم برایش انتخاب نشده، برای همین این گزینه برایش خاموش می‌ماند و تأثیری ندارد. برای مدل‌هایی که پشتیبانی می‌کنند به‌صورت خودکار اعمال می‌شود.",
+    "speculativeDraftModel": "مدل پیش‌نویس",
+    "speculativeDraftModelDescription": "برای مدل فعال، توکن‌ها را پیش‌نویس می‌کند.",
+    "speculativeDraftModelNone": "هیچ‌کدام (MTP توکار)",
+    "speculativeDraftModelIgnoredOverridden": "مدل فعال مدل پیش‌نویس خودش را دارد، برای همین این انتخاب نادیده گرفته می‌شود.",
+    "speculativeDraftModelIgnoredIncompatible": "این مدل پیش‌نویس با مدل فعال سازگار نیست، برای همین نادیده گرفته می‌شود.",
+    "speculativeDraftModelIgnoredNotCapable": "این مدل هیچ لایه پیش‌نویسی ندارد، برای همین نمی‌توان از آن به‌عنوان مدل پیش‌نویس استفاده کرد.",
+    "speculativeDraftKeyCacheType": "نوع کش Key پیش‌نویس",
+    "speculativeDraftValueCacheType": "نوع کش Value پیش‌نویس",
+    "speculativeDraftNGpuLayers": "لایه‌های GPU پیش‌نویس",
+    "speculativeDraftNGpuLayersDescription": "تعداد لایه‌های مدل پیش‌نویس که روی GPU تخلیه می‌شوند.",
+    "speculativeDraftCacheTypeInactiveDescription": "به‌محض اجرای رمزگشایی گمانه‌زنانه اعمال می‌شود."
   },
   "memory": {
     "shortWarning": "هشدار حافظه",
@@ -381,7 +395,8 @@
         "viewModelCardOnHuggingFace": "مشاهده کارت مدل در Hugging Face",
         "visionSupported": "پشتیبانی می‌شود",
         "visionNotSupported": "پشتیبانی نمی‌شود",
-        "visionUnknown": "نامشخص"
+        "visionUnknown": "نامشخص",
+        "draftOnlyReason": "مدل فقط پیش‌نویس. آن را از مسیر تنظیمات → رمزگشایی گمانه‌زنانه انتخاب کنید."
       },
       "accessibility": {
         "expandDetails": "نمایش جزئیات",
@@ -442,7 +457,9 @@
       "multilingual": "چندزبانه",
       "rewriting": "بازنویسی",
       "creativity": "نوشتن خلاقانه",
-      "vision": "بینایی"
+      "vision": "بینایی",
+      "mtp": "گمانه‌زنانه (MTP)",
+      "mtpDraft": "پیش‌نویس گمانه‌زنانه"
     },
     "hubRun": {
       "title": "دانلود مدل",
@@ -1006,7 +1023,8 @@
       "tokensPerSec": "{{value}} توکن/ثانیه",
       "ttft": "{{value}}ms TTFT",
       "interrupted": "متوقف شد",
-      "truncated": "قطع شد — احتمالاً context پر شده"
+      "truncated": "قطع شد — احتمالاً context پر شده",
+      "draftAccepted": "پیش‌نویس: {{accepted}}/{{total}} ({{pct}}%)"
     },
     "pendingIndicator": {
       "preparingTool": "در حال آماده‌سازی ابزار",
@@ -1229,7 +1247,8 @@
       "showResultsAccessibilityLabel": "نمایش نتایج جستجوی وب برای {{query}}",
       "openLinkError": "باز کردن این لینک ممکن نشد."
     },
-    "contextFullRemote": "گنجایش گفتگو پر شد. یک چت جدید شروع کنید."
+    "contextFullRemote": "گنجایش گفتگو پر شد. یک چت جدید شروع کنید.",
+    "speculativeInitFailed": "این دستگاه نتوانست رمزگشایی گمانه‌زنانه را برای این مدل شروع کند — به‌احتمال زیاد حافظه کافی برای context پیش‌نویس وجود ندارد. رمزگشایی گمانه‌زنانه را از مسیر تنظیمات → تنظیمات پیشرفته خاموش کنید و دوباره تلاش کنید."
   },
   "benchmark": {
     "title": "بنچمارک",
