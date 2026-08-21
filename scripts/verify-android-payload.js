@@ -90,6 +90,51 @@ function parseArgs(argv) {
   return args;
 }
 
+/**
+ * A symbol rule has to demand that something is *present*. The shape a
+ * weakening edit takes is emptying `mustExport` during a dependency bump
+ * instead of re-declaring it, and the library itself is still there, so no
+ * other rule notices. `expectedMatchCount` only counts as a demand when it
+ * asks for a positive number of matches: `count: 0` asserts the backend is
+ * absent, which is both self-contradictory next to `mustExport` and exactly
+ * the state this check exists to reject.
+ */
+function assertRuleDemandsSomething(rule, manifestPath) {
+  const named = rule.lib || '(unnamed library)';
+  const refuse = why => {
+    throw new Error(
+      `${manifestPath} declares a symbol rule for ${named} that ${why}, so its backend would not be checked.`,
+    );
+  };
+
+  if (!rule.lib) {
+    refuse('names no library');
+  }
+  const mustExport = rule.mustExport || [];
+  if (!Array.isArray(mustExport)) {
+    refuse('has a mustExport that is not a list');
+  }
+
+  const count = rule.expectedMatchCount;
+  if (count !== undefined) {
+    if (
+      typeof count !== 'object' ||
+      count === null ||
+      typeof count.pattern !== 'string' ||
+      count.pattern.length === 0 ||
+      !Number.isInteger(count.count) ||
+      count.count < 0
+    ) {
+      refuse('has a malformed expectedMatchCount');
+    }
+  }
+
+  const demandsPresence = mustExport.length > 0 || (count && count.count > 0);
+  if (!demandsPresence) {
+    refuse('asserts nothing');
+  }
+}
+
 function loadManifest(manifestPath) {
   let manifest;
   try {
@@ -116,18 +161,8 @@ function loadManifest(manifestPath) {
         `${manifestPath} declares no required libraries for ${abi.abi || '(unnamed ABI)'}.`,
       );
     }
-    // A rule naming a library but asserting nothing about it is the shape a
-    // weakening edit takes — emptying mustExport during an upgrade rather than
-    // re-declaring it. The library is still present, so nothing else fails.
     for (const rule of abi.requiredSymbols || []) {
-      if (
-        !rule.lib ||
-        ((rule.mustExport || []).length === 0 && !rule.expectedMatchCount)
-      ) {
-        throw new Error(
-          `${manifestPath} declares a symbol rule for ${rule.lib || '(unnamed library)'} that asserts nothing, so its backend would not be checked.`,
-        );
-      }
+      assertRuleDemandsSomething(rule, manifestPath);
     }
   }
   const symbolRules = manifest.abis.reduce(
@@ -142,7 +177,7 @@ function loadManifest(manifestPath) {
   return manifest;
 }
 
-function variantsFromManifest(manifest) {
+function variantsFromManifest(manifest, manifestPath) {
   const variants = [];
   for (const abi of manifest.abis) {
     for (const lib of abi.requiredLibs) {
@@ -154,6 +189,14 @@ function variantsFromManifest(manifest) {
         variants.push(variant);
       }
     }
+  }
+  // An empty allowlist is not "build everything", it is a workflow that exports
+  // ORG_GRADLE_PROJECT_rnllamaVariants= and an assertion that then greps for a
+  // bare prefix and matches any build.
+  if (variants.length === 0) {
+    throw new Error(
+      `${manifestPath} yields an empty variant allowlist; every required library is a JNI wrapper.`,
+    );
   }
   return variants;
 }
@@ -424,7 +467,9 @@ function main() {
   const manifest = loadManifest(args.manifest);
 
   if (args.printVariants) {
-    process.stdout.write(`${variantsFromManifest(manifest).join(',')}\n`);
+    process.stdout.write(
+      `${variantsFromManifest(manifest, args.manifest).join(',')}\n`,
+    );
     return 0;
   }
 

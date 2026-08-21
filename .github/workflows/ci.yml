@@ -327,7 +327,7 @@ jobs:
             grep -F "rnllama variants" android/android-build.log || echo "  (no variant line at all — ORG_GRADLE_PROJECT_rnllamaVariants never reached the subproject)"
             exit 1
           fi
-          echo "OK: llama.rn built exactly the declared variants."
+          echo "OK: llama.rn reported the declared variant list (extras, if any, are permitted and are reported by the payload check)."
 
       - name: Verify the Android payload
         run: |

@@ -481,6 +481,29 @@ describe('a check that cannot run', () => {
       },
     ],
     ['a rule naming no library', rule => delete rule.lib],
+    // count: 0 does not merely assert nothing, it asserts the backend is
+    // ABSENT — so the incident build satisfies it exactly.
+    [
+      'a rule whose only demand is a count of zero',
+      rule => {
+        rule.mustExport = [];
+        rule.expectedMatchCount = {pattern: 'hexagon', count: 0};
+      },
+    ],
+    [
+      'a rule whose expectedMatchCount has no pattern',
+      rule => {
+        rule.mustExport = [];
+        rule.expectedMatchCount = {count: 16};
+      },
+    ],
+    [
+      'a rule whose expectedMatchCount is an empty object',
+      rule => {
+        rule.mustExport = [];
+        rule.expectedMatchCount = {};
+      },
+    ],
   ])('fails on %s', (_label, weaken) => {
     const weakened = path.join(workspace, 'weakened.json');
     const edited = JSON.parse(JSON.stringify(manifest));
@@ -499,7 +522,28 @@ describe('a check that cannot run', () => {
       weakened,
     ]);
     expect(status).toBe(1);
-    expect(output).toContain('asserts nothing');
+    expect(output).toContain('its backend would not be checked');
+  });
+
+  it('refuses a manifest that yields an empty variant allowlist', () => {
+    const weakened = path.join(workspace, 'wrappers-only.json');
+    const edited = JSON.parse(JSON.stringify(manifest));
+    for (const abi of edited.abis) {
+      abi.requiredLibs = abi.requiredLibs.filter(lib =>
+        lib.startsWith('librnllama_jni'),
+      );
+    }
+    fs.writeFileSync(weakened, JSON.stringify(edited));
+
+    // An empty allowlist would be exported as ORG_GRADLE_PROJECT_rnllamaVariants=
+    // and the build-log assertion would then grep for a bare prefix.
+    const {status, output} = runGate([
+      '--print-variants',
+      '--manifest',
+      weakened,
+    ]);
+    expect(status).toBe(1);
+    expect(output).toContain('empty variant allowlist');
   });
 
   it('refuses a repeated --apk rather than checking only the last one', () => {
