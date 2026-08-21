@@ -191,7 +191,21 @@
       "consentRevoke": "Revogar"
     },
     "languageSheetTitle": "Idioma",
-    "languageSearchPlaceholder": "Pesquisar idiomas"
+    "languageSearchPlaceholder": "Pesquisar idiomas",
+    "speculativeDecoding": "Decodificação Especulativa",
+    "speculativeDecodingDescription": "Use um pequeno modelo de rascunho (ou um modelo MTP embutido) para prever tokens e acelerar a geração. Experimental.",
+    "speculativeNotMTPCapable": "O modelo ativo não é compatível com decodificação especulativa e nenhum modelo de rascunho compatível está pareado, então isso permanece desativado para ele, sem efeito. É aplicado automaticamente a modelos compatíveis.",
+    "speculativeDraftModel": "Modelo de Rascunho",
+    "speculativeDraftModelDescription": "Rascunha tokens para o modelo ativo.",
+    "speculativeDraftModelNone": "Nenhum (MTP embutido)",
+    "speculativeDraftModelIgnoredOverridden": "O modelo ativo já vem com seu próprio modelo de rascunho, então esta escolha é ignorada.",
+    "speculativeDraftModelIgnoredIncompatible": "Este modelo de rascunho não é compatível com o modelo ativo, então é ignorado.",
+    "speculativeDraftModelIgnoredNotCapable": "Este modelo não possui camadas de rascunho, então não pode ser usado como modelo de rascunho.",
+    "speculativeDraftKeyCacheType": "Tipo de Cache de Chave do Rascunho",
+    "speculativeDraftValueCacheType": "Tipo de Cache de Valor do Rascunho",
+    "speculativeDraftNGpuLayers": "Camadas de GPU do Rascunho",
+    "speculativeDraftNGpuLayersDescription": "Número de camadas do modelo de rascunho a descarregar para a GPU.",
+    "speculativeDraftCacheTypeInactiveDescription": "Aplicado quando a decodificação especulativa estiver em execução."
   },
   "memory": {
     "shortWarning": "Aviso de Memória",
@@ -390,7 +404,8 @@
         "viewModelCardOnHuggingFace": "Ver Ficha do Modelo no Hugging Face",
         "visionSupported": "Compatível",
         "visionNotSupported": "Não compatível",
-        "visionUnknown": "Desconhecido"
+        "visionUnknown": "Desconhecido",
+        "draftOnlyReason": "Modelo apenas de rascunho. Selecione-o em Configurações → Decodificação especulativa."
       },
       "accessibility": {
         "expandDetails": "Expandir detalhes",
@@ -451,7 +466,9 @@
       "multilingual": "Multilíngue",
       "rewriting": "Reescrita",
       "creativity": "Escrita criativa",
-      "vision": "Visão"
+      "vision": "Visão",
+      "mtp": "Especulativo (MTP)",
+      "mtpDraft": "Rascunho especulativo"
     }
   },
   "completionParams": {
@@ -548,7 +565,8 @@
       "tokensPerSec": "{{value}} tokens/seg",
       "ttft": "{{value}}ms TTFT",
       "interrupted": "Interrompido",
-      "truncated": "Cortado — provavelmente o contexto está cheio"
+      "truncated": "Cortado — provavelmente o contexto está cheio",
+      "draftAccepted": "rascunho: {{accepted}}/{{total}} ({{pct}}%)"
     },
     "exportUtils": {
       "fileSaved": "Arquivo Salvo",
@@ -1229,7 +1247,8 @@
       "showResultsAccessibilityLabel": "Mostrar resultados da busca na web para {{query}}",
       "openLinkError": "Não foi possível abrir este link."
     },
-    "contextFullRemote": "A conversa ficou sem espaço. Comece um novo chat."
+    "contextFullRemote": "A conversa ficou sem espaço. Comece um novo chat.",
+    "speculativeInitFailed": "Este dispositivo não conseguiu iniciar a decodificação especulativa para este modelo — provavelmente não há memória suficiente para o contexto de rascunho. Desative a Decodificação especulativa em Configurações → Configurações Avançadas e tente novamente."
   },
   "htmlPreview": {
     "defaultTitle": "Pré-visualização",
