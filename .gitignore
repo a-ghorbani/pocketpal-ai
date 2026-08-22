@@ -101,6 +101,12 @@ e2e/dist/
 # with the worktree.
 e2e/specs/visual-capture/TASK-*.spec.ts
 
+# Android build log and payload-check report, written by both the CI and
+# release workflows and reproducible locally. The build log can contain the
+# gradle command line, so it is never committed.
+android/android-build.log
+/payload-report.txt
+
 # Dev-team workflow control-plane artefacts (story docs, designer asks,
 # screenshot inventories). Live in the dev-team repo and are sometimes
 # synced into the worktree for local reference; never committed here.
