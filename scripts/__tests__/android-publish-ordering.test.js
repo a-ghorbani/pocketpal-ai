@@ -171,29 +171,45 @@ function gateExamines(step) {
  * literal `.apk`/`.aab`, so a rule keyed on filenames would see nothing to
  * compare and skip the step entirely. It is refused instead: the gate cannot
  * be shown to have read bytes the parse cannot identify.
+ *
+ * `anyExpression` holds for a `with:` path field, where the whole value is the
+ * path and an expression therefore hides one. It is cleared for a shell
+ * command, where a `${{ }}` is as likely to be a tag, a secret or a token —
+ * `gh release create v1.0.0` publishes no binary at all — so only an
+ * expression sitting against an `.apk`/`.aab` names an artifact there.
  */
 const UNRESOLVED_PATH = '(a path this parse cannot resolve)';
 
-function reachesUnresolvedAndroidOutput(value) {
+function reachesUnresolvedAndroidOutput(value, {anyExpression = false} = {}) {
   const text = String(value ?? '');
   return (
     /build\/outputs/.test(text) ||
     (text.includes('*') && /\.(?:apk|aab)/.test(text)) ||
-    text.includes('${{')
+    /\$\{\{[^\n]*?\}\}[^\s"']*\.(?:apk|aab)/.test(text) ||
+    (anyExpression && text.includes('${{'))
   );
 }
 
 /** Every way this repository can put built bytes in front of someone. */
 function publisherOf(step, lanes) {
   const text = stepText(step, lanes);
-  const pathsOrUnresolved = field => {
-    const paths = artifactsIn(JSON.stringify(step.with));
+  // Applied to every publisher that names a path, not only the `uses:` ones:
+  // an unresolvable path leaves path identity with nothing to compare, and a
+  // vacuous rule reads exactly like a satisfied one.
+  const resolved = (source, options) => {
+    const paths = artifactsIn(source);
     if (paths.length > 0) {
       return paths;
     }
-    return reachesUnresolvedAndroidOutput(step.with[field])
+    return reachesUnresolvedAndroidOutput(source, options)
       ? [UNRESOLVED_PATH]
       : [];
+  };
+  const pathsOrUnresolved = field => {
+    const paths = artifactsIn(JSON.stringify(step.with));
+    return paths.length > 0
+      ? paths
+      : resolved(String(step.with[field] ?? ''), {anyExpression: true});
   };
   if (/^actions\/upload-artifact@/.test(step.uses)) {
     const paths = pathsOrUnresolved('path');
@@ -206,10 +222,10 @@ function publisherOf(step, lanes) {
     return null;
   }
   if (/upload_to_play_store/.test(text)) {
-    return {rule: 'play-upload', paths: artifactsIn(text)};
+    return {rule: 'play-upload', paths: resolved(text)};
   }
   if (/\bgh\s+release\s+(?:create|upload)/.test(step.run)) {
-    return {rule: 'gh-release-cli', paths: artifactsIn(step.run)};
+    return {rule: 'gh-release-cli', paths: resolved(step.run)};
   }
   if (gitPushArguments(step.run).length > 0) {
     return {rule: 'tag-push', paths: []};
@@ -1078,6 +1094,41 @@ describe('each rule is capable of failing', () => {
     expect(violationsOfOrdering(m)).toEqual([]);
     expect(violationsOfPathIdentity(m)).toEqual([
       expect.stringContaining(fragment),
+    ]);
+  });
+
+  // The command-line publishers name their paths as arguments rather than in a
+  // `with:` block, and the same spellings hide an artifact there. Ordering
+  // alone held these: it fires on position, so it fired before this too — the
+  // fix is that path identity stops being vacuous, which is what the second
+  // assertion in each case is for.
+  it.each([
+    ['gh release create', 'gh release create v1.0.0 dist/*.apk'],
+    [
+      'a fastlane play upload',
+      'bundle exec fastlane run upload_to_play_store aab:android/app/build/outputs/bundle/prodRelease/',
+    ],
+  ])('both rules catch %s naming no resolvable file', (_label, run) => {
+    const m = broken();
+    const job = jobIn(m, 'ci.yml', 'build-android');
+    const gate = job.steps.findIndex(isGateStep);
+    job.steps.splice(gate, 0, {
+      workflow: 'ci.yml',
+      job: 'build-android',
+      index: 0,
+      name: 'Publish the build output',
+      run,
+      uses: '',
+      with: {},
+      raw: {},
+    });
+    reindex(job);
+
+    expect(violationsOfOrdering(m)).toEqual([
+      expect.stringContaining('Publish the build output'),
+    ]);
+    expect(violationsOfPathIdentity(m)).toEqual([
+      expect.stringContaining('cannot resolve to a filename'),
     ]);
   });
 
