@@ -204,7 +204,7 @@
     "speculativeDraftKeyCacheType": "نوع کش Key پیش‌نویس",
     "speculativeDraftValueCacheType": "نوع کش Value پیش‌نویس",
     "speculativeDraftNGpuLayers": "لایه‌های GPU پیش‌نویس",
-    "speculativeDraftNGpuLayersDescription": "تعداد لایه‌های مدل پیش‌نویس که روی GPU تخلیه می‌شوند.",
+    "speculativeDraftNGpuLayersDescription": "تعداد لایه‌های مدل پیش‌نویس که روی GPU بارگذاری می‌شوند.",
     "speculativeDraftCacheTypeInactiveDescription": "به‌محض اجرای رمزگشایی گمانه‌زنانه اعمال می‌شود."
   },
   "memory": {
