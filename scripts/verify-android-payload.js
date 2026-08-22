@@ -42,11 +42,18 @@ const ELF32_PHDR_SIZE = 32;
 const ELF64_PHDR_SIZE = 56;
 const ELF32_EHDR_SIZE = 52;
 const ELF64_EHDR_SIZE = 64;
+const EOCD_SIGNATURE = 0x06054b50;
+const CENTRAL_SIGNATURE = 0x02014b50;
+const LOCAL_SIGNATURE = 0x04034b50;
+const EOCD_SIZE = 22;
+const LOCAL_HEADER_SIZE = 30;
 
-// What the NDK already produces (`-Wl,-z,max-page-size=16384`) and what
-// Android 15+ requires of shared libraries on 16 KB-page devices. The manifest
-// declares the requirement per ABI; this is only the floor it cannot undercut,
-// because a lowered number is the cheapest edit that unblocks a failing build.
+// The page size a 16 KB-page device maps at. Two separate properties are held
+// to it — the linker's `p_align` (`-Wl,-z,max-page-size=16384`) and the zip
+// data offset the packager placed the library at — and a library needs both to
+// load; neither on its own is the Android 15 requirement. The manifest declares
+// the number per ABI; this is only the floor it cannot undercut, because a
+// lowered number is the cheapest edit that unblocks a failing build.
 const MIN_LIB_ALIGNMENT = 16384;
 
 function usage() {
@@ -178,6 +185,18 @@ function assertAbiStructure(abi, manifestPath) {
     !Array.isArray(abi.requiredSymbols)
   ) {
     refuseAbi(abi, manifestPath, 'a requiredSymbols that is not a list');
+  }
+  // The assets moved to a top-level block, and a key nothing reads is worse
+  // than a missing one: an editor working from the old shape declares assets,
+  // is never told they are ignored, and gets a green gate.
+  for (const abandoned of ['requiredAssets', 'requiredAssetElfMachine']) {
+    if (abi[abandoned] !== undefined) {
+      refuseAbi(
+        abi,
+        manifestPath,
+        `a per-ABI ${abandoned}, which nothing reads; the DSP assets are declared once in the top-level "assets" block`,
+      );
+    }
   }
   for (const rule of abi.requiredSymbols || []) {
     assertRuleDemandsSomething(rule, manifestPath);
@@ -411,6 +430,83 @@ function readElfMachine(buf) {
   }
   const littleEndian = buf[5] === 1;
   return littleEndian ? buf.readUInt16LE(18) : buf.readUInt16BE(18);
+}
+
+/**
+ * Where each entry's bytes actually start, and whether they are stored or
+ * deflated. Read from the archive's own headers rather than from `unzip`,
+ * which prints the *central* directory's extra-field length — the alignment
+ * padding lives in the **local** header, and the two differ (0 against 599
+ * bytes for `librnllama.so` in a release APK).
+ */
+function readZipIndex(archive) {
+  const fd = fs.openSync(archive, 'r');
+  try {
+    const size = fs.fstatSync(fd).size;
+    const tailLength = Math.min(size, 0xffff + 22);
+    const tail = Buffer.alloc(tailLength);
+    fs.readSync(fd, tail, 0, tailLength, size - tailLength);
+
+    let eocd = -1;
+    for (let at = tail.length - EOCD_SIZE; at >= 0; at--) {
+      if (tail.readUInt32LE(at) === EOCD_SIGNATURE) {
+        eocd = at;
+        break;
+      }
+    }
+    if (eocd === -1) {
+      throw new Error('no end-of-central-directory record');
+    }
+    const count = tail.readUInt16LE(eocd + 10);
+    const directorySize = tail.readUInt32LE(eocd + 12);
+    const directoryAt = tail.readUInt32LE(eocd + 16);
+    // Guessing past a ZIP64 marker would silently read the wrong offsets, so
+    // it fails instead; no artifact this gate judges is near those limits.
+    if (
+      count === 0xffff ||
+      directorySize === 0xffffffff ||
+      directoryAt === 0xffffffff
+    ) {
+      throw new Error(
+        'the archive uses ZIP64, which this reader does not parse',
+      );
+    }
+
+    const directory = Buffer.alloc(directorySize);
+    fs.readSync(fd, directory, 0, directorySize, directoryAt);
+
+    const index = new Map();
+    const local = Buffer.alloc(LOCAL_HEADER_SIZE);
+    let at = 0;
+    for (let i = 0; i < count; i++) {
+      if (directory.readUInt32LE(at) !== CENTRAL_SIGNATURE) {
+        throw new Error('a central directory entry is malformed');
+      }
+      const method = directory.readUInt16LE(at + 10);
+      const nameLength = directory.readUInt16LE(at + 28);
+      const extraLength = directory.readUInt16LE(at + 30);
+      const commentLength = directory.readUInt16LE(at + 32);
+      const localAt = directory.readUInt32LE(at + 42);
+      const name = directory.toString('utf-8', at + 46, at + 46 + nameLength);
+
+      fs.readSync(fd, local, 0, LOCAL_HEADER_SIZE, localAt);
+      if (local.readUInt32LE(0) !== LOCAL_SIGNATURE) {
+        throw new Error(`the local header of ${name} is malformed`);
+      }
+      index.set(name, {
+        stored: method === 0,
+        dataOffset:
+          localAt +
+          LOCAL_HEADER_SIZE +
+          local.readUInt16LE(26) +
+          local.readUInt16LE(28),
+      });
+      at += 46 + nameLength + extraLength + commentLength;
+    }
+    return index;
+  } finally {
+    fs.closeSync(fd);
+  }
 }
 
 /**
@@ -697,6 +793,13 @@ function checkAssets({
  * property of what the platform loads, and the libraries this manifest does
  * not name are loaded by the same linker on the same device.
  *
+ * Two properties, not one. `p_align` is what the linker wrote into the object;
+ * the **zip data offset** is where that object sits in the archive. The app
+ * ships `extractNativeLibs=false`, so bionic maps each `.so` in place out of
+ * the APK and both have to be 16 KB-aligned — an artifact with conforming
+ * segments at unaligned offsets cannot `dlopen` on a 16 KB-page device, and
+ * asserting only the first certifies exactly that artifact.
+ *
  * The DSP assets are deliberately outside the subject set. They are ELF32
  * Hexagon objects at `p_align` 4096, loaded by the DSP rather than by Android,
  * so one floor spanning both would fail the gate on a correct artifact.
@@ -707,6 +810,7 @@ function checkAlignment({
   entries,
   abi,
   artifactName,
+  zipIndex,
   report,
   fail,
 }) {
@@ -785,6 +889,39 @@ function checkAlignment({
       );
     }
   }
+
+  if (!zipIndex) {
+    return;
+  }
+
+  // Stored entries only. A deflated library is extracted to disk at install
+  // (legacy packaging) rather than mapped out of the archive, so its offset
+  // decides nothing — and an APK where every library is deflated legitimately
+  // has nothing to check here, which the counts make visible rather than
+  // silently reporting as a pass.
+  const mapped = libs.filter(entry => zipIndex.get(entry)?.stored);
+  const misplaced = mapped.filter(
+    entry => zipIndex.get(entry).dataOffset % declared !== 0,
+  );
+  report.push(
+    `    zip data offset: ${mapped.length - misplaced.length}/${mapped.length} stored libraries at a multiple of ${declared}` +
+      (mapped.length < libs.length
+        ? ` (${libs.length - mapped.length} deflated, extracted at install)`
+        : ''),
+  );
+  for (const entry of misplaced) {
+    const offset = zipIndex.get(entry).dataOffset;
+    report.push(`      MISPLACED  ${entry} (data offset ${offset})`);
+    fail(
+      [
+        `${entry} in ${artifactName} begins at byte ${offset}, which is not a multiple of ${declared}.`,
+        'The app sets extractNativeLibs=false, so this library is mapped in place out of the APK and',
+        'a 16 KB-page device cannot load it from an unaligned offset — the segment alignment above',
+        'says nothing about this. Alignment padding is inserted by the Android Gradle Plugin when it',
+        'packages the archive, so a failure here means the artifact was repacked or zipaligned away.',
+      ].join('\n      '),
+    );
+  }
 }
 
 function checkArtifact({archive, kind, manifest, report, failures}) {
@@ -837,6 +974,25 @@ function checkArtifact({archive, kind, manifest, report, failures}) {
     );
   }
 
+  // Only an APK is mapped in place. A bundle is repackaged by bundletool on
+  // the way to the device, so its offsets say nothing about what installs.
+  let zipIndex = null;
+  if (kind === 'apk') {
+    try {
+      zipIndex = readZipIndex(archive);
+    } catch (err) {
+      report.push(`  UNREADABLE — ${err.message}`);
+      fail(
+        [
+          `could not read the archive layout of ${artifactName}: ${err.message}.`,
+          'The payload check could not run, so it reports failure rather than success —',
+          'a check that cannot read the artifact has proven nothing about it.',
+        ].join('\n      '),
+      );
+      return;
+    }
+  }
+
   checkAssets({
     archive,
     prefix,
@@ -880,6 +1036,7 @@ function checkArtifact({archive, kind, manifest, report, failures}) {
       entries,
       abi,
       artifactName,
+      zipIndex,
       report,
       fail,
     });
@@ -993,4 +1150,9 @@ if (require.main === module) {
   }
 }
 
-module.exports = {readDynsym, readProgramHeaders, variantsFromManifest};
+module.exports = {
+  readDynsym,
+  readProgramHeaders,
+  readZipIndex,
+  variantsFromManifest,
+};
