@@ -1,10 +1,12 @@
 import React from 'react';
-import {ScrollView} from 'react-native';
+import {ScrollView, StyleSheet} from 'react-native';
 
 // Use the project's custom render which mounts MarkdownProvider — required
 // because MarkdownView now relies on the ambient TRenderEngineProvider
 // instead of building its own engine per instance.
 import {render, fireEvent} from '../../../../jest/test-utils';
+import {themeFixtures} from '../../../../jest/fixtures/theme';
+import {useTheme} from '../../../hooks';
 
 import {MarkdownView} from '../MarkdownView';
 
@@ -110,6 +112,51 @@ describe('MarkdownView Component', () => {
     );
 
     expect(getByText(/console\.log/)).toBeTruthy();
+  });
+
+  describe('Link Rendering', () => {
+    const lightLink = themeFixtures.lightTheme.colors.secondary;
+    const darkLink = themeFixtures.darkTheme.colors.secondary;
+
+    it('renders link text from a markdown link', () => {
+      const markdownText = '[Example](https://example.com)';
+      const {getByText} = render(
+        <MarkdownView markdownText={markdownText} maxMessageWidth={300} />,
+      );
+
+      expect(getByText('Example')).toBeTruthy();
+    });
+
+    it('styles links with a distinct color and underline', () => {
+      const markdownText = '[Example](https://example.com)';
+      const {getByText} = render(
+        <MarkdownView markdownText={markdownText} maxMessageWidth={300} />,
+      );
+
+      const linkNode = getByText('Example');
+      const flattened = StyleSheet.flatten(linkNode.props.style) || {};
+
+      expect(flattened.color).toBe(lightLink);
+      expect(flattened.textDecorationLine).toBe('underline');
+    });
+
+    it('uses the dark theme link color in dark mode', () => {
+      (useTheme as jest.Mock).mockReturnValue(themeFixtures.darkTheme);
+      try {
+        const {getByText} = render(
+          <MarkdownView
+            markdownText="[Example](https://example.com)"
+            maxMessageWidth={300}
+          />,
+        );
+        const flattened =
+          StyleSheet.flatten(getByText('Example').props.style) || {};
+
+        expect(flattened.color).toBe(darkLink);
+      } finally {
+        (useTheme as jest.Mock).mockReturnValue(themeFixtures.lightTheme);
+      }
+    });
   });
 
   describe('Table Rendering', () => {

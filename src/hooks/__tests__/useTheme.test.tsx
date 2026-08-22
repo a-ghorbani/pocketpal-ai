@@ -11,7 +11,7 @@ import {useTheme} from '../useTheme';
 import {uiStore} from '../../store';
 
 import {darkTheme, lightTheme} from '../../utils/theme';
-import {FONT_FAMILIES} from '../../theme/tokens';
+import {FONT_FAMILIES, NON_LATIN_LOCALES} from '../../theme/tokens';
 
 describe('useTheme', () => {
   beforeEach(() => {
@@ -109,11 +109,10 @@ describe('useTheme', () => {
       }
     });
 
-    it('headlineH1 swaps for every non-Latin / non-Latin-script locale', () => {
-      const fallbackLocales: Array<
-        'fa' | 'he' | 'ja' | 'ko' | 'ru' | 'uk' | 'zh' | 'zh_Hant'
-      > = ['fa', 'he', 'ja', 'ko', 'ru', 'uk', 'zh', 'zh_Hant'];
-      for (const lang of fallbackLocales) {
+    it('headlineH1 swaps for every Fraunces-fallback locale', () => {
+      // Derived, not hand-listed — a hardcoded copy silently rots when a
+      // locale joins the fallback set (as pl did).
+      for (const lang of NON_LATIN_LOCALES) {
         uiStore.setLanguage(lang);
         const {result} = renderHook(() => useTheme());
         expect(result.current.typography.headlineH1.fontFamily).toBe(

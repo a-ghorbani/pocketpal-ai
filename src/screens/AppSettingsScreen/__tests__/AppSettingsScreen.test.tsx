@@ -10,7 +10,7 @@ import {
 
 import {AppSettingsScreen} from '../AppSettingsScreen';
 
-import {uiStore, ttsStore} from '../../../store';
+import {uiStore, ttsStore, searchProviderStore} from '../../../store';
 
 jest.useFakeTimers();
 
@@ -41,12 +41,12 @@ describe('AppSettingsScreen', () => {
   });
 
   it('drives the language menu from supportedLanguages so every option is templated', () => {
-    // The menu items (language-option-*) render only after the anchor button's
-    // native measure() callback fires, which jsdom does not invoke; the visible
-    // selector and the supportedLanguages source that templates the options are
-    // the unit-testable surface. The open-menu + language-option-* selection
-    // interaction is exercised by the App Settings visual capture and the
-    // Appium language spec.
+    // The options (language-option-*) live in the selector's searchable sheet,
+    // which the sheet mock does not mount; the visible trigger and the
+    // supportedLanguages source that templates the options are the
+    // unit-testable surface here. Opening the sheet and selecting a language is
+    // exercised by SearchableSelectSheet's own tests and the Appium language
+    // spec.
     const {getByTestId} = render(<AppSettingsScreen />);
     expect(getByTestId('language-selector-button')).toBeTruthy();
     expect(uiStore.supportedLanguages.length).toBeGreaterThan(0);
@@ -85,5 +85,57 @@ describe('AppSettingsScreen', () => {
       );
     });
     expect(uiStore.setDisplayMemUsage).toHaveBeenCalledWith(true);
+  });
+
+  describe('internet search settings', () => {
+    afterEach(() => {
+      runInAction(() => {
+        searchProviderStore.hasConsentedToSearch = false;
+      });
+    });
+
+    it('shows the consent gate first and routes acceptance to the store', () => {
+      const {getByTestId, queryByTestId} = render(<AppSettingsScreen />);
+
+      expect(getByTestId('internet-search-consent')).toBeTruthy();
+      expect(queryByTestId('internet-search-consent-given')).toBeNull();
+
+      fireEvent.press(getByTestId('internet-search-consent-accept'));
+
+      expect(searchProviderStore.setConsent).toHaveBeenCalledWith(true);
+    });
+
+    it('gates the BYOK key sheet behind consent', () => {
+      const {getByTestId, rerender} = render(<AppSettingsScreen />);
+      expect(
+        getByTestId('search-provider-key-button').props.accessibilityState
+          .disabled,
+      ).toBe(true);
+
+      runInAction(() => {
+        searchProviderStore.hasConsentedToSearch = true;
+      });
+      rerender(<AppSettingsScreen />);
+
+      expect(getByTestId('internet-search-consent-given')).toBeTruthy();
+      expect(
+        getByTestId('search-provider-key-button').props.accessibilityState
+          .disabled,
+      ).toBe(false);
+    });
+
+    it('writes the result count through the store', () => {
+      jest.useFakeTimers();
+      const {getByTestId} = render(<AppSettingsScreen />);
+
+      act(() => {
+        fireEvent(getByTestId('search-result-count-slider'), 'valueChange', 3);
+      });
+      act(() => {
+        jest.advanceTimersByTime(300);
+      });
+
+      expect(searchProviderStore.setResultCount).toHaveBeenCalledWith(3);
+    });
   });
 });

@@ -18,6 +18,10 @@ export const createTagsStyles = (theme: Theme) => ({
     margin: 0,
     backgroundColor: 'transparent',
   },
+  a: {
+    color: theme.colors.secondary,
+    textDecorationLine: 'underline' as const,
+  },
   code: {
     ...theme.typography.codeS,
     backgroundColor: theme.colors.surface,

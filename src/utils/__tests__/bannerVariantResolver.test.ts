@@ -124,10 +124,18 @@ describe('resolveBannerVariant', () => {
       expect(result.variant).toBe('none');
     });
 
-    it('does not fire for remote sessions', () => {
+    it('fires for a remote session once its context window is known', () => {
       const result = resolveBannerVariant(
         snap({used: 3277, isRemote: true}),
-        baseInput({isRemote: true}),
+        baseInput({isRemote: true, effectiveNCtx: 4096}),
+      );
+      expect(result.variant).toBe('context-warning');
+    });
+
+    it('does not fire for a remote session without a known context window', () => {
+      const result = resolveBannerVariant(
+        snap({used: 3277, isRemote: true}),
+        baseInput({isRemote: true, effectiveNCtx: undefined}),
       );
       expect(result.variant).not.toBe('context-warning');
     });
@@ -200,6 +208,50 @@ describe('resolveBannerVariant', () => {
           effectiveNCtx: undefined,
           activeModelId: undefined,
         }),
+      );
+      expect(result.variant).toBe('none');
+    });
+  });
+
+  describe('remote llama.cpp context banners (relaxed)', () => {
+    // A length-truncation at the server's real window resolves context-full,
+    // the same machinery a local model uses.
+    it('resolves context-full on a remote length truncation at the window', () => {
+      const result = resolveBannerVariant(
+        snap({
+          isRemote: true,
+          contextFull: true,
+          finishReason: 'length',
+          used: 4096,
+        }),
+        baseInput({isRemote: true, effectiveNCtx: 4096}),
+      );
+      expect(result.variant).toBe('context-full');
+      expect(result.ratio).toBe(1);
+    });
+
+    // A near-limit remote turn (>0.8 of the window) resolves context-warning.
+    it('resolves context-warning near the remote window', () => {
+      const result = resolveBannerVariant(
+        snap({isRemote: true, used: 7000}),
+        baseInput({isRemote: true, effectiveNCtx: 8192}),
+      );
+      expect(result.variant).toBe('context-warning');
+      expect(result.ratio).toBeCloseTo(7000 / 8192, 3);
+    });
+
+    // A length cap from a small user max_tokens (well below the window) fails
+    // the freshness gate, and hedged excludes length — so no banner.
+    it('shows no false full banner for a max_tokens length cap', () => {
+      const result = resolveBannerVariant(
+        snap({
+          isRemote: true,
+          contextFull: true,
+          finishReason: 'length',
+          tokensPredicted: 256,
+          used: 300,
+        }),
+        baseInput({isRemote: true, effectiveNCtx: 32768}),
       );
       expect(result.variant).toBe('none');
     });

@@ -119,8 +119,7 @@ export const VideoPalScreen = observer(({activePal}: VideoPalScreenProps) => {
 
     // Check if multimodal is enabled
     try {
-      const isEnabled = await modelStore.isMultimodalEnabled();
-      if (!isEnabled) {
+      if (!modelStore.activeModelCaps.visionActive) {
         safeAlert(
           'Multimodal Not Enabled',
           'This model does not support image analysis. Please load a multimodal model.',

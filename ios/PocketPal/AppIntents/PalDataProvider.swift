@@ -197,6 +197,27 @@ class PalDataProvider {
                 print("[PalDataProvider] Error: Full path is undefined for local model")
                 return nil
             }
+            if fileManager.fileExists(atPath: fullPath) {
+                return fullPath
+            }
+            // The stored path is absolute and captured at import time; the app
+            // container UUID can change (OS upgrade, backup/restore), leaving it
+            // stale while the file still exists under the current container.
+            // Imported models are copied into Documents/models/local, so
+            // re-anchor that stable suffix onto the current documents path.
+            // Mirrors resolveLocalModelPath() in src/store/ModelStore.ts.
+            // Use upperBound and re-add the known prefix so the appended
+            // component never begins with "/".
+            if let markerRange = fullPath.range(of: "/models/local/") {
+                let relativePath = "models/local/" + String(fullPath[markerRange.upperBound...])
+                let recoveredPath = documentsPath
+                    .appendingPathComponent(relativePath)
+                    .path
+                if recoveredPath != fullPath, fileManager.fileExists(atPath: recoveredPath) {
+                    print("[PalDataProvider] Recovered local model path: \(recoveredPath)")
+                    return recoveredPath
+                }
+            }
             return fullPath
         }
 

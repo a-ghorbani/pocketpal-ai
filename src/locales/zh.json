@@ -9,7 +9,7 @@
     "update": "更新",
     "error": "错误",
     "export": "导出",
-    "networkError": "网络错误，请重试",
+    "networkError": "网络错误，请重试。",
     "downloadETA": "预计时间",
     "calculating": "计算中...",
     "second": "秒",
@@ -31,29 +31,30 @@
     "close": "关闭",
     "clear": "全部清除",
     "gallery": "图库",
-    "stop": "停止"
+    "stop": "停止",
+    "noResults": "没有结果"
   },
   "settings": {
     "modelInitializationSettings": "模型初始化设置",
     "metal": "Metal",
-    "metalDescription": "Apple的硬件加速API",
-    "metalRequiresNewerIOS": "Metal加速需要iOS 18或更高版本，请升级设备以使用此功能",
+    "metalDescription": "Apple 的硬件加速 API。",
+    "metalRequiresNewerIOS": "Metal 加速需要 iOS 18 或更高版本，请升级您的设备以使用此功能。",
     "openCL": "OpenCL（实验性）",
-    "openCLDescription": "Adreno GPU的GPU加速。提示处理更快，但生成速度不一定更快。",
-    "openCLNotAvailable": "此设备不支持OpenCL。需要具有i8mm和dotprod CPU功能的Adreno GPU。",
-    "openCLMissingCPUFeatures": "OpenCL需要i8mm和dotprod CPU功能，但此设备不支持。",
-    "openCLQuantizationNote": "注意：纯Q4_0量化模型在OpenCL上性能最佳。",
-    "openCLDocsLink": "详情请参阅llama.cpp OpenCL文档。",
+    "openCLDescription": "Adreno GPU 的 GPU 加速。提示处理更快，但生成速度不一定更快。",
+    "openCLNotAvailable": "此设备不支持 OpenCL。需要具有 i8mm 和 dotprod CPU 功能的 Adreno GPU。",
+    "openCLMissingCPUFeatures": "OpenCL 需要 i8mm 和 dotprod CPU 功能，但此设备不支持。",
+    "openCLQuantizationNote": "注意：纯 Q4_0 量化模型在 OpenCL 上性能最佳。",
+    "openCLDocsLink": "详情请参阅 llama.cpp OpenCL 文档。",
     "layersOnGPU": "GPU层数：{{gpuLayers}}",
     "deviceSelection": "设备选择",
     "deviceSelectionIOS": "设备（Metal）",
-    "deviceSelectionIOSDescription": "选择Metal GPU或仅CPU模式",
-    "deviceSelectionAndroidDescription": "选择计算设备（CPU、GPU或Hexagon NPU）",
+    "deviceSelectionIOSDescription": "选择 Metal GPU 或仅 CPU 模式",
+    "deviceSelectionAndroidDescription": "选择计算设备（CPU、GPU 或 Hexagon NPU）",
     "cpuOnlyNoAccelerators": "仅CPU - 未检测到硬件加速器",
     "contextSize": "上下文长度",
     "contextSizePlaceholder": "输入上下文长度（最小{{minContextSize}}）",
     "invalidContextSizeError": "请输入有效数字（最小{{minContextSize}}）",
-    "modelReloadNotice": "更改需要模型重新加载才能生效",
+    "modelReloadNotice": "需要重新加载模型以使更改生效。",
     "advancedSettings": "高级设置",
     "batchSize": "批处理大小",
     "batchSizeDescription": "批处理大小: {{batchSize}}{{effectiveBatch}}",
@@ -65,18 +66,18 @@
     "imageMaxTokens": "图像最大令牌数",
     "imageMaxTokensDescription": "图像处理的最大令牌数: {{tokens}}{{effectiveTokens}} (较低 = 更快，细节较少)",
     "flashAttention": "Flash Attention",
-    "flashAttentionDescription": "启用Flash Attention以加快处理速度",
+    "flashAttentionDescription": "启用 Flash Attention 以加快处理速度",
     "flashAttentionIOSDescription": "内存高效注意力（Metal上自动启用）",
-    "flashAttentionAndroidDescription": "OpenCL状态保存/加载必须禁用",
+    "flashAttentionAndroidDescription": "OpenCL 状态保存/加载必须禁用",
     "flashAttentionAuto": "自动",
     "flashAttentionOn": "开启",
     "flashAttentionOff": "关闭",
     "keyCacheType": "键缓存类型",
     "keyCacheTypeDescription": "选择键计算的缓存类型",
-    "keyCacheTypeDisabledDescription": "启用Flash Attention以更改缓存类型",
+    "keyCacheTypeDisabledDescription": "启用 Flash Attention 以更改缓存类型",
     "valueCacheType": "值缓存类型",
     "valueCacheTypeDescription": "选择值计算的缓存类型",
-    "valueCacheTypeDisabledDescription": "启用Flash Attention以更改缓存类型",
+    "valueCacheTypeDisabledDescription": "启用 Flash Attention 以更改缓存类型",
     "memorySettings": "内存设置",
     "useMlock": "使用内存锁定",
     "useMlockDescription": "强制系统将模型保留在RAM中，而不是交换或压缩",
@@ -88,62 +89,62 @@
     "useMmapFalseDescription": "当启用权重重新打包时，建议禁用该功能以避免内存使用量翻倍",
     "modelLoadingSettings": "模型加载设置",
     "autoOffloadLoad": "自动卸载/加载",
-    "autoOffloadLoadDescription": "当APP在后台时自动卸载模型",
+    "autoOffloadLoadDescription": "当 App 在后台时自动卸载模型",
     "autoNavigateToChat": "自动导航到聊天",
-    "autoNavigateToChatDescription": "加载完成时导航到聊天界面",
-    "appSettings": "APP设置",
+    "autoNavigateToChatDescription": "开始加载时自动跳转至聊天页面。",
+    "appSettings": "App设置",
     "language": "语言",
     "darkMode": "深色模式",
     "displayMemoryUsage": "显示内存使用情况",
-    "displayMemoryUsageDescription": "在聊天页面中显示内存使用情况",
+    "displayMemoryUsageDescription": "在聊天页面中显示内存使用情况。",
     "exportOptions": "导出选项",
     "exportLegacyChats": "导出旧版聊天会话",
-    "exportLegacyChatsDescription": "如果迁移失败或需要恢复旧聊天会话，请使用此选项",
+    "exportLegacyChatsDescription": "如果迁移失败或需要恢复旧的聊天会话，请使用此选项。",
     "exportButton": "导出",
     "importChats": "导入聊天会话",
-    "importChatsDescription": "从JSON文件导入聊天会话",
+    "importChatsDescription": "从（导出的）JSON文件中导入聊天会话。",
     "importButton": "导入",
-    "importSuccess": "成功导入{{count}}个聊天会话",
-    "importError": "导入聊天会话失败，请检查文件格式",
+    "importSuccess": "成功导入{{count}}个聊天会话。",
+    "importError": "导入聊天会话失败，请检查文件格式。",
     "apiSettingsTitle": "API设置",
     "huggingFaceTokenLabel": "Hugging Face令牌",
-    "tokenIsSetDescription": "令牌已设置，访问受限模型时需要",
-    "setTokenDescription": "设置令牌以从Hugging Face访问受限模型",
+    "tokenIsSetDescription": "令牌已设置，访问受限模型时需要。",
+    "setTokenDescription": "设置令牌以从 Hugging Face 访问受限模型。",
     "setTokenButton": "设置令牌",
     "useHfTokenLabel": "使用HF令牌",
-    "useHfTokenDescription": "使用HF令牌访问受限模型",
+    "useHfTokenDescription": "启用后使用令牌进行 API 请求。若令牌导致身份验证问题，请将其禁用。",
     "cacheStorageTitle": "缓存与存储",
     "clearPalCaches": "清除快捷指令缓存",
-    "clearPalCachesDescription": "清除用于加速快捷指令的缓存数据。这不会影响你的Pal或聊天历史记录。",
+    "clearPalCachesDescription": "清除用于加速快捷指令的缓存数据。这不会影响您的 Pal 或聊天历史记录。",
     "clearCachesButton": "清除缓存",
     "clearCachesConfirmTitle": "清除快捷指令缓存？",
-    "clearCachesConfirmMessage": "这将清除所有缓存的会话数据（{{fileCount}}个文件，{{size}}）。清除后，快捷指令首次使用时可能会变慢。这不会影响你的Pal或聊天历史记录。",
+    "clearCachesConfirmMessage": "这将清除所有缓存的会话数据（{{fileCount}} 个文件，{{size}}）。清除后，快捷指令首次使用时可能会变慢。这不会影响您的 Pal 或聊天历史记录。",
     "clearCachesSuccess": "成功清除{{count}}个缓存文件。",
     "clearCachesError": "清除缓存失败，请重试。",
     "noCachesToClear": "没有可清除的缓存。",
-    "weightRepacking": "启用权重 重新打包",
-    "weightRepackingDescription": "禁用内存映射时，Prompt处理速度更快，内存开销极小；Token生成不受影响",
+    "weightRepacking": "启用权重重新打包",
+    "weightRepackingDescription": "禁用内存映射时，提示词处理更快，且额外内存开销极小；Token 生成速度不受影响。",
     "serverName": "服务器名称",
     "serverUrl": "服务器URL",
     "serverUrlPlaceholder": "例如：http://192.168.1.100:1234",
     "apiKey": "API 密钥",
-    "apiKeyPlaceholder": "可选（使用OpenAI/Groq时必填）",
-    "apiKeyDescription": "安全存储在设备上",
+    "apiKeyPlaceholder": "可选（使用 OpenAI/Groq 时必填）",
+    "apiKeyDescription": "安全存储在设备上。",
     "remoteModel": "远程",
-    "remotePrivacyNotice": "发送至远程服务器的消息将离开本设备，请仅连接你信任的服务器",
+    "remotePrivacyNotice": "发送至远程服务器的消息将离开本设备，请仅连接您信任的服务器。",
     "remoteIndicator": "远程",
-    "serverUrlRequired": "服务器URL为必填项",
+    "serverUrlRequired": "需要服务器URL",
     "serverUrlInvalid": "URL格式错误",
-    "serverUrlHttpWarning": "iOS 对非本地服务器强制要求 HTTPS，请改用 https:// 或本地网络地址",
+    "serverUrlHttpWarning": "iOS 对非本地服务器强制要求 HTTPS，请改用 https:// 或本地网络地址。",
     "addRemoteModel": "添加远端模型",
-    "yourServers": "你的服务器",
+    "yourServers": "您的服务器",
     "orConnectNewServer": "或连接新服务器",
     "selectModel": "选择模型",
     "addModel": "添加模型",
     "connected": "已连接",
     "connectionFailed": "连接失败：{{error}}",
     "connecting": "连接中...",
-    "noModelsAvailable": "该服务器无可用模型",
+    "noModelsAvailable": "该服务器无可用模型。",
     "alreadyAdded": "已存在",
     "connectedServers": "已连接的服务器",
     "modelsCount": "{{count}} 个模型",
@@ -157,19 +158,48 @@
     "enterUrlManually": "手动输入URL",
     "manageServers": "管理服务器",
     "ttsAvailability": "文本转语音",
-    "ttsAvailabilityDescription": "朗读 助手回复",
-    "ttsAvailabilityLowMemoryWarning": "你的设备内存较低——这可能无法稳定运行",
+    "ttsAvailabilityDescription": "朗读助手回复。",
+    "ttsAvailabilityLowMemoryWarning": "您的设备内存不足 — 此功能可能无法稳定运行。",
     "requestTimeout": "请求超时（秒）",
-    "requestTimeoutHelp": "等待服务器响应的最长时间。留空则使用默认值。",
-    "requestTimeoutPlaceholder": "可选 - 留空则使用默认值"
+    "requestTimeoutHelp": "等待服务器响应的最长时间，留空则使用默认值。",
+    "requestTimeoutPlaceholder": "可选 - 留空则使用默认值",
+    "serverType": "服务器类型",
+    "serverTypeHelp": "已自动检测；如有误请手动更改。",
+    "internetSearch": {
+      "title": "联网搜索",
+      "description": "让 Pal 用自己的工具搜索网络。需自备 API 密钥——PocketPal 绝不保存您的密钥，也不会转发您的查询。",
+      "providerLabel": "搜索服务供应商",
+      "providerGated": "即将推出",
+      "keyLabel": "API 密钥",
+      "keyIsSet": "已为 {{provider}} 设置密钥。",
+      "keyNotSet": "尚未为 {{provider}} 设置密钥。",
+      "setKeyButton": "设置密钥",
+      "updateKeyButton": "更新密钥",
+      "clearKeyButton": "清除密钥",
+      "keyInputPlaceholder": "粘贴您的 {{provider}} API 密钥",
+      "keyUpdateError": "无法更新密钥，请重试。",
+      "showKeyAccessibilityLabel": "显示 API 密钥",
+      "hideKeyAccessibilityLabel": "隐藏 API 密钥",
+      "resultCountLabel": "每次搜索的结果数",
+      "resultCountDescription": "结果越少，模型的上下文就能保留更多空间。",
+      "consentTitle": "搜索会离开您的设备",
+      "consentDescription": "当 Pal 搜索网络时，您的查询会通过互联网发送给所选服务商。当 Pal 读取网页时，如果所选服务商没有自带的阅读器，网址和网页内容可能会改为发送给默认阅读服务（r.jina.ai）。密钥和查询绝不会发送给 PocketPal。",
+      "consentAccept": "我已了解",
+      "consentRequired": "同意以上声明后，可设置密钥并启用搜索。",
+      "consentGivenTitle": "联网搜索已启用",
+      "consentGivenDescription": "如上所述，查询和网页读取可能会离开您的设备。",
+      "consentRevoke": "撤销"
+    },
+    "languageSheetTitle": "语言",
+    "languageSearchPlaceholder": "搜索语言"
   },
   "memory": {
     "shortWarning": "内存警告",
-    "multimodalWarning": "此设备可能没有足够的资源运行多模态模型",
+    "multimodalWarning": "此设备可能没有足够的资源运行多模态模型。",
     "memoryTight": "内存紧张",
     "lowMemory": "内存不足",
-    "memoryDetailMessage": "此模型需要约{{needed}}，但可用内存估计仅为约{{available}}。随着您使用应用，估计会更加准确。",
-    "estimatedMemory": "预估内存: ~{{size}}",
+    "memoryDetailMessage": "此模型需要约 {{needed}}，但估计可用内存仅为约 {{available}}。随着您使用应用，估算将更加准确。",
+    "estimatedMemory": "预估内存: 约 {{size}}",
     "alerts": {
       "memoryWarningTitle": "内存警告",
       "memoryWarningMessage": "此模型可能超过可用内存，这可能导致不稳定；继续加载吗？",
@@ -192,7 +222,7 @@
   "models": {
     "fileManagement": {
       "fileAlreadyExists": "文件已存在",
-      "fileAlreadyExistsMessage": "此名称的文件已存在，你想做什么？",
+      "fileAlreadyExistsMessage": "已存在同名文件，您想如何处理？",
       "replace": "替换",
       "keepBoth": "保留两者",
       "copyingModel": "正在复制模型文件...",
@@ -210,21 +240,21 @@
     "mmproj": "投影仪",
     "multimodal": {
       "settings": "多模态设置",
-      "projectionModels": "Projection模型",
-      "noCompatibleModels": "未找到兼容的Projection模型",
-      "noProjectionModels": "没有可用的Projection模型",
+      "projectionModels": "投影模型",
+      "noCompatibleModels": "未找到兼容的投影模型",
+      "noProjectionModels": "没有可用的投影模型",
       "selected": "已选择",
       "select": "选择",
       "download": "下载",
-      "projectionNeededTitle": "需要Projection模型",
-      "projectionNeededMessage": "此模型需要Projection模型才能使用多模态功能",
-      "projectionMissingWarning": "Projection模型缺失",
-      "projectionMissingShort": "缺少Projection模型",
+      "projectionNeededTitle": "需要投影模型",
+      "projectionNeededMessage": "此模型需要配合投影模型才能使用多模态功能。",
+      "projectionMissingWarning": "投影模型缺失",
+      "projectionMissingShort": "缺少投影模型",
       "reloadModelTitle": "重新加载模型",
-      "reloadModelMessage": "需要重新加载模型以应用新的Projection模型，你想现在重新加载吗？",
+      "reloadModelMessage": "模型需要重新加载以应用新的投影模型，您想现在重新加载吗？",
       "reload": "重新加载",
-      "deleteProjectionTitle": "删除Projection模型",
-      "deleteProjectionMessage": "你确定要删除此Projection模型吗？",
+      "deleteProjectionTitle": "删除投影模型",
+      "deleteProjectionMessage": "您确定要删除此投影模型吗？",
       "cannotDeleteTitle": "无法删除",
       "visionControls": {
         "enableVision": "启用视觉能力",
@@ -236,19 +266,19 @@
         "downloadWithVision": "下载包含视觉能力的模型",
         "downloadTextOnly": "仅下载包含文本能力的模型",
         "visionToggleDescription": "启用图像处理功能",
-        "projectionModelSize": "+{{size}} Projection模型",
+        "projectionModelSize": "+{{size}} 投影模型",
         "visionModeDescription": "处理图像和文本",
         "textOnlyModeDescription": "仅处理文本",
         "includesVisionCapability": "包含视觉能力",
-        "requiresProjectionModel": "请先下载兼容的Projection模型"
+        "requiresProjectionModel": "请先下载兼容的投影模型"
       },
-      "cannotDeleteActive": "此Projection模型当前处于活动状态",
-      "cannotDeleteInUse": "此Projection模型被已下载的LLM模型使用：",
+      "cannotDeleteActive": "此投影模型当前处于活动状态。",
+      "cannotDeleteInUse": "此投影模型被已下载的LLM模型使用：",
       "dependentModels": "依赖模型：",
-      "visionWillBeDisabled": "这些模型的视觉能力将被禁用"
+      "visionWillBeDisabled": "这些模型的视觉能力将被禁用。"
     },
     "buttons": {
-      "addFromHuggingFace": "从Hugging Face添加",
+      "addFromHuggingFace": "从 Hugging Face 添加",
       "addLocalModel": "添加本地模型",
       "reset": "重置"
     },
@@ -271,32 +301,32 @@
     "modelFile": {
       "alerts": {
         "cannotRemoveTitle": "无法删除",
-        "modelPreset": "此模型是预设的",
-        "downloadedFirst": "模型已下载，请先删除模型",
+        "modelPreset": "此模型是预设的。",
+        "downloadedFirst": "模型已下载，请先删除该文件。",
         "removeTitle": "删除模型",
-        "removeMessage": "你确定要从列表中删除此模型吗？",
-        "removeError": "无法删除模型",
+        "removeMessage": "您确定要从列表中删除此模型吗？",
+        "removeError": "无法删除模型。",
         "alreadyDownloadedTitle": "模型已下载",
-        "alreadyDownloadedMessage": "模型已下载",
+        "alreadyDownloadedMessage": "模型已下载。",
         "deleteTitle": "删除模型",
-        "deleteMessage": "你确定要删除此已下载的模型吗？"
+        "deleteMessage": "您确定要删除此已下载的模型吗？"
       },
       "buttons": {
         "remove": "删除"
       },
       "warnings": {
         "storage": {
-          "message": "没有足够的存储空间",
+          "message": "没有足够的存储空间。",
           "shortMessage": "存储不足"
         },
         "memory": {
-          "message": "模型大小接近或超过设备的总内存，这可能会导致意外行为"
+          "message": "模型大小接近或超过设备的总内存，这可能会导致意外行为。"
         },
         "legacy": {
-          "message": "旧版量化格式 - 模型可能无法运行",
+          "message": "旧版量化格式 - 模型可能无法运行。",
           "shortMessage": "旧版量化"
         },
-        "multiple": "{{count}}个警告"
+        "multiple": "{{count}} 个警告"
       },
       "labels": {
         "downloadSpeed": "{{speed}}"
@@ -305,12 +335,12 @@
     "search": {
       "noResults": "找不到模型",
       "loadingMore": "加载中...",
-      "searchPlaceholder": "搜索Hugging Face模型",
-      "modelUpdatedLong": "{{time}}前更新",
-      "modelUpdatedShort": "{{time}}前",
+      "searchPlaceholder": "搜索 Hugging Face 模型",
+      "modelUpdatedLong": "{{time}} 前更新",
+      "modelUpdatedShort": "{{time}} 前",
       "modelUpdatedJustNowLong": "刚刚更新",
       "modelUpdatedJustNowShort": "刚刚",
-      "errorOccurred": "无法加载模型，请重试",
+      "errorOccurred": "无法加载模型，请重试。",
       "filters": {
         "author": "作者",
         "authorPlaceholder": "按作者筛选...",
@@ -327,9 +357,9 @@
     "modelCard": {
       "alerts": {
         "deleteTitle": "删除模型",
-        "deleteMessage": "你确定要删除此已下载的模型吗？",
+        "deleteMessage": "您确定要删除此已下载的模型吗？",
         "removeTitle": "删除模型",
-        "removeMessage": "你确定要从列表中删除此模型吗？"
+        "removeMessage": "您确定要从列表中删除此模型吗？"
       },
       "buttons": {
         "settings": "设置",
@@ -348,7 +378,10 @@
         "author": "作者",
         "requiresProjectionModel": "需要投影模型",
         "downloadProjectionModel": "下载投影模型",
-        "viewModelCardOnHuggingFace": "在Hugging Face上查看模型卡片"
+        "viewModelCardOnHuggingFace": "在 Hugging Face 上查看模型卡片",
+        "visionSupported": "支持",
+        "visionNotSupported": "不支持",
+        "visionUnknown": "未知"
       },
       "accessibility": {
         "expandDetails": "展开详情",
@@ -374,8 +407,8 @@
         "label": "模板:",
         "editButton": "编辑",
         "dialogTitle": "编辑聊天模板",
-        "note1": "注意: 更改模板可能会更改BOS、EOS和系统提示",
-        "note2": "使用Nunjucks，留空以使用模型的模板",
+        "note1": "注意: 更改模板可能会更改 BOS、EOS 和系统提示词。",
+        "note2": "使用 Nunjucks，留空则使用模型默认模板。",
         "placeholder": "在此输入聊天模板...",
         "closeButton": "关闭"
       },
@@ -386,17 +419,17 @@
       "tokenSettings": {
         "bos": "BOS",
         "eos": "EOS",
-        "addGenerationPrompt": "添加生成Prompt",
+        "addGenerationPrompt": "添加生成提示词",
         "bosTokenPlaceholder": "BOS Token",
         "eosTokenPlaceholder": "EOS Token",
-        "systemPrompt": "系统提示"
+        "systemPrompt": "系统提示词"
       }
     },
     "modelDescription": {
       "size": "大小: ",
       "parameters": "参数: ",
       "separator": " | ",
-      "notAvailable": "不可用"
+      "notAvailable": "N/A"
     },
     "modelCapabilities": {
       "questionAnswering": "问答",
@@ -416,76 +449,76 @@
       "resolving": "正在加载模型详情…",
       "cancel": "取消",
       "retry": "重试",
-      "invalidLinkTitle": "链接无效",
-      "invalidLinkMessage": "此Hugging Face链接缺失，或其模型或文件无效。",
-      "resolveError": "无法加载模型详情，请检查网络连接后重试。"
+      "invalidLinkTitle": "无效链接",
+      "invalidLinkMessage": "此 Hugging Face 链接无效，或此模型/文件不存在。",
+      "resolveError": "无法加载模型详情，请检查您的网络连接并重试。"
     }
   },
   "completionParams": {
-    "include_thinking_in_context": "在发送给模型的上下文中包含AI的思考/推理部分，禁用此选项可以节省上下文空间；但可能会影响性能",
-    "jinja": "启用Jinja模板进行聊天格式化；启用时，使用基于Jinja的聊天模板处理以提高与现代模型的兼容性",
+    "include_thinking_in_context": "在发送给模型的上下文中包含 AI 的思考/推理部分，禁用此选项可以节省上下文空间；但可能会影响性能。",
+    "jinja": "启用 Jinja 模板进行聊天格式化。启用时，使用基于 Jinja 的聊天模板处理以提高与现代模型的兼容性。",
     "grammar": "应用特定的语法规则，以确保生成的文本遵循特定的结构或格式",
     "stop": "定义将停止文本生成的特定短语",
-    "n_predict": "要生成的最大 token 数量，设为\"无限制\"则不设上限，或选\"自定义\"指定一个值",
-    "n_probs": "显示替代词的概率分数",
-    "top_k": "通过限制单词选择到K个最可能的选项来控制创造性，较低的值会使响应更集中",
+    "n_predict": "要生成的最大 token 数量，设为\"Unlimited（无限制）\"则不设上限，或选\"Custom（自定义）\"指定一个值。",
+    "n_probs": "显示替代词的概率分数。",
+    "top_k": "通过限制单词选择到 K 个最可能的选项来控制创造性，较低的值会使响应更集中",
     "top_p": "平衡创造性和连贯性，较高的值（接近1.0）允许更富有创造性但可能不那么集中的响应",
-    "min_p": "考虑token的最小概率，过滤掉不太可能的单词以减少不合逻辑或上下文外的响应",
+    "min_p": "考虑 token 的最小概率，过滤掉不太可能的单词以减少不合逻辑或上下文外的响应",
     "temperature": "控制创造性和可预测性，较高的值会使响应更富有创造性但焦点较少",
     "penalty_last_n": "检查重复的范围，较大的值有助于防止长期重复",
     "penalty_repeat": "抑制单词重复，较高的值会使响应使用更多样化的语言",
     "penalty_freq": "惩罚常用词，较高的值鼓励使用更广泛的词汇",
     "penalty_present": "减少主题和想法的重复，较高的值鼓励更多样化的内容",
-    "mirostat": "启用对响应创造性的高级控制，为了智能、实时调整随机性和连贯性，请设置为1或2（更平滑）",
-    "mirostat_tau": "设置Mirostat的创造性水平，较高的值允许更多样化和富有想象力的响应，而较低的值确保更集中的输出",
-    "mirostat_eta": "Mirostat调整创造性的速度，较高的值意味着调整速度更快",
+    "mirostat": "启用对响应创造性的高级控制。设为 1 或 2（更平滑）可智能实时调整随机性与连贯性。",
+    "mirostat_tau": "设置 Mirostat 的目标创造力层级，较高的值允许更多样化和富有想象力的回复，而较低的值确保回复更为聚焦。",
+    "mirostat_eta": "Mirostat 调整创造性的速度，较高的值意味着调整速度更快",
     "dry_multiplier": "DRY（不要重复自己）功能的强度，较高的值强烈防止重复",
-    "dry_base": "DRY模式中的重复基本惩罚，较高的值更积极地防止重复",
-    "dry_allowed_length": "DRY惩罚在应用之前可以重复的单词数",
-    "dry_penalty_last_n": "DRY模式中检查重复的范围",
-    "dry_sequence_breakers": "重置DRY模式中重复检查器的符号",
+    "dry_base": "DRY 模式中的重复基本惩罚，较高的值更积极地防止重复",
+    "dry_allowed_length": "DRY 惩罚在应用之前可以重复的单词数",
+    "dry_penalty_last_n": "DRY 模式中检查重复的范围",
+    "dry_sequence_breakers": "重置 DRY 模式中重复检查器的符号",
     "ignore_eos": "即使模型想要停止也要继续生成，有助于强制更长的响应",
     "logit_bias": "调整特定单词出现在响应中的可能性",
     "seed": "设置随机数生成器的种子，有助于重现结果",
-    "xtc_probability": "设置token通过XTC采样器删除的可能性，0是禁用",
-    "xtc_threshold": "设置token通过XTC采样器删除的最小概率阈值，（> 0.5禁用XTC）",
-    "typical_p": "使用参数p启用本地典型采样，1.0是禁用"
+    "xtc_probability": "设置 token 通过 XTC 采样器删除的可能性，0是禁用",
+    "xtc_threshold": "设置 token 通过 XTC 采样器删除的最小概率阈值，（> 0.5禁用XTC）",
+    "typical_p": "使用参数 p 启用本地典型采样，1.0是禁用"
   },
   "about": {
     "screenTitle": "关于",
-    "description": "直接将语言模型完全本地部署在你手机上的APP，建立在llama.cpp和llama.rn的基础上！",
+    "description": "一款将大语言模型直接部署到您手机上的 App，基于 llama.cpp 与 llama.rn 构建。",
     "supportProject": "支持项目",
-    "supportProjectDescription": "如果你喜欢使用PocketPal AI，请考虑通过以下方式支持项目：",
-    "githubButton": "在GitHub上点个Star~",
+    "supportProjectDescription": "如果您喜欢使用 PocketPal AI，请考虑通过以下方式支持项目：",
+    "githubButton": "在 GitHub 上点个 Star",
     "orText": "或",
     "orBy": "或通过",
     "sponsorButton": "成为帅气且尊贵的赞助者！",
-    "versionCopiedTitle": "复制成功！",
+    "versionCopiedTitle": "版本已复制",
     "versionCopiedDescription": "版本信息已复制到剪贴板",
     "privacyPolicy": "隐私政策",
     "termsOfService": "服务条款",
     "tour": "导览",
-    "tourDescription": "重新观看欢迎页面，了解PocketPal AI能为你做些什么。",
+    "tourDescription": "重新观看欢迎页面，了解 PocketPal AI 提供的功能。",
     "showIntroButton": "再看一次介绍"
   },
   "feedback": {
     "title": "发送反馈",
-    "description": "你的声音很重要！告诉我们PocketPal AI如何帮助你以及我们可以做什么来使其更有用",
-    "shareThoughtsButton": "分享你的想法",
+    "description": "您的意见很重要！请告诉我们 PocketPal AI 对您有何帮助，以及我们能做些什么让它更实用。",
+    "shareThoughtsButton": "分享您的想法",
     "useCase": {
-      "label": "你如何使用PocketPal AI？",
-      "placeholder": "例如：摘要、角色扮演等"
+      "label": "您使用 PocketPal AI 的用途是什么？",
+      "placeholder": "例如：摘要、角色扮演等。"
     },
     "featureRequests": {
-      "label": "你想在未来看到什么功能？",
-      "placeholder": "分享你的想法或功能建议"
+      "label": "建议新功能",
+      "placeholder": "您希望看到哪些新功能？"
     },
     "generalFeedback": {
       "label": "一般反馈",
-      "placeholder": "如果你有其他想法，请随时分享"
+      "placeholder": "如果您有其他想法，请随时分享。"
     },
     "usageFrequency": {
-      "label": "你多久使用一次PocketPal AI？（可选）",
+      "label": "您多久使用一次 PocketPal AI？（可选）",
       "options": {
         "daily": "每天",
         "weekly": "每周",
@@ -495,15 +528,15 @@
     },
     "email": {
       "label": "联系电子邮件（可选）",
-      "placeholder": "你的电子邮件地址"
+      "placeholder": "您的电子邮件地址"
     },
     "submit": "提交反馈",
     "validation": {
       "required": "请提供至少一些反馈"
     },
-    "success": "感谢你的反馈！",
+    "success": "感谢您的反馈！",
     "error": {
-      "general": "发送反馈时出错，请再试一次"
+      "general": "发送反馈时出错，请重试。"
     }
   },
   "components": {
@@ -512,22 +545,22 @@
     },
     "exportUtils": {
       "fileSaved": "文件已保存",
-      "fileSavedMessage": "文件已保存到你的下载文件夹，文件名为{{filename}}",
+      "fileSavedMessage": "文件已保存到您的下载文件夹，文件名为 {{filename}}",
       "share": "分享",
       "ok": "确定",
       "shareError": "分享错误",
-      "shareErrorMessage": "无法分享文件，请重试",
+      "shareErrorMessage": "无法分享文件，请重试。",
       "saveError": "保存到下载文件夹时出错",
       "saveOptions": "保存选项",
-      "saveOptionsMessage": "无法直接保存到下载文件夹，你想分享文件吗？",
+      "saveOptionsMessage": "无法直接保存到下载文件夹，您想改为分享文件吗？",
       "cancel": "取消",
-      "shareContentErrorMessage": "无法分享内容，请重试",
+      "shareContentErrorMessage": "无法分享内容，请重试。",
       "exportError": "导出错误",
-      "exportErrorMessage": "导出文件时出错，请重试",
+      "exportErrorMessage": "导出文件时出错，请重试。",
       "permissionRequired": "需要存储权限",
-      "permissionMessage": "需要存储权限才能将文件保存到下载文件夹",
+      "permissionMessage": "需要存储权限才能将文件保存到下载文件夹。",
       "permissionDenied": "存储权限被拒绝",
-      "permissionDeniedMessage": "没有存储权限，导出功能将被禁用",
+      "permissionDeniedMessage": "没有存储权限，导出功能将被禁用。",
       "continue": "继续"
     },
     "thinkingBubble": {
@@ -535,14 +568,14 @@
     },
     "chatEmptyPlaceholder": {
       "noModelsTitle": "没有可用的模型",
-      "noModelsDescription": "需要下载一个模型，才能与PocketPal开始聊天",
+      "noModelsDescription": "需要下载一个模型，才能与 PocketPal 开始聊天",
       "noModelsButton": "下载模型",
-      "activateModelTitle": "在你和PocketPal开始聊天前，请先激活模型~",
-      "activateModelDescription": "选择并加载一个模型以开始聊天",
+      "activateModelTitle": "在您开始聊天前，请先激活模型",
+      "activateModelDescription": "选择模型并下载。下载完成后，点击模型旁边的“加载”按钮，即可开始聊天。",
       "activateModelButton": "选择模型",
       "loading": "加载中...",
-      "gettingReadyTitle": "{{name}}正在准备中",
-      "gettingReadyDescription": "你的Pal一准备好聊天，我们就会通知你。点击顶部的横幅可以查看进度。"
+      "gettingReadyTitle": "{{name}} 正在准备中",
+      "gettingReadyDescription": "我们会在您的 Pal 可以开始聊天时通知您，点击顶部的横幅可以查看进度。"
     },
     "chatInput": {
       "inputPlaceholder": "消息",
@@ -551,12 +584,13 @@
         "disableThinking": "禁用思考模式",
         "thinkingEnabled": "思考模式已启用",
         "thinkingDisabled": "思考模式已禁用",
-        "thinkText": "思考"
+        "thinkText": "思考",
+        "cycleEffort": "推理强度：{{level}}。双击可切换强度级别"
       }
     },
     "contentReportSheet": {
       "title": "举报内容",
-      "privacyNote": "我们不会发送任何消息内容或对话详情。请描述您遇到的具体问题。",
+      "privacyNote": "我们不会发送任何消息内容或对话详情，请描述您遇到的具体问题。",
       "categoryLabel": "举报类别",
       "selectCategory": "选择类别",
       "categories": {
@@ -578,16 +612,16 @@
       },
       "success": {
         "title": "举报已提交",
-        "message": "感谢您的举报。我们将审查并采取适当行动。"
+        "message": "感谢您的举报，我们将审查并采取适当行动。"
       },
       "error": {
         "title": "举报失败",
-        "message": "提交举报失败。请重试。"
+        "message": "提交举报失败，请重试。"
       }
     },
     "modelErrorReportSheet": {
       "title": "报告模型加载问题",
-      "privacyNote": "通过分享此错误的详细信息帮助我们改进PocketPal。请查看下方将要分享的内容 - 您可以取消选择不想包含的项目。",
+      "privacyNote": "通过分享此错误的详细信息帮助我们改进 PocketPal。请查看下方将要分享的内容 - 您可以取消选择不想包含的项目。",
       "errorMessage": "错误消息",
       "modelInfo": "模型信息",
       "modelName": "名称",
@@ -605,7 +639,7 @@
       "submit": "提交报告",
       "success": {
         "title": "报告已提交",
-        "message": "感谢您帮助我们改进PocketPal。您的报告将帮助我们修复此问题。"
+        "message": "感谢您帮助我们改进 PocketPal。您的报告将帮助我们修复此问题。"
       },
       "error": {
         "title": "报告失败",
@@ -637,12 +671,12 @@
       "pleaseCorrect": "请纠正以下内容：",
       "ok": "确定",
       "error": "错误",
-      "failedToSave": "保存Pal设置失败",
+      "failedToSave": "保存 Pal 设置失败",
       "resetToGlobal": "重置为全局默认值",
       "resetToSystem": "重置为系统默认值",
-      "clearPalSettings": "清除Pal设置",
-      "customSettingsFor": "{{palName}}的自定义设置",
-      "inheritedSettingsFor": "{{palName}}的继承设置"
+      "clearPalSettings": "清除 Pal 设置",
+      "customSettingsFor": "{{palName}} 的自定义设置",
+      "inheritedSettingsFor": "{{palName}} 的继承设置"
     },
     "chatHeaderTitle": {
       "defaultTitle": "聊天"
@@ -653,14 +687,14 @@
     "chatPalModelPickerSheet": {
       "modelsTab": "模型",
       "palsTab": "Pal",
-      "noPal": "没有Pal",
-      "disablePal": "禁用当前Pal",
+      "noPal": "没有 Pal",
+      "disablePal": "禁用当前 Pal",
       "noDescription": "没有描述",
       "assistantType": "Pal",
       "roleplayType": "角色扮演",
       "videoType": "视频",
       "confirmationTitle": "确认",
-      "modelSwitchMessage": "此Pal具有不同的默认模型({{modelName}})，要切换到Pal的默认模型吗？",
+      "modelSwitchMessage": "此 Pal 具有不同的默认模型 ({{modelName}})，要切换到 Pal 的默认模型吗？",
       "keepButton": "保持",
       "switchButton": "切换"
     },
@@ -668,24 +702,24 @@
       "downloadFailedTitle": "下载失败",
       "downloadFailedMessage": "模型下载失败: {{message}}",
       "unauthorizedTitle": "认证失败",
-      "unauthorizedMessage": "你的Hugging Face令牌似乎无效或已过期，请在设置中更新你的令牌",
+      "unauthorizedMessage": "您的 Hugging Face 令牌似乎无效或已过期，请在设置中更新您的令牌。",
       "forbiddenTitle": "访问被拒绝",
-      "forbiddenMessage": "你没有权限访问此模型，请确保:",
+      "forbiddenMessage": "您没有权限访问此模型，请确保:",
       "forbiddenSteps": [
-        "你的令牌具有\"读取\"权限",
-        "你已请求并获得了此模型的访问权限",
-        "模型所有者已批准你的访问请求"
+        "您的令牌具有\"读取\"权限",
+        "您已请求并获得了此模型的访问权限",
+        "模型所有者已批准您的访问请求"
       ],
-      "getTokenTitle": "获取Hugging Face令牌",
-      "getTokenMessage": "下载此模型需要Hugging Face令牌",
+      "getTokenTitle": "获取 Hugging Face 令牌",
+      "getTokenMessage": "下载此模型需要 Hugging Face 令牌。",
       "getTokenSteps": [
-        "访问huggingface并登录",
+        "访问 huggingface.co 并登录",
         "导航至设置 > 访问令牌",
         "创建具有\"读取\"权限的新令牌",
         "复制令牌并粘贴到令牌字段中"
       ],
       "tokenDisabledTitle": "令牌已禁用",
-      "tokenDisabledMessage": "你有一个Hugging Face令牌设置，但它目前被禁用；此模型需要令牌才能下载；请启用你的令牌以继续",
+      "tokenDisabledMessage": "您有一个 Hugging Face 令牌设置，但它目前被禁用；此模型需要令牌才能下载；请启用您的令牌以继续。",
       "enableAndRetry": "启用并重试",
       "goToSettings": "前往设置",
       "tryAgain": "重试",
@@ -702,25 +736,26 @@
       "exportCurrentSession": "导出当前会话",
       "exportAllSessions": "导出所有会话",
       "exportChatSession": "导出聊天会话",
-      "importSessions": "导入会话"
+      "importSessions": "导入会话",
+      "exportCurrentSessionMarkdown": "导出为 Markdown"
     },
     "hfTokenSheet": {
       "title": "Hugging Face 令牌",
       "description": "访问受限模型所需",
       "inputLabel": "个人访问令牌",
-      "inputPlaceholder": "在此粘贴你的令牌",
+      "inputPlaceholder": "在此粘贴您的令牌",
       "save": "保存令牌",
       "saved": "令牌已成功保存",
       "reset": "重置令牌",
       "resetSuccess": "令牌已成功删除",
       "instructions": "如何获取令牌：",
       "instructionsSteps": [
-        "登录 huggingface",
+        "访问 huggingface.co 并登录",
         "导航至设置 > 访问令牌",
         "创建具有\"read\"权限的新令牌",
         "复制令牌并粘贴在下方"
       ],
-      "getTokenLink": "从 huggingface 获取令牌 ↗",
+      "getTokenLink": "从 huggingface.co 获取令牌 ↗",
       "error": {
         "saving": "保存令牌时出错",
         "missing": "需要 Hugging Face 令牌",
@@ -729,12 +764,25 @@
       },
       "gatedModelIndicator": "需要令牌",
       "tokenRequired": "此模型需要 Hugging Face 访问令牌",
-      "searchErrorHint": "你的 Hugging Face API 令牌无效或已过期；如果要继续搜索，请在设置中删除令牌或禁用令牌验证",
+      "searchErrorHint": "您的 Hugging Face API 令牌无效或已过期；如果要继续搜索，请在设置中删除令牌或禁用令牌验证。",
       "disableAndRetry": "禁用令牌并重试"
     },
     "modelSettingsSheet": {
       "modelSettings": "模型设置",
-      "saveChanges": "保存更改"
+      "saveChanges": "保存更改",
+      "reasoningSection": "推理",
+      "isReasoningModel": "推理模型",
+      "isReasoningModelHelp": "显示此模型的思考控件，即使未自动检测到。",
+      "supportsEffort": "支持分级推理强度",
+      "effortValues": "此模型支持的推理强度级别",
+      "effortLevels": {
+        "minimal": "极低",
+        "low": "低",
+        "medium": "中",
+        "high": "高",
+        "xhigh": "极高",
+        "max": "最高"
+      }
     },
     "modelsHeaderRight": {
       "menuTitleHf": "Hugging Face模型",
@@ -753,30 +801,34 @@
         "newVideoPal": "新建视频Pal"
       },
       "description": "描述",
-      "descriptionPlaceholder": "输入Pal的简要描述",
+      "descriptionPlaceholder": "输入 Pal 的简要描述",
       "parameters": "参数",
       "generationSettings": "生成设置",
       "configureGenerationSettings": "配置生成设置",
       "validation": {
         "nameRequired": "名称为必填项",
-        "generatingPromptRequired": "使用AI Prompt时需要生成Prompt",
-        "promptModelRequired": "使用AI Prompt时需要Prompt生成模型"
+        "generatingPromptRequired": "使用 AI 提示词时需要生成提示词",
+        "promptModelRequired": "使用 AI 提示词时需要提示词生成模型"
       },
       "talents": "技能",
       "talentNames": {
-        "render_html": "HTML预览",
+        "render_html": "HTML 预览",
         "calculate": "数学表达式",
-        "datetime": "日期和时间"
+        "datetime": "日期和时间",
+        "web_search": "网络搜索",
+        "read_url": "读取网页"
       },
       "talentDescriptions": {
-        "render_html": "在聊天中内联渲染HTML文档",
+        "render_html": "在聊天中内联渲染 HTML 文档",
         "calculate": "计算数学表达式",
-        "datetime": "获取当前日期和时间"
+        "datetime": "获取当前日期和时间",
+        "web_search": "在互联网上搜索最新信息（需在设置中填写 API 密钥）",
+        "read_url": "读取网页的完整内容（需在设置中填写 API 密钥）"
       },
       "greeting": {
         "sectionLabel": "问候语",
         "textLabel": "问候消息",
-        "textPlaceholder": "在空白聊天时这个Pal该说些什么？",
+        "textPlaceholder": "聊天为空时，这个 Pal 该说些什么？",
         "suggestedPromptsLabel": "建议提示词",
         "addPromptButton": "添加提示词",
         "promptPlaceholder": "用于快捷标签的简短提示词",
@@ -793,15 +845,15 @@
       "defaultModel": "默认模型",
       "defaultModelPlaceholder": "选择模型",
       "validation": {
-        "generatingPromptRequired": "需要生成Prompt",
-        "promptModelRequired": "需要Prompt生成模型"
+        "generatingPromptRequired": "需要生成提示词",
+        "promptModelRequired": "需要提示词生成模型"
       },
       "create": "创建"
     },
     "modelNotAvailable": {
-      "noModelsDownloaded": "你还没有下载任何模型，请先下载模型",
+      "noModelsDownloaded": "您还没有下载任何模型，请先下载一个模型。",
       "downloadAModel": "下载模型",
-      "defaultModelNotDownloaded": "此Pal推荐特定模型但需要下载，或者您可以选择其他模型",
+      "defaultModelNotDownloaded": "此 Pal 推荐一个需要下载的特定模型，或者您可以选择其他模型。",
       "modelNotDownloadedShort": "模型未下载",
       "recommendedModel": "推荐模型",
       "cancelDownload": "取消下载",
@@ -833,7 +885,7 @@
       "toneStyle": "语气/风格",
       "toneStylePlaceholder": "严肃",
       "validation": {
-        "promptModelRequired": "需要Prompt生成模型"
+        "promptModelRequired": "需要提示词生成模型"
       },
       "create": "创建"
     },
@@ -843,7 +895,7 @@
         "edit": "编辑Lookie Pal"
       },
       "palName": "Pal名",
-      "palNamePlaceholder": "输入你的Lookie Pal名称",
+      "palNamePlaceholder": "输入您的 Lookie Pal 名称",
       "visionModel": "视觉模型",
       "visionModelPlaceholder": "选择视觉模型",
       "requiredModelsSection": "必需模型",
@@ -855,31 +907,31 @@
       "accessibilityLabel": "发送"
     },
     "systemPromptSection": {
-      "sectionTitle": "系统提示",
-      "useAIPrompt": "使用AI生成系统提示",
+      "sectionTitle": "系统提示词",
+      "useAIPrompt": "使用 AI 生成系统提示词",
       "modelSelector": {
         "label": "选择生成用模型*",
-        "sublabel": "推荐: Llama 3.2 3B 或 Qwen3 4B Instruct 2507",
+        "sublabel": "推荐: Llama 3.2 3B 或 Qwen3 4B Instruct 2507。",
         "placeholder": "选择模型"
       },
       "generatingPrompt": {
         "label": "目的与背景",
-        "placeholder": "描述此Pal的角色、目的或场景..."
+        "placeholder": "描述此 Pal 的角色、目的或场景..."
       },
       "buttons": {
         "loadingModel": "加载模型中...",
         "stopGenerating": "停止生成",
-        "generatePrompt": "生成系统提示",
+        "generatePrompt": "生成系统提示词",
         "resetParameters": "重置参数",
         "resetTemplate": "重置模板"
       },
       "systemPrompt": {
-        "label": "系统提示",
-        "sublabel": "自由编辑内容以找到最佳Prompt",
+        "label": "系统提示词",
+        "sublabel": "请自由编辑和尝试，以找到最适合您场景的提示词",
         "placeholder": "你是一个乐于助人的助手"
       },
       "warnings": {
-        "promptChanged": "系统提示已手动更改"
+        "promptChanged": "系统提示词已手动更改"
       }
     },
     "sidebarContent": {
@@ -900,11 +952,11 @@
       "deselectAll": "取消全选",
       "exportCount": "导出 ({{count}})",
       "deleteCount": "删除 ({{count}})",
-      "bulkDeleteTitle": "删除聊天",
-      "bulkDeleteMessage": "删除 {{count}} 个聊天？此操作无法撤销。",
-      "bulkDeleteError": "删除聊天失败，请重试。",
-      "exportError": "导出聊天失败，请重试。",
-      "bulkExportError": "导出聊天失败，请重试。",
+      "bulkDeleteTitle": "删除聊天对话",
+      "bulkDeleteMessage": "删除 {{count}} 个聊天会话？此操作无法撤销。",
+      "bulkDeleteError": "删除聊天会话失败，请重试。",
+      "exportError": "导出聊天会话失败，请重试。",
+      "bulkExportError": "导出聊天会话失败，请重试。",
       "dateGroups": {
         "today": "今天",
         "yesterday": "昨天",
@@ -914,8 +966,11 @@
         "threeWeeksAgo": "3周前",
         "fourWeeksAgo": "4周前",
         "lastMonth": "上个月",
-        "older": "以前"
-      }
+        "older": "以前",
+        "pinned": "已置顶"
+      },
+      "pin": "置顶",
+      "unpin": "取消置顶"
     },
     "usageStats": {
       "tooltip": {
@@ -941,17 +996,17 @@
       }
     },
     "palHeaderRight": {
-      "exportAllPals": "导出所有帕尔",
-      "importPals": "导入帕尔",
-      "importSuccess": "成功导入{{count}}个帕尔",
-      "importError": "导入帕尔失败，请检查文件格式"
+      "exportAllPals": "导出所有 Pal",
+      "importPals": "导入 Pal",
+      "importSuccess": "成功导入 {{count}} 个 Pal。",
+      "importError": "导入 Pal 失败，请检查文件格式。"
     },
     "bubble": {
       "msPerToken": "{{value}}毫秒/token",
       "tokensPerSec": "{{value}} tokens/秒",
       "ttft": "{{value}}毫秒 TTFT",
-      "interrupted": "已中断",
-      "truncated": "已截断——可能是上下文已满"
+      "interrupted": "被中断",
+      "truncated": "已截断 — 可能是上下文已满"
     },
     "pendingIndicator": {
       "preparingTool": "正在准备工具",
@@ -961,45 +1016,45 @@
       "stopping": "正在停止…"
     },
     "toolMetrics": {
-      "tokens": "{{count}} 个token",
+      "tokens": "{{count}} 个 token",
       "elapsed": "{{seconds}}秒"
     }
   },
   "palsScreen": {
     "sectionTitles": {
-      "myPalsLocal": "我的Pal (本地)",
+      "myPalsLocal": "我的 Pal (本地)",
       "myLibrary": "我的库 (palshub.ai)",
-      "discoverPals": "发现Pal (palshub.ai)"
+      "discoverPals": "发现 Pal (palshub.ai)"
     },
-    "systemPrompt": "系统提示",
+    "systemPrompt": "系统提示词",
     "videoAnalysis": "视频分析",
-    "videoAnalysisDescription": "这是一个基于视频的AI助手，可以对来自设备摄像头的视频流提供实时评论",
+    "videoAnalysisDescription": "这是一个基于视频的 AI 助手，可以对来自设备摄像头的视频流提供实时评论。",
     "captureInterval": "捕获间隔",
     "captureIntervalUnit": "毫秒",
     "world": "世界",
     "toneStyle": "音调/风格",
     "aiRole": "AI的角色",
     "userRole": "用户角色",
-    "prompt": "提示",
+    "prompt": "提示词",
     "assistant": "助手",
     "roleplay": "角色扮演",
     "video": "视频",
     "deletePal": "删除Pal",
-    "deletePalMessage": "你确定要删除此Pal吗？",
+    "deletePalMessage": "您确定要删除此 Pal 吗？",
     "missingModel": "缺少模型",
-    "missingModelMessage": "此Pal的默认模型\"{{modelName}}\"不可用，请在编辑表中下载它或选择其他模型",
+    "missingModelMessage": "此 Pal 的默认模型\"{{modelName}}\"不可用，请在编辑表中下载它或选择其他模型。",
     "search": "搜索",
     "profile": "个人资料",
     "signIn": "登录",
     "addPal": "添加Pal",
-    "signInToAccessLibrary": "登录以访问您在palshub.ai的资料库",
+    "signInToAccessLibrary": "登录以访问您在 palshub.ai 的资料库",
     "signOut": "退出登录",
     "signOutConfirmation": "您确定要退出登录吗？",
     "signOutError": "退出登录失败，请重试。",
     "account": "账户",
     "signInToPalsHub": "登录PalsHub",
-    "signInDescription": "访问您的资料库，创建私人Pal，并在设备间同步",
-    "searchAllPals": "搜索所有Pal...",
+    "signInDescription": "访问您的资料库，创建私人 Pal，并在设备间同步",
+    "searchAllPals": "搜索所有 Pal...",
     "deletePalConfirmation": "您确定要删除\"{{palName}}\"吗？",
     "filters": {
       "all": "全部",
@@ -1016,8 +1071,8 @@
       "download": "下载",
       "getFree": "免费获取"
     },
-    "premiumPalDescription": "来自palshub.ai社区的高级Pal",
-    "premiumInfoText": "在应用外访问palshub.ai探索更多Pal",
+    "premiumPalDescription": "来自 palshub.ai 社区的高级 Pal",
+    "premiumInfoText": "在应用外访问 palshub.ai 探索更多 Pal",
     "sortOptions": {
       "newest": "最新",
       "oldest": "最旧",
@@ -1034,37 +1089,37 @@
       "noDescriptionAvailable": "暂无描述。",
       "categories": "分类",
       "tags": "标签",
-      "systemPrompt": "系统提示",
+      "systemPrompt": "系统提示词",
       "downloaded": "已下载",
       "success": "成功",
       "palAddedToCollection": "Pal已添加到您的收藏！",
       "error": "错误",
-      "failedToLoadDetails": "加载Pal详情失败",
-      "failedToDownload": "下载Pal失败",
-      "premiumPalMessage": "这是一个高级Pal。\n• 如果您已经通过Palshub账户解锁，请登录以访问完整详情。\n• 还没有解锁？请访问palshub.ai应用了解更多。",
+      "failedToLoadDetails": "加载 Pal 详情失败",
+      "failedToDownload": "下载 Pal 失败",
+      "premiumPalMessage": "这是一个高级 Pal。\n• 如果您已经通过 Palshub 账户解锁，请登录以访问完整详情。\n• 还没有解锁？请访问 palshub.ai 应用了解更多。",
       "notAvailable": "N/A",
-      "buyOnPalshub": "在Palshub购买",
-      "finalizingPurchase": "正在完成购买…",
-      "processingPurchase": "处理中——即将解锁。",
-      "checkoutSessionExpired": "你的会话已过期，请重新登录以继续。",
+      "buyOnPalshub": "在 Palshub 购买",
+      "finalizingPurchase": "正在完成您的购买…",
+      "processingPurchase": "处理中 — 即将解锁。",
+      "checkoutSessionExpired": "您的会话已过期，请重新登录以继续。",
       "signInAgain": "重新登录",
-      "palNotAvailable": "此Pal目前无法购买。",
-      "checkoutFailed": "出现问题，请重试。"
+      "palNotAvailable": "此 Pal 目前无法购买。",
+      "checkoutFailed": "发生错误，请重试。"
     }
   },
   "validation": {
     "nameRequired": "需要填写名称",
-    "systemPromptRequired": "需要填写系统提示",
+    "systemPromptRequired": "需要填写系统提示词",
     "worldRequired": "需要填写世界设置",
     "locationRequired": "需要填写位置",
-    "aiRoleRequired": "需要填写AI角色",
+    "aiRoleRequired": "需要填写 AI 角色",
     "userRoleRequired": "需要填写用户角色",
     "situationRequired": "需要填写情况",
     "toneStyleRequired": "需要填写语气/风格"
   },
   "camera": {
     "permissionTitle": "需要摄像头权限",
-    "permissionMessage": "PocketPal需要访问摄像头来分析图像",
+    "permissionMessage": "PocketPal 需要访问摄像头来分析图像",
     "requestingPermission": "请求摄像头权限...",
     "noDevice": "未找到摄像头设备",
     "errorTitle": "摄像头错误",
@@ -1078,7 +1133,7 @@
   },
   "video": {
     "permissionTitle": "需要摄像头权限",
-    "permissionMessage": "PocketPal需要访问摄像头来分析视频",
+    "permissionMessage": "PocketPal 需要访问摄像头来分析视频",
     "requestingPermission": "请求摄像头权限...",
     "noDevice": "未找到摄像头设备",
     "errorTitle": "摄像头错误",
@@ -1092,9 +1147,9 @@
     "captureIntervalUnit": "毫秒",
     "liveCommentary": "实时解说",
     "emptyPlaceholder": {
-      "title": "欢迎使用Lookie",
+      "title": "欢迎使用 Lookie",
       "subtitle": "私密设备端实时视频分析",
-      "experimentalNotice": "这是一个实验性功能，准确性取决于所选模型，速度取决于你的设备性能；某些模型可能会失败",
+      "experimentalNotice": "这是一个实验性功能，准确性取决于所选模型，速度取决于您的设备性能；并且某些模型可能无法正常运行。",
       "howToUse": "使用方法：",
       "step1": "• 编辑提示词（可选）来指导分析",
       "step2": "• 点击摄像头按钮开始实时视频分析",
@@ -1113,57 +1168,68 @@
   },
   "chat": {
     "conversationReset": "对话已重置！",
-    "modelNotLoaded": "模型未加载，请初始化模型",
+    "modelNotLoaded": "模型未加载，请初始化模型。",
     "completionFailed": "生成失败: ",
     "loadingModel": "加载模型中...",
     "typeYourMessage": "输入消息",
     "load": "加载",
     "goToModels": "转到模型",
-    "readyToChat": "准备好聊天了吗？加载上次使用的模型",
-    "pleaseLoadModel": "在你聊天前，请先加载模型",
-    "multimodalNotEnabled": "此模型未启用多模态功能，图片将显示但不会被AI处理",
+    "readyToChat": "准备好聊天了吗？加载上次使用的模型。",
+    "pleaseLoadModel": "加载模型以开始聊天。",
+    "multimodalNotEnabled": "此模型未启用多模态功能，图片将显示但不会被 AI 处理。",
     "cannotSendWithoutModel": "请先加载模型",
-    "toolCallTruncated": "工具调用被截断——模型可能空间不足，请尝试增大上下文或缩减请求。",
+    "toolCallTruncated": "工具调用被截断 — 可能是模型空间不足。请尝试增大上下文或精简请求。",
     "toolCompatWarning": "此模型可能不支持工具调用，结果可能不可靠。",
-    "softCapWarning": "新建聊天以获得最佳性能。",
+    "softCapWarning": "为获得最佳性能，请新建聊天。",
     "contextWarning": "此对话已经很长，可能很快就会空间不足。",
     "contextRemoteHedged": "此回复可能已被截断，请重新发送或缩短请求。",
     "contextFull": "对话空间已满，请新建聊天或增大上下文长度。",
     "contextFullEscalated": "空间仍然不足，请新建聊天或增大上下文长度以继续。",
-    "contextFullHeavyTalent": "对话空间已满——{{talent}}通常需要更多空间，请新建聊天或增大上下文长度。",
+    "contextFullHeavyTalent": "对话空间已满 — {{talent}}通常需要更多空间，请新建聊天或增大上下文长度。",
     "contextBannerDismiss": "关闭",
     "contextNewChat": "新建聊天",
     "contextIncrease": "增大上下文",
     "contextMoreRoom": "更多空间",
     "increaseContextTitle": "为此聊天提供更多空间",
-    "increaseContextBody": "空间是模型的工作记忆——决定它一次能记住多少聊天内容。空间越大，回复被截断前的聊天就越长。",
+    "increaseContextBody": "空间是模型的工作记忆 — 决定它一次能记住多少聊天内容。空间越大，在回复被截断前的聊天就越长。",
     "increaseContextTokensUnit": "token",
-    "increaseContextWordsRam": "约{{words}}词 · ≈{{ram}} 内存",
+    "increaseContextWordsRam": "约{{words}}词 · 约{{ram}} 内存",
     "increaseContextFitsChip": "可容纳",
     "increaseContextTightChip": "紧张",
     "increaseContextWontFitChip": "无法容纳",
     "increaseContextFitsStatus": "此设备可轻松运行。",
-    "increaseContextFitsUnconstrainedStatus": "内存充足——仅受模型限制。",
-    "increaseContextTightStatus": "超过约{{tokens}}后，此设备可能内存不足并变慢，但仍可尝试。",
+    "increaseContextFitsUnconstrainedStatus": "内存充足 — 仅受模型限制。",
+    "increaseContextTightStatus": "超过约{{tokens}}后，此设备可能内存不足并变慢，但仍可尝试运行。",
     "increaseContextWontFitStatus": "约{{tokens}}可能无法容纳于此设备的内存中，请选择更小的长度。",
-    "increaseContextModelMax": "{{tokens}} · 模型上限",
-    "increaseContextHedge": "重新加载需要几秒钟，你的聊天内容不会丢失。",
+    "increaseContextModelMax": "{{tokens}} · 模型最大值",
+    "increaseContextHedge": "重新加载需要几秒钟，您的聊天内容不会丢失。",
     "increaseContextAdvanced": "高级",
-    "increaseContextAdvancedBody": "此聊天的上下文长度：{{from}} → {{to}} token（模型上限{{max}}）。设备限制为估算值，随着更大上下文成功加载会相应提高。",
+    "increaseContextAdvancedBody": "此聊天的上下文长度：{{from}} → {{to}} token（模型最大值 {{max}}）。设备限制为估算值，随着更大上下文成功加载会相应提高。",
     "increaseContextSliderA11yLabel": "上下文长度",
-    "increaseContextSliderA11yValue": "{{tokens}} 个token",
-    "increaseContextConfirmSize": "设为{{size}}",
+    "increaseContextSliderA11yValue": "{{tokens}} token",
+    "increaseContextConfirmSize": "设为 {{size}}",
     "increaseContextReloadingShort": "正在重新加载…",
     "increaseContextNoFitBody": "此设备无法为该模型容纳更大的上下文，请新建聊天以继续。",
-    "increaseContextCancel": "暂不",
+    "increaseContextCancel": "暂时不用",
     "increaseContextReloading": "正在以更大的上下文重新加载模型…",
-    "increaseContextSuccess": "上下文已增大至{{target}} token。",
-    "increaseContextFailure": "无法增大上下文长度，已恢复你之前的设置。",
-    "palLoadHint": "此Pal通常需要的空间超出当前上下文长度的限制。",
-    "generatingPreview": "正在生成预览…（{{tokens}} 个token）",
+    "increaseContextSuccess": "上下文已增大至 {{target}} token。",
+    "increaseContextFailure": "无法增大上下文长度，已恢复您之前的设置。",
+    "palLoadHint": "此 Pal 通常需要的空间超出当前上下文长度的限制。",
+    "generatingPreview": "正在生成预览…（{{tokens}} token）",
     "generatingPreviewPending": "正在生成预览…",
-    "toolUsedChip": "已使用{{name}}",
-    "toolErrorBlock": "{{name}}失败"
+    "toolUsedChip": "已使用 {{name}}",
+    "toolErrorBlock": "{{name}} 失败",
+    "webSearch": {
+      "searched": "已搜索： {{query}}",
+      "noResults": "没有结果",
+      "noResultsFor": "找不到 {{query}} 的结果",
+      "resultsCount": "{{count}} 条结果",
+      "resultsCountOne": "1 条结果",
+      "searchResultsTitle": "搜索结果",
+      "showResultsAccessibilityLabel": "显示 {{query}} 的网络搜索结果",
+      "openLinkError": "无法打开此链接。"
+    },
+    "contextFullRemote": "对话空间已满，请新建聊天。"
   },
   "benchmark": {
     "title": "基准测试",
@@ -1186,8 +1252,8 @@
     },
     "messages": {
       "pleaseSelectModel": "请先选择并初始化一个模型",
-      "testWarning": "注意：大模型可能需要2-5分钟进行测试，一旦开始就无法中断",
-      "keepScreenOpen": "请保持此界面打开！",
+      "testWarning": "注意：较大的模型可能需要 2-5 分钟进行测试，且一旦开始就无法中断。",
+      "keepScreenOpen": "请保持此界面打开。",
       "initializingModel": "正在初始化模型...",
       "modelMaxValue": "(最大值: {{maxValue}})"
     },
@@ -1196,15 +1262,15 @@
         "title": "高级设置",
         "testProfile": "测试配置文件",
         "customParameters": "自定义参数",
-        "description": "微调基准测试参数以适应特定测试场景"
+        "description": "为特定测试场景微调基准参数。"
       },
       "deleteResult": {
         "title": "删除结果",
-        "message": "你确定要删除此基准测试结果吗？"
+        "message": "您确定要删除此基准测试结果吗？"
       },
       "clearAllResults": {
         "title": "清除所有结果",
-        "message": "你确定要删除所有基准测试结果吗？"
+        "message": "您确定要删除所有基准测试结果吗？"
       },
       "shareResults": {
         "title": "共享基准测试结果",
@@ -1238,16 +1304,16 @@
         "cacheTypes": "缓存类型: {{cacheK}}/{{cacheV}}"
       },
       "results": {
-        "promptProcessing": "Prompt处理",
+        "promptProcessing": "提示词处理",
         "tokenGeneration": "Token生成",
         "totalTime": "总时间",
         "peakMemory": "峰值内存",
-        "tokensPerSecond": "tok/sec"
+        "tokensPerSecond": "t/s"
       },
       "actions": {
         "deleteButton": " ",
-        "submittedText": "✓ 提交到",
-        "leaderboardLink": "AI手机排行榜 ↗",
+        "submittedText": "✓ 已共享至",
+        "leaderboardLink": "AI 手机排行榜 ↗",
         "cannotShare": "无法共享",
         "cannotShareTooltip": "本地模型结果无法共享",
         "submitButton": "提交到排行榜",
@@ -1270,7 +1336,7 @@
         "cpuDetails": "CPU详细信息",
         "gpuDetails": "GPU详细信息",
         "hexagonDetails": "Hexagon DSP",
-        "appInfo": "APP信息"
+        "appInfo": "App信息"
       },
       "fields": {
         "architecture": "架构",
@@ -1286,7 +1352,7 @@
         "gpuVendor": "供应商",
         "metalSupport": "Metal支持",
         "openclSupport": "OpenCL支持",
-        "openclRequirement": "需要i8mm和dotprod"
+        "openclRequirement": "需要 i8mm 和 dotprod"
       },
       "instructions": {
         "format": "FP16: {{fp16}}, DotProd: {{dotProd}}, SVE: {{sve}}, I8MM: {{i8mm}}",
@@ -1298,17 +1364,17 @@
   },
   "errors": {
     "unexpectedError": "发生意外错误",
-    "hfAuthenticationError": "Hugging Face认证错误：令牌缺失或无效",
+    "hfAuthenticationError": "Hugging Face 认证错误：令牌缺失或无效",
     "hfAuthenticationErrorSearch": "Hugging Face认证错误：令牌缺失或无效",
     "authenticationError": "认证错误：令牌缺失或无效",
-    "hfAuthorizationError": "Hugging Face授权错误：没有访问此资源的权限",
+    "hfAuthorizationError": "Hugging Face 授权错误：没有访问此资源的权限",
     "authorizationError": "授权错误：没有访问此资源的权限",
-    "hfServerError": "Hugging Face服务器错误：API服务器问题",
-    "serverError": "服务器错误：API服务器问题",
-    "hfNetworkTimeout": "网络超时：对Hugging Face的请求花费时间过长",
+    "hfServerError": "Hugging Face 服务器错误：API 服务器问题",
+    "serverError": "服务器错误：API 服务器问题",
+    "hfNetworkTimeout": "网络超时：对 Hugging Face 的请求花费时间过长",
     "networkTimeout": "网络超时：请求花费时间过长",
-    "hfNetworkError": "网络错误：无法连接到Hugging Face API",
-    "networkError": "网络错误：无法连接到API",
+    "hfNetworkError": "网络错误：无法连接到 Hugging Face API",
+    "networkError": "网络错误：无法连接到 API",
     "downloadSetupFailedTitle": "下载设置失败",
     "downloadSetupFailedMessage": "无法准备模型下载: {{message}}",
     "cameraErrorTitle": "摄像头错误",
@@ -1317,7 +1383,7 @@
     "galleryErrorMessage": "选择图片失败"
   },
   "simulator": {
-    "cameraNotAvailable": "当前虚拟机无法使用摄像头，请使用物理机！！"
+    "cameraNotAvailable": "模拟器无法调用相机，请使用实体设备运行。"
   },
   "voiceAndSpeech": {
     "sectionTitle": "语音与朗读",
@@ -1326,41 +1392,41 @@
     "previewButton": "预览",
     "stopPreviewButton": "停止预览",
     "voicesTitle": "语音",
-    "voicesEmptyHint": "轻点任意语音即可安装并使用，或选择系统语音——系统语音始终可用",
+    "voicesEmptyHint": "点击任意语音即可安装并使用，或选择系统语音 — 系统语音始终可用。",
     "supertonicStepsLabel": "质量（扩散步数）",
     "toggleAutoSpeakLabel": "切换自动朗读",
     "openSettingsLabel": "TTS设置",
     "playMessageLabel": "播放消息",
     "stopMessageLabel": "停止播放",
     "autoSpeakLabel": "自动朗读回复",
-    "autoSpeakDescription": "自动朗读新回复",
+    "autoSpeakDescription": "收到新回复时自动朗读。",
     "engineChipKitten": "Kitten",
     "engineChipKokoro": "Kokoro",
     "engineChipSupertonic": "Supertonic",
     "engineChipSystem": "系统",
     "stepsCount": "{{steps}} 步",
-    "engineKittenTagline": "占用最小、稳定可靠、最适合旧设备",
-    "engineKokoroTagline": "最高质量、启动较慢、部分语音可能不兼容所有设备",
-    "engineSupertonicTagline": "启动最快、内存占用较高、偶尔可能漏字",
-    "engineSystemTagline": "系统内置语音，始终可用无需安装",
+    "engineKittenTagline": "占用最小、稳定可靠、最适合旧设备。",
+    "engineKokoroTagline": "最高质量、启动较慢、部分语音可能无法在所有设备上运行。",
+    "engineSupertonicTagline": "启动最快、内存占用更高、偶尔可能漏字。",
+    "engineSystemTagline": "系统内置语音，始终可用，无需安装。",
     "engineSystemTitleIos": "iOS语音",
     "engineSystemTitleAndroid": "安卓语音",
     "engineSystemTier": "始终可用",
     "engineTierLightest": "最轻量",
     "engineTierBestQuality": "最佳质量",
     "engineTierFastestStart": "启动最快",
-    "engineSpecsLine": "{{voices}} 个语音  ·  {{sizeMb}} MB  ·  ~{{ramMb}} MB 内存",
+    "engineSpecsLine": "{{voices}} 个语音  ·  {{sizeMb}} MB  ·  约{{ramMb}} MB 内存",
     "engineSystemSpecsLine": "{{voices}} 个语音",
     "engineRemoveTitle": "删除 {{engineTitle}}？",
-    "engineRemoveBody": "可在此设备上释放约 {{sizeMb}} MB 空间",
+    "engineRemoveBody": "可在此设备上释放约 {{sizeMb}} MB 空间。",
     "engineRemoveCancel": "取消",
     "engineRemoveConfirm": "删除",
     "engineInstallCta": "安装 · {{sizeMb}} MB",
     "engineDownloadingLabel": "下载中…  {{pct}}%  ·  {{mbDone}} / {{sizeMb}} MB",
     "engineRetryCta": "再试一次",
-    "voicesEmptyState": "未找到语音",
-    "kokoroDeviceNote": "某些语音可能不兼容所有设备",
-    "insufficientStorage": "存储空间不足，请释放 {{requiredMb}} MB 以安装此引擎（当前可用 {{freeMb}} MB）",
+    "voicesEmptyState": "未找到语音。",
+    "kokoroDeviceNote": "部分语音可能不兼容所有设备。",
+    "insufficientStorage": "存储空间不足 — 请释放 {{requiredMb}} MB 以安装此引擎（当前可用 {{freeMb}} MB）。",
     "supertonicLanguageLabel": "语言",
     "supertonicLanguageAuto": "自动",
     "supertonicLanguageSheetTitle": "语言",
@@ -1401,9 +1467,9 @@
   },
   "htmlPreview": {
     "defaultTitle": "预览",
-    "showPreview": "显示渲染预览",
-    "showCode": "显示HTML代码",
-    "copyHtml": "复制HTML",
+    "showPreview": "显示渲染的预览",
+    "showCode": "显示 HTML 代码",
+    "copyHtml": "复制 HTML",
     "closePreview": "关闭预览",
     "openFullscreen": "全屏打开：{{title}}"
   },
@@ -1415,22 +1481,22 @@
       "brand": "PocketPal"
     },
     "screen1": {
-      "title": "认识你的Pal。",
+      "title": "认识您的 Pal。",
       "titleAccent": "Pal。",
-      "body": "住在你手机里的聪明小伙伴。\n来花一分钟把它们设置好吧。",
-      "cta": "带我逛逛",
+      "body": "住在您手机里的聪明小伙伴。\n来花一分钟把它们设置好吧。",
+      "cta": "带我去看看",
       "eyebrow": "欢迎使用PocketPal"
     },
     "screen2": {
       "title": "随时，\n随地。",
-      "body": "你的Pal就住在你的手机里。\n不用联网、没有信号也能用——在飞机上、断网时、偏远村庄里都能正常工作。",
+      "body": "您的 Pal 就住在您的手机里。\n不用联网、没有信号也能用——在飞机上、断网时、偏远村庄里都能正常工作。",
       "highlight": "不用联网、没有信号",
       "cta": "下一步",
       "eyebrow": "理念",
       "titleAccent": "随时，"
     },
     "screen3": {
-      "title": "更小巧，\n但完全属于你。",
+      "title": "更小巧，\n但完全属于您。",
       "titleAccent": "更小巧，",
       "body": "手机上的Pal快速又私密——但比云端AI更轻量。把它当成口袋里的小伙伴，而不是无所不知的神谕。",
       "highlight": "快速又私密",
@@ -1438,20 +1504,20 @@
       "eyebrow": "温馨提示"
     },
     "screen4": {
-      "title": "一切都不会离开你的手机。",
+      "title": "任何内容都不会离开您的手机。",
       "titleAccent": "离开",
-      "body": "无需账户。没有云端。不做追踪。你的对话始终属于你自己。",
+      "body": "无需账户。没有云端。不做追踪。您的对话始终属于您自己。",
       "highlight": "无需账户。没有云端。不做追踪。",
       "cta": "开始使用",
       "eyebrow": "隐私承诺"
     },
     "screen5": {
-      "title": "你想让Pal帮你做什么？",
-      "body": "选一个你想聊的话题——我们会为你匹配适合你手机的Pal。",
+      "title": "您想让 Pal 帮您做什么？",
+      "body": "选一个您想聊的话题 — 我们会为您匹配适合您手机的 Pal。",
       "topic": {
         "smartchat": "智能聊天",
         "coding": "编程",
-        "education": "学习",
+        "education": "教育",
         "roleplay": "角色扮演",
         "creative_writing": "创意写作",
         "else": "想找点别的？"
@@ -1462,13 +1528,13 @@
         "education": "学习、讲解、测验",
         "roleplay": "角色、情景",
         "creative_writing": "故事、灵感、草稿",
-        "else": "稍后在应用内浏览所有Pal"
+        "else": "稍后在应用内浏览所有 Pal"
       }
     },
     "screen6": {
-      "cta": "下载{{name}}",
-      "ctaTemplate": "下载{{name}}（{{size}}）",
-      "useTemplate": "使用{{name}}",
+      "cta": "下载 {{name}}",
+      "ctaTemplate": "下载 {{name}}（{{size}}）",
+      "useTemplate": "使用 {{name}}",
       "deviceRamSuffix": "GB 内存",
       "deviceFreeSuffix": "GB 可用",
       "recommended": "推荐",
@@ -1478,29 +1544,29 @@
         "balanced": "均衡",
         "best": "最佳"
       },
-      "subtitleTemplate": "{{name}}靠手机上的小型AI模型来思考——挑一个适合的吧。",
+      "subtitleTemplate": "{{name}} 靠手机上的小型 AI 模型来思考——挑一个适合的吧。",
       "pal": {
         "pip": {
-          "body": "我们为你找到了一个完美的Pal——贴心的日常小伙伴。够聪明，能应付大多数事情；够轻量，适配任何手机。"
+          "body": "我们为您找到了一个完美的 Pal — 贴心的日常小伙伴。够聪明，能应付大多数事情；够轻量，适配任何手机。"
         },
         "codie": {
-          "body": "认识一下Codie——你本地的结对编程伙伴。读代码、写代码、讲解难点，全程都不会离开你的手机。"
+          "body": "认识一下 Codie — 您本地的结对编程伙伴。读代码、写代码、讲解难点，全程都不会离开您的手机。"
         },
         "sage": {
-          "body": "Sage耐心又好奇，会一步步带你理清思路。一个揣在口袋里的学习搭档。"
+          "body": "Sage 耐心又好奇，会一步步带您理清思路。一个揣在口袋里的学习搭档。"
         },
         "echo": {
-          "body": "Echo是个多才多艺的角色扮演伙伴——始终入戏、描绘场景，无论你的故事走向何方都紧紧跟随。"
+          "body": "Echo 是个多才多艺的角色扮演伙伴 — 始终入戏、描绘场景，无论您的故事走向何方都紧紧跟随。"
         },
         "muse": {
-          "body": "Muse帮你写作。提供措辞建议、找准节奏，并保持你独有的语气。"
+          "body": "Muse 帮您写作。提供措辞建议、找准节奏，并保持您独有的语气。"
         }
       }
     }
   },
   "downloadBanner": {
-    "titleByPal": "{{name}}正在下载",
-    "titleByModel": "{{name}}正在下载",
-    "extraInProgress": "另有{{count}}个正在进行"
+    "titleByPal": "{{name}} 正在下载",
+    "titleByModel": "{{name}} 正在下载",
+    "extraInProgress": "另有 {{count}} 个正在进行"
   }
 }

@@ -1,4 +1,4 @@
-import {StyleSheet} from 'react-native';
+import {I18nManager, StyleSheet} from 'react-native';
 
 import {Theme} from '../../utils/types';
 
@@ -25,6 +25,9 @@ export const createStyles = (theme: Theme) =>
       color: theme.colors.onSurface,
       fontSize: 16,
       padding: 0,
+      // TextInput is not auto-mirrored the way Text is, so this needs the
+      // explicit ternary. See rowLabel.
+      textAlign: I18nManager.isRTL ? 'right' : 'left',
     },
     list: {
       flex: 1,
@@ -44,6 +47,10 @@ export const createStyles = (theme: Theme) =>
       flex: 1,
       color: theme.colors.onSurface,
       fontSize: 16,
+      // 'left' is how "start" is spelled: RN has no textAlign start/end, and
+      // auto-mirrors left/right for Text. An isRTL ternary mirrors twice and
+      // lands at the end.
+      textAlign: 'left',
     },
     rowLabelSelected: {
       fontWeight: '700',
@@ -51,6 +58,7 @@ export const createStyles = (theme: Theme) =>
     emptyText: {
       color: theme.colors.onSurfaceVariant,
       fontSize: 14,
+      textAlign: 'left',
       paddingHorizontal: 16,
       paddingVertical: 16,
     },

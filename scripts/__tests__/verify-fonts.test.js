@@ -24,6 +24,7 @@ const ANDROID_DIR = path.join(
   'fonts',
 );
 const INFO_PLIST = path.join(ROOT, 'ios', 'PocketPal', 'Info.plist');
+const LOCALES_DIR = path.join(ROOT, 'src', 'locales');
 
 /**
  * Run verify-fonts.js against a temp workspace. The temp workspace
@@ -43,6 +44,7 @@ function runWithOverrides(overrides = {}) {
       {recursive: true},
     );
     fs.mkdirSync(path.join(tmp, 'ios', 'PocketPal'), {recursive: true});
+    fs.mkdirSync(path.join(tmp, 'src', 'locales'), {recursive: true});
 
     fs.copyFileSync(
       TYPOGRAPHY_PATH,
@@ -65,6 +67,15 @@ function runWithOverrides(overrides = {}) {
       INFO_PLIST,
       path.join(tmp, 'ios', 'PocketPal', 'Info.plist'),
     );
+    // index.ts + the locale JSONs feed the headline glyph-coverage check.
+    for (const f of fs.readdirSync(LOCALES_DIR)) {
+      if (f === 'index.ts' || f.endsWith('.json')) {
+        fs.copyFileSync(
+          path.join(LOCALES_DIR, f),
+          path.join(tmp, 'src', 'locales', f),
+        );
+      }
+    }
 
     // Apply overrides — relative paths.
     for (const [relPath, content] of Object.entries(overrides.files || {})) {
@@ -149,6 +160,38 @@ describe('verify-fonts.js', () => {
     expect(result.output).toContain(
       'JetBrainsMono-Regular: missing <string>JetBrainsMono-Regular.ttf</string>',
     );
+  });
+
+  it('fails when a Fraunces-rendered locale needs glyphs the subset lacks', () => {
+    // Drop 'pl' from NON_LATIN_LOCALES. Polish is Latin script but needs
+    // Latin Extended-A, which the bundled Fraunces subset does not carry,
+    // so headlines would render with missing glyphs.
+    const src = fs.readFileSync(TYPOGRAPHY_PATH, 'utf-8');
+    const withoutPl = src.replace(/^\s*'pl',\n/m, '');
+    expect(withoutPl).not.toBe(src);
+    const result = runWithOverrides({
+      files: {'src/theme/tokens/typography.ts': withoutPl},
+    });
+    expect(result.exitCode).not.toBe(0);
+    expect(result.output).toContain('not in the bundled Fraunces subset');
+    expect(result.output).toContain("add 'pl' to NON_LATIN_LOCALES");
+  });
+
+  it('refuses to declare success when NON_LATIN_LOCALES cannot be parsed', () => {
+    // The glyph check is regex-driven, so the parse-failure branch is the
+    // safety net for the whole design: it must exit non-zero rather than
+    // quietly skipping coverage.
+    const src = fs.readFileSync(TYPOGRAPHY_PATH, 'utf-8');
+    const mangled = src.replace(
+      'NON_LATIN_LOCALES: ReadonlyArray<AvailableLanguage> = [',
+      'NON_LATIN_LOCALES = [',
+    );
+    expect(mangled).not.toBe(src);
+    const result = runWithOverrides({
+      files: {'src/theme/tokens/typography.ts': mangled},
+    });
+    expect(result.exitCode).not.toBe(0);
+    expect(result.output).toContain('refusing to declare success');
   });
 
   it('fails when typography.ts references an unknown family', () => {

@@ -43,6 +43,13 @@ export const createStyles = (theme: Theme) =>
     textDescription: {
       color: theme.colors.onSurfaceVariant,
     },
+    consentContainer: {
+      marginVertical: theme.spacing.s,
+    },
+    consentButton: {
+      alignSelf: 'flex-end',
+      marginTop: theme.spacing.m,
+    },
     menuContainer: {
       position: 'relative',
     },

@@ -634,6 +634,21 @@ class ChatSessionRepository {
     });
   }
 
+  // Set pinned status for a session.
+  // Deliberately does not swallow a missing record the way the sibling setters
+  // do: the store must not mirror a pin it could not persist.
+  async setSessionPinned(sessionId: string, pinned: boolean): Promise<void> {
+    const session = await database.collections
+      .get('chat_sessions')
+      .find(sessionId);
+
+    await database.write(async () => {
+      await session.update((record: any) => {
+        record.pinned = pinned;
+      });
+    });
+  }
+
   // Set active pal for a session
   async setSessionActivePal(sessionId: string, palId?: string): Promise<void> {
     const session = await database.collections

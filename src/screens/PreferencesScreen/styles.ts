@@ -46,11 +46,25 @@ export const createStyles = (theme: Theme) =>
       color: theme.colors.error,
       marginTop: theme.spacing.xs,
     },
+    // Cap the value side of a settings row so a long value label ellipsizes
+    // inside the button instead of squeezing the flex title/description
+    // column into a sliver.
     menuContainer: {
       position: 'relative',
+      flexShrink: 1,
+      maxWidth: '55%',
     },
     menuButton: {
       minWidth: 100,
+      maxWidth: '100%',
+    },
+    // A control too wide to share its row (e.g. the draft-model picker, whose
+    // values are model filenames) sits under the title/description instead.
+    // Also keeps the menu anchor at the row's left edge, on-screen.
+    fullRowControl: {
+      marginTop: theme.spacing.s,
+      alignSelf: 'flex-start',
+      maxWidth: '100%',
     },
     buttonContent: {
       flexDirection: 'row-reverse',

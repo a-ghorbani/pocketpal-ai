@@ -204,6 +204,11 @@ export const createStyles = (theme: Theme) =>
     buttonLabelDisabled: {
       color: theme.colors.onSurfaceVariant,
     },
+    draftOnlyHint: {
+      fontSize: 12,
+      color: theme.colors.onSurfaceVariant,
+      marginTop: 8,
+    },
     iconButton: {
       padding: theme.spacing.s,
       borderRadius: theme.radius.m,

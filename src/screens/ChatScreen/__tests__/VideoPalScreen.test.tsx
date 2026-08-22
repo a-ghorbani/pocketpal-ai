@@ -1,6 +1,8 @@
 import React from 'react';
 import {Alert} from 'react-native';
 
+import {runInAction} from 'mobx';
+
 import {
   render as baseRender,
   fireEvent,
@@ -11,6 +13,7 @@ import {VideoPalScreen} from '../VideoPalScreen';
 import {palStore, chatSessionStore, modelStore} from '../../../store';
 import type {Pal} from '../../../types/pal';
 import {LlamaContext} from 'llama.rn';
+import {ModelOrigin} from '../../../utils/types';
 import {mockLlamaContextParams} from '../../../../jest/fixtures/models';
 
 const render = (ui: React.ReactElement, options: any = {}) =>
@@ -53,6 +56,11 @@ describe('VideoPalScreen', () => {
   });
 
   afterEach(() => {
+    runInAction(() => {
+      modelStore.isMultimodalActive = false;
+      modelStore.activeModelId = undefined;
+      modelStore.models = [];
+    });
     // Restore original activePalId getter if it existed
     if (originalActivePalId) {
       Object.defineProperty(
@@ -116,8 +124,10 @@ describe('VideoPalScreen', () => {
     // Provide a context so we pass the first guard
     modelStore.context = new LlamaContext(mockLlamaContextParams);
 
-    // Ensure multimodal check resolves to false
-    jest.spyOn(modelStore, 'isMultimodalEnabled').mockResolvedValue(false);
+    // Multimodal is not active on the loaded model
+    runInAction(() => {
+      modelStore.isMultimodalActive = false;
+    });
 
     const alertSpy = jest.spyOn(Alert, 'alert');
 
@@ -150,7 +160,13 @@ describe('VideoPalScreen', () => {
     modelStore.context = new LlamaContext(mockLlamaContextParams);
 
     // Allow multimodal
-    jest.spyOn(modelStore, 'isMultimodalEnabled').mockResolvedValue(true);
+    runInAction(() => {
+      modelStore.models = [
+        {id: 'model-1', origin: ModelOrigin.PRESET, supportsMultimodal: true},
+      ] as any;
+      modelStore.activeModelId = 'model-1';
+      modelStore.isMultimodalActive = true;
+    });
 
     const {getByLabelText, getByTestId, queryByTestId} = render(
       <VideoPalScreen activePal={videoPal} />,

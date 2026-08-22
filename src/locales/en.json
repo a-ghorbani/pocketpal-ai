@@ -32,7 +32,8 @@
     "close": "Close",
     "back": "Go back",
     "clear": "Clear All",
-    "gallery": "Gallery"
+    "gallery": "Gallery",
+    "noResults": "No results"
   },
   "settings": {
     "modelInitializationSettings": "Model Initialization Settings",
@@ -89,6 +90,20 @@
     "useMmapFalseDescription": "Disabled is recommended when weight repacking is enabled to avoid doubling memory usage",
     "weightRepacking": "Enable Weight Repacking",
     "weightRepackingDescription": "Faster prompt processing with minimal memory overhead when memory mapping is disabled. Token generation is unaffected.",
+    "speculativeDecoding": "Speculative Decoding",
+    "speculativeDecodingDescription": "Use a small draft model (or an embedded MTP model) to predict tokens and speed up generation. Experimental.",
+    "speculativeNotMTPCapable": "The active model isn't speculative-capable and no compatible draft is paired, so this stays off for it with no effect. It applies automatically to capable models.",
+    "speculativeDraftModel": "Draft Model",
+    "speculativeDraftModelDescription": "Drafts tokens for the active model.",
+    "speculativeDraftModelNone": "None (embedded MTP)",
+    "speculativeDraftModelIgnoredOverridden": "The active model comes with its own draft model, so this pick is ignored.",
+    "speculativeDraftModelIgnoredIncompatible": "This draft isn't compatible with the active model, so it's ignored.",
+    "speculativeDraftModelIgnoredNotCapable": "This model carries no draft layers, so it can't be used as a draft model.",
+    "speculativeDraftKeyCacheType": "Draft Key Cache Type",
+    "speculativeDraftValueCacheType": "Draft Value Cache Type",
+    "speculativeDraftNGpuLayers": "Draft GPU Layers",
+    "speculativeDraftNGpuLayersDescription": "Number of draft-model layers to offload to the GPU.",
+    "speculativeDraftCacheTypeInactiveDescription": "Applies once speculative decoding runs.",
     "ttsAvailability": "Text-to-speech",
     "ttsAvailabilityDescription": "Read assistant replies aloud.",
     "ttsAvailabilityLowMemoryWarning": "Your device's memory is low — this may not work reliably.",
@@ -99,6 +114,8 @@
     "autoNavigateToChatDescription": "Navigate to chat when loading starts.",
     "appSettings": "App Settings",
     "language": "Language",
+    "languageSheetTitle": "Language",
+    "languageSearchPlaceholder": "Search languages",
     "darkMode": "Dark Mode",
     "displayMemoryUsage": "Display Memory Usage",
     "displayMemoryUsageDescription": "Display memory usage in the chat page.",
@@ -111,6 +128,31 @@
     "importButton": "Import",
     "importSuccess": "Successfully imported {{count}} chat session(s).",
     "importError": "Failed to import chat sessions. Please check the file format.",
+    "internetSearch": {
+      "title": "Internet Search",
+      "description": "Let Pals search the web with their own tools. Bring your own API key — PocketPal never holds your keys or routes your queries.",
+      "providerLabel": "Search provider",
+      "providerGated": "Coming soon",
+      "keyLabel": "API key",
+      "keyIsSet": "Key is set for {{provider}}.",
+      "keyNotSet": "No key set for {{provider}}.",
+      "setKeyButton": "Set Key",
+      "updateKeyButton": "Update Key",
+      "clearKeyButton": "Clear Key",
+      "keyInputPlaceholder": "Paste your {{provider}} API key",
+      "keyUpdateError": "Couldn't update the key. Please try again.",
+      "showKeyAccessibilityLabel": "Show API key",
+      "hideKeyAccessibilityLabel": "Hide API key",
+      "resultCountLabel": "Results per search",
+      "resultCountDescription": "Fewer results keep more room in the model's context.",
+      "consentTitle": "Searches leave your device",
+      "consentDescription": "When a Pal searches the web, your query is sent to the selected provider over the internet. When a Pal reads a page, the URL and page content may instead be sent to a default reader service (r.jina.ai) if the selected provider has no native reader. Keys and queries are never sent to PocketPal.",
+      "consentAccept": "I understand",
+      "consentRequired": "Accept the disclosure above to set a key and enable search.",
+      "consentGivenTitle": "Searching the web is enabled",
+      "consentGivenDescription": "Queries and page reads may leave your device as described above.",
+      "consentRevoke": "Revoke"
+    },
     "apiSettingsTitle": "API Settings",
     "huggingFaceTokenLabel": "Hugging Face Token",
     "tokenIsSetDescription": "Token is set. Required for accessing gated models.",
@@ -382,6 +424,9 @@
       "labels": {
         "skills": "Skills: ",
         "vision": "Vision",
+        "visionSupported": "Supported",
+        "visionNotSupported": "Not supported",
+        "visionUnknown": "Unknown",
         "capabilities": "capabilities.",
         "modelName": "Model Name",
         "contextLength": "Context Length",
@@ -389,7 +434,8 @@
         "author": "Author",
         "requiresProjectionModel": "Requires projection model",
         "downloadProjectionModel": "Download projection model",
-        "viewModelCardOnHuggingFace": "View Model Card on Hugging Face"
+        "viewModelCardOnHuggingFace": "View Model Card on Hugging Face",
+        "draftOnlyReason": "Draft-only model. Pick it under Settings → Speculative decoding."
       },
       "badges": {
         "downloaded": "Downloaded",
@@ -456,7 +502,9 @@
       "multilingual": "Multilingual",
       "rewriting": "Rewriting",
       "creativity": "Creative writing",
-      "vision": "Vision"
+      "vision": "Vision",
+      "mtp": "Speculative (MTP)",
+      "mtpDraft": "Speculative draft"
     }
   },
   "completionParams": {
@@ -555,6 +603,7 @@
     "bubble": {
       "tokensPerSecCompact": "{{value}} tok/s",
       "ttftCompact": "TTFT {{value}}ms",
+      "draftAccepted": "draft: {{accepted}}/{{total}} ({{pct}}%)",
       "interrupted": "Interrupted",
       "truncated": "Cut off — likely context full"
     },
@@ -760,6 +809,7 @@
       "makeChatTemporary": "Make chat temporary",
       "export": "Export/Import",
       "exportCurrentSession": "Export current session",
+      "exportCurrentSessionMarkdown": "Export as Markdown",
       "exportAllSessions": "Export all sessions",
       "exportChatSession": "Export chat session",
       "importSessions": "Import sessions"
@@ -839,12 +889,16 @@
       "talentNames": {
         "render_html": "HTML preview",
         "calculate": "Math expressions",
-        "datetime": "Date & time"
+        "datetime": "Date & time",
+        "web_search": "Web search",
+        "read_url": "Read web page"
       },
       "talentDescriptions": {
         "render_html": "Render HTML documents inline in chat",
         "calculate": "Evaluate mathematical expressions",
-        "datetime": "Get the current date and time"
+        "datetime": "Get the current date and time",
+        "web_search": "Search the internet for current information (requires API key in Settings)",
+        "read_url": "Read the full content of a web page (requires API key in Settings)"
       },
       "greeting": {
         "sectionLabel": "Greeting",
@@ -978,7 +1032,10 @@
       "bulkDeleteError": "Failed to delete chat sessions. Please try again.",
       "exportError": "Failed to export chat session. Please try again.",
       "bulkExportError": "Failed to export chat sessions. Please try again.",
+      "pin": "Pin",
+      "unpin": "Unpin",
       "dateGroups": {
+        "pinned": "Pinned",
         "today": "Today",
         "yesterday": "Yesterday",
         "thisWeek": "This week",
@@ -997,12 +1054,7 @@
         "total": "Total: ",
         "usage": "Usage: "
       },
-      "byteSizes": [
-        "Bytes",
-        "KB",
-        "MB",
-        "GB"
-      ]
+      "byteSizes": ["Bytes", "KB", "MB", "GB"]
     },
     "chatView": {
       "menuItems": {
@@ -1186,6 +1238,7 @@
     "modelNotLoaded": "Model not loaded. Please initialize the model.",
     "completionFailed": "Completion failed: ",
     "toolCallTruncated": "Tool call cut off — the model likely ran out of room. Try a larger context or a smaller request.",
+    "speculativeInitFailed": "This device could not start speculative decoding for this model — most likely there is not enough memory for the draft context. Turn off Speculative decoding under Settings → Advanced Settings and try again.",
     "loadingModel": "Loading model ...",
     "typeYourMessage": "Type your message here",
     "load": "Load",
@@ -1199,6 +1252,7 @@
     "contextWarning": "This conversation is getting long and may soon run out of room.",
     "contextRemoteHedged": "This reply may have been cut off. Try sending again or shortening the request.",
     "contextFull": "The conversation ran out of room. Start a new chat or increase the context size.",
+    "contextFullRemote": "The conversation ran out of room. Start a new chat.",
     "contextFullEscalated": "Still out of room. Start a new chat, or increase the context size to keep going.",
     "contextFullHeavyTalent": "The conversation ran out of room — {{talent}} tends to need more. Start a new chat or increase the context size.",
     "contextBannerDismiss": "Dismiss",
@@ -1233,7 +1287,17 @@
     "generatingPreview": "Generating preview… ({{tokens}} tokens)",
     "generatingPreviewPending": "Generating preview…",
     "toolUsedChip": "used {{name}}",
-    "toolErrorBlock": "{{name}} failed"
+    "toolErrorBlock": "{{name}} failed",
+    "webSearch": {
+      "searched": "Searched: {{query}}",
+      "noResults": "No results",
+      "noResultsFor": "No results for {{query}}",
+      "resultsCount": "{{count}} results",
+      "resultsCountOne": "1 result",
+      "searchResultsTitle": "Search results",
+      "showResultsAccessibilityLabel": "Show web search results for {{query}}",
+      "openLinkError": "Couldn't open this link."
+    }
   },
   "htmlPreview": {
     "defaultTitle": "Preview",

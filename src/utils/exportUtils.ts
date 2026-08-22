@@ -8,7 +8,7 @@ import {chatSessionRepository} from '../repositories/ChatSessionRepository';
 
 import {uiStore, palStore} from '../store';
 import {ensureLegacyStoragePermission} from './androidPermission';
-import {derivedText} from './chat';
+import {derivedText, userId} from './chat';
 import {getAbsoluteThumbnailPath, isLocalThumbnailPath} from './imageUtils';
 import type {Pal} from '../types/pal';
 import type {Message} from '../database';
@@ -271,11 +271,79 @@ export const exportLegacyChatSessions = async (): Promise<void> => {
 };
 
 /**
- * Helper function to share JSON data as a file
+ * Export a single chat session as a human-readable Markdown file.
+ *
+ * The JSON export is for re-importing; this one is for reading and sharing
+ * outside the app.
+ */
+export const exportChatSessionAsMarkdown = async (
+  sessionId: string,
+): Promise<void> => {
+  try {
+    const sessionData = await chatSessionRepository.getSessionById(sessionId);
+    if (!sessionData) {
+      throw new Error('Session not found');
+    }
+
+    const {session, messages} = sessionData;
+    const exportedAt = format(new Date(), 'yyyy-MM-dd HH:mm');
+
+    // Titles are derived from the user's own first message, so a multi-line
+    // one would otherwise break out of the `#` heading and be re-parsed as
+    // body markdown.
+    const title = session.title.replace(/\s+/g, ' ').trim();
+
+    const lines: string[] = [
+      `# ${title}`,
+      '',
+      `*Exported: ${exportedAt}*`,
+      '',
+      '---',
+      '',
+    ];
+
+    // `getSessionById` returns `position DESC` (newest first) to match the
+    // inverted chat FlatList. A human-readable transcript needs chronological
+    // order, so walk a reversed copy — never mutate the repository's array.
+    for (const msg of [...messages].reverse()) {
+      const exported = toExportedMessage(msg);
+      const role = exported.author === userId ? 'User' : 'Assistant';
+      lines.push(`### ${role}`, '', exported.text ?? '');
+
+      // Multimodal messages keep their attachments in `metadata.imageUris`.
+      // Note that an attachment existed, but drop the URI itself: these come
+      // from react-native-image-picker's OS temp dir (Android `getCacheDir`,
+      // iOS `NSTemporaryDirectory`), which is evictable — so the path resolves
+      // for no reader — and on iOS embeds the app-install container UUID, which
+      // has no place in a document whose purpose is being shared off-device.
+      const imageUris: unknown = exported.metadata?.imageUris;
+      if (Array.isArray(imageUris)) {
+        imageUris.forEach(() => lines.push('', '_[image]_'));
+      }
+
+      lines.push('', '---', '');
+    }
+
+    const timestamp = format(new Date(), 'yyyy-MM-dd_HH-mm-ss');
+    const sanitizedTitle = session.title
+      .replace(/[^a-z0-9]/gi, '_')
+      .toLowerCase();
+    const filename = `chat_${sanitizedTitle}_${timestamp}.md`;
+
+    await shareJsonData(lines.join('\n'), filename, 'text/markdown');
+  } catch (error) {
+    console.error('Error exporting chat session as markdown:', error);
+    throw error;
+  }
+};
+
+/**
+ * Helper function to share text data as a file
  */
 const shareJsonData = async (
   jsonData: string,
   filename: string,
+  mimeType: string = 'application/json',
 ): Promise<void> => {
   const currentL10n = uiStore.l10n;
   try {
@@ -289,7 +357,7 @@ const shareJsonData = async (
       await Share.open({
         url: `file://${tempFilePath}`,
         title: `Share ${filename}`,
-        type: 'application/json',
+        type: mimeType,
         failOnCancel: false,
       });
     } else if (Platform.OS === 'android' && Platform.Version === 29) {
@@ -299,7 +367,7 @@ const shareJsonData = async (
         await Share.open({
           url: `file://${tempFilePath}`,
           title: `Share ${filename}`,
-          type: 'application/json',
+          type: mimeType,
           failOnCancel: false,
         });
         return; // Exit early after sharing
@@ -316,7 +384,7 @@ const shareJsonData = async (
           await Share.open({
             url: `file://${tempFilePath}`,
             title: `Share ${filename}`,
-            type: 'application/json',
+            type: mimeType,
             failOnCancel: false,
           });
           return; // Exit early after sharing
@@ -352,7 +420,7 @@ const shareJsonData = async (
                     title: `Share ${filename}`,
                     message: 'PocketPal AI Chat Export',
                     url: `file://${savePath}`,
-                    type: 'application/json',
+                    type: mimeType,
                     failOnCancel: false,
                   };
 

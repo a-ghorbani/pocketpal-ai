@@ -512,10 +512,45 @@ export interface ServerConfig {
     | string;
 }
 
+/**
+ * Capabilities a llama.cpp server reports for one model via GET /props.
+ * Keyed per full model id (`${serverId}/${remoteModelId}`) in ServerStore.
+ * An absent field means unknown; a field is only ever set from a response that
+ * describes an actually loaded model, never from a router placeholder.
+ */
+export interface RemoteModelCaps {
+  // Never written or read. Every other field here is optional, so without a
+  // discriminant the weaker list-derived type would be silently assignable to
+  // this one and could be passed wherever a probed answer is expected.
+  tier?: 'probe';
+  contextLength?: number; // /props n_ctx; only ever a finite number > 0
+  supportsVision?: boolean; // /props modalities.vision
+  // The backend these describe. ServerConfig.url is mutable and a live session
+  // does not follow it, so caps that do not carry their own url cannot be
+  // matched against the session. Absent on an entry written before this field
+  // existed: taken at face value, no migration.
+  probedUrl?: string;
+}
+
+/**
+ * The backend a live remote chat session is actually talking to. Captured when
+ * the completion engine is built and never repointed, unlike the ServerConfig
+ * it was built from — editing a server url leaves the session on the old
+ * backend until the model is re-selected. Owned by ModelStore, not persisted.
+ */
+export interface RemoteSessionBinding {
+  modelId: string; // `${serverId}/${remoteModelId}`
+  serverId: string;
+  remoteModelId: string;
+  url: string;
+  serverType?: string;
+}
+
 export enum ModelType {
   PROJECTION = 'projection',
   VISION = 'vision',
   LLM = 'llm',
+  DRAFT = 'draft',
 }
 
 /**
@@ -533,6 +568,8 @@ export interface GGUFMetadata {
   n_embd_head_v: number; // Value head dimension
   sliding_window?: number; // For SWA models
   context_length?: number; // Native context length from GGUF
+  nextn_predict_layers?: number; // <arch>.nextn_predict_layers; >0 ⇒ embedded MTP draft layers
+  embedding_length_out?: number; // <arch>.embedding_length_out; draft output width (n_embd_out)
 }
 
 export interface Model {
@@ -563,6 +600,8 @@ export interface Model {
   compatibleProjectionModels?: string[]; // Array of mmproj model IDs that work with this model
   defaultProjectionModel?: string; // Default mmproj model ID to use with this model
   visionEnabled?: boolean; // User preference for enabling vision capabilities (defaults to true for backward compatibility)
+
+  defaultDraftModel?: string; // Default draft model ID to auto-pair / auto-download
 
   // Thinking capabilities
   /** @deprecated Read via resolveReasoningCapability; kept as a fallback for old records. */
@@ -595,6 +634,11 @@ export interface Model {
   serverName?: string; // Denormalized for display convenience
   remoteModelId?: string; // The model ID as reported by the server's /v1/models
 }
+
+export type DraftConfig =
+  | {mode: 'off'}
+  | {mode: 'embedded'}
+  | {mode: 'paired'; resolvedDraftPath: string; draftModel: Model};
 
 export type MainTabParamList = {
   ChatsTab: undefined;
@@ -733,6 +777,14 @@ export interface ContextInitParams
   /** Disable extra buffer types for weight repacking (CPU_REPACK). Android only.
    * Reduces memory usage at the cost of slower prompt processing. Default: false */
   no_extra_bufts?: boolean;
+
+  // v2.3+ speculative decoding / draft model. This shape is persisted, so an
+  // upstream rename of the inherited spec_draft_* fields needs a migration.
+  /** Master switch for speculative decoding; default false (feature OFF). */
+  speculativeEnabled?: boolean;
+  /** User-picked global draft Model ID, used when a target has no per-target
+   * defaultDraftModel; undefined = none. */
+  selectedDraftModelId?: string;
 
   // Deprecated (kept for migration)
   /** @deprecated Use devices instead */
