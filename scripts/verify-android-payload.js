@@ -41,6 +41,7 @@ const ELF64_SHDR_SIZE = 64;
 const ELF32_PHDR_SIZE = 32;
 const ELF64_PHDR_SIZE = 56;
 const ELF32_EHDR_SIZE = 52;
+const ELF64_EHDR_SIZE = 64;
 
 // What the NDK already produces (`-Wl,-z,max-page-size=16384`) and what
 // Android 15+ requires of shared libraries on 16 KB-page devices. The manifest
@@ -433,7 +434,7 @@ function readProgramHeaders(buf) {
   }
   const elf64 = buf[4] === 2;
   const littleEndian = buf[5] === 1;
-  if (elf64 && buf.length < ELF64_SHDR_SIZE) {
+  if (elf64 && buf.length < ELF64_EHDR_SIZE) {
     throw new Error('file is too short to be an ELF object');
   }
 
