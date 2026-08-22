@@ -42,6 +42,12 @@ const ELF32_PHDR_SIZE = 32;
 const ELF64_PHDR_SIZE = 56;
 const ELF32_EHDR_SIZE = 52;
 
+// What the NDK already produces (`-Wl,-z,max-page-size=16384`) and what
+// Android 15+ requires of shared libraries on 16 KB-page devices. The manifest
+// declares the requirement per ABI; this is only the floor it cannot undercut,
+// because a lowered number is the cheapest edit that unblocks a failing build.
+const MIN_LIB_ALIGNMENT = 16384;
+
 function usage() {
   return [
     'Usage:',
@@ -205,6 +211,35 @@ function assertAcceleratorFloors(abi, manifestPath) {
   }
 }
 
+function isPowerOfTwo(value) {
+  if (!Number.isInteger(value) || value < 1) {
+    return false;
+  }
+  let remaining = value;
+  while (remaining % 2 === 0) {
+    remaining /= 2;
+  }
+  return remaining === 1;
+}
+
+function assertAlignmentFloor(abi, manifestPath) {
+  const declared = abi.requiredLibAlignment;
+  if (!isPowerOfTwo(declared)) {
+    refuseAbi(
+      abi,
+      manifestPath,
+      'no requiredLibAlignment that is an integer power of two',
+    );
+  }
+  if (declared < MIN_LIB_ALIGNMENT) {
+    refuseAbi(
+      abi,
+      manifestPath,
+      `a requiredLibAlignment of ${declared}, under the ${MIN_LIB_ALIGNMENT}-byte floor`,
+    );
+  }
+}
+
 /**
  * The DSP libraries are extracted as a set at runtime and the backend is
  * disabled outright if any one is missing, so a compiled-in accelerator with
@@ -293,6 +328,11 @@ function loadManifest(manifestPath) {
   assertAssetFloors(manifest, manifestPath);
   for (const abi of manifest.abis) {
     assertAcceleratorFloors(abi, manifestPath);
+  }
+  // Last, so that a manifest weakened in some other way is still refused with
+  // the message that names what it weakened.
+  for (const abi of manifest.abis) {
+    assertAlignmentFloor(abi, manifestPath);
   }
   return manifest;
 }
@@ -665,6 +705,101 @@ function checkAssets({
   }
 }
 
+/**
+ * Every shipped library of one ABI, not only the required ones: alignment is a
+ * property of what the platform loads, and the libraries this manifest does
+ * not name are loaded by the same linker on the same device.
+ *
+ * The DSP assets are deliberately outside the subject set. They are ELF32
+ * Hexagon objects at `p_align` 4096, loaded by the DSP rather than by Android,
+ * so one floor spanning both would fail the gate on a correct artifact.
+ */
+function checkAlignment({
+  archive,
+  prefix,
+  entries,
+  abi,
+  artifactName,
+  report,
+  fail,
+}) {
+  const libs = [...entries]
+    .filter(
+      entry =>
+        entry.startsWith(`${prefix}lib/${abi.abi}/`) && entry.endsWith('.so'),
+    )
+    .sort();
+  const declared = abi.requiredLibAlignment;
+  const judged = libs.map(entry => {
+    try {
+      const loads = readProgramHeaders(readZipEntry(archive, entry)).filter(
+        header => header.type === PT_LOAD,
+      );
+      const offending = loads.filter(
+        header => header.align < declared || !isPowerOfTwo(header.align),
+      );
+      return {
+        entry,
+        loads: loads.length,
+        worst:
+          offending.length > 0
+            ? Math.min(...offending.map(header => header.align))
+            : null,
+      };
+    } catch (err) {
+      return {entry, unreadable: err.message};
+    }
+  });
+
+  const conforming = judged.filter(
+    lib => !lib.unreadable && lib.loads > 0 && lib.worst === null,
+  ).length;
+  report.push(
+    `    segment alignment: ${conforming}/${libs.length} libraries at p_align >= ${declared}`,
+  );
+
+  for (const lib of judged) {
+    if (lib.unreadable) {
+      report.push(`      UNREADABLE  ${lib.entry} — ${lib.unreadable}`);
+      fail(
+        [
+          `could not read the program headers of ${lib.entry} in ${artifactName}: ${lib.unreadable}.`,
+          'The payload check could not run, so it reports failure rather than success —',
+          'a check that cannot read the artifact has proven nothing about it.',
+        ].join('\n      '),
+      );
+      continue;
+    }
+    // An object with nothing to load proves nothing about its alignment, so it
+    // is an instrument failure rather than a pass.
+    if (lib.loads === 0) {
+      report.push(`      NO PT_LOAD  ${lib.entry}`);
+      fail(
+        [
+          `${lib.entry} in ${artifactName} has no PT_LOAD segment, so its alignment could not be judged.`,
+          'The payload check could not run, so it reports failure rather than success —',
+          'a check that cannot read the artifact has proven nothing about it.',
+        ].join('\n      '),
+      );
+      continue;
+    }
+    if (lib.worst !== null) {
+      report.push(
+        `      MISALIGNED  ${lib.entry} (PT_LOAD p_align ${lib.worst})`,
+      );
+      fail(
+        [
+          `${lib.entry} in ${artifactName} has a PT_LOAD segment at p_align ${lib.worst};`,
+          `scripts/android-payload-manifest.json requires at least ${declared} for ${abi.abi}.`,
+          'Android 15+ refuses to load a shared library whose segments are not page-aligned on a',
+          '16 KB-page device. The NDK produces this alignment by default, so a library below it',
+          'came from a toolchain or linker flag that overrode it — fix the build, not the manifest.',
+        ].join('\n      '),
+      );
+    }
+  }
+}
+
 function checkArtifact({archive, kind, manifest, report, failures}) {
   const artifactName = path.basename(archive);
   const prefix = kind === 'aab' ? 'base/' : '';
@@ -751,6 +886,16 @@ function checkArtifact({archive, kind, manifest, report, failures}) {
         ].join('\n      '),
       );
     }
+
+    checkAlignment({
+      archive,
+      prefix,
+      entries,
+      abi,
+      artifactName,
+      report,
+      fail,
+    });
 
     const extras = [...entries]
       .filter(entry => entry.startsWith(`${prefix}lib/${abi.abi}/librnllama`))

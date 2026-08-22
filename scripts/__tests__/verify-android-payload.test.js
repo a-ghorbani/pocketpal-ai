@@ -517,6 +517,116 @@ describe('the declared payload', () => {
   });
 });
 
+describe('16 KB page alignment', () => {
+  // A tripwire on what the NDK already produces, not a repair — so it has to
+  // be shown capable of failing, on the artifact and on the declaration alike.
+  it('fails when a required library regresses below the declared alignment', () => {
+    const entries = conformingEntries();
+    entries['lib/arm64-v8a/librnllama_v8.so'] = buildElf([], {
+      emptyDynsym: true,
+      segments: [
+        {type: PT_LOAD, align: 16384},
+        {type: PT_LOAD, align: 4096},
+      ],
+    });
+    const {status, output} = gateApk(entries);
+    expect(status).toBe(1);
+    expect(output).toContain(
+      'MISALIGNED  lib/arm64-v8a/librnllama_v8.so (PT_LOAD p_align 4096)',
+    );
+    expect(output).toContain('requires at least 16384 for arm64-v8a');
+  });
+
+  // The subject is what the platform loads, not what llama.rn contributes: a
+  // scan restricted to requiredLibs would miss the other 52 of 68 libraries.
+  it('fails when a library the manifest never names regresses', () => {
+    const entries = conformingEntries();
+    entries['lib/arm64-v8a/libreanimated.so'] = buildElf([], {
+      emptyDynsym: true,
+      segments: [{type: PT_LOAD, align: 4096}],
+    });
+    const {status, output} = gateApk(entries);
+    expect(status).toBe(1);
+    expect(output).toContain('MISALIGNED  lib/arm64-v8a/libreanimated.so');
+  });
+
+  it('fails on a p_align that is not a power of two', () => {
+    const entries = conformingEntries();
+    entries['lib/x86_64/librnllama_x86_64.so'] = buildElf([], {
+      emptyDynsym: true,
+      segments: [{type: PT_LOAD, align: 24576}],
+    });
+    const {status, output} = gateApk(entries);
+    expect(status).toBe(1);
+    expect(output).toContain('p_align 24576');
+  });
+
+  it('passes a library aligned more strictly than declared', () => {
+    const entries = conformingEntries();
+    entries['lib/arm64-v8a/librnllama_v8.so'] = buildElf([], {
+      emptyDynsym: true,
+      segments: [{type: PT_LOAD, align: 65536}],
+    });
+    const {status, output} = gateApk(entries);
+    expect(status).toBe(0);
+    expect(output).toContain('segment alignment: 12/12 libraries');
+  });
+
+  it('fails a library with no PT_LOAD rather than counting it as aligned', () => {
+    const entries = conformingEntries();
+    entries['lib/arm64-v8a/librnllama_v8.so'] = buildElf([], {
+      emptyDynsym: true,
+      segments: [{type: PT_DYNAMIC, align: 8}],
+    });
+    const {status, output} = gateApk(entries);
+    expect(status).toBe(1);
+    expect(output).toContain('NO PT_LOAD  lib/arm64-v8a/librnllama_v8.so');
+    expect(output).toContain('proven nothing about it');
+  });
+
+  it('reports how many libraries it judged, so a scan of none is visible', () => {
+    const {status, output} = gateApk(conformingEntries());
+    expect(status).toBe(0);
+    expect(output).toContain(
+      'segment alignment: 12/12 libraries at p_align >= 16384',
+    );
+    expect(output).toContain(
+      'segment alignment: 4/4 libraries at p_align >= 16384',
+    );
+  });
+
+  it.each([
+    ['weakened below the floor', 4096, 'under the 16384-byte floor'],
+    ['not a power of two', 24576, 'integer power of two'],
+    ['absent', undefined, 'integer power of two'],
+  ])(
+    'refuses a manifest whose alignment requirement is %s',
+    (_label, value, fragment) => {
+      const weakened = path.join(workspace, 'weakened-alignment.json');
+      const edited = JSON.parse(JSON.stringify(manifest));
+      if (value === undefined) {
+        delete edited.abis[0].requiredLibAlignment;
+      } else {
+        edited.abis[0].requiredLibAlignment = value;
+      }
+      fs.writeFileSync(weakened, JSON.stringify(edited));
+
+      const archive = writeArchive('app-prod-release.apk', conformingEntries());
+      const {status, output} = runGate([
+        '--apk',
+        archive,
+        '--manifest',
+        weakened,
+      ]);
+      expect(status).toBe(1);
+      expect(output).toContain(fragment);
+      // Refused before anything was opened: the artifact is sound, and a
+      // manifest that cannot be trusted must not be used to judge one.
+      expect(output).not.toContain('artifact:');
+    },
+  );
+});
+
 describe('a check that cannot run', () => {
   // Every case below must fail. A gate that passes because it read nothing is
   // worse than no gate: it reports the artifact as sound on no evidence.
@@ -628,7 +738,11 @@ describe('a check that cannot run', () => {
     const weakened = path.join(workspace, 'no-libs.json');
     fs.writeFileSync(
       weakened,
-      JSON.stringify({abis: [{abi: 'arm64-v8a', requiredLibs: []}]}),
+      JSON.stringify({
+        abis: [
+          {abi: 'arm64-v8a', requiredLibs: [], requiredLibAlignment: 16384},
+        ],
+      }),
     );
     const archive = writeArchive('app-prod-release.apk', conformingEntries());
     const {status, output} = runGate([
@@ -956,6 +1070,7 @@ describe('a check that cannot run', () => {
         abis: [
           {
             abi: 'armeabi-v7a',
+            requiredLibAlignment: 16384,
             requiredLibs: ['librnllama.so', 'librnllama_jni.so'],
             requiredSymbols: [
               {lib: 'librnllama.so', mustExport: ['lm_ggml_backend_reg_count']},
