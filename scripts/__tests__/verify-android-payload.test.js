@@ -600,6 +600,20 @@ describe('a check that cannot run', () => {
       'no elfMachine',
     ],
     [
+      'a manifest that never says which ABIs can load the assets',
+      edited => {
+        delete edited.assets.usableByAbis;
+      },
+      'no usableByAbis',
+    ],
+    [
+      'a manifest claiming the assets are usable by an ABI it does not declare',
+      edited => {
+        edited.assets.usableByAbis.push('armeabi-v7a');
+      },
+      'does not declare as an ABI',
+    ],
+    [
       'an accelerator ABI with no symbol rule, even when another ABI has one',
       edited => {
         edited.abis[0].requiredSymbols = [];
@@ -636,6 +650,38 @@ describe('a check that cannot run', () => {
     const {output} = gateApk(conformingEntries());
     const rows = output.split('\n').filter(line => /^\s*assets: /.test(line));
     expect(rows).toEqual(['  assets: 4/4 present']);
+  });
+
+  // usableByAbis is compared against the shipped lib/ trees, never against the
+  // manifest that declares it — an equality between two readings of the same
+  // document holds whatever either one says.
+  it('reports which ABIs can load the DSP assets, read from the lib trees', () => {
+    const {status, output} = gateApk(conformingEntries());
+    expect(status).toBe(0);
+    expect(output).toContain('can load the DSP assets: yes (declared yes)');
+    expect(output).toContain('can load the DSP assets: no (declared no)');
+  });
+
+  it('fails when an accelerator variant appears under an undeclared-usable ABI', () => {
+    const entries = conformingEntries();
+    entries['lib/x86_64/librnllama_v8_2_dotprod_i8mm_hexagon_opencl.so'] =
+      PLAIN_ELF;
+    const {status, output} = gateApk(entries);
+    expect(status).toBe(1);
+    expect(output).toContain(
+      'ships accelerator libraries for arm64-v8a, x86_64',
+    );
+    expect(output).toContain('usable by arm64-v8a');
+  });
+
+  it('fails when an ABI declared able to load the assets carries no accelerator', () => {
+    const entries = conformingEntries();
+    delete entries[
+      'lib/arm64-v8a/librnllama_v8_2_dotprod_i8mm_hexagon_opencl.so'
+    ];
+    const {status, output} = gateApk(entries);
+    expect(status).toBe(1);
+    expect(output).toContain('ships accelerator libraries for no ABI');
   });
 
   it('refuses an asset scope the packager cannot deliver', () => {
