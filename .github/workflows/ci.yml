@@ -275,22 +275,6 @@ jobs:
           fi
           echo "OK: llama.rn reported the declared variant list (extras, if any, are permitted and are reported by the payload check)."
 
-      - name: Verify the Android payload
-        run: |
-          node scripts/verify-android-payload.js \
-            --apk android/app/build/outputs/apk/prod/release/app-prod-release.apk \
-            --report payload-report.txt
-
-      # The report is evidence about the artifact, not the artifact, so it
-      # uploads whether or not the check passed. The APK below does not.
-      - name: Upload payload report
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: payload-report
-          path: payload-report.txt
-          if-no-files-found: ignore
-
       - name: Verify prod APK has no automation-bridge code (DCE sanity check)
         run: |
           set -euo pipefail
@@ -323,6 +307,25 @@ jobs:
             exit 1
           fi
           echo "OK: prod bundle contains zero automation markers."
+
+      # Last thing to name the APK before it is uploaded: no step may touch the
+      # artifact between the gate and the publish, and the ordering test
+      # enforces that by reading this file.
+      - name: Verify the Android payload
+        run: |
+          node scripts/verify-android-payload.js \
+            --apk android/app/build/outputs/apk/prod/release/app-prod-release.apk \
+            --report payload-report.txt
+
+      # The report is evidence about the artifact, not the artifact, so it
+      # uploads whether or not the check passed. The APK below does not.
+      - name: Upload payload report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: payload-report
+          path: payload-report.txt
+          if-no-files-found: ignore
 
       - name: Upload Android APK
         uses: actions/upload-artifact@v4

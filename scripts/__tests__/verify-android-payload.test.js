@@ -1,7 +1,10 @@
 const {execFileSync} = require('child_process');
+const {crc32} = require('zlib');
 const fs = require('fs');
 const os = require('os');
 const path = require('path');
+
+const {readProgramHeaders} = require('../verify-android-payload.js');
 
 const SCRIPT_PATH = path.join(__dirname, '..', 'verify-android-payload.js');
 const MANIFEST_PATH = path.join(
@@ -13,16 +16,29 @@ const manifest = JSON.parse(fs.readFileSync(MANIFEST_PATH, 'utf-8'));
 
 const ELF64_SHDR_SIZE = 64;
 const ELF64_SYM_SIZE = 24;
+const ELF32_PHDR_SIZE = 32;
+const ELF64_PHDR_SIZE = 56;
+const PT_LOAD = 1;
+const PT_DYNAMIC = 2;
+
+/** What the NDK's max-page-size produces, and what the manifest declares. */
+const ALIGNED_SEGMENTS = [
+  {type: PT_LOAD, align: 16384},
+  {type: PT_LOAD, align: 16384},
+];
 
 /**
  * A minimal little-endian AArch64 ELF64 shared object carrying nothing but a
- * `.dynsym` and its string table.
+ * `.dynsym`, its string table, and a program header table.
  *
  * Synthetic rather than committed binaries: the cases that matter most here —
  * a `.dynsym` that is absent, or present but empty — are artifacts no compiler
  * emits, and a committed `.so` could not be reviewed.
  */
-function buildElf(symbols, {omitDynsym = false, emptyDynsym = false} = {}) {
+function buildElf(
+  symbols,
+  {omitDynsym = false, emptyDynsym = false, segments = ALIGNED_SEGMENTS} = {},
+) {
   let dynstr = Buffer.from([0]);
   const nameOffsets = [];
   for (const symbol of symbols) {
@@ -45,8 +61,16 @@ function buildElf(symbols, {omitDynsym = false, emptyDynsym = false} = {}) {
     });
   }
 
+  const phdrs = Buffer.alloc(segments.length * ELF64_PHDR_SIZE);
+  segments.forEach((segment, i) => {
+    const at = i * ELF64_PHDR_SIZE;
+    phdrs.writeUInt32LE(segment.type, at);
+    phdrs.writeBigUInt64LE(BigInt(segment.align), at + 48);
+  });
+
   const align8 = n => n + ((8 - (n % 8)) % 8);
-  const dynstrOffset = ELF64_SHDR_SIZE;
+  const phoff = ELF64_SHDR_SIZE;
+  const dynstrOffset = align8(phoff + phdrs.length);
   const dynsymOffset = align8(dynstrOffset + dynstr.length);
   const shoff = align8(dynsymOffset + dynsym.length);
   const sectionCount = omitDynsym ? 2 : 3;
@@ -59,8 +83,11 @@ function buildElf(symbols, {omitDynsym = false, emptyDynsym = false} = {}) {
   header.writeUInt16LE(3, 16); // ET_DYN
   header.writeUInt16LE(0xb7, 18); // EM_AARCH64
   header.writeUInt32LE(1, 20);
+  header.writeBigUInt64LE(BigInt(segments.length > 0 ? phoff : 0), 0x20);
   header.writeBigUInt64LE(BigInt(shoff), 0x28);
   header.writeUInt16LE(ELF64_SHDR_SIZE, 52);
+  header.writeUInt16LE(ELF64_PHDR_SIZE, 0x36);
+  header.writeUInt16LE(segments.length, 0x38);
   header.writeUInt16LE(ELF64_SHDR_SIZE, 0x3a);
   header.writeUInt16LE(sectionCount, 0x3c);
 
@@ -86,6 +113,7 @@ function buildElf(symbols, {omitDynsym = false, emptyDynsym = false} = {}) {
 
   const out = Buffer.alloc(shoff + sections.length);
   header.copy(out, 0);
+  phdrs.copy(out, phoff);
   dynstr.copy(out, dynstrOffset);
   dynsym.copy(out, dynsymOffset);
   sections.copy(out, shoff);
@@ -122,17 +150,54 @@ function hexagonDynsym(matchCount, {withRequired = true} = {}) {
 
 /**
  * A DSP library as far as the check is concerned: ELF32, little-endian, and
- * targeting EM_QDSP6. The real ones are 650-730 KB of Hexagon code; only the
- * header is asserted, so only the header is built.
+ * targeting EM_QDSP6, at the 4 KB alignment the shipped ones actually carry.
+ * The real ones are 650-730 KB of Hexagon code; only the headers are read, so
+ * only the headers are built.
  */
-function buildDspStub(machine = 164) {
-  const out = Buffer.alloc(52);
+function buildDspStub(
+  machine = 164,
+  segments = [
+    {type: PT_LOAD, align: 4096},
+    {type: PT_LOAD, align: 4096},
+  ],
+) {
+  const phoff = 52;
+  const out = Buffer.alloc(phoff + segments.length * ELF32_PHDR_SIZE);
   out.writeUInt32BE(0x7f454c46, 0);
   out.writeUInt8(1, 4); // ELFCLASS32
   out.writeUInt8(1, 5); // ELFDATA2LSB
   out.writeUInt8(1, 6);
   out.writeUInt16LE(3, 16); // ET_DYN
   out.writeUInt16LE(machine, 18);
+  out.writeUInt32LE(segments.length > 0 ? phoff : 0, 0x1c);
+  out.writeUInt16LE(ELF32_PHDR_SIZE, 42);
+  out.writeUInt16LE(segments.length, 44);
+  segments.forEach((segment, i) => {
+    const at = phoff + i * ELF32_PHDR_SIZE;
+    out.writeUInt32LE(segment.type, at);
+    out.writeUInt32LE(segment.align, at + 28);
+  });
+  return out;
+}
+
+/** Neither of the two shapes the rest of this file builds: 32-bit, MSB. */
+function buildBigEndianElf(aligns) {
+  const phoff = 52;
+  const out = Buffer.alloc(phoff + aligns.length * ELF32_PHDR_SIZE);
+  out.writeUInt32BE(0x7f454c46, 0);
+  out.writeUInt8(1, 4); // ELFCLASS32
+  out.writeUInt8(2, 5); // ELFDATA2MSB
+  out.writeUInt8(1, 6);
+  out.writeUInt16BE(3, 16); // ET_DYN
+  out.writeUInt16BE(20, 18); // EM_PPC
+  out.writeUInt32BE(phoff, 0x1c);
+  out.writeUInt16BE(ELF32_PHDR_SIZE, 42);
+  out.writeUInt16BE(aligns.length, 44);
+  aligns.forEach((align, i) => {
+    const at = phoff + i * ELF32_PHDR_SIZE;
+    out.writeUInt32BE(PT_LOAD, at);
+    out.writeUInt32BE(align, at + 28);
+  });
   return out;
 }
 
@@ -148,14 +213,14 @@ function conformingEntries(prefix = '') {
     for (const lib of abi.requiredLibs) {
       entries[`${prefix}lib/${abi.abi}/${lib}`] = PLAIN_ELF;
     }
-    for (const asset of abi.requiredAssets) {
-      entries[`${prefix}${asset}`] = buildDspStub();
-    }
     for (const rule of abi.requiredSymbols) {
       entries[`${prefix}lib/${abi.abi}/${rule.lib}`] = hexagonDynsym(
         rule.expectedMatchCount.count,
       );
     }
+  }
+  for (const asset of manifest.assets.required) {
+    entries[`${prefix}${asset}`] = buildDspStub();
   }
   return entries;
 }
@@ -181,6 +246,82 @@ function writeArchive(name, entries) {
   }
   const archive = path.join(workspace, name);
   execFileSync('zip', ['-q', '-r', '-X', archive, ...roots], {cwd: staging});
+  return archive;
+}
+
+/**
+ * A zip written by hand, storing every entry uncompressed and controlling the
+ * byte offset its data lands on.
+ *
+ * `zip -q -r -X` cannot be used for this: it deflates even incompressible data,
+ * so a rule scoped to stored entries would have an empty subject set against
+ * every archive built above and pass having examined nothing. That is the same
+ * defect the rule exists to catch, one level up.
+ */
+function writeStoredArchive(name, entries, {align = 16384} = {}) {
+  const files = Object.entries(entries);
+  const locals = [];
+  const chunks = [];
+  let offset = 0;
+
+  for (const [entry, contents] of files) {
+    const nameBytes = Buffer.from(entry, 'utf-8');
+    const body = Buffer.isBuffer(contents) ? contents : Buffer.from(contents);
+    let padding = 0;
+    if (align) {
+      const unpadded = (offset + 30 + nameBytes.length) % align;
+      const wanted = unpadded === 0 ? 0 : align - unpadded;
+      // An extra field is a 4-byte header plus its payload, so a gap of 1-3
+      // bytes has to become a whole page instead.
+      padding = wanted === 0 ? 0 : wanted < 4 ? wanted + align : wanted;
+    }
+    const extra = Buffer.alloc(padding);
+    if (padding > 0) {
+      extra.writeUInt16LE(0xd935, 0); // the id Android's own aligner uses
+      extra.writeUInt16LE(padding - 4, 2);
+    }
+
+    const header = Buffer.alloc(30);
+    header.writeUInt32LE(0x04034b50, 0);
+    header.writeUInt16LE(20, 4);
+    header.writeUInt16LE(0, 8); // stored
+    header.writeUInt32LE(crc32(body), 14);
+    header.writeUInt32LE(body.length, 18);
+    header.writeUInt32LE(body.length, 22);
+    header.writeUInt16LE(nameBytes.length, 26);
+    header.writeUInt16LE(extra.length, 28);
+
+    locals.push({nameBytes, body, offset, extraLength: extra.length});
+    chunks.push(header, nameBytes, extra, body);
+    offset += 30 + nameBytes.length + extra.length + body.length;
+  }
+
+  const directoryAt = offset;
+  for (const local of locals) {
+    const central = Buffer.alloc(46);
+    central.writeUInt32LE(0x02014b50, 0);
+    central.writeUInt16LE(20, 4);
+    central.writeUInt16LE(20, 6);
+    central.writeUInt16LE(0, 10); // stored
+    central.writeUInt32LE(crc32(local.body), 16);
+    central.writeUInt32LE(local.body.length, 20);
+    central.writeUInt32LE(local.body.length, 24);
+    central.writeUInt16LE(local.nameBytes.length, 28);
+    central.writeUInt32LE(local.offset, 42);
+    chunks.push(central, local.nameBytes);
+    offset += 46 + local.nameBytes.length;
+  }
+
+  const end = Buffer.alloc(22);
+  end.writeUInt32LE(0x06054b50, 0);
+  end.writeUInt16LE(locals.length, 8);
+  end.writeUInt16LE(locals.length, 10);
+  end.writeUInt32LE(offset - directoryAt, 12);
+  end.writeUInt32LE(directoryAt, 16);
+  chunks.push(end);
+
+  const archive = path.join(workspace, name);
+  fs.writeFileSync(archive, Buffer.concat(chunks));
   return archive;
 }
 
@@ -219,6 +360,44 @@ describe('the variant allowlist', () => {
 
   it('needs no artifact, so it is safe to call before anything is built', () => {
     expect(runGate(['--print-variants']).status).toBe(0);
+  });
+});
+
+describe('the program-header reader', () => {
+  // The DSP assets are ELF32 and nothing guarantees the byte order of every
+  // object the platform loads, so a reader that copied readDynsym's
+  // little-endian 64-bit assertion would throw instead of judging.
+  it.each([
+    [
+      'a 64-bit little-endian object',
+      () => buildElf([], {emptyDynsym: true}),
+      [16384, 16384],
+    ],
+    ['a 32-bit little-endian object', () => buildDspStub(), [4096, 4096]],
+    ['a 32-bit big-endian object', () => buildBigEndianElf([65536]), [65536]],
+  ])('reads the segment alignments of %s', (_label, build, aligns) => {
+    const headers = readProgramHeaders(build());
+    expect(headers.map(header => header.align)).toEqual(aligns);
+    expect(headers.every(header => header.type === PT_LOAD)).toBe(true);
+  });
+
+  it('agrees with the builder on an arbitrary segment list', () => {
+    const segments = [
+      {type: PT_DYNAMIC, align: 8},
+      {type: PT_LOAD, align: 4096},
+      {type: PT_LOAD, align: 16384},
+    ];
+    expect(
+      readProgramHeaders(buildElf([], {emptyDynsym: true, segments})),
+    ).toEqual(
+      segments.map(segment => ({type: segment.type, align: segment.align})),
+    );
+  });
+
+  it('refuses an object with no program header table rather than reading none', () => {
+    expect(() =>
+      readProgramHeaders(buildElf([], {emptyDynsym: true, segments: []})),
+    ).toThrow('program headers are absent');
   });
 });
 
@@ -340,6 +519,178 @@ describe('the declared payload', () => {
   });
 });
 
+describe('16 KB page alignment', () => {
+  // A tripwire on what the NDK already produces, not a repair — so it has to
+  // be shown capable of failing, on the artifact and on the declaration alike.
+  it('fails when a required library regresses below the declared alignment', () => {
+    const entries = conformingEntries();
+    entries['lib/arm64-v8a/librnllama_v8.so'] = buildElf([], {
+      emptyDynsym: true,
+      segments: [
+        {type: PT_LOAD, align: 16384},
+        {type: PT_LOAD, align: 4096},
+      ],
+    });
+    const {status, output} = gateApk(entries);
+    expect(status).toBe(1);
+    expect(output).toContain(
+      'MISALIGNED  lib/arm64-v8a/librnllama_v8.so (PT_LOAD p_align 4096)',
+    );
+    expect(output).toContain('requires at least 16384 for arm64-v8a');
+  });
+
+  // The subject is what the platform loads, not what llama.rn contributes: a
+  // scan restricted to requiredLibs would miss the other 52 of 68 libraries.
+  it('fails when a library the manifest never names regresses', () => {
+    const entries = conformingEntries();
+    entries['lib/arm64-v8a/libreanimated.so'] = buildElf([], {
+      emptyDynsym: true,
+      segments: [{type: PT_LOAD, align: 4096}],
+    });
+    const {status, output} = gateApk(entries);
+    expect(status).toBe(1);
+    expect(output).toContain('MISALIGNED  lib/arm64-v8a/libreanimated.so');
+  });
+
+  it('fails on a p_align that is not a power of two', () => {
+    const entries = conformingEntries();
+    entries['lib/x86_64/librnllama_x86_64.so'] = buildElf([], {
+      emptyDynsym: true,
+      segments: [{type: PT_LOAD, align: 24576}],
+    });
+    const {status, output} = gateApk(entries);
+    expect(status).toBe(1);
+    expect(output).toContain('p_align 24576');
+  });
+
+  it('passes a library aligned more strictly than declared', () => {
+    const entries = conformingEntries();
+    entries['lib/arm64-v8a/librnllama_v8.so'] = buildElf([], {
+      emptyDynsym: true,
+      segments: [{type: PT_LOAD, align: 65536}],
+    });
+    const {status, output} = gateApk(entries);
+    expect(status).toBe(0);
+    expect(output).toContain('segment alignment: 12/12 libraries');
+  });
+
+  it('fails a library with no PT_LOAD rather than counting it as aligned', () => {
+    const entries = conformingEntries();
+    entries['lib/arm64-v8a/librnllama_v8.so'] = buildElf([], {
+      emptyDynsym: true,
+      segments: [{type: PT_DYNAMIC, align: 8}],
+    });
+    const {status, output} = gateApk(entries);
+    expect(status).toBe(1);
+    expect(output).toContain('NO PT_LOAD  lib/arm64-v8a/librnllama_v8.so');
+    expect(output).toContain('proven nothing about it');
+  });
+
+  it('reports how many libraries it judged, so a scan of none is visible', () => {
+    const {status, output} = gateApk(conformingEntries());
+    expect(status).toBe(0);
+    expect(output).toContain(
+      'segment alignment: 12/12 libraries at p_align >= 16384',
+    );
+    expect(output).toContain(
+      'segment alignment: 4/4 libraries at p_align >= 16384',
+    );
+  });
+
+  it.each([
+    ['weakened below the floor', 4096, 'under the 16384-byte floor'],
+    ['not a power of two', 24576, 'integer power of two'],
+    ['absent', undefined, 'integer power of two'],
+  ])(
+    'refuses a manifest whose alignment requirement is %s',
+    (_label, value, fragment) => {
+      const weakened = path.join(workspace, 'weakened-alignment.json');
+      const edited = JSON.parse(JSON.stringify(manifest));
+      if (value === undefined) {
+        delete edited.abis[0].requiredLibAlignment;
+      } else {
+        edited.abis[0].requiredLibAlignment = value;
+      }
+      fs.writeFileSync(weakened, JSON.stringify(edited));
+
+      const archive = writeArchive('app-prod-release.apk', conformingEntries());
+      const {status, output} = runGate([
+        '--apk',
+        archive,
+        '--manifest',
+        weakened,
+      ]);
+      expect(status).toBe(1);
+      expect(output).toContain(fragment);
+      // Refused before anything was opened: the artifact is sound, and a
+      // manifest that cannot be trusted must not be used to judge one.
+      expect(output).not.toContain('artifact:');
+    },
+  );
+});
+
+describe('16 KB zip data offsets', () => {
+  // The app ships extractNativeLibs=false, so each library is mapped in place
+  // out of the archive and its start offset has to be page-aligned too. A
+  // conforming p_align at an unaligned offset still cannot be loaded.
+  it('passes an archive whose stored libraries start on a page boundary', () => {
+    const {status, output} = runGate([
+      '--apk',
+      writeStoredArchive('app-prod-release.apk', conformingEntries()),
+    ]);
+    expect(status).toBe(0);
+    // The guard against the subject set being empty: `zip` deflates even
+    // incompressible data, so a stored-scoped rule examines nothing unless the
+    // fixture is built stored on purpose.
+    expect(output).toContain('zip data offset: 12/12 stored libraries');
+    expect(output).toContain('zip data offset: 4/4 stored libraries');
+    expect(output).not.toContain('zip data offset: 0/0');
+  });
+
+  it('fails an archive with conforming segments at unaligned offsets', () => {
+    const {status, output} = runGate([
+      '--apk',
+      writeStoredArchive('app-prod-release.apk', conformingEntries(), {
+        align: 0,
+      }),
+    ]);
+    expect(status).toBe(1);
+    expect(output).toContain('MISPLACED  lib/arm64-v8a/');
+    expect(output).toContain('is not a multiple of 16384');
+    // The point of the case: the ELF side is untouched and still passes, so
+    // only the offset rule can be what refused it.
+    expect(output).toContain('segment alignment: 12/12 libraries');
+  });
+
+  it('reports deflated libraries as outside the subject set, not as passing', () => {
+    // `zip` deflates, so this is the legacy-packaging shape: nothing is mapped
+    // in place, nothing to align, and the counts have to say so.
+    const {status, output} = gateApk(conformingEntries());
+    expect(status).toBe(0);
+    expect(output).toContain('zip data offset: 0/0 stored libraries');
+    expect(output).toContain('12 deflated, extracted at install');
+  });
+
+  it('does not judge offsets in a bundle, which bundletool repackages', () => {
+    const archive = writeStoredArchive(
+      'app-prod-release.aab',
+      conformingEntries('base/'),
+      {align: 0},
+    );
+    const {status, output} = runGate(['--aab', archive]);
+    expect(status).toBe(0);
+    expect(output).not.toContain('zip data offset');
+  });
+
+  it('fails when the archive layout cannot be read at all', () => {
+    const archive = path.join(workspace, 'no-directory.apk');
+    fs.writeFileSync(archive, Buffer.alloc(512, 0x41));
+    const {status, output} = runGate(['--apk', archive]);
+    expect(status).toBe(1);
+    expect(output).toContain('proven nothing about it');
+  });
+});
+
 describe('a check that cannot run', () => {
   // Every case below must fail. A gate that passes because it read nothing is
   // worse than no gate: it reports the artifact as sound on no evidence.
@@ -451,7 +802,11 @@ describe('a check that cannot run', () => {
     const weakened = path.join(workspace, 'no-libs.json');
     fs.writeFileSync(
       weakened,
-      JSON.stringify({abis: [{abi: 'arm64-v8a', requiredLibs: []}]}),
+      JSON.stringify({
+        abis: [
+          {abi: 'arm64-v8a', requiredLibs: [], requiredLibAlignment: 16384},
+        ],
+      }),
     );
     const archive = writeArchive('app-prod-release.apk', conformingEntries());
     const {status, output} = runGate([
@@ -551,23 +906,30 @@ describe('a check that cannot run', () => {
   // stops being checked and nothing else covers it.
   it.each([
     [
-      'an accelerator ABI with no required assets',
-      abis => {
-        abis[0].requiredAssets = [];
+      'a manifest with no required assets',
+      edited => {
+        edited.assets.required = [];
       },
       'no required assets',
     ],
     [
-      'an accelerator ABI whose requiredAssets is absent',
-      abis => {
-        delete abis[0].requiredAssets;
+      'a manifest whose assets.required is absent',
+      edited => {
+        delete edited.assets.required;
       },
       'no required assets',
+    ],
+    [
+      'a manifest with no assets block at all',
+      edited => {
+        delete edited.assets;
+      },
+      'no assets block',
     ],
     [
       'an accelerator ABI whose only rule examines a different library',
-      abis => {
-        abis[0].requiredSymbols = [
+      edited => {
+        edited.abis[0].requiredSymbols = [
           {lib: 'librnllama.so', mustExport: ['lm_ggml_backend_reg_count']},
         ];
       },
@@ -575,8 +937,8 @@ describe('a check that cannot run', () => {
     ],
     [
       "an accelerator ABI whose only rule examines the accelerator's JNI wrapper",
-      abis => {
-        abis[0].requiredSymbols = [
+      edited => {
+        edited.abis[0].requiredSymbols = [
           {
             lib: 'librnllama_jni_v8_2_dotprod_i8mm_hexagon_opencl.so',
             mustExport: ['Java_com_rnllama_RNLlama_nativeSetLoadedLibrary'],
@@ -586,17 +948,31 @@ describe('a check that cannot run', () => {
       'no symbol rule examining it',
     ],
     [
-      'an accelerator ABI declaring assets with no machine to check them against',
-      abis => {
-        delete abis[0].requiredAssetElfMachine;
+      'a manifest declaring assets with no machine to check them against',
+      edited => {
+        delete edited.assets.elfMachine;
       },
-      'no requiredAssetElfMachine',
+      'no elfMachine',
+    ],
+    [
+      'a manifest that never says which ABIs can load the assets',
+      edited => {
+        delete edited.assets.usableByAbis;
+      },
+      'no usableByAbis',
+    ],
+    [
+      'a manifest claiming the assets are usable by an ABI it does not declare',
+      edited => {
+        edited.assets.usableByAbis.push('armeabi-v7a');
+      },
+      'does not declare as an ABI',
     ],
     [
       'an accelerator ABI with no symbol rule, even when another ABI has one',
-      abis => {
-        abis[0].requiredSymbols = [];
-        abis[1].requiredSymbols = [
+      edited => {
+        edited.abis[0].requiredSymbols = [];
+        edited.abis[1].requiredSymbols = [
           {
             lib: 'librnllama_x86_64.so',
             mustExport: ['lm_ggml_backend_reg_count'],
@@ -608,7 +984,7 @@ describe('a check that cannot run', () => {
   ])('fails on %s', (_label, weaken, fragment) => {
     const weakened = path.join(workspace, 'weakened-abi.json');
     const edited = JSON.parse(JSON.stringify(manifest));
-    weaken(edited.abis);
+    weaken(edited);
     fs.writeFileSync(weakened, JSON.stringify(edited));
 
     const archive = writeArchive('app-prod-release.apk', conformingEntries());
@@ -622,13 +998,88 @@ describe('a check that cannot run', () => {
     expect(output).toContain(fragment);
   });
 
-  it('reports the assets row even when none are declared', () => {
-    // The summary claims assets were checked, so a manifest declaring none
-    // must be visible in the report rather than simply omitting the line.
-    // x86_64 declares no assets, which is legitimate — it carries no
-    // accelerator. The committed manifest already has this shape.
+  it('reports the assets row once per artifact, not once per declared ABI', () => {
+    // Android packages assets/ once, so a row per ABI would claim the same
+    // four entries were checked twice and invite the ABI-scoping that does not
+    // exist. The summary claims assets were checked; this is where it shows.
     const {output} = gateApk(conformingEntries());
-    expect(output).toContain('assets: 0/0 present');
+    const rows = output.split('\n').filter(line => /^\s*assets: /.test(line));
+    expect(rows).toEqual(['  assets: 4/4 present']);
+  });
+
+  // usableByAbis is compared against the shipped lib/ trees, never against the
+  // manifest that declares it — an equality between two readings of the same
+  // document holds whatever either one says.
+  it('reports which ABIs can load the DSP assets, read from the lib trees', () => {
+    const {status, output} = gateApk(conformingEntries());
+    expect(status).toBe(0);
+    expect(output).toContain('can load the DSP assets: yes (declared yes)');
+    expect(output).toContain('can load the DSP assets: no (declared no)');
+  });
+
+  it('fails when an accelerator variant appears under an undeclared-usable ABI', () => {
+    const entries = conformingEntries();
+    entries['lib/x86_64/librnllama_v8_2_dotprod_i8mm_hexagon_opencl.so'] =
+      PLAIN_ELF;
+    const {status, output} = gateApk(entries);
+    expect(status).toBe(1);
+    expect(output).toContain(
+      'ships accelerator libraries for arm64-v8a, x86_64',
+    );
+    expect(output).toContain('usable by arm64-v8a');
+  });
+
+  it('fails when an ABI declared able to load the assets carries no accelerator', () => {
+    const entries = conformingEntries();
+    delete entries[
+      'lib/arm64-v8a/librnllama_v8_2_dotprod_i8mm_hexagon_opencl.so'
+    ];
+    const {status, output} = gateApk(entries);
+    expect(status).toBe(1);
+    expect(output).toContain('ships accelerator libraries for no ABI');
+  });
+
+  it('refuses an asset scope the packager cannot deliver', () => {
+    const weakened = path.join(workspace, 'abi-scoped-assets.json');
+    const edited = JSON.parse(JSON.stringify(manifest));
+    edited.assets.scope = 'abi';
+    fs.writeFileSync(weakened, JSON.stringify(edited));
+
+    const archive = writeArchive('app-prod-release.apk', conformingEntries());
+    const {status, output} = runGate([
+      '--apk',
+      archive,
+      '--manifest',
+      weakened,
+    ]);
+    expect(status).toBe(1);
+    expect(output).toContain('only "artifact" is deliverable');
+  });
+
+  // Relocating the assets out of the ABIs leaves the global accelerator guard
+  // reading a field nothing else in the block touches, which is exactly how a
+  // guard gets quietly lost in a restructure.
+  it('still refuses a manifest with populated assets but no accelerator ABI', () => {
+    const weakened = path.join(workspace, 'assets-without-accelerator.json');
+    const edited = JSON.parse(JSON.stringify(manifest));
+    edited.abis[0].requiredLibs = edited.abis[0].requiredLibs.filter(
+      lib => !/_hexagon/.test(lib),
+    );
+    edited.abis[0].requiredSymbols = [
+      {lib: 'librnllama.so', mustExport: ['lm_ggml_backend_reg_count']},
+    ];
+    fs.writeFileSync(weakened, JSON.stringify(edited));
+
+    expect(edited.assets.required.length).toBeGreaterThan(0);
+    const archive = writeArchive('app-prod-release.apk', conformingEntries());
+    const {status, output} = runGate([
+      '--apk',
+      archive,
+      '--manifest',
+      weakened,
+    ]);
+    expect(status).toBe(1);
+    expect(output).toContain('no accelerator library');
   });
 
   // A new fail-closed assertion with no test is how the previous holes became
@@ -683,8 +1134,8 @@ describe('a check that cannot run', () => {
         abis: [
           {
             abi: 'armeabi-v7a',
+            requiredLibAlignment: 16384,
             requiredLibs: ['librnllama.so', 'librnllama_jni.so'],
-            requiredAssets: [],
             requiredSymbols: [
               {lib: 'librnllama.so', mustExport: ['lm_ggml_backend_reg_count']},
             ],
