@@ -150,9 +150,6 @@ function assertAbiStructure(abi, manifestPath) {
   ) {
     refuseAbi(abi, manifestPath, 'no required libraries');
   }
-  if (abi.requiredAssets !== undefined && !Array.isArray(abi.requiredAssets)) {
-    refuseAbi(abi, manifestPath, 'a requiredAssets that is not a list');
-  }
   if (
     abi.requiredSymbols !== undefined &&
     !Array.isArray(abi.requiredSymbols)
@@ -166,14 +163,14 @@ function assertAbiStructure(abi, manifestPath) {
 
 /**
  * An ABI that carries an accelerator variant has to demand the things that
- * make it work. Both lists degrade the same silent way: emptying one is the
- * cheapest edit that unblocks a build, the rule simply stops being checked,
- * and nothing else in the manifest covers it.
+ * make it work. The list degrades silently: emptying it is the cheapest edit
+ * that unblocks a build, the rule simply stops being checked, and nothing else
+ * in the manifest covers it.
  *
  * Conditional because an ABI without an accelerator legitimately declares
- * neither. The `_hexagon` test mirrors the name convention llama.rn's own
- * CMake uses to decide which variant gets the backend; were upstream to rename
- * it, the ladder-coverage test fails first.
+ * none. The `_hexagon` test mirrors the name convention llama.rn's own CMake
+ * uses to decide which variant gets the backend; were upstream to rename it,
+ * the ladder-coverage test fails first.
  */
 function assertAcceleratorFloors(abi, manifestPath) {
   if (!abi.requiredLibs.some(lib => /_hexagon/.test(lib))) {
@@ -198,22 +195,37 @@ function assertAcceleratorFloors(abi, manifestPath) {
       'an accelerator library but no symbol rule examining it',
     );
   }
-  // The DSP libraries are extracted as a set at runtime and the backend is
-  // disabled outright if any one is missing, so a compiled-in backend with no
-  // assets is dead on the device.
-  if ((abi.requiredAssets || []).length === 0) {
-    refuseAbi(
-      abi,
-      manifestPath,
-      'an accelerator library but no required assets',
+}
+
+/**
+ * The DSP libraries are extracted as a set at runtime and the backend is
+ * disabled outright if any one is missing, so a compiled-in accelerator with
+ * no assets is dead on the device.
+ *
+ * Unconditional because `loadManifest` refuses a manifest with no accelerator
+ * ABI before reaching here; these floors would otherwise need that condition.
+ */
+function assertAssetFloors(manifest, manifestPath) {
+  const refuse = why => {
+    throw new Error(`${manifestPath} declares ${why}.`);
+  };
+  const assets = manifest.assets;
+  if (!assets || typeof assets !== 'object' || Array.isArray(assets)) {
+    refuse('no assets block, so no DSP payload would be checked');
+  }
+  // One legal value, so this cannot fail on a correct manifest. It exists so a
+  // maintainer reaching for "abi" is told why no packaging mechanism delivers
+  // it, rather than shipping a scope nothing implements.
+  if (assets.scope !== 'artifact') {
+    refuse(
+      `an asset scope of ${JSON.stringify(assets.scope)}; only "artifact" is deliverable, because Android packages assets/ once per artifact and not per ABI`,
     );
   }
-  if (!Number.isInteger(abi.requiredAssetElfMachine)) {
-    refuseAbi(
-      abi,
-      manifestPath,
-      'required assets but no requiredAssetElfMachine to check them against',
-    );
+  if (!Array.isArray(assets.required) || assets.required.length === 0) {
+    refuse('an accelerator library but no required assets');
+  }
+  if (!Number.isInteger(assets.elfMachine)) {
+    refuse('required assets but no elfMachine to check them against');
   }
 }
 
@@ -262,6 +274,7 @@ function loadManifest(manifestPath) {
       `${manifestPath} declares no accelerator library for any ABI, so no backend would be checked.`,
     );
   }
+  assertAssetFloors(manifest, manifestPath);
   for (const abi of manifest.abis) {
     assertAcceleratorFloors(abi, manifestPath);
   }
@@ -510,6 +523,78 @@ function checkSymbolRule({rule, archive, artifactName, entry, report, fail}) {
   }
 }
 
+/**
+ * The DSP assets, once per artifact: Android packages `assets/` once, not per
+ * ABI, so checking them inside the ABI loop would report the same four entries
+ * as many times as there are declared ABIs.
+ */
+function checkAssets({
+  archive,
+  prefix,
+  entries,
+  assets,
+  artifactName,
+  report,
+  fail,
+}) {
+  const missing = assets.required.filter(
+    asset => !entries.has(`${prefix}${asset}`),
+  );
+  report.push(
+    `  assets: ${assets.required.length - missing.length}/${assets.required.length} present`,
+  );
+
+  // Presence by filename is not enough: a file of the right name that is not a
+  // DSP library leaves the backend as dead on the device as a missing one, and
+  // would report PASS.
+  for (const asset of assets.required.filter(
+    candidate => !missing.includes(candidate),
+  )) {
+    const entry = `${prefix}${asset}`;
+    let machine;
+    try {
+      machine = readElfMachine(readZipEntry(archive, entry));
+    } catch (err) {
+      report.push(`    UNREADABLE  ${entry} — ${err.message}`);
+      fail(
+        [
+          `could not read ${entry} in ${artifactName}: ${err.message}.`,
+          'The payload check could not run, so it reports failure rather than success —',
+          'a check that cannot read the artifact has proven nothing about it.',
+        ].join('\n      '),
+      );
+      continue;
+    }
+    if (machine !== assets.elfMachine) {
+      report.push(
+        `    WRONG MACHINE  ${entry} (e_machine ${machine}, expected ${assets.elfMachine})`,
+      );
+      fail(
+        [
+          `${entry} in ${artifactName} is not a DSP library: its ELF e_machine is ${machine},`,
+          `and the manifest requires ${assets.elfMachine}.`,
+          'A file of the right name that the DSP cannot load disables the Hexagon backend just as',
+          'surely as a missing one. Check that llama.rn shipped real bin/arm64-v8a payloads.',
+        ].join('\n      '),
+      );
+    }
+  }
+
+  for (const asset of missing) {
+    report.push(`    MISSING  ${prefix}${asset}`);
+    fail(
+      [
+        `${artifactName} is missing ${prefix}${asset}.`,
+        'All four DSP libraries are required, not only the one a given device uses:',
+        'RNLlama.java extracts them as a set and disables the Hexagon backend entirely',
+        'if any one is absent. They are synced into the artifact from',
+        "node_modules/llama.rn/bin/arm64-v8a by llama.rn's syncRNLlamaHtpAssets task —",
+        'check that the dependency installed completely.',
+      ].join('\n      '),
+    );
+  }
+}
+
 function checkArtifact({archive, kind, manifest, report, failures}) {
   const artifactName = path.basename(archive);
   const prefix = kind === 'aab' ? 'base/' : '';
@@ -560,6 +645,16 @@ function checkArtifact({archive, kind, manifest, report, failures}) {
     );
   }
 
+  checkAssets({
+    archive,
+    prefix,
+    entries,
+    assets: manifest.assets,
+    artifactName,
+    report,
+    fail,
+  });
+
   for (const abi of manifest.abis) {
     report.push(`  ${abi.abi}`);
 
@@ -581,65 +676,6 @@ function checkArtifact({archive, kind, manifest, report, failures}) {
           'The build did not produce every library the manifest requires. If the variant allowlist',
           '(ORG_GRADLE_PROJECT_rnllamaVariants) was narrowed, widen it to match the manifest; if the',
           'manifest is what changed, update scripts/android-payload-manifest.json in the same pull request.',
-        ].join('\n      '),
-      );
-    }
-
-    const missingAssets = (abi.requiredAssets || []).filter(
-      asset => !entries.has(`${prefix}${asset}`),
-    );
-    // Printed even when nothing is declared: the summary line claims assets
-    // were checked, so a manifest that declares none has to be visible here.
-    const requiredAssets = abi.requiredAssets || [];
-    report.push(
-      `    assets: ${requiredAssets.length - missingAssets.length}/${requiredAssets.length} present`,
-    );
-    // Presence by filename is not enough: a file of the right name that is not
-    // a DSP library leaves the backend as dead on the device as a missing one,
-    // and would report PASS.
-    for (const asset of (abi.requiredAssets || []).filter(
-      candidate => !missingAssets.includes(candidate),
-    )) {
-      const entry = `${prefix}${asset}`;
-      let machine;
-      try {
-        machine = readElfMachine(readZipEntry(archive, entry));
-      } catch (err) {
-        report.push(`      UNREADABLE  ${entry} — ${err.message}`);
-        fail(
-          [
-            `could not read ${entry} in ${artifactName}: ${err.message}.`,
-            'The payload check could not run, so it reports failure rather than success —',
-            'a check that cannot read the artifact has proven nothing about it.',
-          ].join('\n      '),
-        );
-        continue;
-      }
-      if (machine !== abi.requiredAssetElfMachine) {
-        report.push(
-          `      WRONG MACHINE  ${entry} (e_machine ${machine}, expected ${abi.requiredAssetElfMachine})`,
-        );
-        fail(
-          [
-            `${entry} in ${artifactName} is not a DSP library: its ELF e_machine is ${machine},`,
-            `and the manifest requires ${abi.requiredAssetElfMachine}.`,
-            'A file of the right name that the DSP cannot load disables the Hexagon backend just as',
-            'surely as a missing one. Check that llama.rn shipped real bin/arm64-v8a payloads.',
-          ].join('\n      '),
-        );
-      }
-    }
-
-    for (const asset of missingAssets) {
-      report.push(`      MISSING  ${prefix}${asset}`);
-      fail(
-        [
-          `${artifactName} is missing ${prefix}${asset}.`,
-          'All four DSP libraries are required, not only the one a given device uses:',
-          'RNLlama.java extracts them as a set and disables the Hexagon backend entirely',
-          'if any one is absent. They are synced into the artifact from',
-          "node_modules/llama.rn/bin/arm64-v8a by llama.rn's syncRNLlamaHtpAssets task —",
-          'check that the dependency installed completely.',
         ].join('\n      '),
       );
     }

@@ -233,9 +233,7 @@ describe('the DSP asset list tracks the runtime loader', () => {
   });
 
   it('declares exactly the assets the loader extracts, at the path it reads', () => {
-    const declared = manifest.abis
-      .flatMap(abi => abi.requiredAssets || [])
-      .sort();
+    const declared = [...manifest.assets.required].sort();
     const expected = htpLibs.map(lib => `assets/${assetDir[1]}${lib}`).sort();
 
     expect(declared).toEqual(expected);

@@ -148,14 +148,14 @@ function conformingEntries(prefix = '') {
     for (const lib of abi.requiredLibs) {
       entries[`${prefix}lib/${abi.abi}/${lib}`] = PLAIN_ELF;
     }
-    for (const asset of abi.requiredAssets) {
-      entries[`${prefix}${asset}`] = buildDspStub();
-    }
     for (const rule of abi.requiredSymbols) {
       entries[`${prefix}lib/${abi.abi}/${rule.lib}`] = hexagonDynsym(
         rule.expectedMatchCount.count,
       );
     }
+  }
+  for (const asset of manifest.assets.required) {
+    entries[`${prefix}${asset}`] = buildDspStub();
   }
   return entries;
 }
@@ -626,23 +626,30 @@ describe('a check that cannot run', () => {
   // stops being checked and nothing else covers it.
   it.each([
     [
-      'an accelerator ABI with no required assets',
-      abis => {
-        abis[0].requiredAssets = [];
+      'a manifest with no required assets',
+      edited => {
+        edited.assets.required = [];
       },
       'no required assets',
     ],
     [
-      'an accelerator ABI whose requiredAssets is absent',
-      abis => {
-        delete abis[0].requiredAssets;
+      'a manifest whose assets.required is absent',
+      edited => {
+        delete edited.assets.required;
       },
       'no required assets',
+    ],
+    [
+      'a manifest with no assets block at all',
+      edited => {
+        delete edited.assets;
+      },
+      'no assets block',
     ],
     [
       'an accelerator ABI whose only rule examines a different library',
-      abis => {
-        abis[0].requiredSymbols = [
+      edited => {
+        edited.abis[0].requiredSymbols = [
           {lib: 'librnllama.so', mustExport: ['lm_ggml_backend_reg_count']},
         ];
       },
@@ -650,8 +657,8 @@ describe('a check that cannot run', () => {
     ],
     [
       "an accelerator ABI whose only rule examines the accelerator's JNI wrapper",
-      abis => {
-        abis[0].requiredSymbols = [
+      edited => {
+        edited.abis[0].requiredSymbols = [
           {
             lib: 'librnllama_jni_v8_2_dotprod_i8mm_hexagon_opencl.so',
             mustExport: ['Java_com_rnllama_RNLlama_nativeSetLoadedLibrary'],
@@ -661,17 +668,17 @@ describe('a check that cannot run', () => {
       'no symbol rule examining it',
     ],
     [
-      'an accelerator ABI declaring assets with no machine to check them against',
-      abis => {
-        delete abis[0].requiredAssetElfMachine;
+      'a manifest declaring assets with no machine to check them against',
+      edited => {
+        delete edited.assets.elfMachine;
       },
-      'no requiredAssetElfMachine',
+      'no elfMachine',
     ],
     [
       'an accelerator ABI with no symbol rule, even when another ABI has one',
-      abis => {
-        abis[0].requiredSymbols = [];
-        abis[1].requiredSymbols = [
+      edited => {
+        edited.abis[0].requiredSymbols = [];
+        edited.abis[1].requiredSymbols = [
           {
             lib: 'librnllama_x86_64.so',
             mustExport: ['lm_ggml_backend_reg_count'],
@@ -683,7 +690,7 @@ describe('a check that cannot run', () => {
   ])('fails on %s', (_label, weaken, fragment) => {
     const weakened = path.join(workspace, 'weakened-abi.json');
     const edited = JSON.parse(JSON.stringify(manifest));
-    weaken(edited.abis);
+    weaken(edited);
     fs.writeFileSync(weakened, JSON.stringify(edited));
 
     const archive = writeArchive('app-prod-release.apk', conformingEntries());
@@ -697,13 +704,56 @@ describe('a check that cannot run', () => {
     expect(output).toContain(fragment);
   });
 
-  it('reports the assets row even when none are declared', () => {
-    // The summary claims assets were checked, so a manifest declaring none
-    // must be visible in the report rather than simply omitting the line.
-    // x86_64 declares no assets, which is legitimate — it carries no
-    // accelerator. The committed manifest already has this shape.
+  it('reports the assets row once per artifact, not once per declared ABI', () => {
+    // Android packages assets/ once, so a row per ABI would claim the same
+    // four entries were checked twice and invite the ABI-scoping that does not
+    // exist. The summary claims assets were checked; this is where it shows.
     const {output} = gateApk(conformingEntries());
-    expect(output).toContain('assets: 0/0 present');
+    const rows = output.split('\n').filter(line => /^\s*assets: /.test(line));
+    expect(rows).toEqual(['  assets: 4/4 present']);
+  });
+
+  it('refuses an asset scope the packager cannot deliver', () => {
+    const weakened = path.join(workspace, 'abi-scoped-assets.json');
+    const edited = JSON.parse(JSON.stringify(manifest));
+    edited.assets.scope = 'abi';
+    fs.writeFileSync(weakened, JSON.stringify(edited));
+
+    const archive = writeArchive('app-prod-release.apk', conformingEntries());
+    const {status, output} = runGate([
+      '--apk',
+      archive,
+      '--manifest',
+      weakened,
+    ]);
+    expect(status).toBe(1);
+    expect(output).toContain('only "artifact" is deliverable');
+  });
+
+  // Relocating the assets out of the ABIs leaves the global accelerator guard
+  // reading a field nothing else in the block touches, which is exactly how a
+  // guard gets quietly lost in a restructure.
+  it('still refuses a manifest with populated assets but no accelerator ABI', () => {
+    const weakened = path.join(workspace, 'assets-without-accelerator.json');
+    const edited = JSON.parse(JSON.stringify(manifest));
+    edited.abis[0].requiredLibs = edited.abis[0].requiredLibs.filter(
+      lib => !/_hexagon/.test(lib),
+    );
+    edited.abis[0].requiredSymbols = [
+      {lib: 'librnllama.so', mustExport: ['lm_ggml_backend_reg_count']},
+    ];
+    fs.writeFileSync(weakened, JSON.stringify(edited));
+
+    expect(edited.assets.required.length).toBeGreaterThan(0);
+    const archive = writeArchive('app-prod-release.apk', conformingEntries());
+    const {status, output} = runGate([
+      '--apk',
+      archive,
+      '--manifest',
+      weakened,
+    ]);
+    expect(status).toBe(1);
+    expect(output).toContain('no accelerator library');
   });
 
   // A new fail-closed assertion with no test is how the previous holes became
@@ -759,7 +809,6 @@ describe('a check that cannot run', () => {
           {
             abi: 'armeabi-v7a',
             requiredLibs: ['librnllama.so', 'librnllama_jni.so'],
-            requiredAssets: [],
             requiredSymbols: [
               {lib: 'librnllama.so', mustExport: ['lm_ggml_backend_reg_count']},
             ],
