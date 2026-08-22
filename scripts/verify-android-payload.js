@@ -135,6 +135,18 @@ function assertRuleDemandsSomething(rule, manifestPath) {
   }
 }
 
+/**
+ * A library that carries the Hexagon backend itself, as opposed to the JNI
+ * wrapper beside it — whose name also contains "_hexagon", but which is a thin
+ * shim exporting stable Java_* entry points and none of the backend symbols.
+ * Mirrors the name convention llama.rn's own CMake uses to decide which
+ * variant gets the backend; were upstream to rename it, the ladder-coverage
+ * test fails first.
+ */
+function isAcceleratorLib(lib) {
+  return /_hexagon/.test(lib) && !/^librnllama_jni/.test(lib);
+}
+
 function refuseAbi(abi, manifestPath, why) {
   throw new Error(
     `${manifestPath} declares ${why} for ${abi.abi || '(unnamed ABI)'}.`,
@@ -168,9 +180,7 @@ function assertAbiStructure(abi, manifestPath) {
  * in the manifest covers it.
  *
  * Conditional because an ABI without an accelerator legitimately declares
- * none. The `_hexagon` test mirrors the name convention llama.rn's own CMake
- * uses to decide which variant gets the backend; were upstream to rename it,
- * the ladder-coverage test fails first.
+ * none.
  */
 function assertAcceleratorFloors(abi, manifestPath) {
   if (!abi.requiredLibs.some(lib => /_hexagon/.test(lib))) {
@@ -179,15 +189,9 @@ function assertAcceleratorFloors(abi, manifestPath) {
   // Not merely "a rule", but a rule that looks at the accelerator library
   // itself. Two near-misses both pass every other floor and both accept an
   // artifact with no backend: a rule pointing at librnllama.so, and a rule
-  // pointing at the accelerator's own JNI wrapper — whose name also contains
-  // "_hexagon", but which is a thin shim exporting stable Java_* entry points
-  // and none of the backend symbols.
+  // pointing at the accelerator's own JNI wrapper.
   if (
-    !(abi.requiredSymbols || []).some(
-      rule =>
-        /_hexagon/.test(rule.lib || '') &&
-        !/^librnllama_jni/.test(rule.lib || ''),
-    )
+    !(abi.requiredSymbols || []).some(rule => isAcceleratorLib(rule.lib || ''))
   ) {
     refuseAbi(
       abi,
@@ -227,6 +231,20 @@ function assertAssetFloors(manifest, manifestPath) {
   if (!Number.isInteger(assets.elfMachine)) {
     refuse('required assets but no elfMachine to check them against');
   }
+  if (!Array.isArray(assets.usableByAbis)) {
+    refuse(
+      'required assets but no usableByAbis to say which ABIs can load them',
+    );
+  }
+  // An ABI nobody declared is never enumerated against the artifact, so naming
+  // one here would be a claim the check silently never reaches.
+  const declaredAbis = new Set(manifest.abis.map(abi => abi.abi));
+  const unknown = assets.usableByAbis.filter(abi => !declaredAbis.has(abi));
+  if (unknown.length > 0) {
+    refuse(
+      `the assets usable by ${unknown.join(', ')}, which it does not declare as an ABI, so nothing would check that claim`,
+    );
+  }
 }
 
 function loadManifest(manifestPath) {
@@ -263,13 +281,7 @@ function loadManifest(manifestPath) {
   // accelerator library, so a manifest declaring none would satisfy all of
   // them vacuously — and the ABI enumeration only compares against what the
   // manifest names, so a tree carrying no ladder at all would pass.
-  if (
-    !manifest.abis.some(abi =>
-      abi.requiredLibs.some(
-        lib => /_hexagon/.test(lib) && !/^librnllama_jni/.test(lib),
-      ),
-    )
-  ) {
+  if (!manifest.abis.some(abi => abi.requiredLibs.some(isAcceleratorLib))) {
     throw new Error(
       `${manifestPath} declares no accelerator library for any ABI, so no backend would be checked.`,
     );
@@ -655,6 +667,8 @@ function checkArtifact({archive, kind, manifest, report, failures}) {
     fail,
   });
 
+  const acceleratorCapableAbis = [];
+
   for (const abi of manifest.abis) {
     report.push(`  ${abi.abi}`);
 
@@ -689,6 +703,21 @@ function checkArtifact({archive, kind, manifest, report, failures}) {
       `    extra rnllama libraries: ${extras.length > 0 ? extras.join(', ') : 'none'}`,
     );
 
+    // The whole tree, not the required list: the accelerator variant is itself
+    // required, so deriving this from what is left over would find nothing and
+    // refuse a correct artifact.
+    const canLoadAssets = [...entries].some(
+      entry =>
+        entry.startsWith(`${prefix}lib/${abi.abi}/`) &&
+        isAcceleratorLib(path.basename(entry)),
+    );
+    if (canLoadAssets) {
+      acceleratorCapableAbis.push(abi.abi);
+    }
+    report.push(
+      `    can load the DSP assets: ${canLoadAssets ? 'yes' : 'no'} (declared ${manifest.assets.usableByAbis.includes(abi.abi) ? 'yes' : 'no'})`,
+    );
+
     for (const rule of abi.requiredSymbols || []) {
       const entry = `${prefix}lib/${abi.abi}/${rule.lib}`;
       if (missingLibs.includes(entry)) {
@@ -696,6 +725,23 @@ function checkArtifact({archive, kind, manifest, report, failures}) {
       }
       checkSymbolRule({rule, archive, artifactName, entry, report, fail});
     }
+  }
+
+  // Derived from the artifact rather than from the manifest that declares it:
+  // equality between two readings of the same document would hold whatever
+  // either said.
+  const declaredUsable = [...manifest.assets.usableByAbis].sort();
+  const observedUsable = [...acceleratorCapableAbis].sort();
+  if (declaredUsable.join(',') !== observedUsable.join(',')) {
+    fail(
+      [
+        `${artifactName} ships accelerator libraries for ${observedUsable.join(', ') || 'no ABI'},`,
+        `but the manifest declares the DSP assets usable by ${declaredUsable.join(', ') || 'no ABI'}.`,
+        'The assets are packaged once per artifact and cannot be scoped to an ABI, so this is a',
+        'declaration of who can load them, not a packaging rule. Either the accelerator ladder',
+        'moved to a different ABI, or usableByAbis in scripts/android-payload-manifest.json is stale.',
+      ].join('\n      '),
+    );
   }
 }
 
