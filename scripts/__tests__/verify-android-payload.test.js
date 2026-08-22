@@ -1,4 +1,5 @@
 const {execFileSync} = require('child_process');
+const {crc32} = require('zlib');
 const fs = require('fs');
 const os = require('os');
 const path = require('path');
@@ -245,6 +246,82 @@ function writeArchive(name, entries) {
   }
   const archive = path.join(workspace, name);
   execFileSync('zip', ['-q', '-r', '-X', archive, ...roots], {cwd: staging});
+  return archive;
+}
+
+/**
+ * A zip written by hand, storing every entry uncompressed and controlling the
+ * byte offset its data lands on.
+ *
+ * `zip -q -r -X` cannot be used for this: it deflates even incompressible data,
+ * so a rule scoped to stored entries would have an empty subject set against
+ * every archive built above and pass having examined nothing. That is the same
+ * defect the rule exists to catch, one level up.
+ */
+function writeStoredArchive(name, entries, {align = 16384} = {}) {
+  const files = Object.entries(entries);
+  const locals = [];
+  const chunks = [];
+  let offset = 0;
+
+  for (const [entry, contents] of files) {
+    const nameBytes = Buffer.from(entry, 'utf-8');
+    const body = Buffer.isBuffer(contents) ? contents : Buffer.from(contents);
+    let padding = 0;
+    if (align) {
+      const unpadded = (offset + 30 + nameBytes.length) % align;
+      const wanted = unpadded === 0 ? 0 : align - unpadded;
+      // An extra field is a 4-byte header plus its payload, so a gap of 1-3
+      // bytes has to become a whole page instead.
+      padding = wanted === 0 ? 0 : wanted < 4 ? wanted + align : wanted;
+    }
+    const extra = Buffer.alloc(padding);
+    if (padding > 0) {
+      extra.writeUInt16LE(0xd935, 0); // the id Android's own aligner uses
+      extra.writeUInt16LE(padding - 4, 2);
+    }
+
+    const header = Buffer.alloc(30);
+    header.writeUInt32LE(0x04034b50, 0);
+    header.writeUInt16LE(20, 4);
+    header.writeUInt16LE(0, 8); // stored
+    header.writeUInt32LE(crc32(body), 14);
+    header.writeUInt32LE(body.length, 18);
+    header.writeUInt32LE(body.length, 22);
+    header.writeUInt16LE(nameBytes.length, 26);
+    header.writeUInt16LE(extra.length, 28);
+
+    locals.push({nameBytes, body, offset, extraLength: extra.length});
+    chunks.push(header, nameBytes, extra, body);
+    offset += 30 + nameBytes.length + extra.length + body.length;
+  }
+
+  const directoryAt = offset;
+  for (const local of locals) {
+    const central = Buffer.alloc(46);
+    central.writeUInt32LE(0x02014b50, 0);
+    central.writeUInt16LE(20, 4);
+    central.writeUInt16LE(20, 6);
+    central.writeUInt16LE(0, 10); // stored
+    central.writeUInt32LE(crc32(local.body), 16);
+    central.writeUInt32LE(local.body.length, 20);
+    central.writeUInt32LE(local.body.length, 24);
+    central.writeUInt16LE(local.nameBytes.length, 28);
+    central.writeUInt32LE(local.offset, 42);
+    chunks.push(central, local.nameBytes);
+    offset += 46 + local.nameBytes.length;
+  }
+
+  const end = Buffer.alloc(22);
+  end.writeUInt32LE(0x06054b50, 0);
+  end.writeUInt16LE(locals.length, 8);
+  end.writeUInt16LE(locals.length, 10);
+  end.writeUInt32LE(offset - directoryAt, 12);
+  end.writeUInt32LE(directoryAt, 16);
+  chunks.push(end);
+
+  const archive = path.join(workspace, name);
+  fs.writeFileSync(archive, Buffer.concat(chunks));
   return archive;
 }
 
@@ -625,6 +702,68 @@ describe('16 KB page alignment', () => {
       expect(output).not.toContain('artifact:');
     },
   );
+});
+
+describe('16 KB zip data offsets', () => {
+  // The app ships extractNativeLibs=false, so each library is mapped in place
+  // out of the archive and its start offset has to be page-aligned too. A
+  // conforming p_align at an unaligned offset still cannot be loaded.
+  it('passes an archive whose stored libraries start on a page boundary', () => {
+    const {status, output} = runGate([
+      '--apk',
+      writeStoredArchive('app-prod-release.apk', conformingEntries()),
+    ]);
+    expect(status).toBe(0);
+    // The guard against the subject set being empty: `zip` deflates even
+    // incompressible data, so a stored-scoped rule examines nothing unless the
+    // fixture is built stored on purpose.
+    expect(output).toContain('zip data offset: 12/12 stored libraries');
+    expect(output).toContain('zip data offset: 4/4 stored libraries');
+    expect(output).not.toContain('zip data offset: 0/0');
+  });
+
+  it('fails an archive with conforming segments at unaligned offsets', () => {
+    const {status, output} = runGate([
+      '--apk',
+      writeStoredArchive('app-prod-release.apk', conformingEntries(), {
+        align: 0,
+      }),
+    ]);
+    expect(status).toBe(1);
+    expect(output).toContain('MISPLACED  lib/arm64-v8a/');
+    expect(output).toContain('is not a multiple of 16384');
+    // The point of the case: the ELF side is untouched and still passes, so
+    // only the offset rule can be what refused it.
+    expect(output).toContain('segment alignment: 12/12 libraries');
+  });
+
+  it('reports deflated libraries as outside the subject set, not as passing', () => {
+    // `zip` deflates, so this is the legacy-packaging shape: nothing is mapped
+    // in place, nothing to align, and the counts have to say so.
+    const {status, output} = gateApk(conformingEntries());
+    expect(status).toBe(0);
+    expect(output).toContain('zip data offset: 0/0 stored libraries');
+    expect(output).toContain('12 deflated, extracted at install');
+  });
+
+  it('does not judge offsets in a bundle, which bundletool repackages', () => {
+    const archive = writeStoredArchive(
+      'app-prod-release.aab',
+      conformingEntries('base/'),
+      {align: 0},
+    );
+    const {status, output} = runGate(['--aab', archive]);
+    expect(status).toBe(0);
+    expect(output).not.toContain('zip data offset');
+  });
+
+  it('fails when the archive layout cannot be read at all', () => {
+    const archive = path.join(workspace, 'no-directory.apk');
+    fs.writeFileSync(archive, Buffer.alloc(512, 0x41));
+    const {status, output} = runGate(['--apk', archive]);
+    expect(status).toBe(1);
+    expect(output).toContain('proven nothing about it');
+  });
 });
 
 describe('a check that cannot run', () => {

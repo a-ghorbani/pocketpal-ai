@@ -41,12 +41,46 @@ const SUSPICIOUS_RUN =
  * Commentary is not command. Both Ruby and shell use `#`, and both files
  * discuss the very actions this file classifies — the upload lane's comment
  * quotes `gradle(task: "bundle")` to explain why it does not build.
+ *
+ * Quote-aware, because every consumer of this text is an unanchored presence
+ * test: dropping a line's tail can only *lose* matches, which moves a step
+ * toward "unclassified" and "exempt". `gh release upload … --notes "Fixes #862"`
+ * is an ordinary line, and a naive strip turns it into a step that publishes
+ * nothing and transports nothing. Failing that direction is the one direction
+ * this file cannot afford.
+ *
+ * An unbalanced quote leaves the rest of the line unstripped, which keeps text
+ * rather than losing it — wrong in the safe direction.
  */
 function codeOf(text) {
-  return String(text)
-    .split('\n')
-    .map(line => line.replace(/(^|\s)#(?!\{).*$/, '$1'))
-    .join('\n');
+  return String(text).split('\n').map(stripComment).join('\n');
+}
+
+function stripComment(line) {
+  let quote = null;
+  for (let i = 0; i < line.length; i++) {
+    const character = line[i];
+    if (quote) {
+      if (character === '\\') {
+        i++;
+      } else if (character === quote) {
+        quote = null;
+      }
+      continue;
+    }
+    if (character === '"' || character === "'") {
+      quote = character;
+      continue;
+    }
+    const startsComment =
+      character === '#' &&
+      line[i + 1] !== '{' &&
+      (i === 0 || /\s/.test(line[i - 1]));
+    if (startsComment) {
+      return line.slice(0, i);
+    }
+  }
+  return line;
 }
 
 function parseLanes() {
@@ -100,10 +134,23 @@ const where = step => `${step.workflow} ${step.job} → ${step.name}`;
 
 // -- what a step says ------------------------------------------------------
 
+/**
+ * Every lane a step's command names. Matched against the known lane names
+ * rather than by position, because `fastlane <lane>`, `fastlane android <lane>`
+ * and `fastlane run <action>` are all valid here — `android/fastlane/Fastfile`
+ * declares `default_platform :android`, so the platform-prefixed form works and
+ * a position-based parse silently resolves it to the platform instead.
+ *
+ * `release.yml/build_android` runs no `gradlew` at all, so that job's entire
+ * building-ness rests on this resolution.
+ */
 function lanesInvokedBy(step, lanes) {
-  return [...step.run.matchAll(/fastlane\s+(\w+)/g)]
-    .map(match => lanes.find(lane => lane.name === match[1]))
-    .filter(Boolean);
+  const named = new Set(
+    [...step.run.matchAll(/fastlane\s+([\w\s]+)/g)].flatMap(match =>
+      match[1].split(/\s+/),
+    ),
+  );
+  return lanes.filter(lane => named.has(lane.name));
 }
 
 /**
@@ -166,71 +213,109 @@ function gateExamines(step) {
 }
 
 /**
- * A publisher whose bytes this parse cannot name. A glob, a bare directory and
- * a `${{ }}` expression all reach an Android build output while matching no
- * literal `.apk`/`.aab`, so a rule keyed on filenames would see nothing to
- * compare and skip the step entirely. It is refused instead: the gate cannot
- * be shown to have read bytes the parse cannot identify.
- *
- * `anyExpression` holds for a `with:` path field, where the whole value is the
- * path and an expression therefore hides one. It is cleared for a shell
- * command, where a `${{ }}` is as likely to be a tag, a secret or a token —
- * `gh release create v1.0.0` publishes no binary at all — so only an
- * expression sitting against an `.apk`/`.aab` names an artifact there.
+ * A publisher whose bytes this parse cannot name. It is refused rather than
+ * skipped: the gate cannot be shown to have read bytes the parse cannot
+ * identify, and a rule with nothing to compare reads exactly like a satisfied
+ * one.
  */
 const UNRESOLVED_PATH = '(a path this parse cannot resolve)';
 
-function reachesUnresolvedAndroidOutput(value, {anyExpression = false} = {}) {
-  const text = String(value ?? '');
-  return (
-    /build\/outputs/.test(text) ||
-    (text.includes('*') && /\.(?:apk|aab)/.test(text)) ||
-    /\$\{\{[^\n]*?\}\}[^\s"']*\.(?:apk|aab)/.test(text) ||
-    (anyExpression && text.includes('${{'))
-  );
+/**
+ * A `with:` path field, split into what it actually names. The whole value is
+ * a path here — one per line, or one per list entry — so anything that is not
+ * a concrete filename hides one, whatever directory it lives in. Keying on
+ * `build/outputs` instead would leave `dist/`, `artifacts/` and
+ * `android/app/release/` naming nothing and classifying as no publisher at all.
+ */
+function pathFieldNames(value) {
+  const tokens = (
+    Array.isArray(value) ? value : String(value ?? '').split('\n')
+  )
+    .map(token => String(token).trim())
+    .filter(Boolean);
+
+  const names = [];
+  for (const token of tokens) {
+    const base = token.split('/').pop();
+    const concrete =
+      !token.includes('${{') &&
+      !/[*?]/.test(token) &&
+      !token.endsWith('/') &&
+      /\.[A-Za-z0-9]+$/.test(base);
+    if (!concrete) {
+      names.push(UNRESOLVED_PATH);
+    } else if (/\.(?:apk|aab)$/.test(base)) {
+      names.push(base);
+    }
+  }
+  return [...new Set(names)];
 }
 
-/** Every way this repository can put built bytes in front of someone. */
+/**
+ * The same judgement over a shell command, but token by token rather than over
+ * the whole text — most of a command's words are not paths, and `gh release
+ * create v1.0.0` publishes no binary at all. Only a token that reaches an
+ * Android build output or carries an `.apk`/`.aab` is considered, and each is
+ * then resolvable or not on its own: asking the question of the whole string
+ * would mark the Play upload unresolvable because the lane that names its
+ * bundle exactly also happens to sit under `build/outputs`.
+ */
+function commandNames(text) {
+  const names = new Set();
+  for (const token of String(text ?? '').split(/[\s'"(),]+/)) {
+    if (!token || !/build\/outputs|\.(?:apk|aab)/.test(token)) {
+      continue;
+    }
+    const base = token.split('/').pop();
+    const concrete =
+      !token.includes('${{') &&
+      !/[*?]/.test(token) &&
+      !token.endsWith('/') &&
+      /\.(?:apk|aab)$/.test(base);
+    names.add(concrete ? base : UNRESOLVED_PATH);
+  }
+  return [...names];
+}
+
+/**
+ * Every way this repository can put built bytes in front of someone.
+ *
+ * Additive, not first-match. A step can be more than one of these at once —
+ * `gh release upload <dir>` appended to the Play-upload step is both — and a
+ * single path list can mix a filename the gate examined with a glob reaching a
+ * second artifact it never saw. Returning on the first match lets the second
+ * one through under cover of the first.
+ */
 function publisherOf(step, lanes) {
   const text = stepText(step, lanes);
-  // Applied to every publisher that names a path, not only the `uses:` ones:
-  // an unresolvable path leaves path identity with nothing to compare, and a
-  // vacuous rule reads exactly like a satisfied one.
-  const resolved = (source, options) => {
-    const paths = artifactsIn(source);
-    if (paths.length > 0) {
-      return paths;
-    }
-    return reachesUnresolvedAndroidOutput(source, options)
-      ? [UNRESOLVED_PATH]
-      : [];
+  const rules = [];
+  const paths = [];
+  const add = (rule, named) => {
+    rules.push(rule);
+    paths.push(...named);
   };
-  const pathsOrUnresolved = field => {
-    const paths = artifactsIn(JSON.stringify(step.with));
-    return paths.length > 0
-      ? paths
-      : resolved(String(step.with[field] ?? ''), {anyExpression: true});
-  };
+
   if (/^actions\/upload-artifact@/.test(step.uses)) {
-    const paths = pathsOrUnresolved('path');
-    return paths.length > 0 ? {rule: 'workflow-artifact', paths} : null;
+    const named = pathFieldNames(step.with.path);
+    if (named.length > 0) {
+      add('workflow-artifact', named);
+    }
   }
   if (/^softprops\/action-gh-release@/.test(step.uses)) {
-    return {rule: 'github-release', paths: pathsOrUnresolved('files')};
+    add('github-release', pathFieldNames(step.with.files));
   }
-  if (!step.run) {
-    return null;
+  if (step.run) {
+    if (/upload_to_play_store/.test(text)) {
+      add('play-upload', commandNames(text));
+    }
+    if (/\bgh\s+release\s+(?:create|upload)/.test(step.run)) {
+      add('gh-release-cli', commandNames(step.run));
+    }
+    if (gitPushArguments(step.run).length > 0) {
+      add('tag-push', []);
+    }
   }
-  if (/upload_to_play_store/.test(text)) {
-    return {rule: 'play-upload', paths: resolved(text)};
-  }
-  if (/\bgh\s+release\s+(?:create|upload)/.test(step.run)) {
-    return {rule: 'gh-release-cli', paths: resolved(step.run)};
-  }
-  if (gitPushArguments(step.run).length > 0) {
-    return {rule: 'tag-push', paths: []};
-  }
-  return null;
+  return rules.length > 0 ? {rules, paths: [...new Set(paths)]} : null;
 }
 
 function obtainsAndroidOutput(step) {
@@ -276,6 +361,11 @@ const buildsThenIsGated = (step, job, m) =>
   namesNoAndroidArtifact(step, job, m) &&
   carriesNoTransport(step, job, m);
 
+/**
+ * Never on its own either: it reads only the job, so a step inside a job that
+ * builds nothing could grow any transport it liked and stay exempt. Paired
+ * with the step half at every use.
+ */
 const runsNoAndroidGradle = (step, job, m) => !isBuildingJob(job, m.lanes);
 
 /**
@@ -290,8 +380,12 @@ const NON_PUBLISHERS = [
     job: 'build_ios',
     step: 'Build and upload iOS app',
     reason: 'uploads to TestFlight; carries no Android payload',
+    // Not `carriesNoTransport`: the iOS lane legitimately runs
+    // `upload_to_testflight`, so naming no Android artifact is the half that
+    // can hold here — and it is what goes red if this step gains one.
     assert: (step, job, m) =>
       runsNoAndroidGradle(step, job, m) &&
+      namesNoAndroidArtifact(step, job, m) &&
       m.lanes
         .filter(lane => lane.origin === 'ios')
         .every(lane => !publishesAndroid(lane.body)),
@@ -394,12 +488,35 @@ const COMPOSITE_ACTIONS = {
   ),
 };
 
-/** Takes the source, not the path, so a mutated composite can be probed. */
+/**
+ * Takes the source, not the path, so a mutated composite can be probed.
+ *
+ * Reads `with:` as well as `run:` and `uses:`, mirroring `stepText` — a
+ * composite's inner steps are steps, and the one that ships bytes is far more
+ * likely to be `uses: actions/upload-artifact@v4` with a `path:` than a raw
+ * shell command. Reading two of the three fields is how a composite that
+ * uploads the APK, or caches `build/outputs`, reads as shipping nothing.
+ */
 const shipsNothing = source => {
-  const commands = (yaml.load(source).runs.steps || [])
-    .map(step => `${step.run || ''}\n${step.uses || ''}`)
+  const steps = yaml.load(source).runs.steps || [];
+  const text = steps
+    .map(step =>
+      [step.run || '', step.uses || '', JSON.stringify(step.with || {})].join(
+        '\n',
+      ),
+    )
     .join('\n');
-  return !SENDS_BYTES_OUT.test(commands) && artifactsIn(commands).length === 0;
+  const publishes = steps.some(step =>
+    /^(?:actions\/upload-artifact|softprops\/action-gh-release)@/.test(
+      step.uses || '',
+    ),
+  );
+  return (
+    !publishes &&
+    !SENDS_BYTES_OUT.test(text) &&
+    !/build\/outputs/.test(text) &&
+    artifactsIn(text).length === 0
+  );
 };
 
 const compositeShipsNothing = step =>
@@ -523,6 +640,31 @@ const PROBE_JOB = {
   ],
 };
 
+/**
+ * The same step in a job that satisfies **every job-level predicate**: it
+ * builds nothing, and it has a gate step below the probe. Any assertion still
+ * returning true here is deciding on the job and ignoring the step it was
+ * handed — which the building-job probe above cannot reveal, because there the
+ * job half is false and the assertion never has to look at the step at all.
+ */
+const PROBE_JOB_WITHOUT_EXCUSES = {
+  workflow: 'probe.yml',
+  id: 'probe',
+  steps: [
+    PROBE_STEP,
+    {
+      workflow: 'probe.yml',
+      job: 'probe',
+      index: 2,
+      name: 'Verify the Android payload',
+      run: `node scripts/verify-android-payload.js --apk ${APK_PATH}`,
+      uses: '',
+      with: {},
+      raw: {},
+    },
+  ],
+};
+
 // -- the rules -------------------------------------------------------------
 
 function exemptionFor(step) {
@@ -608,14 +750,39 @@ function violationsOfPathIdentity(m) {
   return problems;
 }
 
+/** `if: always()` and friends run a step whatever the gate decided. */
+const RUNS_REGARDLESS =
+  /always\s*\(\s*\)|failure\s*\(\s*\)|cancelled\s*\(\s*\)/;
+
 /**
- * The gate can still fail the job. A skipped, suppressed or piped gate
- * keeps ordering and path identity green while asserting nothing: the default shell is
- * `bash -e {0}`, which sets no pipefail, so a trailing `| tee` exits with
- * tee's status.
+ * The gate can still fail the job, and a failed gate still stops the publish.
+ *
+ * Both halves, because they are the same evasion from opposite ends. A skipped,
+ * suppressed or piped gate keeps ordering and path identity green while
+ * asserting nothing — the default shell is `bash -e {0}`, which sets no
+ * pipefail, so a trailing `| tee` exits with tee's status. And a publishing
+ * step carrying `if: always()` runs on a build the gate has just refused,
+ * while its position in the job is still perfectly correct. `if: always()`
+ * appears three and seven lines above two of the uploads already, so it is the
+ * idiomatic thing to write there.
  */
 function violationsOfGateCanFail(m) {
   const problems = [];
+
+  for (const job of allJobs(m)) {
+    if (!job.steps.some(isGateStep)) {
+      continue;
+    }
+    for (const step of job.steps) {
+      const publisher = publisherOf(step, m.lanes);
+      if (publisher && RUNS_REGARDLESS.test(String(step.raw.if ?? ''))) {
+        problems.push(
+          `${where(step)} publishes under if: ${step.raw.if}, so it runs even when the gate failed`,
+        );
+      }
+    }
+  }
+
   for (const step of allSteps(m)) {
     if (!isGateStep(step)) {
       continue;
@@ -636,8 +803,10 @@ function violationsOfGateCanFail(m) {
     if (step.run.replace(/\|\|/g, '').includes('|')) {
       complain('pipes its output, so it exits with the last command status');
     }
-    if (/set\s+\+e/.test(step.run)) {
-      complain('disables errexit with set +e');
+    // `+o errexit` is the same instruction spelled long; the short form alone
+    // was the whole check.
+    if (/set\s+\+(?:e\b|o\s+errexit)/.test(step.run)) {
+      complain('disables errexit');
     }
     if (step.run.includes('--manifest')) {
       complain('passes --manifest, which is a test flag');
@@ -647,8 +816,18 @@ function violationsOfGateCanFail(m) {
       .split('\n')
       .map(line => line.trim())
       .filter(line => line && !line.startsWith('#'));
-    if (!commands[commands.length - 1].includes('verify-android-payload.js')) {
+    const final = commands[commands.length - 1] ?? '';
+    // Must *begin* the final command, not merely appear in it. `bash -e` reports
+    // no failure for a command it only inspected: `if <gate>; then …; fi` and
+    // `while <gate>; do …; done` both exit 0, as does a negated `! <gate>`.
+    // Testing only for the script's presence rewards collapsing the multi-line
+    // `if` — which the old parse did catch — onto one line.
+    if (!/^node\s+\S*verify-android-payload\.js\b/.test(final)) {
       complain('does not invoke the payload check as its final command');
+    }
+    // Backgrounded, so the shell moves on and never sees the exit status.
+    if (/&\s*$/.test(final)) {
+      complain('backgrounds the payload check with &');
     }
   }
   return problems;
@@ -741,9 +920,11 @@ describe('the parse itself', () => {
         .map(step => [step.name, publisherOf(step, committed.lanes)]),
     );
 
-    expect(steps['Upload Android app to Alpha track'].rule).toBe('play-upload');
-    expect(steps['Push the release tag'].rule).toBe('tag-push');
-    expect(steps['Create GitHub Release'].rule).toBe('github-release');
+    expect(steps['Upload Android app to Alpha track'].rules).toEqual([
+      'play-upload',
+    ]);
+    expect(steps['Push the release tag'].rules).toEqual(['tag-push']);
+    expect(steps['Create GitHub Release'].rules).toEqual(['github-release']);
 
     // Two of the three resolve to a path the identity rule can compare; a
     // tag names no artifact, so that rule is properly vacuous for it.
@@ -817,16 +998,24 @@ describe('the parse itself', () => {
 
   /**
    * An assertion that no input can falsify is not a check, and the easiest one
-   * to write by accident restates its own lookup key. One adversarial step in
-   * an ungated building job must falsify every assertion that reads a step;
-   * one that survives it exempts by decoration. Add spellings here whenever an
-   * exemption learns to read something new about a step.
+   * to write by accident restates its own lookup key or reads only the job.
+   *
+   * Two probe jobs, because one is not enough: an assertion deciding purely on
+   * the job is falsified by the building-job probe without ever looking at the
+   * step it was handed, and reads as sound. The second job satisfies every
+   * job-level predicate — builds nothing, gate below the step — so only the
+   * step half can carry it there. Add a probe whenever an exemption learns to
+   * read something new.
    */
-  it('rests no exemption on an assertion that cannot fail', () => {
+  it.each([
+    ['a building job with no gate', () => PROBE_JOB],
+    ['a job with every excuse removed', () => PROBE_JOB_WITHOUT_EXCUSES],
+  ])('rests no exemption on an assertion that cannot fail, in %s', (_l, of) => {
+    const job = of();
     for (const entry of NON_PUBLISHERS) {
       expect({
         entry: `${entry.workflow} ${entry.step}`,
-        survivesTheProbe: entry.assert(PROBE_STEP, PROBE_JOB, committed),
+        survivesTheProbe: entry.assert(PROBE_STEP, job, committed),
       }).toEqual({
         entry: `${entry.workflow} ${entry.step}`,
         survivesTheProbe: false,
@@ -841,7 +1030,7 @@ describe('the parse itself', () => {
       }
       expect({
         action,
-        survivesTheProbe: entry.assert(PROBE_STEP, PROBE_JOB, committed),
+        survivesTheProbe: entry.assert(PROBE_STEP, job, committed),
       }).toEqual({action, survivesTheProbe: false});
     }
   });
@@ -908,6 +1097,17 @@ describe('no publish outruns the payload gate', () => {
 describe('each rule is capable of failing', () => {
   const broken = () => model();
 
+  /**
+   * A synthesised step has to arrive the way a parsed one does. `parseWorkflows`
+   * runs every `run:` through `codeOf`, so a mutation that sets one directly is
+   * exercising text the real parse would never have produced — and a case built
+   * that way can pass while the reader it is meant to test does nothing.
+   */
+  const asParsed = fields => ({...fields, run: codeOf(fields.run ?? '')});
+  const appendRun = (step, extra) => {
+    step.run = codeOf(`${step.run}\n${extra}`);
+  };
+
   const stepIn = (m, workflow, job, name) => {
     const found = allJobs(m)
       .find(
@@ -946,16 +1146,18 @@ describe('each rule is capable of failing', () => {
     const job = jobIn(m, 'ci.yml', 'build-android');
     // The gate here passes --apk only, so a bundle built and uploaded beside
     // it is ordered after a gate that never opened it.
-    job.steps.push({
-      workflow: 'ci.yml',
-      job: 'build-android',
-      index: job.steps.length,
-      name: 'Upload the bundle to Play',
-      run: 'bundle exec fastlane upload_android_alpha',
-      uses: '',
-      with: {},
-      raw: {},
-    });
+    job.steps.push(
+      asParsed({
+        workflow: 'ci.yml',
+        job: 'build-android',
+        index: job.steps.length,
+        name: 'Upload the bundle to Play',
+        run: 'bundle exec fastlane upload_android_alpha',
+        uses: '',
+        with: {},
+        raw: {},
+      }),
+    );
 
     expect(violationsOfOrdering(m)).toEqual([]);
     expect(violationsOfPathIdentity(m)).toEqual([
@@ -967,16 +1169,20 @@ describe('each rule is capable of failing', () => {
     const m = broken();
     const job = jobIn(m, 'release.yml', 'build_android');
     const gate = job.steps.findIndex(isGateStep);
-    job.steps.splice(gate + 1, 0, {
-      workflow: 'release.yml',
-      job: 'build_android',
-      index: 0,
-      name: 'Re-sign the APK',
-      run: 'apksigner sign android/app/build/outputs/apk/prod/release/app-prod-release.apk',
-      uses: '',
-      with: {},
-      raw: {},
-    });
+    job.steps.splice(
+      gate + 1,
+      0,
+      asParsed({
+        workflow: 'release.yml',
+        job: 'build_android',
+        index: 0,
+        name: 'Re-sign the APK',
+        run: 'apksigner sign android/app/build/outputs/apk/prod/release/app-prod-release.apk',
+        uses: '',
+        with: {},
+        raw: {},
+      }),
+    );
     reindex(job);
 
     expect(violationsOfOrdering(m)).toEqual([]);
@@ -993,7 +1199,7 @@ describe('each rule is capable of failing', () => {
       'a pipe into tee',
       step => (step.run = `${step.run.trim()} 2>&1 | tee gate.log`),
     ],
-    ['a trailing unrelated command', step => (step.run += '\necho done')],
+    ['a trailing unrelated command', step => appendRun(step, 'echo done')],
     ['a test manifest', step => (step.run += ' --manifest /tmp/weak.json')],
   ])(
     'the gate-can-fail rule catches a gate neutered by %s',
@@ -1046,6 +1252,11 @@ describe('each rule is capable of failing', () => {
    * for the spelling it can read, and a glob, a bare directory or an
    * expression reaches the same bytes while matching none of them.
    */
+  // Every spelling twice: alone, and paired with the very filename the gate
+  // above it did examine. The pairing is the one that matters — a rule that
+  // stops at the first name it recognises reports the pair as fully gated.
+  const GATED_APK =
+    'android/app/build/outputs/apk/prod/release/app-prod-release.apk';
   const SPELLINGS = [
     [
       'an explicit filename',
@@ -1063,7 +1274,19 @@ describe('each rule is capable of failing', () => {
       'cannot resolve to a filename',
     ],
     ['an expression', '${{ env.APK_PATH }}', 'cannot resolve to a filename'],
-  ];
+    // Outside build/outputs entirely: a staging directory names no artifact a
+    // filename rule can see, and keying on the Gradle path would miss it.
+    ['a staging directory', 'dist/', 'cannot resolve to a filename'],
+    ['an artifacts directory', 'artifacts/', 'cannot resolve to a filename'],
+    [
+      'a release directory',
+      'android/app/release/',
+      'cannot resolve to a filename',
+    ],
+  ].flatMap(([spelling, value, fragment]) => [
+    [spelling, value, fragment],
+    [`${spelling} beside a gated filename`, `${GATED_APK}\n${value}`, fragment],
+  ]);
 
   it.each(
     SPELLINGS.flatMap(([spelling, value, fragment]) => [
@@ -1081,20 +1304,25 @@ describe('each rule is capable of failing', () => {
   )('path identity catches %s', (_label, step, fragment) => {
     const m = broken();
     const job = jobIn(m, 'ci.yml', 'build-android');
-    job.steps.push({
-      ...step,
-      workflow: 'ci.yml',
-      job: 'build-android',
-      index: job.steps.length,
-      name: 'Ship the build output',
-      run: '',
-      raw: {},
-    });
+    job.steps.push(
+      asParsed({
+        ...step,
+        workflow: 'ci.yml',
+        job: 'build-android',
+        index: job.steps.length,
+        name: 'Ship the build output',
+        run: '',
+        raw: {},
+      }),
+    );
 
     expect(violationsOfOrdering(m)).toEqual([]);
-    expect(violationsOfPathIdentity(m)).toEqual([
+    // Contains rather than equals: a path list naming the gated APK as well
+    // legitimately reports the interposition too, and the case is about the
+    // second path still being seen.
+    expect(violationsOfPathIdentity(m)).toContainEqual(
       expect.stringContaining(fragment),
-    ]);
+    );
   });
 
   // The command-line publishers name their paths as arguments rather than in a
@@ -1112,16 +1340,20 @@ describe('each rule is capable of failing', () => {
     const m = broken();
     const job = jobIn(m, 'ci.yml', 'build-android');
     const gate = job.steps.findIndex(isGateStep);
-    job.steps.splice(gate, 0, {
-      workflow: 'ci.yml',
-      job: 'build-android',
-      index: 0,
-      name: 'Publish the build output',
-      run,
-      uses: '',
-      with: {},
-      raw: {},
-    });
+    job.steps.splice(
+      gate,
+      0,
+      asParsed({
+        workflow: 'ci.yml',
+        job: 'build-android',
+        index: 0,
+        name: 'Publish the build output',
+        run,
+        uses: '',
+        with: {},
+        raw: {},
+      }),
+    );
     reindex(job);
 
     expect(violationsOfOrdering(m)).toEqual([
@@ -1139,19 +1371,23 @@ describe('each rule is capable of failing', () => {
     const m = broken();
     const job = jobIn(m, 'ci.yml', 'build-android');
     const gate = job.steps.findIndex(isGateStep);
-    job.steps.splice(gate, 0, {
-      workflow: 'ci.yml',
-      job: 'build-android',
-      index: 0,
-      name: 'Upload the APK directory',
-      run: '',
-      uses: 'actions/upload-artifact@v4',
-      with: {
-        name: 'android-release-apk',
-        path: 'android/app/build/outputs/apk/prod/release/',
-      },
-      raw: {},
-    });
+    job.steps.splice(
+      gate,
+      0,
+      asParsed({
+        workflow: 'ci.yml',
+        job: 'build-android',
+        index: 0,
+        name: 'Upload the APK directory',
+        run: '',
+        uses: 'actions/upload-artifact@v4',
+        with: {
+          name: 'android-release-apk',
+          path: 'android/app/build/outputs/apk/prod/release/',
+        },
+        raw: {},
+      }),
+    );
     reindex(job);
 
     expect(violationsOfOrdering(m)).toEqual([
@@ -1160,6 +1396,243 @@ describe('each rule is capable of failing', () => {
     expect(violationsOfPathIdentity(m)).toEqual([
       expect.stringContaining('cannot resolve to a filename'),
     ]);
+  });
+
+  // The classifier is an if-chain over a single step, so a step that is two
+  // publishers at once used to be reported as whichever came first — and the
+  // second one's path went with it.
+  it('classifies a step that is two publishers at once, not just the first', () => {
+    const m = broken();
+    const step = stepIn(
+      m,
+      'release.yml',
+      'build_android',
+      'Upload Android app to Alpha track',
+    );
+    appendRun(
+      step,
+      'gh release upload "v$VERSION" android/app/build/outputs/apk/e2e/release/',
+    );
+
+    expect(publisherOf(step, m.lanes).rules).toEqual([
+      'play-upload',
+      'gh-release-cli',
+    ]);
+    expect(violationsOfPathIdentity(m)).toEqual([
+      expect.stringContaining('cannot resolve to a filename'),
+    ]);
+  });
+
+  /**
+   * A publishing step carrying `if: always()` runs on a build the gate has
+   * just refused, while sitting in exactly the right place in the job. Ordering
+   * and path identity read position and paths; neither reads `if:`.
+   */
+  it.each([
+    [
+      'a workflow-artifact upload',
+      {
+        uses: 'actions/upload-artifact@v4',
+        with: {name: 'apk', path: GATED_APK},
+      },
+    ],
+    [
+      'a GitHub Release',
+      {uses: 'softprops/action-gh-release@v1', with: {files: GATED_APK}},
+    ],
+    ['a Play upload', {run: 'bundle exec fastlane upload_android_alpha'}],
+    ['a gh release upload', {run: `gh release upload v1.0.0 ${GATED_APK}`}],
+    ['a tag push', {run: 'git push origin "v1.0.0"'}],
+  ])(
+    'the gate-can-fail rule catches %s running under if: always()',
+    (_l, s) => {
+      const m = broken();
+      const job = jobIn(m, 'ci.yml', 'build-android');
+      job.steps.push(
+        asParsed({
+          workflow: 'ci.yml',
+          job: 'build-android',
+          index: job.steps.length,
+          name: 'Publish regardless',
+          run: '',
+          uses: '',
+          with: {},
+          ...s,
+          raw: {if: 'always()'},
+        }),
+      );
+
+      expect(violationsOfGateCanFail(m)).toEqual([
+        expect.stringContaining('runs even when the gate failed'),
+      ]);
+    },
+  );
+
+  it('leaves an if: that cannot outrun a failed gate alone', () => {
+    const m = broken();
+    const job = jobIn(m, 'ci.yml', 'build-android');
+    job.steps.push(
+      asParsed({
+        workflow: 'ci.yml',
+        job: 'build-android',
+        index: job.steps.length,
+        name: 'Publish on a branch',
+        run: '',
+        uses: 'actions/upload-artifact@v4',
+        with: {name: 'apk', path: GATED_APK},
+        raw: {if: "github.ref == 'refs/heads/main'"},
+      }),
+    );
+
+    expect(violationsOfGateCanFail(m)).toEqual([]);
+  });
+
+  /**
+   * `bash -e` reports no failure for a command it merely inspected, so each of
+   * these exits 0 with the gate exiting non-zero. The multi-line `if` was
+   * already caught, which is what made collapsing it onto one line the reward.
+   */
+  it.each([
+    ['backgrounding', run => `${run.trim()} &`],
+    ['negation', run => `! ${run.trim()}`],
+    ['a single-line if', run => `if ${run.trim()}; then echo ok; fi`],
+    ['a single-line while', run => `while ${run.trim()}; do break; done`],
+    ['the long spelling of set +e', run => `set +o errexit\n${run.trim()}`],
+  ])('the gate-can-fail rule catches %s', (_label, neuter) => {
+    const m = broken();
+    const gate = stepIn(
+      m,
+      'ci.yml',
+      'build-android',
+      'Verify the Android payload',
+    );
+    gate.run = codeOf(neuter(gate.run.replace(/\\\n\s*/g, ' ')));
+
+    expect(violationsOfOrdering(m)).toEqual([]);
+    expect(violationsOfGateCanFail(m).length).toBeGreaterThan(0);
+  });
+
+  /**
+   * A `#` inside a quoted string is not a comment. Every consumer of this text
+   * is an unanchored presence test, so a truncated line can only lose matches —
+   * which always moves a step toward exempt.
+   */
+  it('does not lose the path that follows a quoted # on the same line', () => {
+    const m = broken();
+    const job = jobIn(m, 'ci.yml', 'build-android');
+    const gate = job.steps.findIndex(isGateStep);
+    // The note comes first, so a naive strip takes the artifact with it and
+    // the step publishes, as far as the parse can tell, nothing at all.
+    job.steps.splice(
+      gate,
+      0,
+      asParsed({
+        workflow: 'ci.yml',
+        job: 'build-android',
+        index: 0,
+        name: 'Publish with a note',
+        run: `gh release upload v1.0.0 --notes "Fixes #862" ${GATED_APK}`,
+        uses: '',
+        with: {},
+        raw: {},
+      }),
+    );
+    reindex(job);
+
+    expect(violationsOfPathIdentity(m)).toContainEqual(
+      expect.stringContaining('app-prod-release.apk'),
+    );
+  });
+
+  it('keeps an exemption red when a quoted # precedes the transport', () => {
+    const m = broken();
+    const step = stepIn(
+      m,
+      'ci.yml',
+      'build-android',
+      'Create dummy release keystore for CI',
+    );
+    const entry = NON_PUBLISHERS.find(
+      candidate => candidate.step === 'Create dummy release keystore for CI',
+    );
+    appendRun(
+      step,
+      `echo "phase #2" && curl -T ${GATED_APK} https://example.com/`,
+    );
+
+    expect(entry.assert(step, jobIn(m, 'ci.yml', 'build-android'), m)).toBe(
+      false,
+    );
+  });
+
+  /**
+   * `runsNoAndroidGradle` reads the job and discards its step, so on its own it
+   * exempts anything that job contains.
+   */
+  it('keeps the iOS upload exemption red when its step gains a transport', () => {
+    const m = broken();
+    const step = stepIn(
+      m,
+      'release.yml',
+      'build_ios',
+      'Build and upload iOS app',
+    );
+    const entry = NON_PUBLISHERS.find(
+      candidate => candidate.step === 'Build and upload iOS app',
+    );
+    appendRun(step, `curl -T ${GATED_APK} https://example.com/`);
+
+    expect(entry.assert(step, jobIn(m, 'release.yml', 'build_ios'), m)).toBe(
+      false,
+    );
+  });
+
+  /**
+   * A composite's inner steps are steps: the one that ships bytes is far more
+   * likely to be an `uses:` with a `path:` than a raw shell command, and half
+   * of what the function reads had never been shown able to fail it.
+   */
+  it.each([
+    [
+      'an upload-artifact step naming the APK',
+      `    - uses: actions/upload-artifact@v4\n      with:\n        path: ${GATED_APK}`,
+    ],
+    [
+      'an upload-artifact step naming a directory',
+      '    - uses: actions/upload-artifact@v4\n      with:\n        path: dist/',
+    ],
+    [
+      'a cache of the build output',
+      '    - uses: actions/cache@v4\n      with:\n        path: android/app/build/outputs',
+    ],
+  ])('refuses a composite carrying %s', (_label, body) => {
+    const composite = [
+      'name: probe',
+      'runs:',
+      '  using: composite',
+      '  steps:',
+      body,
+    ].join('\n');
+    expect(shipsNothing(composite)).toBe(false);
+  });
+
+  /**
+   * `release.yml/build_android` runs no `gradlew`, so its building-ness rests
+   * entirely on resolving the lane name — and the platform-prefixed form is
+   * valid here because the Fastfile declares `default_platform :android`.
+   */
+  it('still sees the release job build through a platform-prefixed lane', () => {
+    const m = broken();
+    const step = stepIn(m, 'release.yml', 'build_android', 'Build Android app');
+    step.run = step.run.replace(
+      'fastlane build_android_release',
+      'fastlane android build_android_release',
+    );
+
+    expect(
+      isBuildingJob(jobIn(m, 'release.yml', 'build_android'), m.lanes),
+    ).toBe(true);
+    expect(violationsOfOrdering(m)).toEqual([]);
   });
 
   it('the lane-split rule fails when the fastlane lanes are re-merged', () => {
@@ -1207,16 +1680,18 @@ describe('each rule is capable of failing', () => {
   it('the building-job count fails first when a fourth Android build job appears', () => {
     const m = broken();
     const job = jobIn(m, 'ci.yml', 'build-and-test');
-    job.steps.push({
-      workflow: 'ci.yml',
-      job: 'build-and-test',
-      index: job.steps.length,
-      name: 'Build Android Release',
-      run: './gradlew assembleProdRelease',
-      uses: '',
-      with: {},
-      raw: {},
-    });
+    job.steps.push(
+      asParsed({
+        workflow: 'ci.yml',
+        job: 'build-and-test',
+        index: job.steps.length,
+        name: 'Build Android Release',
+        run: './gradlew assembleProdRelease',
+        uses: '',
+        with: {},
+        raw: {},
+      }),
+    );
 
     const building = allJobs(m)
       .filter(candidate => isBuildingJob(candidate, m.lanes))
