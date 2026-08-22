@@ -82,9 +82,10 @@ export function resolveBannerVariant(
         };
       }
 
-      // 2. context-warning — local, near the limit, dismissable per draft.
+      // 2. context-warning — near the limit, dismissable per draft. Admits
+      // remote llama.cpp too: the outer effectiveNCtx gate only passes for a
+      // remote model once its /props contextLength is known.
       if (
-        !isRemote &&
         !snapshot.contextFull &&
         snapshot.used / nCtx >= WARNING_THRESHOLD &&
         !dismissed.has('context-warning')

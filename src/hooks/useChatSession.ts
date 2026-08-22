@@ -19,7 +19,10 @@ import {resolveReasoningCapability} from '../utils/reasoningCapability';
 
 import {MessageType, ModelOrigin, User} from '../utils/types';
 import {createMultimodalWarning} from '../utils/errors';
-import {resolveSystemMessages} from '../utils/systemPromptResolver';
+import {
+  assembleMessages,
+  resolveSystemMessages,
+} from '../utils/systemPromptResolver';
 import {convertToChatMessages, removeThinkingParts} from '../utils/chat';
 import {activateKeepAwake, deactivateKeepAwake} from '../utils/keepAwake';
 import {
@@ -29,11 +32,16 @@ import {
   CompletionResult,
   CompletionResultSnapshot,
 } from '../utils/completionTypes';
-import {talentRegistry} from '../services/talents';
+import {
+  collectSystemPromptFragments,
+  seedReadUrlAllowlist,
+  talentRegistry,
+} from '../services/talents';
 import type {ToolDefinition} from '../services/talents/types';
 import {
   agentStateReducer,
   createTriggerMarkerCache,
+  DEFAULT_MAX_TURNS,
   initialAgentUiState,
   runAgent,
   type AgentEvent,
@@ -122,14 +130,24 @@ const prepareCompletion = async ({
     });
   }
 
-  const messages = [
-    ...systemMessages,
+  // Talent-contributed system-prompt fragments (e.g. search grounding). Kept on
+  // the initial messages array so they persist across every follow-up tool turn.
+  const sessionToolNames = (
+    (sessionCompletionSettings?.tools as ToolDefinition[] | undefined) ?? []
+  ).map(tool => tool.function?.name ?? '');
+  const systemPromptFragments = collectSystemPromptFragments(sessionToolNames, {
+    now: new Date(),
+    maxToolTurns: DEFAULT_MAX_TURNS,
+  });
+
+  const messages = assembleMessages(systemMessages, systemPromptFragments, [
     ...chatMessages,
-    {
-      role: 'user',
-      content: userMessageContent,
-    },
-  ];
+    {role: 'user', content: userMessageContent},
+  ]);
+
+  // Reseed the read_url exfiltration allowlist for this run; the trust policy
+  // (which sources count) lives in the talents module.
+  seedReadUrlAllowlist(messages, currentMessages);
 
   const completionParamsWithAppProps = {
     ...sessionCompletionSettings,
@@ -280,11 +298,10 @@ async function applyEventToStore(
       });
       return;
     case 'token': {
-      // Capture time-to-first-token on the first content/reasoning token.
-      if (
-        ctx.timeToFirstTokenMs.value === null &&
-        (event.delta.content || event.delta.reasoningContent)
-      ) {
+      const hasFirstTokenSignal = !!(
+        event.delta.content || event.delta.reasoningContent
+      );
+      if (ctx.timeToFirstTokenMs.value === null && hasFirstTokenSignal) {
         ctx.timeToFirstTokenMs.value = Date.now() - ctx.completionStartTime;
       }
       if (!modelStore.isStreaming) {
@@ -407,11 +424,19 @@ async function applyEventToStore(
         modelStore.activeContextSettings?.n_ctx,
         modelStore.activeModel?.origin === ModelOrigin.REMOTE,
       );
+      const draftTimings =
+        finalResult.draft_tokens != null && finalResult.draft_tokens > 0
+          ? {
+              draft_tokens: finalResult.draft_tokens,
+              draft_tokens_accepted: finalResult.draft_tokens_accepted,
+            }
+          : {};
       await chatSessionStore.updateMessage(ctx.messageId, ctx.sessionId, {
         metadata: {
           timings: {
             ...(finalResult.timings ?? {}),
             time_to_first_token_ms: ctx.timeToFirstTokenMs.value,
+            ...draftTimings,
           },
           copyable: true,
           multimodal: ctx.hasImages && ctx.isMultimodalEnabled,
@@ -502,7 +527,7 @@ export const useChatSession = (
     const imageUris = message.imageUris;
     const hasImages = !!(imageUris && imageUris.length > 0);
 
-    const isMultimodalEnabled = await modelStore.isMultimodalEnabled();
+    const isMultimodalEnabled = modelStore.activeModelCaps.visionActive;
 
     const currentMessages = toJS(chatSessionStore.currentSessionMessages);
 
@@ -736,6 +761,13 @@ export const useChatSession = (
       // CompletionResult flag upstream when available.
       const isContextFullError = /context is full/i.test(errorMessage);
       const treatAsContextFull = isToolArgsParseError || isContextFullError;
+      // Low-RAM devices can fail to allocate the speculative draft context at
+      // first completion (the load-time memory check has no term for it).
+      // LLAMARN-DEP: string-coupled to the throw in rn-completion.cpp; a
+      // reword would silently demote this back to the raw dump.
+      const isSpeculativeInitError = /failed to create MTP draft context/i.test(
+        errorMessage,
+      );
 
       // Error rollback path. The empty/in-flight AssistantTurn row
       // already exists; preserve any partial steps and tag with
@@ -839,6 +871,8 @@ export const useChatSession = (
         // No turn content to attach the hint to — fall back to a
         // friendly system message instead of the raw native error dump.
         await addSystemMessage(l10n.chat.toolCallTruncated);
+      } else if (isSpeculativeInitError) {
+        await addSystemMessage(l10n.chat.speculativeInitFailed);
       } else if (isContextFullError) {
         // No turn to attach to; surface the banner via a store snapshot
         // rather than dumping the raw "Context is full" native error.
@@ -902,6 +936,5 @@ export const useChatSession = (
     handleSendPress,
     handleResetConversation,
     handleStopPress,
-    isMultimodalEnabled: async () => await modelStore.isMultimodalEnabled(),
   };
 };

@@ -100,13 +100,15 @@ export const BannerRow: React.FC<BannerRowProps> = observer(
       },
     };
 
-    const activeModel = modelStore.activeModel;
+    const isRemote = modelStore.activeModel?.origin === ModelOrigin.REMOTE;
+
+    const effectiveNCtx = modelStore.activeModelCaps.effectiveContextLength;
 
     const {variant, heavyTalentName, ratio} = resolveBannerVariant(
       chatSessionStore.lastCompletionResult,
       {
-        effectiveNCtx: modelStore.activeContextSettings?.n_ctx,
-        isRemote: activeModel?.origin === ModelOrigin.REMOTE,
+        effectiveNCtx,
+        isRemote,
         htmlPreviewCount,
         activeModelId: modelStore.activeModelId,
         dismissed: chatSessionStore.dismissedBannerVariants,
@@ -203,11 +205,17 @@ export const BannerRow: React.FC<BannerRowProps> = observer(
       ? (talentNames[heavyTalentName as keyof typeof talentNames] ??
         heavyTalentName)
       : undefined;
-    const fullText = heavyTalentLabel
-      ? t(l10n.chat.contextFullHeavyTalent, {talent: heavyTalentLabel})
-      : chatSessionStore.consecutiveFullFailures >= 2
-        ? l10n.chat.contextFullEscalated
-        : l10n.chat.contextFull;
+    // Remote wins over every local variant: the escalated and heavy-talent
+    // copies both carry the "increase the context size" advice, but a remote
+    // model has no in-app context control, so remote always gets the single
+    // remote copy (no increase clause) regardless of failure count / talent.
+    const fullText = isRemote
+      ? l10n.chat.contextFullRemote
+      : heavyTalentLabel
+        ? t(l10n.chat.contextFullHeavyTalent, {talent: heavyTalentLabel})
+        : chatSessionStore.consecutiveFullFailures >= 2
+          ? l10n.chat.contextFullEscalated
+          : l10n.chat.contextFull;
 
     return (
       <View

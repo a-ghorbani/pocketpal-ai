@@ -28,7 +28,9 @@ export const config: Options.Testrunner = {
   logLevel: 'info',
   bail: 0,
   waitforTimeout: 30000,
-  connectionRetryTimeout: 120000,
+  // A real iOS device bootstraps WebDriverAgent on first use, which regularly
+  // outruns the default and fails session creation before the app is reached.
+  connectionRetryTimeout: Number(process.env.E2E_CONNECTION_TIMEOUT) || 120000,
   connectionRetryCount: 3,
 
   framework: 'mocha',
@@ -49,6 +51,9 @@ export const config: Options.Testrunner = {
 
   mochaOpts: {
     ui: 'bdd',
-    timeout: 600000, // 10 minutes - model downloads and inference can be slow
+    // 10 minutes - model downloads and inference can be slow. A per-test
+    // this.timeout() does not override this, so specs that pull multi-GB
+    // fixtures onto a real device raise it through the environment instead.
+    timeout: Number(process.env.E2E_MOCHA_TIMEOUT) || 600000,
   },
 } as Options.Testrunner;

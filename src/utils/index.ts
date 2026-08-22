@@ -30,6 +30,7 @@ import {
   getRecommendedProjectionModel,
   getVisionModelSizeBreakdown,
 } from './multimodalHelpers';
+import {isDraftOnlyFilename} from './mtp';
 
 export const L10nContext = React.createContext<
   (typeof l10n)[keyof typeof l10n]
@@ -423,8 +424,13 @@ export function hfAsModel(
   // Check if this is a projection model
   const isProjModel = isProjectionModel(modelFile.rfilename);
 
+  // Vision is decided per repo, but a speculative draft that merely lives
+  // alongside an mmproj cannot use one — it would pull the projector down for
+  // nothing and offer image attach on a model that never loads.
+  const isDraftOnly = isDraftOnlyFilename(modelFile.rfilename);
+
   // Check if this is a vision LLM (in a vision repo but not a projection model)
-  const isVisionLLM = isVision && !isProjModel;
+  const isVisionLLM = isVision && !isProjModel && !isDraftOnly;
 
   // Get compatible projection models if this is a vision LLM
   let compatibleProjectionModels: string[] = [];
@@ -847,6 +853,7 @@ export * from './cacheUtils';
 export * from './errors';
 export * from './fb';
 export * from './formatters';
+export * from './mtp';
 export * from './multimodalHelpers';
 export * from './network';
 export * from './types';

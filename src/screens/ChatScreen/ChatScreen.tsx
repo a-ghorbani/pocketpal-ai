@@ -74,8 +74,11 @@ export const ChatScreen: React.FC = observer(() => {
   const [isErrorReportVisible, setIsErrorReportVisible] = useState(false);
   const [errorToReport, setErrorToReport] = useState<ErrorState | null>(null);
 
-  const {handleSendPress, handleStopPress, isMultimodalEnabled} =
-    useChatSession(currentMessageInfo, user, assistant);
+  const {handleSendPress, handleStopPress} = useChatSession(
+    currentMessageInfo,
+    user,
+    assistant,
+  );
 
   // Handle deep linking for message prefill
   const {pendingMessage, clearPendingMessage} = usePendingMessage();
@@ -126,17 +129,7 @@ export const ChatScreen: React.FC = observer(() => {
     setErrorToReport(null);
   }, []);
 
-  // Check if multimodal is enabled
-  const [multimodalEnabled, setMultimodalEnabled] = React.useState(false);
-
-  React.useEffect(() => {
-    const checkMultimodal = async () => {
-      const enabled = await isMultimodalEnabled();
-      setMultimodalEnabled(enabled);
-    };
-
-    checkMultimodal();
-  }, [isMultimodalEnabled]);
+  const visionEnabled = modelStore.activeModelCaps.visionActive;
 
   // Resolver is the single source of truth for reasoning capability.
   // Pill is reachable whenever the model is not known to be non-reasoning
@@ -300,7 +293,7 @@ export const ChatScreen: React.FC = observer(() => {
         isStreaming={modelStore.isStreaming}
         sendButtonVisibilityMode="always"
         showImageUpload={true}
-        isVisionEnabled={multimodalEnabled}
+        isVisionEnabled={visionEnabled}
         initialInputText={pendingMessage || undefined}
         onInitialTextConsumed={clearPendingMessage}
         autoFocusSignal={autoFocusSignal}

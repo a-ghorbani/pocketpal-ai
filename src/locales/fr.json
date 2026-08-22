@@ -24,7 +24,15 @@
     "hours": "heures",
     "minute": "min",
     "minutes": "min",
-    "justNow": "à l'instant"
+    "justNow": "à l'instant",
+    "stop": "Stop",
+    "error": "Erreur",
+    "export": "Exporter",
+    "ok": "Ok",
+    "close": "Fermer",
+    "clear": "Tout effacer",
+    "gallery": "Gallerie",
+    "noResults": "Pas de résultats"
   },
   "settings": {
     "modelInitializationSettings": "Paramètres d'initialisation du modèle",
@@ -77,7 +85,11 @@
     "setTokenDescription": "Configurez un token pour accéder aux modèles restreints de Hugging Face.",
     "setTokenButton": "Configurer le token",
     "useHfTokenLabel": "Utiliser le token HF",
-    "useHfTokenDescription": "Activez pour utiliser le token pour les requêtes API. Désactivez si le token cause des problèmes d'authentification."
+    "useHfTokenDescription": "Activez pour utiliser le token pour les requêtes API. Désactivez si le token cause des problèmes d'authentification.",
+    "openCL": "OpenCL (expérimental)",
+    "openCLDescription": "Acceleration GPU pour Adreno GPUs. prompt plus rapide, generation ne sera pas toujours plus rapide.",
+    "openCLNotAvailable": "OpenCL n'es pas disponible sur cet appareil. Nécessite un GPU adreno avec i8mm et dotprod CPU.",
+    "deviceSelection": "Choix de l'appareil"
   },
   "memory": {
     "shortWarning": "Alerte mémoire"

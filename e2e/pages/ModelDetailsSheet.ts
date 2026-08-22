@@ -71,29 +71,40 @@ export class ModelDetailsSheet extends BasePage {
    * @param filename - The exact filename (e.g., 'SmolLM2-135M-Instruct-Q4_0.gguf')
    * @param timeout - Timeout for waiting for elements
    */
-  async tapDownloadForFile(
-    filename: string,
-    timeout = 10000,
-  ): Promise<void> {
+  async tapDownloadForFile(filename: string, timeout = 10000): Promise<void> {
     // Wait for the specific file card to exist in DOM
     // We use waitForExist because isDisplayed is unreliable for sheet content on iOS
     const fileCardSelector = Selectors.modelDetails.fileCard(filename);
-    const fileCard = await this.waitForExist(fileCardSelector, timeout);
+    await this.waitForExist(fileCardSelector, timeout);
 
-    // Find the download button within this file card. If the file is already
-    // downloaded the button is absent — treat as a no-op so the caller can
-    // proceed to the load step against the existing model card.
-    const downloadButton = fileCard.$(Selectors.modelDetails.downloadButtonElement);
-    const exists = await downloadButton
-      .waitForExist({timeout: 2000})
-      .then(() => true)
-      .catch(() => false);
+    // A card can exist in the hierarchy while still below the fold (the sheet
+    // scroll stops on existence, not visibility), and an off-screen card
+    // exposes no children — a bare button lookup then misreads "not rendered"
+    // as "already downloaded". Swipe the sheet until the button is reachable
+    // before concluding anything.
+    const findButton = () =>
+      browser
+        .$(fileCardSelector)
+        .$(Selectors.modelDetails.downloadButtonElement)
+        .waitForExist({timeout: 2000})
+        .then(() => true)
+        .catch(() => false);
+    let exists = await findButton();
+    for (let i = 0; i < 6 && !exists; i++) {
+      await Gestures.swipeUpInSheet();
+      await browser.pause(300);
+      exists = await findButton();
+    }
+
     if (exists) {
-      await downloadButton.click();
+      await browser
+        .$(fileCardSelector)
+        .$(Selectors.modelDetails.downloadButtonElement)
+        .click();
     } else {
       console.log(
         `[tapDownloadForFile] no download button on card for ${filename} ` +
-          `after 2s; assuming already downloaded`,
+          `after scrolling; assuming already downloaded`,
       );
     }
   }
@@ -129,10 +140,18 @@ export class ModelDetailsSheet extends BasePage {
    * Uses getLastDisplayedElement to handle stacked sheets (finds topmost visible handle)
    */
   async close(): Promise<void> {
-    const handle = await this.getLastDisplayedElement(
-      Selectors.common.sheetHandle,
-    );
-    await Gestures.swipeDownOnElement(handle);
-    await this.waitForClose();
+    // The handle can be absent (already dismissed) or the swipe can miss on
+    // some screen geometries; the system back action closes bottom sheets
+    // regardless.
+    try {
+      const handle = await this.getLastDisplayedElement(
+        Selectors.common.sheetHandle,
+      );
+      await Gestures.swipeDownOnElement(handle);
+      await this.waitForClose();
+    } catch {
+      await browser.back();
+      await this.waitForClose();
+    }
   }
 }

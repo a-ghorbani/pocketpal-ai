@@ -2,7 +2,7 @@
  * @format
  */
 
-// Import URL polyfill for React Native/Hermes compatibility
+// Hermes/React Native ship no URL; it must exist before the app graph loads.
 import 'react-native-url-polyfill/auto';
 
 import {AppRegistry, LogBox} from 'react-native';

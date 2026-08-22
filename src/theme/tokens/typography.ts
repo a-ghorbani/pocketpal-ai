@@ -38,22 +38,31 @@ export const FONT_FAMILIES = {
 } as const;
 
 /**
- * Locales whose primary script is not covered by the bundled Fraunces
- * font subset. For these, Fraunces tokens fall back to Inter (which
- * covers Latin + Cyrillic) so the headline renders in a known family
- * instead of an unpredictable system fallback for missing glyphs.
+ * Locales whose script is not covered by the bundled Fraunces font
+ * subset. For these, Fraunces tokens fall back to Inter (which covers
+ * Latin + Latin Extended-A + Cyrillic) so the headline renders in a
+ * known family instead of an unpredictable system fallback for missing
+ * glyphs.
  *
  * Why Cyrillic (ru, uk) is on this list: the bundled Fraunces TTFs are
  * the Latin-only subset from Fontsource and contain no Cyrillic
  * codepoints. CJK / Hebrew / Arabic / Persian / Hangul are intentionally
  * not bundled — Inter passes those glyphs through to the platform
  * system font.
+ *
+ * Why Polish is on this list despite being Latin script: that Fraunces
+ * subset stops at Latin-1 and has no Latin Extended-A, so it is missing
+ * ą ć ę ł ń ś ź ż and their capitals — 16 of Polish's 18 diacritics.
+ * The membership test is glyph coverage, not script family; check a new
+ * locale's characters against the bundled TTFs before omitting it here.
+ * Portuguese needs only Latin-1 (ã õ ç á é í ó ú â ê ô à) and is covered.
  */
 export const NON_LATIN_LOCALES: ReadonlyArray<AvailableLanguage> = [
   'fa',
   'he',
   'ja',
   'ko',
+  'pl',
   'ru',
   'uk',
   'zh',

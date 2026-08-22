@@ -113,6 +113,11 @@ class ChatSessionRepository {
     return; // Mock: do nothing
   }
 
+  async setSessionPinned(sessionId, pinned) {
+    this._pinned = this._pinned || {};
+    this._pinned[sessionId] = pinned;
+  }
+
   // Update session completion settings
   async updateSessionCompletionSettings(sessionId, settings) {
     return; // Mock: do nothing

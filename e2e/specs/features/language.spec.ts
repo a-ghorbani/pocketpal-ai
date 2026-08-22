@@ -35,6 +35,10 @@ const LANGUAGE_ASSERTIONS: Record<string, {languageLabel: string}> = {
   ja: {languageLabel: '言語'},
   ko: {languageLabel: '언어'},
   ms: {languageLabel: 'Bahasa'},
+  pl: {languageLabel: 'Język'},
+  // pt and pt_BR share this label, so the spec proves the switch works but not
+  // that the two locales are distinct — locales.test.ts covers that.
+  pt: {languageLabel: 'Idioma'},
   pt_BR: {languageLabel: 'Idioma'},
   ru: {languageLabel: 'Язык'},
   uk: {languageLabel: 'Мова'},
@@ -43,7 +47,7 @@ const LANGUAGE_ASSERTIONS: Record<string, {languageLabel: string}> = {
 };
 
 // Order: start with non-English, end with English to restore default state
-const LANGUAGE_ORDER = ['fa', 'he', 'id', 'ja', 'ko', 'ms', 'pt_BR', 'ru', 'uk', 'zh', 'zh_Hant', 'en'];
+const LANGUAGE_ORDER = ['fa', 'he', 'id', 'ja', 'ko', 'ms', 'pl', 'pt', 'pt_BR', 'ru', 'uk', 'zh', 'zh_Hant', 'en'];
 
 describe('Language Switching', () => {
   let chatPage: ChatPage;

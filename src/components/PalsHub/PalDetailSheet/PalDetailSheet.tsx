@@ -400,10 +400,10 @@ export const PalDetailSheet: React.FC<PalDetailSheetProps> = observer(
               </>
             )}
 
-          {/* Show buy button (US) or informational text (non-US) for premium pals */}
+          {/* Show buy button (eligible) or informational text (ineligible) for premium pals */}
           {palLabel.type === 'premium' &&
             !displayPal.is_owned &&
-            (palStore.isUSRegion ? (
+            (palStore.isCheckoutEligible ? (
               <View style={styles.buyActionColumn}>
                 <Button
                   testID="buy-button"

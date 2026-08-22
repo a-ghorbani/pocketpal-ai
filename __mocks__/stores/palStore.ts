@@ -3,7 +3,7 @@ import {migrateLegacyPalToNew} from '../../src/utils/pal-migration';
 
 class MockPalStore {
   pals: Pal[] = [];
-  isUSRegion: boolean = false;
+  isCheckoutEligible: boolean = false;
 
   // PalsHub discovery state (read by the Explore tab).
   cachedPalsHubPals: any[] = [];

@@ -158,7 +158,7 @@ describe('contextInitParamsVersions', () => {
 
       const migrated = migrateContextInitParams(v20Params);
 
-      expect(migrated.version).toBe('2.2');
+      expect(migrated.version).toBe('2.3');
       expect(migrated.image_max_tokens).toBe(512);
       expect(migrated.no_extra_bufts).toBe(false);
     });
@@ -182,8 +182,67 @@ describe('contextInitParamsVersions', () => {
 
       const migrated = migrateContextInitParams(v20ParamsWithTokens);
 
-      expect(migrated.version).toBe('2.2');
+      expect(migrated.version).toBe('2.3');
       expect(migrated.image_max_tokens).toBe(1024); // Should preserve custom value
+    });
+
+    it('should migrate from v2.2 to v2.3 with speculative decoding OFF', () => {
+      const v22Params = {
+        version: '2.2',
+        n_ctx: 4096,
+        n_batch: 512,
+        n_ubatch: 512,
+        n_threads: 4,
+        cache_type_k: CacheType.Q8_0,
+        cache_type_v: CacheType.Q8_0,
+        n_gpu_layers: 50,
+        use_mlock: true,
+        use_mmap: 'false' as const,
+        kv_unified: true,
+        n_parallel: 1,
+        image_max_tokens: 1024,
+        no_extra_bufts: false,
+      };
+
+      const migrated = migrateContextInitParams(v22Params);
+
+      expect(migrated.version).toBe('2.3');
+      // Feature OFF for upgraded records; no spec_draft_* forwarded.
+      expect(migrated.speculativeEnabled).toBe(false);
+      expect(migrated.spec_draft_n_max).toBeUndefined();
+      expect(migrated.spec_draft_cache_type_k).toBeUndefined();
+      // All prior fields preserved unchanged.
+      expect(migrated.n_ctx).toBe(4096);
+      expect(migrated.cache_type_k).toBe(CacheType.Q8_0);
+      expect(migrated.n_gpu_layers).toBe(50);
+      expect(migrated.use_mlock).toBe(true);
+      expect(migrated.use_mmap).toBe('false');
+      expect(migrated.image_max_tokens).toBe(1024);
+    });
+
+    it('should preserve an explicit speculativeEnabled when migrating to v2.3', () => {
+      const v22ParamsSpeculative = {
+        version: '2.2',
+        n_ctx: 2048,
+        n_batch: 512,
+        n_ubatch: 512,
+        n_threads: 4,
+        cache_type_k: CacheType.F16,
+        cache_type_v: CacheType.F16,
+        n_gpu_layers: 99,
+        use_mlock: false,
+        use_mmap: 'true' as const,
+        kv_unified: true,
+        n_parallel: 1,
+        image_max_tokens: 512,
+        no_extra_bufts: false,
+        speculativeEnabled: true,
+      };
+
+      const migrated = migrateContextInitParams(v22ParamsSpeculative);
+
+      expect(migrated.version).toBe('2.3');
+      expect(migrated.speculativeEnabled).toBe(true);
     });
   });
 
