@@ -1,0 +1,710 @@
+#!/usr/bin/env node
+/**
+ * verify-android-payload.js — checks a built Android APK/AAB against
+ * scripts/android-payload-manifest.json before it can be published.
+ *
+ * Usage:
+ *   node scripts/verify-android-payload.js --apk <path> [--aab <path>] [--report <path>]
+ *   node scripts/verify-android-payload.js --print-variants
+ *
+ * `--print-variants` reads only the manifest and writes the gradle variant
+ * allowlist to stdout, so it is safe inside `$(...)`.
+ *
+ * Two things here are deliberate and would otherwise look arbitrary:
+ *
+ * - Backend presence is decided from `.dynsym`, never from `strings` or file
+ *   size. `strings` false-positives on unrelated `codec_*_ht` symbols, and two
+ *   builds that differ in whether the Hexagon backend is compiled in have
+ *   identical `opencl` string counts. `.dynsym` also survives stripping.
+ * - The ELF reader is in-process rather than a call out to `readelf`/`llvm-nm`.
+ *   macOS ships no `readelf`, and the NDK's `llvm-nm` sits at a host-specific
+ *   path, so shelling out would make the check unrunnable on exactly the
+ *   machines that need to run it locally.
+ *
+ * Exit 0 when every declared requirement holds, non-zero otherwise —
+ * including when the check could not read what it was asked to judge.
+ *
+ * Pattern mirrors scripts/verify-fonts.js.
+ */
+const {execFileSync} = require('child_process');
+const fs = require('fs');
+const path = require('path');
+
+const DEFAULT_MANIFEST = path.join(__dirname, 'android-payload-manifest.json');
+const ISSUE_URL = 'https://github.com/a-ghorbani/pocketpal-ai/issues/858';
+
+const SHT_DYNSYM = 11;
+const SHN_UNDEF = 0;
+const ELF64_SYM_SIZE = 24;
+const ELF64_SHDR_SIZE = 64;
+
+function usage() {
+  return [
+    'Usage:',
+    '  node scripts/verify-android-payload.js --apk <path> [--aab <path>] [--report <path>]',
+    '  node scripts/verify-android-payload.js --print-variants',
+    '',
+    'At least one of --apk / --aab is required unless --print-variants is given.',
+  ].join('\n');
+}
+
+function parseArgs(argv) {
+  const args = {};
+  for (let i = 0; i < argv.length; i++) {
+    const flag = argv[i];
+    switch (flag) {
+      case '--print-variants':
+        args.printVariants = true;
+        break;
+      case '--apk':
+      case '--aab':
+      case '--manifest':
+      case '--report': {
+        const value = argv[++i];
+        if (!value || value.startsWith('--')) {
+          throw new Error(`${flag} needs a path.\n\n${usage()}`);
+        }
+        // Refused rather than last-one-wins: a repeated flag would otherwise
+        // check one artifact while reporting on the whole invocation.
+        if (args[flag.slice(2)]) {
+          throw new Error(`${flag} was given twice.\n\n${usage()}`);
+        }
+        args[flag.slice(2)] = value;
+        break;
+      }
+      default:
+        throw new Error(`Unknown argument: ${flag}\n\n${usage()}`);
+    }
+  }
+  if (!args.printVariants && !args.apk && !args.aab) {
+    throw new Error(`Nothing to check.\n\n${usage()}`);
+  }
+  // Refused rather than ignored: --print-variants returns before reading any
+  // artifact, so accepting both would silently pass whatever it was given.
+  if (args.printVariants && (args.apk || args.aab)) {
+    throw new Error(
+      `--print-variants does not check an artifact; do not pass it with --apk/--aab.\n\n${usage()}`,
+    );
+  }
+  args.manifest = args.manifest || DEFAULT_MANIFEST;
+  return args;
+}
+
+/**
+ * A symbol rule has to demand that something is *present*. The shape a
+ * weakening edit takes is emptying `mustExport` during a dependency bump
+ * instead of re-declaring it, and the library itself is still there, so no
+ * other rule notices. `expectedMatchCount` only counts as a demand when it
+ * asks for a positive number of matches: `count: 0` asserts the backend is
+ * absent, which is both self-contradictory next to `mustExport` and exactly
+ * the state this check exists to reject.
+ */
+function assertRuleDemandsSomething(rule, manifestPath) {
+  const named = rule.lib || '(unnamed library)';
+  const refuse = why => {
+    throw new Error(
+      `${manifestPath} declares a symbol rule for ${named} that ${why}, so its backend would not be checked.`,
+    );
+  };
+
+  if (!rule.lib) {
+    refuse('names no library');
+  }
+  const mustExport = rule.mustExport || [];
+  if (!Array.isArray(mustExport)) {
+    refuse('has a mustExport that is not a list');
+  }
+
+  const count = rule.expectedMatchCount;
+  if (count !== undefined) {
+    if (
+      typeof count !== 'object' ||
+      count === null ||
+      typeof count.pattern !== 'string' ||
+      count.pattern.length === 0 ||
+      !Number.isInteger(count.count) ||
+      count.count < 0
+    ) {
+      refuse('has a malformed expectedMatchCount');
+    }
+  }
+
+  const demandsPresence = mustExport.length > 0 || (count && count.count > 0);
+  if (!demandsPresence) {
+    refuse('asserts nothing');
+  }
+}
+
+function refuseAbi(abi, manifestPath, why) {
+  throw new Error(
+    `${manifestPath} declares ${why} for ${abi.abi || '(unnamed ABI)'}.`,
+  );
+}
+
+/** Shape and the one floor every ABI has, accelerator or not. */
+function assertAbiStructure(abi, manifestPath) {
+  if (
+    !abi.abi ||
+    !Array.isArray(abi.requiredLibs) ||
+    abi.requiredLibs.length === 0
+  ) {
+    refuseAbi(abi, manifestPath, 'no required libraries');
+  }
+  if (abi.requiredAssets !== undefined && !Array.isArray(abi.requiredAssets)) {
+    refuseAbi(abi, manifestPath, 'a requiredAssets that is not a list');
+  }
+  if (
+    abi.requiredSymbols !== undefined &&
+    !Array.isArray(abi.requiredSymbols)
+  ) {
+    refuseAbi(abi, manifestPath, 'a requiredSymbols that is not a list');
+  }
+  for (const rule of abi.requiredSymbols || []) {
+    assertRuleDemandsSomething(rule, manifestPath);
+  }
+}
+
+/**
+ * An ABI that carries an accelerator variant has to demand the things that
+ * make it work. Both lists degrade the same silent way: emptying one is the
+ * cheapest edit that unblocks a build, the rule simply stops being checked,
+ * and nothing else in the manifest covers it.
+ *
+ * Conditional because an ABI without an accelerator legitimately declares
+ * neither. The `_hexagon` test mirrors the name convention llama.rn's own
+ * CMake uses to decide which variant gets the backend; were upstream to rename
+ * it, the ladder-coverage test fails first.
+ */
+function assertAcceleratorFloors(abi, manifestPath) {
+  if (!abi.requiredLibs.some(lib => /_hexagon/.test(lib))) {
+    return;
+  }
+  // Not merely "a rule", but a rule that looks at the accelerator library
+  // itself. Two near-misses both pass every other floor and both accept an
+  // artifact with no backend: a rule pointing at librnllama.so, and a rule
+  // pointing at the accelerator's own JNI wrapper — whose name also contains
+  // "_hexagon", but which is a thin shim exporting stable Java_* entry points
+  // and none of the backend symbols.
+  if (
+    !(abi.requiredSymbols || []).some(
+      rule =>
+        /_hexagon/.test(rule.lib || '') &&
+        !/^librnllama_jni/.test(rule.lib || ''),
+    )
+  ) {
+    refuseAbi(
+      abi,
+      manifestPath,
+      'an accelerator library but no symbol rule examining it',
+    );
+  }
+  // The DSP libraries are extracted as a set at runtime and the backend is
+  // disabled outright if any one is missing, so a compiled-in backend with no
+  // assets is dead on the device.
+  if ((abi.requiredAssets || []).length === 0) {
+    refuseAbi(
+      abi,
+      manifestPath,
+      'an accelerator library but no required assets',
+    );
+  }
+  if (!Number.isInteger(abi.requiredAssetElfMachine)) {
+    refuseAbi(
+      abi,
+      manifestPath,
+      'required assets but no requiredAssetElfMachine to check them against',
+    );
+  }
+}
+
+function loadManifest(manifestPath) {
+  let manifest;
+  try {
+    manifest = JSON.parse(fs.readFileSync(manifestPath, 'utf-8'));
+  } catch (err) {
+    throw new Error(
+      `Could not read the manifest ${manifestPath}: ${err.message}`,
+    );
+  }
+  // A manifest that declares nothing would let every artifact pass, which is
+  // the failure mode this check exists to prevent.
+  if (!Array.isArray(manifest.abis) || manifest.abis.length === 0) {
+    throw new Error(
+      `${manifestPath} declares no ABIs, so it would pass any artifact.`,
+    );
+  }
+  for (const abi of manifest.abis) {
+    assertAbiStructure(abi, manifestPath);
+  }
+  // Between the two per-ABI passes so the broadest weakening gets the broadest
+  // message instead of being reported as one ABI's problem.
+  const symbolRules = manifest.abis.reduce(
+    (total, abi) => total + (abi.requiredSymbols || []).length,
+    0,
+  );
+  if (symbolRules === 0) {
+    throw new Error(
+      `${manifestPath} declares no symbol rules, so no backend would be checked.`,
+    );
+  }
+  // Every accelerator floor below is conditional on an ABI declaring an
+  // accelerator library, so a manifest declaring none would satisfy all of
+  // them vacuously — and the ABI enumeration only compares against what the
+  // manifest names, so a tree carrying no ladder at all would pass.
+  if (
+    !manifest.abis.some(abi =>
+      abi.requiredLibs.some(
+        lib => /_hexagon/.test(lib) && !/^librnllama_jni/.test(lib),
+      ),
+    )
+  ) {
+    throw new Error(
+      `${manifestPath} declares no accelerator library for any ABI, so no backend would be checked.`,
+    );
+  }
+  for (const abi of manifest.abis) {
+    assertAcceleratorFloors(abi, manifestPath);
+  }
+  return manifest;
+}
+
+function variantsFromManifest(manifest, manifestPath) {
+  const variants = [];
+  for (const abi of manifest.abis) {
+    for (const lib of abi.requiredLibs) {
+      if (lib.startsWith('librnllama_jni')) {
+        continue;
+      }
+      const variant = lib.replace(/^lib/, '').replace(/\.so$/, '');
+      if (!variants.includes(variant)) {
+        variants.push(variant);
+      }
+    }
+  }
+  // An empty allowlist silently un-narrows the build: gradle skips passing
+  // -DRNLLAMA_ANDROID_VARIANTS at all for an empty value, and CMake reads the
+  // resulting empty variable as "every variant enabled"
+  // (cmake/rnllama-build-options.cmake). The build-log assertion would also
+  // fail, since gradle prints nothing either — this just fails earlier, and
+  // says which of the two it is.
+  if (variants.length === 0) {
+    throw new Error(
+      `${manifestPath} yields an empty variant allowlist; every required library is a JNI wrapper.`,
+    );
+  }
+  return variants;
+}
+
+function listZipEntries(archive) {
+  let out;
+  try {
+    out = execFileSync('unzip', ['-Z1', archive], {
+      encoding: 'utf-8',
+      maxBuffer: 64 * 1024 * 1024,
+    });
+  } catch (err) {
+    throw new Error(`could not list ${archive}: ${err.message.trim()}`);
+  }
+  const entries = out.split('\n').filter(Boolean);
+  if (entries.length === 0) {
+    throw new Error(`${archive} contains no entries`);
+  }
+  return entries;
+}
+
+function readZipEntry(archive, entry) {
+  let buf;
+  try {
+    buf = execFileSync('unzip', ['-p', archive, entry], {
+      maxBuffer: 512 * 1024 * 1024,
+    });
+  } catch (err) {
+    throw new Error(`could not extract ${entry}: ${err.message.trim()}`);
+  }
+  if (buf.length === 0) {
+    throw new Error(`${entry} extracted as zero bytes`);
+  }
+  return buf;
+}
+
+/**
+ * The ELF machine an object targets. Shares the header layout between ELF32
+ * and ELF64 — `e_machine` sits at the same offset in both — so this works for
+ * the DSP libraries, which are ELF32, as well as the arm64 libraries.
+ */
+function readElfMachine(buf) {
+  if (buf.length < 20) {
+    throw new Error('file is too short to be an ELF object');
+  }
+  if (buf.readUInt32BE(0) !== 0x7f454c46) {
+    throw new Error('file is not an ELF object');
+  }
+  const littleEndian = buf[5] === 1;
+  return littleEndian ? buf.readUInt16LE(18) : buf.readUInt16BE(18);
+}
+
+/**
+ * Bounded by the string table, not by the file: a `.dynstr` region containing
+ * no NUL would otherwise make every lookup scan to EOF, turning a malformed
+ * artifact into an O(symbols x filesize) scan rather than a prompt failure.
+ */
+function readCString(buf, offset, limit) {
+  if (offset < 0 || offset >= limit || limit > buf.length) {
+    throw new Error('a .dynsym name points outside its string table');
+  }
+  const end = buf.indexOf(0, offset);
+  if (end === -1 || end >= limit) {
+    throw new Error('a .dynsym name is not terminated inside its string table');
+  }
+  return buf.toString('utf-8', offset, end);
+}
+
+/**
+ * Every `.dynsym` entry, in file order, skipping the reserved null entry —
+ * the same set `llvm-nm -D` prints, which is what the manifest counts were
+ * calibrated against.
+ */
+function readDynsym(buf) {
+  if (buf.length < ELF64_SHDR_SIZE) {
+    throw new Error('file is too short to be an ELF object');
+  }
+  if (buf.readUInt32BE(0) !== 0x7f454c46) {
+    throw new Error('file is not an ELF object');
+  }
+  if (buf[4] !== 2 || buf[5] !== 1) {
+    throw new Error('file is not a little-endian 64-bit ELF object');
+  }
+
+  const shoff = Number(buf.readBigUInt64LE(0x28));
+  const shentsize = buf.readUInt16LE(0x3a);
+  const shnum = buf.readUInt16LE(0x3c);
+  if (shoff === 0 || shnum === 0) {
+    throw new Error('ELF section headers are absent');
+  }
+  if (shentsize < ELF64_SHDR_SIZE || shoff + shnum * shentsize > buf.length) {
+    throw new Error('ELF section header table is malformed or truncated');
+  }
+
+  const sections = [];
+  for (let i = 0; i < shnum; i++) {
+    const at = shoff + i * shentsize;
+    sections.push({
+      type: buf.readUInt32LE(at + 4),
+      offset: Number(buf.readBigUInt64LE(at + 24)),
+      size: Number(buf.readBigUInt64LE(at + 32)),
+      link: buf.readUInt32LE(at + 40),
+      entsize: Number(buf.readBigUInt64LE(at + 56)),
+    });
+  }
+
+  const dynsym = sections.find(section => section.type === SHT_DYNSYM);
+  if (!dynsym) {
+    throw new Error('the file has no .dynsym section');
+  }
+  if (dynsym.entsize !== ELF64_SYM_SIZE) {
+    throw new Error(`.dynsym has an unexpected entry size (${dynsym.entsize})`);
+  }
+  if (dynsym.offset + dynsym.size > buf.length) {
+    throw new Error('.dynsym runs past the end of the file');
+  }
+  const strtab = sections[dynsym.link];
+  if (!strtab) {
+    throw new Error(
+      '.dynsym points at a string table the file does not contain',
+    );
+  }
+
+  const count = Math.floor(dynsym.size / dynsym.entsize);
+  if (count < 2) {
+    throw new Error('.dynsym is empty');
+  }
+
+  const symbols = [];
+  for (let i = 1; i < count; i++) {
+    const at = dynsym.offset + i * dynsym.entsize;
+    symbols.push({
+      name: readCString(
+        buf,
+        strtab.offset + buf.readUInt32LE(at),
+        strtab.offset + strtab.size,
+      ),
+      defined: buf.readUInt16LE(at + 6) !== SHN_UNDEF,
+    });
+  }
+  return symbols;
+}
+
+function checkSymbolRule({rule, archive, artifactName, entry, report, fail}) {
+  let symbols;
+  try {
+    symbols = readDynsym(readZipEntry(archive, entry));
+  } catch (err) {
+    report.push(`    ${rule.lib}: UNREADABLE — ${err.message}`);
+    fail(
+      [
+        `could not read the exported symbols of ${entry} in ${artifactName}: ${err.message}.`,
+        'The payload check could not run, so it reports failure rather than success —',
+        'a check that cannot read the artifact has proven nothing about it.',
+      ].join('\n      '),
+    );
+    return;
+  }
+
+  report.push(`    ${rule.lib}: ${symbols.length} .dynsym entries`);
+
+  const missing = (rule.mustExport || []).filter(
+    name => !symbols.some(symbol => symbol.name === name && symbol.defined),
+  );
+  for (const name of rule.mustExport || []) {
+    report.push(
+      `      ${missing.includes(name) ? 'MISSING' : 'present'}  ${name}`,
+    );
+  }
+  if (missing.length > 0) {
+    fail(
+      [
+        `${entry} in ${artifactName} does not export ${missing.join(', ')}.`,
+        'The Hexagon (NPU) backend was not compiled into this build, so Snapdragon devices',
+        'will fall back to the CPU. Point HEXAGON_SDK_ROOT and HEXAGON_TOOLS_ROOT at an SDK',
+        'containing ipc/fastrpc/remote/ship/android_aarch64/libcdsprpc.so and rebuild.',
+        `Background: ${ISSUE_URL}`,
+      ].join('\n      '),
+    );
+  }
+
+  const expected = rule.expectedMatchCount;
+  if (!expected) {
+    return;
+  }
+  const pattern = expected.pattern.toLowerCase();
+  const matched = symbols.filter(symbol =>
+    symbol.name.toLowerCase().includes(pattern),
+  ).length;
+  report.push(
+    `      ${matched} .dynsym entries matching "${expected.pattern}" (declared ${expected.count})`,
+  );
+  if (matched !== expected.count && missing.length === 0) {
+    fail(
+      [
+        `${entry} in ${artifactName} has ${matched} .dynsym entries matching "${expected.pattern}";`,
+        `scripts/android-payload-manifest.json declares ${expected.count}.`,
+        'The required symbols are all present, so the backend is compiled in — this is a drift',
+        'tripwire, not a breakage. If the change is expected (a llama.rn upgrade, say), re-declare',
+        `expectedMatchCount as ${matched} in the same pull request so the diff is reviewed.`,
+      ].join('\n      '),
+    );
+  }
+}
+
+function checkArtifact({archive, kind, manifest, report, failures}) {
+  const artifactName = path.basename(archive);
+  const prefix = kind === 'aab' ? 'base/' : '';
+  const fail = message => failures.push(`FAIL: ${message}`);
+
+  report.push(`artifact: ${archive} (${kind})`);
+
+  let entries;
+  try {
+    entries = new Set(listZipEntries(archive));
+  } catch (err) {
+    report.push(`  UNREADABLE — ${err.message}`);
+    fail(
+      [
+        `${err.message}.`,
+        'The payload check could not run, so it reports failure rather than success —',
+        'a check that cannot read the artifact has proven nothing about it.',
+      ].join('\n      '),
+    );
+    return;
+  }
+
+  // The manifest says what each declared ABI must contain; it cannot say
+  // anything about an ABI nobody declared. Adding one to abiFilters or
+  // reactNativeArchitectures would otherwise ship a tree this check never
+  // opens — and the variant allowlist is matched by exact name, so that tree
+  // would carry only the generic portable-C pair.
+  const declaredAbis = new Set(manifest.abis.map(entry => entry.abi));
+  const libPrefix = `${prefix}lib/`;
+  const shippedAbis = [
+    ...new Set(
+      [...entries]
+        .filter(entry => entry.startsWith(libPrefix))
+        .map(entry => entry.slice(libPrefix.length).split('/')[0])
+        .filter(Boolean),
+    ),
+  ].sort();
+  report.push(`  ABIs in the artifact: ${shippedAbis.join(', ') || 'none'}`);
+  for (const abi of shippedAbis.filter(name => !declaredAbis.has(name))) {
+    report.push(`    UNDECLARED  ${libPrefix}${abi}/`);
+    fail(
+      [
+        `${artifactName} ships ${libPrefix}${abi}/, which the manifest does not declare.`,
+        'Nothing checked that tree, so its native payload is unverified. Either declare the ABI in',
+        'scripts/android-payload-manifest.json, or drop it from reactNativeArchitectures and the',
+        "app's abiFilters so it is not shipped.",
+      ].join('\n      '),
+    );
+  }
+
+  for (const abi of manifest.abis) {
+    report.push(`  ${abi.abi}`);
+
+    const missingLibs = [];
+    for (const lib of abi.requiredLibs) {
+      const entry = `${prefix}lib/${abi.abi}/${lib}`;
+      if (!entries.has(entry)) {
+        missingLibs.push(entry);
+      }
+    }
+    report.push(
+      `    libraries: ${abi.requiredLibs.length - missingLibs.length}/${abi.requiredLibs.length} present`,
+    );
+    for (const entry of missingLibs) {
+      report.push(`      MISSING  ${entry}`);
+      fail(
+        [
+          `${artifactName} is missing ${entry}.`,
+          'The build did not produce every library the manifest requires. If the variant allowlist',
+          '(ORG_GRADLE_PROJECT_rnllamaVariants) was narrowed, widen it to match the manifest; if the',
+          'manifest is what changed, update scripts/android-payload-manifest.json in the same pull request.',
+        ].join('\n      '),
+      );
+    }
+
+    const missingAssets = (abi.requiredAssets || []).filter(
+      asset => !entries.has(`${prefix}${asset}`),
+    );
+    // Printed even when nothing is declared: the summary line claims assets
+    // were checked, so a manifest that declares none has to be visible here.
+    const requiredAssets = abi.requiredAssets || [];
+    report.push(
+      `    assets: ${requiredAssets.length - missingAssets.length}/${requiredAssets.length} present`,
+    );
+    // Presence by filename is not enough: a file of the right name that is not
+    // a DSP library leaves the backend as dead on the device as a missing one,
+    // and would report PASS.
+    for (const asset of (abi.requiredAssets || []).filter(
+      candidate => !missingAssets.includes(candidate),
+    )) {
+      const entry = `${prefix}${asset}`;
+      let machine;
+      try {
+        machine = readElfMachine(readZipEntry(archive, entry));
+      } catch (err) {
+        report.push(`      UNREADABLE  ${entry} — ${err.message}`);
+        fail(
+          [
+            `could not read ${entry} in ${artifactName}: ${err.message}.`,
+            'The payload check could not run, so it reports failure rather than success —',
+            'a check that cannot read the artifact has proven nothing about it.',
+          ].join('\n      '),
+        );
+        continue;
+      }
+      if (machine !== abi.requiredAssetElfMachine) {
+        report.push(
+          `      WRONG MACHINE  ${entry} (e_machine ${machine}, expected ${abi.requiredAssetElfMachine})`,
+        );
+        fail(
+          [
+            `${entry} in ${artifactName} is not a DSP library: its ELF e_machine is ${machine},`,
+            `and the manifest requires ${abi.requiredAssetElfMachine}.`,
+            'A file of the right name that the DSP cannot load disables the Hexagon backend just as',
+            'surely as a missing one. Check that llama.rn shipped real bin/arm64-v8a payloads.',
+          ].join('\n      '),
+        );
+      }
+    }
+
+    for (const asset of missingAssets) {
+      report.push(`      MISSING  ${prefix}${asset}`);
+      fail(
+        [
+          `${artifactName} is missing ${prefix}${asset}.`,
+          'All four DSP libraries are required, not only the one a given device uses:',
+          'RNLlama.java extracts them as a set and disables the Hexagon backend entirely',
+          'if any one is absent. They are synced into the artifact from',
+          "node_modules/llama.rn/bin/arm64-v8a by llama.rn's syncRNLlamaHtpAssets task —",
+          'check that the dependency installed completely.',
+        ].join('\n      '),
+      );
+    }
+
+    const extras = [...entries]
+      .filter(entry => entry.startsWith(`${prefix}lib/${abi.abi}/librnllama`))
+      .map(entry => path.basename(entry))
+      .filter(lib => !abi.requiredLibs.includes(lib))
+      .sort();
+    report.push(
+      `    extra rnllama libraries: ${extras.length > 0 ? extras.join(', ') : 'none'}`,
+    );
+
+    for (const rule of abi.requiredSymbols || []) {
+      const entry = `${prefix}lib/${abi.abi}/${rule.lib}`;
+      if (missingLibs.includes(entry)) {
+        continue;
+      }
+      checkSymbolRule({rule, archive, artifactName, entry, report, fail});
+    }
+  }
+}
+
+function main() {
+  const args = parseArgs(process.argv.slice(2));
+  const manifest = loadManifest(args.manifest);
+
+  if (args.printVariants) {
+    process.stdout.write(
+      `${variantsFromManifest(manifest, args.manifest).join(',')}\n`,
+    );
+    return 0;
+  }
+
+  const report = ['Android payload check', `manifest: ${args.manifest}`, ''];
+  const failures = [];
+
+  for (const [flag, kind] of [
+    ['apk', 'apk'],
+    ['aab', 'aab'],
+  ]) {
+    if (args[flag]) {
+      checkArtifact({archive: args[flag], kind, manifest, report, failures});
+      report.push('');
+    }
+  }
+
+  report.push(
+    failures.length === 0
+      ? 'PASS: every declared library, asset and backend symbol is present.'
+      : failures.join('\n\n'),
+  );
+
+  // The report file is written before the verdict is printed. It is the
+  // evidence that the check ran, so a pass nobody can audit is not a pass —
+  // and a run that printed PASS and then failed on the write would read, to a
+  // human scanning the log, as a pass.
+  const text = `${report.join('\n')}\n`;
+  if (args.report) {
+    try {
+      fs.writeFileSync(args.report, text);
+    } catch (err) {
+      process.stdout.write(`${report.slice(0, -1).join('\n')}\n`);
+      throw new Error(
+        `could not write the report to ${args.report}: ${err.message}. The check ran, but its evidence could not be recorded.`,
+      );
+    }
+  }
+  process.stdout.write(text);
+  return failures.length === 0 ? 0 : 1;
+}
+
+if (require.main === module) {
+  try {
+    process.exit(main());
+  } catch (err) {
+    console.error(`FAIL: ${err.message}`);
+    process.exit(1);
+  }
+}
+
+module.exports = {readDynsym, variantsFromManifest};

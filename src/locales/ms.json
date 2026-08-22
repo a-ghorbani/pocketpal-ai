@@ -191,7 +191,21 @@
       "consentRevoke": "Batalkan"
     },
     "languageSheetTitle": "Bahasa",
-    "languageSearchPlaceholder": "Cari bahasa"
+    "languageSearchPlaceholder": "Cari bahasa",
+    "speculativeDecoding": "Penyahkodan Spekulatif",
+    "speculativeDecodingDescription": "Guna model draf kecil (atau model MTP terbenam) untuk meramal token dan mempercepatkan penjanaan. Percubaan.",
+    "speculativeNotMTPCapable": "Model aktif ini tidak menyokong penyahkodan spekulatif dan tiada draf serasi dipasangkan, jadi ini kekal dimatikan untuknya tanpa sebarang kesan. Ia digunakan secara automatik pada model yang menyokongnya.",
+    "speculativeDraftModel": "Model Draf",
+    "speculativeDraftModelDescription": "Membuat draf token untuk model aktif.",
+    "speculativeDraftModelNone": "Tiada (MTP terbenam)",
+    "speculativeDraftModelIgnoredOverridden": "Model aktif ini disertakan dengan model drafnya sendiri, jadi pilihan ini diabaikan.",
+    "speculativeDraftModelIgnoredIncompatible": "Draf ini tidak serasi dengan model aktif, jadi ia diabaikan.",
+    "speculativeDraftModelIgnoredNotCapable": "Model ini tidak mempunyai lapisan draf, jadi ia tidak boleh digunakan sebagai model draf.",
+    "speculativeDraftKeyCacheType": "Jenis Cache Kunci Draf",
+    "speculativeDraftValueCacheType": "Jenis Cache Nilai Draf",
+    "speculativeDraftNGpuLayers": "Lapisan GPU Draf",
+    "speculativeDraftNGpuLayersDescription": "Bilangan lapisan model draf yang dimuatkan ke GPU.",
+    "speculativeDraftCacheTypeInactiveDescription": "Digunakan sebaik sahaja penyahkodan spekulatif berjalan."
   },
   "memory": {
     "shortWarning": "Amaran Memori",
@@ -381,7 +395,8 @@
         "viewModelCardOnHuggingFace": "Lihat Kad Model di Hugging Face",
         "visionSupported": "Disokong",
         "visionNotSupported": "Tidak disokong",
-        "visionUnknown": "Tidak diketahui"
+        "visionUnknown": "Tidak diketahui",
+        "draftOnlyReason": "Model draf sahaja. Pilih ia di bawah Tetapan → Penyahkodan Spekulatif."
       },
       "accessibility": {
         "expandDetails": "Kembangkan butiran",
@@ -442,7 +457,9 @@
       "multilingual": "Pelbagai Bahasa",
       "rewriting": "Menulis Semula",
       "creativity": "Penulisan Kreatif",
-      "vision": "Penglihatan"
+      "vision": "Penglihatan",
+      "mtp": "Spekulatif (MTP)",
+      "mtpDraft": "Draf spekulatif"
     },
     "hubRun": {
       "title": "Muat turun model",
@@ -1006,7 +1023,8 @@
       "tokensPerSec": "{{value}} token/saat",
       "ttft": "{{value}}ms TTFT",
       "interrupted": "Terganggu",
-      "truncated": "Terpotong — kemungkinan konteks penuh"
+      "truncated": "Terpotong — kemungkinan konteks penuh",
+      "draftAccepted": "draf: {{accepted}}/{{total}} ({{pct}}%)"
     },
     "pendingIndicator": {
       "preparingTool": "Menyediakan alat",
@@ -1229,7 +1247,8 @@
       "showResultsAccessibilityLabel": "Papar hasil carian web untuk {{query}}",
       "openLinkError": "Tidak dapat membuka pautan ini."
     },
-    "contextFullRemote": "Perbualan ini sudah kehabisan ruang. Mulakan sembang baharu."
+    "contextFullRemote": "Perbualan ini sudah kehabisan ruang. Mulakan sembang baharu.",
+    "speculativeInitFailed": "Peranti ini tidak dapat memulakan penyahkodan spekulatif untuk model ini — kemungkinan besar memori tidak mencukupi untuk konteks draf. Matikan Penyahkodan Spekulatif di bawah Tetapan → Tetapan Lanjutan dan cuba lagi."
   },
   "benchmark": {
     "title": "Tolok Ukur",

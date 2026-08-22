@@ -191,7 +191,21 @@
       "consentGivenTitle": "Wyszukiwanie w internecie jest włączone",
       "consentGivenDescription": "Zapytania i odczyty stron mogą opuszczać Twoje urządzenie w sposób opisany powyżej.",
       "consentRevoke": "Cofnij zgodę"
-    }
+    },
+    "speculativeDecoding": "Dekodowanie spekulatywne",
+    "speculativeDecodingDescription": "Użyj małego modelu roboczego (lub wbudowanego modelu MTP) do przewidywania tokenów i przyspieszenia generowania. Eksperymentalne.",
+    "speculativeNotMTPCapable": "Aktywny model nie obsługuje dekodowania spekulatywnego i nie ma sparowanego zgodnego modelu roboczego, więc funkcja pozostaje dla niego wyłączona i nie działa. Włącza się automatycznie w modelach, które ją obsługują.",
+    "speculativeDraftModel": "Model roboczy",
+    "speculativeDraftModelDescription": "Wstępnie generuje tokeny dla aktywnego modelu.",
+    "speculativeDraftModelNone": "Brak (wbudowany MTP)",
+    "speculativeDraftModelIgnoredOverridden": "Aktywny model ma własny model roboczy, więc ten wybór jest ignorowany.",
+    "speculativeDraftModelIgnoredIncompatible": "Ten model roboczy nie jest zgodny z aktywnym modelem, więc jest ignorowany.",
+    "speculativeDraftModelIgnoredNotCapable": "Ten model nie zawiera warstw roboczych, więc nie może pełnić funkcji modelu roboczego.",
+    "speculativeDraftKeyCacheType": "Typ klucza pamięci podręcznej modelu roboczego",
+    "speculativeDraftValueCacheType": "Typ pamięci podręcznej wartości modelu roboczego",
+    "speculativeDraftNGpuLayers": "Warstwy GPU modelu roboczego",
+    "speculativeDraftNGpuLayersDescription": "Liczba warstw modelu roboczego przenoszonych do GPU.",
+    "speculativeDraftCacheTypeInactiveDescription": "Zacznie obowiązywać po uruchomieniu dekodowania spekulatywnego."
   },
   "models": {
     "labels": {
@@ -356,7 +370,8 @@
         "viewModelCardOnHuggingFace": "Zobacz Kartę Modelu na Hugging Face",
         "visionSupported": "Obsługiwane",
         "visionNotSupported": "Nieobsługiwane",
-        "visionUnknown": "Nieznane"
+        "visionUnknown": "Nieznane",
+        "draftOnlyReason": "Model tylko roboczy. Wybierz go w Ustawienia → Dekodowanie spekulatywne."
       },
       "accessibility": {
         "expandDetails": "Rozwiń szczegóły",
@@ -417,7 +432,9 @@
       "multilingual": "Wielojęzyczny",
       "rewriting": "Przekształcenie",
       "creativity": "Twórcze pisanie",
-      "vision": "Wizja"
+      "vision": "Wizja",
+      "mtp": "Spekulatywne (MTP)",
+      "mtpDraft": "Roboczy spekulatywny"
     },
     "fileManagement": {
       "fileAlreadyExists": "Plik już istnieje",
@@ -522,7 +539,8 @@
       "tokensPerSec": "{{value}} tokenów/sek",
       "ttft": "{{value}}ms TTFT",
       "interrupted": "Przerwane",
-      "truncated": "Przerwano - prawdopodobnie wyczerpano limit kontekstu"
+      "truncated": "Przerwano - prawdopodobnie wyczerpano limit kontekstu",
+      "draftAccepted": "roboczy: {{accepted}}/{{total}} ({{pct}}%)"
     },
     "exportUtils": {
       "fileSaved": "Plik zapisany",
@@ -1554,7 +1572,8 @@
       "searchResultsTitle": "Wyniki wyszukiwania",
       "showResultsAccessibilityLabel": "Pokaż wyniki wyszukiwania w internecie dla {{query}}",
       "openLinkError": "Nie udało się otworzyć tego linku."
-    }
+    },
+    "speculativeInitFailed": "To urządzenie nie mogło uruchomić dekodowania spekulatywnego dla tego modelu — najprawdopodobniej brakuje pamięci na kontekst modelu roboczego. Wyłącz Dekodowanie spekulatywne w Ustawienia → Ustawienia Zaawansowane i spróbuj ponownie."
   },
   "htmlPreview": {
     "defaultTitle": "Podgląd",

@@ -210,7 +210,8 @@
       "showResultsAccessibilityLabel": "顯示 {{query}} 的網路搜尋結果",
       "openLinkError": "無法開啟此連結。"
     },
-    "contextFullRemote": "對話空間不足。請開始新對話。"
+    "contextFullRemote": "對話空間不足。請開始新對話。",
+    "speculativeInitFailed": "此裝置無法為此模型啟動推測解碼，很可能是草稿內容的記憶體不足。請在「設定 → 進階設定」中關閉推測解碼後再試一次。"
   },
   "common": {
     "cancel": "取消",
@@ -704,7 +705,8 @@
       "tokensPerSec": "{{value}} 詞元/秒",
       "ttft": "{{value}}毫秒 TTFT",
       "interrupted": "被打斷",
-      "truncated": "已截斷 — 可能是上下文已滿"
+      "truncated": "已截斷 — 可能是上下文已滿",
+      "draftAccepted": "草稿：{{accepted}}/{{total}}（{{pct}}%）"
     },
     "thinkingBubble": {
       "reasoning": "推理"
@@ -939,7 +941,8 @@
         "viewModelCardOnHuggingFace": "在 Hugging Face 觀看模型卡",
         "visionSupported": "支援",
         "visionNotSupported": "不支援",
-        "visionUnknown": "未知"
+        "visionUnknown": "未知",
+        "draftOnlyReason": "僅供草稿使用的模型。請在「設定 → 推測解碼」中選擇。"
       },
       "accessibility": {
         "loadingIndicator": "正在載入",
@@ -1000,7 +1003,9 @@
       "multilingual": "多種語言",
       "rewriting": "重新撰寫",
       "creativity": "創意寫作",
-      "vision": "視覺"
+      "vision": "視覺",
+      "mtp": "推測（MTP）",
+      "mtpDraft": "推測草稿"
     },
     "vision": "視覺",
     "mmproj": "投影機",
@@ -1219,7 +1224,21 @@
       "consentRevoke": "撤銷"
     },
     "languageSheetTitle": "語言",
-    "languageSearchPlaceholder": "搜尋語言"
+    "languageSearchPlaceholder": "搜尋語言",
+    "speculativeDecoding": "推測解碼",
+    "speculativeDecodingDescription": "使用小型草稿模型（或內嵌的 MTP 模型）預測 token，加速生成。實驗性功能。",
+    "speculativeNotMTPCapable": "目前使用的模型不支援推測解碼，也未搭配相容的草稿模型，因此此設定對它無效並維持關閉。對支援的模型會自動套用。",
+    "speculativeDraftModel": "草稿模型",
+    "speculativeDraftModelDescription": "為目前使用的模型草擬 token。",
+    "speculativeDraftModelNone": "無（內嵌 MTP）",
+    "speculativeDraftModelIgnoredOverridden": "目前使用的模型自帶草稿模型，因此會忽略此選擇。",
+    "speculativeDraftModelIgnoredIncompatible": "此草稿模型與目前使用的模型不相容，因此會被忽略。",
+    "speculativeDraftModelIgnoredNotCapable": "此模型不含草稿層，因此無法用作草稿模型。",
+    "speculativeDraftKeyCacheType": "草稿鍵快取類型",
+    "speculativeDraftValueCacheType": "草稿值快取類型",
+    "speculativeDraftNGpuLayers": "草稿 GPU 層數",
+    "speculativeDraftNGpuLayersDescription": "要卸載到 GPU 的草稿模型層數。",
+    "speculativeDraftCacheTypeInactiveDescription": "推測解碼啟動後即會套用。"
   },
   "storage": {
     "checkFailed": "無法檢查存儲",
