@@ -35,8 +35,12 @@ const ISSUE_URL = 'https://github.com/a-ghorbani/pocketpal-ai/issues/858';
 
 const SHT_DYNSYM = 11;
 const SHN_UNDEF = 0;
+const PT_LOAD = 1;
 const ELF64_SYM_SIZE = 24;
 const ELF64_SHDR_SIZE = 64;
+const ELF32_PHDR_SIZE = 32;
+const ELF64_PHDR_SIZE = 56;
+const ELF32_EHDR_SIZE = 52;
 
 function usage() {
   return [
@@ -366,6 +370,60 @@ function readElfMachine(buf) {
   }
   const littleEndian = buf[5] === 1;
   return littleEndian ? buf.readUInt16LE(18) : buf.readUInt16BE(18);
+}
+
+/**
+ * Every program header, in file order. Both ELF classes and both byte orders,
+ * like `readElfMachine` and unlike `readDynsym`: the subjects include the
+ * ELF32 DSP objects, and a reader that assumed ELF64-LE would throw on them
+ * rather than judge them.
+ */
+function readProgramHeaders(buf) {
+  if (buf.length < ELF32_EHDR_SIZE) {
+    throw new Error('file is too short to be an ELF object');
+  }
+  if (buf.readUInt32BE(0) !== 0x7f454c46) {
+    throw new Error('file is not an ELF object');
+  }
+  if (buf[4] !== 1 && buf[4] !== 2) {
+    throw new Error(`ELF class ${buf[4]} is neither 32-bit nor 64-bit`);
+  }
+  if (buf[5] !== 1 && buf[5] !== 2) {
+    throw new Error(`ELF data encoding ${buf[5]} is neither LSB nor MSB`);
+  }
+  const elf64 = buf[4] === 2;
+  const littleEndian = buf[5] === 1;
+  if (elf64 && buf.length < ELF64_SHDR_SIZE) {
+    throw new Error('file is too short to be an ELF object');
+  }
+
+  const u16 = at =>
+    littleEndian ? buf.readUInt16LE(at) : buf.readUInt16BE(at);
+  const u32 = at =>
+    littleEndian ? buf.readUInt32LE(at) : buf.readUInt32BE(at);
+  const u64 = at =>
+    Number(littleEndian ? buf.readBigUInt64LE(at) : buf.readBigUInt64BE(at));
+
+  const phoff = elf64 ? u64(0x20) : u32(0x1c);
+  const phentsize = u16(elf64 ? 0x36 : 42);
+  const phnum = u16(elf64 ? 0x38 : 44);
+  const phdrSize = elf64 ? ELF64_PHDR_SIZE : ELF32_PHDR_SIZE;
+  if (phoff === 0 || phnum === 0) {
+    throw new Error('ELF program headers are absent');
+  }
+  if (phentsize < phdrSize || phoff + phnum * phentsize > buf.length) {
+    throw new Error('ELF program header table is malformed or truncated');
+  }
+
+  const headers = [];
+  for (let i = 0; i < phnum; i++) {
+    const at = phoff + i * phentsize;
+    headers.push({
+      type: u32(at),
+      align: elf64 ? u64(at + 48) : u32(at + 28),
+    });
+  }
+  return headers;
 }
 
 /**
@@ -789,4 +847,4 @@ if (require.main === module) {
   }
 }
 
-module.exports = {readDynsym, variantsFromManifest};
+module.exports = {readDynsym, readProgramHeaders, variantsFromManifest};

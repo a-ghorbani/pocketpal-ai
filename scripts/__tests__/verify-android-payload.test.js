@@ -3,6 +3,8 @@ const fs = require('fs');
 const os = require('os');
 const path = require('path');
 
+const {readProgramHeaders} = require('../verify-android-payload.js');
+
 const SCRIPT_PATH = path.join(__dirname, '..', 'verify-android-payload.js');
 const MANIFEST_PATH = path.join(
   __dirname,
@@ -13,16 +15,29 @@ const manifest = JSON.parse(fs.readFileSync(MANIFEST_PATH, 'utf-8'));
 
 const ELF64_SHDR_SIZE = 64;
 const ELF64_SYM_SIZE = 24;
+const ELF32_PHDR_SIZE = 32;
+const ELF64_PHDR_SIZE = 56;
+const PT_LOAD = 1;
+const PT_DYNAMIC = 2;
+
+/** What the NDK's max-page-size produces, and what the manifest declares. */
+const ALIGNED_SEGMENTS = [
+  {type: PT_LOAD, align: 16384},
+  {type: PT_LOAD, align: 16384},
+];
 
 /**
  * A minimal little-endian AArch64 ELF64 shared object carrying nothing but a
- * `.dynsym` and its string table.
+ * `.dynsym`, its string table, and a program header table.
  *
  * Synthetic rather than committed binaries: the cases that matter most here —
  * a `.dynsym` that is absent, or present but empty — are artifacts no compiler
  * emits, and a committed `.so` could not be reviewed.
  */
-function buildElf(symbols, {omitDynsym = false, emptyDynsym = false} = {}) {
+function buildElf(
+  symbols,
+  {omitDynsym = false, emptyDynsym = false, segments = ALIGNED_SEGMENTS} = {},
+) {
   let dynstr = Buffer.from([0]);
   const nameOffsets = [];
   for (const symbol of symbols) {
@@ -45,8 +60,16 @@ function buildElf(symbols, {omitDynsym = false, emptyDynsym = false} = {}) {
     });
   }
 
+  const phdrs = Buffer.alloc(segments.length * ELF64_PHDR_SIZE);
+  segments.forEach((segment, i) => {
+    const at = i * ELF64_PHDR_SIZE;
+    phdrs.writeUInt32LE(segment.type, at);
+    phdrs.writeBigUInt64LE(BigInt(segment.align), at + 48);
+  });
+
   const align8 = n => n + ((8 - (n % 8)) % 8);
-  const dynstrOffset = ELF64_SHDR_SIZE;
+  const phoff = ELF64_SHDR_SIZE;
+  const dynstrOffset = align8(phoff + phdrs.length);
   const dynsymOffset = align8(dynstrOffset + dynstr.length);
   const shoff = align8(dynsymOffset + dynsym.length);
   const sectionCount = omitDynsym ? 2 : 3;
@@ -59,8 +82,11 @@ function buildElf(symbols, {omitDynsym = false, emptyDynsym = false} = {}) {
   header.writeUInt16LE(3, 16); // ET_DYN
   header.writeUInt16LE(0xb7, 18); // EM_AARCH64
   header.writeUInt32LE(1, 20);
+  header.writeBigUInt64LE(BigInt(segments.length > 0 ? phoff : 0), 0x20);
   header.writeBigUInt64LE(BigInt(shoff), 0x28);
   header.writeUInt16LE(ELF64_SHDR_SIZE, 52);
+  header.writeUInt16LE(ELF64_PHDR_SIZE, 0x36);
+  header.writeUInt16LE(segments.length, 0x38);
   header.writeUInt16LE(ELF64_SHDR_SIZE, 0x3a);
   header.writeUInt16LE(sectionCount, 0x3c);
 
@@ -86,6 +112,7 @@ function buildElf(symbols, {omitDynsym = false, emptyDynsym = false} = {}) {
 
   const out = Buffer.alloc(shoff + sections.length);
   header.copy(out, 0);
+  phdrs.copy(out, phoff);
   dynstr.copy(out, dynstrOffset);
   dynsym.copy(out, dynsymOffset);
   sections.copy(out, shoff);
@@ -122,17 +149,54 @@ function hexagonDynsym(matchCount, {withRequired = true} = {}) {
 
 /**
  * A DSP library as far as the check is concerned: ELF32, little-endian, and
- * targeting EM_QDSP6. The real ones are 650-730 KB of Hexagon code; only the
- * header is asserted, so only the header is built.
+ * targeting EM_QDSP6, at the 4 KB alignment the shipped ones actually carry.
+ * The real ones are 650-730 KB of Hexagon code; only the headers are read, so
+ * only the headers are built.
  */
-function buildDspStub(machine = 164) {
-  const out = Buffer.alloc(52);
+function buildDspStub(
+  machine = 164,
+  segments = [
+    {type: PT_LOAD, align: 4096},
+    {type: PT_LOAD, align: 4096},
+  ],
+) {
+  const phoff = 52;
+  const out = Buffer.alloc(phoff + segments.length * ELF32_PHDR_SIZE);
   out.writeUInt32BE(0x7f454c46, 0);
   out.writeUInt8(1, 4); // ELFCLASS32
   out.writeUInt8(1, 5); // ELFDATA2LSB
   out.writeUInt8(1, 6);
   out.writeUInt16LE(3, 16); // ET_DYN
   out.writeUInt16LE(machine, 18);
+  out.writeUInt32LE(segments.length > 0 ? phoff : 0, 0x1c);
+  out.writeUInt16LE(ELF32_PHDR_SIZE, 42);
+  out.writeUInt16LE(segments.length, 44);
+  segments.forEach((segment, i) => {
+    const at = phoff + i * ELF32_PHDR_SIZE;
+    out.writeUInt32LE(segment.type, at);
+    out.writeUInt32LE(segment.align, at + 28);
+  });
+  return out;
+}
+
+/** Neither of the two shapes the rest of this file builds: 32-bit, MSB. */
+function buildBigEndianElf(aligns) {
+  const phoff = 52;
+  const out = Buffer.alloc(phoff + aligns.length * ELF32_PHDR_SIZE);
+  out.writeUInt32BE(0x7f454c46, 0);
+  out.writeUInt8(1, 4); // ELFCLASS32
+  out.writeUInt8(2, 5); // ELFDATA2MSB
+  out.writeUInt8(1, 6);
+  out.writeUInt16BE(3, 16); // ET_DYN
+  out.writeUInt16BE(20, 18); // EM_PPC
+  out.writeUInt32BE(phoff, 0x1c);
+  out.writeUInt16BE(ELF32_PHDR_SIZE, 42);
+  out.writeUInt16BE(aligns.length, 44);
+  aligns.forEach((align, i) => {
+    const at = phoff + i * ELF32_PHDR_SIZE;
+    out.writeUInt32BE(PT_LOAD, at);
+    out.writeUInt32BE(align, at + 28);
+  });
   return out;
 }
 
@@ -219,6 +283,44 @@ describe('the variant allowlist', () => {
 
   it('needs no artifact, so it is safe to call before anything is built', () => {
     expect(runGate(['--print-variants']).status).toBe(0);
+  });
+});
+
+describe('the program-header reader', () => {
+  // The DSP assets are ELF32 and nothing guarantees the byte order of every
+  // object the platform loads, so a reader that copied readDynsym's
+  // little-endian 64-bit assertion would throw instead of judging.
+  it.each([
+    [
+      'a 64-bit little-endian object',
+      () => buildElf([], {emptyDynsym: true}),
+      [16384, 16384],
+    ],
+    ['a 32-bit little-endian object', () => buildDspStub(), [4096, 4096]],
+    ['a 32-bit big-endian object', () => buildBigEndianElf([65536]), [65536]],
+  ])('reads the segment alignments of %s', (_label, build, aligns) => {
+    const headers = readProgramHeaders(build());
+    expect(headers.map(header => header.align)).toEqual(aligns);
+    expect(headers.every(header => header.type === PT_LOAD)).toBe(true);
+  });
+
+  it('agrees with the builder on an arbitrary segment list', () => {
+    const segments = [
+      {type: PT_DYNAMIC, align: 8},
+      {type: PT_LOAD, align: 4096},
+      {type: PT_LOAD, align: 16384},
+    ];
+    expect(
+      readProgramHeaders(buildElf([], {emptyDynsym: true, segments})),
+    ).toEqual(
+      segments.map(segment => ({type: segment.type, align: segment.align})),
+    );
+  });
+
+  it('refuses an object with no program header table rather than reading none', () => {
+    expect(() =>
+      readProgramHeaders(buildElf([], {emptyDynsym: true, segments: []})),
+    ).toThrow('program headers are absent');
   });
 });
 
