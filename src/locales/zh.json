@@ -191,7 +191,21 @@
       "consentRevoke": "撤销"
     },
     "languageSheetTitle": "语言",
-    "languageSearchPlaceholder": "搜索语言"
+    "languageSearchPlaceholder": "搜索语言",
+    "speculativeDecoding": "推测解码",
+    "speculativeDecodingDescription": "使用小型草稿模型（或内置的 MTP 模型）预测 token，加快生成速度。实验性功能。",
+    "speculativeNotMTPCapable": "当前模型不支持推测解码，也没有配对兼容的草稿模型，因此此功能对它保持关闭、不会生效。对于支持的模型，它会自动启用。",
+    "speculativeDraftModel": "草稿模型",
+    "speculativeDraftModelDescription": "为当前模型草拟 token。",
+    "speculativeDraftModelNone": "无（内置 MTP）",
+    "speculativeDraftModelIgnoredOverridden": "当前模型自带草稿模型，因此此选择将被忽略。",
+    "speculativeDraftModelIgnoredIncompatible": "此草稿模型与当前模型不兼容，因此将被忽略。",
+    "speculativeDraftModelIgnoredNotCapable": "此模型不含草稿层，无法用作草稿模型。",
+    "speculativeDraftKeyCacheType": "草稿模型键缓存类型",
+    "speculativeDraftValueCacheType": "草稿模型值缓存类型",
+    "speculativeDraftNGpuLayers": "草稿模型 GPU 层数",
+    "speculativeDraftNGpuLayersDescription": "卸载到 GPU 的草稿模型层数。",
+    "speculativeDraftCacheTypeInactiveDescription": "推测解码运行后即生效。"
   },
   "memory": {
     "shortWarning": "内存警告",
@@ -381,7 +395,8 @@
         "viewModelCardOnHuggingFace": "在 Hugging Face 上查看模型卡片",
         "visionSupported": "支持",
         "visionNotSupported": "不支持",
-        "visionUnknown": "未知"
+        "visionUnknown": "未知",
+        "draftOnlyReason": "仅草稿模型。请在“设置 → 推测解码”中选择它。"
       },
       "accessibility": {
         "expandDetails": "展开详情",
@@ -442,7 +457,9 @@
       "multilingual": "多语言支持",
       "rewriting": "重写文章",
       "creativity": "创造性写作",
-      "vision": "视觉"
+      "vision": "视觉",
+      "mtp": "推测解码 (MTP)",
+      "mtpDraft": "推测草稿"
     },
     "hubRun": {
       "title": "下载模型",
@@ -1006,7 +1023,8 @@
       "tokensPerSec": "{{value}} tokens/秒",
       "ttft": "{{value}}毫秒 TTFT",
       "interrupted": "被中断",
-      "truncated": "已截断 — 可能是上下文已满"
+      "truncated": "已截断 — 可能是上下文已满",
+      "draftAccepted": "草稿：{{accepted}}/{{total}}（{{pct}}%）"
     },
     "pendingIndicator": {
       "preparingTool": "正在准备工具",
@@ -1229,7 +1247,8 @@
       "showResultsAccessibilityLabel": "显示 {{query}} 的网络搜索结果",
       "openLinkError": "无法打开此链接。"
     },
-    "contextFullRemote": "对话空间已满，请新建聊天。"
+    "contextFullRemote": "对话空间已满，请新建聊天。",
+    "speculativeInitFailed": "此设备无法为该模型启动推测解码 — 很可能是草稿上下文的内存不足。请在“设置 → 高级设置”中关闭推测解码后重试。"
   },
   "benchmark": {
     "title": "基准测试",

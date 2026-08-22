@@ -210,7 +210,8 @@
       "showResultsAccessibilityLabel": "{{query}}에 대한 웹 검색 결과 표시",
       "openLinkError": "이 링크를 열 수 없어요."
     },
-    "contextFullRemote": "대화 공간이 가득 찼습니다. 새 채팅을 시작해 주세요."
+    "contextFullRemote": "대화 공간이 가득 찼습니다. 새 채팅을 시작해 주세요.",
+    "speculativeInitFailed": "이 기기에서 이 모델의 추측 디코딩을 시작할 수 없어요 — 드래프트 컨텍스트에 필요한 메모리가 부족한 것 같아요. 설정 → 고급 설정에서 추측 디코딩을 끄고 다시 시도해 주세요."
   },
   "common": {
     "cancel": "취소",
@@ -744,7 +745,8 @@
       "tokensPerSec": "{{value}} 토큰/초",
       "ttft": "{{value}}ms TTFT",
       "interrupted": "중단됨",
-      "truncated": "응답 중단됨 — 컨텍스트가 가득 참"
+      "truncated": "응답 중단됨 — 컨텍스트가 가득 참",
+      "draftAccepted": "드래프트: {{accepted}}/{{total}} ({{pct}}%)"
     },
     "pendingIndicator": {
       "preparingTool": "도구 준비 중",
@@ -939,7 +941,8 @@
         "viewModelCardOnHuggingFace": "Hugging Face에서 모델 카드 보기",
         "visionSupported": "지원함",
         "visionNotSupported": "지원 안 함",
-        "visionUnknown": "알 수 없음"
+        "visionUnknown": "알 수 없음",
+        "draftOnlyReason": "드래프트 전용 모델이에요. 설정 → 추측 디코딩에서 선택하세요."
       },
       "accessibility": {
         "expandDetails": "세부정보 펼치기",
@@ -1000,7 +1003,9 @@
       "multilingual": "다국어",
       "rewriting": "재작성",
       "creativity": "창의적인 작문",
-      "vision": "시각"
+      "vision": "시각",
+      "mtp": "추측 (MTP)",
+      "mtpDraft": "추측 드래프트"
     },
     "vision": "시각",
     "mmproj": "시각 프로젝터",
@@ -1219,7 +1224,21 @@
       "consentRevoke": "동의 철회"
     },
     "languageSheetTitle": "언어",
-    "languageSearchPlaceholder": "언어 검색"
+    "languageSearchPlaceholder": "언어 검색",
+    "speculativeDecoding": "추측 디코딩",
+    "speculativeDecodingDescription": "작은 드래프트 모델(또는 내장 MTP 모델)로 토큰을 미리 예측해 생성 속도를 높여요. 실험적 기능이에요.",
+    "speculativeNotMTPCapable": "현재 활성 모델은 추측 디코딩을 지원하지 않고 호환되는 드래프트 모델도 연결돼 있지 않아, 이 모델에서는 꺼진 상태로 아무 효과가 없어요. 지원되는 모델에는 자동으로 적용돼요.",
+    "speculativeDraftModel": "드래프트 모델",
+    "speculativeDraftModelDescription": "활성 모델을 위해 토큰을 미리 작성해요.",
+    "speculativeDraftModelNone": "없음 (내장 MTP)",
+    "speculativeDraftModelIgnoredOverridden": "현재 활성 모델에 자체 드래프트 모델이 포함돼 있어, 이 선택은 무시돼요.",
+    "speculativeDraftModelIgnoredIncompatible": "이 드래프트 모델은 활성 모델과 호환되지 않아, 무시돼요.",
+    "speculativeDraftModelIgnoredNotCapable": "이 모델에는 드래프트 레이어가 없어, 드래프트 모델로 사용할 수 없어요.",
+    "speculativeDraftKeyCacheType": "드래프트 키 캐시 유형",
+    "speculativeDraftValueCacheType": "드래프트 값 캐시 유형",
+    "speculativeDraftNGpuLayers": "드래프트 GPU 레이어",
+    "speculativeDraftNGpuLayersDescription": "GPU에 오프로드할 드래프트 모델 레이어 수예요.",
+    "speculativeDraftCacheTypeInactiveDescription": "추측 디코딩이 실행되면 적용돼요."
   },
   "storage": {
     "checkFailed": "저장공간 확인 실패",

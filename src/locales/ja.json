@@ -191,7 +191,21 @@
       "consentRevoke": "取り消す"
     },
     "languageSheetTitle": "言語",
-    "languageSearchPlaceholder": "言語を検索"
+    "languageSearchPlaceholder": "言語を検索",
+    "speculativeDecoding": "投機的デコード",
+    "speculativeDecodingDescription": "小さなドラフトモデル（または埋め込みのMTPモデル）を使ってトークンを予測し、生成を高速化します。実験的機能です。",
+    "speculativeNotMTPCapable": "現在のモデルは投機的デコードに対応しておらず、互換性のあるドラフトモデルも設定されていないため、この設定はオフのままで効果はありません。対応モデルには自動的に適用されます。",
+    "speculativeDraftModel": "ドラフトモデル",
+    "speculativeDraftModelDescription": "現在のモデル向けにトークンのドラフトを生成します。",
+    "speculativeDraftModelNone": "なし（埋め込みMTP）",
+    "speculativeDraftModelIgnoredOverridden": "現在のモデルには専用のドラフトモデルが付属しているため、この選択は無視されます。",
+    "speculativeDraftModelIgnoredIncompatible": "このドラフトモデルは現在のモデルと互換性がないため、無視されます。",
+    "speculativeDraftModelIgnoredNotCapable": "このモデルにはドラフトレイヤーが含まれていないため、ドラフトモデルとして使用できません。",
+    "speculativeDraftKeyCacheType": "ドラフトのキーキャッシュタイプ",
+    "speculativeDraftValueCacheType": "ドラフトの値キャッシュタイプ",
+    "speculativeDraftNGpuLayers": "ドラフトのGPUレイヤー",
+    "speculativeDraftNGpuLayersDescription": "GPUにオフロードするドラフトモデルのレイヤー数。",
+    "speculativeDraftCacheTypeInactiveDescription": "投機的デコードが実行されると適用されます。"
   },
   "memory": {
     "shortWarning": "メモリ警告",
@@ -381,7 +395,8 @@
         "viewModelCardOnHuggingFace": "Hugging Faceでモデルカードを表示",
         "visionSupported": "対応",
         "visionNotSupported": "非対応",
-        "visionUnknown": "不明"
+        "visionUnknown": "不明",
+        "draftOnlyReason": "ドラフト専用モデルです。設定 → 投機的デコードで選択してください。"
       },
       "accessibility": {
         "expandDetails": "詳細を展開",
@@ -442,7 +457,9 @@
       "multilingual": "多言語対応",
       "rewriting": "文章の書き換え",
       "creativity": "創作文章",
-      "vision": "ビジョン"
+      "vision": "ビジョン",
+      "mtp": "投機的（MTP）",
+      "mtpDraft": "投機的ドラフト"
     },
     "hubRun": {
       "title": "モデルをダウンロード",
@@ -1006,7 +1023,8 @@
       "tokensPerSec": "{{value}} トークン/秒",
       "ttft": "{{value}}ms TTFT",
       "interrupted": "中断されました",
-      "truncated": "途中で停止 — コンテキストが満杯の可能性"
+      "truncated": "途中で停止 — コンテキストが満杯の可能性",
+      "draftAccepted": "ドラフト: {{accepted}}/{{total}} ({{pct}}%)"
     },
     "pendingIndicator": {
       "preparingTool": "ツールを準備中",
@@ -1229,7 +1247,8 @@
       "showResultsAccessibilityLabel": "{{query}}のウェブ検索結果を表示",
       "openLinkError": "このリンクを開けませんでした。"
     },
-    "contextFullRemote": "会話の余裕がなくなりました。新しいチャットを始めてください。"
+    "contextFullRemote": "会話の余裕がなくなりました。新しいチャットを始めてください。",
+    "speculativeInitFailed": "このデバイスではこのモデルの投機的デコードを開始できませんでした。ドラフトコンテキスト用のメモリが不足している可能性が高いです。設定 → 詳細設定で投機的デコードをオフにして、もう一度お試しください。"
   },
   "benchmark": {
     "title": "ベンチマーク",

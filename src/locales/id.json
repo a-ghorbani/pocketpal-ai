@@ -191,7 +191,21 @@
       "consentRevoke": "Cabut"
     },
     "languageSheetTitle": "Bahasa",
-    "languageSearchPlaceholder": "Cari bahasa"
+    "languageSearchPlaceholder": "Cari bahasa",
+    "speculativeDecoding": "Speculative Decoding",
+    "speculativeDecodingDescription": "Gunakan model draf kecil (atau model MTP bawaan) untuk memprediksi token dan mempercepat generasi. Eksperimental.",
+    "speculativeNotMTPCapable": "Model yang aktif tidak mendukung speculative decoding dan tidak ada draf kompatibel yang dipasangkan, jadi fitur ini tetap mati untuknya tanpa efek. Fitur ini diterapkan otomatis pada model yang mendukung.",
+    "speculativeDraftModel": "Model Draf",
+    "speculativeDraftModelDescription": "Menyusun draf token untuk model yang aktif.",
+    "speculativeDraftModelNone": "Tidak ada (MTP bawaan)",
+    "speculativeDraftModelIgnoredOverridden": "Model yang aktif sudah memiliki model draf sendiri, jadi pilihan ini diabaikan.",
+    "speculativeDraftModelIgnoredIncompatible": "Draf ini tidak kompatibel dengan model yang aktif, jadi diabaikan.",
+    "speculativeDraftModelIgnoredNotCapable": "Model ini tidak memiliki layer draf, jadi tidak bisa digunakan sebagai model draf.",
+    "speculativeDraftKeyCacheType": "Jenis Cache Kunci Draf",
+    "speculativeDraftValueCacheType": "Jenis Cache Nilai Draf",
+    "speculativeDraftNGpuLayers": "Layer GPU Draf",
+    "speculativeDraftNGpuLayersDescription": "Jumlah layer model draf yang dialihkan ke GPU.",
+    "speculativeDraftCacheTypeInactiveDescription": "Berlaku setelah speculative decoding berjalan."
   },
   "memory": {
     "shortWarning": "Peringatan Memori",
@@ -381,7 +395,8 @@
         "viewModelCardOnHuggingFace": "Lihat Kartu Model di Hugging Face",
         "visionSupported": "Didukung",
         "visionNotSupported": "Tidak didukung",
-        "visionUnknown": "Tidak diketahui"
+        "visionUnknown": "Tidak diketahui",
+        "draftOnlyReason": "Model khusus draf. Pilih di Pengaturan → Speculative Decoding."
       },
       "accessibility": {
         "expandDetails": "Perluas detail",
@@ -442,7 +457,9 @@
       "multilingual": "Multibahasa",
       "rewriting": "Menulis Ulang",
       "creativity": "Penulisan Kreatif",
-      "vision": "Visi"
+      "vision": "Visi",
+      "mtp": "Speculative (MTP)",
+      "mtpDraft": "Draf Speculative"
     },
     "hubRun": {
       "title": "Unduh Model",
@@ -1006,7 +1023,8 @@
       "tokensPerSec": "{{value}} token/detik",
       "ttft": "{{value}}md TTFT",
       "interrupted": "Terputus",
-      "truncated": "Terpotong — kemungkinan konteks penuh"
+      "truncated": "Terpotong — kemungkinan konteks penuh",
+      "draftAccepted": "draf: {{accepted}}/{{total}} ({{pct}}%)"
     },
     "pendingIndicator": {
       "preparingTool": "Menyiapkan alat",
@@ -1229,7 +1247,8 @@
       "showResultsAccessibilityLabel": "Tampilkan hasil pencarian web untuk {{query}}",
       "openLinkError": "Gagal membuka tautan ini."
     },
-    "contextFullRemote": "Percakapan sudah penuh. Mulai obrolan baru."
+    "contextFullRemote": "Percakapan sudah penuh. Mulai obrolan baru.",
+    "speculativeInitFailed": "Perangkat ini tidak dapat memulai speculative decoding untuk model ini — kemungkinan besar memori tidak cukup untuk konteks draf. Matikan Speculative Decoding di Pengaturan → Pengaturan Lanjutan lalu coba lagi."
   },
   "benchmark": {
     "title": "Benchmark",

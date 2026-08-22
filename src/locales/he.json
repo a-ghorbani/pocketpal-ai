@@ -191,7 +191,21 @@
       "consentRevoke": "בטל הסכמה"
     },
     "languageSheetTitle": "שפה",
-    "languageSearchPlaceholder": "חפש שפות"
+    "languageSearchPlaceholder": "חפש שפות",
+    "speculativeDecoding": "פענוח ספקולטיבי",
+    "speculativeDecodingDescription": "השתמש במודל טיוטה קטן (או במודל MTP מוטמע) כדי לנחש טוקנים ולהאיץ את היצירה. ניסיוני.",
+    "speculativeNotMTPCapable": "המודל הפעיל לא תומך בפענוח ספקולטיבי ולא משויך אליו מודל טיוטה תואם, אז ההגדרה נשארת כבויה עבורו וללא השפעה. היא חלה אוטומטית על מודלים שתומכים בכך.",
+    "speculativeDraftModel": "מודל טיוטה",
+    "speculativeDraftModelDescription": "מכין טיוטת טוקנים עבור המודל הפעיל.",
+    "speculativeDraftModelNone": "ללא (MTP מוטמע)",
+    "speculativeDraftModelIgnoredOverridden": "למודל הפעיל יש כבר מודל טיוטה משלו, אז הבחירה הזו לא נלקחת בחשבון.",
+    "speculativeDraftModelIgnoredIncompatible": "מודל הטיוטה הזה לא תואם למודל הפעיל, אז הוא לא נלקח בחשבון.",
+    "speculativeDraftModelIgnoredNotCapable": "למודל הזה אין שכבות טיוטה, אז אי אפשר להשתמש בו כמודל טיוטה.",
+    "speculativeDraftKeyCacheType": "סוג מטמון מפתח לטיוטה",
+    "speculativeDraftValueCacheType": "סוג מטמון ערך לטיוטה",
+    "speculativeDraftNGpuLayers": "שכבות GPU לטיוטה",
+    "speculativeDraftNGpuLayersDescription": "כמות השכבות של מודל הטיוטה שיועברו ל-GPU.",
+    "speculativeDraftCacheTypeInactiveDescription": "ייכנס לתוקף ברגע שפענוח ספקולטיבי יפעל."
   },
   "memory": {
     "shortWarning": "אזהרת זיכרון",
@@ -381,7 +395,8 @@
         "viewModelCardOnHuggingFace": "הצג כרטיס מודל ב-Hugging Face",
         "visionSupported": "נתמך",
         "visionNotSupported": "לא נתמך",
-        "visionUnknown": "לא ידוע"
+        "visionUnknown": "לא ידוע",
+        "draftOnlyReason": "מודל לטיוטה בלבד. בחר אותו תחת הגדרות → פענוח ספקולטיבי."
       },
       "accessibility": {
         "expandDetails": "הרחב פרטים",
@@ -442,7 +457,9 @@
       "multilingual": "רב-לשוניות",
       "rewriting": "שכתוב",
       "creativity": "כתיבה יצירתית",
-      "vision": "ראייה"
+      "vision": "ראייה",
+      "mtp": "ספקולטיבי (MTP)",
+      "mtpDraft": "טיוטה ספקולטיבית"
     },
     "hubRun": {
       "title": "הורד מודל",
@@ -1006,7 +1023,8 @@
       "tokensPerSec": "{{value}} טוקנים/שנ'",
       "ttft": "{{value}}מ.ש. TTFT",
       "interrupted": "הופסק",
-      "truncated": "נקטע — ככל הנראה ההקשר מלא"
+      "truncated": "נקטע — ככל הנראה ההקשר מלא",
+      "draftAccepted": "טיוטה: {{accepted}}/{{total}} ({{pct}}%)"
     },
     "pendingIndicator": {
       "preparingTool": "מכין כלי",
@@ -1229,7 +1247,8 @@
       "showResultsAccessibilityLabel": "הצג תוצאות חיפוש ברשת עבור {{query}}",
       "openLinkError": "לא ניתן היה לפתוח את הקישור הזה."
     },
-    "contextFullRemote": "נגמר המקום בשיחה. פתח צ'אט חדש."
+    "contextFullRemote": "נגמר המקום בשיחה. פתח צ'אט חדש.",
+    "speculativeInitFailed": "המכשיר הזה לא הצליח להפעיל פענוח ספקולטיבי עבור המודל הזה — כנראה שאין מספיק זיכרון עבור הקשר מודל הטיוטה. כבה את הפענוח הספקולטיבי תחת הגדרות → הגדרות מתקדמות ונסה שוב."
   },
   "benchmark": {
     "title": "מבחן ביצועים",
