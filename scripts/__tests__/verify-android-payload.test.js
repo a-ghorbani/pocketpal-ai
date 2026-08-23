@@ -815,6 +815,28 @@ describe('16 KB zip data offsets', () => {
     expect(output).toContain('proven nothing about it');
   });
 
+  /**
+   * `unzip` transliterates bytes it cannot render, so its listing and the
+   * central directory can name different things. A subject set taken from the
+   * listing then skips exactly the entries whose naming is chosen freely.
+   */
+  it('fails when the entry listing and the archive layout disagree on a name', () => {
+    const entries = conformingEntries();
+    const awkward = Buffer.concat([
+      Buffer.from('lib/arm64-v8a/libevi'),
+      Buffer.from([0xbb]),
+      Buffer.from('l.so'),
+    ]).toString('binary');
+    entries[awkward] = PLAIN_ELF;
+    const {status, output} = runGate([
+      '--apk',
+      writeStoredArchive('app-prod-release.apk', entries, {method: 8}),
+    ]);
+    expect(status).toBe(1);
+    expect(output).toContain('name different libraries');
+    expect(output).toContain('proven nothing about it');
+  });
+
   it('fails when a library is compressed rather than stored', () => {
     // The app maps its libraries out of the APK, so a deflated one cannot be
     // loaded at all — the offset is not the only thing this rule protects.

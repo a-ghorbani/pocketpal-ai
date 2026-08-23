@@ -850,12 +850,29 @@ function checkAlignment({
   report,
   fail,
 }) {
-  const libs = [...entries]
-    .filter(
-      entry =>
-        entry.startsWith(`${prefix}lib/${abi.abi}/`) && entry.endsWith('.so'),
-    )
+  // Named from the archive's own central directory when there is one. `unzip`
+  // transliterates bytes it cannot render, so a subject set built from its
+  // listing and an index built from the directory disagree on exactly the
+  // entries whose naming is chosen freely.
+  const inTree = name =>
+    name.startsWith(`${prefix}lib/${abi.abi}/`) && name.endsWith('.so');
+  const libs = (zipIndex ? [...zipIndex.keys()] : [...entries])
+    .filter(inTree)
     .sort();
+  const listed = [...entries].filter(inTree).sort();
+  if (zipIndex && listed.join('\n') !== libs.join('\n')) {
+    report.push(
+      `      UNREADABLE  ${prefix}lib/${abi.abi}/ — the entry listing and the archive layout name different libraries`,
+    );
+    fail(
+      [
+        `${artifactName} lists ${listed.length} libraries under ${prefix}lib/${abi.abi}/ but its central directory names ${libs.length}.`,
+        'The two readings of one archive disagree, so neither can be trusted to say what ships.',
+        'The payload check could not run, so it reports failure rather than success —',
+        'a check that cannot read the artifact has proven nothing about it.',
+      ].join('\n      '),
+    );
+  }
   const declared = abi.requiredLibAlignment;
   const judged = libs.map(entry => {
     try {
@@ -934,10 +951,19 @@ function checkAlignment({
   // the APK, so a deflated entry is not a library checked under some other
   // rule — it is one the loader cannot map at all, on any device. Skipping it
   // here would excuse the more serious fault of the two.
-  // Both readings come from the same central directory — `unzip -Z1` lists it
-  // and `readZipIndex` walks it — so an entry can only be absent here if the
-  // directory itself is malformed, which the reader refuses outright.
   const indexed = libs.filter(entry => zipIndex.has(entry));
+  // A library dropped between the subject set and the index would otherwise
+  // shrink the denominator and read as a clean pass over fewer things.
+  for (const entry of libs.filter(name => !zipIndex.has(name))) {
+    report.push(`      UNINDEXED  ${entry}`);
+    fail(
+      [
+        `${entry} is listed in ${artifactName} but absent from its central directory.`,
+        'The payload check could not run, so it reports failure rather than success —',
+        'a check that cannot read the artifact has proven nothing about it.',
+      ].join('\n      '),
+    );
+  }
   const deflated = indexed.filter(entry => !zipIndex.get(entry).stored);
   const misplaced = indexed.filter(
     entry =>
@@ -945,7 +971,7 @@ function checkAlignment({
       zipIndex.get(entry).dataOffset % declared !== 0,
   );
   report.push(
-    `    zip data offset: ${indexed.length - deflated.length - misplaced.length}/${indexed.length} libraries stored at a multiple of ${declared}`,
+    `    zip data offset: ${indexed.length - deflated.length - misplaced.length}/${libs.length} libraries stored at a multiple of ${declared}`,
   );
   for (const entry of deflated) {
     report.push(`      DEFLATED  ${entry}`);
