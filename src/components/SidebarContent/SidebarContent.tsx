@@ -12,6 +12,7 @@ import {chatSessionStore, SessionMetaData} from '../../store';
 import {Menu, RenameModal, Checkbox} from '..';
 import {
   BenchmarkIcon,
+  BookIcon,
   ChatIcon,
   EditIcon,
   ModelIcon,
@@ -564,6 +565,13 @@ export const SidebarContent: React.FC<DrawerContentComponentProps> = observer(
               onPress={() => props.navigation.navigate(ROUTES.BENCHMARK)}
               style={styles.menuDrawerItem}
               testID="drawer-item-benchmark"
+            />
+            <Drawer.Item
+              label={l10n.components.sidebarContent.menuItems.knowledgeBase}
+              icon={() => <BookIcon stroke={theme.colors.primary} />}
+              onPress={() => props.navigation.navigate(ROUTES.KNOWLEDGE_BASE)}
+              style={styles.menuDrawerItem}
+              testID="drawer-item-knowledge-base"
             />
             <Drawer.Item
               label={l10n.components.sidebarContent.menuItems.settings}

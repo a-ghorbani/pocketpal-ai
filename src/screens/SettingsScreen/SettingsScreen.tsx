@@ -15,7 +15,7 @@ import {debounce} from 'lodash';
 import {observer} from 'mobx-react-lite';
 import {toJS} from 'mobx';
 import {SafeAreaView} from 'react-native-safe-area-context';
-import {useIsFocused} from '@react-navigation/native';
+import {useIsFocused, useNavigation} from '@react-navigation/native';
 import {
   Switch,
   Text,
@@ -56,8 +56,10 @@ import {
   hfStore,
   ttsStore,
   searchProviderStore,
+  knowledgeBaseStore,
 } from '../../store';
 import type {SearchProviderId} from '../../services/search/types';
+import {ROUTES} from '../../utils/navigationConstants';
 
 import {CacheType, ModelType} from '../../utils/types';
 import {
@@ -85,6 +87,7 @@ export const SettingsScreen: React.FC = observer(() => {
   const theme = useTheme();
   const styles = createStyles(theme);
   const isFocused = useIsFocused();
+  const navigation = useNavigation();
   const [contextSize, setContextSize] = useState(
     modelStore.contextInitParams.n_ctx.toString(),
   );
@@ -1322,6 +1325,51 @@ export const SettingsScreen: React.FC = observer(() => {
                   <Text variant="labelSmall" style={styles.textDescription}>
                     {l10n.settings.internetSearch.resultCountDescription}
                   </Text>
+                </View>
+              </View>
+            </Card.Content>
+          </Card>
+
+          {/* Knowledge Base */}
+          <Card elevation={0} style={styles.card}>
+            <Card.Title title={l10n.settings.knowledgeBase.title} />
+            <Card.Content>
+              <View style={styles.settingItemContainer}>
+                <View style={styles.switchContainer}>
+                  <View style={styles.textContainer}>
+                    <Text variant="titleMedium" style={styles.textLabel}>
+                      {l10n.settings.knowledgeBase.enableLabel}
+                    </Text>
+                    <Text variant="labelSmall" style={styles.textDescription}>
+                      {l10n.settings.knowledgeBase.description}
+                    </Text>
+                  </View>
+                  <Switch
+                    testID="kb-enabled-switch"
+                    value={knowledgeBaseStore.enabled}
+                    onValueChange={value =>
+                      knowledgeBaseStore.setEnabled(value)
+                    }
+                  />
+                </View>
+                <Divider />
+                <View style={styles.switchContainer}>
+                  <View style={styles.textContainer}>
+                    <Text variant="titleMedium" style={styles.textLabel}>
+                      {l10n.settings.knowledgeBase.embeddingModelLabel}
+                    </Text>
+                    <Text variant="labelSmall" style={styles.textDescription}>
+                      {knowledgeBaseStore.preset.label}
+                    </Text>
+                  </View>
+                  <Button
+                    compact
+                    mode="outlined"
+                    onPress={() =>
+                      (navigation as any).navigate(ROUTES.KNOWLEDGE_BASE)
+                    }>
+                    {l10n.settings.knowledgeBase.title}
+                  </Button>
                 </View>
               </View>
             </Card.Content>

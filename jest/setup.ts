@@ -62,6 +62,8 @@ import {mockServerStore} from '../__mocks__/stores/serverStore';
 import {mockTTSStore} from '../__mocks__/stores/ttsStore';
 import {checkoutFlowStore as mockCheckoutFlowStore} from '../__mocks__/stores/checkoutFlowStore';
 import {mockSearchProviderStore} from '../__mocks__/stores/searchProviderStore';
+import {mockKnowledgeBaseStore} from '../__mocks__/stores/knowledgeBaseStore';
+import {mockEmbeddingStore} from '../__mocks__/stores/embeddingStore';
 
 jest.mock('@react-native-clipboard/clipboard', () => mockClipboard);
 
@@ -121,6 +123,8 @@ jest.mock('../src/store', () => {
     ttsStore: mockTTSStore,
     checkoutFlowStore: mockCheckoutFlowStore,
     searchProviderStore: mockSearchProviderStore,
+    knowledgeBaseStore: mockKnowledgeBaseStore,
+    embeddingStore: mockEmbeddingStore,
     defaultCompletionSettings: mockDefaultCompletionSettings,
   };
 });

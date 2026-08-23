@@ -40,6 +40,7 @@ import {
   ModelsScreen,
   SettingsScreen,
   BenchmarkScreen,
+  KnowledgeBaseScreen,
   AboutScreen,
 
   // Dev tools screen. Only available in debug mode.
@@ -158,6 +159,16 @@ const App = observer(() => {
                             options={{
                               headerStyle: styles.headerWithoutDivider,
                               title: currentL10n.screenTitles.benchmark,
+                            }}
+                          />
+                          <Drawer.Screen
+                            name={ROUTES.KNOWLEDGE_BASE}
+                            component={gestureHandlerRootHOC(
+                              KnowledgeBaseScreen,
+                            )}
+                            options={{
+                              headerStyle: styles.headerWithoutDivider,
+                              title: currentL10n.screenTitles.knowledgeBase,
                             }}
                           />
                           <Drawer.Screen

@@ -4,6 +4,7 @@ export const ROUTES = {
   CHAT: 'Chat',
   MODELS: 'Models',
   PALS: 'Pals (experimental)',
+  KNOWLEDGE_BASE: 'Knowledge Base',
   BENCHMARK: 'Benchmark',
   SETTINGS: 'Settings',
   APP_INFO: 'App Info',
