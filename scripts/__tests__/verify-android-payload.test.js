@@ -352,6 +352,35 @@ describe('the Hexagon backend', () => {
     expect(status).toBe(0);
     expect(output).toContain('llama.rn unknown');
   });
+
+  it('reports the installed tree, not the declared pin, when the two disagree', () => {
+    const isolated = path.join(workspace, 'isolated');
+    fs.mkdirSync(isolated);
+    const copy = path.join(isolated, 'verify-android-payload.js');
+    fs.copyFileSync(SCRIPT_PATH, copy);
+    fs.mkdirSync(path.join(workspace, 'node_modules', 'llama.rn'), {
+      recursive: true,
+    });
+    fs.writeFileSync(
+      path.join(workspace, 'node_modules', 'llama.rn', 'package.json'),
+      JSON.stringify({name: 'llama.rn', version: '0.0.0-installed'}),
+    );
+    fs.writeFileSync(
+      path.join(workspace, 'package.json'),
+      JSON.stringify({dependencies: {'llama.rn': '0.0.0-declared'}}),
+    );
+    const archive = writeArchive('app-prod-release.apk', conformingEntries());
+
+    const {status, output} = runScript(copy, [
+      '--manifest',
+      MANIFEST_PATH,
+      '--apk',
+      archive,
+    ]);
+    expect(status).toBe(0);
+    expect(output).toContain('llama.rn 0.0.0-installed');
+    expect(output).not.toContain('0.0.0-declared');
+  });
 });
 
 describe('the declared payload', () => {
