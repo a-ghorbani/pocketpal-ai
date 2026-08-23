@@ -4,14 +4,18 @@ const yaml = require('js-yaml');
 
 /**
  * Nothing may ship an Android artifact that the payload gate has not examined.
- * That property used to live in three YAML comments, where a step reordering,
- * an added `if:`, or a publishing step in a new workflow would break it in
- * silence. Here it is read off the committed workflow and Fastfile text.
+ * The property is read off the committed workflow and Fastfile text: a step
+ * reordering, an added `if:`, or a publishing step in a new workflow all break
+ * it, and none of them announces itself.
  *
- * The rules below are applied to a parsed model, never to the files in place,
- * so every one of them is also exercised against a deliberately broken copy —
- * a rule asserted only over the committed files is true today and held by
- * nothing tomorrow.
+ * Two things about the shape. The rules are applied to a parsed model, never to
+ * the files in place, so every one of them is also exercised against a
+ * deliberately broken copy — a rule asserted only over the committed files is
+ * true today and held by nothing tomorrow. And inside a job that builds
+ * Android the default is inverted: a step `ACCOUNTED_STEPS` does not name is a
+ * violation. Recognising every way a step might publish is a question about an
+ * open set; naming the steps this repository has is a question about a closed
+ * one.
  */
 const ROOT = path.join(__dirname, '..', '..');
 const WORKFLOW_DIR = path.join(ROOT, '.github', 'workflows');
@@ -42,45 +46,45 @@ const SUSPICIOUS_RUN =
  * discuss the very actions this file classifies — the upload lane's comment
  * quotes `gradle(task: "bundle")` to explain why it does not build.
  *
- * Quote-aware, because every consumer of this text is an unanchored presence
- * test: dropping a line's tail can only *lose* matches, which moves a step
- * toward "unclassified" and "exempt". `gh release upload … --notes "Fixes #862"`
- * is an ordinary line, and a naive strip turns it into a step that publishes
- * nothing and transports nothing. Failing that direction is the one direction
- * this file cannot afford.
- *
- * An unbalanced quote leaves the rest of the line unstripped, which keeps text
- * rather than losing it — wrong in the safe direction.
+ * Quote state carries across lines, because a `run: |` block is one script and
+ * a quoted string may span several of them. Every consumer of this text is an
+ * unanchored presence test, so dropping a line's tail can only *lose* matches,
+ * which moves a step toward "publishes nothing" and "carries no transport" —
+ * the one direction this file cannot afford to be wrong in. An unbalanced
+ * quote therefore leaves the remainder unstripped: noisier, never blinder.
  */
 function codeOf(text) {
-  return String(text).split('\n').map(stripComment).join('\n');
-}
-
-function stripComment(line) {
+  const lines = String(text).split('\n');
   let quote = null;
-  for (let i = 0; i < line.length; i++) {
-    const character = line[i];
-    if (quote) {
-      if (character === '\\') {
-        i++;
-      } else if (character === quote) {
-        quote = null;
+  return lines
+    .map(line => {
+      let cut = line.length;
+      for (let i = 0; i < line.length; i++) {
+        const character = line[i];
+        if (quote) {
+          if (character === '\\') {
+            i++;
+          } else if (character === quote) {
+            quote = null;
+          }
+          continue;
+        }
+        if (character === '"' || character === "'") {
+          quote = character;
+          continue;
+        }
+        if (
+          character === '#' &&
+          line[i + 1] !== '{' &&
+          (i === 0 || /\s/.test(line[i - 1]))
+        ) {
+          cut = i;
+          break;
+        }
       }
-      continue;
-    }
-    if (character === '"' || character === "'") {
-      quote = character;
-      continue;
-    }
-    const startsComment =
-      character === '#' &&
-      line[i + 1] !== '{' &&
-      (i === 0 || /\s/.test(line[i - 1]));
-    if (startsComment) {
-      return line.slice(0, i);
-    }
-  }
-  return line;
+      return line.slice(0, cut);
+    })
+    .join('\n');
 }
 
 function parseLanes() {
@@ -263,16 +267,31 @@ function pathFieldNames(value) {
 function commandNames(text) {
   const names = new Set();
   for (const token of String(text ?? '').split(/[\s'"(),]+/)) {
-    if (!token || !/build\/outputs|\.(?:apk|aab)/.test(token)) {
+    if (!token || /^[a-z][a-z0-9+.-]*:\/\//i.test(token)) {
+      continue;
+    }
+    // A word is a candidate path if it is shaped like one: a directory
+    // separator or a wildcard. Asking only about tokens that already spell
+    // `.apk` made an indirect path invisible rather than unresolvable. A bare
+    // `"$ARTIFACT"` is not caught here and does not need to be — it resolves
+    // to nothing, and a publisher that resolves to nothing is refused below.
+    const looksLikeAPath = token.includes('/') || /[*?]/.test(token);
+    if (!looksLikeAPath) {
       continue;
     }
     const base = token.split('/').pop();
     const concrete =
-      !token.includes('${{') &&
+      !token.includes('$') &&
       !/[*?]/.test(token) &&
       !token.endsWith('/') &&
-      /\.(?:apk|aab)$/.test(base);
-    names.add(concrete ? base : UNRESOLVED_PATH);
+      /\.[A-Za-z0-9]+$/.test(base);
+    if (concrete) {
+      if (/\.(?:apk|aab)$/.test(base)) {
+        names.add(base);
+      }
+      continue;
+    }
+    names.add(UNRESOLVED_PATH);
   }
   return [...names];
 }
@@ -280,11 +299,9 @@ function commandNames(text) {
 /**
  * Every way this repository can put built bytes in front of someone.
  *
- * Additive, not first-match. A step can be more than one of these at once —
- * `gh release upload <dir>` appended to the Play-upload step is both — and a
- * single path list can mix a filename the gate examined with a glob reaching a
- * second artifact it never saw. Returning on the first match lets the second
- * one through under cover of the first.
+ * Additive, not first-match: a step can be more than one of these at once, and
+ * a single path list can mix a filename the gate examined with a glob reaching
+ * a second artifact it never saw.
  */
 function publisherOf(step, lanes) {
   const text = stepText(step, lanes);
@@ -348,62 +365,68 @@ const namesNoAndroidArtifact = (step, _job, m) =>
 const carriesNoTransport = (step, _job, m) =>
   !MOVES_BYTES_AT_ALL.test(stepText(step, m.lanes));
 
-/**
- * A property of the job, so it is never the whole assertion: on its own it
- * leaves a step free to grow a transport of its own while the gate below it
- * keeps the exemption green.
- */
+/** A property of the job, so it is never the whole assertion. */
 const gatedLaterInTheSameJob = (step, job) =>
   job.steps.some(other => other.index > step.index && isGateStep(other));
 
-const buildsThenIsGated = (step, job, m) =>
-  gatedLaterInTheSameJob(step, job) &&
-  namesNoAndroidArtifact(step, job, m) &&
-  carriesNoTransport(step, job, m);
+const handlesNoArtifact = (step, job, m) =>
+  namesNoAndroidArtifact(step, job, m) && carriesNoTransport(step, job, m);
 
-/**
- * Never on its own either: it reads only the job, so a step inside a job that
- * builds nothing could grow any transport it liked and stay exempt. Paired
- * with the step half at every use.
- */
+const buildsThenIsGated = (step, job, m) =>
+  gatedLaterInTheSameJob(step, job) && handlesNoArtifact(step, job, m);
+
+const pushesOnlyTheBumpCommit = (step, job, m) =>
+  gitPushArguments(step.run).every(args => args === '') &&
+  namesNoAndroidArtifact(step, job, m);
+
+/** Reads only the job, so it is paired with a step-reading half at every use. */
 const runsNoAndroidGradle = (step, job, m) => !isBuildingJob(job, m.lanes);
 
 /**
- * A step the suspicion net flags that publishes nothing. Each entry states why
- * and, beside it, the assertion that goes red when the reason stops holding —
- * an exemption asserted only in prose is the hole this whole file exists to
- * close.
+ * Every step of a building job that is neither the gate nor a publisher, plus
+ * the steps outside those jobs that the suspicion net flags.
+ *
+ * This list is the whole point of the design. Deciding whether a step publishes
+ * by recognising what publishing looks like is a blacklist over free-form shell
+ * and YAML, and it leaked in five consecutive spellings. The default is
+ * inverted here: inside a job that builds Android, a step this list does not
+ * account for is a **violation**, not a step nobody looked at. Recognising
+ * every way to publish is impossible; enumerating the steps this repository
+ * actually has is a page of text.
+ *
+ * Each entry states why the step ships nothing and, beside it, the assertion
+ * that goes red when that stops being true. A new step in a building job costs
+ * a reviewed line here — the same price as a fourth building job.
  */
-const NON_PUBLISHERS = [
-  {
+const ACCOUNTED_STEPS = [
+  // release.yml / build_android
+  ...[
+    ['Maximize build space', 'frees disk before the toolchains install'],
+    ['Install dependencies', 'installs the JS dependency tree'],
+    [
+      'Derive the rnllama variant allowlist from the payload manifest',
+      'reads the manifest and exports a gradle property',
+    ],
+    ['Bump versions', 'rewrites the version in tracked files'],
+    ['Set up Android Keystore', 'writes the signing keystore'],
+    ['Create .env file', 'writes build configuration'],
+    [
+      'Verify the variant allowlist reached the llama.rn build',
+      'greps the build log for the declared variant list',
+    ],
+  ].map(([step, reason]) => ({
     workflow: 'release.yml',
-    job: 'build_ios',
-    step: 'Build and upload iOS app',
-    reason: 'uploads to TestFlight; carries no Android payload',
-    // Not `carriesNoTransport`: the iOS lane legitimately runs
-    // `upload_to_testflight`, so naming no Android artifact is the half that
-    // can hold here — and it is what goes red if this step gains one.
-    assert: (step, job, m) =>
-      runsNoAndroidGradle(step, job, m) &&
-      namesNoAndroidArtifact(step, job, m) &&
-      m.lanes
-        .filter(lane => lane.origin === 'ios')
-        .every(lane => !publishesAndroid(lane.body)),
-  },
+    job: 'build_android',
+    step,
+    reason,
+    assert: handlesNoArtifact,
+  })),
   {
     workflow: 'release.yml',
     job: 'build_android',
     step: 'Commit and push version changes',
     reason: 'pushes the version-bump commit; the tag is pushed after the gate',
-    assert: step => gitPushArguments(step.run).every(args => args === ''),
-  },
-  {
-    workflow: 'release.yml',
-    job: 'build_android',
-    step: 'Set up Android Keystore',
-    reason: 'writes the signing keystore; matched only on the key file name',
-    assert: (step, job, m) =>
-      namesNoAndroidArtifact(step, job, m) && carriesNoTransport(step, job, m),
+    assert: pushesOnlyTheBumpCommit,
   },
   {
     workflow: 'release.yml',
@@ -412,14 +435,31 @@ const NON_PUBLISHERS = [
     reason: 'builds the artifacts the gate then examines in the same job',
     assert: buildsThenIsGated,
   },
-  {
+
+  // ci.yml / build-android
+  ...[
+    ['Maximize build space', 'frees disk before the toolchains install'],
+    ['Install Yarn', 'installs the package manager'],
+    ['Install dependencies', 'installs the JS dependency tree'],
+    [
+      'Derive the rnllama variant allowlist from the payload manifest',
+      'reads the manifest and exports a gradle property',
+    ],
+    ['Create dummy google-services.json for CI', 'writes a placeholder config'],
+    ['Create dummy .env file for CI', 'writes placeholder build configuration'],
+    ['Create dummy release keystore for CI', 'writes a throwaway signing key'],
+    ['ccache statistics', 'prints compiler cache counters'],
+    [
+      'Verify the variant allowlist reached the llama.rn build',
+      'greps the build log for the declared variant list',
+    ],
+  ].map(([step, reason]) => ({
     workflow: 'ci.yml',
     job: 'build-android',
-    step: 'Create dummy release keystore for CI',
-    reason: 'writes a throwaway signing key; matched only on the file name',
-    assert: (step, job, m) =>
-      namesNoAndroidArtifact(step, job, m) && carriesNoTransport(step, job, m),
-  },
+    step,
+    reason,
+    assert: handlesNoArtifact,
+  })),
   {
     workflow: 'ci.yml',
     job: 'build-android',
@@ -429,20 +469,34 @@ const NON_PUBLISHERS = [
   },
   {
     workflow: 'ci.yml',
-    job: 'build-ios',
-    step: 'Build iOS Release',
-    reason: 'builds an iOS binary and transports nothing',
-    assert: (step, job, m) =>
-      namesNoAndroidArtifact(step, job, m) && carriesNoTransport(step, job, m),
+    job: 'build-android',
+    step: 'Verify prod APK has no automation-bridge code (DCE sanity check)',
+    reason: 'reads the built APK to assert what it does not contain',
+    // Names the APK by design, so only the transport half can hold here.
+    assert: carriesNoTransport,
   },
-  {
+
+  // e2e-tests.yml / build-android
+  ...[
+    ['Install dependencies', 'installs the JS dependency tree'],
+    [
+      'Derive the rnllama variant allowlist from the payload manifest',
+      'reads the manifest and exports a gradle property',
+    ],
+    ['Create dummy google-services.json for CI', 'writes a placeholder config'],
+    ['Create dummy .env file for CI', 'writes placeholder build configuration'],
+    ['Create dummy release keystore for CI', 'writes a throwaway signing key'],
+    [
+      'Verify the variant allowlist reached the llama.rn build',
+      'greps the build log for the declared variant list',
+    ],
+  ].map(([step, reason]) => ({
     workflow: 'e2e-tests.yml',
     job: 'build-android',
-    step: 'Create dummy release keystore for CI',
-    reason: 'writes a throwaway signing key; matched only on the file name',
-    assert: (step, job, m) =>
-      namesNoAndroidArtifact(step, job, m) && carriesNoTransport(step, job, m),
-  },
+    step,
+    reason,
+    assert: handlesNoArtifact,
+  })),
   {
     workflow: 'e2e-tests.yml',
     job: 'build-android',
@@ -450,12 +504,28 @@ const NON_PUBLISHERS = [
     reason: 'builds the artifact the gate then examines in the same job',
     assert: buildsThenIsGated,
   },
+
+  // Outside the building jobs, where the suspicion net is what flags a step.
+  {
+    workflow: 'release.yml',
+    job: 'build_ios',
+    step: 'Build and upload iOS app',
+    reason: 'uploads to TestFlight; carries no Android payload',
+    // Not the transport half: the iOS lane legitimately runs
+    // `upload_to_testflight`, so naming no Android artifact is what can hold.
+    assert: (step, job, m) =>
+      runsNoAndroidGradle(step, job, m) &&
+      namesNoAndroidArtifact(step, job, m) &&
+      m.lanes
+        .filter(lane => lane.origin === 'ios')
+        .every(lane => !publishesAndroid(lane.body)),
+  },
   {
     workflow: 'ci.yml',
-    job: 'build-android',
-    step: 'Verify prod APK has no automation-bridge code (DCE sanity check)',
-    reason: 'reads the built APK to assert what it does not contain',
-    assert: carriesNoTransport,
+    job: 'build-ios',
+    step: 'Build iOS Release',
+    reason: 'builds an iOS binary and transports nothing',
+    assert: handlesNoArtifact,
   },
   {
     workflow: 'l10n-upload.yml',
@@ -465,16 +535,6 @@ const NON_PUBLISHERS = [
     assert: (step, job, m) =>
       runsNoAndroidGradle(step, job, m) && namesNoAndroidArtifact(step, job, m),
   },
-  // The gate steps name the artifact they open, so the net flags them. They
-  // are exempt from it and governed by the gate rules instead, which are stricter than any
-  // exemption: no if:, no suppression, no pipe, and the check last.
-  ...['release.yml', 'ci.yml', 'e2e-tests.yml'].map(workflow => ({
-    workflow,
-    job: workflow === 'release.yml' ? 'build_android' : 'build-android',
-    step: 'Verify the Android payload',
-    reason: 'is the payload gate itself',
-    assert: isGateStep,
-  })),
 ];
 
 const COMPOSITE_ACTIONS = {
@@ -491,14 +551,25 @@ const COMPOSITE_ACTIONS = {
 /**
  * Takes the source, not the path, so a mutated composite can be probed.
  *
- * Reads `with:` as well as `run:` and `uses:`, mirroring `stepText` — a
- * composite's inner steps are steps, and the one that ships bytes is far more
+ * A composite's inner steps are steps, and the one that ships bytes is more
  * likely to be `uses: actions/upload-artifact@v4` with a `path:` than a raw
- * shell command. Reading two of the three fields is how a composite that
- * uploads the APK, or caches `build/outputs`, reads as shipping nothing.
+ * shell command, so all three fields are read — the same text `stepText`
+ * gives a step.
  */
 const shipsNothing = source => {
-  const steps = yaml.load(source).runs.steps || [];
+  const runs = yaml.load(source).runs ?? {};
+  // Only a composite is a list of steps this can read. `using: node20` and
+  // `using: docker` run code this parse never sees, and a composite with no
+  // steps at all is a shape it has never been shown, so none of them can be
+  // judged — and "cannot judge" is not "ships nothing".
+  if (
+    runs.using !== 'composite' ||
+    !Array.isArray(runs.steps) ||
+    runs.steps.length === 0
+  ) {
+    return false;
+  }
+  const steps = runs.steps;
   const text = steps
     .map(step =>
       [step.run || '', step.uses || '', JSON.stringify(step.with || {})].join(
@@ -527,7 +598,7 @@ const cacheReachesNoBuildOutput = step =>
 
 /**
  * The actions a step may use without being classified. Floored exactly like
- * NON_PUBLISHERS: otherwise the cheapest way to publish through a new
+ * ACCOUNTED_STEPS: otherwise the cheapest way to publish through a new
  * third-party action is to add its name here.
  *
  * An entry declares **either** an `assert` that some input can falsify — the
@@ -667,8 +738,8 @@ const PROBE_JOB_WITHOUT_EXCUSES = {
 
 // -- the rules -------------------------------------------------------------
 
-function exemptionFor(step) {
-  return NON_PUBLISHERS.find(
+function accountedEntryFor(step) {
+  return ACCOUNTED_STEPS.find(
     entry =>
       entry.workflow === step.workflow &&
       entry.job === step.job &&
@@ -699,6 +770,19 @@ function violationsOfOrdering(m) {
 }
 
 /**
+ * The publisher classes that must name what they ship. A tag push genuinely
+ * names no artifact; the other four cannot publish without one, so resolving
+ * to nothing means the parse could not read what they send — never that they
+ * send nothing.
+ */
+const MUST_NAME_AN_ARTIFACT = new Set([
+  'workflow-artifact',
+  'github-release',
+  'play-upload',
+  'gh-release-cli',
+]);
+
+/**
  * Path identity: the gate below a publishing step examined the bytes it publishes, and
  * nothing between the two named that artifact again. Ordering alone binds the
  * gate to nothing: gating the APK while publishing the bundle is ordered and
@@ -712,6 +796,16 @@ function violationsOfPathIdentity(m) {
       const publisher = publisherOf(step, m.lanes);
       if (!publisher) {
         continue;
+      }
+      // An empty path set is the failure this rule exists to prevent, so it
+      // cannot be the shape a satisfied one takes.
+      if (
+        publisher.paths.length === 0 &&
+        publisher.rules.some(rule => MUST_NAME_AN_ARTIFACT.has(rule))
+      ) {
+        problems.push(
+          `${where(step)} publishes, but this parse could not read any path out of it, so no gate step can be shown to have examined what it sends`,
+        );
       }
       for (const artifact of publisher.paths) {
         if (artifact === UNRESOLVED_PATH) {
@@ -752,7 +846,7 @@ function violationsOfPathIdentity(m) {
 
 /** `if: always()` and friends run a step whatever the gate decided. */
 const RUNS_REGARDLESS =
-  /always\s*\(\s*\)|failure\s*\(\s*\)|cancelled\s*\(\s*\)/;
+  /always\s*\(\s*\)|failure\s*\(\s*\)|cancelled\s*\(\s*\)/i;
 
 /**
  * The gate can still fail the job, and a failed gate still stops the publish.
@@ -763,7 +857,7 @@ const RUNS_REGARDLESS =
  * pipefail, so a trailing `| tee` exits with tee's status. And a publishing
  * step carrying `if: always()` runs on a build the gate has just refused,
  * while its position in the job is still perfectly correct. `if: always()`
- * appears three and seven lines above two of the uploads already, so it is the
+ * already appears seven lines above each of two uploads, so it is the
  * idiomatic thing to write there.
  */
 function violationsOfGateCanFail(m) {
@@ -795,39 +889,35 @@ function violationsOfGateCanFail(m) {
       complain('carries continue-on-error');
     }
     if (step.raw.shell !== undefined) {
-      complain('overrides shell:, which changes whether a pipe can hide it');
+      complain('overrides shell:, which changes how a failure propagates');
     }
-    if (step.run.includes('||')) {
-      complain('suppresses its exit status with ||');
-    }
-    if (step.run.replace(/\|\|/g, '').includes('|')) {
-      complain('pipes its output, so it exits with the last command status');
-    }
-    // `+o errexit` is the same instruction spelled long; the short form alone
-    // was the whole check.
-    if (/set\s+\+(?:e\b|o\s+errexit)/.test(step.run)) {
-      complain('disables errexit');
-    }
-    if (step.run.includes('--manifest')) {
-      complain('passes --manifest, which is a test flag');
-    }
+
+    // The shape is pinned, rather than a list of ways to defeat it. Every way
+    // `bash -e` can be made to report success for a failing command is a shell
+    // feature — `||`, a pipe, `&`, `!`, `if`/`while`, `set +e` in its several
+    // spellings, `trap … ERR`, another command after it on the same line — and
+    // enumerating them is a blacklist over the shell. What the gate step is
+    // allowed to be is one command, optionally after `set -euo pipefail`, and
+    // that is a list of two.
     const commands = step.run
       .replace(/\\\n\s*/g, ' ')
       .split('\n')
       .map(line => line.trim())
-      .filter(line => line && !line.startsWith('#'));
-    const final = commands[commands.length - 1] ?? '';
-    // Must *begin* the final command, not merely appear in it. `bash -e` reports
-    // no failure for a command it only inspected: `if <gate>; then …; fi` and
-    // `while <gate>; do …; done` both exit 0, as does a negated `! <gate>`.
-    // Testing only for the script's presence rewards collapsing the multi-line
-    // `if` — which the old parse did catch — onto one line.
-    if (!/^node\s+\S*verify-android-payload\.js\b/.test(final)) {
-      complain('does not invoke the payload check as its final command');
+      .filter(Boolean);
+    const invocation =
+      /^node\s+\S*verify-android-payload\.js(\s+--[\w-]+(\s+\S+)?)*$/;
+    const permitted =
+      (commands.length === 1 && invocation.test(commands[0])) ||
+      (commands.length === 2 &&
+        commands[0] === 'set -euo pipefail' &&
+        invocation.test(commands[1]));
+    if (!permitted) {
+      complain(
+        'does not run the payload check as its whole script; the only permitted shape is the invocation, optionally after `set -euo pipefail`',
+      );
     }
-    // Backgrounded, so the shell moves on and never sees the exit status.
-    if (/&\s*$/.test(final)) {
-      complain('backgrounds the payload check with &');
+    if (step.run.includes('--manifest')) {
+      complain('passes --manifest, which is a test flag');
     }
   }
   return problems;
@@ -858,11 +948,56 @@ function violationsOfLaneSplit(m) {
     .map(lane => `${lane.origin} lane ${lane.name} both builds and publishes`);
 }
 
+/**
+ * Inside a building job, every step is accounted for or it is a violation.
+ *
+ * This is the inversion. The other rules ask "does this step publish?", which
+ * is a question about an open set — free-form shell, arbitrary actions, any
+ * spelling of a path — and each round of review found another spelling it
+ * answered wrongly. This one asks "is this step one of the ones we know
+ * about?", which is a question about a closed set: the steps committed to this
+ * repository. An unrecognised step is refused rather than skipped, so a new way
+ * to publish does not have to be recognised in order to be caught.
+ */
+function violationsOfUnaccountedSteps(m) {
+  const problems = [];
+  for (const job of allJobs(m)) {
+    if (!isBuildingJob(job, m.lanes)) {
+      continue;
+    }
+    for (const step of job.steps) {
+      if (isGateStep(step) || publisherOf(step, m.lanes)) {
+        continue;
+      }
+      // An allowlisted action carries its own reason and assertion already.
+      if (step.uses && ALLOWED_ACTIONS[step.uses]) {
+        continue;
+      }
+      if (!accountedEntryFor(step)) {
+        problems.push(
+          `${where(step)} is in a job that builds Android and is not accounted for`,
+        );
+      }
+    }
+  }
+  return problems;
+}
+
 /** Anything that looks like it could ship bytes is classified or exempt. */
 function violationsOfSuspicionNet(m) {
+  const building = new Set(
+    allJobs(m)
+      .filter(job => isBuildingJob(job, m.lanes))
+      .map(job => `${job.workflow}/${job.id}`),
+  );
   return allSteps(m)
     .filter(step => {
-      if (publisherOf(step, m.lanes) || exemptionFor(step)) {
+      // Building jobs are covered by the stronger rule above, which accounts
+      // for every step rather than only the ones a pattern notices.
+      if (building.has(`${step.workflow}/${step.job}`)) {
+        return false;
+      }
+      if (publisherOf(step, m.lanes) || accountedEntryFor(step)) {
         return false;
       }
       return step.uses
@@ -943,7 +1078,7 @@ describe('the parse itself', () => {
     );
     expect(suspicious.length).toBeGreaterThan(0);
 
-    for (const entry of NON_PUBLISHERS) {
+    for (const entry of ACCOUNTED_STEPS) {
       const matched = allSteps(committed).filter(
         step =>
           step.workflow === entry.workflow &&
@@ -1002,17 +1137,16 @@ describe('the parse itself', () => {
    *
    * Two probe jobs, because one is not enough: an assertion deciding purely on
    * the job is falsified by the building-job probe without ever looking at the
-   * step it was handed, and reads as sound. The second job satisfies every
-   * job-level predicate — builds nothing, gate below the step — so only the
-   * step half can carry it there. Add a probe whenever an exemption learns to
-   * read something new.
+   * step it was handed. The second job satisfies every job-level predicate —
+   * builds nothing, gate below the step — so only the step half can carry it
+   * there. Add a probe whenever an exemption learns to read something new.
    */
   it.each([
     ['a building job with no gate', () => PROBE_JOB],
     ['a job with every excuse removed', () => PROBE_JOB_WITHOUT_EXCUSES],
   ])('rests no exemption on an assertion that cannot fail, in %s', (_l, of) => {
     const job = of();
-    for (const entry of NON_PUBLISHERS) {
+    for (const entry of ACCOUNTED_STEPS) {
       expect({
         entry: `${entry.workflow} ${entry.step}`,
         survivesTheProbe: entry.assert(PROBE_STEP, job, committed),
@@ -1083,6 +1217,7 @@ describe('no publish outruns the payload gate', () => {
     ['cross-job publishing', violationsOfCrossJobPublish],
     ['the lane split', violationsOfLaneSplit],
     ['the suspicion net', violationsOfSuspicionNet],
+    ['every step accounted for', violationsOfUnaccountedSteps],
   ])('%s holds over the committed workflows', (_label, rule) => {
     expect(rule(committed)).toEqual([]);
   });
@@ -1326,10 +1461,9 @@ describe('each rule is capable of failing', () => {
   });
 
   // The command-line publishers name their paths as arguments rather than in a
-  // `with:` block, and the same spellings hide an artifact there. Ordering
-  // alone held these: it fires on position, so it fired before this too — the
-  // fix is that path identity stops being vacuous, which is what the second
-  // assertion in each case is for.
+  // `with:` block, and the same spellings hide an artifact there. Both rules
+  // must fire: ordering decides on position alone, so it says nothing about
+  // whether the gate could compare what is published.
   it.each([
     ['gh release create', 'gh release create v1.0.0 dist/*.apk'],
     [
@@ -1364,9 +1498,8 @@ describe('each rule is capable of failing', () => {
     ]);
   });
 
-  // The sharpest form: an APK published before the gate has run at all, by a
-  // step whose path names no file. Every rule read past it before it was
-  // classified as a publisher with an unresolvable path.
+  // An APK published before the gate has run at all, by a step whose path
+  // names no file.
   it('both rules catch a directory-path upload spliced above the gate', () => {
     const m = broken();
     const job = jobIn(m, 'ci.yml', 'build-android');
@@ -1398,9 +1531,7 @@ describe('each rule is capable of failing', () => {
     ]);
   });
 
-  // The classifier is an if-chain over a single step, so a step that is two
-  // publishers at once used to be reported as whichever came first — and the
-  // second one's path went with it.
+  // A step can be more than one publisher at once, and each one's paths count.
   it('classifies a step that is two publishers at once, not just the first', () => {
     const m = broken();
     const step = stepIn(
@@ -1443,6 +1574,15 @@ describe('each rule is capable of failing', () => {
     ['a Play upload', {run: 'bundle exec fastlane upload_android_alpha'}],
     ['a gh release upload', {run: `gh release upload v1.0.0 ${GATED_APK}`}],
     ['a tag push', {run: 'git push origin "v1.0.0"'}],
+    // GitHub does not read the expression case-sensitively, so neither may this.
+    [
+      'an upload under a capitalised Always()',
+      {
+        uses: 'actions/upload-artifact@v4',
+        with: {name: 'apk', path: GATED_APK},
+        conditional: 'Always()',
+      },
+    ],
   ])(
     'the gate-can-fail rule catches %s running under if: always()',
     (_l, s) => {
@@ -1458,7 +1598,7 @@ describe('each rule is capable of failing', () => {
           uses: '',
           with: {},
           ...s,
-          raw: {if: 'always()'},
+          raw: {if: s.conditional ?? 'always()'},
         }),
       );
 
@@ -1552,7 +1692,7 @@ describe('each rule is capable of failing', () => {
       'build-android',
       'Create dummy release keystore for CI',
     );
-    const entry = NON_PUBLISHERS.find(
+    const entry = ACCOUNTED_STEPS.find(
       candidate => candidate.step === 'Create dummy release keystore for CI',
     );
     appendRun(
@@ -1577,7 +1717,7 @@ describe('each rule is capable of failing', () => {
       'build_ios',
       'Build and upload iOS app',
     );
-    const entry = NON_PUBLISHERS.find(
+    const entry = ACCOUNTED_STEPS.find(
       candidate => candidate.step === 'Build and upload iOS app',
     );
     appendRun(step, `curl -T ${GATED_APK} https://example.com/`);
@@ -1633,6 +1773,155 @@ describe('each rule is capable of failing', () => {
       isBuildingJob(jobIn(m, 'release.yml', 'build_android'), m.lanes),
     ).toBe(true);
     expect(violationsOfOrdering(m)).toEqual([]);
+  });
+
+  /**
+   * The inversion, from both directions: a step nobody wrote down is refused
+   * whatever it does, and one that is written down still has to satisfy its
+   * own assertion.
+   */
+  it.each([
+    ['a shell command nothing recognises', {run: 'bash tools/ship.sh'}],
+    ['an action nothing recognises', {uses: 'some-org/do-things@v1'}],
+    ['an innocuous-looking one', {run: 'echo hello'}],
+  ])('an unaccounted %s in a building job is refused', (_label, fields) => {
+    const m = broken();
+    const job = jobIn(m, 'ci.yml', 'build-android');
+    job.steps.push(
+      asParsed({
+        workflow: 'ci.yml',
+        job: 'build-android',
+        index: job.steps.length,
+        name: 'Something new',
+        run: '',
+        uses: '',
+        with: {},
+        raw: {},
+        ...fields,
+      }),
+    );
+
+    expect(violationsOfUnaccountedSteps(m)).toEqual([
+      expect.stringContaining('Something new'),
+    ]);
+  });
+
+  it('refuses an accounted step whose own assertion stops holding', () => {
+    const m = broken();
+    const step = stepIn(m, 'ci.yml', 'build-android', 'ccache statistics');
+    appendRun(step, `curl -T ${GATED_APK} https://example.com/`);
+    const entry = ACCOUNTED_STEPS.find(
+      candidate =>
+        candidate.workflow === 'ci.yml' &&
+        candidate.step === 'ccache statistics',
+    );
+
+    expect(entry.assert(step, jobIn(m, 'ci.yml', 'build-android'), m)).toBe(
+      false,
+    );
+  });
+
+  /**
+   * An indirect path in a shell command. The step names an artifact by way of
+   * a variable, a wildcard or a directory, so no filename can be read out of
+   * it — and a publisher whose bytes cannot be named is refused, rather than
+   * reported as having published nothing.
+   */
+  it.each([
+    ['a directory staged from a variable', 'gh release upload "v1.0.0" dist/'],
+    ['a wholly indirect argument', 'gh release upload "v$VERSION" "$ARTIFACT"'],
+    ['a wildcard expansion', 'gh release upload "v1.0.0" "$BUNDLE_DIR"/*.aab'],
+  ])('path identity refuses %s', (_label, run) => {
+    const m = broken();
+    const job = jobIn(m, 'ci.yml', 'build-android');
+    job.steps.push(
+      asParsed({
+        workflow: 'ci.yml',
+        job: 'build-android',
+        index: job.steps.length,
+        name: 'Ship it',
+        run,
+        uses: '',
+        with: {},
+        raw: {},
+      }),
+    );
+
+    expect(violationsOfOrdering(m)).toEqual([]);
+    expect(violationsOfPathIdentity(m).length).toBeGreaterThan(0);
+  });
+
+  // A `run: |` block is one script, so a quoted string may span its lines.
+  it('does not lose a path to a quote opened on an earlier line', () => {
+    const m = broken();
+    const job = jobIn(m, 'ci.yml', 'build-android');
+    job.steps.push(
+      asParsed({
+        workflow: 'ci.yml',
+        job: 'build-android',
+        index: job.steps.length,
+        name: 'Publish with a multi-line note',
+        run: `gh release upload v1.0.0 --notes "What changed\n- see #862" ${GATED_APK}`,
+        uses: '',
+        with: {},
+        raw: {},
+      }),
+    );
+
+    expect(violationsOfPathIdentity(m)).toContainEqual(
+      expect.stringContaining('app-prod-release.apk'),
+    );
+  });
+
+  it.each([
+    ['using: node20', 'runs:\n  using: node20\n  main: index.js'],
+    ['using: docker', 'runs:\n  using: docker\n  image: Dockerfile'],
+    ['a composite with no steps', 'runs:\n  using: composite\n  steps: []'],
+    ['no runs block this reader understands', 'runs: {}'],
+  ])('refuses a composite it cannot walk: %s', (_label, source) => {
+    expect(shipsNothing(`name: probe\n${source}`)).toBe(false);
+  });
+
+  it.each([
+    ['set +eu', 'set +eu'],
+    ['set +ex', 'set +ex'],
+    ['set +eo pipefail', 'set +eo pipefail'],
+    ['a trailing command on one line', null],
+    ['a backgrounded gate awaited', null],
+    ['an ERR trap', "trap 'exit 0' ERR"],
+  ])('the gate-can-fail rule catches %s', (label, prefix) => {
+    const m = broken();
+    const gate = stepIn(
+      m,
+      'ci.yml',
+      'build-android',
+      'Verify the Android payload',
+    );
+    const invocation = gate.run.replace(/\\\n\s*/g, ' ').trim();
+    if (prefix) {
+      gate.run = codeOf(`${prefix}\n${invocation}`);
+    } else if (label === 'a trailing command on one line') {
+      gate.run = codeOf(`${invocation}; cat payload-report.txt`);
+    } else {
+      gate.run = codeOf(`${invocation} & wait`);
+    }
+
+    expect(violationsOfGateCanFail(m).length).toBeGreaterThan(0);
+  });
+
+  it('accepts the gate preceded by set -euo pipefail, and nothing else', () => {
+    const m = broken();
+    const gate = stepIn(
+      m,
+      'ci.yml',
+      'build-android',
+      'Verify the Android payload',
+    );
+    gate.run = codeOf(
+      `set -euo pipefail\n${gate.run.replace(/\\\n\s*/g, ' ').trim()}`,
+    );
+
+    expect(violationsOfGateCanFail(m)).toEqual([]);
   });
 
   it('the lane-split rule fails when the fastlane lanes are re-merged', () => {

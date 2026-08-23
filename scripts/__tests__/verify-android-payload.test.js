@@ -15,6 +15,7 @@ const MANIFEST_PATH = path.join(
 const manifest = JSON.parse(fs.readFileSync(MANIFEST_PATH, 'utf-8'));
 
 const ELF64_SHDR_SIZE = 64;
+const ELF64_EHDR_SIZE = 64;
 const ELF64_SYM_SIZE = 24;
 const ELF32_PHDR_SIZE = 32;
 const ELF64_PHDR_SIZE = 56;
@@ -69,13 +70,13 @@ function buildElf(
   });
 
   const align8 = n => n + ((8 - (n % 8)) % 8);
-  const phoff = ELF64_SHDR_SIZE;
+  const phoff = ELF64_EHDR_SIZE;
   const dynstrOffset = align8(phoff + phdrs.length);
   const dynsymOffset = align8(dynstrOffset + dynstr.length);
   const shoff = align8(dynsymOffset + dynsym.length);
   const sectionCount = omitDynsym ? 2 : 3;
 
-  const header = Buffer.alloc(ELF64_SHDR_SIZE);
+  const header = Buffer.alloc(ELF64_EHDR_SIZE);
   header.writeUInt32BE(0x7f454c46, 0);
   header.writeUInt8(2, 4); // ELFCLASS64
   header.writeUInt8(1, 5); // ELFDATA2LSB
@@ -85,7 +86,7 @@ function buildElf(
   header.writeUInt32LE(1, 20);
   header.writeBigUInt64LE(BigInt(segments.length > 0 ? phoff : 0), 0x20);
   header.writeBigUInt64LE(BigInt(shoff), 0x28);
-  header.writeUInt16LE(ELF64_SHDR_SIZE, 52);
+  header.writeUInt16LE(ELF64_EHDR_SIZE, 52);
   header.writeUInt16LE(ELF64_PHDR_SIZE, 0x36);
   header.writeUInt16LE(segments.length, 0x38);
   header.writeUInt16LE(ELF64_SHDR_SIZE, 0x3a);
@@ -258,7 +259,11 @@ function writeArchive(name, entries) {
  * every archive built above and pass having examined nothing. That is the same
  * defect the rule exists to catch, one level up.
  */
-function writeStoredArchive(name, entries, {align = 16384} = {}) {
+function writeStoredArchive(
+  name,
+  entries,
+  {align = 16384, method = 0, corruptLocalSignatureOf = null} = {},
+) {
   const files = Object.entries(entries);
   const locals = [];
   const chunks = [];
@@ -282,9 +287,12 @@ function writeStoredArchive(name, entries, {align = 16384} = {}) {
     }
 
     const header = Buffer.alloc(30);
-    header.writeUInt32LE(0x04034b50, 0);
+    header.writeUInt32LE(
+      entry === corruptLocalSignatureOf ? 0x05034b50 : 0x04034b50,
+      0,
+    );
     header.writeUInt16LE(20, 4);
-    header.writeUInt16LE(0, 8); // stored
+    header.writeUInt16LE(method, 8);
     header.writeUInt32LE(crc32(body), 14);
     header.writeUInt32LE(body.length, 18);
     header.writeUInt32LE(body.length, 22);
@@ -302,7 +310,7 @@ function writeStoredArchive(name, entries, {align = 16384} = {}) {
     central.writeUInt32LE(0x02014b50, 0);
     central.writeUInt16LE(20, 4);
     central.writeUInt16LE(20, 6);
-    central.writeUInt16LE(0, 10); // stored
+    central.writeUInt16LE(method, 10);
     central.writeUInt32LE(crc32(local.body), 16);
     central.writeUInt32LE(local.body.length, 20);
     central.writeUInt32LE(local.body.length, 24);
@@ -343,10 +351,15 @@ function runGate(args) {
   return runScript(SCRIPT_PATH, args);
 }
 
+/**
+ * A real APK stores its libraries uncompressed and page-aligned, and the gate
+ * now requires both, so the fixtures are built that way. `writeArchive` still
+ * exists for the bundle path and for the case about deflation itself.
+ */
 function gateApk(entries, extraArgs = []) {
   return runGate([
     '--apk',
-    writeArchive('app-prod-release.apk', entries),
+    writeStoredArchive('app-prod-release.apk', entries),
     ...extraArgs,
   ]);
 }
@@ -688,7 +701,10 @@ describe('16 KB page alignment', () => {
       }
       fs.writeFileSync(weakened, JSON.stringify(edited));
 
-      const archive = writeArchive('app-prod-release.apk', conformingEntries());
+      const archive = writeStoredArchive(
+        'app-prod-release.apk',
+        conformingEntries(),
+      );
       const {status, output} = runGate([
         '--apk',
         archive,
@@ -717,8 +733,8 @@ describe('16 KB zip data offsets', () => {
     // The guard against the subject set being empty: `zip` deflates even
     // incompressible data, so a stored-scoped rule examines nothing unless the
     // fixture is built stored on purpose.
-    expect(output).toContain('zip data offset: 12/12 stored libraries');
-    expect(output).toContain('zip data offset: 4/4 stored libraries');
+    expect(output).toContain('zip data offset: 12/12 libraries stored');
+    expect(output).toContain('zip data offset: 4/4 libraries stored');
     expect(output).not.toContain('zip data offset: 0/0');
   });
 
@@ -737,13 +753,16 @@ describe('16 KB zip data offsets', () => {
     expect(output).toContain('segment alignment: 12/12 libraries');
   });
 
-  it('reports deflated libraries as outside the subject set, not as passing', () => {
-    // `zip` deflates, so this is the legacy-packaging shape: nothing is mapped
-    // in place, nothing to align, and the counts have to say so.
-    const {status, output} = gateApk(conformingEntries());
-    expect(status).toBe(0);
-    expect(output).toContain('zip data offset: 0/0 stored libraries');
-    expect(output).toContain('12 deflated, extracted at install');
+  it('refuses a `zip`-built archive, whose entries are all deflated', () => {
+    // `zip -q -r -X` deflates even incompressible data. That is why the stored
+    // writer exists — and why a rule scoped to stored entries would otherwise
+    // examine nothing here — but it is also not a loadable artifact.
+    const {status, output} = runGate([
+      '--apk',
+      writeArchive('app-prod-release.apk', conformingEntries()),
+    ]);
+    expect(status).toBe(1);
+    expect(output).toContain('DEFLATED');
   });
 
   it('does not judge offsets in a bundle, which bundletool repackages', () => {
@@ -757,12 +776,33 @@ describe('16 KB zip data offsets', () => {
     expect(output).not.toContain('zip data offset');
   });
 
-  it('fails when the archive layout cannot be read at all', () => {
-    const archive = path.join(workspace, 'no-directory.apk');
-    fs.writeFileSync(archive, Buffer.alloc(512, 0x41));
+  // A whole archive of the wrong bytes fails at entry listing, long before the
+  // layout is read, so it says nothing about this reader. This one lists
+  // normally under `unzip` and breaks only where the local headers are walked.
+  it('fails on an archive whose local header the reader cannot trust', () => {
+    const archive = writeStoredArchive(
+      'app-prod-release.apk',
+      conformingEntries(),
+      {corruptLocalSignatureOf: 'lib/arm64-v8a/librnllama.so'},
+    );
     const {status, output} = runGate(['--apk', archive]);
     expect(status).toBe(1);
+    expect(output).toContain('local header of lib/arm64-v8a/librnllama.so');
     expect(output).toContain('proven nothing about it');
+  });
+
+  it('fails when a library is compressed rather than stored', () => {
+    // The app maps its libraries out of the APK, so a deflated one cannot be
+    // loaded at all — the offset is not the only thing this rule protects.
+    const {status, output} = runGate([
+      '--apk',
+      writeStoredArchive('app-prod-release.apk', conformingEntries(), {
+        method: 8,
+      }),
+    ]);
+    expect(status).toBe(1);
+    expect(output).toContain('DEFLATED  lib/arm64-v8a/');
+    expect(output).toContain('cannot be');
   });
 });
 
@@ -826,7 +866,10 @@ describe('a check that cannot run', () => {
   });
 
   it('refuses --print-variants alongside an artifact rather than skipping the check', () => {
-    const archive = writeArchive('app-prod-release.apk', conformingEntries());
+    const archive = writeStoredArchive(
+      'app-prod-release.apk',
+      conformingEntries(),
+    );
     const {status, output} = runGate(['--print-variants', '--apk', archive]);
     expect(status).toBe(1);
     expect(output).toContain('does not check an artifact');
@@ -842,7 +885,7 @@ describe('a check that cannot run', () => {
   });
 
   it('fails when the artifact is a readable archive holding nothing', () => {
-    const archive = writeArchive('app-prod-release.apk', {
+    const archive = writeStoredArchive('app-prod-release.apk', {
       'META-INF/placeholder': Buffer.from('x'),
     });
     expect(runGate(['--apk', archive]).status).toBe(1);
@@ -883,7 +926,10 @@ describe('a check that cannot run', () => {
         ],
       }),
     );
-    const archive = writeArchive('app-prod-release.apk', conformingEntries());
+    const archive = writeStoredArchive(
+      'app-prod-release.apk',
+      conformingEntries(),
+    );
     const {status, output} = runGate([
       '--apk',
       archive,
@@ -901,7 +947,10 @@ describe('a check that cannot run', () => {
       abi.requiredSymbols = [];
     }
     fs.writeFileSync(weakened, JSON.stringify(stripped));
-    const archive = writeArchive('app-prod-release.apk', conformingEntries());
+    const archive = writeStoredArchive(
+      'app-prod-release.apk',
+      conformingEntries(),
+    );
     const {status, output} = runGate([
       '--apk',
       archive,
@@ -964,7 +1013,7 @@ describe('a check that cannot run', () => {
     const entries = conformingEntries();
     entries['lib/arm64-v8a/librnllama_v8_2_dotprod_i8mm_hexagon_opencl.so'] =
       hexagonDynsym(0, {withRequired: false});
-    const archive = writeArchive('app-prod-release.apk', entries);
+    const archive = writeStoredArchive('app-prod-release.apk', entries);
 
     const {status, output} = runGate([
       '--apk',
@@ -993,6 +1042,20 @@ describe('a check that cannot run', () => {
         delete edited.assets.required;
       },
       'no required assets',
+    ],
+    [
+      'a manifest that stops declaring how the libraries are packaged',
+      edited => {
+        delete edited.nativeLibsMappedInPlace;
+      },
+      'nativeLibsMappedInPlace',
+    ],
+    [
+      'a manifest claiming the libraries are extracted at install',
+      edited => {
+        edited.nativeLibsMappedInPlace = false;
+      },
+      'nativeLibsMappedInPlace',
     ],
     [
       'a manifest with no assets block at all',
@@ -1029,6 +1092,32 @@ describe('a check that cannot run', () => {
       },
       'no elfMachine',
     ],
+    // The assets moved to a top-level block, so these keys are read by nothing.
+    // A key nothing reads is worse than a missing one: it looks like a
+    // declaration and demands nothing.
+    [
+      'an ABI re-declaring the assets at the abandoned location',
+      edited => {
+        edited.abis[0].requiredAssets = [
+          'assets/ggml-hexagon/libggml-htp-v73.so',
+        ];
+      },
+      'a per-ABI requiredAssets',
+    ],
+    [
+      'an ABI whose abandoned asset list is not even a list',
+      edited => {
+        edited.abis[0].requiredAssets = 'not even a list';
+      },
+      'a per-ABI requiredAssets',
+    ],
+    [
+      'an ABI re-declaring the abandoned asset machine',
+      edited => {
+        edited.abis[0].requiredAssetElfMachine = 164;
+      },
+      'a per-ABI requiredAssetElfMachine',
+    ],
     [
       'a manifest that never says which ABIs can load the assets',
       edited => {
@@ -1062,7 +1151,10 @@ describe('a check that cannot run', () => {
     weaken(edited);
     fs.writeFileSync(weakened, JSON.stringify(edited));
 
-    const archive = writeArchive('app-prod-release.apk', conformingEntries());
+    const archive = writeStoredArchive(
+      'app-prod-release.apk',
+      conformingEntries(),
+    );
     const {status, output} = runGate([
       '--apk',
       archive,
@@ -1120,7 +1212,10 @@ describe('a check that cannot run', () => {
     edited.assets.scope = 'abi';
     fs.writeFileSync(weakened, JSON.stringify(edited));
 
-    const archive = writeArchive('app-prod-release.apk', conformingEntries());
+    const archive = writeStoredArchive(
+      'app-prod-release.apk',
+      conformingEntries(),
+    );
     const {status, output} = runGate([
       '--apk',
       archive,
@@ -1146,7 +1241,10 @@ describe('a check that cannot run', () => {
     fs.writeFileSync(weakened, JSON.stringify(edited));
 
     expect(edited.assets.required.length).toBeGreaterThan(0);
-    const archive = writeArchive('app-prod-release.apk', conformingEntries());
+    const archive = writeStoredArchive(
+      'app-prod-release.apk',
+      conformingEntries(),
+    );
     const {status, output} = runGate([
       '--apk',
       archive,
@@ -1224,7 +1322,7 @@ describe('a check that cannot run', () => {
       ]),
       'lib/armeabi-v7a/librnllama_jni.so': PLAIN_ELF,
     };
-    const archive = writeArchive('app-prod-release.apk', entries);
+    const archive = writeStoredArchive('app-prod-release.apk', entries);
     const {status, output} = runGate([
       '--apk',
       archive,
@@ -1259,8 +1357,8 @@ describe('a check that cannot run', () => {
   });
 
   it('refuses a repeated --apk rather than checking only the last one', () => {
-    const first = writeArchive('first.apk', conformingEntries());
-    const second = writeArchive('second.apk', conformingEntries());
+    const first = writeStoredArchive('first.apk', conformingEntries());
+    const second = writeStoredArchive('second.apk', conformingEntries());
     const {status, output} = runGate(['--apk', first, '--apk', second]);
     expect(status).toBe(1);
     expect(output).toContain('given twice');
@@ -1269,7 +1367,10 @@ describe('a check that cannot run', () => {
   it('fails when the manifest declares no ABIs', () => {
     const emptyManifest = path.join(workspace, 'empty-manifest.json');
     fs.writeFileSync(emptyManifest, JSON.stringify({abis: []}));
-    const archive = writeArchive('app-prod-release.apk', conformingEntries());
+    const archive = writeStoredArchive(
+      'app-prod-release.apk',
+      conformingEntries(),
+    );
     const {status, output} = runGate([
       '--apk',
       archive,

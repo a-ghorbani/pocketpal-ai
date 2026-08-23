@@ -5,10 +5,12 @@
     "mustExportRule": "mustExport names must be DEFINED in .dynsym (st_shndx != SHN_UNDEF). An undefined import proves only that something references the symbol, not that it was compiled in.",
     "extraLibsRule": "librnllama* libraries beyond requiredLibs are reported and permitted, not failed: forcing prebuilts (ORG_GRADLE_PROJECT_rnllamaBuildFromSource=false) legitimately produces all seven arm64 variants.",
     "assetScopeRule": "assets.required paths resolve from the artifact root, and the block sits beside abis[] rather than inside it: Android packages assets/ once per artifact, not per ABI (verified against a built APK). scope admits only \"artifact\" — declaring \"abi\" is refused, because no supported packaging mechanism delivers it.",
+    "libPackagingRule": "nativeLibsMappedInPlace records that the app ships extractNativeLibs=false, so Android maps each lib/<abi>/*.so straight out of the APK instead of extracting it at install. Two consequences the gate enforces: the zip data offset must be page-aligned, and every library must be STORED — a deflated one cannot be mapped and is unloadable on every device, not only 16 KB ones. The attribute is injected by AGP from the useLegacyPackaging=false default rather than written in any source file, so it is declared here where a change to it is reviewed.",
     "libAlignmentRule": "requiredLibAlignment is the minimum p_align of every PT_LOAD segment of every library shipped under lib/<abi>/, not only the required ones: Android 15+ loads all of them on a 16 KB-page device. The script floors it at 16384 and will not accept less, because lowering the number is the cheapest edit that unblocks a failing build. The DSP assets are outside the subject set — they are Hexagon objects at p_align 4096, loaded by the DSP and not by Android.",
     "assetUsabilityRule": "usableByAbis is a claim about which shipped lib/<abi>/ trees carry a library able to load the assets, not a packaging directive — assets are not ABI-scoped, so the DSP payload reaches every ABI regardless. It is asserted against the artifact: an ABI is listed iff its tree carries a non-wrapper _hexagon library.",
     "assetFormatRule": "Every required asset is checked to be an ELF object for assets.elfMachine. Presence by filename is not enough: a file of the right name that is not a DSP library produces the same user-visible outcome as a missing backend, with a passing report. 164 is EM_QDSP6."
   },
+  "nativeLibsMappedInPlace": true,
   "assets": {
     "scope": "artifact",
     "required": [

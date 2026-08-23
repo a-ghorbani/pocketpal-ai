@@ -345,6 +345,15 @@ function loadManifest(manifestPath) {
       `${manifestPath} declares no accelerator library for any ABI, so no backend would be checked.`,
     );
   }
+  // Only `true` is accepted. The app maps its libraries in place; flipping
+  // this to say otherwise would silently retire both the offset rule and the
+  // stored requirement, which is the cheapest edit that unblocks a repacked
+  // artifact.
+  if (manifest.nativeLibsMappedInPlace !== true) {
+    throw new Error(
+      `${manifestPath} must declare nativeLibsMappedInPlace: true; the app ships extractNativeLibs=false, so every native library is mapped out of the APK rather than extracted.`,
+    );
+  }
   assertAssetFloors(manifest, manifestPath);
   for (const abi of manifest.abis) {
     assertAcceleratorFloors(abi, manifestPath);
@@ -435,17 +444,30 @@ function readElfMachine(buf) {
 /**
  * Where each entry's bytes actually start, and whether they are stored or
  * deflated. Read from the archive's own headers rather than from `unzip`,
- * which prints the *central* directory's extra-field length — the alignment
- * padding lives in the **local** header, and the two differ (0 against 599
- * bytes for `librnllama.so` in a release APK).
+ * which prints the *central* directory's extra-field length: the alignment
+ * padding lives in the **local** header, and the two differ. In a release APK
+ * the central value is 0 for every library while the local one is whatever it
+ * took to reach the next page boundary, so the difference is the whole field.
  */
 function readZipIndex(archive) {
   const fd = fs.openSync(archive, 'r');
+  // A short read is not an error to `fs.readSync`; it simply returns fewer
+  // bytes and leaves the rest of the buffer as it found it. Discarding the
+  // count means an offset past the end of the file is read as whatever the
+  // buffer held last, which for a reused buffer is the previous entry.
+  const readExactly = (buffer, length, position) => {
+    const got = fs.readSync(fd, buffer, 0, length, position);
+    if (got !== length) {
+      throw new Error(
+        `wanted ${length} bytes at ${position} but the archive gave ${got}`,
+      );
+    }
+  };
   try {
     const size = fs.fstatSync(fd).size;
     const tailLength = Math.min(size, 0xffff + 22);
     const tail = Buffer.alloc(tailLength);
-    fs.readSync(fd, tail, 0, tailLength, size - tailLength);
+    readExactly(tail, tailLength, size - tailLength);
 
     let eocd = -1;
     for (let at = tail.length - EOCD_SIZE; at >= 0; at--) {
@@ -473,10 +495,9 @@ function readZipIndex(archive) {
     }
 
     const directory = Buffer.alloc(directorySize);
-    fs.readSync(fd, directory, 0, directorySize, directoryAt);
+    readExactly(directory, directorySize, directoryAt);
 
     const index = new Map();
-    const local = Buffer.alloc(LOCAL_HEADER_SIZE);
     let at = 0;
     for (let i = 0; i < count; i++) {
       if (directory.readUInt32LE(at) !== CENTRAL_SIGNATURE) {
@@ -489,7 +510,8 @@ function readZipIndex(archive) {
       const localAt = directory.readUInt32LE(at + 42);
       const name = directory.toString('utf-8', at + 46, at + 46 + nameLength);
 
-      fs.readSync(fd, local, 0, LOCAL_HEADER_SIZE, localAt);
+      const local = Buffer.alloc(LOCAL_HEADER_SIZE);
+      readExactly(local, LOCAL_HEADER_SIZE, localAt);
       if (local.readUInt32LE(0) !== LOCAL_SIGNATURE) {
         throw new Error(`the local header of ${name} is malformed`);
       }
@@ -585,7 +607,7 @@ function readCString(buf, offset, limit) {
  * calibrated against.
  */
 function readDynsym(buf) {
-  if (buf.length < ELF64_SHDR_SIZE) {
+  if (buf.length < ELF64_EHDR_SIZE) {
     throw new Error('file is too short to be an ELF object');
   }
   if (buf.readUInt32BE(0) !== 0x7f454c46) {
@@ -908,21 +930,43 @@ function checkAlignment({
     return;
   }
 
-  // Stored entries only. A deflated library is extracted to disk at install
-  // (legacy packaging) rather than mapped out of the archive, so its offset
-  // decides nothing — and an APK where every library is deflated legitimately
-  // has nothing to check here, which the counts make visible rather than
-  // silently reporting as a pass.
-  const mapped = libs.filter(entry => zipIndex.get(entry)?.stored);
-  const misplaced = mapped.filter(
-    entry => zipIndex.get(entry).dataOffset % declared !== 0,
+  // Every library, not only the stored ones. The app maps its libraries out of
+  // the APK, so a deflated entry is not a library checked under some other
+  // rule — it is one the loader cannot map at all, on any device. Skipping it
+  // here would excuse the more serious fault of the two.
+  const missing = libs.filter(entry => !zipIndex.has(entry));
+  for (const entry of missing) {
+    report.push(`      UNINDEXED  ${entry}`);
+    fail(
+      [
+        `${entry} is listed in ${artifactName} but absent from its central directory.`,
+        'The payload check could not run, so it reports failure rather than success —',
+        'a check that cannot read the artifact has proven nothing about it.',
+      ].join('\n      '),
+    );
+  }
+  const indexed = libs.filter(entry => zipIndex.has(entry));
+  const deflated = indexed.filter(entry => !zipIndex.get(entry).stored);
+  const misplaced = indexed.filter(
+    entry =>
+      zipIndex.get(entry).stored &&
+      zipIndex.get(entry).dataOffset % declared !== 0,
   );
   report.push(
-    `    zip data offset: ${mapped.length - misplaced.length}/${mapped.length} stored libraries at a multiple of ${declared}` +
-      (mapped.length < libs.length
-        ? ` (${libs.length - mapped.length} deflated, extracted at install)`
-        : ''),
+    `    zip data offset: ${indexed.length - deflated.length - misplaced.length}/${indexed.length} libraries stored at a multiple of ${declared}`,
   );
+  for (const entry of deflated) {
+    report.push(`      DEFLATED  ${entry}`);
+    fail(
+      [
+        `${entry} in ${artifactName} is compressed inside the archive.`,
+        'scripts/android-payload-manifest.json declares nativeLibsMappedInPlace, so the platform maps',
+        'this library straight out of the APK and never extracts it — a compressed entry cannot be',
+        'mapped and will fail to load on every device. Either the artifact was repacked after the',
+        'build, or packaging changed to useLegacyPackaging and the manifest has to say so.',
+      ].join('\n      '),
+    );
+  }
   for (const entry of misplaced) {
     const offset = zipIndex.get(entry).dataOffset;
     report.push(`      MISPLACED  ${entry} (data offset ${offset})`);
