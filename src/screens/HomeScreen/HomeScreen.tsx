@@ -119,13 +119,17 @@ const HistoryRow: React.FC<{
     const palUri = pal ? palThumbnailUri(pal) : undefined;
     const palFill = pal?.color?.[0] ?? theme.colors.surfaceVariant;
     return (
-      <Pressable
-        style={styles.historyRow}
-        onPress={onPress}
-        accessibilityRole="button"
-        accessibilityLabel={session.title}
-        testID={`home-history-${session.id}`}>
-        <View style={styles.historyRowMain}>
+      // The row is a plain container, not a Pressable: an accessible parent
+      // collapses its children into one element, which hid the kebab from the
+      // a11y tree entirely (tappable by coordinate, unreachable by VoiceOver).
+      // The open-chat target and the kebab are siblings instead.
+      <View style={styles.historyRow}>
+        <Pressable
+          style={styles.historyRowMain}
+          onPress={onPress}
+          accessibilityRole="button"
+          accessibilityLabel={session.title}
+          testID={`home-history-${session.id}`}>
           <View style={styles.historyTitleRow}>
             {session.pinned ? (
               <StarIcon
@@ -167,7 +171,7 @@ const HistoryRow: React.FC<{
               {formatRelativeAge(session.date)}
             </Text>
           </View>
-        </View>
+        </Pressable>
         <Menu
           visible={menuVisible}
           onDismiss={onMenuDismiss}
@@ -228,7 +232,7 @@ const HistoryRow: React.FC<{
             leadingIcon={() => <TrashIcon stroke={theme.colors.error} />}
           />
         </Menu>
-      </Pressable>
+      </View>
     );
   },
 );

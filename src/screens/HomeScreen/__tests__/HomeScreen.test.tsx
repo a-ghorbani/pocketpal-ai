@@ -487,6 +487,34 @@ describe('HomeScreen', () => {
       fireEvent.press(getByTestId(`home-session-more-${id}`));
     };
 
+    it('exposes the kebab as its own a11y element, not folded into the row', () => {
+      // RN collapses children of an accessible parent into one element. With the
+      // row itself Pressable the kebab vanished from the a11y tree — tappable by
+      // coordinate, unreachable by VoiceOver. Caught on device, not by jest;
+      // this guards the structure that fixed it.
+      twoSessions();
+      const {getByTestId} = render(<HomeScreen />, {
+        withNavigation: true,
+        withSafeArea: true,
+      });
+      const row = getByTestId('home-history-a');
+      const kebab = getByTestId('home-session-more-a');
+      expect(row.props.accessibilityRole).toBe('button');
+      expect(kebab.props.accessibilityRole).toBe('button');
+      // Neither may contain the other, or the a11y tree folds them back together.
+      const contains = (a: any, b: any) => {
+        let n = b.parent;
+        while (n) {
+          if (n === a) {
+            return true;
+          }
+          n = n.parent;
+        }
+        return false;
+      };
+      expect(contains(row, kebab)).toBe(false);
+    });
+
     it('the kebab is an actual control, not decoration', () => {
       twoSessions();
       const {getByTestId} = render(<HomeScreen />, {
