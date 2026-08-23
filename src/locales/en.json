@@ -1054,7 +1054,12 @@
         "total": "Total: ",
         "usage": "Usage: "
       },
-      "byteSizes": ["Bytes", "KB", "MB", "GB"]
+      "byteSizes": [
+        "Bytes",
+        "KB",
+        "MB",
+        "GB"
+      ]
     },
     "chatView": {
       "menuItems": {
@@ -1650,6 +1655,7 @@
     "modelChipPrefix": "Model used",
     "modelChipEmpty": "Select a model",
     "chatHistory": "Chat history",
+    "sessionActions": "Chat actions",
     "emptyHint": "Select a pal or model, then start typing. Your conversations will appear here.",
     "sendLabel": "Send message",
     "searchLabel": "Search chats"

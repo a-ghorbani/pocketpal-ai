@@ -277,7 +277,13 @@ export const createStyles = (theme: Theme) =>
       flex: 1,
       gap: theme.spacing.xxs,
     },
+    historyTitleRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: theme.spacing.xxs,
+    },
     historyRowTitle: {
+      flexShrink: 1,
       ...theme.typography.uiM,
       fontSize: 14,
       lineHeight: 20,

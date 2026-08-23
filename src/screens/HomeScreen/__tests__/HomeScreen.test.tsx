@@ -1,4 +1,5 @@
 import React from 'react';
+import {Alert} from 'react-native';
 import {runInAction} from 'mobx';
 import {fireEvent, waitFor} from '@testing-library/react-native';
 
@@ -13,6 +14,12 @@ import {
 import {mockLocalPal} from '../../../../jest/fixtures/pals';
 
 import {HomeScreen} from '../HomeScreen';
+
+const mockExportChatSession = jest.fn().mockResolvedValue(undefined);
+jest.mock('../../../utils/exportUtils', () => ({
+  ...jest.requireActual('../../../utils/exportUtils'),
+  exportChatSession: (id: string) => mockExportChatSession(id),
+}));
 
 const mockPicker = jest.fn((_props: any) => null);
 jest.mock('../../../components/ChatPalModelPickerSheet', () => ({
@@ -449,5 +456,195 @@ describe('HomeScreen', () => {
     expect(getByText(placeholderFor('Pip'))).toBeTruthy();
     fireEvent.press(getByTestId('home-pal-pip'));
     expect(getByText(en.home.composerPlaceholderGeneric)).toBeTruthy();
+  });
+
+  describe('chat-row overflow menu', () => {
+    // The drawer carried per-row pin/rename/export/delete; the bottom-tab swap
+    // dropped it, leaving pinning with no call site anywhere in the app.
+    const twoSessions = () =>
+      runInAction(() => {
+        chatSessionStore.sessions = [
+          {
+            id: 'a',
+            title: 'First chat',
+            date: '2026-06-01T10:00:00.000Z',
+            messages: [],
+            completionSettings: {} as any,
+            settingsSource: 'custom',
+          },
+          {
+            id: 'b',
+            title: 'Second chat',
+            date: '2026-06-02T10:00:00.000Z',
+            messages: [],
+            completionSettings: {} as any,
+            settingsSource: 'custom',
+          },
+        ] as any;
+      });
+
+    const openMenu = (getByTestId: any, id: string) => {
+      fireEvent.press(getByTestId(`home-session-more-${id}`));
+    };
+
+    it('exposes the kebab as its own a11y element, not folded into the row', () => {
+      // RN collapses children of an accessible parent into one element. With the
+      // row itself Pressable the kebab vanished from the a11y tree — tappable by
+      // coordinate, unreachable by VoiceOver. Caught on device, not by jest;
+      // this guards the structure that fixed it.
+      twoSessions();
+      const {getByTestId} = render(<HomeScreen />, {
+        withNavigation: true,
+        withSafeArea: true,
+      });
+      const row = getByTestId('home-history-a');
+      const kebab = getByTestId('home-session-more-a');
+      expect(row.props.accessibilityRole).toBe('button');
+      expect(kebab.props.accessibilityRole).toBe('button');
+      // Neither may contain the other, or the a11y tree folds them back together.
+      const contains = (a: any, b: any) => {
+        let n = b.parent;
+        while (n) {
+          if (n === a) {
+            return true;
+          }
+          n = n.parent;
+        }
+        return false;
+      };
+      expect(contains(row, kebab)).toBe(false);
+    });
+
+    it('the kebab is an actual control, not decoration', () => {
+      twoSessions();
+      const {getByTestId} = render(<HomeScreen />, {
+        withNavigation: true,
+        withSafeArea: true,
+      });
+      const kebab = getByTestId('home-session-more-a');
+      expect(kebab.props.accessibilityRole).toBe('button');
+      expect(kebab.props.accessibilityLabel).toBe(en.home.sessionActions);
+      // The negative control for this whole slice: before the fix the kebab was
+      // a bare View, so opening a menu from it was impossible.
+      expect(kebab.props.onClick ?? kebab.props.onPress).toBeDefined();
+    });
+
+    it('opens the menu for the tapped row only', () => {
+      twoSessions();
+      const {getByTestId, queryByTestId} = render(<HomeScreen />, {
+        withNavigation: true,
+        withSafeArea: true,
+      });
+      expect(queryByTestId('home-session-pin-a')).toBeNull();
+
+      openMenu(getByTestId, 'a');
+
+      expect(getByTestId('home-session-pin-a')).toBeTruthy();
+      expect(queryByTestId('home-session-pin-b')).toBeNull();
+    });
+
+    it('pin routes to togglePinSession — the writer the nav swap orphaned', () => {
+      twoSessions();
+      const {getByTestId} = render(<HomeScreen />, {
+        withNavigation: true,
+        withSafeArea: true,
+      });
+      openMenu(getByTestId, 'a');
+      fireEvent.press(getByTestId('home-session-pin-a'));
+
+      expect(chatSessionStore.togglePinSession).toHaveBeenCalledWith('a');
+    });
+
+    it('export routes to exportChatSession', async () => {
+      twoSessions();
+      const {getByTestId} = render(<HomeScreen />, {
+        withNavigation: true,
+        withSafeArea: true,
+      });
+      openMenu(getByTestId, 'b');
+      fireEvent.press(getByTestId('home-session-export-b'));
+
+      await waitFor(() => {
+        expect(mockExportChatSession).toHaveBeenCalledWith('b');
+      });
+    });
+
+    it('delete asks first and only deletes on confirm', () => {
+      twoSessions();
+      const alert = jest.spyOn(Alert, 'alert').mockImplementation(() => {});
+      const {getByTestId} = render(<HomeScreen />, {
+        withNavigation: true,
+        withSafeArea: true,
+      });
+      openMenu(getByTestId, 'a');
+      fireEvent.press(getByTestId('home-session-delete-a'));
+
+      expect(chatSessionStore.deleteSession).not.toHaveBeenCalled();
+      expect(alert).toHaveBeenCalled();
+
+      const confirm = (alert.mock.calls[0][2] as any[]).find(
+        b => b.style === 'destructive',
+      );
+      confirm.onPress();
+
+      expect(chatSessionStore.deleteSession).toHaveBeenCalledWith('a');
+      alert.mockRestore();
+    });
+
+    it('labels the item Unpin and marks the row when the session is pinned', () => {
+      runInAction(() => {
+        chatSessionStore.sessions = [
+          {
+            id: 'p',
+            title: 'Pinned chat',
+            date: '2026-06-01T10:00:00.000Z',
+            pinned: true,
+            messages: [],
+            completionSettings: {} as any,
+            settingsSource: 'custom',
+          },
+        ] as any;
+      });
+      const {getByTestId, getByText} = render(<HomeScreen />, {
+        withNavigation: true,
+        withSafeArea: true,
+      });
+      expect(getByTestId('home-session-pinned-p')).toBeTruthy();
+
+      openMenu(getByTestId, 'p');
+      expect(getByText(en.components.sidebarContent.unpin)).toBeTruthy();
+    });
+
+    it('sorts pinned sessions above newer unpinned ones', () => {
+      runInAction(() => {
+        chatSessionStore.sessions = [
+          {
+            id: 'newer',
+            title: 'Newer unpinned',
+            date: '2026-06-10T10:00:00.000Z',
+            messages: [],
+            completionSettings: {} as any,
+            settingsSource: 'custom',
+          },
+          {
+            id: 'older',
+            title: 'Older pinned',
+            date: '2026-06-01T10:00:00.000Z',
+            pinned: true,
+            messages: [],
+            completionSettings: {} as any,
+            settingsSource: 'custom',
+          },
+        ] as any;
+      });
+      const {getAllByTestId} = render(<HomeScreen />, {
+        withNavigation: true,
+        withSafeArea: true,
+      });
+      const order = getAllByTestId(/^home-history-/)
+        .map(n => n.props.testID)
+        .filter(id => id !== 'home-history-search');
+      expect(order).toEqual(['home-history-older', 'home-history-newer']);
+    });
   });
 });
