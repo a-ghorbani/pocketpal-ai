@@ -22,7 +22,13 @@ export interface ChunkOptions {
   overlapChars?: number;
 }
 
-export const DEFAULT_CHUNK_CHARS = 1_400;
+/**
+ * Default chunk target in characters. Sized to stay under bge-small's
+ * 512-token encoder ceiling with margin for token-dense text (code,
+ * CJK): 1200 chars at ~2.8 chars/token ~= 430 tokens. Chunk tails
+ * beyond the ceiling are invisible to the dense index.
+ */
+export const DEFAULT_CHUNK_CHARS = 1_200;
 export const DEFAULT_CHUNK_MIN_CHARS = 200;
 export const DEFAULT_CHUNK_OVERLAP_CHARS = 200;
 

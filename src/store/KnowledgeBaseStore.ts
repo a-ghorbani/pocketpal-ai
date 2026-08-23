@@ -23,6 +23,7 @@ import {KbDocument} from '../database';
 
 import {
   chunkText,
+  DEFAULT_CHUNK_CHARS,
   deleteDocVectors,
   readDocVectors,
   retrieveChunks,
@@ -66,7 +67,7 @@ class KnowledgeBaseStore {
   enabled = false;
   embeddingPresetId: string = DEFAULT_EMBEDDING_PRESET_ID;
   autoIndexThresholdChars = DEFAULT_AUTO_INDEX_THRESHOLD;
-  chunkChars = 1_400;
+  chunkChars: number = DEFAULT_CHUNK_CHARS;
   topK = 8;
   minCosine = 0.25;
   includeInAllChats = false;
@@ -84,7 +85,7 @@ class KnowledgeBaseStore {
 
   constructor() {
     makeAutoObservable(this, {vectorCache: false}, {autoBind: true});
-    makePersistable(this, {
+    const persistable = makePersistable(this, {
       name: 'KnowledgeBaseStore',
       storage: AsyncStorage,
       properties: [
@@ -96,6 +97,14 @@ class KnowledgeBaseStore {
         'minCosine',
         'includeInAllChats',
       ],
+    });
+    // One-time upgrade: no UI sets chunkChars, so a persisted 1400 can
+    // only be the old default, which overran bge-small's 512-token
+    // ceiling on token-dense text. Migrate it to the safer target.
+    persistable.then(() => {
+      if (this.chunkChars === 1_400) {
+        this.chunkChars = DEFAULT_CHUNK_CHARS;
+      }
     });
     void this.refreshDocuments();
   }
