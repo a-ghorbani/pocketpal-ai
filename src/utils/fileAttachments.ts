@@ -27,6 +27,35 @@ export const TOTAL_CHAR_CAP = 64_000;
 /** Files larger than this are never read, only listed to the model. */
 export const MAX_READABLE_BYTES = 5 * 1024 * 1024;
 
+/**
+ * Context-aware budgeting. A phone-class model often runs with a 2k-8k
+ * context; the static caps above can then exceed the entire window and
+ * the prompt-processing time explodes. `computeAttachmentCharBudget`
+ * scales the injection allowance off the model's real `n_ctx` minus
+ * what the rest of the prompt (system prompt + history + user text)
+ * already needs.
+ */
+
+/** Rough chars-per-token ratio for mixed English text. */
+export const CHARS_PER_TOKEN = 3.4;
+
+/** Share of the context window we are ever willing to spend on files. */
+export const ATTACHMENT_CONTEXT_SHARE = 0.35;
+
+/** Never shrink attachment injection below this, even in tiny contexts. */
+export const MIN_ATTACHMENT_BUDGET = 2_000;
+
+export const computeAttachmentCharBudget = (
+  nCtx: number,
+  reservedChars: number,
+): number => {
+  const windowChars = Math.max(nCtx, 0) * CHARS_PER_TOKEN;
+  const raw = windowChars * ATTACHMENT_CONTEXT_SHARE - reservedChars;
+  return Math.round(
+    Math.min(Math.max(raw, MIN_ATTACHMENT_BUDGET), TOTAL_CHAR_CAP),
+  );
+};
+
 const ATTACHMENT_CACHE_DIR = `${RNFS.CachesDirectoryPath}/attachments`;
 
 /** Extensions we are willing to inject as text. */
@@ -245,9 +274,20 @@ export const pickFileAttachments = async (): Promise<PendingAttachment[]> => {
  */
 export const buildAttachmentRecords = async (
   pending: ChatAttachment[],
+  budgetChars?: number,
 ): Promise<AttachmentRecord[]> => {
   const records: AttachmentRecord[] = [];
-  let totalBudget = TOTAL_CHAR_CAP;
+  let totalBudget = Math.max(
+    budgetChars != null && Number.isFinite(budgetChars)
+      ? Math.min(budgetChars, TOTAL_CHAR_CAP)
+      : TOTAL_CHAR_CAP,
+    MIN_ATTACHMENT_BUDGET,
+  );
+  // Per-file cap scales with the budget (half of it) but never exceeds
+  // the static cap, so one file cannot eat the whole allowance.
+  const perFileCap = Math.round(
+    Math.min(Math.max(totalBudget / 2, 1_000), PER_FILE_CHAR_CAP),
+  );
 
   for (const file of pending) {
     if (!isPendingAttachment(file)) {
@@ -287,8 +327,8 @@ export const buildAttachmentRecords = async (
       content = content.replace(/\r\n/g, '\n');
 
       let truncated = false;
-      if (content.length > PER_FILE_CHAR_CAP) {
-        content = content.slice(0, PER_FILE_CHAR_CAP);
+      if (content.length > perFileCap) {
+        content = content.slice(0, perFileCap);
         truncated = true;
       }
       if (content.length > totalBudget) {

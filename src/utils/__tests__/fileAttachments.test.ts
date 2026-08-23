@@ -7,9 +7,11 @@ import {
   PER_FILE_CHAR_CAP,
   TOTAL_CHAR_CAP,
   MAX_READABLE_BYTES,
+  MIN_ATTACHMENT_BUDGET,
   AttachmentRecord,
   PendingAttachment,
   buildAttachmentRecords,
+  computeAttachmentCharBudget,
   formatAttachmentsForPrompt,
   formatByteSize,
   getMessageAttachments,
@@ -108,10 +110,54 @@ describe('isPendingAttachment / toAttachmentRecord', () => {
   });
 });
 
+describe('computeAttachmentCharBudget', () => {
+  it('keeps the static cap only for huge contexts', () => {
+    expect(computeAttachmentCharBudget(65536, 0)).toBe(TOTAL_CHAR_CAP);
+    // 32k ctx -> 32768*3.4*0.35 = 38994, below the cap.
+    expect(computeAttachmentCharBudget(32768, 1000)).toBe(
+      Math.round(32768 * 3.4 * 0.35 - 1000),
+    );
+  });
+
+  it('scales down for a small-context model', () => {
+    // 4096 ctx * 3.4 * 0.35 ~= 4874 chars; minus 1000 reserved.
+    expect(computeAttachmentCharBudget(4096, 1000)).toBe(
+      Math.round(4096 * 3.4 * 0.35 - 1000),
+    );
+  });
+
+  it('floors at the minimum budget', () => {
+    expect(computeAttachmentCharBudget(512, 100_000)).toBe(
+      MIN_ATTACHMENT_BUDGET,
+    );
+  });
+
+  it('ignores negative contexts', () => {
+    expect(computeAttachmentCharBudget(-5, 0)).toBe(MIN_ATTACHMENT_BUDGET);
+  });
+});
+
 describe('buildAttachmentRecords', () => {
   beforeEach(() => {
     jest.clearAllMocks();
     (RNFS.readFile as jest.Mock).mockResolvedValue('file body');
+  });
+
+  it('splits an explicit budget across files with a half-budget per-file cap', async () => {
+    (RNFS.readFile as jest.Mock).mockResolvedValue('x'.repeat(20_000));
+    const out = await buildAttachmentRecords(
+      [
+        pending({name: 'a.txt', mime: 'text/plain'}),
+        pending({name: 'b.txt', mime: 'text/plain'}),
+      ],
+      5_000,
+    );
+    // Each file capped at budget/2 = 2500; together they consume exactly
+    // the 5000-char budget.
+    expect(out[0].content).toHaveLength(2_500);
+    expect(out[1].content).toHaveLength(2_500);
+    expect(out[0].truncated).toBe(true);
+    expect(out[1].truncated).toBe(true);
   });
 
   it('captures readable text files', async () => {

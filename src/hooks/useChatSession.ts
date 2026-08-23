@@ -28,6 +28,7 @@ import {
   AttachmentRecord,
   ChatAttachment,
   buildAttachmentRecords,
+  computeAttachmentCharBudget,
   formatAttachmentsForPrompt,
 } from '../utils/fileAttachments';
 import {activateKeepAwake, deactivateKeepAwake} from '../utils/keepAwake';
@@ -553,7 +554,24 @@ export const useChatSession = (
     let attachments: AttachmentRecord[] = [];
     if (pendingFiles.length > 0) {
       try {
-        attachments = await buildAttachmentRecords(pendingFiles);
+        // Context-aware budget: never let file injection eat more than a
+        // bounded share of the active model's real context window after
+        // reserving an estimate of system prompt + history + user text.
+        const nCtx = toJS(modelStore.contextInitParams).n_ctx ?? 4096;
+        const reservedChars =
+          currentMessages.reduce(
+            (sum, m) =>
+              sum +
+              (typeof (m as MessageType.Text).text === 'string'
+                ? ((m as MessageType.Text).text?.length ?? 0)
+                : 0) +
+              64, // per-message template overhead estimate
+            0,
+          ) +
+          (message.text?.length ?? 0) +
+          2_000; // system prompt allowance
+        const budgetChars = computeAttachmentCharBudget(nCtx, reservedChars);
+        attachments = await buildAttachmentRecords(pendingFiles, budgetChars);
       } catch (error) {
         console.error('Failed to read attachments:', error);
       }
