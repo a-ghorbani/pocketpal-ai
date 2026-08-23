@@ -434,6 +434,20 @@ function readDynsym(buf) {
   return symbols;
 }
 
+function installedLlamaRnVersion() {
+  try {
+    const pkg = JSON.parse(
+      fs.readFileSync(
+        path.join(__dirname, '..', 'node_modules', 'llama.rn', 'package.json'),
+        'utf-8',
+      ),
+    );
+    return pkg.version || 'unknown';
+  } catch {
+    return 'unknown';
+  }
+}
+
 function checkSymbolRule({rule, archive, artifactName, entry, report, fail}) {
   let symbols;
   try {
@@ -481,7 +495,7 @@ function checkSymbolRule({rule, archive, artifactName, entry, report, fail}) {
     symbol.name.toLowerCase().includes(pattern),
   ).length;
   report.push(
-    `      ${matched} .dynsym entries matching "${expected.pattern}" (declared ${expected.count})`,
+    `      ${matched} .dynsym entries matching "${expected.pattern}" (declared ${expected.count}), llama.rn ${installedLlamaRnVersion()}`,
   );
   if (matched !== expected.count && missing.length === 0) {
     fail(
