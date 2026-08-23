@@ -65,7 +65,11 @@ class EmbeddingStore {
         model: path,
         n_ctx: 2048,
         n_batch: 512,
-        pooling_type: 'mean',
+        // Required or the native layer rejects every embedding() call
+        // with "Embedding is not enabled".
+        embedding: true,
+        // llama_pooling_type enum: 1 = MEAN (encoder pooling).
+        pooling_type: 1,
         use_mmap: true,
         // Embedding passes are single-shot and tiny; the chat model's
         // threadpool settings are intentionally not shared here.
