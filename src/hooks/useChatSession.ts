@@ -9,6 +9,7 @@ import {randId} from '../utils';
 import {L10nContext} from '../utils';
 import {
   chatSessionStore,
+  knowledgeBaseStore,
   modelStore,
   palStore,
   serverStore,
@@ -30,7 +31,10 @@ import {
   buildAttachmentRecords,
   computeAttachmentCharBudget,
   formatAttachmentsForPrompt,
+  isPendingAttachment,
+  readAttachmentText,
 } from '../utils/fileAttachments';
+import {formatKbHitsForPrompt} from '../utils/kbInjection';
 import {activateKeepAwake, deactivateKeepAwake} from '../utils/keepAwake';
 import {
   toApiCompletionParams,
@@ -62,6 +66,7 @@ const prepareCompletion = async ({
   imageUris,
   message,
   attachments,
+  kbBlock,
   systemMessages,
   contextId,
   assistant,
@@ -73,6 +78,7 @@ const prepareCompletion = async ({
   imageUris: string[];
   message: MessageType.PartialText;
   attachments: AttachmentRecord[];
+  kbBlock?: string;
   systemMessages: Array<{role: 'system'; content: string}>;
   contextId: string;
   assistant: User;
@@ -89,7 +95,11 @@ const prepareCompletion = async ({
   const hasImages = imageUris && imageUris.length > 0;
 
   // The user text with any captured attachment content folded in.
-  const userText = formatAttachmentsForPrompt(message.text, attachments);
+  let userText = formatAttachmentsForPrompt(message.text, attachments);
+  // Knowledge-base excerpts (if retrieval ran) quote after the files.
+  if (kbBlock) {
+    userText = userText ? `${userText}\n\n${kbBlock}` : kbBlock;
+  }
 
   // Create user message content - use array format only for multimodal,
   // string for text-only.
@@ -552,6 +562,9 @@ export const useChatSession = (
       ? (message.metadata?.attachments as ChatAttachment[])
       : [];
     let attachments: AttachmentRecord[] = [];
+    // Attachment files routed into the knowledge base this turn.
+    const indexedDocIds: string[] = [];
+    let kbBudgetChars = 0;
     if (pendingFiles.length > 0) {
       try {
         // Context-aware budget: never let file injection eat more than a
@@ -571,9 +584,76 @@ export const useChatSession = (
           (message.text?.length ?? 0) +
           2_000; // system prompt allowance
         const budgetChars = computeAttachmentCharBudget(nCtx, reservedChars);
-        attachments = await buildAttachmentRecords(pendingFiles, budgetChars);
+        kbBudgetChars = budgetChars;
+
+        // Smart routing: a text file whose full content exceeds the
+        // injection budget goes to the knowledge base (index once,
+        // retrieve per question) instead of being truncated away. Falls
+        // back to direct injection when the KB is off or unavailable.
+        const routed: ChatAttachment[] = [];
+        const kbRecords: AttachmentRecord[] = [];
+        for (const file of pendingFiles) {
+          if (
+            !knowledgeBaseStore.enabled ||
+            !isPendingAttachment(file) ||
+            (await knowledgeBaseStore.isModelDownloaded()) === false
+          ) {
+            routed.push(file);
+            continue;
+          }
+          const fullText = await readAttachmentText(file);
+          if (fullText === null || fullText.length <= budgetChars) {
+            routed.push(file);
+            continue;
+          }
+          try {
+            const doc = await knowledgeBaseStore.indexDocument({
+              name: file.name,
+              mime: file.mime,
+              size: file.size,
+              text: fullText,
+              source: 'attach',
+            });
+            indexedDocIds.push(doc.id);
+            kbRecords.push({
+              name: file.name,
+              size: file.size,
+              mime: file.mime,
+              content: null,
+              indexedToKb: true,
+              kbDocId: doc.id,
+              kbChunkCount: doc.chunkCount,
+            });
+          } catch (error) {
+            console.warn('[KB] indexing failed, injecting directly:', error);
+            routed.push(file);
+          }
+        }
+        attachments = [
+          ...kbRecords,
+          ...(await buildAttachmentRecords(routed, budgetChars)),
+        ];
       } catch (error) {
         console.error('Failed to read attachments:', error);
+      }
+    }
+
+    // Knowledge-base retrieval: pull the chunks most relevant to this
+    // question out of the corpus and quote them under the user text.
+    let kbBlock = '';
+    if (
+      knowledgeBaseStore.enabled &&
+      (indexedDocIds.length > 0 || knowledgeBaseStore.includeInAllChats) &&
+      message.text.trim().length > 0
+    ) {
+      try {
+        const hits = await knowledgeBaseStore.query(
+          message.text,
+          indexedDocIds.length > 0 ? indexedDocIds : undefined,
+        );
+        kbBlock = formatKbHitsForPrompt(hits, Math.max(kbBudgetChars, 2_000));
+      } catch (error) {
+        console.warn('[KB] retrieval failed, continuing without it:', error);
       }
     }
 
@@ -619,6 +699,7 @@ export const useChatSession = (
       imageUris: imageUris || [],
       message,
       attachments,
+      kbBlock: kbBlock || undefined,
       systemMessages,
       contextId,
       assistant,

@@ -176,6 +176,11 @@ export interface AttachmentRecord {
   /** Text captured at send time; null for binary/oversized files. */
   content: string | null;
   truncated?: boolean;
+  /** Set when the file was indexed into the local knowledge base instead
+   * of injected directly; retrieval supplies relevant excerpts per turn. */
+  indexedToKb?: boolean;
+  kbDocId?: string;
+  kbChunkCount?: number;
 }
 
 /** Anything the input can show as an attached file chip. */
@@ -228,6 +233,28 @@ export const formatByteSize = (bytes: number): string => {
 
 const sanitizeFileName = (name: string): string =>
   name.replace(/[^a-zA-Z0-9._-]/g, '_').slice(-80) || 'file';
+
+/** Full text of a staged file, or null when it is binary/oversized. */
+export const readAttachmentText = async (
+  file: PendingAttachment,
+): Promise<string | null> => {
+  const readable =
+    file.size > 0 &&
+    file.size <= MAX_READABLE_BYTES &&
+    isTextSafeFile(file.name, file.mime);
+  if (!readable) {
+    return null;
+  }
+  try {
+    const content = await RNFS.readFile(file.localPath, 'utf8');
+    if (content.includes('\u0000')) {
+      return null;
+    }
+    return content.replace(/\r\n/g, '\n');
+  } catch {
+    return null;
+  }
+};
 
 /**
  * Open the system document picker (multi-select, all files) and stage
@@ -391,6 +418,12 @@ export const formatAttachmentsForPrompt = (
       `--- Attached file: ${a.name}` +
       ` (${a.mime || 'unknown type'}, ${formatByteSize(a.size)})` +
       `${a.truncated ? ' [truncated]' : ''} ---`;
+    if (a.indexedToKb) {
+      return (
+        `${header}\n[File indexed into the local knowledge base ` +
+        `(${a.kbChunkCount ?? '?'} chunks); relevant excerpts are quoted below]`
+      );
+    }
     if (a.content == null) {
       return `${header}\n[Binary or oversized file; contents not extracted]`;
     }
