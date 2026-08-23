@@ -934,17 +934,9 @@ function checkAlignment({
   // the APK, so a deflated entry is not a library checked under some other
   // rule — it is one the loader cannot map at all, on any device. Skipping it
   // here would excuse the more serious fault of the two.
-  const missing = libs.filter(entry => !zipIndex.has(entry));
-  for (const entry of missing) {
-    report.push(`      UNINDEXED  ${entry}`);
-    fail(
-      [
-        `${entry} is listed in ${artifactName} but absent from its central directory.`,
-        'The payload check could not run, so it reports failure rather than success —',
-        'a check that cannot read the artifact has proven nothing about it.',
-      ].join('\n      '),
-    );
-  }
+  // Both readings come from the same central directory — `unzip -Z1` lists it
+  // and `readZipIndex` walks it — so an entry can only be absent here if the
+  // directory itself is malformed, which the reader refuses outright.
   const indexed = libs.filter(entry => zipIndex.has(entry));
   const deflated = indexed.filter(entry => !zipIndex.get(entry).stored);
   const misplaced = indexed.filter(

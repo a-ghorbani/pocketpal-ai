@@ -1,6 +1,7 @@
 const fs = require('fs');
 const path = require('path');
 const yaml = require('js-yaml');
+const {createHash} = require('crypto');
 
 /**
  * Nothing may ship an Android artifact that the payload gate has not examined.
@@ -85,6 +86,39 @@ function codeOf(text) {
       return line.slice(0, cut);
     })
     .join('\n');
+}
+
+/**
+ * A step's whole content, canonically. Every key is included — `env`,
+ * `working-directory`, `if`, `with`, `uses`, and any key GitHub adds later —
+ * because naming the ones that matter is the judgement this file has learned
+ * not to make. The script is the parsed one, so a comment edit is not a change
+ * and an edit to what runs always is.
+ */
+function digestOf(step) {
+  const canonical = value => {
+    if (Array.isArray(value)) {
+      return value.map(canonical);
+    }
+    if (value && typeof value === 'object') {
+      return Object.keys(value)
+        .sort()
+        .reduce((out, key) => {
+          out[key] = key === 'run' ? codeOf(value[key]) : canonical(value[key]);
+          return out;
+        }, {});
+    }
+    return value;
+  };
+  const {run: _raw, ...rest} = step.raw ?? {};
+  return createHash('sha256')
+    .update(
+      JSON.stringify(
+        canonical({...rest, run: step.run, uses: step.uses, with: step.with}),
+      ),
+    )
+    .digest('hex')
+    .slice(0, 12);
 }
 
 function parseLanes() {
@@ -179,10 +213,16 @@ function artifactsIn(text) {
   ];
 }
 
+/**
+ * One entry per `git push`, its arguments trimmed — including the empty string
+ * for a bare push. Dropping the empty entries loses the invocation itself, so a
+ * bare `git push` classified as nothing and `every(…)` over the result was
+ * vacuously true.
+ */
 function gitPushArguments(run) {
-  return [...run.matchAll(/git\s+push\b([^\n]*)/g)]
-    .map(match => match[1].trim())
-    .filter(Boolean);
+  return [...run.matchAll(/git\s+push\b([^\n]*)/g)].map(match =>
+    match[1].trim(),
+  );
 }
 
 function buildsAndroid(body) {
@@ -196,11 +236,13 @@ function publishesAndroid(body) {
 }
 
 function isBuildingJob(job, lanes) {
-  return job.steps.some(
-    step =>
-      /gradlew\s+[^\n]*\b(?:assemble|bundle)/i.test(step.run) ||
-      lanesInvokedBy(step, lanes).some(lane => buildsAndroid(lane.body)),
-  );
+  return job.steps.some(step => {
+    const script = step.run.replace(/\\\n\s*/g, ' ');
+    return (
+      /\b(?:gradlew|gradle)\b[^\n]*\b(?:assemble|bundle)/i.test(script) ||
+      lanesInvokedBy(step, lanes).some(lane => buildsAndroid(lane.body))
+    );
+  });
 }
 
 function isGateStep(step) {
@@ -231,6 +273,20 @@ const UNRESOLVED_PATH = '(a path this parse cannot resolve)';
  * `build/outputs` instead would leave `dist/`, `artifacts/` and
  * `android/app/release/` naming nothing and classifying as no publisher at all.
  */
+/**
+ * The uploads whose paths are known not to be build output. Small, pinned, and
+ * asserted disjoint from `build/outputs`: a concrete filename that is not an
+ * `.apk`/`.aab` is not thereby harmless — `tar czf out/x.tgz …/apk` produces
+ * one — so the parse vouches only for names written down here.
+ */
+const NON_ARTIFACT_UPLOADS = ['payload-report.txt', 'PocketPal.app.dSYM.zip'];
+
+/**
+ * A `with:` path field, split into what it names. The whole value is a path
+ * here — one per line, or one per list entry — so each token is an artifact
+ * this parse can name, a declared non-artifact upload, or something it cannot
+ * vouch for at all.
+ */
 function pathFieldNames(value) {
   const tokens = (
     Array.isArray(value) ? value : String(value ?? '').split('\n')
@@ -238,8 +294,7 @@ function pathFieldNames(value) {
     .map(token => String(token).trim())
     .filter(Boolean);
 
-  const names = [];
-  for (const token of tokens) {
+  return tokens.map(token => {
     const base = token.split('/').pop();
     const concrete =
       !token.includes('${{') &&
@@ -247,12 +302,15 @@ function pathFieldNames(value) {
       !token.endsWith('/') &&
       /\.[A-Za-z0-9]+$/.test(base);
     if (!concrete) {
-      names.push(UNRESOLVED_PATH);
-    } else if (/\.(?:apk|aab)$/.test(base)) {
-      names.push(base);
+      return {kind: 'unreadable', token};
     }
-  }
-  return [...new Set(names)];
+    if (/\.(?:apk|aab)$/.test(base)) {
+      return {kind: 'artifact', token: base};
+    }
+    return NON_ARTIFACT_UPLOADS.includes(base)
+      ? {kind: 'declared', token: base}
+      : {kind: 'undeclared', token: base};
+  });
 }
 
 /**
@@ -265,18 +323,15 @@ function pathFieldNames(value) {
  * bundle exactly also happens to sit under `build/outputs`.
  */
 function commandNames(text) {
-  const names = new Set();
+  const seen = new Map();
   for (const token of String(text ?? '').split(/[\s'"(),]+/)) {
     if (!token || /^[a-z][a-z0-9+.-]*:\/\//i.test(token)) {
       continue;
     }
-    // A word is a candidate path if it is shaped like one: a directory
-    // separator or a wildcard. Asking only about tokens that already spell
-    // `.apk` made an indirect path invisible rather than unresolvable. A bare
-    // `"$ARTIFACT"` is not caught here and does not need to be — it resolves
-    // to nothing, and a publisher that resolves to nothing is refused below.
-    const looksLikeAPath = token.includes('/') || /[*?]/.test(token);
-    if (!looksLikeAPath) {
+    // A word is a candidate path if it is shaped like one. A bare `"$ARTIFACT"`
+    // is not caught here and does not need to be: it resolves to nothing, and a
+    // publisher that resolves to nothing is refused.
+    if (!token.includes('/') && !/[*?]/.test(token)) {
       continue;
     }
     const base = token.split('/').pop();
@@ -285,15 +340,13 @@ function commandNames(text) {
       !/[*?]/.test(token) &&
       !token.endsWith('/') &&
       /\.[A-Za-z0-9]+$/.test(base);
-    if (concrete) {
-      if (/\.(?:apk|aab)$/.test(base)) {
-        names.add(base);
-      }
-      continue;
+    if (!concrete) {
+      seen.set(token, {kind: 'unreadable', token});
+    } else if (/\.(?:apk|aab)$/.test(base)) {
+      seen.set(base, {kind: 'artifact', token: base});
     }
-    names.add(UNRESOLVED_PATH);
   }
-  return [...names];
+  return [...seen.values()];
 }
 
 /**
@@ -306,17 +359,16 @@ function commandNames(text) {
 function publisherOf(step, lanes) {
   const text = stepText(step, lanes);
   const rules = [];
-  const paths = [];
-  const add = (rule, named) => {
+  const named = [];
+  const add = (rule, tokens) => {
     rules.push(rule);
-    paths.push(...named);
+    named.push(...tokens);
   };
 
+  // Unconditional, like the other four: declining to classify when no artifact
+  // can be read makes the empty-resolution refusal unreachable for this class.
   if (/^actions\/upload-artifact@/.test(step.uses)) {
-    const named = pathFieldNames(step.with.path);
-    if (named.length > 0) {
-      add('workflow-artifact', named);
-    }
+    add('workflow-artifact', pathFieldNames(step.with.path));
   }
   if (/^softprops\/action-gh-release@/.test(step.uses)) {
     add('github-release', pathFieldNames(step.with.files));
@@ -328,11 +380,25 @@ function publisherOf(step, lanes) {
     if (/\bgh\s+release\s+(?:create|upload)/.test(step.run)) {
       add('gh-release-cli', commandNames(step.run));
     }
-    if (gitPushArguments(step.run).length > 0) {
+    if (gitPushArguments(step.run).some(args => args !== '')) {
       add('tag-push', []);
     }
   }
-  return rules.length > 0 ? {rules, paths: [...new Set(paths)]} : null;
+  if (rules.length === 0) {
+    return null;
+  }
+  return {
+    rules,
+    paths: [
+      ...new Set(
+        named.filter(one => one.kind === 'artifact').map(one => one.token),
+      ),
+    ],
+    concerns: named.filter(
+      one => one.kind === 'unreadable' || one.kind === 'undeclared',
+    ),
+    declared: named.filter(one => one.kind === 'declared').length,
+  };
 }
 
 function obtainsAndroidOutput(step) {
@@ -354,7 +420,7 @@ function obtainsAndroidOutput(step) {
  * instead by naming no artifact.
  */
 const SENDS_BYTES_OUT =
-  /upload_to_|git push|gh\s+(?:release|api)|scp\s|rsync\s|aws s3/;
+  /upload_to_|git push|gh\s+(?:release|api)|scp\s|rsync\s|aws s3|(?:curl|wget)[^\n]*\s(?:-T\b|--upload-file|-F\b|--form|-d\b|--data|--post-file|-X\s*(?:POST|PUT))/;
 const MOVES_BYTES_AT_ALL = new RegExp(
   `${SENDS_BYTES_OUT.source}|\\bcurl\\b|\\bwget\\b`,
 );
@@ -383,159 +449,529 @@ const pushesOnlyTheBumpCommit = (step, job, m) =>
 const runsNoAndroidGradle = (step, job, m) => !isBuildingJob(job, m.lanes);
 
 /**
- * Every step of a building job that is neither the gate nor a publisher, plus
- * the steps outside those jobs that the suspicion net flags.
+ * Every step of a building job, and the steps outside them that the suspicion
+ * net flags. Nothing is exempt by what it is: the gate, the publishers and the
+ * allowlisted actions are all here, because being recognised as one of those
+ * was itself a way to stop being looked at.
  *
- * This list is the whole point of the design. Deciding whether a step publishes
- * by recognising what publishing looks like is a blacklist over free-form shell
- * and YAML, and it leaked in five consecutive spellings. The default is
- * inverted here: inside a job that builds Android, a step this list does not
- * account for is a **violation**, not a step nobody looked at. Recognising
- * every way to publish is impossible; enumerating the steps this repository
- * actually has is a page of text.
+ * Each row pins the step's **content**, so an edit inside an already-accounted
+ * step costs the same reviewed line that adding a step costs. The list of steps
+ * is closed, and so is what a step may contain. The assertions beside the rows
+ * stay as a second line of defence, but they are no longer what holds the
+ * property: they can refuse only the transports somebody thought of, and the
+ * digest refuses the rest.
  *
- * Each entry states why the step ships nothing and, beside it, the assertion
- * that goes red when that stops being true. A new step in a building job costs
- * a reviewed line here — the same price as a fourth building job.
+ * A row is `[workflow, job, step, digest, reason, assertion]`. A `null` digest
+ * marks a step outside the building jobs, where the content pin does not apply.
  */
+const STEP_ASSERTIONS = {
+  handlesNoArtifact,
+  buildsThenIsGated,
+  pushesOnlyTheBumpCommit,
+  carriesNoTransport,
+  isGateStep: step => isGateStep(step),
+  // No assertion of its own, and it says so rather than manufacturing one that
+  // cannot fail: a publisher is held by ordering and path identity, and by the
+  // content pin, which is what stops it growing a second publish beside the one
+  // it is here for.
+  publisher: null,
+  reportUpload: (step, _job, m) => {
+    const publisher = publisherOf(step, m.lanes);
+    return (
+      publisher !== null &&
+      publisher.paths.length === 0 &&
+      publisher.concerns.length === 0 &&
+      publisher.declared > 0
+    );
+  },
+  iosUpload: (step, job, m) =>
+    runsNoAndroidGradle(step, job, m) &&
+    namesNoAndroidArtifact(step, job, m) &&
+    m.lanes
+      .filter(lane => lane.origin === 'ios')
+      .every(lane => !publishesAndroid(lane.body)),
+  weblateUpload: (step, job, m) =>
+    runsNoAndroidGradle(step, job, m) && namesNoAndroidArtifact(step, job, m),
+  // Carries the action allowlist's own reason and assertion.
+  action: (step, job, m) => {
+    const entry = ALLOWED_ACTIONS[step.uses];
+    return Boolean(entry) && (!entry.assert || entry.assert(step, job, m));
+  },
+};
+
 const ACCOUNTED_STEPS = [
-  // release.yml / build_android
-  ...[
-    ['Maximize build space', 'frees disk before the toolchains install'],
-    ['Install dependencies', 'installs the JS dependency tree'],
-    [
-      'Derive the rnllama variant allowlist from the payload manifest',
-      'reads the manifest and exports a gradle property',
-    ],
-    ['Bump versions', 'rewrites the version in tracked files'],
-    ['Set up Android Keystore', 'writes the signing keystore'],
-    ['Create .env file', 'writes build configuration'],
-    [
-      'Verify the variant allowlist reached the llama.rn build',
-      'greps the build log for the declared variant list',
-    ],
-  ].map(([step, reason]) => ({
-    workflow: 'release.yml',
-    job: 'build_android',
-    step,
-    reason,
-    assert: handlesNoArtifact,
-  })),
-  {
-    workflow: 'release.yml',
-    job: 'build_android',
-    step: 'Commit and push version changes',
-    reason: 'pushes the version-bump commit; the tag is pushed after the gate',
-    assert: pushesOnlyTheBumpCommit,
-  },
-  {
-    workflow: 'release.yml',
-    job: 'build_android',
-    step: 'Build Android app',
-    reason: 'builds the artifacts the gate then examines in the same job',
-    assert: buildsThenIsGated,
-  },
-
-  // ci.yml / build-android
-  ...[
-    ['Maximize build space', 'frees disk before the toolchains install'],
-    ['Install Yarn', 'installs the package manager'],
-    ['Install dependencies', 'installs the JS dependency tree'],
-    [
-      'Derive the rnllama variant allowlist from the payload manifest',
-      'reads the manifest and exports a gradle property',
-    ],
-    ['Create dummy google-services.json for CI', 'writes a placeholder config'],
-    ['Create dummy .env file for CI', 'writes placeholder build configuration'],
-    ['Create dummy release keystore for CI', 'writes a throwaway signing key'],
-    ['ccache statistics', 'prints compiler cache counters'],
-    [
-      'Verify the variant allowlist reached the llama.rn build',
-      'greps the build log for the declared variant list',
-    ],
-  ].map(([step, reason]) => ({
-    workflow: 'ci.yml',
-    job: 'build-android',
-    step,
-    reason,
-    assert: handlesNoArtifact,
-  })),
-  {
-    workflow: 'ci.yml',
-    job: 'build-android',
-    step: 'Build Android Release',
-    reason: 'builds the artifact the gate then examines in the same job',
-    assert: buildsThenIsGated,
-  },
-  {
-    workflow: 'ci.yml',
-    job: 'build-android',
-    step: 'Verify prod APK has no automation-bridge code (DCE sanity check)',
-    reason: 'reads the built APK to assert what it does not contain',
-    // Names the APK by design, so only the transport half can hold here.
-    assert: carriesNoTransport,
-  },
-
-  // e2e-tests.yml / build-android
-  ...[
-    ['Install dependencies', 'installs the JS dependency tree'],
-    [
-      'Derive the rnllama variant allowlist from the payload manifest',
-      'reads the manifest and exports a gradle property',
-    ],
-    ['Create dummy google-services.json for CI', 'writes a placeholder config'],
-    ['Create dummy .env file for CI', 'writes placeholder build configuration'],
-    ['Create dummy release keystore for CI', 'writes a throwaway signing key'],
-    [
-      'Verify the variant allowlist reached the llama.rn build',
-      'greps the build log for the declared variant list',
-    ],
-  ].map(([step, reason]) => ({
-    workflow: 'e2e-tests.yml',
-    job: 'build-android',
-    step,
-    reason,
-    assert: handlesNoArtifact,
-  })),
-  {
-    workflow: 'e2e-tests.yml',
-    job: 'build-android',
-    step: 'Build Android E2E APK',
-    reason: 'builds the artifact the gate then examines in the same job',
-    assert: buildsThenIsGated,
-  },
-
-  // Outside the building jobs, where the suspicion net is what flags a step.
-  {
-    workflow: 'release.yml',
-    job: 'build_ios',
-    step: 'Build and upload iOS app',
-    reason: 'uploads to TestFlight; carries no Android payload',
-    // Not the transport half: the iOS lane legitimately runs
-    // `upload_to_testflight`, so naming no Android artifact is what can hold.
-    assert: (step, job, m) =>
-      runsNoAndroidGradle(step, job, m) &&
-      namesNoAndroidArtifact(step, job, m) &&
-      m.lanes
-        .filter(lane => lane.origin === 'ios')
-        .every(lane => !publishesAndroid(lane.body)),
-  },
-  {
-    workflow: 'ci.yml',
-    job: 'build-ios',
-    step: 'Build iOS Release',
-    reason: 'builds an iOS binary and transports nothing',
-    assert: handlesNoArtifact,
-  },
-  {
-    workflow: 'l10n-upload.yml',
-    job: 'upload',
-    step: 'Upload to Weblate',
-    reason: 'uploads src/locales/en.json to the translation service',
-    assert: (step, job, m) =>
-      runsNoAndroidGradle(step, job, m) && namesNoAndroidArtifact(step, job, m),
-  },
-];
+  [
+    'ci.yml',
+    'build-android',
+    'Check out code',
+    'ddb2f046a7c1',
+    'checks out the repository',
+    'action',
+  ],
+  [
+    'ci.yml',
+    'build-android',
+    'Maximize build space',
+    '4d41c4a237cd',
+    'frees disk before the toolchains install',
+    'handlesNoArtifact',
+  ],
+  [
+    'ci.yml',
+    'build-android',
+    'Set up Node.js',
+    '8f92aaf91be0',
+    'installs Node',
+    'action',
+  ],
+  [
+    'ci.yml',
+    'build-android',
+    'Cache node_modules',
+    'f4ef7d943135',
+    'restores the dependency cache',
+    'action',
+  ],
+  [
+    'ci.yml',
+    'build-android',
+    'Install Yarn',
+    '74f8204ffaff',
+    'installs the package manager',
+    'handlesNoArtifact',
+  ],
+  [
+    'ci.yml',
+    'build-android',
+    'Install dependencies',
+    'df124beeabda',
+    'installs the JS dependency tree',
+    'handlesNoArtifact',
+  ],
+  [
+    'ci.yml',
+    'build-android',
+    'Derive the rnllama variant allowlist from the payload manifest',
+    '27fd84e82e81',
+    'reads the manifest and exports a gradle property',
+    'handlesNoArtifact',
+  ],
+  [
+    'ci.yml',
+    'build-android',
+    'Cache llama.rn native build tree',
+    'a7690de26de0',
+    'restores the native build tree',
+    'action',
+  ],
+  [
+    'ci.yml',
+    'build-android',
+    'Set up JDK 17',
+    'bcb91f2c754f',
+    'installs the JDK',
+    'action',
+  ],
+  [
+    'ci.yml',
+    'build-android',
+    'Set up the Hexagon SDK',
+    'fb3527993437',
+    'fetches and verifies the Hexagon SDK',
+    'action',
+  ],
+  [
+    'ci.yml',
+    'build-android',
+    'Set up ccache',
+    '71c9892ff908',
+    'restores the compiler cache',
+    'action',
+  ],
+  [
+    'ci.yml',
+    'build-android',
+    'Create dummy google-services.json for CI',
+    'e15bdfd6f028',
+    'writes a placeholder config',
+    'handlesNoArtifact',
+  ],
+  [
+    'ci.yml',
+    'build-android',
+    'Create dummy .env file for CI',
+    '0752168128c6',
+    'writes placeholder build configuration',
+    'handlesNoArtifact',
+  ],
+  [
+    'ci.yml',
+    'build-android',
+    'Create dummy release keystore for CI',
+    'e2776b4eece8',
+    'writes a throwaway signing key',
+    'handlesNoArtifact',
+  ],
+  [
+    'ci.yml',
+    'build-android',
+    'Build Android Release',
+    '8edc74417d96',
+    'builds the artifact the gate then examines in the same job',
+    'buildsThenIsGated',
+  ],
+  [
+    'ci.yml',
+    'build-android',
+    'ccache statistics',
+    '79d772e38080',
+    'prints compiler cache counters',
+    'handlesNoArtifact',
+  ],
+  [
+    'ci.yml',
+    'build-android',
+    'Verify the variant allowlist reached the llama.rn build',
+    '698e98dba6cc',
+    'greps the build log for the declared variant list',
+    'handlesNoArtifact',
+  ],
+  [
+    'ci.yml',
+    'build-android',
+    'Verify prod APK has no automation-bridge code (DCE sanity check)',
+    '507d08fb6e5b',
+    'reads the built APK to assert what it does not contain',
+    'carriesNoTransport',
+  ],
+  [
+    'ci.yml',
+    'build-android',
+    'Verify the Android payload',
+    'ea93b4c01dbd',
+    'is the payload gate itself',
+    'isGateStep',
+  ],
+  [
+    'ci.yml',
+    'build-android',
+    'Upload payload report',
+    'c9025c2bef53',
+    "uploads the gate's report, which is evidence about the artifact rather than the artifact",
+    'reportUpload',
+  ],
+  [
+    'ci.yml',
+    'build-android',
+    'Upload Android APK',
+    '74ec2ebad81a',
+    'publishes the checked APK as a workflow artifact',
+    'publisher',
+  ],
+  [
+    'e2e-tests.yml',
+    'build-android',
+    'Checkout',
+    'cf37721dff3e',
+    'checks out the repository',
+    'action',
+  ],
+  [
+    'e2e-tests.yml',
+    'build-android',
+    'Setup Java',
+    '3a5994f8db80',
+    'installs the JDK',
+    'action',
+  ],
+  [
+    'e2e-tests.yml',
+    'build-android',
+    'Setup Node.js',
+    '72f06927c12c',
+    'installs Node',
+    'action',
+  ],
+  [
+    'e2e-tests.yml',
+    'build-android',
+    'Install dependencies',
+    '1781a40fca38',
+    'installs the JS dependency tree',
+    'handlesNoArtifact',
+  ],
+  [
+    'e2e-tests.yml',
+    'build-android',
+    'Derive the rnllama variant allowlist from the payload manifest',
+    '27fd84e82e81',
+    'reads the manifest and exports a gradle property',
+    'handlesNoArtifact',
+  ],
+  [
+    'e2e-tests.yml',
+    'build-android',
+    'Set up the Hexagon SDK',
+    'fb3527993437',
+    'fetches and verifies the Hexagon SDK',
+    'action',
+  ],
+  [
+    'e2e-tests.yml',
+    'build-android',
+    'Create dummy google-services.json for CI',
+    '5b3655f75fe0',
+    'writes a placeholder config',
+    'handlesNoArtifact',
+  ],
+  [
+    'e2e-tests.yml',
+    'build-android',
+    'Create dummy .env file for CI',
+    'b1cbd6733e44',
+    'writes placeholder build configuration',
+    'handlesNoArtifact',
+  ],
+  [
+    'e2e-tests.yml',
+    'build-android',
+    'Create dummy release keystore for CI',
+    '59912466755b',
+    'writes a throwaway signing key',
+    'handlesNoArtifact',
+  ],
+  [
+    'e2e-tests.yml',
+    'build-android',
+    'Build Android E2E APK',
+    '404ac64be90c',
+    'builds the artifact the gate then examines in the same job',
+    'buildsThenIsGated',
+  ],
+  [
+    'e2e-tests.yml',
+    'build-android',
+    'Verify the variant allowlist reached the llama.rn build',
+    '698e98dba6cc',
+    'greps the build log for the declared variant list',
+    'handlesNoArtifact',
+  ],
+  [
+    'e2e-tests.yml',
+    'build-android',
+    'Verify the Android payload',
+    '96059495fc7c',
+    'is the payload gate itself',
+    'isGateStep',
+  ],
+  [
+    'e2e-tests.yml',
+    'build-android',
+    'Upload payload report',
+    'c9025c2bef53',
+    "uploads the gate's report, which is evidence about the artifact rather than the artifact",
+    'reportUpload',
+  ],
+  [
+    'e2e-tests.yml',
+    'build-android',
+    'Upload APK artifact',
+    'a268f3772d59',
+    'publishes the checked APK as a workflow artifact',
+    'publisher',
+  ],
+  [
+    'release.yml',
+    'build_android',
+    'Checkout code',
+    'ed632cdea590',
+    'checks out the repository',
+    'action',
+  ],
+  [
+    'release.yml',
+    'build_android',
+    'Maximize build space',
+    '4d41c4a237cd',
+    'frees disk before the toolchains install',
+    'handlesNoArtifact',
+  ],
+  [
+    'release.yml',
+    'build_android',
+    'Set up JDK 17',
+    '93c113a968c5',
+    'installs the JDK',
+    'action',
+  ],
+  [
+    'release.yml',
+    'build_android',
+    'Set up Node.js',
+    '8f92aaf91be0',
+    'installs Node',
+    'action',
+  ],
+  [
+    'release.yml',
+    'build_android',
+    'Install dependencies',
+    'df124beeabda',
+    'installs the JS dependency tree',
+    'handlesNoArtifact',
+  ],
+  [
+    'release.yml',
+    'build_android',
+    'Derive the rnllama variant allowlist from the payload manifest',
+    '27fd84e82e81',
+    'reads the manifest and exports a gradle property',
+    'handlesNoArtifact',
+  ],
+  [
+    'release.yml',
+    'build_android',
+    'Set up the Hexagon SDK',
+    'fb3527993437',
+    'fetches and verifies the Hexagon SDK',
+    'action',
+  ],
+  [
+    'release.yml',
+    'build_android',
+    'Set up Ruby',
+    'c6bd8de9ca3a',
+    'installs Ruby and the bundle',
+    'action',
+  ],
+  [
+    'release.yml',
+    'build_android',
+    'Bump versions',
+    'edf1504a267b',
+    'rewrites the version in tracked files',
+    'handlesNoArtifact',
+  ],
+  [
+    'release.yml',
+    'build_android',
+    'Commit and push version changes',
+    '14002b2eb6a5',
+    'pushes the version-bump commit; the tag is pushed after the gate',
+    'pushesOnlyTheBumpCommit',
+  ],
+  [
+    'release.yml',
+    'build_android',
+    'Set up Android Keystore',
+    'e8ae052abd03',
+    'writes the signing keystore',
+    'handlesNoArtifact',
+  ],
+  [
+    'release.yml',
+    'build_android',
+    'Authenticate to Google Cloud',
+    '6ab20557d737',
+    'mints a Google Cloud credential',
+    'action',
+  ],
+  [
+    'release.yml',
+    'build_android',
+    'Create .env file',
+    '932c23c2e022',
+    'writes build configuration',
+    'handlesNoArtifact',
+  ],
+  [
+    'release.yml',
+    'build_android',
+    'Build Android app',
+    'efc23e757a4e',
+    'builds the artifacts the gate then examines in the same job',
+    'buildsThenIsGated',
+  ],
+  [
+    'release.yml',
+    'build_android',
+    'Verify the variant allowlist reached the llama.rn build',
+    '698e98dba6cc',
+    'greps the build log for the declared variant list',
+    'handlesNoArtifact',
+  ],
+  [
+    'release.yml',
+    'build_android',
+    'Verify the Android payload',
+    '3a5ceba12bf9',
+    'is the payload gate itself',
+    'isGateStep',
+  ],
+  [
+    'release.yml',
+    'build_android',
+    'Upload payload report',
+    'c9025c2bef53',
+    "uploads the gate's report, which is evidence about the artifact rather than the artifact",
+    'reportUpload',
+  ],
+  [
+    'release.yml',
+    'build_android',
+    'Upload Android app to Alpha track',
+    '3f3f10876f2c',
+    'publishes the checked bundle to Play',
+    'publisher',
+  ],
+  [
+    'release.yml',
+    'build_android',
+    'Push the release tag',
+    'bba9bef8ba94',
+    'pushes the release tag after the gate',
+    'publisher',
+  ],
+  [
+    'release.yml',
+    'build_android',
+    'Create GitHub Release',
+    '62888b052a79',
+    'publishes the checked APK to a GitHub Release',
+    'publisher',
+  ],
+  [
+    'release.yml',
+    'build_ios',
+    'Build and upload iOS app',
+    null,
+    'uploads to TestFlight; carries no Android payload',
+    'iosUpload',
+  ],
+  [
+    'ci.yml',
+    'build-ios',
+    'Build iOS Release',
+    null,
+    'builds an iOS binary and transports nothing',
+    'handlesNoArtifact',
+  ],
+  [
+    'l10n-upload.yml',
+    'upload',
+    'Upload to Weblate',
+    null,
+    'uploads src/locales/en.json to the translation service',
+    'weblateUpload',
+  ],
+].map(([workflow, job, step, digest, reason, assertion]) => ({
+  workflow,
+  job,
+  step,
+  digest,
+  reason,
+  assert: STEP_ASSERTIONS[assertion],
+}));
 
 const COMPOSITE_ACTIONS = {
   './.github/actions/setup-hexagon-sdk': path.join(
@@ -577,10 +1013,20 @@ const shipsNothing = source => {
       ),
     )
     .join('\n');
-  const publishes = steps.some(step =>
-    /^(?:actions\/upload-artifact|softprops\/action-gh-release)@/.test(
-      step.uses || '',
-    ),
+  // An inner `uses:` is a step like any other, and nothing else allowlists it —
+  // a nested composite or an unreviewed third-party action would otherwise ride
+  // in under the outer action's entry.
+  // An inner `uses:` is a step like any other. A nested composite or an
+  // unreviewed third-party action rides in under the outer action's entry, and
+  // a publishing action is refused outright — ordering and path identity are
+  // what hold those, and neither of them reaches inside a composite.
+  const publishes = steps.some(
+    step =>
+      step.uses &&
+      (!ALLOWED_ACTIONS[step.uses] ||
+        /^(?:actions\/upload-artifact|softprops\/action-gh-release)@/.test(
+          step.uses,
+        )),
   );
   return (
     !publishes &&
@@ -592,6 +1038,12 @@ const shipsNothing = source => {
 
 const compositeShipsNothing = step =>
   shipsNothing(fs.readFileSync(COMPOSITE_ACTIONS[step.uses], 'utf-8'));
+
+const compositeDigest = uses =>
+  createHash('sha256')
+    .update(codeOf(fs.readFileSync(COMPOSITE_ACTIONS[uses], 'utf-8')))
+    .digest('hex')
+    .slice(0, 12);
 
 const cacheReachesNoBuildOutput = step =>
   !/build\/outputs/.test(JSON.stringify(step.with));
@@ -659,13 +1111,19 @@ const ALLOWED_ACTIONS = {
     reason: 'always a publisher, by the action name alone',
     carriedBy: 'ordering and path identity',
   },
+  // Pinned by content, like the steps. A composite is free-form shell behind
+  // one `uses:`, so reading it for transports would be the same enumeration
+  // that has leaked everywhere else; the digest is what holds it, and
+  // `shipsNothing` is the second line.
   './.github/actions/setup-hexagon-sdk': {
     reason: 'fetches and verifies the Hexagon SDK',
     assert: compositeShipsNothing,
+    digest: '0e127c3ea33a',
   },
   './.github/actions/setup-ccache': {
     reason: 'restores the compiler cache',
     assert: compositeShipsNothing,
+    digest: '46922326eb0c',
   },
 };
 
@@ -738,8 +1196,8 @@ const PROBE_JOB_WITHOUT_EXCUSES = {
 
 // -- the rules -------------------------------------------------------------
 
-function accountedEntryFor(step) {
-  return ACCOUNTED_STEPS.find(
+function accountedEntriesFor(step) {
+  return ACCOUNTED_STEPS.filter(
     entry =>
       entry.workflow === step.workflow &&
       entry.job === step.job &&
@@ -797,10 +1255,19 @@ function violationsOfPathIdentity(m) {
       if (!publisher) {
         continue;
       }
-      // An empty path set is the failure this rule exists to prevent, so it
+      for (const concern of publisher.concerns) {
+        problems.push(
+          concern.kind === 'unreadable'
+            ? `${where(step)} publishes ${concern.token}, which this parse cannot resolve to a filename, so no gate step can be shown to have examined it`
+            : `${where(step)} publishes ${concern.token}, which is neither an Android artifact this parse can compare nor a declared non-artifact upload`,
+        );
+      }
+      // An empty resolution is the failure this rule exists to prevent, so it
       // cannot be the shape a satisfied one takes.
       if (
         publisher.paths.length === 0 &&
+        publisher.concerns.length === 0 &&
+        publisher.declared === 0 &&
         publisher.rules.some(rule => MUST_NAME_AN_ARTIFACT.has(rule))
       ) {
         problems.push(
@@ -869,7 +1336,20 @@ function violationsOfGateCanFail(m) {
     }
     for (const step of job.steps) {
       const publisher = publisherOf(step, m.lanes);
-      if (publisher && RUNS_REGARDLESS.test(String(step.raw.if ?? ''))) {
+      // A report upload ships evidence about the artifact rather than the
+      // artifact, and runs whatever the gate decided. A tag push names no file
+      // and is still a publish.
+      const shipsOnlyDeclaredFiles =
+        publisher &&
+        publisher.declared > 0 &&
+        publisher.paths.length === 0 &&
+        publisher.concerns.length === 0 &&
+        !publisher.rules.includes('tag-push');
+      if (
+        publisher &&
+        !shipsOnlyDeclaredFiles &&
+        RUNS_REGARDLESS.test(String(step.raw.if ?? ''))
+      ) {
         problems.push(
           `${where(step)} publishes under if: ${step.raw.if}, so it runs even when the gate failed`,
         );
@@ -888,8 +1368,15 @@ function violationsOfGateCanFail(m) {
     if (step.raw['continue-on-error'] !== undefined) {
       complain('carries continue-on-error');
     }
-    if (step.raw.shell !== undefined) {
-      complain('overrides shell:, which changes how a failure propagates');
+    // The script is only one of the keys that decide what runs. `env` can
+    // preload a module, `working-directory` can move the paths the flags name,
+    // and a `container` would replace the machine.
+    const permittedKeys = ['name', 'run'];
+    const extra = Object.keys(step.raw).filter(
+      key => !permittedKeys.includes(key),
+    );
+    if (extra.length > 0) {
+      complain(`carries ${extra.join(', ')}, which the gate step may not set`);
     }
 
     // The shape is pinned, rather than a list of ways to defeat it. Every way
@@ -966,16 +1453,37 @@ function violationsOfUnaccountedSteps(m) {
       continue;
     }
     for (const step of job.steps) {
-      if (isGateStep(step) || publisherOf(step, m.lanes)) {
-        continue;
-      }
-      // An allowlisted action carries its own reason and assertion already.
-      if (step.uses && ALLOWED_ACTIONS[step.uses]) {
-        continue;
-      }
-      if (!accountedEntryFor(step)) {
+      const entries = accountedEntriesFor(step);
+      if (entries.length === 0) {
         problems.push(
           `${where(step)} is in a job that builds Android and is not accounted for`,
+        );
+        continue;
+      }
+      // Ambiguity in either direction leaves a step answered by an entry that
+      // was not written for it: two entries claiming one step, or one entry
+      // covering two steps that need not have the same content.
+      const twins = job.steps.filter(other => other.name === step.name);
+      if (entries.length > 1 || twins.length > 1) {
+        problems.push(
+          `${where(step)} is matched by ${entries.length} entries and shares its name with ${twins.length} steps, so which one answers for it is undecided`,
+        );
+        continue;
+      }
+      const entry = entries[0];
+      // The list of steps is closed; this closes what a step contains. Without
+      // it a step keeps its exemption through any edit to its own body, and
+      // every assertion beside it is an enumeration of the transports somebody
+      // thought of.
+      const digest = digestOf(step);
+      if (digest !== entry.digest) {
+        problems.push(
+          `${where(step)} has changed since it was reviewed (content ${digest}, accounted as ${entry.digest})`,
+        );
+      }
+      if (entry.assert && !entry.assert(step, job, m)) {
+        problems.push(
+          `${where(step)} no longer satisfies the reason it is accounted for: ${entry.reason}`,
         );
       }
     }
@@ -997,7 +1505,7 @@ function violationsOfSuspicionNet(m) {
       if (building.has(`${step.workflow}/${step.job}`)) {
         return false;
       }
-      if (publisherOf(step, m.lanes) || accountedEntryFor(step)) {
+      if (publisherOf(step, m.lanes) || accountedEntriesFor(step).length > 0) {
         return false;
       }
       return step.uses
@@ -1034,8 +1542,7 @@ describe('the parse itself', () => {
       .filter(job => isBuildingJob(job, committed.lanes))
       .map(job => `${job.workflow}/${job.id}`);
 
-    // A legitimate new Android build job costs a reviewed edit to this list,
-    // which is the intended price: an ungated fourth one fails here first.
+    // A legitimate new Android build job costs a reviewed edit to this list.
     expect(building.sort()).toEqual([
       'ci.yml/build-android',
       'e2e-tests.yml/build-android',
@@ -1089,10 +1596,18 @@ describe('the parse itself', () => {
         entry: entry.step,
         matched: 1,
       });
+      // Exactly one of the two floors: an assertion that can fail, or a stated
+      // reason it is carried elsewhere. Never neither.
       expect({
         entry: entry.step,
-        holds: entry.assert(matched[0], jobOf(matched[0]), committed),
-      }).toEqual({entry: entry.step, holds: true});
+        floored: Boolean(entry.assert || entry.digest),
+      }).toEqual({entry: entry.step, floored: true});
+      if (entry.assert) {
+        expect({
+          entry: entry.step,
+          holds: entry.assert(matched[0], jobOf(matched[0]), committed),
+        }).toEqual({entry: entry.step, holds: true});
+      }
     }
 
     const used = new Set(
@@ -1104,6 +1619,12 @@ describe('the parse itself', () => {
     for (const [action, entry] of Object.entries(ALLOWED_ACTIONS)) {
       const steps = allSteps(committed).filter(step => step.uses === action);
       expect({action, count: steps.length > 0}).toEqual({action, count: true});
+      if (entry.digest) {
+        expect({action, content: compositeDigest(action)}).toEqual({
+          action,
+          content: entry.digest,
+        });
+      }
       // Exactly one of the two floors, never neither and never both.
       expect({
         action,
@@ -1147,6 +1668,9 @@ describe('the parse itself', () => {
   ])('rests no exemption on an assertion that cannot fail, in %s', (_l, of) => {
     const job = of();
     for (const entry of ACCOUNTED_STEPS) {
+      if (!entry.assert) {
+        continue;
+      }
       expect({
         entry: `${entry.workflow} ${entry.step}`,
         survivesTheProbe: entry.assert(PROBE_STEP, job, committed),
@@ -1186,6 +1710,34 @@ describe('the parse itself', () => {
       false,
     );
     expect(shipsNothing(composite('scp a.aab example.com:/srv/'))).toBe(false);
+  });
+
+  // Asserted rather than described: a count in a comment is a claim nothing
+  // checks.
+  it('accounts for every step of every building job, by role', () => {
+    const steps = allJobs(committed)
+      .filter(job => isBuildingJob(job, committed.lanes))
+      .flatMap(job => job.steps);
+    const role = step =>
+      isGateStep(step)
+        ? 'gate'
+        : publisherOf(step, committed.lanes)
+          ? 'publisher'
+          : step.uses
+            ? 'action'
+            : 'run';
+    const census = steps.reduce((out, step) => {
+      out[role(step)] = (out[role(step)] ?? 0) + 1;
+      return out;
+    }, {});
+
+    expect(census).toEqual({gate: 3, publisher: 8, action: 17, run: 27});
+    expect(steps).toHaveLength(55);
+    expect(ACCOUNTED_STEPS).toHaveLength(58);
+    expect(ACCOUNTED_STEPS.filter(entry => entry.digest === null)).toHaveLength(
+      3,
+    );
+    expect(Object.keys(ALLOWED_ACTIONS)).toHaveLength(14);
   });
 
   it('reads the two Android fastlane lanes and what each one does', () => {
@@ -1452,9 +2004,6 @@ describe('each rule is capable of failing', () => {
     );
 
     expect(violationsOfOrdering(m)).toEqual([]);
-    // Contains rather than equals: a path list naming the gated APK as well
-    // legitimately reports the interposition too, and the case is about the
-    // second path still being seen.
     expect(violationsOfPathIdentity(m)).toContainEqual(
       expect.stringContaining(fragment),
     );
@@ -1498,8 +2047,6 @@ describe('each rule is capable of failing', () => {
     ]);
   });
 
-  // An APK published before the gate has run at all, by a step whose path
-  // names no file.
   it('both rules catch a directory-path upload spliced above the gate', () => {
     const m = broken();
     const job = jobIn(m, 'ci.yml', 'build-android');
@@ -1531,7 +2078,6 @@ describe('each rule is capable of failing', () => {
     ]);
   });
 
-  // A step can be more than one publisher at once, and each one's paths count.
   it('classifies a step that is two publishers at once, not just the first', () => {
     const m = broken();
     const step = stepIn(
@@ -1549,9 +2095,9 @@ describe('each rule is capable of failing', () => {
       'play-upload',
       'gh-release-cli',
     ]);
-    expect(violationsOfPathIdentity(m)).toEqual([
+    expect(violationsOfPathIdentity(m)).toContainEqual(
       expect.stringContaining('cannot resolve to a filename'),
-    ]);
+    );
   });
 
   /**
@@ -1873,6 +2419,17 @@ describe('each rule is capable of failing', () => {
     );
   });
 
+  it('refuses a composite whose source has changed since it was reviewed', () => {
+    const source = fs.readFileSync(
+      COMPOSITE_ACTIONS['./.github/actions/setup-ccache'],
+      'utf-8',
+    );
+    const edited = `${source}\n# a line that changes nothing and everything\n`;
+    expect(
+      createHash('sha256').update(codeOf(edited)).digest('hex').slice(0, 12),
+    ).not.toBe(compositeDigest('./.github/actions/setup-ccache'));
+  });
+
   it.each([
     ['using: node20', 'runs:\n  using: node20\n  main: index.js'],
     ['using: docker', 'runs:\n  using: docker\n  image: Dockerfile'],
@@ -1922,6 +2479,109 @@ describe('each rule is capable of failing', () => {
     );
 
     expect(violationsOfGateCanFail(m)).toEqual([]);
+  });
+
+  /**
+   * The content pin. Being recognised — as a publisher, as the gate, as an
+   * allowlisted action — does not end the enquiry: a line appended inside an
+   * already-accounted step costs the same reviewed line as a new step.
+   */
+  it.each([
+    [
+      'the tag push',
+      'Push the release tag',
+      'curl -T "$AAB" https://example.com/',
+    ],
+    [
+      'the Play upload',
+      'Upload Android app to Alpha track',
+      'bash tools/ship.sh',
+    ],
+    ['a build step', 'Build Android app', 'gsutil cp "$APK" gs://bucket/'],
+    [
+      'the allowlist derivation',
+      'Derive the rnllama variant allowlist from the payload manifest',
+      'nc example.com 9000 < "$APK"',
+    ],
+  ])('refuses a line appended inside %s', (_label, name, appended) => {
+    const m = broken();
+    const step = stepIn(m, 'release.yml', 'build_android', name);
+    appendRun(step, appended);
+
+    expect(violationsOfUnaccountedSteps(m)).toEqual([
+      expect.stringContaining('has changed since it was reviewed'),
+    ]);
+  });
+
+  it('refuses an edit to a gate step and to an allowlisted action alike', () => {
+    const m = broken();
+    stepIn(m, 'ci.yml', 'build-android', 'Set up Node.js').with = {
+      'node-version': '99',
+    };
+    appendRun(
+      stepIn(
+        m,
+        'ci.yml',
+        'build-android',
+        'Verify prod APK has no automation-bridge code (DCE sanity check)',
+      ),
+      'gsutil cp "$APK" gs://bucket/',
+    );
+
+    expect(violationsOfUnaccountedSteps(m)).toEqual([
+      expect.stringContaining('Set up Node.js'),
+      expect.stringContaining('DCE sanity check'),
+    ]);
+  });
+
+  // A step that uploads a concrete file this parse cannot vouch for. The
+  // filename is resolvable, so nothing is unreadable about it — but a tarball
+  // built from the output directory is not thereby harmless.
+  it('refuses an upload of a file that is not a declared non-artifact path', () => {
+    const m = broken();
+    const job = jobIn(m, 'ci.yml', 'build-android');
+    job.steps.push(
+      asParsed({
+        workflow: 'ci.yml',
+        job: 'build-android',
+        index: job.steps.length,
+        name: 'Upload payload report',
+        run: '',
+        uses: 'actions/upload-artifact@v4',
+        with: {name: 'bundle', path: 'out/x.tgz'},
+        raw: {},
+      }),
+    );
+
+    expect(violationsOfPathIdentity(m)).toContainEqual(
+      expect.stringContaining('neither an Android artifact'),
+    );
+  });
+
+  it('refuses two accounted steps of one job sharing a name', () => {
+    const m = broken();
+    const job = jobIn(m, 'ci.yml', 'build-android');
+    const twin = job.steps.find(step => step.name === 'ccache statistics');
+    job.steps.push(asParsed({...twin, index: job.steps.length}));
+
+    expect(violationsOfUnaccountedSteps(m)).toContainEqual(
+      expect.stringContaining('undecided'),
+    );
+  });
+
+  it('sees a build invoked through a line continuation', () => {
+    const m = broken();
+    const step = stepIn(m, 'ci.yml', 'build-android', 'Build Android Release');
+    step.run = codeOf(
+      step.run.replace(
+        './gradlew assembleProdRelease',
+        './gradlew \\\n  assembleProdRelease',
+      ),
+    );
+
+    expect(isBuildingJob(jobIn(m, 'ci.yml', 'build-android'), m.lanes)).toBe(
+      true,
+    );
   });
 
   it('the lane-split rule fails when the fastlane lanes are re-merged', () => {

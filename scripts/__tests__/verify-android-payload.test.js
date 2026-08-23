@@ -1,5 +1,5 @@
 const {execFileSync} = require('child_process');
-const {crc32} = require('zlib');
+const {crc32, deflateRawSync} = require('zlib');
 const fs = require('fs');
 const os = require('os');
 const path = require('path');
@@ -271,7 +271,8 @@ function writeStoredArchive(
 
   for (const [entry, contents] of files) {
     const nameBytes = Buffer.from(entry, 'utf-8');
-    const body = Buffer.isBuffer(contents) ? contents : Buffer.from(contents);
+    const source = Buffer.isBuffer(contents) ? contents : Buffer.from(contents);
+    const body = method === 8 ? deflateRawSync(source) : source;
     let padding = 0;
     if (align) {
       const unpadded = (offset + 30 + nameBytes.length) % align;
@@ -293,13 +294,13 @@ function writeStoredArchive(
     );
     header.writeUInt16LE(20, 4);
     header.writeUInt16LE(method, 8);
-    header.writeUInt32LE(crc32(body), 14);
+    header.writeUInt32LE(crc32(source), 14);
     header.writeUInt32LE(body.length, 18);
-    header.writeUInt32LE(body.length, 22);
+    header.writeUInt32LE(source.length, 22);
     header.writeUInt16LE(nameBytes.length, 26);
     header.writeUInt16LE(extra.length, 28);
 
-    locals.push({nameBytes, body, offset, extraLength: extra.length});
+    locals.push({nameBytes, body, source, offset, extraLength: extra.length});
     chunks.push(header, nameBytes, extra, body);
     offset += 30 + nameBytes.length + extra.length + body.length;
   }
@@ -311,9 +312,9 @@ function writeStoredArchive(
     central.writeUInt16LE(20, 4);
     central.writeUInt16LE(20, 6);
     central.writeUInt16LE(method, 10);
-    central.writeUInt32LE(crc32(local.body), 16);
+    central.writeUInt32LE(crc32(local.source), 16);
     central.writeUInt32LE(local.body.length, 20);
-    central.writeUInt32LE(local.body.length, 24);
+    central.writeUInt32LE(local.source.length, 24);
     central.writeUInt16LE(local.nameBytes.length, 28);
     central.writeUInt32LE(local.offset, 42);
     chunks.push(central, local.nameBytes);
@@ -788,6 +789,29 @@ describe('16 KB zip data offsets', () => {
     const {status, output} = runGate(['--apk', archive]);
     expect(status).toBe(1);
     expect(output).toContain('local header of lib/arm64-v8a/librnllama.so');
+    expect(output).toContain('proven nothing about it');
+  });
+
+  /**
+   * A short read is not an error to `fs.readSync`; it returns fewer bytes and
+   * leaves the rest of the buffer alone. Read lengths therefore have to be
+   * checked, or an offset past the end of the file is answered from whatever
+   * the buffer last held.
+   */
+  it('fails on a local header offset that points past the end of the file', () => {
+    const archive = writeStoredArchive(
+      'app-prod-release.apk',
+      conformingEntries(),
+    );
+    const bytes = fs.readFileSync(archive);
+    // Repoint the first central directory entry's local header past EOF.
+    const at = bytes.indexOf(Buffer.from([0x50, 0x4b, 0x01, 0x02]));
+    bytes.writeUInt32LE(bytes.length + 1024, at + 42);
+    fs.writeFileSync(archive, bytes);
+
+    const {status, output} = runGate(['--apk', archive]);
+    expect(status).toBe(1);
+    expect(output).toContain('wanted 30 bytes');
     expect(output).toContain('proven nothing about it');
   });
 
