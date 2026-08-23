@@ -26,8 +26,9 @@ import {
   nativeTextElement,
 } from '../../helpers/selectors';
 import {Gestures} from '../../helpers/gestures';
+import {readControlEnabled, tapControl} from '../../helpers/control-state';
+import {saveFailureScreenshot} from '../../helpers/screenshots';
 import {TIMEOUTS} from '../../fixtures/models';
-import {SCREENSHOT_DIR} from '../../wdio.shared.conf';
 
 declare const driver: WebdriverIO.Browser;
 declare const browser: WebdriverIO.Browser;
@@ -64,18 +65,7 @@ describe('Remote Server Features', () => {
 
   afterEach(async function (this: Mocha.Context) {
     if (this.currentTest?.state === 'failed') {
-      const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
-      const testName = this.currentTest.title.replace(/\s+/g, '-');
-      try {
-        if (!fs.existsSync(SCREENSHOT_DIR)) {
-          fs.mkdirSync(SCREENSHOT_DIR, {recursive: true});
-        }
-        await driver.saveScreenshot(
-          path.join(SCREENSHOT_DIR, `failure-${testName}-${timestamp}.png`),
-        );
-      } catch (e) {
-        console.error('Failed to capture screenshot:', (e as Error).message);
-      }
+      await saveFailureScreenshot(this.currentTest.title);
     }
   });
 
@@ -165,19 +155,31 @@ describe('Remote Server Features', () => {
     // the model list sits below the fold — scroll by existence (controls deep
     // in a bottom sheet report isDisplayed=false on iOS) before selecting.
     if (REMOTE_MODEL_HINT) {
-      await Gestures.scrollInSheetToElementExists(
-        byPartialText(REMOTE_MODEL_HINT),
+      // The list gets ~36px of viewport before the sheet is scrolled, and the
+      // pinned Add Model button is painted across the first row -- a tap on the
+      // row's centre lands on that button instead. Scroll the row clear of it
+      // first, with a gesture that starts below the text inputs.
+      const rowSelector = byPartialText(REMOTE_MODEL_HINT);
+      // Unscrolled, the row is clipped to ~10px (measured [42,2204][1038,2214]),
+      // which already sits above the button and so reads as reachable while
+      // being far too small to tap. Scroll once so the list has real rows before
+      // asking whether anything is clear.
+      await Gestures.swipeUpInSheetBelowInputs();
+      await browser.pause(400);
+      const reachable = await Gestures.scrollInSheetClearOfOverlay(
+        rowSelector,
+        Selectors.remoteModel.addModelButton,
         12,
+        Gestures.swipeUpInSheetBelowInputs,
       );
-      const modelEl = browser.$(byPartialText(REMOTE_MODEL_HINT));
-      const exists = await modelEl
-        .waitForExist({timeout: 8000})
-        .then(() => true)
-        .catch(() => false);
-      if (exists) {
-        await modelEl.click();
+      if (reachable) {
+        await tapControl(rowSelector);
         console.log(`Selected model matching "${REMOTE_MODEL_HINT}"`);
         await browser.pause(500);
+      } else {
+        console.log(
+          `Model "${REMOTE_MODEL_HINT}" never came clear of Add Model`,
+        );
       }
     } else {
       // No hint: a single returned model auto-selects. Otherwise scroll the
@@ -210,11 +212,32 @@ describe('Remote Server Features', () => {
     );
     const addButton = browser.$(Selectors.remoteModel.addModelButton);
     await addButton.waitForExist({timeout: 5000});
-    await addButton.waitForEnabled({timeout: 8000});
-    await addButton.click();
-    await browser.pause(1000);
+    // The button only enables once a model is selected, and its wrapper is
+    // always enabled -- so the real control decides whether the tap is worth
+    // making at all.
+    await browser.waitUntil(
+      () => readControlEnabled(Selectors.remoteModel.addModelButton),
+      {
+        timeout: 8000,
+        timeoutMsg: 'Add Model stayed disabled: no model was selected',
+      },
+    );
+    await tapControl(Selectors.remoteModel.addModelButton);
 
-    console.log('Remote model added successfully');
+    // Assert the model actually landed. The later sub-tests drive the card this
+    // step creates, so without an outcome check they fail against an empty
+    // Models screen, far from the cause.
+    await modelsPage.waitForReady();
+    const readyGroup = browser.$(
+      Selectors.models.modelAccordion('Ready to Use'),
+    );
+    await readyGroup.waitForDisplayed({timeout: TIMEOUTS.element});
+
+    if (REMOTE_MODEL_HINT) {
+      const addedCard = browser.$(byPartialText(REMOTE_MODEL_HINT));
+      await addedCard.waitForDisplayed({timeout: TIMEOUTS.element});
+    }
+    console.log('Remote model added and visible on the Models screen');
   });
 
   it('should select and chat with a remote model', async () => {
@@ -330,9 +353,7 @@ describe('Remote Server Features', () => {
 
         if (responseText && responseText.length > 0) {
           const stopButton = browser.$(Selectors.chat.stopButton);
-          const stopVisible = await stopButton
-            .isDisplayed()
-            .catch(() => false);
+          const stopVisible = await stopButton.isDisplayed().catch(() => false);
           if (!stopVisible) {
             break;
           }

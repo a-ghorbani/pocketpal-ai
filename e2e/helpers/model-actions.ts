@@ -17,6 +17,48 @@ import {TIMEOUTS, ModelTestConfig, ModelQuantVariant} from '../fixtures/models';
 declare const browser: WebdriverIO.Browser;
 
 /**
+ * Wait for a model's card to appear on the Models screen after a download.
+ *
+ * Fails fast on the app's download-error dialog: once that is up the download
+ * is over, so waiting out the remaining minutes only buys a timeout that names
+ * the wrong thing.
+ */
+export async function waitForModelDownloaded(
+  downloadFile: string,
+  timeout: number = TIMEOUTS.download,
+): Promise<void> {
+  const cardSelector = Selectors.modelCard.cardContainer(downloadFile);
+  const deadline = Date.now() + timeout;
+
+  while (Date.now() < deadline) {
+    if (
+      await browser
+        .$(cardSelector)
+        .isDisplayed()
+        .catch(() => false)
+    ) {
+      return;
+    }
+    if (
+      await browser
+        .$(byTestId('download-error-dialog'))
+        .isDisplayed()
+        .catch(() => false)
+    ) {
+      const reason = await browser
+        .$(byTestId('error-message-text'))
+        .getText()
+        .catch(() => 'unknown');
+      throw new Error(`Download failed for ${downloadFile}: ${reason}`);
+    }
+    await browser.pause(1000);
+  }
+  throw new Error(
+    `Model card for ${downloadFile} did not appear within ${timeout}ms`,
+  );
+}
+
+/**
  * Dismiss memory/performance warning alert if it appears.
  * The app shows this alert when loading models that may exceed device memory
  * or for multimodal models on low-end devices.
@@ -178,8 +220,8 @@ export async function downloadAndLoadModel(
   const containerSelector = Selectors.modelCard.cardContainer(
     model.downloadFile,
   );
+  await waitForModelDownloaded(model.downloadFile, downloadTimeout);
   const modelCardContainer = browser.$(containerSelector);
-  await modelCardContainer.waitForDisplayed({timeout: downloadTimeout});
 
   if (model.disableVisionBeforeLoad) {
     await disableVisionOnCard(model.downloadFile);
@@ -242,8 +284,8 @@ export async function downloadAndLoadModelVariant(
   const containerSelector = Selectors.modelCard.cardContainer(
     variant.downloadFile,
   );
+  await waitForModelDownloaded(variant.downloadFile, downloadTimeout);
   const modelCardContainer = browser.$(containerSelector);
-  await modelCardContainer.waitForDisplayed({timeout: downloadTimeout});
 
   const loadBtn = modelCardContainer.$(Selectors.modelCard.loadButtonElement);
   await loadBtn.waitForDisplayed({timeout: 10000});

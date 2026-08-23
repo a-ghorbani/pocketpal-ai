@@ -54,9 +54,11 @@ import {ModelDetailsSheet} from '../../pages/ModelDetailsSheet';
 import {SettingsPage} from '../../pages/SettingsPage';
 import {Selectors, byTestId, byPartialText} from '../../helpers/selectors';
 import {Gestures} from '../../helpers/gestures';
+import {readAccessibilityLabel} from '../../helpers/element-text';
 import {
   dismissPerformanceWarningIfPresent,
   dismissContextRoomSheetIfPresent,
+  waitForModelDownloaded,
 } from '../../helpers/model-actions';
 import {TIMEOUTS, ModelTestConfig} from '../../fixtures/models';
 import {SCREENSHOT_DIR} from '../../wdio.shared.conf';
@@ -268,12 +270,7 @@ async function downloadModelOnly(model: ModelTestConfig): Promise<void> {
   await modelsPage.waitForReady();
 
   const downloadTimeout = model.downloadTimeout ?? TIMEOUTS.download;
-  const containerSelector = Selectors.modelCard.cardContainer(
-    model.downloadFile,
-  );
-  await browser
-    .$(containerSelector)
-    .waitForDisplayed({timeout: downloadTimeout});
+  await waitForModelDownloaded(model.downloadFile, downloadTimeout);
 
   // The card flips to "downloaded" on isDownloaded=true, then the GGUF metadata
   // (nextn/width) is fetched right after; give that async read a beat to land so
@@ -327,8 +324,8 @@ async function downloadAndLoadTarget(model: ModelTestConfig): Promise<void> {
   const containerSelector = Selectors.modelCard.cardContainer(
     model.downloadFile,
   );
+  await waitForModelDownloaded(model.downloadFile, downloadTimeout);
   const modelCardContainer = browser.$(containerSelector);
-  await modelCardContainer.waitForDisplayed({timeout: downloadTimeout});
 
   const loadBtn = modelCardContainer.$(Selectors.modelCard.loadButtonElement);
   await loadBtn.waitForDisplayed({timeout: 10000});
@@ -357,11 +354,7 @@ async function pickDraftModel(
   await item.click();
   await browser.pause(700);
 
-  const pickerLabel =
-    (await browser
-      .$(SPEC_PICKER)
-      .getAttribute('label')
-      .catch(() => '')) || '';
+  const pickerLabel = await readAccessibilityLabel(SPEC_PICKER);
   console.log(`[paired] draft picker after selection: ${pickerLabel}`);
 }
 
@@ -476,8 +469,7 @@ describe('Speculative Decoding / separate-draft (paired) MTP', () => {
     }
 
     const draftEl = browser.$(DRAFT_TOKENS_EL);
-    const draftText =
-      (await draftEl.getAttribute('label').catch(() => '')) || '';
+    const draftText = await draftEl.getText();
     console.log(`[paired] draft tokens surfaced: ${draftText}`);
 
     // "draft: <accepted>/<total> (<pct>%)" -- total is draft_tokens; > 0 == engaged.
@@ -486,11 +478,9 @@ describe('Speculative Decoding / separate-draft (paired) MTP', () => {
     expect(Number(m && m[1])).toBeGreaterThanOrEqual(0);
     expect(Number(m && m[2])).toBeGreaterThan(0);
 
-    const timingText =
-      (await browser
-        .$(TIMING_EL)
-        .getAttribute('label')
-        .catch(() => '')) || '';
+    const timingEl = browser.$(TIMING_EL);
+    await timingEl.waitForExist({timeout: TIMEOUTS.element});
+    const timingText = await timingEl.getText();
     console.log(`[paired] timings surfaced: ${timingText}`);
     const rate = timingText.match(/([\d.]+)\s*tokens?\/sec/i);
     expect(rate).not.toBeNull();
