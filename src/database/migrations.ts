@@ -153,5 +153,38 @@ export default schemaMigrations({
         }),
       ],
     },
+    // Migration to version 9: Knowledge base tables for local RAG
+    {
+      toVersion: 9,
+      steps: [
+        createTable({
+          name: 'kb_documents',
+          columns: [
+            {name: 'name', type: 'string'},
+            {name: 'mime', type: 'string', isOptional: true},
+            {name: 'size', type: 'number'},
+            {name: 'content_hash', type: 'string', isIndexed: true},
+            {name: 'preset_id', type: 'string'},
+            {name: 'dims', type: 'number'},
+            {name: 'chunk_count', type: 'number'},
+            {name: 'char_count', type: 'number'},
+            {name: 'status', type: 'string'},
+            {name: 'error', type: 'string', isOptional: true},
+            {name: 'source', type: 'string', isOptional: true},
+            {name: 'created_at', type: 'number'},
+            {name: 'updated_at', type: 'number'},
+          ],
+        }),
+        createTable({
+          name: 'kb_chunks',
+          columns: [
+            {name: 'doc_id', type: 'string', isIndexed: true},
+            {name: 'position', type: 'number'},
+            {name: 'text', type: 'string'},
+            {name: 'created_at', type: 'number'},
+          ],
+        }),
+      ],
+    },
   ],
 });

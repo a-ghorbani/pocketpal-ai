@@ -1,7 +1,7 @@
 import {appSchema, tableSchema} from '@nozbe/watermelondb';
 
 export default appSchema({
-  version: 8,
+  version: 9,
   tables: [
     tableSchema({
       name: 'chat_sessions',
@@ -129,6 +129,37 @@ export default appSchema({
         {name: 'greeting', type: 'string', isOptional: true}, // JSON stringified Pal['greeting']
         {name: 'created_at', type: 'number'},
         {name: 'updated_at', type: 'number'},
+      ],
+    }),
+    // Knowledge base (local RAG): one document row per indexed file,
+    // one chunk row per text chunk. Embedding vectors live in a flat
+    // binary file per document (see utils/rag/vectorStore) - SQLite
+    // only carries the searchable text and metadata.
+    tableSchema({
+      name: 'kb_documents',
+      columns: [
+        {name: 'name', type: 'string'},
+        {name: 'mime', type: 'string', isOptional: true},
+        {name: 'size', type: 'number'},
+        {name: 'content_hash', type: 'string', isIndexed: true},
+        {name: 'preset_id', type: 'string'},
+        {name: 'dims', type: 'number'},
+        {name: 'chunk_count', type: 'number'},
+        {name: 'char_count', type: 'number'},
+        {name: 'status', type: 'string'}, // 'indexing' | 'ready' | 'error'
+        {name: 'error', type: 'string', isOptional: true},
+        {name: 'source', type: 'string', isOptional: true}, // 'attach' | 'manual'
+        {name: 'created_at', type: 'number'},
+        {name: 'updated_at', type: 'number'},
+      ],
+    }),
+    tableSchema({
+      name: 'kb_chunks',
+      columns: [
+        {name: 'doc_id', type: 'string', isIndexed: true},
+        {name: 'position', type: 'number'},
+        {name: 'text', type: 'string'},
+        {name: 'created_at', type: 'number'},
       ],
     }),
   ],
