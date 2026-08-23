@@ -262,9 +262,9 @@ const makeAssistantTurn = (
   metadata: {},
 });
 
-describe('convertToChatMessages — AssistantTurn', () => {
+describe('convertToChatMessages - AssistantTurn', () => {
   // Reminder: convertToChatMessages reverses message groups (chronological
-  // input is the order the chat list keeps — newest first). User-then-
+  // input is the order the chat list keeps - newest first). User-then-
   // assistant order in the input becomes assistant-then-user in the output.
 
   it('#1 AssistantTurn with one step (no tools) → one assistant API message', () => {
@@ -275,7 +275,7 @@ describe('convertToChatMessages — AssistantTurn', () => {
     expect(result).toEqual([{role: 'assistant', content: 'Hi there!'}]);
   });
 
-  it('#2 [preamble+toolCall, followup] → assistant(content, tool_calls) + tool + assistant(content) — three API messages', () => {
+  it('#2 [preamble+toolCall, followup] → assistant(content, tool_calls) + tool + assistant(content) - three API messages', () => {
     const turn = makeAssistantTurn([
       {
         content: 'Let me calculate',
@@ -594,7 +594,7 @@ describe('derivedText', () => {
       steps: [
         {content: 'preamble'},
         {content: ''}, // skipped
-        {toolCalls: [{id: 'c', function: {name: 'x', arguments: '{}'}}]}, // no content — skipped
+        {toolCalls: [{id: 'c', function: {name: 'x', arguments: '{}'}}]}, // no content - skipped
         {content: 'final answer'},
       ],
     };

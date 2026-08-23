@@ -15,7 +15,7 @@ export type MessageContentProps = Omit<CommonDSProps, 'disabled'> & {
 };
 
 /**
- * DS MessageContent — token-bound message bubble shell.
+ * DS MessageContent - token-bound message bubble shell.
  *
  * Variants: user / assistant / system. Size axis is single ('m').
  *

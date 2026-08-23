@@ -6,7 +6,7 @@ import {useTheme} from '../../../../hooks';
 import {createStyles} from './styles';
 
 export type ItalicAccentTitleProps = {
-  /** Full title string — may contain `\n` for forced line breaks. */
+  /** Full title string - may contain `\n` for forced line breaks. */
   title: string;
   /**
    * Substring rendered in Fraunces-Italic. When omitted the entire
@@ -23,7 +23,7 @@ export type ItalicAccentTitleProps = {
 /**
  * Splits a title string into a plain run and a Fraunces-italic accent
  * run. When `accent` is omitted (or missing) the whole title renders
- * italic. `title` may contain `\n` — each line renders as its own
+ * italic. `title` may contain `\n` - each line renders as its own
  * Text so they center independently of each other's widths.
  */
 export const ItalicAccentTitle: React.FC<ItalicAccentTitleProps> = ({

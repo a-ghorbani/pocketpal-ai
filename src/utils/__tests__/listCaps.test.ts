@@ -22,8 +22,8 @@ const VISION_UNLOADED = 'ggml-org/gemma-4-31B-it-GGUF:Q8_0';
 const TEXT = 'gemma-3-4b';
 
 /**
- * A real unloaded row — no `meta`, so the launch arguments are the only source
- * left — with its argument list swapped for the one under test.
+ * A real unloaded row - no `meta`, so the launch arguments are the only source
+ * left - with its argument list swapped for the one under test.
  */
 const withArgs = (args: string[]): RemoteModelInfo => {
   const row = routerRow(VISION_UNLOADED);
@@ -51,7 +51,7 @@ describe('deriveListCaps', () => {
     });
 
     it('says nothing when the row declares no architecture at all', () => {
-      // A router build predating the field, or a proxy in front of one — the
+      // A router build predating the field, or a proxy in front of one - the
       // whole list lands here, and "cannot tell" must not read as "no".
       const row = {...routerRow(VISION)};
       delete row.architecture;

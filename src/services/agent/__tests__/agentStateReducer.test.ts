@@ -9,7 +9,7 @@ const noopRunResult = {
 };
 
 describe('agentStateReducer', () => {
-  // ---------- Story Test Requirements (Reducer) #1–#7 ----------
+  // ---------- Story Test Requirements (Reducer) #1-#7 ----------
 
   it('#1 run_started → status prefill', () => {
     const next = agentStateReducer(initialAgentUiState, {
@@ -240,7 +240,7 @@ describe('agentStateReducer', () => {
     expect(first.status).toBe('generating_tool_call');
     expect(first.pendingTalentNames).toEqual(['render_html']);
     // Now feed many subsequent tool-call tokens. The reducer must
-    // return the same `first` reference each time — not a structurally
+    // return the same `first` reference each time - not a structurally
     // equal new object.
     let state = first;
     for (let i = 0; i < 10; i++) {
@@ -259,7 +259,7 @@ describe('agentStateReducer', () => {
 
   it('pendingTalentNames stay stable when later deltas drop the function name', () => {
     // llama.rn sometimes emits the function name only on the first
-    // tool-call delta and leaves it empty on subsequent ones — the
+    // tool-call delta and leaves it empty on subsequent ones - the
     // reducer must carry the original names through so the indicator
     // label doesn't flicker.
     const after1 = agentStateReducer(initialAgentUiState, {
@@ -285,7 +285,7 @@ describe('agentStateReducer', () => {
       type: 'token',
       delta: {
         toolCalls: [
-          // missing function name — defensively filtered
+          // missing function name - defensively filtered
           {id: 'x', function: {name: '', arguments: '{}'}},
           {id: 'y', function: {name: 'calculate', arguments: '{}'}},
         ],
@@ -372,7 +372,7 @@ describe('agentStateReducer', () => {
   // ---------- PendingIndicator no-flicker invariant.
   //   The active-set predicate (`isPending`) at ChatView is:
   //   status ∈ { prefill, generating_tool_call, executing_tool }
-  //   It must stay stable through a fast streaming sequence — once
+  //   It must stay stable through a fast streaming sequence - once
   //   status flips to `streaming_text`, no token event flips it back.
   //   Otherwise the indicator would visibly flicker on/off between
   //   tokens. ----------
@@ -412,7 +412,7 @@ describe('agentStateReducer', () => {
       }
       // No flicker: every frame is non-pending.
       expect(transitions.every(p => p === false)).toBe(true);
-      // Sanity — status never left streaming_text.
+      // Sanity - status never left streaming_text.
       expect(s.status).toBe('streaming_text');
     });
 
@@ -457,7 +457,7 @@ describe('agentStateReducer', () => {
       // reasoningContent length > 0. Empty deltas (e.g. partial
       // chunks the engine emits between visible tokens) must be
       // no-ops. If they leaked through and reset status, the
-      // indicator would briefly reappear between tokens — flicker.
+      // indicator would briefly reappear between tokens - flicker.
       let s = initialAgentUiState;
       s = agentStateReducer(s, {type: 'run_started', messageId: 'm1'});
       s = agentStateReducer(s, {

@@ -11,7 +11,7 @@ import {HeroRow} from '../HeroRow';
 
 // HeroRow routes preview through ttsStore.preview (the store-level
 // coordinator). The store is globally mocked via __mocks__/stores/ttsStore
-// — no engine mock needed here.
+// - no engine mock needed here.
 
 const renderHero = () =>
   render(

@@ -5,24 +5,24 @@
  * `spec_type=draft-mtp` is emitted ONLY when capability is real (an MTP-capable
  * target for embedded mode, or a width-matched MTP draft for paired mode).
  * A non-MTP target with speculative on resolves to OFF and emits nothing
- * speculative — so it never hits the non-MTP native error.
+ * speculative - so it never hits the non-MTP native error.
  *
  * Three gates:
  *  - Engagement: a REAL MTP-capable model with speculative on must produce
  *    `draft_tokens > 0` at completion. This is the ONLY proof the feature is not
- *    inert — unit/UI tests cannot observe engagement. `draft_tokens` is a
+ *    inert - unit/UI tests cannot observe engagement. `draft_tokens` is a
  *    TOP-LEVEL field on the native completion result (sibling of `timings`).
  *  - Off-safety (negative control): a NON-MTP model with speculative on
  *    and no valid draft loads with NO native error, produces output, and
  *    `draft_tokens === 0` (PocketPal resolved to OFF and never sent spec_type).
  *  - Crash-safety: a width-mismatched paired draft must NOT abort the
- *    process — a mismatched pair, had it reached init_mtp, would SIGABRT
+ *    process - a mismatched pair, had it reached init_mtp, would SIGABRT
  *    uncatchably. The gate is "process survives + target loads", not draft count.
  *
  * All three tests are emulator-runnable. (An earlier revision blamed a 2 GB
  * AVD for the draft-context failure; the real cause was the q8_0 draft
  * V-cache default colliding with flash attention resolving off on Android
- * CPU — fixed in the store's draft cache defaults.) Reasoning models on a
+ * CPU - fixed in the store's draft cache defaults.) Reasoning models on a
  * virtual device can spend minutes in the think-phase, hence the raised
  * inference budget below.
  *
@@ -71,7 +71,7 @@ const NON_MTP_MODEL = {
  * engagement gate. Confirmed available + MTP-signalled: header range-fetch shows
  * `qwen35.nextn_predict_layers = 1` and `blk.*.nextn.*` tensors, and llama.rn (0.12.5+)
  * registers LLM_ARCH_QWEN35 + the nextn KV/tensors, so it loads
- * and resolves to embedded MTP. ~0.8B Q4_0 (~0.5GB) — sim-runnable.
+ * and resolves to embedded MTP. ~0.8B Q4_0 (~0.5GB) - sim-runnable.
  */
 const MTP_MODEL = {
   id: 'qwen3.5-0.8b-mtp',
@@ -154,7 +154,7 @@ async function enableSpeculativeGlobally(
 
   // Read the switch itself: with app state persisted between runs
   // (E2E_NO_RESET) speculative may already be on, and a
-  // "picker exists" heuristic misreads an off-viewport picker as OFF —
+  // "picker exists" heuristic misreads an off-viewport picker as OFF -
   // clicking then toggles the feature off. Android exposes `checked`,
   // iOS `value`; only click when it reads unchecked.
   const state = (browser as any).isAndroid
@@ -283,7 +283,7 @@ describe('Speculative Decoding / MTP draft model', () => {
     const draftEl = browser.$(DRAFT_TOKENS_EL);
     await draftEl.waitForExist({timeout: SPEC_INFERENCE_TIMEOUT});
     // iOS exposes the text as `label`; Android only sets content-desc when an
-    // accessibilityLabel exists — and uiautomator2 reports a MISSING attribute
+    // accessibilityLabel exists - and uiautomator2 reports a MISSING attribute
     // as the literal string "null", so sanitize before falling back to the
     // rendered text.
     const attrName = (browser as any).isAndroid ? 'content-desc' : 'label';

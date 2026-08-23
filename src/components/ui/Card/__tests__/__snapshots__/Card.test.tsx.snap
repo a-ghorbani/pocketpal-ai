@@ -1,6 +1,6 @@
 // Jest Snapshot v1, https://goo.gl/fbAQLP
 
-exports[`Card — snapshot matrix baseline (variant x size x {default,disabled} x modes) elevated-l-default-dark 1`] = `
+exports[`Card - snapshot matrix baseline (variant x size x {default,disabled} x modes) elevated-l-default-dark 1`] = `
 <View
   collapsable={false}
   pointerEvents="box-none"
@@ -32,7 +32,7 @@ exports[`Card — snapshot matrix baseline (variant x size x {default,disabled} 
 </View>
 `;
 
-exports[`Card — snapshot matrix baseline (variant x size x {default,disabled} x modes) elevated-l-default-light 1`] = `
+exports[`Card - snapshot matrix baseline (variant x size x {default,disabled} x modes) elevated-l-default-light 1`] = `
 <View
   collapsable={false}
   pointerEvents="box-none"
@@ -64,7 +64,7 @@ exports[`Card — snapshot matrix baseline (variant x size x {default,disabled} 
 </View>
 `;
 
-exports[`Card — snapshot matrix baseline (variant x size x {default,disabled} x modes) elevated-l-disabled-dark 1`] = `
+exports[`Card - snapshot matrix baseline (variant x size x {default,disabled} x modes) elevated-l-disabled-dark 1`] = `
 <View
   collapsable={false}
   pointerEvents="box-none"
@@ -96,7 +96,7 @@ exports[`Card — snapshot matrix baseline (variant x size x {default,disabled} 
 </View>
 `;
 
-exports[`Card — snapshot matrix baseline (variant x size x {default,disabled} x modes) elevated-l-disabled-light 1`] = `
+exports[`Card - snapshot matrix baseline (variant x size x {default,disabled} x modes) elevated-l-disabled-light 1`] = `
 <View
   collapsable={false}
   pointerEvents="box-none"
@@ -128,7 +128,7 @@ exports[`Card — snapshot matrix baseline (variant x size x {default,disabled} 
 </View>
 `;
 
-exports[`Card — snapshot matrix baseline (variant x size x {default,disabled} x modes) elevated-m-default-dark 1`] = `
+exports[`Card - snapshot matrix baseline (variant x size x {default,disabled} x modes) elevated-m-default-dark 1`] = `
 <View
   collapsable={false}
   pointerEvents="box-none"
@@ -160,7 +160,7 @@ exports[`Card — snapshot matrix baseline (variant x size x {default,disabled} 
 </View>
 `;
 
-exports[`Card — snapshot matrix baseline (variant x size x {default,disabled} x modes) elevated-m-default-light 1`] = `
+exports[`Card - snapshot matrix baseline (variant x size x {default,disabled} x modes) elevated-m-default-light 1`] = `
 <View
   collapsable={false}
   pointerEvents="box-none"
@@ -192,7 +192,7 @@ exports[`Card — snapshot matrix baseline (variant x size x {default,disabled} 
 </View>
 `;
 
-exports[`Card — snapshot matrix baseline (variant x size x {default,disabled} x modes) elevated-m-disabled-dark 1`] = `
+exports[`Card - snapshot matrix baseline (variant x size x {default,disabled} x modes) elevated-m-disabled-dark 1`] = `
 <View
   collapsable={false}
   pointerEvents="box-none"
@@ -224,7 +224,7 @@ exports[`Card — snapshot matrix baseline (variant x size x {default,disabled} 
 </View>
 `;
 
-exports[`Card — snapshot matrix baseline (variant x size x {default,disabled} x modes) elevated-m-disabled-light 1`] = `
+exports[`Card - snapshot matrix baseline (variant x size x {default,disabled} x modes) elevated-m-disabled-light 1`] = `
 <View
   collapsable={false}
   pointerEvents="box-none"
@@ -256,7 +256,7 @@ exports[`Card — snapshot matrix baseline (variant x size x {default,disabled} 
 </View>
 `;
 
-exports[`Card — snapshot matrix baseline (variant x size x {default,disabled} x modes) elevated-s-default-dark 1`] = `
+exports[`Card - snapshot matrix baseline (variant x size x {default,disabled} x modes) elevated-s-default-dark 1`] = `
 <View
   collapsable={false}
   pointerEvents="box-none"
@@ -288,7 +288,7 @@ exports[`Card — snapshot matrix baseline (variant x size x {default,disabled} 
 </View>
 `;
 
-exports[`Card — snapshot matrix baseline (variant x size x {default,disabled} x modes) elevated-s-default-light 1`] = `
+exports[`Card - snapshot matrix baseline (variant x size x {default,disabled} x modes) elevated-s-default-light 1`] = `
 <View
   collapsable={false}
   pointerEvents="box-none"
@@ -320,7 +320,7 @@ exports[`Card — snapshot matrix baseline (variant x size x {default,disabled} 
 </View>
 `;
 
-exports[`Card — snapshot matrix baseline (variant x size x {default,disabled} x modes) elevated-s-disabled-dark 1`] = `
+exports[`Card - snapshot matrix baseline (variant x size x {default,disabled} x modes) elevated-s-disabled-dark 1`] = `
 <View
   collapsable={false}
   pointerEvents="box-none"
@@ -352,7 +352,7 @@ exports[`Card — snapshot matrix baseline (variant x size x {default,disabled} 
 </View>
 `;
 
-exports[`Card — snapshot matrix baseline (variant x size x {default,disabled} x modes) elevated-s-disabled-light 1`] = `
+exports[`Card - snapshot matrix baseline (variant x size x {default,disabled} x modes) elevated-s-disabled-light 1`] = `
 <View
   collapsable={false}
   pointerEvents="box-none"
@@ -384,7 +384,7 @@ exports[`Card — snapshot matrix baseline (variant x size x {default,disabled} 
 </View>
 `;
 
-exports[`Card — snapshot matrix baseline (variant x size x {default,disabled} x modes) flat-l-default-dark 1`] = `
+exports[`Card - snapshot matrix baseline (variant x size x {default,disabled} x modes) flat-l-default-dark 1`] = `
 <View
   collapsable={false}
   pointerEvents="box-none"
@@ -415,7 +415,7 @@ exports[`Card — snapshot matrix baseline (variant x size x {default,disabled} 
 </View>
 `;
 
-exports[`Card — snapshot matrix baseline (variant x size x {default,disabled} x modes) flat-l-default-light 1`] = `
+exports[`Card - snapshot matrix baseline (variant x size x {default,disabled} x modes) flat-l-default-light 1`] = `
 <View
   collapsable={false}
   pointerEvents="box-none"
@@ -446,7 +446,7 @@ exports[`Card — snapshot matrix baseline (variant x size x {default,disabled} 
 </View>
 `;
 
-exports[`Card — snapshot matrix baseline (variant x size x {default,disabled} x modes) flat-l-disabled-dark 1`] = `
+exports[`Card - snapshot matrix baseline (variant x size x {default,disabled} x modes) flat-l-disabled-dark 1`] = `
 <View
   collapsable={false}
   pointerEvents="box-none"
@@ -477,7 +477,7 @@ exports[`Card — snapshot matrix baseline (variant x size x {default,disabled} 
 </View>
 `;
 
-exports[`Card — snapshot matrix baseline (variant x size x {default,disabled} x modes) flat-l-disabled-light 1`] = `
+exports[`Card - snapshot matrix baseline (variant x size x {default,disabled} x modes) flat-l-disabled-light 1`] = `
 <View
   collapsable={false}
   pointerEvents="box-none"
@@ -508,7 +508,7 @@ exports[`Card — snapshot matrix baseline (variant x size x {default,disabled} 
 </View>
 `;
 
-exports[`Card — snapshot matrix baseline (variant x size x {default,disabled} x modes) flat-m-default-dark 1`] = `
+exports[`Card - snapshot matrix baseline (variant x size x {default,disabled} x modes) flat-m-default-dark 1`] = `
 <View
   collapsable={false}
   pointerEvents="box-none"
@@ -539,7 +539,7 @@ exports[`Card — snapshot matrix baseline (variant x size x {default,disabled} 
 </View>
 `;
 
-exports[`Card — snapshot matrix baseline (variant x size x {default,disabled} x modes) flat-m-default-light 1`] = `
+exports[`Card - snapshot matrix baseline (variant x size x {default,disabled} x modes) flat-m-default-light 1`] = `
 <View
   collapsable={false}
   pointerEvents="box-none"
@@ -570,7 +570,7 @@ exports[`Card — snapshot matrix baseline (variant x size x {default,disabled} 
 </View>
 `;
 
-exports[`Card — snapshot matrix baseline (variant x size x {default,disabled} x modes) flat-m-disabled-dark 1`] = `
+exports[`Card - snapshot matrix baseline (variant x size x {default,disabled} x modes) flat-m-disabled-dark 1`] = `
 <View
   collapsable={false}
   pointerEvents="box-none"
@@ -601,7 +601,7 @@ exports[`Card — snapshot matrix baseline (variant x size x {default,disabled} 
 </View>
 `;
 
-exports[`Card — snapshot matrix baseline (variant x size x {default,disabled} x modes) flat-m-disabled-light 1`] = `
+exports[`Card - snapshot matrix baseline (variant x size x {default,disabled} x modes) flat-m-disabled-light 1`] = `
 <View
   collapsable={false}
   pointerEvents="box-none"
@@ -632,7 +632,7 @@ exports[`Card — snapshot matrix baseline (variant x size x {default,disabled} 
 </View>
 `;
 
-exports[`Card — snapshot matrix baseline (variant x size x {default,disabled} x modes) flat-s-default-dark 1`] = `
+exports[`Card - snapshot matrix baseline (variant x size x {default,disabled} x modes) flat-s-default-dark 1`] = `
 <View
   collapsable={false}
   pointerEvents="box-none"
@@ -663,7 +663,7 @@ exports[`Card — snapshot matrix baseline (variant x size x {default,disabled} 
 </View>
 `;
 
-exports[`Card — snapshot matrix baseline (variant x size x {default,disabled} x modes) flat-s-default-light 1`] = `
+exports[`Card - snapshot matrix baseline (variant x size x {default,disabled} x modes) flat-s-default-light 1`] = `
 <View
   collapsable={false}
   pointerEvents="box-none"
@@ -694,7 +694,7 @@ exports[`Card — snapshot matrix baseline (variant x size x {default,disabled} 
 </View>
 `;
 
-exports[`Card — snapshot matrix baseline (variant x size x {default,disabled} x modes) flat-s-disabled-dark 1`] = `
+exports[`Card - snapshot matrix baseline (variant x size x {default,disabled} x modes) flat-s-disabled-dark 1`] = `
 <View
   collapsable={false}
   pointerEvents="box-none"
@@ -725,7 +725,7 @@ exports[`Card — snapshot matrix baseline (variant x size x {default,disabled} 
 </View>
 `;
 
-exports[`Card — snapshot matrix baseline (variant x size x {default,disabled} x modes) flat-s-disabled-light 1`] = `
+exports[`Card - snapshot matrix baseline (variant x size x {default,disabled} x modes) flat-s-disabled-light 1`] = `
 <View
   collapsable={false}
   pointerEvents="box-none"
@@ -756,7 +756,7 @@ exports[`Card — snapshot matrix baseline (variant x size x {default,disabled} 
 </View>
 `;
 
-exports[`Card — snapshot matrix baseline (variant x size x {default,disabled} x modes) outlined-l-default-dark 1`] = `
+exports[`Card - snapshot matrix baseline (variant x size x {default,disabled} x modes) outlined-l-default-dark 1`] = `
 <View
   collapsable={false}
   pointerEvents="box-none"
@@ -789,7 +789,7 @@ exports[`Card — snapshot matrix baseline (variant x size x {default,disabled} 
 </View>
 `;
 
-exports[`Card — snapshot matrix baseline (variant x size x {default,disabled} x modes) outlined-l-default-light 1`] = `
+exports[`Card - snapshot matrix baseline (variant x size x {default,disabled} x modes) outlined-l-default-light 1`] = `
 <View
   collapsable={false}
   pointerEvents="box-none"
@@ -822,7 +822,7 @@ exports[`Card — snapshot matrix baseline (variant x size x {default,disabled} 
 </View>
 `;
 
-exports[`Card — snapshot matrix baseline (variant x size x {default,disabled} x modes) outlined-l-disabled-dark 1`] = `
+exports[`Card - snapshot matrix baseline (variant x size x {default,disabled} x modes) outlined-l-disabled-dark 1`] = `
 <View
   collapsable={false}
   pointerEvents="box-none"
@@ -855,7 +855,7 @@ exports[`Card — snapshot matrix baseline (variant x size x {default,disabled} 
 </View>
 `;
 
-exports[`Card — snapshot matrix baseline (variant x size x {default,disabled} x modes) outlined-l-disabled-light 1`] = `
+exports[`Card - snapshot matrix baseline (variant x size x {default,disabled} x modes) outlined-l-disabled-light 1`] = `
 <View
   collapsable={false}
   pointerEvents="box-none"
@@ -888,7 +888,7 @@ exports[`Card — snapshot matrix baseline (variant x size x {default,disabled} 
 </View>
 `;
 
-exports[`Card — snapshot matrix baseline (variant x size x {default,disabled} x modes) outlined-m-default-dark 1`] = `
+exports[`Card - snapshot matrix baseline (variant x size x {default,disabled} x modes) outlined-m-default-dark 1`] = `
 <View
   collapsable={false}
   pointerEvents="box-none"
@@ -921,7 +921,7 @@ exports[`Card — snapshot matrix baseline (variant x size x {default,disabled} 
 </View>
 `;
 
-exports[`Card — snapshot matrix baseline (variant x size x {default,disabled} x modes) outlined-m-default-light 1`] = `
+exports[`Card - snapshot matrix baseline (variant x size x {default,disabled} x modes) outlined-m-default-light 1`] = `
 <View
   collapsable={false}
   pointerEvents="box-none"
@@ -954,7 +954,7 @@ exports[`Card — snapshot matrix baseline (variant x size x {default,disabled} 
 </View>
 `;
 
-exports[`Card — snapshot matrix baseline (variant x size x {default,disabled} x modes) outlined-m-disabled-dark 1`] = `
+exports[`Card - snapshot matrix baseline (variant x size x {default,disabled} x modes) outlined-m-disabled-dark 1`] = `
 <View
   collapsable={false}
   pointerEvents="box-none"
@@ -987,7 +987,7 @@ exports[`Card — snapshot matrix baseline (variant x size x {default,disabled} 
 </View>
 `;
 
-exports[`Card — snapshot matrix baseline (variant x size x {default,disabled} x modes) outlined-m-disabled-light 1`] = `
+exports[`Card - snapshot matrix baseline (variant x size x {default,disabled} x modes) outlined-m-disabled-light 1`] = `
 <View
   collapsable={false}
   pointerEvents="box-none"
@@ -1020,7 +1020,7 @@ exports[`Card — snapshot matrix baseline (variant x size x {default,disabled} 
 </View>
 `;
 
-exports[`Card — snapshot matrix baseline (variant x size x {default,disabled} x modes) outlined-s-default-dark 1`] = `
+exports[`Card - snapshot matrix baseline (variant x size x {default,disabled} x modes) outlined-s-default-dark 1`] = `
 <View
   collapsable={false}
   pointerEvents="box-none"
@@ -1053,7 +1053,7 @@ exports[`Card — snapshot matrix baseline (variant x size x {default,disabled} 
 </View>
 `;
 
-exports[`Card — snapshot matrix baseline (variant x size x {default,disabled} x modes) outlined-s-default-light 1`] = `
+exports[`Card - snapshot matrix baseline (variant x size x {default,disabled} x modes) outlined-s-default-light 1`] = `
 <View
   collapsable={false}
   pointerEvents="box-none"
@@ -1086,7 +1086,7 @@ exports[`Card — snapshot matrix baseline (variant x size x {default,disabled} 
 </View>
 `;
 
-exports[`Card — snapshot matrix baseline (variant x size x {default,disabled} x modes) outlined-s-disabled-dark 1`] = `
+exports[`Card - snapshot matrix baseline (variant x size x {default,disabled} x modes) outlined-s-disabled-dark 1`] = `
 <View
   collapsable={false}
   pointerEvents="box-none"
@@ -1119,7 +1119,7 @@ exports[`Card — snapshot matrix baseline (variant x size x {default,disabled} 
 </View>
 `;
 
-exports[`Card — snapshot matrix baseline (variant x size x {default,disabled} x modes) outlined-s-disabled-light 1`] = `
+exports[`Card - snapshot matrix baseline (variant x size x {default,disabled} x modes) outlined-s-disabled-light 1`] = `
 <View
   collapsable={false}
   pointerEvents="box-none"
@@ -1152,7 +1152,7 @@ exports[`Card — snapshot matrix baseline (variant x size x {default,disabled} 
 </View>
 `;
 
-exports[`Card — snapshot matrix non-Latin font-fallback canary (canaryVariant x size=default x default x light x lang) flat-s-default-light-fa 1`] = `
+exports[`Card - snapshot matrix non-Latin font-fallback canary (canaryVariant x size=default x default x light x lang) flat-s-default-light-fa 1`] = `
 <View
   collapsable={false}
   pointerEvents="box-none"

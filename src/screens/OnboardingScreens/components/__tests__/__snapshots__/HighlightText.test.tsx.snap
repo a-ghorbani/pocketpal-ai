@@ -150,7 +150,7 @@ exports[`HighlightText wraps a single matching phrase in a pill segment 1`] = `
           no internet, no signal
         </Text>
         <Text>
-           — nice.
+           - nice.
         </Text>
       </Text>
     </View>

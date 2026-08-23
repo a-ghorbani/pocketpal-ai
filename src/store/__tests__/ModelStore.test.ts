@@ -315,7 +315,7 @@ describe('ModelStore', () => {
       await modelStore.drainPendingProjectionCleanup();
 
       // In-flight: wait for the download; a later launch collects the file.
-      // Shared: another vision model still uses it — never delete, stop
+      // Shared: another vision model still uses it - never delete, stop
       // tracking.
       expect(modelStore.pendingProjectionCleanupIds).toEqual([inFlightId]);
       expect(modelStore.models.find(m => m.id === sharedId)?.isDownloaded).toBe(
@@ -327,7 +327,7 @@ describe('ModelStore', () => {
     it('defers a downloaded record until its header has been read', async () => {
       // Only the filename says draft; the header could veto but has not been
       // fetched yet. Stripping now would repeat the R1 damage class inside
-      // the metadata-missing window — wait for the backfill instead.
+      // the metadata-missing window - wait for the backfill instead.
       const pendingMetadata = {
         ...presetModelFixture,
         id: 'x/y/mtp-something.gguf',
@@ -576,7 +576,7 @@ describe('ModelStore', () => {
     });
 
     // Projector (mmproj) Models are synthesized from the candidate's explicit
-    // mmproj into a sibling with a derived /resolve/main/ url — so EVERY resolved
+    // mmproj into a sibling with a derived /resolve/main/ url - so EVERY resolved
     // preset, LLM and projector alike, has a non-empty downloadUrl and is
     // downloadable (a vision preset's projector would never download otherwise).
     const isProjection = (id: string) => /\/mmproj/i.test(id);
@@ -1715,7 +1715,7 @@ describe('ModelStore', () => {
 
       await modelStore.deleteModel(otherModel);
 
-      // The global draft pick is unrelated to the deleted model — keep it.
+      // The global draft pick is unrelated to the deleted model - keep it.
       expect(modelStore.contextInitParams.selectedDraftModelId).toBe(
         draftModel.id,
       );
@@ -1849,7 +1849,7 @@ describe('ModelStore', () => {
       modelStore.benchmarkActive = true;
       const model = {...presetModelFixture, isDownloaded: true};
       modelStore.exitBenchmarkMode();
-      // After exit, the synchronous gate is gone — initContext proceeds
+      // After exit, the synchronous gate is gone - initContext proceeds
       // to its normal pre-flight (memory check, etc.). The model isn't
       // downloaded in this test fixture so the call may resolve to null
       // or throw a non-benchmark error; we only care that the
@@ -1982,7 +1982,7 @@ describe('ModelStore', () => {
 
       await modelStore.checkSpaceAndDownload(visionModel.id);
 
-      // Only the (cancelled) main model download was attempted — the projection
+      // Only the (cancelled) main model download was attempted - the projection
       // model must NOT be chained off a user cancel.
       expect(downloadManager.startDownload).toHaveBeenCalledTimes(1);
       expect(downloadManager.startDownload).toHaveBeenCalledWith(
@@ -2720,7 +2720,7 @@ describe('ModelStore', () => {
       it('defaults the embedded draft cache to F16 unless flash attn is forced on', async () => {
         // llama.cpp refuses a quantized draft V cache whenever flash
         // attention resolves off, and `auto` resolves per backend AFTER init
-        // (off on Android CPU) — so Q8_0 is only safe when the user forced
+        // (off on Android CPU) - so Q8_0 is only safe when the user forced
         // flash attention on.
         runInAction(() => {
           modelStore.contextInitParams.flash_attn_type = undefined;
@@ -4880,7 +4880,7 @@ describe('ModelStore', () => {
       await modelStore.setRemoteModel(remoteModel);
 
       // Nothing is forwarded when there is no key, so the probe falls back to
-      // its own Keychain read — the common local llama.cpp case.
+      // its own Keychain read - the common local llama.cpp case.
       expect(probe).toHaveBeenCalledWith('srv-1', 'llama-7b', undefined);
       probe.mockRestore();
       getApiKey.mockRestore();
@@ -5108,7 +5108,7 @@ describe('ModelStore', () => {
         new Error('std::runtime_error'),
       );
 
-      // Should not throw — error is caught internally
+      // Should not throw - error is caught internally
       await modelStore.fetchAndPersistGGUFMetadata(model);
 
       expect(model.ggufMetadata).toBeUndefined();
@@ -5534,7 +5534,7 @@ describe('ModelStore', () => {
 
         const cfg = await (modelStore as any).resolveDraftConfig(self);
 
-        // It carries its own MTP layers, so it runs embedded — never twice.
+        // It carries its own MTP layers, so it runs embedded - never twice.
         expect(cfg.mode).toBe('embedded');
         expect(cfg.resolvedDraftPath).toBeUndefined();
         expect(cfg.draftModel).toBeUndefined();
@@ -6020,7 +6020,7 @@ describe('ModelStore', () => {
         expect(params.is_model_draft_asset).toBe(false);
       });
 
-      it('a draft-related init failure sets modelLoadError once and calls initLlama once — no auto-retry', async () => {
+      it('a draft-related init failure sets modelLoadError once and calls initLlama once - no auto-retry', async () => {
         modelStore.setSpeculativeEnabled(true);
         setupPairedDownloadedModels();
 

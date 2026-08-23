@@ -78,10 +78,10 @@ describe('compareReports', () => {
     const baseline = makeReport({chat_active: 200});
     const current = makeReport({chat_active: 260}); // +60 MB, +30%
 
-    // Default thresholds (10%, 200 MB) — passes (60 MB < 200 MB)
+    // Default thresholds (10%, 200 MB) - passes (60 MB < 200 MB)
     expect(compareReports(baseline, current).pass).toBe(true);
 
-    // Custom thresholds (5%, 50 MB) — fails (both exceeded)
+    // Custom thresholds (5%, 50 MB) - fails (both exceeded)
     const result = compareReports(baseline, current, {pct: 5, mb: 50});
     expect(result.pass).toBe(false);
     expect(result.regressions).toHaveLength(1);
@@ -135,7 +135,7 @@ describe('compareReports', () => {
 
     const result = compareReports(baseline, current);
 
-    // extra_checkpoint has no baseline — should not appear in deltas
+    // extra_checkpoint has no baseline - should not appear in deltas
     expect(
       result.deltas.find(d => d.checkpoint === 'extra_checkpoint'),
     ).toBeUndefined();

@@ -2,7 +2,7 @@ import type {SearchProvider, PageContent} from '../search/types';
 
 /**
  * Injected at `registerDefaultTalents()` so the search engines never import
- * `SearchProviderStore` — keeps `execute()` free of MobX/store coupling.
+ * `SearchProviderStore` - keeps `execute()` free of MobX/store coupling.
  */
 export interface SearchAccess {
   getActiveProvider(): SearchProvider;

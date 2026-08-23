@@ -39,7 +39,7 @@ export interface ToolDefinition {
 
 /**
  * Passed in (rather than read from the clock/config) so fragments stay pure
- * and testable — inject a fixed `now`.
+ * and testable - inject a fixed `now`.
  */
 export interface SystemPromptContext {
   now: Date;
@@ -61,7 +61,7 @@ export interface TalentEngine {
   toToolDefinition(): ToolDefinition;
   /**
    * Optional system-prompt fragment; folded into the single leading system
-   * message by `assembleMessages` — a talent must never emit its own.
+   * message by `assembleMessages` - a talent must never emit its own.
    */
   systemPromptFragment?(ctx: SystemPromptContext): string | null;
 }

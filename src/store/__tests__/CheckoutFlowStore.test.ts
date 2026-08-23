@@ -1,5 +1,5 @@
 /**
- * CheckoutFlowStore — checkout state machine and reconcile poll.
+ * CheckoutFlowStore - checkout state machine and reconcile poll.
  */
 
 jest.mock('../../services/palshub/PalsHubApiService', () => ({
@@ -422,7 +422,7 @@ describe('CheckoutFlowStore', () => {
 
   it('openAuth resolves an unexpected path -> cancelled, silent', async () => {
     // Well-formed URL whose trailing segment is neither success nor cancel
-    // falls through to the cancel default — no reconcile, no error.
+    // falls through to the cancel default - no reconcile, no error.
     openAuth.mockResolvedValue('pocketpal://checkout/unexpected');
     await checkoutFlowStore.start('pal-1');
     await flushMicrotasks();
@@ -511,7 +511,7 @@ describe('CheckoutFlowStore', () => {
   });
 });
 
-describe('CheckoutFlowStore — iOS (link-out prep absent)', () => {
+describe('CheckoutFlowStore - iOS (link-out prep absent)', () => {
   // iOS has no External Content Links module: the spec is null, so start()
   // goes 200 -> browser_open directly with no prep and never reports.
   let store: {
@@ -586,9 +586,9 @@ describe('CheckoutFlowStore — iOS (link-out prep absent)', () => {
   });
 });
 
-describe('CheckoutFlowStore — auth-session spec unavailable', () => {
+describe('CheckoutFlowStore - auth-session spec unavailable', () => {
   // The auth-session spec is TurboModuleRegistry.get(...), null when the native
-  // module is absent — reachable only on Android if the module is not added to
+  // module is absent - reachable only on Android if the module is not added to
   // getPackages(). The guard must degrade to a silent cancel rather than crash
   // on a null .openAuth.
   it('null NativeAuthSession -> silent cancel, no crash', async () => {

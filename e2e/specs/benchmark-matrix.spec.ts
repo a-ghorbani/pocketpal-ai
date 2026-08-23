@@ -1,5 +1,5 @@
 /**
- * Benchmark Matrix E2E Spec (v2 — BenchmarkRunnerScreen-driven).
+ * Benchmark Matrix E2E Spec (v2 - BenchmarkRunnerScreen-driven).
  *
  * Drives the in-app BenchmarkRunnerScreen across {models} x {quants} x
  * {backends}. The screen owns the matrix loop, downloads, init/release,
@@ -61,7 +61,7 @@ describe('Benchmark Matrix', () => {
     // No tap: the deep link carried `?autostart=1`, so the screen self-starts
     // the matrix once it mounts (the fix for HyperOS / MediaTek dropping
     // injected taps). We just wait for the status element to appear, then
-    // poll it for a terminal state — no `bench-run-button` interaction.
+    // poll it for a terminal state - no `bench-run-button` interaction.
     const status = await driver.$(byTestId('bench-runner-screen-status'));
     await status.waitForDisplayed({timeout: 30_000});
 
@@ -71,7 +71,7 @@ describe('Benchmark Matrix', () => {
 
     // Fast-fail diagnostic: with autostart=1 the screen must leave `idle`
     // within seconds of mount. If it doesn't, the autostart param never
-    // reached the screen — fail in 30s with that specific signal instead
+    // reached the screen - fail in 30s with that specific signal instead
     // of burning the full BENCH_MAX_WAIT_MIN on a silent timeout.
     let lastObserved: string | null = await readStatus();
     try {
@@ -87,7 +87,7 @@ describe('Benchmark Matrix', () => {
       // own timeoutMsg is a static string built before the wait starts, so
       // it cannot include the value of `lastObserved` at timeout time.)
       throw new Error(
-        `autostart did not leave 'idle' within 30s (last status=${lastObserved ?? 'null'}). The screen mounted but the autostart deep-link param never triggered onRun — likely a regression in the deep-link param plumbing or the screen's once-per-mount effect.`,
+        `autostart did not leave 'idle' within 30s (last status=${lastObserved ?? 'null'}). The screen mounted but the autostart deep-link param never triggered onRun - likely a regression in the deep-link param plumbing or the screen's once-per-mount effect.`,
       );
     }
 

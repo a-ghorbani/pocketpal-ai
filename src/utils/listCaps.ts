@@ -104,7 +104,7 @@ export function deriveListCaps(
 
 /**
  * The same derivation for every model of every server, keyed as
- * `${serverId}/${remoteModelId}` — the id a remote `Model` carries.
+ * `${serverId}/${remoteModelId}` - the id a remote `Model` carries.
  */
 export function deriveListCapsMap(
   servers: ServerConfig[],

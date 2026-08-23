@@ -21,7 +21,7 @@ export type BottomNavBarProps = Omit<CommonDSProps, 'disabled'> & {
 };
 
 /**
- * DS BottomNavBar — presentational shell (no navigation wiring).
+ * DS BottomNavBar - presentational shell (no navigation wiring).
  *
  * Defaults: testID='ui-bottom-nav', accessibilityRole='tablist'.
  * Item testID: 'ui-bottom-nav-item-<value>'; item role 'tab'.

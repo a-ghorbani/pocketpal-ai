@@ -7,7 +7,7 @@ import {TalentEngine, TalentResult, ToolDefinition} from './types';
  *   - `html` (string, required): the HTML document (or fragment) to render.
  *   - `title` (string, optional): a short label shown above the preview.
  *
- * Security model: this engine is a pure pass-through — sanitization is the
+ * Security model: this engine is a pure pass-through - sanitization is the
  * WebView wrapper's job. See HtmlPreviewBubble for the actual envelope:
  * strict CSP (default-src 'none', no network/external fetch), but JavaScript
  * IS enabled with 'unsafe-inline' + 'unsafe-eval' for interactive HTML/games.

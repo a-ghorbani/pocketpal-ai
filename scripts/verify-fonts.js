@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * verify-fonts.js — bundled font asset check.
+ * verify-fonts.js - bundled font asset check.
  *
  * Every `fontFamily` string referenced by the design-token typography
  * surface (src/theme/tokens/typography.ts) and by the legacy fontStyles
@@ -10,7 +10,7 @@
  *   - <string>Name.ttf</string> inside ios/PocketPal/Info.plist (UIAppFonts)
  *
  * The PostScript name of the asset must equal the filename sans `.ttf`
- * (otherwise iOS silently falls back to system) — this is verified at
+ * (otherwise iOS silently falls back to system) - this is verified at
  * font-acquisition time rather than here; this script only verifies
  * presence.
  *
@@ -49,7 +49,7 @@ const INFO_PLIST = path.join(ROOT, 'ios', 'PocketPal', 'Info.plist');
  * Matches: 'Family-Variant' or "Family-Variant". Filters to identifiers
  * that look like font family names (capital first letter, contain a
  * hyphen, end in a known variant suffix). This is intentionally
- * permissive but resilient to comments — anything that doesn't look
+ * permissive but resilient to comments - anything that doesn't look
  * like a real family name is dropped.
  */
 function extractFontFamilies(filePath) {
@@ -119,7 +119,7 @@ function plistTtfNames(plistPath) {
  * resolving idDelta/idRangeOffset, so a codepoint a segment maps to glyph 0
  * (.notdef) would count as covered. Verified against a glyph-resolving parser
  * across all bundled TTFs with zero divergence, but it is the one direction
- * this check could fail *unsafe* — revisit if a font vendor/cut changes.
+ * this check could fail *unsafe* - revisit if a font vendor/cut changes.
  */
 function fontCodepoints(ttfPath) {
   const buf = fs.readFileSync(ttfPath);
@@ -162,7 +162,7 @@ function fontCodepoints(ttfPath) {
         const start = buf.readUInt32BE(go);
         // Cap the scan: only low-BMP letters matter for this check and a
         // format-12 group can span a huge range (emoji, CJK Ext).
-        // Under-reporting coverage is safe — it can only produce a spurious
+        // Under-reporting coverage is safe - it can only produce a spurious
         // "add to NON_LATIN_LOCALES" failure, never a false pass.
         const end = Math.min(buf.readUInt32BE(go + 4), 0x2fff);
         for (let c = start; c <= end; c++) {
@@ -203,13 +203,13 @@ function localeLetters(localeJsonPath) {
  *
  * This exists because the Fraunces subset stops at Latin-1: Polish is Latin
  * script but needs Latin Extended-A, so "it's Latin, it's fine" is wrong.
- * Only letters are checked — shared punctuation (— • … → ✓) is absent from
+ * Only letters are checked - shared punctuation (- • … → ✓) is absent from
  * Fraunces for every locale including `en`, and is not a regression.
  *
  * Deliberately over-approximate: it scans the whole locale JSON, not just the
  * strings that land in headline slots. So one stray non-Latin-1 letter in a
  * body string would push an otherwise-fine locale onto the fallback list and
- * cost it the serif headline. That trade is intentional — mapping keys to
+ * cost it the serif headline. That trade is intentional - mapping keys to
  * headline slots is brittle, and a false fallback is cosmetic while a false
  * pass ships tofu.
  */
@@ -217,7 +217,7 @@ function verifyHeadlineGlyphCoverage() {
   const localesDir = path.join(ROOT, 'src', 'locales');
   const indexPath = path.join(localesDir, 'index.ts');
   // Headlines use Regular, Medium and the italics, so require coverage in
-  // every cut — a future re-cut of one weight would otherwise slip past.
+  // every cut - a future re-cut of one weight would otherwise slip past.
   const frauncesCuts = fs.existsSync(ASSETS_DIR)
     ? fs
         .readdirSync(ASSETS_DIR)
@@ -240,7 +240,7 @@ function verifyHeadlineGlyphCoverage() {
   );
   if (!registryBlock || !exemptBlock) {
     console.error(
-      'verify-fonts: could not parse languageRegistry / NON_LATIN_LOCALES — refusing to declare success.',
+      'verify-fonts: could not parse languageRegistry / NON_LATIN_LOCALES - refusing to declare success.',
     );
     process.exit(2);
   }
@@ -272,7 +272,7 @@ function verifyHeadlineGlyphCoverage() {
         .map(c => String.fromCodePoint(c))
         .join('');
       errors.push(
-        `${lang}: ${missing.length} letter(s) not in the bundled Fraunces subset (${sample}) — ` +
+        `${lang}: ${missing.length} letter(s) not in the bundled Fraunces subset (${sample}) - ` +
           `add '${lang}' to NON_LATIN_LOCALES in src/theme/tokens/typography.ts so headlines fall back to Inter`,
       );
     }
@@ -288,7 +288,7 @@ function main() {
 
   if (families.size === 0) {
     console.error(
-      'verify-fonts: no font families discovered — refusing to declare success.',
+      'verify-fonts: no font families discovered - refusing to declare success.',
     );
     process.exit(2);
   }
@@ -330,7 +330,7 @@ function main() {
   }
 
   console.log(
-    '\nverify-fonts: OK — all families bundled on all platforms, ' +
+    '\nverify-fonts: OK - all families bundled on all platforms, ' +
       'and every Fraunces-rendered locale is covered by the bundled subset.',
   );
 }

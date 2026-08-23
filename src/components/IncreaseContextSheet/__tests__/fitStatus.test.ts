@@ -31,7 +31,7 @@ describe('makeFitStatusFor', () => {
 
 describe('hasFittingUpgrade', () => {
   const ladder = [2048, 4096, 8192, 16384, 32768];
-  // Everything fits — isolates the cap/current-size gating from memory.
+  // Everything fits - isolates the cap/current-size gating from memory.
   const alwaysFits = () => 'fits' as const;
 
   it('is true when a larger tier within the model cap fits', () => {

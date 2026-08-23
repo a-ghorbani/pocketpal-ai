@@ -13,7 +13,7 @@ export const createStyles = (theme: Theme) => {
       gap: theme.spacing.sm,
     },
     title: {
-      // Figma `Headline/H2` — Fraunces Medium 24/28, centered.
+      // Figma `Headline/H2` - Fraunces Medium 24/28, centered.
       fontFamily: isFraunces
         ? FONT_FAMILIES.FRAUNCES_MEDIUM
         : FONT_FAMILIES.INTER_MEDIUM,

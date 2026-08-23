@@ -162,7 +162,7 @@ describe('Remote Server Features', () => {
     expect(isConnected).toBe(true);
 
     // Select a model. With #783 the sheet is taller (Server Type dropdown), so
-    // the model list sits below the fold — scroll by existence (controls deep
+    // the model list sits below the fold - scroll by existence (controls deep
     // in a bottom sheet report isDisplayed=false on iOS) before selecting.
     if (REMOTE_MODEL_HINT) {
       await Gestures.scrollInSheetToElementExists(
@@ -265,7 +265,7 @@ describe('Remote Server Features', () => {
       } else {
         // Dump page source for diagnostics if model not found
         console.log(
-          `Model "${REMOTE_MODEL_HINT}" not found in picker — dumping page source`,
+          `Model "${REMOTE_MODEL_HINT}" not found in picker - dumping page source`,
         );
         try {
           const debugDir = path.join(__dirname, '../../debug-output');
@@ -278,11 +278,11 @@ describe('Remote Server Features', () => {
           console.log(`Page source saved to: ${debugFile}`);
           if (pageSource.includes(REMOTE_MODEL_HINT)) {
             console.log(
-              'Model IS in accessibility tree but not "displayed" — check accessible={false} on BottomSheet',
+              'Model IS in accessibility tree but not "displayed" - check accessible={false} on BottomSheet',
             );
           } else {
             console.log(
-              'Model NOT in accessibility tree at all — BottomSheet likely has accessible={true}',
+              'Model NOT in accessibility tree at all - BottomSheet likely has accessible={true}',
             );
           }
         } catch (e) {
@@ -293,7 +293,7 @@ describe('Remote Server Features', () => {
         );
       }
     } else {
-      // No hint — tap the first model item by position
+      // No hint - tap the first model item by position
       await driver
         .action('pointer', {parameters: {pointerType: 'touch'}})
         .move({x: Math.round(width * 0.5), y: Math.round(height * 0.55)})
@@ -382,7 +382,7 @@ describe('Remote Server Features', () => {
     // alert to appear and be auto-accepted, then verify the server is gone.
     await browser.pause(3000);
 
-    // Verify server was deleted — FAB menu should no longer have Manage Servers,
+    // Verify server was deleted - FAB menu should no longer have Manage Servers,
     // and the models list should be empty (only "Available to Download" section)
     console.log('Server deleted successfully via Manage Servers');
   });

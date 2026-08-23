@@ -193,7 +193,7 @@ async function swipeUpInSheet(): Promise<void> {
 
 /**
  * Scroll within a sheet until the target element is fully inside a
- * "safe viewport" — the screen minus a bottom reserve that accounts for
+ * "safe viewport" - the screen minus a bottom reserve that accounts for
  * fixed UI like Sheet.Actions (Cancel/Create), tab bars, system
  * navigation. UIAutomator2 reports `isDisplayed=true` for elements
  * whose bounds intersect the screen even when those elements are
@@ -204,7 +204,7 @@ async function swipeUpInSheet(): Promise<void> {
  *
  * @param selector - Element selector to scroll to
  * @param maxScrolls - Maximum number of scroll attempts
- * @param bottomReservePct - Fraction of screen height (0–1) reserved
+ * @param bottomReservePct - Fraction of screen height (0-1) reserved
  *   for the bottom-anchored UI. Defaults to 0.15 (~15%), enough for a
  *   Sheet.Actions row plus system nav on Android. Pass a larger value
  *   when scrolling inside a sheet with a tall action area.

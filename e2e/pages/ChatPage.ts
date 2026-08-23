@@ -58,7 +58,7 @@ export class ChatPage extends BasePage {
    *
    * The single tap is occasionally missed on Android (the drawer never opens),
    * which then fails the downstream waitForOpen. Tap, verify the drawer
-   * actually opened (the Pals item appears), and retry the tap if it didn't —
+   * actually opened (the Pals item appears), and retry the tap if it didn't -
    * checking "already open" first so a retry can't toggle an open drawer shut.
    */
   async openDrawer(): Promise<void> {
@@ -169,7 +169,7 @@ export class ChatPage extends BasePage {
    * #764). A tap on the overlap hits the chip and opens the "Voices" sheet
    * instead of flipping the toggle. So: measure both elements, tap the part of
    * the toggle the chip does NOT cover, dismiss any sheet that still slips
-   * open, and verify the toggle actually flipped — retrying the other clear
+   * open, and verify the toggle actually flipped - retrying the other clear
    * side if it did not.
    */
   async tapThinkingToggle(): Promise<void> {

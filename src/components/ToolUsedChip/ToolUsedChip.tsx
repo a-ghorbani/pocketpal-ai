@@ -15,7 +15,7 @@ import {AgentToolCallMetrics} from '../../utils/types';
 interface ToolUsedChipProps {
   toolName: string;
   /**
-   * Optional generation metrics — tokens emitted while the model
+   * Optional generation metrics - tokens emitted while the model
    * produced this call's arguments and the wall-clock duration.
    * Surfaced as a same-line suffix when present. Older persisted
    * tool calls won't carry metrics; the chip degrades gracefully.

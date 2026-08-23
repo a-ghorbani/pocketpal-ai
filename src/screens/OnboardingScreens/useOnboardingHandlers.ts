@@ -67,7 +67,7 @@ export const useOnboardingHandlers = (step: OnboardingStep) => {
   }, [step, goTo]);
 
   // Screen-5 chip tap: write topic + navigate in the same handler
-  // (single forward control — there is no Continue button on screen 5).
+  // (single forward control - there is no Continue button on screen 5).
   const selectTopic = useCallback(
     (key: TopicKey | null) => {
       uiStore.setOnboardingTopic(key);
@@ -115,7 +115,7 @@ export const useOnboardingHandlers = (step: OnboardingStep) => {
           });
         }
       } else {
-        // First time finishing with this topic — materialise the pal.
+        // First time finishing with this topic - materialise the pal.
         const palData: Omit<Pal, 'id' | 'created_at' | 'updated_at'> = {
           type: 'local',
           name: palDef.name,
@@ -141,7 +141,7 @@ export const useOnboardingHandlers = (step: OnboardingStep) => {
         // for the dialog. We catch defensively to keep the rejection from
         // becoming an unhandled promise from this no-await call site.
         modelStore.checkSpaceAndDownload(picked.id).catch(() => {
-          // intentionally swallowed — downloadError already drives the UI.
+          // intentionally swallowed - downloadError already drives the UI.
         });
       }
     } finally {

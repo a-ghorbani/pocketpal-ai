@@ -3,7 +3,7 @@ import {CompletionParams as LlamaRNCompletionParams} from 'llama.rn';
 export type {ToolCall} from 'llama.rn';
 import type {ToolCall} from 'llama.rn';
 
-// `enabled: false` is a best-effort hint — reasoning the model still returns is
+// `enabled: false` is a best-effort hint - reasoning the model still returns is
 // never stripped from what is displayed.
 export interface ReasoningIntent {
   enabled: boolean;

@@ -43,7 +43,7 @@ export interface OpenAIToolDefinition {
   };
 }
 
-/** OpenAI tool_choice — `'auto' | 'none' | 'required'` for the simple
+/** OpenAI tool_choice - `'auto' | 'none' | 'required'` for the simple
  * case, or `{type:'function', function:{name}}` to pin a single tool. */
 export type OpenAIToolChoice =
   | 'auto'
@@ -54,7 +54,7 @@ export type OpenAIToolChoice =
 /** OpenAI-compatible response_format. `json_schema` is the structured-output
  * mode supported by OpenAI, llama.cpp server, LM Studio, Ollama, and most
  * other compatible servers. `name` is required by OpenAI but ignored by
- * others — we inject a default when the caller doesn't supply one. */
+ * others - we inject a default when the caller doesn't supply one. */
 export type OpenAIResponseFormat =
   | {type: 'text'}
   | {type: 'json_object'}
@@ -85,7 +85,7 @@ export interface StreamChatParams {
 
 /**
  * Streamed tool_call state per OpenAI `index`. Arguments are stored
- * as fragments and joined once at end-of-stream — concatenating into
+ * as fragments and joined once at end-of-stream - concatenating into
  * a growing string per chunk was O(N²) on long argument payloads
  * (e.g. a multi-KB `render_html` html string).
  */
@@ -138,7 +138,7 @@ function applyToolCallDelta(
 
 /**
  * Materialise the final tool_calls array from the fragment-based
- * accumulator. Undefined when no tool_calls were seen — mirrors
+ * accumulator. Undefined when no tool_calls were seen - mirrors
  * llama.rn's shape.
  */
 function assembleFinalToolCalls(
@@ -315,7 +315,7 @@ export async function fetchModels(
 
 /**
  * Fetch model capabilities from a llama.cpp server's GET /props endpoint.
- * Pure: parses the response into caps and never throws — a timeout, non-2xx,
+ * Pure: parses the response into caps and never throws - a timeout, non-2xx,
  * or malformed body resolves to `{}` so the caller's models path and
  * connection are never affected. `/props` is llama.cpp-specific; callers gate
  * on serverType before invoking.
@@ -445,7 +445,7 @@ export async function detectServerType(
       clearTimeout(timeout);
     }
   } catch {
-    // Probe failed — not Ollama
+    // Probe failed - not Ollama
   }
 
   return '';
@@ -462,7 +462,7 @@ export async function detectServerType(
 /**
  * Translate the reasoning intent into the per-serverType wire payload. Gating
  * is keyed on the PERSISTED serverType (never live detection). An unknown /
- * strict server receives no reasoning controls — omit beats a 400.
+ * strict server receives no reasoning controls - omit beats a 400.
  *
  * - llama.cpp: reasoning_format always 'auto' (no-op for non-reasoning models;
  *   prevents raw channel/think markers leaking into content). ON+effort →
@@ -470,7 +470,7 @@ export async function detectServerType(
  *   {enable_thinking:false}. (ignores unknown → safe)
  * - vLLM (modern): ON+effort → chat_template_kwargs:{reasoning_effort}; ON →
  *   nothing; OFF → chat_template_kwargs:{enable_thinking:false}. (ignores unknown)
- * - LM Studio: on/off only — its chat API ignores reasoning_effort. ON →
+ * - LM Studio: on/off only - its chat API ignores reasoning_effort. ON →
  *   nothing; OFF → chat_template_kwargs:{enable_thinking:false}.
  * - Ollama (/v1): OFF → reasoning_effort:'none' (safe no-op). NEVER think:true,
  *   NEVER a non-'none' effort (hard-400 risk). Graded effort deferred.
@@ -519,7 +519,7 @@ export function buildReasoningPayload(
     case 'OpenAI':
       return effort ? {reasoning_effort: effort} : {};
     default:
-      // unknown / old vLLM — omit everything.
+      // unknown / old vLLM - omit everything.
       return {};
   }
 }
@@ -543,7 +543,7 @@ function hasLocalImageAttachment(messages: OpenAIChatMessage[]): boolean {
   );
 }
 
-// Skip inlining a file larger than this — base64 inflates ~33% and the whole
+// Skip inlining a file larger than this - base64 inflates ~33% and the whole
 // buffer is held in memory, so a huge attachment would spike heap on low-RAM
 // devices. The image is left unchanged and the server surfaces the failure.
 const REMOTE_IMAGE_MAX_BYTES = 12 * 1024 * 1024;
@@ -604,7 +604,7 @@ export function __clearRemoteImageCache(): void {
  * part unchanged when it is not a local image, when a successful stat reports
  * an over-cap file, or when the read fails. A stat throw or a size-less result
  * FALLS THROUGH to encoding so a healthy image is never dropped on a stat
- * hiccup — only a successful over-cap stat skips.
+ * hiccup - only a successful over-cap stat skips.
  */
 async function encodeImagePart(part: {
   type: string;
@@ -628,7 +628,7 @@ async function encodeImagePart(part: {
       return part;
     }
   } catch {
-    // stat unavailable — encode anyway rather than drop a healthy image.
+    // stat unavailable - encode anyway rather than drop a healthy image.
   }
 
   try {
@@ -803,7 +803,7 @@ export async function streamChatCompletion(
 
         // When tool_calls deltas are present, forward a token event so
         // the agent loop can react to a tool call beginning to assemble
-        // — same shape llama.rn emits.
+        // - same shape llama.rn emits.
         let toolCallsDelta: ToolCall[] | undefined;
         if (Array.isArray(delta.tool_calls) && delta.tool_calls.length > 0) {
           toolCallsDelta = applyToolCallDelta(toolCallAcc, delta.tool_calls);
@@ -829,11 +829,11 @@ export async function streamChatCompletion(
 
     xhr.onreadystatechange = () => {
       if (xhr.readyState === XMLHttpRequest.HEADERS_RECEIVED) {
-        // Headers received — clear connection timeout
+        // Headers received - clear connection timeout
         clearTimeout(connectionTimer);
 
         if (xhr.status !== 200) {
-          // Don't reject yet — wait for onload to read the error body
+          // Don't reject yet - wait for onload to read the error body
           clearTimeout(connectionTimer);
         } else {
           resetIdleTimer();
@@ -857,14 +857,14 @@ export async function streamChatCompletion(
           const errorBody = JSON.parse(xhr.responseText);
           const detail =
             errorBody?.error?.message || errorBody?.error || xhr.responseText;
-          errorMessage = `Server error: ${xhr.status} — ${detail}`;
+          errorMessage = `Server error: ${xhr.status} - ${detail}`;
           console.log(
             '[OpenAI] Error:',
             errorBody?.error?.message || errorBody?.error,
           );
         } catch {
           if (xhr.responseText) {
-            errorMessage = `Server error: ${xhr.status} — ${xhr.responseText.substring(0, 200)}`;
+            errorMessage = `Server error: ${xhr.status} - ${xhr.responseText.substring(0, 200)}`;
             console.log(
               '[OpenAI] Error (raw):',
               xhr.responseText.substring(0, 200),
@@ -884,7 +884,7 @@ export async function streamChatCompletion(
     xhr.onprogress = () => {
       // After `xhr.abort()` the OS may still deliver bytes already
       // queued in the receive buffer via further onprogress firings.
-      // Drop them — but consume the offset so onload (if it ever
+      // Drop them - but consume the offset so onload (if it ever
       // fires) doesn't double-process them.
       if (signal?.aborted) {
         lastProcessedLength = xhr.responseText.length;
@@ -978,7 +978,7 @@ export async function streamChatCompletion(
         case 'tool_calls':
           // OpenAI emits finish_reason="tool_calls" when the model
           // chose to call tools instead of producing a final answer.
-          // Treat as a normal stop — the agent loop reads .tool_calls
+          // Treat as a normal stop - the agent loop reads .tool_calls
           // off the result and dispatches the next turn.
           result.stopped_eos = true;
           break;
@@ -1015,7 +1015,7 @@ export async function streamChatCompletion(
       cleanup();
 
       if (signal?.aborted) {
-        // Externally aborted — resolve with partial content
+        // Externally aborted - resolve with partial content
         resolve({
           text: fullContent,
           content: fullContent,
@@ -1028,7 +1028,7 @@ export async function streamChatCompletion(
       // by the timeout handler that triggered xhr.abort()
     };
 
-    // Only include params with meaningful values — some providers (e.g. OpenAI
+    // Only include params with meaningful values - some providers (e.g. OpenAI
     // with newer models) reject unsupported or empty params with 400 errors.
     const requestBody: Record<string, any> = {
       model: params.model,
@@ -1047,7 +1047,7 @@ export async function streamChatCompletion(
     if (params.stop && params.stop.length > 0) {
       requestBody.stop = params.stop;
     }
-    // Only attach when the caller actually supplied them — empty arrays
+    // Only attach when the caller actually supplied them - empty arrays
     // cause some servers (and their schema validators) to choke.
     if (params.tools && params.tools.length > 0) {
       requestBody.tools = params.tools;

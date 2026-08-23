@@ -12,7 +12,7 @@ export const createStyles = (theme: Theme, align: 'left' | 'center') => {
     theme.typography.headlineH1.fontFamily === FONT_FAMILIES.FRAUNCES_MEDIUM;
   return StyleSheet.create({
     // Stack one Text per line inside a centered column so each line
-    // centers independently — RN's wrapped-Text centering anchors
+    // centers independently - RN's wrapped-Text centering anchors
     // shorter lines to the longest line's width, not the parent.
     root: {
       alignItems: align === 'center' ? 'center' : 'flex-start',

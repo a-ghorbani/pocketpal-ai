@@ -11,7 +11,7 @@ export type OnboardingBackButtonProps = {
 };
 
 /**
- * Top-left header Back chevron — used on screen 5 (no bottom bar).
+ * Top-left header Back chevron - used on screen 5 (no bottom bar).
  * Other screens render Back inside `OnboardingBottomBar`. Both
  * render under the same `onboarding-back` testID.
  */
@@ -28,7 +28,7 @@ export const OnboardingBackButton: React.FC<OnboardingBackButtonProps> = ({
       accessibilityLabel={accessibilityLabel}
       onPress={onPress}
       style={styles.root}>
-      {/* Figma chevron-left lg — native 6.5×11.5. */}
+      {/* Figma chevron-left lg - native 6.5×11.5. */}
       <ChevronLeftLgIcon width={6.5} height={11.5} />
     </Pressable>
   );

@@ -129,7 +129,7 @@ describe('Talent Tool-Use Pipeline', () => {
 
     // After submit we're on PalsScreen. Opening the drawer from PalsScreen
     // is unreliable (gesture conflicts with BottomActionBar/sheet dismiss).
-    // Restart the app — it always opens on Chat, the Pal persists in DB.
+    // Restart the app - it always opens on Chat, the Pal persists in DB.
     await browser.pause(1000);
     await driver.terminateApp(getAppBundleId());
     await browser.pause(1000);
@@ -137,7 +137,7 @@ describe('Talent Tool-Use Pipeline', () => {
     await chatPage.waitForReady(TIMEOUTS.appReady);
 
     // Re-load the model (app restart clears the loaded context).
-    // Model is already downloaded — navigate to Models, find card, tap Load.
+    // Model is already downloaded - navigate to Models, find card, tap Load.
     await chatPage.openDrawer();
     await drawerPage.waitForOpen();
     await drawerPage.navigateToModels();
@@ -172,7 +172,7 @@ describe('Talent Tool-Use Pipeline', () => {
     // current context pops the pal-load-hint snackbar over the input; its "More
     // room" action sits under the send button and can intercept the send tap
     // (opening the increase-context sheet) so the message never posts. Clear
-    // overlays, send, and confirm the user message actually posted — retry the
+    // overlays, send, and confirm the user message actually posted - retry the
     // send once if it was intercepted (#764).
     await chatPage.typeInInput(HTML_PROMPT);
     for (let attempt = 0; attempt < 2; attempt++) {
@@ -212,11 +212,11 @@ describe('Talent Tool-Use Pipeline', () => {
       await htmlPreview.waitForExist({timeout: 10000});
       previewVisible = true;
     } catch {
-      // Model may not have produced a tool call — non-determinism
+      // Model may not have produced a tool call - non-determinism
     }
 
     if (previewVisible) {
-      console.log('HTML preview bubble detected — talent pipeline working');
+      console.log('HTML preview bubble detected - talent pipeline working');
     } else {
       console.warn(
         'HTML preview bubble NOT detected. Model may not have produced a tool call. ' +

@@ -2,10 +2,10 @@
  * Tests for the Theme builder.
  *
  * Visual diff is the human-eye acceptance gate. Jest cannot prove
- * pixel-equality, but it CAN prove that the legacy Paper-compat surface —
+ * pixel-equality, but it CAN prove that the legacy Paper-compat surface -
  * the things ~18 MD3-typescale consumers + 4 `theme.spacing.default`
  * consumers + every legacy `theme.borders.*` / `theme.insets.*` reader
- * depend on — is preserved verbatim from origin/main.
+ * depend on - is preserved verbatim from origin/main.
  *
  * If any one of these unit-level guarantees breaks, a visual regression
  * is guaranteed and the foundation-slice claim is false.
@@ -31,7 +31,7 @@
 import {buildTheme, darkTheme, fontStyles, lightTheme} from '../theme';
 import {radius, spacing, stroke, typography} from '../../theme/tokens';
 
-describe('Theme builder — legacy surface preservation', () => {
+describe('Theme builder - legacy surface preservation', () => {
   describe('spacing', () => {
     it('lightTheme.spacing.default === 16 (= tokens.spacing.m)', () => {
       expect(lightTheme.spacing.default).toBe(16);
@@ -164,9 +164,9 @@ describe('Theme builder — legacy surface preservation', () => {
   });
 });
 
-describe('Theme builder — new token surface', () => {
+describe('Theme builder - new token surface', () => {
   it('exposes theme.typography (resolved per locale)', () => {
-    // en-locale snapshot — Latin → Fraunces upright family.
+    // en-locale snapshot - Latin → Fraunces upright family.
     expect(lightTheme.typography.headlineH1).toEqual(typography.headlineH1);
     expect(lightTheme.typography.bodyM).toEqual(typography.bodyM);
     expect(lightTheme.typography.codeM).toEqual(typography.codeM);
@@ -183,9 +183,9 @@ describe('Theme builder — new token surface', () => {
   });
 });
 
-describe('Theme builder — locale-aware typography', () => {
+describe('Theme builder - locale-aware typography', () => {
   // buildTheme is a pure function. Direct invocation does not depend on
-  // MobX / store mocks — this is the unit-level contract.
+  // MobX / store mocks - this is the unit-level contract.
   it('en locale leaves headlineH1 in Fraunces-Medium', () => {
     const theme = buildTheme({mode: 'light', language: 'en'});
     expect(theme.typography.headlineH1.fontFamily).toBe('Fraunces-Medium');
@@ -202,7 +202,7 @@ describe('Theme builder — locale-aware typography', () => {
   });
 });
 
-describe('Theme builder — Paper-internal fields preserved', () => {
+describe('Theme builder - Paper-internal fields preserved', () => {
   it('lightTheme has Paper-required `isV3` true', () => {
     expect(lightTheme.isV3).toBe(true);
   });
@@ -221,7 +221,7 @@ describe('Theme builder — Paper-internal fields preserved', () => {
   });
 });
 
-describe('Theme module — x1 is gone', () => {
+describe('Theme module - x1 is gone', () => {
   it('theme module exports do not include x1Theme or AppTheme', () => {
     // Hard fence: any reintroduction surfaces in the public API.
     // The grep-based unit in invariants.test.ts is the broader gate; this

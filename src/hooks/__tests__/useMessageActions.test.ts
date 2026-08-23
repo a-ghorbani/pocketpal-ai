@@ -227,7 +227,7 @@ describe('useMessageActions', () => {
     });
   });
 
-  // ---------- Story Test Requirements (Interaction) #1–#6 on AssistantTurn ----------
+  // ---------- Story Test Requirements (Interaction) #1-#6 on AssistantTurn ----------
 
   describe('AssistantTurn interactions', () => {
     const assistantId = 'assistant';

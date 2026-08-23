@@ -30,7 +30,7 @@ Modells need to be downloaded before use. You can download and use these models 
 ### Downloading a Model
 
 - Tap the burger menu
-- Navigate to the “Models” page
+- Navigate to the "Models" page
 - Choose your desired model and hit download
 
 
@@ -41,11 +41,11 @@ Modells need to be downloaded before use. You can download and use these models 
 </div>
 
 ### Loading a Model
-After downloading, tap *Load* to bring the model into memory. Now you’re ready to chat!
+After downloading, tap *Load* to bring the model into memory. Now you're ready to chat!
 
 ### Tips
 
-On iOS devices, Apple’s GPU API (Metal) is activated by default. If you experience any hiccups, try deactivating it.
+On iOS devices, Apple's GPU API (Metal) is activated by default. If you experience any hiccups, try deactivating it.
 
 #### iOS Metal
 
@@ -53,9 +53,9 @@ On iOS devices, Apple’s GPU API (Metal) is activated by default. If you experi
 
 To keep the device running smoothly, PocketPal AI can automatically manage memory usage:
 
-- Enable “Auto Offload/Load” on the model page (by default it is)
+- Enable "Auto Offload/Load" on the model page (by default it is)
 - The app will offload the model when in the background
-- It’ll reload when you return (give it a few seconds for larger models)
+- It'll reload when you return (give it a few seconds for larger models)
 
 #### Advanced Settings
 
@@ -72,9 +72,9 @@ Click the chevron icon to access advanced LLM settings like:
     <img src="../assets/model_load.webp" alt="Load a Model" style="width: 33%;">
 </div>
 
-### Finally, Let’s Chat!
+### Finally, Let's Chat!
 
-Once your model is loaded, head to the “Chat” page and start conversing with the loaded model!
+Once your model is loaded, head to the "Chat" page and start conversing with the loaded model!
 
 The generation performance metric is also displayed. If interested, watch the chat bubble for real-time performance metrics: Tokens per second and Milliseconds per token.
 
@@ -85,7 +85,7 @@ The generation performance metric is also displayed. If interested, watch the ch
 
 ### Copying Text
 
-Important Note: As of now, I haven’t found an easy way to select and copy text from the generated responses while preserving the text formatting, particularly Markdown support.
+Important Note: As of now, I haven't found an easy way to select and copy text from the generated responses while preserving the text formatting, particularly Markdown support.
 
 In the meantime, here are the current options for copying text:
 - Paragraph-level copying: Long-press on a specific paragraph to copy its content.
@@ -93,7 +93,7 @@ In the meantime, here are the current options for copying text:
 
 I know these options might not be ideal, and this is one of my frustrations with using other apps. The difficulty of copying portions of text used to be a particularly annoying aspect of chat apps like ChatGPT and others.
 
-**Developers**: PocketPal AI is built using React Native. Finding an easy solution that balances text selection with preserved formatting (especially Markdown support) has been tricky for me. If you have experience in this area, I’d love to hear from you!
+**Developers**: PocketPal AI is built using React Native. Finding an easy solution that balances text selection with preserved formatting (especially Markdown support) has been tricky for me. If you have experience in this area, I'd love to hear from you!
 
 ## Feedback Welcome!
 

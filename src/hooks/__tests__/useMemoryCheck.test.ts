@@ -251,7 +251,7 @@ describe('useMemoryCheck', () => {
   it('sums a paired draft size into the memory-fit chain', async () => {
     // ceiling/total = 3GB; localModel.size = 2GB → 2.4GB requirement fits alone.
     // A 1GB draft pushes the requirement to (2GB + 1GB) × 1.2 = 3.6GB, which no
-    // longer fits — proving the draft size flows through useMemoryCheck →
+    // longer fits - proving the draft size flows through useMemoryCheck →
     // getMemoryFitDetails → getModelMemoryRequirement (the badge/fitStatus chain),
     // not just the hasEnoughMemory chain.
     runInAction(() => {

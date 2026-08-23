@@ -6,7 +6,7 @@
  * It does not extend DeepLinkService.parseURL.
  *
  * Only `repo_id` is load-bearing: it gates acceptance and drives resolution.
- * `filename` is optional and never gates acceptance — the landing sheet lists
+ * `filename` is optional and never gates acceptance - the landing sheet lists
  * the full repo and the user picks a file; the parsed value is kept only for
  * future attribution use.
  */
@@ -51,7 +51,7 @@ export const isHubLink = (url: string): boolean => {
  * Parses and validates a `pocketpal://hub/run?repo_id=…&filename=…&source=…`
  * URL. Returns a HubRunRequest on success, or null on any failure (unknown
  * host/path, missing or malformed `repo_id`). A missing or non-`.gguf`
- * `filename` is a normal success — it is trimmed and stored if present, else
+ * `filename` is a normal success - it is trimmed and stored if present, else
  * left undefined. Never throws, never mutates state.
  */
 export const parseHubRunURL = (url: string): HubRunRequest | null => {

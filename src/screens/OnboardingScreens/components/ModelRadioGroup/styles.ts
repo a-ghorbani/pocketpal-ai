@@ -2,7 +2,7 @@ import {StyleSheet} from 'react-native';
 
 import type {Theme} from '../../../../utils/types';
 
-// Figma palette for the recommended (Balanced) card — sourced from
+// Figma palette for the recommended (Balanced) card - sourced from
 // the canonical file's `Color/Yellow/*` band.
 const RECOMMENDED_BG = '#F5DBBC'; // Color/yellow/subtle
 const RECOMMENDED_BORDER = '#A86C34'; // Color/yellow/highest-contrast
@@ -25,7 +25,7 @@ export const createStyles = (
       borderColor: recommended ? RECOMMENDED_BORDER : 'transparent',
       backgroundColor: recommended ? RECOMMENDED_BG : theme.colors.background,
       marginBottom: theme.spacing.s,
-      // Card drop shadow — Figma "Subtle Shadow" 0/2/4 8% black.
+      // Card drop shadow - Figma "Subtle Shadow" 0/2/4 8% black.
       shadowColor: theme.colors.shadow,
       shadowOffset: {width: 0, height: 2},
       shadowOpacity: 0.08,

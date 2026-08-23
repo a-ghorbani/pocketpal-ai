@@ -20,7 +20,7 @@ export type OnboardingBottomBarProps = {
   backAccessibilityLabel: string;
   /**
    * If true, render an opaque rounded-top elevated card matching
-   * Figma `887:30028` (used by screen 6). Default false — the bar
+   * Figma `887:30028` (used by screen 6). Default false - the bar
    * sits flush against the canvas.
    */
   elevated?: boolean;
@@ -61,7 +61,7 @@ export const OnboardingBottomBar: React.FC<OnboardingBottomBarProps> = ({
             accessibilityLabel={backAccessibilityLabel}
             onPress={onBack}
             style={styles.backBtn}>
-            {/* Figma `746:26300` chevron-left lg variant — native
+            {/* Figma `746:26300` chevron-left lg variant - native
                 viewBox 6.5×11.5. Fill baked into the SVG export
                 (#181715, matches `onBackground` in light). */}
             <ChevronLeftLgIcon width={6.5} height={11.5} />

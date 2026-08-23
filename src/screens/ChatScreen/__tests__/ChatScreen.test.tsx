@@ -491,7 +491,7 @@ describe('ChatScreen reasoning override reaches the pill (live, no remount)', ()
   // they cannot catch a broken live-override/observation path.
   let savedModels: any[];
   let savedSessionId: string | null | undefined;
-  // Persisted reasoning settings for the active session — the pill init effect
+  // Persisted reasoning settings for the active session - the pill init effect
   // reads enable_thinking back from here, mirroring real session persistence.
   let persisted: {enable_thinking: boolean; reasoning?: {effort?: string}};
 

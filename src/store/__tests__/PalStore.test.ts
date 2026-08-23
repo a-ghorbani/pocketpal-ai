@@ -880,7 +880,7 @@ describe('PalStore', () => {
 
       it('legacy / both absent: pact and greeting are undefined', async () => {
         const palsHubPal = buildPalsHubPal({});
-        // mockPalsHubPal has no pact / greeting — older Palshub server shape.
+        // mockPalsHubPal has no pact / greeting - older Palshub server shape.
 
         await palStore.downloadPalsHubPal(palsHubPal);
 

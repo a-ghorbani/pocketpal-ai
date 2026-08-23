@@ -44,7 +44,7 @@ export interface ModelTestConfig {
   isVision?: boolean;
   /**
    * Turn the card's Vision toggle off after download, before Load. For a
-   * vision repo this skips the mmproj at init — on low-RAM virtual devices
+   * vision repo this skips the mmproj at init - on low-RAM virtual devices
    * the projector plus the main context can crowd out the rest of the load
    * (e.g. the MTP draft context), failing a test about something else.
    */

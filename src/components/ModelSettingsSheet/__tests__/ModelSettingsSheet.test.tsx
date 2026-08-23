@@ -405,7 +405,7 @@ describe('ModelSettingsSheet', () => {
         fireEvent.press(getByText('Save Changes'));
       });
       // An unrelated save must not stamp a source:'user' override onto a
-      // fail-open 'unknown' model — that would kill detection + learn-from-stream.
+      // fail-open 'unknown' model - that would kill detection + learn-from-stream.
       expect(modelStore.setReasoningOverride).not.toHaveBeenCalled();
     });
   });

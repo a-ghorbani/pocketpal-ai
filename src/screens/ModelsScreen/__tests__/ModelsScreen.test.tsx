@@ -388,7 +388,7 @@ describe('ModelsScreen', () => {
       fireEvent.press(getByTestId('local-fab', {includeHiddenElements: true}));
     });
 
-    // pick should NOT have been called again — the early return guard blocks it
+    // pick should NOT have been called again - the early return guard blocks it
     expect(pick).not.toHaveBeenCalled();
   });
 

@@ -168,7 +168,7 @@ describe('TalentSurface', () => {
     const step: AgentStep = {
       toolCalls: [{id: 'c0', function: {name: 'render_html', arguments: '{}'}}],
       toolOutcomes: [
-        // Wrong type for this UI — renderResult returns null.
+        // Wrong type for this UI - renderResult returns null.
         {
           callId: 'c0',
           toolName: 'render_html',
@@ -190,7 +190,7 @@ describe('TalentSurface', () => {
   it('multi-tool partial completion: talent block + error block render together in array order', () => {
     // step₀ has [A, B]; A succeeds (talent UI registered), B fails
     // (error result). Blocks emit in step.toolCalls array order. Both
-    // must appear simultaneously after step_finished — ChatView's
+    // must appear simultaneously after step_finished - ChatView's
     // pending indicator stops covering them once outcomes land.
     talentUIRegistry.register({
       name: 'render_html',
@@ -239,7 +239,7 @@ describe('TalentSurface', () => {
       // (e.g. talent removed from the build, or registry init lost a
       // race with the chat reload). The persisted step still has a
       // valid html outcome; the UI must gracefully fall back to the
-      // subtle "used X" chip — no crash, no missing row.
+      // subtle "used X" chip - no crash, no missing row.
       // Note: registry was reset() in the outer beforeEach.
       const step: AgentStep = {
         toolCalls: [
@@ -249,7 +249,7 @@ describe('TalentSurface', () => {
           {
             callId: 'c0',
             toolName: 'render_html',
-            // Real (non-error) result — the rich UI would normally
+            // Real (non-error) result - the rich UI would normally
             // render this, but the UI is gone after reload.
             result: {
               type: 'html',
@@ -267,7 +267,7 @@ describe('TalentSurface', () => {
       // even though the rich UI is gone.
       expect(getByTestId('tool-used-chip')).toBeTruthy();
       expect(getByText('used render_html')).toBeTruthy();
-      // No error block — outcome is non-error.
+      // No error block - outcome is non-error.
       expect(queryByTestId('tool-error-block')).toBeNull();
     });
 

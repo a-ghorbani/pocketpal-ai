@@ -429,7 +429,7 @@ describe('PalsHubApiService', () => {
 
       const result = service.transformApiPal(apiPal);
 
-      // Wire-boundary forwarding is verbatim — snake_case preserved, no
+      // Wire-boundary forwarding is verbatim - snake_case preserved, no
       // shape conversion. The snake_case to camelCase rename and the
       // strict-boolean to necessity mapping happen at the next boundary
       // (PalStore.createLocalPalFromPalsHub).

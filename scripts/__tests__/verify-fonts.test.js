@@ -77,7 +77,7 @@ function runWithOverrides(overrides = {}) {
       }
     }
 
-    // Apply overrides — relative paths.
+    // Apply overrides - relative paths.
     for (const [relPath, content] of Object.entries(overrides.files || {})) {
       const dest = path.join(tmp, relPath);
       fs.mkdirSync(path.dirname(dest), {recursive: true});

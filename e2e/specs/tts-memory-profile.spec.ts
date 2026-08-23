@@ -7,7 +7,7 @@
  *   tts_<engine>_idle     engine released
  *
  * Engines run small to large (kitten, supertonic, kokoro) and the runtime is
- * released between them — the native TTS slot holds one engine at a time.
+ * released between them - the native TTS slot holds one engine at a time.
  *
  * Writes a per-engine report to OUTPUT_DIR/tts-memory-profile.json using the
  * same schema/writer shape as memory-profile.spec.ts.
@@ -153,7 +153,7 @@ describe('TTS Memory Profile', () => {
 
   it('should profile TTS engine memory', async function (this: Mocha.Context) {
     // Three model downloads (~770 MB total) plus synthesis far exceed the
-    // shared 10-minute default — give the whole sweep a generous budget.
+    // shared 10-minute default - give the whole sweep a generous budget.
     this.timeout(45 * 60 * 1000);
     await clearSnapshots();
 

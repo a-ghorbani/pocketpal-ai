@@ -11,12 +11,12 @@ import {createStyles} from './styles';
 export type SurfaceProps = Omit<CommonDSProps, 'disabled'> & {
   /**
    * Visual radius token. Default `'none'` keeps Surface as a trivial
-   * `View + background + optional elevation` primitive — consumers
+   * `View + background + optional elevation` primitive - consumers
    * opt in to a radius when they want one.
    */
   radius?: keyof TokenRadius;
   /**
-   * Android-only `elevation` style. iOS shadows are consumer-owned —
+   * Android-only `elevation` style. iOS shadows are consumer-owned -
    * if a surface needs a drop shadow on iOS, pass
    * `shadowColor/Offset/Opacity/Radius` on the `style` prop alongside
    * `elevation` (the pattern other pocketpal screens already use).
@@ -27,7 +27,7 @@ export type SurfaceProps = Omit<CommonDSProps, 'disabled'> & {
 };
 
 /**
- * DS Surface — token-bound background + optional radius + Android
+ * DS Surface - token-bound background + optional radius + Android
  * elevation. Pure visual primitive; consumers wrap their own shadow
  * specs when iOS shadows are wanted.
  *

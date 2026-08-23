@@ -1,6 +1,6 @@
 /**
  * Body-size cap stops a hostile/oversized response from buffering into JS memory
- * and OOMing a device holding a multi-GB model. Calls throw — never silent-empty.
+ * and OOMing a device holding a multi-GB model. Calls throw - never silent-empty.
  */
 
 const DEFAULT_TIMEOUT_MS = 12000;
@@ -73,7 +73,7 @@ export const fetchText = async (
   }
   assertWithinDeclaredSize(res);
   // RN fetch is XHR-backed (no streaming reader), so the full body is
-  // materialized here before this slice — the clamp caps output, not peak memory.
+  // materialized here before this slice - the clamp caps output, not peak memory.
   const text = await res.text();
   return text.length > MAX_BODY_BYTES ? text.slice(0, MAX_BODY_BYTES) : text;
 };

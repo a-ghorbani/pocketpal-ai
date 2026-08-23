@@ -22,7 +22,7 @@ describe('createSearchProvider', () => {
       /key not set/i,
     );
     expect(global.fetch).not.toHaveBeenCalled();
-    // Accessor is read inside search() (lazy) — later key is picked up.
+    // Accessor is read inside search() (lazy) - later key is picked up.
     key = 'now-set';
     await expect(provider.search('q', {maxResults: 3})).rejects.toThrow(
       /failed/i,

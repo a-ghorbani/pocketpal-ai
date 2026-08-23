@@ -241,7 +241,7 @@ describe('resolveBannerVariant', () => {
     });
 
     // A length cap from a small user max_tokens (well below the window) fails
-    // the freshness gate, and hedged excludes length — so no banner.
+    // the freshness gate, and hedged excludes length - so no banner.
     it('shows no false full banner for a max_tokens length cap', () => {
       const result = resolveBannerVariant(
         snap({

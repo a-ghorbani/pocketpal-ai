@@ -5,7 +5,7 @@ import type {ToolDefinition} from '../talents/types';
  * Per-context cache of trigger-text markers extracted from
  * `getFormattedChat(...)` `grammar_triggers`. Used by the runner to
  * detect when the model has begun emitting a tool-call sentinel even
- * before parsed `tool_calls` arrive — surfaces a `marker_seen` event
+ * before parsed `tool_calls` arrive - surfaces a `marker_seen` event
  * so the UI can flip to "preparing tool" copy a frame earlier.
  *
  * Factory pattern (NOT module-level state) so the cache lifetime is

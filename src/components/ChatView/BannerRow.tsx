@@ -32,7 +32,7 @@ const withAlpha = (hex: string, alphaHex: string): string =>
 
 // Heavy-talent name for the full-banner sub-copy: the newest assistant turn's
 // first tool call whose engine declares a recommended context. Declarative
-// only — never moves the banner trigger.
+// only - never moves the banner trigger.
 function deriveHeavyTalentName(
   messages: MessageType.Any[],
 ): string | undefined {

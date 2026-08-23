@@ -246,7 +246,7 @@ describe('deriveEffectiveBackend', () => {
 
   it('prioritises large_buffer_unsupported over matching layer counts', () => {
     // Explicit: when the regression flag fires but counts still say 28/28,
-    // we must trust the flag and report partial — matching the v2.0 resolution
+    // we must trust the flag and report partial - matching the v2.0 resolution
     // comment in deriveEffectiveBackend.
     const signals = deriveLogSignals([
       'I/lm_ggml_opencl: Initializing OpenCL backend',
@@ -280,7 +280,7 @@ describe('deriveEffectiveBackend', () => {
  * lines (literals verified against llama.rn 0.12.0-rc.9):
  *   - registry-allocation marker (sets hexagon_init=true)
  *   - new session: HTP0 (sets hexagon_device_name)
- *   - offloaded N/M layers to GPU (backend-agnostic counter — same line
+ *   - offloaded N/M layers to GPU (backend-agnostic counter - same line
  *     used for OpenCL; partial-vs-full classification reuses the existing
  *     offload regex).
  */
@@ -289,7 +289,7 @@ const HEXAGON_FULL_OFFLOAD_LINES = [
   'ggml-hex: Hexagon Arch version v75',
   'ggml-hex: new session: HTP0 : default',
   // load_tensors entries are the ground truth that the model actually
-  // ended up on Hexagon — without them the registry alloc alone could
+  // ended up on Hexagon - without them the registry alloc alone could
   // fire even on a CPU-routed model (see Snapdragon 8 Elite Gen 5).
   'load_tensors:          CPU model buffer size =   189.42 MiB',
   'load_tensors:  HTP0-REPACK model buffer size =   980.00 MiB',
@@ -393,7 +393,7 @@ describe('deriveEffectiveBackend (Hexagon)', () => {
 // Memory buffers
 // -----------------------------------------------------------------------------
 
-describe('deriveLogSignals — memory_buffers', () => {
+describe('deriveLogSignals - memory_buffers', () => {
   it('parses CPU-only weights from load_tensors lines', () => {
     const signals = deriveLogSignals([
       'load_tensors:          CPU model buffer size =  1169.07 MiB',

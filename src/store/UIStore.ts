@@ -74,7 +74,7 @@ export class UIStore {
   // Per-session, in-memory only. Reset on completion. Not persisted.
   onboardingState: OnboardingState = {...INITIAL_ONBOARDING_STATE};
 
-  // Per-modelId dismissal of the download banner. Per-session — once the
+  // Per-modelId dismissal of the download banner. Per-session - once the
   // download completes, the entry can be cleared so a fresh ready-to-load
   // state isn't pre-dismissed.
   dismissedDownloadIds: string[] = [];
@@ -223,7 +223,7 @@ export class UIStore {
     });
   }
 
-  // Test / E2E only — callers MUST gate with `__DEV__ || __E2E__`.
+  // Test / E2E only - callers MUST gate with `__DEV__ || __E2E__`.
   resetOnboarding() {
     runInAction(() => {
       this.hasCompletedOnboarding = false;

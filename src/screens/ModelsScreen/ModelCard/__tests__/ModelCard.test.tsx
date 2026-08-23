@@ -741,7 +741,7 @@ describe('ModelCard', () => {
       });
 
       // The estimator has no local file to measure, so this row would read
-      // "Estimated memory: 0 B" — a device claim about someone else's hardware.
+      // "Estimated memory: 0 B" - a device claim about someone else's hardware.
       expect(queryByTestId('memory-requirement')).toBeNull();
       // `author` is the server name, already in the header chip.
       expect(queryByText(l10n.en.models.modelCard.labels.author)).toBeNull();
@@ -834,7 +834,7 @@ describe('ModelCard', () => {
       );
       expand(getByTestId);
 
-      // Header glyph and expanded cell, reading the same value — the pair is
+      // Header glyph and expanded cell, reading the same value - the pair is
       // the assertion, since a header that disagreed with the body would
       // otherwise still satisfy a single-match query.
       await waitFor(() => {

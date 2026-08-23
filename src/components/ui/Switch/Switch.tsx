@@ -15,12 +15,12 @@ export type SwitchProps = Omit<CommonDSProps, 'accessibilityRole'> & {
   variant?: SwitchVariant;
   value: boolean;
   onValueChange: (value: boolean) => void;
-  /** Required — Switch has no visible label. */
+  /** Required - Switch has no visible label. */
   accessibilityLabel: string;
 };
 
 /**
- * DS Switch (wraps Paper Switch — Paper handles accessibilityRole
+ * DS Switch (wraps Paper Switch - Paper handles accessibilityRole
  * 'switch', accessibilityValue, and platform thumb-track behaviour).
  *
  * Defaults: variant='default', testID='ui-switch'. Size is owned by

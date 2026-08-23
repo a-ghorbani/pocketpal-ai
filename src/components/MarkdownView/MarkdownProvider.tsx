@@ -17,21 +17,21 @@ import {tableHTMLElementModels, tableRenderers} from './TableRenderers';
  *
  * - `TRenderEngineProvider` owns the parser + style engine
  *   (tagsStyles, customHTMLElementModels, systemFonts). Rebuilds only
- *   when theme changes — NOT on every token during streaming.
+ *   when theme changes - NOT on every token during streaming.
  * - `RenderHTMLConfigProvider` owns the per-tag renderer overrides and
  *   default text props. Stable across the app lifetime.
  *
  * Components that render markdown should sit under this provider and
  * use `<RenderHTMLSource>` (lightweight, per-instance) instead of the
- * combined `<RenderHTML>` — which would mount its own engine + config
+ * combined `<RenderHTML>` - which would mount its own engine + config
  * on every render and trigger the library's "costly tree rerenders"
  * warning during streaming.
  *
- * See https://stackoverflow.com/a/68966121 — the maintainer's canonical
+ * See https://stackoverflow.com/a/68966121 - the maintainer's canonical
  * guidance on splitting providers from sources.
  */
 
-// Module-level constants — never change → never invalidate the engine.
+// Module-level constants - never change → never invalidate the engine.
 const SYSTEM_FONTS = defaultSystemFonts;
 const DEFAULT_TEXT_PROPS = {
   selectable: false,
@@ -41,7 +41,7 @@ const DEFAULT_TEXT_PROPS = {
 // Renderer map at module scope so its identity is stable across every
 // render of MarkdownProvider (the library's useProfiler warns when this
 // reference changes between renders). Component functions inside the
-// map can still call hooks — they're rendered as part of the React tree,
+// map can still call hooks - they're rendered as part of the React tree,
 // not stored as data.
 const renderers = {
   code: (props: any) => <CodeRenderer {...props} />,

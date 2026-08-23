@@ -1,6 +1,6 @@
 // Jest Snapshot v1, https://goo.gl/fbAQLP
 
-exports[`IconButton — snapshot matrix baseline (variant x size x {default,disabled} x modes) filled-l-default-dark 1`] = `
+exports[`IconButton - snapshot matrix baseline (variant x size x {default,disabled} x modes) filled-l-default-dark 1`] = `
 <View
   collapsable={false}
   pointerEvents="box-none"
@@ -63,7 +63,7 @@ exports[`IconButton — snapshot matrix baseline (variant x size x {default,disa
 </View>
 `;
 
-exports[`IconButton — snapshot matrix baseline (variant x size x {default,disabled} x modes) filled-l-default-light 1`] = `
+exports[`IconButton - snapshot matrix baseline (variant x size x {default,disabled} x modes) filled-l-default-light 1`] = `
 <View
   collapsable={false}
   pointerEvents="box-none"
@@ -126,7 +126,7 @@ exports[`IconButton — snapshot matrix baseline (variant x size x {default,disa
 </View>
 `;
 
-exports[`IconButton — snapshot matrix baseline (variant x size x {default,disabled} x modes) filled-l-disabled-dark 1`] = `
+exports[`IconButton - snapshot matrix baseline (variant x size x {default,disabled} x modes) filled-l-disabled-dark 1`] = `
 <View
   collapsable={false}
   pointerEvents="box-none"
@@ -189,7 +189,7 @@ exports[`IconButton — snapshot matrix baseline (variant x size x {default,disa
 </View>
 `;
 
-exports[`IconButton — snapshot matrix baseline (variant x size x {default,disabled} x modes) filled-l-disabled-light 1`] = `
+exports[`IconButton - snapshot matrix baseline (variant x size x {default,disabled} x modes) filled-l-disabled-light 1`] = `
 <View
   collapsable={false}
   pointerEvents="box-none"
@@ -252,7 +252,7 @@ exports[`IconButton — snapshot matrix baseline (variant x size x {default,disa
 </View>
 `;
 
-exports[`IconButton — snapshot matrix baseline (variant x size x {default,disabled} x modes) filled-m-default-dark 1`] = `
+exports[`IconButton - snapshot matrix baseline (variant x size x {default,disabled} x modes) filled-m-default-dark 1`] = `
 <View
   collapsable={false}
   pointerEvents="box-none"
@@ -315,7 +315,7 @@ exports[`IconButton — snapshot matrix baseline (variant x size x {default,disa
 </View>
 `;
 
-exports[`IconButton — snapshot matrix baseline (variant x size x {default,disabled} x modes) filled-m-default-light 1`] = `
+exports[`IconButton - snapshot matrix baseline (variant x size x {default,disabled} x modes) filled-m-default-light 1`] = `
 <View
   collapsable={false}
   pointerEvents="box-none"
@@ -378,7 +378,7 @@ exports[`IconButton — snapshot matrix baseline (variant x size x {default,disa
 </View>
 `;
 
-exports[`IconButton — snapshot matrix baseline (variant x size x {default,disabled} x modes) filled-m-disabled-dark 1`] = `
+exports[`IconButton - snapshot matrix baseline (variant x size x {default,disabled} x modes) filled-m-disabled-dark 1`] = `
 <View
   collapsable={false}
   pointerEvents="box-none"
@@ -441,7 +441,7 @@ exports[`IconButton — snapshot matrix baseline (variant x size x {default,disa
 </View>
 `;
 
-exports[`IconButton — snapshot matrix baseline (variant x size x {default,disabled} x modes) filled-m-disabled-light 1`] = `
+exports[`IconButton - snapshot matrix baseline (variant x size x {default,disabled} x modes) filled-m-disabled-light 1`] = `
 <View
   collapsable={false}
   pointerEvents="box-none"
@@ -504,7 +504,7 @@ exports[`IconButton — snapshot matrix baseline (variant x size x {default,disa
 </View>
 `;
 
-exports[`IconButton — snapshot matrix baseline (variant x size x {default,disabled} x modes) filled-s-default-dark 1`] = `
+exports[`IconButton - snapshot matrix baseline (variant x size x {default,disabled} x modes) filled-s-default-dark 1`] = `
 <View
   collapsable={false}
   pointerEvents="box-none"
@@ -567,7 +567,7 @@ exports[`IconButton — snapshot matrix baseline (variant x size x {default,disa
 </View>
 `;
 
-exports[`IconButton — snapshot matrix baseline (variant x size x {default,disabled} x modes) filled-s-default-light 1`] = `
+exports[`IconButton - snapshot matrix baseline (variant x size x {default,disabled} x modes) filled-s-default-light 1`] = `
 <View
   collapsable={false}
   pointerEvents="box-none"
@@ -630,7 +630,7 @@ exports[`IconButton — snapshot matrix baseline (variant x size x {default,disa
 </View>
 `;
 
-exports[`IconButton — snapshot matrix baseline (variant x size x {default,disabled} x modes) filled-s-disabled-dark 1`] = `
+exports[`IconButton - snapshot matrix baseline (variant x size x {default,disabled} x modes) filled-s-disabled-dark 1`] = `
 <View
   collapsable={false}
   pointerEvents="box-none"
@@ -693,7 +693,7 @@ exports[`IconButton — snapshot matrix baseline (variant x size x {default,disa
 </View>
 `;
 
-exports[`IconButton — snapshot matrix baseline (variant x size x {default,disabled} x modes) filled-s-disabled-light 1`] = `
+exports[`IconButton - snapshot matrix baseline (variant x size x {default,disabled} x modes) filled-s-disabled-light 1`] = `
 <View
   collapsable={false}
   pointerEvents="box-none"
@@ -756,7 +756,7 @@ exports[`IconButton — snapshot matrix baseline (variant x size x {default,disa
 </View>
 `;
 
-exports[`IconButton — snapshot matrix baseline (variant x size x {default,disabled} x modes) outlined-l-default-dark 1`] = `
+exports[`IconButton - snapshot matrix baseline (variant x size x {default,disabled} x modes) outlined-l-default-dark 1`] = `
 <View
   collapsable={false}
   pointerEvents="box-none"
@@ -821,7 +821,7 @@ exports[`IconButton — snapshot matrix baseline (variant x size x {default,disa
 </View>
 `;
 
-exports[`IconButton — snapshot matrix baseline (variant x size x {default,disabled} x modes) outlined-l-default-light 1`] = `
+exports[`IconButton - snapshot matrix baseline (variant x size x {default,disabled} x modes) outlined-l-default-light 1`] = `
 <View
   collapsable={false}
   pointerEvents="box-none"
@@ -886,7 +886,7 @@ exports[`IconButton — snapshot matrix baseline (variant x size x {default,disa
 </View>
 `;
 
-exports[`IconButton — snapshot matrix baseline (variant x size x {default,disabled} x modes) outlined-l-disabled-dark 1`] = `
+exports[`IconButton - snapshot matrix baseline (variant x size x {default,disabled} x modes) outlined-l-disabled-dark 1`] = `
 <View
   collapsable={false}
   pointerEvents="box-none"
@@ -949,7 +949,7 @@ exports[`IconButton — snapshot matrix baseline (variant x size x {default,disa
 </View>
 `;
 
-exports[`IconButton — snapshot matrix baseline (variant x size x {default,disabled} x modes) outlined-l-disabled-light 1`] = `
+exports[`IconButton - snapshot matrix baseline (variant x size x {default,disabled} x modes) outlined-l-disabled-light 1`] = `
 <View
   collapsable={false}
   pointerEvents="box-none"
@@ -1012,7 +1012,7 @@ exports[`IconButton — snapshot matrix baseline (variant x size x {default,disa
 </View>
 `;
 
-exports[`IconButton — snapshot matrix baseline (variant x size x {default,disabled} x modes) outlined-m-default-dark 1`] = `
+exports[`IconButton - snapshot matrix baseline (variant x size x {default,disabled} x modes) outlined-m-default-dark 1`] = `
 <View
   collapsable={false}
   pointerEvents="box-none"
@@ -1077,7 +1077,7 @@ exports[`IconButton — snapshot matrix baseline (variant x size x {default,disa
 </View>
 `;
 
-exports[`IconButton — snapshot matrix baseline (variant x size x {default,disabled} x modes) outlined-m-default-light 1`] = `
+exports[`IconButton - snapshot matrix baseline (variant x size x {default,disabled} x modes) outlined-m-default-light 1`] = `
 <View
   collapsable={false}
   pointerEvents="box-none"
@@ -1142,7 +1142,7 @@ exports[`IconButton — snapshot matrix baseline (variant x size x {default,disa
 </View>
 `;
 
-exports[`IconButton — snapshot matrix baseline (variant x size x {default,disabled} x modes) outlined-m-disabled-dark 1`] = `
+exports[`IconButton - snapshot matrix baseline (variant x size x {default,disabled} x modes) outlined-m-disabled-dark 1`] = `
 <View
   collapsable={false}
   pointerEvents="box-none"
@@ -1205,7 +1205,7 @@ exports[`IconButton — snapshot matrix baseline (variant x size x {default,disa
 </View>
 `;
 
-exports[`IconButton — snapshot matrix baseline (variant x size x {default,disabled} x modes) outlined-m-disabled-light 1`] = `
+exports[`IconButton - snapshot matrix baseline (variant x size x {default,disabled} x modes) outlined-m-disabled-light 1`] = `
 <View
   collapsable={false}
   pointerEvents="box-none"
@@ -1268,7 +1268,7 @@ exports[`IconButton — snapshot matrix baseline (variant x size x {default,disa
 </View>
 `;
 
-exports[`IconButton — snapshot matrix baseline (variant x size x {default,disabled} x modes) outlined-s-default-dark 1`] = `
+exports[`IconButton - snapshot matrix baseline (variant x size x {default,disabled} x modes) outlined-s-default-dark 1`] = `
 <View
   collapsable={false}
   pointerEvents="box-none"
@@ -1333,7 +1333,7 @@ exports[`IconButton — snapshot matrix baseline (variant x size x {default,disa
 </View>
 `;
 
-exports[`IconButton — snapshot matrix baseline (variant x size x {default,disabled} x modes) outlined-s-default-light 1`] = `
+exports[`IconButton - snapshot matrix baseline (variant x size x {default,disabled} x modes) outlined-s-default-light 1`] = `
 <View
   collapsable={false}
   pointerEvents="box-none"
@@ -1398,7 +1398,7 @@ exports[`IconButton — snapshot matrix baseline (variant x size x {default,disa
 </View>
 `;
 
-exports[`IconButton — snapshot matrix baseline (variant x size x {default,disabled} x modes) outlined-s-disabled-dark 1`] = `
+exports[`IconButton - snapshot matrix baseline (variant x size x {default,disabled} x modes) outlined-s-disabled-dark 1`] = `
 <View
   collapsable={false}
   pointerEvents="box-none"
@@ -1461,7 +1461,7 @@ exports[`IconButton — snapshot matrix baseline (variant x size x {default,disa
 </View>
 `;
 
-exports[`IconButton — snapshot matrix baseline (variant x size x {default,disabled} x modes) outlined-s-disabled-light 1`] = `
+exports[`IconButton - snapshot matrix baseline (variant x size x {default,disabled} x modes) outlined-s-disabled-light 1`] = `
 <View
   collapsable={false}
   pointerEvents="box-none"
@@ -1524,7 +1524,7 @@ exports[`IconButton — snapshot matrix baseline (variant x size x {default,disa
 </View>
 `;
 
-exports[`IconButton — snapshot matrix baseline (variant x size x {default,disabled} x modes) standard-l-default-dark 1`] = `
+exports[`IconButton - snapshot matrix baseline (variant x size x {default,disabled} x modes) standard-l-default-dark 1`] = `
 <View
   collapsable={false}
   pointerEvents="box-none"
@@ -1587,7 +1587,7 @@ exports[`IconButton — snapshot matrix baseline (variant x size x {default,disa
 </View>
 `;
 
-exports[`IconButton — snapshot matrix baseline (variant x size x {default,disabled} x modes) standard-l-default-light 1`] = `
+exports[`IconButton - snapshot matrix baseline (variant x size x {default,disabled} x modes) standard-l-default-light 1`] = `
 <View
   collapsable={false}
   pointerEvents="box-none"
@@ -1650,7 +1650,7 @@ exports[`IconButton — snapshot matrix baseline (variant x size x {default,disa
 </View>
 `;
 
-exports[`IconButton — snapshot matrix baseline (variant x size x {default,disabled} x modes) standard-l-disabled-dark 1`] = `
+exports[`IconButton - snapshot matrix baseline (variant x size x {default,disabled} x modes) standard-l-disabled-dark 1`] = `
 <View
   collapsable={false}
   pointerEvents="box-none"
@@ -1713,7 +1713,7 @@ exports[`IconButton — snapshot matrix baseline (variant x size x {default,disa
 </View>
 `;
 
-exports[`IconButton — snapshot matrix baseline (variant x size x {default,disabled} x modes) standard-l-disabled-light 1`] = `
+exports[`IconButton - snapshot matrix baseline (variant x size x {default,disabled} x modes) standard-l-disabled-light 1`] = `
 <View
   collapsable={false}
   pointerEvents="box-none"
@@ -1776,7 +1776,7 @@ exports[`IconButton — snapshot matrix baseline (variant x size x {default,disa
 </View>
 `;
 
-exports[`IconButton — snapshot matrix baseline (variant x size x {default,disabled} x modes) standard-m-default-dark 1`] = `
+exports[`IconButton - snapshot matrix baseline (variant x size x {default,disabled} x modes) standard-m-default-dark 1`] = `
 <View
   collapsable={false}
   pointerEvents="box-none"
@@ -1839,7 +1839,7 @@ exports[`IconButton — snapshot matrix baseline (variant x size x {default,disa
 </View>
 `;
 
-exports[`IconButton — snapshot matrix baseline (variant x size x {default,disabled} x modes) standard-m-default-light 1`] = `
+exports[`IconButton - snapshot matrix baseline (variant x size x {default,disabled} x modes) standard-m-default-light 1`] = `
 <View
   collapsable={false}
   pointerEvents="box-none"
@@ -1902,7 +1902,7 @@ exports[`IconButton — snapshot matrix baseline (variant x size x {default,disa
 </View>
 `;
 
-exports[`IconButton — snapshot matrix baseline (variant x size x {default,disabled} x modes) standard-m-disabled-dark 1`] = `
+exports[`IconButton - snapshot matrix baseline (variant x size x {default,disabled} x modes) standard-m-disabled-dark 1`] = `
 <View
   collapsable={false}
   pointerEvents="box-none"
@@ -1965,7 +1965,7 @@ exports[`IconButton — snapshot matrix baseline (variant x size x {default,disa
 </View>
 `;
 
-exports[`IconButton — snapshot matrix baseline (variant x size x {default,disabled} x modes) standard-m-disabled-light 1`] = `
+exports[`IconButton - snapshot matrix baseline (variant x size x {default,disabled} x modes) standard-m-disabled-light 1`] = `
 <View
   collapsable={false}
   pointerEvents="box-none"
@@ -2028,7 +2028,7 @@ exports[`IconButton — snapshot matrix baseline (variant x size x {default,disa
 </View>
 `;
 
-exports[`IconButton — snapshot matrix baseline (variant x size x {default,disabled} x modes) standard-s-default-dark 1`] = `
+exports[`IconButton - snapshot matrix baseline (variant x size x {default,disabled} x modes) standard-s-default-dark 1`] = `
 <View
   collapsable={false}
   pointerEvents="box-none"
@@ -2091,7 +2091,7 @@ exports[`IconButton — snapshot matrix baseline (variant x size x {default,disa
 </View>
 `;
 
-exports[`IconButton — snapshot matrix baseline (variant x size x {default,disabled} x modes) standard-s-default-light 1`] = `
+exports[`IconButton - snapshot matrix baseline (variant x size x {default,disabled} x modes) standard-s-default-light 1`] = `
 <View
   collapsable={false}
   pointerEvents="box-none"
@@ -2154,7 +2154,7 @@ exports[`IconButton — snapshot matrix baseline (variant x size x {default,disa
 </View>
 `;
 
-exports[`IconButton — snapshot matrix baseline (variant x size x {default,disabled} x modes) standard-s-disabled-dark 1`] = `
+exports[`IconButton - snapshot matrix baseline (variant x size x {default,disabled} x modes) standard-s-disabled-dark 1`] = `
 <View
   collapsable={false}
   pointerEvents="box-none"
@@ -2217,7 +2217,7 @@ exports[`IconButton — snapshot matrix baseline (variant x size x {default,disa
 </View>
 `;
 
-exports[`IconButton — snapshot matrix baseline (variant x size x {default,disabled} x modes) standard-s-disabled-light 1`] = `
+exports[`IconButton - snapshot matrix baseline (variant x size x {default,disabled} x modes) standard-s-disabled-light 1`] = `
 <View
   collapsable={false}
   pointerEvents="box-none"
@@ -2280,7 +2280,7 @@ exports[`IconButton — snapshot matrix baseline (variant x size x {default,disa
 </View>
 `;
 
-exports[`IconButton — snapshot matrix non-Latin font-fallback canary (canaryVariant x size=default x default x light x lang) standard-s-default-light-fa 1`] = `
+exports[`IconButton - snapshot matrix non-Latin font-fallback canary (canaryVariant x size=default x default x light x lang) standard-s-default-light-fa 1`] = `
 <View
   collapsable={false}
   pointerEvents="box-none"

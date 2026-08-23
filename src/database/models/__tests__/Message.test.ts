@@ -88,7 +88,7 @@ describe('Message.toMessageObject', () => {
     const obj = msg.toMessageObject() as MessageType.AssistantTurn;
     // Top-level steps populated.
     expect(obj.steps).toEqual(steps);
-    // metadata.steps stripped from the in-memory metadata bag — the
+    // metadata.steps stripped from the in-memory metadata bag - the
     // persistence layer is the sole writer of metadata.steps on disk.
     expect((obj.metadata as any)?.steps).toBeUndefined();
     // Other metadata fields preserved.

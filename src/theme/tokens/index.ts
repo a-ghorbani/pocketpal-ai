@@ -2,7 +2,7 @@
  * Design tokens entry point (Phase 1).
  *
  * Pure data + types. No React, no Paper, no MobX imports here. The only
- * runtime dependency is `colorUtils` (pure utility — not React/Paper/MobX).
+ * runtime dependency is `colorUtils` (pure utility - not React/Paper/MobX).
  *
  * Mode is selected by binding (light vs dark), not by mutation. Locale
  * fallback (Fraunces → Inter for non-Latin scripts) lives in the theme
@@ -34,7 +34,7 @@ export const darkTokens: Tokens = {
 
 /**
  * Returns the resolved Tokens for a given mode. The returned object is a
- * stable per-module reference — do not mutate.
+ * stable per-module reference - do not mutate.
  */
 export function resolveTokens(mode: Mode): Tokens {
   return mode === 'dark' ? darkTokens : lightTokens;

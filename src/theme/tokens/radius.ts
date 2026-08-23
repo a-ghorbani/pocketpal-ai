@@ -1,7 +1,7 @@
 /**
  * Radius tokens. Single scale. Key names mirror canonical Figma
  * `Radius/*` (None/XXS/XS/S/M/ML/L/XL/XXL) so a Figma spec saying
- * `Radius/L` maps directly to `radius.l`. There is no `sm` step —
+ * `Radius/L` maps directly to `radius.l`. There is no `sm` step -
  * Figma jumps S(8) → M(12). The legacy lowercase `radius/radius-xs`
  * (= 4) alias resolves to `xs` here.
  */

@@ -3,7 +3,7 @@
  *
  * Drives the server-side e2e helpers from the test host so the purchase flow
  * can run repeatedly from a clean state. These endpoints are test-mode only,
- * guarded by a shared key, and idempotent — safe to call on every run.
+ * guarded by a shared key, and idempotent - safe to call on every run.
  *
  * Required env (set in e2e/.env or the CI env). Names match the palshub
  * test-harness contract:
@@ -33,7 +33,7 @@ const RESET_OWNERSHIP_PATH = '/api/test/e2e/purchases/reset';
 async function post(path: string, body: Record<string, unknown>): Promise<void> {
   if (!palshubTestConfig.testKey) {
     throw new Error(
-      'E2E_API_KEY is not set — cannot call PalsHub test endpoints',
+      'E2E_API_KEY is not set - cannot call PalsHub test endpoints',
     );
   }
 

@@ -44,12 +44,12 @@ export async function dispatchAutomationDeepLink(
     await runTtsCommand(params.queryParams.cmd);
     return true;
   }
-  // pocketpal://e2e/benchmark — bench host. Match against the raw URL via
+  // pocketpal://e2e/benchmark - bench host. Match against the raw URL via
   // the shared helper so both deep-link sites (this dispatcher and the
   // useDeepLinking cold/warm-launch effect) accept the exact same shape.
   if (isBenchmarkRunnerUrl(params.url)) {
-    // Resolve autostart from the same raw URL string via the shared helper —
-    // NOT from params.queryParams — so the iOS/DeepLinkService origin and the
+    // Resolve autostart from the same raw URL string via the shared helper -
+    // NOT from params.queryParams - so the iOS/DeepLinkService origin and the
     // Android/Linking origin cannot diverge in truthiness.
     navigation?.navigate(ROUTES.BENCHMARK_RUNNER, {
       autostart: parseBenchmarkAutostart(params.url),

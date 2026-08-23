@@ -50,7 +50,7 @@
     "deviceSelectionIOS": "Peranti (Metal)",
     "deviceSelectionIOSDescription": "Pilih mod GPU Metal atau mod CPU sahaja",
     "deviceSelectionAndroidDescription": "Pilih jenis pengkomputeran peranti (CPU, GPU, atau Hexagon NPU)",
-    "cpuOnlyNoAccelerators": "CPU sahaja – Tiada pemecut perkakasan dikesan",
+    "cpuOnlyNoAccelerators": "CPU sahaja - Tiada pemecut perkakasan dikesan",
     "contextSize": "Saiz Konteks",
     "contextSizePlaceholder": "Masukkan saiz konteks (minimum {{minContextSize}})",
     "invalidContextSizeError": "Sila masukkan nombor yang sah (minimum {{minContextSize}})",
@@ -126,7 +126,7 @@
     "weightRepackingDescription": "Pemprosesan prompt yang lebih pantas dengan overhed memori yang minimum apabila pemetaan memori dilumpuhkan. Penjanaan token tidak terjejas.",
     "ttsAvailability": "Teks-ke-pertuturan",
     "ttsAvailabilityDescription": "Bacakan balasan pembantu dengan kuat.",
-    "ttsAvailabilityLowMemoryWarning": "Memori peranti anda rendah — ini mungkin tidak berfungsi dengan baik.",
+    "ttsAvailabilityLowMemoryWarning": "Memori peranti anda rendah - ini mungkin tidak berfungsi dengan baik.",
     "serverName": "Nama Pelayan",
     "serverUrl": "URL Pelayan",
     "serverUrlPlaceholder": "cth., http://192.168.1.100:1234",
@@ -167,7 +167,7 @@
     "serverTypeHelp": "Dikesan secara automatik; tukar jika salah.",
     "internetSearch": {
       "title": "Carian Internet",
-      "description": "Biarkan Pals mencari di web dengan alat mereka sendiri. Bawa kunci API anda sendiri — PocketPal tidak sekali-kali menyimpan kunci atau menghalakan pertanyaan anda.",
+      "description": "Biarkan Pals mencari di web dengan alat mereka sendiri. Bawa kunci API anda sendiri - PocketPal tidak sekali-kali menyimpan kunci atau menghalakan pertanyaan anda.",
       "providerLabel": "Penyedia carian",
       "providerGated": "Akan datang",
       "keyLabel": "Kunci API",
@@ -337,7 +337,7 @@
           "message": "Saiz model hampir atau melebihi jumlah memori peranti. Ini boleh menyebabkan kelakuan tidak menentu."
         },
         "legacy": {
-          "message": "Format kuantuman lama – model mungkin tidak berjalan.",
+          "message": "Format kuantuman lama - model mungkin tidak berjalan.",
           "shortMessage": "Kuantuman lama"
         },
         "multiple": "{{count}} Amaran"
@@ -638,7 +638,7 @@
     },
     "modelErrorReportSheet": {
       "title": "Laporkan Masalah Pemuatan Model",
-      "privacyNote": "Bantu kami memperbaiki PocketPal dengan berkongsi butiran tentang ralat ini. Semak di bawah apa yang akan dikongsi – anda boleh membatalkan mana-mana item yang tidak mahu disertakan.",
+      "privacyNote": "Bantu kami memperbaiki PocketPal dengan berkongsi butiran tentang ralat ini. Semak di bawah apa yang akan dikongsi - anda boleh membatalkan mana-mana item yang tidak mahu disertakan.",
       "errorMessage": "Mesej ralat",
       "modelInfo": "Maklumat Model",
       "modelName": "Nama",
@@ -1023,7 +1023,7 @@
       "tokensPerSec": "{{value}} token/saat",
       "ttft": "{{value}}ms TTFT",
       "interrupted": "Terganggu",
-      "truncated": "Terpotong — kemungkinan konteks penuh",
+      "truncated": "Terpotong - kemungkinan konteks penuh",
       "draftAccepted": "draf: {{accepted}}/{{total}} ({{pct}}%)"
     },
     "pendingIndicator": {
@@ -1118,7 +1118,7 @@
       "notAvailable": "T/A",
       "buyOnPalshub": "Beli di Palshub",
       "finalizingPurchase": "Memuktamadkan pembelian anda…",
-      "processingPurchase": "Memproses — akan dibuka sebentar lagi.",
+      "processingPurchase": "Memproses - akan dibuka sebentar lagi.",
       "checkoutSessionExpired": "Sesi anda telah tamat tempoh. Log masuk semula untuk meneruskan.",
       "signInAgain": "Log masuk semula",
       "palNotAvailable": "Pal ini tidak tersedia untuk dibeli buat masa ini.",
@@ -1196,27 +1196,27 @@
     "pleaseLoadModel": "Muat model untuk bersembang.",
     "multimodalNotEnabled": "Multimodal tidak didayakan untuk model ini. Imej akan dipaparkan tetapi tidak diproses oleh AI.",
     "cannotSendWithoutModel": "Muat model terlebih dahulu",
-    "toolCallTruncated": "Panggilan alat terpotong — model berkemungkinan kehabisan ruang. Cuba konteks lebih besar atau permintaan lebih kecil.",
+    "toolCallTruncated": "Panggilan alat terpotong - model berkemungkinan kehabisan ruang. Cuba konteks lebih besar atau permintaan lebih kecil.",
     "toolCompatWarning": "Model ini mungkin tidak menyokong panggilan alat. Hasil mungkin tidak boleh dipercayai.",
     "softCapWarning": "Mulakan sembang baharu untuk prestasi terbaik.",
     "contextWarning": "Perbualan ini semakin panjang dan mungkin akan kehabisan ruang tidak lama lagi.",
     "contextRemoteHedged": "Balasan ini mungkin terpotong. Cuba hantar semula atau pendekkan permintaan anda.",
     "contextFull": "Perbualan ini sudah kehabisan ruang. Mulakan sembang baharu atau tingkatkan saiz konteks.",
     "contextFullEscalated": "Masih kehabisan ruang. Mulakan sembang baharu, atau tingkatkan saiz konteks untuk meneruskan.",
-    "contextFullHeavyTalent": "Perbualan ini sudah kehabisan ruang — {{talent}} cenderung memerlukan lebih banyak. Mulakan sembang baharu atau tingkatkan saiz konteks.",
+    "contextFullHeavyTalent": "Perbualan ini sudah kehabisan ruang - {{talent}} cenderung memerlukan lebih banyak. Mulakan sembang baharu atau tingkatkan saiz konteks.",
     "contextBannerDismiss": "Tutup",
     "contextNewChat": "Sembang baharu",
     "contextIncrease": "Tingkatkan konteks",
     "contextMoreRoom": "Lebih ruang",
     "increaseContextTitle": "Beri sembang ini lebih ruang",
-    "increaseContextBody": "Ruang ialah memori kerja model — sebanyak mana sembang ini boleh diingatinya pada satu masa. Lebih ruang bermakna sembang lebih panjang sebelum balasan terpotong.",
+    "increaseContextBody": "Ruang ialah memori kerja model - sebanyak mana sembang ini boleh diingatinya pada satu masa. Lebih ruang bermakna sembang lebih panjang sebelum balasan terpotong.",
     "increaseContextTokensUnit": "token",
     "increaseContextWordsRam": "~{{words}} perkataan · ≈{{ram}} RAM",
     "increaseContextFitsChip": "Muat",
     "increaseContextTightChip": "Terhad",
     "increaseContextWontFitChip": "Tidak muat",
     "increaseContextFitsStatus": "Selesa untuk peranti ini.",
-    "increaseContextFitsUnconstrainedStatus": "RAM mencukupi — hanya dihadkan oleh model.",
+    "increaseContextFitsUnconstrainedStatus": "RAM mencukupi - hanya dihadkan oleh model.",
     "increaseContextTightStatus": "Melepasi ~{{tokens}}, peranti ini mungkin kehabisan memori dan menjadi perlahan. Ia masih boleh mencuba.",
     "increaseContextWontFitStatus": "~{{tokens}} berkemungkinan tidak muat dalam memori peranti ini. Pilih saiz yang lebih kecil.",
     "increaseContextModelMax": "{{tokens}} · maks model",
@@ -1248,7 +1248,7 @@
       "openLinkError": "Tidak dapat membuka pautan ini."
     },
     "contextFullRemote": "Perbualan ini sudah kehabisan ruang. Mulakan sembang baharu.",
-    "speculativeInitFailed": "Peranti ini tidak dapat memulakan penyahkodan spekulatif untuk model ini — kemungkinan besar memori tidak mencukupi untuk konteks draf. Matikan Penyahkodan Spekulatif di bawah Tetapan → Tetapan Lanjutan dan cuba lagi."
+    "speculativeInitFailed": "Peranti ini tidak dapat memulakan penyahkodan spekulatif untuk model ini - kemungkinan besar memori tidak mencukupi untuk konteks draf. Matikan Penyahkodan Spekulatif di bawah Tetapan → Tetapan Lanjutan dan cuba lagi."
   },
   "benchmark": {
     "title": "Tolok Ukur",
@@ -1419,7 +1419,7 @@
     "previewButton": "Pratonton",
     "stopPreviewButton": "Hentikan pratonton",
     "voicesTitle": "Suara",
-    "voicesEmptyHint": "Ketik mana-mana suara untuk memasang dan menggunakannya. Atau pilih suara sistem — yang sentiasa tersedia.",
+    "voicesEmptyHint": "Ketik mana-mana suara untuk memasang dan menggunakannya. Atau pilih suara sistem - yang sentiasa tersedia.",
     "supertonicStepsLabel": "Kualiti (langkah penyebaran)",
     "toggleAutoSpeakLabel": "Togol sebut automatik",
     "openSettingsLabel": "Tetapan TTS",
@@ -1453,7 +1453,7 @@
     "engineRetryCta": "Cuba lagi",
     "voicesEmptyState": "Tiada suara ditemui.",
     "kokoroDeviceNote": "Sesetengah suara mungkin tidak berfungsi pada semua peranti.",
-    "insufficientStorage": "Ruang tidak mencukupi — bebaskan {{requiredMb}} MB untuk memasang enjin ini ({{freeMb}} MB tersedia).",
+    "insufficientStorage": "Ruang tidak mencukupi - bebaskan {{requiredMb}} MB untuk memasang enjin ini ({{freeMb}} MB tersedia).",
     "supertonicLanguageLabel": "Bahasa",
     "supertonicLanguageAuto": "Auto",
     "supertonicLanguageSheetTitle": "Bahasa",
@@ -1569,13 +1569,13 @@
           "body": "Kami menemui pal yang sempurna untuk anda - teman harian yang mesra. Cukup bijak untuk kebanyakan perkara, cukup ringan untuk mana-mana telefon."
         },
         "codie": {
-          "body": "Kenali Codie — rakan pengaturcaraan tempatan anda. Membaca kod, menulis kod, menerangkan bahagian rumit tanpa keluar dari telefon anda."
+          "body": "Kenali Codie - rakan pengaturcaraan tempatan anda. Membaca kod, menulis kod, menerangkan bahagian rumit tanpa keluar dari telefon anda."
         },
         "sage": {
           "body": "Sage sabar, ingin tahu, dan membimbing anda melalui idea langkah demi langkah. Teman belajar yang anda simpan dalam saku."
         },
         "echo": {
-          "body": "Echo ialah teman main peranan serba boleh — kekal dalam watak, menggambarkan adegan, mengikut ke mana sahaja cerita anda menuju."
+          "body": "Echo ialah teman main peranan serba boleh - kekal dalam watak, menggambarkan adegan, mengikut ke mana sahaja cerita anda menuju."
         },
         "muse": {
           "body": "Muse membantu anda menulis. Mencadangkan ungkapan, mencari rentak, dan mengekalkan nada anda."

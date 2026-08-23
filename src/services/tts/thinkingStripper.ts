@@ -83,7 +83,7 @@ export class ThinkingStripper {
 
   flush(): string {
     if (this.inside) {
-      // Unclosed think block — drop remaining.
+      // Unclosed think block - drop remaining.
       this.buffer = '';
       return '';
     }

@@ -70,13 +70,13 @@ describe('ThinkingBubble', () => {
     const {getByText, queryByTestId} = renderThinkingBubble();
 
     // The reasoning label is rendered in PARTIAL/EXPANDED inside
-    // headerContainer and in COLLAPSED inside collapsedRow — different
+    // headerContainer and in COLLAPSED inside collapsedRow - different
     // elements, same text. Re-query after each press so the press
     // event lands on the live element.
     const press = () =>
       fireEvent.press(getByText(l10n.en.components.thinkingBubble.reasoning));
 
-    // Initial: PARTIAL — no collapsed row
+    // Initial: PARTIAL - no collapsed row
     expect(queryByTestId('thinking-bubble-collapsed')).toBeNull();
 
     // Press 1: PARTIAL → EXPANDED (still card, no collapsed row)

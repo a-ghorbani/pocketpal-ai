@@ -223,7 +223,7 @@ function buildNextTurnMessages(
   }));
   // The `messages` field on ApiCompletionParams is typed as
   // llama.rn's RNLlamaOAICompatibleMessage[]. Our ChatMessage shape
-  // is the on-the-wire-equivalent — cast at the boundary.
+  // is the on-the-wire-equivalent - cast at the boundary.
   return [
     ...(prior ?? []),
     assistantMsg as unknown as NonNullable<
@@ -238,7 +238,7 @@ function buildNextTurnMessages(
 /**
  * The agent loop. Returns an `AsyncIterable<AgentEvent>` so the hook
  * can drive the reducer + per-step persistence in lockstep with
- * `for await`. Zero React/MobX/store imports — see test #15.
+ * `for await`. Zero React/MobX/store imports - see test #15.
  */
 export async function* runAgent(
   options: AgentRunOptions,
@@ -258,7 +258,7 @@ export async function* runAgent(
 
   // When the consumer aborts mid-stream (e.g. user taps the stop
   // button while the engine is generating tokens), the runner is the
-  // only layer that has BOTH the abort signal AND the engine handle —
+  // only layer that has BOTH the abort signal AND the engine handle -
   // so it owns the abort→engine.stopCompletion translation. Without
   // this, the signal would only be observed between turns and the
   // in-flight engine.completion call could keep running native
@@ -284,7 +284,7 @@ export async function* runAgent(
   // Mutated from inside the streaming-bridge `.then` handler (the
   // `as CompletionResult | null` cast is a TS hint so that the
   // outer-loop reads after `await completionPromise` see the right
-  // type — without it, narrowing through the closure collapses to
+  // type - without it, narrowing through the closure collapses to
   // `never`).
   let lastResult: CompletionResult | null = null as CompletionResult | null;
   const callIdSeed = Date.now();
@@ -299,7 +299,7 @@ export async function* runAgent(
       yield {type: 'step_started', turn, isFollowUp: turn > 0};
 
       // Per-iteration locals for marker detection. Declared INSIDE the
-      // while body so each turn gets a fresh value automatically — no
+      // while body so each turn gets a fresh value automatically - no
       // function-scope state, no manual reset. A multi-step run with a
       // marker in step 0 and another in step 1 yields exactly two
       // `marker_seen` events because each iteration redeclares these.
@@ -321,12 +321,12 @@ export async function* runAgent(
       // Track engine failure separately so we can fully await the
       // promise (no unhandled rejection) before yielding the
       // run_failed event. The .then/.catch chain returns a fully-
-      // settled promise — never rejects — by capturing the error in
+      // settled promise - never rejects - by capturing the error in
       // `engineError` for surface above.
       let engineError: Error | null = null;
       const completionPromise = engine
         .completion(turnParams, data => {
-          // llama.rn's stopCompletion is non-blocking — native can keep
+          // llama.rn's stopCompletion is non-blocking - native can keep
           // firing this callback for seconds after Stop. Drop the chunk
           // so the consumer pipeline doesn't churn during wind-down.
           if (signal?.aborted) {
@@ -414,7 +414,7 @@ export async function* runAgent(
           : normalizeToolCallIds(rawToolCalls, callIdSeed + turn);
       // Attach per-step generation metrics: tokens counted across the
       // streaming run and ms from first tool-call token to here. The
-      // step total is replicated onto each call — for multi-tool steps
+      // step total is replicated onto each call - for multi-tool steps
       // this slightly overstates per-call cost, but the alternative
       // (omitting metrics on multi-tool) is worse UX and the case is
       // rare. Only attach when we actually saw tool-call tokens.
@@ -440,7 +440,7 @@ export async function* runAgent(
       }
 
       if (!calls || calls.length === 0) {
-        // No tools requested — final answer landed.
+        // No tools requested - final answer landed.
         break;
       }
 
@@ -470,7 +470,7 @@ export async function* runAgent(
       // the model's tool-call markers and the full arguments JSON
       // (e.g. the entire `render_html` html string); putting that into
       // assistantMsg.content makes the chat template render the
-      // tool_call TWICE on replay — once via `content` and once via
+      // tool_call TWICE on replay - once via `content` and once via
       // the structured `tool_calls` field. That doubles the prompt
       // size and breaks KV-cache prefix-match against turn N-1's
       // streamed bytes, so the engine fully prefills again. `content`
@@ -500,7 +500,7 @@ export async function* runAgent(
     }
 
     const result: AgentRunResult = {
-      // The runner does NOT track the steps[] internally — the hook
+      // The runner does NOT track the steps[] internally - the hook
       // builds them from events. We pass an empty array here; the
       // reducer/persistence layer is the source of truth for the
       // final step list. `hitMaxTurns` and `finalResult` are the

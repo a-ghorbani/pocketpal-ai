@@ -529,7 +529,7 @@ function buildApps(
 ): void {
   // E2E builds default to __E2E_SKIP_ONBOARDING__=true (babel.config.js) so the
   // OnboardingStack is bypassed and the other specs reach the chat shell
-  // directly. The onboarding spec is the one exception — it needs the flow to
+  // directly. The onboarding spec is the one exception - it needs the flow to
   // actually mount, so build that variant with E2E_SKIP_ONBOARDING=false. It is
   // a distinct binary; run the onboarding spec in its own build/--skip-build
   // cycle, not bundled with specs that expect onboarding bypassed.

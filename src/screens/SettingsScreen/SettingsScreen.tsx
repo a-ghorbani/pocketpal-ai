@@ -756,7 +756,7 @@ export const SettingsScreen: React.FC = observer(() => {
                     <>
                       <Divider />
 
-                      {/* Draft Model Picker: full-row control — model names
+                      {/* Draft Model Picker: full-row control - model names
                           are too long to share a row with the title. */}
                       <View style={styles.settingItemContainer}>
                         <Text variant="titleMedium" style={styles.textLabel}>

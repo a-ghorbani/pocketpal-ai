@@ -1,6 +1,6 @@
 // Jest Snapshot v1, https://goo.gl/fbAQLP
 
-exports[`CategoryBadge — snapshot matrix baseline (variant x size x {default,disabled} x modes) neutral-m-default-dark 1`] = `
+exports[`CategoryBadge - snapshot matrix baseline (variant x size x {default,disabled} x modes) neutral-m-default-dark 1`] = `
 <View
   collapsable={false}
   pointerEvents="box-none"
@@ -44,7 +44,7 @@ exports[`CategoryBadge — snapshot matrix baseline (variant x size x {default,d
 </View>
 `;
 
-exports[`CategoryBadge — snapshot matrix baseline (variant x size x {default,disabled} x modes) neutral-m-default-light 1`] = `
+exports[`CategoryBadge - snapshot matrix baseline (variant x size x {default,disabled} x modes) neutral-m-default-light 1`] = `
 <View
   collapsable={false}
   pointerEvents="box-none"
@@ -88,7 +88,7 @@ exports[`CategoryBadge — snapshot matrix baseline (variant x size x {default,d
 </View>
 `;
 
-exports[`CategoryBadge — snapshot matrix baseline (variant x size x {default,disabled} x modes) neutral-s-default-dark 1`] = `
+exports[`CategoryBadge - snapshot matrix baseline (variant x size x {default,disabled} x modes) neutral-s-default-dark 1`] = `
 <View
   collapsable={false}
   pointerEvents="box-none"
@@ -132,7 +132,7 @@ exports[`CategoryBadge — snapshot matrix baseline (variant x size x {default,d
 </View>
 `;
 
-exports[`CategoryBadge — snapshot matrix baseline (variant x size x {default,disabled} x modes) neutral-s-default-light 1`] = `
+exports[`CategoryBadge - snapshot matrix baseline (variant x size x {default,disabled} x modes) neutral-s-default-light 1`] = `
 <View
   collapsable={false}
   pointerEvents="box-none"
@@ -176,7 +176,7 @@ exports[`CategoryBadge — snapshot matrix baseline (variant x size x {default,d
 </View>
 `;
 
-exports[`CategoryBadge — snapshot matrix baseline (variant x size x {default,disabled} x modes) primary-m-default-dark 1`] = `
+exports[`CategoryBadge - snapshot matrix baseline (variant x size x {default,disabled} x modes) primary-m-default-dark 1`] = `
 <View
   collapsable={false}
   pointerEvents="box-none"
@@ -220,7 +220,7 @@ exports[`CategoryBadge — snapshot matrix baseline (variant x size x {default,d
 </View>
 `;
 
-exports[`CategoryBadge — snapshot matrix baseline (variant x size x {default,disabled} x modes) primary-m-default-light 1`] = `
+exports[`CategoryBadge - snapshot matrix baseline (variant x size x {default,disabled} x modes) primary-m-default-light 1`] = `
 <View
   collapsable={false}
   pointerEvents="box-none"
@@ -264,7 +264,7 @@ exports[`CategoryBadge — snapshot matrix baseline (variant x size x {default,d
 </View>
 `;
 
-exports[`CategoryBadge — snapshot matrix baseline (variant x size x {default,disabled} x modes) primary-s-default-dark 1`] = `
+exports[`CategoryBadge - snapshot matrix baseline (variant x size x {default,disabled} x modes) primary-s-default-dark 1`] = `
 <View
   collapsable={false}
   pointerEvents="box-none"
@@ -308,7 +308,7 @@ exports[`CategoryBadge — snapshot matrix baseline (variant x size x {default,d
 </View>
 `;
 
-exports[`CategoryBadge — snapshot matrix baseline (variant x size x {default,disabled} x modes) primary-s-default-light 1`] = `
+exports[`CategoryBadge - snapshot matrix baseline (variant x size x {default,disabled} x modes) primary-s-default-light 1`] = `
 <View
   collapsable={false}
   pointerEvents="box-none"
@@ -352,7 +352,7 @@ exports[`CategoryBadge — snapshot matrix baseline (variant x size x {default,d
 </View>
 `;
 
-exports[`CategoryBadge — snapshot matrix baseline (variant x size x {default,disabled} x modes) secondary-m-default-dark 1`] = `
+exports[`CategoryBadge - snapshot matrix baseline (variant x size x {default,disabled} x modes) secondary-m-default-dark 1`] = `
 <View
   collapsable={false}
   pointerEvents="box-none"
@@ -396,7 +396,7 @@ exports[`CategoryBadge — snapshot matrix baseline (variant x size x {default,d
 </View>
 `;
 
-exports[`CategoryBadge — snapshot matrix baseline (variant x size x {default,disabled} x modes) secondary-m-default-light 1`] = `
+exports[`CategoryBadge - snapshot matrix baseline (variant x size x {default,disabled} x modes) secondary-m-default-light 1`] = `
 <View
   collapsable={false}
   pointerEvents="box-none"
@@ -440,7 +440,7 @@ exports[`CategoryBadge — snapshot matrix baseline (variant x size x {default,d
 </View>
 `;
 
-exports[`CategoryBadge — snapshot matrix baseline (variant x size x {default,disabled} x modes) secondary-s-default-dark 1`] = `
+exports[`CategoryBadge - snapshot matrix baseline (variant x size x {default,disabled} x modes) secondary-s-default-dark 1`] = `
 <View
   collapsable={false}
   pointerEvents="box-none"
@@ -484,7 +484,7 @@ exports[`CategoryBadge — snapshot matrix baseline (variant x size x {default,d
 </View>
 `;
 
-exports[`CategoryBadge — snapshot matrix baseline (variant x size x {default,disabled} x modes) secondary-s-default-light 1`] = `
+exports[`CategoryBadge - snapshot matrix baseline (variant x size x {default,disabled} x modes) secondary-s-default-light 1`] = `
 <View
   collapsable={false}
   pointerEvents="box-none"
@@ -528,7 +528,7 @@ exports[`CategoryBadge — snapshot matrix baseline (variant x size x {default,d
 </View>
 `;
 
-exports[`CategoryBadge — snapshot matrix baseline (variant x size x {default,disabled} x modes) tertiary-m-default-dark 1`] = `
+exports[`CategoryBadge - snapshot matrix baseline (variant x size x {default,disabled} x modes) tertiary-m-default-dark 1`] = `
 <View
   collapsable={false}
   pointerEvents="box-none"
@@ -572,7 +572,7 @@ exports[`CategoryBadge — snapshot matrix baseline (variant x size x {default,d
 </View>
 `;
 
-exports[`CategoryBadge — snapshot matrix baseline (variant x size x {default,disabled} x modes) tertiary-m-default-light 1`] = `
+exports[`CategoryBadge - snapshot matrix baseline (variant x size x {default,disabled} x modes) tertiary-m-default-light 1`] = `
 <View
   collapsable={false}
   pointerEvents="box-none"
@@ -616,7 +616,7 @@ exports[`CategoryBadge — snapshot matrix baseline (variant x size x {default,d
 </View>
 `;
 
-exports[`CategoryBadge — snapshot matrix baseline (variant x size x {default,disabled} x modes) tertiary-s-default-dark 1`] = `
+exports[`CategoryBadge - snapshot matrix baseline (variant x size x {default,disabled} x modes) tertiary-s-default-dark 1`] = `
 <View
   collapsable={false}
   pointerEvents="box-none"
@@ -660,7 +660,7 @@ exports[`CategoryBadge — snapshot matrix baseline (variant x size x {default,d
 </View>
 `;
 
-exports[`CategoryBadge — snapshot matrix baseline (variant x size x {default,disabled} x modes) tertiary-s-default-light 1`] = `
+exports[`CategoryBadge - snapshot matrix baseline (variant x size x {default,disabled} x modes) tertiary-s-default-light 1`] = `
 <View
   collapsable={false}
   pointerEvents="box-none"
@@ -704,7 +704,7 @@ exports[`CategoryBadge — snapshot matrix baseline (variant x size x {default,d
 </View>
 `;
 
-exports[`CategoryBadge — snapshot matrix non-Latin font-fallback canary (canaryVariant x size=default x default x light x lang) neutral-s-default-light-fa 1`] = `
+exports[`CategoryBadge - snapshot matrix non-Latin font-fallback canary (canaryVariant x size=default x default x light x lang) neutral-s-default-light-fa 1`] = `
 <View
   collapsable={false}
   pointerEvents="box-none"

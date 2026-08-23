@@ -437,7 +437,7 @@ export class DownloadManager {
       }
     } catch (error) {
       // RNFS.stopDownload aborts the task, rejecting this promise. A user
-      // cancel is not a failure — surface it as a distinct cancellation.
+      // cancel is not a failure - surface it as a distinct cancellation.
       if (this.cancelledModelIds.delete(model.id)) {
         console.log(`${TAG}: Download cancelled by user for ID: ${model.id}`);
         runInAction(() => {
@@ -553,7 +553,7 @@ export class DownloadManager {
           console.log(`${TAG}: Cancelling Android download:`, modelId);
           await NativeDownloadModule.cancelDownload(job.downloadId);
           // Android cancel emits no failure event, so nothing consumes the
-          // cancelled-id marker — clear it here to avoid leaking entries.
+          // cancelled-id marker - clear it here to avoid leaking entries.
           this.cancelledModelIds.delete(modelId);
         }
 

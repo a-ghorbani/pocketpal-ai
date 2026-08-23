@@ -82,7 +82,7 @@ describe('KokoroEngine', () => {
     });
   });
 
-  describe('downloadModel() — two-phase', () => {
+  describe('downloadModel() - two-phase', () => {
     const okDownload = () => ({
       promise: Promise.resolve({statusCode: 200, bytesWritten: 100}),
       jobId: 1,

@@ -39,7 +39,7 @@ export const Onboarding6Screen: React.FC = observer(() => {
 
   // Pre-select the Recommended (Balanced) tier on first arrival so the
   // Download CTA is enabled immediately. Re-seed when the topic (and
-  // thus the pal) changes — the previously-picked model belongs to a
+  // thus the pal) changes - the previously-picked model belongs to a
   // different pal's list and would otherwise leave the radio in an
   // unselectable state. User taps after that override the seed.
   useEffect(() => {

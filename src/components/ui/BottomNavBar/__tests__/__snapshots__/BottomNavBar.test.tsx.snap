@@ -1,6 +1,6 @@
 // Jest Snapshot v1, https://goo.gl/fbAQLP
 
-exports[`BottomNavBar — snapshot matrix baseline (variant x size x {default,disabled} x modes) default-m-default-dark 1`] = `
+exports[`BottomNavBar - snapshot matrix baseline (variant x size x {default,disabled} x modes) default-m-default-dark 1`] = `
 <View
   collapsable={false}
   pointerEvents="box-none"
@@ -211,7 +211,7 @@ exports[`BottomNavBar — snapshot matrix baseline (variant x size x {default,di
 </View>
 `;
 
-exports[`BottomNavBar — snapshot matrix baseline (variant x size x {default,disabled} x modes) default-m-default-light 1`] = `
+exports[`BottomNavBar - snapshot matrix baseline (variant x size x {default,disabled} x modes) default-m-default-light 1`] = `
 <View
   collapsable={false}
   pointerEvents="box-none"
@@ -422,7 +422,7 @@ exports[`BottomNavBar — snapshot matrix baseline (variant x size x {default,di
 </View>
 `;
 
-exports[`BottomNavBar — snapshot matrix baseline (variant x size x {default,disabled} x modes) default-m-disabled-dark 1`] = `
+exports[`BottomNavBar - snapshot matrix baseline (variant x size x {default,disabled} x modes) default-m-disabled-dark 1`] = `
 <View
   collapsable={false}
   pointerEvents="box-none"
@@ -633,7 +633,7 @@ exports[`BottomNavBar — snapshot matrix baseline (variant x size x {default,di
 </View>
 `;
 
-exports[`BottomNavBar — snapshot matrix baseline (variant x size x {default,disabled} x modes) default-m-disabled-light 1`] = `
+exports[`BottomNavBar - snapshot matrix baseline (variant x size x {default,disabled} x modes) default-m-disabled-light 1`] = `
 <View
   collapsable={false}
   pointerEvents="box-none"
@@ -844,7 +844,7 @@ exports[`BottomNavBar — snapshot matrix baseline (variant x size x {default,di
 </View>
 `;
 
-exports[`BottomNavBar — snapshot matrix non-Latin font-fallback canary (canaryVariant x size=default x default x light x lang) default-m-default-light-fa 1`] = `
+exports[`BottomNavBar - snapshot matrix non-Latin font-fallback canary (canaryVariant x size=default x default x light x lang) default-m-default-light-fa 1`] = `
 <View
   collapsable={false}
   pointerEvents="box-none"

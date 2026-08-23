@@ -10,8 +10,8 @@ import {UserContext} from '../../utils';
 import {MessageType} from '../../utils/types';
 
 /**
- * Pure shape primitive (border, background, scale animation). Chrome —
- * timing, copy, and any other turn-level slots — is owned by
+ * Pure shape primitive (border, background, scale animation). Chrome -
+ * timing, copy, and any other turn-level slots - is owned by
  * `AssistantTurnFooter` rendered adjacent to the Bubble by `Message`.
  */
 export const Bubble = ({

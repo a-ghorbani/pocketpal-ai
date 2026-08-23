@@ -79,7 +79,7 @@ export class ModelDetailsSheet extends BasePage {
 
     // A card can exist in the hierarchy while still below the fold (the sheet
     // scroll stops on existence, not visibility), and an off-screen card
-    // exposes no children — a bare button lookup then misreads "not rendered"
+    // exposes no children - a bare button lookup then misreads "not rendered"
     // as "already downloaded". Swipe the sheet until the button is reachable
     // before concluding anything.
     const findButton = () =>

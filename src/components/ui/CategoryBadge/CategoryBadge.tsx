@@ -18,7 +18,7 @@ export type CategoryBadgeProps = Omit<CommonDSProps, 'disabled'> & {
 };
 
 /**
- * DS CategoryBadge — non-interactive label tile from the category
+ * DS CategoryBadge - non-interactive label tile from the category
  * palette.
  *
  * Defaults: variant='neutral', size='m', testID='ui-category-badge',

@@ -230,7 +230,7 @@ describe('mergeReports', () => {
     );
   });
 
-  it('treats missing version as 1.0 (legacy default) — mixing missing with explicit 1.1 is fatal', () => {
+  it('treats missing version as 1.0 (legacy default) - mixing missing with explicit 1.1 is fatal', () => {
     const reports = [
       {runs: [makeRow({})]}, // missing version -> 1.0
       {version: '1.1', runs: [makeRow({pp_avg: 200})]},

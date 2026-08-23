@@ -80,8 +80,8 @@ BENCH_BACKENDS) and emits the BenchmarkRunnerScreen's bench-config.json.
   --push [<udid>]  also adb-push to ${REMOTE_PATH}
 
 Tiers:
-  smoke    3 models × 3 quants  (~18 cells, ~10–15 min)        DEFAULT
-  focused  6 models × 6 quants  (~60 cells, ~30–45 min)
+  smoke    3 models × 3 quants  (~18 cells, ~10-15 min)        DEFAULT
+  focused  6 models × 6 quants  (~60 cells, ~30-45 min)
   full    11 models × 8 quants  (~165 cells, ~3 hr)
 
 Sweep axes (any subset; absent => single-cell app-default path):
@@ -177,7 +177,7 @@ if (require.main === module) {
   } catch (e) {
     // parseSettingsAxes (called transitively from buildScreenConfig) throws
     // on invalid BENCH_* env-var values per WHAT 9e. The CLI's job is to
-    // surface a one-liner and exit non-zero — not to dump a stack trace.
+    // surface a one-liner and exit non-zero - not to dump a stack trace.
     console.error(`Error: ${(e as Error).message}`);
     process.exit(1);
   }

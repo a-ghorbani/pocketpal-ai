@@ -26,8 +26,8 @@ export const assistant = {id: assistantId};
 /**
  * Returns the visible textual content of a message in a single string.
  * Used by every `.text`-style consumer that should observe "final
- * visible content" — Bubble copy, drawer preview, exports, session
- * titles — so the type bifurcation between `Text` and `AssistantTurn`
+ * visible content" - Bubble copy, drawer preview, exports, session
+ * titles - so the type bifurcation between `Text` and `AssistantTurn`
  * is contained to one helper.
  *
  * For `AssistantTurn`, joins each step's `content` with a blank line
@@ -66,7 +66,7 @@ function toWireToolCall(
  * Build the API messages for one `AgentStep`. Emits an assistant message
  * (with `tool_calls` if present) followed by one role:'tool' message per
  * outcome. The OpenAI spec requires assistant-with-tool_calls to PRECEDE
- * its tool responses so `tool_call_id` back-refs resolve — preserved
+ * its tool responses so `tool_call_id` back-refs resolve - preserved
  * by the inner ordering here (OUTER reverse below does not reorder inner
  * arrays).
  *
@@ -124,7 +124,7 @@ export function convertToChatMessages(
       if (message.type === 'assistant_turn') {
         // Include any AssistantTurn whose steps array is non-empty.
         // Filter rule preserves turns where a step has only tool_calls
-        // (empty content) — the model still needs to see those plus
+        // (empty content) - the model still needs to see those plus
         // their tool responses on the next iteration so tool_call_id
         // back-refs resolve.
         return ((message as MessageType.AssistantTurn).steps ?? []).length > 0;

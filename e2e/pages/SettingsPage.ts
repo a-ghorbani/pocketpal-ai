@@ -203,7 +203,7 @@ export class SettingsPage extends BasePage {
    * Tap the "Save" button in the ServerConfigSheet.
    */
   async tapSaveServer(): Promise<void> {
-    // Save button may also be below fold — scroll if not visible
+    // Save button may also be below fold - scroll if not visible
     const saveBtn = browser.$(Selectors.serverConfig.saveButton);
     const isVisible = await saveBtn.isDisplayed().catch(() => false);
     if (!isVisible) {

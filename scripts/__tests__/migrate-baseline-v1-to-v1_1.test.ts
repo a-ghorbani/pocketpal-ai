@@ -3,7 +3,7 @@
  * `e2e/scripts/migrate-baseline-v1-to-v1_1.ts`.
  *
  * Lives in scripts/__tests__/ (root jest) following the same pattern
- * as merge-bench-reports.test.ts and benchmark-compare.test.ts —
+ * as merge-bench-reports.test.ts and benchmark-compare.test.ts -
  * the e2e directory is testPathIgnorePatterns'd by the root jest
  * config.
  */
@@ -123,7 +123,7 @@ describe('migrateReport', () => {
       ],
     };
     const out = migrateReport(v1_1);
-    // Already-1.1 input MUST keep its non-app-default fingerprint —
+    // Already-1.1 input MUST keep its non-app-default fingerprint -
     // the migration's only legitimate path to mint app-default is
     // the legacy v1.0 stamp.
     expect(out.runs[0].settings_fingerprint).toBe('cache_type_k=q8_0;...');

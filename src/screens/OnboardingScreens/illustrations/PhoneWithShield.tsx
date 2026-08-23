@@ -10,7 +10,7 @@ export type PhoneWithShieldProps = {
 };
 
 /**
- * Screen 4 illustration — phone outline (rounded rect, thick dark
+ * Screen 4 illustration - phone outline (rounded rect, thick dark
  * border, speech notch at top) with a privacy shield glyph centered
  * inside. Approximation of Figma frame `885:29601`. Phone outline +
  * notch are tokenised; shield glyph is the flat SVG exported from
@@ -41,7 +41,7 @@ export const PhoneWithShield: React.FC<PhoneWithShieldProps> = ({
           stroke={theme.colors.onBackground}
           strokeWidth={6.83}
         />
-        {/* Speech notch — y offset matches the Figma layout where the
+        {/* Speech notch - y offset matches the Figma layout where the
             pill sits slightly inset from the phone's top edge. */}
         <Rect
           x={(viewBoxW - 22) / 2}

@@ -21,12 +21,12 @@ yarn install
 
 ## Benchmark Matrix (Android)
 
-Drives the in-app **BenchmarkRunnerScreen** via deep link (`pocketpal://e2e/benchmark`) — no WDIO required for ad-hoc runs. Three tiers gated by `BENCH_TIER`:
+Drives the in-app **BenchmarkRunnerScreen** via deep link (`pocketpal://e2e/benchmark`) - no WDIO required for ad-hoc runs. Three tiers gated by `BENCH_TIER`:
 
 | Tier | Models × quants × backends | Cells | Runtime | When |
 |------|----------------------------|------:|---------|------|
-| `smoke` (default) | 3 × 3 × 2 | 18 | ~10–15 min | Regression gate |
-| `focused` | 6 × 6 × 2 | ~60 | ~30–45 min | Investigation |
+| `smoke` (default) | 3 × 3 × 2 | 18 | ~10-15 min | Regression gate |
+| `focused` | 6 × 6 × 2 | ~60 | ~30-45 min | Investigation |
 | `full` | 11 × 8 × 2 | ~165 | ~3 hr/device | Default-tier recalibration |
 
 Model + quant rosters live in [`fixtures/benchmark-models.ts`](fixtures/benchmark-models.ts) (single source: `BENCHMARK_FULL_MODELS`; smaller tiers derived as id filters).
@@ -89,7 +89,7 @@ yarn ios:build:e2e
 # iOS real device (IPA, requires code signing)
 yarn ios:build:ipa
 
-# Android E2E APK (required — prod APK has no automation bridge)
+# Android E2E APK (required - prod APK has no automation bridge)
 yarn android:build:e2e
 # Installs as com.pocketpalai.e2e and coexists side-by-side with the
 # prod install (com.pocketpalai). E2E_BUILD=true is set automatically
@@ -97,7 +97,7 @@ yarn android:build:e2e
 ```
 
 **Flavor.** E2E targets the `e2e` flavor (`com.pocketpalai.e2e`, debuggable),
-which ships the automation bridge. The `prod` flavor has no bridge — specs
+which ships the automation bridge. The `prod` flavor has no bridge - specs
 will silently fail there.
 
 **Firebase.** `android/app/google-services.json` (gitignored) must contain
@@ -201,7 +201,7 @@ To use `--each-device`, set up a device inventory:
    adb devices -l
    ```
 
-   > `devices.json` is gitignored — each machine has its own.
+   > `devices.json` is gitignored - each machine has its own.
 
 ### Reports
 
@@ -378,7 +378,7 @@ Per-run (`BenchmarkRun`):
   "tg_avg": 18.2,                       // tokens/s, nullable
   "wall_ms": 24571,
   "peak_memory_mb": 812.3,              // nullable
-  "log_signals": {                      // structured — see src/__automation__/logSignals.ts
+  "log_signals": {                      // structured - see src/__automation__/logSignals.ts
     "opencl_init": true,
     "opencl_device_name": "QUALCOMM Adreno(TM) 840",
     "adreno_gen": "A8X",
@@ -402,10 +402,10 @@ Derived from the structured `log_signals` payload, not regex on raw text:
 
 | Value | Meaning |
 |-------|---------|
-| `cpu` | No OpenCL init observed — pure CPU path. |
+| `cpu` | No OpenCL init observed - pure CPU path. |
 | `opencl` | OpenCL initialised, all layers offloaded to GPU, no large-buffer regression. |
 | `cpu+opencl-partial` | OpenCL initialised but some layers ran on CPU, or `large_buffer_unsupported` triggered a fallback. |
-| `unknown` | OpenCL initialised but layer counts absent — investigate `log_signals.raw_matches`. |
+| `unknown` | OpenCL initialised but layer counts absent - investigate `log_signals.raw_matches`. |
 
 A row where `requested_backend=gpu` but `effective_backend=cpu` is the canonical "silent CPU fallback" we want to catch. The comparison script flags this as a regression even when `pp_avg` / `tg_avg` numbers look fine.
 
@@ -445,7 +445,7 @@ adb shell run-as com.pocketpalai.e2e sh -c \
    files/models/hf/bartowski/Qwen_Qwen3-1.7B-GGUF/Qwen_Qwen3-1.7B-Q4_0.gguf'
 ```
 
-Then run with `MODELS_PRESEEDED=1`. The spec fails fast (before touching the matrix loop) with a per-file `adb push` template if anything is missing — no silent download fallback.
+Then run with `MODELS_PRESEEDED=1`. The spec fails fast (before touching the matrix loop) with a per-file `adb push` template if anything is missing - no silent download fallback.
 
 ### Comparing two reports
 
@@ -456,10 +456,10 @@ npx tsx e2e/scripts/benchmark-compare.ts \
 
 Flags rows where either `pp_avg` or `tg_avg` delta exceeds `|delta%| > 15` (override with `--pct N`). Additional flags, all independent of numeric deltas:
 
-- `effective_backend:<base>-><cur>` — silent backend fallback (e.g. requested GPU but ran on CPU).
-- `status_regression(<status>)` — baseline row was `ok`, current row flipped to `failed`/`skipped`.
-- `pp_null_regression` / `tg_null_regression` — both rows claim `status:'ok'` but the current numeric metric is `null` while the baseline was numeric (catches partial native failures the screen didn't reject as failed).
-- Top-level `bench_protocol_mismatch` — the persisted `bench` block (`pp`/`tg`/`pl`/`nr`) differs between reports. Comparison is skipped (`pass:false`) and the CLI exits 2 because pp/tg numbers are not comparable across protocols. Reports that omit the `bench` block (e.g. legacy baselines pre-v1.1) skip the check with a stderr warning.
+- `effective_backend:<base>-><cur>` - silent backend fallback (e.g. requested GPU but ran on CPU).
+- `status_regression(<status>)` - baseline row was `ok`, current row flipped to `failed`/`skipped`.
+- `pp_null_regression` / `tg_null_regression` - both rows claim `status:'ok'` but the current numeric metric is `null` while the baseline was numeric (catches partial native failures the screen didn't reject as failed).
+- Top-level `bench_protocol_mismatch` - the persisted `bench` block (`pp`/`tg`/`pl`/`nr`) differs between reports. Comparison is skipped (`pass:false`) and the CLI exits 2 because pp/tg numbers are not comparable across protocols. Reports that omit the `bench` block (e.g. legacy baselines pre-v1.1) skip the check with a stderr warning.
 
 `pass` is `true` only when no row is flagged AND `missing_in_current` is empty AND no `bench_protocol_mismatch`. Exit codes: 0 pass, 1 regression, 2 input/protocol error.
 
@@ -468,5 +468,5 @@ Flags rows where either `pp_avg` or `tg_avg` delta exceeds `|delta%| > 15` (over
 - Android only. iOS Metal benchmarking is a follow-up.
 - Hexagon NPU tier excluded.
 - Preseed requires the E2E-flavor APK (see above).
-- Static IQ1_S rung is substituted with IQ2_M for Qwen3 1.7B and Gemma 3 1B — neither is published at IQ1_S by bartowski or lmstudio-community. The canonical rung label in the JSON remains `iq1_s` so reports are comparable when IQ1_S eventually ships.
+- Static IQ1_S rung is substituted with IQ2_M for Qwen3 1.7B and Gemma 3 1B - neither is published at IQ1_S by bartowski or lmstudio-community. The canonical rung label in the JSON remains `iq1_s` so reports are comparable when IQ1_S eventually ships.
 - LFM2 1.2B slot 3 is deferred: no publisher has a complete 8-quant set.

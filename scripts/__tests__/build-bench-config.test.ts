@@ -7,7 +7,7 @@
  * confirm the unification (round-1 review C2).
  *
  * The tests live in `scripts/__tests__/` (root jest) and import the e2e
- * scripts via relative paths — same pattern as `merge-bench-reports.test.ts`
+ * scripts via relative paths - same pattern as `merge-bench-reports.test.ts`
  * and `benchmark-compare.test.ts`. The root jest config ignores `/e2e/`
  * (`testPathIgnorePatterns`), so co-locating these tests in the e2e workspace
  * would not run them.
@@ -58,7 +58,7 @@ describe('shared BenchConfig builder', () => {
     const cfg = buildSharedConfig(matrix);
 
     // The screen reads BenchConfig with: models, backends, bench. The
-    // helper's output is exactly that — no extra fields the screen would
+    // helper's output is exactly that - no extra fields the screen would
     // need to ignore.
     expect(Object.keys(cfg).sort()).toEqual(['backends', 'bench', 'models']);
   });
@@ -84,7 +84,7 @@ describe('shared BenchConfig builder', () => {
   it('omits settings_axes from the JSON when the matrix has no axes (WHAT 9a)', () => {
     const matrix = getBenchmarkMatrix(); // env-less matrix has no axes
     const cfg = buildSharedConfig(matrix);
-    // Empty array MUST be omitted, not emitted — single canonical
+    // Empty array MUST be omitted, not emitted - single canonical
     // "no sweep" shape on the wire.
     expect(Object.prototype.hasOwnProperty.call(cfg, 'settings_axes')).toBe(
       false,
@@ -105,7 +105,7 @@ describe('shared BenchConfig builder', () => {
 });
 
 // -----------------------------------------------------------------------------
-// parseSettingsAxes — env-var → settings_axes contract (WHAT 4b.2-4, 9e)
+// parseSettingsAxes - env-var → settings_axes contract (WHAT 4b.2-4, 9e)
 // -----------------------------------------------------------------------------
 
 describe('parseSettingsAxes', () => {

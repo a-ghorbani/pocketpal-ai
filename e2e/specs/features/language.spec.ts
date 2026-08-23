@@ -62,7 +62,7 @@ const LANGUAGE_ASSERTIONS: Record<
     firstCardTitle: 'Ustawienia Inicjalizacji Modelu',
   },
   // pt shares both of these strings with pt_BR, so this spec proves the switch
-  // works but not that the two locales are distinct — locales.test.ts covers that.
+  // works but not that the two locales are distinct - locales.test.ts covers that.
   pt: {
     screenTitle: 'Configurações',
     firstCardTitle: 'Configurações de Inicialização do Modelo',

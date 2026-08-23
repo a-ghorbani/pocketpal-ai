@@ -106,7 +106,7 @@
     "speculativeDraftCacheTypeInactiveDescription": "Applies once speculative decoding runs.",
     "ttsAvailability": "Text-to-speech",
     "ttsAvailabilityDescription": "Read assistant replies aloud.",
-    "ttsAvailabilityLowMemoryWarning": "Your device's memory is low — this may not work reliably.",
+    "ttsAvailabilityLowMemoryWarning": "Your device's memory is low - this may not work reliably.",
     "modelLoadingSettings": "Model Loading Settings",
     "autoOffloadLoad": "Auto Offload/Load",
     "autoOffloadLoadDescription": "Offload model when app is in background.",
@@ -130,7 +130,7 @@
     "importError": "Failed to import chat sessions. Please check the file format.",
     "internetSearch": {
       "title": "Internet Search",
-      "description": "Let Pals search the web with their own tools. Bring your own API key — PocketPal never holds your keys or routes your queries.",
+      "description": "Let Pals search the web with their own tools. Bring your own API key - PocketPal never holds your keys or routes your queries.",
       "providerLabel": "Search provider",
       "providerGated": "Coming soon",
       "keyLabel": "API key",
@@ -604,7 +604,7 @@
       "ttft": "{{value}}ms TTFT",
       "draftAccepted": "draft: {{accepted}}/{{total}} ({{pct}}%)",
       "interrupted": "Interrupted",
-      "truncated": "Cut off — likely context full"
+      "truncated": "Cut off - likely context full"
     },
     "exportUtils": {
       "fileSaved": "File Saved",
@@ -649,7 +649,7 @@
       "activateModelButton": "Select Model",
       "loading": "Loading...",
       "gettingReadyTitle": "{{name}} is getting ready",
-      "gettingReadyDescription": "We’ll let you know the moment your pal can chat. Tap the banner up top to see how it’s going."
+      "gettingReadyDescription": "We'll let you know the moment your pal can chat. Tap the banner up top to see how it's going."
     },
     "chatInput": {
       "inputPlaceholder": "Message",
@@ -1152,7 +1152,7 @@
       "notAvailable": "N/A",
       "buyOnPalshub": "Buy on Palshub",
       "finalizingPurchase": "Finalizing your purchase…",
-      "processingPurchase": "Processing — will unlock shortly.",
+      "processingPurchase": "Processing - will unlock shortly.",
       "checkoutSessionExpired": "Your session expired. Sign in again to continue.",
       "signInAgain": "Sign in again",
       "palNotAvailable": "This pal is not available for purchase right now.",
@@ -1223,8 +1223,8 @@
     "conversationReset": "Conversation reset!",
     "modelNotLoaded": "Model not loaded. Please initialize the model.",
     "completionFailed": "Completion failed: ",
-    "toolCallTruncated": "Tool call cut off — the model likely ran out of room. Try a larger context or a smaller request.",
-    "speculativeInitFailed": "This device could not start speculative decoding for this model — most likely there is not enough memory for the draft context. Turn off Speculative decoding under Settings → Advanced Settings and try again.",
+    "toolCallTruncated": "Tool call cut off - the model likely ran out of room. Try a larger context or a smaller request.",
+    "speculativeInitFailed": "This device could not start speculative decoding for this model - most likely there is not enough memory for the draft context. Turn off Speculative decoding under Settings → Advanced Settings and try again.",
     "loadingModel": "Loading model ...",
     "typeYourMessage": "Type your message here",
     "load": "Load",
@@ -1240,20 +1240,20 @@
     "contextFull": "The conversation ran out of room. Start a new chat or increase the context size.",
     "contextFullRemote": "The conversation ran out of room. Start a new chat.",
     "contextFullEscalated": "Still out of room. Start a new chat, or increase the context size to keep going.",
-    "contextFullHeavyTalent": "The conversation ran out of room — {{talent}} tends to need more. Start a new chat or increase the context size.",
+    "contextFullHeavyTalent": "The conversation ran out of room - {{talent}} tends to need more. Start a new chat or increase the context size.",
     "contextBannerDismiss": "Dismiss",
     "contextNewChat": "New chat",
     "contextIncrease": "Increase context",
     "contextMoreRoom": "More room",
     "increaseContextTitle": "Give this chat more room",
-    "increaseContextBody": "Room is the model's working memory — how much of this chat it can keep in mind at once. More room means longer chats before replies get cut off.",
+    "increaseContextBody": "Room is the model's working memory - how much of this chat it can keep in mind at once. More room means longer chats before replies get cut off.",
     "increaseContextTokensUnit": "tokens",
     "increaseContextWordsRam": "~{{words}} words · ≈{{ram}} RAM",
     "increaseContextFitsChip": "Fits",
     "increaseContextTightChip": "Tight",
     "increaseContextWontFitChip": "Won't fit",
     "increaseContextFitsStatus": "Comfortable for this device.",
-    "increaseContextFitsUnconstrainedStatus": "Plenty of RAM — limited only by the model.",
+    "increaseContextFitsUnconstrainedStatus": "Plenty of RAM - limited only by the model.",
     "increaseContextTightStatus": "Past ~{{tokens}}, this device may run low on memory and slow down. It can still try.",
     "increaseContextWontFitStatus": "~{{tokens}} likely won't fit in this device's memory. Pick a smaller size.",
     "increaseContextModelMax": "{{tokens}} · model max",
@@ -1456,7 +1456,7 @@
     "previewButton": "Preview",
     "stopPreviewButton": "Stop preview",
     "voicesTitle": "Voices",
-    "voicesEmptyHint": "Tap any voice to install it and use it. Or pick a system voice — those are always available.",
+    "voicesEmptyHint": "Tap any voice to install it and use it. Or pick a system voice - those are always available.",
     "supertonicStepsLabel": "Quality (diffusion steps)",
     "supertonicLanguageLabel": "Language",
     "supertonicLanguageAuto": "Auto",
@@ -1527,7 +1527,7 @@
     "engineRetryCta": "Try again",
     "voicesEmptyState": "No voices found.",
     "kokoroDeviceNote": "Some voices may not work on all devices.",
-    "insufficientStorage": "Not enough space — free up {{requiredMb}} MB to install this engine ({{freeMb}} MB available)."
+    "insufficientStorage": "Not enough space - free up {{requiredMb}} MB to install this engine ({{freeMb}} MB available)."
   },
   "onboarding": {
     "back": "Back",
@@ -1539,7 +1539,7 @@
     "screen1": {
       "title": "Meet your pals.",
       "titleAccent": "pals.",
-      "body": "Smart little friends that live inside your phone.\nLet’s get you set up - it’ll take a minute.",
+      "body": "Smart little friends that live inside your phone.\nLet's get you set up - it'll take a minute.",
       "cta": "Show me Around",
       "eyebrow": "Welcome to PocketPal"
     },
@@ -1568,8 +1568,8 @@
       "eyebrow": "Privacy promised"
     },
     "screen5": {
-      "title": "What’s your pal for?",
-      "body": "Pick what you’d like to discuss - we’ll match a pal that fits your phone.",
+      "title": "What's your pal for?",
+      "body": "Pick what you'd like to discuss - we'll match a pal that fits your phone.",
       "topic": {
         "smartchat": "Smart Chat",
         "coding": "Coding",
@@ -1606,13 +1606,13 @@
           "body": "We found a perfect pal for you - a friendly everyday companion. Smart enough for most things, light enough for any phone."
         },
         "codie": {
-          "body": "Meet Codie — your local pair-programmer. Reads code, writes code, explains tricky bits without ever leaving your phone."
+          "body": "Meet Codie - your local pair-programmer. Reads code, writes code, explains tricky bits without ever leaving your phone."
         },
         "sage": {
           "body": "Sage is patient, curious, and walks you through ideas step by step. A study buddy you keep in your pocket."
         },
         "echo": {
-          "body": "Echo is a versatile roleplay companion — stays in character, paints scenes, follows wherever your story leads."
+          "body": "Echo is a versatile roleplay companion - stays in character, paints scenes, follows wherever your story leads."
         },
         "muse": {
           "body": "Muse helps you write. Suggests phrasing, finds the rhythm, and keeps your tone intact."

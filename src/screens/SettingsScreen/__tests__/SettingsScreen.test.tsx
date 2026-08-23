@@ -557,7 +557,7 @@ describe('SettingsScreen', () => {
         expect(getByText('Draft Key Cache Type')).toBeTruthy();
       });
       // The f16 cache option renders 'F16 (Default)' (flashAttnCompatibility),
-      // shown for BOTH the key and value draft cache rows. Substring match —
+      // shown for BOTH the key and value draft cache rows. Substring match -
       // the button prepends a chevron icon glyph to the label text content.
       expect(
         getByTestId('speculative-draft-key-cache-button'),
@@ -574,7 +574,7 @@ describe('SettingsScreen', () => {
         modelStore.contextInitParams.selectedDraftModelId = undefined;
         modelStore.contextInitParams.spec_draft_cache_type_k = undefined;
         modelStore.contextInitParams.spec_draft_cache_type_v = undefined;
-        // q8_0 is only the default when flash attention is explicitly on —
+        // q8_0 is only the default when flash attention is explicitly on -
         // `auto` can resolve off per backend, where a quantized V draft
         // cache is fatal.
         modelStore.contextInitParams.flash_attn_type = 'on';
@@ -636,7 +636,7 @@ describe('SettingsScreen', () => {
       await waitFor(() => {
         expect(getByText('Draft Key Cache Type')).toBeTruthy();
       });
-      // Button label falls back to None. (Substring match — the button
+      // Button label falls back to None. (Substring match - the button
       // prepends a chevron icon glyph to the label text content.)
       expect(getByTestId('speculative-draft-model-picker')).toHaveTextContent(
         /None \(embedded MTP\)/,
@@ -668,7 +668,7 @@ describe('SettingsScreen', () => {
       await waitFor(() => {
         expect(getByText('Draft Key Cache Type')).toBeTruthy();
       });
-      // Substring match — the button prepends a chevron icon glyph.
+      // Substring match - the button prepends a chevron icon glyph.
       expect(getByTestId('speculative-draft-model-picker')).toHaveTextContent(
         /Tiny Draft/,
       );
@@ -1069,7 +1069,7 @@ describe('SettingsScreen', () => {
       expect(getByTestId('speculative-no-effect-note')).toBeTruthy();
     });
 
-    it('shows the note when an incompatible (non-MTP) draft is selected — the coarse "any draft picked" signal would have hidden it', async () => {
+    it('shows the note when an incompatible (non-MTP) draft is selected - the coarse "any draft picked" signal would have hidden it', async () => {
       jest.useFakeTimers();
       runInAction(() => {
         modelStore.contextInitParams.speculativeEnabled = true;
@@ -1157,7 +1157,7 @@ describe('SettingsScreen', () => {
 
   describe('TTS availability toggle', () => {
     afterEach(() => {
-      // Reset observable fields between tests — beforeEach's clearAllMocks()
+      // Reset observable fields between tests - beforeEach's clearAllMocks()
       // resets jest.fn() call lists but not field values.
       runInAction(() => {
         ttsStore.deviceMeetsMemory = false;
@@ -1165,7 +1165,7 @@ describe('SettingsScreen', () => {
       });
     });
 
-    it('§6.A — high-memory, no override: switch ON, helper line hidden', async () => {
+    it('§6.A - high-memory, no override: switch ON, helper line hidden', async () => {
       runInAction(() => {
         ttsStore.deviceMeetsMemory = true;
         ttsStore.userTTSOverride = null;
@@ -1182,7 +1182,7 @@ describe('SettingsScreen', () => {
       ).toBeNull();
     });
 
-    it('§6.B — low-memory, no override: switch OFF, helper line visible', async () => {
+    it('§6.B - low-memory, no override: switch OFF, helper line visible', async () => {
       runInAction(() => {
         ttsStore.deviceMeetsMemory = false;
         ttsStore.userTTSOverride = null;
@@ -1199,7 +1199,7 @@ describe('SettingsScreen', () => {
       ).toBeTruthy();
     });
 
-    it('§6.C — low-memory: toggling ON calls setUserTTSOverride(true)', async () => {
+    it('§6.C - low-memory: toggling ON calls setUserTTSOverride(true)', async () => {
       runInAction(() => {
         ttsStore.deviceMeetsMemory = false;
         ttsStore.userTTSOverride = null;
@@ -1217,7 +1217,7 @@ describe('SettingsScreen', () => {
       expect(ttsStore.setUserTTSOverride).toHaveBeenCalledWith(true);
     });
 
-    it('§6.D — high-memory: toggling OFF calls setUserTTSOverride(false)', async () => {
+    it('§6.D - high-memory: toggling OFF calls setUserTTSOverride(false)', async () => {
       runInAction(() => {
         ttsStore.deviceMeetsMemory = true;
         ttsStore.userTTSOverride = null;
@@ -1235,7 +1235,7 @@ describe('SettingsScreen', () => {
       expect(ttsStore.setUserTTSOverride).toHaveBeenCalledWith(false);
     });
 
-    it('§9f — low-memory + opt-in: switch ON, helper line still visible', async () => {
+    it('§9f - low-memory + opt-in: switch ON, helper line still visible', async () => {
       runInAction(() => {
         ttsStore.deviceMeetsMemory = false;
         ttsStore.userTTSOverride = true;

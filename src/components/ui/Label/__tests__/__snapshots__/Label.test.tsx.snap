@@ -1,6 +1,6 @@
 // Jest Snapshot v1, https://goo.gl/fbAQLP
 
-exports[`Label — snapshot matrix baseline (variant x size x {default,disabled} x modes) informational-m-default-dark 1`] = `
+exports[`Label - snapshot matrix baseline (variant x size x {default,disabled} x modes) informational-m-default-dark 1`] = `
 <View
   collapsable={false}
   pointerEvents="box-none"
@@ -47,7 +47,7 @@ exports[`Label — snapshot matrix baseline (variant x size x {default,disabled}
 </View>
 `;
 
-exports[`Label — snapshot matrix baseline (variant x size x {default,disabled} x modes) informational-m-default-light 1`] = `
+exports[`Label - snapshot matrix baseline (variant x size x {default,disabled} x modes) informational-m-default-light 1`] = `
 <View
   collapsable={false}
   pointerEvents="box-none"
@@ -94,7 +94,7 @@ exports[`Label — snapshot matrix baseline (variant x size x {default,disabled}
 </View>
 `;
 
-exports[`Label — snapshot matrix baseline (variant x size x {default,disabled} x modes) informational-s-default-dark 1`] = `
+exports[`Label - snapshot matrix baseline (variant x size x {default,disabled} x modes) informational-s-default-dark 1`] = `
 <View
   collapsable={false}
   pointerEvents="box-none"
@@ -141,7 +141,7 @@ exports[`Label — snapshot matrix baseline (variant x size x {default,disabled}
 </View>
 `;
 
-exports[`Label — snapshot matrix baseline (variant x size x {default,disabled} x modes) informational-s-default-light 1`] = `
+exports[`Label - snapshot matrix baseline (variant x size x {default,disabled} x modes) informational-s-default-light 1`] = `
 <View
   collapsable={false}
   pointerEvents="box-none"
@@ -188,7 +188,7 @@ exports[`Label — snapshot matrix baseline (variant x size x {default,disabled}
 </View>
 `;
 
-exports[`Label — snapshot matrix baseline (variant x size x {default,disabled} x modes) status-error-m-default-dark 1`] = `
+exports[`Label - snapshot matrix baseline (variant x size x {default,disabled} x modes) status-error-m-default-dark 1`] = `
 <View
   collapsable={false}
   pointerEvents="box-none"
@@ -235,7 +235,7 @@ exports[`Label — snapshot matrix baseline (variant x size x {default,disabled}
 </View>
 `;
 
-exports[`Label — snapshot matrix baseline (variant x size x {default,disabled} x modes) status-error-m-default-light 1`] = `
+exports[`Label - snapshot matrix baseline (variant x size x {default,disabled} x modes) status-error-m-default-light 1`] = `
 <View
   collapsable={false}
   pointerEvents="box-none"
@@ -282,7 +282,7 @@ exports[`Label — snapshot matrix baseline (variant x size x {default,disabled}
 </View>
 `;
 
-exports[`Label — snapshot matrix baseline (variant x size x {default,disabled} x modes) status-error-s-default-dark 1`] = `
+exports[`Label - snapshot matrix baseline (variant x size x {default,disabled} x modes) status-error-s-default-dark 1`] = `
 <View
   collapsable={false}
   pointerEvents="box-none"
@@ -329,7 +329,7 @@ exports[`Label — snapshot matrix baseline (variant x size x {default,disabled}
 </View>
 `;
 
-exports[`Label — snapshot matrix baseline (variant x size x {default,disabled} x modes) status-error-s-default-light 1`] = `
+exports[`Label - snapshot matrix baseline (variant x size x {default,disabled} x modes) status-error-s-default-light 1`] = `
 <View
   collapsable={false}
   pointerEvents="box-none"
@@ -376,7 +376,7 @@ exports[`Label — snapshot matrix baseline (variant x size x {default,disabled}
 </View>
 `;
 
-exports[`Label — snapshot matrix baseline (variant x size x {default,disabled} x modes) status-info-m-default-dark 1`] = `
+exports[`Label - snapshot matrix baseline (variant x size x {default,disabled} x modes) status-info-m-default-dark 1`] = `
 <View
   collapsable={false}
   pointerEvents="box-none"
@@ -423,7 +423,7 @@ exports[`Label — snapshot matrix baseline (variant x size x {default,disabled}
 </View>
 `;
 
-exports[`Label — snapshot matrix baseline (variant x size x {default,disabled} x modes) status-info-m-default-light 1`] = `
+exports[`Label - snapshot matrix baseline (variant x size x {default,disabled} x modes) status-info-m-default-light 1`] = `
 <View
   collapsable={false}
   pointerEvents="box-none"
@@ -470,7 +470,7 @@ exports[`Label — snapshot matrix baseline (variant x size x {default,disabled}
 </View>
 `;
 
-exports[`Label — snapshot matrix baseline (variant x size x {default,disabled} x modes) status-info-s-default-dark 1`] = `
+exports[`Label - snapshot matrix baseline (variant x size x {default,disabled} x modes) status-info-s-default-dark 1`] = `
 <View
   collapsable={false}
   pointerEvents="box-none"
@@ -517,7 +517,7 @@ exports[`Label — snapshot matrix baseline (variant x size x {default,disabled}
 </View>
 `;
 
-exports[`Label — snapshot matrix baseline (variant x size x {default,disabled} x modes) status-info-s-default-light 1`] = `
+exports[`Label - snapshot matrix baseline (variant x size x {default,disabled} x modes) status-info-s-default-light 1`] = `
 <View
   collapsable={false}
   pointerEvents="box-none"
@@ -564,7 +564,7 @@ exports[`Label — snapshot matrix baseline (variant x size x {default,disabled}
 </View>
 `;
 
-exports[`Label — snapshot matrix baseline (variant x size x {default,disabled} x modes) status-success-m-default-dark 1`] = `
+exports[`Label - snapshot matrix baseline (variant x size x {default,disabled} x modes) status-success-m-default-dark 1`] = `
 <View
   collapsable={false}
   pointerEvents="box-none"
@@ -611,7 +611,7 @@ exports[`Label — snapshot matrix baseline (variant x size x {default,disabled}
 </View>
 `;
 
-exports[`Label — snapshot matrix baseline (variant x size x {default,disabled} x modes) status-success-m-default-light 1`] = `
+exports[`Label - snapshot matrix baseline (variant x size x {default,disabled} x modes) status-success-m-default-light 1`] = `
 <View
   collapsable={false}
   pointerEvents="box-none"
@@ -658,7 +658,7 @@ exports[`Label — snapshot matrix baseline (variant x size x {default,disabled}
 </View>
 `;
 
-exports[`Label — snapshot matrix baseline (variant x size x {default,disabled} x modes) status-success-s-default-dark 1`] = `
+exports[`Label - snapshot matrix baseline (variant x size x {default,disabled} x modes) status-success-s-default-dark 1`] = `
 <View
   collapsable={false}
   pointerEvents="box-none"
@@ -705,7 +705,7 @@ exports[`Label — snapshot matrix baseline (variant x size x {default,disabled}
 </View>
 `;
 
-exports[`Label — snapshot matrix baseline (variant x size x {default,disabled} x modes) status-success-s-default-light 1`] = `
+exports[`Label - snapshot matrix baseline (variant x size x {default,disabled} x modes) status-success-s-default-light 1`] = `
 <View
   collapsable={false}
   pointerEvents="box-none"
@@ -752,7 +752,7 @@ exports[`Label — snapshot matrix baseline (variant x size x {default,disabled}
 </View>
 `;
 
-exports[`Label — snapshot matrix baseline (variant x size x {default,disabled} x modes) status-warning-m-default-dark 1`] = `
+exports[`Label - snapshot matrix baseline (variant x size x {default,disabled} x modes) status-warning-m-default-dark 1`] = `
 <View
   collapsable={false}
   pointerEvents="box-none"
@@ -799,7 +799,7 @@ exports[`Label — snapshot matrix baseline (variant x size x {default,disabled}
 </View>
 `;
 
-exports[`Label — snapshot matrix baseline (variant x size x {default,disabled} x modes) status-warning-m-default-light 1`] = `
+exports[`Label - snapshot matrix baseline (variant x size x {default,disabled} x modes) status-warning-m-default-light 1`] = `
 <View
   collapsable={false}
   pointerEvents="box-none"
@@ -846,7 +846,7 @@ exports[`Label — snapshot matrix baseline (variant x size x {default,disabled}
 </View>
 `;
 
-exports[`Label — snapshot matrix baseline (variant x size x {default,disabled} x modes) status-warning-s-default-dark 1`] = `
+exports[`Label - snapshot matrix baseline (variant x size x {default,disabled} x modes) status-warning-s-default-dark 1`] = `
 <View
   collapsable={false}
   pointerEvents="box-none"
@@ -893,7 +893,7 @@ exports[`Label — snapshot matrix baseline (variant x size x {default,disabled}
 </View>
 `;
 
-exports[`Label — snapshot matrix baseline (variant x size x {default,disabled} x modes) status-warning-s-default-light 1`] = `
+exports[`Label - snapshot matrix baseline (variant x size x {default,disabled} x modes) status-warning-s-default-light 1`] = `
 <View
   collapsable={false}
   pointerEvents="box-none"
@@ -940,7 +940,7 @@ exports[`Label — snapshot matrix baseline (variant x size x {default,disabled}
 </View>
 `;
 
-exports[`Label — snapshot matrix non-Latin font-fallback canary (canaryVariant x size=default x default x light x lang) informational-s-default-light-fa 1`] = `
+exports[`Label - snapshot matrix non-Latin font-fallback canary (canaryVariant x size=default x default x light x lang) informational-s-default-light-fa 1`] = `
 <View
   collapsable={false}
   pointerEvents="box-none"

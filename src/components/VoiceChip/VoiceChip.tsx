@@ -28,7 +28,7 @@ const pickSpeakerIcon = (autoSpeakEnabled: boolean, isPlaying: boolean) => {
 /**
  * Compact voice control. Collapses to a dimmed speaker icon when auto-speak
  * is OFF (quietly present, doesn't compete with send). Expands to a full
- * split-pill — speaker + divider + chevron — when active, playing, or when
+ * split-pill - speaker + divider + chevron - when active, playing, or when
  * setup is still needed. Hidden entirely when TTS is unavailable.
  */
 export const VoiceChip: React.FC = observer(() => {

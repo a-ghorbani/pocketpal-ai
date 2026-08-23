@@ -33,7 +33,7 @@ export const useStructuredOutput = () => {
       },
     ) => {
       // `engine` is set for both local (LocalCompletionEngine wrapping a
-      // LlamaContext) and remote (OpenAICompletionEngine) — so structured
+      // LlamaContext) and remote (OpenAICompletionEngine) - so structured
       // output works against any backend that honours
       // response_format.json_schema.
       const engine = modelStore.engine;

@@ -6,18 +6,18 @@
  * component (default export) that accepts `width` / `height` / `fill`
  * / `stroke` props.
  *
- *  - `SplashMark`    — splash mark inner artwork (Figma `884:28352`).
- *  - `Screen1Hero`   — same flat SVG artwork as the splash mark,
+ *  - `SplashMark`    - splash mark inner artwork (Figma `884:28352`).
+ *  - `Screen1Hero`   - same flat SVG artwork as the splash mark,
  *                      sized to 112×112 on the welcome screen
  *                      (Figma `884:29310`).
- *  - `ShieldGlyph`   — privacy-shield vector used inside screen 4's
+ *  - `ShieldGlyph`   - privacy-shield vector used inside screen 4's
  *                      phone-outline composite (Figma `885:29695`).
- *  - `chipIcons`     — per-topic vector glyphs for screen 5 chips,
+ *  - `chipIcons`     - per-topic vector glyphs for screen 5 chips,
  *                      exported verbatim from Figma's iconify slots
  *                      (`fluent:chat-28-filled`, `typcn:code`,
  *                      `wpf:books`, `solar:mask-happly-bold`,
  *                      `fa6-solid:feather`).
- *  - `ArrowRightGlyph` / `HeadphonesGlyph` — flat SVGs used by the
+ *  - `ArrowRightGlyph` / `HeadphonesGlyph` - flat SVGs used by the
  *                      Figma button instances; matched 1:1 to avoid
  *                      hand-drawing.
  */
@@ -36,7 +36,7 @@ import type {TopicKey} from '../../store/onboarding/types';
 
 export {SplashMark, ShieldGlyph, ArrowRightGlyph, HeadphonesGlyph};
 
-// Screen 1 hero is the same flat SVG as the splash mark — verified
+// Screen 1 hero is the same flat SVG as the splash mark - verified
 // against Figma node equality (`884:28352` interior matches
 // `884:29310` Visual).
 export const Screen1Hero = SplashMark;

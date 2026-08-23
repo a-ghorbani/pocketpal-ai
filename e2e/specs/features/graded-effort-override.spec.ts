@@ -30,7 +30,7 @@ import {SCREENSHOT_DIR} from '../../wdio.shared.conf';
 declare const driver: WebdriverIO.Browser;
 declare const browser: WebdriverIO.Browser;
 
-/** Qwen3-0.6B: small reasoning-capable model — matches thinking.spec.ts. */
+/** Qwen3-0.6B: small reasoning-capable model - matches thinking.spec.ts. */
 const THINKING_MODEL = {
   id: 'qwen3-0.6b',
   searchQuery: 'bartowski Qwen_Qwen3-0.6B',
@@ -45,7 +45,7 @@ const THINKING_MODEL = {
 
 /**
  * A GRADED pill carries a different accessibilityLabel than a binary one:
- * "Reasoning effort: {Level}. Double tap to cycle effort level" — where {Level}
+ * "Reasoning effort: {Level}. Double tap to cycle effort level" - where {Level}
  * is the active grade (Low/Medium/High) when ON and EMPTY when OFF. (A binary
  * pill instead reads "Disable thinking mode" / "Enable thinking mode".) The
  * pill is always present via testID "thinking-toggle"; we read its state from
@@ -54,7 +54,7 @@ const THINKING_MODEL = {
  *
  * On iOS the testID becomes the element `name`, but when an accessibilityLabel
  * is also present the `~accessibility-id` strategy may resolve to the label
- * instead — so match by `name` via predicate. On Android the testID maps to
+ * instead - so match by `name` via predicate. On Android the testID maps to
  * resource-id.
  */
 const pillSelector = (): string =>
@@ -77,7 +77,7 @@ async function pillLabel(): Promise<string> {
  * or "" when the pill is OFF. The label format is "Reasoning effort: {Level}.
  * Double tap to cycle effort level"; OFF renders an empty level. A binary pill
  * (the bug this test guards against) instead reads "Disable/Enable thinking
- * mode" — reported here as "ON"/"" so the cycle never holds across grades.
+ * mode" - reported here as "ON"/"" so the cycle never holds across grades.
  */
 async function pillEffort(): Promise<string> {
   const label = await pillLabel();
@@ -206,14 +206,14 @@ describe('Local Graded-Effort Override', () => {
       await browser.pause(400);
     }
 
-    // Enabling axis-2 pre-selects the standard low/medium/high subset — exactly
+    // Enabling axis-2 pre-selects the standard low/medium/high subset - exactly
     // the graded set this test wants. The chip is a toggle, so TAPPING a
     // pre-selected chip would DESELECT it and persist an empty effort set (a
     // binary pill). The chip's selected state is also not reliably readable
     // across platforms (paper Chip's accessibilityState.selected surfaces as
     // selected="true" on iOS but selected="false" on Android even when chosen),
     // so a read-then-tap approach is unsafe. Instead we rely on the pre-applied
-    // selection and only confirm the chips are present — no tapping.
+    // selection and only confirm the chips are present - no tapping.
     for (const level of ['low', 'medium', 'high']) {
       await Gestures.scrollToElement(
         Selectors.modelSettings.effortChip(level),
@@ -236,7 +236,7 @@ describe('Local Graded-Effort Override', () => {
     await chatPage.waitForReady();
 
     // The pill is present via testID "thinking-toggle" regardless of binary vs
-    // graded state — but ChatPage.isThinkingToggleVisible() keys off the
+    // graded state - but ChatPage.isThinkingToggleVisible() keys off the
     // BINARY "Disable/Enable thinking mode" labels, which a graded pill never
     // carries. Assert pill presence by testID instead. The chat re-render after
     // the settings save + drawer navigation can lag a beat, so wait for it.
@@ -258,7 +258,7 @@ describe('Local Graded-Effort Override', () => {
 
     // Advance the pill one cycle step: tap until the effort label CHANGES. The
     // first pill interaction after navigation can be swallowed by the TTS
-    // VoiceChip overlap, so a single blind tap is unreliable — retry until the
+    // VoiceChip overlap, so a single blind tap is unreliable - retry until the
     // label moves (or we exhaust the attempt budget).
     const advance = async (from: string): Promise<string> => {
       for (let attempt = 0; attempt < 4; attempt++) {

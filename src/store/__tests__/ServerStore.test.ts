@@ -1141,7 +1141,7 @@ describe('ServerStore', () => {
 
       await serverStore.fetchRemoteModelCaps(id, 'm');
 
-      // Same numbers, different backend — the no-op short-circuit must not
+      // Same numbers, different backend - the no-op short-circuit must not
       // swallow this or the entry keeps claiming the old url.
       expect(serverStore.remoteCaps[`${id}/m`]).toEqual({
         contextLength: 8192,
@@ -1254,7 +1254,7 @@ describe('ServerStore', () => {
       const id = addLlamaServer();
       jest.clearAllMocks();
       // A keyless server resolves to undefined, which is indistinguishable
-      // from "not supplied" — the read happens either way.
+      // from "not supplied" - the read happens either way.
       const getApiKey = jest
         .spyOn(serverStore, 'getApiKey')
         .mockResolvedValue(undefined);

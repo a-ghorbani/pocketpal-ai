@@ -39,7 +39,7 @@ interface ThinkingBubbleProps {
   /**
    * When true, auto-collapse the bubble (typically when the step's main
    * content has started streaming, signalling the model has moved past
-   * the reasoning block). Respects user intent — once the user manually
+   * the reasoning block). Respects user intent - once the user manually
    * toggles, this prop no longer drives state.
    */
   autoCollapse?: boolean;
@@ -63,7 +63,7 @@ export const ThinkingBubble: React.FC<ThinkingBubbleProps> = ({
   // Once the user manually toggles, the autoCollapse signal is ignored
   // for the lifetime of this bubble (per-row instance). Without this,
   // a user who expanded mid-stream would get re-collapsed when content
-  // tokens start arriving — undesired.
+  // tokens start arriving - undesired.
   const userToggledRef = useRef(false);
 
   // React to autoCollapse: rising-edge collapse only, and only if the
@@ -262,7 +262,7 @@ export const ThinkingBubble: React.FC<ThinkingBubbleProps> = ({
   };
 
   const handlePress = () => {
-    // Mark that the user has taken control — autoCollapse becomes
+    // Mark that the user has taken control - autoCollapse becomes
     // a no-op from here on for this bubble instance.
     userToggledRef.current = true;
     toggleState();
@@ -300,7 +300,7 @@ export const ThinkingBubble: React.FC<ThinkingBubbleProps> = ({
     );
   }
 
-  // PARTIAL / EXPANDED — original card rendering.
+  // PARTIAL / EXPANDED - original card rendering.
   return (
     <TouchableOpacity
       style={styles.shadowContainer}

@@ -908,7 +908,7 @@ describe('PalSheet', () => {
 
     it('emits greeting with raw whitespace text when prompts are present', async () => {
       // Whitespace-only text has length > 0, so the predicate is true and the
-      // text is saved verbatim (no trim) — mirror of the PalsHub wire-side
+      // text is saved verbatim (no trim) - mirror of the PalsHub wire-side
       // predicate.
       const {getByTestId} = renderPalSheet(createBasicPal());
 
@@ -1029,7 +1029,7 @@ describe('PalSheet', () => {
         fireEvent.changeText(getByTestId('form-field-greetingText'), 'Hi');
       });
 
-      // Row 0: '  a  ' (whitespace around content — should be trimmed to 'a')
+      // Row 0: '  a  ' (whitespace around content - should be trimmed to 'a')
       await act(async () => {
         fireEvent.press(getByTestId('suggested-prompt-add-button'));
       });
@@ -1037,12 +1037,12 @@ describe('PalSheet', () => {
         fireEvent.changeText(getByTestId('suggested-prompt-input-0'), '  a  ');
       });
 
-      // Row 1: '' (empty — should be dropped)
+      // Row 1: '' (empty - should be dropped)
       await act(async () => {
         fireEvent.press(getByTestId('suggested-prompt-add-button'));
       });
 
-      // Row 2: '   ' (whitespace-only — should be dropped)
+      // Row 2: '   ' (whitespace-only - should be dropped)
       await act(async () => {
         fireEvent.press(getByTestId('suggested-prompt-add-button'));
       });

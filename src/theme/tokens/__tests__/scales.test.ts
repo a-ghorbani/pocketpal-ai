@@ -4,7 +4,7 @@
  * Verifies the "single scale per dimension" rule: the canonical Figma
  * file lists `Gap/*` and lowercase `radius/radius-xs` as legacy names
  * that mirror `Spacing/*` / `Radius/XS`. The token module resolves those
- * aliases at module level — consumers see ONE scale per dimension. The
+ * aliases at module level - consumers see ONE scale per dimension. The
  * surfaced spacing / radius / stroke objects must not contain any alias
  * keys (`gap*`, `radius-xs`, `Gap/*`, etc.).
  *
@@ -16,7 +16,7 @@
  */
 import {radius, spacing, stroke} from '../index';
 
-describe('design-token scales — single scale per dimension', () => {
+describe('design-token scales - single scale per dimension', () => {
   describe('spacing', () => {
     // The exact, canonical key set. Any drift (a `Gap/*` alias leaking
     // through, an extra key, a renamed key) fails this assertion.
@@ -61,7 +61,7 @@ describe('design-token scales — single scale per dimension', () => {
 
     // Documented aliasing: Gap/S=8 mirrors Spacing/S=8; Gap/SM=12
     // mirrors Spacing/SM=12 (residual canonical-file name-drift). The
-    // token module resolves these at source — `spacing.s` and
+    // token module resolves these at source - `spacing.s` and
     // `spacing.sm` are the canonical lookups.
     it('Gap/S alias resolves to spacing.s (=8)', () => {
       expect(spacing.s).toBe(8);
@@ -74,7 +74,7 @@ describe('design-token scales — single scale per dimension', () => {
 
   describe('radius', () => {
     // Key names mirror canonical Figma `Radius/*`
-    // (None/XXS/XS/S/M/ML/L/XL/XXL). Note: there is no `sm` step — Figma
+    // (None/XXS/XS/S/M/ML/L/XL/XXL). Note: there is no `sm` step - Figma
     // jumps S(8) → M(12). A Figma spec saying `Radius/L` must map to
     // `radius.l` (= 20), not `radius.l = 32`.
     const expectedKeys = [

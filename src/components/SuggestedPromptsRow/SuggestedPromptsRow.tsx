@@ -15,7 +15,7 @@ interface SuggestedPromptsRowProps {
   onSelect: (prompt: string) => void;
   /**
    * When true, chips render dimmed and taps are ignored. Use when no model
-   * is loaded — matches the send-button disabled behavior.
+   * is loaded - matches the send-button disabled behavior.
    */
   disabled?: boolean;
 }

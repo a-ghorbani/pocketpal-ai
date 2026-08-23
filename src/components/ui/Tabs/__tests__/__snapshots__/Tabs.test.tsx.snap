@@ -1,6 +1,6 @@
 // Jest Snapshot v1, https://goo.gl/fbAQLP
 
-exports[`Tabs — snapshot matrix baseline (variant x size x {default,disabled} x modes) pill-m-default-dark 1`] = `
+exports[`Tabs - snapshot matrix baseline (variant x size x {default,disabled} x modes) pill-m-default-dark 1`] = `
 <View
   collapsable={false}
   pointerEvents="box-none"
@@ -243,7 +243,7 @@ exports[`Tabs — snapshot matrix baseline (variant x size x {default,disabled} 
 </View>
 `;
 
-exports[`Tabs — snapshot matrix baseline (variant x size x {default,disabled} x modes) pill-m-default-light 1`] = `
+exports[`Tabs - snapshot matrix baseline (variant x size x {default,disabled} x modes) pill-m-default-light 1`] = `
 <View
   collapsable={false}
   pointerEvents="box-none"
@@ -486,7 +486,7 @@ exports[`Tabs — snapshot matrix baseline (variant x size x {default,disabled} 
 </View>
 `;
 
-exports[`Tabs — snapshot matrix baseline (variant x size x {default,disabled} x modes) pill-m-disabled-dark 1`] = `
+exports[`Tabs - snapshot matrix baseline (variant x size x {default,disabled} x modes) pill-m-disabled-dark 1`] = `
 <View
   collapsable={false}
   pointerEvents="box-none"
@@ -729,7 +729,7 @@ exports[`Tabs — snapshot matrix baseline (variant x size x {default,disabled} 
 </View>
 `;
 
-exports[`Tabs — snapshot matrix baseline (variant x size x {default,disabled} x modes) pill-m-disabled-light 1`] = `
+exports[`Tabs - snapshot matrix baseline (variant x size x {default,disabled} x modes) pill-m-disabled-light 1`] = `
 <View
   collapsable={false}
   pointerEvents="box-none"
@@ -972,7 +972,7 @@ exports[`Tabs — snapshot matrix baseline (variant x size x {default,disabled} 
 </View>
 `;
 
-exports[`Tabs — snapshot matrix baseline (variant x size x {default,disabled} x modes) pill-s-default-dark 1`] = `
+exports[`Tabs - snapshot matrix baseline (variant x size x {default,disabled} x modes) pill-s-default-dark 1`] = `
 <View
   collapsable={false}
   pointerEvents="box-none"
@@ -1215,7 +1215,7 @@ exports[`Tabs — snapshot matrix baseline (variant x size x {default,disabled} 
 </View>
 `;
 
-exports[`Tabs — snapshot matrix baseline (variant x size x {default,disabled} x modes) pill-s-default-light 1`] = `
+exports[`Tabs - snapshot matrix baseline (variant x size x {default,disabled} x modes) pill-s-default-light 1`] = `
 <View
   collapsable={false}
   pointerEvents="box-none"
@@ -1458,7 +1458,7 @@ exports[`Tabs — snapshot matrix baseline (variant x size x {default,disabled} 
 </View>
 `;
 
-exports[`Tabs — snapshot matrix baseline (variant x size x {default,disabled} x modes) pill-s-disabled-dark 1`] = `
+exports[`Tabs - snapshot matrix baseline (variant x size x {default,disabled} x modes) pill-s-disabled-dark 1`] = `
 <View
   collapsable={false}
   pointerEvents="box-none"
@@ -1701,7 +1701,7 @@ exports[`Tabs — snapshot matrix baseline (variant x size x {default,disabled} 
 </View>
 `;
 
-exports[`Tabs — snapshot matrix baseline (variant x size x {default,disabled} x modes) pill-s-disabled-light 1`] = `
+exports[`Tabs - snapshot matrix baseline (variant x size x {default,disabled} x modes) pill-s-disabled-light 1`] = `
 <View
   collapsable={false}
   pointerEvents="box-none"
@@ -1944,7 +1944,7 @@ exports[`Tabs — snapshot matrix baseline (variant x size x {default,disabled} 
 </View>
 `;
 
-exports[`Tabs — snapshot matrix baseline (variant x size x {default,disabled} x modes) underline-m-default-dark 1`] = `
+exports[`Tabs - snapshot matrix baseline (variant x size x {default,disabled} x modes) underline-m-default-dark 1`] = `
 <View
   collapsable={false}
   pointerEvents="box-none"
@@ -2181,7 +2181,7 @@ exports[`Tabs — snapshot matrix baseline (variant x size x {default,disabled} 
 </View>
 `;
 
-exports[`Tabs — snapshot matrix baseline (variant x size x {default,disabled} x modes) underline-m-default-light 1`] = `
+exports[`Tabs - snapshot matrix baseline (variant x size x {default,disabled} x modes) underline-m-default-light 1`] = `
 <View
   collapsable={false}
   pointerEvents="box-none"
@@ -2418,7 +2418,7 @@ exports[`Tabs — snapshot matrix baseline (variant x size x {default,disabled} 
 </View>
 `;
 
-exports[`Tabs — snapshot matrix baseline (variant x size x {default,disabled} x modes) underline-m-disabled-dark 1`] = `
+exports[`Tabs - snapshot matrix baseline (variant x size x {default,disabled} x modes) underline-m-disabled-dark 1`] = `
 <View
   collapsable={false}
   pointerEvents="box-none"
@@ -2655,7 +2655,7 @@ exports[`Tabs — snapshot matrix baseline (variant x size x {default,disabled} 
 </View>
 `;
 
-exports[`Tabs — snapshot matrix baseline (variant x size x {default,disabled} x modes) underline-m-disabled-light 1`] = `
+exports[`Tabs - snapshot matrix baseline (variant x size x {default,disabled} x modes) underline-m-disabled-light 1`] = `
 <View
   collapsable={false}
   pointerEvents="box-none"
@@ -2892,7 +2892,7 @@ exports[`Tabs — snapshot matrix baseline (variant x size x {default,disabled} 
 </View>
 `;
 
-exports[`Tabs — snapshot matrix baseline (variant x size x {default,disabled} x modes) underline-s-default-dark 1`] = `
+exports[`Tabs - snapshot matrix baseline (variant x size x {default,disabled} x modes) underline-s-default-dark 1`] = `
 <View
   collapsable={false}
   pointerEvents="box-none"
@@ -3129,7 +3129,7 @@ exports[`Tabs — snapshot matrix baseline (variant x size x {default,disabled} 
 </View>
 `;
 
-exports[`Tabs — snapshot matrix baseline (variant x size x {default,disabled} x modes) underline-s-default-light 1`] = `
+exports[`Tabs - snapshot matrix baseline (variant x size x {default,disabled} x modes) underline-s-default-light 1`] = `
 <View
   collapsable={false}
   pointerEvents="box-none"
@@ -3366,7 +3366,7 @@ exports[`Tabs — snapshot matrix baseline (variant x size x {default,disabled} 
 </View>
 `;
 
-exports[`Tabs — snapshot matrix baseline (variant x size x {default,disabled} x modes) underline-s-disabled-dark 1`] = `
+exports[`Tabs - snapshot matrix baseline (variant x size x {default,disabled} x modes) underline-s-disabled-dark 1`] = `
 <View
   collapsable={false}
   pointerEvents="box-none"
@@ -3603,7 +3603,7 @@ exports[`Tabs — snapshot matrix baseline (variant x size x {default,disabled} 
 </View>
 `;
 
-exports[`Tabs — snapshot matrix baseline (variant x size x {default,disabled} x modes) underline-s-disabled-light 1`] = `
+exports[`Tabs - snapshot matrix baseline (variant x size x {default,disabled} x modes) underline-s-disabled-light 1`] = `
 <View
   collapsable={false}
   pointerEvents="box-none"
@@ -3840,7 +3840,7 @@ exports[`Tabs — snapshot matrix baseline (variant x size x {default,disabled} 
 </View>
 `;
 
-exports[`Tabs — snapshot matrix non-Latin font-fallback canary (canaryVariant x size=default x default x light x lang) underline-s-default-light-fa 1`] = `
+exports[`Tabs - snapshot matrix non-Latin font-fallback canary (canaryVariant x size=default x default x light x lang) underline-s-default-light-fa 1`] = `
 <View
   collapsable={false}
   pointerEvents="box-none"

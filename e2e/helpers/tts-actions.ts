@@ -59,7 +59,7 @@ async function readStatus(): Promise<TtsStatus> {
     }
     return JSON.parse(data) as TtsStatus;
   }
-  // Prefer the explicit UDID — `booted` is ambiguous when several
+  // Prefer the explicit UDID - `booted` is ambiguous when several
   // simulators are running at once.
   const target = process.env.E2E_DEVICE_UDID || 'booted';
   const container = execSync(

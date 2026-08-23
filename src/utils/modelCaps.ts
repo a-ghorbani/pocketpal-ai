@@ -11,12 +11,12 @@ import type {
 /**
  * Effective capabilities of a model, kept as two independent axes.
  *
- * Axis 1 (`vision` / `contextLength`) — what the model declares, independent of
+ * Axis 1 (`vision` / `contextLength`) - what the model declares, independent of
  * load state; describes the model itself, so it is meaningful for any model.
- * Axis 2 (`visionActive` / `effectiveContextLength`) — what the session that
+ * Axis 2 (`visionActive` / `effectiveContextLength`) - what the session that
  * exists right now can actually do; meaningful only for the active model.
  *
- * Both length fields are a number > 0 or absent, never 0 — callers do not
+ * Both length fields are a number > 0 or absent, never 0 - callers do not
  * re-check.
  */
 export interface ModelCapabilityView {
@@ -26,7 +26,7 @@ export interface ModelCapabilityView {
   effectiveContextLength?: number;
 }
 
-/** Resolver inputs. Assembled in one place — `ModelStore`. */
+/** Resolver inputs. Assembled in one place - `ModelStore`. */
 export interface CapabilityEnv {
   remoteCaps: Record<string, RemoteModelCaps>;
   listCaps: Record<string, ListDerivedCaps>;
@@ -49,7 +49,7 @@ const triState = (value: boolean | undefined): 'yes' | 'no' | 'unknown' => {
 };
 
 /**
- * Resolve the effective capabilities of a model. Single source of truth — the
+ * Resolve the effective capabilities of a model. Single source of truth - the
  * only place `model.origin` is branched on to answer a capability question, so
  * its consumers cannot structurally disagree.
  *
@@ -65,13 +65,13 @@ export function resolveModelCaps(
   }
 
   // Context facts describe the live session, so they apply to the active model
-  // alone — a card must never borrow another model's load state.
+  // alone - a card must never borrow another model's load state.
   const isActiveModel = model.id === env.activeModelId;
 
   if (model.origin === ModelOrigin.REMOTE) {
     // Two tiers, merged field by field rather than entry by entry: a probe
     // answers about a loaded model, the models list about a configured one, so
-    // one can answer where the other is silent. `positive` runs per tier — a
+    // one can answer where the other is silent. `positive` runs per tier - a
     // legacy zero in a probe entry must not discard a usable listed window.
     const confirmed = resolveRemoteCaps(model, env.remoteCaps, env.binding);
     const listed = env.listCaps[model.id];

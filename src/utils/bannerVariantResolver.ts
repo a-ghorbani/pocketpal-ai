@@ -68,7 +68,7 @@ export function resolveBannerVariant(
 
       const ratio = Math.min(1, Math.max(0, snapshot.used / nCtx));
 
-      // 1. context-full — freshness gate corroborates the frozen flag;
+      // 1. context-full - freshness gate corroborates the frozen flag;
       // dismissable per draft (the dismissal clears on the next finished turn).
       if (
         snapshot.contextFull &&
@@ -82,7 +82,7 @@ export function resolveBannerVariant(
         };
       }
 
-      // 2. context-warning — near the limit, dismissable per draft. Admits
+      // 2. context-warning - near the limit, dismissable per draft. Admits
       // remote llama.cpp too: the outer effectiveNCtx gate only passes for a
       // remote model once its /props contextLength is known.
       if (
@@ -94,7 +94,7 @@ export function resolveBannerVariant(
       }
     }
 
-    // 3. context-remote-hedged — remote weak-signal truncation, dismissable.
+    // 3. context-remote-hedged - remote weak-signal truncation, dismissable.
     // Remote models never set activeContextSettings.n_ctx, so this branch
     // must not depend on effectiveNCtx.
     if (
@@ -108,7 +108,7 @@ export function resolveBannerVariant(
     }
   }
 
-  // 4. html-soft-cap — preventative hint, independent of model state.
+  // 4. html-soft-cap - preventative hint, independent of model state.
   if (htmlPreviewCount >= 4) {
     return {variant: 'html-soft-cap'};
   }

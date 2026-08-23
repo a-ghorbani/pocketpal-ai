@@ -90,7 +90,7 @@ class PalStore {
       // Initialize Lookie pal after database is loaded
       await this.initializeLookiePal();
 
-      // Initialize Pip pal (idempotent — see initializePipPal).
+      // Initialize Pip pal (idempotent - see initializePipPal).
       await this.initializePipPal();
 
       // Register talent engines (idempotent)
@@ -710,7 +710,7 @@ class PalStore {
       if (!lookiePal) {
         console.log('Creating default Lookie pal...');
 
-        // Offline constant — no network resolve at pal init.
+        // Offline constant - no network resolve at pal init.
         const defaultModel = LOOKIE_DEFAULT_MODEL;
 
         // Create the Lookie pal with all the original properties
@@ -771,7 +771,7 @@ class PalStore {
         description:
           'A friendly general-purpose pal that runs entirely on your phone.',
         systemPrompt:
-          'You are Pip, a friendly and helpful assistant who runs locally on the user’s phone. Keep replies concise and warm.',
+          "You are Pip, a friendly and helpful assistant who runs locally on the user's phone. Keep replies concise and warm.",
         isSystemPromptChanged: false,
         useAIPrompt: false,
         defaultModel: undefined,

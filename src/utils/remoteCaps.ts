@@ -12,7 +12,7 @@ import {
  * comparison that answers "do these describe what we are talking to".
  *
  * No binding (or one for another model) means there is no live session to
- * contradict, and an entry with no `probedUrl` predates the field — both are
+ * contradict, and an entry with no `probedUrl` predates the field - both are
  * taken at face value.
  */
 export function capsMatchBinding(

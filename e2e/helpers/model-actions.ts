@@ -69,7 +69,7 @@ export async function dismissContextRoomSheetIfPresent(): Promise<void> {
  * Wait for the first AI message bubble to appear, dismissing the "Give this
  * chat more room" sheet on each poll. With a pal that needs more room than the
  * current context, that sheet can surface over the chat right after sending and
- * block the AI bubble from being seen — a plain waitForExist then times out
+ * block the AI bubble from being seen - a plain waitForExist then times out
  * (talent-tool-use, #764). Polling + dismissing clears the overlay so the
  * bubble becomes visible.
  */
@@ -96,7 +96,7 @@ export async function waitForAiMessage(
  */
 async function disableVisionOnCard(filename: string): Promise<void> {
   const card = browser.$(Selectors.modelCard.cardContainer(filename));
-  // `.//`-scoped so Android evaluates the child query against THIS card —
+  // `.//`-scoped so Android evaluates the child query against THIS card -
   // an absolute testID XPath is document-global and can expand a sibling.
   const expand = (browser as any).isAndroid
     ? card.$('.//*[contains(@resource-id, "expand-details-button")]')
@@ -107,7 +107,7 @@ async function disableVisionOnCard(filename: string): Promise<void> {
 
   // The switch carries its own testID: RN view-flattening turns the row
   // container into a leaf in the a11y tree, so a child query under the row
-  // can never match. Scroll BEFORE concluding it is absent — an off-screen
+  // can never match. Scroll BEFORE concluding it is absent - an off-screen
   // toggle also reads as not existing, and skipping then silently leaves
   // vision ON (the failure this helper exists to prevent).
   const visionSwitch = browser.$(byTestId('vision-toggle-switch'));

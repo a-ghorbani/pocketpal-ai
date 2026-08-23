@@ -28,7 +28,7 @@ export interface HFResolveResult {
  * `url`.
  *
  * It must go through `createSiblingsFromFileDetails` so every sibling has a
- * download URL — a hand-built `ModelFile` has none, which makes the downstream
+ * download URL - a hand-built `ModelFile` has none, which makes the downstream
  * space-check/download a silent no-op.
  *
  * No fallback and no filename selection: a fetch failure throws. Callers that

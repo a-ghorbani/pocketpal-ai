@@ -253,7 +253,7 @@ describe('exports', () => {
 
   it('resolves pt and pt_BR to different translations', () => {
     // European vs Brazilian Portuguese are separate locales, and their
-    // Settings header strings happen to be identical — so a wiring mistake
+    // Settings header strings happen to be identical - so a wiring mistake
     // that pointed both at one JSON would not show up on screen.
     expect(l10n.pt.settings.useMmapDescription).not.toBe(
       l10n.pt_BR.settings.useMmapDescription,

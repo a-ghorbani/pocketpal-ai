@@ -6,16 +6,16 @@
  * That isolation removes three classes of failure that earlier shared-state
  * designs hit:
  *
- *   1. Cold-launch auto-load shadowing — when the bench shared the store,
+ *   1. Cold-launch auto-load shadowing - when the bench shared the store,
  *      `ChatView`'s `selectModel(palDefaultModel)` could load the model
  *      with default devices BEFORE the matrix could call `setDevices(...)`,
  *      and `initContext`'s "already loaded → skip" path silently dropped
  *      the runner's per-cell intent.
- *   2. Cross-cell MMKV leak — a previous cell's persisted `n_gpu_layers`
+ *   2. Cross-cell MMKV leak - a previous cell's persisted `n_gpu_layers`
  *      could carry into the next cell unless explicitly pinned and then
  *      restored at matrix exit. The pin/restore machinery was a
  *      symptom-level patch.
- *   3. Crash-corruption — if the matrix threw mid-flight, the user's
+ *   3. Crash-corruption - if the matrix threw mid-flight, the user's
  *      persisted Settings would be left in whatever transient state the
  *      last cell wrote.
  *
@@ -48,7 +48,7 @@ export type SettingsOverrides = Partial<Record<SettingsKnob, SettingsValue>>;
 /**
  * The exact field set the bench runner controls when composing
  * `ContextParams` for `initLlama`. Excludes `model`, `devices`,
- * `n_gpu_layers` — those are the per-cell axis values, computed from the
+ * `n_gpu_layers` - those are the per-cell axis values, computed from the
  * cell's backend slot, not part of the shared base.
  */
 export type BenchBaseParams = Pick<
@@ -73,7 +73,7 @@ export type BenchBaseParams = Pick<
  * in Settings: `use_mmap` is an explicit boolean (no smart resolver),
  * `flash_attn_type` follows the platform default that matches the merged
  * v2.2 contract, `kv_unified=true` matches the post-v2.0 ContextInitParams
- * default. `n_threads` is a fallback only — the matrix overwrites it with
+ * default. `n_threads` is a fallback only - the matrix overwrites it with
  * `getRecommendedThreadCount()` at matrix start.
  */
 export const DEFAULT_BENCH_BASE_PARAMS: BenchBaseParams = {
@@ -98,8 +98,8 @@ export const DEFAULT_BENCH_BASE_PARAMS: BenchBaseParams = {
  * 'smart'`, mirroring the Settings UI) doesn't coincide with the
  * `ContextParams` field type (`boolean`). `'smart'` has no per-file
  * resolution under the bench (no model file is open at compose time);
- * we resolve it to the platform default — `true` on iOS, `false` on
- * Android — to match the ContextInitParams v2.2 migration semantics.
+ * we resolve it to the platform default - `true` on iOS, `false` on
+ * Android - to match the ContextInitParams v2.2 migration semantics.
  *
  * Pure: no closure capture, no side effects. Exported for unit tests.
  */
@@ -137,10 +137,10 @@ export function buildOverridesParams(
 /**
  * Compose the literal `ContextParams` the runner hands to `initLlama` for
  * a single cell. The field order is significant for the snapshot-on-disk:
- *   1. base — every field with its default value
- *   2. overrides — the cell's sweep-axis values (only the keys the cell
+ *   1. base - every field with its default value
+ *   2. overrides - the cell's sweep-axis values (only the keys the cell
  *      explicitly varied; everything else stays at base)
- *   3. cell-axis fixed slots — `model`, `devices`, `n_gpu_layers`, which
+ *   3. cell-axis fixed slots - `model`, `devices`, `n_gpu_layers`, which
  *      are determined by the cell coordinates, not the sweep
  *
  * Pure: no closure capture, no side effects. Exported for unit tests.

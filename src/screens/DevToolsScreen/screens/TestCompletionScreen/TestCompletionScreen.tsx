@@ -366,7 +366,7 @@ export const TestCompletionScreen: React.FC = observer(() => {
         textCompletion: {
           text: '',
           error:
-            'This test requires a local model — getFormattedChat is not available for remote models.',
+            'This test requires a local model - getFormattedChat is not available for remote models.',
         },
       }));
       return;
@@ -721,7 +721,7 @@ export const TestCompletionScreen: React.FC = observer(() => {
         formattedChat: {
           text: '',
           error:
-            'This test requires a local model — getFormattedChat is not available for remote models.',
+            'This test requires a local model - getFormattedChat is not available for remote models.',
         },
       }));
       return;
@@ -1027,7 +1027,7 @@ export const TestCompletionScreen: React.FC = observer(() => {
       id: 'structuredOutput',
       label: 'Structured output (JSON schema)',
       description:
-        'completion() with response_format.json_schema — llama.rn converts the schema object to GBNF internally.',
+        'completion() with response_format.json_schema - llama.rn converts the schema object to GBNF internally.',
       run: runStructuredOutputTest,
     },
     {

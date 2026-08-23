@@ -1,5 +1,5 @@
 /**
- * Typography tokens — the new design-system surface.
+ * Typography tokens - the new design-system surface.
  *
  * Base (Latin) values. Locale-aware swapping (Fraunces → Inter for
  * non-Latin) is implemented by `typographyForLocale()` and invoked from
@@ -22,7 +22,7 @@ import {TokenTypography, TypographyStyle} from './types';
 
 // Family-name constants. Match the PostScript names of the bundled TTFs.
 // The Fraunces cuts under src/assets/fonts/ are static instances of the
-// variable Fraunces pinned at SOFT=0, WONK=1, opsz=36 — WONK=1 selects
+// variable Fraunces pinned at SOFT=0, WONK=1, opsz=36 - WONK=1 selects
 // the design system's eccentric letterforms (single-storey `a`, swooshier
 // italics, alt `g`). PostScript names match the original family so RN
 // font lookup is unchanged.
@@ -47,12 +47,12 @@ export const FONT_FAMILIES = {
  * Why Cyrillic (ru, uk) is on this list: the bundled Fraunces TTFs are
  * the Latin-only subset from Fontsource and contain no Cyrillic
  * codepoints. CJK / Hebrew / Arabic / Persian / Hangul are intentionally
- * not bundled — Inter passes those glyphs through to the platform
+ * not bundled - Inter passes those glyphs through to the platform
  * system font.
  *
  * Why Polish is on this list despite being Latin script: that Fraunces
  * subset stops at Latin-1 and has no Latin Extended-A, so it is missing
- * ą ć ę ł ń ś ź ż and their capitals — 16 of Polish's 18 diacritics.
+ * ą ć ę ł ń ś ź ż and their capitals - 16 of Polish's 18 diacritics.
  * The membership test is glyph coverage, not script family; check a new
  * locale's characters against the bundled TTFs before omitting it here.
  * Portuguese needs only Latin-1 (ã õ ç á é í ó ú â ê ô à) and is covered.
@@ -77,7 +77,7 @@ const isNonLatinLocale = (locale: AvailableLanguage): boolean =>
  * (`RZxDJea4t6jnBZrV4YBacF`, design system at `789:19792`). All
  * line-heights are absolute pixel values.
  *
- * No consumer references these in this slice — the new surface coexists
+ * No consumer references these in this slice - the new surface coexists
  * with the legacy `theme.fonts.*` MD3 typescale (preserved verbatim by
  * the builder to avoid visual regression). Future restyle slices
  * migrate per screen.
@@ -145,7 +145,7 @@ export const typography: TokenTypography = {
     fontWeight: '400',
   },
 
-  // Headlines (Fraunces — bundled subset is Latin-only; non-Latin and
+  // Headlines (Fraunces - bundled subset is Latin-only; non-Latin and
   // Cyrillic locales swap to Inter via `typographyForLocale`). Canonical
   // Headline/H1 uses Fraunces-Regular family at font-medium (500); we
   // pick the bundled `Fraunces-Medium` static cut to match.
@@ -167,7 +167,7 @@ export const typography: TokenTypography = {
     fontStyle: 'italic',
   },
 
-  // Code (JetBrains Mono — locale-agnostic)
+  // Code (JetBrains Mono - locale-agnostic)
   codeM: {
     fontFamily: FONT_FAMILIES.JETBRAINS_MONO_REGULAR,
     fontSize: 14,
@@ -187,14 +187,14 @@ export const typography: TokenTypography = {
  * rule:
  *   - Fraunces upright + non-Latin locale → Inter (same weight class).
  *   - Fraunces italic  + non-Latin locale → Inter-Medium with
- *     `fontStyle: 'italic'` (synthesised italic — no Inter-Italic cut
+ *     `fontStyle: 'italic'` (synthesised italic - no Inter-Italic cut
  *     bundled).
  *   - Inter / JetBrains Mono → no swap. Inter ships with Latin +
  *     Cyrillic glyphs and renders ru/uk/Latin locales directly; for
  *     scripts Inter doesn't cover, the platform falls back to system
  *     fonts. Code is locale-agnostic.
  *
- * Invoked from the theme builder — components never call this directly,
+ * Invoked from the theme builder - components never call this directly,
  * so components remain locale-agnostic.
  */
 export function typographyForLocale(
@@ -220,7 +220,7 @@ export function typographyForLocale(
         fontStyle: 'italic',
       };
     default:
-      // Inter family and JetBrains Mono — no swap.
+      // Inter family and JetBrains Mono - no swap.
       return base;
   }
 }

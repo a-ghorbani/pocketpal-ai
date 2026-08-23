@@ -49,7 +49,7 @@
     "deviceSelectionIOS": "Dispositivo (Metal)",
     "deviceSelectionIOSDescription": "Scegli la GPU Metal o la modalità solo CPU",
     "deviceSelectionAndroidDescription": "Seleziona dispositivo di calcolo (CPU, GPU o NPU Hexagon)",
-    "cpuOnlyNoAccelerators": "Solo CPU – Nessun acceleratore hardware rilevato",
+    "cpuOnlyNoAccelerators": "Solo CPU - Nessun acceleratore hardware rilevato",
     "contextSize": "Dimensione del contesto",
     "contextSizePlaceholder": "Inserisci la dimensione del contesto (min {{minContextSize}})",
     "invalidContextSizeError": "Inserisci un numero valido (minimum {{minContextSize}})",

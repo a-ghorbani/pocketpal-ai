@@ -105,7 +105,7 @@ export function runSnapshotMatrix<V extends string, S extends string>(
   const canaryVariant = axes.rtlCanaryVariant ?? axes.variants[0];
   const defaultSize = axes.sizes[0];
 
-  describe(`${name} — snapshot matrix`, () => {
+  describe(`${name} - snapshot matrix`, () => {
     describe('baseline (variant x size x {default,disabled} x modes)', () => {
       for (const variant of axes.variants) {
         for (const size of axes.sizes) {

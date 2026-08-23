@@ -65,7 +65,7 @@ describe('ttsRuntime', () => {
     await ttsRuntime.acquire(kitten, async () => undefined);
     await ttsRuntime.acquire(kokoro, async () => undefined);
 
-    // Kokoro must be loaded twice now — once originally, once after kitten
+    // Kokoro must be loaded twice now - once originally, once after kitten
     // displaced it. The previous design short-circuited the second load.
     expect(kokoro.loadInto).toHaveBeenCalledTimes(2);
   });
@@ -135,7 +135,7 @@ describe('ttsRuntime', () => {
       await ttsRuntime.stop();
 
       expect(stopMock).toHaveBeenCalledTimes(1);
-      // Stop must NOT release — the engine stays loaded so the next play
+      // Stop must NOT release - the engine stays loaded so the next play
       // starts immediately without paying re-init cost.
       expect(ttsRuntime.getActiveEngineId()).toBe('kokoro');
     });
@@ -172,7 +172,7 @@ describe('ttsRuntime', () => {
       await expect(
         ttsRuntime.acquire(broken, async () => 'ok'),
       ).rejects.toThrow('boom');
-      // activeEngineId stays null — the failed load did not become active.
+      // activeEngineId stays null - the failed load did not become active.
       expect(ttsRuntime.getActiveEngineId()).toBeNull();
 
       // The next acquire must still work.
@@ -189,7 +189,7 @@ describe('ttsRuntime', () => {
           throw new Error('work-failed');
         }),
       ).rejects.toThrow('work-failed');
-      // The engine is still loaded — only the work failed.
+      // The engine is still loaded - only the work failed.
       expect(ttsRuntime.getActiveEngineId()).toBe('kokoro');
 
       // Next acquire on the same engine must still succeed without re-init.

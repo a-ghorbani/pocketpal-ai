@@ -8,13 +8,13 @@ export type PipMascotProps = {
   width?: number;
 };
 
-// Figma palette — sourced verbatim from the canonical file for the
+// Figma palette - sourced verbatim from the canonical file for the
 // recommended-pal mascot at `887:30085`.
 const MASCOT_BG = '#CED5D3'; // Color/green/subtle
 const MASCOT_BORDER = '#FAFAFA'; // Color/primary/foreground
 
 /**
- * Screen 6 illustration — the recommended-pal "Pip" mascot. A
+ * Screen 6 illustration - the recommended-pal "Pip" mascot. A
  * 66×62 rounded card (green-subtle bg, 3px white border) with a
  * friendly cartoon face inside: two black eye dots, a curved
  * eyebrow stroke, and a tiny "ping" speech notch at the bottom.
@@ -40,7 +40,7 @@ export const PipMascot: React.FC<PipMascotProps> = ({width = 66}) => {
         strokeWidth={3}
       />
       <G>
-        {/* Eyes — two black dots, centered horizontally with a 13px gap. */}
+        {/* Eyes - two black dots, centered horizontally with a 13px gap. */}
         <Circle cx={26.3} cy={31} r={3.3} fill={theme.colors.onBackground} />
         <Circle cx={39.7} cy={31} r={3.3} fill={theme.colors.onBackground} />
         {/* Eyebrow arc (left brow tilted). */}

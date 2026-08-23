@@ -38,7 +38,7 @@ describe('Surface', () => {
     expect(flat.elevation).toBe(0);
   });
 
-  it('defaults radius to none — no implicit corners', () => {
+  it('defaults radius to none - no implicit corners', () => {
     const {getByTestId} = renderWithTheme(
       <Surface testID="surf">
         <Text>x</Text>
@@ -58,7 +58,7 @@ describe('Surface', () => {
     expect(flat.borderRadius).toBe(20);
   });
 
-  it('does not synthesise iOS shadow props — consumer-owned per pocketpal pattern', () => {
+  it('does not synthesise iOS shadow props - consumer-owned per pocketpal pattern', () => {
     const {getByTestId} = renderWithTheme(
       <Surface testID="surf" elevation={3}>
         <Text>x</Text>

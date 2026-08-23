@@ -83,7 +83,7 @@ interface PendingIndicatorProps {
    * True between the user pressing Stop and the runner actually
    * exiting (native llama.rn finishing its in-flight `llama_decode`
    * chunk). When true, the indicator overrides any tool-call label /
-   * count / elapsed suffix with a single "Stopping…" message — the
+   * count / elapsed suffix with a single "Stopping…" message - the
    * user-facing signal that "your stop was received, native is
    * winding down at its next chunk boundary."
    */
@@ -92,7 +92,7 @@ interface PendingIndicatorProps {
 
 /**
  * Three-dot pending indicator rendered below the latest turn during
- * prefill / tool-call generation / tool execution. Pure decoration —
+ * prefill / tool-call generation / tool execution. Pure decoration -
  * visibility is gated by the caller.
  *
  * For long tool calls, when `pendingTalentNames` is non-empty the
@@ -113,7 +113,7 @@ export const PendingIndicator: React.FC<PendingIndicatorProps> = ({
   const inToolCallMode = !!firstTalent;
 
   // Elapsed seconds tracker. Starts when we enter tool-call mode,
-  // resets when we leave. Uses a 1-second interval — coarse enough
+  // resets when we leave. Uses a 1-second interval - coarse enough
   // not to thrash the UI, fine enough to reassure "still going".
   const [elapsedSec, setElapsedSec] = useState(0);
   useEffect(() => {

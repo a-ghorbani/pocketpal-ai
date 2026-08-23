@@ -20,7 +20,7 @@ interface UsePalLoadHintReturn {
 }
 
 // One-shot snackbar trigger when a pal with a heavy talent loads into a chat
-// whose runtime n_ctx is below the talent's recommendation. Declarative only —
+// whose runtime n_ctx is below the talent's recommendation. Declarative only -
 // reads recommendedContextTokens, never moves a banner trigger.
 export const usePalLoadHint = ({
   activePal,

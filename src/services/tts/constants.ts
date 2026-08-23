@@ -49,7 +49,7 @@ export const SUPERTONIC_MODEL_VERSION = 3;
 export const SUPERTONIC_VERSION_SENTINEL_FILENAME = 'model-version.json';
 
 /**
- * Voice-style embeddings base URL — recorded in the local
+ * Voice-style embeddings base URL - recorded in the local
  * `voices-manifest.json` so the fork's `StyleLoader` can fetch per-voice
  * style embeddings on first play.
  */
@@ -98,7 +98,7 @@ export const KOKORO_MODEL_BASE_URL =
 export const KOKORO_VOICES_BASE_URL = `${KOKORO_MODEL_BASE_URL}/voices`;
 
 /**
- * Core Kokoro files — downloaded all-or-nothing (Phase 1). Without these
+ * Core Kokoro files - downloaded all-or-nothing (Phase 1). Without these
  * the engine cannot initialize. Local name is `model_fp32.onnx` so users
  * who previously downloaded the FP16 weights (saved as `model.onnx`) get
  * a clean re-download instead of inheriting the silent-audio bug.

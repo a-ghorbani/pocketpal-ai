@@ -1,5 +1,5 @@
 // Deep-link protocol surface for the E2E benchmark runner. Owns the URL
-// prefix, the prefix matcher, and the autostart query parser — i.e. every
+// prefix, the prefix matcher, and the autostart query parser - i.e. every
 // shape-bound piece of the `pocketpal://e2e/benchmark[...]` contract.
 //
 // Lives under src/__automation__/ so the automation protocol stays inside
@@ -9,7 +9,7 @@
 // are the only places outside this folder that may import from here.
 //
 // Pure module: no side effects, no logging, no navigation. The helpers
-// never throw — malformed inputs yield `false`. This keeps the import safe
+// never throw - malformed inputs yield `false`. This keeps the import safe
 // even if a future call site lands outside an `__E2E__` branch.
 
 // Canonical deep-link URL that routes to the benchmark runner screen.
@@ -27,7 +27,7 @@ export function isBenchmarkRunnerUrl(url: string | null | undefined): boolean {
 // allowlist avoids an "autostart=0 still starts" foot-gun and keeps the
 // contract trivially scriptable from adb / WDIO.
 //
-// This is the SINGLE place the truthiness rule lives — both deep-link
+// This is the SINGLE place the truthiness rule lives - both deep-link
 // delivery sites call it, so the two routing paths cannot drift. It is NOT
 // the routing gate: isBenchmarkRunnerUrl stays the sole matcher; this
 // helper is consulted only once a URL has already matched.

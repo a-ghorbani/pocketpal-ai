@@ -187,7 +187,7 @@ const prepareCompletion = async ({
   // reasoning_content instead of leaking raw channel/think markers into content
   // (e.g. gemma-4 emits an empty <|channel>thought block even when thinking is
   // off). On/off is carried solely by enable_thinking. "Off" stays a best-effort
-  // hint — it never strips reasoning the model still returns (rendered by
+  // hint - it never strips reasoning the model still returns (rendered by
   // ReasoningBlock); separate from include_thinking_in_context, which only
   // governs what prior <think> we SEND.
   const isReasoningCapable =
@@ -292,7 +292,7 @@ function deriveSnapshotFromResult(
 
 /**
  * Map a single AgentEvent into the corresponding store mutation(s).
- * Free of business logic — every event maps to a known action surface
+ * Free of business logic - every event maps to a known action surface
  * on `chatSessionStore`. This is the only place inside the run
  * lifecycle that writes to the store. The reducer
  * (`agentStateReducer`) updates `agentUiState` separately.
@@ -313,7 +313,7 @@ async function applyEventToStore(
     case 'run_started':
       // Status flip happens in the reducer; the empty AssistantTurn
       // already exists (created in prepareCompletion). Nothing else to
-      // persist here — the message was added before the run started.
+      // persist here - the message was added before the run started.
       return;
     case 'step_started':
       await chatSessionStore.pushAgentStep(ctx.messageId, ctx.sessionId, {
@@ -351,7 +351,7 @@ async function applyEventToStore(
       // that carries content OR reasoning, then forward each new
       // substring via onAssistantMessageChunk. Wrapped defensively so a
       // UI-path failure cannot kill the completion stream. Skipped
-      // when auto-speak is off — ttsStore calls would early-return
+      // when auto-speak is off - ttsStore calls would early-return
       // anyway, but the slice math is the residual per-token cost.
       if (ctx.tts.enabled) {
         try {
@@ -389,7 +389,7 @@ async function applyEventToStore(
       // Per-token writes go through the throttled streaming path so
       // they coalesce. Only forward fields that were actually present in
       // this delta to avoid clobbering existing content with empty.
-      // toolCalls are not written here — the reducer still consumes
+      // toolCalls are not written here - the reducer still consumes
       // `event.delta.toolCalls` for pendingTalentNames, but the
       // canonical step.toolCalls write happens after step_finished via
       // appendToolCall so ids match outcomes by construction.
@@ -475,7 +475,7 @@ async function applyEventToStore(
       }
       // Fire TTS auto-speak after the final text is observable. Store
       // enforces auto-speak / voice / idempotency gating internally.
-      // Wrapped defensively — UI-path errors must not bubble.
+      // Wrapped defensively - UI-path errors must not bubble.
       try {
         ttsStore.onAssistantMessageComplete(
           ctx.messageId,
@@ -509,7 +509,7 @@ export const useChatSession = (
   const l10n = React.useContext(L10nContext);
   const conversationIdRef = useRef<string>(randId());
   // Trigger-marker cache lifetime is scoped to the hook (useRef). No
-  // module-level mutable state — see triggerMarkers.ts contract.
+  // module-level mutable state - see triggerMarkers.ts contract.
   // Resolved before each runAgent call; the resulting string[] is
   // passed into AgentRunOptions.triggerMarkers so the runner has no
   // direct dependency on the cache, modelStore, or getFormattedChat.
@@ -754,7 +754,7 @@ export const useChatSession = (
       (cleanCompletionParams.tools as ToolDefinition[] | undefined) ?? [];
     let triggerMarkers: string[] = [];
     // Marker detection reads `grammar_triggers` from a local Jinja
-    // `getFormattedChat` call — only meaningful when a local llama.rn
+    // `getFormattedChat` call - only meaningful when a local llama.rn
     // context exists. In server mode (`modelStore.context` undefined)
     // the remote llama.cpp parser handles tool-call detection on its
     // own, so this whole step is skipped. Without the guard the
@@ -791,7 +791,7 @@ export const useChatSession = (
 
       // The chunk-cycle would otherwise run entirely via microtask
       // resumption from queue.next(), starving the macrotask queue
-      // where touch events ride — Stop taps could sit for tens of
+      // where touch events ride - Stop taps could sit for tens of
       // seconds during long streams. A setTimeout(_, 0) yield every
       // YIELD_INTERVAL_MS lets touches dispatch. The yield also
       // decouples native production from consumption, so a backlog
@@ -881,7 +881,7 @@ export const useChatSession = (
       chatSessionStore.setAgentUiState(initialAgentUiState);
       chatSessionStore.setToolCallTokenCount(0);
 
-      // Stop any in-flight TTS — the completion errored, so buffered
+      // Stop any in-flight TTS - the completion errored, so buffered
       // audio should not keep playing.
       ttsStore.stop().catch(ttsErr => {
         console.warn('[useChatSession] TTS stop on error failed:', ttsErr);
@@ -896,7 +896,7 @@ export const useChatSession = (
       const isToolArgsParseError =
         /Failed to parse tool call arguments as JSON/i.test(errorMessage);
       // Prompt-processing overflow: when the prompt itself exceeds n_ctx
-      // (ctx_shift is off — the llama.rn default), the native layer throws
+      // (ctx_shift is off - the llama.rn default), the native layer throws
       // "Context is full" before any token is generated, so it never reaches
       // run_finished. Treat it as an n_ctx-exhaustion signal so the banner
       // surfaces instead of a raw error dump.
@@ -970,7 +970,7 @@ export const useChatSession = (
           turnAbsorbedError = true;
         } else {
           // A prompt that overflows n_ctx throws before any token, so there
-          // is no content to keep — but still record the snapshot so the
+          // is no content to keep - but still record the snapshot so the
           // banner surfaces the full state. The empty turn is cleaned up
           // below; the store snapshot drives the banner independently.
           // Per-process for this draft: with no message persisted, the banner
@@ -1013,7 +1013,7 @@ export const useChatSession = (
       } else if (errorMessage.includes('network')) {
         await addSystemMessage(l10n.common.networkError);
       } else if (isToolArgsParseError) {
-        // No turn content to attach the hint to — fall back to a
+        // No turn content to attach the hint to - fall back to a
         // friendly system message instead of the raw native error dump.
         await addSystemMessage(l10n.chat.toolCallTruncated);
       } else if (isSpeculativeInitError) {
@@ -1047,18 +1047,18 @@ export const useChatSession = (
     // Enter the `stopping` state IMMEDIATELY: the user gets visible
     // feedback ("Stopping…") and the send button is gated off so a
     // new completion can't try to use the still-busy native context.
-    // We do NOT touch `inferencing` / `isGenerating` here — those get
+    // We do NOT touch `inferencing` / `isGenerating` here - those get
     // cleared by the for-await cleanup in handleSendPress once the
     // runner has actually exited (native llama.rn has returned from
     // its current llama_decode chunk; see ChatSessionStore.isStopping
     // for the rationale).
     chatSessionStore.setIsStopping(true);
-    // The runner's abort listener owns engine.stopCompletion — this
+    // The runner's abort listener owns engine.stopCompletion - this
     // signal is the single source of stop intent.
     abortRef.current?.abort();
     // Stop any in-flight TTS so buffered audio doesn't keep playing
     // after the user tapped Stop. Inferencing/isStreaming/isGenerating
-    // flags are NOT cleared here — those get cleared by the for-await
+    // flags are NOT cleared here - those get cleared by the for-await
     // cleanup in handleSendPress once the runner has actually exited.
     ttsStore.stop().catch(err => {
       console.warn('[useChatSession] TTS stop on user-stop failed:', err);

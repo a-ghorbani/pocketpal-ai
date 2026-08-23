@@ -103,7 +103,7 @@ export const ServerDetailsSheet: React.FC<ServerDetailsSheetProps> = observer(
           return;
         }
         try {
-          // Validate URL format — throws on invalid
+          // Validate URL format - throws on invalid
           const parsed = new URL(trimmedUrl);
           if (!parsed.hostname) {
             throw new Error('No hostname');
@@ -177,7 +177,7 @@ export const ServerDetailsSheet: React.FC<ServerDetailsSheetProps> = observer(
       const serverName = server.name;
       const modelCount = userModels.length;
       // Dismiss the sheet first so the native alert can present on the main
-      // window — @gorhom/bottom-sheet renders on a separate overlay that can
+      // window - @gorhom/bottom-sheet renders on a separate overlay that can
       // block native alerts on iOS.
       onDismiss();
       setTimeout(() => {

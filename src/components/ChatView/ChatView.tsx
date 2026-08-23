@@ -189,7 +189,7 @@ export interface ChatProps extends ChatTopLevelProps {
  * re-renders ChatView on each token, the `renderListHeaderComponent`
  * useCallback would change reference (because it'd carry the count in
  * its deps), and FlatList would unmount + remount the header every
- * ~50ms — killing both Animated.loop and setInterval.
+ * ~50ms - killing both Animated.loop and setInterval.
  */
 const PendingIndicatorView: React.FC = observer(() => (
   <PendingIndicator
@@ -295,7 +295,7 @@ export const ChatView = observer(
     );
 
     // The increase CTA is shown only when at least one larger context tier
-    // fits the device — same OOM-safe intent the sheet enforces per stop.
+    // fits the device - same OOM-safe intent the sheet enforces per stop.
     // Memoized: hasFittingUpgrade walks the tier ladder calling the GGUF
     // memory estimator per stop, and ChatView re-renders on every streamed
     // token. Non-n_ctx contextInitParams (devices/cache) change rarely and
@@ -392,7 +392,7 @@ export const ChatView = observer(
     // ============ ACTIVE PAL MODEL INITIALIZATION ============
     // Initialize model context when active pal changes.
     // Gate: while the e2e benchmark runner owns the native context lifecycle,
-    // this auto-load must NOT fire — otherwise it shadows the matrix's per-cell
+    // this auto-load must NOT fire - otherwise it shadows the matrix's per-cell
     // devices/n_gpu_layers via initContext's "already loaded → skip" path.
     React.useEffect(() => {
       if (modelStore.benchmarkActive) {
@@ -421,7 +421,7 @@ export const ChatView = observer(
     // inset already spans the navigation bar (KeyboardProvider is configured
     // navigationBarTranslucent), so the space the keyboard actually steals from
     // the chat surface is the IME inset minus the safe-area bottom inset. One
-    // expression, correct on every API level — there is no version fork (the
+    // expression, correct on every API level - there is no version fork (the
     // API ≤ 29 under-reservation is handled by the clamp, not a branch). The
     // input translate, the suggested-prompts overlay, and the inverted-list
     // bottom spacer all derive from THIS value so they never disagree.
@@ -964,14 +964,14 @@ export const ChatView = observer(
     // opens. Reads the SAME reconciled occlusion value as the input translate, so
     // the two can never disagree, and holds while the keyboard is settled-open
     // (it returns to 0 only when the keyboard closes, not while it merely stops
-    // moving — the previous in-flight gate dropped it too early on API ≤ 29).
+    // moving - the previous in-flight gate dropped it too early on API ≤ 29).
     const headerStyle = useAnimatedStyle(() => ({
       height: keyboardOcclusion.value,
     }));
 
     // Render header (pending indicator + keyboard spacer). The
     // FlatList is `inverted={true}`, so the ListHeaderComponent renders
-    // at the bottom of the visible list — i.e. BELOW the latest turn,
+    // at the bottom of the visible list - i.e. BELOW the latest turn,
     // never inside it.
     const renderListHeaderComponent = React.useCallback(
       () => (
@@ -1186,7 +1186,7 @@ export const ChatView = observer(
               />
             </Reanimated.View>
 
-            {/* Suggested prompts — float above the input container, share
+            {/* Suggested prompts - float above the input container, share
                 its keyboard-tracking transform so they rise together but
                 render as a sibling (no shared background / rounded top). */}
             {messages.length === 0 &&

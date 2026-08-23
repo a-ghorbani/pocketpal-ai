@@ -15,7 +15,7 @@ export type LabelProps = Omit<CommonDSProps, 'disabled'> & {
 };
 
 /**
- * DS Label — Informational + Status. Pure visual primitive
+ * DS Label - Informational + Status. Pure visual primitive
  * (View + colored background + optional icon).
  *
  * Defaults: variant='informational', size='m', testID='ui-label',

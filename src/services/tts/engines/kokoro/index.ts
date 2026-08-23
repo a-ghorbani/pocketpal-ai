@@ -24,9 +24,9 @@ export type KokoroProgressCallback = (progress: number) => void;
  * Kokoro neural TTS engine (82M FP32 ONNX port).
  *
  * Installation is two-phase:
- *   1. Core files (`model_fp32.onnx`, `tokenizer.json`, IPA dict) — all-or-nothing;
+ *   1. Core files (`model_fp32.onnx`, `tokenizer.json`, IPA dict) - all-or-nothing;
  *      any failure cleans up the whole `tts/kokoro/` dir.
- *   2. Per-voice `.bin` embedding files — best-effort; partial success is
+ *   2. Per-voice `.bin` embedding files - best-effort; partial success is
  *      accepted (engine usable with whichever voices did land). The voices
  *      manifest is (re)written at the end to point at the full voice
  *      catalog.
@@ -83,7 +83,7 @@ export class KokoroEngine implements Engine {
   // Reclaim FP16 weights from previous installs (saved as `model.onnx`)
   // before the disk-space gate runs. isInstalled() reports false for legacy
   // users because the new local name is `model_fp32.onnx`, so the bundled
-  // FP32 file does not double-count — but the orphan ~163 MB sits on disk
+  // FP32 file does not double-count - but the orphan ~163 MB sits on disk
   // and can push a borderline device below the install threshold. Run this
   // BEFORE the store's disk preflight so reclaimable space counts.
   async reclaimLegacySpace(): Promise<void> {
@@ -106,7 +106,7 @@ export class KokoroEngine implements Engine {
     // `reclaimLegacySpace()`. Idempotent.
     await this.reclaimLegacySpace();
 
-    // Phase 1: core files (model + tokenizer + dict) — all-or-nothing.
+    // Phase 1: core files (model + tokenizer + dict) - all-or-nothing.
     const corePhaseWeight = 0.6;
     const coreFiles = [
       ...KOKORO_MODEL_FILES,
@@ -163,7 +163,7 @@ export class KokoroEngine implements Engine {
       throw err;
     }
 
-    // Phase 2: per-voice `.bin` embedding files — best-effort; partial OK.
+    // Phase 2: per-voice `.bin` embedding files - best-effort; partial OK.
     const voicePhaseBase = corePhaseWeight;
     const voicePhaseWeight = 1 - corePhaseWeight;
     let voicesDone = 0;

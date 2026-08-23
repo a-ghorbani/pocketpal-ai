@@ -22,7 +22,7 @@ export class SystemEngine implements Engine {
 
   /**
    * The fork still requires `Speech.initialize({engine: OS_NATIVE})` when
-   * switching from a neural engine — needed so playback routes through the
+   * switching from a neural engine - needed so playback routes through the
    * OS native path instead of staying on the previously-active neural
    * engine. The runtime calls this whenever System becomes the active
    * engine; switching back to a neural engine triggers its own loadInto.
@@ -39,7 +39,7 @@ export class SystemEngine implements Engine {
    * Streaming path. The library's stream degrades to roughly per-sentence
    * speaks on OS engine (native `speak()` resolves on dispatch, so the
    * stream's underrun guard fires immediately), but the OS native queue
-   * handles the chaining — behavior is equivalent to the prior JS-side
+   * handles the chaining - behavior is equivalent to the prior JS-side
    * `onFinish` loop and we inherit the library's CJK sentence handling.
    */
   playStreaming(voice: Voice, waitFor?: Promise<void>): StreamingHandle {

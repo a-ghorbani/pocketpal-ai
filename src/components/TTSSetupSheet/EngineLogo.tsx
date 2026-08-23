@@ -34,7 +34,7 @@ interface EngineLogoProps {
 /**
  * Branded engine logo in a rounded "pill" surface, optionally wrapped with
  * a download progress ring. Ring renders only when `progress` is a finite
- * value 0..1 — use null/undefined for static states.
+ * value 0..1 - use null/undefined for static states.
  */
 export const EngineLogo: React.FC<EngineLogoProps> = ({
   engineId,

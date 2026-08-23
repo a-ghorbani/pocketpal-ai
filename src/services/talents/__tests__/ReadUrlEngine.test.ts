@@ -86,7 +86,7 @@ describe('ReadUrlEngine', () => {
     );
     expect(result.type).toBe('text');
     if (result.type === 'text') {
-      // Tail dropped on a word boundary — the result is shorter than the source.
+      // Tail dropped on a word boundary - the result is shorter than the source.
       expect(result.summary.length).toBeLessThan(longBody.length);
       expect(result.summary).toContain('…');
     }
@@ -201,7 +201,7 @@ describe('ReadUrlEngine', () => {
     });
 
     it('strips a smuggled fragment before the URL reaches the provider', async () => {
-      // Allowlist matching ignores fragments, so `#data` passes the guard —
+      // Allowlist matching ignores fragments, so `#data` passes the guard -
       // but the outbound read must carry the canonical URL (Exa transmits it
       // verbatim in a JSON body).
       const read = jest.fn().mockResolvedValue({

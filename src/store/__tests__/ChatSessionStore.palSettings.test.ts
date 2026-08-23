@@ -238,7 +238,7 @@ describe('ChatSessionStore - Pal Settings', () => {
       // Reasoning carrier mirrors the override so the remote wire path honors
       // the OFF intent for the first message of the new chat (not local-only).
       expect(result.reasoning).toEqual({enabled: false});
-      // Pal's other completion settings survive — override is single-key.
+      // Pal's other completion settings survive - override is single-key.
       expect(result.temperature).toBe(0.5);
     });
 
@@ -282,7 +282,7 @@ describe('ChatSessionStore - Pal Settings', () => {
 
     it('override is ignored on session-branch resolution (settingsSource pal)', async () => {
       palStore.pals.push(makeThinkingPal('palX', true));
-      // Active session with settingsSource='pal' — resolver should
+      // Active session with settingsSource='pal' - resolver should
       // return pal's enable_thinking, NOT the no-session override.
       chatSessionStore.sessions = [
         {
@@ -310,7 +310,7 @@ describe('ChatSessionStore - Pal Settings', () => {
     });
 
     it('override does NOT strip PACT-derived tools', async () => {
-      // Pal advertises a registered talent — resolver should inject
+      // Pal advertises a registered talent - resolver should inject
       // tools AND still let the override flip enable_thinking last.
       const palWithTalent: Pal = {
         ...makeThinkingPal('palToolful', true),

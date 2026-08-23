@@ -109,7 +109,7 @@ export const Message = observer(
     enableAnimation,
     // isActiveRun / activeRunPendingTalentNames / isGeneratingToolCall
     // are kept on MessageTopLevelProps for ChatView's prop API but not
-    // consumed here — pending UX is owned by ChatView's PendingIndicator
+    // consumed here - pending UX is owned by ChatView's PendingIndicator
     // and TalentSurface dispatches off persisted step data alone.
     message,
     messageWidth,
@@ -260,7 +260,7 @@ export const Message = observer(
       const blocks: React.ReactNode[] = [];
       // `isFirstBlock` drives the inter-block spacer (no top margin on
       // the first block). `nameShown` tracks whether the author header
-      // has already been rendered — reasoning blocks never render the
+      // has already been rendered - reasoning blocks never render the
       // header (they're metadata, not chat posts), so the showName
       // slot passes through to the first content/talent block.
       let isFirstBlock = true;
@@ -268,7 +268,7 @@ export const Message = observer(
 
       // Wraps a single TextMessage step fragment in the chat-bubble
       // shell (contentContainer / renderBubble) plus the turn-block
-      // spacer. Used for content blocks only — reasoning has its own
+      // spacer. Used for content blocks only - reasoning has its own
       // wrapper via `wrapReasoningBlock` because it's not a bubble.
       const wrapTextBlock = (
         keySuffix: string,
@@ -314,7 +314,7 @@ export const Message = observer(
         );
       };
 
-      // Reasoning is metadata, not a chat bubble — it skips the
+      // Reasoning is metadata, not a chat bubble - it skips the
       // contentContainer / renderBubble shell entirely, so the
       // collapsed text-only row (and partial card) sit directly on
       // the chat surface with no bubble background or insets fighting
@@ -369,11 +369,11 @@ export const Message = observer(
           isFirstBlock = false;
         }
 
-        // Talent surface — outside the bubble, with its own visual
+        // Talent surface - outside the bubble, with its own visual
         // container (e.g. HtmlPreviewBubble). Renders one block per call
         // in step.toolCalls (in array order). The ChatView-owned
         // PendingIndicator covers the in-flight window before outcomes
-        // land — no per-call pending UI here.
+        // land - no per-call pending UI here.
         if (step.toolCalls && step.toolCalls.length > 0) {
           blocks.push(
             <View

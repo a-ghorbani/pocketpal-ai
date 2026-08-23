@@ -16,7 +16,7 @@ export type HeaderProps = Omit<CommonDSProps, 'disabled'> & {
 };
 
 /**
- * Header — the shared building block for every DS overlay
+ * Header - the shared building block for every DS overlay
  * (Sheet, Modal, Dialog). Every DS overlay MUST compose `<Header>`;
  * bespoke header markup inside an overlay is forbidden.
  *

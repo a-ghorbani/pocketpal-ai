@@ -425,7 +425,7 @@ export function hfAsModel(
   const isProjModel = isProjectionModel(modelFile.rfilename);
 
   // Vision is decided per repo, but a speculative draft that merely lives
-  // alongside an mmproj cannot use one — it would pull the projector down for
+  // alongside an mmproj cannot use one - it would pull the projector down for
   // nothing and offer image attach on a model that never loads.
   const isDraftOnly = isDraftOnlyFilename(modelFile.rfilename);
 

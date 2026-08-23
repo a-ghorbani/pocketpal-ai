@@ -5,7 +5,7 @@ import type {Engine, EngineId} from './types';
 /**
  * Single-slot coordinator for the TTS native runtime.
  *
- * The fork's `Speech` module is global — only one neural engine has its
+ * The fork's `Speech` module is global - only one neural engine has its
  * model loaded at a time. The previous design tracked initialization
  * per-engine-wrapper, which lied: a wrapper said `initialized=true`
  * even after another engine had silently swapped it out at the native
@@ -20,7 +20,7 @@ import type {Engine, EngineId} from './types';
 class TTSRuntime {
   /** id of the engine currently loaded in native land, null if released. */
   private activeEngineId: EngineId | null = null;
-  /** FIFO chain of pending operations — guarantees no concurrent swaps. */
+  /** FIFO chain of pending operations - guarantees no concurrent swaps. */
   private opMutex: Promise<unknown> = Promise.resolve();
 
   /**
@@ -28,7 +28,7 @@ class TTSRuntime {
    * Releases the previous engine (if neural) and loads the new one when
    * the active id doesn't match.
    *
-   * Calls are serialized — concurrent acquires queue rather than racing.
+   * Calls are serialized - concurrent acquires queue rather than racing.
    */
   async acquire<T>(engine: Engine, fn: () => Promise<T>): Promise<T> {
     return this.serialize(async () => {
@@ -56,7 +56,7 @@ class TTSRuntime {
   /**
    * Stop any in-flight native playback. Serialized with `acquire` so a
    * subsequent `acquire()` queued on the same mutex runs AFTER the stop
-   * completes — this is the only reason to prefer this over calling
+   * completes - this is the only reason to prefer this over calling
    * `Speech.stop()` directly. Without serialization, a fire-and-forget
    * stop can cancel a newly-started utterance that was ordered later in
    * JS but reached native first.
@@ -96,7 +96,7 @@ class TTSRuntime {
     if (prev === null) {
       return;
     }
-    // System engine doesn't hold neural resources — nothing to release.
+    // System engine doesn't hold neural resources - nothing to release.
     if (prev !== 'system') {
       try {
         await Speech.release();

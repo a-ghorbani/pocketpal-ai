@@ -327,7 +327,7 @@ describe('chat', () => {
     });
 
     it('opens the increase-context sheet when the hint action is tapped, reaching the no-fit state when nothing larger fits', () => {
-      // The mocked memory ceiling (4–5 GB) is below the model's requirement at
+      // The mocked memory ceiling (4-5 GB) is below the model's requirement at
       // any larger ladder tier, so the sheet resolves to its no-fit state. That
       // is exactly the dead-end risk the hint action must avoid: the sheet stays
       // reachable and offers New chat rather than a permanently disabled confirm.
@@ -351,7 +351,7 @@ describe('chat', () => {
       fireEvent.press(action);
 
       // The sheet is now open and reachable from the hint. In the no-fit state
-      // confirm is hidden and New chat is offered — not a dead-end.
+      // confirm is hidden and New chat is offered - not a dead-end.
       expect(getByTestId('increase-context-no-fit')).toBeTruthy();
       expect(queryByTestId('increase-context-confirm')).toBeNull();
 

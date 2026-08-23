@@ -5,7 +5,7 @@
  * doesn't ship a custom ESLint plugin and the regressions they guard are
  * cheap to express with a recursive directory walk. They complement (do
  * NOT replace) the scripts/verify-* CI checks for fonts and the Paper
- * surface — those check different concerns.
+ * surface - those check different concerns.
  *
  * Coverage:
  *   - No `x1Theme`, `AppTheme.X1`, or `'x1'` colorScheme reference
@@ -103,7 +103,7 @@ describe('design-token grep invariants', () => {
     //   - the tokens module itself
     //   - the theme builder (`theme.ts`) and the hook (`useTheme.ts`)
     //   - the Theme interface (`types.ts`)
-    //   - the DS layer at `components/ui/**` — canonical consumer of
+    //   - the DS layer at `components/ui/**` - canonical consumer of
     //     the new token surface.
     const ALLOWED_RELATIVE: ReadonlyArray<string> = [
       'theme/tokens',

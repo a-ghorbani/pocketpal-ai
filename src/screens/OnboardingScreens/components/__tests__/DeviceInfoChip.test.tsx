@@ -71,7 +71,7 @@ describe('DeviceInfoChip', () => {
       expect(text).toContain('6 GB RAM');
       expect(text).not.toContain('GB free');
     });
-    // Bullet separators are <View>s — there should be exactly one when only
+    // Bullet separators are <View>s - there should be exactly one when only
     // two text segments are present (between "iPhone 13 Pro" and "6 GB RAM").
     const chip = getByTestId('onboarding-device-chip');
     const textNodes = within(chip).getAllByText(/.+/);

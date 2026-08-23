@@ -85,13 +85,13 @@ export class PalPurchasePage extends BasePage {
       await ok.waitForDisplayed({timeout});
       await ok.click();
     } catch {
-      // No alert — proceed.
+      // No alert - proceed.
     }
   }
 
   /**
    * Tap Buy; if it routes to sign-in, authenticate and retry. Sign-in is async,
-   * so a Buy tap before the session settles re-opens the AuthSheet — retry until
+   * so a Buy tap before the session settles re-opens the AuthSheet - retry until
    * Buy actually starts checkout (the AuthSheet no longer appears).
    */
   async signInAndStartCheckout(
@@ -132,7 +132,7 @@ export class PalPurchasePage extends BasePage {
       await continueBtn.waitForDisplayed({timeout});
       await continueBtn.click();
     } catch {
-      // No consent prompt surfaced — proceed.
+      // No consent prompt surfaced - proceed.
     }
   }
 

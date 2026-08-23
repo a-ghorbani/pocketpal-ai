@@ -59,7 +59,7 @@ export interface TextMessageProps extends TextMessageTopLevelProps {
   /**
    * When provided, the component renders this step's `content` in
    * place of `message.text`. Set by the AssistantTurn renderer for
-   * each step within a turn — same component, per-step content.
+   * each step within a turn - same component, per-step content.
    * Reasoning is rendered separately via ReasoningBlock.
    */
   step?: AgentStep;
@@ -77,7 +77,7 @@ export const TextMessage = ({
   // For AssistantTurn rendering, the per-step `content` is the
   // authoritative source. For legacy `Text` messages, fall back to
   // `message.text`. Reasoning is rendered separately via
-  // ReasoningBlock — TextMessage only owns the content side.
+  // ReasoningBlock - TextMessage only owns the content side.
   const visibleText: string = step
     ? (step.content ?? '')
     : 'text' in message
@@ -300,10 +300,10 @@ export const TextMessage = ({
               : null
           }
 
-          {/* Render images above the text — legacy Text path only. */}
+          {/* Render images above the text - legacy Text path only. */}
           {!step && renderImages()}
 
-          {/* Attachment chips above the text — user Text path only. */}
+          {/* Attachment chips above the text - user Text path only. */}
           {!step && hasAttachments && (
             <View style={attachmentChipsRow}>
               {attachments.map(file => (
@@ -321,7 +321,7 @@ export const TextMessage = ({
             </View>
           )}
 
-          {/* Knowledge-base provenance chip — user Text path only. */}
+          {/* Knowledge-base provenance chip - user Text path only. */}
           {!step && kbQuoteLabel && (
             <View style={attachmentChipsRow}>
               <View style={attachmentChip}>
@@ -345,7 +345,7 @@ export const TextMessage = ({
         </View>
       )}
 
-      {/* Image preview modal — legacy Text path only. */}
+      {/* Image preview modal - legacy Text path only. */}
       {!step && renderImagePreview()}
     </>
   );

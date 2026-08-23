@@ -1,6 +1,6 @@
 // Jest Snapshot v1, https://goo.gl/fbAQLP
 
-exports[`Checkbox — snapshot matrix baseline (variant x size x {default,disabled} x modes) default-default-default-dark-off 1`] = `
+exports[`Checkbox - snapshot matrix baseline (variant x size x {default,disabled} x modes) default-default-default-dark-off 1`] = `
 <View
   collapsable={false}
   pointerEvents="box-none"
@@ -125,7 +125,7 @@ exports[`Checkbox — snapshot matrix baseline (variant x size x {default,disabl
 </View>
 `;
 
-exports[`Checkbox — snapshot matrix baseline (variant x size x {default,disabled} x modes) default-default-default-dark-on 1`] = `
+exports[`Checkbox - snapshot matrix baseline (variant x size x {default,disabled} x modes) default-default-default-dark-on 1`] = `
 <View
   collapsable={false}
   pointerEvents="box-none"
@@ -250,7 +250,7 @@ exports[`Checkbox — snapshot matrix baseline (variant x size x {default,disabl
 </View>
 `;
 
-exports[`Checkbox — snapshot matrix baseline (variant x size x {default,disabled} x modes) default-default-default-light-off 1`] = `
+exports[`Checkbox - snapshot matrix baseline (variant x size x {default,disabled} x modes) default-default-default-light-off 1`] = `
 <View
   collapsable={false}
   pointerEvents="box-none"
@@ -375,7 +375,7 @@ exports[`Checkbox — snapshot matrix baseline (variant x size x {default,disabl
 </View>
 `;
 
-exports[`Checkbox — snapshot matrix baseline (variant x size x {default,disabled} x modes) default-default-default-light-on 1`] = `
+exports[`Checkbox - snapshot matrix baseline (variant x size x {default,disabled} x modes) default-default-default-light-on 1`] = `
 <View
   collapsable={false}
   pointerEvents="box-none"
@@ -500,7 +500,7 @@ exports[`Checkbox — snapshot matrix baseline (variant x size x {default,disabl
 </View>
 `;
 
-exports[`Checkbox — snapshot matrix baseline (variant x size x {default,disabled} x modes) default-default-disabled-dark-off 1`] = `
+exports[`Checkbox - snapshot matrix baseline (variant x size x {default,disabled} x modes) default-default-disabled-dark-off 1`] = `
 <View
   collapsable={false}
   pointerEvents="box-none"
@@ -625,7 +625,7 @@ exports[`Checkbox — snapshot matrix baseline (variant x size x {default,disabl
 </View>
 `;
 
-exports[`Checkbox — snapshot matrix baseline (variant x size x {default,disabled} x modes) default-default-disabled-dark-on 1`] = `
+exports[`Checkbox - snapshot matrix baseline (variant x size x {default,disabled} x modes) default-default-disabled-dark-on 1`] = `
 <View
   collapsable={false}
   pointerEvents="box-none"
@@ -750,7 +750,7 @@ exports[`Checkbox — snapshot matrix baseline (variant x size x {default,disabl
 </View>
 `;
 
-exports[`Checkbox — snapshot matrix baseline (variant x size x {default,disabled} x modes) default-default-disabled-light-off 1`] = `
+exports[`Checkbox - snapshot matrix baseline (variant x size x {default,disabled} x modes) default-default-disabled-light-off 1`] = `
 <View
   collapsable={false}
   pointerEvents="box-none"
@@ -875,7 +875,7 @@ exports[`Checkbox — snapshot matrix baseline (variant x size x {default,disabl
 </View>
 `;
 
-exports[`Checkbox — snapshot matrix baseline (variant x size x {default,disabled} x modes) default-default-disabled-light-on 1`] = `
+exports[`Checkbox - snapshot matrix baseline (variant x size x {default,disabled} x modes) default-default-disabled-light-on 1`] = `
 <View
   collapsable={false}
   pointerEvents="box-none"
@@ -1000,7 +1000,7 @@ exports[`Checkbox — snapshot matrix baseline (variant x size x {default,disabl
 </View>
 `;
 
-exports[`Checkbox — snapshot matrix non-Latin font-fallback canary (canaryVariant x size=default x default x light x lang) default-default-default-light-fa 1`] = `
+exports[`Checkbox - snapshot matrix non-Latin font-fallback canary (canaryVariant x size=default x default x light x lang) default-default-default-light-fa 1`] = `
 <View
   collapsable={false}
   pointerEvents="box-none"

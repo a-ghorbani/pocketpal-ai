@@ -20,7 +20,7 @@ import {ScrollView} from 'react-native-gesture-handler';
 
 // Element models: Tell react-native-render-html to treat table tags as renderable
 // block elements instead of silently dropping them (default "tabular" = content model "none").
-// All use HTMLContentModel.block because the TableRenderer owns all rendering —
+// All use HTMLContentModel.block because the TableRenderer owns all rendering -
 // we never delegate back to the library's default renderers for table sub-elements.
 export const tableHTMLElementModels: HTMLElementModelRecord = {
   table: HTMLElementModel.fromCustomModel({

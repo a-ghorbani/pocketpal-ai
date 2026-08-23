@@ -1,4 +1,4 @@
-# `src/__automation__/` — E2E Automation Bridge
+# `src/__automation__/` - E2E Automation Bridge
 
 Single home for all code that exists ONLY to support E2E automation
 (Appium/WebDriverIO specs). Every file in this folder MUST be
@@ -20,10 +20,10 @@ buildType `releaseE2e`) is the production-like build that sets
 
 Two independent guardrails enforce the contract:
 
-1. **ESLint `no-restricted-imports`** — in `.eslintrc.js`, files outside
+1. **ESLint `no-restricted-imports`** - in `.eslintrc.js`, files outside
    this folder may not import from `src/__automation__/...` EXCEPT for
    the allow-listed entry points (`App.tsx`, `src/hooks/useDeepLinking.ts`).
-2. **CI bundle-grep** — in `.github/workflows/ci.yml`, the `build-android`
+2. **CI bundle-grep** - in `.github/workflows/ci.yml`, the `build-android`
    job extracts `assets/index.android.bundle` from the prod APK and fails
    the build if any of the automation marker strings
    (`AUTOMATION_BRIDGE`, `memory-snapshot-label`, `memory-snapshot-result`,
@@ -48,13 +48,13 @@ Two independent guardrails enforce the contract:
 > every prod build.
 >
 > When adding a new automation surface, register a new marker (a literal
-> string referenced from inside the runtime code, never just JSDoc — Hermes
+> string referenced from inside the runtime code, never just JSDoc - Hermes
 > can DCE pure-comment literals) and add it to the markers list in `ci.yml`.
 > Then trust the gate, not the import site.
 
 ## Adding a new adapter
 
-1. Create `src/__automation__/adapters/FooAdapter.tsx` — a functional
+1. Create `src/__automation__/adapters/FooAdapter.tsx` - a functional
    component that renders a hidden, accessibility-tree-friendly surface
    (see `MemoryAdapter.tsx` as reference). Hidden adapters are appropriate
    when the spec needs to instrument the regular UX flow at lifecycle
@@ -72,7 +72,7 @@ Two independent guardrails enforce the contract:
    your adapter introduces new protocol strings.
 
 For tasks that are synthetic harnesses (don't need to instrument the
-real UX flow), prefer adding a dedicated screen under `screens/` —
+real UX flow), prefer adding a dedicated screen under `screens/` -
 mounted as an `__E2E__`-gated `Drawer.Screen` in `App.tsx` and reachable
 by deep link only. See `BenchmarkRunnerScreen.tsx` as reference.
 
@@ -94,8 +94,8 @@ by deep link only. See `BenchmarkRunnerScreen.tsx` as reference.
 used by `src/hooks/useDeepLinking.ts` inside a `__E2E__` gate. Today it
 handles two hosts:
 
-- `memory` — `pocketpal://memory?cmd=snap::<label>` etc. (memory-profile spec)
-- `e2e/benchmark` — navigates to `BenchmarkRunnerScreen` (benchmark-matrix spec).
+- `memory` - `pocketpal://memory?cmd=snap::<label>` etc. (memory-profile spec)
+- `e2e/benchmark` - navigates to `BenchmarkRunnerScreen` (benchmark-matrix spec).
   On Android, the cold-launch path also lives in `useDeepLinking.ts`
   itself (a `__E2E__`-gated `Linking.getInitialURL()` effect) since RN's
   Android side has no equivalent of the iOS `RCTOpenURLNotification`

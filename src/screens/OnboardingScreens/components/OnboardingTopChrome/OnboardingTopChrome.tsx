@@ -13,7 +13,7 @@ import {createStyles} from './styles';
 export type OnboardingChromeStep = 'splash' | 1 | 2 | 3 | 4 | 5 | 6 | null;
 
 /**
- * Persistent onboarding top chrome — Stepper + top-right action — rendered
+ * Persistent onboarding top chrome - Stepper + top-right action - rendered
  * once at the OnboardingStack level, overlaid above the navigator. Driven
  * by the active route name (mapped to a step) so the chrome stays put
  * while the screen body slides in/out underneath.

@@ -20,7 +20,7 @@ const dismissModes = (root: any) =>
     .map((n: any) => n.props.keyboardDismissMode);
 
 // The chat FlatList is the node carrying BOTH keyboardDismissMode and the data
-// array — child message rows also carry `inverted` but not keyboardDismissMode.
+// array - child message rows also carry `inverted` but not keyboardDismissMode.
 const chatFlatLists = (root: any) =>
   root.findAll(
     (n: any) =>

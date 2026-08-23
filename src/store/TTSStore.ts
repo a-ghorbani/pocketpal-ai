@@ -40,7 +40,7 @@ export type TTSPlaybackState =
 
 /**
  * State machine for a neural-engine model download lifecycle.
- * Derived from the engine's `isInstalled()` on `init()` — never
+ * Derived from the engine's `isInstalled()` on `init()` - never
  * persisted; the source of truth is the file system.
  */
 export type NeuralDownloadState =
@@ -76,10 +76,10 @@ const previewMessageId = (voice: Voice): string =>
  * choice). See architecture/tts.md §4a for the formula. The lifecycle hooks
  * registered in `init()` (AppState listener, session reaction, isInstalled
  * checks) run unconditionally so a low-memory user opting in mid-session has
- * a safe runtime — see architecture/tts.md §4e.
+ * a safe runtime - see architecture/tts.md §4e.
  *
  * Streaming: `useChatSession` calls three hooks as an assistant message is
- * produced — `onAssistantMessageStart`, `onAssistantMessageChunk`, and
+ * produced - `onAssistantMessageStart`, `onAssistantMessageChunk`, and
  * `onAssistantMessageComplete`. The first creates a `StreamingHandle`, the
  * second feeds deltas into it, the third flushes the remaining buffer. If
  * `start` is missed (e.g., voice picked mid-message) `complete` falls back
@@ -134,7 +134,7 @@ export class TTSStore {
   /** Free disk bytes, refreshed each time the setup sheet opens. */
   freeDiskBytes: number | null = null;
 
-  // Per-engine model lifecycle — derived state, NOT persisted.
+  // Per-engine model lifecycle - derived state, NOT persisted.
   supertonicDownloadState: NeuralDownloadState = 'not_installed';
   supertonicDownloadProgress: number = 0;
   supertonicDownloadError: string | null = null;
@@ -182,7 +182,7 @@ export class TTSStore {
   }
 
   /**
-   * Initialize the store. Idempotent — safe to call multiple times; only the
+   * Initialize the store. Idempotent - safe to call multiple times; only the
    * first call does work.
    */
   async init(): Promise<void> {
@@ -203,7 +203,7 @@ export class TTSStore {
       this.deviceMeetsMemory = totalMemory >= TTS_MIN_RAM_BYTES;
     });
 
-    // Lifecycle hooks below run UNCONDITIONALLY — see architecture/tts.md §4e
+    // Lifecycle hooks below run UNCONDITIONALLY - see architecture/tts.md §4e
     // and I8. A user on a low-memory device may flip `userTTSOverride = true`
     // mid-session, at which point the AppState listener and session reaction
     // must already be in place. The four call-site guards in `play`,
@@ -231,7 +231,7 @@ export class TTSStore {
       // changed (e.g. Kokoro FP16 → FP32 migration), clear the voice so
       // play/stream paths don't crash trying to init a missing engine.
       // Stash the voice id first so it can be restored after re-download
-      // — otherwise users lose their selection across the forced upgrade.
+      // - otherwise users lose their selection across the forced upgrade.
       if (
         this.currentVoice != null &&
         this.currentVoice.engine !== 'system' &&
@@ -262,7 +262,7 @@ export class TTSStore {
       // Stop in-flight audio AND release the active engine's native
       // resources (200-450 MB depending on engine). Re-init is lazy on
       // the next play after foreground.
-      // Only react to 'background' — 'inactive' fires for transient
+      // Only react to 'background' - 'inactive' fires for transient
       // interruptions (Control Center, incoming call sheet, notification
       // tap) that shouldn't tear down a 200+ MB engine.
       this.stop()
@@ -277,7 +277,7 @@ export class TTSStore {
     this.autoSpeakEnabled = on;
     if (!on) {
       // Turning auto-speak off frees the active neural engine's RAM
-      // proactively — the user has signaled they don't want passive
+      // proactively - the user has signaled they don't want passive
       // playback. Re-init is lazy on the next preview / message replay.
       this.stop()
         .then(() => ttsRuntime.release())
@@ -469,11 +469,11 @@ export class TTSStore {
   }
 
   /**
-   * Audition path — speak `TTS_PREVIEW_SAMPLE` with `voice` and route
+   * Audition path - speak `TTS_PREVIEW_SAMPLE` with `voice` and route
    * through the store so it interacts cleanly with any in-flight stream
    * or replay (no overlapping audio, no engine-swap races).
    *
-   * Skips the thinking-stripper entirely — preview text is fixed and
+   * Skips the thinking-stripper entirely - preview text is fixed and
    * known clean.
    *
    * messageId is engine-qualified (`preview:<engine>:<voiceId>`) so two
@@ -515,7 +515,7 @@ export class TTSStore {
   /**
    * `true` when a preview for `voice` is currently in flight. Components
    * use this to swap their play icon for stop while the engine loads
-   * and speaks (Kokoro warm-up is ~4s — without this the user has no
+   * and speaks (Kokoro warm-up is ~4s - without this the user has no
    * feedback that their tap registered).
    */
   isPreviewingVoice(voice: Voice): boolean {
@@ -537,7 +537,7 @@ export class TTSStore {
     }
     // Stop ANY prior playback before opening the new session. The stop
     // promise is passed to the streaming handle so it waits for the old
-    // `Speech.stop()` to complete before starting synthesis — prevents
+    // `Speech.stop()` to complete before starting synthesis - prevents
     // the old stop flag from killing the new stream's first sentence.
     const stopDone = this.stop().catch(err => {
       console.warn('[TTSStore] stop before new stream failed:', err);
@@ -597,7 +597,7 @@ export class TTSStore {
     }
   }
 
-  /** Final completion — flushes streaming or falls back to replay. */
+  /** Final completion - flushes streaming or falls back to replay. */
   onAssistantMessageComplete(
     messageId: string,
     text: string,
@@ -628,7 +628,7 @@ export class TTSStore {
               this.playbackState.messageId === messageId
             ) {
               this.playbackState = {mode: 'idle'};
-              // Only reset stripper if this message still owns it —
+              // Only reset stripper if this message still owns it -
               // a new message may have already set its own stripper.
               this.streamStripper = null;
               this.streamPlaceholderEmitted = false;
@@ -717,7 +717,7 @@ export class TTSStore {
           this.setDownloadProgress(id, progress);
         });
       });
-      // Auto-select a voice when none is set — so play and auto-speak work
+      // Auto-select a voice when none is set - so play and auto-speak work
       // immediately after install. If a previous selection for this engine
       // was stashed during init() (e.g. forced re-download after a model
       // layout migration), restore it when still valid; otherwise fall
@@ -747,7 +747,7 @@ export class TTSStore {
   private async deleteNeuralEngine(id: NeuralEngineId): Promise<void> {
     // Defensive: refuse to delete while a download is writing into the
     // same directory. The UI never offers delete in this state, but the
-    // store API is public — guard anyway. Mirrors `downloadNeuralEngine`'s
+    // store API is public - guard anyway. Mirrors `downloadNeuralEngine`'s
     // own early-return on duplicate downloads.
     if (this.getDownloadState(id) === 'downloading') {
       return;

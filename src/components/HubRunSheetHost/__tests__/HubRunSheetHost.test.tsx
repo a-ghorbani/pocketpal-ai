@@ -1,9 +1,9 @@
 /**
- * HubRunSheetHost — global host for the hub/run route.
+ * HubRunSheetHost - global host for the hub/run route.
  *
  * Covers: a parked request resolves the repo and presents DetailsView (full
  * quant list); a resolve failure shows an error with Retry; dismiss clears the
- * parked request and starts no download (the host never downloads directly —
+ * parked request and starts no download (the host never downloads directly -
  * that is owned by ModelFileCard inside DetailsView).
  */
 

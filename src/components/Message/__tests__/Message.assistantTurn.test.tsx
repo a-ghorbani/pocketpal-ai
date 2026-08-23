@@ -24,7 +24,7 @@ jest.mock('@react-native-clipboard/clipboard', () => ({
 // internal markdown machinery. The stub records the step prop it was
 // rendered with so we can assert "right step → right block". After
 // the reasoning split (see ReasoningBlock), TextMessage only renders
-// content blocks — reasoning is asserted via mockReasoningBlockCalls.
+// content blocks - reasoning is asserted via mockReasoningBlockCalls.
 let mockTextMessageCalls: Array<{step?: AgentStep; messageId: string}> = [];
 jest.mock('../../TextMessage/TextMessage', () => {
   return {
@@ -40,7 +40,7 @@ jest.mock('../../TextMessage/TextMessage', () => {
 
 // Stub ReasoningBlock so tests can assert reasoning rendering without
 // pulling in marked/RenderHtml. The stub records the text it was
-// rendered with — that's the only contract Message owes the block.
+// rendered with - that's the only contract Message owes the block.
 let mockReasoningBlockCalls: Array<{text: string; autoCollapse?: boolean}> = [];
 jest.mock('../../ReasoningBlock/ReasoningBlock', () => {
   return {
@@ -107,7 +107,7 @@ beforeEach(() => {
   mockReasoningBlockCalls = [];
 });
 
-describe('Message — AssistantTurn renderer', () => {
+describe('Message - AssistantTurn renderer', () => {
   // ---------- Story Test Requirements (Renderer) #1, #2, #10, #11, #12, #13 ----------
 
   it('#0 streaming reactivity: in-place mutation of step.content re-renders Message (regression: would fail if `observer` were dropped)', () => {
@@ -139,7 +139,7 @@ describe('Message — AssistantTurn renderer', () => {
     expect(mockTextMessageCalls).toHaveLength(1);
     expect(mockTextMessageCalls[0].step?.content).toBe('Hel');
 
-    // Mutate the step in place — same shape as ChatSessionStore's
+    // Mutate the step in place - same shape as ChatSessionStore's
     // `turn.steps[lastIdx] = {...last, ...partial}`. Wrapped in `act`
     // so React flushes the observer-triggered re-render before we
     // inspect mock calls.
@@ -238,7 +238,7 @@ describe('Message — AssistantTurn renderer', () => {
       />,
     );
     // Exactly ONE node carries an `onLongPress` prop (the Pressable wrapping
-    // the row). This proves long-press routing is turn-level — not split
+    // the row). This proves long-press routing is turn-level - not split
     // across N step-level rows.
     const longPressables = UNSAFE_root.findAll(
       (n: any) => n.props && typeof n.props.onLongPress === 'function',
@@ -428,7 +428,7 @@ describe('Message — AssistantTurn renderer', () => {
   // ---------- Canonical scenarios ----------
 
   describe('canonical scenarios', () => {
-    it('A — text only: single TextMessage block, no TalentSurface, ONE footer', () => {
+    it('A - text only: single TextMessage block, no TalentSurface, ONE footer', () => {
       const message = makeDerivedTurn([{content: 'Hi! How can I help?'}], {
         metadata: {
           timings: {predicted_per_token_ms: 32, predicted_per_second: 30},
@@ -451,7 +451,7 @@ describe('Message — AssistantTurn renderer', () => {
       expect(getAllByTestId('assistant-turn-footer')).toHaveLength(1);
     });
 
-    it('B — datetime tool (no UI registered): TextMessage + TalentSurface (chip path) + TextMessage + ONE footer', () => {
+    it('B - datetime tool (no UI registered): TextMessage + TalentSurface (chip path) + TextMessage + ONE footer', () => {
       const message = makeDerivedTurn(
         [
           {
@@ -499,7 +499,7 @@ describe('Message — AssistantTurn renderer', () => {
       expect(getAllByTestId('assistant-turn-footer')).toHaveLength(1);
     });
 
-    it('C — render_html with preamble and follow-up: 2 text blocks + 1 talent block + ONE footer', () => {
+    it('C - render_html with preamble and follow-up: 2 text blocks + 1 talent block + ONE footer', () => {
       const message = makeDerivedTurn(
         [
           {
@@ -540,7 +540,7 @@ describe('Message — AssistantTurn renderer', () => {
       expect(getAllByTestId('assistant-turn-footer')).toHaveLength(1);
     });
 
-    it('D — render_html with no preamble: HtmlPreview block + TextMessage + ONE footer (no empty leading bubble)', () => {
+    it('D - render_html with no preamble: HtmlPreview block + TextMessage + ONE footer (no empty leading bubble)', () => {
       const message = makeDerivedTurn(
         [
           {
@@ -576,7 +576,7 @@ describe('Message — AssistantTurn renderer', () => {
           showStatus
         />,
       );
-      // No empty leading TextMessage — the per-step skip rule §4a
+      // No empty leading TextMessage - the per-step skip rule §4a
       // collapses zero-block steps. Step 0's content is empty, so
       // only the talent block fires; step 1 supplies the only
       // TextMessage.
@@ -585,7 +585,7 @@ describe('Message — AssistantTurn renderer', () => {
       expect(getAllByTestId('assistant-turn-footer')).toHaveLength(1);
     });
 
-    it('E — tool failed: TextMessage(preamble) + TalentSurface (error path) + TextMessage(apology) + ONE footer', () => {
+    it('E - tool failed: TextMessage(preamble) + TalentSurface (error path) + TextMessage(apology) + ONE footer', () => {
       const message = makeDerivedTurn(
         [
           {
@@ -629,7 +629,7 @@ describe('Message — AssistantTurn renderer', () => {
       expect(getAllByTestId('assistant-turn-footer')).toHaveLength(1);
     });
 
-    it('F — reasoning + content: separate reasoning block + content block + ONE footer', () => {
+    it('F - reasoning + content: separate reasoning block + content block + ONE footer', () => {
       const message = makeDerivedTurn(
         [
           {
@@ -660,7 +660,7 @@ describe('Message — AssistantTurn renderer', () => {
       expect(getAllByTestId('assistant-turn-footer')).toHaveLength(1);
     });
 
-    it('G — multi-tool in one step: 1 preamble TextMessage + 1 TalentSurface (with both calls) + ONE footer', () => {
+    it('G - multi-tool in one step: 1 preamble TextMessage + 1 TalentSurface (with both calls) + ONE footer', () => {
       const message = makeDerivedTurn(
         [
           {
@@ -725,7 +725,7 @@ describe('Message — AssistantTurn renderer', () => {
 
     it('multi-tool partial completion: step₀ has two calls, first ok + second error → both rendered in array order via TalentSurface, ONE footer', () => {
       // One talent block (A) followed by one error block (B), in array
-      // order. Both surface simultaneously after step_finished —
+      // order. Both surface simultaneously after step_finished -
       // asserted here at the Message-renderer level by checking
       // TalentSurface receives both calls + outcomes in the right
       // order. Per-block dispatch (talent UI vs error block) lives in
@@ -783,7 +783,7 @@ describe('Message — AssistantTurn renderer', () => {
       expect(mockTextMessageCalls).toHaveLength(2);
       expect(queryAllByTestId('talent-surface')).toHaveLength(1);
       // Both calls reach TalentSurface in array order. The
-      // surface-level dispatch is tested in TalentSurface.test.tsx —
+      // surface-level dispatch is tested in TalentSurface.test.tsx -
       // here we verify the renderer doesn't drop calls or shuffle order.
       const calls = mockTalentSurfaceCalls[0].step?.toolCalls;
       const outcomes = mockTalentSurfaceCalls[0].step?.toolOutcomes;

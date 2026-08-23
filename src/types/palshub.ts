@@ -167,7 +167,7 @@ export interface PalsHubPal {
   is_owned?: boolean;
 
   // ============================================================================
-  // PACT (Pal Action & Capability Treaty) — wire shape, snake_case
+  // PACT (Pal Action & Capability Treaty) - wire shape, snake_case
   // ============================================================================
   /**
    * Optional PACT declaration carried from PalsHub. The wire shape uses
@@ -182,7 +182,7 @@ export interface PalsHubPal {
   };
 
   // ============================================================================
-  // GREETING — wire shape, snake_case
+  // GREETING - wire shape, snake_case
   // ============================================================================
   /**
    * Optional greeting carried from PalsHub. `suggested_prompts` (snake_case)
@@ -194,7 +194,7 @@ export interface PalsHubPal {
   };
 
   // ============================================================================
-  // PASS-THROUGH ARRAYS — not consumed by the client today
+  // PASS-THROUGH ARRAYS - not consumed by the client today
   // ============================================================================
   /**
    * Server-side image array. The server derives `thumbnail_url` from

@@ -8,10 +8,10 @@ import {L10nContext} from '../../utils';
 import {VoicePickerView} from './VoicePickerView';
 
 /**
- * Voice-led TTS sheet — single view.
+ * Voice-led TTS sheet - single view.
  *
  * Voices grouped by engine; each group surfaces its own install/manage
- * affordances inline. No separate Manage Engines route — it lives in the
+ * affordances inline. No separate Manage Engines route - it lives in the
  * group headers.
  */
 export const TTSSetupSheet: React.FC = observer(() => {

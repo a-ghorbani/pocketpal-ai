@@ -7,7 +7,7 @@
  * a structured payload; `deriveEffectiveBackend()` maps the payload to a
  * 4-state enum.
  *
- * Pure functions only — no Node, no React Native imports — so this module
+ * Pure functions only - no Node, no React Native imports - so this module
  * is safe to import from both the screen (Hermes) and unit tests (Jest).
  */
 
@@ -29,7 +29,7 @@ export interface LogSignals {
   large_buffer_enabled: boolean;
   large_buffer_unsupported: boolean;
   /** True when the Hexagon registry-allocation line was observed. Mirrors
-   * `opencl_init` (WHAT 1d, 8 D2 — verified literal:
+   * `opencl_init` (WHAT 1d, 8 D2 - verified literal:
    * `ggml-hex: Hexagon backend (experimental) : allocating new registry`). */
   hexagon_init: boolean;
   /** First HTP device name observed (e.g. "HTP0"). Mirrors
@@ -38,7 +38,7 @@ export interface LogSignals {
   offloaded_layers: number | null;
   total_layers: number | null;
   /** Memory buffers reported by llama.cpp at load + context-init time.
-   * Deterministic given (model, backend, context params) — does not depend
+   * Deterministic given (model, backend, context params) - does not depend
    * on OS / PSS / GC state. Sources:
    *   - weights_mib: `load_tensors: <DEV> model buffer size = X MiB`
    *     (cpp/llama-model.cpp). Keys include "CPU", "CPU_REPACK", "OpenCL",
@@ -57,7 +57,7 @@ export interface MemoryBuffers {
   /** Per-allocator weight buffer sizes (MiB). */
   weights_mib: Record<string, number>;
   /** Sum of weights_mib values. Always equals the sum by construction in
-   * deriveLogSignals — it cannot drift from the record. */
+   * deriveLogSignals - it cannot drift from the record. */
   weights_total_mib: number;
   /** Per-allocator KV cache buffer sizes (MiB). */
   kv_cache_mib: Record<string, number>;
@@ -79,7 +79,7 @@ export type EffectiveBackend =
   | 'cpu+hexagon-partial'
   | 'unknown';
 
-// Larger than strictly necessary on purpose — when a cell goes wrong we
+// Larger than strictly necessary on purpose - when a cell goes wrong we
 // want context, and the parser's structured output is what regression
 // tooling actually consumes (raw_matches is debug-only).
 const RAW_MATCHES_CAP = 200;
@@ -138,7 +138,7 @@ export function deriveLogSignals(lines: string[]): LogSignals {
   //   "ggml-hex: new session: HTP0 : ..."
   // Layer-offload reuses `offloadedRe` because the underlying log line
   // ("offloaded N/M layers to GPU" in cpp/llama-model.cpp) is
-  // backend-agnostic — it prints for any non-CPU backend that received
+  // backend-agnostic - it prints for any non-CPU backend that received
   // layers, including Hexagon.
   const hexagonInitRe = /ggml-hex:\s+Hexagon backend.*allocating new registry/;
   const hexagonDeviceRe = /ggml-hex:\s+new session:\s+(HTP\d+)/;
@@ -209,7 +209,7 @@ export function deriveLogSignals(lines: string[]): LogSignals {
       }
     }
 
-    // Hexagon registry-allocation marker — the llama.rn-side anchor for
+    // Hexagon registry-allocation marker - the llama.rn-side anchor for
     // "Hexagon backend actually came up." Mirrors the OpenCL `init` line
     // semantic.
     if (hexagonInitRe.test(line)) {
@@ -226,7 +226,7 @@ export function deriveLogSignals(lines: string[]): LogSignals {
       }
     }
 
-    // Memory buffers — last-write-wins per (kind, device) key. llama.cpp
+    // Memory buffers - last-write-wins per (kind, device) key. llama.cpp
     // only prints each buffer line once per context init, so collisions
     // would mean a re-init within the same listener window; taking the
     // latest value is correct for that case.
@@ -247,7 +247,7 @@ export function deriveLogSignals(lines: string[]): LogSignals {
   }
 
   // Totals are computed once at the end so they're always consistent with
-  // the records — last-write-wins on duplicate keys is honoured.
+  // the records - last-write-wins on duplicate keys is honoured.
   const sumValues = (rec: Record<string, number>): number =>
     Object.values(rec).reduce((acc, v) => acc + v, 0);
   signals.memory_buffers.weights_total_mib = sumValues(
@@ -273,7 +273,7 @@ export function deriveLogSignals(lines: string[]): LogSignals {
  * Ground truth: `memory_buffers.weights_mib` keys. llama.cpp emits one
  * `load_tensors: <DEV> model buffer size = X MiB` line per allocator that
  * actually received tensors, so the key set is exact evidence of which
- * backend(s) hold the weights — independent of any init-line side
+ * backend(s) hold the weights - independent of any init-line side
  * effects (e.g. `getDeviceOptions()` triggering a Hexagon registry
  * allocation that fires `hexagon_init=true` even when the model never
  * runs on Hexagon, observed on Snapdragon 8 Elite Gen 5).
@@ -365,7 +365,7 @@ export type RequestedBackend = 'cpu' | 'gpu' | 'hexagon';
 /**
  * Returns true when the actual backend the cell landed on satisfies the
  * cell's `requested_backend`. Partial offload (cpu+opencl-partial,
- * cpu+hexagon-partial) IS considered a satisfied request — the runner
+ * cpu+hexagon-partial) IS considered a satisfied request - the runner
  * landed on the requested backend, just incompletely; the report's
  * `effective_backend` field carries the partial signal so operators can
  * still spot it. Mismatch happens when the cell asked for one backend

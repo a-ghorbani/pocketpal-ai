@@ -26,7 +26,7 @@ export const PACKAGE = 'com.pocketpalai.e2e';
 export const REMOTE_DIR = `/sdcard/Android/data/${PACKAGE}/files`;
 
 // argv-style adb invocation. The udid flows in from process.env (E2E_DEVICE_UDID)
-// — passing it as its own argv slot ([-s, udid]) makes shell-metacharacter
+// - passing it as its own argv slot ([-s, udid]) makes shell-metacharacter
 // injection structurally impossible. Replaces the previous shell-string
 // `execSync(\`adb ${...}\`)` call shape (round-1 C4).
 export const adb = (udid: string | undefined, ...args: string[]): string => {
@@ -83,7 +83,7 @@ export async function deepLinkLaunch(): Promise<void> {
 }
 
 export function pullLatestReport(outDir: string, udid?: string): string {
-  // `adb shell ls <pattern>` works with argv (no shell expansion needed —
+  // `adb shell ls <pattern>` works with argv (no shell expansion needed -
   // the device-side shell expands the glob). Each token is its own argv
   // slot so neither REMOTE_DIR nor the udid can carry shell metacharacters
   // into the host shell.

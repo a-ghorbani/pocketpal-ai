@@ -7,7 +7,7 @@ export const styles = ({theme}: {theme: Theme}) =>
     container: {
       paddingTop: 4,
       paddingBottom: 8,
-      // No horizontal padding — aligns with the AI text / footer / chip
+      // No horizontal padding - aligns with the AI text / footer / chip
       // at the assistant row's marginLeft (single shared gutter).
     },
     text: {

@@ -166,7 +166,7 @@ describe('draft-only detection', () => {
 
   it('does NOT treat an embedded-MTP model as draft-only', () => {
     // Qwen3.5-0.8B-MTP: nextn > 0 but a normal arch, and it loads and
-    // generates on device — gating it would break a shipped mode.
+    // generates on device - gating it would break a shipped mode.
     expect(isDraftOnlyArch('qwen35')).toBe(false);
     expect(isDraftOnlyModel({ggufMetadata: dmeta('qwen35', 1)})).toBe(false);
     expect(isMTPCapable({ggufMetadata: dmeta('qwen35', 1)})).toBe(true);

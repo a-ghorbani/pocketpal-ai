@@ -55,7 +55,7 @@ beforeEach(() => {
   });
 });
 
-describe('ChatView — AssistantTurn integration', () => {
+describe('ChatView - AssistantTurn integration', () => {
   // ---------- Story Test Requirements (Renderer) #6 + #11 ----------
 
   it('#6 htmlPreviewCount counts step.toolOutcomes filtered to result.type=html across all turns', () => {
@@ -113,7 +113,7 @@ describe('ChatView — AssistantTurn integration', () => {
       <ChatView messages={messages} onSendPress={jest.fn()} user={user} />,
       {withNavigation: true, withBottomSheetProvider: true},
     );
-    // Soft cap fires at >= 4 — banner is visible.
+    // Soft cap fires at >= 4 - banner is visible.
     expect(getByTestId('soft-cap-warning')).toBeTruthy();
   });
 
@@ -240,12 +240,12 @@ describe('ChatView — AssistantTurn integration', () => {
     expect(externalLongPress.mock.calls[0][0].type).toBe('assistant_turn');
     expect(externalLongPress.mock.calls[0][0].id).toBe('t1');
 
-    // The long-press also opens the menu — Copy label appears.
+    // The long-press also opens the menu - Copy label appears.
     expect(getByText(l10n.en.components.chatView.menuItems.copy)).toBeTruthy();
   });
 });
 
-describe('ChatView — Copy menu item label is present in l10n', () => {
+describe('ChatView - Copy menu item label is present in l10n', () => {
   it('exposes a Copy menu label (sanity for menuItems)', () => {
     expect(l10n.en.components.chatView.menuItems.copy).toBeTruthy();
   });
@@ -253,8 +253,8 @@ describe('ChatView — Copy menu item label is present in l10n', () => {
 
 // ---------- Canonical scenario H + I ----------
 
-describe('ChatView — abort with partial content', () => {
-  it('H — interrupted turn with copyable but no timings: AssistantTurnFooter shows copy alone, no timing', () => {
+describe('ChatView - abort with partial content', () => {
+  it('H - interrupted turn with copyable but no timings: AssistantTurnFooter shows copy alone, no timing', () => {
     const turn: MessageType.AssistantTurn = {
       id: 't1',
       type: 'assistant_turn',
@@ -270,12 +270,12 @@ describe('ChatView — abort with partial content', () => {
     expect(getByTestId('assistant-turn-footer')).toBeTruthy();
     // Copy renders (copyable=true).
     expect(getByTestId('footer-copy')).toBeTruthy();
-    // No timing line — `metadata.timings` is absent.
+    // No timing line - `metadata.timings` is absent.
     expect(queryByTestId('footer-timing')).toBeNull();
   });
 });
 
-describe('ChatView — dead-zone phase walk via PendingIndicator', () => {
+describe('ChatView - dead-zone phase walk via PendingIndicator', () => {
   // The PendingIndicator is owned by ChatView and gated on
   // `chatSessionStore.agentUiState.status`. It appears in every status
   // EXCEPT streaming_text and done. Drive the status across the table
@@ -346,7 +346,7 @@ describe('ChatView — dead-zone phase walk via PendingIndicator', () => {
 
     // 10 simulated re-renders, each representing a token landing.
     // The status remains streaming_text the whole time (no flips
-    // back to prefill — that's the reducer-level guarantee). Each
+    // back to prefill - that's the reducer-level guarantee). Each
     // re-render passes a new turn message reference (content
     // grows), forcing React to re-evaluate the header component.
     let content = 'h';
@@ -360,7 +360,7 @@ describe('ChatView — dead-zone phase walk via PendingIndicator', () => {
           user={user}
         />,
       );
-      // Indicator MUST remain hidden across every frame — no
+      // Indicator MUST remain hidden across every frame - no
       // flicker is observable.
       expect(queryByTestId('pending-indicator')).toBeNull();
     }

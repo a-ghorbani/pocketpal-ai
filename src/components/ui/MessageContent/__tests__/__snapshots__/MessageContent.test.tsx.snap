@@ -1,6 +1,6 @@
 // Jest Snapshot v1, https://goo.gl/fbAQLP
 
-exports[`MessageContent — snapshot matrix baseline (variant x size x {default,disabled} x modes) assistant-m-default-dark 1`] = `
+exports[`MessageContent - snapshot matrix baseline (variant x size x {default,disabled} x modes) assistant-m-default-dark 1`] = `
 <View
   collapsable={false}
   pointerEvents="box-none"
@@ -44,7 +44,7 @@ exports[`MessageContent — snapshot matrix baseline (variant x size x {default,
 </View>
 `;
 
-exports[`MessageContent — snapshot matrix baseline (variant x size x {default,disabled} x modes) assistant-m-default-light 1`] = `
+exports[`MessageContent - snapshot matrix baseline (variant x size x {default,disabled} x modes) assistant-m-default-light 1`] = `
 <View
   collapsable={false}
   pointerEvents="box-none"
@@ -88,7 +88,7 @@ exports[`MessageContent — snapshot matrix baseline (variant x size x {default,
 </View>
 `;
 
-exports[`MessageContent — snapshot matrix baseline (variant x size x {default,disabled} x modes) system-m-default-dark 1`] = `
+exports[`MessageContent - snapshot matrix baseline (variant x size x {default,disabled} x modes) system-m-default-dark 1`] = `
 <View
   collapsable={false}
   pointerEvents="box-none"
@@ -132,7 +132,7 @@ exports[`MessageContent — snapshot matrix baseline (variant x size x {default,
 </View>
 `;
 
-exports[`MessageContent — snapshot matrix baseline (variant x size x {default,disabled} x modes) system-m-default-light 1`] = `
+exports[`MessageContent - snapshot matrix baseline (variant x size x {default,disabled} x modes) system-m-default-light 1`] = `
 <View
   collapsable={false}
   pointerEvents="box-none"
@@ -176,7 +176,7 @@ exports[`MessageContent — snapshot matrix baseline (variant x size x {default,
 </View>
 `;
 
-exports[`MessageContent — snapshot matrix baseline (variant x size x {default,disabled} x modes) user-m-default-dark 1`] = `
+exports[`MessageContent - snapshot matrix baseline (variant x size x {default,disabled} x modes) user-m-default-dark 1`] = `
 <View
   collapsable={false}
   pointerEvents="box-none"
@@ -220,7 +220,7 @@ exports[`MessageContent — snapshot matrix baseline (variant x size x {default,
 </View>
 `;
 
-exports[`MessageContent — snapshot matrix baseline (variant x size x {default,disabled} x modes) user-m-default-light 1`] = `
+exports[`MessageContent - snapshot matrix baseline (variant x size x {default,disabled} x modes) user-m-default-light 1`] = `
 <View
   collapsable={false}
   pointerEvents="box-none"
@@ -264,7 +264,7 @@ exports[`MessageContent — snapshot matrix baseline (variant x size x {default,
 </View>
 `;
 
-exports[`MessageContent — snapshot matrix non-Latin font-fallback canary (canaryVariant x size=default x default x light x lang) user-m-default-light-fa 1`] = `
+exports[`MessageContent - snapshot matrix non-Latin font-fallback canary (canaryVariant x size=default x default x light x lang) user-m-default-light-fa 1`] = `
 <View
   collapsable={false}
   pointerEvents="box-none"

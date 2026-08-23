@@ -21,7 +21,7 @@ export const Onboarding5Screen: React.FC = observer(() => {
   const labels = t.screen5.topic as Record<TopicKey, string>;
   const descriptions = t.screen5.topicDescription as Record<TopicKey, string>;
   // Figma `884:28282` omits a back affordance, but the screen sits
-  // mid-flow — users need to be able to retreat to screens 2–4. Render
+  // mid-flow - users need to be able to retreat to screens 2-4. Render
   // a back-only bottom bar (no primary CTA: chips auto-advance).
   return (
     <OnboardingScaffold

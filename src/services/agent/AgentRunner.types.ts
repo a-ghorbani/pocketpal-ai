@@ -35,7 +35,7 @@ export interface AgentRunResult {
 /**
  * Discriminated union emitted by `runAgent`. Consumers (hook + reducer +
  * persistence layer) drive their state machines off this stream rather
- * than reading store state mid-run. Order is meaningful — consumers may
+ * than reading store state mid-run. Order is meaningful - consumers may
  * rely on `run_started` arriving before `step_started`, etc.
  */
 export type AgentEvent =
@@ -53,7 +53,7 @@ export type AgentEvent =
        * attached when the step actually invoked tools. Optional because
        * text-only steps and the final step of a multi-turn chain don't
        * have any. When present, ids are reconciled with outcome callIds
-       * via {@link normalizeToolCallIds} — the hook's `appendToolCall`
+       * via {@link normalizeToolCallIds} - the hook's `appendToolCall`
        * writer relies on this to make
        * `step.toolCalls[i].id === outcome.callId` true by construction.
        */
@@ -65,8 +65,8 @@ export type AgentEvent =
 /**
  * UX-state derived from `AgentEvent`s by `agentStateReducer`. Lives on
  * `chatSessionStore.agentUiState`. Renderers compute "is this message
- * the active run?" once at ChatView level — see Active-vs-persisted
- * predicate in the story — and pass it down as `isActiveRun: boolean`.
+ * the active run?" once at ChatView level - see Active-vs-persisted
+ * predicate in the story - and pass it down as `isActiveRun: boolean`.
  */
 export interface AgentUiState {
   status:
@@ -88,7 +88,7 @@ export const initialAgentUiState: AgentUiState = {
 };
 
 /**
- * Inputs to `runAgent`. The runner has no React/MobX/store imports —
+ * Inputs to `runAgent`. The runner has no React/MobX/store imports -
  * the talent registry is injected via `talentLookup` and the message id
  * (already created by the hook before calling) is passed in.
  */
@@ -102,7 +102,7 @@ export interface AgentRunOptions {
   /** Plain-text trigger markers (extracted from llama.rn
    * `grammar_triggers`) the streaming bridge scans for in
    * accumulated content. Precomputed by the hook before each
-   * `runAgent` invocation — the runner never imports the cache or
+   * `runAgent` invocation - the runner never imports the cache or
    * `getFormattedChat`. Pass `[]` to disable marker detection;
    * `tool_call_started` still drives the UX status flip in that
    * case (one beat later). */

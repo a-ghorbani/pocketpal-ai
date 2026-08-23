@@ -9,7 +9,7 @@ import {ttsStore} from '../store/TTSStore';
  * and release a neural engine without driving the setup-sheet UI, so RAM can
  * be sampled at loaded / active / idle checkpoints.
  *
- * Outcomes are written to a status file the spec polls — mirrors the
+ * Outcomes are written to a status file the spec polls - mirrors the
  * memory-snapshots file round-trip in `memoryProfile.ts`. The file is the
  * only awaitable signal because downloads (Supertonic ~380 MB) outlive any
  * single deep-link / TextInput round-trip.

@@ -96,7 +96,7 @@ export const effectiveDraftModeOf = (
 /**
  * A quantized draft V cache is fatal without flash attention: llama.cpp
  * refuses the MTP context ("quantized V cache ... requires Flash Attention"),
- * and `auto` resolves per backend AFTER init params are committed — on
+ * and `auto` resolves per backend AFTER init params are committed - on
  * Android CPU it resolves off. Q8_0 is therefore only defaulted when the
  * user explicitly forced flash attention on; anything else gets F16.
  */

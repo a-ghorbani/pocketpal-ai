@@ -2,7 +2,7 @@
  * Thinking Toggle Override E2E Tests (issue #744 regression guard)
  *
  * With a pal active, the thinking toggle in the chat input must reflect and
- * persist the user's choice — not get re-overlaid by the pal's stored
+ * persist the user's choice - not get re-overlaid by the pal's stored
  * enable_thinking value on every render.
  *
  * Covers:
@@ -38,7 +38,7 @@ import {SCREENSHOT_DIR} from '../../wdio.shared.conf';
 declare const driver: WebdriverIO.Browser;
 declare const browser: WebdriverIO.Browser;
 
-/** Qwen3-0.6B: small thinking-capable model — matches thinking.spec.ts */
+/** Qwen3-0.6B: small thinking-capable model - matches thinking.spec.ts */
 const THINKING_MODEL = {
   id: 'qwen3-0.6b',
   searchQuery: 'bartowski Qwen_Qwen3-0.6B',
@@ -170,7 +170,7 @@ describe('Thinking Toggle Override (with pal active)', () => {
     expect(await chatPage.isThinkingEnabled()).toBe(false);
 
     // A second read after a longer settle window guards against a delayed
-    // re-resolve that would have shown the bug as a 1–2 frame flicker.
+    // re-resolve that would have shown the bug as a 1-2 frame flicker.
     await browser.pause(1500);
     expect(await chatPage.isThinkingEnabled()).toBe(false);
   });
@@ -188,7 +188,7 @@ describe('Thinking Toggle Override (with pal active)', () => {
 
     // If the override leaked back to pal's enable_thinking=true between
     // session creation and prepareCompletion, the Reasoning bubble would
-    // appear here. A short timeout is enough — the bubble streams in
+    // appear here. A short timeout is enough - the bubble streams in
     // before the answer if thinking is on.
     const thinkingVisible = await chatPage.isThinkingBubbleVisible(5000);
     expect(thinkingVisible).toBe(false);

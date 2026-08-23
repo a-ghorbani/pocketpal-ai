@@ -18,7 +18,7 @@ const STREAM_TARGET_CHARS = 300;
  * engine-swap guard.
  *
  * The library's stream calls `Speech.speak` internally, which doesn't
- * route through `ttsRuntime.acquire` — so we pin the engine once, up
+ * route through `ttsRuntime.acquire` - so we pin the engine once, up
  * front, and hold appends in a queue until the acquire resolves. After
  * that, appends pass straight through. This keeps the per-call
  * acquire-release overhead out of the streaming hot path while still
@@ -26,7 +26,7 @@ const STREAM_TARGET_CHARS = 300;
  *
  * `waitFor` lets the caller sequence the acquire behind an external
  * promise (e.g. a prior `stop()` so the old `Speech.stop()` completes
- * before any new synthesis starts — prevents the stop flag from
+ * before any new synthesis starts - prevents the stop flag from
  * accidentally killing the new stream's first sentence).
  */
 export function createEngineStreamingHandle(
@@ -35,7 +35,7 @@ export function createEngineStreamingHandle(
   options?: Omit<SpeechStreamOptions, 'targetChars' | 'onError'>,
   waitFor?: Promise<void>,
 ): StreamingHandle {
-  // The stream is created INSIDE `acquire` — after `loadInto()` has swapped
+  // The stream is created INSIDE `acquire` - after `loadInto()` has swapped
   // `Speech.currentEngine` to `engine`. Creating it earlier would bind the
   // stream's internal engine-factory to whichever engine was previously
   // loaded, causing synthesis on the wrong engine.
@@ -47,11 +47,11 @@ export function createEngineStreamingHandle(
 
   const ready = (waitFor ?? Promise.resolve())
     .catch(() => {
-      // Swallow stop errors — we still want to start the new stream.
+      // Swallow stop errors - we still want to start the new stream.
     })
     .then(() => {
       // Short-circuit: if cancel() was called while waiting, skip the
-      // acquire entirely — avoids loading a 200+ MB engine for nothing.
+      // acquire entirely - avoids loading a 200+ MB engine for nothing.
       if (dead) {
         return;
       }

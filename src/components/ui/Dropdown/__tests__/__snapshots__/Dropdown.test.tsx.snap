@@ -1,6 +1,6 @@
 // Jest Snapshot v1, https://goo.gl/fbAQLP
 
-exports[`Dropdown — snapshot matrix baseline (variant x size x {default,disabled} x modes) standard-l-default-dark 1`] = `
+exports[`Dropdown - snapshot matrix baseline (variant x size x {default,disabled} x modes) standard-l-default-dark 1`] = `
 <View
   collapsable={false}
   pointerEvents="box-none"
@@ -86,7 +86,7 @@ exports[`Dropdown — snapshot matrix baseline (variant x size x {default,disabl
 </View>
 `;
 
-exports[`Dropdown — snapshot matrix baseline (variant x size x {default,disabled} x modes) standard-l-default-light 1`] = `
+exports[`Dropdown - snapshot matrix baseline (variant x size x {default,disabled} x modes) standard-l-default-light 1`] = `
 <View
   collapsable={false}
   pointerEvents="box-none"
@@ -172,7 +172,7 @@ exports[`Dropdown — snapshot matrix baseline (variant x size x {default,disabl
 </View>
 `;
 
-exports[`Dropdown — snapshot matrix baseline (variant x size x {default,disabled} x modes) standard-l-disabled-dark 1`] = `
+exports[`Dropdown - snapshot matrix baseline (variant x size x {default,disabled} x modes) standard-l-disabled-dark 1`] = `
 <View
   collapsable={false}
   pointerEvents="box-none"
@@ -258,7 +258,7 @@ exports[`Dropdown — snapshot matrix baseline (variant x size x {default,disabl
 </View>
 `;
 
-exports[`Dropdown — snapshot matrix baseline (variant x size x {default,disabled} x modes) standard-l-disabled-light 1`] = `
+exports[`Dropdown - snapshot matrix baseline (variant x size x {default,disabled} x modes) standard-l-disabled-light 1`] = `
 <View
   collapsable={false}
   pointerEvents="box-none"
@@ -344,7 +344,7 @@ exports[`Dropdown — snapshot matrix baseline (variant x size x {default,disabl
 </View>
 `;
 
-exports[`Dropdown — snapshot matrix baseline (variant x size x {default,disabled} x modes) standard-m-default-dark 1`] = `
+exports[`Dropdown - snapshot matrix baseline (variant x size x {default,disabled} x modes) standard-m-default-dark 1`] = `
 <View
   collapsable={false}
   pointerEvents="box-none"
@@ -430,7 +430,7 @@ exports[`Dropdown — snapshot matrix baseline (variant x size x {default,disabl
 </View>
 `;
 
-exports[`Dropdown — snapshot matrix baseline (variant x size x {default,disabled} x modes) standard-m-default-light 1`] = `
+exports[`Dropdown - snapshot matrix baseline (variant x size x {default,disabled} x modes) standard-m-default-light 1`] = `
 <View
   collapsable={false}
   pointerEvents="box-none"
@@ -516,7 +516,7 @@ exports[`Dropdown — snapshot matrix baseline (variant x size x {default,disabl
 </View>
 `;
 
-exports[`Dropdown — snapshot matrix baseline (variant x size x {default,disabled} x modes) standard-m-disabled-dark 1`] = `
+exports[`Dropdown - snapshot matrix baseline (variant x size x {default,disabled} x modes) standard-m-disabled-dark 1`] = `
 <View
   collapsable={false}
   pointerEvents="box-none"
@@ -602,7 +602,7 @@ exports[`Dropdown — snapshot matrix baseline (variant x size x {default,disabl
 </View>
 `;
 
-exports[`Dropdown — snapshot matrix baseline (variant x size x {default,disabled} x modes) standard-m-disabled-light 1`] = `
+exports[`Dropdown - snapshot matrix baseline (variant x size x {default,disabled} x modes) standard-m-disabled-light 1`] = `
 <View
   collapsable={false}
   pointerEvents="box-none"
@@ -688,7 +688,7 @@ exports[`Dropdown — snapshot matrix baseline (variant x size x {default,disabl
 </View>
 `;
 
-exports[`Dropdown — snapshot matrix baseline (variant x size x {default,disabled} x modes) standard-s-default-dark 1`] = `
+exports[`Dropdown - snapshot matrix baseline (variant x size x {default,disabled} x modes) standard-s-default-dark 1`] = `
 <View
   collapsable={false}
   pointerEvents="box-none"
@@ -774,7 +774,7 @@ exports[`Dropdown — snapshot matrix baseline (variant x size x {default,disabl
 </View>
 `;
 
-exports[`Dropdown — snapshot matrix baseline (variant x size x {default,disabled} x modes) standard-s-default-light 1`] = `
+exports[`Dropdown - snapshot matrix baseline (variant x size x {default,disabled} x modes) standard-s-default-light 1`] = `
 <View
   collapsable={false}
   pointerEvents="box-none"
@@ -860,7 +860,7 @@ exports[`Dropdown — snapshot matrix baseline (variant x size x {default,disabl
 </View>
 `;
 
-exports[`Dropdown — snapshot matrix baseline (variant x size x {default,disabled} x modes) standard-s-disabled-dark 1`] = `
+exports[`Dropdown - snapshot matrix baseline (variant x size x {default,disabled} x modes) standard-s-disabled-dark 1`] = `
 <View
   collapsable={false}
   pointerEvents="box-none"
@@ -946,7 +946,7 @@ exports[`Dropdown — snapshot matrix baseline (variant x size x {default,disabl
 </View>
 `;
 
-exports[`Dropdown — snapshot matrix baseline (variant x size x {default,disabled} x modes) standard-s-disabled-light 1`] = `
+exports[`Dropdown - snapshot matrix baseline (variant x size x {default,disabled} x modes) standard-s-disabled-light 1`] = `
 <View
   collapsable={false}
   pointerEvents="box-none"
@@ -1032,7 +1032,7 @@ exports[`Dropdown — snapshot matrix baseline (variant x size x {default,disabl
 </View>
 `;
 
-exports[`Dropdown — snapshot matrix non-Latin font-fallback canary (canaryVariant x size=default x default x light x lang) standard-s-default-light-fa 1`] = `
+exports[`Dropdown - snapshot matrix non-Latin font-fallback canary (canaryVariant x size=default x default x light x lang) standard-s-default-light-fa 1`] = `
 <View
   collapsable={false}
   pointerEvents="box-none"

@@ -5,7 +5,7 @@
  *   1. Add a remote server; the probe seeds the server-type selector to
  *      "llama.cpp" (detectServerType -> seedServerType).
  *   2. Save the server and select the remote reasoning model.
- *   3. The thinking pill is reachable for the remote model (the headline fix —
+ *   3. The thinking pill is reachable for the remote model (the headline fix -
  *      the pill was previously gated on a native context the remote path lacks,
  *      so it was never shown).
  *   4. Thinking ON -> a reasoning bubble renders.
@@ -85,14 +85,14 @@ function pingModelsEndpoint(timeoutMs = 4000): Promise<boolean> {
 /**
  * Read the value shown on the server-type dropdown trigger. The ui Dropdown
  * renders the selected option's label as both the trigger's accessibilityLabel
- * and a child Text node. Reads off the EXISTING element — the trigger deep in a
+ * and a child Text node. Reads off the EXISTING element - the trigger deep in a
  * bottom sheet can report isDisplayed=false on iOS even when present, so we do
  * not gate on visibility here.
  *
  * Cross-platform read: on iOS the accessibilityLabel surfaces via the trigger's
  * "label"/"name"/"value" attributes. On Android (UiAutomator2) it maps to
  * content-desc, and the trigger's own "text" is empty because the visible value
- * lives in a child TextView — so we also try content-desc and the child Text.
+ * lives in a child TextView - so we also try content-desc and the child Text.
  */
 async function readServerTypeValue(): Promise<string> {
   const trigger = browser.$(Selectors.serverType.dropdown());
@@ -331,7 +331,7 @@ describe('Remote Reasoning Features', () => {
     await chatPage.sendMessage('What is 17*23?');
 
     // The reasoning bubble renders as the assistant turn begins streaming, so
-    // assert it during early stream — well before completion. (A reasoning
+    // assert it during early stream - well before completion. (A reasoning
     // model on a real server returns reasoning_content first.)
     const thinkingVisible = await chatPage.isThinkingBubbleVisible(45000);
     if (!thinkingVisible) {

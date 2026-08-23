@@ -9,7 +9,7 @@ export type HighlightTextProps = {
   body: string;
   /** Phrases to wrap in a peach pill. Order is preserved. */
   phrases: string[];
-  /** Text alignment (centered on screens 1–4). */
+  /** Text alignment (centered on screens 1-4). */
   align?: 'left' | 'center';
 };
 
@@ -17,7 +17,7 @@ export type HighlightTextProps = {
  * Split `body` around each phrase in `phrases`. Matched runs render
  * inside a nested `<Text>` with a peach pill background; unmatched
  * runs render plain. Phrase matching is case-sensitive and
- * exact-substring (matches the design contract — phrases are
+ * exact-substring (matches the design contract - phrases are
  * translator-edited).
  *
  * If no phrase appears in `body`, the body renders plain (fallback

@@ -40,7 +40,7 @@ describe('wrapUntrusted', () => {
     const nonce = endMatch?.[1] as string;
     const realEnd = `----- END UNTRUSTED WEB CONTENT ${nonce} -----`;
 
-    // Exactly one real (nonce-bearing) END marker exists, and it is last —
+    // Exactly one real (nonce-bearing) END marker exists, and it is last -
     // the injected payload stays inside the wrapped block.
     expect(out.split(realEnd)).toHaveLength(2);
     expect(out.endsWith(realEnd)).toBe(true);
@@ -48,7 +48,7 @@ describe('wrapUntrusted', () => {
       out.indexOf(realEnd),
     );
 
-    // The embedded literal marker base was neutralised — no bare
+    // The embedded literal marker base was neutralised - no bare
     // "UNTRUSTED WEB CONTENT" survives in the body that could mimic a marker.
     const body = out.slice(0, out.indexOf(realEnd));
     const bodyAfterNote = body.slice(

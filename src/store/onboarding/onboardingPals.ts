@@ -1,5 +1,5 @@
 /**
- * Hardcoded onboarding pals — one per topic chosen on screen 5, with
+ * Hardcoded onboarding pals - one per topic chosen on screen 5, with
  * three model tiers each. `else` falls back to the Pip (smartchat) pal.
  *
  * The Balanced tier is universally `recommended: true` for now; a
@@ -45,7 +45,7 @@ export interface OnboardingPalModelEntry {
 }
 
 /**
- * Derived entry id — matches `Model.id` shape from both `hfAsModel`
+ * Derived entry id - matches `Model.id` shape from both `hfAsModel`
  * (`${hfModel.id}/${modelFile.rfilename}`) and `defaultModels.ts`
  * preset ids. `entry.id` is never persisted as a separate field.
  */
@@ -92,7 +92,7 @@ export interface OnboardingPalDef {
   name: string;
   /**
    * English description copied into `Pal.description` on materialise.
-   * Shown on PalsScreen / detail sheet. Not l10n'd for now — iterate
+   * Shown on PalsScreen / detail sheet. Not l10n'd for now - iterate
    * once the pal set stabilises.
    */
   description: string;
@@ -153,10 +153,10 @@ const PAL_CODIE: OnboardingPalDef = {
   description:
     'A pocket pair-programmer who writes, debugs, and explains code with you.',
   systemPrompt:
-    "You are Codie, a coding pal on the user's phone. Answer with code first: one fenced block with a language tag. Then explain in at most 2 short sentences — phone screens are small. When debugging, state the bug in one sentence, then show the fixed code. Never repeat the user's code back.",
+    "You are Codie, a coding pal on the user's phone. Answer with code first: one fenced block with a language tag. Then explain in at most 2 short sentences - phone screens are small. When debugging, state the bug in one sentence, then show the fixed code. Never repeat the user's code back.",
   color: ['#0F3D5E', '#7BB9D7'],
   greeting: {
-    text: "Hey, I'm Codie 👋 Paste some code or tell me what you're building — let's get it working.",
+    text: "Hey, I'm Codie 👋 Paste some code or tell me what you're building - let's get it working.",
     suggestedPrompts: [
       'Write a Python function to validate an email address',
       'Explain what a closure is in JavaScript',
@@ -224,7 +224,7 @@ const PAL_SAGE: OnboardingPalDef = {
     palEntry({
       tier: 'balanced',
       recommended: true,
-      // Shared with Echo balanced — `addHFModel` idempotency collapses
+      // Shared with Echo balanced - `addHFModel` idempotency collapses
       // duplicates into one `modelStore.models` row.
       repo: 'lmstudio-community/gemma-3-1b-it-GGUF',
       filename: 'gemma-3-1b-it-Q8_0.gguf',
@@ -254,7 +254,7 @@ const PAL_ECHO: OnboardingPalDef = {
     "You are Echo, a roleplay companion. Stay fully in character; never break the fourth wall. Write vivid scenes with senses, action, and dialogue. Keep turns to 100-180 words and end on a moment the user can react to. Follow the user's cues; let them drive the story.",
   color: ['#3B0E5E', '#C99BE0'],
   greeting: {
-    text: "I'm Echo — every story needs a second voice. Where shall we begin?",
+    text: "I'm Echo - every story needs a second voice. Where shall we begin?",
     suggestedPrompts: [
       "You're a mysterious innkeeper; I just walked in from the rain",
       'Play a sarcastic detective in 1920s Chicago',
@@ -275,7 +275,7 @@ const PAL_ECHO: OnboardingPalDef = {
     palEntry({
       tier: 'balanced',
       recommended: true,
-      // Shared with Sage balanced — idempotent dedupe at register time.
+      // Shared with Sage balanced - idempotent dedupe at register time.
       repo: 'lmstudio-community/gemma-3-1b-it-GGUF',
       filename: 'gemma-3-1b-it-Q8_0.gguf',
       params: 999885952,
@@ -304,7 +304,7 @@ const PAL_MUSE: OnboardingPalDef = {
     "You are Muse, a creative writing pal. Draft, continue, and polish prose and poetry. Match the user's tone, voice, and genre. Show, don't tell; vary rhythm; cut filler. For feedback: say what works, then give 2-3 concrete improvements. Offer options, not lectures.",
   color: ['#5E0E3D', '#E0A0C9'],
   greeting: {
-    text: "I'm Muse. Bring me a sentence, a stanza, or a blank page — we'll make it sing.",
+    text: "I'm Muse. Bring me a sentence, a stanza, or a blank page - we'll make it sing.",
     suggestedPrompts: [
       'Help me write an opening line for a short story',
       "Make this sentence more vivid: 'the sunset was beautiful'",

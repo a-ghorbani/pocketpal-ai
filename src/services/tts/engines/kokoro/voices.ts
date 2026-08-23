@@ -13,7 +13,7 @@ import type {Voice} from '../../types';
  * v1b-TTS-language follow-up.
  */
 export const KOKORO_VOICES: Voice[] = [
-  // American English — female
+  // American English - female
   {
     id: 'af_heart',
     name: 'Heart',
@@ -77,7 +77,7 @@ export const KOKORO_VOICES: Voice[] = [
     language: 'en',
     gender: 'f',
   },
-  // American English — male
+  // American English - male
   {
     id: 'am_adam',
     name: 'Adam',
@@ -134,7 +134,7 @@ export const KOKORO_VOICES: Voice[] = [
     language: 'en',
     gender: 'm',
   },
-  // British English — female
+  // British English - female
   {
     id: 'bf_alice',
     name: 'Alice',
@@ -156,7 +156,7 @@ export const KOKORO_VOICES: Voice[] = [
     language: 'en-GB',
     gender: 'f',
   },
-  // British English — male
+  // British English - male
   {
     id: 'bm_george',
     name: 'George',

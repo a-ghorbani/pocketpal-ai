@@ -32,7 +32,7 @@ describe('readDeviceSignals', () => {
       new Error('id boom'),
     );
 
-    // A failing device-id read must not reject — it degrades like the other
+    // A failing device-id read must not reject - it degrades like the other
     // native reads so the classifier falls back rather than resolving empty.
     const signals = await readDeviceSignals();
 

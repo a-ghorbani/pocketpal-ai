@@ -205,7 +205,7 @@ export const Selectors = {
     get fabGroupClose(): string {
       return byAccessibilityLabel('Close menu');
     },
-    // FAB actions — react-native-paper FAB.Group renders actions as buttons
+    // FAB actions - react-native-paper FAB.Group renders actions as buttons
     // with accessibilityLabel as the name; testID gets suffixed with
     // "-container-outer-layer" so byTestId won't match the tappable element.
     get hfFab(): string {
@@ -340,7 +340,7 @@ export const Selectors = {
       }
       return `-ios predicate string:name == "cancel-button"`;
     },
-    // List-wide (NOT card-scoped) clickable Download/Cancel buttons — for
+    // List-wide (NOT card-scoped) clickable Download/Cancel buttons - for
     // enumerating every download control on the Models screen with $$ when the
     // test should not pin a specific model (the device-rule list varies). Filter
     // to the Button class so taps land on the control, not the wrapper View.
@@ -404,7 +404,7 @@ export const Selectors = {
       byTestId(`device-option-${tier}`),
   },
 
-  // BenchmarkResultTrigger — hidden E2E trigger for the benchmark-matrix spec.
+  // BenchmarkResultTrigger - hidden E2E trigger for the benchmark-matrix spec.
   // Testids mirror MemorySnapshotTrigger's set.
   benchmarkResult: {
     get container(): string {
@@ -529,7 +529,7 @@ export const Selectors = {
   thinking: {
     // The toggle carries testID "thinking-toggle" AND a state-dependent
     // accessibilityLabel. On iOS the testID becomes the element `name`, so the
-    // accessibility-id (`~label`) match no longer resolves — match the `label`
+    // accessibility-id (`~label`) match no longer resolves - match the `label`
     // attribute via predicate instead. On Android the label stays as
     // content-desc, so `~label` still works.
     /** "Think" toggle button - when thinking is currently enabled */

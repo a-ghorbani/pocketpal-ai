@@ -36,7 +36,7 @@ const STEPS_BUTTONS = [1, 2, 3, 5, 10, 20].map(v => ({
 
 /**
  * Compact "current voice" strip used as the header of the unified Voices
- * sheet. Renders nothing when no voice is set — the voices list itself is
+ * sheet. Renders nothing when no voice is set - the voices list itself is
  * the answer in that state. When the current voice is Supertonic, the
  * strip embeds an inline quality (steps) selector since quality is a
  * property of that voice.

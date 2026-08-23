@@ -192,7 +192,7 @@ describe('useChatSession', () => {
     await result.current.handleStopPress();
 
     expect(chatSessionStore.setIsStopping).toHaveBeenCalledWith(true);
-    // inferencing flag is NOT cleared by handleStopPress anymore — the
+    // inferencing flag is NOT cleared by handleStopPress anymore - the
     // runner's for-await cleanup is the single owner of that.
     const calls = (chatSessionStore.setIsGenerating as jest.Mock).mock.calls;
     expect(calls.find(c => c[0] === false)).toBeUndefined();
@@ -678,9 +678,9 @@ describe('useChatSession', () => {
           .fn()
           .mockImplementation(async (_params, onData) => {
             if (onData) {
-              // First chunk — should trigger start + first chunk
+              // First chunk - should trigger start + first chunk
               onData({token: 'tok', content: 'Hello '});
-              // Second chunk — cumulative content; delta is "world."
+              // Second chunk - cumulative content; delta is "world."
               onData({token: 'tok', content: 'Hello world.'});
             }
             return {
@@ -852,7 +852,7 @@ describe('useChatSession', () => {
         useChatSession({current: null}, textMessage.author, mockAssistant),
       );
 
-      // No throw expected — try/catch wraps the TTS hooks.
+      // No throw expected - try/catch wraps the TTS hooks.
       await act(async () => {
         await result.current.handleSendPress(textMessage);
       });

@@ -53,7 +53,7 @@ import {l10n as locales, t} from '../../locales';
 type L10n = (typeof locales)['en'];
 type DownloadState = 'not_installed' | 'downloading' | 'ready' | 'error';
 
-// System TTS hidden until language/accent/search filtering is built —
+// System TTS hidden until language/accent/search filtering is built -
 // 180+ iOS / 470+ Android unfiltered voices is hostile UX.
 const ENGINE_ORDER: EngineId[] = ['kitten', 'kokoro', 'supertonic'];
 
@@ -176,7 +176,7 @@ const NEURAL_ESTIMATED_BYTES: Record<NeuralEngineId, number> = {
 const isLowDiskFor = (engineId: NeuralEngineId): boolean => {
   const free = ttsStore.freeDiskBytes;
   if (free == null) {
-    return false; // unknown — allow attempt
+    return false; // unknown - allow attempt
   }
   return free < NEURAL_ESTIMATED_BYTES[engineId] * 1.2;
 };
@@ -196,12 +196,12 @@ const VOICES_BY_ENGINE: Record<EngineId, Voice[]> = {
 };
 
 /**
- * Unified voices view — single screen for the entire TTS sheet.
+ * Unified voices view - single screen for the entire TTS sheet.
  *
  * Voices grouped by ENGINE. Each engine group is a self-contained
  * mini engine card: header with logo + spec subtitle + status, body
  * that adapts by state (install card / progress / error / voice rows).
- * No separate Manage Engines view — this IS manage.
+ * No separate Manage Engines view - this IS manage.
  */
 export const VoicePickerView: React.FC = observer(() => {
   const theme = useTheme();
@@ -441,10 +441,10 @@ export const VoicePickerView: React.FC = observer(() => {
     const isActive = ttsStore.currentVoice?.engine === engineId && ready;
 
     // Two-line subtitle: tier (bold) on top; specs (regular) below.
-    // Specs include disk MB AND peak RAM — RAM is the true device-fit
+    // Specs include disk MB AND peak RAM - RAM is the true device-fit
     // signal, especially on lower-end devices where peak working set matters
     // more than disk size (meta.sizeMb).
-    // RAM rounds to nearest 50 MB — exact numbers ("235 MB" vs "228 MB")
+    // RAM rounds to nearest 50 MB - exact numbers ("235 MB" vs "228 MB")
     // are noise; the "~" prefix is in the localized template.
     const ramRounded = Math.round(meta.ramMb / 50) * 50;
     const tierLabel = engineTierLabel(engineId, l10n);

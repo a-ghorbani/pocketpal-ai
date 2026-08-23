@@ -795,7 +795,7 @@ describe('PalDetailSheet', () => {
       );
 
       await waitFor(() => {
-        expect(getByText('Processing — will unlock shortly.')).toBeTruthy();
+        expect(getByText('Processing - will unlock shortly.')).toBeTruthy();
       });
     });
 

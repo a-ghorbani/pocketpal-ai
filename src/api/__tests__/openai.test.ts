@@ -184,7 +184,7 @@ describe('fetchModelsWithHeaders', () => {
   it('aborts the models request at the configured timeout', async () => {
     jest.useFakeTimers();
     const abortSpy = jest.spyOn(AbortController.prototype, 'abort');
-    // fetch never resolves — only the timeout can settle this.
+    // fetch never resolves - only the timeout can settle this.
     global.fetch = jest.fn().mockImplementation(
       (_url: string, opts: {signal: AbortSignal}) =>
         new Promise((_resolve, reject) => {
@@ -601,7 +601,7 @@ describe('fetchServerProps', () => {
     const props = await fetchServerProps('http://localhost:8080');
 
     // n_ctx 0 is "unknown", not a window, and vision is undecidable on a body
-    // that describes no model — both fields stay absent.
+    // that describes no model - both fields stay absent.
     expect(props).toEqual({});
   });
 
@@ -1019,7 +1019,7 @@ describe('streamChatCompletion', () => {
     );
     await finishStream(MockXHR.instances[1], p2);
 
-    // The second send hit the cache — the file was read from disk only once.
+    // The second send hit the cache - the file was read from disk only once.
     expect(RNFS.readFile).toHaveBeenCalledTimes(1);
   });
 
@@ -1045,7 +1045,7 @@ describe('streamChatCompletion', () => {
     await send('file:///tmp/c.png');
     expect(RNFS.readFile).toHaveBeenCalledTimes(3);
 
-    // The two newest paths are still resident — re-sending them is a cache hit.
+    // The two newest paths are still resident - re-sending them is a cache hit.
     await send('file:///tmp/c.png');
     await send('file:///tmp/b.png');
     expect(RNFS.readFile).toHaveBeenCalledTimes(3);
@@ -1075,7 +1075,7 @@ describe('streamChatCompletion', () => {
     await finishStream(MockXHR.instances[1], p2);
     expect(RNFS.readFile).toHaveBeenCalledTimes(2);
 
-    // A subsequent send is a plain cache hit — the raced entry cached cleanly.
+    // A subsequent send is a plain cache hit - the raced entry cached cleanly.
     const p3 = streamChatCompletion(
       {messages: [imageMessage('file:///tmp/race.png')], model: 'm'},
       'http://localhost:1234',
@@ -1409,7 +1409,7 @@ describe('streamChatCompletion', () => {
     });
 
     await expect(resultPromise).rejects.toThrow(
-      'Server error: 500 — Internal Server Error',
+      'Server error: 500 - Internal Server Error',
     );
   });
 
@@ -1530,7 +1530,7 @@ describe('streamChatCompletion', () => {
 
     const result = await resultPromise;
     // prompt_n sets tokens_evaluated; absent predicted_n must NOT zero the
-    // per-event tally — it keeps the single content-bearing event count.
+    // per-event tally - it keeps the single content-bearing event count.
     expect(result.tokens_evaluated).toBe(3000);
     expect(result.tokens_predicted).toBe(1);
   });
@@ -1754,7 +1754,7 @@ describe('streamChatCompletion', () => {
 
   // Per-server configurable timeout: a single timeoutMs overrides BOTH the
   // connection-phase guard (default 30s) and the idle-between-chunks guard
-  // (default 60s). The two-phase structure stays intact — only the durations
+  // (default 60s). The two-phase structure stays intact - only the durations
   // change. Driven with fake timers so we assert on the configured deadline.
   describe('configurable timeout', () => {
     beforeEach(() => {
@@ -1791,7 +1791,7 @@ describe('streamChatCompletion', () => {
       expect(rejected).toBeNull();
       expect(xhr.status).toBe(0); // never aborted yet
 
-      // Headers finally arrive at ~200s — stream proceeds.
+      // Headers finally arrive at ~200s - stream proceeds.
       jest.advanceTimersByTime(170000);
       xhr.simulateHeaders(200);
       xhr.simulateProgress(
@@ -1815,7 +1815,7 @@ describe('streamChatCompletion', () => {
         'http://localhost:1234',
       );
 
-      // Drive past the 30s default — no headers received.
+      // Drive past the 30s default - no headers received.
       jest.advanceTimersByTime(30000);
 
       await expect(resultPromise).rejects.toThrow('Connection timed out');
@@ -1868,7 +1868,7 @@ describe('streamChatCompletion', () => {
       const xhr = MockXHR.instances[0];
       xhr.simulateHeaders(200);
 
-      // Emit a chunk every 80s (under the 100s idle window) five times —
+      // Emit a chunk every 80s (under the 100s idle window) five times -
       // total 400s, far beyond the 100s timeout, yet no idle abort because
       // each chunk resets the timer.
       for (let i = 0; i < 5; i++) {
@@ -1896,7 +1896,7 @@ describe('streamChatCompletion', () => {
     // via the observable connection-deadline behaviour.
     describe('normalization of invalid timeoutMs', () => {
       // For each invalid input, the connection guard must still fire at the
-      // 30s default — i.e. the API never sets a 0/negative/NaN deadline.
+      // 30s default - i.e. the API never sets a 0/negative/NaN deadline.
       it.each([
         ['undefined', undefined],
         ['zero', 0],
@@ -1930,7 +1930,7 @@ describe('streamChatCompletion', () => {
         },
       );
 
-      // A positive finite value passes through untouched — the guard fires at
+      // A positive finite value passes through untouched - the guard fires at
       // the configured value, not the default.
       it('passes a positive finite timeoutMs through (guard fires at configured value)', async () => {
         const resultPromise = streamChatCompletion(
@@ -1986,7 +1986,7 @@ describe('buildReasoningPayload (per-serverType gating)', () => {
     });
   });
 
-  it('LM Studio is on/off only — no graded effort', () => {
+  it('LM Studio is on/off only - no graded effort', () => {
     expect(buildReasoningPayload('LM Studio', {enabled: false})).toEqual({
       chat_template_kwargs: {enable_thinking: false},
     });
@@ -2018,7 +2018,7 @@ describe('buildReasoningPayload (per-serverType gating)', () => {
     const off = buildReasoningPayload('Ollama', {enabled: false});
     expect(off).toEqual({reasoning_effort: 'none'});
     expect(off).not.toHaveProperty('think');
-    // ON sends nothing — never think:true, never a non-none effort.
+    // ON sends nothing - never think:true, never a non-none effort.
     const on = buildReasoningPayload('Ollama', {enabled: true, effort: 'high'});
     expect(on).toEqual({});
     expect(on).not.toHaveProperty('think');

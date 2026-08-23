@@ -155,7 +155,7 @@ describe('RemoteModelSheet', () => {
     expect(addButton.props.accessibilityState?.disabled).toBe(true);
   });
 
-  // Manual add path — the in-edit timeout field feeds fetchModelsWithHeaders
+  // Manual add path - the in-edit timeout field feeds fetchModelsWithHeaders
   // (NOT the chip path's fetchModels). The field is rendered only after an
   // initial probe attempt surfaces the server fields.
   describe('manual add-path probe feed', () => {

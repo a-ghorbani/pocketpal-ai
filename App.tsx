@@ -63,7 +63,7 @@ const DeepLinkHandler = () => {
 };
 
 // Branches between the OnboardingStack (first-launch flow) and the main
-// Drawer.Navigator. Both children mount under the same provider tree —
+// Drawer.Navigator. Both children mount under the same provider tree -
 // switching does NOT remount providers above this point.
 //
 // The hydration check is belt-and-suspenders. AppWithMigrationWrapper
@@ -287,8 +287,8 @@ const HydrationHold = () => (
 // are observed on first paint.
 //
 // The gate must wrap App itself (App calls useTheme() BEFORE <PaperProvider>
-// mounts), so AppWithMigrationWrapper — which sits above App and has no
-// theme dependency — is the chosen host. While unhydrated it renders the
+// mounts), so AppWithMigrationWrapper - which sits above App and has no
+// theme dependency - is the chosen host. While unhydrated it renders the
 // neutral background-only hold above.
 const AppWithMigrationWrapper = observer(() => {
   if (!isHydrated(uiStore)) {

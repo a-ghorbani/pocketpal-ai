@@ -47,7 +47,7 @@ const applyChatTemplateSpy = jest
   .spyOn(require('../../utils/chat'), 'applyChatTemplate')
   .mockImplementation(async () => 'mocked prompt');
 
-describe('useChatSession — AssistantTurn integration', () => {
+describe('useChatSession - AssistantTurn integration', () => {
   beforeEach(() => {
     applyChatTemplateSpy.mockClear();
   });
@@ -84,7 +84,7 @@ describe('useChatSession — AssistantTurn integration', () => {
     ).mock.calls.find(args => args[0]?.type === 'assistant_turn');
     expect(addAssistantCall).toBeDefined();
     expect(addAssistantCall![0].metadata.copyable).toBeUndefined();
-    // pushAgentStep called for each step_started — one in this happy path.
+    // pushAgentStep called for each step_started - one in this happy path.
     expect(chatSessionStore.pushAgentStep).toHaveBeenCalled();
     // Per-token writes go through updateActiveStepStreaming.
     expect(chatSessionStore.updateActiveStepStreaming).toHaveBeenCalled();
@@ -104,7 +104,7 @@ describe('useChatSession — AssistantTurn integration', () => {
   });
 
   it('#2 run_finished with hitMaxTurns:true → metadata.hitMaxTurns written, console.warn emitted, no run_failed surfacing', async () => {
-    // Engine always returns tool_calls, never a final answer — exhausts maxTurns.
+    // Engine always returns tool_calls, never a final answer - exhausts maxTurns.
     if (modelStore.context) {
       modelStore.context.completion = jest
         .fn()
@@ -141,7 +141,7 @@ describe('useChatSession — AssistantTurn integration', () => {
   });
 
   it('#3 run_failed: error rollback writes {interrupted, copyable} into assistant_turn metadata (does not lose steps)', async () => {
-    // Engine throws — runner emits run_failed. Silence the expected
+    // Engine throws - runner emits run_failed. Silence the expected
     // console.error so the test output stays clean.
     const errSpy = jest.spyOn(console, 'error').mockImplementation(() => {});
     if (modelStore.context) {
@@ -180,7 +180,7 @@ describe('useChatSession — AssistantTurn integration', () => {
     ] as any;
     // The hook's prepareCompletion creates a fresh assistant turn with an
     // empty steps[] array; we want the test to verify the rollback path
-    // when the runner errors — addMessageToCurrentSession is mocked to
+    // when the runner errors - addMessageToCurrentSession is mocked to
     // inject the seeded id.
     (
       chatSessionStore.addMessageToCurrentSession as jest.Mock
@@ -218,7 +218,7 @@ describe('useChatSession — AssistantTurn integration', () => {
 
   it('#3b run_failed with tool-args parse error → metadata.truncationLikely set; no system message', async () => {
     // llama.cpp's native tool-call parser throws when the model emits
-    // a malformed tool_calls arguments string — typically because it
+    // a malformed tool_calls arguments string - typically because it
     // ran out of context mid-args (very common for `render_html` with
     // long HTML). The catch block detects this shape and writes
     // {truncationLikely: true} on the turn so the footer can surface
@@ -319,7 +319,7 @@ describe('useChatSession — AssistantTurn integration', () => {
             type: 'assistant_turn',
             author: assistant,
             createdAt: Date.now(),
-            steps: [], // no generated content — prompt overflowed
+            steps: [], // no generated content - prompt overflowed
             metadata: {copyable: true},
           } as MessageType.AssistantTurn,
         ],
@@ -355,7 +355,7 @@ describe('useChatSession — AssistantTurn integration', () => {
   it('#3d "Context is full" WITH partial content → turn tagged contextFull (no truncationLikely)', async () => {
     // Defensive branch: if a context-full error arrives after some content
     // was produced, the partial turn is preserved and tagged contextFull via
-    // treatAsContextFull — but without truncationLikely (that flag is reserved
+    // treatAsContextFull - but without truncationLikely (that flag is reserved
     // for the tool-args parse case).
     const errSpy = jest.spyOn(console, 'error').mockImplementation(() => {});
     if (modelStore.context) {
@@ -546,7 +546,7 @@ describe('useChatSession — AssistantTurn integration', () => {
             content: '',
             tool_calls: [
               {
-                // Empty id from llama.rn — the runner reconciles via
+                // Empty id from llama.rn - the runner reconciles via
                 // normalizeToolCallIds. The hook MUST receive the
                 // normalized id, not this raw one.
                 id: '',
@@ -586,7 +586,7 @@ describe('useChatSession — AssistantTurn integration', () => {
     const outcomeCallIds = outcomeArgs.map(
       c => (c[2] as {callId: string}).callId,
     );
-    // No empty ids emitted — runner normalized them.
+    // No empty ids emitted - runner normalized them.
     expect(calledIds.every(id => id.length > 0)).toBe(true);
     // Every outcome's callId must appear in the appendToolCall set.
     for (const cid of outcomeCallIds) {
@@ -646,7 +646,7 @@ describe('useChatSession — AssistantTurn integration', () => {
     // toolCalls.length === 2; the hook calls appendToolCall once with
     // both, then appendToolOutcome twice (one per tool). The ids
     // attached to step_finished MUST match the outcome callIds by
-    // construction — the runner reuses the same normalized list for
+    // construction - the runner reuses the same normalized list for
     // tool_call_started and tool_call_finished.
     const calcTalent: TalentEngine = {
       name: 'calculate',
@@ -703,7 +703,7 @@ describe('useChatSession — AssistantTurn integration', () => {
       modelStore.context.completion = jest.fn().mockImplementation(async () => {
         turnIndex += 1;
         if (turnIndex === 1) {
-          // Both ids are empty — runner MUST normalize them via the
+          // Both ids are empty - runner MUST normalize them via the
           // per-run seed. The hook's appendToolCall receives the
           // normalized list (not the raw empties).
           return {
@@ -749,7 +749,7 @@ describe('useChatSession — AssistantTurn integration', () => {
     }>;
     expect(calls).toHaveLength(2);
     expect(calls.every(c => c.id.length > 0)).toBe(true);
-    // Distinct synthetic ids per index — runner appends `_<idx>` to
+    // Distinct synthetic ids per index - runner appends `_<idx>` to
     // the seed.
     expect(calls[0].id).not.toBe(calls[1].id);
 
@@ -764,7 +764,7 @@ describe('useChatSession — AssistantTurn integration', () => {
     for (const oid of outcomeIds) {
       expect(calledIds).toContain(oid);
     }
-    // Tool names match too — calculate came first, datetime second.
+    // Tool names match too - calculate came first, datetime second.
     expect(calls[0].function.name).toBe('calculate');
     expect(calls[1].function.name).toBe('datetime');
 
@@ -873,7 +873,7 @@ describe('useChatSession — AssistantTurn integration', () => {
       await result.current.handleSendPress(textMessage);
     });
 
-    // appendToolCall fired twice — once per tool-using step.
+    // appendToolCall fired twice - once per tool-using step.
     expect(appendToolCallSpy).toHaveBeenCalledTimes(2);
 
     // Each appendToolCall list has exactly one call with a non-empty
@@ -1090,7 +1090,7 @@ describe('useChatSession — AssistantTurn integration', () => {
     // PATH B: the empty turn is deleted from the repository.
     expect(deleteMessageSpy).toHaveBeenCalledWith(turnId);
 
-    // No `interrupted` metadata write — that branch only fires when
+    // No `interrupted` metadata write - that branch only fires when
     // partial content exists. Filter all updateMessage calls to
     // those that wrote metadata.interrupted=true; should be empty.
     const interruptedCalls = updateMessageSpy.mock.calls.filter(

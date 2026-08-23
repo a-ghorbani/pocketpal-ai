@@ -25,7 +25,7 @@ function makeAssistantTurn(
   };
 }
 
-describe('ChatSessionStore — AssistantTurn extensions', () => {
+describe('ChatSessionStore - AssistantTurn extensions', () => {
   beforeEach(() => {
     jest.clearAllMocks();
     chatSessionStore.sessions = [];
@@ -127,13 +127,13 @@ describe('ChatSessionStore — AssistantTurn extensions', () => {
       // step_finished + tool events run synchronously, step_started(1)
       // pushes a new step. Without the flush, the timer fires later
       // and applies step 0's pending content to step 1 (which is now
-      // lastIdx) — producing the duplicate-text-after-preview regression.
+      // lastIdx) - producing the duplicate-text-after-preview regression.
       jest.useFakeTimers();
       const dateNowSpy = jest.spyOn(Date, 'now').mockReturnValue(2_000_000);
       try {
         // Force the throttle to schedule a setTimeout (rather than
         // applying inline) by setting lastStreamingUpdateTime to "just
-        // now" — so the first updateActiveStepStreaming call goes
+        // now" - so the first updateActiveStepStreaming call goes
         // through the timer path.
         (chatSessionStore as any).lastStreamingUpdateTime = 2_000_000;
         (chatSessionStore as any).pendingStreamingUpdate = null;
@@ -474,7 +474,7 @@ describe('ChatSessionStore — AssistantTurn extensions', () => {
       ).toBe('a');
 
       // Subsequent calls within the throttle window: coalesce into the
-      // single slot. The pendingStreamingUpdate is overwritten — never
+      // single slot. The pendingStreamingUpdate is overwritten - never
       // appended to a queue.
       chatSessionStore.updateActiveStepStreaming(turn.id, 'session1', {
         content: 'a-b',
@@ -489,7 +489,7 @@ describe('ChatSessionStore — AssistantTurn extensions', () => {
         partial: {content: 'a-b-c'},
       });
 
-      // Mixing in a legacy text update overwrites the same slot — confirms
+      // Mixing in a legacy text update overwrites the same slot - confirms
       // the throttle slot is shared across paths, not per-shape.
       chatSessionStore.updateMessageStreaming(turn.id, 'session1', {
         text: 'legacy',
@@ -611,7 +611,7 @@ describe('ChatSessionStore — AssistantTurn extensions', () => {
         settingsSource: 'pal' as const,
       };
       await chatSessionStore.updateSessionTitle(session);
-      // 'Let me look that up\n\nThe answer is 42' is 39 chars — under 40, so
+      // 'Let me look that up\n\nThe answer is 42' is 39 chars - under 40, so
       // no truncation.
       expect(session.title).toBe('Let me look that up\n\nThe answer is 42');
     });

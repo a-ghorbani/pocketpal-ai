@@ -1,5 +1,5 @@
 /**
- * useDeepLinking — hub/run dispatch.
+ * useDeepLinking - hub/run dispatch.
  *
  * Covers: valid link -> DeepLinkStore.setPendingHubRun; invalid/malformed link
  * -> Alert + NO store write (validation runs before any side effect); and that
@@ -47,7 +47,7 @@ jest.mock('../../services/DeepLinkService', () => ({
 const VALID_URL =
   'pocketpal://hub/run?repo_id=author/model&filename=model.Q4_K_M.gguf&source=hf';
 
-describe('useDeepLinking — hub/run dispatch', () => {
+describe('useDeepLinking - hub/run dispatch', () => {
   let getInitialURLSpy: jest.SpyInstance;
   let addEventListenerSpy: jest.SpyInstance;
   let alertSpy: jest.SpyInstance;

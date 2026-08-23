@@ -5,7 +5,7 @@
  *   - UI layer is observation-free: no file under `src/components/ui/`
  *     imports `mobx`, `mobx-react`, or any store module.
  *   - Sheet / Modal / Dialog compose the `Header` building block.
- *   - No production file imports the Paper `Surface` symbol — UI
+ *   - No production file imports the Paper `Surface` symbol - UI
  *     consumers must import `Surface` from `src/components/ui`.
  */
 import * as fs from 'fs';
@@ -95,7 +95,7 @@ describe('UI layer grep invariants', () => {
         // Header must be imported from the sibling UI Header module.
         expect(code).toMatch(/from\s+['"]\.\.\/Header['"]/);
         // And used as a JSX tag exactly once (single source of structural
-        // truth — bespoke inline header markup is forbidden alongside it).
+        // truth - bespoke inline header markup is forbidden alongside it).
         const headerOpenings = code.match(/<Header(\s|\/|>)/g) ?? [];
         expect(headerOpenings).toHaveLength(1);
       },
@@ -118,7 +118,7 @@ describe('UI layer grep invariants', () => {
       // aliased, possibly alongside other symbols) from
       // `react-native-paper`. We intentionally don't try to catch the
       // pathological `import * as RNP from 'react-native-paper';
-      // RNP.Surface` access pattern — ESLint already covers it via
+      // RNP.Surface` access pattern - ESLint already covers it via
       // `no-restricted-syntax` if needed, and no such pattern exists
       // in the codebase today.
       const importRe =
@@ -135,7 +135,7 @@ describe('UI layer grep invariants', () => {
           .map(o => `  - ${path.relative(SRC, o.file)}: ${o.match}`)
           .join('\n');
         throw new Error(
-          `Paper Surface import(s) found — must import from src/components/ui instead:\n${detail}`,
+          `Paper Surface import(s) found - must import from src/components/ui instead:\n${detail}`,
         );
       }
       expect(offenders).toEqual([]);

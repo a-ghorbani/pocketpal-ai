@@ -143,7 +143,7 @@ export const SearchProviderKeySheet: React.FC<SearchProviderKeySheetProps> =
               </Button>
             </View>
           </Sheet.Actions>
-          {/* Inside the sheet's modal layer — the gorhom portal paints above
+          {/* Inside the sheet's modal layer - the gorhom portal paints above
               siblings and paper Portals, which would hide this feedback. */}
           <Snackbar
             visible={showError}

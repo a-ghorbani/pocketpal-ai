@@ -24,7 +24,7 @@ import type {ReasoningCapability} from './reasoningCapability';
  * did to produce the call's `arguments` JSON, NOT how long the
  * engine took to execute it. Surfaced post-hoc by the chip / preview
  * footer so the user can see the "cost" of a tool call after it
- * lands. Optional — older persisted calls (or steps where multi-tool
+ * lands. Optional - older persisted calls (or steps where multi-tool
  * accounting isn't useful) may carry no metrics.
  */
 export interface AgentToolCallMetrics {
@@ -286,9 +286,9 @@ export interface SemanticColors {
 
   border: string;
   placeholder: string;
-  // Subtle border / divider — Figma `Color/muted/light` (#e5e3e1).
+  // Subtle border / divider - Figma `Color/muted/light` (#e5e3e1).
   mutedLight: string;
-  // Figma `Color/Secondary/Default` — small DS button surface.
+  // Figma `Color/Secondary/Default` - small DS button surface.
   secondaryDefault: string;
 
   // Interactive states
@@ -345,7 +345,7 @@ export interface SemanticColors {
   iconModelTypeVision: string;
   iconModelTypeAudio: string;
 
-  // Accent — peach pill / Recommended-tier card highlight; greenStrong
+  // Accent - peach pill / Recommended-tier card highlight; greenStrong
   // powers the download progress-bar fill.
   accent: {
     peach: string;
@@ -403,10 +403,10 @@ export interface ThemeSpacing {
 
 /**
  * The Theme consumed via `useTheme()`. Superset of:
- *   - resolved tokens (typography, radius, stroke) — the new surface that
+ *   - resolved tokens (typography, radius, stroke) - the new surface that
  *     per-screen restyle work migrates consumers onto.
  *   - the legacy MD3 alias surface (colors keys + MD3 typescale on
- *     `fonts`) — pinned to today's values to avoid visual regression.
+ *     `fonts`) - pinned to today's values to avoid visual regression.
  *
  * The two surfaces do NOT cross-feed: the legacy `fonts` block is
  * preserved verbatim and is not derived from `theme.typography.*`. This
@@ -503,7 +503,7 @@ export interface RemoteModelCaps {
 /**
  * The backend a live remote chat session is actually talking to. Captured when
  * the completion engine is built and never repointed, unlike the ServerConfig
- * it was built from — editing a server url leaves the session on the old
+ * it was built from - editing a server url leaves the session on the old
  * backend until the model is re-selected. Owned by ModelStore, not persisted.
  */
 export interface RemoteSessionBinding {

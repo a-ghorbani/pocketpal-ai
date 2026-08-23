@@ -51,7 +51,7 @@ jest.mock('@dr.pogodin/react-native-fs', () => ({
 jest.mock('date-fns', () => ({
   // Return-only mock with the fixed value the filename tests rely on. Tests
   // that need to assert WHICH date was formatted (export time vs session date)
-  // read `format.mock.calls` — `jest.fn()` records arguments regardless of
+  // read `format.mock.calls` - `jest.fn()` records arguments regardless of
   // return value.
   format: jest.fn().mockReturnValue('2024-01-01_12-00-00'),
 }));
@@ -207,7 +207,7 @@ describe('exportUtils', () => {
       );
     });
 
-    it('exports AssistantTurn rows with derivedText (joined step.content) — story Hook test #5', async () => {
+    it('exports AssistantTurn rows with derivedText (joined step.content) - story Hook test #5', async () => {
       const turnSessionData = {
         session: {
           id: 'session-2',
@@ -226,7 +226,7 @@ describe('exportUtils', () => {
             }),
             createdAt: 1704067200000,
             // Real WatermelonDB Message.toMessageObject lifts metadata.steps
-            // to top-level — we mirror that here.
+            // to top-level - we mirror that here.
             toMessageObject: () => ({
               id: 'msg-turn',
               type: 'assistant_turn',
@@ -665,7 +665,7 @@ describe('exportUtils', () => {
     beforeEach(() => {
       // IMPORTANT: `getSessionById` queries `Q.sortBy('position', Q.desc)` and
       // `addMessageToSession` assigns `highestPosition + 1`, so the real array
-      // is NEWEST FIRST — the same convention ChatSessionStore documents
+      // is NEWEST FIRST - the same convention ChatSessionStore documents
       // ("messages are in reverse order, ie 0 is the latest"). Fixtures must
       // match that order or an ordering bug stays invisible.
       chatSessionRepository.getSessionById = jest.fn().mockResolvedValue({
@@ -738,7 +738,7 @@ describe('exportUtils', () => {
       await exportChatSessionAsMarkdown('session-old');
 
       // `format` is mocked to a fixed string, so the rendered output cannot
-      // reveal which date was used — assert on the argument instead.
+      // reveal which date was used - assert on the argument instead.
       const formattedDates = (format as jest.Mock).mock.calls
         .filter(([, pattern]) => pattern === 'yyyy-MM-dd HH:mm')
         .map(([date]) => (date as Date).toISOString());
@@ -823,7 +823,7 @@ describe('exportUtils', () => {
 
     it('collapses a multi-line title so it stays a single heading', async () => {
       // Titles are derived from the user's first message, so they can contain
-      // newlines — and a `#` starting the second line shifts the structure.
+      // newlines - and a `#` starting the second line shifts the structure.
       (chatSessionRepository.getSessionById as jest.Mock).mockResolvedValueOnce(
         {
           session: {

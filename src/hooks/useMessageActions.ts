@@ -10,7 +10,7 @@ import {MessageType, User} from '../utils/types';
 
 /**
  * Either a legacy `Text` message or an `AssistantTurn` row. Used by
- * Copy / TryAgain handlers — both shapes are first-class. Edit is
+ * Copy / TryAgain handlers - both shapes are first-class. Edit is
  * gated to `Text` only inside `handleEdit` (the single source of truth
  * for "edit disallowed on assistant_turn").
  */
@@ -42,7 +42,7 @@ export const useMessageActions = ({
 
   const handleEdit = useCallback(
     async (message: CopyableMessage) => {
-      // Edit is intentionally disallowed on assistant_turn — this is
+      // Edit is intentionally disallowed on assistant_turn - this is
       // the single source of truth (no store-level guard).
       if (message.type !== 'text' || message.author.id !== user.id) {
         return;
@@ -86,7 +86,7 @@ export const useMessageActions = ({
         return;
       }
 
-      // Assistant message (Text or AssistantTurn) — find and resubmit
+      // Assistant message (Text or AssistantTurn) - find and resubmit
       // the last user message. The walk-back logic is index-based and
       // doesn't depend on assistant text content, so AssistantTurn
       // rows behave identically to legacy Text rows here.

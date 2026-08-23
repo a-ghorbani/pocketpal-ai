@@ -36,7 +36,7 @@ import {
 
 const RNFS = require('@dr.pogodin/react-native-fs');
 
-// Runtime-referenced marker for the CI bundle-grep — see .github/workflows/ci.yml.
+// Runtime-referenced marker for the CI bundle-grep - see .github/workflows/ci.yml.
 // MUST be referenced INSIDE a runtime branch (not just JSDoc) so Hermes cannot
 // DCE the literal as dead code. We log it from onRun below.
 const BENCH_RUN_MATRIX = 'BENCH_RUN_MATRIX';
@@ -49,12 +49,12 @@ type Status = string; // 'idle' | 'downloading:<f>[ <pct>%]' | 'running:<i/n>:<t
 
 /** Closed enum for the requested-backend axis. Hexagon (Qualcomm NPU) is a
  * third backend value, distinct from cpu/gpu, and gated by the same
- * fail-fast pattern as `gpu` — if the device has no Hexagon, hexagon cells
+ * fail-fast pattern as `gpu` - if the device has no Hexagon, hexagon cells
  * fail and the matrix continues. (WHAT §1a, §8 D1.) */
 export type Backend = 'cpu' | 'gpu' | 'hexagon';
 
 /** Closed enum of fingerprint-eligible knobs. Adding a knob is a
- * fingerprint-version bump (WHAT §4d.1 — fixed contract). */
+ * fingerprint-version bump (WHAT §4d.1 - fixed contract). */
 export type SettingsKnob =
   | 'cache_type_k'
   | 'cache_type_v'
@@ -92,7 +92,7 @@ export interface BenchConfig {
   backends: Backend[];
   bench?: {pp: number; tg: number; pl: number; nr: number};
   /** Sweep axes for per-cell context-init overrides. Optional/absent means
-   * "no sweep" — the matrix produces one cell per (model, variant, backend)
+   * "no sweep" - the matrix produces one cell per (model, variant, backend)
    * with empty overrides and the reserved `app-default` fingerprint
    * (WHAT §1a, §2, §4d D7). */
   settings_axes?: SettingsAxis[];
@@ -102,13 +102,13 @@ export interface BenchConfig {
    *      thread, Hexagon HTP FastRPC teardown) defer their final memory
    *      release a few hundred ms past the JSI-promise boundary. ≥200ms is
    *      enough for that.
-   *   2. **Thermal stabilisation** — long matrix runs see CPU/SoC/battery
+   *   2. **Thermal stabilisation** - long matrix runs see CPU/SoC/battery
    *      temperatures climb monotonically across cells (≈1°C per cell on
    *      Snapdragon under sustained pp+tg load), and a hot device throttles
    *      mid-cell, distorting pp/tg numbers. Setting this to e.g. 15-60s
    *      gives the cooling system a window to bring temperatures back to a
    *      stable working range before the next cell.
-   * Default 2000ms when absent (driver-release insurance only — does NOT
+   * Default 2000ms when absent (driver-release insurance only - does NOT
    * stabilise thermals on hot devices). Operators tune higher in the
    * pushed bench-config.json without rebuilding the APK. The effective
    * value is echoed in the report's top-level `inter_cell_settle_ms`. */
@@ -144,7 +144,7 @@ interface BenchmarkRunRow {
    * field captures what the runtime actually saw. Diagnostic for
    * cross-cell or cross-session state leaks. */
   effective_init_params: Record<string, unknown>;
-  /** What the cell asked for. Always present (possibly `{}`) — single
+  /** What the cell asked for. Always present (possibly `{}`) - single
    * writer is `runMatrix` (WHAT §4h I1, §5). */
   settings_overrides: Partial<Record<SettingsKnob, SettingsValue>>;
   /** Canonical fingerprint identifying the cell's settings configuration.
@@ -172,7 +172,7 @@ interface BenchmarkReport {
    * when comparing two reports captured under different settle values. */
   inter_cell_settle_ms: number;
   /** Echo of `config.settings_axes` when the run had axes. Omitted when the
-   * config had none (WHAT §1e, §9a — empty array MUST NOT be emitted). */
+   * config had none (WHAT §1e, §9a - empty array MUST NOT be emitted). */
   settings_axes_used?: SettingsAxis[];
   runs: BenchmarkRunRow[];
 }
@@ -220,10 +220,10 @@ type PreRunSnapshot = Partial<Record<SettingsKnob, SettingsValue>>;
 
 /**
  * Expand sweep axes into a list of per-cell override maps. WHAT §2:
- * absent / empty axes returns `[{}]` — single cell, empty overrides,
+ * absent / empty axes returns `[{}]` - single cell, empty overrides,
  * which is the only path that produces the `app-default` fingerprint
  * (D7). With axes, returns the full cartesian product preserving axis
- * order (WHAT 4b.3 — fixed declaration order).
+ * order (WHAT 4b.3 - fixed declaration order).
  *
  * Pure: no closure capture, no side effects. Exported for unit tests.
  */
@@ -251,12 +251,12 @@ export function expandAxes(
 
 /**
  * Project the bench's matrix-level base params onto the six
- * fingerprint-eligible knobs (WHAT 4d.1 — fixed contract). This is the
+ * fingerprint-eligible knobs (WHAT 4d.1 - fixed contract). This is the
  * fixed point used to build `req:`-prefixed failure fingerprints when a
  * cell throws BEFORE init params are composed (e.g. download timeout,
  * GPU/Hexagon pre-check failure).
  *
- * Reads only from the bench's own base params — never from
+ * Reads only from the bench's own base params - never from
  * `modelStore.contextInitParams`. The runner is fully isolated from the
  * rest of the app's state, so the fingerprint reflects the bench's
  * declared base, not whatever the user happens to have in Settings.
@@ -317,7 +317,7 @@ function snapshotCellInitSettings(
  * Map a cell's `backend` to its concrete (`devices`, `n_gpu_layers`) slot.
  * Both fields are pinned per cell; pinning `n_gpu_layers` is required
  * because `devices=['CPU']` alone does NOT prevent ggml from routing
- * layers to other registered backends when `n_gpu_layers > 0` — verified
+ * layers to other registered backends when `n_gpu_layers > 0` - verified
  * on Snapdragon 8 Elite Gen 5 where `devices=['CPU']` + `n_gpu_layers=99`
  * + Hexagon registered results in full Hexagon offload.
  *
@@ -339,7 +339,7 @@ function backendSlot(
 }
 
 /**
- * Fingerprint canonical-form key list (WHAT 4d.1 — fixed contract).
+ * Fingerprint canonical-form key list (WHAT 4d.1 - fixed contract).
  * Adding a knob here is a fingerprint-version bump.
  */
 export const FINGERPRINT_KEYS: readonly SettingsKnob[] = [
@@ -356,7 +356,7 @@ export const FINGERPRINT_KEYS: readonly SettingsKnob[] = [
  * from "the canonicalised default fingerprint happens to match"
  * (WHAT D7). Minted only by `buildSuccessFingerprint` /
  * `buildFailureFingerprint` when the cell came from a no-axes config
- * with empty overrides — and by the v1.0->v1.1 migration script for
+ * with empty overrides - and by the v1.0->v1.1 migration script for
  * legacy rows.
  */
 export const APP_DEFAULT_FINGERPRINT = 'app-default';
@@ -396,7 +396,7 @@ export function canonicaliseFingerprint(
 
 /**
  * Build the fingerprint for the success path (or post-init failure
- * path, WHAT 9d). Reads from the post-init snapshot — the source of
+ * path, WHAT 9d). Reads from the post-init snapshot - the source of
  * truth for what the engine actually applied.
  *
  * Special case (WHAT D7, I2): when the cell came from a no-axes
@@ -419,7 +419,7 @@ export function buildSuccessFingerprint(
 /**
  * Build the fingerprint for the pre-init failure path (WHAT 9c, I3
  * exception (b)). Constructed from the matrix-level pre-run snapshot
- * (4c.1) overlaid with the cell's requested overrides — no constraint
+ * (4c.1) overlaid with the cell's requested overrides - no constraint
  * replay (no setter calls); the spread is mechanical so the result is
  * reproducible without re-running setter logic.
  *
@@ -461,7 +461,7 @@ export async function runMatrix(
   const bench = config.bench ?? DEFAULT_BENCH;
   // Resolve inter-cell settle once per matrix. Validates: must be a finite
   // non-negative number; anything else falls back to the default rather
-  // than throwing — keeps the matrix robust to a typo'd config value
+  // than throwing - keeps the matrix robust to a typo'd config value
   // (e.g. "30000" string instead of 30000 number).
   const interCellSettleMs =
     typeof config.inter_cell_settle_ms === 'number' &&
@@ -485,7 +485,7 @@ export async function runMatrix(
   };
 
   // Matrix-level fingerprint snapshot (WHAT 4c.1). Derived from the
-  // bench's own base — NOT from `modelStore.contextInitParams` — so the
+  // bench's own base - NOT from `modelStore.contextInitParams` - so the
   // fingerprint reflects what the bench would have run, independent of
   // whatever the user has in Settings.
   const preRunSnapshot = snapshotFingerprintKeys(benchBase);
@@ -517,8 +517,8 @@ export async function runMatrix(
   }
 
   // Expand the sweep-axes into per-cell override maps. Empty / absent
-  // axes produces `[{}]` — one cell per (model, variant, backend), empty
-  // overrides — the only path that mints `app-default` fingerprints
+  // axes produces `[{}]` - one cell per (model, variant, backend), empty
+  // overrides - the only path that mints `app-default` fingerprints
   // (WHAT §2, §4d D7).
   const overridesList = expandAxes(config.settings_axes);
 
@@ -544,10 +544,10 @@ export async function runMatrix(
   // acquisition+work span in try/finally so a rejection during
   // toggleNativeLog or enterBenchmarkMode can't strand the app with
   // logging on or benchmarkActive=true. Both cleanup calls in the
-  // finally are idempotent — safe to call even if their setup
+  // finally are idempotent - safe to call even if their setup
   // counterpart never ran or only partially ran.
   try {
-    // Native log capture is global state in llama.rn — flip it on once for
+    // Native log capture is global state in llama.rn - flip it on once for
     // the whole matrix. Per-cell scoping is done by attaching a fresh
     // listener around each init+bench window.
     await toggleNativeLog(true).catch(() => undefined);
@@ -569,13 +569,13 @@ export async function runMatrix(
       version: '1.1',
       platform: 'android',
       timestamp: startTimestamp,
-      preseeded: true, // pessimistic — flips false on first downloading: transition
+      preseeded: true, // pessimistic - flips false on first downloading: transition
       bench,
       inter_cell_settle_ms: interCellSettleMs,
       runs: [],
     };
     // settings_axes_used echoes config.settings_axes only when the run
-    // had axes (WHAT 1e, 9a — empty array MUST NOT be emitted).
+    // had axes (WHAT 1e, 9a - empty array MUST NOT be emitted).
     if (hadAxesInConfig && config.settings_axes) {
       report.settings_axes_used = config.settings_axes;
     }
@@ -591,7 +591,7 @@ export async function runMatrix(
       // spec can disambiguate identical (model,quant,backend) cells with
       // different settings. Truncated to 60 chars to keep the polled
       // status string bounded. The summary uses the REQUESTED overrides
-      // (not the post-init canonicalised fingerprint) — operators care
+      // (not the post-init canonicalised fingerprint) - operators care
       // about what they asked for in the live status.
       const overrideEntries = Object.entries(overrides);
       const tagSuffix =
@@ -622,7 +622,7 @@ export async function runMatrix(
       let logSub: {remove: () => void} | null = null;
       // The native context the runner owns for this cell. Stored at outer
       // scope so the `finally` block can release it regardless of where in
-      // the try body a throw lands. Distinct from `modelStore.context` —
+      // the try body a throw lands. Distinct from `modelStore.context` -
       // the runner never assigns to that.
       let ctx: LlamaContext | null = null;
       // Post-init snapshot, hoisted so the catch path can pick between the
@@ -716,12 +716,12 @@ export async function runMatrix(
             model_id: model.hfModelId,
             siblings: [{rfilename: variant.filename} as any],
           } as any;
-          // url is REQUIRED — hfAsModel reads modelFile.url into model.downloadUrl,
+          // url is REQUIRED - hfAsModel reads modelFile.url into model.downloadUrl,
           // and ModelStore.checkSpaceAndDownload early-returns when !downloadUrl,
           // silently never starting the download. Construct the canonical HF
           // resolve URL inline; if the bench-config ever needs a different host
           // (private repo, mirror, etc.) we'd take it from the variant instead.
-          // size is REQUIRED — hasEnoughSpace returns false for size <= 0
+          // size is REQUIRED - hasEnoughSpace returns false for size <= 0
           // (malformed model), and DownloadManager.startDownload then throws
           // "Not enough storage space". The variant.size from bench-config
           // wins; otherwise fall back to 1 to bypass the pre-check (the actual
@@ -806,18 +806,18 @@ export async function runMatrix(
         });
 
         // 5. Init the native context directly. `initLlama` is the runner's
-        //    ONLY native-load entrypoint — `modelStore.initContext` /
+        //    ONLY native-load entrypoint - `modelStore.initContext` /
         //    `selectModel` are gated by `benchmarkActive` and would throw
         //    if accidentally invoked.
         ctx = await initLlama(cellParams);
 
         // 6. Validate the actual backend satisfies the requested backend.
         //    Partial offload (cpu+opencl-partial, cpu+hexagon-partial) IS
-        //    considered satisfied — the cell landed on the requested
+        //    considered satisfied - the cell landed on the requested
         //    backend, just incompletely. A fundamentally different backend
         //    (e.g. requested gpu, model loaded entirely on CPU) is a hard
         //    failure: under shared-state designs this could silently land
-        //    in baselines as `status:ok` with `effective_backend:cpu` —
+        //    in baselines as `status:ok` with `effective_backend:cpu` -
         //    the redesign disallows that.
         const okSignals = deriveLogSignals(logBuffer);
         const okBackend = deriveEffectiveBackend(okSignals);
@@ -898,7 +898,7 @@ export async function runMatrix(
           cells: report.runs.length,
         });
       } catch (e) {
-        // Salvage whatever load lines we captured before the throw — useful
+        // Salvage whatever load lines we captured before the throw - useful
         // for debugging "why did this cell fail" without re-running. The log
         // listener is detached in the finally block (sole detach site).
         const partialSignals = deriveLogSignals(logBuffer);
@@ -951,12 +951,12 @@ export async function runMatrix(
         // Without this distinction, a single cell failure would make the spec
         // pull a partial report mid-run while the screen is still iterating.
         setStatus(`cell-failed:${i + 1}/${cells.length}:${short}`);
-        // continue to the next cell — per-cell error containment.
+        // continue to the next cell - per-cell error containment.
       } finally {
         // Sole release site for the runner-owned context. If `initLlama`
         // threw, `ctx` stays null and we skip release. If anything between
         // `initLlama` and the success-row throws, the local `ctx` is the
-        // only handle to the native context — we MUST release it here or
+        // only handle to the native context - we MUST release it here or
         // the native context list grows on every failed cell.
         if (ctx) {
           // Lifecycle log lines so logcat (`ReactNativeJS:V`) gives us a
@@ -1001,7 +1001,7 @@ export async function runMatrix(
                 `wall_ms=${Date.now() - purgeStart}`,
             );
           } catch (e) {
-            // Non-fatal — we'd rather continue the matrix than abort
+            // Non-fatal - we'd rather continue the matrix than abort
             // because a memory hint failed.
             console.log(`[BENCH] cell ${tag}: purge threw: ${String(e)}`);
           }
@@ -1012,8 +1012,8 @@ export async function runMatrix(
           //      teardown) defer their final memory release a few hundred
           //      ms past that boundary. The pre-redesign code carried a
           //      100ms `setTimeout` inside `ModelStore._releaseContextInternal`
-          //      — added in response to actual failures, not preemptively.
-          //   2. Thermal stabilisation across long matrix runs — operators
+          //      - added in response to actual failures, not preemptively.
+          //   2. Thermal stabilisation across long matrix runs - operators
           //      tune `config.inter_cell_settle_ms` (default 2000ms) up
           //      to 15-60s when the device is throttling mid-cell.
           // Skipped when ctx is null (cell failed before init) since there
@@ -1029,7 +1029,7 @@ export async function runMatrix(
     setStatus('complete');
   } finally {
     // Outer matrix-level finally: success and failure paths converge here.
-    // No "restore settings" step is required — under the isolated
+    // No "restore settings" step is required - under the isolated
     // lifecycle the runner never wrote to `modelStore.contextInitParams`,
     // so there is nothing to undo. The single side-effect we own is
     // native-log toggle (matrix-scoped) and benchmark-mode (matrix-scoped).
@@ -1079,7 +1079,7 @@ export const BenchmarkRunnerScreen: React.FC<BenchmarkRunnerScreenProps> =
         return;
       }
       runningRef.current = true;
-      // Runtime reference to the marker constant — protects against Hermes
+      // Runtime reference to the marker constant - protects against Hermes
       // DCE. Without this, the literal would be stripped from the e2e
       // bundle and the CI grep "must be present" check would falsely pass.
       console.log(`[${BENCH_RUN_MATRIX}] starting matrix run`);
@@ -1103,7 +1103,7 @@ export const BenchmarkRunnerScreen: React.FC<BenchmarkRunnerScreenProps> =
     }, []);
 
     // Autostart: when the route carries autostart=true, invoke the SAME
-    // onRun the button uses — no second start path, same use of the
+    // onRun the button uses - no second start path, same use of the
     // already-pushed bench-config.json. Fired at most once per mount via the
     // ref latch, so MobX-observer re-renders (this is an `observer`) cannot
     // re-trigger it; onRun's single-flight gate (runningRef + status guard)

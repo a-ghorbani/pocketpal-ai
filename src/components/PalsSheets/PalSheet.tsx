@@ -247,7 +247,7 @@ export const PalSheet: React.FC<PalSheetProps> = observer(
         const originalSystemPrompt = data.originalSystemPrompt;
 
         // Build pact from selected talents
-        // Always pass pact explicitly — using `undefined` would skip the
+        // Always pass pact explicitly - using `undefined` would skip the
         // update in PalRepository (it checks `if (updates.pact !== undefined)`)
         const selectedTalents = data.talents ?? [];
         const pact =

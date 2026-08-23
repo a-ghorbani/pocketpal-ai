@@ -90,7 +90,7 @@ const Speech = {
 
 export default Speech;
 
-/** Mirror of the fork's `TTSEngine` enum — minimum surface used by tests. */
+/** Mirror of the fork's `TTSEngine` enum - minimum surface used by tests. */
 export enum TTSEngine {
   OS_NATIVE = 'os-native',
   KOKORO = 'kokoro',

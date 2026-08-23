@@ -19,7 +19,7 @@ describe('collectSystemPromptFragments', () => {
 
   it('references read_url in the web_search fragment only when read_url is active', () => {
     // read_url contributes no fragment of its own, but the web_search fragment
-    // names it as a sibling tool — and must not when read_url is disabled.
+    // names it as a sibling tool - and must not when read_url is disabled.
     const both = collectSystemPromptFragments(['web_search', 'read_url'], ctx);
     const searchOnly = collectSystemPromptFragments(['web_search'], ctx);
     expect(both).toHaveLength(1);

@@ -50,7 +50,7 @@
     "deviceSelectionIOS": "Perangkat (Metal)",
     "deviceSelectionIOSDescription": "Pilih mode GPU Metal atau mode CPU saja",
     "deviceSelectionAndroidDescription": "Pilih jenis komputasi perangkat (CPU, GPU, atau Hexagon NPU)",
-    "cpuOnlyNoAccelerators": "CPU saja – Tidak ada akselerator perangkat keras yang terdeteksi",
+    "cpuOnlyNoAccelerators": "CPU saja - Tidak ada akselerator perangkat keras yang terdeteksi",
     "contextSize": "Ukuran Konteks",
     "contextSizePlaceholder": "Masukkan ukuran konteks (minimal {{minContextSize}})",
     "invalidContextSizeError": "Harap masukkan angka yang valid (minimal {{minContextSize}})",
@@ -159,7 +159,7 @@
     "manageServers": "Kelola Server",
     "ttsAvailability": "Text-to-speech",
     "ttsAvailabilityDescription": "Bacakan balasan asisten dengan suara.",
-    "ttsAvailabilityLowMemoryWarning": "Memori perangkat Anda rendah — fitur ini mungkin tidak bekerja dengan baik.",
+    "ttsAvailabilityLowMemoryWarning": "Memori perangkat Anda rendah - fitur ini mungkin tidak bekerja dengan baik.",
     "requestTimeout": "Batas Waktu Permintaan (detik)",
     "requestTimeoutHelp": "Waktu tunggu maksimal untuk server yang lambat merespons. Kosongkan untuk pakai bawaan.",
     "requestTimeoutPlaceholder": "Opsional - kosongkan untuk pakai bawaan",
@@ -167,7 +167,7 @@
     "serverTypeHelp": "Terdeteksi otomatis; ubah jika keliru.",
     "internetSearch": {
       "title": "Pencarian Internet",
-      "description": "Biarkan Pals mencari di web dengan alat mereka sendiri. Bawa Kunci API Anda sendiri — PocketPal tidak pernah menyimpan kunci atau meneruskan kueri Anda.",
+      "description": "Biarkan Pals mencari di web dengan alat mereka sendiri. Bawa Kunci API Anda sendiri - PocketPal tidak pernah menyimpan kunci atau meneruskan kueri Anda.",
       "providerLabel": "Penyedia Pencarian",
       "providerGated": "Segera hadir",
       "keyLabel": "Kunci API",
@@ -337,7 +337,7 @@
           "message": "Ukuran model mendekati atau melebihi total memori perangkat. Hal ini dapat menyebabkan perilaku tak terduga."
         },
         "legacy": {
-          "message": "Format kuantisasi lama – model mungkin tidak berjalan.",
+          "message": "Format kuantisasi lama - model mungkin tidak berjalan.",
           "shortMessage": "Kuantisasi lama"
         },
         "multiple": "{{count}} Peringatan"
@@ -638,7 +638,7 @@
     },
     "modelErrorReportSheet": {
       "title": "Laporkan Masalah Pemuatan Model",
-      "privacyNote": "Bantu kami meningkatkan PocketPal dengan membagikan detail tentang kesalahan ini. Tinjau di bawah ini apa yang akan dibagikan – Anda dapat membatalkan item apa pun yang tidak ingin disertakan.",
+      "privacyNote": "Bantu kami meningkatkan PocketPal dengan membagikan detail tentang kesalahan ini. Tinjau di bawah ini apa yang akan dibagikan - Anda dapat membatalkan item apa pun yang tidak ingin disertakan.",
       "errorMessage": "Pesan kesalahan",
       "modelInfo": "Informasi Model",
       "modelName": "Nama",
@@ -1023,7 +1023,7 @@
       "tokensPerSec": "{{value}} token/detik",
       "ttft": "{{value}}md TTFT",
       "interrupted": "Terputus",
-      "truncated": "Terpotong — kemungkinan konteks penuh",
+      "truncated": "Terpotong - kemungkinan konteks penuh",
       "draftAccepted": "draf: {{accepted}}/{{total}} ({{pct}}%)"
     },
     "pendingIndicator": {
@@ -1118,7 +1118,7 @@
       "notAvailable": "T/A",
       "buyOnPalshub": "Beli di Palshub",
       "finalizingPurchase": "Menyelesaikan pembelian Anda…",
-      "processingPurchase": "Memproses — akan segera terbuka.",
+      "processingPurchase": "Memproses - akan segera terbuka.",
       "checkoutSessionExpired": "Sesi Anda telah berakhir. Masuk lagi untuk melanjutkan.",
       "signInAgain": "Masuk Lagi",
       "palNotAvailable": "Pal ini sedang tidak tersedia untuk dibeli saat ini.",
@@ -1196,7 +1196,7 @@
     "pleaseLoadModel": "Muat model untuk mengobrol.",
     "multimodalNotEnabled": "Multimodal tidak diaktifkan untuk model ini. Gambar akan ditampilkan tetapi tidak diproses oleh AI.",
     "cannotSendWithoutModel": "Muat model terlebih dahulu",
-    "toolCallTruncated": "Pemanggilan alat terpotong — model kemungkinan kehabisan ruang. Coba konteks yang lebih besar atau permintaan yang lebih kecil.",
+    "toolCallTruncated": "Pemanggilan alat terpotong - model kemungkinan kehabisan ruang. Coba konteks yang lebih besar atau permintaan yang lebih kecil.",
     "toolCompatWarning": "Model ini mungkin tidak mendukung pemanggilan alat. Hasil mungkin tidak andal.",
     "softCapWarning": "Mulai chat baru untuk performa terbaik.",
     "generatingPreview": "Membuat pratinjau… ({{tokens}} token)",
@@ -1207,20 +1207,20 @@
     "contextRemoteHedged": "Balasan ini mungkin terpotong. Coba kirim ulang atau persingkat permintaan.",
     "contextFull": "Ruang percakapan telah habis. Mulai obrolan baru atau tingkatkan ukuran konteks.",
     "contextFullEscalated": "Ruang masih habis. Mulai obrolan baru, atau tingkatkan ukuran konteks untuk melanjutkan.",
-    "contextFullHeavyTalent": "Ruang percakapan telah habis — {{talent}} cenderung membutuhkan lebih banyak. Mulai obrolan baru atau tingkatkan ukuran konteks.",
+    "contextFullHeavyTalent": "Ruang percakapan telah habis - {{talent}} cenderung membutuhkan lebih banyak. Mulai obrolan baru atau tingkatkan ukuran konteks.",
     "contextBannerDismiss": "Tutup",
     "contextNewChat": "Obrolan Baru",
     "contextIncrease": "Tingkatkan Konteks",
     "contextMoreRoom": "Lebih Banyak Ruang",
     "increaseContextTitle": "Beri obrolan ini lebih banyak ruang",
-    "increaseContextBody": "Ruang adalah memori kerja model — seberapa banyak obrolan ini yang dapat diingatnya sekaligus. Lebih banyak ruang berarti obrolan lebih panjang sebelum balasan terpotong.",
+    "increaseContextBody": "Ruang adalah memori kerja model - seberapa banyak obrolan ini yang dapat diingatnya sekaligus. Lebih banyak ruang berarti obrolan lebih panjang sebelum balasan terpotong.",
     "increaseContextTokensUnit": "token",
     "increaseContextWordsRam": "~{{words}} kata · ≈{{ram}} RAM",
     "increaseContextFitsChip": "Muat",
     "increaseContextTightChip": "Terbatas",
     "increaseContextWontFitChip": "Tidak Muat",
     "increaseContextFitsStatus": "Nyaman untuk perangkat ini.",
-    "increaseContextFitsUnconstrainedStatus": "RAM melimpah — hanya dibatasi oleh model.",
+    "increaseContextFitsUnconstrainedStatus": "RAM melimpah - hanya dibatasi oleh model.",
     "increaseContextTightStatus": "Melebihi ~{{tokens}}, perangkat ini mungkin kehabisan memori dan melambat. Tetap bisa dicoba.",
     "increaseContextWontFitStatus": "~{{tokens}} kemungkinan tidak muat di memori perangkat ini. Pilih ukuran yang lebih kecil.",
     "increaseContextModelMax": "{{tokens}} · maks model",
@@ -1248,7 +1248,7 @@
       "openLinkError": "Gagal membuka tautan ini."
     },
     "contextFullRemote": "Percakapan sudah penuh. Mulai obrolan baru.",
-    "speculativeInitFailed": "Perangkat ini tidak dapat memulai speculative decoding untuk model ini — kemungkinan besar memori tidak cukup untuk konteks draf. Matikan Speculative Decoding di Pengaturan → Pengaturan Lanjutan lalu coba lagi."
+    "speculativeInitFailed": "Perangkat ini tidak dapat memulai speculative decoding untuk model ini - kemungkinan besar memori tidak cukup untuk konteks draf. Matikan Speculative Decoding di Pengaturan → Pengaturan Lanjutan lalu coba lagi."
   },
   "benchmark": {
     "title": "Benchmark",
@@ -1411,7 +1411,7 @@
     "previewButton": "Pratinjau",
     "stopPreviewButton": "Hentikan pratinjau",
     "voicesTitle": "Suara-suara",
-    "voicesEmptyHint": "Ketuk suara mana pun untuk menginstalnya dan menggunakannya. Atau pilih suara sistem — suara tersebut selalu tersedia.",
+    "voicesEmptyHint": "Ketuk suara mana pun untuk menginstalnya dan menggunakannya. Atau pilih suara sistem - suara tersebut selalu tersedia.",
     "supertonicStepsLabel": "Kualitas (langkah difusi)",
     "toggleAutoSpeakLabel": "Aktifkan/nonaktifkan fitur bicara otomatis",
     "openSettingsLabel": "Pengaturan TTS",
@@ -1445,7 +1445,7 @@
     "engineRetryCta": "Coba lagi",
     "voicesEmptyState": "Suara tidak ditemukan.",
     "kokoroDeviceNote": "Beberapa suara mungkin tidak berfungsi di semua perangkat.",
-    "insufficientStorage": "Ruang tidak mencukupi — bebaskan {{requiredMb}} MB untuk memasang mesin ini ({{freeMb}} MB tersedia).",
+    "insufficientStorage": "Ruang tidak mencukupi - bebaskan {{requiredMb}} MB untuk memasang mesin ini ({{freeMb}} MB tersedia).",
     "supertonicLanguageLabel": "Bahasa",
     "supertonicLanguageAuto": "Otomatis",
     "supertonicLanguageSheetTitle": "Bahasa",
@@ -1563,19 +1563,19 @@
         "balanced": "Seimbang",
         "best": "Terbaik"
       },
-      "subtitleTemplate": "{{name}} berpikir menggunakan model AI kecil di ponsel Anda — pilih yang cocok.",
+      "subtitleTemplate": "{{name}} berpikir menggunakan model AI kecil di ponsel Anda - pilih yang cocok.",
       "pal": {
         "pip": {
-          "body": "Kami menemukan pal yang sempurna untuk Anda — teman sehari-hari yang ramah. Cukup pintar untuk sebagian besar hal, cukup ringan untuk ponsel mana pun."
+          "body": "Kami menemukan pal yang sempurna untuk Anda - teman sehari-hari yang ramah. Cukup pintar untuk sebagian besar hal, cukup ringan untuk ponsel mana pun."
         },
         "codie": {
-          "body": "Kenali Codie — pair-programmer lokal Anda. Membaca kode, menulis kode, menjelaskan bagian rumit tanpa meninggalkan ponsel Anda."
+          "body": "Kenali Codie - pair-programmer lokal Anda. Membaca kode, menulis kode, menjelaskan bagian rumit tanpa meninggalkan ponsel Anda."
         },
         "sage": {
           "body": "Sage sabar, ingin tahu, dan membimbing Anda melalui ide-ide langkah demi langkah. Teman belajar yang Anda simpan di saku."
         },
         "echo": {
-          "body": "Echo adalah teman bermain peran yang serbaguna — tetap dalam karakter, melukiskan suasana, mengikuti ke mana pun cerita Anda berlanjut."
+          "body": "Echo adalah teman bermain peran yang serbaguna - tetap dalam karakter, melukiskan suasana, mengikuti ke mana pun cerita Anda berlanjut."
         },
         "muse": {
           "body": "Muse membantu Anda menulis. Menyarankan frasa, menemukan ritme, dan menjaga nada Anda tetap utuh."

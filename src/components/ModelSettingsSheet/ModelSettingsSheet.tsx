@@ -36,7 +36,7 @@ export const ModelSettingsSheet: React.FC<ModelSettingsSheetProps> = memo(
     const l10n = useContext(L10nContext);
 
     // Remote models have no local-only settings (chat template, stop words,
-    // tokens) — only the reasoning override applies to them.
+    // tokens) - only the reasoning override applies to them.
     const isRemote = model?.origin === ModelOrigin.REMOTE;
 
     // Reasoning override (seeded from the resolver so the controls show the

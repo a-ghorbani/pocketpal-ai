@@ -35,7 +35,7 @@ declare const browser: WebdriverIO.Browser;
 // The "Available to Download" group is collapsed on first load; its accordion
 // testID uses the localized display name. Which models the group contains is
 // device-rule-driven (#772) and varies by platform and device tier, so the test
-// does NOT pin a model filename — it starts whichever model the device actually
+// does NOT pin a model filename - it starts whichever model the device actually
 // offers (see the spec body).
 const AVAILABLE_GROUP = 'Available to Download';
 
@@ -86,7 +86,7 @@ describe('Download cancel', () => {
     await browser.pause(500);
 
     // Start the first model whose download actually begins, rather than pinning
-    // a filename (the device-rule list varies by platform/tier — #772). Cards
+    // a filename (the device-rule list varies by platform/tier - #772). Cards
     // are listed largest-first, so this naturally picks the biggest model that
     // fits the device's free storage, giving the longest in-progress window to
     // cancel. A storage-starved device disables every Download button ("Storage
@@ -114,7 +114,7 @@ describe('Download cancel', () => {
     expect(started).toBe(true);
     console.log('[download-cancel] download in progress, tapping cancel');
 
-    // Tap Stop/Cancel — the user-initiated cancellation under test.
+    // Tap Stop/Cancel - the user-initiated cancellation under test.
     await cancelButton.click();
 
     // Core assertion: NO "Download Failed" dialog appears after cancelling.
@@ -144,6 +144,6 @@ describe('Download cancel', () => {
       .$(Selectors.modelCard.cancelButton)
       .waitForExist({reverse: true, timeout: 15000});
 
-    console.log('[download-cancel] PASS — cancel silent, no error dialog');
+    console.log('[download-cancel] PASS - cancel silent, no error dialog');
   });
 });

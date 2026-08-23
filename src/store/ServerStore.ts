@@ -22,7 +22,7 @@ const KEYCHAIN_SERVICE_PREFIX = 'pocketpal-server-';
 const FETCH_THROTTLE_MS = 60000;
 
 /**
- * The capability fields of a `RemoteModelCaps` entry — everything except the
+ * The capability fields of a `RemoteModelCaps` entry - everything except the
  * provenance the entry carries. Enumerated once so the usability check and the
  * no-op write check cannot drift apart when a field is added.
  */
@@ -285,15 +285,15 @@ class ServerStore {
    * remoteCaps. llama.cpp only; callers invoke it detached, and it never
    * throws or rejects.
    *
-   * At most two requests: the scoped one, and — only when the server is
-   * provably serving this one model — a bare retry, which is what a
+   * At most two requests: the scoped one, and - only when the server is
+   * provably serving this one model - a bare retry, which is what a
    * single-model llama-server has always answered correctly. On a multi-model
    * server the bare form describes whichever model happens to be resident, so
    * it is never issued there and the caps simply stay unknown.
    *
    * Merges field-wise within one backend: a response that resolves only one
    * field must not blank a known other, and a probe that resolves nothing
-   * writes nothing. Across backends there is nothing to merge — an entry
+   * writes nothing. Across backends there is nothing to merge - an entry
    * probed against another url is replaced, not blended.
    *
    * The written entry carries the url it was probed against, so a reader can
@@ -348,7 +348,7 @@ class ServerStore {
     runInAction(() => {
       // The probe is detached, so the server may have been removed or
       // repointed while it was in flight. Both prune this key, and both make
-      // the answer describe a backend that is no longer configured — writing
+      // the answer describe a backend that is no longer configured - writing
       // now would resurrect it.
       const current = this.servers.find(s => s.id === serverId);
       if (

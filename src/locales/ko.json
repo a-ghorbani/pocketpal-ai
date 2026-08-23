@@ -159,7 +159,7 @@
     "pleaseLoadModel": "채팅을 시작하려면 모델을 로드해 주세요.",
     "multimodalNotEnabled": "이 모델은 멀티모달 기능이 활성화되지 않았습니다. 이미지는 표시되지만 AI가 처리하지는 않습니다.",
     "cannotSendWithoutModel": "모델을 먼저 로드해 주세요",
-    "toolCallTruncated": "도구 호출 중단됨 — 모델의 컨텍스트 용량이 부족한 것으로 보입니다. 더 큰 컨텍스트를 지정하거나 요청 크기를 줄이십시오.",
+    "toolCallTruncated": "도구 호출 중단됨 - 모델의 컨텍스트 용량이 부족한 것으로 보입니다. 더 큰 컨텍스트를 지정하거나 요청 크기를 줄이십시오.",
     "toolCompatWarning": "이 모델은 도구 호출을 지원하지 않을 수 있어, 결과가 정확하지 않을 수 있습니다.",
     "softCapWarning": "최상의 성능을 위해 새로운 대화를 시작하세요.",
     "generatingPreview": "미리보기 생성 중… ({{tokens}} 토큰)",
@@ -170,7 +170,7 @@
     "contextRemoteHedged": "이 응답이 중간에 끊겼을 수 있습니다. 다시 보내거나 요청을 줄여 보세요.",
     "contextFull": "대화 공간이 가득 찼습니다. 새 채팅을 시작하거나 컨텍스트 크기를 늘려 주세요.",
     "contextFullEscalated": "여전히 공간이 부족합니다. 새 채팅을 시작하거나, 계속하려면 컨텍스트 크기를 늘려 주세요.",
-    "contextFullHeavyTalent": "대화 공간이 가득 찼습니다 — {{talent}}은(는) 더 많은 공간이 필요한 편입니다. 새 채팅을 시작하거나 컨텍스트 크기를 늘려 주세요.",
+    "contextFullHeavyTalent": "대화 공간이 가득 찼습니다 - {{talent}}은(는) 더 많은 공간이 필요한 편입니다. 새 채팅을 시작하거나 컨텍스트 크기를 늘려 주세요.",
     "contextBannerDismiss": "닫기",
     "contextNewChat": "새 채팅",
     "contextIncrease": "컨텍스트 늘리기",
@@ -183,7 +183,7 @@
     "increaseContextTightChip": "빠듯함",
     "increaseContextWontFitChip": "부족함",
     "increaseContextFitsStatus": "이 기기에서 충분히 여유롭습니다.",
-    "increaseContextFitsUnconstrainedStatus": "이 기기의 RAM이 충분합니다 — 모델에 따라서만 영향을 받습니다.",
+    "increaseContextFitsUnconstrainedStatus": "이 기기의 RAM이 충분합니다 - 모델에 따라서만 영향을 받습니다.",
     "increaseContextTightStatus": "약 {{tokens}}을(를) 넘으면 이 기기의 메모리가 부족해 느려질 수 있습니다. 그래도 시도해 볼 수는 있습니다.",
     "increaseContextWontFitStatus": "약 {{tokens}}은(는) 이 기기의 메모리에 맞지 않을 가능성이 높습니다. 더 작은 크기를 선택해 주세요.",
     "increaseContextModelMax": "{{tokens}} · 모델 최대",
@@ -211,7 +211,7 @@
       "openLinkError": "이 링크를 열 수 없어요."
     },
     "contextFullRemote": "대화 공간이 가득 찼습니다. 새 채팅을 시작해 주세요.",
-    "speculativeInitFailed": "이 기기에서 이 모델의 추측 디코딩을 시작할 수 없어요 — 드래프트 컨텍스트에 필요한 메모리가 부족한 것 같아요. 설정 → 고급 설정에서 추측 디코딩을 끄고 다시 시도해 주세요."
+    "speculativeInitFailed": "이 기기에서 이 모델의 추측 디코딩을 시작할 수 없어요 - 드래프트 컨텍스트에 필요한 메모리가 부족한 것 같아요. 설정 → 고급 설정에서 추측 디코딩을 끄고 다시 시도해 주세요."
   },
   "common": {
     "cancel": "취소",
@@ -745,7 +745,7 @@
       "tokensPerSec": "{{value}} 토큰/초",
       "ttft": "{{value}}ms TTFT",
       "interrupted": "중단됨",
-      "truncated": "응답 중단됨 — 컨텍스트가 가득 참",
+      "truncated": "응답 중단됨 - 컨텍스트가 가득 참",
       "draftAccepted": "드래프트: {{accepted}}/{{total}} ({{pct}}%)"
     },
     "pendingIndicator": {
@@ -1192,7 +1192,7 @@
     "manageServers": "서버 관리",
     "ttsAvailability": "텍스트 음성 변환 (TTS)",
     "ttsAvailabilityDescription": "어시스턴트의 답변을 음성으로 출력합니다.",
-    "ttsAvailabilityLowMemoryWarning": "귀하의 기기 메모리가 낮습니다 — 신뢰성 있게 작동하지 않을 수 있습니다.",
+    "ttsAvailabilityLowMemoryWarning": "귀하의 기기 메모리가 낮습니다 - 신뢰성 있게 작동하지 않을 수 있습니다.",
     "requestTimeout": "요청 제한 시간(초)",
     "requestTimeoutHelp": "서버 응답을 기다리는 최대 시간입니다. 비워 두면 기본값이 적용됩니다.",
     "requestTimeoutPlaceholder": "선택 사항 - 비워 두면 기본값 적용",
@@ -1200,7 +1200,7 @@
     "serverTypeHelp": "자동으로 감지된 설정입니다. 틀린 부분이 있다면 변경해 주세요.",
     "internetSearch": {
       "title": "인터넷 검색",
-      "description": "Pal이 자체 도구로 웹을 검색할 수 있도록 해보세요. 본인의 API 키만 가져오시면 됩니다 — PocketPal은 사용자의 키를 저장하거나 쿼리를 라우팅하지 않습니다.",
+      "description": "Pal이 자체 도구로 웹을 검색할 수 있도록 해보세요. 본인의 API 키만 가져오시면 됩니다 - PocketPal은 사용자의 키를 저장하거나 쿼리를 라우팅하지 않습니다.",
       "providerLabel": "검색 제공자",
       "providerGated": "출시 예정",
       "keyLabel": "API 키",
@@ -1334,7 +1334,7 @@
       "notAvailable": "비어있음",
       "buyOnPalshub": "Palshub에서 구매하기",
       "finalizingPurchase": "구매를 마무리하는 중…",
-      "processingPurchase": "처리 중 — 곧 잠금이 해제됩니다.",
+      "processingPurchase": "처리 중 - 곧 잠금이 해제됩니다.",
       "checkoutSessionExpired": "세션이 만료되었습니다. 계속하려면 다시 로그인해 주세요.",
       "signInAgain": "다시 로그인하기",
       "palNotAvailable": "이 Pal은 현재 구매할 수 없습니다.",
@@ -1410,7 +1410,7 @@
     "voiceRowTitle": "음성",
     "notSet": "설정되지 않음",
     "previewButton": "미리보기",
-    "voicesEmptyHint": "원하는 음성을 탭하여 설치 후 사용해 보세요. 또는 시스템 음성을 선택할 수도 있습니다 — 시스템 음성은 언제나 사용 가능합니다.",
+    "voicesEmptyHint": "원하는 음성을 탭하여 설치 후 사용해 보세요. 또는 시스템 음성을 선택할 수도 있습니다 - 시스템 음성은 언제나 사용 가능합니다.",
     "supertonicStepsLabel": "품질 (디퓨전 단계)",
     "toggleAutoSpeakLabel": "자동 말하기 토글",
     "openSettingsLabel": "TTS 설정",
@@ -1444,7 +1444,7 @@
     "engineRetryCta": "다시 시도하기",
     "voicesEmptyState": "음성 없음.",
     "kokoroDeviceNote": "일부 음성은 모든 기기에서 작동하지 않을 수 있습니다.",
-    "insufficientStorage": "저장 공간 부족 — 이 엔진 설치에 필요한 {{requiredMb}}MB를 확보하세요. ({{freeMb}} MB 사용 가능).",
+    "insufficientStorage": "저장 공간 부족 - 이 엔진 설치에 필요한 {{requiredMb}}MB를 확보하세요. ({{freeMb}} MB 사용 가능).",
     "engineRemoveBody": "저장 공간 {{sizeMb}} MB 확보 가능",
     "supertonicLanguageLabel": "언어",
     "supertonicLanguageAuto": "자동",
@@ -1569,13 +1569,13 @@
           "body": "여러분에게 딱 맞는 Pal을 찾았어요 - 친근한 일상 동반자예요. 대부분의 일을 똑똑하게 처리하면서도, 어떤 휴대폰에서나 가볍게 돌아가요."
         },
         "codie": {
-          "body": "Codie를 소개할게요 — 휴대폰 안의 페어 프로그래머예요. 코드를 읽고, 코드를 쓰고, 까다로운 부분을 설명해 줘요. 그 모든 일이 휴대폰을 벗어나지 않아요."
+          "body": "Codie를 소개할게요 - 휴대폰 안의 페어 프로그래머예요. 코드를 읽고, 코드를 쓰고, 까다로운 부분을 설명해 줘요. 그 모든 일이 휴대폰을 벗어나지 않아요."
         },
         "sage": {
           "body": "Sage는 인내심 있고 호기심 많아서, 개념을 하나씩 차근차근 안내해 줘요. 주머니 속에 두는 학습 친구예요."
         },
         "echo": {
-          "body": "Echo는 다재다능한 역할극 동반자예요 — 캐릭터를 끝까지 유지하고, 장면을 생생하게 그려내며, 이야기가 어디로 흘러가든 함께해요."
+          "body": "Echo는 다재다능한 역할극 동반자예요 - 캐릭터를 끝까지 유지하고, 장면을 생생하게 그려내며, 이야기가 어디로 흘러가든 함께해요."
         },
         "muse": {
           "body": "Muse는 글쓰기를 도와줘요. 표현을 제안하고, 리듬을 찾아주며, 여러분의 어조를 그대로 살려줘요."

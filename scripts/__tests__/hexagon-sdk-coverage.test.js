@@ -19,7 +19,7 @@ const LLAMA_RN_CMAKE = [
 
 /**
  * The provisioning action verifies a digest over a narrow subset of the ~3 GB
- * SDK — the parts the Android build reads or links. That subset is only sound
+ * SDK - the parts the Android build reads or links. That subset is only sound
  * while it still covers what llama.rn's CMake actually references. A widened
  * include set would otherwise leave the digest green over a stale, narrower
  * set, and on a cache hit the tarball digest is not there to catch it.

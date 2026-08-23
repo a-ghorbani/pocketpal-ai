@@ -17,7 +17,7 @@ export type PressablePrimitiveProps = Omit<
 > & {
   /**
    * Outer style for the Pressable container. May be a static style or
-   * a function of (pressed, disabled) — additive on top of the
+   * a function of (pressed, disabled) - additive on top of the
    * state-layer overlay. `hovered`/`focused` are not surfaced: RN's
    * `Pressable` only exposes `pressed` via its style callback on mobile.
    * Focus, where it applies, is consumer-driven (e.g. Input wraps
@@ -38,7 +38,7 @@ export type PressablePrimitiveProps = Omit<
 /**
  * DS Pressable primitive. Wraps RN Pressable and renders a token-bound
  * state-layer overlay on press. Tokens-only; does NOT supply padding,
- * radius, or background — consumers wrap in their own styled View or
+ * radius, or background - consumers wrap in their own styled View or
  * pass an outer style.
  */
 export const Pressable: React.FC<PressablePrimitiveProps> = ({

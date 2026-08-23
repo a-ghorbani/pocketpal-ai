@@ -5,7 +5,7 @@
  *   - Dedupes runs across files: latest timestamp per (model_id, quant,
  *     requested_backend) wins.
  *   - Filters out a configurable list of stale model_ids (e.g. when a
- *     fixture entry is replaced — `lfm2-1.2b` → `lfm2.5-1.2b-instruct`).
+ *     fixture entry is replaced - `lfm2-1.2b` → `lfm2.5-1.2b-instruct`).
  *   - Sorts runs deterministically by (model_id, quant, backend) so the
  *     baseline diff stays readable across re-baselines.
  *   - Overrides top-level metadata fields (commit, llama_rn_version,
@@ -28,7 +28,7 @@ import * as path from 'path';
 import {deriveLogSignals} from '../../src/__automation__/logSignals';
 
 /**
- * Tiny glob shim — supports `<dir>/<prefix>*<suffix>` of one segment, which
+ * Tiny glob shim - supports `<dir>/<prefix>*<suffix>` of one segment, which
  * is all the merge script ever needs. Avoids depending on the transitive
  * `glob` package.
  */
@@ -212,7 +212,7 @@ function compareRuns(a: RunRow, b: RunRow): number {
  * Re-derive structured signals from the row's `raw_matches` before strip.
  *
  * Why: when we add a new structured field to logSignals (e.g.
- * `memory_buffers`), older raw reports can backfill it on merge — re-running
+ * `memory_buffers`), older raw reports can backfill it on merge - re-running
  * the parser populates the new field without re-running cells on device.
  * Caveat: `raw_matches` is gated by `BENCH_LOG_RE` at capture time, so the
  * backfill only works if the new field's source lines were already matched
@@ -223,7 +223,7 @@ function compareRuns(a: RunRow, b: RunRow): number {
  *
  * No-op when raw_matches is absent or empty (legacy reports already
  * stripped, or cells that failed before any log line landed). The row's
- * existing structured fields are overwritten by the parser output — the
+ * existing structured fields are overwritten by the parser output - the
  * source-of-truth is always `raw_matches`, structured fields are a cache.
  */
 function rederiveLogSignals(r: RunRow): RunRow {
@@ -237,7 +237,7 @@ function rederiveLogSignals(r: RunRow): RunRow {
 
 /**
  * `log_signals.raw_matches` is debug context (the first ~200 captured native
- * log lines) — useful for one-off investigation, not for a versioned
+ * log lines) - useful for one-off investigation, not for a versioned
  * baseline. Stripping it keeps baseline diffs readable. Always called
  * AFTER `rederiveLogSignals`, never before.
  */
@@ -351,7 +351,7 @@ export function mergeReports(
           r.settings_overrides === null
         ) {
           throw new Error(
-            `row missing settings_fingerprint/settings_overrides — input is malformed (model_id=${r.model_id}, quant=${r.quant})`,
+            `row missing settings_fingerprint/settings_overrides - input is malformed (model_id=${r.model_id}, quant=${r.quant})`,
           );
         }
       }
@@ -456,7 +456,7 @@ function main() {
     console.error(`  bench: ${benchKey(bench)}`);
   } else {
     console.error(
-      '  bench: (omitted — no input report carried bench params; legacy merge)',
+      '  bench: (omitted - no input report carried bench params; legacy merge)',
     );
   }
   if (drop.size > 0) {

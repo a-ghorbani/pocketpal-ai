@@ -124,7 +124,7 @@ const DEFAULT_PCT = 15;
 function rowKey(r: BenchmarkRunReport): string {
   // WHAT 4g.1: 4-tuple including settings_fingerprint. Defensive
   // '?? "app-default"' so a bare legacy v1.0 baseline passed directly
-  // (bypassing the merger) does not crash the script — it falls back
+  // (bypassing the merger) does not crash the script - it falls back
   // to the legacy 3-tuple semantic.
   return `${r.model_id}::${r.quant}::${r.requested_backend}::${
     r.settings_fingerprint ?? 'app-default'
@@ -204,7 +204,7 @@ export function compareReports(
     }
     // Defense-in-depth for the screen-side invariant (status:'ok' rows
     // always carry non-null pp_avg/tg_avg). If the screen contract ever
-    // regresses again — both sides claim `ok` but current pp/tg is null —
+    // regresses again - both sides claim `ok` but current pp/tg is null -
     // surface it as a regression rather than a silent un-comparable null.
     if (
       baseRow.status === 'ok' &&
@@ -372,12 +372,12 @@ function main(): void {
   console.error(`\nSaved to: ${path.resolve(savePath)}`);
 
   // Protocol mismatch is an input/protocol error (exit 2), not a runtime
-  // regression — the comparison itself is invalid until the baseline is
+  // regression - the comparison itself is invalid until the baseline is
   // recaptured at the same nr/pp/tg/pl. Print before the row table so the
   // operator notices before scrolling.
   if (result.bench_protocol_mismatch) {
     console.error(
-      `\nFAIL: bench protocol mismatch — baseline ${JSON.stringify(
+      `\nFAIL: bench protocol mismatch - baseline ${JSON.stringify(
         result.bench_protocol_mismatch.baseline,
       )} vs current ${JSON.stringify(result.bench_protocol_mismatch.current)}`,
     );

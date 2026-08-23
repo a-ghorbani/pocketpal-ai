@@ -103,7 +103,7 @@ export const WebSearchResultsSheet: React.FC<WebSearchResultsSheetProps> = ({
         )}
         <View style={styles.bottomSpacer} />
       </Sheet.ScrollView>
-      {/* Inside the sheet's modal layer — the gorhom portal paints above
+      {/* Inside the sheet's modal layer - the gorhom portal paints above
             siblings and paper Portals, which would hide this feedback. */}
       <Snackbar
         visible={showOpenError}

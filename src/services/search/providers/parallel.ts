@@ -13,7 +13,7 @@ interface ParallelResponse {
 }
 
 /**
- * Ships gated (SearchProviderStore `selectable: false`) — listed but not
+ * Ships gated (SearchProviderStore `selectable: false`) - listed but not
  * selectable until free-tier/PAYG terms are confirmed.
  */
 export class ParallelProvider implements SearchProvider {

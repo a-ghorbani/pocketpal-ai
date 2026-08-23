@@ -1,5 +1,5 @@
 /**
- * useDeepLinking — cold-launch routing tests
+ * useDeepLinking - cold-launch routing tests
  *
  * Covers the SHOULD rows from the Test Requirements table for the
  * `__E2E__`-gated `useEffect` that reads
@@ -50,7 +50,7 @@ jest.mock('../../services/DeepLinkService', () => ({
   },
 }));
 
-describe('useDeepLinking — cold-launch routing', () => {
+describe('useDeepLinking - cold-launch routing', () => {
   let getInitialURLSpy: jest.SpyInstance;
   let alertSpy: jest.SpyInstance;
 
@@ -83,7 +83,7 @@ describe('useDeepLinking — cold-launch routing', () => {
     // read getInitialURL on cold launch.
     expect(getInitialURLSpy).toHaveBeenCalledTimes(2);
     // Bare URL still routes; autostart resolves false so the screen stays
-    // idle and waits for a tap — current behaviour preserved.
+    // idle and waits for a tap - current behaviour preserved.
     expect(mockNavigate).toHaveBeenCalledWith(ROUTES.BENCHMARK_RUNNER, {
       autostart: false,
     });
@@ -154,7 +154,7 @@ describe('useDeepLinking — cold-launch routing', () => {
   });
 
   it('navigates on warm-state url events (WDIO deepLink path)', async () => {
-    // Cold launch returns null — this app start was a regular launch.
+    // Cold launch returns null - this app start was a regular launch.
     getInitialURLSpy.mockResolvedValue(null);
 
     // Both the benchmark and prod hub/run effects register a 'url' listener;
@@ -295,7 +295,7 @@ describe('useDeepLinking — cold-launch routing', () => {
   });
 });
 
-describe('useDeepLinking — deep-link routing', () => {
+describe('useDeepLinking - deep-link routing', () => {
   // The registered deep-link handler, captured from deepLinkService.addListener.
   const getHandler = (): ((params: any) => Promise<void>) => {
     const addListener = deepLinkService.addListener as jest.Mock;

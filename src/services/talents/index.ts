@@ -49,7 +49,7 @@ let registered = false;
 
 /**
  * Register built-in talent engines. UI renderers register separately via
- * `registerDefaultTalentUIs` — keeps the talent UI out of this service module's
+ * `registerDefaultTalentUIs` - keeps the talent UI out of this service module's
  * graph so engine-logic consumers don't load the bottom-sheet tree.
  */
 export function registerDefaultTalents(): void {
@@ -69,7 +69,7 @@ export function registerDefaultTalents(): void {
  * Derive OpenAI-format tool schemas from registered engines.
  *
  * When `talentNames` is provided, only engines matching those names are
- * included — this ensures a Pal's completionSettings.tools matches its
+ * included - this ensures a Pal's completionSettings.tools matches its
  * pact.talents (the single source of truth for what the Pal advertises
  * to the model and what the dispatch loop will accept).
  *

@@ -136,7 +136,7 @@ describe('PACT vocabulary audit', () => {
     });
 
     it('works without prior registerDefaultTalents call', () => {
-      // Registry is reset in beforeEach — deriveToolSchemas calls
+      // Registry is reset in beforeEach - deriveToolSchemas calls
       // registerDefaultTalents internally.
       expect(talentRegistry.has('render_html')).toBe(false);
       const schemas = deriveToolSchemas();

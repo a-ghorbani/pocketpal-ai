@@ -10,15 +10,15 @@
  *
  * Three tiers, in order of cadence:
  *
- *   smoke   — 3 models × 3 quants × 2 backends = 18 cells (~10–15 min).
+ *   smoke   - 3 models × 3 quants × 2 backends = 18 cells (~10-15 min).
  *             Run regularly to gate regressions.
- *   focused — 6 models × 6 quants × 2 backends ≈ 60–70 cells (~30–45 min).
+ *   focused - 6 models × 6 quants × 2 backends ≈ 60-70 cells (~30-45 min).
  *             Run on llama.rn bumps or to investigate a smoke regression.
- *   full    — 11 models × 8 quants × 2 backends ≈ 165 cells (~3 hr/device).
+ *   full    - 11 models × 8 quants × 2 backends ≈ 165 cells (~3 hr/device).
  *             Run when recalibrating defaults or adding a new device class.
  *
  * Single source of truth: BENCHMARK_FULL_MODELS. The smaller tiers are
- * derived as filters by id — adding a model means editing FULL once and
+ * derived as filters by id - adding a model means editing FULL once and
  * deciding which tiers (if any) it joins.
  */
 
@@ -28,7 +28,7 @@ import {ModelTestConfig} from './models';
 
 /**
  * Closed enum for sweep-eligible context-init knobs. Mirrors
- * `SettingsKnob` in BenchmarkRunnerScreen.tsx — keeping the two declarations
+ * `SettingsKnob` in BenchmarkRunnerScreen.tsx - keeping the two declarations
  * aligned by hand is easier than threading a cross-package import.
  *
  * Adding a knob here is a fingerprint-version bump per WHAT 4d.1.
@@ -59,7 +59,7 @@ export interface BenchSettingsAxis {
  *
  * Note on iq1_s: bartowski does not publish IQ1_S for most repos; we
  * substitute with IQ2_M. The label stays canonical so cross-row
- * comparisons remain meaningful — see BENCHMARK_FULL_MODELS comments.
+ * comparisons remain meaningful - see BENCHMARK_FULL_MODELS comments.
  */
 export const BENCHMARK_MATRIX_QUANTS = [
   'iq1_s',
@@ -77,7 +77,7 @@ export type BenchmarkMatrixBackend = 'cpu' | 'gpu' | 'hexagon';
 export type BenchmarkTier = 'smoke' | 'focused' | 'full';
 
 /**
- * Full benchmark matrix — every model we want to track perf for, with the
+ * Full benchmark matrix - every model we want to track perf for, with the
  * widest quant coverage each publisher offers. Run rarely (a few times a
  * year, or when adding a device class). The smaller tiers below filter
  * from this list.
@@ -235,7 +235,7 @@ export const BENCHMARK_FULL_MODELS: ModelTestConfig[] = [
       {quant: 'q8_0', downloadFile: 'LFM2.5-1.2B-Instruct-Q8_0.gguf'},
     ],
   },
-  // --- Heavy (3.8B+ class) — ANR-prone on entry-level Adreno; keep last so
+  // --- Heavy (3.8B+ class) - ANR-prone on entry-level Adreno; keep last so
   //     partial-run data survives if the OS kills the app process.
   {
     id: 'phi-3.5-mini',
@@ -281,7 +281,7 @@ export const BENCHMARK_FULL_MODELS: ModelTestConfig[] = [
     downloadTimeout: 600000,
     prompts: [{input: 'Hi'}],
     quants: [
-      // "E2B" naming is misleading — Q4_0 is 3.4 GB, on par with Phi-3.5-mini.
+      // "E2B" naming is misleading - Q4_0 is 3.4 GB, on par with Phi-3.5-mini.
       // ANR risk on POCO-class devices for high-quant CPU benches.
       {quant: 'iq1_s', downloadFile: 'google_gemma-4-E2B-it-IQ2_M.gguf'},
       {quant: 'q2_k', downloadFile: 'google_gemma-4-E2B-it-Q2_K.gguf'},
@@ -295,14 +295,14 @@ export const BENCHMARK_FULL_MODELS: ModelTestConfig[] = [
   },
 ];
 
-/** Smoke tier — fast regression gate. */
+/** Smoke tier - fast regression gate. */
 export const BENCHMARK_SMOKE_IDS = [
   'qwen3.5-0.8b',
   'qwen3-1.7b',
   'gemma-3-1b',
 ] as const;
 
-/** Focused tier — investigation. Includes smoke + 3 architectural axes. */
+/** Focused tier - investigation. Includes smoke + 3 architectural axes. */
 export const BENCHMARK_FOCUSED_IDS = [
   ...BENCHMARK_SMOKE_IDS,
   'qwen3.5-2b',
@@ -329,10 +329,10 @@ interface TierSpec {
  * Tier definitions. Each picks a model subset and the rung subset relevant
  * to that tier's regression-vs-investigation tradeoff.
  *
- *   smoke   — Q4_0 (native MM), Q4_K_M (dequant fallback), Q8_0 (full path).
+ *   smoke   - Q4_0 (native MM), Q4_K_M (dequant fallback), Q8_0 (full path).
  *             Three classes, fastest signal.
- *   focused — drops IQ1_S + Q2_K (always CPU-only; low signal/noise).
- *   full    — every rung.
+ *   focused - drops IQ1_S + Q2_K (always CPU-only; low signal/noise).
+ *   full    - every rung.
  */
 export const BENCHMARK_TIERS: Record<BenchmarkTier, TierSpec> = {
   smoke: {
@@ -351,7 +351,7 @@ export const BENCHMARK_TIERS: Record<BenchmarkTier, TierSpec> = {
 
 /**
  * Validate and coerce a single env-var value list per knob domain.
- * Throws with a descriptive message on any invalid value — the CLI's
+ * Throws with a descriptive message on any invalid value - the CLI's
  * outer `main()` catches and exits non-zero (WHAT 9e: invalid env-var
  * value rejected at config-build time).
  */
@@ -433,11 +433,11 @@ function parseSettingsAxisValues(
  * use_mmap, n_threads. Within each axis, values keep their env-var order.
  *
  * Empty/absent env vars produce no axis; an empty result means "no
- * sweep" — downstream (`buildConfig`) emits no `settings_axes` field, so
+ * sweep" - downstream (`buildConfig`) emits no `settings_axes` field, so
  * the runner falls into the `app-default` path (WHAT 9a).
  */
 export function parseSettingsAxes(env: NodeJS.ProcessEnv): BenchSettingsAxis[] {
-  // Fixed declaration order (WHAT D5) — produces stable cell order across
+  // Fixed declaration order (WHAT D5) - produces stable cell order across
   // runs.
   const order: Array<{name: BenchSettingsKnob; envKey: string}> = [
     {name: 'cache_type_k', envKey: 'BENCH_CACHE_TYPE_K'},
@@ -473,7 +473,7 @@ export function parseSettingsAxes(env: NodeJS.ProcessEnv): BenchSettingsAxis[] {
  *     BENCH_USE_MMAP=true,false,smart
  *     BENCH_N_THREADS=4,6,8
  *
- * Filters narrow the tier — they cannot widen it. To widen, pick a higher
+ * Filters narrow the tier - they cannot widen it. To widen, pick a higher
  * tier (e.g. BENCH_TIER=full BENCH_MODELS=phi-4-mini).
  */
 export function getBenchmarkMatrix(): {
@@ -513,7 +513,7 @@ export function getBenchmarkMatrix(): {
       : [...tierSpec.quants]
   ) as BenchmarkMatrixQuant[];
 
-  // Default still cpu+gpu — Hexagon is opt-in via BENCH_BACKENDS=hexagon
+  // Default still cpu+gpu - Hexagon is opt-in via BENCH_BACKENDS=hexagon
   // (WHAT 4b.2). Devices without Hexagon will fail-fast per WHAT 4a.7.
   const allBackends: BenchmarkMatrixBackend[] = ['cpu', 'gpu', 'hexagon'];
   const defaultBackends: BenchmarkMatrixBackend[] = ['cpu', 'gpu'];

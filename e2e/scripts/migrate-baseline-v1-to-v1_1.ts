@@ -7,13 +7,13 @@
  *     `version` from '1.0' to '1.1'.
  *   - merge-bench-reports.ts and benchmark-compare.ts now key on a
  *     4-tuple including the fingerprint. Legacy baselines without the
- *     fingerprint cannot be mixed with new v1.1 reports — the merger
+ *     fingerprint cannot be mixed with new v1.1 reports - the merger
  *     refuses with a hint pointing operators at this script.
  *
  * What it does:
  *   - Stamps every row with `settings_fingerprint: 'app-default'` and
  *     `settings_overrides: {}` (the only path that mints `app-default`
- *     retroactively — WHAT D7/D8).
+ *     retroactively - WHAT D7/D8).
  *   - Bumps `report.version` from '1.0' to '1.1'.
  *   - Idempotent: running twice produces the same output as running
  *     once. Already-v1.1 inputs pass through unchanged.
@@ -31,7 +31,7 @@ import * as fs from 'fs';
 import * as path from 'path';
 
 /**
- * Tiny glob shim — matches `<dir>/<prefix>*<suffix>` of one segment.
+ * Tiny glob shim - matches `<dir>/<prefix>*<suffix>` of one segment.
  * Same shape as the merge script's helper; copy/paste avoids creating a
  * new shared module for two callers.
  */
@@ -95,7 +95,7 @@ Stamps every row in v1.0 baseline JSONs with:
   settings_overrides:   {}
 and bumps the report's version from "1.0" to "1.1".
 
-Idempotent — running twice produces the same output. Throws on
+Idempotent - running twice produces the same output. Throws on
 unknown versions.
 
   --input <glob>      glob of baseline files (one segment of '*'
@@ -115,7 +115,7 @@ unknown versions.
  *   - '1.0' or missing (legacy): stamp every row, bump version.
  *   - anything else: throw.
  *
- * `settings_axes_used` is intentionally NOT added — the legacy
+ * `settings_axes_used` is intentionally NOT added - the legacy
  * baselines were captured WITHOUT sweeps by construction, so adding
  * it would lie about provenance.
  */

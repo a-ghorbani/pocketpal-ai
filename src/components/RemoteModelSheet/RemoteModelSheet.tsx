@@ -126,7 +126,7 @@ export const RemoteModelSheet: React.FC<RemoteModelSheetProps> = observer(
           return;
         }
         try {
-          // Validate URL format — throws on invalid
+          // Validate URL format - throws on invalid
           const parsed = new URL(trimmedUrl);
           if (!parsed.hostname) {
             throw new Error('No hostname');
@@ -496,7 +496,7 @@ export const RemoteModelSheet: React.FC<RemoteModelSheetProps> = observer(
             </>
           )}
 
-          {/* Server name + API key — shown after probe attempt (success OR failure)
+          {/* Server name + API key - shown after probe attempt (success OR failure)
               so user can enter API key after 401 and retry */}
           {showServerFields && (
             <>
@@ -642,7 +642,7 @@ export const RemoteModelSheet: React.FC<RemoteModelSheetProps> = observer(
                             stroke={theme.colors.iconModelTypeText}
                           />
                         ) : (
-                          <Text style={styles.modelVisionUnknown}>—</Text>
+                          <Text style={styles.modelVisionUnknown}>-</Text>
                         )}
                       </View>
                     )}

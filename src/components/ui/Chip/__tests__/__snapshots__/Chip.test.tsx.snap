@@ -1,6 +1,6 @@
 // Jest Snapshot v1, https://goo.gl/fbAQLP
 
-exports[`Chip — snapshot matrix baseline (variant x size x {default,disabled} x modes) display-m-default-dark 1`] = `
+exports[`Chip - snapshot matrix baseline (variant x size x {default,disabled} x modes) display-m-default-dark 1`] = `
 <View
   collapsable={false}
   pointerEvents="box-none"
@@ -47,7 +47,7 @@ exports[`Chip — snapshot matrix baseline (variant x size x {default,disabled} 
 </View>
 `;
 
-exports[`Chip — snapshot matrix baseline (variant x size x {default,disabled} x modes) display-m-default-light 1`] = `
+exports[`Chip - snapshot matrix baseline (variant x size x {default,disabled} x modes) display-m-default-light 1`] = `
 <View
   collapsable={false}
   pointerEvents="box-none"
@@ -94,7 +94,7 @@ exports[`Chip — snapshot matrix baseline (variant x size x {default,disabled} 
 </View>
 `;
 
-exports[`Chip — snapshot matrix baseline (variant x size x {default,disabled} x modes) display-m-disabled-dark 1`] = `
+exports[`Chip - snapshot matrix baseline (variant x size x {default,disabled} x modes) display-m-disabled-dark 1`] = `
 <View
   collapsable={false}
   pointerEvents="box-none"
@@ -141,7 +141,7 @@ exports[`Chip — snapshot matrix baseline (variant x size x {default,disabled} 
 </View>
 `;
 
-exports[`Chip — snapshot matrix baseline (variant x size x {default,disabled} x modes) display-m-disabled-light 1`] = `
+exports[`Chip - snapshot matrix baseline (variant x size x {default,disabled} x modes) display-m-disabled-light 1`] = `
 <View
   collapsable={false}
   pointerEvents="box-none"
@@ -188,7 +188,7 @@ exports[`Chip — snapshot matrix baseline (variant x size x {default,disabled} 
 </View>
 `;
 
-exports[`Chip — snapshot matrix baseline (variant x size x {default,disabled} x modes) display-s-default-dark 1`] = `
+exports[`Chip - snapshot matrix baseline (variant x size x {default,disabled} x modes) display-s-default-dark 1`] = `
 <View
   collapsable={false}
   pointerEvents="box-none"
@@ -235,7 +235,7 @@ exports[`Chip — snapshot matrix baseline (variant x size x {default,disabled} 
 </View>
 `;
 
-exports[`Chip — snapshot matrix baseline (variant x size x {default,disabled} x modes) display-s-default-light 1`] = `
+exports[`Chip - snapshot matrix baseline (variant x size x {default,disabled} x modes) display-s-default-light 1`] = `
 <View
   collapsable={false}
   pointerEvents="box-none"
@@ -282,7 +282,7 @@ exports[`Chip — snapshot matrix baseline (variant x size x {default,disabled} 
 </View>
 `;
 
-exports[`Chip — snapshot matrix baseline (variant x size x {default,disabled} x modes) display-s-disabled-dark 1`] = `
+exports[`Chip - snapshot matrix baseline (variant x size x {default,disabled} x modes) display-s-disabled-dark 1`] = `
 <View
   collapsable={false}
   pointerEvents="box-none"
@@ -329,7 +329,7 @@ exports[`Chip — snapshot matrix baseline (variant x size x {default,disabled} 
 </View>
 `;
 
-exports[`Chip — snapshot matrix baseline (variant x size x {default,disabled} x modes) display-s-disabled-light 1`] = `
+exports[`Chip - snapshot matrix baseline (variant x size x {default,disabled} x modes) display-s-disabled-light 1`] = `
 <View
   collapsable={false}
   pointerEvents="box-none"
@@ -376,7 +376,7 @@ exports[`Chip — snapshot matrix baseline (variant x size x {default,disabled} 
 </View>
 `;
 
-exports[`Chip — snapshot matrix baseline (variant x size x {default,disabled} x modes) input-m-default-dark 1`] = `
+exports[`Chip - snapshot matrix baseline (variant x size x {default,disabled} x modes) input-m-default-dark 1`] = `
 <View
   collapsable={false}
   pointerEvents="box-none"
@@ -452,7 +452,7 @@ exports[`Chip — snapshot matrix baseline (variant x size x {default,disabled} 
 </View>
 `;
 
-exports[`Chip — snapshot matrix baseline (variant x size x {default,disabled} x modes) input-m-default-light 1`] = `
+exports[`Chip - snapshot matrix baseline (variant x size x {default,disabled} x modes) input-m-default-light 1`] = `
 <View
   collapsable={false}
   pointerEvents="box-none"
@@ -528,7 +528,7 @@ exports[`Chip — snapshot matrix baseline (variant x size x {default,disabled} 
 </View>
 `;
 
-exports[`Chip — snapshot matrix baseline (variant x size x {default,disabled} x modes) input-m-disabled-dark 1`] = `
+exports[`Chip - snapshot matrix baseline (variant x size x {default,disabled} x modes) input-m-disabled-dark 1`] = `
 <View
   collapsable={false}
   pointerEvents="box-none"
@@ -604,7 +604,7 @@ exports[`Chip — snapshot matrix baseline (variant x size x {default,disabled} 
 </View>
 `;
 
-exports[`Chip — snapshot matrix baseline (variant x size x {default,disabled} x modes) input-m-disabled-light 1`] = `
+exports[`Chip - snapshot matrix baseline (variant x size x {default,disabled} x modes) input-m-disabled-light 1`] = `
 <View
   collapsable={false}
   pointerEvents="box-none"
@@ -680,7 +680,7 @@ exports[`Chip — snapshot matrix baseline (variant x size x {default,disabled} 
 </View>
 `;
 
-exports[`Chip — snapshot matrix baseline (variant x size x {default,disabled} x modes) input-s-default-dark 1`] = `
+exports[`Chip - snapshot matrix baseline (variant x size x {default,disabled} x modes) input-s-default-dark 1`] = `
 <View
   collapsable={false}
   pointerEvents="box-none"
@@ -756,7 +756,7 @@ exports[`Chip — snapshot matrix baseline (variant x size x {default,disabled} 
 </View>
 `;
 
-exports[`Chip — snapshot matrix baseline (variant x size x {default,disabled} x modes) input-s-default-light 1`] = `
+exports[`Chip - snapshot matrix baseline (variant x size x {default,disabled} x modes) input-s-default-light 1`] = `
 <View
   collapsable={false}
   pointerEvents="box-none"
@@ -832,7 +832,7 @@ exports[`Chip — snapshot matrix baseline (variant x size x {default,disabled} 
 </View>
 `;
 
-exports[`Chip — snapshot matrix baseline (variant x size x {default,disabled} x modes) input-s-disabled-dark 1`] = `
+exports[`Chip - snapshot matrix baseline (variant x size x {default,disabled} x modes) input-s-disabled-dark 1`] = `
 <View
   collapsable={false}
   pointerEvents="box-none"
@@ -908,7 +908,7 @@ exports[`Chip — snapshot matrix baseline (variant x size x {default,disabled} 
 </View>
 `;
 
-exports[`Chip — snapshot matrix baseline (variant x size x {default,disabled} x modes) input-s-disabled-light 1`] = `
+exports[`Chip - snapshot matrix baseline (variant x size x {default,disabled} x modes) input-s-disabled-light 1`] = `
 <View
   collapsable={false}
   pointerEvents="box-none"
@@ -984,7 +984,7 @@ exports[`Chip — snapshot matrix baseline (variant x size x {default,disabled} 
 </View>
 `;
 
-exports[`Chip — snapshot matrix baseline (variant x size x {default,disabled} x modes) selectable-m-default-dark 1`] = `
+exports[`Chip - snapshot matrix baseline (variant x size x {default,disabled} x modes) selectable-m-default-dark 1`] = `
 <View
   collapsable={false}
   pointerEvents="box-none"
@@ -1060,7 +1060,7 @@ exports[`Chip — snapshot matrix baseline (variant x size x {default,disabled} 
 </View>
 `;
 
-exports[`Chip — snapshot matrix baseline (variant x size x {default,disabled} x modes) selectable-m-default-light 1`] = `
+exports[`Chip - snapshot matrix baseline (variant x size x {default,disabled} x modes) selectable-m-default-light 1`] = `
 <View
   collapsable={false}
   pointerEvents="box-none"
@@ -1136,7 +1136,7 @@ exports[`Chip — snapshot matrix baseline (variant x size x {default,disabled} 
 </View>
 `;
 
-exports[`Chip — snapshot matrix baseline (variant x size x {default,disabled} x modes) selectable-m-disabled-dark 1`] = `
+exports[`Chip - snapshot matrix baseline (variant x size x {default,disabled} x modes) selectable-m-disabled-dark 1`] = `
 <View
   collapsable={false}
   pointerEvents="box-none"
@@ -1212,7 +1212,7 @@ exports[`Chip — snapshot matrix baseline (variant x size x {default,disabled} 
 </View>
 `;
 
-exports[`Chip — snapshot matrix baseline (variant x size x {default,disabled} x modes) selectable-m-disabled-light 1`] = `
+exports[`Chip - snapshot matrix baseline (variant x size x {default,disabled} x modes) selectable-m-disabled-light 1`] = `
 <View
   collapsable={false}
   pointerEvents="box-none"
@@ -1288,7 +1288,7 @@ exports[`Chip — snapshot matrix baseline (variant x size x {default,disabled} 
 </View>
 `;
 
-exports[`Chip — snapshot matrix baseline (variant x size x {default,disabled} x modes) selectable-s-default-dark 1`] = `
+exports[`Chip - snapshot matrix baseline (variant x size x {default,disabled} x modes) selectable-s-default-dark 1`] = `
 <View
   collapsable={false}
   pointerEvents="box-none"
@@ -1364,7 +1364,7 @@ exports[`Chip — snapshot matrix baseline (variant x size x {default,disabled} 
 </View>
 `;
 
-exports[`Chip — snapshot matrix baseline (variant x size x {default,disabled} x modes) selectable-s-default-light 1`] = `
+exports[`Chip - snapshot matrix baseline (variant x size x {default,disabled} x modes) selectable-s-default-light 1`] = `
 <View
   collapsable={false}
   pointerEvents="box-none"
@@ -1440,7 +1440,7 @@ exports[`Chip — snapshot matrix baseline (variant x size x {default,disabled} 
 </View>
 `;
 
-exports[`Chip — snapshot matrix baseline (variant x size x {default,disabled} x modes) selectable-s-disabled-dark 1`] = `
+exports[`Chip - snapshot matrix baseline (variant x size x {default,disabled} x modes) selectable-s-disabled-dark 1`] = `
 <View
   collapsable={false}
   pointerEvents="box-none"
@@ -1516,7 +1516,7 @@ exports[`Chip — snapshot matrix baseline (variant x size x {default,disabled} 
 </View>
 `;
 
-exports[`Chip — snapshot matrix baseline (variant x size x {default,disabled} x modes) selectable-s-disabled-light 1`] = `
+exports[`Chip - snapshot matrix baseline (variant x size x {default,disabled} x modes) selectable-s-disabled-light 1`] = `
 <View
   collapsable={false}
   pointerEvents="box-none"
@@ -1592,7 +1592,7 @@ exports[`Chip — snapshot matrix baseline (variant x size x {default,disabled} 
 </View>
 `;
 
-exports[`Chip — snapshot matrix non-Latin font-fallback canary (canaryVariant x size=default x default x light x lang) selectable-s-default-light-fa 1`] = `
+exports[`Chip - snapshot matrix non-Latin font-fallback canary (canaryVariant x size=default x default x light x lang) selectable-s-default-light-fa 1`] = `
 <View
   collapsable={false}
   pointerEvents="box-none"

@@ -26,7 +26,7 @@ interface IncreaseContextSheetProps {
   onClose: () => void;
   onReloadStart: () => void;
   onReloadResult: (success: boolean, target: number) => void;
-  // Start a fresh chat — used by the no-fit state where no larger context fits.
+  // Start a fresh chat - used by the no-fit state where no larger context fits.
   onNewChat: () => void;
 }
 
@@ -86,7 +86,7 @@ export const IncreaseContextSheet: React.FC<IncreaseContextSheetProps> =
         model.ggufMetadata?.context_length ??
         CONTEXT_LADDER[CONTEXT_LADDER.length - 1];
 
-      // Only stops strictly above the current value are offered — the sheet is
+      // Only stops strictly above the current value are offered - the sheet is
       // an upgrade affordance. The model max is appended as the rightmost stop.
       const ladder = useMemo<number[]>(() => {
         const filtered: number[] = CONTEXT_LADDER.filter(
@@ -138,7 +138,7 @@ export const IncreaseContextSheet: React.FC<IncreaseContextSheetProps> =
       const chosenFit = fitStatusFor(chosen);
       const chosenMem = memBytes(chosen);
 
-      // Furthest "fits" stop on the ladder — drives the device-limit status
+      // Furthest "fits" stop on the ladder - drives the device-limit status
       // copy and the no-fit / memory-constrained state.
       const deviceLimitIdx = useMemo(() => {
         let idx = -1;
@@ -152,7 +152,7 @@ export const IncreaseContextSheet: React.FC<IncreaseContextSheetProps> =
       const memConstrained =
         deviceLimitIdx >= 0 && deviceLimitIdx < ladder.length - 1;
 
-      // No upgrade fits the device — the sheet must not be a dead-end.
+      // No upgrade fits the device - the sheet must not be a dead-end.
       const anyFits = deviceLimitIdx >= 0;
 
       // Semantic fit-zone tints. Warm hues read as a memory warning; the brand
@@ -232,7 +232,7 @@ export const IncreaseContextSheet: React.FC<IncreaseContextSheetProps> =
           isVisible={isVisible}
           onClose={onClose}
           title={l10n.chat.increaseContextTitle}
-          // Fixed tall snap-point — Sheet.ScrollView measures its own intrinsic
+          // Fixed tall snap-point - Sheet.ScrollView measures its own intrinsic
           // height as zero when nested, so without one the sheet collapses and
           // the bottom content (status line, advanced, actions) gets clipped.
           snapPoints={['85%']}>

@@ -99,7 +99,7 @@ describe('useTheme', () => {
     });
 
     it('headlineH1 swaps Fraunces → Inter for Cyrillic locales (ru, uk)', () => {
-      // Bundled Fraunces subset is Latin-only — ru/uk must use Inter.
+      // Bundled Fraunces subset is Latin-only - ru/uk must use Inter.
       for (const lang of ['ru', 'uk'] as const) {
         uiStore.setLanguage(lang);
         const {result} = renderHook(() => useTheme());
@@ -110,7 +110,7 @@ describe('useTheme', () => {
     });
 
     it('headlineH1 swaps for every Fraunces-fallback locale', () => {
-      // Derived, not hand-listed — a hardcoded copy silently rots when a
+      // Derived, not hand-listed - a hardcoded copy silently rots when a
       // locale joins the fallback set (as pl did).
       for (const lang of NON_LATIN_LOCALES) {
         uiStore.setLanguage(lang);

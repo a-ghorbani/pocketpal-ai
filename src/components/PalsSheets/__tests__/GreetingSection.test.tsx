@@ -226,7 +226,7 @@ describe('GreetingSection', () => {
       expect(queryByTestId('suggested-prompt-input-2')).toBeNull();
     });
 
-    it('does not trim or filter on typing — whitespace stays in form state', async () => {
+    it('does not trim or filter on typing - whitespace stays in form state', async () => {
       let getFormValues: () => PalFormData;
 
       const {getByTestId} = render(

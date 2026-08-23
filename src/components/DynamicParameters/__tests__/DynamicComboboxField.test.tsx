@@ -87,7 +87,7 @@ describe('DynamicComboboxField', () => {
     expect(
       queryByTestId('dynamic-combobox-option-testCombobox-French'),
     ).toBeTruthy();
-    // "German" contains "en" too (GermaN? No — "German" has "an" not "en")
+    // "German" contains "en" too (GermaN? No - "German" has "an" not "en")
     // Actually "German" does NOT contain "en". Let's check: G-e-r-m-a-n. No "en".
     expect(
       queryByTestId('dynamic-combobox-option-testCombobox-German'),

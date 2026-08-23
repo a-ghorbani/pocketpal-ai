@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * verify-android-payload.js — checks a built Android APK/AAB against
+ * verify-android-payload.js - checks a built Android APK/AAB against
  * scripts/android-payload-manifest.json before it can be published.
  *
  * Usage:
@@ -21,7 +21,7 @@
  *   path, so shelling out would make the check unrunnable on exactly the
  *   machines that need to run it locally.
  *
- * Exit 0 when every declared requirement holds, non-zero otherwise —
+ * Exit 0 when every declared requirement holds, non-zero otherwise -
  * including when the check could not read what it was asked to judge.
  *
  * Pattern mirrors scripts/verify-fonts.js.
@@ -182,7 +182,7 @@ function assertAcceleratorFloors(abi, manifestPath) {
   // Not merely "a rule", but a rule that looks at the accelerator library
   // itself. Two near-misses both pass every other floor and both accept an
   // artifact with no backend: a rule pointing at librnllama.so, and a rule
-  // pointing at the accelerator's own JNI wrapper — whose name also contains
+  // pointing at the accelerator's own JNI wrapper - whose name also contains
   // "_hexagon", but which is a thin shim exporting stable Java_* entry points
   // and none of the backend symbols.
   if (
@@ -249,7 +249,7 @@ function loadManifest(manifestPath) {
   }
   // Every accelerator floor below is conditional on an ABI declaring an
   // accelerator library, so a manifest declaring none would satisfy all of
-  // them vacuously — and the ABI enumeration only compares against what the
+  // them vacuously - and the ABI enumeration only compares against what the
   // manifest names, so a tree carrying no ladder at all would pass.
   if (
     !manifest.abis.some(abi =>
@@ -285,7 +285,7 @@ function variantsFromManifest(manifest, manifestPath) {
   // -DRNLLAMA_ANDROID_VARIANTS at all for an empty value, and CMake reads the
   // resulting empty variable as "every variant enabled"
   // (cmake/rnllama-build-options.cmake). The build-log assertion would also
-  // fail, since gradle prints nothing either — this just fails earlier, and
+  // fail, since gradle prints nothing either - this just fails earlier, and
   // says which of the two it is.
   if (variants.length === 0) {
     throw new Error(
@@ -329,7 +329,7 @@ function readZipEntry(archive, entry) {
 
 /**
  * The ELF machine an object targets. Shares the header layout between ELF32
- * and ELF64 — `e_machine` sits at the same offset in both — so this works for
+ * and ELF64 - `e_machine` sits at the same offset in both - so this works for
  * the DSP libraries, which are ELF32, as well as the arm64 libraries.
  */
 function readElfMachine(buf) {
@@ -360,7 +360,7 @@ function readCString(buf, offset, limit) {
 }
 
 /**
- * Every `.dynsym` entry, in file order, skipping the reserved null entry —
+ * Every `.dynsym` entry, in file order, skipping the reserved null entry -
  * the same set `llvm-nm -D` prints, which is what the manifest counts were
  * calibrated against.
  */
@@ -439,11 +439,11 @@ function checkSymbolRule({rule, archive, artifactName, entry, report, fail}) {
   try {
     symbols = readDynsym(readZipEntry(archive, entry));
   } catch (err) {
-    report.push(`    ${rule.lib}: UNREADABLE — ${err.message}`);
+    report.push(`    ${rule.lib}: UNREADABLE - ${err.message}`);
     fail(
       [
         `could not read the exported symbols of ${entry} in ${artifactName}: ${err.message}.`,
-        'The payload check could not run, so it reports failure rather than success —',
+        'The payload check could not run, so it reports failure rather than success -',
         'a check that cannot read the artifact has proven nothing about it.',
       ].join('\n      '),
     );
@@ -488,7 +488,7 @@ function checkSymbolRule({rule, archive, artifactName, entry, report, fail}) {
       [
         `${entry} in ${artifactName} has ${matched} .dynsym entries matching "${expected.pattern}";`,
         `scripts/android-payload-manifest.json declares ${expected.count}.`,
-        'The required symbols are all present, so the backend is compiled in — this is a drift',
+        'The required symbols are all present, so the backend is compiled in - this is a drift',
         'tripwire, not a breakage. If the change is expected (a llama.rn upgrade, say), re-declare',
         `expectedMatchCount as ${matched} in the same pull request so the diff is reviewed.`,
       ].join('\n      '),
@@ -507,11 +507,11 @@ function checkArtifact({archive, kind, manifest, report, failures}) {
   try {
     entries = new Set(listZipEntries(archive));
   } catch (err) {
-    report.push(`  UNREADABLE — ${err.message}`);
+    report.push(`  UNREADABLE - ${err.message}`);
     fail(
       [
         `${err.message}.`,
-        'The payload check could not run, so it reports failure rather than success —',
+        'The payload check could not run, so it reports failure rather than success -',
         'a check that cannot read the artifact has proven nothing about it.',
       ].join('\n      '),
     );
@@ -521,7 +521,7 @@ function checkArtifact({archive, kind, manifest, report, failures}) {
   // The manifest says what each declared ABI must contain; it cannot say
   // anything about an ABI nobody declared. Adding one to abiFilters or
   // reactNativeArchitectures would otherwise ship a tree this check never
-  // opens — and the variant allowlist is matched by exact name, so that tree
+  // opens - and the variant allowlist is matched by exact name, so that tree
   // would carry only the generic portable-C pair.
   const declaredAbis = new Set(manifest.abis.map(entry => entry.abi));
   const libPrefix = `${prefix}lib/`;
@@ -591,11 +591,11 @@ function checkArtifact({archive, kind, manifest, report, failures}) {
       try {
         machine = readElfMachine(readZipEntry(archive, entry));
       } catch (err) {
-        report.push(`      UNREADABLE  ${entry} — ${err.message}`);
+        report.push(`      UNREADABLE  ${entry} - ${err.message}`);
         fail(
           [
             `could not read ${entry} in ${artifactName}: ${err.message}.`,
-            'The payload check could not run, so it reports failure rather than success —',
+            'The payload check could not run, so it reports failure rather than success -',
             'a check that cannot read the artifact has proven nothing about it.',
           ].join('\n      '),
         );
@@ -624,7 +624,7 @@ function checkArtifact({archive, kind, manifest, report, failures}) {
           'All four DSP libraries are required, not only the one a given device uses:',
           'RNLlama.java extracts them as a set and disables the Hexagon backend entirely',
           'if any one is absent. They are synced into the artifact from',
-          "node_modules/llama.rn/bin/arm64-v8a by llama.rn's syncRNLlamaHtpAssets task —",
+          "node_modules/llama.rn/bin/arm64-v8a by llama.rn's syncRNLlamaHtpAssets task -",
           'check that the dependency installed completely.',
         ].join('\n      '),
       );
@@ -680,7 +680,7 @@ function main() {
   );
 
   // The report file is written before the verdict is printed. It is the
-  // evidence that the check ran, so a pass nobody can audit is not a pass —
+  // evidence that the check ran, so a pass nobody can audit is not a pass -
   // and a run that printed PASS and then failed on the write would read, to a
   // human scanning the log, as a pass.
   const text = `${report.join('\n')}\n`;

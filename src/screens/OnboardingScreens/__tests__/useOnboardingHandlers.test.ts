@@ -84,7 +84,7 @@ describe('useOnboardingHandlers', () => {
     });
   });
 
-  describe('selectTopic (screen 5 — single forward control)', () => {
+  describe('selectTopic (screen 5 - single forward control)', () => {
     it('writes the picked topic and navigates to Onboarding6 in one handler', () => {
       const {result} = renderHook(() => useOnboardingHandlers(5));
       act(() => result.current.selectTopic('smartchat'));
@@ -298,7 +298,7 @@ describe('useOnboardingHandlers', () => {
         }
       });
 
-      // finish() resolves cleanly — the rejection on the fire-and-forget
+      // finish() resolves cleanly - the rejection on the fire-and-forget
       // checkSpaceAndDownload is swallowed by the in-handler .catch.
       expect(threw).toBeNull();
       // Side-effects up to checkSpaceAndDownload still ran.
@@ -310,7 +310,7 @@ describe('useOnboardingHandlers', () => {
     it('skip on screen 6 after selecting a model: no register, no pal write, no download', async () => {
       // The user selected Codie/Balanced (HF) and then tapped Skip
       // instead of Download. selectedModelId is non-null but skip() must
-      // NOT register the HF entry — only finish() is the boundary site
+      // NOT register the HF entry - only finish() is the boundary site
       // for registration, and skip() doesn't trigger it.
       palStore.pals = [];
       uiStore.onboardingState.selectedModelId = CODIE_BALANCED_ID;

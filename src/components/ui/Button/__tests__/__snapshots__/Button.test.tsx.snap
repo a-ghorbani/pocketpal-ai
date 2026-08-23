@@ -1,6 +1,6 @@
 // Jest Snapshot v1, https://goo.gl/fbAQLP
 
-exports[`Button — snapshot matrix baseline (variant x size x {default,disabled} x modes) destructive-l-default-dark 1`] = `
+exports[`Button - snapshot matrix baseline (variant x size x {default,disabled} x modes) destructive-l-default-dark 1`] = `
 <View
   collapsable={false}
   pointerEvents="box-none"
@@ -75,7 +75,7 @@ exports[`Button — snapshot matrix baseline (variant x size x {default,disabled
 </View>
 `;
 
-exports[`Button — snapshot matrix baseline (variant x size x {default,disabled} x modes) destructive-l-default-light 1`] = `
+exports[`Button - snapshot matrix baseline (variant x size x {default,disabled} x modes) destructive-l-default-light 1`] = `
 <View
   collapsable={false}
   pointerEvents="box-none"
@@ -150,7 +150,7 @@ exports[`Button — snapshot matrix baseline (variant x size x {default,disabled
 </View>
 `;
 
-exports[`Button — snapshot matrix baseline (variant x size x {default,disabled} x modes) destructive-l-disabled-dark 1`] = `
+exports[`Button - snapshot matrix baseline (variant x size x {default,disabled} x modes) destructive-l-disabled-dark 1`] = `
 <View
   collapsable={false}
   pointerEvents="box-none"
@@ -225,7 +225,7 @@ exports[`Button — snapshot matrix baseline (variant x size x {default,disabled
 </View>
 `;
 
-exports[`Button — snapshot matrix baseline (variant x size x {default,disabled} x modes) destructive-l-disabled-light 1`] = `
+exports[`Button - snapshot matrix baseline (variant x size x {default,disabled} x modes) destructive-l-disabled-light 1`] = `
 <View
   collapsable={false}
   pointerEvents="box-none"
@@ -300,7 +300,7 @@ exports[`Button — snapshot matrix baseline (variant x size x {default,disabled
 </View>
 `;
 
-exports[`Button — snapshot matrix baseline (variant x size x {default,disabled} x modes) destructive-m-default-dark 1`] = `
+exports[`Button - snapshot matrix baseline (variant x size x {default,disabled} x modes) destructive-m-default-dark 1`] = `
 <View
   collapsable={false}
   pointerEvents="box-none"
@@ -375,7 +375,7 @@ exports[`Button — snapshot matrix baseline (variant x size x {default,disabled
 </View>
 `;
 
-exports[`Button — snapshot matrix baseline (variant x size x {default,disabled} x modes) destructive-m-default-light 1`] = `
+exports[`Button - snapshot matrix baseline (variant x size x {default,disabled} x modes) destructive-m-default-light 1`] = `
 <View
   collapsable={false}
   pointerEvents="box-none"
@@ -450,7 +450,7 @@ exports[`Button — snapshot matrix baseline (variant x size x {default,disabled
 </View>
 `;
 
-exports[`Button — snapshot matrix baseline (variant x size x {default,disabled} x modes) destructive-m-disabled-dark 1`] = `
+exports[`Button - snapshot matrix baseline (variant x size x {default,disabled} x modes) destructive-m-disabled-dark 1`] = `
 <View
   collapsable={false}
   pointerEvents="box-none"
@@ -525,7 +525,7 @@ exports[`Button — snapshot matrix baseline (variant x size x {default,disabled
 </View>
 `;
 
-exports[`Button — snapshot matrix baseline (variant x size x {default,disabled} x modes) destructive-m-disabled-light 1`] = `
+exports[`Button - snapshot matrix baseline (variant x size x {default,disabled} x modes) destructive-m-disabled-light 1`] = `
 <View
   collapsable={false}
   pointerEvents="box-none"
@@ -600,7 +600,7 @@ exports[`Button — snapshot matrix baseline (variant x size x {default,disabled
 </View>
 `;
 
-exports[`Button — snapshot matrix baseline (variant x size x {default,disabled} x modes) destructive-s-default-dark 1`] = `
+exports[`Button - snapshot matrix baseline (variant x size x {default,disabled} x modes) destructive-s-default-dark 1`] = `
 <View
   collapsable={false}
   pointerEvents="box-none"
@@ -675,7 +675,7 @@ exports[`Button — snapshot matrix baseline (variant x size x {default,disabled
 </View>
 `;
 
-exports[`Button — snapshot matrix baseline (variant x size x {default,disabled} x modes) destructive-s-default-light 1`] = `
+exports[`Button - snapshot matrix baseline (variant x size x {default,disabled} x modes) destructive-s-default-light 1`] = `
 <View
   collapsable={false}
   pointerEvents="box-none"
@@ -750,7 +750,7 @@ exports[`Button — snapshot matrix baseline (variant x size x {default,disabled
 </View>
 `;
 
-exports[`Button — snapshot matrix baseline (variant x size x {default,disabled} x modes) destructive-s-disabled-dark 1`] = `
+exports[`Button - snapshot matrix baseline (variant x size x {default,disabled} x modes) destructive-s-disabled-dark 1`] = `
 <View
   collapsable={false}
   pointerEvents="box-none"
@@ -825,7 +825,7 @@ exports[`Button — snapshot matrix baseline (variant x size x {default,disabled
 </View>
 `;
 
-exports[`Button — snapshot matrix baseline (variant x size x {default,disabled} x modes) destructive-s-disabled-light 1`] = `
+exports[`Button - snapshot matrix baseline (variant x size x {default,disabled} x modes) destructive-s-disabled-light 1`] = `
 <View
   collapsable={false}
   pointerEvents="box-none"
@@ -900,7 +900,7 @@ exports[`Button — snapshot matrix baseline (variant x size x {default,disabled
 </View>
 `;
 
-exports[`Button — snapshot matrix baseline (variant x size x {default,disabled} x modes) primary-l-default-dark 1`] = `
+exports[`Button - snapshot matrix baseline (variant x size x {default,disabled} x modes) primary-l-default-dark 1`] = `
 <View
   collapsable={false}
   pointerEvents="box-none"
@@ -975,7 +975,7 @@ exports[`Button — snapshot matrix baseline (variant x size x {default,disabled
 </View>
 `;
 
-exports[`Button — snapshot matrix baseline (variant x size x {default,disabled} x modes) primary-l-default-light 1`] = `
+exports[`Button - snapshot matrix baseline (variant x size x {default,disabled} x modes) primary-l-default-light 1`] = `
 <View
   collapsable={false}
   pointerEvents="box-none"
@@ -1050,7 +1050,7 @@ exports[`Button — snapshot matrix baseline (variant x size x {default,disabled
 </View>
 `;
 
-exports[`Button — snapshot matrix baseline (variant x size x {default,disabled} x modes) primary-l-disabled-dark 1`] = `
+exports[`Button - snapshot matrix baseline (variant x size x {default,disabled} x modes) primary-l-disabled-dark 1`] = `
 <View
   collapsable={false}
   pointerEvents="box-none"
@@ -1125,7 +1125,7 @@ exports[`Button — snapshot matrix baseline (variant x size x {default,disabled
 </View>
 `;
 
-exports[`Button — snapshot matrix baseline (variant x size x {default,disabled} x modes) primary-l-disabled-light 1`] = `
+exports[`Button - snapshot matrix baseline (variant x size x {default,disabled} x modes) primary-l-disabled-light 1`] = `
 <View
   collapsable={false}
   pointerEvents="box-none"
@@ -1200,7 +1200,7 @@ exports[`Button — snapshot matrix baseline (variant x size x {default,disabled
 </View>
 `;
 
-exports[`Button — snapshot matrix baseline (variant x size x {default,disabled} x modes) primary-m-default-dark 1`] = `
+exports[`Button - snapshot matrix baseline (variant x size x {default,disabled} x modes) primary-m-default-dark 1`] = `
 <View
   collapsable={false}
   pointerEvents="box-none"
@@ -1275,7 +1275,7 @@ exports[`Button — snapshot matrix baseline (variant x size x {default,disabled
 </View>
 `;
 
-exports[`Button — snapshot matrix baseline (variant x size x {default,disabled} x modes) primary-m-default-light 1`] = `
+exports[`Button - snapshot matrix baseline (variant x size x {default,disabled} x modes) primary-m-default-light 1`] = `
 <View
   collapsable={false}
   pointerEvents="box-none"
@@ -1350,7 +1350,7 @@ exports[`Button — snapshot matrix baseline (variant x size x {default,disabled
 </View>
 `;
 
-exports[`Button — snapshot matrix baseline (variant x size x {default,disabled} x modes) primary-m-disabled-dark 1`] = `
+exports[`Button - snapshot matrix baseline (variant x size x {default,disabled} x modes) primary-m-disabled-dark 1`] = `
 <View
   collapsable={false}
   pointerEvents="box-none"
@@ -1425,7 +1425,7 @@ exports[`Button — snapshot matrix baseline (variant x size x {default,disabled
 </View>
 `;
 
-exports[`Button — snapshot matrix baseline (variant x size x {default,disabled} x modes) primary-m-disabled-light 1`] = `
+exports[`Button - snapshot matrix baseline (variant x size x {default,disabled} x modes) primary-m-disabled-light 1`] = `
 <View
   collapsable={false}
   pointerEvents="box-none"
@@ -1500,7 +1500,7 @@ exports[`Button — snapshot matrix baseline (variant x size x {default,disabled
 </View>
 `;
 
-exports[`Button — snapshot matrix baseline (variant x size x {default,disabled} x modes) primary-s-default-dark 1`] = `
+exports[`Button - snapshot matrix baseline (variant x size x {default,disabled} x modes) primary-s-default-dark 1`] = `
 <View
   collapsable={false}
   pointerEvents="box-none"
@@ -1575,7 +1575,7 @@ exports[`Button — snapshot matrix baseline (variant x size x {default,disabled
 </View>
 `;
 
-exports[`Button — snapshot matrix baseline (variant x size x {default,disabled} x modes) primary-s-default-light 1`] = `
+exports[`Button - snapshot matrix baseline (variant x size x {default,disabled} x modes) primary-s-default-light 1`] = `
 <View
   collapsable={false}
   pointerEvents="box-none"
@@ -1650,7 +1650,7 @@ exports[`Button — snapshot matrix baseline (variant x size x {default,disabled
 </View>
 `;
 
-exports[`Button — snapshot matrix baseline (variant x size x {default,disabled} x modes) primary-s-disabled-dark 1`] = `
+exports[`Button - snapshot matrix baseline (variant x size x {default,disabled} x modes) primary-s-disabled-dark 1`] = `
 <View
   collapsable={false}
   pointerEvents="box-none"
@@ -1725,7 +1725,7 @@ exports[`Button — snapshot matrix baseline (variant x size x {default,disabled
 </View>
 `;
 
-exports[`Button — snapshot matrix baseline (variant x size x {default,disabled} x modes) primary-s-disabled-light 1`] = `
+exports[`Button - snapshot matrix baseline (variant x size x {default,disabled} x modes) primary-s-disabled-light 1`] = `
 <View
   collapsable={false}
   pointerEvents="box-none"
@@ -1800,7 +1800,7 @@ exports[`Button — snapshot matrix baseline (variant x size x {default,disabled
 </View>
 `;
 
-exports[`Button — snapshot matrix baseline (variant x size x {default,disabled} x modes) secondary-l-default-dark 1`] = `
+exports[`Button - snapshot matrix baseline (variant x size x {default,disabled} x modes) secondary-l-default-dark 1`] = `
 <View
   collapsable={false}
   pointerEvents="box-none"
@@ -1875,7 +1875,7 @@ exports[`Button — snapshot matrix baseline (variant x size x {default,disabled
 </View>
 `;
 
-exports[`Button — snapshot matrix baseline (variant x size x {default,disabled} x modes) secondary-l-default-light 1`] = `
+exports[`Button - snapshot matrix baseline (variant x size x {default,disabled} x modes) secondary-l-default-light 1`] = `
 <View
   collapsable={false}
   pointerEvents="box-none"
@@ -1950,7 +1950,7 @@ exports[`Button — snapshot matrix baseline (variant x size x {default,disabled
 </View>
 `;
 
-exports[`Button — snapshot matrix baseline (variant x size x {default,disabled} x modes) secondary-l-disabled-dark 1`] = `
+exports[`Button - snapshot matrix baseline (variant x size x {default,disabled} x modes) secondary-l-disabled-dark 1`] = `
 <View
   collapsable={false}
   pointerEvents="box-none"
@@ -2025,7 +2025,7 @@ exports[`Button — snapshot matrix baseline (variant x size x {default,disabled
 </View>
 `;
 
-exports[`Button — snapshot matrix baseline (variant x size x {default,disabled} x modes) secondary-l-disabled-light 1`] = `
+exports[`Button - snapshot matrix baseline (variant x size x {default,disabled} x modes) secondary-l-disabled-light 1`] = `
 <View
   collapsable={false}
   pointerEvents="box-none"
@@ -2100,7 +2100,7 @@ exports[`Button — snapshot matrix baseline (variant x size x {default,disabled
 </View>
 `;
 
-exports[`Button — snapshot matrix baseline (variant x size x {default,disabled} x modes) secondary-m-default-dark 1`] = `
+exports[`Button - snapshot matrix baseline (variant x size x {default,disabled} x modes) secondary-m-default-dark 1`] = `
 <View
   collapsable={false}
   pointerEvents="box-none"
@@ -2175,7 +2175,7 @@ exports[`Button — snapshot matrix baseline (variant x size x {default,disabled
 </View>
 `;
 
-exports[`Button — snapshot matrix baseline (variant x size x {default,disabled} x modes) secondary-m-default-light 1`] = `
+exports[`Button - snapshot matrix baseline (variant x size x {default,disabled} x modes) secondary-m-default-light 1`] = `
 <View
   collapsable={false}
   pointerEvents="box-none"
@@ -2250,7 +2250,7 @@ exports[`Button — snapshot matrix baseline (variant x size x {default,disabled
 </View>
 `;
 
-exports[`Button — snapshot matrix baseline (variant x size x {default,disabled} x modes) secondary-m-disabled-dark 1`] = `
+exports[`Button - snapshot matrix baseline (variant x size x {default,disabled} x modes) secondary-m-disabled-dark 1`] = `
 <View
   collapsable={false}
   pointerEvents="box-none"
@@ -2325,7 +2325,7 @@ exports[`Button — snapshot matrix baseline (variant x size x {default,disabled
 </View>
 `;
 
-exports[`Button — snapshot matrix baseline (variant x size x {default,disabled} x modes) secondary-m-disabled-light 1`] = `
+exports[`Button - snapshot matrix baseline (variant x size x {default,disabled} x modes) secondary-m-disabled-light 1`] = `
 <View
   collapsable={false}
   pointerEvents="box-none"
@@ -2400,7 +2400,7 @@ exports[`Button — snapshot matrix baseline (variant x size x {default,disabled
 </View>
 `;
 
-exports[`Button — snapshot matrix baseline (variant x size x {default,disabled} x modes) secondary-s-default-dark 1`] = `
+exports[`Button - snapshot matrix baseline (variant x size x {default,disabled} x modes) secondary-s-default-dark 1`] = `
 <View
   collapsable={false}
   pointerEvents="box-none"
@@ -2475,7 +2475,7 @@ exports[`Button — snapshot matrix baseline (variant x size x {default,disabled
 </View>
 `;
 
-exports[`Button — snapshot matrix baseline (variant x size x {default,disabled} x modes) secondary-s-default-light 1`] = `
+exports[`Button - snapshot matrix baseline (variant x size x {default,disabled} x modes) secondary-s-default-light 1`] = `
 <View
   collapsable={false}
   pointerEvents="box-none"
@@ -2550,7 +2550,7 @@ exports[`Button — snapshot matrix baseline (variant x size x {default,disabled
 </View>
 `;
 
-exports[`Button — snapshot matrix baseline (variant x size x {default,disabled} x modes) secondary-s-disabled-dark 1`] = `
+exports[`Button - snapshot matrix baseline (variant x size x {default,disabled} x modes) secondary-s-disabled-dark 1`] = `
 <View
   collapsable={false}
   pointerEvents="box-none"
@@ -2625,7 +2625,7 @@ exports[`Button — snapshot matrix baseline (variant x size x {default,disabled
 </View>
 `;
 
-exports[`Button — snapshot matrix baseline (variant x size x {default,disabled} x modes) secondary-s-disabled-light 1`] = `
+exports[`Button - snapshot matrix baseline (variant x size x {default,disabled} x modes) secondary-s-disabled-light 1`] = `
 <View
   collapsable={false}
   pointerEvents="box-none"
@@ -2700,7 +2700,7 @@ exports[`Button — snapshot matrix baseline (variant x size x {default,disabled
 </View>
 `;
 
-exports[`Button — snapshot matrix baseline (variant x size x {default,disabled} x modes) tertiary-l-default-dark 1`] = `
+exports[`Button - snapshot matrix baseline (variant x size x {default,disabled} x modes) tertiary-l-default-dark 1`] = `
 <View
   collapsable={false}
   pointerEvents="box-none"
@@ -2775,7 +2775,7 @@ exports[`Button — snapshot matrix baseline (variant x size x {default,disabled
 </View>
 `;
 
-exports[`Button — snapshot matrix baseline (variant x size x {default,disabled} x modes) tertiary-l-default-light 1`] = `
+exports[`Button - snapshot matrix baseline (variant x size x {default,disabled} x modes) tertiary-l-default-light 1`] = `
 <View
   collapsable={false}
   pointerEvents="box-none"
@@ -2850,7 +2850,7 @@ exports[`Button — snapshot matrix baseline (variant x size x {default,disabled
 </View>
 `;
 
-exports[`Button — snapshot matrix baseline (variant x size x {default,disabled} x modes) tertiary-l-disabled-dark 1`] = `
+exports[`Button - snapshot matrix baseline (variant x size x {default,disabled} x modes) tertiary-l-disabled-dark 1`] = `
 <View
   collapsable={false}
   pointerEvents="box-none"
@@ -2925,7 +2925,7 @@ exports[`Button — snapshot matrix baseline (variant x size x {default,disabled
 </View>
 `;
 
-exports[`Button — snapshot matrix baseline (variant x size x {default,disabled} x modes) tertiary-l-disabled-light 1`] = `
+exports[`Button - snapshot matrix baseline (variant x size x {default,disabled} x modes) tertiary-l-disabled-light 1`] = `
 <View
   collapsable={false}
   pointerEvents="box-none"
@@ -3000,7 +3000,7 @@ exports[`Button — snapshot matrix baseline (variant x size x {default,disabled
 </View>
 `;
 
-exports[`Button — snapshot matrix baseline (variant x size x {default,disabled} x modes) tertiary-m-default-dark 1`] = `
+exports[`Button - snapshot matrix baseline (variant x size x {default,disabled} x modes) tertiary-m-default-dark 1`] = `
 <View
   collapsable={false}
   pointerEvents="box-none"
@@ -3075,7 +3075,7 @@ exports[`Button — snapshot matrix baseline (variant x size x {default,disabled
 </View>
 `;
 
-exports[`Button — snapshot matrix baseline (variant x size x {default,disabled} x modes) tertiary-m-default-light 1`] = `
+exports[`Button - snapshot matrix baseline (variant x size x {default,disabled} x modes) tertiary-m-default-light 1`] = `
 <View
   collapsable={false}
   pointerEvents="box-none"
@@ -3150,7 +3150,7 @@ exports[`Button — snapshot matrix baseline (variant x size x {default,disabled
 </View>
 `;
 
-exports[`Button — snapshot matrix baseline (variant x size x {default,disabled} x modes) tertiary-m-disabled-dark 1`] = `
+exports[`Button - snapshot matrix baseline (variant x size x {default,disabled} x modes) tertiary-m-disabled-dark 1`] = `
 <View
   collapsable={false}
   pointerEvents="box-none"
@@ -3225,7 +3225,7 @@ exports[`Button — snapshot matrix baseline (variant x size x {default,disabled
 </View>
 `;
 
-exports[`Button — snapshot matrix baseline (variant x size x {default,disabled} x modes) tertiary-m-disabled-light 1`] = `
+exports[`Button - snapshot matrix baseline (variant x size x {default,disabled} x modes) tertiary-m-disabled-light 1`] = `
 <View
   collapsable={false}
   pointerEvents="box-none"
@@ -3300,7 +3300,7 @@ exports[`Button — snapshot matrix baseline (variant x size x {default,disabled
 </View>
 `;
 
-exports[`Button — snapshot matrix baseline (variant x size x {default,disabled} x modes) tertiary-s-default-dark 1`] = `
+exports[`Button - snapshot matrix baseline (variant x size x {default,disabled} x modes) tertiary-s-default-dark 1`] = `
 <View
   collapsable={false}
   pointerEvents="box-none"
@@ -3375,7 +3375,7 @@ exports[`Button — snapshot matrix baseline (variant x size x {default,disabled
 </View>
 `;
 
-exports[`Button — snapshot matrix baseline (variant x size x {default,disabled} x modes) tertiary-s-default-light 1`] = `
+exports[`Button - snapshot matrix baseline (variant x size x {default,disabled} x modes) tertiary-s-default-light 1`] = `
 <View
   collapsable={false}
   pointerEvents="box-none"
@@ -3450,7 +3450,7 @@ exports[`Button — snapshot matrix baseline (variant x size x {default,disabled
 </View>
 `;
 
-exports[`Button — snapshot matrix baseline (variant x size x {default,disabled} x modes) tertiary-s-disabled-dark 1`] = `
+exports[`Button - snapshot matrix baseline (variant x size x {default,disabled} x modes) tertiary-s-disabled-dark 1`] = `
 <View
   collapsable={false}
   pointerEvents="box-none"
@@ -3525,7 +3525,7 @@ exports[`Button — snapshot matrix baseline (variant x size x {default,disabled
 </View>
 `;
 
-exports[`Button — snapshot matrix baseline (variant x size x {default,disabled} x modes) tertiary-s-disabled-light 1`] = `
+exports[`Button - snapshot matrix baseline (variant x size x {default,disabled} x modes) tertiary-s-disabled-light 1`] = `
 <View
   collapsable={false}
   pointerEvents="box-none"
@@ -3600,7 +3600,7 @@ exports[`Button — snapshot matrix baseline (variant x size x {default,disabled
 </View>
 `;
 
-exports[`Button — snapshot matrix non-Latin font-fallback canary (canaryVariant x size=default x default x light x lang) primary-s-default-light-fa 1`] = `
+exports[`Button - snapshot matrix non-Latin font-fallback canary (canaryVariant x size=default x default x light x lang) primary-s-default-light-fa 1`] = `
 <View
   collapsable={false}
   pointerEvents="box-none"

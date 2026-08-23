@@ -159,7 +159,7 @@
     "manageServers": "管理服务器",
     "ttsAvailability": "文本转语音",
     "ttsAvailabilityDescription": "朗读助手回复。",
-    "ttsAvailabilityLowMemoryWarning": "您的设备内存不足 — 此功能可能无法稳定运行。",
+    "ttsAvailabilityLowMemoryWarning": "您的设备内存不足 - 此功能可能无法稳定运行。",
     "requestTimeout": "请求超时（秒）",
     "requestTimeoutHelp": "等待服务器响应的最长时间，留空则使用默认值。",
     "requestTimeoutPlaceholder": "可选 - 留空则使用默认值",
@@ -167,7 +167,7 @@
     "serverTypeHelp": "已自动检测；如有误请手动更改。",
     "internetSearch": {
       "title": "联网搜索",
-      "description": "让 Pal 用自己的工具搜索网络。需自备 API 密钥——PocketPal 绝不保存您的密钥，也不会转发您的查询。",
+      "description": "让 Pal 用自己的工具搜索网络。需自备 API 密钥--PocketPal 绝不保存您的密钥，也不会转发您的查询。",
       "providerLabel": "搜索服务供应商",
       "providerGated": "即将推出",
       "keyLabel": "API 密钥",
@@ -396,7 +396,7 @@
         "visionSupported": "支持",
         "visionNotSupported": "不支持",
         "visionUnknown": "未知",
-        "draftOnlyReason": "仅草稿模型。请在“设置 → 推测解码”中选择它。"
+        "draftOnlyReason": "仅草稿模型。请在\"设置 → 推测解码\"中选择它。"
       },
       "accessibility": {
         "expandDetails": "展开详情",
@@ -588,7 +588,7 @@
       "noModelsDescription": "需要下载一个模型，才能与 PocketPal 开始聊天",
       "noModelsButton": "下载模型",
       "activateModelTitle": "在您开始聊天前，请先激活模型",
-      "activateModelDescription": "选择模型并下载。下载完成后，点击模型旁边的“加载”按钮，即可开始聊天。",
+      "activateModelDescription": "选择模型并下载。下载完成后，点击模型旁边的\"加载\"按钮，即可开始聊天。",
       "activateModelButton": "选择模型",
       "loading": "加载中...",
       "gettingReadyTitle": "{{name}} 正在准备中",
@@ -1023,7 +1023,7 @@
       "tokensPerSec": "{{value}} tokens/秒",
       "ttft": "{{value}}毫秒 TTFT",
       "interrupted": "被中断",
-      "truncated": "已截断 — 可能是上下文已满",
+      "truncated": "已截断 - 可能是上下文已满",
       "draftAccepted": "草稿：{{accepted}}/{{total}}（{{pct}}%）"
     },
     "pendingIndicator": {
@@ -1118,7 +1118,7 @@
       "notAvailable": "N/A",
       "buyOnPalshub": "在 Palshub 购买",
       "finalizingPurchase": "正在完成您的购买…",
-      "processingPurchase": "处理中 — 即将解锁。",
+      "processingPurchase": "处理中 - 即将解锁。",
       "checkoutSessionExpired": "您的会话已过期，请重新登录以继续。",
       "signInAgain": "重新登录",
       "palNotAvailable": "此 Pal 目前无法购买。",
@@ -1196,27 +1196,27 @@
     "pleaseLoadModel": "加载模型以开始聊天。",
     "multimodalNotEnabled": "此模型未启用多模态功能，图片将显示但不会被 AI 处理。",
     "cannotSendWithoutModel": "请先加载模型",
-    "toolCallTruncated": "工具调用被截断 — 可能是模型空间不足。请尝试增大上下文或精简请求。",
+    "toolCallTruncated": "工具调用被截断 - 可能是模型空间不足。请尝试增大上下文或精简请求。",
     "toolCompatWarning": "此模型可能不支持工具调用，结果可能不可靠。",
     "softCapWarning": "为获得最佳性能，请新建聊天。",
     "contextWarning": "此对话已经很长，可能很快就会空间不足。",
     "contextRemoteHedged": "此回复可能已被截断，请重新发送或缩短请求。",
     "contextFull": "对话空间已满，请新建聊天或增大上下文长度。",
     "contextFullEscalated": "空间仍然不足，请新建聊天或增大上下文长度以继续。",
-    "contextFullHeavyTalent": "对话空间已满 — {{talent}}通常需要更多空间，请新建聊天或增大上下文长度。",
+    "contextFullHeavyTalent": "对话空间已满 - {{talent}}通常需要更多空间，请新建聊天或增大上下文长度。",
     "contextBannerDismiss": "关闭",
     "contextNewChat": "新建聊天",
     "contextIncrease": "增大上下文",
     "contextMoreRoom": "更多空间",
     "increaseContextTitle": "为此聊天提供更多空间",
-    "increaseContextBody": "空间是模型的工作记忆 — 决定它一次能记住多少聊天内容。空间越大，在回复被截断前的聊天就越长。",
+    "increaseContextBody": "空间是模型的工作记忆 - 决定它一次能记住多少聊天内容。空间越大，在回复被截断前的聊天就越长。",
     "increaseContextTokensUnit": "token",
     "increaseContextWordsRam": "约{{words}}词 · 约{{ram}} 内存",
     "increaseContextFitsChip": "可容纳",
     "increaseContextTightChip": "紧张",
     "increaseContextWontFitChip": "无法容纳",
     "increaseContextFitsStatus": "此设备可轻松运行。",
-    "increaseContextFitsUnconstrainedStatus": "内存充足 — 仅受模型限制。",
+    "increaseContextFitsUnconstrainedStatus": "内存充足 - 仅受模型限制。",
     "increaseContextTightStatus": "超过约{{tokens}}后，此设备可能内存不足并变慢，但仍可尝试运行。",
     "increaseContextWontFitStatus": "约{{tokens}}可能无法容纳于此设备的内存中，请选择更小的长度。",
     "increaseContextModelMax": "{{tokens}} · 模型最大值",
@@ -1248,7 +1248,7 @@
       "openLinkError": "无法打开此链接。"
     },
     "contextFullRemote": "对话空间已满，请新建聊天。",
-    "speculativeInitFailed": "此设备无法为该模型启动推测解码 — 很可能是草稿上下文的内存不足。请在“设置 → 高级设置”中关闭推测解码后重试。"
+    "speculativeInitFailed": "此设备无法为该模型启动推测解码 - 很可能是草稿上下文的内存不足。请在\"设置 → 高级设置\"中关闭推测解码后重试。"
   },
   "benchmark": {
     "title": "基准测试",
@@ -1411,7 +1411,7 @@
     "previewButton": "预览",
     "stopPreviewButton": "停止预览",
     "voicesTitle": "语音",
-    "voicesEmptyHint": "点击任意语音即可安装并使用，或选择系统语音 — 系统语音始终可用。",
+    "voicesEmptyHint": "点击任意语音即可安装并使用，或选择系统语音 - 系统语音始终可用。",
     "supertonicStepsLabel": "质量（扩散步数）",
     "toggleAutoSpeakLabel": "切换自动朗读",
     "openSettingsLabel": "TTS设置",
@@ -1445,7 +1445,7 @@
     "engineRetryCta": "再试一次",
     "voicesEmptyState": "未找到语音。",
     "kokoroDeviceNote": "部分语音可能不兼容所有设备。",
-    "insufficientStorage": "存储空间不足 — 请释放 {{requiredMb}} MB 以安装此引擎（当前可用 {{freeMb}} MB）。",
+    "insufficientStorage": "存储空间不足 - 请释放 {{requiredMb}} MB 以安装此引擎（当前可用 {{freeMb}} MB）。",
     "supertonicLanguageLabel": "语言",
     "supertonicLanguageAuto": "自动",
     "supertonicLanguageSheetTitle": "语言",
@@ -1508,7 +1508,7 @@
     },
     "screen2": {
       "title": "随时，\n随地。",
-      "body": "您的 Pal 就住在您的手机里。\n不用联网、没有信号也能用——在飞机上、断网时、偏远村庄里都能正常工作。",
+      "body": "您的 Pal 就住在您的手机里。\n不用联网、没有信号也能用--在飞机上、断网时、偏远村庄里都能正常工作。",
       "highlight": "不用联网、没有信号",
       "cta": "下一步",
       "eyebrow": "理念",
@@ -1517,7 +1517,7 @@
     "screen3": {
       "title": "更小巧，\n但完全属于您。",
       "titleAccent": "更小巧，",
-      "body": "手机上的Pal快速又私密——但比云端AI更轻量。把它当成口袋里的小伙伴，而不是无所不知的神谕。",
+      "body": "手机上的Pal快速又私密--但比云端AI更轻量。把它当成口袋里的小伙伴，而不是无所不知的神谕。",
       "highlight": "快速又私密",
       "cta": "知道了",
       "eyebrow": "温馨提示"
@@ -1532,7 +1532,7 @@
     },
     "screen5": {
       "title": "您想让 Pal 帮您做什么？",
-      "body": "选一个您想聊的话题 — 我们会为您匹配适合您手机的 Pal。",
+      "body": "选一个您想聊的话题 - 我们会为您匹配适合您手机的 Pal。",
       "topic": {
         "smartchat": "智能聊天",
         "coding": "编程",
@@ -1563,19 +1563,19 @@
         "balanced": "均衡",
         "best": "最佳"
       },
-      "subtitleTemplate": "{{name}} 靠手机上的小型 AI 模型来思考——挑一个适合的吧。",
+      "subtitleTemplate": "{{name}} 靠手机上的小型 AI 模型来思考--挑一个适合的吧。",
       "pal": {
         "pip": {
-          "body": "我们为您找到了一个完美的 Pal — 贴心的日常小伙伴。够聪明，能应付大多数事情；够轻量，适配任何手机。"
+          "body": "我们为您找到了一个完美的 Pal - 贴心的日常小伙伴。够聪明，能应付大多数事情；够轻量，适配任何手机。"
         },
         "codie": {
-          "body": "认识一下 Codie — 您本地的结对编程伙伴。读代码、写代码、讲解难点，全程都不会离开您的手机。"
+          "body": "认识一下 Codie - 您本地的结对编程伙伴。读代码、写代码、讲解难点，全程都不会离开您的手机。"
         },
         "sage": {
           "body": "Sage 耐心又好奇，会一步步带您理清思路。一个揣在口袋里的学习搭档。"
         },
         "echo": {
-          "body": "Echo 是个多才多艺的角色扮演伙伴 — 始终入戏、描绘场景，无论您的故事走向何方都紧紧跟随。"
+          "body": "Echo 是个多才多艺的角色扮演伙伴 - 始终入戏、描绘场景，无论您的故事走向何方都紧紧跟随。"
         },
         "muse": {
           "body": "Muse 帮您写作。提供措辞建议、找准节奏，并保持您独有的语气。"

@@ -57,7 +57,7 @@ const HEAD_INJECTION = `<meta http-equiv="Content-Security-Policy" content="${CS
   /* Constrain content to the viewport width. Models often emit fixed
      pixel widths (e.g. 1024px containers, full-bleed images, wide
      tables) that would otherwise overflow horizontally inside the
-     chat bubble — and horizontal scroll in a chat row reads as broken.
+     chat bubble - and horizontal scroll in a chat row reads as broken.
      Cap top-level children and common wide elements; let tables/pre
      scroll internally so their content is still reachable. */
   body > * { max-width: 100vw; box-sizing: border-box; }
@@ -87,10 +87,10 @@ const FRAGMENT_STYLES = `<style>
  * exfiltrate data over the network or escape the WebView origin.
  *
  * Handles two shapes the model can emit:
- *   1. Full document (<!doctype ...><html>...) — inject CSP + viewport into
+ *   1. Full document (<!doctype ...><html>...) - inject CSP + viewport into
  *      the existing <head>; do NOT re-wrap (nested <html>/<body> tags get
  *      mangled by the HTML parser and drop the model's <style> block).
- *   2. Fragment — wrap in a minimal document with our default styles.
+ *   2. Fragment - wrap in a minimal document with our default styles.
  */
 function wrapDocument(html: string): string {
   const trimmed = html.trim();
@@ -111,7 +111,7 @@ function wrapDocument(html: string): string {
         match => `${match}\n<head>${HEAD_INJECTION}</head>`,
       );
     }
-    // Malformed full doc (e.g. <!doctype html><body>...) — no <html> or <head>
+    // Malformed full doc (e.g. <!doctype html><body>...) - no <html> or <head>
     // to inject into. Fall through to fragment wrapping to ensure CSP.
   }
 
@@ -249,7 +249,7 @@ export const HtmlPreviewBubble: React.FC<HtmlPreviewBubbleProps> = ({
         ) : (
           <WebView
             source={{html: wrappedHtml, baseUrl: 'about:blank'}}
-            // JS off in the in-row preview — see file-level doc. Layout +
+            // JS off in the in-row preview - see file-level doc. Layout +
             // CSS still render; interactive content waits for fullscreen.
             javaScriptEnabled={false}
             originWhitelist={['about:blank']}

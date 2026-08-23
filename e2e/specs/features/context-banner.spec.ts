@@ -7,7 +7,7 @@
  * a long-generation prompt so a reply overflows the window and surfaces the
  * banner. From there we cover the reachable recovery affordances.
  *
- * Validates (best-effort — exact warning-vs-full depends on token counts):
+ * Validates (best-effort - exact warning-vs-full depends on token counts):
  * - No context banner on a fresh chat before any inference.
  * - A context banner (warning or full) + its fullness meter appear once a reply
  *   overflows the small context.
@@ -142,7 +142,7 @@ describe('Context-Limit Banner', () => {
     console.log(`Context banner kind after overflow: ${kind}`);
     expect(kind === 'full' || kind === 'warning').toBe(true);
     // Note: the fullness meter is intentionally hidden from accessibility
-    // (decorative), so it is not queryable via Appium — the banner's presence
+    // (decorative), so it is not queryable via Appium - the banner's presence
     // above is the meaningful assertion.
   });
 
@@ -157,9 +157,9 @@ describe('Context-Limit Banner', () => {
       kind === 'full' ? B.fullIncrease : B.warningIncrease;
 
     // The increase CTA only shows when a larger tier fits the device. If it is
-    // absent (device can't fit more), there is nothing to open — skip cleanly.
+    // absent (device can't fit more), there is nothing to open - skip cleanly.
     if (!(await exists(increaseSelector))) {
-      console.log('Increase CTA not present (no larger tier fits) — skipping');
+      console.log('Increase CTA not present (no larger tier fits) - skipping');
       return;
     }
 
@@ -209,7 +209,7 @@ describe('Context-Limit Banner', () => {
       kind = await triggerBanner(chatPage);
     }
     if (kind !== 'full') {
-      console.log('Could not reach a full banner — skipping new-chat check');
+      console.log('Could not reach a full banner - skipping new-chat check');
       return;
     }
 

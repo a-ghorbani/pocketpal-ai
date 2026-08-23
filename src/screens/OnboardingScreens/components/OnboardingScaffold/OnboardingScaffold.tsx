@@ -8,7 +8,7 @@ import {createStyles} from './styles';
 export type OnboardingScaffoldProps = {
   /** 1-based screen index used for the testID. */
   step: 1 | 2 | 3 | 4 | 5 | 6;
-  /** Top-left slot — screen-5 in-header Back chevron (only consumer). */
+  /** Top-left slot - screen-5 in-header Back chevron (only consumer). */
   topLeft?: React.ReactNode;
   /**
    * Hero visual block rendered between the header band and the
@@ -16,7 +16,7 @@ export type OnboardingScaffoldProps = {
    */
   illustration?: React.ReactNode;
   /**
-   * `content` slot — eyebrow + title + body + any additional
+   * `content` slot - eyebrow + title + body + any additional
    * children (chip grid, model radios, etc). Centered as a single
    * block under the illustration.
    */
@@ -25,7 +25,7 @@ export type OnboardingScaffoldProps = {
   bottomBar?: React.ReactNode;
   /**
    * Lay the body in the figma-default "centered" vertical-justify
-   * mode (screens 1–4) or in the screen-5/6 "top-anchored" mode
+   * mode (screens 1-4) or in the screen-5/6 "top-anchored" mode
    * (Figma uses `pt-xxl` and lets content flow from the top).
    */
   layout?: 'centered' | 'top';

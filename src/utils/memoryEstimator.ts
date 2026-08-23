@@ -86,7 +86,7 @@ export function getModelMemoryRequirement(
   const mmProjSize = projectionModel?.size || 0;
   const draftSize = draftModel?.size || 0;
 
-  // A paired draft runs with its own KV cache, sized by the target's n_ctx —
+  // A paired draft runs with its own KV cache, sized by the target's n_ctx -
   // there is no separate draft n_ctx.
   let draftKvCacheSize = 0;
   if (

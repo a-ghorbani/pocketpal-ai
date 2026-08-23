@@ -156,7 +156,7 @@ describe('ModelStore local model path handling (#684)', () => {
 
     it('leaves isDownloaded untouched when a check throws, and still evaluates the rest', async () => {
       // The broken model starts present. A rejected exists() is indeterminate,
-      // not proof the file is gone, so isDownloaded must survive the failure —
+      // not proof the file is gone, so isDownloaded must survive the failure -
       // flipping it to false in the catch (the exact regression this guards)
       // would make this go red.
       const broken = createLocalModel(`${DOCS}/models/local/broken.gguf`);
@@ -278,7 +278,7 @@ describe('ModelStore local model path handling (#684)', () => {
     it('settles the status checks before pruning, so a recoverable local model survives a launch', async () => {
       // The branch every launch after the one-time migration takes. The tests
       // above drive refreshDownloadStatuses and removeInvalidLocalModels by
-      // hand, which proves they compose — not that initializeStore calls them
+      // hand, which proves they compose - not that initializeStore calls them
       // in that order. Pruning before the checks settle is exactly the reported
       // bug, so assert the ordering where production actually performs it.
       const stalePath =

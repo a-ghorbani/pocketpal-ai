@@ -6,7 +6,7 @@
  * select the pal in chat, and verify the greeting bubble + chip render.
  * Then tap the chip and verify the prompt is sent as a user message.
  *
- * Uses the smallest viable model (Qwen3-0.6B) — no tool calls are needed.
+ * Uses the smallest viable model (Qwen3-0.6B) - no tool calls are needed.
  *
  * Usage:
  *   yarn e2e:ios --spec pal-greeting --skip-build
@@ -36,7 +36,7 @@ declare const browser: WebdriverIO.Browser;
 
 const GREETING_MODEL = ALL_MODELS.find(m => m.id === 'qwen3-0.6b');
 if (!GREETING_MODEL) {
-  throw new Error('qwen3-0.6b model fixture missing — update e2e/fixtures/models.ts');
+  throw new Error('qwen3-0.6b model fixture missing - update e2e/fixtures/models.ts');
 }
 
 const PAL_NAME = 'Greeter';
@@ -109,7 +109,7 @@ describe('Pal greeting editor round-trip', () => {
     await driver.activateApp(getAppBundleId());
     await chatPage.waitForReady(TIMEOUTS.appReady);
 
-    // Re-load the model — app restart clears the loaded context.
+    // Re-load the model - app restart clears the loaded context.
     await chatPage.openDrawer();
     await drawerPage.waitForOpen();
     await drawerPage.navigateToModels();

@@ -1,4 +1,4 @@
-/** Single budgeting enforcement point for search talents — pure (no network/Keychain). */
+/** Single budgeting enforcement point for search talents - pure (no network/Keychain). */
 
 import type {
   SearchHit,
@@ -51,7 +51,7 @@ const truncateOnWordBoundary = (text: string, maxChars: number): string => {
 
 // Per-field caps so no single provider-controlled field (title/URL) can blow
 // the token ceiling; a clamped legit hit always fits. URLs are dropped rather
-// than truncated — a cut URL would be uncopyable for read_url.
+// than truncated - a cut URL would be uncopyable for read_url.
 const TITLE_MAX_CHARS = 200;
 const URL_MAX_CHARS = 2048;
 
@@ -83,7 +83,7 @@ export const budgetHits = (
   for (const hit of cleaned) {
     const hitTokens = estimateTokens(renderHit(hit));
     if (usedTokens + hitTokens > budget.tokenCeiling) {
-      break; // drop hits whole (even the first) — never truncate mid-fact
+      break; // drop hits whole (even the first) - never truncate mid-fact
     }
     out.push(hit);
     usedTokens += hitTokens;
@@ -114,7 +114,7 @@ export const budgetPage = (
 };
 
 /**
- * The BYOK key is deliberately NOT part of the cache key — a secret must never
+ * The BYOK key is deliberately NOT part of the cache key - a secret must never
  * land in a key; invalidation on key change is explicit (`resetSearchCache`).
  */
 const MAX_CACHE_ENTRIES = 50;

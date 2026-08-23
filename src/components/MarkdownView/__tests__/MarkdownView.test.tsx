@@ -1,7 +1,7 @@
 import React from 'react';
 import {ScrollView, StyleSheet} from 'react-native';
 
-// Use the project's custom render which mounts MarkdownProvider — required
+// Use the project's custom render which mounts MarkdownProvider - required
 // because MarkdownView now relies on the ambient TRenderEngineProvider
 // instead of building its own engine per instance.
 import {render, fireEvent} from '../../../../jest/test-utils';

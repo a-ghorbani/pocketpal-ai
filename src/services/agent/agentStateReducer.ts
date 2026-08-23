@@ -8,7 +8,7 @@ import type {AgentEvent, AgentUiState} from './AgentRunner.types';
  * the chat hook's call-site guard relies on this to skip redundant
  * MobX writes (load-bearing for streaming perf).
  *
- * Never clears `pendingTalentNames` on a content/reasoning `token` —
+ * Never clears `pendingTalentNames` on a content/reasoning `token` -
  * streamed text must not overwrite a tool-call hint already on the step.
  */
 export function agentStateReducer(
@@ -37,7 +37,7 @@ export function agentStateReducer(
           .map(tc => tc.function?.name)
           .filter((n): n is string => !!n);
         const alreadyGenerating = state.status === 'generating_tool_call';
-        // Carry names — later deltas sometimes drop the function name
+        // Carry names - later deltas sometimes drop the function name
         // once it's been emitted, leaving anonymous calls.
         const carryNames =
           alreadyGenerating && state.pendingTalentNames.length > 0

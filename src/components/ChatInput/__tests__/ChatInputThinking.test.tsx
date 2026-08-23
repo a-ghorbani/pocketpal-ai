@@ -42,6 +42,10 @@ jest.mock('../../../store', () => ({
   uiStore: {
     colorScheme: 'light',
   },
+  knowledgeBaseStore: {
+    enabled: false,
+    documents: [],
+  },
   ttsStore: {
     isTTSAvailable: false,
     currentVoice: null,

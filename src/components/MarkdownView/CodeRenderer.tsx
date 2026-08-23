@@ -34,7 +34,7 @@ function decodeHTMLEntities(text: string): string {
 /**
  * react-native-render-html `code` renderer. Hoisted out of MarkdownView so
  * the provider-level `renderers` object can reference it as a stable
- * module-level function — the lib's profiler warns when `renderers` changes
+ * module-level function - the lib's profiler warns when `renderers` changes
  * between renders.
  *
  * `useTheme()` is read at render time, so theme switches still work; only

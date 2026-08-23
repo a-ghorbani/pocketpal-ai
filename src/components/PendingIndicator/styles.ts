@@ -9,7 +9,7 @@ export const styles = StyleSheet.create({
     alignSelf: 'flex-start',
     paddingTop: 6,
     // Extra paddingBottom keeps the dot-row from sitting flush against
-    // the chat input — when the keyboard is closed, the FlatList's
+    // the chat input - when the keyboard is closed, the FlatList's
     // header spacer collapses to height: 0 and the indicator is
     // otherwise the very last visible row above the input.
     paddingBottom: 16,

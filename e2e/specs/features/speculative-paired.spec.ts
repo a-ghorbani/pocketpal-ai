@@ -1,5 +1,5 @@
 /**
- * Separate-Draft (mem-shared / "assistant" MTP) Speculative Decoding — engagement
+ * Separate-Draft (mem-shared / "assistant" MTP) Speculative Decoding - engagement
  *
  * The sibling `speculative.spec.ts` proves EMBEDDED MTP (a self-contained MTP
  * target) and the crash-SAFETY of a width-MISMATCHED paired draft.
@@ -32,13 +32,13 @@
  * model has crashed the iOS-sim Metal driver (MTLSimDevice newBufferWithLength ->
  * _xpc_api_misuse). The target is therefore loaded TEXT-ONLY: only the base
  * weights are downloaded, never the mmproj projection file, so multimodal stays
- * off. If the target still aborts on a text-only load, that is a real finding —
+ * off. If the target still aborts on a text-only load, that is a real finding -
  * the test captures the fresh crash-report path and skips (unproven on device)
  * rather than forcing a green.
  *
  * Usage:
  *   yarn e2e:ios --spec speculative-paired --devices virtual-only
- *   (long downloads: prefix with E2E_MOCHA_TIMEOUT=1800000 — a per-test
+ *   (long downloads: prefix with E2E_MOCHA_TIMEOUT=1800000 - a per-test
  *   this.timeout() cannot raise wdio's mochaOpts ceiling)
  */
 
@@ -79,7 +79,7 @@ const DRAFT_MODEL: ModelTestConfig = {
 
 /**
  * The chat target paired with the draft. Loaded TEXT-ONLY (no mmproj). Same
- * repo as the draft (arch `gemma4`, no nextn KV — genuinely non-MTP), and the
+ * repo as the draft (arch `gemma4`, no nextn KV - genuinely non-MTP), and the
  * exact pair the Pixel 9 engagement evidence was captured with.
  */
 const TARGET_MODEL: ModelTestConfig = {
@@ -154,7 +154,7 @@ async function scrollSettingsToTop(): Promise<void> {
 }
 
 /**
- * Navigate to Settings without SettingsPage.navigateTo — that helper waits for
+ * Navigate to Settings without SettingsPage.navigateTo - that helper waits for
  * context-size-input to be *displayed*, but a repeat visit keeps the previous
  * scroll offset so the input is off-screen and the wait times out.
  */
@@ -184,7 +184,7 @@ async function enableSpeculativeGlobally(
 ): Promise<void> {
   await goToSettings(settingsPage);
   // A revisit restores the previous scroll offset, and scrollToElement only
-  // searches downward — start every pass from the top. Try to reach the
+  // searches downward - start every pass from the top. Try to reach the
   // switch first: off-viewport content is absent from the a11y tree, so an
   // existence probe cannot tell "accordion collapsed" from "row below the
   // fold", and a blind accordion click can collapse an open section.
@@ -202,7 +202,7 @@ async function enableSpeculativeGlobally(
 
   // Read the switch itself: with app state persisted between runs
   // (E2E_NO_RESET) speculative may already be on, and the previous
-  // "picker exists" heuristic misreads an off-viewport picker as OFF —
+  // "picker exists" heuristic misreads an off-viewport picker as OFF -
   // clicking then toggles the feature off. Android exposes `checked`,
   // iOS `value`; only click when it reads unchecked.
   const state = (browser as any).isAndroid
@@ -241,7 +241,7 @@ async function downloadModelOnly(model: ModelTestConfig): Promise<void> {
   await modelsPage.waitForReady();
 
   // Persisted-state rerun (E2E_NO_RESET): the card already exists, so the
-  // whole HF search flow is a no-op — skip it.
+  // whole HF search flow is a no-op - skip it.
   const cardSelector = Selectors.modelCard.cardContainer(model.downloadFile);
   if (
     await browser

@@ -18,8 +18,8 @@ const ELF64_SYM_SIZE = 24;
  * A minimal little-endian AArch64 ELF64 shared object carrying nothing but a
  * `.dynsym` and its string table.
  *
- * Synthetic rather than committed binaries: the cases that matter most here —
- * a `.dynsym` that is absent, or present but empty — are artifacts no compiler
+ * Synthetic rather than committed binaries: the cases that matter most here -
+ * a `.dynsym` that is absent, or present but empty - are artifacts no compiler
  * emits, and a committed `.so` could not be reviewed.
  */
 function buildElf(symbols, {omitDynsym = false, emptyDynsym = false} = {}) {
@@ -503,7 +503,7 @@ describe('a check that cannot run', () => {
     ],
     ['a rule naming no library', rule => delete rule.lib],
     // count: 0 does not merely assert nothing, it asserts the backend is
-    // ABSENT — so the incident build satisfies it exactly.
+    // ABSENT - so the incident build satisfies it exactly.
     [
       'a rule whose only demand is a count of zero',
       rule => {
@@ -625,7 +625,7 @@ describe('a check that cannot run', () => {
   it('reports the assets row even when none are declared', () => {
     // The summary claims assets were checked, so a manifest declaring none
     // must be visible in the report rather than simply omitting the line.
-    // x86_64 declares no assets, which is legitimate — it carries no
+    // x86_64 declares no assets, which is legitimate - it carries no
     // accelerator. The committed manifest already has this shape.
     const {output} = gateApk(conformingEntries());
     expect(output).toContain('assets: 0/0 present');

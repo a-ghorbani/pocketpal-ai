@@ -155,7 +155,7 @@ class CheckoutFlowStore {
         }
         if (prep.outcome !== 'launched') {
           console.warn(
-            `[checkout] prepareExternalLink outcome="${prep.outcome}" — see Android logcat tag ExternalContentLinkModule for the Billing responseCode/debugMessage`,
+            `[checkout] prepareExternalLink outcome="${prep.outcome}" - see Android logcat tag ExternalContentLinkModule for the Billing responseCode/debugMessage`,
           );
         }
         if (prep.outcome === 'launched') {
@@ -292,7 +292,7 @@ class CheckoutFlowStore {
   }
 
   // Best-effort External Content Links report, fired once after reconcile
-  // confirms ownership (Android only — the spec is null on iOS). Threads the
+  // confirms ownership (Android only - the spec is null on iOS). Threads the
   // token minted during the link-out prep. Never gates, blocks, or fails the
   // checkout: a rejection is swallowed and the state is untouched. Not fired on
   // the already-owned (400) path: no external transaction occurred.

@@ -31,7 +31,7 @@ interface ModalComponent extends React.FC<ModalProps> {
 }
 
 /**
- * DS Modal — Portal + full-screen View + DS Header composition.
+ * DS Modal - Portal + full-screen View + DS Header composition.
  * Renders a single Header; bespoke header markup is forbidden.
  *
  * Dismiss model: Modal is fullscreen, so there is no scrim region for

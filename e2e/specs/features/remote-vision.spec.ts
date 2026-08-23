@@ -217,7 +217,7 @@ describe('Remote Vision Capability', () => {
 
   it('keeps the image-attach button disabled for a non-vision remote server', async function (this: Mocha.Context) {
     if (!NONVISION_URL) {
-      console.log('REMOTE_NONVISION_URL unset — skipping non-vision case');
+      console.log('REMOTE_NONVISION_URL unset - skipping non-vision case');
       this.skip();
       return;
     }

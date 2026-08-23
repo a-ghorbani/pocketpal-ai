@@ -32,7 +32,7 @@ describe('WebSearchEngine', () => {
     const def = new WebSearchEngine(makeAccess()).toToolDefinition();
     expect(def.function.name).toBe('web_search');
     expect(def.function.parameters.required).toEqual(['query']);
-    // maxResults is NOT a tool parameter — settings own it.
+    // maxResults is NOT a tool parameter - settings own it.
     expect(def.function.parameters.properties).not.toHaveProperty('maxResults');
   });
 

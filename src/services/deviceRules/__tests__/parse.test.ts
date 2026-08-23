@@ -108,7 +108,7 @@ describe('parseDeviceRules', () => {
         hf_repo: 'Qwen/Qwen3-8B-GGUF',
         hf_filename: 'Qwen3-8B-Q4_K_M.gguf',
         draft: {
-          // A DIFFERENT repo than the target — the case mmproj rejects.
+          // A DIFFERENT repo than the target - the case mmproj rejects.
           hf_repo: 'Qwen/Qwen3-0.6B-GGUF',
           hf_filename: 'Qwen3-0.6B-Q4_K_M.gguf',
           size_bytes: 500000000,

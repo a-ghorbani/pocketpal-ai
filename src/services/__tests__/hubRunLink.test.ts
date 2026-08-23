@@ -1,5 +1,5 @@
 /**
- * parseHubRunURL — the single parse/validate site for the hub/run deep link.
+ * parseHubRunURL - the single parse/validate site for the hub/run deep link.
  *
  * Covers: valid link, wrong host, wrong path, malformed/missing repo_id,
  * optional filename (absent / non-.gguf are normal successes), source

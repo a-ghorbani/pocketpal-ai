@@ -26,7 +26,7 @@ export const ChatEmptyPlaceholder = observer(
     const hasActiveModel = modelStore.activeModelId !== undefined;
     // When the user lands here from onboarding-finish, the pal exists
     // and its defaultModel is downloading. The DownloadOverlay banner is
-    // already showing progress at the top of the screen — the empty
+    // already showing progress at the top of the screen - the empty
     // state's job is just to telegraph "your pal is on the way, no
     // model picker needed."
     const pendingPalDownload = modelStore.activeDownloads
@@ -50,7 +50,7 @@ export const ChatEmptyPlaceholder = observer(
             ) ?? `${pendingPalDownload.name} is getting ready`,
           description:
             l10n.components.chatEmptyPlaceholder.gettingReadyDescription ??
-            'We’ll let you know the moment your pal can chat. Tap the banner up top to see how it’s going.',
+            "We'll let you know the moment your pal can chat. Tap the banner up top to see how it's going.",
           buttonText: null,
           onPress: () => {},
         };

@@ -17,7 +17,7 @@ describe('HighlightText', () => {
   it('wraps a single matching phrase in a pill segment', () => {
     const {toJSON} = render(
       <HighlightText
-        body="Anytime, with no internet, no signal — nice."
+        body="Anytime, with no internet, no signal - nice."
         phrases={['no internet, no signal']}
       />,
     );

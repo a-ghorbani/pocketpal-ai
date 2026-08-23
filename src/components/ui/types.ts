@@ -2,7 +2,7 @@ import type {AccessibilityRole, StyleProp, ViewStyle} from 'react-native';
 
 /**
  * Common props shared by every DS component.
- * `style` is additive — consumers extend, not destroy the base.
+ * `style` is additive - consumers extend, not destroy the base.
  */
 export type CommonDSProps = {
   testID?: string;

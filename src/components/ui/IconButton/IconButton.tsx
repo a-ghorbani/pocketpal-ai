@@ -15,7 +15,7 @@ import {
 export type IconButtonProps = CommonDSProps & {
   variant?: IconButtonVariant;
   size?: IconButtonSize;
-  /** The icon node — typically a vector icon component. */
+  /** The icon node - typically a vector icon component. */
   icon: React.ReactNode;
   /**
    * Required: icon-only controls have no visible label, so an

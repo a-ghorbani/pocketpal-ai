@@ -52,7 +52,7 @@ describe('WebSearchResultBubble', () => {
     expect(getByTestId('web-search-result-trigger')).toBeTruthy();
     expect(getByText(/Searched: mars rover/)).toBeTruthy();
     expect(getByText(/2 results/)).toBeTruthy();
-    // The full list is not rendered inline — only in the sheet on tap.
+    // The full list is not rendered inline - only in the sheet on tap.
     expect(queryByTestId('web-search-results-sheet')).toBeNull();
     expect(queryByTestId('web-search-result-row')).toBeNull();
   });

@@ -16,7 +16,7 @@ type Pal = {
   rot: number;
   // Pal body size (square, in viewBox px).
   size: number;
-  // Eye dots position (left/right) — relative to cx,cy.
+  // Eye dots position (left/right) - relative to cx,cy.
   eyeOffsetX: number;
   eyeOffsetY: number;
   // Body fill color.
@@ -24,9 +24,9 @@ type Pal = {
 };
 
 /**
- * Screen 2 illustration — phone outline (rounded rect, thick dark
+ * Screen 2 illustration - phone outline (rounded rect, thick dark
  * border, speech notch at top) with 5 friendly "pal" blobs scattered
- * inside. Approximation of Figma frame `884:32584` — geometry
+ * inside. Approximation of Figma frame `884:32584` - geometry
  * (positions / rotations / sizes) ported from the Figma design
  * context. Each pal is a rotated rounded-rect with two eye dots and
  * a small smile.
@@ -46,7 +46,7 @@ export const PhoneWithPals: React.FC<PhoneWithPalsProps> = ({width = 170}) => {
   const viewBoxW = 85;
   const viewBoxH = 143;
   const height = (width * viewBoxH) / viewBoxW;
-  // Pal palette — sampled per-pal from the canonical Figma illustration
+  // Pal palette - sampled per-pal from the canonical Figma illustration
   // (`884:32584`). Kept inline because these are illustration fills, not
   // screen-level styling; positions match `pals[]` below.
   //   [0] top-left   = warm tan-peach
@@ -112,7 +112,7 @@ export const PhoneWithPals: React.FC<PhoneWithPalsProps> = ({width = 170}) => {
   ];
   return (
     <Svg width={width} height={height} viewBox={`0 0 ${viewBoxW} ${viewBoxH}`}>
-      {/* Phone outline — rounded rect with thick dark border. */}
+      {/* Phone outline - rounded rect with thick dark border. */}
       <Rect
         x={3.4}
         y={3.4}

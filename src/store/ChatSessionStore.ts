@@ -83,7 +83,7 @@ class ChatSessionStore {
    * returned from its in-flight `llama_decode` chunk and the for-await
    * loop in `useChatSession` exits). During this window the JS layer
    * cannot start a new completion (the native context is still busy)
-   * — the send button must be disabled and the user needs visible
+   * - the send button must be disabled and the user needs visible
    * "Stopping…" feedback so they don't mistake the silent gap for the
    * stop having succeeded already.
    *
@@ -218,7 +218,7 @@ class ChatSessionStore {
   /**
    * The single writer of `agentUiState`. The hook drives this from the
    * `AgentEvent` stream via `agentStateReducer`. There is intentionally
-   * NO imperative `setIsGeneratingToolCall` setter — UI flags derive
+   * NO imperative `setIsGeneratingToolCall` setter - UI flags derive
    * from `agentUiState.status` via `@computed get`.
    */
   setAgentUiState(state: AgentUiState) {
@@ -559,7 +559,7 @@ class ChatSessionStore {
       // the resolved snapshot in `completionSettings` already carries it
       // (applied last in `resolveCompletionSettings`). Birth the session as
       // 'custom' so the resolver returns that snapshot verbatim on every
-      // subsequent inference — pal-derived params survive (merged before
+      // subsequent inference - pal-derived params survive (merged before
       // the override) and the user's choice is preserved.
       const birthSource: 'pal' | 'custom' =
         this.newChatThinkingOverride !== undefined
@@ -630,7 +630,7 @@ class ChatSessionStore {
    * Pending throttled update. Discriminated so the same throttle slot
    * can serve both legacy `Text` updates (`kind: 'text'`) and the new
    * AssistantTurn active-step updates (`kind: 'step'`). Per-token writes
-   * coalesce — they don't stack — because each call overwrites this slot.
+   * coalesce - they don't stack - because each call overwrites this slot.
    */
   private pendingStreamingUpdate:
     | {
@@ -842,7 +842,7 @@ class ChatSessionStore {
 
             // Merge metadata instead of replacing, to preserve existing
             // fields (e.g., timings written by an earlier event, or
-            // metadata.steps if a caller naively passes metadata.steps —
+            // metadata.steps if a caller naively passes metadata.steps -
             // though this should not happen since metadata.steps is a
             // persistence-layer detail).
             if (update.metadata !== undefined && existingMessage.metadata) {
@@ -866,7 +866,7 @@ class ChatSessionStore {
 
   /**
    * Append a new step to an `assistant_turn` row. Writes the whole
-   * `steps` array wholesale (no shallow-merge tricks — see Persistence
+   * `steps` array wholesale (no shallow-merge tricks - see Persistence
    * notes in the story). Used by the agent runner via `applyEventToStore`
    * on `step_started`.
    */
@@ -915,7 +915,7 @@ class ChatSessionStore {
    * once per step on `step_finished`, with ids that match the
    * upcoming `appendToolOutcome` callIds by construction.
    *
-   * Single writer for `step.toolCalls` — the streaming partial in
+   * Single writer for `step.toolCalls` - the streaming partial in
    * `applyEventToStore` does not write this field.
    */
   async appendToolCall(
@@ -1538,7 +1538,7 @@ class ChatSessionStore {
 
       if (session?.settingsSource === 'custom') {
         // User explicitly chose custom settings - use session settings.
-        // Preserve PACT-derived tools — custom settings control generation
+        // Preserve PACT-derived tools - custom settings control generation
         // params (temperature, etc.) but pact.talents is the source of truth
         // for tool availability.
         const pactTools = resolvedSettings.tools;

@@ -12,7 +12,7 @@
  *   once it lands, the e2e calls it per engine x language, pulls each WAV off the
  *   device via adb pull / simctl, then runs this analyzer on the pulled files.
  *   This script is the reusable host-side half and has no dependency on the app
- *   or the device — it only reads WAV files on disk.
+ *   or the device - it only reads WAV files on disk.
  *
  * Usage:
  *   npx tsx scripts/analyze-tts-audio.ts <file-or-dir-or-glob> [...more]
@@ -282,7 +282,7 @@ function resolveWhisperModel(explicit?: string): string | undefined {
 
 /**
  * Optional ASR sanity hook. Requires whisper-cli on PATH AND a resolvable model
- * (via --whisper-model or WHISPER_MODEL). Never throws — returns
+ * (via --whisper-model or WHISPER_MODEL). Never throws - returns
  * `available: false` with a note when it cannot run.
  */
 export function runAsr(
@@ -609,7 +609,7 @@ function main(): void {
     }
   }
   console.error(
-    `\n${summary.passed}/${summary.total} passed — ${summary.pass ? 'PASS' : 'FAIL'}`,
+    `\n${summary.passed}/${summary.total} passed - ${summary.pass ? 'PASS' : 'FAIL'}`,
   );
 
   process.exit(summary.pass ? 0 : 1);

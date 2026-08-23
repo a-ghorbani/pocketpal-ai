@@ -163,8 +163,8 @@ export const ChatScreen: React.FC = observer(() => {
     }
     // Tool support surfaces in four independent places in llama.rn's
     // jinja metadata: defaultCaps.tools/toolCalls (model declares it
-    // inline in the default template — Ministral, Llama 3.x, etc.) or
-    // toolUse/toolUseCaps (separate tool-use template — Qwen3, etc.).
+    // inline in the default template - Ministral, Llama 3.x, etc.) or
+    // toolUse/toolUseCaps (separate tool-use template - Qwen3, etc.).
     // Any one is sufficient; only warn when all four are absent.
     const jinja = model.chatTemplates?.jinja;
     const hasToolSupport =
@@ -194,7 +194,7 @@ export const ChatScreen: React.FC = observer(() => {
   // enable_thinking flag and the reasoning carrier so the remote wire path
   // (openai.ts, gated per serverType) and the local hook both see it.
   // Preserves pal overrides. No active session: stage on the new-chat
-  // override field — the resolver applies it as the last layer and session
+  // override field - the resolver applies it as the last layer and session
   // creation bakes it in, without touching newChatCompletionSettings.
   const persistReasoning = async (enabled: boolean, effort?: string) => {
     const currentSession = chatSessionStore.sessions.find(

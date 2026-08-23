@@ -8,7 +8,7 @@ import {TextStyle} from 'react-native';
 export type Mode = 'light' | 'dark';
 
 /**
- * Color tokens — every key has a light and dark binding (encoded in the
+ * Color tokens - every key has a light and dark binding (encoded in the
  * `lightColors` / `darkColors` exports). Names mirror MD3 conventions for
  * the migration layer; semantic / PocketPal-specific extras are appended.
  */
@@ -40,7 +40,7 @@ export interface TokenColors {
   outlineVariant: string;
   // Subtle border / divider colour. Maps to design-system muted/light.
   mutedLight: string;
-  // Design-system `Color/Secondary/Default` — small DS button surface.
+  // Design-system `Color/Secondary/Default` - small DS button surface.
   secondaryDefault: string;
 
   // MD3 extras
@@ -126,7 +126,7 @@ export interface TokenColors {
   iconModelTypeVision: string;
   iconModelTypeAudio: string;
 
-  // Accent — peach pill / recommended-tier highlight (canonical Figma
+  // Accent - peach pill / recommended-tier highlight (canonical Figma
   // `Color/Accent/Peach`; see `accent.peach` consumers in onboarding).
   // `accent.greenStrong` powers the download progress-bar fill.
   accent: {
@@ -150,7 +150,7 @@ export interface TypographyStyle {
 }
 
 /**
- * Typography tokens — base (Latin) values. Locale-aware swapping happens
+ * Typography tokens - base (Latin) values. Locale-aware swapping happens
  * in the theme builder via `typographyForLocale()`.
  */
 export interface TokenTypography {
@@ -184,7 +184,7 @@ export interface TokenSpacing {
 
 // Key names mirror canonical Figma `Radius/*` (None/XXS/XS/S/M/ML/L/XL/XXL)
 // so a Figma spec saying `Radius/L` maps directly to `theme.radius.l`.
-// Note: there is no `sm` step — Figma jumps S(8) → M(12).
+// Note: there is no `sm` step - Figma jumps S(8) → M(12).
 export interface TokenRadius {
   none: 0;
   xxs: 2;

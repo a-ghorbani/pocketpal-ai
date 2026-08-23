@@ -6,8 +6,8 @@
  * `<arch>.nextn_predict_layers` KV, or `nextn.*` tensors from converters that
  * write the layers but omit the KV)?
  *
- * A general-purpose parser must materialize every metadata value — including
- * the ~10^5-string tokenizer vocab that dominates a header — before the caller
+ * A general-purpose parser must materialize every metadata value - including
+ * the ~10^5-string tokenizer vocab that dominates a header - before the caller
  * can look at any of it. This reader instead *seeks past* every value it does
  * not need using GGUF's length-prefixed encoding, so the vocab is walked with
  * integer reads only: no string materialization, no `TextDecoder` (Hermes has
@@ -16,7 +16,7 @@
  * GGUF is little-endian, versioned (v1 uses 32-bit lengths, v2/v3 64-bit),
  * and frozen at the container level: llama.cpp cannot change the layout
  * without breaking every reader in the ecosystem. Any structural anomaly
- * throws — the probe maps that to `unknown`, never to a false negative.
+ * throws - the probe maps that to `unknown`, never to a false negative.
  */
 
 const GGUF_MAGIC = 0x46554747; // "GGUF" read as LE u32
@@ -286,7 +286,7 @@ export const readGGUFHeaderForMTP = async (
         return reader.skip(next, count * elemFixed);
       }
       // Element-by-element only for strings / nested arrays: integer reads,
-      // nothing decoded — this is the tokenizer-vocab walk.
+      // nothing decoded - this is the tokenizer-vocab walk.
       for (let i = 0; i < count; i++) {
         next = await skipValue(elemType, next, depth + 1);
       }

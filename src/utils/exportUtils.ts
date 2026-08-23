@@ -15,7 +15,7 @@ import type {Message} from '../database';
 
 /**
  * Project a WatermelonDB Message into the export DTO. For
- * `assistant_turn` rows the `text` column is empty by design — we
+ * `assistant_turn` rows the `text` column is empty by design - we
  * route through `derivedText(toMessageObject())` so the export carries
  * the visible joined content. Same DTO shape as before for `text` rows.
  */
@@ -304,7 +304,7 @@ export const exportChatSessionAsMarkdown = async (
 
     // `getSessionById` returns `position DESC` (newest first) to match the
     // inverted chat FlatList. A human-readable transcript needs chronological
-    // order, so walk a reversed copy — never mutate the repository's array.
+    // order, so walk a reversed copy - never mutate the repository's array.
     for (const msg of [...messages].reverse()) {
       const exported = toExportedMessage(msg);
       const role = exported.author === userId ? 'User' : 'Assistant';
@@ -313,8 +313,8 @@ export const exportChatSessionAsMarkdown = async (
       // Multimodal messages keep their attachments in `metadata.imageUris`.
       // Note that an attachment existed, but drop the URI itself: these come
       // from react-native-image-picker's OS temp dir (Android `getCacheDir`,
-      // iOS `NSTemporaryDirectory`), which is evictable — so the path resolves
-      // for no reader — and on iOS embeds the app-install container UUID, which
+      // iOS `NSTemporaryDirectory`), which is evictable - so the path resolves
+      // for no reader - and on iOS embeds the app-install container UUID, which
       // has no place in a document whose purpose is being shared off-device.
       const imageUris: unknown = exported.metadata?.imageUris;
       if (Array.isArray(imageUris)) {

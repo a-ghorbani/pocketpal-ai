@@ -1,6 +1,6 @@
 // Run-scoped allowlist guarding read_url against prompt-injected exfiltration:
-// only URLs the model legitimately saw — web_search hits and user-written
-// text — may be fetched. Injected page content can name a URL, but it never
+// only URLs the model legitimately saw - web_search hits and user-written
+// text - may be fetched. Injected page content can name a URL, but it never
 // enters this set, and appending data to an allowed URL fails exact match.
 // Assumes one agent run at a time; reset and reseeded at each run start.
 
@@ -50,7 +50,7 @@ export function extractUrls(text: string): string[] {
 }
 
 /**
- * Run-start seed — the single place that defines what counts as a trusted URL
+ * Run-start seed - the single place that defines what counts as a trusted URL
  * source: user-written message text and structured `{type:'search'}` hit URLs
  * from this session's persisted turns. Never assistant text and never
  * tool-message text (page bodies are untrusted). Live hits register in

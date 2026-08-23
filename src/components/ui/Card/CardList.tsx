@@ -13,7 +13,7 @@ export type CardListProps = Omit<CommonDSProps, 'disabled'> & {
 };
 
 /**
- * DS CardList — Card sub-namespace optimized for list use. Same body
+ * DS CardList - Card sub-namespace optimized for list use. Same body
  * as Card but no elevation (single 'default' variant).
  *
  * Defaults: size='m', testID='ui-card-list',

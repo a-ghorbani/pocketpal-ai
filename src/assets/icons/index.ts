@@ -9,7 +9,7 @@ export {default as ChatIcon} from './chat.svg';
 export {default as CheckCircleIcon} from './check-circle.svg';
 export {default as ChevronDownIcon} from './chevron-down.svg';
 // Design-system chevron-left exported directly from the canonical Figma
-// icon library (`746:26281`). Three stroke weights — pick the one Figma
+// icon library (`746:26281`). Three stroke weights - pick the one Figma
 // uses for the specific component. Native viewBox preserves aspect ratio.
 export {default as ChevronLeftSmIcon} from './chevron-left-sm.svg';
 export {default as ChevronLeftMdIcon} from './chevron-left-md.svg';
@@ -71,7 +71,7 @@ export {default as WavesIcon} from './waves.svg';
 export {default as WifiOffIcon} from './wifi-off.svg';
 export {default as XIcon} from './x.svg';
 
-// Figma DS icon library — exported from canonical Figma node `746:26281`.
+// Figma DS icon library - exported from canonical Figma node `746:26281`.
 // Use these (size-suffixed) for new design-system work. Legacy unsuffixed
 // entries above coexist; replace one-by-one as they migrate.
 export {default as AlertTriangleLgIcon} from './alert-triangle-lg.svg';

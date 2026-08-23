@@ -582,7 +582,7 @@ class ModelStore {
     };
 
     if (speculative) {
-      // llama.rn's speculative type set stays empty without spec_type — nothing engages.
+      // llama.rn's speculative type set stays empty without spec_type - nothing engages.
       params.spec_type = 'draft-mtp';
 
       // llama.rn throws on spec_draft_n_max <= 0 with DRAFT_MTP.
@@ -598,7 +598,7 @@ class ModelStore {
       params.spec_draft_cache_type_k =
         this.contextInitParams.spec_draft_cache_type_k ?? cacheDefaults.k;
       // With flash attention explicitly off a quantized draft V cache can
-      // never load (llama.cpp hard-refuses it) — clamp even an explicit pick.
+      // never load (llama.cpp hard-refuses it) - clamp even an explicit pick.
       const draftV =
         this.contextInitParams.spec_draft_cache_type_v ?? cacheDefaults.v;
       params.spec_draft_cache_type_v =
@@ -659,8 +659,8 @@ class ModelStore {
   // Drafts downloaded before draft detection existed were classified as
   // vision models (their repo carries an mmproj); re-derive so they heal.
   // The pairing may have auto-downloaded that mmproj, and projection models
-  // are only reachable through a multimodal model's UI — which the heal
-  // removes — so the cleared ids are recorded (persisted with the same write
+  // are only reachable through a multimodal model's UI - which the heal
+  // removes - so the cleared ids are recorded (persisted with the same write
   // that strips the pairing) and drained after download state is synced.
   healDraftVisionClassification = () => {
     runInAction(() => {
@@ -692,7 +692,7 @@ class ModelStore {
    * stays queued while its download is still in flight or its deletion
    * fails, so a kill or an unfinished mmproj download cannot strand the
    * file forever. An id whose projection model has downloaded dependents is
-   * legitimately shared — dropped, never deleted.
+   * legitimately shared - dropped, never deleted.
    */
   drainPendingProjectionCleanup = async () => {
     if (this.pendingProjectionCleanupIds.length === 0) {
@@ -753,7 +753,7 @@ class ModelStore {
     if (storedVersion < MODEL_LIST_VERSION) {
       await this.mergeModelLists(presets);
       // mergeModelLists awaits the download-status checks (which re-anchor stale
-      // container paths), so pruning here — as the non-migration branch does —
+      // container paths), so pruning here - as the non-migration branch does -
       // is now safe: a recoverable local model has already been settled and will
       // not be dropped as missing.
       this.removeInvalidLocalModels();
@@ -916,7 +916,7 @@ class ModelStore {
     return presets;
   };
 
-  // Resolve the preset list from the bundled offline floor only — no network. This
+  // Resolve the preset list from the bundled offline floor only - no network. This
   // populates the model list immediately on first launch so a slow or hanging
   // rules fetch can never leave the list empty. The fetched online override is
   // applied afterwards by upgradeToFetchedRules (fire-and-forget).
@@ -1143,7 +1143,7 @@ class ModelStore {
       console.log('Active → Inactive: No auto-release action');
     } else if (this.appState === 'inactive' && nextAppState === 'background') {
       // inactive → background: release if enabled
-      // Skip for remote models — no native context to release, and
+      // Skip for remote models - no native context to release, and
       // releaseContext() would clear the engine with no reload path.
       if (
         this.isAutoReleaseEnabled &&
@@ -1156,7 +1156,7 @@ class ModelStore {
       }
     } else if (this.appState === 'active' && nextAppState === 'background') {
       // active → background: release if enabled (direct transition)
-      // Skip for remote models — same reason as above.
+      // Skip for remote models - same reason as above.
       if (
         this.isAutoReleaseEnabled &&
         this.activeModelId &&
@@ -1175,7 +1175,7 @@ class ModelStore {
 
   /**
    * Remote models are exempt from auto-release, so a session survives
-   * backgrounding — but the capability probe behind it may not have: iOS can
+   * backgrounding - but the capability probe behind it may not have: iOS can
    * tear the request down, and the first probe is the request that raises the
    * local-network prompt, so a grant always arrives after it already failed.
    * Without this, caps stay unknown for the rest of the session and the only
@@ -1345,7 +1345,7 @@ class ModelStore {
    * existing not-found handling still applies.
    *
    * IMPORTANT: this re-anchoring is duplicated in native Swift for iOS
-   * Shortcuts — see the LOCAL branch of parseModelPath() in
+   * Shortcuts - see the LOCAL branch of parseModelPath() in
    * ios/PocketPal/AppIntents/PalDataProvider.swift. Keep the two in sync; the
    * shared '/models/local/' marker must match on both sides.
    */
@@ -1355,7 +1355,7 @@ class ModelStore {
     // A rejected exists() must not escape: getModelFullPath is treated as
     // non-throwing by every consumer, and deleteModel awaits it *outside* its
     // try (a throw would abort the delete before the unlink). An indeterminate
-    // check is degraded to "not present" — recovery is attempted, and if it is
+    // check is degraded to "not present" - recovery is attempted, and if it is
     // also indeterminate we fall through to the stored path so the existing
     // not-found handling still applies.
     const pathExists = async (path: string): Promise<boolean> => {
@@ -1448,7 +1448,7 @@ class ModelStore {
     //
     // Each check is isolated: a single failure (e.g. an RNFS error, or a local
     // model with no fullPath) must not abort the others, and must leave
-    // isDownloaded untouched rather than defaulting it to false — an
+    // isDownloaded untouched rather than defaulting it to false - an
     // indeterminate result is not evidence the file is gone.
     await Promise.all(
       this.models.map(model =>
@@ -1477,7 +1477,7 @@ class ModelStore {
           return true;
         }
         // For local models, isDownloaded==true means the file exists, otherwise
-        // it's invalid. Callers must let refreshDownloadStatuses settle first —
+        // it's invalid. Callers must let refreshDownloadStatuses settle first -
         // it re-anchors stale container paths (resolveLocalModelPath) so a
         // recoverable model is not treated as missing here.
         if (model.isDownloaded) {
@@ -1599,7 +1599,7 @@ class ModelStore {
       await this._downloadDraftModelIfNeeded(model);
     } catch (err) {
       if (err instanceof DownloadCancelledError) {
-        // User cancelled — not a failure. Don't surface an error and don't
+        // User cancelled - not a failure. Don't surface an error and don't
         // chain the projection-model download for multimodal models.
         return;
       }
@@ -2128,7 +2128,7 @@ class ModelStore {
 
   /**
    * Hand context ownership back to the rest of the app. Intentionally
-   * trivial — no native work — so it's safe to call from a `finally` block.
+   * trivial - no native work - so it's safe to call from a `finally` block.
    */
   exitBenchmarkMode = (): void => {
     runInAction(() => {
@@ -2209,7 +2209,7 @@ class ModelStore {
       const operationPromise = this.contextOperationMutex.then(async () => {
         // A benchmark may have started while this load sat in the mutex
         // queue (cold-launch deep-link race). Bail before doing native work
-        // — enterBenchmarkMode will release any context we leave behind.
+        // - enterBenchmarkMode will release any context we leave behind.
         if (this.benchmarkActive) {
           console.log(
             `[ModelStore] Skipping queued load for "${model.name}" - benchmark mode is active`,
@@ -2583,7 +2583,7 @@ class ModelStore {
   }
 
   /**
-   * Capabilities of any model, active or not — the model card's entry point.
+   * Capabilities of any model, active or not - the model card's entry point.
    * Never annotate it explicitly as `action`: that untracks the observable
    * reads, so every card would freeze on its first value while the suite
    * stayed green.
@@ -2591,7 +2591,7 @@ class ModelStore {
   capsFor = (model: Model | undefined): ModelCapabilityView =>
     resolveModelCaps(model, this.capabilityEnv);
 
-  /** Capabilities of the live session — chat's entry point. */
+  /** Capabilities of the live session - chat's entry point. */
   get activeModelCaps(): ModelCapabilityView {
     return this.capsFor(this.activeModel);
   }
@@ -2619,7 +2619,7 @@ class ModelStore {
   }
 
   /**
-   * Derived from `serverStore.userSelectedModels` and `serverStore.servers` —
+   * Derived from `serverStore.userSelectedModels` and `serverStore.servers` -
    * not from `serverModels`, so the list a server currently advertises does not
    * change which cards exist. Remote models are never stored in the persisted
    * `models` array.
@@ -2959,7 +2959,7 @@ class ModelStore {
       this.refreshDownloadStatuses();
     });
 
-    // Get the MobX observable version — the plain `model` object was wrapped
+    // Get the MobX observable version - the plain `model` object was wrapped
     // in a proxy when pushed into the observable array. We must pass the proxy
     // so that mutations inside fetchAndPersistGGUFMetadata trigger reactivity.
     const observableModel = this.models.find(m => m.id === model.id);

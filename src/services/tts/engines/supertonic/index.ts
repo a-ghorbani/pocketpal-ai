@@ -129,7 +129,7 @@ export class SupertonicEngine implements Engine {
 
   /**
    * Delete the whole stale model directory before a (re)download. v2 and v3
-   * share filenames, so per-file reclaim is impossible — the entire dir is
+   * share filenames, so per-file reclaim is impossible - the entire dir is
    * stale when the sentinel doesn't match. Invoked by the store before the
    * disk-space preflight so reclaimed space counts toward the threshold.
    * Idempotent; safe when the dir is absent or already at the current version.
@@ -172,7 +172,7 @@ export class SupertonicEngine implements Engine {
     await RNFS.mkdir(parentDir, {NSURLIsExcludedFromBackupKey: true});
     await RNFS.mkdir(modelDir, {NSURLIsExcludedFromBackupKey: true});
 
-    // Phase 1: core ONNX model files — all-or-nothing.
+    // Phase 1: core ONNX model files - all-or-nothing.
     const corePhaseWeight = 0.7;
     const corePerFile = new Array(SUPERTONIC_MODEL_FILES.length).fill(0);
     const reportCore = () => {
@@ -212,7 +212,7 @@ export class SupertonicEngine implements Engine {
         reportCore();
       }
 
-      // Phase 2: per-voice style JSON files — best-effort; partial OK.
+      // Phase 2: per-voice style JSON files - best-effort; partial OK.
       // Without these the StyleLoader would fetch them lazily on first
       // play, causing a confusing delay after the user picks a voice.
       const voicePhaseBase = corePhaseWeight;
@@ -252,7 +252,7 @@ export class SupertonicEngine implements Engine {
         }
       }
 
-      // Manifest WITH baseUrl — if any voice files failed to download
+      // Manifest WITH baseUrl - if any voice files failed to download
       // (flaky network), the fork's StyleLoader can lazy-fetch them from
       // this URL on first play. Matches Kokoro's pattern.
       const manifest = {
@@ -266,7 +266,7 @@ export class SupertonicEngine implements Engine {
 
       // Version sentinel is the FINAL disk write (I-M2): if the process is
       // killed before this, isInstalled() reports false and the download is
-      // cleanly redone — an interrupted v3 never looks installed.
+      // cleanly redone - an interrupted v3 never looks installed.
       await RNFS.writeFile(
         this.getFilePath(SUPERTONIC_VERSION_SENTINEL_FILENAME),
         JSON.stringify({version: SUPERTONIC_MODEL_VERSION}),
@@ -276,7 +276,7 @@ export class SupertonicEngine implements Engine {
         onProgress(1);
       }
     } catch (err) {
-      // Partial cleanup — next retry starts from scratch.
+      // Partial cleanup - next retry starts from scratch.
       try {
         if (await RNFS.exists(modelDir)) {
           await RNFS.unlink(modelDir);

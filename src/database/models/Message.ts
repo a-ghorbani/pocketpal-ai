@@ -43,7 +43,7 @@ export default class Message extends Model {
       // in-memory type. The persisted metadata keeps `steps` (the DB is
       // the source of truth for crash recovery), but the in-memory
       // metadata strips it so consumers reading `message.metadata.steps`
-      // get `undefined` — they must use `message.steps`. The
+      // get `undefined` - they must use `message.steps`. The
       // persistence layer (ChatSessionRepository) is the sole writer of
       // `metadata.steps` on the way back to disk.
       const {steps: liftedSteps, ...metadataWithoutSteps} = rawMetadata;

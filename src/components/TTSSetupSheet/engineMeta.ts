@@ -2,11 +2,11 @@ import type {EngineId} from '../../services/tts';
 
 /**
  * Per-engine numeric/visual metadata used across the sheet for branding,
- * spec strips and group headers. Single source of truth — extend here
+ * spec strips and group headers. Single source of truth - extend here
  * when adding a new engine.
  *
  * Localized strings (title, tagline, tier label) live in
- * `voiceAndSpeech.engine*` keys in en.json — look them up at the call
+ * `voiceAndSpeech.engine*` keys in en.json - look them up at the call
  * site so translators can localize without touching this table.
  *
  * RAM is the peak resident MB measured during synthesis (E2E memory

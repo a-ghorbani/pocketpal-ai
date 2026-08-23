@@ -81,7 +81,7 @@ describe('Visual Capture', () => {
   before(async function () {
     if (captures.length === 0) {
       console.log(
-        'VISUAL_CAPTURES not set — skipping visual capture spec.',
+        'VISUAL_CAPTURES not set - skipping visual capture spec.',
         'Set VISUAL_CAPTURES env var with a JSON array of {prompt, name, description?}.',
       );
       this.skip();

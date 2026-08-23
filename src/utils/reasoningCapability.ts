@@ -1,9 +1,9 @@
 /**
  * Effective reasoning capability for a model, kept as two independent axes.
  *
- * Axis 1 (`isReasoning` / `source`) — whether the model reasons at all; drives
+ * Axis 1 (`isReasoning` / `source`) - whether the model reasons at all; drives
  * pill visibility and the on/off state.
- * Axis 2 (`supportsEffort` / `effortValues` / `effortSource`) — whether the pill
+ * Axis 2 (`supportsEffort` / `effortValues` / `effortSource`) - whether the pill
  * grades to low/medium/high and the value set. Present only when axis 1 ≠ 'no'.
  *
  * Provenance precedence is user > learned > detected > unknown; a `source: 'user'`
@@ -39,7 +39,7 @@ export type EffortLevel = (typeof EFFORT_LEVELS)[number];
 
 /**
  * Standard subset pre-selected the first time a user enables graded effort on
- * a model — gives the chips an immediate selected/unselected contrast (instead
+ * a model - gives the chips an immediate selected/unselected contrast (instead
  * of an all-blank row that doesn't read as togglable) and a sensible default.
  */
 export const DEFAULT_EFFORT_VALUES: string[] = ['low', 'medium', 'high'];
@@ -59,7 +59,7 @@ const UNKNOWN: ReasoningCapability = {
 
 /**
  * Resolve the effective reasoning capability for a model. Single source of
- * truth — no component reads `supportsThinking` directly post-migration.
+ * truth - no component reads `supportsThinking` directly post-migration.
  *
  * Local models read `model.reasoning`; remote models (not persisted) read
  * `remoteReasoning[model.id]`. When neither is present the legacy

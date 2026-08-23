@@ -405,7 +405,7 @@ describe('BannerRow', () => {
       };
     });
     const {getByText, queryByText} = renderBanner({canIncrease: false});
-    // Remote copy drops "or increase the context size" — the increase CTA is
+    // Remote copy drops "or increase the context size" - the increase CTA is
     // hidden for remote (no client-side control).
     expect(getByText(l10n.en.chat.contextFullRemote)).toBeTruthy();
     expect(queryByText(l10n.en.chat.contextFull)).toBeNull();

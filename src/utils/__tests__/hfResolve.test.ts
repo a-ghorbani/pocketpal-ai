@@ -1,12 +1,12 @@
 /**
  * HF repo resolvers.
  *
- * resolveHFRepo — strict, repo-level core: assembles the full HuggingFaceModel
+ * resolveHFRepo - strict, repo-level core: assembles the full HuggingFaceModel
  * with populated /resolve/ sibling URLs; throws on any fetch failure.
  *
- * resolveHFModelForDownload — repo + single-filename resolver built on the core.
+ * resolveHFModelForDownload - repo + single-filename resolver built on the core.
  * Strict mode (no fallback): throws when a fetch fails or no sibling matches.
- * Tolerant mode (fallback provided): used by the PalsHub flow — fills gaps and
+ * Tolerant mode (fallback provided): used by the PalsHub flow - fills gaps and
  * never throws, keeping per-fetch independence on partial responses.
  *
  * Both guard the silent-no-op regression: resolved URLs must be non-empty
@@ -43,7 +43,7 @@ beforeEach(() => {
   jest.clearAllMocks();
 });
 
-describe('resolveHFRepo — strict repo-level core', () => {
+describe('resolveHFRepo - strict repo-level core', () => {
   it('assembles the full model with populated /resolve/ sibling urls', async () => {
     mockFetchModelInfo.mockResolvedValue(modelInfoResponse);
     mockFetchModelFilesDetails.mockResolvedValue(fileDetails);
@@ -90,7 +90,7 @@ describe('resolveHFRepo — strict repo-level core', () => {
   });
 });
 
-describe('resolveHFModelForDownload — strict mode (no fallback)', () => {
+describe('resolveHFModelForDownload - strict mode (no fallback)', () => {
   it('resolves the matching sibling with a non-empty /resolve/ url', async () => {
     mockFetchModelInfo.mockResolvedValue(modelInfoResponse);
     mockFetchModelFilesDetails.mockResolvedValue(fileDetails);
@@ -151,7 +151,7 @@ describe('resolveHFModelForDownload — strict mode (no fallback)', () => {
   });
 });
 
-describe('resolveHFModelForDownload — tolerant mode (fallback)', () => {
+describe('resolveHFModelForDownload - tolerant mode (fallback)', () => {
   const fallback = {
     author: 'fallback-author',
     size: 1234,

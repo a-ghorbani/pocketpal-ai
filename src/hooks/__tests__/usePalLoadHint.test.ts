@@ -6,7 +6,7 @@ import type {Pal} from '../../types/pal';
 
 import {usePalLoadHint} from '../usePalLoadHint';
 
-// talentRegistry (src/services/talents) is the real singleton in Jest — only
+// talentRegistry (src/services/talents) is the real singleton in Jest - only
 // src/services/index is centrally mocked. Register the built-in engines so
 // render_html (recommendedContextTokens=4096) and the light engines
 // (datetime/calculate, no field) are available.

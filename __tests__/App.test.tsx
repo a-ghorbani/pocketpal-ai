@@ -12,7 +12,7 @@ import {it} from '@jest/globals';
 
 import {act, render} from '@testing-library/react-native';
 
-// Hydration gate test plumbing — see __mocks__/external/mobx-persist-store.js.
+// Hydration gate test plumbing - see __mocks__/external/mobx-persist-store.js.
 // __setHydrated() flips the controllable mock; we restore the default
 // (true) after each test so other suites are unaffected.
 
@@ -25,7 +25,7 @@ afterEach(() => {
 it('renders correctly', () => {
   const result = render(<App />);
   expect(result).toBeDefined();
-  // With _hydrated === true (default), no splash mounts — closes the
+  // With _hydrated === true (default), no splash mounts - closes the
   // regression where the gate could be silently disabled and the splash
   // never renders even though PaperProvider does.
   expect(result.queryByTestId('hydration-splash')).toBeNull();
@@ -34,7 +34,7 @@ it('renders correctly', () => {
 it('renders hydration splash while UIStore is not hydrated', () => {
   __setHydrated(false);
   const result = render(<App />);
-  // The splash must mount, AND <PaperProvider> must NOT — i.e. nothing
+  // The splash must mount, AND <PaperProvider> must NOT - i.e. nothing
   // below the gate is in the tree. The drawer header titles, only
   // present after PaperProvider + NavigationContainer mount, are the
   // proxy: they should be absent.

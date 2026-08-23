@@ -91,7 +91,7 @@
     "weightRepackingDescription": "Processamento de prompt mais rápido com sobrecarga mínima de memória quando o mapeamento de memória está desativado. A geração de tokens não é afetada.",
     "ttsAvailability": "Conversão de texto em fala",
     "ttsAvailabilityDescription": "Ler as respostas do assistente em voz alta.",
-    "ttsAvailabilityLowMemoryWarning": "A memória do seu dispositivo está baixa — isso pode não funcionar de forma confiável.",
+    "ttsAvailabilityLowMemoryWarning": "A memória do seu dispositivo está baixa - isso pode não funcionar de forma confiável.",
     "modelLoadingSettings": "Configurações de Carregamento do Modelo",
     "autoOffloadLoad": "Descarregar/Carregar Automaticamente",
     "autoOffloadLoadDescription": "Descarregar o modelo quando o app estiver em segundo plano.",
@@ -167,7 +167,7 @@
     "serverTypeHelp": "Detectado automaticamente; altere se estiver errado.",
     "internetSearch": {
       "title": "Busca na internet",
-      "description": "Deixe os Pals pesquisarem na web com as próprias ferramentas. Use sua própria chave de API — o PocketPal nunca guarda suas chaves nem encaminha suas consultas.",
+      "description": "Deixe os Pals pesquisarem na web com as próprias ferramentas. Use sua própria chave de API - o PocketPal nunca guarda suas chaves nem encaminha suas consultas.",
       "providerLabel": "Provedor de busca",
       "providerGated": "Em breve",
       "keyLabel": "Chave de API",
@@ -565,7 +565,7 @@
       "tokensPerSec": "{{value}} tokens/seg",
       "ttft": "{{value}}ms TTFT",
       "interrupted": "Interrompido",
-      "truncated": "Cortado — provavelmente o contexto está cheio",
+      "truncated": "Cortado - provavelmente o contexto está cheio",
       "draftAccepted": "rascunho: {{accepted}}/{{total}} ({{pct}}%)"
     },
     "exportUtils": {
@@ -1118,7 +1118,7 @@
       "notAvailable": "N/D",
       "buyOnPalshub": "Comprar no Palshub",
       "finalizingPurchase": "Finalizando sua compra…",
-      "processingPurchase": "Processando — será desbloqueado em breve.",
+      "processingPurchase": "Processando - será desbloqueado em breve.",
       "checkoutSessionExpired": "Sua sessão expirou. Entre novamente para continuar.",
       "signInAgain": "Entrar novamente",
       "palNotAvailable": "Este pal não está disponível para compra no momento.",
@@ -1188,7 +1188,7 @@
     "conversationReset": "Conversa reiniciada!",
     "modelNotLoaded": "Modelo não carregado. Inicialize o modelo.",
     "completionFailed": "Falha na completação: ",
-    "toolCallTruncated": "Chamada de ferramenta cortada — o modelo provavelmente ficou sem espaço. Tente um contexto maior ou uma requisição menor.",
+    "toolCallTruncated": "Chamada de ferramenta cortada - o modelo provavelmente ficou sem espaço. Tente um contexto maior ou uma requisição menor.",
     "loadingModel": "Carregando modelo ...",
     "typeYourMessage": "Digite sua mensagem aqui",
     "load": "Carregar",
@@ -1203,20 +1203,20 @@
     "contextRemoteHedged": "Esta resposta pode ter sido cortada. Tente enviar novamente ou encurtar a requisição.",
     "contextFull": "A conversa ficou sem espaço. Inicie um novo chat ou aumente o tamanho do contexto.",
     "contextFullEscalated": "Ainda sem espaço. Inicie um novo chat ou aumente o tamanho do contexto para continuar.",
-    "contextFullHeavyTalent": "A conversa ficou sem espaço — {{talent}} costuma precisar de mais. Inicie um novo chat ou aumente o tamanho do contexto.",
+    "contextFullHeavyTalent": "A conversa ficou sem espaço - {{talent}} costuma precisar de mais. Inicie um novo chat ou aumente o tamanho do contexto.",
     "contextBannerDismiss": "Dispensar",
     "contextNewChat": "Novo chat",
     "contextIncrease": "Aumentar contexto",
     "contextMoreRoom": "Mais espaço",
     "increaseContextTitle": "Dê mais espaço a este chat",
-    "increaseContextBody": "Espaço é a memória de trabalho do modelo — quanto deste chat ele consegue manter em mente de uma vez. Mais espaço significa conversas mais longas antes que as respostas sejam cortadas.",
+    "increaseContextBody": "Espaço é a memória de trabalho do modelo - quanto deste chat ele consegue manter em mente de uma vez. Mais espaço significa conversas mais longas antes que as respostas sejam cortadas.",
     "increaseContextTokensUnit": "tokens",
     "increaseContextWordsRam": "~{{words}} palavras · ≈{{ram}} de RAM",
     "increaseContextFitsChip": "Cabe",
     "increaseContextTightChip": "Apertado",
     "increaseContextWontFitChip": "Não vai caber",
     "increaseContextFitsStatus": "Confortável para este dispositivo.",
-    "increaseContextFitsUnconstrainedStatus": "RAM de sobra — limitado apenas pelo modelo.",
+    "increaseContextFitsUnconstrainedStatus": "RAM de sobra - limitado apenas pelo modelo.",
     "increaseContextTightStatus": "Acima de ~{{tokens}}, este dispositivo pode ficar com pouca memória e mais lento. Ainda pode tentar.",
     "increaseContextWontFitStatus": "~{{tokens}} provavelmente não vai caber na memória deste dispositivo. Escolha um tamanho menor.",
     "increaseContextModelMax": "{{tokens}} · máximo do modelo",
@@ -1248,7 +1248,7 @@
       "openLinkError": "Não foi possível abrir este link."
     },
     "contextFullRemote": "A conversa ficou sem espaço. Comece um novo chat.",
-    "speculativeInitFailed": "Este dispositivo não conseguiu iniciar a decodificação especulativa para este modelo — provavelmente não há memória suficiente para o contexto de rascunho. Desative a Decodificação especulativa em Configurações → Configurações Avançadas e tente novamente."
+    "speculativeInitFailed": "Este dispositivo não conseguiu iniciar a decodificação especulativa para este modelo - provavelmente não há memória suficiente para o contexto de rascunho. Desative a Decodificação especulativa em Configurações → Configurações Avançadas e tente novamente."
   },
   "htmlPreview": {
     "defaultTitle": "Pré-visualização",
@@ -1419,7 +1419,7 @@
     "previewButton": "Pré-visualizar",
     "stopPreviewButton": "Parar pré-visualização",
     "voicesTitle": "Vozes",
-    "voicesEmptyHint": "Toque em qualquer voz para instalá-la e usá-la. Ou escolha uma voz do sistema — essas estão sempre disponíveis.",
+    "voicesEmptyHint": "Toque em qualquer voz para instalá-la e usá-la. Ou escolha uma voz do sistema - essas estão sempre disponíveis.",
     "supertonicStepsLabel": "Qualidade (etapas de difusão)",
     "supertonicLanguageLabel": "Idioma",
     "supertonicLanguageAuto": "Automático",
@@ -1490,7 +1490,7 @@
     "engineRetryCta": "Tentar novamente",
     "voicesEmptyState": "Nenhuma voz encontrada.",
     "kokoroDeviceNote": "Algumas vozes podem não funcionar em todos os dispositivos.",
-    "insufficientStorage": "Espaço insuficiente — libere {{requiredMb}} MB para instalar este mecanismo ({{freeMb}} MB disponíveis)."
+    "insufficientStorage": "Espaço insuficiente - libere {{requiredMb}} MB para instalar este mecanismo ({{freeMb}} MB disponíveis)."
   },
   "onboarding": {
     "back": "Voltar",
@@ -1569,13 +1569,13 @@
           "body": "Encontramos o pal perfeito para você - um companheiro amigável para o dia a dia. Inteligente o suficiente para a maioria das coisas, leve o suficiente para qualquer celular."
         },
         "codie": {
-          "body": "Conheça o Codie — seu programador-parceiro local. Lê código, escreve código, explica partes complicadas sem nunca sair do seu celular."
+          "body": "Conheça o Codie - seu programador-parceiro local. Lê código, escreve código, explica partes complicadas sem nunca sair do seu celular."
         },
         "sage": {
           "body": "Sage é paciente, curioso e te guia pelas ideias passo a passo. Um parceiro de estudos que você carrega no bolso."
         },
         "echo": {
-          "body": "Echo é um companheiro de interpretação versátil — mantém o personagem, pinta cenas, segue para onde sua história te levar."
+          "body": "Echo é um companheiro de interpretação versátil - mantém o personagem, pinta cenas, segue para onde sua história te levar."
         },
         "muse": {
           "body": "Muse te ajuda a escrever. Sugere frases, encontra o ritmo e mantém seu tom intacto."

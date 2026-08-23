@@ -5,7 +5,7 @@ import type {Theme} from '../../../../utils/types';
 export const createStyles = (theme: Theme) =>
   StyleSheet.create({
     root: {
-      // Figma `884:32492` Buttons (Skip) — pill, padding xxs, radius
+      // Figma `884:32492` Buttons (Skip) - pill, padding xxs, radius
       // m, height 28. Background is transparent so it floats over
       // the body bg.
       height: 28,

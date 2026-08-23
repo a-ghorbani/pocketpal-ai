@@ -233,7 +233,7 @@ describe('BenchmarkRunnerScreen', () => {
 
   describe('autostart', () => {
     // Helper: configure useRoute to return params {autostart: <value>}. The
-    // production read path is `route.params.autostart` — this mirrors what
+    // production read path is `route.params.autostart` - this mirrors what
     // the two deep-link delivery sites set via parseBenchmarkAutostart.
     const setRouteAutostart = (autostart: boolean | undefined) => {
       useRoute.mockReturnValue({
@@ -305,7 +305,7 @@ describe('BenchmarkRunnerScreen', () => {
       await waitFor(() => {
         expect(runner).toHaveBeenCalledTimes(1);
       });
-      // A later tap arrives while the run is in flight — single-flight gate
+      // A later tap arrives while the run is in flight - single-flight gate
       // rejects it.
       await act(async () => {
         fireEvent.press(getByTestId('bench-run-button'));
@@ -326,7 +326,7 @@ describe('BenchmarkRunnerScreen', () => {
       await waitFor(() => {
         expect(runner).toHaveBeenCalledTimes(1);
       });
-      // Force a re-render with stable autostart — the ref latch must keep the
+      // Force a re-render with stable autostart - the ref latch must keep the
       // run from firing again.
       await act(async () => {
         rerender(
@@ -422,7 +422,7 @@ describe('BenchmarkRunnerScreen', () => {
       await runMatrix(VALID_CONFIG, setStatus, setLastCell);
       expect(modelStore.enterBenchmarkMode).toHaveBeenCalledTimes(1);
       expect(modelStore.exitBenchmarkMode).toHaveBeenCalledTimes(1);
-      // exit must run AFTER enter — `.invocationCallOrder` is monotonic.
+      // exit must run AFTER enter - `.invocationCallOrder` is monotonic.
       const enterOrder = (modelStore.enterBenchmarkMode as jest.Mock).mock
         .invocationCallOrder[0];
       const exitOrder = (modelStore.exitBenchmarkMode as jest.Mock).mock
@@ -605,7 +605,7 @@ describe('BenchmarkRunnerScreen', () => {
     });
 
     it('hard-fails the cell with backend-mismatch:<requested>:<actual> when the actual backend is wrong', async () => {
-      // Requested gpu, but native logs only report CPU — the merged
+      // Requested gpu, but native logs only report CPU - the merged
       // architecture must surface this as a failed row, NOT as `status:ok`
       // with `effective_backend != requested_backend`. Wrong-backend rows
       // silently in baselines is what motivated the redesign.
@@ -633,14 +633,14 @@ describe('BenchmarkRunnerScreen', () => {
       (initLlama as jest.Mock)
         .mockRejectedValueOnce(new Error('cell-1-init-boom'))
         .mockResolvedValueOnce(makeMockContext());
-      // Cell 1 needs CPU logs to (almost — it fails before assertion);
+      // Cell 1 needs CPU logs to (almost - it fails before assertion);
       // cell 2 needs OpenCL logs. Use a stateful stub that returns a fresh
       // sub per attach call.
       let attachIdx = 0;
       (addNativeLogListener as jest.Mock).mockImplementation(
         (cb: (level: string, text: string) => void) => {
           if (attachIdx === 0) {
-            // cell 1 — cpu logs (won't be read, init fails first)
+            // cell 1 - cpu logs (won't be read, init fails first)
             attachIdx++;
             return {remove: jest.fn()};
           }
@@ -748,7 +748,7 @@ describe('BenchmarkRunnerScreen', () => {
       expect(initLlama).not.toHaveBeenCalled();
     });
 
-    it('hexagon-on-non-hexagon-device does NOT abort the matrix — subsequent cells still run', async () => {
+    it('hexagon-on-non-hexagon-device does NOT abort the matrix - subsequent cells still run', async () => {
       const cfg: BenchConfig = {
         ...VALID_CONFIG,
         backends: ['hexagon', 'cpu'],
@@ -874,7 +874,7 @@ describe('BenchmarkRunnerScreen', () => {
     it('falls back to default when inter_cell_settle_ms is invalid (string, NaN, negative)', async () => {
       stubOpenCLLogs();
       // Validates the typeof+isFinite+>=0 guard. A typo'd value should not
-      // throw or silently apply — it falls back to the safe default.
+      // throw or silently apply - it falls back to the safe default.
       for (const bad of ['30000' as unknown as number, NaN, -1, Infinity]) {
         RNFS.writeFile.mockClear();
         const cfg: BenchConfig = {...VALID_CONFIG, inter_cell_settle_ms: bad};
@@ -994,7 +994,7 @@ describe('BenchmarkRunnerScreen', () => {
         settings_axes: [{name: 'cache_type_k', values: ['q8_0']}],
       };
       // initLlama rejects BEFORE any cell-init snapshot is produced.
-      // Wait — actually under the new design the cellParams / fingerprint
+      // Wait - actually under the new design the cellParams / fingerprint
       // snapshot are computed BEFORE initLlama. Let's force the pre-init
       // path another way: throw during the model resolve / download step
       // by emptying modelStore.models and rejecting the download.
@@ -1089,7 +1089,7 @@ describe('BenchmarkRunnerScreen', () => {
   });
 
   // ---------------------------------------------------------------------------
-  // expandAxes — pure helper unit tests
+  // expandAxes - pure helper unit tests
   // ---------------------------------------------------------------------------
 
   describe('expandAxes', () => {
@@ -1291,7 +1291,7 @@ describe('BenchmarkRunnerScreen', () => {
     });
 
     it('resolves use_mmap="smart" deterministically (no per-file resolver in bench)', () => {
-      // Resolves to the platform default — tests run with Platform.OS=='ios'
+      // Resolves to the platform default - tests run with Platform.OS=='ios'
       // by default in jest, so 'smart' → true. The actual value isn't the
       // load-bearing claim; the determinism is.
       const v = buildOverridesParams({use_mmap: 'smart'}).use_mmap;
@@ -1319,7 +1319,7 @@ describe('BenchmarkRunnerScreen', () => {
     });
 
     it('overrides cannot smuggle in a different model / devices / n_gpu_layers', () => {
-      // Even if a future axis added 'devices' (it shouldn't — those are
+      // Even if a future axis added 'devices' (it shouldn't - those are
       // cell-axis fields), the cell-axis literal at the end of compose
       // wins. Defensive contract test.
       const params = composeCellParams({

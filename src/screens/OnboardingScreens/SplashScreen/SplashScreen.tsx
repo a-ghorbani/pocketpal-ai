@@ -11,7 +11,7 @@ import {createStyles} from './styles';
 const SPLASH_MIN_DWELL_MS = 600;
 
 /**
- * Brand splash — post-hydration, pre-Onboarding-1. Renders the
+ * Brand splash - post-hydration, pre-Onboarding-1. Renders the
  * 112×112 mark from Figma `884:28352` then transitions after
  * `SPLASH_MIN_DWELL_MS`.
  */

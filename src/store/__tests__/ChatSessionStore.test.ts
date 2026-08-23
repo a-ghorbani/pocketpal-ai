@@ -1401,14 +1401,14 @@ describe('chatSessionStore', () => {
     });
   });
 
-  describe('newChatThinkingOverride — session-creation handoff & clears', () => {
+  describe('newChatThinkingOverride - session-creation handoff & clears', () => {
     beforeEach(() => {
       chatSessionStore.newChatPalId = undefined;
       chatSessionStore.newChatThinkingOverride = undefined;
       chatSessionStore.newChatSettingsSource = 'pal';
     });
 
-    it("births session as 'custom' when override is staged (overrides 'pal' source) — memory + DB", async () => {
+    it("births session as 'custom' when override is staged (overrides 'pal' source) - memory + DB", async () => {
       const mockNewSession = {
         id: 'new-session-override',
         title: 'With Override',
@@ -1438,7 +1438,7 @@ describe('chatSessionStore', () => {
         'palX',
         'custom',
       );
-      // Override is one-shot — cleared in the same code block as newChatPalId.
+      // Override is one-shot - cleared in the same code block as newChatPalId.
       expect(chatSessionStore.newChatThinkingOverride).toBeUndefined();
       expect(chatSessionStore.newChatPalId).toBeUndefined();
     });
@@ -2510,7 +2510,7 @@ describe('chatSessionStore', () => {
         expect(chatSessionStore.sessions[0].pinned).toBe(false);
       });
 
-      // Seeded pinned:true on purpose — seeding false would let an
+      // Seeded pinned:true on purpose - seeding false would let an
       // implementation that writes false in its catch block pass too.
       it('leaves the pin untouched when the write fails', async () => {
         chatSessionStore.sessions = [pinnedSession({pinned: true})];

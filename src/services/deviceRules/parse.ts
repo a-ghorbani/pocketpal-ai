@@ -23,7 +23,7 @@ const isObject = (v: unknown): v is Record<string, unknown> =>
   typeof v === 'object' && v !== null && !Array.isArray(v);
 
 // The download URL is derived from a hard-coded huggingface.co template, so this
-// host check is defense-in-depth only — the real boundary is isSafePathSegment
+// host check is defense-in-depth only - the real boundary is isSafePathSegment
 // on the path parts. huggingface.co is the only host the app's HF token is sent
 // to (DownloadManager host-gates the Bearer header).
 const isHuggingFaceUrl = (url: unknown): url is string => {
@@ -47,7 +47,7 @@ const isSafePathSegment = (v: unknown): v is string =>
   !v.includes('/') &&
   !v.includes('\\') &&
   // With separators already disallowed, only an exact "."/".." segment can
-  // traverse — reject those, but allow a literal ".." inside a longer name.
+  // traverse - reject those, but allow a literal ".." inside a longer name.
   v !== '.' &&
   v !== '..';
 
@@ -288,7 +288,7 @@ const parseCandidate = (v: unknown): RuleCandidate | null => {
     return null;
   }
   // size_bytes is required: without it the resolved model has size 0, and
-  // hasEnoughSpace() returns false — an undownloadable card. Drop the candidate
+  // hasEnoughSpace() returns false - an undownloadable card. Drop the candidate
   // (mmproj enforces the same for the projector).
   const sizeBytes = asNumber(v.size_bytes);
   if (sizeBytes === undefined) {
@@ -298,7 +298,7 @@ const parseCandidate = (v: unknown): RuleCandidate | null => {
   let mmproj: RuleMmproj | undefined;
   if (multimodal) {
     // A multimodal candidate with an invalid projector reference is dropped
-    // entirely — never ship a vision model with an unvalidated projector path.
+    // entirely - never ship a vision model with an unvalidated projector path.
     const parsed = parseMmproj(v.mmproj, v.hf_repo as string);
     if (!parsed) {
       return null;
@@ -306,7 +306,7 @@ const parseCandidate = (v: unknown): RuleCandidate | null => {
     mmproj = parsed;
   }
   // An invalid draft block degrades to no-draft (drop only the draft, keep the
-  // target) — unlike mmproj, a bad draft must not drop the whole candidate.
+  // target) - unlike mmproj, a bad draft must not drop the whole candidate.
   const draft = v.draft !== undefined ? parseDraft(v.draft) : null;
   return {
     model: v.model,

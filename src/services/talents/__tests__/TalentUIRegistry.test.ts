@@ -47,7 +47,7 @@ describe('TalentUIRegistry', () => {
       expect(talentUIRegistry.has('render_html')).toBe(true);
     });
 
-    it('is idempotent across calls — same UI instance', () => {
+    it('is idempotent across calls - same UI instance', () => {
       registerDefaultTalentUIs();
       const firstInstance = talentUIRegistry.get('render_html');
       registerDefaultTalentUIs();

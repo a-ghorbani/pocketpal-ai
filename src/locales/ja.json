@@ -1023,7 +1023,7 @@
       "tokensPerSec": "{{value}} トークン/秒",
       "ttft": "{{value}}ms TTFT",
       "interrupted": "中断されました",
-      "truncated": "途中で停止 — コンテキストが満杯の可能性",
+      "truncated": "途中で停止 - コンテキストが満杯の可能性",
       "draftAccepted": "ドラフト: {{accepted}}/{{total}} ({{pct}}%)"
     },
     "pendingIndicator": {
@@ -1118,7 +1118,7 @@
       "notAvailable": "N/A",
       "buyOnPalshub": "Palshubで購入",
       "finalizingPurchase": "購入を完了処理中…",
-      "processingPurchase": "処理中 — まもなくアンロックされます。",
+      "processingPurchase": "処理中 - まもなくアンロックされます。",
       "checkoutSessionExpired": "セッションの有効期限が切れました。続行するには再度サインインしてください。",
       "signInAgain": "再度サインイン",
       "palNotAvailable": "このPalは現在購入できません。",
@@ -1196,7 +1196,7 @@
     "pleaseLoadModel": "チャットを開始するにはモデルを読み込んでください",
     "multimodalNotEnabled": "このモデルではマルチモーダル機能が有効になっていません、画像は表示されますが、AIによって処理されません",
     "cannotSendWithoutModel": "モデルを読み込んでください",
-    "toolCallTruncated": "ツール呼び出しが途中で停止しました — モデルの空き容量が不足した可能性があります。コンテキストを大きくするか、リクエストを小さくしてお試しください。",
+    "toolCallTruncated": "ツール呼び出しが途中で停止しました - モデルの空き容量が不足した可能性があります。コンテキストを大きくするか、リクエストを小さくしてお試しください。",
     "toolCompatWarning": "このモデルはツール呼び出しに対応していない可能性があります。結果が不正確になる場合があります。",
     "softCapWarning": "最適なパフォーマンスのために新しいチャットを開始してください。",
     "contextWarning": "この会話が長くなっており、まもなく空き容量が不足する可能性があります。",

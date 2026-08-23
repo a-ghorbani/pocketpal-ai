@@ -133,7 +133,7 @@ describe('Draft Autosave', () => {
     await aiMessage.waitForExist({timeout: TIMEOUTS.inference});
     await waitForInferenceComplete();
 
-    // Switch away and back — draft should be gone (cleared on send)
+    // Switch away and back - draft should be gone (cleared on send)
     await chatPage.openDrawer();
     await drawerPage.tapSession('DraftTestAlpha');
     await chatPage.openDrawer();

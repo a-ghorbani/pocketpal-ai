@@ -21,7 +21,7 @@ interface ToolMetricsFooterProps {
  * AssistantTurnFooter (same fontSize / colour) so it reads as part
  * of the same chrome family without competing with the result above.
  *
- * Renders nothing if `metrics.tokens` is 0 — that's the cue for
+ * Renders nothing if `metrics.tokens` is 0 - that's the cue for
  * "metrics absent" (older persisted calls, or steps where the runner
  * didn't see any tool-call tokens).
  */

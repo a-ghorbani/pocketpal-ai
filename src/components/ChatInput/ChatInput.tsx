@@ -47,7 +47,7 @@ import {
 import {t} from '../../locales';
 
 import {SendButton, StopButton, Menu, VoiceChip} from '..';
-import {useNavigation} from '@react-navigation/native';
+import {NavigationContext} from '@react-navigation/native';
 import {ROUTES} from '../../utils/navigationConstants';
 
 export interface ChatInputTopLevelProps {
@@ -165,7 +165,9 @@ export const ChatInput = observer(
     const l10n = React.useContext(L10nContext);
     const theme = useTheme();
     const user = React.useContext(UserContext);
-    const navigation = useNavigation();
+    // Optional on purpose: ChatInput renders in unit tests without a
+    // NavigationContainer; the badge just no-ops there.
+    const navigation = React.useContext(NavigationContext);
     const inputRef = React.useRef<TextInput>(null);
     const editBarHeight = React.useRef(new Animated.Value(0)).current;
     const iconRotation = React.useRef(new Animated.Value(0)).current;
@@ -688,7 +690,7 @@ export const ChatInput = observer(
                     accessibilityRole="button"
                     accessibilityLabel="Knowledge base active, open settings"
                     onPress={() =>
-                      (navigation as any).navigate(ROUTES.KNOWLEDGE_BASE)
+                      navigation?.navigate(ROUTES.KNOWLEDGE_BASE as never)
                     }>
                     <View style={styles.kbBadge}>
                       <Icon
@@ -775,7 +777,7 @@ export const ChatInput = observer(
                 </View>
               )}
 
-              {/* Voice chip (TTS) — always present so users can stop
+              {/* Voice chip (TTS) - always present so users can stop
                   audio independently of text generation. Self-gates:
                   returns null when TTS is unavailable. */}
               <VoiceChip />

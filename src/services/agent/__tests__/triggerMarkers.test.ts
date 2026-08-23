@@ -70,7 +70,7 @@ describe('createTriggerMarkerCache', () => {
     const r2 = await cache.getMarkers('ctx', [tool('calculate')], fc);
     expect(r1).toEqual(['X']);
     expect(r2).toEqual(['X']);
-    // Second call hits the cache — getFormattedChat invoked exactly once.
+    // Second call hits the cache - getFormattedChat invoked exactly once.
     expect(fc).toHaveBeenCalledTimes(1);
   });
 
@@ -101,7 +101,7 @@ describe('createTriggerMarkerCache', () => {
     const fc = jest.fn(makeFormattedChat([{value: 'M'}]));
     await cache.getMarkers('ctx', [tool('calculate'), tool('datetime')], fc);
     await cache.getMarkers('ctx', [tool('datetime'), tool('calculate')], fc);
-    // Same key — second call hits cache.
+    // Same key - second call hits cache.
     expect(fc).toHaveBeenCalledTimes(1);
   });
 

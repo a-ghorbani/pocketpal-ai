@@ -20,7 +20,7 @@ import {buildTheme} from '../utils/theme';
  * Memoization: built themes are cached in a WeakMap keyed first on the
  * Paper theme identity (so a changed provider theme can never return a
  * stale merge) then on `${mode}:${language}`. This restores referential
- * stability across renders that don't change any of those inputs —
+ * stability across renders that don't change any of those inputs -
  * important on hot UI surfaces (chat) where downstream `useMemo` deps
  * would otherwise re-fire every render. The WeakMap lets stale Paper-theme
  * buckets be garbage-collected.

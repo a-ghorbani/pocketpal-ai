@@ -18,7 +18,7 @@ interface ReasoningBlockProps {
   /**
    * When true, the inner ThinkingBubble auto-collapses to its compact
    * text-only row. The user's manual toggle still wins for the bubble's
-   * lifetime — see ThinkingBubble's `userToggledRef`.
+   * lifetime - see ThinkingBubble's `userToggledRef`.
    */
   autoCollapse?: boolean;
 }

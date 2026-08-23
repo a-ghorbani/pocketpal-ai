@@ -6,7 +6,7 @@
  * server emits.
  *
  * Only host-identifying values inside `status.args` and `status.preset` are
- * replaced — absolute paths keep their last two segments; the bind-address
+ * replaced - absolute paths keep their last two segments; the bind-address
  * flag and its value become placeholders. Every key, every array element and
  * every ordering
  * is as it arrived: `--ctx-size` and its value are adjacent by position, so a

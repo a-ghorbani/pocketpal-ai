@@ -1,10 +1,10 @@
-/** Provider-agnostic search types — no provider-specific field crosses this boundary. */
+/** Provider-agnostic search types - no provider-specific field crosses this boundary. */
 
 export type SearchProviderId = 'tavily' | 'brave' | 'exa' | 'parallel';
 
 export interface SearchHit {
   title: string;
-  /** Canonical result URL — always kept (citation + read_url target). */
+  /** Canonical result URL - always kept (citation + read_url target). */
   url: string;
   /** Smallest faithful body field the provider offers, as plain text. */
   snippet: string;
@@ -25,7 +25,7 @@ export interface SearchOptions {
 
 /**
  * Adapter contract: read the BYOK key lazily inside search()/read(), and throw
- * on transport/auth/no-key/timeout — never return a silent empty.
+ * on transport/auth/no-key/timeout - never return a silent empty.
  */
 export interface SearchProvider {
   readonly id: SearchProviderId;
@@ -39,6 +39,6 @@ export interface SearchBudget {
   maxResults: number;
   /** ~280 chars per snippet. */
   perSnippetChars: number;
-  /** The talent's recommendedContextTokens — the result token ceiling. */
+  /** The talent's recommendedContextTokens - the result token ceiling. */
   tokenCeiling: number;
 }

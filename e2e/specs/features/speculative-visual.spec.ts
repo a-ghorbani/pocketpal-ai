@@ -1,5 +1,5 @@
 /**
- * Speculative Decoding — visual state capture
+ * Speculative Decoding - visual state capture
  *
  * Companion to `speculative.spec.ts`. That spec proves the feature engages;
  * this one walks every user-visible state the feature introduces and saves a
@@ -7,7 +7,7 @@
  *
  *   1. Speculative section with the toggle OFF (baseline).
  *   2. Speculative section enabled with no model loaded.
- *   3. Draft-pick ignored note (no capable target — "carries no draft layers").
+ *   3. Draft-pick ignored note (no capable target - "carries no draft layers").
  *   4. MTP capability on a downloaded model card (Models screen) and its
  *      absence on a non-MTP card.
  *   5. MTP badge in the HF search details view (remote, pre-download path) and
@@ -62,7 +62,7 @@ const MTP = {
   nameFragment: 'Qwen3.5-0.8B',
 };
 
-/** Matches speculative.spec.ts — the MTP model needs room to complete a turn. */
+/** Matches speculative.spec.ts - the MTP model needs room to complete a turn. */
 const SPEC_CONTEXT_SIZE = '4096';
 
 /**
@@ -127,7 +127,7 @@ async function scrollSettingsToTop(): Promise<void> {
 }
 
 /**
- * Navigate to Settings without SettingsPage.navigateTo — that helper waits for
+ * Navigate to Settings without SettingsPage.navigateTo - that helper waits for
  * the context-size input to be *displayed*, and the Settings screen keeps the
  * scroll offset of the previous visit, so the input is usually off-screen.
  */
@@ -146,7 +146,7 @@ async function goToSettings(): Promise<void> {
 /**
  * Scroll a settings row into view from the top of the screen, so a capture is
  * not at the mercy of where the previous step left the scroll offset. Rewinds
- * and retries once — a swipe swallowed by a keyboard or a menu leaves the list
+ * and retries once - a swipe swallowed by a keyboard or a menu leaves the list
  * short of the target.
  */
 async function scrollSettingsTo(selector: string): Promise<boolean> {
@@ -188,7 +188,7 @@ async function setSpeculative(enabled: boolean): Promise<void> {
 }
 
 /**
- * Menu entry whose text contains `fragment`, excluding the picker button —
+ * Menu entry whose text contains `fragment`, excluding the picker button -
  * the button renders the current pick, so it matches the same text and would
  * otherwise swallow the tap and leave the menu open over the next capture.
  */
@@ -328,7 +328,7 @@ async function loadDownloadedModel(downloadFile: string): Promise<void> {
     .then(() => true)
     .catch(() => false);
   if (!hasLoadButton) {
-    console.log(`[load] ${downloadFile} already active — skipping load`);
+    console.log(`[load] ${downloadFile} already active - skipping load`);
     await drawerPage.navigateToChat();
     await chatPage.waitForReady();
     return;
@@ -369,7 +369,7 @@ async function toggleCardDetails(downloadFile: string): Promise<void> {
   await browser.pause(800);
 }
 
-describe('Speculative decoding — visual states', () => {
+describe('Speculative decoding - visual states', () => {
   before(async () => {
     const chatPage = new ChatPage();
     const settingsPage = new SettingsPage();
@@ -410,7 +410,7 @@ describe('Speculative decoding — visual states', () => {
 
     // Downloads both fixtures for the later states, capturing the pre-download
     // details view of each on the way. The badge wait is best-effort so a slow
-    // or failed probe still leaves the downloads (and the later states) intact —
+    // or failed probe still leaves the downloads (and the later states) intact -
     // the outcome is asserted at the end of this test.
     let mtpBadgeSeen = false;
     await downloadModelViaHFSearch(MTP, async () => {
@@ -454,7 +454,7 @@ describe('Speculative decoding — visual states', () => {
   });
 
   it('shows the draft-pick ignored note when the pick carries no draft layers', async () => {
-    // Nothing is loaded yet, so a non-MTP pick is simply unusable as a draft —
+    // Nothing is loaded yet, so a non-MTP pick is simply unusable as a draft -
     // the "carries no draft layers" variant of the note.
     await openAdvancedSection();
     const label = await selectDraftModel(NON_MTP.nameFragment);
@@ -515,8 +515,8 @@ describe('Speculative decoding — visual states', () => {
     }
     await openAdvancedSection();
 
-    // The MTP target is active, so the non-MTP draft pick is ignored — the
-    // "not compatible" variant of the note — and the resolution is `embedded`.
+    // The MTP target is active, so the non-MTP draft pick is ignored - the
+    // "not compatible" variant of the note - and the resolution is `embedded`.
     await scrollSettingsTo(SPEC_IGNORED_NOTE);
     await expect(browser.$(SPEC_IGNORED_NOTE)).toBeExisting();
     await expect(browser.$(SPEC_NO_EFFECT_NOTE)).not.toBeExisting();

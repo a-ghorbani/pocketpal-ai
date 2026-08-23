@@ -37,7 +37,7 @@ export const DeviceInfoChip: React.FC<DeviceInfoChipProps> = ({
           setName(n);
         }
       } catch {
-        /* ignore — field stays null */
+        /* ignore - field stays null */
       }
       try {
         const r = await DeviceInfo.getTotalMemory();

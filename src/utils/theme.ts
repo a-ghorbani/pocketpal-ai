@@ -17,7 +17,7 @@ import {type AvailableLanguage} from '../locales';
 // some time). The builder takes a `Mode` from the tokens module directly.
 
 /**
- * Legacy Inter weight map. Preserved verbatim — `ChatInput/styles.ts`
+ * Legacy Inter weight map. Preserved verbatim - `ChatInput/styles.ts`
  * still imports `fontStyles` directly; the export will be removed in a
  * later cleanup phase once consumers migrate to `theme.typography.*`.
  */
@@ -84,10 +84,10 @@ const configuredFonts = configureFonts({
  *   - `colors`: every MD3 key Paper expects, sourced from the tokens
  *     module (values copied verbatim from today's createBaseColors +
  *     createSemanticColors output).
- *   - `typography`, `radius`, `stroke`: new surface — what later
+ *   - `typography`, `radius`, `stroke`: new surface - what later
  *     per-screen restyle work migrates consumers to.
  *   - `fonts`, `spacing.default`, `borders`, `insets`, `icons`: legacy
- *     surface preserved verbatim — pinned to today's values so the ~18
+ *     surface preserved verbatim - pinned to today's values so the ~18
  *     MD3-typescale consumers + 4 spacing.default consumers continue to
  *     render unchanged.
  *   - Non-color/non-font Paper internals (`isV3`, `dark`, `roundness`,
@@ -114,7 +114,7 @@ export const buildTheme = ({
       // Keep any Paper-internal keys (e.g. elevation tints) the tokens
       // module doesn't explicitly enumerate.
       ...baseTheme.colors,
-      // Token-resolved color surface — same values as today's
+      // Token-resolved color surface - same values as today's
       // createBaseColors + createSemanticColors output.
       ...tokens.colors,
     },
@@ -123,7 +123,7 @@ export const buildTheme = ({
       messageBorderRadius: 15,
       default: 12,
     },
-    // Legacy fonts surface — preserved VERBATIM.
+    // Legacy fonts surface - preserved VERBATIM.
     // Components that read `theme.fonts.bodyMedium`, `theme.fonts.titleSmall`,
     // `theme.fonts.titleMediumLight`, etc., see the exact same shape and
     // values as before this slice.
@@ -230,7 +230,7 @@ export const buildTheme = ({
   };
 };
 
-// En-locale snapshot exports — used by jest fixtures and any non-React
+// En-locale snapshot exports - used by jest fixtures and any non-React
 // caller that doesn't have access to `useTheme()`. Locale-swapped values
 // are only observable via the hook.
 export const lightTheme = buildTheme({mode: 'light', language: 'en'});

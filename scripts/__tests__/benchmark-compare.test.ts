@@ -1,7 +1,7 @@
 /**
  * Unit tests for the pure `compareReports` function in
  * `e2e/scripts/benchmark-compare.ts`. Mirrors the pattern of
- * `scripts/__tests__/memory-compare.test.ts` — the script lives under `e2e/`
+ * `scripts/__tests__/memory-compare.test.ts` - the script lives under `e2e/`
  * but its regression-diffing core is plain TypeScript with no Appium deps.
  *
  * Behaviour under test:
@@ -56,7 +56,7 @@ function makeReport(
 }
 
 // Suppress the WARN line `compareReports` emits when one or both sides omit
-// `bench` — every test in this file uses the legacy fixture (no bench field)
+// `bench` - every test in this file uses the legacy fixture (no bench field)
 // except the protocol-mismatch suite below, which sets it explicitly.
 const originalConsoleError = console.error;
 beforeAll(() => {
@@ -163,7 +163,7 @@ describe('compareReports (benchmark-compare)', () => {
   it('uses OR semantics: flags when pp OR tg regresses (not AND)', () => {
     // Contrast with memory-compare which requires BOTH thresholds.
     const baseline = makeReport([makeRun({pp_avg: 300, tg_avg: 24})]);
-    // -20% pp but +5% tg — one dim regresses, the other improves.
+    // -20% pp but +5% tg - one dim regresses, the other improves.
     const current = makeReport([makeRun({pp_avg: 240, tg_avg: 25.2})]);
 
     const result = compareReports(baseline, current);
@@ -516,7 +516,7 @@ describe('compareReports (benchmark-compare)', () => {
   });
 
   // ---------------------------------------------------------------------------
-  // v1.1 — settings_fingerprint axis + Hexagon effective_backend arms
+  // v1.1 - settings_fingerprint axis + Hexagon effective_backend arms
   // (WHAT 4g.1, 4g.4)
   // ---------------------------------------------------------------------------
 

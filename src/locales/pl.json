@@ -50,7 +50,7 @@
     "weightRepackingDescription": "Szybsze przetwarzanie poleceń przy minimalnym obciążeniu pamięci, gdy mapowanie pamięci jest wyłączone. Nie ma to wpływu na generowanie tokenów.",
     "ttsAvailability": "Synteza mowy",
     "ttsAvailabilityDescription": "Przeczytaj na głos odpowiedzi asystenta.",
-    "ttsAvailabilityLowMemoryWarning": "W urządzeniu jest mało pamięci — funkcja może nie działać prawidłowo.",
+    "ttsAvailabilityLowMemoryWarning": "W urządzeniu jest mało pamięci - funkcja może nie działać prawidłowo.",
     "modelLoadingSettings": "Ustawienia Ładowania Modelu",
     "autoOffloadLoad": "Automatyczne Wyładowywanie/Załadowywanie",
     "autoOffloadLoadDescription": "Wyładuj model, gdy aplikacja działa w tle.",
@@ -90,12 +90,12 @@
     "serverUrl": "URL Serwera",
     "serverUrlPlaceholder": "np., http://192.168.1.100:1234",
     "requestTimeout": "Limit czasu żądania (w sekundach)",
-    "requestTimeoutPlaceholder": "Opcjonalnie – pozostaw puste, aby zachować ustawienie domyślne",
+    "requestTimeoutPlaceholder": "Opcjonalnie - pozostaw puste, aby zachować ustawienie domyślne",
     "requestTimeoutHelp": "Maksymalny czas oczekiwania na odpowiedź opóźnionego serwera. Aby zachować ustawienie domyślne, pozostaw to pole puste.",
     "serverType": "Typ Serwera",
     "serverTypeHelp": "Wykryto automatycznie; popraw, jeśli jest błędne.",
     "apiKey": "Klucz API",
-    "apiKeyPlaceholder": "Opcjonalne – wymagane w przypadku OpenAI/Groq",
+    "apiKeyPlaceholder": "Opcjonalne - wymagane w przypadku OpenAI/Groq",
     "apiKeyDescription": "Bezpiecznie zapisane na urządzeniu.",
     "remoteModel": "Zdalny",
     "remotePrivacyNotice": "Wiadomości wysyłane do zdalnych serwerów opuszczają Twoje urządzenie. Łącz się wyłącznie z serwerami, którym ufasz.",
@@ -104,7 +104,7 @@
     "deviceSelectionIOS": "Urządzenie (Metal)",
     "deviceSelectionIOSDescription": "Wybierz Metal GPU lub tryb wyłącznie CPU",
     "deviceSelectionAndroidDescription": "Wybierz urządzenie obliczeniowe (CPU, GPU lub Hexagon NPU)",
-    "cpuOnlyNoAccelerators": "Tylko CPU – nie wykryto żadnych akceleratorów sprzętowych",
+    "cpuOnlyNoAccelerators": "Tylko CPU - nie wykryto żadnych akceleratorów sprzętowych",
     "contextSize": "Rozmiar Kontekstu",
     "contextSizePlaceholder": "Wprowadź rozmiar kontekstu (min {{minContextSize}})",
     "invalidContextSizeError": "Wprowadź prawidłową liczbę (co najmniej {{minContextSize}})",
@@ -162,14 +162,14 @@
     "valueCacheTypeDescription": "Wybierz typ pamięci podręcznej do obliczania wartości",
     "flashAttentionOn": "Wł.",
     "flashAttentionOff": "Wył.",
-    "valueCacheTypeDisabledDescription": "Włącz opcję „Flash Attention”, aby zmienić typ pamięci podręcznej",
+    "valueCacheTypeDisabledDescription": "Włącz opcję „Flash Attention\", aby zmienić typ pamięci podręcznej",
     "physicalBatchSizeDescription": "Fizyczny rozmiar partii: {{physicalBatchSize}}{{effectivePhysicalBatch}}",
     "remoteIndicator": "Zdalny",
     "languageSheetTitle": "Język",
     "languageSearchPlaceholder": "Wyszukaj języki",
     "internetSearch": {
       "title": "Wyszukiwanie w internecie",
-      "description": "Pozwól Kumplom przeszukiwać internet za pomocą własnych narzędzi. Użyj własnego klucza API — PocketPal nigdy nie przechowuje Twoich kluczy ani nie przekazuje Twoich zapytań.",
+      "description": "Pozwól Kumplom przeszukiwać internet za pomocą własnych narzędzi. Użyj własnego klucza API - PocketPal nigdy nie przechowuje Twoich kluczy ani nie przekazuje Twoich zapytań.",
       "providerLabel": "Dostawca wyszukiwania",
       "providerGated": "Wkrótce",
       "keyLabel": "Klucz API",
@@ -210,7 +210,7 @@
   "models": {
     "labels": {
       "availableToDownload": "Dostępne do Pobrania",
-      "useAddButtonForMore": "Użyj przycisku „+” aby znaleźć więcej modeli",
+      "useAddButtonForMore": "Użyj przycisku „+\" aby znaleźć więcej modeli",
       "localModel": "Lokalne",
       "hfModel": "HF",
       "unknownGroup": "Nieznane",
@@ -303,7 +303,7 @@
           "message": "Rozmiar modelu jest zbliżony do całkowitej pojemności pamięci urządzenia lub ją przekracza. Może to spowodować nieoczekiwane zachowanie urządzenia."
         },
         "legacy": {
-          "message": "Starszy format kwantyzacji – model może nie działać.",
+          "message": "Starszy format kwantyzacji - model może nie działać.",
           "shortMessage": "Przestarzała kwantyzacja"
         },
         "multiple": "{{count}} Ostrzeżenia"
@@ -461,7 +461,7 @@
     "jinja": "Włącz obsługę szablonów Jinja do formatowania czatu. Po włączeniu tej opcji przetwarzanie szablonów czatu odbywa się w oparciu o Jinja, co zapewnia lepszą kompatybilność z nowoczesnymi modelami.",
     "grammar": "Zastosuj określone reguły gramatyczne, aby wygenerowany tekst był zgodny z określoną strukturą lub formatem",
     "stop": "Określ konkretne frazy, które spowodują zatrzymanie generowania tekstu",
-    "n_predict": "Maksymalna liczba tokenów do wygenerowania. Ustaw opcję „Nieograniczona”, aby zrezygnować z ograniczeń, lub „Niestandardowa”, aby podać konkretną wartość.",
+    "n_predict": "Maksymalna liczba tokenów do wygenerowania. Ustaw opcję „Nieograniczona\", aby zrezygnować z ograniczeń, lub „Niestandardowa\", aby podać konkretną wartość.",
     "n_probs": "Pokaż oceny prawdopodobieństwa dla alternatywnych słów.",
     "top_k": "Kontroluj kreatywność, ograniczając wybór słów do K najbardziej prawdopodobnych opcji. Niższe wartości sprawiają, że odpowiedzi są bardziej konkretne",
     "top_p": "Znajdź równowagę między kreatywnością a spójnością. Wyższe wartości (bliskie 1,0) pozwalają na uzyskanie bardziej kreatywnych, ale potencjalnie mniej konkretnych odpowiedzi",
@@ -544,20 +544,20 @@
     },
     "exportUtils": {
       "fileSaved": "Plik zapisany",
-      "fileSavedMessage": "Plik został zapisany w folderze „Pobrane” pod nazwą {{filename}}",
+      "fileSavedMessage": "Plik został zapisany w folderze „Pobrane\" pod nazwą {{filename}}",
       "share": "Udostępnij",
       "ok": "OK",
       "shareError": "Błąd Udostępniania",
       "shareErrorMessage": "Nie udało się udostępnić pliku. Spróbuj ponownie.",
-      "saveError": "Błąd podczas zapisywania w folderze „Pobrane”",
+      "saveError": "Błąd podczas zapisywania w folderze „Pobrane\"",
       "saveOptions": "Opcje Zapisu",
-      "saveOptionsMessage": "Nie można zapisać pliku bezpośrednio w folderze „Pobrane”. Czy chcesz zamiast tego udostępnić ten plik?",
+      "saveOptionsMessage": "Nie można zapisać pliku bezpośrednio w folderze „Pobrane\". Czy chcesz zamiast tego udostępnić ten plik?",
       "cancel": "Anuluj",
       "shareContentErrorMessage": "Nie udało się udostępnić treści. Spróbuj ponownie.",
       "exportError": "Błąd Eksportu",
       "exportErrorMessage": "Wystąpił błąd podczas eksportowania pliku. Spróbuj ponownie.",
       "permissionRequired": "Uprawnienie Wymagane do Zapisu",
-      "permissionMessage": "Potrzebujemy zgody na zapisanie Twojego pliku eksportu w folderze „Pobrane”.",
+      "permissionMessage": "Potrzebujemy zgody na zapisanie Twojego pliku eksportu w folderze „Pobrane\".",
       "permissionDenied": "Odmowa Dostępu",
       "permissionDeniedMessage": "Bez uprawnień do przechowywania danych funkcja eksportu będzie wyłączona.",
       "continue": "Kontynuuj"
@@ -605,7 +605,7 @@
     },
     "modelErrorReportSheet": {
       "title": "Zgłoś Problem z Ładowaniem Modelu",
-      "privacyNote": "Pomóż nam ulepszyć PocketPal, przekazując szczegóły dotyczące tego błędu. Poniżej znajdziesz listę informacji, które zostaną udostępnione — możesz odznaczyć te pozycje, których nie chcesz ujawniać.",
+      "privacyNote": "Pomóż nam ulepszyć PocketPal, przekazując szczegóły dotyczące tego błędu. Poniżej znajdziesz listę informacji, które zostaną udostępnione - możesz odznaczyć te pozycje, których nie chcesz ujawniać.",
       "errorMessage": "Komunikat o błędzie",
       "modelInfo": "Informacje o Modelu",
       "modelName": "Nazwa",
@@ -690,7 +690,7 @@
       "forbiddenTitle": "Odmowa Dostępu",
       "forbiddenMessage": "Nie masz uprawnień dostępu do tego modelu. Upewnij się, że:",
       "forbiddenSteps": [
-        "Twój token ma uprawnienie „odczytu”",
+        "Twój token ma uprawnienie „odczytu\"",
         "Złożyłeś wniosek o dostęp do tego modelu i uzyskałeś go",
         "Właściciel modelu zatwierdził Twoją prośbę o dostęp"
       ],
@@ -736,7 +736,7 @@
       "instructionsSteps": [
         "Wejdź na stronę huggingface.co i zaloguj się",
         "Przejdź do sekcji Ustawienia > Tokeny Dostępu",
-        "Utwórz nowy token z uprawnieniem „odczytu”",
+        "Utwórz nowy token z uprawnieniem „odczytu\"",
         "Skopiuj token i wklej go poniżej"
       ],
       "getTokenLink": "Uzyskaj token ze strony huggingface.co ↗",
@@ -828,7 +828,7 @@
       "noModelsDescription": "Pobierz model, aby rozpocząć rozmowę w PocketPal",
       "noModelsButton": "Pobierz Model",
       "activateModelTitle": "Aktywuj model, aby rozpocząć",
-      "activateModelDescription": "Wybierz model i pobierz go. Po zakończeniu pobierania dotknij opcji „Załaduj” obok modelu i rozpocznij rozmowę."
+      "activateModelDescription": "Wybierz model i pobierz go. Po zakończeniu pobierania dotknij opcji „Załaduj\" obok modelu i rozpocznij rozmowę."
     },
     "chatInput": {
       "inputPlaceholder": "Wiadomość",
@@ -1083,7 +1083,7 @@
       "notAvailable": "nie dot.",
       "buyOnPalshub": "Kup na Palshub",
       "finalizingPurchase": "Finalizujemy Twój zakup…",
-      "processingPurchase": "Przetwarzanie — dostęp zostanie wkrótce odblokowany.",
+      "processingPurchase": "Przetwarzanie - dostęp zostanie wkrótce odblokowany.",
       "checkoutSessionExpired": "Twoja sesja wygasła. Zaloguj się ponownie, aby kontynuować.",
       "signInAgain": "Zaloguj się ponownie",
       "palNotAvailable": "Ten Kumpel nie jest obecnie dostępny w sprzedaży.",
@@ -1310,7 +1310,7 @@
     "previewButton": "Podgląd",
     "stopPreviewButton": "Zatrzymaj podgląd",
     "voicesTitle": "Głosy",
-    "voicesEmptyHint": "Dotknij dowolnego głosu, aby go zainstalować i zacząć z niego korzystać. Możesz też wybrać głos systemowy — te są zawsze dostępne.",
+    "voicesEmptyHint": "Dotknij dowolnego głosu, aby go zainstalować i zacząć z niego korzystać. Możesz też wybrać głos systemowy - te są zawsze dostępne.",
     "supertonicStepsLabel": "Jakość (etapy dyfuzji)",
     "supertonicLanguageLabel": "Język",
     "supertonicLanguageAuto": "Automatycznie",
@@ -1370,7 +1370,7 @@
     "engineRetryCta": "Spróbuj ponownie",
     "voicesEmptyState": "Nie znaleziono żadnych głosów.",
     "kokoroDeviceNote": "Niektóre głosy mogą nie działać na wszystkich urządzeniach.",
-    "insufficientStorage": "Za mało miejsca — zwolnij {{requiredMb}} MB, aby zainstalować ten silnik (dostępne {{freeMb}} MB).",
+    "insufficientStorage": "Za mało miejsca - zwolnij {{requiredMb}} MB, aby zainstalować ten silnik (dostępne {{freeMb}} MB).",
     "engineTierBestQuality": "najwyższa jakość",
     "engineTierFastestStart": "najszybszy start",
     "engineSpecsLine": "{{voices}} głosów  ·  {{sizeMb}} MB  ·  ~{{ramMb}} MB pamięci RAM",
@@ -1393,7 +1393,7 @@
         "else": "Przejrzyj wszystkich Kumpli później w aplikacji",
         "smartchat": "Przyjazny towarzysz na co dzień"
       },
-      "body": "Wybierz temat, o którym chcesz porozmawiać – dobierzemy Ci kumpla, który będzie pasował do Twojego telefonu.",
+      "body": "Wybierz temat, o którym chcesz porozmawiać - dobierzemy Ci kumpla, który będzie pasował do Twojego telefonu.",
       "topic": {
         "smartchat": "Inteligentny Czat",
         "coding": "Programowanie",
@@ -1417,19 +1417,19 @@
         "balanced": "Zrównoważony",
         "best": "Najlepszy"
       },
-      "subtitleTemplate": "{{name}} myśli za pomocą niewielkiego modelu sztucznej inteligencji na telefonie – wybierz taki, który Ci odpowiada.",
+      "subtitleTemplate": "{{name}} myśli za pomocą niewielkiego modelu sztucznej inteligencji na telefonie - wybierz taki, który Ci odpowiada.",
       "pal": {
         "pip": {
           "body": "Znaleźliśmy dla Ciebie idealnego kumpla - przyjaznego towarzysza na co dzień. Wystarczająco inteligentny, by poradzić sobie z większością zadań, i wystarczająco lekki, by pasować do każdego telefonu."
         },
         "codie": {
-          "body": "Poznaj Codie — Twojego lokalnego partnera do programowania. Czyta kod, pisze kod i wyjaśnia skomplikowane fragmenty, nie opuszczając przy tym nigdy Twojego telefonu."
+          "body": "Poznaj Codie - Twojego lokalnego partnera do programowania. Czyta kod, pisze kod i wyjaśnia skomplikowane fragmenty, nie opuszczając przy tym nigdy Twojego telefonu."
         },
         "sage": {
           "body": "Sage jest cierpliwy, ciekawy świata i krok po kroku wyjaśnia różne pomysły. To taki kolega do nauki, którego zawsze masz pod ręką."
         },
         "echo": {
-          "body": "Echo to wszechstronny towarzysz w grach fabularnych — pozostaje w charakterze swojej postaci, maluje sceny i podąża za Tobą, dokądkolwiek zaprowadzi cię Twoja historia."
+          "body": "Echo to wszechstronny towarzysz w grach fabularnych - pozostaje w charakterze swojej postaci, maluje sceny i podąża za Tobą, dokądkolwiek zaprowadzi cię Twoja historia."
         },
         "muse": {
           "body": "Muse pomaga w pisaniu. Sugeruje sformułowania, nadaje tekstowi rytm i pozwala zachować odpowiedni ton."
@@ -1445,7 +1445,7 @@
     "screen1": {
       "title": "Poznaj swoich kumpli.",
       "titleAccent": "kumple.",
-      "body": "Sprytni mali przyjaciele, którzy mieszkają w Twoim telefonie.\nZacznijmy konfigurację – to zajmie tylko chwilę.",
+      "body": "Sprytni mali przyjaciele, którzy mieszkają w Twoim telefonie.\nZacznijmy konfigurację - to zajmie tylko chwilę.",
       "cta": "Oprowadź mnie",
       "eyebrow": "Witaj w PocketPal"
     },
@@ -1454,7 +1454,7 @@
       "eyebrow": "Uwaga",
       "title": "Mniejszy,\nale za to Twój.",
       "titleAccent": "Mniejszy,",
-      "body": "Kumple na Twoim telefonie działają szybko i zapewniają prywatność – ale są mniej rozbudowani niż sztuczna inteligencja w chmurze. Pomyśl o nich raczej jak o kieszonkowych towarzyszach, a nie wszechwiedzących wyroczniach.",
+      "body": "Kumple na Twoim telefonie działają szybko i zapewniają prywatność - ale są mniej rozbudowani niż sztuczna inteligencja w chmurze. Pomyśl o nich raczej jak o kieszonkowych towarzyszach, a nie wszechwiedzących wyroczniach.",
       "highlight": "szybko i dyskretnie"
     },
     "screen4": {
@@ -1467,7 +1467,7 @@
     },
     "screen2": {
       "title": "Kiedy chcesz,\nGdzie chcesz.",
-      "body": "Twoi Kumple żyją w Twoim telefonie.\nBez internetu, bez zasięgu – działają w samolotach, poza siecią, w odległych wioskach.",
+      "body": "Twoi Kumple żyją w Twoim telefonie.\nBez internetu, bez zasięgu - działają w samolotach, poza siecią, w odległych wioskach.",
       "highlight": "Bez internetu, bez sieci",
       "cta": "Następny",
       "eyebrow": "Pomysł",
@@ -1528,7 +1528,7 @@
     "contextRemoteHedged": "Ta odpowiedź mogła zostać ucięta. Spróbuj wysłać ją ponownie lub skrócić zapytanie.",
     "contextFull": "W rozmowie zabrakło miejsca. Rozpocznij nową rozmowę lub zwiększ rozmiar kontekstu.",
     "contextFullEscalated": "Wciąż brakuje miejsca. Rozpocznij nową rozmowę lub zwiększ rozmiar kontekstu, aby kontynuować.",
-    "contextFullHeavyTalent": "W rozmowie zabrakło miejsca — {{talent}} zazwyczaj potrzebuje więcej. Rozpocznij nową rozmowę lub zwiększ rozmiar kontekstu.",
+    "contextFullHeavyTalent": "W rozmowie zabrakło miejsca - {{talent}} zazwyczaj potrzebuje więcej. Rozpocznij nową rozmowę lub zwiększ rozmiar kontekstu.",
     "contextBannerDismiss": "Odrzuć",
     "contextNewChat": "Nowy czat",
     "contextIncrease": "Powiększ kontekst",
@@ -1573,7 +1573,7 @@
       "showResultsAccessibilityLabel": "Pokaż wyniki wyszukiwania w internecie dla {{query}}",
       "openLinkError": "Nie udało się otworzyć tego linku."
     },
-    "speculativeInitFailed": "To urządzenie nie mogło uruchomić dekodowania spekulatywnego dla tego modelu — najprawdopodobniej brakuje pamięci na kontekst modelu roboczego. Wyłącz Dekodowanie spekulatywne w Ustawienia → Ustawienia Zaawansowane i spróbuj ponownie."
+    "speculativeInitFailed": "To urządzenie nie mogło uruchomić dekodowania spekulatywnego dla tego modelu - najprawdopodobniej brakuje pamięci na kontekst modelu roboczego. Wyłącz Dekodowanie spekulatywne w Ustawienia → Ustawienia Zaawansowane i spróbuj ponownie."
   },
   "htmlPreview": {
     "defaultTitle": "Podgląd",

@@ -3,7 +3,7 @@ import {StyleSheet, type TextStyle, type ViewStyle} from 'react-native';
 import type {Theme} from '../../../utils/types';
 
 /**
- * CategoryBadge palette — small token-bound palette covering the common
+ * CategoryBadge palette - small token-bound palette covering the common
  * badge color slots.
  */
 export type CategoryBadgeVariant =

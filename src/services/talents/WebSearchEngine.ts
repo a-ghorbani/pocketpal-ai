@@ -94,14 +94,14 @@ export class WebSearchEngine implements TalentEngine {
       if (__DEV__) {
         console.log('[web_search]', {query, provider: provider.id, count: 0});
       }
-      // No usable hits — provider returned none, or budgeting rejected them all.
+      // No usable hits - provider returned none, or budgeting rejected them all.
       // Don't cache: a transient/all-rejected empty must not lock out retries or
       // flip the same input between success and error on replay.
       const summary = `web_search: no results for "${query}". Try a shorter or less restrictive query.`;
       return {type: 'error', summary, errorMessage: summary};
     }
 
-    // Cache the budgeted hits, not the raw payload — same model-visible result
+    // Cache the budgeted hits, not the raw payload - same model-visible result
     // on replay, without retaining oversized provider snippets.
     setCachedHits(provider.id, query, maxResults, budgeted);
     allowReadUrls(budgeted.map(h => h.url));
@@ -136,7 +136,7 @@ export class WebSearchEngine implements TalentEngine {
       : '';
     return (
       `Today's date is ${today}. You can search the web with web_search${readUrl}. ` +
-      `For time-sensitive or factual questions, search first; usually one or two searches suffice — ` +
+      `For time-sensitive or factual questions, search first; usually one or two searches suffice - ` +
       `you have a budget of ${budget} tool calls. Answer using the facts in the results and cite ` +
       'source URLs. If the results do not contain the answer, say so rather than guessing.'
     );

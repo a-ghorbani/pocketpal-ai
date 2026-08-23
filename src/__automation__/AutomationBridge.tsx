@@ -15,7 +15,7 @@ import {TTSAdapter} from './adapters/TTSAdapter';
  *   AUTOMATION_BRIDGE
  *
  * If this string is present in a prod APK's index.android.bundle, the
- * DCE contract has been violated — fix the gate, not the grep.
+ * DCE contract has been violated - fix the gate, not the grep.
  */
 export const AutomationBridge: React.FC = () => {
   if (!__E2E__) {

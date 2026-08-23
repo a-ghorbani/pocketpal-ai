@@ -19,7 +19,7 @@ export interface TalentUI {
  *
  * Mirrors {@link TalentRegistry} on the UI side: each visual talent registers
  * a `TalentUI` that knows how to render its result and pending state.
- * Text-only talents (calculate, datetime) do not register a TalentUI —
+ * Text-only talents (calculate, datetime) do not register a TalentUI -
  * TalentSurface renders nothing for them.
  */
 export class TalentUIRegistry {

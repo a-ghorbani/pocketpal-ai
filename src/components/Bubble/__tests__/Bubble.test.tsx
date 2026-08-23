@@ -31,7 +31,7 @@ describe('Bubble', () => {
     );
   };
 
-  // Bubble is a pure shape primitive — chrome lives on
+  // Bubble is a pure shape primitive - chrome lives on
   // AssistantTurnFooter. Tests assert shape behaviour only.
 
   it('renders the child content', () => {

@@ -117,9 +117,9 @@ export const useDeepLinking = () => {
   );
 
   // E2E-only routing for the BenchmarkRunnerScreen. Two paths:
-  //   1. Cold launch — Linking.getInitialURL() reads the launching intent's
+  //   1. Cold launch - Linking.getInitialURL() reads the launching intent's
   //      data URI; no MainActivity onNewIntent override needed.
-  //   2. Warm launch — WDIO's `mobile: deepLink` driver command delivers the
+  //   2. Warm launch - WDIO's `mobile: deepLink` driver command delivers the
   //      URL after the app has already started (fullReset re-installs the
   //      APK but the activity is launched before the test sends the deep
   //      link), so Android routes it as a warm 'url' event. Without the
@@ -135,8 +135,8 @@ export const useDeepLinking = () => {
       if (isBenchmarkRunnerUrl(url)) {
         // Resolve autostart from the same raw URL the gate matched, via the
         // shared helper, so cold-launch (getInitialURL) and warm-launch
-        // ('url' event) deliveries — and the iOS dispatchAutomationDeepLink
-        // path — cannot diverge in truthiness. A bare bench URL resolves
+        // ('url' event) deliveries - and the iOS dispatchAutomationDeepLink
+        // path - cannot diverge in truthiness. A bare bench URL resolves
         // false, so the screen stays idle exactly as before.
         (navigation as any).navigate(ROUTES.BENCHMARK_RUNNER, {
           autostart: parseBenchmarkAutostart(url),
@@ -182,7 +182,7 @@ export const useDeepLinking = () => {
   // emitter above; Android prod has no native deep-link bridge, so this RN
   // Linking path (cold getInitialURL + warm 'url' event) is the only delivery.
   // Gated by isHubLink so non-hub URLs (chat, e2e/benchmark, memory) and unknown
-  // hub paths are ignored silently — only the exact hub/run route reaches
+  // hub paths are ignored silently - only the exact hub/run route reaches
   // handleHubRunLink, matching the native emitter path. A malformed hub/run
   // payload still alerts.
   useEffect(() => {

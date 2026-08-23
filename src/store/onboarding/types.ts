@@ -1,13 +1,13 @@
 /**
- * Onboarding types — closed union of topic keys shown on the topic chip
+ * Onboarding types - closed union of topic keys shown on the topic chip
  * grid and the in-memory state shape for the onboarding flow.
  *
  * `OnboardingState` lives inside `UIStore` (single store; per-session,
- * not persisted) — see `UIStore.onboardingState`. `hasCompletedOnboarding`
+ * not persisted) - see `UIStore.onboardingState`. `hasCompletedOnboarding`
  * and `onboardingTopicsSnapshot` are persisted there too.
  *
  * The `else` chip is rendered in the 6th grid slot as a non-interactive
- * outlined card — it advertises the no-preference path without competing
+ * outlined card - it advertises the no-preference path without competing
  * with the real topic chips for taps. Users still reach that path via the
  * top-right Skip button. `else` is also the fallback index into
  * `TOPIC_TO_PAL` for `resolvePalForTopic(null)`.

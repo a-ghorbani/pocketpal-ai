@@ -68,7 +68,7 @@ async function collect(iter: AsyncIterable<AgentEvent>): Promise<AgentEvent[]> {
 }
 
 describe('runAgent', () => {
-  // ---------- Story Test Requirements (AgentRunner) #1–#18 ----------
+  // ---------- Story Test Requirements (AgentRunner) #1-#18 ----------
 
   it('#1 single turn, no tools → run_started, step_started, token*, step_finished, run_finished', async () => {
     const engine = makeScriptedEngine({
@@ -273,7 +273,7 @@ describe('runAgent', () => {
   });
 
   it('#5 maxTurns hit → run_finished with hitMaxTurns=true (NOT run_failed)', async () => {
-    // Engine always asks for more tools — never produces a final answer.
+    // Engine always asks for more tools - never produces a final answer.
     const engine: CompletionEngine = {
       completion: jest.fn(async (_p, cb) => {
         cb?.({});
@@ -534,7 +534,7 @@ describe('runAgent', () => {
       runAgent({
         engine,
         initialParams: baseParams,
-        // Empty allow-list — model invented a tool the Pal does not advertise.
+        // Empty allow-list - model invented a tool the Pal does not advertise.
         allowedTalentNames: [],
         talentLookup: () =>
           makeTalent('evil', () => ({type: 'text', summary: 'pwn'})),
@@ -606,7 +606,7 @@ describe('runAgent', () => {
     const engine: CompletionEngine = {
       completion: jest.fn(async (_p, cb) => {
         cb?.({content: 'first'});
-        // Abort once the first turn finishes — i.e. before the next loop iteration.
+        // Abort once the first turn finishes - i.e. before the next loop iteration.
         controller.abort();
         return {
           text: 'first',
@@ -644,7 +644,7 @@ describe('runAgent', () => {
   });
 
   it('#11 triggerMarkers contains marker, content matches → marker_seen fires exactly once', async () => {
-    // The model streams a marker but never produces a parsed tool_call —
+    // The model streams a marker but never produces a parsed tool_call -
     // the runner must still emit marker_seen so the UI can flip its
     // status copy at marker time.
     const engine = makeScriptedEngine({
@@ -946,7 +946,7 @@ describe('runAgent', () => {
       /[\\/]node_modules[\\/]mobx-react-lite[\\/]/,
       /[\\/]node_modules[\\/]react-native[\\/]/,
       /[\\/]src[\\/]store[\\/]/,
-      // The runner must NOT import the trigger-marker cache module —
+      // The runner must NOT import the trigger-marker cache module -
       // it consumes `triggerMarkers` only as a `string[]` value
       // injected through `AgentRunOptions`. Locks the architectural
       // invariant in CI rather than relying on a one-time grep.
@@ -977,13 +977,13 @@ describe('runAgent', () => {
             ],
           },
         },
-        // No second turn expected — abort fires at the boundary after tool execution.
+        // No second turn expected - abort fires at the boundary after tool execution.
       ],
     });
     const slow: TalentEngine = {
       name: 'slow',
       // The talent's execute() runs to completion; abort fires DURING it,
-      // but the runner does not cancel synchronous-ish talents — the
+      // but the runner does not cancel synchronous-ish talents - the
       // outcome is still appended.
       execute: async () => {
         controller.abort();
@@ -1067,7 +1067,7 @@ describe('runAgent', () => {
       triggerMarkers: [],
     })) {
       out.push(e);
-      // Slow the consumer — let other microtasks run between pulls.
+      // Slow the consumer - let other microtasks run between pulls.
       await new Promise(r => setTimeout(r, 0));
     }
     const tokenEvents = out.filter(e => e.type === 'token');
@@ -1170,7 +1170,7 @@ describe('runAgent', () => {
   // `generating_tool_call`, sourced from
   // `delta.toolCalls[0].function.arguments`. That only works if the
   // engine emits incremental tool_calls deltas mid-stream. This test
-  // proves OUR pipeline works in that case — if the indicator stays
+  // proves OUR pipeline works in that case - if the indicator stays
   // empty on device, the problem is upstream (the engine isn't
   // streaming tool_calls; on-device verification via the
   // [pending-debug] logs).
@@ -1240,7 +1240,7 @@ describe('runAgent', () => {
       })
       .filter(n => n >= 0);
     expect(argLens).toEqual(stages.map(s => s.length));
-    // Strictly increasing — the count source for the indicator.
+    // Strictly increasing - the count source for the indicator.
     for (let i = 1; i < argLens.length; i++) {
       expect(argLens[i]).toBeGreaterThan(argLens[i - 1]);
     }
@@ -1252,7 +1252,7 @@ describe('runAgent', () => {
   // and tracks the wall-clock duration from the first such event to
   // step finalisation. The metrics ride on the normalized toolCalls
   // attached to `step_finished`, which the hook persists via
-  // appendToolCall — so post-hoc UI (chip + preview footer) can show
+  // appendToolCall - so post-hoc UI (chip + preview footer) can show
   // them without any new persistence path.
   it('attaches per-call generation metrics on step_finished', async () => {
     const stages = ['{"a":', '{"a":1', '{"a":12', '{"a":123}'];
@@ -1308,7 +1308,7 @@ describe('runAgent', () => {
     const call = stepFinished!.toolCalls![0];
     expect(call.metrics).toBeDefined();
     expect(call.metrics!.tokens).toBe(stages.length);
-    // Duration is wall-clock — assert it's a non-negative finite number
+    // Duration is wall-clock - assert it's a non-negative finite number
     // rather than a precise value (test scheduling is non-deterministic).
     expect(call.metrics!.durationMs).toBeGreaterThanOrEqual(0);
     expect(Number.isFinite(call.metrics!.durationMs)).toBe(true);

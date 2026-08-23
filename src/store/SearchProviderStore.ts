@@ -50,7 +50,7 @@ class SearchProviderStore {
     this.loadKeysFromSecureStorage();
   }
 
-  // Persisted prefs skip the setters — re-validate after hydration so a stale
+  // Persisted prefs skip the setters - re-validate after hydration so a stale
   // gated/unknown provider, malformed type, or out-of-range count can't
   // survive a reload. Consent is a privacy gate: only a literal true counts.
   normalizeHydratedPrefs() {

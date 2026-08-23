@@ -177,7 +177,7 @@ describe('AssistantTurnFooter', () => {
     expect(getByText('Interrupted')).toBeTruthy();
   });
 
-  it('upgrades the status to "Cut off — likely context full" when truncationLikely is set', () => {
+  it('upgrades the status to "Cut off - likely context full" when truncationLikely is set', () => {
     const message = baseTurn({
       metadata: {copyable: true, interrupted: true, truncationLikely: true},
     });
@@ -185,7 +185,7 @@ describe('AssistantTurnFooter', () => {
       <AssistantTurnFooter message={message} />,
     );
     expect(getByTestId('footer-interrupted-status')).toBeTruthy();
-    expect(getByText('Cut off — likely context full')).toBeTruthy();
+    expect(getByText('Cut off - likely context full')).toBeTruthy();
   });
 
   it('renders the footer for interrupted-only turns (no copyable, no timings)', () => {
@@ -208,7 +208,7 @@ describe('AssistantTurnFooter', () => {
 
     it('suppresses the "cut off" footer text when the context-full banner owns this turn', () => {
       // The turn's snapshot is the store's live one AND it is contextFull,
-      // so the sticky banner is the single surface — footer drops "cut off"
+      // so the sticky banner is the single surface - footer drops "cut off"
       // and shows plain "Interrupted" instead.
       const snapshot = {used: 4096, contextFull: true, isRemote: false};
       runInAction(() => {
@@ -227,7 +227,7 @@ describe('AssistantTurnFooter', () => {
       );
       expect(getByTestId('footer-interrupted-status')).toBeTruthy();
       expect(getByText('Interrupted')).toBeTruthy();
-      expect(queryByText('Cut off — likely context full')).toBeNull();
+      expect(queryByText('Cut off - likely context full')).toBeNull();
     });
 
     it('still shows "cut off" when the turn snapshot is not the live banner snapshot', () => {
@@ -249,7 +249,7 @@ describe('AssistantTurnFooter', () => {
         },
       });
       const {getByText} = render(<AssistantTurnFooter message={message} />);
-      expect(getByText('Cut off — likely context full')).toBeTruthy();
+      expect(getByText('Cut off - likely context full')).toBeTruthy();
     });
 
     it('shows "cut off" when the live snapshot is not contextFull even if it matches', () => {
@@ -266,7 +266,7 @@ describe('AssistantTurnFooter', () => {
         },
       });
       const {getByText} = render(<AssistantTurnFooter message={message} />);
-      expect(getByText('Cut off — likely context full')).toBeTruthy();
+      expect(getByText('Cut off - likely context full')).toBeTruthy();
     });
 
     it('shows plain "Interrupted" for an interrupted-but-not-truncated turn regardless of banner state', () => {
@@ -284,7 +284,7 @@ describe('AssistantTurnFooter', () => {
         <AssistantTurnFooter message={message} />,
       );
       expect(getByText('Interrupted')).toBeTruthy();
-      expect(queryByText('Cut off — likely context full')).toBeNull();
+      expect(queryByText('Cut off - likely context full')).toBeNull();
     });
   });
 });

@@ -7,8 +7,8 @@ export const isMTPCapable = (model: {ggufMetadata?: GGUFMetadata}): boolean =>
 /**
  * A draft-only artifact speculates for a target but cannot be a chat model:
  * loading one fails in llama.rn with "Failed to load model". Embedded-MTP
- * models also carry `nextn_predict_layers`, so the arch suffix — not the layer
- * count — is what separates the two.
+ * models also carry `nextn_predict_layers`, so the arch suffix - not the layer
+ * count - is what separates the two.
  */
 // Converters disagree on the separator (`gemma4-assistant`, `gemma4_assistant`)
 // and some older ones tag the draft `*_mtp`, so match on the suffix word.
@@ -17,7 +17,7 @@ export const isDraftOnlyArch = (architecture?: string): boolean =>
 
 // Naming-convention signal for when no GGUF header is available yet:
 // ggml-org publishes drafts as `mtp-<target>`; converters use an `assistant`
-// token. Token match only — "openassistant-…" is a chat model, not a draft.
+// token. Token match only - "openassistant-…" is a chat model, not a draft.
 export const isDraftOnlyFilename = (filename?: string): boolean => {
   const name = (filename ?? '').toLowerCase().split('/').pop() ?? '';
   return name.startsWith('mtp-') || /(^|[-_.])assistant([-_.]|$)/.test(name);
@@ -39,7 +39,7 @@ export const nEmbdOut = (meta?: GGUFMetadata): number | undefined =>
   meta?.embedding_length_out ?? meta?.n_embd;
 
 /**
- * `unknown` means the probe could not run — no network, or a runtime the GGUF
+ * `unknown` means the probe could not run - no network, or a runtime the GGUF
  * reader cannot execute on. It is deliberately not folded into `not-capable`:
  * a probe that is broken everywhere must stay distinguishable from a genuine
  * negative, which reads identically at every call site.

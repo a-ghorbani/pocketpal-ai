@@ -106,7 +106,7 @@ export async function readSnapshots(): Promise<MemorySnapshot[]> {
 
     if (isSimulator) {
       // Simulator: read directly from filesystem via simctl. Prefer the
-      // explicit UDID — `booted` is ambiguous with several sims running.
+      // explicit UDID - `booted` is ambiguous with several sims running.
       const target = udid || 'booted';
       const container = execSync(
         `xcrun simctl get_app_container ${target} ${IOS_BUNDLE_ID} data`,
