@@ -1,5 +1,11 @@
-import React, {useContext, useEffect, useMemo, useState} from 'react';
-import {Image, ScrollView, Text, View} from 'react-native';
+import React, {
+  useCallback,
+  useContext,
+  useEffect,
+  useMemo,
+  useState,
+} from 'react';
+import {Alert, Image, ScrollView, Text, View} from 'react-native';
 
 import {observer} from 'mobx-react';
 import {useNavigation} from '@react-navigation/native';
@@ -21,7 +27,10 @@ import {
 import {getFullThumbnailUri} from '../../utils/imageUtils';
 import {ROUTES} from '../../utils/navigationConstants';
 import {Pressable} from '../../components/ui/primitives/Pressable';
+import {Menu} from '../../components/Menu';
+import {RenameModal} from '../../components/RenameModal';
 import {ChatPalModelPickerSheet} from '../../components/ChatPalModelPickerSheet';
+import {exportChatSession} from '../../utils/exportUtils';
 import {
   PlusFilledIcon,
   SendArrowIcon,
@@ -31,6 +40,10 @@ import {
   ClockIcon,
   DotsHorizontalIcon,
   MessageCircleMdIcon,
+  StarIcon,
+  EditIcon,
+  ShareIcon,
+  TrashIcon,
 } from '../../assets/icons';
 import type {Pal} from '../../types/pal';
 import type {SessionMetaData} from '../../store/ChatSessionStore';
@@ -78,63 +91,147 @@ const HistoryRow: React.FC<{
   session: SessionMetaData;
   styles: HomeStyles;
   onPress: () => void;
-}> = observer(({session, styles, onPress}) => {
-  const theme = useTheme();
-  const pal = session.activePalId
-    ? palStore.getPalById(session.activePalId)
-    : undefined;
-  const palUri = pal ? palThumbnailUri(pal) : undefined;
-  const palFill = pal?.color?.[0] ?? theme.colors.surfaceVariant;
-  return (
-    <Pressable
-      style={styles.historyRow}
-      onPress={onPress}
-      accessibilityRole="button"
-      accessibilityLabel={session.title}
-      testID={`home-history-${session.id}`}>
-      <View style={styles.historyRowMain}>
-        <Text style={styles.historyRowTitle} numberOfLines={1}>
-          {session.title}
-        </Text>
-        <View style={styles.historyInfoRow}>
-          {pal ? (
-            <View style={[styles.historyAvatar, {backgroundColor: palFill}]}>
-              {palUri ? (
-                <Image
-                  source={{uri: palUri}}
-                  style={styles.historyAvatarImage}
-                />
-              ) : (
-                palAvatarArt(pal)
-              )}
-            </View>
-          ) : null}
-          {pal ? (
-            <Text style={styles.historyMetaText} numberOfLines={1}>
-              {pal.name}
+  menuVisible: boolean;
+  onMorePress: () => void;
+  onMenuDismiss: () => void;
+  onPressPin: (sessionId: string) => void;
+  onPressRename: (session: SessionMetaData) => void;
+  onPressExport: (sessionId: string) => void;
+  onPressDelete: (sessionId: string) => void;
+}> = observer(
+  ({
+    session,
+    styles,
+    onPress,
+    menuVisible,
+    onMorePress,
+    onMenuDismiss,
+    onPressPin,
+    onPressRename,
+    onPressExport,
+    onPressDelete,
+  }) => {
+    const theme = useTheme();
+    const l10n = useContext(L10nContext);
+    const pal = session.activePalId
+      ? palStore.getPalById(session.activePalId)
+      : undefined;
+    const palUri = pal ? palThumbnailUri(pal) : undefined;
+    const palFill = pal?.color?.[0] ?? theme.colors.surfaceVariant;
+    return (
+      <Pressable
+        style={styles.historyRow}
+        onPress={onPress}
+        accessibilityRole="button"
+        accessibilityLabel={session.title}
+        testID={`home-history-${session.id}`}>
+        <View style={styles.historyRowMain}>
+          <View style={styles.historyTitleRow}>
+            {session.pinned ? (
+              <StarIcon
+                width={12}
+                height={12}
+                fill={theme.colors.yellowAccent}
+                testID={`home-session-pinned-${session.id}`}
+              />
+            ) : null}
+            <Text style={styles.historyRowTitle} numberOfLines={1}>
+              {session.title}
             </Text>
-          ) : null}
-          <Text style={styles.historyMetaText}>·</Text>
-          <ClockIcon
-            width={14}
-            height={14}
-            stroke={theme.colors.foregroundTertiary}
-          />
-          <Text style={styles.historyMetaText} numberOfLines={1}>
-            {formatRelativeAge(session.date)}
-          </Text>
+          </View>
+          <View style={styles.historyInfoRow}>
+            {pal ? (
+              <View style={[styles.historyAvatar, {backgroundColor: palFill}]}>
+                {palUri ? (
+                  <Image
+                    source={{uri: palUri}}
+                    style={styles.historyAvatarImage}
+                  />
+                ) : (
+                  palAvatarArt(pal)
+                )}
+              </View>
+            ) : null}
+            {pal ? (
+              <Text style={styles.historyMetaText} numberOfLines={1}>
+                {pal.name}
+              </Text>
+            ) : null}
+            <Text style={styles.historyMetaText}>·</Text>
+            <ClockIcon
+              width={14}
+              height={14}
+              stroke={theme.colors.foregroundTertiary}
+            />
+            <Text style={styles.historyMetaText} numberOfLines={1}>
+              {formatRelativeAge(session.date)}
+            </Text>
+          </View>
         </View>
-      </View>
-      <View style={styles.historyMore}>
-        <DotsHorizontalIcon
-          width={14}
-          height={14}
-          stroke={theme.colors.foregroundTertiary}
-        />
-      </View>
-    </Pressable>
-  );
-});
+        <Menu
+          visible={menuVisible}
+          onDismiss={onMenuDismiss}
+          anchorPosition="bottom"
+          anchor={
+            <Pressable
+              style={styles.historyMore}
+              onPress={onMorePress}
+              accessibilityRole="button"
+              accessibilityLabel={l10n.home.sessionActions}
+              hitSlop={{top: 8, bottom: 8, left: 8, right: 8}}
+              testID={`home-session-more-${session.id}`}>
+              <DotsHorizontalIcon
+                width={14}
+                height={14}
+                stroke={theme.colors.foregroundTertiary}
+              />
+            </Pressable>
+          }>
+          <Menu.Item
+            testID={`home-session-pin-${session.id}`}
+            onPress={() => onPressPin(session.id)}
+            label={
+              session.pinned
+                ? l10n.components.sidebarContent.unpin
+                : l10n.components.sidebarContent.pin
+            }
+            leadingIcon={() => (
+              // star.svg is stroke-only and .svgrrc binds that stroke to the fill
+              // prop, so fill='none' paints nothing — omitting fill is what
+              // yields the outline. No test catches this (svg is mocked).
+              <StarIcon
+                width={20}
+                height={20}
+                {...(session.pinned
+                  ? {fill: theme.colors.primary}
+                  : {stroke: theme.colors.primary})}
+              />
+            )}
+          />
+          <Menu.Item
+            testID={`home-session-rename-${session.id}`}
+            onPress={() => onPressRename(session)}
+            label={l10n.common.rename}
+            leadingIcon={() => <EditIcon stroke={theme.colors.primary} />}
+          />
+          <Menu.Item
+            testID={`home-session-export-${session.id}`}
+            onPress={() => onPressExport(session.id)}
+            label={l10n.common.export}
+            leadingIcon={() => <ShareIcon stroke={theme.colors.primary} />}
+          />
+          <Menu.Item
+            testID={`home-session-delete-${session.id}`}
+            onPress={() => onPressDelete(session.id)}
+            label={l10n.common.delete}
+            labelStyle={{color: theme.colors.error}}
+            leadingIcon={() => <TrashIcon stroke={theme.colors.error} />}
+          />
+        </Menu>
+      </Pressable>
+    );
+  },
+);
 
 export const HomeScreen: React.FC = observer(() => {
   const theme = useTheme();
@@ -149,6 +246,9 @@ export const HomeScreen: React.FC = observer(() => {
     undefined,
   );
   const [isPickerVisible, setPickerVisible] = useState(false);
+  const [menuSessionId, setMenuSessionId] = useState<string | null>(null);
+  const [sessionToRename, setSessionToRename] =
+    useState<SessionMetaData | null>(null);
 
   // Defensive: clear any stale one-shot auto-focus flag whenever Home regains
   // focus, so a launch that navigated but never mounted Chat can't carry over.
@@ -167,7 +267,7 @@ export const HomeScreen: React.FC = observer(() => {
   // bodies (read by the row observers), not these keys, so it won't recompute.
   const pals = palStore.pals;
   const sessionOrderSig = sessions
-    .map(s => `${s.id}:${s.date}:${s.activePalId ?? ''}`)
+    .map(s => `${s.id}:${s.date}:${s.activePalId ?? ''}:${s.pinned ? 1 : 0}`)
     .join('|');
   const palOrderSig = pals
     .map(p => `${p.id}:${p.name}:${p.source ?? ''}`)
@@ -215,11 +315,14 @@ export const HomeScreen: React.FC = observer(() => {
       }
       return 0;
     });
-    // History rows render newest-first (getAllSessions has no order); copy so
-    // the store is not mutated for a presentation need.
-    const recent = [...sessions].sort((a, b) =>
-      a.date < b.date ? 1 : a.date > b.date ? -1 : 0,
-    );
+    // History rows render pinned-first, then newest-first (getAllSessions has
+    // no order); copy so the store is not mutated for a presentation need.
+    const recent = [...sessions].sort((a, b) => {
+      if (!!a.pinned !== !!b.pinned) {
+        return a.pinned ? -1 : 1;
+      }
+      return a.date < b.date ? 1 : a.date > b.date ? -1 : 0;
+    });
     return {recentSessions: recent, orderedPals: ordered, defaultPalId: dft};
     // Recomputes only when ordering-relevant fields change (the signatures).
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -281,6 +384,63 @@ export const HomeScreen: React.FC = observer(() => {
   };
 
   const handleModelChipPress = () => setPickerVisible(true);
+
+  const closeMenu = useCallback(() => setMenuSessionId(null), []);
+
+  const handlePressPin = useCallback(
+    async (sessionId: string) => {
+      closeMenu();
+      await chatSessionStore.togglePinSession(sessionId);
+    },
+    [closeMenu],
+  );
+
+  const handlePressRename = useCallback(
+    (session: SessionMetaData) => {
+      closeMenu();
+      setSessionToRename(session);
+    },
+    [closeMenu],
+  );
+
+  const handlePressExport = useCallback(
+    async (sessionId: string) => {
+      closeMenu();
+      try {
+        await exportChatSession(sessionId);
+      } catch {
+        Alert.alert(
+          l10n.common.error,
+          l10n.components.sidebarContent.exportError,
+        );
+      }
+    },
+    [closeMenu, l10n],
+  );
+
+  const handlePressDelete = useCallback(
+    (sessionId: string) => {
+      closeMenu();
+      Alert.alert(
+        l10n.components.sidebarContent.deleteChatTitle,
+        l10n.components.sidebarContent.deleteChatMessage,
+        [
+          {text: l10n.common.cancel, style: 'cancel'},
+          {
+            text: l10n.common.delete,
+            style: 'destructive',
+            onPress: async () => {
+              // The deleted session may be the active one; reset first so Chat
+              // never resolves a session that is about to disappear.
+              chatSessionStore.resetActiveSession();
+              await chatSessionStore.deleteSession(sessionId);
+            },
+          },
+        ],
+      );
+    },
+    [closeMenu, l10n],
+  );
 
   return (
     <SafeAreaView style={styles.safeArea} edges={['top']} testID="home-screen">
@@ -462,6 +622,13 @@ export const HomeScreen: React.FC = observer(() => {
                   session={session}
                   styles={styles}
                   onPress={() => void handleHistoryPress(session)}
+                  menuVisible={menuSessionId === session.id}
+                  onMorePress={() => setMenuSessionId(session.id)}
+                  onMenuDismiss={closeMenu}
+                  onPressPin={id => void handlePressPin(id)}
+                  onPressRename={handlePressRename}
+                  onPressExport={id => void handlePressExport(id)}
+                  onPressDelete={handlePressDelete}
                 />
               ))}
             </View>
@@ -476,6 +643,12 @@ export const HomeScreen: React.FC = observer(() => {
           theme.colors.mutedBackground,
         ]}
         style={styles.bottomFade}
+      />
+
+      <RenameModal
+        visible={sessionToRename !== null}
+        session={sessionToRename}
+        onClose={() => setSessionToRename(null)}
       />
 
       {isPickerVisible && (
