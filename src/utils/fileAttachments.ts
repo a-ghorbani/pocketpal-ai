@@ -186,6 +186,33 @@ export interface AttachmentRecord {
 /** Anything the input can show as an attached file chip. */
 export type ChatAttachment = PendingAttachment | AttachmentRecord;
 
+/** A knowledge-base retrieval receipt carried on `metadata.kbQuote`.
+ * Records which docs contributed excerpts to this message's prompt so
+ * the chat can show provenance under the bubble. */
+export interface KbQuoteMetadata {
+  sources: Array<{
+    name: string;
+    position: number;
+    cosine: number;
+  }>;
+}
+
+/** Extract a validated KB quote receipt from message metadata. */
+export const getMessageKbQuote = (message: {
+  metadata?: Record<string, unknown>;
+}): KbQuoteMetadata | null => {
+  const raw = message.metadata?.kbQuote as KbQuoteMetadata | undefined;
+  if (
+    !raw ||
+    !Array.isArray(raw.sources) ||
+    raw.sources.length === 0 ||
+    typeof raw.sources[0]?.name !== 'string'
+  ) {
+    return null;
+  }
+  return raw;
+};
+
 /** True for a freshly picked file that still needs its content captured. */
 export const isPendingAttachment = (
   a: ChatAttachment,

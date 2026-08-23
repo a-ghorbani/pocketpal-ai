@@ -13,7 +13,7 @@ class MockKnowledgeBaseStore {
   embeddingPresetId = EMBEDDING_PRESETS[0].id;
   autoIndexThresholdChars = 20_000;
   chunkChars = 1_400;
-  topK = 8;
+  topK = 4;
   minCosine = 0.25;
   includeInAllChats = false;
 

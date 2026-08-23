@@ -68,7 +68,7 @@ class KnowledgeBaseStore {
   embeddingPresetId: string = DEFAULT_EMBEDDING_PRESET_ID;
   autoIndexThresholdChars = DEFAULT_AUTO_INDEX_THRESHOLD;
   chunkChars: number = DEFAULT_CHUNK_CHARS;
-  topK = 8;
+  topK = 4;
   minCosine = 0.25;
   includeInAllChats = false;
 
@@ -98,12 +98,16 @@ class KnowledgeBaseStore {
         'includeInAllChats',
       ],
     });
-    // One-time upgrade: no UI sets chunkChars, so a persisted 1400 can
-    // only be the old default, which overran bge-small's 512-token
-    // ceiling on token-dense text. Migrate it to the safer target.
+    // One-time upgrades for persisted defaults. No UI sets chunkChars,
+    // so a persisted 1400 can only be the old default (it overran
+    // bge-small's 512-token ceiling). topK 8 was the old latency-heavy
+    // default; 4 halves the quoted prefill for typical questions.
     persistable.then(() => {
       if (this.chunkChars === 1_400) {
         this.chunkChars = DEFAULT_CHUNK_CHARS;
+      }
+      if (this.topK === 8) {
+        this.topK = 4;
       }
     });
     void this.refreshDocuments();

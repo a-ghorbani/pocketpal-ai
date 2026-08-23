@@ -22,7 +22,10 @@ import {styles} from './styles';
 import {MarkdownView} from '../MarkdownView';
 
 import {AgentStep, MessageType} from '../../utils/types';
-import {getMessageAttachments} from '../../utils/fileAttachments';
+import {
+  getMessageAttachments,
+  getMessageKbQuote,
+} from '../../utils/fileAttachments';
 import {
   excludeDerivedMessageProps,
   getUserName,
@@ -118,6 +121,24 @@ export const TextMessage = ({
   const attachments =
     'metadata' in message ? getMessageAttachments(message) : [];
   const hasAttachments = attachments.length > 0;
+
+  // Knowledge-base retrieval receipt for this question
+  const kbQuote =
+    !step && user?.id === 'user' && 'metadata' in message
+      ? getMessageKbQuote(message)
+      : null;
+  const kbQuoteLabel = (() => {
+    if (!kbQuote) {
+      return null;
+    }
+    const uniqueDocs = new Set(kbQuote.sources.map(s => s.name));
+    const first = kbQuote.sources[0].name;
+    const others = uniqueDocs.size - 1;
+    const excerptWord = kbQuote.sources.length === 1 ? 'excerpt' : 'excerpts';
+    return `${kbQuote.sources.length} KB ${excerptWord} from ${first}${
+      others > 0 ? ` (+${others} more)` : ''
+    }`;
+  })();
 
   const handleEmailPress = (email: string) => {
     try {
@@ -297,6 +318,22 @@ export const TextMessage = ({
                   </Text>
                 </View>
               ))}
+            </View>
+          )}
+
+          {/* Knowledge-base provenance chip — user Text path only. */}
+          {!step && kbQuoteLabel && (
+            <View style={attachmentChipsRow}>
+              <View style={attachmentChip}>
+                <Icon
+                  source="book-open-variant"
+                  size={14}
+                  color={theme.colors.outline}
+                />
+                <Text numberOfLines={1} style={attachmentChipText}>
+                  {kbQuoteLabel}
+                </Text>
+              </View>
             </View>
           )}
 

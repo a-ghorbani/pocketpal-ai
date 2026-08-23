@@ -29,6 +29,7 @@ import {
   AttachmentRecord,
   ChatAttachment,
   buildAttachmentRecords,
+  KbQuoteMetadata,
   computeAttachmentCharBudget,
   formatAttachmentsForPrompt,
   isPendingAttachment,
@@ -641,6 +642,7 @@ export const useChatSession = (
     // Knowledge-base retrieval: pull the chunks most relevant to this
     // question out of the corpus and quote them under the user text.
     let kbBlock = '';
+    let kbQuote: KbQuoteMetadata | undefined;
     if (
       knowledgeBaseStore.enabled &&
       (indexedDocIds.length > 0 || knowledgeBaseStore.includeInAllChats) &&
@@ -651,7 +653,20 @@ export const useChatSession = (
           message.text,
           indexedDocIds.length > 0 ? indexedDocIds : undefined,
         );
-        kbBlock = formatKbHitsForPrompt(hits, Math.max(kbBudgetChars, 2_000));
+        kbBlock = formatKbHitsForPrompt(
+          hits,
+          Math.max(kbBudgetChars, 2_000),
+          message.text,
+        );
+        if (kbBlock) {
+          kbQuote = {
+            sources: hits.map(h => ({
+              name: h.docName,
+              position: h.position,
+              cosine: h.cosine,
+            })),
+          };
+        }
       } catch (error) {
         console.warn('[KB] retrieval failed, continuing without it:', error);
       }
@@ -670,6 +685,7 @@ export const useChatSession = (
         copyable: true,
         multimodal: hasImages,
         ...(attachments.length > 0 ? {attachments} : {}),
+        ...(kbQuote ? {kbQuote} : {}),
       },
     };
     await addMessage(textMessage);

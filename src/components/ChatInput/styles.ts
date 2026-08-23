@@ -162,6 +162,21 @@ export const createStyles = ({
       ...fontStyles.semibold,
       color: theme.colors.inverseOnSurface,
     },
+    // Knowledge-base active badge (left controls, next to Pal name)
+    kbBadge: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 3,
+      marginLeft: 8,
+      paddingVertical: 3,
+      paddingHorizontal: 7,
+      borderRadius: 10,
+      backgroundColor: theme.colors.surfaceVariant,
+    },
+    kbBadgeText: {
+      fontSize: 10,
+      ...fontStyles.semibold,
+    },
     // Image preview styles
     imagePreviewContainer: {
       marginVertical: 8,

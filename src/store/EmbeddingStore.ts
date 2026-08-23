@@ -5,6 +5,8 @@
  * actually indexed or a query is embedded, and released after idle so
  * a 33-600MB embedding model never sits in RAM unused.
  */
+import {AppState} from 'react-native';
+
 import {LlamaContext, initLlama} from 'llama.rn';
 import {makeAutoObservable, runInAction} from 'mobx';
 
@@ -28,8 +30,10 @@ export const isEmbeddingModelDownloaded = async (
   }
 };
 
-/** Release an idle embedding context after this many ms. */
-const IDLE_RELEASE_MS = 60_000;
+/** Release an idle embedding context after this many ms. Long enough
+ * that a back-and-forth chat keeps the model warm; a backgrounded app
+ * releases immediately via the AppState listener. */
+const IDLE_RELEASE_MS = 10 * 60_000;
 
 class EmbeddingStore {
   context: LlamaContext | null = null;
@@ -41,6 +45,15 @@ class EmbeddingStore {
 
   constructor() {
     makeAutoObservable(this, {}, {autoBind: true});
+
+    // Free the embedding model's RAM as soon as the app leaves the
+    // foreground; the next embed() lazily reloads it (mmap, so cheap).
+    const appStateChange = (state: string) => {
+      if (state !== 'active') {
+        void this.release();
+      }
+    };
+    AppState.addEventListener('change', appStateChange);
   }
 
   private async create(presetId: string): Promise<LlamaContext> {

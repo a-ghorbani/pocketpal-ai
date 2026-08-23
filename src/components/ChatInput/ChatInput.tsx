@@ -29,7 +29,13 @@ import {useTheme} from '../../hooks';
 
 import {createStyles} from './styles';
 
-import {chatSessionStore, modelStore, palStore, uiStore} from '../../store';
+import {
+  chatSessionStore,
+  knowledgeBaseStore,
+  modelStore,
+  palStore,
+  uiStore,
+} from '../../store';
 
 import {MessageType} from '../../utils/types';
 import {L10nContext, UserContext} from '../../utils';
@@ -41,6 +47,8 @@ import {
 import {t} from '../../locales';
 
 import {SendButton, StopButton, Menu, VoiceChip} from '..';
+import {useNavigation} from '@react-navigation/native';
+import {ROUTES} from '../../utils/navigationConstants';
 
 export interface ChatInputTopLevelProps {
   /** Whether the AI is currently streaming tokens */
@@ -157,6 +165,7 @@ export const ChatInput = observer(
     const l10n = React.useContext(L10nContext);
     const theme = useTheme();
     const user = React.useContext(UserContext);
+    const navigation = useNavigation();
     const inputRef = React.useRef<TextInput>(null);
     const editBarHeight = React.useRef(new Animated.Value(0)).current;
     const iconRotation = React.useRef(new Animated.Value(0)).current;
@@ -167,6 +176,11 @@ export const ChatInput = observer(
     const {hasPermission, requestPermission} = useCameraPermission();
 
     const hasActiveModel = !!modelStore.activeModelId;
+
+    // Knowledge base is consulted for this message when enabled and a
+    // corpus exists (plus per-chat attached docs).
+    const kbActive =
+      knowledgeBaseStore.enabled && knowledgeBaseStore.documents.length > 0;
 
     // Use `defaultValue` if provided
     const [text, setText] = React.useState(textInputProps?.defaultValue ?? '');
@@ -665,6 +679,32 @@ export const ChatInput = observer(
                       {currentActivePal?.name}
                     </Text>
                   </Text>
+                )}
+                {/* Knowledge-base indicator: this chat consults the
+                    local corpus. Tap to open its screen. */}
+                {kbActive && !isVideoCapable && (
+                  <TouchableOpacity
+                    testID="kb-active-badge"
+                    accessibilityRole="button"
+                    accessibilityLabel="Knowledge base active, open settings"
+                    onPress={() =>
+                      (navigation as any).navigate(ROUTES.KNOWLEDGE_BASE)
+                    }>
+                    <View style={styles.kbBadge}>
+                      <Icon
+                        source="book-open-variant"
+                        size={14}
+                        color={onSurfaceColorVariant}
+                      />
+                      <Text
+                        style={[
+                          styles.kbBadgeText,
+                          {color: onSurfaceColorVariant},
+                        ]}>
+                        KB · {knowledgeBaseStore.documents.length}
+                      </Text>
+                    </View>
+                  </TouchableOpacity>
                 )}
               </View>
 
