@@ -7,7 +7,7 @@ import {
   TouchableOpacity,
   Modal,
 } from 'react-native';
-import {IconButton} from 'react-native-paper';
+import {IconButton, Icon} from 'react-native-paper';
 
 import ParsedText from 'react-native-parsed-text';
 import {
@@ -22,6 +22,7 @@ import {styles} from './styles';
 import {MarkdownView} from '../MarkdownView';
 
 import {AgentStep, MessageType} from '../../utils/types';
+import {getMessageAttachments} from '../../utils/fileAttachments';
 import {
   excludeDerivedMessageProps,
   getUserName,
@@ -100,6 +101,9 @@ export const TextMessage = ({
     imagePreviewModal,
     imagePreviewCloseButton,
     imagePreviewContent,
+    attachmentChipsRow,
+    attachmentChip,
+    attachmentChipText,
   } = styles({
     message,
     theme,
@@ -109,6 +113,11 @@ export const TextMessage = ({
   // Extract imageUris from the message if available
   const imageUris = (message as any).imageUris || [];
   const hasImages = imageUris && imageUris.length > 0;
+
+  // Attachment chips for messages sent with local files
+  const attachments =
+    'metadata' in message ? getMessageAttachments(message) : [];
+  const hasAttachments = attachments.length > 0;
 
   const handleEmailPress = (email: string) => {
     try {
@@ -272,6 +281,24 @@ export const TextMessage = ({
 
           {/* Render images above the text — legacy Text path only. */}
           {!step && renderImages()}
+
+          {/* Attachment chips above the text — user Text path only. */}
+          {!step && hasAttachments && (
+            <View style={attachmentChipsRow}>
+              {attachments.map(file => (
+                <View key={file.name} style={attachmentChip}>
+                  <Icon
+                    source="file-document-outline"
+                    size={14}
+                    color={theme.colors.outline}
+                  />
+                  <Text numberOfLines={1} style={attachmentChipText}>
+                    {file.name}
+                  </Text>
+                </View>
+              ))}
+            </View>
+          )}
 
           <MarkdownView
             markdownText={visibleText.trim()}

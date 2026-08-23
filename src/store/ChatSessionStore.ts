@@ -16,6 +16,7 @@ import {
 import {chatSessionRepository} from '../repositories/ChatSessionRepository';
 import {defaultCompletionParams} from '../utils/completionSettingsVersions';
 import {derivedText} from '../utils/chat';
+import {getMessageAttachments} from '../utils/fileAttachments';
 import {palStore} from './PalStore';
 import {deriveToolSchemas} from '../services/talents';
 import {AgentUiState, initialAgentUiState} from '../services/agent';
@@ -473,7 +474,8 @@ class ChatSessionStore {
     if (message.type !== 'text' && message.type !== 'assistant_turn') {
       return;
     }
-    const titleSource = derivedText(message);
+    const titleSource =
+      derivedText(message) || getMessageAttachments(message)[0]?.name || '';
     if (!titleSource) {
       return;
     }

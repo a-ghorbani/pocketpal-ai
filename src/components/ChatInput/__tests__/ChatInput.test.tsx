@@ -457,9 +457,11 @@ describe('input', () => {
     }
   });
 
-  it('disables plus button when vision is not enabled', () => {
+  it('disables plus button when no model is loaded', () => {
     expect.assertions(1);
     const onSendPress = jest.fn();
+    const previousModelId = modelStore.activeModelId;
+    modelStore.activeModelId = undefined;
     const {getByLabelText} = render(
       <UserContext.Provider value={user}>
         <ChatInput
@@ -475,18 +477,21 @@ describe('input', () => {
 
     const plusButton = getByLabelText('Add image');
     expect(plusButton.props.accessibilityState.disabled).toBe(true);
+    modelStore.activeModelId = previousModelId;
   });
 
-  it('enables plus button when vision is enabled', () => {
+  it('enables plus button when a model is loaded without vision', () => {
     expect.assertions(1);
     const onSendPress = jest.fn();
+    const previousModelId = modelStore.activeModelId;
+    modelStore.activeModelId = 'test-model-id';
     const {getByLabelText} = render(
       <UserContext.Provider value={user}>
         <ChatInput
           {...{
             onSendPress,
             showImageUpload: true,
-            isVisionEnabled: true,
+            isVisionEnabled: false,
             sendButtonVisibilityMode: 'editing',
           }}
         />
@@ -495,6 +500,7 @@ describe('input', () => {
 
     const plusButton = getByLabelText('Add image');
     expect(plusButton.props.accessibilityState.disabled).toBe(false);
+    modelStore.activeModelId = previousModelId;
   });
 
   it('shows send button with always visibility mode', () => {

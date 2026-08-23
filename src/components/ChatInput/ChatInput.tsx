@@ -14,7 +14,7 @@ import {useCameraPermission} from 'react-native-vision-camera';
 import ReactNativeHapticFeedback from 'react-native-haptic-feedback';
 
 import {observer} from 'mobx-react';
-import {IconButton, Text} from 'react-native-paper';
+import {IconButton, Icon, Text} from 'react-native-paper';
 
 import {hasVideoCapability} from '../../utils/pal-capabilities';
 
@@ -33,6 +33,11 @@ import {chatSessionStore, modelStore, palStore, uiStore} from '../../store';
 
 import {MessageType} from '../../utils/types';
 import {L10nContext, UserContext} from '../../utils';
+import {
+  ChatAttachment,
+  isPendingAttachment,
+  pickFileAttachments,
+} from '../../utils/fileAttachments';
 import {t} from '../../locales';
 
 import {SendButton, StopButton, Menu, VoiceChip} from '..';
@@ -56,6 +61,9 @@ export interface ChatInputTopLevelProps {
   /** External control for selected images (for edit mode) */
   defaultImages?: string[];
   onDefaultImagesChange?: (images: string[]) => void;
+  /** External control for attached files (for edit mode) */
+  defaultAttachments?: ChatAttachment[];
+  onDefaultAttachmentsChange?: (files: ChatAttachment[]) => void;
 
   /** Camera-specific props */
   isCameraActive?: boolean;
@@ -136,6 +144,8 @@ export const ChatInput = observer(
     isVisionEnabled = false,
     defaultImages,
     onDefaultImagesChange,
+    defaultAttachments,
+    onDefaultAttachmentsChange,
     showThinkingToggle = false,
     isThinkingEnabled = false,
     onThinkingToggle,
@@ -169,6 +179,14 @@ export const ChatInput = observer(
       onDefaultImagesChange ?? setInternalSelectedImages;
     // State for image upload menu
     const [showImageUploadMenu, setShowImageUploadMenu] = React.useState(false);
+    // State for picked local files (attachments) awaiting send - use
+    // external control when provided (edit mode)
+    const [internalSelectedFiles, setInternalSelectedFiles] = React.useState<
+      ChatAttachment[]
+    >([]);
+    const selectedFiles = defaultAttachments ?? internalSelectedFiles;
+    const setSelectedFiles =
+      onDefaultAttachmentsChange ?? setInternalSelectedFiles;
     // State for showing "model not loaded" helper text
     const [showModelWarning, setShowModelWarning] = React.useState(false);
     const isEditMode = chatSessionStore.isEditMode;
@@ -222,7 +240,8 @@ export const ChatInput = observer(
 
     const handleSend = () => {
       const trimmedValue = value.trim();
-      if (trimmedValue) {
+      const hasAttachments = selectedFiles.length > 0;
+      if (trimmedValue || hasAttachments) {
         // Check if model is loaded before sending
         if (!hasActiveModel) {
           // Trigger haptic feedback to indicate the action is blocked
@@ -242,10 +261,12 @@ export const ChatInput = observer(
           text: trimmedValue,
           type: 'text',
           imageUris: selectedImages.length > 0 ? selectedImages : undefined,
+          metadata: hasAttachments ? {attachments: selectedFiles} : undefined,
         });
         setText('');
         // Clear selected images after sending
         setSelectedImages([]);
+        setSelectedFiles([]);
       }
     };
 
@@ -333,6 +354,33 @@ export const ChatInput = observer(
       }
     };
 
+    // Handle picking local files for the model to analyze
+    const handleAttachFiles = async () => {
+      try {
+        // The system picker leaves the app; keep the model in memory
+        // while it is in the background (Android auto-release).
+        modelStore.disableAutoRelease('file-picker');
+
+        const staged = await pickFileAttachments();
+        if (staged.length > 0) {
+          setSelectedFiles([...selectedFiles, ...staged]);
+        }
+        setShowImageUploadMenu(false);
+      } catch (error) {
+        console.error('Error attaching files:', error);
+        Alert.alert(l10n.errors.fileErrorTitle, l10n.errors.fileErrorMessage);
+      } finally {
+        modelStore.enableAutoRelease('file-picker');
+      }
+    };
+
+    // Remove an attached file from the selection
+    const handleRemoveFile = (index: number) => {
+      const newFiles = [...selectedFiles];
+      newFiles.splice(index, 1);
+      setSelectedFiles(newFiles);
+    };
+
     // Remove an image from the selection
     const handleRemoveImage = (index: number) => {
       const newImages = [...selectedImages];
@@ -350,8 +398,11 @@ export const ChatInput = observer(
       !isStopVisible &&
       user &&
       !isVideoCapable && // Hide send button for video-capable pals
-      (sendButtonVisibilityMode === 'always' || value.trim());
-    const isSendButtonEnabled = value.trim().length > 0 && hasActiveModel;
+      (sendButtonVisibilityMode === 'always' ||
+        value.trim() ||
+        selectedFiles.length > 0);
+    const isSendButtonEnabled =
+      (value.trim().length > 0 || selectedFiles.length > 0) && hasActiveModel;
     const sendButtonOpacity = isSendButtonEnabled ? 1 : 0.4;
 
     const rotateInterpolate = iconRotation.interpolate({
@@ -361,8 +412,10 @@ export const ChatInput = observer(
 
     const onSurfaceColor = currentActivePal?.color?.[0] || theme.colors.text;
     const onSurfaceColorVariant = onSurfaceColor + '55'; // for disabled state or placeholder text
-    // // Plus button state
-    const isPlusButtonEnabled = !isStreaming && isVisionEnabled;
+    // // Plus button state: enabled whenever a model is loaded (file
+    // attachments work on any model, not just vision ones).
+    const isPlusButtonEnabled =
+      !isStreaming && (isVisionEnabled || hasActiveModel);
     const plusColor = isPlusButtonEnabled
       ? onSurfaceColor
       : onSurfaceColorVariant;
@@ -427,6 +480,41 @@ export const ChatInput = observer(
                       style={styles.removeImageButton}
                       onPress={() => handleRemoveImage(index)}
                       accessibilityLabel={`Remove image ${index + 1}`}
+                    />
+                  </View>
+                ))}
+              </ScrollView>
+            </View>
+          )}
+
+          {/* Attached Files Preview Section */}
+          {selectedFiles.length > 0 && (
+            <View style={styles.filePreviewContainer}>
+              <ScrollView
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                contentContainerStyle={styles.imageScrollContent}>
+                {selectedFiles.map((file, index) => (
+                  <View
+                    key={isPendingAttachment(file) ? file.localPath : file.name}
+                    style={styles.fileChip}>
+                    <Icon
+                      source="file-document-outline"
+                      size={16}
+                      color={onSurfaceColor}
+                    />
+                    <Text
+                      numberOfLines={1}
+                      style={[styles.fileChipText, {color: onSurfaceColor}]}>
+                      {file.name}
+                    </Text>
+                    <IconButton
+                      icon="close"
+                      size={14}
+                      iconColor={onSurfaceColorVariant}
+                      style={styles.fileChipRemove}
+                      onPress={() => handleRemoveFile(index)}
+                      accessibilityLabel={`Remove file ${index + 1}`}
                     />
                   </View>
                 ))}
@@ -510,15 +598,24 @@ export const ChatInput = observer(
                     </TouchableOpacity>
                   }>
                   <Menu.Item
-                    label={l10n.camera?.takePhoto || 'Camera'}
-                    icon="camera"
-                    onPress={handleTakePhoto}
+                    label={l10n.common?.attachFile || 'Attach file'}
+                    icon="paperclip"
+                    onPress={handleAttachFiles}
                   />
-                  <Menu.Item
-                    label={l10n.common?.gallery || 'Gallery'}
-                    icon="image"
-                    onPress={handleSelectImages}
-                  />
+                  {isVisionEnabled && (
+                    <>
+                      <Menu.Item
+                        label={l10n.camera?.takePhoto || 'Camera'}
+                        icon="camera"
+                        onPress={handleTakePhoto}
+                      />
+                      <Menu.Item
+                        label={l10n.common?.gallery || 'Gallery'}
+                        icon="image"
+                        onPress={handleSelectImages}
+                      />
+                    </>
+                  )}
                 </Menu>
               )}
 

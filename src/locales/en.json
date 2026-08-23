@@ -32,6 +32,7 @@
     "close": "Close",
     "clear": "Clear All",
     "gallery": "Gallery",
+    "attachFile": "Attach file",
     "noResults": "No results"
   },
   "settings": {
@@ -1402,7 +1403,9 @@
     "cameraErrorTitle": "Camera Error",
     "cameraErrorMessage": "Failed to take photo",
     "galleryErrorTitle": "Gallery Error",
-    "galleryErrorMessage": "Failed to select images"
+    "galleryErrorMessage": "Failed to select images",
+    "fileErrorTitle": "File Error",
+    "fileErrorMessage": "Failed to attach files"
   },
   "simulator": {
     "cameraNotAvailable": "Camera not available in simulator. Please use a physical device."

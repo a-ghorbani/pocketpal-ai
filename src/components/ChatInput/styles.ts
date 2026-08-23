@@ -194,6 +194,35 @@ export const createStyles = ({
       width: 25,
       height: 25,
     },
+    // Attached file chip styles
+    filePreviewContainer: {
+      marginTop: 8,
+      marginBottom: 4,
+      paddingHorizontal: 16,
+    },
+    fileChip: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      marginHorizontal: 4,
+      paddingVertical: 2,
+      paddingLeft: 8,
+      paddingRight: 2,
+      borderRadius: 16,
+      backgroundColor: theme.colors.surfaceVariant,
+      maxWidth: 220,
+      minHeight: 32,
+    },
+    fileChipText: {
+      fontSize: 12,
+      flexShrink: 1,
+      marginRight: 2,
+    },
+    fileChipRemove: {
+      margin: 0,
+      padding: 0,
+      width: 26,
+      height: 26,
+    },
     inputInnerContainer: {
       flexShrink: 1,
       flexGrow: 1,

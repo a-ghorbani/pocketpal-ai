@@ -5,6 +5,7 @@ import Clipboard from '@react-native-clipboard/clipboard';
 import {chatSessionStore, modelStore} from '../store';
 
 import {derivedText} from '../utils/chat';
+import {ChatAttachment, getMessageAttachments} from '../utils/fileAttachments';
 import {MessageType, User} from '../utils/types';
 
 /**
@@ -21,6 +22,7 @@ interface UseMessageActionsProps {
   handleSendPress: (message: MessageType.PartialText) => Promise<void>;
   setInputText?: (text: string) => void;
   setInputImages?: (images: string[]) => void;
+  setInputAttachments?: (files: ChatAttachment[]) => void;
 }
 
 export const useMessageActions = ({
@@ -29,6 +31,7 @@ export const useMessageActions = ({
   handleSendPress,
   setInputText,
   setInputImages,
+  setInputAttachments,
 }: UseMessageActionsProps) => {
   const handleCopy = useCallback((message: CopyableMessage) => {
     if (message.type !== 'text' && message.type !== 'assistant_turn') {
@@ -45,12 +48,13 @@ export const useMessageActions = ({
         return;
       }
 
-      // Enter edit mode and set input text and images
+      // Enter edit mode and set input text, images, and attachments
       chatSessionStore.enterEditMode(message.id);
       setInputText?.(message.text);
       setInputImages?.(message.imageUris || []);
+      setInputAttachments?.(getMessageAttachments(message));
     },
-    [setInputText, setInputImages, user.id],
+    [setInputText, setInputImages, setInputAttachments, user.id],
   );
 
   const handleTryAgain = useCallback(
@@ -64,6 +68,7 @@ export const useMessageActions = ({
       if (message.type === 'text' && message.author.id === user.id) {
         const messageText = message.text;
         const relatedImages = message.imageUris;
+        const relatedAttachments = getMessageAttachments(message);
 
         await chatSessionStore.removeMessagesFromId(message.id, true);
         await handleSendPress({
@@ -72,6 +77,10 @@ export const useMessageActions = ({
           imageUris:
             relatedImages && relatedImages.length > 0
               ? relatedImages
+              : undefined,
+          metadata:
+            relatedAttachments.length > 0
+              ? {attachments: relatedAttachments}
               : undefined,
         });
         return;

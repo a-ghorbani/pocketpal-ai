@@ -52,6 +52,7 @@ import {
 import {t} from '../../locales';
 import {getModelMemoryRequirement} from '../../utils/memoryEstimator';
 import {CONTEXT_LADDER} from '../../utils/bannerVariantResolver';
+import {ChatAttachment} from '../../utils/fileAttachments';
 
 import {chatSessionStore, modelStore} from '../../store';
 
@@ -255,6 +256,9 @@ export const ChatView = observer(
     const inputTextRef = React.useRef(inputText);
     inputTextRef.current = inputText;
     const [inputImages, setInputImages] = React.useState<string[]>([]);
+    const [inputAttachments, setInputAttachments] = React.useState<
+      ChatAttachment[]
+    >([]);
     const [isPickerVisible, setIsPickerVisible] = React.useState(false);
     const [_selectedModel, setSelectedModel] = React.useState<string | null>(
       null,
@@ -528,6 +532,7 @@ export const ChatView = observer(
     const handleCancelEdit = React.useCallback(() => {
       setInputText('');
       setInputImages([]);
+      setInputAttachments([]);
       chatSessionStore.exitEditMode();
     }, []);
 
@@ -538,6 +543,7 @@ export const ChatView = observer(
         handleSendPress: wrappedOnSendPress,
         setInputText,
         setInputImages,
+        setInputAttachments,
       });
 
     // ============ AUTO-SCROLL ON NEW USER MESSAGE ============
@@ -1166,6 +1172,8 @@ export const ChatView = observer(
                   isVisionEnabled,
                   defaultImages: inputImages,
                   onDefaultImagesChange: setInputImages,
+                  defaultAttachments: inputAttachments,
+                  onDefaultAttachmentsChange: setInputAttachments,
                   textInputProps: {
                     ...textInputProps,
                     // Only override value and onChangeText if not using promptText

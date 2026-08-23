@@ -2,6 +2,11 @@ import {applyTemplate, Templates} from 'chat-formatter';
 import {JinjaFormattedChatResult, LlamaContext} from 'llama.rn';
 import {CompletionParams} from './completionTypes';
 import {defaultCompletionParams} from './completionSettingsVersions';
+import {
+  formatAttachmentsForPrompt,
+  getMessageAttachments,
+  hasMessageAttachments,
+} from './fileAttachments';
 
 import {
   AgentStep,
@@ -126,7 +131,12 @@ export function convertToChatMessages(
       }
       if (message.type === 'text') {
         const text = (message as MessageType.Text).text;
-        return text !== undefined && text !== null && text.trim() !== '';
+        // Attachment-bearing messages stay in context even with empty
+        // text; their captured file content is the payload.
+        return (
+          (text !== undefined && text !== null && text.trim() !== '') ||
+          hasMessageAttachments(message)
+        );
       }
       return false;
     })
@@ -142,7 +152,11 @@ export function convertToChatMessages(
       const textMessage = message as MessageType.Text;
       const role: 'assistant' | 'user' =
         message.author.id === assistant.id ? 'assistant' : 'user';
-      const messageText = textMessage.text || '';
+      // Fold captured attachment content into the historical text.
+      const messageText = formatAttachmentsForPrompt(
+        textMessage.text || '',
+        getMessageAttachments(textMessage),
+      );
 
       // Multimodal user messages keep their existing shape.
       if (

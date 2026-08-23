@@ -61,6 +61,27 @@ export const styles = ({
       width: '100%',
       height: '100%',
     },
+    attachmentChipsRow: {
+      marginBottom: 6,
+      flexDirection: 'row',
+      flexWrap: 'wrap',
+      gap: 6,
+    },
+    attachmentChip: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 4,
+      paddingHorizontal: 8,
+      paddingVertical: 4,
+      borderRadius: 12,
+      backgroundColor: theme.colors.surfaceVariant,
+      maxWidth: 200,
+    },
+    attachmentChipText: {
+      fontSize: 12,
+      color: theme.colors.outline,
+      flexShrink: 1,
+    },
     imagePreviewModal: {
       flex: 1,
       backgroundColor: 'rgba(0, 0, 0, 0.9)',

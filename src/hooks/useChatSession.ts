@@ -24,6 +24,12 @@ import {
   resolveSystemMessages,
 } from '../utils/systemPromptResolver';
 import {convertToChatMessages, removeThinkingParts} from '../utils/chat';
+import {
+  AttachmentRecord,
+  ChatAttachment,
+  buildAttachmentRecords,
+  formatAttachmentsForPrompt,
+} from '../utils/fileAttachments';
 import {activateKeepAwake, deactivateKeepAwake} from '../utils/keepAwake';
 import {
   toApiCompletionParams,
@@ -54,6 +60,7 @@ import {
 const prepareCompletion = async ({
   imageUris,
   message,
+  attachments,
   systemMessages,
   contextId,
   assistant,
@@ -64,6 +71,7 @@ const prepareCompletion = async ({
 }: {
   imageUris: string[];
   message: MessageType.PartialText;
+  attachments: AttachmentRecord[];
   systemMessages: Array<{role: 'system'; content: string}>;
   contextId: string;
   assistant: User;
@@ -79,6 +87,9 @@ const prepareCompletion = async ({
   // Check if we have images and if multimodal is enabled
   const hasImages = imageUris && imageUris.length > 0;
 
+  // The user text with any captured attachment content folded in.
+  const userText = formatAttachmentsForPrompt(message.text, attachments);
+
   // Create user message content - use array format only for multimodal,
   // string for text-only.
   let userMessageContent: any;
@@ -87,7 +98,7 @@ const prepareCompletion = async ({
     userMessageContent = [
       {
         type: 'text',
-        text: message.text,
+        text: userText,
       },
       ...imageUris.map(path => ({
         type: 'image_url',
@@ -95,7 +106,7 @@ const prepareCompletion = async ({
       })),
     ];
   } else {
-    userMessageContent = message.text;
+    userMessageContent = userText;
 
     if (hasImages && !isMultimodalEnabled) {
       uiStore.setChatWarning(
@@ -531,6 +542,23 @@ export const useChatSession = (
 
     const currentMessages = toJS(chatSessionStore.currentSessionMessages);
 
+    // Capture attachment file content now (text-safe files only, with
+    // truncation) so the persisted message carries everything the model
+    // will see, independent of the cache copy's lifetime.
+    const pendingFiles: ChatAttachment[] = Array.isArray(
+      message.metadata?.attachments,
+    )
+      ? (message.metadata?.attachments as ChatAttachment[])
+      : [];
+    let attachments: AttachmentRecord[] = [];
+    if (pendingFiles.length > 0) {
+      try {
+        attachments = await buildAttachmentRecords(pendingFiles);
+      } catch (error) {
+        console.error('Failed to read attachments:', error);
+      }
+    }
+
     const textMessage: MessageType.Text = {
       author: user,
       createdAt: Date.now(),
@@ -543,6 +571,7 @@ export const useChatSession = (
         conversationId: conversationIdRef.current,
         copyable: true,
         multimodal: hasImages,
+        ...(attachments.length > 0 ? {attachments} : {}),
       },
     };
     await addMessage(textMessage);
@@ -571,6 +600,7 @@ export const useChatSession = (
     const {cleanCompletionParams, messageInfo} = await prepareCompletion({
       imageUris: imageUris || [],
       message,
+      attachments,
       systemMessages,
       contextId,
       assistant,
