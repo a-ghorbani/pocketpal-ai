@@ -79,6 +79,8 @@ const SPEC_CONTEXT_SIZE = '4096';
 const BADGE_PROBE_TIMEOUT = 90000;
 
 const SPEC_ACCORDION = byTestId('advanced-settings-accordion');
+/** First row inside the accordion — mounted only while it is expanded. */
+const SPEC_ACCORDION_FIRST_ROW = byTestId('batch-size-slider');
 const SPEC_SWITCH = byTestId('speculative-decoding-switch');
 const SPEC_PICKER = byTestId('speculative-draft-model-picker');
 const SPEC_NO_EFFECT_NOTE = byTestId('speculative-no-effect-note');
@@ -116,6 +118,11 @@ async function saveShot(name: string): Promise<void> {
  * before scrolling to a target.
  */
 async function scrollSettingsToTop(): Promise<void> {
+  // A fixed swipe count cannot rewind a list whose height depends on whether
+  // the Advanced accordion is expanded; the native scroller has no such limit.
+  if (await Gestures.nativeScrollIntoView(byTestId('context-size-input'))) {
+    return;
+  }
   for (let i = 0; i < 8; i++) {
     await Gestures.swipeDown();
   }
@@ -161,6 +168,7 @@ async function openAdvancedSection(navigate = true): Promise<void> {
   const revealed = await ensureRevealed({
     toggle: SPEC_ACCORDION,
     dependent: SPEC_SWITCH,
+    stateProbe: SPEC_ACCORDION_FIRST_ROW,
     rewind: scrollSettingsToTop,
     maxScrolls: 12,
   });

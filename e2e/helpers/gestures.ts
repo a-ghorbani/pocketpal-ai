@@ -179,6 +179,34 @@ async function scrollToElement(
 }
 
 /**
+ * Scroll to a control with UiAutomator's own scroller, which walks the whole
+ * container in either direction rather than the viewport. Android only;
+ * returns false elsewhere so callers can fall back to a swipe loop.
+ *
+ * Only for a control known to be mounted — a miss scrolls to the end of the
+ * list before failing, which costs tens of seconds.
+ */
+async function nativeScrollIntoView(selector: string): Promise<boolean> {
+  if (!(browser as unknown as {isAndroid?: boolean}).isAndroid) {
+    return false;
+  }
+  const match = selector.match(/contains\(@resource-id, "([^"]+)"\)/);
+  if (!match) {
+    return false;
+  }
+  try {
+    return await browser
+      .$(
+        '-android uiautomator:new UiScrollable(new UiSelector().scrollable(true))' +
+          `.scrollIntoView(new UiSelector().resourceIdMatches(".*${match[1]}.*"))`,
+      )
+      .isExisting();
+  } catch {
+    return false;
+  }
+}
+
+/**
  * Swipe up within a bottom sheet (uses safer coordinates)
  * Avoids the bottom navigation gesture area on Android
  */
@@ -318,6 +346,7 @@ async function scrollInSheetToElementExists(
 
 export const Gestures = {
   getScreenSize,
+  nativeScrollIntoView,
   swipe,
   swipeDownOnElement,
   swipeDownToClose,
