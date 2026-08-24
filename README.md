@@ -11,13 +11,15 @@ focus on knowledge, autonomy, and running your own local models - no cloud,
 no account, no telemetry. Built and tested on a Pixel 8 Pro running
 GrapheneOS. **Android only.**
 
-[![Get it on Obtainium](https://img.shields.io/badge/Get_it_on-Obtainium-2D2D2D?style=for-the-badge&logo=android&logoColor=3ddc84)](obtainium://app/%7B%22id%22%3A%22com.pocketpalai%22%2C%22url%22%3A%22https%3A%2F%2Fgithub.com%2Ftokenbleed%2Fpocketmind%22%2C%22author%22%3A%22tokenbleed%22%2C%22name%22%3A%22PocketMind%22%2C%22preferredApkIndex%22%3A0%2C%22additionalSettings%22%3A%22%7B%5C%22trackOnly%5C%22%3Afalse%7D%22%2C%22overrideSource%22%3A%22GitHub%22%7D)
+[<img src=".github/img/badge_obtainium.png" alt="Get it on Obtainium" height="66" />](https://tokenbleed.github.io/pocketmind/)
 [![Latest APK](https://img.shields.io/github/v/release/tokenbleed/pocketmind?style=for-the-badge&label=Latest%20APK&color=2D2D2D&logo=github)](https://github.com/tokenbleed/pocketmind/releases/latest)
 
 The Obtainium button works on any Android device with
-[Obtainium](https://github.com/ImranR98/Obtainium) installed: it opens the
-app pre-filled with this repo, so PocketMind tracks its own updates from
-GitHub releases. No store, no account.
+[Obtainium](https://github.com/ImranR98/Obtainium) installed: the click
+passes through a tiny redirect page (GitHub strips direct
+`obtainium://` links from READMEs) and lands in the app with this repo
+pre-filled, so PocketMind tracks its own updates from GitHub releases.
+No store, no account.
 
 </div>
 
@@ -64,6 +66,55 @@ the phone into the whole stack:
   the notification follows agent steps and tool calls
 - **Latency pack**: extractive sentence-level quote trimming, tuned defaults,
   warm embedding context
+
+## How the knowledge base works
+
+Everything below runs on the phone, with no network call anywhere in the
+path. Documents take two routes depending on size, and every send runs a
+hybrid retrieval pass:
+
+```mermaid
+flowchart TD
+    subgraph INGEST["Ingestion, at attach time"]
+        A["File attached"] --> B{"Office or PDF?"}
+        B -->|"PDF DOCX EPUB PPTX XLSX ODT"| C["Text extraction<br/>pdfbox-android, zip/XML readers"]
+        B -->|"Text, code, CSV, logs"| D["Raw text"]
+        C --> D
+        D --> E{"Over the auto-index<br/>threshold, 20k chars"}
+        E -->|"No, fits the prompt"| F["Quoted directly<br/>under the context budget"]
+        E -->|"Yes"| G["Chunking<br/>1200 chars, 200 overlap"]
+        G --> H["Embedding, GGUF via llama.cpp<br/>BGE Small EN v1.5, or Qwen3"]
+        H --> V[("Vector store<br/>Float32 blob per document")]
+        G --> S[("Chunks and metadata<br/>in SQLite")]
+    end
+
+    subgraph QUERY["Retrieval, at send time"]
+        U["User message"] --> Q1["Query embedding<br/>warm context, L2 normalized"]
+        Q1 --> DP["Dense pass<br/>cosine similarity"]
+        U --> KP["BM25 keyword pass<br/>exact tokens survive"]
+        DP --> RRF["Reciprocal rank fusion<br/>k=60"]
+        KP --> RRF
+        RRF --> TK["Top-K hits<br/>with a cosine floor"]
+        TK --> TR["Extractive trimming<br/>query-relevant sentences only,<br/>900 chars per hit"]
+        TR --> INJ["Quoted under source headers<br/>global 3000 char budget"]
+    end
+
+    V -.->|"loaded per query"| DP
+    S -.->|"chunk text"| KP
+    INJ --> LLM["Local LLM prompt,<br/>provenance chips in the UI"]
+```
+
+Two design notes behind the shape of that graph:
+
+- **Hybrid retrieval, not dense-only.** Small embedding models blur exact
+  tokens such as IDs, error codes, and file names; BM25 nails those. Both
+  passes run on every query and fuse through RRF, which needs no shared
+  score scale. If the embedding model is missing, retrieval degrades to
+  keyword-only instead of failing the chat.
+- **Brute-force beats an index at phone scale.** A few thousand chunks by
+  384 dims is a couple million multiplies per query, so plain dot products
+  in JS outpace any index structure while keeping the corpus a set of
+  plain files.
 
 ## Roadmap
 
