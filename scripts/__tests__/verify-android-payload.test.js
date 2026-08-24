@@ -184,11 +184,11 @@ function writeArchive(name, entries) {
   return archive;
 }
 
-function runGate(args) {
+function runScript(scriptPath, args) {
   try {
     return {
       status: 0,
-      output: execFileSync('node', [SCRIPT_PATH, ...args], {encoding: 'utf-8'}),
+      output: execFileSync('node', [scriptPath, ...args], {encoding: 'utf-8'}),
     };
   } catch (err) {
     return {
@@ -196,6 +196,10 @@ function runGate(args) {
       output: `${err.stdout || ''}${err.stderr || ''}`,
     };
   }
+}
+
+function runGate(args) {
+  return runScript(SCRIPT_PATH, args);
 }
 
 function gateApk(entries, extraArgs = []) {
@@ -305,6 +309,77 @@ describe('the Hexagon backend', () => {
     expect(output).toContain('18 .dynsym entries matching "hexagon"');
     expect(output).toContain('re-declare');
     expect(output).toContain('expectedMatchCount as 18');
+  });
+
+  it('names the llama.rn version the count was read from', () => {
+    const {count, pattern} = manifest.abis.find(abi => abi.abi === 'arm64-v8a')
+      .requiredSymbols[0].expectedMatchCount;
+    const installed = JSON.parse(
+      fs.readFileSync(
+        path.join(
+          __dirname,
+          '..',
+          '..',
+          'node_modules',
+          'llama.rn',
+          'package.json',
+        ),
+        'utf-8',
+      ),
+    ).version;
+
+    const {status, output} = gateApk(conformingEntries());
+    expect(status).toBe(0);
+    expect(output).toContain(`${count} .dynsym entries matching "${pattern}"`);
+    expect(output).toContain(`(declared ${count}), llama.rn ${installed}`);
+  });
+
+  it('reads unknown when llama.rn is not installed, and still passes', () => {
+    // One level below the workspace root so `__dirname/..` is a directory this
+    // test created: os.tmpdir() is /tmp on CI, where a node_modules could exist.
+    const isolated = path.join(workspace, 'isolated');
+    fs.mkdirSync(isolated);
+    const copy = path.join(isolated, 'verify-android-payload.js');
+    fs.copyFileSync(SCRIPT_PATH, copy);
+    const archive = writeArchive('app-prod-release.apk', conformingEntries());
+
+    const {status, output} = runScript(copy, [
+      '--manifest',
+      MANIFEST_PATH,
+      '--apk',
+      archive,
+    ]);
+    expect(status).toBe(0);
+    expect(output).toContain('llama.rn unknown');
+  });
+
+  it('reports the installed tree, not the declared pin, when the two disagree', () => {
+    const isolated = path.join(workspace, 'isolated');
+    fs.mkdirSync(isolated);
+    const copy = path.join(isolated, 'verify-android-payload.js');
+    fs.copyFileSync(SCRIPT_PATH, copy);
+    fs.mkdirSync(path.join(workspace, 'node_modules', 'llama.rn'), {
+      recursive: true,
+    });
+    fs.writeFileSync(
+      path.join(workspace, 'node_modules', 'llama.rn', 'package.json'),
+      JSON.stringify({name: 'llama.rn', version: '0.0.0-installed'}),
+    );
+    fs.writeFileSync(
+      path.join(workspace, 'package.json'),
+      JSON.stringify({dependencies: {'llama.rn': '0.0.0-declared'}}),
+    );
+    const archive = writeArchive('app-prod-release.apk', conformingEntries());
+
+    const {status, output} = runScript(copy, [
+      '--manifest',
+      MANIFEST_PATH,
+      '--apk',
+      archive,
+    ]);
+    expect(status).toBe(0);
+    expect(output).toContain('llama.rn 0.0.0-installed');
+    expect(output).not.toContain('0.0.0-declared');
   });
 });
 
