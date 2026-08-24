@@ -34,6 +34,7 @@ class MainApplication : Application(), ReactApplication {
               add(AuthSessionPackage())
               add(ExternalContentLinkPackage())
               add(PdfTextPackage())
+              add(ForegroundServicePackage())
               add(DownloadPackage())
             }
 

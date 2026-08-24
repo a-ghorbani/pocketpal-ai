@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Status-bar icon for in-progress model runs. Must be alpha-only
+     (white on transparent) - Android masks color status icons. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp"
+    android:height="24dp"
+    android:viewportWidth="24"
+    android:viewportHeight="24">
+    <!-- Chat bubble -->
+    <path
+        android:fillColor="#FFFFFFFF"
+        android:pathData="M4,3 C2.343,3 1,4.343 1,6 L1,14 C1,15.657 2.343,17 4,17 L6.5,17 L6.5,19.594 C6.5,20.482 7.539,20.969 8.229,20.407 L11.5,17.736 L11.5,17 L20,17 C21.657,17 23,15.657 23,14 L23,6 C23,4.343 21.657,3 20,3 Z" />
+    <!-- Three dots, punched out of the bubble -->
+    <path
+        android:fillColor="#FF000000"
+        android:pathData="M6.5,9 h2 v2 h-2 Z M11,9 h2 v2 h-2 Z M15.5,9 h2 v2 h-2 Z" />
+</vector>

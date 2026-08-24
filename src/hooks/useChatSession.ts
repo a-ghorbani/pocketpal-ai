@@ -38,6 +38,12 @@ import {
 import {formatKbHitsForPrompt} from '../utils/kbInjection';
 import {activateKeepAwake, deactivateKeepAwake} from '../utils/keepAwake';
 import {
+  startForegroundRun,
+  stopForegroundRun,
+  updateForegroundRun,
+} from '../utils/foregroundService';
+import {t} from '../locales';
+import {
   toApiCompletionParams,
   ApiCompletionParams,
   CompletionParams,
@@ -699,6 +705,19 @@ export const useChatSession = (
       console.error('Failed to activate keep awake during chat:', error);
     }
 
+    // Foreground service: keeps the run alive when the app is
+    // backgrounded mid-generation. Fire-and-forget; the wrapper never
+    // rejects and generation must never block on the permission dialog.
+    startForegroundRun(
+      modelStore.activeModel?.name ?? l10n.chat.fgsFallbackTitle,
+      l10n.chat.fgsPreparing,
+      {
+        title: l10n.chat.fgsPermissionTitle,
+        message: l10n.chat.fgsPermissionMessage,
+        button: l10n.chat.fgsPermissionButton,
+      },
+    );
+
     const activeSession = chatSessionStore.sessions.find(
       s => s.id === chatSessionStore.activeSessionId,
     );
@@ -729,7 +748,7 @@ export const useChatSession = (
 
     // Allowed talent names for this Pal. The runner rejects any
     // tool call whose function.name isn't in this list.
-    const palTalents = (pal?.pact?.talents ?? []).map(t => t.name);
+    const palTalents = (pal?.pact?.talents ?? []).map(talent => talent.name);
 
     abortRef.current = new AbortController();
     const completionStartTime = Date.now();
@@ -823,9 +842,21 @@ export const useChatSession = (
         }
 
         switch (event.type) {
-          case 'run_started':
           case 'step_started':
+            toolCallTokensRaw = 0;
+            chatSessionStore.setToolCallTokenCount(0);
+            updateForegroundRun(t(l10n.chat.fgsStep, {n: event.turn + 1}));
+            break;
           case 'tool_call_started':
+            toolCallTokensRaw = 0;
+            chatSessionStore.setToolCallTokenCount(0);
+            updateForegroundRun(
+              t(l10n.chat.fgsTool, {
+                name: event.call.function.name,
+              }),
+            );
+            break;
+          case 'run_started':
           case 'run_finished':
           case 'run_failed':
             toolCallTokensRaw = 0;
@@ -1030,6 +1061,7 @@ export const useChatSession = (
         await addSystemMessage(`${l10n.chat.completionFailed}${errorMessage}`);
       }
     } finally {
+      stopForegroundRun();
       try {
         deactivateKeepAwake();
       } catch (error) {
@@ -1066,7 +1098,9 @@ export const useChatSession = (
 
     // Note: deactivateKeepAwake intentionally stays here so the device
     // can sleep as soon as the user signals stop, even if native is
-    // still finishing the current chunk.
+    // still finishing the current chunk. Same for the foreground
+    // service notification.
+    stopForegroundRun();
     try {
       deactivateKeepAwake();
     } catch (error) {

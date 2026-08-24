@@ -11,6 +11,13 @@
     <!-- Permissions -->
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.CAMERA" />
+    <!-- Keeps a model run alive while the app is backgrounded. The
+         service itself is declared below with foregroundServiceType
+         dataSync; POST_NOTIFICATIONS (API 33+) gates its notification
+         visibility, not its ability to run. -->
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_DATA_SYNC" />
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
 
     <!-- Needed only for devices running Android 9 (API 28) or lower -->
     <!-- Currently used for storing chat sessions (/Download) -->
@@ -61,6 +68,14 @@
             <data android:scheme="pocketpal" android:host="checkout" />
         </intent-filter>
       </activity>
+
+        <!-- Foreground service that keeps an in-progress model run
+             alive when the app is backgrounded. Started/stopped from
+             JS via ForegroundServiceModule. -->
+        <service
+            android:name=".AgentRunService"
+            android:exported="false"
+            android:foregroundServiceType="dataSync" />
 
         <!-- Optional native library for OpenCL (GPU acceleration) -->
         <uses-native-library
