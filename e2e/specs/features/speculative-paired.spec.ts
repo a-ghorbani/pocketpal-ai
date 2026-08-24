@@ -55,6 +55,8 @@ import {SettingsPage} from '../../pages/SettingsPage';
 import {Selectors, byTestId, byPartialText} from '../../helpers/selectors';
 import {Gestures} from '../../helpers/gestures';
 import {readAccessibilityLabel} from '../../helpers/element-text';
+import {ensureRevealed} from '../../helpers/disclosure';
+import {readSwitchState} from '../../helpers/control-state';
 import {
   dismissPerformanceWarningIfPresent,
   dismissContextRoomSheetIfPresent,
@@ -67,37 +69,48 @@ declare const driver: WebdriverIO.Browser;
 declare const browser: WebdriverIO.Browser;
 
 /**
- * Separate MTP draft: arch gemma4-assistant, nextn_predict_layers=4, ~98 MB.
- * Downloaded (not loaded) so its width/MTP metadata is available to the pairing
- * resolver and it appears in the draft-model picker.
+ * Fixture pair, overridable per device. The default gemma-4 set needs ~2.9 GB,
+ * which does not fit every target; any pair works so long as the draft is
+ * MTP-capable and its n_embd_out equals the target's n_embd (draftResolution.ts).
+ */
+const env = (name: string, fallback: string): string =>
+  process.env[name] || fallback;
+
+/**
+ * Separate MTP draft. Downloaded (not loaded) so its width/MTP metadata is
+ * available to the pairing resolver and it appears in the draft-model picker.
+ *
+ * The draft file is ~97 MB, but the app pairs every file in a multimodal repo
+ * with its mmproj, so the actual transfer is ~655 MB — well past the 5-minute
+ * default.
  */
 const DRAFT_MODEL: ModelTestConfig = {
-  id: 'gemma-4-e2b-mtp-draft',
-  searchQuery: 'ggml-org gemma-4-E2B-it-GGUF',
-  selectorText: 'gemma-4-E2B-it',
-  downloadFile: 'mtp-gemma-4-E2B-it-Q8_0.gguf',
+  id: 'paired-mtp-draft',
+  searchQuery: env('E2E_PAIRED_DRAFT_QUERY', 'ggml-org gemma-4-E2B-it-GGUF'),
+  selectorText: env('E2E_PAIRED_DRAFT_SELECTOR', 'gemma-4-E2B-it'),
+  downloadFile: env('E2E_PAIRED_DRAFT_FILE', 'mtp-gemma-4-E2B-it-Q8_0.gguf'),
+  downloadTimeout: Number(process.env.E2E_DOWNLOAD_TIMEOUT) || 900000,
   prompts: [{input: 'Hi', description: 'Basic greeting'}],
 };
 
 /**
- * The chat target paired with the draft. Loaded TEXT-ONLY (no mmproj). Same
- * repo as the draft (arch `gemma4`, no nextn KV — genuinely non-MTP), and the
- * exact pair the Pixel 9 engagement evidence was captured with.
+ * The chat target paired with the draft. The default is loaded TEXT-ONLY (no
+ * mmproj) because its repo is multimodal.
  */
 const TARGET_MODEL: ModelTestConfig = {
-  id: 'gemma-4-e2b-target',
-  searchQuery: 'ggml-org gemma-4-E2B-it-GGUF',
-  selectorText: 'gemma-4-E2B-it',
-  downloadFile: 'gemma-4-E2B-it-Q4_0.gguf',
-  // ~3.5 GB; HF often serves large files at only a few MB/s, so the wait is
+  id: 'paired-target',
+  searchQuery: env('E2E_PAIRED_TARGET_QUERY', 'ggml-org gemma-4-E2B-it-GGUF'),
+  selectorText: env('E2E_PAIRED_TARGET_SELECTOR', 'gemma-4-E2B-it'),
+  downloadFile: env('E2E_PAIRED_TARGET_FILE', 'gemma-4-E2B-it-Q4_0.gguf'),
+  // HF often serves large files at only a few MB/s, so the wait is
   // overridable for slow lanes the way E2E_MOCHA_TIMEOUT is.
   downloadTimeout: Number(process.env.E2E_DOWNLOAD_TIMEOUT) || 900000,
   prompts: [{input: 'Hi', description: 'Basic greeting'}],
-  disableVisionBeforeLoad: true,
+  disableVisionBeforeLoad: process.env.E2E_PAIRED_TARGET_VISION !== 'false',
 };
 
 /** Fragment of the draft's display name (extractHFModelTitle == filename). */
-const DRAFT_TITLE_FRAGMENT = 'mtp-gemma-4-E2B-it-Q8_0';
+const DRAFT_TITLE_FRAGMENT = DRAFT_MODEL.downloadFile.replace(/\.gguf$/, '');
 
 /**
  * n_ctx for the run. The paired draft needs room to draft to completion; with
@@ -108,6 +121,8 @@ const DRAFT_TITLE_FRAGMENT = 'mtp-gemma-4-E2B-it-Q8_0';
 const SPEC_CONTEXT_SIZE = '4096';
 
 const SPEC_ACCORDION = byTestId('advanced-settings-accordion');
+/** First row inside the accordion — mounted only while it is expanded. */
+const SPEC_ACCORDION_FIRST_ROW = byTestId('batch-size-slider');
 const SPEC_SWITCH = byTestId('speculative-decoding-switch');
 const SPEC_PICKER = byTestId('speculative-draft-model-picker');
 
@@ -150,6 +165,11 @@ function freshCrashReports(sinceMs: number): string[] {
  * the screen mounted), so rewind to the top before scrolling to a row.
  */
 async function scrollSettingsToTop(): Promise<void> {
+  // A fixed swipe count cannot rewind a list whose height depends on whether
+  // the Advanced accordion is expanded; the native scroller has no such limit.
+  if (await Gestures.nativeScrollIntoView(byTestId('context-size-input'))) {
+    return;
+  }
   for (let i = 0; i < 8; i++) {
     await Gestures.swipeDown();
   }
@@ -180,26 +200,73 @@ async function goToSettings(settingsPage: SettingsPage): Promise<void> {
   }
 }
 
+/**
+ * The iOS simulator's Metal shim aborts in MTLSimDevice.newBufferWithLength
+ * (_xpc_shmem_create_with_prot) once a paired draft decodes alongside a large
+ * target, so runs there select the CPU backend. Draft-token production is
+ * backend-independent, so the engagement proof is unaffected.
+ */
+async function forceCpuIfRequested(settingsPage: SettingsPage): Promise<void> {
+  if (process.env.E2E_FORCE_CPU !== 'true') {
+    return;
+  }
+  await goToSettings(settingsPage);
+  await scrollSettingsToTop();
+  const cpuOption = byTestId('device-option-cpu');
+  const reached =
+    (await Gestures.nativeScrollIntoView(cpuOption)) ||
+    (await Gestures.scrollToElement(cpuOption, 10));
+  if (!reached) {
+    console.log('[paired] CPU device option not present; leaving backend as-is');
+    return;
+  }
+  await browser.pause(700);
+  await browser.$(cpuOption).click();
+  await browser.pause(700);
+  console.log('[paired] selected CPU backend');
+
+  // The draft carries its own layer count (spec_draft_n_gpu_layers, default
+  // 99), so the device selector alone leaves the draft's decode on Metal —
+  // which is exactly where the simulator aborts.
+  await enableSpeculativeGlobally(settingsPage);
+  const draftLayers = byTestId('speculative-draft-gpu-layers-slider-input');
+  const draftReached =
+    (await Gestures.nativeScrollIntoView(draftLayers)) ||
+    (await Gestures.scrollToElement(draftLayers, 12));
+  if (!draftReached) {
+    console.log('[paired] draft gpu-layers input not reachable');
+    return;
+  }
+  const input = browser.$(draftLayers);
+  await input.clearValue();
+  await input.setValue('0');
+  await browser.pause(500);
+  // The layer count uses a numeric keypad, which has no Return/Done key. ESC
+  // closes it on Android without the back-press that hideKeyboard() emits (a
+  // pop React Navigation would consume); iOS needs the driver's own dismiss.
+  if ((browser as any).isAndroid) {
+    await (browser as any).pressKeyCode(111).catch(() => undefined);
+  } else {
+    await browser
+      .execute('mobile: hideKeyboard' as any)
+      .catch(() => undefined);
+  }
+  await browser.pause(500);
+  console.log('[paired] draft gpu layers set to 0');
+}
+
 /** Enable speculative decoding globally in Settings -> Advanced. */
 async function enableSpeculativeGlobally(
   settingsPage: SettingsPage,
 ): Promise<void> {
   await goToSettings(settingsPage);
-  // A revisit restores the previous scroll offset, and scrollToElement only
-  // searches downward — start every pass from the top. Try to reach the
-  // switch first: off-viewport content is absent from the a11y tree, so an
-  // existence probe cannot tell "accordion collapsed" from "row below the
-  // fold", and a blind accordion click can collapse an open section.
-  await scrollSettingsToTop();
-  await Gestures.scrollToElement(SPEC_ACCORDION, 8);
-  let switchReachable = await Gestures.scrollToElement(SPEC_SWITCH, 8);
-  if (!switchReachable) {
-    await scrollSettingsToTop();
-    await Gestures.scrollToElement(SPEC_ACCORDION, 8);
-    await browser.$(SPEC_ACCORDION).click();
-    await browser.pause(500);
-    switchReachable = await Gestures.scrollToElement(SPEC_SWITCH, 8);
-  }
+  await ensureRevealed({
+    toggle: SPEC_ACCORDION,
+    dependent: SPEC_SWITCH,
+    stateProbe: SPEC_ACCORDION_FIRST_ROW,
+    rewind: scrollSettingsToTop,
+    maxScrolls: 8,
+  });
   await browser.$(SPEC_SWITCH).waitForExist({timeout: TIMEOUTS.element});
 
   // Read the switch itself: with app state persisted between runs
@@ -222,6 +289,61 @@ async function enableSpeculativeGlobally(
   }
   await Gestures.scrollToElement(SPEC_PICKER, 4);
   await browser.$(SPEC_PICKER).waitForExist({timeout: TIMEOUTS.element});
+}
+
+/**
+ * Download a file with its vision projection turned OFF.
+ *
+ * The plain download button on a file card always passes `enableVision: true`,
+ * so every file in a multimodal repo drags its ~557 MB mmproj along (a 97 MB
+ * draft becomes a 655 MB transfer). The projection is reachable only through
+ * the card's vision chip, which opens a sheet carrying its own toggle and
+ * Download button. Neither control has a testID, so both are matched on text.
+ *
+ * Returns false when the file has no vision chip — a non-multimodal file needs
+ * the normal path.
+ */
+async function tapDownloadWithoutVision(filename: string): Promise<boolean> {
+  const card = browser.$(Selectors.modelDetails.fileCard(filename));
+  const chip = card.$(byPartialText('Includes vision capability'));
+  if (!(await chip.isExisting().catch(() => false))) {
+    return false;
+  }
+  await browser.pause(700);
+  await chip.click();
+  await browser.pause(1500);
+
+  const toggle = browser.$(
+    (browser as any).isAndroid
+      ? '//android.widget.Switch'
+      : '-ios class chain:**/XCUIElementTypeSwitch',
+  );
+  if (await toggle.isExisting().catch(() => false)) {
+    const on = await readSwitchState(
+      (browser as any).isAndroid
+        ? '//android.widget.Switch'
+        : '-ios class chain:**/XCUIElementTypeSwitch',
+    );
+    if (on !== false) {
+      await toggle.click();
+      await browser.pause(700);
+    }
+  }
+
+  // Exact match on the button: every file row behind the sheet also carries a
+  // download control, labelled "Download model", and a substring match resolves
+  // one of those instead — a tap that lands under the sheet and does nothing.
+  const downloadBtn = browser.$(
+    (browser as any).isAndroid
+      ? '//android.widget.Button[@content-desc="Download"]'
+      : '-ios predicate string:type == "XCUIElementTypeButton" AND label == "Download"',
+  );
+  await downloadBtn.waitForExist({timeout: TIMEOUTS.element});
+  await browser.pause(500);
+  await downloadBtn.click();
+  await browser.pause(1500);
+  console.log(`[paired] ${filename}: downloading without vision projection`);
+  return true;
 }
 
 /**
@@ -263,7 +385,12 @@ async function downloadModelOnly(model: ModelTestConfig): Promise<void> {
   await modelDetailsSheet.waitForReady();
 
   await modelDetailsSheet.scrollToFile(model.downloadFile);
-  await modelDetailsSheet.tapDownloadForFile(model.downloadFile);
+  if (
+    process.env.E2E_PAIRED_NO_VISION !== 'true' ||
+    !(await tapDownloadWithoutVision(model.downloadFile))
+  ) {
+    await modelDetailsSheet.tapDownloadForFile(model.downloadFile);
+  }
 
   await modelDetailsSheet.close();
   await hfSearchSheet.close();
@@ -311,7 +438,12 @@ async function downloadAndLoadTarget(model: ModelTestConfig): Promise<void> {
     await modelDetailsSheet.waitForReady();
 
     await modelDetailsSheet.scrollToFile(model.downloadFile);
-    await modelDetailsSheet.tapDownloadForFile(model.downloadFile);
+    if (
+      process.env.E2E_PAIRED_NO_VISION !== 'true' ||
+      !(await tapDownloadWithoutVision(model.downloadFile))
+    ) {
+      await modelDetailsSheet.tapDownloadForFile(model.downloadFile);
+    }
 
     await modelDetailsSheet.close();
     await hfSearchSheet.close();
@@ -394,6 +526,7 @@ describe('Speculative Decoding / separate-draft (paired) MTP', () => {
     await goToSettings(settingsPage);
     await settingsPage.setContextSize(SPEC_CONTEXT_SIZE);
     await enableSpeculativeGlobally(settingsPage);
+    await forceCpuIfRequested(settingsPage);
     await saveShot('speculative-paired-settings-enabled');
   });
 
