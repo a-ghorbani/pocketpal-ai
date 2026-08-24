@@ -58,13 +58,15 @@ the phone into the whole stack:
 - **Agent workspace**: sandboxed `list_files`, `read_file`, `write_file`,
   and `grep_files` talents with strict path jailing, so a Pal can keep
   notes and files across turns
+- **Background runs**: every generation runs under an Android foreground
+  service (dataSync type) with a progress notification, so a long agent
+  run survives the app being backgrounded or the screen turning off;
+  the notification follows agent steps and tool calls
 - **Latency pack**: extractive sentence-level quote trimming, tuned defaults,
   warm embedding context
 
 ## Roadmap
 
-- Autonomous task loop with step and token budgets, run under a foreground
-  service
 - Telegram connector (Bot API) for messages and files in and out
 
 ## Relationship to upstream
