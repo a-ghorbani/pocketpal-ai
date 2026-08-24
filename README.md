@@ -11,15 +11,13 @@ focus on knowledge, autonomy, and running your own local models - no cloud,
 no account, no telemetry. Built and tested on a Pixel 8 Pro running
 GrapheneOS. **Android only.**
 
-[<img src=".github/img/badge_obtainium.png" alt="Get it on Obtainium" height="66" />](https://tokenbleed.github.io/pocketmind/)
-[![Latest APK](https://img.shields.io/github/v/release/tokenbleed/pocketmind?style=for-the-badge&label=Latest%20APK&color=2D2D2D&logo=github)](https://github.com/tokenbleed/pocketmind/releases/latest)
+<table align="center"><tr>
+<td><a href="https://tokenbleed.github.io/pocketmind/"><img src=".github/img/badge_obtainium.png" alt="Get it on Obtainium" height="66" /></a></td>
+<td><a href="https://github.com/tokenbleed/pocketmind/releases/latest"><img src="https://img.shields.io/github/v/release/tokenbleed/pocketmind?style=for-the-badge&label=Latest%20APK&color=2D2D2D&logo=github" alt="Latest APK" /></a></td>
+</tr></table>
 
-The Obtainium button works on any Android device with
-[Obtainium](https://github.com/ImranR98/Obtainium) installed: the click
-passes through a tiny redirect page (GitHub strips direct
-`obtainium://` links from READMEs) and lands in the app with this repo
-pre-filled, so PocketMind tracks its own updates from GitHub releases.
-No store, no account.
+Releases are a single universal APK: Android 7.0 (API 24) and newer,
+arm64-v8a and x86_64, no per-device variants.
 
 </div>
 
@@ -129,6 +127,42 @@ deserves the credit for the app, the model manager, and the llama.rn
 integration; this fork diverges on the knowledge-base and autonomy direction.
 It is not affiliated with the upstream project, and it is not on any app
 store. Pull requests welcome once the roadmap stabilizes.
+
+## Engineering notes
+
+An honest admission first: given a free hand, this would have been written
+in Kotlin as a native app. Forking the React Native codebase was the
+faster path to a working product, and shipping something users can run
+outranks writing it in the right language. The tradeoff is a bigger APK
+and a JS layer between the UI and llama.cpp.
+
+A size-and-speed audit of the current codebase, in impact order:
+
+1. **Decide the fate of on-device TTS.** The single biggest slab in the
+   APK is `libonnxruntime.so` at 32 MB per ABI, 64 MB across both, and
+   it exists solely for the optional voice engines (kitten, kokoro,
+   supertonic) that `@pocketpalai/react-native-speech` drives with ONNX
+   models. No app code imports it directly. Keeping voice costs 64 MB
+   in every install; dropping TTS cuts the APK by a third.
+2. **Strip the PalsHub cloud layer.** `@supabase/supabase-js`, the
+   Firebase app-check BoM, Google Sign-In, Play Billing, and Chrome
+   Custom Tabs all exist for upstream's community hub and checkout.
+   None of it serves an offline fork, and it drags Play Services
+   dependencies into a degoogled build.
+3. **Enable R8 minification and resource shrinking.** Release builds
+   currently ship with `minifyEnabled false` (upstream default). Turning
+   on R8 plus `shrinkResources` trims DEX and assets; it needs a
+   validation pass on device because native-module reflection breaks
+   without the right keep rules.
+4. **Virtualize the message list.** Chat renders every message inside a
+   ScrollView, so each token re-renders the whole transcript. A windowed
+   list (or `React.memo` on message rows) cuts per-token JS work on long
+   sessions.
+5. **Live with the llama.cpp weight.** Six CPU-variant `.so` files at
+   ~10 MB each plus Hexagon DSP assets, per ABI, are what make the
+   178 MB APK. That is the price of one universal binary that runs on
+   everything from a 2016 arm64 phone to a Hexagon-backed flagship;
+   per-ABI splits would halve downloads but we ship universal only.
 
 ## Development
 
