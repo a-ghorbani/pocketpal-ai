@@ -7,7 +7,6 @@
  * map (src/utils/theme.ts) MUST be backed by a bundled asset:
  *   - src/assets/fonts/<Name>.ttf
  *   - android/app/src/main/assets/fonts/<Name>.ttf
- *   - <string>Name.ttf</string> inside ios/PocketPal/Info.plist (UIAppFonts)
  *
  * The PostScript name of the asset must equal the filename sans `.ttf`
  * (otherwise iOS silently falls back to system) - this is verified at
@@ -40,7 +39,6 @@ const ANDROID_DIR = path.join(
   'assets',
   'fonts',
 );
-const INFO_PLIST = path.join(ROOT, 'ios', 'PocketPal', 'Info.plist');
 
 /**
  * Extract every quoted `*-Regular`, `*-Medium`, `*-Bold`, `*-Italic`, etc.
@@ -295,7 +293,6 @@ function main() {
 
   const assets = listTtfNames(ASSETS_DIR);
   const android = listTtfNames(ANDROID_DIR);
-  const ios = plistTtfNames(INFO_PLIST);
 
   const errors = [];
   for (const name of [...families].sort()) {
@@ -305,11 +302,6 @@ function main() {
     if (!android.has(name)) {
       errors.push(
         `${name}: missing android/app/src/main/assets/fonts/${name}.ttf`,
-      );
-    }
-    if (!ios.has(name)) {
-      errors.push(
-        `${name}: missing <string>${name}.ttf</string> in ios/PocketPal/Info.plist (UIAppFonts)`,
       );
     }
   }

@@ -152,13 +152,13 @@ jobs:
             echo "Two different causes look identical here. Either ORG_GRADLE_PROJECT_rnllamaVariants"
             echo "did not reach the llama.rn subproject, or upstream changed the wording of the line"
             echo "this step greps for (android/build.gradle, the println next to rnllamaVariants)."
-            echo "Check the wording first — a llama.rn upgrade is the more common reason."
+            echo "Check the wording first - a llama.rn upgrade is the more common reason."
             exit 1
           fi
           echo "OK: llama.rn reported the declared variant list (extras, if any, are permitted and are reported by the payload check)."
 
-      # This build may ADD test scaffolding — different flavor, automation
-      # bridge, debuggable, dummy signing — but it must not SUBTRACT production
+      # This build may ADD test scaffolding - different flavor, automation
+      # bridge, debuggable, dummy signing - but it must not SUBTRACT production
       # capability, which is what this asserts. The manifest describes only the
       # native payload, and that does not vary by flavor, so it applies here
       # unchanged. The mirror of this is ci.yml's DCE check, which asserts the

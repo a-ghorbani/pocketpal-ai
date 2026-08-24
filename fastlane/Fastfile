@@ -31,20 +31,7 @@ lane :bump_version do |options|
     version_name: new_version
   )
 
-  # For iOS: Bump version and build number
-  ios_dir = File.join(root_dir, 'ios')
-  Dir.chdir(ios_dir) do
-    increment_version_number_in_xcodeproj(
-      version_number: new_version,
-      xcodeproj: File.join(ios_dir, "PocketPal.xcodeproj")
-    )
-    increment_build_number_in_xcodeproj(
-      xcodeproj: File.join(ios_dir, "PocketPal.xcodeproj")
-    )
-  end
-
   UI.message("Bumped versions:")
   UI.message("- Version name: #{new_version}")
   UI.message("- Android version code: #{new_version_code}")
-  UI.message("- iOS build number: #{get_build_number_from_xcodeproj(xcodeproj: File.join(ios_dir, 'PocketPal.xcodeproj'))}")
 end

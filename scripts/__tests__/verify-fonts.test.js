@@ -23,13 +23,12 @@ const ANDROID_DIR = path.join(
   'assets',
   'fonts',
 );
-const INFO_PLIST = path.join(ROOT, 'ios', 'PocketPal', 'Info.plist');
 const LOCALES_DIR = path.join(ROOT, 'src', 'locales');
 
 /**
  * Run verify-fonts.js against a temp workspace. The temp workspace
- * mirrors the relevant inputs (typography.ts, theme.ts, fonts dirs,
- * Info.plist) so we can introduce mismatches without touching the real
+ * mirrors the relevant inputs (typography.ts, theme.ts, fonts dirs)
+ * so we can introduce mismatches without touching the real
  * project files (which would race with parallel Jest workers).
  */
 function runWithOverrides(overrides = {}) {
@@ -43,7 +42,6 @@ function runWithOverrides(overrides = {}) {
       path.join(tmp, 'android', 'app', 'src', 'main', 'assets', 'fonts'),
       {recursive: true},
     );
-    fs.mkdirSync(path.join(tmp, 'ios', 'PocketPal'), {recursive: true});
     fs.mkdirSync(path.join(tmp, 'src', 'locales'), {recursive: true});
 
     fs.copyFileSync(
@@ -63,10 +61,6 @@ function runWithOverrides(overrides = {}) {
         path.join(tmp, 'android', 'app', 'src', 'main', 'assets', 'fonts', f),
       );
     }
-    fs.copyFileSync(
-      INFO_PLIST,
-      path.join(tmp, 'ios', 'PocketPal', 'Info.plist'),
-    );
     // index.ts + the locale JSONs feed the headline glyph-coverage check.
     for (const f of fs.readdirSync(LOCALES_DIR)) {
       if (f === 'index.ts' || f.endsWith('.json')) {
@@ -143,22 +137,6 @@ describe('verify-fonts.js', () => {
     expect(result.exitCode).not.toBe(0);
     expect(result.output).toContain(
       'JetBrainsMono-Medium: missing android/app/src/main/assets/fonts/JetBrainsMono-Medium.ttf',
-    );
-  });
-
-  it('fails when a font is missing from ios UIAppFonts', () => {
-    // Strip the JetBrainsMono entries from the plist.
-    const plistSrc = fs.readFileSync(INFO_PLIST, 'utf-8');
-    const stripped = plistSrc
-      .split('\n')
-      .filter(line => !line.includes('JetBrainsMono'))
-      .join('\n');
-    const result = runWithOverrides({
-      files: {'ios/PocketPal/Info.plist': stripped},
-    });
-    expect(result.exitCode).not.toBe(0);
-    expect(result.output).toContain(
-      'JetBrainsMono-Regular: missing <string>JetBrainsMono-Regular.ttf</string>',
     );
   });
 

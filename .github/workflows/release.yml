@@ -16,16 +16,9 @@ on:
           - preminor
           - prepatch
           - prerelease
-      ios_only:
-        description: "iOS only: skip version bump + Android, build TestFlight from current ref"
-        required: false
-        default: false
-        type: boolean
-
 jobs:
   # Job 1: Version Bumping and Android Build
   build_android:
-    if: ${{ !inputs.ios_only }}
     runs-on: ubuntu-latest
     permissions:
       contents: 'write' # Allows workflow to checkout repository code
@@ -75,7 +68,7 @@ jobs:
         run: yarn install
 
       # Step 4b: The manifest that the payload gate enforces also decides which
-      # rnllama variants are worth compiling — one declaration, both uses.
+      # rnllama variants are worth compiling - one declaration, both uses.
       - name: Derive the rnllama variant allowlist from the payload manifest
         run: |
           set -euo pipefail
@@ -90,7 +83,7 @@ jobs:
 
       # No ccache on the release path, deliberately. Its key is the commit
       # SHA, and a release builds a fresh version-bump commit, so the only way
-      # it could ever hit is the `ccache-android-` prefix restore — which would
+      # it could ever hit is the `ccache-android-` prefix restore - which would
       # link objects of unreviewed provenance into the artifact that ships.
       # Keeping it would cost the shipped binary's provenance to save build
       # minutes on the least frequent workflow we run.
@@ -114,11 +107,11 @@ jobs:
           echo "VERSION=$VERSION" >> $GITHUB_ENV
           git config user.name "GitHub Actions"
           git config user.email "actions@github.com"
-          git add .version package.json android/app/build.gradle ios/PocketPal.xcodeproj/project.pbxproj
+          git add .version package.json android/app/build.gradle
           git commit -m "chore(release): bump version to $VERSION"
           git push
           # Created here so it points at the bump commit, but pushed only once
-          # the payload check has passed — see "Push the release tag" below.
+          # the payload check has passed - see "Push the release tag" below.
           git tag "v$VERSION"
 
       # Step 8: Set up Android Keystore
@@ -186,8 +179,8 @@ jobs:
       # COUPLING: the string grepped for below is upstream's, printed by
       # node_modules/llama.rn/android/build.gradle next to its rnllamaVariants
       # lookup. A llama.rn upgrade that rewords it fails this step. That is the
-      # intended direction — it is the only live proof the environment reaches
-      # gradle — but the fix is to update the literal, not to delete the check.
+      # intended direction - it is the only live proof the environment reaches
+      # gradle - but the fix is to update the literal, not to delete the check.
       - name: Verify the variant allowlist reached the llama.rn build
         run: |
           set -euo pipefail
@@ -201,12 +194,12 @@ jobs:
             echo "Two different causes look identical here. Either ORG_GRADLE_PROJECT_rnllamaVariants"
             echo "did not reach the llama.rn subproject, or upstream changed the wording of the line"
             echo "this step greps for (android/build.gradle, the println next to rnllamaVariants)."
-            echo "Check the wording first — a llama.rn upgrade is the more common reason."
+            echo "Check the wording first - a llama.rn upgrade is the more common reason."
             exit 1
           fi
           echo "OK: llama.rn reported the declared variant list (extras, if any, are permitted and are reported by the payload check)."
 
-      # Step 10b: Both shipped forms are checked — the APK goes to the GitHub
+      # Step 10b: Both shipped forms are checked - the APK goes to the GitHub
       # Release, the AAB goes to Play, and they are packaged separately.
       - name: Verify the Android payload
         run: |
@@ -251,118 +244,3 @@ jobs:
           generate_release_notes: true
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
-  # Job 2: iOS Build and Upload (runs on macOS)
-  build_ios:
-    runs-on: macos-26 # macOS 26 includes an iOS 26-capable Xcode toolchain
-    needs: build_android
-    if: ${{ always() && (needs.build_android.result == 'success' || needs.build_android.result == 'skipped') }}
-    env:
-      NODE_OPTIONS: '--max-old-space-size=8192'
-
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-        with:
-          ref: ${{ github.ref }}    # This ensures we get the latest changes including the version bump
-          fetch-depth: 0
-
-      # Step 1: Select the default Xcode shipped on macOS 26.
-      # App Store Connect now requires uploads built with the iOS 26 SDK or later.
-      - name: Setup Xcode
-        run: |
-          sudo xcode-select -s /Applications/Xcode.app
-          xcodebuild -version
-
-      # Step 2: Set up Node.js
-      - name: Set up Node.js
-        uses: actions/setup-node@v3
-        with:
-          node-version: '22.21.0'
-          cache: 'yarn'
-
-      # Step 3: Install dependencies using Yarn
-      - name: Install dependencies
-        run: yarn install
-
-      # Step 4: Set up Ruby and Bundler
-      - name: Set up Ruby
-        uses: ruby/setup-ruby@v1
-        with:
-          ruby-version: '3.2.3'  # Specify a Ruby version
-          bundler-cache: true
-
-      # Step 5: Install CocoaPods dependencies
-      - name: Install CocoaPods dependencies
-        working-directory: ios
-        run: pod install
-
-      # Step 6: Create Env.xcconfig
-      - name: Create Env.xcconfig
-        run: |
-          cat > ios/Config/Env.xcconfig << 'EOL'
-          // This file contains environment-specific build settings.
-
-          GOOGLE_WEB_CLIENT_ID = ${{ vars.GOOGLE_WEB_CLIENT_ID }}
-          REVERSED_GOOGLE_IOS_CLIENT_ID = ${{ vars.REVERSED_GOOGLE_IOS_CLIENT_ID }}
-
-          EOL
-
-      # Step 7: Create .env file
-      - name: Create .env file
-        run: |
-          cat > .env << 'EOL'
-          FIREBASE_FUNCTIONS_URL=${{ vars.FIREBASE_FUNCTIONS_URL }}
-
-          # PalsHub/Supabase Configuration
-          SUPABASE_URL=${{ vars.SUPABASE_URL }}
-          SUPABASE_ANON_KEY=${{ secrets.SUPABASE_ANON_KEY }}
-          PALSHUB_API_BASE_URL=${{ vars.PALSHUB_API_BASE_URL }}
-
-          # App Configuration
-          APP_URL=pocketpal://app
-
-          # Feature Flags (true/false)
-          ENABLE_PALSHUB_INTEGRATION=true
-          ENABLE_AUTHENTICATION=true
-          ENABLE_OFFLINE_MODE=true
-
-          # Google Sign-In Configuration
-          GOOGLE_IOS_CLIENT_ID=${{ vars.GOOGLE_IOS_CLIENT_ID }}
-          GOOGLE_WEB_CLIENT_ID=${{ vars.GOOGLE_WEB_CLIENT_ID }}
-          EOL
-
-      # Step 8: Build and upload iOS app to TestFlight
-      - name: Build and upload iOS app
-        working-directory: ios
-        env:
-          MATCH_PASSWORD: ${{ secrets.MATCH_PASSWORD }}
-          MATCH_GIT_URL: ${{ secrets.MATCH_GIT_URL }}
-          MATCH_GITHUB_TOKEN: ${{ secrets.MATCH_GITHUB_TOKEN }}
-          APP_STORE_CONNECT_API_KEY_ID: ${{ secrets.APP_STORE_CONNECT_API_KEY_ID }}
-          APP_STORE_CONNECT_API_ISSUER_ID: ${{ secrets.APP_STORE_CONNECT_API_ISSUER_ID }}
-          APP_STORE_CONNECT_API_KEY_CONTENT: ${{ secrets.APP_STORE_CONNECT_API_KEY_CONTENT }}
-          APP_STORE_CONNECT_USER_ID: ${{ secrets.APP_STORE_CONNECT_USER_ID }}
-          GOOGLE_SERVICES_PLIST: ${{ secrets.GOOGLE_SERVICES_PLIST }}
-        run: bundle exec fastlane release_ios_testflight
-
-      # Step 9: Extract iOS version info for dSYM artifact naming
-      - name: Extract iOS version info
-        id: version
-        if: always()
-        run: |
-          MARKETING_VERSION=$(cat .version | tr -d '[:space:]')
-          BUILD_NUMBER=$(grep -m1 'CURRENT_PROJECT_VERSION' ios/PocketPal.xcodeproj/project.pbxproj | awk -F'= ' '{print $2}' | tr -d ' ;')
-          echo "marketing_version=${MARKETING_VERSION}" >> "$GITHUB_OUTPUT"
-          echo "build_number=${BUILD_NUMBER}" >> "$GITHUB_OUTPUT"
-          echo "Extracted: v${MARKETING_VERSION} build ${BUILD_NUMBER}"
-
-      # Step 10: Retain dSYM as a workflow artifact for crash symbolication (FOU-86)
-      - name: Upload iOS dSYM
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: ios-dsym-v${{ steps.version.outputs.marketing_version }}-build${{ steps.version.outputs.build_number }}
-          path: ios/build/PocketPal.app.dSYM.zip
-          retention-days: 90
-          if-no-files-found: warn
