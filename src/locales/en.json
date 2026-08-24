@@ -890,14 +890,22 @@
         "calculate": "Math expressions",
         "datetime": "Date & time",
         "web_search": "Web search",
-        "read_url": "Read web page"
+        "read_url": "Read web page",
+        "list_files": "List workspace files",
+        "read_file": "Read workspace file",
+        "write_file": "Write workspace file",
+        "grep_files": "Search workspace files"
       },
       "talentDescriptions": {
         "render_html": "Render HTML documents inline in chat",
         "calculate": "Evaluate mathematical expressions",
         "datetime": "Get the current date and time",
         "web_search": "Search the internet for current information (requires API key in Settings)",
-        "read_url": "Read the full content of a web page (requires API key in Settings)"
+        "read_url": "Read the full content of a web page (requires API key in Settings)",
+        "list_files": "List files in the app's private agent workspace",
+        "read_file": "Read text files from the agent workspace, paged by line",
+        "write_file": "Create or append text files in the agent workspace",
+        "grep_files": "Regex search across agent workspace files"
       },
       "greeting": {
         "sectionLabel": "Greeting",

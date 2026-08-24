@@ -3,6 +3,10 @@ import {CalculateEngine} from './CalculateEngine';
 import {DatetimeEngine} from './DatetimeEngine';
 import {WebSearchEngine} from './WebSearchEngine';
 import {ReadUrlEngine} from './ReadUrlEngine';
+import {ListFilesEngine} from './ListFilesEngine';
+import {ReadFileEngine} from './ReadFileEngine';
+import {WriteFileEngine} from './WriteFileEngine';
+import {GrepFilesEngine} from './GrepFilesEngine';
 import {talentRegistry} from './TalentRegistry';
 import type {SearchAccess} from './searchAccess';
 import type {ToolDefinition, SystemPromptContext} from './types';
@@ -17,6 +21,10 @@ export {CalculateEngine} from './CalculateEngine';
 export {DatetimeEngine} from './DatetimeEngine';
 export {WebSearchEngine} from './WebSearchEngine';
 export {ReadUrlEngine} from './ReadUrlEngine';
+export {ListFilesEngine} from './ListFilesEngine';
+export {ReadFileEngine} from './ReadFileEngine';
+export {WriteFileEngine} from './WriteFileEngine';
+export {GrepFilesEngine} from './GrepFilesEngine';
 export type {SearchAccess} from './searchAccess';
 // Deliberately narrow: the raw allowlist writers stay module-internal so all
 // writes happen inside services/talents (seed at run start, WebSearchEngine
@@ -62,6 +70,12 @@ export function registerDefaultTalents(): void {
   const searchAccess = createSearchAccess();
   talentRegistry.register(new WebSearchEngine(searchAccess));
   talentRegistry.register(new ReadUrlEngine(searchAccess));
+  // Workspace file talents: all four share the lexical path jail in
+  // workspaceFs.ts; they appear per-Pal only when named in pact.talents.
+  talentRegistry.register(new ListFilesEngine());
+  talentRegistry.register(new ReadFileEngine());
+  talentRegistry.register(new WriteFileEngine());
+  talentRegistry.register(new GrepFilesEngine());
   registered = true;
 }
 

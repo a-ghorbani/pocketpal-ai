@@ -55,12 +55,14 @@ the phone into the whole stack:
 - **Document extraction**: PDF, DOCX, EPUB, PPTX, XLSX, and ODT files are
   text-extracted at attach time (pdfbox-android for PDFs, pure-JS zip/XML
   readers for the rest), so they feed chat and the knowledge base
+- **Agent workspace**: sandboxed `list_files`, `read_file`, `write_file`,
+  and `grep_files` talents with strict path jailing, so a Pal can keep
+  notes and files across turns
 - **Latency pack**: extractive sentence-level quote trimming, tuned defaults,
   warm embedding context
 
 ## Roadmap
 
-- Sandboxed agent workspace (list/read/write/grep tools with path jailing)
 - Autonomous task loop with step and token budgets, run under a foreground
   service
 - Telegram connector (Bot API) for messages and files in and out
