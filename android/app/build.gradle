@@ -101,7 +101,7 @@ android {
             // Replace RN's auto-injected default-app-setup CMakeLists so
             // we can link `hardware_info.cpp` (HardwareInfoModule's JNI
             // shim) into libappmodules.so. The replacement file must
-            // include ReactNative-application.cmake — see jni/CMakeLists.txt.
+            // include ReactNative-application.cmake, see jni/CMakeLists.txt.
             path file("src/main/jni/CMakeLists.txt")
         }
     }
@@ -129,8 +129,7 @@ android {
         debug {
             signingConfig signingConfigs.debug
             // RN dev menu + Metro-served JS. Mirrors BuildConfig.DEBUG but
-            // is independent of `debuggable`, so `releaseE2e` (which sets
-            // debuggable=true for `adb run-as`) can still pin to false.
+            // is independent of `debuggable`.
             buildConfigField "boolean", "USE_DEV_SUPPORT", "true"
         }
         release {
@@ -148,19 +147,6 @@ android {
             proguardFiles getDefaultProguardFile("proguard-android.txt"), "proguard-rules.pro"
             buildConfigField "boolean", "USE_DEV_SUPPORT", "false"
         }
-        releaseE2e {
-            // E2E buildType: inherits 95% of release (Hermes, minify toggle,
-            // proguard rules), then overrides:
-            //   1. debuggable=true so `adb shell run-as com.pocketpalai.e2e`
-            //      works for the benchmark-matrix preseed workflow.
-            //   2. Debug signing — E2E builds are never shipped to stores.
-            //   3. matchingFallbacks so dependencies resolve to their release
-            //      variant (they don't publish a releaseE2e variant).
-            initWith release
-            debuggable true
-            signingConfig signingConfigs.debug
-            matchingFallbacks = ['release']
-        }
     }
 
     flavorDimensions "distribution"
@@ -168,30 +154,6 @@ android {
         prod {
             dimension "distribution"
             // applicationId stays as defaultConfig: com.pocketpalai
-        }
-        e2e {
-            dimension "distribution"
-            applicationIdSuffix ".e2e"
-            // Effective applicationId: com.pocketpalai.e2e
-            // Separate sandbox; installs side-by-side with prod.
-        }
-    }
-
-    // Keep the variant matrix narrow: only prodDebug, prodRelease,
-    // e2eDebug, and e2eReleaseE2e are valid combinations.
-    //   - e2e + release  → unsigned E2E APK nobody asked for; drop it
-    //   - prod + releaseE2e → debuggable prod APK that would ship via the
-    //     prod applicationId; drop it
-    // Without this filter, a bare `./gradlew assembleRelease` or
-    // `assembleReleaseE2e` would build extra, confusing variants.
-    variantFilter { variant ->
-        def flavors = variant.flavors*.name
-        def buildType = variant.buildType.name
-        if (flavors.contains('e2e') && buildType == 'release') {
-            setIgnore(true)
-        }
-        if (flavors.contains('prod') && buildType == 'releaseE2e') {
-            setIgnore(true)
         }
     }
 }
@@ -206,8 +168,8 @@ dependencies {
         implementation jscFlavor
     }
 
-    // The Firebase Android BoM (Bill of Materials) lets you manage all your Firebase library versions 
-    // by specifying only one version — the BoM's version.
+    // The Firebase Android BoM (Bill of Materials) lets you manage all
+    // Firebase library versions by specifying only one version: the BoM's version.
     implementation platform('com.google.firebase:firebase-bom:34.4.0')
     implementation 'com.google.firebase:firebase-appcheck-playintegrity'
     implementation 'com.google.firebase:firebase-appcheck-debug'
@@ -231,7 +193,7 @@ dependencies {
     // Chrome Custom Tabs for the in-app PalsHub checkout (AuthSessionModule)
     implementation "androidx.browser:browser:1.8.0"
 
-    // Google Play Billing — External Content Links program (ExternalContentLinkModule)
+    // Google Play Billing, External Content Links program (ExternalContentLinkModule)
     implementation "com.android.billingclient:billing:8.2.1"
 
     // OkHttp for DownloadModule (network requests)
