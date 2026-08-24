@@ -41,8 +41,9 @@ import {
   nativeTextElement,
 } from '../../helpers/selectors';
 import {Gestures} from '../../helpers/gestures';
+import {readControlEnabled, tapControl} from '../../helpers/control-state';
+import {saveFailureScreenshot} from '../../helpers/screenshots';
 import {TIMEOUTS} from '../../fixtures/models';
-import {SCREENSHOT_DIR} from '../../wdio.shared.conf';
 
 declare const driver: WebdriverIO.Browser;
 declare const browser: WebdriverIO.Browser;
@@ -134,6 +135,61 @@ async function dumpPageSource(name: string): Promise<void> {
   }
 }
 
+/**
+ * Enter the server URL and wait for the probe to report "Connected", retyping
+ * the URL to re-fire it on failure.
+ *
+ * The probe settles into a terminal "Connection failed" state, so a longer wait
+ * cannot rescue a transient network error — only another probe can.
+ */
+async function probeUntilConnected(
+  modelsPage: ModelsPage,
+  attempts = 3,
+): Promise<boolean> {
+  for (let attempt = 1; attempt <= attempts; attempt++) {
+    const urlInput = browser.$(Selectors.remoteModel.urlInput);
+    await urlInput.waitForDisplayed({timeout: 5000});
+    await urlInput.clearValue();
+    await urlInput.setValue(SERVER_URL);
+
+    // Dismiss the keyboard so it does not cover the lower sheet (it blocks
+    // both the probe-revealed fields and scrolling to the dropdown).
+    await modelsPage.hideKeyboard();
+
+    const connected = await browser
+      .$(byPartialText('Connected'))
+      .waitForDisplayed({timeout: 15000})
+      .then(() => true)
+      .catch(() => false);
+    if (connected) {
+      console.log(`Probe connected to ${SERVER_URL} (attempt ${attempt})`);
+      return true;
+    }
+    console.log(`Probe attempt ${attempt} did not connect; re-firing`);
+    await browser.pause(1000);
+  }
+  return false;
+}
+
+/**
+ * Wait for any in-flight assistant turn to finish, so the composer is back to
+ * Send rather than Stop.
+ */
+async function waitForTurnToSettle(
+  timeout = TIMEOUTS.inference,
+): Promise<void> {
+  await browser
+    .waitUntil(
+      async () =>
+        !(await browser
+          .$(Selectors.chat.stopButton)
+          .isDisplayed()
+          .catch(() => false)),
+      {timeout, interval: 1000},
+    )
+    .catch(() => undefined);
+}
+
 describe('Remote Reasoning Features', () => {
   let chatPage: ChatPage;
   let drawerPage: DrawerPage;
@@ -165,18 +221,7 @@ describe('Remote Reasoning Features', () => {
 
   afterEach(async function (this: Mocha.Context) {
     if (this.currentTest?.state === 'failed') {
-      const stamp = new Date().toISOString().replace(/[:.]/g, '-');
-      const name = this.currentTest.title.replace(/\s+/g, '-');
-      try {
-        if (!fs.existsSync(SCREENSHOT_DIR)) {
-          fs.mkdirSync(SCREENSHOT_DIR, {recursive: true});
-        }
-        await driver.saveScreenshot(
-          path.join(SCREENSHOT_DIR, `failure-${name}-${stamp}.png`),
-        );
-      } catch (e) {
-        console.error('Failed to capture screenshot:', (e as Error).message);
-      }
+      await saveFailureScreenshot(this.currentTest.title);
     }
   });
 
@@ -188,24 +233,8 @@ describe('Remote Reasoning Features', () => {
 
     await modelsPage.openAddRemoteModel();
 
-    // Enter server URL and let the auto-probe fire (debounce + network).
-    const urlInput = browser.$(Selectors.remoteModel.urlInput);
-    await urlInput.waitForDisplayed({timeout: 5000});
-    await urlInput.clearValue();
-    await urlInput.setValue(SERVER_URL);
-    console.log(`Entered server URL: ${SERVER_URL}`);
-
-    // Dismiss the keyboard so it does not cover the lower sheet (it blocks
-    // both the probe-revealed fields and scrolling to the dropdown).
-    await modelsPage.hideKeyboard();
-    await browser.pause(4000);
-
     // The probe reveals the server fields incl. the server-type dropdown.
-    const connectedText = browser.$(byPartialText('Connected'));
-    const isConnected = await connectedText
-      .waitForDisplayed({timeout: 12000})
-      .then(() => true)
-      .catch(() => false);
+    const isConnected = await probeUntilConnected(modelsPage);
     expect(isConnected).toBe(true);
 
     // Scroll the dropdown trigger into the rendered region. On iOS, controls
@@ -227,26 +256,33 @@ describe('Remote Reasoning Features', () => {
   it('adds the remote model, selects it, and activates it in chat', async () => {
     // Scroll the reasoning model row into view, then select it. The server
     // exposes many models, so the target row is well below the fold.
-    await Gestures.scrollInSheetToElementExists(byPartialText(MODEL_HINT), 12);
-    const modelEl = browser.$(byPartialText(MODEL_HINT));
-    const modelExists = await modelEl
-      .waitForExist({timeout: 8000})
-      .then(() => true)
-      .catch(() => false);
-    expect(modelExists).toBe(true);
-    await modelEl.click();
+    // Unscrolled the list is clipped to a few px and the pinned Add Model
+    // button overlaps its first row, so a tap at the row's centre lands on that
+    // button. Expand the sheet first, then require the row to be clear of it.
+    await Gestures.swipeUpInSheetBelowInputs();
+    await browser.pause(400);
+    const rowSelector = byPartialText(MODEL_HINT);
+    const modelReachable = await Gestures.scrollInSheetClearOfOverlay(
+      rowSelector,
+      Selectors.remoteModel.addModelButton,
+      12,
+      Gestures.swipeUpInSheetBelowInputs,
+    );
+    expect(modelReachable).toBe(true);
+    await tapControl(rowSelector);
     console.log(`Selected model matching "${MODEL_HINT}" in add sheet`);
     await browser.pause(500);
 
-    // Scroll to and tap "Add Model" (enabled once a model is selected).
-    await Gestures.scrollInSheetToElementExists(
-      Selectors.remoteModel.addModelButton,
-      6,
-    );
     const addButton = browser.$(Selectors.remoteModel.addModelButton);
     await addButton.waitForExist({timeout: 5000});
-    await addButton.waitForEnabled({timeout: 8000});
-    await addButton.click();
+    await browser.waitUntil(
+      () => readControlEnabled(Selectors.remoteModel.addModelButton),
+      {
+        timeout: 8000,
+        timeoutMsg: 'Add Model stayed disabled: no model was selected',
+      },
+    );
+    await tapControl(Selectors.remoteModel.addModelButton);
     await browser.pause(1000);
     console.log('Remote reasoning model added');
 
@@ -262,7 +298,7 @@ describe('Remote Reasoning Features', () => {
       .then(() => true)
       .catch(() => false);
     if (needsPick) {
-      await selectModelBtn.click();
+      await tapControl(byPartialText('Select Model'));
       await browser.pause(1000);
 
       // Picker opens on the Pals tab; swipe to the Models tab.
@@ -282,15 +318,26 @@ describe('Remote Reasoning Features', () => {
 
       const pickerModel = browser.$(byPartialText(MODEL_HINT));
       await pickerModel.waitForExist({timeout: 10000});
-      await pickerModel.click();
+      await tapControl(byPartialText(MODEL_HINT));
     }
 
     // Activation (setRemoteModel) is async: it releases any context and reads
     // the API key from the keychain before activeModel resolves and the chat
     // input renders. Poll until the chat input appears.
+    // The chat input is present whether or not a model is active -- when none
+    // is, it just reads "Model not loaded". Wait for that text to go away, or a
+    // failed activation passes here and every later test runs against a chat
+    // with no model.
     const chatInput = browser.$(Selectors.chat.input);
-    const activated = await chatInput
-      .waitForDisplayed({timeout: 20000})
+    await chatInput.waitForDisplayed({timeout: 20000}).catch(() => undefined);
+    const activated = await browser
+      .waitUntil(
+        async () => {
+          const placeholder = await chatInput.getText().catch(() => '');
+          return !placeholder.includes('Model not loaded');
+        },
+        {timeout: 20000, interval: 1000},
+      )
       .then(() => true)
       .catch(() => false);
     if (!activated) {
@@ -305,13 +352,15 @@ describe('Remote Reasoning Features', () => {
     // reasoning capability is "unknown" (fail-open), not gated on a native
     // context the remote path lacks. Poll because activation just settled.
     let visible = false;
-    await browser.waitUntil(
-      async () => {
-        visible = await chatPage.isThinkingToggleVisible();
-        return visible;
-      },
-      {timeout: 15000, interval: 1000, timeoutMsg: 'thinking pill not shown'},
-    ).catch(() => undefined);
+    await browser
+      .waitUntil(
+        async () => {
+          visible = await chatPage.isThinkingToggleVisible();
+          return visible;
+        },
+        {timeout: 15000, interval: 1000, timeoutMsg: 'thinking pill not shown'},
+      )
+      .catch(() => undefined);
     if (!visible) {
       await dumpPageSource('remote-pill-missing.xml');
     }
@@ -342,6 +391,9 @@ describe('Remote Reasoning Features', () => {
   });
 
   it('renders no reasoning bubble when thinking is OFF', async () => {
+    // The ON test asserts during early stream and returns while the turn is
+    // still generating; until it finishes the composer shows Stop, not Send.
+    await waitForTurnToSettle();
     await chatPage.resetChat();
 
     // Guard against a false pass: the OFF assertion is only meaningful if the

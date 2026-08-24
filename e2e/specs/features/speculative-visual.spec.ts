@@ -38,7 +38,13 @@ import {ModelDetailsSheet} from '../../pages/ModelDetailsSheet';
 import {SettingsPage} from '../../pages/SettingsPage';
 import {Selectors, byTestId, byPartialText} from '../../helpers/selectors';
 import {Gestures} from '../../helpers/gestures';
-import {dismissPerformanceWarningIfPresent} from '../../helpers/model-actions';
+import {ensureRevealed} from '../../helpers/disclosure';
+import {readControlEnabled, readSwitchState} from '../../helpers/control-state';
+import {readAccessibilityLabel} from '../../helpers/element-text';
+import {
+  dismissPerformanceWarningIfPresent,
+  waitForModelDownloaded,
+} from '../../helpers/model-actions';
 import {TIMEOUTS} from '../../fixtures/models';
 import {SCREENSHOT_DIR} from '../../wdio.shared.conf';
 
@@ -73,6 +79,8 @@ const SPEC_CONTEXT_SIZE = '4096';
 const BADGE_PROBE_TIMEOUT = 90000;
 
 const SPEC_ACCORDION = byTestId('advanced-settings-accordion');
+/** First row inside the accordion — mounted only while it is expanded. */
+const SPEC_ACCORDION_FIRST_ROW = byTestId('batch-size-slider');
 const SPEC_SWITCH = byTestId('speculative-decoding-switch');
 const SPEC_PICKER = byTestId('speculative-draft-model-picker');
 const SPEC_NO_EFFECT_NOTE = byTestId('speculative-no-effect-note');
@@ -104,23 +112,17 @@ async function saveShot(name: string): Promise<void> {
   }
 }
 
-/** Rendered text of an element (accessibility label carries it on both OSes). */
-async function readLabel(selector: string): Promise<string> {
-  const attr = (browser as any).isAndroid ? 'content-desc' : 'label';
-  return (
-    (await browser
-      .$(selector)
-      .getAttribute(attr)
-      .catch(() => '')) || ''
-  );
-}
-
 /**
  * Settings keeps its scroll offset and accordion state between visits (the
  * drawer navigator keeps the screen mounted), so every visit rewinds to the top
  * before scrolling to a target.
  */
 async function scrollSettingsToTop(): Promise<void> {
+  // A fixed swipe count cannot rewind a list whose height depends on whether
+  // the Advanced accordion is expanded; the native scroller has no such limit.
+  if (await Gestures.nativeScrollIntoView(byTestId('context-size-input'))) {
+    return;
+  }
   for (let i = 0; i < 8; i++) {
     await Gestures.swipeDown();
   }
@@ -163,14 +165,16 @@ async function openAdvancedSection(navigate = true): Promise<void> {
   if (navigate) {
     await goToSettings();
   }
-  if (!(await browser.$(SPEC_SWITCH).isExisting())) {
-    if (!(await scrollSettingsTo(SPEC_ACCORDION))) {
-      throw new Error('Advanced settings accordion never came into view');
-    }
-    await browser.$(SPEC_ACCORDION).click();
-    await browser.pause(700);
+  const revealed = await ensureRevealed({
+    toggle: SPEC_ACCORDION,
+    dependent: SPEC_SWITCH,
+    stateProbe: SPEC_ACCORDION_FIRST_ROW,
+    rewind: scrollSettingsToTop,
+    maxScrolls: 12,
+  });
+  if (!revealed) {
+    throw new Error('Speculative decoding switch never came into view');
   }
-  await scrollSettingsTo(SPEC_SWITCH);
   await browser.$(SPEC_SWITCH).waitForExist({timeout: TIMEOUTS.element});
 }
 
@@ -180,11 +184,16 @@ async function openAdvancedSection(navigate = true): Promise<void> {
  * wrapper view and exposes no usable value attribute).
  */
 async function setSpeculative(enabled: boolean): Promise<void> {
-  const isOn = await browser.$(SPEC_PICKER).isExisting();
-  if (isOn !== enabled) {
-    await browser.$(SPEC_SWITCH).click();
-    await browser.pause(800);
+  await scrollSettingsTo(SPEC_SWITCH);
+  const state = await readSwitchState(SPEC_SWITCH);
+  const isOn =
+    state === null ? await Gestures.scrollToElement(SPEC_PICKER, 3) : state;
+  if (isOn === enabled) {
+    return;
   }
+  await scrollSettingsTo(SPEC_SWITCH);
+  await browser.$(SPEC_SWITCH).click();
+  await browser.pause(800);
 }
 
 /**
@@ -251,7 +260,7 @@ async function selectDraftModel(fragment: string): Promise<string> {
     await dismissMenu();
   }
   await browser.pause(500);
-  const label = await readLabel(SPEC_PICKER);
+  const label = await readAccessibilityLabel(SPEC_PICKER);
   console.log(`[draft picker] "${fragment}" -> "${label}"`);
   return label;
 }
@@ -288,8 +297,8 @@ async function downloadModelViaHFSearch(
   const containerSelector = Selectors.modelCard.cardContainer(
     model.downloadFile,
   );
+  await waitForModelDownloaded(model.downloadFile, TIMEOUTS.download);
   const container = browser.$(containerSelector);
-  await container.waitForDisplayed({timeout: TIMEOUTS.download});
   // The load button only renders once the file is fully downloaded.
   await container
     .$(Selectors.modelCard.loadButtonElement)
@@ -462,7 +471,9 @@ describe('Speculative decoding — visual states', () => {
 
     await scrollSettingsTo(SPEC_IGNORED_NOTE);
     await expect(browser.$(SPEC_IGNORED_NOTE)).toBeExisting();
-    console.log(`[ignored note] ${await readLabel(SPEC_IGNORED_NOTE)}`);
+    console.log(
+      `[ignored note] ${await readAccessibilityLabel(SPEC_IGNORED_NOTE)}`,
+    );
     await saveShot('mtp-03-ignored-note-draft-not-capable');
   });
 
@@ -472,12 +483,15 @@ describe('Speculative decoding — visual states', () => {
 
     await scrollSettingsTo(SPEC_NO_EFFECT_NOTE);
     await expect(browser.$(SPEC_NO_EFFECT_NOTE)).toBeExisting();
-    console.log(`[no-effect note] ${await readLabel(SPEC_NO_EFFECT_NOTE)}`);
+    console.log(
+      `[no-effect note] ${await readAccessibilityLabel(SPEC_NO_EFFECT_NOTE)}`,
+    );
     await saveShot('mtp-08-no-effect-note');
 
     await scrollSettingsTo(DRAFT_KEY_CACHE);
-    expect(await browser.$(DRAFT_KEY_CACHE).isEnabled()).toBe(false);
-    expect(await browser.$(DRAFT_VALUE_CACHE).isEnabled()).toBe(false);
+    expect(await readControlEnabled(DRAFT_KEY_CACHE)).toBe(false);
+    await scrollSettingsTo(DRAFT_VALUE_CACHE);
+    expect(await readControlEnabled(DRAFT_VALUE_CACHE)).toBe(false);
     await saveShot('mtp-09-draft-cache-rows-disabled');
   });
 
@@ -490,12 +504,18 @@ describe('Speculative decoding — visual states', () => {
     expect(label).toContain(MTP.nameFragment);
 
     await scrollSettingsTo(DRAFT_KEY_CACHE);
-    expect(await browser.$(DRAFT_KEY_CACHE).isEnabled()).toBe(true);
-    expect(await browser.$(DRAFT_VALUE_CACHE).isEnabled()).toBe(true);
-    console.log(`[draft key cache] ${await readLabel(DRAFT_KEY_CACHE)}`);
-    console.log(`[draft value cache] ${await readLabel(DRAFT_VALUE_CACHE)}`);
+    expect(await readControlEnabled(DRAFT_KEY_CACHE)).toBe(true);
+    await scrollSettingsTo(DRAFT_VALUE_CACHE);
+    expect(await readControlEnabled(DRAFT_VALUE_CACHE)).toBe(true);
+    console.log(
+      `[draft key cache] ${await readAccessibilityLabel(DRAFT_KEY_CACHE)}`,
+    );
+    console.log(
+      `[draft value cache] ${await readAccessibilityLabel(DRAFT_VALUE_CACHE)}`,
+    );
     await saveShot('mtp-10-draft-cache-rows-enabled-paired');
 
+    await scrollSettingsTo(DRAFT_KEY_CACHE);
     await browser.$(DRAFT_KEY_CACHE).click();
     await browser.pause(1000);
     await saveShot('mtp-11-draft-cache-menu-open');
@@ -520,14 +540,21 @@ describe('Speculative decoding — visual states', () => {
     await scrollSettingsTo(SPEC_IGNORED_NOTE);
     await expect(browser.$(SPEC_IGNORED_NOTE)).toBeExisting();
     await expect(browser.$(SPEC_NO_EFFECT_NOTE)).not.toBeExisting();
-    console.log(`[ignored note] ${await readLabel(SPEC_IGNORED_NOTE)}`);
+    console.log(
+      `[ignored note] ${await readAccessibilityLabel(SPEC_IGNORED_NOTE)}`,
+    );
     await saveShot('mtp-12-ignored-note-draft-incompatible');
 
     await scrollSettingsTo(DRAFT_KEY_CACHE);
-    expect(await browser.$(DRAFT_KEY_CACHE).isEnabled()).toBe(true);
-    expect(await browser.$(DRAFT_VALUE_CACHE).isEnabled()).toBe(true);
-    console.log(`[draft key cache] ${await readLabel(DRAFT_KEY_CACHE)}`);
-    console.log(`[draft value cache] ${await readLabel(DRAFT_VALUE_CACHE)}`);
+    expect(await readControlEnabled(DRAFT_KEY_CACHE)).toBe(true);
+    await scrollSettingsTo(DRAFT_VALUE_CACHE);
+    expect(await readControlEnabled(DRAFT_VALUE_CACHE)).toBe(true);
+    console.log(
+      `[draft key cache] ${await readAccessibilityLabel(DRAFT_KEY_CACHE)}`,
+    );
+    console.log(
+      `[draft value cache] ${await readAccessibilityLabel(DRAFT_VALUE_CACHE)}`,
+    );
     await saveShot('mtp-13-draft-cache-rows-enabled-embedded');
   });
 });

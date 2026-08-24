@@ -46,6 +46,7 @@ import {ChatPage} from '../../pages/ChatPage';
 import {SettingsPage} from '../../pages/SettingsPage';
 import {Selectors, byTestId, nativeTextElement} from '../../helpers/selectors';
 import {Gestures} from '../../helpers/gestures';
+import {ensureRevealed} from '../../helpers/disclosure';
 import {
   downloadAndLoadModel,
   waitForInferenceComplete,
@@ -104,6 +105,8 @@ const SPEC_CONTEXT_SIZE = '4096';
 const SPEC_INFERENCE_TIMEOUT = 420000;
 
 const SPEC_ACCORDION = byTestId('advanced-settings-accordion');
+/** First row inside the accordion — mounted only while it is expanded. */
+const SPEC_ACCORDION_FIRST_ROW = byTestId('batch-size-slider');
 const SPEC_SWITCH = byTestId('speculative-decoding-switch');
 const SPEC_PICKER = byTestId('speculative-draft-model-picker');
 const SPEC_GPU_LAYERS = byTestId('speculative-draft-gpu-layers-slider');
@@ -139,17 +142,31 @@ async function goToSettings(settingsPage: SettingsPage): Promise<void> {
   await settingsPage.navigateTo();
 }
 
+/**
+ * Rewind Settings to the top. `scrollToElement` only searches downward, so a
+ * pass that has already scrolled past a row can never reach it again.
+ */
+async function scrollSettingsToTop(): Promise<void> {
+  if (await Gestures.nativeScrollIntoView(byTestId('context-size-input'))) {
+    return;
+  }
+  for (let i = 0; i < 8; i++) {
+    await Gestures.swipeDown();
+  }
+}
+
 /** Enable speculative decoding globally in Settings -> Advanced. */
 async function enableSpeculativeGlobally(
   settingsPage: SettingsPage,
 ): Promise<void> {
   await goToSettings(settingsPage);
-  await Gestures.scrollToElement(SPEC_ACCORDION, 8);
-  if (!(await browser.$(SPEC_SWITCH).isExisting())) {
-    await browser.$(SPEC_ACCORDION).click();
-    await browser.pause(500);
-  }
-  await Gestures.scrollToElement(SPEC_SWITCH, 8);
+  await ensureRevealed({
+    toggle: SPEC_ACCORDION,
+    dependent: SPEC_SWITCH,
+    stateProbe: SPEC_ACCORDION_FIRST_ROW,
+    rewind: scrollSettingsToTop,
+    maxScrolls: 8,
+  });
   await browser.$(SPEC_SWITCH).waitForExist({timeout: TIMEOUTS.element});
 
   // Read the switch itself: with app state persisted between runs

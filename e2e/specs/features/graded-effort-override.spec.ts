@@ -12,22 +12,20 @@
  *     --spec graded-effort-override --devices iphone-17-pro-sim --skip-build
  */
 
-import * as fs from 'fs';
-import * as path from 'path';
 import {expect} from '@wdio/globals';
 import {ChatPage} from '../../pages/ChatPage';
 import {DrawerPage} from '../../pages/DrawerPage';
 import {ModelsPage} from '../../pages/ModelsPage';
 import {Selectors, byTestId, isAndroid} from '../../helpers/selectors';
 import {Gestures} from '../../helpers/gestures';
+import {ensureSwitchOn} from '../../helpers/disclosure';
+import {saveFailureScreenshot} from '../../helpers/screenshots';
 import {
   downloadAndLoadModel,
   dismissPerformanceWarningIfPresent,
 } from '../../helpers/model-actions';
 import {TIMEOUTS} from '../../fixtures/models';
-import {SCREENSHOT_DIR} from '../../wdio.shared.conf';
 
-declare const driver: WebdriverIO.Browser;
 declare const browser: WebdriverIO.Browser;
 
 /** Qwen3-0.6B: small reasoning-capable model — matches thinking.spec.ts. */
@@ -142,18 +140,7 @@ describe('Local Graded-Effort Override', () => {
 
   afterEach(async function (this: Mocha.Context) {
     if (this.currentTest?.state === 'failed') {
-      const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
-      const testName = this.currentTest.title.replace(/\s+/g, '-');
-      try {
-        if (!fs.existsSync(SCREENSHOT_DIR)) {
-          fs.mkdirSync(SCREENSHOT_DIR, {recursive: true});
-        }
-        await driver.saveScreenshot(
-          path.join(SCREENSHOT_DIR, `failure-${testName}-${timestamp}.png`),
-        );
-      } catch (e) {
-        console.error('Failed to capture screenshot:', (e as Error).message);
-      }
+      await saveFailureScreenshot(this.currentTest.title);
     }
   });
 
@@ -165,46 +152,36 @@ describe('Local Graded-Effort Override', () => {
     await modelsPage.waitForReady();
     await modelsPage.openModelSettings(THINKING_MODEL.downloadFile);
 
-    // The reasoning section sits at the bottom of the settings ScrollView;
-    // scroll it into view before driving the controls.
-    await Gestures.scrollToElement(Selectors.modelSettings.isReasoningSwitch, 6);
-    const isReasoning = browser.$(Selectors.modelSettings.isReasoningSwitch);
-    await isReasoning.waitForDisplayed({timeout: 10000});
+    // Axis 1 reveals the axis-2 effort switch, which in turn reveals the effort
+    // chips. The paper Switch exposes no reliable "value" attribute (null on
+    // iOS), so each axis is steered by the control it reveals rather than by
+    // its own state.
+    const reachInSheet = (selector: string, maxScrolls?: number) =>
+      Gestures.scrollInSheetToElementExists(selector, maxScrolls);
+    const reachInSheetForClick = (selector: string, maxScrolls?: number) =>
+      Gestures.scrollInSheetClearOfOverlay(
+        selector,
+        Selectors.generationSettings.saveChangesButton,
+        maxScrolls,
+      );
 
-    // Ensure axis-1 is ON (it reveals the axis-2 effort controls). The paper
-    // Switch does not expose a reliable "value" attribute on iOS (returns null),
-    // so a blind value-based click would toggle an already-ON reasoning model
-    // OFF and unmount the effort switch. Steer by presence of the dependent
-    // axis-2 control instead: only click axis-1 if the effort switch is absent.
-    const effortSwitchPresent = async (): Promise<boolean> =>
-      browser
-        .$(Selectors.modelSettings.supportsEffortSwitch)
-        .isExisting()
-        .catch(() => false);
-    if (!(await effortSwitchPresent())) {
-      await isReasoning.click();
-      await browser.pause(400);
-    }
+    const effortSwitchShown = await ensureSwitchOn({
+      toggle: Selectors.modelSettings.isReasoningSwitch,
+      dependent: Selectors.modelSettings.supportsEffortSwitch,
+      reach: reachInSheet,
+      reachForClick: reachInSheetForClick,
+      maxScrolls: 8,
+    });
+    expect(effortSwitchShown).toBe(true);
 
-    await Gestures.scrollToElement(
-      Selectors.modelSettings.supportsEffortSwitch,
-      6,
-    );
-    const supportsEffort = browser.$(Selectors.modelSettings.supportsEffortSwitch);
-    await supportsEffort.waitForDisplayed({timeout: 10000});
-
-    // Ensure axis-2 is ON (it reveals the effort chips). Same paper-Switch
-    // limitation as axis-1: steer by presence of the dependent effort chips
-    // rather than the unreliable "value" attribute. Only click if absent.
-    const effortChipsPresent = async (): Promise<boolean> =>
-      browser
-        .$(Selectors.modelSettings.effortChip('low'))
-        .isExisting()
-        .catch(() => false);
-    if (!(await effortChipsPresent())) {
-      await supportsEffort.click();
-      await browser.pause(400);
-    }
+    const effortChipsShown = await ensureSwitchOn({
+      toggle: Selectors.modelSettings.supportsEffortSwitch,
+      dependent: Selectors.modelSettings.effortChip('low'),
+      reach: reachInSheet,
+      reachForClick: reachInSheetForClick,
+      maxScrolls: 8,
+    });
+    expect(effortChipsShown).toBe(true);
 
     // Enabling axis-2 pre-selects the standard low/medium/high subset — exactly
     // the graded set this test wants. The chip is a toggle, so TAPPING a
@@ -215,12 +192,11 @@ describe('Local Graded-Effort Override', () => {
     // so a read-then-tap approach is unsafe. Instead we rely on the pre-applied
     // selection and only confirm the chips are present — no tapping.
     for (const level of ['low', 'medium', 'high']) {
-      await Gestures.scrollToElement(
+      const chipShown = await Gestures.scrollInSheetToElementExists(
         Selectors.modelSettings.effortChip(level),
-        4,
+        6,
       );
-      const chip = browser.$(Selectors.modelSettings.effortChip(level));
-      await chip.waitForDisplayed({timeout: 10000});
+      expect(chipShown).toBe(true);
     }
 
     const save = browser.$(Selectors.generationSettings.saveChangesButton);
@@ -281,7 +257,9 @@ describe('Local Graded-Effort Override', () => {
       current = await advance(current);
       const on = current.length > 0;
       states.push(on);
-      console.log(`pill state after step ${i + 1}: ${on ? `ON (${current})` : 'OFF'}`);
+      console.log(
+        `pill state after step ${i + 1}: ${on ? `ON (${current})` : 'OFF'}`,
+      );
     }
 
     expect(states).toEqual([true, true, true, false]);
