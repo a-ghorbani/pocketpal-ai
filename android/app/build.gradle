@@ -236,6 +236,9 @@ dependencies {
 
     // OkHttp for DownloadModule (network requests)
     implementation("com.squareup.okhttp3:okhttp:4.12.0")
+
+    // PDF text-layer extraction for attachments/knowledge base (PdfTextModule)
+    implementation("com.tom-roush:pdfbox-android:2.0.27.0")
 }
 
 project.ext.vectoricons = [

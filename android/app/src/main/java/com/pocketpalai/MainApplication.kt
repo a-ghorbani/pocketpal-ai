@@ -17,6 +17,7 @@ import com.pocketpal.HardwareInfoPackage
 import com.pocketpal.StorefrontPackage
 import com.pocketpal.AuthSessionPackage
 import com.pocketpal.ExternalContentLinkPackage
+import com.pocketpal.PdfTextPackage
 import com.pocketpal.download.DownloadPackage
 
 class MainApplication : Application(), ReactApplication {
@@ -32,6 +33,7 @@ class MainApplication : Application(), ReactApplication {
               add(StorefrontPackage())
               add(AuthSessionPackage())
               add(ExternalContentLinkPackage())
+              add(PdfTextPackage())
               add(DownloadPackage())
             }
 
@@ -53,10 +55,12 @@ class MainApplication : Application(), ReactApplication {
     super.onCreate()
     // Enable Adreno large buffer support on Qualcomm A7X/A8X GPUs.
     // The OpenCL backend in llama.rn self-gates on GPU family and the
-    // cl_qcom_large_buffer extension — this is a no-op on non-Adreno devices.
+    // cl_qcom_large_buffer extension - this is a no-op on non-Adreno devices.
     // Must be set before SoLoader.init so the native library picks it up.
     // See: https://github.com/ggml-org/llama.cpp/pull/20997
     Os.setenv("LM_GGML_OPENCL_ADRENO_USE_LARGE_BUFFER", "1", true)
+    // pdfbox-android fonts/assets must be initialized before first use.
+    com.tom_roush.pdfbox.android.PDFBoxResourceLoader.init(applicationContext)
     SoLoader.init(this, OpenSourceMergedSoMapping)
     if (BuildConfig.IS_NEW_ARCHITECTURE_ENABLED) {
       // If you opted-in for the New Architecture, we load the native entry point for this app.

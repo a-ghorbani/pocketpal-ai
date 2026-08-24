@@ -2,6 +2,11 @@ import * as RNFS from '@dr.pogodin/react-native-fs';
 import {pick, types} from '@react-native-documents/picker';
 
 import {MessageType} from './types';
+import {
+  extractCapFor,
+  extractDocumentText,
+  isExtractableFile,
+} from './documentExtractors';
 
 /**
  * Local-file attachment support (Android-first).
@@ -261,7 +266,9 @@ export const formatByteSize = (bytes: number): string => {
 const sanitizeFileName = (name: string): string =>
   name.replace(/[^a-zA-Z0-9._-]/g, '_').slice(-80) || 'file';
 
-/** Full text of a staged file, or null when it is binary/oversized. */
+/** Full text of a staged file, or null when it is binary/oversized.
+ * Plain-text files are read directly; PDF/OOXML/EPUB documents go
+ * through the extractors. */
 export const readAttachmentText = async (
   file: PendingAttachment,
 ): Promise<string | null> => {
@@ -269,18 +276,25 @@ export const readAttachmentText = async (
     file.size > 0 &&
     file.size <= MAX_READABLE_BYTES &&
     isTextSafeFile(file.name, file.mime);
-  if (!readable) {
-    return null;
-  }
-  try {
-    const content = await RNFS.readFile(file.localPath, 'utf8');
-    if (content.includes('\u0000')) {
+  if (readable) {
+    try {
+      const content = await RNFS.readFile(file.localPath, 'utf8');
+      if (content.includes('\u0000')) {
+        return null;
+      }
+      return content.replace(/\r\n/g, '\n');
+    } catch {
       return null;
     }
-    return content.replace(/\r\n/g, '\n');
-  } catch {
-    return null;
   }
+  if (
+    file.size > 0 &&
+    file.size <= extractCapFor(file.name) &&
+    isExtractableFile(file.name, file.mime)
+  ) {
+    return extractDocumentText(file.localPath, file.name);
+  }
+  return null;
 };
 
 /**
@@ -356,7 +370,26 @@ export const buildAttachmentRecords = async (
       file.size <= MAX_READABLE_BYTES &&
       isTextSafeFile(file.name, file.mime);
 
-    if (!readable) {
+    let content: string | null = null;
+
+    if (readable) {
+      try {
+        const raw = await RNFS.readFile(file.localPath, 'utf8');
+        // A claimed-text file carrying NUL bytes is really binary.
+        content = raw.includes('\u0000') ? null : raw.replace(/\r\n/g, '\n');
+      } catch {
+        content = null;
+      }
+    } else if (
+      file.size > 0 &&
+      file.size <= extractCapFor(file.name) &&
+      isExtractableFile(file.name, file.mime)
+    ) {
+      // PDF / OOXML / EPUB: extraction instead of a raw read.
+      content = await extractDocumentText(file.localPath, file.name);
+    }
+
+    if (content === null) {
       records.push({
         name: file.name,
         size: file.size,
@@ -367,19 +400,6 @@ export const buildAttachmentRecords = async (
     }
 
     try {
-      let content = await RNFS.readFile(file.localPath, 'utf8');
-      // A claimed-text file carrying NUL bytes is really binary.
-      if (content.includes('\u0000')) {
-        records.push({
-          name: file.name,
-          size: file.size,
-          mime: file.mime,
-          content: null,
-        });
-        continue;
-      }
-      content = content.replace(/\r\n/g, '\n');
-
       let truncated = false;
       if (content.length > perFileCap) {
         content = content.slice(0, perFileCap);

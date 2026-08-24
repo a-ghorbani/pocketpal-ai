@@ -3,6 +3,15 @@ import {pick} from '@react-native-documents/picker';
 
 import {MessageType} from '../types';
 
+jest.mock('../documentExtractors', () => ({
+  ...jest.requireActual('../documentExtractors'),
+  extractDocumentText: jest.fn(),
+}));
+
+import {
+  extractDocumentText,
+} from '../documentExtractors';
+
 import {
   PER_FILE_CHAR_CAP,
   TOTAL_CHAR_CAP,
@@ -141,6 +150,33 @@ describe('buildAttachmentRecords', () => {
   beforeEach(() => {
     jest.clearAllMocks();
     (RNFS.readFile as jest.Mock).mockResolvedValue('file body');
+    (extractDocumentText as jest.Mock).mockResolvedValue(null);
+  });
+
+  it('routes PDF attachments through the document extractor', async () => {
+    (extractDocumentText as jest.Mock).mockResolvedValue('paper body text');
+    const out = await buildAttachmentRecords([
+      pending({
+        name: 'paper.pdf',
+        mime: 'application/pdf',
+        size: 1024 * 1024,
+      }),
+    ]);
+    expect(extractDocumentText).toHaveBeenCalledWith(
+      '/cache/attachments/1_notes.md',
+      'paper.pdf',
+    );
+    expect(out[0]).toMatchObject({name: 'paper.pdf', content: 'paper body text'});
+    // The raw utf8 read must not have been attempted for the PDF.
+    expect(RNFS.readFile).not.toHaveBeenCalled();
+  });
+
+  it('lists PDFs as opaque when extraction finds no text', async () => {
+    (extractDocumentText as jest.Mock).mockResolvedValue(null);
+    const out = await buildAttachmentRecords([
+      pending({name: 'scan.pdf', mime: 'application/pdf', size: 512}),
+    ]);
+    expect(out[0]).toMatchObject({name: 'scan.pdf', content: null});
   });
 
   it('splits an explicit budget across files with a half-budget per-file cap', async () => {
