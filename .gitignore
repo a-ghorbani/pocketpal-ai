@@ -111,3 +111,6 @@ android/android-build.log
 # screenshot inventories). Live in the dev-team repo and are sometimes
 # synced into the worktree for local reference; never committed here.
 workflows/
+
+# Local stress-test/benchmark output, never committed
+/debug-output/
