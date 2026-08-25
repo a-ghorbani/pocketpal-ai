@@ -5,6 +5,7 @@ import {runInAction} from 'mobx';
 import {
   act,
   fireEvent,
+  isNestedInText,
   render as baseRender,
 } from '../../../../jest/test-utils';
 
@@ -91,6 +92,12 @@ describe('SettingsScreen (launcher)', () => {
         `${l10n.en.settings.launcher.logInPrompt} ${l10n.en.settings.launcher.logIn}`,
       ),
     ).toBeTruthy();
+  });
+
+  it('carries the log-in link testID on a Text that is not nested in another', () => {
+    const {getByTestId} = render(<SettingsScreen />);
+
+    expect(isNestedInText(getByTestId('settings-log-in'))).toBe(false);
   });
 
   it('Account Settings row targets Log in while signed out', () => {

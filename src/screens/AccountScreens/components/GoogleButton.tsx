@@ -32,6 +32,7 @@ export const GoogleButton: React.FC<GoogleButtonProps> = ({
       testID={testID}
       variant="secondary"
       disabled={disabled}
+      style={disabled ? styles.submitDisabled : undefined}
       onPress={onPress}
       accessibilityLabel={label}>
       <View style={styles.socialContent}>

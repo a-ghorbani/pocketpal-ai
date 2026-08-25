@@ -135,15 +135,15 @@ export const AccountLoginScreen: React.FC = observer(() => {
           onPress={handleGoogle}
         />
 
-        <Text style={styles.promptText}>
+        <Text
+          testID="account-login-signup-link"
+          accessible
+          accessibilityRole="button"
+          accessibilityLabel={copy.login.createAccountLink}
+          style={styles.promptText}
+          onPress={() => navigation.replace(ROUTES.ACCOUNT_SIGN_UP)}>
           {copy.login.noAccountPrompt}{' '}
-          <Text
-            testID="account-login-signup-link"
-            accessibilityRole="button"
-            style={styles.promptLink}
-            onPress={() => navigation.replace(ROUTES.ACCOUNT_SIGN_UP)}>
-            {copy.login.createAccountLink}
-          </Text>
+          <Text style={styles.promptLink}>{copy.login.createAccountLink}</Text>
         </Text>
 
         <LegalFooter />

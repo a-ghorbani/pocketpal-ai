@@ -4,6 +4,7 @@ import {runInAction} from 'mobx';
 
 import {
   fireEvent,
+  isNestedInText,
   render as baseRender,
   waitFor,
 } from '../../../../jest/test-utils';
@@ -164,6 +165,25 @@ describe('AccountSignUpScreen', () => {
     expect(
       getByText(`${copy.signUp.haveAccountPrompt} ${copy.signUp.loginLink}`),
     ).toBeTruthy();
+  });
+
+  it('carries both log-in link testIDs on a Text that is not nested in another', async () => {
+    (authService.signUpWithEmail as jest.Mock).mockResolvedValueOnce(true);
+    const {getByTestId} = render();
+
+    expect(isNestedInText(getByTestId('account-signup-login-link'))).toBe(
+      false,
+    );
+
+    fillForm(getByTestId);
+    fireEvent.press(getByTestId('account-signup-submit'));
+    await waitFor(() =>
+      expect(getByTestId('account-signup-verify')).toBeTruthy(),
+    );
+
+    expect(
+      isNestedInText(getByTestId('account-signup-verify-login-link')),
+    ).toBe(false);
   });
 
   it('replaces itself with Log in rather than stacking a second route', () => {

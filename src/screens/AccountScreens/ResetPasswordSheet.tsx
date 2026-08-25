@@ -100,6 +100,7 @@ export const ResetPasswordSheet: React.FC<ResetPasswordSheetProps> = ({
         <Button
           testID={sent ? 'account-reset-done' : 'account-reset-submit'}
           disabled={submitting}
+          style={submitting ? styles.submitDisabled : undefined}
           label={sent ? copy.reset.done : copy.reset.submit}
           accessibilityLabel={sent ? copy.reset.done : copy.reset.submit}
           onPress={sent ? onClose : handleSubmit}

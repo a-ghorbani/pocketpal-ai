@@ -137,13 +137,15 @@ export const SettingsScreen: React.FC = observer(() => {
               accessibilityLabel={l10n.settings.launcher.createAccountButton}
               onPress={() => navigation.navigate(ROUTES.ACCOUNT_SIGN_UP)}
             />
-            <Text style={styles.ctaLoginPrompt}>
+            <Text
+              testID="settings-log-in"
+              accessible
+              accessibilityRole="button"
+              accessibilityLabel={l10n.settings.launcher.logIn}
+              style={styles.ctaLoginPrompt}
+              onPress={() => navigation.navigate(ROUTES.ACCOUNT_LOGIN)}>
               {l10n.settings.launcher.logInPrompt}{' '}
-              <Text
-                testID="settings-log-in"
-                accessibilityRole="button"
-                style={styles.ctaLoginLink}
-                onPress={() => navigation.navigate(ROUTES.ACCOUNT_LOGIN)}>
+              <Text style={styles.ctaLoginLink}>
                 {l10n.settings.launcher.logIn}
               </Text>
             </Text>

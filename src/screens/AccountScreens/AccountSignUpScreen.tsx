@@ -96,15 +96,15 @@ export const AccountSignUpScreen: React.FC = observer(() => {
             accessibilityLabel={copy.verify.done}
             onPress={() => navigation.popToTop()}
           />
-          <Text style={styles.promptText}>
+          <Text
+            testID="account-signup-verify-login-link"
+            accessible
+            accessibilityRole="button"
+            accessibilityLabel={copy.verify.loginLink}
+            style={styles.promptText}
+            onPress={() => navigation.replace(ROUTES.ACCOUNT_LOGIN)}>
             {copy.verify.loginPrompt}{' '}
-            <Text
-              testID="account-signup-verify-login-link"
-              accessibilityRole="button"
-              style={styles.promptLink}
-              onPress={() => navigation.replace(ROUTES.ACCOUNT_LOGIN)}>
-              {copy.verify.loginLink}
-            </Text>
+            <Text style={styles.promptLink}>{copy.verify.loginLink}</Text>
           </Text>
         </ScrollView>
       </SafeAreaView>
@@ -184,15 +184,15 @@ export const AccountSignUpScreen: React.FC = observer(() => {
           onPress={handleGoogle}
         />
 
-        <Text style={styles.promptText}>
+        <Text
+          testID="account-signup-login-link"
+          accessible
+          accessibilityRole="button"
+          accessibilityLabel={copy.signUp.loginLink}
+          style={styles.promptText}
+          onPress={() => navigation.replace(ROUTES.ACCOUNT_LOGIN)}>
           {copy.signUp.haveAccountPrompt}{' '}
-          <Text
-            testID="account-signup-login-link"
-            accessibilityRole="button"
-            style={styles.promptLink}
-            onPress={() => navigation.replace(ROUTES.ACCOUNT_LOGIN)}>
-            {copy.signUp.loginLink}
-          </Text>
+          <Text style={styles.promptLink}>{copy.signUp.loginLink}</Text>
         </Text>
 
         <LegalFooter />

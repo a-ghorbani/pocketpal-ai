@@ -5,6 +5,7 @@ import {runInAction} from 'mobx';
 import {
   act,
   fireEvent,
+  isNestedInText,
   render as baseRender,
   waitFor,
 } from '../../../../jest/test-utils';
@@ -228,6 +229,14 @@ describe('AccountLoginScreen', () => {
         `${copy.login.noAccountPrompt} ${copy.login.createAccountLink}`,
       ),
     ).toBeTruthy();
+  });
+
+  it('carries the sign-up link testID on a Text that is not nested in another', () => {
+    const {getByTestId} = render();
+
+    expect(isNestedInText(getByTestId('account-login-signup-link'))).toBe(
+      false,
+    );
   });
 
   it('keeps the legal footer prefix and both links in a single text run', () => {
