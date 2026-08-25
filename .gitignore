@@ -22,6 +22,9 @@ DerivedData
 *.xcuserstate
 **/.xcode.env.local
 ios/dist
+# Only matched by build/ above on a case-insensitive volume, and its
+# ModuleCache.noindex / SourcePackages siblings are not matched at all.
+ios/derived-data/
 
 # Android/IntelliJ
 #
