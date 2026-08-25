@@ -455,6 +455,7 @@ jobs:
             -configuration Release \
             -sdk iphonesimulator \
             -destination 'generic/platform=iOS Simulator' \
+            -derivedDataPath derived-data \
             CODE_SIGN_IDENTITY="" \
             CODE_SIGNING_REQUIRED=NO \
             CODE_SIGNING_ALLOWED=NO \
@@ -468,3 +469,11 @@ jobs:
             echo "::endgroup::"
             exit $EXIT_CODE
           fi
+
+      # The subject is the simulator binary this job already builds, not the
+      # shipped one. Sound for the dependencies it examines because neither
+      # guards CoreLocation behind #if targetEnvironment(simulator).
+      - name: Verify the iOS API surface
+        run: |
+          node scripts/verify-ios-api-surface.js \
+            --app ios/derived-data/Build/Products/Release-iphonesimulator/PocketPal.app
