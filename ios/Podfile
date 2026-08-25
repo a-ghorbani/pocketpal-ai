@@ -19,6 +19,7 @@ prepare_react_native_project!
 # end
 use_frameworks! :linkage => :static
 $RNFirebaseAsStaticFramework = true
+$VCEnableLocation = false
 
 ENV['RCT_NEW_ARCH_ENABLED'] = '1'
 
