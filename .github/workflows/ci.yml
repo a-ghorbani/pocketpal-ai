@@ -444,6 +444,25 @@ jobs:
           sudo xcode-select -s /Applications/Xcode.app
           xcodebuild -version
 
+      # The reading half of the surface check needs lipo/nm/otool and compiles
+      # Mach-O fixtures with clang, so its suite skips itself off macOS and the
+      # Linux jest job reports it green having read nothing. This is the only
+      # job that can run it. The skip guard is what makes the step worth having:
+      # a silently skipped suite is the failure the check itself exists to
+      # prevent, one level up.
+      - name: Verify the iOS API surface check itself
+        run: |
+          set -euo pipefail
+          yarn jest scripts/__tests__/verify-ios-api-surface --coverage=false 2>&1 \
+            | tee ios-api-surface-tests.log
+          if grep -qE '[0-9]+ skipped' ios-api-surface-tests.log; then
+            echo "::error::The iOS API surface suite skipped tests on the one runner that can execute them."
+            echo "Every case in scripts/__tests__/verify-ios-api-surface.binary.test.js is gated on"
+            echo "clang, lipo, nm, otool, zip and unzip all resolving. One of them did not, so the"
+            echo "reading half of the gate went unexercised. Fix the toolchain, do not relax the guard."
+            exit 1
+          fi
+
       - name: Build iOS Release
         run: |
           cd ios
