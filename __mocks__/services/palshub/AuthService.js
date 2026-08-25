@@ -1,90 +1,46 @@
 // Mock for src/services/palshub/AuthService.ts
 // This mock avoids the @env import issue by providing a complete mock implementation
 
-const mockProfile = {
-  id: 'test-user-id',
-  email: 'test@example.com',
-  name: 'Test User',
-  avatar_url: null,
-};
+const {makeAutoObservable} = require('mobx');
 
-const mockAuthService = {
-  // Observable properties (mutable for tests)
-  isAuthenticated: false,
-  user: null,
-  profile: null,
-  session: null,
-  isLoading: false,
-  error: null,
-  isInitialized: true,
+const authService = makeAutoObservable(
+  {
+    user: null,
+    profile: null,
+    session: null,
+    isLoading: false,
+    isAuthenticated: false,
+    error: null,
 
-  // Methods
-  signInWithEmail: jest.fn().mockResolvedValue(true),
+    signInWithGoogle: jest.fn().mockResolvedValue(undefined),
+    signInWithEmail: jest.fn().mockResolvedValue(true),
+    signUpWithEmail: jest.fn().mockResolvedValue(true),
+    signOut: jest.fn().mockResolvedValue(undefined),
+    resetPassword: jest.fn().mockResolvedValue(true),
+    updateProfile: jest.fn().mockResolvedValue(undefined),
+    clearError: jest.fn(),
 
-  signUpWithEmail: jest.fn().mockResolvedValue(true),
-
-  signInWithGoogle: jest.fn().mockResolvedValue({
-    success: true,
-    user: mockProfile,
-  }),
-
-  resetPassword: jest.fn().mockResolvedValue(true),
-
-  signOut: jest.fn().mockResolvedValue({
-    success: true,
-  }),
-
-  refreshSession: jest.fn().mockResolvedValue({
-    success: true,
-  }),
-
-  updateProfile: jest.fn().mockResolvedValue({
-    success: true,
-    profile: mockProfile,
-  }),
-
-  deleteAccount: jest.fn().mockResolvedValue({
-    success: true,
-  }),
-
-  clearError: jest.fn(),
-
-  // Initialization method
-  initialize: jest.fn().mockResolvedValue(true),
-
-  // Getters
-  get isSupabaseConfigured() {
-    return true;
+    get authState() {
+      return {
+        user: this.user,
+        profile: this.profile,
+        session: this.session,
+        isLoading: this.isLoading,
+        isAuthenticated: this.isAuthenticated,
+        error: this.error,
+      };
+    },
   },
-
-  get currentUser() {
-    return this.user;
+  {
+    signInWithGoogle: false,
+    signInWithEmail: false,
+    signUpWithEmail: false,
+    signOut: false,
+    resetPassword: false,
+    updateProfile: false,
+    clearError: false,
   },
-
-  get currentProfile() {
-    return this.profile;
-  },
-
-  get authState() {
-    return {
-      user: this.user,
-      profile: this.profile,
-      session: this.session,
-      isLoading: this.isLoading,
-      isAuthenticated: this.isAuthenticated,
-      error: this.error,
-    };
-  },
-
-  // Private methods (mocked for completeness)
-  initAuthListener: jest.fn(),
-  handleAuthStateChange: jest.fn(),
-  createOrUpdateProfile: jest.fn().mockResolvedValue(mockProfile),
-  fetchProfile: jest.fn().mockResolvedValue(mockProfile),
-};
-
-// Create a singleton instance
-const authService = mockAuthService;
+);
 
 // Export the mock service
 export default authService;
