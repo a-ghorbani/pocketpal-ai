@@ -1,0 +1,38 @@
+{
+  "forbidden": [
+    {
+      "framework": "CoreLocation",
+      "purposeStringKey": "NSLocationWhenInUseUsageDescription",
+      "symbolPatterns": ["cllocation", "corelocation"],
+      "ignoredSymbols": [
+        {
+          "symbol": "__swift_FORCE_LOAD_$_swiftCoreLocation",
+          "reason": "Autolink hint emitted by any file importing the CoreLocation overlay, including the value-type-only importers that must keep compiling. It is a link directive, not an API access."
+        }
+      ],
+      "selectors": [
+        "requestWhenInUseAuthorization",
+        "locationServicesEnabled",
+        "headingAvailable",
+        "isRangingAvailable",
+        "significantLocationChangeMonitoringAvailable",
+        "startUpdatingLocation",
+        "startUpdatingHeading"
+      ],
+      "reportOnlyDylibs": [
+        "CoreLocation.framework/CoreLocation",
+        "libswiftCoreLocation.dylib"
+      ]
+    }
+  ],
+  "sentinels": [
+    {
+      "undefinedSymbols": [
+        "_OBJC_CLASS_$_AVCaptureDevice",
+        "_OBJC_CLASS_$_AVCaptureSession"
+      ],
+      "selectors": ["requestAccessForMediaType:completionHandler:"],
+      "reason": "The app ships a camera preview, so every build references AVFoundation capture and asks for camera access. If these are absent the binary was not read, and an absence found beside them is not evidence."
+    }
+  ]
+}
