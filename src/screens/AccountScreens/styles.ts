@@ -112,6 +112,16 @@ export const createStyles = (theme: Theme) =>
       marginBottom: theme.spacing.xxs,
       textAlign: 'left',
     },
+    identity: {
+      ...theme.typography.bodyM,
+      color: theme.colors.onSurface,
+      textAlign: 'left',
+    },
+    status: {
+      ...theme.typography.captionS,
+      color: theme.colors.onSurfaceVariant,
+      textAlign: 'left',
+    },
     sheetInput: {
       ...theme.typography.bodyM,
       color: theme.colors.onSurface,
