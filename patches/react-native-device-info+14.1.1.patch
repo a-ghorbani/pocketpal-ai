@@ -1,0 +1,61 @@
+diff --git a/node_modules/react-native-device-info/ios/RNDeviceInfo/RNDeviceInfo.m b/node_modules/react-native-device-info/ios/RNDeviceInfo/RNDeviceInfo.m
+index 948c561..71cb401 100644
+--- a/node_modules/react-native-device-info/ios/RNDeviceInfo/RNDeviceInfo.m
++++ b/node_modules/react-native-device-info/ios/RNDeviceInfo/RNDeviceInfo.m
+@@ -10,7 +10,6 @@
+ #include <arpa/inet.h>
+ #import <mach/mach.h>
+ #import <mach-o/arch.h>
+-#import <CoreLocation/CoreLocation.h>
+ #import <React/RCTUtils.h>
+ #import "RNDeviceInfo.h"
+ #import "DeviceUID.h"
+@@ -862,18 +861,6 @@ - (BOOL) isBatteryCharging {
+     resolve(@(self.isBatteryCharging));
+ }
+ 
+-- (BOOL) isLocationEnabled {
+-    return [CLLocationManager locationServicesEnabled];
+-}
+-
+-RCT_EXPORT_BLOCKING_SYNCHRONOUS_METHOD(isLocationEnabledSync) {
+-    return @(self.isLocationEnabled);
+-}
+-
+-RCT_EXPORT_METHOD(isLocationEnabled:(RCTPromiseResolveBlock)resolve rejecter:(RCTPromiseRejectBlock)reject) {
+-    resolve(@(self.isLocationEnabled));
+-}
+-
+ - (BOOL) isHeadphonesConnected {
+     AVAudioSessionRouteDescription* route = [[AVAudioSession sharedInstance] currentRoute];
+     for (AVAudioSessionPortDescription* desc in [route outputs]) {
+@@ -989,29 +976,6 @@ - (unsigned long) getUsedMemory {
+ #endif
+ }
+ 
+-- (NSDictionary *) getAvailableLocationProviders {
+-#if !TARGET_OS_TV
+-    return @{
+-              @"locationServicesEnabled": [NSNumber numberWithBool: [CLLocationManager locationServicesEnabled]],
+-              @"significantLocationChangeMonitoringAvailable": [NSNumber numberWithBool: [CLLocationManager significantLocationChangeMonitoringAvailable]],
+-              @"headingAvailable": [NSNumber numberWithBool: [CLLocationManager headingAvailable]],
+-              @"isRangingAvailable": [NSNumber numberWithBool: [CLLocationManager isRangingAvailable]]
+-              };
+-#else
+-    return @{
+-              @"locationServicesEnabled": [NSNumber numberWithBool: [CLLocationManager locationServicesEnabled]]
+-              };
+-#endif
+-}
+-
+-RCT_EXPORT_BLOCKING_SYNCHRONOUS_METHOD(getAvailableLocationProvidersSync) {
+-    return self.getAvailableLocationProviders;
+-}
+-
+-RCT_EXPORT_METHOD(getAvailableLocationProviders:(RCTPromiseResolveBlock)resolve rejecter:(RCTPromiseRejectBlock)reject) {
+-    resolve(self.getAvailableLocationProviders);
+-}
+-
+ #pragma mark - Installer Package Name -
+ 
+ RCT_EXPORT_BLOCKING_SYNCHRONOUS_METHOD(getInstallerPackageNameSync) {
