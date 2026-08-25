@@ -287,6 +287,24 @@ describeOnMac('the gate reading an archive', () => {
     expect(output).toContain('contains 0 app bundles');
   });
 
+  /**
+   * Distinct from the case above, which has a Payload/ that is empty. Both fail
+   * closed, but reporting "0 app bundles under Payload/" for an archive that
+   * has no Payload/ at all sends the reader looking in the wrong place.
+   */
+  it('says so when an archive has no Payload directory', () => {
+    const stage = fs.mkdtempSync(path.join(workdir, 'no-payload-'));
+    fs.mkdirSync(path.join(stage, 'Something'), {recursive: true});
+    fs.writeFileSync(path.join(stage, 'Something', 'file'), '');
+    const ipa = path.join(workdir, 'no-payload.ipa');
+    execFileSync('zip', ['-qr', ipa, 'Something'], {cwd: stage});
+
+    const {status, output} = runGate(['--ipa', ipa]);
+    expect(status).toBe(1);
+    expect(output).toContain('has no Payload/ directory');
+    expect(output).not.toContain('app bundles under Payload/');
+  });
+
   it('fails rather than reporting a pass when the archive cannot be opened', () => {
     const notAnArchive = path.join(workdir, 'not-an-archive.ipa');
     fs.writeFileSync(notAnArchive, 'plain text');

@@ -101,6 +101,20 @@ describe('evaluateReadings', () => {
     );
   });
 
+  /**
+   * Every rule below is per slice, so a set with no slices satisfies all of
+   * them vacuously. `main()` cannot reach this — `readSlices` throws when lipo
+   * reports no architectures — but this is the exported surface.
+   */
+  it.each([
+    ['an empty list', []],
+    ['undefined', undefined],
+  ])('fails on %s of slices rather than reporting a pass', (_label, slices) => {
+    const {failures} = verdict(slices);
+    expect(failures.join('\n')).toContain('no architecture slices were read');
+    expect(failures.join('\n')).toContain('instrument failure');
+  });
+
   it('fails when a forbidden symbol is referenced', () => {
     const slice = passingSlice();
     slice.undefinedSymbols.push('_OBJC_CLASS_$_CLLocationManager');
@@ -300,6 +314,21 @@ describe('loadManifest floors', () => {
       withoutFirstForbidden({symbolPatterns: ['cllocation']}),
     );
     expect(() => loadManifest(file)).toThrow(/do not include "corelocation"/);
+  });
+
+  /**
+   * `0` and `""` are falsy, so a default of `entry.ignoredSymbols || []` would
+   * accept them and exempt nothing — the one way a floor can fail that leaves
+   * the manifest looking checked.
+   */
+  it.each([
+    ['zero', 0],
+    ['an empty string', ''],
+    ['null', null],
+    ['an object', {}],
+  ])('refuses an ignoredSymbols that is %s', (_label, value) => {
+    const file = writeManifest(withoutFirstForbidden({ignoredSymbols: value}));
+    expect(() => loadManifest(file)).toThrow(/is not a list/);
   });
 
   it('refuses an exemption with no reason', () => {

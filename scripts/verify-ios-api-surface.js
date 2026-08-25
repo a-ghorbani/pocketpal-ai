@@ -125,13 +125,19 @@ function assertForbiddenFloors(entry, manifestPath) {
       `declares symbol patterns for ${named} that do not include "${entry.framework.toLowerCase()}", so the framework's own name would not be searched for`,
     );
   }
-  const ignored = entry.ignoredSymbols || [];
-  if (!Array.isArray(ignored)) {
+  // Tested against undefined rather than falsiness: `0` and `""` are malformed
+  // declarations, and defaulting them to an empty list would accept the
+  // manifest and check nothing, which is the one outcome a floor may not have.
+  if (
+    entry.ignoredSymbols !== undefined &&
+    !Array.isArray(entry.ignoredSymbols)
+  ) {
     refuse(
       manifestPath,
       `has an ignoredSymbols for ${named} that is not a list`,
     );
   }
+  const ignored = entry.ignoredSymbols || [];
   for (const exemption of ignored) {
     if (
       !exemption ||
@@ -249,9 +255,12 @@ function locateBinary(args) {
     const workdir = fs.mkdtempSync(path.join(os.tmpdir(), 'ios-api-surface-'));
     run('unzip', ['-q', args.ipa, '-d', workdir]);
     const payload = path.join(workdir, 'Payload');
-    const bundles = fs.existsSync(payload)
-      ? fs.readdirSync(payload).filter(entry => entry.endsWith('.app'))
-      : [];
+    if (!fs.existsSync(payload)) {
+      throw new Error(`${args.ipa} has no Payload/ directory`);
+    }
+    const bundles = fs
+      .readdirSync(payload)
+      .filter(entry => entry.endsWith('.app'));
     if (bundles.length !== 1) {
       throw new Error(
         `${args.ipa} contains ${bundles.length} app bundles under Payload/; expected exactly one`,
@@ -435,6 +444,20 @@ function evaluateReadings({manifest, slices}) {
   const report = [];
   const failures = [];
   const fail = message => failures.push(`FAIL: ${message}`);
+
+  // The per-slice rules below cannot speak for a set with no slices in it: an
+  // empty list would satisfy every one of them vacuously and report a pass on a
+  // binary nothing had read.
+  if (!Array.isArray(slices) || slices.length === 0) {
+    fail(
+      [
+        'no architecture slices were read.',
+        'A binary that could not be sliced produces the same empty result as a clean one, so this',
+        'is an instrument failure, not a pass.',
+      ].join('\n      '),
+    );
+    return {report, failures};
+  }
 
   for (const slice of slices) {
     const symbols = slice.undefinedSymbols || [];
