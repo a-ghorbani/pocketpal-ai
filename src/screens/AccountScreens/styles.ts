@@ -86,4 +86,38 @@ export const createStyles = (theme: Theme) =>
       ...theme.typography.bodyS,
       color: theme.colors.primary,
     },
+    inlineLink: {
+      ...theme.typography.bodyS,
+      color: theme.colors.primary,
+      alignSelf: 'flex-end',
+    },
+    sheetContent: {
+      paddingHorizontal: theme.spacing.m,
+      paddingBottom: theme.spacing.l,
+      gap: theme.spacing.m,
+    },
+    sheetBody: {
+      ...theme.typography.bodyM,
+      color: theme.colors.onSurfaceVariant,
+      textAlign: 'left',
+    },
+    sheetTitle: {
+      ...theme.typography.titleM,
+      color: theme.colors.onBackground,
+      textAlign: 'left',
+    },
+    fieldLabel: {
+      ...theme.typography.captionS,
+      color: theme.colors.onSurfaceVariant,
+      marginBottom: theme.spacing.xxs,
+      textAlign: 'left',
+    },
+    sheetInput: {
+      ...theme.typography.bodyM,
+      color: theme.colors.onSurface,
+      paddingHorizontal: theme.spacing.s,
+      paddingVertical: theme.spacing.s,
+      borderBottomWidth: theme.stroke.sm,
+      borderBottomColor: theme.colors.outline,
+    },
   });
