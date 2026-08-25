@@ -212,6 +212,9 @@
     "launcher": {
       "welcome": "Welcome, {{name}}",
       "memberSince": "Member since, {{year}}",
+      "welcomeNoName": "Welcome",
+      "logIn": "Log in",
+      "logInPrompt": "Already have an account?",
       "createAccountTitle": "Create Account",
       "createAccountDescription": "Sign up to enjoy full access to the app after a seamless onboarding experience.",
       "createAccountButton": "Create Account",
@@ -230,6 +233,73 @@
       "appSettingsSubtitle": "Dark mode, display, language",
       "aboutApp": "About App",
       "aboutAppSubtitle": "Learn more about PocketPal and share feedback"
+    },
+    "account": {
+      "login": {
+        "title": "Welcome Back",
+        "emailLabel": "Your Email",
+        "emailPlaceholder": "you@example.com",
+        "passwordLabel": "Your Password",
+        "passwordPlaceholder": "Enter your password",
+        "revealPassword": "Show password",
+        "hidePassword": "Hide password",
+        "forgotPassword": "Forgot password?",
+        "submit": "Log in",
+        "noAccountPrompt": "Don't have an account?",
+        "createAccountLink": "Create account"
+      },
+      "signUp": {
+        "title": "Create Account",
+        "subtitle": "Set up an account to get the most out of PocketPal.",
+        "nameLabel": "Your Name",
+        "namePlaceholder": "Enter your name",
+        "emailLabel": "Your Email",
+        "emailPlaceholder": "you@example.com",
+        "passwordLabel": "Your Password",
+        "passwordPlaceholder": "Choose a password",
+        "submit": "Create Account",
+        "haveAccountPrompt": "Already have an account?",
+        "loginLink": "Log in"
+      },
+      "verify": {
+        "title": "Verify Your Account",
+        "body": "We've sent a verification link to {{email}}. Open that link to continue.",
+        "done": "Done",
+        "loginPrompt": "Already verified?",
+        "loginLink": "Log in"
+      },
+      "reset": {
+        "title": "Reset Password",
+        "body": "Enter the email address associated with your account and we'll send a reset link.",
+        "emailLabel": "Your Email",
+        "emailPlaceholder": "you@example.com",
+        "submit": "Send reset link",
+        "sentTitle": "Check your email",
+        "sentBody": "If an account exists for {{email}}, we've sent a link to reset the password.",
+        "done": "Done"
+      },
+      "social": {
+        "google": "Continue with Google",
+        "divider": "or"
+      },
+      "legal": {
+        "prefix": "By continuing you agree to our"
+      },
+      "validation": {
+        "emailRequired": "Enter your email address.",
+        "emailInvalid": "Enter a valid email address.",
+        "passwordRequired": "Enter your password.",
+        "nameRequired": "Enter your name."
+      },
+      "details": {
+        "registeredWithEmail": "You're registered with {{email}}",
+        "registeredWithProvider": "You're registered with {{provider}} linked to {{email}}",
+        "usernameLabel": "Your Username",
+        "usernamePlaceholder": "Choose a username",
+        "save": "Save Changes",
+        "saved": "Changes saved",
+        "savedUnconfirmed": "Saved, but we couldn't confirm the change."
+      }
     }
   },
   "memory": {
@@ -1236,6 +1306,7 @@
     "appInfo": "About App",
     "preferences": "Preferences",
     "appSettings": "App Settings",
+    "accountSettings": "Account Settings",
     "testCompletion": "Test Completion"
   },
   "chat": {
