@@ -13,13 +13,20 @@
  * the frameworks this app must not reference at all, so the warning is caught
  * on the pull request rather than on upload.
  *
- * Two things here are deliberate and would otherwise look arbitrary:
+ * Three things here are deliberate and would otherwise look arbitrary:
  *
  * - The symbol patterns are broad and the exceptions are named. An exact
  *   forbidden list cannot fail on a symbol nobody predicted; a broad pattern
  *   plus a reviewed `ignoredSymbols` list fails closed on it. A symbol that
  *   matches a pattern but belongs to some other framework is an over-match, and
  *   the repair is to correct the pattern, never to exempt the symbol.
+ * - `selectors`, unlike `symbolPatterns`, are matched **exactly**, because a
+ *   selector is a whole name rather than a fragment. The declared list is
+ *   therefore the whole of the selector surface: a variant nobody listed —
+ *   `requestWhenInUseAuthorizationWithCompletion:` beside the declared
+ *   `requestWhenInUseAuthorization` — is not caught. Widening the list is a
+ *   one-line manifest edit, and is meant to be a decision rather than a
+ *   surprise.
  * - A zero-match reading is an instrument failure, not a pass, unless the same
  *   reading also found every sentinel. An empty grep proves nothing about a
  *   binary that may not have been read at all.
