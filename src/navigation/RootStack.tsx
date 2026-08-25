@@ -16,6 +16,9 @@ import {
   PreferencesScreen,
   AppSettingsScreen,
   DevToolsScreen,
+  AccountLoginScreen,
+  AccountSignUpScreen,
+  AccountScreen,
 } from '../screens';
 import PalsScreen from '../screens/PalsScreen';
 
@@ -90,6 +93,23 @@ export const RootStack: React.FC<RootStackProps> = ({
         name={ROUTES.APP_INFO}
         component={gestureHandlerRootHOC(AboutScreen)}
         options={{title: l10n.screenTitles.appInfo}}
+      />
+      <Stack.Screen
+        name={ROUTES.ACCOUNT_LOGIN}
+        component={gestureHandlerRootHOC(AccountLoginScreen)}
+        // An omitted title falls back to the route name, painting hardcoded
+        // English under every locale.
+        options={{title: ''}}
+      />
+      <Stack.Screen
+        name={ROUTES.ACCOUNT_SIGN_UP}
+        component={gestureHandlerRootHOC(AccountSignUpScreen)}
+        options={{title: ''}}
+      />
+      <Stack.Screen
+        name={ROUTES.ACCOUNT}
+        component={gestureHandlerRootHOC(AccountScreen)}
+        options={{title: l10n.screenTitles.accountSettings}}
       />
 
       {isDebugMode && (
