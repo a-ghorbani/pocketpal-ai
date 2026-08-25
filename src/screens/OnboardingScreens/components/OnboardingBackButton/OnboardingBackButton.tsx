@@ -28,8 +28,11 @@ export const OnboardingBackButton: React.FC<OnboardingBackButtonProps> = ({
       accessibilityLabel={accessibilityLabel}
       onPress={onPress}
       style={styles.root}>
-      {/* Figma chevron-left lg — native 6.5×11.5. */}
-      <ChevronLeftLgIcon width={6.5} height={11.5} />
+      <ChevronLeftLgIcon
+        width={6.5}
+        height={11.5}
+        color={theme.colors.onBackground}
+      />
     </Pressable>
   );
 };

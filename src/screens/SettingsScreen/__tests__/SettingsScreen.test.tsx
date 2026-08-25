@@ -1,16 +1,30 @@
 import React from 'react';
 
-import {fireEvent, render as baseRender} from '../../../../jest/test-utils';
+import {runInAction} from 'mobx';
+
+import {
+  act,
+  fireEvent,
+  isNestedInText,
+  render as baseRender,
+} from '../../../../jest/test-utils';
 
 import {SettingsScreen} from '../SettingsScreen';
 
+import {authService} from '../../../services';
 import {ROUTES} from '../../../utils/navigationConstants';
-import {l10n} from '../../../locales';
+import {l10n, t} from '../../../locales';
 
 const mockNavigate = jest.fn();
+const mockReplace = jest.fn();
+const mockPopToTop = jest.fn();
 jest.mock('@react-navigation/native', () => ({
   ...jest.requireActual('@react-navigation/native'),
-  useNavigation: () => ({navigate: mockNavigate}),
+  useNavigation: () => ({
+    navigate: mockNavigate,
+    replace: mockReplace,
+    popToTop: mockPopToTop,
+  }),
 }));
 
 jest.useFakeTimers();
@@ -18,9 +32,30 @@ jest.useFakeTimers();
 const render = (ui: React.ReactElement, options: any = {}) =>
   baseRender(ui, {withSafeArea: true, withNavigation: true, ...options});
 
+const signIn = (
+  user: Record<string, unknown> = {},
+  profile: Record<string, unknown> | null = null,
+) =>
+  runInAction(() => {
+    authService.isAuthenticated = true;
+    authService.user = {
+      id: 'user-1',
+      email: 'sam@example.com',
+      created_at: '2025-04-02T00:00:00.000Z',
+      ...user,
+    } as any;
+    authService.profile = profile as any;
+  });
+
 describe('SettingsScreen (launcher)', () => {
   beforeEach(() => {
     jest.clearAllMocks();
+    runInAction(() => {
+      authService.isAuthenticated = false;
+      authService.user = null;
+      authService.profile = null;
+      authService.error = null;
+    });
   });
 
   it('renders the not-registered Create Account CTA and no Welcome/My-pals', () => {
@@ -35,18 +70,47 @@ describe('SettingsScreen (launcher)', () => {
     ).toBeNull();
   });
 
-  it('Create Account CTA is disabled (honest inert affordance, no navigation)', () => {
+  it('Create Account CTA navigates to the sign-up route', () => {
     const {getByTestId} = render(<SettingsScreen />);
     const cta = getByTestId('settings-create-account');
-    expect(cta.props.accessibilityState?.disabled).toBe(true);
+    expect(cta.props.accessibilityState?.disabled).toBeFalsy();
     fireEvent.press(cta);
-    expect(mockNavigate).not.toHaveBeenCalled();
+    expect(mockNavigate).toHaveBeenCalledWith(ROUTES.ACCOUNT_SIGN_UP);
   });
 
-  it('Account Settings row is inert (no navigation on press)', () => {
+  it('offers a Log in link beside the Create Account CTA', () => {
+    const {getByTestId} = render(<SettingsScreen />);
+    fireEvent.press(getByTestId('settings-log-in'));
+    expect(mockNavigate).toHaveBeenCalledWith(ROUTES.ACCOUNT_LOGIN);
+  });
+
+  it('keeps the log-in prompt and its link in a single text run', () => {
+    const {getByText} = render(<SettingsScreen />);
+
+    expect(
+      getByText(
+        `${l10n.en.settings.launcher.logInPrompt} ${l10n.en.settings.launcher.logIn}`,
+      ),
+    ).toBeTruthy();
+  });
+
+  it('carries the log-in link testID on a Text that is not nested in another', () => {
+    const {getByTestId} = render(<SettingsScreen />);
+
+    expect(isNestedInText(getByTestId('settings-log-in'))).toBe(false);
+  });
+
+  it('Account Settings row targets Log in while signed out', () => {
     const {getByTestId} = render(<SettingsScreen />);
     fireEvent.press(getByTestId('settings-nav-account-settings'));
-    expect(mockNavigate).not.toHaveBeenCalled();
+    expect(mockNavigate).toHaveBeenCalledWith(ROUTES.ACCOUNT_LOGIN);
+  });
+
+  it('Account Settings row targets Account Settings once signed in', () => {
+    signIn();
+    const {getByTestId} = render(<SettingsScreen />);
+    fireEvent.press(getByTestId('settings-nav-account-settings'));
+    expect(mockNavigate).toHaveBeenCalledWith(ROUTES.ACCOUNT);
   });
 
   it('renders Account Settings last (after About App) in the not-registered state', () => {
@@ -115,8 +179,95 @@ describe('SettingsScreen (launcher)', () => {
     }
   });
 
-  it('does not render the Log out footer in the not-registered state (inert auth)', () => {
+  it('does not render the Log out footer in the not-registered state', () => {
     const {queryByTestId} = render(<SettingsScreen />);
     expect(queryByTestId('settings-log-out')).toBeNull();
+  });
+
+  it('re-renders registered when the session resolves after mount', () => {
+    const {getByTestId, queryByTestId, getByText} = render(<SettingsScreen />);
+    expect(queryByTestId('settings-nav-my-pals')).toBeNull();
+
+    act(() => {
+      signIn({}, {id: 'user-1', full_name: 'Sam Smith'});
+    });
+
+    expect(
+      getByText(t(l10n.en.settings.launcher.welcome, {name: 'Sam Smith'})),
+    ).toBeTruthy();
+    expect(
+      getByText(t(l10n.en.settings.launcher.memberSince, {year: 2025})),
+    ).toBeTruthy();
+    expect(getByTestId('settings-nav-my-pals')).toBeTruthy();
+    expect(getByTestId('settings-log-out')).toBeTruthy();
+    expect(queryByTestId('settings-create-account')).toBeNull();
+  });
+
+  it('signs out directly, with no confirmation dialog', () => {
+    signIn();
+    const {getByTestId} = render(<SettingsScreen />);
+
+    fireEvent.press(getByTestId('settings-log-out'));
+
+    expect(authService.signOut).toHaveBeenCalled();
+  });
+
+  it('reverts to the signed-out launcher once the session is gone', () => {
+    signIn();
+    const {getByTestId, queryByTestId} = render(<SettingsScreen />);
+    expect(getByTestId('settings-log-out')).toBeTruthy();
+
+    act(() => {
+      runInAction(() => {
+        authService.isAuthenticated = false;
+        authService.user = null;
+        authService.profile = null;
+      });
+    });
+
+    expect(queryByTestId('settings-log-out')).toBeNull();
+    expect(getByTestId('settings-create-account')).toBeTruthy();
+    expect(queryByTestId('settings-nav-my-pals')).toBeNull();
+  });
+
+  it('greets without a name when no name source exists', () => {
+    signIn({email: undefined, user_metadata: {}});
+    const {getByText} = render(<SettingsScreen />);
+
+    expect(getByText(l10n.en.settings.launcher.welcomeNoName)).toBeTruthy();
+  });
+
+  it('falls back through the name sources and never reads profile.email', () => {
+    signIn(
+      {email: 'sam@example.com'},
+      {id: 'user-1', username: 'sam_123', email: 'stale@wrong.example'},
+    );
+    const {getByText, queryByText} = render(<SettingsScreen />);
+
+    expect(
+      getByText(t(l10n.en.settings.launcher.welcome, {name: 'sam_123'})),
+    ).toBeTruthy();
+    expect(
+      queryByText(
+        t(l10n.en.settings.launcher.welcome, {name: 'stale@wrong.example'}),
+      ),
+    ).toBeNull();
+  });
+
+  it('omits the member-since row when the account carries no created_at', () => {
+    signIn({created_at: undefined});
+    const {queryByText} = render(<SettingsScreen />);
+
+    expect(
+      queryByText(t(l10n.en.settings.launcher.memberSince, {year: 2025})),
+    ).toBeNull();
+  });
+
+  it('never mounts the checkout auth sheet', () => {
+    signIn();
+    const {queryByTestId} = render(<SettingsScreen />);
+
+    expect(queryByTestId('email-input')).toBeNull();
+    expect(queryByTestId('auth-submit-button')).toBeNull();
   });
 });

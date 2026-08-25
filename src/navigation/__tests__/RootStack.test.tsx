@@ -3,6 +3,7 @@ import {createNavigationContainerRef} from '@react-navigation/native';
 
 import {render} from '../../../jest/test-utils';
 import {ROUTES} from '../../utils/navigationConstants';
+import {l10n} from '../../locales';
 
 import {RootStack} from '../RootStack';
 
@@ -21,6 +22,9 @@ jest.mock('../../screens', () => {
     PreferencesScreen: stub('PreferencesScreen'),
     AppSettingsScreen: stub('AppSettingsScreen'),
     DevToolsScreen: stub('DevToolsScreen'),
+    AccountLoginScreen: stub('AccountLoginScreen'),
+    AccountSignUpScreen: stub('AccountSignUpScreen'),
+    AccountScreen: stub('AccountScreen'),
   };
 });
 
@@ -44,6 +48,28 @@ const renderWithRef = () => {
   const {NavigationContainer} = jest.requireActual('@react-navigation/native');
   const utils = render(
     <NavigationContainer ref={navigationRef}>
+      <RootStack />
+    </NavigationContainer>,
+    {withSafeArea: true},
+  );
+  return {navigationRef, ...utils};
+};
+
+const currentTitle = (navigationRef: {
+  getCurrentOptions: () => object | undefined;
+}) =>
+  (navigationRef.getCurrentOptions() as {title?: string} | undefined)?.title;
+
+// Starts the container already on the route instead of navigating to it: a
+// real transition unmounts the tab host, and the RN Animated teardown throws
+// under react-test-renderer.
+const renderAtRoute = (routeName: string) => {
+  const navigationRef = createNavigationContainerRef();
+  const {NavigationContainer} = jest.requireActual('@react-navigation/native');
+  const utils = render(
+    <NavigationContainer
+      ref={navigationRef}
+      initialState={{routes: [{name: routeName}]}}>
       <RootStack />
     </NavigationContainer>,
     {withSafeArea: true},
@@ -75,6 +101,36 @@ describe('RootStack', () => {
         ROUTES.APP_INFO,
         ROUTES.DEV_TOOLS,
       ]),
+    );
+  });
+
+  it('registers the three account routes as pushed siblings', () => {
+    const {navigationRef} = renderWithRef();
+    const routeNames = navigationRef.getRootState().routeNames;
+
+    expect(routeNames).toEqual(
+      expect.arrayContaining([
+        ROUTES.ACCOUNT_LOGIN,
+        ROUTES.ACCOUNT_SIGN_UP,
+        ROUTES.ACCOUNT,
+      ]),
+    );
+  });
+
+  it.each([[ROUTES.ACCOUNT_LOGIN], [ROUTES.ACCOUNT_SIGN_UP]])(
+    'pins %s to an empty title so the header never paints the route name',
+    routeName => {
+      const {navigationRef} = renderAtRoute(routeName);
+
+      expect(currentTitle(navigationRef)).toBe('');
+    },
+  );
+
+  it('titles Account Settings from the localized screen title', () => {
+    const {navigationRef} = renderAtRoute(ROUTES.ACCOUNT);
+
+    expect(currentTitle(navigationRef)).toBe(
+      l10n.en.screenTitles.accountSettings,
     );
   });
 

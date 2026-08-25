@@ -117,6 +117,25 @@ const styles = StyleSheet.create({
   },
 });
 
+/**
+ * True when the element sits inside another `Text`. Nested RN `Text` nodes are
+ * attributed-string ranges in one native text view, and RN synthesizes their
+ * a11y children from those ranges carrying label/role/actions only — never
+ * `testID`. So a testID on a nested Text resolves in Jest (which walks the
+ * React tree) and NOT in XCUITest/UiAutomator. Assert `false` for any testID an
+ * e2e page object has to resolve.
+ */
+export const isNestedInText = (element: {parent: any}): boolean => {
+  let node = element.parent;
+  while (node) {
+    if (node.type === 'Text') {
+      return true;
+    }
+    node = node.parent;
+  }
+  return false;
+};
+
 // Re-export everything
 export * from '@testing-library/react-native';
 export {customRender as render};

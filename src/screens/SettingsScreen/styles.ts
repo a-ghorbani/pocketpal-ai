@@ -52,6 +52,17 @@ export const createStyles = (theme: Theme) =>
     ctaButton: {
       marginTop: theme.spacing.s,
     },
+    // Pressable paragraph — hugs its text so the blank margin either side is
+    // not part of the tap target.
+    ctaLoginPrompt: {
+      ...theme.fonts.bodySmall,
+      color: theme.colors.onSurfaceVariant,
+      textAlign: 'center',
+      alignSelf: 'center',
+    },
+    ctaLoginLink: {
+      color: theme.colors.primary,
+    },
     group: {
       backgroundColor: theme.colors.surface,
       borderRadius: theme.borders.default,

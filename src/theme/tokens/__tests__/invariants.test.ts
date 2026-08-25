@@ -156,6 +156,10 @@ describe('design-token grep invariants', () => {
       // the typography/radius axes onto the canonical Figma token scale.
       'screens/PalsScreen',
       'components/PalsSheets',
+      // Settings-side account / auth routes: the serif headline, forms, and
+      // shared chrome consume the typography/stroke axes onto the canonical
+      // Figma token scale.
+      'screens/AccountScreens',
     ];
     const files = listFiles(SRC).filter(f => {
       const rel = path.relative(SRC, f).replace(/\\/g, '/');

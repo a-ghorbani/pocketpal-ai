@@ -1,4 +1,5 @@
 export * from './AboutScreen';
+export * from './AccountScreens';
 export * from './AppSettingsScreen';
 export * from './BenchmarkScreen';
 export * from './ChatScreen';

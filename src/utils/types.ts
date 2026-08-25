@@ -656,6 +656,9 @@ export type RootStackParamList = {
   Preferences: undefined;
   'App Settings': undefined;
   'App Info': undefined;
+  'Log in': undefined;
+  'Create Account': undefined;
+  'Account Settings': undefined;
   'Dev Tools': undefined;
   BenchmarkRunner: undefined;
 };

@@ -27,6 +27,7 @@ import {Sheet, TextInput} from '../../components';
 import {useTheme} from '../../hooks';
 import {createStyles} from './styles';
 import {L10nContext} from '../../utils';
+import {LEGAL_URLS} from '../../utils/legalUrls';
 import {uiStore} from '../../store';
 
 const GithubButtonIcon = ({color}: {color: string}) => (
@@ -193,15 +194,13 @@ export const AboutScreen: React.FC = () => {
           <View style={styles.legalRow}>
             <Text
               style={styles.legalLink}
-              onPress={() =>
-                Linking.openURL('https://pocketpal.dev/privacy-policy')
-              }>
+              onPress={() => Linking.openURL(LEGAL_URLS.privacyPolicy)}>
               {l10n.about.privacyPolicy}
             </Text>
             <Text style={styles.legalSeparator}>·</Text>
             <Text
               style={styles.legalLink}
-              onPress={() => Linking.openURL('https://pocketpal.dev/terms')}>
+              onPress={() => Linking.openURL(LEGAL_URLS.termsOfService)}>
               {l10n.about.termsOfService}
             </Text>
           </View>
