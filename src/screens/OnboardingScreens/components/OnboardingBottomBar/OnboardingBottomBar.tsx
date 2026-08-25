@@ -61,10 +61,11 @@ export const OnboardingBottomBar: React.FC<OnboardingBottomBarProps> = ({
             accessibilityLabel={backAccessibilityLabel}
             onPress={onBack}
             style={styles.backBtn}>
-            {/* Figma `746:26300` chevron-left lg variant — native
-                viewBox 6.5×11.5. Fill baked into the SVG export
-                (#181715, matches `onBackground` in light). */}
-            <ChevronLeftLgIcon width={6.5} height={11.5} />
+            <ChevronLeftLgIcon
+              width={6.5}
+              height={11.5}
+              color={theme.colors.onBackground}
+            />
           </Pressable>
         ) : null}
         {hasPrimary ? (
