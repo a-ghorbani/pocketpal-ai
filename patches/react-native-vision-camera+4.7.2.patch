@@ -1,0 +1,114 @@
+diff --git a/node_modules/react-native-vision-camera/ios/Core/Extensions/CLLocationManager+requestAccess.swift b/node_modules/react-native-vision-camera/ios/Core/Extensions/CLLocationManager+requestAccess.swift
+index b678fe8..f55aa2a 100644
+--- a/node_modules/react-native-vision-camera/ios/Core/Extensions/CLLocationManager+requestAccess.swift
++++ b/node_modules/react-native-vision-camera/ios/Core/Extensions/CLLocationManager+requestAccess.swift
+@@ -8,6 +8,7 @@
+ import CoreLocation
+ import Foundation
+ 
++#if VISION_CAMERA_ENABLE_LOCATION
+ extension CLLocationManager {
+   enum AccessType {
+     case whenInUse
+@@ -56,3 +57,4 @@ extension CLLocationManager {
+     }
+   }
+ }
++#endif
+diff --git a/node_modules/react-native-vision-camera/ios/Core/LocationProvider.swift b/node_modules/react-native-vision-camera/ios/Core/LocationProvider.swift
+index e84fb9b..a6c70bc 100644
+--- a/node_modules/react-native-vision-camera/ios/Core/LocationProvider.swift
++++ b/node_modules/react-native-vision-camera/ios/Core/LocationProvider.swift
+@@ -8,6 +8,7 @@
+ import CoreLocation
+ import Foundation
+ 
++#if VISION_CAMERA_ENABLE_LOCATION
+ class LocationProvider {
+   private let locationManager = CLLocationManager()
+ 
+@@ -51,3 +52,4 @@ class LocationProvider {
+     return locationManager.heading
+   }
+ }
++#endif
+diff --git a/node_modules/react-native-vision-camera/ios/Core/MetadataProvider.swift b/node_modules/react-native-vision-camera/ios/Core/MetadataProvider.swift
+index 4855d31..d85eea2 100644
+--- a/node_modules/react-native-vision-camera/ios/Core/MetadataProvider.swift
++++ b/node_modules/react-native-vision-camera/ios/Core/MetadataProvider.swift
+@@ -16,7 +16,9 @@ class MetadataProvider: NSObject, AVCapturePhotoFileDataRepresentationCustomizer
+   /**
+    Get or set the location provider to also set GPS tags for captured photos or videos.
+    */
+-  var locationProvider: LocationProvider?
++  #if VISION_CAMERA_ENABLE_LOCATION
++    var locationProvider: LocationProvider?
++  #endif
+ 
+   // MARK: - Photo Metadata
+ 
+@@ -32,12 +34,14 @@ class MetadataProvider: NSObject, AVCapturePhotoFileDataRepresentationCustomizer
+       properties[kCGImagePropertyExifDictionary as String] = exifDictionary
+     }
+ 
+-    // Add GPS Location EXIF info
+-    if let locationProvider,
+-       let location = locationProvider.location {
+-      let locationExif = location.toEXIF(heading: locationProvider.heading)
+-      properties[kCGImagePropertyGPSDictionary as String] = locationExif
+-    }
++    #if VISION_CAMERA_ENABLE_LOCATION
++      // Add GPS Location EXIF info
++      if let locationProvider,
++         let location = locationProvider.location {
++        let locationExif = location.toEXIF(heading: locationProvider.heading)
++        properties[kCGImagePropertyGPSDictionary as String] = locationExif
++      }
++    #endif
+ 
+     return properties
+   }
+@@ -51,11 +55,13 @@ class MetadataProvider: NSObject, AVCapturePhotoFileDataRepresentationCustomizer
+     let brandingMetadata = createBrandingMetadaItem()
+     metadata.append(brandingMetadata)
+ 
+-    if let location = locationProvider?.location {
+-      // Add GPS Location metadata
+-      let locationMetadata = createLocationMetadataItem(location: location)
+-      metadata.append(locationMetadata)
+-    }
++    #if VISION_CAMERA_ENABLE_LOCATION
++      if let location = locationProvider?.location {
++        // Add GPS Location metadata
++        let locationMetadata = createLocationMetadataItem(location: location)
++        metadata.append(locationMetadata)
++      }
++    #endif
+ 
+     return metadata
+   }
+@@ -70,13 +76,15 @@ class MetadataProvider: NSObject, AVCapturePhotoFileDataRepresentationCustomizer
+     return metadataItem
+   }
+ 
+-  private func createLocationMetadataItem(location: CLLocation) -> AVMetadataItem {
+-    let metadataItem = AVMutableMetadataItem()
+-    metadataItem.keySpace = .quickTimeMetadata
+-    metadataItem.key = AVMetadataKey.quickTimeMetadataKeyLocationISO6709 as NSString
+-    metadataItem.identifier = .quickTimeMetadataLocationISO6709
+-    metadataItem.value = location.iso6709String as NSString
+-    metadataItem.dataType = kCMMetadataDataType_QuickTimeMetadataLocation_ISO6709 as String
+-    return metadataItem
+-  }
++  #if VISION_CAMERA_ENABLE_LOCATION
++    private func createLocationMetadataItem(location: CLLocation) -> AVMetadataItem {
++      let metadataItem = AVMutableMetadataItem()
++      metadataItem.keySpace = .quickTimeMetadata
++      metadataItem.key = AVMetadataKey.quickTimeMetadataKeyLocationISO6709 as NSString
++      metadataItem.identifier = .quickTimeMetadataLocationISO6709
++      metadataItem.value = location.iso6709String as NSString
++      metadataItem.dataType = kCMMetadataDataType_QuickTimeMetadataLocation_ISO6709 as String
++      return metadataItem
++    }
++  #endif
+ }
