@@ -204,6 +204,42 @@ describe('AccountLoginScreen', () => {
     );
   });
 
+  it('submits with empty fields so the required-field message is reachable', () => {
+    const {getByTestId} = render();
+    const submit = getByTestId('account-login-submit');
+
+    expect(submit.props.accessibilityState?.disabled).toBeFalsy();
+    fireEvent.press(submit);
+
+    expect(authService.signInWithEmail).not.toHaveBeenCalled();
+    expect(getByTestId('account-login-error').props.children).toBe(
+      copy.validation.emailRequired,
+    );
+  });
+
+  it('keeps the sign-up prompt and its link in a single text run', () => {
+    const {getByText} = render();
+
+    // Two sibling Texts in a mirrored flex row reverse their reading order
+    // under RTL; one run with an inline link cannot be reordered. A sibling
+    // pair would also not compose into this single string.
+    expect(
+      getByText(
+        `${copy.login.noAccountPrompt} ${copy.login.createAccountLink}`,
+      ),
+    ).toBeTruthy();
+  });
+
+  it('keeps the legal footer prefix and both links in a single text run', () => {
+    const {getByText} = render();
+
+    expect(
+      getByText(
+        `${copy.legal.prefix} ${l10n.en.about.termsOfService} · ${l10n.en.about.privacyPolicy}`,
+      ),
+    ).toBeTruthy();
+  });
+
   it('pops immediately when the route is opened with a live session', async () => {
     runInAction(() => {
       authService.isAuthenticated = true;

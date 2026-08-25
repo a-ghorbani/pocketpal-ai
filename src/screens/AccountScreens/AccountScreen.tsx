@@ -5,7 +5,6 @@ import {observer} from 'mobx-react-lite';
 import {SafeAreaView} from 'react-native-safe-area-context';
 
 import {Button} from '../../components/ui/Button';
-import {Input} from '../../components/ui/Input';
 
 import {useTheme} from '../../hooks';
 
@@ -15,6 +14,7 @@ import {L10nContext} from '../../utils';
 import {t} from '../../locales';
 
 import {ErrorSlot} from './components/ErrorSlot';
+import {LabeledInput} from './components/LabeledInput';
 import {createStyles, inputTextAlign} from './styles';
 import {useAccountSessionGuard} from './useAccountSessionGuard';
 
@@ -78,7 +78,7 @@ export const AccountScreen: React.FC = observer(() => {
         </Text>
 
         <View style={styles.form}>
-          <Input
+          <LabeledInput
             testID="account-details-username"
             label={copy.details.usernameLabel}
             placeholder={copy.details.usernamePlaceholder}
@@ -97,7 +97,8 @@ export const AccountScreen: React.FC = observer(() => {
           ) : null}
           <Button
             testID="account-details-save"
-            disabled={saving || !username.trim()}
+            disabled={saving}
+            style={saving ? styles.submitDisabled : undefined}
             label={saving ? undefined : copy.details.save}
             accessibilityLabel={copy.details.save}
             onPress={handleSave}>

@@ -3,12 +3,12 @@ import React, {useContext, useState} from 'react';
 import {EyeIcon, EyeOffIcon} from '../../../assets/icons';
 
 import {IconButton} from '../../../components/ui/IconButton';
-import {Input} from '../../../components/ui/Input';
 
 import {useTheme} from '../../../hooks';
 
 import {L10nContext} from '../../../utils';
 
+import {LabeledInput} from './LabeledInput';
 import {inputTextAlign} from '../styles';
 
 type PasswordInputProps = {
@@ -36,7 +36,7 @@ export const PasswordInput: React.FC<PasswordInputProps> = ({
   const ToggleIcon = revealed ? EyeOffIcon : EyeIcon;
 
   return (
-    <Input
+    <LabeledInput
       testID={testID}
       label={label}
       placeholder={placeholder}

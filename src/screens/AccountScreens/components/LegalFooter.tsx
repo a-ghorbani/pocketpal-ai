@@ -1,5 +1,5 @@
 import React, {useContext} from 'react';
-import {Linking, Text, View} from 'react-native';
+import {Linking, Text} from 'react-native';
 
 import {useTheme} from '../../../hooks';
 
@@ -14,19 +14,21 @@ export const LegalFooter: React.FC = () => {
   const styles = createStyles(theme);
 
   return (
-    <View style={styles.legalRow}>
-      <Text style={styles.legalText}>{l10n.settings.account.legal.prefix}</Text>
+    <Text style={styles.legalText}>
+      {l10n.settings.account.legal.prefix}{' '}
       <Text
         style={styles.legalLink}
+        accessibilityRole="link"
         onPress={() => Linking.openURL(LEGAL_URLS.termsOfService)}>
         {l10n.about.termsOfService}
       </Text>
-      <Text style={styles.legalText}>·</Text>
+      {' · '}
       <Text
         style={styles.legalLink}
+        accessibilityRole="link"
         onPress={() => Linking.openURL(LEGAL_URLS.privacyPolicy)}>
         {l10n.about.privacyPolicy}
       </Text>
-    </View>
+    </Text>
   );
 };

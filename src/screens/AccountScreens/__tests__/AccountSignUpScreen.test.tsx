@@ -145,6 +145,27 @@ describe('AccountSignUpScreen', () => {
     );
   });
 
+  it('submits with empty fields so the required-field message is reachable', () => {
+    const {getByTestId} = render();
+    const submit = getByTestId('account-signup-submit');
+
+    expect(submit.props.accessibilityState?.disabled).toBeFalsy();
+    fireEvent.press(submit);
+
+    expect(authService.signUpWithEmail).not.toHaveBeenCalled();
+    expect(getByTestId('account-signup-error').props.children).toBe(
+      copy.validation.nameRequired,
+    );
+  });
+
+  it('keeps the log-in prompt and its link in a single text run', () => {
+    const {getByText} = render();
+
+    expect(
+      getByText(`${copy.signUp.haveAccountPrompt} ${copy.signUp.loginLink}`),
+    ).toBeTruthy();
+  });
+
   it('replaces itself with Log in rather than stacking a second route', () => {
     const {getByTestId} = render();
 

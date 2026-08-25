@@ -83,6 +83,16 @@ describe('SettingsScreen (launcher)', () => {
     expect(mockNavigate).toHaveBeenCalledWith(ROUTES.ACCOUNT_LOGIN);
   });
 
+  it('keeps the log-in prompt and its link in a single text run', () => {
+    const {getByText} = render(<SettingsScreen />);
+
+    expect(
+      getByText(
+        `${l10n.en.settings.launcher.logInPrompt} ${l10n.en.settings.launcher.logIn}`,
+      ),
+    ).toBeTruthy();
+  });
+
   it('Account Settings row targets Log in while signed out', () => {
     const {getByTestId} = render(<SettingsScreen />);
     fireEvent.press(getByTestId('settings-nav-account-settings'));

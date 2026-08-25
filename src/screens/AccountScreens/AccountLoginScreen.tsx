@@ -7,7 +7,6 @@ import {useNavigation} from '@react-navigation/native';
 import {StackNavigationProp} from '@react-navigation/stack';
 
 import {Button} from '../../components/ui/Button';
-import {Input} from '../../components/ui/Input';
 
 import {useTheme} from '../../hooks';
 
@@ -19,6 +18,7 @@ import {RootStackParamList} from '../../utils/types';
 
 import {ErrorSlot} from './components/ErrorSlot';
 import {GoogleButton} from './components/GoogleButton';
+import {LabeledInput} from './components/LabeledInput';
 import {LegalFooter} from './components/LegalFooter';
 import {OrDivider} from './components/OrDivider';
 import {PasswordInput} from './components/PasswordInput';
@@ -80,7 +80,7 @@ export const AccountLoginScreen: React.FC = observer(() => {
         <Text style={styles.headline}>{copy.login.title}</Text>
 
         <View style={styles.form}>
-          <Input
+          <LabeledInput
             testID="account-login-email"
             label={copy.login.emailLabel}
             placeholder={copy.login.emailPlaceholder}
@@ -114,7 +114,8 @@ export const AccountLoginScreen: React.FC = observer(() => {
           <ErrorSlot testID="account-login-error" message={errorText} />
           <Button
             testID="account-login-submit"
-            disabled={submitting || !email || !password}
+            disabled={submitting}
+            style={submitting ? styles.submitDisabled : undefined}
             label={submitting ? undefined : copy.login.submit}
             accessibilityLabel={copy.login.submit}
             onPress={handleSubmit}>
@@ -134,8 +135,8 @@ export const AccountLoginScreen: React.FC = observer(() => {
           onPress={handleGoogle}
         />
 
-        <View style={styles.promptRow}>
-          <Text style={styles.promptText}>{copy.login.noAccountPrompt}</Text>
+        <Text style={styles.promptText}>
+          {copy.login.noAccountPrompt}{' '}
           <Text
             testID="account-login-signup-link"
             accessibilityRole="button"
@@ -143,7 +144,7 @@ export const AccountLoginScreen: React.FC = observer(() => {
             onPress={() => navigation.replace(ROUTES.ACCOUNT_SIGN_UP)}>
             {copy.login.createAccountLink}
           </Text>
-        </View>
+        </Text>
 
         <LegalFooter />
       </ScrollView>

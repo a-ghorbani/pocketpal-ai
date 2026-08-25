@@ -52,19 +52,12 @@ export const createStyles = (theme: Theme) =>
     ctaButton: {
       marginTop: theme.spacing.s,
     },
-    ctaLoginRow: {
-      flexDirection: 'row',
-      flexWrap: 'wrap',
-      justifyContent: 'center',
-      alignItems: 'center',
-      gap: theme.spacing.xs,
-    },
     ctaLoginPrompt: {
       ...theme.fonts.bodySmall,
       color: theme.colors.onSurfaceVariant,
+      textAlign: 'center',
     },
     ctaLoginLink: {
-      ...theme.fonts.bodySmall,
       color: theme.colors.primary,
     },
     group: {

@@ -18,12 +18,18 @@ export const createStyles = (theme: Theme) =>
     headline: {
       ...theme.typography.headlineH1,
       color: theme.colors.onBackground,
-      textAlign: 'left',
+      textAlign: 'center',
     },
     subtitle: {
       ...theme.typography.bodyM,
       color: theme.colors.onSurfaceVariant,
-      textAlign: 'left',
+      textAlign: 'center',
+    },
+    // The DS Button's disabled fill is surfaceContainerLow — 8% of the surface
+    // over a black canvas, i.e. invisible in dark mode. Repaint at the call
+    // site so a disabled submit is still a legible pill.
+    submitDisabled: {
+      backgroundColor: theme.colors.surfaceVariant,
     },
     form: {
       gap: theme.spacing.m,
@@ -56,34 +62,22 @@ export const createStyles = (theme: Theme) =>
       ...theme.typography.uiM,
       color: theme.colors.onSurface,
     },
-    legalRow: {
-      flexDirection: 'row',
-      flexWrap: 'wrap',
-      justifyContent: 'center',
-      alignItems: 'center',
-      gap: theme.spacing.xs,
-    },
     legalText: {
       ...theme.typography.captionS,
       color: theme.colors.onSurfaceVariant,
+      textAlign: 'center',
     },
     legalLink: {
-      ...theme.typography.captionS,
       color: theme.colors.primary,
     },
-    promptRow: {
-      flexDirection: 'row',
-      flexWrap: 'wrap',
-      justifyContent: 'center',
-      alignItems: 'center',
-      gap: theme.spacing.xs,
-    },
+    // One Text per phrase, with the link as an inline child: two sibling Texts
+    // in a mirrored flex row reverse their reading order under RTL.
     promptText: {
       ...theme.typography.bodyS,
       color: theme.colors.onSurfaceVariant,
+      textAlign: 'center',
     },
     promptLink: {
-      ...theme.typography.bodyS,
       color: theme.colors.primary,
     },
     inlineLink: {

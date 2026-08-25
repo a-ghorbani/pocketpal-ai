@@ -7,7 +7,6 @@ import {useNavigation} from '@react-navigation/native';
 import {StackNavigationProp} from '@react-navigation/stack';
 
 import {Button} from '../../components/ui/Button';
-import {Input} from '../../components/ui/Input';
 
 import {useTheme} from '../../hooks';
 
@@ -20,6 +19,7 @@ import {RootStackParamList} from '../../utils/types';
 
 import {ErrorSlot} from './components/ErrorSlot';
 import {GoogleButton} from './components/GoogleButton';
+import {LabeledInput} from './components/LabeledInput';
 import {LegalFooter} from './components/LegalFooter';
 import {OrDivider} from './components/OrDivider';
 import {PasswordInput} from './components/PasswordInput';
@@ -96,8 +96,8 @@ export const AccountSignUpScreen: React.FC = observer(() => {
             accessibilityLabel={copy.verify.done}
             onPress={() => navigation.popToTop()}
           />
-          <View style={styles.promptRow}>
-            <Text style={styles.promptText}>{copy.verify.loginPrompt}</Text>
+          <Text style={styles.promptText}>
+            {copy.verify.loginPrompt}{' '}
             <Text
               testID="account-signup-verify-login-link"
               accessibilityRole="button"
@@ -105,7 +105,7 @@ export const AccountSignUpScreen: React.FC = observer(() => {
               onPress={() => navigation.replace(ROUTES.ACCOUNT_LOGIN)}>
               {copy.verify.loginLink}
             </Text>
-          </View>
+          </Text>
         </ScrollView>
       </SafeAreaView>
     );
@@ -123,7 +123,7 @@ export const AccountSignUpScreen: React.FC = observer(() => {
         <Text style={styles.subtitle}>{copy.signUp.subtitle}</Text>
 
         <View style={styles.form}>
-          <Input
+          <LabeledInput
             testID="account-signup-name"
             label={copy.signUp.nameLabel}
             placeholder={copy.signUp.namePlaceholder}
@@ -136,7 +136,7 @@ export const AccountSignUpScreen: React.FC = observer(() => {
               textAlign: inputTextAlign(),
             }}
           />
-          <Input
+          <LabeledInput
             testID="account-signup-email"
             label={copy.signUp.emailLabel}
             placeholder={copy.signUp.emailPlaceholder}
@@ -163,7 +163,8 @@ export const AccountSignUpScreen: React.FC = observer(() => {
           <ErrorSlot testID="account-signup-error" message={errorText} />
           <Button
             testID="account-signup-submit"
-            disabled={submitting || !name || !email || !password}
+            disabled={submitting}
+            style={submitting ? styles.submitDisabled : undefined}
             label={submitting ? undefined : copy.signUp.submit}
             accessibilityLabel={copy.signUp.submit}
             onPress={handleSubmit}>
@@ -183,8 +184,8 @@ export const AccountSignUpScreen: React.FC = observer(() => {
           onPress={handleGoogle}
         />
 
-        <View style={styles.promptRow}>
-          <Text style={styles.promptText}>{copy.signUp.haveAccountPrompt}</Text>
+        <Text style={styles.promptText}>
+          {copy.signUp.haveAccountPrompt}{' '}
           <Text
             testID="account-signup-login-link"
             accessibilityRole="button"
@@ -192,7 +193,7 @@ export const AccountSignUpScreen: React.FC = observer(() => {
             onPress={() => navigation.replace(ROUTES.ACCOUNT_LOGIN)}>
             {copy.signUp.loginLink}
           </Text>
-        </View>
+        </Text>
 
         <LegalFooter />
       </ScrollView>
