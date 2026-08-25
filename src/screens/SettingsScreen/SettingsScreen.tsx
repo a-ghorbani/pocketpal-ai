@@ -25,6 +25,7 @@ import {useTheme} from '../../hooks';
 import {createStyles} from './styles';
 
 import {palStore} from '../../store';
+import {authService} from '../../services';
 
 import {RootStackParamList} from '../../utils/types';
 import {ROUTES} from '../../utils/navigationConstants';
@@ -37,15 +38,23 @@ type LauncherIcon = React.FC<{
   stroke?: string;
 }>;
 
-// Auth-driven launcher header is wired in a later slice; the root defaults to
-// the not-registered variant and never reads account state on this branch.
-const IS_REGISTERED = false;
-
 export const SettingsScreen: React.FC = observer(() => {
   const l10n = useContext(L10nContext);
   const theme = useTheme();
   const styles = createStyles(theme);
   const navigation = useNavigation<StackNavigationProp<RootStackParamList>>();
+
+  const isRegistered = authService.isAuthenticated;
+  const user = authService.user;
+  const profile = authService.profile;
+  const displayName =
+    profile?.full_name ??
+    profile?.username ??
+    user?.user_metadata?.full_name ??
+    user?.email?.split('@')[0];
+  const memberSinceYear = user?.created_at
+    ? new Date(user.created_at).getFullYear()
+    : undefined;
 
   const renderRow = (
     RowIcon: LauncherIcon,
@@ -77,20 +86,33 @@ export const SettingsScreen: React.FC = observer(() => {
     UserCircleIcon,
     l10n.settings.launcher.accountSettings,
     l10n.settings.launcher.accountSettingsSubtitle,
-    {testID: 'settings-nav-account-settings', inert: true},
+    {
+      testID: 'settings-nav-account-settings',
+      onPress: () =>
+        navigation.navigate(
+          isRegistered ? ROUTES.ACCOUNT : ROUTES.ACCOUNT_LOGIN,
+        ),
+    },
   );
 
   return (
     <SafeAreaView style={styles.safeArea} edges={['top', 'bottom']}>
       <ScrollView contentContainerStyle={styles.container}>
-        {IS_REGISTERED ? (
+        {isRegistered ? (
           <View style={styles.headerRegistered}>
             <Text style={styles.welcome}>
-              {t(l10n.settings.launcher.welcome, {name: ''})}
+              {displayName
+                ? t(l10n.settings.launcher.welcome, {name: displayName})
+                : l10n.settings.launcher.welcomeNoName}
             </Text>
-            <Text style={styles.memberSince}>
-              {t(l10n.settings.launcher.memberSince, {year: ''})}
-            </Text>
+            {memberSinceYear !== undefined &&
+            Number.isFinite(memberSinceYear) ? (
+              <Text style={styles.memberSince}>
+                {t(l10n.settings.launcher.memberSince, {
+                  year: memberSinceYear,
+                })}
+              </Text>
+            ) : null}
           </View>
         ) : (
           <View style={styles.ctaCard}>
@@ -110,16 +132,28 @@ export const SettingsScreen: React.FC = observer(() => {
             <Button
               testID="settings-create-account"
               variant="secondary"
-              disabled
               style={styles.ctaButton}
               label={l10n.settings.launcher.createAccountButton}
               accessibilityLabel={l10n.settings.launcher.createAccountButton}
+              onPress={() => navigation.navigate(ROUTES.ACCOUNT_SIGN_UP)}
             />
+            <View style={styles.ctaLoginRow}>
+              <Text style={styles.ctaLoginPrompt}>
+                {l10n.settings.launcher.logInPrompt}
+              </Text>
+              <Text
+                testID="settings-log-in"
+                accessibilityRole="button"
+                style={styles.ctaLoginLink}
+                onPress={() => navigation.navigate(ROUTES.ACCOUNT_LOGIN)}>
+                {l10n.settings.launcher.logIn}
+              </Text>
+            </View>
           </View>
         )}
 
         <View style={styles.group}>
-          {IS_REGISTERED &&
+          {isRegistered &&
             renderRow(
               SmileMdIcon,
               l10n.settings.launcher.myPals,
@@ -131,7 +165,7 @@ export const SettingsScreen: React.FC = observer(() => {
                 onPress: () => navigation.navigate(ROUTES.PALS),
               },
             )}
-          {IS_REGISTERED && accountSettingsRow}
+          {isRegistered && accountSettingsRow}
           {renderRow(
             SettingsIcon,
             l10n.settings.launcher.preferences,
@@ -177,7 +211,7 @@ export const SettingsScreen: React.FC = observer(() => {
               onPress: () => navigation.navigate(ROUTES.APP_INFO),
             },
           )}
-          {!IS_REGISTERED && accountSettingsRow}
+          {!isRegistered && accountSettingsRow}
           {__DEV__ &&
             renderRow(
               CpuChipIcon,
@@ -190,13 +224,14 @@ export const SettingsScreen: React.FC = observer(() => {
             )}
         </View>
 
-        {IS_REGISTERED && (
+        {isRegistered && (
           <Button
             testID="settings-log-out"
             variant="secondary"
             style={styles.logOut}
             label={l10n.settings.launcher.logOut}
             accessibilityLabel={l10n.settings.launcher.logOut}
+            onPress={() => authService.signOut()}
           />
         )}
       </ScrollView>
