@@ -204,8 +204,8 @@ describe('evaluateReadings', () => {
 
   /**
    * The whole reason the patterns are broad rather than an exact list of the
-   * three symbols measured today. `CLLocationUpdate` ships in no build this
-   * story examined; a forbidden list written from that measurement would pass it.
+   * symbols measured today. `_OBJC_CLASS_$_CLLocationUpdate` appears in no
+   * current build, so a forbidden list drawn from a measurement would pass it.
    */
   it('fails on a location symbol nobody predicted', () => {
     const slice = passingSlice();
