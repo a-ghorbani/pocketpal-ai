@@ -10,6 +10,11 @@ export const ROUTES = {
   APP_SETTINGS: 'App Settings',
   APP_INFO: 'App Info',
 
+  // Account / auth routes
+  ACCOUNT_LOGIN: 'Log in',
+  ACCOUNT_SIGN_UP: 'Create Account',
+  ACCOUNT: 'Account Settings',
+
   // Dev tools route. Only available in debug mode.
   DEV_TOOLS: 'Dev Tools',
 
