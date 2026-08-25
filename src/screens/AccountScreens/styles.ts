@@ -72,10 +72,14 @@ export const createStyles = (theme: Theme) =>
     },
     // One Text per phrase, with the link as an inline child: two sibling Texts
     // in a mirrored flex row reverse their reading order under RTL.
+    // The whole paragraph is the pressable (the testID has to sit here — a
+    // nested Text drops its identifier natively), so it must hug its text or
+    // the blank margin either side would navigate too.
     promptText: {
       ...theme.typography.bodyS,
       color: theme.colors.onSurfaceVariant,
       textAlign: 'center',
+      alignSelf: 'center',
     },
     promptLink: {
       color: theme.colors.primary,
