@@ -262,9 +262,17 @@ function writeArchive(name, entries) {
 function writeStoredArchive(
   name,
   entries,
-  {align = 16384, method = 0, corruptLocalSignatureOf = null} = {},
+  {
+    align = 16384,
+    method = 0,
+    corruptLocalSignatureOf = null,
+    repeat = null,
+  } = {},
 ) {
   const files = Object.entries(entries);
+  if (repeat) {
+    files.push([repeat, entries[repeat]]);
+  }
   const locals = [];
   const chunks = [];
   let offset = 0;
@@ -524,7 +532,46 @@ describe('the Hexagon backend', () => {
     const {status, output} = gateApk(conformingEntries());
     expect(status).toBe(0);
     expect(output).toContain(`${count} .dynsym entries matching "${pattern}"`);
-    expect(output).toContain(`(declared ${count}), llama.rn ${installed}`);
+    expect(output).toContain(
+      `(declared ${count}), built here against llama.rn ${installed}`,
+    );
+  });
+
+  /**
+   * The version is a fact about the machine running the check, not about the
+   * artifact, and `package.json` is arbitrary JSON from a dependency tree. An
+   * unvalidated value writes whatever it likes into the evidence.
+   */
+  it('reads unknown rather than printing an arbitrary version string', () => {
+    const isolated = path.join(workspace, 'forged');
+    fs.mkdirSync(path.join(isolated, 'node_modules', 'llama.rn'), {
+      recursive: true,
+    });
+    const copy = path.join(isolated, 'verify-android-payload.js');
+    fs.copyFileSync(SCRIPT_PATH, copy);
+    fs.writeFileSync(
+      path.join(isolated, 'node_modules', 'llama.rn', 'package.json'),
+      JSON.stringify({version: '0.99.0-totally-different'}),
+    );
+    const archive = writeStoredArchive(
+      'app-prod-release.apk',
+      conformingEntries(),
+    );
+    const {status, output} = runGate([
+      '--apk',
+      archive,
+      '--manifest',
+      MANIFEST_PATH,
+    ]);
+    expect(status).toBe(0);
+    expect(output).not.toContain('totally-different');
+
+    const forged = execFileSync(
+      'node',
+      [copy, '--apk', archive, '--manifest', MANIFEST_PATH],
+      {encoding: 'utf-8'},
+    );
+    expect(forged).toContain('built here against llama.rn unknown');
   });
 
   it('reads unknown when llama.rn is not installed, and still passes', () => {
@@ -839,7 +886,21 @@ describe('16 KB zip data offsets', () => {
       writeStoredArchive('app-prod-release.apk', entries, {method: 8}),
     ]);
     expect(status).toBe(1);
-    expect(output).toContain('name different libraries');
+    expect(output).toContain('in one reading of the archive and not the other');
+    expect(output).toContain('libevi');
+    expect(output).toContain('proven nothing about it');
+  });
+
+  it('fails on an archive whose central directory repeats a name', () => {
+    // A repeated name overwrites its earlier entry, so the index holds fewer
+    // libraries than the archive declares and its counts read as complete.
+    const entries = conformingEntries();
+    const archive = writeStoredArchive('app-prod-release.apk', entries, {
+      repeat: 'lib/arm64-v8a/librnllama.so',
+    });
+    const {status, output} = runGate(['--apk', archive]);
+    expect(status).toBe(1);
+    expect(output).toContain('distinct paths');
     expect(output).toContain('proven nothing about it');
   });
 

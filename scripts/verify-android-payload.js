@@ -525,6 +525,14 @@ function readZipIndex(archive) {
       });
       at += 46 + nameLength + extraLength + commentLength;
     }
+    // A repeated name overwrites its earlier entry, so the map can hold fewer
+    // libraries than the archive declares and every count taken from it reads
+    // as complete.
+    if (index.size !== count) {
+      throw new Error(
+        `the central directory declares ${count} entries but names ${index.size} distinct paths`,
+      );
+    }
     return index;
   } finally {
     fs.closeSync(fd);
@@ -676,6 +684,17 @@ function readDynsym(buf) {
   return symbols;
 }
 
+/**
+ * The llama.rn version installed **on the machine running this check**, which
+ * is not a fact about the artifact: a report can be produced against an APK
+ * built from any other version. It is printed to make a drifted symbol count
+ * easier to explain, and labelled as the build host's so it cannot be read as
+ * a property of what shipped.
+ *
+ * Constrained to a semver-shaped string. `package.json` is arbitrary JSON from
+ * a dependency tree, and an unvalidated value writes whatever it likes into
+ * the evidence.
+ */
 function installedLlamaRnVersion() {
   try {
     const pkg = JSON.parse(
@@ -684,7 +703,9 @@ function installedLlamaRnVersion() {
         'utf-8',
       ),
     );
-    return pkg.version || 'unknown';
+    return /^\d+\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?$/.test(pkg.version)
+      ? pkg.version
+      : 'unknown';
   } catch {
     return 'unknown';
   }
@@ -737,7 +758,7 @@ function checkSymbolRule({rule, archive, artifactName, entry, report, fail}) {
     symbol.name.toLowerCase().includes(pattern),
   ).length;
   report.push(
-    `      ${matched} .dynsym entries matching "${expected.pattern}" (declared ${expected.count}), llama.rn ${installedLlamaRnVersion()}`,
+    `      ${matched} .dynsym entries matching "${expected.pattern}" (declared ${expected.count}), built here against llama.rn ${installedLlamaRnVersion()}`,
   );
   if (matched !== expected.count && missing.length === 0) {
     fail(
@@ -860,13 +881,21 @@ function checkAlignment({
     .filter(inTree)
     .sort();
   const listed = [...entries].filter(inTree).sort();
-  if (zipIndex && listed.join('\n') !== libs.join('\n')) {
+  const disagreement = new Set(
+    zipIndex
+      ? [
+          ...listed.filter(name => !libs.includes(name)),
+          ...libs.filter(name => !listed.includes(name)),
+        ]
+      : [],
+  );
+  if (disagreement.size > 0) {
     report.push(
-      `      UNREADABLE  ${prefix}lib/${abi.abi}/ — the entry listing and the archive layout name different libraries`,
+      `      UNREADABLE  ${prefix}lib/${abi.abi}/ — ${[...disagreement].sort().join(', ')}`,
     );
     fail(
       [
-        `${artifactName} lists ${listed.length} libraries under ${prefix}lib/${abi.abi}/ but its central directory names ${libs.length}.`,
+        `${artifactName} names ${[...disagreement].sort().join(', ')} under ${prefix}lib/${abi.abi}/ in one reading of the archive and not the other.`,
         'The two readings of one archive disagree, so neither can be trusted to say what ships.',
         'The payload check could not run, so it reports failure rather than success —',
         'a check that cannot read the artifact has proven nothing about it.',
@@ -951,19 +980,9 @@ function checkAlignment({
   // the APK, so a deflated entry is not a library checked under some other
   // rule — it is one the loader cannot map at all, on any device. Skipping it
   // here would excuse the more serious fault of the two.
-  const indexed = libs.filter(entry => zipIndex.has(entry));
-  // A library dropped between the subject set and the index would otherwise
-  // shrink the denominator and read as a clean pass over fewer things.
-  for (const entry of libs.filter(name => !zipIndex.has(name))) {
-    report.push(`      UNINDEXED  ${entry}`);
-    fail(
-      [
-        `${entry} is listed in ${artifactName} but absent from its central directory.`,
-        'The payload check could not run, so it reports failure rather than success —',
-        'a check that cannot read the artifact has proven nothing about it.',
-      ].join('\n      '),
-    );
-  }
+  const indexed = libs;
+  // `libs` is taken from the index, so every entry is in it by construction —
+  // a name in one reading and not the other is caught above instead.
   const deflated = indexed.filter(entry => !zipIndex.get(entry).stored);
   const misplaced = indexed.filter(
     entry =>

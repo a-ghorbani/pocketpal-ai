@@ -2,6 +2,7 @@ const fs = require('fs');
 const path = require('path');
 const yaml = require('js-yaml');
 const {createHash} = require('crypto');
+const {execFileSync} = require('child_process');
 
 /**
  * Nothing may ship an Android artifact that the payload gate has not examined.
@@ -21,21 +22,37 @@ const {createHash} = require('crypto');
 const ROOT = path.join(__dirname, '..', '..');
 const WORKFLOW_DIR = path.join(ROOT, '.github', 'workflows');
 
-// Named explicitly rather than globbed: a fourth Fastfile ships inside
-// vendor/bundle wherever `bundle install` has run, so a glob count would be
-// environment-dependent and unfit for a vacuity guard.
+/**
+ * Every tracked Fastfile, derived rather than named. A literal list is a pin
+ * whose subject is enumerated, so a fourth Fastfile is simply never read and a
+ * lane in it can build and publish unseen. `git ls-files` is the source rather
+ * than a filesystem walk because a vendored copy ships under `vendor/bundle`
+ * wherever `bundle install` has run — 3 tracked against 4 on disk here — and
+ * an environment-dependent subject is unfit for a pin.
+ *
+ * The origin is the directory holding `fastlane/`, which is what decides the
+ * platform a lane belongs to.
+ */
+const FASTFILES = execFileSync('git', ['ls-files', '*Fastfile'], {
+  cwd: ROOT,
+  encoding: 'utf-8',
+})
+  .split('\n')
+  .filter(Boolean)
+  .sort()
+  .map(file => [
+    path.dirname(path.dirname(file)) === '.'
+      ? 'root'
+      : path.dirname(path.dirname(file)),
+    path.join(ROOT, file),
+  ]);
+
 /** Pinned by content, like the composites: free-form Ruby behind one `run:`. */
 const ACCOUNTED_FASTFILES = {
   root: 'c50e1384844af4d5c37cd9d5',
   android: '3173e30e8166a178fafe40a0',
   ios: '9d6c9e883a56dfe47abc0462',
 };
-
-const FASTFILES = [
-  ['root', path.join(ROOT, 'fastlane', 'Fastfile')],
-  ['android', path.join(ROOT, 'android', 'fastlane', 'Fastfile')],
-  ['ios', path.join(ROOT, 'ios', 'fastlane', 'Fastfile')],
-];
 
 const KNOWN_WORKFLOWS = [
   'ci.yml',
@@ -306,6 +323,38 @@ function isGateStep(step) {
   );
 }
 
+/**
+ * The concerns a gate step below this one already answers for: it wrote that
+ * path as its own report, and nothing between the two touched it. Recognised
+ * by which step produced it rather than by what it is called, so no step can
+ * stage the artifact under the name and inherit the exemption.
+ */
+function unexplainedConcerns(step, job, m) {
+  const gates = job.steps.filter(isGateStep);
+  return (publisherOf(step, m.lanes)?.concerns ?? []).filter(
+    concern =>
+      !(
+        concern.kind === 'undeclared' &&
+        gates.some(
+          candidate =>
+            candidate.index < step.index &&
+            gateReports(candidate).includes(concern.token) &&
+            !job.steps.some(
+              other =>
+                other.index > candidate.index &&
+                other.index < step.index &&
+                stepText(other, m.lanes).includes(concern.token),
+            ),
+        )
+      ),
+  );
+}
+
+/** The evidence path the gate itself writes, as it writes it. */
+function gateReports(step) {
+  return [...step.run.matchAll(/--report\s+(\S+)/g)].map(match => match[1]);
+}
+
 function gateExamines(step) {
   return [...step.run.matchAll(/--(?:apk|aab)\s+(\S+)/g)].map(match =>
     path.basename(match[1]),
@@ -313,22 +362,12 @@ function gateExamines(step) {
 }
 
 /**
- * A `with:` path field, split into what it actually names. The whole value is
- * a path here — one per line, or one per list entry — so anything that is not
- * a concrete filename hides one, whatever directory it lives in. Keying on
- * `build/outputs` instead would leave `dist/`, `artifacts/` and
- * `android/app/release/` naming nothing and classifying as no publisher at all.
+ * The one upload whose path is known not to be build output, and it is iOS
+ * symbols. The gate's own report is not here: it is recognised by the gate
+ * that wrote it, because a name is something any step can stage a file under.
+ * Asserted to reach no build-output directory and to appear in no building job.
  */
-/**
- * The uploads whose paths are known not to be build output. Small, pinned, and
- * asserted to reach no build-output directory: a concrete filename that is not
- * an `.apk`/`.aab` is not thereby harmless — `tar czf out/x.tgz …/apk` produces
- * one — so the parse vouches only for the paths written down here.
- */
-const NON_ARTIFACT_UPLOADS = [
-  'payload-report.txt',
-  'ios/build/PocketPal.app.dSYM.zip',
-];
+const NON_ARTIFACT_UPLOADS = ['ios/build/PocketPal.app.dSYM.zip'];
 
 /**
  * A `with:` path field, split into what it names. The whole value is a path
@@ -526,13 +565,13 @@ const STEP_ASSERTIONS = {
   // content pin, which is what stops it growing a second publish beside the one
   // it is here for.
   publisher: null,
-  reportUpload: (step, _job, m) => {
+  reportUpload: (step, job, m) => {
     const publisher = publisherOf(step, m.lanes);
     return (
       publisher !== null &&
       publisher.paths.length === 0 &&
-      publisher.concerns.length === 0 &&
-      publisher.declared > 0
+      publisher.concerns.length > 0 &&
+      unexplainedConcerns(step, job, m).length === 0
     );
   },
   iosUpload: (step, job, m) =>
@@ -1102,10 +1141,7 @@ const compositeShipsNothing = step =>
   shipsNothing(fs.readFileSync(COMPOSITE_ACTIONS[step.uses], 'utf-8'));
 
 const compositeDigest = uses =>
-  createHash('sha256')
-    .update(codeOf(fs.readFileSync(COMPOSITE_ACTIONS[uses], 'utf-8')))
-    .digest('hex')
-    .slice(0, 12);
+  digestOfValue(codeOf(fs.readFileSync(COMPOSITE_ACTIONS[uses], 'utf-8')));
 
 const cacheReachesNoBuildOutput = step =>
   !/build\/outputs/.test(JSON.stringify(step.with));
@@ -1180,12 +1216,12 @@ const ALLOWED_ACTIONS = {
   './.github/actions/setup-hexagon-sdk': {
     reason: 'fetches and verifies the Hexagon SDK',
     assert: compositeShipsNothing,
-    digest: '0e127c3ea33a',
+    digest: '3d808d2f47fd8cdb4ee42f97',
   },
   './.github/actions/setup-ccache': {
     reason: 'restores the compiler cache',
     assert: compositeShipsNothing,
-    digest: '46922326eb0c',
+    digest: '4494b7478119382e229d070d',
   },
 };
 
@@ -1317,7 +1353,7 @@ function violationsOfPathIdentity(m) {
       if (!publisher) {
         continue;
       }
-      for (const concern of publisher.concerns) {
+      for (const concern of unexplainedConcerns(step, job, m)) {
         problems.push(
           concern.kind === 'unreadable'
             ? `${where(step)} publishes ${concern.token}, which this parse cannot resolve to a filename, so no gate step can be shown to have examined it`
@@ -1396,9 +1432,8 @@ function violationsOfGateCanFail(m) {
       // artifact. A tag push names no file and is still a publish.
       const shipsOnlyDeclaredFiles =
         publisher &&
-        publisher.declared > 0 &&
         publisher.paths.length === 0 &&
-        publisher.concerns.length === 0 &&
+        unexplainedConcerns(step, job, m).length === 0 &&
         !publisher.rules.includes('tag-push');
       if (
         publisher &&
@@ -1807,20 +1842,53 @@ describe('the parse itself', () => {
 
   it('pins every Fastfile by content, and the declared uploads reach no build output', () => {
     expect(fastfileDigest()).toEqual(ACCOUNTED_FASTFILES);
+    // The one pinned map that had no inventory of its own.
+    expect(Object.keys(ACCOUNTED_JOBS).sort()).toEqual(
+      allJobs(committed)
+        .filter(job => isBuildingJob(job, committed.lanes))
+        .map(job => `${job.workflow}/${job.id}`)
+        .sort(),
+    );
+    const inBuildingJobs = allJobs(committed)
+      .filter(job => isBuildingJob(job, committed.lanes))
+      .flatMap(job => job.steps)
+      .map(step => stepText(step, committed.lanes))
+      .join('\n');
     for (const declared of NON_ARTIFACT_UPLOADS) {
       expect(declared).not.toContain('build/outputs');
+      expect(inBuildingJobs).not.toContain(declared);
     }
   });
 
   it('resolves every accounted row to an assertion that exists', () => {
-    // A mistyped key yields `undefined`, and an entry with no assertion is a
-    // row that floors nothing.
+    // `STEP_ASSERTIONS[name]` yields `undefined` on a typo, and the rule reads
+    // `if (entry.assert && …)`, so a mistyped name silently retires the row's
+    // assertion while its digest keeps passing. A digest is per-step content
+    // and says nothing about where the step sits, so the one rule that notices
+    // a gate moving out from between a build and its publishes is exactly what
+    // a typo here would switch off. `null` is a stated absence and passes.
+    const resolves = row => row.assert !== undefined;
     for (const entry of ACCOUNTED_STEPS) {
       expect({
         entry: `${entry.workflow} ${entry.step}`,
-        resolved: entry.assert !== undefined || entry.digest !== null,
+        resolved: resolves(entry),
       }).toEqual({entry: `${entry.workflow} ${entry.step}`, resolved: true});
     }
+
+    // The guard has to read the assertion, not the digest beside it: 55 of the
+    // 58 rows carry a digest, so a disjunction over the two is answered by the
+    // digest and never looks at the name.
+    const mistyped = {
+      workflow: 'ci.yml',
+      job: 'build-android',
+      step: 'Build Android Release',
+      digest: 'a'.repeat(24),
+      assert: STEP_ASSERTIONS.buildsThenIsGate,
+    };
+    expect(resolves(mistyped)).toBe(false);
+    expect(resolves({...mistyped, assert: STEP_ASSERTIONS.publisher})).toBe(
+      true,
+    );
   });
 
   it('reads the two Android fastlane lanes and what each one does', () => {
@@ -2508,9 +2576,9 @@ describe('each rule is capable of failing', () => {
       'utf-8',
     );
     const edited = `${source}\n# a line that changes nothing and everything\n`;
-    expect(
-      createHash('sha256').update(codeOf(edited)).digest('hex').slice(0, 12),
-    ).not.toBe(compositeDigest('./.github/actions/setup-ccache'));
+    expect(digestOfValue(codeOf(edited))).not.toBe(
+      compositeDigest('./.github/actions/setup-ccache'),
+    );
   });
 
   it.each([
@@ -2790,6 +2858,57 @@ describe('each rule is capable of failing', () => {
     );
 
     expect(isBuildingJob(job, m.lanes)).toBe(true);
+  });
+
+  /**
+   * The gate's report is exempt because a gate below it wrote that path, not
+   * because of what it is called. A name would let any step stage the signed
+   * APK under it and inherit the exemption.
+   */
+  it('refuses an upload of the report path from a job with no gate', () => {
+    const m = broken();
+    const job = jobIn(m, 'ci.yml', 'build-and-test');
+    job.steps.push(
+      asParsed({
+        workflow: 'ci.yml',
+        job: 'build-and-test',
+        index: job.steps.length,
+        name: 'Upload payload report',
+        run: '',
+        uses: 'actions/upload-artifact@v4',
+        with: {name: 'payload-report', path: 'payload-report.txt'},
+        raw: {},
+      }),
+    );
+
+    expect(violationsOfPathIdentity(m)).toContainEqual(
+      expect.stringContaining('neither an Android artifact'),
+    );
+  });
+
+  it('refuses the report upload when a step restages that path after the gate', () => {
+    const m = broken();
+    const job = jobIn(m, 'ci.yml', 'build-android');
+    const gate = job.steps.findIndex(isGateStep);
+    job.steps.splice(
+      gate + 1,
+      0,
+      asParsed({
+        workflow: 'ci.yml',
+        job: 'build-android',
+        index: 0,
+        name: 'Stage it',
+        run: `cp ${GATED_APK} payload-report.txt`,
+        uses: '',
+        with: {},
+        raw: {},
+      }),
+    );
+    reindex(job);
+
+    expect(violationsOfPathIdentity(m)).toContainEqual(
+      expect.stringContaining('neither an Android artifact'),
+    );
   });
 
   it('the lane-split rule fails when the fastlane lanes are re-merged', () => {
