@@ -534,7 +534,10 @@ describe('the Hexagon backend', () => {
     fs.mkdirSync(isolated);
     const copy = path.join(isolated, 'verify-android-payload.js');
     fs.copyFileSync(SCRIPT_PATH, copy);
-    const archive = writeArchive('app-prod-release.apk', conformingEntries());
+    const archive = writeStoredArchive(
+      'app-prod-release.apk',
+      conformingEntries(),
+    );
 
     const {status, output} = runScript(copy, [
       '--manifest',
@@ -562,7 +565,10 @@ describe('the Hexagon backend', () => {
       path.join(workspace, 'package.json'),
       JSON.stringify({dependencies: {'llama.rn': '0.0.0-declared'}}),
     );
-    const archive = writeArchive('app-prod-release.apk', conformingEntries());
+    const archive = writeStoredArchive(
+      'app-prod-release.apk',
+      conformingEntries(),
+    );
 
     const {status, output} = runScript(copy, [
       '--manifest',
