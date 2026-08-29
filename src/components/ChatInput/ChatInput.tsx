@@ -80,6 +80,8 @@ export interface ChatInputTopLevelProps {
   reasoningEffort?: string;
   /** Callback to cycle the graded effort state (off -> values -> off) */
   onEffortCycle?: () => void;
+  /** When provided, shows a temperature pill that opens the generation settings panel */
+  onGenSettingsPress?: () => void;
 }
 
 export interface ChatInputAdditionalProps {
@@ -105,6 +107,8 @@ export interface ChatInputAdditionalProps {
   reasoningEffort?: string;
   /** Callback to cycle the graded effort state (off -> values -> off) */
   onEffortCycle?: () => void;
+  /** When provided, shows a temperature pill that opens the generation settings panel */
+  onGenSettingsPress?: () => void;
 }
 
 export type ChatInputProps = ChatInputTopLevelProps & ChatInputAdditionalProps;
@@ -143,6 +147,7 @@ export const ChatInput = observer(
     effortValues = [],
     reasoningEffort,
     onEffortCycle,
+    onGenSettingsPress,
   }: ChatInputProps) => {
     const l10n = React.useContext(L10nContext);
     const theme = useTheme();
@@ -570,6 +575,31 @@ export const ChatInput = observer(
                   </Text>
                 )}
               </View>
+
+              {/* Temperature Pill */}
+              {onGenSettingsPress && !isCameraActive && hasActiveModel && (
+                <TouchableOpacity
+                  style={[
+                    styles.thinkingToggleLeft,
+                    {borderColor: onSurfaceColorVariant},
+                  ]}
+                  onPress={onGenSettingsPress}
+                  accessibilityLabel="Open generation settings"
+                  accessibilityRole="button"
+                  testID="temperature-pill">
+                  <Text
+                    style={[
+                      styles.thinkingToggleText,
+                      {color: onSurfaceColorVariant},
+                    ]}>
+                    {`T: ${(
+                      chatSessionStore.sessions.find(
+                        s => s.id === chatSessionStore.activeSessionId,
+                      )?.completionSettings?.temperature ?? 0.7
+                    ).toFixed(1)}`}
+                  </Text>
+                </TouchableOpacity>
+              )}
 
               {/* Thinking Toggle Button. Graded models (axis-2) cycle
                   off -> low -> medium -> high; effortless models toggle
