@@ -167,45 +167,45 @@
     "serverTypeHelp": "Terdeteksi otomatis; ubah jika keliru.",
     "internetSearch": {
       "title": "Pencarian Internet",
-      "description": "Biarkan Pals mencari di web dengan alat mereka sendiri. Bawa Kunci API Anda sendiri — PocketPal tidak pernah menyimpan kunci atau meneruskan kueri Anda.",
-      "providerLabel": "Penyedia Pencarian",
+      "description": "Izinkan Pal mencari di web dengan alat mereka sendiri. Bawa kunci API Anda sendiri — PocketPal tidak pernah menyimpan kunci Anda atau merutekan kueri Anda.",
+      "providerLabel": "Penyedia pencarian",
       "providerGated": "Segera hadir",
       "keyLabel": "Kunci API",
-      "keyIsSet": "Kunci sudah diatur untuk {{provider}}.",
-      "keyNotSet": "Belum ada kunci untuk {{provider}}.",
+      "keyIsSet": "Kunci telah diatur untuk {{provider}}.",
+      "keyNotSet": "Tidak ada kunci yang diatur untuk {{provider}}.",
       "setKeyButton": "Atur Kunci",
       "updateKeyButton": "Perbarui Kunci",
       "clearKeyButton": "Hapus Kunci",
-      "keyInputPlaceholder": "Tempel Kunci API {{provider}} Anda",
+      "keyInputPlaceholder": "Tempel kunci API {{provider}} Anda",
       "keyUpdateError": "Gagal memperbarui kunci. Silakan coba lagi.",
-      "showKeyAccessibilityLabel": "Tampilkan Kunci API",
-      "hideKeyAccessibilityLabel": "Sembunyikan Kunci API",
-      "resultCountLabel": "Hasil per Pencarian",
-      "resultCountDescription": "Semakin sedikit hasil, semakin banyak ruang tersisa di konteks model.",
+      "showKeyAccessibilityLabel": "Tampilkan kunci API",
+      "hideKeyAccessibilityLabel": "Sembunyikan kunci API",
+      "resultCountLabel": "Hasil per pencarian",
+      "resultCountDescription": "Lebih sedikit hasil menyisakan lebih banyak ruang dalam konteks model.",
       "consentTitle": "Pencarian meninggalkan perangkat Anda",
-      "consentDescription": "Saat sebuah Pal mencari di web, kueri Anda dikirim ke penyedia yang dipilih melalui internet. Saat sebuah Pal membaca halaman, URL dan konten halaman mungkin dikirim ke layanan pembaca default (r.jina.ai) jika penyedia yang dipilih tidak memiliki pembaca bawaan. Kunci dan kueri tidak pernah dikirim ke PocketPal.",
+      "consentDescription": "Saat Pal mencari di web, kueri Anda dikirim ke penyedia yang dipilih melalui internet. Saat Pal membaca halaman, URL dan konten halaman dapat dikirim ke layanan pembaca default (r.jina.ai) jika penyedia yang dipilih tidak memiliki pembaca bawaan. Kunci dan kueri tidak pernah dikirim ke PocketPal.",
       "consentAccept": "Saya mengerti",
-      "consentRequired": "Setujui pemberitahuan di atas untuk mengatur kunci dan mengaktifkan pencarian.",
+      "consentRequired": "Terima pengungkapan di atas untuk mengatur kunci dan mengaktifkan pencarian.",
       "consentGivenTitle": "Pencarian web diaktifkan",
-      "consentGivenDescription": "Kueri dan pembacaan halaman mungkin meninggalkan perangkat Anda seperti dijelaskan di atas.",
+      "consentGivenDescription": "Kueri dan pembacaan halaman dapat meninggalkan perangkat Anda seperti dijelaskan di atas.",
       "consentRevoke": "Cabut"
     },
     "languageSheetTitle": "Bahasa",
     "languageSearchPlaceholder": "Cari bahasa",
-    "speculativeDecoding": "Speculative Decoding",
-    "speculativeDecodingDescription": "Gunakan model draf kecil (atau model MTP bawaan) untuk memprediksi token dan mempercepat generasi. Eksperimental.",
-    "speculativeNotMTPCapable": "Model yang aktif tidak mendukung speculative decoding dan tidak ada draf kompatibel yang dipasangkan, jadi fitur ini tetap mati untuknya tanpa efek. Fitur ini diterapkan otomatis pada model yang mendukung.",
+    "speculativeDecoding": "Decoding Spekulatif",
+    "speculativeDecodingDescription": "Gunakan model draf kecil (atau model MTP tertanam) untuk memprediksi token dan mempercepat pembuatan. Eksperimental.",
+    "speculativeNotMTPCapable": "Model aktif tidak mendukung spekulatif dan tidak ada draf yang kompatibel dipasangkan, sehingga ini tetap mati tanpa efek. Ini berlaku secara otomatis untuk model yang mendukung.",
     "speculativeDraftModel": "Model Draf",
-    "speculativeDraftModelDescription": "Menyusun draf token untuk model yang aktif.",
-    "speculativeDraftModelNone": "Tidak ada (MTP bawaan)",
-    "speculativeDraftModelIgnoredOverridden": "Model yang aktif sudah memiliki model draf sendiri, jadi pilihan ini diabaikan.",
-    "speculativeDraftModelIgnoredIncompatible": "Draf ini tidak kompatibel dengan model yang aktif, jadi diabaikan.",
-    "speculativeDraftModelIgnoredNotCapable": "Model ini tidak memiliki layer draf, jadi tidak bisa digunakan sebagai model draf.",
-    "speculativeDraftKeyCacheType": "Jenis Cache Kunci Draf",
-    "speculativeDraftValueCacheType": "Jenis Cache Nilai Draf",
-    "speculativeDraftNGpuLayers": "Layer GPU Draf",
-    "speculativeDraftNGpuLayersDescription": "Jumlah layer model draf yang dialihkan ke GPU.",
-    "speculativeDraftCacheTypeInactiveDescription": "Berlaku setelah speculative decoding berjalan."
+    "speculativeDraftModelDescription": "Membuat draf token untuk model aktif.",
+    "speculativeDraftModelNone": "Tidak ada (MTP tertanam)",
+    "speculativeDraftModelIgnoredOverridden": "Model aktif memiliki model draf sendiri, sehingga pilihan ini diabaikan.",
+    "speculativeDraftModelIgnoredIncompatible": "Draf ini tidak kompatibel dengan model aktif, sehingga diabaikan.",
+    "speculativeDraftModelIgnoredNotCapable": "Model ini tidak memiliki lapisan draf, sehingga tidak dapat digunakan sebagai model draf.",
+    "speculativeDraftKeyCacheType": "Tipe Cache Kunci Draf",
+    "speculativeDraftValueCacheType": "Tipe Cache Nilai Draf",
+    "speculativeDraftNGpuLayers": "Lapisan GPU Draf",
+    "speculativeDraftNGpuLayersDescription": "Jumlah lapisan model draf yang dialihkan ke GPU.",
+    "speculativeDraftCacheTypeInactiveDescription": "Berlaku setelah decoding spekulatif berjalan."
   },
   "memory": {
     "shortWarning": "Peringatan Memori",
@@ -396,7 +396,7 @@
         "visionSupported": "Didukung",
         "visionNotSupported": "Tidak didukung",
         "visionUnknown": "Tidak diketahui",
-        "draftOnlyReason": "Model khusus draf. Pilih di Pengaturan → Speculative Decoding."
+        "draftOnlyReason": "Model khusus draf. Pilih di Pengaturan → Decoding spekulatif."
       },
       "accessibility": {
         "expandDetails": "Perluas detail",
@@ -458,8 +458,8 @@
       "rewriting": "Menulis Ulang",
       "creativity": "Penulisan Kreatif",
       "vision": "Visi",
-      "mtp": "Speculative (MTP)",
-      "mtpDraft": "Draf Speculative"
+      "mtp": "Spekulatif (MTP)",
+      "mtpDraft": "Draf spekulatif"
     },
     "hubRun": {
       "title": "Unduh Model",
@@ -839,8 +839,8 @@
         "render_html": "Render dokumen HTML secara inline di chat",
         "calculate": "Evaluasi ekspresi matematika",
         "datetime": "Dapatkan tanggal dan waktu saat ini",
-        "web_search": "Cari informasi terkini di internet (memerlukan Kunci API di Pengaturan)",
-        "read_url": "Baca seluruh konten halaman web (memerlukan Kunci API di Pengaturan)"
+        "web_search": "Cari di internet untuk informasi terkini (memerlukan kunci API di Pengaturan)",
+        "read_url": "Baca konten lengkap halaman web (memerlukan kunci API di Pengaturan)"
       },
       "greeting": {
         "sectionLabel": "Sapaan",
@@ -987,7 +987,7 @@
         "pinned": "Disematkan"
       },
       "pin": "Sematkan",
-      "unpin": "Lepas sematan"
+      "unpin": "Lepaskan sematan"
     },
     "usageStats": {
       "tooltip": {
@@ -1243,12 +1243,12 @@
       "noResultsFor": "Tidak ada hasil untuk {{query}}",
       "resultsCount": "{{count}} hasil",
       "resultsCountOne": "1 hasil",
-      "searchResultsTitle": "Hasil Pencarian",
+      "searchResultsTitle": "Hasil pencarian",
       "showResultsAccessibilityLabel": "Tampilkan hasil pencarian web untuk {{query}}",
-      "openLinkError": "Gagal membuka tautan ini."
+      "openLinkError": "Tidak dapat membuka tautan ini."
     },
-    "contextFullRemote": "Percakapan sudah penuh. Mulai obrolan baru.",
-    "speculativeInitFailed": "Perangkat ini tidak dapat memulai speculative decoding untuk model ini — kemungkinan besar memori tidak cukup untuk konteks draf. Matikan Speculative Decoding di Pengaturan → Pengaturan Lanjutan lalu coba lagi."
+    "contextFullRemote": "Percakapan kehabisan ruang. Mulai obrolan baru.",
+    "speculativeInitFailed": "Perangkat ini tidak dapat memulai decoding spekulatif untuk model ini — kemungkinan besar tidak ada cukup memori untuk konteks draf. Matikan Decoding spekulatif di Pengaturan → Pengaturan Lanjutan dan coba lagi."
   },
   "benchmark": {
     "title": "Benchmark",
