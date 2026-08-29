@@ -1,1 +1,405 @@
-{}
+{
+  "common": {
+    "cancel": "Скасаваць",
+    "delete": "Выдаліць",
+    "dismiss": "Адхіліць",
+    "rename": "Перайменаваць",
+    "reset": "Скінуць",
+    "save": "Захаваць",
+    "stop": "Спыніць",
+    "update": "Абнавіць",
+    "error": "Памылка",
+    "export": "Экспартаваць",
+    "networkError": "Памылка сеткі. Паспрабуйце яшчэ раз.",
+    "downloadETA": "ETA",
+    "calculating": "выконваецца разлік…",
+    "second": "сек",
+    "seconds": "сек",
+    "year": "год",
+    "years": "г.",
+    "month": "месяц",
+    "months": "мес.",
+    "week": "тыдзень",
+    "weeks": "тыд.",
+    "day": "дзень",
+    "days": "д.",
+    "hour": "гадзіна",
+    "hours": "гадз",
+    "minute": "хв",
+    "minutes": "хв",
+    "justNow": "толькі што",
+    "ok": "ОК",
+    "close": "Закрыць",
+    "clear": "Ачысціць усё",
+    "gallery": "Галерэя",
+    "noResults": "Нічога не знойдзена"
+  },
+  "settings": {
+    "modelInitializationSettings": "Налады ініцыялізацыі мадэлі",
+    "metal": "Metal",
+    "metalDescription": "Апаратна-паскораны API ад Apple.",
+    "openCL": "OpenCL (эксперыментальна)",
+    "layersOnGPU": "Слаі на GPU: {{gpuLayers}}",
+    "deviceSelection": "Выбар прылады",
+    "deviceSelectionIOS": "Прылада (Metal)",
+    "cpuOnlyNoAccelerators": "Толькі CPU — не выяўлена апаратных паскаральнікаў",
+    "contextSize": "Памер кантэксту",
+    "contextSizePlaceholder": "Увядзіце памер кантэксту (мін {{minContextSize}})",
+    "advancedSettings": "Пашыраныя налады",
+    "batchSize": "Памер пакета (Batch Size)",
+    "batchSizeDescription": "Памер пакета: {{batchSize}}{{effectiveBatch}}",
+    "effectiveLabel": "эфектыўны",
+    "physicalBatchSize": "Фізічны памер пакета",
+    "valueCacheType": "Тып кэшу значэнняў (Value Cache)",
+    "modelLoadingSettings": "Налады загрузкі мадэлі",
+    "importChats": "Імпартаваць сэсіі чата",
+    "memorySettings": "Налады памяці",
+    "language": "Мова",
+    "languageSheetTitle": "Мова",
+    "languageSearchPlaceholder": "Пошук моў",
+    "darkMode": "Цёмны рэжым",
+    "displayMemoryUsage": "Паказаць выкарыстанне памяці",
+    "exportButton": "Экспартаваць",
+    "importButton": "Імпартаваць",
+    "internetSearch": {
+      "title": "Пошук у інтэрнэце",
+      "setKeyButton": "Задаць ключ",
+      "updateKeyButton": "Абнавіць ключ",
+      "clearKeyButton": "Ачысціць ключ",
+      "keyInputPlaceholder": "Устаўце свой ключ API {{provider}}",
+      "keyUpdateError": "Не ўдалося абнавіць ключа. Паспрабуйце зноў.",
+      "showKeyAccessibilityLabel": "Паказаць ключ API",
+      "hideKeyAccessibilityLabel": "Схаваць ключ API",
+      "consentRevoke": "Адклікаць",
+      "consentAccept": "Я разумею",
+      "keyLabel": "Ключ API",
+      "keyIsSet": "Для {{provider}} зададзены ключ.",
+      "keyNotSet": "Для {{provider}} не зададзена ключа.",
+      "consentGivenTitle": "Пошук у інтэрнэце ўключаны",
+      "consentTitle": "Пошук пакідае вашу прыладу"
+    },
+    "cacheStorageTitle": "Кэш і сховішча",
+    "serverType": "Тып сервера",
+    "yourServers": "Вашы серверы",
+    "selectModel": "Выбраць мадэль",
+    "addModel": "Дадаць мадэль",
+    "connected": "Падключана",
+    "connectionFailed": "Збой падключэння: {{error}}",
+    "connecting": "Ідзе падключэнне…",
+    "noModelsAvailable": "На гэтым серверы няма даступных мадэляў.",
+    "alreadyAdded": "Ужо дададзена",
+    "connectedServers": "Падключаныя серверы",
+    "modelsCount": "Мадэляў: {{count}}",
+    "serverDetails": "Звесткі пра сервер",
+    "modelsUsingServer": "Мадэлі, якія выкарыстоўваюць сервер:",
+    "saveChanges": "Захаваць змяненні",
+    "removeServer": "Выдаліць сервер",
+    "removeServerMessage": "Выдаліць сервер {{serverName}} і мадэлі на ім ({{count}})?",
+    "removeRemoteModel": "Выдаліць {{modelName}} ({{serverName}})?",
+    "retryConnection": "Паўтарыць спробу",
+    "apiKey": "Ключ API",
+    "remoteModel": "Аддаленая",
+    "remoteIndicator": "Аддаленая",
+    "serverUrlRequired": "Патрабуецца URL сервера",
+    "serverUrlInvalid": "Няправільны фармат URL",
+    "flashAttentionOn": "Укл.",
+    "flashAttentionOff": "Выкл.",
+    "flashAttentionAuto": "Аўта",
+    "useMmapTrue": "Уключана",
+    "useMmapFalse": "Выключана",
+    "appSettings": "Налады праграмы",
+    "exportOptions": "Параметры экспартавання",
+    "serverName": "Назва сервера",
+    "serverUrl": "URL сервера",
+    "serverUrlPlaceholder": "напр., http://192.168.1.100:1234",
+    "addRemoteModel": "Дадаць аддаленую мадэль",
+    "manageServers": "Кіраваць серверамі"
+  },
+  "benchmark": {
+    "benchmarkResultCard": {
+      "actions": {
+        "deleteButton": " "
+      },
+      "errors": {
+        "genericRetry": "Паўтарыць спробу"
+      },
+      "results": {
+        "tokensPerSecond": "ток/с",
+        "totalTime": "Агульны час"
+      },
+      "modelSettings": {
+        "context": "Кантэкст: {{context}}",
+        "batch": "Пакет (Batch): {{batch}}",
+        "ubatch": "UBatch: {{ubatch}}"
+      },
+      "modelMeta": {
+        "params": "парам."
+      }
+    },
+    "deviceInfoCard": {
+      "fields": {
+        "instructions": "Інструкцыі",
+        "version": "Версія",
+        "gpuType": "Тып відэакарты",
+        "architecture": "Архітэктура",
+        "totalMemory": "Агулам памяці",
+        "deviceId": "ID прылады"
+      },
+      "sections": {
+        "appInfo": "Звесткі пра праграму",
+        "cpuDetails": "Звесткі пра працэсар",
+        "gpuDetails": "Звесткі пра відэакартку"
+      },
+      "title": "Інфармацыя пра прыладу",
+      "deviceSummary": "{{brand}} {{model}} • {{systemName}} {{systemVersion}}"
+    },
+    "dialogs": {
+      "shareResults": {
+        "performanceMetrics": "• Метрыкі прадукцыйнасці",
+        "dontShowAgain": "Больш не паказваць гэта паведамленне"
+      },
+      "deleteResult": {
+        "title": "Выдаліць рэзультат"
+      }
+    },
+    "sections": {
+      "testResults": "Рэзультаты тэста"
+    },
+    "buttons": {
+      "clearAll": "Ачысціць усё",
+      "done": "Гатова",
+      "cancel": "Скасаваць",
+      "delete": "Выдаліць",
+      "share": "Абагуліць",
+      "sharing": "Ідзе абагульванне…",
+      "viewRawData": "Паказаць неапрацаваныя даныя",
+      "advancedSettings": "Пашыраныя налады",
+      "hideRawData": "Схаваць неапрацаваныя даныя",
+      "startTest": "Пачаць тэст",
+      "runningTest": "Ідзе правядзенне тэста…"
+    },
+    "title": "Параўнаўчы тэст",
+    "modelSelector": {
+      "prompt": "Выбраць мадэль",
+      "noModels": "Не запампавана мадэляў"
+    },
+    "messages": {
+      "pleaseSelectModel": "Спачатку выберыце і ініцыялізуйце мадэль"
+    }
+  },
+  "components": {
+    "modelSettingsSheet": {
+      "reasoningSection": "Лагічны вывад"
+    }
+  },
+  "voiceAndSpeech": {
+    "supertonicLanguageNames": {
+      "id": "Інданезійская",
+      "ar": "Арабская",
+      "bg": "Балгарская",
+      "hr": "Харвацкая",
+      "cs": "Чэшская",
+      "da": "Дацкая",
+      "nl": "Нідэрландская",
+      "en": "Англійская",
+      "et": "Эстонская",
+      "fi": "Фінская",
+      "fr": "Французская",
+      "de": "Нямецкая",
+      "el": "Грэчаская",
+      "hi": "Хіндзі",
+      "hu": "Венгерская",
+      "it": "Італьянская",
+      "ja": "Японская",
+      "ko": "Карэйская",
+      "lv": "Латышская",
+      "lt": "Літоўская",
+      "pl": "Польская",
+      "pt": "Партугальская",
+      "ro": "Румынская",
+      "ru": "Руская",
+      "sk": "Славацкая",
+      "sl": "Славенская",
+      "es": "Іспанская",
+      "sv": "Шведская",
+      "tr": "Турэцкая",
+      "uk": "Украінская",
+      "vi": "В’етнамская"
+    },
+    "supertonicLanguageSearchPlaceholder": "Пошук моў",
+    "openSettingsLabel": "Налады TTS",
+    "playMessageLabel": "Прайграць паведамленне",
+    "stopMessageLabel": "Спыніць паведамленне",
+    "engineRetryCta": "Паспрабаваць зноў",
+    "engineRemoveCancel": "Скасаваць",
+    "engineRemoveConfirm": "Выдаліць",
+    "engineInstallCta": "Усталяваць · {{sizeMb}} МБ",
+    "engineDownloadingLabel": "Ідзе спампоўванне…  {{pct}}%  ·  {{mbDone}} / {{sizeMb}} МБ",
+    "engineTierLightest": "лёгкія",
+    "engineTierBestQuality": "найлепшая якасць",
+    "engineTierFastestStart": "хуткі запуск",
+    "voicesTitle": "Галасы",
+    "supertonicLanguageSheetTitle": "Мова",
+    "previewButton": "Перадпрагляд",
+    "stopPreviewButton": "Спыніць перадпрагляд",
+    "supertonicLanguageLabel": "Мова",
+    "supertonicLanguageAuto": "Аўтаматычна",
+    "voiceRowTitle": "Голас"
+  },
+  "chat": {
+    "increaseContextCancel": "Не зараз",
+    "webSearch": {
+      "noResults": "Няма рэзультатаў",
+      "searchResultsTitle": "Рэзультаты пошуку",
+      "resultsCountOne": "1 рэзультат"
+    },
+    "increaseContextReloadingShort": "Ідзе перазагрузка…",
+    "increaseContextSliderA11yLabel": "Памер кантэксту",
+    "increaseContextSliderA11yValue": "Токенаў: {{tokens}}",
+    "contextBannerDismiss": "Адхіліць",
+    "contextNewChat": "Новы чат",
+    "load": "Загрузіць"
+  },
+  "onboarding": {
+    "screen6": {
+      "modelTier": {
+        "quick": "Хуткая",
+        "balanced": "Збалансаваная",
+        "best": "Найлепшая"
+      },
+      "deviceRamSuffix": "ГБ RAM"
+    },
+    "screen5": {
+      "topic": {
+        "smartchat": "Разумны чат",
+        "coding": "Кадаванне",
+        "education": "Адукацыя",
+        "roleplay": "Ралявыя гульні",
+        "creative_writing": "Творчае пісьмо",
+        "else": "Шукаеце нешта іншае?"
+      },
+      "topicDescription": {
+        "smartchat": "Прыязны штодзённы кампаньён",
+        "coding": "Код, адладка, тлумачэнні",
+        "education": "Вучоба, тлумачэнні, тэсты",
+        "roleplay": "Персанажы, сцэнарыі",
+        "creative_writing": "Гісторыі, ідэі, чарнавікі"
+      }
+    },
+    "screen2": {
+      "cta": "Далей",
+      "eyebrow": "Ідэя"
+    },
+    "back": "Назад",
+    "skip": "Прапусціць",
+    "skipForNow": "Пакуль прапусціць",
+    "splash": {
+      "brand": "PocketPal"
+    },
+    "screen3": {
+      "cta": "Зразумела",
+      "eyebrow": "Перасцярога"
+    },
+    "screen4": {
+      "cta": "Пачнём"
+    }
+  },
+  "errors": {
+    "cameraErrorTitle": "Памылка камеры",
+    "galleryErrorTitle": "Памылка Галерэі"
+  },
+  "htmlPreview": {
+    "closePreview": "Закрыць перадпаказ",
+    "defaultTitle": "Перадпаказ",
+    "copyHtml": "Скапіяваць HTML"
+  },
+  "screenTitles": {
+    "chat": "Чат",
+    "models": "Мадэлі",
+    "benchmark": "Параўнаўчы тэст",
+    "settings": "Налады",
+    "appInfo": "Звесткі пра праграму"
+  },
+  "memory": {
+    "alerts": {
+      "cancel": "Скасаваць",
+      "continue": "Працягнуць"
+    }
+  },
+  "models": {
+    "labels": {
+      "localModel": "Лакальная",
+      "hfModel": "HF",
+      "unknownGroup": "Невядома",
+      "availableToUse": "Гатова да выкарыстання",
+      "availableToDownload": "Даступна для спампоўвання"
+    },
+    "multimodal": {
+      "selected": "Выбрана",
+      "select": "Выбраць",
+      "reload": "Перазагрузіць",
+      "reloadModelTitle": "Перазагрузіць мадэль",
+      "visionControls": {
+        "textOnlyMode": "Толькі тэкст",
+        "textOnlyModeDescription": "Апрацоўваць толькі тэкст"
+      },
+      "download": "Спампаваць"
+    },
+    "vision": "Бачанне",
+    "modelFile": {
+      "labels": {
+        "downloadSpeed": "{{speed}}"
+      },
+      "buttons": {
+        "remove": "Выдаліць"
+      },
+      "alerts": {
+        "cannotRemoveTitle": "Немагчыма выдаліць"
+      }
+    },
+    "search": {
+      "noResults": "Не знойдзена мадэляў",
+      "filters": {
+        "sortBy": "Сартаваць паводле",
+        "clearFilters": "Ачысціць фільтры",
+        "showFilters": "Паказаць фільтры",
+        "hideFilters": "Схаваць фільтры",
+        "sortRelevance": "Рэлевантнасць",
+        "sortDownloads": "Спампоўванні",
+        "sortRecent": "Нядаўна абноўленыя",
+        "sortLikes": "Найбольшая колькасць упадабанняў",
+        "author": "Аўтар"
+      },
+      "modelUpdatedJustNowShort": "толькі што"
+    },
+    "hubRun": {
+      "title": "Спампаваць мадэль",
+      "cancel": "Скасаваць",
+      "retry": "Паўтарыць спробу",
+      "invalidLinkTitle": "Няправільная спасылка"
+    },
+    "modelsResetDialog": {
+      "confirmReset": "Пацвердзіць скід"
+    },
+    "modelCard": {
+      "alerts": {
+        "deleteTitle": "Выдаліць мадэль"
+      },
+      "buttons": {
+        "settings": "Налады",
+        "download": "Спампаваць",
+        "remove": "Выдаліць",
+        "load": "Загрузіць",
+        "offload": "Выгрузіць"
+      },
+      "labels": {
+        "skills": "Навыкі: ",
+        "vision": "Бачанне",
+        "visionSupported": "Падтрымліваецца",
+        "visionNotSupported": "Не падтрымліваецца",
+        "visionUnknown": "Невядома",
+        "capabilities": "здольнасці."
+      }
+    }
+  }
+}
