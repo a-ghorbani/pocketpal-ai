@@ -202,6 +202,11 @@ describe('openRouterEventStream', () => {
     ['shifted path', shiftedControl],
     ['authorized', authorizedControl],
   ])('reports the %s control as open with no error', (_label, capture) => {
+    // Each control is the same server answering 200 where its sibling capture
+    // answered 404 or 401, so those two are about the route and the key rather
+    // than about a stream this build cannot serve.
+    expect(capture.headers['content-type']).toBe('text/event-stream');
+
     const onOpen = jest.fn();
     const onClose = jest.fn();
     const {xhr} = open({onOpen, onClose});

@@ -52,9 +52,9 @@ rather than baked into the fixture.
 | `sse-download-sequence.txt` | `GET /models/sse` across a failed download, a successful one and a cancel — `download_finished` fires for both outcomes, `download_failed` fires on cancel, and `download_progress` nests its URL map under `data.progress` |
 | `sse-unregistered-404.txt` | `GET /models/sse` where the route is unregistered: a clean JSON `not_found_error` envelope, which is what a router built before the stream existed looks like |
 | `post-models-unregistered-404.txt` | the same for `POST /models` |
-| `sse-shifted-control-200.txt` | same-instance control: the same server answers 200 chunked at the registered path, so the 404 above is about the route and not about a mistyped URL |
+| `sse-shifted-control-200.txt` | same-instance control: the same server answers 200 `text/event-stream` at the registered path, so the 404 above is about the route and not about a mistyped URL |
 | `sse-unauthorized-401.txt` | `GET /models/sse` with no key on a key-protected server — an `authentication_error` envelope, a different shape from the 404 |
-| `sse-authorized-control-200.txt` | same-instance control: 200 with the key, so the 401 is about credentials and not about the route |
+| `sse-authorized-control-200.txt` | same-instance control: 200 with the key, so the 401 is about credentials and not about the route. Byte-identical to the shifted control, which is itself informative: both succeed through the same handler |
 
 ## Relationship to `jest/fixtures/remoteModelList.ts`
 
