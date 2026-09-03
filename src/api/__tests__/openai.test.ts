@@ -6,6 +6,7 @@ import {
   testConnection,
   streamChatCompletion,
   buildReasoningPayload,
+  buildSamplerPayload,
   __clearRemoteImageCache,
 } from '../openai';
 import {
@@ -13,6 +14,7 @@ import {
   directVisionModelsBody,
   routerModelsBody,
 } from '../../../jest/fixtures/remoteModelList';
+import {slotsAfterSamplerRequest} from '../../../jest/fixtures/llamaServerWire';
 
 /** Build a minimal Headers-like object for fetch mocks. */
 function mockHeaders(entries: Record<string, string> = {}) {
@@ -2109,5 +2111,192 @@ describe('streamChatCompletion reasoning payload', () => {
     );
     xhr.simulateLoad();
     await resultPromise;
+  });
+});
+
+describe('buildSamplerPayload', () => {
+  // The server's own vocabulary, projected from a live `/slots` body rather
+  // than restated here: a name spelled the same way in the parser and in a
+  // hand-written fixture would agree with itself and with nothing else.
+  const serverSamplerNames = Object.keys(slotsAfterSamplerRequest[0].params);
+
+  const settings = {
+    temperature: 0.33,
+    top_p: 0.77,
+    top_k: 11,
+    min_p: 0.11,
+    typical_p: 0.91,
+    xtc_threshold: 0.31,
+    xtc_probability: 0.21,
+    penalty_last_n: 41,
+    penalty_repeat: 1.11,
+    penalty_freq: 0.41,
+    penalty_present: 0.51,
+    mirostat: 2,
+    mirostat_tau: 4.1,
+    mirostat_eta: 0.21,
+    seed: 12345,
+    n_predict: 128,
+  };
+
+  it('spells every emitted sampler the way the server does', () => {
+    const payload = buildSamplerPayload('llama.cpp', settings);
+
+    expect(Object.keys(payload)).not.toHaveLength(0);
+    for (const name of Object.keys(payload)) {
+      expect(serverSamplerNames).toContain(name);
+    }
+  });
+
+  it('renames the four penalties the server does not know by our names', () => {
+    const ourPenaltyNames = [
+      'penalty_last_n',
+      'penalty_repeat',
+      'penalty_freq',
+      'penalty_present',
+    ];
+    for (const ours of ourPenaltyNames) {
+      expect(serverSamplerNames).not.toContain(ours);
+    }
+
+    const payload = buildSamplerPayload('llama.cpp', settings);
+    for (const ours of ourPenaltyNames) {
+      expect(payload).not.toHaveProperty(ours);
+    }
+    expect(payload.repeat_last_n).toBe(41);
+    expect(payload.repeat_penalty).toBe(1.11);
+    expect(payload.frequency_penalty).toBe(0.41);
+    expect(payload.presence_penalty).toBe(0.51);
+  });
+
+  it('forwards the allow-listed samplers and nothing else', () => {
+    expect(buildSamplerPayload('llama.cpp', settings)).toEqual({
+      top_k: 11,
+      min_p: 0.11,
+      typical_p: 0.91,
+      xtc_threshold: 0.31,
+      xtc_probability: 0.21,
+      repeat_last_n: 41,
+      repeat_penalty: 1.11,
+      frequency_penalty: 0.41,
+      presence_penalty: 0.51,
+      mirostat: 2,
+      mirostat_tau: 4.1,
+      mirostat_eta: 0.21,
+      seed: 12345,
+    });
+  });
+
+  it('omits a value that is not a finite number, and keeps a zero', () => {
+    expect(
+      buildSamplerPayload('llama.cpp', {
+        top_k: undefined,
+        min_p: NaN,
+        typical_p: Infinity,
+        mirostat: 0,
+      }),
+    ).toEqual({mirostat: 0});
+  });
+
+  it('sends nothing for a server type with no allow-list row', () => {
+    for (const serverType of [
+      'vLLM',
+      'Ollama',
+      'OpenAI',
+      'LM Studio',
+      'something-else',
+      '',
+      undefined,
+    ]) {
+      expect(buildSamplerPayload(serverType, settings)).toEqual({});
+    }
+  });
+});
+
+describe('streamChatCompletion sampler payload', () => {
+  let originalXHR: typeof XMLHttpRequest;
+  beforeEach(() => {
+    originalXHR = global.XMLHttpRequest;
+    (global as any).XMLHttpRequest = MockXHR;
+    MockXHR.instances = [];
+  });
+  afterEach(() => {
+    global.XMLHttpRequest = originalXHR;
+  });
+
+  /** Send one turn and return the parsed request body. */
+  const bodyOf = async (
+    params: Record<string, any>,
+    serverType?: string,
+  ): Promise<any> => {
+    const resultPromise = streamChatCompletion(
+      {messages: [{role: 'user', content: 'Hi'}], model: 'm', ...params},
+      'http://localhost:1234',
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      serverType,
+    );
+    const xhr = MockXHR.instances[MockXHR.instances.length - 1];
+    const body = JSON.parse(xhr.requestBody);
+    xhr.simulateHeaders(200);
+    xhr.simulateProgress(
+      'data: {"choices":[{"delta":{},"finish_reason":"stop"}]}\n\ndata: [DONE]\n\n',
+    );
+    xhr.simulateLoad();
+    await resultPromise;
+    return body;
+  };
+
+  it('carries the changed samplers alongside the unconditional fields', async () => {
+    const body = await bodyOf(
+      {
+        temperature: 0.7,
+        top_p: 0.9,
+        max_tokens: 100,
+        stop: ['</s>'],
+        top_k: 10,
+        penalty_repeat: 1.2,
+      },
+      'llama.cpp',
+    );
+
+    expect(body.top_k).toBe(10);
+    expect(body.repeat_penalty).toBe(1.2);
+    expect(body.temperature).toBe(0.7);
+    expect(body.top_p).toBe(0.9);
+    expect(body.max_completion_tokens).toBe(100);
+    expect(body.stop).toEqual(['</s>']);
+    expect(body.stream).toBe(true);
+  });
+
+  it('sends an unknown server type the same body as before', async () => {
+    const body = await bodyOf({
+      temperature: 0.7,
+      top_p: 0.9,
+      max_tokens: 100,
+      stop: ['</s>'],
+      top_k: 10,
+      penalty_repeat: 1.2,
+    });
+
+    expect(body).toEqual({
+      model: 'm',
+      messages: [{role: 'user', content: 'Hi'}],
+      stream: true,
+      temperature: 0.7,
+      top_p: 0.9,
+      max_completion_tokens: 100,
+      stop: ['</s>'],
+    });
+  });
+
+  it('builds the same body for the same settings on every send', async () => {
+    const params = {top_k: 10, penalty_repeat: 1.2, seed: 7};
+    const first = await bodyOf(params, 'llama.cpp');
+    const second = await bodyOf(params, 'llama.cpp');
+
+    expect(second).toEqual(first);
   });
 });

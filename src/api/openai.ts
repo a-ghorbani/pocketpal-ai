@@ -67,6 +67,76 @@ export type OpenAIResponseFormat =
       };
     };
 
+/**
+ * Every numeric completion control, mapped to the name llama.cpp knows it by,
+ * for both reading a server default and sending a value.
+ *
+ * The four `penalty_*` renames are the wire's names, not ours: llama-server
+ * accepts an unknown key with a 200 and ignores it, so under our own spelling
+ * the sampler silently keeps its default.
+ *
+ * `n_predict` is the one entry whose read name is not its send name — it is
+ * reported under `n_predict` and sent as `max_completion_tokens`.
+ */
+export const PARAM_WIRE_NAME = {
+  temperature: 'temperature',
+  top_p: 'top_p',
+  top_k: 'top_k',
+  min_p: 'min_p',
+  typical_p: 'typical_p',
+  xtc_threshold: 'xtc_threshold',
+  xtc_probability: 'xtc_probability',
+  penalty_last_n: 'repeat_last_n',
+  penalty_repeat: 'repeat_penalty',
+  penalty_freq: 'frequency_penalty',
+  penalty_present: 'presence_penalty',
+  mirostat: 'mirostat',
+  mirostat_tau: 'mirostat_tau',
+  mirostat_eta: 'mirostat_eta',
+  seed: 'seed',
+  n_predict: 'n_predict',
+} as const;
+
+export type SamplerParam = keyof typeof PARAM_WIRE_NAME;
+
+/**
+ * Samplers forwarded per server type; a type with no row receives none of
+ * them. `temperature`, `top_p` and `max_completion_tokens` are missing here
+ * because they are OpenAI-standard and sent unconditionally to every server.
+ */
+export const FORWARD_ALLOWLIST: Partial<Record<string, SamplerParam[]>> = {
+  'llama.cpp': [
+    'top_k',
+    'min_p',
+    'typical_p',
+    'xtc_threshold',
+    'xtc_probability',
+    'penalty_last_n',
+    'penalty_repeat',
+    'penalty_freq',
+    'penalty_present',
+    'mirostat',
+    'mirostat_tau',
+    'mirostat_eta',
+    'seed',
+  ],
+  vLLM: [],
+};
+
+export function buildSamplerPayload(
+  serverType: string | undefined,
+  params: Partial<Record<SamplerParam, number>>,
+): Record<string, number> {
+  const payload: Record<string, number> = {};
+  for (const param of FORWARD_ALLOWLIST[serverType ?? ''] ?? []) {
+    const value = params[param];
+    if (typeof value === 'number' && Number.isFinite(value)) {
+      payload[PARAM_WIRE_NAME[param]] = value;
+    }
+  }
+  return payload;
+}
+
 /** Parameters for streaming chat completion */
 export interface StreamChatParams {
   messages: OpenAIChatMessage[];
@@ -74,6 +144,19 @@ export interface StreamChatParams {
   temperature?: number;
   top_p?: number;
   max_tokens?: number;
+  top_k?: number;
+  min_p?: number;
+  typical_p?: number;
+  xtc_threshold?: number;
+  xtc_probability?: number;
+  penalty_last_n?: number;
+  penalty_repeat?: number;
+  penalty_freq?: number;
+  penalty_present?: number;
+  mirostat?: number;
+  mirostat_tau?: number;
+  mirostat_eta?: number;
+  seed?: number;
   stop?: string | string[];
   stream?: boolean;
   tools?: OpenAIToolDefinition[];
@@ -1074,6 +1157,7 @@ export async function streamChatCompletion(
         requestBody.response_format = params.response_format;
       }
     }
+    Object.assign(requestBody, buildSamplerPayload(serverType, params));
     // Per-serverType reasoning controls. Merge chat_template_kwargs rather than
     // overwrite so a future caller-supplied kwarg is preserved.
     const reasoningPayload = buildReasoningPayload(
