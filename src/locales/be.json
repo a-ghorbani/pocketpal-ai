@@ -235,7 +235,7 @@
     "engineRemoveConfirm": "Выдаліць",
     "engineInstallCta": "Усталяваць · {{sizeMb}} МБ",
     "engineDownloadingLabel": "Ідзе спампоўванне…  {{pct}}%  ·  {{mbDone}} / {{sizeMb}} МБ",
-    "engineTierLightest": "лёгкія",
+    "engineTierLightest": "найлягчэйшы",
     "engineTierBestQuality": "найлепшая якасць",
     "engineTierFastestStart": "хуткі запуск",
     "voicesTitle": "Галасы",
@@ -272,7 +272,7 @@
     "screen5": {
       "topic": {
         "smartchat": "Разумны чат",
-        "coding": "Кадаванне",
+        "coding": "Праграмаванне",
         "education": "Адукацыя",
         "roleplay": "Ралявыя гульні",
         "creative_writing": "Творчае пісьмо",
