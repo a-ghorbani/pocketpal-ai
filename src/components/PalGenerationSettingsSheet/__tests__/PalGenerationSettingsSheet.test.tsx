@@ -119,6 +119,51 @@ describe('PalGenerationSettingsSheet', () => {
       });
     });
 
+    it('picks up a server default that lands while the sheet is open', async () => {
+      runInAction(() => {
+        modelStore.models = [
+          {
+            id: 'srv/m',
+            origin: ModelOrigin.REMOTE,
+            serverId: 'srv',
+          } as any,
+        ];
+        modelStore.activeModelId = 'srv/m';
+        serverStore.remoteProps = {};
+      });
+
+      const {getByTestId, queryByTestId} = render(
+        <L10nContext.Provider value={l10n.en}>
+          <PalGenerationSettingsSheet
+            {...defaultProps}
+            completionSettings={{...mockCompletionParams, top_k: 40}}
+          />
+        </L10nContext.Provider>,
+      );
+
+      // Settle the prop-driven settings load, so the only thing that can
+      // re-render the sheet afterwards is the store read itself.
+      await act(async () => {});
+      expect(queryByTestId('top_k-server-default')).toBeNull();
+
+      // A probe is detached, so the sheet has to observe rather than snapshot.
+      await act(async () => {
+        runInAction(() => {
+          serverStore.remoteProps = {
+            'srv/m': {samplerDefaults: {top_k: 40}},
+          };
+        });
+      });
+
+      expect(getByTestId('top_k-server-default')).toBeTruthy();
+
+      runInAction(() => {
+        modelStore.models = [];
+        modelStore.activeModelId = undefined;
+        serverStore.remoteProps = {};
+      });
+    });
+
     it('does not render when not visible', () => {
       const {queryByTestId} = render(
         <L10nContext.Provider value={l10n.en}>
