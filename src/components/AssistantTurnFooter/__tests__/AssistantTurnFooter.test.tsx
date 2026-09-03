@@ -75,14 +75,24 @@ describe('AssistantTurnFooter', () => {
     );
   });
 
-  it('shows no cached part when nothing was reused from the prompt cache', () => {
-    const message = baseTurn({
-      metadata: {
-        timings: {predicted_per_token_ms: 10, cache_n: 0},
-      },
+  it('separates a cold prompt cache from a build that never reports one', () => {
+    const cold = baseTurn({
+      metadata: {timings: {predicted_per_token_ms: 10, cache_n: 0}},
     });
-    const {getByTestId} = render(<AssistantTurnFooter message={message} />);
-    expect(getByTestId('footer-timing').props.children).toBe('10ms/token');
+    expect(
+      render(<AssistantTurnFooter message={cold} />).getByTestId(
+        'footer-timing',
+      ).props.children,
+    ).toBe('10ms/token, 0 cached');
+
+    const silent = baseTurn({
+      metadata: {timings: {predicted_per_token_ms: 10}},
+    });
+    expect(
+      render(<AssistantTurnFooter message={silent} />).getByTestId(
+        'footer-timing',
+      ).props.children,
+    ).toBe('10ms/token');
   });
 
   it('renders copy button when copyable, even if timings absent (abort path)', () => {

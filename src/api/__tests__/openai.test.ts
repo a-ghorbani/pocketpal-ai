@@ -729,6 +729,30 @@ describe('fetchServerProps', () => {
     });
   });
 
+  it('keeps a server default that is zero', async () => {
+    global.fetch = jest.fn().mockResolvedValueOnce({
+      ok: true,
+      json: () => Promise.resolve(propsModelDescribing),
+    });
+
+    const {props} = await fetchServerProps('http://localhost:8080');
+
+    // Five of the captured defaults are legitimately 0. A parser that treated
+    // absent and zero alike would drop exactly these, leaving the indicator
+    // silently dead on five controls and working on the rest.
+    const wire = propsModelDescribing.default_generation_settings.params;
+    expect([
+      wire.xtc_probability,
+      wire.mirostat,
+      wire.frequency_penalty,
+      wire.presence_penalty,
+    ]).toEqual([0, 0, 0, 0]);
+    expect(props.samplerDefaults?.xtc_probability).toBe(0);
+    expect(props.samplerDefaults?.mirostat).toBe(0);
+    expect(props.samplerDefaults?.penalty_freq).toBe(0);
+    expect(props.samplerDefaults?.penalty_present).toBe(0);
+  });
+
   it('does not offer the live seed as a default to return to', async () => {
     global.fetch = jest.fn().mockResolvedValueOnce({
       ok: true,
