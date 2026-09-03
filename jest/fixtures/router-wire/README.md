@@ -12,12 +12,28 @@ transcribed from that document encodes its errors and passes.
 
 ## What was captured, and what was left out
 
-Nothing is trimmed. Files are byte-for-byte as they arrived, headers included
-where the capture was taken with `curl -i`, because key ordering, content types
-and fields that appear on only some builds are all evidence and none of them is
-knowably unimportant in advance. Host-identifying values inside
-`status.args` were **not** rewritten in these files: the sandbox ran on
-loopback with no host-identifying paths beyond a checkout directory.
+Every retained line is byte-for-byte as it arrived, headers included where the
+capture was taken with `curl -i`, because key ordering, content types and fields
+that appear on only some builds are all evidence and none of them is knowably
+unimportant in advance. Host-identifying values inside `status.args` were **not**
+rewritten: the sandbox ran on loopback with no host-identifying paths beyond a
+checkout directory.
+
+Eleven of the twelve files are complete. `sse-download-sequence.txt` selects
+**rows** from a 112-event stream: all nine non-`download_progress` events, each
+of which is a distinct outcome, plus three of the 103 `download_progress` ticks
+— the first (`done: 0`), one mid-sequence, and the last (`done == total`).
+Selecting rows is not the same operation as tidying a row, and only the second
+is forbidden: the omitted ticks are structurally identical to the retained
+mid-sequence one and differ only in the `done` integer, so removing them alters
+no key, no nesting level and no event ordering. The first and last are kept
+because `0` is a real value and completion is a distinct state.
+
+**What this capture does not establish.** The wire allows `download_progress` to
+carry several URLs in parallel for a multi-file download. Every tick captured
+here has exactly one URL: the parallel case was never exercised, so multi-entry
+behaviour of the per-URL map is unverified by capture, and any test over it is a
+constructed case rather than a measured one.
 
 Tests project the fields they need in their own bodies, through
 `jest/fixtures/routerWire.ts`, so the projection is visible at the assertion
