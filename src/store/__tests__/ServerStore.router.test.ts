@@ -18,6 +18,7 @@ jest.mock('../../api/router', () => ({
   ...jest.requireActual('../../api/router'),
   openRouterEventStream: jest.fn(() => ({close: jest.fn()})),
   routerLoad: jest.fn(),
+  routerUnload: jest.fn(),
 }));
 
 const mockAddEventListener = jest.fn().mockReturnValue({remove: jest.fn()});
@@ -38,6 +39,7 @@ import type {RemoteModelInfo} from '../../api/openai';
 import {
   openRouterEventStream,
   routerLoad,
+  routerUnload,
   RouterStreamError,
 } from '../../api/router';
 
@@ -48,18 +50,27 @@ const persistedProperties: string[] = (
 const mockedFetch = openaiModule.fetchModelsWithHeaders as jest.Mock;
 const mockedOpenStream = openRouterEventStream as jest.Mock;
 const mockedRouterLoad = routerLoad as jest.Mock;
+const mockedRouterUnload = routerUnload as jest.Mock;
 
 /** One of the captured router rows; the tests move it between states. */
 const TARGET = 'gemma-4-e2b';
 const ROUTER_ACK_MS = 20000;
 const ROUTER_EVIDENCE_MS = 45000;
 const ROUTER_UNREACHABLE_MS = 90000;
+const ROUTER_UNLOAD_SETTLE_MS = 30000;
+const ROUTER_POLL_MS = 4000;
 
 const listResult = (models: any[], hasModelsKey: boolean) => ({
   models: models as RemoteModelInfo[],
   headers: {},
   hasModelsKey,
 });
+
+/** A reconcile that starts strictly after whatever came before it. */
+const reconcile = async (serverId: string) => {
+  jest.advanceTimersByTime(1);
+  await serverStore.fetchModelsForServer(serverId);
+};
 
 /** Let a detached reconcile reach its mocked fetch. */
 const flush = async () => {
@@ -360,6 +371,7 @@ describe('the router event stream', () => {
         serverId: id,
         key: `${id}/gemma-4-e2b`,
         startedAt: Date.now(),
+        requestSeq: 0,
         lastEvidenceAt: Date.now(),
       };
     });
@@ -434,6 +446,7 @@ describe('the poll tier', () => {
         serverId,
         key: `${serverId}/alpha`,
         startedAt: Date.now(),
+        requestSeq: 0,
         lastEvidenceAt: Date.now(),
       };
       serverStore.syncRouterTiers();
@@ -529,6 +542,7 @@ describe('loading a model', () => {
     const serverId = addServer();
     mockedFetch.mockResolvedValue(listResult(rowsWith(TARGET, value), false));
     await serverStore.fetchModelsForServer(serverId);
+    jest.advanceTimersByTime(1);
     return serverId;
   };
 
@@ -562,7 +576,7 @@ describe('loading a model', () => {
     const second = serverStore.ensureRouterModelLoaded(id, TARGET);
     await flush();
     answerWith('loaded');
-    await serverStore.fetchModelsForServer(id);
+    await reconcile(id);
 
     await expect(first).resolves.toBe('ready');
     await expect(second).resolves.toBe('ready');
@@ -579,7 +593,7 @@ describe('loading a model', () => {
     expect(serverStore.routerRowState(id, TARGET)).toBe('unloaded');
 
     answerWith('loaded');
-    await serverStore.fetchModelsForServer(id);
+    await reconcile(id);
     await expect(pending).resolves.toBe('ready');
   });
 
@@ -598,7 +612,7 @@ describe('loading a model', () => {
     expect(serverStore.routerRowState(id, TARGET)).toBe('loading');
 
     answerWith('loaded');
-    await serverStore.fetchModelsForServer(id);
+    await reconcile(id);
 
     await expect(pending).resolves.toBe('ready');
     expect(serverStore.routerOp(id, TARGET)).toBeUndefined();
@@ -611,7 +625,10 @@ describe('loading a model', () => {
     await expect(serverStore.ensureRouterModelLoaded(id, TARGET)).resolves.toBe(
       'failed',
     );
-    expect(serverStore.routerReason(id, TARGET)).toBe('Connection timed out');
+    expect(serverStore.routerReason(id, TARGET)).toEqual({
+      cause: 'load-failed',
+      message: 'Connection timed out',
+    });
   });
 
   it('settles failed off the row that says so, after the request was accepted', async () => {
@@ -651,7 +668,7 @@ describe('loading a model', () => {
     expect(serverStore.routerOp(id, TARGET)).toBeDefined();
 
     answerWith('loaded');
-    await serverStore.fetchModelsForServer(id);
+    await reconcile(id);
     await expect(pending).resolves.toBe('ready');
   });
 
@@ -679,14 +696,17 @@ describe('loading a model', () => {
     await expect(serverStore.ensureRouterModelLoaded(id, TARGET)).resolves.toBe(
       'failed',
     );
-    expect(serverStore.routerReason(id, TARGET)).toBe('failed to allocate');
+    expect(serverStore.routerReason(id, TARGET)).toEqual({
+      cause: 'load-failed',
+      message: 'failed to allocate',
+    });
   });
 
   it('settles failed when the server could not be reached at all', async () => {
     const id = await routerServer();
+    mockedFetch.mockRejectedValue(new Error('Network request failed'));
     const pending = serverStore.ensureRouterModelLoaded(id, TARGET);
     await flush();
-    mockedFetch.mockRejectedValue(new Error('Network request failed'));
 
     jest.advanceTimersByTime(ROUTER_UNREACHABLE_MS + ROUTER_ACK_MS);
     await flush();
@@ -705,5 +725,129 @@ describe('loading a model', () => {
     await pending;
 
     expect(serverStore.routerPolls.has(id)).toBe(false);
+  });
+});
+
+describe('unloading a model', () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+    jest.useFakeTimers();
+    resetStore();
+    mockedRouterUnload.mockResolvedValue({status: 200, body: {success: true}});
+  });
+
+  afterEach(() => {
+    jest.useRealTimers();
+  });
+
+  const rowsWith = (id: string, value: string) =>
+    routerModelsBody.data.map(row =>
+      row.id === id ? {...row, status: {...row.status, value}} : row,
+    );
+
+  const answerWith = (value: string) =>
+    mockedFetch.mockResolvedValue(listResult(rowsWith(TARGET, value), false));
+
+  const routerServer = async (value = 'loaded') => {
+    const serverId = addServer();
+    answerWith(value);
+    await serverStore.fetchModelsForServer(serverId);
+    jest.advanceTimersByTime(1);
+    return serverId;
+  };
+
+  // The row lags after every unload, the correct ones included.
+  it('settles nothing while the row still reads loaded', async () => {
+    const id = await routerServer('loaded');
+
+    const pending = serverStore.unloadRouterModel(id, TARGET);
+    await flush();
+    await reconcile(id);
+
+    expect(serverStore.routerOp(id, TARGET)).toBeDefined();
+    expect(serverStore.routerRowState(id, TARGET)).toBe('loaded');
+
+    answerWith('unloaded');
+    await reconcile(id);
+    await expect(pending).resolves.toBe('ready');
+  });
+
+  it.each([
+    ['already unloaded', 'unload-not-running-400.json'],
+    ['unknown to the server', 'unload-not-found-400.json'],
+  ])('settles success and says nothing for a model %s', async (_l, capture) => {
+    const id = await routerServer('loaded');
+    mockedRouterUnload.mockResolvedValueOnce({
+      status: 400,
+      body: routerWireJson(capture as any),
+    });
+    answerWith('unloaded');
+
+    await expect(serverStore.unloadRouterModel(id, TARGET)).resolves.toBe(
+      'ready',
+    );
+    expect(serverStore.routerReason(id, TARGET)).toBeUndefined();
+  });
+
+  it('settles failed once the bound passes with the model still held', async () => {
+    const id = await routerServer('loaded');
+    const pending = serverStore.unloadRouterModel(id, TARGET);
+    await flush();
+
+    jest.advanceTimersByTime(ROUTER_UNLOAD_SETTLE_MS + 2000);
+    await flush();
+
+    await expect(pending).resolves.toBe('failed');
+    expect(serverStore.routerReason(id, TARGET)).toEqual({
+      cause: 'unload-not-released',
+    });
+    // Never offered as free while the server still holds it.
+    expect(serverStore.routerRowState(id, TARGET)).toBe('loaded');
+    expect(serverStore.routerPolls.has(id)).toBe(false);
+  });
+
+  // A row nobody managed to re-read is not an unconverged row.
+  it('does not settle failed at the bound when the reconcile failed', async () => {
+    const id = await routerServer('loaded');
+    mockedFetch.mockRejectedValue(new Error('Network request failed'));
+    const pending = serverStore.unloadRouterModel(id, TARGET);
+    await flush();
+
+    jest.advanceTimersByTime(ROUTER_UNLOAD_SETTLE_MS + 2000);
+    await flush();
+
+    expect(serverStore.routerOp(id, TARGET)).toBeDefined();
+
+    mockedFetch.mockClear();
+    answerWith('unloaded');
+    jest.advanceTimersByTime(ROUTER_POLL_MS + 1000);
+    await flush();
+    await expect(pending).resolves.toBe('ready');
+  });
+
+  it('settles every unload, so nothing polls forever', async () => {
+    const id = await routerServer('loaded');
+    mockedFetch.mockRejectedValue(new Error('Network request failed'));
+    const pending = serverStore.unloadRouterModel(id, TARGET);
+    await flush();
+
+    jest.advanceTimersByTime(ROUTER_UNREACHABLE_MS + ROUTER_UNLOAD_SETTLE_MS);
+    await flush();
+
+    await expect(pending).resolves.toBe('failed');
+    expect(serverStore.routerPolls.has(id)).toBe(false);
+  });
+
+  it('reads an unload the opposite way round from a load', async () => {
+    const id = await routerServer('loaded');
+    const pending = serverStore.unloadRouterModel(id, TARGET);
+    await flush();
+
+    await reconcile(id);
+
+    expect(serverStore.routerOp(id, TARGET)?.kind).toBe('unload');
+    jest.advanceTimersByTime(ROUTER_UNLOAD_SETTLE_MS + 2000);
+    await flush();
+    await expect(pending).resolves.toBe('failed');
   });
 });

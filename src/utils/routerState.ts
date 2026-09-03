@@ -47,6 +47,16 @@ export interface RouterLive {
 
 export type RouterOpKind = 'load' | 'unload' | 'download';
 
+/**
+ * Why an operation ended badly. The cause carries the copy; `message` carries
+ * the server's own words where it gave any, which are not a stable contract
+ * and are only ever passed through.
+ */
+export interface RouterFailure {
+  cause: 'load-failed' | 'unload-not-released' | 'download-not-fetched';
+  message?: string;
+}
+
 export interface RouterOp {
   kind: RouterOpKind;
   phase: 'requested' | 'active';
@@ -54,6 +64,8 @@ export interface RouterOp {
   /** Rekeyed once when a lone download adopts the id its first event carries. */
   key: string;
   startedAt: number;
+  /** Which models fetch was the last to begin before this request. */
+  requestSeq: number;
   lastEvidenceAt: number;
   /** Set once a terminal download event has arrived for this op. */
   attemptEnded?: boolean;

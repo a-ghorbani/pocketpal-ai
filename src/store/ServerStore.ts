@@ -24,8 +24,10 @@ import {
   applyLivePatch,
   loadVerdict,
   mapRowStatus,
+  unloadVerdict,
   reduceRouterEvent,
   rowMatchesKey,
+  RouterFailure,
   RouterLive,
   RouterOp,
   RouterRowState,
@@ -35,6 +37,7 @@ import {
   openRouterEventStream,
   routerErrorMessage,
   routerLoad,
+  routerUnload,
   RouterStreamError,
   RouterStreamHandle,
 } from '../api/router';
@@ -77,6 +80,13 @@ const ROUTER_EVIDENCE_MS = 45000;
 const ROUTER_UNREACHABLE_MS = 90000;
 
 /**
+ * How long an unload may take to converge. It must clear the wire's ten-second
+ * stop timeout, or a child that is slow to stop reads as a server that refused
+ * to release it.
+ */
+const ROUTER_UNLOAD_SETTLE_MS = 30000;
+
+/**
  * The capability fields of a `RemoteModelCaps` entry — everything except the
  * provenance the entry carries. Enumerated once so the usability check and the
  * no-op write check cannot drift apart when a field is added.
@@ -106,7 +116,11 @@ function dropServerEntries<T>(
 interface RouterListShape {
   hasModelsKey: boolean;
   startedAt: number;
-  completedAt: number;
+  /**
+   * Which fetch this was. A counter rather than a clock reading, so "the list
+   * was re-read after that request" is exact however coarse the clock is.
+   */
+  seq: number;
 }
 
 export type RouterOpOutcome = 'ready' | 'failed';
@@ -136,8 +150,8 @@ class ServerStore {
   routerStreamCap: Record<string, RouterStreamCap> = {};
   routerObservedEviction: Set<string> = new Set();
   routerListShape: Record<string, RouterListShape> = {};
-  /** What the server said about a model whose operation failed, until dismissed. */
-  routerReasons: Record<string, string> = {};
+  /** Why a model's last operation ended badly, until the user dismisses it. */
+  routerReasons: Record<string, RouterFailure> = {};
 
   private lastFetchTime = 0;
   private appStateSubscription: any = null;
@@ -147,6 +161,7 @@ class ServerStore {
   private routerTicker: ReturnType<typeof setInterval> | null = null;
   private routerPollInFlight = new Set<string>();
   private routerLastPollAt: Record<string, number> = {};
+  private routerFetchSeq = 0;
   private routerOpWaiters = new Map<
     string,
     (outcome: RouterOpOutcome) => void
@@ -163,6 +178,7 @@ class ServerStore {
       routerTicker: false,
       routerPollInFlight: false,
       routerLastPollAt: false,
+      routerFetchSeq: false,
       routerOpWaiters: false,
       routerLoadPromises: false,
     } as AnnotationsMap<ServerStore, string>);
@@ -462,6 +478,7 @@ class ServerStore {
     });
 
     const startedAt = Date.now();
+    const seq = ++this.routerFetchSeq;
 
     try {
       const apiKey = await this.getApiKey(serverId);
@@ -478,11 +495,7 @@ class ServerStore {
         // in place on a failure: without a stamp, a reconcile that never
         // happened is indistinguishable from one that found the old row, and
         // every bound below turns on that difference.
-        this.routerListShape[serverId] = {
-          hasModelsKey,
-          startedAt,
-          completedAt: Date.now(),
-        };
+        this.routerListShape[serverId] = {hasModelsKey, startedAt, seq};
 
         // Update lastConnected timestamp
         const s = this.servers.find(sv => sv.id === serverId);
@@ -807,7 +820,10 @@ class ServerStore {
     delete this.routerReasons[`${serverId}/${remoteModelId}`];
   }
 
-  routerReason(serverId: string, remoteModelId: string): string | undefined {
+  routerReason(
+    serverId: string,
+    remoteModelId: string,
+  ): RouterFailure | undefined {
     return this.routerReasons[`${serverId}/${remoteModelId}`];
   }
 
@@ -852,6 +868,7 @@ class ServerStore {
       serverId,
       key,
       startedAt: Date.now(),
+      requestSeq: this.routerFetchSeq,
       lastEvidenceAt: Date.now(),
     });
 
@@ -869,7 +886,10 @@ class ServerStore {
       // A 2xx says the request was accepted, not that a load is under way: the
       // child can still fail to launch with nothing further on the wire.
     } catch (error: any) {
-      this.settleRouterOp(key, 'failed', error?.message);
+      this.settleRouterOp(key, 'failed', {
+        cause: 'load-failed',
+        message: error?.message,
+      });
     }
     return settled;
   }
@@ -905,6 +925,60 @@ class ServerStore {
     this.requestRouterReconcile(serverId);
   }
 
+  /**
+   * Unloads a resident model. The request is asynchronous: a 200 means the
+   * server accepted it and the row goes on reading the old state until it
+   * converges, so nothing is settled here and a verdict read off the response
+   * would report a correct unload as a failure.
+   */
+  async unloadRouterModel(
+    serverId: string,
+    remoteModelId: string,
+  ): Promise<RouterOpOutcome> {
+    if (!this.isRouterServer(serverId)) {
+      return 'failed';
+    }
+    const key = `${serverId}/${remoteModelId}`;
+    if (this.routerOps[key]?.kind === 'unload') {
+      return 'failed';
+    }
+    const server = this.servers.find(s => s.id === serverId);
+    if (!server) {
+      return 'failed';
+    }
+    const settled = this.startRouterOp(key, {
+      kind: 'unload',
+      phase: 'requested',
+      serverId,
+      key,
+      startedAt: Date.now(),
+      requestSeq: this.routerFetchSeq,
+      lastEvidenceAt: Date.now(),
+    });
+
+    try {
+      const apiKey = await this.getApiKey(serverId);
+      const {status, body} = await routerUnload(
+        server.url,
+        remoteModelId,
+        apiKey,
+        server.requestTimeoutMs,
+      );
+      if (status < 200 || status >= 300) {
+        runInAction(() => {
+          const op = this.routerOps[key];
+          if (op) {
+            op.reason = routerErrorMessage(body);
+          }
+        });
+      }
+    } catch {
+      // The request may still have been acted on, so the row decides.
+    }
+    this.requestRouterReconcile(serverId);
+    return settled as Promise<RouterOpOutcome>;
+  }
+
   private startRouterOp(key: string, op: RouterOp): Promise<RouterLoadOutcome> {
     const settled = new Promise<RouterLoadOutcome>(resolve =>
       this.routerOpWaiters.set(key, resolve),
@@ -921,15 +995,15 @@ class ServerStore {
   private settleRouterOp(
     key: string,
     outcome: RouterOpOutcome,
-    reason?: string,
+    failure?: RouterFailure,
   ): void {
     if (!this.routerOps[key]) {
       return;
     }
     runInAction(() => {
       this.setRouterOp(key, undefined);
-      if (outcome === 'failed' && reason) {
-        this.routerReasons[key] = reason;
+      if (outcome === 'failed' && failure) {
+        this.routerReasons[key] = failure;
       }
     });
     const waiter = this.routerOpWaiters.get(key);
@@ -951,6 +1025,8 @@ class ServerStore {
       const state = this.resolveRouterRowState(serverId, key);
       if (op.kind === 'load') {
         this.settleLoadOp(key, op, state);
+      } else if (op.kind === 'unload') {
+        this.settleUnloadOp(key, op, state);
       }
     }
   }
@@ -972,7 +1048,28 @@ class ServerStore {
     // A request that has not been acknowledged yet is not a failure: the server
     // may simply not have started.
     if (op.phase === 'active' || op.verdictRequested) {
-      this.settleRouterOp(key, 'failed', op.reason ?? this.rowReason(key));
+      this.settleRouterOp(key, 'failed', {
+        cause: 'load-failed',
+        message: op.reason ?? this.rowReason(key),
+      });
+    }
+  }
+
+  /**
+   * Read the other way round from a load: what the caller asked for is that
+   * the model be gone. A model the server had already dropped answers 400 and
+   * settles success, because the end state is already true.
+   */
+  private settleUnloadOp(
+    key: string,
+    op: RouterOp,
+    state: RouterRowState,
+  ): void {
+    if (!this.hasReconciledSince(op)) {
+      return;
+    }
+    if (unloadVerdict(state) === 'released') {
+      this.settleRouterOp(key, 'ready');
     }
   }
 
@@ -983,8 +1080,14 @@ class ServerStore {
       : undefined;
   }
 
-  private hasReconciledSince(serverId: string, at: number): boolean {
-    return (this.routerListShape[serverId]?.completedAt ?? 0) > at;
+  /**
+   * Whether a models fetch that began after this request has since succeeded.
+   * A fetch already in flight when the request went out can only report the
+   * state from before it, so its completion says nothing about the request.
+   */
+  private hasReconciledSince(op: RouterOp): boolean {
+    const shape = this.routerListShape[op.serverId];
+    return shape !== undefined && shape.seq > op.requestSeq;
   }
 
   // Poll tier
@@ -1060,10 +1163,17 @@ class ServerStore {
     for (const [key, op] of Object.entries({...this.routerOps})) {
       if (
         op.verdictRequested &&
-        !this.hasReconciledSince(op.serverId, op.startedAt) &&
+        !this.hasReconciledSince(op) &&
         now - op.startedAt > ROUTER_UNREACHABLE_MS
       ) {
-        this.settleRouterOp(key, 'failed', op.reason);
+        this.settleRouterOp(key, 'failed', {
+          cause: op.kind === 'unload' ? 'unload-not-released' : 'load-failed',
+          message: op.reason,
+        });
+        continue;
+      }
+      if (op.kind === 'unload') {
+        this.applyUnloadBound(key, op, now);
         continue;
       }
       const interval =
@@ -1077,6 +1187,26 @@ class ServerStore {
       });
       this.requestRouterReconcile(op.serverId);
     }
+  }
+
+  /**
+   * An unload arms no watchdog: there is no acknowledgement to wait for and no
+   * evidence to re-arm from, only convergence. A row nobody managed to re-read
+   * is not an unconverged one, so the bound applies only against a reconcile
+   * that ran after the request.
+   */
+  private applyUnloadBound(key: string, op: RouterOp, now: number): void {
+    if (now - op.startedAt <= ROUTER_UNLOAD_SETTLE_MS) {
+      return;
+    }
+    if (this.hasReconciledSince(op)) {
+      this.settleRouterOp(key, 'failed', {cause: 'unload-not-released'});
+      return;
+    }
+    runInAction(() => {
+      op.verdictRequested = true;
+    });
+    this.requestRouterReconcile(op.serverId);
   }
 
   // Auto-fetch on foreground
