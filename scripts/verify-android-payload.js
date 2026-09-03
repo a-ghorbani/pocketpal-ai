@@ -35,8 +35,26 @@ const ISSUE_URL = 'https://github.com/a-ghorbani/pocketpal-ai/issues/858';
 
 const SHT_DYNSYM = 11;
 const SHN_UNDEF = 0;
+const PT_LOAD = 1;
 const ELF64_SYM_SIZE = 24;
 const ELF64_SHDR_SIZE = 64;
+const ELF32_PHDR_SIZE = 32;
+const ELF64_PHDR_SIZE = 56;
+const ELF32_EHDR_SIZE = 52;
+const ELF64_EHDR_SIZE = 64;
+const EOCD_SIGNATURE = 0x06054b50;
+const CENTRAL_SIGNATURE = 0x02014b50;
+const LOCAL_SIGNATURE = 0x04034b50;
+const EOCD_SIZE = 22;
+const LOCAL_HEADER_SIZE = 30;
+
+// The page size a 16 KB-page device maps at. Two separate properties are held
+// to it — the linker's `p_align` (`-Wl,-z,max-page-size=16384`) and the zip
+// data offset the packager placed the library at — and a library needs both to
+// load; neither on its own is the Android 15 requirement. The manifest declares
+// the number per ABI; this is only the floor it cannot undercut, because a
+// lowered number is the cheapest edit that unblocks a failing build.
+const MIN_LIB_ALIGNMENT = 16384;
 
 function usage() {
   return [
@@ -135,6 +153,18 @@ function assertRuleDemandsSomething(rule, manifestPath) {
   }
 }
 
+/**
+ * A library that carries the Hexagon backend itself, as opposed to the JNI
+ * wrapper beside it — whose name also contains "_hexagon", but which is a thin
+ * shim exporting stable Java_* entry points and none of the backend symbols.
+ * Mirrors the name convention llama.rn's own CMake uses to decide which
+ * variant gets the backend; were upstream to rename it, the ladder-coverage
+ * test fails first.
+ */
+function isAcceleratorLib(lib) {
+  return /_hexagon/.test(lib) && !/^librnllama_jni/.test(lib);
+}
+
 function refuseAbi(abi, manifestPath, why) {
   throw new Error(
     `${manifestPath} declares ${why} for ${abi.abi || '(unnamed ABI)'}.`,
@@ -150,14 +180,23 @@ function assertAbiStructure(abi, manifestPath) {
   ) {
     refuseAbi(abi, manifestPath, 'no required libraries');
   }
-  if (abi.requiredAssets !== undefined && !Array.isArray(abi.requiredAssets)) {
-    refuseAbi(abi, manifestPath, 'a requiredAssets that is not a list');
-  }
   if (
     abi.requiredSymbols !== undefined &&
     !Array.isArray(abi.requiredSymbols)
   ) {
     refuseAbi(abi, manifestPath, 'a requiredSymbols that is not a list');
+  }
+  // The assets moved to a top-level block, and a key nothing reads is worse
+  // than a missing one: an editor working from the old shape declares assets,
+  // is never told they are ignored, and gets a green gate.
+  for (const abandoned of ['requiredAssets', 'requiredAssetElfMachine']) {
+    if (abi[abandoned] !== undefined) {
+      refuseAbi(
+        abi,
+        manifestPath,
+        `a per-ABI ${abandoned}, which nothing reads; the DSP assets are declared once in the top-level "assets" block`,
+      );
+    }
   }
   for (const rule of abi.requiredSymbols || []) {
     assertRuleDemandsSomething(rule, manifestPath);
@@ -166,14 +205,12 @@ function assertAbiStructure(abi, manifestPath) {
 
 /**
  * An ABI that carries an accelerator variant has to demand the things that
- * make it work. Both lists degrade the same silent way: emptying one is the
- * cheapest edit that unblocks a build, the rule simply stops being checked,
- * and nothing else in the manifest covers it.
+ * make it work. The list degrades silently: emptying it is the cheapest edit
+ * that unblocks a build, the rule simply stops being checked, and nothing else
+ * in the manifest covers it.
  *
  * Conditional because an ABI without an accelerator legitimately declares
- * neither. The `_hexagon` test mirrors the name convention llama.rn's own
- * CMake uses to decide which variant gets the backend; were upstream to rename
- * it, the ladder-coverage test fails first.
+ * none.
  */
 function assertAcceleratorFloors(abi, manifestPath) {
   if (!abi.requiredLibs.some(lib => /_hexagon/.test(lib))) {
@@ -182,15 +219,9 @@ function assertAcceleratorFloors(abi, manifestPath) {
   // Not merely "a rule", but a rule that looks at the accelerator library
   // itself. Two near-misses both pass every other floor and both accept an
   // artifact with no backend: a rule pointing at librnllama.so, and a rule
-  // pointing at the accelerator's own JNI wrapper — whose name also contains
-  // "_hexagon", but which is a thin shim exporting stable Java_* entry points
-  // and none of the backend symbols.
+  // pointing at the accelerator's own JNI wrapper.
   if (
-    !(abi.requiredSymbols || []).some(
-      rule =>
-        /_hexagon/.test(rule.lib || '') &&
-        !/^librnllama_jni/.test(rule.lib || ''),
-    )
+    !(abi.requiredSymbols || []).some(rule => isAcceleratorLib(rule.lib || ''))
   ) {
     refuseAbi(
       abi,
@@ -198,21 +229,79 @@ function assertAcceleratorFloors(abi, manifestPath) {
       'an accelerator library but no symbol rule examining it',
     );
   }
-  // The DSP libraries are extracted as a set at runtime and the backend is
-  // disabled outright if any one is missing, so a compiled-in backend with no
-  // assets is dead on the device.
-  if ((abi.requiredAssets || []).length === 0) {
+}
+
+function isPowerOfTwo(value) {
+  if (!Number.isInteger(value) || value < 1) {
+    return false;
+  }
+  let remaining = value;
+  while (remaining % 2 === 0) {
+    remaining /= 2;
+  }
+  return remaining === 1;
+}
+
+function assertAlignmentFloor(abi, manifestPath) {
+  const declared = abi.requiredLibAlignment;
+  if (!isPowerOfTwo(declared)) {
     refuseAbi(
       abi,
       manifestPath,
-      'an accelerator library but no required assets',
+      'no requiredLibAlignment that is an integer power of two',
     );
   }
-  if (!Number.isInteger(abi.requiredAssetElfMachine)) {
+  if (declared < MIN_LIB_ALIGNMENT) {
     refuseAbi(
       abi,
       manifestPath,
-      'required assets but no requiredAssetElfMachine to check them against',
+      `a requiredLibAlignment of ${declared}, under the ${MIN_LIB_ALIGNMENT}-byte floor`,
+    );
+  }
+}
+
+/**
+ * The DSP libraries are extracted as a set at runtime and the backend is
+ * disabled outright if any one is missing, so a compiled-in accelerator with
+ * no assets is dead on the device.
+ *
+ * Unconditional because `loadManifest` refuses a manifest with no accelerator
+ * ABI before reaching here; these floors would otherwise need that condition.
+ */
+function assertAssetFloors(manifest, manifestPath) {
+  const refuse = why => {
+    throw new Error(`${manifestPath} declares ${why}.`);
+  };
+  const assets = manifest.assets;
+  if (!assets || typeof assets !== 'object' || Array.isArray(assets)) {
+    refuse('no assets block, so no DSP payload would be checked');
+  }
+  // One legal value, so this cannot fail on a correct manifest. It exists so a
+  // maintainer reaching for "abi" is told why no packaging mechanism delivers
+  // it, rather than shipping a scope nothing implements.
+  if (assets.scope !== 'artifact') {
+    refuse(
+      `an asset scope of ${JSON.stringify(assets.scope)}; only "artifact" is deliverable, because Android packages assets/ once per artifact and not per ABI`,
+    );
+  }
+  if (!Array.isArray(assets.required) || assets.required.length === 0) {
+    refuse('an accelerator library but no required assets');
+  }
+  if (!Number.isInteger(assets.elfMachine)) {
+    refuse('required assets but no elfMachine to check them against');
+  }
+  if (!Array.isArray(assets.usableByAbis)) {
+    refuse(
+      'required assets but no usableByAbis to say which ABIs can load them',
+    );
+  }
+  // An ABI nobody declared is never enumerated against the artifact, so naming
+  // one here would be a claim the check silently never reaches.
+  const declaredAbis = new Set(manifest.abis.map(abi => abi.abi));
+  const unknown = assets.usableByAbis.filter(abi => !declaredAbis.has(abi));
+  if (unknown.length > 0) {
+    refuse(
+      `the assets usable by ${unknown.join(', ')}, which it does not declare as an ABI, so nothing would check that claim`,
     );
   }
 }
@@ -251,19 +340,28 @@ function loadManifest(manifestPath) {
   // accelerator library, so a manifest declaring none would satisfy all of
   // them vacuously — and the ABI enumeration only compares against what the
   // manifest names, so a tree carrying no ladder at all would pass.
-  if (
-    !manifest.abis.some(abi =>
-      abi.requiredLibs.some(
-        lib => /_hexagon/.test(lib) && !/^librnllama_jni/.test(lib),
-      ),
-    )
-  ) {
+  if (!manifest.abis.some(abi => abi.requiredLibs.some(isAcceleratorLib))) {
     throw new Error(
       `${manifestPath} declares no accelerator library for any ABI, so no backend would be checked.`,
     );
   }
+  // Only `true` is accepted. The app maps its libraries in place; flipping
+  // this to say otherwise would silently retire both the offset rule and the
+  // stored requirement, which is the cheapest edit that unblocks a repacked
+  // artifact.
+  if (manifest.nativeLibsMappedInPlace !== true) {
+    throw new Error(
+      `${manifestPath} must declare nativeLibsMappedInPlace: true; the app ships extractNativeLibs=false, so every native library is mapped out of the APK rather than extracted.`,
+    );
+  }
+  assertAssetFloors(manifest, manifestPath);
   for (const abi of manifest.abis) {
     assertAcceleratorFloors(abi, manifestPath);
+  }
+  // Last, so that a manifest weakened in some other way is still refused with
+  // the message that names what it weakened.
+  for (const abi of manifest.abis) {
+    assertAlignmentFloor(abi, manifestPath);
   }
   return manifest;
 }
@@ -344,6 +442,158 @@ function readElfMachine(buf) {
 }
 
 /**
+ * Where each entry's bytes actually start, and whether they are stored or
+ * deflated. Read from the archive's own headers rather than from `unzip`,
+ * which prints the *central* directory's extra-field length: the alignment
+ * padding lives in the **local** header, and the two differ. In a release APK
+ * the central value is 0 for every library while the local one is whatever it
+ * took to reach the next page boundary, so the difference is the whole field.
+ */
+function readZipIndex(archive) {
+  const fd = fs.openSync(archive, 'r');
+  // A short read is not an error to `fs.readSync`; it simply returns fewer
+  // bytes and leaves the rest of the buffer as it found it. Discarding the
+  // count means an offset past the end of the file is read as whatever the
+  // buffer held last, which for a reused buffer is the previous entry.
+  const readExactly = (buffer, length, position) => {
+    const got = fs.readSync(fd, buffer, 0, length, position);
+    if (got !== length) {
+      throw new Error(
+        `wanted ${length} bytes at ${position} but the archive gave ${got}`,
+      );
+    }
+  };
+  try {
+    const size = fs.fstatSync(fd).size;
+    const tailLength = Math.min(size, 0xffff + 22);
+    const tail = Buffer.alloc(tailLength);
+    readExactly(tail, tailLength, size - tailLength);
+
+    let eocd = -1;
+    for (let at = tail.length - EOCD_SIZE; at >= 0; at--) {
+      if (tail.readUInt32LE(at) === EOCD_SIGNATURE) {
+        eocd = at;
+        break;
+      }
+    }
+    if (eocd === -1) {
+      throw new Error('no end-of-central-directory record');
+    }
+    const count = tail.readUInt16LE(eocd + 10);
+    const directorySize = tail.readUInt32LE(eocd + 12);
+    const directoryAt = tail.readUInt32LE(eocd + 16);
+    // Guessing past a ZIP64 marker would silently read the wrong offsets, so
+    // it fails instead; no artifact this gate judges is near those limits.
+    if (
+      count === 0xffff ||
+      directorySize === 0xffffffff ||
+      directoryAt === 0xffffffff
+    ) {
+      throw new Error(
+        'the archive uses ZIP64, which this reader does not parse',
+      );
+    }
+
+    const directory = Buffer.alloc(directorySize);
+    readExactly(directory, directorySize, directoryAt);
+
+    const index = new Map();
+    let at = 0;
+    for (let i = 0; i < count; i++) {
+      if (directory.readUInt32LE(at) !== CENTRAL_SIGNATURE) {
+        throw new Error('a central directory entry is malformed');
+      }
+      const method = directory.readUInt16LE(at + 10);
+      const nameLength = directory.readUInt16LE(at + 28);
+      const extraLength = directory.readUInt16LE(at + 30);
+      const commentLength = directory.readUInt16LE(at + 32);
+      const localAt = directory.readUInt32LE(at + 42);
+      const name = directory.toString('utf-8', at + 46, at + 46 + nameLength);
+
+      const local = Buffer.alloc(LOCAL_HEADER_SIZE);
+      readExactly(local, LOCAL_HEADER_SIZE, localAt);
+      if (local.readUInt32LE(0) !== LOCAL_SIGNATURE) {
+        throw new Error(`the local header of ${name} is malformed`);
+      }
+      index.set(name, {
+        stored: method === 0,
+        dataOffset:
+          localAt +
+          LOCAL_HEADER_SIZE +
+          local.readUInt16LE(26) +
+          local.readUInt16LE(28),
+      });
+      at += 46 + nameLength + extraLength + commentLength;
+    }
+    // A repeated name overwrites its earlier entry, so the map can hold fewer
+    // libraries than the archive declares and every count taken from it reads
+    // as complete.
+    if (index.size !== count) {
+      throw new Error(
+        `the central directory declares ${count} entries but names ${index.size} distinct paths`,
+      );
+    }
+    return index;
+  } finally {
+    fs.closeSync(fd);
+  }
+}
+
+/**
+ * Every program header, in file order. Both ELF classes and both byte orders,
+ * like `readElfMachine` and unlike `readDynsym`: the subjects include the
+ * ELF32 DSP objects, and a reader that assumed ELF64-LE would throw on them
+ * rather than judge them.
+ */
+function readProgramHeaders(buf) {
+  if (buf.length < ELF32_EHDR_SIZE) {
+    throw new Error('file is too short to be an ELF object');
+  }
+  if (buf.readUInt32BE(0) !== 0x7f454c46) {
+    throw new Error('file is not an ELF object');
+  }
+  if (buf[4] !== 1 && buf[4] !== 2) {
+    throw new Error(`ELF class ${buf[4]} is neither 32-bit nor 64-bit`);
+  }
+  if (buf[5] !== 1 && buf[5] !== 2) {
+    throw new Error(`ELF data encoding ${buf[5]} is neither LSB nor MSB`);
+  }
+  const elf64 = buf[4] === 2;
+  const littleEndian = buf[5] === 1;
+  if (elf64 && buf.length < ELF64_EHDR_SIZE) {
+    throw new Error('file is too short to be an ELF object');
+  }
+
+  const u16 = at =>
+    littleEndian ? buf.readUInt16LE(at) : buf.readUInt16BE(at);
+  const u32 = at =>
+    littleEndian ? buf.readUInt32LE(at) : buf.readUInt32BE(at);
+  const u64 = at =>
+    Number(littleEndian ? buf.readBigUInt64LE(at) : buf.readBigUInt64BE(at));
+
+  const phoff = elf64 ? u64(0x20) : u32(0x1c);
+  const phentsize = u16(elf64 ? 0x36 : 42);
+  const phnum = u16(elf64 ? 0x38 : 44);
+  const phdrSize = elf64 ? ELF64_PHDR_SIZE : ELF32_PHDR_SIZE;
+  if (phoff === 0 || phnum === 0) {
+    throw new Error('ELF program headers are absent');
+  }
+  if (phentsize < phdrSize || phoff + phnum * phentsize > buf.length) {
+    throw new Error('ELF program header table is malformed or truncated');
+  }
+
+  const headers = [];
+  for (let i = 0; i < phnum; i++) {
+    const at = phoff + i * phentsize;
+    headers.push({
+      type: u32(at),
+      align: elf64 ? u64(at + 48) : u32(at + 28),
+    });
+  }
+  return headers;
+}
+
+/**
  * Bounded by the string table, not by the file: a `.dynstr` region containing
  * no NUL would otherwise make every lookup scan to EOF, turning a malformed
  * artifact into an O(symbols x filesize) scan rather than a prompt failure.
@@ -365,7 +615,7 @@ function readCString(buf, offset, limit) {
  * calibrated against.
  */
 function readDynsym(buf) {
-  if (buf.length < ELF64_SHDR_SIZE) {
+  if (buf.length < ELF64_EHDR_SIZE) {
     throw new Error('file is too short to be an ELF object');
   }
   if (buf.readUInt32BE(0) !== 0x7f454c46) {
@@ -434,6 +684,17 @@ function readDynsym(buf) {
   return symbols;
 }
 
+/**
+ * The llama.rn version installed **on the machine running this check**, which
+ * is not a fact about the artifact: a report can be produced against an APK
+ * built from any other version. It is printed to make a drifted symbol count
+ * easier to explain, and labelled as the build host's so it cannot be read as
+ * a property of what shipped.
+ *
+ * Constrained to a semver-shaped string. `package.json` is arbitrary JSON from
+ * a dependency tree, and an unvalidated value writes whatever it likes into
+ * the evidence.
+ */
 function installedLlamaRnVersion() {
   try {
     const pkg = JSON.parse(
@@ -442,7 +703,9 @@ function installedLlamaRnVersion() {
         'utf-8',
       ),
     );
-    return pkg.version || 'unknown';
+    return /^\d+\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?$/.test(pkg.version)
+      ? pkg.version
+      : 'unknown';
   } catch {
     return 'unknown';
   }
@@ -495,7 +758,7 @@ function checkSymbolRule({rule, archive, artifactName, entry, report, fail}) {
     symbol.name.toLowerCase().includes(pattern),
   ).length;
   report.push(
-    `      ${matched} .dynsym entries matching "${expected.pattern}" (declared ${expected.count}), llama.rn ${installedLlamaRnVersion()}`,
+    `      ${matched} .dynsym entries matching "${expected.pattern}" (declared ${expected.count}), built here against llama.rn ${installedLlamaRnVersion()}`,
   );
   if (matched !== expected.count && missing.length === 0) {
     fail(
@@ -505,6 +768,252 @@ function checkSymbolRule({rule, archive, artifactName, entry, report, fail}) {
         'The required symbols are all present, so the backend is compiled in — this is a drift',
         'tripwire, not a breakage. If the change is expected (a llama.rn upgrade, say), re-declare',
         `expectedMatchCount as ${matched} in the same pull request so the diff is reviewed.`,
+      ].join('\n      '),
+    );
+  }
+}
+
+/**
+ * The DSP assets, once per artifact: Android packages `assets/` once, not per
+ * ABI, so checking them inside the ABI loop would report the same four entries
+ * as many times as there are declared ABIs.
+ */
+function checkAssets({
+  archive,
+  prefix,
+  entries,
+  assets,
+  artifactName,
+  report,
+  fail,
+}) {
+  const missing = assets.required.filter(
+    asset => !entries.has(`${prefix}${asset}`),
+  );
+  report.push(
+    `  assets: ${assets.required.length - missing.length}/${assets.required.length} present`,
+  );
+
+  // Presence by filename is not enough: a file of the right name that is not a
+  // DSP library leaves the backend as dead on the device as a missing one, and
+  // would report PASS.
+  for (const asset of assets.required.filter(
+    candidate => !missing.includes(candidate),
+  )) {
+    const entry = `${prefix}${asset}`;
+    let machine;
+    try {
+      machine = readElfMachine(readZipEntry(archive, entry));
+    } catch (err) {
+      report.push(`    UNREADABLE  ${entry} — ${err.message}`);
+      fail(
+        [
+          `could not read ${entry} in ${artifactName}: ${err.message}.`,
+          'The payload check could not run, so it reports failure rather than success —',
+          'a check that cannot read the artifact has proven nothing about it.',
+        ].join('\n      '),
+      );
+      continue;
+    }
+    if (machine !== assets.elfMachine) {
+      report.push(
+        `    WRONG MACHINE  ${entry} (e_machine ${machine}, expected ${assets.elfMachine})`,
+      );
+      fail(
+        [
+          `${entry} in ${artifactName} is not a DSP library: its ELF e_machine is ${machine},`,
+          `and the manifest requires ${assets.elfMachine}.`,
+          'A file of the right name that the DSP cannot load disables the Hexagon backend just as',
+          'surely as a missing one. Check that llama.rn shipped real bin/arm64-v8a payloads.',
+        ].join('\n      '),
+      );
+    }
+  }
+
+  for (const asset of missing) {
+    report.push(`    MISSING  ${prefix}${asset}`);
+    fail(
+      [
+        `${artifactName} is missing ${prefix}${asset}.`,
+        'All four DSP libraries are required, not only the one a given device uses:',
+        'RNLlama.java extracts them as a set and disables the Hexagon backend entirely',
+        'if any one is absent. They are synced into the artifact from',
+        "node_modules/llama.rn/bin/arm64-v8a by llama.rn's syncRNLlamaHtpAssets task —",
+        'check that the dependency installed completely.',
+      ].join('\n      '),
+    );
+  }
+}
+
+/**
+ * Every shipped library of one ABI, not only the required ones: alignment is a
+ * property of what the platform loads, and the libraries this manifest does
+ * not name are loaded by the same linker on the same device.
+ *
+ * Two properties, not one. `p_align` is what the linker wrote into the object;
+ * the **zip data offset** is where that object sits in the archive. The app
+ * ships `extractNativeLibs=false`, so bionic maps each `.so` in place out of
+ * the APK and both have to be 16 KB-aligned — an artifact with conforming
+ * segments at unaligned offsets cannot `dlopen` on a 16 KB-page device, and
+ * asserting only the first certifies exactly that artifact.
+ *
+ * The DSP assets are deliberately outside the subject set. They are ELF32
+ * Hexagon objects at `p_align` 4096, loaded by the DSP rather than by Android,
+ * so one floor spanning both would fail the gate on a correct artifact.
+ */
+function checkAlignment({
+  archive,
+  prefix,
+  entries,
+  abi,
+  artifactName,
+  zipIndex,
+  report,
+  fail,
+}) {
+  // Named from the archive's own central directory when there is one. `unzip`
+  // transliterates bytes it cannot render, so a subject set built from its
+  // listing and an index built from the directory disagree on exactly the
+  // entries whose naming is chosen freely.
+  const inTree = name =>
+    name.startsWith(`${prefix}lib/${abi.abi}/`) && name.endsWith('.so');
+  const libs = (zipIndex ? [...zipIndex.keys()] : [...entries])
+    .filter(inTree)
+    .sort();
+  const listed = [...entries].filter(inTree).sort();
+  const disagreement = new Set(
+    zipIndex
+      ? [
+          ...listed.filter(name => !libs.includes(name)),
+          ...libs.filter(name => !listed.includes(name)),
+        ]
+      : [],
+  );
+  if (disagreement.size > 0) {
+    report.push(
+      `      UNREADABLE  ${prefix}lib/${abi.abi}/ — ${[...disagreement].sort().join(', ')}`,
+    );
+    fail(
+      [
+        `${artifactName} names ${[...disagreement].sort().join(', ')} under ${prefix}lib/${abi.abi}/ in one reading of the archive and not the other.`,
+        'The two readings of one archive disagree, so neither can be trusted to say what ships.',
+        'The payload check could not run, so it reports failure rather than success —',
+        'a check that cannot read the artifact has proven nothing about it.',
+      ].join('\n      '),
+    );
+  }
+  const declared = abi.requiredLibAlignment;
+  const judged = libs.map(entry => {
+    try {
+      const loads = readProgramHeaders(readZipEntry(archive, entry)).filter(
+        header => header.type === PT_LOAD,
+      );
+      const offending = loads.filter(
+        header => header.align < declared || !isPowerOfTwo(header.align),
+      );
+      return {
+        entry,
+        loads: loads.length,
+        worst:
+          offending.length > 0
+            ? Math.min(...offending.map(header => header.align))
+            : null,
+      };
+    } catch (err) {
+      return {entry, unreadable: err.message};
+    }
+  });
+
+  const conforming = judged.filter(
+    lib => !lib.unreadable && lib.loads > 0 && lib.worst === null,
+  ).length;
+  report.push(
+    `    segment alignment: ${conforming}/${libs.length} libraries at p_align >= ${declared}`,
+  );
+
+  for (const lib of judged) {
+    if (lib.unreadable) {
+      report.push(`      UNREADABLE  ${lib.entry} — ${lib.unreadable}`);
+      fail(
+        [
+          `could not read the program headers of ${lib.entry} in ${artifactName}: ${lib.unreadable}.`,
+          'The payload check could not run, so it reports failure rather than success —',
+          'a check that cannot read the artifact has proven nothing about it.',
+        ].join('\n      '),
+      );
+      continue;
+    }
+    // An object with nothing to load proves nothing about its alignment, so it
+    // is an instrument failure rather than a pass.
+    if (lib.loads === 0) {
+      report.push(`      NO PT_LOAD  ${lib.entry}`);
+      fail(
+        [
+          `${lib.entry} in ${artifactName} has no PT_LOAD segment, so its alignment could not be judged.`,
+          'The payload check could not run, so it reports failure rather than success —',
+          'a check that cannot read the artifact has proven nothing about it.',
+        ].join('\n      '),
+      );
+      continue;
+    }
+    if (lib.worst !== null) {
+      report.push(
+        `      MISALIGNED  ${lib.entry} (PT_LOAD p_align ${lib.worst})`,
+      );
+      fail(
+        [
+          `${lib.entry} in ${artifactName} has a PT_LOAD segment at p_align ${lib.worst};`,
+          `scripts/android-payload-manifest.json requires at least ${declared} for ${abi.abi}.`,
+          'Android 15+ refuses to load a shared library whose segments are not page-aligned on a',
+          '16 KB-page device. The NDK produces this alignment by default, so a library below it',
+          'came from a toolchain or linker flag that overrode it — fix the build, not the manifest.',
+        ].join('\n      '),
+      );
+    }
+  }
+
+  if (!zipIndex) {
+    return;
+  }
+
+  // Every library, not only the stored ones. The app maps its libraries out of
+  // the APK, so a deflated entry is not a library checked under some other
+  // rule — it is one the loader cannot map at all, on any device. Skipping it
+  // here would excuse the more serious fault of the two.
+  const indexed = libs;
+  // `libs` is taken from the index, so every entry is in it by construction —
+  // a name in one reading and not the other is caught above instead.
+  const deflated = indexed.filter(entry => !zipIndex.get(entry).stored);
+  const misplaced = indexed.filter(
+    entry =>
+      zipIndex.get(entry).stored &&
+      zipIndex.get(entry).dataOffset % declared !== 0,
+  );
+  report.push(
+    `    zip data offset: ${indexed.length - deflated.length - misplaced.length}/${libs.length} libraries stored at a multiple of ${declared}`,
+  );
+  for (const entry of deflated) {
+    report.push(`      DEFLATED  ${entry}`);
+    fail(
+      [
+        `${entry} in ${artifactName} is compressed inside the archive.`,
+        'scripts/android-payload-manifest.json declares nativeLibsMappedInPlace, so the platform maps',
+        'this library straight out of the APK and never extracts it — a compressed entry cannot be',
+        'mapped and will fail to load on every device. Either the artifact was repacked after the',
+        'build, or packaging changed to useLegacyPackaging and the manifest has to say so.',
+      ].join('\n      '),
+    );
+  }
+  for (const entry of misplaced) {
+    const offset = zipIndex.get(entry).dataOffset;
+    report.push(`      MISPLACED  ${entry} (data offset ${offset})`);
+    fail(
+      [
+        `${entry} in ${artifactName} begins at byte ${offset}, which is not a multiple of ${declared}.`,
+        'The app sets extractNativeLibs=false, so this library is mapped in place out of the APK and',
+        'a 16 KB-page device cannot load it from an unaligned offset — the segment alignment above',
+        'says nothing about this. Alignment padding is inserted by the Android Gradle Plugin when it',
+        'packages the archive, so a failure here means the artifact was repacked or zipaligned away.',
       ].join('\n      '),
     );
   }
@@ -560,6 +1069,37 @@ function checkArtifact({archive, kind, manifest, report, failures}) {
     );
   }
 
+  // Only an APK is mapped in place. A bundle is repackaged by bundletool on
+  // the way to the device, so its offsets say nothing about what installs.
+  let zipIndex = null;
+  if (kind === 'apk') {
+    try {
+      zipIndex = readZipIndex(archive);
+    } catch (err) {
+      report.push(`  UNREADABLE — ${err.message}`);
+      fail(
+        [
+          `could not read the archive layout of ${artifactName}: ${err.message}.`,
+          'The payload check could not run, so it reports failure rather than success —',
+          'a check that cannot read the artifact has proven nothing about it.',
+        ].join('\n      '),
+      );
+      return;
+    }
+  }
+
+  checkAssets({
+    archive,
+    prefix,
+    entries,
+    assets: manifest.assets,
+    artifactName,
+    report,
+    fail,
+  });
+
+  const acceleratorCapableAbis = [];
+
   for (const abi of manifest.abis) {
     report.push(`  ${abi.abi}`);
 
@@ -585,64 +1125,16 @@ function checkArtifact({archive, kind, manifest, report, failures}) {
       );
     }
 
-    const missingAssets = (abi.requiredAssets || []).filter(
-      asset => !entries.has(`${prefix}${asset}`),
-    );
-    // Printed even when nothing is declared: the summary line claims assets
-    // were checked, so a manifest that declares none has to be visible here.
-    const requiredAssets = abi.requiredAssets || [];
-    report.push(
-      `    assets: ${requiredAssets.length - missingAssets.length}/${requiredAssets.length} present`,
-    );
-    // Presence by filename is not enough: a file of the right name that is not
-    // a DSP library leaves the backend as dead on the device as a missing one,
-    // and would report PASS.
-    for (const asset of (abi.requiredAssets || []).filter(
-      candidate => !missingAssets.includes(candidate),
-    )) {
-      const entry = `${prefix}${asset}`;
-      let machine;
-      try {
-        machine = readElfMachine(readZipEntry(archive, entry));
-      } catch (err) {
-        report.push(`      UNREADABLE  ${entry} — ${err.message}`);
-        fail(
-          [
-            `could not read ${entry} in ${artifactName}: ${err.message}.`,
-            'The payload check could not run, so it reports failure rather than success —',
-            'a check that cannot read the artifact has proven nothing about it.',
-          ].join('\n      '),
-        );
-        continue;
-      }
-      if (machine !== abi.requiredAssetElfMachine) {
-        report.push(
-          `      WRONG MACHINE  ${entry} (e_machine ${machine}, expected ${abi.requiredAssetElfMachine})`,
-        );
-        fail(
-          [
-            `${entry} in ${artifactName} is not a DSP library: its ELF e_machine is ${machine},`,
-            `and the manifest requires ${abi.requiredAssetElfMachine}.`,
-            'A file of the right name that the DSP cannot load disables the Hexagon backend just as',
-            'surely as a missing one. Check that llama.rn shipped real bin/arm64-v8a payloads.',
-          ].join('\n      '),
-        );
-      }
-    }
-
-    for (const asset of missingAssets) {
-      report.push(`      MISSING  ${prefix}${asset}`);
-      fail(
-        [
-          `${artifactName} is missing ${prefix}${asset}.`,
-          'All four DSP libraries are required, not only the one a given device uses:',
-          'RNLlama.java extracts them as a set and disables the Hexagon backend entirely',
-          'if any one is absent. They are synced into the artifact from',
-          "node_modules/llama.rn/bin/arm64-v8a by llama.rn's syncRNLlamaHtpAssets task —",
-          'check that the dependency installed completely.',
-        ].join('\n      '),
-      );
-    }
+    checkAlignment({
+      archive,
+      prefix,
+      entries,
+      abi,
+      artifactName,
+      zipIndex,
+      report,
+      fail,
+    });
 
     const extras = [...entries]
       .filter(entry => entry.startsWith(`${prefix}lib/${abi.abi}/librnllama`))
@@ -653,6 +1145,21 @@ function checkArtifact({archive, kind, manifest, report, failures}) {
       `    extra rnllama libraries: ${extras.length > 0 ? extras.join(', ') : 'none'}`,
     );
 
+    // The whole tree, not the required list: the accelerator variant is itself
+    // required, so deriving this from what is left over would find nothing and
+    // refuse a correct artifact.
+    const canLoadAssets = [...entries].some(
+      entry =>
+        entry.startsWith(`${prefix}lib/${abi.abi}/`) &&
+        isAcceleratorLib(path.basename(entry)),
+    );
+    if (canLoadAssets) {
+      acceleratorCapableAbis.push(abi.abi);
+    }
+    report.push(
+      `    can load the DSP assets: ${canLoadAssets ? 'yes' : 'no'} (declared ${manifest.assets.usableByAbis.includes(abi.abi) ? 'yes' : 'no'})`,
+    );
+
     for (const rule of abi.requiredSymbols || []) {
       const entry = `${prefix}lib/${abi.abi}/${rule.lib}`;
       if (missingLibs.includes(entry)) {
@@ -660,6 +1167,23 @@ function checkArtifact({archive, kind, manifest, report, failures}) {
       }
       checkSymbolRule({rule, archive, artifactName, entry, report, fail});
     }
+  }
+
+  // Derived from the artifact rather than from the manifest that declares it:
+  // equality between two readings of the same document would hold whatever
+  // either said.
+  const declaredUsable = [...manifest.assets.usableByAbis].sort();
+  const observedUsable = [...acceleratorCapableAbis].sort();
+  if (declaredUsable.join(',') !== observedUsable.join(',')) {
+    fail(
+      [
+        `${artifactName} ships accelerator libraries for ${observedUsable.join(', ') || 'no ABI'},`,
+        `but the manifest declares the DSP assets usable by ${declaredUsable.join(', ') || 'no ABI'}.`,
+        'The assets are packaged once per artifact and cannot be scoped to an ABI, so this is a',
+        'declaration of who can load them, not a packaging rule. Either the accelerator ladder',
+        'moved to a different ABI, or usableByAbis in scripts/android-payload-manifest.json is stale.',
+      ].join('\n      '),
+    );
   }
 }
 
@@ -721,4 +1245,9 @@ if (require.main === module) {
   }
 }
 
-module.exports = {readDynsym, variantsFromManifest};
+module.exports = {
+  readDynsym,
+  readProgramHeaders,
+  readZipIndex,
+  variantsFromManifest,
+};
