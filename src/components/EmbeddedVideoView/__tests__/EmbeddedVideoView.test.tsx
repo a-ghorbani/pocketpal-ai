@@ -208,6 +208,31 @@ describe('EmbeddedVideoView', () => {
     expect(flipButton).toBeTruthy();
   });
 
+  it('selects the camera matching the requested position when several are available', () => {
+    const {
+      useCameraPermission,
+      useCameraDevices,
+    } = require('react-native-vision-camera');
+    useCameraPermission.mockReturnValue({
+      hasPermission: true,
+      requestPermission: jest.fn(),
+    });
+    useCameraDevices.mockReturnValue([
+      {id: 'front', position: 'front'},
+      {id: 'back', position: 'back'},
+    ]);
+
+    const {getByTestId} = render(
+      <L10nContext.Provider value={l10n.en}>
+        <EmbeddedVideoView {...defaultProps} />
+      </L10nContext.Provider>,
+    );
+
+    expect(getByTestId('camera').props.device.id).toBe('back');
+    fireEvent.press(getByTestId('flip-camera-button'));
+    expect(getByTestId('camera').props.device.id).toBe('front');
+  });
+
   it('increases capture interval when increase button is pressed', () => {
     // Mock camera permission as granted
     const {useCameraPermission} = require('react-native-vision-camera');
