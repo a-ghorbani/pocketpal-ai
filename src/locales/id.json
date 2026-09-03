@@ -194,7 +194,7 @@
     "languageSearchPlaceholder": "Cari bahasa",
     "speculativeDecoding": "Decoding Spekulatif",
     "speculativeDecodingDescription": "Gunakan model draf kecil (atau model MTP tertanam) untuk memprediksi token dan mempercepat pembuatan. Eksperimental.",
-    "speculativeNotMTPCapable": "Model aktif tidak mendukung spekulatif dan tidak ada draf yang kompatibel dipasangkan, sehingga ini tetap mati tanpa efek. Ini berlaku secara otomatis untuk model yang mendukung.",
+    "speculativeNotMTPCapable": "Model aktif tidak mendukung decoding spekulatif dan tidak ada draf kompatibel yang dipasangkan, sehingga fitur ini tetap mati untuknya tanpa efek. Fitur ini berlaku secara otomatis untuk model yang mendukung.",
     "speculativeDraftModel": "Model Draf",
     "speculativeDraftModelDescription": "Membuat draf token untuk model aktif.",
     "speculativeDraftModelNone": "Tidak ada (MTP tertanam)",
