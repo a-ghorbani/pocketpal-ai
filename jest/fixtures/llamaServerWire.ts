@@ -431,15 +431,6 @@ export const slotsAfterSamplerRequest = [
   },
 ];
 
-/** `POST /models/unload` on a model that is not loaded, HTTP 400. */
-export const errorModelNotRunning = {
-  error: {
-    code: 400,
-    message: 'model is not running',
-    type: 'invalid_request_error',
-  },
-};
-
 /** Bare `GET /slots` against a router, HTTP 400. */
 export const errorSlotsBareRouter = {
   error: {
