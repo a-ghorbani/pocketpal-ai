@@ -179,6 +179,37 @@ describe('CompletionSettings', () => {
       expect(changed.getByTestId('mirostat-server-default-reset')).toBeTruthy();
     });
 
+    it('treats n predict as one number with two presentations', () => {
+      const onChange = jest.fn();
+      const {getByTestId, getByText, queryByTestId, rerender} = render(
+        <CompletionSettings
+          settings={{...mockCompletionParams, n_predict: 500}}
+          onChange={onChange}
+          serverDefaults={{n_predict: -1}}
+        />,
+      );
+
+      expect(getByTestId('n_predict-input')).toBeTruthy();
+      expect(getByText('Server default: -1 · Reset')).toBeTruthy();
+
+      fireEvent.press(getByTestId('n_predict-server-default-reset'));
+      expect(onChange).toHaveBeenCalledWith('n_predict', -1);
+
+      rerender(
+        <CompletionSettings
+          settings={{...mockCompletionParams, n_predict: -1}}
+          onChange={onChange}
+          serverDefaults={{n_predict: -1}}
+        />,
+      );
+
+      // -1 is Unlimited, so the numeric input unmounts rather than being left
+      // showing a stale number.
+      expect(queryByTestId('n_predict-input')).toBeNull();
+      expect(getByTestId('n_predict-server-default')).toBeTruthy();
+      expect(queryByTestId('n_predict-server-default-reset')).toBeNull();
+    });
+
     it('changes nothing while the settings are read-only', () => {
       const onChange = jest.fn();
       const {getByTestId} = render(
