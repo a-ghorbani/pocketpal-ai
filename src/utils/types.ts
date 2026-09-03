@@ -11,6 +11,7 @@ import type {TokenRadius, TokenStroke, TokenTypography} from '../theme/tokens';
 import {SkillKey} from '.';
 import type {TalentResult} from '../services/talents/types';
 import type {ReasoningCapability} from './reasoningCapability';
+import type {SamplerParam} from '../api/openai';
 
 /**
  * One model-emitted tool call within an `AgentStep`. The `arguments` field
@@ -493,11 +494,49 @@ export interface RemoteModelCaps {
   tier?: 'probe';
   contextLength?: number; // /props n_ctx; only ever a finite number > 0
   supportsVision?: boolean; // /props modalities.vision
+  supportsAudio?: boolean; // /props modalities.audio
   // The backend these describe. ServerConfig.url is mutable and a live session
   // does not follow it, so caps that do not carry their own url cannot be
   // matched against the session. Absent on an entry written before this field
   // existed: taken at face value, no migration.
   probedUrl?: string;
+}
+
+/** A server's own generation defaults, keyed by our names rather than the wire's. */
+export type SamplerDefaults = Partial<Record<SamplerParam, number>>;
+
+/**
+ * What a llama.cpp server says about one model beyond its capabilities: facts
+ * that describe rather than gate, and that stay true for the life of a server
+ * process. Same key and same provenance rules as RemoteModelCaps.
+ *
+ * Nothing here may gate an action or an affordance — that is what the
+ * capability tier is for.
+ */
+export interface RemoteModelProps {
+  // Never written or read; the discriminant that keeps a description from
+  // being passed where a probed capability is expected.
+  tier?: 'props';
+  samplerDefaults?: SamplerDefaults;
+  slotCount?: number; // /props total_slots; a finite integer > 0
+  buildInfo?: string; // /props build_info
+  modelAlias?: string; // /props model_alias
+  chatTemplateCaps?: {
+    supportsTools?: boolean;
+    supportsThinking?: boolean;
+  };
+  probedUrl?: string;
+}
+
+/**
+ * A point-in-time observation of one model's sleep state. Not persisted: a
+ * hydrated "asleep" would be a claim about now that nobody checked. An absent
+ * entry is unknown, never awake.
+ */
+export interface RemoteModelPresence {
+  isSleeping: boolean;
+  probedUrl: string;
+  at: number;
 }
 
 /**

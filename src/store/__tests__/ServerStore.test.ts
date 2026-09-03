@@ -27,12 +27,16 @@ jest
 import {serverStore} from '../ServerStore';
 import {routerModelsBody} from '../../../jest/fixtures/remoteModelList';
 import type {RemoteModelInfo} from '../../api/openai';
+import type {RemoteModelCaps} from '../../utils/types';
 
 // Captured at import time: the constructor runs once, and `clearAllMocks`
 // between tests would otherwise erase the only call there ever is.
 const persistedProperties: string[] = (
   jest.requireMock('mobx-persist-store').makePersistable as jest.Mock
 ).mock.calls[0][1].properties;
+
+/** A probe result that resolves the capability tier and nothing else. */
+const capsOnly = (caps: RemoteModelCaps) => ({caps, props: {}});
 
 const mockedFetchModels = openaiModule.fetchModels as jest.Mock;
 const mockedFetchServerProps = openaiModule.fetchServerProps as jest.Mock;
@@ -1007,10 +1011,12 @@ describe('ServerStore', () => {
     it('writes the scoped probe result under the full model id', async () => {
       const id = addLlamaServer({requestTimeoutMs: 20000});
       jest.clearAllMocks();
-      mockedFetchServerProps.mockResolvedValueOnce({
-        contextLength: 8192,
-        supportsVision: true,
-      });
+      mockedFetchServerProps.mockResolvedValueOnce(
+        capsOnly({
+          contextLength: 8192,
+          supportsVision: true,
+        }),
+      );
 
       await serverStore.fetchRemoteModelCaps(id, 'gemma-4-e2b');
 
@@ -1032,7 +1038,9 @@ describe('ServerStore', () => {
     it('honours a server timeout shorter than the probe bound', async () => {
       const id = addLlamaServer({requestTimeoutMs: 1500});
       jest.clearAllMocks();
-      mockedFetchServerProps.mockResolvedValueOnce({contextLength: 8192});
+      mockedFetchServerProps.mockResolvedValueOnce(
+        capsOnly({contextLength: 8192}),
+      );
 
       await serverStore.fetchRemoteModelCaps(id, 'm');
 
@@ -1047,7 +1055,9 @@ describe('ServerStore', () => {
     it('keys by the raw model id even when it contains a slash', async () => {
       const id = addLlamaServer();
       jest.clearAllMocks();
-      mockedFetchServerProps.mockResolvedValueOnce({supportsVision: false});
+      mockedFetchServerProps.mockResolvedValueOnce(
+        capsOnly({supportsVision: false}),
+      );
 
       await serverStore.fetchRemoteModelCaps(id, 'unsloth/gemma-3-4b');
 
@@ -1061,16 +1071,20 @@ describe('ServerStore', () => {
     it('does not let a sibling model inherit another model caps', async () => {
       const id = addLlamaServer();
       jest.clearAllMocks();
-      mockedFetchServerProps.mockResolvedValueOnce({
-        contextLength: 8192,
-        supportsVision: true,
-      });
+      mockedFetchServerProps.mockResolvedValueOnce(
+        capsOnly({
+          contextLength: 8192,
+          supportsVision: true,
+        }),
+      );
       await serverStore.fetchRemoteModelCaps(id, 'gemma-4-e2b');
 
-      mockedFetchServerProps.mockResolvedValueOnce({
-        contextLength: 4096,
-        supportsVision: false,
-      });
+      mockedFetchServerProps.mockResolvedValueOnce(
+        capsOnly({
+          contextLength: 4096,
+          supportsVision: false,
+        }),
+      );
       await serverStore.fetchRemoteModelCaps(id, 'gemma-3-4b');
 
       expect(serverStore.remoteCaps[`${id}/gemma-4-e2b`]).toEqual({
@@ -1095,7 +1109,9 @@ describe('ServerStore', () => {
           probedUrl: 'http://localhost:8080',
         };
       });
-      mockedFetchServerProps.mockResolvedValueOnce({supportsVision: false});
+      mockedFetchServerProps.mockResolvedValueOnce(
+        capsOnly({supportsVision: false}),
+      );
 
       await serverStore.fetchRemoteModelCaps(id, 'm');
 
@@ -1116,7 +1132,9 @@ describe('ServerStore', () => {
           probedUrl: 'http://localhost:9090',
         };
       });
-      mockedFetchServerProps.mockResolvedValueOnce({supportsVision: false});
+      mockedFetchServerProps.mockResolvedValueOnce(
+        capsOnly({supportsVision: false}),
+      );
 
       await serverStore.fetchRemoteModelCaps(id, 'm');
 
@@ -1137,7 +1155,9 @@ describe('ServerStore', () => {
           probedUrl: 'http://localhost:9090',
         };
       });
-      mockedFetchServerProps.mockResolvedValueOnce({contextLength: 8192});
+      mockedFetchServerProps.mockResolvedValueOnce(
+        capsOnly({contextLength: 8192}),
+      );
 
       await serverStore.fetchRemoteModelCaps(id, 'm');
 
@@ -1162,7 +1182,7 @@ describe('ServerStore', () => {
           supportsVision: true,
         };
       });
-      mockedFetchServerProps.mockResolvedValueOnce({});
+      mockedFetchServerProps.mockResolvedValueOnce(capsOnly({}));
 
       await serverStore.fetchRemoteModelCaps(id, 'm');
 
@@ -1181,8 +1201,10 @@ describe('ServerStore', () => {
         ]);
       });
       mockedFetchServerProps
-        .mockResolvedValueOnce({})
-        .mockResolvedValueOnce({contextLength: 4096, supportsVision: true});
+        .mockResolvedValueOnce(capsOnly({}))
+        .mockResolvedValueOnce(
+          capsOnly({contextLength: 4096, supportsVision: true}),
+        );
 
       await serverStore.fetchRemoteModelCaps(id, 'm');
 
@@ -1222,7 +1244,7 @@ describe('ServerStore', () => {
           serverStore.serverModels.set(id, models);
         }
       });
-      mockedFetchServerProps.mockResolvedValueOnce({});
+      mockedFetchServerProps.mockResolvedValueOnce(capsOnly({}));
 
       await serverStore.fetchRemoteModelCaps(id, 'm0');
 
@@ -1236,7 +1258,9 @@ describe('ServerStore', () => {
       const id = addLlamaServer();
       jest.clearAllMocks();
       const getApiKey = jest.spyOn(serverStore, 'getApiKey');
-      mockedFetchServerProps.mockResolvedValueOnce({contextLength: 8192});
+      mockedFetchServerProps.mockResolvedValueOnce(
+        capsOnly({contextLength: 8192}),
+      );
 
       await serverStore.fetchRemoteModelCaps(id, 'm', 'sk-test');
 
@@ -1258,7 +1282,9 @@ describe('ServerStore', () => {
       const getApiKey = jest
         .spyOn(serverStore, 'getApiKey')
         .mockResolvedValue(undefined);
-      mockedFetchServerProps.mockResolvedValueOnce({contextLength: 8192});
+      mockedFetchServerProps.mockResolvedValueOnce(
+        capsOnly({contextLength: 8192}),
+      );
 
       await serverStore.fetchRemoteModelCaps(id, 'm', undefined);
 
@@ -1277,7 +1303,7 @@ describe('ServerStore', () => {
       jest.clearAllMocks();
       mockedFetchServerProps.mockImplementationOnce(async () => {
         serverStore.removeServer(id);
-        return {contextLength: 8192, supportsVision: true};
+        return capsOnly({contextLength: 8192, supportsVision: true});
       });
 
       await serverStore.fetchRemoteModelCaps(id, 'm');
@@ -1290,7 +1316,7 @@ describe('ServerStore', () => {
       jest.clearAllMocks();
       mockedFetchServerProps.mockImplementationOnce(async () => {
         serverStore.updateServer(id, {url: 'http://localhost:9090'});
-        return {contextLength: 8192, supportsVision: true};
+        return capsOnly({contextLength: 8192, supportsVision: true});
       });
 
       await serverStore.fetchRemoteModelCaps(id, 'm');

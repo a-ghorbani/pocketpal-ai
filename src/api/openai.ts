@@ -7,7 +7,12 @@ import {
   ReasoningIntent,
   ToolCall,
 } from '../utils/completionTypes';
-import {RemoteModelCaps} from '../utils/types';
+import {
+  RemoteModelCaps,
+  RemoteModelPresence,
+  RemoteModelProps,
+  SamplerDefaults,
+} from '../utils/types';
 
 /**
  * Raw API response shape from OpenAI /v1/models. The optional fields are what
@@ -396,18 +401,82 @@ export async function fetchModels(
   return models;
 }
 
+/** One `/props` response, split by how long each fact stays true. */
+export interface ServerPropsResult {
+  caps: RemoteModelCaps;
+  props: RemoteModelProps;
+  presence?: RemoteModelPresence;
+}
+
+const finiteNumber = (value: unknown): number | undefined =>
+  typeof value === 'number' && Number.isFinite(value) ? value : undefined;
+
+const nonEmptyString = (value: unknown): string | undefined =>
+  typeof value === 'string' && value !== '' ? value : undefined;
+
+const definiteBoolean = (value: unknown): boolean | undefined =>
+  typeof value === 'boolean' ? value : undefined;
+
 /**
- * Fetch model capabilities from a llama.cpp server's GET /props endpoint.
- * Pure: parses the response into caps and never throws — a timeout, non-2xx,
- * or malformed body resolves to `{}` so the caller's models path and
- * connection are never affected. `/props` is llama.cpp-specific; callers gate
- * on serverType before invoking.
+ * The server's own generation defaults, read under the same wire names a
+ * request is sent under. Values sit under `params` on current builds and
+ * directly on `default_generation_settings` on older ones.
+ *
+ * `seed` is skipped: the server reports the live seed, which is not a value
+ * anyone should be offered as a default to return to.
+ */
+function readSamplerDefaults(generationSettings: any): SamplerDefaults {
+  const defaults: SamplerDefaults = {};
+  for (const param of Object.keys(PARAM_WIRE_NAME) as SamplerParam[]) {
+    if (param === 'seed') {
+      continue;
+    }
+    const wireName = PARAM_WIRE_NAME[param];
+    const value = finiteNumber(
+      generationSettings?.params?.[wireName] ?? generationSettings?.[wireName],
+    );
+    if (value !== undefined) {
+      defaults[param] = value;
+    }
+  }
+  return defaults;
+}
+
+/**
+ * The two chat-template flags this app has a use for. `supports_thinking`
+ * exists only on builds newer than b9976, so an absent key is unknown rather
+ * than a definite `false`.
+ */
+function readChatTemplateCaps(
+  wire: any,
+): RemoteModelProps['chatTemplateCaps'] | undefined {
+  const supportsTools = definiteBoolean(wire?.supports_tools);
+  const supportsThinking = definiteBoolean(wire?.supports_thinking);
+  if (supportsTools === undefined && supportsThinking === undefined) {
+    return undefined;
+  }
+  return {
+    ...(supportsTools !== undefined ? {supportsTools} : {}),
+    ...(supportsThinking !== undefined ? {supportsThinking} : {}),
+  };
+}
+
+/**
+ * Fetch what a llama.cpp server reports for one model via GET /props.
+ * Pure: parses the response into the three tiers and never throws — a timeout,
+ * non-2xx, or malformed body resolves every tier to unknown so the caller's
+ * models path and connection are never affected. `/props` is
+ * llama.cpp-specific; callers gate on serverType before invoking.
  *
  * `modelId` scopes the request (`?model=<id>`). A multi-model router answers
- * the bare form with a placeholder (`model_path: 'none'`, `n_ctx: 0`,
- * `modalities` absent) that describes no model, so a field is only ever
- * returned when the body describes an actually loaded model. Absent field =
- * unknown; the caller merges field-wise and never blanks a known value.
+ * the bare form with a placeholder (`role: 'router'`, `model_path: 'none'`,
+ * `n_ctx: 0`, `modalities` absent) that describes no model, so a field is only
+ * ever returned when the body describes an actually loaded model. Absent field
+ * = unknown; the caller merges field-wise and never blanks a known value.
+ *
+ * Sleep state takes the weaker gate: a sleeping child may report almost
+ * nothing else, so requiring a model-describing body would suppress the very
+ * observation the field exists for.
  *
  * Key names verified against live llama.cpp builds (b9910, b9976): context
  * window is `default_generation_settings.n_ctx` (top-level `n_ctx` is an
@@ -418,7 +487,7 @@ export async function fetchServerProps(
   apiKey?: string,
   timeoutMs?: number,
   modelId?: string,
-): Promise<RemoteModelCaps> {
+): Promise<ServerPropsResult> {
   const url =
     `${normalizeUrl(serverUrl)}/props` +
     (modelId ? `?model=${encodeURIComponent(modelId)}` : '');
@@ -435,10 +504,12 @@ export async function fetchServerProps(
       signal: controller.signal,
     });
     if (!response.ok) {
-      return {};
+      return {caps: {}, props: {}};
     }
     const data = await response.json();
     const caps: RemoteModelCaps = {};
+    const props: RemoteModelProps = {};
+    let presence: RemoteModelPresence | undefined;
 
     const nCtx: unknown =
       data?.default_generation_settings?.n_ctx ?? data?.n_ctx;
@@ -452,13 +523,56 @@ export async function fetchServerProps(
         modelPath !== '' &&
         modelPath !== 'none') ||
       caps.contextLength !== undefined;
+    const isRouterPlaceholder =
+      data?.role === 'router' ||
+      (modelPath === 'none' && data?.modalities === undefined);
+
     if (describesModel) {
       caps.supportsVision = data?.modalities?.vision === true;
+      caps.supportsAudio = data?.modalities?.audio === true;
+
+      const samplerDefaults = readSamplerDefaults(
+        data?.default_generation_settings,
+      );
+      if (Object.keys(samplerDefaults).length > 0) {
+        props.samplerDefaults = samplerDefaults;
+      }
+
+      const slotCount = finiteNumber(data?.total_slots);
+      if (
+        slotCount !== undefined &&
+        Number.isInteger(slotCount) &&
+        slotCount > 0
+      ) {
+        props.slotCount = slotCount;
+      }
+
+      const buildInfo = nonEmptyString(data?.build_info);
+      if (buildInfo !== undefined) {
+        props.buildInfo = buildInfo;
+      }
+
+      const modelAlias = nonEmptyString(data?.model_alias);
+      if (modelAlias !== undefined) {
+        props.modelAlias = modelAlias;
+      }
+
+      const chatTemplateCaps = readChatTemplateCaps(data?.chat_template_caps);
+      if (chatTemplateCaps !== undefined) {
+        props.chatTemplateCaps = chatTemplateCaps;
+      }
     }
 
-    return caps;
+    if (!isRouterPlaceholder) {
+      const isSleeping = definiteBoolean(data?.is_sleeping);
+      if (isSleeping !== undefined) {
+        presence = {isSleeping, probedUrl: serverUrl, at: Date.now()};
+      }
+    }
+
+    return {caps, props, presence};
   } catch {
-    return {};
+    return {caps: {}, props: {}};
   } finally {
     clearTimeout(timeout);
   }

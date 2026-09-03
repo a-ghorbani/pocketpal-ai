@@ -330,7 +330,7 @@ class ServerStore {
     );
 
     const apiKey = resolvedApiKey ?? (await this.getApiKey(serverId));
-    let caps = await fetchServerProps(
+    let {caps} = await fetchServerProps(
       probedUrl,
       apiKey,
       timeoutMs,
@@ -338,7 +338,7 @@ class ServerStore {
     );
 
     if (isUnusable(caps) && this.servesOnlyModel(serverId, remoteModelId)) {
-      caps = await fetchServerProps(probedUrl, apiKey, timeoutMs);
+      ({caps} = await fetchServerProps(probedUrl, apiKey, timeoutMs));
     }
 
     if (isUnusable(caps)) {
