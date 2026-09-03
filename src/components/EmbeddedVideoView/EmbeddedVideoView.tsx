@@ -14,8 +14,10 @@ import * as RNFS from '@dr.pogodin/react-native-fs';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import {
   Camera,
-  useCameraDevice,
+  getCameraDevice,
+  useCameraDevices,
   useCameraPermission,
+  CameraDevice,
   CameraPosition,
 } from 'react-native-vision-camera';
 
@@ -50,7 +52,9 @@ export const EmbeddedVideoView = observer(
       useState<CameraPosition>('back');
     const [isCapturing, setIsCapturing] = useState(false);
     const camera = useRef<Camera>(null);
-    const device = useCameraDevice(cameraPosition);
+    const devices = useCameraDevices();
+    const device: CameraDevice | undefined =
+      getCameraDevice(devices, cameraPosition) ?? devices[0];
     const captureTimerRef = useRef<NodeJS.Timeout | null>(null);
 
     // Check if running in simulator - simplified check for iOS simulator

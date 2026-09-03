@@ -17,7 +17,9 @@ jest.mock('react-native-vision-camera', () => {
         children,
       ),
     ),
-    useCameraDevice: jest.fn(() => ({id: 'mock-device'})),
+    useCameraDevices: jest.fn(() => [{id: 'mock-device', position: 'back'}]),
+    getCameraDevice: (devices: any[], position: string) =>
+      devices.find(d => d.position === position),
     useCameraPermission: jest.fn(() => ({
       hasPermission: true,
       requestPermission: jest.fn(() => Promise.resolve(true)),
@@ -63,6 +65,8 @@ describe('EmbeddedVideoView', () => {
 
   afterEach(() => {
     jest.useRealTimers();
+    const {useCameraDevices} = require('react-native-vision-camera');
+    useCameraDevices.mockReturnValue([{id: 'mock-device', position: 'back'}]);
   });
 
   it('renders correctly with camera permission', () => {
@@ -308,13 +312,13 @@ describe('EmbeddedVideoView', () => {
     // Mock camera permission as granted
     const {
       useCameraPermission,
-      useCameraDevice,
+      useCameraDevices,
     } = require('react-native-vision-camera');
     useCameraPermission.mockReturnValue({
       hasPermission: true,
       requestPermission: jest.fn(),
     });
-    useCameraDevice.mockReturnValue(null); // Simulate no device (simulator)
+    useCameraDevices.mockReturnValue([]);
 
     const {getByText} = render(
       <L10nContext.Provider value={l10n.en}>
@@ -333,13 +337,13 @@ describe('EmbeddedVideoView', () => {
   it('keeps a working close button in the iOS simulator state', () => {
     const {
       useCameraPermission,
-      useCameraDevice,
+      useCameraDevices,
     } = require('react-native-vision-camera');
     useCameraPermission.mockReturnValue({
       hasPermission: true,
       requestPermission: jest.fn(),
     });
-    useCameraDevice.mockReturnValue(null);
+    useCameraDevices.mockReturnValue([]);
 
     const {getByTestId} = render(
       <L10nContext.Provider value={l10n.en}>
@@ -366,13 +370,13 @@ describe('EmbeddedVideoView', () => {
     it('shows the no-device message with a working close button', () => {
       const {
         useCameraPermission,
-        useCameraDevice,
+        useCameraDevices,
       } = require('react-native-vision-camera');
       useCameraPermission.mockReturnValue({
         hasPermission: true,
         requestPermission: jest.fn(),
       });
-      useCameraDevice.mockReturnValue(null);
+      useCameraDevices.mockReturnValue([]);
 
       const {getByText, getByTestId} = render(
         <L10nContext.Provider value={l10n.en}>
@@ -383,6 +387,27 @@ describe('EmbeddedVideoView', () => {
       expect(getByText(l10n.en.video.noDevice)).toBeTruthy();
       fireEvent.press(getByTestId('close-button'));
       expect(defaultProps.onClose).toHaveBeenCalled();
+    });
+
+    it('falls back to the only available camera when it is front-facing', () => {
+      const {
+        useCameraPermission,
+        useCameraDevices,
+      } = require('react-native-vision-camera');
+      useCameraPermission.mockReturnValue({
+        hasPermission: true,
+        requestPermission: jest.fn(),
+      });
+      useCameraDevices.mockReturnValue([{id: 'front', position: 'front'}]);
+
+      const {getByTestId, queryByText} = render(
+        <L10nContext.Provider value={l10n.en}>
+          <EmbeddedVideoView {...defaultProps} />
+        </L10nContext.Provider>,
+      );
+
+      expect(getByTestId('camera').props.device.id).toBe('front');
+      expect(queryByText(l10n.en.video.noDevice)).toBeNull();
     });
   });
 });
