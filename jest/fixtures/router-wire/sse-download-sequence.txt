@@ -1,0 +1,224 @@
+data: {"model":"definitely-not-a-real-org/nope-GGUF:Q4_K_M","event":"model_status","data":{"status":"downloading"}}
+
+data: {"model":"definitely-not-a-real-org/nope-GGUF:Q4_K_M","event":"download_finished"}
+
+data: {"model":"*","event":"models_reload"}
+
+data: {"model":"ggml-org/gemma-3-270m-it-GGUF:Q8_0","event":"model_status","data":{"status":"downloading"}}
+
+data: {"model":"ggml-org/gemma-3-270m-it-GGUF:Q8_0","event":"download_progress","data":{"progress":{"https://huggingface.co/ggml-org/gemma-3-270m-it-GGUF/resolve/e7647be17ae1108f2f605ed061ca0608b171afff/gemma-3-270m-it-Q8_0.gguf":{"done":0,"total":291545600}}}}
+
+data: {"model":"ggml-org/gemma-3-270m-it-GGUF:Q8_0","event":"download_progress","data":{"progress":{"https://huggingface.co/ggml-org/gemma-3-270m-it-GGUF/resolve/e7647be17ae1108f2f605ed061ca0608b171afff/gemma-3-270m-it-Q8_0.gguf":{"done":300276,"total":291545600}}}}
+
+data: {"model":"ggml-org/gemma-3-270m-it-GGUF:Q8_0","event":"download_progress","data":{"progress":{"https://huggingface.co/ggml-org/gemma-3-270m-it-GGUF/resolve/e7647be17ae1108f2f605ed061ca0608b171afff/gemma-3-270m-it-Q8_0.gguf":{"done":1491689,"total":291545600}}}}
+
+data: {"model":"ggml-org/gemma-3-270m-it-GGUF:Q8_0","event":"download_progress","data":{"progress":{"https://huggingface.co/ggml-org/gemma-3-270m-it-GGUF/resolve/e7647be17ae1108f2f605ed061ca0608b171afff/gemma-3-270m-it-Q8_0.gguf":{"done":4735721,"total":291545600}}}}
+
+data: {"model":"ggml-org/gemma-3-270m-it-GGUF:Q8_0","event":"download_progress","data":{"progress":{"https://huggingface.co/ggml-org/gemma-3-270m-it-GGUF/resolve/e7647be17ae1108f2f605ed061ca0608b171afff/gemma-3-270m-it-Q8_0.gguf":{"done":8008978,"total":291545600}}}}
+
+data: {"model":"ggml-org/gemma-3-270m-it-GGUF:Q8_0","event":"download_progress","data":{"progress":{"https://huggingface.co/ggml-org/gemma-3-270m-it-GGUF/resolve/e7647be17ae1108f2f605ed061ca0608b171afff/gemma-3-270m-it-Q8_0.gguf":{"done":11926175,"total":291545600}}}}
+
+data: {"model":"ggml-org/gemma-3-270m-it-GGUF:Q8_0","event":"download_progress","data":{"progress":{"https://huggingface.co/ggml-org/gemma-3-270m-it-GGUF/resolve/e7647be17ae1108f2f605ed061ca0608b171afff/gemma-3-270m-it-Q8_0.gguf":{"done":14605081,"total":291545600}}}}
+
+data: {"model":"ggml-org/gemma-3-270m-it-GGUF:Q8_0","event":"download_progress","data":{"progress":{"https://huggingface.co/ggml-org/gemma-3-270m-it-GGUF/resolve/e7647be17ae1108f2f605ed061ca0608b171afff/gemma-3-270m-it-Q8_0.gguf":{"done":16982130,"total":291545600}}}}
+
+data: {"model":"ggml-org/gemma-3-270m-it-GGUF:Q8_0","event":"download_progress","data":{"progress":{"https://huggingface.co/ggml-org/gemma-3-270m-it-GGUF/resolve/e7647be17ae1108f2f605ed061ca0608b171afff/gemma-3-270m-it-Q8_0.gguf":{"done":20879818,"total":291545600}}}}
+
+data: {"model":"ggml-org/gemma-3-270m-it-GGUF:Q8_0","event":"download_progress","data":{"progress":{"https://huggingface.co/ggml-org/gemma-3-270m-it-GGUF/resolve/e7647be17ae1108f2f605ed061ca0608b171afff/gemma-3-270m-it-Q8_0.gguf":{"done":24473120,"total":291545600}}}}
+
+data: {"model":"ggml-org/gemma-3-270m-it-GGUF:Q8_0","event":"download_progress","data":{"progress":{"https://huggingface.co/ggml-org/gemma-3-270m-it-GGUF/resolve/e7647be17ae1108f2f605ed061ca0608b171afff/gemma-3-270m-it-Q8_0.gguf":{"done":27748417,"total":291545600}}}}
+
+data: {"model":"ggml-org/gemma-3-270m-it-GGUF:Q8_0","event":"download_progress","data":{"progress":{"https://huggingface.co/ggml-org/gemma-3-270m-it-GGUF/resolve/e7647be17ae1108f2f605ed061ca0608b171afff/gemma-3-270m-it-Q8_0.gguf":{"done":32845393,"total":291545600}}}}
+
+data: {"model":"ggml-org/gemma-3-270m-it-GGUF:Q8_0","event":"download_progress","data":{"progress":{"https://huggingface.co/ggml-org/gemma-3-270m-it-GGUF/resolve/e7647be17ae1108f2f605ed061ca0608b171afff/gemma-3-270m-it-Q8_0.gguf":{"done":37310592,"total":291545600}}}}
+
+data: {"model":"ggml-org/gemma-3-270m-it-GGUF:Q8_0","event":"download_progress","data":{"progress":{"https://huggingface.co/ggml-org/gemma-3-270m-it-GGUF/resolve/e7647be17ae1108f2f605ed061ca0608b171afff/gemma-3-270m-it-Q8_0.gguf":{"done":41479751,"total":291545600}}}}
+
+data: {"model":"ggml-org/gemma-3-270m-it-GGUF:Q8_0","event":"download_progress","data":{"progress":{"https://huggingface.co/ggml-org/gemma-3-270m-it-GGUF/resolve/e7647be17ae1108f2f605ed061ca0608b171afff/gemma-3-270m-it-Q8_0.gguf":{"done":44170250,"total":291545600}}}}
+
+data: {"model":"ggml-org/gemma-3-270m-it-GGUF:Q8_0","event":"download_progress","data":{"progress":{"https://huggingface.co/ggml-org/gemma-3-270m-it-GGUF/resolve/e7647be17ae1108f2f605ed061ca0608b171afff/gemma-3-270m-it-Q8_0.gguf":{"done":47757189,"total":291545600}}}}
+
+data: {"model":"ggml-org/gemma-3-270m-it-GGUF:Q8_0","event":"download_progress","data":{"progress":{"https://huggingface.co/ggml-org/gemma-3-270m-it-GGUF/resolve/e7647be17ae1108f2f605ed061ca0608b171afff/gemma-3-270m-it-Q8_0.gguf":{"done":52804076,"total":291545600}}}}
+
+data: {"model":"ggml-org/gemma-3-270m-it-GGUF:Q8_0","event":"download_progress","data":{"progress":{"https://huggingface.co/ggml-org/gemma-3-270m-it-GGUF/resolve/e7647be17ae1108f2f605ed061ca0608b171afff/gemma-3-270m-it-Q8_0.gguf":{"done":57553315,"total":291545600}}}}
+
+data: {"model":"ggml-org/gemma-3-270m-it-GGUF:Q8_0","event":"download_progress","data":{"progress":{"https://huggingface.co/ggml-org/gemma-3-270m-it-GGUF/resolve/e7647be17ae1108f2f605ed061ca0608b171afff/gemma-3-270m-it-Q8_0.gguf":{"done":62323531,"total":291545600}}}}
+
+data: {"model":"ggml-org/gemma-3-270m-it-GGUF:Q8_0","event":"download_progress","data":{"progress":{"https://huggingface.co/ggml-org/gemma-3-270m-it-GGUF/resolve/e7647be17ae1108f2f605ed061ca0608b171afff/gemma-3-270m-it-Q8_0.gguf":{"done":66210832,"total":291545600}}}}
+
+data: {"model":"ggml-org/gemma-3-270m-it-GGUF:Q8_0","event":"download_progress","data":{"progress":{"https://huggingface.co/ggml-org/gemma-3-270m-it-GGUF/resolve/e7647be17ae1108f2f605ed061ca0608b171afff/gemma-3-270m-it-Q8_0.gguf":{"done":68014467,"total":291545600}}}}
+
+data: {"model":"ggml-org/gemma-3-270m-it-GGUF:Q8_0","event":"download_progress","data":{"progress":{"https://huggingface.co/ggml-org/gemma-3-270m-it-GGUF/resolve/e7647be17ae1108f2f605ed061ca0608b171afff/gemma-3-270m-it-Q8_0.gguf":{"done":71001546,"total":291545600}}}}
+
+data: {"model":"ggml-org/gemma-3-270m-it-GGUF:Q8_0","event":"download_progress","data":{"progress":{"https://huggingface.co/ggml-org/gemma-3-270m-it-GGUF/resolve/e7647be17ae1108f2f605ed061ca0608b171afff/gemma-3-270m-it-Q8_0.gguf":{"done":75486274,"total":291545600}}}}
+
+data: {"model":"ggml-org/gemma-3-270m-it-GGUF:Q8_0","event":"download_progress","data":{"progress":{"https://huggingface.co/ggml-org/gemma-3-270m-it-GGUF/resolve/e7647be17ae1108f2f605ed061ca0608b171afff/gemma-3-270m-it-Q8_0.gguf":{"done":78497905,"total":291545600}}}}
+
+data: {"model":"ggml-org/gemma-3-270m-it-GGUF:Q8_0","event":"download_progress","data":{"progress":{"https://huggingface.co/ggml-org/gemma-3-270m-it-GGUF/resolve/e7647be17ae1108f2f605ed061ca0608b171afff/gemma-3-270m-it-Q8_0.gguf":{"done":80896355,"total":291545600}}}}
+
+data: {"model":"ggml-org/gemma-3-270m-it-GGUF:Q8_0","event":"download_progress","data":{"progress":{"https://huggingface.co/ggml-org/gemma-3-270m-it-GGUF/resolve/e7647be17ae1108f2f605ed061ca0608b171afff/gemma-3-270m-it-Q8_0.gguf":{"done":85116278,"total":291545600}}}}
+
+data: {"model":"ggml-org/gemma-3-270m-it-GGUF:Q8_0","event":"download_progress","data":{"progress":{"https://huggingface.co/ggml-org/gemma-3-270m-it-GGUF/resolve/e7647be17ae1108f2f605ed061ca0608b171afff/gemma-3-270m-it-Q8_0.gguf":{"done":90502742,"total":291545600}}}}
+
+data: {"model":"ggml-org/gemma-3-270m-it-GGUF:Q8_0","event":"download_progress","data":{"progress":{"https://huggingface.co/ggml-org/gemma-3-270m-it-GGUF/resolve/e7647be17ae1108f2f605ed061ca0608b171afff/gemma-3-270m-it-Q8_0.gguf":{"done":95272368,"total":291545600}}}}
+
+data: {"model":"ggml-org/gemma-3-270m-it-GGUF:Q8_0","event":"download_progress","data":{"progress":{"https://huggingface.co/ggml-org/gemma-3-270m-it-GGUF/resolve/e7647be17ae1108f2f605ed061ca0608b171afff/gemma-3-270m-it-Q8_0.gguf":{"done":100053128,"total":291545600}}}}
+
+data: {"model":"ggml-org/gemma-3-270m-it-GGUF:Q8_0","event":"download_progress","data":{"progress":{"https://huggingface.co/ggml-org/gemma-3-270m-it-GGUF/resolve/e7647be17ae1108f2f605ed061ca0608b171afff/gemma-3-270m-it-Q8_0.gguf":{"done":104248084,"total":291545600}}}}
+
+data: {"model":"ggml-org/gemma-3-270m-it-GGUF:Q8_0","event":"download_progress","data":{"progress":{"https://huggingface.co/ggml-org/gemma-3-270m-it-GGUF/resolve/e7647be17ae1108f2f605ed061ca0608b171afff/gemma-3-270m-it-Q8_0.gguf":{"done":108163725,"total":291545600}}}}
+
+data: {"model":"ggml-org/gemma-3-270m-it-GGUF:Q8_0","event":"download_progress","data":{"progress":{"https://huggingface.co/ggml-org/gemma-3-270m-it-GGUF/resolve/e7647be17ae1108f2f605ed061ca0608b171afff/gemma-3-270m-it-Q8_0.gguf":{"done":114134214,"total":291545600}}}}
+
+data: {"model":"ggml-org/gemma-3-270m-it-GGUF:Q8_0","event":"download_progress","data":{"progress":{"https://huggingface.co/ggml-org/gemma-3-270m-it-GGUF/resolve/e7647be17ae1108f2f605ed061ca0608b171afff/gemma-3-270m-it-Q8_0.gguf":{"done":117127962,"total":291545600}}}}
+
+data: {"model":"ggml-org/gemma-3-270m-it-GGUF:Q8_0","event":"download_progress","data":{"progress":{"https://huggingface.co/ggml-org/gemma-3-270m-it-GGUF/resolve/e7647be17ae1108f2f605ed061ca0608b171afff/gemma-3-270m-it-Q8_0.gguf":{"done":121592441,"total":291545600}}}}
+
+data: {"model":"ggml-org/gemma-3-270m-it-GGUF:Q8_0","event":"download_progress","data":{"progress":{"https://huggingface.co/ggml-org/gemma-3-270m-it-GGUF/resolve/e7647be17ae1108f2f605ed061ca0608b171afff/gemma-3-270m-it-Q8_0.gguf":{"done":123987063,"total":291545600}}}}
+
+data: {"model":"ggml-org/gemma-3-270m-it-GGUF:Q8_0","event":"download_progress","data":{"progress":{"https://huggingface.co/ggml-org/gemma-3-270m-it-GGUF/resolve/e7647be17ae1108f2f605ed061ca0608b171afff/gemma-3-270m-it-Q8_0.gguf":{"done":126991981,"total":291545600}}}}
+
+data: {"model":"ggml-org/gemma-3-270m-it-GGUF:Q8_0","event":"download_progress","data":{"progress":{"https://huggingface.co/ggml-org/gemma-3-270m-it-GGUF/resolve/e7647be17ae1108f2f605ed061ca0608b171afff/gemma-3-270m-it-Q8_0.gguf":{"done":132068913,"total":291545600}}}}
+
+data: {"model":"ggml-org/gemma-3-270m-it-GGUF:Q8_0","event":"download_progress","data":{"progress":{"https://huggingface.co/ggml-org/gemma-3-270m-it-GGUF/resolve/e7647be17ae1108f2f605ed061ca0608b171afff/gemma-3-270m-it-Q8_0.gguf":{"done":135069017,"total":291545600}}}}
+
+data: {"model":"ggml-org/gemma-3-270m-it-GGUF:Q8_0","event":"download_progress","data":{"progress":{"https://huggingface.co/ggml-org/gemma-3-270m-it-GGUF/resolve/e7647be17ae1108f2f605ed061ca0608b171afff/gemma-3-270m-it-Q8_0.gguf":{"done":137465213,"total":291545600}}}}
+
+data: {"model":"ggml-org/gemma-3-270m-it-GGUF:Q8_0","event":"download_progress","data":{"progress":{"https://huggingface.co/ggml-org/gemma-3-270m-it-GGUF/resolve/e7647be17ae1108f2f605ed061ca0608b171afff/gemma-3-270m-it-Q8_0.gguf":{"done":141334244,"total":291545600}}}}
+
+data: {"model":"ggml-org/gemma-3-270m-it-GGUF:Q8_0","event":"download_progress","data":{"progress":{"https://huggingface.co/ggml-org/gemma-3-270m-it-GGUF/resolve/e7647be17ae1108f2f605ed061ca0608b171afff/gemma-3-270m-it-Q8_0.gguf":{"done":144942974,"total":291545600}}}}
+
+data: {"model":"ggml-org/gemma-3-270m-it-GGUF:Q8_0","event":"download_progress","data":{"progress":{"https://huggingface.co/ggml-org/gemma-3-270m-it-GGUF/resolve/e7647be17ae1108f2f605ed061ca0608b171afff/gemma-3-270m-it-Q8_0.gguf":{"done":148552524,"total":291545600}}}}
+
+data: {"model":"ggml-org/gemma-3-270m-it-GGUF:Q8_0","event":"download_progress","data":{"progress":{"https://huggingface.co/ggml-org/gemma-3-270m-it-GGUF/resolve/e7647be17ae1108f2f605ed061ca0608b171afff/gemma-3-270m-it-Q8_0.gguf":{"done":153341298,"total":291545600}}}}
+
+data: {"model":"ggml-org/gemma-3-270m-it-GGUF:Q8_0","event":"download_progress","data":{"progress":{"https://huggingface.co/ggml-org/gemma-3-270m-it-GGUF/resolve/e7647be17ae1108f2f605ed061ca0608b171afff/gemma-3-270m-it-Q8_0.gguf":{"done":158163062,"total":291545600}}}}
+
+data: {"model":"ggml-org/gemma-3-270m-it-GGUF:Q8_0","event":"download_progress","data":{"progress":{"https://huggingface.co/ggml-org/gemma-3-270m-it-GGUF/resolve/e7647be17ae1108f2f605ed061ca0608b171afff/gemma-3-270m-it-Q8_0.gguf":{"done":162073904,"total":291545600}}}}
+
+data: {"model":"ggml-org/gemma-3-270m-it-GGUF:Q8_0","event":"download_progress","data":{"progress":{"https://huggingface.co/ggml-org/gemma-3-270m-it-GGUF/resolve/e7647be17ae1108f2f605ed061ca0608b171afff/gemma-3-270m-it-Q8_0.gguf":{"done":166261410,"total":291545600}}}}
+
+data: {"model":"ggml-org/gemma-3-270m-it-GGUF:Q8_0","event":"download_progress","data":{"progress":{"https://huggingface.co/ggml-org/gemma-3-270m-it-GGUF/resolve/e7647be17ae1108f2f605ed061ca0608b171afff/gemma-3-270m-it-Q8_0.gguf":{"done":169553031,"total":291545600}}}}
+
+data: {"model":"ggml-org/gemma-3-270m-it-GGUF:Q8_0","event":"download_progress","data":{"progress":{"https://huggingface.co/ggml-org/gemma-3-270m-it-GGUF/resolve/e7647be17ae1108f2f605ed061ca0608b171afff/gemma-3-270m-it-Q8_0.gguf":{"done":174053371,"total":291545600}}}}
+
+data: {"model":"ggml-org/gemma-3-270m-it-GGUF:Q8_0","event":"download_progress","data":{"progress":{"https://huggingface.co/ggml-org/gemma-3-270m-it-GGUF/resolve/e7647be17ae1108f2f605ed061ca0608b171afff/gemma-3-270m-it-Q8_0.gguf":{"done":177675595,"total":291545600}}}}
+
+data: {"model":"ggml-org/gemma-3-270m-it-GGUF:Q8_0","event":"download_progress","data":{"progress":{"https://huggingface.co/ggml-org/gemma-3-270m-it-GGUF/resolve/e7647be17ae1108f2f605ed061ca0608b171afff/gemma-3-270m-it-Q8_0.gguf":{"done":181863679,"total":291545600}}}}
+
+data: {"model":"ggml-org/gemma-3-270m-it-GGUF:Q8_0","event":"download_progress","data":{"progress":{"https://huggingface.co/ggml-org/gemma-3-270m-it-GGUF/resolve/e7647be17ae1108f2f605ed061ca0608b171afff/gemma-3-270m-it-Q8_0.gguf":{"done":184872341,"total":291545600}}}}
+
+data: {"model":"ggml-org/gemma-3-270m-it-GGUF:Q8_0","event":"download_progress","data":{"progress":{"https://huggingface.co/ggml-org/gemma-3-270m-it-GGUF/resolve/e7647be17ae1108f2f605ed061ca0608b171afff/gemma-3-270m-it-Q8_0.gguf":{"done":189648409,"total":291545600}}}}
+
+data: {"model":"ggml-org/gemma-3-270m-it-GGUF:Q8_0","event":"download_progress","data":{"progress":{"https://huggingface.co/ggml-org/gemma-3-270m-it-GGUF/resolve/e7647be17ae1108f2f605ed061ca0608b171afff/gemma-3-270m-it-Q8_0.gguf":{"done":195055469,"total":291545600}}}}
+
+data: {"model":"ggml-org/gemma-3-270m-it-GGUF:Q8_0","event":"download_progress","data":{"progress":{"https://huggingface.co/ggml-org/gemma-3-270m-it-GGUF/resolve/e7647be17ae1108f2f605ed061ca0608b171afff/gemma-3-270m-it-Q8_0.gguf":{"done":199522614,"total":291545600}}}}
+
+data: {"model":"ggml-org/gemma-3-270m-it-GGUF:Q8_0","event":"download_progress","data":{"progress":{"https://huggingface.co/ggml-org/gemma-3-270m-it-GGUF/resolve/e7647be17ae1108f2f605ed061ca0608b171afff/gemma-3-270m-it-Q8_0.gguf":{"done":204017067,"total":291545600}}}}
+
+data: {"model":"ggml-org/gemma-3-270m-it-GGUF:Q8_0","event":"download_progress","data":{"progress":{"https://huggingface.co/ggml-org/gemma-3-270m-it-GGUF/resolve/e7647be17ae1108f2f605ed061ca0608b171afff/gemma-3-270m-it-Q8_0.gguf":{"done":208491855,"total":291545600}}}}
+
+data: {"model":"ggml-org/gemma-3-270m-it-GGUF:Q8_0","event":"download_progress","data":{"progress":{"https://huggingface.co/ggml-org/gemma-3-270m-it-GGUF/resolve/e7647be17ae1108f2f605ed061ca0608b171afff/gemma-3-270m-it-Q8_0.gguf":{"done":211488915,"total":291545600}}}}
+
+data: {"model":"ggml-org/gemma-3-270m-it-GGUF:Q8_0","event":"download_progress","data":{"progress":{"https://huggingface.co/ggml-org/gemma-3-270m-it-GGUF/resolve/e7647be17ae1108f2f605ed061ca0608b171afff/gemma-3-270m-it-Q8_0.gguf":{"done":218369150,"total":291545600}}}}
+
+data: {"model":"ggml-org/gemma-3-270m-it-GGUF:Q8_0","event":"download_progress","data":{"progress":{"https://huggingface.co/ggml-org/gemma-3-270m-it-GGUF/resolve/e7647be17ae1108f2f605ed061ca0608b171afff/gemma-3-270m-it-Q8_0.gguf":{"done":221647522,"total":291545600}}}}
+
+data: {"model":"ggml-org/gemma-3-270m-it-GGUF:Q8_0","event":"download_progress","data":{"progress":{"https://huggingface.co/ggml-org/gemma-3-270m-it-GGUF/resolve/e7647be17ae1108f2f605ed061ca0608b171afff/gemma-3-270m-it-Q8_0.gguf":{"done":226995577,"total":291545600}}}}
+
+data: {"model":"ggml-org/gemma-3-270m-it-GGUF:Q8_0","event":"download_progress","data":{"progress":{"https://huggingface.co/ggml-org/gemma-3-270m-it-GGUF/resolve/e7647be17ae1108f2f605ed061ca0608b171afff/gemma-3-270m-it-Q8_0.gguf":{"done":230018432,"total":291545600}}}}
+
+data: {"model":"ggml-org/gemma-3-270m-it-GGUF:Q8_0","event":"download_progress","data":{"progress":{"https://huggingface.co/ggml-org/gemma-3-270m-it-GGUF/resolve/e7647be17ae1108f2f605ed061ca0608b171afff/gemma-3-270m-it-Q8_0.gguf":{"done":234521990,"total":291545600}}}}
+
+data: {"model":"ggml-org/gemma-3-270m-it-GGUF:Q8_0","event":"download_progress","data":{"progress":{"https://huggingface.co/ggml-org/gemma-3-270m-it-GGUF/resolve/e7647be17ae1108f2f605ed061ca0608b171afff/gemma-3-270m-it-Q8_0.gguf":{"done":236317570,"total":291545600}}}}
+
+data: {"model":"ggml-org/gemma-3-270m-it-GGUF:Q8_0","event":"download_progress","data":{"progress":{"https://huggingface.co/ggml-org/gemma-3-270m-it-GGUF/resolve/e7647be17ae1108f2f605ed061ca0608b171afff/gemma-3-270m-it-Q8_0.gguf":{"done":238401744,"total":291545600}}}}
+
+data: {"model":"ggml-org/gemma-3-270m-it-GGUF:Q8_0","event":"download_progress","data":{"progress":{"https://huggingface.co/ggml-org/gemma-3-270m-it-GGUF/resolve/e7647be17ae1108f2f605ed061ca0608b171afff/gemma-3-270m-it-Q8_0.gguf":{"done":239902579,"total":291545600}}}}
+
+data: {"model":"ggml-org/gemma-3-270m-it-GGUF:Q8_0","event":"download_progress","data":{"progress":{"https://huggingface.co/ggml-org/gemma-3-270m-it-GGUF/resolve/e7647be17ae1108f2f605ed061ca0608b171afff/gemma-3-270m-it-Q8_0.gguf":{"done":242317580,"total":291545600}}}}
+
+data: {"model":"ggml-org/gemma-3-270m-it-GGUF:Q8_0","event":"download_progress","data":{"progress":{"https://huggingface.co/ggml-org/gemma-3-270m-it-GGUF/resolve/e7647be17ae1108f2f605ed061ca0608b171afff/gemma-3-270m-it-Q8_0.gguf":{"done":244416073,"total":291545600}}}}
+
+data: {"model":"ggml-org/gemma-3-270m-it-GGUF:Q8_0","event":"download_progress","data":{"progress":{"https://huggingface.co/ggml-org/gemma-3-270m-it-GGUF/resolve/e7647be17ae1108f2f605ed061ca0608b171afff/gemma-3-270m-it-Q8_0.gguf":{"done":245915720,"total":291545600}}}}
+
+data: {"model":"ggml-org/gemma-3-270m-it-GGUF:Q8_0","event":"download_progress","data":{"progress":{"https://huggingface.co/ggml-org/gemma-3-270m-it-GGUF/resolve/e7647be17ae1108f2f605ed061ca0608b171afff/gemma-3-270m-it-Q8_0.gguf":{"done":248304543,"total":291545600}}}}
+
+data: {"model":"ggml-org/gemma-3-270m-it-GGUF:Q8_0","event":"download_progress","data":{"progress":{"https://huggingface.co/ggml-org/gemma-3-270m-it-GGUF/resolve/e7647be17ae1108f2f605ed061ca0608b171afff/gemma-3-270m-it-Q8_0.gguf":{"done":250411783,"total":291545600}}}}
+
+data: {"model":"ggml-org/gemma-3-270m-it-GGUF:Q8_0","event":"download_progress","data":{"progress":{"https://huggingface.co/ggml-org/gemma-3-270m-it-GGUF/resolve/e7647be17ae1108f2f605ed061ca0608b171afff/gemma-3-270m-it-Q8_0.gguf":{"done":251607210,"total":291545600}}}}
+
+data: {"model":"ggml-org/gemma-3-270m-it-GGUF:Q8_0","event":"download_progress","data":{"progress":{"https://huggingface.co/ggml-org/gemma-3-270m-it-GGUF/resolve/e7647be17ae1108f2f605ed061ca0608b171afff/gemma-3-270m-it-Q8_0.gguf":{"done":251910273,"total":291545600}}}}
+
+data: {"model":"ggml-org/gemma-3-270m-it-GGUF:Q8_0","event":"download_progress","data":{"progress":{"https://huggingface.co/ggml-org/gemma-3-270m-it-GGUF/resolve/e7647be17ae1108f2f605ed061ca0608b171afff/gemma-3-270m-it-Q8_0.gguf":{"done":253095619,"total":291545600}}}}
+
+data: {"model":"ggml-org/gemma-3-270m-it-GGUF:Q8_0","event":"download_progress","data":{"progress":{"https://huggingface.co/ggml-org/gemma-3-270m-it-GGUF/resolve/e7647be17ae1108f2f605ed061ca0608b171afff/gemma-3-270m-it-Q8_0.gguf":{"done":253388393,"total":291545600}}}}
+
+data: {"model":"ggml-org/gemma-3-270m-it-GGUF:Q8_0","event":"download_progress","data":{"progress":{"https://huggingface.co/ggml-org/gemma-3-270m-it-GGUF/resolve/e7647be17ae1108f2f605ed061ca0608b171afff/gemma-3-270m-it-Q8_0.gguf":{"done":256084760,"total":291545600}}}}
+
+data: {"model":"ggml-org/gemma-3-270m-it-GGUF:Q8_0","event":"download_progress","data":{"progress":{"https://huggingface.co/ggml-org/gemma-3-270m-it-GGUF/resolve/e7647be17ae1108f2f605ed061ca0608b171afff/gemma-3-270m-it-Q8_0.gguf":{"done":257885873,"total":291545600}}}}
+
+data: {"model":"ggml-org/gemma-3-270m-it-GGUF:Q8_0","event":"download_progress","data":{"progress":{"https://huggingface.co/ggml-org/gemma-3-270m-it-GGUF/resolve/e7647be17ae1108f2f605ed061ca0608b171afff/gemma-3-270m-it-Q8_0.gguf":{"done":259384369,"total":291545600}}}}
+
+data: {"model":"ggml-org/gemma-3-270m-it-GGUF:Q8_0","event":"download_progress","data":{"progress":{"https://huggingface.co/ggml-org/gemma-3-270m-it-GGUF/resolve/e7647be17ae1108f2f605ed061ca0608b171afff/gemma-3-270m-it-Q8_0.gguf":{"done":262092918,"total":291545600}}}}
+
+data: {"model":"ggml-org/gemma-3-270m-it-GGUF:Q8_0","event":"download_progress","data":{"progress":{"https://huggingface.co/ggml-org/gemma-3-270m-it-GGUF/resolve/e7647be17ae1108f2f605ed061ca0608b171afff/gemma-3-270m-it-Q8_0.gguf":{"done":263585727,"total":291545600}}}}
+
+data: {"model":"ggml-org/gemma-3-270m-it-GGUF:Q8_0","event":"download_progress","data":{"progress":{"https://huggingface.co/ggml-org/gemma-3-270m-it-GGUF/resolve/e7647be17ae1108f2f605ed061ca0608b171afff/gemma-3-270m-it-Q8_0.gguf":{"done":263890637,"total":291545600}}}}
+
+data: {"model":"ggml-org/gemma-3-270m-it-GGUF:Q8_0","event":"download_progress","data":{"progress":{"https://huggingface.co/ggml-org/gemma-3-270m-it-GGUF/resolve/e7647be17ae1108f2f605ed061ca0608b171afff/gemma-3-270m-it-Q8_0.gguf":{"done":265980315,"total":291545600}}}}
+
+data: {"model":"ggml-org/gemma-3-270m-it-GGUF:Q8_0","event":"download_progress","data":{"progress":{"https://huggingface.co/ggml-org/gemma-3-270m-it-GGUF/resolve/e7647be17ae1108f2f605ed061ca0608b171afff/gemma-3-270m-it-Q8_0.gguf":{"done":268064468,"total":291545600}}}}
+
+data: {"model":"ggml-org/gemma-3-270m-it-GGUF:Q8_0","event":"download_progress","data":{"progress":{"https://huggingface.co/ggml-org/gemma-3-270m-it-GGUF/resolve/e7647be17ae1108f2f605ed061ca0608b171afff/gemma-3-270m-it-Q8_0.gguf":{"done":268954119,"total":291545600}}}}
+
+data: {"model":"ggml-org/gemma-3-270m-it-GGUF:Q8_0","event":"download_progress","data":{"progress":{"https://huggingface.co/ggml-org/gemma-3-270m-it-GGUF/resolve/e7647be17ae1108f2f605ed061ca0608b171afff/gemma-3-270m-it-Q8_0.gguf":{"done":269831679,"total":291545600}}}}
+
+data: {"model":"ggml-org/gemma-3-270m-it-GGUF:Q8_0","event":"download_progress","data":{"progress":{"https://huggingface.co/ggml-org/gemma-3-270m-it-GGUF/resolve/e7647be17ae1108f2f605ed061ca0608b171afff/gemma-3-270m-it-Q8_0.gguf":{"done":271334423,"total":291545600}}}}
+
+data: {"model":"ggml-org/gemma-3-270m-it-GGUF:Q8_0","event":"download_progress","data":{"progress":{"https://huggingface.co/ggml-org/gemma-3-270m-it-GGUF/resolve/e7647be17ae1108f2f605ed061ca0608b171afff/gemma-3-270m-it-Q8_0.gguf":{"done":274011964,"total":291545600}}}}
+
+data: {"model":"ggml-org/gemma-3-270m-it-GGUF:Q8_0","event":"download_progress","data":{"progress":{"https://huggingface.co/ggml-org/gemma-3-270m-it-GGUF/resolve/e7647be17ae1108f2f605ed061ca0608b171afff/gemma-3-270m-it-Q8_0.gguf":{"done":275491629,"total":291545600}}}}
+
+data: {"model":"ggml-org/gemma-3-270m-it-GGUF:Q8_0","event":"download_progress","data":{"progress":{"https://huggingface.co/ggml-org/gemma-3-270m-it-GGUF/resolve/e7647be17ae1108f2f605ed061ca0608b171afff/gemma-3-270m-it-Q8_0.gguf":{"done":277282693,"total":291545600}}}}
+
+data: {"model":"ggml-org/gemma-3-270m-it-GGUF:Q8_0","event":"download_progress","data":{"progress":{"https://huggingface.co/ggml-org/gemma-3-270m-it-GGUF/resolve/e7647be17ae1108f2f605ed061ca0608b171afff/gemma-3-270m-it-Q8_0.gguf":{"done":279967860,"total":291545600}}}}
+
+data: {"model":"ggml-org/gemma-3-270m-it-GGUF:Q8_0","event":"download_progress","data":{"progress":{"https://huggingface.co/ggml-org/gemma-3-270m-it-GGUF/resolve/e7647be17ae1108f2f605ed061ca0608b171afff/gemma-3-270m-it-Q8_0.gguf":{"done":281486172,"total":291545600}}}}
+
+data: {"model":"ggml-org/gemma-3-270m-it-GGUF:Q8_0","event":"download_progress","data":{"progress":{"https://huggingface.co/ggml-org/gemma-3-270m-it-GGUF/resolve/e7647be17ae1108f2f605ed061ca0608b171afff/gemma-3-270m-it-Q8_0.gguf":{"done":283594452,"total":291545600}}}}
+
+data: {"model":"ggml-org/gemma-3-270m-it-GGUF:Q8_0","event":"download_progress","data":{"progress":{"https://huggingface.co/ggml-org/gemma-3-270m-it-GGUF/resolve/e7647be17ae1108f2f605ed061ca0608b171afff/gemma-3-270m-it-Q8_0.gguf":{"done":285981867,"total":291545600}}}}
+
+data: {"model":"ggml-org/gemma-3-270m-it-GGUF:Q8_0","event":"download_progress","data":{"progress":{"https://huggingface.co/ggml-org/gemma-3-270m-it-GGUF/resolve/e7647be17ae1108f2f605ed061ca0608b171afff/gemma-3-270m-it-Q8_0.gguf":{"done":287485057,"total":291545600}}}}
+
+data: {"model":"ggml-org/gemma-3-270m-it-GGUF:Q8_0","event":"download_progress","data":{"progress":{"https://huggingface.co/ggml-org/gemma-3-270m-it-GGUF/resolve/e7647be17ae1108f2f605ed061ca0608b171afff/gemma-3-270m-it-Q8_0.gguf":{"done":288988389,"total":291545600}}}}
+
+data: {"model":"ggml-org/gemma-3-270m-it-GGUF:Q8_0","event":"download_progress","data":{"progress":{"https://huggingface.co/ggml-org/gemma-3-270m-it-GGUF/resolve/e7647be17ae1108f2f605ed061ca0608b171afff/gemma-3-270m-it-Q8_0.gguf":{"done":291545600,"total":291545600}}}}
+
+data: {"model":"ggml-org/gemma-3-270m-it-GGUF:Q8_0","event":"download_finished"}
+
+data: {"model":"*","event":"models_reload"}
+
+data: {"model":"*","event":"models_reload"}
+
+data: {"model":"ggml-org/gemma-3-1b-it-GGUF:Q8_0","event":"model_status","data":{"status":"downloading"}}
+
+data: {"model":"ggml-org/gemma-3-1b-it-GGUF:Q8_0","event":"download_progress","data":{"progress":{"https://huggingface.co/ggml-org/gemma-3-1b-it-GGUF/resolve/f9c28bcd85737ffc5aef028638d3341d49869c27/gemma-3-1b-it-Q8_0.gguf":{"done":0,"total":1069306368}}}}
+
+data: {"model":"ggml-org/gemma-3-1b-it-GGUF:Q8_0","event":"download_progress","data":{"progress":{"https://huggingface.co/ggml-org/gemma-3-1b-it-GGUF/resolve/f9c28bcd85737ffc5aef028638d3341d49869c27/gemma-3-1b-it-Q8_0.gguf":{"done":1070036,"total":1069306368}}}}
+
+data: {"model":"ggml-org/gemma-3-1b-it-GGUF:Q8_0","event":"download_progress","data":{"progress":{"https://huggingface.co/ggml-org/gemma-3-1b-it-GGUF/resolve/f9c28bcd85737ffc5aef028638d3341d49869c27/gemma-3-1b-it-Q8_0.gguf":{"done":3232724,"total":1069306368}}}}
+
+data: {"model":"ggml-org/gemma-3-1b-it-GGUF:Q8_0","event":"download_progress","data":{"progress":{"https://huggingface.co/ggml-org/gemma-3-1b-it-GGUF/resolve/f9c28bcd85737ffc5aef028638d3341d49869c27/gemma-3-1b-it-Q8_0.gguf":{"done":8639444,"total":1069306368}}}}
+
+data: {"model":"ggml-org/gemma-3-1b-it-GGUF:Q8_0","event":"download_progress","data":{"progress":{"https://huggingface.co/ggml-org/gemma-3-1b-it-GGUF/resolve/f9c28bcd85737ffc5aef028638d3341d49869c27/gemma-3-1b-it-Q8_0.gguf":{"done":16211274,"total":1069306368}}}}
+
+data: {"model":"ggml-org/gemma-3-1b-it-GGUF:Q8_0","event":"download_progress","data":{"progress":{"https://huggingface.co/ggml-org/gemma-3-1b-it-GGUF/resolve/f9c28bcd85737ffc5aef028638d3341d49869c27/gemma-3-1b-it-Q8_0.gguf":{"done":22684495,"total":1069306368}}}}
+
+data: {"model":"ggml-org/gemma-3-1b-it-GGUF:Q8_0","event":"download_progress","data":{"progress":{"https://huggingface.co/ggml-org/gemma-3-1b-it-GGUF/resolve/f9c28bcd85737ffc5aef028638d3341d49869c27/gemma-3-1b-it-Q8_0.gguf":{"done":29147431,"total":1069306368}}}}
+
+data: {"model":"ggml-org/gemma-3-1b-it-GGUF:Q8_0","event":"download_progress","data":{"progress":{"https://huggingface.co/ggml-org/gemma-3-1b-it-GGUF/resolve/f9c28bcd85737ffc5aef028638d3341d49869c27/gemma-3-1b-it-Q8_0.gguf":{"done":29147431,"total":1069306368}}}}
+
+data: {"model":"ggml-org/gemma-3-1b-it-GGUF:Q8_0","event":"download_failed"}
+
