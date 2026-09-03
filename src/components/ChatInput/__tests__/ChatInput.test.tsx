@@ -716,6 +716,27 @@ describe('input', () => {
       expect(Alert.alert).not.toHaveBeenCalled();
     });
 
+    it('closes the menu and re-enables auto-release after a camera error', async () => {
+      (launchCamera as jest.Mock).mockResolvedValue({
+        errorCode: 'camera_unavailable',
+      });
+
+      const screen = renderWithImageUpload();
+      await pressCameraMenuItem(screen);
+
+      await waitFor(() => {
+        expect(modelStore.enableAutoRelease).toHaveBeenCalledWith(
+          'camera-photo',
+        );
+      });
+      expect(modelStore.disableAutoRelease).toHaveBeenCalledWith(
+        'camera-photo',
+      );
+      await waitFor(() => {
+        expect(screen.queryByText(l10n.en.camera.takePhoto)).toBeNull();
+      });
+    });
+
     it('handles image library selection successfully', async () => {
       const mockResult = {
         assets: [{uri: 'file://test-library-photo.jpg'}],

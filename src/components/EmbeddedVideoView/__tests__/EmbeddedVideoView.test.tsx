@@ -330,6 +330,27 @@ describe('EmbeddedVideoView', () => {
     ).toBeTruthy();
   });
 
+  it('keeps a working close button in the iOS simulator state', () => {
+    const {
+      useCameraPermission,
+      useCameraDevice,
+    } = require('react-native-vision-camera');
+    useCameraPermission.mockReturnValue({
+      hasPermission: true,
+      requestPermission: jest.fn(),
+    });
+    useCameraDevice.mockReturnValue(null);
+
+    const {getByTestId} = render(
+      <L10nContext.Provider value={l10n.en}>
+        <EmbeddedVideoView {...defaultProps} />
+      </L10nContext.Provider>,
+    );
+
+    fireEvent.press(getByTestId('close-button'));
+    expect(defaultProps.onClose).toHaveBeenCalled();
+  });
+
   describe('on an Android device without a camera', () => {
     const platformOS = Object.getOwnPropertyDescriptor(Platform, 'OS')!
       .get as jest.Mock;
