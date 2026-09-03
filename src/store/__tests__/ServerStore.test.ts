@@ -1394,6 +1394,25 @@ describe('ServerStore', () => {
       expect(serverStore.sleepStateFor(id)).toBe('awake');
     });
 
+    it('keeps a known audio capability when a placeholder body follows', async () => {
+      const id = addLlamaServer();
+      jest.clearAllMocks();
+      mockedFetchServerProps
+        .mockResolvedValueOnce(
+          capsOnly({
+            contextLength: 8192,
+            supportsVision: false,
+            supportsAudio: true,
+          }),
+        )
+        .mockResolvedValueOnce(capsOnly({}));
+
+      await serverStore.fetchRemoteModelCaps(id, 'm');
+      await serverStore.fetchRemoteModelCaps(id, 'm');
+
+      expect(serverStore.remoteCaps[`${id}/m`]?.supportsAudio).toBe(true);
+    });
+
     it('writes a descriptive answer without touching the capability tier', async () => {
       const id = addLlamaServer();
       jest.clearAllMocks();
