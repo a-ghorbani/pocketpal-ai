@@ -636,6 +636,86 @@ describe('input', () => {
       expect(launchCamera).toHaveBeenCalledTimes(0); // Not called until menu interaction
     });
 
+    const renderWithImageUpload = () =>
+      render(
+        <UserContext.Provider value={user}>
+          <ChatInput
+            {...{
+              onSendPress: jest.fn(),
+              showImageUpload: true,
+              isVisionEnabled: true,
+              sendButtonVisibilityMode: 'editing',
+            }}
+          />
+        </UserContext.Provider>,
+      );
+
+    const pressCameraMenuItem = async (
+      screen: ReturnType<typeof renderWithImageUpload>,
+    ) => {
+      fireEvent.press(screen.getByLabelText('Add image'));
+      fireEvent.press(await screen.findByText(l10n.en.camera.takePhoto));
+    };
+
+    it('adds the captured photo to the selection', async () => {
+      (launchCamera as jest.Mock).mockResolvedValue({
+        assets: [{uri: 'file://test-photo.jpg'}],
+      });
+
+      const screen = renderWithImageUpload();
+      await pressCameraMenuItem(screen);
+
+      expect(await screen.findByLabelText('Remove image 1')).toBeTruthy();
+      expect(Alert.alert).not.toHaveBeenCalled();
+    });
+
+    it('alerts that no camera device was found when the camera is unavailable', async () => {
+      (launchCamera as jest.Mock).mockResolvedValue({
+        errorCode: 'camera_unavailable',
+      });
+
+      const screen = renderWithImageUpload();
+      await pressCameraMenuItem(screen);
+
+      await waitFor(() => {
+        expect(Alert.alert).toHaveBeenCalledWith(
+          l10n.en.camera.errorTitle,
+          l10n.en.camera.noDevice,
+        );
+      });
+      expect(launchCamera).toHaveBeenCalledTimes(1);
+      expect(screen.queryByLabelText('Remove image 1')).toBeNull();
+    });
+
+    it('alerts with the generic camera error for other error codes', async () => {
+      (launchCamera as jest.Mock).mockResolvedValue({
+        errorCode: 'others',
+        errorMessage: 'x',
+      });
+
+      const screen = renderWithImageUpload();
+      await pressCameraMenuItem(screen);
+
+      await waitFor(() => {
+        expect(Alert.alert).toHaveBeenCalledWith(
+          l10n.en.errors.cameraErrorTitle,
+          l10n.en.errors.cameraErrorMessage,
+        );
+      });
+    });
+
+    it('stays silent when the camera is cancelled', async () => {
+      (launchCamera as jest.Mock).mockResolvedValue({didCancel: true});
+
+      const screen = renderWithImageUpload();
+      await pressCameraMenuItem(screen);
+
+      await waitFor(() => {
+        expect(launchCamera).toHaveBeenCalledTimes(1);
+      });
+      expect(Alert.alert).not.toHaveBeenCalled();
+    });
+
     it('handles image library selection successfully', async () => {
       const mockResult = {
         assets: [{uri: 'file://test-library-photo.jpg'}],
