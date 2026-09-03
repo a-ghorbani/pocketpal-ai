@@ -21,6 +21,9 @@ import {
   slotsAfterSamplerRequest,
 } from '../../../jest/fixtures/llamaServerWire';
 import {EFFORT_LEVELS} from '../../utils/reasoningCapability';
+import {runInAction} from 'mobx';
+
+import {serverStore} from '../../store';
 
 /** Build a minimal Headers-like object for fetch mocks. */
 function mockHeaders(entries: Record<string, string> = {}) {
@@ -2537,11 +2540,25 @@ describe('streamChatCompletion sampler payload', () => {
     });
   });
 
-  it('builds the same body for the same settings on every send', async () => {
+  it('builds the same body whether or not a probe has landed', async () => {
     const params = {top_k: 10, penalty_repeat: 1.2, seed: 7};
-    const first = await bodyOf(params, 'llama.cpp');
-    const second = await bodyOf(params, 'llama.cpp');
+    const before = await bodyOf(params, 'llama.cpp');
 
-    expect(second).toEqual(first);
+    runInAction(() => {
+      serverStore.remoteProps = {
+        'srv/m': {
+          samplerDefaults: {top_k: 40, penalty_repeat: 1.0, temperature: 0.8},
+          probedUrl: 'http://localhost:1234',
+        },
+      };
+    });
+
+    const after = await bodyOf(params, 'llama.cpp');
+
+    expect(after).toEqual(before);
+
+    runInAction(() => {
+      serverStore.remoteProps = {};
+    });
   });
 });
