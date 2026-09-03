@@ -11,7 +11,12 @@ import {
   PROPS_TIMEOUT_MS,
   RemoteModelInfo,
 } from '../api/openai';
-import {RemoteModelCaps, ServerConfig} from '../utils/types';
+import {
+  RemoteModelCaps,
+  RemoteModelPresence,
+  RemoteModelProps,
+  ServerConfig,
+} from '../utils/types';
 import {ReasoningCapability} from '../utils/reasoningCapability';
 import {deriveListCapsMap} from '../utils/listCaps';
 import type {ListDerivedCaps} from '../utils/listCaps';
@@ -26,7 +31,56 @@ const FETCH_THROTTLE_MS = 60000;
  * provenance the entry carries. Enumerated once so the usability check and the
  * no-op write check cannot drift apart when a field is added.
  */
-const CAPS_FIELDS = ['contextLength', 'supportsVision'] as const;
+const CAPS_FIELDS = [
+  'contextLength',
+  'supportsVision',
+  'supportsAudio',
+] as const;
+
+/** The same enumeration for the description tier. */
+const PROPS_FIELDS = [
+  'samplerDefaults',
+  'slotCount',
+  'buildInfo',
+  'modelAlias',
+  'chatTemplateCaps',
+] as const;
+
+const PROPS_SCALAR_FIELDS = ['slotCount', 'buildInfo', 'modelAlias'] as const;
+
+const isUnusableCaps = (caps: RemoteModelCaps) =>
+  CAPS_FIELDS.every(f => caps[f] === undefined);
+
+const isUnusableProps = (props: RemoteModelProps) =>
+  PROPS_FIELDS.every(f => props[f] === undefined);
+
+const shallowEqual = (
+  a: Record<string, unknown> | undefined,
+  b: Record<string, unknown> | undefined,
+): boolean => {
+  if (a === b) {
+    return true;
+  }
+  if (!a || !b) {
+    return false;
+  }
+  const keys = Object.keys(a);
+  return (
+    keys.length === Object.keys(b).length && keys.every(k => a[k] === b[k])
+  );
+};
+
+// A nested object is compared by its contents: a fresh `samplerDefaults`
+// holding the same numbers is the same answer, and rewriting it would make an
+// unchanged probe look like news to every observer.
+const samePropsContent = (a: RemoteModelProps, b: RemoteModelProps): boolean =>
+  PROPS_SCALAR_FIELDS.every(f => a[f] === b[f]) &&
+  shallowEqual(a.samplerDefaults, b.samplerDefaults) &&
+  shallowEqual(a.chatTemplateCaps, b.chatTemplateCaps);
+
+// Request bookkeeping rather than store state: a second probe for a key while
+// one is in flight awaits that one instead of issuing its own.
+const probesInFlight = new Map<string, Promise<void>>();
 
 /**
  * Shared by every path that invalidates per-model state, so a new map cannot
@@ -51,6 +105,11 @@ class ServerStore {
   // Server-reported capabilities keyed by the same full model id. /props
   // answers per model on a multi-model server, so caps cannot live per server.
   remoteCaps: Record<string, RemoteModelCaps> = {};
+  // What the same /props answer says beyond capabilities, under the same key.
+  remoteProps: Record<string, RemoteModelProps> = {};
+  // Sleep state, deliberately not persisted: a hydrated "asleep" would be a
+  // claim about now that nobody checked.
+  remotePresence: Record<string, RemoteModelPresence> = {};
   serverModels: Map<string, RemoteModelInfo[]> = observable.map();
   userSelectedModels: Array<{serverId: string; remoteModelId: string}> = [];
   isLoading = false;
@@ -73,6 +132,7 @@ class ServerStore {
         'userSelectedModels',
         'remoteReasoning',
         'remoteCaps',
+        'remoteProps',
       ],
       storage: AsyncStorage,
     }).then(() => {
@@ -115,6 +175,8 @@ class ServerStore {
 
     if (invalidatesDiscovery) {
       this.remoteCaps = dropServerEntries(this.remoteCaps, id);
+      this.remoteProps = dropServerEntries(this.remoteProps, id);
+      this.remotePresence = dropServerEntries(this.remotePresence, id);
       this.serverModels.delete(id);
     }
   }
@@ -128,6 +190,8 @@ class ServerStore {
     );
     this.remoteReasoning = dropServerEntries(this.remoteReasoning, id);
     this.remoteCaps = dropServerEntries(this.remoteCaps, id);
+    this.remoteProps = dropServerEntries(this.remoteProps, id);
+    this.remotePresence = dropServerEntries(this.remotePresence, id);
     // Clean up API key from keychain
     this.removeApiKey(id);
   }
@@ -311,13 +375,30 @@ class ServerStore {
     remoteModelId: string,
     resolvedApiKey?: string,
   ): Promise<void> {
+    const key = `${serverId}/${remoteModelId}`;
+    const inFlight = probesInFlight.get(key);
+    if (inFlight) {
+      return inFlight;
+    }
+
+    const request = this.probeRemoteModel(
+      serverId,
+      remoteModelId,
+      resolvedApiKey,
+    ).finally(() => probesInFlight.delete(key));
+    probesInFlight.set(key, request);
+    return request;
+  }
+
+  private async probeRemoteModel(
+    serverId: string,
+    remoteModelId: string,
+    resolvedApiKey?: string,
+  ): Promise<void> {
     const server = this.servers.find(s => s.id === serverId);
     if (!server || server.serverType !== 'llama.cpp') {
       return;
     }
-
-    const isUnusable = (caps: RemoteModelCaps) =>
-      CAPS_FIELDS.every(f => caps[f] === undefined);
 
     // Snapshot: `server` is the live observable, so updateServer mutates it
     // in place while the probe is in flight.
@@ -330,18 +411,23 @@ class ServerStore {
     );
 
     const apiKey = resolvedApiKey ?? (await this.getApiKey(serverId));
-    let {caps} = await fetchServerProps(
+    let {caps, props, presence} = await fetchServerProps(
       probedUrl,
       apiKey,
       timeoutMs,
       remoteModelId,
     );
 
-    if (isUnusable(caps) && this.servesOnlyModel(serverId, remoteModelId)) {
-      ({caps} = await fetchServerProps(probedUrl, apiKey, timeoutMs));
+    if (isUnusableCaps(caps) && this.servesOnlyModel(serverId, remoteModelId)) {
+      const bare = await fetchServerProps(probedUrl, apiKey, timeoutMs);
+      // Per tier: the retry fires on an unusable capability answer, which is
+      // exactly when the scoped call may already have resolved the other two.
+      caps = isUnusableCaps(bare.caps) ? caps : bare.caps;
+      props = isUnusableProps(bare.props) ? props : bare.props;
+      presence = bare.presence ?? presence;
     }
 
-    if (isUnusable(caps)) {
+    if (isUnusableCaps(caps) && isUnusableProps(props) && !presence) {
       return;
     }
 
@@ -359,22 +445,70 @@ class ServerStore {
         return;
       }
       const key = `${serverId}/${remoteModelId}`;
-      const prior = this.remoteCaps[key];
-      const sameBackend = prior?.probedUrl === probedUrl;
-      const merged: RemoteModelCaps = {
-        ...(sameBackend ? prior : undefined),
-        ...caps,
-        probedUrl,
-      };
-      if (
-        prior &&
-        prior.probedUrl === merged.probedUrl &&
-        CAPS_FIELDS.every(f => prior[f] === merged[f])
-      ) {
-        return;
+
+      if (!isUnusableCaps(caps)) {
+        const prior = this.remoteCaps[key];
+        const merged: RemoteModelCaps = {
+          ...(prior?.probedUrl === probedUrl ? prior : undefined),
+          ...caps,
+          probedUrl,
+        };
+        const unchanged =
+          prior &&
+          prior.probedUrl === merged.probedUrl &&
+          CAPS_FIELDS.every(f => prior[f] === merged[f]);
+        if (!unchanged) {
+          this.remoteCaps[key] = merged;
+        }
       }
-      this.remoteCaps[key] = merged;
+
+      if (!isUnusableProps(props)) {
+        const prior = this.remoteProps[key];
+        const merged: RemoteModelProps = {
+          ...(prior?.probedUrl === probedUrl ? prior : undefined),
+          ...props,
+          probedUrl,
+        };
+        const unchanged =
+          prior &&
+          prior.probedUrl === merged.probedUrl &&
+          samePropsContent(prior, merged);
+        if (!unchanged) {
+          this.remoteProps[key] = merged;
+        }
+      }
+
+      if (presence) {
+        this.remotePresence[key] = presence;
+      }
     });
+  }
+
+  /**
+   * Whether the model this server was last asked about is sleeping. Answers
+   * about that model, not about whether the server is reachable, and gates
+   * nothing. Unknown until an observation lands, and unknown again once the
+   * url moves.
+   */
+  sleepStateFor(serverId: string): 'awake' | 'asleep' | 'unknown' {
+    const server = this.servers.find(s => s.id === serverId);
+    if (!server) {
+      return 'unknown';
+    }
+    const prefix = `${serverId}/`;
+    let latest: RemoteModelPresence | undefined;
+    for (const [key, entry] of Object.entries(this.remotePresence)) {
+      if (!key.startsWith(prefix) || entry.probedUrl !== server.url) {
+        continue;
+      }
+      if (!latest || entry.at > latest.at) {
+        latest = entry;
+      }
+    }
+    if (!latest) {
+      return 'unknown';
+    }
+    return latest.isSleeping ? 'asleep' : 'awake';
   }
 
   /**

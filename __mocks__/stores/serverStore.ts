@@ -1,6 +1,11 @@
 import {makeAutoObservable, observable} from 'mobx';
 
-import {RemoteModelCaps, ServerConfig} from '../../src/utils/types';
+import {
+  RemoteModelCaps,
+  RemoteModelPresence,
+  RemoteModelProps,
+  ServerConfig,
+} from '../../src/utils/types';
 import {ReasoningCapability} from '../../src/utils/reasoningCapability';
 import {RemoteModelInfo} from '../../src/api/openai';
 import {deriveListCapsMap} from '../../src/utils/listCaps';
@@ -17,9 +22,32 @@ class MockServerStore {
     return deriveListCapsMap(this.servers, this.serverModels);
   }
 
+  sleepStateFor(serverId: string): 'awake' | 'asleep' | 'unknown' {
+    const server = this.servers.find(s => s.id === serverId);
+    if (!server) {
+      return 'unknown';
+    }
+    const prefix = `${serverId}/`;
+    let latest: RemoteModelPresence | undefined;
+    for (const [key, entry] of Object.entries(this.remotePresence)) {
+      if (!key.startsWith(prefix) || entry.probedUrl !== server.url) {
+        continue;
+      }
+      if (!latest || entry.at > latest.at) {
+        latest = entry;
+      }
+    }
+    if (!latest) {
+      return 'unknown';
+    }
+    return latest.isSleeping ? 'asleep' : 'awake';
+  }
+
   userSelectedModels: Array<{serverId: string; remoteModelId: string}> = [];
   remoteReasoning: Record<string, ReasoningCapability> = {};
   remoteCaps: Record<string, RemoteModelCaps> = {};
+  remoteProps: Record<string, RemoteModelProps> = {};
+  remotePresence: Record<string, RemoteModelPresence> = {};
   isLoading = false;
   error: string | null = null;
   privacyNoticeAcknowledged = false;
