@@ -561,6 +561,16 @@ export async function detectServerType(
  *   model id; nothing for on/off (400 on misapplied params).
  * - unknown / old vLLM: omit everything.
  */
+/** Thinking budget per effort level; `-1` is llama.cpp's uncapped sentinel. */
+const REASONING_BUDGET_TOKENS: Record<string, number> = {
+  minimal: 256,
+  low: 512,
+  medium: 2048,
+  high: 8192,
+  xhigh: 16384,
+  max: -1,
+};
+
 export function buildReasoningPayload(
   serverType: string | undefined,
   reasoning: ReasoningIntent | undefined,
@@ -586,6 +596,7 @@ export function buildReasoningPayload(
         ? {
             reasoning_format: 'auto',
             chat_template_kwargs: {reasoning_effort: effort},
+            reasoning_budget_tokens: REASONING_BUDGET_TOKENS[effort] ?? -1,
           }
         : {reasoning_format: 'auto'};
     case 'vLLM':

@@ -15,6 +15,7 @@ import {
   routerModelsBody,
 } from '../../../jest/fixtures/remoteModelList';
 import {slotsAfterSamplerRequest} from '../../../jest/fixtures/llamaServerWire';
+import {EFFORT_LEVELS} from '../../utils/reasoningCapability';
 
 /** Build a minimal Headers-like object for fetch mocks. */
 function mockHeaders(entries: Record<string, string> = {}) {
@@ -1978,14 +1979,50 @@ describe('buildReasoningPayload (per-serverType gating)', () => {
     ).toEqual({
       reasoning_format: 'auto',
       chat_template_kwargs: {reasoning_effort: 'high'},
+      reasoning_budget_tokens: 8192,
     });
   });
 
+  it('llama.cpp budgets rise with the effort level and uncap at max', () => {
+    const budgetFor = (effort: string) =>
+      buildReasoningPayload('llama.cpp', {enabled: true, effort})
+        .reasoning_budget_tokens;
+
+    expect(EFFORT_LEVELS.map(budgetFor)).toEqual([
+      256, 512, 2048, 8192, 16384, -1,
+    ]);
+  });
+
+  it('llama.cpp sends no budget when reasoning is on without an effort', () => {
+    const on = buildReasoningPayload('llama.cpp', {enabled: true});
+    expect(on).not.toHaveProperty('reasoning_budget_tokens');
+    const off = buildReasoningPayload('llama.cpp', {enabled: false});
+    expect(off).not.toHaveProperty('reasoning_budget_tokens');
+  });
+
+  it('sends no budget to any other server type', () => {
+    for (const serverType of [
+      'vLLM',
+      'LM Studio',
+      'Ollama',
+      'OpenAI',
+      undefined,
+    ]) {
+      expect(
+        buildReasoningPayload(serverType, {enabled: true, effort: 'high'}),
+      ).not.toHaveProperty('reasoning_budget_tokens');
+    }
+  });
+
   it('llama.cpp OFF sends enable_thinking:false + reasoning_format auto', () => {
-    expect(buildReasoningPayload('llama.cpp', {enabled: false})).toEqual({
+    const off = buildReasoningPayload('llama.cpp', {enabled: false});
+    expect(off).toEqual({
       reasoning_format: 'auto',
       chat_template_kwargs: {enable_thinking: false},
     });
+    // llama-server has no top-level reasoning_effort: it 200s and keeps
+    // thinking on, so enable_thinking is the only thing that turns it off.
+    expect(off).not.toHaveProperty('reasoning_effort');
   });
 
   it('LM Studio is on/off only — no graded effort', () => {
