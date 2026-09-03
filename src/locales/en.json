@@ -563,6 +563,8 @@
     "bubble": {
       "msPerToken": "{{value}}ms/token",
       "tokensPerSec": "{{value}} tokens/sec",
+      "promptTokensPerSec": "{{value}} prompt tokens/sec",
+      "cachedTokens": "{{value}} cached",
       "ttft": "{{value}}ms TTFT",
       "draftAccepted": "draft: {{accepted}}/{{total}} ({{pct}}%)",
       "interrupted": "Interrupted",

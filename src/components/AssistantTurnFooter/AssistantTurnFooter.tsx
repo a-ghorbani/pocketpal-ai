@@ -63,6 +63,20 @@ export const AssistantTurnFooter: React.FC<AssistantTurnFooterProps> = observer(
         }),
       );
     }
+    if (timings?.prompt_per_second != null) {
+      timingParts.push(
+        t(l10n.components.bubble.promptTokensPerSec, {
+          value: timings.prompt_per_second.toFixed(2),
+        }),
+      );
+    }
+    if (timings?.cache_n != null && timings.cache_n > 0) {
+      timingParts.push(
+        t(l10n.components.bubble.cachedTokens, {
+          value: String(timings.cache_n),
+        }),
+      );
+    }
     if (timings?.time_to_first_token_ms != null) {
       timingParts.push(
         t(l10n.components.bubble.ttft, {
