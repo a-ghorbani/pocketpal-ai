@@ -1,4 +1,4 @@
-import {View} from 'react-native';
+import {TouchableOpacity, View} from 'react-native';
 import React from 'react';
 
 import {InputSlider} from '../InputSlider';
@@ -11,26 +11,72 @@ import {useTheme} from '../../hooks';
 import {createStyles} from './styles';
 
 import {L10nContext} from '../../utils';
+import {t} from '../../locales';
 import {
   COMPLETION_PARAMS_METADATA,
   validateNumericField,
 } from '../../utils/modelSettings';
 import {CompletionParams} from '../../utils/completionTypes';
+import {SamplerDefaults} from '../../utils/types';
 
 interface Props {
   settings: CompletionParams;
   onChange: (name: string, value: any) => void;
   disabled?: boolean;
+  serverDefaults?: SamplerDefaults;
 }
 
 export const CompletionSettings: React.FC<Props> = ({
   settings,
   onChange,
   disabled = false,
+  serverDefaults,
 }) => {
   const theme = useTheme();
   const styles = createStyles(theme);
   const l10n = React.useContext(L10nContext);
+
+  /**
+   * What the server says this parameter defaults to, and whether the editor is
+   * still on it. `tolerance` is half a slider step, so a quantised float does
+   * not read as a deliberate change; a discrete control passes 0 and compares
+   * exactly.
+   */
+  const renderServerDefault = (name: string, tolerance: number) => {
+    const serverValue = serverDefaults?.[name];
+    if (serverValue === undefined) {
+      return null;
+    }
+    const current = Number(settings[name]);
+    const matches =
+      tolerance > 0
+        ? Math.abs(current - serverValue) < tolerance
+        : current === serverValue;
+
+    if (matches) {
+      return (
+        <Text
+          variant="labelSmall"
+          style={styles.serverDefault}
+          testID={`${name}-server-default`}>
+          {l10n.components.completionSettings.serverDefault}
+        </Text>
+      );
+    }
+
+    return (
+      <TouchableOpacity
+        onPress={disabled ? undefined : () => onChange(name, serverValue)}
+        disabled={disabled}
+        testID={`${name}-server-default-reset`}>
+        <Text variant="labelSmall" style={styles.serverDefaultReset}>
+          {t(l10n.components.completionSettings.resetToServerDefault, {
+            value: String(serverValue),
+          })}
+        </Text>
+      </TouchableOpacity>
+    );
+  };
 
   const renderSlider = ({name}: {name: string}) => {
     const metadata = COMPLETION_PARAMS_METADATA[name];
@@ -52,6 +98,7 @@ export const CompletionSettings: React.FC<Props> = ({
           debounceMs={300} // Enable debouncing for sliders
           disabled={disabled}
         />
+        {renderServerDefault(name, step / 2)}
       </View>
     );
   };
@@ -84,6 +131,7 @@ export const CompletionSettings: React.FC<Props> = ({
           editable={!disabled}
           testID={`${String(name)}-input`}
         />
+        {renderServerDefault(String(name), 0)}
       </View>
     );
   };
@@ -141,6 +189,7 @@ export const CompletionSettings: React.FC<Props> = ({
           ]}
           style={styles.segmentedButtons}
         />
+        {renderServerDefault('mirostat', 0)}
       </View>
     );
   };

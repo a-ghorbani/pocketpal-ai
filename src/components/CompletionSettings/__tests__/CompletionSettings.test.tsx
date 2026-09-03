@@ -88,6 +88,114 @@ describe('CompletionSettings', () => {
     expect(getByTestId('temperature-slider').props.step).toBe(0.01);
   });
 
+  describe('server defaults', () => {
+    it('shows nothing at all when the server reported none', () => {
+      const {queryByTestId} = render(
+        <CompletionSettings
+          settings={mockCompletionParams}
+          onChange={jest.fn()}
+        />,
+      );
+
+      expect(queryByTestId('top_k-server-default')).toBeNull();
+      expect(queryByTestId('top_k-server-default-reset')).toBeNull();
+    });
+
+    it('shows nothing for a parameter the server did not report', () => {
+      const {queryByTestId} = render(
+        <CompletionSettings
+          settings={mockCompletionParams}
+          onChange={jest.fn()}
+          serverDefaults={{top_k: 40}}
+        />,
+      );
+
+      expect(queryByTestId('top_k-server-default')).toBeTruthy();
+      expect(queryByTestId('min_p-server-default')).toBeNull();
+      expect(queryByTestId('min_p-server-default-reset')).toBeNull();
+    });
+
+    it('reads a value still on the server default as such', () => {
+      const {getByTestId, queryByTestId} = render(
+        <CompletionSettings
+          settings={{...mockCompletionParams, top_k: 40}}
+          onChange={jest.fn()}
+          serverDefaults={{top_k: 40}}
+        />,
+      );
+
+      expect(getByTestId('top_k-server-default')).toBeTruthy();
+      expect(queryByTestId('top_k-server-default-reset')).toBeNull();
+    });
+
+    it('does not call a quantised float a deliberate change', () => {
+      // Half a step either way is the slider's own resolution, not an edit.
+      const {getByTestId} = render(
+        <CompletionSettings
+          settings={{...mockCompletionParams, penalty_repeat: 1.0}}
+          onChange={jest.fn()}
+          serverDefaults={{penalty_repeat: 1.004}}
+        />,
+      );
+
+      expect(getByTestId('penalty_repeat-server-default')).toBeTruthy();
+    });
+
+    it('offers the server value back, and shows the number', () => {
+      const onChange = jest.fn();
+      const {getByTestId, getByText} = render(
+        <CompletionSettings
+          settings={{...mockCompletionParams, min_p: 0.3}}
+          onChange={onChange}
+          serverDefaults={{min_p: 0.05}}
+        />,
+      );
+
+      expect(getByText('Server default: 0.05 · Reset')).toBeTruthy();
+
+      fireEvent.press(getByTestId('min_p-server-default-reset'));
+
+      expect(onChange).toHaveBeenCalledTimes(1);
+      expect(onChange).toHaveBeenCalledWith('min_p', 0.05);
+    });
+
+    it('compares a discrete control exactly', () => {
+      const onDefault = render(
+        <CompletionSettings
+          settings={{...mockCompletionParams, mirostat: 0}}
+          onChange={jest.fn()}
+          serverDefaults={{mirostat: 0}}
+        />,
+      );
+      expect(onDefault.getByTestId('mirostat-server-default')).toBeTruthy();
+
+      const changed = render(
+        <CompletionSettings
+          settings={{...mockCompletionParams, mirostat: 1}}
+          onChange={jest.fn()}
+          serverDefaults={{mirostat: 0}}
+        />,
+      );
+      expect(changed.getByTestId('mirostat-server-default-reset')).toBeTruthy();
+    });
+
+    it('changes nothing while the settings are read-only', () => {
+      const onChange = jest.fn();
+      const {getByTestId} = render(
+        <CompletionSettings
+          settings={{...mockCompletionParams, min_p: 0.3}}
+          onChange={onChange}
+          serverDefaults={{min_p: 0.05}}
+          disabled
+        />,
+      );
+
+      fireEvent.press(getByTestId('min_p-server-default-reset'));
+
+      expect(onChange).not.toHaveBeenCalled();
+    });
+  });
+
   it('handles slider changes', async () => {
     const mockOnChange = jest.fn();
     const {getByTestId} = render(
