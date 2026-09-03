@@ -22,6 +22,7 @@ import {deriveListCapsMap} from '../utils/listCaps';
 import type {ListDerivedCaps} from '../utils/listCaps';
 import {
   applyLivePatch,
+  downloadVerdict,
   loadVerdict,
   mapRowStatus,
   unloadVerdict,
@@ -36,6 +37,7 @@ import {
 import {
   openRouterEventStream,
   routerErrorMessage,
+  routerDownload,
   routerLoad,
   routerUnload,
   RouterStreamError,
@@ -87,6 +89,17 @@ const ROUTER_UNREACHABLE_MS = 90000;
 const ROUTER_UNLOAD_SETTLE_MS = 30000;
 
 /**
+ * A terminal download event can arrive fractionally before the list settles,
+ * so the row is looked for again across a short window before the attempt is
+ * called a failure. The ceiling is what bounds a download nothing corroborates
+ * — generous, because too short false-fails a running download while too long
+ * only delays an honest failure, and the row shows Downloading with a cancel
+ * throughout either way.
+ */
+const ROUTER_DOWNLOAD_SETTLE_MS = 8000;
+const ROUTER_DOWNLOAD_MAX_MS = 2 * 60 * 60 * 1000;
+
+/**
  * The capability fields of a `RemoteModelCaps` entry — everything except the
  * provenance the entry carries. Enumerated once so the usability check and the
  * no-op write check cannot drift apart when a field is added.
@@ -124,6 +137,12 @@ interface RouterListShape {
 }
 
 export type RouterOpOutcome = 'ready' | 'failed';
+
+const UNREACHABLE_CAUSE: Record<RouterOp['kind'], RouterFailure['cause']> = {
+  load: 'load-failed',
+  unload: 'unload-not-released',
+  download: 'download-not-fetched',
+};
 export type RouterLoadOutcome = RouterOpOutcome | 'not-router';
 
 class ServerStore {
@@ -378,17 +397,23 @@ class ServerStore {
     return [...keys];
   }
 
-  private resolveRouterRowState(serverId: string, key: string): RouterRowState {
+  /** What the last list read said, with no overlay and no operation of ours. */
+  private routerRowFromList(serverId: string, key: string): RouterRowState {
     const remoteModelId = key.slice(serverId.length + 1);
-    const row = (this.serverModels.get(serverId) ?? []).find(candidate =>
-      rowMatchesKey(candidate, remoteModelId),
+    return mapRowStatus(
+      (this.serverModels.get(serverId) ?? []).find(candidate =>
+        rowMatchesKey(candidate, remoteModelId),
+      ),
     );
+  }
+
+  private resolveRouterRowState(serverId: string, key: string): RouterRowState {
     const live = this.routerEvents[key];
     const fetchStartedAt = this.routerListShape[serverId]?.startedAt ?? 0;
     if (live?.status && live.at > fetchStartedAt) {
       return live.status;
     }
-    const rowState = mapRowStatus(row);
+    const rowState = this.routerRowFromList(serverId, key);
     // A download has no row until it lands, so its own operation is what says
     // the model is on its way.
     if (rowState === 'absent' && this.routerOps[key]?.kind === 'download') {
@@ -774,7 +799,7 @@ class ServerStore {
       return;
     }
 
-    const key = `${serverId}/${effect.model}`;
+    const key = this.adoptRouterEventKey(serverId, effect.model);
     runInAction(() => {
       this.routerEvents[key] = applyLivePatch(
         this.routerEvents[key],
@@ -790,7 +815,7 @@ class ServerStore {
       const op = this.routerOps[key];
       if (op) {
         if (effect.attemptEnded) {
-          op.attemptEnded = true;
+          op.attemptEndedAt = Date.now();
         }
         op.phase = 'active';
         op.lastEvidenceAt = Date.now();
@@ -800,6 +825,40 @@ class ServerStore {
     if (effect.reconcile) {
       this.requestRouterReconcile(serverId);
     }
+  }
+
+  /**
+   * The server may normalise the reference that was typed, so a download with
+   * no competitor adopts the id its first event carries. With two in flight
+   * there is nothing to adopt from and only an exact match joins.
+   */
+  private adoptRouterEventKey(serverId: string, model: string): string {
+    const exact = `${serverId}/${model}`;
+    if (this.routerOps[exact]) {
+      return exact;
+    }
+    const downloads = Object.entries(this.routerOps).filter(
+      ([, op]) => op.serverId === serverId && op.kind === 'download',
+    );
+    if (downloads.length !== 1) {
+      return exact;
+    }
+    const [previousKey, op] = downloads[0];
+    runInAction(() => {
+      this.setRouterOp(previousKey, undefined);
+      this.setRouterOp(exact, {...op, key: exact});
+      const live = this.routerEvents[previousKey];
+      if (live) {
+        delete this.routerEvents[previousKey];
+        this.routerEvents[exact] = live;
+      }
+    });
+    const waiter = this.routerOpWaiters.get(previousKey);
+    if (waiter) {
+      this.routerOpWaiters.delete(previousKey);
+      this.routerOpWaiters.set(exact, waiter);
+    }
+    return exact;
   }
 
   private requestRouterReconcile(serverId: string): void {
@@ -979,6 +1038,74 @@ class ServerStore {
     return settled as Promise<RouterOpOutcome>;
   }
 
+  /**
+   * Asks the server to fetch a model for itself. The reference goes on the
+   * wire exactly as typed. A 200 is acceptance and not validation — a
+   * repository that does not exist is accepted with the same shape — so the
+   * only evidence the model arrived is its row appearing in the list.
+   */
+  async startRouterDownload(
+    serverId: string,
+    reference: string,
+  ): Promise<{accepted: boolean; message?: string}> {
+    const server = this.servers.find(s => s.id === serverId);
+    if (!server || !this.isRouterServer(serverId)) {
+      return {accepted: false};
+    }
+    const key = `${serverId}/${reference}`;
+    try {
+      const apiKey = await this.getApiKey(serverId);
+      const {status, body} = await routerDownload(
+        server.url,
+        reference,
+        apiKey,
+        server.requestTimeoutMs,
+      );
+      if (status < 200 || status >= 300) {
+        return {accepted: false, message: routerErrorMessage(body)};
+      }
+    } catch (error: any) {
+      return {accepted: false, message: error?.message};
+    }
+    this.startRouterOp(key, {
+      kind: 'download',
+      phase: 'requested',
+      serverId,
+      key,
+      startedAt: Date.now(),
+      requestSeq: this.routerFetchSeq,
+      lastEvidenceAt: Date.now(),
+    });
+    return {accepted: true};
+  }
+
+  /** Stopping a download is an unload of the model being fetched. */
+  async cancelRouterDownload(
+    serverId: string,
+    remoteModelId: string,
+  ): Promise<void> {
+    const key = `${serverId}/${remoteModelId}`;
+    const op = this.routerOps[key];
+    if (op?.kind !== 'download') {
+      return;
+    }
+    runInAction(() => {
+      op.cancelled = true;
+      op.attemptEndedAt = Date.now();
+    });
+    const server = this.servers.find(s => s.id === serverId);
+    if (server) {
+      const apiKey = await this.getApiKey(serverId);
+      await routerUnload(
+        server.url,
+        remoteModelId,
+        apiKey,
+        server.requestTimeoutMs,
+      ).catch(() => undefined);
+    }
+    this.requestRouterReconcile(serverId);
+  }
+
   private startRouterOp(key: string, op: RouterOp): Promise<RouterLoadOutcome> {
     const settled = new Promise<RouterLoadOutcome>(resolve =>
       this.routerOpWaiters.set(key, resolve),
@@ -1027,6 +1154,8 @@ class ServerStore {
         this.settleLoadOp(key, op, state);
       } else if (op.kind === 'unload') {
         this.settleUnloadOp(key, op, state);
+      } else {
+        this.settleDownloadOp(key, op);
       }
     }
   }
@@ -1071,6 +1200,45 @@ class ServerStore {
     if (unloadVerdict(state) === 'released') {
       this.settleRouterOp(key, 'ready');
     }
+  }
+
+  /**
+   * A download settles on the model's presence in the list. Neither terminal
+   * event says which outcome happened: the same one fires for a download that
+   * succeeded and for one of a repository that does not exist, and the other
+   * fires on cancel. Absence is not failure while the ceiling is unspent —
+   * a model being fetched need not be listed until it lands.
+   */
+  private settleDownloadOp(key: string, op: RouterOp): void {
+    const now = Date.now();
+    const verdict = downloadVerdict({
+      rowState: this.routerRowFromList(op.serverId, key),
+      freshCorroboration: op.lastEvidenceAt > (op.armedAt ?? op.startedAt),
+      attemptEnded: op.attemptEndedAt !== undefined,
+      graceElapsed:
+        op.attemptEndedAt !== undefined &&
+        now - op.attemptEndedAt > ROUTER_DOWNLOAD_SETTLE_MS,
+      ceilingElapsed: now - op.startedAt > ROUTER_DOWNLOAD_MAX_MS,
+    });
+    if (verdict === 'arrived') {
+      this.settleRouterOp(key, 'ready');
+      return;
+    }
+    if (verdict === 'never-arrived') {
+      this.settleRouterOp(
+        key,
+        'failed',
+        op.cancelled ? undefined : {cause: 'download-not-fetched'},
+      );
+      return;
+    }
+    runInAction(() => {
+      if (verdict === 'downloading') {
+        op.phase = 'active';
+        op.lastEvidenceAt = now;
+      }
+      op.verdictRequested = false;
+    });
   }
 
   private rowReason(key: string): string | undefined {
@@ -1167,7 +1335,7 @@ class ServerStore {
         now - op.startedAt > ROUTER_UNREACHABLE_MS
       ) {
         this.settleRouterOp(key, 'failed', {
-          cause: op.kind === 'unload' ? 'unload-not-released' : 'load-failed',
+          cause: UNREACHABLE_CAUSE[op.kind],
           message: op.reason,
         });
         continue;
@@ -1183,6 +1351,7 @@ class ServerStore {
       }
       runInAction(() => {
         op.lastEvidenceAt = now;
+        op.armedAt = now;
         op.verdictRequested = true;
       });
       this.requestRouterReconcile(op.serverId);

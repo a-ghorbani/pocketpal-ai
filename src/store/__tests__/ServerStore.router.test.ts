@@ -19,6 +19,7 @@ jest.mock('../../api/router', () => ({
   openRouterEventStream: jest.fn(() => ({close: jest.fn()})),
   routerLoad: jest.fn(),
   routerUnload: jest.fn(),
+  routerDownload: jest.fn(),
 }));
 
 const mockAddEventListener = jest.fn().mockReturnValue({remove: jest.fn()});
@@ -34,10 +35,12 @@ import {
 import {
   routerWireEvents,
   routerWireJson,
+  routerWireResponse,
 } from '../../../jest/fixtures/routerWire';
 import type {RemoteModelInfo} from '../../api/openai';
 import {
   openRouterEventStream,
+  routerDownload,
   routerLoad,
   routerUnload,
   RouterStreamError,
@@ -51,6 +54,7 @@ const mockedFetch = openaiModule.fetchModelsWithHeaders as jest.Mock;
 const mockedOpenStream = openRouterEventStream as jest.Mock;
 const mockedRouterLoad = routerLoad as jest.Mock;
 const mockedRouterUnload = routerUnload as jest.Mock;
+const mockedRouterDownload = routerDownload as jest.Mock;
 
 /** One of the captured router rows; the tests move it between states. */
 const TARGET = 'gemma-4-e2b';
@@ -59,12 +63,25 @@ const ROUTER_EVIDENCE_MS = 45000;
 const ROUTER_UNREACHABLE_MS = 90000;
 const ROUTER_UNLOAD_SETTLE_MS = 30000;
 const ROUTER_POLL_MS = 4000;
+const ROUTER_DOWNLOAD_SETTLE_MS = 8000;
+const ROUTER_DOWNLOAD_MAX_MS = 2 * 60 * 60 * 1000;
+
+const routerWireResponseBody = (name: any) =>
+  JSON.parse(routerWireResponse(name).body);
 
 const listResult = (models: any[], hasModelsKey: boolean) => ({
   models: models as RemoteModelInfo[],
   headers: {},
   hasModelsKey,
 });
+
+/** Advance in slices so each tick's detached fetch can resolve between them. */
+const advance = async (ms: number) => {
+  for (let elapsed = 0; elapsed < ms; elapsed += 1000) {
+    jest.advanceTimersByTime(1000);
+    await flush();
+  }
+};
 
 /** A reconcile that starts strictly after whatever came before it. */
 const reconcile = async (serverId: string) => {
@@ -849,5 +866,210 @@ describe('unloading a model', () => {
     jest.advanceTimersByTime(ROUTER_UNLOAD_SETTLE_MS + 2000);
     await flush();
     await expect(pending).resolves.toBe('failed');
+  });
+});
+
+describe('downloading a model to the server', () => {
+  const REFERENCE = 'ggml-org/gemma-3-270m-it-GGUF:Q8_0';
+  const NORMALISED = 'ggml-org/gemma-3-270m-it-gguf:q8_0';
+
+  beforeEach(() => {
+    jest.clearAllMocks();
+    jest.useFakeTimers();
+    resetStore();
+    mockedRouterDownload.mockResolvedValue({
+      status: 200,
+      body: {success: true},
+    });
+    mockedRouterUnload.mockResolvedValue({status: 200, body: {success: true}});
+  });
+
+  afterEach(() => {
+    jest.useRealTimers();
+  });
+
+  const routerServer = async () => {
+    const serverId = addServer();
+    mockedFetch.mockResolvedValue(listResult(routerModelsBody.data, false));
+    await serverStore.fetchModelsForServer(serverId);
+    jest.advanceTimersByTime(1);
+    return serverId;
+  };
+
+  const withDownloadedRow = () =>
+    mockedFetch.mockResolvedValue(
+      listResult(
+        [
+          ...routerModelsBody.data,
+          {
+            id: REFERENCE,
+            object: 'model',
+            owned_by: 'llamacpp',
+            status: {value: 'unloaded'},
+          },
+        ],
+        false,
+      ),
+    );
+
+  it('posts the reference exactly as typed', async () => {
+    const id = await routerServer();
+
+    await serverStore.startRouterDownload(id, REFERENCE);
+
+    expect(mockedRouterDownload.mock.calls[0][1]).toBe(REFERENCE);
+  });
+
+  it('shows the model as downloading from the accepted request alone', async () => {
+    const id = await routerServer();
+
+    await serverStore.startRouterDownload(id, REFERENCE);
+
+    expect(serverStore.routerRowState(id, REFERENCE)).toBe('downloading');
+  });
+
+  it('reports a refused request with the server reason and starts nothing', async () => {
+    const id = await routerServer();
+    mockedRouterDownload.mockResolvedValueOnce({
+      status: 404,
+      body: routerWireResponseBody('post-models-unregistered-404.txt'),
+    });
+
+    const result = await serverStore.startRouterDownload(id, REFERENCE);
+
+    expect(result).toEqual({accepted: false, message: 'File Not Found'});
+    expect(serverStore.routerOp(id, REFERENCE)).toBeUndefined();
+  });
+
+  // download_finished fires identically for a download that succeeded and one
+  // of a repository that does not exist.
+  it('settles success on the row appearing, not on the attempt ending', async () => {
+    const id = await routerServer();
+    await serverStore.startRouterDownload(id, REFERENCE);
+
+    serverStore.applyRouterEvent(id, {
+      model: REFERENCE,
+      event: 'download_finished',
+    });
+    await flush();
+    expect(serverStore.routerOp(id, REFERENCE)).toBeDefined();
+
+    withDownloadedRow();
+    await reconcile(id);
+
+    expect(serverStore.routerOp(id, REFERENCE)).toBeUndefined();
+    expect(serverStore.routerRowState(id, REFERENCE)).toBe('unloaded');
+    expect(serverStore.routerReason(id, REFERENCE)).toBeUndefined();
+  });
+
+  it('settles failed when nothing ever appears after the attempt ended', async () => {
+    const id = await routerServer();
+    await serverStore.startRouterDownload(id, REFERENCE);
+
+    serverStore.applyRouterEvent(id, {
+      model: REFERENCE,
+      event: 'download_finished',
+    });
+    await flush();
+
+    await advance(ROUTER_DOWNLOAD_SETTLE_MS + ROUTER_POLL_MS);
+
+    expect(serverStore.routerOp(id, REFERENCE)).toBeUndefined();
+    expect(serverStore.routerReason(id, REFERENCE)).toEqual({
+      cause: 'download-not-fetched',
+    });
+    expect(serverStore.routerRowState(id, REFERENCE)).toBe('absent');
+  });
+
+  it('does not fail a download that is still running and silent', async () => {
+    const id = await routerServer();
+    await serverStore.startRouterDownload(id, REFERENCE);
+
+    await advance(ROUTER_EVIDENCE_MS * 4);
+
+    expect(serverStore.routerOp(id, REFERENCE)).toBeDefined();
+  });
+
+  it('bounds a download nothing ever corroborates', async () => {
+    const id = await routerServer();
+    await serverStore.startRouterDownload(id, REFERENCE);
+
+    await advance(ROUTER_DOWNLOAD_MAX_MS + ROUTER_POLL_MS);
+
+    expect(serverStore.routerOp(id, REFERENCE)).toBeUndefined();
+  });
+
+  it('sums the captured byte map and keeps a first tick of zero', async () => {
+    const id = await routerServer();
+    await serverStore.startRouterDownload(id, REFERENCE);
+
+    const first = routerWireEvents('sse-download-sequence.txt').find(
+      event => event.event === 'download_progress' && event.model === REFERENCE,
+    );
+    serverStore.applyRouterEvent(id, first);
+
+    expect(serverStore.routerLive(id, REFERENCE)?.bytes).toEqual({
+      done: 0,
+      total: 291545600,
+      urls: 1,
+    });
+  });
+
+  it('adopts the id the server used when one download is in flight', async () => {
+    const id = await routerServer();
+    await serverStore.startRouterDownload(id, REFERENCE);
+
+    serverStore.applyRouterEvent(id, {
+      model: NORMALISED,
+      event: 'download_progress',
+      data: {progress: {'https://x/y.gguf': {done: 1, total: 2}}},
+    });
+
+    expect(serverStore.routerOp(id, REFERENCE)).toBeUndefined();
+    expect(serverStore.routerOp(id, NORMALISED)?.kind).toBe('download');
+  });
+
+  it('adopts nothing while two downloads are in flight', async () => {
+    const id = await routerServer();
+    await serverStore.startRouterDownload(id, REFERENCE);
+    await serverStore.startRouterDownload(id, 'other/repo:Q4_K_M');
+
+    serverStore.applyRouterEvent(id, {
+      model: NORMALISED,
+      event: 'download_progress',
+      data: {progress: {'https://x/y.gguf': {done: 1, total: 2}}},
+    });
+
+    expect(serverStore.routerOp(id, REFERENCE)?.kind).toBe('download');
+    expect(serverStore.routerOp(id, 'other/repo:Q4_K_M')?.kind).toBe(
+      'download',
+    );
+  });
+
+  it('cancels by unloading, and settles on absence with nothing surfaced', async () => {
+    const id = await routerServer();
+    await serverStore.startRouterDownload(id, REFERENCE);
+
+    await serverStore.cancelRouterDownload(id, REFERENCE);
+    serverStore.applyRouterEvent(id, {
+      model: REFERENCE,
+      event: 'download_failed',
+    });
+    await advance(ROUTER_DOWNLOAD_SETTLE_MS + ROUTER_POLL_MS);
+
+    expect(mockedRouterUnload.mock.calls[0][1]).toBe(REFERENCE);
+    expect(serverStore.routerOp(id, REFERENCE)).toBeUndefined();
+    expect(serverStore.routerReason(id, REFERENCE)).toBeUndefined();
+  });
+
+  it('never asks the router to reload its own list', async () => {
+    const id = await routerServer();
+    await serverStore.startRouterDownload(id, REFERENCE);
+    withDownloadedRow();
+    await reconcile(id);
+
+    for (const call of mockedFetch.mock.calls) {
+      expect(String(call[0])).not.toContain('reload');
+    }
   });
 });

@@ -59,7 +59,7 @@ export function routerWireResponse(name: RouterWireFixture): {
   headers: Record<string, string>;
   body: string;
 } {
-  const raw = routerWireText(name);
+  const raw = routerWireText(name).replace(/\r\n/g, '\n');
   const separator = raw.indexOf('\n\n');
   const head = separator === -1 ? raw : raw.slice(0, separator);
   const body = separator === -1 ? '' : raw.slice(separator + 2);

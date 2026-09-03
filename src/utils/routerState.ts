@@ -67,10 +67,14 @@ export interface RouterOp {
   /** Which models fetch was the last to begin before this request. */
   requestSeq: number;
   lastEvidenceAt: number;
-  /** Set once a terminal download event has arrived for this op. */
-  attemptEnded?: boolean;
+  /** When a terminal download event said the attempt stopped. Not an outcome. */
+  attemptEndedAt?: number;
+  /** When a watchdog last asked the list, so later evidence reads as fresh. */
+  armedAt?: number;
   /** A watchdog has asked the list; the next reconcile may settle this op. */
   verdictRequested?: boolean;
+  /** The user stopped this themselves, so its ending is not a failure. */
+  cancelled?: boolean;
   reason?: string;
 }
 
