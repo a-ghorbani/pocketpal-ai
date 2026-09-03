@@ -42,6 +42,13 @@ class MockServerStore {
   getUserSelectedModelsForServer: jest.Mock;
   recordRemoteReasoningObserved: jest.Mock;
   setRemoteReasoningOverride: jest.Mock;
+  ensureRouterModelLoaded: jest.Mock;
+  unloadRouterModel: jest.Mock;
+  startRouterDownload: jest.Mock;
+  cancelRouterOp: jest.Mock;
+  openRouterStream: jest.Mock;
+  closeRouterStream: jest.Mock;
+  dismissRouterReason: jest.Mock;
 
   constructor() {
     makeAutoObservable(this, {
@@ -63,6 +70,13 @@ class MockServerStore {
       getUserSelectedModelsForServer: false,
       recordRemoteReasoningObserved: false,
       setRemoteReasoningOverride: false,
+      ensureRouterModelLoaded: false,
+      unloadRouterModel: false,
+      startRouterDownload: false,
+      cancelRouterOp: false,
+      openRouterStream: false,
+      closeRouterStream: false,
+      dismissRouterReason: false,
     });
     this.addServer = jest.fn().mockReturnValue('mock-server-id');
     this.updateServer = jest.fn();
@@ -72,6 +86,13 @@ class MockServerStore {
     this.removeApiKey = jest.fn().mockResolvedValue(undefined);
     this.fetchModelsForServer = jest.fn().mockResolvedValue(undefined);
     this.fetchRemoteModelCaps = jest.fn().mockResolvedValue(undefined);
+    this.ensureRouterModelLoaded = jest.fn().mockResolvedValue('not-router');
+    this.unloadRouterModel = jest.fn().mockResolvedValue('ready');
+    this.startRouterDownload = jest.fn().mockResolvedValue({accepted: true});
+    this.cancelRouterOp = jest.fn().mockResolvedValue(undefined);
+    this.openRouterStream = jest.fn().mockResolvedValue(undefined);
+    this.closeRouterStream = jest.fn();
+    this.dismissRouterReason = jest.fn();
     this.fetchAllRemoteModels = jest.fn().mockResolvedValue(undefined);
     this.testServerConnection = jest
       .fn()

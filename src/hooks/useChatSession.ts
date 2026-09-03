@@ -546,6 +546,14 @@ export const useChatSession = (
       },
     };
     await addMessage(textMessage);
+
+    // Only this path can tell "waiting for weights" from "waiting for the
+    // first token", so it waits here rather than inside the engine.
+    if ((await modelStore.ensureActiveRemoteModelReady()) === 'failed') {
+      await addSystemMessage(l10n.chat.remoteModelNotReady);
+      return;
+    }
+
     modelStore.setInferencing(true);
     modelStore.setIsStreaming(false);
     chatSessionStore.setIsGenerating(true);

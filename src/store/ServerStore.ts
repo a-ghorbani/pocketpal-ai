@@ -1079,14 +1079,15 @@ class ServerStore {
     return {accepted: true};
   }
 
-  /** Stopping a download is an unload of the model being fetched. */
-  async cancelRouterDownload(
-    serverId: string,
-    remoteModelId: string,
-  ): Promise<void> {
+  /**
+   * Stopping either a load or a download is an unload of the model in
+   * question, which is the wire's own contract and not derivable from the
+   * endpoint's name.
+   */
+  async cancelRouterOp(serverId: string, remoteModelId: string): Promise<void> {
     const key = `${serverId}/${remoteModelId}`;
     const op = this.routerOps[key];
-    if (op?.kind !== 'download') {
+    if (!op || op.kind === 'unload') {
       return;
     }
     runInAction(() => {
@@ -1177,10 +1178,13 @@ class ServerStore {
     // A request that has not been acknowledged yet is not a failure: the server
     // may simply not have started.
     if (op.phase === 'active' || op.verdictRequested) {
-      this.settleRouterOp(key, 'failed', {
-        cause: 'load-failed',
-        message: op.reason ?? this.rowReason(key),
-      });
+      this.settleRouterOp(
+        key,
+        'failed',
+        op.cancelled
+          ? undefined
+          : {cause: 'load-failed', message: op.reason ?? this.rowReason(key)},
+      );
     }
   }
 

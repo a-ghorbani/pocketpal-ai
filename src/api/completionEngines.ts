@@ -63,12 +63,22 @@ export class OpenAICompletionEngine implements CompletionEngine {
     private apiKey?: string,
     private timeoutMs?: number,
     private serverType?: string,
+    /**
+     * Awaited before every request, so a completion cannot reach a model the
+     * server has not made ready. It is a primitive like the rest: the engine
+     * holds no store handle. Rejecting reaches the caller's existing error
+     * surface.
+     */
+    private ensureReady?: () => Promise<void>,
   ) {}
 
   async completion(
     params: ApiCompletionParams,
     callback?: (data: CompletionStreamData) => void,
   ): Promise<CompletionResult> {
+    if (this.ensureReady) {
+      await this.ensureReady();
+    }
     this.abortController = new AbortController();
 
     return streamChatCompletion(

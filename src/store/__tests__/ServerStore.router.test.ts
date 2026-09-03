@@ -1050,7 +1050,7 @@ describe('downloading a model to the server', () => {
     const id = await routerServer();
     await serverStore.startRouterDownload(id, REFERENCE);
 
-    await serverStore.cancelRouterDownload(id, REFERENCE);
+    await serverStore.cancelRouterOp(id, REFERENCE);
     serverStore.applyRouterEvent(id, {
       model: REFERENCE,
       event: 'download_failed',

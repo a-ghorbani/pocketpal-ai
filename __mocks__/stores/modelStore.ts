@@ -246,6 +246,8 @@ class MockModelStore {
     this.inferencing = value;
   };
 
+  ensureActiveRemoteModelReady = jest.fn().mockResolvedValue('not-router');
+
   setIsStreaming = (value: boolean) => {
     this.isStreaming = value;
   };

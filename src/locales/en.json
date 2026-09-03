@@ -205,7 +205,34 @@
     "removeRemoteModel": "Remove {{modelName}} ({{serverName}})?",
     "retryConnection": "Retry",
     "enterUrlManually": "Enter URL manually",
-    "manageServers": "Manage Servers"
+    "manageServers": "Manage Servers",
+    "routerModels": {
+      "loadedGroup": "Loaded",
+      "downloadingGroup": "Downloading",
+      "availableGroup": "Available",
+      "residentCount": "{{count}} resident",
+      "load": "Load",
+      "unload": "Unload",
+      "cancel": "Cancel",
+      "unloading": "Unloading…",
+      "stateLoading": "Loading",
+      "stateLoaded": "Loaded",
+      "stateResident": "Resident",
+      "stateDownloading": "Downloading",
+      "stateUnloaded": "Not loaded",
+      "files": "{{count}} files",
+      "evictionNote": "This server has released a model on its own while you were connected. Loading another may release one again.",
+      "loadFailed": "This model did not load.",
+      "unloadNotReleased": "The server did not release this model.",
+      "downloadNotFetched": "The server could not fetch this model.",
+      "dismiss": "Dismiss",
+      "downloadLabel": "Add a model to this server",
+      "downloadPlaceholder": "owner/repo:QUANT",
+      "downloadAction": "Fetch",
+      "unloadBoundTitle": "Unload {{model}}?",
+      "unloadBoundBody": "This chat is using this model. It will be loaded again on your next message.",
+      "unloadBoundConfirm": "Unload"
+    }
   },
   "memory": {
     "shortWarning": "Memory Warning",
@@ -1015,7 +1042,12 @@
         "total": "Total: ",
         "usage": "Usage: "
       },
-      "byteSizes": ["Bytes", "KB", "MB", "GB"]
+      "byteSizes": [
+        "Bytes",
+        "KB",
+        "MB",
+        "GB"
+      ]
     },
     "chatView": {
       "menuItems": {
@@ -1243,7 +1275,9 @@
       "searchResultsTitle": "Search results",
       "showResultsAccessibilityLabel": "Show web search results for {{query}}",
       "openLinkError": "Couldn't open this link."
-    }
+    },
+    "preparingModel": "Preparing model on the server…",
+    "remoteModelNotReady": "The server could not make this model ready."
   },
   "htmlPreview": {
     "defaultTitle": "Preview",

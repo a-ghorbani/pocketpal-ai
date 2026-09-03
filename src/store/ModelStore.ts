@@ -2673,6 +2673,7 @@ class ModelStore {
         apiKey,
         server.requestTimeoutMs,
         server.serverType,
+        () => this.requireActiveRemoteModelReady(),
       );
       this.activeRemoteBinding = {
         modelId: model.id,
@@ -2688,6 +2689,33 @@ class ModelStore {
     serverStore
       .fetchRemoteModelCaps(model.serverId, model.remoteModelId, apiKey)
       .catch(() => {});
+    serverStore
+      .ensureRouterModelLoaded(model.serverId, model.remoteModelId)
+      .catch(() => {});
+  };
+
+  /**
+   * Asks the bound server to make the active remote model ready. Reads the
+   * binding rather than the mutable server record, so it can only ever act on
+   * the backend this session is actually attached to.
+   */
+  ensureActiveRemoteModelReady = async (): Promise<
+    'ready' | 'failed' | 'not-router'
+  > => {
+    const binding = this.activeRemoteBinding;
+    if (!binding) {
+      return 'not-router';
+    }
+    return serverStore.ensureRouterModelLoaded(
+      binding.serverId,
+      binding.remoteModelId,
+    );
+  };
+
+  private requireActiveRemoteModelReady = async (): Promise<void> => {
+    if ((await this.ensureActiveRemoteModelReady()) === 'failed') {
+      throw new Error(uiStore.l10n.chat.remoteModelNotReady);
+    }
   };
 
   /**
