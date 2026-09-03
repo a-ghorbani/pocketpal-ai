@@ -188,11 +188,12 @@ export const EmbeddedVideoView = observer(
               ? l10n.simulator.cameraNotAvailable
               : l10n.video.noDevice}
           </Text>
-          {isSimulator && (
-            <TouchableOpacity style={styles.closeButton} onPress={onClose}>
-              <Icon name="close" style={styles.closeButtonIcon} />
-            </TouchableOpacity>
-          )}
+          <TouchableOpacity
+            style={styles.closeButton}
+            onPress={onClose}
+            testID="close-button">
+            <Icon name="close" style={styles.closeButtonIcon} />
+          </TouchableOpacity>
         </View>
       );
     }

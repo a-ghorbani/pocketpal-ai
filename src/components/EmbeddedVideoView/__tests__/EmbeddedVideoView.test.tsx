@@ -329,4 +329,39 @@ describe('EmbeddedVideoView', () => {
       ),
     ).toBeTruthy();
   });
+
+  describe('on an Android device without a camera', () => {
+    const platformOS = Object.getOwnPropertyDescriptor(Platform, 'OS')!
+      .get as jest.Mock;
+
+    beforeEach(() => {
+      platformOS.mockReturnValue('android');
+    });
+
+    afterEach(() => {
+      platformOS.mockReturnValue('ios');
+    });
+
+    it('shows the no-device message with a working close button', () => {
+      const {
+        useCameraPermission,
+        useCameraDevice,
+      } = require('react-native-vision-camera');
+      useCameraPermission.mockReturnValue({
+        hasPermission: true,
+        requestPermission: jest.fn(),
+      });
+      useCameraDevice.mockReturnValue(null);
+
+      const {getByText, getByTestId} = render(
+        <L10nContext.Provider value={l10n.en}>
+          <EmbeddedVideoView {...defaultProps} />
+        </L10nContext.Provider>,
+      );
+
+      expect(getByText(l10n.en.video.noDevice)).toBeTruthy();
+      fireEvent.press(getByTestId('close-button'));
+      expect(defaultProps.onClose).toHaveBeenCalled();
+    });
+  });
 });
