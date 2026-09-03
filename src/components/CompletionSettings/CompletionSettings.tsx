@@ -32,24 +32,29 @@ export const CompletionSettings: React.FC<Props> = ({
   const styles = createStyles(theme);
   const l10n = React.useContext(L10nContext);
 
-  const renderSlider = ({name, step = 0.01}: {name: string; step?: number}) => (
-    <View style={styles.settingItem}>
-      <InputSlider
-        testID={`${name}-slider`}
-        label={name.toUpperCase().replace('_', ' ')}
-        labelVariant="labelSmall"
-        description={l10n.completionParams[name]}
-        value={settings[name]}
-        onValueChange={value => onChange(name, value)}
-        min={COMPLETION_PARAMS_METADATA[name]?.validation.min}
-        max={COMPLETION_PARAMS_METADATA[name]?.validation.max}
-        step={step}
-        precision={Number.isInteger(step) ? 0 : 2}
-        debounceMs={300} // Enable debouncing for sliders
-        disabled={disabled}
-      />
-    </View>
-  );
+  const renderSlider = ({name}: {name: string}) => {
+    const metadata = COMPLETION_PARAMS_METADATA[name];
+    const step = metadata?.step ?? 0.01;
+
+    return (
+      <View style={styles.settingItem}>
+        <InputSlider
+          testID={`${name}-slider`}
+          label={name.toUpperCase().replace('_', ' ')}
+          labelVariant="labelSmall"
+          description={l10n.completionParams[name]}
+          value={settings[name]}
+          onValueChange={value => onChange(name, value)}
+          min={metadata?.validation.min}
+          max={metadata?.validation.max}
+          step={step}
+          precision={Number.isInteger(step) ? 0 : 2}
+          debounceMs={300} // Enable debouncing for sliders
+          disabled={disabled}
+        />
+      </View>
+    );
+  };
 
   const renderIntegerInput = ({name}: {name: keyof CompletionParams}) => {
     const metadata = COMPLETION_PARAMS_METADATA[name];
@@ -202,20 +207,20 @@ export const CompletionSettings: React.FC<Props> = ({
       {renderNPredictField()}
       {renderSwitch('include_thinking_in_context')}
       {renderSlider({name: 'temperature'})}
-      {renderSlider({name: 'top_k', step: 1})}
+      {renderSlider({name: 'top_k'})}
       {renderSlider({name: 'top_p'})}
       {renderSlider({name: 'min_p'})}
       {renderSlider({name: 'xtc_threshold'})}
       {renderSlider({name: 'xtc_probability'})}
       {renderSlider({name: 'typical_p'})}
-      {renderSlider({name: 'penalty_last_n', step: 1})}
+      {renderSlider({name: 'penalty_last_n'})}
       {renderSlider({name: 'penalty_repeat'})}
       {renderSlider({name: 'penalty_freq'})}
       {renderSlider({name: 'penalty_present'})}
       {renderMirostatSelector()}
       {(settings.mirostat ?? 0) > 0 && (
         <>
-          {renderSlider({name: 'mirostat_tau', step: 1})}
+          {renderSlider({name: 'mirostat_tau'})}
           {renderSlider({name: 'mirostat_eta'})}
         </>
       )}

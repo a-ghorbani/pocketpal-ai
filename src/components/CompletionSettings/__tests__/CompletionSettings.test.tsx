@@ -74,6 +74,20 @@ describe('CompletionSettings', () => {
     expect(seedInput.props.value).toBe('0');
   });
 
+  it('gives each slider the granularity its parameter metadata declares', () => {
+    const {getByTestId} = render(
+      <CompletionSettings
+        settings={{...mockCompletionParams, mirostat: 1}}
+        onChange={jest.fn()}
+      />,
+    );
+
+    expect(getByTestId('top_k-slider').props.step).toBe(1);
+    expect(getByTestId('penalty_last_n-slider').props.step).toBe(1);
+    expect(getByTestId('mirostat_tau-slider').props.step).toBe(1);
+    expect(getByTestId('temperature-slider').props.step).toBe(0.01);
+  });
+
   it('handles slider changes', async () => {
     const mockOnChange = jest.fn();
     const {getByTestId} = render(
