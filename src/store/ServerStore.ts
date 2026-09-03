@@ -22,6 +22,7 @@ import {deriveListCapsMap} from '../utils/listCaps';
 import type {ListDerivedCaps} from '../utils/listCaps';
 import {
   applyLivePatch,
+  loadVerdict,
   mapRowStatus,
   reduceRouterEvent,
   rowMatchesKey,
@@ -32,6 +33,8 @@ import {
 } from '../utils/routerState';
 import {
   openRouterEventStream,
+  routerErrorMessage,
+  routerLoad,
   RouterStreamError,
   RouterStreamHandle,
 } from '../api/router';
@@ -57,6 +60,21 @@ const ROUTER_STREAM_MAX_MS = 10 * 60 * 1000;
  */
 const ROUTER_POLL_MS = 4000;
 const ROUTER_TICK_MS = 1000;
+
+/**
+ * Both watchdogs bound the app's ignorance, never the server's work: expiry
+ * asks the list and nothing else, so neither interval can change an outcome.
+ * Too short costs a request; too long delays an answer.
+ */
+const ROUTER_ACK_MS = 20000;
+const ROUTER_EVIDENCE_MS = 45000;
+
+/**
+ * How long an operation may go without the app managing to re-read the list
+ * at all. Reaching it means the server could not be asked, which is a request
+ * failure and not a claim about the model.
+ */
+const ROUTER_UNREACHABLE_MS = 90000;
 
 /**
  * The capability fields of a `RemoteModelCaps` entry — everything except the
@@ -91,6 +109,9 @@ interface RouterListShape {
   completedAt: number;
 }
 
+export type RouterOpOutcome = 'ready' | 'failed';
+export type RouterLoadOutcome = RouterOpOutcome | 'not-router';
+
 class ServerStore {
   servers: ServerConfig[] = [];
   // Remote reasoning capability keyed by full model id (`${serverId}/${remoteModelId}`).
@@ -115,6 +136,8 @@ class ServerStore {
   routerStreamCap: Record<string, RouterStreamCap> = {};
   routerObservedEviction: Set<string> = new Set();
   routerListShape: Record<string, RouterListShape> = {};
+  /** What the server said about a model whose operation failed, until dismissed. */
+  routerReasons: Record<string, string> = {};
 
   private lastFetchTime = 0;
   private appStateSubscription: any = null;
@@ -124,6 +147,11 @@ class ServerStore {
   private routerTicker: ReturnType<typeof setInterval> | null = null;
   private routerPollInFlight = new Set<string>();
   private routerLastPollAt: Record<string, number> = {};
+  private routerOpWaiters = new Map<
+    string,
+    (outcome: RouterOpOutcome) => void
+  >();
+  private routerLoadPromises = new Map<string, Promise<RouterLoadOutcome>>();
 
   constructor() {
     makeAutoObservable(this, {
@@ -135,6 +163,8 @@ class ServerStore {
       routerTicker: false,
       routerPollInFlight: false,
       routerLastPollAt: false,
+      routerOpWaiters: false,
+      routerLoadPromises: false,
     } as AnnotationsMap<ServerStore, string>);
 
     makePersistable(this, {
@@ -460,6 +490,7 @@ class ServerStore {
           s.lastConnected = Date.now();
         }
       });
+      this.settleRouterOps(serverId);
     } catch (error: any) {
       runInAction(() => {
         this.error = error.message || 'Failed to fetch models';
@@ -762,6 +793,200 @@ class ServerStore {
     this.fetchModelsForServer(serverId).catch(() => {});
   }
 
+  // Operations
+
+  setRouterOp(key: string, op: RouterOp | undefined): void {
+    if (op) {
+      this.routerOps[key] = op;
+    } else {
+      delete this.routerOps[key];
+    }
+  }
+
+  dismissRouterReason(serverId: string, remoteModelId: string): void {
+    delete this.routerReasons[`${serverId}/${remoteModelId}`];
+  }
+
+  routerReason(serverId: string, remoteModelId: string): string | undefined {
+    return this.routerReasons[`${serverId}/${remoteModelId}`];
+  }
+
+  /**
+   * The only issuer of a load request. Idempotent per model: called again while
+   * one is in flight it returns the same promise and posts nothing, so
+   * activation, the picker, the send gate and the engine cannot double-post.
+   */
+  async ensureRouterModelLoaded(
+    serverId: string,
+    remoteModelId: string,
+  ): Promise<RouterLoadOutcome> {
+    if (!this.isRouterServer(serverId)) {
+      return 'not-router';
+    }
+    const key = `${serverId}/${remoteModelId}`;
+    const pending = this.routerLoadPromises.get(key);
+    if (pending) {
+      return pending;
+    }
+    if (this.routerRowState(serverId, remoteModelId) === 'loaded') {
+      return 'ready';
+    }
+    const promise = this.runRouterLoad(serverId, remoteModelId, key);
+    this.routerLoadPromises.set(key, promise);
+    return promise;
+  }
+
+  private async runRouterLoad(
+    serverId: string,
+    remoteModelId: string,
+    key: string,
+  ): Promise<RouterLoadOutcome> {
+    const server = this.servers.find(s => s.id === serverId);
+    if (!server) {
+      this.routerLoadPromises.delete(key);
+      return 'not-router';
+    }
+    const settled = this.startRouterOp(key, {
+      kind: 'load',
+      phase: 'requested',
+      serverId,
+      key,
+      startedAt: Date.now(),
+      lastEvidenceAt: Date.now(),
+    });
+
+    try {
+      const apiKey = await this.getApiKey(serverId);
+      const {status, body} = await routerLoad(
+        server.url,
+        remoteModelId,
+        apiKey,
+        server.requestTimeoutMs,
+      );
+      if (status < 200 || status >= 300) {
+        this.resolveRefusedLoad(serverId, remoteModelId, key, body);
+      }
+      // A 2xx says the request was accepted, not that a load is under way: the
+      // child can still fail to launch with nothing further on the wire.
+    } catch (error: any) {
+      this.settleRouterOp(key, 'failed', error?.message);
+    }
+    return settled;
+  }
+
+  /**
+   * A refusal is resolved by the model's observed state, never by the text of
+   * the refusal. A load posted at a model that is already resident answers 400
+   * and does not wake it — the end state the caller wanted is already true, so
+   * it settles ready and shows nothing.
+   */
+  private resolveRefusedLoad(
+    serverId: string,
+    remoteModelId: string,
+    key: string,
+    body: unknown,
+  ): void {
+    const reason = routerErrorMessage(body);
+    const state = this.routerRowState(serverId, remoteModelId);
+    if (state === 'loaded' || state === 'sleeping') {
+      this.settleRouterOp(key, 'ready');
+      return;
+    }
+    if (state === 'loading' || state === 'downloading') {
+      return;
+    }
+    runInAction(() => {
+      const op = this.routerOps[key];
+      if (op) {
+        op.reason = reason;
+        op.verdictRequested = true;
+      }
+    });
+    this.requestRouterReconcile(serverId);
+  }
+
+  private startRouterOp(key: string, op: RouterOp): Promise<RouterLoadOutcome> {
+    const settled = new Promise<RouterLoadOutcome>(resolve =>
+      this.routerOpWaiters.set(key, resolve),
+    );
+    runInAction(() => {
+      this.setRouterOp(key, op);
+      delete this.routerReasons[key];
+    });
+    this.syncRouterTiers();
+    this.openRouterStream(op.serverId);
+    return settled;
+  }
+
+  private settleRouterOp(
+    key: string,
+    outcome: RouterOpOutcome,
+    reason?: string,
+  ): void {
+    if (!this.routerOps[key]) {
+      return;
+    }
+    runInAction(() => {
+      this.setRouterOp(key, undefined);
+      if (outcome === 'failed' && reason) {
+        this.routerReasons[key] = reason;
+      }
+    });
+    const waiter = this.routerOpWaiters.get(key);
+    this.routerOpWaiters.delete(key);
+    this.routerLoadPromises.delete(key);
+    waiter?.(outcome);
+    this.syncRouterTiers();
+  }
+
+  /**
+   * Read after every reconcile of this server. Each kind has its own verdict
+   * and borrows no other's.
+   */
+  private settleRouterOps(serverId: string): void {
+    for (const [key, op] of Object.entries({...this.routerOps})) {
+      if (op.serverId !== serverId) {
+        continue;
+      }
+      const state = this.resolveRouterRowState(serverId, key);
+      if (op.kind === 'load') {
+        this.settleLoadOp(key, op, state);
+      }
+    }
+  }
+
+  private settleLoadOp(key: string, op: RouterOp, state: RouterRowState): void {
+    const verdict = loadVerdict(state);
+    if (verdict === 'ready') {
+      this.settleRouterOp(key, 'ready');
+      return;
+    }
+    if (verdict === 'in-flight') {
+      runInAction(() => {
+        op.phase = 'active';
+        op.lastEvidenceAt = Date.now();
+        op.verdictRequested = false;
+      });
+      return;
+    }
+    // A request that has not been acknowledged yet is not a failure: the server
+    // may simply not have started.
+    if (op.phase === 'active' || op.verdictRequested) {
+      this.settleRouterOp(key, 'failed', op.reason ?? this.rowReason(key));
+    }
+  }
+
+  private rowReason(key: string): string | undefined {
+    const exitCode = this.routerEvents[key]?.exitCode;
+    return typeof exitCode === 'number' && exitCode !== 0
+      ? `exit code ${exitCode}`
+      : undefined;
+  }
+
+  private hasReconciledSince(serverId: string, at: number): boolean {
+    return (this.routerListShape[serverId]?.completedAt ?? 0) > at;
+  }
+
   // Poll tier
 
   setRouterPoll(serverId: string, active: boolean): void {
@@ -814,6 +1039,7 @@ class ServerStore {
       return;
     }
     const now = Date.now();
+    this.armRouterWatchdogs(now);
     for (const serverId of this.routerPolls) {
       if (this.routerPollInFlight.has(serverId)) {
         continue;
@@ -826,6 +1052,30 @@ class ServerStore {
       this.fetchModelsForServer(serverId)
         .catch(() => {})
         .then(() => this.routerPollInFlight.delete(serverId));
+    }
+  }
+
+  /** Expiry asks the list. It never reads an outcome out of the silence. */
+  private armRouterWatchdogs(now: number): void {
+    for (const [key, op] of Object.entries({...this.routerOps})) {
+      if (
+        op.verdictRequested &&
+        !this.hasReconciledSince(op.serverId, op.startedAt) &&
+        now - op.startedAt > ROUTER_UNREACHABLE_MS
+      ) {
+        this.settleRouterOp(key, 'failed', op.reason);
+        continue;
+      }
+      const interval =
+        op.phase === 'requested' ? ROUTER_ACK_MS : ROUTER_EVIDENCE_MS;
+      if (now - op.lastEvidenceAt <= interval) {
+        continue;
+      }
+      runInAction(() => {
+        op.lastEvidenceAt = now;
+        op.verdictRequested = true;
+      });
+      this.requestRouterReconcile(op.serverId);
     }
   }
 

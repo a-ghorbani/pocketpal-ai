@@ -57,6 +57,8 @@ export interface RouterOp {
   lastEvidenceAt: number;
   /** Set once a terminal download event has arrived for this op. */
   attemptEnded?: boolean;
+  /** A watchdog has asked the list; the next reconcile may settle this op. */
+  verdictRequested?: boolean;
   reason?: string;
 }
 
