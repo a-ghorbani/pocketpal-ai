@@ -243,7 +243,6 @@ type TtsRunState = {
 // and (remote only) a 'length' finish reason derived from `stopped_limit`.
 function deriveSnapshotFromResult(
   result: CompletionResult,
-  effectiveNCtx: number | undefined,
   isRemote: boolean,
 ): CompletionResultSnapshot {
   const used = (result.tokens_evaluated ?? 0) + (result.tokens_predicted ?? 0);
@@ -421,7 +420,6 @@ async function applyEventToStore(
       const finalResult = event.result.finalResult;
       const snapshot = deriveSnapshotFromResult(
         finalResult,
-        modelStore.activeContextSettings?.n_ctx,
         modelStore.activeModel?.origin === ModelOrigin.REMOTE,
       );
       const draftTimings =
