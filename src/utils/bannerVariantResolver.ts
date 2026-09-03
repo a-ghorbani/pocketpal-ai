@@ -58,21 +58,24 @@ export function resolveBannerVariant(
   } = input;
 
   // context-* variants require a loaded model. The nCtx-reading variants
-  // (full, warning) additionally need a known runtime n_ctx; the remote
-  // hedged advisory does not read n_ctx and only needs a loaded model.
+  // (full, warning) additionally need a known runtime n_ctx and a known token
+  // count; the remote hedged advisory reads neither and only needs a loaded
+  // model.
   const modelLoaded = activeModelId !== undefined;
 
   if (snapshot && modelLoaded) {
-    if (effectiveNCtx !== undefined) {
+    const used = snapshot.used;
+
+    if (effectiveNCtx !== undefined && used !== undefined) {
       const nCtx = effectiveNCtx;
 
-      const ratio = Math.min(1, Math.max(0, snapshot.used / nCtx));
+      const ratio = Math.min(1, Math.max(0, used / nCtx));
 
       // 1. context-full — freshness gate corroborates the frozen flag;
       // dismissable per draft (the dismissal clears on the next finished turn).
       if (
         snapshot.contextFull &&
-        snapshot.used >= nCtx - AUTOCLEAR_RUNWAY &&
+        used >= nCtx - AUTOCLEAR_RUNWAY &&
         !dismissed.has('context-full')
       ) {
         return {
@@ -87,7 +90,7 @@ export function resolveBannerVariant(
       // remote model once its /props contextLength is known.
       if (
         !snapshot.contextFull &&
-        snapshot.used / nCtx >= WARNING_THRESHOLD &&
+        used / nCtx >= WARNING_THRESHOLD &&
         !dismissed.has('context-warning')
       ) {
         return {variant: 'context-warning', ratio};

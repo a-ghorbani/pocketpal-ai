@@ -61,6 +61,7 @@ export interface CompletionResult {
     prompt_per_second?: number;
     prompt_ms?: number;
     prompt_n?: number;
+    cache_n?: number;
     predicted_n?: number;
     [key: string]: number | undefined;
   };
@@ -77,13 +78,14 @@ export interface CompletionResult {
   interrupted?: boolean;
 }
 
-// `used` is tokens_evaluated + tokens_predicted; tokens_cached is not exposed at
-// the engine boundary, so on prompt-cache-reuse turns it under-counts KV
-// occupancy.
+// An absent `used` means the count is unknown, and must never be shown as zero.
+// llama.rn's local `tokens_evaluated` is the whole prompt; a llama.cpp server's
+// `timings.prompt_n` is only the part it evaluated, the reused prefix being in
+// `cache_n`.
 export interface CompletionResultSnapshot {
   content?: string;
   reasoning_content?: string;
-  used: number;
+  used?: number;
   contextFull: boolean;
   tokensPredicted?: number;
   finishReason?: string;
