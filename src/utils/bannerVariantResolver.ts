@@ -98,8 +98,8 @@ export function resolveBannerVariant(
     }
 
     // 3. context-remote-hedged — remote weak-signal truncation, dismissable.
-    // Remote models never set activeContextSettings.n_ctx, so this branch
-    // must not depend on effectiveNCtx.
+    // A remote session's window is known only once its /props probe lands, so
+    // this branch must not depend on effectiveNCtx.
     if (
       isRemote &&
       snapshot.finishReason !== 'length' &&

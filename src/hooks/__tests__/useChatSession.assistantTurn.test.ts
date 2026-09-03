@@ -9,7 +9,9 @@ import {
 } from '../../../jest/fixtures/models';
 
 import {useChatSession} from '../useChatSession';
-import {chatSessionStore, modelStore, palStore} from '../../store';
+import {chatSessionStore, modelStore, palStore, serverStore} from '../../store';
+import {resolveBannerVariant} from '../../utils/bannerVariantResolver';
+import {ModelOrigin} from '../../utils/types';
 import {assistant} from '../../utils/chat';
 import {chatSessionRepository} from '../../repositories/ChatSessionRepository';
 import {talentRegistry} from '../../services/talents';
@@ -1112,5 +1114,161 @@ describe('useChatSession — AssistantTurn integration', () => {
 
     deleteMessageSpy.mockRestore();
     errSpy.mockRestore();
+  });
+
+  describe('remote context accounting', () => {
+    const REMOTE_WINDOW = 4096;
+
+    // `activeModelCaps` is a computed over `capsFor()`, so the window is set up
+    // by registering a remote model and the probe entry it resolves through.
+    const activateRemoteModel = () => {
+      modelStore.activeModelId = 'remote-1';
+      modelStore.models = [
+        {id: 'remote-1', origin: ModelOrigin.REMOTE, serverId: 'srv-1'} as any,
+      ];
+      (modelStore as any).activeContextSettings = undefined;
+      serverStore.servers = [
+        {
+          id: 'srv-1',
+          name: 'llama',
+          url: 'http://localhost:8080',
+          serverType: 'llama.cpp',
+        } as any,
+      ];
+      serverStore.remoteCaps = {'remote-1': {contextLength: REMOTE_WINDOW}};
+    };
+
+    const bannerInput = () => ({
+      effectiveNCtx: modelStore.activeModelCaps.effectiveContextLength,
+      isRemote: true,
+      htmlPreviewCount: 0,
+      activeModelId: modelStore.activeModelId,
+      dismissed: new Set<never>(),
+    });
+
+    it('a finished remote turn feeds the full banner a real count', async () => {
+      activateRemoteModel();
+      if (modelStore.context) {
+        modelStore.context.completion = jest.fn().mockResolvedValue({
+          text: 'cut off',
+          content: 'cut off',
+          timings: {prompt_n: 3900, cache_n: 0, predicted_n: 100},
+          tokens_evaluated: 3900,
+          tokens_predicted: 100,
+          stopped_limit: 1,
+        });
+      }
+      const {result} = renderHook(() =>
+        useChatSession({current: null}, textMessage.author, mockAssistant),
+      );
+
+      await act(async () => {
+        await result.current.handleSendPress(textMessage);
+      });
+
+      const snapshot = (
+        chatSessionStore.recordCompletionSnapshot as jest.Mock
+      ).mock.calls.at(-1)![0];
+      expect(snapshot.used).toBe(4000);
+      expect(snapshot.contextFull).toBe(true);
+      expect(modelStore.activeModelCaps.effectiveContextLength).toBe(
+        REMOTE_WINDOW,
+      );
+
+      expect(resolveBannerVariant(snapshot, bannerInput()).variant).toBe(
+        'context-full',
+      );
+      // The window is only reached because the count is real: a zeroed one
+      // fails the freshness gate and the banner never renders.
+      expect(
+        resolveBannerVariant({...snapshot, used: 0}, bannerInput()).variant,
+      ).not.toBe('context-full');
+    });
+
+    it('a remote turn with no timings reports no count at all', async () => {
+      activateRemoteModel();
+      if (modelStore.context) {
+        modelStore.context.completion = jest.fn().mockResolvedValue({
+          text: 'hello',
+          content: 'hello',
+          tokens_predicted: 12,
+        });
+      }
+      const {result} = renderHook(() =>
+        useChatSession({current: null}, textMessage.author, mockAssistant),
+      );
+
+      await act(async () => {
+        await result.current.handleSendPress(textMessage);
+      });
+
+      const snapshot = (
+        chatSessionStore.recordCompletionSnapshot as jest.Mock
+      ).mock.calls.at(-1)![0];
+      // A predicted-only tally carries no prompt term and is not an occupancy
+      // number, so there is nothing to report.
+      expect(snapshot.used).toBeUndefined();
+      expect(resolveBannerVariant(snapshot, bannerInput()).variant).not.toBe(
+        'context-full',
+      );
+    });
+
+    it('an aborted turn with partial content reports no count, not zero', async () => {
+      const errSpy = jest.spyOn(console, 'error').mockImplementation(() => {});
+      activateRemoteModel();
+      if (modelStore.context) {
+        modelStore.context.completion = jest
+          .fn()
+          .mockRejectedValueOnce(new Error('socket hang up'));
+      }
+      const ref: {
+        current: {createdAt: number; id: string; sessionId: string} | null;
+      } = {current: null};
+      const {result} = renderHook(() =>
+        useChatSession(ref, textMessage.author, mockAssistant),
+      );
+
+      const turnId = 'turn-remote-abort';
+      chatSessionStore.sessions = [
+        {
+          id: 'session-1',
+          title: '',
+          date: '',
+          messages: [
+            {
+              id: turnId,
+              type: 'assistant_turn',
+              author: assistant,
+              createdAt: Date.now(),
+              steps: [{content: 'partial'}],
+              metadata: {copyable: true},
+            } as MessageType.AssistantTurn,
+          ],
+          completionSettings: {},
+          settingsSource: 'pal',
+        },
+      ] as any;
+      (
+        chatSessionStore.addMessageToCurrentSession as jest.Mock
+      ).mockImplementation(async (msg: any) => {
+        msg.id = turnId;
+      });
+
+      await act(async () => {
+        await result.current.handleSendPress(textMessage);
+      });
+
+      const interruptedCall = (
+        chatSessionStore.updateMessage as jest.Mock
+      ).mock.calls.find(c => c[2]?.metadata?.interrupted === true);
+      expect(interruptedCall).toBeDefined();
+      const snapshot = interruptedCall![2].metadata.completionResult;
+      expect(snapshot.contextFull).toBe(false);
+      // Tokens were certainly consumed and no turn reported how many.
+      expect(snapshot.used).toBeUndefined();
+      expect('used' in snapshot).toBe(true);
+
+      errSpy.mockRestore();
+    });
   });
 });
