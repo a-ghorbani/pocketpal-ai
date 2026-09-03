@@ -50,7 +50,11 @@ const listResult = (models: any[], hasModelsKey: boolean) => ({
 });
 
 /** Let a detached reconcile reach its mocked fetch. */
-const flush = () => new Promise(resolve => setImmediate(resolve));
+const flush = async () => {
+  for (let i = 0; i < 8; i++) {
+    await Promise.resolve();
+  }
+};
 
 const addServer = (serverType = 'llama.cpp') =>
   serverStore.addServer({
@@ -59,7 +63,7 @@ const addServer = (serverType = 'llama.cpp') =>
     serverType,
   });
 
-const resetStore = () =>
+const resetStore = () => {
   runInAction(() => {
     serverStore.servers = [];
     serverStore.serverModels.clear();
@@ -74,6 +78,9 @@ const resetStore = () =>
     serverStore.routerObservedEviction = new Set();
     serverStore.routerListShape = {};
   });
+  // Through the action, so the poll bookkeeping it owns is cleared too.
+  runInAction(() => serverStore.syncRouterTiers());
+};
 
 describe('router detection', () => {
   beforeEach(() => {
@@ -386,5 +393,104 @@ describe('the router event stream', () => {
     });
     await flush();
     expect(mockedFetch).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe('the poll tier', () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+    jest.useFakeTimers();
+    resetStore();
+  });
+
+  afterEach(() => {
+    jest.useRealTimers();
+  });
+
+  const routerServer = async () => {
+    const id = addServer();
+    mockedFetch.mockResolvedValue(listResult(routerModelsBody.data, false));
+    await serverStore.fetchModelsForServer(id);
+    return id;
+  };
+
+  const inFlightOp = (serverId: string, kind: 'load' | 'download') =>
+    runInAction(() => {
+      serverStore.routerOps[`${serverId}/alpha`] = {
+        kind,
+        phase: 'requested',
+        serverId,
+        key: `${serverId}/alpha`,
+        startedAt: Date.now(),
+        lastEvidenceAt: Date.now(),
+      };
+      serverStore.syncRouterTiers();
+    });
+
+  it('polls a server with work in flight and no stream', async () => {
+    const id = await routerServer();
+    inFlightOp(id, 'load');
+    expect(serverStore.routerPolls.has(id)).toBe(true);
+
+    mockedFetch.mockClear();
+    jest.advanceTimersByTime(5000);
+    await flush();
+
+    expect(mockedFetch).toHaveBeenCalledTimes(1);
+  });
+
+  it('does not poll the server the stream is open on', async () => {
+    const id = await routerServer();
+    runInAction(() =>
+      serverStore.setRouterStream({serverId: id, state: 'open'}),
+    );
+    inFlightOp(id, 'load');
+
+    expect(serverStore.routerPolls.has(id)).toBe(false);
+  });
+
+  it('adds no second source of the model list', async () => {
+    const id = await routerServer();
+    inFlightOp(id, 'download');
+
+    mockedFetch.mockClear();
+    jest.advanceTimersByTime(5000);
+    await flush();
+
+    expect(mockedFetch).toHaveBeenCalledTimes(1);
+    expect(mockedFetch.mock.calls[0][0]).toBe('http://desktop:8080');
+  });
+
+  it('drops the entry once that server has no work left', async () => {
+    const id = await routerServer();
+    inFlightOp(id, 'load');
+
+    runInAction(() => {
+      serverStore.routerOps = {};
+      serverStore.syncRouterTiers();
+    });
+
+    expect(serverStore.routerPolls.has(id)).toBe(false);
+  });
+
+  it('keeps one poll in flight per server', async () => {
+    const id = await routerServer();
+    inFlightOp(id, 'load');
+    mockedFetch.mockClear();
+    let release: () => void = () => {};
+    mockedFetch.mockImplementation(
+      () =>
+        new Promise(resolve => {
+          release = () => resolve(listResult(routerModelsBody.data, false));
+        }),
+    );
+
+    jest.advanceTimersByTime(5000);
+    await flush();
+    jest.advanceTimersByTime(5000);
+    await flush();
+
+    expect(mockedFetch).toHaveBeenCalledTimes(1);
+    release();
   });
 });

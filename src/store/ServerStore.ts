@@ -1,5 +1,10 @@
 import {AppState, AppStateStatus} from 'react-native';
-import {makeAutoObservable, observable, runInAction} from 'mobx';
+import {
+  makeAutoObservable,
+  observable,
+  runInAction,
+  AnnotationsMap,
+} from 'mobx';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import {makePersistable} from 'mobx-persist-store';
 import * as Keychain from 'react-native-keychain';
@@ -43,6 +48,15 @@ const FETCH_THROTTLE_MS = 60000;
  */
 const ROUTER_STREAM_MAX_BYTES = 2 * 1024 * 1024;
 const ROUTER_STREAM_MAX_MS = 10 * 60 * 1000;
+
+/**
+ * How often a server with work in flight and no stream is re-read. The only
+ * other reconcile fires on a background-to-foreground transition and is
+ * throttled to a minute, so a foregrounded app would otherwise never re-read
+ * at all.
+ */
+const ROUTER_POLL_MS = 4000;
+const ROUTER_TICK_MS = 1000;
 
 /**
  * The capability fields of a `RemoteModelCaps` entry — everything except the
@@ -107,11 +121,21 @@ class ServerStore {
   private routerStreamHandle: RouterStreamHandle | null = null;
   private routerFocusedServerId: string | null = null;
   private routerForegrounded = true;
+  private routerTicker: ReturnType<typeof setInterval> | null = null;
+  private routerPollInFlight = new Set<string>();
+  private routerLastPollAt: Record<string, number> = {};
 
   constructor() {
     makeAutoObservable(this, {
       serverModels: observable,
-    });
+      // Connection plumbing: nothing renders from it.
+      routerStreamHandle: false,
+      routerFocusedServerId: false,
+      routerForegrounded: false,
+      routerTicker: false,
+      routerPollInFlight: false,
+      routerLastPollAt: false,
+    } as AnnotationsMap<ServerStore, string>);
 
     makePersistable(this, {
       name: 'ServerStore',
@@ -639,6 +663,7 @@ class ServerStore {
           runInAction(() => {
             this.setRouterStreamCap(serverId, 'present');
             this.setRouterStream({serverId, state: 'open'});
+            this.syncRouterTiers();
           }),
         onEvent: payload => this.applyRouterEvent(serverId, payload),
         onClose: error => this.handleRouterStreamClosed(serverId, error),
@@ -655,6 +680,7 @@ class ServerStore {
     this.routerStreamHandle?.close();
     this.routerStreamHandle = null;
     runInAction(() => this.setRouterStream(null));
+    this.syncRouterTiers();
   }
 
   private handleRouterStreamClosed(
@@ -668,6 +694,7 @@ class ServerStore {
         this.setRouterStreamCap(serverId, 'absent');
       }
     });
+    this.syncRouterTiers();
     // A stream that drops never settles anything: the model goes on loading on
     // the desktop, and only a reconciled row may say otherwise.
     if (
@@ -735,6 +762,73 @@ class ServerStore {
     this.fetchModelsForServer(serverId).catch(() => {});
   }
 
+  // Poll tier
+
+  setRouterPoll(serverId: string, active: boolean): void {
+    if (active) {
+      this.routerPolls.add(serverId);
+    } else {
+      this.routerPolls.delete(serverId);
+      delete this.routerLastPollAt[serverId];
+    }
+  }
+
+  /**
+   * A server with work in flight and no stream is re-read on a timer. It reuses
+   * the existing models fetch, so the model list keeps its two writers and the
+   * poll can never disagree with the list the capabilities are derived from.
+   */
+  syncRouterTiers(): void {
+    const busy = new Set(Object.values(this.routerOps).map(op => op.serverId));
+    runInAction(() => {
+      for (const serverId of [...this.routerPolls]) {
+        if (!busy.has(serverId) || this.routerStream?.serverId === serverId) {
+          this.setRouterPoll(serverId, false);
+        }
+      }
+      for (const serverId of busy) {
+        if (this.routerStream?.serverId !== serverId) {
+          this.setRouterPoll(serverId, true);
+        }
+      }
+    });
+    this.syncRouterTicker();
+  }
+
+  private syncRouterTicker(): void {
+    const wanted =
+      this.routerForegrounded && Object.keys(this.routerOps).length > 0;
+    if (wanted && !this.routerTicker) {
+      this.routerTicker = setInterval(
+        () => this.routerTick(),
+        ROUTER_TICK_MS,
+      ) as any;
+    } else if (!wanted && this.routerTicker) {
+      clearInterval(this.routerTicker);
+      this.routerTicker = null;
+    }
+  }
+
+  private routerTick(): void {
+    if (!this.routerForegrounded) {
+      return;
+    }
+    const now = Date.now();
+    for (const serverId of this.routerPolls) {
+      if (this.routerPollInFlight.has(serverId)) {
+        continue;
+      }
+      if (now - (this.routerLastPollAt[serverId] ?? 0) < ROUTER_POLL_MS) {
+        continue;
+      }
+      this.routerLastPollAt[serverId] = now;
+      this.routerPollInFlight.add(serverId);
+      this.fetchModelsForServer(serverId)
+        .catch(() => {})
+        .then(() => this.routerPollInFlight.delete(serverId));
+    }
+  }
+
   // Auto-fetch on foreground
   private setupAppStateListener(): void {
     this.appStateSubscription = AppState.addEventListener(
@@ -750,6 +844,7 @@ class ServerStore {
         } else {
           this.routerForegrounded = false;
           this.closeRouterStream();
+          this.syncRouterTicker();
         }
       },
     );
@@ -770,8 +865,9 @@ class ServerStore {
       ),
     );
     if (this.routerFocusedServerId) {
-      this.openRouterStream(this.routerFocusedServerId);
+      await this.openRouterStream(this.routerFocusedServerId);
     }
+    this.syncRouterTiers();
   }
 }
 
