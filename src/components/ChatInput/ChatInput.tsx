@@ -280,7 +280,18 @@ export const ChatInput = observer(
           quality: 0.8,
         });
 
-        if (result.assets && result.assets.length > 0 && result.assets[0].uri) {
+        if (result.errorCode === 'camera_unavailable') {
+          Alert.alert(l10n.camera.errorTitle, l10n.camera.noDevice);
+        } else if (result.errorCode) {
+          Alert.alert(
+            l10n.errors.cameraErrorTitle,
+            l10n.errors.cameraErrorMessage,
+          );
+        } else if (
+          result.assets &&
+          result.assets.length > 0 &&
+          result.assets[0].uri
+        ) {
           const newImages = [...selectedImages, result.assets[0].uri];
           setSelectedImages(newImages);
         }
