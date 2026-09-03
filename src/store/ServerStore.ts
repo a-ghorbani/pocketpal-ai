@@ -5,7 +5,7 @@ import {makePersistable} from 'mobx-persist-store';
 import * as Keychain from 'react-native-keychain';
 
 import {
-  fetchModels,
+  fetchModelsWithHeaders,
   fetchServerProps,
   testConnection,
   PROPS_TIMEOUT_MS,
@@ -15,6 +15,14 @@ import {RemoteModelCaps, ServerConfig} from '../utils/types';
 import {ReasoningCapability} from '../utils/reasoningCapability';
 import {deriveListCapsMap} from '../utils/listCaps';
 import type {ListDerivedCaps} from '../utils/listCaps';
+import {
+  mapRowStatus,
+  rowMatchesKey,
+  RouterLive,
+  RouterOp,
+  RouterRowState,
+  RouterStreamCap,
+} from '../utils/routerState';
 
 const KEYCHAIN_SERVICE_PREFIX = 'pocketpal-server-';
 
@@ -42,6 +50,18 @@ function dropServerEntries<T>(
   );
 }
 
+/**
+ * What a `GET /v1/models` fetch found about the whole response rather than
+ * about any row, plus when it ran. Live-only, like everything router-shaped:
+ * a desktop's state belongs to that desktop, and a persisted copy of it is
+ * only a stale claim.
+ */
+interface RouterListShape {
+  hasModelsKey: boolean;
+  startedAt: number;
+  completedAt: number;
+}
+
 class ServerStore {
   servers: ServerConfig[] = [];
   // Remote reasoning capability keyed by full model id (`${serverId}/${remoteModelId}`).
@@ -56,6 +76,16 @@ class ServerStore {
   isLoading = false;
   error: string | null = null;
   privacyNoticeAcknowledged = false;
+
+  // Router mode. None of the state below is persisted: it describes a desktop
+  // this app may not reach next launch.
+  routerEvents: Record<string, RouterLive> = {};
+  routerOps: Record<string, RouterOp> = {};
+  routerStream: {serverId: string; state: 'connecting' | 'open'} | null = null;
+  routerPolls: Set<string> = new Set();
+  routerStreamCap: Record<string, RouterStreamCap> = {};
+  routerObservedEviction: Set<string> = new Set();
+  routerListShape: Record<string, RouterListShape> = {};
 
   private lastFetchTime = 0;
   private appStateSubscription: any = null;
@@ -190,6 +220,111 @@ class ServerStore {
     return deriveListCapsMap(this.servers, this.serverModels);
   }
 
+  /**
+   * The servers running in router mode. A computed with no writer: it refreshes
+   * with the list it reads and costs no request, the evidence being in a body
+   * already fetched.
+   *
+   * Two disjuncts, because they answer in different situations. A `status`
+   * object on a row is direct evidence but can only classify a body that has
+   * rows. The absent top-level `models` key is a property of the response, so
+   * it still answers when the list is empty, filtered or truncated.
+   */
+  get routerServers(): Set<string> {
+    const ids = new Set<string>();
+    for (const server of this.servers) {
+      if (server.serverType !== 'llama.cpp') {
+        continue;
+      }
+      const rows = this.serverModels.get(server.id) ?? [];
+      const shape = this.routerListShape[server.id];
+      const carriesStatus = rows.some(
+        row => row.status !== null && typeof row.status === 'object',
+      );
+      if (carriesStatus || shape?.hasModelsKey === false) {
+        ids.add(server.id);
+      }
+    }
+    return ids;
+  }
+
+  isRouterServer(serverId: string): boolean {
+    return this.routerServers.has(serverId);
+  }
+
+  /**
+   * What every consumer branches on, per model key. The live overlay wins while
+   * it is newer than the start of the fetch that produced the row; otherwise
+   * the row does, so a slow fetch cannot strand a finished load in `loading`.
+   */
+  get routerRowStates(): Record<string, RouterRowState> {
+    const states: Record<string, RouterRowState> = {};
+    for (const serverId of this.routerServers) {
+      for (const key of this.routerKeysForServer(serverId)) {
+        states[key] = this.resolveRouterRowState(serverId, key);
+      }
+    }
+    return states;
+  }
+
+  routerRowState(serverId: string, remoteModelId: string): RouterRowState {
+    return (
+      this.routerRowStates[`${serverId}/${remoteModelId}`] ??
+      this.resolveRouterRowState(serverId, `${serverId}/${remoteModelId}`)
+    );
+  }
+
+  private routerKeysForServer(serverId: string): string[] {
+    const prefix = `${serverId}/`;
+    const keys = new Set<string>();
+    for (const row of this.serverModels.get(serverId) ?? []) {
+      keys.add(`${serverId}/${row.id}`);
+    }
+    for (const map of [this.routerEvents, this.routerOps]) {
+      for (const key of Object.keys(map)) {
+        if (key.startsWith(prefix)) {
+          keys.add(key);
+        }
+      }
+    }
+    return [...keys];
+  }
+
+  private resolveRouterRowState(serverId: string, key: string): RouterRowState {
+    const remoteModelId = key.slice(serverId.length + 1);
+    const row = (this.serverModels.get(serverId) ?? []).find(candidate =>
+      rowMatchesKey(candidate, remoteModelId),
+    );
+    const live = this.routerEvents[key];
+    const fetchStartedAt = this.routerListShape[serverId]?.startedAt ?? 0;
+    if (live?.status && live.at > fetchStartedAt) {
+      return live.status;
+    }
+    const rowState = mapRowStatus(row);
+    // A download has no row until it lands, so its own operation is what says
+    // the model is on its way.
+    if (rowState === 'absent' && this.routerOps[key]?.kind === 'download') {
+      return 'downloading';
+    }
+    return rowState;
+  }
+
+  routerLive(serverId: string, remoteModelId: string): RouterLive | undefined {
+    return this.routerEvents[`${serverId}/${remoteModelId}`];
+  }
+
+  routerOp(serverId: string, remoteModelId: string): RouterOp | undefined {
+    return this.routerOps[`${serverId}/${remoteModelId}`];
+  }
+
+  /** Resident models on a server: a fact, shown without predicting anything. */
+  routerResidentCount(serverId: string): number {
+    return this.routerKeysForServer(serverId).filter(key => {
+      const state = this.resolveRouterRowState(serverId, key);
+      return state === 'loaded' || state === 'loading' || state === 'sleeping';
+    }).length;
+  }
+
   getModelsNotYetAdded(serverId: string): RemoteModelInfo[] {
     const allModels = this.serverModels.get(serverId) || [];
     return allModels.filter(
@@ -254,9 +389,11 @@ class ServerStore {
       this.error = null;
     });
 
+    const startedAt = Date.now();
+
     try {
       const apiKey = await this.getApiKey(serverId);
-      const models = await fetchModels(
+      const {models, hasModelsKey} = await fetchModelsWithHeaders(
         server.url,
         apiKey,
         server.requestTimeoutMs,
@@ -265,6 +402,15 @@ class ServerStore {
       runInAction(() => {
         this.serverModels.set(serverId, models);
         this.isLoading = false;
+        // Only the success branch, because this fetch leaves the previous rows
+        // in place on a failure: without a stamp, a reconcile that never
+        // happened is indistinguishable from one that found the old row, and
+        // every bound below turns on that difference.
+        this.routerListShape[serverId] = {
+          hasModelsKey,
+          startedAt,
+          completedAt: Date.now(),
+        };
 
         // Update lastConnected timestamp
         const s = this.servers.find(sv => sv.id === serverId);
