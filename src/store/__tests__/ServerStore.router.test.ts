@@ -14,6 +14,11 @@ jest.mock('../../api/openai', () => ({
   PROPS_TIMEOUT_MS: 5000,
 }));
 
+jest.mock('../../api/router', () => ({
+  ...jest.requireActual('../../api/router'),
+  openRouterEventStream: jest.fn(() => ({close: jest.fn()})),
+}));
+
 const mockAddEventListener = jest.fn().mockReturnValue({remove: jest.fn()});
 jest
   .spyOn(AppState, 'addEventListener')
@@ -24,20 +29,28 @@ import {
   directTextModelsBody,
   routerModelsBody,
 } from '../../../jest/fixtures/remoteModelList';
-import {routerWireJson} from '../../../jest/fixtures/routerWire';
+import {
+  routerWireEvents,
+  routerWireJson,
+} from '../../../jest/fixtures/routerWire';
 import type {RemoteModelInfo} from '../../api/openai';
+import {openRouterEventStream, RouterStreamError} from '../../api/router';
 
 const persistedProperties: string[] = (
   jest.requireMock('mobx-persist-store').makePersistable as jest.Mock
 ).mock.calls[0][1].properties;
 
 const mockedFetch = openaiModule.fetchModelsWithHeaders as jest.Mock;
+const mockedOpenStream = openRouterEventStream as jest.Mock;
 
 const listResult = (models: any[], hasModelsKey: boolean) => ({
   models: models as RemoteModelInfo[],
   headers: {},
   hasModelsKey,
 });
+
+/** Let a detached reconcile reach its mocked fetch. */
+const flush = () => new Promise(resolve => setImmediate(resolve));
 
 const addServer = (serverType = 'llama.cpp') =>
   serverStore.addServer({
@@ -213,5 +226,165 @@ describe('routerRowStates', () => {
     const id = await withRouter();
 
     expect(serverStore.routerRowState(id, 'never-heard-of-it')).toBe('absent');
+  });
+});
+
+describe('the router event stream', () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+    resetStore();
+  });
+
+  const openOn = async (serverId: string) => {
+    mockedOpenStream.mockClear();
+    await serverStore.openRouterStream(serverId);
+    return mockedOpenStream.mock.calls[0]?.[2];
+  };
+
+  const routerServer = async () => {
+    const id = addServer();
+    mockedFetch.mockResolvedValue(listResult(routerModelsBody.data, false));
+    await serverStore.fetchModelsForServer(id);
+    return id;
+  };
+
+  it('remembers an unregistered stream endpoint and never retries it', async () => {
+    const id = await routerServer();
+    const handlers = await openOn(id);
+
+    handlers.onClose(new RouterStreamError('File Not Found', 404));
+
+    expect(serverStore.routerStreamCapFor(id)).toBe('absent');
+
+    mockedOpenStream.mockClear();
+    await serverStore.openRouterStream(id);
+    expect(mockedOpenStream).not.toHaveBeenCalled();
+  });
+
+  // 404 and 401 both pass against an implementation matching the error text,
+  // because the captured 401 message carries no number. A status a text match
+  // would find is what separates them.
+  it.each([401, 400, 500])(
+    'remembers nothing from a %i, which is not about the build',
+    async status => {
+      const id = await routerServer();
+      const handlers = await openOn(id);
+
+      handlers.onClose(new RouterStreamError('Invalid API Key', status));
+
+      expect(serverStore.routerStreamCapFor(id)).toBe('unknown');
+    },
+  );
+
+  it('records the stream as present once it answers', async () => {
+    const id = await routerServer();
+    const handlers = await openOn(id);
+
+    handlers.onOpen();
+
+    expect(serverStore.routerStreamCapFor(id)).toBe('present');
+    expect(serverStore.routerStream).toEqual({serverId: id, state: 'open'});
+  });
+
+  it('opens nothing on a server with no router evidence', async () => {
+    const id = addServer();
+    mockedFetch.mockResolvedValue(listResult(directTextModelsBody.data, true));
+    await serverStore.fetchModelsForServer(id);
+
+    mockedOpenStream.mockClear();
+    await serverStore.openRouterStream(id);
+
+    expect(mockedOpenStream).not.toHaveBeenCalled();
+  });
+
+  it('keeps at most one stream when focus moves', async () => {
+    const first = await routerServer();
+    const second = addServer();
+    mockedFetch.mockResolvedValue(listResult(routerModelsBody.data, false));
+    await serverStore.fetchModelsForServer(second);
+
+    await serverStore.openRouterStream(first);
+    await serverStore.openRouterStream(second);
+
+    expect(serverStore.routerStream?.serverId).toBe(second);
+  });
+
+  it('writes the overlay from the captured load stream', async () => {
+    const id = await routerServer();
+
+    for (const event of routerWireEvents('sse-load-sequence.txt')) {
+      serverStore.applyRouterEvent(id, event);
+    }
+
+    expect(serverStore.routerLive(id, 'alpha')?.status).toBe('unloaded');
+    expect(serverStore.routerLive(id, 'alpha')?.exitCode).toBe(0);
+  });
+
+  it('turns the eviction note on for an unload nobody asked for', async () => {
+    const id = await routerServer();
+
+    serverStore.applyRouterEvent(id, {
+      model: 'gemma-4-e2b',
+      event: 'status_change',
+      data: {status: 'unloaded'},
+    });
+
+    expect(serverStore.routerObservedEviction.has(id)).toBe(true);
+  });
+
+  it('does not call our own unload an eviction', async () => {
+    const id = await routerServer();
+    runInAction(() => {
+      serverStore.routerOps[`${id}/gemma-4-e2b`] = {
+        kind: 'unload',
+        phase: 'requested',
+        serverId: id,
+        key: `${id}/gemma-4-e2b`,
+        startedAt: Date.now(),
+        lastEvidenceAt: Date.now(),
+      };
+    });
+
+    serverStore.applyRouterEvent(id, {
+      model: 'gemma-4-e2b',
+      event: 'status_change',
+      data: {status: 'unloaded'},
+    });
+
+    expect(serverStore.routerObservedEviction.has(id)).toBe(false);
+  });
+
+  it('drops every belief about a server on models_reload', async () => {
+    const id = await routerServer();
+    serverStore.applyRouterEvent(id, {
+      model: 'alpha',
+      event: 'status_change',
+      data: {status: 'loading'},
+    });
+
+    serverStore.applyRouterEvent(id, {model: '*', event: 'models_reload'});
+
+    expect(serverStore.routerLive(id, 'alpha')).toBeUndefined();
+  });
+
+  it('reconciles on a terminal-looking event and not on a progress tick', async () => {
+    const id = await routerServer();
+    mockedFetch.mockClear();
+
+    serverStore.applyRouterEvent(id, {
+      model: 'alpha',
+      event: 'status_change',
+      data: {status: 'loading', progress: {value: 0.0}},
+    });
+    await flush();
+    expect(mockedFetch).not.toHaveBeenCalled();
+
+    serverStore.applyRouterEvent(id, {
+      model: 'alpha',
+      event: 'status_change',
+      data: {status: 'loaded'},
+    });
+    await flush();
+    expect(mockedFetch).toHaveBeenCalledTimes(1);
   });
 });

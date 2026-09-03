@@ -16,18 +16,33 @@ import {ReasoningCapability} from '../utils/reasoningCapability';
 import {deriveListCapsMap} from '../utils/listCaps';
 import type {ListDerivedCaps} from '../utils/listCaps';
 import {
+  applyLivePatch,
   mapRowStatus,
+  reduceRouterEvent,
   rowMatchesKey,
   RouterLive,
   RouterOp,
   RouterRowState,
   RouterStreamCap,
 } from '../utils/routerState';
+import {
+  openRouterEventStream,
+  RouterStreamError,
+  RouterStreamHandle,
+} from '../api/router';
 
 const KEYCHAIN_SERVICE_PREFIX = 'pocketpal-server-';
 
 /** Minimum interval between auto-fetch cycles (ms) */
 const FETCH_THROTTLE_MS = 60000;
+
+/**
+ * A long-lived XHR keeps the whole response in `responseText`, and a download
+ * stream can run for an hour. Reopening is free: nothing depends on the stream
+ * for an outcome.
+ */
+const ROUTER_STREAM_MAX_BYTES = 2 * 1024 * 1024;
+const ROUTER_STREAM_MAX_MS = 10 * 60 * 1000;
 
 /**
  * The capability fields of a `RemoteModelCaps` entry — everything except the
@@ -89,6 +104,9 @@ class ServerStore {
 
   private lastFetchTime = 0;
   private appStateSubscription: any = null;
+  private routerStreamHandle: RouterStreamHandle | null = null;
+  private routerFocusedServerId: string | null = null;
+  private routerForegrounded = true;
 
   constructor() {
     makeAutoObservable(this, {
@@ -564,19 +582,196 @@ class ServerStore {
     this.privacyNoticeAcknowledged = true;
   }
 
+  // Router event stream
+
+  setRouterStream(stream: ServerStore['routerStream']): void {
+    this.routerStream = stream;
+  }
+
+  /**
+   * Only this request's own status may write the cap, and only a 404 may say
+   * `absent`: an unregistered route is a fact about the build, whereas a 401 is
+   * about credentials, a 400 about that one request and a 500 about that
+   * moment. None of those is worth remembering.
+   */
+  setRouterStreamCap(serverId: string, cap: RouterStreamCap): void {
+    this.routerStreamCap[serverId] = cap;
+  }
+
+  routerStreamCapFor(serverId: string): RouterStreamCap {
+    return this.routerStreamCap[serverId] ?? 'unknown';
+  }
+
+  /**
+   * At most one stream app-wide, against the server the user is looking at or
+   * the one with the most recent operation. N sockets to N desktops is not a
+   * thing to do on a phone.
+   */
+  async openRouterStream(serverId: string): Promise<void> {
+    this.routerFocusedServerId = serverId;
+    if (!this.isRouterServer(serverId) || !this.routerForegrounded) {
+      return;
+    }
+    if (this.routerStreamCapFor(serverId) === 'absent') {
+      return;
+    }
+    if (this.routerStream?.serverId === serverId) {
+      return;
+    }
+    this.closeRouterStream();
+
+    const server = this.servers.find(s => s.id === serverId);
+    if (!server) {
+      return;
+    }
+    const apiKey = await this.getApiKey(serverId);
+    if (this.routerFocusedServerId !== serverId || !this.routerForegrounded) {
+      return;
+    }
+
+    runInAction(() => this.setRouterStream({serverId, state: 'connecting'}));
+
+    this.routerStreamHandle = openRouterEventStream(
+      server.url,
+      apiKey,
+      {
+        onOpen: () =>
+          runInAction(() => {
+            this.setRouterStreamCap(serverId, 'present');
+            this.setRouterStream({serverId, state: 'open'});
+          }),
+        onEvent: payload => this.applyRouterEvent(serverId, payload),
+        onClose: error => this.handleRouterStreamClosed(serverId, error),
+      },
+      {
+        connectTimeoutMs: server.requestTimeoutMs,
+        maxBytes: ROUTER_STREAM_MAX_BYTES,
+        maxDurationMs: ROUTER_STREAM_MAX_MS,
+      },
+    );
+  }
+
+  closeRouterStream(): void {
+    this.routerStreamHandle?.close();
+    this.routerStreamHandle = null;
+    runInAction(() => this.setRouterStream(null));
+  }
+
+  private handleRouterStreamClosed(
+    serverId: string,
+    error?: RouterStreamError,
+  ): void {
+    this.routerStreamHandle = null;
+    runInAction(() => {
+      this.setRouterStream(null);
+      if (error?.status === 404) {
+        this.setRouterStreamCap(serverId, 'absent');
+      }
+    });
+    // A stream that drops never settles anything: the model goes on loading on
+    // the desktop, and only a reconciled row may say otherwise.
+    if (
+      !error &&
+      this.routerForegrounded &&
+      this.routerFocusedServerId === serverId
+    ) {
+      this.openRouterStream(serverId);
+    }
+  }
+
+  /**
+   * The only writer of `routerEvents`. An event says a model's situation may
+   * have changed; what it is comes from the list.
+   */
+  applyRouterEvent(serverId: string, payload: unknown): void {
+    const effect = reduceRouterEvent(payload);
+    if (effect.kind === 'ignore') {
+      return;
+    }
+    if (effect.kind === 'drop-server') {
+      runInAction(() => {
+        this.routerEvents = dropServerEntries(this.routerEvents, serverId);
+      });
+      this.requestRouterReconcile(serverId);
+      return;
+    }
+    if (effect.kind === 'drop-model') {
+      runInAction(() => {
+        delete this.routerEvents[`${serverId}/${effect.model}`];
+      });
+      this.requestRouterReconcile(serverId);
+      return;
+    }
+
+    const key = `${serverId}/${effect.model}`;
+    runInAction(() => {
+      this.routerEvents[key] = applyLivePatch(
+        this.routerEvents[key],
+        effect.patch,
+        Date.now(),
+      );
+      if (
+        effect.patch.status === 'unloaded' &&
+        this.routerOps[key]?.kind !== 'unload'
+      ) {
+        this.routerObservedEviction.add(serverId);
+      }
+      const op = this.routerOps[key];
+      if (op) {
+        if (effect.attemptEnded) {
+          op.attemptEnded = true;
+        }
+        op.phase = 'active';
+        op.lastEvidenceAt = Date.now();
+      }
+    });
+
+    if (effect.reconcile) {
+      this.requestRouterReconcile(serverId);
+    }
+  }
+
+  private requestRouterReconcile(serverId: string): void {
+    this.fetchModelsForServer(serverId).catch(() => {});
+  }
+
   // Auto-fetch on foreground
   private setupAppStateListener(): void {
     this.appStateSubscription = AppState.addEventListener(
       'change',
       (nextAppState: AppStateStatus) => {
         if (nextAppState === 'active') {
+          this.routerForegrounded = true;
           const now = Date.now();
           if (now - this.lastFetchTime > FETCH_THROTTLE_MS) {
             this.fetchAllRemoteModels();
           }
+          this.handleRouterForeground();
+        } else {
+          this.routerForegrounded = false;
+          this.closeRouterStream();
         }
       },
     );
+  }
+
+  /**
+   * The list is reconciled before anything reopens, because the event that
+   * would have said a load finished may already have happened while the stream
+   * was closed. Asking answers; waiting for a past event does not.
+   */
+  private async handleRouterForeground(): Promise<void> {
+    const servers = new Set(
+      Object.values(this.routerOps).map(op => op.serverId),
+    );
+    await Promise.all(
+      [...servers].map(serverId =>
+        this.fetchModelsForServer(serverId).catch(() => {}),
+      ),
+    );
+    if (this.routerFocusedServerId) {
+      this.openRouterStream(this.routerFocusedServerId);
+    }
   }
 }
 
