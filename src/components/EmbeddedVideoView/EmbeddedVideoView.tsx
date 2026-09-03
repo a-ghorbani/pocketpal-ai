@@ -195,6 +195,8 @@ export const EmbeddedVideoView = observer(
           <TouchableOpacity
             style={styles.closeButton}
             onPress={onClose}
+            accessibilityRole="button"
+            accessibilityLabel={l10n.common.close}
             testID="close-button">
             <Icon name="close" style={styles.closeButtonIcon} />
           </TouchableOpacity>
@@ -248,6 +250,8 @@ export const EmbeddedVideoView = observer(
           <TouchableOpacity
             style={styles.closeButton}
             onPress={onClose}
+            accessibilityRole="button"
+            accessibilityLabel={l10n.common.close}
             testID="close-button">
             <Icon name="close" style={styles.closeButtonIcon} />
           </TouchableOpacity>

@@ -296,13 +296,14 @@ describe('EmbeddedVideoView', () => {
       requestPermission: jest.fn(),
     });
 
-    const {getByTestId} = render(
+    const {getByLabelText} = render(
       <L10nContext.Provider value={l10n.en}>
         <EmbeddedVideoView {...defaultProps} />
       </L10nContext.Provider>,
     );
 
-    const closeButton = getByTestId('close-button');
+    const closeButton = getByLabelText(l10n.en.common.close);
+    expect(closeButton.props.accessibilityRole).toBe('button');
     fireEvent.press(closeButton);
 
     expect(defaultProps.onClose).toHaveBeenCalled();
@@ -378,14 +379,16 @@ describe('EmbeddedVideoView', () => {
       });
       useCameraDevices.mockReturnValue([]);
 
-      const {getByText, getByTestId} = render(
+      const {getByText, getByLabelText} = render(
         <L10nContext.Provider value={l10n.en}>
           <EmbeddedVideoView {...defaultProps} />
         </L10nContext.Provider>,
       );
 
       expect(getByText(l10n.en.video.noDevice)).toBeTruthy();
-      fireEvent.press(getByTestId('close-button'));
+      const closeButton = getByLabelText(l10n.en.common.close);
+      expect(closeButton.props.accessibilityRole).toBe('button');
+      fireEvent.press(closeButton);
       expect(defaultProps.onClose).toHaveBeenCalled();
     });
 
