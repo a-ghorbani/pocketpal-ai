@@ -57,12 +57,11 @@ describe('remote model readiness', () => {
   });
 
   // Withdrawing the request leaves no record because it is not news about the
-  // server. The engine still needs a message, and it says what is true: this
-  // app is no longer waiting.
-  it('refuses one with no record by naming the wait, not the server', async () => {
-    await expect(refusalFor(undefined)).resolves.toBe(
-      l10n.en.settings.routerModels.waitStopped,
-    );
+  // server, and the ten-minute ceiling now leaves one of its own. What remains
+  // here is a withdrawal, which the engine must refuse without composing copy
+  // of its own about a server it has nothing to report on.
+  it('refuses one with no record without saying anything at all', async () => {
+    await expect(refusalFor(undefined)).resolves.toBe('');
   });
 
   it('asks the server to load the model without making activation wait', async () => {

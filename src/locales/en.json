@@ -227,7 +227,7 @@
       "unloadNotReleased": "The server did not release this model.",
       "downloadNotFetched": "The server could not fetch this model.",
       "serverUnreachable": "Could not reach this server.",
-    "waitStopped": "Stopped waiting for this model.",
+      "waitStopped": "Stopped waiting for this model.",
       "dismiss": "Dismiss",
       "downloadLabel": "Add a model to this server",
       "downloadPlaceholder": "owner/repo:QUANT",

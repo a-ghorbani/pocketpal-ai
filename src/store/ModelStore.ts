@@ -43,7 +43,7 @@ import {
 import {getRecommendedProjectionModel} from '../utils/multimodalHelpers';
 import {isDraftOnlyModel} from '../utils/mtp';
 import {getOriginalModelName} from '../utils/formatters';
-import {routerFailureLabel, routerFailureText} from '../utils/routerCopy';
+import {routerFailureText} from '../utils/routerCopy';
 import type {RouterFailure} from '../utils/routerState';
 import type {OnboardingPalModelEntry} from './onboarding/onboardingPals';
 
@@ -2727,12 +2727,11 @@ class ModelStore {
     if ((await this.ensureActiveRemoteModelReady()) !== 'failed') {
       return;
     }
-    const l10n = uiStore.l10n;
-    // The engine needs a message even where the operation left no record, and
-    // that message is about this app's wait, never about the server.
+    // Where the operation left no record it withdrew rather than ended, and
+    // there is nothing to report about the server. The engine still needs an
+    // Error, so it carries no message rather than a manufactured one.
     throw new Error(
-      routerFailureText(this.activeRemoteFailure, l10n) ??
-        routerFailureLabel('wait-stopped', l10n),
+      routerFailureText(this.activeRemoteFailure, uiStore.l10n) ?? '',
     );
   };
 
