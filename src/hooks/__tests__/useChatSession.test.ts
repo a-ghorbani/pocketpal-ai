@@ -27,6 +27,7 @@ import {l10n} from '../../locales';
 import {assistant} from '../../utils/chat';
 import {ModelOrigin} from '../../utils/types';
 import type {RouterFailure} from '../../utils/routerState';
+import {RemoteModelRequestWithdrawnError} from '../../utils/errors';
 
 const mockAssistant = {
   id: 'h3o3lc5xj',
@@ -201,6 +202,52 @@ describe('useChatSession', () => {
         chatSessionStore.addMessageToCurrentSession,
       ).not.toHaveBeenCalledWith(
         expect.objectContaining({metadata: {system: true}}),
+      );
+    });
+  });
+
+  // The engine refuses a turn whose readiness request the user withdrew. That
+  // is a decision the catch makes about the error it caught, never about the
+  // error's message being empty: an absence has more than one cause, and the
+  // other one is a native throw that would then vanish in silence.
+  describe('a completion refused because the request was withdrawn', () => {
+    const rejectWith = (error: Error) => {
+      if (modelStore.context) {
+        modelStore.context.completion = jest.fn().mockRejectedValueOnce(error);
+      }
+    };
+
+    const send = async () => {
+      const {result} = renderHook(() =>
+        useChatSession({current: null}, textMessage.author, mockAssistant),
+      );
+      await act(async () => {
+        await result.current.handleSendPress(textMessage);
+      });
+    };
+
+    it('says nothing at all', async () => {
+      rejectWith(new RemoteModelRequestWithdrawnError());
+
+      await send();
+
+      expect(
+        chatSessionStore.addMessageToCurrentSession,
+      ).not.toHaveBeenCalledWith(
+        expect.objectContaining({metadata: {system: true}}),
+      );
+    });
+
+    it('still reports an unrelated error that happens to carry no message', async () => {
+      rejectWith(new Error(''));
+
+      await send();
+
+      expect(chatSessionStore.addMessageToCurrentSession).toHaveBeenCalledWith(
+        expect.objectContaining({
+          text: l10n.en.chat.completionFailed,
+          author: assistant,
+        }),
       );
     });
   });

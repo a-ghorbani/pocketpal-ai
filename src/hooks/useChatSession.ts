@@ -19,7 +19,10 @@ import {resolveReasoningCapability} from '../utils/reasoningCapability';
 import {routerFailureText} from '../utils/routerCopy';
 
 import {MessageType, ModelOrigin, User} from '../utils/types';
-import {createMultimodalWarning} from '../utils/errors';
+import {
+  createMultimodalWarning,
+  RemoteModelRequestWithdrawnError,
+} from '../utils/errors';
 import {
   assembleMessages,
   resolveSystemMessages,
@@ -877,6 +880,10 @@ export const useChatSession = (
       if (turnAbsorbedError) {
         // Footer already surfaces interrupted / truncationLikely; nothing
         // more to add to chat.
+      } else if (error instanceof RemoteModelRequestWithdrawnError) {
+        // The user stopped the operation this turn was waiting on, so they
+        // know why it ended. Recognised by type: an error carrying no message
+        // is not the same thing, and must still be reported below.
       } else if (errorMessage.includes('network')) {
         await addSystemMessage(l10n.common.networkError);
       } else if (isToolArgsParseError) {

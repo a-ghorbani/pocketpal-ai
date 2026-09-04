@@ -2,6 +2,7 @@ import {modelStore} from '../ModelStore';
 import {serverStore} from '../ServerStore';
 import {l10n} from '../../locales';
 import type {RouterFailure} from '../../utils/routerState';
+import {RemoteModelRequestWithdrawnError} from '../../utils/errors';
 
 jest.mock('../ServerStore', () => ({
   serverStore: {
@@ -46,22 +47,24 @@ describe('remote model readiness', () => {
     (serverStore.routerReason as jest.Mock).mockReturnValue(reason);
     return modelStore
       .engine!.completion({} as any)
-      .then(() => 'no refusal at all')
-      .catch((error: Error) => error.message);
+      .then(() => undefined)
+      .catch((error: Error) => error);
   };
 
   it('refuses a request with the record the operation left', async () => {
-    await expect(refusalFor({cause: 'load-failed'})).resolves.toBe(
+    expect((await refusalFor({cause: 'load-failed'}))?.message).toBe(
       l10n.en.settings.routerModels.loadFailed,
     );
   });
 
   // Withdrawing the request leaves no record because it is not news about the
   // server, and the ten-minute ceiling now leaves one of its own. What remains
-  // here is a withdrawal, which the engine must refuse without composing copy
-  // of its own about a server it has nothing to report on.
-  it('refuses one with no record without saying anything at all', async () => {
-    await expect(refusalFor(undefined)).resolves.toBe('');
+  // here is a withdrawal, and it is refused as one — a type a surface can
+  // recognise, rather than an empty message a surface would have to guess at.
+  it('refuses one with no record as a withdrawal, not as a failure', async () => {
+    expect(await refusalFor(undefined)).toBeInstanceOf(
+      RemoteModelRequestWithdrawnError,
+    );
   });
 
   it('asks the server to load the model without making activation wait', async () => {

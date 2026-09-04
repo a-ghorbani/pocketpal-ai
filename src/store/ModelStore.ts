@@ -85,7 +85,11 @@ import {
   RemoteSessionBinding,
 } from '../utils/types';
 
-import {ErrorState, createErrorState} from '../utils/errors';
+import {
+  ErrorState,
+  RemoteModelRequestWithdrawnError,
+  createErrorState,
+} from '../utils/errors';
 import {chatSessionRepository} from '../repositories/ChatSessionRepository';
 import {hasEnoughMemory} from '../hooks/useMemoryCheck';
 import {
@@ -2727,12 +2731,11 @@ class ModelStore {
     if ((await this.ensureActiveRemoteModelReady()) !== 'failed') {
       return;
     }
-    // Where the operation left no record it withdrew rather than ended, and
-    // there is nothing to report about the server. The engine still needs an
-    // Error, so it carries no message rather than a manufactured one.
-    throw new Error(
-      routerFailureText(this.activeRemoteFailure, uiStore.l10n) ?? '',
-    );
+    const reason = routerFailureText(this.activeRemoteFailure, uiStore.l10n);
+    if (reason === undefined) {
+      throw new RemoteModelRequestWithdrawnError();
+    }
+    throw new Error(reason);
   };
 
   /**
