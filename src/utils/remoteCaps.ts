@@ -17,7 +17,7 @@ import {
  * taken at face value.
  */
 export function capsMatchBinding(
-  caps: {probedUrl?: string} | undefined,
+  caps: RemoteModelCaps | RemoteModelProps | undefined,
   binding: RemoteSessionBinding | undefined,
   modelId: string,
 ): boolean {

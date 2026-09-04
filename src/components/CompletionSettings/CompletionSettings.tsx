@@ -18,6 +18,7 @@ import {
 } from '../../utils/modelSettings';
 import {CompletionParams} from '../../utils/completionTypes';
 import {SamplerDefaults} from '../../utils/types';
+import {SamplerParam} from '../../api/openai';
 
 /** The step a control is edited at; `renderSlider` reads the same value. */
 const stepOf = (name: string): number =>
@@ -57,7 +58,7 @@ export const CompletionSettings: React.FC<Props> = ({
    * not read as a deliberate change; a discrete control passes 0 and compares
    * exactly.
    */
-  const renderServerDefault = (name: string, tolerance: number) => {
+  const renderServerDefault = (name: SamplerParam, tolerance: number) => {
     const serverValue = serverDefaults?.[name];
     if (serverValue === undefined) {
       return null;
@@ -93,8 +94,10 @@ export const CompletionSettings: React.FC<Props> = ({
     );
   };
 
-  const renderSlider = ({name}: {name: string}) => {
+  const renderSlider = ({name}: {name: SamplerParam}) => {
     const metadata = COMPLETION_PARAMS_METADATA[name];
+    const range =
+      metadata?.validation.type === 'numeric' ? metadata.validation : undefined;
     const step = stepOf(name);
 
     return (
@@ -104,10 +107,10 @@ export const CompletionSettings: React.FC<Props> = ({
           label={name.toUpperCase().replace('_', ' ')}
           labelVariant="labelSmall"
           description={l10n.completionParams[name]}
-          value={settings[name]}
+          value={settings[name] as number}
           onValueChange={value => onChange(name, value)}
-          min={metadata?.validation.min}
-          max={metadata?.validation.max}
+          min={range?.min}
+          max={range?.max}
           step={step}
           precision={Number.isInteger(step) ? 0 : 2}
           debounceMs={300} // Enable debouncing for sliders
@@ -118,7 +121,7 @@ export const CompletionSettings: React.FC<Props> = ({
     );
   };
 
-  const renderIntegerInput = ({name}: {name: keyof CompletionParams}) => {
+  const renderIntegerInput = ({name}: {name: SamplerParam}) => {
     const metadata = COMPLETION_PARAMS_METADATA[name];
     if (!metadata) {
       return null;
@@ -146,7 +149,7 @@ export const CompletionSettings: React.FC<Props> = ({
           editable={!disabled}
           testID={`${String(name)}-input`}
         />
-        {renderServerDefault(String(name), 0)}
+        {renderServerDefault(name, 0)}
       </View>
     );
   };
