@@ -24,6 +24,7 @@ import {render, fireEvent, waitFor, act} from '../../../../jest/test-utils';
 import {serverStore} from '../../../store';
 import * as openai from '../../../api/openai';
 import type {PairingProbeResult} from '../../../api/openai';
+import {Sheet} from '../../Sheet';
 import {PairServerSheet} from '../PairServerSheet';
 
 const mockUseCameraDevice = useCameraDevice as jest.Mock;
@@ -59,14 +60,18 @@ const settle = async (
   });
 };
 
-const pressButton = async (root: any, testID: string) => {
-  const targets = root.UNSAFE_root.findAll(
+/** The pressable node behind `testID`, of the several a Button renders. */
+const control = (root: any, testID: string) =>
+  root.UNSAFE_root.findAll(
     (n: any) =>
       n.props?.testID === testID && typeof n.props?.onPress === 'function',
-  );
-  expect(targets.length).toBeGreaterThan(0);
+  )[0];
+
+const pressButton = async (root: any, testID: string) => {
+  const target = control(root, testID);
+  expect(target).toBeTruthy();
   await act(async () => {
-    fireEvent.press(targets[0]);
+    fireEvent.press(target);
     await Promise.resolve();
   });
 };
@@ -74,12 +79,7 @@ const pressButton = async (root: any, testID: string) => {
 const keyField = (root: any) =>
   root.UNSAFE_root.findAll((n: any) => n.props?.testID === 'pair-server-key');
 
-const addButton = (root: any) =>
-  root.UNSAFE_root.findAll(
-    (n: any) =>
-      n.props?.testID === 'pair-server-add' &&
-      typeof n.props?.onPress === 'function',
-  )[0];
+const addButton = (root: any) => control(root, 'pair-server-add');
 
 /** Deliver a scanned code through whatever handler the sheet registered. */
 const scan = async (value: string) => {
@@ -575,6 +575,41 @@ describe('PairServerSheet', () => {
     });
   });
 
+  describe('reaching the buttons with the keyboard up', () => {
+    // The sheet pans rather than resizes, so only the keyboard-aware scroll
+    // view moves a control clear of the keyboard.
+    // react-test-renderer reports a memo() component as its inner function.
+    const scrollViewTypes = [Sheet.ScrollView, (Sheet.ScrollView as any).type];
+
+    const scrollsWithTheBody = (root: any, testID: string) => {
+      let node = control(root, testID);
+      expect(node).toBeTruthy();
+      while (node) {
+        if (scrollViewTypes.includes(node.type)) {
+          return true;
+        }
+        node = node.parent;
+      }
+      return false;
+    };
+
+    it("scrolls the manual form's Add with the fields it submits", async () => {
+      const root = renderSheet();
+      await pressButton(root, 'pair-server-manual');
+
+      expect(scrollsWithTheBody(root, 'pair-server-continue')).toBe(true);
+    });
+
+    it("scrolls the confirm step's Add with the key field", async () => {
+      const probe = nextProbe();
+      const root = renderSheet({request: {url: QR_PAYLOAD}});
+      await settle(probe, usable(1));
+
+      expect(scrollsWithTheBody(root, 'pair-server-add')).toBe(true);
+      expect(scrollsWithTheBody(root, 'pair-server-back')).toBe(true);
+    });
+  });
+
   describe('reaching the buttons over a system navigation bar', () => {
     const NAV_BAR = 48;
 
@@ -596,20 +631,25 @@ describe('PairServerSheet', () => {
       });
     });
 
-    /** The largest bottom padding any ancestor of `testID` contributes. */
+    /**
+     * The largest bottom padding held under `testID` by an ancestor — its own
+     * layout, or the padding a scroll view puts under its content.
+     */
     const liftAbove = (root: any, testID: string) => {
-      let node = root.UNSAFE_root.findAll(
-        (n: any) =>
-          n.props?.testID === testID && typeof n.props?.onPress === 'function',
-      )[0];
+      let node = control(root, testID);
       expect(node).toBeTruthy();
       let lift = 0;
       while (node) {
-        const flat = StyleSheet.flatten(node.props?.style) as
-          | {paddingBottom?: number}
-          | undefined;
-        if (typeof flat?.paddingBottom === 'number') {
-          lift = Math.max(lift, flat.paddingBottom);
+        for (const style of [
+          node.props?.style,
+          node.props?.contentContainerStyle,
+        ]) {
+          const flat = StyleSheet.flatten(style) as
+            | {paddingBottom?: number}
+            | undefined;
+          if (typeof flat?.paddingBottom === 'number') {
+            lift = Math.max(lift, flat.paddingBottom);
+          }
         }
         node = node.parent;
       }

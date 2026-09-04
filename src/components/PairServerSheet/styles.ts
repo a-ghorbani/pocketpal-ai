@@ -2,11 +2,11 @@ import {StyleSheet} from 'react-native';
 
 import {Theme} from '../../utils/types';
 
-export const createStyles = (theme: Theme) =>
+export const createStyles = (theme: Theme, bottomInset: number) =>
   StyleSheet.create({
     body: {
       paddingHorizontal: 24,
-      paddingBottom: 24,
+      paddingBottom: 10 + bottomInset,
       gap: 16,
     },
     cameraFill: {
@@ -47,14 +47,16 @@ export const createStyles = (theme: Theme) =>
       fontSize: 14,
       color: theme.colors.error,
     },
-    footer: {
-      paddingHorizontal: 24,
-      alignItems: 'center',
-    },
-    footerEnd: {
-      paddingHorizontal: 24,
-      alignItems: 'center',
+    actions: {
+      flexDirection: 'row',
       justifyContent: 'flex-end',
+      gap: 8,
+    },
+    actionsSplit: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      gap: 8,
     },
     actionsRight: {
       flexDirection: 'row',

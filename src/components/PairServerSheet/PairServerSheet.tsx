@@ -8,6 +8,7 @@ import React, {
 import {View, TextInput as RNTextInput} from 'react-native';
 
 import {observer} from 'mobx-react';
+import {useSafeAreaInsets} from 'react-native-safe-area-context';
 import {ActivityIndicator, Button, Text} from 'react-native-paper';
 import {
   Camera,
@@ -49,7 +50,8 @@ export const PairServerSheet: React.FC<PairServerSheetProps> = observer(
   ({isVisible, onDismiss, request, onPaired}) => {
     const theme = useTheme();
     const l10n = useContext(L10nContext);
-    const styles = createStyles(theme);
+    const insets = useSafeAreaInsets();
+    const styles = createStyles(theme, insets.bottom);
 
     const device = useCameraDevice('back');
     const {hasPermission, requestPermission} = useCameraPermission();
@@ -327,21 +329,23 @@ export const PairServerSheet: React.FC<PairServerSheetProps> = observer(
       }
     };
 
+    // The sheet pans rather than resizes for the keyboard, so a pinned footer
+    // would sit behind it; these rows scroll with the keyboard-aware body.
     const renderActions = () => {
       switch (state) {
         case 'scanning':
           return canScan ? (
-            <Sheet.Actions style={styles.footerEnd}>
+            <View style={styles.actions}>
               <Button
                 testID="pair-server-manual"
                 onPress={() => setState('manual')}>
                 {l10n.settings.enterUrlManually}
               </Button>
-            </Sheet.Actions>
+            </View>
           ) : null;
         case 'manual':
           return (
-            <Sheet.Actions style={styles.footer}>
+            <View style={styles.actionsSplit}>
               {canScan ? (
                 <Button
                   testID="pair-server-scan"
@@ -354,11 +358,11 @@ export const PairServerSheet: React.FC<PairServerSheetProps> = observer(
               <Button testID="pair-server-continue" onPress={confirmManual}>
                 {l10n.models.pairServer.add}
               </Button>
-            </Sheet.Actions>
+            </View>
           );
         case 'duplicate':
           return (
-            <Sheet.Actions style={styles.footerEnd}>
+            <View style={styles.actions}>
               <Button testID="pair-server-cancel" onPress={onDismiss}>
                 {l10n.common.cancel}
               </Button>
@@ -373,12 +377,12 @@ export const PairServerSheet: React.FC<PairServerSheetProps> = observer(
                 }}>
                 {l10n.models.pairServer.use}
               </Button>
-            </Sheet.Actions>
+            </View>
           );
         case 'confirming':
         case 'saving':
           return (
-            <Sheet.Actions style={styles.footer}>
+            <View style={styles.actionsSplit}>
               <Button testID="pair-server-back" onPress={goBack}>
                 {l10n.models.pairServer.back}
               </Button>
@@ -395,7 +399,7 @@ export const PairServerSheet: React.FC<PairServerSheetProps> = observer(
                   {l10n.models.pairServer.add}
                 </Button>
               </View>
-            </Sheet.Actions>
+            </View>
           );
       }
     };
@@ -496,8 +500,9 @@ export const PairServerSheet: React.FC<PairServerSheetProps> = observer(
               {renderVerdict()}
             </>
           )}
+
+          {renderActions()}
         </Sheet.ScrollView>
-        {renderActions()}
       </Sheet>
     );
   },
