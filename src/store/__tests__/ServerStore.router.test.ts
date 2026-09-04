@@ -714,6 +714,35 @@ describe('loading a model', () => {
     expect(serverStore.routerRowState(id, TARGET)).toBe('failed');
   });
 
+  // The stream is corroboration, not authority. Losing it costs the progress
+  // fraction; a load still running on the desktop must not be called failed
+  // because this phone stopped hearing about it.
+  it('settles nothing when the stream drops under a running load', async () => {
+    const id = await routerServer();
+    mockedOpenStream.mockClear();
+    await serverStore.openRouterStream(id);
+    const handlers = mockedOpenStream.mock.calls[0]?.[2];
+
+    const pending = serverStore.ensureRouterModelLoaded(id, TARGET);
+    await flush();
+    answerWith('loading');
+    jest.advanceTimersByTime(ROUTER_ACK_MS + 2000);
+    await flush();
+
+    // A clean close carries no error — the drop no reconnect can distinguish.
+    handlers.onClose(undefined);
+    jest.advanceTimersByTime(ROUTER_EVIDENCE_MS + ROUTER_POLL_MS);
+    await flush();
+
+    expect(serverStore.routerOp(id, TARGET)).toBeDefined();
+    expect(serverStore.routerReason(id, TARGET)).toBeUndefined();
+
+    // And the row, once it moves, is still what settles it.
+    answerWith('loaded');
+    await reconcile(id);
+    await expect(pending).resolves.toBe('ready');
+  });
+
   it('leaves a load in flight while the row still says loading', async () => {
     const id = await routerServer();
     const pending = serverStore.ensureRouterModelLoaded(id, TARGET);
