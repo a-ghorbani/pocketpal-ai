@@ -1520,27 +1520,44 @@ describe('streamChatCompletion', () => {
     ).toBe(35);
   });
 
-  it('treats a reported cache_n of 0 as a count, not as an absent key', async () => {
-    const resultPromise = streamChatCompletion(
-      {messages: [{role: 'user', content: 'Hi'}], model: 'test-model'},
-      'http://localhost:1234',
-    );
+  // Both shapes are projected from the capture rather than retyped, so each
+  // still carries the finish chunk's full nine-key `timings` object.
+  it('distinguishes a reported cache_n of 0 from an absent one', async () => {
+    const coldTimings = {...cacheReuseTimings, cache_n: 0};
+    const preReuseTimings: Record<string, number> = {...cacheReuseTimings};
+    delete preReuseTimings.cache_n;
 
-    const xhr = MockXHR.instances[0];
-    xhr.simulateHeaders(200);
-    xhr.simulateProgress(
-      'data: {"choices":[{"delta":{"content":"Hello"},"finish_reason":null}]}\n\n',
-    );
-    // Every cold prompt on a build that reports reuse looks like this.
-    xhr.simulateProgress(
-      'data: {"choices":[{"delta":{},"finish_reason":"stop"}],"timings":{"prompt_n":3000,"cache_n":0,"predicted_n":500}}\n\n',
-    );
-    xhr.simulateProgress('data: [DONE]\n\n');
-    xhr.simulateLoad();
+    const finish = async (timings: Record<string, number>) => {
+      const resultPromise = streamChatCompletion(
+        {messages: [{role: 'user', content: 'Hi'}], model: 'test-model'},
+        'http://localhost:1234',
+      );
+      const xhr = MockXHR.instances[MockXHR.instances.length - 1];
+      xhr.simulateHeaders(200);
+      xhr.simulateProgress(
+        'data: {"choices":[{"delta":{"content":"Hello"},"finish_reason":null}]}\n\n',
+      );
+      xhr.simulateProgress(
+        `data: {"choices":[{"delta":{},"finish_reason":"stop"}],"timings":${JSON.stringify(
+          timings,
+        )}}\n\n`,
+      );
+      xhr.simulateProgress('data: [DONE]\n\n');
+      xhr.simulateLoad();
+      return resultPromise;
+    };
 
-    const result = await resultPromise;
-    expect(result.tokens_evaluated).toBe(3000);
-    expect(result.timings?.cache_n).toBe(0);
+    // A cold prompt on a build that reports reuse: 0 is a real count.
+    const cold = await finish(coldTimings);
+    expect(cold.tokens_evaluated).toBe(cacheReuseTimings.prompt_n);
+    expect(cold.timings?.cache_n).toBe(0);
+
+    // A build too old to report reuse omits the key. Same total, and the app
+    // degrades to it rather than below it — but a different fact, and the
+    // result keeps the two apart.
+    const preReuse = await finish(preReuseTimings);
+    expect(preReuse.tokens_evaluated).toBe(cacheReuseTimings.prompt_n);
+    expect(preReuse.timings?.cache_n).toBeUndefined();
   });
 
   it('guards each timings token key independently (only predicted_n)', async () => {
