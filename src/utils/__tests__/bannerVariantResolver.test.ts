@@ -13,6 +13,7 @@ const baseInput = (
   htmlPreviewCount: 0,
   activeModelId: 'model-1',
   dismissed: new Set(),
+  remoteWaking: false,
   ...overrides,
 });
 
@@ -328,5 +329,43 @@ describe('resolveBannerVariant', () => {
       const result = resolveBannerVariant(undefined, baseInput());
       expect(result.variant).toBe('none');
     });
+  });
+});
+
+describe('remote-waking', () => {
+  it('renders while the bound server is asleep and the request is in flight', () => {
+    expect(
+      resolveBannerVariant(undefined, baseInput({remoteWaking: true})),
+    ).toEqual({variant: 'remote-waking'});
+  });
+
+  it('wins over context-full, the highest-precedence snapshot banner', () => {
+    const result = resolveBannerVariant(
+      snap({used: 4096, contextFull: true}),
+      baseInput({remoteWaking: true}),
+    );
+
+    expect(result.variant).toBe('remote-waking');
+  });
+
+  it('is not dismissible, because there is nothing durable to dismiss', () => {
+    const result = resolveBannerVariant(
+      undefined,
+      baseInput({
+        remoteWaking: true,
+        dismissed: new Set(['remote-waking'] as const),
+      }),
+    );
+
+    expect(result.variant).toBe('remote-waking');
+  });
+
+  it('yields to the ordinary banners once the server is no longer asleep', () => {
+    const result = resolveBannerVariant(
+      snap({used: 4096, contextFull: true}),
+      baseInput({remoteWaking: false}),
+    );
+
+    expect(result.variant).toBe('context-full');
   });
 });

@@ -1229,6 +1229,7 @@
     "multimodalNotEnabled": "Multimodal is not enabled for this model. Images will be displayed but not processed by the AI.",
     "cannotSendWithoutModel": "Load a model first",
     "toolCompatWarning": "This model may not support tool calling. Results may be unreliable.",
+    "remoteWaking": "Waking the server…",
     "softCapWarning": "Start a new chat for best performance.",
     "contextWarning": "This conversation is getting long and may soon run out of room.",
     "contextRemoteHedged": "This reply may have been cut off. Try sending again or shortening the request.",
