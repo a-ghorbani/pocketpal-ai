@@ -48,10 +48,12 @@ interface RemoteModelSheetProps {
   isVisible: boolean;
   onDismiss: () => void;
   onModelAdded?: () => void;
+  /** Opens on this server's chip, list already populated. */
+  initialServerId?: string;
 }
 
 export const RemoteModelSheet: React.FC<RemoteModelSheetProps> = observer(
-  ({isVisible, onDismiss, onModelAdded}) => {
+  ({isVisible, onDismiss, onModelAdded, initialServerId}) => {
     const theme = useTheme();
     const l10n = useContext(L10nContext);
     const styles = createStyles(theme);
@@ -248,6 +250,19 @@ export const RemoteModelSheet: React.FC<RemoteModelSheetProps> = observer(
         setIsProbing(false);
       }
     }, []);
+
+    // Runs after the reset effect above, which is declared first. Routed
+    // through the chip handler rather than setting the id, so the list is
+    // populated too; an unknown id leaves the normal reset state.
+    useEffect(() => {
+      if (!isVisible || !initialServerId) {
+        return;
+      }
+      const server = serverStore.servers.find(s => s.id === initialServerId);
+      if (server) {
+        handleServerChipPress(server);
+      }
+    }, [isVisible, initialServerId, handleServerChipPress]);
 
     const handleDeselectChip = useCallback(() => {
       setSelectedServerId(null);

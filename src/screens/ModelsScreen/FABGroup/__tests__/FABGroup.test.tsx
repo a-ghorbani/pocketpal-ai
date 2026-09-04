@@ -12,6 +12,7 @@ describe('FABGroup', () => {
   const mockOnAddHFModel = jest.fn();
   const mockOnAddLocalModel = jest.fn();
   const mockOnAddRemoteModel = jest.fn();
+  const mockOnScanServer = jest.fn();
 
   beforeEach(() => {
     jest.clearAllMocks();
@@ -23,6 +24,7 @@ describe('FABGroup', () => {
         onAddHFModel={mockOnAddHFModel}
         onAddLocalModel={mockOnAddLocalModel}
         onAddRemoteModel={mockOnAddRemoteModel}
+        onScanServer={mockOnScanServer}
       />,
       {withNavigation: true},
     );
@@ -30,12 +32,13 @@ describe('FABGroup', () => {
     expect(getByTestId('fab-group')).toBeTruthy();
   });
 
-  it('renders all three action buttons (HF, local, remote)', () => {
+  it('renders every action button', () => {
     const {getByTestId} = render(
       <FABGroup
         onAddHFModel={mockOnAddHFModel}
         onAddLocalModel={mockOnAddLocalModel}
         onAddRemoteModel={mockOnAddRemoteModel}
+        onScanServer={mockOnScanServer}
       />,
       {withNavigation: true},
     );
@@ -49,6 +52,9 @@ describe('FABGroup', () => {
     expect(
       getByTestId('remote-fab', {includeHiddenElements: true}),
     ).toBeTruthy();
+    expect(
+      getByTestId('scan-server-fab', {includeHiddenElements: true}),
+    ).toBeTruthy();
   });
 
   it('renders accessibility labels for all actions', () => {
@@ -57,6 +63,7 @@ describe('FABGroup', () => {
         onAddHFModel={mockOnAddHFModel}
         onAddLocalModel={mockOnAddLocalModel}
         onAddRemoteModel={mockOnAddRemoteModel}
+        onScanServer={mockOnScanServer}
       />,
       {withNavigation: true},
     );

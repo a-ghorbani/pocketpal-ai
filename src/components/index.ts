@@ -29,6 +29,7 @@ export * from './IncreaseContextSheet';
 export * from './GreetingBubble';
 export * from './HtmlPreviewBubble';
 export * from './HubRunSheetHost';
+export * from './PairServerSheet';
 export * from './SuggestedPromptsRow';
 export * from './ImageMessage';
 export * from './KeyboardAccessoryView';
