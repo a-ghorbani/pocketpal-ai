@@ -58,6 +58,17 @@ const ROUTER_STREAM_MAX_BYTES = 2 * 1024 * 1024;
 const ROUTER_STREAM_MAX_MS = 10 * 60 * 1000;
 
 /**
+ * A peer that answers 200 and ends the stream immediately would otherwise be
+ * reconnected to as fast as the round trip allows, each attempt costing a
+ * Keychain read and a token-bearing request. Reopening after a healthy stream
+ * ends is still wanted promptly, so the bound is on the rate rather than on
+ * the total, and it lifts by itself once the window has passed.
+ */
+const ROUTER_RECONNECT_WINDOW_MS = 60 * 1000;
+const ROUTER_RECONNECT_MAX = 6;
+const ROUTER_RECONNECT_BACKOFF_MS = 1000;
+
+/**
  * How often a server with work in flight and no stream is re-read. The only
  * other reconcile fires on a background-to-foreground transition and is
  * throttled to a minute, so a foregrounded app would otherwise never re-read
@@ -138,11 +149,6 @@ interface RouterListShape {
 
 export type RouterOpOutcome = 'ready' | 'failed';
 
-const UNREACHABLE_CAUSE: Record<RouterOp['kind'], RouterFailure['cause']> = {
-  load: 'load-failed',
-  unload: 'unload-not-released',
-  download: 'download-not-fetched',
-};
 export type RouterLoadOutcome = RouterOpOutcome | 'not-router';
 
 class ServerStore {
@@ -176,6 +182,12 @@ class ServerStore {
   private appStateSubscription: any = null;
   private routerStreamHandle: RouterStreamHandle | null = null;
   private routerFocusedServerId: string | null = null;
+  private routerStreamSeq = 0;
+  private routerReconnectAt: Record<string, number[]> = {};
+  private routerReconnectTimer: ReturnType<typeof setTimeout> | null = null;
+  private routerSuspendedAt: number | null = null;
+  private routerReconcileInFlight = new Set<string>();
+  private routerReconcilePending = new Set<string>();
   private routerForegrounded = true;
   private routerTicker: ReturnType<typeof setInterval> | null = null;
   private routerPollInFlight = new Set<string>();
@@ -193,6 +205,12 @@ class ServerStore {
       // Connection plumbing: nothing renders from it.
       routerStreamHandle: false,
       routerFocusedServerId: false,
+      routerStreamSeq: false,
+      routerReconnectAt: false,
+      routerReconnectTimer: false,
+      routerSuspendedAt: false,
+      routerReconcileInFlight: false,
+      routerReconcilePending: false,
       routerForegrounded: false,
       routerTicker: false,
       routerPollInFlight: false,
@@ -279,10 +297,7 @@ class ServerStore {
   private dropRouterState(serverId: string): void {
     for (const key of Object.keys(this.routerOps)) {
       if (this.routerOps[key].serverId === serverId) {
-        const waiter = this.routerOpWaiters.get(key);
-        this.routerOpWaiters.delete(key);
-        this.routerLoadPromises.delete(key);
-        waiter?.('failed');
+        this.abandonRouterOp(key);
       }
     }
     this.routerEvents = dropServerEntries(this.routerEvents, serverId);
@@ -293,6 +308,7 @@ class ServerStore {
     delete this.routerStreamCap[serverId];
     delete this.routerListShape[serverId];
     delete this.routerLastPollAt[serverId];
+    delete this.routerReconnectAt[serverId];
     this.routerPollInFlight.delete(serverId);
     if (this.routerStream?.serverId === serverId) {
       this.closeRouterStream();
@@ -456,8 +472,59 @@ class ServerStore {
     return rowState;
   }
 
+  /**
+   * An event names whatever model the server pleases, so the overlay would
+   * otherwise grow for the life of the session. A row the list no longer
+   * carries, with no operation of ours and nothing said about it since this
+   * fetch began, describes a model that is gone.
+   */
+  private pruneRouterOverlay(serverId: string, startedAt: number): void {
+    const listed = new Set(
+      (this.serverModels.get(serverId) ?? []).map(
+        row => `${serverId}/${row.id}`,
+      ),
+    );
+    const prefix = `${serverId}/`;
+    for (const key of Object.keys(this.routerEvents)) {
+      if (!key.startsWith(prefix) || listed.has(key) || this.routerOps[key]) {
+        continue;
+      }
+      if (this.routerEvents[key].at > startedAt) {
+        continue;
+      }
+      delete this.routerEvents[key];
+    }
+  }
+
   routerLive(serverId: string, remoteModelId: string): RouterLive | undefined {
     return this.routerEvents[`${serverId}/${remoteModelId}`];
+  }
+
+  /**
+   * What the picker lists. A download has no row on the server until the
+   * weights land, so without the operations and the unread failures beside the
+   * server's own rows an in-flight fetch is invisible, its Cancel unreachable,
+   * and the copy for one that never arrived has nowhere to render.
+   */
+  routerPickerRows(serverId: string): RemoteModelInfo[] {
+    const rows = this.serverModels.get(serverId) ?? [];
+    const seen = new Set(rows.map(row => row.id));
+    const prefix = `${serverId}/`;
+    const pending: RemoteModelInfo[] = [];
+    for (const map of [this.routerOps, this.routerReasons]) {
+      for (const key of Object.keys(map)) {
+        if (!key.startsWith(prefix)) {
+          continue;
+        }
+        const id = key.slice(prefix.length);
+        if (seen.has(id)) {
+          continue;
+        }
+        seen.add(id);
+        pending.push({id, object: 'model', owned_by: ''});
+      }
+    }
+    return [...rows, ...pending];
   }
 
   routerOp(serverId: string, remoteModelId: string): RouterOp | undefined {
@@ -525,10 +592,12 @@ class ServerStore {
   }
 
   // Remote model fetching
-  async fetchModelsForServer(serverId: string): Promise<void> {
+  async fetchModelsForServer(
+    serverId: string,
+  ): Promise<{ok: boolean; error?: string}> {
     const server = this.servers.find(s => s.id === serverId);
     if (!server) {
-      return;
+      return {ok: false};
     }
 
     runInAction(() => {
@@ -555,6 +624,7 @@ class ServerStore {
         // happened is indistinguishable from one that found the old row, and
         // every bound below turns on that difference.
         this.routerListShape[serverId] = {hasModelsKey, startedAt, seq};
+        this.pruneRouterOverlay(serverId, startedAt);
 
         // Update lastConnected timestamp
         const s = this.servers.find(sv => sv.id === serverId);
@@ -563,11 +633,14 @@ class ServerStore {
         }
       });
       this.settleRouterOps(serverId);
+      return {ok: true};
     } catch (error: any) {
+      const message = error.message || 'Failed to fetch models';
       runInAction(() => {
-        this.error = error.message || 'Failed to fetch models';
+        this.error = message;
         this.isLoading = false;
       });
+      return {ok: false, error: message};
     }
   }
 
@@ -745,18 +818,25 @@ class ServerStore {
     if (this.routerStream?.serverId === serverId) {
       return;
     }
-    this.closeRouterStream();
-
     const server = this.servers.find(s => s.id === serverId);
     if (!server) {
       return;
     }
+    this.closeRouterStream();
+    const attempt = ++this.routerStreamSeq;
+    // Claimed before the Keychain is read, because that await is long enough
+    // for a second caller to reach the guard above and open a request this one
+    // would then lose the handle to.
+    runInAction(() => this.setRouterStream({serverId, state: 'connecting'}));
+
     const apiKey = await this.getApiKey(serverId);
-    if (this.routerFocusedServerId !== serverId || !this.routerForegrounded) {
+    if (attempt !== this.routerStreamSeq) {
       return;
     }
-
-    runInAction(() => this.setRouterStream({serverId, state: 'connecting'}));
+    if (this.routerFocusedServerId !== serverId || !this.routerForegrounded) {
+      this.closeRouterStream();
+      return;
+    }
 
     this.routerStreamHandle = openRouterEventStream(
       server.url,
@@ -779,11 +859,35 @@ class ServerStore {
     );
   }
 
+  /**
+   * Closing tells no handler: the stream ends here because this store said so,
+   * and only an ending nobody asked for is a reason to open another.
+   */
   closeRouterStream(): void {
+    this.routerStreamSeq++;
+    if (this.routerReconnectTimer) {
+      clearTimeout(this.routerReconnectTimer);
+      this.routerReconnectTimer = null;
+    }
     this.routerStreamHandle?.close();
     this.routerStreamHandle = null;
     runInAction(() => this.setRouterStream(null));
     this.syncRouterTiers();
+  }
+
+  /**
+   * Nothing is watching this server any more. Distinct from closing the
+   * stream, which the background transition does while the app is still bound
+   * to the server it will reopen against.
+   */
+  releaseRouterStream(serverId: string): void {
+    delete this.routerReconnectAt[serverId];
+    if (this.routerFocusedServerId === serverId) {
+      this.routerFocusedServerId = null;
+    }
+    if (this.routerStream?.serverId === serverId) {
+      this.closeRouterStream();
+    }
   }
 
   private handleRouterStreamClosed(
@@ -800,13 +904,41 @@ class ServerStore {
     this.syncRouterTiers();
     // A stream that drops never settles anything: the model goes on loading on
     // the desktop, and only a reconciled row may say otherwise.
+    this.reopenRouterStream(serverId, error);
+  }
+
+  /**
+   * An HTTP status is a refusal — this build, or these credentials — and will
+   * answer the same way again. Everything else is transport: React Native maps
+   * `xhr.timeout = 0` onto Foundation's 60-second idle default on iOS, so a
+   * stream that simply went quiet arrives as an error carrying no status, and
+   * gating the reopen on `!error` would leave that platform never reconnecting.
+   */
+  private reopenRouterStream(
+    serverId: string,
+    error?: RouterStreamError,
+  ): void {
     if (
-      !error &&
-      this.routerForegrounded &&
-      this.routerFocusedServerId === serverId
+      error?.status !== undefined ||
+      !this.routerForegrounded ||
+      this.routerFocusedServerId !== serverId
     ) {
-      this.openRouterStream(serverId);
+      return;
     }
+    const now = Date.now();
+    const attempts = (this.routerReconnectAt[serverId] ?? []).filter(
+      at => now - at < ROUTER_RECONNECT_WINDOW_MS,
+    );
+    this.routerReconnectAt[serverId] = attempts;
+    if (attempts.length >= ROUTER_RECONNECT_MAX) {
+      return;
+    }
+    attempts.push(now);
+    const delay = attempts.length > 1 ? ROUTER_RECONNECT_BACKOFF_MS : 0;
+    this.routerReconnectTimer = setTimeout(() => {
+      this.routerReconnectTimer = null;
+      this.openRouterStream(serverId);
+    }, delay);
   }
 
   /**
@@ -833,17 +965,14 @@ class ServerStore {
       return;
     }
 
-    const key = this.adoptRouterEventKey(serverId, effect.model);
+    const key = this.adoptRouterEventKey(serverId, effect.about, effect.model);
     runInAction(() => {
       this.routerEvents[key] = applyLivePatch(
         this.routerEvents[key],
         effect.patch,
         Date.now(),
       );
-      if (
-        effect.patch.status === 'unloaded' &&
-        this.routerOps[key]?.kind !== 'unload'
-      ) {
+      if (this.isEvictionEvidence(serverId, key, effect.patch.status)) {
         this.routerObservedEviction.add(serverId);
       }
       const op = this.routerOps[key];
@@ -866,13 +995,25 @@ class ServerStore {
    * no competitor adopts the id its first event carries. With two in flight
    * there is nothing to adopt from and only an exact match joins.
    */
-  private adoptRouterEventKey(serverId: string, model: string): string {
+  private adoptRouterEventKey(
+    serverId: string,
+    about: 'status' | 'download',
+    model: string,
+  ): string {
     const exact = `${serverId}/${model}`;
     if (this.routerOps[exact]) {
       return exact;
     }
+    if (about !== 'download') {
+      return exact;
+    }
     const downloads = Object.entries(this.routerOps).filter(
-      ([, op]) => op.serverId === serverId && op.kind === 'download',
+      ([, op]) =>
+        op.serverId === serverId &&
+        op.kind === 'download' &&
+        // The id its *first* event carries: once anything has been heard about
+        // this download, a later id belongs to some other fetch.
+        op.phase === 'requested',
     );
     if (downloads.length !== 1) {
       return exact;
@@ -895,8 +1036,46 @@ class ServerStore {
     return exact;
   }
 
+  /**
+   * The note tells the user this server drops models to make room, so it needs
+   * both halves: nothing of ours was operating on the model that went away,
+   * and something of ours was asking for room while it did. Without the first
+   * it fires on our own failed load; without the second, on the ordinary
+   * idle-timeout exit every one of these servers performs unprompted.
+   */
+  private isEvictionEvidence(
+    serverId: string,
+    key: string,
+    status: RouterRowState | undefined,
+  ): boolean {
+    if (status !== 'unloaded' || this.routerOps[key]) {
+      return false;
+    }
+    return Object.values(this.routerOps).some(
+      op => op.serverId === serverId && op.kind !== 'unload',
+    );
+  }
+
+  /**
+   * Every event that may have settled something asks the list. A progress
+   * stream can carry many of those a second, so a request made while one is
+   * already running is collapsed into a single follow-up rather than issued:
+   * the answer to all of them is whatever the next read returns.
+   */
   private requestRouterReconcile(serverId: string): void {
-    this.fetchModelsForServer(serverId).catch(() => {});
+    if (this.routerReconcileInFlight.has(serverId)) {
+      this.routerReconcilePending.add(serverId);
+      return;
+    }
+    this.routerReconcileInFlight.add(serverId);
+    this.fetchModelsForServer(serverId)
+      .catch(() => {})
+      .then(() => {
+        this.routerReconcileInFlight.delete(serverId);
+        if (this.routerReconcilePending.delete(serverId)) {
+          this.requestRouterReconcile(serverId);
+        }
+      });
   }
 
   // Operations
@@ -979,8 +1158,11 @@ class ServerStore {
       // A 2xx says the request was accepted, not that a load is under way: the
       // child can still fail to launch with nothing further on the wire.
     } catch (error: any) {
+      // The request never reached the server, so nothing is known about the
+      // model. Reporting that it did not load would be a claim this app is in
+      // no position to make.
       this.settleRouterOp(key, 'failed', {
-        cause: 'load-failed',
+        cause: 'server-unreachable',
         message: error?.message,
       });
     }
@@ -1142,6 +1324,10 @@ class ServerStore {
   }
 
   private startRouterOp(key: string, op: RouterOp): Promise<RouterLoadOutcome> {
+    // Every operation settles, a superseded one included: the question it was
+    // asking is no longer being tracked, and a caller left awaiting an answer
+    // that can never come hangs with nothing to show for it.
+    this.abandonRouterOp(key);
     const settled = new Promise<RouterLoadOutcome>(resolve =>
       this.routerOpWaiters.set(key, resolve),
     );
@@ -1152,6 +1338,17 @@ class ServerStore {
     this.syncRouterTiers();
     this.openRouterStream(op.serverId);
     return settled;
+  }
+
+  /** Answers whoever is awaiting this key without claiming anything happened. */
+  private abandonRouterOp(key: string): void {
+    const waiter = this.routerOpWaiters.get(key);
+    if (!waiter) {
+      return;
+    }
+    this.routerOpWaiters.delete(key);
+    this.routerLoadPromises.delete(key);
+    waiter('failed');
   }
 
   private settleRouterOp(
@@ -1184,7 +1381,10 @@ class ServerStore {
       if (op.serverId !== serverId) {
         continue;
       }
-      const state = this.resolveRouterRowState(serverId, key);
+      // The list, never the overlay: an event is an accelerant for what the
+      // screen shows and is not authority for an outcome, so a status arriving
+      // mid-fetch cannot settle an operation off itself.
+      const state = this.routerRowFromList(serverId, key);
       if (op.kind === 'load') {
         this.settleLoadOp(key, op, state);
       } else if (op.kind === 'unload') {
@@ -1251,7 +1451,12 @@ class ServerStore {
     const now = Date.now();
     const verdict = downloadVerdict({
       rowState: this.routerRowFromList(op.serverId, key),
-      freshCorroboration: op.lastEvidenceAt > (op.armedAt ?? op.startedAt),
+      // The terminal event stamps `lastEvidenceAt` as well, so without it in
+      // the baseline every download would corroborate its own ending and the
+      // grace below could never be spent.
+      freshCorroboration:
+        op.lastEvidenceAt >
+        Math.max(op.armedAt ?? op.startedAt, op.attemptEndedAt ?? 0),
       attemptEnded: op.attemptEndedAt !== undefined,
       graceElapsed:
         op.attemptEndedAt !== undefined &&
@@ -1373,7 +1578,7 @@ class ServerStore {
         now - op.startedAt > ROUTER_UNREACHABLE_MS
       ) {
         this.settleRouterOp(key, 'failed', {
-          cause: UNREACHABLE_CAUSE[op.kind],
+          cause: 'server-unreachable',
           message: op.reason,
         });
         continue;
@@ -1423,6 +1628,7 @@ class ServerStore {
       (nextAppState: AppStateStatus) => {
         if (nextAppState === 'active') {
           this.routerForegrounded = true;
+          this.resumeRouterOps();
           const now = Date.now();
           if (now - this.lastFetchTime > FETCH_THROTTLE_MS) {
             this.fetchAllRemoteModels();
@@ -1430,11 +1636,43 @@ class ServerStore {
           this.handleRouterForeground();
         } else {
           this.routerForegrounded = false;
+          this.routerSuspendedAt = Date.now();
           this.closeRouterStream();
           this.syncRouterTicker();
         }
       },
     );
+  }
+
+  /**
+   * Every bound on an operation measures how long this app has gone without
+   * being able to ask, and a backgrounded app was not failing to ask — it was
+   * not running. Charging that time would settle a model still loading as
+   * failed the moment the user came back. Each stamp moves forward by the
+   * interval instead, so every bound resumes exactly where it was suspended.
+   */
+  private resumeRouterOps(): void {
+    const suspendedAt = this.routerSuspendedAt;
+    this.routerSuspendedAt = null;
+    if (suspendedAt === null) {
+      return;
+    }
+    const suspended = Date.now() - suspendedAt;
+    if (suspended <= 0) {
+      return;
+    }
+    runInAction(() => {
+      for (const op of Object.values(this.routerOps)) {
+        op.startedAt += suspended;
+        op.lastEvidenceAt += suspended;
+        if (op.armedAt !== undefined) {
+          op.armedAt += suspended;
+        }
+        if (op.attemptEndedAt !== undefined) {
+          op.attemptEndedAt += suspended;
+        }
+      }
+    });
   }
 
   /**

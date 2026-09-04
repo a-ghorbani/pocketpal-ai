@@ -16,11 +16,20 @@ jest.mock('../../api/openai', () => ({
 
 jest.mock('../../api/router', () => ({
   ...jest.requireActual('../../api/router'),
-  openRouterEventStream: jest.fn(() => ({close: jest.fn()})),
+  openRouterEventStream: jest.fn(),
   routerLoad: jest.fn(),
   routerUnload: jest.fn(),
   routerDownload: jest.fn(),
 }));
+
+/**
+ * The store registers its listener while it is being constructed, and import
+ * hoisting puts that before any spy this file can install — so the handler has
+ * to come from the registration the preset's own mock already recorded.
+ */
+const appStateChanged: (state: string) => void = (
+  AppState.addEventListener as unknown as jest.Mock
+).mock.calls[0][1];
 
 const mockAddEventListener = jest.fn().mockReturnValue({remove: jest.fn()});
 jest
@@ -38,6 +47,7 @@ import {
   routerWireResponse,
 } from '../../../jest/fixtures/routerWire';
 import type {RemoteModelInfo} from '../../api/openai';
+import type {RouterOp} from '../../utils/routerState';
 import {
   openRouterEventStream,
   routerDownload,
@@ -52,6 +62,40 @@ const persistedProperties: string[] = (
 
 const mockedFetch = openaiModule.fetchModelsWithHeaders as jest.Mock;
 const mockedOpenStream = openRouterEventStream as jest.Mock;
+
+/**
+ * Stands in for the handle the real transport returns, which distinguishes the
+ * two endings that look identical on the wire: `close()` is this store's own
+ * decision and reaches no handler, while `endStream` is the stream ending
+ * without being asked. A stand-in whose close did nothing at all would hide
+ * every defect in that distinction, since nothing would ever fire.
+ */
+const openedStreams: Array<{handlers: any; closed: boolean}> = [];
+
+const installStreamHandle = () => {
+  openedStreams.length = 0;
+  mockedOpenStream.mockImplementation((_url, _apiKey, handlers) => {
+    const stream = {handlers, closed: false};
+    openedStreams.push(stream);
+    return {
+      close: () => {
+        stream.closed = true;
+      },
+    };
+  });
+};
+
+const liveStream = () => openedStreams[openedStreams.length - 1];
+
+/** The stream ends by itself: the server hung up, or the transport gave out. */
+const endStream = (error?: RouterStreamError) => {
+  const stream = liveStream();
+  if (!stream || stream.closed) {
+    return;
+  }
+  stream.closed = true;
+  stream.handlers.onClose?.(error);
+};
 const mockedRouterLoad = routerLoad as jest.Mock;
 const mockedRouterUnload = routerUnload as jest.Mock;
 const mockedRouterDownload = routerDownload as jest.Mock;
@@ -66,6 +110,9 @@ const ROUTER_UNLOAD_SETTLE_MS = 30000;
 const ROUTER_POLL_MS = 4000;
 const ROUTER_DOWNLOAD_SETTLE_MS = 8000;
 const ROUTER_DOWNLOAD_MAX_MS = 2 * 60 * 60 * 1000;
+const ROUTER_TICK_MS = 1000;
+const ROUTER_RECONNECT_MAX = 6;
+const ROUTER_RECONNECT_BACKOFF_MS = 1000;
 
 const routerWireResponseBody = (name: any) =>
   JSON.parse(routerWireResponse(name).body);
@@ -105,6 +152,12 @@ const reconcile = async (serverId: string) => {
   await serverStore.fetchModelsForServer(serverId);
 };
 
+/** Let a scheduled reopen run, then let the work it starts settle. */
+const settleReopen = async () => {
+  await new Promise(resolve => setTimeout(resolve, 0));
+  await flush();
+};
+
 /** Let a detached reconcile reach its mocked fetch. */
 const flush = async () => {
   for (let i = 0; i < 8; i++) {
@@ -142,6 +195,7 @@ const resetStore = () => {
 describe('router detection', () => {
   beforeEach(() => {
     jest.clearAllMocks();
+    installStreamHandle();
     resetStore();
   });
 
@@ -228,6 +282,7 @@ describe('router detection', () => {
 describe('routerRowStates', () => {
   beforeEach(() => {
     jest.clearAllMocks();
+    installStreamHandle();
     resetStore();
   });
 
@@ -296,13 +351,15 @@ describe('routerRowStates', () => {
 describe('the router event stream', () => {
   beforeEach(() => {
     jest.clearAllMocks();
+    installStreamHandle();
     resetStore();
   });
 
   const openOn = async (serverId: string) => {
     mockedOpenStream.mockClear();
+    openedStreams.length = 0;
     await serverStore.openRouterStream(serverId);
-    return mockedOpenStream.mock.calls[0]?.[2];
+    return liveStream()?.handlers;
   };
 
   const routerServer = async () => {
@@ -403,6 +460,78 @@ describe('the router event stream', () => {
     expect(serverStore.routerStream?.serverId).toBe(second);
   });
 
+  it('opens no second stream for a close it asked for itself', async () => {
+    const id = await routerServer();
+    await openOn(id);
+
+    serverStore.closeRouterStream();
+    await flush();
+
+    expect(mockedOpenStream).toHaveBeenCalledTimes(1);
+    expect(serverStore.routerStream).toBeNull();
+  });
+
+  it('reopens a stream that ended without being asked to', async () => {
+    const id = await routerServer();
+    await openOn(id);
+
+    endStream();
+    await settleReopen();
+
+    expect(mockedOpenStream).toHaveBeenCalledTimes(2);
+  });
+
+  // React Native maps `xhr.timeout = 0` onto Foundation's 60-second idle
+  // default on iOS, so a stream that merely went quiet ends as an error with
+  // no status. Reopening only on a clean end never reconnects on that platform.
+  it('reopens after a transport ending that carries no status', async () => {
+    const id = await routerServer();
+    await openOn(id);
+
+    endStream(new RouterStreamError('Stream timed out'));
+    await settleReopen();
+
+    expect(mockedOpenStream).toHaveBeenCalledTimes(2);
+  });
+
+  it('does not reopen after a refusal that would only be refused again', async () => {
+    const id = await routerServer();
+    await openOn(id);
+
+    endStream(streamErrorFrom('sse-unauthorized-401.txt'));
+    await settleReopen();
+
+    expect(mockedOpenStream).toHaveBeenCalledTimes(1);
+  });
+
+  it('opens nothing further once the server is released', async () => {
+    const id = await routerServer();
+    await openOn(id);
+
+    serverStore.releaseRouterStream(id);
+    endStream();
+    await settleReopen();
+
+    expect(mockedOpenStream).toHaveBeenCalledTimes(1);
+    expect(serverStore.routerStream).toBeNull();
+  });
+
+  // Two callers reaching the guard while the first is still reading the
+  // Keychain would each open a request, and only the later handle would be
+  // held — leaving a token-bearing connection no close could ever reach.
+  it('opens one request when two callers ask at once', async () => {
+    const id = await routerServer();
+    mockedOpenStream.mockClear();
+    openedStreams.length = 0;
+
+    await Promise.all([
+      serverStore.openRouterStream(id),
+      serverStore.openRouterStream(id),
+    ]);
+
+    expect(mockedOpenStream).toHaveBeenCalledTimes(1);
+  });
+
   it('writes the overlay from the captured load stream', async () => {
     const id = await routerServer();
 
@@ -414,37 +543,61 @@ describe('the router event stream', () => {
     expect(serverStore.routerLive(id, 'alpha')?.exitCode).toBe(0);
   });
 
-  it('turns the eviction note on for an unload nobody asked for', async () => {
-    const id = await routerServer();
-
-    serverStore.applyRouterEvent(id, {
-      model: 'gemma-4-e2b',
-      event: 'status_change',
-      data: {status: 'unloaded'},
-    });
-
-    expect(serverStore.routerObservedEviction.has(id)).toBe(true);
-  });
-
-  it('does not call our own unload an eviction', async () => {
-    const id = await routerServer();
+  /** An operation of ours on some other model, which is what asks for room. */
+  const putOpAt = (id: string, model: string, kind: RouterOp['kind']) =>
     runInAction(() => {
-      serverStore.routerOps[`${id}/gemma-4-e2b`] = {
-        kind: 'unload',
+      serverStore.routerOps[`${id}/${model}`] = {
+        kind,
         phase: 'requested',
         serverId: id,
-        key: `${id}/gemma-4-e2b`,
+        key: `${id}/${model}`,
         startedAt: Date.now(),
         requestSeq: 0,
         lastEvidenceAt: Date.now(),
       };
     });
 
+  const goesUnloaded = (id: string, model: string) =>
     serverStore.applyRouterEvent(id, {
-      model: 'gemma-4-e2b',
+      model,
       event: 'status_change',
       data: {status: 'unloaded'},
     });
+
+  it('turns the eviction note on for a model released to make room', async () => {
+    const id = await routerServer();
+    putOpAt(id, UNLOADED_TARGET, 'load');
+
+    goesUnloaded(id, TARGET);
+
+    expect(serverStore.routerObservedEviction.has(id)).toBe(true);
+  });
+
+  it('does not call our own unload an eviction', async () => {
+    const id = await routerServer();
+    putOpAt(id, TARGET, 'unload');
+
+    goesUnloaded(id, TARGET);
+
+    expect(serverStore.routerObservedEviction.has(id)).toBe(false);
+  });
+
+  // Both of these read identically on the wire to a real eviction, and both
+  // appear in the captures, so a note that fires on them is telling the user
+  // something untrue about their server every time they load a model.
+  it('does not call our own load failing an eviction', async () => {
+    const id = await routerServer();
+    putOpAt(id, TARGET, 'load');
+
+    goesUnloaded(id, TARGET);
+
+    expect(serverStore.routerObservedEviction.has(id)).toBe(false);
+  });
+
+  it('does not call an idle exit with nothing in flight an eviction', async () => {
+    const id = await routerServer();
+
+    goesUnloaded(id, TARGET);
 
     expect(serverStore.routerObservedEviction.has(id)).toBe(false);
   });
@@ -480,9 +633,120 @@ describe('the router event stream', () => {
   });
 });
 
+describe('a peer that ends every stream it opens', () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+    installStreamHandle();
+    jest.useFakeTimers();
+    resetStore();
+  });
+
+  afterEach(() => {
+    jest.useRealTimers();
+  });
+
+  it('is reconnected to at a bounded rate rather than as fast as it answers', async () => {
+    const id = addServer();
+    mockedFetch.mockResolvedValue(listResult(routerModelsBody.data, false));
+    await serverStore.fetchModelsForServer(id);
+    await serverStore.openRouterStream(id);
+
+    for (let attempt = 0; attempt < 20; attempt++) {
+      endStream();
+      await flush();
+      jest.advanceTimersByTime(ROUTER_RECONNECT_BACKOFF_MS);
+      await flush();
+    }
+
+    expect(mockedOpenStream.mock.calls.length).toBeLessThanOrEqual(
+      ROUTER_RECONNECT_MAX + 1,
+    );
+  });
+});
+
+describe('leaving and returning to the foreground', () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+    installStreamHandle();
+    jest.useFakeTimers();
+    resetStore();
+    mockedRouterDownload.mockResolvedValue({
+      status: 200,
+      body: {success: true},
+    });
+  });
+
+  afterEach(() => {
+    jest.useRealTimers();
+    appStateChanged('active');
+  });
+
+  const busyRouter = async () => {
+    const id = addServer();
+    mockedFetch.mockResolvedValue(listResult(routerModelsBody.data, false));
+    await serverStore.fetchModelsForServer(id);
+    await serverStore.startRouterDownload(id, 'owner/repo:Q4_K_M');
+    await serverStore.openRouterStream(id);
+    return id;
+  };
+
+  it('asks the list before it opens anything on the way back', async () => {
+    const id = await busyRouter();
+
+    appStateChanged('background');
+    expect(serverStore.routerStream).toBeNull();
+
+    mockedFetch.mockClear();
+    mockedOpenStream.mockClear();
+    openedStreams.length = 0;
+    // The event that would have said the load finished may have arrived while
+    // the stream was shut. Asking answers; waiting for a past event does not.
+    let streamsOpenWhenAsked = -1;
+    mockedFetch.mockImplementation(async () => {
+      streamsOpenWhenAsked = openedStreams.length;
+      return listResult(routerModelsBody.data, false);
+    });
+
+    appStateChanged('active');
+    await flush();
+
+    expect(mockedFetch).toHaveBeenCalled();
+    expect(streamsOpenWhenAsked).toBe(0);
+    expect(mockedOpenStream).toHaveBeenCalledTimes(1);
+    expect(serverStore.routerStream?.serverId).toBe(id);
+  });
+
+  // The bounds measure how long this app has failed to ask. A backgrounded app
+  // was not failing to ask, and charging it settles a model that is still
+  // loading as failed the moment the user comes back.
+  it('does not charge time in the background against the reach bound', async () => {
+    const id = await busyRouter();
+    const key = `${id}/owner/repo:Q4_K_M`;
+    runInAction(() => {
+      serverStore.routerOps[key].verdictRequested = true;
+    });
+    mockedFetch.mockRejectedValue(new Error('unreachable'));
+
+    appStateChanged('background');
+    jest.advanceTimersByTime(ROUTER_UNREACHABLE_MS * 2);
+    appStateChanged('active');
+    await flush();
+
+    await advance(ROUTER_TICK_MS * 3);
+    expect(serverStore.routerOp(id, 'owner/repo:Q4_K_M')).toBeDefined();
+
+    await advance(ROUTER_UNREACHABLE_MS + ROUTER_TICK_MS);
+    expect(serverStore.routerOp(id, 'owner/repo:Q4_K_M')).toBeUndefined();
+    expect(serverStore.routerReason(id, 'owner/repo:Q4_K_M')).toEqual({
+      cause: 'server-unreachable',
+    });
+  });
+});
+
 describe('the poll tier', () => {
   beforeEach(() => {
     jest.clearAllMocks();
+    installStreamHandle();
     jest.useFakeTimers();
     resetStore();
   });
@@ -583,6 +847,7 @@ describe('the poll tier', () => {
 describe('loading a model', () => {
   beforeEach(() => {
     jest.clearAllMocks();
+    installStreamHandle();
     jest.useFakeTimers();
     resetStore();
     mockedRouterLoad.mockResolvedValue({status: 200, body: {success: true}});
@@ -677,7 +942,9 @@ describe('loading a model', () => {
     expect(serverStore.routerOp(id, TARGET)).toBeUndefined();
   });
 
-  it('settles failed on the response when the request itself failed', async () => {
+  // A request that never arrived says nothing about the model, so reporting
+  // that it did not load would be a claim this app cannot support.
+  it('blames the reach, not the model, when the request never arrived', async () => {
     const id = await routerServer();
     mockedRouterLoad.mockRejectedValueOnce(new Error('Connection timed out'));
 
@@ -685,7 +952,7 @@ describe('loading a model', () => {
       'failed',
     );
     expect(serverStore.routerReason(id, TARGET)).toEqual({
-      cause: 'load-failed',
+      cause: 'server-unreachable',
       message: 'Connection timed out',
     });
   });
@@ -804,6 +1071,19 @@ describe('loading a model', () => {
     await expect(pending).resolves.toBe('failed');
   });
 
+  // The send path awaits this promise before it starts inferring, so an
+  // operation left unresolved is a chat that hangs with no error and no
+  // spinner. Every operation settles, a superseded one included.
+  it('settles a load that a second operation on the same model supersedes', async () => {
+    const id = await routerServer();
+    const load = serverStore.ensureRouterModelLoaded(id, UNLOADED_TARGET);
+    await flush();
+
+    await serverStore.unloadRouterModel(id, UNLOADED_TARGET);
+
+    await expect(load).resolves.toBe('failed');
+  });
+
   it('drops the poll entry once the load settles', async () => {
     const id = await routerServer();
     const pending = serverStore.ensureRouterModelLoaded(id, TARGET);
@@ -821,6 +1101,7 @@ describe('loading a model', () => {
 describe('unloading a model', () => {
   beforeEach(() => {
     jest.clearAllMocks();
+    installStreamHandle();
     jest.useFakeTimers();
     resetStore();
     mockedRouterUnload.mockResolvedValue({status: 200, body: {success: true}});
@@ -948,6 +1229,7 @@ describe('downloading a model to the server', () => {
 
   beforeEach(() => {
     jest.clearAllMocks();
+    installStreamHandle();
     jest.useFakeTimers();
     resetStore();
     mockedRouterDownload.mockResolvedValue({
@@ -1035,9 +1317,13 @@ describe('downloading a model to the server', () => {
     expect(serverStore.routerReason(id, REFERENCE)).toBeUndefined();
   });
 
+  // The terminal event lands well after the request here, so the two stamps
+  // genuinely differ: a grace measured from the request would have the event
+  // corroborate its own ending and could never be spent at all.
   it('settles failed when nothing ever appears after the attempt ended', async () => {
     const id = await routerServer();
     await serverStore.startRouterDownload(id, REFERENCE);
+    await advance(ROUTER_POLL_MS);
 
     serverStore.applyRouterEvent(id, {
       model: REFERENCE,
@@ -1052,6 +1338,30 @@ describe('downloading a model to the server', () => {
       cause: 'download-not-fetched',
     });
     expect(serverStore.routerRowState(id, REFERENCE)).toBe('absent');
+  });
+
+  it('holds a download open when something corroborates it after that', async () => {
+    const id = await routerServer();
+    await serverStore.startRouterDownload(id, REFERENCE);
+    await advance(ROUTER_POLL_MS);
+
+    serverStore.applyRouterEvent(id, {
+      model: REFERENCE,
+      event: 'download_finished',
+    });
+    await flush();
+    await advance(ROUTER_POLL_MS);
+    serverStore.applyRouterEvent(id, {
+      model: REFERENCE,
+      event: 'download_progress',
+      data: {progress: {'https://x/y.gguf': {done: 1, total: 2}}},
+    });
+    await flush();
+
+    await advance(ROUTER_DOWNLOAD_SETTLE_MS + ROUTER_POLL_MS);
+
+    expect(serverStore.routerOp(id, REFERENCE)).toBeDefined();
+    expect(serverStore.routerReason(id, REFERENCE)).toBeUndefined();
   });
 
   it('does not fail a download that is still running and silent', async () => {
@@ -1102,6 +1412,42 @@ describe('downloading a model to the server', () => {
     expect(serverStore.routerOp(id, NORMALISED)?.kind).toBe('download');
   });
 
+  // The two above only cover adoption agreeing with the truth or declining.
+  // This one puts them in opposition: a transition on an unrelated model is
+  // not news of this download, and reading a verdict off that model's row
+  // ends the download with the wrong answer and no trace of it.
+  it('does not let an unrelated status move a download in flight', async () => {
+    const id = await routerServer();
+    await serverStore.startRouterDownload(id, REFERENCE);
+
+    serverStore.applyRouterEvent(id, {
+      model: TARGET,
+      event: 'status_change',
+      data: {status: 'sleeping'},
+    });
+    await flush();
+
+    expect(serverStore.routerOp(id, REFERENCE)?.kind).toBe('download');
+    expect(serverStore.routerOp(id, TARGET)).toBeUndefined();
+    expect(serverStore.routerRowState(id, REFERENCE)).toBe('downloading');
+    expect(serverStore.routerReason(id, REFERENCE)).toBeUndefined();
+  });
+
+  it('adopts nothing once the download has already been heard from', async () => {
+    const id = await routerServer();
+    await serverStore.startRouterDownload(id, REFERENCE);
+    const progress = {
+      event: 'download_progress',
+      data: {progress: {'https://x/y.gguf': {done: 1, total: 2}}},
+    };
+
+    serverStore.applyRouterEvent(id, {...progress, model: NORMALISED});
+    serverStore.applyRouterEvent(id, {...progress, model: 'someone/else:Q4_0'});
+
+    expect(serverStore.routerOp(id, NORMALISED)?.kind).toBe('download');
+    expect(serverStore.routerOp(id, 'someone/else:Q4_0')).toBeUndefined();
+  });
+
   it('adopts nothing while two downloads are in flight', async () => {
     const id = await routerServer();
     await serverStore.startRouterDownload(id, REFERENCE);
@@ -1135,6 +1481,45 @@ describe('downloading a model to the server', () => {
     expect(serverStore.routerReason(id, REFERENCE)).toBeUndefined();
   });
 
+  // A progress stream carries many of these a second, and each of them asking
+  // the list separately is a request per tick against the user's desktop.
+  it('collapses a burst of events into one list read and one follow-up', async () => {
+    const id = await routerServer();
+    mockedFetch.mockClear();
+
+    for (let i = 0; i < 5; i++) {
+      serverStore.applyRouterEvent(id, {
+        model: TARGET,
+        event: 'status_change',
+        data: {status: 'unloaded'},
+      });
+    }
+    await flush();
+
+    expect(mockedFetch.mock.calls.length).toBeLessThanOrEqual(2);
+  });
+
+  // The overlay is keyed by whatever ids the server names, so without a prune
+  // it grows for the life of the session.
+  it('drops overlay entries for models the list no longer carries', async () => {
+    const id = await routerServer();
+    await serverStore.startRouterDownload(id, REFERENCE);
+    for (const model of ['ghost-model', TARGET, REFERENCE]) {
+      serverStore.applyRouterEvent(id, {
+        model,
+        event: 'status_change',
+        data: {status: 'unloaded'},
+      });
+    }
+    await flush();
+
+    await reconcile(id);
+
+    expect(serverStore.routerLive(id, 'ghost-model')).toBeUndefined();
+    expect(serverStore.routerLive(id, TARGET)).toBeDefined();
+    expect(serverStore.routerLive(id, REFERENCE)).toBeDefined();
+  });
+
   it('never asks the router to reload its own list', async () => {
     const id = await routerServer();
     await serverStore.startRouterDownload(id, REFERENCE);
@@ -1150,6 +1535,7 @@ describe('downloading a model to the server', () => {
 describe('a server that is repointed or removed', () => {
   beforeEach(() => {
     jest.clearAllMocks();
+    installStreamHandle();
     jest.useFakeTimers();
     resetStore();
     mockedRouterLoad.mockResolvedValue({status: 200, body: {success: true}});
