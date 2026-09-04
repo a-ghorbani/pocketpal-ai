@@ -392,7 +392,9 @@
         "expandDetailsButton": "Expandir detalles del modelo",
         "memoryWarningButton": "Mostrar detalles de la advertencia de memoria",
         "integrityWarningButton": "Mostrar detalles de la advertencia de integridad",
-        "memoryWarningSnackbar": "Notificación de advertencia de memoria"
+        "memoryWarningSnackbar": "Notificación de advertencia de memoria",
+        "expandDetails": "Expandir detalles",
+        "collapseDetails": "Contraer detalles"
       },
       "alerts": {
         "deleteTitle": "Eliminar modelo",
@@ -410,7 +412,18 @@
       "labels": {
         "skills": "Habilidades: ",
         "vision": "Visión",
-        "visionSupported": "Compatible"
+        "visionSupported": "Compatible",
+        "visionNotSupported": "No compatible",
+        "visionUnknown": "Desconocido",
+        "capabilities": "capacidades.",
+        "modelName": "Nombre del modelo",
+        "contextLength": "Longitud de contexto",
+        "architecture": "Arquitectura",
+        "author": "Autor",
+        "requiresProjectionModel": "Requiere modelo de proyección",
+        "downloadProjectionModel": "Descargar modelo de proyección",
+        "viewModelCardOnHuggingFace": "Ver ficha del modelo en Hugging Face",
+        "draftOnlyReason": "Modelo exclusivo para borrador. Selecciónalo en Ajustes → Decodificación especulativa."
       }
     },
     "modelSettings": {
@@ -670,7 +683,22 @@
       }
     },
     "chatGenerationSettingsSheet": {
-      "invalidValues": "Valores no válidos"
+      "invalidValues": "Valores no válidos",
+      "invalidNumericValuesMessage": "Debe ser un número válido",
+      "pleaseCorrect": "Corrige lo siguiente:",
+      "ok": "Aceptar",
+      "saveChanges": "Guardar cambios",
+      "saveAsPreset": "Guardar como ajuste preestablecido",
+      "title_session": "Ajustes de generación del chat (sesión)",
+      "title_preset": "Ajustes de generación del chat (ajuste preestablecido)",
+      "resetToSystemDefaults": "Restablecer valores predeterminados del sistema",
+      "resetToPreset": "Restablecer al ajuste preestablecido",
+      "applytoPresetAlert": {
+        "title": "Éxito",
+        "message": "Estos ajustes se aplicarán a todas las sesiones futuras"
+      },
+      "palSettings": "Ajustes de Pal",
+      "settingsSource": "Origen de los ajustes"
     },
     "systemPromptSection": {
       "buttons": {
