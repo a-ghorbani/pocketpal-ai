@@ -31,8 +31,10 @@ const isValidRepoId = (value: string): boolean => {
 };
 
 /**
- * True only for the exact `pocketpal://hub/run` route (host=hub, path=run),
- * regardless of query payload. Gates the delivery paths so non-hub URLs and
+ * True only for the exact `pocketpal://hub/run` route (scheme, host=hub,
+ * path=run), regardless of query payload. The scheme test is load-bearing
+ * rather than defence in depth: on a cold iOS launch nothing filters the URL
+ * before this, so any other registered scheme would reach the download flow. Gates the delivery paths so non-hub URLs and
  * unknown hub paths are ignored silently; a malformed `hub/run` payload still
  * reaches the handler (and alerts). Never throws.
  */
@@ -40,7 +42,9 @@ export const isHubLink = (url: string): boolean => {
   try {
     const parsed = new URL(url);
     return (
-      parsed.hostname === 'hub' && parsed.pathname.replace(/^\/+/, '') === 'run'
+      parsed.protocol === 'pocketpal:' &&
+      parsed.hostname === 'hub' &&
+      parsed.pathname.replace(/^\/+/, '') === 'run'
     );
   } catch {
     return false;
@@ -62,7 +66,7 @@ export const parseHubRunURL = (url: string): HubRunRequest | null => {
     return null;
   }
 
-  if (parsed.hostname !== 'hub') {
+  if (parsed.protocol !== 'pocketpal:' || parsed.hostname !== 'hub') {
     return null;
   }
 

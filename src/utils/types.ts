@@ -463,6 +463,29 @@ export enum ModelOrigin {
   REMOTE = 'remote',
 }
 
+/** What the last probe of a server learned. Stored. */
+export type ServerReachability = 'unknown' | 'reachable' | 'unreachable';
+
+/**
+ * The public answer, reachability with the server's sleeping flag folded in at
+ * read time. `unknown` is a member: pre-probe is not offline.
+ */
+export type ServerPresence = 'unknown' | 'reachable' | 'asleep' | 'unreachable';
+
+export interface ServerPresenceEntry {
+  reachability: ServerReachability;
+  probing: boolean;
+  /** Settle time of the last probe or promotion; orders two racing writers. */
+  checkedAt?: number;
+}
+
+/** A server's per-model user declarations, as one derived entry. */
+export interface RemoteModelPrefs {
+  /** Bare remote model ids, so a picker row tests `includes(row.id)`. */
+  favouriteModelIds: string[];
+  lastUsedModelId?: string;
+}
+
 export interface ServerConfig {
   id: string;
   name: string;

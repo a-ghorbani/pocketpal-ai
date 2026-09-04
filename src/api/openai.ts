@@ -8,6 +8,7 @@ import {
   ToolCall,
 } from '../utils/completionTypes';
 import {RemoteModelCaps} from '../utils/types';
+import {seedServerType} from '../utils/serverTypes';
 
 /**
  * Raw API response shape from OpenAI /v1/models. The optional fields are what
@@ -449,6 +450,194 @@ export async function detectServerType(
   }
 
   return '';
+}
+
+/** What one presence probe learned. Any HTTP response, of any status, is reachable. */
+export type ProbedReachability = 'reachable' | 'unreachable';
+
+/**
+ * Ask whether a server answers at all. Never throws.
+ *
+ * `/health` on llama.cpp — cheap and it cannot load a model — and
+ * `/v1/models` everywhere else. The classification lives here rather than in
+ * the store because `fetchModelsWithHeaders` reduces a 401 and a dead socket
+ * to two plain `Error`s that differ only by message string.
+ */
+export async function probeServerReachability(
+  serverUrl: string,
+  options: {apiKey?: string; timeoutMs?: number; serverType?: string} = {},
+): Promise<ProbedReachability> {
+  const path = options.serverType === 'llama.cpp' ? '/health' : '/v1/models';
+  const controller = new AbortController();
+  const timeout = setTimeout(
+    () => controller.abort(),
+    resolveTimeout(options.timeoutMs, CONNECTION_TIMEOUT_MS),
+  );
+
+  try {
+    await fetch(`${normalizeUrl(serverUrl)}${path}`, {
+      method: 'GET',
+      headers: buildHeaders(options.apiKey),
+      signal: controller.signal,
+    });
+    return 'reachable';
+  } catch {
+    return 'unreachable';
+  } finally {
+    clearTimeout(timeout);
+  }
+}
+
+/**
+ * Whether the credentials we hold were proved acceptable. `authorised`
+ * requires the keyless control to have been refused outright; every other
+ * control outcome, a timeout included, is `unconfirmed` and asserts nothing.
+ */
+export type PairingAuthorisation = 'authorised' | 'unconfirmed';
+
+export type PairingProbeResult =
+  | {
+      outcome: 'usable';
+      models: RemoteModelInfo[];
+      headers: Record<string, string>;
+      serverType: string;
+      authorisation: PairingAuthorisation;
+    }
+  | {outcome: 'unauthorized'; status: number; source: 'list' | 'gate'}
+  | {outcome: 'unreadable'; status: number}
+  | {outcome: 'server-error'; status: number}
+  | {outcome: 'unreachable'};
+
+/**
+ * Bare `GET /props`, reading `response.status` and nothing else. `null` means
+ * the request never answered.
+ *
+ * Never `?model=`: against an unloaded model on a swap router the scoped form
+ * loads it, and at pairing time we cannot tell an unloaded model from a
+ * sleeping one. The body is never parsed either — a sleeping child answers
+ * 500 with plain text.
+ */
+async function probeGateStatus(
+  serverUrl: string,
+  apiKey: string | undefined,
+  timeoutMs: number,
+): Promise<number | null> {
+  const controller = new AbortController();
+  const timeout = setTimeout(
+    () => controller.abort(),
+    resolveTimeout(timeoutMs, PROPS_TIMEOUT_MS),
+  );
+
+  try {
+    const response = await fetch(`${normalizeUrl(serverUrl)}/props`, {
+      method: 'GET',
+      headers: buildHeaders(apiKey),
+      signal: controller.signal,
+    });
+    return response.status;
+  } catch {
+    return null;
+  } finally {
+    clearTimeout(timeout);
+  }
+}
+
+/** Server types whose gate is measured here. Unknown shares llama.cpp's. */
+const GATED_BY_PROPS = ['llama.cpp', ''];
+
+/**
+ * Is this server usable with the credentials we hold? A different question
+ * from reachability, asked at a different moment, and never answered from a
+ * 2xx: llama.cpp serves `/v1/models` to an unauthenticated caller, so a
+ * status-keyed verdict pairs a key-protected server whose first chat then 401s.
+ *
+ * At most three requests: the model list, a resource the server is measured to
+ * gate, and that same gate with the key deliberately omitted so gatedness is
+ * measured on this server rather than inherited from a build. Never throws.
+ */
+export async function probePairingTarget(
+  serverUrl: string,
+  options: {apiKey?: string; timeoutMs?: number} = {},
+): Promise<PairingProbeResult> {
+  const {apiKey, timeoutMs} = options;
+
+  const controller = new AbortController();
+  const listTimeout = setTimeout(
+    () => controller.abort(),
+    resolveTimeout(timeoutMs, CONNECTION_TIMEOUT_MS),
+  );
+
+  let response: Response;
+  try {
+    response = await fetch(`${normalizeUrl(serverUrl)}/v1/models`, {
+      method: 'GET',
+      headers: buildHeaders(apiKey),
+      signal: controller.signal,
+    });
+  } catch {
+    return {outcome: 'unreachable'};
+  } finally {
+    clearTimeout(listTimeout);
+  }
+
+  if (response.status === 401 || response.status === 403) {
+    return {outcome: 'unauthorized', status: response.status, source: 'list'};
+  }
+  if (!response.ok) {
+    return {outcome: 'server-error', status: response.status};
+  }
+
+  const headers: Record<string, string> = {};
+  response.headers.forEach((value: string, key: string) => {
+    headers[key] = value;
+  });
+
+  let body: any;
+  try {
+    body = await response.json();
+  } catch {
+    return {outcome: 'unreadable', status: response.status};
+  }
+  if (!Array.isArray(body?.data)) {
+    return {outcome: 'unreadable', status: response.status};
+  }
+
+  const models = liftModelEntryCapabilities(
+    body.data as RemoteModelInfo[],
+    body.models,
+  );
+  const detected = await detectServerType(serverUrl, models, headers);
+
+  let authorisation: PairingAuthorisation = 'unconfirmed';
+  if (GATED_BY_PROPS.includes(detected)) {
+    const gateTimeoutMs = Math.min(
+      timeoutMs ?? PROPS_TIMEOUT_MS,
+      PROPS_TIMEOUT_MS,
+    );
+    const gate = await probeGateStatus(serverUrl, apiKey, gateTimeoutMs);
+
+    if (gate === 401 || gate === 403) {
+      return {outcome: 'unauthorized', status: gate, source: 'gate'};
+    }
+    if (gate !== null && gate >= 200 && gate < 300 && apiKey) {
+      const control = await probeGateStatus(
+        serverUrl,
+        undefined,
+        gateTimeoutMs,
+      );
+      if (control === 401 || control === 403) {
+        authorisation = 'authorised';
+      }
+    }
+  }
+
+  return {
+    outcome: 'usable',
+    models,
+    headers,
+    serverType: seedServerType(detected, serverUrl),
+    authorisation,
+  };
 }
 
 /**

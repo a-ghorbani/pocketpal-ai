@@ -21,9 +21,11 @@ import {
   ErrorSnackbar,
   ModelSettingsSheet,
   ModelErrorReportSheet,
+  PairServerSheet,
   RemoteModelSheet,
   ServerDetailsSheet,
 } from '../../components';
+import {usePairServerSheet} from '../../hooks/useDeepLinking';
 
 import {uiStore, modelStore, hfStore, UIStore, serverStore} from '../../store';
 
@@ -52,6 +54,9 @@ export const ModelsScreen: React.FC = observer(() => {
   const [serverDetailsSheetVisible, setServerDetailsSheetVisible] =
     useState(false);
   const [selectedServerId, setSelectedServerId] = useState<string | null>(null);
+  const [pairServerSheetVisible, setPairServerSheetVisible] = useState(false);
+  const [pairedServerId, setPairedServerId] = useState<string | undefined>();
+  const {pendingPairing, clearPendingPairing} = usePairServerSheet();
 
   const theme = useTheme();
   const styles = createStyles(theme);
@@ -120,6 +125,7 @@ export const ModelsScreen: React.FC = observer(() => {
   };
 
   const handleAddRemoteModel = () => {
+    setPairedServerId(undefined);
     setRemoteModelSheetVisible(true);
   };
 
@@ -446,6 +452,7 @@ export const ModelsScreen: React.FC = observer(() => {
         onAddHFModel={() => setHFSearchVisible(true)}
         onAddLocalModel={handleAddLocalModel}
         onAddRemoteModel={handleAddRemoteModel}
+        onScanServer={() => setPairServerSheetVisible(true)}
         onManageServers={handleManageServers}
         hasServers={serverStore.servers.length > 0}
       />
@@ -459,8 +466,21 @@ export const ModelsScreen: React.FC = observer(() => {
         onClose={handleCloseErrorReport}
         error={errorToReport}
       />
+      <PairServerSheet
+        isVisible={pairServerSheetVisible || pendingPairing !== null}
+        request={pendingPairing}
+        onDismiss={() => {
+          setPairServerSheetVisible(false);
+          clearPendingPairing();
+        }}
+        onPaired={serverId => {
+          setPairedServerId(serverId);
+          setRemoteModelSheetVisible(true);
+        }}
+      />
       <RemoteModelSheet
         isVisible={remoteModelSheetVisible}
+        initialServerId={pairedServerId}
         onDismiss={() => setRemoteModelSheetVisible(false)}
       />
       <ServerDetailsSheet

@@ -6085,4 +6085,256 @@ describe('ModelStore', () => {
       });
     });
   });
+  describe('presence watch', () => {
+    const SERVER_ID = 'srv-watch';
+
+    const setPresenceFor = (
+      serverId: string,
+      reachability: 'unknown' | 'reachable' | 'unreachable',
+    ) =>
+      runInAction(() => {
+        serverStore.serverPresence = {
+          ...serverStore.serverPresence,
+          [serverId]: {reachability, probing: false, checkedAt: Date.now()},
+        };
+      });
+
+    const setPresence = (
+      reachability: 'unknown' | 'reachable' | 'unreachable',
+    ) => setPresenceFor(SERVER_ID, reachability);
+
+    const bindTo = (serverId: string) =>
+      runInAction(() => {
+        modelStore.activeRemoteBinding = {
+          modelId: `${serverId}/m1`,
+          serverId,
+          remoteModelId: 'm1',
+          url: 'http://host:9931',
+        };
+      });
+
+    let probeSpy: jest.SpyInstance;
+
+    beforeEach(() => {
+      jest.useFakeTimers();
+      probeSpy = jest
+        .spyOn(serverStore, 'probeServerPresence')
+        .mockImplementation(async (serverId: string) => {
+          setPresenceFor(serverId, 'unreachable');
+        });
+      runInAction(() => {
+        modelStore.appState = 'active';
+        modelStore.presenceWatchFailures = 0;
+        serverStore.serverPresence = {};
+        serverStore.servers = [
+          {id: SERVER_ID, name: 'Watched', url: 'http://host:9931'},
+          {id: 'other', name: 'Other', url: 'http://other:9931'},
+        ];
+      });
+      bindTo(SERVER_ID);
+    });
+
+    afterEach(() => {
+      runInAction(() => {
+        modelStore.activeRemoteBinding = undefined;
+        modelStore.presenceWatchFailures = 0;
+        serverStore.serverPresence = {};
+        serverStore.servers = [];
+      });
+      jest.clearAllTimers();
+      jest.useRealTimers();
+      probeSpy.mockRestore();
+    });
+
+    /** Advance to the next tick and let its probe settle. */
+    const runNextTick = async (delayMs: number) => {
+      jest.advanceTimersByTime(delayMs);
+      await Promise.resolve();
+      await Promise.resolve();
+    };
+
+    it('backs off, then stops once the server answers', async () => {
+      setPresence('unreachable');
+
+      await runNextTick(2000);
+      expect(probeSpy).toHaveBeenCalledTimes(1);
+      expect(modelStore.presenceWatchFailures).toBe(1);
+
+      await runNextTick(5000);
+      expect(probeSpy).toHaveBeenCalledTimes(2);
+      expect(modelStore.presenceWatchFailures).toBe(2);
+
+      probeSpy.mockImplementation(async () => {
+        setPresence('reachable');
+      });
+      await runNextTick(10000);
+
+      expect(modelStore.presenceWatchFailures).toBe(0);
+      expect(modelStore.presenceWatch).toBeNull();
+    });
+
+    it('waits the backoff interval and not less', async () => {
+      setPresence('unreachable');
+
+      await runNextTick(1999);
+      expect(probeSpy).not.toHaveBeenCalled();
+
+      await runNextTick(1);
+      expect(probeSpy).toHaveBeenCalledTimes(1);
+    });
+
+    it('does not run while the server is reachable', async () => {
+      setPresence('reachable');
+
+      await runNextTick(60000);
+
+      expect(probeSpy).not.toHaveBeenCalled();
+    });
+
+    it('cancels on background and re-probes on foreground', async () => {
+      setPresence('unreachable');
+      await runNextTick(2000);
+      probeSpy.mockClear();
+
+      runInAction(() => {
+        modelStore.appState = 'background';
+      });
+      expect(modelStore.presenceWatch).toBeNull();
+
+      await runNextTick(60000);
+      expect(probeSpy).not.toHaveBeenCalled();
+
+      await modelStore.handleAppStateChange('active');
+      expect(probeSpy).toHaveBeenCalled();
+    });
+
+    it('stops after ten consecutive failures rather than polling forever', async () => {
+      setPresence('unreachable');
+
+      for (let i = 0; i < 12; i++) {
+        await runNextTick(30000);
+      }
+
+      expect(modelStore.presenceWatchFailures).toBe(10);
+      expect(probeSpy).toHaveBeenCalledTimes(10);
+      expect(modelStore.presenceWatch).toBeNull();
+    });
+
+    it('recovers from the cap: a reachable answer zeroes the counter and the next failure re-arms', async () => {
+      setPresence('unreachable');
+      for (let i = 0; i < 12; i++) {
+        await runNextTick(30000);
+      }
+      expect(modelStore.presenceWatch).toBeNull();
+
+      // A retry or a foreground probe answers.
+      setPresence('reachable');
+      expect(modelStore.presenceWatchFailures).toBe(0);
+      expect(modelStore.presenceWatch).toBeNull();
+
+      // The watch is alive again rather than dead for the session.
+      setPresence('unreachable');
+      expect(modelStore.presenceWatch).not.toBeNull();
+
+      probeSpy.mockClear();
+      await runNextTick(2000);
+      expect(probeSpy).toHaveBeenCalledTimes(1);
+    });
+
+    it('zeroes the counter when the bound model changes', async () => {
+      setPresence('unreachable');
+      await runNextTick(2000);
+      expect(modelStore.presenceWatchFailures).toBe(1);
+
+      bindTo('other');
+
+      expect(modelStore.presenceWatchFailures).toBe(0);
+    });
+
+    it('stops when the remote binding clears', async () => {
+      setPresence('unreachable');
+      await runNextTick(2000);
+
+      runInAction(() => {
+        modelStore.activeRemoteBinding = undefined;
+      });
+
+      expect(modelStore.presenceWatch).toBeNull();
+    });
+
+    it('probes the server it is bound to now, not the one the tick was scheduled for', async () => {
+      setPresence('unreachable');
+      bindTo('other');
+      probeSpy.mockClear();
+
+      await runNextTick(2000);
+
+      expect(probeSpy).toHaveBeenCalled();
+      expect(probeSpy.mock.calls.map(call => call[0])).not.toContain(SERVER_ID);
+    });
+
+    it('runs one chain, not two, when the app blips while a probe is in flight', async () => {
+      let release!: () => void;
+      const inFlight = new Promise<void>(resolve => {
+        release = resolve;
+      });
+      probeSpy.mockImplementationOnce(async (serverId: string) => {
+        await inFlight;
+        setPresenceFor(serverId, 'unreachable');
+      });
+      setPresence('unreachable');
+
+      jest.advanceTimersByTime(2000);
+      await Promise.resolve();
+
+      runInAction(() => {
+        modelStore.appState = 'background';
+      });
+      runInAction(() => {
+        modelStore.appState = 'active';
+      });
+
+      release();
+      await Promise.resolve();
+      await Promise.resolve();
+
+      probeSpy.mockClear();
+      await runNextTick(30000);
+
+      expect(probeSpy).toHaveBeenCalledTimes(1);
+    });
+
+    it('stops rather than polling forever when the probe cannot answer', async () => {
+      probeSpy.mockImplementation(async () => {});
+      setPresence('unknown');
+
+      for (let i = 0; i < 30; i++) {
+        await runNextTick(30000);
+      }
+
+      expect(probeSpy).toHaveBeenCalledTimes(10);
+    });
+
+    it('stops when the bound server is removed', async () => {
+      setPresence('unreachable');
+      await runNextTick(2000);
+      probeSpy.mockClear();
+
+      runInAction(() => {
+        serverStore.servers = serverStore.servers.filter(
+          s => s.id !== SERVER_ID,
+        );
+      });
+
+      expect(modelStore.presenceWatch).toBeNull();
+      await runNextTick(60000);
+      expect(probeSpy).not.toHaveBeenCalled();
+    });
+
+    it('probes the bound server when a completion settles with an error', () => {
+      modelStore.probeActiveRemoteServer();
+
+      expect(probeSpy).toHaveBeenCalledWith(SERVER_ID, {reason: 'detached'});
+    });
+  });
 });

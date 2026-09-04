@@ -205,6 +205,15 @@
     "removeRemoteModel": "Remove {{modelName}} ({{serverName}})?",
     "retryConnection": "Retry",
     "enterUrlManually": "Enter URL manually",
+    "serverPresence": {
+      "label": "Status",
+      "unknown": "Not checked yet",
+      "reachable": "Reachable",
+      "asleep": "Asleep",
+      "unreachable": "Not reachable",
+      "checking": "Checking…",
+      "retry": "Check now"
+    },
     "manageServers": "Manage Servers"
   },
   "memory": {
@@ -367,6 +376,33 @@
         "sortRecent": "Recently Updated",
         "sortLikes": "Most Liked"
       }
+    },
+    "pairServer": {
+      "title": "Add server",
+      "scanHint": "Point the camera at the QR code shown by your server.",
+      "notAServerQr": "That code isn't a server address.",
+      "noCamera": "No camera is available on this device, so enter the address by hand.",
+      "cameraDenied": "Camera access is off. Allow it in Settings, or enter the address by hand.",
+      "urlLabel": "Server address",
+      "nameLabel": "Name (optional)",
+      "apiKeyLabel": "API key (optional)",
+      "checking": "Checking the server…",
+      "oneModel": "1 model available",
+      "modelCount": "{{count}} models available",
+      "noModelsYet": "No models yet — you can add one after connecting.",
+      "credentialsVerified": "API key accepted.",
+      "credentialsUnverified": "The API key couldn't be verified.",
+      "noKeySupplied": "No API key supplied.",
+      "credentialsRefused": "The server refused these credentials.",
+      "notAModelServer": "The address answered, but not as a model server.",
+      "serverAnswered": "The server answered {{status}}. Check the address.",
+      "unreachable": "Couldn't reach that address.",
+      "scanInstead": "Scan a code",
+      "back": "Back",
+      "duplicateTitle": "Already added",
+      "duplicateMessage": "You already have this server saved as \"{{name}}\".",
+      "use": "Use",
+      "add": "Add"
     },
     "hubRun": {
       "title": "Download model",
@@ -1194,6 +1230,7 @@
     "multimodalNotEnabled": "Multimodal is not enabled for this model. Images will be displayed but not processed by the AI.",
     "cannotSendWithoutModel": "Load a model first",
     "toolCompatWarning": "This model may not support tool calling. Results may be unreliable.",
+    "remoteWaking": "Waking the server…",
     "softCapWarning": "Start a new chat for best performance.",
     "contextWarning": "This conversation is getting long and may soon run out of room.",
     "contextRemoteHedged": "This reply may have been cut off. Try sending again or shortening the request.",

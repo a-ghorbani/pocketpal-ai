@@ -13,8 +13,13 @@ jest.mock('mobx-persist-store', () => ({
 jest.mock('../../api/openai', () => ({
   fetchModels: jest.fn(),
   fetchServerProps: jest.fn(),
+  probeServerReachability: jest.fn(),
   testConnection: jest.fn(),
   PROPS_TIMEOUT_MS: 5000,
+}));
+
+jest.mock('../../utils/serverPresence', () => ({
+  readServerIsSleeping: jest.fn(() => undefined),
 }));
 
 // Mock AppState.addEventListener
@@ -34,7 +39,15 @@ const persistedProperties: string[] = (
   jest.requireMock('mobx-persist-store').makePersistable as jest.Mock
 ).mock.calls[0][1].properties;
 
+const mockedReadServerIsSleeping = (
+  jest.requireMock('../../utils/serverPresence') as {
+    readServerIsSleeping: jest.Mock;
+  }
+).readServerIsSleeping;
+
 const mockedFetchModels = openaiModule.fetchModels as jest.Mock;
+const mockedProbeReachability =
+  openaiModule.probeServerReachability as jest.Mock;
 const mockedFetchServerProps = openaiModule.fetchServerProps as jest.Mock;
 const mockedTestConnection = openaiModule.testConnection as jest.Mock;
 const {PROPS_TIMEOUT_MS} = openaiModule;
@@ -53,7 +66,11 @@ describe('ServerStore', () => {
       serverStore.privacyNoticeAcknowledged = false;
       serverStore.remoteReasoning = {};
       serverStore.remoteCaps = {};
+      serverStore.serverPresence = {};
+      serverStore.favouriteRemoteModels = {};
+      serverStore.lastUsedRemoteModel = {};
     });
+    mockedReadServerIsSleeping.mockReturnValue(undefined);
   });
 
   describe('initial state', () => {
@@ -518,6 +535,8 @@ describe('ServerStore', () => {
         'userSelectedModels',
         'remoteReasoning',
         'remoteCaps',
+        'favouriteRemoteModels',
+        'lastUsedRemoteModel',
       ]);
     });
   });
@@ -1331,6 +1350,454 @@ describe('ServerStore', () => {
 
       expect(serverStore.remoteCaps[`${id}/m1`]).toBeUndefined();
       expect(serverStore.remoteCaps['other-server/m2']).toBeDefined();
+    });
+  });
+  describe('server presence', () => {
+    const addServer = (overrides: Record<string, any> = {}) =>
+      serverStore.addServer({
+        name: 'llama',
+        url: 'http://localhost:9931',
+        serverType: 'llama.cpp',
+        ...overrides,
+      });
+
+    describe('the read-time fold', () => {
+      it('reads unknown for a server nothing has probed, and never throws', () => {
+        expect(serverStore.presenceFor('never-probed')).toBe('unknown');
+        expect(serverStore.isProbing('never-probed')).toBe(false);
+      });
+
+      it.each([
+        ['unknown', undefined, 'unknown'],
+        ['unknown', true, 'unknown'],
+        ['reachable', true, 'asleep'],
+        ['reachable', false, 'reachable'],
+        ['reachable', undefined, 'reachable'],
+        ['unreachable', true, 'unreachable'],
+      ])(
+        'folds reachability %s with a sleeping flag of %p into %s',
+        (reachability, sleeping, expected) => {
+          mockedReadServerIsSleeping.mockReturnValue(sleeping);
+          runInAction(() => {
+            serverStore.serverPresence = {
+              s1: {reachability: reachability as any, probing: false},
+            };
+          });
+
+          expect(serverStore.presenceFor('s1')).toBe(expected);
+        },
+      );
+    });
+
+    describe('probeServerPresence', () => {
+      it('records a reachable answer and clears probing', async () => {
+        const id = addServer();
+        mockedProbeReachability.mockResolvedValue('reachable');
+
+        await serverStore.probeServerPresence(id, {reason: 'user'});
+
+        expect(serverStore.presenceFor(id)).toBe('reachable');
+        expect(serverStore.isProbing(id)).toBe(false);
+      });
+
+      it('calls a server that answered 401 reachable, because it answered', async () => {
+        const id = addServer();
+        mockedProbeReachability.mockResolvedValue('reachable');
+
+        await serverStore.probeServerPresence(id, {reason: 'detached'});
+
+        expect(serverStore.presenceFor(id)).toBe('reachable');
+      });
+
+      it('reports probing while the request is in flight', async () => {
+        const id = addServer();
+        let settle: (value: string) => void = () => {};
+        mockedProbeReachability.mockReturnValue(
+          new Promise(resolve => {
+            settle = resolve;
+          }),
+        );
+
+        const probe = serverStore.probeServerPresence(id, {reason: 'user'});
+        await Promise.resolve();
+        expect(serverStore.isProbing(id)).toBe(true);
+
+        settle('unreachable');
+        await probe;
+        expect(serverStore.isProbing(id)).toBe(false);
+        expect(serverStore.presenceFor(id)).toBe('unreachable');
+      });
+
+      it('is single-flight while one is in flight, and lets the next one through', async () => {
+        const id = addServer();
+        let settle: (value: string) => void = () => {};
+        mockedProbeReachability.mockReturnValue(
+          new Promise(resolve => {
+            settle = resolve;
+          }),
+        );
+
+        const first = serverStore.probeServerPresence(id, {reason: 'user'});
+        // The keychain read comes first, so one drain is not yet the request.
+        await Promise.resolve();
+        await Promise.resolve();
+        expect(mockedProbeReachability).toHaveBeenCalledTimes(1);
+
+        const joined = serverStore.probeServerPresence(id, {reason: 'user'});
+        await Promise.resolve();
+        expect(mockedProbeReachability).toHaveBeenCalledTimes(1);
+
+        settle('reachable');
+        await Promise.all([first, joined]);
+
+        // The entry is released, so the join is for the flight and not forever.
+        mockedProbeReachability.mockResolvedValue('reachable');
+        await serverStore.probeServerPresence(id, {reason: 'user'});
+        expect(mockedProbeReachability).toHaveBeenCalledTimes(2);
+      });
+
+      it('forwards the raw timeout for a user-initiated probe', async () => {
+        const id = addServer({requestTimeoutMs: 600000});
+        mockedProbeReachability.mockResolvedValue('reachable');
+
+        await serverStore.probeServerPresence(id, {reason: 'user'});
+
+        expect(mockedProbeReachability.mock.calls[0][1].timeoutMs).toBe(600000);
+      });
+
+      it('clamps a detached probe, so one black-holing host cannot swallow every tick', async () => {
+        const id = addServer({requestTimeoutMs: 600000});
+        mockedProbeReachability.mockResolvedValue('reachable');
+
+        await serverStore.probeServerPresence(id, {reason: 'detached'});
+
+        expect(mockedProbeReachability.mock.calls[0][1].timeoutMs).toBe(
+          PROPS_TIMEOUT_MS,
+        );
+      });
+
+      it('discards its answer when the url moved while it was in flight', async () => {
+        const id = addServer();
+        let settle: (value: string) => void = () => {};
+        mockedProbeReachability.mockReturnValue(
+          new Promise(resolve => {
+            settle = resolve;
+          }),
+        );
+
+        const probe = serverStore.probeServerPresence(id, {reason: 'user'});
+        await Promise.resolve();
+        serverStore.updateServer(id, {url: 'http://elsewhere:9931'});
+        settle('reachable');
+        await probe;
+
+        expect(serverStore.presenceFor(id)).toBe('unknown');
+      });
+
+      it('discards its answer when the server was removed while it was in flight', async () => {
+        const id = addServer();
+        let settle: (value: string) => void = () => {};
+        mockedProbeReachability.mockReturnValue(
+          new Promise(resolve => {
+            settle = resolve;
+          }),
+        );
+
+        const probe = serverStore.probeServerPresence(id, {reason: 'user'});
+        await Promise.resolve();
+        serverStore.removeServer(id);
+        settle('reachable');
+        await probe;
+
+        expect(serverStore.presenceFor(id)).toBe('unknown');
+      });
+    });
+
+    describe('the model-fetch promotion', () => {
+      it('promotes a server to reachable without a probe', async () => {
+        const id = addServer();
+        mockedFetchModels.mockResolvedValue([]);
+
+        await serverStore.fetchModelsForServer(id);
+
+        expect(serverStore.presenceFor(id)).toBe('reachable');
+      });
+
+      it('never demotes on a failed fetch, which cannot tell refusal from a dead socket', async () => {
+        const id = addServer();
+        runInAction(() => {
+          serverStore.serverPresence = {
+            [id]: {reachability: 'reachable', probing: false, checkedAt: 1},
+          };
+        });
+        mockedFetchModels.mockRejectedValue(new Error('Connection timed out'));
+
+        await serverStore.fetchModelsForServer(id);
+
+        expect(serverStore.presenceFor(id)).toBe('reachable');
+      });
+
+      it('discards its promotion when the url moved while the fetch was in flight', async () => {
+        const id = addServer();
+        let settle: (value: unknown) => void = () => {};
+        mockedFetchModels.mockReturnValue(
+          new Promise(resolve => {
+            settle = resolve;
+          }),
+        );
+
+        const fetching = serverStore.fetchModelsForServer(id);
+        await Promise.resolve();
+        serverStore.updateServer(id, {url: 'http://elsewhere:9931'});
+        settle([]);
+        await fetching;
+
+        expect(serverStore.presenceFor(id)).toBe('unknown');
+        expect(serverStore.serverModels.get(id)).toBeUndefined();
+      });
+
+      it('outranks an older probe that settles unreachable after it, from an empty baseline', async () => {
+        const id = addServer();
+        let settleProbe: (value: string) => void = () => {};
+        mockedProbeReachability.mockReturnValue(
+          new Promise(resolve => {
+            settleProbe = resolve;
+          }),
+        );
+        mockedFetchModels.mockResolvedValue([]);
+
+        const probe = serverStore.probeServerPresence(id, {reason: 'detached'});
+        await Promise.resolve();
+        await serverStore.fetchModelsForServer(id);
+        expect(serverStore.presenceFor(id)).toBe('reachable');
+
+        settleProbe('unreachable');
+        await probe;
+
+        expect(serverStore.presenceFor(id)).toBe('reachable');
+      });
+    });
+
+    describe('pruning', () => {
+      it('drops the entry when the server is removed', async () => {
+        const id = addServer();
+        mockedProbeReachability.mockResolvedValue('reachable');
+        await serverStore.probeServerPresence(id, {reason: 'user'});
+
+        serverStore.removeServer(id);
+
+        expect(serverStore.presenceFor(id)).toBe('unknown');
+      });
+
+      it('drops the entry when the serverType is edited, which repoints the probe', async () => {
+        const id = addServer();
+        mockedProbeReachability.mockResolvedValue('reachable');
+        await serverStore.probeServerPresence(id, {reason: 'user'});
+
+        serverStore.updateServer(id, {serverType: 'Ollama'});
+
+        expect(serverStore.presenceFor(id)).toBe('unknown');
+      });
+    });
+  });
+  describe('canonical ServerConfig.url', () => {
+    it('stores the canonical form of a scanned web-UI root', () => {
+      const id = serverStore.addServer({
+        name: 'llama',
+        url: 'http://192.168.1.5:9931/',
+      });
+
+      expect(serverStore.servers.find(s => s.id === id)?.url).toBe(
+        'http://192.168.1.5:9931',
+      );
+    });
+
+    it('strips a hand-entered /v1 base, which 404s every request today', () => {
+      const id = serverStore.addServer({
+        name: 'llama',
+        url: 'http://192.168.1.5:9931/v1',
+      });
+
+      expect(serverStore.servers.find(s => s.id === id)?.url).toBe(
+        'http://192.168.1.5:9931',
+      );
+    });
+
+    it('canonicalises an edited url too', () => {
+      const id = serverStore.addServer({
+        name: 'llama',
+        url: 'http://host:9931',
+      });
+
+      serverStore.updateServer(id, {url: 'http://host:9931/v1/'});
+
+      expect(serverStore.servers.find(s => s.id === id)?.url).toBe(
+        'http://host:9931',
+      );
+    });
+
+    it('keeps caps, models and presence through a no-op trailing-slash edit', async () => {
+      const id = serverStore.addServer({
+        name: 'llama',
+        url: 'http://host:9931',
+        serverType: 'llama.cpp',
+      });
+      mockedProbeReachability.mockResolvedValue('reachable');
+      await serverStore.probeServerPresence(id, {reason: 'user'});
+      runInAction(() => {
+        serverStore.remoteCaps[`${id}/m1`] = {contextLength: 4096};
+        serverStore.serverModels.set(id, []);
+      });
+
+      serverStore.updateServer(id, {url: 'http://host:9931/'});
+
+      expect(serverStore.remoteCaps[`${id}/m1`]).toBeDefined();
+      expect(serverStore.serverModels.get(id)).toBeDefined();
+      expect(serverStore.presenceFor(id)).toBe('reachable');
+    });
+
+    it('keeps caps, models and presence on the first save of a record stored raw', async () => {
+      const id = serverStore.addServer({
+        name: 'llama',
+        url: 'http://host:9931',
+        serverType: 'llama.cpp',
+      });
+      // A record persisted before canonicalisation existed hydrates raw.
+      runInAction(() => {
+        serverStore.servers.find(s => s.id === id)!.url =
+          'http://host:9931/v1/';
+      });
+      mockedProbeReachability.mockResolvedValue('reachable');
+      await serverStore.probeServerPresence(id, {reason: 'user'});
+      runInAction(() => {
+        serverStore.remoteCaps[`${id}/m1`] = {contextLength: 4096};
+        serverStore.serverModels.set(id, []);
+      });
+
+      serverStore.updateServer(id, {name: 'llama', url: 'http://host:9931'});
+
+      expect(serverStore.remoteCaps[`${id}/m1`]).toBeDefined();
+      expect(serverStore.serverModels.get(id)).toBeDefined();
+      expect(serverStore.presenceFor(id)).toBe('reachable');
+    });
+
+    it('still invalidates on a genuine repoint', () => {
+      const id = serverStore.addServer({
+        name: 'llama',
+        url: 'http://host:9931',
+      });
+      runInAction(() => {
+        serverStore.remoteCaps[`${id}/m1`] = {contextLength: 4096};
+      });
+
+      serverStore.updateServer(id, {url: 'http://host:9932'});
+
+      expect(serverStore.remoteCaps[`${id}/m1`]).toBeUndefined();
+    });
+  });
+  describe('per-server model preferences', () => {
+    const addServer = (name = 's1') =>
+      serverStore.addServer({name, url: `http://${name}:9931`});
+
+    it('declares both preference maps to the persistence layer and presence to neither', () => {
+      // mobx-persist-store is mocked wholesale, so neither a missing name nor
+      // a wrongly added one shows up anywhere else in this suite. Asserts the
+      // declaration only, not that the library round-trips through storage.
+      expect(persistedProperties).toContain('favouriteRemoteModels');
+      expect(persistedProperties).toContain('lastUsedRemoteModel');
+      expect(persistedProperties).not.toContain('serverPresence');
+    });
+
+    it('returns the same frozen empty entry for a server with no declarations', () => {
+      expect(serverStore.remoteModelPrefsFor('none')).toEqual({
+        favouriteModelIds: [],
+      });
+      expect(serverStore.remoteModelPrefsFor('none')).toBe(
+        serverStore.remoteModelPrefsFor('other'),
+      );
+    });
+
+    it('toggles a favourite on and back off', () => {
+      const id = addServer();
+
+      serverStore.toggleFavourite(id, 'qwen3');
+      expect(serverStore.remoteModelPrefsFor(id).favouriteModelIds).toEqual([
+        'qwen3',
+      ]);
+
+      serverStore.toggleFavourite(id, 'qwen3');
+      expect(serverStore.remoteModelPrefsFor(id).favouriteModelIds).toEqual([]);
+    });
+
+    it('keeps a model id containing a slash intact', () => {
+      const id = addServer();
+
+      serverStore.toggleFavourite(id, 'ggml-org/gemma-4-31B-it-GGUF:Q8_0');
+
+      expect(serverStore.remoteModelPrefsFor(id).favouriteModelIds).toEqual([
+        'ggml-org/gemma-4-31B-it-GGUF:Q8_0',
+      ]);
+    });
+
+    it("keeps each server's declarations to itself", () => {
+      const a = addServer('a');
+      const b = addServer('b');
+
+      serverStore.toggleFavourite(a, 'qwen3');
+      serverStore.recordLastUsedRemoteModel(b, 'gemma');
+
+      expect(serverStore.remoteModelPrefsFor(a)).toEqual({
+        favouriteModelIds: ['qwen3'],
+      });
+      expect(serverStore.remoteModelPrefsFor(b)).toEqual({
+        favouriteModelIds: [],
+        lastUsedModelId: 'gemma',
+      });
+    });
+
+    it('records last-used per server without touching the local auto-reload slot', () => {
+      const id = addServer();
+
+      serverStore.recordLastUsedRemoteModel(id, 'qwen3');
+
+      expect(serverStore.remoteModelPrefsFor(id).lastUsedModelId).toBe('qwen3');
+    });
+
+    it('returns a favourite the server has stopped listing, unchanged', () => {
+      const id = addServer();
+
+      serverStore.toggleFavourite(id, 'retired-model');
+
+      expect(serverStore.remoteModelPrefsFor(id).favouriteModelIds).toEqual([
+        'retired-model',
+      ]);
+    });
+
+    it('survives a url edit, because it is a user declaration', () => {
+      const id = addServer();
+      serverStore.toggleFavourite(id, 'qwen3');
+      serverStore.recordLastUsedRemoteModel(id, 'qwen3');
+
+      serverStore.updateServer(id, {url: 'http://elsewhere:9931'});
+
+      expect(serverStore.remoteModelPrefsFor(id)).toEqual({
+        favouriteModelIds: ['qwen3'],
+        lastUsedModelId: 'qwen3',
+      });
+    });
+
+    it('drops both maps and the presence entry when the server is removed', async () => {
+      const id = addServer();
+      serverStore.toggleFavourite(id, 'qwen3');
+      serverStore.recordLastUsedRemoteModel(id, 'qwen3');
+      mockedProbeReachability.mockResolvedValue('reachable');
+      await serverStore.probeServerPresence(id, {reason: 'user'});
+
+      serverStore.removeServer(id);
+
+      expect(serverStore.favouriteRemoteModels).toEqual({});
+      expect(serverStore.lastUsedRemoteModel).toEqual({});
+      expect(serverStore.presenceFor(id)).toBe('unknown');
     });
   });
 });

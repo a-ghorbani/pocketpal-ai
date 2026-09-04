@@ -22,6 +22,18 @@ export interface DeepLinkParams {
 
 export type DeepLinkHandler = (params: DeepLinkParams) => void;
 
+/**
+ * A deep link rendered for a log line. A query value can be a credential — the
+ * pairing route carries an API key — so only the parameter names are kept, and
+ * the raw url, which carries the same query string, is never included.
+ */
+export const describeDeepLink = (params: DeepLinkParams): string => {
+  const names = Object.keys(params.queryParams ?? {}).sort();
+  return `${params.scheme}://${params.host}${
+    names.length ? ` ?${names.join(',')}` : ''
+  }`;
+};
+
 class DeepLinkService {
   private eventEmitter: NativeEventEmitter | null = null;
   private listeners: DeepLinkHandler[] = [];
@@ -55,7 +67,7 @@ class DeepLinkService {
     this.subscription = this.eventEmitter.addListener(
       'onDeepLink',
       (params: DeepLinkParams) => {
-        console.log('Deep link received:', params);
+        console.log('Deep link received:', describeDeepLink(params));
         this.notifyListeners(params);
       },
     );
