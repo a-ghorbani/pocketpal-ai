@@ -205,6 +205,15 @@
     "removeRemoteModel": "Remove {{modelName}} ({{serverName}})?",
     "retryConnection": "Retry",
     "enterUrlManually": "Enter URL manually",
+    "serverPresence": {
+      "label": "Status",
+      "unknown": "Not checked yet",
+      "reachable": "Reachable",
+      "asleep": "Asleep",
+      "unreachable": "Not reachable",
+      "checking": "Checking…",
+      "retry": "Check now"
+    },
     "manageServers": "Manage Servers"
   },
   "memory": {
