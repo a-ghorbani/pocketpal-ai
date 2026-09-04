@@ -145,6 +145,7 @@ class MockModelStore {
       enterBenchmarkMode: false,
       exitBenchmarkMode: false,
       recordReasoningObserved: false,
+      ensureActiveRemoteModelReady: false,
       setReasoningOverride: false,
       contextId: computed,
       lastUsedModel: computed,
@@ -158,6 +159,9 @@ class MockModelStore {
       activeDownloads: computed,
     });
     this.refreshDownloadStatuses = jest.fn();
+    this.ensureActiveRemoteModelReady = jest
+      .fn()
+      .mockResolvedValue('not-router');
     this.addLocalModel = jest.fn();
     this.removeModelByFullPath = jest.fn();
     this.setNContext = jest.fn();
@@ -246,7 +250,7 @@ class MockModelStore {
     this.inferencing = value;
   };
 
-  ensureActiveRemoteModelReady = jest.fn().mockResolvedValue('not-router');
+  ensureActiveRemoteModelReady: jest.Mock = jest.fn();
 
   setIsStreaming = (value: boolean) => {
     this.isStreaming = value;

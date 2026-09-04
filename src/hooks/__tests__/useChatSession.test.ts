@@ -103,6 +103,68 @@ describe('useChatSession', () => {
     });
   });
 
+  describe('remote model readiness', () => {
+    const readiness = () =>
+      modelStore.ensureActiveRemoteModelReady as jest.Mock;
+
+    /** Enough turns for the send path to reach the readiness call. */
+    const settleMicrotasks = async () => {
+      for (let i = 0; i < 20; i++) {
+        await Promise.resolve();
+      }
+    };
+
+    it('holds the send until the server reports the model ready', async () => {
+      let reportReady: (outcome: string) => void = () => {};
+      readiness().mockReturnValueOnce(
+        new Promise<string>(resolve => {
+          reportReady = resolve;
+        }),
+      );
+
+      const {result} = renderHook(() =>
+        useChatSession({current: null}, textMessage.author, mockAssistant),
+      );
+
+      let send: Promise<void> = Promise.resolve();
+      await act(async () => {
+        send = result.current.handleSendPress(textMessage);
+        await settleMicrotasks();
+      });
+
+      expect(readiness()).toHaveBeenCalled();
+      expect(modelStore.context?.completion).not.toHaveBeenCalled();
+
+      await act(async () => {
+        reportReady('ready');
+        await send;
+      });
+
+      expect(modelStore.context?.completion).toHaveBeenCalled();
+    });
+
+    it('sends nothing and says so when the server could not make it ready', async () => {
+      readiness().mockResolvedValueOnce('failed');
+
+      const {result} = renderHook(() =>
+        useChatSession({current: null}, textMessage.author, mockAssistant),
+      );
+
+      await act(async () => {
+        await result.current.handleSendPress(textMessage);
+      });
+
+      expect(modelStore.context?.completion).not.toHaveBeenCalled();
+      expect(chatSessionStore.addMessageToCurrentSession).toHaveBeenCalledWith(
+        expect.objectContaining({
+          text: l10n.en.chat.remoteModelNotReady,
+          author: assistant,
+          metadata: {system: true},
+        }),
+      );
+    });
+  });
+
   it('should handle general errors during completion', async () => {
     const errorMessage = 'Some general error';
     if (modelStore.context) {
