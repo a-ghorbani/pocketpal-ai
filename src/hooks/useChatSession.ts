@@ -245,13 +245,12 @@ function deriveSnapshotFromResult(
   result: CompletionResult,
   isRemote: boolean,
 ): CompletionResultSnapshot {
-  // A remote turn carries its counts on `timings`; with no such object there
-  // is no prompt term at all, and a predicted-only tally is not an occupancy
-  // number. Local turns always report `tokens_evaluated`.
+  // Without a prompt term the total is a predicted-only tally, which is not an
+  // occupancy number on either path.
   const used =
-    isRemote && !result.timings
+    result.tokens_evaluated === undefined
       ? undefined
-      : (result.tokens_evaluated ?? 0) + (result.tokens_predicted ?? 0);
+      : result.tokens_evaluated + (result.tokens_predicted ?? 0);
   // Local turns set context_full/truncated directly; finishReason only bridges
   // the remote engine's signal (stopped_limit) into the OR predicate below, so
   // it is intentionally remote-only.

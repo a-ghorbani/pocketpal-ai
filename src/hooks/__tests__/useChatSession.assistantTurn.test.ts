@@ -1213,6 +1213,35 @@ describe('useChatSession — AssistantTurn integration', () => {
       );
     });
 
+    it('a remote turn whose timings carry rates but no token counts reports no count', async () => {
+      activateRemoteModel();
+      if (modelStore.context) {
+        modelStore.context.completion = jest.fn().mockResolvedValue({
+          text: 'hello',
+          content: 'hello',
+          // `timings` is present and carries no prompt term, so the presence
+          // of the object says nothing about whether a count arrived.
+          timings: {predicted_per_second: 80, prompt_per_second: 800},
+          tokens_predicted: 600,
+        });
+      }
+      const {result} = renderHook(() =>
+        useChatSession({current: null}, textMessage.author, mockAssistant),
+      );
+
+      await act(async () => {
+        await result.current.handleSendPress(textMessage);
+      });
+
+      const snapshot = (
+        chatSessionStore.recordCompletionSnapshot as jest.Mock
+      ).mock.calls.at(-1)![0];
+      expect(snapshot.used).toBeUndefined();
+      expect(resolveBannerVariant(snapshot, bannerInput()).variant).not.toBe(
+        'context-full',
+      );
+    });
+
     it('an aborted turn with partial content reports no count, not zero', async () => {
       const errSpy = jest.spyOn(console, 'error').mockImplementation(() => {});
       activateRemoteModel();
@@ -1381,5 +1410,29 @@ describe('useChatSession — AssistantTurn integration', () => {
 
       errSpy.mockRestore();
     });
+  });
+
+  it('a local turn with no evaluated count reports no count either', async () => {
+    if (modelStore.context) {
+      modelStore.context.completion = jest.fn().mockResolvedValue({
+        text: 'hello',
+        content: 'hello',
+        timings: {predicted_per_second: 80},
+        tokens_predicted: 600,
+      });
+    }
+    const {result} = renderHook(() =>
+      useChatSession({current: null}, textMessage.author, mockAssistant),
+    );
+
+    await act(async () => {
+      await result.current.handleSendPress(textMessage);
+    });
+
+    const snapshot = (
+      chatSessionStore.recordCompletionSnapshot as jest.Mock
+    ).mock.calls.at(-1)![0];
+    expect(snapshot.isRemote).toBe(false);
+    expect(snapshot.used).toBeUndefined();
   });
 });
