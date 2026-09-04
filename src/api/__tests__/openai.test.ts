@@ -1610,6 +1610,32 @@ describe('streamChatCompletion', () => {
     expect(result.timings?.cache_n).toBeUndefined();
   });
 
+  it('guards each timings token key independently (only cache_n)', async () => {
+    const resultPromise = streamChatCompletion(
+      {messages: [{role: 'user', content: 'Hi'}], model: 'test-model'},
+      'http://localhost:1234',
+    );
+
+    const xhr = MockXHR.instances[0];
+    xhr.simulateHeaders(200);
+    xhr.simulateProgress(
+      'data: {"choices":[{"delta":{"content":"Hello"},"finish_reason":null}]}\n\n',
+    );
+    xhr.simulateProgress(
+      `data: {"choices":[{"delta":{},"finish_reason":"stop"}],"timings":${JSON.stringify(
+        {cache_n: cacheReuseTimings.cache_n},
+      )}}\n\n`,
+    );
+    xhr.simulateProgress('data: [DONE]\n\n');
+    xhr.simulateLoad();
+
+    const result = await resultPromise;
+    // A fully reused prompt evaluates nothing, so the whole count arrives on
+    // cache_n and prompt_n is absent. Reading prompt_n alone loses it.
+    expect(result.tokens_evaluated).toBe(31);
+    expect(result.timings?.prompt_n).toBeUndefined();
+  });
+
   it('returns no timings when server does not provide them', async () => {
     const resultPromise = streamChatCompletion(
       {messages: [{role: 'user', content: 'Hi'}], model: 'test-model'},
