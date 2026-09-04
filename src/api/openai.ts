@@ -453,7 +453,7 @@ export async function detectServerType(
 }
 
 /** What one presence probe learned. Any HTTP response, of any status, is reachable. */
-export type ServerReachability = 'reachable' | 'unreachable';
+export type ProbedReachability = 'reachable' | 'unreachable';
 
 /**
  * Ask whether a server answers at all. Never throws.
@@ -466,7 +466,7 @@ export type ServerReachability = 'reachable' | 'unreachable';
 export async function probeServerReachability(
   serverUrl: string,
   options: {apiKey?: string; timeoutMs?: number; serverType?: string} = {},
-): Promise<ServerReachability> {
+): Promise<ProbedReachability> {
   const path = options.serverType === 'llama.cpp' ? '/health' : '/v1/models';
   const controller = new AbortController();
   const timeout = setTimeout(

@@ -7,11 +7,18 @@ import * as Keychain from 'react-native-keychain';
 import {
   fetchModels,
   fetchServerProps,
+  probeServerReachability,
   testConnection,
   PROPS_TIMEOUT_MS,
   RemoteModelInfo,
 } from '../api/openai';
-import {RemoteModelCaps, ServerConfig} from '../utils/types';
+import {
+  RemoteModelCaps,
+  ServerConfig,
+  ServerPresence,
+  ServerPresenceEntry,
+} from '../utils/types';
+import {readServerIsSleeping} from '../utils/serverPresence';
 import {ReasoningCapability} from '../utils/reasoningCapability';
 import {deriveListCapsMap} from '../utils/listCaps';
 import type {ListDerivedCaps} from '../utils/listCaps';
@@ -42,6 +49,19 @@ function dropServerEntries<T>(
   );
 }
 
+/**
+ * The same guarantee for maps keyed by the bare serverId, on which
+ * `dropServerEntries`' prefix test is a silent no-op.
+ */
+function dropServerKey<T>(
+  map: Record<string, T>,
+  serverId: string,
+): Record<string, T> {
+  const rest = {...map};
+  delete rest[serverId];
+  return rest;
+}
+
 class ServerStore {
   servers: ServerConfig[] = [];
   // Remote reasoning capability keyed by full model id (`${serverId}/${remoteModelId}`).
@@ -52,6 +72,9 @@ class ServerStore {
   // answers per model on a multi-model server, so caps cannot live per server.
   remoteCaps: Record<string, RemoteModelCaps> = {};
   serverModels: Map<string, RemoteModelInfo[]> = observable.map();
+  // Deliberately not persisted: a hydrated reachability is a claim about now
+  // that nobody checked.
+  serverPresence: Record<string, ServerPresenceEntry> = {};
   userSelectedModels: Array<{serverId: string; remoteModelId: string}> = [];
   isLoading = false;
   error: string | null = null;
@@ -59,6 +82,7 @@ class ServerStore {
 
   private lastFetchTime = 0;
   private appStateSubscription: any = null;
+  private presenceProbes = new Map<string, Promise<void>>();
 
   constructor() {
     makeAutoObservable(this, {
@@ -116,6 +140,7 @@ class ServerStore {
     if (invalidatesDiscovery) {
       this.remoteCaps = dropServerEntries(this.remoteCaps, id);
       this.serverModels.delete(id);
+      this.serverPresence = dropServerKey(this.serverPresence, id);
     }
   }
 
@@ -128,6 +153,7 @@ class ServerStore {
     );
     this.remoteReasoning = dropServerEntries(this.remoteReasoning, id);
     this.remoteCaps = dropServerEntries(this.remoteCaps, id);
+    this.serverPresence = dropServerKey(this.serverPresence, id);
     // Clean up API key from keychain
     this.removeApiKey(id);
   }
@@ -242,12 +268,124 @@ class ServerStore {
     }
   }
 
+  /**
+   * The single assign site for `serverPresence`, with two callers: the probe
+   * and `fetchModelsForServer`'s promotion.
+   */
+  private assignPresence(serverId: string, entry: ServerPresenceEntry): void {
+    this.serverPresence = {...this.serverPresence, [serverId]: entry};
+  }
+
+  /**
+   * Learn whether a server answers. Single-flight per server; a second call
+   * while one is in flight joins the first.
+   *
+   * `reason` selects the timeout policy and nothing else: a user waiting on a
+   * confirm or a retry gets their configured timeout, because a cold or waking
+   * server is what that setting exists for, while a detached caller is capped —
+   * an unclamped repeat against a black-holing host would hold this promise for
+   * the user's full timeout and swallow every scheduled tick behind it.
+   */
+  async probeServerPresence(
+    serverId: string,
+    options: {reason: 'user' | 'detached'},
+  ): Promise<void> {
+    const inFlight = this.presenceProbes.get(serverId);
+    if (inFlight) {
+      return inFlight;
+    }
+
+    const server = this.servers.find(s => s.id === serverId);
+    if (!server) {
+      return;
+    }
+
+    const probedUrl = server.url;
+    const probedType = server.serverType;
+    const timeoutMs =
+      options.reason === 'user'
+        ? server.requestTimeoutMs
+        : Math.min(
+            server.requestTimeoutMs ?? PROPS_TIMEOUT_MS,
+            PROPS_TIMEOUT_MS,
+          );
+
+    const existing = this.serverPresence[serverId];
+    const baselineCheckedAt = existing?.checkedAt ?? -Infinity;
+
+    runInAction(() => {
+      this.assignPresence(serverId, {
+        reachability: existing?.reachability ?? 'unknown',
+        probing: true,
+        checkedAt: existing?.checkedAt,
+      });
+    });
+
+    const run = (async () => {
+      const apiKey = await this.getApiKey(serverId);
+      const reachability = await probeServerReachability(probedUrl, {
+        apiKey,
+        timeoutMs,
+        serverType: probedType,
+      });
+
+      runInAction(() => {
+        const current = this.servers.find(s => s.id === serverId);
+        if (
+          !current ||
+          current.url !== probedUrl ||
+          current.serverType !== probedType
+        ) {
+          return;
+        }
+        // A newer settled answer landed while this one was in flight. The
+        // discard is one-directional: the promotion below always writes,
+        // because an arrived HTTP response outranks a transport failure.
+        if (
+          (this.serverPresence[serverId]?.checkedAt ?? -Infinity) >
+          baselineCheckedAt
+        ) {
+          return;
+        }
+        this.assignPresence(serverId, {
+          reachability,
+          probing: false,
+          checkedAt: Date.now(),
+        });
+      });
+    })().finally(() => {
+      this.presenceProbes.delete(serverId);
+    });
+
+    this.presenceProbes.set(serverId, run);
+    return run;
+  }
+
+  /** True while a probe is in flight. Not an answer about the server. */
+  isProbing = (serverId: string): boolean =>
+    this.serverPresence[serverId]?.probing ?? false;
+
+  /** Reachability with the sleeping flag folded in. Never annotate as `action`. */
+  presenceFor = (serverId: string): ServerPresence => {
+    const reachability = this.serverPresence[serverId]?.reachability;
+    if (reachability === undefined || reachability === 'unknown') {
+      return 'unknown';
+    }
+    if (reachability === 'unreachable') {
+      return 'unreachable';
+    }
+    return readServerIsSleeping(serverId) === true ? 'asleep' : 'reachable';
+  };
+
   // Remote model fetching
   async fetchModelsForServer(serverId: string): Promise<void> {
     const server = this.servers.find(s => s.id === serverId);
     if (!server) {
       return;
     }
+
+    const probedUrl = server.url;
+    const probedType = server.serverType;
 
     runInAction(() => {
       this.isLoading = true;
@@ -257,22 +395,30 @@ class ServerStore {
     try {
       const apiKey = await this.getApiKey(serverId);
       const models = await fetchModels(
-        server.url,
+        probedUrl,
         apiKey,
         server.requestTimeoutMs,
       );
 
       runInAction(() => {
-        this.serverModels.set(serverId, models);
         this.isLoading = false;
 
-        // Update lastConnected timestamp
         const s = this.servers.find(sv => sv.id === serverId);
-        if (s) {
-          s.lastConnected = Date.now();
+        if (!s || s.url !== probedUrl || s.serverType !== probedType) {
+          return;
         }
+
+        this.serverModels.set(serverId, models);
+        s.lastConnected = Date.now();
+        this.assignPresence(serverId, {
+          reachability: 'reachable',
+          probing: false,
+          checkedAt: Date.now(),
+        });
       });
     } catch (error: any) {
+      // A failure here cannot tell a refusal from a dead socket, so it never
+      // demotes presence.
       runInAction(() => {
         this.error = error.message || 'Failed to fetch models';
         this.isLoading = false;

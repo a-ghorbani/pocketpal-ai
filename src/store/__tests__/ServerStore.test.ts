@@ -13,8 +13,13 @@ jest.mock('mobx-persist-store', () => ({
 jest.mock('../../api/openai', () => ({
   fetchModels: jest.fn(),
   fetchServerProps: jest.fn(),
+  probeServerReachability: jest.fn(),
   testConnection: jest.fn(),
   PROPS_TIMEOUT_MS: 5000,
+}));
+
+jest.mock('../../utils/serverPresence', () => ({
+  readServerIsSleeping: jest.fn(() => undefined),
 }));
 
 // Mock AppState.addEventListener
@@ -34,7 +39,15 @@ const persistedProperties: string[] = (
   jest.requireMock('mobx-persist-store').makePersistable as jest.Mock
 ).mock.calls[0][1].properties;
 
+const mockedReadServerIsSleeping = (
+  jest.requireMock('../../utils/serverPresence') as {
+    readServerIsSleeping: jest.Mock;
+  }
+).readServerIsSleeping;
+
 const mockedFetchModels = openaiModule.fetchModels as jest.Mock;
+const mockedProbeReachability =
+  openaiModule.probeServerReachability as jest.Mock;
 const mockedFetchServerProps = openaiModule.fetchServerProps as jest.Mock;
 const mockedTestConnection = openaiModule.testConnection as jest.Mock;
 const {PROPS_TIMEOUT_MS} = openaiModule;
@@ -53,7 +66,9 @@ describe('ServerStore', () => {
       serverStore.privacyNoticeAcknowledged = false;
       serverStore.remoteReasoning = {};
       serverStore.remoteCaps = {};
+      serverStore.serverPresence = {};
     });
+    mockedReadServerIsSleeping.mockReturnValue(undefined);
   });
 
   describe('initial state', () => {
@@ -1331,6 +1346,238 @@ describe('ServerStore', () => {
 
       expect(serverStore.remoteCaps[`${id}/m1`]).toBeUndefined();
       expect(serverStore.remoteCaps['other-server/m2']).toBeDefined();
+    });
+  });
+  describe('server presence', () => {
+    const addServer = (overrides: Record<string, any> = {}) =>
+      serverStore.addServer({
+        name: 'llama',
+        url: 'http://localhost:9931',
+        serverType: 'llama.cpp',
+        ...overrides,
+      });
+
+    describe('the read-time fold', () => {
+      it('reads unknown for a server nothing has probed, and never throws', () => {
+        expect(serverStore.presenceFor('never-probed')).toBe('unknown');
+        expect(serverStore.isProbing('never-probed')).toBe(false);
+      });
+
+      it.each([
+        ['unknown', undefined, 'unknown'],
+        ['unknown', true, 'unknown'],
+        ['reachable', true, 'asleep'],
+        ['reachable', false, 'reachable'],
+        ['reachable', undefined, 'reachable'],
+        ['unreachable', true, 'unreachable'],
+      ])(
+        'folds reachability %s with a sleeping flag of %p into %s',
+        (reachability, sleeping, expected) => {
+          mockedReadServerIsSleeping.mockReturnValue(sleeping);
+          runInAction(() => {
+            serverStore.serverPresence = {
+              s1: {reachability: reachability as any, probing: false},
+            };
+          });
+
+          expect(serverStore.presenceFor('s1')).toBe(expected);
+        },
+      );
+    });
+
+    describe('probeServerPresence', () => {
+      it('records a reachable answer and clears probing', async () => {
+        const id = addServer();
+        mockedProbeReachability.mockResolvedValue('reachable');
+
+        await serverStore.probeServerPresence(id, {reason: 'user'});
+
+        expect(serverStore.presenceFor(id)).toBe('reachable');
+        expect(serverStore.isProbing(id)).toBe(false);
+      });
+
+      it('calls a server that answered 401 reachable, because it answered', async () => {
+        const id = addServer();
+        mockedProbeReachability.mockResolvedValue('reachable');
+
+        await serverStore.probeServerPresence(id, {reason: 'detached'});
+
+        expect(serverStore.presenceFor(id)).toBe('reachable');
+      });
+
+      it('reports probing while the request is in flight', async () => {
+        const id = addServer();
+        let settle: (value: string) => void = () => {};
+        mockedProbeReachability.mockReturnValue(
+          new Promise(resolve => {
+            settle = resolve;
+          }),
+        );
+
+        const probe = serverStore.probeServerPresence(id, {reason: 'user'});
+        await Promise.resolve();
+        expect(serverStore.isProbing(id)).toBe(true);
+
+        settle('unreachable');
+        await probe;
+        expect(serverStore.isProbing(id)).toBe(false);
+        expect(serverStore.presenceFor(id)).toBe('unreachable');
+      });
+
+      it('is single-flight: a second call joins the first request', async () => {
+        const id = addServer();
+        mockedProbeReachability.mockResolvedValue('reachable');
+
+        await Promise.all([
+          serverStore.probeServerPresence(id, {reason: 'user'}),
+          serverStore.probeServerPresence(id, {reason: 'user'}),
+        ]);
+
+        expect(mockedProbeReachability).toHaveBeenCalledTimes(1);
+      });
+
+      it('forwards the raw timeout for a user-initiated probe', async () => {
+        const id = addServer({requestTimeoutMs: 600000});
+        mockedProbeReachability.mockResolvedValue('reachable');
+
+        await serverStore.probeServerPresence(id, {reason: 'user'});
+
+        expect(mockedProbeReachability.mock.calls[0][1].timeoutMs).toBe(600000);
+      });
+
+      it('clamps a detached probe, so one black-holing host cannot swallow every tick', async () => {
+        const id = addServer({requestTimeoutMs: 600000});
+        mockedProbeReachability.mockResolvedValue('reachable');
+
+        await serverStore.probeServerPresence(id, {reason: 'detached'});
+
+        expect(mockedProbeReachability.mock.calls[0][1].timeoutMs).toBe(
+          PROPS_TIMEOUT_MS,
+        );
+      });
+
+      it('discards its answer when the url moved while it was in flight', async () => {
+        const id = addServer();
+        let settle: (value: string) => void = () => {};
+        mockedProbeReachability.mockReturnValue(
+          new Promise(resolve => {
+            settle = resolve;
+          }),
+        );
+
+        const probe = serverStore.probeServerPresence(id, {reason: 'user'});
+        await Promise.resolve();
+        serverStore.updateServer(id, {url: 'http://elsewhere:9931'});
+        settle('reachable');
+        await probe;
+
+        expect(serverStore.presenceFor(id)).toBe('unknown');
+      });
+
+      it('discards its answer when the server was removed while it was in flight', async () => {
+        const id = addServer();
+        let settle: (value: string) => void = () => {};
+        mockedProbeReachability.mockReturnValue(
+          new Promise(resolve => {
+            settle = resolve;
+          }),
+        );
+
+        const probe = serverStore.probeServerPresence(id, {reason: 'user'});
+        await Promise.resolve();
+        serverStore.removeServer(id);
+        settle('reachable');
+        await probe;
+
+        expect(serverStore.presenceFor(id)).toBe('unknown');
+      });
+    });
+
+    describe('the model-fetch promotion', () => {
+      it('promotes a server to reachable without a probe', async () => {
+        const id = addServer();
+        mockedFetchModels.mockResolvedValue([]);
+
+        await serverStore.fetchModelsForServer(id);
+
+        expect(serverStore.presenceFor(id)).toBe('reachable');
+      });
+
+      it('never demotes on a failed fetch, which cannot tell refusal from a dead socket', async () => {
+        const id = addServer();
+        runInAction(() => {
+          serverStore.serverPresence = {
+            [id]: {reachability: 'reachable', probing: false, checkedAt: 1},
+          };
+        });
+        mockedFetchModels.mockRejectedValue(new Error('Connection timed out'));
+
+        await serverStore.fetchModelsForServer(id);
+
+        expect(serverStore.presenceFor(id)).toBe('reachable');
+      });
+
+      it('discards its promotion when the url moved while the fetch was in flight', async () => {
+        const id = addServer();
+        let settle: (value: unknown) => void = () => {};
+        mockedFetchModels.mockReturnValue(
+          new Promise(resolve => {
+            settle = resolve;
+          }),
+        );
+
+        const fetching = serverStore.fetchModelsForServer(id);
+        await Promise.resolve();
+        serverStore.updateServer(id, {url: 'http://elsewhere:9931'});
+        settle([]);
+        await fetching;
+
+        expect(serverStore.presenceFor(id)).toBe('unknown');
+        expect(serverStore.serverModels.get(id)).toBeUndefined();
+      });
+
+      it('outranks an older probe that settles unreachable after it, from an empty baseline', async () => {
+        const id = addServer();
+        let settleProbe: (value: string) => void = () => {};
+        mockedProbeReachability.mockReturnValue(
+          new Promise(resolve => {
+            settleProbe = resolve;
+          }),
+        );
+        mockedFetchModels.mockResolvedValue([]);
+
+        const probe = serverStore.probeServerPresence(id, {reason: 'detached'});
+        await Promise.resolve();
+        await serverStore.fetchModelsForServer(id);
+        expect(serverStore.presenceFor(id)).toBe('reachable');
+
+        settleProbe('unreachable');
+        await probe;
+
+        expect(serverStore.presenceFor(id)).toBe('reachable');
+      });
+    });
+
+    describe('pruning', () => {
+      it('drops the entry when the server is removed', async () => {
+        const id = addServer();
+        mockedProbeReachability.mockResolvedValue('reachable');
+        await serverStore.probeServerPresence(id, {reason: 'user'});
+
+        serverStore.removeServer(id);
+
+        expect(serverStore.presenceFor(id)).toBe('unknown');
+      });
+
+      it('drops the entry when the serverType is edited, which repoints the probe', async () => {
+        const id = addServer();
+        mockedProbeReachability.mockResolvedValue('reachable');
+        await serverStore.probeServerPresence(id, {reason: 'user'});
+
+        serverStore.updateServer(id, {serverType: 'Ollama'});
+
+        expect(serverStore.presenceFor(id)).toBe('unknown');
+      });
     });
   });
 });
