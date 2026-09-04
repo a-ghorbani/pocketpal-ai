@@ -3,10 +3,12 @@
  */
 
 import type {HubRunRequest} from '../../src/services/hubRunLink';
+import type {PairingRequest} from '../../src/services/pairingLink';
 
 export class DeepLinkStore {
   pendingMessage: string | null = null;
   pendingHubRun: HubRunRequest | null = null;
+  pendingPairing: PairingRequest | null = null;
 
   setPendingMessage = jest.fn((message: string | null) => {
     this.pendingMessage = message;
@@ -22,6 +24,14 @@ export class DeepLinkStore {
 
   clearPendingHubRun = jest.fn(() => {
     this.pendingHubRun = null;
+  });
+
+  setPendingPairing = jest.fn((request: PairingRequest | null) => {
+    this.pendingPairing = request;
+  });
+
+  clearPendingPairing = jest.fn(() => {
+    this.pendingPairing = null;
   });
 }
 

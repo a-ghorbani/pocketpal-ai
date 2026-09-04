@@ -77,7 +77,11 @@ describe('useDeepLinking — hub/run dispatch', () => {
     await Promise.resolve();
 
     expect(registeredHandler).toBeDefined();
-    await registeredHandler!({host: 'hub', url: VALID_URL});
+    await registeredHandler!({
+      scheme: 'pocketpal',
+      host: 'hub',
+      url: VALID_URL,
+    });
 
     expect(deepLinkStore.setPendingHubRun).toHaveBeenCalledWith({
       repoId: 'author/model',
@@ -97,6 +101,7 @@ describe('useDeepLinking — hub/run dispatch', () => {
     await Promise.resolve();
 
     await registeredHandler!({
+      scheme: 'pocketpal',
       host: 'hub',
       url: 'pocketpal://hub/run?filename=x.gguf', // missing repo_id
     });
@@ -111,6 +116,7 @@ describe('useDeepLinking — hub/run dispatch', () => {
     await Promise.resolve();
 
     await registeredHandler!({
+      scheme: 'pocketpal',
       host: 'hub',
       url: 'pocketpal://hub/run?repo_id=author/model&source=hf',
     });
