@@ -91,6 +91,7 @@ class MockModelStore {
   enterBenchmarkMode: jest.Mock;
   exitBenchmarkMode: jest.Mock;
   recordReasoningObserved: jest.Mock;
+  probeActiveRemoteServer: jest.Mock;
   setReasoningOverride: jest.Mock;
   benchmarkActive: boolean = false;
   isContextLoading: boolean = false;
@@ -145,6 +146,7 @@ class MockModelStore {
       enterBenchmarkMode: false,
       exitBenchmarkMode: false,
       recordReasoningObserved: false,
+      probeActiveRemoteServer: false,
       setReasoningOverride: false,
       contextId: computed,
       lastUsedModel: computed,
@@ -225,6 +227,7 @@ class MockModelStore {
     this.enterBenchmarkMode = jest.fn().mockResolvedValue(undefined);
     this.exitBenchmarkMode = jest.fn();
     this.recordReasoningObserved = jest.fn();
+    this.probeActiveRemoteServer = jest.fn();
     // Mirror the real writer so tests exercise the live override → resolver →
     // pill reactive chain. Local ids mutate Model.reasoning on the observable
     // model; remote ids route to ServerStore (kept as a spy fallback here).

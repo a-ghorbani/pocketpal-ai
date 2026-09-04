@@ -6085,4 +6085,178 @@ describe('ModelStore', () => {
       });
     });
   });
+  describe('presence watch', () => {
+    const SERVER_ID = 'srv-watch';
+
+    const setPresence = (
+      reachability: 'unknown' | 'reachable' | 'unreachable',
+    ) =>
+      runInAction(() => {
+        serverStore.serverPresence = {
+          [SERVER_ID]: {reachability, probing: false, checkedAt: Date.now()},
+        };
+      });
+
+    let probeSpy: jest.SpyInstance;
+
+    beforeEach(() => {
+      jest.useFakeTimers();
+      probeSpy = jest
+        .spyOn(serverStore, 'probeServerPresence')
+        .mockImplementation(async () => {
+          setPresence('unreachable');
+        });
+      runInAction(() => {
+        modelStore.appState = 'active';
+        modelStore.presenceWatchFailures = 0;
+        serverStore.serverPresence = {};
+        modelStore.activeRemoteBinding = {
+          modelId: `${SERVER_ID}/m1`,
+          serverId: SERVER_ID,
+          remoteModelId: 'm1',
+          url: 'http://host:9931',
+        };
+      });
+    });
+
+    afterEach(() => {
+      runInAction(() => {
+        modelStore.activeRemoteBinding = undefined;
+        modelStore.presenceWatchFailures = 0;
+        serverStore.serverPresence = {};
+      });
+      jest.clearAllTimers();
+      jest.useRealTimers();
+      probeSpy.mockRestore();
+    });
+
+    /** Advance to the next tick and let its probe settle. */
+    const runNextTick = async (delayMs: number) => {
+      jest.advanceTimersByTime(delayMs);
+      await Promise.resolve();
+      await Promise.resolve();
+    };
+
+    it('backs off, then stops once the server answers', async () => {
+      setPresence('unreachable');
+
+      await runNextTick(2000);
+      expect(probeSpy).toHaveBeenCalledTimes(1);
+      expect(modelStore.presenceWatchFailures).toBe(1);
+
+      await runNextTick(5000);
+      expect(probeSpy).toHaveBeenCalledTimes(2);
+      expect(modelStore.presenceWatchFailures).toBe(2);
+
+      probeSpy.mockImplementation(async () => {
+        setPresence('reachable');
+      });
+      await runNextTick(10000);
+
+      expect(modelStore.presenceWatchFailures).toBe(0);
+      expect(modelStore.presenceWatchTimer).toBeNull();
+    });
+
+    it('waits the backoff interval and not less', async () => {
+      setPresence('unreachable');
+
+      await runNextTick(1999);
+      expect(probeSpy).not.toHaveBeenCalled();
+
+      await runNextTick(1);
+      expect(probeSpy).toHaveBeenCalledTimes(1);
+    });
+
+    it('does not run while the server is reachable', async () => {
+      setPresence('reachable');
+
+      await runNextTick(60000);
+
+      expect(probeSpy).not.toHaveBeenCalled();
+    });
+
+    it('cancels on background and re-probes on foreground', async () => {
+      setPresence('unreachable');
+      await runNextTick(2000);
+      probeSpy.mockClear();
+
+      runInAction(() => {
+        modelStore.appState = 'background';
+      });
+      expect(modelStore.presenceWatchTimer).toBeNull();
+
+      await runNextTick(60000);
+      expect(probeSpy).not.toHaveBeenCalled();
+
+      await modelStore.handleAppStateChange('active');
+      expect(probeSpy).toHaveBeenCalled();
+    });
+
+    it('stops after ten consecutive failures rather than polling forever', async () => {
+      setPresence('unreachable');
+
+      for (let i = 0; i < 12; i++) {
+        await runNextTick(30000);
+      }
+
+      expect(modelStore.presenceWatchFailures).toBe(10);
+      expect(probeSpy).toHaveBeenCalledTimes(10);
+      expect(modelStore.presenceWatchTimer).toBeNull();
+    });
+
+    it('recovers from the cap: a reachable answer zeroes the counter and the next failure re-arms', async () => {
+      setPresence('unreachable');
+      for (let i = 0; i < 12; i++) {
+        await runNextTick(30000);
+      }
+      expect(modelStore.presenceWatchTimer).toBeNull();
+
+      // A retry or a foreground probe answers.
+      setPresence('reachable');
+      expect(modelStore.presenceWatchFailures).toBe(0);
+      expect(modelStore.presenceWatchTimer).toBeNull();
+
+      // The watch is alive again rather than dead for the session.
+      setPresence('unreachable');
+      expect(modelStore.presenceWatchTimer).not.toBeNull();
+
+      probeSpy.mockClear();
+      await runNextTick(2000);
+      expect(probeSpy).toHaveBeenCalledTimes(1);
+    });
+
+    it('zeroes the counter when the bound model changes', async () => {
+      setPresence('unreachable');
+      await runNextTick(2000);
+      expect(modelStore.presenceWatchFailures).toBe(1);
+
+      runInAction(() => {
+        modelStore.activeRemoteBinding = {
+          modelId: 'other/m2',
+          serverId: 'other',
+          remoteModelId: 'm2',
+          url: 'http://other:9931',
+        };
+      });
+
+      expect(modelStore.presenceWatchFailures).toBe(0);
+    });
+
+    it('stops when the remote binding clears', async () => {
+      setPresence('unreachable');
+      await runNextTick(2000);
+
+      runInAction(() => {
+        modelStore.activeRemoteBinding = undefined;
+      });
+
+      expect(modelStore.presenceWatchTimer).toBeNull();
+    });
+
+    it('probes the bound server when a completion settles with an error', () => {
+      modelStore.probeActiveRemoteServer();
+
+      expect(probeSpy).toHaveBeenCalledWith(SERVER_ID, {reason: 'detached'});
+    });
+  });
 });

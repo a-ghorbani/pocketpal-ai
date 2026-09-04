@@ -5,7 +5,7 @@ import {v4 as uuidv4} from 'uuid';
 import 'react-native-get-random-values';
 import {makePersistable} from 'mobx-persist-store';
 import * as RNFS from '@dr.pogodin/react-native-fs';
-import {computed, makeAutoObservable, runInAction, toJS} from 'mobx';
+import {computed, makeAutoObservable, reaction, runInAction, toJS} from 'mobx';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import {ContextParams, LlamaContext, initLlama} from 'llama.rn';
 import {
@@ -153,6 +153,10 @@ function createRemoteModel(params: {
 const pairedDraftModel = (config?: DraftConfig): Model | undefined =>
   config?.mode === 'paired' ? config.draftModel : undefined;
 
+/** Watch backoff; the last entry repeats until the cap. */
+const PRESENCE_WATCH_BACKOFF_MS = [2000, 5000, 10000, 20000, 30000];
+const PRESENCE_WATCH_MAX_FAILURES = 10;
+
 class ModelStore {
   models: Model[] = [];
   version: number | undefined = undefined; // Persisted version
@@ -191,6 +195,12 @@ class ModelStore {
   engine: CompletionEngine | undefined = undefined;
 
   activeRemoteBinding: RemoteSessionBinding | undefined = undefined;
+
+  // Annotated `false` in makeAutoObservable: the watch's own bookkeeping,
+  // read imperatively and never a reaction input.
+  presenceWatchTimer: ReturnType<typeof setTimeout> | null = null;
+  presenceWatchFailures = 0;
+  private disposePresenceWatch: (() => void) | undefined = undefined;
 
   lastUsedModelId: string | undefined = undefined;
 
@@ -249,6 +259,8 @@ class ModelStore {
       contextId: computed,
       remoteModels: computed,
       activeDownloads: computed,
+      presenceWatchTimer: false,
+      presenceWatchFailures: false,
     });
     makePersistable(this, {
       name: 'ModelStore',
@@ -273,6 +285,7 @@ class ModelStore {
     });
 
     this.setupAppStateListener();
+    this.startPresenceWatch();
 
     // Set up download manager callbacks
     downloadManager.setCallbacks({
@@ -1138,6 +1151,7 @@ class ModelStore {
       // Coming to foreground - check if we need to reload auto-released model
       await this.checkAndReloadAutoReleasedModel();
       this.reprobeRemoteCapsIfUnknown();
+      this.probeActiveRemoteServer();
     } else if (this.appState === 'active' && nextAppState === 'inactive') {
       // active → inactive: NO action (per requirements)
       console.log('Active → Inactive: No auto-release action');
@@ -1186,6 +1200,111 @@ class ModelStore {
    * it cannot produce caps this session could use. The next activation
    * rebuilds the binding and probes the url it is built from.
    */
+  /**
+   * Re-probes the active remote model's server while it is not reachable, so a
+   * network coming back is noticed with no user action. It lives here because
+   * every gate it reads already does, and it only calls the store's probe —
+   * the write stays in ServerStore.
+   *
+   * The reaction covers the observable gates. The failure cap is read inside
+   * `syncPresenceWatch` instead, because the counter is deliberately not
+   * observable and each tick re-enters that method anyway.
+   */
+  private startPresenceWatch = (): void => {
+    this.disposePresenceWatch = reaction(
+      () => {
+        const serverId = this.activeRemoteBinding?.serverId;
+        return {
+          appState: this.appState,
+          modelId: this.activeRemoteBinding?.modelId,
+          serverId,
+          presence: serverId ? serverStore.presenceFor(serverId) : undefined,
+        };
+      },
+      (next, prev) => {
+        // Both resets run before the scheduler, not after: applied the other
+        // way round the counter is still at the cap when the gate is read, and
+        // the watch never restarts for the rest of the session.
+        if (
+          next.modelId !== prev?.modelId ||
+          next.serverId !== prev?.serverId
+        ) {
+          this.presenceWatchFailures = 0;
+        }
+        if (next.presence === 'reachable') {
+          this.presenceWatchFailures = 0;
+        }
+        this.syncPresenceWatch();
+      },
+    );
+  };
+
+  /** The single start/stop site for the watch timer. */
+  private syncPresenceWatch = (): void => {
+    const serverId = this.activeRemoteBinding?.serverId;
+    const shouldWatch =
+      this.appState === 'active' &&
+      serverId !== undefined &&
+      serverStore.presenceFor(serverId) !== 'reachable' &&
+      this.presenceWatchFailures < PRESENCE_WATCH_MAX_FAILURES;
+
+    if (!shouldWatch) {
+      this.clearPresenceWatch();
+      return;
+    }
+    if (this.presenceWatchTimer !== null) {
+      return;
+    }
+
+    const delay =
+      PRESENCE_WATCH_BACKOFF_MS[
+        Math.min(
+          this.presenceWatchFailures,
+          PRESENCE_WATCH_BACKOFF_MS.length - 1,
+        )
+      ];
+    // The handle stays set for the whole tick, not just until it fires, so it
+    // reads as "a tick is scheduled or running". Cleared once, in the tick's
+    // finally — otherwise a presence write made by the probe re-arms through
+    // the reaction before the failure is counted, and the cap never closes.
+    this.presenceWatchTimer = setTimeout(() => {
+      this.runPresenceWatchTick(serverId).catch(() => {});
+    }, delay);
+  };
+
+  private clearPresenceWatch = (): void => {
+    if (this.presenceWatchTimer !== null) {
+      clearTimeout(this.presenceWatchTimer);
+      this.presenceWatchTimer = null;
+    }
+  };
+
+  private runPresenceWatchTick = async (serverId: string): Promise<void> => {
+    try {
+      await serverStore.probeServerPresence(serverId, {reason: 'detached'});
+      if (serverStore.presenceFor(serverId) === 'unreachable') {
+        this.presenceWatchFailures += 1;
+      }
+    } finally {
+      this.presenceWatchTimer = null;
+      this.syncPresenceWatch();
+    }
+  };
+
+  /**
+   * Re-checks the bound server, detached. Called on foreground and when a
+   * remote completion settles with an error.
+   */
+  probeActiveRemoteServer = (): void => {
+    const serverId = this.activeRemoteBinding?.serverId;
+    if (!serverId) {
+      return;
+    }
+    serverStore
+      .probeServerPresence(serverId, {reason: 'detached'})
+      .catch(() => {});
+  };
+
   private reprobeRemoteCapsIfUnknown = () => {
     const model = this.activeModel;
     if (
@@ -2685,8 +2804,12 @@ class ModelStore {
       // Do NOT set lastUsedModelId for remote models -- server may be offline on next launch
     });
 
+    serverStore.recordLastUsedRemoteModel(model.serverId, model.remoteModelId);
     serverStore
       .fetchRemoteModelCaps(model.serverId, model.remoteModelId, apiKey)
+      .catch(() => {});
+    serverStore
+      .probeServerPresence(model.serverId, {reason: 'detached'})
       .catch(() => {});
   };
 
