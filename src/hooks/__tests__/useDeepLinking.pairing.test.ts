@@ -12,6 +12,7 @@ import {renderHook} from '@testing-library/react-native';
 
 import {useDeepLinking} from '../useDeepLinking';
 import {deepLinkStore} from '../../store';
+import {ROUTES} from '../../utils/navigationConstants';
 
 const mockNavigate = jest.fn();
 
@@ -97,7 +98,7 @@ describe('useDeepLinking — llama:// pairing', () => {
   };
 
   describe('the dispatcher path', () => {
-    it('parks a pairing link and opens nothing itself', () => {
+    it('parks a pairing link and goes to the screen that hosts the sheet', () => {
       renderHook(() => useDeepLinking());
 
       registeredHandler!(
@@ -111,7 +112,7 @@ describe('useDeepLinking — llama:// pairing', () => {
         apiKey: 'sk-x',
         name: undefined,
       });
-      expect(mockNavigate).not.toHaveBeenCalled();
+      expect(mockNavigate).toHaveBeenCalledWith(ROUTES.MODELS);
       expect(deepLinkStore.setPendingHubRun).not.toHaveBeenCalled();
     });
 
@@ -160,7 +161,7 @@ describe('useDeepLinking — llama:// pairing', () => {
   });
 
   describe('the raw Linking path, which never enters the dispatcher', () => {
-    it('parks a warm pairing link', () => {
+    it('parks a warm pairing link and goes to the same screen', () => {
       renderHook(() => useDeepLinking());
 
       deliverWarm('llama://192.168.1.5:9931');
@@ -168,6 +169,7 @@ describe('useDeepLinking — llama:// pairing', () => {
       expect(deepLinkStore.setPendingPairing).toHaveBeenCalledWith({
         url: 'http://192.168.1.5:9931',
       });
+      expect(mockNavigate).toHaveBeenCalledWith(ROUTES.MODELS);
     });
 
     it('does not let llama://hub/run through isHubLink', () => {
@@ -178,12 +180,13 @@ describe('useDeepLinking — llama:// pairing', () => {
       expect(deepLinkStore.setPendingHubRun).not.toHaveBeenCalled();
     });
 
-    it('ignores an unrecognised link without alerting', () => {
+    it('ignores an unrecognised link without alerting or navigating', () => {
       renderHook(() => useDeepLinking());
 
       deliverWarm('llama://');
 
       expect(deepLinkStore.setPendingPairing).not.toHaveBeenCalled();
+      expect(mockNavigate).not.toHaveBeenCalled();
       expect(alertSpy).not.toHaveBeenCalled();
     });
 

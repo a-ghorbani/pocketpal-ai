@@ -84,14 +84,20 @@ export const useDeepLinking = () => {
     deepLinkStore.setPendingHubRun(request);
   }, []);
 
-  // Parks a valid pairing payload for the sheet host. An unrecognised link is
-  // ignored silently, and nothing else is written until the user confirms.
-  const handlePairingLink = useCallback((url: string) => {
-    const request = parsePairingURL(url);
-    if (request) {
-      deepLinkStore.setPendingPairing(request);
-    }
-  }, []);
+  // Parks a valid pairing payload and goes to the screen that hosts the sheet,
+  // which also owns the model picker the user lands in once a server is added.
+  // An unrecognised link is ignored silently, and nothing else is written until
+  // the user confirms.
+  const handlePairingLink = useCallback(
+    (url: string) => {
+      const request = parsePairingURL(url);
+      if (request) {
+        deepLinkStore.setPendingPairing(request);
+        (navigation as any).navigate(ROUTES.MODELS);
+      }
+    },
+    [navigation],
+  );
 
   const handleDeepLink = useCallback(
     async (params: DeepLinkParams) => {
