@@ -8,7 +8,11 @@
 
 import React from 'react';
 import {runInAction} from 'mobx';
-import {useCameraDevice, useCodeScanner} from 'react-native-vision-camera';
+import {
+  useCameraDevice,
+  useCameraPermission,
+  useCodeScanner,
+} from 'react-native-vision-camera';
 
 import {render, fireEvent, waitFor, act} from '../../../../jest/test-utils';
 import {serverStore} from '../../../store';
@@ -16,6 +20,7 @@ import * as openai from '../../../api/openai';
 import {PairServerSheet} from '../PairServerSheet';
 
 const mockUseCameraDevice = useCameraDevice as jest.Mock;
+const mockUseCameraPermission = useCameraPermission as jest.Mock;
 const mockUseCodeScanner = useCodeScanner as jest.Mock;
 
 const QR_PAYLOAD = 'http://192.168.1.5:9931/';
@@ -50,9 +55,20 @@ const scan = async (value: string) => {
 
 describe('PairServerSheet', () => {
   let probeSpy: jest.SpyInstance;
+  let requestPermission: jest.Mock;
+
+  /** vision-camera reports only granted/not-granted; everything else is manual. */
+  const grantCamera = (granted: boolean) => {
+    requestPermission = jest.fn().mockResolvedValue(granted);
+    mockUseCameraPermission.mockReturnValue({
+      hasPermission: granted,
+      requestPermission,
+    });
+  };
 
   beforeEach(() => {
     jest.clearAllMocks();
+    grantCamera(true);
     mockUseCameraDevice.mockReturnValue({id: 'back'});
     mockUseCodeScanner.mockImplementation(() => ({}));
     probeSpy = jest.spyOn(openai, 'probePairingTarget');
@@ -227,7 +243,44 @@ describe('PairServerSheet', () => {
     });
   });
 
-  describe('a device with no camera', () => {
+  describe('camera availability', () => {
+    it('asks for camera access when the sheet opens without it', async () => {
+      grantCamera(false);
+      renderSheet();
+
+      await waitFor(() => {
+        expect(requestPermission).toHaveBeenCalled();
+      });
+    });
+
+    it('never mounts the camera without access, and pairs by hand instead', async () => {
+      grantCamera(false);
+      probeSpy.mockResolvedValue(usable(2));
+      const onPaired = jest.fn();
+      const root = renderSheet({onPaired});
+
+      await waitFor(() => {
+        expect(root.getByTestId('pair-server-camera-denied')).toBeTruthy();
+      });
+      expect(root.queryByTestId('pair-server-camera')).toBeNull();
+      expect(root.queryByTestId('pair-server-no-camera')).toBeNull();
+
+      await act(async () => {
+        fireEvent.changeText(
+          root.getByTestId('pair-server-url'),
+          'http://192.168.1.5:9931',
+        );
+      });
+      await pressButton(root, 'pair-server-continue');
+
+      await waitFor(() => {
+        expect(root.getByTestId('pair-server-models')).toBeTruthy();
+      });
+      await pressButton(root, 'pair-server-add');
+
+      expect(onPaired).toHaveBeenCalledWith('mock-server-id');
+    });
+
     it('opens on manual entry and still completes a pairing', async () => {
       mockUseCameraDevice.mockReturnValue(undefined);
       probeSpy.mockResolvedValue(usable(2));
@@ -235,6 +288,7 @@ describe('PairServerSheet', () => {
       const root = renderSheet({onPaired});
 
       expect(root.getByTestId('pair-server-no-camera')).toBeTruthy();
+      expect(root.queryByTestId('pair-server-camera-denied')).toBeNull();
 
       await act(async () => {
         fireEvent.changeText(

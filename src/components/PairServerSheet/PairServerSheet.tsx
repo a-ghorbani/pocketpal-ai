@@ -6,6 +6,7 @@ import {ActivityIndicator, Button, Text} from 'react-native-paper';
 import {
   Camera,
   useCameraDevice,
+  useCameraPermission,
   useCodeScanner,
 } from 'react-native-vision-camera';
 
@@ -39,6 +40,9 @@ export const PairServerSheet: React.FC<PairServerSheetProps> = observer(
     const styles = createStyles(theme);
 
     const device = useCameraDevice('back');
+    const {hasPermission, requestPermission} = useCameraPermission();
+    const [permissionSettled, setPermissionSettled] = useState(false);
+    const canScan = hasPermission && device != null;
 
     const [state, setState] = useState<SheetState>('scanning');
     const [url, setUrl] = useState('');
@@ -83,6 +87,25 @@ export const PairServerSheet: React.FC<PairServerSheetProps> = observer(
       if (!isVisible) {
         return;
       }
+      if (hasPermission) {
+        setPermissionSettled(true);
+        return;
+      }
+      let abandoned = false;
+      requestPermission().finally(() => {
+        if (!abandoned) {
+          setPermissionSettled(true);
+        }
+      });
+      return () => {
+        abandoned = true;
+      };
+    }, [isVisible, hasPermission, requestPermission]);
+
+    useEffect(() => {
+      if (!isVisible) {
+        return;
+      }
       setProbe(null);
       setIsProbing(false);
       setScanError(false);
@@ -94,8 +117,8 @@ export const PairServerSheet: React.FC<PairServerSheetProps> = observer(
       setUrl('');
       setName('');
       setApiKey('');
-      setState(device ? 'scanning' : 'manual');
-    }, [isVisible, request, device, accept]);
+      setState(canScan ? 'scanning' : 'manual');
+    }, [isVisible, request, canScan, accept]);
 
     const codeScanner = useCodeScanner({
       codeTypes: ['qr'],
@@ -149,6 +172,15 @@ export const PairServerSheet: React.FC<PairServerSheetProps> = observer(
     }, [probe, url, name, apiKey, onPaired, onDismiss]);
 
     const canAdd = probe?.outcome === 'usable' && !isProbing;
+
+    const manualHint = !device
+      ? {testID: 'pair-server-no-camera', text: l10n.models.pairServer.noCamera}
+      : permissionSettled
+        ? {
+            testID: 'pair-server-camera-denied',
+            text: l10n.models.pairServer.cameraDenied,
+          }
+        : null;
 
     const renderVerdict = () => {
       if (isProbing || !probe) {
@@ -224,7 +256,7 @@ export const PairServerSheet: React.FC<PairServerSheetProps> = observer(
         onClose={onDismiss}
         title={l10n.models.pairServer.title}>
         <Sheet.ScrollView contentContainerStyle={styles.body}>
-          {state === 'scanning' && device && (
+          {state === 'scanning' && canScan && (
             <>
               <View style={styles.camera}>
                 <Camera
@@ -245,9 +277,11 @@ export const PairServerSheet: React.FC<PairServerSheetProps> = observer(
 
           {state === 'manual' && (
             <>
-              <Text testID="pair-server-no-camera" style={styles.hint}>
-                {l10n.models.pairServer.noCamera}
-              </Text>
+              {manualHint && (
+                <Text testID={manualHint.testID} style={styles.hint}>
+                  {manualHint.text}
+                </Text>
+              )}
               <TextInput
                 testID="pair-server-url"
                 label={l10n.models.pairServer.urlLabel}

@@ -383,6 +383,7 @@
       "notAServerQr": "That code isn't a server address.",
       "manualEntry": "Enter the server address",
       "noCamera": "No camera is available on this device, so enter the address by hand.",
+      "cameraDenied": "Camera access is off. Allow it in Settings, or enter the address by hand.",
       "urlLabel": "Server address",
       "nameLabel": "Name (optional)",
       "apiKeyLabel": "API key (optional)",
