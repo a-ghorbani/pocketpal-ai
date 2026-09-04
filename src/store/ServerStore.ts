@@ -253,6 +253,7 @@ class ServerStore {
     if (invalidatesDiscovery) {
       this.remoteCaps = dropServerEntries(this.remoteCaps, id);
       this.serverModels.delete(id);
+      this.dropRouterState(id);
     }
   }
 
@@ -265,8 +266,41 @@ class ServerStore {
     );
     this.remoteReasoning = dropServerEntries(this.remoteReasoning, id);
     this.remoteCaps = dropServerEntries(this.remoteCaps, id);
+    this.dropRouterState(id);
     // Clean up API key from keychain
     this.removeApiKey(id);
+  }
+
+  /**
+   * An operation against a server that has been removed or repointed is
+   * abandoned rather than failed: it describes a backend that is no longer
+   * configured, so there is no outcome left to report about it.
+   */
+  private dropRouterState(serverId: string): void {
+    for (const key of Object.keys(this.routerOps)) {
+      if (this.routerOps[key].serverId === serverId) {
+        const waiter = this.routerOpWaiters.get(key);
+        this.routerOpWaiters.delete(key);
+        this.routerLoadPromises.delete(key);
+        waiter?.('failed');
+      }
+    }
+    this.routerEvents = dropServerEntries(this.routerEvents, serverId);
+    this.routerOps = dropServerEntries(this.routerOps, serverId);
+    this.routerReasons = dropServerEntries(this.routerReasons, serverId);
+    this.routerPolls.delete(serverId);
+    this.routerObservedEviction.delete(serverId);
+    delete this.routerStreamCap[serverId];
+    delete this.routerListShape[serverId];
+    delete this.routerLastPollAt[serverId];
+    this.routerPollInFlight.delete(serverId);
+    if (this.routerStream?.serverId === serverId) {
+      this.closeRouterStream();
+    }
+    if (this.routerFocusedServerId === serverId) {
+      this.routerFocusedServerId = null;
+    }
+    this.syncRouterTicker();
   }
 
   addUserSelectedModel(serverId: string, remoteModelId: string): void {

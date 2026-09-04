@@ -58,6 +58,7 @@ const mockedRouterDownload = routerDownload as jest.Mock;
 
 /** One of the captured router rows; the tests move it between states. */
 const TARGET = 'gemma-4-e2b';
+const UNLOADED_TARGET = 'ggml-org/gemma-4-31B-it-GGUF:Q8_0';
 const ROUTER_ACK_MS = 20000;
 const ROUTER_EVIDENCE_MS = 45000;
 const ROUTER_UNREACHABLE_MS = 90000;
@@ -117,6 +118,7 @@ const resetStore = () => {
     serverStore.routerStreamCap = {};
     serverStore.routerObservedEviction = new Set();
     serverStore.routerListShape = {};
+    serverStore.routerReasons = {};
   });
   // Through the action, so the poll bookkeeping it owns is cleared too.
   runInAction(() => serverStore.syncRouterTiers());
@@ -1071,5 +1073,99 @@ describe('downloading a model to the server', () => {
     for (const call of mockedFetch.mock.calls) {
       expect(String(call[0])).not.toContain('reload');
     }
+  });
+});
+
+describe('a server that is repointed or removed', () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+    jest.useFakeTimers();
+    resetStore();
+    mockedRouterLoad.mockResolvedValue({status: 200, body: {success: true}});
+  });
+
+  afterEach(() => {
+    jest.useRealTimers();
+  });
+
+  const busyRouter = async () => {
+    const id = addServer();
+    mockedFetch.mockResolvedValue(listResult(routerModelsBody.data, false));
+    await serverStore.fetchModelsForServer(id);
+    jest.advanceTimersByTime(1);
+    const pending = serverStore.ensureRouterModelLoaded(id, UNLOADED_TARGET);
+    await flush();
+    serverStore.applyRouterEvent(id, {
+      model: UNLOADED_TARGET,
+      event: 'status_change',
+      data: {status: 'loading'},
+    });
+    runInAction(() => {
+      serverStore.routerStreamCap[id] = 'present';
+      serverStore.routerObservedEviction.add(id);
+      serverStore.routerReasons[`${id}/other`] = {cause: 'load-failed'};
+    });
+    return {id, pending};
+  };
+
+  const leftBehind = (id: string) => ({
+    events: Object.keys(serverStore.routerEvents).filter(k =>
+      k.startsWith(`${id}/`),
+    ),
+    ops: Object.keys(serverStore.routerOps).filter(k => k.startsWith(`${id}/`)),
+    reasons: Object.keys(serverStore.routerReasons).filter(k =>
+      k.startsWith(`${id}/`),
+    ),
+    polls: serverStore.routerPolls.has(id),
+    cap: serverStore.routerStreamCap[id],
+    shape: serverStore.routerListShape[id],
+    eviction: serverStore.routerObservedEviction.has(id),
+  });
+
+  it.each([
+    [
+      'a new url',
+      (id: string) =>
+        serverStore.updateServer(id, {url: 'http://elsewhere:8080'}),
+    ],
+    [
+      'a new type',
+      (id: string) => serverStore.updateServer(id, {serverType: 'Ollama'}),
+    ],
+    ['removal', (id: string) => serverStore.removeServer(id)],
+  ])('leaves no router state behind after %s', async (_label, act) => {
+    const {id, pending} = await busyRouter();
+
+    act(id);
+
+    expect(leftBehind(id)).toEqual({
+      events: [],
+      ops: [],
+      reasons: [],
+      polls: false,
+      cap: undefined,
+      shape: undefined,
+      eviction: false,
+    });
+    // The waiter is released so nothing hangs, but no reason is recorded:
+    // there is no outcome to report about a backend that is no longer
+    // configured.
+    await expect(pending).resolves.toBe('failed');
+    expect(leftBehind(id).reasons).toEqual([]);
+  });
+
+  it("leaves another server's entries alone", async () => {
+    const {id} = await busyRouter();
+    const other = addServer();
+    runInAction(() => {
+      serverStore.routerEvents[`${other}/alpha`] = {
+        status: 'loaded',
+        at: Date.now(),
+      };
+    });
+
+    serverStore.removeServer(id);
+
+    expect(serverStore.routerEvents[`${other}/alpha`]).toBeDefined();
   });
 });
