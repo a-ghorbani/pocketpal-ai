@@ -1270,5 +1270,116 @@ describe('useChatSession — AssistantTurn integration', () => {
 
       errSpy.mockRestore();
     });
+
+    // The overflow paths never see a finished turn, so they pin `used` to the
+    // session's context window. A remote session leaves the local context
+    // settings unset, which is why reading the window from there suppressed
+    // this banner outright.
+    const overflowSession = (turnId: string, steps: any[]) => {
+      chatSessionStore.sessions = [
+        {
+          id: 'session-1',
+          title: '',
+          date: '',
+          messages: [
+            {
+              id: turnId,
+              type: 'assistant_turn',
+              author: assistant,
+              createdAt: Date.now(),
+              steps,
+              metadata: {copyable: true},
+            } as MessageType.AssistantTurn,
+          ],
+          completionSettings: {},
+          settingsSource: 'pal',
+        },
+      ] as any;
+      (
+        chatSessionStore.addMessageToCurrentSession as jest.Mock
+      ).mockImplementation(async (msg: any) => {
+        msg.id = turnId;
+      });
+    };
+
+    it('a prompt that overflows a remote window pins used to that window', async () => {
+      const errSpy = jest.spyOn(console, 'error').mockImplementation(() => {});
+      activateRemoteModel();
+      if (modelStore.context) {
+        modelStore.context.completion = jest
+          .fn()
+          .mockRejectedValueOnce(new Error('Context is full'));
+      }
+      const ref: {
+        current: {createdAt: number; id: string; sessionId: string} | null;
+      } = {current: null};
+      const {result} = renderHook(() =>
+        useChatSession(ref, textMessage.author, mockAssistant),
+      );
+      overflowSession('turn-remote-overflow', []);
+
+      await act(async () => {
+        await result.current.handleSendPress(textMessage);
+      });
+
+      const snapshot = (
+        chatSessionStore.recordCompletionSnapshot as jest.Mock
+      ).mock.calls.at(-1)![0];
+      expect(snapshot).toMatchObject({
+        used: REMOTE_WINDOW,
+        contextFull: true,
+        isRemote: true,
+      });
+      expect(resolveBannerVariant(snapshot, bannerInput()).variant).toBe(
+        'context-full',
+      );
+
+      // The window has to come from the probe: a remote session never
+      // populates the local context settings, so a snapshot sourced from
+      // those carries no count and the freshness gate rejects it.
+      expect(modelStore.activeContextSettings?.n_ctx).toBeUndefined();
+      expect(
+        resolveBannerVariant(
+          {...snapshot, used: modelStore.activeContextSettings?.n_ctx ?? 0},
+          bannerInput(),
+        ).variant,
+      ).not.toBe('context-full');
+
+      errSpy.mockRestore();
+    });
+
+    it('an overflow after partial output records the window on the turn', async () => {
+      const errSpy = jest.spyOn(console, 'error').mockImplementation(() => {});
+      activateRemoteModel();
+      if (modelStore.context) {
+        modelStore.context.completion = jest
+          .fn()
+          .mockRejectedValueOnce(new Error('Context is full'));
+      }
+      const ref: {
+        current: {createdAt: number; id: string; sessionId: string} | null;
+      } = {current: null};
+      const {result} = renderHook(() =>
+        useChatSession(ref, textMessage.author, mockAssistant),
+      );
+      overflowSession('turn-remote-overflow-partial', [{content: 'partial'}]);
+
+      await act(async () => {
+        await result.current.handleSendPress(textMessage);
+      });
+
+      const interruptedCall = (
+        chatSessionStore.updateMessage as jest.Mock
+      ).mock.calls.find(c => c[2]?.metadata?.interrupted === true);
+      expect(interruptedCall).toBeDefined();
+      const snapshot = interruptedCall![2].metadata.completionResult;
+      expect(snapshot.contextFull).toBe(true);
+      expect(snapshot.used).toBe(REMOTE_WINDOW);
+      expect(resolveBannerVariant(snapshot, bannerInput()).variant).toBe(
+        'context-full',
+      );
+
+      errSpy.mockRestore();
+    });
   });
 });
