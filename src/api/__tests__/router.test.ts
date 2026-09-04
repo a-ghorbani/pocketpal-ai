@@ -217,6 +217,30 @@ describe('openRouterEventStream', () => {
     expect(onClose).not.toHaveBeenCalled();
   });
 
+  // A close this caller asked for and a stream that ended by itself are
+  // byte-identical on the wire. A consumer that reopens on the second must not
+  // be handed the first, so they are separated here rather than downstream.
+  it('tells nobody about a close the caller asked for', () => {
+    const onClose = jest.fn();
+    const {handle, xhr} = open({onClose});
+
+    xhr.respondHead(authorizedControl.status);
+    handle.close();
+
+    expect(xhr.aborted).toBe(true);
+    expect(onClose).not.toHaveBeenCalled();
+  });
+
+  it('reports a stream that ended on its own', () => {
+    const onClose = jest.fn();
+    const {xhr} = open({onClose});
+
+    xhr.respondHead(authorizedControl.status);
+    xhr.finish();
+
+    expect(onClose).toHaveBeenCalledWith(undefined);
+  });
+
   it('closes once the byte budget is reached', () => {
     const onClose = jest.fn();
     const handle = openRouterEventStream(

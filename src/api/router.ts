@@ -39,7 +39,12 @@ export class RouterStreamError extends Error {
 export interface RouterStreamHandlers {
   onOpen?: () => void;
   onEvent?: (payload: any) => void;
-  /** Terminal. `error` is absent when the stream ended without an HTTP failure. */
+  /**
+   * Terminal, and only for an ending nobody here asked for: `error` is absent
+   * when the stream ended without an HTTP failure. `close()` is the caller's
+   * own decision and never arrives as this, so a consumer that reopens on a
+   * stream ending cannot be made to reopen the one it just closed.
+   */
   onClose?: (error?: RouterStreamError) => void;
 }
 
@@ -155,9 +160,10 @@ export function openRouterEventStream(
     timers.length = 0;
   };
 
-  const settle = (error?: RouterStreamError) => {
+  /** Stop the request and its timers. Tells nobody: the caller is here. */
+  const teardown = (): boolean => {
     if (settled) {
-      return;
+      return false;
     }
     settled = true;
     clearTimers();
@@ -166,7 +172,14 @@ export function openRouterEventStream(
     } catch {
       // The request may already be finished; nothing to unwind.
     }
-    handlers.onClose?.(error);
+    return true;
+  };
+
+  /** The stream ended on its own — by failure, by budget, or by the server. */
+  const ended = (error?: RouterStreamError) => {
+    if (teardown()) {
+      handlers.onClose?.(error);
+    }
   };
 
   const consume = () => {
@@ -181,7 +194,7 @@ export function openRouterEventStream(
       }
     }
     if (options.maxBytes !== undefined && text.length >= options.maxBytes) {
-      settle();
+      ended();
     }
   };
 
@@ -189,13 +202,13 @@ export function openRouterEventStream(
     timers.push(
       setTimeout(() => {
         if (!opened) {
-          settle(new RouterStreamError('Connection timed out'));
+          ended(new RouterStreamError('Connection timed out'));
         }
       }, options.connectTimeoutMs),
     );
   }
   if (options.maxDurationMs !== undefined) {
-    timers.push(setTimeout(() => settle(), options.maxDurationMs));
+    timers.push(setTimeout(() => ended(), options.maxDurationMs));
   }
 
   xhr.onreadystatechange = () => {
@@ -220,7 +233,7 @@ export function openRouterEventStream(
       } catch {
         body = null;
       }
-      settle(
+      ended(
         new RouterStreamError(
           routerErrorMessage(body) ?? `Server error: ${xhr.status}`,
           xhr.status,
@@ -246,12 +259,12 @@ export function openRouterEventStream(
           handlers.onEvent?.(event);
         }
       }
-      settle();
+      ended();
     }
   };
 
-  xhr.onerror = () => settle(new RouterStreamError('Stream failed'));
-  xhr.ontimeout = () => settle(new RouterStreamError('Stream timed out'));
+  xhr.onerror = () => ended(new RouterStreamError('Stream failed'));
+  xhr.ontimeout = () => ended(new RouterStreamError('Stream timed out'));
 
   xhr.open('GET', `${routerBase(serverUrl)}/models/sse`);
   for (const [key, value] of Object.entries(buildHeaders(apiKey))) {
@@ -260,5 +273,9 @@ export function openRouterEventStream(
   xhr.setRequestHeader('Accept', 'text/event-stream');
   xhr.send();
 
-  return {close: () => settle()};
+  return {
+    close: () => {
+      teardown();
+    },
+  };
 }
