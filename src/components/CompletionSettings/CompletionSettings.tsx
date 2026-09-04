@@ -63,6 +63,12 @@ export const CompletionSettings: React.FC<Props> = ({
     if (serverValue === undefined) {
       return null;
     }
+    // A server run with `--top-k 0` reports a default this app's own range
+    // rejects. Offering it would produce a one-tap write that Save then refuses.
+    const rule = COMPLETION_PARAMS_METADATA[name]?.validation;
+    if (rule && !validateNumericField(serverValue, rule).isValid) {
+      return null;
+    }
     const current = Number(settings[name]);
     const matches =
       tolerance > 0

@@ -160,6 +160,27 @@ describe('CompletionSettings', () => {
       expect(onChange).toHaveBeenCalledWith('min_p', 0.05);
     });
 
+    it('withholds a reported default the app would refuse on save', () => {
+      const onChange = jest.fn();
+      const {queryByTestId, getByTestId} = render(
+        <CompletionSettings
+          settings={{...mockCompletionParams, top_k: 40, min_p: 0.3}}
+          onChange={onChange}
+          serverDefaults={{top_k: 0, min_p: 0.05}}
+        />,
+      );
+
+      // `--top-k 0` is how llama.cpp disables top-k; this app's range starts
+      // at 1, so offering it would produce a tap that Save then rejects.
+      expect(queryByTestId('top_k-server-default-reset')).toBeNull();
+      expect(queryByTestId('top_k-server-default')).toBeNull();
+
+      // Same render, an in-range default on another control still offered —
+      // so the absence above is the rule firing, not the whole row failing.
+      fireEvent.press(getByTestId('min_p-server-default-reset'));
+      expect(onChange).toHaveBeenCalledWith('min_p', 0.05);
+    });
+
     it('compares a discrete control exactly', () => {
       const onDefault = render(
         <CompletionSettings
