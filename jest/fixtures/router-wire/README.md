@@ -1,6 +1,6 @@
 # Router-mode wire captures
 
-Unedited responses and event streams from a live `llama-server` in router mode,
+Responses and event streams captured from a live `llama-server` in router mode,
 build **b9976 (`e3546c794`)**, taken in an isolated sandbox on loopback with
 three CPU-only presets, two tiny models and one deliberately corrupt `.gguf`.
 
@@ -10,16 +10,35 @@ the `download_progress` URL map, what `POST /models` returns for a repository
 that does not exist, and what the two terminal download events mean. A fixture
 transcribed from that document encodes its errors and passes.
 
-## What was captured, and what was left out
+## What was captured, what was redacted, and what was left out
 
-Every retained line is byte-for-byte as it arrived, headers included where the
-capture was taken with `curl -i`, because key ordering, content types and fields
-that appear on only some builds are all evidence and none of them is knowably
-unimportant in advance. Host-identifying values inside `status.args` were **not**
-rewritten: the sandbox ran on loopback with no host-identifying paths beyond a
-checkout directory.
+Retained lines are as they arrived, headers included where the capture was taken
+with `curl -i`, because key ordering, content types and fields that appear on
+only some builds are all evidence and none of them is knowably unimportant in
+advance — with the one exception below.
 
-Eleven of the twelve files are complete. `sse-download-sequence.txt` selects
+**Redacted.** Three files carried absolute paths belonging to the capture host,
+and those paths are replaced: the directory the binary ran from becomes
+`/bin/llama-server`, and the directory the weights sat in becomes
+`/models/<name>.gguf`. That reaches `status.args` and the `status.preset` string
+in `router-v1-models.json`, and — a single-model server names its model by its
+path — `models[].name`, `models[].model`, `data[].id` and `data[].aliases` in
+`direct-v1-models.json` and `direct-models-endpoint.json`. Nothing else is
+rewritten: `--host 127.0.0.1` and `--port 0` are what the server reported, and
+the other nine files carry no host-identifying value at all — the only absolute
+paths left in them are content types, Hugging Face repository ids and one
+`huggingface.co` download URL.
+
+**What the redaction preserves**, which is what keeps these usable as evidence:
+every key, every type, every nesting level, and every array element in its
+original position. `args` is a flat array in which a flag and its value are
+adjacent by position, so an edit that dropped an element, merged two or moved
+one would quietly change what the parser sees — each replaced element is
+replaced in place by exactly one element. That is the standard
+`jest/fixtures/remoteModelList.ts` states for its own redactions, and these
+files are held to it.
+
+**Left out.** Only one file omits anything. `sse-download-sequence.txt` selects
 **rows** from a 112-event stream: all nine non-`download_progress` events, each
 of which is a distinct outcome, plus three of the 103 `download_progress` ticks
 — the first (`done: 0`), one mid-sequence, and the last (`done == total`).
