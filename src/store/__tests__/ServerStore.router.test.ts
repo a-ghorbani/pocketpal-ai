@@ -1464,6 +1464,47 @@ describe('downloading a model to the server', () => {
     expect(serverStore.routerReason(id, REFERENCE)).toBeUndefined();
   });
 
+  // The status above is rejected on its shape alone. This one is a download
+  // event about a model the list already carries, so only presence separates
+  // it from news of our fetch — and adopting it settles the download `ready`
+  // off another model's row: the operation disappears reporting success while
+  // the fetch it was tracking runs on untracked.
+  it('does not let a download event about a listed model move one in flight', async () => {
+    const id = await routerServer();
+    await serverStore.startRouterDownload(id, REFERENCE);
+
+    serverStore.applyRouterEvent(id, {
+      model: TARGET,
+      event: 'download_finished',
+    });
+    await flush();
+
+    expect(serverStore.routerOp(id, REFERENCE)?.kind).toBe('download');
+    expect(serverStore.routerOp(id, TARGET)).toBeUndefined();
+    expect(serverStore.routerReason(id, REFERENCE)).toBeUndefined();
+  });
+
+  // Two downloads are in flight; ours has been heard from and the second has
+  // not. Counting only the ones still unheard-from makes the second the lone
+  // candidate, so a fetch the desktop started for itself rekeys it.
+  it('adopts nothing while a second download is in flight, heard from or not', async () => {
+    const id = await routerServer();
+    const progress = {
+      event: 'download_progress',
+      data: {progress: {'https://x/y.gguf': {done: 1, total: 2}}},
+    };
+    await serverStore.startRouterDownload(id, REFERENCE);
+    serverStore.applyRouterEvent(id, {...progress, model: NORMALISED});
+    await serverStore.startRouterDownload(id, 'other/repo:Q4_K_M');
+
+    serverStore.applyRouterEvent(id, {...progress, model: 'someone/else:Q4_0'});
+
+    expect(serverStore.routerOp(id, 'other/repo:Q4_K_M')?.kind).toBe(
+      'download',
+    );
+    expect(serverStore.routerOp(id, 'someone/else:Q4_0')).toBeUndefined();
+  });
+
   it('adopts nothing once the download has already been heard from', async () => {
     const id = await routerServer();
     await serverStore.startRouterDownload(id, REFERENCE);

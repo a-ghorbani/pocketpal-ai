@@ -1051,8 +1051,10 @@ class ServerStore {
 
   /**
    * The server may normalise the reference that was typed, so a download with
-   * no competitor adopts the id its first event carries. With two in flight
-   * there is nothing to adopt from and only an exact match joins.
+   * no competitor adopts the id its first event carries. Everything else has
+   * to be ruled out first, because a wrong adoption reads this download's
+   * verdict off another model's row: it settles `ready` and disappears while
+   * the fetch it was tracking goes on untracked.
    */
   private adoptRouterEventKey(
     serverId: string,
@@ -1066,18 +1068,24 @@ class ServerStore {
     if (about !== 'download') {
       return exact;
     }
+    // A model the server already lists is not the one it is still fetching
+    // for us, whatever it says about it.
+    const listed: RouterRowState = this.routerRowFromList(serverId, exact);
+    if (listed !== 'absent') {
+      return exact;
+    }
     const downloads = Object.entries(this.routerOps).filter(
-      ([, op]) =>
-        op.serverId === serverId &&
-        op.kind === 'download' &&
-        // The id its *first* event carries: once anything has been heard about
-        // this download, a later id belongs to some other fetch.
-        op.phase === 'requested',
+      ([, op]) => op.serverId === serverId && op.kind === 'download',
     );
     if (downloads.length !== 1) {
       return exact;
     }
     const [previousKey, op] = downloads[0];
+    // The id its *first* event carries: once anything has been heard about
+    // this download, a later id belongs to some other fetch.
+    if (op.phase !== 'requested') {
+      return exact;
+    }
     runInAction(() => {
       this.setRouterOp(previousKey, undefined);
       this.setRouterOp(exact, {...op, key: exact});
