@@ -101,26 +101,6 @@ export const RemoteModelSheet: React.FC<RemoteModelSheetProps> = observer(
       timeoutSecondsRef.current = timeoutSeconds;
     }, [timeoutSeconds]);
 
-    // Reset all state when sheet reopens
-    useEffect(() => {
-      if (isVisible) {
-        setUrl('');
-        setServerName('');
-        setApiKey('');
-        setTimeoutSeconds('');
-        timeoutSecondsRef.current = '';
-        setServerType('unknown');
-        setSecureTextEntry(true);
-        setIsProbing(false);
-        setProbeResult(null);
-        setAvailableModels([]);
-        setSelectedModelId(null);
-        setSelectedServerId(null);
-        setIsSaving(false);
-        setUrlError('');
-      }
-    }, [isVisible]);
-
     const probeServer = useCallback(
       async (probeUrl: string) => {
         const trimmedUrl = probeUrl.trim();
@@ -251,14 +231,29 @@ export const RemoteModelSheet: React.FC<RemoteModelSheetProps> = observer(
       }
     }, []);
 
-    // Runs after the reset effect above, which is declared first. Routed
-    // through the chip handler rather than setting the id, so the list is
-    // populated too; an unknown id leaves the normal reset state.
+    // Reset all state when sheet reopens
     useEffect(() => {
-      if (!isVisible || !initialServerId) {
+      if (!isVisible) {
         return;
       }
-      const server = serverStore.servers.find(s => s.id === initialServerId);
+      setUrl('');
+      setServerName('');
+      setApiKey('');
+      setTimeoutSeconds('');
+      timeoutSecondsRef.current = '';
+      setServerType('unknown');
+      setSecureTextEntry(true);
+      setIsProbing(false);
+      setProbeResult(null);
+      setAvailableModels([]);
+      setSelectedModelId(null);
+      setSelectedServerId(null);
+      setIsSaving(false);
+      setUrlError('');
+
+      const server = initialServerId
+        ? serverStore.servers.find(s => s.id === initialServerId)
+        : undefined;
       if (server) {
         handleServerChipPress(server);
       }
