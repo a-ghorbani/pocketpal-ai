@@ -97,6 +97,14 @@ const keyField = (root: any) =>
 
 const addButton = (root: any) => control(root, 'pair-server-add');
 
+/** Nothing rendered asks for the keyboard, by either mechanism. */
+const expectNoSelfFocus = (root: any) => {
+  expect(
+    root.UNSAFE_root.findAll((n: any) => n.props?.autoFocus === true),
+  ).toEqual([]);
+  expect(focusMock).not.toHaveBeenCalled();
+};
+
 /** Deliver a scanned code through whatever handler the sheet registered. */
 const scan = async (value: string) => {
   const {onCodeScanned} = mockUseCodeScanner.mock.calls.at(-1)![0];
@@ -202,10 +210,7 @@ describe('PairServerSheet', () => {
         QR_PAYLOAD,
       );
       expect(root.getByTestId('pair-server-trust')).toBeTruthy();
-      expect(keyField(root).some((n: any) => n.props.autoFocus === true)).toBe(
-        false,
-      );
-      expect(focusMock).not.toHaveBeenCalled();
+      expectNoSelfFocus(root);
 
       await settle(probe, usable(1));
     });
@@ -219,10 +224,7 @@ describe('PairServerSheet', () => {
 
       expect(root.getByTestId('pair-server-verdict')).toBeTruthy();
       expect(keyField(root).length).toBeGreaterThan(0);
-      expect(keyField(root).some((n: any) => n.props.autoFocus === true)).toBe(
-        false,
-      );
-      expect(focusMock).not.toHaveBeenCalled();
+      expectNoSelfFocus(root);
     });
 
     it('adds the server on the first press of Add', async () => {
@@ -635,6 +637,29 @@ describe('PairServerSheet', () => {
         expect.objectContaining({url: 'http://192.168.1.5:9931/v1'}),
       );
       expect(onPaired).toHaveBeenCalledWith('mock-server-id');
+    });
+  });
+
+  describe('raising the keyboard', () => {
+    it('is left to the user on every step that has a field', async () => {
+      const probe = nextProbe();
+      const root = renderSheet();
+      expectNoSelfFocus(root);
+
+      await pressButton(root, 'pair-server-manual');
+      expectNoSelfFocus(root);
+
+      await act(async () => {
+        fireEvent.changeText(
+          root.getByTestId('pair-server-url'),
+          'http://192.168.1.5:9931',
+        );
+      });
+      await pressButton(root, 'pair-server-continue');
+      await settle(probe, refused);
+
+      expect(root.getByTestId('pair-server-verdict')).toBeTruthy();
+      expectNoSelfFocus(root);
     });
   });
 
