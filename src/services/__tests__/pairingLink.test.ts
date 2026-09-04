@@ -1,4 +1,4 @@
-import {parsePairingURL, sameServerUrl} from '../pairingLink';
+import {isPairingLink, parsePairingURL, sameServerUrl} from '../pairingLink';
 
 describe('parsePairingURL — http(s) form', () => {
   it('accepts the real Llama-app QR payload, a web-UI root with a trailing slash', () => {
@@ -65,6 +65,39 @@ describe('parsePairingURL — llama:// authority form', () => {
 
   it('rejects an out-of-range port', () => {
     expect(parsePairingURL('llama://host:70000')).toBeNull();
+  });
+});
+
+describe('parsePairingURL — llama:// authority form, trailing slash', () => {
+  it('accepts a trailing slash, which is never disqualifying', () => {
+    expect(parsePairingURL('llama://192.168.1.5:9931/')).toEqual({
+      url: 'http://192.168.1.5:9931',
+    });
+    expect(parsePairingURL('llama://host/')).toEqual({
+      url: 'http://host:9931',
+    });
+  });
+
+  it('rejects a path, which the authority form has no slot for', () => {
+    expect(parsePairingURL('llama://192.168.1.5:9931/v1')).toBeNull();
+    expect(parsePairingURL('llama://host/anything')).toBeNull();
+  });
+});
+
+describe('isPairingLink', () => {
+  it('accepts every llama:// spelling the grammar routes', () => {
+    expect(isPairingLink('llama://add-server?url=http%3A%2F%2Fh%3A1')).toBe(
+      true,
+    );
+    expect(isPairingLink('llama://192.168.1.5:9931')).toBe(true);
+    expect(isPairingLink('LLAMA://host')).toBe(true);
+  });
+
+  it('rejects the scanner-only forms, which are not a route', () => {
+    expect(isPairingLink('http://192.168.1.5:9931/')).toBe(false);
+    expect(isPairingLink('https://example.com/anything')).toBe(false);
+    expect(isPairingLink('192.168.1.5:9931')).toBe(false);
+    expect(isPairingLink('pocketpal://hub/run?repo_id=a/b')).toBe(false);
   });
 });
 

@@ -109,8 +109,14 @@ function parseLlamaRoute(raw: string): PairingRequest | null {
   return {url, name, apiKey};
 }
 
-function parseLlamaAuthority(rest: string): PairingRequest | null {
-  const authority = splitAuthority(rest);
+function parseLlamaAuthority(
+  text: string,
+  remainder: string,
+): PairingRequest | null {
+  if (remainder !== '' && remainder !== '/') {
+    return null;
+  }
+  const authority = splitAuthority(text);
   if (!authority) {
     return null;
   }
@@ -136,7 +142,7 @@ export function parsePairingURL(raw: string): PairingRequest | null {
     const authority = rest.split(/[/?#]/)[0];
     return authority.toLowerCase() === 'add-server'
       ? parseLlamaRoute(text)
-      : parseLlamaAuthority(rest);
+      : parseLlamaAuthority(authority, rest.slice(authority.length));
   }
 
   // Schemeless `host:port`. A scheme-looking prefix that is none of the three
@@ -147,6 +153,15 @@ export function parsePairingURL(raw: string): PairingRequest | null {
   }
   return {url: `http://${authority.host}:${authority.port}`};
 }
+
+/**
+ * True only for the `llama:` scheme. The delivery paths gate on this rather
+ * than on a successful parse: the grammar also accepts an absolute http(s) url
+ * and a bare `host:port`, which are the scanner's forms, and a router that
+ * accepted them would open the pairing sheet for links addressed elsewhere.
+ */
+export const isPairingLink = (url: string): boolean =>
+  SCHEME_RE.exec(url.trim())?.[1].toLowerCase() === 'llama';
 
 /** Duplicate detection: both sides canonicalised, because neither is known to be. */
 export function sameServerUrl(a: string, b: string): boolean {
