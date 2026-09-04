@@ -610,7 +610,7 @@ describe('PairServerSheet', () => {
     });
   });
 
-  describe('reaching the buttons over a system navigation bar', () => {
+  describe('passing the safe-area inset down to the action row', () => {
     const NAV_BAR = 48;
 
     beforeEach(() => {
@@ -632,10 +632,11 @@ describe('PairServerSheet', () => {
     });
 
     /**
-     * The largest bottom padding held under `testID` by an ancestor — its own
-     * layout, or the padding a scroll view puts under its content.
+     * The largest bottom padding *declared* by an ancestor of `testID`. This is
+     * the inset being wired through, not the control's clearance on screen —
+     * the sheet clips its scroll tail, so clearance is only measurable on device.
      */
-    const liftAbove = (root: any, testID: string) => {
+    const declaredBottomInset = (root: any, testID: string) => {
       let node = control(root, testID);
       expect(node).toBeTruthy();
       let lift = 0;
@@ -656,25 +657,25 @@ describe('PairServerSheet', () => {
       return lift;
     };
 
-    it("lifts the scanner's way into manual entry", async () => {
+    it("declares the inset under the scanner's way into manual entry", async () => {
       const root = renderSheet();
 
       expect(root.getByTestId('pair-server-camera')).toBeTruthy();
-      expect(liftAbove(root, 'pair-server-manual')).toBeGreaterThanOrEqual(
-        NAV_BAR,
-      );
+      expect(
+        declaredBottomInset(root, 'pair-server-manual'),
+      ).toBeGreaterThanOrEqual(NAV_BAR);
     });
 
-    it("lifts the manual form's Add", async () => {
+    it("declares the inset under the manual form's Add", async () => {
       const root = renderSheet();
       await pressButton(root, 'pair-server-manual');
 
-      expect(liftAbove(root, 'pair-server-continue')).toBeGreaterThanOrEqual(
-        NAV_BAR,
-      );
+      expect(
+        declaredBottomInset(root, 'pair-server-continue'),
+      ).toBeGreaterThanOrEqual(NAV_BAR);
     });
 
-    it("lifts the duplicate prompt's Use", async () => {
+    it("declares the inset under the duplicate prompt's Use", async () => {
       runInAction(() => {
         serverStore.servers = [
           {id: 's1', name: 'Studio', url: 'http://192.168.1.5:9931'},
@@ -683,19 +684,19 @@ describe('PairServerSheet', () => {
       const root = renderSheet();
       await scan(QR_PAYLOAD);
 
-      expect(liftAbove(root, 'pair-server-use')).toBeGreaterThanOrEqual(
-        NAV_BAR,
-      );
+      expect(
+        declaredBottomInset(root, 'pair-server-use'),
+      ).toBeGreaterThanOrEqual(NAV_BAR);
     });
 
-    it("lifts the confirm step's Add", async () => {
+    it("declares the inset under the confirm step's Add", async () => {
       const probe = nextProbe();
       const root = renderSheet({request: {url: QR_PAYLOAD}});
       await settle(probe, usable(1));
 
-      expect(liftAbove(root, 'pair-server-add')).toBeGreaterThanOrEqual(
-        NAV_BAR,
-      );
+      expect(
+        declaredBottomInset(root, 'pair-server-add'),
+      ).toBeGreaterThanOrEqual(NAV_BAR);
     });
   });
 
