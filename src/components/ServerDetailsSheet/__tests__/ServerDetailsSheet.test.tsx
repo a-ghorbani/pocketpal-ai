@@ -450,6 +450,19 @@ describe('ServerDetailsSheet', () => {
       expect(presenceText()).toMatch(/checking/i);
     });
 
+    it('cannot start a second probe while one is already in flight', () => {
+      serverStore.serverPresence = {
+        'srv-1': {reachability: 'unreachable', probing: true},
+      };
+      const {getByTestId} = render(
+        <ServerDetailsSheet isVisible onDismiss={jest.fn()} serverId="srv-1" />,
+      );
+
+      fireEvent.press(getByTestId('server-presence-retry'));
+
+      expect(serverStore.probeServerPresence).not.toHaveBeenCalled();
+    });
+
     it('retries as a user-initiated probe, so the server timeout applies', () => {
       const {getByTestId} = render(
         <ServerDetailsSheet isVisible onDismiss={jest.fn()} serverId="srv-1" />,

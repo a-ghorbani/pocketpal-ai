@@ -1428,16 +1428,32 @@ describe('ServerStore', () => {
         expect(serverStore.presenceFor(id)).toBe('unreachable');
       });
 
-      it('is single-flight: a second call joins the first request', async () => {
+      it('is single-flight while one is in flight, and lets the next one through', async () => {
         const id = addServer();
-        mockedProbeReachability.mockResolvedValue('reachable');
+        let settle: (value: string) => void = () => {};
+        mockedProbeReachability.mockReturnValue(
+          new Promise(resolve => {
+            settle = resolve;
+          }),
+        );
 
-        await Promise.all([
-          serverStore.probeServerPresence(id, {reason: 'user'}),
-          serverStore.probeServerPresence(id, {reason: 'user'}),
-        ]);
-
+        const first = serverStore.probeServerPresence(id, {reason: 'user'});
+        // The keychain read comes first, so one drain is not yet the request.
+        await Promise.resolve();
+        await Promise.resolve();
         expect(mockedProbeReachability).toHaveBeenCalledTimes(1);
+
+        const joined = serverStore.probeServerPresence(id, {reason: 'user'});
+        await Promise.resolve();
+        expect(mockedProbeReachability).toHaveBeenCalledTimes(1);
+
+        settle('reachable');
+        await Promise.all([first, joined]);
+
+        // The entry is released, so the join is for the flight and not forever.
+        mockedProbeReachability.mockResolvedValue('reachable');
+        await serverStore.probeServerPresence(id, {reason: 'user'});
+        expect(mockedProbeReachability).toHaveBeenCalledTimes(2);
       });
 
       it('forwards the raw timeout for a user-initiated probe', async () => {
