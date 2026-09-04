@@ -1,4 +1,5 @@
 import {AppState, AppStateStatus} from 'react-native';
+import {SleepState, lastObservedSleepState} from '../utils/remotePresence';
 import {makeAutoObservable, observable, runInAction} from 'mobx';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import {makePersistable} from 'mobx-persist-store';
@@ -37,7 +38,6 @@ const CAPS_FIELDS = [
   'supportsAudio',
 ] as const;
 
-/** The same enumeration for the description tier. */
 const PROPS_FIELDS = [
   'samplerDefaults',
   'slotCount',
@@ -484,31 +484,8 @@ class ServerStore {
     });
   }
 
-  /**
-   * Whether the model this server was last asked about is sleeping. Answers
-   * about that model, not about whether the server is reachable, and gates
-   * nothing. Unknown until an observation lands, and unknown again once the
-   * url moves.
-   */
-  sleepStateFor(serverId: string): 'awake' | 'asleep' | 'unknown' {
-    const server = this.servers.find(s => s.id === serverId);
-    if (!server) {
-      return 'unknown';
-    }
-    const prefix = `${serverId}/`;
-    let latest: RemoteModelPresence | undefined;
-    for (const [key, entry] of Object.entries(this.remotePresence)) {
-      if (!key.startsWith(prefix) || entry.probedUrl !== server.url) {
-        continue;
-      }
-      if (!latest || entry.at > latest.at) {
-        latest = entry;
-      }
-    }
-    if (!latest) {
-      return 'unknown';
-    }
-    return latest.isSleeping ? 'asleep' : 'awake';
+  lastObservedSleepState(serverId: string): SleepState {
+    return lastObservedSleepState(this.servers, this.remotePresence, serverId);
   }
 
   /**

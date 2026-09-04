@@ -9,6 +9,10 @@ import {
 import {ReasoningCapability} from '../../src/utils/reasoningCapability';
 import {RemoteModelInfo} from '../../src/api/openai';
 import {deriveListCapsMap} from '../../src/utils/listCaps';
+import {
+  SleepState,
+  lastObservedSleepState,
+} from '../../src/utils/remotePresence';
 
 class MockServerStore {
   servers: ServerConfig[] = [];
@@ -22,25 +26,8 @@ class MockServerStore {
     return deriveListCapsMap(this.servers, this.serverModels);
   }
 
-  sleepStateFor(serverId: string): 'awake' | 'asleep' | 'unknown' {
-    const server = this.servers.find(s => s.id === serverId);
-    if (!server) {
-      return 'unknown';
-    }
-    const prefix = `${serverId}/`;
-    let latest: RemoteModelPresence | undefined;
-    for (const [key, entry] of Object.entries(this.remotePresence)) {
-      if (!key.startsWith(prefix) || entry.probedUrl !== server.url) {
-        continue;
-      }
-      if (!latest || entry.at > latest.at) {
-        latest = entry;
-      }
-    }
-    if (!latest) {
-      return 'unknown';
-    }
-    return latest.isSleeping ? 'asleep' : 'awake';
+  lastObservedSleepState(serverId: string): SleepState {
+    return lastObservedSleepState(this.servers, this.remotePresence, serverId);
   }
 
   userSelectedModels: Array<{serverId: string; remoteModelId: string}> = [];

@@ -1391,7 +1391,7 @@ describe('ServerStore', () => {
         buildInfo: 'b9976-e3546c794',
         probedUrl: 'http://localhost:8080',
       });
-      expect(serverStore.sleepStateFor(id)).toBe('awake');
+      expect(serverStore.lastObservedSleepState(id)).toBe('awake');
     });
 
     it('keeps a known audio capability when a placeholder body follows', async () => {
@@ -1429,7 +1429,7 @@ describe('ServerStore', () => {
       await serverStore.fetchRemoteModelCaps(id, 'm');
 
       expect(serverStore.remoteCaps[`${id}/m`]).toBeUndefined();
-      expect(serverStore.sleepStateFor(id)).toBe('asleep');
+      expect(serverStore.lastObservedSleepState(id)).toBe('asleep');
     });
 
     it('writes nothing anywhere when a repeat probe reports the same answer', async () => {
@@ -1553,12 +1553,12 @@ describe('ServerStore', () => {
           at: 1,
         };
       });
-      expect(serverStore.sleepStateFor(id)).toBe('asleep');
+      expect(serverStore.lastObservedSleepState(id)).toBe('asleep');
 
       serverStore.updateServer(id, {url: 'http://localhost:9090'});
 
       // Unknown, never 'awake' and never "offline": nobody has looked.
-      expect(serverStore.sleepStateFor(id)).toBe('unknown');
+      expect(serverStore.lastObservedSleepState(id)).toBe('unknown');
     });
 
     it('answers sleep state from the most recent observation of this backend', () => {
@@ -1581,13 +1581,13 @@ describe('ServerStore', () => {
         };
       });
 
-      expect(serverStore.sleepStateFor(id)).toBe('awake');
+      expect(serverStore.lastObservedSleepState(id)).toBe('awake');
     });
 
     it('reports unknown sleep state for a server nobody has probed', () => {
       const id = addLlamaServer();
-      expect(serverStore.sleepStateFor(id)).toBe('unknown');
-      expect(serverStore.sleepStateFor('gone')).toBe('unknown');
+      expect(serverStore.lastObservedSleepState(id)).toBe('unknown');
+      expect(serverStore.lastObservedSleepState('gone')).toBe('unknown');
     });
 
     it('reads a store hydrated before the props map as unknown, then fills it', async () => {
