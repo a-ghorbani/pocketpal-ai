@@ -51,6 +51,7 @@ describe('AssistantTurnFooter', () => {
     const message = baseTurn({
       metadata: {
         timings: {...streamFinishChunk.timings, time_to_first_token_ms: 150},
+        completionResult: {used: 0, contextFull: false, isRemote: true},
       },
     });
     const {getByTestId} = render(<AssistantTurnFooter message={message} />);
@@ -77,7 +78,10 @@ describe('AssistantTurnFooter', () => {
 
   it('separates a cold prompt cache from a build that never reports one', () => {
     const cold = baseTurn({
-      metadata: {timings: {predicted_per_token_ms: 10, cache_n: 0}},
+      metadata: {
+        timings: {predicted_per_token_ms: 10, cache_n: 0},
+        completionResult: {used: 0, contextFull: false, isRemote: true},
+      },
     });
     expect(
       render(<AssistantTurnFooter message={cold} />).getByTestId(
@@ -86,13 +90,48 @@ describe('AssistantTurnFooter', () => {
     ).toBe('10ms/token, 0 cached');
 
     const silent = baseTurn({
-      metadata: {timings: {predicted_per_token_ms: 10}},
+      metadata: {
+        timings: {predicted_per_token_ms: 10},
+        completionResult: {used: 0, contextFull: false, isRemote: true},
+      },
     });
     expect(
       render(<AssistantTurnFooter message={silent} />).getByTestId(
         'footer-timing',
       ).props.children,
     ).toBe('10ms/token');
+  });
+
+  it('keeps prompt speed and cached tokens off a local turn that reports them', () => {
+    const timings = {...streamFinishChunk.timings, time_to_first_token_ms: 150};
+    expect(timings.prompt_per_second).toBeDefined();
+    expect(timings.cache_n).toBeDefined();
+
+    const local = baseTurn({
+      metadata: {
+        timings,
+        completionResult: {used: 0, contextFull: false, isRemote: false},
+      },
+    });
+    expect(
+      render(<AssistantTurnFooter message={local} />).getByTestId(
+        'footer-timing',
+      ).props.children,
+    ).toBe('6ms/token, 170.35 tokens/sec, 150ms TTFT');
+
+    const remote = baseTurn({
+      metadata: {
+        timings,
+        completionResult: {used: 0, contextFull: false, isRemote: true},
+      },
+    });
+    expect(
+      render(<AssistantTurnFooter message={remote} />).getByTestId(
+        'footer-timing',
+      ).props.children,
+    ).toBe(
+      '6ms/token, 170.35 tokens/sec, 126.90 prompt tokens/sec, 15 cached, 150ms TTFT',
+    );
   });
 
   it('renders copy button when copyable, even if timings absent (abort path)', () => {

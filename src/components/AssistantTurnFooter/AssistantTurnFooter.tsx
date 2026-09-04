@@ -63,17 +63,20 @@ export const AssistantTurnFooter: React.FC<AssistantTurnFooterProps> = observer(
         }),
       );
     }
-    if (timings?.prompt_per_second != null) {
+    // llama.rn reports both of these on local turns too, so origin gates them
+    // rather than presence; the local footer is a separate decision.
+    const isRemoteTurn = completionResult?.isRemote === true;
+    if (isRemoteTurn && timings?.prompt_per_second != null) {
       timingParts.push(
         t(l10n.components.bubble.promptTokensPerSec, {
           value: timings.prompt_per_second.toFixed(2),
         }),
       );
     }
-    // Presence-gated, zero included: a build that does not report prompt-cache
-    // reuse omits the key entirely, while a cold prompt on a build that does
-    // reports 0. Those are different facts and read differently.
-    if (timings?.cache_n != null) {
+    // Zero is included: a build that does not report prompt-cache reuse omits
+    // the key entirely, while a cold prompt on a build that does reports 0.
+    // Those are different facts and read differently.
+    if (isRemoteTurn && timings?.cache_n != null) {
       timingParts.push(
         t(l10n.components.bubble.cachedTokens, {
           value: String(timings.cache_n),
