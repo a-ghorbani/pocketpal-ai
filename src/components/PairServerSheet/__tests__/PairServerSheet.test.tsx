@@ -37,6 +37,11 @@ const pressButton = async (root: any, testID: string) => {
   });
 };
 
+const keyFieldHasAutoFocus = (root: any) =>
+  root.UNSAFE_root.findAll(
+    (n: any) => n.props?.testID === 'pair-server-key',
+  ).some((n: any) => n.props.autoFocus === true);
+
 const addButton = (root: any) =>
   root.UNSAFE_root.findAll(
     (n: any) =>
@@ -115,6 +120,36 @@ describe('PairServerSheet', () => {
         '3',
       );
       expect(addButton(root).props.disabled).toBe(false);
+    });
+
+    it('counts one model in the singular', async () => {
+      probeSpy.mockResolvedValue(usable(1, 'authorised'));
+      const root = renderSheet();
+
+      await scan(QR_PAYLOAD);
+
+      await waitFor(() => {
+        expect(root.getByTestId('pair-server-models')).toBeTruthy();
+      });
+      expect(root.getByTestId('pair-server-models').props.children).toBe(
+        '1 model available',
+      );
+    });
+
+    it('focuses the key field so a refused key can be corrected', async () => {
+      probeSpy.mockResolvedValue({
+        outcome: 'unauthorized',
+        status: 401,
+        source: 'gate',
+      });
+      const root = renderSheet();
+
+      await scan(QR_PAYLOAD);
+
+      await waitFor(() => {
+        expect(root.getByTestId('pair-server-verdict')).toBeTruthy();
+      });
+      expect(keyFieldHasAutoFocus(root)).toBe(true);
     });
 
     it('enables Add for a usable server with no models, which is not an error', async () => {

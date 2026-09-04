@@ -381,15 +381,14 @@
       "title": "Add server",
       "scanHint": "Point the camera at the QR code shown by your server.",
       "notAServerQr": "That code isn't a server address.",
-      "manualEntry": "Enter the server address",
       "noCamera": "No camera is available on this device, so enter the address by hand.",
       "cameraDenied": "Camera access is off. Allow it in Settings, or enter the address by hand.",
       "urlLabel": "Server address",
       "nameLabel": "Name (optional)",
       "apiKeyLabel": "API key (optional)",
       "checking": "Checking the server…",
-      "modelCount_one": "{{count}} model available",
-      "modelCount_other": "{{count}} models available",
+      "oneModel": "1 model available",
+      "modelCount": "{{count}} models available",
       "noModelsYet": "No models yet — you can add one after connecting.",
       "credentialsVerified": "API key accepted.",
       "credentialsUnverified": "The API key couldn't be verified.",
@@ -401,8 +400,7 @@
       "duplicateTitle": "Already added",
       "duplicateMessage": "You already have this server saved as \"{{name}}\".",
       "use": "Use",
-      "add": "Add",
-      "retry": "Retry"
+      "add": "Add"
     },
     "hubRun": {
       "title": "Download model",

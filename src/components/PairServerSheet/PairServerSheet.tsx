@@ -207,10 +207,12 @@ export const PairServerSheet: React.FC<PairServerSheetProps> = observer(
               <Text testID="pair-server-models" style={styles.verdictText}>
                 {count === 0
                   ? l10n.models.pairServer.noModelsYet
-                  : l10n.models.pairServer.modelCount_other.replace(
-                      '{{count}}',
-                      String(count),
-                    )}
+                  : count === 1
+                    ? l10n.models.pairServer.oneModel
+                    : l10n.models.pairServer.modelCount.replace(
+                        '{{count}}',
+                        String(count),
+                      )}
               </Text>
               <Text
                 testID="pair-server-credentials"
@@ -254,7 +256,11 @@ export const PairServerSheet: React.FC<PairServerSheetProps> = observer(
       <Sheet
         isVisible={isVisible}
         onClose={onDismiss}
-        title={l10n.models.pairServer.title}>
+        title={
+          state === 'duplicate'
+            ? l10n.models.pairServer.duplicateTitle
+            : l10n.models.pairServer.title
+        }>
         <Sheet.ScrollView contentContainerStyle={styles.body}>
           {state === 'scanning' && canScan && (
             <>
@@ -352,6 +358,7 @@ export const PairServerSheet: React.FC<PairServerSheetProps> = observer(
                 value={apiKey}
                 onChangeText={setApiKey}
                 onBlur={() => runProbe(url, apiKey)}
+                autoFocus
                 autoCapitalize="none"
                 secureTextEntry
               />
