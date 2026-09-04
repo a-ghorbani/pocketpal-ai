@@ -67,6 +67,22 @@ const control = (root: any, testID: string) =>
       n.props?.testID === testID && typeof n.props?.onPress === 'function',
   )[0];
 
+// react-test-renderer reports a memo() component as its inner function.
+const scrollViewTypes = [Sheet.ScrollView, (Sheet.ScrollView as any).type];
+
+/** The `Sheet.ScrollView` carrying `testID`, or null when none does. */
+const scrollBodyOver = (root: any, testID: string) => {
+  let node = control(root, testID);
+  expect(node).toBeTruthy();
+  while (node) {
+    if (scrollViewTypes.includes(node.type)) {
+      return node;
+    }
+    node = node.parent;
+  }
+  return null;
+};
+
 const pressButton = async (root: any, testID: string) => {
   const target = control(root, testID);
   expect(target).toBeTruthy();
@@ -602,20 +618,8 @@ describe('PairServerSheet', () => {
   describe('reaching the buttons with the keyboard up', () => {
     // The sheet pans rather than resizes, so only the keyboard-aware scroll
     // view moves a control clear of the keyboard.
-    // react-test-renderer reports a memo() component as its inner function.
-    const scrollViewTypes = [Sheet.ScrollView, (Sheet.ScrollView as any).type];
-
-    const scrollsWithTheBody = (root: any, testID: string) => {
-      let node = control(root, testID);
-      expect(node).toBeTruthy();
-      while (node) {
-        if (scrollViewTypes.includes(node.type)) {
-          return true;
-        }
-        node = node.parent;
-      }
-      return false;
-    };
+    const scrollsWithTheBody = (root: any, testID: string) =>
+      scrollBodyOver(root, testID) !== null;
 
     it("scrolls the manual form's Add with the fields it submits", async () => {
       const root = renderSheet();
@@ -631,6 +635,19 @@ describe('PairServerSheet', () => {
 
       expect(scrollsWithTheBody(root, 'pair-server-add')).toBe(true);
       expect(scrollsWithTheBody(root, 'pair-server-back')).toBe(true);
+    });
+
+    // Asserted as a prop because no test can observe it: `fireEvent.press`
+    // calls `onPress` directly and never consults the touch responder chain,
+    // so a press test lands on the first try with or without this.
+    it('spends the first press on the button, not on the keyboard', async () => {
+      const probe = nextProbe();
+      const root = renderSheet({request: {url: QR_PAYLOAD}});
+      await settle(probe, usable(1));
+
+      expect(
+        scrollBodyOver(root, 'pair-server-add').props.keyboardShouldPersistTaps,
+      ).toBe('handled');
     });
   });
 
