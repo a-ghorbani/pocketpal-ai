@@ -234,6 +234,36 @@ describe('reduceRouterEvent over the captured download stream', () => {
     expect(effect.patch.bytes!.done).toBe(0);
   });
 
+  // Constructed: every captured tick carries exactly one URL, so a map with
+  // two entries has never been observed. It is covered anyway because reading
+  // only the first entry satisfies every measured case above, and a two-file
+  // download would then report a fraction of the bytes as if it were all of
+  // them.
+  it('sums a two-entry map rather than reading one of its entries', () => {
+    const measured = downloadStream.find(
+      e => e.event === 'download_progress',
+    ) as any;
+    const [url, only] = Object.entries(
+      measured.data.progress as Record<string, any>,
+    )[0];
+
+    const effect = reduceRouterEvent({
+      ...measured,
+      data: {
+        progress: {
+          [url]: only,
+          [url + '.mmproj']: {done: 5, total: 11},
+        },
+      },
+    }) as Extract<RouterEventEffect, {kind: 'update'}>;
+
+    expect(effect.patch.bytes).toEqual({
+      done: only.done + 5,
+      total: only.total + 11,
+      urls: 2,
+    });
+  });
+
   it('ignores a progress payload whose map is at the documented place', () => {
     expect(
       reduceRouterEvent({

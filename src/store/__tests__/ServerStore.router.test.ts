@@ -344,6 +344,32 @@ describe('the router event stream', () => {
     },
   );
 
+  // The pair above still passes if the cap is read off the wording, because
+  // none of those three messages carries the 404's words. These two put the
+  // wording and the status on opposite sides, so only a reading of the status
+  // answers both.
+  it.each([400, 500])(
+    'remembers nothing from a %i wearing the 404 wording',
+    async status => {
+      const id = await routerServer();
+      const handlers = await openOn(id);
+      const notFound = streamErrorFrom('sse-unregistered-404.txt');
+
+      handlers.onClose(new RouterStreamError(notFound.message, status));
+
+      expect(serverStore.routerStreamCapFor(id)).toBe('unknown');
+    },
+  );
+
+  it('remembers a 404 that does not say so in words', async () => {
+    const id = await routerServer();
+    const handlers = await openOn(id);
+
+    handlers.onClose(new RouterStreamError('', 404));
+
+    expect(serverStore.routerStreamCapFor(id)).toBe('absent');
+  });
+
   it('records the stream as present once it answers', async () => {
     const id = await routerServer();
     const handlers = await openOn(id);
