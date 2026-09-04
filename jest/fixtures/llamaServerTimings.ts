@@ -9,22 +9,12 @@
  * aarch64). Every wire fact here was observed on that one build; cross-build
  * generalisation is unverified.
  *
- * Three things this capture must not be read as saying. Each is a citation that
- * looks right, and each was written down before being checked against the
- * source lines:
- *
- *  - Upstream's own `timings` assertions (`test_completion.py:659`,
- *    `test_kv_keep_only_active.py:80`) run against the native
- *    `POST /completion` and read the response body non-streaming, while this
- *    app reads the OpenAI-compatible endpoint's SSE finish chunk — a different
- *    endpoint and a different envelope. Upstream does not cover this path, and
- *    this fixture is the app's own capture rather than a copy of theirs.
- *  - Upstream asserts nothing about the join between a separately counted
- *    prompt and `prompt_n + cache_n`. Its token-count endpoint has exactly two
- *    tests and both are loose bounds (`> 5`, `> 10`).
- *  - `test_compat_anthropic.py:882` is a different endpoint,
- *    `POST /v1/messages/count_tokens`, which merely shares the `input_tokens`
- *    field name. It constrains nothing here and must not be cited for it.
+ * Upstream's own `timings` assertions (`test_completion.py:659`,
+ * `test_kv_keep_only_active.py:80`) run against the native `POST /completion`
+ * and read the response body non-streaming, while this app reads the
+ * OpenAI-compatible endpoint's SSE finish chunk — a different endpoint and a
+ * different envelope. Upstream does not cover this path, and this capture is
+ * the app's own rather than a copy of theirs.
  */
 export const cacheReuseTimings = {
   cache_n: 31,
