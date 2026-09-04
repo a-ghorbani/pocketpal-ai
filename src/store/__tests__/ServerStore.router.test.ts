@@ -1099,6 +1099,22 @@ describe('loading a model', () => {
     await expect(load).resolves.toBe('failed');
   });
 
+  // A chat activation opens the stream with no picker on screen, so nothing
+  // else is holding it: one message would otherwise buy a token-bearing socket
+  // for the life of the process, reopened on every foreground.
+  it('closes the stream its own operation opened once that operation settles', async () => {
+    const id = await routerServer();
+    const pending = serverStore.ensureRouterModelLoaded(id, TARGET);
+    await flush();
+    expect(serverStore.routerStream?.serverId).toBe(id);
+
+    answerWith('loaded');
+    await reconcile(id);
+    await expect(pending).resolves.toBe('ready');
+
+    expect(serverStore.routerStream).toBeNull();
+  });
+
   it('drops the poll entry once the load settles', async () => {
     const id = await routerServer();
     const pending = serverStore.ensureRouterModelLoaded(id, TARGET);

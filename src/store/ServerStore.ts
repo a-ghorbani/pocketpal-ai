@@ -189,6 +189,9 @@ class ServerStore {
   private lastFetchTime = 0;
   private appStateSubscription: any = null;
   private routerStreamHandle: RouterStreamHandle | null = null;
+  /** Servers the UI is watching. A picker on screen is the only one there is. */
+  private routerStreamViewers = new Set<string>();
+  /** Derived from the reasons above; never latched. */
   private routerFocusedServerId: string | null = null;
   private routerStreamSeq = 0;
   private routerReconnectAt: Record<string, number[]> = {};
@@ -213,6 +216,7 @@ class ServerStore {
       serverModels: observable,
       // Connection plumbing: nothing renders from it.
       routerStreamHandle: false,
+      routerStreamViewers: false,
       routerFocusedServerId: false,
       routerStreamSeq: false,
       routerReconnectAt: false,
@@ -319,6 +323,7 @@ class ServerStore {
     delete this.routerLastPollAt[serverId];
     delete this.routerReconnectAt[serverId];
     this.routerPollInFlight.delete(serverId);
+    this.routerStreamViewers.delete(serverId);
     if (this.routerStream?.serverId === serverId) {
       this.closeRouterStream();
     }
@@ -812,11 +817,61 @@ class ServerStore {
   }
 
   /**
-   * At most one stream app-wide, against the server the user is looking at or
-   * the one with the most recent operation. N sockets to N desktops is not a
-   * thing to do on a phone.
+   * The UI is watching this server. Only two things hold a stream — something
+   * on screen showing it, and an operation waiting on it — and a stream nobody
+   * holds is closed, so neither caller has to remember to.
    */
-  async openRouterStream(serverId: string): Promise<void> {
+  openRouterStream(serverId: string): Promise<void> {
+    this.routerStreamViewers.add(serverId);
+    return this.syncRouterStream();
+  }
+
+  /**
+   * Nothing is watching this server any more. The stream survives it if an
+   * operation is still waiting on one, and ends if nothing else holds it.
+   */
+  releaseRouterStream(serverId: string): void {
+    this.routerStreamViewers.delete(serverId);
+    delete this.routerReconnectAt[serverId];
+    this.syncRouterStream();
+  }
+
+  /**
+   * Which server this store should hold its one stream against: what the user
+   * is looking at, else the most recent operation's server. N sockets to N
+   * desktops is not a thing to do on a phone.
+   */
+  private wantedRouterStreamServer(): string | null {
+    const configured = (serverId: string) =>
+      this.servers.some(server => server.id === serverId);
+    for (const serverId of [...this.routerStreamViewers].reverse()) {
+      if (configured(serverId)) {
+        return serverId;
+      }
+    }
+    let latest: RouterOp | undefined;
+    for (const op of Object.values(this.routerOps)) {
+      if (!latest || op.startedAt > latest.startedAt) {
+        latest = op;
+      }
+    }
+    return latest !== undefined && configured(latest.serverId)
+      ? latest.serverId
+      : null;
+  }
+
+  /** Read after every change to either reason, and after nothing else. */
+  private syncRouterStream(): Promise<void> {
+    const wanted = this.wantedRouterStreamServer();
+    if (wanted === null) {
+      this.routerFocusedServerId = null;
+      this.closeRouterStream();
+      return Promise.resolve();
+    }
+    return this.connectRouterStream(wanted);
+  }
+
+  private async connectRouterStream(serverId: string): Promise<void> {
     this.routerFocusedServerId = serverId;
     if (!this.isRouterServer(serverId) || !this.routerForegrounded) {
       return;
@@ -888,21 +943,6 @@ class ServerStore {
     this.syncRouterTiers();
   }
 
-  /**
-   * Nothing is watching this server any more. Distinct from closing the
-   * stream, which the background transition does while the app is still bound
-   * to the server it will reopen against.
-   */
-  releaseRouterStream(serverId: string): void {
-    delete this.routerReconnectAt[serverId];
-    if (this.routerFocusedServerId === serverId) {
-      this.routerFocusedServerId = null;
-    }
-    if (this.routerStream?.serverId === serverId) {
-      this.closeRouterStream();
-    }
-  }
-
   private handleRouterStreamClosed(
     serverId: string,
     error?: RouterStreamError,
@@ -955,7 +995,7 @@ class ServerStore {
           this.routerReconnectTimer = null;
           this.setRouterStream(null);
         });
-        this.openRouterStream(serverId);
+        this.syncRouterStream();
       }, delay);
     });
   }
@@ -1355,7 +1395,7 @@ class ServerStore {
       delete this.routerReasons[key];
     });
     this.syncRouterTiers();
-    this.openRouterStream(op.serverId);
+    this.syncRouterStream();
     return settled;
   }
 
@@ -1389,6 +1429,7 @@ class ServerStore {
     this.routerLoadPromises.delete(key);
     waiter?.(outcome);
     this.syncRouterTiers();
+    this.syncRouterStream();
   }
 
   /**
@@ -1708,9 +1749,7 @@ class ServerStore {
         this.fetchModelsForServer(serverId).catch(() => {}),
       ),
     );
-    if (this.routerFocusedServerId) {
-      await this.openRouterStream(this.routerFocusedServerId);
-    }
+    await this.syncRouterStream();
     this.syncRouterTiers();
   }
 }
