@@ -249,7 +249,7 @@ export const PairServerSheet: React.FC<PairServerSheetProps> = observer(
 
     const manualHint = !device
       ? {testID: 'pair-server-no-camera', text: l10n.models.pairServer.noCamera}
-      : permissionSettled
+      : permissionSettled && !hasPermission
         ? {
             testID: 'pair-server-camera-denied',
             text: l10n.models.pairServer.cameraDenied,

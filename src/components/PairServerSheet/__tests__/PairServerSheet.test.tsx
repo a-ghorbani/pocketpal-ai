@@ -503,6 +503,26 @@ describe('PairServerSheet', () => {
   });
 
   describe('camera availability', () => {
+    it('blames nothing for hand entry the user chose with the camera working', async () => {
+      const root = renderSheet();
+
+      await pressButton(root, 'pair-server-manual');
+
+      expect(root.queryByTestId('pair-server-camera-denied')).toBeNull();
+      expect(root.queryByTestId('pair-server-no-camera')).toBeNull();
+      expect(control(root, 'pair-server-scan')).toBeTruthy();
+    });
+
+    it('explains the missing scanner when access was refused', async () => {
+      grantCamera(false);
+      const root = renderSheet();
+
+      await waitFor(() => {
+        expect(root.getByTestId('pair-server-camera-denied')).toBeTruthy();
+      });
+      expect(control(root, 'pair-server-scan')).toBeFalsy();
+    });
+
     it('asks for camera access when the sheet opens without it', async () => {
       grantCamera(false);
       renderSheet();
