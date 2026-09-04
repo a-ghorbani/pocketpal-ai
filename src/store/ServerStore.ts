@@ -23,6 +23,7 @@ import type {ListDerivedCaps} from '../utils/listCaps';
 import {
   applyLivePatch,
   loadFailureFrom,
+  unloadFailureFrom,
   downloadVerdict,
   loadVerdict,
   mapRowStatus,
@@ -1711,14 +1712,21 @@ class ServerStore {
     if (now - op.startedAt <= ROUTER_UNLOAD_SETTLE_MS) {
       return;
     }
-    if (this.hasReconciledSince(op)) {
-      this.settleRouterOp(key, 'failed', {cause: 'unload-not-released'});
+    if (!this.hasReconciledSince(op)) {
+      runInAction(() => {
+        op.verdictRequested = true;
+      });
+      this.requestRouterReconcile(op.serverId);
       return;
     }
-    runInAction(() => {
-      op.verdictRequested = true;
-    });
-    this.requestRouterReconcile(op.serverId);
+    // A fetch having succeeded since the request says nothing about what it
+    // found, so the bound reads the row the same way the reconcile does.
+    const state = this.routerRowFromList(op.serverId, key);
+    if (unloadVerdict(state) === 'released') {
+      this.settleRouterOp(key, 'ready');
+      return;
+    }
+    this.settleRouterOp(key, 'failed', unloadFailureFrom(state));
   }
 
   // Auto-fetch on foreground

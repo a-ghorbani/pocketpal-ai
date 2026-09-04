@@ -6,6 +6,7 @@ import {
   mapRowStatus,
   reduceRouterEvent,
   rowMatchesKey,
+  unloadFailureFrom,
   unloadVerdict,
   RouterEventEffect,
   RouterListState,
@@ -423,6 +424,28 @@ describe('loadFailureFrom', () => {
       expect(loadFailureFrom(listed(state), op(), 'exit code 1')).toEqual({
         cause: 'load-failed',
         message: 'exit code 1',
+      });
+    },
+  );
+});
+
+describe('unloadFailureFrom', () => {
+  it('builds none from a row the app does not believe', () => {
+    expect(unloadFailureFrom(listed('unknown'))).toBeUndefined();
+  });
+
+  it.each(['unloaded', 'absent', 'failed'] as RouterRowState[])(
+    'builds none from a row reading %s, which is the model released',
+    state => {
+      expect(unloadFailureFrom(listed(state))).toBeUndefined();
+    },
+  );
+
+  it.each(['loaded', 'sleeping', 'loading', 'downloading'] as RouterRowState[])(
+    'blames the unload off a row reading %s, which is the model still held',
+    state => {
+      expect(unloadFailureFrom(listed(state))).toEqual({
+        cause: 'unload-not-released',
       });
     },
   );

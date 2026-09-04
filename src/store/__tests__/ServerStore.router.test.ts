@@ -1430,6 +1430,42 @@ describe('unloading a model', () => {
     expect(serverStore.routerPolls.has(id)).toBe(false);
   });
 
+  // A row this build cannot read is not an unconverged row either. The bound
+  // settled on `hasReconciledSince` alone, which proves a fetch succeeded after
+  // the request and says nothing at all about what it found.
+  it('records nothing at the bound when it cannot read the row', async () => {
+    const id = await routerServer('loaded');
+    const pending = serverStore.unloadRouterModel(id, TARGET);
+    await flush();
+    answerWith('quiescing');
+    await reconcile(id);
+
+    jest.advanceTimersByTime(ROUTER_UNLOAD_SETTLE_MS + 2000);
+    await flush();
+
+    await expect(pending).resolves.toBe('failed');
+    expect(serverStore.routerRowState(id, TARGET)).toBe('unknown');
+    expect(serverStore.routerReason(id, TARGET)).toBeUndefined();
+  });
+
+  // The same state by its other route: the list was read successfully once
+  // after the request, and every read since has failed, so the row it left
+  // behind is not one the app may say the server is still holding.
+  it('records nothing at the bound when the list went stale after it', async () => {
+    const id = await routerServer('loaded');
+    const pending = serverStore.unloadRouterModel(id, TARGET);
+    await flush();
+    await reconcile(id);
+    mockedFetch.mockRejectedValue(new Error('Network request failed'));
+    await serverStore.fetchModelsForServer(id);
+
+    await advance(ROUTER_UNLOAD_SETTLE_MS + ROUTER_TICK_MS);
+
+    await expect(pending).resolves.toBe('failed');
+    expect(serverStore.routerRowState(id, TARGET)).toBe('unknown');
+    expect(serverStore.routerReason(id, TARGET)).toBeUndefined();
+  });
+
   // A row nobody managed to re-read is not an unconverged row.
   it('does not settle failed at the bound when the reconcile failed', async () => {
     const id = await routerServer('loaded');

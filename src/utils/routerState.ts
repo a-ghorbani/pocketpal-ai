@@ -219,6 +219,23 @@ export function unloadVerdict(state: RouterListState): RouterUnloadVerdict {
   }
 }
 
+/**
+ * The record an unload may leave behind, the mirror of a load's: only a row the
+ * app believes, and reads as still holding the model, supports the claim that
+ * the server did not release it. `unknown` is the absence of such a reading,
+ * not a model the server is holding.
+ */
+export function unloadFailureFrom(
+  state: RouterListState,
+): RouterFailure | undefined {
+  if (state === 'unknown') {
+    return undefined;
+  }
+  return unloadVerdict(state) === 'not-converged'
+    ? {cause: 'unload-not-released'}
+    : undefined;
+}
+
 export type RouterDownloadVerdict =
   | 'arrived'
   | 'downloading'
