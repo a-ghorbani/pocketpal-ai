@@ -26,6 +26,7 @@ import {
 import {l10n} from '../../locales';
 import {assistant} from '../../utils/chat';
 import {ModelOrigin} from '../../utils/types';
+import type {RouterFailure} from '../../utils/routerState';
 
 const mockAssistant = {
   id: 'h3o3lc5xj',
@@ -143,8 +144,24 @@ describe('useChatSession', () => {
       expect(modelStore.context?.completion).toHaveBeenCalled();
     });
 
-    it('sends nothing and says so when the server could not make it ready', async () => {
+    const bindTo = (reason?: RouterFailure) => {
+      modelStore.activeRemoteBinding = {
+        modelId: 'srv-1/alpha',
+        serverId: 'srv-1',
+        remoteModelId: 'alpha',
+        url: 'http://desktop:8080',
+      } as any;
+      serverStore.routerReasons = reason ? {'srv-1/alpha': reason} : {};
+    };
+
+    afterEach(() => {
+      modelStore.activeRemoteBinding = undefined;
+      serverStore.routerReasons = {};
+    });
+
+    it('sends nothing and renders the record the operation left', async () => {
       readiness().mockResolvedValueOnce('failed');
+      bindTo({cause: 'load-failed'});
 
       const {result} = renderHook(() =>
         useChatSession({current: null}, textMessage.author, mockAssistant),
@@ -157,10 +174,33 @@ describe('useChatSession', () => {
       expect(modelStore.context?.completion).not.toHaveBeenCalled();
       expect(chatSessionStore.addMessageToCurrentSession).toHaveBeenCalledWith(
         expect.objectContaining({
-          text: l10n.en.chat.remoteModelNotReady,
+          text: l10n.en.settings.routerModels.loadFailed,
           author: assistant,
           metadata: {system: true},
         }),
+      );
+    });
+
+    // Stopping the load is the user's own act. It leaves no record because it
+    // is not news about the server, and a message about the server is exactly
+    // what it must not produce.
+    it('sends nothing and says nothing when no record was left', async () => {
+      readiness().mockResolvedValueOnce('failed');
+      bindTo(undefined);
+
+      const {result} = renderHook(() =>
+        useChatSession({current: null}, textMessage.author, mockAssistant),
+      );
+
+      await act(async () => {
+        await result.current.handleSendPress(textMessage);
+      });
+
+      expect(modelStore.context?.completion).not.toHaveBeenCalled();
+      expect(
+        chatSessionStore.addMessageToCurrentSession,
+      ).not.toHaveBeenCalledWith(
+        expect.objectContaining({metadata: {system: true}}),
       );
     });
   });

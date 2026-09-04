@@ -1,5 +1,7 @@
 import {modelStore} from '../ModelStore';
 import {serverStore} from '../ServerStore';
+import {l10n} from '../../locales';
+import type {RouterFailure} from '../../utils/routerState';
 
 jest.mock('../ServerStore', () => ({
   serverStore: {
@@ -14,6 +16,7 @@ jest.mock('../ServerStore', () => ({
     ],
     fetchRemoteModelCaps: jest.fn().mockResolvedValue(undefined),
     ensureRouterModelLoaded: jest.fn().mockResolvedValue('ready'),
+    routerReason: jest.fn(),
   },
 }));
 
@@ -30,7 +33,36 @@ describe('remote model readiness', () => {
     (serverStore.ensureRouterModelLoaded as jest.Mock).mockResolvedValue(
       'ready',
     );
+    (serverStore.routerReason as jest.Mock).mockReturnValue(undefined);
     modelStore.activeRemoteBinding = undefined;
+  });
+
+  /** What the engine does before every request, reached through the engine. */
+  const refusalFor = async (reason?: RouterFailure) => {
+    await modelStore.setRemoteModel(remoteModel);
+    (serverStore.ensureRouterModelLoaded as jest.Mock).mockResolvedValue(
+      'failed',
+    );
+    (serverStore.routerReason as jest.Mock).mockReturnValue(reason);
+    return modelStore
+      .engine!.completion({} as any)
+      .then(() => 'no refusal at all')
+      .catch((error: Error) => error.message);
+  };
+
+  it('refuses a request with the record the operation left', async () => {
+    await expect(refusalFor({cause: 'load-failed'})).resolves.toBe(
+      l10n.en.settings.routerModels.loadFailed,
+    );
+  });
+
+  // Withdrawing the request leaves no record because it is not news about the
+  // server. The engine still needs a message, and it says what is true: this
+  // app is no longer waiting.
+  it('refuses one with no record by naming the wait, not the server', async () => {
+    await expect(refusalFor(undefined)).resolves.toBe(
+      l10n.en.settings.routerModels.waitStopped,
+    );
   });
 
   it('asks the server to load the model without making activation wait', async () => {

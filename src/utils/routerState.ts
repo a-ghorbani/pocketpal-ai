@@ -83,7 +83,9 @@ export interface RouterFailure {
     | 'unload-not-released'
     | 'download-not-fetched'
     /** The server could not be asked at all, which is no claim about the model. */
-    | 'server-unreachable';
+    | 'server-unreachable'
+    /** This app stopped waiting, which is no claim about the model either. */
+    | 'wait-stopped';
   message?: string;
 }
 

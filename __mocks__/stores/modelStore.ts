@@ -252,6 +252,14 @@ class MockModelStore {
 
   ensureActiveRemoteModelReady: jest.Mock = jest.fn();
 
+  get activeRemoteFailure() {
+    const binding = this.activeRemoteBinding;
+    return (
+      binding &&
+      mockServerStore.routerReason(binding.serverId, binding.remoteModelId)
+    );
+  }
+
   setIsStreaming = (value: boolean) => {
     this.isStreaming = value;
   };

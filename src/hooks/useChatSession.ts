@@ -16,6 +16,7 @@ import {
   uiStore,
 } from '../store';
 import {resolveReasoningCapability} from '../utils/reasoningCapability';
+import {routerFailureText} from '../utils/routerCopy';
 
 import {MessageType, ModelOrigin, User} from '../utils/types';
 import {createMultimodalWarning} from '../utils/errors';
@@ -550,7 +551,10 @@ export const useChatSession = (
     // Only this path can tell "waiting for weights" from "waiting for the
     // first token", so it waits here rather than inside the engine.
     if ((await modelStore.ensureActiveRemoteModelReady()) === 'failed') {
-      await addSystemMessage(l10n.chat.remoteModelNotReady);
+      const reason = routerFailureText(modelStore.activeRemoteFailure, l10n);
+      if (reason) {
+        await addSystemMessage(reason);
+      }
       return;
     }
 

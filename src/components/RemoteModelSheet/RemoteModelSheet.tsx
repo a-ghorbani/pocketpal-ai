@@ -39,11 +39,8 @@ import {
 } from '../../api/openai';
 import {deriveListCaps} from '../../utils/listCaps';
 import {t} from '../../locales';
-import type {
-  RouterFailure,
-  RouterOpKind,
-  RouterRowState,
-} from '../../utils/routerState';
+import type {RouterOpKind, RouterRowState} from '../../utils/routerState';
+import {routerFailureText} from '../../utils/routerCopy';
 import {formatBytes} from '../../utils/formatters';
 
 import {createStyles} from './styles';
@@ -103,22 +100,6 @@ const routerOpLabel = (kind: RouterOpKind, l10n: any): string | null => {
       return l10n.settings.routerModels.stateDownloading;
     case 'unload':
       return null;
-  }
-};
-
-const routerFailureLabel = (
-  cause: RouterFailure['cause'],
-  l10n: any,
-): string => {
-  switch (cause) {
-    case 'load-failed':
-      return l10n.settings.routerModels.loadFailed;
-    case 'unload-not-released':
-      return l10n.settings.routerModels.unloadNotReleased;
-    case 'download-not-fetched':
-      return l10n.settings.routerModels.downloadNotFetched;
-    case 'server-unreachable':
-      return l10n.settings.routerModels.serverUnreachable;
   }
 };
 
@@ -683,9 +664,7 @@ export const RemoteModelSheet: React.FC<RemoteModelSheetProps> = observer(
               <Text
                 style={styles.routerReasonText}
                 testID={`router-reason-${model.id}`}>
-                {failure.message
-                  ? `${routerFailureLabel(failure.cause, l10n)} ${failure.message}`
-                  : routerFailureLabel(failure.cause, l10n)}
+                {routerFailureText(failure, l10n)}
               </Text>
               <Button
                 compact

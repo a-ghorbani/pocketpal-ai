@@ -43,6 +43,8 @@ import {
 import {getRecommendedProjectionModel} from '../utils/multimodalHelpers';
 import {isDraftOnlyModel} from '../utils/mtp';
 import {getOriginalModelName} from '../utils/formatters';
+import {routerFailureLabel, routerFailureText} from '../utils/routerCopy';
+import type {RouterFailure} from '../utils/routerState';
 import type {OnboardingPalModelEntry} from './onboarding/onboardingPals';
 
 import {downloadManager, DownloadCancelledError} from '../services/downloads';
@@ -2712,10 +2714,26 @@ class ModelStore {
     );
   };
 
+  /** The record the last operation on the bound model left, if it left one. */
+  get activeRemoteFailure(): RouterFailure | undefined {
+    const binding = this.activeRemoteBinding;
+    return (
+      binding &&
+      serverStore.routerReason(binding.serverId, binding.remoteModelId)
+    );
+  }
+
   private requireActiveRemoteModelReady = async (): Promise<void> => {
-    if ((await this.ensureActiveRemoteModelReady()) === 'failed') {
-      throw new Error(uiStore.l10n.chat.remoteModelNotReady);
+    if ((await this.ensureActiveRemoteModelReady()) !== 'failed') {
+      return;
     }
+    const l10n = uiStore.l10n;
+    // The engine needs a message even where the operation left no record, and
+    // that message is about this app's wait, never about the server.
+    throw new Error(
+      routerFailureText(this.activeRemoteFailure, l10n) ??
+        routerFailureLabel('wait-stopped', l10n),
+    );
   };
 
   /**
