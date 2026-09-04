@@ -157,6 +157,11 @@ const pairedDraftModel = (config?: DraftConfig): Model | undefined =>
 const PRESENCE_WATCH_BACKOFF_MS = [2000, 5000, 10000, 20000, 30000];
 const PRESENCE_WATCH_MAX_FAILURES = 10;
 
+interface PresenceWatch {
+  serverId: string;
+  timer: ReturnType<typeof setTimeout> | null;
+}
+
 class ModelStore {
   models: Model[] = [];
   version: number | undefined = undefined; // Persisted version
@@ -198,7 +203,7 @@ class ModelStore {
 
   // Annotated `false` in makeAutoObservable: the watch's own bookkeeping,
   // read imperatively and never a reaction input.
-  presenceWatchTimer: ReturnType<typeof setTimeout> | null = null;
+  presenceWatch: PresenceWatch | null = null;
   presenceWatchFailures = 0;
   private disposePresenceWatch: (() => void) | undefined = undefined;
 
@@ -259,7 +264,7 @@ class ModelStore {
       contextId: computed,
       remoteModels: computed,
       activeDownloads: computed,
-      presenceWatchTimer: false,
+      presenceWatch: false,
       presenceWatchFailures: false,
     });
     makePersistable(this, {
@@ -1218,6 +1223,9 @@ class ModelStore {
           appState: this.appState,
           modelId: this.activeRemoteBinding?.modelId,
           serverId,
+          configured:
+            serverId !== undefined &&
+            serverStore.servers.some(s => s.id === serverId),
           presence: serverId ? serverStore.presenceFor(serverId) : undefined,
         };
       },
@@ -1239,20 +1247,28 @@ class ModelStore {
     );
   };
 
-  /** The single start/stop site for the watch timer. */
+  /** The single start/stop site for the watch. */
   private syncPresenceWatch = (): void => {
     const serverId = this.activeRemoteBinding?.serverId;
     const shouldWatch =
       this.appState === 'active' &&
       serverId !== undefined &&
+      serverStore.servers.some(s => s.id === serverId) &&
       serverStore.presenceFor(serverId) !== 'reachable' &&
       this.presenceWatchFailures < PRESENCE_WATCH_MAX_FAILURES;
 
+    if (this.presenceWatch && this.presenceWatch.serverId !== serverId) {
+      this.clearPresenceWatch();
+    }
     if (!shouldWatch) {
       this.clearPresenceWatch();
       return;
     }
-    if (this.presenceWatchTimer !== null) {
+    // The handle stays set for the whole tick, not just until it fires, so it
+    // reads as "a tick is scheduled or running". Cleared once, in the tick's
+    // finally — otherwise a presence write made by the probe re-arms through
+    // the reaction before the failure is counted, and the cap never closes.
+    if (this.presenceWatch?.timer != null) {
       return;
     }
 
@@ -1263,31 +1279,38 @@ class ModelStore {
           PRESENCE_WATCH_BACKOFF_MS.length - 1,
         )
       ];
-    // The handle stays set for the whole tick, not just until it fires, so it
-    // reads as "a tick is scheduled or running". Cleared once, in the tick's
-    // finally — otherwise a presence write made by the probe re-arms through
-    // the reaction before the failure is counted, and the cap never closes.
-    this.presenceWatchTimer = setTimeout(() => {
-      this.runPresenceWatchTick(serverId).catch(() => {});
+    const watch: PresenceWatch = this.presenceWatch ?? {serverId, timer: null};
+    this.presenceWatch = watch;
+    watch.timer = setTimeout(() => {
+      this.runPresenceWatchTick(watch).catch(() => {});
     }, delay);
   };
 
   private clearPresenceWatch = (): void => {
-    if (this.presenceWatchTimer !== null) {
-      clearTimeout(this.presenceWatchTimer);
-      this.presenceWatchTimer = null;
+    if (this.presenceWatch?.timer != null) {
+      clearTimeout(this.presenceWatch.timer);
     }
+    this.presenceWatch = null;
   };
 
-  private runPresenceWatchTick = async (serverId: string): Promise<void> => {
+  private runPresenceWatchTick = async (
+    watch: PresenceWatch,
+  ): Promise<void> => {
+    if (this.presenceWatch !== watch) {
+      return;
+    }
     try {
-      await serverStore.probeServerPresence(serverId, {reason: 'detached'});
-      if (serverStore.presenceFor(serverId) === 'unreachable') {
+      await serverStore.probeServerPresence(watch.serverId, {
+        reason: 'detached',
+      });
+      if (serverStore.presenceFor(watch.serverId) !== 'reachable') {
         this.presenceWatchFailures += 1;
       }
     } finally {
-      this.presenceWatchTimer = null;
-      this.syncPresenceWatch();
+      if (this.presenceWatch === watch) {
+        watch.timer = null;
+        this.syncPresenceWatch();
+      }
     }
   };
 
