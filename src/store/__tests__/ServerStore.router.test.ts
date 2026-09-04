@@ -504,6 +504,21 @@ describe('the router event stream', () => {
     expect(mockedOpenStream).toHaveBeenCalledTimes(1);
   });
 
+  // The release lands after the stream ended and before the reopen it
+  // scheduled — the window the transport split made the ordinary one, and the
+  // one the release above never enters because it closes the stream itself.
+  it('cancels a reopen the release lands in the middle of', async () => {
+    const id = await routerServer();
+    await openOn(id);
+
+    endStream();
+    serverStore.releaseRouterStream(id);
+    await settleReopen();
+
+    expect(mockedOpenStream).toHaveBeenCalledTimes(1);
+    expect(serverStore.routerStream).toBeNull();
+  });
+
   it('opens nothing further once the server is released', async () => {
     const id = await routerServer();
     await openOn(id);

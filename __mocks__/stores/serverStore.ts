@@ -39,7 +39,10 @@ class MockServerStore {
   routerEvents: Record<string, RouterLive> = {};
   routerOps: Record<string, RouterOp> = {};
   routerReasons: Record<string, RouterFailure> = {};
-  routerStream: {serverId: string; state: 'connecting' | 'open'} | null = null;
+  routerStream: {
+    serverId: string;
+    state: 'connecting' | 'open' | 'reopening';
+  } | null = null;
   routerPolls: Set<string> = new Set();
   routerStreamCap: Record<string, RouterStreamCap> = {};
   routerObservedEviction: Set<string> = new Set();

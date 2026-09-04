@@ -170,7 +170,15 @@ class ServerStore {
   // this app may not reach next launch.
   routerEvents: Record<string, RouterLive> = {};
   routerOps: Record<string, RouterOp> = {};
-  routerStream: {serverId: string; state: 'connecting' | 'open'} | null = null;
+  /**
+   * The whole of this store's commitment to one server's stream, a scheduled
+   * reopen included. Nothing may hold a socket, or a timer that will open one,
+   * without an entry here saying which server it is for.
+   */
+  routerStream: {
+    serverId: string;
+    state: 'connecting' | 'open' | 'reopening';
+  } | null = null;
   routerPolls: Set<string> = new Set();
   routerStreamCap: Record<string, RouterStreamCap> = {};
   routerObservedEviction: Set<string> = new Set();
@@ -184,6 +192,7 @@ class ServerStore {
   private routerFocusedServerId: string | null = null;
   private routerStreamSeq = 0;
   private routerReconnectAt: Record<string, number[]> = {};
+  /** Non-null exactly while `routerStream` reads `reopening`. */
   private routerReconnectTimer: ReturnType<typeof setTimeout> | null = null;
   private routerSuspendedAt: number | null = null;
   private routerReconcileInFlight = new Set<string>();
@@ -815,7 +824,11 @@ class ServerStore {
     if (this.routerStreamCapFor(serverId) === 'absent') {
       return;
     }
-    if (this.routerStream?.serverId === serverId) {
+    const held = this.routerStream;
+    if (
+      held?.serverId === serverId &&
+      (held.state === 'connecting' || held.state === 'open')
+    ) {
       return;
     }
     const server = this.servers.find(s => s.id === serverId);
@@ -935,10 +948,16 @@ class ServerStore {
     }
     attempts.push(now);
     const delay = attempts.length > 1 ? ROUTER_RECONNECT_BACKOFF_MS : 0;
-    this.routerReconnectTimer = setTimeout(() => {
-      this.routerReconnectTimer = null;
-      this.openRouterStream(serverId);
-    }, delay);
+    runInAction(() => {
+      this.setRouterStream({serverId, state: 'reopening'});
+      this.routerReconnectTimer = setTimeout(() => {
+        runInAction(() => {
+          this.routerReconnectTimer = null;
+          this.setRouterStream(null);
+        });
+        this.openRouterStream(serverId);
+      }, delay);
+    });
   }
 
   /**
