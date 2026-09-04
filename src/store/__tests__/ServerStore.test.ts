@@ -1580,4 +1580,74 @@ describe('ServerStore', () => {
       });
     });
   });
+  describe('canonical ServerConfig.url', () => {
+    it('stores the canonical form of a scanned web-UI root', () => {
+      const id = serverStore.addServer({
+        name: 'llama',
+        url: 'http://192.168.1.5:9931/',
+      });
+
+      expect(serverStore.servers.find(s => s.id === id)?.url).toBe(
+        'http://192.168.1.5:9931',
+      );
+    });
+
+    it('strips a hand-entered /v1 base, which 404s every request today', () => {
+      const id = serverStore.addServer({
+        name: 'llama',
+        url: 'http://192.168.1.5:9931/v1',
+      });
+
+      expect(serverStore.servers.find(s => s.id === id)?.url).toBe(
+        'http://192.168.1.5:9931',
+      );
+    });
+
+    it('canonicalises an edited url too', () => {
+      const id = serverStore.addServer({
+        name: 'llama',
+        url: 'http://host:9931',
+      });
+
+      serverStore.updateServer(id, {url: 'http://host:9931/v1/'});
+
+      expect(serverStore.servers.find(s => s.id === id)?.url).toBe(
+        'http://host:9931',
+      );
+    });
+
+    it('keeps caps, models and presence through a no-op trailing-slash edit', async () => {
+      const id = serverStore.addServer({
+        name: 'llama',
+        url: 'http://host:9931',
+        serverType: 'llama.cpp',
+      });
+      mockedProbeReachability.mockResolvedValue('reachable');
+      await serverStore.probeServerPresence(id, {reason: 'user'});
+      runInAction(() => {
+        serverStore.remoteCaps[`${id}/m1`] = {contextLength: 4096};
+        serverStore.serverModels.set(id, []);
+      });
+
+      serverStore.updateServer(id, {url: 'http://host:9931/'});
+
+      expect(serverStore.remoteCaps[`${id}/m1`]).toBeDefined();
+      expect(serverStore.serverModels.get(id)).toBeDefined();
+      expect(serverStore.presenceFor(id)).toBe('reachable');
+    });
+
+    it('still invalidates on a genuine repoint', () => {
+      const id = serverStore.addServer({
+        name: 'llama',
+        url: 'http://host:9931',
+      });
+      runInAction(() => {
+        serverStore.remoteCaps[`${id}/m1`] = {contextLength: 4096};
+      });
+
+      serverStore.updateServer(id, {url: 'http://host:9932'});
+
+      expect(serverStore.remoteCaps[`${id}/m1`]).toBeUndefined();
+    });
+  });
 });

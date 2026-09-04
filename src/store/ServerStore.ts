@@ -19,6 +19,7 @@ import {
   ServerPresenceEntry,
 } from '../utils/types';
 import {readServerIsSleeping} from '../utils/serverPresence';
+import {canonicalizeServerUrl} from '../utils/serverUrl';
 import {ReasoningCapability} from '../utils/reasoningCapability';
 import {deriveListCapsMap} from '../utils/listCaps';
 import type {ListDerivedCaps} from '../utils/listCaps';
@@ -112,6 +113,7 @@ class ServerStore {
     const id = `server-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
     const newServer: ServerConfig = {
       ...config,
+      url: canonicalizeServerUrl(config.url),
       id,
     };
     this.servers.push(newServer);
@@ -130,12 +132,20 @@ class ServerStore {
     // against a router. Drop both and let the next probe / fetch repopulate.
     // Reasoning state survives: it carries user declarations, and it is not
     // server-reported.
-    const invalidatesDiscovery =
-      (updates.url !== undefined && updates.url !== server.url) ||
-      (updates.serverType !== undefined &&
-        updates.serverType !== server.serverType);
+    // Canonicalised before the comparison, not after the assign: a no-op
+    // slash edit would otherwise compare raw against canonical, read as a
+    // repoint, and drop caps, models and presence for an unchanged server.
+    const canonical: Partial<ServerConfig> =
+      updates.url !== undefined
+        ? {...updates, url: canonicalizeServerUrl(updates.url)}
+        : updates;
 
-    Object.assign(server, updates);
+    const invalidatesDiscovery =
+      (canonical.url !== undefined && canonical.url !== server.url) ||
+      (canonical.serverType !== undefined &&
+        canonical.serverType !== server.serverType);
+
+    Object.assign(server, canonical);
 
     if (invalidatesDiscovery) {
       this.remoteCaps = dropServerEntries(this.remoteCaps, id);
