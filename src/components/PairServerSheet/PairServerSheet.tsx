@@ -5,7 +5,7 @@ import React, {
   useRef,
   useState,
 } from 'react';
-import {View, TextInput as RNTextInput} from 'react-native';
+import {View} from 'react-native';
 
 import {observer} from 'mobx-react';
 import {useSafeAreaInsets} from 'react-native-safe-area-context';
@@ -70,8 +70,6 @@ export const PairServerSheet: React.FC<PairServerSheetProps> = observer(
 
     const canScanRef = useRef(canScan);
     canScanRef.current = canScan;
-
-    const keyField = useRef<RNTextInput | null>(null);
 
     const probeGeneration = useRef(0);
     const inFlight = useRef<{
@@ -171,12 +169,6 @@ export const PairServerSheet: React.FC<PairServerSheetProps> = observer(
       setEntryState(canScanRef.current ? 'scanning' : 'manual');
       setState(canScanRef.current ? 'scanning' : 'manual');
     }, [isVisible, request, accept]);
-
-    useEffect(() => {
-      if (verdict?.result.outcome === 'unauthorized') {
-        keyField.current?.focus();
-      }
-    }, [verdict]);
 
     const codeScanner = useCodeScanner({
       codeTypes: ['qr'],
@@ -489,7 +481,6 @@ export const PairServerSheet: React.FC<PairServerSheetProps> = observer(
                 {l10n.settings.remotePrivacyNotice}
               </Text>
               <TextInput
-                ref={keyField}
                 testID="pair-server-key"
                 label={l10n.models.pairServer.apiKeyLabel}
                 value={apiKey}

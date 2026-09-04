@@ -194,7 +194,7 @@ describe('PairServerSheet', () => {
       await settle(probe, usable(1));
     });
 
-    it('focuses the key field so a refused key can be corrected', async () => {
+    it('puts a refusal and the key field on screen, and raises no keyboard', async () => {
       const probe = nextProbe();
       const root = renderSheet();
 
@@ -202,7 +202,11 @@ describe('PairServerSheet', () => {
       await settle(probe, refused);
 
       expect(root.getByTestId('pair-server-verdict')).toBeTruthy();
-      expect(focusMock).toHaveBeenCalled();
+      expect(keyField(root).length).toBeGreaterThan(0);
+      expect(keyField(root).some((n: any) => n.props.autoFocus === true)).toBe(
+        false,
+      );
+      expect(focusMock).not.toHaveBeenCalled();
     });
 
     it('adds the server on the first press of Add', async () => {
