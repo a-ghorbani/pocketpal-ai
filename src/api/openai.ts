@@ -958,6 +958,18 @@ export async function streamChatCompletion(
         return;
       }
 
+      // The server evaluates only the prompt tokens it did not already hold in
+      // its KV cache, so the prompt total is `prompt_n + cache_n`. The two keys
+      // are guarded separately: a build too old to report reuse omits `cache_n`
+      // entirely, while a cold prompt on a newer one reports 0, and those are
+      // different facts.
+      const promptTokens =
+        serverTimings &&
+        (serverTimings.prompt_n !== undefined ||
+          serverTimings.cache_n !== undefined)
+          ? (serverTimings.prompt_n ?? 0) + (serverTimings.cache_n ?? 0)
+          : undefined;
+
       const result: CompletionResult = {
         text: fullContent,
         content: fullContent,
@@ -966,7 +978,7 @@ export async function streamChatCompletion(
         // llama.cpp reports authoritative token counts on `timings`; the server
         // count wins over the per-event tally. Each field is guarded on its own
         // key so a server that emits only one does not zero the other.
-        tokens_evaluated: serverTimings?.prompt_n,
+        tokens_evaluated: promptTokens,
         tokens_predicted: serverTimings?.predicted_n ?? tokensPredicted,
         timings: serverTimings,
       };
