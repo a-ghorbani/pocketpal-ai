@@ -5,8 +5,7 @@ import {ReasoningCapability} from '../../src/utils/reasoningCapability';
 import {RemoteModelInfo} from '../../src/api/openai';
 import {deriveListCapsMap} from '../../src/utils/listCaps';
 import {
-  mapRowStatus,
-  rowMatchesKey,
+  rowStateFromList,
   RouterFailure,
   RouterLive,
   RouterOp,
@@ -48,7 +47,7 @@ class MockServerStore {
   routerObservedEviction: Set<string> = new Set();
   routerListShape: Record<
     string,
-    {hasModelsKey: boolean; startedAt: number; seq: number; stale: boolean}
+    {hasModelsKey: boolean; seq: number; stale: boolean}
   > = {};
 
   addServer: jest.Mock;
@@ -91,11 +90,10 @@ class MockServerStore {
   }
 
   routerRowState(serverId: string, remoteModelId: string): RouterRowState {
-    const row = (this.serverModels.get(serverId) ?? []).find(candidate =>
-      rowMatchesKey(candidate, remoteModelId),
-    );
-    return mapRowStatus(
-      row && this.routerListShape[serverId]?.stale ? {id: row.id} : row,
+    return rowStateFromList(
+      this.serverModels.get(serverId) ?? [],
+      remoteModelId,
+      this.routerListShape[serverId]?.stale === true,
     );
   }
 

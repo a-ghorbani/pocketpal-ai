@@ -1296,9 +1296,10 @@ describe('one presenter at a time', () => {
     expect(serverStore.routerResidentCount(id)).toBe(residentRowsIn('loading'));
   });
 
-  // Ten minutes is a fact about how long this app waited. The desktop may
-  // still be loading the model, and its row is what says so.
-  it('records nothing when the wait ends with the row still loading', async () => {
+  // Ten minutes is a fact about how long this app waited, and the desktop may
+  // still be loading — but a message is on screen waiting for an answer, so
+  // the end of the wait is itself news. What it may not do is blame the model.
+  it('says the wait stopped when it ends with the row still loading', async () => {
     const id = await routerServer('unloaded');
     const pending = serverStore.ensureRouterModelLoaded(id, TARGET);
     await flush();
@@ -1309,7 +1310,73 @@ describe('one presenter at a time', () => {
 
     await expect(pending).resolves.toBe('failed');
     expect(serverStore.routerOp(id, TARGET)).toBeUndefined();
+    expect(serverStore.routerReason(id, TARGET)).toEqual({
+      cause: 'wait-stopped',
+    });
+  });
+
+  it('leaves no detail from a settled attempt for the next one', async () => {
+    const id = await routerServer('unloaded');
+    const first = serverStore.ensureRouterModelLoaded(id, TARGET);
+    await flush();
+    jest.advanceTimersByTime(1);
+    serverStore.applyRouterEvent(id, {...firstProgressEvent(), model: TARGET});
+    expect(serverStore.routerLive(id, TARGET)?.progress).toBeDefined();
+
+    answerWith('loaded');
+    await reconcile(id);
+    await expect(first).resolves.toBe('ready');
+
+    answerWith('unloaded');
+    await reconcile(id);
+    serverStore.ensureRouterModelLoaded(id, TARGET);
+    await flush();
+
+    // A bar reading the last attempt's fraction opens the next one part-way
+    // through, and a fresh failure reads the previous exit code.
+    expect(serverStore.routerLive(id, TARGET)).toBeUndefined();
+  });
+
+  it('says nothing about a server for a request the user withdrew', async () => {
+    mockedRouterUnload.mockResolvedValue({status: 200, body: {success: true}});
+    const id = await routerServer('unloaded');
+    const pending = serverStore.ensureRouterModelLoaded(id, TARGET);
+    await flush();
+    mockedFetch.mockRejectedValue(new Error('Network request failed'));
+
+    await serverStore.cancelRouterOp(id, TARGET);
+    await advance(ROUTER_UNREACHABLE_MS + ROUTER_ACK_MS);
+
+    await expect(pending).resolves.toBe('failed');
+    expect(serverStore.routerOp(id, TARGET)).toBeUndefined();
     expect(serverStore.routerReason(id, TARGET)).toBeUndefined();
+  });
+
+  // A read already in flight when the request went out can only report the
+  // state from before it, which is not this request's answer in either
+  // direction.
+  it('does not settle ready off a list read that began before the request', async () => {
+    const id = await routerServer('unloaded');
+    let answerOld: (value: unknown) => void = () => {};
+    mockedFetch.mockImplementationOnce(
+      () =>
+        new Promise(resolve => {
+          answerOld = resolve;
+        }),
+    );
+    const older = serverStore.fetchModelsForServer(id);
+    const pending = serverStore.ensureRouterModelLoaded(id, TARGET);
+    await flush();
+
+    answerOld(listResult(rowsWith('loaded'), false));
+    await older;
+    await flush();
+
+    expect(serverStore.routerOp(id, TARGET)).toBeDefined();
+
+    answerWith('loaded');
+    await reconcile(id);
+    await expect(pending).resolves.toBe('ready');
   });
 
   // The other way a row reads `unknown`: a build whose status value this one
@@ -1327,6 +1394,48 @@ describe('one presenter at a time', () => {
     await expect(pending).resolves.toBe('failed');
     expect(serverStore.routerRowState(id, TARGET)).toBe('unknown');
     expect(serverStore.routerReason(id, TARGET)).toBeUndefined();
+  });
+
+  // Two reads of one server overlap: the tiers hold separate in-flight guards,
+  // and the foreground path fires two in the same tick. Whichever answers last
+  // is not thereby the one that answered.
+  it('does not let an overtaken read that failed discredit the list', async () => {
+    const id = await routerServer('loaded');
+    let failSlow: (error: unknown) => void = () => {};
+    mockedFetch.mockImplementationOnce(
+      () =>
+        new Promise((_resolve, reject) => {
+          failSlow = reject;
+        }),
+    );
+    const slow = serverStore.fetchModelsForServer(id);
+    answerWith('loaded');
+    await serverStore.fetchModelsForServer(id);
+
+    failSlow(new Error('Network request failed'));
+    await slow;
+
+    expect(serverStore.routerRowState(id, TARGET)).toBe('loaded');
+    expect(serverStore.routerResidentCount(id)).toBe(residentRowsIn('loaded'));
+  });
+
+  it('does not let an overtaken read that succeeded install an older list', async () => {
+    const id = await routerServer('unloaded');
+    let answerSlow: (value: unknown) => void = () => {};
+    mockedFetch.mockImplementationOnce(
+      () =>
+        new Promise(resolve => {
+          answerSlow = resolve;
+        }),
+    );
+    const slow = serverStore.fetchModelsForServer(id);
+    answerWith('loaded');
+    await serverStore.fetchModelsForServer(id);
+
+    answerSlow(listResult(rowsWith('unloaded'), false));
+    await slow;
+
+    expect(serverStore.routerRowState(id, TARGET)).toBe('loaded');
   });
 
   it('still blames the model when the row it settles on says it failed', async () => {
@@ -1573,6 +1682,32 @@ describe('downloading a model to the server', () => {
 
     expect(serverStore.routerOp(id, REFERENCE)?.kind).toBe('download');
     expect(serverStore.routerRowState(id, REFERENCE)).toBe('absent');
+  });
+
+  // The picker's rows are the server's plus this app's own business. Without
+  // that second half an in-flight fetch has no row, so its Cancel is
+  // unreachable and the copy for one that never arrived has nowhere to go.
+  it('lists a model it has an operation about that the server does not list', async () => {
+    const id = await routerServer();
+
+    await serverStore.startRouterDownload(id, REFERENCE);
+
+    expect(serverStore.routerPickerRows(id).map(row => row.id)).toContain(
+      REFERENCE,
+    );
+  });
+
+  it('lists a model with an unread failure and no row of its own', async () => {
+    const id = await routerServer();
+    runInAction(() => {
+      serverStore.routerReasons[`${id}/${REFERENCE}`] = {
+        cause: 'download-not-fetched',
+      };
+    });
+
+    expect(serverStore.routerPickerRows(id).map(row => row.id)).toContain(
+      REFERENCE,
+    );
   });
 
   it('reports a refused request with the server reason and starts nothing', async () => {

@@ -23,13 +23,14 @@ import type {ListDerivedCaps} from '../utils/listCaps';
 import {
   applyLivePatch,
   loadFailureFrom,
+  rowStateFromList,
   unloadFailureFrom,
+  unreachableFailureFrom,
+  waitStoppedFailureFrom,
   downloadVerdict,
   loadVerdict,
-  mapRowStatus,
   unloadVerdict,
   reduceRouterEvent,
-  rowMatchesKey,
   RouterFailure,
   RouterListState,
   RouterLive,
@@ -152,7 +153,6 @@ function dropServerEntries<T>(
  */
 interface RouterListShape {
   hasModelsKey: boolean;
-  startedAt: number;
   /**
    * Which fetch this was. A counter rather than a clock reading, so "the list
    * was re-read after that request" is exact however coarse the clock is.
@@ -476,20 +476,23 @@ class ServerStore {
     return [...keys];
   }
 
-  /**
-   * What the last list read said. A failed read leaves the rows it could not
-   * refresh in place, and a state nothing has corroborated since is not one
-   * this app may claim, so the row is passed on without it — which maps to
-   * `unknown`, and renders as no claim at all.
-   */
   private routerRowFromList(serverId: string, key: string): RouterListState {
-    const remoteModelId = key.slice(serverId.length + 1);
-    const row = (this.serverModels.get(serverId) ?? []).find(candidate =>
-      rowMatchesKey(candidate, remoteModelId),
+    return rowStateFromList(
+      this.serverModels.get(serverId) ?? [],
+      key.slice(serverId.length + 1),
+      this.routerListShape[serverId]?.stale === true,
     );
-    return mapRowStatus(
-      row && this.routerListShape[serverId]?.stale ? {id: row.id} : row,
-    );
+  }
+
+  /**
+   * Whether a later read of this server's list has already answered. Such a
+   * read says nothing in either direction: its rows are older than the ones
+   * installed, and its failure is not news about a list somebody has since
+   * read successfully.
+   */
+  private listReadOvertaken(serverId: string, seq: number): boolean {
+    const shape = this.routerListShape[serverId];
+    return shape !== undefined && shape.seq > seq;
   }
 
   /**
@@ -636,19 +639,21 @@ class ServerStore {
         server.requestTimeoutMs,
       );
 
+      if (this.listReadOvertaken(serverId, seq)) {
+        runInAction(() => {
+          this.isLoading = false;
+        });
+        return {ok: true};
+      }
+
       runInAction(() => {
         this.serverModels.set(serverId, models);
         this.isLoading = false;
-        // Only the success branch, because this fetch leaves the previous rows
-        // in place on a failure: without a stamp, a reconcile that never
-        // happened is indistinguishable from one that found the old row, and
-        // every bound below turns on that difference.
-        this.routerListShape[serverId] = {
-          hasModelsKey,
-          startedAt,
-          seq,
-          stale: false,
-        };
+        // The stamp is written only here, because this fetch leaves the
+        // previous rows in place on a failure: without it, a reconcile that
+        // never happened is indistinguishable from one that found the old row,
+        // and every bound below turns on that difference.
+        this.routerListShape[serverId] = {hasModelsKey, seq, stale: false};
         this.pruneRouterOverlay(serverId, startedAt);
 
         // Update lastConnected timestamp
@@ -665,7 +670,7 @@ class ServerStore {
         this.error = message;
         this.isLoading = false;
         const shape = this.routerListShape[serverId];
-        if (shape) {
+        if (shape && !this.listReadOvertaken(serverId, seq)) {
           shape.stale = true;
         }
       });
@@ -1244,10 +1249,14 @@ class ServerStore {
       // The request never reached the server, so nothing is known about the
       // model. Reporting that it did not load would be a claim this app is in
       // no position to make.
-      this.settleRouterOp(key, 'failed', {
-        cause: 'server-unreachable',
-        message: error?.message,
-      });
+      const failed = this.routerOps[key];
+      if (failed) {
+        this.settleRouterOp(
+          key,
+          'failed',
+          unreachableFailureFrom(failed, error?.message),
+        );
+      }
     }
     return settled;
   }
@@ -1416,6 +1425,10 @@ class ServerStore {
     runInAction(() => {
       this.setRouterOp(key, op);
       delete this.routerReasons[key];
+      // Detail is keyed by model, not by attempt: left behind, the last
+      // attempt's fraction opens this one part-way through and its exit code
+      // is suffixed to this one's failure.
+      delete this.routerEvents[key];
     });
     this.syncRouterTiers();
     this.syncRouterStream();
@@ -1464,9 +1477,6 @@ class ServerStore {
       if (op.serverId !== serverId) {
         continue;
       }
-      // The list, never the overlay: an event is an accelerant for what the
-      // screen shows and is not authority for an outcome, so a status arriving
-      // mid-fetch cannot settle an operation off itself.
       const state = this.routerRowFromList(serverId, key);
       if (op.kind === 'load') {
         this.settleLoadOp(key, op, state);
@@ -1484,7 +1494,7 @@ class ServerStore {
     state: RouterListState,
   ): void {
     const verdict = loadVerdict(state);
-    if (verdict === 'ready') {
+    if (verdict === 'ready' && this.hasReconciledSince(op)) {
       this.settleRouterOp(key, 'ready');
       return;
     }
@@ -1672,10 +1682,11 @@ class ServerStore {
         !this.hasReconciledSince(op) &&
         now - op.startedAt > ROUTER_UNREACHABLE_MS
       ) {
-        this.settleRouterOp(key, 'failed', {
-          cause: 'server-unreachable',
-          message: op.reason,
-        });
+        this.settleRouterOp(
+          key,
+          'failed',
+          unreachableFailureFrom(op, op.reason),
+        );
         continue;
       }
       if (op.kind === 'unload') {
@@ -1683,9 +1694,18 @@ class ServerStore {
         continue;
       }
       // Ten minutes is a fact about how long this app waited, so the row is
-      // still what says whether the model loaded.
+      // still what says whether the model loaded — but the wait ending is news
+      // in itself, because a message is on screen waiting for it.
       if (op.kind === 'load' && now - op.startedAt > ROUTER_LOAD_MAX_MS) {
-        this.settleRouterOp(key, 'failed', this.loadFailure(op, key));
+        this.settleRouterOp(
+          key,
+          'failed',
+          waitStoppedFailureFrom(
+            this.routerRowFromList(op.serverId, key),
+            op,
+            op.reason ?? this.rowReason(key),
+          ),
+        );
         continue;
       }
       const interval =
@@ -1720,13 +1740,14 @@ class ServerStore {
       return;
     }
     // A fetch having succeeded since the request says nothing about what it
-    // found, so the bound reads the row the same way the reconcile does.
-    const state = this.routerRowFromList(op.serverId, key);
-    if (unloadVerdict(state) === 'released') {
-      this.settleRouterOp(key, 'ready');
-      return;
-    }
-    this.settleRouterOp(key, 'failed', unloadFailureFrom(state));
+    // found, so the bound reads the row the same way the reconcile does. A row
+    // that has released the model cannot reach here: the fetch that made it so
+    // settled the operation ready on its way past.
+    this.settleRouterOp(
+      key,
+      'failed',
+      unloadFailureFrom(this.routerRowFromList(op.serverId, key)),
+    );
   }
 
   // Auto-fetch on foreground

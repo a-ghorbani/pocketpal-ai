@@ -6,7 +6,10 @@ import {
   mapRowStatus,
   reduceRouterEvent,
   rowMatchesKey,
+  rowStateFromList,
   unloadFailureFrom,
+  unreachableFailureFrom,
+  waitStoppedFailureFrom,
   unloadVerdict,
   RouterEventEffect,
   RouterListState,
@@ -429,6 +432,66 @@ describe('loadFailureFrom', () => {
   );
 });
 
+describe('waitStoppedFailureFrom', () => {
+  const op = (cancelled?: boolean): RouterOp => ({
+    kind: 'load',
+    phase: 'active',
+    serverId: 'srv',
+    key: 'srv/alpha',
+    startedAt: 0,
+    requestSeq: 0,
+    lastEvidenceAt: 0,
+    cancelled,
+  });
+
+  // The wait is ours and a message is on screen waiting for it, so its ending
+  // is reported even where the row settles nothing.
+  it.each(['loading', 'downloading', 'unknown'] as RouterRowState[])(
+    'reports the wait ending off a row reading %s',
+    state => {
+      expect(waitStoppedFailureFrom(listed(state), op())).toEqual({
+        cause: 'wait-stopped',
+      });
+    },
+  );
+
+  it('reports the row where the row settles the question', () => {
+    expect(
+      waitStoppedFailureFrom(listed('unloaded'), op(), 'exit code 1'),
+    ).toEqual({cause: 'load-failed', message: 'exit code 1'});
+  });
+
+  it('reports nothing for a request the user withdrew', () => {
+    expect(waitStoppedFailureFrom(listed('loading'), op(true))).toBeUndefined();
+  });
+});
+
+describe('unreachableFailureFrom', () => {
+  const op = (cancelled?: boolean): RouterOp => ({
+    kind: 'load',
+    phase: 'active',
+    serverId: 'srv',
+    key: 'srv/alpha',
+    startedAt: 0,
+    requestSeq: 0,
+    lastEvidenceAt: 0,
+    cancelled,
+  });
+
+  it('names the reach and not the model', () => {
+    expect(unreachableFailureFrom(op(), 'Network request failed')).toEqual({
+      cause: 'server-unreachable',
+      message: 'Network request failed',
+    });
+  });
+
+  it('reports nothing for a request the user withdrew', () => {
+    expect(
+      unreachableFailureFrom(op(true), 'Network request failed'),
+    ).toBeUndefined();
+  });
+});
+
 describe('unloadFailureFrom', () => {
   it('builds none from a row the app does not believe', () => {
     expect(unloadFailureFrom(listed('unknown'))).toBeUndefined();
@@ -449,4 +512,20 @@ describe('unloadFailureFrom', () => {
       });
     },
   );
+});
+
+describe('rowStateFromList', () => {
+  const rows = routerModelsBody.data as any[];
+
+  it('reads the row the server listed', () => {
+    expect(rowStateFromList(rows, 'gemma-4-e2b', false)).toBe('loaded');
+  });
+
+  it('drops the state of a row a failed read left behind', () => {
+    expect(rowStateFromList(rows, 'gemma-4-e2b', true)).toBe('unknown');
+  });
+
+  it('leaves absence alone, which no read refreshed away', () => {
+    expect(rowStateFromList(rows, 'never-heard-of-it', true)).toBe('absent');
+  });
 });

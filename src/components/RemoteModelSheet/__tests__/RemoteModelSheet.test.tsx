@@ -1,5 +1,5 @@
 import React from 'react';
-import {render, fireEvent, waitFor} from '../../../../jest/test-utils';
+import {render, fireEvent, waitFor, within} from '../../../../jest/test-utils';
 import {RemoteModelSheet} from '../RemoteModelSheet';
 import {serverStore} from '../../../store';
 import {
@@ -459,6 +459,8 @@ describe('RemoteModelSheet', () => {
     const ROWS = routerModelsBody.data as any[];
     const LOADED = 'gemma-4-e2b';
     const UNLOADED = 'ggml-org/gemma-4-31B-it-GGUF:Q8_0';
+    /** A model this app has business about that the server does not list. */
+    const PENDING_REF = 'ggml-org/gemma-3-270m-it-GGUF:Q8_0';
 
     const openRouter = async (
       serverType: string | undefined = 'llama.cpp',
@@ -600,12 +602,7 @@ describe('RemoteModelSheet', () => {
 
     it('renders the router surface for a server that lists nothing', async () => {
       serverStore.routerListShape = {
-        'srv-1': {
-          hasModelsKey: false,
-          startedAt: Date.now(),
-          seq: 1,
-          stale: false,
-        },
+        'srv-1': {hasModelsKey: false, seq: 1, stale: false},
       };
       serverStore.servers = [
         {
@@ -772,12 +769,7 @@ describe('RemoteModelSheet', () => {
     // went on calling itself loaded underneath the note saying so.
     it('makes no claim for a row the last fetch could not refresh', async () => {
       serverStore.routerListShape = {
-        'srv-1': {
-          hasModelsKey: false,
-          startedAt: Date.now(),
-          seq: 1,
-          stale: true,
-        },
+        'srv-1': {hasModelsKey: false, seq: 1, stale: true},
       };
       const {queryByTestId, getByTestId} = await openRouter();
 
@@ -786,6 +778,69 @@ describe('RemoteModelSheet', () => {
       expect(getByTestId('router-resident-count').props.children).toBe(
         '0 resident',
       );
+    });
+
+    // The picker's own rows — a model this app has business about that the
+    // server does not list — carry no state the server vouched for, so there
+    // is nothing here to load.
+    it('offers no load for a model the server has no row for', async () => {
+      const key = `srv-1/${PENDING_REF}`;
+      serverStore.routerReasons = {[key]: {cause: 'download-not-fetched'}};
+
+      const {getByTestId, queryByTestId} = await openRouter();
+
+      expect(getByTestId(`router-row-${PENDING_REF}`)).toBeTruthy();
+      expect(queryByTestId(`router-load-${PENDING_REF}`)).toBeNull();
+      expect(queryByTestId(`router-state-${PENDING_REF}`)).toBeNull();
+    });
+
+    // The row has no state of its own until the weights land, so the group it
+    // sits in can only come from the operation.
+    it('files a download with no row of its own under Downloading', async () => {
+      const key = `srv-1/${PENDING_REF}`;
+      serverStore.routerOps = {
+        [key]: {
+          kind: 'download',
+          phase: 'active',
+          serverId: 'srv-1',
+          key,
+          startedAt: Date.now(),
+          requestSeq: 0,
+          lastEvidenceAt: Date.now(),
+        },
+      };
+
+      const {getByTestId} = await openRouter();
+
+      expect(
+        within(getByTestId('router-group-downloading')).getByTestId(
+          `router-row-${PENDING_REF}`,
+        ),
+      ).toBeTruthy();
+    });
+
+    // A model the server is still fetching is nothing a session can bind to,
+    // whether or not the server already lists a row under that name.
+    it('does not let a model being fetched be selected', async () => {
+      const key = `srv-1/${UNLOADED}`;
+      serverStore.routerOps = {
+        [key]: {
+          kind: 'download',
+          phase: 'active',
+          serverId: 'srv-1',
+          key,
+          startedAt: Date.now(),
+          requestSeq: 0,
+          lastEvidenceAt: Date.now(),
+        },
+      };
+
+      const {getByTestId} = await openRouter();
+      fireEvent.press(getByTestId(`router-select-${UNLOADED}`));
+
+      expect(
+        getByTestId('add-model-button').props.accessibilityState?.disabled,
+      ).toBe(true);
     });
 
     // A row that is one accessibility target announces itself and swallows

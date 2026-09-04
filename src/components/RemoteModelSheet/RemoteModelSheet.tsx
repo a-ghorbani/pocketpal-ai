@@ -960,7 +960,7 @@ export const RemoteModelSheet: React.FC<RemoteModelSheetProps> = observer(
                 </View>
               ) : (
                 ROUTER_GROUPS.map(group => (
-                  <View key={group}>
+                  <View key={group} testID={`router-group-${group}`}>
                     <View style={styles.routerGroupHeader}>
                       <Text style={styles.routerGroupTitle}>
                         {routerGroupLabels(l10n)[group]}

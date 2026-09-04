@@ -25,8 +25,8 @@ declare const reconciledList: unique symbol;
 
 /**
  * A row state read off a reconciled list. Every verdict takes one of these and
- * not a bare `RouterRowState`, so the overlay-first accessor — which is what
- * the screen reads, and which an event outranks a row in — cannot reach one.
+ * not a bare `RouterRowState`, so the widened state the screen reads cannot be
+ * passed to one.
  */
 export type RouterListState = RouterRowState & {
   readonly [reconciledList]: true;
@@ -151,6 +151,21 @@ export function mapRowStatus(row: RouterListRow | undefined): RouterListState {
   return fromReconciledList(asStatus(row.status?.value) ?? 'unknown');
 }
 
+/**
+ * The one reading of a server's list for one model. A read that failed leaves
+ * the rows it could not refresh in place, and a state nothing has corroborated
+ * since is not one this app may claim, so such a row is passed on without it —
+ * which maps to `unknown`, and renders as no claim at all.
+ */
+export function rowStateFromList(
+  rows: RouterListRow[],
+  remoteModelId: string,
+  stale: boolean,
+): RouterListState {
+  const row = rows.find(candidate => rowMatchesKey(candidate, remoteModelId));
+  return mapRowStatus(row && stale ? {id: row.id} : row);
+}
+
 /** Upstream matches a row to a model id by either key; so do we. */
 export function rowMatchesKey(row: RouterListRow, id: string): boolean {
   return row.id === id || row.model === id;
@@ -195,6 +210,36 @@ export function loadFailureFrom(
   return loadVerdict(state) === 'in-flight'
     ? undefined
     : {cause: 'load-failed', message};
+}
+
+/**
+ * The record a load leaves when this app stops waiting for it. The wait is
+ * ours, so its ending is always something to report — a message is on screen
+ * waiting for an answer, and silence is not one — but where the row settles
+ * the question, the row is what gets reported. A request the user withdrew has
+ * no outcome at all: they know why it ended.
+ */
+export function waitStoppedFailureFrom(
+  state: RouterListState,
+  op: RouterOp,
+  message?: string,
+): RouterFailure | undefined {
+  if (op.cancelled) {
+    return undefined;
+  }
+  return loadFailureFrom(state, op, message) ?? {cause: 'wait-stopped'};
+}
+
+/**
+ * The record an operation leaves when the server could not be asked at all.
+ * It claims nothing about the model, and a request the user withdrew leaves
+ * none — the reach failing is not why it ended.
+ */
+export function unreachableFailureFrom(
+  op: RouterOp,
+  message?: string,
+): RouterFailure | undefined {
+  return op.cancelled ? undefined : {cause: 'server-unreachable', message};
 }
 
 export type RouterUnloadVerdict = 'released' | 'not-converged';
