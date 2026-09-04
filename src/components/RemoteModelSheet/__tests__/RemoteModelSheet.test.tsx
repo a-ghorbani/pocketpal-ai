@@ -453,4 +453,204 @@ describe('RemoteModelSheet', () => {
       expect(mockedFetchModelsWithHeaders).not.toHaveBeenCalled();
     });
   });
+
+  describe('router model management', () => {
+    const ROWS = routerModelsBody.data as any[];
+    const LOADED = 'gemma-4-e2b';
+    const UNLOADED = 'ggml-org/gemma-4-31B-it-GGUF:Q8_0';
+
+    const openRouter = async (
+      serverType: string | undefined = 'llama.cpp',
+      rows: any[] = ROWS,
+    ) => {
+      serverStore.servers = [
+        {
+          id: 'srv-1',
+          name: 'router',
+          url: 'http://localhost:8080',
+          serverType,
+        },
+      ];
+      (serverStore.getApiKey as jest.Mock).mockResolvedValue(undefined);
+      mockedFetchModels.mockResolvedValueOnce(rows);
+
+      const view = render(
+        <RemoteModelSheet isVisible={true} onDismiss={jest.fn()} />,
+      );
+      fireEvent.press(view.getByTestId('server-chip-srv-1'));
+      await waitFor(() => {
+        expect(view.queryByText(LOADED)).toBeTruthy();
+      });
+      return view;
+    };
+
+    beforeEach(() => {
+      serverStore.routerEvents = {};
+      serverStore.routerOps = {};
+      serverStore.routerReasons = {};
+      serverStore.routerStreamCap = {};
+      serverStore.routerObservedEviction = new Set();
+      serverStore.routerListShape = {};
+    });
+
+    it('opens the stream and asks for no capabilities per row', async () => {
+      await openRouter();
+
+      expect(serverStore.openRouterStream).toHaveBeenCalledWith('srv-1');
+      expect(serverStore.fetchRemoteModelCaps).not.toHaveBeenCalled();
+      expect(mockedFetchModels).toHaveBeenCalledTimes(1);
+    });
+
+    it('groups rows by what the server says about them', async () => {
+      const {getByTestId} = await openRouter();
+
+      expect(getByTestId(`router-row-${LOADED}`)).toBeTruthy();
+      expect(getByTestId(`router-unload-${LOADED}`)).toBeTruthy();
+      expect(getByTestId(`router-load-${UNLOADED}`)).toBeTruthy();
+    });
+
+    it('shows the resident count as a fact and predicts nothing', async () => {
+      const {getByTestId, queryByText} = await openRouter();
+
+      expect(getByTestId('router-resident-count')).toBeTruthy();
+      expect(queryByText(/evict/i)).toBeNull();
+    });
+
+    it('mentions eviction only once one has been seen', async () => {
+      const first = await openRouter();
+      expect(first.queryByTestId('router-eviction-note')).toBeNull();
+      first.unmount();
+
+      serverStore.routerObservedEviction = new Set(['srv-1']);
+      const second = await openRouter();
+
+      expect(second.getByTestId('router-eviction-note')).toBeTruthy();
+    });
+
+    it('never calls a model sleeping, whatever the row says', async () => {
+      const rows = ROWS.map(row =>
+        row.id === LOADED
+          ? {...row, status: {...row.status, value: 'sleeping'}}
+          : row,
+      );
+      const {queryByText, getByTestId} = await openRouter('llama.cpp', rows);
+
+      expect(queryByText(/sleeping/i)).toBeNull();
+      expect(getByTestId(`router-unload-${LOADED}`)).toBeTruthy();
+    });
+
+    it('renders a determinate bar for a load reporting zero progress', async () => {
+      serverStore.routerEvents = {
+        [`srv-1/${UNLOADED}`]: {
+          status: 'loading',
+          progress: {value: 0},
+          at: Date.now(),
+        },
+      };
+      const {getByTestId} = await openRouter();
+
+      // A determinate bar announces a value; an indeterminate one announces
+      // none, so this distinguishes zero progress from no progress.
+      const bar = getByTestId(`router-progress-${UNLOADED}`);
+      expect(bar.props.accessibilityValue).toEqual({min: 0, max: 100, now: 0});
+    });
+
+    it('says a model is being released rather than offering a second unload', async () => {
+      serverStore.routerOps = {
+        [`srv-1/${LOADED}`]: {
+          kind: 'unload',
+          phase: 'requested',
+          serverId: 'srv-1',
+          key: `srv-1/${LOADED}`,
+          startedAt: Date.now(),
+          requestSeq: 0,
+          lastEvidenceAt: Date.now(),
+        },
+      };
+      const {getByTestId, queryByTestId} = await openRouter();
+
+      expect(getByTestId(`router-unloading-${LOADED}`)).toBeTruthy();
+      expect(queryByTestId(`router-unload-${LOADED}`)).toBeNull();
+    });
+
+    it.each(['unknown', 'absent'])(
+      'offers no download field while the stream has answered %s',
+      async cap => {
+        serverStore.routerStreamCap = {'srv-1': cap as any};
+        const {queryByTestId} = await openRouter();
+
+        expect(queryByTestId('router-download-field')).toBeNull();
+      },
+    );
+
+    it('offers the download field once the stream has answered', async () => {
+      serverStore.routerStreamCap = {'srv-1': 'present'};
+      const {getByTestId} = await openRouter();
+
+      expect(getByTestId('router-download-field')).toBeTruthy();
+    });
+
+    it('renders the router surface for a server that lists nothing', async () => {
+      serverStore.routerListShape = {
+        'srv-1': {hasModelsKey: false, startedAt: Date.now(), seq: 1},
+      };
+      serverStore.servers = [
+        {
+          id: 'srv-1',
+          name: 'router',
+          url: 'http://localhost:8080',
+          serverType: 'llama.cpp',
+        },
+      ];
+      (serverStore.getApiKey as jest.Mock).mockResolvedValue(undefined);
+      mockedFetchModels.mockResolvedValueOnce([]);
+
+      const {getByText, queryByTestId} = render(
+        <RemoteModelSheet isVisible={true} onDismiss={jest.fn()} />,
+      );
+      fireEvent.press(getByText('router'));
+      await waitFor(() => {
+        expect(queryByTestId('router-resident-count')).toBeTruthy();
+      });
+    });
+
+    it('leaves a server with no router evidence exactly as it was', async () => {
+      const plain = [
+        {id: 'solo', object: 'model', owned_by: 'llamacpp'},
+      ] as any[];
+      const {queryByTestId, getByText} = await (async () => {
+        serverStore.servers = [
+          {
+            id: 'srv-1',
+            name: 'router',
+            url: 'http://localhost:8080',
+            serverType: 'llama.cpp',
+          },
+        ];
+        (serverStore.getApiKey as jest.Mock).mockResolvedValue(undefined);
+        mockedFetchModels.mockResolvedValueOnce(plain);
+        const view = render(
+          <RemoteModelSheet isVisible={true} onDismiss={jest.fn()} />,
+        );
+        fireEvent.press(view.getByTestId('server-chip-srv-1'));
+        await waitFor(() => expect(view.queryByText('solo')).toBeTruthy());
+        return view;
+      })();
+
+      expect(queryByTestId('router-row-solo')).toBeNull();
+      expect(queryByTestId('router-resident-count')).toBeNull();
+      expect(getByText('solo')).toBeTruthy();
+      expect(serverStore.openRouterStream).not.toHaveBeenCalled();
+    });
+
+    // The sibling surfaces this sheet renders do not exist yet, so the
+    // degraded path is the one that actually ships first.
+    it('renders without favourites, last-used or presence', async () => {
+      const {getByTestId, queryByTestId} = await openRouter();
+
+      expect(queryByTestId(`router-favourite-${LOADED}`)).toBeNull();
+      expect(getByTestId(`router-row-${LOADED}`)).toBeTruthy();
+      expect(getByTestId(`router-load-${UNLOADED}`)).toBeTruthy();
+    });
+  });
 });

@@ -15,6 +15,7 @@ import {
   RadioButton,
   ActivityIndicator,
   Icon,
+  ProgressBar,
 } from 'react-native-paper';
 import {Dropdown} from '../ui';
 import {observer} from 'mobx-react';
@@ -40,9 +41,105 @@ import {
 } from '../../api/openai';
 import {deriveListCaps} from '../../utils/listCaps';
 import {t} from '../../locales';
+import type {RouterRowState} from '../../utils/routerState';
 
 import {createStyles} from './styles';
+import {
+  canToggleFavourite,
+  isServerOffline,
+  serverFavouriteModelIds,
+  serverLastUsedRemoteModelId,
+  toggleFavourite,
+} from './siblingReads';
 import {ChatIcon, EyeIcon, EyeOffIcon} from '../../assets/icons';
+
+type RouterGroup = 'loaded' | 'downloading' | 'available';
+
+const ROUTER_GROUPS: RouterGroup[] = ['loaded', 'downloading', 'available'];
+
+const routerGroupLabels = (l10n: any): Record<RouterGroup, string> => ({
+  loaded: l10n.settings.routerModels.loadedGroup,
+  downloading: l10n.settings.routerModels.downloadingGroup,
+  available: l10n.settings.routerModels.availableGroup,
+});
+
+/**
+ * A row's own state, in words. `sleeping` is deliberately not called that: the
+ * word is reserved for whether a whole server is awake, and the two would read
+ * as contradicting each other.
+ */
+const routerStateLabel = (state: RouterRowState, l10n: any): string | null => {
+  switch (state) {
+    case 'loading':
+      return l10n.settings.routerModels.stateLoading;
+    case 'loaded':
+      return l10n.settings.routerModels.stateLoaded;
+    case 'sleeping':
+      return l10n.settings.routerModels.stateResident;
+    case 'downloading':
+      return l10n.settings.routerModels.stateDownloading;
+    case 'unloaded':
+    case 'failed':
+      return l10n.settings.routerModels.stateUnloaded;
+    case 'unknown':
+    case 'absent':
+      return null;
+  }
+};
+
+const routerFailureLabel = (
+  cause: 'load-failed' | 'unload-not-released' | 'download-not-fetched',
+  l10n: any,
+): string => {
+  switch (cause) {
+    case 'load-failed':
+      return l10n.settings.routerModels.loadFailed;
+    case 'unload-not-released':
+      return l10n.settings.routerModels.unloadNotReleased;
+    case 'download-not-fetched':
+      return l10n.settings.routerModels.downloadNotFetched;
+  }
+};
+
+/**
+ * A downloading model is not selectable, so it sits in its own group rather
+ * than under Available where it would offer an action that does nothing.
+ */
+function routerGroupOf(state: RouterRowState): RouterGroup {
+  switch (state) {
+    case 'loaded':
+    case 'loading':
+    case 'sleeping':
+      return 'loaded';
+    case 'downloading':
+      return 'downloading';
+    case 'unloaded':
+    case 'failed':
+    case 'unknown':
+    case 'absent':
+      return 'available';
+  }
+}
+
+/**
+ * Group first, then favourites and the last-used model inside each group. A
+ * favourite that is not loaded stays where its state puts it.
+ */
+function orderRouterRows(
+  rows: RemoteModelInfo[],
+  serverId: string,
+): RemoteModelInfo[] {
+  const favourites = serverFavouriteModelIds();
+  const lastUsed = serverLastUsedRemoteModelId();
+  const rank = (row: RemoteModelInfo) => {
+    const key = `${serverId}/${row.id}`;
+    if (favourites.includes(key) || favourites.includes(row.id)) {
+      return 0;
+    }
+    return key === lastUsed || row.id === lastUsed ? 1 : 2;
+  };
+  return [...rows].sort((a, b) => rank(a) - rank(b));
+}
 
 interface RemoteModelSheetProps {
   isVisible: boolean;
@@ -88,6 +185,10 @@ export const RemoteModelSheet: React.FC<RemoteModelSheetProps> = observer(
     // Errors
     const [urlError, setUrlError] = useState('');
 
+    // Server-side download
+    const [downloadReference, setDownloadReference] = useState('');
+    const [downloadError, setDownloadError] = useState<string | null>(null);
+
     // Keep apiKey in a ref so debounced function reads current value
     const apiKeyRef = useRef(apiKey);
     useEffect(() => {
@@ -116,6 +217,8 @@ export const RemoteModelSheet: React.FC<RemoteModelSheetProps> = observer(
         setSelectedServerId(null);
         setIsSaving(false);
         setUrlError('');
+        setDownloadReference('');
+        setDownloadError(null);
       }
     }, [isVisible]);
 
@@ -301,6 +404,232 @@ export const RemoteModelSheet: React.FC<RemoteModelSheetProps> = observer(
       onModelAdded,
       onDismiss,
     ]);
+
+    const isRouter =
+      !!selectedServerId && serverStore.isRouterServer(selectedServerId);
+
+    // The stream is what makes progress fractional; it is also what says
+    // whether this build has a download endpoint at all.
+    useEffect(() => {
+      if (isVisible && isRouter && selectedServerId) {
+        serverStore.openRouterStream(selectedServerId);
+        return () => serverStore.closeRouterStream();
+      }
+      return undefined;
+    }, [isVisible, isRouter, selectedServerId]);
+
+    const routerRows =
+      isRouter && selectedServerId
+        ? serverStore.serverModels.get(selectedServerId) || []
+        : [];
+
+    const handleDownload = useCallback(async () => {
+      const reference = downloadReference.trim();
+      if (!reference || !selectedServerId) {
+        return;
+      }
+      setDownloadError(null);
+      const result = await serverStore.startRouterDownload(
+        selectedServerId,
+        reference,
+      );
+      if (result.accepted) {
+        setDownloadReference('');
+      } else {
+        setDownloadError(
+          result.message || l10n.settings.routerModels.downloadNotFetched,
+        );
+      }
+    }, [downloadReference, selectedServerId, l10n]);
+
+    const renderVisionSlot = (model: RemoteModelInfo) => {
+      if (serverTypeInEffect !== 'llama.cpp') {
+        return null;
+      }
+      const listCaps = deriveListCaps(model, serverTypeInEffect);
+      return (
+        <View
+          style={styles.modelVisionSlot}
+          testID={`remote-model-row-vision-${model.id}`}
+          accessible={true}
+          accessibilityLabel={`${l10n.models.modelCard.labels.vision}: ${
+            listCaps.supportsVision === true
+              ? l10n.models.modelCard.labels.visionSupported
+              : listCaps.supportsVision === false
+                ? l10n.models.modelCard.labels.visionNotSupported
+                : l10n.models.modelCard.labels.visionUnknown
+          }`}>
+          {listCaps.supportsVision === true ? (
+            <EyeIcon
+              width={16}
+              height={16}
+              stroke={theme.colors.iconModelTypeVision}
+            />
+          ) : listCaps.supportsVision === false ? (
+            <ChatIcon
+              width={16}
+              height={16}
+              stroke={theme.colors.iconModelTypeText}
+            />
+          ) : (
+            <Text style={styles.modelVisionUnknown}>—</Text>
+          )}
+        </View>
+      );
+    };
+
+    const renderRouterRow = (model: RemoteModelInfo, servId: string) => {
+      const state = serverStore.routerRowState(servId, model.id);
+      const op = serverStore.routerOp(servId, model.id);
+      const live = serverStore.routerLive(servId, model.id);
+      const failure = serverStore.routerReason(servId, model.id);
+      const alreadyAdded = isModelAlreadyAdded(servId, model.id);
+      const favourites = serverFavouriteModelIds();
+      const isFavourite =
+        favourites.includes(`${servId}/${model.id}`) ||
+        favourites.includes(model.id);
+
+      // 0.0 is a real reading on the first tick of a load, so the bar is
+      // determinate at zero rather than absent.
+      const fraction = live?.progress?.value;
+      const determinate =
+        typeof fraction === 'number' && fraction >= 0 && fraction <= 1;
+      const showProgress = state === 'loading' || state === 'downloading';
+
+      const action = () => {
+        if (op) {
+          return op.kind === 'unload' ? (
+            <Text
+              style={styles.routerRowState}
+              testID={`router-unloading-${model.id}`}>
+              {l10n.settings.routerModels.unloading}
+            </Text>
+          ) : (
+            <Button
+              compact
+              mode="text"
+              testID={`router-cancel-${model.id}`}
+              onPress={() => serverStore.cancelRouterOp(servId, model.id)}>
+              {l10n.settings.routerModels.cancel}
+            </Button>
+          );
+        }
+        if (state === 'loaded' || state === 'sleeping') {
+          return (
+            <Button
+              compact
+              mode="text"
+              testID={`router-unload-${model.id}`}
+              onPress={() => serverStore.unloadRouterModel(servId, model.id)}>
+              {l10n.settings.routerModels.unload}
+            </Button>
+          );
+        }
+        if (state === 'downloading') {
+          return null;
+        }
+        return (
+          <Button
+            compact
+            mode="text"
+            testID={`router-load-${model.id}`}
+            onPress={() =>
+              serverStore.ensureRouterModelLoaded(servId, model.id)
+            }>
+            {l10n.settings.routerModels.load}
+          </Button>
+        );
+      };
+
+      return (
+        <View key={model.id} testID={`router-row-${model.id}`}>
+          <TouchableOpacity
+            activeOpacity={alreadyAdded || state === 'downloading' ? 1 : 0.6}
+            style={[styles.modelRow, alreadyAdded && styles.modelRowDisabled]}
+            onPress={() => {
+              if (!alreadyAdded && state !== 'downloading') {
+                setSelectedModelId(model.id);
+              }
+            }}>
+            <RadioButton
+              value={model.id}
+              status={
+                alreadyAdded || selectedModelId === model.id
+                  ? 'checked'
+                  : 'unchecked'
+              }
+              onPress={() => {
+                if (!alreadyAdded && state !== 'downloading') {
+                  setSelectedModelId(model.id);
+                }
+              }}
+              disabled={alreadyAdded || state === 'downloading'}
+              uncheckedColor={theme.colors.onSurfaceVariant}
+            />
+            <Text style={styles.modelName}>{model.id}</Text>
+            <View style={styles.routerRowMeta}>
+              {renderVisionSlot(model)}
+              {routerStateLabel(state, l10n) && (
+                <Text
+                  style={styles.routerRowState}
+                  testID={`router-state-${model.id}`}>
+                  {routerStateLabel(state, l10n)}
+                </Text>
+              )}
+              {canToggleFavourite() && (
+                <TouchableOpacity
+                  testID={`router-favourite-${model.id}`}
+                  onPress={() => toggleFavourite(servId, model.id)}>
+                  <Icon
+                    source={isFavourite ? 'star' : 'star-outline'}
+                    size={18}
+                    color={theme.colors.onSurfaceVariant}
+                  />
+                </TouchableOpacity>
+              )}
+              {action()}
+            </View>
+          </TouchableOpacity>
+          {showProgress && (
+            <ProgressBar
+              testID={`router-progress-${model.id}`}
+              style={styles.routerRowProgress}
+              indeterminate={!determinate}
+              progress={determinate ? fraction : undefined}
+            />
+          )}
+          {live?.bytes && state === 'downloading' && (
+            <Text
+              style={[styles.routerRowState, styles.routerReasonRow]}
+              testID={`router-bytes-${model.id}`}>
+              {t(l10n.settings.routerModels.files, {
+                count: live.bytes.urls,
+              })}
+            </Text>
+          )}
+          {failure && (
+            <View style={styles.routerReasonRow}>
+              <Text
+                style={styles.routerReasonText}
+                testID={`router-reason-${model.id}`}>
+                {failure.message
+                  ? `${routerFailureLabel(failure.cause, l10n)} ${failure.message}`
+                  : routerFailureLabel(failure.cause, l10n)}
+              </Text>
+              <Button
+                compact
+                mode="text"
+                testID={`router-dismiss-${model.id}`}
+                onPress={() =>
+                  serverStore.dismissRouterReason(servId, model.id)
+                }>
+                {l10n.settings.routerModels.dismiss}
+              </Button>
+            </View>
+          )}
+        </View>
+      );
+    };
 
     const selectedServer = selectedServerId
       ? serverStore.servers.find(s => s.id === selectedServerId)
@@ -570,8 +899,98 @@ export const RemoteModelSheet: React.FC<RemoteModelSheetProps> = observer(
             </>
           )}
 
+          {/* Router model management */}
+          {showPostConnection && isRouter && selectedServerId && (
+            <View style={styles.modelListSection}>
+              {isServerOffline(selectedServerId) ? (
+                <View style={styles.routerNote}>
+                  <Text style={styles.routerNoteText}>
+                    {l10n.settings.routerModels.serverOffline}
+                  </Text>
+                </View>
+              ) : (
+                ROUTER_GROUPS.map(group => (
+                  <View key={group}>
+                    <View style={styles.routerGroupHeader}>
+                      <Text style={styles.routerGroupTitle}>
+                        {routerGroupLabels(l10n)[group]}
+                      </Text>
+                      {group === 'loaded' && (
+                        <Text
+                          style={styles.routerGroupCount}
+                          testID="router-resident-count">
+                          {t(l10n.settings.routerModels.residentCount, {
+                            count:
+                              serverStore.routerResidentCount(selectedServerId),
+                          })}
+                        </Text>
+                      )}
+                    </View>
+                    {orderRouterRows(
+                      routerRows.filter(
+                        row =>
+                          routerGroupOf(
+                            serverStore.routerRowState(
+                              selectedServerId,
+                              row.id,
+                            ),
+                          ) === group,
+                      ),
+                      selectedServerId,
+                    ).map(model => renderRouterRow(model, selectedServerId))}
+                  </View>
+                ))
+              )}
+
+              {serverStore.routerObservedEviction.has(selectedServerId) && (
+                <View style={styles.routerNote} testID="router-eviction-note">
+                  <Text style={styles.routerNoteText}>
+                    {l10n.settings.routerModels.evictionNote}
+                  </Text>
+                </View>
+              )}
+
+              {serverStore.routerStreamCapFor(selectedServerId) ===
+                'present' && (
+                <View
+                  style={styles.routerDownloadSection}
+                  testID="router-download-field">
+                  <Text style={styles.modelListLabel}>
+                    {l10n.settings.routerModels.downloadLabel}
+                  </Text>
+                  <View style={styles.routerDownloadRow}>
+                    <View style={styles.routerDownloadInput}>
+                      <TextInput
+                        testID="router-download-input"
+                        label={l10n.settings.routerModels.downloadLabel}
+                        value={downloadReference}
+                        onChangeText={setDownloadReference}
+                        placeholder={
+                          l10n.settings.routerModels.downloadPlaceholder
+                        }
+                        autoCapitalize="none"
+                        autoCorrect={false}
+                      />
+                    </View>
+                    <Button
+                      compact
+                      mode="contained-tonal"
+                      testID="router-download-button"
+                      disabled={!downloadReference.trim()}
+                      onPress={handleDownload}>
+                      {l10n.settings.routerModels.downloadAction}
+                    </Button>
+                  </View>
+                  {downloadError && (
+                    <Text style={styles.errorText}>{downloadError}</Text>
+                  )}
+                </View>
+              )}
+            </View>
+          )}
+
           {/* Model Selection */}
-          {showPostConnection && availableModels.length >= 1 && (
+          {showPostConnection && !isRouter && availableModels.length >= 1 && (
             <View style={styles.modelListSection}>
               <Text style={styles.modelListLabel}>
                 {l10n.settings.selectModel}
@@ -580,7 +999,6 @@ export const RemoteModelSheet: React.FC<RemoteModelSheetProps> = observer(
                 const servId = selectedServerId || '';
                 const alreadyAdded =
                   !!selectedServerId && isModelAlreadyAdded(servId, model.id);
-                const listCaps = deriveListCaps(model, serverTypeInEffect);
                 return (
                   <TouchableOpacity
                     key={model.id}
@@ -617,35 +1035,7 @@ export const RemoteModelSheet: React.FC<RemoteModelSheetProps> = observer(
                         {l10n.settings.alreadyAdded}
                       </Text>
                     )}
-                    {serverTypeInEffect === 'llama.cpp' && (
-                      <View
-                        style={styles.modelVisionSlot}
-                        testID={`remote-model-row-vision-${model.id}`}
-                        accessible={true}
-                        accessibilityLabel={`${l10n.models.modelCard.labels.vision}: ${
-                          listCaps.supportsVision === true
-                            ? l10n.models.modelCard.labels.visionSupported
-                            : listCaps.supportsVision === false
-                              ? l10n.models.modelCard.labels.visionNotSupported
-                              : l10n.models.modelCard.labels.visionUnknown
-                        }`}>
-                        {listCaps.supportsVision === true ? (
-                          <EyeIcon
-                            width={16}
-                            height={16}
-                            stroke={theme.colors.iconModelTypeVision}
-                          />
-                        ) : listCaps.supportsVision === false ? (
-                          <ChatIcon
-                            width={16}
-                            height={16}
-                            stroke={theme.colors.iconModelTypeText}
-                          />
-                        ) : (
-                          <Text style={styles.modelVisionUnknown}>—</Text>
-                        )}
-                      </View>
-                    )}
+                    {renderVisionSlot(model)}
                   </TouchableOpacity>
                 );
               })}
