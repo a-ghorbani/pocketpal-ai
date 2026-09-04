@@ -52,22 +52,22 @@
     "physicalBatchSize": "Фізічны памер пакета",
     "valueCacheType": "Тып кэшу значэнняў (Value Cache)",
     "modelLoadingSettings": "Налады загрузкі мадэлі",
-    "importChats": "Імпартаваць сэсіі чата",
+    "importChats": "Імпартаваць сесіі чата",
     "memorySettings": "Налады памяці",
     "language": "Мова",
     "languageSheetTitle": "Мова",
     "languageSearchPlaceholder": "Пошук моў",
     "darkMode": "Цёмны рэжым",
-    "displayMemoryUsage": "Паказаць выкарыстанне памяці",
+    "displayMemoryUsage": "Паказваць выкарыстанне памяці",
     "exportButton": "Экспартаваць",
     "importButton": "Імпартаваць",
     "internetSearch": {
       "title": "Пошук у інтэрнэце",
       "setKeyButton": "Задаць ключ",
       "updateKeyButton": "Абнавіць ключ",
-      "clearKeyButton": "Ачысціць ключ",
+      "clearKeyButton": "Выдаліць ключ",
       "keyInputPlaceholder": "Устаўце свой ключ API {{provider}}",
-      "keyUpdateError": "Не ўдалося абнавіць ключа. Паспрабуйце зноў.",
+      "keyUpdateError": "Не ўдалося абнавіць ключ. Паспрабуйце зноў.",
       "showKeyAccessibilityLabel": "Паказаць ключ API",
       "hideKeyAccessibilityLabel": "Схаваць ключ API",
       "consentRevoke": "Адклікаць",
@@ -76,7 +76,10 @@
       "keyIsSet": "Для {{provider}} зададзены ключ.",
       "keyNotSet": "Для {{provider}} не зададзена ключа.",
       "consentGivenTitle": "Пошук у інтэрнэце ўключаны",
-      "consentTitle": "Пошук пакідае вашу прыладу"
+      "consentTitle": "Пошукавыя запыты выходзяць за межы вашай прылады",
+      "providerLabel": "Сэрвіс пошуку",
+      "providerGated": "Ужо хутка",
+      "resultCountLabel": "Вынікаў на пошукавы запыт"
     },
     "cacheStorageTitle": "Кэш і сховішча",
     "serverType": "Тып сервера",
@@ -91,7 +94,7 @@
     "connectedServers": "Падключаныя серверы",
     "modelsCount": "Мадэляў: {{count}}",
     "serverDetails": "Звесткі пра сервер",
-    "modelsUsingServer": "Мадэлі, якія выкарыстоўваюць сервер:",
+    "modelsUsingServer": "Мадэлі, якія выкарыстоўваюць гэты сервер:",
     "saveChanges": "Захаваць змяненні",
     "removeServer": "Выдаліць сервер",
     "removeServerMessage": "Выдаліць сервер {{serverName}} і мадэлі на ім ({{count}})?",
@@ -113,7 +116,14 @@
     "serverUrl": "URL сервера",
     "serverUrlPlaceholder": "напр., http://192.168.1.100:1234",
     "addRemoteModel": "Дадаць аддаленую мадэль",
-    "manageServers": "Кіраваць серверамі"
+    "manageServers": "Кіраваць серверамі",
+    "cpuThreads": "Патокі працэсара",
+    "huggingFaceTokenLabel": "Токен Hugging Face",
+    "setTokenButton": "Задаць токен",
+    "useHfTokenLabel": "Выкарыстоўваць токен HF",
+    "orConnectNewServer": "або падключыцеся да новага сервера",
+    "apiKeyDescription": "Захоўваецца бяспечна на прыладзе.",
+    "remotePrivacyNotice": "Паведамленні, якія адпраўляюцца на аддаленыя серверы, выходзяць за межы вашай прылады. Падключайцеся толькі да тых сервераў, якім вы давяраеце."
   },
   "benchmark": {
     "benchmarkResultCard": {
@@ -130,7 +140,8 @@
       "modelSettings": {
         "context": "Кантэкст: {{context}}",
         "batch": "Пакет (Batch): {{batch}}",
-        "ubatch": "UBatch: {{ubatch}}"
+        "ubatch": "UBatch: {{ubatch}}",
+        "gpuLayers": "Слаі відэакарты: {{layers}}"
       },
       "modelMeta": {
         "params": "парам."
@@ -143,12 +154,14 @@
         "gpuType": "Тып відэакарты",
         "architecture": "Архітэктура",
         "totalMemory": "Агулам памяці",
-        "deviceId": "ID прылады"
+        "deviceId": "ID прылады",
+        "gpuRenderer": "Сродак візуалізацыі",
+        "gpuVendor": "Пастаўшчык"
       },
       "sections": {
         "appInfo": "Звесткі пра праграму",
         "cpuDetails": "Звесткі пра працэсар",
-        "gpuDetails": "Звесткі пра відэакартку"
+        "gpuDetails": "Звесткі пра відэакарту"
       },
       "title": "Інфармацыя пра прыладу",
       "deviceSummary": "{{brand}} {{model}} • {{systemName}} {{systemVersion}}"
@@ -159,11 +172,11 @@
         "dontShowAgain": "Больш не паказваць гэта паведамленне"
       },
       "deleteResult": {
-        "title": "Выдаліць рэзультат"
+        "title": "Выдаліць вынік"
       }
     },
     "sections": {
-      "testResults": "Рэзультаты тэста"
+      "testResults": "Вынікі тэста"
     },
     "buttons": {
       "clearAll": "Ачысціць усё",
@@ -181,7 +194,7 @@
     "title": "Параўнаўчы тэст",
     "modelSelector": {
       "prompt": "Выбраць мадэль",
-      "noModels": "Не запампавана мадэляў"
+      "noModels": "Няма спампаваных мадэляў"
     },
     "messages": {
       "pleaseSelectModel": "Спачатку выберыце і ініцыялізуйце мадэль"
@@ -189,7 +202,7 @@
   },
   "components": {
     "modelSettingsSheet": {
-      "reasoningSection": "Лагічны вывад"
+      "reasoningSection": "Разважанне"
     }
   },
   "voiceAndSpeech": {
@@ -235,9 +248,9 @@
     "engineRemoveConfirm": "Выдаліць",
     "engineInstallCta": "Усталяваць · {{sizeMb}} МБ",
     "engineDownloadingLabel": "Ідзе спампоўванне…  {{pct}}%  ·  {{mbDone}} / {{sizeMb}} МБ",
-    "engineTierLightest": "лёгкія",
+    "engineTierLightest": "найлягчэйшы",
     "engineTierBestQuality": "найлепшая якасць",
-    "engineTierFastestStart": "хуткі запуск",
+    "engineTierFastestStart": "найхутчэйшы запуск",
     "voicesTitle": "Галасы",
     "supertonicLanguageSheetTitle": "Мова",
     "previewButton": "Перадпрагляд",
@@ -272,9 +285,9 @@
     "screen5": {
       "topic": {
         "smartchat": "Разумны чат",
-        "coding": "Кадаванне",
+        "coding": "Праграмаванне",
         "education": "Адукацыя",
-        "roleplay": "Ралявыя гульні",
+        "roleplay": "Ролевыя гульні",
         "creative_writing": "Творчае пісьмо",
         "else": "Шукаеце нешта іншае?"
       },
@@ -309,8 +322,8 @@
     "galleryErrorTitle": "Памылка Галерэі"
   },
   "htmlPreview": {
-    "closePreview": "Закрыць перадпаказ",
-    "defaultTitle": "Перадпаказ",
+    "closePreview": "Закрыць перадпрагляд",
+    "defaultTitle": "Перадпрагляд",
     "copyHtml": "Скапіяваць HTML"
   },
   "screenTitles": {
@@ -341,9 +354,18 @@
       "reloadModelTitle": "Перазагрузіць мадэль",
       "visionControls": {
         "textOnlyMode": "Толькі тэкст",
-        "textOnlyModeDescription": "Апрацоўваць толькі тэкст"
+        "textOnlyModeDescription": "Апрацоўваць толькі тэкст",
+        "visionEnabled": "Бачанне ўключана",
+        "visionDisabled": "Бачанне выключана",
+        "enableVision": "Уключыць магчымасці бачання",
+        "disableVision": "Выключыць магчымасці бачання",
+        "visionMode": "Бачанне ўключана",
+        "downloadWithVision": "Спампаваць з магчымасцю бачання",
+        "downloadTextOnly": "Спампаваць толькі тэкставую версію"
       },
-      "download": "Спампаваць"
+      "download": "Спампаваць",
+      "settings": "Налады мультымадальнасці",
+      "cannotDeleteTitle": "Немагчыма выдаліць"
     },
     "vision": "Бачанне",
     "modelFile": {
@@ -354,7 +376,17 @@
         "remove": "Выдаліць"
       },
       "alerts": {
-        "cannotRemoveTitle": "Немагчыма выдаліць"
+        "cannotRemoveTitle": "Немагчыма выдаліць",
+        "deleteTitle": "Выдаліць мадэль",
+        "removeTitle": "Выдаліць мадэль",
+        "removeError": "Не ўдалося выдаліць мадэль.",
+        "alreadyDownloadedTitle": "Мадэль ужо спампавана",
+        "alreadyDownloadedMessage": "Гэта мадэль ужо спампавана."
+      },
+      "warnings": {
+        "legacy": {
+          "shortMessage": "Састарэлая квантызацыя"
+        }
       }
     },
     "search": {
@@ -367,8 +399,9 @@
         "sortRelevance": "Рэлевантнасць",
         "sortDownloads": "Спампоўванні",
         "sortRecent": "Нядаўна абноўленыя",
-        "sortLikes": "Найбольшая колькасць упадабанняў",
-        "author": "Аўтар"
+        "sortLikes": "Найбольш упадабанняў",
+        "author": "Аўтар",
+        "authorPlaceholder": "Фільтраваць паводле аўтара…"
       },
       "modelUpdatedJustNowShort": "толькі што"
     },
@@ -379,11 +412,14 @@
       "invalidLinkTitle": "Няправільная спасылка"
     },
     "modelsResetDialog": {
-      "confirmReset": "Пацвердзіць скід"
+      "confirmReset": "Пацвердзіць скід",
+      "proceedWithReset": "Працягнуць скід"
     },
     "modelCard": {
       "alerts": {
-        "deleteTitle": "Выдаліць мадэль"
+        "deleteTitle": "Выдаліць мадэль",
+        "removeTitle": "Выдаліць мадэль",
+        "removeMessage": "Вы ўпэўнены, што хочаце выдаліць мадэль са спіса?"
       },
       "buttons": {
         "settings": "Налады",
@@ -398,8 +434,33 @@
         "visionSupported": "Падтрымліваецца",
         "visionNotSupported": "Не падтрымліваецца",
         "visionUnknown": "Невядома",
-        "capabilities": "здольнасці."
+        "capabilities": "здольнасці.",
+        "modelName": "Назва мадэлі"
       }
+    },
+    "fileManagement": {
+      "replace": "Замяніць",
+      "copyingModel": "Ідзе капіяванне файла мадэлі…",
+      "copyFailed": "Не ўдалося скапіяваць файл мадэлі",
+      "fileAlreadyExists": "Файл ужо існуе",
+      "fileAlreadyExistsMessage": "Файл з такім імем ужо існуе. Што вы хочаце зрабіць?",
+      "keepBoth": "Пакінуць абодва"
+    },
+    "buttons": {
+      "addLocalModel": "Дадаць лакальную мадэль",
+      "reset": "Скінуць"
+    },
+    "modelsHeaderRight": {
+      "menuTitleHf": "Мадэлі з Hugging Face",
+      "menuTitleDownloaded": "Спампаваныя мадэлі",
+      "menuTitleGrouped": "Групаваць паводле тыпаў мадэляў",
+      "menuTitleReset": "Скінуць спіс мадэляў"
+    },
+    "details": {
+      "title": "Даступныя файлы GGUF"
     }
+  },
+  "storage": {
+    "checkFailed": "Не ўдалося праверыць сховішча"
   }
 }
