@@ -72,6 +72,7 @@ class MockServerStore {
   cancelRouterOp: jest.Mock;
   openRouterStream: jest.Mock;
   closeRouterStream: jest.Mock;
+  releaseRouterStream: jest.Mock;
   dismissRouterReason: jest.Mock;
 
   isRouterServer(serverId: string): boolean {
@@ -111,6 +112,24 @@ class MockServerStore {
 
   routerStreamCapFor(serverId: string): RouterStreamCap {
     return this.routerStreamCap[serverId] ?? 'unknown';
+  }
+
+  routerPickerRows(serverId: string): RemoteModelInfo[] {
+    const rows = this.serverModels.get(serverId) ?? [];
+    const seen = new Set(rows.map(row => row.id));
+    const prefix = `${serverId}/`;
+    const pending: RemoteModelInfo[] = [];
+    for (const map of [this.routerOps, this.routerReasons]) {
+      for (const key of Object.keys(map)) {
+        const id = key.slice(prefix.length);
+        if (!key.startsWith(prefix) || seen.has(id)) {
+          continue;
+        }
+        seen.add(id);
+        pending.push({id, object: 'model', owned_by: ''});
+      }
+    }
+    return [...rows, ...pending];
   }
 
   routerOp(serverId: string, remoteModelId: string): RouterOp | undefined {
@@ -154,6 +173,7 @@ class MockServerStore {
       cancelRouterOp: false,
       openRouterStream: false,
       closeRouterStream: false,
+      releaseRouterStream: false,
       dismissRouterReason: false,
     });
     this.addServer = jest.fn().mockReturnValue('mock-server-id');
@@ -162,7 +182,7 @@ class MockServerStore {
     this.setApiKey = jest.fn().mockResolvedValue(undefined);
     this.getApiKey = jest.fn().mockResolvedValue(undefined);
     this.removeApiKey = jest.fn().mockResolvedValue(undefined);
-    this.fetchModelsForServer = jest.fn().mockResolvedValue(undefined);
+    this.fetchModelsForServer = jest.fn().mockResolvedValue({ok: true});
     this.fetchRemoteModelCaps = jest.fn().mockResolvedValue(undefined);
     this.ensureRouterModelLoaded = jest.fn().mockResolvedValue('not-router');
     this.unloadRouterModel = jest.fn().mockResolvedValue('ready');
@@ -170,6 +190,7 @@ class MockServerStore {
     this.cancelRouterOp = jest.fn().mockResolvedValue(undefined);
     this.openRouterStream = jest.fn().mockResolvedValue(undefined);
     this.closeRouterStream = jest.fn();
+    this.releaseRouterStream = jest.fn();
     this.dismissRouterReason = jest.fn();
     this.fetchAllRemoteModels = jest.fn().mockResolvedValue(undefined);
     this.testServerConnection = jest

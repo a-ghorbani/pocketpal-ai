@@ -8,6 +8,7 @@ import {
   fetchModelsWithHeaders,
 } from '../../../api/openai';
 import {routerModelsBody} from '../../../../jest/fixtures/remoteModelList';
+import {routerWireEvents} from '../../../../jest/fixtures/routerWire';
 
 const mockedFetchModels = fetchModels as jest.Mock;
 const mockedFetchModelsWithHeaders = fetchModelsWithHeaders as jest.Mock;
@@ -53,9 +54,18 @@ jest.mock('lodash/debounce', () => (fn: any) => {
   return debounced;
 });
 
+/**
+ * What the store's own fetch would have left behind. The sheet asks the store
+ * to read the list rather than reading it itself, so a test seeds the result
+ * instead of the response.
+ */
+const seedServerModels = (rows: any[], serverId = 'srv-1') =>
+  serverStore.serverModels.set(serverId, rows);
+
 describe('RemoteModelSheet', () => {
   beforeEach(() => {
     jest.clearAllMocks();
+    serverStore.serverModels.clear();
   });
 
   it('renders nothing when not visible', () => {
@@ -313,23 +323,21 @@ describe('RemoteModelSheet', () => {
     });
   });
 
-  // Tapping a saved server's chip probes via fetchModels using THAT server's
-  // stored requestTimeoutMs (raw), so a saved slow server does not red-X at
-  // the 30s default.
+  // Tapping a saved server's chip reads the list through the store, which is
+  // what stamps the shape of the response beside the rows. A read issued here
+  // would leave that stamp unwritten and every consumer of it guessing.
   describe('chip-press probe feed', () => {
-    it('passes the saved server requestTimeoutMs to fetchModels on chip press', async () => {
-      serverStore.servers = [
-        {
-          id: 'srv-1',
-          name: 'Slow Server',
-          url: 'http://localhost:1234',
-          requestTimeoutMs: 600000,
-        },
-      ];
+    const savedServer = {
+      id: 'srv-1',
+      name: 'Slow Server',
+      url: 'http://localhost:1234',
+      requestTimeoutMs: 600000,
+    };
+
+    it('reads the list through the store rather than fetching it', async () => {
+      serverStore.servers = [savedServer];
       (serverStore.getApiKey as jest.Mock).mockResolvedValue(undefined);
-      mockedFetchModels.mockResolvedValueOnce([
-        {id: 'llama-7b', object: 'model', owned_by: 'system'},
-      ]);
+      seedServerModels([{id: 'llama-7b', object: 'model', owned_by: 'system'}]);
 
       const {getByTestId} = render(
         <RemoteModelSheet isVisible={true} onDismiss={jest.fn()} />,
@@ -338,35 +346,28 @@ describe('RemoteModelSheet', () => {
       fireEvent.press(getByTestId('server-chip-srv-1'));
 
       await waitFor(() => {
-        expect(mockedFetchModels).toHaveBeenCalledWith(
-          'http://localhost:1234',
-          undefined,
-          600000,
-        );
+        expect(serverStore.fetchModelsForServer).toHaveBeenCalledWith('srv-1');
       });
-      // The add-path probe must NOT be involved in the chip flow.
+      expect(mockedFetchModels).not.toHaveBeenCalled();
       expect(mockedFetchModelsWithHeaders).not.toHaveBeenCalled();
     });
 
-    it('forwards undefined for a saved server without requestTimeoutMs', async () => {
-      serverStore.servers = [
-        {id: 'srv-1', name: 'Default Server', url: 'http://localhost:1234'},
-      ];
+    it('reports a chip whose server could not be read as offline', async () => {
+      serverStore.servers = [savedServer];
       (serverStore.getApiKey as jest.Mock).mockResolvedValue(undefined);
-      mockedFetchModels.mockResolvedValueOnce([]);
+      (serverStore.fetchModelsForServer as jest.Mock).mockResolvedValueOnce({
+        ok: false,
+        error: 'Network request failed',
+      });
 
-      const {getByTestId} = render(
+      const {getByTestId, getByText} = render(
         <RemoteModelSheet isVisible={true} onDismiss={jest.fn()} />,
       );
 
       fireEvent.press(getByTestId('server-chip-srv-1'));
 
       await waitFor(() => {
-        expect(mockedFetchModels).toHaveBeenCalledWith(
-          'http://localhost:1234',
-          undefined,
-          undefined,
-        );
+        expect(getByText(/Network request failed/)).toBeTruthy();
       });
     });
   });
@@ -388,7 +389,7 @@ describe('RemoteModelSheet', () => {
         },
       ];
       (serverStore.getApiKey as jest.Mock).mockResolvedValue(undefined);
-      mockedFetchModels.mockResolvedValueOnce(rows);
+      seedServerModels(rows);
 
       const view = render(
         <RemoteModelSheet isVisible={true} onDismiss={jest.fn()} />,
@@ -449,7 +450,7 @@ describe('RemoteModelSheet', () => {
     it('issues no request of its own to answer', async () => {
       await openViaChip('llama.cpp');
 
-      expect(mockedFetchModels).toHaveBeenCalledTimes(1);
+      expect(mockedFetchModels).not.toHaveBeenCalled();
       expect(mockedFetchModelsWithHeaders).not.toHaveBeenCalled();
     });
   });
@@ -472,7 +473,7 @@ describe('RemoteModelSheet', () => {
         },
       ];
       (serverStore.getApiKey as jest.Mock).mockResolvedValue(undefined);
-      mockedFetchModels.mockResolvedValueOnce(rows);
+      seedServerModels(rows);
 
       const view = render(
         <RemoteModelSheet isVisible={true} onDismiss={jest.fn()} />,
@@ -498,7 +499,7 @@ describe('RemoteModelSheet', () => {
 
       expect(serverStore.openRouterStream).toHaveBeenCalledWith('srv-1');
       expect(serverStore.fetchRemoteModelCaps).not.toHaveBeenCalled();
-      expect(mockedFetchModels).toHaveBeenCalledTimes(1);
+      expect(mockedFetchModels).not.toHaveBeenCalled();
     });
 
     it('groups rows by what the server says about them', async () => {
@@ -603,7 +604,7 @@ describe('RemoteModelSheet', () => {
         },
       ];
       (serverStore.getApiKey as jest.Mock).mockResolvedValue(undefined);
-      mockedFetchModels.mockResolvedValueOnce([]);
+      seedServerModels([]);
 
       const {getByText, queryByTestId} = render(
         <RemoteModelSheet isVisible={true} onDismiss={jest.fn()} />,
@@ -628,7 +629,7 @@ describe('RemoteModelSheet', () => {
           },
         ];
         (serverStore.getApiKey as jest.Mock).mockResolvedValue(undefined);
-        mockedFetchModels.mockResolvedValueOnce(plain);
+        seedServerModels(plain);
         const view = render(
           <RemoteModelSheet isVisible={true} onDismiss={jest.fn()} />,
         );
@@ -641,6 +642,91 @@ describe('RemoteModelSheet', () => {
       expect(queryByTestId('router-resident-count')).toBeNull();
       expect(getByText('solo')).toBeTruthy();
       expect(serverStore.openRouterStream).not.toHaveBeenCalled();
+    });
+
+    // A download the server has not finished has no row of its own, so the
+    // rows alone leave the fetch invisible, its Cancel unreachable and the
+    // copy for one that never arrived with nowhere to render.
+    describe('a model the server has no row for', () => {
+      const PENDING = 'ggml-org/gemma-3-270m-it-GGUF:Q8_0';
+      const key = `srv-1/${PENDING}`;
+
+      it('lists a download in flight with its cancel', async () => {
+        serverStore.routerOps = {
+          [key]: {
+            kind: 'download',
+            phase: 'requested',
+            serverId: 'srv-1',
+            key,
+            startedAt: Date.now(),
+            requestSeq: 0,
+            lastEvidenceAt: Date.now(),
+          },
+        };
+
+        const {getByTestId} = await openRouter();
+
+        expect(getByTestId(`router-row-${PENDING}`)).toBeTruthy();
+        expect(getByTestId(`router-cancel-${PENDING}`)).toBeTruthy();
+        expect(getByTestId(`router-state-${PENDING}`).props.children).toBe(
+          'Downloading',
+        );
+      });
+
+      it('renders the copy for a download that never arrived', async () => {
+        serverStore.routerReasons = {[key]: {cause: 'download-not-fetched'}};
+
+        const {getByTestId} = await openRouter();
+
+        expect(getByTestId(`router-reason-${PENDING}`)).toBeTruthy();
+        expect(getByTestId(`router-dismiss-${PENDING}`)).toBeTruthy();
+      });
+
+      it('reads the bar from the bytes the stream reported', async () => {
+        const tick = routerWireEvents('sse-download-sequence.txt').find(
+          event => event.event === 'download_progress',
+        );
+        const files = Object.values(tick.data.progress) as any[];
+        const total = files.reduce((sum, file) => sum + file.total, 0);
+
+        serverStore.routerOps = {
+          [key]: {
+            kind: 'download',
+            phase: 'active',
+            serverId: 'srv-1',
+            key,
+            startedAt: Date.now(),
+            requestSeq: 0,
+            lastEvidenceAt: Date.now(),
+          },
+        };
+        serverStore.routerEvents = {
+          [key]: {
+            status: 'downloading',
+            bytes: {done: total / 2, total, urls: files.length},
+            at: Date.now(),
+          },
+        };
+
+        const {getByTestId} = await openRouter();
+        // A determinate bar announces its value; an indeterminate one
+        // announces none, which is what a parsed byte total was buying.
+        expect(
+          getByTestId(`router-progress-${PENDING}`).props.accessibilityValue,
+        ).toEqual({min: 0, max: 100, now: 50});
+      });
+    });
+
+    // A row that is one accessibility target announces itself and swallows
+    // every control inside it, so Load, Unload, Cancel and the star cannot be
+    // reached and activating any of them selects the model instead.
+    it('leaves every control in a row its own accessibility target', async () => {
+      const {getByTestId} = await openRouter();
+
+      expect(getByTestId(`router-select-${LOADED}`).props.accessible).toBe(
+        false,
+      );
+      expect(getByTestId(`router-unload-${LOADED}`)).toBeTruthy();
     });
 
     // The sibling surfaces this sheet renders do not exist yet, so the

@@ -19,7 +19,6 @@ import {
 } from 'react-native-paper';
 import {Dropdown} from '../ui';
 import {observer} from 'mobx-react';
-import {runInAction} from 'mobx';
 import debounce from 'lodash/debounce';
 
 import {Sheet, TextInput} from '..';
@@ -35,13 +34,13 @@ import {
 import {ServerConfig} from '../../utils/types';
 import {
   RemoteModelInfo,
-  fetchModels,
   fetchModelsWithHeaders,
   detectServerType,
 } from '../../api/openai';
 import {deriveListCaps} from '../../utils/listCaps';
 import {t} from '../../locales';
-import type {RouterRowState} from '../../utils/routerState';
+import type {RouterFailure, RouterRowState} from '../../utils/routerState';
+import {formatBytes} from '../../utils/formatters';
 
 import {createStyles} from './styles';
 import {
@@ -88,7 +87,7 @@ const routerStateLabel = (state: RouterRowState, l10n: any): string | null => {
 };
 
 const routerFailureLabel = (
-  cause: 'load-failed' | 'unload-not-released' | 'download-not-fetched',
+  cause: RouterFailure['cause'],
   l10n: any,
 ): string => {
   switch (cause) {
@@ -98,6 +97,8 @@ const routerFailureLabel = (
       return l10n.settings.routerModels.unloadNotReleased;
     case 'download-not-fetched':
       return l10n.settings.routerModels.downloadNotFetched;
+    case 'server-unreachable':
+      return l10n.settings.routerModels.serverUnreachable;
   }
 };
 
@@ -331,14 +332,15 @@ export const RemoteModelSheet: React.FC<RemoteModelSheetProps> = observer(
         const key = await serverStore.getApiKey(server.id);
         apiKeyRef.current = key || '';
         setApiKey(key || '');
-        const models = await fetchModels(
-          server.url,
-          key || undefined,
-          server.requestTimeoutMs,
-        );
-        runInAction(() => {
-          serverStore.serverModels.set(server.id, models);
-        });
+        // Through the store's own fetch: it is what stamps the shape of the
+        // response beside the rows, and router detection and the ranking of
+        // rows both read that stamp.
+        const result = await serverStore.fetchModelsForServer(server.id);
+        if (!result.ok) {
+          setProbeResult({ok: false, error: result.error});
+          return;
+        }
+        const models = serverStore.serverModels.get(server.id) ?? [];
         const notYetAdded = serverStore.getModelsNotYetAdded(server.id);
         setAvailableModels(models);
         if (notYetAdded.length === 1) {
@@ -412,15 +414,16 @@ export const RemoteModelSheet: React.FC<RemoteModelSheetProps> = observer(
     // whether this build has a download endpoint at all.
     useEffect(() => {
       if (isVisible && isRouter && selectedServerId) {
-        serverStore.openRouterStream(selectedServerId);
-        return () => serverStore.closeRouterStream();
+        const watched = selectedServerId;
+        serverStore.openRouterStream(watched);
+        return () => serverStore.releaseRouterStream(watched);
       }
       return undefined;
     }, [isVisible, isRouter, selectedServerId]);
 
     const routerRows =
       isRouter && selectedServerId
-        ? serverStore.serverModels.get(selectedServerId) || []
+        ? serverStore.routerPickerRows(selectedServerId)
         : [];
 
     const handleDownload = useCallback(async () => {
@@ -484,14 +487,24 @@ export const RemoteModelSheet: React.FC<RemoteModelSheetProps> = observer(
       const live = serverStore.routerLive(servId, model.id);
       const failure = serverStore.routerReason(servId, model.id);
       const alreadyAdded = isModelAlreadyAdded(servId, model.id);
+      // A model the server is still fetching, or one it never fetched at all,
+      // is nothing this app can bind a session to yet.
+      const selectable =
+        !alreadyAdded && state !== 'downloading' && state !== 'absent';
       const favourites = serverFavouriteModelIds();
       const isFavourite =
         favourites.includes(`${servId}/${model.id}`) ||
         favourites.includes(model.id);
 
-      // 0.0 is a real reading on the first tick of a load, so the bar is
-      // determinate at zero rather than absent.
-      const fraction = live?.progress?.value;
+      // 0.0 and 0 bytes are both real readings on the first tick, so the bar
+      // is determinate at zero rather than absent.
+      const bytes = live?.bytes;
+      const fraction =
+        state === 'downloading'
+          ? bytes && bytes.total > 0
+            ? bytes.done / bytes.total
+            : undefined
+          : live?.progress?.value;
       const determinate =
         typeof fraction === 'number' && fraction >= 0 && fraction <= 1;
       const showProgress = state === 'loading' || state === 'downloading';
@@ -544,10 +557,15 @@ export const RemoteModelSheet: React.FC<RemoteModelSheetProps> = observer(
       return (
         <View key={model.id} testID={`router-row-${model.id}`}>
           <TouchableOpacity
-            activeOpacity={alreadyAdded || state === 'downloading' ? 1 : 0.6}
+            testID={`router-select-${model.id}`}
+            // Each control in this row is its own target. Left focusable, the
+            // row swallows Load, Unload, Cancel and the star, and activating
+            // any of them selects the model instead.
+            accessible={false}
+            activeOpacity={selectable ? 0.6 : 1}
             style={[styles.modelRow, alreadyAdded && styles.modelRowDisabled]}
             onPress={() => {
-              if (!alreadyAdded && state !== 'downloading') {
+              if (selectable) {
                 setSelectedModelId(model.id);
               }
             }}>
@@ -559,11 +577,11 @@ export const RemoteModelSheet: React.FC<RemoteModelSheetProps> = observer(
                   : 'unchecked'
               }
               onPress={() => {
-                if (!alreadyAdded && state !== 'downloading') {
+                if (selectable) {
                   setSelectedModelId(model.id);
                 }
               }}
-              disabled={alreadyAdded || state === 'downloading'}
+              disabled={!selectable}
               uncheckedColor={theme.colors.onSurfaceVariant}
             />
             <Text style={styles.modelName}>{model.id}</Text>
@@ -579,6 +597,9 @@ export const RemoteModelSheet: React.FC<RemoteModelSheetProps> = observer(
               {canToggleFavourite() && (
                 <TouchableOpacity
                   testID={`router-favourite-${model.id}`}
+                  accessibilityRole="button"
+                  accessibilityState={{selected: isFavourite}}
+                  accessibilityLabel={l10n.settings.routerModels.favourite}
                   onPress={() => toggleFavourite(servId, model.id)}>
                   <Icon
                     source={isFavourite ? 'star' : 'star-outline'}
@@ -598,12 +619,13 @@ export const RemoteModelSheet: React.FC<RemoteModelSheetProps> = observer(
               progress={determinate ? fraction : undefined}
             />
           )}
-          {live?.bytes && state === 'downloading' && (
+          {bytes && bytes.total > 0 && state === 'downloading' && (
             <Text
               style={[styles.routerRowState, styles.routerReasonRow]}
               testID={`router-bytes-${model.id}`}>
-              {t(l10n.settings.routerModels.files, {
-                count: live.bytes.urls,
+              {t(l10n.settings.routerModels.downloadedOf, {
+                done: formatBytes(bytes.done, 1, false, true),
+                total: formatBytes(bytes.total, 1, false, true),
               })}
             </Text>
           )}
