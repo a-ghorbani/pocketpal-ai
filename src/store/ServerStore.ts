@@ -142,16 +142,18 @@ class ServerStore {
     // against a router. Drop both and let the next probe / fetch repopulate.
     // Reasoning state survives: it carries user declarations, and it is not
     // server-reported.
-    // Canonicalised before the comparison, not after the assign: a no-op
-    // slash edit would otherwise compare raw against canonical, read as a
-    // repoint, and drop caps, models and presence for an unchanged server.
+    // Both sides are canonicalised for the comparison: a record stored before
+    // canonicalisation existed still holds its raw url, so comparing against
+    // it reads the first save of an unchanged server as a repoint and drops
+    // its caps, models and presence.
     const canonical: Partial<ServerConfig> =
       updates.url !== undefined
         ? {...updates, url: canonicalizeServerUrl(updates.url)}
         : updates;
 
     const invalidatesDiscovery =
-      (canonical.url !== undefined && canonical.url !== server.url) ||
+      (canonical.url !== undefined &&
+        canonical.url !== canonicalizeServerUrl(server.url)) ||
       (canonical.serverType !== undefined &&
         canonical.serverType !== server.serverType);
 

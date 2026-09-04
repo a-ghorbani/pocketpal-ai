@@ -1640,6 +1640,31 @@ describe('ServerStore', () => {
       expect(serverStore.presenceFor(id)).toBe('reachable');
     });
 
+    it('keeps caps, models and presence on the first save of a record stored raw', async () => {
+      const id = serverStore.addServer({
+        name: 'llama',
+        url: 'http://host:9931',
+        serverType: 'llama.cpp',
+      });
+      // A record persisted before canonicalisation existed hydrates raw.
+      runInAction(() => {
+        serverStore.servers.find(s => s.id === id)!.url =
+          'http://host:9931/v1/';
+      });
+      mockedProbeReachability.mockResolvedValue('reachable');
+      await serverStore.probeServerPresence(id, {reason: 'user'});
+      runInAction(() => {
+        serverStore.remoteCaps[`${id}/m1`] = {contextLength: 4096};
+        serverStore.serverModels.set(id, []);
+      });
+
+      serverStore.updateServer(id, {name: 'llama', url: 'http://host:9931'});
+
+      expect(serverStore.remoteCaps[`${id}/m1`]).toBeDefined();
+      expect(serverStore.serverModels.get(id)).toBeDefined();
+      expect(serverStore.presenceFor(id)).toBe('reachable');
+    });
+
     it('still invalidates on a genuine repoint', () => {
       const id = serverStore.addServer({
         name: 'llama',
