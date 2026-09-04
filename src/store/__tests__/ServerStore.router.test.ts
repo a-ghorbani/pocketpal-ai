@@ -76,6 +76,21 @@ const listResult = (models: any[], hasModelsKey: boolean) => ({
   hasModelsKey,
 });
 
+/** The first real progress tick of a captured load, value and all. */
+const firstProgressEvent = () =>
+  routerWireEvents('sse-load-sequence.txt').find(
+    event => event.data?.progress !== undefined,
+  );
+
+/** A stream failure carrying a captured envelope's own status and wording. */
+const streamErrorFrom = (name: any) => {
+  const captured = routerWireResponse(name);
+  return new RouterStreamError(
+    JSON.parse(captured.body).error.message,
+    captured.status,
+  );
+};
+
 /** Advance in slices so each tick's detached fetch can resolve between them. */
 const advance = async (ms: number) => {
   for (let elapsed = 0; elapsed < ms; elapsed += 1000) {
@@ -301,7 +316,7 @@ describe('the router event stream', () => {
     const id = await routerServer();
     const handlers = await openOn(id);
 
-    handlers.onClose(new RouterStreamError('File Not Found', 404));
+    handlers.onClose(streamErrorFrom('sse-unregistered-404.txt'));
 
     expect(serverStore.routerStreamCapFor(id)).toBe('absent');
 
@@ -319,7 +334,11 @@ describe('the router event stream', () => {
       const id = await routerServer();
       const handlers = await openOn(id);
 
-      handlers.onClose(new RouterStreamError('Invalid API Key', status));
+      handlers.onClose(
+        status === 401
+          ? streamErrorFrom('sse-unauthorized-401.txt')
+          : new RouterStreamError('Server error', status),
+      );
 
       expect(serverStore.routerStreamCapFor(id)).toBe('unknown');
     },
@@ -421,11 +440,7 @@ describe('the router event stream', () => {
     const id = await routerServer();
     mockedFetch.mockClear();
 
-    serverStore.applyRouterEvent(id, {
-      model: 'alpha',
-      event: 'status_change',
-      data: {status: 'loading', progress: {value: 0.0}},
-    });
+    serverStore.applyRouterEvent(id, firstProgressEvent());
     await flush();
     expect(mockedFetch).not.toHaveBeenCalled();
 
@@ -623,9 +638,8 @@ describe('loading a model', () => {
 
     jest.advanceTimersByTime(1);
     serverStore.applyRouterEvent(id, {
+      ...firstProgressEvent(),
       model: TARGET,
-      event: 'status_change',
-      data: {status: 'loading', progress: {value: 0.0}},
     });
     expect(serverStore.routerLive(id, TARGET)?.progress?.value).toBe(0);
     expect(serverStore.routerRowState(id, TARGET)).toBe('loading');
@@ -659,7 +673,9 @@ describe('loading a model', () => {
       listResult(
         routerModelsBody.data.map(row =>
           row.id === TARGET
-            ? {...row, status: {value: 'unloaded', failed: true, exit_code: 1}}
+            ? // Constructed: no capture holds a row after a failed load, only
+              // the SSE transition that accompanies one.
+              {...row, status: {value: 'unloaded', failed: true, exit_code: 1}}
             : row,
         ),
         false,

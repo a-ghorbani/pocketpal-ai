@@ -29,6 +29,8 @@ describe('mapRowStatus', () => {
     expect(mapRowStatus(undefined)).toBe('absent');
   });
 
+  // Constructed: the captures hold the SSE transition of a failed load, not a
+  // list row taken after one.
   it('reads a failed load off the row, where the wire states it', () => {
     expect(
       mapRowStatus({status: {value: 'unloaded', failed: true, exit_code: 1}}),
