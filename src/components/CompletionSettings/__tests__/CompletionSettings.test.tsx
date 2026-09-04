@@ -2,6 +2,7 @@ import React from 'react';
 import {render, fireEvent} from '@testing-library/react-native';
 import {CompletionSettings} from '../CompletionSettings';
 import {mockCompletionParams} from '../../../../jest/fixtures/models';
+import {propsModelDescribing} from '../../../../jest/fixtures/llamaServerWire';
 
 jest.useFakeTimers();
 
@@ -208,6 +209,56 @@ describe('CompletionSettings', () => {
       expect(queryByTestId('n_predict-input')).toBeNull();
       expect(getByTestId('n_predict-server-default')).toBeTruthy();
       expect(queryByTestId('n_predict-server-default-reset')).toBeNull();
+    });
+
+    it('renders a reported value at the resolution its control is edited at', () => {
+      // Straight off the wire: the server reports IEEE doubles, and a test that
+      // hand-writes 0.8 exercises a value no server ever sends.
+      const wire = propsModelDescribing.default_generation_settings.params;
+      expect(wire.temperature).toBe(0.800000011920929);
+      expect(wire.min_p).toBe(0.05000000074505806);
+      expect(wire.xtc_threshold).toBe(0.10000000149011612);
+
+      const {getByText} = render(
+        <CompletionSettings
+          settings={{
+            ...mockCompletionParams,
+            temperature: 0.7,
+            min_p: 0.3,
+            xtc_threshold: 0.5,
+            top_k: 10,
+          }}
+          onChange={jest.fn()}
+          serverDefaults={{
+            temperature: wire.temperature,
+            min_p: wire.min_p,
+            xtc_threshold: wire.xtc_threshold,
+            top_k: wire.top_k,
+          }}
+        />,
+      );
+
+      expect(getByText('Server default: 0.8 · Reset')).toBeTruthy();
+      expect(getByText('Server default: 0.05 · Reset')).toBeTruthy();
+      expect(getByText('Server default: 0.1 · Reset')).toBeTruthy();
+      // An integer-step control keeps its whole number.
+      expect(getByText('Server default: 40 · Reset')).toBeTruthy();
+    });
+
+    it('resets to the exact reported value, not the rounded display', () => {
+      const onChange = jest.fn();
+      const wire = propsModelDescribing.default_generation_settings.params;
+      const {getByTestId} = render(
+        <CompletionSettings
+          settings={{...mockCompletionParams, temperature: 0.7}}
+          onChange={onChange}
+          serverDefaults={{temperature: wire.temperature}}
+        />,
+      );
+
+      fireEvent.press(getByTestId('temperature-server-default-reset'));
+
+      expect(onChange).toHaveBeenCalledWith('temperature', wire.temperature);
     });
 
     it('changes nothing while the settings are read-only', () => {

@@ -19,6 +19,21 @@ import {
 import {CompletionParams} from '../../utils/completionTypes';
 import {SamplerDefaults} from '../../utils/types';
 
+/** The step a control is edited at; `renderSlider` reads the same value. */
+const stepOf = (name: string): number =>
+  COMPLETION_PARAMS_METADATA[name]?.step ?? 0.01;
+
+/**
+ * The wire delivers IEEE doubles — the server's own `temperature` default
+ * arrives as `0.800000011920929` — so a reported value is shown at the
+ * resolution its control is actually edited at, the same rounding `InputSlider`
+ * applies to a dragged value.
+ */
+const formatAtControlPrecision = (name: string, value: number): string => {
+  const precision = Number.isInteger(stepOf(name)) ? 0 : 2;
+  return String(parseFloat(value.toFixed(precision)));
+};
+
 interface Props {
   settings: CompletionParams;
   onChange: (name: string, value: any) => void;
@@ -71,7 +86,7 @@ export const CompletionSettings: React.FC<Props> = ({
         testID={`${name}-server-default-reset`}>
         <Text variant="labelSmall" style={styles.serverDefaultReset}>
           {t(l10n.components.completionSettings.resetToServerDefault, {
-            value: String(serverValue),
+            value: formatAtControlPrecision(name, serverValue),
           })}
         </Text>
       </TouchableOpacity>
@@ -80,7 +95,7 @@ export const CompletionSettings: React.FC<Props> = ({
 
   const renderSlider = ({name}: {name: string}) => {
     const metadata = COMPLETION_PARAMS_METADATA[name];
-    const step = metadata?.step ?? 0.01;
+    const step = stepOf(name);
 
     return (
       <View style={styles.settingItem}>
