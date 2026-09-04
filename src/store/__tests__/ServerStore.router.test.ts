@@ -1175,6 +1175,38 @@ describe('loading a model', () => {
     await expect(pending).resolves.toBe('failed');
   });
 
+  // The overlay outranks the row until a later fetch answers, and after an
+  // unreachable server there is no later fetch. Left in place, the row goes on
+  // showing a frozen determinate bar and counting as resident underneath the
+  // note saying the server could not be reached — permanently.
+  it('stops a settled operation claiming the model is still loading', async () => {
+    const id = await routerServer();
+    let fail: (error: unknown) => void = () => {};
+    mockedRouterLoad.mockImplementationOnce(
+      () =>
+        new Promise((_resolve, reject) => {
+          fail = reject;
+        }),
+    );
+    const pending = serverStore.ensureRouterModelLoaded(id, TARGET);
+    await flush();
+
+    jest.advanceTimersByTime(1);
+    serverStore.applyRouterEvent(id, {...firstProgressEvent(), model: TARGET});
+    expect(serverStore.routerRowState(id, TARGET)).toBe('loading');
+    const whileLoading = serverStore.routerResidentCount(id);
+
+    fail(new Error('Network request failed'));
+    await expect(pending).resolves.toBe('failed');
+
+    expect(serverStore.routerReason(id, TARGET)).toEqual({
+      cause: 'server-unreachable',
+      message: 'Network request failed',
+    });
+    expect(serverStore.routerRowState(id, TARGET)).toBe('unloaded');
+    expect(serverStore.routerResidentCount(id)).toBe(whileLoading - 1);
+  });
+
   it('settles a load that a second operation on the same model supersedes', async () => {
     const id = await routerServer();
     const load = serverStore.ensureRouterModelLoaded(id, UNLOADED_TARGET);

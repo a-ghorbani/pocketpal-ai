@@ -1012,8 +1012,8 @@ class ServerStore {
   }
 
   /**
-   * The only writer of `routerEvents`. An event says a model's situation may
-   * have changed; what it is comes from the list.
+   * An event says a model's situation may have changed; what it is comes from
+   * the list. Nothing here reads an outcome out of one.
    */
   applyRouterEvent(serverId: string, payload: unknown): void {
     const effect = reduceRouterEvent(payload);
@@ -1439,6 +1439,7 @@ class ServerStore {
     }
     runInAction(() => {
       this.setRouterOp(key, undefined);
+      this.dropInFlightOverlay(key);
       if (outcome === 'failed' && failure) {
         this.routerReasons[key] = failure;
       }
@@ -1449,6 +1450,20 @@ class ServerStore {
     waiter?.(outcome);
     this.syncRouterTiers();
     this.syncRouterStream();
+  }
+
+  /**
+   * An in-progress overlay says an attempt is under way, and the attempt is
+   * over. Nothing will correct it — it outranks the row until a fetch that
+   * began after it succeeds, which after an unreachable server never happens —
+   * so the row would go on showing a frozen bar and counting as resident
+   * beneath the note saying the server could not be reached.
+   */
+  private dropInFlightOverlay(key: string): void {
+    const status = this.routerEvents[key]?.status;
+    if (status === 'loading' || status === 'downloading') {
+      delete this.routerEvents[key];
+    }
   }
 
   /**
