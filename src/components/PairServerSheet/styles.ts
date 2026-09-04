@@ -47,16 +47,14 @@ export const createStyles = (theme: Theme) =>
       fontSize: 14,
       color: theme.colors.error,
     },
-    actions: {
-      flexDirection: 'row',
-      justifyContent: 'flex-end',
-      gap: 8,
-    },
-    actionsSplit: {
-      flexDirection: 'row',
+    footer: {
+      paddingHorizontal: 24,
       alignItems: 'center',
-      justifyContent: 'space-between',
-      gap: 8,
+    },
+    footerEnd: {
+      paddingHorizontal: 24,
+      alignItems: 'center',
+      justifyContent: 'flex-end',
     },
     actionsRight: {
       flexDirection: 'row',

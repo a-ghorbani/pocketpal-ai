@@ -327,6 +327,79 @@ export const PairServerSheet: React.FC<PairServerSheetProps> = observer(
       }
     };
 
+    const renderActions = () => {
+      switch (state) {
+        case 'scanning':
+          return canScan ? (
+            <Sheet.Actions style={styles.footerEnd}>
+              <Button
+                testID="pair-server-manual"
+                onPress={() => setState('manual')}>
+                {l10n.settings.enterUrlManually}
+              </Button>
+            </Sheet.Actions>
+          ) : null;
+        case 'manual':
+          return (
+            <Sheet.Actions style={styles.footer}>
+              {canScan ? (
+                <Button
+                  testID="pair-server-scan"
+                  onPress={() => setState('scanning')}>
+                  {l10n.models.pairServer.scanInstead}
+                </Button>
+              ) : (
+                <View />
+              )}
+              <Button testID="pair-server-continue" onPress={confirmManual}>
+                {l10n.models.pairServer.add}
+              </Button>
+            </Sheet.Actions>
+          );
+        case 'duplicate':
+          return (
+            <Sheet.Actions style={styles.footerEnd}>
+              <Button testID="pair-server-cancel" onPress={onDismiss}>
+                {l10n.common.cancel}
+              </Button>
+              <Button
+                testID="pair-server-use"
+                mode="contained"
+                onPress={() => {
+                  if (duplicate) {
+                    onPaired?.(duplicate.id);
+                  }
+                  onDismiss();
+                }}>
+                {l10n.models.pairServer.use}
+              </Button>
+            </Sheet.Actions>
+          );
+        case 'confirming':
+        case 'saving':
+          return (
+            <Sheet.Actions style={styles.footer}>
+              <Button testID="pair-server-back" onPress={goBack}>
+                {l10n.models.pairServer.back}
+              </Button>
+              <View style={styles.actionsRight}>
+                <Button testID="pair-server-cancel" onPress={onDismiss}>
+                  {l10n.common.cancel}
+                </Button>
+                <Button
+                  testID="pair-server-add"
+                  mode="contained"
+                  disabled={!canAdd || state === 'saving'}
+                  loading={state === 'saving'}
+                  onPress={add}>
+                  {l10n.models.pairServer.add}
+                </Button>
+              </View>
+            </Sheet.Actions>
+          );
+      }
+    };
+
     return (
       <Sheet
         isVisible={isVisible}
@@ -355,13 +428,6 @@ export const PairServerSheet: React.FC<PairServerSheetProps> = observer(
                   ? l10n.models.pairServer.notAServerQr
                   : l10n.models.pairServer.scanHint}
               </Text>
-              <View style={styles.actions}>
-                <Button
-                  testID="pair-server-manual"
-                  onPress={() => setState('manual')}>
-                  {l10n.settings.enterUrlManually}
-                </Button>
-              </View>
             </>
           )}
 
@@ -398,48 +464,16 @@ export const PairServerSheet: React.FC<PairServerSheetProps> = observer(
                   {l10n.models.pairServer.notAServerQr}
                 </Text>
               )}
-              <View style={styles.actionsSplit}>
-                {canScan ? (
-                  <Button
-                    testID="pair-server-scan"
-                    onPress={() => setState('scanning')}>
-                    {l10n.models.pairServer.scanInstead}
-                  </Button>
-                ) : (
-                  <View />
-                )}
-                <Button testID="pair-server-continue" onPress={confirmManual}>
-                  {l10n.models.pairServer.add}
-                </Button>
-              </View>
             </>
           )}
 
           {state === 'duplicate' && (
-            <>
-              <Text testID="pair-server-duplicate" style={styles.verdictText}>
-                {l10n.models.pairServer.duplicateMessage.replace(
-                  '{{name}}',
-                  duplicate?.name ?? '',
-                )}
-              </Text>
-              <View style={styles.actions}>
-                <Button testID="pair-server-cancel" onPress={onDismiss}>
-                  {l10n.common.cancel}
-                </Button>
-                <Button
-                  testID="pair-server-use"
-                  mode="contained"
-                  onPress={() => {
-                    if (duplicate) {
-                      onPaired?.(duplicate.id);
-                    }
-                    onDismiss();
-                  }}>
-                  {l10n.models.pairServer.use}
-                </Button>
-              </View>
-            </>
+            <Text testID="pair-server-duplicate" style={styles.verdictText}>
+              {l10n.models.pairServer.duplicateMessage.replace(
+                '{{name}}',
+                duplicate?.name ?? '',
+              )}
+            </Text>
           )}
 
           {(state === 'confirming' || state === 'saving') && (
@@ -460,27 +494,10 @@ export const PairServerSheet: React.FC<PairServerSheetProps> = observer(
                 secureTextEntry
               />
               {renderVerdict()}
-              <View style={styles.actionsSplit}>
-                <Button testID="pair-server-back" onPress={goBack}>
-                  {l10n.models.pairServer.back}
-                </Button>
-                <View style={styles.actionsRight}>
-                  <Button testID="pair-server-cancel" onPress={onDismiss}>
-                    {l10n.common.cancel}
-                  </Button>
-                  <Button
-                    testID="pair-server-add"
-                    mode="contained"
-                    disabled={!canAdd || state === 'saving'}
-                    loading={state === 'saving'}
-                    onPress={add}>
-                    {l10n.models.pairServer.add}
-                  </Button>
-                </View>
-              </View>
             </>
           )}
         </Sheet.ScrollView>
+        {renderActions()}
       </Sheet>
     );
   },

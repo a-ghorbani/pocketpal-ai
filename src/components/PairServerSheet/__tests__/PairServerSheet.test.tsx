@@ -12,7 +12,8 @@
 
 import React from 'react';
 import {runInAction} from 'mobx';
-import {TextInput as RNTextInput} from 'react-native';
+import {StyleSheet, TextInput as RNTextInput} from 'react-native';
+import {useSafeAreaInsets} from 'react-native-safe-area-context';
 import {
   useCameraDevice,
   useCameraPermission,
@@ -571,6 +572,90 @@ describe('PairServerSheet', () => {
         expect.objectContaining({url: 'http://192.168.1.5:9931/v1'}),
       );
       expect(onPaired).toHaveBeenCalledWith('mock-server-id');
+    });
+  });
+
+  describe('reaching the buttons over a system navigation bar', () => {
+    const NAV_BAR = 48;
+
+    beforeEach(() => {
+      (useSafeAreaInsets as jest.Mock).mockReturnValue({
+        top: 0,
+        right: 0,
+        bottom: NAV_BAR,
+        left: 0,
+      });
+    });
+
+    afterEach(() => {
+      (useSafeAreaInsets as jest.Mock).mockReturnValue({
+        top: 0,
+        right: 0,
+        bottom: 0,
+        left: 0,
+      });
+    });
+
+    /** The largest bottom padding any ancestor of `testID` contributes. */
+    const liftAbove = (root: any, testID: string) => {
+      let node = root.UNSAFE_root.findAll(
+        (n: any) =>
+          n.props?.testID === testID && typeof n.props?.onPress === 'function',
+      )[0];
+      expect(node).toBeTruthy();
+      let lift = 0;
+      while (node) {
+        const flat = StyleSheet.flatten(node.props?.style) as
+          | {paddingBottom?: number}
+          | undefined;
+        if (typeof flat?.paddingBottom === 'number') {
+          lift = Math.max(lift, flat.paddingBottom);
+        }
+        node = node.parent;
+      }
+      return lift;
+    };
+
+    it("lifts the scanner's way into manual entry", async () => {
+      const root = renderSheet();
+
+      expect(root.getByTestId('pair-server-camera')).toBeTruthy();
+      expect(liftAbove(root, 'pair-server-manual')).toBeGreaterThanOrEqual(
+        NAV_BAR,
+      );
+    });
+
+    it("lifts the manual form's Add", async () => {
+      const root = renderSheet();
+      await pressButton(root, 'pair-server-manual');
+
+      expect(liftAbove(root, 'pair-server-continue')).toBeGreaterThanOrEqual(
+        NAV_BAR,
+      );
+    });
+
+    it("lifts the duplicate prompt's Use", async () => {
+      runInAction(() => {
+        serverStore.servers = [
+          {id: 's1', name: 'Studio', url: 'http://192.168.1.5:9931'},
+        ];
+      });
+      const root = renderSheet();
+      await scan(QR_PAYLOAD);
+
+      expect(liftAbove(root, 'pair-server-use')).toBeGreaterThanOrEqual(
+        NAV_BAR,
+      );
+    });
+
+    it("lifts the confirm step's Add", async () => {
+      const probe = nextProbe();
+      const root = renderSheet({request: {url: QR_PAYLOAD}});
+      await settle(probe, usable(1));
+
+      expect(liftAbove(root, 'pair-server-add')).toBeGreaterThanOrEqual(
+        NAV_BAR,
+      );
     });
   });
 
