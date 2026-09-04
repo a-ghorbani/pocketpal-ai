@@ -673,13 +673,16 @@ describe('PairServerSheet', () => {
     });
 
     /**
-     * The largest bottom padding *declared* by an ancestor of `testID`. This is
-     * the inset being wired through, not the control's clearance on screen —
-     * the sheet clips its scroll tail, so clearance is only measurable on device.
+     * The largest bottom padding *declared* between `testID` and the scroll
+     * body it sits in. This is the inset being wired through, not the control's
+     * clearance on screen — the sheet clips its scroll tail, so clearance is
+     * only measurable on device. The walk stops at the scroll body so a bottom
+     * inset declared by some ancestor above it cannot stand in for this one.
      */
     const declaredBottomInset = (root: any, testID: string) => {
+      const body = scrollBodyOver(root, testID);
+      expect(body).toBeTruthy();
       let node = control(root, testID);
-      expect(node).toBeTruthy();
       let lift = 0;
       while (node) {
         for (const style of [
@@ -693,7 +696,7 @@ describe('PairServerSheet', () => {
             lift = Math.max(lift, flat.paddingBottom);
           }
         }
-        node = node.parent;
+        node = node === body ? null : node.parent;
       }
       return lift;
     };
