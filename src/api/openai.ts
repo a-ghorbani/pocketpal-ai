@@ -542,7 +542,7 @@ async function probeGateStatus(
   }
 }
 
-/** Server types whose gate this lane has measured. Unknown shares llama.cpp's. */
+/** Server types whose gate is measured here. Unknown shares llama.cpp's. */
 const GATED_BY_PROPS = ['llama.cpp', ''];
 
 /**

@@ -238,7 +238,7 @@ describe('probePairingTarget — the gate and its keyless control', () => {
     expect(propsUrls(fetchMock)).toHaveLength(1);
   });
 
-  it('issues no gate for a detected type whose gating this lane has not measured', async () => {
+  it('issues no gate for a detected type whose gating is not measured', async () => {
     const fetchMock = routeFetch([
       [
         /\/v1\/models/,
