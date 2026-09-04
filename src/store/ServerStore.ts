@@ -1618,8 +1618,8 @@ class ServerStore {
 
   /**
    * A server with work in flight and no stream is re-read on a timer. It reuses
-   * the existing models fetch, so the model list keeps its two writers and the
-   * poll can never disagree with the list the capabilities are derived from.
+   * the existing models fetch rather than adding a second source, so the poll
+   * can never disagree with the list the capabilities are derived from.
    */
   syncRouterTiers(): void {
     const busy = new Set(Object.values(this.routerOps).map(op => op.serverId));
