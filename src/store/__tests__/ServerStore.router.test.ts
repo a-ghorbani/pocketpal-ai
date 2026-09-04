@@ -106,6 +106,7 @@ const UNLOADED_TARGET = 'ggml-org/gemma-4-31B-it-GGUF:Q8_0';
 const ROUTER_ACK_MS = 20000;
 const ROUTER_EVIDENCE_MS = 45000;
 const ROUTER_UNREACHABLE_MS = 90000;
+const ROUTER_LOAD_MAX_MS = 10 * 60 * 1000;
 const ROUTER_UNLOAD_SETTLE_MS = 30000;
 const ROUTER_POLL_MS = 4000;
 const ROUTER_DOWNLOAD_SETTLE_MS = 8000;
@@ -1089,6 +1090,41 @@ describe('loading a model', () => {
   // The send path awaits this promise before it starts inferring, so an
   // operation left unresolved is a chat that hangs with no error and no
   // spinner. Every operation settles, a superseded one included.
+  // The row goes on saying `loading` and the list goes on answering, so the
+  // reach bound never applies and every healthy read re-arms the watchdog. The
+  // send path is waiting on this promise, and a chat that hangs with no error
+  // and no spinner is the one outcome the gate must not produce.
+  it('settles a load the row never moves off loading', async () => {
+    const id = await routerServer();
+    const pending = serverStore.ensureRouterModelLoaded(id, TARGET);
+    await flush();
+    answerWith('loading');
+    await reconcile(id);
+
+    await advance(ROUTER_LOAD_MAX_MS + ROUTER_TICK_MS);
+
+    expect(serverStore.routerOp(id, TARGET)).toBeUndefined();
+    await expect(pending).resolves.toBe('failed');
+  });
+
+  // Stopping it is a withdrawal, not a verdict: nothing is surfaced, and the
+  // caller waiting on the promise is answered rather than left there.
+  it('settles a load the user stopped, with nothing surfaced', async () => {
+    mockedRouterUnload.mockResolvedValue({status: 200, body: {success: true}});
+    const id = await routerServer();
+    const pending = serverStore.ensureRouterModelLoaded(id, TARGET);
+    await flush();
+    answerWith('loading');
+    await reconcile(id);
+
+    await serverStore.cancelRouterOp(id, TARGET);
+    await flush();
+
+    expect(serverStore.routerOp(id, TARGET)).toBeUndefined();
+    expect(serverStore.routerReason(id, TARGET)).toBeUndefined();
+    await expect(pending).resolves.toBe('failed');
+  });
+
   it('settles a load that a second operation on the same model supersedes', async () => {
     const id = await routerServer();
     const load = serverStore.ensureRouterModelLoaded(id, UNLOADED_TARGET);

@@ -93,6 +93,16 @@ const ROUTER_EVIDENCE_MS = 45000;
 const ROUTER_UNREACHABLE_MS = 90000;
 
 /**
+ * How long a load may stay in flight while the row goes on reading `loading`.
+ * Nothing else bounds it: the reach bound needs the list to have stopped
+ * answering, and a healthy list read that still says `loading` re-arms the
+ * watchdog instead. The send path is waiting on the operation, so an
+ * unbounded one is a chat that hangs with no error and no spinner — worse
+ * than reporting that the load did not finish, which the user can retry.
+ */
+const ROUTER_LOAD_MAX_MS = 10 * 60 * 1000;
+
+/**
  * How long an unload may take to converge. It must clear the wire's ten-second
  * stop timeout, or a child that is slow to stop reads as a server that refused
  * to release it.
@@ -1469,6 +1479,12 @@ class ServerStore {
       this.settleRouterOp(key, 'ready');
       return;
     }
+    // A withdrawn request has no outcome left to report, whatever the row goes
+    // on saying: what the caller is waiting on is the request, not the model.
+    if (op.cancelled) {
+      this.settleRouterOp(key, 'failed');
+      return;
+    }
     if (verdict === 'in-flight') {
       runInAction(() => {
         op.phase = 'active';
@@ -1480,14 +1496,14 @@ class ServerStore {
     // A request that has not been acknowledged yet is not a failure: the server
     // may simply not have started.
     if (op.phase === 'active' || op.verdictRequested) {
-      this.settleRouterOp(
-        key,
-        'failed',
-        op.cancelled
-          ? undefined
-          : {cause: 'load-failed', message: op.reason ?? this.rowReason(key)},
-      );
+      this.settleRouterOp(key, 'failed', this.loadFailure(op, key));
     }
+  }
+
+  private loadFailure(op: RouterOp, key: string): RouterFailure | undefined {
+    return op.cancelled
+      ? undefined
+      : {cause: 'load-failed', message: op.reason ?? this.rowReason(key)};
   }
 
   /**
@@ -1653,6 +1669,10 @@ class ServerStore {
       }
       if (op.kind === 'unload') {
         this.applyUnloadBound(key, op, now);
+        continue;
+      }
+      if (op.kind === 'load' && now - op.startedAt > ROUTER_LOAD_MAX_MS) {
+        this.settleRouterOp(key, 'failed', this.loadFailure(op, key));
         continue;
       }
       const interval =
