@@ -543,6 +543,29 @@ describe('PairServerSheet', () => {
       expect(control(root, 'pair-server-scan')).toBeFalsy();
     });
 
+    it('blames nothing while the OS is still asking for access', async () => {
+      const ask = deferred<boolean>();
+      requestPermission = jest.fn().mockReturnValue(ask.promise);
+      mockUseCameraPermission.mockReturnValue({
+        hasPermission: false,
+        requestPermission,
+      });
+      const root = renderSheet();
+
+      await waitFor(() => {
+        expect(requestPermission).toHaveBeenCalled();
+      });
+      expect(root.queryByTestId('pair-server-camera-denied')).toBeNull();
+
+      await act(async () => {
+        ask.resolve(false);
+        await Promise.resolve();
+        await Promise.resolve();
+      });
+
+      expect(root.getByTestId('pair-server-camera-denied')).toBeTruthy();
+    });
+
     it('asks for camera access when the sheet opens without it', async () => {
       grantCamera(false);
       renderSheet();
