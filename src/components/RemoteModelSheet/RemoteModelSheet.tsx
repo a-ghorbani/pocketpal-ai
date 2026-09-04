@@ -39,7 +39,11 @@ import {
 } from '../../api/openai';
 import {deriveListCaps} from '../../utils/listCaps';
 import {t} from '../../locales';
-import type {RouterFailure, RouterRowState} from '../../utils/routerState';
+import type {
+  RouterFailure,
+  RouterOpKind,
+  RouterRowState,
+} from '../../utils/routerState';
 import {formatBytes} from '../../utils/formatters';
 
 import {createStyles} from './styles';
@@ -86,6 +90,22 @@ const routerStateLabel = (state: RouterRowState, l10n: any): string | null => {
   }
 };
 
+/**
+ * While an operation holds a row, the operation is what the row says it is
+ * doing. An unload names itself in the action column instead, where the button
+ * it replaces was.
+ */
+const routerOpLabel = (kind: RouterOpKind, l10n: any): string | null => {
+  switch (kind) {
+    case 'load':
+      return l10n.settings.routerModels.stateLoading;
+    case 'download':
+      return l10n.settings.routerModels.stateDownloading;
+    case 'unload':
+      return null;
+  }
+};
+
 const routerFailureLabel = (
   cause: RouterFailure['cause'],
   l10n: any,
@@ -120,6 +140,23 @@ function routerGroupOf(state: RouterRowState): RouterGroup {
     case 'absent':
       return 'available';
   }
+}
+
+function routerGroupOfOp(kind: RouterOpKind): RouterGroup {
+  switch (kind) {
+    case 'download':
+      return 'downloading';
+    case 'load':
+    case 'unload':
+      return 'loaded';
+  }
+}
+
+function routerRowGroup(serverId: string, modelId: string): RouterGroup {
+  const op = serverStore.routerOp(serverId, modelId);
+  return op
+    ? routerGroupOfOp(op.kind)
+    : routerGroupOf(serverStore.routerRowState(serverId, modelId));
 }
 
 /**
@@ -482,15 +519,21 @@ export const RemoteModelSheet: React.FC<RemoteModelSheetProps> = observer(
     };
 
     const renderRouterRow = (model: RemoteModelInfo, servId: string) => {
-      const state = serverStore.routerRowState(servId, model.id);
       const op = serverStore.routerOp(servId, model.id);
+      const state = serverStore.routerRowState(servId, model.id);
       const live = serverStore.routerLive(servId, model.id);
       const failure = serverStore.routerReason(servId, model.id);
       const alreadyAdded = isModelAlreadyAdded(servId, model.id);
       // A model the server is still fetching, or one it never fetched at all,
       // is nothing this app can bind a session to yet.
       const selectable =
-        !alreadyAdded && state !== 'downloading' && state !== 'absent';
+        !alreadyAdded &&
+        op?.kind !== 'download' &&
+        state !== 'downloading' &&
+        state !== 'absent';
+      const label = op
+        ? routerOpLabel(op.kind, l10n)
+        : routerStateLabel(state, l10n);
       const favourites = serverFavouriteModelIds();
       const isFavourite =
         favourites.includes(`${servId}/${model.id}`) ||
@@ -500,14 +543,14 @@ export const RemoteModelSheet: React.FC<RemoteModelSheetProps> = observer(
       // is determinate at zero rather than absent.
       const bytes = live?.bytes;
       const fraction =
-        state === 'downloading'
+        op?.kind === 'download'
           ? bytes && bytes.total > 0
             ? bytes.done / bytes.total
             : undefined
           : live?.progress?.value;
       const determinate =
         typeof fraction === 'number' && fraction >= 0 && fraction <= 1;
-      const showProgress = state === 'loading' || state === 'downloading';
+      const showProgress = op?.kind === 'load' || op?.kind === 'download';
 
       const action = () => {
         if (op) {
@@ -538,7 +581,13 @@ export const RemoteModelSheet: React.FC<RemoteModelSheetProps> = observer(
             </Button>
           );
         }
-        if (state === 'downloading') {
+        // Nothing for this app to start: the server is already doing it, or
+        // has no such model to do it to.
+        if (
+          state === 'loading' ||
+          state === 'downloading' ||
+          state === 'absent'
+        ) {
           return null;
         }
         return (
@@ -587,11 +636,11 @@ export const RemoteModelSheet: React.FC<RemoteModelSheetProps> = observer(
             <Text style={styles.modelName}>{model.id}</Text>
             <View style={styles.routerRowMeta}>
               {renderVisionSlot(model)}
-              {routerStateLabel(state, l10n) && (
+              {label && (
                 <Text
                   style={styles.routerRowState}
                   testID={`router-state-${model.id}`}>
-                  {routerStateLabel(state, l10n)}
+                  {label}
                 </Text>
               )}
               {canToggleFavourite() && (
@@ -619,7 +668,7 @@ export const RemoteModelSheet: React.FC<RemoteModelSheetProps> = observer(
               progress={determinate ? fraction : undefined}
             />
           )}
-          {bytes && bytes.total > 0 && state === 'downloading' && (
+          {bytes && bytes.total > 0 && op?.kind === 'download' && (
             <Text
               style={[styles.routerRowState, styles.routerReasonRow]}
               testID={`router-bytes-${model.id}`}>
@@ -951,12 +1000,7 @@ export const RemoteModelSheet: React.FC<RemoteModelSheetProps> = observer(
                     {orderRouterRows(
                       routerRows.filter(
                         row =>
-                          routerGroupOf(
-                            serverStore.routerRowState(
-                              selectedServerId,
-                              row.id,
-                            ),
-                          ) === group,
+                          routerRowGroup(selectedServerId, row.id) === group,
                       ),
                       selectedServerId,
                     ).map(model => renderRouterRow(model, selectedServerId))}

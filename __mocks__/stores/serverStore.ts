@@ -48,7 +48,7 @@ class MockServerStore {
   routerObservedEviction: Set<string> = new Set();
   routerListShape: Record<
     string,
-    {hasModelsKey: boolean; startedAt: number; seq: number}
+    {hasModelsKey: boolean; startedAt: number; seq: number; stale: boolean}
   > = {};
 
   addServer: jest.Mock;
@@ -91,25 +91,18 @@ class MockServerStore {
   }
 
   routerRowState(serverId: string, remoteModelId: string): RouterRowState {
-    const live = this.routerEvents[`${serverId}/${remoteModelId}`];
-    if (live?.status) {
-      return live.status;
-    }
-    const state = mapRowStatus(
-      (this.serverModels.get(serverId) ?? []).find(row =>
-        rowMatchesKey(row, remoteModelId),
-      ),
+    const row = (this.serverModels.get(serverId) ?? []).find(candidate =>
+      rowMatchesKey(candidate, remoteModelId),
     );
-    return state === 'absent' &&
-      this.routerOps[`${serverId}/${remoteModelId}`]?.kind === 'download'
-      ? 'downloading'
-      : state;
+    return mapRowStatus(
+      row && this.routerListShape[serverId]?.stale ? {id: row.id} : row,
+    );
   }
 
   routerResidentCount(serverId: string): number {
     return (this.serverModels.get(serverId) ?? []).filter(row => {
       const state = this.routerRowState(serverId, row.id);
-      return state === 'loaded' || state === 'loading' || state === 'sleeping';
+      return state === 'loaded' || state === 'sleeping';
     }).length;
   }
 

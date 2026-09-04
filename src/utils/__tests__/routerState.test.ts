@@ -1,6 +1,7 @@
 import {
   applyLivePatch,
   downloadVerdict,
+  loadFailureFrom,
   loadVerdict,
   mapRowStatus,
   reduceRouterEvent,
@@ -8,6 +9,7 @@ import {
   unloadVerdict,
   RouterEventEffect,
   RouterListState,
+  RouterOp,
   RouterRowState,
 } from '../routerState';
 import {routerWireEvents} from '../../../jest/fixtures/routerWire';
@@ -365,11 +367,7 @@ describe('reduceRouterEvent on shapes it does not recognise', () => {
 
 describe('applyLivePatch', () => {
   it('keeps fields an event did not mention and restamps recency', () => {
-    const first = applyLivePatch(
-      undefined,
-      {status: 'loading', progress: {value: 0}},
-      10,
-    );
+    const first = applyLivePatch(undefined, {progress: {value: 0}}, 10);
     const second = applyLivePatch(
       first,
       {bytes: {done: 1, total: 2, urls: 1}},
@@ -377,10 +375,46 @@ describe('applyLivePatch', () => {
     );
 
     expect(second).toEqual({
-      status: 'loading',
       progress: {value: 0},
       bytes: {done: 1, total: 2, urls: 1},
+      exitCode: undefined,
       at: 20,
     });
   });
+});
+
+describe('loadFailureFrom', () => {
+  const op = (cancelled?: boolean): RouterOp => ({
+    kind: 'load',
+    phase: 'active',
+    serverId: 'srv',
+    key: 'srv/alpha',
+    startedAt: 0,
+    requestSeq: 0,
+    lastEvidenceAt: 0,
+    cancelled,
+  });
+
+  it.each(['loading', 'downloading'] as RouterRowState[])(
+    'builds no record from a row still reading %s',
+    state => {
+      expect(
+        loadFailureFrom(listed(state), op(), 'exit code 1'),
+      ).toBeUndefined();
+    },
+  );
+
+  it('builds none for a request the user withdrew', () => {
+    expect(loadFailureFrom(listed('failed'), op(true))).toBeUndefined();
+  });
+
+  it.each(['unloaded', 'failed', 'absent', 'unknown'] as RouterRowState[])(
+    'blames the load off a row reading %s',
+    state => {
+      expect(loadFailureFrom(listed(state), op(), 'exit code 1')).toEqual({
+        cause: 'load-failed',
+        message: 'exit code 1',
+      });
+    },
+  );
 });

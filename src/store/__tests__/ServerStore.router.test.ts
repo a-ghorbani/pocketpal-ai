@@ -311,37 +311,6 @@ describe('routerRowStates', () => {
     expect(serverStore.routerResidentCount(id)).toBe(loaded);
   });
 
-  it('prefers an overlay entry written after the fetch started', async () => {
-    const id = await withRouter();
-    const target = routerModelsBody.data.find(
-      row => row.status.value === 'unloaded',
-    )!;
-
-    runInAction(() => {
-      serverStore.routerEvents[`${id}/${target.id}`] = {
-        status: 'loading',
-        at: Date.now() + 1000,
-      };
-    });
-
-    expect(serverStore.routerRowState(id, target.id)).toBe('loading');
-  });
-
-  it('prefers the row over an overlay entry the fetch has overtaken', async () => {
-    const id = addServer();
-    runInAction(() => {
-      serverStore.routerEvents[`${id}/gemma-4-e2b`] = {
-        status: 'loading',
-        at: 1,
-      };
-    });
-    mockedFetch.mockResolvedValue(listResult(routerModelsBody.data, false));
-
-    await serverStore.fetchModelsForServer(id);
-
-    expect(serverStore.routerRowState(id, 'gemma-4-e2b')).toBe('loaded');
-  });
-
   it('reports a model the server does not list as absent', async () => {
     const id = await withRouter();
 
@@ -555,7 +524,6 @@ describe('the router event stream', () => {
       serverStore.applyRouterEvent(id, event);
     }
 
-    expect(serverStore.routerLive(id, 'alpha')?.status).toBe('unloaded');
     expect(serverStore.routerLive(id, 'alpha')?.exitCode).toBe(0);
   });
 
@@ -949,7 +917,7 @@ describe('loading a model', () => {
       model: TARGET,
     });
     expect(serverStore.routerLive(id, TARGET)?.progress?.value).toBe(0);
-    expect(serverStore.routerRowState(id, TARGET)).toBe('loading');
+    expect(serverStore.routerRowState(id, TARGET)).toBe('unloaded');
 
     answerWith('loaded');
     await reconcile(id);
@@ -1059,11 +1027,11 @@ describe('loading a model', () => {
     expect(mockedFetch).toHaveBeenCalledTimes(1);
   });
 
-  // Both of these put the overlay and the row in opposition, with the row's
-  // fetch still in flight so the overlay outranks it. An event is what the
-  // screen shows and never what settles or gates an operation: resolving
-  // either off one reports a load that did not happen as ready.
-  it('resolves a refusal off the row, never off an event that outranks it', async () => {
+  // Both of these put an event and the row in opposition, with the row's fetch
+  // still in flight. An event is what the screen shows and never what settles
+  // or gates an operation: resolving either off one reports a load that did
+  // not happen as ready.
+  it('resolves a refusal off the row, never off the event beside it', async () => {
     const id = await routerServer();
     let refuse: (answer: unknown) => void = () => {};
     mockedRouterLoad.mockImplementationOnce(
@@ -1082,7 +1050,6 @@ describe('loading a model', () => {
       event: 'status_change',
       data: {status: 'sleeping'},
     });
-    expect(serverStore.routerRowState(id, TARGET)).toBe('sleeping');
 
     refuse({status: 400, body: {error: {message: 'no free slot'}}});
     await flush();
@@ -1091,7 +1058,7 @@ describe('loading a model', () => {
     expect(pending).toBeDefined();
   });
 
-  it('gates a load on the row, never on an event that outranks it', async () => {
+  it('gates a load on the row, never on the event beside it', async () => {
     const id = await routerServer();
 
     mockedFetch.mockImplementation(() => new Promise(() => {}));
@@ -1101,7 +1068,6 @@ describe('loading a model', () => {
       event: 'status_change',
       data: {status: 'loaded'},
     });
-    expect(serverStore.routerRowState(id, TARGET)).toBe('loaded');
 
     serverStore.ensureRouterModelLoaded(id, TARGET);
     await flush();
@@ -1175,11 +1141,10 @@ describe('loading a model', () => {
     await expect(pending).resolves.toBe('failed');
   });
 
-  // The overlay outranks the row until a later fetch answers, and after an
-  // unreachable server there is no later fetch. Left in place, the row goes on
-  // showing a frozen determinate bar and counting as resident underneath the
-  // note saying the server could not be reached — permanently.
-  it('stops a settled operation claiming the model is still loading', async () => {
+  // A load in flight is the operation's to present, and the operation is gone.
+  // Nothing it left behind may go on saying the model is loading, and nothing
+  // it left behind may count the model as resident.
+  it('leaves a settled operation claiming nothing about the model', async () => {
     const id = await routerServer();
     let fail: (error: unknown) => void = () => {};
     mockedRouterLoad.mockImplementationOnce(
@@ -1193,7 +1158,6 @@ describe('loading a model', () => {
 
     jest.advanceTimersByTime(1);
     serverStore.applyRouterEvent(id, {...firstProgressEvent(), model: TARGET});
-    expect(serverStore.routerRowState(id, TARGET)).toBe('loading');
     const whileLoading = serverStore.routerResidentCount(id);
 
     fail(new Error('Network request failed'));
@@ -1204,7 +1168,7 @@ describe('loading a model', () => {
       message: 'Network request failed',
     });
     expect(serverStore.routerRowState(id, TARGET)).toBe('unloaded');
-    expect(serverStore.routerResidentCount(id)).toBe(whileLoading - 1);
+    expect(serverStore.routerResidentCount(id)).toBe(whileLoading);
   });
 
   it('settles a load that a second operation on the same model supersedes', async () => {
@@ -1244,6 +1208,129 @@ describe('loading a model', () => {
     await pending;
 
     expect(serverStore.routerPolls.has(id)).toBe(false);
+  });
+});
+
+describe('one presenter at a time', () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+    installStreamHandle();
+    jest.useFakeTimers();
+    resetStore();
+    mockedRouterLoad.mockResolvedValue({status: 200, body: {success: true}});
+  });
+
+  afterEach(() => {
+    jest.useRealTimers();
+  });
+
+  const rowsWith = (value: string) =>
+    routerModelsBody.data.map(row =>
+      row.id === TARGET ? {...row, status: {...row.status, value}} : row,
+    );
+
+  const answerWith = (value: string) =>
+    mockedFetch.mockResolvedValue(listResult(rowsWith(value), false));
+
+  const routerServer = async (value = 'unloaded') => {
+    const serverId = addServer();
+    answerWith(value);
+    await serverStore.fetchModelsForServer(serverId);
+    jest.advanceTimersByTime(1);
+    return serverId;
+  };
+
+  const residentRowsIn = (value: string) =>
+    rowsWith(value).filter(
+      row => row.status.value === 'loaded' || row.status.value === 'sleeping',
+    ).length;
+
+  it('reads the row and not the event, however recent the event is', async () => {
+    const id = await routerServer('unloaded');
+    jest.advanceTimersByTime(1);
+
+    serverStore.applyRouterEvent(id, {
+      model: TARGET,
+      event: 'status_change',
+      data: {status: 'loaded'},
+    });
+
+    expect(serverStore.routerRowState(id, TARGET)).toBe('unloaded');
+  });
+
+  it('leaves no status on the overlay for any surface to read', async () => {
+    const id = await routerServer('unloaded');
+
+    serverStore.applyRouterEvent(id, {...firstProgressEvent(), model: TARGET});
+
+    expect(serverStore.routerLive(id, TARGET)).not.toHaveProperty('status');
+  });
+
+  // The device capture: the desktop stopped answering while the row said
+  // loading, and the row went on saying it under the note that the server
+  // could not be reached.
+  it('makes no claim for a row the last fetch could not refresh', async () => {
+    const id = await routerServer('loading');
+    mockedFetch.mockRejectedValue(new Error('Network request failed'));
+
+    await serverStore.fetchModelsForServer(id);
+
+    expect(serverStore.routerOp(id, TARGET)).toBeUndefined();
+    expect(serverStore.routerRowState(id, TARGET)).toBe('unknown');
+  });
+
+  it('believes the row again as soon as a fetch succeeds', async () => {
+    const id = await routerServer('loading');
+    mockedFetch.mockRejectedValue(new Error('Network request failed'));
+    await serverStore.fetchModelsForServer(id);
+
+    answerWith('loading');
+    await serverStore.fetchModelsForServer(id);
+
+    expect(serverStore.routerRowState(id, TARGET)).toBe('loading');
+  });
+
+  it('counts only the models the server is holding as resident', async () => {
+    const id = await routerServer('loading');
+
+    expect(serverStore.routerResidentCount(id)).toBe(residentRowsIn('loading'));
+  });
+
+  // Ten minutes is a fact about how long this app waited. The desktop may
+  // still be loading the model, and its row is what says so.
+  it('records nothing when the wait ends with the row still loading', async () => {
+    const id = await routerServer('unloaded');
+    const pending = serverStore.ensureRouterModelLoaded(id, TARGET);
+    await flush();
+    answerWith('loading');
+    await reconcile(id);
+
+    await advance(ROUTER_LOAD_MAX_MS + ROUTER_TICK_MS);
+
+    await expect(pending).resolves.toBe('failed');
+    expect(serverStore.routerOp(id, TARGET)).toBeUndefined();
+    expect(serverStore.routerReason(id, TARGET)).toBeUndefined();
+  });
+
+  it('still blames the model when the row it settles on says it failed', async () => {
+    const id = await routerServer('unloaded');
+    const pending = serverStore.ensureRouterModelLoaded(id, TARGET);
+    await flush();
+    mockedFetch.mockResolvedValue(
+      listResult(
+        routerModelsBody.data.map(row =>
+          row.id === TARGET
+            ? {...row, status: {value: 'unloaded', failed: true, exit_code: 1}}
+            : row,
+        ),
+        false,
+      ),
+    );
+
+    await advance(ROUTER_LOAD_MAX_MS + ROUTER_TICK_MS);
+
+    await expect(pending).resolves.toBe('failed');
+    expect(serverStore.routerReason(id, TARGET)?.cause).toBe('load-failed');
   });
 });
 
@@ -1424,12 +1511,15 @@ describe('downloading a model to the server', () => {
     expect(mockedRouterDownload.mock.calls[0][1]).toBe(REFERENCE);
   });
 
-  it('shows the model as downloading from the accepted request alone', async () => {
+  // The server lists nothing for a model it has not finished fetching, so the
+  // operation is the only thing that can say the fetch is under way.
+  it('leaves the accepted request as the only sign of the download', async () => {
     const id = await routerServer();
 
     await serverStore.startRouterDownload(id, REFERENCE);
 
-    expect(serverStore.routerRowState(id, REFERENCE)).toBe('downloading');
+    expect(serverStore.routerOp(id, REFERENCE)?.kind).toBe('download');
+    expect(serverStore.routerRowState(id, REFERENCE)).toBe('absent');
   });
 
   it('reports a refused request with the server reason and starts nothing', async () => {
@@ -1578,7 +1668,6 @@ describe('downloading a model to the server', () => {
 
     expect(serverStore.routerOp(id, REFERENCE)?.kind).toBe('download');
     expect(serverStore.routerOp(id, TARGET)).toBeUndefined();
-    expect(serverStore.routerRowState(id, REFERENCE)).toBe('downloading');
     expect(serverStore.routerReason(id, REFERENCE)).toBeUndefined();
   });
 
@@ -1805,10 +1894,7 @@ describe('a server that is repointed or removed', () => {
     const {id} = await busyRouter();
     const other = addServer();
     runInAction(() => {
-      serverStore.routerEvents[`${other}/alpha`] = {
-        status: 'loaded',
-        at: Date.now(),
-      };
+      serverStore.routerEvents[`${other}/alpha`] = {at: Date.now()};
     });
 
     serverStore.removeServer(id);

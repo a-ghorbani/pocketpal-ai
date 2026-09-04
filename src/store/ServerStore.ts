@@ -22,6 +22,7 @@ import {deriveListCapsMap} from '../utils/listCaps';
 import type {ListDerivedCaps} from '../utils/listCaps';
 import {
   applyLivePatch,
+  loadFailureFrom,
   downloadVerdict,
   loadVerdict,
   mapRowStatus,
@@ -156,6 +157,8 @@ interface RouterListShape {
    * was re-read after that request" is exact however coarse the clock is.
    */
   seq: number;
+  /** The last read of this list failed, and none has succeeded since. */
+  stale: boolean;
 }
 
 export type RouterOpOutcome = 'ready' | 'failed';
@@ -435,15 +438,15 @@ class ServerStore {
   }
 
   /**
-   * What every consumer branches on, per model key. The live overlay wins while
-   * it is newer than the start of the fetch that produced the row; otherwise
-   * the row does, so a slow fetch cannot strand a finished load in `loading`.
+   * What the server's own list says about each model key. It is one half of
+   * what a row shows: while an operation of ours is on a key that operation is
+   * what presents the row, and this is not read for a label at all.
    */
   get routerRowStates(): Record<string, RouterRowState> {
     const states: Record<string, RouterRowState> = {};
     for (const serverId of this.routerServers) {
       for (const key of this.routerKeysForServer(serverId)) {
-        states[key] = this.resolveRouterRowState(serverId, key);
+        states[key] = this.routerRowFromList(serverId, key);
       }
     }
     return states;
@@ -452,7 +455,7 @@ class ServerStore {
   routerRowState(serverId: string, remoteModelId: string): RouterRowState {
     return (
       this.routerRowStates[`${serverId}/${remoteModelId}`] ??
-      this.resolveRouterRowState(serverId, `${serverId}/${remoteModelId}`)
+      this.routerRowFromList(serverId, `${serverId}/${remoteModelId}`)
     );
   }
 
@@ -472,29 +475,20 @@ class ServerStore {
     return [...keys];
   }
 
-  /** What the last list read said, with no overlay and no operation of ours. */
+  /**
+   * What the last list read said. A failed read leaves the rows it could not
+   * refresh in place, and a state nothing has corroborated since is not one
+   * this app may claim, so the row is passed on without it — which maps to
+   * `unknown`, and renders as no claim at all.
+   */
   private routerRowFromList(serverId: string, key: string): RouterListState {
     const remoteModelId = key.slice(serverId.length + 1);
-    return mapRowStatus(
-      (this.serverModels.get(serverId) ?? []).find(candidate =>
-        rowMatchesKey(candidate, remoteModelId),
-      ),
+    const row = (this.serverModels.get(serverId) ?? []).find(candidate =>
+      rowMatchesKey(candidate, remoteModelId),
     );
-  }
-
-  private resolveRouterRowState(serverId: string, key: string): RouterRowState {
-    const live = this.routerEvents[key];
-    const fetchStartedAt = this.routerListShape[serverId]?.startedAt ?? 0;
-    if (live?.status && live.at > fetchStartedAt) {
-      return live.status;
-    }
-    const rowState: RouterRowState = this.routerRowFromList(serverId, key);
-    // A download has no row until it lands, so its own operation is what says
-    // the model is on its way.
-    if (rowState === 'absent' && this.routerOps[key]?.kind === 'download') {
-      return 'downloading';
-    }
-    return rowState;
+    return mapRowStatus(
+      row && this.routerListShape[serverId]?.stale ? {id: row.id} : row,
+    );
   }
 
   /**
@@ -559,8 +553,8 @@ class ServerStore {
   /** Resident models on a server: a fact, shown without predicting anything. */
   routerResidentCount(serverId: string): number {
     return this.routerKeysForServer(serverId).filter(key => {
-      const state = this.resolveRouterRowState(serverId, key);
-      return state === 'loaded' || state === 'loading' || state === 'sleeping';
+      const state = this.routerRowFromList(serverId, key);
+      return state === 'loaded' || state === 'sleeping';
     }).length;
   }
 
@@ -648,7 +642,12 @@ class ServerStore {
         // in place on a failure: without a stamp, a reconcile that never
         // happened is indistinguishable from one that found the old row, and
         // every bound below turns on that difference.
-        this.routerListShape[serverId] = {hasModelsKey, startedAt, seq};
+        this.routerListShape[serverId] = {
+          hasModelsKey,
+          startedAt,
+          seq,
+          stale: false,
+        };
         this.pruneRouterOverlay(serverId, startedAt);
 
         // Update lastConnected timestamp
@@ -664,6 +663,10 @@ class ServerStore {
       runInAction(() => {
         this.error = message;
         this.isLoading = false;
+        const shape = this.routerListShape[serverId];
+        if (shape) {
+          shape.stale = true;
+        }
       });
       return {ok: false, error: message};
     }
@@ -1439,7 +1442,6 @@ class ServerStore {
     }
     runInAction(() => {
       this.setRouterOp(key, undefined);
-      this.dropInFlightOverlay(key);
       if (outcome === 'failed' && failure) {
         this.routerReasons[key] = failure;
       }
@@ -1450,20 +1452,6 @@ class ServerStore {
     waiter?.(outcome);
     this.syncRouterTiers();
     this.syncRouterStream();
-  }
-
-  /**
-   * An in-progress overlay says an attempt is under way, and the attempt is
-   * over. Nothing will correct it — it outranks the row until a fetch that
-   * began after it succeeds, which after an unreachable server never happens —
-   * so the row would go on showing a frozen bar and counting as resident
-   * beneath the note saying the server could not be reached.
-   */
-  private dropInFlightOverlay(key: string): void {
-    const status = this.routerEvents[key]?.status;
-    if (status === 'loading' || status === 'downloading') {
-      delete this.routerEvents[key];
-    }
   }
 
   /**
@@ -1521,9 +1509,11 @@ class ServerStore {
   }
 
   private loadFailure(op: RouterOp, key: string): RouterFailure | undefined {
-    return op.cancelled
-      ? undefined
-      : {cause: 'load-failed', message: op.reason ?? this.rowReason(key)};
+    return loadFailureFrom(
+      this.routerRowFromList(op.serverId, key),
+      op,
+      op.reason ?? this.rowReason(key),
+    );
   }
 
   /**
@@ -1691,6 +1681,8 @@ class ServerStore {
         this.applyUnloadBound(key, op, now);
         continue;
       }
+      // Ten minutes is a fact about how long this app waited, so the row is
+      // still what says whether the model loaded.
       if (op.kind === 'load' && now - op.startedAt > ROUTER_LOAD_MAX_MS) {
         this.settleRouterOp(key, 'failed', this.loadFailure(op, key));
         continue;

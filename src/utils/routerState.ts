@@ -55,12 +55,18 @@ export interface RouterBytes {
   urls: number;
 }
 
-export interface RouterLive {
-  status?: RouterRowState;
+/**
+ * What an event leaves behind: detail a surface may render beside whatever is
+ * presenting the row, and never a state of its own.
+ */
+export interface RouterLiveDetail {
   progress?: RouterLoadProgress;
   bytes?: RouterBytes;
   exitCode?: number;
-  /** When this entry was written, which is how it is ranked against a fetch. */
+}
+
+export interface RouterLive extends RouterLiveDetail {
+  /** When this entry was written, which is what a prune measures. */
   at: number;
 }
 
@@ -170,6 +176,21 @@ export function loadVerdict(state: RouterListState): RouterLoadVerdict {
   }
 }
 
+/**
+ * The record a load may leave behind, built from the row it settled on. A row
+ * still in flight is not an outcome, and a request the user withdrew has none
+ * to report, so neither yields one.
+ */
+export function loadFailureFrom(
+  state: RouterListState,
+  op: RouterOp,
+  message?: string,
+): RouterFailure | undefined {
+  return op.cancelled || loadVerdict(state) === 'in-flight'
+    ? undefined
+    : {cause: 'load-failed', message};
+}
+
 export type RouterUnloadVerdict = 'released' | 'not-converged';
 
 /**
@@ -233,11 +254,12 @@ export function downloadVerdict(
   return 'unresolved';
 }
 
-export interface RouterLivePatch {
+/**
+ * What one event said. Only the detail is stored; `status` is read here and
+ * nowhere else, for the transient decisions the reducer and its caller make.
+ */
+export interface RouterLivePatch extends RouterLiveDetail {
   status?: RouterRowState;
-  progress?: RouterLoadProgress;
-  bytes?: RouterBytes;
-  exitCode?: number;
 }
 
 export type RouterEventEffect =
@@ -391,15 +413,16 @@ export function reduceRouterEvent(payload: any): RouterEventEffect {
   return {kind: 'ignore'};
 }
 
-/** Merge a patch into an overlay entry, stamping when it was written. */
+/** Merge the detail an event carried into an overlay entry, restamping it. */
 export function applyLivePatch(
   previous: RouterLive | undefined,
-  patch: RouterLivePatch,
+  detail: RouterLiveDetail,
   at: number,
 ): RouterLive {
   return {
-    ...previous,
-    ...patch,
+    progress: detail.progress ?? previous?.progress,
+    bytes: detail.bytes ?? previous?.bytes,
+    exitCode: detail.exitCode ?? previous?.exitCode,
     at,
   };
 }

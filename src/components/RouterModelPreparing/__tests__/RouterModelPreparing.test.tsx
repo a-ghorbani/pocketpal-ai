@@ -59,7 +59,7 @@ describe('RouterModelPreparing', () => {
     modelStore.activeRemoteBinding = BINDING;
     serverStore.routerOps = {'srv-1/alpha': loadOp()};
     serverStore.routerEvents = {
-      'srv-1/alpha': {status: 'loading', progress: {value: 0}, at: Date.now()},
+      'srv-1/alpha': {progress: {value: 0}, at: Date.now()},
     };
 
     const {getByTestId} = render(<RouterModelPreparing />);

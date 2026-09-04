@@ -541,12 +541,19 @@ describe('RemoteModelSheet', () => {
     });
 
     it('renders a determinate bar for a load reporting zero progress', async () => {
-      serverStore.routerEvents = {
+      serverStore.routerOps = {
         [`srv-1/${UNLOADED}`]: {
-          status: 'loading',
-          progress: {value: 0},
-          at: Date.now(),
+          kind: 'load',
+          phase: 'active',
+          serverId: 'srv-1',
+          key: `srv-1/${UNLOADED}`,
+          startedAt: Date.now(),
+          requestSeq: 0,
+          lastEvidenceAt: Date.now(),
         },
+      };
+      serverStore.routerEvents = {
+        [`srv-1/${UNLOADED}`]: {progress: {value: 0}, at: Date.now()},
       };
       const {getByTestId} = await openRouter();
 
@@ -593,7 +600,12 @@ describe('RemoteModelSheet', () => {
 
     it('renders the router surface for a server that lists nothing', async () => {
       serverStore.routerListShape = {
-        'srv-1': {hasModelsKey: false, startedAt: Date.now(), seq: 1},
+        'srv-1': {
+          hasModelsKey: false,
+          startedAt: Date.now(),
+          seq: 1,
+          stale: false,
+        },
       };
       serverStore.servers = [
         {
@@ -702,7 +714,6 @@ describe('RemoteModelSheet', () => {
         };
         serverStore.routerEvents = {
           [key]: {
-            status: 'downloading',
             bytes: {done: total / 2, total, urls: files.length},
             at: Date.now(),
           },
@@ -715,6 +726,66 @@ describe('RemoteModelSheet', () => {
           getByTestId(`router-progress-${PENDING}`).props.accessibilityValue,
         ).toEqual({min: 0, max: 100, now: 50});
       });
+    });
+
+    // While an operation holds a row, the operation is what the row says: the
+    // list has an answer of its own and reading both is how two of them end
+    // up on screen at once.
+    it('lets the operation say what the row is doing', async () => {
+      serverStore.routerOps = {
+        [`srv-1/${UNLOADED}`]: {
+          kind: 'load',
+          phase: 'active',
+          serverId: 'srv-1',
+          key: `srv-1/${UNLOADED}`,
+          startedAt: Date.now(),
+          requestSeq: 0,
+          lastEvidenceAt: Date.now(),
+        },
+      };
+      const {getByTestId, queryByTestId} = await openRouter();
+
+      expect(getByTestId(`router-state-${UNLOADED}`).props.children).toBe(
+        'Loading',
+      );
+      expect(getByTestId(`router-progress-${UNLOADED}`)).toBeTruthy();
+      expect(getByTestId(`router-cancel-${UNLOADED}`)).toBeTruthy();
+      expect(queryByTestId(`router-load-${UNLOADED}`)).toBeNull();
+    });
+
+    // Posting a second one collides with the load already running, and the
+    // row it would collide with is not this app's to cancel.
+    it('offers no load for a model the server is already loading', async () => {
+      const rows = ROWS.map(row =>
+        row.id === UNLOADED
+          ? {...row, status: {...row.status, value: 'loading'}}
+          : row,
+      );
+      const {queryByTestId} = await openRouter('llama.cpp', rows);
+
+      expect(queryByTestId(`router-load-${UNLOADED}`)).toBeNull();
+      expect(queryByTestId(`router-cancel-${UNLOADED}`)).toBeNull();
+      expect(queryByTestId(`router-progress-${UNLOADED}`)).toBeNull();
+    });
+
+    // The device capture: the desktop stopped answering mid-load, and the row
+    // went on calling itself loaded underneath the note saying so.
+    it('makes no claim for a row the last fetch could not refresh', async () => {
+      serverStore.routerListShape = {
+        'srv-1': {
+          hasModelsKey: false,
+          startedAt: Date.now(),
+          seq: 1,
+          stale: true,
+        },
+      };
+      const {queryByTestId, getByTestId} = await openRouter();
+
+      expect(queryByTestId(`router-state-${LOADED}`)).toBeNull();
+      expect(queryByTestId(`router-unload-${LOADED}`)).toBeNull();
+      expect(getByTestId('router-resident-count').props.children).toBe(
+        '0 resident',
+      );
     });
 
     // A row that is one accessibility target announces itself and swallows
