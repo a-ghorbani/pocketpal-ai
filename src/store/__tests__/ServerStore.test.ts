@@ -67,6 +67,8 @@ describe('ServerStore', () => {
       serverStore.remoteReasoning = {};
       serverStore.remoteCaps = {};
       serverStore.serverPresence = {};
+      serverStore.favouriteRemoteModels = {};
+      serverStore.lastUsedRemoteModel = {};
     });
     mockedReadServerIsSleeping.mockReturnValue(undefined);
   });
@@ -533,6 +535,8 @@ describe('ServerStore', () => {
         'userSelectedModels',
         'remoteReasoning',
         'remoteCaps',
+        'favouriteRemoteModels',
+        'lastUsedRemoteModel',
       ]);
     });
   });
@@ -1648,6 +1652,111 @@ describe('ServerStore', () => {
       serverStore.updateServer(id, {url: 'http://host:9932'});
 
       expect(serverStore.remoteCaps[`${id}/m1`]).toBeUndefined();
+    });
+  });
+  describe('per-server model preferences', () => {
+    const addServer = (name = 's1') =>
+      serverStore.addServer({name, url: `http://${name}:9931`});
+
+    it('declares both preference maps to the persistence layer and presence to neither', () => {
+      // mobx-persist-store is mocked wholesale, so neither a missing name nor
+      // a wrongly added one shows up anywhere else in this suite. Asserts the
+      // declaration only, not that the library round-trips through storage.
+      expect(persistedProperties).toContain('favouriteRemoteModels');
+      expect(persistedProperties).toContain('lastUsedRemoteModel');
+      expect(persistedProperties).not.toContain('serverPresence');
+    });
+
+    it('returns the same frozen empty entry for a server with no declarations', () => {
+      expect(serverStore.remoteModelPrefsFor('none')).toEqual({
+        favouriteModelIds: [],
+      });
+      expect(serverStore.remoteModelPrefsFor('none')).toBe(
+        serverStore.remoteModelPrefsFor('other'),
+      );
+    });
+
+    it('toggles a favourite on and back off', () => {
+      const id = addServer();
+
+      serverStore.toggleFavourite(id, 'qwen3');
+      expect(serverStore.remoteModelPrefsFor(id).favouriteModelIds).toEqual([
+        'qwen3',
+      ]);
+
+      serverStore.toggleFavourite(id, 'qwen3');
+      expect(serverStore.remoteModelPrefsFor(id).favouriteModelIds).toEqual([]);
+    });
+
+    it('keeps a model id containing a slash intact', () => {
+      const id = addServer();
+
+      serverStore.toggleFavourite(id, 'ggml-org/gemma-4-31B-it-GGUF:Q8_0');
+
+      expect(serverStore.remoteModelPrefsFor(id).favouriteModelIds).toEqual([
+        'ggml-org/gemma-4-31B-it-GGUF:Q8_0',
+      ]);
+    });
+
+    it("keeps each server's declarations to itself", () => {
+      const a = addServer('a');
+      const b = addServer('b');
+
+      serverStore.toggleFavourite(a, 'qwen3');
+      serverStore.recordLastUsedRemoteModel(b, 'gemma');
+
+      expect(serverStore.remoteModelPrefsFor(a)).toEqual({
+        favouriteModelIds: ['qwen3'],
+      });
+      expect(serverStore.remoteModelPrefsFor(b)).toEqual({
+        favouriteModelIds: [],
+        lastUsedModelId: 'gemma',
+      });
+    });
+
+    it('records last-used per server without touching the local auto-reload slot', () => {
+      const id = addServer();
+
+      serverStore.recordLastUsedRemoteModel(id, 'qwen3');
+
+      expect(serverStore.remoteModelPrefsFor(id).lastUsedModelId).toBe('qwen3');
+    });
+
+    it('returns a favourite the server has stopped listing, unchanged', () => {
+      const id = addServer();
+
+      serverStore.toggleFavourite(id, 'retired-model');
+
+      expect(serverStore.remoteModelPrefsFor(id).favouriteModelIds).toEqual([
+        'retired-model',
+      ]);
+    });
+
+    it('survives a url edit, because it is a user declaration', () => {
+      const id = addServer();
+      serverStore.toggleFavourite(id, 'qwen3');
+      serverStore.recordLastUsedRemoteModel(id, 'qwen3');
+
+      serverStore.updateServer(id, {url: 'http://elsewhere:9931'});
+
+      expect(serverStore.remoteModelPrefsFor(id)).toEqual({
+        favouriteModelIds: ['qwen3'],
+        lastUsedModelId: 'qwen3',
+      });
+    });
+
+    it('drops both maps and the presence entry when the server is removed', async () => {
+      const id = addServer();
+      serverStore.toggleFavourite(id, 'qwen3');
+      serverStore.recordLastUsedRemoteModel(id, 'qwen3');
+      mockedProbeReachability.mockResolvedValue('reachable');
+      await serverStore.probeServerPresence(id, {reason: 'user'});
+
+      serverStore.removeServer(id);
+
+      expect(serverStore.favouriteRemoteModels).toEqual({});
+      expect(serverStore.lastUsedRemoteModel).toEqual({});
+      expect(serverStore.presenceFor(id)).toBe('unknown');
     });
   });
 });

@@ -14,6 +14,7 @@ import {
 } from '../api/openai';
 import {
   RemoteModelCaps,
+  RemoteModelPrefs,
   ServerConfig,
   ServerPresence,
   ServerPresenceEntry,
@@ -25,6 +26,11 @@ import {deriveListCapsMap} from '../utils/listCaps';
 import type {ListDerivedCaps} from '../utils/listCaps';
 
 const KEYCHAIN_SERVICE_PREFIX = 'pocketpal-server-';
+
+/** Shared identity, so a row re-rendering for an unrelated reason sees no change. */
+const NO_REMOTE_MODEL_PREFS: RemoteModelPrefs = Object.freeze({
+  favouriteModelIds: [] as string[],
+});
 
 /** Minimum interval between auto-fetch cycles (ms) */
 const FETCH_THROTTLE_MS = 60000;
@@ -76,6 +82,8 @@ class ServerStore {
   // Deliberately not persisted: a hydrated reachability is a claim about now
   // that nobody checked.
   serverPresence: Record<string, ServerPresenceEntry> = {};
+  favouriteRemoteModels: Record<string, true> = {};
+  lastUsedRemoteModel: Record<string, string> = {};
   userSelectedModels: Array<{serverId: string; remoteModelId: string}> = [];
   isLoading = false;
   error: string | null = null;
@@ -98,6 +106,8 @@ class ServerStore {
         'userSelectedModels',
         'remoteReasoning',
         'remoteCaps',
+        'favouriteRemoteModels',
+        'lastUsedRemoteModel',
       ],
       storage: AsyncStorage,
     }).then(() => {
@@ -164,6 +174,11 @@ class ServerStore {
     this.remoteReasoning = dropServerEntries(this.remoteReasoning, id);
     this.remoteCaps = dropServerEntries(this.remoteCaps, id);
     this.serverPresence = dropServerKey(this.serverPresence, id);
+    this.favouriteRemoteModels = dropServerEntries(
+      this.favouriteRemoteModels,
+      id,
+    );
+    this.lastUsedRemoteModel = dropServerKey(this.lastUsedRemoteModel, id);
     // Clean up API key from keychain
     this.removeApiKey(id);
   }
@@ -277,6 +292,54 @@ class ServerStore {
       console.error('Failed to remove API key:', error);
     }
   }
+
+  /** Sole writer of `favouriteRemoteModels`. Flips one key and nothing else. */
+  toggleFavourite(serverId: string, remoteModelId: string): void {
+    const key = `${serverId}/${remoteModelId}`;
+    const next = {...this.favouriteRemoteModels};
+    if (next[key]) {
+      delete next[key];
+    } else {
+      next[key] = true;
+    }
+    this.favouriteRemoteModels = next;
+  }
+
+  /** Sole writer of `lastUsedRemoteModel`, called on activation, not on a tap. */
+  recordLastUsedRemoteModel(serverId: string, remoteModelId: string): void {
+    this.lastUsedRemoteModel = {
+      ...this.lastUsedRemoteModel,
+      [serverId]: remoteModelId,
+    };
+  }
+
+  /**
+   * Both per-model declarations as one entry per server. Model ids may contain
+   * a slash, the server id may not, so the key splits at the first one.
+   */
+  get remoteModelPrefsByServer(): Record<string, RemoteModelPrefs> {
+    const byServer: Record<string, RemoteModelPrefs> = {};
+    const entryFor = (serverId: string): RemoteModelPrefs =>
+      (byServer[serverId] ??= {favouriteModelIds: []});
+
+    for (const key of Object.keys(this.favouriteRemoteModels)) {
+      const slash = key.indexOf('/');
+      if (slash > 0) {
+        entryFor(key.slice(0, slash)).favouriteModelIds.push(
+          key.slice(slash + 1),
+        );
+      }
+    }
+    for (const [serverId, modelId] of Object.entries(
+      this.lastUsedRemoteModel,
+    )) {
+      entryFor(serverId).lastUsedModelId = modelId;
+    }
+    return byServer;
+  }
+
+  remoteModelPrefsFor = (serverId: string): RemoteModelPrefs =>
+    this.remoteModelPrefsByServer[serverId] ?? NO_REMOTE_MODEL_PREFS;
 
   /**
    * The single assign site for `serverPresence`, with two callers: the probe

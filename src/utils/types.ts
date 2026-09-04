@@ -479,6 +479,13 @@ export interface ServerPresenceEntry {
   checkedAt?: number;
 }
 
+/** A server's per-model user declarations, as one derived entry. */
+export interface RemoteModelPrefs {
+  /** Bare remote model ids, so a picker row tests `includes(row.id)`. */
+  favouriteModelIds: string[];
+  lastUsedModelId?: string;
+}
+
 export interface ServerConfig {
   id: string;
   name: string;
