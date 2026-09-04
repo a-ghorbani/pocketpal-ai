@@ -152,6 +152,62 @@ describe('PairServerSheet', () => {
       expect(keyFieldHasAutoFocus(root)).toBe(true);
     });
 
+    it('adds the server on the first press of Add', async () => {
+      probeSpy.mockResolvedValue(usable(2, 'authorised'));
+      const onPaired = jest.fn();
+      const root = renderSheet({
+        request: {url: QR_PAYLOAD, apiKey: 'sk-x'},
+        onPaired,
+      });
+
+      await waitFor(() => {
+        expect(root.getByTestId('pair-server-models')).toBeTruthy();
+      });
+
+      // The key field holds focus, so the press that reaches Add blurs it
+      // first. A probe started by that blur would still be in flight when the
+      // press lands, and would disable Add underneath it.
+      probeSpy.mockReturnValue(new Promise(() => {}));
+      await act(async () => {
+        fireEvent(root.getByTestId('pair-server-key'), 'blur');
+      });
+      await act(async () => {
+        fireEvent.press(root.getByTestId('pair-server-add'));
+        await Promise.resolve();
+      });
+
+      expect(serverStore.addServer).toHaveBeenCalledTimes(1);
+      expect(onPaired).toHaveBeenCalledWith('mock-server-id');
+      expect(probeSpy).toHaveBeenCalledTimes(1);
+    });
+
+    it('re-probes when the key is edited and then left', async () => {
+      probeSpy.mockResolvedValue({
+        outcome: 'unauthorized',
+        status: 401,
+        source: 'gate',
+      });
+      const root = renderSheet({request: {url: QR_PAYLOAD}});
+
+      await waitFor(() => {
+        expect(root.getByTestId('pair-server-verdict')).toBeTruthy();
+      });
+
+      probeSpy.mockResolvedValue(usable(2, 'authorised'));
+      await act(async () => {
+        fireEvent.changeText(root.getByTestId('pair-server-key'), 'sk-x');
+      });
+      await act(async () => {
+        fireEvent(root.getByTestId('pair-server-key'), 'blur');
+      });
+
+      await waitFor(() => {
+        expect(root.getByTestId('pair-server-models')).toBeTruthy();
+      });
+      expect(probeSpy).toHaveBeenCalledTimes(2);
+      expect(probeSpy).toHaveBeenLastCalledWith(QR_PAYLOAD, {apiKey: 'sk-x'});
+    });
+
     it('enables Add for a usable server with no models, which is not an error', async () => {
       probeSpy.mockResolvedValue(usable(0));
       const root = renderSheet();

@@ -1,4 +1,10 @@
-import React, {useCallback, useContext, useEffect, useState} from 'react';
+import React, {
+  useCallback,
+  useContext,
+  useEffect,
+  useRef,
+  useState,
+} from 'react';
 import {View} from 'react-native';
 
 import {observer} from 'mobx-react';
@@ -53,7 +59,10 @@ export const PairServerSheet: React.FC<PairServerSheetProps> = observer(
     const [scanError, setScanError] = useState(false);
     const [duplicate, setDuplicate] = useState<ServerConfig | null>(null);
 
+    const probedKey = useRef<string | null>(null);
+
     const runProbe = useCallback(async (target: string, key: string) => {
+      probedKey.current = key;
       setIsProbing(true);
       setProbe(null);
       const result = await probePairingTarget(target, {
@@ -110,6 +119,7 @@ export const PairServerSheet: React.FC<PairServerSheetProps> = observer(
       setIsProbing(false);
       setScanError(false);
       setDuplicate(null);
+      probedKey.current = null;
       if (request) {
         accept(request);
         return;
@@ -170,6 +180,15 @@ export const PairServerSheet: React.FC<PairServerSheetProps> = observer(
       onPaired?.(serverId);
       onDismiss();
     }, [probe, url, name, apiKey, onPaired, onDismiss]);
+
+    // Leaving the field without having touched the key must not start a probe:
+    // the press that reaches Add blurs the field first, and a probe in flight
+    // disables Add underneath that press.
+    const reprobeIfKeyChanged = useCallback(() => {
+      if (apiKey !== probedKey.current) {
+        runProbe(url, apiKey);
+      }
+    }, [apiKey, url, runProbe]);
 
     const canAdd = probe?.outcome === 'usable' && !isProbing;
 
@@ -261,7 +280,9 @@ export const PairServerSheet: React.FC<PairServerSheetProps> = observer(
             ? l10n.models.pairServer.duplicateTitle
             : l10n.models.pairServer.title
         }>
-        <Sheet.ScrollView contentContainerStyle={styles.body}>
+        <Sheet.ScrollView
+          contentContainerStyle={styles.body}
+          keyboardShouldPersistTaps="handled">
           {state === 'scanning' && canScan && (
             <>
               <View style={styles.camera}>
@@ -357,7 +378,7 @@ export const PairServerSheet: React.FC<PairServerSheetProps> = observer(
                 label={l10n.models.pairServer.apiKeyLabel}
                 value={apiKey}
                 onChangeText={setApiKey}
-                onBlur={() => runProbe(url, apiKey)}
+                onBlur={reprobeIfKeyChanged}
                 autoFocus
                 autoCapitalize="none"
                 secureTextEntry
