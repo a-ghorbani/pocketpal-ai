@@ -5,7 +5,7 @@ import React, {
   useRef,
   useState,
 } from 'react';
-import {View} from 'react-native';
+import {View, TextInput as RNTextInput} from 'react-native';
 
 import {observer} from 'mobx-react';
 import {ActivityIndicator, Button, Text} from 'react-native-paper';
@@ -24,12 +24,18 @@ import {parsePairingURL, sameServerUrl} from '../../services/pairingLink';
 import type {PairingRequest} from '../../services/pairingLink';
 import {probePairingTarget} from '../../api/openai';
 import type {PairingProbeResult} from '../../api/openai';
-import {seedServerType} from '../../utils/serverTypes';
 import type {ServerConfig} from '../../utils/types';
 
 import {createStyles} from './styles';
 
-type SheetState = 'scanning' | 'manual' | 'confirming' | 'duplicate' | 'saving';
+type EntryState = 'scanning' | 'manual';
+type SheetState = EntryState | 'confirming' | 'duplicate' | 'saving';
+
+/** A settled probe and the key it ran with. */
+interface Verdict {
+  key: string;
+  result: PairingProbeResult;
+}
 
 interface PairServerSheetProps {
   isVisible: boolean;
@@ -51,35 +57,62 @@ export const PairServerSheet: React.FC<PairServerSheetProps> = observer(
     const canScan = hasPermission && device != null;
 
     const [state, setState] = useState<SheetState>('scanning');
+    const [entryState, setEntryState] = useState<EntryState>('manual');
     const [url, setUrl] = useState('');
     const [name, setName] = useState('');
     const [apiKey, setApiKey] = useState('');
-    const [probe, setProbe] = useState<PairingProbeResult | null>(null);
+    const [verdict, setVerdict] = useState<Verdict | null>(null);
     const [isProbing, setIsProbing] = useState(false);
     const [scanError, setScanError] = useState(false);
     const [duplicate, setDuplicate] = useState<ServerConfig | null>(null);
 
-    const probedKey = useRef<string | null>(null);
+    const canScanRef = useRef(canScan);
+    canScanRef.current = canScan;
 
-    const runProbe = useCallback(async (target: string, key: string) => {
-      probedKey.current = key;
-      setIsProbing(true);
-      setProbe(null);
-      const result = await probePairingTarget(target, {
-        apiKey: key || undefined,
-      });
-      setIsProbing(false);
-      setProbe(result);
-    }, []);
+    const keyField = useRef<RNTextInput | null>(null);
+
+    const probeGeneration = useRef(0);
+    const inFlight = useRef<{
+      key: string;
+      result: Promise<PairingProbeResult>;
+    } | null>(null);
+
+    const runProbe = useCallback(
+      (target: string, key: string): Promise<PairingProbeResult> => {
+        const generation = ++probeGeneration.current;
+        setIsProbing(true);
+        setVerdict(null);
+        const result = probePairingTarget(target, {apiKey: key || undefined});
+        inFlight.current = {key, result};
+        result.then(settled => {
+          if (probeGeneration.current !== generation) {
+            return;
+          }
+          inFlight.current = null;
+          setIsProbing(false);
+          setVerdict({key, result: settled});
+        });
+        return result;
+      },
+      [],
+    );
+
+    const probeTypedKey = useCallback((): Promise<PairingProbeResult> => {
+      if (inFlight.current?.key === apiKey) {
+        return inFlight.current.result;
+      }
+      return runProbe(url, apiKey);
+    }, [apiKey, url, runProbe]);
 
     const accept = useCallback(
-      (parsed: PairingRequest) => {
+      (parsed: PairingRequest, from: EntryState) => {
         const existing = serverStore.servers.find(s =>
           sameServerUrl(s.url, parsed.url),
         );
         setUrl(parsed.url);
         setName(parsed.name ?? '');
         setApiKey(parsed.apiKey ?? '');
+        setEntryState(from);
         if (existing) {
           setDuplicate(existing);
           setState('duplicate');
@@ -92,8 +125,13 @@ export const PairServerSheet: React.FC<PairServerSheetProps> = observer(
       [runProbe],
     );
 
+    // Only where the camera can actually be reached: iOS prompts once for the
+    // life of the install, and two Android denials become permanent.
+    const scannerReachable =
+      !request && (state === 'scanning' || state === 'manual');
+
     useEffect(() => {
-      if (!isVisible) {
+      if (!isVisible || !scannerReachable) {
         return;
       }
       if (hasPermission) {
@@ -109,26 +147,34 @@ export const PairServerSheet: React.FC<PairServerSheetProps> = observer(
       return () => {
         abandoned = true;
       };
-    }, [isVisible, hasPermission, requestPermission]);
+    }, [isVisible, scannerReachable, hasPermission, requestPermission]);
 
     useEffect(() => {
       if (!isVisible) {
         return;
       }
-      setProbe(null);
+      probeGeneration.current += 1;
+      inFlight.current = null;
+      setVerdict(null);
       setIsProbing(false);
       setScanError(false);
       setDuplicate(null);
-      probedKey.current = null;
       if (request) {
-        accept(request);
+        accept(request, 'manual');
         return;
       }
       setUrl('');
       setName('');
       setApiKey('');
-      setState(canScan ? 'scanning' : 'manual');
-    }, [isVisible, request, canScan, accept]);
+      setEntryState(canScanRef.current ? 'scanning' : 'manual');
+      setState(canScanRef.current ? 'scanning' : 'manual');
+    }, [isVisible, request, accept]);
+
+    useEffect(() => {
+      if (verdict?.result.outcome === 'unauthorized') {
+        keyField.current?.focus();
+      }
+    }, [verdict]);
 
     const codeScanner = useCodeScanner({
       codeTypes: ['qr'],
@@ -143,7 +189,7 @@ export const PairServerSheet: React.FC<PairServerSheetProps> = observer(
           return;
         }
         setScanError(false);
-        accept(parsed);
+        accept(parsed, 'scanning');
       },
     });
 
@@ -153,23 +199,37 @@ export const PairServerSheet: React.FC<PairServerSheetProps> = observer(
         setScanError(true);
         return;
       }
-      accept({
-        ...parsed,
-        name: name || parsed.name,
-        apiKey: apiKey || parsed.apiKey,
-      });
+      accept(
+        {
+          ...parsed,
+          name: name || parsed.name,
+          apiKey: apiKey || parsed.apiKey,
+        },
+        'manual',
+      );
     }, [url, name, apiKey, accept]);
+
+    const goBack = useCallback(() => {
+      probeGeneration.current += 1;
+      inFlight.current = null;
+      setVerdict(null);
+      setIsProbing(false);
+      setScanError(false);
+      setState(entryState);
+    }, [entryState]);
 
     const add = useCallback(async () => {
       setState('saving');
-      const detected =
-        probe?.outcome === 'usable'
-          ? probe.serverType
-          : seedServerType('', url);
+      const result =
+        verdict?.key === apiKey ? verdict.result : await probeTypedKey();
+      if (result.outcome !== 'usable') {
+        setState('confirming');
+        return;
+      }
       const serverId = serverStore.addServer({
         name: name || url,
         url,
-        serverType: detected,
+        serverType: result.serverType,
       });
       if (apiKey) {
         await serverStore.setApiKey(serverId, apiKey);
@@ -179,18 +239,11 @@ export const PairServerSheet: React.FC<PairServerSheetProps> = observer(
         .catch(() => {});
       onPaired?.(serverId);
       onDismiss();
-    }, [probe, url, name, apiKey, onPaired, onDismiss]);
+    }, [verdict, apiKey, probeTypedKey, name, url, onPaired, onDismiss]);
 
-    // Leaving the field without having touched the key must not start a probe:
-    // the press that reaches Add blurs the field first, and a probe in flight
-    // disables Add underneath that press.
-    const reprobeIfKeyChanged = useCallback(() => {
-      if (apiKey !== probedKey.current) {
-        runProbe(url, apiKey);
-      }
-    }, [apiKey, url, runProbe]);
-
-    const canAdd = probe?.outcome === 'usable' && !isProbing;
+    const typedKeyVerdict = verdict?.key === apiKey ? verdict.result : null;
+    const canAdd =
+      typedKeyVerdict === null || typedKeyVerdict.outcome === 'usable';
 
     const manualHint = !device
       ? {testID: 'pair-server-no-camera', text: l10n.models.pairServer.noCamera}
@@ -202,7 +255,7 @@ export const PairServerSheet: React.FC<PairServerSheetProps> = observer(
         : null;
 
     const renderVerdict = () => {
-      if (isProbing || !probe) {
+      if (isProbing) {
         return (
           <View style={styles.verdict}>
             <ActivityIndicator testID="pair-server-probing" />
@@ -212,13 +265,16 @@ export const PairServerSheet: React.FC<PairServerSheetProps> = observer(
           </View>
         );
       }
+      if (!typedKeyVerdict) {
+        return null;
+      }
 
-      switch (probe.outcome) {
+      switch (typedKeyVerdict.outcome) {
         case 'usable': {
-          const count = probe.models.length;
+          const count = typedKeyVerdict.models.length;
           const credentials = !apiKey
             ? l10n.models.pairServer.noKeySupplied
-            : probe.authorisation === 'authorised'
+            : typedKeyVerdict.authorisation === 'authorised'
               ? l10n.models.pairServer.credentialsVerified
               : l10n.models.pairServer.credentialsUnverified;
           return (
@@ -258,7 +314,7 @@ export const PairServerSheet: React.FC<PairServerSheetProps> = observer(
             <Text testID="pair-server-verdict" style={styles.errorText}>
               {l10n.models.pairServer.serverAnswered.replace(
                 '{{status}}',
-                String(probe.status),
+                String(typedKeyVerdict.status),
               )}
             </Text>
           );
@@ -299,6 +355,13 @@ export const PairServerSheet: React.FC<PairServerSheetProps> = observer(
                   ? l10n.models.pairServer.notAServerQr
                   : l10n.models.pairServer.scanHint}
               </Text>
+              <View style={styles.actions}>
+                <Button
+                  testID="pair-server-manual"
+                  onPress={() => setState('manual')}>
+                  {l10n.settings.enterUrlManually}
+                </Button>
+              </View>
             </>
           )}
 
@@ -335,7 +398,16 @@ export const PairServerSheet: React.FC<PairServerSheetProps> = observer(
                   {l10n.models.pairServer.notAServerQr}
                 </Text>
               )}
-              <View style={styles.actions}>
+              <View style={styles.actionsSplit}>
+                {canScan ? (
+                  <Button
+                    testID="pair-server-scan"
+                    onPress={() => setState('scanning')}>
+                    {l10n.models.pairServer.scanInstead}
+                  </Button>
+                ) : (
+                  <View />
+                )}
                 <Button testID="pair-server-continue" onPress={confirmManual}>
                   {l10n.models.pairServer.add}
                 </Button>
@@ -372,30 +444,39 @@ export const PairServerSheet: React.FC<PairServerSheetProps> = observer(
 
           {(state === 'confirming' || state === 'saving') && (
             <>
-              <Text style={styles.url}>{url}</Text>
+              <Text testID="pair-server-url-label" style={styles.url}>
+                {url}
+              </Text>
+              <Text testID="pair-server-trust" style={styles.notice}>
+                {l10n.settings.remotePrivacyNotice}
+              </Text>
               <TextInput
+                ref={keyField}
                 testID="pair-server-key"
                 label={l10n.models.pairServer.apiKeyLabel}
                 value={apiKey}
                 onChangeText={setApiKey}
-                onBlur={reprobeIfKeyChanged}
-                autoFocus
                 autoCapitalize="none"
                 secureTextEntry
               />
               {renderVerdict()}
-              <View style={styles.actions}>
-                <Button testID="pair-server-cancel" onPress={onDismiss}>
-                  {l10n.common.cancel}
+              <View style={styles.actionsSplit}>
+                <Button testID="pair-server-back" onPress={goBack}>
+                  {l10n.models.pairServer.back}
                 </Button>
-                <Button
-                  testID="pair-server-add"
-                  mode="contained"
-                  disabled={!canAdd || state === 'saving'}
-                  loading={state === 'saving'}
-                  onPress={add}>
-                  {l10n.models.pairServer.add}
-                </Button>
+                <View style={styles.actionsRight}>
+                  <Button testID="pair-server-cancel" onPress={onDismiss}>
+                    {l10n.common.cancel}
+                  </Button>
+                  <Button
+                    testID="pair-server-add"
+                    mode="contained"
+                    disabled={!canAdd || state === 'saving'}
+                    loading={state === 'saving'}
+                    onPress={add}>
+                    {l10n.models.pairServer.add}
+                  </Button>
+                </View>
               </View>
             </>
           )}

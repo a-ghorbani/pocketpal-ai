@@ -397,6 +397,8 @@
       "notAModelServer": "The address answered, but not as a model server.",
       "serverAnswered": "The server answered {{status}}. Check the address.",
       "unreachable": "Couldn't reach that address.",
+      "scanInstead": "Scan a code",
+      "back": "Back",
       "duplicateTitle": "Already added",
       "duplicateMessage": "You already have this server saved as \"{{name}}\".",
       "use": "Use",

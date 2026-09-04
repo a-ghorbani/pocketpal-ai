@@ -24,8 +24,13 @@ export const createStyles = (theme: Theme) =>
       textAlign: 'center',
     },
     url: {
-      fontSize: 14,
+      fontSize: 15,
+      fontWeight: '600',
       color: theme.colors.onSurface,
+    },
+    notice: {
+      fontSize: 13,
+      color: theme.colors.onSurfaceVariant,
     },
     verdict: {
       gap: 4,
@@ -45,6 +50,16 @@ export const createStyles = (theme: Theme) =>
     actions: {
       flexDirection: 'row',
       justifyContent: 'flex-end',
+      gap: 8,
+    },
+    actionsSplit: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      gap: 8,
+    },
+    actionsRight: {
+      flexDirection: 'row',
       gap: 8,
     },
   });
