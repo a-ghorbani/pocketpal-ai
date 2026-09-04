@@ -284,6 +284,7 @@ describe('reduceRouterEvent over the captured download stream', () => {
       expect(reduceRouterEvent(event)).toEqual({
         kind: 'update',
         model: event.model,
+        about: 'download',
         patch: {},
         reconcile: true,
         attemptEnded: true,

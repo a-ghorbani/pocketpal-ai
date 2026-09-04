@@ -53,7 +53,12 @@ export type RouterOpKind = 'load' | 'unload' | 'download';
  * and are only ever passed through.
  */
 export interface RouterFailure {
-  cause: 'load-failed' | 'unload-not-released' | 'download-not-fetched';
+  cause:
+    | 'load-failed'
+    | 'unload-not-released'
+    | 'download-not-fetched'
+    /** The server could not be asked at all, which is no claim about the model. */
+    | 'server-unreachable';
   message?: string;
 }
 
@@ -138,7 +143,10 @@ export function loadVerdict(state: RouterRowState): RouterLoadVerdict {
     case 'loading':
     case 'downloading':
       return 'in-flight';
-    default:
+    case 'unloaded':
+    case 'absent':
+    case 'failed':
+    case 'unknown':
       return 'failed';
   }
 }
@@ -156,7 +164,11 @@ export function unloadVerdict(state: RouterRowState): RouterUnloadVerdict {
     case 'absent':
     case 'failed':
       return 'released';
-    default:
+    case 'loading':
+    case 'loaded':
+    case 'sleeping':
+    case 'downloading':
+    case 'unknown':
       return 'not-converged';
   }
 }
@@ -217,6 +229,11 @@ export type RouterEventEffect =
   | {
       kind: 'update';
       model: string;
+      /**
+       * Which family of event this was. A download's key may be adopted from
+       * the id the server chose, and only news of a download can carry it.
+       */
+      about: 'status' | 'download';
       patch: RouterLivePatch;
       /** The situation may have settled; ask the list, do not read the name. */
       reconcile: boolean;
@@ -317,6 +334,7 @@ export function reduceRouterEvent(payload: any): RouterEventEffect {
     return {
       kind: 'update',
       model,
+      about: 'status',
       patch,
       reconcile: status !== 'loading' && status !== 'downloading',
       attemptEnded: false,
@@ -331,6 +349,7 @@ export function reduceRouterEvent(payload: any): RouterEventEffect {
     return {
       kind: 'update',
       model,
+      about: 'download',
       patch: {status: 'downloading', bytes},
       reconcile: false,
       attemptEnded: false,
@@ -343,6 +362,7 @@ export function reduceRouterEvent(payload: any): RouterEventEffect {
     return {
       kind: 'update',
       model,
+      about: 'download',
       patch: {},
       reconcile: true,
       attemptEnded: true,
