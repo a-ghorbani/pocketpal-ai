@@ -8,9 +8,13 @@
 import {useEffect, useCallback} from 'react';
 import {Alert, Linking} from 'react-native';
 import {useNavigation} from '@react-navigation/native';
-import {deepLinkService, DeepLinkParams} from '../services/DeepLinkService';
+import {
+  deepLinkService,
+  describeDeepLink,
+  DeepLinkParams,
+} from '../services/DeepLinkService';
 import {isHubLink, parseHubRunURL} from '../services/hubRunLink';
-import {parsePairingURL} from '../services/pairingLink';
+import {isPairingLink, parsePairingURL} from '../services/pairingLink';
 import {chatSessionStore, palStore, deepLinkStore, uiStore} from '../store';
 import {ROUTES} from '../utils/navigationConstants';
 import {
@@ -101,7 +105,7 @@ export const useDeepLinking = () => {
 
   const handleDeepLink = useCallback(
     async (params: DeepLinkParams) => {
-      console.log('Handling deep link:', params);
+      console.log('Handling deep link:', describeDeepLink(params));
 
       // Automation-bridge dispatch (E2E-only). DCE-stripped in prod because
       // __E2E__ inlines to false and the require() inside the gate is never
@@ -248,7 +252,7 @@ export const useDeepLinking = () => {
   // request, so the repeat changes nothing.
   useEffect(() => {
     const routeIfPairing = (url: string | null) => {
-      if (url && parsePairingURL(url)) {
+      if (url && isPairingLink(url)) {
         handlePairingLink(url);
       }
     };

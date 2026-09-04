@@ -43,6 +43,7 @@ jest.mock('@react-navigation/native', () => {
 // Stub the iOS-only DeepLinkService so the second `useEffect` (chat-deep-link
 // path) is a no-op and doesn't mask the cold-launch effect under test.
 jest.mock('../../services/DeepLinkService', () => ({
+  ...jest.requireActual('../../services/DeepLinkService'),
   deepLinkService: {
     initialize: jest.fn(),
     addListener: jest.fn(() => () => {}),

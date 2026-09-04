@@ -34,6 +34,7 @@ jest.mock('@react-navigation/native', () => {
 let registeredHandler: ((params: any) => void) | undefined;
 
 jest.mock('../../services/DeepLinkService', () => ({
+  ...jest.requireActual('../../services/DeepLinkService'),
   deepLinkService: {
     initialize: jest.fn(),
     addListener: jest.fn((cb: any) => {

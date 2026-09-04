@@ -33,6 +33,7 @@ jest.mock('@react-navigation/native', () => {
 let registeredHandler: ((params: any) => void) | undefined;
 
 jest.mock('../../services/DeepLinkService', () => ({
+  ...jest.requireActual('../../services/DeepLinkService'),
   deepLinkService: {
     initialize: jest.fn(),
     addListener: jest.fn((cb: any) => {
@@ -160,6 +161,10 @@ describe('useDeepLinking — llama:// pairing', () => {
     });
   });
 
+  // The authority form is delivered by the OS only on iOS, where a scheme
+  // cannot be host-scoped; the Android intent-filter is scoped to
+  // `add-server`. These inject below the OS resolver, so they pin the parse
+  // and the routing, not the registration.
   describe('the raw Linking path, which never enters the dispatcher', () => {
     it('parks a warm pairing link and goes to the same screen', () => {
       renderHook(() => useDeepLinking());
@@ -178,6 +183,17 @@ describe('useDeepLinking — llama:// pairing', () => {
       deliverWarm('llama://hub/run?repo_id=a/b');
 
       expect(deepLinkStore.setPendingHubRun).not.toHaveBeenCalled();
+    });
+
+    it('ignores an absolute http url, which is a scanner form and not a route', () => {
+      renderHook(() => useDeepLinking());
+
+      deliverWarm('http://192.168.1.5:9931/');
+      deliverWarm('https://example.com/');
+      deliverWarm('192.168.1.5:9931');
+
+      expect(deepLinkStore.setPendingPairing).not.toHaveBeenCalled();
+      expect(mockNavigate).not.toHaveBeenCalled();
     });
 
     it('ignores an unrecognised link without alerting or navigating', () => {
@@ -201,6 +217,24 @@ describe('useDeepLinking — llama:// pairing', () => {
         url: 'http://192.168.1.5:9931',
       });
     });
+  });
+
+  it('keeps the pairing key out of the log line', () => {
+    const logSpy = jest.spyOn(console, 'log').mockImplementation(() => {});
+    renderHook(() => useDeepLinking());
+
+    registeredHandler!(
+      emitterParams(
+        'llama://add-server?url=http%3A%2F%2F100.101.102.103%3A9931&key=sk-secret',
+      ),
+    );
+
+    const logged = JSON.stringify(logSpy.mock.calls);
+    expect(logged).not.toContain('sk-secret');
+    expect(logged).not.toContain('key=');
+    expect(logged).toContain('llama://add-server');
+    expect(logged).toContain('key');
+    logSpy.mockRestore();
   });
 
   it('lets a second link overwrite the parked one', () => {
