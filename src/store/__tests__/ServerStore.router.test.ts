@@ -1312,6 +1312,23 @@ describe('one presenter at a time', () => {
     expect(serverStore.routerReason(id, TARGET)).toBeUndefined();
   });
 
+  // The other way a row reads `unknown`: a build whose status value this one
+  // cannot read. The settle path reaches it with no watchdog ceiling involved,
+  // so what protects the record here is the row, not a timing relationship.
+  it('records nothing when it cannot read the row it settles on', async () => {
+    const id = await routerServer('unloaded');
+    const pending = serverStore.ensureRouterModelLoaded(id, TARGET);
+    await flush();
+
+    answerWith('quiescing');
+    jest.advanceTimersByTime(ROUTER_ACK_MS + 2000);
+    await flush();
+
+    await expect(pending).resolves.toBe('failed');
+    expect(serverStore.routerRowState(id, TARGET)).toBe('unknown');
+    expect(serverStore.routerReason(id, TARGET)).toBeUndefined();
+  });
+
   it('still blames the model when the row it settles on says it failed', async () => {
     const id = await routerServer('unloaded');
     const pending = serverStore.ensureRouterModelLoaded(id, TARGET);

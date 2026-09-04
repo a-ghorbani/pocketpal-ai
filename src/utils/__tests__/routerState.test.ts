@@ -408,7 +408,16 @@ describe('loadFailureFrom', () => {
     expect(loadFailureFrom(listed('failed'), op(true))).toBeUndefined();
   });
 
-  it.each(['unloaded', 'failed', 'absent', 'unknown'] as RouterRowState[])(
+  // `unknown` is the state whose whole meaning is that the app does not believe
+  // the list — a read that failed, or a value this build cannot read. A claim
+  // about the model derived from it is a claim derived from no claim.
+  it('builds none from a row the app does not believe', () => {
+    expect(
+      loadFailureFrom(listed('unknown'), op(), 'exit code 1'),
+    ).toBeUndefined();
+  });
+
+  it.each(['unloaded', 'failed', 'absent'] as RouterRowState[])(
     'blames the load off a row reading %s',
     state => {
       expect(loadFailureFrom(listed(state), op(), 'exit code 1')).toEqual({

@@ -179,16 +179,20 @@ export function loadVerdict(state: RouterListState): RouterLoadVerdict {
 }
 
 /**
- * The record a load may leave behind, built from the row it settled on. A row
- * still in flight is not an outcome, and a request the user withdrew has none
- * to report, so neither yields one.
+ * The record a load may leave behind, built from the row it settled on. Only a
+ * row the app both believes and reads as settled supports a claim about the
+ * model: a row still in flight is not an outcome, `unknown` is the absence of
+ * one, and a request the user withdrew has none to report.
  */
 export function loadFailureFrom(
   state: RouterListState,
   op: RouterOp,
   message?: string,
 ): RouterFailure | undefined {
-  return op.cancelled || loadVerdict(state) === 'in-flight'
+  if (op.cancelled || state === 'unknown') {
+    return undefined;
+  }
+  return loadVerdict(state) === 'in-flight'
     ? undefined
     : {cause: 'load-failed', message};
 }
