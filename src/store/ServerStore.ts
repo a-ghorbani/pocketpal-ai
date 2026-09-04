@@ -29,6 +29,7 @@ import {
   reduceRouterEvent,
   rowMatchesKey,
   RouterFailure,
+  RouterListState,
   RouterLive,
   RouterOp,
   RouterRowState,
@@ -472,7 +473,7 @@ class ServerStore {
   }
 
   /** What the last list read said, with no overlay and no operation of ours. */
-  private routerRowFromList(serverId: string, key: string): RouterRowState {
+  private routerRowFromList(serverId: string, key: string): RouterListState {
     const remoteModelId = key.slice(serverId.length + 1);
     return mapRowStatus(
       (this.serverModels.get(serverId) ?? []).find(candidate =>
@@ -487,7 +488,7 @@ class ServerStore {
     if (live?.status && live.at > fetchStartedAt) {
       return live.status;
     }
-    const rowState = this.routerRowFromList(serverId, key);
+    const rowState: RouterRowState = this.routerRowFromList(serverId, key);
     // A download has no row until it lands, so its own operation is what says
     // the model is on its way.
     if (rowState === 'absent' && this.routerOps[key]?.kind === 'download') {
@@ -1193,7 +1194,8 @@ class ServerStore {
     if (pending) {
       return pending;
     }
-    if (this.routerRowState(serverId, remoteModelId) === 'loaded') {
+    const listed: RouterRowState = this.routerRowFromList(serverId, key);
+    if (listed === 'loaded') {
       return 'ready';
     }
     const promise = this.runRouterLoad(serverId, remoteModelId, key);
@@ -1230,7 +1232,7 @@ class ServerStore {
         server.requestTimeoutMs,
       );
       if (status < 200 || status >= 300) {
-        this.resolveRefusedLoad(serverId, remoteModelId, key, body);
+        this.resolveRefusedLoad(serverId, key, body);
       }
       // A 2xx says the request was accepted, not that a load is under way: the
       // child can still fail to launch with nothing further on the wire.
@@ -1247,24 +1249,23 @@ class ServerStore {
   }
 
   /**
-   * A refusal is resolved by the model's observed state, never by the text of
-   * the refusal. A load posted at a model that is already resident answers 400
-   * and does not wake it — the end state the caller wanted is already true, so
-   * it settles ready and shows nothing.
+   * A refusal is resolved by the model's reconciled row, never by the text of
+   * the refusal and never by an event. A load posted at a model that is
+   * already resident answers 400 and does not wake it — the end state the
+   * caller wanted is already true, so it settles ready and shows nothing.
    */
   private resolveRefusedLoad(
     serverId: string,
-    remoteModelId: string,
     key: string,
     body: unknown,
   ): void {
     const reason = routerErrorMessage(body);
-    const state = this.routerRowState(serverId, remoteModelId);
-    if (state === 'loaded' || state === 'sleeping') {
+    const verdict = loadVerdict(this.routerRowFromList(serverId, key));
+    if (verdict === 'ready') {
       this.settleRouterOp(key, 'ready');
       return;
     }
-    if (state === 'loading' || state === 'downloading') {
+    if (verdict === 'in-flight') {
       return;
     }
     runInAction(() => {
@@ -1473,7 +1474,11 @@ class ServerStore {
     }
   }
 
-  private settleLoadOp(key: string, op: RouterOp, state: RouterRowState): void {
+  private settleLoadOp(
+    key: string,
+    op: RouterOp,
+    state: RouterListState,
+  ): void {
     const verdict = loadVerdict(state);
     if (verdict === 'ready') {
       this.settleRouterOp(key, 'ready');
@@ -1514,7 +1519,7 @@ class ServerStore {
   private settleUnloadOp(
     key: string,
     op: RouterOp,
-    state: RouterRowState,
+    state: RouterListState,
   ): void {
     if (!this.hasReconciledSince(op)) {
       return;

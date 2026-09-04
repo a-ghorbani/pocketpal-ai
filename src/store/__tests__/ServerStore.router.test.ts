@@ -1059,6 +1059,56 @@ describe('loading a model', () => {
     expect(mockedFetch).toHaveBeenCalledTimes(1);
   });
 
+  // Both of these put the overlay and the row in opposition, with the row's
+  // fetch still in flight so the overlay outranks it. An event is what the
+  // screen shows and never what settles or gates an operation: resolving
+  // either off one reports a load that did not happen as ready.
+  it('resolves a refusal off the row, never off an event that outranks it', async () => {
+    const id = await routerServer();
+    let refuse: (answer: unknown) => void = () => {};
+    mockedRouterLoad.mockImplementationOnce(
+      () =>
+        new Promise(resolve => {
+          refuse = resolve;
+        }),
+    );
+    const pending = serverStore.ensureRouterModelLoaded(id, TARGET);
+    await flush();
+
+    mockedFetch.mockImplementation(() => new Promise(() => {}));
+    jest.advanceTimersByTime(1);
+    serverStore.applyRouterEvent(id, {
+      model: TARGET,
+      event: 'status_change',
+      data: {status: 'sleeping'},
+    });
+    expect(serverStore.routerRowState(id, TARGET)).toBe('sleeping');
+
+    refuse({status: 400, body: {error: {message: 'no free slot'}}});
+    await flush();
+
+    expect(serverStore.routerOp(id, TARGET)?.reason).toBe('no free slot');
+    expect(pending).toBeDefined();
+  });
+
+  it('gates a load on the row, never on an event that outranks it', async () => {
+    const id = await routerServer();
+
+    mockedFetch.mockImplementation(() => new Promise(() => {}));
+    jest.advanceTimersByTime(1);
+    serverStore.applyRouterEvent(id, {
+      model: TARGET,
+      event: 'status_change',
+      data: {status: 'loaded'},
+    });
+    expect(serverStore.routerRowState(id, TARGET)).toBe('loaded');
+
+    serverStore.ensureRouterModelLoaded(id, TARGET);
+    await flush();
+
+    expect(mockedRouterLoad).toHaveBeenCalledTimes(1);
+  });
+
   it('carries the server reason when a refusal is not about residency', async () => {
     const id = await routerServer();
     mockedRouterLoad.mockResolvedValueOnce({

@@ -21,6 +21,25 @@ export type RouterStatus =
  */
 export type RouterRowState = RouterStatus | 'absent' | 'failed' | 'unknown';
 
+declare const reconciledList: unique symbol;
+
+/**
+ * A row state read off a reconciled list. Every verdict takes one of these and
+ * not a bare `RouterRowState`, so the overlay-first accessor — which is what
+ * the screen reads, and which an event outranks a row in — cannot reach one.
+ */
+export type RouterListState = RouterRowState & {
+  readonly [reconciledList]: true;
+};
+
+/**
+ * The one place a bare member becomes a list state, and it is reached only
+ * from a `RouterListRow`. Nothing else may assert this.
+ */
+function fromReconciledList(state: RouterRowState): RouterListState {
+  return state as RouterListState;
+}
+
 /** Whether this build has `GET /models/sse`, which shipped later than load and unload. */
 export type RouterStreamCap = 'unknown' | 'present' | 'absent';
 
@@ -114,14 +133,14 @@ function asStatus(value: unknown): RouterStatus | undefined {
  * Total: every row, and the absence of one, maps to a member. A row whose state
  * is unreadable is `unknown`, never a default to `unloaded`.
  */
-export function mapRowStatus(row: RouterListRow | undefined): RouterRowState {
+export function mapRowStatus(row: RouterListRow | undefined): RouterListState {
   if (!row) {
-    return 'absent';
+    return fromReconciledList('absent');
   }
   if (row.status?.failed === true) {
-    return 'failed';
+    return fromReconciledList('failed');
   }
-  return asStatus(row.status?.value) ?? 'unknown';
+  return fromReconciledList(asStatus(row.status?.value) ?? 'unknown');
 }
 
 /** Upstream matches a row to a model id by either key; so do we. */
@@ -135,8 +154,8 @@ export type RouterLoadVerdict = 'ready' | 'failed' | 'in-flight';
  * A load reads the row. `sleeping` is resident — the process is alive and only
  * the weights are released — so it is ready, not a failure.
  */
-export function loadVerdict(state: RouterRowState): RouterLoadVerdict {
-  switch (state) {
+export function loadVerdict(state: RouterListState): RouterLoadVerdict {
+  switch (state as RouterRowState) {
     case 'loaded':
     case 'sleeping':
       return 'ready';
@@ -158,8 +177,8 @@ export type RouterUnloadVerdict = 'released' | 'not-converged';
  * load's: a row still reading `loaded` is the failure being guarded against,
  * and running one through the other's mapping reports it as success.
  */
-export function unloadVerdict(state: RouterRowState): RouterUnloadVerdict {
-  switch (state) {
+export function unloadVerdict(state: RouterListState): RouterUnloadVerdict {
+  switch (state as RouterRowState) {
     case 'unloaded':
     case 'absent':
     case 'failed':
@@ -180,7 +199,7 @@ export type RouterDownloadVerdict =
   | 'never-arrived';
 
 export interface RouterDownloadEvidence {
-  rowState: RouterRowState;
+  rowState: RouterListState;
   /** A downloading row in this reconcile, or an event since the last arm. */
   freshCorroboration: boolean;
   attemptEnded: boolean;

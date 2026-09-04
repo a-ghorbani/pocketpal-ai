@@ -7,6 +7,7 @@ import {
   rowMatchesKey,
   unloadVerdict,
   RouterEventEffect,
+  RouterListState,
   RouterRowState,
 } from '../routerState';
 import {routerWireEvents} from '../../../jest/fixtures/routerWire';
@@ -17,6 +18,21 @@ const downloadStream = routerWireEvents('sse-download-sequence.txt');
 
 const forModel = (events: any[], model: string) =>
   events.filter(e => e.model === model);
+
+/**
+ * A verdict takes a state a reconciled list reported, and the mapper is the
+ * only thing that produces one — so the rows below go through it rather than
+ * asserting the type onto a bare member.
+ */
+const listed = (state: RouterRowState): RouterListState => {
+  if (state === 'absent') {
+    return mapRowStatus(undefined);
+  }
+  if (state === 'failed') {
+    return mapRowStatus({status: {failed: true}});
+  }
+  return mapRowStatus({status: {value: state}});
+};
 
 describe('mapRowStatus', () => {
   it('reads the captured router rows', () => {
@@ -63,7 +79,7 @@ describe('verdicts', () => {
     ['absent', 'failed'],
     ['unknown', 'failed'],
   ])('a load at a %s row is %s', (state, expected) => {
-    expect(loadVerdict(state)).toBe(expected);
+    expect(loadVerdict(listed(state))).toBe(expected);
   });
 
   it.each<[RouterRowState, string]>([
@@ -76,16 +92,16 @@ describe('verdicts', () => {
     ['downloading', 'not-converged'],
     ['unknown', 'not-converged'],
   ])('an unload at a %s row is %s', (state, expected) => {
-    expect(unloadVerdict(state)).toBe(expected);
+    expect(unloadVerdict(listed(state))).toBe(expected);
   });
 
   it('reads an unload the opposite way round from a load', () => {
-    expect(loadVerdict('loaded')).toBe('ready');
-    expect(unloadVerdict('loaded')).toBe('not-converged');
+    expect(loadVerdict(listed('loaded'))).toBe('ready');
+    expect(unloadVerdict(listed('loaded'))).toBe('not-converged');
   });
 
   const evidence = (over: Partial<Parameters<typeof downloadVerdict>[0]>) => ({
-    rowState: 'absent' as RouterRowState,
+    rowState: listed('absent'),
     freshCorroboration: false,
     attemptEnded: false,
     graceElapsed: false,
@@ -94,15 +110,19 @@ describe('verdicts', () => {
   });
 
   it('settles a download on the row, not on the attempt ending', () => {
-    expect(downloadVerdict(evidence({rowState: 'unloaded'}))).toBe('arrived');
+    expect(downloadVerdict(evidence({rowState: listed('unloaded')}))).toBe(
+      'arrived',
+    );
     expect(
-      downloadVerdict(evidence({attemptEnded: true, rowState: 'unloaded'})),
+      downloadVerdict(
+        evidence({attemptEnded: true, rowState: listed('unloaded')}),
+      ),
     ).toBe('arrived');
   });
 
   it('holds a download open while its ceiling is unspent', () => {
     expect(downloadVerdict(evidence({}))).toBe('unresolved');
-    expect(downloadVerdict(evidence({rowState: 'downloading'}))).toBe(
+    expect(downloadVerdict(evidence({rowState: listed('downloading')}))).toBe(
       'downloading',
     );
     expect(downloadVerdict(evidence({freshCorroboration: true}))).toBe(
