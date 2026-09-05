@@ -39,7 +39,11 @@ import {
 } from '../../api/openai';
 import {deriveListCaps} from '../../utils/listCaps';
 import {t} from '../../locales';
-import type {RouterOpKind, RouterRowState} from '../../utils/routerState';
+import type {
+  RouterOp,
+  RouterOpKind,
+  RouterRowState,
+} from '../../utils/routerState';
 import {routerFailureText} from '../../utils/routerCopy';
 import {formatBytes} from '../../utils/formatters';
 
@@ -134,18 +138,17 @@ function routerGroupOfOp(kind: RouterOpKind): RouterGroup {
 }
 
 /**
- * The operation presents a row only while it is still one this app is
- * conducting. A withdrawn request has ended for every purpose the screen has,
- * even though the store keeps it until a read confirms the row; presenting it
- * offers a Cancel that cancels nothing and a bar for work nobody is waiting on.
+ * What the operation is doing, for the row to say. Cancelling a load or a
+ * download posts an unload, so a withdrawn one is presenting exactly that:
+ * no progress for work nobody awaits, no Cancel for something already
+ * withdrawn, and an acknowledgement rather than a row that goes quiet.
  */
-function presentingOp(serverId: string, modelId: string) {
-  const op = serverStore.routerOp(serverId, modelId);
-  return op?.cancelled ? undefined : op;
+function presentedKind(op: RouterOp | undefined): RouterOpKind | undefined {
+  return op && (op.cancelled ? 'unload' : op.kind);
 }
 
 function routerRowGroup(serverId: string, modelId: string): RouterGroup {
-  const op = presentingOp(serverId, modelId);
+  const op = serverStore.routerOp(serverId, modelId);
   return op
     ? routerGroupOfOp(op.kind)
     : routerGroupOf(serverStore.routerRowState(serverId, modelId));
@@ -514,7 +517,8 @@ export const RemoteModelSheet: React.FC<RemoteModelSheetProps> = observer(
     };
 
     const renderRouterRow = (model: RemoteModelInfo, servId: string) => {
-      const op = presentingOp(servId, model.id);
+      const op = serverStore.routerOp(servId, model.id);
+      const kind = presentedKind(op);
       const state = serverStore.routerRowState(servId, model.id);
       const live = serverStore.routerLive(servId, model.id);
       const failure = serverStore.routerReason(servId, model.id);
@@ -523,11 +527,11 @@ export const RemoteModelSheet: React.FC<RemoteModelSheetProps> = observer(
       // is nothing this app can bind a session to yet.
       const selectable =
         !alreadyAdded &&
-        op?.kind !== 'download' &&
+        kind !== 'download' &&
         state !== 'downloading' &&
         state !== 'absent';
-      const label = op
-        ? routerOpLabel(op.kind, l10n)
+      const label = kind
+        ? routerOpLabel(kind, l10n)
         : routerStateLabel(state, l10n);
       const favourites = serverFavouriteModelIds();
       const isFavourite =
@@ -538,18 +542,18 @@ export const RemoteModelSheet: React.FC<RemoteModelSheetProps> = observer(
       // is determinate at zero rather than absent.
       const bytes = live?.bytes;
       const fraction =
-        op?.kind === 'download'
+        kind === 'download'
           ? bytes && bytes.total > 0
             ? bytes.done / bytes.total
             : undefined
           : live?.progress?.value;
       const determinate =
         typeof fraction === 'number' && fraction >= 0 && fraction <= 1;
-      const showProgress = op?.kind === 'load' || op?.kind === 'download';
+      const showProgress = kind === 'load' || kind === 'download';
 
       const action = () => {
-        if (op) {
-          return op.kind === 'unload' ? (
+        if (kind) {
+          return kind === 'unload' ? (
             <Text
               style={styles.routerRowState}
               testID={`router-unloading-${model.id}`}>
@@ -663,7 +667,7 @@ export const RemoteModelSheet: React.FC<RemoteModelSheetProps> = observer(
               progress={determinate ? fraction : undefined}
             />
           )}
-          {bytes && bytes.total > 0 && op?.kind === 'download' && (
+          {bytes && bytes.total > 0 && kind === 'download' && (
             <Text
               style={[styles.routerRowState, styles.routerReasonRow]}
               testID={`router-bytes-${model.id}`}>

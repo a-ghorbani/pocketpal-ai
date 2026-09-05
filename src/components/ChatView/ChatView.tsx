@@ -426,14 +426,16 @@ export const ChatView = observer(
       Math.max(0, Math.abs(keyboard.height.value) - insets.bottom),
     );
 
-    // Shared value to track if keyboard is visible (height > 0)
-    const isKeyboardVisible = useSharedValue(false);
-
-    // Animated style for input container padding
-    // Apply bottom padding (safe area inset) only when keyboard is NOT visible
+    // The bottom inset is reserved unconditionally, and must stay that way.
+    // `keyboardOcclusion` already subtracts it from the translation, so this
+    // padding is what puts the input's content back at the keyboard's edge
+    // rather than that far under it. It is also the only thing keeping this
+    // container's contents — the preparing banner included — clear of the
+    // system navigation bar, which draws over the window's bottom edge and
+    // takes the taps aimed at anything sitting there.
     const inputContainerAnimatedStyle = useAnimatedStyle(() => ({
       transform: [{translateY: -keyboardOcclusion.value}],
-      paddingBottom: isKeyboardVisible.value ? 0 : insets.bottom,
+      paddingBottom: insets.bottom,
     }));
 
     // Suggested-prompts overlay shares the input's keyboard translation but

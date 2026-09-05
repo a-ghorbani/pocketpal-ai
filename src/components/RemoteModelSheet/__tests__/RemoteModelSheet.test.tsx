@@ -8,6 +8,7 @@ import {
   fetchModelsWithHeaders,
 } from '../../../api/openai';
 import {routerModelsBody} from '../../../../jest/fixtures/remoteModelList';
+import {l10n} from '../../../locales';
 import {routerWireEvents} from '../../../../jest/fixtures/routerWire';
 
 const mockedFetchModels = fetchModels as jest.Mock;
@@ -851,9 +852,11 @@ describe('RemoteModelSheet', () => {
     });
 
     // On a server that has stopped answering, the operation lives on for the
-    // ninety seconds the reach bound takes. Presenting it offers a Cancel that
-    // cancels nothing and a bar for work nobody is waiting on.
-    it('stops presenting an operation the user withdrew', async () => {
+    // ninety seconds the reach bound takes. It must not go on offering a
+    // Cancel that cancels nothing or a bar for work nobody awaits — and it
+    // must not go quiet either: cancelling posts an unload, and that is what
+    // the row says is happening.
+    it('presents an operation the user withdrew as the unload it now is', async () => {
       const key = `srv-1/${UNLOADED}`;
       serverStore.routerOps = {
         [key]: {
@@ -873,10 +876,33 @@ describe('RemoteModelSheet', () => {
 
       expect(queryByTestId(`router-cancel-${UNLOADED}`)).toBeNull();
       expect(queryByTestId(`router-progress-${UNLOADED}`)).toBeNull();
-      // The list presents it again, and the list says it is not loaded.
-      expect(getByTestId(`router-state-${UNLOADED}`).props.children).toBe(
-        'Not loaded',
+      expect(getByTestId(`router-unloading-${UNLOADED}`)).toBeTruthy();
+    });
+
+    // The field used to show the server's words alone, which said nothing
+    // about what had gone wrong. It carries the app's cause now, with the
+    // server's words quoted rather than spoken in the app's voice.
+    it('names the failure and quotes the server when a download is refused', async () => {
+      (serverStore.startRouterDownload as jest.Mock).mockResolvedValue({
+        accepted: false,
+        message: 'File Not Found',
+      });
+      serverStore.routerStreamCap = {'srv-1': 'present'};
+      const {getByTestId, getByText} = await openRouter();
+
+      fireEvent.changeText(
+        getByTestId('router-download-input'),
+        'owner/repo:Q8_0',
       );
+      fireEvent.press(getByTestId('router-download-button'));
+
+      await waitFor(() => {
+        expect(
+          getByText(
+            `${l10n.en.settings.routerModels.downloadNotFetched} “File Not Found”`,
+          ),
+        ).toBeTruthy();
+      });
     });
 
     // A row that is one accessibility target announces itself and swallows
