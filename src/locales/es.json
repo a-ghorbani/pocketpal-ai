@@ -703,8 +703,381 @@
     "systemPromptSection": {
       "buttons": {
         "stopGenerating": "Detener generación",
-        "generatePrompt": "Generar instrucción del sistema"
+        "generatePrompt": "Generar instrucción del sistema",
+        "loadingModel": "Cargando modelo...",
+        "resetParameters": "Restablecer parámetros",
+        "resetTemplate": "Restablecer plantilla"
+      },
+      "sectionTitle": "Prompt del sistema",
+      "useAIPrompt": "Usar IA para generar el prompt del sistema",
+      "modelSelector": {
+        "label": "Seleccionar modelo para la generación*",
+        "sublabel": "Recomendado: Llama 3.2 3B o Qwen3 4B Instruct 2507",
+        "placeholder": "Seleccionar modelo"
+      },
+      "generatingPrompt": {
+        "label": "Propósito y contexto",
+        "placeholder": "Describe el rol, propósito o escenario para este Pal..."
+      },
+      "systemPrompt": {
+        "label": "Prompt del sistema",
+        "sublabel": "Siéntete libre de editar y experimentar para encontrar el prompt óptimo para tu escenario",
+        "placeholder": "Eres un asistente útil"
+      },
+      "warnings": {
+        "promptChanged": "El prompt del sistema ha sido modificado manualmente"
       }
+    },
+    "palGenerationSettingsSheet": {
+      "title": "Ajustes de generación - {{palName}}",
+      "invalidValues": "Valores no válidos",
+      "invalidNumericValuesMessage": "Debe ser un número válido",
+      "pleaseCorrect": "Por favor corrige lo siguiente:",
+      "ok": "Aceptar",
+      "error": "Error",
+      "failedToSave": "No se pudieron guardar los ajustes de Pal",
+      "resetToGlobal": "Restablecer a los valores predeterminados globales",
+      "resetToSystem": "Restablecer a los valores predeterminados del sistema",
+      "clearPalSettings": "Borrar ajustes de Pal",
+      "customSettingsFor": "Ajustes personalizados para {{palName}}",
+      "inheritedSettingsFor": "Ajustes heredados para {{palName}}"
+    },
+    "chatHeaderTitle": {
+      "defaultTitle": "Chat"
+    },
+    "fileMessage": {
+      "fileButtonAccessibilityLabel": "Archivo"
+    },
+    "chatPalModelPickerSheet": {
+      "modelsTab": "Modelos",
+      "palsTab": "Pals",
+      "noPal": "Ningún Pal",
+      "disablePal": "Desactivar Pal activo",
+      "noDescription": "Sin descripción",
+      "assistantType": "Asistente",
+      "roleplayType": "Juego de rol",
+      "videoType": "Video",
+      "confirmationTitle": "Confirmación",
+      "modelSwitchMessage": "Este Pal tiene un modelo predeterminado diferente ({{modelName}}). ¿Quieres cambiar al modelo predeterminado del Pal?",
+      "keepButton": "Conservar",
+      "switchButton": "Cambiar"
+    },
+    "downloadErrorDialog": {
+      "downloadFailedTitle": "Error de descarga",
+      "downloadFailedMessage": "No se pudo descargar el modelo: {{message}}",
+      "unauthorizedTitle": "Error de autenticación",
+      "unauthorizedMessage": "Tu token de Hugging Face parece no ser válido o ha expirado. Por favor, actualiza tu token en los ajustes.",
+      "forbiddenTitle": "Acceso denegado",
+      "forbiddenMessage": "No tienes permiso para acceder a este modelo. Asegúrate de:",
+      "forbiddenSteps": [
+        "Que tu token tenga permisos de lectura (\"read\")",
+        "Que hayas solicitado y se te haya concedido acceso a este modelo",
+        "Que el propietario del modelo haya aprobado tu solicitud de acceso"
+      ],
+      "getTokenTitle": "Obtener token de Hugging Face",
+      "getTokenMessage": "Este modelo requiere un token de Hugging Face para descargarse.",
+      "getTokenSteps": [
+        "Entra en huggingface.co e inicia sesión",
+        "Ve a Ajustes > Tokens de acceso",
+        "Crea un token nuevo con permisos de lectura (\"read\")",
+        "Copia el token y pégalo en el campo de tokens"
+      ],
+      "tokenDisabledTitle": "El token está desactivado",
+      "tokenDisabledMessage": "Tienes configurado un token de Hugging Face, pero actualmente está desactivado. Este modelo requiere un token para descargarse. Activa tu token para continuar.",
+      "enableAndRetry": "Activar y reintentar",
+      "goToSettings": "Ir a ajustes",
+      "tryAgain": "Volver a intentar",
+      "viewOnHuggingFace": "Ver modelo en HF ↗"
+    },
+    "headerRight": {
+      "deleteChatTitle": "Eliminar chat",
+      "deleteChatMessage": "¿Seguro que quieres eliminar este chat?",
+      "generationSettings": "Ajustes de generación",
+      "model": "Modelo",
+      "duplicateChatHistory": "Duplicar historial de chat",
+      "makeChatTemporary": "Hacer que el chat sea temporal",
+      "export": "Exportar / Importar",
+      "exportCurrentSession": "Exportar sesión actual",
+      "exportCurrentSessionMarkdown": "Exportar como Markdown",
+      "exportAllSessions": "Exportar todas las sesiones",
+      "exportChatSession": "Exportar sesión de chat",
+      "importSessions": "Importar sesiones"
+    },
+    "hfTokenSheet": {
+      "title": "Token de Hugging Face",
+      "description": "Necesario para acceder a modelos restringidos",
+      "inputLabel": "Token de acceso personal",
+      "inputPlaceholder": "Pega tu token aquí",
+      "save": "Guardar token",
+      "saved": "Token guardado con éxito",
+      "reset": "Restablecer token",
+      "resetSuccess": "Token eliminado con éxito",
+      "instructions": "Cómo obtener un token:",
+      "instructionsSteps": [
+        "Ve a huggingface.co e inicia sesión",
+        "Ve a Configuración > Tokens de acceso",
+        "Crea un nuevo token con acceso de lectura (\"read\")",
+        "Copia el token y pégalo abajo"
+      ],
+      "getTokenLink": "Obtener un token en huggingface.co ↗",
+      "error": {
+        "saving": "Error al guardar el token",
+        "missing": "Se requiere un token de Hugging Face",
+        "invalid": "Token inválido o caducado",
+        "gatedModelAccess": "Se denegó el acceso a este modelo restringido"
+      },
+      "gatedModelIndicator": "Requiere Token",
+      "tokenRequired": "Este modelo requiere un token de acceso de Hugging Face",
+      "searchErrorHint": "Este modelo requiere un token de acceso de Hugging Face",
+      "disableAndRetry": "Desactivar token y reintentar"
+    },
+    "modelSettingsSheet": {
+      "modelSettings": "Ajustes del modelo",
+      "saveChanges": "Guardar cambios",
+      "reasoningSection": "Razonamiento",
+      "isReasoningModel": "Modelo de razonamiento",
+      "isReasoningModelHelp": "Mostrar el control de pensamiento para este modelo, incluso si no se detectó automáticamente",
+      "supportsEffort": "Compatible con esfuerzo graduado",
+      "effortValues": "Niveles de esfuerzo que admite este modelo",
+      "effortLevels": {
+        "minimal": "Mínimo",
+        "low": "Bajo",
+        "medium": "Medio",
+        "high": "Alto",
+        "xhigh": "Muy alto",
+        "max": "Máximo"
+      }
+    },
+    "modelsHeaderRight": {
+      "menuTitleHf": "Modelos de Hugging Face",
+      "menuTitleDownloaded": "Modelos descargados",
+      "menuTitleGrouped": "Agrupar por tipo de modelo",
+      "menuTitleReset": "Restablecer lista de modelos"
+    },
+    "modelsResetDialog": {
+      "proceedWithReset": "Continuar con el restablecimiento",
+      "confirmReset": "Confirmar restablecimiento"
+    },
+    "palSheet": {
+      "title": {
+        "edit": "Editar Pal",
+        "newPal": "Nuevo Pal",
+        "newVideoPal": "Nuevo Video Pal"
+      },
+      "description": "Descripción",
+      "descriptionPlaceholder": "Introduce una breve descripción de tu Pal",
+      "parameters": "Parámetros",
+      "generationSettings": "Ajustes de generación",
+      "configureGenerationSettings": "Configurar ajustes de generación",
+      "validation": {
+        "nameRequired": "El nombre es obligatorio",
+        "generatingPromptRequired": "El mensaje de generación es obligatorio al usar el prompt de IA",
+        "promptModelRequired": "El modelo de generación de prompts es obligatorio al usar el prompt de IA"
+      },
+      "talents": "Talentos",
+      "talentNames": {
+        "render_html": "Vista previa HTML",
+        "calculate": "Expresiones matemáticas",
+        "datetime": "Fecha y hora",
+        "web_search": "Búsqueda en la web",
+        "read_url": "Leer página web"
+      },
+      "talentDescriptions": {
+        "render_html": "Renderizar documentos HTML en línea en el chat",
+        "calculate": "Evaluar expresiones matemáticas",
+        "datetime": "Obtener la fecha y la hora actuales",
+        "web_search": "Buscar información actual en internet (requiere una clave de API en Configuración)",
+        "read_url": "Leer el contenido completo de una página web (requiere una clave de API en Configuración)"
+      },
+      "greeting": {
+        "sectionLabel": "Saludo",
+        "textLabel": "Mensaje de saludo",
+        "textPlaceholder": "¿Qué debería decir este Pal en un chat vacío?",
+        "suggestedPromptsLabel": "Mensajes sugeridos",
+        "addPromptButton": "Añadir prompt",
+        "promptPlaceholder": "Un prompt corto para el chip",
+        "removePromptLabel": "Eliminar prompt"
+      }
+    },
+    "assistantPalSheet": {
+      "title": {
+        "create": "Crear asistente Pal",
+        "edit": "Editar asistente Pal"
+      },
+      "palName": "Nombre del Pal",
+      "palNamePlaceholder": "Nombre",
+      "defaultModel": "Modelo predeterminado",
+      "defaultModelPlaceholder": "Seleccionar modelo",
+      "validation": {
+        "generatingPromptRequired": "El prompt de generación es obligatorio",
+        "promptModelRequired": "El modelo de generación de prompts es obligatorio"
+      },
+      "create": "Crear"
+    },
+    "modelNotAvailable": {
+      "noModelsDownloaded": "No tienes ningún modelo descargado todavía. Por favor, descarga un modelo primero.",
+      "downloadAModel": "Descargar un modelo",
+      "defaultModelNotDownloaded": "Este asistente recomienda un modelo específico que es necesario descargar, o puedes seleccionar un modelo diferente.",
+      "modelNotDownloadedShort": "Modelo no descargado",
+      "recommendedModel": "Modelo recomendado",
+      "cancelDownload": "Cancelar descarga",
+      "download": "Descargar"
+    },
+    "roleplayPalSheet": {
+      "title": {
+        "create": "Crear Pal de Juegos de Rol",
+        "edit": "Editar Pal de Juegos de Rol"
+      },
+      "palName": "Nombre del Pal",
+      "palNamePlaceholder": "Nombre",
+      "defaultModel": "Modelo predeterminado",
+      "defaultModelPlaceholder": "Seleccionar modelo",
+      "descriptionSection": "Descripción",
+      "world": "Mundo",
+      "worldPlaceholder": "Fantasía",
+      "location": "Ubicación",
+      "locationPlaceholder": "Bosque encantado",
+      "locationSublabel": "¿Dónde se desarrolla la historia?",
+      "aiRole": "Rol de la IA",
+      "aiRolePlaceholder": "Eldara, un travieso espíritu del bosque",
+      "aiRoleSublabel": "Establece el rol del personaje",
+      "userRole": "Rol de usuario",
+      "userRolePlaceholder": "Sir Elandor, un valiente caballero",
+      "userRoleSublabel": "¿Quién eres?",
+      "situation": "Situación",
+      "situationPlaceholder": "Misión de rescate, resolver un misterio",
+      "toneStyle": "Tono / Estilo",
+      "toneStylePlaceholder": "Serio",
+      "validation": {
+        "promptModelRequired": "El modelo de generación de prompts es obligatorio"
+      },
+      "create": "Crear"
+    },
+    "lookiePalSheet": {
+      "title": {
+        "create": "Crear Lookie Pal",
+        "edit": "Editar Lookie Pal"
+      },
+      "palName": "Nombre del Pal",
+      "palNamePlaceholder": "Introduce un nombre para tu Pal",
+      "visionModel": "Modelo de visión",
+      "visionModelPlaceholder": "Selecciona un modelo de visión",
+      "requiredModelsSection": "Modelos necesarios",
+      "captureInterval": "Intervalo de captura",
+      "captureIntervalHelper": "Tiempo entre capturas automáticas en milisegundos",
+      "create": "Crear"
+    },
+    "sendButton": {
+      "accessibilityLabel": "Enviar"
+    },
+    "sidebarContent": {
+      "menuItems": {
+        "chat": "Chat",
+        "models": "Modelos",
+        "pals": "Pals (Asistentes)",
+        "benchmark": "Rendimiento",
+        "settings": "Ajustes",
+        "appInfo": "Información de la aplicación",
+        "testCompletion": "Probar completado"
+      },
+      "deleteChatTitle": "Eliminar chat",
+      "deleteChatMessage": "¿Estás seguro de que quieres eliminar este chat?",
+      "select": "Seleccionar",
+      "nSelected": "{{count}} seleccionados",
+      "selectAll": "Seleccionar todo",
+      "deselectAll": "Deseleccionar todo",
+      "exportCount": "Exportar ({{count}})",
+      "deleteCount": "Eliminar ({{count}})",
+      "bulkDeleteTitle": "Eliminar sesiones de chat",
+      "bulkDeleteMessage": "¿Eliminar {{count}} sesión(es) de chat? Esta acción no se puede deshacer.",
+      "bulkDeleteError": "Error al eliminar las sesiones de chat. Por favor, inténtalo de nuevo.",
+      "exportError": "Error al exportar la sesión de chat. Por favor, inténtalo de nuevo.",
+      "bulkExportError": "Error al exportar las sesiones de chat. Por favor, inténtalo de nuevo.",
+      "pin": "Fijar",
+      "unpin": "Desfijar",
+      "dateGroups": {
+        "pinned": "Fijados",
+        "today": "Hoy",
+        "yesterday": "Ayer",
+        "thisWeek": "Esta semana",
+        "lastWeek": "La semana pasada",
+        "twoWeeksAgo": "Hace 2 semanas",
+        "threeWeeksAgo": "Hace 3 semanas",
+        "fourWeeksAgo": "Hace 4 semanas",
+        "lastMonth": "El mes pasado",
+        "older": "Más antiguos"
+      }
+    },
+    "usageStats": {
+      "tooltip": {
+        "title": "Uso de memoria",
+        "used": "Usado: ",
+        "total": "Total: ",
+        "usage": "Uso: "
+      },
+      "byteSizes": [
+        "Bytes",
+        "KB",
+        "MB",
+        "GB"
+      ]
+    },
+    "chatView": {
+      "menuItems": {
+        "copy": "Copiar",
+        "regenerate": "Regenerar",
+        "regenerateWith": "Regenerar con",
+        "edit": "Editar",
+        "reportContent": "Reportar contenido"
+      }
+    },
+    "palHeaderRight": {
+      "exportAllPals": "Exportar todos los pals",
+      "importPals": "Importar pals",
+      "importSuccess": "Se importaron {{count}} pal(s) con éxito",
+      "importError": "No se pudieron importar los pals. Revisa el formato del archivo."
+    }
+  },
+  "palsScreen": {
+    "sectionTitles": {
+      "myPalsLocal": "Mis pals (locales)",
+      "myLibrary": "Mi biblioteca (palshub.ai)",
+      "discoverPals": "Descubrir pals (palshub.ai)"
+    },
+    "systemPrompt": "Prompt del sistema",
+    "videoAnalysis": "Análisis de video",
+    "videoAnalysisDescription": "Este es un asistente de IA basado en video que ofrece comentarios en tiempo real sobre transmisiones de video de la cámara de tu dispositivo.",
+    "captureInterval": "Intervalo de captura",
+    "captureIntervalUnit": "ms",
+    "world": "Mundo",
+    "toneStyle": "Tono / Estilo",
+    "aiRole": "Rol de la IA",
+    "userRole": "Rol de usuario",
+    "prompt": "Prompt",
+    "assistant": "Asistente",
+    "roleplay": "Juego de rol",
+    "video": "Video",
+    "deletePal": "Eliminar Pal",
+    "deletePalMessage": "¿Seguro que quieres eliminar este Pal?",
+    "missingModel": "Modelo no encontrado",
+    "missingModelMessage": "El modelo predeterminado \"{{modelName}}\" para este Pal (amigo) no está disponible. Descárgalo en la pantalla de edición o selecciona otro modelo.",
+    "search": "Buscar",
+    "profile": "Perfil",
+    "signIn": "Iniciar sesión",
+    "addPal": "Agregar amigo (Pal)",
+    "signInToAccessLibrary": "Inicia sesión para acceder a tu biblioteca desde palshub.ai",
+    "signOut": "Cerrar sesión",
+    "signOutConfirmation": "¿Seguro que quieres cerrar sesión?",
+    "signOutError": "Error al cerrar sesión. Por favor, inténtalo de nuevo.",
+    "account": "Cuenta",
+    "signInToPalsHub": "Iniciar sesión en PalsHub",
+    "signInDescription": "Accede a tu biblioteca, crea amigos privados y sincroniza entre dispositivos",
+    "searchAllPals": "Buscar en todos los amigos (Pals)...",
+    "deletePalConfirmation": "¿Seguro que quieres eliminar a \"{{palName}}\"?",
+    "filters": {
+      "all": "Todos",
+      "myPals": "Mis Pals",
+      "local": "Local"
     }
   }
 }
