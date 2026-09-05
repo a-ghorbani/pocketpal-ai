@@ -1,5 +1,5 @@
 import type {Translations} from '../locales/types';
-import type {RouterFailure} from './routerState';
+import type {RouterFailure, RouterLoadOutcome} from './routerState';
 
 /**
  * The one rendering of a router failure, shared by the picker row and the
@@ -24,9 +24,56 @@ export const routerFailureLabel = (
 };
 
 /**
- * Everything a surface may need from one failure record. The picker row shows
- * these in a plain `<Text>`; the chat renders markdown, so it takes the
- * neutralised form below.
+ * Every character that occupies no space and can reorder or hide what follows
+ * it: Unicode's whole format class, where the direction and isolate controls
+ * live, plus the four filler letters that are not formatting but render as
+ * nothing. JavaScript's `\s` matches none of them, so collapsing whitespace
+ * leaves them in place.
+ */
+const INVISIBLE = /[\p{Cf}ᅟᅠㅤﾠ]/gu;
+
+/**
+ * Everything `marked` gives meaning to, plus `:` — which is not markup, but
+ * without which GFM autolinks a bare `https://…` into a tappable `<a href>`
+ * that `Linking.openURL` will open. Escaping rather than deleting keeps the
+ * characters on screen: a model identifier like `Q4_K_M` or a Windows path
+ * survives intact, which stripping did not.
+ *
+ * `.` carries a second job that its neighbours do not: it is what defeats the
+ * URL pattern `ParsedText` matches on the link-preview path, which does not
+ * go through `marked` at all. That path is unreachable while the chat screen
+ * passes no `onPreviewDataFetched`, so removing `.` here would look harmless
+ * and would arm it.
+ */
+const MARKDOWN_ACTIVE = /[\\`*_{}[\]()#+\-.!|>~<&:]/g;
+
+/**
+ * One line, with nothing in it that can hide or reorder the rest. Every
+ * surface needs this much; only a markdown one needs the escaping below.
+ */
+const asOneVisibleLine = (text: string): string =>
+  text.replace(INVISIBLE, '').replace(/\s+/g, ' ').trim();
+
+/**
+ * The server's own words rendered inert for a markdown surface. They are not
+ * ours and carry no contract, so they arrive as one line of text that formats
+ * nothing, links to nothing and reorders nothing.
+ */
+export const asInertServerText = (text: string): string =>
+  asOneVisibleLine(text).replace(MARKDOWN_ACTIVE, match => `\\${match}`);
+
+/**
+ * The app's own sentence, then the server's words as something quoted rather
+ * than said. The bubble is authored by the assistant, so words run together
+ * with the app's read as the app's own.
+ */
+const withServerWords = (label: string, detail: string): string =>
+  detail ? `${label} “${detail}”` : label;
+
+/**
+ * What a surface that renders no markup shows — the picker row's plain text
+ * node. The words are kept as the server wrote them, so identifiers survive,
+ * but nothing invisible comes with them.
  */
 export const routerFailureText = (
   failure: RouterFailure | undefined,
@@ -35,37 +82,11 @@ export const routerFailureText = (
   if (!failure) {
     return undefined;
   }
-  const label = routerFailureLabel(failure.cause, l10n);
-  return failure.message ? `${label} ${failure.message}` : label;
+  return withServerWords(
+    routerFailureLabel(failure.cause, l10n),
+    failure.message ? asOneVisibleLine(failure.message) : '',
+  );
 };
-
-/**
- * Direction and isolate controls, and the zero-width characters that hide
- * beside them. JavaScript's `\s` matches none of these, so a collapse of
- * whitespace leaves them in place to reorder what the user reads.
- */
-const INVISIBLE = /[\u200B-\u200F\u202A-\u202E\u2066-\u2069\uFEFF]/g;
-
-/**
- * Everything `marked` gives meaning to, plus `:` — which is not markup, but
- * without which GFM autolinks a bare `https://…` into a tappable `<a href>`
- * that `Linking.openURL` will open. Escaping rather than deleting keeps the
- * characters on screen: a model identifier like `Q4_K_M` or a Windows path
- * survives intact, which stripping did not.
- */
-const MARKDOWN_ACTIVE = /[\\`*_{}[\]()#+\-.!|>~<&:]/g;
-
-/**
- * The server's own words rendered inert for a markdown surface. They are not
- * ours and carry no contract, so they arrive as one line of text that formats
- * nothing, links to nothing and reorders nothing.
- */
-export const asInertServerText = (text: string): string =>
-  text
-    .replace(INVISIBLE, '')
-    .replace(/\s+/g, ' ')
-    .trim()
-    .replace(MARKDOWN_ACTIVE, match => `\\${match}`);
 
 /** The same record, safe to hand to a markdown renderer. */
 export const routerFailureMarkdownText = (
@@ -75,7 +96,40 @@ export const routerFailureMarkdownText = (
   if (!failure) {
     return undefined;
   }
-  const label = routerFailureLabel(failure.cause, l10n);
-  const detail = failure.message ? asInertServerText(failure.message) : '';
-  return detail ? `${label} ${detail}` : label;
+  return withServerWords(
+    routerFailureLabel(failure.cause, l10n),
+    failure.message ? asInertServerText(failure.message) : '',
+  );
+};
+
+/**
+ * Whether a turn may proceed, and what to say if not. One exhaustive reading
+ * of the outcome: a surface branches on the answer rather than re-deriving a
+ * withdrawal from the absence of a record.
+ */
+export type RouterReadiness =
+  | {proceed: true}
+  | {proceed: false; withdrawn: true}
+  | {proceed: false; withdrawn: false; say: string};
+
+export const routerReadiness = (
+  outcome: RouterLoadOutcome,
+  failure: RouterFailure | undefined,
+  l10n: Translations,
+): RouterReadiness => {
+  switch (outcome) {
+    case 'ready':
+    case 'not-router':
+      return {proceed: true};
+    case 'withdrawn':
+      return {proceed: false, withdrawn: true};
+    case 'failed':
+      return {
+        proceed: false,
+        withdrawn: false,
+        say:
+          routerFailureMarkdownText(failure, l10n) ??
+          routerFailureLabel('wait-stopped', l10n),
+      };
+  }
 };

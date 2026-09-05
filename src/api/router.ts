@@ -71,10 +71,14 @@ const SERVER_TEXT_MAX = 200;
 /**
  * Bounded here rather than at each surface, so what the store retains is
  * bounded too. Counted in code points: a cut between the halves of a
- * surrogate pair leaves a replacement character on screen.
+ * surrogate pair leaves a replacement character on screen. A code point is at
+ * most two UTF-16 units, so twice the cap always contains the cap — which is
+ * why the whole body is never walked.
  */
 export function capServerText(text: string): string {
-  return Array.from(text).slice(0, SERVER_TEXT_MAX).join('');
+  return Array.from(text.slice(0, SERVER_TEXT_MAX * 2))
+    .slice(0, SERVER_TEXT_MAX)
+    .join('');
 }
 
 export function routerErrorMessage(body: any): string | undefined {

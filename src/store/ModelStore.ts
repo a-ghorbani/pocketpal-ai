@@ -44,10 +44,7 @@ import {
 import {getRecommendedProjectionModel} from '../utils/multimodalHelpers';
 import {isDraftOnlyModel} from '../utils/mtp';
 import {getOriginalModelName} from '../utils/formatters';
-import {
-  routerFailureLabel,
-  routerFailureMarkdownText,
-} from '../utils/routerCopy';
+import {routerReadiness} from '../utils/routerCopy';
 import type {RouterFailure} from '../utils/routerState';
 import type {OnboardingPalModelEntry} from './onboarding/onboardingPals';
 
@@ -2730,18 +2727,18 @@ class ModelStore {
   }
 
   private requireActiveRemoteModelReady = async (): Promise<void> => {
-    const outcome = await this.ensureActiveRemoteModelReady();
-    if (outcome === 'withdrawn') {
-      throw new RemoteModelRequestWithdrawnError();
-    }
-    if (outcome !== 'failed') {
+    const readiness = routerReadiness(
+      await this.ensureActiveRemoteModelReady(),
+      this.activeRemoteFailure,
+      uiStore.l10n,
+    );
+    if (readiness.proceed) {
       return;
     }
-    const l10n = uiStore.l10n;
-    throw new Error(
-      routerFailureMarkdownText(this.activeRemoteFailure, l10n) ??
-        routerFailureLabel('wait-stopped', l10n),
-    );
+    if (readiness.withdrawn) {
+      throw new RemoteModelRequestWithdrawnError();
+    }
+    throw new Error(readiness.say);
   };
 
   /**

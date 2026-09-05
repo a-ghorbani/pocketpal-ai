@@ -25,12 +25,32 @@ describe('routerFailureText', () => {
     expect(routerFailureText({cause: 'load-failed'}, en)).toBe(LOAD_FAILED);
   });
 
-  // The picker row is a plain <Text>, so it shows the server's words as the
-  // server wrote them. Model identifiers reach it intact.
-  it('leaves the server words alone for a surface that renders none of them', () => {
+  // The picker row is a plain <Text>, so it needs no escaping and model
+  // identifiers reach it as the server wrote them.
+  it('leaves the server words unescaped for a surface that renders no markup', () => {
     expect(
       routerFailureText({cause: 'load-failed', message: 'Q4_K_M in C:\\m'}, en),
-    ).toBe(`${LOAD_FAILED} Q4_K_M in C:\\m`);
+    ).toBe(`${LOAD_FAILED} “Q4_K_M in C:\\m”`);
+  });
+
+  // Split from the markdown path, this one lost both steps that are not about
+  // markup: a multi-line body stacked in a one-line row, and a direction
+  // control reordered what was read.
+  it('still gives that surface one line with nothing invisible in it', () => {
+    expect(
+      routerFailureText(
+        {cause: 'load-failed', message: 'a\n\nb\u202Ec\u200Bd'},
+        en,
+      ),
+    ).toBe(`${LOAD_FAILED} “a bcd”`);
+  });
+
+  // The bubble is authored by the assistant, so words run together with the
+  // app's own read as the app saying them.
+  it('marks the server words as quoted rather than said', () => {
+    expect(
+      routerFailureText({cause: 'load-failed', message: 'no free slot'}, en),
+    ).toContain('“no free slot”');
   });
 });
 
@@ -48,14 +68,18 @@ describe('asInertServerText, rendered through the chat markdown', () => {
     expect(hasLink(render(asInertServerText(text)))).toBe(false);
   });
 
+  // The same control as above: assert the renderer does emit the markup when
+  // it is handed the raw text, so this cannot pass by the renderer having
+  // gone inert for some unrelated reason.
   it.each([
     '<img src=x onerror=alert(1)>',
     '<a href="http://evil.example">x</a>',
     '<script>alert(1)</script>',
   ])('renders no raw markup for %s', text => {
-    expect(render(asInertServerText(text))).not.toMatch(
-      /<(a|img|script|iframe)[\s>]/i,
-    );
+    const raw = /<(a|img|script|iframe)[\s>]/i;
+
+    expect(render(text)).toMatch(raw);
+    expect(render(asInertServerText(text))).not.toMatch(raw);
   });
 
   it('formats nothing', () => {
