@@ -24,7 +24,9 @@ export const RouterModelPreparing: React.FC = observer(() => {
     return null;
   }
   const op = serverStore.routerOp(binding.serverId, binding.remoteModelId);
-  if (op?.kind !== 'load') {
+  // A withdrawn request is not work anyone is waiting on, whatever the store
+  // keeps until a read confirms the row.
+  if (op?.kind !== 'load' || op.cancelled) {
     return null;
   }
 

@@ -546,6 +546,7 @@ describe('RemoteModelSheet', () => {
       serverStore.routerOps = {
         [`srv-1/${UNLOADED}`]: {
           kind: 'load',
+          attempt: 1,
           phase: 'active',
           serverId: 'srv-1',
           key: `srv-1/${UNLOADED}`,
@@ -569,6 +570,7 @@ describe('RemoteModelSheet', () => {
       serverStore.routerOps = {
         [`srv-1/${LOADED}`]: {
           kind: 'unload',
+          attempt: 1,
           phase: 'requested',
           serverId: 'srv-1',
           key: `srv-1/${LOADED}`,
@@ -664,6 +666,7 @@ describe('RemoteModelSheet', () => {
         serverStore.routerOps = {
           [key]: {
             kind: 'download',
+            attempt: 1,
             phase: 'requested',
             serverId: 'srv-1',
             key,
@@ -701,6 +704,7 @@ describe('RemoteModelSheet', () => {
         serverStore.routerOps = {
           [key]: {
             kind: 'download',
+            attempt: 1,
             phase: 'active',
             serverId: 'srv-1',
             key,
@@ -732,6 +736,7 @@ describe('RemoteModelSheet', () => {
       serverStore.routerOps = {
         [`srv-1/${UNLOADED}`]: {
           kind: 'load',
+          attempt: 1,
           phase: 'active',
           serverId: 'srv-1',
           key: `srv-1/${UNLOADED}`,
@@ -801,6 +806,7 @@ describe('RemoteModelSheet', () => {
       serverStore.routerOps = {
         [key]: {
           kind: 'download',
+          attempt: 1,
           phase: 'active',
           serverId: 'srv-1',
           key,
@@ -826,6 +832,7 @@ describe('RemoteModelSheet', () => {
       serverStore.routerOps = {
         [key]: {
           kind: 'download',
+          attempt: 1,
           phase: 'active',
           serverId: 'srv-1',
           key,
@@ -841,6 +848,35 @@ describe('RemoteModelSheet', () => {
       expect(
         getByTestId('add-model-button').props.accessibilityState?.disabled,
       ).toBe(true);
+    });
+
+    // On a server that has stopped answering, the operation lives on for the
+    // ninety seconds the reach bound takes. Presenting it offers a Cancel that
+    // cancels nothing and a bar for work nobody is waiting on.
+    it('stops presenting an operation the user withdrew', async () => {
+      const key = `srv-1/${UNLOADED}`;
+      serverStore.routerOps = {
+        [key]: {
+          kind: 'load',
+          attempt: 1,
+          phase: 'active',
+          serverId: 'srv-1',
+          key,
+          startedAt: Date.now(),
+          requestSeq: 0,
+          lastEvidenceAt: Date.now(),
+          cancelled: true,
+        },
+      };
+
+      const {getByTestId, queryByTestId} = await openRouter();
+
+      expect(queryByTestId(`router-cancel-${UNLOADED}`)).toBeNull();
+      expect(queryByTestId(`router-progress-${UNLOADED}`)).toBeNull();
+      // The list presents it again, and the list says it is not loaded.
+      expect(getByTestId(`router-state-${UNLOADED}`).props.children).toBe(
+        'Not loaded',
+      );
     });
 
     // A row that is one accessibility target announces itself and swallows

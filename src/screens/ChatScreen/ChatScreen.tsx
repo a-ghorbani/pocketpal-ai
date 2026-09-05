@@ -8,7 +8,6 @@ import {
   ChatView,
   ErrorSnackbar,
   ModelErrorReportSheet,
-  RouterModelPreparing,
 } from '../../components';
 import {PalSheet} from '../../components/PalsSheets';
 
@@ -289,7 +288,6 @@ export const ChatScreen: React.FC = observer(() => {
             : l10n.chat.typeYourMessage,
         }}
       />
-      <RouterModelPreparing />
       {uiStore.chatWarning && (
         <ErrorSnackbar
           error={uiStore.chatWarning}

@@ -42,6 +42,7 @@ import {
 
 import ImageView from './ImageView';
 import {BannerRow} from './BannerRow';
+import {RouterModelPreparing} from '../RouterModelPreparing';
 import {createStyles} from './styles';
 
 import {IncreaseContextSheet} from '../IncreaseContextSheet';
@@ -1136,12 +1137,14 @@ export const ChatView = observer(
 
             {/* Chat input */}
             <Reanimated.View
+              testID="chat-input-container"
               onLayout={onLayoutChatInput}
               style={[
                 styles.inputContainer,
                 inputContainerAnimatedStyle,
                 {backgroundColor: inputBackgroundColor},
               ]}>
+              <RouterModelPreparing />
               <BannerRow
                 messages={messages}
                 htmlPreviewCount={htmlPreviewCount}

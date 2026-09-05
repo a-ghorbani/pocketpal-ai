@@ -13,6 +13,7 @@ const BINDING = {
 
 const loadOp = () => ({
   kind: 'load' as const,
+  attempt: 1,
   phase: 'requested' as const,
   serverId: 'srv-1',
   key: 'srv-1/alpha',
@@ -37,6 +38,15 @@ describe('RouterModelPreparing', () => {
 
   it('renders nothing while no load is in flight', () => {
     modelStore.activeRemoteBinding = BINDING;
+    const {queryByTestId} = render(<RouterModelPreparing />);
+
+    expect(queryByTestId('router-model-preparing')).toBeNull();
+  });
+
+  it('shows nothing for a load the user withdrew', () => {
+    modelStore.activeRemoteBinding = BINDING;
+    serverStore.routerOps = {'srv-1/alpha': {...loadOp(), cancelled: true}};
+
     const {queryByTestId} = render(<RouterModelPreparing />);
 
     expect(queryByTestId('router-model-preparing')).toBeNull();

@@ -133,8 +133,19 @@ function routerGroupOfOp(kind: RouterOpKind): RouterGroup {
   }
 }
 
-function routerRowGroup(serverId: string, modelId: string): RouterGroup {
+/**
+ * The operation presents a row only while it is still one this app is
+ * conducting. A withdrawn request has ended for every purpose the screen has,
+ * even though the store keeps it until a read confirms the row; presenting it
+ * offers a Cancel that cancels nothing and a bar for work nobody is waiting on.
+ */
+function presentingOp(serverId: string, modelId: string) {
   const op = serverStore.routerOp(serverId, modelId);
+  return op?.cancelled ? undefined : op;
+}
+
+function routerRowGroup(serverId: string, modelId: string): RouterGroup {
+  const op = presentingOp(serverId, modelId);
   return op
     ? routerGroupOfOp(op.kind)
     : routerGroupOf(serverStore.routerRowState(serverId, modelId));
@@ -458,7 +469,10 @@ export const RemoteModelSheet: React.FC<RemoteModelSheetProps> = observer(
         setDownloadReference('');
       } else {
         setDownloadError(
-          result.message || l10n.settings.routerModels.downloadNotFetched,
+          routerFailureText(
+            {cause: 'download-not-fetched', message: result.message},
+            l10n,
+          ) ?? null,
         );
       }
     }, [downloadReference, selectedServerId, l10n]);
@@ -500,7 +514,7 @@ export const RemoteModelSheet: React.FC<RemoteModelSheetProps> = observer(
     };
 
     const renderRouterRow = (model: RemoteModelInfo, servId: string) => {
-      const op = serverStore.routerOp(servId, model.id);
+      const op = presentingOp(servId, model.id);
       const state = serverStore.routerRowState(servId, model.id);
       const live = serverStore.routerLive(servId, model.id);
       const failure = serverStore.routerReason(servId, model.id);
