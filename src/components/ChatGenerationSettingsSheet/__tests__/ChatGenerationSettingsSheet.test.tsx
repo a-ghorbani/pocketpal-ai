@@ -2,7 +2,13 @@ import React from 'react';
 import {fireEvent, render, act} from '../../../../jest/test-utils';
 import {Alert} from 'react-native';
 import {ChatGenerationSettingsSheet} from '../ChatGenerationSettingsSheet';
-import {chatSessionStore, defaultCompletionSettings} from '../../../store';
+import {runInAction} from 'mobx';
+
+import {
+  chatSessionStore,
+  defaultCompletionSettings,
+  modelStore,
+} from '../../../store';
 import {validateCompletionSettings} from '../../../utils/modelSettings';
 
 // Mock modelSettings validation
@@ -20,10 +26,13 @@ jest.spyOn(Alert, 'alert');
 
 // Mock the CompletionSettings component
 jest.mock('../../CompletionSettings', () => {
-  const {View, TouchableOpacity} = require('react-native');
+  const {View, Text, TouchableOpacity} = require('react-native');
   return {
-    CompletionSettings: ({onChange}) => (
+    CompletionSettings: ({onChange, serverDefaults}) => (
       <View testID="completion-settings">
+        <Text testID="mock-server-defaults">
+          {JSON.stringify(serverDefaults ?? null)}
+        </Text>
         <TouchableOpacity
           testID="mock-settings-update"
           onPress={() => onChange('temperature', '3.0')} // Value above max of 2
@@ -84,6 +93,9 @@ jest.mock('../../../store', () => ({
     top_k: 40,
     top_p: 0.9,
   },
+  modelStore: require('mobx').makeAutoObservable({
+    activeSamplerDefaults: undefined,
+  }),
 }));
 
 describe('ChatGenerationSettingsSheet', () => {
@@ -105,6 +117,34 @@ describe('ChatGenerationSettingsSheet', () => {
 
     expect(getByTestId('sheet')).toBeTruthy();
     expect(getByTestId('completion-settings')).toBeTruthy();
+  });
+
+  it('picks up a server default that lands while the sheet is open', async () => {
+    const {getByTestId} = render(
+      <ChatGenerationSettingsSheet {...defaultProps} />,
+    );
+
+    // Settle the initial settings load first, so the only thing that can
+    // re-render the sheet afterwards is the store read itself.
+    await act(async () => {});
+    expect(getByTestId('mock-server-defaults').props.children).toBe('null');
+
+    // A probe is detached, so the sheet has to observe rather than snapshot.
+    await act(async () => {
+      runInAction(() => {
+        (modelStore as any).activeSamplerDefaults = {top_k: 40};
+      });
+    });
+
+    expect(getByTestId('mock-server-defaults').props.children).toBe(
+      '{"top_k":40}',
+    );
+
+    act(() => {
+      runInAction(() => {
+        (modelStore as any).activeSamplerDefaults = undefined;
+      });
+    });
   });
 
   it('does not render when not visible', () => {

@@ -27,12 +27,16 @@ jest
 import {serverStore} from '../ServerStore';
 import {routerModelsBody} from '../../../jest/fixtures/remoteModelList';
 import type {RemoteModelInfo} from '../../api/openai';
+import type {RemoteModelCaps} from '../../utils/types';
 
 // Captured at import time: the constructor runs once, and `clearAllMocks`
 // between tests would otherwise erase the only call there ever is.
 const persistedProperties: string[] = (
   jest.requireMock('mobx-persist-store').makePersistable as jest.Mock
 ).mock.calls[0][1].properties;
+
+/** A probe result that resolves the capability tier and nothing else. */
+const capsOnly = (caps: RemoteModelCaps) => ({caps, props: {}});
 
 const mockedFetchModels = openaiModule.fetchModels as jest.Mock;
 const mockedFetchServerProps = openaiModule.fetchServerProps as jest.Mock;
@@ -53,6 +57,8 @@ describe('ServerStore', () => {
       serverStore.privacyNoticeAcknowledged = false;
       serverStore.remoteReasoning = {};
       serverStore.remoteCaps = {};
+      serverStore.remoteProps = {};
+      serverStore.remotePresence = {};
     });
   });
 
@@ -518,7 +524,11 @@ describe('ServerStore', () => {
         'userSelectedModels',
         'remoteReasoning',
         'remoteCaps',
+        'remoteProps',
       ]);
+      // remotePresence is absent on purpose: a hydrated "asleep" is a claim
+      // about now that nobody checked.
+      expect(persistedProperties).not.toContain('remotePresence');
     });
   });
 
@@ -1004,13 +1014,102 @@ describe('ServerStore', () => {
         ...overrides,
       });
 
+    const flush = () => new Promise(r => setImmediate(r));
+
+    /** A probe held open until the test releases it. */
+    const deferredProbe = () => {
+      let settle: (v: unknown) => void = () => {};
+      mockedFetchServerProps.mockImplementationOnce(
+        () => new Promise(resolve => (settle = resolve)),
+      );
+      return () => settle({caps: {}, props: {}});
+    };
+
+    it("does not answer a repointed server with the old url's probe", async () => {
+      const id = addLlamaServer();
+      jest.clearAllMocks();
+      const release = deferredProbe();
+      const first = serverStore.fetchRemoteModelCaps(id, 'm');
+      await flush();
+      expect(mockedFetchServerProps.mock.calls[0][0]).toBe(
+        'http://localhost:8080',
+      );
+
+      serverStore.updateServer(id, {url: 'http://elsewhere:9090'});
+      mockedFetchServerProps.mockResolvedValue(capsOnly({contextLength: 4096}));
+      // Deliberately not awaited before the assertion: a regression makes this
+      // join the still-open first probe, and the assertion must be what fails
+      // rather than the test timing out.
+      const second = serverStore.fetchRemoteModelCaps(id, 'm');
+      await flush();
+
+      const urls = mockedFetchServerProps.mock.calls.map(c => c[0]);
+      expect(urls).toContain('http://elsewhere:9090');
+
+      release();
+      await Promise.all([first, second]);
+    });
+
+    it('lets a probe be reissued after the app has been backgrounded', async () => {
+      const id = addLlamaServer();
+      jest.clearAllMocks();
+      const release = deferredProbe();
+      const first = serverStore.fetchRemoteModelCaps(id, 'm');
+      await flush();
+      expect(mockedFetchServerProps).toHaveBeenCalledTimes(1);
+
+      // The constructor's registration was recorded before `clearAllMocks`, so
+      // re-register to get the same handler back.
+      (serverStore as any).setupAppStateListener();
+      mockAddEventListener.mock.calls.at(-1)![1]('background');
+
+      mockedFetchServerProps.mockResolvedValue(capsOnly({contextLength: 4096}));
+      const second = serverStore.fetchRemoteModelCaps(id, 'm');
+      await flush();
+
+      expect(mockedFetchServerProps).toHaveBeenCalledTimes(2);
+
+      release();
+      await Promise.all([first, second]);
+    });
+
+    it('lets a settling stale probe alone rather than evicting its replacement', async () => {
+      const id = addLlamaServer();
+      jest.clearAllMocks();
+      const releaseStale = deferredProbe();
+      const stale = serverStore.fetchRemoteModelCaps(id, 'm');
+      await flush();
+
+      (serverStore as any).setupAppStateListener();
+      mockAddEventListener.mock.calls.at(-1)![1]('background');
+
+      const releaseLive = deferredProbe();
+      const live = serverStore.fetchRemoteModelCaps(id, 'm');
+      await flush();
+      expect(mockedFetchServerProps).toHaveBeenCalledTimes(2);
+
+      // The stale probe settles last. Deleting by key rather than by identity
+      // would drop the live probe's registration here.
+      releaseStale();
+      await stale;
+
+      const joined = serverStore.fetchRemoteModelCaps(id, 'm');
+      await flush();
+      expect(mockedFetchServerProps).toHaveBeenCalledTimes(2);
+
+      releaseLive();
+      await Promise.all([live, joined]);
+    });
+
     it('writes the scoped probe result under the full model id', async () => {
       const id = addLlamaServer({requestTimeoutMs: 20000});
       jest.clearAllMocks();
-      mockedFetchServerProps.mockResolvedValueOnce({
-        contextLength: 8192,
-        supportsVision: true,
-      });
+      mockedFetchServerProps.mockResolvedValueOnce(
+        capsOnly({
+          contextLength: 8192,
+          supportsVision: true,
+        }),
+      );
 
       await serverStore.fetchRemoteModelCaps(id, 'gemma-4-e2b');
 
@@ -1032,7 +1131,9 @@ describe('ServerStore', () => {
     it('honours a server timeout shorter than the probe bound', async () => {
       const id = addLlamaServer({requestTimeoutMs: 1500});
       jest.clearAllMocks();
-      mockedFetchServerProps.mockResolvedValueOnce({contextLength: 8192});
+      mockedFetchServerProps.mockResolvedValueOnce(
+        capsOnly({contextLength: 8192}),
+      );
 
       await serverStore.fetchRemoteModelCaps(id, 'm');
 
@@ -1047,7 +1148,9 @@ describe('ServerStore', () => {
     it('keys by the raw model id even when it contains a slash', async () => {
       const id = addLlamaServer();
       jest.clearAllMocks();
-      mockedFetchServerProps.mockResolvedValueOnce({supportsVision: false});
+      mockedFetchServerProps.mockResolvedValueOnce(
+        capsOnly({supportsVision: false}),
+      );
 
       await serverStore.fetchRemoteModelCaps(id, 'unsloth/gemma-3-4b');
 
@@ -1061,16 +1164,20 @@ describe('ServerStore', () => {
     it('does not let a sibling model inherit another model caps', async () => {
       const id = addLlamaServer();
       jest.clearAllMocks();
-      mockedFetchServerProps.mockResolvedValueOnce({
-        contextLength: 8192,
-        supportsVision: true,
-      });
+      mockedFetchServerProps.mockResolvedValueOnce(
+        capsOnly({
+          contextLength: 8192,
+          supportsVision: true,
+        }),
+      );
       await serverStore.fetchRemoteModelCaps(id, 'gemma-4-e2b');
 
-      mockedFetchServerProps.mockResolvedValueOnce({
-        contextLength: 4096,
-        supportsVision: false,
-      });
+      mockedFetchServerProps.mockResolvedValueOnce(
+        capsOnly({
+          contextLength: 4096,
+          supportsVision: false,
+        }),
+      );
       await serverStore.fetchRemoteModelCaps(id, 'gemma-3-4b');
 
       expect(serverStore.remoteCaps[`${id}/gemma-4-e2b`]).toEqual({
@@ -1095,7 +1202,9 @@ describe('ServerStore', () => {
           probedUrl: 'http://localhost:8080',
         };
       });
-      mockedFetchServerProps.mockResolvedValueOnce({supportsVision: false});
+      mockedFetchServerProps.mockResolvedValueOnce(
+        capsOnly({supportsVision: false}),
+      );
 
       await serverStore.fetchRemoteModelCaps(id, 'm');
 
@@ -1116,7 +1225,9 @@ describe('ServerStore', () => {
           probedUrl: 'http://localhost:9090',
         };
       });
-      mockedFetchServerProps.mockResolvedValueOnce({supportsVision: false});
+      mockedFetchServerProps.mockResolvedValueOnce(
+        capsOnly({supportsVision: false}),
+      );
 
       await serverStore.fetchRemoteModelCaps(id, 'm');
 
@@ -1137,7 +1248,9 @@ describe('ServerStore', () => {
           probedUrl: 'http://localhost:9090',
         };
       });
-      mockedFetchServerProps.mockResolvedValueOnce({contextLength: 8192});
+      mockedFetchServerProps.mockResolvedValueOnce(
+        capsOnly({contextLength: 8192}),
+      );
 
       await serverStore.fetchRemoteModelCaps(id, 'm');
 
@@ -1162,7 +1275,7 @@ describe('ServerStore', () => {
           supportsVision: true,
         };
       });
-      mockedFetchServerProps.mockResolvedValueOnce({});
+      mockedFetchServerProps.mockResolvedValueOnce(capsOnly({}));
 
       await serverStore.fetchRemoteModelCaps(id, 'm');
 
@@ -1181,8 +1294,10 @@ describe('ServerStore', () => {
         ]);
       });
       mockedFetchServerProps
-        .mockResolvedValueOnce({})
-        .mockResolvedValueOnce({contextLength: 4096, supportsVision: true});
+        .mockResolvedValueOnce(capsOnly({}))
+        .mockResolvedValueOnce(
+          capsOnly({contextLength: 4096, supportsVision: true}),
+        );
 
       await serverStore.fetchRemoteModelCaps(id, 'm');
 
@@ -1222,7 +1337,7 @@ describe('ServerStore', () => {
           serverStore.serverModels.set(id, models);
         }
       });
-      mockedFetchServerProps.mockResolvedValueOnce({});
+      mockedFetchServerProps.mockResolvedValueOnce(capsOnly({}));
 
       await serverStore.fetchRemoteModelCaps(id, 'm0');
 
@@ -1236,7 +1351,9 @@ describe('ServerStore', () => {
       const id = addLlamaServer();
       jest.clearAllMocks();
       const getApiKey = jest.spyOn(serverStore, 'getApiKey');
-      mockedFetchServerProps.mockResolvedValueOnce({contextLength: 8192});
+      mockedFetchServerProps.mockResolvedValueOnce(
+        capsOnly({contextLength: 8192}),
+      );
 
       await serverStore.fetchRemoteModelCaps(id, 'm', 'sk-test');
 
@@ -1258,7 +1375,9 @@ describe('ServerStore', () => {
       const getApiKey = jest
         .spyOn(serverStore, 'getApiKey')
         .mockResolvedValue(undefined);
-      mockedFetchServerProps.mockResolvedValueOnce({contextLength: 8192});
+      mockedFetchServerProps.mockResolvedValueOnce(
+        capsOnly({contextLength: 8192}),
+      );
 
       await serverStore.fetchRemoteModelCaps(id, 'm', undefined);
 
@@ -1277,7 +1396,7 @@ describe('ServerStore', () => {
       jest.clearAllMocks();
       mockedFetchServerProps.mockImplementationOnce(async () => {
         serverStore.removeServer(id);
-        return {contextLength: 8192, supportsVision: true};
+        return capsOnly({contextLength: 8192, supportsVision: true});
       });
 
       await serverStore.fetchRemoteModelCaps(id, 'm');
@@ -1290,7 +1409,7 @@ describe('ServerStore', () => {
       jest.clearAllMocks();
       mockedFetchServerProps.mockImplementationOnce(async () => {
         serverStore.updateServer(id, {url: 'http://localhost:9090'});
-        return {contextLength: 8192, supportsVision: true};
+        return capsOnly({contextLength: 8192, supportsVision: true});
       });
 
       await serverStore.fetchRemoteModelCaps(id, 'm');
@@ -1331,6 +1450,246 @@ describe('ServerStore', () => {
 
       expect(serverStore.remoteCaps[`${id}/m1`]).toBeUndefined();
       expect(serverStore.remoteCaps['other-server/m2']).toBeDefined();
+    });
+
+    it('writes all three tiers from one response, under one url', async () => {
+      const id = addLlamaServer();
+      jest.clearAllMocks();
+      mockedFetchServerProps.mockResolvedValueOnce({
+        caps: {contextLength: 8192, supportsVision: false, supportsAudio: true},
+        props: {slotCount: 4},
+        presence: {
+          isSleeping: false,
+          probedUrl: 'http://localhost:8080',
+          at: 100,
+        },
+      });
+
+      await serverStore.fetchRemoteModelCaps(id, 'm');
+
+      expect(serverStore.remoteCaps[`${id}/m`]).toEqual({
+        contextLength: 8192,
+        supportsVision: false,
+        supportsAudio: true,
+        probedUrl: 'http://localhost:8080',
+      });
+      expect(serverStore.remoteProps[`${id}/m`]).toEqual({
+        slotCount: 4,
+        probedUrl: 'http://localhost:8080',
+      });
+      expect(serverStore.lastObservedSleepState(id)).toBe('awake');
+    });
+
+    it('keeps a known audio capability when a placeholder body follows', async () => {
+      const id = addLlamaServer();
+      jest.clearAllMocks();
+      mockedFetchServerProps
+        .mockResolvedValueOnce(
+          capsOnly({
+            contextLength: 8192,
+            supportsVision: false,
+            supportsAudio: true,
+          }),
+        )
+        .mockResolvedValueOnce(capsOnly({}));
+
+      await serverStore.fetchRemoteModelCaps(id, 'm');
+      await serverStore.fetchRemoteModelCaps(id, 'm');
+
+      expect(serverStore.remoteCaps[`${id}/m`]?.supportsAudio).toBe(true);
+    });
+
+    it('writes a descriptive answer without touching the capability tier', async () => {
+      const id = addLlamaServer();
+      jest.clearAllMocks();
+      mockedFetchServerProps.mockResolvedValueOnce({
+        caps: {},
+        props: {},
+        presence: {
+          isSleeping: true,
+          probedUrl: 'http://localhost:8080',
+          at: 100,
+        },
+      });
+
+      await serverStore.fetchRemoteModelCaps(id, 'm');
+
+      expect(serverStore.remoteCaps[`${id}/m`]).toBeUndefined();
+      expect(serverStore.lastObservedSleepState(id)).toBe('asleep');
+    });
+
+    it('writes nothing anywhere when a repeat probe reports the same answer', async () => {
+      const id = addLlamaServer();
+      jest.clearAllMocks();
+      const answer = () => ({
+        caps: {contextLength: 8192, supportsVision: true},
+        props: {slotCount: 4, samplerDefaults: {top_k: 40}},
+      });
+      mockedFetchServerProps
+        .mockResolvedValueOnce(answer())
+        .mockResolvedValueOnce(answer());
+
+      await serverStore.fetchRemoteModelCaps(id, 'm');
+      const caps = serverStore.remoteCaps[`${id}/m`];
+      const props = serverStore.remoteProps[`${id}/m`];
+
+      await serverStore.fetchRemoteModelCaps(id, 'm');
+
+      // Same object, not merely an equal one: a rewrite would wake every
+      // observer for an answer that said nothing new.
+      expect(serverStore.remoteCaps[`${id}/m`]).toBe(caps);
+      expect(serverStore.remoteProps[`${id}/m`]).toBe(props);
+    });
+
+    it('keeps a scoped descriptive answer the bare retry did not repeat', async () => {
+      const id = addLlamaServer();
+      runInAction(() => {
+        serverStore.serverModels.set(id, [
+          {id: 'm', object: 'model', owned_by: 'system'},
+        ]);
+      });
+      jest.clearAllMocks();
+      mockedFetchServerProps
+        .mockResolvedValueOnce({caps: {}, props: {slotCount: 4}})
+        .mockResolvedValueOnce({
+          caps: {contextLength: 4096, supportsVision: true},
+          props: {},
+        });
+
+      await serverStore.fetchRemoteModelCaps(id, 'm');
+
+      expect(mockedFetchServerProps).toHaveBeenCalledTimes(2);
+      expect(serverStore.remoteCaps[`${id}/m`]?.contextLength).toBe(4096);
+      expect(serverStore.remoteProps[`${id}/m`]?.slotCount).toBe(4);
+    });
+
+    it('collapses two probes for one model in the same tick into one request', async () => {
+      const id = addLlamaServer();
+      jest.clearAllMocks();
+      mockedFetchServerProps.mockResolvedValue(
+        capsOnly({contextLength: 8192, supportsVision: true}),
+      );
+
+      await Promise.all([
+        serverStore.fetchRemoteModelCaps(id, 'm'),
+        serverStore.fetchRemoteModelCaps(id, 'm'),
+      ]);
+
+      expect(mockedFetchServerProps).toHaveBeenCalledTimes(1);
+      expect(serverStore.remoteCaps[`${id}/m`]?.contextLength).toBe(8192);
+    });
+
+    it('probes again once the previous request has settled', async () => {
+      const id = addLlamaServer();
+      jest.clearAllMocks();
+      mockedFetchServerProps.mockResolvedValue(
+        capsOnly({contextLength: 8192, supportsVision: true}),
+      );
+
+      await serverStore.fetchRemoteModelCaps(id, 'm');
+      await serverStore.fetchRemoteModelCaps(id, 'm');
+
+      expect(mockedFetchServerProps).toHaveBeenCalledTimes(2);
+    });
+
+    it('never writes a chat-template flag into the reasoning capability', async () => {
+      const id = addLlamaServer();
+      jest.clearAllMocks();
+      mockedFetchServerProps.mockResolvedValueOnce({
+        caps: {contextLength: 8192, supportsVision: false},
+        props: {
+          chatTemplateCaps: {supportsTools: true, supportsThinking: true},
+        },
+      });
+
+      await serverStore.fetchRemoteModelCaps(id, 'm');
+
+      expect(serverStore.remoteProps[`${id}/m`]?.chatTemplateCaps).toEqual({
+        supportsTools: true,
+        supportsThinking: true,
+      });
+      expect(serverStore.remoteReasoning).toEqual({});
+    });
+
+    it('drops props and presence with the server they describe', () => {
+      const id = addLlamaServer();
+      runInAction(() => {
+        serverStore.remoteProps[`${id}/m1`] = {slotCount: 4};
+        serverStore.remotePresence[`${id}/m1`] = {
+          isSleeping: true,
+          probedUrl: 'http://localhost:8080',
+          at: 1,
+        };
+        serverStore.remoteProps['other-server/m2'] = {slotCount: 2};
+      });
+
+      serverStore.removeServer(id);
+
+      expect(serverStore.remoteProps[`${id}/m1`]).toBeUndefined();
+      expect(serverStore.remotePresence[`${id}/m1`]).toBeUndefined();
+      expect(serverStore.remoteProps['other-server/m2']).toBeDefined();
+    });
+
+    it('forgets sleep state when the server url is edited', () => {
+      const id = addLlamaServer();
+      runInAction(() => {
+        serverStore.remotePresence[`${id}/m`] = {
+          isSleeping: true,
+          probedUrl: 'http://localhost:8080',
+          at: 1,
+        };
+      });
+      expect(serverStore.lastObservedSleepState(id)).toBe('asleep');
+
+      serverStore.updateServer(id, {url: 'http://localhost:9090'});
+
+      // Unknown, never 'awake' and never "offline": nobody has looked.
+      expect(serverStore.lastObservedSleepState(id)).toBe('unknown');
+    });
+
+    it('answers sleep state from the most recent observation of this backend', () => {
+      const id = addLlamaServer();
+      runInAction(() => {
+        serverStore.remotePresence[`${id}/old`] = {
+          isSleeping: true,
+          probedUrl: 'http://localhost:8080',
+          at: 1,
+        };
+        serverStore.remotePresence[`${id}/new`] = {
+          isSleeping: false,
+          probedUrl: 'http://localhost:8080',
+          at: 2,
+        };
+        serverStore.remotePresence[`${id}/elsewhere`] = {
+          isSleeping: true,
+          probedUrl: 'http://localhost:9090',
+          at: 3,
+        };
+      });
+
+      expect(serverStore.lastObservedSleepState(id)).toBe('awake');
+    });
+
+    it('reports unknown sleep state for a server nobody has probed', () => {
+      const id = addLlamaServer();
+      expect(serverStore.lastObservedSleepState(id)).toBe('unknown');
+      expect(serverStore.lastObservedSleepState('gone')).toBe('unknown');
+    });
+
+    it('reads a store hydrated before the props map as unknown, then fills it', async () => {
+      const id = addLlamaServer();
+
+      expect(serverStore.remoteProps[`${id}/m`]).toBeUndefined();
+
+      jest.clearAllMocks();
+      mockedFetchServerProps.mockResolvedValueOnce({
+        caps: {},
+        props: {slotCount: 4},
+      });
+
+      await serverStore.fetchRemoteModelCaps(id, 'm');
+
+      expect(serverStore.remoteProps[`${id}/m`]?.slotCount).toBe(4);
     });
   });
 });

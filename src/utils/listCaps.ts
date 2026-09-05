@@ -13,6 +13,8 @@ import type {ServerConfig} from './types';
 export interface ListDerivedCaps {
   tier: 'list';
   supportsVision?: boolean;
+  // Declared so the resolver can read it; nothing derives it yet.
+  supportsAudio?: boolean;
   contextLength?: number;
 }
 

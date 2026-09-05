@@ -9,6 +9,7 @@ import {
   Model,
   ContextInitParams,
   RemoteSessionBinding,
+  SamplerDefaults,
 } from '../../src/utils/types';
 import {LlamaContext} from 'llama.rn';
 import {CompletionEngine} from '../../src/utils/completionTypes';
@@ -18,6 +19,7 @@ import {
   effectiveDraftModeOf,
 } from '../../src/store/draftResolution';
 import {resolveModelCaps} from '../../src/utils/modelCaps';
+import {resolveRemoteProps} from '../../src/utils/remoteCaps';
 import type {
   CapabilityEnv,
   ModelCapabilityView,
@@ -283,6 +285,7 @@ class MockModelStore {
   private get capabilityEnv(): CapabilityEnv {
     return {
       remoteCaps: mockServerStore.remoteCaps,
+      remoteProps: mockServerStore.remoteProps,
       listCaps: mockServerStore.listCaps,
       binding: this.activeRemoteBinding,
       isMultimodalActive: this.isMultimodalActive,
@@ -296,6 +299,12 @@ class MockModelStore {
 
   get activeModelCaps(): ModelCapabilityView {
     return this.capsFor(this.activeModel);
+  }
+
+  get activeSamplerDefaults(): SamplerDefaults | undefined {
+    const env = this.capabilityEnv;
+    return resolveRemoteProps(this.activeModel, env.remoteProps, env.binding)
+      .samplerDefaults;
   }
 
   get displayModels(): Model[] {

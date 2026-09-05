@@ -2943,10 +2943,73 @@ describe('ModelStore', () => {
         runInAction(() => {
           serverStore.servers = [];
           serverStore.remoteCaps = {};
+          serverStore.remoteProps = {};
           modelStore.models = [];
           modelStore.activeModelId = undefined;
           modelStore.activeRemoteBinding = undefined;
           modelStore.isMultimodalActive = false;
+        });
+      });
+
+      describe('server sampler defaults', () => {
+        const activateRemoteModel = () => {
+          runInAction(() => {
+            modelStore.models = [
+              {
+                id: 'srv-1/remote-model',
+                origin: ModelOrigin.REMOTE,
+                serverId: 'srv-1',
+              } as any,
+            ];
+            modelStore.activeModelId = 'srv-1/remote-model';
+          });
+        };
+
+        it('exposes what the active model backend reported', () => {
+          activateRemoteModel();
+          runInAction(() => {
+            serverStore.remoteProps = {
+              'srv-1/remote-model': {
+                samplerDefaults: {top_k: 40, temperature: 0.8},
+                probedUrl: 'http://localhost:8080',
+              },
+            };
+          });
+
+          expect(modelStore.activeSamplerDefaults).toEqual({
+            top_k: 40,
+            temperature: 0.8,
+          });
+        });
+
+        it('is undefined when no model is active', () => {
+          runInAction(() => {
+            serverStore.remoteProps = {
+              'srv-1/remote-model': {samplerDefaults: {top_k: 40}},
+            };
+          });
+
+          expect(modelStore.activeSamplerDefaults).toBeUndefined();
+        });
+
+        it('is undefined when the entry describes another backend', () => {
+          activateRemoteModel();
+          runInAction(() => {
+            modelStore.activeRemoteBinding = {
+              modelId: 'srv-1/remote-model',
+              serverId: 'srv-1',
+              remoteModelId: 'remote-model',
+              url: 'http://localhost:9090',
+            };
+            serverStore.remoteProps = {
+              'srv-1/remote-model': {
+                samplerDefaults: {top_k: 40},
+                probedUrl: 'http://localhost:8080',
+              },
+            };
+          });
+
+          expect(modelStore.activeSamplerDefaults).toBeUndefined();
         });
       });
 
@@ -2968,6 +3031,7 @@ describe('ModelStore', () => {
         expect(modelStore.activeModelCaps).toEqual({
           vision: 'yes',
           visionActive: true,
+          audio: 'unknown',
           contextLength: 8192,
           effectiveContextLength: 8192,
         });

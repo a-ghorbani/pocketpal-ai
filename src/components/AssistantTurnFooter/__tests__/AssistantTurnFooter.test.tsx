@@ -6,6 +6,7 @@ import {render, fireEvent} from '../../../../jest/test-utils';
 import {chatSessionStore} from '../../../store';
 
 import {AssistantTurnFooter} from '../AssistantTurnFooter';
+import {streamFinishChunk} from '../../../../jest/fixtures/llamaServerWire';
 
 jest.mock('@react-native-clipboard/clipboard', () => ({
   setString: jest.fn(),
@@ -44,6 +45,96 @@ describe('AssistantTurnFooter', () => {
     expect(queryByTestId('assistant-turn-footer')).toBeTruthy();
     expect(getByText('10ms/token, 100.00 tokens/sec')).toBeTruthy();
     expect(queryByTestId('footer-copy')).toBeNull();
+  });
+
+  it('renders prompt speed and cached tokens from a server finish chunk', () => {
+    const message = baseTurn({
+      metadata: {
+        timings: {...streamFinishChunk.timings, time_to_first_token_ms: 150},
+        completionResult: {used: 0, contextFull: false, isRemote: true},
+      },
+    });
+    const {getByTestId} = render(<AssistantTurnFooter message={message} />);
+    expect(getByTestId('footer-timing').props.children).toBe(
+      '6ms/token, 170.35 tokens/sec, 126.90 prompt tokens/sec, 15 cached, 150ms TTFT',
+    );
+  });
+
+  it('leaves out the parts a build does not report', () => {
+    const message = baseTurn({
+      metadata: {
+        timings: {
+          predicted_per_token_ms: 10,
+          predicted_per_second: 100,
+          time_to_first_token_ms: 150,
+        },
+        // Remote, so the origin gate passes and the absence under test is the
+        // server's silence rather than the gate withholding them.
+        completionResult: {used: 0, contextFull: false, isRemote: true},
+      },
+    });
+    const {getByTestId} = render(<AssistantTurnFooter message={message} />);
+    expect(getByTestId('footer-timing').props.children).toBe(
+      '10ms/token, 100.00 tokens/sec, 150ms TTFT',
+    );
+  });
+
+  it('separates a cold prompt cache from a build that never reports one', () => {
+    const cold = baseTurn({
+      metadata: {
+        timings: {predicted_per_token_ms: 10, cache_n: 0},
+        completionResult: {used: 0, contextFull: false, isRemote: true},
+      },
+    });
+    expect(
+      render(<AssistantTurnFooter message={cold} />).getByTestId(
+        'footer-timing',
+      ).props.children,
+    ).toBe('10ms/token, 0 cached');
+
+    const silent = baseTurn({
+      metadata: {
+        timings: {predicted_per_token_ms: 10},
+        completionResult: {used: 0, contextFull: false, isRemote: true},
+      },
+    });
+    expect(
+      render(<AssistantTurnFooter message={silent} />).getByTestId(
+        'footer-timing',
+      ).props.children,
+    ).toBe('10ms/token');
+  });
+
+  it('keeps prompt speed and cached tokens off a local turn that reports them', () => {
+    const timings = {...streamFinishChunk.timings, time_to_first_token_ms: 150};
+    expect(timings.prompt_per_second).toBeDefined();
+    expect(timings.cache_n).toBeDefined();
+
+    const local = baseTurn({
+      metadata: {
+        timings,
+        completionResult: {used: 0, contextFull: false, isRemote: false},
+      },
+    });
+    expect(
+      render(<AssistantTurnFooter message={local} />).getByTestId(
+        'footer-timing',
+      ).props.children,
+    ).toBe('6ms/token, 170.35 tokens/sec, 150ms TTFT');
+
+    const remote = baseTurn({
+      metadata: {
+        timings,
+        completionResult: {used: 0, contextFull: false, isRemote: true},
+      },
+    });
+    expect(
+      render(<AssistantTurnFooter message={remote} />).getByTestId(
+        'footer-timing',
+      ).props.children,
+    ).toBe(
+      '6ms/token, 170.35 tokens/sec, 126.90 prompt tokens/sec, 15 cached, 150ms TTFT',
+    );
   });
 
   it('renders copy button when copyable, even if timings absent (abort path)', () => {

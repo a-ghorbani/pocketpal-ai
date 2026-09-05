@@ -2,6 +2,7 @@ import {
   Model,
   ModelOrigin,
   RemoteModelCaps,
+  RemoteModelProps,
   RemoteSessionBinding,
 } from './types';
 
@@ -16,7 +17,7 @@ import {
  * taken at face value.
  */
 export function capsMatchBinding(
-  caps: RemoteModelCaps | undefined,
+  caps: RemoteModelCaps | RemoteModelProps | undefined,
   binding: RemoteSessionBinding | undefined,
   modelId: string,
 ): boolean {
@@ -56,6 +57,43 @@ export function resolveRemoteCaps(
   }
   if (perModel.supportsVision !== undefined) {
     resolved.supportsVision = perModel.supportsVision;
+  }
+  if (perModel.supportsAudio !== undefined) {
+    resolved.supportsAudio = perModel.supportsAudio;
+  }
+  return resolved;
+}
+
+/**
+ * The description tier of the same probe: what the server said about the model
+ * beyond what it can do. Same shape and the same binding rule as
+ * `resolveRemoteCaps` — a description of another backend is no description at
+ * all — and the same absence semantics, so a caller can tell "this server says
+ * nothing" from "this server says zero".
+ */
+export function resolveRemoteProps(
+  model: Model | undefined,
+  remoteProps: Record<string, RemoteModelProps>,
+  binding: RemoteSessionBinding | undefined,
+): RemoteModelProps {
+  if (!model || model.origin !== ModelOrigin.REMOTE) {
+    return {};
+  }
+
+  const perModel = remoteProps[model.id];
+  if (!capsMatchBinding(perModel, binding, model.id)) {
+    return {};
+  }
+
+  const resolved: RemoteModelProps = {};
+  if (perModel.samplerDefaults !== undefined) {
+    resolved.samplerDefaults = perModel.samplerDefaults;
+  }
+  if (perModel.slotCount !== undefined) {
+    resolved.slotCount = perModel.slotCount;
+  }
+  if (perModel.chatTemplateCaps !== undefined) {
+    resolved.chatTemplateCaps = perModel.chatTemplateCaps;
   }
   return resolved;
 }

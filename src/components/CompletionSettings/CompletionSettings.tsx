@@ -1,4 +1,4 @@
-import {View} from 'react-native';
+import {TouchableOpacity, View} from 'react-native';
 import React from 'react';
 
 import {InputSlider} from '../InputSlider';
@@ -11,47 +11,123 @@ import {useTheme} from '../../hooks';
 import {createStyles} from './styles';
 
 import {L10nContext} from '../../utils';
+import {t} from '../../locales';
 import {
   COMPLETION_PARAMS_METADATA,
   validateNumericField,
 } from '../../utils/modelSettings';
 import {CompletionParams} from '../../utils/completionTypes';
+import {SamplerDefaults} from '../../utils/types';
+import {SamplerParam} from '../../api/openai';
+
+/** The step a control is edited at; `renderSlider` reads the same value. */
+const stepOf = (name: string): number =>
+  COMPLETION_PARAMS_METADATA[name]?.step ?? 0.01;
+
+/**
+ * The wire delivers IEEE doubles — the server's own `temperature` default
+ * arrives as `0.800000011920929` — so a reported value is shown at the
+ * resolution its control is actually edited at, the same rounding `InputSlider`
+ * applies to a dragged value.
+ */
+const formatAtControlPrecision = (name: string, value: number): string => {
+  const precision = Number.isInteger(stepOf(name)) ? 0 : 2;
+  return String(parseFloat(value.toFixed(precision)));
+};
 
 interface Props {
   settings: CompletionParams;
   onChange: (name: string, value: any) => void;
   disabled?: boolean;
+  serverDefaults?: SamplerDefaults;
 }
 
 export const CompletionSettings: React.FC<Props> = ({
   settings,
   onChange,
   disabled = false,
+  serverDefaults,
 }) => {
   const theme = useTheme();
   const styles = createStyles(theme);
   const l10n = React.useContext(L10nContext);
 
-  const renderSlider = ({name, step = 0.01}: {name: string; step?: number}) => (
-    <View style={styles.settingItem}>
-      <InputSlider
-        testID={`${name}-slider`}
-        label={name.toUpperCase().replace('_', ' ')}
-        labelVariant="labelSmall"
-        description={l10n.completionParams[name]}
-        value={settings[name]}
-        onValueChange={value => onChange(name, value)}
-        min={COMPLETION_PARAMS_METADATA[name]?.validation.min}
-        max={COMPLETION_PARAMS_METADATA[name]?.validation.max}
-        step={step}
-        precision={Number.isInteger(step) ? 0 : 2}
-        debounceMs={300} // Enable debouncing for sliders
-        disabled={disabled}
-      />
-    </View>
-  );
+  /**
+   * What the server says this parameter defaults to, and whether the editor is
+   * still on it. `tolerance` is half a slider step, so a quantised float does
+   * not read as a deliberate change; a discrete control passes 0 and compares
+   * exactly.
+   */
+  const renderServerDefault = (name: SamplerParam, tolerance: number) => {
+    const serverValue = serverDefaults?.[name];
+    if (serverValue === undefined) {
+      return null;
+    }
+    // A server run with `--top-k 0` reports a default this app's own range
+    // rejects. Offering it would produce a one-tap write that Save then refuses.
+    const rule = COMPLETION_PARAMS_METADATA[name]?.validation;
+    if (rule && !validateNumericField(serverValue, rule).isValid) {
+      return null;
+    }
+    const current = Number(settings[name]);
+    const matches =
+      tolerance > 0
+        ? Math.abs(current - serverValue) < tolerance
+        : current === serverValue;
 
-  const renderIntegerInput = ({name}: {name: keyof CompletionParams}) => {
+    if (matches) {
+      return (
+        <Text
+          variant="labelSmall"
+          style={styles.serverDefault}
+          testID={`${name}-server-default`}>
+          {l10n.components.completionSettings.serverDefault}
+        </Text>
+      );
+    }
+
+    return (
+      <TouchableOpacity
+        onPress={disabled ? undefined : () => onChange(name, serverValue)}
+        disabled={disabled}
+        testID={`${name}-server-default-reset`}>
+        <Text variant="labelSmall" style={styles.serverDefaultReset}>
+          {t(l10n.components.completionSettings.resetToServerDefault, {
+            value: formatAtControlPrecision(name, serverValue),
+          })}
+        </Text>
+      </TouchableOpacity>
+    );
+  };
+
+  const renderSlider = ({name}: {name: SamplerParam}) => {
+    const metadata = COMPLETION_PARAMS_METADATA[name];
+    const range =
+      metadata?.validation.type === 'numeric' ? metadata.validation : undefined;
+    const step = stepOf(name);
+
+    return (
+      <View style={styles.settingItem}>
+        <InputSlider
+          testID={`${name}-slider`}
+          label={name.toUpperCase().replace('_', ' ')}
+          labelVariant="labelSmall"
+          description={l10n.completionParams[name]}
+          value={settings[name] as number}
+          onValueChange={value => onChange(name, value)}
+          min={range?.min}
+          max={range?.max}
+          step={step}
+          precision={Number.isInteger(step) ? 0 : 2}
+          debounceMs={300} // Enable debouncing for sliders
+          disabled={disabled}
+        />
+        {renderServerDefault(name, step / 2)}
+      </View>
+    );
+  };
+
+  const renderIntegerInput = ({name}: {name: SamplerParam}) => {
     const metadata = COMPLETION_PARAMS_METADATA[name];
     if (!metadata) {
       return null;
@@ -79,6 +155,7 @@ export const CompletionSettings: React.FC<Props> = ({
           editable={!disabled}
           testID={`${String(name)}-input`}
         />
+        {renderServerDefault(name, 0)}
       </View>
     );
   };
@@ -136,6 +213,7 @@ export const CompletionSettings: React.FC<Props> = ({
           ]}
           style={styles.segmentedButtons}
         />
+        {renderServerDefault('mirostat', 0)}
       </View>
     );
   };
@@ -193,6 +271,7 @@ export const CompletionSettings: React.FC<Props> = ({
             testID="n_predict-input"
           />
         )}
+        {renderServerDefault('n_predict', 0)}
       </View>
     );
   };
@@ -202,20 +281,20 @@ export const CompletionSettings: React.FC<Props> = ({
       {renderNPredictField()}
       {renderSwitch('include_thinking_in_context')}
       {renderSlider({name: 'temperature'})}
-      {renderSlider({name: 'top_k', step: 1})}
+      {renderSlider({name: 'top_k'})}
       {renderSlider({name: 'top_p'})}
       {renderSlider({name: 'min_p'})}
       {renderSlider({name: 'xtc_threshold'})}
       {renderSlider({name: 'xtc_probability'})}
       {renderSlider({name: 'typical_p'})}
-      {renderSlider({name: 'penalty_last_n', step: 1})}
+      {renderSlider({name: 'penalty_last_n'})}
       {renderSlider({name: 'penalty_repeat'})}
       {renderSlider({name: 'penalty_freq'})}
       {renderSlider({name: 'penalty_present'})}
       {renderMirostatSelector()}
       {(settings.mirostat ?? 0) > 0 && (
         <>
-          {renderSlider({name: 'mirostat_tau', step: 1})}
+          {renderSlider({name: 'mirostat_tau'})}
           {renderSlider({name: 'mirostat_eta'})}
         </>
       )}
