@@ -519,8 +519,6 @@ export interface RemoteModelProps {
   tier?: 'props';
   samplerDefaults?: SamplerDefaults;
   slotCount?: number; // /props total_slots; a finite integer > 0
-  buildInfo?: string; // /props build_info
-  modelAlias?: string; // /props model_alias
   chatTemplateCaps?: {
     supportsTools?: boolean;
     supportsThinking?: boolean;
@@ -534,6 +532,10 @@ export interface RemoteModelProps {
  * entry is unknown, never awake.
  */
 export interface RemoteModelPresence {
+  // Never written or read. Without it this record is structurally assignable
+  // into either persisted tier, since every field of both is optional — and a
+  // volatile observation written there would be persisted as a settled fact.
+  tier?: 'presence';
   isSleeping: boolean;
   probedUrl: string;
   at: number;
