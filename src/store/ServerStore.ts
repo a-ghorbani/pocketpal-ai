@@ -1408,6 +1408,10 @@ class ServerStore {
       op.cancelled = true;
       op.attemptEndedAt = Date.now();
     });
+    // The user has just said the request is over, so nobody waiting on it
+    // needs the list to confirm that. Whether the model is loaded is a
+    // separate question, and the operation goes on asking it below.
+    this.releaseRouterWaiter(key, 'withdrawn');
     const server = this.servers.find(s => s.id === serverId);
     if (server) {
       const apiKey = await this.getApiKey(serverId);
@@ -1464,15 +1468,30 @@ class ServerStore {
     return settled;
   }
 
-  /** Answers whoever is awaiting this key without claiming anything happened. */
-  private abandonRouterOp(key: string): void {
+  /**
+   * Answers whoever is awaiting this key without settling the operation.
+   *
+   * Two different questions run through one key. Whether the model loaded is a
+   * fact about the model, and needs a read of the list to corroborate it —
+   * that is what settling an operation decides. Whether the request is still
+   * being pursued is a fact about the request, and is sometimes known outright:
+   * a caller left waiting for corroboration it does not need is a send
+   * suspended for as long as the server stays quiet. Resolving a waiter is
+   * once per key; a later settle finds none and says nothing to anybody.
+   */
+  private releaseRouterWaiter(key: string, outcome: RouterOpOutcome): void {
     const waiter = this.routerOpWaiters.get(key);
     if (!waiter) {
       return;
     }
     this.routerOpWaiters.delete(key);
     this.routerLoadPromises.delete(key);
-    waiter('failed');
+    waiter(outcome);
+  }
+
+  /** The question this key was asking is no longer being tracked. */
+  private abandonRouterOp(key: string): void {
+    this.releaseRouterWaiter(key, 'failed');
   }
 
   private settleRouterOp(

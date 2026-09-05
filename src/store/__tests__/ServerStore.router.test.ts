@@ -48,6 +48,7 @@ import {
 } from '../../../jest/fixtures/routerWire';
 import type {RemoteModelInfo} from '../../api/openai';
 import type {RouterOp} from '../../utils/routerState';
+import type {RouterLoadOutcome} from '../ServerStore';
 import {
   openRouterEventStream,
   routerDownload,
@@ -1339,21 +1340,6 @@ describe('one presenter at a time', () => {
     expect(serverStore.routerLive(id, TARGET)).toBeUndefined();
   });
 
-  it('says nothing about a server for a request the user withdrew', async () => {
-    mockedRouterUnload.mockResolvedValue({status: 200, body: {success: true}});
-    const id = await routerServer('unloaded');
-    const pending = serverStore.ensureRouterModelLoaded(id, TARGET);
-    await flush();
-    mockedFetch.mockRejectedValue(new Error('Network request failed'));
-
-    await serverStore.cancelRouterOp(id, TARGET);
-    await advance(ROUTER_UNREACHABLE_MS + ROUTER_ACK_MS);
-
-    await expect(pending).resolves.toBe('failed');
-    expect(serverStore.routerOp(id, TARGET)).toBeUndefined();
-    expect(serverStore.routerReason(id, TARGET)).toBeUndefined();
-  });
-
   // A read already in flight when the request went out can only report the
   // state from before it, which is not this request's answer in either
   // direction.
@@ -1544,6 +1530,52 @@ describe('one presenter at a time', () => {
     // The row still says the model is resident, so the unload has converged
     // on nothing and must still be in flight.
     expect(serverStore.routerOp(id, TARGET)?.kind).toBe('unload');
+  });
+
+  // Two questions the code answered with one event. Whether the model loaded
+  // needs a read to corroborate; whether the request was withdrawn does not —
+  // the user just said so — and the caller is waiting on the request. On a
+  // server that has stopped answering, tying the second to the first left a
+  // send suspended for the ninety seconds the reach bound takes.
+  it('answers the caller at the tap, not at the reach bound', async () => {
+    mockedRouterUnload.mockResolvedValue({status: 200, body: {success: true}});
+    const id = await routerServer('unloaded');
+    const pending = serverStore.ensureRouterModelLoaded(id, TARGET);
+    await flush();
+    mockedFetch.mockRejectedValue(new Error('Network request failed'));
+
+    await serverStore.cancelRouterOp(id, TARGET);
+    await flush();
+
+    // No clock has advanced, so no bound can have fired.
+    let answered: RouterLoadOutcome | undefined;
+    pending.then(outcome => {
+      answered = outcome;
+    });
+    await flush();
+
+    expect(answered).toBe('withdrawn');
+    // The operation itself is still tracked: what the row says is a question
+    // about the model, and that one still waits for a read.
+    expect(serverStore.routerOp(id, TARGET)).toBeDefined();
+  });
+
+  it('answers the caller once, whatever settles the operation later', async () => {
+    mockedRouterUnload.mockResolvedValue({status: 200, body: {success: true}});
+    const id = await routerServer('unloaded');
+    const pending = serverStore.ensureRouterModelLoaded(id, TARGET);
+    await flush();
+    mockedFetch.mockRejectedValue(new Error('Network request failed'));
+    await serverStore.cancelRouterOp(id, TARGET);
+    await flush();
+
+    const answers: RouterLoadOutcome[] = [];
+    pending.then(outcome => answers.push(outcome));
+    await advance(ROUTER_UNREACHABLE_MS + ROUTER_ACK_MS);
+
+    expect(answers).toEqual(['withdrawn']);
+    expect(serverStore.routerOp(id, TARGET)).toBeUndefined();
+    expect(serverStore.routerReason(id, TARGET)).toBeUndefined();
   });
 
   it('still blames the model when the row it settles on says it failed', async () => {
