@@ -41,12 +41,20 @@ const CAPS_FIELDS = [
 const PROPS_FIELDS = [
   'samplerDefaults',
   'slotCount',
-  'buildInfo',
-  'modelAlias',
   'chatTemplateCaps',
 ] as const;
 
-const PROPS_SCALAR_FIELDS = ['slotCount', 'buildInfo', 'modelAlias'] as const;
+// Compared by content, not identity. Every other member of PROPS_FIELDS is a
+// scalar, and the scalar set is derived rather than restated so a field added
+// above is compared by default instead of silently skipped.
+const PROPS_DEEP_FIELDS = ['samplerDefaults', 'chatTemplateCaps'] as const;
+
+type PropsDeepField = (typeof PROPS_DEEP_FIELDS)[number];
+
+const PROPS_SCALAR_FIELDS = PROPS_FIELDS.filter(
+  (field): field is Exclude<(typeof PROPS_FIELDS)[number], PropsDeepField> =>
+    !(PROPS_DEEP_FIELDS as readonly string[]).includes(field),
+);
 
 const isUnusableCaps = (caps: RemoteModelCaps) =>
   CAPS_FIELDS.every(f => caps[f] === undefined);
@@ -75,8 +83,7 @@ const shallowEqual = (
 // unchanged probe look like news to every observer.
 const samePropsContent = (a: RemoteModelProps, b: RemoteModelProps): boolean =>
   PROPS_SCALAR_FIELDS.every(f => a[f] === b[f]) &&
-  shallowEqual(a.samplerDefaults, b.samplerDefaults) &&
-  shallowEqual(a.chatTemplateCaps, b.chatTemplateCaps);
+  PROPS_DEEP_FIELDS.every(f => shallowEqual(a[f], b[f]));
 
 // Request bookkeeping rather than store state: a second probe for a key while
 // one is in flight awaits that one instead of issuing its own.
@@ -375,7 +382,11 @@ class ServerStore {
     remoteModelId: string,
     resolvedApiKey?: string,
   ): Promise<void> {
-    const key = `${serverId}/${remoteModelId}`;
+    // Keyed on the url as well as the model: a probe issued before a server
+    // edit is asking a different backend, and joining it would answer the new
+    // url with the old one's result.
+    const url = this.servers.find(s => s.id === serverId)?.url;
+    const key = `${serverId}/${remoteModelId}/${url ?? ''}`;
     const inFlight = probesInFlight.get(key);
     if (inFlight) {
       return inFlight;
@@ -539,7 +550,14 @@ class ServerStore {
           if (now - this.lastFetchTime > FETCH_THROTTLE_MS) {
             this.fetchAllRemoteModels();
           }
+          return;
         }
+        // A probe that spans a background period cannot answer for the
+        // foreground: iOS may have torn its socket down, and on the first run
+        // it is the request that raises the local-network prompt, so a grant
+        // always lands after it has already failed. Dropping the entry lets
+        // the reprobe issue its own request instead of joining that one.
+        probesInFlight.clear();
       },
     );
   }

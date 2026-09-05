@@ -1014,6 +1014,50 @@ describe('ServerStore', () => {
         ...overrides,
       });
 
+    it("does not answer a repointed server with the old url's probe", async () => {
+      const id = addLlamaServer();
+      jest.clearAllMocks();
+      // Never resolved: the point is that the second call must not join it.
+      mockedFetchServerProps.mockImplementationOnce(
+        () => new Promise(() => {}),
+      );
+      void serverStore.fetchRemoteModelCaps(id, 'm');
+      await new Promise(r => setImmediate(r));
+      expect(mockedFetchServerProps.mock.calls[0][0]).toBe(
+        'http://localhost:8080',
+      );
+
+      serverStore.updateServer(id, {url: 'http://elsewhere:9090'});
+      mockedFetchServerProps.mockResolvedValue(capsOnly({contextLength: 4096}));
+      await serverStore.fetchRemoteModelCaps(id, 'm');
+
+      const urls = mockedFetchServerProps.mock.calls.map(c => c[0]);
+      expect(urls).toContain('http://elsewhere:9090');
+    });
+
+    it('lets a probe be reissued after the app has been backgrounded', async () => {
+      const id = addLlamaServer();
+      jest.clearAllMocks();
+      mockedFetchServerProps.mockImplementationOnce(
+        () => new Promise(() => {}),
+      );
+      void serverStore.fetchRemoteModelCaps(id, 'm');
+      await new Promise(r => setImmediate(r));
+      expect(mockedFetchServerProps).toHaveBeenCalledTimes(1);
+
+      // A probe spanning a background period cannot answer for the foreground.
+      // Re-register to obtain the same handler the constructor installed;
+      // clearAllMocks above discarded the constructor's recorded call.
+      (serverStore as any).setupAppStateListener();
+      const onAppState = mockAddEventListener.mock.calls.at(-1)![1];
+      onAppState('background');
+
+      mockedFetchServerProps.mockResolvedValue(capsOnly({contextLength: 4096}));
+      await serverStore.fetchRemoteModelCaps(id, 'm');
+
+      expect(mockedFetchServerProps).toHaveBeenCalledTimes(2);
+    });
+
     it('writes the scoped probe result under the full model id', async () => {
       const id = addLlamaServer({requestTimeoutMs: 20000});
       jest.clearAllMocks();
@@ -1370,7 +1414,7 @@ describe('ServerStore', () => {
       jest.clearAllMocks();
       mockedFetchServerProps.mockResolvedValueOnce({
         caps: {contextLength: 8192, supportsVision: false, supportsAudio: true},
-        props: {slotCount: 4, buildInfo: 'b9976-e3546c794'},
+        props: {slotCount: 4},
         presence: {
           isSleeping: false,
           probedUrl: 'http://localhost:8080',
@@ -1388,7 +1432,6 @@ describe('ServerStore', () => {
       });
       expect(serverStore.remoteProps[`${id}/m`]).toEqual({
         slotCount: 4,
-        buildInfo: 'b9976-e3546c794',
         probedUrl: 'http://localhost:8080',
       });
       expect(serverStore.lastObservedSleepState(id)).toBe('awake');
