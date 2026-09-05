@@ -92,12 +92,6 @@ export function resolveRemoteProps(
   if (perModel.slotCount !== undefined) {
     resolved.slotCount = perModel.slotCount;
   }
-  if (perModel.buildInfo !== undefined) {
-    resolved.buildInfo = perModel.buildInfo;
-  }
-  if (perModel.modelAlias !== undefined) {
-    resolved.modelAlias = perModel.modelAlias;
-  }
   if (perModel.chatTemplateCaps !== undefined) {
     resolved.chatTemplateCaps = perModel.chatTemplateCaps;
   }

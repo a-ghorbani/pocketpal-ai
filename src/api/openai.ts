@@ -411,9 +411,6 @@ export interface ServerPropsResult {
 const finiteNumber = (value: unknown): number | undefined =>
   typeof value === 'number' && Number.isFinite(value) ? value : undefined;
 
-const nonEmptyString = (value: unknown): string | undefined =>
-  typeof value === 'string' && value !== '' ? value : undefined;
-
 const definiteBoolean = (value: unknown): boolean | undefined =>
   typeof value === 'boolean' ? value : undefined;
 
@@ -545,16 +542,6 @@ export async function fetchServerProps(
         slotCount > 0
       ) {
         props.slotCount = slotCount;
-      }
-
-      const buildInfo = nonEmptyString(data?.build_info);
-      if (buildInfo !== undefined) {
-        props.buildInfo = buildInfo;
-      }
-
-      const modelAlias = nonEmptyString(data?.model_alias);
-      if (modelAlias !== undefined) {
-        props.modelAlias = modelAlias;
       }
 
       const chatTemplateCaps = readChatTemplateCaps(data?.chat_template_caps);

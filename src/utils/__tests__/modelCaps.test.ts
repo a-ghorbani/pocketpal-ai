@@ -149,7 +149,7 @@ describe('resolveModelCaps', () => {
           remoteModel(),
           env({
             remoteProps: {
-              'srv/gemma-4-e2b': {slotCount: 4, buildInfo: 'b9976-e3546c794'},
+              'srv/gemma-4-e2b': {slotCount: 4},
             },
             activeModelId: 'srv/gemma-4-e2b',
           }),

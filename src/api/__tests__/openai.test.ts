@@ -722,8 +722,11 @@ describe('fetchServerProps', () => {
       n_predict: wire.n_predict,
     });
     expect(props.slotCount).toBe(propsModelDescribing.total_slots);
-    expect(props.buildInfo).toBe(propsModelDescribing.build_info);
-    expect(props.modelAlias).toBe(propsModelDescribing.model_alias);
+    // The wire carries both; nothing reads them, so nothing persists them.
+    expect(propsModelDescribing.build_info).toBeTruthy();
+    expect(propsModelDescribing.model_alias).toBeTruthy();
+    expect(props).not.toHaveProperty('buildInfo');
+    expect(props).not.toHaveProperty('modelAlias');
 
     expect(presence).toEqual({
       isSleeping: propsModelDescribing.is_sleeping,

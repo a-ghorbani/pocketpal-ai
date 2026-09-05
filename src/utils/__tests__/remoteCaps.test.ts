@@ -119,8 +119,6 @@ describe('resolveRemoteProps', () => {
   const described = {
     samplerDefaults: {top_k: 40, temperature: 0.8},
     slotCount: 4,
-    buildInfo: 'b9976-e3546c794',
-    modelAlias: 'bartowski/Qwen_Qwen3-1.7B-GGUF:Q4_K_M',
     chatTemplateCaps: {supportsTools: true},
   };
 
