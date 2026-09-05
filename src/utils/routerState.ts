@@ -73,6 +73,16 @@ export interface RouterLive extends RouterLiveDetail {
 export type RouterOpKind = 'load' | 'unload' | 'download';
 
 /**
+ * How an operation ended for whoever was waiting on it. `withdrawn` is not a
+ * kind of failure: the user stopped the request, which is a fact about the
+ * request and not about the model.
+ */
+export type RouterOpOutcome = 'ready' | 'failed' | 'withdrawn';
+
+/** The same, plus the answer for a server that is not a router at all. */
+export type RouterLoadOutcome = RouterOpOutcome | 'not-router';
+
+/**
  * Why an operation ended badly. The cause carries the copy; `message` carries
  * the server's own words where it gave any, which are not a stable contract
  * and are only ever passed through.

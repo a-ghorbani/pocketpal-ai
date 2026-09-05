@@ -422,6 +422,17 @@ describe('loadFailureFrom', () => {
     ).toBeUndefined();
   });
 
+  // The states the narrowing exists for: a row saying the model is resident
+  // supports no claim that it did not load, whichever caller asks.
+  it.each(['loaded', 'sleeping'] as RouterRowState[])(
+    'builds none from a row reading %s, which is the model resident',
+    state => {
+      expect(
+        loadFailureFrom(listed(state), op(), 'exit code 1'),
+      ).toBeUndefined();
+    },
+  );
+
   it.each(['unloaded', 'failed', 'absent'] as RouterRowState[])(
     'blames the load off a row reading %s',
     state => {
@@ -466,6 +477,17 @@ describe('waitStoppedFailureFrom', () => {
   it('reports nothing for a request the user withdrew', () => {
     expect(waitStoppedFailureFrom(listed('loading'), op(true))).toBeUndefined();
   });
+
+  // The ceiling can find the model resident. Reporting the end of our own
+  // wait is honest there; reporting that the model did not load is not.
+  it.each(['loaded', 'sleeping'] as RouterRowState[])(
+    'reports the wait ending, not a failure, off a row reading %s',
+    state => {
+      expect(waitStoppedFailureFrom(listed(state), op())).toEqual({
+        cause: 'wait-stopped',
+      });
+    },
+  );
 });
 
 describe('unreachableFailureFrom', () => {

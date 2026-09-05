@@ -1578,6 +1578,150 @@ describe('one presenter at a time', () => {
     expect(serverStore.routerReason(id, TARGET)).toBeUndefined();
   });
 
+  // The last of the keyed post-await writes: a refused unload's server text
+  // landed on whatever the key held two awaits later, so the load that
+  // replaced it reported "this model did not load" in the unload's words.
+  it('does not let a refused unload put its words on the operation that replaced it', async () => {
+    const id = await routerServer('sleeping');
+    let refuse: (value: unknown) => void = () => {};
+    mockedRouterUnload.mockImplementationOnce(
+      () =>
+        new Promise(resolve => {
+          refuse = resolve;
+        }),
+    );
+    const unload = serverStore.unloadRouterModel(id, TARGET);
+    await flush();
+    const load = serverStore.ensureRouterModelLoaded(id, TARGET);
+    await flush();
+    expect(serverStore.routerOp(id, TARGET)?.kind).toBe('load');
+
+    answerWith('unloaded');
+    refuse({status: 400, body: {error: {message: 'model is not loaded'}}});
+    await unload;
+    await advance(ROUTER_ACK_MS + ROUTER_POLL_MS);
+
+    await expect(load).resolves.toBe('failed');
+    expect(serverStore.routerReason(id, TARGET)?.message).toBeUndefined();
+  });
+
+  // Releasing the caller at the tap removed the only thing keeping a load
+  // idempotent, so a second one went out while the cancel's own unload was
+  // still on the wire — and the operation it replaced lost the withdrawal.
+  it('posts no second load while the withdrawal it follows is still in flight', async () => {
+    const id = await routerServer('unloaded');
+    let finishUnload: (value: unknown) => void = () => {};
+    mockedRouterUnload.mockImplementationOnce(
+      () =>
+        new Promise(resolve => {
+          finishUnload = resolve;
+        }),
+    );
+    serverStore.ensureRouterModelLoaded(id, TARGET);
+    await flush();
+    mockedRouterLoad.mockClear();
+
+    const cancelled = serverStore.cancelRouterOp(id, TARGET);
+    await flush();
+    serverStore.ensureRouterModelLoaded(id, TARGET);
+    await flush();
+
+    expect(mockedRouterLoad).not.toHaveBeenCalled();
+    expect(serverStore.routerOp(id, TARGET)?.cancelled).toBe(true);
+
+    finishUnload({status: 200, body: {success: true}});
+    await cancelled;
+    await flush();
+  });
+
+  // Three wirings of the same bound. Only the helper was pinned, so any of
+  // them could be removed with the suite green.
+  it('bounds the words a refusal leaves on the record', async () => {
+    const id = await routerServer('unloaded');
+    mockedRouterLoad.mockResolvedValueOnce({
+      status: 500,
+      body: {error: {message: 'x'.repeat(5000)}},
+    });
+
+    await expect(serverStore.ensureRouterModelLoaded(id, TARGET)).resolves.toBe(
+      'failed',
+    );
+
+    expect(serverStore.routerReason(id, TARGET)?.message).toHaveLength(200);
+  });
+
+  it('bounds the words a transport failure leaves on the record', async () => {
+    const id = await routerServer('unloaded');
+    mockedRouterLoad.mockRejectedValueOnce(new Error('y'.repeat(5000)));
+
+    await expect(serverStore.ensureRouterModelLoaded(id, TARGET)).resolves.toBe(
+      'failed',
+    );
+
+    expect(serverStore.routerReason(id, TARGET)?.message).toHaveLength(200);
+  });
+
+  // The overlay reaches a key by two routes. Starting an operation clears it;
+  // adopting one moves it, and did not.
+  it('clears a key of an earlier attempt when a download adopts it', async () => {
+    const ADOPTED = 'ggml-org/gemma-3-270m-it-GGUF:Q8_0';
+    mockedRouterDownload.mockResolvedValue({status: 200, body: {}});
+    const id = await routerServer();
+    runInAction(() => {
+      serverStore.routerEvents[`${id}/${ADOPTED}`] = {
+        progress: {value: 0.6},
+        exitCode: 1,
+        at: Date.now(),
+      };
+    });
+    await serverStore.startRouterDownload(id, 'as-typed');
+
+    serverStore.applyRouterEvent(id, {
+      model: ADOPTED,
+      event: 'download_progress',
+      data: {progress: {a: {done: 1, total: 4}}},
+    });
+
+    expect(serverStore.routerOp(id, ADOPTED)?.kind).toBe('download');
+    expect(serverStore.routerLive(id, ADOPTED)?.progress).toBeUndefined();
+    expect(serverStore.routerLive(id, ADOPTED)?.exitCode).toBeUndefined();
+  });
+
+  // A replaced attempt does not act on the user's desktop either: its refusal
+  // settles nothing, writes nothing, and asks for nothing.
+  it('issues no request on behalf of an attempt that has been replaced', async () => {
+    const id = await routerServer('unloaded');
+    let refuse: (value: unknown) => void = () => {};
+    mockedRouterLoad.mockImplementationOnce(
+      () =>
+        new Promise(resolve => {
+          refuse = resolve;
+        }),
+    );
+    const load = serverStore.ensureRouterModelLoaded(id, TARGET);
+    await flush();
+    mockedRouterUnload.mockResolvedValue({status: 200, body: {success: true}});
+    serverStore.unloadRouterModel(id, TARGET);
+    await flush();
+    mockedFetch.mockClear();
+
+    refuse({status: 500, body: {error: {message: 'failed to allocate'}}});
+    await load;
+    await flush();
+
+    expect(mockedFetch).not.toHaveBeenCalled();
+    expect(serverStore.routerOp(id, TARGET)?.reason).toBeUndefined();
+  });
+
+  it('bounds the words a refused download leaves for the field to show', async () => {
+    const id = await routerServer();
+    mockedRouterDownload.mockRejectedValueOnce(new Error('z'.repeat(5000)));
+
+    const result = await serverStore.startRouterDownload(id, 'owner/repo:Q8_0');
+
+    expect(result.message).toHaveLength(200);
+  });
+
   it('still blames the model when the row it settles on says it failed', async () => {
     const id = await routerServer('unloaded');
     const pending = serverStore.ensureRouterModelLoaded(id, TARGET);

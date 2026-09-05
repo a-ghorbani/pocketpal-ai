@@ -36,6 +36,8 @@ import {
   RouterListState,
   RouterLive,
   RouterOp,
+  RouterLoadOutcome,
+  RouterOpOutcome,
   RouterRowState,
   RouterStreamCap,
 } from '../utils/routerState';
@@ -163,9 +165,7 @@ interface RouterListShape {
   stale: boolean;
 }
 
-export type RouterOpOutcome = 'ready' | 'failed' | 'withdrawn';
-
-export type RouterLoadOutcome = RouterOpOutcome | 'not-router';
+export type {RouterLoadOutcome, RouterOpOutcome};
 
 class ServerStore {
   servers: ServerConfig[] = [];
@@ -227,6 +227,8 @@ class ServerStore {
     (outcome: RouterOpOutcome) => void
   >();
   private routerLoadPromises = new Map<string, Promise<RouterLoadOutcome>>();
+  /** Outbound work a withdrawal still owes on a key, until its unload lands. */
+  private routerWithdrawals = new Map<string, Promise<void>>();
 
   constructor() {
     makeAutoObservable(this, {
@@ -249,6 +251,7 @@ class ServerStore {
       routerAttemptSeq: false,
       routerOpWaiters: false,
       routerLoadPromises: false,
+      routerWithdrawals: false,
     } as AnnotationsMap<ServerStore, string>);
 
     makePersistable(this, {
@@ -1191,6 +1194,10 @@ class ServerStore {
       return 'not-router';
     }
     const key = `${serverId}/${remoteModelId}`;
+    const withdrawal = this.routerWithdrawals.get(key);
+    if (withdrawal) {
+      await withdrawal;
+    }
     const pending = this.routerLoadPromises.get(key);
     if (pending) {
       return pending;
@@ -1283,12 +1290,9 @@ class ServerStore {
     if (verdict === 'in-flight') {
       return;
     }
-    runInAction(() => {
-      const op = this.routerOps[key];
-      if (op) {
-        op.reason = reason;
-        op.verdictRequested = true;
-      }
+    this.withRouterAttempt(key, attempt, op => {
+      op.reason = reason;
+      op.verdictRequested = true;
     });
     this.requestRouterReconcile(serverId);
   }
@@ -1314,9 +1318,10 @@ class ServerStore {
     if (!server) {
       return 'failed';
     }
+    const attempt = this.nextRouterAttempt();
     const settled = this.startRouterOp(key, {
       kind: 'unload',
-      attempt: this.nextRouterAttempt(),
+      attempt,
       phase: 'requested',
       serverId,
       key,
@@ -1334,11 +1339,8 @@ class ServerStore {
         server.requestTimeoutMs,
       );
       if (status < 200 || status >= 300) {
-        runInAction(() => {
-          const op = this.routerOps[key];
-          if (op) {
-            op.reason = routerErrorMessage(body);
-          }
+        this.withRouterAttempt(key, attempt, op => {
+          op.reason = routerErrorMessage(body);
         });
       }
     } catch {
@@ -1380,9 +1382,10 @@ class ServerStore {
         message: error?.message && capServerText(error.message),
       };
     }
+    const attempt = this.nextRouterAttempt();
     this.startRouterOp(key, {
       kind: 'download',
-      attempt: this.nextRouterAttempt(),
+      attempt,
       phase: 'requested',
       serverId,
       key,
@@ -1412,17 +1415,34 @@ class ServerStore {
     // needs the list to confirm that. Whether the model is loaded is a
     // separate question, and the operation goes on asking it below.
     this.releaseRouterWaiter(key, 'withdrawn');
-    const server = this.servers.find(s => s.id === serverId);
-    if (server) {
-      const apiKey = await this.getApiKey(serverId);
-      await routerUnload(
-        server.url,
-        remoteModelId,
-        apiKey,
-        server.requestTimeoutMs,
-      ).catch(() => undefined);
+    // Releasing the caller does not release the key: this withdrawal still
+    // owes an unload, and a load posted before it lands races it on the wire
+    // and replaces the operation carrying the withdrawal.
+    const withdrawal = this.postRouterCancel(serverId, remoteModelId);
+    this.routerWithdrawals.set(key, withdrawal);
+    try {
+      await withdrawal;
+    } finally {
+      this.routerWithdrawals.delete(key);
     }
     this.requestRouterReconcile(serverId);
+  }
+
+  private async postRouterCancel(
+    serverId: string,
+    remoteModelId: string,
+  ): Promise<void> {
+    const server = this.servers.find(s => s.id === serverId);
+    if (!server) {
+      return;
+    }
+    const apiKey = await this.getApiKey(serverId);
+    await routerUnload(
+      server.url,
+      remoteModelId,
+      apiKey,
+      server.requestTimeoutMs,
+    ).catch(() => undefined);
   }
 
   /** A number no other operation carries, so a late answer can be placed. */
@@ -1435,6 +1455,19 @@ class ServerStore {
    * carries. A request that has been replaced is reporting about something
    * nothing is tracking, and its answer would land on the replacement.
    */
+  /** Applies only while this key still carries the attempt that is answering. */
+  private withRouterAttempt(
+    key: string,
+    attempt: number,
+    apply: (op: RouterOp) => void,
+  ): void {
+    const op = this.routerOps[key];
+    if (op?.attempt !== attempt) {
+      return;
+    }
+    runInAction(() => apply(op));
+  }
+
   private settleRouterAttempt(
     key: string,
     attempt: number,
@@ -1547,7 +1580,8 @@ class ServerStore {
       return;
     }
     // A withdrawn request has no outcome left to report, whatever the row goes
-    // on saying: what the caller is waiting on is the request, not the model.
+    // on saying. Its caller was answered at the tap, so what this branch is
+    // for is the record: falling through would let the row's state decide one.
     if (op.cancelled) {
       this.settleRouterOp(key, 'withdrawn');
       return;
