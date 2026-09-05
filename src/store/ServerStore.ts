@@ -23,6 +23,7 @@ import type {ListDerivedCaps} from '../utils/listCaps';
 import {
   applyLivePatch,
   loadFailureFrom,
+  pickerRowsFromList,
   rowStateFromList,
   unloadFailureFrom,
   unreachableFailureFrom,
@@ -40,6 +41,7 @@ import {
 } from '../utils/routerState';
 import {
   openRouterEventStream,
+  capServerText,
   routerErrorMessage,
   routerDownload,
   routerLoad,
@@ -147,9 +149,8 @@ function dropServerEntries<T>(
 
 /**
  * What a `GET /v1/models` fetch found about the whole response rather than
- * about any row, plus when it ran. Live-only, like everything router-shaped:
- * a desktop's state belongs to that desktop, and a persisted copy of it is
- * only a stale claim.
+ * about any row. Live-only, like everything router-shaped: a desktop's state
+ * belongs to that desktop, and a persisted copy of it is only a stale claim.
  */
 interface RouterListShape {
   hasModelsKey: boolean;
@@ -162,7 +163,7 @@ interface RouterListShape {
   stale: boolean;
 }
 
-export type RouterOpOutcome = 'ready' | 'failed';
+export type RouterOpOutcome = 'ready' | 'failed' | 'withdrawn';
 
 export type RouterLoadOutcome = RouterOpOutcome | 'not-router';
 
@@ -220,6 +221,7 @@ class ServerStore {
   private routerPollInFlight = new Set<string>();
   private routerLastPollAt: Record<string, number> = {};
   private routerFetchSeq = 0;
+  private routerAttemptSeq = 0;
   private routerOpWaiters = new Map<
     string,
     (outcome: RouterOpOutcome) => void
@@ -244,6 +246,7 @@ class ServerStore {
       routerPollInFlight: false,
       routerLastPollAt: false,
       routerFetchSeq: false,
+      routerAttemptSeq: false,
       routerOpWaiters: false,
       routerLoadPromises: false,
     } as AnnotationsMap<ServerStore, string>);
@@ -530,24 +533,10 @@ class ServerStore {
    * and the copy for one that never arrived has nowhere to render.
    */
   routerPickerRows(serverId: string): RemoteModelInfo[] {
-    const rows = this.serverModels.get(serverId) ?? [];
-    const seen = new Set(rows.map(row => row.id));
-    const prefix = `${serverId}/`;
-    const pending: RemoteModelInfo[] = [];
-    for (const map of [this.routerOps, this.routerReasons]) {
-      for (const key of Object.keys(map)) {
-        if (!key.startsWith(prefix)) {
-          continue;
-        }
-        const id = key.slice(prefix.length);
-        if (seen.has(id)) {
-          continue;
-        }
-        seen.add(id);
-        pending.push({id, object: 'model', owned_by: ''});
-      }
-    }
-    return [...rows, ...pending];
+    return pickerRowsFromList(this.serverModels.get(serverId) ?? [], serverId, [
+      ...Object.keys(this.routerOps),
+      ...Object.keys(this.routerReasons),
+    ]) as RemoteModelInfo[];
   }
 
   routerOp(serverId: string, remoteModelId: string): RouterOp | undefined {
@@ -1109,6 +1098,9 @@ class ServerStore {
     runInAction(() => {
       this.setRouterOp(previousKey, undefined);
       this.setRouterOp(exact, {...op, key: exact});
+      // The adopted key may carry detail from an earlier attempt on it, and
+      // this operation did not go through the clearing that starting one does.
+      delete this.routerEvents[exact];
       const live = this.routerEvents[previousKey];
       if (live) {
         delete this.routerEvents[previousKey];
@@ -1222,8 +1214,10 @@ class ServerStore {
       this.routerLoadPromises.delete(key);
       return 'not-router';
     }
+    const attempt = this.nextRouterAttempt();
     const settled = this.startRouterOp(key, {
       kind: 'load',
+      attempt,
       phase: 'requested',
       serverId,
       key,
@@ -1241,7 +1235,7 @@ class ServerStore {
         server.requestTimeoutMs,
       );
       if (status < 200 || status >= 300) {
-        this.resolveRefusedLoad(serverId, key, body);
+        this.resolveRefusedLoad(serverId, key, attempt, body);
       }
       // A 2xx says the request was accepted, not that a load is under way: the
       // child can still fail to launch with nothing further on the wire.
@@ -1251,10 +1245,14 @@ class ServerStore {
       // no position to make.
       const failed = this.routerOps[key];
       if (failed) {
-        this.settleRouterOp(
+        this.settleRouterAttempt(
           key,
+          attempt,
           'failed',
-          unreachableFailureFrom(failed, error?.message),
+          unreachableFailureFrom(
+            failed,
+            error?.message && capServerText(error.message),
+          ),
         );
       }
     }
@@ -1270,12 +1268,16 @@ class ServerStore {
   private resolveRefusedLoad(
     serverId: string,
     key: string,
+    attempt: number,
     body: unknown,
   ): void {
+    if (this.routerOps[key]?.attempt !== attempt) {
+      return;
+    }
     const reason = routerErrorMessage(body);
     const verdict = loadVerdict(this.routerRowFromList(serverId, key));
     if (verdict === 'ready') {
-      this.settleRouterOp(key, 'ready');
+      this.settleRouterAttempt(key, attempt, 'ready');
       return;
     }
     if (verdict === 'in-flight') {
@@ -1314,6 +1316,7 @@ class ServerStore {
     }
     const settled = this.startRouterOp(key, {
       kind: 'unload',
+      attempt: this.nextRouterAttempt(),
       phase: 'requested',
       serverId,
       key,
@@ -1372,10 +1375,14 @@ class ServerStore {
         return {accepted: false, message: routerErrorMessage(body)};
       }
     } catch (error: any) {
-      return {accepted: false, message: error?.message};
+      return {
+        accepted: false,
+        message: error?.message && capServerText(error.message),
+      };
     }
     this.startRouterOp(key, {
       kind: 'download',
+      attempt: this.nextRouterAttempt(),
       phase: 'requested',
       serverId,
       key,
@@ -1412,6 +1419,28 @@ class ServerStore {
       ).catch(() => undefined);
     }
     this.requestRouterReconcile(serverId);
+  }
+
+  /** A number no other operation carries, so a late answer can be placed. */
+  private nextRouterAttempt(): number {
+    return ++this.routerAttemptSeq;
+  }
+
+  /**
+   * Settles only if the attempt that is answering is still the one this key
+   * carries. A request that has been replaced is reporting about something
+   * nothing is tracking, and its answer would land on the replacement.
+   */
+  private settleRouterAttempt(
+    key: string,
+    attempt: number,
+    outcome: RouterOpOutcome,
+    failure?: RouterFailure,
+  ): void {
+    if (this.routerOps[key]?.attempt !== attempt) {
+      return;
+    }
+    this.settleRouterOp(key, outcome, failure);
   }
 
   private startRouterOp(key: string, op: RouterOp): Promise<RouterLoadOutcome> {
@@ -1501,7 +1530,13 @@ class ServerStore {
     // A withdrawn request has no outcome left to report, whatever the row goes
     // on saying: what the caller is waiting on is the request, not the model.
     if (op.cancelled) {
-      this.settleRouterOp(key, 'failed');
+      this.settleRouterOp(key, 'withdrawn');
+      return;
+    }
+    // A read that began before the request reports the state from before it,
+    // which settles this request in neither direction. An uncorroborated
+    // success means keep waiting, never declare failure.
+    if (!this.hasReconciledSince(op)) {
       return;
     }
     if (verdict === 'in-flight') {
@@ -1573,11 +1608,11 @@ class ServerStore {
       return;
     }
     if (verdict === 'never-arrived') {
-      this.settleRouterOp(
-        key,
-        'failed',
-        op.cancelled ? undefined : {cause: 'download-not-fetched'},
-      );
+      if (op.cancelled) {
+        this.settleRouterOp(key, 'withdrawn');
+      } else {
+        this.settleRouterOp(key, 'failed', {cause: 'download-not-fetched'});
+      }
       return;
     }
     runInAction(() => {

@@ -390,6 +390,7 @@ describe('applyLivePatch', () => {
 describe('loadFailureFrom', () => {
   const op = (cancelled?: boolean): RouterOp => ({
     kind: 'load',
+    attempt: 1,
     phase: 'active',
     serverId: 'srv',
     key: 'srv/alpha',
@@ -435,6 +436,7 @@ describe('loadFailureFrom', () => {
 describe('waitStoppedFailureFrom', () => {
   const op = (cancelled?: boolean): RouterOp => ({
     kind: 'load',
+    attempt: 1,
     phase: 'active',
     serverId: 'srv',
     key: 'srv/alpha',
@@ -469,6 +471,7 @@ describe('waitStoppedFailureFrom', () => {
 describe('unreachableFailureFrom', () => {
   const op = (cancelled?: boolean): RouterOp => ({
     kind: 'load',
+    attempt: 1,
     phase: 'active',
     serverId: 'srv',
     key: 'srv/alpha',

@@ -5,6 +5,7 @@ import {ReasoningCapability} from '../../src/utils/reasoningCapability';
 import {RemoteModelInfo} from '../../src/api/openai';
 import {deriveListCapsMap} from '../../src/utils/listCaps';
 import {
+  pickerRowsFromList,
   rowStateFromList,
   RouterFailure,
   RouterLive,
@@ -109,21 +110,10 @@ class MockServerStore {
   }
 
   routerPickerRows(serverId: string): RemoteModelInfo[] {
-    const rows = this.serverModels.get(serverId) ?? [];
-    const seen = new Set(rows.map(row => row.id));
-    const prefix = `${serverId}/`;
-    const pending: RemoteModelInfo[] = [];
-    for (const map of [this.routerOps, this.routerReasons]) {
-      for (const key of Object.keys(map)) {
-        const id = key.slice(prefix.length);
-        if (!key.startsWith(prefix) || seen.has(id)) {
-          continue;
-        }
-        seen.add(id);
-        pending.push({id, object: 'model', owned_by: ''});
-      }
-    }
-    return [...rows, ...pending];
+    return pickerRowsFromList(this.serverModels.get(serverId) ?? [], serverId, [
+      ...Object.keys(this.routerOps),
+      ...Object.keys(this.routerReasons),
+    ]) as RemoteModelInfo[];
   }
 
   routerOp(serverId: string, remoteModelId: string): RouterOp | undefined {

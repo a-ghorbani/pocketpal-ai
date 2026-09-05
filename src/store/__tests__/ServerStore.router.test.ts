@@ -532,6 +532,7 @@ describe('the router event stream', () => {
     runInAction(() => {
       serverStore.routerOps[`${id}/${model}`] = {
         kind,
+        attempt: 1,
         phase: 'requested',
         serverId: id,
         key: `${id}/${model}`,
@@ -750,6 +751,7 @@ describe('the poll tier', () => {
     runInAction(() => {
       serverStore.routerOps[`${serverId}/alpha`] = {
         kind,
+        attempt: 1,
         phase: 'requested',
         serverId,
         key: `${serverId}/alpha`,
@@ -1138,7 +1140,7 @@ describe('loading a model', () => {
 
     expect(serverStore.routerOp(id, TARGET)).toBeUndefined();
     expect(serverStore.routerReason(id, TARGET)).toBeUndefined();
-    await expect(pending).resolves.toBe('failed');
+    await expect(pending).resolves.toBe('withdrawn');
   });
 
   // A load in flight is the operation's to present, and the operation is gone.
@@ -1436,6 +1438,112 @@ describe('one presenter at a time', () => {
     await slow;
 
     expect(serverStore.routerRowState(id, TARGET)).toBe('loaded');
+  });
+
+  // Two routes reach the failure branch with a row that reads `loaded`, and
+  // both were rendering "Loaded", an Unload button and "This model did not
+  // load." together. An uncorroborated success means keep waiting.
+  it('does not call a loaded row a failure when an event marked the op active', async () => {
+    const id = await routerServer('unloaded');
+    let answerOld: (value: unknown) => void = () => {};
+    mockedFetch.mockImplementationOnce(
+      () =>
+        new Promise(resolve => {
+          answerOld = resolve;
+        }),
+    );
+    const older = serverStore.fetchModelsForServer(id);
+    serverStore.ensureRouterModelLoaded(id, TARGET);
+    await flush();
+    serverStore.applyRouterEvent(id, {
+      model: TARGET,
+      event: 'status_change',
+      data: {status: 'loading'},
+    });
+
+    answerOld(listResult(rowsWith('loaded'), false));
+    await older;
+    await flush();
+
+    expect(serverStore.routerReason(id, TARGET)).toBeUndefined();
+    expect(serverStore.routerOp(id, TARGET)).toBeDefined();
+  });
+
+  it('does not call a loaded row a failure when a refusal asked for a verdict', async () => {
+    const id = await routerServer('unloaded');
+    let answerOld: (value: unknown) => void = () => {};
+    mockedFetch.mockImplementationOnce(
+      () =>
+        new Promise(resolve => {
+          answerOld = resolve;
+        }),
+    );
+    const older = serverStore.fetchModelsForServer(id);
+    mockedRouterLoad.mockResolvedValueOnce({
+      status: 400,
+      body: {error: {message: 'model already loaded'}},
+    });
+    mockedFetch.mockRejectedValue(new Error('Network request failed'));
+    serverStore.ensureRouterModelLoaded(id, TARGET);
+    await flush();
+    expect(serverStore.routerOp(id, TARGET)?.verdictRequested).toBe(true);
+
+    answerOld(listResult(rowsWith('loaded'), false));
+    await older;
+    await flush();
+
+    expect(serverStore.routerReason(id, TARGET)).toBeUndefined();
+  });
+
+  // An operation is identified by its attempt, not by the key it sits on: a
+  // request that has already been replaced is answering about something the
+  // store is no longer tracking.
+  it('does not let a superseded load settle the operation that replaced it', async () => {
+    const id = await routerServer('sleeping');
+    let failLoad: (error: unknown) => void = () => {};
+    mockedRouterLoad.mockImplementationOnce(
+      () =>
+        new Promise((_resolve, reject) => {
+          failLoad = reject;
+        }),
+    );
+    const load = serverStore.ensureRouterModelLoaded(id, TARGET);
+    await flush();
+    mockedRouterUnload.mockResolvedValue({status: 200, body: {success: true}});
+    serverStore.unloadRouterModel(id, TARGET);
+    await flush();
+    expect(serverStore.routerOp(id, TARGET)?.kind).toBe('unload');
+
+    failLoad(new Error('Network request failed'));
+    await load;
+    await flush();
+
+    expect(serverStore.routerOp(id, TARGET)?.kind).toBe('unload');
+    expect(serverStore.routerReason(id, TARGET)).toBeUndefined();
+  });
+
+  it('does not let a superseded load report the operation that replaced it ready', async () => {
+    const id = await routerServer('sleeping');
+    let refuse: (value: unknown) => void = () => {};
+    mockedRouterLoad.mockImplementationOnce(
+      () =>
+        new Promise(resolve => {
+          refuse = resolve;
+        }),
+    );
+    const load = serverStore.ensureRouterModelLoaded(id, TARGET);
+    await flush();
+    mockedRouterUnload.mockResolvedValue({status: 200, body: {success: true}});
+    serverStore.unloadRouterModel(id, TARGET);
+    await flush();
+
+    refuse({status: 400, body: {error: {message: 'model is already running'}}});
+    await load;
+    await flush();
+
+    // The row still says the model is resident, so the unload has converged
+    // on nothing and must still be in flight.
+    expect(serverStore.routerOp(id, TARGET)?.kind).toBe('unload');
   });
 
   it('still blames the model when the row it settles on says it failed', async () => {

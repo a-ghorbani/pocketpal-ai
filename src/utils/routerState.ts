@@ -91,6 +91,12 @@ export interface RouterFailure {
 
 export interface RouterOp {
   kind: RouterOpKind;
+  /**
+   * Which attempt this is, store-wide. A key can carry a second operation
+   * while the first is still in flight, and the first's late answer is about
+   * something nothing is tracking any more.
+   */
+  attempt: number;
   phase: 'requested' | 'active';
   serverId: string;
   /** Rekeyed once when a lone download adopts the id its first event carries. */
@@ -166,6 +172,35 @@ export function rowStateFromList(
   return mapRowStatus(row && stale ? {id: row.id} : row);
 }
 
+/**
+ * What the picker lists for one server: the server's own rows, plus a row for
+ * every model this app has business about that the server does not list. A
+ * download has no row until the weights land, so without the second half an
+ * in-flight fetch is invisible, its Cancel unreachable, and the copy for one
+ * that never arrived has nowhere to render.
+ */
+export function pickerRowsFromList<Row extends {id: string}>(
+  rows: Row[],
+  serverId: string,
+  ownKeys: string[],
+): Array<Row | {id: string; object: string; owned_by: string}> {
+  const seen = new Set(rows.map(row => row.id));
+  const prefix = `${serverId}/`;
+  const pending: Array<{id: string; object: string; owned_by: string}> = [];
+  for (const key of ownKeys) {
+    if (!key.startsWith(prefix)) {
+      continue;
+    }
+    const id = key.slice(prefix.length);
+    if (seen.has(id)) {
+      continue;
+    }
+    seen.add(id);
+    pending.push({id, object: 'model', owned_by: ''});
+  }
+  return [...rows, ...pending];
+}
+
 /** Upstream matches a row to a model id by either key; so do we. */
 export function rowMatchesKey(row: RouterListRow, id: string): boolean {
   return row.id === id || row.model === id;
@@ -207,9 +242,12 @@ export function loadFailureFrom(
   if (op.cancelled || state === 'unknown') {
     return undefined;
   }
-  return loadVerdict(state) === 'in-flight'
-    ? undefined
-    : {cause: 'load-failed', message};
+  // Only a row that settles the question against the model supports the
+  // claim. `ready` is stated rather than assumed: callers used to guarantee
+  // it could not arrive here, and one of them stopped.
+  return loadVerdict(state) === 'failed'
+    ? {cause: 'load-failed', message}
+    : undefined;
 }
 
 /**
