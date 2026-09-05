@@ -1014,48 +1014,91 @@ describe('ServerStore', () => {
         ...overrides,
       });
 
+    const flush = () => new Promise(r => setImmediate(r));
+
+    /** A probe held open until the test releases it. */
+    const deferredProbe = () => {
+      let settle: (v: unknown) => void = () => {};
+      mockedFetchServerProps.mockImplementationOnce(
+        () => new Promise(resolve => (settle = resolve)),
+      );
+      return () => settle({caps: {}, props: {}});
+    };
+
     it("does not answer a repointed server with the old url's probe", async () => {
       const id = addLlamaServer();
       jest.clearAllMocks();
-      // Never resolved: the point is that the second call must not join it.
-      mockedFetchServerProps.mockImplementationOnce(
-        () => new Promise(() => {}),
-      );
-      void serverStore.fetchRemoteModelCaps(id, 'm');
-      await new Promise(r => setImmediate(r));
+      const release = deferredProbe();
+      const first = serverStore.fetchRemoteModelCaps(id, 'm');
+      await flush();
       expect(mockedFetchServerProps.mock.calls[0][0]).toBe(
         'http://localhost:8080',
       );
 
       serverStore.updateServer(id, {url: 'http://elsewhere:9090'});
       mockedFetchServerProps.mockResolvedValue(capsOnly({contextLength: 4096}));
-      await serverStore.fetchRemoteModelCaps(id, 'm');
+      // Deliberately not awaited before the assertion: a regression makes this
+      // join the still-open first probe, and the assertion must be what fails
+      // rather than the test timing out.
+      const second = serverStore.fetchRemoteModelCaps(id, 'm');
+      await flush();
 
       const urls = mockedFetchServerProps.mock.calls.map(c => c[0]);
       expect(urls).toContain('http://elsewhere:9090');
+
+      release();
+      await Promise.all([first, second]);
     });
 
     it('lets a probe be reissued after the app has been backgrounded', async () => {
       const id = addLlamaServer();
       jest.clearAllMocks();
-      mockedFetchServerProps.mockImplementationOnce(
-        () => new Promise(() => {}),
-      );
-      void serverStore.fetchRemoteModelCaps(id, 'm');
-      await new Promise(r => setImmediate(r));
+      const release = deferredProbe();
+      const first = serverStore.fetchRemoteModelCaps(id, 'm');
+      await flush();
       expect(mockedFetchServerProps).toHaveBeenCalledTimes(1);
 
-      // A probe spanning a background period cannot answer for the foreground.
-      // Re-register to obtain the same handler the constructor installed;
-      // clearAllMocks above discarded the constructor's recorded call.
+      // The constructor's registration was recorded before `clearAllMocks`, so
+      // re-register to get the same handler back.
       (serverStore as any).setupAppStateListener();
-      const onAppState = mockAddEventListener.mock.calls.at(-1)![1];
-      onAppState('background');
+      mockAddEventListener.mock.calls.at(-1)![1]('background');
 
       mockedFetchServerProps.mockResolvedValue(capsOnly({contextLength: 4096}));
-      await serverStore.fetchRemoteModelCaps(id, 'm');
+      const second = serverStore.fetchRemoteModelCaps(id, 'm');
+      await flush();
 
       expect(mockedFetchServerProps).toHaveBeenCalledTimes(2);
+
+      release();
+      await Promise.all([first, second]);
+    });
+
+    it('lets a settling stale probe alone rather than evicting its replacement', async () => {
+      const id = addLlamaServer();
+      jest.clearAllMocks();
+      const releaseStale = deferredProbe();
+      const stale = serverStore.fetchRemoteModelCaps(id, 'm');
+      await flush();
+
+      (serverStore as any).setupAppStateListener();
+      mockAddEventListener.mock.calls.at(-1)![1]('background');
+
+      const releaseLive = deferredProbe();
+      const live = serverStore.fetchRemoteModelCaps(id, 'm');
+      await flush();
+      expect(mockedFetchServerProps).toHaveBeenCalledTimes(2);
+
+      // The stale probe settles last. Deleting by key rather than by identity
+      // would drop the live probe's registration here.
+      releaseStale();
+      await stale;
+
+      const joined = serverStore.fetchRemoteModelCaps(id, 'm');
+      await flush();
+      expect(mockedFetchServerProps).toHaveBeenCalledTimes(2);
+
+      releaseLive();
+      await Promise.all([live, joined]);
     });
 
     it('writes the scoped probe result under the full model id', async () => {

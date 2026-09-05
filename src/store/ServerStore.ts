@@ -47,7 +47,10 @@ const PROPS_FIELDS = [
 // Compared by content, not identity. Every other member of PROPS_FIELDS is a
 // scalar, and the scalar set is derived rather than restated so a field added
 // above is compared by default instead of silently skipped.
-const PROPS_DEEP_FIELDS = ['samplerDefaults', 'chatTemplateCaps'] as const;
+const PROPS_DEEP_FIELDS = [
+  'samplerDefaults',
+  'chatTemplateCaps',
+] as const satisfies readonly (typeof PROPS_FIELDS)[number][];
 
 type PropsDeepField = (typeof PROPS_DEEP_FIELDS)[number];
 
@@ -55,6 +58,23 @@ const PROPS_SCALAR_FIELDS = PROPS_FIELDS.filter(
   (field): field is Exclude<(typeof PROPS_FIELDS)[number], PropsDeepField> =>
     !(PROPS_DEEP_FIELDS as readonly string[]).includes(field),
 );
+
+// Deriving the scalar set stops a new field being skipped, but not a new
+// object-valued one being compared by identity — which, against a body parsed
+// fresh each probe, is never equal and rewrites the map on every probe. This
+// makes that a compile error instead. The naked `K` matters: constraining it
+// inside the conditional stops the type distributing and the check silently
+// passes.
+type ScalarValued<K> = K extends keyof RemoteModelProps
+  ? NonNullable<RemoteModelProps[K]> extends object
+    ? never
+    : K
+  : never;
+
+const _scalarFieldsAreScalars: ScalarValued<
+  (typeof PROPS_SCALAR_FIELDS)[number]
+>[] = PROPS_SCALAR_FIELDS;
+void _scalarFieldsAreScalars;
 
 const isUnusableCaps = (caps: RemoteModelCaps) =>
   CAPS_FIELDS.every(f => caps[f] === undefined);
@@ -88,6 +108,29 @@ const samePropsContent = (a: RemoteModelProps, b: RemoteModelProps): boolean =>
 // Request bookkeeping rather than store state: a second probe for a key while
 // one is in flight awaits that one instead of issuing its own.
 const probesInFlight = new Map<string, Promise<void>>();
+
+/**
+ * The declared fields of a prior entry describing the same backend. Copying by
+ * name rather than spreading the hydrated object means a field dropped from the
+ * schema stops being carried forward; a spread would preserve it for the life
+ * of the entry, so a removal could never take effect.
+ */
+function carryForward<T extends {probedUrl?: string}>(
+  prior: T | undefined,
+  probedUrl: string,
+  fields: readonly (keyof T)[],
+): Partial<T> {
+  if (!prior || prior.probedUrl !== probedUrl) {
+    return {};
+  }
+  const kept: Partial<T> = {};
+  for (const field of fields) {
+    if (prior[field] !== undefined) {
+      kept[field] = prior[field];
+    }
+  }
+  return kept;
+}
 
 /**
  * Shared by every path that invalidates per-model state, so a new map cannot
@@ -392,11 +435,19 @@ class ServerStore {
       return inFlight;
     }
 
-    const request = this.probeRemoteModel(
+    // Deletes only its own registration. `clear()` can drop an entry while its
+    // probe is still pending, so a late settle would otherwise evict the
+    // replacement registered under the same key — the reprobe the clear exists
+    // to allow.
+    const request: Promise<void> = this.probeRemoteModel(
       serverId,
       remoteModelId,
       resolvedApiKey,
-    ).finally(() => probesInFlight.delete(key));
+    ).finally(() => {
+      if (probesInFlight.get(key) === request) {
+        probesInFlight.delete(key);
+      }
+    });
     probesInFlight.set(key, request);
     return request;
   }
@@ -460,7 +511,7 @@ class ServerStore {
       if (!isUnusableCaps(caps)) {
         const prior = this.remoteCaps[key];
         const merged: RemoteModelCaps = {
-          ...(prior?.probedUrl === probedUrl ? prior : undefined),
+          ...carryForward(prior, probedUrl, CAPS_FIELDS),
           ...caps,
           probedUrl,
         };
@@ -476,7 +527,7 @@ class ServerStore {
       if (!isUnusableProps(props)) {
         const prior = this.remoteProps[key];
         const merged: RemoteModelProps = {
-          ...(prior?.probedUrl === probedUrl ? prior : undefined),
+          ...carryForward(prior, probedUrl, PROPS_FIELDS),
           ...props,
           probedUrl,
         };
