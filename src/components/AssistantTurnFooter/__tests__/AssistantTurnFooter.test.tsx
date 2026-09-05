@@ -68,6 +68,9 @@ describe('AssistantTurnFooter', () => {
           predicted_per_second: 100,
           time_to_first_token_ms: 150,
         },
+        // Remote, so the origin gate passes and the absence under test is the
+        // server's silence rather than the gate withholding them.
+        completionResult: {used: 0, contextFull: false, isRemote: true},
       },
     });
     const {getByTestId} = render(<AssistantTurnFooter message={message} />);
