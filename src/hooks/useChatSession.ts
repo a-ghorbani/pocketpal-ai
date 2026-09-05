@@ -16,7 +16,10 @@ import {
   uiStore,
 } from '../store';
 import {resolveReasoningCapability} from '../utils/reasoningCapability';
-import {routerFailureText} from '../utils/routerCopy';
+import {
+  routerFailureLabel,
+  routerFailureMarkdownText,
+} from '../utils/routerCopy';
 
 import {MessageType, ModelOrigin, User} from '../utils/types';
 import {
@@ -553,11 +556,17 @@ export const useChatSession = (
 
     // Only this path can tell "waiting for weights" from "waiting for the
     // first token", so it waits here rather than inside the engine.
-    if ((await modelStore.ensureActiveRemoteModelReady()) === 'failed') {
-      const reason = routerFailureText(modelStore.activeRemoteFailure, l10n);
-      if (reason) {
-        await addSystemMessage(reason);
-      }
+    const readiness = await modelStore.ensureActiveRemoteModelReady();
+    if (readiness === 'withdrawn') {
+      // The user stopped the load themselves, so they know why this turn did
+      // not run. Nothing to report about the server.
+      return;
+    }
+    if (readiness === 'failed') {
+      await addSystemMessage(
+        routerFailureMarkdownText(modelStore.activeRemoteFailure, l10n) ??
+          routerFailureLabel('wait-stopped', l10n),
+      );
       return;
     }
 
@@ -901,7 +910,9 @@ export const useChatSession = (
           isRemote: modelStore.activeModel?.origin === ModelOrigin.REMOTE,
         });
       } else {
-        await addSystemMessage(`${l10n.chat.completionFailed}${errorMessage}`);
+        await addSystemMessage(
+          `${l10n.chat.completionFailed}${errorMessage || l10n.errors.unexpectedError}`,
+        );
       }
     } finally {
       try {

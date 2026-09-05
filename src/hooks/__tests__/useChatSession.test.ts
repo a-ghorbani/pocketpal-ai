@@ -182,11 +182,10 @@ describe('useChatSession', () => {
       );
     });
 
-    // Stopping the load is the user's own act. It leaves no record because it
-    // is not news about the server, and a message about the server is exactly
-    // what it must not produce.
-    it('sends nothing and says nothing when no record was left', async () => {
-      readiness().mockResolvedValueOnce('failed');
+    // Stopping the load is the user's own act, so they know why the turn did
+    // not run. Recognised as an outcome, not guessed at from a missing record.
+    it('sends nothing and says nothing when the user withdrew the request', async () => {
+      readiness().mockResolvedValueOnce('withdrawn');
       bindTo(undefined);
 
       const {result} = renderHook(() =>
@@ -202,6 +201,29 @@ describe('useChatSession', () => {
         chatSessionStore.addMessageToCurrentSession,
       ).not.toHaveBeenCalledWith(
         expect.objectContaining({metadata: {system: true}}),
+      );
+    });
+
+    // A failure that left no record is not a withdrawal: the turn is still
+    // waiting and is owed an account of why it stopped.
+    it('sends nothing and names the wait when a failure left no record', async () => {
+      readiness().mockResolvedValueOnce('failed');
+      bindTo(undefined);
+
+      const {result} = renderHook(() =>
+        useChatSession({current: null}, textMessage.author, mockAssistant),
+      );
+
+      await act(async () => {
+        await result.current.handleSendPress(textMessage);
+      });
+
+      expect(modelStore.context?.completion).not.toHaveBeenCalled();
+      expect(chatSessionStore.addMessageToCurrentSession).toHaveBeenCalledWith(
+        expect.objectContaining({
+          text: l10n.en.settings.routerModels.waitStopped,
+          metadata: {system: true},
+        }),
       );
     });
   });
@@ -245,7 +267,7 @@ describe('useChatSession', () => {
 
       expect(chatSessionStore.addMessageToCurrentSession).toHaveBeenCalledWith(
         expect.objectContaining({
-          text: l10n.en.chat.completionFailed,
+          text: `${l10n.en.chat.completionFailed}${l10n.en.errors.unexpectedError}`,
           author: assistant,
         }),
       );

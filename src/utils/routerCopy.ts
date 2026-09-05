@@ -23,23 +23,11 @@ export const routerFailureLabel = (
   }
 };
 
-/** The cap `src/api/openai.ts` already puts on server-supplied text. */
-const SERVER_TEXT_MAX = 200;
-
 /**
- * The server's words reach a markdown-rendered chat bubble, where its
- * formatting characters would be read as markup rather than shown, and where
- * an unbounded body would be the whole turn. They are not ours and not a
- * stable contract, so they arrive as one capped line of plain text.
+ * Everything a surface may need from one failure record. The picker row shows
+ * these in a plain `<Text>`; the chat renders markdown, so it takes the
+ * neutralised form below.
  */
-const asPlainServerText = (text: string): string =>
-  text
-    .replace(/\s+/g, ' ')
-    .replace(/[`*_~[\]()#>|\\]/g, '')
-    .trim()
-    .slice(0, SERVER_TEXT_MAX);
-
-/** No record, nothing to say: an operation may end without an outcome. */
 export const routerFailureText = (
   failure: RouterFailure | undefined,
   l10n: Translations,
@@ -48,6 +36,46 @@ export const routerFailureText = (
     return undefined;
   }
   const label = routerFailureLabel(failure.cause, l10n);
-  const detail = failure.message ? asPlainServerText(failure.message) : '';
+  return failure.message ? `${label} ${failure.message}` : label;
+};
+
+/**
+ * Direction and isolate controls, and the zero-width characters that hide
+ * beside them. JavaScript's `\s` matches none of these, so a collapse of
+ * whitespace leaves them in place to reorder what the user reads.
+ */
+const INVISIBLE = /[\u200B-\u200F\u202A-\u202E\u2066-\u2069\uFEFF]/g;
+
+/**
+ * Everything `marked` gives meaning to, plus `:` — which is not markup, but
+ * without which GFM autolinks a bare `https://…` into a tappable `<a href>`
+ * that `Linking.openURL` will open. Escaping rather than deleting keeps the
+ * characters on screen: a model identifier like `Q4_K_M` or a Windows path
+ * survives intact, which stripping did not.
+ */
+const MARKDOWN_ACTIVE = /[\\`*_{}[\]()#+\-.!|>~<&:]/g;
+
+/**
+ * The server's own words rendered inert for a markdown surface. They are not
+ * ours and carry no contract, so they arrive as one line of text that formats
+ * nothing, links to nothing and reorders nothing.
+ */
+export const asInertServerText = (text: string): string =>
+  text
+    .replace(INVISIBLE, '')
+    .replace(/\s+/g, ' ')
+    .trim()
+    .replace(MARKDOWN_ACTIVE, match => `\\${match}`);
+
+/** The same record, safe to hand to a markdown renderer. */
+export const routerFailureMarkdownText = (
+  failure: RouterFailure | undefined,
+  l10n: Translations,
+): string | undefined => {
+  if (!failure) {
+    return undefined;
+  }
+  const label = routerFailureLabel(failure.cause, l10n);
+  const detail = failure.message ? asInertServerText(failure.message) : '';
   return detail ? `${label} ${detail}` : label;
 };

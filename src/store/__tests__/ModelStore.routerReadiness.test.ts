@@ -57,13 +57,29 @@ describe('remote model readiness', () => {
     );
   });
 
-  // Withdrawing the request leaves no record because it is not news about the
-  // server, and the ten-minute ceiling now leaves one of its own. What remains
-  // here is a withdrawal, and it is refused as one — a type a surface can
-  // recognise, rather than an empty message a surface would have to guess at.
-  it('refuses one with no record as a withdrawal, not as a failure', async () => {
-    expect(await refusalFor(undefined)).toBeInstanceOf(
-      RemoteModelRequestWithdrawnError,
+  // A withdrawal is a fact known where `cancelled` is, so it arrives as an
+  // outcome rather than being re-derived from the absence of a record — an
+  // absence three other endings also produce.
+  it('refuses a withdrawn request as a withdrawal', async () => {
+    await modelStore.setRemoteModel(remoteModel);
+    (serverStore.ensureRouterModelLoaded as jest.Mock).mockResolvedValue(
+      'withdrawn',
+    );
+
+    const refusal = await modelStore
+      .engine!.completion({} as any)
+      .then(() => undefined)
+      .catch((error: Error) => error);
+
+    expect(refusal).toBeInstanceOf(RemoteModelRequestWithdrawnError);
+  });
+
+  // Superseded, abandoned, or settled off a row this build cannot read: all
+  // end `failed` with no record, and none of them is a withdrawal. They still
+  // owe the waiting turn an account of why it stopped.
+  it('refuses a failure with no record by naming the wait it stopped', async () => {
+    expect((await refusalFor(undefined))?.message).toBe(
+      l10n.en.settings.routerModels.waitStopped,
     );
   });
 

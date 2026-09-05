@@ -65,9 +65,23 @@ function routerBase(serverUrl: string): string {
 }
 
 /** The reason a server gave, where it gave one. Never a verdict. */
+/** The cap `src/api/openai.ts` already puts on server-supplied text. */
+const SERVER_TEXT_MAX = 200;
+
+/**
+ * Bounded here rather than at each surface, so what the store retains is
+ * bounded too. Counted in code points: a cut between the halves of a
+ * surrogate pair leaves a replacement character on screen.
+ */
+export function capServerText(text: string): string {
+  return Array.from(text).slice(0, SERVER_TEXT_MAX).join('');
+}
+
 export function routerErrorMessage(body: any): string | undefined {
   const message = body?.error?.message ?? body?.error;
-  return typeof message === 'string' && message ? message : undefined;
+  return typeof message === 'string' && message
+    ? capServerText(message)
+    : undefined;
 }
 
 async function postRouterOp(

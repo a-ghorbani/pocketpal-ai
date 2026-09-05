@@ -22,6 +22,7 @@ import {
 
 import {uiStore, hfStore} from '.';
 import {serverStore} from './ServerStore';
+import type {RouterLoadOutcome} from './ServerStore';
 import {chatSessionStore} from './ChatSessionStore';
 import {
   draftCacheDefaults,
@@ -43,7 +44,10 @@ import {
 import {getRecommendedProjectionModel} from '../utils/multimodalHelpers';
 import {isDraftOnlyModel} from '../utils/mtp';
 import {getOriginalModelName} from '../utils/formatters';
-import {routerFailureText} from '../utils/routerCopy';
+import {
+  routerFailureLabel,
+  routerFailureMarkdownText,
+} from '../utils/routerCopy';
 import type {RouterFailure} from '../utils/routerState';
 import type {OnboardingPalModelEntry} from './onboarding/onboardingPals';
 
@@ -2705,9 +2709,7 @@ class ModelStore {
    * binding rather than the mutable server record, so it can only ever act on
    * the backend this session is actually attached to.
    */
-  ensureActiveRemoteModelReady = async (): Promise<
-    'ready' | 'failed' | 'not-router'
-  > => {
+  ensureActiveRemoteModelReady = async (): Promise<RouterLoadOutcome> => {
     const binding = this.activeRemoteBinding;
     if (!binding) {
       return 'not-router';
@@ -2728,14 +2730,18 @@ class ModelStore {
   }
 
   private requireActiveRemoteModelReady = async (): Promise<void> => {
-    if ((await this.ensureActiveRemoteModelReady()) !== 'failed') {
-      return;
-    }
-    const reason = routerFailureText(this.activeRemoteFailure, uiStore.l10n);
-    if (reason === undefined) {
+    const outcome = await this.ensureActiveRemoteModelReady();
+    if (outcome === 'withdrawn') {
       throw new RemoteModelRequestWithdrawnError();
     }
-    throw new Error(reason);
+    if (outcome !== 'failed') {
+      return;
+    }
+    const l10n = uiStore.l10n;
+    throw new Error(
+      routerFailureMarkdownText(this.activeRemoteFailure, l10n) ??
+        routerFailureLabel('wait-stopped', l10n),
+    );
   };
 
   /**
