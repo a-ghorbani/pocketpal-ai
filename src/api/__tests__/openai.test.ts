@@ -149,6 +149,36 @@ describe('fetchModelsWithHeaders', () => {
     jest.clearAllMocks();
   });
 
+  describe('hasModelsKey', () => {
+    const fetchBody = async (body: unknown) => {
+      global.fetch = jest.fn().mockResolvedValueOnce({
+        ok: true,
+        headers: mockHeaders(),
+        json: () => Promise.resolve(body),
+      });
+      return fetchModelsWithHeaders('http://localhost:8080');
+    };
+
+    it('is false for a router body', async () => {
+      expect((await fetchBody(routerModelsBody)).hasModelsKey).toBe(false);
+    });
+
+    it.each([
+      ['vision', directVisionModelsBody],
+      ['text', directTextModelsBody],
+    ])('is true for a direct %s body', async (_label, body) => {
+      expect((await fetchBody(body)).hasModelsKey).toBe(true);
+    });
+
+    // The key is a property of the response, so it answers where a rule
+    // reading rows cannot: a body whose list is empty.
+    it('is false for a router body with no rows', async () => {
+      expect((await fetchBody({data: [], object: 'list'})).hasModelsKey).toBe(
+        false,
+      );
+    });
+  });
+
   it('returns models and response headers', async () => {
     const mockModels = [{id: 'model-1', object: 'model', owned_by: 'system'}];
 
@@ -176,7 +206,7 @@ describe('fetchModelsWithHeaders', () => {
 
     await expect(
       fetchModelsWithHeaders('http://localhost:8080', undefined, undefined),
-    ).resolves.toEqual({models: [], headers: {}});
+    ).resolves.toEqual({models: [], headers: {}, hasModelsKey: false});
   });
 
   // The connection-phase guard on the models probe honours a supplied

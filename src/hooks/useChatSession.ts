@@ -16,9 +16,13 @@ import {
   uiStore,
 } from '../store';
 import {resolveReasoningCapability} from '../utils/reasoningCapability';
+import {routerReadiness} from '../utils/routerCopy';
 
 import {MessageType, ModelOrigin, User} from '../utils/types';
-import {createMultimodalWarning} from '../utils/errors';
+import {
+  createMultimodalWarning,
+  RemoteModelRequestWithdrawnError,
+} from '../utils/errors';
 import {
   assembleMessages,
   resolveSystemMessages,
@@ -546,6 +550,23 @@ export const useChatSession = (
       },
     };
     await addMessage(textMessage);
+
+    // Only this path can tell "waiting for weights" from "waiting for the
+    // first token", so it waits here rather than inside the engine.
+    const readiness = routerReadiness(
+      await modelStore.ensureActiveRemoteModelReady(),
+      modelStore.activeRemoteFailure,
+      l10n,
+    );
+    if (!readiness.proceed) {
+      // A withdrawal is the user's own act, so they know why this turn did not
+      // run; anything else owes them an account of it.
+      if (!readiness.withdrawn) {
+        await addSystemMessage(readiness.say);
+      }
+      return;
+    }
+
     modelStore.setInferencing(true);
     modelStore.setIsStreaming(false);
     chatSessionStore.setIsGenerating(true);
@@ -865,6 +886,10 @@ export const useChatSession = (
       if (turnAbsorbedError) {
         // Footer already surfaces interrupted / truncationLikely; nothing
         // more to add to chat.
+      } else if (error instanceof RemoteModelRequestWithdrawnError) {
+        // The user stopped the operation this turn was waiting on, so they
+        // know why it ended. Recognised by type: an error carrying no message
+        // is not the same thing, and must still be reported below.
       } else if (errorMessage.includes('network')) {
         await addSystemMessage(l10n.common.networkError);
       } else if (isToolArgsParseError) {
@@ -882,7 +907,9 @@ export const useChatSession = (
           isRemote: modelStore.activeModel?.origin === ModelOrigin.REMOTE,
         });
       } else {
-        await addSystemMessage(`${l10n.chat.completionFailed}${errorMessage}`);
+        await addSystemMessage(
+          `${l10n.chat.completionFailed}${errorMessage || l10n.errors.unexpectedError}`,
+        );
       }
     } finally {
       try {

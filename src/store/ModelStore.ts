@@ -22,6 +22,7 @@ import {
 
 import {uiStore, hfStore} from '.';
 import {serverStore} from './ServerStore';
+import type {RouterLoadOutcome} from './ServerStore';
 import {chatSessionStore} from './ChatSessionStore';
 import {
   draftCacheDefaults,
@@ -43,6 +44,8 @@ import {
 import {getRecommendedProjectionModel} from '../utils/multimodalHelpers';
 import {isDraftOnlyModel} from '../utils/mtp';
 import {getOriginalModelName} from '../utils/formatters';
+import {routerReadiness} from '../utils/routerCopy';
+import type {RouterFailure} from '../utils/routerState';
 import type {OnboardingPalModelEntry} from './onboarding/onboardingPals';
 
 import {downloadManager, DownloadCancelledError} from '../services/downloads';
@@ -83,7 +86,11 @@ import {
   RemoteSessionBinding,
 } from '../utils/types';
 
-import {ErrorState, createErrorState} from '../utils/errors';
+import {
+  ErrorState,
+  RemoteModelRequestWithdrawnError,
+  createErrorState,
+} from '../utils/errors';
 import {chatSessionRepository} from '../repositories/ChatSessionRepository';
 import {hasEnoughMemory} from '../hooks/useMemoryCheck';
 import {
@@ -2673,6 +2680,7 @@ class ModelStore {
         apiKey,
         server.requestTimeoutMs,
         server.serverType,
+        () => this.requireActiveRemoteModelReady(),
       );
       this.activeRemoteBinding = {
         modelId: model.id,
@@ -2688,6 +2696,49 @@ class ModelStore {
     serverStore
       .fetchRemoteModelCaps(model.serverId, model.remoteModelId, apiKey)
       .catch(() => {});
+    serverStore
+      .ensureRouterModelLoaded(model.serverId, model.remoteModelId)
+      .catch(() => {});
+  };
+
+  /**
+   * Asks the bound server to make the active remote model ready. Reads the
+   * binding rather than the mutable server record, so it can only ever act on
+   * the backend this session is actually attached to.
+   */
+  ensureActiveRemoteModelReady = async (): Promise<RouterLoadOutcome> => {
+    const binding = this.activeRemoteBinding;
+    if (!binding) {
+      return 'not-router';
+    }
+    return serverStore.ensureRouterModelLoaded(
+      binding.serverId,
+      binding.remoteModelId,
+    );
+  };
+
+  /** The record the last operation on the bound model left, if it left one. */
+  get activeRemoteFailure(): RouterFailure | undefined {
+    const binding = this.activeRemoteBinding;
+    return (
+      binding &&
+      serverStore.routerReason(binding.serverId, binding.remoteModelId)
+    );
+  }
+
+  private requireActiveRemoteModelReady = async (): Promise<void> => {
+    const readiness = routerReadiness(
+      await this.ensureActiveRemoteModelReady(),
+      this.activeRemoteFailure,
+      uiStore.l10n,
+    );
+    if (readiness.proceed) {
+      return;
+    }
+    if (readiness.withdrawn) {
+      throw new RemoteModelRequestWithdrawnError();
+    }
+    throw new Error(readiness.say);
   };
 
   /**
