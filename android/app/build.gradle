@@ -104,7 +104,8 @@ android {
         externalNativeBuild {
             cmake {
                 // 超过阈值时让 CMake 对过长对象文件路径做 hashing 缩短。
-                arguments "-DCMAKE_OBJECT_PATH_MAX=128"
+                // 取 250：在 ninja 260 上限前触发 hashing，且大于最长对象目录（约 159 字符），128 会连目录都放不下。
+                arguments "-DCMAKE_OBJECT_PATH_MAX=250"
             }
         }
     }
