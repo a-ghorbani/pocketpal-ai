@@ -164,13 +164,7 @@ e2e/reports/2026-02-13T16-14-12-758/
    - `AWS_SECRET_ACCESS_KEY`
    - `AWS_DEVICE_FARM_PROJECT_ARN`
 
-### Run via GitHub Actions
-
-1. Go to Actions → "E2E Tests (AWS Device Farm)"
-2. Click "Run workflow"
-3. Select platform (android, ios, or both)
-
-### Run manually
+### Run locally
 
 ```bash
 yarn e2e:aws --platform android --app path/to/app.apk

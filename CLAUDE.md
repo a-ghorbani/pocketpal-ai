@@ -2,7 +2,7 @@
 
 ## Local Verification Checklist
 
-Before waiting for GitHub Actions to fail, run the Android preflight locally from the repository root:
+Before a local Android release build, run the Android preflight from the repository root:
 
 ```bash
 cmd /c yarn.cmd preflight:android

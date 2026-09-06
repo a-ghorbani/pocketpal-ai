@@ -103,22 +103,26 @@ Please note that when you turn off the "resemble format" (RF button), your think
 
 in the older llama version 0.11.0 （app-1.11.21）can you control their thinking without configuring templates for the 4B, 2B, and 0.8B models. This repository also includes a branch specifically designed to be compatible with llama version 0.11.0; please note that under the Android framework, engine switching is not possible—you can only have one engine per app.
 
-### CI/CD & Downloads
+### Local Builds
 
-I have optimized the compilation for versions **1.11.21** and **1.12.2**, enabling direct generation of **APK** and **IPA** installer packages via actions; feel free to compile and test them yourself.
+This repository does not use remote CI or GitHub Actions. Run the checks and builds locally on Windows:
 
-- [https://github.com/CCSSNE/bianyi-1.11.21](https://github.com/CCSSNE/bianyi-1.11.21)
-- [https://github.com/CCSSNE/bianyi-1.12.2](https://github.com/CCSSNE/bianyi-1.12.2)
+```powershell
+cmd /c yarn.cmd preflight:android
+cmd /c yarn.cmd build:android:release
+```
+
+The unsigned release APK is generated under `android/app/build/outputs/apk/release/`.
 
 ## Compared to the original version; the only issue is that PAL login is unusable.
 
-Since the original `release.yml` isn't hardcoded either, but rather retrieves values from GitHub Actions configuration:
+For local builds, configure the following values in the ignored `.env` file instead of relying on remote configuration:
 
-SUPABASE_URL=${{ vars.SUPABASE_URL }}
+SUPABASE_URL=https://your-project.supabase.co
 
-SUPABASE_ANON_KEY=${{ secrets.SUPABASE_ANON_KEY }}
+SUPABASE_ANON_KEY=your-anon-key
 
-PALSHUB_API_BASE_URL=${{ vars.PALSHUB_API_BASE_URL }}
+PALSHUB_API_BASE_URL=https://palshub.ai
 
 **PALSHUB_API_BASE_URL**
 
