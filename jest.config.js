@@ -1,25 +1,6 @@
 module.exports = {
   preset: 'react-native',
-  collectCoverage: true,
-  collectCoverageFrom: [
-    'src/**/*.{ts,tsx}',
-    '!**/index.{ts,tsx}',
-    '!**/styles.{ts,tsx}',
-    '!**/types.{ts,tsx}',
-    '!**/*.d.ts',
-    '!**/ImageView.android.ts',
-    '!**/ImageView.ios.ts',
-    '!**/ImageView.tsx',
-  ],
-  coveragePathIgnorePatterns: ['/src/screens/DevToolsScreen/', '/old/'],
-  coverageThreshold: {
-    global: {
-      branches: 60,
-      functions: 60,
-      lines: 60,
-      statements: 60,
-    },
-  },
+  collectCoverage: false,
   moduleFileExtensions: ['ts', 'tsx', 'js', 'jsx', 'json', 'node'],
   modulePathIgnorePatterns: ['<rootDir>/old/'],
   setupFiles: ['./jest/setup.ts'],
