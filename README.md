@@ -105,10 +105,9 @@ in the older llama version 0.11.0 （app-1.11.21）can you control their thinkin
 
 ### Local Builds
 
-This repository does not use remote CI or GitHub Actions. Run the checks and builds locally on Windows:
+This repository does not use remote CI or GitHub Actions. Build locally on Windows:
 
 ```powershell
-cmd /c yarn.cmd preflight:android
 cmd /c yarn.cmd build:android:release
 ```
 
