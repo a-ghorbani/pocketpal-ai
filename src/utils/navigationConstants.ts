@@ -8,6 +8,7 @@ export const ROUTES = {
   SETTINGS: 'Settings',
   APP_INFO: 'App Info',
   CONSOLE: 'Console',
+  API_SERVER: 'API Server',
 
   // Dev tools route. Only available in debug mode.
   DEV_TOOLS: 'Dev Tools',

@@ -40,6 +40,7 @@ import {
   BenchmarkScreen,
   AboutScreen,
   ConsoleScreen,
+  ApiServerScreen,
 
   // Dev tools screen. Only available in debug mode.
   DevToolsScreen,
@@ -150,6 +151,14 @@ const App = observer(() => {
                       options={{
                         headerStyle: styles.headerWithoutDivider,
                         title: 'Console',
+                      }}
+                    />
+                    <Drawer.Screen
+                      name={ROUTES.API_SERVER}
+                      component={gestureHandlerRootHOC(ApiServerScreen)}
+                      options={{
+                        headerStyle: styles.headerWithoutDivider,
+                        title: currentL10n.screenTitles.apiServer,
                       }}
                     />
 

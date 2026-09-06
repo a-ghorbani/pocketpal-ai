@@ -851,6 +851,7 @@
         "benchmark": "Benchmark",
         "settings": "Settings",
         "appInfo": "App Info",
+        "apiServer": "API Server",
         "testCompletion": "Test Completion"
       },
       "deleteChatTitle": "Delete Chat",
@@ -1043,7 +1044,30 @@
     "benchmark": "Benchmark",
     "settings": "Settings",
     "appInfo": "App Info",
+    "apiServer": "API Server",
     "testCompletion": "Test Completion"
+  },
+  "apiServer": {
+    "statusTitle": "Server Status",
+    "statusRunning": "Running",
+    "statusStopped": "Stopped",
+    "activeRequests": "Requests in queue: {{count}}",
+    "settingsTitle": "Settings",
+    "portLabel": "Port",
+    "invalidPort": "Port must be a number between {{min}} and {{max}}",
+    "requireAuthLabel": "Require API Key",
+    "apiKeyLabel": "API Key",
+    "autoStartLabel": "Start automatically at launch",
+    "errorTitle": "API Server Error",
+    "copiedTitle": "Copied",
+    "copiedMessage": "Copied to clipboard",
+    "compatTitle": "OpenAI Compatibility",
+    "compatEndpoints": "Endpoints: GET /v1/models, POST /v1/chat/completions (streaming SSE supported).",
+    "compatTools": "Tool calling: pass your client tools via \"tools\"; the server renders tool prompts and returns tool_calls. The client executes tools and sends results back with role \"tool\" messages.",
+    "compatThinking": "Thinking: reasoning models return reasoning_content separately; use enable_thinking and reasoning_format to control it.",
+    "compatMcp": "MCP: connect any MCP-enabled OpenAI client - its MCP servers and tools work transparently through the standard tool-call loop.",
+    "requestLogTitle": "Request Log",
+    "requestLogEmpty": "No requests yet."
   },
   "chat": {
     "conversationReset": "Conversation reset!",

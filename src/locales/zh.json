@@ -847,6 +847,7 @@
         "benchmark": "基准测试",
         "settings": "设置",
         "appInfo": "关于",
+        "apiServer": "API 服务",
         "testCompletion": "测试完成"
       },
       "deleteChatTitle": "删除聊天",
@@ -1038,7 +1039,30 @@
     "benchmark": "基准测试",
     "settings": "设置",
     "appInfo": "关于",
+    "apiServer": "API 服务",
     "testCompletion": "测试完成"
+  },
+  "apiServer": {
+    "statusTitle": "服务器状态",
+    "statusRunning": "运行中",
+    "statusStopped": "已停止",
+    "activeRequests": "排队中的请求：{{count}}",
+    "settingsTitle": "设置",
+    "portLabel": "端口",
+    "invalidPort": "端口必须是 {{min}} 到 {{max}} 之间的数字",
+    "requireAuthLabel": "要求 API Key",
+    "apiKeyLabel": "API Key",
+    "autoStartLabel": "启动时自动开启服务",
+    "errorTitle": "API 服务错误",
+    "copiedTitle": "已复制",
+    "copiedMessage": "已复制到剪贴板",
+    "compatTitle": "OpenAI 兼容",
+    "compatEndpoints": "端点：GET /v1/models、POST /v1/chat/completions（支持 SSE 流式）。",
+    "compatTools": "工具调用：客户端通过 \"tools\" 传入工具，服务端渲染工具提示词并返回 tool_calls；客户端执行工具后用 role \"tool\" 消息回传结果。",
+    "compatThinking": "思维链：推理模型会单独返回 reasoning_content；可用 enable_thinking 和 reasoning_format 控制。",
+    "compatMcp": "MCP：任何支持 MCP 的 OpenAI 客户端都能直连——其 MCP 服务器与工具通过标准工具调用循环透明生效。",
+    "requestLogTitle": "请求日志",
+    "requestLogEmpty": "暂无请求。"
   },
   "chat": {
     "conversationReset": "对话已重置！",

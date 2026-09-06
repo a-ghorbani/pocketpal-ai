@@ -28,6 +28,7 @@ const EXPECTED_SECTIONS = [
   'camera',
   'video',
   'screenTitles',
+  'apiServer',
   'chat',
   'benchmark',
   'errors',
@@ -57,7 +58,7 @@ describe('l10n object', () => {
   });
 
   it.each(ALL_LANGUAGES)(
-    'l10n.%s has all 19 expected top-level sections',
+    'l10n.%s has all expected top-level sections',
     lang => {
       const sections = Object.keys(l10n[lang]);
       for (const section of EXPECTED_SECTIONS) {
