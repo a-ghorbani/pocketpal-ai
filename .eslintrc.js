@@ -12,7 +12,6 @@ module.exports = {
     'ios/',
     'build/',
     'dist/',
-    'e2e/',
     'old/',
   ],
   rules: {

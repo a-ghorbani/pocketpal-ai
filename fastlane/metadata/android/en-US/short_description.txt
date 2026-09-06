@@ -1,1 +1,0 @@
-PocketPal is an app for secure and private conversation with open source LLMs

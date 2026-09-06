@@ -44,24 +44,11 @@ yarn-error.log
 package-lock.json
 .yarn
 
-# fastlane
-#
-# It is recommended to not store the screenshots in the git repo. Instead, use fastlane to re-generate the
-# screenshots whenever they are needed.
-# For more information about the recommended setup visit:
-# https://docs.fastlane.tools/best-practices/source-control/
-
-**/fastlane/report.xml
-**/fastlane/Preview.html
-**/fastlane/screenshots
-**/fastlane/test_output
-
 # Bundle artifact
 *.jsbundle
 
 # Ruby / CocoaPods
 **/Pods/
-/vendor/bundle/
 
 # Temporary files created by Metro to check the health of the file watcher
 .metro-health-check*
@@ -90,13 +77,3 @@ ios/Config/Env.xcconfig
 .vscode/
 old/
 编译错误日志/
-
-# E2E debug output
-e2e/debug-output/
-e2e/device-farm-artifacts/
-e2e/test-package.zip
-e2e/testspec-*-allmodels.yml
-
-# E2E pipeline
-e2e/devices.json
-e2e/reports/
