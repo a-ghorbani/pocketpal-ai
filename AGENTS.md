@@ -86,7 +86,7 @@
 正式验证不是排障模式的自动下一步，而是独立授权层级。
 
 - 用户只要求“正式编译”“安装”或“正式回归”其中一项时，只执行该项，不自行补齐其他动作。
-- 用户明确要求“完整验证闭环”时，执行：正式编译 PocketPal Release APK（按“Windows 增量构建”规则从 `P:\` 构建）→ 安装到设备名包含 `emulator` 的模拟器 → 复现并回归验证。
+- 用户明确要求“完整验证闭环”时，执行：正式编译 PocketPal Release APK（按“Windows 增量构建”规则从 `D:\AI\LLM\pocketpal-experimental` 构建）→ 安装到设备名包含 `emulator` 的模拟器 → 复现并回归验证。
 - 所有正式动作继续遵守本文件的设备与构建约束。
 
 #### F 工具术语与修饰指令
@@ -169,13 +169,12 @@ cmd /c yarn.cmd build:android:release
 
 Windows 增量构建：
 
-- Windows CMake/Ninja 可能因为仓库绝对路径过长而触发 260 字符限制；本仓库构建时固定使用短盘符 `P:`，避免路径长度问题。
-- 首次构建或每次新开终端时执行 `subst P: D:\AI\LLM\pocketpal-experimental`，然后从 `P:\` 直接构建；后续保持同一短路径以复用 Gradle/CMake/Kotlin 增量产物。
+- Windows CMake/Ninja 可能因为仓库绝对路径过长而触发 260 字符限制；根因是 `.cxx` 中间目录 + `react-native-keyboard-controller` 等对象文件全路径超限。已验证 `subst P:` 短盘符方案不可靠（CMake 缓存仍解析长路径，且 autolinking 会产生盘符混用导致 `different roots` 失败），禁止再用 `P:` 方案。
+- 固定从 `D:\AI\LLM\pocketpal-experimental` 直接构建；native 中间目录由 `android/app/build.gradle` 外迁到 `D:/cxx/pocketpal`，并设置 `-DCMAKE_OBJECT_PATH_MAX=250`（250：在 ninja 260 上限前触发 hashing，且大于最长对象目录约 159 字符；128 会连目录都放不下）。
 - 日常增量构建不要执行 `clean`；只有在有明确缓存或构建状态错误证据时才清理对应缓存。
 
 ```powershell
-subst P: D:\AI\LLM\pocketpal-experimental
-Set-Location P:\
+Set-Location D:\AI\LLM\pocketpal-experimental
 cmd /c yarn.cmd build:android:release
 ```
 
