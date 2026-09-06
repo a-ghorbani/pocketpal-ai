@@ -1,6 +1,7 @@
 # PocketPal 本地构建规则
 
 不要往本文件写日志和任何带日期的东西，这不是倒垃圾的地方。
+编译默认是编译安卓版本。iOS版本已经暂停开发了
 
 ## 工作原则
 
@@ -48,12 +49,6 @@ cmd /c npx.cmd patch-package
 
 `postinstall` 依赖 Bash；Windows 上使用 `--ignore-scripts` 后必须显式运行 `patch-package`，否则仓库中的依赖补丁不会生效。当前默认不从源码编译 `llama.rn`，因此不需要额外拉取 OpenCL headers。
 
-提交前的本地门禁：
-
-```powershell
-cmd /c yarn.cmd preflight:android
-```
-
 Android 本地构建：
 
 ```powershell
@@ -61,6 +56,18 @@ cmd /c yarn.cmd build:android:release
 ```
 
 产物位于 `android/app/build/outputs/apk/release/`。本机没有提交 Firebase 或发布签名凭据时，使用被 `.gitignore` 忽略的本地 `android/app/google-services.json`、`.env` 和签名配置；不得把占位配置写进源码或提交。
+
+Windows 增量构建：
+
+- Windows CMake/Ninja 可能因为仓库绝对路径过长而触发 260 字符限制；本仓库构建时固定使用短盘符 `P:`，避免路径长度问题。
+- 首次构建或每次新开终端时执行 `subst P: D:\AI\LLM\pocketpal-experimental`，然后从 `P:\` 直接构建；后续保持同一短路径以复用 Gradle/CMake/Kotlin 增量产物。
+- 日常增量构建不要执行 `clean`；只有在有明确缓存或构建状态错误证据时才清理对应缓存。
+
+```powershell
+subst P: D:\AI\LLM\pocketpal-experimental
+Set-Location P:\
+cmd /c yarn.cmd build:android:release
+```
 
 ## 构建失败处理
 
