@@ -130,7 +130,6 @@ export const AboutScreen: React.FC = () => {
               </View>
               <Text style={styles.llamaBuildText}>
                 {'llama.rn v' +
-                  // eslint-disable-next-line @typescript-eslint/no-var-requires
                   (require('llama.rn/package.json').version as string) +
                   ' (llama.cpp build ' +
                   BuildInfo.number +
