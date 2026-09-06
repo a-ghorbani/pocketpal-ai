@@ -70,7 +70,7 @@ describe('the preparing banner inside the chat view', () => {
     const {getByTestId} = renderChat();
 
     expect(
-      within(getByTestId('chat-input-container')).getByTestId(
+      within(getByTestId('chat-composer-container')).getByTestId(
         'router-model-preparing',
       ),
     ).toBeTruthy();
@@ -85,7 +85,7 @@ describe('the preparing banner inside the chat view', () => {
     loadInFlight();
 
     const {getByTestId} = renderChat();
-    const container = getByTestId('chat-input-container');
+    const container = getByTestId('chat-composer-container');
     const order = container
       .findAll(
         (node: any) =>
