@@ -755,7 +755,7 @@
       "disablePal": "Desactivar Pal activo",
       "noDescription": "Sin descripción",
       "assistantType": "Asistente",
-      "roleplayType": "Juego de rol",
+      "roleplayType": "Juego de roles",
       "videoType": "Video",
       "confirmationTitle": "Confirmación",
       "modelSwitchMessage": "Este Pal tiene un modelo predeterminado diferente ({{modelName}}). ¿Quieres cambiar al modelo predeterminado del Pal?",
@@ -1077,7 +1077,515 @@
     "filters": {
       "all": "Todos",
       "myPals": "Mis Pals",
-      "local": "Local"
+      "local": "Local",
+      "video": "Video",
+      "free": "Gratis",
+      "premium": "Premium"
+    },
+    "labels": {
+      "free": "Gratis",
+      "premium": "Premium",
+      "private": "Privado",
+      "download": "Descargar",
+      "getFree": "Obtener gratis"
+    },
+    "premiumPalDescription": "Pal premium de la comunidad de palshub.ai",
+    "premiumInfoText": "Visita palshub.ai para explorar más Pals (amigos)",
+    "sortOptions": {
+      "newest": "Más recientes",
+      "oldest": "Más antiguos",
+      "rating": "Mejor valorados",
+      "popular": "Más populares"
+    },
+    "palDetailSheet": {
+      "by": "por",
+      "unknown": "Desconocido",
+      "rating": "Valoración",
+      "reviews": "Reseñas",
+      "created": "Creado",
+      "description": "Descripción",
+      "noDescriptionAvailable": "No hay descripción disponible.",
+      "categories": "Categorías",
+      "tags": "Etiquetas",
+      "systemPrompt": "Instrucción del sistema",
+      "downloaded": "Descargado",
+      "success": "Éxito",
+      "palAddedToCollection": "¡El Pal (amigo) se ha añadido a tu colección!",
+      "error": "Error",
+      "failedToLoadDetails": "Error al cargar los detalles del Pal",
+      "failedToDownload": "Error al descargar el Pal",
+      "premiumPalMessage": "Este es un Pal (amigo) prémium. • Si ya lo has desbloqueado con tu cuenta de Palshub, simplemente inicia sesión para acceder a todos los detalles. • ¿Aún no lo has desbloqueado? Visita la aplicación palshub.ai para obtener más información.",
+      "notAvailable": "N/D",
+      "buyOnPalshub": "Comprar en Palshub",
+      "finalizingPurchase": "Finalizando tu compra..",
+      "processingPurchase": "Procesando; se desbloqueará en breve.",
+      "checkoutSessionExpired": "Tu sesión ha caducado. Inicia sesión de nuevo para continuar.",
+      "signInAgain": "Iniciar sesión de nuevo",
+      "palNotAvailable": "Este Pal no está disponible para la compra en este momento.",
+      "checkoutFailed": "Algo salió mal. Por favor, inténtalo de nuevo."
     }
+  },
+  "validation": {
+    "nameRequired": "El nombre es obligatorio",
+    "systemPromptRequired": "La instrucción del sistema es obligatoria",
+    "worldRequired": "El mundo es obligatorio",
+    "locationRequired": "La ubicación es obligatoria",
+    "aiRoleRequired": "El rol de la IA es obligatorio",
+    "userRoleRequired": "El rol del usuario es obligatorio",
+    "situationRequired": "La situación es obligatoria",
+    "toneStyleRequired": "El tono/estilo es obligatorio"
+  },
+  "camera": {
+    "permissionTitle": "Permiso de cámara requerido",
+    "permissionMessage": "Pocket Pal necesita acceso a la cámara para analizar imágenes",
+    "requestingPermission": "Solicitando permiso de cámara...",
+    "noDevice": "No se encontró ningún dispositivo de cámara",
+    "errorTitle": "Error de cámara",
+    "errorMessage": "Ocurrió un error al tomar la foto",
+    "flip": "Voltear",
+    "analyzing": "Analizando imagen...",
+    "startCamera": "Iniciar cámara",
+    "stopCamera": "Detener cámara",
+    "promptPlaceholder": "¿Qué quieres saber sobre esta imagen?",
+    "takePhoto": "Cámara"
+  },
+  "video": {
+    "permissionTitle": "Permiso de cámara requerido",
+    "permissionMessage": "PocketPal necesita acceso a la cámara para el análisis de video",
+    "requestingPermission": "Solicitando permiso de cámara...",
+    "noDevice": "No se encontró ningún dispositivo de cámara",
+    "errorTitle": "Error de cámara",
+    "errorMessage": "Ocurrió un error con la cámara",
+    "flip": "Voltear",
+    "analyzing": "Analizando video...",
+    "startCamera": "Iniciar cámara",
+    "stopCamera": "Detener cámara",
+    "promptPlaceholder": "¿Qué quieres saber sobre este video?",
+    "captureInterval": "Intervalo de captura",
+    "captureIntervalUnit": "ms",
+    "liveCommentary": "Comentarios en vivo",
+    "emptyPlaceholder": {
+      "title": "Te damos la bienvenida a Lookie",
+      "subtitle": "Análisis de video en tiempo real, privado y en el dispositivo",
+      "experimentalNotice": "Esta es una función experimental. La precisión depende del modelo seleccionado, la velocidad depende de las especificaciones de tu dispositivo y algunos modelos podrían fallar.",
+      "howToUse": "Cómo usar:",
+      "step1": "• Edita la instrucción (opcional) para guiar el análisis",
+      "step2": "• Toca el botón de la cámara para iniciar el análisis de video en vivo",
+      "step3": "• Ajusta la frecuencia de las capturas mientras la cámara esté activa",
+      "step4": "• Cambia a otro amigo para chatear con texto normal"
+    }
+  },
+  "screenTitles": {
+    "chat": "Chat",
+    "models": "Modelos",
+    "pals": "Pals (experimental)",
+    "benchmark": "Prueba de rendimiento",
+    "settings": "Ajustes",
+    "appInfo": "Información de la aplicación",
+    "testCompletion": "Prueba de finalización"
+  },
+  "chat": {
+    "conversationReset": "¡Conversación restablecida!",
+    "modelNotLoaded": "Modelo no cargado. Por favor, inicializa el modelo.",
+    "completionFailed": "Error al generar la respuesta: ",
+    "toolCallTruncated": "Llamada a herramienta interrumpida — es posible que el modelo se haya quedado sin espacio. Prueba con un contexto más grande o una solicitud más pequeña.",
+    "speculativeInitFailed": "Este dispositivo no pudo iniciar la decodificación especulativa para este modelo — lo más probable es que no haya suficiente memoria para el contexto auxiliar. Desactiva la decodificación especulativa en Ajustes → Ajustes avanzados e inténtalo de nuevo.",
+    "loadingModel": "Cargando modelo ...",
+    "typeYourMessage": "Escribe tu mensaje aquí",
+    "load": "Cargar",
+    "goToModels": "Ir a Modelos",
+    "readyToChat": "¿Listo para chatear? Carga el último modelo usado.",
+    "pleaseLoadModel": "Carga un modelo para chatear.",
+    "multimodalNotEnabled": "El modo multimodal no está habilitado para este modelo. Las imágenes se mostrarán pero la IA no las procesará.",
+    "cannotSendWithoutModel": "Carga un modelo primero",
+    "toolCompatWarning": "Es posible que este modelo no sea compatible con el uso de herramientas. Los resultados pueden no ser confiables.",
+    "softCapWarning": "Inicia un nuevo chat para obtener el mejor rendimiento.",
+    "contextWarning": "Esta conversación se está alargando y pronto podría quedarse sin espacio.",
+    "contextRemoteHedged": "Es posible que esta respuesta se haya cortado. Prueba a enviarla de nuevo o a acortar la solicitud.",
+    "contextFull": "La conversación se quedó sin espacio. Inicia un nuevo chat o aumenta el tamaño del contexto.",
+    "contextFullRemote": "La conversación se quedó sin espacio. Inicia un nuevo chat.",
+    "contextFullEscalated": "Sigue sin haber espacio. Inicia un nuevo chat o aumenta el tamaño del contexto para continuar.",
+    "contextFullHeavyTalent": "La conversación se quedó sin espacio — {{talent}} suele necesitar más. Inicia un nuevo chat o aumenta el tamaño del contexto.",
+    "contextBannerDismiss": "Descartar",
+    "contextNewChat": "Nuevo chat",
+    "contextIncrease": "Aumentar contexto",
+    "contextMoreRoom": "Más espacio",
+    "increaseContextTitle": "Dale más espacio a este chat",
+    "increaseContextBody": "El espacio es la memoria de trabajo del modelo: cuánto de este chat puede tener en cuenta a la vez. Más espacio significa chats más largos antes de que las respuestas se corten.",
+    "increaseContextTokensUnit": "tokens",
+    "increaseContextWordsRam": "~{{words}} palabras · ≈{{ram}} de RAM",
+    "increaseContextFitsChip": "Cabe",
+    "increaseContextTightChip": "Justo",
+    "increaseContextWontFitChip": "No cabe",
+    "increaseContextFitsStatus": "Cómodo para este dispositivo.",
+    "increaseContextFitsUnconstrainedStatus": "Suficiente RAM: limitado solo por el modelo.",
+    "increaseContextTightStatus": "A partir de ~{{tokens}}, este dispositivo puede quedarse con poca memoria y volverse más lento. Aún puede intentarlo.",
+    "increaseContextWontFitStatus": "~{{tokens}} probablemente no quepa en la memoria de este dispositivo. Elige un tamaño más pequeño.",
+    "increaseContextModelMax": "{{tokens}} · máx. del modelo",
+    "increaseContextHedge": "La recarga toma unos segundos. No se pierde nada de tu chat.",
+    "increaseContextAdvanced": "Avanzado",
+    "increaseContextAdvancedBody": "Tamaño del contexto para este chat: {{from}} → {{to}} tokens (máx. del modelo {{max}}). El límite del dispositivo es una estimación y aumenta a medida que los contextos más grandes se cargan correctamente.",
+    "increaseContextSliderA11yLabel": "Tamaño del contexto",
+    "increaseContextSliderA11yValue": "{{tokens}} tokens",
+    "increaseContextConfirmSize": "Ajustar a {{size}}",
+    "increaseContextReloadingShort": "Recargando..",
+    "increaseContextNoFitBody": "Este dispositivo no tiene capacidad para un contexto mayor con este modelo. Inicia un chat nuevo para continuar.",
+    "increaseContextCancel": "Ahora no",
+    "increaseContextReloading": "Recargando el modelo con un contexto mayor…",
+    "increaseContextSuccess": "Contexto ampliado a {{target}} tokens.",
+    "increaseContextFailure": "No se pudo aumentar el tamaño del contexto. Se restauró tu configuración anterior.",
+    "palLoadHint": "Este asistente (pal) suele necesitar más espacio del que permite el tamaño del contexto actual.",
+    "generatingPreview": "Generando vista previa… ({{tokens}} tokens)",
+    "generatingPreviewPending": "Generando vista previa…",
+    "toolUsedChip": "{name}} utilizado",
+    "toolErrorBlock": "{{name}} falló",
+    "webSearch": {
+      "searched": "Búsqueda realizada: {{query}}",
+      "noResults": "Sin resultados",
+      "noResultsFor": "No hay resultados para {{query}}",
+      "resultsCount": "{{count}} resultados",
+      "resultsCountOne": "1 resultado",
+      "searchResultsTitle": "Resultados de búsqueda",
+      "showResultsAccessibilityLabel": "Mostrar resultados de búsqueda de {{query}}",
+      "openLinkError": "No se pudo abrir este enlace."
+    }
+  },
+  "htmlPreview": {
+    "defaultTitle": "Vista previa",
+    "showPreview": "Mostrar vista previa renderizada",
+    "showCode": "Mostrar código HTML",
+    "copyHtml": "Copiar HTML",
+    "closePreview": "Cerrar vista previa",
+    "openFullscreen": "Abrir a pantalla completa: {{title}}"
+  },
+  "benchmark": {
+    "title": "Prueba de rendimiento",
+    "modelSelector": {
+      "prompt": "Seleccionar modelo",
+      "noModels": "No hay modelos descargados"
+    },
+    "buttons": {
+      "advancedSettings": "Ajustes avanzados",
+      "startTest": "Iniciar prueba",
+      "runningTest": "Ejecutando prueba...",
+      "clearAll": "Limpiar todo",
+      "done": "Listo",
+      "cancel": "Cancelar",
+      "delete": "Eliminar",
+      "share": "Compartir",
+      "sharing": "Compartiendo...",
+      "viewRawData": "Ver datos sin procesar",
+      "hideRawData": "Ocultar datos sin procesar"
+    },
+    "messages": {
+      "pleaseSelectModel": "Por favor, selecciona e inicializa un modelo primero",
+      "testWarning": "Nota: la prueba puede tardar entre 2 y 5 minutos en modelos grandes y no se puede interrumpir una vez iniciada.",
+      "keepScreenOpen": "Por favor mantén esta pantalla abierta.",
+      "initializingModel": "Inicializando modelo...",
+      "modelMaxValue": "(max: {maxValue}})"
+    },
+    "dialogs": {
+      "advancedSettings": {
+        "title": "Ajustes avanzados",
+        "testProfile": "Perfil de prueba",
+        "customParameters": "Parámetros personalizados",
+        "description": "Ajusta los parámetros de la prueba para escenarios de evaluación específicos."
+      },
+      "deleteResult": {
+        "title": "Eliminar resultado",
+        "message": "¿Estás seguro de que quieres eliminar este resultado de la prueba?"
+      },
+      "clearAllResults": {
+        "title": "Limpiar todos los resultados",
+        "message": "¿Estás seguro de que quieres eliminar todos los resultados de las pruebas?"
+      },
+      "shareResults": {
+        "title": "Compartir resultados de las pruebas",
+        "sharedDataTitle": "Los datos compartidos incluyen:",
+        "deviceAndModelInfo": "• Especificaciones del dispositivo e información del modelo",
+        "performanceMetrics": "• Métricas de rendimiento",
+        "dontShowAgain": "No volver a mostrar este mensaje"
+      }
+    },
+    "sections": {
+      "testResults": "Resultados de las pruebas"
+    },
+    "benchmarkResultCard": {
+      "modelMeta": {
+        "params": "parámetros"
+      },
+      "config": {
+        "title": "Configuración de la prueba",
+        "format": "PP: {{pp}} • TG: {{tg}} • PL: {{pl}} • Rep: {{nr}}"
+      },
+      "modelSettings": {
+        "title": "Ajustes del modelo",
+        "context": "Contexto: {{context}}",
+        "batch": "Lote: {{batch}}",
+        "ubatch": "UBatch: {{ubatch}",
+        "cpuThreads": "Hilos de CPU: {{threads}}",
+        "gpuLayers": "Capas de GPU: {{layers}}",
+        "device": "Dispositivo: {{device}}",
+        "flashAttentionEnabled": "Flash Attention Habilitado",
+        "flashAttentionDisabled": "Flash Attention Deshabilitado",
+        "cacheTypes": "Tipos de caché: {{cacheK}}/{{cacheV}}"
+      },
+      "results": {
+        "promptProcessing": "Procesamiento de prompts",
+        "tokenGeneration": "Generación de tokens",
+        "totalTime": "Tiempo total",
+        "peakMemory": "Pico de memoria",
+        "tokensPerSecond": "t/s"
+      },
+      "actions": {
+        "deleteButton": " ",
+        "submittedText": "✓ Compartido con",
+        "leaderboardLink": "Clasificación de IA para Móviles ↗",
+        "cannotShare": "No se puede compartir",
+        "cannotShareTooltip": "Los resultados de modelos locales no se pueden compartir",
+        "submitButton": "Enviar a la clasificación (Ranking)",
+        "viewLeaderboard": "Ver clasificación (ranking)↗"
+      },
+      "errors": {
+        "networkRetry": "Comprueba tu conexión e inténtalo de nuevo",
+        "appCheckRetry": "Reintentar envío",
+        "serverRetry": "Inténtalo de nuevo más tarde",
+        "genericRetry": "Reintentar",
+        "failedToSubmit": "Error al enviar la prueba"
+      }
+    },
+    "deviceInfoCard": {
+      "title": "Información del dispositivo",
+      "deviceSummary": "{{brand}} {{model}} • {{systemName}} {{systemVersion}}",
+      "coreSummary": "{{cores}} núcleos • {{memory}}",
+      "sections": {
+        "basicInfo": "Información básica",
+        "cpuDetails": "Detalles de la CPU",
+        "gpuDetails": "Detalles de la GPU",
+        "hexagonDetails": "DSP Hexagon",
+        "appInfo": "Información de la aplicación"
+      },
+      "fields": {
+        "architecture": "Arquitectura",
+        "totalMemory": "Memoria total",
+        "deviceId": "ID del dispositivo",
+        "cpuCores": "Núcleos de la CPU",
+        "cpuModel": "Modelo de CPU",
+        "chipset": "Chipset",
+        "instructions": "Instrucciones",
+        "version": "Versión",
+        "gpuType": "Tipo de GPU",
+        "gpuRenderer": "Renderizador",
+        "gpuVendor": "Proveedor",
+        "metalSupport": "Soporte de Metal",
+        "openclSupport": "Soporte de OpenCL",
+        "openclRequirement": "Requiere i8mm y dotprod"
+      },
+      "instructions": {
+        "format": "FP16: {{fp16}}, DotProd: {{dotProd}}, SVE: {{sve}}, I8MM: {{i8mm}}",
+        "yes": "✓",
+        "no": "✗"
+      },
+      "versionFormat": "{{version}} ({{buildNumber}})"
+    }
+  },
+  "errors": {
+    "unexpectedError": "Ocurrió un error inesperado",
+    "hfAuthenticationError": "Error de autenticación de Hugging Face: falta el token o no es válido",
+    "hfAuthenticationErrorSearch": "Error de autenticación de Hugging Face: token inválido",
+    "authenticationError": "Error de autenticación: falta el token o no es válido",
+    "hfAuthorizationError": "Error de autorización de Hugging Face: sin permiso para acceder a este recurso",
+    "authorizationError": "Error de autorización: sin permiso para acceder a este recurso",
+    "hfServerError": "Error del servidor de Hugging Face: problema con el servidor de la API",
+    "serverError": "Error del servidor: problema con el servidor de la API",
+    "hfNetworkTimeout": "Tiempo de espera agotado en la red: la solicitud a Hugging Face tardó demasiado en completarse",
+    "networkTimeout": "Tiempo de espera agotado en la red: la solicitud tardó demasiado en completarse",
+    "hfNetworkError": "Error de red: no se pudo conectar a la API de Hugging Face",
+    "networkError": "Error de red: no se pudo conectar a la API",
+    "downloadSetupFailedTitle": "Error al configurar la descarga",
+    "downloadSetupFailedMessage": "No se pudo preparar el modelo para la descarga: {{message}}",
+    "cameraErrorTitle": "Error de la cámara",
+    "cameraErrorMessage": "No se pudo tomar la foto",
+    "galleryErrorTitle": "Error de la galería",
+    "galleryErrorMessage": "No se pudieron seleccionar las imágenes"
+  },
+  "simulator": {
+    "cameraNotAvailable": "La cámara no está disponible en el simulador. Usa un dispositivo físico."
+  },
+  "voiceAndSpeech": {
+    "sectionTitle": "Voz y Habla",
+    "voiceRowTitle": "Voz",
+    "notSet": "Sin configurar",
+    "previewButton": "Vista previa",
+    "stopPreviewButton": "Detener vista previa",
+    "voicesTitle": "Voces",
+    "voicesEmptyHint": "Toca cualquier voz para instalarla y usarla. O elige una voz del sistema; esas siempre están disponibles.",
+    "supertonicStepsLabel": "Calidad (pasos de difusión)",
+    "supertonicLanguageLabel": "Idioma",
+    "supertonicLanguageAuto": "Automático",
+    "supertonicLanguageSheetTitle": "Idioma",
+    "supertonicLanguageSearchPlaceholder": "Buscar idiomas",
+    "supertonicLanguageNames": {
+      "ar": "Árabe",
+      "bg": "Búlgaro",
+      "hr": "Croata",
+      "cs": "Checo",
+      "da": "Danés",
+      "nl": "Neerlandés",
+      "en": "Inglés",
+      "et": "Estonio",
+      "fi": "Finés",
+      "fr": "Francés",
+      "de": "Alemán",
+      "el": "Griego",
+      "hi": "Hindi",
+      "hu": "Húngaro",
+      "id": "Indonesio",
+      "it": "Italiano",
+      "ja": "Japonés",
+      "ko": "Coreano",
+      "lv": "Letón",
+      "lt": "Lituano",
+      "pl": "Polaco",
+      "pt": "Portugués",
+      "ro": "Rumano",
+      "ru": "Ruso",
+      "sk": "Eslovaco",
+      "sl": "Esloveno",
+      "es": "Español",
+      "sv": "Sueco",
+      "tr": "Turco",
+      "uk": "Ucraniano",
+      "vi": "Vietnamita"
+    },
+    "toggleAutoSpeakLabel": "Activar lectura automática",
+    "openSettingsLabel": "Ajustes de TTS",
+    "playMessageLabel": "Reproducir mensaje",
+    "stopMessageLabel": "Detener mensaje",
+    "autoSpeakLabel": "Leer respuestas automáticamente",
+    "autoSpeakDescription": "Leer las nuevas respuestas en voz alta a medida que llegan.",
+    "engineChipKitten": "Kitten",
+    "engineChipKokoro": "Kokoro",
+    "engineChipSupertonic": "Supertonic",
+    "engineChipSystem": "Sistema",
+    "stepsCount": "{{steps} pasos",
+    "engineKittenTagline": "El menor consumo. Fiable. Ideal para dispositivos antiguos.",
+    "engineKokoroTagline": "La más alta calidad. Más lento al iniciar. Es posible que algunas voces no funcionen en todos los dispositivos.",
+    "engineSupertonicTagline": "El inicio más rápido. Consume más memoria RAM. Puede omitir palabras ocasionalmente.",
+    "engineSystemTagline": "Voces integradas del sistema operativo. Siempre disponibles, sin instalación.",
+    "engineSystemTitleIos": "Voces de iOS",
+    "engineSystemTitleAndroid": "Voces de Android",
+    "engineSystemTier": "siempre disponible",
+    "engineTierLightest": "el más ligero",
+    "engineTierBestQuality": "la mejor calidad",
+    "engineTierFastestStart": "el inicio más rápido",
+    "engineSpecsLine": "{{voices}} voces  ·  {{sizeMb}} MB  ·  ~{{ramMb}} MB de RAM",
+    "engineSystemSpecsLine": "{{voices}} voces",
+    "engineRemoveTitle": "¿Eliminar {{engineTitle}}?",
+    "engineRemoveBody": "Libera ~{{sizeMb}} MB en este dispositivo.",
+    "engineRemoveCancel": "Cancelar",
+    "engineRemoveConfirm": "Eliminar",
+    "engineInstallCta": "Instalar · {{sizeMb}} MB",
+    "engineDownloadingLabel": "Descargando… {{pct}}% · {{mbDone}} / {{sizeMb}} MB",
+    "engineRetryCta": "Intentar de nuevo",
+    "voicesEmptyState": "No se encontraron voces.",
+    "kokoroDeviceNote": "Es posible que algunas voces no funcionen en todos los dispositivos.",
+    "insufficientStorage": "Espacio insuficiente: libera {{requiredMb}} MB para instalar este motor ({{freeMb}} MB disponibles)."
+  },
+  "onboarding": {
+    "back": "Atrás",
+    "skip": "Omitir",
+    "skipForNow": "Omitir por ahora",
+    "splash": {
+      "brand": "PocketPal"
+    },
+    "screen1": {
+      "title": "Conoce a tus amigos (Pals).",
+      "titleAccent": "pals.",
+      "body": "Pequeños amigos (pals) inteligentes que viven dentro de tu teléfono. Vamos a configurarlo todo; solo te tomará un minuto.",
+      "cta": "Muéstrame cómo funciona",
+      "eyebrow": "Te damos la bienvenida a PocketPal"
+    },
+    "screen2": {
+      "title": "En cualquier momento y en cualquier lugar.",
+      "body": "Tus amigos (pals) viven dentro de tu teléfono. Sin internet ni señal; funcionan en aviones, fuera de la red y en aldeas remotas.",
+      "highlight": "Sin internet ni señal",
+      "cta": "Siguiente",
+      "eyebrow": "La idea",
+      "titleAccent": "En cualquier momento,"
+    },
+    "screen3": {
+      "title": "Pequeños, pero tuyos.",
+      "titleAccent": "Pequeños,",
+      "body": "Los amigos (pals) en tu teléfono son rápidos y privados, pero más ligeros que la IA en la nube. Piensa en ellos como un compañero de bolsillo, no como un oráculo que todo lo sabe.",
+      "highlight": "rápido y privado",
+      "cta": "Entendido",
+      "eyebrow": "Un aviso"
+    },
+    "screen4": {
+      "title": "Nada sale de tu teléfono.",
+      "titleAccent": "sale",
+      "body": "Sin nube. Sin rastreo. Tus conversaciones se quedan contigo.",
+      "highlight": "Sin cuentas. Sin nube. Sin rastreo.",
+      "cta": "Comenzar",
+      "eyebrow": "Privacidad garantizada"
+    },
+    "screen5": {
+      "title": "¿Para qué quieres a tu amigo (pal)?",
+      "body": "Elige qué te gustaría conversar; buscaremos un amigo (pal) que se adapte a tu teléfono.",
+      "topic": {
+        "smartchat": "Chat inteligente",
+        "coding": "Programación",
+        "education": "Educación",
+        "roleplay": "Juego de roles",
+        "creative_writing": "Escritura creativa",
+        "else": "¿Buscas algo más?"
+      },
+      "topicDescription": {
+        "smartchat": "Compañero amigable para el día a día",
+        "coding": "Programar, depurar, explicar",
+        "education": "Aprender, explicar, hacer cuestionarios",
+        "roleplay": "Personajes, escenarios",
+        "creative_writing": "Historias, ideas, borradores",
+        "else": "Explora todos los amigos más tarde en la app"
+      }
+    },
+    "screen6": {
+      "cta": "Descargar {{name}}",
+      "ctaTemplate": "Descargar {{name}} ({{size}})",
+      "useTemplate": "Usar {{name}}",
+      "deviceRamSuffix": "GB de RAM",
+      "deviceFreeSuffix": "GB libres",
+      "recommended": "Recomendado",
+      "downloaded": "Descargado",
+      "modelTier": {
+        "quick": "Rápido",
+        "balanced": "Equilibrado",
+        "best": "El mejor"
+      },
+      "subtitleTemplate": "{{name}} cree que usar un modelo de IA pequeño en tu teléfono es ideal; elige uno que se adapte.",
+      "pal": {
+        "pip": {
+          "body": "Encontramos un amigo perfecto para ti: un compañero amigable para el día a día. Lo suficientemente inteligente para casi todo y lo bastante ligero para cualquier teléfono."
+        },
+        "codie": {
+          "body": "Conoce a Codie: tu programador en pareja local. Lee código, escribe código y explica las partes complicadas sin salir nunca de tu teléfono."
+        },
+        "sage": {
+          "body": "Sage es paciente, curioso y te guía paso a paso por las ideas. Un compañero de estudio que llevas en el bolsillo."
+        },
+        "echo": {
+          "body": "Echo es un compañero versátil para juegos de roles: se mantiene en el personaje, describe escenas y te sigue allá donde tu historia te lleve."
+        },
+        "muse": {
+          "body": "Muse te ayuda a escribir. Sugiere frases, encuentra el ritmo y mantiene intacto tu tono."
+        }
+      }
+    }
+  },
+  "downloadBanner": {
+    "titleByPal": "{{name}} se está descargando",
+    "titleByModel": "{{name}} se está descargando",
+    "extraInProgress": "+{{count}} más en progreso"
   }
 }
