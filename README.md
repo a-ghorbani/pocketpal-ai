@@ -1,3 +1,7 @@
+# 本项目停止开发
+
+转为新项目，后端就负责后端，前端就负责前端以及所有的agent的配置，不要混在一起。这个项目已经无法继续了。
+
 # Fork update
 
 Since the majority of the users of this application are those who wish to gain a deeper understanding of large models, I place greater emphasis on learning and exploration. I try to provide more parameters for users to debug, with easy recovery from incorrect adjustments, while exposing as much of the pipeline as possible so users can clearly see the model’s inputs, outputs, and adjustment methods. Because the chain is fully controllable, when the model encounters issues, configurations can be adjusted directly instead of waiting for code-level changes, making experimentation more flexible.
