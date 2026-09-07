@@ -1,3 +1,5 @@
+import {toJS} from 'mobx';
+
 import {modelStore} from '../../store';
 import type {TokenData} from 'llama.rn';
 
@@ -184,7 +186,7 @@ export class EngineAdapter {
 
     const params = mapRequestToLlamaParams(request, {
       chatTemplate: modelStore.activeModel?.chatTemplate?.chatTemplate,
-      defaultStopWords: modelStore.activeModel?.stopWords,
+      defaultStopWords: toJS(modelStore.activeModel?.stopWords),
     });
 
     this.tracker.reset();

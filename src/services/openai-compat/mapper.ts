@@ -302,11 +302,10 @@ export function mapRequestToLlamaParams(
   if (maxTokens !== undefined && maxTokens !== null) {
     params.n_predict = maxTokens;
   }
-  const stop = normalizeStop(request.stop);
+  const stop =
+    normalizeStop(request.stop) ?? normalizeStop(options.defaultStopWords);
   if (stop) {
     params.stop = stop;
-  } else if (options.defaultStopWords && options.defaultStopWords.length > 0) {
-    params.stop = options.defaultStopWords;
   }
   if (request.seed !== undefined) {
     params.seed = request.seed;
