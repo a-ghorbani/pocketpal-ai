@@ -1,5 +1,5 @@
 import {isMTPCapable, nEmbdOut} from '../utils/mtp';
-import {CacheType, DraftConfig, Model, ModelOrigin} from '../utils/types';
+import {CacheType, DraftConfig, Model} from '../utils/types';
 
 // These must stay module-level functions: makeAutoObservable wraps class
 // methods in `action`, actions run untracked, so a computed calling one would
@@ -70,10 +70,7 @@ export interface DraftResolutionSource {
 export const effectiveDraftModeOf = (
   source: DraftResolutionSource,
 ): DraftConfig['mode'] => {
-  const target =
-    source.activeModel?.origin === ModelOrigin.REMOTE
-      ? undefined
-      : source.activeModel;
+  const target = source.activeModel;
 
   if (target) {
     return resolveDraftCandidate(

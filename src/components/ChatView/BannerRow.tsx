@@ -10,7 +10,7 @@ import {AlertIcon} from '../../assets/icons';
 import {useTheme} from '../../hooks';
 import {chatSessionStore, modelStore} from '../../store';
 import {L10nContext} from '../../utils';
-import {MessageType, ModelOrigin} from '../../utils/types';
+import {MessageType} from '../../utils/types';
 import {resolveBannerVariant} from '../../utils/bannerVariantResolver';
 import {talentRegistry} from '../../services/talents';
 import {t} from '../../locales';
@@ -94,13 +94,7 @@ export const BannerRow: React.FC<BannerRowProps> = observer(
         backgroundColor: withAlpha(error, '22'),
         borderColor: withAlpha(error, '66'),
       },
-      neutral: {
-        backgroundColor: theme.colors.surfaceVariant,
-        borderColor: theme.colors.outline,
-      },
     };
-
-    const isRemote = modelStore.activeModel?.origin === ModelOrigin.REMOTE;
 
     const effectiveNCtx = modelStore.activeModelCaps.effectiveContextLength;
 
@@ -108,7 +102,6 @@ export const BannerRow: React.FC<BannerRowProps> = observer(
       chatSessionStore.lastCompletionResult,
       {
         effectiveNCtx,
-        isRemote,
         htmlPreviewCount,
         activeModelId: modelStore.activeModelId,
         dismissed: chatSessionStore.dismissedBannerVariants,
@@ -176,46 +169,17 @@ export const BannerRow: React.FC<BannerRowProps> = observer(
       );
     }
 
-    if (variant === 'context-remote-hedged') {
-      return (
-        <View
-          testID="context-remote-hedged-banner"
-          accessibilityRole="alert"
-          accessibilityLiveRegion="polite"
-          style={[styles.banner, tint.neutral]}>
-          <Text style={styles.bannerText}>{l10n.chat.contextRemoteHedged}</Text>
-          <View style={styles.bannerActions}>
-            <Button
-              compact
-              mode="text"
-              testID="context-banner-dismiss"
-              onPress={() =>
-                chatSessionStore.setBannerDismissed('context-remote-hedged')
-              }>
-              {l10n.chat.contextBannerDismiss}
-            </Button>
-          </View>
-        </View>
-      );
-    }
-
     // context-full (dismissable per draft).
     const talentNames = l10n.components.palSheet.talentNames;
     const heavyTalentLabel = heavyTalentName
       ? (talentNames[heavyTalentName as keyof typeof talentNames] ??
         heavyTalentName)
       : undefined;
-    // Remote wins over every local variant: the escalated and heavy-talent
-    // copies both carry the "increase the context size" advice, but a remote
-    // model has no in-app context control, so remote always gets the single
-    // remote copy (no increase clause) regardless of failure count / talent.
-    const fullText = isRemote
-      ? l10n.chat.contextFullRemote
-      : heavyTalentLabel
-        ? t(l10n.chat.contextFullHeavyTalent, {talent: heavyTalentLabel})
-        : chatSessionStore.consecutiveFullFailures >= 2
-          ? l10n.chat.contextFullEscalated
-          : l10n.chat.contextFull;
+    const fullText = heavyTalentLabel
+      ? t(l10n.chat.contextFullHeavyTalent, {talent: heavyTalentLabel})
+      : chatSessionStore.consecutiveFullFailures >= 2
+        ? l10n.chat.contextFullEscalated
+        : l10n.chat.contextFull;
 
     return (
       <View

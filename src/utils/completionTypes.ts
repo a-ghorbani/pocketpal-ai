@@ -87,14 +87,12 @@ export interface CompletionResultSnapshot {
   contextFull: boolean;
   tokensPredicted?: number;
   finishReason?: string;
-  isRemote: boolean;
 }
 
 // Declared in precedence order.
 export type BannerVariant =
   | 'context-full'
   | 'context-warning'
-  | 'context-remote-hedged'
   | 'html-soft-cap'
   | 'none';
 

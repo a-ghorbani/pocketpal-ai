@@ -11,11 +11,10 @@ import {
 } from '../../../../jest/test-utils';
 import {ChatScreen} from '../ChatScreen';
 
-import {chatSessionStore, modelStore, serverStore} from '../../../store';
+import {chatSessionStore, modelStore} from '../../../store';
 
 import {l10n} from '../../../locales';
 import {mockLlamaContextParams} from '../../../../jest/fixtures/models';
-import {buildReasoningPayload} from '../../../api/openai';
 import {ModelOrigin} from '../../../utils/types';
 
 const render = (ui: React.ReactElement, options: any = {}) =>
@@ -425,7 +424,6 @@ describe('ChatScreen reasoning pill visibility', () => {
     savedModels = modelStore.models;
     runInAction(() => {
       modelStore.context = new LlamaContext(mockLlamaContextParams);
-      serverStore.remoteReasoning = {};
     });
     modelStore.engine = {
       completion: jest.fn(),
@@ -504,7 +502,6 @@ describe('ChatScreen reasoning override reaches the pill (live, no remount)', ()
     persisted = {enable_thinking: false, reasoning: {effort: undefined}};
     runInAction(() => {
       modelStore.context = new LlamaContext(mockLlamaContextParams);
-      serverStore.remoteReasoning = {};
       chatSessionStore.activeSessionId = 'session-1';
     });
     modelStore.engine = {
@@ -667,7 +664,6 @@ describe('ChatScreen graded effort pill cycle', () => {
     persisted = {enable_thinking: false, reasoning: {effort: undefined}};
     runInAction(() => {
       modelStore.context = new LlamaContext(mockLlamaContextParams);
-      serverStore.remoteReasoning = {};
       chatSessionStore.activeSessionId = 'session-1';
     });
     modelStore.engine = {
@@ -760,138 +756,15 @@ describe('ChatScreen graded effort pill cycle', () => {
   });
 });
 
-describe('ChatScreen on/off toggle → reasoning carrier (remote)', () => {
-  let savedModels: any[];
-  let savedSessionId: string | null | undefined;
-  // Session-backed persistence so the simple on/off toggle round-trips through
-  // updateSessionCompletionSettings, mirroring real session behaviour.
-  let persisted: {
-    enable_thinking: boolean;
-    reasoning?: {enabled: boolean; effort?: string};
-  };
-
-  beforeEach(() => {
-    jest.clearAllMocks();
-    savedModels = modelStore.models;
-    savedSessionId = chatSessionStore.activeSessionId;
-    persisted = {enable_thinking: true, reasoning: undefined};
-    runInAction(() => {
-      modelStore.context = new LlamaContext(mockLlamaContextParams);
-      // No entry → resolver reports isReasoning 'unknown' (pill shown,
-      // fail-open) and supportsEffort false (simple on/off toggle).
-      serverStore.remoteReasoning = {};
-      chatSessionStore.activeSessionId = 'session-1';
-    });
-    modelStore.engine = {
-      completion: jest.fn(),
-      stopCompletion: jest.fn(),
-    } as any;
-    (
-      chatSessionStore.getCurrentCompletionSettings as jest.Mock
-    ).mockImplementation(async () => ({...persisted}));
-    (
-      chatSessionStore.updateSessionCompletionSettings as jest.Mock
-    ).mockImplementation(async (s: any) => {
-      persisted = {
-        enable_thinking: s.enable_thinking,
-        reasoning: s.reasoning,
-      };
-      runInAction(() => {
-        const session = chatSessionStore.sessions.find(
-          x => x.id === 'session-1',
-        );
-        if (session) {
-          (session as any).completionSettings = {...persisted};
-        }
-      });
-    });
-  });
-
-  afterEach(() => {
-    modelStore.models = savedModels;
-    runInAction(() => {
-      modelStore.activeModelId = undefined;
-      chatSessionStore.activeSessionId = savedSessionId as any;
-    });
-  });
-
-  const useRemoteEffortUnknownModel = () => {
-    const model = {
-      ...savedModels[0],
-      id: 'remote-effort-unknown',
-      origin: ModelOrigin.REMOTE,
-      supportsThinking: undefined,
-      reasoning: undefined,
-    };
-    modelStore.models = [...savedModels, model];
-    runInAction(() => {
-      modelStore.activeModelId = 'remote-effort-unknown';
-    });
-  };
-
-  // Toggling thinking OFF on a remote effort-unknown model must populate the
-  // reasoning carrier (enabled:false), so buildReasoningPayload produces the
-  // per-serverType OFF wire shape. Pre-R1 the toggle set only enable_thinking,
-  // leaving params.reasoning undefined → buildReasoningPayload returns {}.
-  it('off toggle yields reasoning.enabled false reaching buildReasoningPayload', async () => {
-    useRemoteEffortUnknownModel();
-    const {getByLabelText} = render(<ChatScreen />, {withNavigation: true});
-
-    // Default thinkingEnabled true → label is "Disable thinking mode".
-    const toggle = getByLabelText('Disable thinking mode');
-    await act(async () => {
-      fireEvent.press(toggle);
-    });
-
-    await waitFor(() =>
-      expect(persisted.reasoning).toEqual({enabled: false, effort: undefined}),
-    );
-    expect(persisted.reasoning?.enabled).toBe(false);
-
-    // The carrier drives the per-serverType OFF payload.
-    expect(buildReasoningPayload('llama.cpp', persisted.reasoning)).toEqual({
-      reasoning_format: 'auto',
-      chat_template_kwargs: {enable_thinking: false},
-    });
-    expect(buildReasoningPayload('Ollama', persisted.reasoning)).toEqual({
-      reasoning_effort: 'none',
-    });
-  });
-});
-
 // The image-attach affordance must reflect a capability that lands after the
-// screen is already on screen: the probe is detached and a lazily-started
-// server can take seconds to answer.
-describe('ChatScreen remote vision reactivity', () => {
-  const modelId = 'srv-1/gemma-4-e2b';
+// screen is already on screen: multimodal init verification can take a
+// moment once the model is selected.
+describe('ChatScreen vision reactivity', () => {
   let savedModels: any[];
 
   beforeEach(() => {
     jest.clearAllMocks();
     savedModels = modelStore.models;
-    modelStore.models = [
-      ...savedModels,
-      {
-        ...savedModels[0],
-        id: modelId,
-        origin: ModelOrigin.REMOTE,
-        serverId: 'srv-1',
-        remoteModelId: 'gemma-4-e2b',
-      },
-    ];
-    runInAction(() => {
-      modelStore.context = undefined;
-      modelStore.activeModelId = modelId;
-      serverStore.servers = [
-        {
-          id: 'srv-1',
-          name: 'llama',
-          url: 'http://localhost:8080',
-          serverType: 'llama.cpp',
-        } as any,
-      ];
-      serverStore.remoteCaps = {};
-    });
     modelStore.engine = {
       completion: jest.fn(),
       stopCompletion: jest.fn(),
@@ -902,27 +775,7 @@ describe('ChatScreen remote vision reactivity', () => {
     modelStore.models = savedModels;
     runInAction(() => {
       modelStore.activeModelId = undefined;
-      serverStore.servers = [];
-      serverStore.remoteCaps = {};
     });
-  });
-
-  it('enables attach when capabilities land, with no further user action', () => {
-    const {getByLabelText} = render(<ChatScreen />, {withNavigation: true});
-
-    expect(getByLabelText('Add image').props.accessibilityState.disabled).toBe(
-      true,
-    );
-
-    act(() => {
-      runInAction(() => {
-        serverStore.remoteCaps[modelId] = {supportsVision: true};
-      });
-    });
-
-    expect(getByLabelText('Add image').props.accessibilityState.disabled).toBe(
-      false,
-    );
   });
 
   it('enables attach when a local model finishes loading its projection', () => {
@@ -961,19 +814,5 @@ describe('ChatScreen remote vision reactivity', () => {
     runInAction(() => {
       modelStore.isMultimodalActive = false;
     });
-  });
-
-  it('does not let the active model inherit a sibling model vision flag', () => {
-    act(() => {
-      runInAction(() => {
-        serverStore.remoteCaps['srv-1/gemma-3-4b'] = {supportsVision: true};
-      });
-    });
-
-    const {getByLabelText} = render(<ChatScreen />, {withNavigation: true});
-
-    expect(getByLabelText('Add image').props.accessibilityState.disabled).toBe(
-      true,
-    );
   });
 });

@@ -4,8 +4,8 @@ import {Button, Text, Divider, Switch, Chip} from 'react-native-paper';
 import {ModelSettings} from '../../screens/ModelsScreen/ModelSettings';
 import {Sheet} from '../Sheet';
 import {ProjectionModelSelector} from '../ProjectionModelSelector';
-import {Model, ModelOrigin} from '../../utils/types';
-import {modelStore, serverStore} from '../../store';
+import {Model} from '../../utils/types';
+import {modelStore} from '../../store';
 import {chatTemplates} from '../../utils/chat';
 import {
   resolveReasoningCapability,
@@ -35,14 +35,9 @@ export const ModelSettingsSheet: React.FC<ModelSettingsSheetProps> = memo(
     );
     const l10n = useContext(L10nContext);
 
-    // Remote models have no local-only settings (chat template, stop words,
-    // tokens) — only the reasoning override applies to them.
-    const isRemote = model?.origin === ModelOrigin.REMOTE;
-
     // Reasoning override (seeded from the resolver so the controls show the
     // effective state). Axis-1 is reasoning yes/no; axis-2 graded effort + set.
-    const seedReasoning = () =>
-      resolveReasoningCapability(model, serverStore.remoteReasoning);
+    const seedReasoning = () => resolveReasoningCapability(model);
     const [isReasoningModel, setIsReasoningModel] = useState(
       () => seedReasoning().isReasoning === 'yes',
     );
@@ -89,10 +84,7 @@ export const ModelSettingsSheet: React.FC<ModelSettingsSheetProps> = memo(
         setTempModelName(model.name);
         setTempChatTemplate(model.chatTemplate);
         setTempStopWords(model.stopWords || []);
-        const cap = resolveReasoningCapability(
-          model,
-          serverStore.remoteReasoning,
-        );
+        const cap = resolveReasoningCapability(model);
         setIsReasoningModel(cap.isReasoning === 'yes');
         setSupportsEffort(cap.supportsEffort);
         setEffortSet(orderEffortValues(cap.effortValues));
@@ -114,11 +106,9 @@ export const ModelSettingsSheet: React.FC<ModelSettingsSheetProps> = memo(
 
     const handleSaveSettings = () => {
       if (model) {
-        if (!isRemote) {
-          modelStore.updateModelName(model.id, tempModelName);
-          modelStore.updateModelChatTemplate(model.id, tempChatTemplate);
-          modelStore.updateModelStopWords(model.id, tempStopWords);
-        }
+        modelStore.updateModelName(model.id, tempModelName);
+        modelStore.updateModelChatTemplate(model.id, tempChatTemplate);
+        modelStore.updateModelStopWords(model.id, tempStopWords);
         // Persist a source:'user' reasoning override only when the user
         // actually touched a reasoning control. Otherwise leave the existing
         // capability (detected/unknown/learned) intact.
@@ -148,7 +138,7 @@ export const ModelSettingsSheet: React.FC<ModelSettingsSheetProps> = memo(
     };
 
     const handleReset = () => {
-      if (model && !isRemote) {
+      if (model) {
         // Reset to model default values
         modelStore.resetModelName(model.id);
         modelStore.resetModelChatTemplate(model.id);
@@ -172,18 +162,14 @@ export const ModelSettingsSheet: React.FC<ModelSettingsSheetProps> = memo(
         <Sheet.ScrollView
           bottomOffset={16}
           contentContainerStyle={styles.sheetScrollViewContainer}>
-          {/* Chat template, stop words and token settings are local-only and
-              don't apply to remote models. */}
-          {!isRemote && (
-            <ModelSettings
-              modelName={tempModelName}
-              chatTemplate={tempChatTemplate}
-              stopWords={tempStopWords}
-              onChange={handleSettingsUpdate}
-              onStopWordsChange={value => setTempStopWords(value || [])}
-              onModelNameChange={handleModelNameChange}
-            />
-          )}
+          <ModelSettings
+            modelName={tempModelName}
+            chatTemplate={tempChatTemplate}
+            stopWords={tempStopWords}
+            onChange={handleSettingsUpdate}
+            onStopWordsChange={value => setTempStopWords(value || [])}
+            onModelNameChange={handleModelNameChange}
+          />
 
           {/* Multimodal Settings Section */}
           {model.supportsMultimodal && (
@@ -205,7 +191,7 @@ export const ModelSettingsSheet: React.FC<ModelSettingsSheetProps> = memo(
           )}
 
           {/* Reasoning override (axis 1 + axis 2). Manual escape hatch when
-              detection is wrong or impossible (remote models). */}
+              detection is wrong or impossible. */}
           <Divider style={styles.multimodalDivider} />
           <Text style={styles.multimodalSectionTitle}>
             {l10n.components.modelSettingsSheet.reasoningSection}
@@ -255,11 +241,9 @@ export const ModelSettingsSheet: React.FC<ModelSettingsSheetProps> = memo(
         </Sheet.ScrollView>
         <Sheet.Actions>
           <View style={styles.secondaryButtons}>
-            {!isRemote && (
-              <Button mode="text" onPress={handleReset}>
-                {l10n.common.reset}
-              </Button>
-            )}
+            <Button mode="text" onPress={handleReset}>
+              {l10n.common.reset}
+            </Button>
             <Button mode="text" onPress={handleCancelSettings}>
               {l10n.common.cancel}
             </Button>

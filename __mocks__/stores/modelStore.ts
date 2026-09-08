@@ -3,13 +3,8 @@ import {computed, makeAutoObservable, observable} from 'mobx';
 import {modelsList} from '../../jest/fixtures/models';
 
 import {downloadManager} from '../services/downloads';
-import {mockServerStore} from './serverStore';
 
-import {
-  Model,
-  ContextInitParams,
-  RemoteSessionBinding,
-} from '../../src/utils/types';
+import {Model, ContextInitParams} from '../../src/utils/types';
 import {LlamaContext} from 'llama.rn';
 import {CompletionEngine} from '../../src/utils/completionTypes';
 import {createDefaultContextInitParams} from '../../src/utils/contextInitParamsVersions';
@@ -36,7 +31,6 @@ class MockModelStore {
   engine: CompletionEngine | undefined = undefined;
   isMultimodalActive: boolean = false;
   activeContextSettings: ContextInitParams | undefined = undefined;
-  activeRemoteBinding: RemoteSessionBinding | undefined = undefined;
 
   // Memory calibration variables
   availableMemoryCeiling: number | undefined = 5 * 1e9; // 5GB ceiling
@@ -54,7 +48,6 @@ class MockModelStore {
   resetModels: jest.Mock;
   initContext: jest.Mock;
   selectModel: jest.Mock;
-  setRemoteModel: jest.Mock;
   lastUsedModelId: any;
   checkSpaceAndDownload: jest.Mock;
   getDownloadProgress: jest.Mock;
@@ -109,7 +102,6 @@ class MockModelStore {
       resetModels: false,
       initContext: false,
       selectModel: false,
-      setRemoteModel: false,
       checkSpaceAndDownload: false,
       getDownloadProgress: false,
       manualReleaseContext: false,
@@ -169,7 +161,6 @@ class MockModelStore {
     this.resetModels = jest.fn();
     this.initContext = jest.fn().mockResolvedValue(Promise.resolve());
     this.selectModel = jest.fn().mockResolvedValue(Promise.resolve());
-    this.setRemoteModel = jest.fn().mockResolvedValue(Promise.resolve());
     this.checkSpaceAndDownload = jest.fn().mockResolvedValue(undefined);
     this.getDownloadProgress = jest.fn();
     this.manualReleaseContext = jest.fn();
@@ -226,8 +217,7 @@ class MockModelStore {
     this.exitBenchmarkMode = jest.fn();
     this.recordReasoningObserved = jest.fn();
     // Mirror the real writer so tests exercise the live override → resolver →
-    // pill reactive chain. Local ids mutate Model.reasoning on the observable
-    // model; remote ids route to ServerStore (kept as a spy fallback here).
+    // pill reactive chain.
     this.setReasoningOverride = jest.fn((modelId: string, cap: any) => {
       const localModel = this.models.find(m => m.id === modelId);
       if (!localModel) {
@@ -282,9 +272,6 @@ class MockModelStore {
   // capability chain and stay reactive to store mutations.
   private get capabilityEnv(): CapabilityEnv {
     return {
-      remoteCaps: mockServerStore.remoteCaps,
-      listCaps: mockServerStore.listCaps,
-      binding: this.activeRemoteBinding,
       isMultimodalActive: this.isMultimodalActive,
       activeContextSettings: this.activeContextSettings,
       activeModelId: this.activeModelId,

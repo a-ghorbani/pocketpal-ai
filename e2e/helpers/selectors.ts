@@ -214,12 +214,6 @@ export const Selectors = {
     get localFab(): string {
       return byAccessibilityLabel('Add Local Model');
     },
-    get remoteFab(): string {
-      return byAccessibilityLabel('Add Remote Model');
-    },
-    get manageServersFab(): string {
-      return byAccessibilityLabel('Manage Servers');
-    },
     get flatList(): string {
       return byTestId('flat-list');
     },
@@ -567,9 +561,6 @@ export const Selectors = {
     get full(): string {
       return byTestId('context-full-banner');
     },
-    get remoteHedged(): string {
-      return byTestId('context-remote-hedged-banner');
-    },
     get softCap(): string {
       return byTestId('soft-cap-warning');
     },
@@ -657,49 +648,5 @@ export const Selectors = {
       return byTestId('reasoning-supports-effort-switch');
     },
     effortChip: (level: string): string => byTestId(`effort-chip-${level}`),
-  },
-
-  // User-selectable server-type dropdown (server details + remote model sheets)
-  serverType: {
-    dropdown: (): string => byTestId('server-type-dropdown'),
-    option: (value: string): string => byTestId(`server-type-option-${value}`),
-  },
-
-  // Remote model sheet (add model from server)
-  remoteModel: {
-    get urlInput(): string {
-      return byTestId('remote-url-input');
-    },
-    get nameInput(): string {
-      return byTestId('remote-name-input');
-    },
-    get apiKeyInput(): string {
-      return byTestId('remote-apikey-input');
-    },
-    get timeoutInput(): string {
-      return byTestId('remote-timeout-input');
-    },
-    get addModelButton(): string {
-      return byTestId('add-model-button');
-    },
-  },
-
-  // Server details sheet (edit/delete server)
-  serverDetails: {
-    get urlInput(): string {
-      return byTestId('server-details-url-input');
-    },
-    get apiKeyInput(): string {
-      return byTestId('server-details-apikey-input');
-    },
-    get timeoutInput(): string {
-      return byTestId('server-details-timeout-input');
-    },
-    get removeButton(): string {
-      return byTestId('remove-server-button');
-    },
-    get saveButton(): string {
-      return byTestId('save-server-button');
-    },
   },
 };

@@ -14,13 +14,6 @@ const localModel = (overrides: Partial<Model> = {}): Model =>
     ...overrides,
   }) as Model;
 
-const remoteModel = (overrides: Partial<Model> = {}): Model =>
-  ({
-    id: 'server-1/remote-x',
-    origin: ModelOrigin.REMOTE,
-    ...overrides,
-  }) as Model;
-
 const cap = (
   overrides: Partial<ReasoningCapability> = {},
 ): ReasoningCapability => ({
@@ -34,7 +27,7 @@ const cap = (
 
 describe('resolveReasoningCapability', () => {
   it('returns unknown for no model (fail-open)', () => {
-    expect(resolveReasoningCapability(undefined, {})).toMatchObject({
+    expect(resolveReasoningCapability(undefined)).toMatchObject({
       isReasoning: 'unknown',
       source: 'unknown',
     });
@@ -43,20 +36,9 @@ describe('resolveReasoningCapability', () => {
   it('local model reads model.reasoning', () => {
     const m = localModel();
     m.reasoning = cap({isReasoning: 'yes', source: 'learned'});
-    expect(resolveReasoningCapability(m, {})).toMatchObject({
+    expect(resolveReasoningCapability(m)).toMatchObject({
       isReasoning: 'yes',
       source: 'learned',
-    });
-  });
-
-  it('remote model reads the keyed remoteReasoning map', () => {
-    const m = remoteModel();
-    const remote = {
-      'server-1/remote-x': cap({isReasoning: 'yes', source: 'user'}),
-    };
-    expect(resolveReasoningCapability(m, remote)).toMatchObject({
-      isReasoning: 'yes',
-      source: 'user',
     });
   });
 
@@ -64,7 +46,7 @@ describe('resolveReasoningCapability', () => {
     const m = localModel();
     m.supportsThinking = false; // detection said no
     m.reasoning = cap({isReasoning: 'yes', source: 'user'});
-    expect(resolveReasoningCapability(m, {})).toMatchObject({
+    expect(resolveReasoningCapability(m)).toMatchObject({
       isReasoning: 'yes',
       source: 'user',
     });
@@ -73,7 +55,7 @@ describe('resolveReasoningCapability', () => {
   it('legacy fallback: supportsThinking true → yes/detected', () => {
     const m = localModel();
     m.supportsThinking = true;
-    expect(resolveReasoningCapability(m, {})).toMatchObject({
+    expect(resolveReasoningCapability(m)).toMatchObject({
       isReasoning: 'yes',
       source: 'detected',
     });
@@ -82,7 +64,7 @@ describe('resolveReasoningCapability', () => {
   it('legacy fallback: supportsThinking false → no/detected', () => {
     const m = localModel();
     m.supportsThinking = false;
-    expect(resolveReasoningCapability(m, {})).toMatchObject({
+    expect(resolveReasoningCapability(m)).toMatchObject({
       isReasoning: 'no',
       source: 'detected',
     });
@@ -90,7 +72,7 @@ describe('resolveReasoningCapability', () => {
 
   it('legacy fallback: neither reasoning nor supportsThinking → unknown', () => {
     const m = localModel();
-    expect(resolveReasoningCapability(m, {})).toMatchObject({
+    expect(resolveReasoningCapability(m)).toMatchObject({
       isReasoning: 'unknown',
       source: 'unknown',
     });
@@ -105,7 +87,7 @@ describe('resolveReasoningCapability', () => {
       effortValues: ['low', 'medium', 'high'],
       effortSource: 'user',
     });
-    const r = resolveReasoningCapability(m, {});
+    const r = resolveReasoningCapability(m);
     expect(r.supportsEffort).toBe(true);
     expect(r.effortValues).toEqual(['low', 'medium', 'high']);
   });
@@ -119,7 +101,7 @@ describe('resolveReasoningCapability', () => {
       effortValues: ['low', 'high'],
       effortSource: 'user',
     });
-    const r = resolveReasoningCapability(m, {});
+    const r = resolveReasoningCapability(m);
     expect(r.isReasoning).toBe('no');
     expect(r.supportsEffort).toBe(false);
     expect(r.effortValues).toEqual([]);
@@ -127,8 +109,8 @@ describe('resolveReasoningCapability', () => {
   });
 
   it("isReasoning 'unknown' is preserved (pill fail-open)", () => {
-    const m = remoteModel();
-    expect(resolveReasoningCapability(m, {}).isReasoning).toBe('unknown');
+    const m = localModel();
+    expect(resolveReasoningCapability(m).isReasoning).toBe('unknown');
   });
 });
 

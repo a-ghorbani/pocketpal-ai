@@ -32,9 +32,8 @@ export const useStructuredOutput = () => {
         repeat_penalty?: number;
       },
     ) => {
-      // `engine` is set for both local (LocalCompletionEngine wrapping a
-      // LlamaContext) and remote (OpenAICompletionEngine) — so structured
-      // output works against any backend that honours
+      // `engine` wraps the local LlamaContext (LocalCompletionEngine) — so
+      // structured output works whenever the loaded model honours
       // response_format.json_schema.
       const engine = modelStore.engine;
       if (!engine) {

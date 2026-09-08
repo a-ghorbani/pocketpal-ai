@@ -11,13 +11,12 @@ import {
   chatSessionStore,
   modelStore,
   palStore,
-  serverStore,
   ttsStore,
   uiStore,
 } from '../store';
 import {resolveReasoningCapability} from '../utils/reasoningCapability';
 
-import {MessageType, ModelOrigin, User} from '../utils/types';
+import {MessageType, User} from '../utils/types';
 import {createMultimodalWarning} from '../utils/errors';
 import {
   assembleMessages,
@@ -168,10 +167,7 @@ const prepareCompletion = async ({
   // ReasoningBlock); separate from include_thinking_in_context, which only
   // governs what prior <think> we SEND.
   const isReasoningCapable =
-    resolveReasoningCapability(
-      modelStore.activeModel,
-      serverStore.remoteReasoning,
-    ).isReasoning !== 'no';
+    resolveReasoningCapability(modelStore.activeModel).isReasoning !== 'no';
   cleanCompletionParams.reasoning_format = 'auto';
   // The enable_thinking:false hint only matters for reasoning-capable models;
   // a non-reasoning model would just ignore it.
@@ -239,31 +235,17 @@ type TtsRunState = {
 };
 
 // Normalise a finished turn's result into the snapshot the banner reads.
-// `contextFull` is frozen here as the OR of the native full/truncated flags
-// and (remote only) a 'length' finish reason derived from `stopped_limit`.
 function deriveSnapshotFromResult(
   result: CompletionResult,
-  effectiveNCtx: number | undefined,
-  isRemote: boolean,
 ): CompletionResultSnapshot {
   const used = (result.tokens_evaluated ?? 0) + (result.tokens_predicted ?? 0);
-  // Local turns set context_full/truncated directly; finishReason only bridges
-  // the remote engine's signal (stopped_limit) into the OR predicate below, so
-  // it is intentionally remote-only.
-  const finishReason =
-    isRemote && result.stopped_limit === 1 ? 'length' : undefined;
-  const contextFull =
-    result.context_full === true ||
-    result.truncated === true ||
-    finishReason === 'length';
+  const contextFull = result.context_full === true || result.truncated === true;
   return {
     content: result.content,
     reasoning_content: result.reasoning_content,
     used,
     contextFull,
     tokensPredicted: result.tokens_predicted,
-    finishReason,
-    isRemote,
   };
 }
 
@@ -318,8 +300,7 @@ async function applyEventToStore(
         const activeModel = modelStore.activeModel;
         if (
           activeModel &&
-          resolveReasoningCapability(activeModel, serverStore.remoteReasoning)
-            .isReasoning !== 'yes'
+          resolveReasoningCapability(activeModel).isReasoning !== 'yes'
         ) {
           modelStore.recordReasoningObserved(activeModel.id);
         }
@@ -419,11 +400,7 @@ async function applyEventToStore(
       // (not in the runner) because timings are an observability
       // concern of the hook, not the runner.
       const finalResult = event.result.finalResult;
-      const snapshot = deriveSnapshotFromResult(
-        finalResult,
-        modelStore.activeContextSettings?.n_ctx,
-        modelStore.activeModel?.origin === ModelOrigin.REMOTE,
-      );
+      const snapshot = deriveSnapshotFromResult(finalResult);
       const draftTimings =
         finalResult.draft_tokens != null && finalResult.draft_tokens > 0
           ? {
@@ -610,11 +587,9 @@ export const useChatSession = (
     let triggerMarkers: string[] = [];
     // Marker detection reads `grammar_triggers` from a local Jinja
     // `getFormattedChat` call — only meaningful when a local llama.rn
-    // context exists. In server mode (`modelStore.context` undefined)
-    // the remote llama.cpp parser handles tool-call detection on its
-    // own, so this whole step is skipped. Without the guard the
-    // non-null assertion below throws TypeError on every server-mode
-    // turn (caught + warned, but noisy).
+    // context exists. Without the guard the non-null assertion below
+    // throws TypeError whenever no context is loaded yet (caught +
+    // warned, but noisy).
     const localContext = modelStore.context;
     if (localContext) {
       try {
@@ -799,13 +774,10 @@ export const useChatSession = (
           // n_ctx-exhaustion signal; when set, treat the turn as full and
           // pin `used` to the loaded n_ctx so the sticky banner's freshness
           // gate holds.
-          const isRemote =
-            modelStore.activeModel?.origin === ModelOrigin.REMOTE;
           const effectiveNCtx = modelStore.activeContextSettings?.n_ctx;
           const abortSnapshot: CompletionResultSnapshot = {
             used: treatAsContextFull ? (effectiveNCtx ?? 0) : 0,
             contextFull: treatAsContextFull,
-            isRemote,
           };
           await chatSessionStore.updateMessage(
             currentMessageInfo.current.id,
@@ -832,13 +804,10 @@ export const useChatSession = (
           // does not rehydrate after a session switch / restart (it re-fires
           // on the next overflowing send).
           if (isContextFullError) {
-            const isRemote =
-              modelStore.activeModel?.origin === ModelOrigin.REMOTE;
             const effectiveNCtx = modelStore.activeContextSettings?.n_ctx;
             chatSessionStore.recordCompletionSnapshot({
               used: effectiveNCtx ?? 0,
               contextFull: true,
-              isRemote,
             });
             turnAbsorbedError = true;
           }
@@ -879,7 +848,6 @@ export const useChatSession = (
         chatSessionStore.recordCompletionSnapshot({
           used: modelStore.activeContextSettings?.n_ctx ?? 0,
           contextFull: true,
-          isRemote: modelStore.activeModel?.origin === ModelOrigin.REMOTE,
         });
       } else {
         await addSystemMessage(`${l10n.chat.completionFailed}${errorMessage}`);

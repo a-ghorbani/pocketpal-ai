@@ -15,13 +15,9 @@ import {
 } from '../utils/completionTypes';
 
 import {fetchModelFilesDetails} from '../api/hf';
-import {
-  LocalCompletionEngine,
-  OpenAICompletionEngine,
-} from '../api/completionEngines';
+import {LocalCompletionEngine} from '../api/completionEngines';
 
 import {uiStore, hfStore} from '.';
-import {serverStore} from './ServerStore';
 import {chatSessionStore} from './ChatSessionStore';
 import {
   draftCacheDefaults,
@@ -80,7 +76,6 @@ import {
   ModelFile,
   ModelOrigin,
   ModelType,
-  RemoteSessionBinding,
 } from '../utils/types';
 
 import {ErrorState, createErrorState} from '../utils/errors';
@@ -93,7 +88,6 @@ import {
 } from '../utils/deviceCapabilities';
 import {detectThinkingCapability} from '../utils/thinkingCapabilityDetection';
 import {ReasoningCapability} from '../utils/reasoningCapability';
-import {capsMatchBinding} from '../utils/remoteCaps';
 import {resolveModelCaps} from '../utils/modelCaps';
 import type {CapabilityEnv, ModelCapabilityView} from '../utils/modelCaps';
 import {t} from '../locales';
@@ -105,50 +99,6 @@ import {
 import NativeHardwareInfo from '../specs/NativeHardwareInfo';
 import {getModelMemoryRequirement} from '../utils/memoryEstimator';
 import {loadLlamaModelInfo} from 'llama.rn';
-
-/**
- * Factory function to create a Model object for a remote model from an OpenAI-compatible server.
- * Fills all required Model fields with sensible defaults.
- */
-function createRemoteModel(params: {
-  serverId: string;
-  serverName: string;
-  remoteModelId: string;
-  modelName: string;
-}): Model {
-  const emptyChatTemplate = {
-    name: '',
-    addBosToken: false,
-    addEosToken: false,
-    bosToken: '',
-    eosToken: '',
-    chatTemplate: '',
-    addGenerationPrompt: false,
-  };
-  return {
-    id: `${params.serverId}/${params.remoteModelId}`,
-    name: params.modelName,
-    author: params.serverName,
-    origin: ModelOrigin.REMOTE,
-    isDownloaded: true,
-    isLocal: false,
-    size: 0,
-    params: 0,
-    downloadUrl: '',
-    hfUrl: '',
-    progress: 0,
-    filename: '',
-    defaultChatTemplate: emptyChatTemplate,
-    chatTemplate: emptyChatTemplate,
-    defaultStopWords: [],
-    stopWords: [],
-    defaultCompletionSettings: {} as CompletionParams,
-    completionSettings: {} as CompletionParams,
-    serverId: params.serverId,
-    serverName: params.serverName,
-    remoteModelId: params.remoteModelId,
-  };
-}
 
 const pairedDraftModel = (config?: DraftConfig): Model | undefined =>
   config?.mode === 'paired' ? config.draftModel : undefined;
@@ -163,7 +113,7 @@ class ModelStore {
    * Returns models with projection models filtered out for display purposes
    */
   get displayModels(): Model[] {
-    return [...filterProjectionModels(this.models), ...this.remoteModels];
+    return filterProjectionModels(this.models);
   }
 
   appState: AppStateStatus = AppState.currentState;
@@ -189,8 +139,6 @@ class ModelStore {
   context: LlamaContext | undefined = undefined;
 
   engine: CompletionEngine | undefined = undefined;
-
-  activeRemoteBinding: RemoteSessionBinding | undefined = undefined;
 
   lastUsedModelId: string | undefined = undefined;
 
@@ -247,7 +195,6 @@ class ModelStore {
       activeModel: computed,
       activeModelCaps: computed,
       contextId: computed,
-      remoteModels: computed,
       activeDownloads: computed,
     });
     makePersistable(this, {
@@ -1085,11 +1032,6 @@ class ModelStore {
   }
 
   private markAutoReleased = (modelId: string) => {
-    // Skip auto-release for remote models (no native context to release)
-    const model = this.activeModel;
-    if (model?.origin === ModelOrigin.REMOTE) {
-      return;
-    }
     console.log('Marking auto-released: ', modelId);
     runInAction(() => {
       this.wasAutoReleased = true;
@@ -1107,16 +1049,6 @@ class ModelStore {
 
   checkAndReloadAutoReleasedModel = async () => {
     if (this.wasAutoReleased && this.lastAutoReleasedModelId) {
-      // Skip if the auto-released model ID refers to a remote model
-      if (this.lastAutoReleasedModelId.includes('/')) {
-        const remoteModel = this.remoteModels.find(
-          m => m.id === this.lastAutoReleasedModelId,
-        );
-        if (remoteModel) {
-          this.clearAutoReleaseFlags();
-          return;
-        }
-      }
       const model = this.models.find(
         m => m.id === this.lastAutoReleasedModelId && m.isDownloaded,
       );
@@ -1137,31 +1069,19 @@ class ModelStore {
     ) {
       // Coming to foreground - check if we need to reload auto-released model
       await this.checkAndReloadAutoReleasedModel();
-      this.reprobeRemoteCapsIfUnknown();
     } else if (this.appState === 'active' && nextAppState === 'inactive') {
       // active → inactive: NO action (per requirements)
       console.log('Active → Inactive: No auto-release action');
     } else if (this.appState === 'inactive' && nextAppState === 'background') {
       // inactive → background: release if enabled
-      // Skip for remote models — no native context to release, and
-      // releaseContext() would clear the engine with no reload path.
-      if (
-        this.isAutoReleaseEnabled &&
-        this.activeModelId &&
-        this.activeModel?.origin !== ModelOrigin.REMOTE
-      ) {
+      if (this.isAutoReleaseEnabled && this.activeModelId) {
         console.log('Inactive → Background: Auto-releasing context');
         this.markAutoReleased(this.activeModelId);
         await this.releaseContext();
       }
     } else if (this.appState === 'active' && nextAppState === 'background') {
       // active → background: release if enabled (direct transition)
-      // Skip for remote models — same reason as above.
-      if (
-        this.isAutoReleaseEnabled &&
-        this.activeModelId &&
-        this.activeModel?.origin !== ModelOrigin.REMOTE
-      ) {
+      if (this.isAutoReleaseEnabled && this.activeModelId) {
         console.log('Active → Background: Auto-releasing context');
         this.markAutoReleased(this.activeModelId);
         await this.releaseContext();
@@ -1171,47 +1091,6 @@ class ModelStore {
     runInAction(() => {
       this.appState = nextAppState;
     });
-  };
-
-  /**
-   * Remote models are exempt from auto-release, so a session survives
-   * backgrounding — but the capability probe behind it may not have: iOS can
-   * tear the request down, and the first probe is the request that raises the
-   * local-network prompt, so a grant always arrives after it already failed.
-   * Without this, caps stay unknown for the rest of the session and the only
-   * recovery is re-selecting the model by hand.
-   *
-   * Also skipped once the server record has been repointed away from that
-   * backend: the probe would read a backend this session never talks to, and
-   * it cannot produce caps this session could use. The next activation
-   * rebuilds the binding and probes the url it is built from.
-   */
-  private reprobeRemoteCapsIfUnknown = () => {
-    const model = this.activeModel;
-    if (
-      model?.origin !== ModelOrigin.REMOTE ||
-      !model.serverId ||
-      !model.remoteModelId ||
-      capsMatchBinding(
-        serverStore.remoteCaps[model.id],
-        this.activeRemoteBinding,
-        model.id,
-      )
-    ) {
-      return;
-    }
-    const binding = this.activeRemoteBinding;
-    if (binding?.modelId === model.id) {
-      const configuredUrl = serverStore.servers.find(
-        s => s.id === model.serverId,
-      )?.url;
-      if (configuredUrl !== undefined && configuredUrl !== binding.url) {
-        return;
-      }
-    }
-    serverStore
-      .fetchRemoteModelCaps(model.serverId, model.remoteModelId)
-      .catch(() => {});
   };
 
   reinitializeContext = async () => {
@@ -2355,7 +2234,6 @@ class ModelStore {
       runInAction(() => {
         this.context = ctx;
         this.engine = new LocalCompletionEngine(ctx);
-        this.activeRemoteBinding = undefined;
         this.activeContextSettings = contextInitParams;
         this.setActiveModel(model.id);
         this.pendingModelId = null;
@@ -2418,19 +2296,17 @@ class ModelStore {
     console.log('attempt to release');
     chatSessionStore.exitEditMode();
     if (!this.context) {
-      // For remote models or deletion scenarios, clear engine and state
+      // Deletion scenarios: clear engine and state
       if (this.engine || clearActiveModel) {
-        // Stop any active remote completion
         if (this.engine) {
           try {
             await this.engine.stopCompletion();
           } catch {
-            // Ignore errors from stopping remote completion
+            // Ignore errors from stopping completion
           }
         }
         runInAction(() => {
           this.engine = undefined;
-          this.activeRemoteBinding = undefined;
           if (clearActiveModel) {
             this.activeModelId = undefined;
           }
@@ -2441,7 +2317,7 @@ class ModelStore {
       if (!this.engine && !clearActiveModel) {
         return 'No context to release';
       }
-      return 'Remote engine cleared';
+      return 'Engine cleared';
     }
 
     try {
@@ -2513,7 +2389,6 @@ class ModelStore {
       runInAction(() => {
         this.context = undefined;
         this.engine = undefined;
-        this.activeRemoteBinding = undefined;
         this.activeContextSettings = undefined;
         // Ensure multimodal state is cleared even if something went wrong above
         this.isMultimodalActive = false;
@@ -2564,18 +2439,11 @@ class ModelStore {
   };
 
   get activeModel(): Model | undefined {
-    // Look in local models first, then remote models
-    return (
-      this.models.find(model => model.id === this.activeModelId) ||
-      this.remoteModels.find(model => model.id === this.activeModelId)
-    );
+    return this.models.find(model => model.id === this.activeModelId);
   }
 
   private get capabilityEnv(): CapabilityEnv {
     return {
-      remoteCaps: serverStore.remoteCaps,
-      listCaps: serverStore.listCaps,
-      binding: this.activeRemoteBinding,
       isMultimodalActive: this.isMultimodalActive,
       activeContextSettings: this.activeContextSettings,
       activeModelId: this.activeModelId,
@@ -2603,45 +2471,14 @@ class ModelStore {
   }
 
   /**
-   * Returns a string context identifier for the active model.
-   * For local models: the numeric native context ID as a string.
-   * For remote models: "remote-{serverId}" string.
+   * Returns a string context identifier for the active model: the numeric
+   * native context ID as a string.
    */
   get contextId(): string | undefined {
     if (this.context) {
       return String(this.context.id);
     }
-    const model = this.activeModel;
-    if (model?.origin === ModelOrigin.REMOTE && model.serverId) {
-      return `remote-${model.serverId}`;
-    }
     return undefined;
-  }
-
-  /**
-   * Derived from `serverStore.userSelectedModels` and `serverStore.servers` —
-   * not from `serverModels`, so the list a server currently advertises does not
-   * change which cards exist. Remote models are never stored in the persisted
-   * `models` array.
-   */
-  get remoteModels(): Model[] {
-    const models: Model[] = [];
-    for (const selected of serverStore.userSelectedModels) {
-      const server = serverStore.servers.find(s => s.id === selected.serverId);
-      if (!server) {
-        continue;
-      }
-      // Use the remote model ID as the display name
-      models.push(
-        createRemoteModel({
-          serverId: selected.serverId,
-          serverName: server.name,
-          remoteModelId: selected.remoteModelId,
-          modelName: selected.remoteModelId,
-        }),
-      );
-    }
-    return models;
   }
 
   setActiveModel(modelId: string) {
@@ -2649,59 +2486,11 @@ class ModelStore {
   }
 
   /**
-   * Set a remote model as the active model and create an OpenAI completion engine.
-   * Releases any active local context first.
-   */
-  setRemoteModel = async (model: Model): Promise<void> => {
-    if (!model.serverId || !model.remoteModelId) {
-      throw new Error('Model is missing remote configuration');
-    }
-
-    // Release any existing context (local or remote)
-    await this.releaseContext();
-
-    const apiKey = await serverStore.getApiKey(model.serverId);
-    const server = serverStore.servers.find(s => s.id === model.serverId);
-    if (!server) {
-      throw new Error('Server not found');
-    }
-
-    runInAction(() => {
-      this.engine = new OpenAICompletionEngine(
-        server.url,
-        model.remoteModelId!,
-        apiKey,
-        server.requestTimeoutMs,
-        server.serverType,
-      );
-      this.activeRemoteBinding = {
-        modelId: model.id,
-        serverId: model.serverId!,
-        remoteModelId: model.remoteModelId!,
-        url: server.url,
-        serverType: server.serverType,
-      };
-      this.setActiveModel(model.id);
-      // Do NOT set lastUsedModelId for remote models -- server may be offline on next launch
-    });
-
-    serverStore
-      .fetchRemoteModelCaps(model.serverId, model.remoteModelId, apiKey)
-      .catch(() => {});
-  };
-
-  /**
    * Public method that routes model selection to the appropriate handler.
    * All callsites should use selectModel() instead of initContext() directly.
-   * - Remote models: calls setRemoteModel()
-   * - Local models: calls initContext()
    */
   selectModel = async (model: Model): Promise<void> => {
-    if (model.origin === ModelOrigin.REMOTE) {
-      await this.setRemoteModel(model);
-    } else {
-      await this.initContext(model);
-    }
+    await this.initContext(model);
   };
 
   downloadHFModel = async (
@@ -3287,15 +3076,12 @@ class ModelStore {
 
   /**
    * Learn-from-stream entry point. The first time a model actually emits
-   * reasoning, flip axis-1 to learned 'yes'. Routes remote ids to ServerStore
-   * (one direction). Idempotent and monotonic; never overrides a user
-   * declaration (handled by the per-store writers).
+   * reasoning, flip axis-1 to learned 'yes'. Idempotent and monotonic; never
+   * overrides a user declaration.
    */
   recordReasoningObserved = (modelId: string): void => {
     const localModel = this.models.find(m => m.id === modelId);
     if (!localModel) {
-      // Not a persisted local model → remote; delegate to ServerStore.
-      serverStore.recordRemoteReasoningObserved(modelId);
       return;
     }
     const existing = localModel.reasoning;
@@ -3314,14 +3100,10 @@ class ModelStore {
     });
   };
 
-  /**
-   * Manual model-card override. Top of precedence; routes remote ids to
-   * ServerStore, local to the persisted Model.
-   */
+  /** Manual model-card override for the persisted Model. */
   setReasoningOverride = (modelId: string, cap: ReasoningCapability): void => {
     const localModel = this.models.find(m => m.id === modelId);
     if (!localModel) {
-      serverStore.setRemoteReasoningOverride(modelId, cap);
       return;
     }
     runInAction(() => {
@@ -3331,11 +3113,11 @@ class ModelStore {
   };
 
   /**
-   * Returns available (i.e. downloaded models) models with projection models filtered out,
-   * plus remote models from configured servers.
+   * Returns available (i.e. downloaded models) models with projection models
+   * filtered out.
    */
   get availableModels(): Model[] {
-    const localAvailable = filterProjectionModels(
+    return filterProjectionModels(
       this.models.filter(
         model =>
           // Include models that are either local or downloaded
@@ -3344,7 +3126,6 @@ class ModelStore {
           model.isDownloaded,
       ),
     );
-    return [...localAvailable, ...this.remoteModels];
   }
 
   setInferencing(value: boolean) {

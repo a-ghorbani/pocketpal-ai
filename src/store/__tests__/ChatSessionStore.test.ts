@@ -1108,7 +1108,6 @@ describe('chatSessionStore', () => {
       chatSessionStore.lastCompletionResult = {
         used: 4096,
         contextFull: true,
-        isRemote: false,
       };
       chatSessionStore.setBannerDismissed('context-warning');
       chatSessionStore.consecutiveFullFailures = 2;
@@ -2237,7 +2236,7 @@ describe('chatSessionStore', () => {
 
     describe('recordCompletionSnapshot', () => {
       it('mirrors the snapshot into lastCompletionResult', () => {
-        const snap = {used: 3000, contextFull: false, isRemote: false};
+        const snap = {used: 3000, contextFull: false};
         chatSessionStore.recordCompletionSnapshot(snap);
         expect(chatSessionStore.lastCompletionResult).toEqual(snap);
       });
@@ -2250,7 +2249,6 @@ describe('chatSessionStore', () => {
         chatSessionStore.recordCompletionSnapshot({
           used: 3000,
           contextFull: false,
-          isRemote: false,
         });
         expect(chatSessionStore.dismissedBannerVariants.size).toBe(0);
       });
@@ -2259,13 +2257,11 @@ describe('chatSessionStore', () => {
         chatSessionStore.recordCompletionSnapshot({
           used: 4096,
           contextFull: true,
-          isRemote: false,
         });
         expect(chatSessionStore.consecutiveFullFailures).toBe(1);
         chatSessionStore.recordCompletionSnapshot({
           used: 4096,
           contextFull: true,
-          isRemote: false,
         });
         expect(chatSessionStore.consecutiveFullFailures).toBe(2);
       });
@@ -2274,13 +2270,11 @@ describe('chatSessionStore', () => {
         chatSessionStore.recordCompletionSnapshot({
           used: 4096,
           contextFull: true,
-          isRemote: false,
         });
         expect(chatSessionStore.consecutiveFullFailures).toBe(1);
         chatSessionStore.recordCompletionSnapshot({
           used: 2000,
           contextFull: false,
-          isRemote: false,
         });
         expect(chatSessionStore.consecutiveFullFailures).toBe(0);
       });
@@ -2325,7 +2319,6 @@ describe('chatSessionStore', () => {
         chatSessionStore.lastCompletionResult = {
           used: 4096,
           contextFull: true,
-          isRemote: false,
         };
         chatSessionStore.setBannerDismissed('context-warning');
         chatSessionStore.consecutiveFullFailures = 3;
@@ -2366,7 +2359,6 @@ describe('chatSessionStore', () => {
           content: 'reply',
           used: 4096,
           contextFull: true,
-          isRemote: false,
         };
         const mockSession = {
           id: 'session1',
@@ -2448,7 +2440,6 @@ describe('chatSessionStore', () => {
         chatSessionStore.lastCompletionResult = {
           used: 100,
           contextFull: false,
-          isRemote: false,
         };
         const resetSpy = jest.spyOn(chatSessionStore, 'resetActiveSession');
         (chatSessionRepository.deleteSessions as jest.Mock).mockResolvedValue(

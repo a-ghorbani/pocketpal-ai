@@ -460,58 +460,6 @@ export enum ModelOrigin {
   PRESET = 'preset',
   LOCAL = 'local',
   HF = 'hf',
-  REMOTE = 'remote',
-}
-
-export interface ServerConfig {
-  id: string;
-  name: string;
-  url: string; // Base URL e.g. "http://192.168.1.100:1234"
-  lastConnected?: number; // Timestamp
-  requestTimeoutMs?: number; // Per-server network timeout in ms; undefined = API default
-  // User-selectable server type; gates the per-server reasoning wire payload.
-  // detectServerType seeds it best-effort; user selection wins. undefined = unknown.
-  serverType?:
-    | 'llama.cpp'
-    | 'LM Studio'
-    | 'Ollama'
-    | 'OpenAI'
-    | 'vLLM'
-    | string;
-}
-
-/**
- * Capabilities a llama.cpp server reports for one model via GET /props.
- * Keyed per full model id (`${serverId}/${remoteModelId}`) in ServerStore.
- * An absent field means unknown; a field is only ever set from a response that
- * describes an actually loaded model, never from a router placeholder.
- */
-export interface RemoteModelCaps {
-  // Never written or read. Every other field here is optional, so without a
-  // discriminant the weaker list-derived type would be silently assignable to
-  // this one and could be passed wherever a probed answer is expected.
-  tier?: 'probe';
-  contextLength?: number; // /props n_ctx; only ever a finite number > 0
-  supportsVision?: boolean; // /props modalities.vision
-  // The backend these describe. ServerConfig.url is mutable and a live session
-  // does not follow it, so caps that do not carry their own url cannot be
-  // matched against the session. Absent on an entry written before this field
-  // existed: taken at face value, no migration.
-  probedUrl?: string;
-}
-
-/**
- * The backend a live remote chat session is actually talking to. Captured when
- * the completion engine is built and never repointed, unlike the ServerConfig
- * it was built from — editing a server url leaves the session on the old
- * backend until the model is re-selected. Owned by ModelStore, not persisted.
- */
-export interface RemoteSessionBinding {
-  modelId: string; // `${serverId}/${remoteModelId}`
-  serverId: string;
-  remoteModelId: string;
-  url: string;
-  serverType?: string;
 }
 
 export enum ModelType {
@@ -596,11 +544,6 @@ export interface Model {
   // list. Lets reconcile prune stale, non-downloaded rule stubs without touching
   // user-added HF/LOCAL or downloaded models.
   isRulePreset?: boolean;
-
-  // Remote model fields (for models from OpenAI-compatible servers)
-  serverId?: string; // Reference to ServerConfig.id for remote models
-  serverName?: string; // Denormalized for display convenience
-  remoteModelId?: string; // The model ID as reported by the server's /v1/models
 }
 
 export type DraftConfig =

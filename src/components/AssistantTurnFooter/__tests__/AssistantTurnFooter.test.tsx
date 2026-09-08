@@ -210,7 +210,7 @@ describe('AssistantTurnFooter', () => {
       // The turn's snapshot is the store's live one AND it is contextFull,
       // so the sticky banner is the single surface — footer drops "cut off"
       // and shows plain "Interrupted" instead.
-      const snapshot = {used: 4096, contextFull: true, isRemote: false};
+      const snapshot = {used: 4096, contextFull: true};
       runInAction(() => {
         chatSessionStore.lastCompletionResult = snapshot;
       });
@@ -237,7 +237,6 @@ describe('AssistantTurnFooter', () => {
         chatSessionStore.lastCompletionResult = {
           used: 1000,
           contextFull: false,
-          isRemote: false,
         };
       });
       const message = baseTurn({
@@ -245,7 +244,7 @@ describe('AssistantTurnFooter', () => {
           copyable: true,
           interrupted: true,
           truncationLikely: true,
-          completionResult: {used: 4096, contextFull: true, isRemote: false},
+          completionResult: {used: 4096, contextFull: true},
         },
       });
       const {getByText} = render(<AssistantTurnFooter message={message} />);
@@ -253,7 +252,7 @@ describe('AssistantTurnFooter', () => {
     });
 
     it('shows "cut off" when the live snapshot is not contextFull even if it matches', () => {
-      const snapshot = {used: 1000, contextFull: false, isRemote: false};
+      const snapshot = {used: 1000, contextFull: false};
       runInAction(() => {
         chatSessionStore.lastCompletionResult = snapshot;
       });
@@ -274,7 +273,6 @@ describe('AssistantTurnFooter', () => {
         chatSessionStore.lastCompletionResult = {
           used: 4096,
           contextFull: true,
-          isRemote: false,
         };
       });
       const message = baseTurn({

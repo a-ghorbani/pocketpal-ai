@@ -11,7 +11,7 @@ import {
 
 import {useChatSession} from '../useChatSession';
 
-import {chatSessionStore, modelStore, palStore, serverStore} from '../../store';
+import {chatSessionStore, modelStore, palStore} from '../../store';
 
 const mockAssistant = {id: 'assistant-1'};
 
@@ -55,7 +55,6 @@ beforeEach(() => {
       await modelStore.context?.stopCompletion();
     }),
   } as any;
-  serverStore.remoteReasoning = {};
 });
 
 jest

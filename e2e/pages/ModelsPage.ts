@@ -118,30 +118,6 @@ export class ModelsPage extends BasePage {
   }
 
   /**
-   * Open the "Add Remote Model" sheet via the FAB menu.
-   */
-  async openAddRemoteModel(): Promise<void> {
-    await this.closeFabMenuIfExpanded();
-    await this.expandFabMenu();
-    await browser.pause(500);
-    await this.tap(Selectors.models.remoteFab);
-    await browser.pause(1000);
-  }
-
-  /**
-   * Tap "Manage Servers" in the FAB menu.
-   * With a single server, ServerDetailsSheet opens directly.
-   * With multiple servers, an Alert appears with server names.
-   */
-  async tapManageServers(): Promise<void> {
-    await this.closeFabMenuIfExpanded();
-    await this.expandFabMenu();
-    await browser.pause(500);
-    await this.tap(Selectors.models.manageServersFab);
-    await browser.pause(1000);
-  }
-
-  /**
    * Open the per-model settings sheet for a model card, found by its
    * download filename. Scopes the settings button to the card container so
    * the right card's button is tapped when several cards are present.

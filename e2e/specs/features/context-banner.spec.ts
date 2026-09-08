@@ -16,8 +16,7 @@
  * - "New chat" from the full banner starts a fresh, banner-free session.
  *
  * Not covered here (covered by unit tests): clear-on-edit/regenerate (no stable
- * edit gesture in the page objects), per-locale copy, and remote-hedged (needs a
- * configured remote server).
+ * edit gesture in the page objects) and per-locale copy.
  *
  * Usage:
  *   yarn e2e:ios --spec context-banner --skip-build

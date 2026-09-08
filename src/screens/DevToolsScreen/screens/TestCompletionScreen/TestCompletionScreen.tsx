@@ -365,8 +365,7 @@ export const TestCompletionScreen: React.FC = observer(() => {
         ...prev,
         textCompletion: {
           text: '',
-          error:
-            'This test requires a local model — getFormattedChat is not available for remote models.',
+          error: 'This test requires a loaded model.',
         },
       }));
       return;
@@ -720,8 +719,7 @@ export const TestCompletionScreen: React.FC = observer(() => {
         ...prev,
         formattedChat: {
           text: '',
-          error:
-            'This test requires a local model — getFormattedChat is not available for remote models.',
+          error: 'This test requires a loaded model.',
         },
       }));
       return;

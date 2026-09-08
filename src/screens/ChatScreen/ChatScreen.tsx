@@ -15,13 +15,7 @@ import {useChatSession} from '../../hooks';
 import {usePendingMessage} from '../../hooks/useDeepLinking';
 import {Pal} from '../../types/pal';
 
-import {
-  modelStore,
-  chatSessionStore,
-  palStore,
-  serverStore,
-  uiStore,
-} from '../../store';
+import {modelStore, chatSessionStore, palStore, uiStore} from '../../store';
 import {hasVideoCapability} from '../../utils/pal-capabilities';
 
 import {L10nContext} from '../../utils';
@@ -108,10 +102,9 @@ export const ChatScreen: React.FC = observer(() => {
 
   // Resolver is the single source of truth for reasoning capability.
   // Pill is reachable whenever the model is not known to be non-reasoning
-  // (fail-open on 'unknown' so remote + missed-local models are reachable).
+  // (fail-open on 'unknown' so a missed-detection model is reachable).
   const reasoningCapability = resolveReasoningCapability(
     modelStore.activeModel,
-    serverStore.remoteReasoning,
   );
   const thinkingSupported =
     !!modelStore.activeModel && reasoningCapability.isReasoning !== 'no';
@@ -191,9 +184,9 @@ export const ChatScreen: React.FC = observer(() => {
   }, [activePalId, modelStore.activeModelId, modelStore.context]);
 
   // Persist the on/off intent (and optional effort) onto both the local
-  // enable_thinking flag and the reasoning carrier so the remote wire path
-  // (openai.ts, gated per serverType) and the local hook both see it.
-  // Preserves pal overrides. No active session: stage on the new-chat
+  // enable_thinking flag and the reasoning carrier so the chat_template_kwargs
+  // wiring in useChatSession sees it too. Preserves pal overrides. No active
+  // session: stage on the new-chat
   // override field — the resolver applies it as the last layer and session
   // creation bakes it in, without touching newChatCompletionSettings.
   const persistReasoning = async (enabled: boolean, effort?: string) => {
@@ -217,7 +210,7 @@ export const ChatScreen: React.FC = observer(() => {
   };
 
   // Simple on/off pill (effortless models): carries the on/off intent on the
-  // reasoning carrier (effort undefined) so remote OFF is not a no-op.
+  // reasoning carrier (effort undefined) so OFF is never a no-op.
   const handleThinkingToggle = async (enabled: boolean) => {
     await persistReasoning(enabled);
   };

@@ -11,7 +11,6 @@ import {FABGroup} from '../FABGroup';
 describe('FABGroup', () => {
   const mockOnAddHFModel = jest.fn();
   const mockOnAddLocalModel = jest.fn();
-  const mockOnAddRemoteModel = jest.fn();
 
   beforeEach(() => {
     jest.clearAllMocks();
@@ -22,7 +21,6 @@ describe('FABGroup', () => {
       <FABGroup
         onAddHFModel={mockOnAddHFModel}
         onAddLocalModel={mockOnAddLocalModel}
-        onAddRemoteModel={mockOnAddRemoteModel}
       />,
       {withNavigation: true},
     );
@@ -30,12 +28,11 @@ describe('FABGroup', () => {
     expect(getByTestId('fab-group')).toBeTruthy();
   });
 
-  it('renders all three action buttons (HF, local, remote)', () => {
+  it('renders both action buttons (HF, local)', () => {
     const {getByTestId} = render(
       <FABGroup
         onAddHFModel={mockOnAddHFModel}
         onAddLocalModel={mockOnAddLocalModel}
-        onAddRemoteModel={mockOnAddRemoteModel}
       />,
       {withNavigation: true},
     );
@@ -46,9 +43,6 @@ describe('FABGroup', () => {
     expect(
       getByTestId('local-fab', {includeHiddenElements: true}),
     ).toBeTruthy();
-    expect(
-      getByTestId('remote-fab', {includeHiddenElements: true}),
-    ).toBeTruthy();
   });
 
   it('renders accessibility labels for all actions', () => {
@@ -56,7 +50,6 @@ describe('FABGroup', () => {
       <FABGroup
         onAddHFModel={mockOnAddHFModel}
         onAddLocalModel={mockOnAddLocalModel}
-        onAddRemoteModel={mockOnAddRemoteModel}
       />,
       {withNavigation: true},
     );
@@ -67,9 +60,6 @@ describe('FABGroup', () => {
     ).toBeTruthy();
     expect(
       getByLabelText('Add Local Model', {includeHiddenElements: true}),
-    ).toBeTruthy();
-    expect(
-      getByLabelText('Add Remote Model', {includeHiddenElements: true}),
     ).toBeTruthy();
   });
 });
