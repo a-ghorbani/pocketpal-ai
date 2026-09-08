@@ -59,7 +59,7 @@ PODS:
   - hermes-engine (0.82.1):
     - hermes-engine/Pre-built (= 0.82.1)
   - hermes-engine/Pre-built (0.82.1)
-  - llama-rn (0.13.0-rc.1):
+  - llama-rn (0.13.0-rc.3):
     - boost
     - DoubleConversion
     - fast_float
