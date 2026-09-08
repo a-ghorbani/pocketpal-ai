@@ -98,23 +98,19 @@ const REQUIRED_HEXAGON_SYMBOLS = [
 ];
 
 /**
- * A `.dynsym` with `matchCount` entries containing "hexagon", of which the two
- * required ones are defined unless `withRequired` is false, plus non-matching
- * noise so the pattern count is not simply the symbol count.
+ * A `.dynsym` carrying the two required symbols as defined entries unless
+ * `withRequired` is false, plus hexagon-named and non-matching noise so a
+ * reader that keys off name substrings rather than the declared names would
+ * reach a different verdict.
  */
-function hexagonDynsym(matchCount, {withRequired = true} = {}) {
+function hexagonDynsym({withRequired = true} = {}) {
   const symbols = [];
   if (withRequired) {
     for (const name of REQUIRED_HEXAGON_SYMBOLS) {
       symbols.push({name, defined: true});
     }
   }
-  while (symbols.length < matchCount) {
-    symbols.push({
-      name: `lm_ggml_hexagon_session_${symbols.length}`,
-      defined: true,
-    });
-  }
+  symbols.push({name: 'lm_ggml_hexagon_session_init', defined: true});
   symbols.push({name: 'lm_ggml_backend_reg_count', defined: true});
   symbols.push({name: 'malloc', defined: false});
   return buildElf(symbols);
@@ -152,9 +148,7 @@ function conformingEntries(prefix = '') {
       entries[`${prefix}${asset}`] = buildDspStub();
     }
     for (const rule of abi.requiredSymbols) {
-      entries[`${prefix}lib/${abi.abi}/${rule.lib}`] = hexagonDynsym(
-        rule.expectedMatchCount.count,
-      );
+      entries[`${prefix}lib/${abi.abi}/${rule.lib}`] = hexagonDynsym();
     }
   }
   return entries;
@@ -255,7 +249,7 @@ describe('a conforming artifact', () => {
     const entries = conformingEntries('base/');
     entries[
       'base/lib/arm64-v8a/librnllama_v8_2_dotprod_i8mm_hexagon_opencl.so'
-    ] = hexagonDynsym(0, {withRequired: false});
+    ] = hexagonDynsym({withRequired: false});
     const archive = writeArchive('app-prod-release.aab', entries);
     const {status, output} = runGate(['--aab', archive]);
     expect(status).toBe(1);
@@ -276,9 +270,7 @@ describe('the Hexagon backend', () => {
   it('fails when the required symbols are absent, naming both', () => {
     const entries = conformingEntries();
     entries['lib/arm64-v8a/librnllama_v8_2_dotprod_i8mm_hexagon_opencl.so'] =
-      hexagonDynsym(0, {
-        withRequired: false,
-      });
+      hexagonDynsym({withRequired: false});
     const {status, output} = gateApk(entries);
     expect(status).toBe(1);
     for (const name of REQUIRED_HEXAGON_SYMBOLS) {
@@ -300,20 +292,7 @@ describe('the Hexagon backend', () => {
     expect(output).toContain('MISSING  lm_ggml_backend_hexagon_reg');
   });
 
-  it('fails on a changed symbol count, and says to re-declare it', () => {
-    const entries = conformingEntries();
-    entries['lib/arm64-v8a/librnllama_v8_2_dotprod_i8mm_hexagon_opencl.so'] =
-      hexagonDynsym(18);
-    const {status, output} = gateApk(entries);
-    expect(status).toBe(1);
-    expect(output).toContain('18 .dynsym entries matching "hexagon"');
-    expect(output).toContain('re-declare');
-    expect(output).toContain('expectedMatchCount as 18');
-  });
-
-  it('names the llama.rn version the count was read from', () => {
-    const {count, pattern} = manifest.abis.find(abi => abi.abi === 'arm64-v8a')
-      .requiredSymbols[0].expectedMatchCount;
+  it('names the llama.rn version the symbols were read from', () => {
     const installed = JSON.parse(
       fs.readFileSync(
         path.join(
@@ -330,8 +309,7 @@ describe('the Hexagon backend', () => {
 
     const {status, output} = gateApk(conformingEntries());
     expect(status).toBe(0);
-    expect(output).toContain(`${count} .dynsym entries matching "${pattern}"`);
-    expect(output).toContain(`(declared ${count}), llama.rn ${installed}`);
+    expect(output).toContain(`.dynsym entries, llama.rn ${installed}`);
   });
 
   it('reads unknown when llama.rn is not installed, and still passes', () => {
@@ -562,44 +540,14 @@ describe('a check that cannot run', () => {
   // a library but asserts nothing about it therefore restores the incident with
   // CI green, and counting rules rather than reading them would not notice.
   it.each([
-    [
-      'a rule that asserts nothing',
-      rule => {
-        delete rule.mustExport;
-        delete rule.expectedMatchCount;
-      },
-    ],
+    ['a rule that asserts nothing', rule => delete rule.mustExport],
     [
       'a rule whose mustExport has been emptied',
       rule => {
         rule.mustExport = [];
-        delete rule.expectedMatchCount;
       },
     ],
     ['a rule naming no library', rule => delete rule.lib],
-    // count: 0 does not merely assert nothing, it asserts the backend is
-    // ABSENT — so the incident build satisfies it exactly.
-    [
-      'a rule whose only demand is a count of zero',
-      rule => {
-        rule.mustExport = [];
-        rule.expectedMatchCount = {pattern: 'hexagon', count: 0};
-      },
-    ],
-    [
-      'a rule whose expectedMatchCount has no pattern',
-      rule => {
-        rule.mustExport = [];
-        rule.expectedMatchCount = {count: 16};
-      },
-    ],
-    [
-      'a rule whose expectedMatchCount is an empty object',
-      rule => {
-        rule.mustExport = [];
-        rule.expectedMatchCount = {};
-      },
-    ],
   ])('fails on %s', (_label, weaken) => {
     const weakened = path.join(workspace, 'weakened.json');
     const edited = JSON.parse(JSON.stringify(manifest));
@@ -608,7 +556,7 @@ describe('a check that cannot run', () => {
 
     const entries = conformingEntries();
     entries['lib/arm64-v8a/librnllama_v8_2_dotprod_i8mm_hexagon_opencl.so'] =
-      hexagonDynsym(0, {withRequired: false});
+      hexagonDynsym({withRequired: false});
     const archive = writeArchive('app-prod-release.apk', entries);
 
     const {status, output} = runGate([
