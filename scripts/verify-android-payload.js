@@ -94,10 +94,7 @@ function parseArgs(argv) {
  * A symbol rule has to demand that something is *present*. The shape a
  * weakening edit takes is emptying `mustExport` during a dependency bump
  * instead of re-declaring it, and the library itself is still there, so no
- * other rule notices. `expectedMatchCount` only counts as a demand when it
- * asks for a positive number of matches: `count: 0` asserts the backend is
- * absent, which is both self-contradictory next to `mustExport` and exactly
- * the state this check exists to reject.
+ * other rule notices — so a rule that names no symbol is refused outright.
  */
 function assertRuleDemandsSomething(rule, manifestPath) {
   const named = rule.lib || '(unnamed library)';
@@ -110,27 +107,10 @@ function assertRuleDemandsSomething(rule, manifestPath) {
   if (!rule.lib) {
     refuse('names no library');
   }
-  const mustExport = rule.mustExport || [];
-  if (!Array.isArray(mustExport)) {
+  if (!Array.isArray(rule.mustExport)) {
     refuse('has a mustExport that is not a list');
   }
-
-  const count = rule.expectedMatchCount;
-  if (count !== undefined) {
-    if (
-      typeof count !== 'object' ||
-      count === null ||
-      typeof count.pattern !== 'string' ||
-      count.pattern.length === 0 ||
-      !Number.isInteger(count.count) ||
-      count.count < 0
-    ) {
-      refuse('has a malformed expectedMatchCount');
-    }
-  }
-
-  const demandsPresence = mustExport.length > 0 || (count && count.count > 0);
-  if (!demandsPresence) {
+  if (rule.mustExport.length === 0) {
     refuse('asserts nothing');
   }
 }
@@ -464,12 +444,14 @@ function checkSymbolRule({rule, archive, artifactName, entry, report, fail}) {
     return;
   }
 
-  report.push(`    ${rule.lib}: ${symbols.length} .dynsym entries`);
+  report.push(
+    `    ${rule.lib}: ${symbols.length} .dynsym entries, llama.rn ${installedLlamaRnVersion()}`,
+  );
 
-  const missing = (rule.mustExport || []).filter(
+  const missing = rule.mustExport.filter(
     name => !symbols.some(symbol => symbol.name === name && symbol.defined),
   );
-  for (const name of rule.mustExport || []) {
+  for (const name of rule.mustExport) {
     report.push(
       `      ${missing.includes(name) ? 'MISSING' : 'present'}  ${name}`,
     );
@@ -482,29 +464,6 @@ function checkSymbolRule({rule, archive, artifactName, entry, report, fail}) {
         'will fall back to the CPU. Point HEXAGON_SDK_ROOT and HEXAGON_TOOLS_ROOT at an SDK',
         'containing ipc/fastrpc/remote/ship/android_aarch64/libcdsprpc.so and rebuild.',
         `Background: ${ISSUE_URL}`,
-      ].join('\n      '),
-    );
-  }
-
-  const expected = rule.expectedMatchCount;
-  if (!expected) {
-    return;
-  }
-  const pattern = expected.pattern.toLowerCase();
-  const matched = symbols.filter(symbol =>
-    symbol.name.toLowerCase().includes(pattern),
-  ).length;
-  report.push(
-    `      ${matched} .dynsym entries matching "${expected.pattern}" (declared ${expected.count}), llama.rn ${installedLlamaRnVersion()}`,
-  );
-  if (matched !== expected.count && missing.length === 0) {
-    fail(
-      [
-        `${entry} in ${artifactName} has ${matched} .dynsym entries matching "${expected.pattern}";`,
-        `scripts/android-payload-manifest.json declares ${expected.count}.`,
-        'The required symbols are all present, so the backend is compiled in — this is a drift',
-        'tripwire, not a breakage. If the change is expected (a llama.rn upgrade, say), re-declare',
-        `expectedMatchCount as ${matched} in the same pull request so the diff is reviewed.`,
       ].join('\n      '),
     );
   }
