@@ -135,7 +135,7 @@
     "manageServers": "Administrar Servidores",
     "metalDescription": "API acelerada por hardware de Apple.",
     "metalRequiresNewerIOS": "La aceleración por Metal requiere iOS 18 o posterior. Actualiza tu dispositivo para usar esta función.",
-    "openCL": "OpenCL (experimental)",
+    "openCL": "OpenCL (Experimental)",
     "openCLDescription": "Aceleración por GPU para GPUs Adreno. Procesamiento de prompts más rápido, pero la generación no siempre será más rápida.",
     "openCLNotAvailable": "OpenCL no está disponible en este dispositivo. Requiere una GPU Adreno con funciones de CPU i8mm y dotprod.",
     "openCLMissingCPUFeatures": "OpenCL requiere funciones de CPU i8mm y dotprod, que no están disponibles en este dispositivo.",
@@ -321,7 +321,7 @@
         "removeMessage": "¿Estás seguro de que quieres eliminar este modelo de la lista?",
         "removeError": "No se pudo eliminar el modelo.",
         "alreadyDownloadedTitle": "El modelo ya está descargado",
-        "alreadyDownloadedMessage": "El modelo ya está descargado",
+        "alreadyDownloadedMessage": "El modelo ya está descargado.",
         "deleteTitle": "Eliminar modelo",
         "deleteMessage": "¿Estás seguro de que quieres eliminar este modelo descargado?"
       },
@@ -337,7 +337,7 @@
           "message": "El tamaño del modelo se aproxima o supera la memoria total de tu dispositivo. Esto puede causar un comportamiento inesperado."
         },
         "legacy": {
-          "message": "Formato de cuantización antiguo: el modelo podría no ejecutarse.",
+          "message": "Formato de cuantización antiguo - el modelo podría no ejecutarse.",
           "shortMessage": "Cuantización antigua"
         },
         "multiple": "{{count}} advertencias"
@@ -370,7 +370,7 @@
     },
     "hubRun": {
       "title": "Descargar modelo",
-      "resolving": "Cargando detalles del modelo..",
+      "resolving": "Cargando detalles del modelo…",
       "cancel": "Cancelar",
       "retry": "Reintentar",
       "invalidLinkTitle": "Enlace no válido",
@@ -388,7 +388,7 @@
         "downloadButton": "Descargar modelo",
         "settingsButton": "Ajustes del modelo",
         "deleteButton": "Eliminar modelo",
-        "removeButton": "Quitar modelo",
+        "removeButton": "Eliminar modelo",
         "expandDetailsButton": "Expandir detalles del modelo",
         "memoryWarningButton": "Mostrar detalles de la advertencia de memoria",
         "integrityWarningButton": "Mostrar detalles de la advertencia de integridad",
@@ -399,7 +399,7 @@
       "alerts": {
         "deleteTitle": "Eliminar modelo",
         "deleteMessage": "¿Estás seguro de que quieres eliminar este modelo descargado?",
-        "removeTitle": "Quitar modelo",
+        "removeTitle": "Eliminar modelo",
         "removeMessage": "¿Estás seguro de que quieres quitar este modelo de la lista?"
       },
       "buttons": {
@@ -472,7 +472,7 @@
     }
   },
   "completionParams": {
-    "include_thinking_in_context": "Incluir razonamiento de la IA en el contexto (deshabilitarlo ahorra espacio, pero puede afectar al rendimiento).",
+    "include_thinking_in_context": "Incluye las partes de pensamiento/razonamiento de la IA en el contexto enviado al modelo. Desactivar esto puede ahorrar espacio de contexto. Podría afectar el rendimiento.",
     "jinja": "Habilitar plantillas Jinja para el formato de chat. Cuando está activo, utiliza el procesamiento de plantillas basado en Jinja para una mejor compatibilidad con los modelos modernos.",
     "grammar": "Aplicar reglas gramaticales específicas para garantizar que el texto generado siga una estructura o formato determinado",
     "stop": "Definir frases específicas que detendrán la generación de texto",
@@ -561,9 +561,9 @@
       "attachmentButtonAccessibilityLabel": "Enviar contenido multimedia"
     },
     "bubble": {
-      "msPerToken": "{{value}ms/token",
+      "msPerToken": "{{value}} ms/token",
       "tokensPerSec": "{{value}} tokens/seg",
-      "ttft": "{{value}ms TTFT",
+      "ttft": "{{value}} ms TTFT",
       "draftAccepted": "borrador: {{accepted}}/{{total}} ({{pct}}%)",
       "interrupted": "Interrumpido",
       "truncated": "Truncado — posible límite de contexto alcanzado"
@@ -637,9 +637,9 @@
         "other": "Otro"
       },
       "descriptionLabel": "Descripción",
-      "descriptionPlaceholder": "Describe el problema con este contenido...",
+      "descriptionPlaceholder": "Por favor describe el problema con este contenido...",
       "includeModelInfo": "Incluir información del modelo",
-      "includeModelInfoDescription": "Incluir el nombre y el identificador del modelo para ayudarnos a investigar",
+      "includeModelInfoDescription": "Incluya el nombre y el identificador del modelo para ayudarnos a investigar",
       "noActiveModelNote": "Ningún modelo activo actualmente",
       "submit": "Enviar reporte",
       "validation": {
@@ -712,7 +712,7 @@
       "useAIPrompt": "Usar IA para generar el prompt del sistema",
       "modelSelector": {
         "label": "Seleccionar modelo para la generación*",
-        "sublabel": "Recomendado: Llama 3.2 3B o Qwen3 4B Instruct 2507",
+        "sublabel": "Recomendado: Llama 3.2 3B o Qwen3 4B Instruct 2507.",
         "placeholder": "Seleccionar modelo"
       },
       "generatingPrompt": {
@@ -828,7 +828,7 @@
       },
       "gatedModelIndicator": "Requiere Token",
       "tokenRequired": "Este modelo requiere un token de acceso de Hugging Face",
-      "searchErrorHint": "Este modelo requiere un token de acceso de Hugging Face",
+      "searchErrorHint": "Tu token de API de Hugging Face no es válido o ha caducado. Para seguir buscando, por favor elimina el token o desactiva la autenticación por token en los Ajustes.",
       "disableAndRetry": "Desactivar token y reintentar"
     },
     "modelSettingsSheet": {
@@ -836,7 +836,7 @@
       "saveChanges": "Guardar cambios",
       "reasoningSection": "Razonamiento",
       "isReasoningModel": "Modelo de razonamiento",
-      "isReasoningModelHelp": "Mostrar el control de pensamiento para este modelo, incluso si no se detectó automáticamente",
+      "isReasoningModelHelp": "Muestra el control de pensamiento para este modelo, incluso si no se detectó automáticamente.",
       "supportsEffort": "Compatible con esfuerzo graduado",
       "effortValues": "Niveles de esfuerzo que admite este modelo",
       "effortLevels": {
@@ -941,7 +941,7 @@
       "aiRole": "Rol de la IA",
       "aiRolePlaceholder": "Eldara, un travieso espíritu del bosque",
       "aiRoleSublabel": "Establece el rol del personaje",
-      "userRole": "Rol de usuario",
+      "userRole": "Rol del usuario",
       "userRolePlaceholder": "Sir Elandor, un valiente caballero",
       "userRoleSublabel": "¿Quién eres?",
       "situation": "Situación",
@@ -1034,7 +1034,7 @@
     "palHeaderRight": {
       "exportAllPals": "Exportar todos los pals",
       "importPals": "Importar pals",
-      "importSuccess": "Se importaron {{count}} pal(s) con éxito",
+      "importSuccess": "Se importaron {{count}} pal(s) con éxito.",
       "importError": "No se pudieron importar los pals. Revisa el formato del archivo."
     }
   },
@@ -1052,7 +1052,7 @@
     "world": "Mundo",
     "toneStyle": "Tono / Estilo",
     "aiRole": "Rol de la IA",
-    "userRole": "Rol de usuario",
+    "userRole": "Mi Rol",
     "prompt": "Prompt",
     "assistant": "Asistente",
     "roleplay": "Juego de rol",
@@ -1114,10 +1114,10 @@
       "error": "Error",
       "failedToLoadDetails": "Error al cargar los detalles del Pal",
       "failedToDownload": "Error al descargar el Pal",
-      "premiumPalMessage": "Este es un Pal (amigo) prémium. • Si ya lo has desbloqueado con tu cuenta de Palshub, simplemente inicia sesión para acceder a todos los detalles. • ¿Aún no lo has desbloqueado? Visita la aplicación palshub.ai para obtener más información.",
+      "premiumPalMessage": "Este es un Pal (amigo) prémium.\n• Si ya lo has desbloqueado con tu cuenta de Palshub, simplemente inicia sesión para acceder a todos los detalles.\n• ¿Aún no lo has desbloqueado? Visita la aplicación palshub.ai para obtener más información.",
       "notAvailable": "N/D",
       "buyOnPalshub": "Comprar en Palshub",
-      "finalizingPurchase": "Finalizando tu compra..",
+      "finalizingPurchase": "Finalizando tu compra…",
       "processingPurchase": "Procesando; se desbloqueará en breve.",
       "checkoutSessionExpired": "Tu sesión ha caducado. Inicia sesión de nuevo para continuar.",
       "signInAgain": "Iniciar sesión de nuevo",
@@ -1228,7 +1228,7 @@
     "increaseContextSliderA11yLabel": "Tamaño del contexto",
     "increaseContextSliderA11yValue": "{{tokens}} tokens",
     "increaseContextConfirmSize": "Ajustar a {{size}}",
-    "increaseContextReloadingShort": "Recargando..",
+    "increaseContextReloadingShort": "Recargando…",
     "increaseContextNoFitBody": "Este dispositivo no tiene capacidad para un contexto mayor con este modelo. Inicia un chat nuevo para continuar.",
     "increaseContextCancel": "Ahora no",
     "increaseContextReloading": "Recargando el modelo con un contexto mayor…",
@@ -1237,7 +1237,7 @@
     "palLoadHint": "Este asistente (pal) suele necesitar más espacio del que permite el tamaño del contexto actual.",
     "generatingPreview": "Generando vista previa… ({{tokens}} tokens)",
     "generatingPreviewPending": "Generando vista previa…",
-    "toolUsedChip": "{name}} utilizado",
+    "toolUsedChip": "{{name}} utilizado",
     "toolErrorBlock": "{{name}} falló",
     "webSearch": {
       "searched": "Búsqueda realizada: {{query}}",
@@ -1282,7 +1282,7 @@
       "testWarning": "Nota: la prueba puede tardar entre 2 y 5 minutos en modelos grandes y no se puede interrumpir una vez iniciada.",
       "keepScreenOpen": "Por favor mantén esta pantalla abierta.",
       "initializingModel": "Inicializando modelo...",
-      "modelMaxValue": "(max: {maxValue}})"
+      "modelMaxValue": "(max: {{maxValue}})"
     },
     "dialogs": {
       "advancedSettings": {
@@ -1322,7 +1322,7 @@
         "title": "Ajustes del modelo",
         "context": "Contexto: {{context}}",
         "batch": "Lote: {{batch}}",
-        "ubatch": "UBatch: {{ubatch}",
+        "ubatch": "UBatch: {{ubatch}}",
         "cpuThreads": "Hilos de CPU: {{threads}}",
         "gpuLayers": "Capas de GPU: {{layers}}",
         "device": "Dispositivo: {{device}}",
@@ -1468,7 +1468,7 @@
     "engineChipKokoro": "Kokoro",
     "engineChipSupertonic": "Supertonic",
     "engineChipSystem": "Sistema",
-    "stepsCount": "{{steps} pasos",
+    "stepsCount": "{{steps}} pasos",
     "engineKittenTagline": "El menor consumo. Fiable. Ideal para dispositivos antiguos.",
     "engineKokoroTagline": "La más alta calidad. Más lento al iniciar. Es posible que algunas voces no funcionen en todos los dispositivos.",
     "engineSupertonicTagline": "El inicio más rápido. Consume más memoria RAM. Puede omitir palabras ocasionalmente.",
@@ -1501,21 +1501,21 @@
     },
     "screen1": {
       "title": "Conoce a tus amigos (Pals).",
-      "titleAccent": "pals.",
-      "body": "Pequeños amigos (pals) inteligentes que viven dentro de tu teléfono. Vamos a configurarlo todo; solo te tomará un minuto.",
+      "titleAccent": "amigos.",
+      "body": "Pequeños amigos (pals) inteligentes que viven dentro de tu teléfono.\nVamos a configurarlo todo; solo te tomará un minuto.",
       "cta": "Muéstrame cómo funciona",
       "eyebrow": "Te damos la bienvenida a PocketPal"
     },
     "screen2": {
-      "title": "En cualquier momento y en cualquier lugar.",
-      "body": "Tus amigos (pals) viven dentro de tu teléfono. Sin internet ni señal; funcionan en aviones, fuera de la red y en aldeas remotas.",
-      "highlight": "Sin internet ni señal",
+      "title": "En cualquier momento,\nEn cualquier lugar.",
+      "body": "Tus amigos (pals) viven dentro de tu teléfono.\nSin internet, sin señal - funcionan en aviones, fuera de la red y en aldeas remotas.",
+      "highlight": "Sin internet sin señal",
       "cta": "Siguiente",
       "eyebrow": "La idea",
       "titleAccent": "En cualquier momento,"
     },
     "screen3": {
-      "title": "Pequeños, pero tuyos.",
+      "title": "Pequeños,\npero tuyos.",
       "titleAccent": "Pequeños,",
       "body": "Los amigos (pals) en tu teléfono son rápidos y privados, pero más ligeros que la IA en la nube. Piensa en ellos como un compañero de bolsillo, no como un oráculo que todo lo sabe.",
       "highlight": "rápido y privado",
