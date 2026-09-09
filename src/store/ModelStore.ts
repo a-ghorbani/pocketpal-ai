@@ -31,6 +31,7 @@ import {
   unpairedDraftCandidate,
 } from './draftResolution';
 import {checkGpuSupport} from '../utils/deviceCapabilities';
+import {resolveDeviceSelection} from '../utils/deviceSelection';
 import {
   deepMerge,
   getSHA256Hash,
@@ -573,7 +574,7 @@ class ModelStore {
       cache_type_k: this.contextInitParams.cache_type_k,
       cache_type_v: this.contextInitParams.cache_type_v,
       n_gpu_layers: this.contextInitParams.n_gpu_layers ?? 99,
-      devices: this.contextInitParams.devices, // NEW
+      devices: this.contextInitParams.devices?.slice(),
       kv_unified: this.contextInitParams.kv_unified ?? true, // NEW (default true!)
       n_parallel: this.contextInitParams.n_parallel ?? 1, // NEW (1 for blocking mode only)
       use_mlock: this.contextInitParams.use_mlock,
@@ -616,6 +617,14 @@ class ModelStore {
           this.contextInitParams.spec_draft_n_gpu_layers;
       }
     }
+
+    Object.assign(
+      params,
+      await resolveDeviceSelection({
+        devices: params.devices,
+        n_gpu_layers: params.n_gpu_layers,
+      }),
+    );
 
     // Remove undefined values from the params object
     return Object.fromEntries(
