@@ -1,4 +1,5 @@
 import React from 'react';
+import {getBackendDevicesInfo} from 'llama.rn';
 import {Platform, Keyboard} from 'react-native';
 import {runInAction} from 'mobx';
 
@@ -32,6 +33,47 @@ describe('SettingsScreen', () => {
     jest.runOnlyPendingTimers();
     jest.useRealTimers();
   });
+
+  it.each(['HTP*', 'HTP99'])(
+    'shows saved %s as Hexagon and writes its discovered name when selected',
+    async savedName => {
+      const originalOS = Platform.OS;
+      const originalSettings = {...modelStore.contextInitParams};
+      Platform.OS = 'android';
+      (getBackendDevicesInfo as jest.Mock).mockResolvedValue([
+        {deviceName: 'HTP3', type: 'accel', backend: 'HTP'},
+        {deviceName: 'HTP4', type: 'accel', backend: 'HTP'},
+      ]);
+      runInAction(() => {
+        modelStore.contextInitParams.devices = [savedName];
+        modelStore.contextInitParams.flash_attn_type = 'off';
+      });
+      try {
+        const {getByTestId} = render(<SettingsScreen />, {
+          withSafeArea: true,
+          withNavigation: true,
+        });
+        await waitFor(() => {
+          expect(
+            getByTestId('device-option-hexagon').props.accessibilityState
+              .checked,
+          ).toBe(true);
+        });
+        act(() => {
+          fireEvent.press(getByTestId('device-option-cpu'));
+          fireEvent.press(getByTestId('device-option-hexagon'));
+        });
+        expect(modelStore.setDevices).toHaveBeenLastCalledWith(['HTP3']);
+        expect(modelStore.setFlashAttnType).not.toHaveBeenCalled();
+      } finally {
+        Platform.OS = originalOS;
+        runInAction(() => {
+          modelStore.contextInitParams = originalSettings;
+        });
+        (getBackendDevicesInfo as jest.Mock).mockReset().mockResolvedValue([]);
+      }
+    },
+  );
 
   it('renders settings screen correctly', async () => {
     const {getByText, getByDisplayValue} = render(<SettingsScreen />, {
