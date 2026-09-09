@@ -6,6 +6,10 @@ import {observer} from 'mobx-react';
 
 jest.unmock('../useTheme');
 jest.unmock('../../store');
+
+jest.mock('../../services/deviceRules/rules', () => ({
+  fetchRules: jest.fn().mockResolvedValue(null),
+}));
 import {useTheme} from '../useTheme';
 
 import {uiStore} from '../../store';
