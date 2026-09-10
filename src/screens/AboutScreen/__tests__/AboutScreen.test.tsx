@@ -69,22 +69,26 @@ describe('AboutScreen', () => {
     );
   });
 
-  it('opens Buy Me a Coffee URL when sponsor button is pressed on non-iOS platforms', () => {
-    Platform.OS = 'android';
-    const {getByText} = render(<AboutScreen />);
+  describe.each(['android', 'ios'] as const)('on %s', os => {
+    const originalOS = Platform.OS;
 
-    fireEvent.press(getByText(l10n.en.about.sponsorButton));
+    beforeEach(() => {
+      Platform.OS = os;
+    });
 
-    expect(Linking.openURL).toHaveBeenCalledWith(
-      'https://www.buymeacoffee.com/aghorbani',
-    );
-  });
+    afterEach(() => {
+      Platform.OS = originalOS;
+    });
 
-  it('does not show sponsor button on iOS', () => {
-    Platform.OS = 'ios';
-    const {queryByText} = render(<AboutScreen />);
+    it('shows no sponsorship option in the support section', () => {
+      const {queryByText, getByText} = render(<AboutScreen />);
 
-    expect(queryByText(l10n.en.about.sponsorButton)).toBeNull();
+      expect(queryByText('Become a Sponsor')).toBeNull();
+      expect(queryByText('or')).toBeNull();
+      expect(getByText(l10n.en.about.githubButton)).toBeTruthy();
+      expect(getByText(l10n.en.about.orBy)).toBeTruthy();
+      expect(getByText(l10n.en.feedback.shareThoughtsButton)).toBeTruthy();
+    });
   });
 
   it('opens feedback form when share thoughts button is pressed', async () => {
