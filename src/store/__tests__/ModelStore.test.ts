@@ -1,6 +1,10 @@
 jest.unmock('../../store');
 import {runInAction} from 'mobx';
-import {LlamaContext} from 'llama.rn';
+import {
+  LlamaContext,
+  getBackendDevicesInfo,
+  initLlama as initializeLlama,
+} from 'llama.rn';
 import {Alert, Platform} from 'react-native';
 
 import {
@@ -133,6 +137,186 @@ describe('ModelStore', () => {
 
   afterEach(() => {
     showErrorSpy.mockRestore();
+  });
+
+  describe('Hexagon load device resolution', () => {
+    const originalInitContext = modelStore.initContext;
+    const discover = getBackendDevicesInfo as jest.Mock;
+    const nativeInit = initializeLlama as jest.Mock;
+    const discovered = (names: string[]) =>
+      names.map(deviceName => ({deviceName, backend: 'HTP', type: 'accel'}));
+    let originalOS: typeof Platform.OS;
+    let originalSettings: typeof modelStore.contextInitParams;
+
+    beforeEach(() => {
+      originalOS = Platform.OS;
+      originalSettings = {...modelStore.contextInitParams};
+      Platform.OS = 'android';
+      modelStore.initContext = originalInitContext;
+      runInAction(() => {
+        modelStore.isContextLoading = false;
+        modelStore.benchmarkActive = false;
+        modelStore.modelLoadError = null;
+        modelStore.contextInitParams = {
+          ...originalSettings,
+          devices: ['HTP*'],
+          n_gpu_layers: 37,
+          flash_attn_type: 'on',
+          cache_type_k: CacheType.Q8_0,
+          cache_type_v: CacheType.F16,
+          use_mmap: 'false',
+          speculativeEnabled: false,
+        };
+      });
+      discover.mockReset().mockResolvedValue(discovered(['HTP2', 'HTP0']));
+      nativeInit.mockReset().mockResolvedValue({
+        release: jest.fn().mockResolvedValue(undefined),
+        isMultimodalEnabled: jest.fn().mockResolvedValue(false),
+      });
+    });
+
+    afterEach(() => {
+      Platform.OS = originalOS;
+      runInAction(() => {
+        modelStore.contextInitParams = originalSettings;
+        modelStore.context = undefined;
+        modelStore.activeModelId = undefined;
+      });
+      discover.mockReset().mockResolvedValue([]);
+    });
+
+    it.each([
+      ['HTP*'],
+      ['HTP0'],
+      ['HTP99'],
+      ['HTP0', 'HTP1'],
+      ['CPU', 'HTP*', 'Adreno'],
+    ])(
+      'resolves saved selection %j without rewriting preferences',
+      async (...devices) => {
+        modelStore.setDevices(devices);
+        const saved = JSON.parse(JSON.stringify(modelStore.contextInitParams));
+        await modelStore.initContext(basicModel);
+        expect(nativeInit).toHaveBeenCalledTimes(1);
+        expect(nativeInit.mock.calls[0][0]).toMatchObject({
+          devices: ['HTP2'],
+          n_gpu_layers: 37,
+          flash_attn_type: 'on',
+          cache_type_k: CacheType.Q8_0,
+          cache_type_v: CacheType.F16,
+        });
+        expect(modelStore.contextInitParams).toEqual(saved);
+      },
+    );
+
+    it('selects only the first of six discovered sessions', async () => {
+      discover.mockResolvedValue(
+        discovered(['HTP0', 'HTP1', 'HTP2', 'HTP3', 'HTP4', 'HTP5']),
+      );
+      await modelStore.initContext(basicModel);
+      expect(nativeInit.mock.calls[0][0].devices).toEqual(['HTP0']);
+    });
+
+    it('preserves an explicit zero GPU-layer setting', async () => {
+      modelStore.setNGPULayers(0);
+      await modelStore.initContext(basicModel);
+      expect(nativeInit.mock.calls[0][0]).toMatchObject({
+        devices: ['HTP2'],
+        n_gpu_layers: 0,
+      });
+    });
+
+    it.each(['empty', 'missing', 'rejected'])(
+      'falls back on %s discovery and recovers on a later load',
+      async failure => {
+        const warning = jest
+          .spyOn(console, 'warn')
+          .mockImplementation(() => {});
+        if (failure === 'rejected') {
+          discover.mockRejectedValueOnce(new Error('Discovery failed'));
+        } else {
+          discover.mockResolvedValueOnce(failure === 'empty' ? [] : undefined);
+        }
+        const saved = JSON.parse(JSON.stringify(modelStore.contextInitParams));
+        await modelStore.initContext(basicModel);
+        expect(nativeInit.mock.calls[0][0]).toMatchObject({
+          devices: ['CPU'],
+          n_gpu_layers: 0,
+          flash_attn_type: 'on',
+          cache_type_k: CacheType.Q8_0,
+        });
+        expect(modelStore.contextInitParams).toEqual(saved);
+        await modelStore.releaseContext();
+        await modelStore.initContext(basicModel);
+        expect(nativeInit.mock.calls[1][0]).toMatchObject({
+          devices: ['HTP2'],
+          n_gpu_layers: 37,
+        });
+        expect(modelStore.contextInitParams).toEqual(saved);
+        warning.mockRestore();
+      },
+    );
+
+    it.each([
+      {os: 'android', devices: undefined},
+      {os: 'android', devices: []},
+      {os: 'android', devices: ['CPU']},
+      {os: 'android', devices: ['Adreno']},
+      {os: 'ios', devices: undefined},
+      {os: 'ios', devices: ['Metal']},
+      {os: 'ios', devices: ['CPU']},
+      {os: 'ios', devices: ['HTP*']},
+    ])(
+      'preserves $os selection $devices without discovery',
+      async ({os, devices}) => {
+        Platform.OS = os as typeof Platform.OS;
+        modelStore.setDevices(devices);
+        await modelStore.initContext(basicModel);
+        expect(nativeInit.mock.calls[0][0].devices).toEqual(devices);
+        expect(nativeInit.mock.calls[0][0].n_gpu_layers).toBe(37);
+        expect(discover).not.toHaveBeenCalled();
+      },
+    );
+
+    it('uses one coherent selection and layer snapshot while discovery is pending', async () => {
+      let finishDiscovery!: (devices: ReturnType<typeof discovered>) => void;
+      let startedDiscovery!: () => void;
+      const started = new Promise<void>(resolve => {
+        startedDiscovery = resolve;
+      });
+      discover.mockImplementationOnce(() => {
+        startedDiscovery();
+        return new Promise(resolve => {
+          finishDiscovery = resolve;
+        });
+      });
+      const loading = modelStore.initContext(basicModel);
+      await started;
+      modelStore.setDevices(['CPU']);
+      modelStore.setNGPULayers(0);
+      finishDiscovery(discovered(['HTP3']));
+      await loading;
+      expect(nativeInit.mock.calls[0][0]).toMatchObject({
+        devices: ['HTP3'],
+        n_gpu_layers: 37,
+        flash_attn_type: 'on',
+        cache_type_k: CacheType.Q8_0,
+      });
+      expect(modelStore.contextInitParams).toMatchObject({
+        devices: ['CPU'],
+        n_gpu_layers: 0,
+      });
+    });
+
+    it('reports native initialization failure without retrying', async () => {
+      nativeInit.mockRejectedValueOnce(new Error('Native init failed'));
+      await expect(modelStore.initContext(basicModel)).rejects.toThrow(
+        'Native init failed',
+      );
+      expect(nativeInit).toHaveBeenCalledTimes(1);
+      expect(modelStore.modelLoadError).not.toBeNull();
+      expect(modelStore.contextInitParams.devices).toEqual(['HTP*']);
+    });
   });
 
   describe('mergeModelLists', () => {

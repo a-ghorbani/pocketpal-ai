@@ -1,4 +1,5 @@
 import React from 'react';
+import {Platform} from 'react-native';
 import {act} from 'react-test-renderer';
 
 import {fireEvent, render, waitFor} from '../../../../jest/test-utils';
@@ -495,14 +496,67 @@ describe('BenchmarkRunnerScreen', () => {
       stubHexagonLogs();
       getDeviceOptions.mockResolvedValueOnce([
         {id: 'cpu', label: 'CPU', devices: ['CPU']},
-        {id: 'hexagon', label: 'Hexagon', devices: ['HTP*']},
+        {id: 'hexagon', label: 'Hexagon', devices: ['HTP0']},
       ]);
       const cfg: BenchConfig = {...VALID_CONFIG, backends: ['hexagon']};
       await runMatrix(cfg, setStatus, setLastCell);
       const [paramsArg] = (initLlama as jest.Mock).mock.calls[0];
-      expect(paramsArg.devices).toEqual(['HTP*']);
+      expect(paramsArg.devices).toEqual(['HTP0']);
       expect(paramsArg.n_gpu_layers).toBe(99);
     });
+
+    it.each([['HTP0', 'HTP1', 'HTP2', 'HTP3', 'HTP4', 'HTP5'], ['HTP3']])(
+      'uses real discovery for Hexagon sessions %j',
+      async (...names) => {
+        const originalOS = Platform.OS;
+        Platform.OS = 'android';
+        const {getBackendDevicesInfo} = require('llama.rn');
+        const actualSelection = jest.requireActual(
+          '../../../utils/deviceSelection',
+        );
+        getBackendDevicesInfo.mockResolvedValue(
+          names.map(deviceName => ({
+            deviceName,
+            type: 'accel',
+            backend: 'HTP',
+          })),
+        );
+        getDeviceOptions.mockImplementationOnce(
+          actualSelection.getDeviceOptions,
+        );
+        stubHexagonLogs();
+        const saved = JSON.parse(JSON.stringify(modelStore.contextInitParams));
+        try {
+          const cfg: BenchConfig = {
+            ...VALID_CONFIG,
+            backends: ['hexagon'],
+            settings_axes: [{name: 'flash_attn_type', values: ['on']}],
+          };
+          await runMatrix(cfg, setStatus, setLastCell);
+          const lastWrite =
+            RNFS.writeFile.mock.calls[RNFS.writeFile.mock.calls.length - 1];
+          const report = JSON.parse(lastWrite[1]);
+          expect(initLlama).toHaveBeenCalledTimes(1);
+          expect(initLlama.mock.calls[0][0]).toMatchObject({
+            devices: [names[0]],
+            n_gpu_layers: 99,
+            flash_attn_type: 'on',
+          });
+          expect(report.runs[0]).toMatchObject({
+            status: 'ok',
+            effective_init_params: {
+              devices: [names[0]],
+              n_gpu_layers: 99,
+              flash_attn_type: 'on',
+            },
+          });
+          expect(modelStore.contextInitParams).toEqual(saved);
+        } finally {
+          Platform.OS = originalOS;
+          getBackendDevicesInfo.mockReset().mockResolvedValue([]);
+        }
+      },
+    );
 
     // -------------------------------------------------------------------------
     // Per-cell context release (sole release site is the per-cell finally)
@@ -1326,10 +1380,10 @@ describe('BenchmarkRunnerScreen', () => {
         filePath: '/mock/path/m.gguf',
         base: DEFAULT_BENCH_BASE_PARAMS,
         overrides: {} as any,
-        devices: ['HTP*'],
+        devices: ['HTP0'],
         n_gpu_layers: 99,
       });
-      expect(params.devices).toEqual(['HTP*']);
+      expect(params.devices).toEqual(['HTP0']);
       expect(params.n_gpu_layers).toBe(99);
       expect(params.model).toBe('/mock/path/m.gguf');
     });
