@@ -53,6 +53,7 @@ describe('ServerDetailsSheet', () => {
   beforeEach(() => {
     jest.clearAllMocks();
     serverStore.servers = [testServer];
+    serverStore.serverPresence = {};
     (serverStore.getApiKey as jest.Mock).mockResolvedValue('sk-test-key');
     (serverStore.getUserSelectedModelsForServer as jest.Mock).mockReturnValue([
       {serverId: 'srv-1', remoteModelId: 'llama-7b'},
@@ -416,6 +417,62 @@ describe('ServerDetailsSheet', () => {
         'srv-1',
         expect.objectContaining({serverType: 'Ollama'}),
       );
+    });
+  });
+  describe('the presence row', () => {
+    const presenceText = () => {
+      const {getByTestId} = render(
+        <ServerDetailsSheet isVisible onDismiss={jest.fn()} serverId="srv-1" />,
+      );
+      return getByTestId('server-presence-status').props.children;
+    };
+
+    it('reads as not-yet-checked before any probe, never as offline', () => {
+      expect(presenceText()).toMatch(/not checked yet/i);
+    });
+
+    it.each([
+      ['reachable', /reachable/i],
+      ['unreachable', /not reachable/i],
+    ])('reads %s from the store', (reachability, expected) => {
+      serverStore.serverPresence = {
+        'srv-1': {reachability: reachability as any, probing: false},
+      };
+
+      expect(presenceText()).toMatch(expected);
+    });
+
+    it('reads as checking while a probe is in flight', () => {
+      serverStore.serverPresence = {
+        'srv-1': {reachability: 'unreachable', probing: true},
+      };
+
+      expect(presenceText()).toMatch(/checking/i);
+    });
+
+    it('cannot start a second probe while one is already in flight', () => {
+      serverStore.serverPresence = {
+        'srv-1': {reachability: 'unreachable', probing: true},
+      };
+      const {getByTestId} = render(
+        <ServerDetailsSheet isVisible onDismiss={jest.fn()} serverId="srv-1" />,
+      );
+
+      fireEvent.press(getByTestId('server-presence-retry'));
+
+      expect(serverStore.probeServerPresence).not.toHaveBeenCalled();
+    });
+
+    it('retries as a user-initiated probe, so the server timeout applies', () => {
+      const {getByTestId} = render(
+        <ServerDetailsSheet isVisible onDismiss={jest.fn()} serverId="srv-1" />,
+      );
+
+      fireEvent.press(getByTestId('server-presence-retry'));
+
+      expect(serverStore.probeServerPresence).toHaveBeenCalledWith('srv-1', {
+        reason: 'user',
+      });
     });
   });
 });

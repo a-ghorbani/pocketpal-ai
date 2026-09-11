@@ -229,6 +229,30 @@ export const ServerDetailsSheet: React.FC<ServerDetailsSheetProps> = observer(
             />
           </View>
 
+          {/* Presence */}
+          <View style={[styles.inputSpacing, styles.presenceRow]}>
+            <Text testID="server-presence-status">
+              {`${l10n.settings.serverPresence.label}: ${
+                serverStore.isProbing(server.id)
+                  ? l10n.settings.serverPresence.checking
+                  : l10n.settings.serverPresence[
+                      serverStore.presenceFor(server.id)
+                    ]
+              }`}
+            </Text>
+            <Button
+              testID="server-presence-retry"
+              compact
+              disabled={serverStore.isProbing(server.id)}
+              onPress={() => {
+                serverStore
+                  .probeServerPresence(server.id, {reason: 'user'})
+                  .catch(() => {});
+              }}>
+              {l10n.settings.serverPresence.retry}
+            </Button>
+          </View>
+
           {/* Request Timeout Input */}
           <View style={styles.inputSpacing}>
             <TextInput

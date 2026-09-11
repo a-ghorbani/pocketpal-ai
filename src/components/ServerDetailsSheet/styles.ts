@@ -16,6 +16,12 @@ export const createStyles = (theme: Theme) => {
       color: theme.colors.onSurfaceVariant,
       fontSize: 12,
     },
+    presenceRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      gap: 8,
+    },
     probeStatusContainer: {
       flexDirection: 'row',
       alignItems: 'center',

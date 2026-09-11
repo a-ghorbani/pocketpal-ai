@@ -1,6 +1,13 @@
 import {makeAutoObservable, observable} from 'mobx';
 
-import {RemoteModelCaps, ServerConfig} from '../../src/utils/types';
+import {
+  RemoteModelCaps,
+  RemoteModelPrefs,
+  ServerConfig,
+  ServerPresence,
+  ServerPresenceEntry,
+} from '../../src/utils/types';
+import {readServerIsSleeping} from '../../src/utils/serverPresence';
 import {ReasoningCapability} from '../../src/utils/reasoningCapability';
 import {RemoteModelInfo} from '../../src/api/openai';
 import {deriveListCapsMap} from '../../src/utils/listCaps';
@@ -20,6 +27,9 @@ class MockServerStore {
   userSelectedModels: Array<{serverId: string; remoteModelId: string}> = [];
   remoteReasoning: Record<string, ReasoningCapability> = {};
   remoteCaps: Record<string, RemoteModelCaps> = {};
+  serverPresence: Record<string, ServerPresenceEntry> = {};
+  favouriteRemoteModels: Record<string, true> = {};
+  lastUsedRemoteModel: Record<string, string> = {};
   isLoading = false;
   error: string | null = null;
   privacyNoticeAcknowledged = false;
@@ -42,6 +52,32 @@ class MockServerStore {
   getUserSelectedModelsForServer: jest.Mock;
   recordRemoteReasoningObserved: jest.Mock;
   setRemoteReasoningOverride: jest.Mock;
+  probeServerPresence: jest.Mock;
+  toggleFavourite: jest.Mock;
+  recordLastUsedRemoteModel: jest.Mock;
+
+  // Derived from the live mock state, like `listCaps`, so a suite that sets
+  // `serverPresence` exercises the real fold and stays reactive.
+  isProbing = (serverId: string): boolean =>
+    this.serverPresence[serverId]?.probing ?? false;
+
+  presenceFor = (serverId: string): ServerPresence => {
+    const reachability = this.serverPresence[serverId]?.reachability;
+    if (reachability === undefined || reachability === 'unknown') {
+      return 'unknown';
+    }
+    if (reachability === 'unreachable') {
+      return 'unreachable';
+    }
+    return readServerIsSleeping(serverId) === true ? 'asleep' : 'reachable';
+  };
+
+  remoteModelPrefsFor = (serverId: string): RemoteModelPrefs => ({
+    favouriteModelIds: Object.keys(this.favouriteRemoteModels)
+      .filter(k => k.startsWith(`${serverId}/`))
+      .map(k => k.slice(serverId.length + 1)),
+    lastUsedModelId: this.lastUsedRemoteModel[serverId],
+  });
 
   constructor() {
     makeAutoObservable(this, {
@@ -63,7 +99,13 @@ class MockServerStore {
       getUserSelectedModelsForServer: false,
       recordRemoteReasoningObserved: false,
       setRemoteReasoningOverride: false,
+      probeServerPresence: false,
+      toggleFavourite: false,
+      recordLastUsedRemoteModel: false,
     });
+    this.probeServerPresence = jest.fn().mockResolvedValue(undefined);
+    this.toggleFavourite = jest.fn();
+    this.recordLastUsedRemoteModel = jest.fn();
     this.addServer = jest.fn().mockReturnValue('mock-server-id');
     this.updateServer = jest.fn();
     this.removeServer = jest.fn();

@@ -522,4 +522,61 @@ describe('BannerRow', () => {
     expect(getByTestId('context-full-banner')).toBeTruthy();
     expect(queryByTestId('soft-cap-warning')).toBeNull();
   });
+  describe('the waking banner', () => {
+    // `asleep` is not reachable in a build from this revision — nothing
+    // reports the sleeping flag yet — so the accessor is stubbed here.
+    const realPresenceFor = serverStore.presenceFor;
+
+    const wakingSetup = (
+      presence: 'asleep' | 'reachable',
+      live: {inferencing: boolean; isStreaming: boolean},
+    ) =>
+      runInAction(() => {
+        modelStore.activeModelId = 'remote-1';
+        modelStore.models = [
+          {
+            id: 'remote-1',
+            origin: ModelOrigin.REMOTE,
+            serverId: 'srv-1',
+          } as any,
+        ];
+        (modelStore as any).activeContextSettings = undefined;
+        modelStore.activeRemoteBinding = {
+          modelId: 'remote-1',
+          serverId: 'srv-1',
+          remoteModelId: 'm1',
+          url: 'http://localhost:8080',
+        };
+        modelStore.inferencing = live.inferencing;
+        modelStore.isStreaming = live.isStreaming;
+        (serverStore as any).presenceFor = () => presence;
+      });
+
+    afterEach(() => {
+      runInAction(() => {
+        modelStore.activeRemoteBinding = undefined;
+        modelStore.inferencing = false;
+        modelStore.isStreaming = false;
+        (serverStore as any).presenceFor = realPresenceFor;
+      });
+    });
+
+    it('renders while the bound server is asleep and no token has arrived', () => {
+      wakingSetup('asleep', {inferencing: true, isStreaming: false});
+
+      expect(renderBanner().getByTestId('remote-waking-banner')).toBeTruthy();
+    });
+
+    it('clears once the first chunk arrives', () => {
+      wakingSetup('asleep', {inferencing: true, isStreaming: true});
+
+      expect(renderBanner().queryByTestId('remote-waking-banner')).toBeNull();
+    });
+
+    it('does not render for a server that is simply reachable', () => {
+      wakingSetup('reachable', {inferencing: true, isStreaming: false});
+
+      expect(renderBanner().queryByTestId('remote-waking-banner')).toBeNull();
+    });
+  });
 });

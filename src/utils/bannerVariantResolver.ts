@@ -22,6 +22,8 @@ export interface BannerResolverInput {
   activeModelId: string | undefined;
   dismissed: Set<BannerVariant>;
   heavyTalentName?: string;
+  /** Caller-computed, so the resolver still reads no live session state. */
+  remoteWaking: boolean;
 }
 
 export interface BannerResolution {
@@ -41,8 +43,8 @@ function endsWithTerminalPunctuation(text: string | undefined): boolean {
 
 /**
  * Resolve the single banner variant to render, in precedence order:
- * context-full → context-warning → context-remote-hedged → html-soft-cap →
- * none. Pure: no JSX, no MobX writes, no async.
+ * remote-waking → context-full → context-warning → context-remote-hedged →
+ * html-soft-cap → none. Pure: no JSX, no MobX writes, no async.
  */
 export function resolveBannerVariant(
   snapshot: CompletionResultSnapshot | undefined,
@@ -55,7 +57,15 @@ export function resolveBannerVariant(
     activeModelId,
     dismissed,
     heavyTalentName,
+    remoteWaking,
   } = input;
+
+  // 0. remote-waking — the only variant about the in-flight request rather
+  // than the last finished one, so it precedes every snapshot branch and
+  // ignores `dismissed`: there is nothing durable to dismiss.
+  if (remoteWaking) {
+    return {variant: 'remote-waking'};
+  }
 
   // context-* variants require a loaded model. The nCtx-reading variants
   // (full, warning) additionally need a known runtime n_ctx; the remote

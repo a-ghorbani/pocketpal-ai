@@ -38,6 +38,7 @@
 			<key>CFBundleURLSchemes</key>
 			<array>
 				<string>pocketpal</string>
+				<string>llama</string>
 			</array>
 		</dict>
 	</array>

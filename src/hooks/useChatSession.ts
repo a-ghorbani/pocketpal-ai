@@ -727,6 +727,7 @@ export const useChatSession = (
       chatSessionStore.setIsStopping(false);
     } catch (error) {
       console.error('Completion error:', error);
+      modelStore.probeActiveRemoteServer();
       modelStore.setInferencing(false);
       modelStore.setIsStreaming(false);
       chatSessionStore.setIsGenerating(false);

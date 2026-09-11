@@ -47,8 +47,10 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
     open url: URL,
     options: [UIApplication.OpenURLOptionsKey : Any] = [:]
   ) -> Bool {
-    // Handle deep links from Shortcuts
-    if url.scheme == "pocketpal" {
+    // Exact matches only, never a prefix or a wildcard: Info.plist also
+    // registers $(REVERSED_GOOGLE_IOS_CLIENT_ID), and a catch-all would take
+    // Google Sign-In callbacks out of the `return false` path its SDK needs.
+    if url.scheme == "pocketpal" || url.scheme == "llama" {
       NotificationCenter.default.post(
         name: NSNotification.Name("RCTOpenURLNotification"),
         object: nil,

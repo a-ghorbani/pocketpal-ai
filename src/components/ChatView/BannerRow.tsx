@@ -8,7 +8,7 @@ import {createStyles} from './styles';
 
 import {AlertIcon} from '../../assets/icons';
 import {useTheme} from '../../hooks';
-import {chatSessionStore, modelStore} from '../../store';
+import {chatSessionStore, modelStore, serverStore} from '../../store';
 import {L10nContext} from '../../utils';
 import {MessageType, ModelOrigin} from '../../utils/types';
 import {resolveBannerVariant} from '../../utils/bannerVariantResolver';
@@ -102,6 +102,14 @@ export const BannerRow: React.FC<BannerRowProps> = observer(
 
     const isRemote = modelStore.activeModel?.origin === ModelOrigin.REMOTE;
 
+    const boundServerId = modelStore.activeRemoteBinding?.serverId;
+    const remoteWaking =
+      isRemote &&
+      modelStore.inferencing &&
+      !modelStore.isStreaming &&
+      boundServerId !== undefined &&
+      serverStore.presenceFor(boundServerId) === 'asleep';
+
     const effectiveNCtx = modelStore.activeModelCaps.effectiveContextLength;
 
     const {variant, heavyTalentName, ratio} = resolveBannerVariant(
@@ -113,11 +121,20 @@ export const BannerRow: React.FC<BannerRowProps> = observer(
         activeModelId: modelStore.activeModelId,
         dismissed: chatSessionStore.dismissedBannerVariants,
         heavyTalentName: deriveHeavyTalentName(messages),
+        remoteWaking,
       },
     );
 
     if (variant === 'none') {
       return null;
+    }
+
+    if (variant === 'remote-waking') {
+      return (
+        <View testID="remote-waking-banner" style={styles.softCapBanner}>
+          <Text style={styles.softCapBannerText}>{l10n.chat.remoteWaking}</Text>
+        </View>
+      );
     }
 
     if (variant === 'html-soft-cap') {

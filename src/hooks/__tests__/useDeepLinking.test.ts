@@ -43,6 +43,7 @@ jest.mock('@react-navigation/native', () => {
 // Stub the iOS-only DeepLinkService so the second `useEffect` (chat-deep-link
 // path) is a no-op and doesn't mask the cold-launch effect under test.
 jest.mock('../../services/DeepLinkService', () => ({
+  ...jest.requireActual('../../services/DeepLinkService'),
   deepLinkService: {
     initialize: jest.fn(),
     addListener: jest.fn(() => () => {}),
@@ -79,9 +80,9 @@ describe('useDeepLinking — cold-launch routing', () => {
     await Promise.resolve();
     await Promise.resolve();
 
-    // Both the __E2E__ benchmark effect and the always-on prod hub/run effect
-    // read getInitialURL on cold launch.
-    expect(getInitialURLSpy).toHaveBeenCalledTimes(2);
+    // The __E2E__ benchmark effect and both always-on prod effects (hub/run
+    // and pairing) read getInitialURL on cold launch.
+    expect(getInitialURLSpy).toHaveBeenCalledTimes(3);
     // Bare URL still routes; autostart resolves false so the screen stays
     // idle and waits for a tap — current behaviour preserved.
     expect(mockNavigate).toHaveBeenCalledWith(ROUTES.BENCHMARK_RUNNER, {
@@ -112,9 +113,9 @@ describe('useDeepLinking — cold-launch routing', () => {
     await Promise.resolve();
 
     // The benchmark effect's `if (!__E2E__) return;` guard keeps it from
-    // navigating. The prod hub/run effect still reads getInitialURL, but a
-    // benchmark URL is not a valid hub link, so it never navigates.
-    expect(getInitialURLSpy).toHaveBeenCalledTimes(1);
+    // navigating. The prod hub/run and pairing effects still read
+    // getInitialURL, but a benchmark URL matches neither route.
+    expect(getInitialURLSpy).toHaveBeenCalledTimes(2);
     expect(mockNavigate).not.toHaveBeenCalled();
   });
 
@@ -126,8 +127,8 @@ describe('useDeepLinking — cold-launch routing', () => {
     await Promise.resolve();
     await Promise.resolve();
 
-    // Both the benchmark and prod hub/run effects read getInitialURL.
-    expect(getInitialURLSpy).toHaveBeenCalledTimes(2);
+    // The benchmark, hub/run and pairing effects all read getInitialURL.
+    expect(getInitialURLSpy).toHaveBeenCalledTimes(3);
     expect(mockNavigate).not.toHaveBeenCalled();
   });
 
@@ -253,12 +254,12 @@ describe('useDeepLinking — cold-launch routing', () => {
     await Promise.resolve();
     unmount();
 
-    // Both the benchmark and prod hub/run 'url' listeners are removed.
-    expect(removeSpy).toHaveBeenCalledTimes(2);
+    // The benchmark, hub/run and pairing 'url' listeners are all removed.
+    expect(removeSpy).toHaveBeenCalledTimes(3);
     addEventListenerSpy.mockRestore();
   });
 
-  it('still registers the prod hub/run url listener when __E2E__=false', async () => {
+  it('still registers the prod url listeners when __E2E__=false', async () => {
     (global as any).__E2E__ = false;
     getInitialURLSpy.mockResolvedValue(null);
     const addEventListenerSpy = jest
@@ -268,13 +269,13 @@ describe('useDeepLinking — cold-launch routing', () => {
     renderHook(() => useDeepLinking());
     await Promise.resolve();
 
-    // The benchmark listener is gated off, but the prod hub/run effect is
-    // always on, so a 'url' listener is still registered.
+    // The benchmark listener is gated off, but the prod hub/run and pairing
+    // effects are always on, so 'url' listeners are still registered.
     expect(addEventListenerSpy).toHaveBeenCalledWith(
       'url',
       expect.any(Function),
     );
-    expect(addEventListenerSpy).toHaveBeenCalledTimes(1);
+    expect(addEventListenerSpy).toHaveBeenCalledTimes(2);
     addEventListenerSpy.mockRestore();
   });
 

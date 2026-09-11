@@ -12,6 +12,7 @@ interface FABGroupProps {
   onAddHFModel: () => void;
   onAddLocalModel: () => void;
   onAddRemoteModel: () => void;
+  onScanServer: () => void;
   onManageServers?: () => void;
   hasServers?: boolean;
 }
@@ -37,6 +38,7 @@ export const FABGroup: React.FC<FABGroupProps> = ({
   onAddHFModel,
   onAddLocalModel,
   onAddRemoteModel,
+  onScanServer,
   onManageServers,
   hasServers,
 }) => {
@@ -79,6 +81,16 @@ export const FABGroup: React.FC<FABGroupProps> = ({
           onAddRemoteModel();
         },
       },
+      {
+        testID: 'scan-server-fab',
+        icon: 'qrcode-scan',
+        label: l10n.models.pairServer.title,
+        accessibilityLabel: l10n.models.pairServer.title,
+        style: styles.actionButton,
+        onPress: () => {
+          onScanServer();
+        },
+      },
     ];
     if (hasServers && onManageServers) {
       items.push({
@@ -98,6 +110,7 @@ export const FABGroup: React.FC<FABGroupProps> = ({
     onAddHFModel,
     onAddLocalModel,
     onAddRemoteModel,
+    onScanServer,
     onManageServers,
     hasServers,
     styles.actionButton,

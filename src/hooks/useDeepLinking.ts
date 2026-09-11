@@ -8,8 +8,13 @@
 import {useEffect, useCallback} from 'react';
 import {Alert, Linking} from 'react-native';
 import {useNavigation} from '@react-navigation/native';
-import {deepLinkService, DeepLinkParams} from '../services/DeepLinkService';
+import {
+  deepLinkService,
+  describeDeepLink,
+  DeepLinkParams,
+} from '../services/DeepLinkService';
 import {isHubLink, parseHubRunURL} from '../services/hubRunLink';
+import {isPairingLink, parsePairingURL} from '../services/pairingLink';
 import {chatSessionStore, palStore, deepLinkStore, uiStore} from '../store';
 import {ROUTES} from '../utils/navigationConstants';
 import {
@@ -83,9 +88,24 @@ export const useDeepLinking = () => {
     deepLinkStore.setPendingHubRun(request);
   }, []);
 
+  // Parks a valid pairing payload and goes to the screen that hosts the sheet,
+  // which also owns the model picker the user lands in once a server is added.
+  // An unrecognised link is ignored silently, and nothing else is written until
+  // the user confirms.
+  const handlePairingLink = useCallback(
+    (url: string) => {
+      const request = parsePairingURL(url);
+      if (request) {
+        deepLinkStore.setPendingPairing(request);
+        (navigation as any).navigate(ROUTES.MODELS);
+      }
+    },
+    [navigation],
+  );
+
   const handleDeepLink = useCallback(
     async (params: DeepLinkParams) => {
-      console.log('Handling deep link:', params);
+      console.log('Handling deep link:', describeDeepLink(params));
 
       // Automation-bridge dispatch (E2E-only). DCE-stripped in prod because
       // __E2E__ inlines to false and the require() inside the gate is never
@@ -95,6 +115,18 @@ export const useDeepLinking = () => {
         if (await dispatchAutomationDeepLink(params, navigation)) {
           return;
         }
+      }
+
+      // Every route below is selected by host alone, and `chat` has no parser
+      // of its own, so an unrouted scheme must stop here rather than at each
+      // branch. Placed below the automation dispatch, which is stripped in
+      // prod, so a future automation scheme is not caught by this gate.
+      if (params.scheme === 'llama') {
+        handlePairingLink(params.url);
+        return;
+      }
+      if (params.scheme !== 'pocketpal') {
+        return;
       }
 
       // Handle chat deep links
@@ -113,7 +145,7 @@ export const useDeepLinking = () => {
         handleHubRunLink(params.url);
       }
     },
-    [handleChatDeepLink, handleHubRunLink, navigation],
+    [handleChatDeepLink, handleHubRunLink, handlePairingLink, navigation],
   );
 
   // E2E-only routing for the BenchmarkRunnerScreen. Two paths:
@@ -213,6 +245,35 @@ export const useDeepLinking = () => {
       sub?.remove();
     };
   }, [handleHubRunLink]);
+
+  // Prod, always-on delivery for the pairing route, mirroring the hub effect
+  // above. Cross-platform for the same reason, so on iOS a `llama://` link
+  // arrives here as well as through the native emitter; both park an equal
+  // request, so the repeat changes nothing.
+  useEffect(() => {
+    const routeIfPairing = (url: string | null) => {
+      if (url && isPairingLink(url)) {
+        handlePairingLink(url);
+      }
+    };
+
+    Linking.getInitialURL()
+      .then(routeIfPairing)
+      .catch(() => {
+        // getInitialURL rejects on some surfaces; the warm listener still runs.
+      });
+
+    let sub: {remove: () => void} | null = null;
+    try {
+      sub = Linking.addEventListener('url', ({url}) => routeIfPairing(url));
+    } catch {
+      sub = null;
+    }
+
+    return () => {
+      sub?.remove();
+    };
+  }, [handlePairingLink]);
 };
 
 /**
@@ -224,6 +285,19 @@ export const useHubRunSheet = () => {
     pendingHubRun: deepLinkStore.pendingHubRun,
     clearPendingHubRun: () => {
       deepLinkStore.clearPendingHubRun();
+    },
+  };
+};
+
+/**
+ * Hook for the pairing-sheet host. Reads the parked request and clears it once
+ * the sheet is dismissed (single-writer clear / consumed-once).
+ */
+export const usePairServerSheet = () => {
+  return {
+    pendingPairing: deepLinkStore.pendingPairing,
+    clearPendingPairing: () => {
+      deepLinkStore.clearPendingPairing();
     },
   };
 };

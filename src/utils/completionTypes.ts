@@ -92,6 +92,7 @@ export interface CompletionResultSnapshot {
 
 // Declared in precedence order.
 export type BannerVariant =
+  | 'remote-waking'
   | 'context-full'
   | 'context-warning'
   | 'context-remote-hedged'

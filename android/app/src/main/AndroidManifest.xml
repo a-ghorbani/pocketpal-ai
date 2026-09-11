@@ -51,6 +51,14 @@
             <category android:name="android.intent.category.BROWSABLE" />
             <data android:scheme="pocketpal" android:host="hub" />
         </intent-filter>
+        <!-- Pairing a remote llama.cpp server from a QR code or a shared link.
+             Scoped to host=add-server so this is not a bare-scheme handler. -->
+        <intent-filter>
+            <action android:name="android.intent.action.VIEW" />
+            <category android:name="android.intent.category.DEFAULT" />
+            <category android:name="android.intent.category.BROWSABLE" />
+            <data android:scheme="llama" android:host="add-server" />
+        </intent-filter>
         <!-- Checkout callback for the in-app PalsHub purchase flow. Scoped to
              host=checkout so it is routed to AuthSessionModule, not the
              hub deep-link path. -->

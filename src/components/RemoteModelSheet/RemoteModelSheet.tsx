@@ -48,10 +48,12 @@ interface RemoteModelSheetProps {
   isVisible: boolean;
   onDismiss: () => void;
   onModelAdded?: () => void;
+  /** Opens on this server's chip, list already populated. */
+  initialServerId?: string;
 }
 
 export const RemoteModelSheet: React.FC<RemoteModelSheetProps> = observer(
-  ({isVisible, onDismiss, onModelAdded}) => {
+  ({isVisible, onDismiss, onModelAdded, initialServerId}) => {
     const theme = useTheme();
     const l10n = useContext(L10nContext);
     const styles = createStyles(theme);
@@ -98,26 +100,6 @@ export const RemoteModelSheet: React.FC<RemoteModelSheetProps> = observer(
     useEffect(() => {
       timeoutSecondsRef.current = timeoutSeconds;
     }, [timeoutSeconds]);
-
-    // Reset all state when sheet reopens
-    useEffect(() => {
-      if (isVisible) {
-        setUrl('');
-        setServerName('');
-        setApiKey('');
-        setTimeoutSeconds('');
-        timeoutSecondsRef.current = '';
-        setServerType('unknown');
-        setSecureTextEntry(true);
-        setIsProbing(false);
-        setProbeResult(null);
-        setAvailableModels([]);
-        setSelectedModelId(null);
-        setSelectedServerId(null);
-        setIsSaving(false);
-        setUrlError('');
-      }
-    }, [isVisible]);
 
     const probeServer = useCallback(
       async (probeUrl: string) => {
@@ -248,6 +230,34 @@ export const RemoteModelSheet: React.FC<RemoteModelSheetProps> = observer(
         setIsProbing(false);
       }
     }, []);
+
+    // Reset all state when sheet reopens
+    useEffect(() => {
+      if (!isVisible) {
+        return;
+      }
+      setUrl('');
+      setServerName('');
+      setApiKey('');
+      setTimeoutSeconds('');
+      timeoutSecondsRef.current = '';
+      setServerType('unknown');
+      setSecureTextEntry(true);
+      setIsProbing(false);
+      setProbeResult(null);
+      setAvailableModels([]);
+      setSelectedModelId(null);
+      setSelectedServerId(null);
+      setIsSaving(false);
+      setUrlError('');
+
+      const server = initialServerId
+        ? serverStore.servers.find(s => s.id === initialServerId)
+        : undefined;
+      if (server) {
+        handleServerChipPress(server);
+      }
+    }, [isVisible, initialServerId, handleServerChipPress]);
 
     const handleDeselectChip = useCallback(() => {
       setSelectedServerId(null);

@@ -1,6 +1,7 @@
 import {makeAutoObservable, runInAction} from 'mobx';
 
 import type {HubRunRequest} from '../services/hubRunLink';
+import type {PairingRequest} from '../services/pairingLink';
 
 /**
  * DeepLinkStore
@@ -11,6 +12,7 @@ import type {HubRunRequest} from '../services/hubRunLink';
 class DeepLinkStore {
   pendingMessage: string | null = null;
   pendingHubRun: HubRunRequest | null = null;
+  pendingPairing: PairingRequest | null = null;
 
   constructor() {
     makeAutoObservable(this);
@@ -37,6 +39,18 @@ class DeepLinkStore {
   clearPendingHubRun() {
     runInAction(() => {
       this.pendingHubRun = null;
+    });
+  }
+
+  setPendingPairing(request: PairingRequest | null) {
+    runInAction(() => {
+      this.pendingPairing = request;
+    });
+  }
+
+  clearPendingPairing() {
+    runInAction(() => {
+      this.pendingPairing = null;
     });
   }
 }
