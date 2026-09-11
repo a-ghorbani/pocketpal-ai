@@ -228,6 +228,13 @@ export const BannerRow: React.FC<BannerRowProps> = observer(
           <Text style={[styles.bannerText, styles.bannerHeaderText]}>
             {fullText}
           </Text>
+          {ratio != null ? (
+            <Text
+              style={[styles.bannerPercent, {color: error}]}
+              testID="banner-percent">
+              {`${Math.round(ratio * 100)}%`}
+            </Text>
+          ) : null}
         </View>
         {ratio != null ? (
           <Meter ratio={ratio} tint={error} styles={styles} />

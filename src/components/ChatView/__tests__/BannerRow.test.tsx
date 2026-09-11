@@ -522,4 +522,34 @@ describe('BannerRow', () => {
     expect(getByTestId('context-full-banner')).toBeTruthy();
     expect(queryByTestId('soft-cap-warning')).toBeNull();
   });
+
+  it('shows the fullness percentage beside the full banner meter', () => {
+    runInAction(() => {
+      chatSessionStore.lastCompletionResult = {
+        used: 3900,
+        contextFull: true,
+        isRemote: false,
+      };
+    });
+    const {getByTestId} = renderBanner();
+    expect(getByTestId('context-full-banner')).toBeTruthy();
+    // 3900 / 4096 ≈ 95%, the same ratio the meter is drawn from.
+    expect(getByTestId('banner-percent')).toHaveTextContent('95%');
+    expect(
+      getByTestId('banner-meter', {includeHiddenElements: true}),
+    ).toBeTruthy();
+  });
+
+  it('renders no banner at all when the turn reported no token count', () => {
+    runInAction(() => {
+      chatSessionStore.lastCompletionResult = {
+        used: undefined,
+        contextFull: true,
+        isRemote: false,
+      };
+    });
+    const {queryByTestId} = renderBanner();
+    expect(queryByTestId('context-full-banner')).toBeNull();
+    expect(queryByTestId('banner-percent')).toBeNull();
+  });
 });

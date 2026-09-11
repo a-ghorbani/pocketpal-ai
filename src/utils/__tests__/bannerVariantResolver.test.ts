@@ -307,6 +307,47 @@ describe('resolveBannerVariant', () => {
     });
   });
 
+  describe('unknown versus zero token count', () => {
+    it('does not fire the full banner when the token count is unknown', () => {
+      const result = resolveBannerVariant(
+        snap({contextFull: true, used: undefined}),
+        baseInput(),
+      );
+      expect(result.variant).toBe('none');
+      expect(result.ratio).toBeUndefined();
+    });
+
+    it('still hedges a remote turn when the token count is unknown', () => {
+      const result = resolveBannerVariant(
+        snap({
+          used: undefined,
+          isRemote: true,
+          tokensPredicted: 600,
+          content: 'cut off here',
+        }),
+        baseInput({isRemote: true}),
+      );
+      expect(result.variant).toBe('context-remote-hedged');
+    });
+
+    it('treats a zero token count as a real number, not as unknown', () => {
+      const input = baseInput({effectiveNCtx: AUTOCLEAR_RUNWAY});
+
+      const counted = resolveBannerVariant(
+        snap({contextFull: true, used: 0}),
+        input,
+      );
+      expect(counted.variant).toBe('context-full');
+      expect(counted.ratio).toBe(0);
+
+      const uncounted = resolveBannerVariant(
+        snap({contextFull: true, used: undefined}),
+        input,
+      );
+      expect(uncounted.variant).toBe('none');
+    });
+  });
+
   describe('suppression', () => {
     it('suppresses context-* when no model is loaded', () => {
       const result = resolveBannerVariant(

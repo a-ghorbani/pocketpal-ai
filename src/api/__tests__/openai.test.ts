@@ -13,6 +13,7 @@ import {
   directVisionModelsBody,
   routerModelsBody,
 } from '../../../jest/fixtures/remoteModelList';
+import {cacheReuseTimings} from '../../../jest/fixtures/llamaServerTimings';
 
 /** Build a minimal Headers-like object for fetch mocks. */
 function mockHeaders(entries: Record<string, string> = {}) {
@@ -1488,6 +1489,77 @@ describe('streamChatCompletion', () => {
     expect(result.tokens_predicted).toBe(500);
   });
 
+  it('adds the cache-reused prefix to the evaluated prompt count', async () => {
+    const resultPromise = streamChatCompletion(
+      {messages: [{role: 'user', content: 'Hi'}], model: 'test-model'},
+      'http://localhost:1234',
+    );
+
+    const xhr = MockXHR.instances[0];
+    xhr.simulateHeaders(200);
+    xhr.simulateProgress(
+      'data: {"choices":[{"delta":{"content":"Hello"},"finish_reason":null}]}\n\n',
+    );
+    xhr.simulateProgress(
+      `data: {"choices":[{"delta":{},"finish_reason":"stop"}],"timings":${JSON.stringify(
+        cacheReuseTimings,
+      )}}\n\n`,
+    );
+    xhr.simulateProgress('data: [DONE]\n\n');
+    xhr.simulateLoad();
+
+    const result = await resultPromise;
+    // The server evaluated one token and reused thirty-one, so reading
+    // `prompt_n` alone reports 1 for a prompt of 32.
+    expect(cacheReuseTimings.prompt_n).toBe(1);
+    expect(result.tokens_evaluated).toBe(32);
+    expect(result.tokens_predicted).toBe(3);
+    // The total the context banner reads off the snapshot.
+    expect(
+      (result.tokens_evaluated ?? 0) + (result.tokens_predicted ?? 0),
+    ).toBe(35);
+  });
+
+  // Both shapes are projected from the capture rather than retyped, so each
+  // still carries the finish chunk's full nine-key `timings` object.
+  it('distinguishes a reported cache_n of 0 from an absent one', async () => {
+    const coldTimings = {...cacheReuseTimings, cache_n: 0};
+    const preReuseTimings: Record<string, number> = {...cacheReuseTimings};
+    delete preReuseTimings.cache_n;
+
+    const finish = async (timings: Record<string, number>) => {
+      const resultPromise = streamChatCompletion(
+        {messages: [{role: 'user', content: 'Hi'}], model: 'test-model'},
+        'http://localhost:1234',
+      );
+      const xhr = MockXHR.instances[MockXHR.instances.length - 1];
+      xhr.simulateHeaders(200);
+      xhr.simulateProgress(
+        'data: {"choices":[{"delta":{"content":"Hello"},"finish_reason":null}]}\n\n',
+      );
+      xhr.simulateProgress(
+        `data: {"choices":[{"delta":{},"finish_reason":"stop"}],"timings":${JSON.stringify(
+          timings,
+        )}}\n\n`,
+      );
+      xhr.simulateProgress('data: [DONE]\n\n');
+      xhr.simulateLoad();
+      return resultPromise;
+    };
+
+    // A cold prompt on a build that reports reuse: 0 is a real count.
+    const cold = await finish(coldTimings);
+    expect(cold.tokens_evaluated).toBe(cacheReuseTimings.prompt_n);
+    expect(cold.timings?.cache_n).toBe(0);
+
+    // A build too old to report reuse omits the key. Same total, and the app
+    // degrades to it rather than below it — but a different fact, and the
+    // result keeps the two apart.
+    const preReuse = await finish(preReuseTimings);
+    expect(preReuse.tokens_evaluated).toBe(cacheReuseTimings.prompt_n);
+    expect(preReuse.timings?.cache_n).toBeUndefined();
+  });
+
   it('guards each timings token key independently (only predicted_n)', async () => {
     const resultPromise = streamChatCompletion(
       {messages: [{role: 'user', content: 'Hi'}], model: 'test-model'},
@@ -1533,6 +1605,35 @@ describe('streamChatCompletion', () => {
     // per-event tally — it keeps the single content-bearing event count.
     expect(result.tokens_evaluated).toBe(3000);
     expect(result.tokens_predicted).toBe(1);
+    // A build too old to report prompt-cache reuse omits the key outright, and
+    // must degrade to the prompt count it does report — never below it.
+    expect(result.timings?.cache_n).toBeUndefined();
+  });
+
+  it('guards each timings token key independently (only cache_n)', async () => {
+    const resultPromise = streamChatCompletion(
+      {messages: [{role: 'user', content: 'Hi'}], model: 'test-model'},
+      'http://localhost:1234',
+    );
+
+    const xhr = MockXHR.instances[0];
+    xhr.simulateHeaders(200);
+    xhr.simulateProgress(
+      'data: {"choices":[{"delta":{"content":"Hello"},"finish_reason":null}]}\n\n',
+    );
+    xhr.simulateProgress(
+      `data: {"choices":[{"delta":{},"finish_reason":"stop"}],"timings":${JSON.stringify(
+        {cache_n: cacheReuseTimings.cache_n},
+      )}}\n\n`,
+    );
+    xhr.simulateProgress('data: [DONE]\n\n');
+    xhr.simulateLoad();
+
+    const result = await resultPromise;
+    // A fully reused prompt evaluates nothing, so the whole count arrives on
+    // cache_n and prompt_n is absent. Reading prompt_n alone loses it.
+    expect(result.tokens_evaluated).toBe(31);
+    expect(result.timings?.prompt_n).toBeUndefined();
   });
 
   it('returns no timings when server does not provide them', async () => {

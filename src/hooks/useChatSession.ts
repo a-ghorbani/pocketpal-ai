@@ -243,10 +243,14 @@ type TtsRunState = {
 // and (remote only) a 'length' finish reason derived from `stopped_limit`.
 function deriveSnapshotFromResult(
   result: CompletionResult,
-  effectiveNCtx: number | undefined,
   isRemote: boolean,
 ): CompletionResultSnapshot {
-  const used = (result.tokens_evaluated ?? 0) + (result.tokens_predicted ?? 0);
+  // Without a prompt term the total is a predicted-only tally, which is not an
+  // occupancy number on either path.
+  const used =
+    result.tokens_evaluated === undefined
+      ? undefined
+      : result.tokens_evaluated + (result.tokens_predicted ?? 0);
   // Local turns set context_full/truncated directly; finishReason only bridges
   // the remote engine's signal (stopped_limit) into the OR predicate below, so
   // it is intentionally remote-only.
@@ -421,7 +425,6 @@ async function applyEventToStore(
       const finalResult = event.result.finalResult;
       const snapshot = deriveSnapshotFromResult(
         finalResult,
-        modelStore.activeContextSettings?.n_ctx,
         modelStore.activeModel?.origin === ModelOrigin.REMOTE,
       );
       const draftTimings =
@@ -795,15 +798,17 @@ export const useChatSession = (
         const hasPartialContent = hasAnyStepContent || hasLegacyText;
 
         if (hasPartialContent) {
-          // No finalResult on the abort path. truncationLikely is the
-          // n_ctx-exhaustion signal; when set, treat the turn as full and
-          // pin `used` to the loaded n_ctx so the sticky banner's freshness
-          // gate holds.
+          // No finalResult on the abort path, so no turn reported a count.
+          // truncationLikely is the n_ctx-exhaustion signal: when set, treat
+          // the turn as full and pin `used` to the context window so the
+          // sticky banner's freshness gate holds. Otherwise the count is
+          // unknown, which is not zero.
           const isRemote =
             modelStore.activeModel?.origin === ModelOrigin.REMOTE;
-          const effectiveNCtx = modelStore.activeContextSettings?.n_ctx;
+          const effectiveNCtx =
+            modelStore.activeModelCaps.effectiveContextLength;
           const abortSnapshot: CompletionResultSnapshot = {
-            used: treatAsContextFull ? (effectiveNCtx ?? 0) : 0,
+            used: treatAsContextFull ? effectiveNCtx : undefined,
             contextFull: treatAsContextFull,
             isRemote,
           };
@@ -834,9 +839,10 @@ export const useChatSession = (
           if (isContextFullError) {
             const isRemote =
               modelStore.activeModel?.origin === ModelOrigin.REMOTE;
-            const effectiveNCtx = modelStore.activeContextSettings?.n_ctx;
+            const effectiveNCtx =
+              modelStore.activeModelCaps.effectiveContextLength;
             chatSessionStore.recordCompletionSnapshot({
-              used: effectiveNCtx ?? 0,
+              used: effectiveNCtx,
               contextFull: true,
               isRemote,
             });
@@ -877,7 +883,7 @@ export const useChatSession = (
         // No turn to attach to; surface the banner via a store snapshot
         // rather than dumping the raw "Context is full" native error.
         chatSessionStore.recordCompletionSnapshot({
-          used: modelStore.activeContextSettings?.n_ctx ?? 0,
+          used: modelStore.activeModelCaps.effectiveContextLength,
           contextFull: true,
           isRemote: modelStore.activeModel?.origin === ModelOrigin.REMOTE,
         });
