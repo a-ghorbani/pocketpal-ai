@@ -303,6 +303,14 @@
           "size_bytes": 1563668704
         },
         {
+          "model": "spark-x2.5-1.7b",
+          "display_name": "Spark-X2.5 1.7B",
+          "hf_repo": "XHToken/Spark-X2.5-1.7B-GGUF",
+          "hf_filename": "Spark-X2.5-1.7B-Q4_K_M.gguf",
+          "params": 1707657216,
+          "size_bytes": 1107457856
+        },
+        {
           "model": "qwen3-1.7b",
           "display_name": "Qwen3 1.7B",
           "hf_repo": "bartowski/Qwen_Qwen3-1.7B-GGUF",
@@ -353,6 +361,14 @@
     },
     "high": {
       "candidates": [
+        {
+          "model": "spark-x2.5-4b",
+          "display_name": "Spark-X2.5 4B",
+          "hf_repo": "XHToken/Spark-X2.5-4B-GGUF",
+          "hf_filename": "Spark-X2.5-4B-Q4_K_M.gguf",
+          "params": 4112079360,
+          "size_bytes": 2600224352
+        },
         {
           "model": "gemma-3-4b",
           "display_name": "Gemma 3 4B",
@@ -412,6 +428,14 @@
     },
     "flagship": {
       "candidates": [
+        {
+          "model": "spark-x2.5-4b",
+          "display_name": "Spark-X2.5 4B",
+          "hf_repo": "XHToken/Spark-X2.5-4B-GGUF",
+          "hf_filename": "Spark-X2.5-4B-Q4_K_M.gguf",
+          "params": 4112079360,
+          "size_bytes": 2600224352
+        },
         {
           "model": "gemma-3-4b",
           "display_name": "Gemma 3 4B",
