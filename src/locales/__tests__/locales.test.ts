@@ -40,6 +40,7 @@ const EXPECTED_SECTIONS = [
 
 const ALL_LANGUAGES: AvailableLanguage[] = [
   'en',
+  'es',
   'fa',
   'he',
   'id',
@@ -81,6 +82,7 @@ describe('l10n object', () => {
   });
 
   it.each([
+    'es',
     'fa',
     'he',
     'id',
@@ -104,6 +106,7 @@ describe('l10n object', () => {
   );
 
   it.each([
+    'es',
     'fa',
     'he',
     'id',
@@ -156,6 +159,7 @@ describe('l10n object', () => {
 
   it('supports in operator for all languages', () => {
     expect('en' in l10n).toBe(true);
+    expect('es' in l10n).toBe(true);
     expect('fa' in l10n).toBe(true);
     expect('he' in l10n).toBe(true);
     expect('id' in l10n).toBe(true);
@@ -230,6 +234,7 @@ describe('exports', () => {
 
   it('languageDisplayNames contains expected values', () => {
     expect(languageDisplayNames.en).toBe('English (EN)');
+    expect(languageDisplayNames.es).toBe('Español (ES)');
     expect(languageDisplayNames.fa).toBe('\u0641\u0627\u0631\u0633\u06CC (FA)');
     expect(languageDisplayNames.he).toBe('\u05E2\u05D1\u05E8\u05D9\u05EA (HE)');
     expect(languageDisplayNames.id).toBe('Indonesia (ID)');
@@ -287,6 +292,7 @@ describe('lazy loading', () => {
   });
 
   it.each([
+    'es',
     'fa',
     'he',
     'id',
@@ -348,6 +354,7 @@ describe('type safety', () => {
     // At runtime we verify the keys match
     const keys: Array<keyof typeof l10n> = [
       'en',
+      'es',
       'fa',
       'he',
       'id',
