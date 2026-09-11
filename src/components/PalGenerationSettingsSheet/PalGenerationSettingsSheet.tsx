@@ -2,7 +2,11 @@ import React, {useContext, useEffect, useState} from 'react';
 import {Sheet} from '../Sheet/Sheet';
 import {CompletionSettings} from '../CompletionSettings';
 import {CompletionParams} from '../../utils/completionTypes';
-import {chatSessionStore, defaultCompletionSettings} from '../../store';
+import {
+  chatSessionStore,
+  defaultCompletionSettings,
+  modelStore,
+} from '../../store';
 import {
   COMPLETION_PARAMS_METADATA,
   validateCompletionSettings,
@@ -13,6 +17,7 @@ import {L10nContext} from '../../utils';
 import {t} from '../../locales';
 import {ChevronDownIcon} from '../../assets/icons';
 import {Menu} from '../Menu';
+import {observer} from 'mobx-react';
 
 import {useTheme} from '../../hooks';
 import {createStyles} from './styles';
@@ -106,159 +111,165 @@ const SettingsLevelIndicator = ({
   );
 };
 
-export const PalGenerationSettingsSheet = ({
-  isVisible,
-  onClose,
-  palName,
-  completionSettings,
-  onUpdateSettings,
-}: {
-  isVisible: boolean;
-  onClose: () => void;
-  palName: string;
-  completionSettings?: Record<string, any>;
-  onUpdateSettings: (settings: Record<string, any> | undefined) => void;
-}) => {
-  const l10n = useContext(L10nContext);
-  const theme = useTheme();
-  const styles = createStyles(theme);
+export const PalGenerationSettingsSheet = observer(
+  function PalGenerationSettingsSheet({
+    isVisible,
+    onClose,
+    palName,
+    completionSettings,
+    onUpdateSettings,
+  }: {
+    isVisible: boolean;
+    onClose: () => void;
+    palName: string;
+    completionSettings?: Record<string, any>;
+    onUpdateSettings: (settings: Record<string, any> | undefined) => void;
+  }) {
+    const l10n = useContext(L10nContext);
+    const theme = useTheme();
+    const styles = createStyles(theme);
 
-  const [settings, setSettings] = useState<CompletionParams>(
-    (completionSettings as CompletionParams) || defaultCompletionSettings,
-  );
-  const [resetMenuVisible, setResetMenuVisible] = useState(false);
-
-  // Update settings when completionSettings changes
-  useEffect(() => {
-    setSettings(
+    const [settings, setSettings] = useState<CompletionParams>(
       (completionSettings as CompletionParams) || defaultCompletionSettings,
     );
-  }, [completionSettings]);
+    const [resetMenuVisible, setResetMenuVisible] = useState(false);
 
-  const updateSettings = (name: string, value: any) => {
-    setSettings(prev => ({...prev, [name]: value}));
-  };
+    // Update settings when completionSettings changes
+    useEffect(() => {
+      setSettings(
+        (completionSettings as CompletionParams) || defaultCompletionSettings,
+      );
+    }, [completionSettings]);
 
-  const onCloseSheet = () => {
-    // Reset to original settings
-    setSettings(
-      (completionSettings as CompletionParams) || defaultCompletionSettings,
-    );
-    onClose();
-  };
-
-  const handleSaveSettings = async () => {
-    // Convert string values to numbers where needed
-    const processedSettings = Object.entries(settings).reduce(
-      (acc, [key, value]) => {
-        const metadata = COMPLETION_PARAMS_METADATA[key];
-        if (metadata?.validation.type === 'numeric') {
-          let numValue: number;
-          if (typeof value === 'string') {
-            numValue = Number(value);
-          } else if (typeof value === 'number') {
-            numValue = value;
-          } else {
-            acc.errors[key] =
-              l10n.components.palGenerationSettingsSheet.invalidNumericValuesMessage;
-            return acc;
-          }
-
-          if (Number.isNaN(numValue)) {
-            acc.errors[key] =
-              l10n.components.palGenerationSettingsSheet.invalidNumericValuesMessage;
-          } else {
-            acc.settings[key] = numValue;
-          }
-        } else {
-          acc.settings[key] = value;
-        }
-        return acc;
-      },
-      {settings: {}, errors: {}} as {
-        settings: typeof settings;
-        errors: Record<string, string>;
-      },
-    );
-
-    // Validate the converted values
-    const validationResult = validateCompletionSettings(
-      processedSettings.settings,
-    );
-    const allErrors = {
-      ...processedSettings.errors,
-      ...validationResult.errors,
+    const updateSettings = (name: string, value: any) => {
+      setSettings(prev => ({...prev, [name]: value}));
     };
 
-    if (Object.keys(allErrors).length > 0) {
-      Alert.alert(
-        l10n.components.palGenerationSettingsSheet.invalidValues,
-        l10n.components.palGenerationSettingsSheet.pleaseCorrect +
-          '\n' +
-          Object.entries(allErrors)
-            .map(([key, msg]) => `• ${key}: ${msg}`)
-            .join('\n'),
-        [{text: l10n.components.palGenerationSettingsSheet.ok}],
+    const onCloseSheet = () => {
+      // Reset to original settings
+      setSettings(
+        (completionSettings as CompletionParams) || defaultCompletionSettings,
       );
-      return;
-    }
+      onClose();
+    };
 
-    // Update the completion settings
-    onUpdateSettings(processedSettings.settings);
-    onClose();
-  };
+    const handleSaveSettings = async () => {
+      // Convert string values to numbers where needed
+      const processedSettings = Object.entries(settings).reduce(
+        (acc, [key, value]) => {
+          const metadata = COMPLETION_PARAMS_METADATA[key];
+          if (metadata?.validation.type === 'numeric') {
+            let numValue: number;
+            if (typeof value === 'string') {
+              numValue = Number(value);
+            } else if (typeof value === 'number') {
+              numValue = value;
+            } else {
+              acc.errors[key] =
+                l10n.components.palGenerationSettingsSheet.invalidNumericValuesMessage;
+              return acc;
+            }
 
-  const handleResetToGlobal = async () => {
-    const globalSettings = await chatSessionStore.resolveCompletionSettings();
-    setSettings(globalSettings);
-    setResetMenuVisible(false);
-  };
+            if (Number.isNaN(numValue)) {
+              acc.errors[key] =
+                l10n.components.palGenerationSettingsSheet.invalidNumericValuesMessage;
+            } else {
+              acc.settings[key] = numValue;
+            }
+          } else {
+            acc.settings[key] = value;
+          }
+          return acc;
+        },
+        {settings: {}, errors: {}} as {
+          settings: typeof settings;
+          errors: Record<string, string>;
+        },
+      );
 
-  const handleResetToSystem = () => {
-    setSettings({...defaultCompletionSettings});
-    setResetMenuVisible(false);
-  };
+      // Validate the converted values
+      const validationResult = validateCompletionSettings(
+        processedSettings.settings,
+      );
+      const allErrors = {
+        ...processedSettings.errors,
+        ...validationResult.errors,
+      };
 
-  const handleResetToDefault = () => {
-    // Clear pal-specific settings (use system defaults)
-    onUpdateSettings(undefined);
-    setSettings(defaultCompletionSettings);
-    setResetMenuVisible(false);
-  };
+      if (Object.keys(allErrors).length > 0) {
+        Alert.alert(
+          l10n.components.palGenerationSettingsSheet.invalidValues,
+          l10n.components.palGenerationSettingsSheet.pleaseCorrect +
+            '\n' +
+            Object.entries(allErrors)
+              .map(([key, msg]) => `• ${key}: ${msg}`)
+              .join('\n'),
+          [{text: l10n.components.palGenerationSettingsSheet.ok}],
+        );
+        return;
+      }
 
-  const hasCustomSettings = completionSettings !== undefined;
+      // Update the completion settings
+      onUpdateSettings(processedSettings.settings);
+      onClose();
+    };
 
-  return (
-    <Sheet
-      title={t(l10n.components.palGenerationSettingsSheet.title, {palName})}
-      isVisible={isVisible}
-      onClose={onCloseSheet}>
-      <Sheet.ScrollView
-        bottomOffset={16}
-        contentContainerStyle={styles.scrollviewContainer}>
-        <SettingsLevelIndicator
-          palName={palName}
-          hasCustomSettings={hasCustomSettings}
-        />
-        <CompletionSettings settings={settings} onChange={updateSettings} />
-      </Sheet.ScrollView>
-      <Sheet.Actions>
-        <View style={styles.actionsContainer}>
-          <ResetButton
-            resetMenuVisible={resetMenuVisible}
-            setResetMenuVisible={setResetMenuVisible}
-            handleResetToDefault={handleResetToDefault}
-            handleResetToGlobal={handleResetToGlobal}
-            handleResetToSystem={handleResetToSystem}
-            styles={styles}
+    const handleResetToGlobal = async () => {
+      const globalSettings = await chatSessionStore.resolveCompletionSettings();
+      setSettings(globalSettings);
+      setResetMenuVisible(false);
+    };
+
+    const handleResetToSystem = () => {
+      setSettings({...defaultCompletionSettings});
+      setResetMenuVisible(false);
+    };
+
+    const handleResetToDefault = () => {
+      // Clear pal-specific settings (use system defaults)
+      onUpdateSettings(undefined);
+      setSettings(defaultCompletionSettings);
+      setResetMenuVisible(false);
+    };
+
+    const hasCustomSettings = completionSettings !== undefined;
+
+    return (
+      <Sheet
+        title={t(l10n.components.palGenerationSettingsSheet.title, {palName})}
+        isVisible={isVisible}
+        onClose={onCloseSheet}>
+        <Sheet.ScrollView
+          bottomOffset={16}
+          contentContainerStyle={styles.scrollviewContainer}>
+          <SettingsLevelIndicator
+            palName={palName}
+            hasCustomSettings={hasCustomSettings}
           />
-          <View style={styles.rightButtons}>
-            <Button mode="contained" onPress={handleSaveSettings}>
-              {l10n.common.save}
-            </Button>
+          <CompletionSettings
+            settings={settings}
+            onChange={updateSettings}
+            serverDefaults={modelStore.activeSamplerDefaults}
+          />
+        </Sheet.ScrollView>
+        <Sheet.Actions>
+          <View style={styles.actionsContainer}>
+            <ResetButton
+              resetMenuVisible={resetMenuVisible}
+              setResetMenuVisible={setResetMenuVisible}
+              handleResetToDefault={handleResetToDefault}
+              handleResetToGlobal={handleResetToGlobal}
+              handleResetToSystem={handleResetToSystem}
+              styles={styles}
+            />
+            <View style={styles.rightButtons}>
+              <Button mode="contained" onPress={handleSaveSettings}>
+                {l10n.common.save}
+              </Button>
+            </View>
           </View>
-        </View>
-      </Sheet.Actions>
-    </Sheet>
-  );
-};
+        </Sheet.Actions>
+      </Sheet>
+    );
+  },
+);

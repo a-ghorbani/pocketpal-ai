@@ -5,6 +5,7 @@ import type {
   ContextInitParams,
   Model,
   RemoteModelCaps,
+  RemoteModelProps,
   RemoteSessionBinding,
 } from './types';
 
@@ -22,6 +23,8 @@ import type {
 export interface ModelCapabilityView {
   vision: 'yes' | 'no' | 'unknown';
   visionActive: boolean;
+  // Declared only: nothing gates on it until an audio send path exists.
+  audio: 'yes' | 'no' | 'unknown';
   contextLength?: number;
   effectiveContextLength?: number;
 }
@@ -29,6 +32,7 @@ export interface ModelCapabilityView {
 /** Resolver inputs. Assembled in one place — `ModelStore`. */
 export interface CapabilityEnv {
   remoteCaps: Record<string, RemoteModelCaps>;
+  remoteProps: Record<string, RemoteModelProps>;
   listCaps: Record<string, ListDerivedCaps>;
   binding: RemoteSessionBinding | undefined;
   isMultimodalActive: boolean;
@@ -36,7 +40,11 @@ export interface CapabilityEnv {
   activeModelId: string | undefined;
 }
 
-const UNKNOWN: ModelCapabilityView = {vision: 'unknown', visionActive: false};
+const UNKNOWN: ModelCapabilityView = {
+  vision: 'unknown',
+  visionActive: false,
+  audio: 'unknown',
+};
 
 const positive = (value: number | undefined): number | undefined =>
   value !== undefined && value > 0 ? value : undefined;
@@ -77,6 +85,7 @@ export function resolveModelCaps(
     const listed = env.listCaps[model.id];
     return {
       vision: triState(confirmed.supportsVision ?? listed?.supportsVision),
+      audio: triState(confirmed.supportsAudio ?? listed?.supportsAudio),
       contextLength:
         positive(confirmed.contextLength) ?? positive(listed?.contextLength),
       // The session axis reads the probe alone: a listed value describes how
@@ -91,6 +100,7 @@ export function resolveModelCaps(
   return {
     vision: triState(model.supportsMultimodal),
     visionActive: isActiveModel && env.isMultimodalActive,
+    audio: 'unknown',
     contextLength:
       positive(model.hfModel?.specs?.gguf?.context_length) ??
       positive(model.ggufMetadata?.context_length),

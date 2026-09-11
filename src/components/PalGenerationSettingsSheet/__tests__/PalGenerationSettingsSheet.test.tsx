@@ -3,7 +3,15 @@ import {Alert} from 'react-native';
 import {render, fireEvent, waitFor, act} from '../../../../jest/test-utils';
 
 import {PalGenerationSettingsSheet} from '../PalGenerationSettingsSheet';
-import {chatSessionStore, defaultCompletionSettings} from '../../../store';
+import {runInAction} from 'mobx';
+
+import {
+  chatSessionStore,
+  defaultCompletionSettings,
+  modelStore,
+  serverStore,
+} from '../../../store';
+import {ModelOrigin} from '../../../utils/types';
 import {L10nContext} from '../../../utils';
 import {l10n, t} from '../../../locales';
 import {validateCompletionSettings} from '../../../utils/modelSettings';
@@ -71,6 +79,89 @@ describe('PalGenerationSettingsSheet', () => {
 
       expect(getByTestId('sheet')).toBeTruthy();
       expect(getByTestId('completion-settings')).toBeTruthy();
+    });
+
+    it('shows what the active model server reports as its defaults', () => {
+      runInAction(() => {
+        modelStore.models = [
+          {
+            id: 'srv/m',
+            origin: ModelOrigin.REMOTE,
+            serverId: 'srv',
+          } as any,
+        ];
+        modelStore.activeModelId = 'srv/m';
+        serverStore.remoteProps = {
+          'srv/m': {samplerDefaults: {top_k: 40, min_p: 0.05}},
+        };
+      });
+
+      const {getByTestId, getByText} = render(
+        <L10nContext.Provider value={l10n.en}>
+          <PalGenerationSettingsSheet
+            {...defaultProps}
+            completionSettings={{
+              ...mockCompletionParams,
+              top_k: 40,
+              min_p: 0.3,
+            }}
+          />
+        </L10nContext.Provider>,
+      );
+
+      expect(getByTestId('top_k-server-default')).toBeTruthy();
+      expect(getByText('Server default: 0.05 · Reset')).toBeTruthy();
+
+      runInAction(() => {
+        modelStore.models = [];
+        modelStore.activeModelId = undefined;
+        serverStore.remoteProps = {};
+      });
+    });
+
+    it('picks up a server default that lands while the sheet is open', async () => {
+      runInAction(() => {
+        modelStore.models = [
+          {
+            id: 'srv/m',
+            origin: ModelOrigin.REMOTE,
+            serverId: 'srv',
+          } as any,
+        ];
+        modelStore.activeModelId = 'srv/m';
+        serverStore.remoteProps = {};
+      });
+
+      const {getByTestId, queryByTestId} = render(
+        <L10nContext.Provider value={l10n.en}>
+          <PalGenerationSettingsSheet
+            {...defaultProps}
+            completionSettings={{...mockCompletionParams, top_k: 40}}
+          />
+        </L10nContext.Provider>,
+      );
+
+      // Settle the prop-driven settings load, so the only thing that can
+      // re-render the sheet afterwards is the store read itself.
+      await act(async () => {});
+      expect(queryByTestId('top_k-server-default')).toBeNull();
+
+      // A probe is detached, so the sheet has to observe rather than snapshot.
+      await act(async () => {
+        runInAction(() => {
+          serverStore.remoteProps = {
+            'srv/m': {samplerDefaults: {top_k: 40}},
+          };
+        });
+      });
+
+      expect(getByTestId('top_k-server-default')).toBeTruthy();
+
+      runInAction(() => {
+        modelStore.models = [];
+        modelStore.activeModelId = undefined;
+        serverStore.remoteProps = {};
+      });
     });
 
     it('does not render when not visible', () => {

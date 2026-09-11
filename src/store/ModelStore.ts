@@ -82,6 +82,7 @@ import {
   ModelOrigin,
   ModelType,
   RemoteSessionBinding,
+  SamplerDefaults,
 } from '../utils/types';
 
 import {ErrorState, createErrorState} from '../utils/errors';
@@ -94,7 +95,7 @@ import {
 } from '../utils/deviceCapabilities';
 import {detectThinkingCapability} from '../utils/thinkingCapabilityDetection';
 import {ReasoningCapability} from '../utils/reasoningCapability';
-import {capsMatchBinding} from '../utils/remoteCaps';
+import {capsMatchBinding, resolveRemoteProps} from '../utils/remoteCaps';
 import {resolveModelCaps} from '../utils/modelCaps';
 import type {CapabilityEnv, ModelCapabilityView} from '../utils/modelCaps';
 import {t} from '../locales';
@@ -247,6 +248,7 @@ class ModelStore {
     makeAutoObservable(this, {
       activeModel: computed,
       activeModelCaps: computed,
+      activeSamplerDefaults: computed,
       contextId: computed,
       remoteModels: computed,
       activeDownloads: computed,
@@ -2583,6 +2585,7 @@ class ModelStore {
   private get capabilityEnv(): CapabilityEnv {
     return {
       remoteCaps: serverStore.remoteCaps,
+      remoteProps: serverStore.remoteProps,
       listCaps: serverStore.listCaps,
       binding: this.activeRemoteBinding,
       isMultimodalActive: this.isMultimodalActive,
@@ -2603,6 +2606,17 @@ class ModelStore {
   /** Capabilities of the live session — chat's entry point. */
   get activeModelCaps(): ModelCapabilityView {
     return this.capsFor(this.activeModel);
+  }
+
+  /**
+   * The server's own generation defaults for the live session, for a settings
+   * surface to show alongside the user's values. Undefined when no probe
+   * describes the backend this session is bound to.
+   */
+  get activeSamplerDefaults(): SamplerDefaults | undefined {
+    const env = this.capabilityEnv;
+    return resolveRemoteProps(this.activeModel, env.remoteProps, env.binding)
+      .samplerDefaults;
   }
 
   get lastUsedModel(): Model | undefined {

@@ -21,6 +21,7 @@ export type ValidationRule =
 export interface CompletionParamMetadata {
   validation: ValidationRule;
   defaultValue: number | boolean | string[] | null | undefined;
+  step?: number;
 }
 
 export const COMPLETION_PARAMS_METADATA: Partial<
@@ -38,46 +39,57 @@ export const COMPLETION_PARAMS_METADATA: Partial<
   temperature: {
     validation: {type: 'numeric', min: 0, max: 2, required: true},
     defaultValue: defaultCompletionParams.temperature,
+    step: 0.01,
   },
   top_k: {
     validation: {type: 'numeric', min: 1, max: 128, required: true},
     defaultValue: defaultCompletionParams.top_k,
+    step: 1,
   },
   top_p: {
     validation: {type: 'numeric', min: 0, max: 1, required: true},
     defaultValue: defaultCompletionParams.top_p,
+    step: 0.01,
   },
   min_p: {
     validation: {type: 'numeric', min: 0, max: 1, required: true},
     defaultValue: defaultCompletionParams.min_p,
+    step: 0.01,
   },
   xtc_threshold: {
     validation: {type: 'numeric', min: 0, max: 1, required: true},
     defaultValue: defaultCompletionParams.xtc_threshold,
+    step: 0.01,
   },
   xtc_probability: {
     validation: {type: 'numeric', min: 0, max: 1, required: true},
     defaultValue: defaultCompletionParams.xtc_probability,
+    step: 0.01,
   },
   typical_p: {
     validation: {type: 'numeric', min: 0, max: 2, required: true},
     defaultValue: defaultCompletionParams.typical_p,
+    step: 0.01,
   },
   penalty_last_n: {
     validation: {type: 'numeric', min: 0, max: 256, required: true},
     defaultValue: defaultCompletionParams.penalty_last_n,
+    step: 1,
   },
   penalty_repeat: {
     validation: {type: 'numeric', min: 0, max: 2, required: true},
     defaultValue: defaultCompletionParams.penalty_repeat,
+    step: 0.01,
   },
   penalty_freq: {
     validation: {type: 'numeric', min: 0, max: 2, required: true},
     defaultValue: defaultCompletionParams.penalty_freq,
+    step: 0.01,
   },
   penalty_present: {
     validation: {type: 'numeric', min: 0, max: 2, required: true},
     defaultValue: defaultCompletionParams.penalty_present,
+    step: 0.01,
   },
   mirostat: {
     validation: {type: 'numeric', min: 0, max: 2, required: true},
@@ -86,10 +98,12 @@ export const COMPLETION_PARAMS_METADATA: Partial<
   mirostat_tau: {
     validation: {type: 'numeric', min: 0, max: 10, required: true},
     defaultValue: defaultCompletionParams.mirostat_tau,
+    step: 1,
   },
   mirostat_eta: {
     validation: {type: 'numeric', min: 0, max: 1, required: true},
     defaultValue: defaultCompletionParams.mirostat_eta,
+    step: 0.01,
   },
   seed: {
     validation: {

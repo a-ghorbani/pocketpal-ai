@@ -1,9 +1,18 @@
 import {makeAutoObservable, observable} from 'mobx';
 
-import {RemoteModelCaps, ServerConfig} from '../../src/utils/types';
+import {
+  RemoteModelCaps,
+  RemoteModelPresence,
+  RemoteModelProps,
+  ServerConfig,
+} from '../../src/utils/types';
 import {ReasoningCapability} from '../../src/utils/reasoningCapability';
 import {RemoteModelInfo} from '../../src/api/openai';
 import {deriveListCapsMap} from '../../src/utils/listCaps';
+import {
+  SleepState,
+  lastObservedSleepState,
+} from '../../src/utils/remotePresence';
 
 class MockServerStore {
   servers: ServerConfig[] = [];
@@ -17,9 +26,15 @@ class MockServerStore {
     return deriveListCapsMap(this.servers, this.serverModels);
   }
 
+  lastObservedSleepState(serverId: string): SleepState {
+    return lastObservedSleepState(this.servers, this.remotePresence, serverId);
+  }
+
   userSelectedModels: Array<{serverId: string; remoteModelId: string}> = [];
   remoteReasoning: Record<string, ReasoningCapability> = {};
   remoteCaps: Record<string, RemoteModelCaps> = {};
+  remoteProps: Record<string, RemoteModelProps> = {};
+  remotePresence: Record<string, RemoteModelPresence> = {};
   isLoading = false;
   error: string | null = null;
   privacyNoticeAcknowledged = false;

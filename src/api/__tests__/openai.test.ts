@@ -6,6 +6,7 @@ import {
   testConnection,
   streamChatCompletion,
   buildReasoningPayload,
+  buildSamplerPayload,
   __clearRemoteImageCache,
 } from '../openai';
 import {
@@ -13,6 +14,16 @@ import {
   directVisionModelsBody,
   routerModelsBody,
 } from '../../../jest/fixtures/remoteModelList';
+import {
+  errorSlotsBareRouter,
+  propsModelDescribing,
+  propsRouterPlaceholder,
+  slotsAfterSamplerRequest,
+} from '../../../jest/fixtures/llamaServerWire';
+import {EFFORT_LEVELS} from '../../utils/reasoningCapability';
+import {runInAction} from 'mobx';
+
+import {serverStore} from '../../store';
 
 /** Build a minimal Headers-like object for fetch mocks. */
 function mockHeaders(entries: Record<string, string> = {}) {
@@ -480,13 +491,17 @@ describe('fetchServerProps', () => {
         }),
     });
 
-    const props = await fetchServerProps('http://localhost:8080');
+    const {caps} = await fetchServerProps('http://localhost:8080');
 
     expect(global.fetch).toHaveBeenCalledWith(
       'http://localhost:8080/props',
       expect.objectContaining({method: 'GET'}),
     );
-    expect(props).toEqual({contextLength: 4096, supportsVision: true});
+    expect(caps).toEqual({
+      contextLength: 4096,
+      supportsVision: true,
+      supportsAudio: false,
+    });
   });
 
   it('falls back to top-level n_ctx and reports vision false when not present', async () => {
@@ -495,8 +510,12 @@ describe('fetchServerProps', () => {
       json: () => Promise.resolve({n_ctx: 8192}),
     });
 
-    const props = await fetchServerProps('http://localhost:8080');
-    expect(props).toEqual({contextLength: 8192, supportsVision: false});
+    const {caps} = await fetchServerProps('http://localhost:8080');
+    expect(caps).toEqual({
+      contextLength: 8192,
+      supportsVision: false,
+      supportsAudio: false,
+    });
   });
 
   it('returns supportsVision false (defined, not omitted) when vision is off', async () => {
@@ -509,37 +528,48 @@ describe('fetchServerProps', () => {
         }),
     });
 
-    const props = await fetchServerProps('http://localhost:8080');
+    const {caps} = await fetchServerProps('http://localhost:8080');
     // Defined false on a 2xx probe clears a stale true on a model swap; a
-    // failed probe would return {} instead.
-    expect(props).toEqual({contextLength: 4096, supportsVision: false});
+    // failed probe would resolve every tier to unknown instead.
+    expect(caps).toEqual({
+      contextLength: 4096,
+      supportsVision: false,
+      supportsAudio: false,
+    });
   });
 
-  it('resolves to empty caps on a non-2xx response', async () => {
-    global.fetch = jest.fn().mockResolvedValueOnce({ok: false, status: 404});
+  it('resolves every tier to unknown on a non-2xx response', async () => {
+    global.fetch = jest.fn().mockResolvedValueOnce({
+      ok: false,
+      status: 400,
+      json: () => Promise.resolve(errorSlotsBareRouter),
+    });
 
-    await expect(fetchServerProps('http://localhost:8080')).resolves.toEqual(
-      {},
-    );
+    await expect(fetchServerProps('http://localhost:8080')).resolves.toEqual({
+      caps: {},
+      props: {},
+    });
   });
 
-  it('resolves to empty caps on a network error (never throws)', async () => {
+  it('resolves every tier to unknown on a network error (never throws)', async () => {
     global.fetch = jest.fn().mockRejectedValueOnce(new Error('boom'));
 
-    await expect(fetchServerProps('http://localhost:8080')).resolves.toEqual(
-      {},
-    );
+    await expect(fetchServerProps('http://localhost:8080')).resolves.toEqual({
+      caps: {},
+      props: {},
+    });
   });
 
-  it('resolves to empty caps on malformed JSON', async () => {
+  it('resolves every tier to unknown on malformed JSON', async () => {
     global.fetch = jest.fn().mockResolvedValueOnce({
       ok: true,
       json: () => Promise.reject(new Error('bad json')),
     });
 
-    await expect(fetchServerProps('http://localhost:8080')).resolves.toEqual(
-      {},
-    );
+    await expect(fetchServerProps('http://localhost:8080')).resolves.toEqual({
+      caps: {},
+      props: {},
+    });
   });
 
   it('scopes the request to a model id when one is supplied', async () => {
@@ -553,7 +583,7 @@ describe('fetchServerProps', () => {
         }),
     });
 
-    const props = await fetchServerProps(
+    const {caps} = await fetchServerProps(
       'http://localhost:8080',
       undefined,
       undefined,
@@ -564,7 +594,11 @@ describe('fetchServerProps', () => {
       'http://localhost:8080/props?model=gemma-4-e2b',
       expect.objectContaining({method: 'GET'}),
     );
-    expect(props).toEqual({contextLength: 8192, supportsVision: true});
+    expect(caps).toEqual({
+      contextLength: 8192,
+      supportsVision: true,
+      supportsAudio: true,
+    });
   });
 
   it('url-encodes a model id containing a slash', async () => {
@@ -586,23 +620,19 @@ describe('fetchServerProps', () => {
     );
   });
 
-  it('returns empty caps for a router placeholder body', async () => {
+  it('resolves nothing at all for a router placeholder body', async () => {
     global.fetch = jest.fn().mockResolvedValueOnce({
       ok: true,
-      json: () =>
-        Promise.resolve({
-          role: 'router',
-          model_path: 'none',
-          default_generation_settings: {n_ctx: 0},
-          modalities: null,
-        }),
+      json: () => Promise.resolve(propsRouterPlaceholder),
     });
 
-    const props = await fetchServerProps('http://localhost:8080');
-
-    // n_ctx 0 is "unknown", not a window, and vision is undecidable on a body
-    // that describes no model — both fields stay absent.
-    expect(props).toEqual({});
+    // n_ctx 0 is "unknown", not a window, and nothing about a model is
+    // decidable from a body that describes none. The router's own sleep state
+    // is not this model's, so presence stays unknown too.
+    await expect(fetchServerProps('http://localhost:8080')).resolves.toEqual({
+      caps: {},
+      props: {},
+    });
   });
 
   it('omits contextLength when n_ctx is zero, negative, or not a number', async () => {
@@ -617,8 +647,8 @@ describe('fetchServerProps', () => {
           }),
       });
 
-      const props = await fetchServerProps('http://localhost:8080');
-      expect(props.contextLength).toBeUndefined();
+      const {caps} = await fetchServerProps('http://localhost:8080');
+      expect(caps.contextLength).toBeUndefined();
     }
   });
 
@@ -632,8 +662,12 @@ describe('fetchServerProps', () => {
         }),
     });
 
-    const props = await fetchServerProps('http://localhost:8080');
-    expect(props).toEqual({contextLength: 2048, supportsVision: false});
+    const {caps} = await fetchServerProps('http://localhost:8080');
+    expect(caps).toEqual({
+      contextLength: 2048,
+      supportsVision: false,
+      supportsAudio: false,
+    });
   });
 
   it('decides vision from model_path alone when no window is reported', async () => {
@@ -647,8 +681,191 @@ describe('fetchServerProps', () => {
         }),
     });
 
-    const props = await fetchServerProps('http://localhost:8080');
-    expect(props).toEqual({supportsVision: true});
+    const {caps} = await fetchServerProps('http://localhost:8080');
+    expect(caps).toEqual({supportsVision: true, supportsAudio: false});
+  });
+
+  it('splits a full model-describing body across the three tiers', async () => {
+    global.fetch = jest.fn().mockResolvedValueOnce({
+      ok: true,
+      json: () => Promise.resolve(propsModelDescribing),
+    });
+
+    const {caps, props, presence} = await fetchServerProps(
+      'http://localhost:8080',
+    );
+
+    expect(caps).toEqual({
+      contextLength: propsModelDescribing.default_generation_settings.n_ctx,
+      supportsVision: false,
+      supportsAudio: false,
+    });
+
+    // Projected from the capture rather than restated, so the four renames are
+    // checked against the server's own spelling and not against themselves.
+    const wire = propsModelDescribing.default_generation_settings.params;
+    expect(props.samplerDefaults).toEqual({
+      temperature: wire.temperature,
+      top_p: wire.top_p,
+      top_k: wire.top_k,
+      min_p: wire.min_p,
+      typical_p: wire.typical_p,
+      xtc_threshold: wire.xtc_threshold,
+      xtc_probability: wire.xtc_probability,
+      penalty_last_n: wire.repeat_last_n,
+      penalty_repeat: wire.repeat_penalty,
+      penalty_freq: wire.frequency_penalty,
+      penalty_present: wire.presence_penalty,
+      mirostat: wire.mirostat,
+      mirostat_tau: wire.mirostat_tau,
+      mirostat_eta: wire.mirostat_eta,
+      n_predict: wire.n_predict,
+    });
+    expect(props.slotCount).toBe(propsModelDescribing.total_slots);
+    // The wire carries both; nothing reads them, so nothing persists them.
+    expect(propsModelDescribing.build_info).toBeTruthy();
+    expect(propsModelDescribing.model_alias).toBeTruthy();
+    expect(props).not.toHaveProperty('buildInfo');
+    expect(props).not.toHaveProperty('modelAlias');
+
+    expect(presence).toEqual({
+      isSleeping: propsModelDescribing.is_sleeping,
+      probedUrl: 'http://localhost:8080',
+      at: expect.any(Number),
+    });
+  });
+
+  it('keeps a server default that is zero', async () => {
+    global.fetch = jest.fn().mockResolvedValueOnce({
+      ok: true,
+      json: () => Promise.resolve(propsModelDescribing),
+    });
+
+    const {props} = await fetchServerProps('http://localhost:8080');
+
+    // Five of the captured defaults are legitimately 0. A parser that treated
+    // absent and zero alike would drop exactly these, leaving the indicator
+    // silently dead on five controls and working on the rest.
+    const wire = propsModelDescribing.default_generation_settings.params;
+    expect([
+      wire.xtc_probability,
+      wire.mirostat,
+      wire.frequency_penalty,
+      wire.presence_penalty,
+    ]).toEqual([0, 0, 0, 0]);
+    expect(props.samplerDefaults?.xtc_probability).toBe(0);
+    expect(props.samplerDefaults?.mirostat).toBe(0);
+    expect(props.samplerDefaults?.penalty_freq).toBe(0);
+    expect(props.samplerDefaults?.penalty_present).toBe(0);
+  });
+
+  it('does not offer the live seed as a default to return to', async () => {
+    global.fetch = jest.fn().mockResolvedValueOnce({
+      ok: true,
+      json: () => Promise.resolve(propsModelDescribing),
+    });
+
+    const {props} = await fetchServerProps('http://localhost:8080');
+
+    expect(propsModelDescribing.default_generation_settings.params.seed).toBe(
+      4294967295,
+    );
+    expect(props.samplerDefaults).not.toHaveProperty('seed');
+  });
+
+  it('leaves a chat-template flag this build does not report unknown', async () => {
+    global.fetch = jest.fn().mockResolvedValueOnce({
+      ok: true,
+      json: () => Promise.resolve(propsModelDescribing),
+    });
+
+    const {props} = await fetchServerProps('http://localhost:8080');
+
+    expect(propsModelDescribing.chat_template_caps).not.toHaveProperty(
+      'supports_thinking',
+    );
+    expect(props.chatTemplateCaps).toEqual({supportsTools: true});
+    expect(props.chatTemplateCaps).not.toHaveProperty('supportsThinking');
+  });
+
+  it('records a chat-template flag a newer build does report', async () => {
+    global.fetch = jest.fn().mockResolvedValueOnce({
+      ok: true,
+      json: () =>
+        Promise.resolve({
+          ...propsModelDescribing,
+          chat_template_caps: {
+            ...propsModelDescribing.chat_template_caps,
+            supports_thinking: true,
+          },
+        }),
+    });
+
+    const {props} = await fetchServerProps('http://localhost:8080');
+
+    expect(props.chatTemplateCaps).toEqual({
+      supportsTools: true,
+      supportsThinking: true,
+    });
+  });
+
+  it('omits a slot count that is not a positive whole number', async () => {
+    for (const total_slots of [0, -1, 2.5, '4', null]) {
+      global.fetch = jest.fn().mockResolvedValueOnce({
+        ok: true,
+        json: () => Promise.resolve({...propsModelDescribing, total_slots}),
+      });
+
+      const {props} = await fetchServerProps('http://localhost:8080');
+      expect(props.slotCount).toBeUndefined();
+    }
+  });
+
+  it('reads sleep state from a body that describes nothing else', async () => {
+    global.fetch = jest.fn().mockResolvedValueOnce({
+      ok: true,
+      json: () => Promise.resolve({is_sleeping: true}),
+    });
+
+    // A sleeping child may report almost nothing, which is exactly when the
+    // observation matters. The other two tiers stay unknown.
+    await expect(fetchServerProps('http://localhost:8080')).resolves.toEqual({
+      caps: {},
+      props: {},
+      presence: {
+        isSleeping: true,
+        probedUrl: 'http://localhost:8080',
+        at: expect.any(Number),
+      },
+    });
+  });
+
+  it('reads no descriptive field from a body that describes no model', async () => {
+    global.fetch = jest.fn().mockResolvedValueOnce({
+      ok: true,
+      json: () =>
+        Promise.resolve({
+          model_path: 'none',
+          build_info: 'b9976-e3546c794',
+          total_slots: 4,
+        }),
+    });
+
+    await expect(fetchServerProps('http://localhost:8080')).resolves.toEqual({
+      caps: {},
+      props: {},
+    });
+  });
+
+  it('records the url it asked, so a reader can tell what it describes', async () => {
+    global.fetch = jest.fn().mockResolvedValueOnce({
+      ok: true,
+      json: () => Promise.resolve(propsModelDescribing),
+    });
+
+    const {presence} = await fetchServerProps('http://192.168.1.100:8080/');
+
+    expect(presence?.probedUrl).toBe('http://192.168.1.100:8080/');
   });
 
   it('bounds an omitted timeout at the props default, not the connection default', async () => {
@@ -1976,14 +2193,50 @@ describe('buildReasoningPayload (per-serverType gating)', () => {
     ).toEqual({
       reasoning_format: 'auto',
       chat_template_kwargs: {reasoning_effort: 'high'},
+      reasoning_budget_tokens: 8192,
     });
   });
 
+  it('llama.cpp budgets rise with the effort level and uncap at max', () => {
+    const budgetFor = (effort: string) =>
+      buildReasoningPayload('llama.cpp', {enabled: true, effort})
+        .reasoning_budget_tokens;
+
+    expect(EFFORT_LEVELS.map(budgetFor)).toEqual([
+      256, 512, 2048, 8192, 16384, -1,
+    ]);
+  });
+
+  it('llama.cpp sends no budget when reasoning is on without an effort', () => {
+    const on = buildReasoningPayload('llama.cpp', {enabled: true});
+    expect(on).not.toHaveProperty('reasoning_budget_tokens');
+    const off = buildReasoningPayload('llama.cpp', {enabled: false});
+    expect(off).not.toHaveProperty('reasoning_budget_tokens');
+  });
+
+  it('sends no budget to any other server type', () => {
+    for (const serverType of [
+      'vLLM',
+      'LM Studio',
+      'Ollama',
+      'OpenAI',
+      undefined,
+    ]) {
+      expect(
+        buildReasoningPayload(serverType, {enabled: true, effort: 'high'}),
+      ).not.toHaveProperty('reasoning_budget_tokens');
+    }
+  });
+
   it('llama.cpp OFF sends enable_thinking:false + reasoning_format auto', () => {
-    expect(buildReasoningPayload('llama.cpp', {enabled: false})).toEqual({
+    const off = buildReasoningPayload('llama.cpp', {enabled: false});
+    expect(off).toEqual({
       reasoning_format: 'auto',
       chat_template_kwargs: {enable_thinking: false},
     });
+    // llama-server has no top-level reasoning_effort: it 200s and keeps
+    // thinking on, so enable_thinking is the only thing that turns it off.
+    expect(off).not.toHaveProperty('reasoning_effort');
   });
 
   it('LM Studio is on/off only — no graded effort', () => {
@@ -2109,5 +2362,206 @@ describe('streamChatCompletion reasoning payload', () => {
     );
     xhr.simulateLoad();
     await resultPromise;
+  });
+});
+
+describe('buildSamplerPayload', () => {
+  // The server's own vocabulary, projected from a live `/slots` body rather
+  // than restated here: a name spelled the same way in the parser and in a
+  // hand-written fixture would agree with itself and with nothing else.
+  const serverSamplerNames = Object.keys(slotsAfterSamplerRequest[0].params);
+
+  const settings = {
+    temperature: 0.33,
+    top_p: 0.77,
+    top_k: 11,
+    min_p: 0.11,
+    typical_p: 0.91,
+    xtc_threshold: 0.31,
+    xtc_probability: 0.21,
+    penalty_last_n: 41,
+    penalty_repeat: 1.11,
+    penalty_freq: 0.41,
+    penalty_present: 0.51,
+    mirostat: 2,
+    mirostat_tau: 4.1,
+    mirostat_eta: 0.21,
+    seed: 12345,
+    n_predict: 128,
+  };
+
+  it('spells every emitted sampler the way the server does', () => {
+    const payload = buildSamplerPayload('llama.cpp', settings);
+
+    expect(Object.keys(payload)).not.toHaveLength(0);
+    for (const name of Object.keys(payload)) {
+      expect(serverSamplerNames).toContain(name);
+    }
+  });
+
+  it('renames the four penalties the server does not know by our names', () => {
+    const ourPenaltyNames = [
+      'penalty_last_n',
+      'penalty_repeat',
+      'penalty_freq',
+      'penalty_present',
+    ];
+    for (const ours of ourPenaltyNames) {
+      expect(serverSamplerNames).not.toContain(ours);
+    }
+
+    const payload = buildSamplerPayload('llama.cpp', settings);
+    for (const ours of ourPenaltyNames) {
+      expect(payload).not.toHaveProperty(ours);
+    }
+    expect(payload.repeat_last_n).toBe(41);
+    expect(payload.repeat_penalty).toBe(1.11);
+    expect(payload.frequency_penalty).toBe(0.41);
+    expect(payload.presence_penalty).toBe(0.51);
+  });
+
+  it('forwards the allow-listed samplers and nothing else', () => {
+    expect(buildSamplerPayload('llama.cpp', settings)).toEqual({
+      top_k: 11,
+      min_p: 0.11,
+      typical_p: 0.91,
+      xtc_threshold: 0.31,
+      xtc_probability: 0.21,
+      repeat_last_n: 41,
+      repeat_penalty: 1.11,
+      frequency_penalty: 0.41,
+      presence_penalty: 0.51,
+      mirostat: 2,
+      mirostat_tau: 4.1,
+      mirostat_eta: 0.21,
+      seed: 12345,
+    });
+  });
+
+  it('omits a value that is not a finite number, and keeps a zero', () => {
+    expect(
+      buildSamplerPayload('llama.cpp', {
+        top_k: undefined,
+        min_p: NaN,
+        typical_p: Infinity,
+        mirostat: 0,
+      }),
+    ).toEqual({mirostat: 0});
+  });
+
+  it('sends nothing for a server type with no allow-list row', () => {
+    for (const serverType of [
+      'vLLM',
+      'Ollama',
+      'OpenAI',
+      'LM Studio',
+      'something-else',
+      '',
+      undefined,
+    ]) {
+      expect(buildSamplerPayload(serverType, settings)).toEqual({});
+    }
+  });
+});
+
+describe('streamChatCompletion sampler payload', () => {
+  let originalXHR: typeof XMLHttpRequest;
+  beforeEach(() => {
+    originalXHR = global.XMLHttpRequest;
+    (global as any).XMLHttpRequest = MockXHR;
+    MockXHR.instances = [];
+  });
+  afterEach(() => {
+    global.XMLHttpRequest = originalXHR;
+  });
+
+  /** Send one turn and return the parsed request body. */
+  const bodyOf = async (
+    params: Record<string, any>,
+    serverType?: string,
+  ): Promise<any> => {
+    const resultPromise = streamChatCompletion(
+      {messages: [{role: 'user', content: 'Hi'}], model: 'm', ...params},
+      'http://localhost:1234',
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      serverType,
+    );
+    const xhr = MockXHR.instances[MockXHR.instances.length - 1];
+    const body = JSON.parse(xhr.requestBody);
+    xhr.simulateHeaders(200);
+    xhr.simulateProgress(
+      'data: {"choices":[{"delta":{},"finish_reason":"stop"}]}\n\ndata: [DONE]\n\n',
+    );
+    xhr.simulateLoad();
+    await resultPromise;
+    return body;
+  };
+
+  it('carries the changed samplers alongside the unconditional fields', async () => {
+    const body = await bodyOf(
+      {
+        temperature: 0.7,
+        top_p: 0.9,
+        max_tokens: 100,
+        stop: ['</s>'],
+        top_k: 10,
+        penalty_repeat: 1.2,
+      },
+      'llama.cpp',
+    );
+
+    expect(body.top_k).toBe(10);
+    expect(body.repeat_penalty).toBe(1.2);
+    expect(body.temperature).toBe(0.7);
+    expect(body.top_p).toBe(0.9);
+    expect(body.max_completion_tokens).toBe(100);
+    expect(body.stop).toEqual(['</s>']);
+    expect(body.stream).toBe(true);
+  });
+
+  it('sends an unknown server type the same body as before', async () => {
+    const body = await bodyOf({
+      temperature: 0.7,
+      top_p: 0.9,
+      max_tokens: 100,
+      stop: ['</s>'],
+      top_k: 10,
+      penalty_repeat: 1.2,
+    });
+
+    expect(body).toEqual({
+      model: 'm',
+      messages: [{role: 'user', content: 'Hi'}],
+      stream: true,
+      temperature: 0.7,
+      top_p: 0.9,
+      max_completion_tokens: 100,
+      stop: ['</s>'],
+    });
+  });
+
+  it('builds the same body whether or not a probe has landed', async () => {
+    const params = {top_k: 10, penalty_repeat: 1.2, seed: 7};
+    const before = await bodyOf(params, 'llama.cpp');
+
+    runInAction(() => {
+      serverStore.remoteProps = {
+        'srv/m': {
+          samplerDefaults: {top_k: 40, penalty_repeat: 1.0, temperature: 0.8},
+          probedUrl: 'http://localhost:1234',
+        },
+      };
+    });
+
+    const after = await bodyOf(params, 'llama.cpp');
+
+    expect(after).toEqual(before);
+
+    runInAction(() => {
+      serverStore.remoteProps = {};
+    });
   });
 });

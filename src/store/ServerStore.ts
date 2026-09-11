@@ -1,4 +1,5 @@
 import {AppState, AppStateStatus} from 'react-native';
+import {SleepState, lastObservedSleepState} from '../utils/remotePresence';
 import {makeAutoObservable, observable, runInAction} from 'mobx';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import {makePersistable} from 'mobx-persist-store';
@@ -11,7 +12,12 @@ import {
   PROPS_TIMEOUT_MS,
   RemoteModelInfo,
 } from '../api/openai';
-import {RemoteModelCaps, ServerConfig} from '../utils/types';
+import {
+  RemoteModelCaps,
+  RemoteModelPresence,
+  RemoteModelProps,
+  ServerConfig,
+} from '../utils/types';
 import {ReasoningCapability} from '../utils/reasoningCapability';
 import {deriveListCapsMap} from '../utils/listCaps';
 import type {ListDerivedCaps} from '../utils/listCaps';
@@ -26,7 +32,105 @@ const FETCH_THROTTLE_MS = 60000;
  * provenance the entry carries. Enumerated once so the usability check and the
  * no-op write check cannot drift apart when a field is added.
  */
-const CAPS_FIELDS = ['contextLength', 'supportsVision'] as const;
+const CAPS_FIELDS = [
+  'contextLength',
+  'supportsVision',
+  'supportsAudio',
+] as const;
+
+const PROPS_FIELDS = [
+  'samplerDefaults',
+  'slotCount',
+  'chatTemplateCaps',
+] as const;
+
+// Compared by content, not identity. Every other member of PROPS_FIELDS is a
+// scalar, and the scalar set is derived rather than restated so a field added
+// above is compared by default instead of silently skipped.
+const PROPS_DEEP_FIELDS = [
+  'samplerDefaults',
+  'chatTemplateCaps',
+] as const satisfies readonly (typeof PROPS_FIELDS)[number][];
+
+type PropsDeepField = (typeof PROPS_DEEP_FIELDS)[number];
+
+const PROPS_SCALAR_FIELDS = PROPS_FIELDS.filter(
+  (field): field is Exclude<(typeof PROPS_FIELDS)[number], PropsDeepField> =>
+    !(PROPS_DEEP_FIELDS as readonly string[]).includes(field),
+);
+
+// Deriving the scalar set stops a new field being skipped, but not a new
+// object-valued one being compared by identity — which, against a body parsed
+// fresh each probe, is never equal and rewrites the map on every probe. This
+// makes that a compile error instead. The naked `K` matters: constraining it
+// inside the conditional stops the type distributing and the check silently
+// passes.
+type ScalarValued<K> = K extends keyof RemoteModelProps
+  ? NonNullable<RemoteModelProps[K]> extends object
+    ? never
+    : K
+  : never;
+
+const _scalarFieldsAreScalars: ScalarValued<
+  (typeof PROPS_SCALAR_FIELDS)[number]
+>[] = PROPS_SCALAR_FIELDS;
+void _scalarFieldsAreScalars;
+
+const isUnusableCaps = (caps: RemoteModelCaps) =>
+  CAPS_FIELDS.every(f => caps[f] === undefined);
+
+const isUnusableProps = (props: RemoteModelProps) =>
+  PROPS_FIELDS.every(f => props[f] === undefined);
+
+const shallowEqual = (
+  a: Record<string, unknown> | undefined,
+  b: Record<string, unknown> | undefined,
+): boolean => {
+  if (a === b) {
+    return true;
+  }
+  if (!a || !b) {
+    return false;
+  }
+  const keys = Object.keys(a);
+  return (
+    keys.length === Object.keys(b).length && keys.every(k => a[k] === b[k])
+  );
+};
+
+// A nested object is compared by its contents: a fresh `samplerDefaults`
+// holding the same numbers is the same answer, and rewriting it would make an
+// unchanged probe look like news to every observer.
+const samePropsContent = (a: RemoteModelProps, b: RemoteModelProps): boolean =>
+  PROPS_SCALAR_FIELDS.every(f => a[f] === b[f]) &&
+  PROPS_DEEP_FIELDS.every(f => shallowEqual(a[f], b[f]));
+
+// Request bookkeeping rather than store state: a second probe for a key while
+// one is in flight awaits that one instead of issuing its own.
+const probesInFlight = new Map<string, Promise<void>>();
+
+/**
+ * The declared fields of a prior entry describing the same backend. Copying by
+ * name rather than spreading the hydrated object means a field dropped from the
+ * schema stops being carried forward; a spread would preserve it for the life
+ * of the entry, so a removal could never take effect.
+ */
+function carryForward<T extends {probedUrl?: string}>(
+  prior: T | undefined,
+  probedUrl: string,
+  fields: readonly (keyof T)[],
+): Partial<T> {
+  if (!prior || prior.probedUrl !== probedUrl) {
+    return {};
+  }
+  const kept: Partial<T> = {};
+  for (const field of fields) {
+    if (prior[field] !== undefined) {
+      kept[field] = prior[field];
+    }
+  }
+  return kept;
+}
 
 /**
  * Shared by every path that invalidates per-model state, so a new map cannot
@@ -51,6 +155,11 @@ class ServerStore {
   // Server-reported capabilities keyed by the same full model id. /props
   // answers per model on a multi-model server, so caps cannot live per server.
   remoteCaps: Record<string, RemoteModelCaps> = {};
+  // What the same /props answer says beyond capabilities, under the same key.
+  remoteProps: Record<string, RemoteModelProps> = {};
+  // Sleep state, deliberately not persisted: a hydrated "asleep" would be a
+  // claim about now that nobody checked.
+  remotePresence: Record<string, RemoteModelPresence> = {};
   serverModels: Map<string, RemoteModelInfo[]> = observable.map();
   userSelectedModels: Array<{serverId: string; remoteModelId: string}> = [];
   isLoading = false;
@@ -73,6 +182,7 @@ class ServerStore {
         'userSelectedModels',
         'remoteReasoning',
         'remoteCaps',
+        'remoteProps',
       ],
       storage: AsyncStorage,
     }).then(() => {
@@ -115,6 +225,8 @@ class ServerStore {
 
     if (invalidatesDiscovery) {
       this.remoteCaps = dropServerEntries(this.remoteCaps, id);
+      this.remoteProps = dropServerEntries(this.remoteProps, id);
+      this.remotePresence = dropServerEntries(this.remotePresence, id);
       this.serverModels.delete(id);
     }
   }
@@ -128,6 +240,8 @@ class ServerStore {
     );
     this.remoteReasoning = dropServerEntries(this.remoteReasoning, id);
     this.remoteCaps = dropServerEntries(this.remoteCaps, id);
+    this.remoteProps = dropServerEntries(this.remoteProps, id);
+    this.remotePresence = dropServerEntries(this.remotePresence, id);
     // Clean up API key from keychain
     this.removeApiKey(id);
   }
@@ -311,13 +425,42 @@ class ServerStore {
     remoteModelId: string,
     resolvedApiKey?: string,
   ): Promise<void> {
+    // Keyed on the url as well as the model: a probe issued before a server
+    // edit is asking a different backend, and joining it would answer the new
+    // url with the old one's result.
+    const url = this.servers.find(s => s.id === serverId)?.url;
+    const key = `${serverId}/${remoteModelId}/${url ?? ''}`;
+    const inFlight = probesInFlight.get(key);
+    if (inFlight) {
+      return inFlight;
+    }
+
+    // Deletes only its own registration. `clear()` can drop an entry while its
+    // probe is still pending, so a late settle would otherwise evict the
+    // replacement registered under the same key — the reprobe the clear exists
+    // to allow.
+    const request: Promise<void> = this.probeRemoteModel(
+      serverId,
+      remoteModelId,
+      resolvedApiKey,
+    ).finally(() => {
+      if (probesInFlight.get(key) === request) {
+        probesInFlight.delete(key);
+      }
+    });
+    probesInFlight.set(key, request);
+    return request;
+  }
+
+  private async probeRemoteModel(
+    serverId: string,
+    remoteModelId: string,
+    resolvedApiKey?: string,
+  ): Promise<void> {
     const server = this.servers.find(s => s.id === serverId);
     if (!server || server.serverType !== 'llama.cpp') {
       return;
     }
-
-    const isUnusable = (caps: RemoteModelCaps) =>
-      CAPS_FIELDS.every(f => caps[f] === undefined);
 
     // Snapshot: `server` is the live observable, so updateServer mutates it
     // in place while the probe is in flight.
@@ -330,18 +473,23 @@ class ServerStore {
     );
 
     const apiKey = resolvedApiKey ?? (await this.getApiKey(serverId));
-    let caps = await fetchServerProps(
+    let {caps, props, presence} = await fetchServerProps(
       probedUrl,
       apiKey,
       timeoutMs,
       remoteModelId,
     );
 
-    if (isUnusable(caps) && this.servesOnlyModel(serverId, remoteModelId)) {
-      caps = await fetchServerProps(probedUrl, apiKey, timeoutMs);
+    if (isUnusableCaps(caps) && this.servesOnlyModel(serverId, remoteModelId)) {
+      const bare = await fetchServerProps(probedUrl, apiKey, timeoutMs);
+      // Per tier: the retry fires on an unusable capability answer, which is
+      // exactly when the scoped call may already have resolved the other two.
+      caps = isUnusableCaps(bare.caps) ? caps : bare.caps;
+      props = isUnusableProps(bare.props) ? props : bare.props;
+      presence = bare.presence ?? presence;
     }
 
-    if (isUnusable(caps)) {
+    if (isUnusableCaps(caps) && isUnusableProps(props) && !presence) {
       return;
     }
 
@@ -359,22 +507,47 @@ class ServerStore {
         return;
       }
       const key = `${serverId}/${remoteModelId}`;
-      const prior = this.remoteCaps[key];
-      const sameBackend = prior?.probedUrl === probedUrl;
-      const merged: RemoteModelCaps = {
-        ...(sameBackend ? prior : undefined),
-        ...caps,
-        probedUrl,
-      };
-      if (
-        prior &&
-        prior.probedUrl === merged.probedUrl &&
-        CAPS_FIELDS.every(f => prior[f] === merged[f])
-      ) {
-        return;
+
+      if (!isUnusableCaps(caps)) {
+        const prior = this.remoteCaps[key];
+        const merged: RemoteModelCaps = {
+          ...carryForward(prior, probedUrl, CAPS_FIELDS),
+          ...caps,
+          probedUrl,
+        };
+        const unchanged =
+          prior &&
+          prior.probedUrl === merged.probedUrl &&
+          CAPS_FIELDS.every(f => prior[f] === merged[f]);
+        if (!unchanged) {
+          this.remoteCaps[key] = merged;
+        }
       }
-      this.remoteCaps[key] = merged;
+
+      if (!isUnusableProps(props)) {
+        const prior = this.remoteProps[key];
+        const merged: RemoteModelProps = {
+          ...carryForward(prior, probedUrl, PROPS_FIELDS),
+          ...props,
+          probedUrl,
+        };
+        const unchanged =
+          prior &&
+          prior.probedUrl === merged.probedUrl &&
+          samePropsContent(prior, merged);
+        if (!unchanged) {
+          this.remoteProps[key] = merged;
+        }
+      }
+
+      if (presence) {
+        this.remotePresence[key] = presence;
+      }
     });
+  }
+
+  lastObservedSleepState(serverId: string): SleepState {
+    return lastObservedSleepState(this.servers, this.remotePresence, serverId);
   }
 
   /**
@@ -428,7 +601,14 @@ class ServerStore {
           if (now - this.lastFetchTime > FETCH_THROTTLE_MS) {
             this.fetchAllRemoteModels();
           }
+          return;
         }
+        // A probe that spans a background period cannot answer for the
+        // foreground: iOS may have torn its socket down, and on the first run
+        // it is the request that raises the local-network prompt, so a grant
+        // always lands after it has already failed. Dropping the entry lets
+        // the reprobe issue its own request instead of joining that one.
+        probesInFlight.clear();
       },
     );
   }

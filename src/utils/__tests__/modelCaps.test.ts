@@ -4,6 +4,7 @@ import type {ListDerivedCaps} from '../listCaps';
 
 const env = (overrides: Partial<CapabilityEnv> = {}): CapabilityEnv => ({
   remoteCaps: {},
+  remoteProps: {},
   listCaps: {},
   binding: undefined,
   isMultimodalActive: false,
@@ -32,6 +33,7 @@ describe('resolveModelCaps', () => {
     expect(resolveModelCaps(undefined, env())).toEqual({
       vision: 'unknown',
       visionActive: false,
+      audio: 'unknown',
     });
   });
 
@@ -117,6 +119,47 @@ describe('resolveModelCaps', () => {
       );
       expect(caps.vision).toBe('unknown');
       expect(caps.contextLength).toBeUndefined();
+    });
+
+    describe('the audio axis', () => {
+      it('answers from a body that describes a loaded model', () => {
+        expect(
+          resolveModelCaps(
+            remoteModel(),
+            env({remoteCaps: {'srv/gemma-4-e2b': {supportsAudio: true}}}),
+          ).audio,
+        ).toBe('yes');
+      });
+
+      it('reads unknown for a model nobody has probed', () => {
+        expect(resolveModelCaps(remoteModel(), env()).audio).toBe('unknown');
+      });
+
+      it('reads unknown, not no, when a probe answered about another axis', () => {
+        expect(
+          resolveModelCaps(
+            remoteModel(),
+            env({remoteCaps: {'srv/gemma-4-e2b': {contextLength: 8192}}}),
+          ).audio,
+        ).toBe('unknown');
+      });
+
+      it('gates nothing: a descriptive answer moves no capability', () => {
+        const caps = resolveModelCaps(
+          remoteModel(),
+          env({
+            remoteProps: {
+              'srv/gemma-4-e2b': {slotCount: 4},
+            },
+            activeModelId: 'srv/gemma-4-e2b',
+          }),
+        );
+
+        expect(caps.vision).toBe('unknown');
+        expect(caps.visionActive).toBe(false);
+        expect(caps.contextLength).toBeUndefined();
+        expect(caps.effectiveContextLength).toBeUndefined();
+      });
     });
 
     describe('the list tier', () => {

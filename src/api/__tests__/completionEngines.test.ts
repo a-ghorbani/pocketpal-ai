@@ -261,6 +261,41 @@ describe('OpenAICompletionEngine', () => {
     );
   });
 
+  it('forwards every sampler to streamChatCompletion unaltered', async () => {
+    mockedStreamChat.mockResolvedValueOnce({text: '', content: ''});
+
+    const samplers = {
+      top_k: 11,
+      min_p: 0.11,
+      typical_p: 0.91,
+      xtc_threshold: 0.31,
+      xtc_probability: 0.21,
+      penalty_last_n: 41,
+      penalty_repeat: 1.11,
+      penalty_freq: 0.41,
+      penalty_present: 0.51,
+      mirostat: 2,
+      mirostat_tau: 4.1,
+      mirostat_eta: 0.21,
+      seed: 12345,
+    };
+
+    await engine.completion({
+      messages: [{role: 'user', content: 'Hi'}],
+      ...samplers,
+    } as any);
+
+    expect(mockedStreamChat).toHaveBeenCalledWith(
+      expect.objectContaining(samplers),
+      'http://localhost:1234',
+      'sk-key',
+      expect.any(Object),
+      undefined,
+      undefined,
+      undefined,
+    );
+  });
+
   it('handles missing optional params gracefully', async () => {
     mockedStreamChat.mockResolvedValueOnce({
       text: '',
