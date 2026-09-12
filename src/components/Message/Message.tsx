@@ -6,6 +6,7 @@ import {observer} from 'mobx-react';
 import ReactNativeHapticFeedback from 'react-native-haptic-feedback';
 
 import {useTheme} from '../../hooks';
+import {uiStore} from '../../store';
 
 import styles, {turnBlockStyles} from './styles';
 import {
@@ -22,6 +23,7 @@ import {
 
 import {MessageType} from '../../utils/types';
 import {excludeDerivedMessageProps, UserContext} from '../../utils';
+import {defaultMessageRenderingSettings} from '../../utils/messageRendering';
 
 const hapticOptions = {
   enableVibrateFallback: true,
@@ -131,6 +133,10 @@ export const Message = observer(
     const user = React.useContext(UserContext);
     const theme = useTheme();
     const scaleAnim = React.useRef(new Animated.Value(1)).current;
+    const messageRenderingSettings = {
+      ...defaultMessageRenderingSettings,
+      ...uiStore.messageRenderingSettings,
+    };
 
     const currentUserIsAuthor =
       message.type !== 'dateHeader' && user?.id === message.author.id;
@@ -324,6 +330,7 @@ export const Message = observer(
         keySuffix: string,
         text: string,
         autoCollapse: boolean,
+        initiallyCollapsed: boolean,
       ) => (
         <View
           key={keySuffix}
@@ -333,6 +340,10 @@ export const Message = observer(
             text={text}
             maxWidth={messageWidth}
             autoCollapse={autoCollapse}
+            initiallyCollapsed={initiallyCollapsed}
+            renderMarkdown={messageRenderingSettings.renderMarkdown}
+            renderLatex={messageRenderingSettings.renderLatex}
+            renderTables={messageRenderingSettings.renderTables}
           />
         </View>
       );
@@ -348,17 +359,20 @@ export const Message = observer(
         const hasContent =
           step.content !== undefined && step.content.length > 0;
 
-        if (hasReasoning) {
+        if (hasReasoning && messageRenderingSettings.showThinkingBlocks) {
           // Auto-collapse the reasoning bubble once content has begun
           // streaming or the step has finalized. While only reasoning
           // is streaming, the bubble stays expanded so the user sees
           // thoughts live.
-          const autoCollapseReasoning = hasContent || step.partial === false;
+          const autoCollapseReasoning =
+            messageRenderingSettings.collapseThinkingByDefault &&
+            (hasContent || step.partial === false);
           blocks.push(
             wrapReasoningBlock(
               `step-${stepIdx}-reasoning`,
               step.reasoningContent as string,
               autoCollapseReasoning,
+              messageRenderingSettings.collapseThinkingByDefault,
             ),
           );
           isFirstBlock = false;

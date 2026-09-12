@@ -17,9 +17,12 @@ import {
 } from '@flyerhq/react-native-link-preview';
 
 import {useTheme} from '../../hooks';
+import {assistantId} from '../../utils/chat';
 
 import {styles} from './styles';
 import {MarkdownView} from '../MarkdownView';
+import {AssistantMessageRenderer} from '../AssistantMessageRenderer';
+import {getMessageRawContent} from '../../utils/messageRendering';
 
 import {AgentStep, MessageType} from '../../utils/types';
 import {
@@ -81,6 +84,12 @@ export const TextMessage = ({
       : '';
   const theme = useTheme();
   const user = React.useContext(UserContext);
+  // A received legacy message is not necessarily an assistant response
+  // (the shared message component still supports arbitrary chat authors).
+  // Restrict rich assistant rendering to the known assistant identity or an
+  // AgentStep, preserving link-preview behavior for regular messages.
+  const isAssistantMessage =
+    step !== undefined || message.author.id === assistantId;
   const [previewData, setPreviewData] = React.useState(
     'previewData' in message ? message.previewData : undefined,
   );
@@ -233,6 +242,7 @@ export const TextMessage = ({
   // markdown path below.
   const linkPreviewEligible =
     !step &&
+    !isAssistantMessage &&
     usePreviewData &&
     !!onPreviewDataFetched &&
     visibleText.length > 0 &&
@@ -273,11 +283,23 @@ export const TextMessage = ({
           {/* Render images above the text — legacy Text path only. */}
           {!step && renderImages()}
 
-          <MarkdownView
-            markdownText={visibleText.trim()}
-            maxMessageWidth={messageWidth}
-            selectable={false}
-          />
+          {isAssistantMessage ? (
+            <AssistantMessageRenderer
+              content={
+                step?.content ??
+                getMessageRawContent(message as MessageType.Text)
+              }
+              messageId={message.id}
+              maxMessageWidth={messageWidth}
+              selectable={false}
+            />
+          ) : (
+            <MarkdownView
+              markdownText={visibleText.trim()}
+              maxMessageWidth={messageWidth}
+              selectable={false}
+            />
+          )}
         </View>
       )}
 
