@@ -3,8 +3,14 @@ const fs = require('fs');
 const path = require('path');
 const os = require('os');
 
+const {extractRegistryLanguages} = require('../lib/registry-languages');
+
 const SCRIPT_PATH = path.join(__dirname, '..', 'validate-l10n.js');
 const LOCALES_DIR = path.join(__dirname, '..', '..', 'src', 'locales');
+
+const WIRED_LANGUAGES = extractRegistryLanguages(
+  fs.readFileSync(path.join(LOCALES_DIR, 'index.ts'), 'utf-8'),
+);
 
 /**
  * Run the validate-l10n.js script against a temporary locale directory.
@@ -20,20 +26,12 @@ function runWithLocales(overrides = {}) {
   fs.mkdirSync(tmpLocalesDir);
 
   try {
-    // Copy original locale files to temp dir
+    // Copy en.json plus one JSON per wired registry locale. A failed
+    // registry extraction must fail the test, not yield an empty fixture.
+    expect(WIRED_LANGUAGES).not.toBeNull();
     for (const filename of [
       'en.json',
-      'fa.json',
-      'he.json',
-      'id.json',
-      'ja.json',
-      'ko.json',
-      'ms.json',
-      'pt_BR.json',
-      'ru.json',
-      'uk.json',
-      'zh.json',
-      'zh_Hant.json',
+      ...WIRED_LANGUAGES.map(lang => `${lang}.json`),
     ]) {
       const src = path.join(LOCALES_DIR, filename);
       const dest = path.join(tmpLocalesDir, filename);
@@ -55,6 +53,13 @@ function runWithLocales(overrides = {}) {
     scriptContent = scriptContent.replace(
       /const EN_PATH = .+;/,
       `const EN_PATH = ${JSON.stringify(path.join(tmpLocalesDir, 'en.json'))};`,
+    );
+    // The script requires its lib relative to its own location, so the
+    // temp copy needs the lib copied alongside it.
+    fs.mkdirSync(path.join(tmpDir, 'lib'));
+    fs.copyFileSync(
+      path.join(__dirname, '..', 'lib', 'registry-languages.js'),
+      path.join(tmpDir, 'lib', 'registry-languages.js'),
     );
     const tmpScriptPath = path.join(tmpDir, 'validate-l10n.js');
     fs.writeFileSync(tmpScriptPath, scriptContent, 'utf-8');
@@ -83,17 +88,12 @@ describe('validate-l10n.js', () => {
     const result = runWithLocales();
     expect(result.exitCode).toBe(0);
     expect(result.output).toContain('en.json: valid JSON');
-    expect(result.output).toContain('fa.json: valid JSON');
-    expect(result.output).toContain('he.json: valid JSON');
-    expect(result.output).toContain('id.json: valid JSON');
-    expect(result.output).toContain('ja.json: valid JSON');
-    expect(result.output).toContain('ko.json: valid JSON');
-    expect(result.output).toContain('ms.json: valid JSON');
-    expect(result.output).toContain('pt_BR.json: valid JSON');
-    expect(result.output).toContain('ru.json: valid JSON');
-    expect(result.output).toContain('uk.json: valid JSON');
-    expect(result.output).toContain('zh.json: valid JSON');
-    expect(result.output).toContain('zh_Hant.json: valid JSON');
+    for (const lang of WIRED_LANGUAGES) {
+      expect(result.output).toContain(`${lang}.json: valid JSON`);
+    }
+    for (const lang of ['be', 'de', 'et', 'fr', 'it', 'sv']) {
+      expect(result.output).not.toContain(`${lang}.json: valid JSON`);
+    }
     expect(result.output).toContain('All l10n files valid');
   });
 
@@ -177,6 +177,20 @@ describe('validate-l10n.js', () => {
     expect(result.exitCode).not.toBe(0);
     expect(result.output).toContain('ko.json');
     expect(result.output).toContain('INVALID JSON');
+  });
+
+  it('warns and falls back to auto-discovery when the registry yields no locales', () => {
+    const result = runWithLocales({
+      'index.ts': [
+        'const languageRegistry = {',
+        '  en: {displayName: "English (EN)"},',
+        '} as const;',
+      ].join('\n'),
+    });
+    expect(result.exitCode).toBe(0);
+    expect(result.output).toContain('index.ts');
+    expect(result.output).toContain('falling back to auto-discovery');
+    expect(result.output).toContain('ja.json: valid JSON');
   });
 
   it('does not validate en.json as a non-en language file', () => {

@@ -8,6 +8,12 @@ const axios = require('axios');
 const fs = require('fs');
 const path = require('path');
 
+const {extractRegistryLanguages} = require('./lib/registry-languages');
+
+const LOCALES_DIR = path.join(__dirname, '../src/locales');
+const EN_PATH = path.join(LOCALES_DIR, 'en.json');
+const INDEX_PATH = path.join(LOCALES_DIR, 'index.ts');
+
 const WEBLATE_API_URL =
   process.env.WEBLATE_API_URL || 'https://hosted.weblate.org/api';
 const WEBLATE_TOKEN = process.env.WEBLATE_TOKEN;
@@ -20,15 +26,13 @@ if (!WEBLATE_TOKEN) {
 }
 
 async function uploadSourceFile() {
-  const enPath = path.join(__dirname, '../src/locales/en.json');
-
-  if (!fs.existsSync(enPath)) {
+  if (!fs.existsSync(EN_PATH)) {
     console.error('Source file en.json not found');
     process.exit(1);
   }
 
   try {
-    const fileContent = fs.readFileSync(enPath);
+    const fileContent = fs.readFileSync(EN_PATH);
     const formData = new FormData();
     formData.append('file', new Blob([fileContent]), 'en.json');
     formData.append('method', 'replace');
@@ -52,23 +56,7 @@ async function uploadSourceFile() {
   }
 }
 
-async function downloadTranslations() {
-  const languages = [
-    'fa',
-    'he',
-    'id',
-    'ja',
-    'ko',
-    'ms',
-    'pl',
-    'pt',
-    'pt_BR',
-    'ru',
-    'uk',
-    'zh',
-    'zh_Hant',
-  ];
-
+async function downloadTranslations(languages) {
   for (const lang of languages) {
     try {
       const response = await axios.get(
@@ -80,7 +68,7 @@ async function downloadTranslations() {
         },
       );
 
-      const filePath = path.join(__dirname, `../src/locales/${lang}.json`);
+      const filePath = path.join(LOCALES_DIR, `${lang}.json`);
       fs.writeFileSync(filePath, JSON.stringify(response.data, null, 2));
       console.log(`✅ Downloaded ${lang}.json`);
     } catch (error) {
@@ -127,16 +115,26 @@ async function getProjectStats() {
 async function main() {
   const command = process.argv[2];
 
+  const languages = extractRegistryLanguages(
+    fs.readFileSync(INDEX_PATH, 'utf-8'),
+  );
+  if (!languages) {
+    console.error(
+      `Could not parse languageRegistry in ${INDEX_PATH} — registry unparseable or has no wired locales`,
+    );
+    process.exit(1);
+  }
+
   switch (command) {
     case 'upload':
       await uploadSourceFile();
       break;
     case 'download':
-      await downloadTranslations();
+      await downloadTranslations(languages);
       break;
     case 'sync':
       await uploadSourceFile();
-      await downloadTranslations();
+      await downloadTranslations(languages);
       break;
     case 'stats':
       await getProjectStats();
