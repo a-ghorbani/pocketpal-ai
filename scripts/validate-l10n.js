@@ -53,6 +53,10 @@ if (fs.existsSync(indexPath)) {
   const registryLanguages = extractRegistryLanguages(indexSrc);
   if (registryLanguages) {
     langFiles = registryLanguages;
+  } else {
+    console.warn(
+      `Could not parse languageRegistry in ${indexPath} — falling back to auto-discovery`,
+    );
   }
 }
 if (!langFiles) {
