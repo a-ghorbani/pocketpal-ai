@@ -56,6 +56,13 @@ function runWithLocales(overrides = {}) {
       /const EN_PATH = .+;/,
       `const EN_PATH = ${JSON.stringify(path.join(tmpLocalesDir, 'en.json'))};`,
     );
+    // The script requires its lib relative to its own location, so the
+    // temp copy needs the lib copied alongside it.
+    fs.mkdirSync(path.join(tmpDir, 'lib'));
+    fs.copyFileSync(
+      path.join(__dirname, '..', 'lib', 'registry-languages.js'),
+      path.join(tmpDir, 'lib', 'registry-languages.js'),
+    );
     const tmpScriptPath = path.join(tmpDir, 'validate-l10n.js');
     fs.writeFileSync(tmpScriptPath, scriptContent, 'utf-8');
 

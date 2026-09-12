@@ -2,6 +2,8 @@
 const fs = require('fs');
 const path = require('path');
 
+const {extractRegistryLanguages} = require('./lib/registry-languages');
+
 const LOCALES_DIR = path.join(__dirname, '../src/locales');
 const EN_PATH = path.join(LOCALES_DIR, 'en.json');
 
@@ -48,13 +50,9 @@ let langFiles;
 const indexPath = path.join(LOCALES_DIR, 'index.ts');
 if (fs.existsSync(indexPath)) {
   const indexSrc = fs.readFileSync(indexPath, 'utf-8');
-  const registryMatch = indexSrc.match(
-    /const languageRegistry\s*=\s*\{([\s\S]*?)\}\s*(?:as const|;)/,
-  );
-  if (registryMatch) {
-    langFiles = [...registryMatch[1].matchAll(/^\s*(\w+)\s*:/gm)]
-      .map(m => m[1])
-      .filter(l => l !== 'en');
+  const registryLanguages = extractRegistryLanguages(indexSrc);
+  if (registryLanguages) {
+    langFiles = registryLanguages;
   }
 }
 if (!langFiles) {
