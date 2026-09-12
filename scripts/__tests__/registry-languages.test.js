@@ -47,4 +47,19 @@ describe('extractRegistryLanguages', () => {
     expect(extractRegistryLanguages('export const whatever = 1;')).toBeNull();
     expect(extractRegistryLanguages('')).toBeNull();
   });
+
+  it('returns null when the registry yields only en', () => {
+    const source = [
+      'const languageRegistry = {',
+      '  en: {displayName: "English (EN)"},',
+      '} as const;',
+    ].join('\n');
+    expect(extractRegistryLanguages(source)).toBeNull();
+  });
+
+  it('returns null when the registry body is empty', () => {
+    expect(
+      extractRegistryLanguages('const languageRegistry = {} as const;'),
+    ).toBeNull();
+  });
 });
