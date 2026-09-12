@@ -3,8 +3,14 @@ const fs = require('fs');
 const path = require('path');
 const os = require('os');
 
+const {extractRegistryLanguages} = require('../lib/registry-languages');
+
 const SCRIPT_PATH = path.join(__dirname, '..', 'validate-l10n.js');
 const LOCALES_DIR = path.join(__dirname, '..', '..', 'src', 'locales');
+
+const WIRED_LANGUAGES = extractRegistryLanguages(
+  fs.readFileSync(path.join(LOCALES_DIR, 'index.ts'), 'utf-8'),
+);
 
 /**
  * Run the validate-l10n.js script against a temporary locale directory.
@@ -20,20 +26,12 @@ function runWithLocales(overrides = {}) {
   fs.mkdirSync(tmpLocalesDir);
 
   try {
-    // Copy original locale files to temp dir
+    // Copy en.json plus one JSON per wired registry locale. A failed
+    // registry extraction must fail the test, not yield an empty fixture.
+    expect(WIRED_LANGUAGES).not.toBeNull();
     for (const filename of [
       'en.json',
-      'fa.json',
-      'he.json',
-      'id.json',
-      'ja.json',
-      'ko.json',
-      'ms.json',
-      'pt_BR.json',
-      'ru.json',
-      'uk.json',
-      'zh.json',
-      'zh_Hant.json',
+      ...WIRED_LANGUAGES.map(lang => `${lang}.json`),
     ]) {
       const src = path.join(LOCALES_DIR, filename);
       const dest = path.join(tmpLocalesDir, filename);
@@ -90,17 +88,9 @@ describe('validate-l10n.js', () => {
     const result = runWithLocales();
     expect(result.exitCode).toBe(0);
     expect(result.output).toContain('en.json: valid JSON');
-    expect(result.output).toContain('fa.json: valid JSON');
-    expect(result.output).toContain('he.json: valid JSON');
-    expect(result.output).toContain('id.json: valid JSON');
-    expect(result.output).toContain('ja.json: valid JSON');
-    expect(result.output).toContain('ko.json: valid JSON');
-    expect(result.output).toContain('ms.json: valid JSON');
-    expect(result.output).toContain('pt_BR.json: valid JSON');
-    expect(result.output).toContain('ru.json: valid JSON');
-    expect(result.output).toContain('uk.json: valid JSON');
-    expect(result.output).toContain('zh.json: valid JSON');
-    expect(result.output).toContain('zh_Hant.json: valid JSON');
+    for (const lang of WIRED_LANGUAGES) {
+      expect(result.output).toContain(`${lang}.json: valid JSON`);
+    }
     expect(result.output).toContain('All l10n files valid');
   });
 
