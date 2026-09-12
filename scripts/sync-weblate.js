@@ -8,6 +8,8 @@ const axios = require('axios');
 const fs = require('fs');
 const path = require('path');
 
+const {extractRegistryLanguages} = require('./lib/registry-languages');
+
 const WEBLATE_API_URL =
   process.env.WEBLATE_API_URL || 'https://hosted.weblate.org/api';
 const WEBLATE_TOKEN = process.env.WEBLATE_TOKEN;
@@ -53,21 +55,16 @@ async function uploadSourceFile() {
 }
 
 async function downloadTranslations() {
-  const languages = [
-    'fa',
-    'he',
-    'id',
-    'ja',
-    'ko',
-    'ms',
-    'pl',
-    'pt',
-    'pt_BR',
-    'ru',
-    'uk',
-    'zh',
-    'zh_Hant',
-  ];
+  const indexPath = path.join(__dirname, '../src/locales/index.ts');
+  const languages = extractRegistryLanguages(
+    fs.readFileSync(indexPath, 'utf-8'),
+  );
+  if (!languages) {
+    console.error(
+      `Could not parse languageRegistry in ${indexPath} — refusing to download a subset of locales`,
+    );
+    process.exit(1);
+  }
 
   for (const lang of languages) {
     try {
