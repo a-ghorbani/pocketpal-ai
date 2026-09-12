@@ -56,6 +56,8 @@ const ALL_LANGUAGES: AvailableLanguage[] = [
   'zh_Hant',
 ];
 
+const NON_EN_LANGUAGES = ALL_LANGUAGES.filter(l => l !== 'en');
+
 describe('l10n object', () => {
   it('supports all expected languages', () => {
     expect(supportedLanguages).toEqual(ALL_LANGUAGES);
@@ -81,22 +83,7 @@ describe('l10n object', () => {
     expect(l10n.en).toEqual(enData);
   });
 
-  it.each([
-    'es',
-    'fa',
-    'he',
-    'id',
-    'ja',
-    'ko',
-    'ms',
-    'pl',
-    'pt',
-    'pt_BR',
-    'ru',
-    'uk',
-    'zh',
-    'zh_Hant',
-  ] as AvailableLanguage[])(
+  it.each(NON_EN_LANGUAGES)(
     'l10n.%s contains translations where they exist',
     lang => {
       const langData = require(`../${lang}.json`);
@@ -105,22 +92,7 @@ describe('l10n object', () => {
     },
   );
 
-  it.each([
-    'es',
-    'fa',
-    'he',
-    'id',
-    'ja',
-    'ko',
-    'ms',
-    'pl',
-    'pt',
-    'pt_BR',
-    'ru',
-    'uk',
-    'zh',
-    'zh_Hant',
-  ] as AvailableLanguage[])(
+  it.each(NON_EN_LANGUAGES)(
     'returns cached result on repeated access for %s',
     lang => {
       const first = l10n[lang];
@@ -158,21 +130,9 @@ describe('l10n object', () => {
   });
 
   it('supports in operator for all languages', () => {
-    expect('en' in l10n).toBe(true);
-    expect('es' in l10n).toBe(true);
-    expect('fa' in l10n).toBe(true);
-    expect('he' in l10n).toBe(true);
-    expect('id' in l10n).toBe(true);
-    expect('ja' in l10n).toBe(true);
-    expect('ko' in l10n).toBe(true);
-    expect('ms' in l10n).toBe(true);
-    expect('pl' in l10n).toBe(true);
-    expect('pt' in l10n).toBe(true);
-    expect('pt_BR' in l10n).toBe(true);
-    expect('ru' in l10n).toBe(true);
-    expect('uk' in l10n).toBe(true);
-    expect('zh' in l10n).toBe(true);
-    expect('zh_Hant' in l10n).toBe(true);
+    for (const lang of ALL_LANGUAGES) {
+      expect(lang in l10n).toBe(true);
+    }
     expect('xx' in l10n).toBe(false);
     expect('fr' in l10n).toBe(false);
   });
@@ -291,22 +251,7 @@ describe('lazy loading', () => {
     });
   });
 
-  it.each([
-    'es',
-    'fa',
-    'he',
-    'id',
-    'ja',
-    'ko',
-    'ms',
-    'pl',
-    'pt',
-    'pt_BR',
-    'ru',
-    'uk',
-    'zh',
-    'zh_Hant',
-  ] as AvailableLanguage[])('accessing %s populates the cache', lang => {
+  it.each(NON_EN_LANGUAGES)('accessing %s populates the cache', lang => {
     jest.isolateModules(() => {
       const freshModule = require('../index');
       expect(freshModule._testGetCacheKeys()).toEqual(['en']);
@@ -323,8 +268,7 @@ describe('lazy loading', () => {
       expect(freshModule._testGetCacheKeys()).toEqual(['en']);
 
       // Access each non-en language
-      const nonEn = ALL_LANGUAGES.filter(l => l !== 'en');
-      for (const lang of nonEn) {
+      for (const lang of NON_EN_LANGUAGES) {
         const _data = freshModule.l10n[lang];
         expect(_data).toBeDefined();
       }
@@ -352,23 +296,7 @@ describe('type safety', () => {
 
   it('keyof typeof l10n resolves to literal union', () => {
     // At runtime we verify the keys match
-    const keys: Array<keyof typeof l10n> = [
-      'en',
-      'es',
-      'fa',
-      'he',
-      'id',
-      'ja',
-      'ko',
-      'ms',
-      'pl',
-      'pt',
-      'pt_BR',
-      'ru',
-      'uk',
-      'zh',
-      'zh_Hant',
-    ];
+    const keys: Array<keyof typeof l10n> = ALL_LANGUAGES;
     expect(Object.keys(l10n).sort()).toEqual(keys.sort());
 
     // This would cause a compile error if the type were wrong:
