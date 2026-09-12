@@ -91,6 +91,9 @@ describe('validate-l10n.js', () => {
     for (const lang of WIRED_LANGUAGES) {
       expect(result.output).toContain(`${lang}.json: valid JSON`);
     }
+    for (const lang of ['be', 'de', 'et', 'fr', 'it', 'sv']) {
+      expect(result.output).not.toContain(`${lang}.json: valid JSON`);
+    }
     expect(result.output).toContain('All l10n files valid');
   });
 
