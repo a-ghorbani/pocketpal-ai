@@ -365,6 +365,52 @@ describe('OpenAICompletionEngine', () => {
     );
   });
 
+  describe('readiness backstop', () => {
+    it('waits for it before every request', async () => {
+      const order: string[] = [];
+      const gated = new OpenAICompletionEngine(
+        'http://localhost:1234',
+        'model-id',
+        undefined,
+        undefined,
+        undefined,
+        async () => {
+          order.push('ready');
+        },
+      );
+      mockedStreamChat.mockImplementationOnce(async () => {
+        order.push('request');
+        return {text: '', content: ''};
+      });
+
+      await gated.completion({
+        messages: [{role: 'user', content: 'Hi'}],
+      } as any);
+
+      expect(order).toEqual(['ready', 'request']);
+    });
+
+    // The chat send path is not the only production caller of an engine, so
+    // the guarantee has to sit here rather than at one call site.
+    it('posts nothing when the model could not be made ready', async () => {
+      const gated = new OpenAICompletionEngine(
+        'http://localhost:1234',
+        'model-id',
+        undefined,
+        undefined,
+        undefined,
+        async () => {
+          throw new Error('not ready');
+        },
+      );
+
+      await expect(
+        gated.completion({messages: [{role: 'user', content: 'Hi'}]} as any),
+      ).rejects.toThrow('not ready');
+      expect(mockedStreamChat).not.toHaveBeenCalled();
+    });
+  });
+
   it('forwards params.reasoning and the constructed serverType', async () => {
     const typedEngine = new OpenAICompletionEngine(
       'http://localhost:1234',

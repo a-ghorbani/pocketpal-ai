@@ -1,0 +1,20 @@
+data: {"model":"alpha","event":"model_status","data":{"status":"loading"}}
+
+data: {"model":"alpha","event":"status_change","data":{"status":"loading","progress":{"stages":["text_model"],"current":"text_model","value":0.0}}}
+
+data: {"model":"alpha","event":"status_change","data":{"status":"loading","progress":{"stages":["text_model"],"current":"text_model","value":0.0}}}
+
+data: {"model":"alpha","event":"status_change","data":{"status":"loading","progress":{"stages":["text_model"],"current":"text_model","value":1.0}}}
+
+data: {"model":"alpha","event":"status_change","data":{"status":"loaded","info":{"id":"alpha","aliases":["alpha"],"tags":[],"object":"model","created":1788456951,"owned_by":"llamacpp","meta":{"vocab_type":2,"n_vocab":128256,"n_ctx":131072,"n_ctx_train":131072,"n_embd":512,"n_params":73271840,"size":58154112,"ftype":"Q4_0"}}}}
+
+data: {"model":"alpha","event":"status_change","data":{"status":"sleeping"}}
+
+data: {"model":"alpha","event":"status_change","data":{"status":"unloaded","exit_code":0}}
+
+data: {"model":"corrupt","event":"model_status","data":{"status":"loading"}}
+
+data: {"model":"corrupt","event":"status_change","data":{"status":"loading","progress":{"stages":["text_model"],"current":"text_model","value":0.0}}}
+
+data: {"model":"corrupt","event":"status_change","data":{"status":"unloaded","exit_code":1}}
+
