@@ -43,6 +43,20 @@ describe('extractRegistryLanguages', () => {
     expect(extractRegistryLanguages(source)).toEqual(['pt_BR']);
   });
 
+  it('extracts multiline entry keys without leaking their fields', () => {
+    const source = [
+      'const languageRegistry = {',
+      '  en: {',
+      '    displayName: "English (EN)",',
+      '  },',
+      '  pl: {',
+      "    displayName: 'Polski (PL)',",
+      '  },',
+      '} as const;',
+    ].join('\n');
+    expect(extractRegistryLanguages(source)).toEqual(['pl']);
+  });
+
   it('returns null when the registry block does not match', () => {
     expect(extractRegistryLanguages('export const whatever = 1;')).toBeNull();
     expect(extractRegistryLanguages('')).toBeNull();
