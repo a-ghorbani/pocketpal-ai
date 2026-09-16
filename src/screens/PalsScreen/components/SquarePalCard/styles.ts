@@ -3,10 +3,15 @@ import {Theme} from '../../../../utils/types';
 
 export const createStyles = (theme: Theme) =>
   StyleSheet.create({
+    cardOuter: {
+      flex: 1,
+    },
     container: {
+      flex: 1,
       marginBottom: 16,
     },
     card: {
+      flex: 1,
       backgroundColor: theme.colors.background,
       borderRadius: 16,
       borderWidth: 1,
@@ -22,9 +27,12 @@ export const createStyles = (theme: Theme) =>
             elevation: 2,
           }),
     },
+    cardInner: {
+      flex: 1,
+    },
     cardContent: {
+      flex: 1,
       padding: 12,
-      aspectRatio: 1, // Square aspect ratio - ensures uniform card heights
       justifyContent: 'space-between', // Better space distribution
     },
     thumbnail: {
@@ -139,9 +147,6 @@ export const createStyles = (theme: Theme) =>
       minHeight: 18, // Ensure minimum height for content
     },
     middleContent: {
-      // Fixed height to ensure all cards have uniform height
-      // This prevents cards from shrinking when description is short
-      height: 60, // Enough for creator + description + warning
       justifyContent: 'flex-start',
     },
     palName: {
@@ -222,7 +227,6 @@ export const createStyles = (theme: Theme) =>
       justifyContent: 'flex-end',
     },
     tag: {
-      height: 18,
       borderColor: theme.colors.outline,
       borderRadius: 4,
       backgroundColor: theme.colors.surfaceContainerHigh,

@@ -145,6 +145,37 @@ describe('SquarePalCard', () => {
       expect(getByText('+1')).toBeTruthy(); // +1 more tag
     });
 
+    it('renders the first tag label and the overflow count for three tags', () => {
+      const pal = createPalsHubPal({
+        tags: [
+          {
+            id: 'tag-1',
+            name: 'productivity',
+            usage_count: 10,
+            created_at: '2023-01-01T00:00:00Z',
+          },
+          {
+            id: 'tag-2',
+            name: 'assistant',
+            usage_count: 5,
+            created_at: '2023-01-01T00:00:00Z',
+          },
+          {
+            id: 'tag-3',
+            name: 'writing',
+            usage_count: 3,
+            created_at: '2023-01-01T00:00:00Z',
+          },
+        ],
+      });
+      const {getByText} = render(
+        <SquarePalCard pal={pal} onPress={mockOnPress} />,
+      );
+
+      expect(getByText('productivity')).toBeTruthy();
+      expect(getByText('+2')).toBeTruthy();
+    });
+
     it('renders thumbnail image when available', () => {
       const pal = createLocalPal({
         thumbnail_url: 'https://example.com/thumb.jpg',
@@ -296,6 +327,20 @@ describe('SquarePalCard', () => {
       expect(getByText('Model not downloaded')).toBeTruthy();
     });
 
+    it('limits the description to one line while the warning shows', () => {
+      const pal = createLocalPal({
+        defaultModel: {...downloadedModel, id: 'unavailable-model'},
+      });
+      modelStore.isModelAvailable = jest.fn().mockReturnValue(false);
+
+      const {getByText} = render(
+        <SquarePalCard pal={pal} onPress={mockOnPress} isLocal={true} />,
+      );
+
+      expect(getByText('A helpful test assistant').props.numberOfLines).toBe(1);
+      expect(getByText('Model not downloaded')).toBeTruthy();
+    });
+
     it('does not show model warning when model is available', () => {
       const pal = createLocalPal({defaultModel: downloadedModel});
       modelStore.isModelAvailable = jest.fn().mockReturnValue(true);
@@ -318,7 +363,7 @@ describe('SquarePalCard', () => {
   });
 
   describe('Content Display', () => {
-    it('truncates long descriptions', () => {
+    it('renders long descriptions in full, limited only by numberOfLines', () => {
       const longDescription = 'A'.repeat(200);
       const pal = createLocalPal({description: longDescription});
 
@@ -326,11 +371,9 @@ describe('SquarePalCard', () => {
         <SquarePalCard pal={pal} onPress={mockOnPress} isLocal={true} />,
       );
 
-      const displayedText = getByText(/A+\.\.\./);
-      expect(displayedText).toBeTruthy();
-      expect(displayedText.props.children.length).toBeLessThan(
-        longDescription.length,
-      );
+      const displayedText = getByText(longDescription);
+      expect(displayedText.props.children).toBe(longDescription);
+      expect(displayedText.props.numberOfLines).toBe(2);
     });
 
     it('displays cleaned system prompt when no description', () => {
