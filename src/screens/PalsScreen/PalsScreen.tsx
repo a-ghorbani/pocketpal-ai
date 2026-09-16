@@ -1,5 +1,11 @@
 import React, {useState, useEffect, useCallback, useContext} from 'react';
-import {View, FlatList, ScrollView, RefreshControl} from 'react-native';
+import {
+  View,
+  FlatList,
+  ScrollView,
+  RefreshControl,
+  useWindowDimensions,
+} from 'react-native';
 import {Text} from 'react-native-paper';
 import {observer} from 'mobx-react-lite';
 
@@ -7,8 +13,11 @@ import {PlusIcon} from '../../assets/icons';
 
 import {useTheme} from '../../hooks';
 import {createStyles} from './styles';
-import {handlePalByType, isLocalPal} from '../../utils/pal-type-guards';
+import {handlePalByType} from '../../utils/pal-type-guards';
 import {L10nContext} from '../../utils';
+import {chunkIntoRows, computePalGridLayout} from './palGridLayout';
+
+import type {PalGridItem} from './palGridLayout';
 
 // Components
 import {
@@ -18,7 +27,7 @@ import {
   ExpandableSearch,
   FilterChips,
   FilterType,
-  SquarePalCard,
+  PalGridRow,
   ProfileSheet,
 } from './components';
 
@@ -43,10 +52,30 @@ import {hasVideoCapability} from '../../utils/pal-capabilities';
 
 import type {PalsHubPal} from '../../types/palshub';
 
+const SectionGrid: React.FC<{
+  section: {title: string; data: PalGridItem[]};
+  columns: number;
+  cardWidth: number;
+  onPalPress: (pal: PalGridItem) => void;
+}> = ({section, columns, cardWidth, onPalPress}) => (
+  <View>
+    {section.title ? <SectionDivider label={section.title} /> : null}
+    {chunkIntoRows(section.data, columns).map(row => (
+      <PalGridRow
+        key={row.key}
+        row={row}
+        cardWidth={cardWidth}
+        onPalPress={onPalPress}
+      />
+    ))}
+  </View>
+);
+
 export const PalsScreen: React.FC = observer(() => {
   const theme = useTheme();
   const styles = createStyles(theme);
   const l10n = useContext(L10nContext);
+  const {width: windowWidth} = useWindowDimensions();
 
   // Navigation state
   const [activeAction, setActiveAction] = useState<BottomActionType>('search');
@@ -300,48 +329,6 @@ export const PalsScreen: React.FC = observer(() => {
     }
   };
 
-  const renderPalCard = ({item}: {item: PalsHubPal | Pal}) => (
-    <SquarePalCard
-      pal={item}
-      onPress={() => handlePalPress(item)}
-      isLocal={isLocalPal(item)}
-    />
-  );
-
-  // renderSectionHeader removed - now handled by SectionGrid component
-
-  // Component to render a section with proper grid layout
-  const SectionGrid: React.FC<{
-    section: {title: string; data: (PalsHubPal | Pal)[]};
-  }> = ({section}) => {
-    const pairs: Array<(PalsHubPal | Pal)[]> = [];
-    for (let i = 0; i < section.data.length; i += 2) {
-      pairs.push(section.data.slice(i, i + 2));
-    }
-
-    return (
-      <View>
-        {section.title ? <SectionDivider label={section.title} /> : null}
-        {pairs.map((pair, pairIndex) => (
-          <View key={`pair-${pairIndex}`} style={styles.row}>
-            <SquarePalCard
-              pal={pair[0]}
-              onPress={() => handlePalPress(pair[0])}
-              isLocal={isLocalPal(pair[0])}
-            />
-            {pair[1] && (
-              <SquarePalCard
-                pal={pair[1]}
-                onPress={() => handlePalPress(pair[1])}
-                isLocal={isLocalPal(pair[1])}
-              />
-            )}
-          </View>
-        ))}
-      </View>
-    );
-  };
-
   const renderEmptyState = () => (
     <View style={styles.emptyState}>
       <PlusIcon stroke={theme.colors.onSurfaceVariant} width={48} height={48} />
@@ -353,7 +340,9 @@ export const PalsScreen: React.FC = observer(() => {
     </View>
   );
 
+  const {columns, cardWidth} = computePalGridLayout(windowWidth);
   const filteredData = getFilteredData();
+  const rows = chunkIntoRows(filteredData, columns);
   const sectionedData = getSectionedData();
   const shouldUseSections =
     (activeFilter === 'all' || activeFilter === 'my-pals') &&
@@ -400,16 +389,26 @@ export const PalsScreen: React.FC = observer(() => {
           {sectionedData.length === 0
             ? renderEmptyState()
             : sectionedData.map((section, index) => (
-                <SectionGrid key={`section-${index}`} section={section} />
+                <SectionGrid
+                  key={`section-${index}`}
+                  section={section}
+                  columns={columns}
+                  cardWidth={cardWidth}
+                  onPalPress={handlePalPress}
+                />
               ))}
         </ScrollView>
       ) : (
         <FlatList
-          data={filteredData}
-          keyExtractor={item => item.id}
-          renderItem={renderPalCard}
-          numColumns={2}
-          columnWrapperStyle={styles.row}
+          data={rows}
+          keyExtractor={row => row.key}
+          renderItem={({item}) => (
+            <PalGridRow
+              row={item}
+              cardWidth={cardWidth}
+              onPalPress={handlePalPress}
+            />
+          )}
           contentContainerStyle={styles.listContainer}
           ListEmptyComponent={renderEmptyState}
           refreshControl={

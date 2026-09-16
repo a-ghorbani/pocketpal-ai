@@ -1,13 +1,38 @@
 import React from 'react';
-import {fireEvent, waitFor} from '@testing-library/react-native';
+import {act, fireEvent, waitFor} from '@testing-library/react-native';
 
 import {render} from '../../../../jest/test-utils';
 
 import {PalsScreen} from '../PalsScreen';
+import {PalGridRow} from '../components';
 
 import {authService, syncService} from '../../../services';
 import {palStore} from '../../../store';
 import {createPal, createPalsHubPal} from '../../../../jest/fixtures/pals';
+
+// Mirrors the real hook: the width change re-renders from inside the component,
+// which is what rotation does. A parent re-render cannot, since observer() memoises.
+let mockWindow = {width: 750, height: 1334, scale: 2, fontScale: 1};
+const mockWindowListeners = new Set<() => void>();
+
+const setWindowWidth = (width: number) => {
+  mockWindow = {...mockWindow, width};
+  mockWindowListeners.forEach(listener => listener());
+};
+
+jest.mock('react-native/Libraries/Utilities/useWindowDimensions', () => {
+  const {useSyncExternalStore} = require('react');
+
+  const subscribe = (listener: () => void) => {
+    mockWindowListeners.add(listener);
+    return () => mockWindowListeners.delete(listener);
+  };
+
+  const useMockWindowDimensions = () =>
+    useSyncExternalStore(subscribe, () => mockWindow);
+
+  return {__esModule: true, default: useMockWindowDimensions};
+});
 
 describe('PalsScreen', () => {
   beforeEach(() => {
@@ -536,6 +561,69 @@ describe('PalsScreen', () => {
 
       await waitFor(() => {
         expect(getByText('Local Pal')).toBeTruthy();
+      });
+    });
+  });
+
+  describe('Grid Layout', () => {
+    const fiveLocalPals = ['g1', 'g2', 'g3', 'g4', 'g5'].map(id =>
+      createPal({id, name: `Grid Pal ${id}`, source: 'local'}),
+    );
+
+    const renderScreen = () =>
+      render(<PalsScreen />, {
+        withNavigation: true,
+        withSafeArea: true,
+        withBottomSheetProvider: true,
+      });
+
+    afterEach(() => {
+      setWindowWidth(750);
+    });
+
+    it('reflows the flat list on a width change without remounting it', () => {
+      palStore.pals = fiveLocalPals;
+      setWindowWidth(360);
+
+      const {getByTestId, UNSAFE_getAllByType} = renderScreen();
+      const firstRowSize = () =>
+        UNSAFE_getAllByType(PalGridRow)[0].props.row.items.length;
+
+      const flatList = getByTestId('pals-flat-list');
+      expect(flatList.props.numColumns).toBeUndefined();
+      expect(firstRowSize()).toBe(2);
+
+      act(() => {
+        setWindowWidth(800);
+      });
+
+      expect(getByTestId('pals-flat-list')).toBe(flatList);
+      expect(firstRowSize()).toBe(4);
+    });
+
+    it('renders the same rows and cell width on both render paths', async () => {
+      // A second section is what sends the screen down the sectioned path.
+      palStore.pals = fiveLocalPals;
+      palStore.cachedPalsHubPals = [
+        createPalsHubPal({id: 'hub-1', title: 'Hub Pal', price_cents: 0}),
+      ];
+      setWindowWidth(800);
+
+      const {getByText, UNSAFE_getAllByType} = renderScreen();
+
+      const sectionedRows = UNSAFE_getAllByType(PalGridRow);
+      expect(sectionedRows[0].props.row.items).toHaveLength(4);
+      expect(sectionedRows[1].props.row.items).toHaveLength(1);
+      sectionedRows.forEach(row =>
+        expect(row.props.cardWidth).toBeCloseTo(180),
+      );
+
+      fireEvent.press(getByText('Local'));
+
+      await waitFor(() => {
+        const flatRows = UNSAFE_getAllByType(PalGridRow);
+        expect(flatRows.map(row => row.props.row.items.length)).toEqual([4, 1]);
+        flatRows.forEach(row => expect(row.props.cardWidth).toBeCloseTo(180));
       });
     });
   });

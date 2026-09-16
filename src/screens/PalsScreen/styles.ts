@@ -12,11 +12,6 @@ export const createStyles = (theme: Theme) =>
       padding: 16,
       paddingBottom: 100, // Extra space for bottom action bar
     },
-    row: {
-      flexDirection: 'row',
-      justifyContent: 'space-between',
-      paddingHorizontal: 0,
-    },
     emptyState: {
       flex: 1,
       alignItems: 'center',
