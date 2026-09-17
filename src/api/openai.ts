@@ -542,8 +542,14 @@ async function probeGateStatus(
   }
 }
 
-/** Server types whose gate is measured here. Unknown shares llama.cpp's. */
-const GATED_BY_PROPS = ['llama.cpp', ''];
+/**
+ * Whose gate is measured here — an undetected server shares llama.cpp's.
+ * Spelled as comparisons rather than list membership: "undetected" has been
+ * both `''` and `undefined`, and a membership test goes quietly false when
+ * that spelling changes, dropping the gate probe with nothing to notice.
+ */
+const gatedByProps = (detected: string | undefined) =>
+  detected === 'llama.cpp' || detected === '' || detected === undefined;
 
 /**
  * Is this server usable with the credentials we hold? A different question
@@ -609,7 +615,7 @@ export async function probePairingTarget(
   const detected = await detectServerType(serverUrl, models, headers);
 
   let authorisation: PairingAuthorisation = 'unconfirmed';
-  if (GATED_BY_PROPS.includes(detected)) {
+  if (gatedByProps(detected)) {
     const gateTimeoutMs = Math.min(
       timeoutMs ?? PROPS_TIMEOUT_MS,
       PROPS_TIMEOUT_MS,

@@ -262,6 +262,24 @@ describe('probePairingTarget — the gate and its keyless control', () => {
     expect(propsUrls(fetchMock)).toHaveLength(0);
   });
 
+  it('issues the gate for a server it could not identify', async () => {
+    const fetchMock = routeFetch([
+      [
+        /\/v1\/models/,
+        {
+          status: 200,
+          json: async () => ({data: [{id: 'm', object: 'model'}]}),
+        },
+      ],
+    ]);
+    global.fetch = fetchMock as any;
+
+    await expect(
+      probePairingTarget(BASE, {apiKey: 'k'}),
+    ).resolves.toMatchObject({outcome: 'usable'});
+    expect(propsUrls(fetchMock).length).toBeGreaterThan(0);
+  });
+
   it('issues exactly two bare, status-only /props requests and reads no body', async () => {
     const propsJson = jest.fn(async () => authErrorBody);
     let call = 0;
