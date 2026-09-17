@@ -376,6 +376,34 @@ describe('SquarePalCard', () => {
       expect(displayedText.props.numberOfLines).toBe(2);
     });
 
+    it('renders a 1200-character description in full, with nothing appended', () => {
+      const description = 'A'.repeat(1200);
+      const pal = createLocalPal({description});
+
+      const {getByText} = render(
+        <SquarePalCard pal={pal} onPress={mockOnPress} isLocal={true} />,
+      );
+
+      const displayedText = getByText(description);
+      expect(displayedText.props.children).toBe(description);
+      expect(displayedText.props.numberOfLines).toBe(2);
+      expect(displayedText.props.children).not.toMatch(/(\.\.\.|\u2026)$/);
+    });
+
+    it('renders a long cleaned system prompt in full, with nothing appended', () => {
+      const systemPrompt = 'B'.repeat(1200);
+      const pal = createLocalPal({description: undefined, systemPrompt});
+
+      const {getByText} = render(
+        <SquarePalCard pal={pal} onPress={mockOnPress} isLocal={true} />,
+      );
+
+      const displayedText = getByText(systemPrompt);
+      expect(displayedText.props.children).toBe(systemPrompt);
+      expect(displayedText.props.numberOfLines).toBe(2);
+      expect(displayedText.props.children).not.toMatch(/(\.\.\.|\u2026)$/);
+    });
+
     it('displays cleaned system prompt when no description', () => {
       const pal = createLocalPal({
         description: undefined,
