@@ -1,5 +1,5 @@
 import React, {useContext} from 'react';
-import {View, TouchableOpacity, Dimensions, Image, Alert} from 'react-native';
+import {View, TouchableOpacity, Image, Alert} from 'react-native';
 
 import {observer} from 'mobx-react-lite';
 import {useNavigation} from '@react-navigation/native';
@@ -39,28 +39,6 @@ interface SquarePalCardProps {
   onPress: () => void;
   isLocal?: boolean;
 }
-
-// Helper functions for content display
-const truncateText = (text: string, maxLength: number): string => {
-  // Safety check for undefined or null values
-  if (!text || typeof text !== 'string') {
-    return '';
-  }
-
-  if (text.length <= maxLength) {
-    return text;
-  }
-
-  // Find the last space before the limit
-  const truncated = text.substring(0, maxLength);
-  const lastSpace = truncated.lastIndexOf(' ');
-
-  if (lastSpace > maxLength * 0.7) {
-    return truncated.substring(0, lastSpace) + '...';
-  }
-
-  return truncated + '...';
-};
 
 const generateParameterSummary = (pal: Pal): string => {
   // Safety check for parameters
@@ -107,14 +85,14 @@ const cleanSystemPrompt = (systemPrompt: string): string => {
 const getDisplayContent = (pal: PalsHubPal | Pal): string => {
   // Priority 1: PalsHub description
   if (pal.description) {
-    return truncateText(pal.description!, 100);
+    return pal.description;
   }
 
   // Priority 2: Parameter-based summary (for local pals with meaningful parameters)
   if (isLocalPal(pal)) {
     const summary = generateParameterSummary(pal);
     if (summary) {
-      return truncateText(summary, 100);
+      return summary;
     }
   }
 
@@ -122,8 +100,7 @@ const getDisplayContent = (pal: PalsHubPal | Pal): string => {
   const systemPrompt = isPalsHubPal(pal) ? pal.system_prompt : pal.systemPrompt;
 
   if (systemPrompt) {
-    const cleaned = cleanSystemPrompt(systemPrompt);
-    return truncateText(cleaned, 80);
+    return cleanSystemPrompt(systemPrompt);
   }
 
   // Priority 4: Fallback based on capabilities (local pals only)
@@ -233,9 +210,6 @@ export const SquarePalCard: React.FC<SquarePalCardProps> = observer(
     const styles = createStyles(theme);
     const l10n = useContext(L10nContext);
     const navigation = useNavigation();
-
-    const screenWidth = Dimensions.get('window').width;
-    const cardWidth = (screenWidth - 48) / 2; // 16px margin on each side + 16px gap
 
     // Check if pal needs a model warning
     // Only for local pals (downloaded pals) that have a default model
@@ -390,13 +364,13 @@ export const SquarePalCard: React.FC<SquarePalCardProps> = observer(
     ];
 
     return (
-      <View>
+      <View style={styles.cardOuter}>
         <TouchableOpacity
           testID={`${isPalsHubPal(pal) ? 'palshub' : 'local'}-pal-card-${pal.id}`}
-          style={[styles.container, {width: cardWidth}]}
+          style={styles.container}
           onPress={onPress}
           activeOpacity={0.7}>
-          <Card elevation={0} style={cardStyle}>
+          <Card elevation={0} style={cardStyle} contentStyle={styles.cardInner}>
             <View style={styles.cardContent}>
               {/* Thumbnail */}
               <PalThumbnail
