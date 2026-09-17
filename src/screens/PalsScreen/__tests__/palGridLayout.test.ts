@@ -58,6 +58,16 @@ describe('chunkIntoRows', () => {
     expect(chunkIntoRows(items, 4).map(row => row.key)).toEqual(keys);
   });
 
+  it('keeps row keys distinct when every id is identical', () => {
+    const duplicates = ['dup', 'dup', 'dup', 'dup'].map(id => createPal({id}));
+
+    const keys = chunkIntoRows(duplicates, 2).map(row => row.key);
+
+    expect(keys).toHaveLength(2);
+    expect(new Set(keys).size).toBe(2);
+    expect(chunkIntoRows(duplicates, 2).map(row => row.key)).toEqual(keys);
+  });
+
   it('returns no rows for an empty list', () => {
     expect(chunkIntoRows([], 4)).toEqual([]);
   });

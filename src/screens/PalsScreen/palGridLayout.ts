@@ -38,7 +38,10 @@ export const chunkIntoRows = (
 
   for (let index = 0; index < items.length; index += columns) {
     const rowItems = items.slice(index, index + columns);
-    rows.push({key: rowItems.map(item => item.id).join('|'), items: rowItems});
+    rows.push({
+      key: `${index}|${rowItems.map(item => item.id).join('|')}`,
+      items: rowItems,
+    });
   }
 
   return rows;
