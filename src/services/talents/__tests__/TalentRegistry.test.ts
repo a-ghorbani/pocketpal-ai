@@ -30,6 +30,14 @@ describe('TalentRegistry', () => {
     expect(reg.get('render_html')).toBe(b);
   });
 
+  it('unregister() removes an engine and reports whether one was there', () => {
+    const reg = new TalentRegistry();
+    reg.register(new RenderHtmlEngine());
+    expect(reg.unregister('render_html')).toBe(true);
+    expect(reg.has('render_html')).toBe(false);
+    expect(reg.unregister('render_html')).toBe(false);
+  });
+
   it('reset() clears all engines', () => {
     const reg = new TalentRegistry();
     reg.register(new RenderHtmlEngine());
