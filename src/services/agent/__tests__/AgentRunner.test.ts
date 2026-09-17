@@ -959,6 +959,286 @@ describe('runAgent', () => {
     }
   });
 
+  // ---------- Gated calls: confirmation + deadline ----------
+
+  function makeGatedTalent(
+    name: string,
+    gates: {
+      requiresConfirmation?: boolean;
+      timeoutMs?: number;
+      confirmationDetail?: (args: Record<string, any>) => string | null;
+    },
+    execute: TalentEngine['execute'],
+  ): TalentEngine {
+    return {
+      name,
+      ...gates,
+      execute,
+      toToolDefinition: () => ({
+        type: 'function',
+        function: {name, description: name, parameters: {}},
+      }),
+    };
+  }
+
+  function scriptOneCall(toolName: string): CompletionEngine {
+    return makeScriptedEngine({
+      scripts: [
+        {
+          tokens: [],
+          result: {
+            text: '',
+            content: '',
+            tool_calls: [
+              {
+                id: 'c0',
+                type: 'function',
+                function: {name: toolName, arguments: '{}'},
+              },
+            ],
+          },
+        },
+        {tokens: [{content: 'done'}], result: {text: 'done', content: 'done'}},
+      ],
+    });
+  }
+
+  function outcomeOf(events: AgentEvent[]): any {
+    const finished = events.filter(e => e.type === 'tool_call_finished');
+    expect(finished).toHaveLength(1);
+    return (finished[0] as any).outcome;
+  }
+
+  it('#22 approved confirmation → execute runs, detail forwarded, text outcome lands', async () => {
+    const execute = jest.fn(
+      async (): Promise<TalentResult> => ({type: 'text', summary: 'ok'}),
+    );
+    const tool = makeGatedTalent(
+      'gated',
+      {
+        requiresConfirmation: true,
+        confirmationDetail: () => 'GET http://127.0.0.1:8765/notes/{{id}}',
+      },
+      execute,
+    );
+    const confirmToolCall = jest.fn(async (_req: any) => true);
+
+    const events = await collect(
+      runAgent({
+        engine: scriptOneCall('gated'),
+        initialParams: baseParams,
+        allowedTalentNames: ['gated'],
+        talentLookup: () => tool,
+        messageId: 'msg',
+        triggerMarkers: [],
+        confirmToolCall,
+      }),
+    );
+
+    expect(confirmToolCall).toHaveBeenCalledTimes(1);
+    expect(confirmToolCall.mock.calls[0][0]).toMatchObject({
+      toolName: 'gated',
+      detail: 'GET http://127.0.0.1:8765/notes/{{id}}',
+    });
+    expect(execute).toHaveBeenCalledTimes(1);
+    expect(outcomeOf(events).responseContent).toBe('ok');
+  });
+
+  it('#23 declined confirmation → error outcome, no execute, follow-up turn still runs', async () => {
+    const execute = jest.fn(
+      async (): Promise<TalentResult> => ({type: 'text', summary: 'ok'}),
+    );
+    const tool = makeGatedTalent(
+      'gated',
+      {requiresConfirmation: true},
+      execute,
+    );
+
+    const events = await collect(
+      runAgent({
+        engine: scriptOneCall('gated'),
+        initialParams: baseParams,
+        allowedTalentNames: ['gated'],
+        talentLookup: () => tool,
+        messageId: 'msg',
+        triggerMarkers: [],
+        confirmToolCall: async () => false,
+      }),
+    );
+
+    expect(execute).not.toHaveBeenCalled();
+    const outcome = outcomeOf(events);
+    expect(outcome.result.type).toBe('error');
+    expect(outcome.responseContent).toMatch(/declined/i);
+    expect(events.filter(e => e.type === 'step_started')).toHaveLength(2);
+  });
+
+  it('#24 gated engine with no confirmToolCall → declined (fail closed)', async () => {
+    const execute = jest.fn(
+      async (): Promise<TalentResult> => ({type: 'text', summary: 'ok'}),
+    );
+    const tool = makeGatedTalent(
+      'gated',
+      {requiresConfirmation: true},
+      execute,
+    );
+
+    const events = await collect(
+      runAgent({
+        engine: scriptOneCall('gated'),
+        initialParams: baseParams,
+        allowedTalentNames: ['gated'],
+        talentLookup: () => tool,
+        messageId: 'msg',
+        triggerMarkers: [],
+      }),
+    );
+
+    expect(execute).not.toHaveBeenCalled();
+    expect(outcomeOf(events).responseContent).toMatch(/declined/i);
+  });
+
+  it('#25 abort while confirmation pending → cancelled, no execute, still one finished event', async () => {
+    const controller = new AbortController();
+    const execute = jest.fn(
+      async (): Promise<TalentResult> => ({type: 'text', summary: 'ok'}),
+    );
+    const tool = makeGatedTalent(
+      'gated',
+      {requiresConfirmation: true},
+      execute,
+    );
+
+    const events = await collect(
+      runAgent({
+        engine: scriptOneCall('gated'),
+        initialParams: baseParams,
+        allowedTalentNames: ['gated'],
+        talentLookup: () => tool,
+        messageId: 'msg',
+        triggerMarkers: [],
+        signal: controller.signal,
+        confirmToolCall: () => {
+          controller.abort();
+          return new Promise<boolean>(() => {});
+        },
+      }),
+    );
+
+    expect(execute).not.toHaveBeenCalled();
+    const outcome = outcomeOf(events);
+    expect(outcome.result.type).toBe('error');
+    expect(outcome.responseContent).toMatch(/cancelled/i);
+    expect(events.filter(e => e.type === 'tool_call_started')).toHaveLength(1);
+  });
+
+  it('#26 deadline fires → timed-out error naming the seconds, ctx.signal aborted', async () => {
+    jest.useFakeTimers();
+    try {
+      let seen: AbortSignal | undefined;
+      const tool = makeGatedTalent(
+        'slow_http',
+        {timeoutMs: 2000},
+        (_args, ctx) => {
+          seen = ctx?.signal;
+          return new Promise<TalentResult>(() => {});
+        },
+      );
+
+      const run = collect(
+        runAgent({
+          engine: scriptOneCall('slow_http'),
+          initialParams: baseParams,
+          allowedTalentNames: ['slow_http'],
+          talentLookup: () => tool,
+          messageId: 'msg',
+          triggerMarkers: [],
+        }),
+      );
+      await jest.advanceTimersByTimeAsync(2000);
+      const events = await run;
+
+      const outcome = outcomeOf(events);
+      expect(outcome.result.type).toBe('error');
+      expect(outcome.responseContent).toBe(
+        'The tool call timed out after 2 s.',
+      );
+      expect(seen?.aborted).toBe(true);
+    } finally {
+      jest.useRealTimers();
+    }
+  });
+
+  it('#27 stop mid-execute of a timeoutMs engine → cancelled at once, not at the deadline', async () => {
+    jest.useFakeTimers();
+    try {
+      const controller = new AbortController();
+      let seen: AbortSignal | undefined;
+      const tool = makeGatedTalent(
+        'slow_http',
+        {timeoutMs: 60000},
+        (_args, ctx) => {
+          seen = ctx?.signal;
+          controller.abort();
+          return new Promise<TalentResult>(() => {});
+        },
+      );
+
+      const events = await collect(
+        runAgent({
+          engine: scriptOneCall('slow_http'),
+          initialParams: baseParams,
+          allowedTalentNames: ['slow_http'],
+          talentLookup: () => tool,
+          messageId: 'msg',
+          triggerMarkers: [],
+          signal: controller.signal,
+        }),
+      );
+
+      const outcome = outcomeOf(events);
+      expect(outcome.result.type).toBe('error');
+      expect(outcome.responseContent).toMatch(/cancelled/i);
+      expect(seen?.aborted).toBe(true);
+    } finally {
+      jest.useRealTimers();
+    }
+  });
+
+  it('#28 ungated engine → execute called with exactly one argument and no confirmation', async () => {
+    const execute = jest.fn(
+      async (): Promise<TalentResult> => ({type: 'text', summary: '4'}),
+    );
+    const calculate: TalentEngine = {
+      name: 'calculate',
+      execute,
+      toToolDefinition: () => ({
+        type: 'function',
+        function: {name: 'calculate', description: '', parameters: {}},
+      }),
+    };
+    const confirmToolCall = jest.fn(async (_req: any) => true);
+
+    const events = await collect(
+      runAgent({
+        engine: scriptOneCall('calculate'),
+        initialParams: baseParams,
+        allowedTalentNames: ['calculate'],
+        talentLookup: () => calculate,
+        messageId: 'msg',
+        triggerMarkers: [],
+        confirmToolCall,
+      }),
+    );
+
+    expect(confirmToolCall).not.toHaveBeenCalled();
+    expect(execute).toHaveBeenCalledTimes(1);
+    // Arity 1 is the proof the pre-change path ran: the deadline branch
+    // always passes a ctx, so no race and no timer can have been set up.
+    expect(execute.mock.calls[0]).toHaveLength(1);
+    expect(outcomeOf(events).responseContent).toBe('4');
+  });
+
   it('#16 stop mid-tool: signal.aborted during executeOne() → in-flight outcome appended, then run_finished', async () => {
     const controller = new AbortController();
     const engine = makeScriptedEngine({

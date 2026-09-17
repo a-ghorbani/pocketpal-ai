@@ -12,7 +12,7 @@ import type {
   AgentRunResult,
   TokenDelta,
 } from './AgentRunner.types';
-import type {TalentResult} from '../talents/types';
+import type {TalentEngine, TalentResult} from '../talents/types';
 
 export const DEFAULT_MAX_TURNS = 5;
 
@@ -119,6 +119,139 @@ function normalizeToolCallIds(
   }));
 }
 
+const CONFIRMATION_DECLINED_SUMMARY =
+  'The user declined this tool call. Do not call it again unless the user asks.';
+
+const CALL_CANCELLED_SUMMARY =
+  'The tool call was cancelled before it finished.';
+
+const timedOutSummary = (timeoutMs: number): string =>
+  `The tool call timed out after ${Math.round(timeoutMs / 1000)} s.`;
+
+function toolErrorOutcome(
+  callId: string,
+  toolName: string,
+  summary: string,
+): AgentToolOutcome {
+  return {
+    callId,
+    toolName,
+    result: {type: 'error', summary, errorMessage: summary},
+    responseContent: summary,
+  };
+}
+
+/** Resolves with `value` once `signal` aborts; never resolves without one. */
+function onAbortResolve<T>(
+  signal: AbortSignal | undefined,
+  value: T,
+): Promise<T> {
+  return new Promise<T>(resolve => {
+    if (!signal) {
+      return;
+    }
+    if (signal.aborted) {
+      resolve(value);
+      return;
+    }
+    signal.addEventListener('abort', () => resolve(value), {once: true});
+  });
+}
+
+/**
+ * Ask the user before a gated call. Raced against the run signal so an abort
+ * settles the call even when the consumer's promise never does; a rejection,
+ * a `false`, and a missing `confirmToolCall` all decline.
+ */
+async function confirmationGate(
+  call: AgentToolCall,
+  toolName: string,
+  handler: TalentEngine,
+  args: Record<string, unknown>,
+  signal: AbortSignal | undefined,
+  confirmToolCall: AgentRunOptions['confirmToolCall'],
+): Promise<{approved: true} | {summary: string}> {
+  if (handler.requiresConfirmation !== true) {
+    return {approved: true};
+  }
+  if (signal?.aborted) {
+    return {summary: CALL_CANCELLED_SUMMARY};
+  }
+  if (!confirmToolCall) {
+    return {summary: CONFIRMATION_DECLINED_SUMMARY};
+  }
+
+  let detail: string | null = null;
+  try {
+    detail = handler.confirmationDetail?.(args) ?? null;
+  } catch {
+    detail = null;
+  }
+
+  const answered = Promise.resolve(
+    confirmToolCall({call, toolName, args, detail}),
+  ).then(
+    approved => ({approved: approved === true}),
+    () => ({approved: false}),
+  );
+  const raced = await Promise.race([
+    answered,
+    onAbortResolve(signal, {cancelled: true as const}),
+  ]);
+  if ('cancelled' in raced) {
+    return {summary: CALL_CANCELLED_SUMMARY};
+  }
+  return raced.approved
+    ? {approved: true}
+    : {summary: CONFIRMATION_DECLINED_SUMMARY};
+}
+
+/**
+ * Run `execute`. An engine declaring no usable `timeoutMs` goes through the
+ * pre-change path — one argument, no race, no timer — so built-ins are
+ * untouched. Otherwise the call is raced against its deadline and the run
+ * signal, and `ctx.signal` aborts on either; a late settle is ignored.
+ */
+async function executeWithDeadline(
+  handler: TalentEngine,
+  args: Record<string, unknown>,
+  signal: AbortSignal | undefined,
+): Promise<{result: TalentResult} | {summary: string}> {
+  const declared = handler.timeoutMs;
+  const deadlineMs =
+    typeof declared === 'number' && Number.isFinite(declared) && declared > 0
+      ? declared
+      : null;
+  if (deadlineMs === null) {
+    return {result: await handler.execute(args)};
+  }
+  if (signal?.aborted) {
+    return {summary: CALL_CANCELLED_SUMMARY};
+  }
+
+  const controller = new AbortController();
+  const abortExecution = () => controller.abort();
+  signal?.addEventListener('abort', abortExecution, {once: true});
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  try {
+    return await Promise.race([
+      handler
+        .execute(args, {signal: controller.signal})
+        .then(result => ({result})),
+      new Promise<{summary: string}>(resolve => {
+        timer = setTimeout(() => {
+          controller.abort();
+          resolve({summary: timedOutSummary(deadlineMs)});
+        }, deadlineMs);
+      }),
+      onAbortResolve(signal, {summary: CALL_CANCELLED_SUMMARY}),
+    ]);
+  } finally {
+    clearTimeout(timer);
+    signal?.removeEventListener('abort', abortExecution);
+  }
+}
+
 /**
  * Execute one tool call and produce an `AgentToolOutcome`. Errors are
  * captured as `result.type === 'error'`; the outcome is always
@@ -128,6 +261,8 @@ async function executeOne(
   call: AgentToolCall,
   allowedTalentNames: string[],
   talentLookup: (name: string) => ReturnType<AgentRunOptions['talentLookup']>,
+  signal?: AbortSignal,
+  confirmToolCall?: AgentRunOptions['confirmToolCall'],
 ): Promise<AgentToolOutcome> {
   const fnName = call.function?.name ?? '';
   const callId = call.id;
@@ -168,8 +303,24 @@ async function executeOne(
     return {callId, toolName: fnName, result, responseContent: summary};
   }
 
+  const gate = await confirmationGate(
+    call,
+    fnName,
+    handler,
+    parsedArgs,
+    signal,
+    confirmToolCall,
+  );
+  if ('summary' in gate) {
+    return toolErrorOutcome(callId, fnName, gate.summary);
+  }
+
   try {
-    const toolResult = await handler.execute(parsedArgs);
+    const executed = await executeWithDeadline(handler, parsedArgs, signal);
+    if ('summary' in executed) {
+      return toolErrorOutcome(callId, fnName, executed.summary);
+    }
+    const toolResult = executed.result;
     return {
       callId,
       toolName: fnName,
@@ -252,6 +403,7 @@ export async function* runAgent(
     messageId,
     maxTurns = DEFAULT_MAX_TURNS,
     signal,
+    confirmToolCall,
   } = options;
 
   yield {type: 'run_started', messageId};
@@ -451,6 +603,8 @@ export async function* runAgent(
           call,
           allowedTalentNames,
           talentLookup,
+          signal,
+          confirmToolCall,
         );
         outcomes.push(outcome);
         yield {type: 'tool_call_finished', outcome};
