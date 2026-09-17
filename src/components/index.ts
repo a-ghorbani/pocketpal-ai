@@ -62,6 +62,7 @@ export * from './TextMessage';
 export * from './TTSSetupSheet';
 export * from './DownloadOverlay';
 export * from './DownloadProgressCard';
+export * from './ToolConfirmationSheet';
 export * from './ToolErrorBlock';
 export * from './ToolMetricsFooter';
 export * from './ToolUsedChip';

@@ -8,6 +8,7 @@ import {
   ChatView,
   ErrorSnackbar,
   ModelErrorReportSheet,
+  ToolConfirmationSheet,
 } from '../../components';
 import {PalSheet} from '../../components/PalsSheets';
 
@@ -72,11 +73,12 @@ export const ChatScreen: React.FC = observer(() => {
   const [isErrorReportVisible, setIsErrorReportVisible] = useState(false);
   const [errorToReport, setErrorToReport] = useState<ErrorState | null>(null);
 
-  const {handleSendPress, handleStopPress} = useChatSession(
-    currentMessageInfo,
-    user,
-    assistant,
-  );
+  const {
+    handleSendPress,
+    handleStopPress,
+    pendingToolConfirmation,
+    resolveToolConfirmation,
+  } = useChatSession(currentMessageInfo, user, assistant);
 
   // Handle deep linking for message prefill
   const {pendingMessage, clearPendingMessage} = usePendingMessage();
@@ -311,6 +313,23 @@ export const ChatScreen: React.FC = observer(() => {
           isVisible={isPalSheetVisible}
           onClose={handleClosePalSheet}
           pal={activePal}
+        />
+      )}
+      {pendingToolConfirmation && (
+        // Keyed by callId so each gated call gets a fresh instance, and every
+        // answer carries the id that instance was mounted for.
+        <ToolConfirmationSheet
+          key={pendingToolConfirmation.callId}
+          isVisible
+          toolName={pendingToolConfirmation.toolName}
+          argsJson={pendingToolConfirmation.argsJson}
+          detail={pendingToolConfirmation.detail}
+          onApprove={() =>
+            resolveToolConfirmation(pendingToolConfirmation.callId, true)
+          }
+          onDecline={() =>
+            resolveToolConfirmation(pendingToolConfirmation.callId, false)
+          }
         />
       )}
     </>

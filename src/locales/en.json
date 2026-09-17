@@ -1013,7 +1013,12 @@
         "total": "Total: ",
         "usage": "Usage: "
       },
-      "byteSizes": ["Bytes", "KB", "MB", "GB"]
+      "byteSizes": [
+        "Bytes",
+        "KB",
+        "MB",
+        "GB"
+      ]
     },
     "chatView": {
       "menuItems": {
@@ -1241,6 +1246,14 @@
       "searchResultsTitle": "Search results",
       "showResultsAccessibilityLabel": "Show web search results for {{query}}",
       "openLinkError": "Couldn't open this link."
+    },
+    "toolConfirmation": {
+      "title": "Run this tool?",
+      "description": "{{name}} wants to run. Review what it will do before approving.",
+      "detailLabel": "Request",
+      "argumentsLabel": "Arguments",
+      "approve": "Approve",
+      "decline": "Decline"
     }
   },
   "htmlPreview": {
