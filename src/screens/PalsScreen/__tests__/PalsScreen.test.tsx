@@ -39,6 +39,9 @@ describe('PalsScreen', () => {
     // Reset all mocks before each test
     jest.clearAllMocks();
 
+    // Nothing is mounted yet, so assign straight through without notifying.
+    mockWindow = {width: 750, height: 1334, scale: 2, fontScale: 1};
+
     // Reset the mock services to default state
     authService.isAuthenticated = false;
     (syncService.needsSync as jest.Mock).mockResolvedValue(false);
@@ -578,7 +581,9 @@ describe('PalsScreen', () => {
       });
 
     afterEach(() => {
-      setWindowWidth(750);
+      act(() => {
+        setWindowWidth(750);
+      });
     });
 
     it('reflows the flat list on a width change without remounting it', () => {
