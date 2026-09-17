@@ -144,7 +144,7 @@ class CustomToolStore {
       return result;
     }
     const tool: CustomToolDefinition = {...result.value, id: uuidv4()};
-    void this.backupUnreadableBlobOnce();
+    this.backupUnreadableBlobOnce().catch(() => undefined);
     runInAction(() => {
       this.tools = [...this.tools, tool];
     });
@@ -165,7 +165,7 @@ class CustomToolStore {
       return {ok: false, issues: [{code: 'shape_invalid'}]};
     }
     const tool: CustomToolDefinition = {...result.value, id};
-    void this.backupUnreadableBlobOnce();
+    this.backupUnreadableBlobOnce().catch(() => undefined);
     runInAction(() => {
       this.tools = this.tools.map(existing =>
         existing.id === id ? tool : existing,
@@ -219,7 +219,7 @@ class CustomToolStore {
     }
 
     if (report.imported.length > 0) {
-      void this.backupUnreadableBlobOnce();
+      this.backupUnreadableBlobOnce().catch(() => undefined);
       runInAction(() => {
         this.tools = [...this.tools, ...report.imported];
       });
