@@ -1034,6 +1034,12 @@
       "importPals": "Import pals",
       "importSuccess": "Successfully imported {{count}} pal(s).",
       "importError": "Failed to import pals. Please check the file format."
+    },
+    "toolUsedChip": {
+      "expand": "Show tool details",
+      "collapse": "Hide tool details",
+      "argumentsLabel": "Arguments",
+      "responseLabel": "Response"
     }
   },
   "palsScreen": {

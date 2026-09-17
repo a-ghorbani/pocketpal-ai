@@ -25,4 +25,22 @@ export const styles = ({theme}: {theme: Theme}) =>
       color: theme.colors.textSecondary,
       opacity: 0.85,
     },
+    details: {
+      marginTop: 4,
+      gap: 8,
+    },
+    detailSection: {
+      gap: 2,
+    },
+    detailLabel: {
+      fontSize: 10,
+      color: theme.colors.textSecondary,
+      opacity: 0.7,
+      textTransform: 'uppercase',
+    },
+    detailText: {
+      fontSize: 11,
+      fontFamily: 'monospace',
+      color: theme.colors.textSecondary,
+    },
   });

@@ -1,16 +1,21 @@
-import React, {useContext} from 'react';
-import {View} from 'react-native';
+import React, {useContext, useState} from 'react';
+import {TouchableOpacity, View} from 'react-native';
 
 import {Text} from 'react-native-paper';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 
 import {useTheme} from '../../hooks';
+import {stripUntrusted} from '../../services/talents/untrustedContent';
 
 import {styles} from './styles';
 
 import {L10nContext} from '../../utils';
 import {t} from '../../locales';
-import {AgentToolCallMetrics} from '../../utils/types';
+import {
+  AgentToolCall,
+  AgentToolCallMetrics,
+  AgentToolOutcome,
+} from '../../utils/types';
 
 interface ToolUsedChipProps {
   toolName: string;
@@ -21,18 +26,40 @@ interface ToolUsedChipProps {
    * tool calls won't carry metrics; the chip degrades gracefully.
    */
   metrics?: AgentToolCallMetrics;
+  /** Persisted call, for the expanded arguments view. */
+  call?: AgentToolCall;
+  /** Persisted outcome, for the expanded response view. */
+  outcome?: AgentToolOutcome;
 }
+
+const prettyArguments = (raw: string | undefined): string => {
+  if (!raw) {
+    return '';
+  }
+  try {
+    return JSON.stringify(JSON.parse(raw), null, 2);
+  } catch {
+    return raw;
+  }
+};
 
 /**
  * "Used X" chip for tool calls with no registered TalentUI (e.g.
  * datetime, calculate). Renders nothing when `toolName` is empty.
+ *
+ * Tapping expands the persisted call and outcome. Nothing new is computed
+ * here: the response was already redacted by the pipeline before it was
+ * stored, so the chip only has to avoid putting it back together.
  */
 export const ToolUsedChip: React.FC<ToolUsedChipProps> = ({
   toolName,
   metrics,
+  call,
+  outcome,
 }) => {
   const theme = useTheme();
   const l10n = useContext(L10nContext);
+  const [expanded, setExpanded] = useState(false);
 
   if (!toolName) {
     return null;
@@ -49,14 +76,71 @@ export const ToolUsedChip: React.FC<ToolUsedChipProps> = ({
         })}`
       : baseLabel;
 
-  return (
-    <View style={componentStyles.container} testID="tool-used-chip">
+  const row = (
+    <>
       <Icon
         name="wrench-outline"
         style={componentStyles.icon}
         testID="tool-used-chip-icon"
       />
       <Text style={componentStyles.label}>{labelWithMetrics}</Text>
+    </>
+  );
+
+  const argumentsText = prettyArguments(call?.function?.arguments);
+  const responseText = outcome ? stripUntrusted(outcome.responseContent) : '';
+  const strings = l10n.components.toolUsedChip;
+
+  if (!argumentsText && !responseText) {
+    return (
+      <View style={componentStyles.container} testID="tool-used-chip">
+        {row}
+      </View>
+    );
+  }
+
+  return (
+    <View testID="tool-used-chip">
+      <TouchableOpacity
+        style={componentStyles.container}
+        onPress={() => setExpanded(previous => !previous)}
+        testID="tool-used-chip-toggle"
+        accessibilityRole="button"
+        accessibilityLabel={expanded ? strings.collapse : strings.expand}>
+        {row}
+      </TouchableOpacity>
+
+      {expanded && (
+        <View style={componentStyles.details} testID="tool-used-chip-details">
+          {argumentsText ? (
+            <View style={componentStyles.detailSection}>
+              <Text style={componentStyles.detailLabel}>
+                {strings.argumentsLabel}
+              </Text>
+              <Text
+                style={componentStyles.detailText}
+                testID="tool-used-chip-arguments"
+                selectable>
+                {argumentsText}
+              </Text>
+            </View>
+          ) : null}
+
+          {responseText ? (
+            <View style={componentStyles.detailSection}>
+              <Text style={componentStyles.detailLabel}>
+                {strings.responseLabel}
+              </Text>
+              <Text
+                style={componentStyles.detailText}
+                testID="tool-used-chip-response"
+                selectable>
+                {responseText}
+              </Text>
+            </View>
+          ) : null}
+        </View>
+      )}
     </View>
   );
 };
