@@ -34,7 +34,6 @@ export const createStyles = (theme: Theme) =>
     cardContent: {
       flex: 1,
       padding: 12,
-      justifyContent: 'space-between', // Better space distribution
     },
     thumbnail: {
       width: '100%',
