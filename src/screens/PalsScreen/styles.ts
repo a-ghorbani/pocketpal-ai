@@ -2,6 +2,8 @@ import {StyleSheet} from 'react-native';
 
 import {Theme} from '../../utils/types';
 
+import {H_PADDING} from './palGridLayout';
+
 export const createStyles = (theme: Theme) =>
   StyleSheet.create({
     container: {
@@ -9,7 +11,8 @@ export const createStyles = (theme: Theme) =>
       backgroundColor: theme.colors.surface,
     },
     listContainer: {
-      padding: 16,
+      paddingHorizontal: H_PADDING,
+      paddingTop: 16,
       paddingBottom: 100, // Extra space for bottom action bar
     },
     emptyState: {
