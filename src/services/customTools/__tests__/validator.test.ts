@@ -217,3 +217,11 @@ describe('validateDefinition', () => {
     }
   });
 });
+
+describe('validateDefinition on live store objects', () => {
+  it('accepts a MobX observable definition, not just a plain object', () => {
+    const {observable} = require('mobx');
+    const live = observable(weatherExample);
+    expect(validateDefinition(live).ok).toBe(true);
+  });
+});

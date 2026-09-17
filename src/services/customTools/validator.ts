@@ -143,6 +143,19 @@ function splitOrigin(url: string): {authority: string} | null {
   };
 }
 
+/**
+ * Definitions reach the validator straight from MobX state, and zod refuses an
+ * observable proxy outright. Parsing a plain JSON snapshot keeps this module
+ * free of any MobX import while still accepting live store objects.
+ */
+const toPlainJson = (input: unknown): unknown => {
+  try {
+    return JSON.parse(JSON.stringify(input));
+  } catch {
+    return input;
+  }
+};
+
 export interface ValidateOptions {
   /** Names already taken by other custom tools. */
   peerNames?: Iterable<string>;
@@ -157,7 +170,7 @@ export function validateDefinition(
   input: unknown,
   options: ValidateOptions = {},
 ): ValidationResult<CustomToolDraft> {
-  const parsed = draftSchema.safeParse(input);
+  const parsed = draftSchema.safeParse(toPlainJson(input));
   if (!parsed.success) {
     return {ok: false, issues: [{code: 'shape_invalid'}]};
   }
