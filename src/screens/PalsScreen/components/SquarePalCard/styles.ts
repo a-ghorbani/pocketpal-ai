@@ -12,6 +12,7 @@ export const createStyles = (theme: Theme) =>
     },
     card: {
       flex: 1,
+      height: '100%',
       backgroundColor: theme.colors.background,
       borderRadius: 16,
       borderWidth: 1,
@@ -197,6 +198,7 @@ export const createStyles = (theme: Theme) =>
       alignItems: 'center',
       justifyContent: 'space-between',
       gap: 4,
+      marginTop: 'auto',
     },
     leftFooter: {
       flex: 1,
