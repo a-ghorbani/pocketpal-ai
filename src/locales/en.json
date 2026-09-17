@@ -205,7 +205,13 @@
     "removeRemoteModel": "Remove {{modelName}} ({{serverName}})?",
     "retryConnection": "Retry",
     "enterUrlManually": "Enter URL manually",
-    "manageServers": "Manage Servers"
+    "manageServers": "Manage Servers",
+    "customTools": {
+      "title": "Custom tools",
+      "description": "Define your own HTTP tools, so a Pal can call a server you run.",
+      "count": "{{count}} defined",
+      "openButton": "Manage"
+    }
   },
   "memory": {
     "shortWarning": "Memory Warning",
@@ -1245,7 +1251,8 @@
     "benchmark": "Benchmark",
     "settings": "Settings",
     "appInfo": "App Info",
-    "testCompletion": "Test Completion"
+    "testCompletion": "Test Completion",
+    "customTools": "Custom tools"
   },
   "chat": {
     "conversationReset": "Conversation reset!",
@@ -1658,5 +1665,27 @@
     "titleByPal": "{{name}} is downloading",
     "titleByModel": "{{name}} is downloading",
     "extraInProgress": "+{{count}} more in progress"
+  },
+  "customToolsScreen": {
+    "title": "Custom tools",
+    "empty": "No custom tools yet.",
+    "emptyHint": "Create one, or import the ready-made Termux example described in docs/custom-tools/README.md.",
+    "create": "New tool",
+    "import": "Import",
+    "export": "Export",
+    "exported": "Copied {{count}} tools to the clipboard.",
+    "exportEmpty": "There is nothing to export yet.",
+    "imported": "Imported {{count}} tools.",
+    "importRejected": "Skipped {{count}} that could not be imported.",
+    "importFailed": "Couldn't read that file.",
+    "delete": "Delete",
+    "edit": "Edit",
+    "deleteConfirmTitle": "Delete {{name}}?",
+    "deleteConfirmMessage": "Its stored secrets are deleted with it.",
+    "cancel": "Cancel",
+    "badgeNonLoopback": "Sends off device",
+    "badgeNoConfirmation": "No confirmation",
+    "badgeInvalid": "Invalid, edit to fix",
+    "badgeNameConflict": "Name in use, rename"
   }
 }
