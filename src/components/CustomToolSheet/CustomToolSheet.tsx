@@ -1,5 +1,6 @@
-import React, {useContext, useEffect, useMemo, useState} from 'react';
+import React, {useContext, useEffect, useMemo, useRef, useState} from 'react';
 import {View} from 'react-native';
+import type {TextInput as RNTextInput} from 'react-native';
 
 import {Button, SegmentedButtons, Switch, Text} from 'react-native-paper';
 import {observer} from 'mobx-react';
@@ -13,8 +14,10 @@ import {
   isNonLoopback,
   secretNames,
 } from '../../services/customTools/toolStatus';
+import {validateDefinition} from '../../services/customTools/validator';
 import type {
   CustomToolDefinition,
+  CustomToolErrorCode,
   HttpMethod,
   ValidationIssue,
 } from '../../services/customTools/types';
@@ -23,6 +26,34 @@ import {createStyles} from './styles';
 
 const METHODS: HttpMethod[] = ['GET', 'POST', 'PUT', 'PATCH', 'DELETE'];
 const MIN_SECRET_LENGTH = 4;
+
+type FieldKey = 'name' | 'description' | 'url' | 'body' | 'schema';
+
+/** Focus goes to the first offender in this order. */
+const FIELD_ORDER: FieldKey[] = [
+  'name',
+  'description',
+  'url',
+  'body',
+  'schema',
+];
+
+/** Codes absent here have no field of their own and stay in the sheet list. */
+const FIELD_OF_CODE: Partial<Record<CustomToolErrorCode, FieldKey>> = {
+  name_invalid: 'name',
+  name_builtin: 'name',
+  name_taken: 'name',
+  description_empty: 'description',
+  url_scheme: 'url',
+  url_userinfo: 'url',
+  url_placeholder_in_origin: 'url',
+  body_not_allowed: 'body',
+  body_placeholder_mixed: 'body',
+  required_not_declared: 'schema',
+  placeholder_undeclared: 'schema',
+};
+
+type FieldErrors = Partial<Record<FieldKey, string>>;
 
 interface Row {
   key: string;
@@ -83,6 +114,15 @@ export const CustomToolSheet: React.FC<CustomToolSheetProps> = observer(
     const [storedSecretNames, setStoredSecretNames] = useState<string[]>([]);
     const [issues, setIssues] = useState<ValidationIssue[]>([]);
     const [localError, setLocalError] = useState<string | null>(null);
+    const [fieldErrors, setFieldErrors] = useState<FieldErrors>({});
+
+    const fieldRefs: Record<FieldKey, React.RefObject<RNTextInput | null>> = {
+      name: useRef<RNTextInput>(null),
+      description: useRef<RNTextInput>(null),
+      url: useRef<RNTextInput>(null),
+      body: useRef<RNTextInput>(null),
+      schema: useRef<RNTextInput>(null),
+    };
 
     useEffect(() => {
       if (!isVisible) {
@@ -90,6 +130,7 @@ export const CustomToolSheet: React.FC<CustomToolSheetProps> = observer(
       }
       setIssues([]);
       setLocalError(null);
+      setFieldErrors({});
       setSecretDrafts({});
       setName(tool?.name ?? '');
       setDescription(tool?.description ?? '');
@@ -283,26 +324,65 @@ export const CustomToolSheet: React.FC<CustomToolSheetProps> = observer(
       </View>
     );
 
+    const messageFor = (issue: ValidationIssue): string => {
+      const template_ =
+        strings.errors[issue.code] ?? strings.errors.shape_invalid;
+      return issue.params ? t(template_, issue.params) : template_;
+    };
+
+    /** Field errors first, so the offender is where the user is looking. */
+    const showRejection = (rejected: ValidationIssue[], local: FieldErrors) => {
+      const mapped: FieldErrors = {};
+      const unmapped: ValidationIssue[] = [];
+      for (const issue of rejected) {
+        const field = FIELD_OF_CODE[issue.code];
+        if (field && !mapped[field]) {
+          mapped[field] = messageFor(issue);
+        } else if (!field) {
+          unmapped.push(issue);
+        }
+      }
+      const next: FieldErrors = {...mapped, ...local};
+      setFieldErrors(next);
+      setIssues(unmapped);
+      const first = FIELD_ORDER.find(field => next[field]);
+      if (first) {
+        fieldRefs[first].current?.focus();
+      }
+    };
+
     const handleSave = async () => {
       setIssues([]);
       setLocalError(null);
+      setFieldErrors({});
 
+      // The JSON fields fall back to a parsed default in `draft`, so their own
+      // parse failures have to be carried separately from the validator's.
+      const local: FieldErrors = {};
       try {
         JSON.parse(schemaText);
       } catch {
-        setLocalError(strings.schemaJsonInvalid);
-        return;
+        local.schema = strings.schemaJsonInvalid;
       }
       if (bodyText.trim()) {
         try {
           JSON.parse(bodyText);
         } catch {
-          setLocalError(strings.bodyJsonInvalid);
-          return;
+          local.body = strings.bodyJsonInvalid;
         }
       }
       if (shortSecret) {
         setLocalError(strings.secretMinLength);
+      }
+
+      // Validated here only to place every rejection on its field in one pass;
+      // the store validates again and remains the only writer.
+      const checked = validateDefinition(draft, {
+        peerNames: customToolStore.peerNamesExcluding(tool?.id),
+      });
+      const rejected = checked.ok ? [] : checked.issues;
+      if (rejected.length > 0 || Object.keys(local).length > 0 || shortSecret) {
+        showRejection(rejected, local);
         return;
       }
 
@@ -310,7 +390,7 @@ export const CustomToolSheet: React.FC<CustomToolSheetProps> = observer(
         ? customToolStore.updateTool(tool.id, draft)
         : customToolStore.addTool(draft);
       if (!result.ok) {
-        setIssues(result.issues);
+        showRejection(result.issues, {});
         return;
       }
 
@@ -327,12 +407,6 @@ export const CustomToolSheet: React.FC<CustomToolSheetProps> = observer(
       onClose();
     };
 
-    const messageFor = (issue: ValidationIssue): string => {
-      const template_ =
-        strings.errors[issue.code] ?? strings.errors.shape_invalid;
-      return issue.params ? t(template_, issue.params) : template_;
-    };
-
     return (
       <Sheet
         isVisible={isVisible}
@@ -343,19 +417,25 @@ export const CustomToolSheet: React.FC<CustomToolSheetProps> = observer(
           contentContainerStyle={styles.container}
           testID="custom-tool-sheet">
           <TextInput
+            ref={fieldRefs.name}
             testID="custom-tool-name"
             label={strings.nameLabel}
             placeholder={strings.namePlaceholder}
             value={name}
             autoCapitalize="none"
             onChangeText={setName}
+            error={!!fieldErrors.name}
+            helperText={fieldErrors.name}
           />
           <TextInput
+            ref={fieldRefs.description}
             testID="custom-tool-description"
             label={strings.descriptionLabel}
             placeholder={strings.descriptionPlaceholder}
             value={description}
             onChangeText={setDescription}
+            error={!!fieldErrors.description}
+            helperText={fieldErrors.description}
           />
 
           <SegmentedButtons
@@ -365,6 +445,7 @@ export const CustomToolSheet: React.FC<CustomToolSheetProps> = observer(
           />
 
           <TextInput
+            ref={fieldRefs.url}
             testID="custom-tool-url"
             label={strings.urlLabel}
             placeholder={strings.urlPlaceholder}
@@ -372,6 +453,8 @@ export const CustomToolSheet: React.FC<CustomToolSheetProps> = observer(
             autoCapitalize="none"
             autoCorrect={false}
             onChangeText={setUrl}
+            error={!!fieldErrors.url}
+            helperText={fieldErrors.url}
           />
           {showNonLoopbackWarning && (
             <Text style={styles.warning} testID="custom-tool-non-loopback">
@@ -393,21 +476,27 @@ export const CustomToolSheet: React.FC<CustomToolSheetProps> = observer(
           )}
 
           <TextInput
+            ref={fieldRefs.body}
             testID="custom-tool-body"
             label={strings.bodyLabel}
             value={bodyText}
             multiline
             autoCapitalize="none"
             onChangeText={setBodyText}
+            error={!!fieldErrors.body}
+            helperText={fieldErrors.body}
           />
 
           <TextInput
+            ref={fieldRefs.schema}
             testID="custom-tool-schema"
             label={strings.rawSchemaLabel}
             value={schemaText}
             multiline
             autoCapitalize="none"
             onChangeText={setSchemaText}
+            error={!!fieldErrors.schema}
+            helperText={fieldErrors.schema}
           />
 
           <View style={styles.section}>

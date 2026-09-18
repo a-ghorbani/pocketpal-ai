@@ -58,11 +58,63 @@ describe('CustomToolSheet', () => {
     fillMinimalTool(utils);
     fireEvent.press(utils.getByTestId('custom-tool-save'));
 
+    // The code names a field, so the copy lands on that field rather than in
+    // the sheet-level list.
     await waitFor(() => {
-      const shown = utils.getByTestId('custom-tool-error-name_builtin');
-      expect(shown).toHaveTextContent(/calculate/);
-      expect(shown).not.toHaveTextContent(/name_builtin/);
+      expect(
+        utils.getByText(/"calculate" is a built-in talent name/),
+      ).toBeTruthy();
     });
+    expect(utils.queryByText(/name_builtin/)).toBeNull();
+    expect(utils.queryByTestId('custom-tool-error-name_builtin')).toBeNull();
+  });
+
+  it('puts each rejection on the field that caused it, not in the sheet list', async () => {
+    const strings = l10n.en.components.customToolSheet;
+    const utils = renderSheet();
+    fireEvent.changeText(utils.getByTestId('custom-tool-name'), 'get_time');
+    fireEvent.changeText(
+      utils.getByTestId('custom-tool-url'),
+      'http://127.0.0.1:8765/time',
+    );
+    // Description left empty, and the schema is not parseable JSON.
+    fireEvent.changeText(utils.getByTestId('custom-tool-schema'), '{not json');
+
+    fireEvent.press(utils.getByTestId('custom-tool-save'));
+
+    await waitFor(() => {
+      expect(utils.getByText(strings.errors.description_empty)).toBeTruthy();
+    });
+    expect(utils.getByText(strings.schemaJsonInvalid)).toBeTruthy();
+    // Neither reaches the sheet-level list, and nothing is written.
+    expect(
+      utils.queryByTestId('custom-tool-error-description_empty'),
+    ).toBeNull();
+    expect(storeMock.addTool).not.toHaveBeenCalled();
+  });
+
+  it('leaves a code with no field of its own in the sheet-level list', async () => {
+    const utils = renderSheet();
+    fillMinimalTool(utils);
+    fireEvent.press(utils.getByTestId('custom-tool-query-add'));
+    fireEvent.changeText(utils.getByTestId('custom-tool-query-key-0'), 'token');
+    fireEvent.changeText(
+      utils.getByTestId('custom-tool-query-value-0'),
+      '{{city}}',
+    );
+    fireEvent.changeText(
+      utils.getByTestId('custom-tool-url'),
+      'http://127.0.0.1:8765/{{secret.K}}',
+    );
+
+    fireEvent.press(utils.getByTestId('custom-tool-save'));
+
+    await waitFor(() => {
+      expect(
+        utils.getByTestId('custom-tool-error-secret_placement'),
+      ).toBeTruthy();
+    });
+    expect(storeMock.addTool).not.toHaveBeenCalled();
   });
 
   it('warns for a host that is not loopback, and stays quiet for one that is', () => {
