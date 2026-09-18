@@ -1104,6 +1104,41 @@ describe('runAgent', () => {
     expect(events.filter(e => e.type === 'run_failed')).toHaveLength(0);
   });
 
+  it('#23c gate throws synchronously → error outcome and run_finished, never run_failed', async () => {
+    const execute = jest.fn(
+      async (): Promise<TalentResult> => ({type: 'text', summary: 'ok'}),
+    );
+    const tool: TalentEngine = {
+      name: 'gated',
+      get requiresConfirmation(): boolean {
+        throw new Error('gate getter exploded');
+      },
+      execute,
+      toToolDefinition: () => ({
+        type: 'function',
+        function: {name: 'gated', description: 'gated', parameters: {}},
+      }),
+    };
+
+    const events = await collect(
+      runAgent({
+        engine: scriptOneCall('gated'),
+        initialParams: baseParams,
+        allowedTalentNames: ['gated'],
+        talentLookup: () => tool,
+        messageId: 'msg',
+        triggerMarkers: [],
+        confirmToolCall: async () => true,
+      }),
+    );
+
+    expect(execute).not.toHaveBeenCalled();
+    expect(outcomeOf(events).result.type).toBe('error');
+    expect(events.filter(e => e.type === 'tool_call_started')).toHaveLength(1);
+    expect(events.filter(e => e.type === 'run_failed')).toHaveLength(0);
+    expect(events.filter(e => e.type === 'run_finished')).toHaveLength(1);
+  });
+
   it('#24 gated engine with no confirmToolCall → declined (fail closed)', async () => {
     const execute = jest.fn(
       async (): Promise<TalentResult> => ({type: 'text', summary: 'ok'}),

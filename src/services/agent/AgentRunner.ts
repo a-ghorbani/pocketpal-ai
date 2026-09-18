@@ -303,19 +303,19 @@ async function executeOne(
     return {callId, toolName: fnName, result, responseContent: summary};
   }
 
-  const gate = await confirmationGate(
-    call,
-    fnName,
-    handler,
-    parsedArgs,
-    signal,
-    confirmToolCall,
-  );
-  if ('summary' in gate) {
-    return toolErrorOutcome(callId, fnName, gate.summary);
-  }
-
   try {
+    const gate = await confirmationGate(
+      call,
+      fnName,
+      handler,
+      parsedArgs,
+      signal,
+      confirmToolCall,
+    );
+    if ('summary' in gate) {
+      return toolErrorOutcome(callId, fnName, gate.summary);
+    }
+
     const executed = await executeWithDeadline(handler, parsedArgs, signal);
     if ('summary' in executed) {
       return toolErrorOutcome(callId, fnName, executed.summary);
