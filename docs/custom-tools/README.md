@@ -49,3 +49,8 @@ and approve the call when the sheet appears.
   and finally the untrusted-content wrapper.
 - A tool pointing anywhere other than loopback is flagged in the editor, because
   anything the model sends then leaves the device.
+- A response that arrives from a host other than the one you defined is
+  discarded on iOS, where the final address is visible. On Android the network
+  stack follows redirects itself and reports the original address, so such a
+  redirect cannot be detected — one more reason to point a tool only at a host
+  you trust.

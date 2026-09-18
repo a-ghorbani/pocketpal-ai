@@ -129,6 +129,10 @@ export class HttpToolEngine implements TalentEngine {
         ...(ctx?.signal ? {signal: ctx.signal} : {}),
       });
 
+      // iOS reports the post-redirect URL, so an off-origin redirect is caught
+      // here. Android's OkHttp follows redirects inside the native layer and
+      // reports the original URL, leaving the same redirect undetectable; the
+      // README states that limitation.
       const definitionOrigin = originOf(this.def.request.url);
       const finalOrigin = response.url ? originOf(response.url) : null;
       if (finalOrigin !== null && finalOrigin !== definitionOrigin) {
