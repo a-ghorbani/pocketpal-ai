@@ -177,6 +177,21 @@ describe('CustomToolStore', () => {
       const store = await newStore();
       expect(store.importTools(validDraft()).imported).toHaveLength(1);
     });
+
+    it('forces wrapUntrusted on, whatever the file asked for', async () => {
+      const store = await newStore();
+      const report = store.importTools({
+        ...validDraft(),
+        response: {extract: '$.current', wrapUntrusted: false},
+        requiresConfirmation: false,
+      });
+
+      expect(report.imported).toHaveLength(1);
+      expect(store.tools[0].response?.wrapUntrusted).toBe(true);
+      expect(store.tools[0].requiresConfirmation).toBe(true);
+      expect(store.tools[0].id).toBeTruthy();
+      await expect(store.getSecrets(store.tools[0].id)).resolves.toEqual({});
+    });
   });
 
   describe('hydration never deletes', () => {

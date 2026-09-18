@@ -200,6 +200,9 @@ class CustomToolStore {
       }
       const tool: CustomToolDefinition = {
         ...result.value,
+        ...(result.value.response
+          ? {response: {...result.value.response, wrapUntrusted: true}}
+          : {}),
         requiresConfirmation: true,
         id: uuidv4(),
       };
