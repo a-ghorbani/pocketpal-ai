@@ -11,6 +11,7 @@ import {
 } from '../../../../jest/test-utils';
 
 import {ModelsScreen} from '../ModelsScreen';
+import {Model, ModelOrigin} from '../../../utils/types';
 
 import {modelStore, uiStore} from '../../../store';
 import {
@@ -426,6 +427,42 @@ describe('ModelsScreen', () => {
         expect(modelNames.length).toBeGreaterThan(0);
         expect(queryByText('basic model')).toBeNull();
       });
+    });
+
+    it.each([false, true])(
+      'includes downloaded and HF models when both filters are active (grouped: %s)',
+      grouped => {
+        const local = {
+          ...downloadedModel,
+          id: 'local-downloaded',
+          origin: ModelOrigin.LOCAL,
+          isLocal: true,
+        };
+        const downloadedHF = {...hfModel2, isDownloaded: true};
+        modelStore.models = [local, basicModel, hfModel1, downloadedHF];
+        uiStore.pageStates.modelsScreen.filters = grouped
+          ? ['downloaded', 'hf', 'grouped']
+          : ['downloaded', 'hf'];
+
+        const {getByTestId} = render(<ModelsScreen />);
+        const visibleModels: Model[] = getByTestId(
+          'flat-list',
+        ).props.data.flatMap((group: {items: Model[]}) => group.items);
+
+        expect(visibleModels.map(model => model.id).sort()).toEqual(
+          [local.id, hfModel1.id, downloadedHF.id].sort(),
+        );
+      },
+    );
+
+    it('keeps local models visible with both filters and no HF models', () => {
+      modelStore.models = [
+        {...downloadedModel, origin: ModelOrigin.LOCAL, isLocal: true},
+      ];
+      uiStore.pageStates.modelsScreen.filters = ['downloaded', 'hf'];
+
+      const {getByText} = render(<ModelsScreen />);
+      expect(getByText('downloaded model')).toBeTruthy();
     });
 
     it('should group models by type when grouped filter is active', async () => {

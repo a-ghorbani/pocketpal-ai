@@ -273,9 +273,15 @@ export const ModelsScreen: React.FC = observer(() => {
   // so we use computed instead for deep comparison
   // (model state changes not-downloaded -> downloaded)
   const filteredAndSortedModels = computed(() => {
+    const showDownloaded = filters.includes('downloaded');
+    const showHF = filters.includes('hf');
     let result = models;
-    if (filters.includes('downloaded')) {
-      result = result.filter(model => model.isDownloaded);
+    if (showDownloaded || showHF) {
+      result = result.filter(
+        model =>
+          (showDownloaded && model.isDownloaded) ||
+          (showHF && model.origin === ModelOrigin.HF),
+      );
     }
     if (!filters.includes('grouped')) {
       result = result.sort((a, b) => {
@@ -287,9 +293,6 @@ export const ModelsScreen: React.FC = observer(() => {
         }
         return 0;
       });
-    }
-    if (filters.includes('hf')) {
-      result = result.filter(model => model.origin === ModelOrigin.HF);
     }
     return result;
   }).get();
