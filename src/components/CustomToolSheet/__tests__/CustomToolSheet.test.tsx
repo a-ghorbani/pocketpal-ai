@@ -158,6 +158,56 @@ describe('CustomToolSheet', () => {
     expect(utils.queryByText(/k-12345/)).toBeNull();
   });
 
+  const secretTool = {
+    id: 'tool-1',
+    name: 'get_weather',
+    description: 'Weather',
+    parameters: {type: 'object', properties: {}},
+    request: {
+      method: 'GET',
+      url: 'https://api.example.com/weather',
+      headers: {Authorization: 'Bearer {{secret.API_KEY}}'},
+    },
+    timeoutMs: 15000,
+    requiresConfirmation: true,
+  };
+
+  it('clears a stored secret through the only delete signal the store has', async () => {
+    storeMock.getSecretNames.mockResolvedValue(['API_KEY']);
+    const utils = renderSheet({tool: secretTool});
+
+    // Enabled only once the stored names have loaded; pressing before that
+    // would be a no-op and the assertion below would pass for the wrong reason.
+    await waitFor(() => {
+      expect(
+        utils.getByTestId('custom-tool-secret-clear-API_KEY').props
+          .accessibilityState.disabled,
+      ).toBe(false);
+    });
+    fireEvent.press(utils.getByTestId('custom-tool-secret-clear-API_KEY'));
+
+    await waitFor(() => {
+      expect(storeMock.setSecrets).toHaveBeenCalledWith('tool-1', {
+        API_KEY: null,
+      });
+    });
+  });
+
+  it('offers no Clear for a secret that was never stored', async () => {
+    storeMock.getSecretNames.mockResolvedValue([]);
+    const utils = renderSheet({tool: secretTool});
+
+    await waitFor(() => {
+      expect(
+        utils.getByTestId('custom-tool-secret-clear-API_KEY'),
+      ).toBeTruthy();
+    });
+    expect(
+      utils.getByTestId('custom-tool-secret-clear-API_KEY').props
+        .accessibilityState.disabled,
+    ).toBe(true);
+  });
+
   it('refuses to save a secret shorter than four characters', async () => {
     const utils = renderSheet();
     fillMinimalTool(utils);

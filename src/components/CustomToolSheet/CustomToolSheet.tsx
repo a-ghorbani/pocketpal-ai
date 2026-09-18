@@ -351,6 +351,30 @@ export const CustomToolSheet: React.FC<CustomToolSheetProps> = observer(
       }
     };
 
+    /**
+     * `setSecrets` with a null value is the store's only delete signal, and an
+     * empty draft is filtered out of the save patch, so this is the one way a
+     * stored secret can be removed without deleting the tool.
+     */
+    const handleClearSecret = async (secret: string) => {
+      if (!tool) {
+        return;
+      }
+      const cleared = await customToolStore.setSecrets(tool.id, {
+        [secret]: null,
+      });
+      if (!cleared) {
+        setLocalError(strings.saveFailed);
+        return;
+      }
+      setStoredSecretNames(previous => previous.filter(n => n !== secret));
+      setSecretDrafts(previous => {
+        const next = {...previous};
+        delete next[secret];
+        return next;
+      });
+    };
+
     const handleSave = async () => {
       setIssues([]);
       setLocalError(null);
@@ -554,13 +578,22 @@ export const CustomToolSheet: React.FC<CustomToolSheetProps> = observer(
               </Text>
               {referencedSecrets.map(secret => (
                 <View key={secret} style={styles.section}>
-                  <Text style={styles.secretState}>
-                    {`${secret} — ${
-                      storedSecretNames.includes(secret)
-                        ? strings.secretSet
-                        : strings.secretNotSet
-                    }`}
-                  </Text>
+                  <View style={styles.row}>
+                    <Text style={styles.secretState}>
+                      {`${secret} — ${
+                        storedSecretNames.includes(secret)
+                          ? strings.secretSet
+                          : strings.secretNotSet
+                      }`}
+                    </Text>
+                    <Button
+                      testID={`custom-tool-secret-clear-${secret}`}
+                      mode="text"
+                      disabled={!tool || !storedSecretNames.includes(secret)}
+                      onPress={() => handleClearSecret(secret)}>
+                      {strings.secretClear}
+                    </Button>
+                  </View>
                   <TextInput
                     testID={`custom-tool-secret-${secret}`}
                     placeholder={strings.secretPlaceholder}
