@@ -1,5 +1,6 @@
 import {runInAction} from 'mobx';
 import {Platform} from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import {palStore} from '../PalStore';
 import {palsHubService} from '../../services';
 import {isUSStorefront} from '../../utils/region';
@@ -9,6 +10,17 @@ import type {PalsHubPal} from '../../types/palshub';
 import * as imageUtils from '../../utils/imageUtils';
 import {resolveHFModelForDownload} from '../../utils/hfResolve';
 import {LOOKIE_DEFAULT_MODEL} from '../builtinPalModels';
+
+jest.mock('@react-native-async-storage/async-storage', () => {
+  const values = new Map<string, string>();
+  return {
+    getItem: jest.fn(async (key: string) => values.get(key) ?? null),
+    setItem: jest.fn(async (key: string, value: string) => {
+      values.set(key, value);
+    }),
+    clear: jest.fn(async () => values.clear()),
+  };
+});
 
 // Mock dependencies
 jest.mock('../../utils/hfResolve', () => ({
@@ -104,8 +116,9 @@ describe('PalStore', () => {
     updated_at: '2023-01-01T00:00:00Z',
   };
 
-  beforeEach(() => {
+  beforeEach(async () => {
     jest.clearAllMocks();
+    await AsyncStorage.clear();
 
     // Reset store state
     runInAction(() => {
@@ -406,6 +419,73 @@ describe('PalStore', () => {
 
       const names = palStore.pals.map(p => p.name).sort();
       expect(names).toEqual(['Lookie', 'Pip']);
+    });
+  });
+
+  describe.each([
+    ['Lookie', 'initializeLookiePal'],
+    ['Pip', 'initializePipPal'],
+  ])('%s seed persistence', (name, initializer) => {
+    const seed = () => (palStore as any)[initializer]();
+
+    beforeEach(() => {
+      (palRepository.createPal as jest.Mock).mockImplementation(
+        async (data: Partial<Pal>) => ({...mockPal, ...data}),
+      );
+      (palRepository.deletePal as jest.Mock).mockResolvedValue(true);
+    });
+
+    it('does not recreate a deleted default pal on the next initialization', async () => {
+      await seed();
+      await palStore.deletePal(palStore.pals[0].id);
+      expect(palStore.pals).toHaveLength(0);
+      (palRepository.createPal as jest.Mock).mockClear();
+
+      await seed();
+
+      expect(palRepository.createPal).not.toHaveBeenCalled();
+      expect(palStore.pals).toHaveLength(0);
+    });
+
+    it('does not recreate a default pal after it is renamed', async () => {
+      await seed();
+      runInAction(() => {
+        palStore.pals[0].name = 'My renamed pal';
+      });
+      (palRepository.createPal as jest.Mock).mockClear();
+
+      await seed();
+
+      expect(palRepository.createPal).not.toHaveBeenCalled();
+      expect(palStore.pals).toHaveLength(1);
+      expect(palStore.pals[0].name).toBe('My renamed pal');
+    });
+
+    it('records existing default pals before they are deleted', async () => {
+      runInAction(() => {
+        palStore.pals = [{...mockPal, name, capabilities: {video: true}}];
+      });
+      await seed();
+      expect(palRepository.createPal).not.toHaveBeenCalled();
+      await palStore.deletePal(mockPal.id);
+
+      await seed();
+
+      expect(palRepository.createPal).not.toHaveBeenCalled();
+      expect(palStore.pals).toHaveLength(0);
+    });
+
+    it('retries seeding after creation fails', async () => {
+      (palRepository.createPal as jest.Mock).mockRejectedValueOnce(
+        new Error('Database unavailable'),
+      );
+      await seed();
+      expect(palStore.pals).toHaveLength(0);
+
+      await seed();
+
+      expect(palRepository.createPal).toHaveBeenCalledTimes(2);
+      expect(palStore.pals[0].name).toBe(name);
     });
   });
 

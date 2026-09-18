@@ -19,6 +19,7 @@
 import {v4 as uuidv4} from 'uuid';
 import {makeAutoObservable, runInAction} from 'mobx';
 import {Platform} from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 import {HF_DOMAIN} from '../config/urls';
 
@@ -47,6 +48,10 @@ import type {
 import {ModelOrigin} from '../utils/types';
 import type {Model} from '../utils/types';
 import {downloadPalThumbnail, deletePalThumbnail} from '../utils/imageUtils';
+
+// Track each built-in separately so future defaults can still be introduced.
+const LOOKIE_SEEDED_KEY = 'PalStore.builtin.Lookie.seeded';
+const PIP_SEEDED_KEY = 'PalStore.builtin.Pip.seeded';
 
 class PalStore {
   // Core pals storage
@@ -698,10 +703,14 @@ class PalStore {
   };
 
   /**
-   * Initialize the default "Lookie" VideoPal if it doesn't exist
+   * Seed the default "Lookie" VideoPal once, preserving deletions and renames.
    */
   private async initializeLookiePal(): Promise<void> {
     try {
+      if ((await AsyncStorage.getItem(LOOKIE_SEEDED_KEY)) === 'true') {
+        return;
+      }
+
       // Check if Lookie already exists
       const lookiePal = this.pals.find(
         p => p.capabilities?.video === true && p.name === 'Lookie',
@@ -744,13 +753,15 @@ class PalStore {
       } else {
         console.log('Lookie pal already exists, skipping creation');
       }
+      // Also mark existing installations; only persist after successful creation.
+      await AsyncStorage.setItem(LOOKIE_SEEDED_KEY, 'true');
     } catch (error) {
       console.error('Error initializing Lookie pal:', error);
     }
   }
 
   /**
-   * Initialize the default "Pip" recommended pal if it doesn't exist.
+   * Seed the default "Pip" recommended pal once, preserving deletions and renames.
    *
    * Idempotent: a re-entry never overwrites an existing Pip record, so a
    * `defaultModel` bound from a prior session (e.g. by the onboarding
@@ -758,10 +769,15 @@ class PalStore {
    */
   private async initializePipPal(): Promise<void> {
     try {
+      if ((await AsyncStorage.getItem(PIP_SEEDED_KEY)) === 'true') {
+        return;
+      }
+
       const existing = this.pals.find(
         p => p.name === 'Pip' && p.source === 'local',
       );
       if (existing) {
+        await AsyncStorage.setItem(PIP_SEEDED_KEY, 'true');
         return;
       }
 
@@ -783,6 +799,7 @@ class PalStore {
       };
 
       await this.addPal(palData);
+      await AsyncStorage.setItem(PIP_SEEDED_KEY, 'true');
     } catch (error) {
       console.error('Error initializing Pip pal:', error);
     }
