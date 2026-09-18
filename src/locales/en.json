@@ -1054,7 +1054,6 @@
       "namePlaceholder": "get_weather",
       "descriptionLabel": "Description",
       "descriptionPlaceholder": "What this tool does, for the model",
-      "methodLabel": "Method",
       "urlLabel": "URL",
       "urlPlaceholder": "http://127.0.0.1:8765/notes/{{id}}",
       "queryLabel": "Query parameters",
@@ -1064,11 +1063,6 @@
       "removeRow": "Remove",
       "keyPlaceholder": "name",
       "valuePlaceholder": "value or {{arg}}",
-      "parametersLabel": "Parameters",
-      "paramNamePlaceholder": "argument",
-      "paramDescriptionPlaceholder": "what it is for",
-      "paramRequired": "Required",
-      "useRawSchema": "Edit raw JSON Schema",
       "rawSchemaLabel": "JSON Schema",
       "responseLabel": "Response handling",
       "extractLabel": "Extract (JSONPath subset)",
@@ -1101,7 +1095,7 @@
         "url_scheme": "The URL must start with http:// or https://.",
         "url_userinfo": "Remove the user:password part of the URL.",
         "url_placeholder_in_origin": "Placeholders are allowed in the path only, not in the host or port.",
-        "secret_placement": "A secret can only go in a query value or the Authorization header. Use a query secret, or type the key literally into the header — literal headers never reach the model, but they are visible in an export file.",
+        "secret_placement": "A secret can only go in a query value or the Authorization header. Elsewhere PocketPal cannot keep the value out of what the model sees or what an export file carries.",
         "body_not_allowed": "A {{method}} request cannot carry a body.",
         "body_placeholder_mixed": "A body placeholder must be the whole value, with no text around it."
       }
