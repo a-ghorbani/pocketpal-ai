@@ -136,6 +136,35 @@ describe('CustomToolStore', () => {
       expect(resetMock).toHaveBeenCalledWith({service: keychainService(id)});
       expect(vault[keychainService(id)]).toBeUndefined();
     });
+
+    it('resets the Keychain entry before it drops the definition', async () => {
+      const store = await newStore();
+      const added = store.addTool(validDraft());
+      const id = added.ok ? added.value.id : '';
+      await store.setSecrets(id, {API_KEY: 'abcd1234'});
+
+      let releaseReset: () => void = () => {};
+      const resetLanded = new Promise<void>(resolve => {
+        releaseReset = resolve;
+      });
+      resetMock.mockImplementationOnce(async ({service}: {service: string}) => {
+        await resetLanded;
+        delete vault[service];
+      });
+
+      const removal = store.removeTool(id);
+      await flush();
+
+      // The reset is still in flight. An interrupted delete must leave a
+      // definition without secrets, never secrets without a definition.
+      expect(store.tools).toHaveLength(1);
+
+      releaseReset();
+      await removal;
+
+      expect(store.tools).toHaveLength(0);
+      expect(vault[keychainService(id)]).toBeUndefined();
+    });
   });
 
   describe('export / import round trip', () => {
