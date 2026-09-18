@@ -4,6 +4,15 @@ import {RemoteModelCaps, ServerConfig} from '../../src/utils/types';
 import {ReasoningCapability} from '../../src/utils/reasoningCapability';
 import {RemoteModelInfo} from '../../src/api/openai';
 import {deriveListCapsMap} from '../../src/utils/listCaps';
+import {
+  pickerRowsFromList,
+  rowStateFromList,
+  RouterFailure,
+  RouterLive,
+  RouterOp,
+  RouterRowState,
+  RouterStreamCap,
+} from '../../src/utils/routerState';
 
 class MockServerStore {
   servers: ServerConfig[] = [];
@@ -24,6 +33,24 @@ class MockServerStore {
   error: string | null = null;
   privacyNoticeAcknowledged = false;
 
+  // Router mode, mirroring the real store's live-only shape. The read helpers
+  // below go through the same pure mapping the store uses, so a test drives
+  // them by setting this state rather than by stubbing an answer.
+  routerEvents: Record<string, RouterLive> = {};
+  routerOps: Record<string, RouterOp> = {};
+  routerReasons: Record<string, RouterFailure> = {};
+  routerStream: {
+    serverId: string;
+    state: 'connecting' | 'open' | 'reopening';
+  } | null = null;
+  routerPolls: Set<string> = new Set();
+  routerStreamCap: Record<string, RouterStreamCap> = {};
+  routerObservedEviction: Set<string> = new Set();
+  routerListShape: Record<
+    string,
+    {hasModelsKey: boolean; seq: number; stale: boolean}
+  > = {};
+
   addServer: jest.Mock;
   updateServer: jest.Mock;
   removeServer: jest.Mock;
@@ -42,6 +69,67 @@ class MockServerStore {
   getUserSelectedModelsForServer: jest.Mock;
   recordRemoteReasoningObserved: jest.Mock;
   setRemoteReasoningOverride: jest.Mock;
+  ensureRouterModelLoaded: jest.Mock;
+  unloadRouterModel: jest.Mock;
+  startRouterDownload: jest.Mock;
+  cancelRouterOp: jest.Mock;
+  openRouterStream: jest.Mock;
+  closeRouterStream: jest.Mock;
+  releaseRouterStream: jest.Mock;
+  dismissRouterReason: jest.Mock;
+
+  isRouterServer(serverId: string): boolean {
+    const server = this.servers.find(s => s.id === serverId);
+    if (server?.serverType !== 'llama.cpp') {
+      return false;
+    }
+    const rows = this.serverModels.get(serverId) ?? [];
+    return (
+      rows.some(row => row.status !== null && typeof row.status === 'object') ||
+      this.routerListShape[serverId]?.hasModelsKey === false
+    );
+  }
+
+  routerRowState(serverId: string, remoteModelId: string): RouterRowState {
+    return rowStateFromList(
+      this.serverModels.get(serverId) ?? [],
+      remoteModelId,
+      this.routerListShape[serverId]?.stale === true,
+    );
+  }
+
+  routerResidentCount(serverId: string): number {
+    return (this.serverModels.get(serverId) ?? []).filter(row => {
+      const state = this.routerRowState(serverId, row.id);
+      return state === 'loaded' || state === 'sleeping';
+    }).length;
+  }
+
+  routerStreamCapFor(serverId: string): RouterStreamCap {
+    return this.routerStreamCap[serverId] ?? 'unknown';
+  }
+
+  routerPickerRows(serverId: string): RemoteModelInfo[] {
+    return pickerRowsFromList(this.serverModels.get(serverId) ?? [], serverId, [
+      ...Object.keys(this.routerOps),
+      ...Object.keys(this.routerReasons),
+    ]) as RemoteModelInfo[];
+  }
+
+  routerOp(serverId: string, remoteModelId: string): RouterOp | undefined {
+    return this.routerOps[`${serverId}/${remoteModelId}`];
+  }
+
+  routerLive(serverId: string, remoteModelId: string): RouterLive | undefined {
+    return this.routerEvents[`${serverId}/${remoteModelId}`];
+  }
+
+  routerReason(
+    serverId: string,
+    remoteModelId: string,
+  ): RouterFailure | undefined {
+    return this.routerReasons[`${serverId}/${remoteModelId}`];
+  }
 
   constructor() {
     makeAutoObservable(this, {
@@ -63,6 +151,14 @@ class MockServerStore {
       getUserSelectedModelsForServer: false,
       recordRemoteReasoningObserved: false,
       setRemoteReasoningOverride: false,
+      ensureRouterModelLoaded: false,
+      unloadRouterModel: false,
+      startRouterDownload: false,
+      cancelRouterOp: false,
+      openRouterStream: false,
+      closeRouterStream: false,
+      releaseRouterStream: false,
+      dismissRouterReason: false,
     });
     this.addServer = jest.fn().mockReturnValue('mock-server-id');
     this.updateServer = jest.fn();
@@ -70,8 +166,16 @@ class MockServerStore {
     this.setApiKey = jest.fn().mockResolvedValue(undefined);
     this.getApiKey = jest.fn().mockResolvedValue(undefined);
     this.removeApiKey = jest.fn().mockResolvedValue(undefined);
-    this.fetchModelsForServer = jest.fn().mockResolvedValue(undefined);
+    this.fetchModelsForServer = jest.fn().mockResolvedValue({ok: true});
     this.fetchRemoteModelCaps = jest.fn().mockResolvedValue(undefined);
+    this.ensureRouterModelLoaded = jest.fn().mockResolvedValue('not-router');
+    this.unloadRouterModel = jest.fn().mockResolvedValue('ready');
+    this.startRouterDownload = jest.fn().mockResolvedValue({accepted: true});
+    this.cancelRouterOp = jest.fn().mockResolvedValue(undefined);
+    this.openRouterStream = jest.fn().mockResolvedValue(undefined);
+    this.closeRouterStream = jest.fn();
+    this.releaseRouterStream = jest.fn();
+    this.dismissRouterReason = jest.fn();
     this.fetchAllRemoteModels = jest.fn().mockResolvedValue(undefined);
     this.testServerConnection = jest
       .fn()

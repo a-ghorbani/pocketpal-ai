@@ -20,6 +20,7 @@ export * from './DownloadErrorDialog';
 export * from './EmbeddedVideoView';
 export * from './EnhancedSearchBar';
 export * from './ErrorSnackbar';
+export * from './RouterModelPreparing';
 export * from './FileMessage';
 export * from './HeaderRight';
 export * from './HeaderLeft';
