@@ -239,6 +239,11 @@ describe('HttpToolEngine', () => {
       const result = await engine.execute({city: 'Paris'});
       expect(result.type).toBe('error');
       expect(result.summary).toBe('network error');
+      // The detail is what makes a failed call diagnosable on device. The
+      // summary stays engine-authored, so server text never steers the model.
+      expect((result as any).errorMessage).toBe(
+        'network error: Network request failed',
+      );
     });
 
     it('names an abort distinctly so the runner race can discard it', async () => {
