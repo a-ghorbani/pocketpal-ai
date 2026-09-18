@@ -104,19 +104,28 @@ function projectStreamChunk(data: CompletionStreamData): TokenDelta {
  * returns id=null; strict Jinja templates reject `tool_call_id: null`
  * in the next-turn tool response, so we synthesize deterministic ids
  * from a per-run seed + index. Same shape as the legacy hook used.
+ *
+ * An id repeated within the batch is replaced the same way: the confirmation
+ * sheet settles a pending call by id, so a late dismiss carrying an earlier
+ * call's id would otherwise answer a different call than the one it closed.
  */
 function normalizeToolCallIds(
   raw: NonNullable<CompletionResult['tool_calls']>,
   seed: number,
 ): AgentToolCall[] {
-  return raw.map((tc, i) => ({
-    id: tc.id || `call_${seed}_${i}`,
-    type: 'function',
-    function: {
-      name: tc.function?.name ?? '',
-      arguments: tc.function?.arguments ?? '',
-    },
-  }));
+  const used = new Set<string>();
+  return raw.map((tc, i) => {
+    const id = tc.id && !used.has(tc.id) ? tc.id : `call_${seed}_${i}`;
+    used.add(id);
+    return {
+      id,
+      type: 'function',
+      function: {
+        name: tc.function?.name ?? '',
+        arguments: tc.function?.arguments ?? '',
+      },
+    };
+  });
 }
 
 /**

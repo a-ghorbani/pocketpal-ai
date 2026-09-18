@@ -891,6 +891,47 @@ describe('runAgent', () => {
     expect(ids[0]).not.toBe(ids[1]);
   });
 
+  it('#13b duplicate ids in one batch → the repeat gets a synthetic id', async () => {
+    const duplicated = {
+      id: 'a',
+      type: 'function' as const,
+      function: {name: 'noop', arguments: '{}'},
+    };
+    const engine = makeScriptedEngine({
+      scripts: [
+        {
+          tokens: [],
+          result: {
+            text: '',
+            content: '',
+            tool_calls: [duplicated, {...duplicated}],
+          } as unknown as CompletionResult,
+        },
+        {tokens: [{content: 'done'}], result: {text: 'done', content: 'done'}},
+      ],
+    });
+    const tool = makeTalent('noop', () => ({type: 'text', summary: 'ok'}));
+
+    const events = await collect(
+      runAgent({
+        engine,
+        initialParams: baseParams,
+        allowedTalentNames: ['noop'],
+        talentLookup: () => tool,
+        messageId: 'msg',
+        triggerMarkers: [],
+      }),
+    );
+
+    const ids = events
+      .filter(e => e.type === 'tool_call_finished')
+      .map(e => (e as any).outcome.callId);
+    expect(ids).toHaveLength(2);
+    expect(ids[0]).toBe('a');
+    expect(ids[1]).toMatch(/^call_\d+_1$/);
+    expect(new Set(ids).size).toBe(2);
+  });
+
   it('#14 engine rejects → run_failed emitted, iterator ends', async () => {
     const engine: CompletionEngine = {
       completion: jest.fn(async () => {
