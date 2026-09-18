@@ -296,33 +296,69 @@ describe('CustomToolStore', () => {
   });
 
   describe('unreadable persisted blob', () => {
-    it('copies the blob aside once, verbatim, before the first write', async () => {
-      getItemMock.mockResolvedValue('{not valid json');
-      const store = await newStore();
-
-      store.addTool(validDraft({name: 'first'}));
-      store.addTool(validDraft({name: 'second'}));
-      await flush();
-
-      const backups = setItemMock.mock.calls.filter(([key]) =>
+    const backupsWritten = () =>
+      setItemMock.mock.calls.filter(([key]) =>
         String(key).startsWith('custom-tools-unreadable-'),
       );
-      expect(backups).toHaveLength(1);
-      expect(backups[0][1]).toBe('{not valid json');
+
+    it('copies the blob aside verbatim, with no user action', async () => {
+      getItemMock.mockResolvedValue('{not valid json');
+      await newStore();
+
+      expect(backupsWritten()).toHaveLength(1);
+      expect(backupsWritten()[0][1]).toBe('{not valid json');
+    });
+
+    it('decides on the raw bytes, without driving the constructor', async () => {
+      const store = await newStore();
+
+      await expect(store.handlePersistedBlob('{not valid json')).resolves.toBe(
+        true,
+      );
+      await expect(
+        store.handlePersistedBlob(JSON.stringify({tools: []})),
+      ).resolves.toBe(false);
+    });
+
+    it('completes the backup write before makePersistable is called', async () => {
+      getItemMock.mockResolvedValue('{not valid json');
+      let releaseBackup = () => {};
+      setItemMock.mockImplementation(
+        () =>
+          new Promise<void>(resolve => {
+            releaseBackup = resolve;
+          }),
+      );
+
+      new CustomToolStore();
+      await flush();
+
+      expect(backupsWritten()).toHaveLength(1);
+      expect(persistMock).not.toHaveBeenCalled();
+
+      releaseBackup();
+      await flush();
+
+      expect(persistMock).toHaveBeenCalledTimes(1);
+      expect(setItemMock.mock.invocationCallOrder[0]).toBeLessThan(
+        persistMock.mock.invocationCallOrder[0],
+      );
+    });
+
+    it('writes no backup when nothing is persisted', async () => {
+      getItemMock.mockResolvedValue(undefined);
+      await newStore();
+
+      expect(backupsWritten()).toHaveLength(0);
     });
 
     it('writes no backup when the persisted blob is readable', async () => {
-      getItemMock.mockResolvedValue(
-        JSON.stringify({schemaVersion: 1, tools: []}),
-      );
+      getItemMock.mockResolvedValue(JSON.stringify({tools: []}));
       const store = await newStore();
       store.addTool(validDraft());
       await flush();
 
-      const backups = setItemMock.mock.calls.filter(([key]) =>
-        String(key).startsWith('custom-tools-unreadable-'),
-      );
-      expect(backups).toHaveLength(0);
+      expect(backupsWritten()).toHaveLength(0);
     });
   });
 });
