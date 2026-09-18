@@ -13,7 +13,6 @@ import type {
 } from '../services/customTools/types';
 
 const STORAGE_KEY = 'CustomToolStore';
-const SCHEMA_VERSION = 1;
 const EXPORT_VERSION = 1;
 const MIN_SECRET_LENGTH = 4;
 
@@ -60,7 +59,6 @@ const isUnreadable = (raw: string): boolean => {
 };
 
 class CustomToolStore {
-  schemaVersion = SCHEMA_VERSION;
   tools: CustomToolDefinition[] = [];
 
   /** Serialises Keychain read-modify-write per tool id. */
@@ -86,7 +84,7 @@ class CustomToolStore {
 
     makePersistable(this, {
       name: STORAGE_KEY,
-      properties: ['schemaVersion', 'tools'],
+      properties: ['tools'],
       storage: AsyncStorage,
     });
   }

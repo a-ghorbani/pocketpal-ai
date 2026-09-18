@@ -80,10 +80,10 @@ describe('CustomToolStore', () => {
   });
 
   describe('persistence boundary', () => {
-    it('persists only the schema version and the definitions', async () => {
+    it('persists only the definitions', async () => {
       await newStore();
       const config = persistMock.mock.calls.at(-1)![1];
-      expect(config.properties).toEqual(['schemaVersion', 'tools']);
+      expect(config.properties).toEqual(['tools']);
     });
   });
 
