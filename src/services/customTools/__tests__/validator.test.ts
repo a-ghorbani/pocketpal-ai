@@ -50,6 +50,28 @@ describe('validateDefinition', () => {
     expect(high.ok && high.value.timeoutMs).toBe(120000);
   });
 
+  it('clamps maxItems and maxChars into the supported range', () => {
+    const result = validateDefinition({
+      ...weatherExample,
+      response: {
+        ...weatherExample.response,
+        maxItems: 99999,
+        maxChars: 10000000,
+      },
+    });
+    expect(result.ok && result.value.response?.maxItems).toBe(100);
+    expect(result.ok && result.value.response?.maxChars).toBe(20000);
+  });
+
+  it('keeps a tighter cap and omits one the definition never set', () => {
+    const result = validateDefinition({
+      ...weatherExample,
+      response: {...weatherExample.response, maxItems: 3},
+    });
+    expect(result.ok && result.value.response?.maxItems).toBe(3);
+    expect(result.ok && result.value.response?.maxChars).toBeUndefined();
+  });
+
   it('refuses a secret in any header other than Authorization', () => {
     const result = validateDefinition({
       ...weatherExample,

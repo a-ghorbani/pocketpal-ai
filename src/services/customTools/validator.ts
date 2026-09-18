@@ -5,7 +5,11 @@ import {BUILTIN_TALENT_NAMES} from '../talents/builtinTalentNames';
 import {
   CUSTOM_TOOL_ERROR_CODES,
   DEFAULT_TIMEOUT_MS,
+  MAX_MAX_CHARS,
+  MAX_MAX_ITEMS,
   MAX_TIMEOUT_MS,
+  MIN_MAX_CHARS,
+  MIN_MAX_ITEMS,
   MIN_TIMEOUT_MS,
 } from './types';
 import type {
@@ -156,6 +160,16 @@ const toPlainJson = (input: unknown): unknown => {
   }
 };
 
+/** Absent or non-finite omits the key, so the pipeline default applies. */
+const clampedCap = (
+  value: number | undefined,
+  min: number,
+  max: number,
+): number | undefined =>
+  typeof value === 'number' && Number.isFinite(value)
+    ? Math.min(max, Math.max(min, Math.round(value)))
+    : undefined;
+
 export interface ValidateOptions {
   /** Names already taken by other custom tools. */
   peerNames?: Iterable<string>;
@@ -257,6 +271,10 @@ export function validateDefinition(
       ? Math.min(MAX_TIMEOUT_MS, Math.max(MIN_TIMEOUT_MS, Math.round(timeout)))
       : DEFAULT_TIMEOUT_MS;
 
+  const {response} = draft;
+  const maxItems = clampedCap(response?.maxItems, MIN_MAX_ITEMS, MAX_MAX_ITEMS);
+  const maxChars = clampedCap(response?.maxChars, MIN_MAX_CHARS, MAX_MAX_CHARS);
+
   return {
     ok: true,
     value: {
@@ -264,7 +282,15 @@ export function validateDefinition(
       description: draft.description,
       parameters: draft.parameters,
       request: request as CustomToolRequest,
-      ...(draft.response ? {response: draft.response} : {}),
+      ...(response
+        ? {
+            response: {
+              ...response,
+              ...(maxItems === undefined ? {} : {maxItems}),
+              ...(maxChars === undefined ? {} : {maxChars}),
+            },
+          }
+        : {}),
       timeoutMs,
       requiresConfirmation: draft.requiresConfirmation ?? true,
     },

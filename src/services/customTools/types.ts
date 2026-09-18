@@ -81,3 +81,8 @@ export type ValidationResult<T> =
 export const DEFAULT_TIMEOUT_MS = 15000;
 export const MIN_TIMEOUT_MS = 1000;
 export const MAX_TIMEOUT_MS = 120000;
+
+export const MIN_MAX_ITEMS = 1;
+export const MAX_MAX_ITEMS = 100;
+export const MIN_MAX_CHARS = 1;
+export const MAX_MAX_CHARS = 20000;
