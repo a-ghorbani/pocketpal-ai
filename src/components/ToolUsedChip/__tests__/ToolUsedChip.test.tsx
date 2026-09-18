@@ -1,7 +1,9 @@
 import React from 'react';
+import {StyleSheet} from 'react-native';
 
 import {fireEvent, render} from '../../../../jest/test-utils';
 
+import * as untrustedContent from '../../../services/talents/untrustedContent';
 import {wrapUntrusted} from '../../../services/talents/untrustedContent';
 
 import {ToolUsedChip} from '../ToolUsedChip';
@@ -93,6 +95,48 @@ describe('ToolUsedChip', () => {
         /"city": "Paris"/,
       );
       expect(getByTestId('tool-used-chip-response')).toHaveTextContent(/sunny/);
+    });
+
+    it('gives the tappable row a 44dp minimum target', () => {
+      const {getByTestId} = render(
+        <ToolUsedChip
+          toolName="get_weather"
+          call={call}
+          outcome={{
+            callId: 'c0',
+            toolName: 'get_weather',
+            result: {type: 'text', summary: 'sunny'},
+            responseContent: 'sunny',
+          }}
+        />,
+      );
+
+      const toggle = getByTestId('tool-used-chip-toggle');
+      expect(StyleSheet.flatten(toggle.props.style).minHeight).toBe(44);
+    });
+
+    it('does no per-token stripping while the chip is collapsed', () => {
+      const spy = jest.spyOn(untrustedContent, 'stripUntrusted');
+      try {
+        const {getByTestId} = render(
+          <ToolUsedChip
+            toolName="get_weather"
+            call={call}
+            outcome={{
+              callId: 'c0',
+              toolName: 'get_weather',
+              result: {type: 'text', summary: 'sunny'},
+              responseContent: 'sunny',
+            }}
+          />,
+        );
+        expect(spy).not.toHaveBeenCalled();
+
+        fireEvent.press(getByTestId('tool-used-chip-toggle'));
+        expect(spy).toHaveBeenCalled();
+      } finally {
+        spy.mockRestore();
+      }
     });
 
     it('strips the untrusted envelope from the displayed response', () => {

@@ -1,4 +1,4 @@
-import React, {useContext, useState} from 'react';
+import React, {useContext, useMemo, useState} from 'react';
 import {TouchableOpacity, View} from 'react-native';
 
 import {Text} from 'react-native-paper';
@@ -51,7 +51,7 @@ const prettyArguments = (raw: string | undefined): string => {
  * here: the response was already redacted by the pipeline before it was
  * stored, so the chip only has to avoid putting it back together.
  */
-export const ToolUsedChip: React.FC<ToolUsedChipProps> = ({
+const ToolUsedChipBase: React.FC<ToolUsedChipProps> = ({
   toolName,
   metrics,
   call,
@@ -60,6 +60,19 @@ export const ToolUsedChip: React.FC<ToolUsedChipProps> = ({
   const theme = useTheme();
   const l10n = useContext(L10nContext);
   const [expanded, setExpanded] = useState(false);
+
+  const rawArguments = call?.function?.arguments ?? '';
+  const rawResponse = outcome?.responseContent ?? '';
+  // The chip re-renders per streaming token, and neither result is read until
+  // it is expanded, so parsing and stripping stay behind that.
+  const argumentsText = useMemo(
+    () => (expanded ? prettyArguments(rawArguments) : ''),
+    [expanded, rawArguments],
+  );
+  const responseText = useMemo(
+    () => (expanded ? stripUntrusted(rawResponse) : ''),
+    [expanded, rawResponse],
+  );
 
   if (!toolName) {
     return null;
@@ -87,11 +100,9 @@ export const ToolUsedChip: React.FC<ToolUsedChipProps> = ({
     </>
   );
 
-  const argumentsText = prettyArguments(call?.function?.arguments);
-  const responseText = outcome ? stripUntrusted(outcome.responseContent) : '';
   const strings = l10n.components.toolUsedChip;
 
-  if (!argumentsText && !responseText) {
+  if (!rawArguments && !rawResponse) {
     return (
       <View style={componentStyles.container} testID="tool-used-chip">
         {row}
@@ -102,7 +113,7 @@ export const ToolUsedChip: React.FC<ToolUsedChipProps> = ({
   return (
     <View testID="tool-used-chip">
       <TouchableOpacity
-        style={componentStyles.container}
+        style={[componentStyles.container, componentStyles.tappable]}
         onPress={() => setExpanded(previous => !previous)}
         testID="tool-used-chip-toggle"
         accessibilityRole="button"
@@ -144,3 +155,6 @@ export const ToolUsedChip: React.FC<ToolUsedChipProps> = ({
     </View>
   );
 };
+
+export const ToolUsedChip = React.memo(ToolUsedChipBase);
+ToolUsedChip.displayName = 'ToolUsedChip';

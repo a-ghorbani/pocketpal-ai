@@ -14,6 +14,11 @@ export const styles = ({theme}: {theme: Theme}) =>
       alignItems: 'center',
       paddingVertical: 0,
     },
+    // A 44dp target on the tappable row only (precedent: ui/Dropdown). The
+    // row centres its content, so the visual density is unchanged.
+    tappable: {
+      minHeight: 44,
+    },
     icon: {
       fontSize: 12,
       marginRight: 6,
