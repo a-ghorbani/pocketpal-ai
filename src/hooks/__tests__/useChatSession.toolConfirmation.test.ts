@@ -9,6 +9,7 @@ import {
 } from '../../../jest/fixtures/models';
 
 import {useChatSession} from '../useChatSession';
+import {activateKeepAwake, deactivateKeepAwake} from '../../utils/keepAwake';
 import {chatSessionStore, modelStore, palStore} from '../../store';
 import {runAgent} from '../../services/agent';
 import type {ToolConfirmationRequest} from '../../services/agent/AgentRunner.types';
@@ -168,6 +169,64 @@ describe('useChatSession tool confirmation', () => {
 
     await expect(answered!).resolves.toBe(false);
     expect(rendered.result.current.pendingToolConfirmation).toBeNull();
+  });
+
+  /** The run flags the re-take guard reads; neither is writable on the mock. */
+  const setRunFlags = (isGenerating: boolean, isStopping: boolean) => {
+    Object.assign(chatSessionStore, {isGenerating, isStopping});
+  };
+
+  it('releases the screen while pending and re-takes it while still generating', async () => {
+    const {rendered, release, sendPromise, getConfirm} = await startHeldRun();
+    setRunFlags(true, false);
+    (deactivateKeepAwake as jest.Mock).mockClear();
+    (activateKeepAwake as jest.Mock).mockClear();
+
+    await act(async () => {
+      getConfirm()(request('call-5'));
+      await Promise.resolve();
+    });
+
+    expect(deactivateKeepAwake).toHaveBeenCalledTimes(1);
+    expect(activateKeepAwake).not.toHaveBeenCalled();
+
+    await act(async () => {
+      rendered.result.current.resolveToolConfirmation('call-5', true);
+    });
+
+    expect(activateKeepAwake).toHaveBeenCalledTimes(1);
+
+    release();
+    await act(async () => {
+      await sendPromise;
+    });
+    setRunFlags(false, false);
+  });
+
+  it('does not re-take the screen when the answer lands after Stop', async () => {
+    const {rendered, release, sendPromise, getConfirm} = await startHeldRun();
+    setRunFlags(true, false);
+
+    await act(async () => {
+      getConfirm()(request('call-6'));
+      await Promise.resolve();
+    });
+
+    // Stop released the screen on purpose; the late answer must leave it alone.
+    setRunFlags(true, true);
+    (activateKeepAwake as jest.Mock).mockClear();
+
+    await act(async () => {
+      rendered.result.current.resolveToolConfirmation('call-6', true);
+    });
+
+    expect(activateKeepAwake).not.toHaveBeenCalled();
+
+    release();
+    await act(async () => {
+      await sendPromise;
+    });
+    setRunFlags(false, false);
   });
 
   it('declines when the screen unmounts while a confirmation is pending', async () => {

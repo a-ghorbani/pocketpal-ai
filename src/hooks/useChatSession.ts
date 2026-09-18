@@ -527,6 +527,18 @@ export const useChatSession = (
       }
       confirmationRef.current = null;
       setPendingToolConfirmation(null);
+      // Stop already released the screen, so a late answer must not take it
+      // back; only a run that is still generating gets it re-taken.
+      if (chatSessionStore.isGenerating && !chatSessionStore.isStopping) {
+        try {
+          activateKeepAwake();
+        } catch (error) {
+          console.error(
+            'Failed to activate keep awake after a confirmation:',
+            error,
+          );
+        }
+      }
       pending.resolve(approved);
     },
     [],
@@ -551,6 +563,16 @@ export const useChatSession = (
           argsJson: JSON.stringify(request.args ?? {}, null, 2),
           detail: request.detail,
         });
+        // The answer can take minutes; nothing is generating meanwhile, so let
+        // the screen sleep until it arrives.
+        try {
+          deactivateKeepAwake();
+        } catch (error) {
+          console.error(
+            'Failed to deactivate keep awake while a confirmation is pending:',
+            error,
+          );
+        }
       }),
     [],
   );
