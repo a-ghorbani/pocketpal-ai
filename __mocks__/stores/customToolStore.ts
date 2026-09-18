@@ -1,5 +1,6 @@
 import {makeAutoObservable} from 'mobx';
 
+import {toolStatus} from '../../src/services/customTools/toolStatus';
 import type {CustomToolDefinition} from '../../src/services/customTools/types';
 
 class MockCustomToolStore {
@@ -43,7 +44,9 @@ class MockCustomToolStore {
   }
 
   get okTools(): CustomToolDefinition[] {
-    return this.tools;
+    return this.tools.filter(
+      tool => toolStatus(tool, this.tools).kind === 'ok',
+    );
   }
 
   peerNamesExcluding(id?: string): string[] {
