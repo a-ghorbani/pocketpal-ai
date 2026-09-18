@@ -108,6 +108,16 @@ describe('HttpToolEngine', () => {
       expect(result.summary).not.toContain(SECRET);
     });
 
+    it('hands the ctx signal to fetch, so a stop reaches the socket', async () => {
+      fetchMock.mockResolvedValue(makeResponse({body: 'sunny'}));
+      const engine = new HttpToolEngine(weatherTool(), access());
+      const controller = new AbortController();
+
+      await engine.execute({city: 'Paris'}, {signal: controller.signal});
+
+      expect(fetchMock.mock.calls[0][1].signal).toBe(controller.signal);
+    });
+
     it('reports an empty body distinctly', async () => {
       fetchMock.mockResolvedValue(makeResponse({body: ''}));
       const engine = new HttpToolEngine(weatherTool(), access());

@@ -1073,6 +1073,37 @@ describe('runAgent', () => {
     expect(events.filter(e => e.type === 'step_started')).toHaveLength(2);
   });
 
+  it('#23b confirmation rejects → declined error outcome, no execute, no run_failed', async () => {
+    const execute = jest.fn(
+      async (): Promise<TalentResult> => ({type: 'text', summary: 'ok'}),
+    );
+    const tool = makeGatedTalent(
+      'gated',
+      {requiresConfirmation: true},
+      execute,
+    );
+
+    const events = await collect(
+      runAgent({
+        engine: scriptOneCall('gated'),
+        initialParams: baseParams,
+        allowedTalentNames: ['gated'],
+        talentLookup: () => tool,
+        messageId: 'msg',
+        triggerMarkers: [],
+        confirmToolCall: async () => {
+          throw new Error('confirmation sheet failed');
+        },
+      }),
+    );
+
+    expect(execute).not.toHaveBeenCalled();
+    const outcome = outcomeOf(events);
+    expect(outcome.result.type).toBe('error');
+    expect(outcome.responseContent).toMatch(/declined/i);
+    expect(events.filter(e => e.type === 'run_failed')).toHaveLength(0);
+  });
+
   it('#24 gated engine with no confirmToolCall → declined (fail closed)', async () => {
     const execute = jest.fn(
       async (): Promise<TalentResult> => ({type: 'text', summary: 'ok'}),
