@@ -11,6 +11,8 @@ import type {TokenRadius, TokenStroke, TokenTypography} from '../theme/tokens';
 import {SkillKey} from '.';
 import type {TalentResult} from '../services/talents/types';
 import type {ReasoningCapability} from './reasoningCapability';
+import type {ServerType} from './serverTypes';
+import type {Samplers} from './samplerParams';
 
 /**
  * One model-emitted tool call within an `AgentStep`. The `arguments` field
@@ -469,36 +471,68 @@ export interface ServerConfig {
   url: string; // Base URL e.g. "http://192.168.1.100:1234"
   lastConnected?: number; // Timestamp
   requestTimeoutMs?: number; // Per-server network timeout in ms; undefined = API default
-  // User-selectable server type; gates the per-server reasoning wire payload.
-  // detectServerType seeds it best-effort; user selection wins. undefined = unknown.
-  serverType?:
-    | 'llama.cpp'
-    | 'LM Studio'
-    | 'Ollama'
-    | 'OpenAI'
-    | 'vLLM'
-    | string;
+  // Selects the server's dialect; see utils/serverTypes.ts for what that
+  // decides. undefined = unknown, on rows written before the field existed.
+  serverType?: ServerType;
 }
 
 /**
- * Capabilities a llama.cpp server reports for one model via GET /props.
- * Keyed per full model id (`${serverId}/${remoteModelId}`) in ServerStore.
+ * Raw API response shape from OpenAI /v1/models. The optional fields are what
+ * a llama.cpp server adds: the first three arrive on the row itself, the last
+ * is lifted from the sibling `models[]` array a single-model server emits.
+ */
+export interface RemoteModelInfo {
+  id: string;
+  object: string;
+  owned_by: string;
+  status?: {value?: string; args?: string[]};
+  architecture?: {input_modalities?: string[]; output_modalities?: string[]};
+  meta?: {n_ctx?: number; n_ctx_train?: number; [key: string]: unknown};
+  capabilities?: string[];
+}
+
+/**
+ * What a llama.cpp server reports for one model via GET /props, keyed per full
+ * model id (`${serverId}/${remoteModelId}`) in ServerStore. One record, so one
+ * entry and one merge path carry everything a probe learned.
  * An absent field means unknown; a field is only ever set from a response that
  * describes an actually loaded model, never from a router placeholder.
  */
 export interface RemoteModelCaps {
-  // Never written or read. Every other field here is optional, so without a
-  // discriminant the weaker list-derived type would be silently assignable to
-  // this one and could be passed wherever a probed answer is expected.
+  // Never written or read at runtime. Every other field here is optional, so
+  // without a discriminant the weaker list-derived type would be silently
+  // assignable to this one and could be passed wherever a probed answer is
+  // expected.
   tier?: 'probe';
   contextLength?: number; // /props n_ctx; only ever a finite number > 0
   supportsVision?: boolean; // /props modalities.vision
+  // The server's own generation defaults. Descriptive rather than gating: a
+  // settings surface shows them alongside the user's values.
+  samplerDefaults?: SamplerDefaults;
   // The backend these describe. ServerConfig.url is mutable and a live session
   // does not follow it, so caps that do not carry their own url cannot be
   // matched against the session. Absent on an entry written before this field
   // existed: taken at face value, no migration.
   probedUrl?: string;
 }
+
+/**
+ * What a `GET /v1/models` row already says about a model, before anything is
+ * activated or probed. Weaker than a probe: the fields describe how the server
+ * was configured, not what a loaded session reports.
+ *
+ * The required `tier` makes this and `RemoteModelCaps` mutually non-assignable,
+ * so "a list answer can never be mistaken for a confirmed one" is a compile
+ * error rather than a rule to remember.
+ */
+export interface ListDerivedCaps {
+  tier: 'list';
+  supportsVision?: boolean;
+  contextLength?: number;
+}
+
+/** A server's own generation defaults, keyed by our names rather than the wire's. */
+export type SamplerDefaults = Samplers;
 
 /**
  * The backend a live remote chat session is actually talking to. Captured when
@@ -511,7 +545,7 @@ export interface RemoteSessionBinding {
   serverId: string;
   remoteModelId: string;
   url: string;
-  serverType?: string;
+  serverType: ServerType;
 }
 
 export enum ModelType {

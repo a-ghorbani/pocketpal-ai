@@ -3134,6 +3134,69 @@ describe('ModelStore', () => {
         });
       });
 
+      describe('server sampler defaults', () => {
+        const activateRemoteModel = () => {
+          runInAction(() => {
+            modelStore.models = [
+              {
+                id: 'srv-1/remote-model',
+                origin: ModelOrigin.REMOTE,
+                serverId: 'srv-1',
+              } as any,
+            ];
+            modelStore.activeModelId = 'srv-1/remote-model';
+          });
+        };
+
+        it('exposes what the active model backend reported', () => {
+          activateRemoteModel();
+          runInAction(() => {
+            serverStore.remoteCaps = {
+              'srv-1/remote-model': {
+                samplerDefaults: {top_k: 40, temperature: 0.8},
+                probedUrl: 'http://localhost:8080',
+              },
+            };
+          });
+
+          expect(modelStore.activeSamplerDefaults).toEqual({
+            top_k: 40,
+            temperature: 0.8,
+          });
+        });
+
+        it('is undefined when no model is active', () => {
+          runInAction(() => {
+            serverStore.remoteCaps = {
+              'srv-1/remote-model': {samplerDefaults: {top_k: 40}},
+            };
+          });
+
+          expect(modelStore.activeSamplerDefaults).toBeUndefined();
+        });
+
+        it('is undefined when the entry describes another backend', () => {
+          activateRemoteModel();
+          runInAction(() => {
+            modelStore.activeRemoteBinding = {
+              modelId: 'srv-1/remote-model',
+              serverId: 'srv-1',
+              remoteModelId: 'remote-model',
+              url: 'http://localhost:9090',
+              serverType: 'unknown',
+            };
+            serverStore.remoteCaps = {
+              'srv-1/remote-model': {
+                samplerDefaults: {top_k: 40},
+                probedUrl: 'http://localhost:8080',
+              },
+            };
+          });
+
+          expect(modelStore.activeSamplerDefaults).toBeUndefined();
+        });
+      });
+
       it('resolves an active remote model against the stored capabilities', () => {
         runInAction(() => {
           modelStore.models = [
@@ -4963,7 +5026,7 @@ describe('ModelStore', () => {
 
       await modelStore.setRemoteModel(remoteModel);
 
-      expect((modelStore.engine as any).timeoutMs).toBe(600000);
+      expect((modelStore.engine as any).endpoint.timeoutMs).toBe(600000);
     });
 
     it('builds the engine with undefined timeout for a server without the field', async () => {
@@ -4975,7 +5038,7 @@ describe('ModelStore', () => {
 
       await modelStore.setRemoteModel(remoteModel);
 
-      expect((modelStore.engine as any).timeoutMs).toBeUndefined();
+      expect((modelStore.engine as any).endpoint.timeoutMs).toBeUndefined();
     });
 
     it('rebuilds the engine with an updated timeout on re-selection', async () => {
@@ -4990,7 +5053,7 @@ describe('ModelStore', () => {
         ];
       });
       await modelStore.setRemoteModel(remoteModel);
-      expect((modelStore.engine as any).timeoutMs).toBe(30000);
+      expect((modelStore.engine as any).endpoint.timeoutMs).toBe(30000);
 
       // User edits the timeout, then re-selects the model.
       runInAction(() => {
@@ -4998,7 +5061,7 @@ describe('ModelStore', () => {
       });
       await modelStore.setRemoteModel(remoteModel);
 
-      expect((modelStore.engine as any).timeoutMs).toBe(600000);
+      expect((modelStore.engine as any).endpoint.timeoutMs).toBe(600000);
     });
 
     it('builds the engine carrying the saved serverType', async () => {
@@ -5015,7 +5078,7 @@ describe('ModelStore', () => {
 
       await modelStore.setRemoteModel(remoteModel);
 
-      expect((modelStore.engine as any).serverType).toBe('Ollama');
+      expect((modelStore.engine as any).endpoint.serverType).toBe('Ollama');
     });
   });
 
@@ -5181,6 +5244,7 @@ describe('ModelStore', () => {
           serverId: 'srv-1',
           remoteModelId: 'llama-7b',
           url: 'http://localhost:8080',
+          serverType: 'unknown',
         };
       });
 

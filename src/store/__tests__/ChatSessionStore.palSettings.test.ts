@@ -3,7 +3,7 @@ import {palStore} from '../PalStore';
 import {defaultCompletionSettings} from '../ChatSessionStore';
 import {CompletionParams} from '../../utils/completionTypes';
 import type {Pal} from '../PalStore';
-import {buildReasoningPayload} from '../../api/openai';
+import {bodyExtras} from '../../api/servers';
 
 describe('ChatSessionStore - Pal Settings', () => {
   beforeEach(() => {
@@ -271,11 +271,21 @@ describe('ChatSessionStore - Pal Settings', () => {
       );
 
       expect(result.reasoning?.enabled).toBe(false);
-      expect(buildReasoningPayload('llama.cpp', result.reasoning)).toEqual({
+      expect(
+        bodyExtras('llama.cpp', {
+          samplers: {},
+          reasoning: result.reasoning,
+        }),
+      ).toEqual({
         reasoning_format: 'auto',
         chat_template_kwargs: {enable_thinking: false},
       });
-      expect(buildReasoningPayload('Ollama', result.reasoning)).toEqual({
+      expect(
+        bodyExtras('Ollama', {
+          samplers: {},
+          reasoning: result.reasoning,
+        }),
+      ).toEqual({
         reasoning_effort: 'none',
       });
     });

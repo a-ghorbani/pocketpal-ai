@@ -15,6 +15,7 @@ import {
 } from '../../../../../jest/fixtures/models';
 import {themeFixtures} from '../../../../../jest/fixtures/theme';
 import {routerModelsBody} from '../../../../../jest/fixtures/remoteModelList';
+import type {ServerType} from '../../../../utils/serverTypes';
 
 // Unmock useMemoryCheck for memory warning tests
 jest.unmock('../../../../hooks/useMemoryCheck');
@@ -884,7 +885,7 @@ describe('ModelCard', () => {
         id,
       });
 
-      const listServer = (serverType?: string, rows?: any[]) => {
+      const listServer = (serverType?: ServerType, rows?: any[]) => {
         runInAction(() => {
           serverStore.servers = [
             {

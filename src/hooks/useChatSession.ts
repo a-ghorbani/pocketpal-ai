@@ -15,6 +15,7 @@ import {
   ttsStore,
   uiStore,
 } from '../store';
+import type {PersistedTurnTimings} from '../utils/completionTypes';
 import {resolveReasoningCapability} from '../utils/reasoningCapability';
 
 import {MessageType, ModelOrigin, User} from '../utils/types';
@@ -434,13 +435,14 @@ async function applyEventToStore(
               draft_tokens_accepted: finalResult.draft_tokens_accepted,
             }
           : {};
+      const timings: PersistedTurnTimings = {
+        ...(finalResult.timings ?? {}),
+        time_to_first_token_ms: ctx.timeToFirstTokenMs.value,
+        ...draftTimings,
+      };
       await chatSessionStore.updateMessage(ctx.messageId, ctx.sessionId, {
         metadata: {
-          timings: {
-            ...(finalResult.timings ?? {}),
-            time_to_first_token_ms: ctx.timeToFirstTokenMs.value,
-            ...draftTimings,
-          },
+          timings,
           copyable: true,
           multimodal: ctx.hasImages && ctx.isMultimodalEnabled,
           completionResult: snapshot,

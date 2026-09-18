@@ -4,17 +4,18 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import {makePersistable} from 'mobx-persist-store';
 import * as Keychain from 'react-native-keychain';
 
+import {fetchModels, testConnection} from '../api/openai';
+import {fetchServerProps, PROPS_TIMEOUT_MS} from '../api/llamaServer/props';
 import {
-  fetchModels,
-  fetchServerProps,
-  testConnection,
-  PROPS_TIMEOUT_MS,
+  ListDerivedCaps,
+  RemoteModelCaps,
   RemoteModelInfo,
-} from '../api/openai';
-import {RemoteModelCaps, ServerConfig} from '../utils/types';
+  ServerConfig,
+} from '../utils/types';
 import {ReasoningCapability} from '../utils/reasoningCapability';
-import {deriveListCapsMap} from '../utils/listCaps';
-import type {ListDerivedCaps} from '../utils/listCaps';
+import {toServerType} from '../utils/serverTypes';
+import {deriveListCapsMap} from '../api/servers';
+import {profileFor} from '../api/servers';
 
 const KEYCHAIN_SERVICE_PREFIX = 'pocketpal-server-';
 
@@ -22,11 +23,33 @@ const KEYCHAIN_SERVICE_PREFIX = 'pocketpal-server-';
 const FETCH_THROTTLE_MS = 60000;
 
 /**
- * The capability fields of a `RemoteModelCaps` entry — everything except the
- * provenance the entry carries. Enumerated once so the usability check and the
- * no-op write check cannot drift apart when a field is added.
+ * The fields a `RemoteModelCaps` entry answers with — everything except the
+ * provenance it carries. A probe that resolves none of them said nothing.
  */
-const CAPS_FIELDS = ['contextLength', 'supportsVision'] as const;
+const CAPS_FIELDS = [
+  'contextLength',
+  'supportsVision',
+  'samplerDefaults',
+] as const;
+
+const isUnusableCaps = (caps: RemoteModelCaps) =>
+  CAPS_FIELDS.every(f => caps[f] === undefined);
+
+const shallowEqual = (
+  a: Record<string, unknown> | undefined,
+  b: Record<string, unknown> | undefined,
+): boolean => {
+  if (a === b) {
+    return true;
+  }
+  if (!a || !b) {
+    return false;
+  }
+  const keys = Object.keys(a);
+  return (
+    keys.length === Object.keys(b).length && keys.every(k => a[k] === b[k])
+  );
+};
 
 /**
  * Shared by every path that invalidates per-model state, so a new map cannot
@@ -76,11 +99,24 @@ class ServerStore {
       ],
       storage: AsyncStorage,
     }).then(() => {
-      // After hydration, fetch models for all servers
-      this.fetchAllRemoteModels();
+      this.afterHydration();
     });
 
     this.setupAppStateListener();
+  }
+
+  /**
+   * makePersistable does not type-check what it restores, so a stored
+   * serverType can be a legacy empty string or a free string. Normalising it
+   * before the first fetch makes the declared type true for every reader.
+   */
+  async afterHydration(): Promise<void> {
+    for (const server of this.servers) {
+      if (server.serverType !== undefined) {
+        server.serverType = toServerType(server.serverType);
+      }
+    }
+    await this.fetchAllRemoteModels();
   }
 
   // Actions
@@ -90,6 +126,9 @@ class ServerStore {
       ...config,
       id,
     };
+    if (newServer.serverType !== undefined) {
+      newServer.serverType = toServerType(newServer.serverType);
+    }
     this.servers.push(newServer);
     return id;
   }
@@ -106,12 +145,19 @@ class ServerStore {
     // against a router. Drop both and let the next probe / fetch repopulate.
     // Reasoning state survives: it carries user declarations, and it is not
     // server-reported.
+    const normalised =
+      updates.serverType !== undefined
+        ? {...updates, serverType: toServerType(updates.serverType)}
+        : updates;
+    // Both sides of the type comparison are normalised: a legacy row whose key
+    // is absent already means 'unknown', so saving 'unknown' over it changes
+    // nothing and must not discard what the server reported.
     const invalidatesDiscovery =
-      (updates.url !== undefined && updates.url !== server.url) ||
-      (updates.serverType !== undefined &&
-        updates.serverType !== server.serverType);
+      (normalised.url !== undefined && normalised.url !== server.url) ||
+      (normalised.serverType !== undefined &&
+        normalised.serverType !== toServerType(server.serverType));
 
-    Object.assign(server, updates);
+    Object.assign(server, normalised);
 
     if (invalidatesDiscovery) {
       this.remoteCaps = dropServerEntries(this.remoteCaps, id);
@@ -312,12 +358,9 @@ class ServerStore {
     resolvedApiKey?: string,
   ): Promise<void> {
     const server = this.servers.find(s => s.id === serverId);
-    if (!server || server.serverType !== 'llama.cpp') {
+    if (!server || !profileFor(server.serverType).hasProps) {
       return;
     }
-
-    const isUnusable = (caps: RemoteModelCaps) =>
-      CAPS_FIELDS.every(f => caps[f] === undefined);
 
     // Snapshot: `server` is the live observable, so updateServer mutates it
     // in place while the probe is in flight.
@@ -337,11 +380,11 @@ class ServerStore {
       remoteModelId,
     );
 
-    if (isUnusable(caps) && this.servesOnlyModel(serverId, remoteModelId)) {
+    if (isUnusableCaps(caps) && this.servesOnlyModel(serverId, remoteModelId)) {
       caps = await fetchServerProps(probedUrl, apiKey, timeoutMs);
     }
 
-    if (isUnusable(caps)) {
+    if (isUnusableCaps(caps)) {
       return;
     }
 
@@ -359,21 +402,33 @@ class ServerStore {
         return;
       }
       const key = `${serverId}/${remoteModelId}`;
-      const prior = this.remoteCaps[key];
-      const sameBackend = prior?.probedUrl === probedUrl;
+      // Carried field by field rather than by spreading the hydrated entry: a
+      // field dropped from the schema would otherwise survive for the life of
+      // the entry, so its removal could never take effect.
+      const prior =
+        this.remoteCaps[key]?.probedUrl === probedUrl
+          ? this.remoteCaps[key]
+          : undefined;
       const merged: RemoteModelCaps = {
-        ...(sameBackend ? prior : undefined),
+        ...(prior && {
+          contextLength: prior.contextLength,
+          supportsVision: prior.supportsVision,
+          samplerDefaults: prior.samplerDefaults,
+        }),
         ...caps,
         probedUrl,
       };
-      if (
+      // `samplerDefaults` is compared by content: a fresh object holding the
+      // same numbers is the same answer, and rewriting it would make an
+      // unchanged probe look like news to every observer.
+      const unchanged =
         prior &&
-        prior.probedUrl === merged.probedUrl &&
-        CAPS_FIELDS.every(f => prior[f] === merged[f])
-      ) {
-        return;
+        prior.contextLength === merged.contextLength &&
+        prior.supportsVision === merged.supportsVision &&
+        shallowEqual(prior.samplerDefaults, merged.samplerDefaults);
+      if (!unchanged) {
+        this.remoteCaps[key] = merged;
       }
-      this.remoteCaps[key] = merged;
     });
   }
 
@@ -423,11 +478,12 @@ class ServerStore {
     this.appStateSubscription = AppState.addEventListener(
       'change',
       (nextAppState: AppStateStatus) => {
-        if (nextAppState === 'active') {
-          const now = Date.now();
-          if (now - this.lastFetchTime > FETCH_THROTTLE_MS) {
-            this.fetchAllRemoteModels();
-          }
+        if (nextAppState !== 'active') {
+          return;
+        }
+        const now = Date.now();
+        if (now - this.lastFetchTime > FETCH_THROTTLE_MS) {
+          this.fetchAllRemoteModels();
         }
       },
     );

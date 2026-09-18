@@ -38,6 +38,33 @@ export const EFFORT_LEVELS = [
 export type EffortLevel = (typeof EFFORT_LEVELS)[number];
 
 /**
+ * Thinking budget per effort level; `-1` is llama.cpp's uncapped sentinel.
+ * Keying it on EffortLevel makes a new level a compile error here rather than
+ * a silently uncapped budget on the wire.
+ */
+const REASONING_BUDGET_TOKENS: Record<EffortLevel, number> = {
+  minimal: 256,
+  low: 512,
+  medium: 2048,
+  high: 8192,
+  xhigh: 16384,
+  max: -1,
+};
+
+/**
+ * The budget is resolved at send time, not baked into the persisted intent, so
+ * an old chat follows today's policy. An effort string that is not a level has
+ * no budget of ours: the server's own default stands.
+ */
+export function reasoningBudgetFor(
+  effort: string | undefined,
+): number | undefined {
+  return EFFORT_LEVELS.includes(effort as EffortLevel)
+    ? REASONING_BUDGET_TOKENS[effort as EffortLevel]
+    : undefined;
+}
+
+/**
  * Standard subset pre-selected the first time a user enables graded effort on
  * a model — gives the chips an immediate selected/unselected contrast (instead
  * of an all-blank row that doesn't read as togglable) and a sensible default.

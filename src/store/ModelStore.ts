@@ -82,6 +82,7 @@ import {
   ModelOrigin,
   ModelType,
   RemoteSessionBinding,
+  SamplerDefaults,
 } from '../utils/types';
 
 import {ErrorState, createErrorState} from '../utils/errors';
@@ -94,7 +95,8 @@ import {
 } from '../utils/deviceCapabilities';
 import {detectThinkingCapability} from '../utils/thinkingCapabilityDetection';
 import {ReasoningCapability} from '../utils/reasoningCapability';
-import {capsMatchBinding} from '../utils/remoteCaps';
+import {toServerType} from '../utils/serverTypes';
+import {capsMatchBinding, resolveRemoteCaps} from '../utils/remoteCaps';
 import {resolveModelCaps} from '../utils/modelCaps';
 import type {CapabilityEnv, ModelCapabilityView} from '../utils/modelCaps';
 import {t} from '../locales';
@@ -247,6 +249,7 @@ class ModelStore {
     makeAutoObservable(this, {
       activeModel: computed,
       activeModelCaps: computed,
+      activeSamplerDefaults: computed,
       contextId: computed,
       remoteModels: computed,
       activeDownloads: computed,
@@ -2605,6 +2608,17 @@ class ModelStore {
     return this.capsFor(this.activeModel);
   }
 
+  /**
+   * The server's own generation defaults for the live session, for a settings
+   * surface to show alongside the user's values. Undefined when no probe
+   * describes the backend this session is bound to.
+   */
+  get activeSamplerDefaults(): SamplerDefaults | undefined {
+    const env = this.capabilityEnv;
+    return resolveRemoteCaps(this.activeModel, env.remoteCaps, env.binding)
+      .samplerDefaults;
+  }
+
   get lastUsedModel(): Model | undefined {
     return this.lastUsedModelId
       ? this.models.find(m => m.id === this.lastUsedModelId && m.isDownloaded)
@@ -2675,20 +2689,22 @@ class ModelStore {
       throw new Error('Server not found');
     }
 
+    const serverType = toServerType(server.serverType);
+
     runInAction(() => {
-      this.engine = new OpenAICompletionEngine(
-        server.url,
-        model.remoteModelId!,
+      this.engine = new OpenAICompletionEngine({
+        url: server.url,
+        remoteModelId: model.remoteModelId!,
         apiKey,
-        server.requestTimeoutMs,
-        server.serverType,
-      );
+        timeoutMs: server.requestTimeoutMs,
+        serverType,
+      });
       this.activeRemoteBinding = {
         modelId: model.id,
         serverId: model.serverId!,
         remoteModelId: model.remoteModelId!,
         url: server.url,
-        serverType: server.serverType,
+        serverType,
       };
       this.setActiveModel(model.id);
       // Do NOT set lastUsedModelId for remote models -- server may be offline on next launch
