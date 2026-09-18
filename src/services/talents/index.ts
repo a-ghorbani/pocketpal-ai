@@ -1,3 +1,5 @@
+import {toJS} from 'mobx';
+
 import {RenderHtmlEngine} from './RenderHtmlEngine';
 import {CalculateEngine} from './CalculateEngine';
 import {DatetimeEngine} from './DatetimeEngine';
@@ -6,7 +8,11 @@ import {ReadUrlEngine} from './ReadUrlEngine';
 import {talentRegistry} from './TalentRegistry';
 import type {SearchAccess} from './searchAccess';
 import type {ToolDefinition, SystemPromptContext} from './types';
+import {attachTalentSource} from './talentSource';
 import {searchProviderStore} from '../../store/SearchProviderStore';
+import {customToolStore} from '../../store/CustomToolStore';
+import {HttpToolEngine} from '../customTools/HttpToolEngine';
+import type {CustomToolAccess} from '../customTools/access';
 import {createSearchProvider, readWithDefaultReader} from '../search';
 
 export {TalentRegistry, talentRegistry} from './TalentRegistry';
@@ -22,9 +28,11 @@ export type {SearchAccess} from './searchAccess';
 // writes happen inside services/talents (seed at run start, WebSearchEngine
 // per search).
 export {seedReadUrlAllowlist, isReadUrlAllowed} from './readUrlAllowlist';
+export {attachTalentSource} from './talentSource';
 export type {
   TalentEngine,
   TalentResult,
+  TalentSource,
   ToolDefinition,
   SystemPromptContext,
 } from './types';
@@ -45,7 +53,18 @@ function createSearchAccess(): SearchAccess {
   };
 }
 
+/**
+ * The custom-tool counterpart of `createSearchAccess`: the engines stay
+ * store-free and read secrets only through this object, per call.
+ */
+function createCustomToolAccess(): CustomToolAccess {
+  return {
+    getSecrets: (toolId: string) => customToolStore.getSecrets(toolId),
+  };
+}
+
 let registered = false;
+let disposeCustomSource: (() => void) | null = null;
 
 /**
  * Register built-in talent engines. UI renderers register separately via
@@ -62,6 +81,16 @@ export function registerDefaultTalents(): void {
   const searchAccess = createSearchAccess();
   talentRegistry.register(new WebSearchEngine(searchAccess));
   talentRegistry.register(new ReadUrlEngine(searchAccess));
+
+  // Built-ins claim their names first, so the custom source can only ever add.
+  const customToolAccess = createCustomToolAccess();
+  disposeCustomSource = attachTalentSource({
+    id: 'custom',
+    engines: () =>
+      customToolStore.okTools.map(
+        def => new HttpToolEngine(toJS(def), customToolAccess),
+      ),
+  });
   registered = true;
 }
 
@@ -110,5 +139,7 @@ export function collectSystemPromptFragments(
  * re-register engines after a `talentRegistry.reset()` call in test teardown.
  */
 export function resetRegisteredFlag(): void {
+  disposeCustomSource?.();
+  disposeCustomSource = null;
   registered = false;
 }

@@ -88,7 +88,12 @@ export const TalentSurface: React.FC<TalentSurfaceProps> = ({step}) => {
     //    The chip carries metrics inline (same line) when present.
     rendered.push(
       <React.Fragment key={call.id}>
-        <ToolUsedChip toolName={name} metrics={call.metrics} />
+        <ToolUsedChip
+          toolName={name}
+          metrics={call.metrics}
+          call={call}
+          outcome={outcome}
+        />
       </React.Fragment>,
     );
   }

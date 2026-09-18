@@ -259,4 +259,53 @@ describe('TalentSection', () => {
       expect(getByTestId('talent-switch-datetime').props.value).toBe(false);
     });
   });
+
+  describe('Custom tools', () => {
+    const customEngine = {
+      name: 'get_time',
+      execute: async () => ({type: 'text' as const, summary: 'now'}),
+      toToolDefinition: () => ({
+        type: 'function' as const,
+        function: {
+          name: 'get_time',
+          description: 'Read the demo server clock',
+          parameters: {type: 'object', properties: {}},
+        },
+      }),
+    };
+
+    it('lists a registered custom tool using its definition description', () => {
+      talentRegistry.register(customEngine);
+
+      const {getByTestId, getByText} = render(
+        <FormWrapper>
+          <TalentSection />
+        </FormWrapper>,
+      );
+
+      expect(getByTestId('talent-item-get_time')).toBeTruthy();
+      expect(getByText('get_time')).toBeTruthy();
+      expect(getByText('Read the demo server clock')).toBeTruthy();
+    });
+
+    it('toggles a custom tool into the form talents', async () => {
+      talentRegistry.register(customEngine);
+      let getValues: (() => PalFormData) | undefined;
+
+      const {getByTestId} = render(
+        <FormWrapper
+          onFormValues={fn => {
+            getValues = fn;
+          }}>
+          <TalentSection />
+        </FormWrapper>,
+      );
+
+      fireEvent(getByTestId('talent-switch-get_time'), 'valueChange', true);
+
+      await waitFor(() => {
+        expect(getValues!().talents).toContain('get_time');
+      });
+    });
+  });
 });
