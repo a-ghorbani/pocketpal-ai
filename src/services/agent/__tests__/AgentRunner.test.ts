@@ -1139,6 +1139,34 @@ describe('runAgent', () => {
     expect(events.filter(e => e.type === 'run_finished')).toHaveLength(1);
   });
 
+  it('#23d declined outcome addresses the model and the user in separate texts', async () => {
+    const tool = makeGatedTalent(
+      'gated',
+      {requiresConfirmation: true},
+      async (): Promise<TalentResult> => ({type: 'text', summary: 'ok'}),
+    );
+
+    const events = await collect(
+      runAgent({
+        engine: scriptOneCall('gated'),
+        initialParams: baseParams,
+        allowedTalentNames: ['gated'],
+        talentLookup: () => tool,
+        messageId: 'msg',
+        triggerMarkers: [],
+        confirmToolCall: async () => false,
+      }),
+    );
+
+    const outcome = outcomeOf(events);
+    // What goes on the wire keeps steering the model.
+    expect(outcome.responseContent).toMatch(/Do not call it again/i);
+    expect(outcome.result.summary).toBe(outcome.responseContent);
+    // What the user reads never carries that instruction.
+    expect(outcome.result.errorMessage).not.toMatch(/Do not call it again/i);
+    expect(outcome.result.errorMessage).not.toBe(outcome.responseContent);
+  });
+
   it('#24 gated engine with no confirmToolCall → declined (fail closed)', async () => {
     const execute = jest.fn(
       async (): Promise<TalentResult> => ({type: 'text', summary: 'ok'}),

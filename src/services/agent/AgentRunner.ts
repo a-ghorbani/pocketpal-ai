@@ -119,25 +119,46 @@ function normalizeToolCallIds(
   }));
 }
 
-const CONFIRMATION_DECLINED_SUMMARY =
-  'The user declined this tool call. Do not call it again unless the user asks.';
+/**
+ * A gate outcome speaks to two audiences. `summary` steers the model and goes
+ * on the wire; `errorMessage` is what the user reads. Steering text on screen
+ * reads as an instruction to the user, so the two never share a string.
+ */
+interface ToolErrorTexts {
+  summary: string;
+  errorMessage: string;
+}
 
-const CALL_CANCELLED_SUMMARY =
-  'The tool call was cancelled before it finished.';
+const DECLINED_TEXTS: ToolErrorTexts = {
+  summary:
+    'The user declined this tool call. Do not call it again unless the user asks.',
+  errorMessage: 'You declined this tool call.',
+};
 
-const timedOutSummary = (timeoutMs: number): string =>
-  `The tool call timed out after ${Math.round(timeoutMs / 1000)} s.`;
+const CANCELLED_TEXTS: ToolErrorTexts = {
+  summary: 'The tool call was cancelled before it finished.',
+  errorMessage: 'The tool call was cancelled.',
+};
+
+const timedOutTexts = (timeoutMs: number): ToolErrorTexts => ({
+  summary: `The tool call timed out after ${Math.round(timeoutMs / 1000)} s.`,
+  errorMessage: 'The tool call took too long and was stopped.',
+});
 
 function toolErrorOutcome(
   callId: string,
   toolName: string,
-  summary: string,
+  texts: ToolErrorTexts,
 ): AgentToolOutcome {
   return {
     callId,
     toolName,
-    result: {type: 'error', summary, errorMessage: summary},
-    responseContent: summary,
+    result: {
+      type: 'error',
+      summary: texts.summary,
+      errorMessage: texts.errorMessage,
+    },
+    responseContent: texts.summary,
   };
 }
 
@@ -170,15 +191,15 @@ async function confirmationGate(
   args: Record<string, unknown>,
   signal: AbortSignal | undefined,
   confirmToolCall: AgentRunOptions['confirmToolCall'],
-): Promise<{approved: true} | {summary: string}> {
+): Promise<{approved: true} | {texts: ToolErrorTexts}> {
   if (handler.requiresConfirmation !== true) {
     return {approved: true};
   }
   if (signal?.aborted) {
-    return {summary: CALL_CANCELLED_SUMMARY};
+    return {texts: CANCELLED_TEXTS};
   }
   if (!confirmToolCall) {
-    return {summary: CONFIRMATION_DECLINED_SUMMARY};
+    return {texts: DECLINED_TEXTS};
   }
 
   let detail: string | null = null;
@@ -199,11 +220,9 @@ async function confirmationGate(
     onAbortResolve(signal, {cancelled: true as const}),
   ]);
   if ('cancelled' in raced) {
-    return {summary: CALL_CANCELLED_SUMMARY};
+    return {texts: CANCELLED_TEXTS};
   }
-  return raced.approved
-    ? {approved: true}
-    : {summary: CONFIRMATION_DECLINED_SUMMARY};
+  return raced.approved ? {approved: true} : {texts: DECLINED_TEXTS};
 }
 
 /**
@@ -216,7 +235,7 @@ async function executeWithDeadline(
   handler: TalentEngine,
   args: Record<string, unknown>,
   signal: AbortSignal | undefined,
-): Promise<{result: TalentResult} | {summary: string}> {
+): Promise<{result: TalentResult} | {texts: ToolErrorTexts}> {
   const declared = handler.timeoutMs;
   const deadlineMs =
     typeof declared === 'number' && Number.isFinite(declared) && declared > 0
@@ -226,7 +245,7 @@ async function executeWithDeadline(
     return {result: await handler.execute(args)};
   }
   if (signal?.aborted) {
-    return {summary: CALL_CANCELLED_SUMMARY};
+    return {texts: CANCELLED_TEXTS};
   }
 
   const controller = new AbortController();
@@ -238,13 +257,13 @@ async function executeWithDeadline(
       handler
         .execute(args, {signal: controller.signal})
         .then(result => ({result})),
-      new Promise<{summary: string}>(resolve => {
+      new Promise<{texts: ToolErrorTexts}>(resolve => {
         timer = setTimeout(() => {
           controller.abort();
-          resolve({summary: timedOutSummary(deadlineMs)});
+          resolve({texts: timedOutTexts(deadlineMs)});
         }, deadlineMs);
       }),
-      onAbortResolve(signal, {summary: CALL_CANCELLED_SUMMARY}),
+      onAbortResolve(signal, {texts: CANCELLED_TEXTS}),
     ]);
   } finally {
     clearTimeout(timer);
@@ -312,13 +331,13 @@ async function executeOne(
       signal,
       confirmToolCall,
     );
-    if ('summary' in gate) {
-      return toolErrorOutcome(callId, fnName, gate.summary);
+    if ('texts' in gate) {
+      return toolErrorOutcome(callId, fnName, gate.texts);
     }
 
     const executed = await executeWithDeadline(handler, parsedArgs, signal);
-    if ('summary' in executed) {
-      return toolErrorOutcome(callId, fnName, executed.summary);
+    if ('texts' in executed) {
+      return toolErrorOutcome(callId, fnName, executed.texts);
     }
     const toolResult = executed.result;
     return {
