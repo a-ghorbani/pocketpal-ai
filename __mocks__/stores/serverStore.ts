@@ -1,9 +1,12 @@
 import {makeAutoObservable, observable} from 'mobx';
 
-import {RemoteModelCaps, ServerConfig} from '../../src/utils/types';
+import {
+  RemoteModelCaps,
+  RemoteModelInfo,
+  ServerConfig,
+} from '../../src/utils/types';
 import {ReasoningCapability} from '../../src/utils/reasoningCapability';
-import {RemoteModelInfo} from '../../src/api/openai';
-import {deriveListCapsMap} from '../../src/utils/listCaps';
+import {deriveListCapsMap} from '../../src/api/servers';
 
 class MockServerStore {
   servers: ServerConfig[] = [];

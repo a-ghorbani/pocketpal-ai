@@ -1,3 +1,33 @@
+// Single writer for `agentUiState` is `chatSessionStore.setAgentUiState`;
+// every UI flag derives from it via `@computed`. Ban imperative
+// setters like `setIsGeneratingToolCall` so a regression that
+// reintroduces them is caught at lint time even if TypeScript
+// accepts the new method.
+const AGENT_SETTER = {
+  selector: "CallExpression[callee.property.name='setIsGeneratingToolCall']",
+  message:
+    'Imperative agent-status setters are banned. Drive agentUiState through agentStateReducer + chatSessionStore.setAgentUiState.',
+};
+
+// A server type is a capability question, and the answer lives in one place:
+// the server profile. Comparing the persisted string at a call site is how
+// two gates for the same capability come to disagree. Matches both operand orders, loose
+// `==`, and `case` labels; misses object keys and the union's own members.
+const SERVER_TYPE_LITERAL = [
+  {
+    selector:
+      'BinaryExpression[operator=/^[!=]==?$/] > Literal[value=/^(llama\\.cpp|LM Studio|Ollama|OpenAI|vLLM)$/]',
+    message:
+      'Do not compare a server type to a literal. Ask the server profile: profileFor(type).hasProps or another profile member (src/api/servers/).',
+  },
+  {
+    selector:
+      'SwitchCase > Literal.test[value=/^(llama\\.cpp|LM Studio|Ollama|OpenAI|vLLM)$/]',
+    message:
+      'Do not switch on a server-type literal. Give the behaviour to the server profile (src/api/servers/).',
+  },
+];
+
 module.exports = {
   root: true,
   extends: [
@@ -22,20 +52,7 @@ module.exports = {
   ],
   rules: {
     'prettier/prettier': 'error',
-    // Single writer for `agentUiState` is `chatSessionStore.setAgentUiState`;
-    // every UI flag derives from it via `@computed`. Ban imperative
-    // setters like `setIsGeneratingToolCall` so a regression that
-    // reintroduces them is caught at lint time even if TypeScript
-    // accepts the new method.
-    'no-restricted-syntax': [
-      'error',
-      {
-        selector:
-          "CallExpression[callee.property.name='setIsGeneratingToolCall']",
-        message:
-          'Imperative agent-status setters are banned. Drive agentUiState through agentStateReducer + chatSessionStore.setAgentUiState.',
-      },
-    ],
+    'no-restricted-syntax': ['error', AGENT_SETTER, ...SERVER_TYPE_LITERAL],
   },
   overrides: [
     {
@@ -92,6 +109,8 @@ module.exports = {
       // .tsx files don't have inline styles.
       files: ['src/components/ui/**/styles.ts'],
       rules: {
+        // An override replaces the base selector list rather than merging
+        // with it, so every list that exists has to carry the shared bans.
         'no-restricted-syntax': [
           'error',
           {
@@ -99,6 +118,7 @@ module.exports = {
             message:
               'Raw hex literal in DS styles.ts is banned — read the color through theme.colors.* (or theme.interaction.*) instead. If the value genuinely cannot come from a token, surface it as a token-layer gap, not a styles.ts string.',
           },
+          ...SERVER_TYPE_LITERAL,
         ],
       },
     },
@@ -109,14 +129,25 @@ module.exports = {
       },
     },
     {
-      // The agent runner module is the producer of AgentEvents and
-      // does not consume the store; tests for it sometimes need to
-      // reach for low-level surfaces. The ban above doesn't fire
-      // here anyway (no setIsGeneratingToolCall anywhere in the
-      // module), but scope-out for clarity.
+      // An override never inherits the base list, so this one names the shared
+      // bans explicitly rather than switching the rule off: an `off` here is
+      // how the next ban would silently skip this folder.
       files: ['src/services/agent/**'],
       rules: {
-        'no-restricted-syntax': 'off',
+        'no-restricted-syntax': ['error', AGENT_SETTER, ...SERVER_TYPE_LITERAL],
+      },
+    },
+    {
+      // Where a server-type literal is the value rather than a proxy for a
+      // capability: the detector that reads the type off a response, and tests
+      // and mocks that have to name the type they are exercising. The profile
+      // table is not here — it uses the literals as object keys, which the ban
+      // does not match anyway, so a comparison sneaking into it still fails.
+      // Last in `overrides`, so it also wins for
+      // src/services/agent/__tests__/.
+      files: ['src/api/servers/detect.ts', '**/__tests__/**', '__mocks__/**'],
+      rules: {
+        'no-restricted-syntax': ['error', AGENT_SETTER],
       },
     },
   ],

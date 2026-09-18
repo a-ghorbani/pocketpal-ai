@@ -192,7 +192,7 @@ export const ChatScreen: React.FC = observer(() => {
 
   // Persist the on/off intent (and optional effort) onto both the local
   // enable_thinking flag and the reasoning carrier so the remote wire path
-  // (openai.ts, gated per serverType) and the local hook both see it.
+  // (the profile in src/api/servers/) and the local hook both see it.
   // Preserves pal overrides. No active session: stage on the new-chat
   // override field — the resolver applies it as the last layer and session
   // creation bakes it in, without touching newChatCompletionSettings.

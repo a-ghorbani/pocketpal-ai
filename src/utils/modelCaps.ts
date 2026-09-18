@@ -1,6 +1,6 @@
 import {resolveRemoteCaps} from './remoteCaps';
 import {ModelOrigin} from './types';
-import type {ListDerivedCaps} from './listCaps';
+import type {ListDerivedCaps} from './types';
 import type {
   ContextInitParams,
   Model,
@@ -36,7 +36,10 @@ export interface CapabilityEnv {
   activeModelId: string | undefined;
 }
 
-const UNKNOWN: ModelCapabilityView = {vision: 'unknown', visionActive: false};
+const UNKNOWN: ModelCapabilityView = {
+  vision: 'unknown',
+  visionActive: false,
+};
 
 const positive = (value: number | undefined): number | undefined =>
   value !== undefined && value > 0 ? value : undefined;

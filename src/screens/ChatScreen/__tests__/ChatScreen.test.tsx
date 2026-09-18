@@ -15,7 +15,7 @@ import {chatSessionStore, modelStore, serverStore} from '../../../store';
 
 import {l10n} from '../../../locales';
 import {mockLlamaContextParams} from '../../../../jest/fixtures/models';
-import {buildReasoningPayload} from '../../../api/openai';
+import {bodyExtras} from '../../../api/servers';
 import {ModelOrigin} from '../../../utils/types';
 
 const render = (ui: React.ReactElement, options: any = {}) =>
@@ -830,10 +830,9 @@ describe('ChatScreen on/off toggle → reasoning carrier (remote)', () => {
   };
 
   // Toggling thinking OFF on a remote effort-unknown model must populate the
-  // reasoning carrier (enabled:false), so buildReasoningPayload produces the
-  // per-serverType OFF wire shape. Pre-R1 the toggle set only enable_thinking,
-  // leaving params.reasoning undefined → buildReasoningPayload returns {}.
-  it('off toggle yields reasoning.enabled false reaching buildReasoningPayload', async () => {
+  // reasoning carrier (enabled:false), so the dialect produces the per-type OFF
+  // wire shape.
+  it('off toggle yields reasoning.enabled false reaching the dialect', async () => {
     useRemoteEffortUnknownModel();
     const {getByLabelText} = render(<ChatScreen />, {withNavigation: true});
 
@@ -849,11 +848,21 @@ describe('ChatScreen on/off toggle → reasoning carrier (remote)', () => {
     expect(persisted.reasoning?.enabled).toBe(false);
 
     // The carrier drives the per-serverType OFF payload.
-    expect(buildReasoningPayload('llama.cpp', persisted.reasoning)).toEqual({
+    expect(
+      bodyExtras('llama.cpp', {
+        samplers: {},
+        reasoning: persisted.reasoning,
+      }),
+    ).toEqual({
       reasoning_format: 'auto',
       chat_template_kwargs: {enable_thinking: false},
     });
-    expect(buildReasoningPayload('Ollama', persisted.reasoning)).toEqual({
+    expect(
+      bodyExtras('Ollama', {
+        samplers: {},
+        reasoning: persisted.reasoning,
+      }),
+    ).toEqual({
       reasoning_effort: 'none',
     });
   });

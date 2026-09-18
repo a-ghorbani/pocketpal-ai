@@ -2,12 +2,10 @@ import React from 'react';
 import {render, fireEvent, waitFor} from '../../../../jest/test-utils';
 import {RemoteModelSheet} from '../RemoteModelSheet';
 import {serverStore} from '../../../store';
-import {
-  detectServerType,
-  fetchModels,
-  fetchModelsWithHeaders,
-} from '../../../api/openai';
+import {fetchModels, fetchModelsWithHeaders} from '../../../api/openai';
+import {detectServerType} from '../../../api/servers/detect';
 import {routerModelsBody} from '../../../../jest/fixtures/remoteModelList';
+import type {ServerType} from '../../../utils/serverTypes';
 
 const mockedFetchModels = fetchModels as jest.Mock;
 const mockedFetchModelsWithHeaders = fetchModelsWithHeaders as jest.Mock;
@@ -43,7 +41,10 @@ jest.mock('../../../api/openai', () => ({
   fetchModelsWithHeaders: jest
     .fn()
     .mockResolvedValue({models: [], headers: {}}),
-  detectServerType: jest.fn().mockResolvedValue(''),
+}));
+
+jest.mock('../../../api/servers/detect', () => ({
+  detectServerType: jest.fn().mockResolvedValue(undefined),
 }));
 
 // Mock lodash debounce to execute immediately
@@ -251,7 +252,8 @@ describe('RemoteModelSheet', () => {
       });
     });
 
-    // The server-type dropdown is seeded by detectServerType (mocked to ''),
+    // The server-type dropdown is seeded by detectServerType (mocked to
+    // undefined),
     // so it falls back to 'unknown'. Selecting an override persists through the
     // addServer call.
     it('persists a user-selected serverType when adding a new server', async () => {
@@ -384,7 +386,8 @@ describe('RemoteModelSheet', () => {
           id: 'srv-1',
           name: 'router',
           url: 'http://localhost:8080',
-          serverType,
+          // The matrix covers values the type forbids but storage can hold.
+          serverType: serverType as ServerType,
         },
       ];
       (serverStore.getApiKey as jest.Mock).mockResolvedValue(undefined);
@@ -431,6 +434,22 @@ describe('RemoteModelSheet', () => {
       // state is still its initial 'unknown'.
       expect(mockedDetectServerType).not.toHaveBeenCalled();
       expect(getByTestId(slot(VISION))).toBeTruthy();
+    });
+
+    it.each([
+      ['llama.cpp', true],
+      ['LM Studio', false],
+      ['Ollama', false],
+      ['OpenAI', false],
+      ['vLLM', false],
+      ['unknown', false],
+      ['', false],
+      ['LLAMA.CPP', false],
+      ['my server', false],
+    ])('shows the slot for server type %j: %s', async (type, shown) => {
+      const {queryByTestId} = await openViaChip(type);
+
+      expect(queryByTestId(slot(VISION)) !== null).toBe(shown);
     });
 
     it('renders no slot at all on a server of another type', async () => {

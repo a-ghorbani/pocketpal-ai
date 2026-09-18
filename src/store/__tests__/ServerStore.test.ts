@@ -4,6 +4,7 @@ import {runInAction} from 'mobx';
 import * as Keychain from 'react-native-keychain';
 
 import * as openaiModule from '../../api/openai';
+import * as propsModule from '../../api/llamaServer/props';
 
 // Mock dependencies before importing the store
 jest.mock('mobx-persist-store', () => ({
@@ -12,8 +13,11 @@ jest.mock('mobx-persist-store', () => ({
 
 jest.mock('../../api/openai', () => ({
   fetchModels: jest.fn(),
-  fetchServerProps: jest.fn(),
   testConnection: jest.fn(),
+}));
+
+jest.mock('../../api/llamaServer/props', () => ({
+  fetchServerProps: jest.fn(),
   PROPS_TIMEOUT_MS: 5000,
 }));
 
@@ -26,7 +30,8 @@ jest
 // Import the singleton after mocks
 import {serverStore} from '../ServerStore';
 import {routerModelsBody} from '../../../jest/fixtures/remoteModelList';
-import type {RemoteModelInfo} from '../../api/openai';
+import type {RemoteModelInfo} from '../../utils/types';
+import type {ServerType} from '../../utils/serverTypes';
 
 // Captured at import time: the constructor runs once, and `clearAllMocks`
 // between tests would otherwise erase the only call there ever is.
@@ -34,10 +39,12 @@ const persistedProperties: string[] = (
   jest.requireMock('mobx-persist-store').makePersistable as jest.Mock
 ).mock.calls[0][1].properties;
 
+/** A probe result that resolves the capability tier and nothing else. */
+
 const mockedFetchModels = openaiModule.fetchModels as jest.Mock;
-const mockedFetchServerProps = openaiModule.fetchServerProps as jest.Mock;
+const mockedFetchServerProps = propsModule.fetchServerProps as jest.Mock;
 const mockedTestConnection = openaiModule.testConnection as jest.Mock;
-const {PROPS_TIMEOUT_MS} = openaiModule;
+const {PROPS_TIMEOUT_MS} = propsModule;
 
 describe('ServerStore', () => {
   beforeEach(() => {
@@ -240,6 +247,116 @@ describe('ServerStore', () => {
     });
   });
 
+  describe('server type normalisation', () => {
+    it('maps a hydrated legacy or free-string type to unknown', async () => {
+      runInAction(() => {
+        serverStore.servers = [
+          {
+            id: 'srv-1',
+            name: 'legacy',
+            url: 'http://localhost:8080',
+            serverType: '' as ServerType,
+          },
+          {
+            id: 'srv-2',
+            name: 'free',
+            url: 'http://localhost:8081',
+            serverType: 'LLAMA.CPP' as ServerType,
+          },
+          {id: 'srv-3', name: 'absent', url: 'http://localhost:8082'},
+        ];
+      });
+      mockedFetchModels.mockResolvedValue([]);
+
+      await serverStore.afterHydration();
+
+      expect(serverStore.servers.map(s => s.serverType)).toEqual([
+        'unknown',
+        'unknown',
+        undefined,
+      ]);
+    });
+
+    it('normalises a hydrated type before the first model fetch', async () => {
+      const seen: Array<string | undefined> = [];
+      mockedFetchModels.mockImplementation(() => {
+        seen.push(serverStore.servers[0].serverType);
+        return Promise.resolve([]);
+      });
+      runInAction(() => {
+        serverStore.servers = [
+          {
+            id: 'srv-1',
+            name: 'legacy',
+            url: 'http://localhost:8080',
+            serverType: '' as ServerType,
+          },
+        ];
+      });
+
+      await serverStore.afterHydration();
+
+      expect(seen).toEqual(['unknown']);
+    });
+
+    it('leaves an absent serverType absent on an unrelated update', () => {
+      const id = serverStore.addServer({
+        name: 'typeless',
+        url: 'http://localhost:8080',
+      });
+      runInAction(() => {
+        serverStore.remoteCaps[`${id}/m`] = {contextLength: 8192};
+        serverStore.serverModels.set(id, [
+          {id: 'm', object: 'model', owned_by: 'system'},
+        ]);
+      });
+
+      serverStore.updateServer(id, {name: 'renamed'});
+
+      expect(serverStore.servers[0].serverType).toBeUndefined();
+      expect(serverStore.remoteCaps[`${id}/m`]).toBeDefined();
+      expect(serverStore.serverModels.has(id)).toBe(true);
+    });
+
+    it('keeps caps when a row with no stored type is saved back as unknown', () => {
+      const id = serverStore.addServer({
+        name: 'typeless',
+        url: 'http://localhost:8080',
+      });
+      runInAction(() => {
+        serverStore.remoteCaps[`${id}/m`] = {contextLength: 8192};
+        serverStore.serverModels.set(id, [
+          {id: 'm', object: 'model', owned_by: 'system'},
+        ]);
+      });
+
+      // The server sheet always sends serverType and reads an absent one as
+      // 'unknown', so this is what pressing Save with nothing changed sends.
+      serverStore.updateServer(id, {
+        url: 'http://localhost:8080',
+        serverType: 'unknown',
+      });
+
+      expect(serverStore.remoteCaps[`${id}/m`]).toBeDefined();
+      expect(serverStore.serverModels.has(id)).toBe(true);
+    });
+
+    it('keeps caps when a legacy type is saved back as unknown', () => {
+      const id = serverStore.addServer({
+        name: 'legacy',
+        url: 'http://localhost:8080',
+        serverType: '' as ServerType,
+      });
+      runInAction(() => {
+        serverStore.remoteCaps[`${id}/m`] = {contextLength: 8192};
+      });
+
+      serverStore.updateServer(id, {serverType: 'unknown'});
+
+      expect(serverStore.remoteCaps[`${id}/m`]).toBeDefined();
+    });
+  });
+
   describe('removeServer', () => {
     it('removes a server from the list', () => {
       const id = serverStore.addServer({
@@ -439,7 +556,7 @@ describe('ServerStore', () => {
   });
 
   describe('listCaps', () => {
-    const addRouter = (serverType = 'llama.cpp') => {
+    const addRouter = (serverType: ServerType = 'llama.cpp') => {
       const id = serverStore.addServer({
         name: 'router',
         url: 'http://localhost:8080',
@@ -1004,6 +1121,26 @@ describe('ServerStore', () => {
         ...overrides,
       });
 
+    it.each([
+      ['llama.cpp', 1],
+      ['LM Studio', 0],
+      ['Ollama', 0],
+      ['OpenAI', 0],
+      ['vLLM', 0],
+      ['unknown', 0],
+      ['', 0],
+      [undefined, 0],
+      ['LLAMA.CPP', 0],
+    ])('probes /props for server type %j: %d call(s)', async (type, calls) => {
+      const id = addLlamaServer({serverType: type});
+      jest.clearAllMocks();
+      mockedFetchServerProps.mockResolvedValue({contextLength: 4096});
+
+      await serverStore.fetchRemoteModelCaps(id, 'm');
+
+      expect(mockedFetchServerProps).toHaveBeenCalledTimes(calls);
+    });
+
     it('writes the scoped probe result under the full model id', async () => {
       const id = addLlamaServer({requestTimeoutMs: 20000});
       jest.clearAllMocks();
@@ -1331,6 +1468,97 @@ describe('ServerStore', () => {
 
       expect(serverStore.remoteCaps[`${id}/m1`]).toBeUndefined();
       expect(serverStore.remoteCaps['other-server/m2']).toBeDefined();
+    });
+
+    it('writes one record from one response, under one url', async () => {
+      const id = addLlamaServer();
+      jest.clearAllMocks();
+      mockedFetchServerProps.mockResolvedValueOnce({
+        contextLength: 8192,
+        supportsVision: true,
+        samplerDefaults: {top_k: 40},
+      });
+
+      await serverStore.fetchRemoteModelCaps(id, 'm');
+
+      expect(serverStore.remoteCaps[`${id}/m`]).toEqual({
+        contextLength: 8192,
+        supportsVision: true,
+        samplerDefaults: {top_k: 40},
+        probedUrl: 'http://localhost:8080',
+      });
+    });
+
+    it('keeps a known capability when a placeholder body follows', async () => {
+      const id = addLlamaServer();
+      jest.clearAllMocks();
+      mockedFetchServerProps
+        .mockResolvedValueOnce({contextLength: 8192, supportsVision: true})
+        .mockResolvedValueOnce({});
+
+      await serverStore.fetchRemoteModelCaps(id, 'm');
+      await serverStore.fetchRemoteModelCaps(id, 'm');
+
+      expect(serverStore.remoteCaps[`${id}/m`]?.supportsVision).toBe(true);
+    });
+
+    it('writes nothing when a repeat probe reports the same answer', async () => {
+      const id = addLlamaServer();
+      jest.clearAllMocks();
+      const answer = () => ({
+        contextLength: 8192,
+        supportsVision: true,
+        samplerDefaults: {top_k: 40},
+      });
+      mockedFetchServerProps
+        .mockResolvedValueOnce(answer())
+        .mockResolvedValueOnce(answer());
+
+      await serverStore.fetchRemoteModelCaps(id, 'm');
+      const caps = serverStore.remoteCaps[`${id}/m`];
+
+      await serverStore.fetchRemoteModelCaps(id, 'm');
+
+      // Same object, not merely an equal one: a rewrite would wake every
+      // observer for an answer that said nothing new.
+      expect(serverStore.remoteCaps[`${id}/m`]).toBe(caps);
+    });
+
+    it('issues no bare retry once the scoped answer resolved a field', async () => {
+      const id = addLlamaServer();
+      runInAction(() => {
+        serverStore.serverModels.set(id, [
+          {id: 'm', object: 'model', owned_by: 'system'},
+        ]);
+      });
+      jest.clearAllMocks();
+      mockedFetchServerProps.mockResolvedValueOnce({
+        samplerDefaults: {top_k: 40},
+      });
+
+      await serverStore.fetchRemoteModelCaps(id, 'm');
+
+      expect(mockedFetchServerProps).toHaveBeenCalledTimes(1);
+      expect(serverStore.remoteCaps[`${id}/m`]?.samplerDefaults).toEqual({
+        top_k: 40,
+      });
+    });
+
+    it('reads a store hydrated without sampler defaults as unknown, then fills them', async () => {
+      const id = addLlamaServer();
+
+      expect(serverStore.remoteCaps[`${id}/m`]).toBeUndefined();
+
+      jest.clearAllMocks();
+      mockedFetchServerProps.mockResolvedValueOnce({
+        samplerDefaults: {top_k: 40},
+      });
+
+      await serverStore.fetchRemoteModelCaps(id, 'm');
+
+      expect(serverStore.remoteCaps[`${id}/m`]?.samplerDefaults).toEqual({
+        top_k: 40,
+      });
     });
   });
 });
