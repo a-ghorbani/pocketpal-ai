@@ -301,6 +301,28 @@ describe('CustomToolStore', () => {
       await expect(store.getSecretNames(id)).resolves.toEqual(['API_KEY']);
     });
 
+    it('prunes a secret the saved definition no longer references', async () => {
+      const store = await newStore();
+      store.addTool(secretDraft());
+      const id = idOf(store);
+      await store.setSecrets(id, {API_KEY: 'k-123456'});
+      await expect(store.getSecretNames(id)).resolves.toEqual(['API_KEY']);
+
+      store.updateTool(id, {
+        ...secretDraft(),
+        request: {
+          method: 'GET',
+          url: 'https://api.example.com/weather',
+          query: {city: '{{city}}'},
+        },
+      });
+      await flush();
+
+      await expect(store.getSecretNames(id)).resolves.toEqual([]);
+      await expect(store.getSecrets(id)).resolves.toEqual({});
+      expect(vault[keychainService(id)]).toBeUndefined();
+    });
+
     it('ignores an unparsable Keychain payload rather than throwing', async () => {
       const store = await newStore();
       store.addTool(validDraft());

@@ -161,23 +161,26 @@ class CustomToolStore {
         existing.id === id ? tool : existing,
       );
     });
+    this.pruneSecrets(id, tool).catch(() => undefined);
     return {ok: true, value: tool};
   }
 
   /**
    * The only path that deletes a definition. The Keychain entry goes on the
-   * same per-id chain so it cannot interleave with a `setSecrets` save.
+   * same per-id chain so it cannot interleave with a `setSecrets` save, and it
+   * is reset first so an interrupted delete leaves a definition without
+   * secrets rather than secrets without a definition.
    */
   async removeTool(id: string): Promise<void> {
     await this.runOnChain(id, async () => {
-      runInAction(() => {
-        this.tools = this.tools.filter(tool => tool.id !== id);
-      });
       try {
         await Keychain.resetGenericPassword({service: keychainService(id)});
       } catch (error) {
         console.error('Failed to remove custom tool secrets:', error);
       }
+      runInAction(() => {
+        this.tools = this.tools.filter(tool => tool.id !== id);
+      });
     });
   }
 
@@ -257,6 +260,32 @@ class CustomToolStore {
   /** Read per call by the engine's access object; never mirrored into MobX. */
   getSecrets(id: string): Promise<Record<string, string>> {
     return this.runOnChain(id, () => this.readSecrets(id));
+  }
+
+  /** Drops stored names the saved definition no longer references. */
+  private pruneSecrets(id: string, next: CustomToolDefinition): Promise<void> {
+    const referenced = new Set(secretNames(next));
+    return this.runOnChain(id, async () => {
+      try {
+        const stored = await this.readSecrets(id);
+        const stale = Object.keys(stored).filter(name => !referenced.has(name));
+        if (stale.length === 0) {
+          return;
+        }
+        for (const name of stale) {
+          delete stored[name];
+        }
+        if (Object.keys(stored).length === 0) {
+          await Keychain.resetGenericPassword({service: keychainService(id)});
+        } else {
+          await Keychain.setGenericPassword(id, JSON.stringify(stored), {
+            service: keychainService(id),
+          });
+        }
+      } catch (error) {
+        console.error('Failed to prune custom tool secrets:', error);
+      }
+    });
   }
 
   /** Which referenced names are set, for the editor. Never values. */
