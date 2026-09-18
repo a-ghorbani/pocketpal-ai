@@ -17,3 +17,5 @@ export {
   SyncStatus,
   LocalPal,
 };
+
+export {default as ChatFolder} from './ChatFolder';

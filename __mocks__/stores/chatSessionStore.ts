@@ -32,6 +32,18 @@ export const mockDefaultCompletionSettings = {
 
 export const mockChatSessionStore = {
   sessions: sessionFixtures,
+  folders: [] as {id: string; name: string}[],
+  folderFilter: null as string | null,
+  sessionSearch: '',
+  newSessionFolderId: null as string | null,
+  visibleSessions: sessionFixtures,
+  setFolderFilter: jest.fn(),
+  setSessionSearch: jest.fn(),
+  loadFolders: jest.fn().mockResolvedValue(undefined),
+  createFolder: jest.fn(),
+  renameFolder: jest.fn(),
+  deleteFolder: jest.fn(),
+  moveSessionsToFolder: jest.fn(),
   //currentSessionMessages: [],
   activeSessionId: 'session-1',
   newChatCompletionSettings: mockDefaultCompletionSettings,

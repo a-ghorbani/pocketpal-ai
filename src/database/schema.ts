@@ -1,8 +1,16 @@
 import {appSchema, tableSchema} from '@nozbe/watermelondb';
 
 export default appSchema({
-  version: 8,
+  version: 9,
   tables: [
+    tableSchema({
+      name: 'chat_folders',
+      columns: [
+        {name: 'name', type: 'string'},
+        {name: 'created_at', type: 'number'},
+        {name: 'updated_at', type: 'number'},
+      ],
+    }),
     tableSchema({
       name: 'chat_sessions',
       columns: [
@@ -11,6 +19,7 @@ export default appSchema({
         {name: 'active_pal_id', type: 'string', isOptional: true},
         {name: 'settings_source', type: 'string', isOptional: true},
         {name: 'pinned', type: 'boolean'},
+        {name: 'folder_id', type: 'string', isOptional: true, isIndexed: true},
         {name: 'created_at', type: 'number'},
         {name: 'updated_at', type: 'number'},
       ],
