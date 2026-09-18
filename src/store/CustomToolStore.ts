@@ -49,65 +49,59 @@ const candidateName = (candidate: unknown): string => {
   return typeof name === 'string' ? name : '';
 };
 
+const isUnreadable = (raw: string): boolean => {
+  try {
+    const parsed: unknown = JSON.parse(raw);
+    const tools = (parsed as {tools?: unknown})?.tools;
+    return !parsed || typeof parsed !== 'object' || !Array.isArray(tools);
+  } catch {
+    return true;
+  }
+};
+
 class CustomToolStore {
   schemaVersion = SCHEMA_VERSION;
   tools: CustomToolDefinition[] = [];
 
-  /**
-   * A persisted blob we could not read as `{schemaVersion, tools[]}`. Kept
-   * verbatim so the first write that would overwrite it copies it aside first;
-   * nothing in the app deletes that copy.
-   */
-  private unreadableBlob: string | null = null;
-  private backupWritten = false;
   /** Serialises Keychain read-modify-write per tool id. */
   private chains = new Map<string, Promise<unknown>>();
 
   constructor() {
     makeAutoObservable(this);
+    this.initPersistence();
+  }
+
+  /**
+   * The backup is awaited before `makePersistable`, because that setup is the
+   * write which would overwrite the blob it preserves.
+   */
+  private async initPersistence(): Promise<void> {
+    let raw: string | null = null;
+    try {
+      raw = await AsyncStorage.getItem(STORAGE_KEY);
+    } catch {
+      raw = null;
+    }
+    await this.handlePersistedBlob(raw);
 
     makePersistable(this, {
       name: STORAGE_KEY,
       properties: ['schemaVersion', 'tools'],
       storage: AsyncStorage,
     });
-
-    this.inspectPersistedBlob();
   }
 
-  private async inspectPersistedBlob(): Promise<void> {
-    let raw: string | null = null;
-    try {
-      raw = await AsyncStorage.getItem(STORAGE_KEY);
-    } catch {
-      return;
-    }
-    if (raw === null) {
-      return;
+  /** Copies an unreadable blob aside verbatim; reports whether it wrote one. */
+  async handlePersistedBlob(raw: string | null): Promise<boolean> {
+    if (raw == null || !isUnreadable(raw)) {
+      return false;
     }
     try {
-      const parsed: unknown = JSON.parse(raw);
-      const tools = (parsed as {tools?: unknown})?.tools;
-      if (!parsed || typeof parsed !== 'object' || !Array.isArray(tools)) {
-        this.unreadableBlob = raw;
-      }
-    } catch {
-      this.unreadableBlob = raw;
-    }
-  }
-
-  private async backupUnreadableBlobOnce(): Promise<void> {
-    if (this.unreadableBlob === null || this.backupWritten) {
-      return;
-    }
-    this.backupWritten = true;
-    try {
-      await AsyncStorage.setItem(
-        `custom-tools-unreadable-${Date.now()}`,
-        this.unreadableBlob,
-      );
+      await AsyncStorage.setItem(`custom-tools-unreadable-${Date.now()}`, raw);
+      return true;
     } catch (error) {
       console.error('Failed to back up unreadable custom tools blob:', error);
+      return false;
     }
   }
 
@@ -144,7 +138,6 @@ class CustomToolStore {
       return result;
     }
     const tool: CustomToolDefinition = {...result.value, id: uuidv4()};
-    this.backupUnreadableBlobOnce().catch(() => undefined);
     runInAction(() => {
       this.tools = [...this.tools, tool];
     });
@@ -165,7 +158,6 @@ class CustomToolStore {
       return {ok: false, issues: [{code: 'shape_invalid'}]};
     }
     const tool: CustomToolDefinition = {...result.value, id};
-    this.backupUnreadableBlobOnce().catch(() => undefined);
     runInAction(() => {
       this.tools = this.tools.map(existing =>
         existing.id === id ? tool : existing,
@@ -180,7 +172,6 @@ class CustomToolStore {
    */
   async removeTool(id: string): Promise<void> {
     await this.runOnChain(id, async () => {
-      await this.backupUnreadableBlobOnce();
       runInAction(() => {
         this.tools = this.tools.filter(tool => tool.id !== id);
       });
@@ -219,7 +210,6 @@ class CustomToolStore {
     }
 
     if (report.imported.length > 0) {
-      this.backupUnreadableBlobOnce().catch(() => undefined);
       runInAction(() => {
         this.tools = [...this.tools, ...report.imported];
       });
@@ -296,7 +286,6 @@ class CustomToolStore {
 
     return this.runOnChain(id, async () => {
       try {
-        await this.backupUnreadableBlobOnce();
         const next = await this.readSecrets(id);
         for (const [name, value] of Object.entries(patch)) {
           if (value === null) {
