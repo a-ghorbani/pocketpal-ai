@@ -403,6 +403,7 @@ export class TTSStore {
       } catch (err) {
         console.warn('[TTSStore] streaming cancel failed:', err);
       }
+
       return;
     }
     if (voice) {
@@ -412,6 +413,26 @@ export class TTSStore {
         console.warn('[TTSStore] stop failed:', err);
       }
     }
+  }
+
+  /**
+   * Establish confirmed silence before opening the microphone. Unlike the
+   * ordinary UI stop path, failures propagate so dictation never starts while
+   * PocketPal may still be speaking.
+   */
+  async stopForDictation(): Promise<void> {
+    const state = this.playbackState;
+    const voice = this.currentVoice;
+    if (state.mode === 'streaming') {
+      await state.handle.cancel();
+    } else if (voice) {
+      await getEngine(voice.engine).stop();
+    }
+    runInAction(() => {
+      this.playbackState = {mode: 'idle'};
+    });
+    this.streamStripper = null;
+    this.streamPlaceholderEmitted = false;
   }
 
   /**

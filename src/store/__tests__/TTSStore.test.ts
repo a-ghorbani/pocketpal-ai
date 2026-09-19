@@ -483,6 +483,16 @@ describe('TTSStore', () => {
       expect(store.playbackState.mode).toBe('idle');
       expect(mockSystemStop).toHaveBeenCalled();
     });
+
+    it('propagates stop failures when preparing for dictation', async () => {
+      const store = await makeStore();
+      store.setCurrentVoice(SYSTEM_VOICE);
+      mockSystemStop.mockRejectedValueOnce(new Error('audio still active'));
+
+      await expect(store.stopForDictation()).rejects.toThrow(
+        'audio still active',
+      );
+    });
   });
 
   describe('streaming callbacks', () => {

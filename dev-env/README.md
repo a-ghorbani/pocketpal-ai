@@ -362,6 +362,35 @@ exposes the emulator's gRPC/WebRTC service endpoint; it is not a standalone
 browser UI. A browser viewer requires Google's separate WebRTC gateway and
 frontend.
 
+## Test Android on-device dictation
+
+PocketPal's microphone control is intentionally separate from keyboard
+dictation. It uses Android's explicit on-device `SpeechRecognizer` API and
+does not fall back to the default, potentially cloud-backed recognizer.
+
+| Environment | Expected result |
+| --- | --- |
+| Existing API 30 Docker emulator | The mic explains that Android 12+ is required; typing and sending continue to work. |
+| API 31–32 phone with an on-device provider | Dictation can run, but Android cannot preflight language-model support. |
+| API 33+ phone with an on-device provider | PocketPal can distinguish installed, downloadable, pending, and unsupported language models. |
+| API 31+ device without an on-device provider | The mic explains that on-device recognition is unavailable. |
+
+For a real offline acceptance check:
+
+1. Install a debug or E2E APK on an API 31+ physical Android phone.
+2. If prompted, explicitly download the current language's speech model.
+3. Disable Wi-Fi and cellular data.
+4. Open a normal text chat, tap the microphone, speak a predetermined phrase,
+   and finish the recording.
+5. Verify the phrase appears once as an editable draft and is not sent.
+6. Repeat after cancelling, changing chats, backgrounding, and locking the
+   phone. The draft must remain unchanged and the system microphone indicator
+   must clear.
+
+The API 30 container cannot prove successful recognition. It is useful only
+for the unsupported-version path. Emulator images can also omit the same
+on-device recognition provider or language models available on real phones.
+
 ## Full GitHub artifact acceptance
 
 Use `verify_android_artifact.py` after changing native dependencies, feature

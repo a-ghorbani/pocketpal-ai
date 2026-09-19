@@ -1166,6 +1166,12 @@ export const ChatView = observer(
                   sendButtonVisibilityMode,
                   showImageUpload,
                   isVisionEnabled,
+                  isDictationEligible: isFocused,
+                  dictationContextKey: [
+                    chatSessionStore.activeSessionId ?? '__new_chat__',
+                    activePal?.id ?? '',
+                    chatSessionStore.editingMessageId ?? '',
+                  ].join(':'),
                   defaultImages: inputImages,
                   onDefaultImagesChange: setInputImages,
                   textInputProps: {

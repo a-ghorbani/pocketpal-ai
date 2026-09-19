@@ -111,6 +111,15 @@ export const createStyles = ({
       flexDirection: 'row',
       alignItems: 'center',
     },
+    dictationControls: {
+      flexDirection: 'row',
+      alignItems: 'center',
+    },
+    dictationStatus: {
+      maxWidth: 120,
+      fontSize: 11,
+      color: theme.colors.onSurfaceVariant,
+    },
     editBar: {
       position: 'absolute',
       top: 0,

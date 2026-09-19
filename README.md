@@ -56,6 +56,7 @@ Most AI apps are a thin window onto someone else's server — every message you 
 
 - **🧠 On-device chat** — run GGUF language models (Gemma, Qwen, Phi, Llama, and more) fully offline.
 - **🗣️ Text-to-speech** — give your assistant a voice with on-device neural TTS (Kokoro and other engines), no cloud calls.
+- **🎙️ On-device dictation on Android** — dictate an editable prompt using Android's local speech recognizer, with no cloud-recognition fallback.
 - **🎭 Pals** — create personalized assistants with their own model, system prompt, and personality (Assistant and Roleplay types).
 - **🛍️ [PalsHub](https://palshub.ai/)** — discover and install community Pals, including premium ones via in-app checkout.
 - **🛠️ Talents & tools** — let capable Pals call built-in tools (calculator, date/time, rich HTML rendering) inside a tool-use loop.
@@ -116,9 +117,12 @@ PocketPal is a four-layer stack, from the silicon up to the chat UI. Each layer 
 
 1. Make sure a model is loaded.
 2. Open the **Chat** page and start talking.
-3. The screen stays awake during inference and deactivates when idle.
-4. **Copy** a full response with the copy icon, or long-press a paragraph to copy just that.
-5. **Edit** any of your messages with a long-press — the AI regenerates from your change. Hit **retry** for a fresh answer, optionally with a different model.
+3. On Android 12 or newer, tap the microphone to dictate one prompt locally. Review or edit the transcript, then tap **Send**. Availability depends on the phone's installed on-device speech service and language model.
+4. The screen stays awake during inference and deactivates when idle.
+5. **Copy** a full response with the copy icon, or long-press a paragraph to copy just that.
+6. **Edit** any of your messages with a long-press — the AI regenerates from your change. Hit **retry** for a fresh answer, optionally with a different model.
+
+Dictation is foreground-only and never sends automatically. Downloading a missing speech-language model may require a network connection, but recognition then uses Android's explicitly on-device service. Sending the resulting prompt can still use the network if you selected a remote language model; system TTS voices can also have provider-specific network behavior.
 
 <img src="assets/images and logos/Chat.png" alt="Chat" width="83%">
 </details>

@@ -8,6 +8,8 @@ import {
   Alert,
   ScrollView,
   Image,
+  Linking,
+  Platform,
 } from 'react-native';
 import {launchCamera, launchImageLibrary} from 'react-native-image-picker';
 import {useCameraPermission} from 'react-native-vision-camera';
@@ -26,10 +28,17 @@ import {
 } from '../../assets/icons';
 
 import {useTheme} from '../../hooks';
+import {useSpeechRecognition} from '../../hooks/useSpeechRecognition';
 
 import {createStyles} from './styles';
 
-import {chatSessionStore, modelStore, palStore, uiStore} from '../../store';
+import {
+  chatSessionStore,
+  modelStore,
+  palStore,
+  ttsStore,
+  uiStore,
+} from '../../store';
 
 import {MessageType} from '../../utils/types';
 import {L10nContext, UserContext} from '../../utils';
@@ -67,6 +76,10 @@ export interface ChatInputTopLevelProps {
   /** Whether to show the image upload button */
   showImageUpload?: boolean;
   isVisionEnabled?: boolean;
+  /** Whether this mounted input is the active foreground chat. */
+  isDictationEligible?: boolean;
+  /** Identity used to discard speech results after chat/edit target changes. */
+  dictationContextKey?: string;
   /** Whether to show the thinking toggle button */
   showThinkingToggle?: boolean;
   /** Whether thinking mode is currently enabled */
@@ -159,6 +172,8 @@ export const ChatInput = observer(
     onPromptTextChange,
     showImageUpload = false,
     isVisionEnabled = false,
+    isDictationEligible = true,
+    dictationContextKey = 'chat',
     defaultImages,
     onDefaultImagesChange,
     showThinkingToggle = false,
@@ -211,6 +226,94 @@ export const ChatInput = observer(
       isVideoCapable && promptText !== undefined
         ? promptText
         : (textInputProps?.value ?? text);
+    const onInputChangeText = textInputProps?.onChangeText;
+
+    const handleChangeText = React.useCallback(
+      (newText: string) => {
+        if (isVideoCapable && onPromptTextChange) {
+          onPromptTextChange(newText);
+        } else {
+          setText(newText);
+          onInputChangeText?.(newText);
+        }
+      },
+      [isVideoCapable, onInputChangeText, onPromptTextChange],
+    );
+
+    const handleDictationFinal = React.useCallback(
+      (newText: string) => handleChangeText(newText),
+      [handleChangeText],
+    );
+    const dictation = useSpeechRecognition({
+      draft: value,
+      contextKey: dictationContextKey,
+      enabled:
+        isDictationEligible &&
+        !isStreaming &&
+        !isStopVisible &&
+        !isCameraActive &&
+        !isVideoCapable,
+      playbackActive: ttsStore.playbackState.mode !== 'idle',
+      onFinalText: handleDictationFinal,
+    });
+    const dictationActive = dictation.phase !== 'idle';
+    const {clearError: clearDictationError, requestModelDownload} = dictation;
+    const speechInputL10n = l10n.components.chatInput.speechInput;
+
+    React.useEffect(() => {
+      if (!dictation.errorCode) {
+        return;
+      }
+      const speech = speechInputL10n;
+      const messages: Record<string, string> = {
+        UNSUPPORTED_ANDROID: speech.unsupportedAndroid,
+        ON_DEVICE_UNAVAILABLE: speech.unavailable,
+        LANGUAGE_UNSUPPORTED: speech.languageUnsupported,
+        LANGUAGE_UNAVAILABLE: speech.languageUnavailable,
+        LANGUAGE_PENDING: speech.languagePending,
+        PERMISSION_DENIED: speech.permissionDenied,
+        PERMISSION_BLOCKED: speech.permissionBlocked,
+        NO_MATCH: speech.noMatch,
+        NO_SPEECH: speech.noSpeech,
+        TIMEOUT: speech.timeout,
+        RESULT_TIMEOUT: speech.timeout,
+        AUDIO_ERROR: speech.audioError,
+        RECOGNIZER_BUSY: speech.busy,
+        UNEXPECTED_NETWORK: speech.offlineFailure,
+        NATIVE_MODULE_ERROR: speech.unavailable,
+      };
+      const buttons: Array<{text: string; onPress?: () => void}> = [];
+      if (
+        dictation.errorCode === 'LANGUAGE_DOWNLOAD_REQUIRED' ||
+        dictation.errorCode === 'LANGUAGE_UNAVAILABLE'
+      ) {
+        buttons.push({
+          text: speech.download,
+          onPress: requestModelDownload,
+        });
+      }
+      if (dictation.errorCode === 'PERMISSION_BLOCKED') {
+        buttons.push({
+          text: speech.openSettings,
+          onPress: Linking.openSettings,
+        });
+      }
+      buttons.push({text: l10n.common.ok, onPress: clearDictationError});
+      Alert.alert(
+        speech.errorTitle,
+        dictation.errorCode === 'LANGUAGE_DOWNLOAD_REQUIRED'
+          ? speech.languageDownloadRequired
+          : (messages[dictation.errorCode] ?? speech.failed),
+        buttons,
+        {onDismiss: clearDictationError},
+      );
+    }, [
+      clearDictationError,
+      dictation.errorCode,
+      l10n.common.ok,
+      requestModelDownload,
+      speechInputL10n,
+    ]);
 
     React.useEffect(() => {
       if (isEditMode) {
@@ -239,15 +342,6 @@ export const ChatInput = observer(
         friction: 8,
       }).start();
     }, [isPickerVisible, iconRotation]);
-
-    const handleChangeText = (newText: string) => {
-      if (isVideoCapable && onPromptTextChange) {
-        onPromptTextChange(newText);
-      } else {
-        setText(newText);
-        textInputProps?.onChangeText?.(newText);
-      }
-    };
 
     const handleSend = () => {
       const trimmedValue = value.trim();
@@ -547,7 +641,7 @@ export const ChatInput = observer(
               editable={
                 isVideoCapable
                   ? !isStreaming && !isCameraActive
-                  : textInputProps?.editable !== false
+                  : textInputProps?.editable !== false && !dictationActive
               }
               testID="chat-input"
               accessibilityLabel="Message input"
@@ -701,6 +795,60 @@ export const ChatInput = observer(
 
             {/* Right Controls */}
             <View style={styles.rightControls}>
+              {Platform.OS === 'android' && !isVideoCapable && (
+                <View style={styles.dictationControls}>
+                  {dictationActive && (
+                    <IconButton
+                      icon="close"
+                      size={18}
+                      onPress={dictation.cancel}
+                      accessibilityLabel={
+                        l10n.components.chatInput.speechInput.cancel
+                      }
+                      testID="dictation-cancel"
+                    />
+                  )}
+                  <IconButton
+                    icon={
+                      dictation.phase === 'finishing'
+                        ? 'progress-clock'
+                        : dictationActive
+                          ? 'stop-circle'
+                          : 'microphone'
+                    }
+                    size={20}
+                    disabled={
+                      !isDictationEligible ||
+                      isStreaming ||
+                      !!isStopVisible ||
+                      isCameraActive ||
+                      dictation.phase === 'preparing' ||
+                      dictation.phase === 'finishing'
+                    }
+                    onPress={
+                      dictationActive ? dictation.finish : dictation.start
+                    }
+                    accessibilityLabel={
+                      dictationActive
+                        ? l10n.components.chatInput.speechInput.finish
+                        : l10n.components.chatInput.speechInput.start
+                    }
+                    accessibilityState={{busy: dictationActive}}
+                    testID="dictation-button"
+                  />
+                  {dictationActive && (
+                    <Text
+                      numberOfLines={1}
+                      style={styles.dictationStatus}
+                      testID="dictation-status">
+                      {dictation.partialText ||
+                        (dictation.phase === 'finishing'
+                          ? l10n.components.chatInput.speechInput.finishing
+                          : l10n.components.chatInput.speechInput.listening)}
+                    </Text>
+                  )}
+                </View>
+              )}
               {/* Helper text for model not loaded */}
               {showModelWarning && !hasActiveModel && (
                 <View style={styles.helperTextContainer}>
