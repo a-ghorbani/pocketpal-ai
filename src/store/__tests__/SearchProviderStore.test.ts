@@ -56,6 +56,7 @@ describe('SearchProviderStore', () => {
       expect(config.properties).toEqual([
         'activeProviderId',
         'resultCount',
+        'fullSearchResults',
         'hasConsentedToSearch',
       ]);
       expect(config.properties).not.toContain('keys');
@@ -129,7 +130,9 @@ describe('SearchProviderStore', () => {
       store.setResultCount(0);
       expect(store.resultCount).toBe(1);
       store.setResultCount(99);
-      expect(store.resultCount).toBe(8);
+      expect(store.resultCount).toBe(20);
+      store.setResultCount(20);
+      expect(store.resultCount).toBe(20);
       store.setResultCount(4);
       expect(store.resultCount).toBe(4);
     });
@@ -138,6 +141,13 @@ describe('SearchProviderStore', () => {
       const store = await newStore();
       store.setConsent(true);
       expect(store.hasConsentedToSearch).toBe(true);
+    });
+
+    it('defaults to full results and allows opting out', async () => {
+      const store = await newStore();
+      expect(store.fullSearchResults).toBe(true);
+      store.setFullSearchResults(false);
+      expect(store.fullSearchResults).toBe(false);
     });
   });
 
@@ -153,7 +163,7 @@ describe('SearchProviderStore', () => {
       const store = await newStore();
       store.resultCount = 99;
       store.normalizeHydratedPrefs();
-      expect(store.resultCount).toBe(8);
+      expect(store.resultCount).toBe(20);
 
       store.resultCount = 0;
       store.normalizeHydratedPrefs();
@@ -177,6 +187,17 @@ describe('SearchProviderStore', () => {
       store.normalizeHydratedPrefs();
       expect(store.hasConsentedToSearch).toBe(false);
       expect(store.canSearch).toBe(false);
+    });
+
+    it('preserves false full results and repairs malformed values', async () => {
+      const store = await newStore();
+      store.fullSearchResults = false;
+      store.normalizeHydratedPrefs();
+      expect(store.fullSearchResults).toBe(false);
+
+      (store as any).fullSearchResults = 'false';
+      store.normalizeHydratedPrefs();
+      expect(store.fullSearchResults).toBe(true);
     });
 
     it('restores the default on a non-numeric or non-finite persisted count', async () => {

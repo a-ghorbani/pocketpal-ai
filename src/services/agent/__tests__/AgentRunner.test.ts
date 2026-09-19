@@ -184,18 +184,19 @@ describe('runAgent', () => {
     });
     const provider = {
       id: 'test-search',
-      search: jest.fn().mockResolvedValue([
-        {
-          title: 'PocketPal release notes',
-          url: 'https://example.com/releases',
-          snippet: 'A new release is available.',
-        },
-      ]),
+      search: jest.fn().mockResolvedValue(
+        Array.from({length: 20}, (_, index) => ({
+          title: `PocketPal release ${index + 1}`,
+          url: `https://example.com/releases/${index + 1}`,
+          snippet: `${'detail '.repeat(100)}CONTENT-TAIL-${index + 1}`,
+        })),
+      ),
     };
     const webSearch = new WebSearchEngine({
       canSearch: () => true,
       getActiveProvider: () => provider,
-      getResultCount: () => 5,
+      getResultCount: () => 20,
+      getFullSearchResults: () => true,
       readWithDefaultReader: jest.fn(),
     } as any);
 
@@ -211,7 +212,7 @@ describe('runAgent', () => {
     );
 
     expect(provider.search).toHaveBeenCalledWith('PocketPal release', {
-      maxResults: 5,
+      maxResults: 20,
     });
     const followUpParams = (engine.completion as jest.Mock).mock.calls[1][0];
     expect(followUpParams.messages).toEqual(
@@ -219,7 +220,7 @@ describe('runAgent', () => {
         expect.objectContaining({
           role: 'tool',
           tool_call_id: 'search-call',
-          content: expect.stringContaining('https://example.com/releases'),
+          content: expect.stringContaining('CONTENT-TAIL-20'),
         }),
       ]),
     );

@@ -13,7 +13,12 @@ import {
 
 import {SettingsScreen} from '../SettingsScreen';
 
-import {modelStore, uiStore, ttsStore} from '../../../store';
+import {
+  modelStore,
+  searchProviderStore,
+  uiStore,
+  ttsStore,
+} from '../../../store';
 import {UIStore as ActualUIStore} from '../../../store/UIStore';
 import {l10n} from '../../../locales';
 
@@ -28,6 +33,10 @@ describe('SettingsScreen', () => {
     Object.assign(uiStore, {
       responsesProtocolLogging: false,
       setResponsesProtocolLogging: jest.fn(),
+    });
+    Object.assign(searchProviderStore, {
+      resultCount: 5,
+      fullSearchResults: true,
     });
     jest.spyOn(Keyboard, 'dismiss');
     // Ensure clean timer state for each test
@@ -91,6 +100,34 @@ describe('SettingsScreen', () => {
     expect(getByText('Model Loading Settings')).toBeTruthy();
     expect(getByText('App Settings')).toBeTruthy();
     expect(getByDisplayValue('2048')).toBeTruthy(); // Context size
+  });
+
+  it('configures up to 20 results and toggles full search output', () => {
+    jest.useFakeTimers();
+    const {getByTestId} = render(<SettingsScreen />, {
+      withSafeArea: true,
+      withNavigation: true,
+    });
+    const slider = getByTestId('search-result-count-slider');
+    expect(slider.props.minimumValue).toBe(1);
+    expect(slider.props.maximumValue).toBe(20);
+    expect(slider.props.step).toBe(1);
+
+    act(() => {
+      fireEvent(slider, 'valueChange', 20);
+      jest.advanceTimersByTime(301);
+    });
+    expect(searchProviderStore.setResultCount).toHaveBeenCalledWith(20);
+
+    const fullResults = getByTestId('full-search-results-switch');
+    expect(fullResults.props.value).toBe(true);
+    expect(fullResults.props.accessibilityLabel).toBe(
+      'Send full search results',
+    );
+    fireEvent(fullResults, 'onValueChange', false);
+    expect(searchProviderStore.setFullSearchResults).toHaveBeenCalledWith(
+      false,
+    );
   });
 
   it('updates context size correctly', async () => {

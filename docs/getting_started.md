@@ -57,6 +57,23 @@ that provider's API key. Search queries and pages then leave the device, and a
 remote chat model also receives the conversation. The Scout Pal record and chat
 history remain stored locally.
 
+The **Results per search** setting accepts 1–20 results and defaults to 5.
+**Send full search results** is enabled by default: PocketPal forwards every
+title, URL, and provider snippet returned up to the selected count without
+shortening or dropping later results. Disable it to restore bounded search
+output, which limits snippets and can omit later results to conserve model
+context. Provider result counts are upper bounds, so a provider may return
+fewer results than requested.
+
+Tavily basic search uses one request for the selected count. Selecting 20
+therefore maximizes the raw results requested in that call; PocketPal does not
+paginate the request. Larger tool output takes more prompt-processing time,
+remote input tokens, local memory, chat storage, and model context. The active
+model or server's context limit still applies, so reduce the count, disable full
+results, or increase the model context when searches overflow it. Changing the
+setting affects future searches and does not restore content shortened in older
+chat history.
+
 Scout can use HTML Preview for requested diagrams, charts, UI mockups, and small
 interactive explanations. A context size of at least 4,096 tokens is
 recommended for HTML generation; PocketPal displays its existing context-room

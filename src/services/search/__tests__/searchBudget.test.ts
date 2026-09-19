@@ -3,6 +3,7 @@ import {
   budgetPage,
   estimateTokens,
   getCachedHits,
+  prepareFullHits,
   setCachedHits,
   resetSearchCache,
 } from '../searchBudget';
@@ -162,6 +163,32 @@ describe('budgetHits', () => {
   });
 });
 
+describe('prepareFullHits', () => {
+  it('keeps all selected fields without size truncation or URL rejection', () => {
+    const longTitle = `<b>${'title '.repeat(100)}TITLE-TAIL</b>`;
+    const longSnippet = `${'snippet '.repeat(500)}SNIPPET-TAIL`;
+    const longUrl = `https://example.com/${'x'.repeat(3000)}`;
+    const out = prepareFullHits(
+      [
+        hit({
+          title: longTitle,
+          snippet: longSnippet,
+          url: longUrl,
+          publishedAt: '2026-01-01',
+        }),
+      ],
+      20,
+    );
+
+    expect(out).toHaveLength(1);
+    expect(out[0].title).toContain('TITLE-TAIL');
+    expect(out[0].title).not.toContain('<b>');
+    expect(out[0].snippet).toContain('SNIPPET-TAIL');
+    expect(out[0].url).toBe(longUrl);
+    expect(out[0].publishedAt).toBe('2026-01-01');
+  });
+});
+
 describe('budgetPage', () => {
   it('keeps leading content and drops the tail on a word boundary', () => {
     const page = {
@@ -199,30 +226,31 @@ describe('in-session cache', () => {
   beforeEach(() => resetSearchCache());
 
   it('returns undefined on a miss', () => {
-    expect(getCachedHits('tavily', 'q', 3)).toBeUndefined();
+    expect(getCachedHits('tavily', 'q', 3, true)).toBeUndefined();
   });
 
-  it('returns cached hits on a hit keyed by provider+query+maxResults', () => {
+  it('returns cached hits keyed by provider, query, count, and output mode', () => {
     const hits = [hit()];
-    setCachedHits('tavily', 'mars', 3, hits);
-    expect(getCachedHits('tavily', 'mars', 3)).toBe(hits);
-    expect(getCachedHits('brave', 'mars', 3)).toBeUndefined();
-    expect(getCachedHits('tavily', 'moon', 3)).toBeUndefined();
-    expect(getCachedHits('tavily', 'mars', 5)).toBeUndefined();
+    setCachedHits('tavily', 'mars', 3, true, hits);
+    expect(getCachedHits('tavily', 'mars', 3, true)).toBe(hits);
+    expect(getCachedHits('brave', 'mars', 3, true)).toBeUndefined();
+    expect(getCachedHits('tavily', 'moon', 3, true)).toBeUndefined();
+    expect(getCachedHits('tavily', 'mars', 5, true)).toBeUndefined();
+    expect(getCachedHits('tavily', 'mars', 3, false)).toBeUndefined();
   });
 
   it('resetSearchCache clears entries', () => {
-    setCachedHits('tavily', 'q', 3, [hit()]);
+    setCachedHits('tavily', 'q', 3, true, [hit()]);
     resetSearchCache();
-    expect(getCachedHits('tavily', 'q', 3)).toBeUndefined();
+    expect(getCachedHits('tavily', 'q', 3, true)).toBeUndefined();
   });
 
   it('evicts the oldest entry once the cap is exceeded', () => {
     // Cap is 50; the 51st distinct key evicts the oldest.
     for (let i = 0; i < 51; i++) {
-      setCachedHits('tavily', `q${i}`, 3, [hit()]);
+      setCachedHits('tavily', `q${i}`, 3, true, [hit()]);
     }
-    expect(getCachedHits('tavily', 'q0', 3)).toBeUndefined();
-    expect(getCachedHits('tavily', 'q50', 3)).toBeDefined();
+    expect(getCachedHits('tavily', 'q0', 3, true)).toBeUndefined();
+    expect(getCachedHits('tavily', 'q50', 3, true)).toBeDefined();
   });
 });

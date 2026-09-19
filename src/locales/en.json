@@ -147,6 +147,8 @@
       "hideKeyAccessibilityLabel": "Hide API key",
       "resultCountLabel": "Results per search",
       "resultCountDescription": "Fewer results keep more room in the model's context.",
+      "fullResultsLabel": "Send full search results",
+      "fullResultsDescription": "Forward every returned title, URL, and provider snippet to the model without PocketPal shortening or omitting results. This uses more context, and the model or server's context limit still applies.",
       "consentTitle": "Searches leave your device",
       "consentDescription": "When a Pal searches the web, your query is sent to the selected provider over the internet. When a Pal reads a page, the URL and page content may instead be sent to a default reader service (r.jina.ai) if the selected provider has no native reader. Keys and queries are never sent to PocketPal.",
       "consentAccept": "I understand",

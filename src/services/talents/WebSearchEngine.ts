@@ -6,7 +6,12 @@ import {
 } from './types';
 import type {SearchAccess} from './searchAccess';
 import type {SearchHit} from '../search/types';
-import {budgetHits, getCachedHits, setCachedHits} from '../search/searchBudget';
+import {
+  budgetHits,
+  getCachedHits,
+  prepareFullHits,
+  setCachedHits,
+} from '../search/searchBudget';
 import {wrapUntrusted} from './untrustedContent';
 import {allowReadUrls} from './readUrlAllowlist';
 
@@ -62,14 +67,26 @@ export class WebSearchEngine implements TalentEngine {
 
     const provider = this.access.getActiveProvider();
     const maxResults = this.access.getResultCount();
+    const fullResults = this.access.getFullSearchResults();
 
-    let hits: SearchHit[];
+    let preparedHits: SearchHit[];
     try {
-      const cached = getCachedHits(provider.id, query, maxResults);
+      const cached = getCachedHits(provider.id, query, maxResults, fullResults);
       if (cached) {
-        hits = cached;
+        preparedHits = cached;
       } else {
-        hits = await provider.search(query, {maxResults});
+        const hits = await provider.search(query, {maxResults});
+        preparedHits = fullResults
+          ? prepareFullHits(hits, maxResults)
+          : budgetHits(
+              hits,
+              {
+                maxResults,
+                perSnippetChars: PER_SNIPPET_CHARS,
+                tokenCeiling: this.recommendedContextTokens,
+              },
+              formatHit,
+            );
       }
     } catch (e) {
       const errMsg = e instanceof Error ? e.message : String(e);
@@ -80,17 +97,7 @@ export class WebSearchEngine implements TalentEngine {
       };
     }
 
-    const budgeted = budgetHits(
-      hits,
-      {
-        maxResults,
-        perSnippetChars: PER_SNIPPET_CHARS,
-        tokenCeiling: this.recommendedContextTokens,
-      },
-      formatHit,
-    );
-
-    if (budgeted.length === 0) {
+    if (preparedHits.length === 0) {
       if (__DEV__) {
         console.log('[web_search]', {query, provider: provider.id, count: 0});
       }
@@ -101,29 +108,29 @@ export class WebSearchEngine implements TalentEngine {
       return {type: 'error', summary, errorMessage: summary};
     }
 
-    // Cache the budgeted hits, not the raw payload — same model-visible result
-    // on replay, without retaining oversized provider snippets.
-    setCachedHits(provider.id, query, maxResults, budgeted);
-    allowReadUrls(budgeted.map(h => h.url));
+    // Cache exactly what this output mode showed the model. The mode is part of
+    // the key, so bounded results can never satisfy a full-results lookup.
+    setCachedHits(provider.id, query, maxResults, fullResults, preparedHits);
+    allowReadUrls(preparedHits.map(h => h.url));
 
     if (__DEV__) {
       console.log('[web_search]', {
         query,
         provider: provider.id,
-        count: budgeted.length,
-        results: budgeted.map(h => ({title: h.title, url: h.url})),
+        count: preparedHits.length,
+        results: preparedHits.map(h => ({title: h.title, url: h.url})),
       });
     }
 
     return {
       type: 'search',
       query,
-      results: budgeted.map(h => ({
+      results: preparedHits.map(h => ({
         title: h.title,
         url: h.url,
         snippet: h.snippet,
       })),
-      summary: wrapUntrusted(formatMenu(query, budgeted)),
+      summary: wrapUntrusted(formatMenu(query, preparedHits)),
     };
   }
 

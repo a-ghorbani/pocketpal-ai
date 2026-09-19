@@ -6,12 +6,14 @@ import type {SearchProviderId} from '../../src/services/search/types';
 class MockSearchProviderStore {
   activeProviderId: SearchProviderId = 'brave';
   resultCount = 5;
+  fullSearchResults = true;
   hasConsentedToSearch = false;
 
   private keys: Partial<Record<SearchProviderId, string>> = {};
 
   setActiveProvider: jest.Mock;
   setResultCount: jest.Mock;
+  setFullSearchResults: jest.Mock;
   setConsent: jest.Mock;
   setKey: jest.Mock;
   clearKey: jest.Mock;
@@ -20,6 +22,7 @@ class MockSearchProviderStore {
     makeAutoObservable(this, {
       setActiveProvider: false,
       setResultCount: false,
+      setFullSearchResults: false,
       setConsent: false,
       setKey: false,
       clearKey: false,
@@ -30,6 +33,9 @@ class MockSearchProviderStore {
     });
     this.setResultCount = jest.fn((count: number) => {
       this.resultCount = count;
+    });
+    this.setFullSearchResults = jest.fn((enabled: boolean) => {
+      this.fullSearchResults = enabled;
     });
     this.setConsent = jest.fn((consented: boolean) => {
       this.hasConsentedToSearch = consented;
