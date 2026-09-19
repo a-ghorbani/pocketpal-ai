@@ -1,4 +1,5 @@
 import React, {useMemo} from 'react';
+import {Linking} from 'react-native';
 
 import {
   RenderHTMLConfigProvider,
@@ -7,8 +8,10 @@ import {
 } from 'react-native-render-html';
 
 import {useTheme} from '../../hooks';
+import {isSafeLinkUrl} from '../../utils/messageRendering';
 
 import {CodeRenderer} from './CodeRenderer';
+import {MathRenderer} from './MathRenderer';
 import {createTagsStyles} from './styles';
 import {tableHTMLElementModels, tableRenderers} from './TableRenderers';
 
@@ -45,7 +48,23 @@ const DEFAULT_TEXT_PROPS = {
 // not stored as data.
 const renderers = {
   code: (props: any) => <CodeRenderer {...props} />,
+  span: (props: any) => <MathRenderer {...props} />,
+  div: (props: any) => <MathRenderer {...props} />,
   ...tableRenderers,
+};
+
+const RENDERERS_PROPS = {
+  a: {
+    onPress: (_event: unknown, href: string) => {
+      if (!isSafeLinkUrl(href || '')) {
+        return;
+      }
+
+      Linking.openURL(href).catch(error =>
+        console.warn('[MarkdownProvider] Failed to open link:', error),
+      );
+    },
+  },
 };
 
 export const MarkdownProvider: React.FC<React.PropsWithChildren> = ({
@@ -61,7 +80,8 @@ export const MarkdownProvider: React.FC<React.PropsWithChildren> = ({
       systemFonts={SYSTEM_FONTS}>
       <RenderHTMLConfigProvider
         defaultTextProps={DEFAULT_TEXT_PROPS}
-        renderers={renderers}>
+        renderers={renderers}
+        renderersProps={RENDERERS_PROPS}>
         {children}
       </RenderHTMLConfigProvider>
     </TRenderEngineProvider>

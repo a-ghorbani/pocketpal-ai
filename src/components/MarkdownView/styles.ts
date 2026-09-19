@@ -85,4 +85,21 @@ export const createStyles = (theme: Theme) =>
       borderRadius: 6,
       marginTop: 4,
     },
+    codeFallbackScroll: {
+      marginTop: 4,
+    },
+    codeFallbackContent: {
+      backgroundColor: theme.colors.surface,
+      padding: 8,
+      borderRadius: 6,
+    },
+    codeFallbackText: {
+      color: theme.colors.onSurface,
+      fontFamily: 'Courier',
+      fontSize: 14,
+    },
+    codeWrapText: {
+      flexShrink: 1,
+      flexWrap: 'wrap',
+    },
   });
