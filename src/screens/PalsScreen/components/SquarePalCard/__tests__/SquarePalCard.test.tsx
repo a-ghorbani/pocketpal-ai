@@ -1,5 +1,5 @@
 import React from 'react';
-import {Alert} from 'react-native';
+import {Alert, StyleSheet} from 'react-native';
 
 import {
   render,
@@ -164,6 +164,20 @@ describe('SquarePalCard', () => {
       );
 
       expect(getByText('T')).toBeTruthy(); // First letter
+    });
+
+    it('uses a high-contrast label on the Scout gold thumbnail', () => {
+      const pal = createLocalPal({
+        name: 'Scout',
+        color: ['#B89A62', '#30291F'],
+      });
+      const {getByText} = render(
+        <SquarePalCard pal={pal} onPress={mockOnPress} isLocal={true} />,
+      );
+
+      expect(StyleSheet.flatten(getByText('S').props.style).color).toBe(
+        '#000000',
+      );
     });
 
     it('renders protection badge for protected PalsHub pals', () => {

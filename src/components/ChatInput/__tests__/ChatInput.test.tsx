@@ -1,6 +1,6 @@
 import {fireEvent, waitFor} from '@testing-library/react-native';
 import * as React from 'react';
-import {ScrollView, Alert} from 'react-native';
+import {ScrollView, Alert, StyleSheet} from 'react-native';
 import {launchCamera, launchImageLibrary} from 'react-native-image-picker';
 import {runInAction} from 'mobx';
 
@@ -9,6 +9,7 @@ import {l10n} from '../../../locales';
 import {UserContext} from '../../../utils';
 import {ChatInput} from '../ChatInput';
 import {render} from '../../../../jest/test-utils';
+import {themeFixtures} from '../../../../jest/fixtures/theme';
 import {palStore, chatSessionStore, modelStore} from '../../../store';
 import ReactNativeHapticFeedback from 'react-native-haptic-feedback';
 
@@ -21,6 +22,27 @@ jest.mock('react-native-image-picker', () => ({
 jest.spyOn(Alert, 'alert');
 
 const renderScrollable = () => <ScrollView />;
+
+const relativeLuminance = ([red, green, blue]: number[]) =>
+  [red, green, blue]
+    .map(channel => channel / 255)
+    .map(channel =>
+      channel <= 0.04045 ? channel / 12.92 : ((channel + 0.055) / 1.055) ** 2.4,
+    )
+    .reduce(
+      (luminance, channel, index) =>
+        luminance + channel * [0.2126, 0.7152, 0.0722][index],
+      0,
+    );
+
+const contrastRatio = (foreground: number[], background: number[]) => {
+  const foregroundLuminance = relativeLuminance(foreground);
+  const backgroundLuminance = relativeLuminance(background);
+  return (
+    (Math.max(foregroundLuminance, backgroundLuminance) + 0.05) /
+    (Math.min(foregroundLuminance, backgroundLuminance) + 0.05)
+  );
+};
 
 describe('input', () => {
   it('send button', () => {
@@ -328,6 +350,141 @@ describe('input', () => {
     const palButton = getByLabelText('Select Pal');
     fireEvent.press(palButton);
     expect(onPalBtnPress).toHaveBeenCalledTimes(1);
+  });
+
+  it.each([
+    ['light', themeFixtures.lightTheme],
+    ['dark', themeFixtures.darkTheme],
+  ])(
+    'keeps the Scout composer foreground readable in the %s app theme',
+    (_mode, theme) => {
+      const originalPals = palStore.pals;
+      const originalActivePalId = Object.getOwnPropertyDescriptor(
+        chatSessionStore,
+        'activePalId',
+      );
+      runInAction(() => {
+        palStore.pals = [
+          {
+            type: 'local',
+            id: 'scout-colors',
+            name: 'Scout',
+            description: 'Scout',
+            systemPrompt: 'Scout',
+            isSystemPromptChanged: false,
+            useAIPrompt: false,
+            parameters: {},
+            parameterSchema: [],
+            source: 'local',
+            color: ['#B89A62', '#30291F'],
+            created_at: '2026-09-19T00:00:00Z',
+            updated_at: '2026-09-19T00:00:00Z',
+          },
+        ];
+      });
+      Object.defineProperty(chatSessionStore, 'activePalId', {
+        get: jest.fn(() => 'scout-colors'),
+        configurable: true,
+      });
+
+      const {getByPlaceholderText, getByText, unmount} = render(
+        <UserContext.Provider value={user}>
+          <ChatInput
+            onSendPress={jest.fn()}
+            inputBackgroundColor="#30291F"
+            showThinkingToggle
+            isThinkingEnabled={false}
+            onThinkingToggle={jest.fn()}
+          />
+        </UserContext.Provider>,
+        {theme},
+      );
+
+      expect(
+        getByPlaceholderText(l10n.en.components.chatInput.inputPlaceholder)
+          .props.placeholderTextColor,
+      ).toBe('rgba(184, 154, 98, 0.9)');
+      expect(StyleSheet.flatten(getByText('Think').props.style).color).toBe(
+        'rgba(184, 154, 98, 0.9)',
+      );
+
+      unmount();
+      runInAction(() => {
+        palStore.pals = originalPals;
+      });
+      if (originalActivePalId) {
+        Object.defineProperty(
+          chatSessionStore,
+          'activePalId',
+          originalActivePalId,
+        );
+      }
+    },
+  );
+
+  it('meets text contrast for the Scout primary and secondary foregrounds', () => {
+    const gold = [0xb8, 0x9a, 0x62];
+    const background = [0x30, 0x29, 0x1f];
+    const secondary = gold.map(
+      (channel, index) => channel * 0.9 + background[index] * 0.1,
+    );
+
+    expect(contrastRatio(gold, background)).toBeGreaterThanOrEqual(4.5);
+    expect(contrastRatio(secondary, background)).toBeGreaterThanOrEqual(4.5);
+  });
+
+  it('preserves the existing muted foreground for a light Pal composer', () => {
+    const originalPals = palStore.pals;
+    const originalActivePalId = Object.getOwnPropertyDescriptor(
+      chatSessionStore,
+      'activePalId',
+    );
+    runInAction(() => {
+      palStore.pals = [
+        {
+          type: 'local',
+          id: 'light-pal',
+          name: 'Light Pal',
+          description: 'Light Pal',
+          systemPrompt: 'Light Pal',
+          isSystemPromptChanged: false,
+          useAIPrompt: false,
+          parameters: {},
+          parameterSchema: [],
+          source: 'local',
+          color: ['#16324F', '#E8F1F8'],
+          created_at: '2026-09-19T00:00:00Z',
+          updated_at: '2026-09-19T00:00:00Z',
+        },
+      ];
+    });
+    Object.defineProperty(chatSessionStore, 'activePalId', {
+      get: jest.fn(() => 'light-pal'),
+      configurable: true,
+    });
+
+    const {getByPlaceholderText, unmount} = render(
+      <UserContext.Provider value={user}>
+        <ChatInput onSendPress={jest.fn()} inputBackgroundColor="#E8F1F8" />
+      </UserContext.Provider>,
+    );
+
+    expect(
+      getByPlaceholderText(l10n.en.components.chatInput.inputPlaceholder).props
+        .placeholderTextColor,
+    ).toBe('#16324F55');
+
+    unmount();
+    runInAction(() => {
+      palStore.pals = originalPals;
+    });
+    if (originalActivePalId) {
+      Object.defineProperty(
+        chatSessionStore,
+        'activePalId',
+        originalActivePalId,
+      );
+    }
   });
 
   it('shows video button for video pal type', async () => {

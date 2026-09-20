@@ -1,11 +1,12 @@
 import React from 'react';
 import {fireEvent} from '@testing-library/react-native';
-import {Platform} from 'react-native';
+import {Platform, StyleSheet} from 'react-native';
 import {runInAction} from 'mobx';
+import {IconButton} from 'react-native-paper';
 
 import {user} from '../../../../jest/fixtures';
 import {render} from '../../../../jest/test-utils';
-import {modelStore} from '../../../store';
+import {chatSessionStore, modelStore, palStore} from '../../../store';
 import {UserContext} from '../../../utils';
 import {useSpeechRecognition} from '../../../hooks/useSpeechRecognition';
 import {ChatInput} from '../ChatInput';
@@ -82,5 +83,72 @@ describe('ChatInput dictation', () => {
     fireEvent.press(getByTestId('dictation-cancel'));
     expect(dictationResult.finish).toHaveBeenCalledTimes(1);
     expect(dictationResult.cancel).toHaveBeenCalledTimes(1);
+  });
+
+  it('uses the Pal foreground for dictation controls on a dark composer', () => {
+    const originalPals = palStore.pals;
+    const originalActivePalId = Object.getOwnPropertyDescriptor(
+      chatSessionStore,
+      'activePalId',
+    );
+    runInAction(() => {
+      palStore.pals = [
+        {
+          type: 'local',
+          id: 'scout-colors',
+          name: 'Scout',
+          systemPrompt: 'Scout',
+          isSystemPromptChanged: false,
+          useAIPrompt: false,
+          parameters: {},
+          parameterSchema: [],
+          source: 'local',
+          color: ['#B89A62', '#30291F'],
+          created_at: '2026-09-19T00:00:00Z',
+          updated_at: '2026-09-19T00:00:00Z',
+        },
+      ];
+    });
+    Object.defineProperty(chatSessionStore, 'activePalId', {
+      get: jest.fn(() => 'scout-colors'),
+      configurable: true,
+    });
+    mockUseSpeechRecognition.mockReturnValue({
+      ...dictationResult,
+      phase: 'listening',
+      partialText: 'temporary words',
+    });
+
+    const {UNSAFE_getAllByType, getByTestId, unmount} = render(
+      <UserContext.Provider value={user}>
+        <ChatInput onSendPress={jest.fn()} inputBackgroundColor="#30291F" />
+      </UserContext.Provider>,
+    );
+
+    const dictationButtons = UNSAFE_getAllByType(IconButton).filter(
+      button =>
+        button.props.testID === 'dictation-button' ||
+        button.props.testID === 'dictation-cancel',
+    );
+    expect(dictationButtons).toHaveLength(2);
+    expect(dictationButtons.map(button => button.props.iconColor)).toEqual([
+      '#B89A62',
+      '#B89A62',
+    ]);
+    expect(
+      StyleSheet.flatten(getByTestId('dictation-status').props.style).color,
+    ).toBe('rgba(184, 154, 98, 0.9)');
+
+    unmount();
+    runInAction(() => {
+      palStore.pals = originalPals;
+    });
+    if (originalActivePalId) {
+      Object.defineProperty(
+        chatSessionStore,
+        'activePalId',
+        originalActivePalId,
+      );
+    }
   });
 });

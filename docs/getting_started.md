@@ -51,6 +51,10 @@ from Chat and select **Scout**. Scout does not select or download a model; it
 uses the local or remote model you already selected. That model or server must
 support function calling for talents to work.
 
+Scout uses a warm dark-beige composer with muted-gold accents in both light and
+dark themes. Existing Scouts that still use the original built-in colors are
+updated automatically; colors you customized are preserved.
+
 Internet Search is not configured automatically. Open **Settings → Internet
 Search**, choose a provider, accept the external-content disclosure, and add
 that provider's API key. Search queries and pages then leave the device, and a

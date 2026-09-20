@@ -48,6 +48,21 @@ import {ModelOrigin} from '../utils/types';
 import type {Model} from '../utils/types';
 import {downloadPalThumbnail, deletePalThumbnail} from '../utils/imageUtils';
 
+const SCOUT_ORIGINAL_COLORS: [string, string] = ['#16324F', '#E8F1F8'];
+const SCOUT_WARM_DARK_COLORS: [string, string] = ['#B89A62', '#30291F'];
+
+const hasColorPair = (
+  color: Pal['color'],
+  expected: [string, string],
+): boolean =>
+  Array.isArray(color) &&
+  color.length === expected.length &&
+  color.every(
+    (value, index) =>
+      typeof value === 'string' &&
+      value.toLowerCase() === expected[index].toLowerCase(),
+  );
+
 class PalStore {
   // Core pals storage
   pals: Pal[] = [];
@@ -794,8 +809,8 @@ class PalStore {
   /**
    * Initialize the default "Scout" general-purpose pal if it doesn't exist.
    *
-   * Idempotent: an existing local Scout may have user-authored settings and
-   * must never be overwritten during startup.
+   * Idempotent: an existing local Scout keeps all user-authored settings.
+   * Only the original built-in color pair is upgraded to the current palette.
    */
   private async initializeScoutPal(): Promise<void> {
     try {
@@ -803,6 +818,12 @@ class PalStore {
         p => p.name === 'Scout' && p.source === 'local',
       );
       if (existing) {
+        if (
+          existing.type === 'local' &&
+          hasColorPair(existing.color, SCOUT_ORIGINAL_COLORS)
+        ) {
+          await this.updatePal(existing.id, {color: SCOUT_WARM_DARK_COLORS});
+        }
         return;
       }
 
@@ -836,7 +857,7 @@ class PalStore {
             'Create an interactive HTML visual explaining the water cycle',
           ],
         },
-        color: ['#16324F', '#E8F1F8'],
+        color: SCOUT_WARM_DARK_COLORS,
         source: 'local',
       };
 

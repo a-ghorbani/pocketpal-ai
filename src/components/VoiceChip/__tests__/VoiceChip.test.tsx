@@ -6,13 +6,14 @@ import {fireEvent, render} from '../../../../jest/test-utils';
 import {L10nContext} from '../../../utils';
 import {l10n} from '../../../locales';
 import {ttsStore} from '../../../store';
+import {VolumeMinIcon} from '../../../assets/icons';
 
 import {VoiceChip} from '../VoiceChip';
 
-const renderChip = () =>
+const renderChip = (collapsedForegroundColor?: string) =>
   render(
     <L10nContext.Provider value={l10n.en}>
-      <VoiceChip />
+      <VoiceChip collapsedForegroundColor={collapsedForegroundColor} />
     </L10nContext.Provider>,
   );
 
@@ -110,5 +111,36 @@ describe('VoiceChip', () => {
     // Pressable synthesizes an accessibilityState object; the selected key
     // should be undefined pre-setup since the component doesn't pass it.
     expect(speaker.props.accessibilityState?.selected).toBeUndefined();
+  });
+
+  it('uses a composer foreground override only in the collapsed state', () => {
+    runInAction(() => {
+      ttsStore.currentVoice = systemVoice;
+      ttsStore.autoSpeakEnabled = false;
+    });
+    const {UNSAFE_getAllByType, rerender} = renderChip(
+      'rgba(184, 154, 98, 0.9)',
+    );
+
+    expect(
+      UNSAFE_getAllByType(VolumeMinIcon).some(
+        icon => icon.props.stroke === 'rgba(184, 154, 98, 0.9)',
+      ),
+    ).toBe(true);
+
+    runInAction(() => {
+      ttsStore.autoSpeakEnabled = true;
+    });
+    rerender(
+      <L10nContext.Provider value={l10n.en}>
+        <VoiceChip collapsedForegroundColor="rgba(184, 154, 98, 0.9)" />
+      </L10nContext.Provider>,
+    );
+
+    expect(
+      UNSAFE_getAllByType(VolumeMinIcon).some(
+        icon => icon.props.stroke === 'rgba(184, 154, 98, 0.9)',
+      ),
+    ).toBe(false);
   });
 });

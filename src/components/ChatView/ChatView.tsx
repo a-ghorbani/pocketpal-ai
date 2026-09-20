@@ -1132,12 +1132,15 @@ export const ChatView = observer(
           </View>
 
           {/* Main chat container */}
-          <Reanimated.View style={styles.chatContainer}>
+          <Reanimated.View
+            testID="chat-message-container"
+            style={styles.chatContainer}>
             {customContent}
             {renderChatList()}
 
             {/* Chat input */}
             <Reanimated.View
+              testID="chat-composer-container"
               onLayout={onLayoutChatInput}
               style={[
                 styles.inputContainer,

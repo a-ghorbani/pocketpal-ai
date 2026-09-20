@@ -42,6 +42,7 @@ import {
 
 import {MessageType} from '../../utils/types';
 import {L10nContext, UserContext} from '../../utils';
+import {isLightColor, withOpacity} from '../../utils/colorUtils';
 import {t} from '../../locales';
 import {GenerationParameterMode} from '../../utils/completionTypes';
 
@@ -483,12 +484,19 @@ export const ChatInput = observer(
     });
 
     const onSurfaceColor = currentActivePal?.color?.[0] || theme.colors.text;
-    const onSurfaceColorVariant = onSurfaceColor + '55'; // for disabled state or placeholder text
+    const hasDarkPalSurface =
+      !!currentActivePal?.color &&
+      !!inputBackgroundColor &&
+      !isLightColor(inputBackgroundColor);
+    const onSurfaceColorVariant = hasDarkPalSurface
+      ? withOpacity(onSurfaceColor, 0.9)
+      : onSurfaceColor + '55';
+    const disabledOnSurfaceColor = onSurfaceColor + '55';
     // // Plus button state
     const isPlusButtonEnabled = !isStreaming && isVisionEnabled;
     const plusColor = isPlusButtonEnabled
       ? onSurfaceColor
-      : onSurfaceColorVariant;
+      : disabledOnSurfaceColor;
 
     // Localize the current graded-effort tier through the same table the
     // model-settings chips use; fall back to the raw token for an unlisted one.
@@ -801,6 +809,7 @@ export const ChatInput = observer(
                     <IconButton
                       icon="close"
                       size={18}
+                      iconColor={hasDarkPalSurface ? onSurfaceColor : undefined}
                       onPress={dictation.cancel}
                       accessibilityLabel={
                         l10n.components.chatInput.speechInput.cancel
@@ -817,6 +826,7 @@ export const ChatInput = observer(
                           : 'microphone'
                     }
                     size={20}
+                    iconColor={hasDarkPalSurface ? onSurfaceColor : undefined}
                     disabled={
                       !isDictationEligible ||
                       isStreaming ||
@@ -839,7 +849,12 @@ export const ChatInput = observer(
                   {dictationActive && (
                     <Text
                       numberOfLines={1}
-                      style={styles.dictationStatus}
+                      style={[
+                        styles.dictationStatus,
+                        hasDarkPalSurface && {
+                          color: onSurfaceColorVariant,
+                        },
+                      ]}
                       testID="dictation-status">
                       {dictation.partialText ||
                         (dictation.phase === 'finishing'
@@ -861,7 +876,11 @@ export const ChatInput = observer(
               {/* Voice chip (TTS) — always present so users can stop
                   audio independently of text generation. Self-gates:
                   returns null when TTS is unavailable. */}
-              <VoiceChip />
+              <VoiceChip
+                collapsedForegroundColor={
+                  hasDarkPalSurface ? onSurfaceColorVariant : undefined
+                }
+              />
 
               {/* Send/Stop Button */}
               {isStopVisible ? (

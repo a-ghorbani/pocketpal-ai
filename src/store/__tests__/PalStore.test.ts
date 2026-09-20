@@ -447,6 +447,7 @@ describe('PalStore', () => {
         },
       });
       expect(scout?.defaultModel).toBeUndefined();
+      expect(scout?.color).toEqual(['#B89A62', '#30291F']);
       expect(scout?.greeting?.suggestedPrompts).toHaveLength(3);
       expect(resolveHFModelForDownload).not.toHaveBeenCalled();
       expect(palsHubService.getPal).not.toHaveBeenCalled();
@@ -498,6 +499,111 @@ describe('PalStore', () => {
         },
       });
       expect(palRepository.createPal).not.toHaveBeenCalled();
+      expect(palRepository.updatePal).not.toHaveBeenCalled();
+    });
+
+    it.each([
+      ['#16324F', '#E8F1F8'],
+      ['#16324f', '#e8f1f8'],
+    ])(
+      'upgrades an existing original-color Scout without changing its other settings',
+      async (foreground, background) => {
+        const existingScout: Pal = {
+          ...mockPal,
+          id: 'scout-existing',
+          name: 'Scout',
+          source: 'local',
+          color: [foreground, background],
+          systemPrompt: 'My customized Scout prompt',
+          greeting: {
+            text: 'Custom greeting',
+            suggestedPrompts: ['Custom prompt'],
+          },
+        };
+        const updatedScout = {
+          ...existingScout,
+          color: ['#B89A62', '#30291F'] as [string, string],
+        };
+        (palRepository.updatePal as jest.Mock).mockResolvedValue(updatedScout);
+        runInAction(() => {
+          palStore.pals = [existingScout];
+        });
+
+        await callInitializeScoutPal();
+
+        expect(palRepository.updatePal).toHaveBeenCalledWith('scout-existing', {
+          color: ['#B89A62', '#30291F'],
+        });
+        expect(palStore.pals).toEqual([updatedScout]);
+        expect(palStore.pals[0]).toMatchObject({
+          id: 'scout-existing',
+          systemPrompt: 'My customized Scout prompt',
+          greeting: {
+            text: 'Custom greeting',
+            suggestedPrompts: ['Custom prompt'],
+          },
+        });
+        expect(palRepository.createPal).not.toHaveBeenCalled();
+      },
+    );
+
+    it('does not rewrite a customized Scout color or the upgraded palette', async () => {
+      const customScout: Pal = {
+        ...mockPal,
+        id: 'scout-custom',
+        name: 'Scout',
+        source: 'local',
+        color: ['#123456', '#654321'],
+      };
+      runInAction(() => {
+        palStore.pals = [customScout];
+      });
+
+      await callInitializeScoutPal();
+      expect(palRepository.updatePal).not.toHaveBeenCalled();
+
+      runInAction(() => {
+        palStore.pals = [{...customScout, color: ['#B89A62', '#30291F']}];
+      });
+      await callInitializeScoutPal();
+
+      expect(palRepository.updatePal).not.toHaveBeenCalled();
+    });
+
+    it('leaves the original color in memory when persistence fails and retries later', async () => {
+      const existingScout: Pal = {
+        ...mockPal,
+        id: 'scout-existing',
+        name: 'Scout',
+        source: 'local',
+        color: ['#16324F', '#E8F1F8'],
+      };
+      const error = new Error('write failed');
+      (palRepository.updatePal as jest.Mock).mockRejectedValueOnce(error);
+      const consoleSpy = jest.spyOn(console, 'error').mockImplementation();
+      runInAction(() => {
+        palStore.pals = [existingScout];
+      });
+
+      await callInitializeScoutPal();
+
+      expect(palStore.pals[0].color).toEqual(['#16324F', '#E8F1F8']);
+      expect(consoleSpy).toHaveBeenCalledWith('Error updating pal:', error);
+      expect(consoleSpy).toHaveBeenCalledWith(
+        'Error initializing Scout pal:',
+        error,
+      );
+
+      const updatedScout: Pal = {
+        ...existingScout,
+        color: ['#B89A62', '#30291F'],
+      };
+      (palRepository.updatePal as jest.Mock).mockResolvedValue(updatedScout);
+      await callInitializeScoutPal();
+
+      expect(palRepository.updatePal).toHaveBeenCalledTimes(2);
+      expect(palStore.pals[0].color).toEqual(['#B89A62', '#30291F']);
+      consoleSpy.mockRestore();
     });
 
     it('adds Scout to an existing built-in-only database', async () => {
