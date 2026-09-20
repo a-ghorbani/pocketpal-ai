@@ -65,6 +65,10 @@ describe('SystemEngine streaming', () => {
   });
 
   it('finalize forwards to the lib stream', async () => {
+    (Speech.isSpeaking as jest.Mock)
+      .mockResolvedValueOnce(true)
+      .mockResolvedValueOnce(false)
+      .mockResolvedValueOnce(false);
     const handle = new SystemEngine().playStreaming(VOICE);
 
     handle.appendText('Hi.');
@@ -72,6 +76,7 @@ describe('SystemEngine streaming', () => {
 
     const [stream] = __getCreatedStreams();
     expect(stream!.finalize).toHaveBeenCalledTimes(1);
+    expect(Speech.isSpeaking).toHaveBeenCalledTimes(3);
   });
 
   it('cancel forwards to the lib stream and blocks further appends', async () => {

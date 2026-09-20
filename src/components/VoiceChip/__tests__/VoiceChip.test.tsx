@@ -31,6 +31,7 @@ describe('VoiceChip', () => {
       ttsStore.userTTSOverride = null;
       ttsStore.currentVoice = null;
       ttsStore.autoSpeakEnabled = false;
+      ttsStore.conversationAutoSpeakEnabled = false;
       ttsStore.playbackState = {mode: 'idle'};
     });
   });
@@ -82,6 +83,36 @@ describe('VoiceChip', () => {
     const {getByTestId} = renderChip();
     fireEvent.press(getByTestId('voicechip-speaker'));
     expect(ttsStore.setAutoSpeak).toHaveBeenCalledWith(false);
+  });
+
+  it('speaker tap during playback skips audio without toggling auto-speak', () => {
+    runInAction(() => {
+      ttsStore.currentVoice = systemVoice;
+      ttsStore.conversationAutoSpeakEnabled = true;
+      ttsStore.playbackState = {
+        mode: 'playing',
+        messageId: 'voice-reply',
+      };
+    });
+
+    const {getByTestId} = renderChip();
+    fireEvent.press(getByTestId('voicechip-speaker'));
+
+    expect(ttsStore.skipCurrentPlayback).toHaveBeenCalledTimes(1);
+    expect(ttsStore.setAutoSpeak).not.toHaveBeenCalled();
+  });
+
+  it('conversation override displays TTS on without changing the saved preference', () => {
+    runInAction(() => {
+      ttsStore.currentVoice = systemVoice;
+      ttsStore.autoSpeakEnabled = false;
+      ttsStore.conversationAutoSpeakEnabled = true;
+    });
+
+    const {getByTestId} = renderChip();
+    expect(getByTestId('voicechip-speaker').props.accessibilityState).toEqual({
+      selected: true,
+    });
   });
 
   it('voice-chosen: secondary tap opens setup sheet, does not toggle', () => {

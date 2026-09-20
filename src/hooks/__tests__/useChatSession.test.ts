@@ -288,6 +288,48 @@ describe('useChatSession', () => {
     },
   );
 
+  it('adds concise table-free guidance only to voice conversation turns', async () => {
+    const testModel = {
+      ...mockBasicModel,
+      id: 'voice-guidance-model',
+      chatTemplate: {
+        ...mockBasicModel.chatTemplate,
+        systemPrompt: 'Base assistant prompt',
+      },
+    };
+    modelStore.models = [testModel];
+    modelStore.setActiveModel(testModel.id);
+
+    const captured: any[][] = [];
+    if (modelStore.context) {
+      modelStore.context.completion = jest
+        .fn()
+        .mockImplementation((params, _onData) => {
+          captured.push(params.messages || []);
+          return Promise.resolve({timings: {total: 100}, usage: {}});
+        });
+    }
+
+    const {result} = renderHook(() =>
+      useChatSession({current: null}, textMessage.author, mockAssistant),
+    );
+    await act(async () => {
+      await result.current.handleSendPress({
+        ...textMessage,
+        metadata: {voiceConversation: true},
+      });
+      await result.current.handleSendPress(textMessage);
+    });
+
+    const voiceSystem = captured[0].find(msg => msg.role === 'system');
+    const typedSystem = captured[1].find(msg => msg.role === 'system');
+    expect(voiceSystem.content).toContain('Base assistant prompt');
+    expect(voiceSystem.content).toContain(
+      'Do not produce Markdown or HTML tables',
+    );
+    expect(typedSystem.content).toBe('Base assistant prompt');
+  });
+
   it('should render parametrized system prompt when pal has parameters', async () => {
     // Create a mock pal with parametrized system prompt
     const mockPal = {

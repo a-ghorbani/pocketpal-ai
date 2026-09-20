@@ -8,14 +8,14 @@ import {user} from '../../../../jest/fixtures';
 import {render} from '../../../../jest/test-utils';
 import {chatSessionStore, modelStore, palStore} from '../../../store';
 import {UserContext} from '../../../utils';
-import {useSpeechRecognition} from '../../../hooks/useSpeechRecognition';
+import {useVoiceConversation} from '../../../hooks/useVoiceConversation';
 import {ChatInput} from '../ChatInput';
 
-jest.mock('../../../hooks/useSpeechRecognition', () => ({
-  useSpeechRecognition: jest.fn(),
+jest.mock('../../../hooks/useVoiceConversation', () => ({
+  useVoiceConversation: jest.fn(),
 }));
 
-const mockUseSpeechRecognition = useSpeechRecognition as jest.Mock;
+const mockUseVoiceConversation = useVoiceConversation as jest.Mock;
 
 const dictationResult = {
   phase: 'idle',
@@ -36,12 +36,20 @@ const dictationResult = {
   refreshCapability: jest.fn(),
 };
 
+const conversationResult = {
+  active: false,
+  phase: 'off',
+  recognition: dictationResult,
+  start: jest.fn(),
+  stop: jest.fn(),
+};
+
 describe('ChatInput dictation', () => {
   const originalOS = Platform.OS;
 
   beforeEach(() => {
     Object.defineProperty(Platform, 'OS', {value: 'android'});
-    mockUseSpeechRecognition.mockReturnValue(dictationResult);
+    mockUseVoiceConversation.mockReturnValue(conversationResult);
     runInAction(() => {
       modelStore.activeModelId = 'test-model-id';
     });
@@ -52,7 +60,7 @@ describe('ChatInput dictation', () => {
     Object.defineProperty(Platform, 'OS', {value: originalOS});
   });
 
-  it('starts dictation without sending a message', () => {
+  it('starts conversation mode without sending a message', () => {
     const onSendPress = jest.fn();
     const {getByTestId} = render(
       <UserContext.Provider value={user}>
@@ -62,15 +70,20 @@ describe('ChatInput dictation', () => {
 
     fireEvent.press(getByTestId('dictation-button'));
 
-    expect(dictationResult.start).toHaveBeenCalledTimes(1);
+    expect(conversationResult.start).toHaveBeenCalledTimes(1);
     expect(onSendPress).not.toHaveBeenCalled();
   });
 
-  it('shows partial text and exposes finish and cancel while listening', () => {
-    mockUseSpeechRecognition.mockReturnValue({
-      ...dictationResult,
+  it('shows partial text and uses the same button to stop conversation', () => {
+    mockUseVoiceConversation.mockReturnValue({
+      ...conversationResult,
+      active: true,
       phase: 'listening',
-      partialText: 'temporary words',
+      recognition: {
+        ...dictationResult,
+        phase: 'listening',
+        partialText: 'temporary words',
+      },
     });
     const {getByTestId, getByText} = render(
       <UserContext.Provider value={user}>
@@ -80,9 +93,7 @@ describe('ChatInput dictation', () => {
 
     expect(getByText('temporary words')).toBeTruthy();
     fireEvent.press(getByTestId('dictation-button'));
-    fireEvent.press(getByTestId('dictation-cancel'));
-    expect(dictationResult.finish).toHaveBeenCalledTimes(1);
-    expect(dictationResult.cancel).toHaveBeenCalledTimes(1);
+    expect(conversationResult.stop).toHaveBeenCalledTimes(1);
   });
 
   it('uses the Pal foreground for dictation controls on a dark composer', () => {
@@ -113,10 +124,15 @@ describe('ChatInput dictation', () => {
       get: jest.fn(() => 'scout-colors'),
       configurable: true,
     });
-    mockUseSpeechRecognition.mockReturnValue({
-      ...dictationResult,
+    mockUseVoiceConversation.mockReturnValue({
+      ...conversationResult,
+      active: true,
       phase: 'listening',
-      partialText: 'temporary words',
+      recognition: {
+        ...dictationResult,
+        phase: 'listening',
+        partialText: 'temporary words',
+      },
     });
 
     const {UNSAFE_getAllByType, getByTestId, unmount} = render(
@@ -127,14 +143,10 @@ describe('ChatInput dictation', () => {
 
     const dictationButtons = UNSAFE_getAllByType(IconButton).filter(
       button =>
-        button.props.testID === 'dictation-button' ||
-        button.props.testID === 'dictation-cancel',
+        button.props.testID === 'dictation-button',
     );
-    expect(dictationButtons).toHaveLength(2);
-    expect(dictationButtons.map(button => button.props.iconColor)).toEqual([
-      '#B89A62',
-      '#B89A62',
-    ]);
+    expect(dictationButtons).toHaveLength(1);
+    expect(dictationButtons[0].props.iconColor).toBe('#B89A62');
     expect(
       StyleSheet.flatten(getByTestId('dictation-status').props.style).color,
     ).toBe('rgba(184, 154, 98, 0.9)');

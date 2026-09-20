@@ -222,6 +222,22 @@ Once your model is loaded, head to the “Chat” page and start conversing with
 
 The generation performance metric is also displayed. If interested, watch the chat bubble for real-time performance metrics: Tokens per second and Milliseconds per token.
 
+On Android 12 or newer, the microphone button can run a hands-free
+conversation when an on-device recognizer and a PocketPal voice are available.
+Start with an empty message composer, tap the microphone, and speak. PocketPal
+sends the recognized text automatically, asks the model for a concise,
+table-free spoken response, reads it with the selected voice, and listens
+again. The response instruction is best-effort and a model may not always
+follow it.
+
+The microphone button turns hands-free conversation off. The gray speaker Stop
+only skips the current audio; generation can finish silently before listening
+resumes. Turning text-to-speech off also ends hands-free conversation, while
+turning text-to-speech on by itself does not start the microphone. Hands-free
+conversation ends when PocketPal leaves the foreground. Recognition stays on
+device, but recognized text is still sent to a remote model when a remote
+server is selected.
+
 <div style="display: flex; justify-content: center;">
     <img src="../assets/chat_1.webp" alt="Navigate to Models Page" style="width: 33%;">
     <img src="../assets/chat_2.webp" alt="Download a Model" style="width: 33%;">

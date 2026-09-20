@@ -46,9 +46,13 @@ jest.mock('../../../store', () => ({
     isTTSAvailable: false,
     currentVoice: null,
     autoSpeakEnabled: false,
+    conversationAutoSpeakEnabled: false,
+    effectiveAutoSpeakEnabled: false,
     playbackState: {mode: 'idle'},
     openSetupSheet: jest.fn(),
     setAutoSpeak: jest.fn(),
+    setConversationAutoSpeak: jest.fn(),
+    stop: jest.fn().mockResolvedValue(undefined),
   },
 }));
 

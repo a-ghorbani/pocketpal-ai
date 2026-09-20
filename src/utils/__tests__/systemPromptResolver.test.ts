@@ -2,6 +2,7 @@ import {
   assembleMessages,
   resolveSystemPrompt,
   resolveSystemMessages,
+  VOICE_CONVERSATION_SYSTEM_PROMPT,
 } from '../systemPromptResolver';
 import type {Pal} from '../../types/pal';
 import type {Model} from '../types';
@@ -218,6 +219,23 @@ describe('systemPromptResolver', () => {
         {role: 'system', content: 'Pal prompt\n\nFRAGMENT-A\n\nFRAGMENT-B'},
         user,
       ]);
+    });
+
+    it('folds voice guidance into the same leading system message', () => {
+      const result = assembleMessages(
+        [sys('Pal prompt')],
+        [VOICE_CONVERSATION_SYSTEM_PROMPT],
+        [user],
+      );
+
+      expect(result).toHaveLength(2);
+      expect(result[0]).toEqual({
+        role: 'system',
+        content: `Pal prompt\n\n${VOICE_CONVERSATION_SYSTEM_PROMPT}`,
+      });
+      expect(result[0].content).toContain(
+        'Do not produce Markdown or HTML tables',
+      );
     });
 
     it('emits the fragments as the sole system message when the pal has none', () => {

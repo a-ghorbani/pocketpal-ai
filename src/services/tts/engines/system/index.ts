@@ -5,6 +5,8 @@ import {createEngineStreamingHandle} from '../../streamingHandle';
 import type {Engine, StreamingHandle, Voice} from '../../types';
 import {getSystemVoices} from './voices';
 
+const SYSTEM_SPEECH_DRAIN_TIMEOUT_MS = 120_000;
+
 /**
  * Thin wrapper around the OS native TTS path exposed by
  * `@pocketpalai/react-native-speech`. Always available on iOS 13+ / Android 8+.
@@ -43,7 +45,42 @@ export class SystemEngine implements Engine {
    * `onFinish` loop and we inherit the library's CJK sentence handling.
    */
   playStreaming(voice: Voice, waitFor?: Promise<void>): StreamingHandle {
-    return createEngineStreamingHandle(this, voice.id, undefined, waitFor);
+    const delegate = createEngineStreamingHandle(
+      this,
+      voice.id,
+      undefined,
+      waitFor,
+    );
+    let cancelled = false;
+    return {
+      appendText: delegate.appendText,
+      async finalize() {
+        await delegate.finalize();
+        const deadline = Date.now() + SYSTEM_SPEECH_DRAIN_TIMEOUT_MS;
+        const startupDeadline = Date.now() + 1_000;
+        let observedSpeaking = false;
+        let consecutiveIdleChecks = 0;
+        while (!cancelled && consecutiveIdleChecks < 2) {
+          if (Date.now() >= deadline) {
+            throw new Error('System speech playback did not finish in time');
+          }
+          const speaking = await Speech.isSpeaking();
+          observedSpeaking ||= speaking;
+          consecutiveIdleChecks =
+            observedSpeaking && !speaking ? consecutiveIdleChecks + 1 : 0;
+          if (!observedSpeaking && Date.now() >= startupDeadline) {
+            return;
+          }
+          if (!cancelled && consecutiveIdleChecks < 2) {
+            await new Promise(resolve => setTimeout(resolve, 40));
+          }
+        }
+      },
+      async cancel() {
+        cancelled = true;
+        await delegate.cancel();
+      },
+    };
   }
 
   async stop(): Promise<void> {

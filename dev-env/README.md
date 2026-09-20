@@ -362,11 +362,14 @@ exposes the emulator's gRPC/WebRTC service endpoint; it is not a standalone
 browser UI. A browser viewer requires Google's separate WebRTC gateway and
 frontend.
 
-## Test Android on-device dictation
+## Test Android hands-free conversation
 
-PocketPal's microphone control is intentionally separate from keyboard
-dictation. It uses Android's explicit on-device `SpeechRecognizer` API and
-does not fall back to the default, potentially cloud-backed recognizer.
+PocketPal's microphone control starts a foreground hands-free loop: recognize
+one utterance, send it automatically, speak the response with the selected
+PocketPal voice, and listen again. It uses Android's explicit on-device
+`SpeechRecognizer` API and does not fall back to the default, potentially
+cloud-backed recognizer. A remote chat model still receives the recognized
+text when the user selected a remote server.
 
 | Environment | Expected result |
 | --- | --- |
@@ -380,12 +383,17 @@ For a real offline acceptance check:
 1. Install a debug or E2E APK on an API 31+ physical Android phone.
 2. If prompted, explicitly download the current language's speech model.
 3. Disable Wi-Fi and cellular data.
-4. Open a normal text chat, tap the microphone, speak a predetermined phrase,
-   and finish the recording.
-5. Verify the phrase appears once as an editable draft and is not sent.
-6. Repeat after cancelling, changing chats, backgrounding, and locking the
-   phone. The draft must remain unchanged and the system microphone indicator
-   must clear.
+4. Select an installed PocketPal voice, open a normal text chat with an empty
+   composer, tap the microphone, and speak a predetermined phrase.
+5. Verify the phrase is sent exactly once without tapping Send, the concise
+   response is spoken without a table, and listening resumes after playback.
+6. While a response is spoken, tap the gray speaker Stop. Audio must stop,
+   generation may finish silently, and listening resumes afterward. Turning
+   TTS off instead must also turn conversation off; turning TTS on alone must
+   not activate the microphone.
+7. Repeat after ordinary silence, stopping conversation, changing chats,
+   backgrounding, and locking the phone. The system microphone indicator must
+   clear whenever conversation exits.
 
 The API 30 container cannot prove successful recognition. It is useful only
 for the unsupported-version path. Emulator images can also omit the same

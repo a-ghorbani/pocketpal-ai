@@ -44,7 +44,7 @@ const VoiceChipComponent: React.FC<VoiceChipProps> = ({
 
   const isAvailable = ttsStore.isTTSAvailable;
   const currentVoice = ttsStore.currentVoice;
-  const autoSpeakEnabled = ttsStore.autoSpeakEnabled;
+  const autoSpeakEnabled = ttsStore.effectiveAutoSpeakEnabled;
   const playbackState = ttsStore.playbackState;
   const isPlaying =
     playbackState.mode === 'playing' || playbackState.mode === 'streaming';
@@ -74,7 +74,7 @@ const VoiceChipComponent: React.FC<VoiceChipProps> = ({
       return;
     }
     if (isPlaying) {
-      ttsStore.stop().catch(() => {});
+      ttsStore.skipCurrentPlayback().catch(() => {});
       return;
     }
     ttsStore.setAutoSpeak(!autoSpeakEnabled);

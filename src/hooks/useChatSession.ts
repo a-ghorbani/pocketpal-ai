@@ -22,6 +22,7 @@ import {createMultimodalWarning} from '../utils/errors';
 import {
   assembleMessages,
   resolveSystemMessages,
+  VOICE_CONVERSATION_SYSTEM_PROMPT,
 } from '../utils/systemPromptResolver';
 import {convertToChatMessages, removeThinkingParts} from '../utils/chat';
 import {activateKeepAwake, deactivateKeepAwake} from '../utils/keepAwake';
@@ -141,6 +142,9 @@ const prepareCompletion = async ({
     now: new Date(),
     maxToolTurns: DEFAULT_MAX_TURNS,
   });
+  if (message.metadata?.voiceConversation === true) {
+    systemPromptFragments.push(VOICE_CONVERSATION_SYSTEM_PROMPT);
+  }
 
   const messages = assembleMessages(systemMessages, systemPromptFragments, [
     ...chatMessages,
@@ -238,6 +242,7 @@ type TtsRunState = {
   started: boolean;
   prevContent: string;
   prevReasoning: string;
+  completion?: Promise<unknown>;
 };
 
 // Normalise a finished turn's result into the snapshot the banner reads.
@@ -308,6 +313,8 @@ async function applyEventToStore(
       // persist here — the message was added before the run started.
       return;
     case 'step_started':
+      ctx.tts.prevContent = '';
+      ctx.tts.prevReasoning = '';
       await chatSessionStore.pushAgentStep(ctx.messageId, ctx.sessionId, {
         partial: true,
       });
@@ -473,10 +480,12 @@ async function applyEventToStore(
       // enforces auto-speak / voice / idempotency gating internally.
       // Wrapped defensively — UI-path errors must not bubble.
       try {
-        ttsStore.onAssistantMessageComplete(
-          ctx.messageId,
-          finalResult.text ?? '',
-          {hadReasoning: !!finalResult.reasoning_content?.trim()},
+        ctx.tts.completion = Promise.resolve(
+          ttsStore.onAssistantMessageComplete(
+            ctx.messageId,
+            finalResult.text ?? '',
+            {hadReasoning: !!finalResult.reasoning_content?.trim()},
+          ),
         );
       } catch (ttsErr) {
         console.warn('[useChatSession] TTS complete hook failed:', ttsErr);
@@ -530,21 +539,25 @@ export const useChatSession = (
     await addMessage(textMessage);
   };
 
-  const handleSendPress = async (message: MessageType.PartialText) => {
+  const handleSendPress = async (
+    message: MessageType.PartialText,
+  ): Promise<boolean> => {
     const engine = modelStore.engine;
     if (!engine) {
       await addSystemMessage(l10n.chat.modelNotLoaded);
-      return;
+      return false;
     }
 
     const contextId = modelStore.contextId;
     if (!contextId) {
       await addSystemMessage(l10n.chat.modelNotLoaded);
-      return;
+      return false;
     }
 
     const imageUris = message.imageUris;
     const hasImages = !!(imageUris && imageUris.length > 0);
+    const runAbortController = new AbortController();
+    abortRef.current = runAbortController;
 
     const isMultimodalEnabled = modelStore.activeModelCaps.visionActive;
 
@@ -605,11 +618,10 @@ export const useChatSession = (
     // tool call whose function.name isn't in this list.
     const palTalents = (pal?.pact?.talents ?? []).map(t => t.name);
 
-    abortRef.current = new AbortController();
     const completionStartTime = Date.now();
     const timeToFirstTokenMs: {value: number | null} = {value: null};
     const tts: TtsRunState = {
-      enabled: ttsStore.autoSpeakEnabled,
+      enabled: ttsStore.effectiveAutoSpeakEnabled,
       started: false,
       prevContent: '',
       prevReasoning: '',
@@ -660,7 +672,7 @@ export const useChatSession = (
         talentLookup: name => talentRegistry.get(name),
         triggerMarkers,
         messageId: messageInfo.id,
-        signal: abortRef.current.signal,
+        signal: runAbortController.signal,
       });
 
       // The chunk-cycle would otherwise run entirely via microtask
@@ -682,7 +694,7 @@ export const useChatSession = (
       const TOOL_TOKEN_BUCKET = 10;
 
       for await (const event of events) {
-        if (abortRef.current?.signal.aborted && event.type === 'token') {
+        if (runAbortController.signal.aborted && event.type === 'token') {
           continue;
         }
 
@@ -744,6 +756,8 @@ export const useChatSession = (
       modelStore.setIsStreaming(false);
       chatSessionStore.setIsGenerating(false);
       chatSessionStore.setIsStopping(false);
+      await tts.completion;
+      return true;
     } catch (error) {
       console.error('Completion error:', error);
       modelStore.setInferencing(false);
@@ -913,6 +927,7 @@ export const useChatSession = (
       } else {
         await addSystemMessage(`${l10n.chat.completionFailed}${errorMessage}`);
       }
+      return false;
     } finally {
       try {
         deactivateKeepAwake();
@@ -928,6 +943,9 @@ export const useChatSession = (
   };
 
   const handleStopPress = async () => {
+    if (!chatSessionStore.isGenerating && !modelStore.inferencing) {
+      return;
+    }
     // Enter the `stopping` state IMMEDIATELY: the user gets visible
     // feedback ("Stopping…") and the send button is gated off so a
     // new completion can't try to use the still-busy native context.

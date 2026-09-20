@@ -515,12 +515,13 @@ export const ChatView = observer(
         if (chatSessionStore.isEditMode) {
           await chatSessionStore.commitEdit();
         }
-        onSendPress(message);
+        const sessionId = chatSessionStore.activeSessionId;
         setInputText('');
-        if (chatSessionStore.activeSessionId) {
-          chatSessionStore.clearDraft(chatSessionStore.activeSessionId);
+        if (sessionId) {
+          chatSessionStore.clearDraft(sessionId);
         }
         Keyboard.dismiss();
+        return onSendPress(message);
       },
       [onSendPress],
     );

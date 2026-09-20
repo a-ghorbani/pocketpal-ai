@@ -18,7 +18,7 @@ type CopyableMessage = MessageType.Text | MessageType.AssistantTurn;
 interface UseMessageActionsProps {
   user: User;
   messages: MessageType.Any[];
-  handleSendPress: (message: MessageType.PartialText) => Promise<void>;
+  handleSendPress: (message: MessageType.PartialText) => Promise<unknown>;
   setInputText?: (text: string) => void;
   setInputImages?: (images: string[]) => void;
 }

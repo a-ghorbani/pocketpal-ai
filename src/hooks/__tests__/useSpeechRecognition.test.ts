@@ -172,6 +172,35 @@ describe('useSpeechRecognition', () => {
     await waitFor(() => expect(native.cancel).toHaveBeenCalledWith(requestId));
   });
 
+  it('reports ordinary no-speech without surfacing an error', async () => {
+    const onSilence = jest.fn();
+    const {result} = renderHook(() =>
+      useSpeechRecognition({
+        draft: '',
+        contextKey: 'chat-1',
+        enabled: true,
+        playbackActive: false,
+        onFinalText: jest.fn(),
+        onSilence,
+      }),
+    );
+
+    await waitFor(() => expect(native.getCapability).toHaveBeenCalled());
+    await act(async () => result.current.start());
+    const requestId = native.start.mock.calls[0][0];
+    act(() => {
+      DeviceEventEmitter.emit('speechRecognitionEvent', {
+        requestId,
+        type: 'error',
+        code: 'NO_SPEECH',
+      });
+    });
+
+    expect(onSilence).toHaveBeenCalledTimes(1);
+    expect(result.current.errorCode).toBeNull();
+    expect(result.current.phase).toBe('idle');
+  });
+
   it('preserves deliberate draft whitespace when appending', () => {
     expect(speechRecognitionTestUtils.appendTranscript('', 'hello')).toBe(
       'hello',

@@ -75,6 +75,7 @@ const Speech = {
   initialize: jest.fn().mockResolvedValue(undefined),
   speak: jest.fn().mockResolvedValue(undefined),
   stop: jest.fn().mockResolvedValue(undefined),
+  isSpeaking: jest.fn().mockResolvedValue(false),
   release: jest.fn().mockResolvedValue(undefined),
   getAvailableVoices: jest.fn().mockResolvedValue([
     {

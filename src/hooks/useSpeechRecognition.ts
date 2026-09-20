@@ -33,6 +33,7 @@ interface UseSpeechRecognitionOptions {
   enabled: boolean;
   playbackActive: boolean;
   onFinalText: (text: string) => void;
+  onSilence?: () => void;
 }
 
 const EVENT_NAME = 'speechRecognitionEvent';
@@ -56,6 +57,7 @@ export function useSpeechRecognition({
   enabled,
   playbackActive,
   onFinalText,
+  onSilence,
 }: UseSpeechRecognitionOptions) {
   const [phase, setPhase] = React.useState<DictationPhase>('idle');
   const [partialText, setPartialText] = React.useState('');
@@ -66,6 +68,7 @@ export function useSpeechRecognition({
   const draftAtStartRef = React.useRef('');
   const contextAtStartRef = React.useRef('');
   const finalCommittedRef = React.useRef(false);
+  const speechObservedRef = React.useRef(false);
   const mountedRef = React.useRef(true);
   const appStateRef = React.useRef(AppState.currentState);
 
@@ -92,6 +95,7 @@ export function useSpeechRecognition({
   const reset = React.useCallback(() => {
     requestIdRef.current = null;
     finalCommittedRef.current = false;
+    speechObservedRef.current = false;
     setPhase('idle');
     setPartialText('');
   }, []);
@@ -132,6 +136,9 @@ export function useSpeechRecognition({
           return;
         }
         if (event.type === 'listening' || event.type === 'speech') {
+          if (event.type === 'speech') {
+            speechObservedRef.current = true;
+          }
           setPhase('listening');
           return;
         }
@@ -144,6 +151,15 @@ export function useSpeechRecognition({
           return;
         }
         if (event.type === 'error') {
+          const isSilence =
+            event.code === 'NO_MATCH' ||
+            event.code === 'NO_SPEECH' ||
+            (event.code === 'TIMEOUT' && !speechObservedRef.current);
+          if (isSilence && onSilence) {
+            reset();
+            onSilence();
+            return;
+          }
           setErrorCode(event.code ?? 'RECOGNITION_FAILED');
           reset();
           return;
@@ -167,7 +183,7 @@ export function useSpeechRecognition({
       },
     );
     return () => subscription.remove();
-  }, [contextKey, onFinalText, reset]);
+  }, [contextKey, onFinalText, onSilence, reset]);
 
   React.useEffect(() => {
     if (phase !== 'idle' && draft !== draftAtStartRef.current) {
@@ -215,6 +231,7 @@ export function useSpeechRecognition({
     draftAtStartRef.current = draft;
     contextAtStartRef.current = contextKey;
     finalCommittedRef.current = false;
+    speechObservedRef.current = false;
     setErrorCode(null);
     setPhase('preparing');
 

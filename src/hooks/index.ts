@@ -7,3 +7,4 @@ export * from './useStorageCheck';
 export * from './useDeepLinking';
 export * from './usePalLoadHint';
 export * from './useSpeechRecognition';
+export * from './useVoiceConversation';

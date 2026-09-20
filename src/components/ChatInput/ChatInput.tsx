@@ -28,7 +28,7 @@ import {
 } from '../../assets/icons';
 
 import {useTheme} from '../../hooks';
-import {useSpeechRecognition} from '../../hooks/useSpeechRecognition';
+import {useVoiceConversation} from '../../hooks/useVoiceConversation';
 
 import {createStyles} from './styles';
 
@@ -53,7 +53,7 @@ export interface ChatInputTopLevelProps {
   isStreaming?: boolean;
   /** Will be called on {@link SendButton} tap. Has {@link MessageType.PartialText} which can
    * be transformed to {@link MessageType.Text} and added to the messages list. */
-  onSendPress: (message: MessageType.PartialText) => void;
+  onSendPress: (message: MessageType.PartialText) => Promise<unknown> | void;
   onStopPress?: () => void;
   onCancelEdit?: () => void;
   onPalBtnPress?: () => void;
@@ -241,23 +241,31 @@ export const ChatInput = observer(
       [isVideoCapable, onInputChangeText, onPromptTextChange],
     );
 
-    const handleDictationFinal = React.useCallback(
-      (newText: string) => handleChangeText(newText),
-      [handleChangeText],
+    const handleConversationSend = React.useCallback(
+      (message: MessageType.PartialText) =>
+        Promise.resolve(onSendPress(message)),
+      [onSendPress],
     );
-    const dictation = useSpeechRecognition({
-      draft: value,
+    const handleStopConversationGeneration = React.useCallback(() => {
+      onStopPress?.();
+    }, [onStopPress]);
+    const handleOpenVoiceSetup = React.useCallback(() => {
+      ttsStore.openSetupSheet();
+    }, []);
+    const conversation = useVoiceConversation({
       contextKey: dictationContextKey,
-      enabled:
+      recognitionEnabled:
         isDictationEligible &&
         !isStreaming &&
         !isStopVisible &&
         !isCameraActive &&
         !isVideoCapable,
-      playbackActive: ttsStore.playbackState.mode !== 'idle',
-      onFinalText: handleDictationFinal,
+      onSendTranscript: handleConversationSend,
+      onStopGeneration: handleStopConversationGeneration,
+      onOpenVoiceSetup: handleOpenVoiceSetup,
     });
-    const dictationActive = dictation.phase !== 'idle';
+    const dictation = conversation.recognition;
+    const dictationActive = conversation.active;
     const {clearError: clearDictationError, requestModelDownload} = dictation;
     const speechInputL10n = l10n.components.chatInput.speechInput;
 
@@ -371,6 +379,34 @@ export const ChatInput = observer(
         // Clear selected images after sending
         setSelectedImages([]);
       }
+    };
+
+    const handleConversationPress = () => {
+      if (conversation.active) {
+        conversation.stop();
+        return;
+      }
+      if (value.trim() || selectedImages.length > 0 || isEditMode) {
+        Alert.alert(
+          speechInputL10n.conversationUnavailableTitle,
+          speechInputL10n.conversationNeedsEmptyComposer,
+        );
+        return;
+      }
+      if (!hasActiveModel) {
+        ReactNativeHapticFeedback.trigger('notificationWarning', hapticOptions);
+        setShowModelWarning(true);
+        setTimeout(() => setShowModelWarning(false), 3000);
+        return;
+      }
+      conversation.start();
+    };
+
+    const handleGenerationStop = () => {
+      if (conversation.active) {
+        conversation.stop(false);
+      }
+      onStopPress?.();
     };
 
     // Handle plus button press to show image upload menu
@@ -493,7 +529,8 @@ export const ChatInput = observer(
       : onSurfaceColor + '55';
     const disabledOnSurfaceColor = onSurfaceColor + '55';
     // // Plus button state
-    const isPlusButtonEnabled = !isStreaming && isVisionEnabled;
+    const isPlusButtonEnabled =
+      !isStreaming && !conversation.active && isVisionEnabled;
     const plusColor = isPlusButtonEnabled
       ? onSurfaceColor
       : disabledOnSurfaceColor;
@@ -649,7 +686,7 @@ export const ChatInput = observer(
               editable={
                 isVideoCapable
                   ? !isStreaming && !isCameraActive
-                  : textInputProps?.editable !== false && !dictationActive
+                  : textInputProps?.editable !== false && !conversation.active
               }
               testID="chat-input"
               accessibilityLabel="Message input"
@@ -805,45 +842,37 @@ export const ChatInput = observer(
             <View style={styles.rightControls}>
               {Platform.OS === 'android' && !isVideoCapable && (
                 <View style={styles.dictationControls}>
-                  {dictationActive && (
-                    <IconButton
-                      icon="close"
-                      size={18}
-                      iconColor={hasDarkPalSurface ? onSurfaceColor : undefined}
-                      onPress={dictation.cancel}
-                      accessibilityLabel={
-                        l10n.components.chatInput.speechInput.cancel
-                      }
-                      testID="dictation-cancel"
-                    />
-                  )}
                   <IconButton
                     icon={
-                      dictation.phase === 'finishing'
+                      conversation.phase === 'finishing'
                         ? 'progress-clock'
-                        : dictationActive
+                        : conversation.active
                           ? 'stop-circle'
                           : 'microphone'
                     }
                     size={20}
                     iconColor={hasDarkPalSurface ? onSurfaceColor : undefined}
                     disabled={
-                      !isDictationEligible ||
-                      isStreaming ||
-                      !!isStopVisible ||
-                      isCameraActive ||
-                      dictation.phase === 'preparing' ||
-                      dictation.phase === 'finishing'
+                      !conversation.active &&
+                      (!isDictationEligible ||
+                        !hasActiveModel ||
+                        isStreaming ||
+                        !!isStopVisible ||
+                        isCameraActive)
                     }
-                    onPress={
-                      dictationActive ? dictation.finish : dictation.start
-                    }
+                    onPress={handleConversationPress}
                     accessibilityLabel={
-                      dictationActive
-                        ? l10n.components.chatInput.speechInput.finish
-                        : l10n.components.chatInput.speechInput.start
+                      conversation.active
+                        ? speechInputL10n.stopConversation
+                        : speechInputL10n.startConversation
                     }
-                    accessibilityState={{busy: dictationActive}}
+                    accessibilityState={{
+                      selected: conversation.active,
+                      busy:
+                        conversation.phase === 'starting' ||
+                        conversation.phase === 'finishing' ||
+                        conversation.phase === 'responding',
+                    }}
                     testID="dictation-button"
                   />
                   {dictationActive && (
@@ -857,9 +886,13 @@ export const ChatInput = observer(
                       ]}
                       testID="dictation-status">
                       {dictation.partialText ||
-                        (dictation.phase === 'finishing'
-                          ? l10n.components.chatInput.speechInput.finishing
-                          : l10n.components.chatInput.speechInput.listening)}
+                        (conversation.phase === 'finishing'
+                          ? speechInputL10n.finishing
+                          : conversation.phase === 'responding'
+                            ? speechInputL10n.responding
+                            : conversation.phase === 'starting'
+                              ? speechInputL10n.starting
+                              : speechInputL10n.listening)}
                     </Text>
                   )}
                 </View>
@@ -884,7 +917,10 @@ export const ChatInput = observer(
 
               {/* Send/Stop Button */}
               {isStopVisible ? (
-                <StopButton color={onSurfaceColor} onPress={onStopPress} />
+                <StopButton
+                  color={onSurfaceColor}
+                  onPress={handleGenerationStop}
+                />
               ) : isVideoCapable && !isCameraActive ? (
                 /* Compact Start Video Button for Video Pals */
                 <TouchableOpacity
@@ -908,7 +944,8 @@ export const ChatInput = observer(
                   </Text>
                 </TouchableOpacity>
               ) : (
-                isSendButtonVisible && (
+                isSendButtonVisible &&
+                !conversation.active && (
                   <View style={{opacity: sendButtonOpacity}}>
                     <SendButton color={onSurfaceColor} onPress={handleSend} />
                   </View>

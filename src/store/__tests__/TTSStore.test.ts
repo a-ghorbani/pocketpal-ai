@@ -519,6 +519,58 @@ describe('TTSStore', () => {
       expect(store.lastSpokenMessageId).toBe('msg-1');
     });
 
+    it('uses a transient conversation override without changing the saved preference', async () => {
+      const store = await makeStore();
+      store.setCurrentVoice(SYSTEM_VOICE);
+      expect(store.autoSpeakEnabled).toBe(false);
+
+      store.setConversationAutoSpeak(true);
+      store.onAssistantMessageStart('voice-turn');
+
+      expect(store.effectiveAutoSpeakEnabled).toBe(true);
+      expect(store.autoSpeakEnabled).toBe(false);
+      expect(store.playbackState.mode).toBe('streaming');
+
+      store.setConversationAutoSpeak(false);
+      expect(store.effectiveAutoSpeakEnabled).toBe(false);
+      expect(store.autoSpeakEnabled).toBe(false);
+    });
+
+    it('explicit auto-speak off also disables the conversation override', async () => {
+      const store = await setupEligible();
+      store.setConversationAutoSpeak(true);
+
+      store.setAutoSpeak(false);
+
+      expect(store.autoSpeakEnabled).toBe(false);
+      expect(store.conversationAutoSpeakEnabled).toBe(false);
+      expect(store.effectiveAutoSpeakEnabled).toBe(false);
+    });
+
+    it('speaker stop skips only the current reply and permits the next reply', async () => {
+      const store = await setupEligible();
+      store.setConversationAutoSpeak(true);
+      store.onAssistantMessageStart('msg-skip');
+      store.onAssistantMessageChunk('msg-skip', 'part one');
+
+      await store.skipCurrentPlayback();
+      const outcome = await store.onAssistantMessageComplete(
+        'msg-skip',
+        'part one part two',
+      );
+
+      expect(outcome).toBe('skipped');
+      expect(lastSystemHandle!.cancel).toHaveBeenCalledTimes(1);
+      expect(lastSystemHandle!.finalize).not.toHaveBeenCalled();
+      expect(store.effectiveAutoSpeakEnabled).toBe(true);
+
+      store.onAssistantMessageStart('msg-next');
+      expect(store.playbackState).toEqual(
+        expect.objectContaining({mode: 'streaming', messageId: 'msg-next'}),
+      );
+      expect(store.lastSpokenMessageId).toBe('msg-next');
+    });
+
     it('onAssistantMessageStart guard: same messageId twice → only one handle opened', async () => {
       const store = await setupEligible();
 
