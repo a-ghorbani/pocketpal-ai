@@ -1,4 +1,6 @@
 import {MMProjRegex} from '../../utils/multimodalPatterns';
+
+import {CoreVersion, passesMinAppVersion, toCoreVersion} from './appVersion';
 import {
   Classifier,
   CpuHeuristicRule,
@@ -14,9 +16,9 @@ import {
 
 // Parse-guard: turns the raw wire JSON into a typed DeviceRules or throws on a
 // structurally invalid file or one whose schema major is not 2. Unknown/extra
-// fields are ignored. A candidate missing a required field, or with an unsafe
-// path segment, is skipped; a tier without a candidates list parses to an empty
-// model list (does not throw).
+// fields are ignored. A candidate missing a required field, with an unsafe path
+// segment, or whose min_app_version gate fails is skipped; a tier without a
+// candidates list parses to an empty model list (does not throw).
 
 const TIERS: Tier[] = ['low', 'mid', 'high', 'flagship'];
 
@@ -236,8 +238,12 @@ const guardRepoFilename = (repo: unknown, filename: unknown): string | null => {
   return repo as string;
 };
 
-const parseMmproj = (v: unknown, candidateRepo: string): RuleMmproj | null => {
-  if (!isObject(v)) {
+const parseMmproj = (
+  v: unknown,
+  candidateRepo: string,
+  appCore: CoreVersion | null,
+): RuleMmproj | null => {
+  if (!isObject(v) || !passesMinAppVersion(v.min_app_version, appCore)) {
     return null;
   }
   const sizeBytes = asNumber(v.size_bytes);
@@ -271,8 +277,11 @@ const parseMmproj = (v: unknown, candidateRepo: string): RuleMmproj | null => {
   };
 };
 
-const parseDraft = (v: unknown): RuleDraft | null => {
-  if (!isObject(v)) {
+const parseDraft = (
+  v: unknown,
+  appCore: CoreVersion | null,
+): RuleDraft | null => {
+  if (!isObject(v) || !passesMinAppVersion(v.min_app_version, appCore)) {
     return null;
   }
   const sizeBytes = asNumber(v.size_bytes);
@@ -289,8 +298,15 @@ const parseDraft = (v: unknown): RuleDraft | null => {
   };
 };
 
-const parseCandidate = (v: unknown): RuleCandidate | null => {
-  if (!isObject(v) || typeof v.model !== 'string') {
+const parseCandidate = (
+  v: unknown,
+  appCore: CoreVersion | null,
+): RuleCandidate | null => {
+  if (
+    !isObject(v) ||
+    typeof v.model !== 'string' ||
+    !passesMinAppVersion(v.min_app_version, appCore)
+  ) {
     return null;
   }
   if (!guardRepoFilename(v.hf_repo, v.hf_filename)) {
@@ -308,7 +324,7 @@ const parseCandidate = (v: unknown): RuleCandidate | null => {
   if (multimodal) {
     // A multimodal candidate with an invalid projector reference is dropped
     // entirely — never ship a vision model with an unvalidated projector path.
-    const parsed = parseMmproj(v.mmproj, v.hf_repo as string);
+    const parsed = parseMmproj(v.mmproj, v.hf_repo as string, appCore);
     if (!parsed) {
       return null;
     }
@@ -316,7 +332,7 @@ const parseCandidate = (v: unknown): RuleCandidate | null => {
   }
   // An invalid draft block degrades to no-draft (drop only the draft, keep the
   // target) — unlike mmproj, a bad draft must not drop the whole candidate.
-  const draft = v.draft !== undefined ? parseDraft(v.draft) : null;
+  const draft = v.draft !== undefined ? parseDraft(v.draft, appCore) : null;
   return {
     model: v.model,
     displayName: asString(v.display_name),
@@ -331,7 +347,10 @@ const parseCandidate = (v: unknown): RuleCandidate | null => {
   };
 };
 
-const parseTiers = (v: unknown): DeviceRules['tiers'] => {
+const parseTiers = (
+  v: unknown,
+  appCore: CoreVersion | null,
+): DeviceRules['tiers'] => {
   if (!isObject(v)) {
     throw new Error('tiers missing');
   }
@@ -341,7 +360,7 @@ const parseTiers = (v: unknown): DeviceRules['tiers'] => {
     const models =
       isObject(raw) && Array.isArray(raw.candidates)
         ? raw.candidates
-            .map(parseCandidate)
+            .map(c => parseCandidate(c, appCore))
             .filter((c): c is RuleCandidate => c !== null)
         : [];
     tiers[tier] = {models};
@@ -349,7 +368,10 @@ const parseTiers = (v: unknown): DeviceRules['tiers'] => {
   return tiers;
 };
 
-export function parseDeviceRules(raw: unknown): DeviceRules {
+export function parseDeviceRules(
+  raw: unknown,
+  appVersion: string,
+): DeviceRules {
   if (!isObject(raw)) {
     throw new Error('rules root is not an object');
   }
@@ -367,6 +389,6 @@ export function parseDeviceRules(raw: unknown): DeviceRules {
     rulesVersion,
     schemaVersion,
     classifier: parseClassifier(raw.classifier),
-    tiers: parseTiers(raw.tiers),
+    tiers: parseTiers(raw.tiers, toCoreVersion(appVersion)),
   };
 }

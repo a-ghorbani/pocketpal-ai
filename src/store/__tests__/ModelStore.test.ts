@@ -34,6 +34,7 @@ import {LOOKIE_DEFAULT_MODEL} from '../builtinPalModels';
 import {classify} from '../../services/deviceRules/classify';
 import {getVisionModelSizeBreakdown} from '../../utils/multimodalHelpers';
 import {MODEL_LIST_VERSION} from '../ModelStore';
+import * as parseModule from '../../services/deviceRules/parse';
 import {parseDeviceRules} from '../../services/deviceRules/parse';
 import {fetchRules} from '../../services/deviceRules/rules';
 import {readDeviceSignals} from '../../services/deviceRules/signals';
@@ -767,7 +768,7 @@ describe('ModelStore', () => {
 
     it('android: parses + classifies non-low and resolves origin:HF presets', () => {
       Platform.OS = 'android';
-      const rules = parseDeviceRules(androidBundledRules);
+      const rules = parseDeviceRules(androidBundledRules, '1.17.3');
       const signals = {ramBytes: 16 * 1e9, socModel: 'SM8850'};
       const tier = classify(signals as any, rules.classifier, 'android');
       expect(tier).not.toBe('low');
@@ -783,7 +784,7 @@ describe('ModelStore', () => {
 
     it('ios: parses + classifies non-low and resolves origin:HF presets', () => {
       Platform.OS = 'ios';
-      const rules = parseDeviceRules(iosBundledRules);
+      const rules = parseDeviceRules(iosBundledRules, '1.17.3');
       const signals = {ramBytes: 8 * 1e9, machine: 'iPhone16,1'};
       const tier = classify(signals as any, rules.classifier, 'ios');
       expect(tier).not.toBe('low');
@@ -807,7 +808,7 @@ describe('ModelStore', () => {
         ['ios', iosBundledRules],
       ] as const) {
         Platform.OS = os;
-        const rules = parseDeviceRules(raw);
+        const rules = parseDeviceRules(raw, '1.17.3');
         const signals = {
           ramBytes: 16 * 1e9,
           socModel: 'SM8850',
@@ -827,7 +828,7 @@ describe('ModelStore', () => {
 
     it('android: resolved LLMs defer oid/lfs to download (none baked)', () => {
       Platform.OS = 'android';
-      const rules = parseDeviceRules(androidBundledRules);
+      const rules = parseDeviceRules(androidBundledRules, '1.17.3');
       const signals = {ramBytes: 16 * 1e9, socModel: 'SM8850'};
       const presets = modelStore.resolvePresetModels(rules, signals as any);
       const llms = presets.filter(m => !isProjection(m.id));
@@ -840,14 +841,14 @@ describe('ModelStore', () => {
     });
 
     it('all four tiers parse to a non-empty, origin:HF model set on android', () => {
-      const rules = parseDeviceRules(androidBundledRules);
+      const rules = parseDeviceRules(androidBundledRules, '1.17.3');
       for (const tier of ['low', 'mid', 'high', 'flagship'] as const) {
         expect(rules.tiers[tier].models.length).toBeGreaterThan(0);
       }
     });
 
     it('all four tiers parse to a non-empty, origin:HF model set on ios', () => {
-      const rules = parseDeviceRules(iosBundledRules);
+      const rules = parseDeviceRules(iosBundledRules, '1.17.3');
       for (const tier of ['low', 'mid', 'high', 'flagship'] as const) {
         expect(rules.tiers[tier].models.length).toBeGreaterThan(0);
       }
@@ -1197,6 +1198,21 @@ describe('ModelStore', () => {
       expect(modelStore.rulesVersion).toBeTruthy();
     });
 
+    it('parses the bundled floor with the running app version', async () => {
+      const parseSpy = jest.spyOn(parseModule, 'parseDeviceRules');
+      try {
+        await (modelStore as any).resolvePresets();
+        expect(parseSpy).toHaveBeenCalledWith(expect.anything(), '1.0.0');
+      } finally {
+        parseSpy.mockRestore();
+      }
+    });
+
+    it('fetches the online rules with the running app version', async () => {
+      await (modelStore as any).upgradeToFetchedRules();
+      expect(fetchRules).toHaveBeenCalledWith('1.0.0');
+    });
+
     it('returns [] and completes when bundled parse throws (startup not bricked)', async () => {
       (readDeviceSignals as jest.Mock).mockRejectedValue(
         new Error('signals exploded'),
@@ -1205,28 +1221,31 @@ describe('ModelStore', () => {
     });
 
     it('upgrades to fetched rules and reconciles when newer rules arrive', async () => {
-      const fetchedRules = parseDeviceRules({
-        schema_version: '2.0.0',
-        platform: 'android',
-        rules_version: '2999-01-01.1',
-        classifier: {
-          ram_bands: [{id: 'all', max_bytes: null}],
-          tier_matrix: [{ram_band: 'all', soc_class: 'mid', tier: 'mid'}],
-          soc_model_to_class: {SM8850: 'mid'},
-        },
-        tiers: {
-          mid: {
-            candidates: [
-              {
-                model: 'fetched',
-                hf_repo: 'ggml-org/fetched-repo',
-                hf_filename: 'fetched.gguf',
-                size_bytes: 500,
-              },
-            ],
+      const fetchedRules = parseDeviceRules(
+        {
+          schema_version: '2.0.0',
+          platform: 'android',
+          rules_version: '2999-01-01.1',
+          classifier: {
+            ram_bands: [{id: 'all', max_bytes: null}],
+            tier_matrix: [{ram_band: 'all', soc_class: 'mid', tier: 'mid'}],
+            soc_model_to_class: {SM8850: 'mid'},
+          },
+          tiers: {
+            mid: {
+              candidates: [
+                {
+                  model: 'fetched',
+                  hf_repo: 'ggml-org/fetched-repo',
+                  hf_filename: 'fetched.gguf',
+                  size_bytes: 500,
+                },
+              ],
+            },
           },
         },
-      });
+        '1.17.3',
+      );
       (fetchRules as jest.Mock).mockResolvedValue(fetchedRules);
 
       await (modelStore as any).upgradeToFetchedRules();

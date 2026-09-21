@@ -48,7 +48,7 @@ const withCandidate = (candidate: Record<string, unknown>) => {
 
 describe('parseDeviceRules', () => {
   it('parses the classifier into camelCase types', () => {
-    const rules = parseDeviceRules(validRaw);
+    const rules = parseDeviceRules(validRaw, '1.17.3');
     expect(rules.platform).toBe('android');
     expect(rules.rulesVersion).toBe('2026-06-10.1');
     expect(rules.classifier.socModelToClass).toEqual({'Tensor G3': 'mid'});
@@ -57,7 +57,7 @@ describe('parseDeviceRules', () => {
   });
 
   it('maps a wire candidate into the internal models array', () => {
-    const rules = parseDeviceRules(validRaw);
+    const rules = parseDeviceRules(validRaw, '1.17.3');
     const c = rules.tiers.mid.models[0];
     expect(c.model).toBe('gemma-3-1b-it');
     expect(c.displayName).toBe('Gemma-3-1b-it (Q4_K_M)');
@@ -69,7 +69,7 @@ describe('parseDeviceRules', () => {
   });
 
   it('drops informational fields the app ignores', () => {
-    const rules = parseDeviceRules(validRaw);
+    const rules = parseDeviceRules(validRaw, '1.17.3');
     const c = rules.tiers.mid.models[0] as unknown as Record<string, unknown>;
     expect(c.quant).toBeUndefined();
     expect(c.obsTg).toBeUndefined();
@@ -93,6 +93,7 @@ describe('parseDeviceRules', () => {
           modalities: ['vision'],
         },
       }),
+      '1.17.3',
     );
     const c = rules.tiers.mid.models[0];
     expect(c.multimodal).toBe(true);
@@ -114,6 +115,7 @@ describe('parseDeviceRules', () => {
           size_bytes: 500000000,
         },
       }),
+      '1.17.3',
     );
     const c = rules.tiers.mid.models[0];
     expect(c.draft?.hfRepo).toBe('Qwen/Qwen3-0.6B-GGUF');
@@ -133,6 +135,7 @@ describe('parseDeviceRules', () => {
           // no size_bytes
         },
       }),
+      '1.17.3',
     );
     const c = rules.tiers.mid.models[0];
     expect(c).toBeDefined();
@@ -157,6 +160,7 @@ describe('parseDeviceRules', () => {
           hf_filename: 'Qwen3-8B-Q4_K_M.gguf',
           draft: {...bad, size_bytes: 500000000},
         }),
+        '1.17.3',
       );
       const c = rules.tiers.mid.models[0];
       expect(c).toBeDefined();
@@ -171,7 +175,7 @@ describe('parseDeviceRules', () => {
       hf_repo: 'a/b',
       hf_filename: 'x.gguf',
     });
-    const rules = parseDeviceRules(noName);
+    const rules = parseDeviceRules(noName, '1.17.3');
     expect(rules.tiers.mid.models[0].displayName).toBeUndefined();
   });
 
@@ -181,7 +185,7 @@ describe('parseDeviceRules', () => {
       {ram_band: '6-8', soc_class: 'mid', tier: 'mid'},
       {ram_band: '6-8', soc_class: 'flagship', tier: 'ultra'},
     ];
-    const rules = parseDeviceRules(withBadTier);
+    const rules = parseDeviceRules(withBadTier, '1.17.3');
     expect(rules.classifier.tierMatrix).toEqual([
       {ramBand: '6-8', socClass: 'mid', tier: 'mid'},
     ]);
@@ -194,19 +198,22 @@ describe('parseDeviceRules', () => {
       generated_at: 'now',
       _status: 'draft',
     };
-    expect(() => parseDeviceRules(extra)).not.toThrow();
+    expect(() => parseDeviceRules(extra, '1.17.3')).not.toThrow();
   });
 
   it('throws on a structurally invalid file', () => {
-    expect(() => parseDeviceRules(null)).toThrow();
-    expect(() => parseDeviceRules({})).toThrow();
+    expect(() => parseDeviceRules(null, '1.17.3')).toThrow();
+    expect(() => parseDeviceRules({}, '1.17.3')).toThrow();
     expect(() =>
-      parseDeviceRules({
-        schema_version: '2.0.0',
-        platform: 'android',
-        rules_version: '1',
-        classifier: {tier_matrix: []},
-      }),
+      parseDeviceRules(
+        {
+          schema_version: '2.0.0',
+          platform: 'android',
+          rules_version: '1',
+          classifier: {tier_matrix: []},
+        },
+        '1.17.3',
+      ),
     ).toThrow(/ram_bands/);
   });
 
@@ -214,7 +221,10 @@ describe('parseDeviceRules', () => {
     'throws on an unsupported schema_version %p',
     schemaVersion => {
       expect(() =>
-        parseDeviceRules({...validRaw, schema_version: schemaVersion}),
+        parseDeviceRules(
+          {...validRaw, schema_version: schemaVersion},
+          '1.17.3',
+        ),
       ).toThrow(/schema_version/);
     },
   );
@@ -222,17 +232,20 @@ describe('parseDeviceRules', () => {
   it.each(['2.0.0', '2.1.0-draft', '2.3.4+build'])(
     'parses a schema major 2 document %p',
     schemaVersion => {
-      const rules = parseDeviceRules({
-        ...validRaw,
-        schema_version: schemaVersion,
-      });
+      const rules = parseDeviceRules(
+        {
+          ...validRaw,
+          schema_version: schemaVersion,
+        },
+        '1.17.3',
+      );
       expect(rules.schemaVersion).toBe(schemaVersion);
       expect(rules.tiers.mid.models).toHaveLength(1);
     },
   );
 
   it('defaults all four tiers even when only some are present', () => {
-    const rules = parseDeviceRules(validRaw);
+    const rules = parseDeviceRules(validRaw, '1.17.3');
     expect(rules.tiers.low.models).toEqual([]);
     expect(rules.tiers.mid.models).toHaveLength(1);
     expect(rules.tiers.high.models).toEqual([]);
@@ -246,13 +259,14 @@ describe('parseDeviceRules', () => {
       hf_repo: 'a/b',
       // no hf_filename
     });
-    const rules = parseDeviceRules(broken);
+    const rules = parseDeviceRules(broken, '1.17.3');
     expect(rules.tiers.mid.models).toHaveLength(1);
   });
 
   it('skips a candidate whose hf_repo has no slash', () => {
     const rules = parseDeviceRules(
       withCandidate({model: 'x', hf_repo: 'singlepart', hf_filename: 'x.gguf'}),
+      '1.17.3',
     );
     expect(rules.tiers.mid.models).toEqual([]);
   });
@@ -260,6 +274,7 @@ describe('parseDeviceRules', () => {
   it('skips a candidate whose hf_repo has more than two parts', () => {
     const rules = parseDeviceRules(
       withCandidate({model: 'x', hf_repo: 'a/b/c', hf_filename: 'x.gguf'}),
+      '1.17.3',
     );
     expect(rules.tiers.mid.models).toEqual([]);
   });
@@ -267,6 +282,7 @@ describe('parseDeviceRules', () => {
   it('skips a candidate whose hf_repo has an empty part', () => {
     const rules = parseDeviceRules(
       withCandidate({model: 'x', hf_repo: 'a/', hf_filename: 'x.gguf'}),
+      '1.17.3',
     );
     expect(rules.tiers.mid.models).toEqual([]);
   });
@@ -278,6 +294,7 @@ describe('parseDeviceRules', () => {
         hf_repo: 'a/b',
         hf_filename: '../../etc/passwd.gguf',
       }),
+      '1.17.3',
     );
     expect(rules.tiers.mid.models).toEqual([]);
   });
@@ -289,6 +306,7 @@ describe('parseDeviceRules', () => {
         hf_repo: 'a/b',
         hf_filename: 'sub/dir/model.gguf',
       }),
+      '1.17.3',
     );
     expect(rules.tiers.mid.models).toEqual([]);
   });
@@ -300,6 +318,7 @@ describe('parseDeviceRules', () => {
         hf_repo: '../../evil/repo',
         hf_filename: 'x.gguf',
       }),
+      '1.17.3',
     );
     expect(rules.tiers.mid.models).toEqual([]);
   });
@@ -311,6 +330,7 @@ describe('parseDeviceRules', () => {
         hf_repo: 'a/b',
         hf_filename: 'model.bin',
       }),
+      '1.17.3',
     );
     expect(rules.tiers.mid.models).toEqual([]);
   });
@@ -320,7 +340,7 @@ describe('parseDeviceRules', () => {
     raw.tiers.mid.candidates = [
       {model: 'x', hf_repo: 'a/b', hf_filename: 'x.gguf'},
     ];
-    expect(parseDeviceRules(raw).tiers.mid.models).toEqual([]);
+    expect(parseDeviceRules(raw, '1.17.3').tiers.mid.models).toEqual([]);
   });
 
   it('accepts a literal ".." inside a repo/filename (not a traversal)', () => {
@@ -330,6 +350,7 @@ describe('parseDeviceRules', () => {
         hf_repo: 'author/repo..v2',
         hf_filename: 'model..q4.gguf',
       }),
+      '1.17.3',
     );
     expect(rules.tiers.mid.models).toHaveLength(1);
     expect(rules.tiers.mid.models[0].hfRepo).toBe('author/repo..v2');
@@ -342,6 +363,7 @@ describe('parseDeviceRules', () => {
         hf_repo: 'a/b',
         hf_filename: 'sub\\dir\\model.gguf',
       }),
+      '1.17.3',
     );
     expect(rules.tiers.mid.models).toEqual([]);
   });
@@ -359,12 +381,13 @@ describe('parseDeviceRules', () => {
           size_bytes: 100,
         },
       }),
+      '1.17.3',
     );
     expect(rules.tiers.mid.models).toEqual([]);
   });
 
   it('derives the download url from a huggingface.co template', () => {
-    const rules = parseDeviceRules(validRaw);
+    const rules = parseDeviceRules(validRaw, '1.17.3');
     // The candidate carries no url; the consumer derives it from repo+filename.
     // Re-derive here to assert the parsed parts compose the expected target.
     const c = rules.tiers.mid.models[0];
@@ -387,6 +410,7 @@ describe('parseDeviceRules', () => {
           size_bytes: 100,
         },
       }),
+      '1.17.3',
     );
     // A failing mmproj drops the whole candidate, not just the projector.
     expect(rules.tiers.mid.models).toEqual([]);
@@ -400,6 +424,7 @@ describe('parseDeviceRules', () => {
         hf_filename: 'x.gguf',
         multimodal: true,
       }),
+      '1.17.3',
     );
     expect(rules.tiers.mid.models).toEqual([]);
   });
@@ -417,6 +442,7 @@ describe('parseDeviceRules', () => {
           size_bytes: 100,
         },
       }),
+      '1.17.3',
     );
     // Cross-repo projectors are not supported: id (LLM repo) and downloadUrl
     // (mmproj repo) would split silently, so the whole candidate is dropped.
@@ -436,6 +462,7 @@ describe('parseDeviceRules', () => {
           size_bytes: 100,
         },
       }),
+      '1.17.3',
     );
     // A non-mmproj projector filename would degrade the model to a plain LLM
     // with no projector, so the candidate is dropped.
@@ -451,6 +478,7 @@ describe('parseDeviceRules', () => {
         multimodal: true,
         mmproj: {hf_repo: 'a/b', hf_filename: 'proj.gguf'},
       }),
+      '1.17.3',
     );
     expect(rules.tiers.mid.models).toEqual([]);
   });
@@ -467,7 +495,130 @@ describe('parseDeviceRules', () => {
         ],
       },
     };
-    const rules = parseDeviceRules(old);
+    const rules = parseDeviceRules(old, '1.17.3');
     expect(rules.tiers.mid.models).toEqual([]);
   });
+});
+
+describe('parseDeviceRules min_app_version gates', () => {
+  const APP = '1.17.3';
+
+  const target = {
+    model: 'x',
+    hf_repo: 'a/b',
+    hf_filename: 'x.gguf',
+  };
+
+  const visionTarget = (mmprojExtra: Record<string, unknown>) => ({
+    ...target,
+    multimodal: true,
+    mmproj: {
+      hf_repo: 'a/b',
+      hf_filename: 'mmproj-BF16.gguf',
+      size_bytes: 100,
+      ...mmprojExtra,
+    },
+  });
+
+  const draftTarget = (draftExtra: Record<string, unknown>) => ({
+    ...target,
+    draft: {
+      hf_repo: 'c/d',
+      hf_filename: 'd.gguf',
+      size_bytes: 100,
+      ...draftExtra,
+    },
+  });
+
+  const midModels = (candidate: Record<string, unknown>, app = APP) =>
+    parseDeviceRules(withCandidate(candidate), app).tiers.mid.models;
+
+  it('keeps a candidate with no min_app_version', () => {
+    expect(midModels(target)).toHaveLength(1);
+  });
+
+  it.each(['1.17.3', '1.16.9', '0.0.0'])(
+    'keeps a candidate whose min_app_version %p is met',
+    min => {
+      expect(midModels({...target, min_app_version: min})).toHaveLength(1);
+    },
+  );
+
+  it.each(['1.17.4', '1.18.0', '2.0.0'])(
+    'drops a candidate whose min_app_version %p is above the app',
+    min => {
+      expect(midModels({...target, min_app_version: min})).toEqual([]);
+    },
+  );
+
+  it.each([['1.17'], ['1.17.3-rc.1'], [1.17], [null], [''], [{}]])(
+    'drops a candidate with a malformed min_app_version %p',
+    min => {
+      expect(midModels({...target, min_app_version: min})).toEqual([]);
+    },
+  );
+
+  it('compares versions numerically', () => {
+    expect(
+      midModels({...target, min_app_version: '1.17.9'}, '1.17.10'),
+    ).toHaveLength(1);
+    expect(midModels({...target, min_app_version: '1.10.0'}, '1.9.0')).toEqual(
+      [],
+    );
+  });
+
+  it.each(['1.17.3-rc.1', '1.17.3+45'])(
+    'strips the app version suffix %p before comparing',
+    app => {
+      expect(
+        midModels({...target, min_app_version: '1.17.3'}, app),
+      ).toHaveLength(1);
+    },
+  );
+
+  it('drops every gated candidate and keeps ungated ones when the app version is unknown', () => {
+    const raw = JSON.parse(JSON.stringify(validRaw));
+    raw.tiers.mid.candidates = [
+      {...target, model: 'gated', size_bytes: 1, min_app_version: '1.0.0'},
+      {...target, model: 'ungated', size_bytes: 1},
+    ];
+    const models = parseDeviceRules(raw, 'unknown').tiers.mid.models;
+    expect(models.map(m => m.model)).toEqual(['ungated']);
+  });
+
+  it('keeps a multimodal candidate whose mmproj gate is met', () => {
+    const [c] = midModels(visionTarget({min_app_version: '1.17.3'}));
+    expect(c.mmproj?.hfFilename).toBe('mmproj-BF16.gguf');
+  });
+
+  it.each(['9.0.0', 'bad', null])(
+    'drops the whole multimodal candidate when its mmproj gate %p fails',
+    min => {
+      expect(midModels(visionTarget({min_app_version: min}))).toEqual([]);
+    },
+  );
+
+  it('ignores the mmproj gate of a candidate that is not multimodal', () => {
+    const [c] = midModels({
+      ...visionTarget({min_app_version: '9.0.0'}),
+      multimodal: false,
+    });
+    expect(c).toBeDefined();
+    expect(c.mmproj).toBeUndefined();
+  });
+
+  it('keeps a draft whose gate is met', () => {
+    const [c] = midModels(draftTarget({min_app_version: '1.0.0'}));
+    expect(c.draft?.hfRepo).toBe('c/d');
+  });
+
+  it.each(['9.0.0', 'bad', null])(
+    'drops only the draft when its gate %p fails',
+    min => {
+      const [c] = midModels(draftTarget({min_app_version: min}));
+      expect(c).toBeDefined();
+      expect(c.hfRepo).toBe('a/b');
+      expect(c.draft).toBeUndefined();
+    },
+  );
 });

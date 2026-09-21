@@ -933,7 +933,7 @@ class ModelStore {
     try {
       const signals = await readDeviceSignals();
       const bundledRaw = Platform.OS === 'ios' ? iosRulesRaw : androidRulesRaw;
-      const rules = parseDeviceRules(bundledRaw);
+      const rules = parseDeviceRules(bundledRaw, DeviceInfo.getVersion());
       const tier = classify(
         signals,
         rules.classifier,
@@ -956,7 +956,7 @@ class ModelStore {
   // already-applied bundled presets in place.
   private upgradeToFetchedRules = async (): Promise<void> => {
     try {
-      const fetched = await fetchRules();
+      const fetched = await fetchRules(DeviceInfo.getVersion());
       if (!fetched) {
         return;
       }

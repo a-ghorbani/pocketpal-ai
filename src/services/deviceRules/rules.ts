@@ -16,6 +16,7 @@ const hasAnyModels = (rules: DeviceRules): boolean =>
   TIERS.some(tier => rules.tiers[tier].models.length > 0);
 
 export async function fetchRules(
+  appVersion: string,
   platform: 'ios' | 'android' = Platform.OS as 'ios' | 'android',
 ): Promise<DeviceRules | null> {
   const controller = new AbortController();
@@ -28,7 +29,7 @@ export async function fetchRules(
       return null;
     }
     const json = await response.json();
-    const rules = parseDeviceRules(json);
+    const rules = parseDeviceRules(json, appVersion);
     if (rules.platform !== platform) {
       return null;
     }
