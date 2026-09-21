@@ -9,7 +9,7 @@ const thinCandidate = {
 };
 
 const newSchemaDoc = {
-  schema_version: '1.2.0-draft',
+  schema_version: '2.0.0',
   platform: 'android',
   rules_version: '2026-06-10.1',
   classifier: {
@@ -59,6 +59,17 @@ describe('fetchRules', () => {
     expect(rules).not.toBeNull();
     expect(rules?.tiers.mid.models).toHaveLength(1);
   });
+
+  it.each(['1.2.0-draft', '3.0.0', '2', 'v2.0.0', 'two'])(
+    'returns null (→ bundled floor) for schema_version %p',
+    async schemaVersion => {
+      mockFetch(() => ({
+        ok: true,
+        json: async () => ({...newSchemaDoc, schema_version: schemaVersion}),
+      }));
+      expect(await fetchRules('android')).toBeNull();
+    },
+  );
 
   it('returns null (→ bundled floor) for an old fat models[] schema doc', async () => {
     mockFetch(() => ({ok: true, json: async () => oldFatDoc}));

@@ -15,7 +15,7 @@ const textCandidate = {
 };
 
 const validRaw = {
-  schema_version: '1.2.0-draft',
+  schema_version: '2.0.0',
   platform: 'android',
   rules_version: '2026-06-10.1',
   classifier: {
@@ -202,13 +202,34 @@ describe('parseDeviceRules', () => {
     expect(() => parseDeviceRules({})).toThrow();
     expect(() =>
       parseDeviceRules({
-        schema_version: '1',
+        schema_version: '2.0.0',
         platform: 'android',
         rules_version: '1',
         classifier: {tier_matrix: []},
       }),
     ).toThrow(/ram_bands/);
   });
+
+  it.each(['1.2.0-draft', '3.0.0', '2', 'v2.0.0', 'two', '2.0', ' 2.0.0'])(
+    'throws on an unsupported schema_version %p',
+    schemaVersion => {
+      expect(() =>
+        parseDeviceRules({...validRaw, schema_version: schemaVersion}),
+      ).toThrow(/schema_version/);
+    },
+  );
+
+  it.each(['2.0.0', '2.1.0-draft', '2.3.4+build'])(
+    'parses a schema major 2 document %p',
+    schemaVersion => {
+      const rules = parseDeviceRules({
+        ...validRaw,
+        schema_version: schemaVersion,
+      });
+      expect(rules.schemaVersion).toBe(schemaVersion);
+      expect(rules.tiers.mid.models).toHaveLength(1);
+    },
+  );
 
   it('defaults all four tiers even when only some are present', () => {
     const rules = parseDeviceRules(validRaw);

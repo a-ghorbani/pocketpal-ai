@@ -570,7 +570,7 @@ describe('ModelStore', () => {
     };
 
     const makeRules = (models: any[]) => ({
-      schemaVersion: '1.2.0-draft',
+      schemaVersion: '2.0.0',
       platform: 'android',
       rulesVersion: '2026-06-10.1',
       classifier: midOnlyClassifier,
@@ -1206,7 +1206,7 @@ describe('ModelStore', () => {
 
     it('upgrades to fetched rules and reconciles when newer rules arrive', async () => {
       const fetchedRules = parseDeviceRules({
-        schema_version: '1.2.0-draft',
+        schema_version: '2.0.0',
         platform: 'android',
         rules_version: '2999-01-01.1',
         classifier: {

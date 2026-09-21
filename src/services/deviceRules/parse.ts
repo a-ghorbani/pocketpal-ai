@@ -13,11 +13,20 @@ import {
 } from './types';
 
 // Parse-guard: turns the raw wire JSON into a typed DeviceRules or throws on a
-// structurally invalid file. Unknown/extra fields are ignored. A candidate
-// missing a required field, or with an unsafe path segment, is skipped; an
-// old-schema or empty tier parses to an empty model list (does not throw).
+// structurally invalid file or one whose schema major is not 2. Unknown/extra
+// fields are ignored. A candidate missing a required field, or with an unsafe
+// path segment, is skipped; a tier without a candidates list parses to an empty
+// model list (does not throw).
 
 const TIERS: Tier[] = ['low', 'mid', 'high', 'flagship'];
+
+const SUPPORTED_SCHEMA_MAJOR = 2;
+const SCHEMA_VERSION_PATTERN = /^(\d+)\.(\d+)\.(\d+)([-+].*)?$/;
+
+const isSupportedSchema = (schemaVersion: string): boolean => {
+  const match = schemaVersion.match(SCHEMA_VERSION_PATTERN);
+  return match !== null && Number(match[1]) === SUPPORTED_SCHEMA_MAJOR;
+};
 
 const isObject = (v: unknown): v is Record<string, unknown> =>
   typeof v === 'object' && v !== null && !Array.isArray(v);
@@ -349,6 +358,9 @@ export function parseDeviceRules(raw: unknown): DeviceRules {
   const schemaVersion = asString(raw.schema_version);
   if (!platform || !rulesVersion || !schemaVersion) {
     throw new Error('rules missing platform / rules_version / schema_version');
+  }
+  if (!isSupportedSchema(schemaVersion)) {
+    throw new Error(`unsupported rules schema_version ${schemaVersion}`);
   }
   return {
     platform,
