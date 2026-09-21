@@ -28,6 +28,7 @@ import {
   mockHFModel1,
 } from '../../../jest/fixtures/models';
 import * as RNFS from '@dr.pogodin/react-native-fs';
+import DeviceInfo from 'react-native-device-info';
 
 import {modelStore, uiStore, serverStore} from '..';
 import {LOOKIE_DEFAULT_MODEL} from '../builtinPalModels';
@@ -1198,19 +1199,42 @@ describe('ModelStore', () => {
       expect(modelStore.rulesVersion).toBeTruthy();
     });
 
-    it('parses the bundled floor with the running app version', async () => {
-      const parseSpy = jest.spyOn(parseModule, 'parseDeviceRules');
-      try {
-        await (modelStore as any).resolvePresets();
-        expect(parseSpy).toHaveBeenCalledWith(expect.anything(), '1.0.0');
-      } finally {
-        parseSpy.mockRestore();
-      }
-    });
+    describe('with the running app version from DeviceInfo', () => {
+      const getVersion = DeviceInfo.getVersion as jest.Mock;
+      let defaultGetVersion: (() => string) | undefined;
+      beforeEach(() => {
+        defaultGetVersion = getVersion.getMockImplementation();
+        getVersion.mockReturnValue('4.5.6');
+      });
+      afterEach(() => {
+        getVersion.mockImplementation(defaultGetVersion);
+      });
 
-    it('fetches the online rules with the running app version', async () => {
-      await (modelStore as any).upgradeToFetchedRules();
-      expect(fetchRules).toHaveBeenCalledWith('1.0.0');
+      it('parses the bundled floor with it', async () => {
+        const parseSpy = jest.spyOn(parseModule, 'parseDeviceRules');
+        try {
+          await (modelStore as any).resolvePresets();
+          expect(parseSpy).toHaveBeenCalledTimes(1);
+          expect(parseSpy).toHaveBeenCalledWith(expect.anything(), '4.5.6');
+        } finally {
+          parseSpy.mockRestore();
+        }
+      });
+
+      it('fetches the online rules with it', async () => {
+        await (modelStore as any).upgradeToFetchedRules();
+        expect(fetchRules).toHaveBeenCalledWith('4.5.6');
+      });
+
+      it('resolves the same floor presets when the app version is unknown', async () => {
+        const known = await (modelStore as any).resolvePresets();
+        getVersion.mockReturnValue('unknown');
+        const unknown = await (modelStore as any).resolvePresets();
+        expect(known.length).toBeGreaterThan(0);
+        expect(unknown.map((m: Model) => m.id)).toEqual(
+          known.map((m: Model) => m.id),
+        );
+      });
     });
 
     it('returns [] and completes when bundled parse throws (startup not bricked)', async () => {

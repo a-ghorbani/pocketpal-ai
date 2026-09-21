@@ -229,6 +229,23 @@ describe('parseDeviceRules', () => {
     },
   );
 
+  it('reports a missing schema_version before checking its major', () => {
+    const noSchema: Record<string, unknown> = {...validRaw};
+    delete noSchema.schema_version;
+    expect(() => parseDeviceRules(noSchema, '1.17.3')).toThrow(
+      /missing platform \/ rules_version \/ schema_version/,
+    );
+  });
+
+  it('rejects an off-major document before parsing its classifier or tiers', () => {
+    expect(() =>
+      parseDeviceRules(
+        {...validRaw, schema_version: '1.2.0-draft', classifier: null},
+        '1.17.3',
+      ),
+    ).toThrow(/unsupported rules schema_version/);
+  });
+
   it.each(['2.0.0', '2.1.0-draft', '2.3.4+build'])(
     'parses a schema major 2 document %p',
     schemaVersion => {
@@ -605,6 +622,26 @@ describe('parseDeviceRules min_app_version gates', () => {
     });
     expect(c).toBeDefined();
     expect(c.mmproj).toBeUndefined();
+  });
+
+  it('does not carry the gate onto the parsed candidate, mmproj or draft', () => {
+    const [c] = midModels({
+      ...visionTarget({min_app_version: '1.0.0'}),
+      min_app_version: '1.0.0',
+      draft: {
+        hf_repo: 'c/d',
+        hf_filename: 'd.gguf',
+        size_bytes: 100,
+        min_app_version: '1.0.0',
+      },
+    });
+    expect(c.mmproj).toBeDefined();
+    expect(c.draft).toBeDefined();
+    for (const block of [c, c.mmproj, c.draft]) {
+      const keys = Object.keys(block as object);
+      expect(keys).not.toContain('min_app_version');
+      expect(keys).not.toContain('minAppVersion');
+    }
   });
 
   it('keeps a draft whose gate is met', () => {
