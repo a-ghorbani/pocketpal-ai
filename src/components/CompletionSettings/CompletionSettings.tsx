@@ -1,4 +1,4 @@
-import {View} from 'react-native';
+import {TouchableOpacity, View} from 'react-native';
 import React from 'react';
 
 import {InputSlider} from '../InputSlider';
@@ -11,47 +11,120 @@ import {useTheme} from '../../hooks';
 import {createStyles} from './styles';
 
 import {L10nContext} from '../../utils';
+import {t} from '../../locales';
 import {
   COMPLETION_PARAMS_METADATA,
   validateNumericField,
 } from '../../utils/modelSettings';
 import {CompletionParams} from '../../utils/completionTypes';
+import {SamplerParam, Samplers} from '../../utils/samplerParams';
+import {serverDefaultState, stepOf} from './serverDefaultState';
+
+const displayNameOf = (name: string): string =>
+  name.toUpperCase().replace(/_/g, ' ');
 
 interface Props {
   settings: CompletionParams;
   onChange: (name: string, value: any) => void;
   disabled?: boolean;
+  serverDefaults?: Samplers;
 }
 
 export const CompletionSettings: React.FC<Props> = ({
   settings,
   onChange,
   disabled = false,
+  serverDefaults,
 }) => {
   const theme = useTheme();
   const styles = createStyles(theme);
   const l10n = React.useContext(L10nContext);
 
-  const renderSlider = ({name, step = 0.01}: {name: string; step?: number}) => (
-    <View style={styles.settingItem}>
-      <InputSlider
-        testID={`${name}-slider`}
-        label={name.toUpperCase().replace('_', ' ')}
-        labelVariant="labelSmall"
-        description={l10n.completionParams[name]}
-        value={settings[name]}
-        onValueChange={value => onChange(name, value)}
-        min={COMPLETION_PARAMS_METADATA[name]?.validation.min}
-        max={COMPLETION_PARAMS_METADATA[name]?.validation.max}
-        step={step}
-        precision={Number.isInteger(step) ? 0 : 2}
-        debounceMs={300} // Enable debouncing for sliders
-        disabled={disabled}
-      />
-    </View>
-  );
+  const renderServerDefault = (name: SamplerParam) => {
+    if (!serverDefaults) {
+      return null;
+    }
+    const row = serverDefaultState(
+      name,
+      Number(settings[name]),
+      serverDefaults[name],
+    );
+    const copy = l10n.components.completionSettings;
+    const caption = (text: string) => (
+      <Text
+        variant="labelSmall"
+        style={styles.serverDefault}
+        testID={`${name}-server-default`}>
+        {text}
+      </Text>
+    );
+    switch (row.kind) {
+      case 'none':
+        return null;
+      case 'omitted':
+        return caption(
+          row.shown === undefined
+            ? copy.usingServerDefaultUnreported
+            : t(copy.usingServerDefault, {value: String(row.shown)}),
+        );
+      case 'matches':
+        return caption(copy.serverDefault);
+      case 'reset':
+        return (
+          <TouchableOpacity
+            onPress={disabled ? undefined : () => onChange(name, row.resetTo)}
+            disabled={disabled}
+            accessibilityRole="button"
+            accessibilityState={{disabled}}
+            accessibilityLabel={t(copy.resetToServerDefaultAccessibilityLabel, {
+              name: displayNameOf(name),
+              value: String(row.shown),
+            })}
+            hitSlop={{top: 8, bottom: 8, left: 8, right: 8}}
+            style={styles.serverDefaultResetTarget}
+            testID={`${name}-server-default-reset`}>
+            <Text
+              variant="labelSmall"
+              style={
+                disabled
+                  ? styles.serverDefaultResetDisabled
+                  : styles.serverDefaultReset
+              }>
+              {t(copy.resetToServerDefault, {value: String(row.shown)})}
+            </Text>
+          </TouchableOpacity>
+        );
+    }
+  };
 
-  const renderIntegerInput = ({name}: {name: keyof CompletionParams}) => {
+  const renderSlider = ({name}: {name: SamplerParam}) => {
+    const metadata = COMPLETION_PARAMS_METADATA[name];
+    const range =
+      metadata?.validation.type === 'numeric' ? metadata.validation : undefined;
+    const step = stepOf(name);
+
+    return (
+      <View style={styles.settingItem}>
+        <InputSlider
+          testID={`${name}-slider`}
+          label={displayNameOf(name)}
+          labelVariant="labelSmall"
+          description={l10n.completionParams[name]}
+          value={settings[name] as number}
+          onValueChange={value => onChange(name, value)}
+          min={range?.min}
+          max={range?.max}
+          step={step}
+          precision={Number.isInteger(step) ? 0 : 2}
+          debounceMs={300} // Enable debouncing for sliders
+          disabled={disabled}
+        />
+        {renderServerDefault(name)}
+      </View>
+    );
+  };
+
+  const renderIntegerInput = ({name}: {name: SamplerParam}) => {
     const metadata = COMPLETION_PARAMS_METADATA[name];
     if (!metadata) {
       return null;
@@ -63,7 +136,7 @@ export const CompletionSettings: React.FC<Props> = ({
     return (
       <View style={styles.settingItem}>
         <Text variant="labelSmall" style={styles.settingLabel}>
-          {String(name).toUpperCase().replace('_', ' ')}
+          {displayNameOf(name)}
         </Text>
         <Text style={styles.description}>
           {l10n.completionParams[String(name)]}
@@ -136,6 +209,7 @@ export const CompletionSettings: React.FC<Props> = ({
           ]}
           style={styles.segmentedButtons}
         />
+        {renderServerDefault('mirostat')}
       </View>
     );
   };
@@ -193,6 +267,7 @@ export const CompletionSettings: React.FC<Props> = ({
             testID="n_predict-input"
           />
         )}
+        {renderServerDefault('n_predict')}
       </View>
     );
   };
@@ -202,20 +277,20 @@ export const CompletionSettings: React.FC<Props> = ({
       {renderNPredictField()}
       {renderSwitch('include_thinking_in_context')}
       {renderSlider({name: 'temperature'})}
-      {renderSlider({name: 'top_k', step: 1})}
+      {renderSlider({name: 'top_k'})}
       {renderSlider({name: 'top_p'})}
       {renderSlider({name: 'min_p'})}
       {renderSlider({name: 'xtc_threshold'})}
       {renderSlider({name: 'xtc_probability'})}
       {renderSlider({name: 'typical_p'})}
-      {renderSlider({name: 'penalty_last_n', step: 1})}
+      {renderSlider({name: 'penalty_last_n'})}
       {renderSlider({name: 'penalty_repeat'})}
       {renderSlider({name: 'penalty_freq'})}
       {renderSlider({name: 'penalty_present'})}
       {renderMirostatSelector()}
       {(settings.mirostat ?? 0) > 0 && (
         <>
-          {renderSlider({name: 'mirostat_tau', step: 1})}
+          {renderSlider({name: 'mirostat_tau'})}
           {renderSlider({name: 'mirostat_eta'})}
         </>
       )}

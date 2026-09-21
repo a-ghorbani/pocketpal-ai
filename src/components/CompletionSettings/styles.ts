@@ -66,6 +66,21 @@ export const createStyles = (theme: Theme) =>
     stopChipText: {
       fontSize: 12,
     },
+    serverDefault: {
+      color: theme.colors.textSecondary,
+      marginTop: 4,
+    },
+    serverDefaultResetTarget: {
+      paddingVertical: 8,
+    },
+    serverDefaultReset: {
+      color: theme.colors.primary,
+      marginTop: 4,
+    },
+    serverDefaultResetDisabled: {
+      color: theme.colors.textSecondary,
+      marginTop: 4,
+    },
     description: {
       fontSize: 12,
       color: theme.colors.textSecondary,

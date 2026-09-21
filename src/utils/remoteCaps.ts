@@ -57,5 +57,8 @@ export function resolveRemoteCaps(
   if (perModel.supportsVision !== undefined) {
     resolved.supportsVision = perModel.supportsVision;
   }
+  if (perModel.samplerDefaults !== undefined) {
+    resolved.samplerDefaults = perModel.samplerDefaults;
+  }
   return resolved;
 }

@@ -1,6 +1,6 @@
 import {CapabilityEnv, resolveModelCaps} from '../modelCaps';
 import {Model, ModelOrigin} from '../types';
-import type {ListDerivedCaps} from '../listCaps';
+import type {ListDerivedCaps} from '../types';
 
 const env = (overrides: Partial<CapabilityEnv> = {}): CapabilityEnv => ({
   remoteCaps: {},
@@ -117,6 +117,23 @@ describe('resolveModelCaps', () => {
       );
       expect(caps.vision).toBe('unknown');
       expect(caps.contextLength).toBeUndefined();
+    });
+
+    it('gates nothing: a descriptive answer moves no capability', () => {
+      const caps = resolveModelCaps(
+        remoteModel(),
+        env({
+          remoteCaps: {
+            'srv/gemma-4-e2b': {samplerDefaults: {top_k: 40}},
+          },
+          activeModelId: 'srv/gemma-4-e2b',
+        }),
+      );
+
+      expect(caps.vision).toBe('unknown');
+      expect(caps.visionActive).toBe(false);
+      expect(caps.contextLength).toBeUndefined();
+      expect(caps.effectiveContextLength).toBeUndefined();
     });
 
     describe('the list tier', () => {

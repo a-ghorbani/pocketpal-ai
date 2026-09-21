@@ -15,6 +15,7 @@ import {
 } from '../utils/completionTypes';
 
 import {fetchModelFilesDetails} from '../api/hf';
+import {profileFor} from '../api/servers';
 import {
   LocalCompletionEngine,
   OpenAICompletionEngine,
@@ -81,8 +82,10 @@ import {
   ModelFile,
   ModelOrigin,
   ModelType,
+  RemoteModelCaps,
   RemoteSessionBinding,
 } from '../utils/types';
+import type {Samplers} from '../utils/samplerParams';
 
 import {ErrorState, createErrorState} from '../utils/errors';
 import {chatSessionRepository} from '../repositories/ChatSessionRepository';
@@ -94,7 +97,8 @@ import {
 } from '../utils/deviceCapabilities';
 import {detectThinkingCapability} from '../utils/thinkingCapabilityDetection';
 import {ReasoningCapability} from '../utils/reasoningCapability';
-import {capsMatchBinding} from '../utils/remoteCaps';
+import {toServerType} from '../utils/serverTypes';
+import {capsMatchBinding, resolveRemoteCaps} from '../utils/remoteCaps';
 import {resolveModelCaps} from '../utils/modelCaps';
 import type {CapabilityEnv, ModelCapabilityView} from '../utils/modelCaps';
 import {t} from '../locales';
@@ -151,6 +155,13 @@ function createRemoteModel(params: {
   };
 }
 
+const answersSession = (
+  caps: RemoteModelCaps | undefined,
+  binding: RemoteSessionBinding,
+): boolean =>
+  capsMatchBinding(caps, binding, binding.modelId) &&
+  caps?.samplerDefaults !== undefined;
+
 const pairedDraftModel = (config?: DraftConfig): Model | undefined =>
   config?.mode === 'paired' ? config.draftModel : undefined;
 
@@ -192,6 +203,8 @@ class ModelStore {
   engine: CompletionEngine | undefined = undefined;
 
   activeRemoteBinding: RemoteSessionBinding | undefined = undefined;
+
+  private postCompletionProbeFor: RemoteSessionBinding | undefined = undefined;
 
   lastUsedModelId: string | undefined = undefined;
 
@@ -247,6 +260,7 @@ class ModelStore {
     makeAutoObservable(this, {
       activeModel: computed,
       activeModelCaps: computed,
+      activeSamplerDefaults: computed,
       contextId: computed,
       remoteModels: computed,
       activeDownloads: computed,
@@ -1146,7 +1160,7 @@ class ModelStore {
     ) {
       // Coming to foreground - check if we need to reload auto-released model
       await this.checkAndReloadAutoReleasedModel();
-      this.reprobeRemoteCapsIfUnknown();
+      this.probeSessionCapsIfUnanswered();
     } else if (this.appState === 'active' && nextAppState === 'inactive') {
       // active → inactive: NO action (per requirements)
       console.log('Active → Inactive: No auto-release action');
@@ -1184,43 +1198,46 @@ class ModelStore {
 
   /**
    * Remote models are exempt from auto-release, so a session survives
-   * backgrounding — but the capability probe behind it may not have: iOS can
-   * tear the request down, and the first probe is the request that raises the
-   * local-network prompt, so a grant always arrives after it already failed.
-   * Without this, caps stay unknown for the rest of the session and the only
-   * recovery is re-selecting the model by hand.
-   *
-   * Also skipped once the server record has been repointed away from that
-   * backend: the probe would read a backend this session never talks to, and
-   * it cannot produce caps this session could use. The next activation
-   * rebuilds the binding and probes the url it is built from.
+   * backgrounding, but its capability probe may not have: iOS can tear the
+   * request down, and the first probe is the one that raises the local-network
+   * prompt, so a grant always arrives after it already failed. A server
+   * repointed away from the session's url is skipped: it cannot answer for it.
    */
-  private reprobeRemoteCapsIfUnknown = () => {
-    const model = this.activeModel;
-    if (
-      model?.origin !== ModelOrigin.REMOTE ||
-      !model.serverId ||
-      !model.remoteModelId ||
-      capsMatchBinding(
-        serverStore.remoteCaps[model.id],
-        this.activeRemoteBinding,
-        model.id,
-      )
-    ) {
-      return;
-    }
+  private probeSessionCapsIfUnanswered = (): boolean => {
     const binding = this.activeRemoteBinding;
-    if (binding?.modelId === model.id) {
-      const configuredUrl = serverStore.servers.find(
-        s => s.id === model.serverId,
-      )?.url;
-      if (configuredUrl !== undefined && configuredUrl !== binding.url) {
-        return;
-      }
+    if (
+      !binding ||
+      answersSession(serverStore.remoteCaps[binding.modelId], binding)
+    ) {
+      return false;
+    }
+    const server = serverStore.servers.find(s => s.id === binding.serverId);
+    if (
+      !server ||
+      server.url !== binding.url ||
+      !profileFor(server.serverType).hasProps
+    ) {
+      return false;
     }
     serverStore
-      .fetchRemoteModelCaps(model.serverId, model.remoteModelId)
+      .fetchRemoteModelCaps(binding.serverId, binding.remoteModelId)
       .catch(() => {});
+    return true;
+  };
+
+  /**
+   * A llama.cpp router proxies GET /props to the model only with autoload on,
+   * so the probe fired at selection time cannot land for a model that is not
+   * resident yet. The first finished completion guarantees residency.
+   */
+  reprobeRemoteCapsAfterCompletion = (): void => {
+    const binding = this.activeRemoteBinding;
+    if (this.postCompletionProbeFor === binding) {
+      return;
+    }
+    if (this.probeSessionCapsIfUnanswered()) {
+      this.postCompletionProbeFor = binding;
+    }
   };
 
   reinitializeContext = async () => {
@@ -2605,6 +2622,22 @@ class ModelStore {
     return this.capsFor(this.activeModel);
   }
 
+  /**
+   * The server's own generation defaults for the live session: undefined
+   * outside a session on a server type that reports them, and a missing key
+   * for a default that was not reported.
+   */
+  get activeSamplerDefaults(): Samplers | undefined {
+    const binding = this.activeRemoteBinding;
+    if (!binding || !profileFor(binding.serverType).hasProps) {
+      return undefined;
+    }
+    return (
+      resolveRemoteCaps(this.activeModel, serverStore.remoteCaps, binding)
+        .samplerDefaults ?? {}
+    );
+  }
+
   get lastUsedModel(): Model | undefined {
     return this.lastUsedModelId
       ? this.models.find(m => m.id === this.lastUsedModelId && m.isDownloaded)
@@ -2675,20 +2708,22 @@ class ModelStore {
       throw new Error('Server not found');
     }
 
+    const serverType = toServerType(server.serverType);
+
     runInAction(() => {
-      this.engine = new OpenAICompletionEngine(
-        server.url,
-        model.remoteModelId!,
+      this.engine = new OpenAICompletionEngine({
+        url: server.url,
+        remoteModelId: model.remoteModelId!,
         apiKey,
-        server.requestTimeoutMs,
-        server.serverType,
-      );
+        timeoutMs: server.requestTimeoutMs,
+        serverType,
+      });
       this.activeRemoteBinding = {
         modelId: model.id,
         serverId: model.serverId!,
         remoteModelId: model.remoteModelId!,
         url: server.url,
-        serverType: server.serverType,
+        serverType,
       };
       this.setActiveModel(model.id);
       // Do NOT set lastUsedModelId for remote models -- server may be offline on next launch
