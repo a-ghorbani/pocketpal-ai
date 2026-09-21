@@ -561,6 +561,8 @@
     "bubble": {
       "msPerToken": "{{value}}ms/token",
       "tokensPerSec": "{{value}} tokens/sec",
+      "promptTokensPerSec": "{{value}} prompt tokens/sec",
+      "cachedTokens": "{{value}} cached",
       "ttft": "{{value}}ms TTFT",
       "draftAccepted": "draft: {{accepted}}/{{total}} ({{pct}}%)",
       "interrupted": "Interrupted",
@@ -679,6 +681,13 @@
         "title": "Report Failed",
         "message": "Failed to submit report. Please try again later."
       }
+    },
+    "completionSettings": {
+      "serverDefault": "server default",
+      "usingServerDefault": "Using server default: {{value}}",
+      "usingServerDefaultUnreported": "Using server default (not reported)",
+      "resetToServerDefault": "Server default: {{value}} · Reset",
+      "resetToServerDefaultAccessibilityLabel": "Reset {{name}} to the server default, {{value}}"
     },
     "chatGenerationSettingsSheet": {
       "invalidValues": "Invalid Values",

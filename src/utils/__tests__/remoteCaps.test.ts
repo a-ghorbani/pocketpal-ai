@@ -109,6 +109,32 @@ describe('resolveRemoteCaps', () => {
     expect(resolveRemoteCaps(undefined, caps, binding())).toEqual({});
     expect(resolveRemoteCaps(remoteModel(), {}, binding())).toEqual({});
   });
+
+  it('carries the sampler defaults on the same entry', () => {
+    const samplerDefaults = {top_k: 40, temperature: 0.8};
+    expect(
+      resolveRemoteCaps(
+        remoteModel(),
+        {'srv/gemma-4-e2b': {samplerDefaults, probedUrl: URL_A}},
+        binding(),
+      ),
+    ).toEqual({samplerDefaults});
+  });
+
+  it('drops the sampler defaults of a different backend with the entry', () => {
+    expect(
+      resolveRemoteCaps(
+        remoteModel(),
+        {
+          'srv/gemma-4-e2b': {
+            samplerDefaults: {top_k: 40},
+            probedUrl: URL_B,
+          },
+        },
+        binding({url: URL_A}),
+      ),
+    ).toEqual({});
+  });
 });
 
 describe('capsMatchBinding', () => {

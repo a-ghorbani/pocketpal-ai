@@ -324,6 +324,7 @@ describe('BannerRow', () => {
         modelId: 'remote-1',
         serverId: 'srv-1',
         remoteModelId: 'remote-1',
+        serverType: 'unknown',
         url: 'http://localhost:8080',
       };
       serverStore.remoteCaps = {
