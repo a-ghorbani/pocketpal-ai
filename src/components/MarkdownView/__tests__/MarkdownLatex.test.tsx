@@ -13,7 +13,6 @@ describe('MarkdownView LaTeX integration', () => {
 
     expect(getByText('Hello World')).toBeTruthy();
     expect(queryByTestId('latex-math-block-webview')).toBeNull();
-    expect(queryByTestId('latex-math-inline-webview')).toBeNull();
   });
 
   it('renders block math between markdown chunks', () => {
@@ -125,7 +124,6 @@ describe('MarkdownView LaTeX integration', () => {
     // WebViews are gone by design.
     const paras = queryAllByTestId('latex-paragraph-webview');
     expect(paras).toHaveLength(9);
-    expect(queryByTestId('latex-math-inline-webview')).toBeNull();
     expect(queryByTestId('latex-block-fallback')).toBeNull();
     expect(queryByTestId('latex-paragraph-fallback')).toBeNull();
     // Sentence stays whole inside one document: prose, math, punctuation.

@@ -59,6 +59,9 @@ describe('MathParagraphView', () => {
       expect(gate({url: 'about:blank'})).toBe(true);
       expect(gate({url: 'https://example.com/a'})).toBe(false);
       expect(openSpy).toHaveBeenCalledWith('https://example.com/a');
+      // The javascript: string below is the attack payload under test —
+      // asserting the gate rejects it, not executing it.
+      // eslint-disable-next-line no-script-url
       expect(gate({url: 'javascript:alert(1)'})).toBe(false);
     } finally {
       openSpy.mockRestore();

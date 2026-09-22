@@ -28,7 +28,7 @@ const isEmptyContent = (content: string): boolean => {
 };
 
 type RenderBlock =
-  | {key: string; kind: 'math'; tex: string; displayMode: boolean}
+  | {key: string; kind: 'math'; tex: string}
   | {key: string; kind: 'text'; source: {html: string}}
   | {key: string; kind: 'para'; raw: string};
 
@@ -129,7 +129,6 @@ export const MarkdownView: React.FC<MarkdownViewProps> = React.memo(
               key: `seg-${keyIndex++}`,
               kind: 'math',
               tex: seg.content,
-              displayMode: true,
             });
           } else {
             // Over the WebView cap: show raw TeX as code so it stays
@@ -162,7 +161,6 @@ export const MarkdownView: React.FC<MarkdownViewProps> = React.memo(
               <LatexBlock
                 key={block.key}
                 tex={block.tex}
-                displayMode={block.displayMode}
                 maxWidth={maxMessageWidth}
               />
             ) : block.kind === 'para' ? (

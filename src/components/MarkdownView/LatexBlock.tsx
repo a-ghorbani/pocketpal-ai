@@ -1,5 +1,5 @@
 import React, {useCallback, useEffect, useMemo, useState} from 'react';
-import {ScrollView, StyleSheet, Text, View} from 'react-native';
+import {ScrollView, StyleSheet, Text} from 'react-native';
 import {WebView} from 'react-native-webview';
 import type {WebViewMessageEvent} from 'react-native-webview';
 
@@ -14,54 +14,43 @@ import {
   MEASURE_SCRIPT,
   MeasuredSize,
   MIN_BLOCK_MATH_HEIGHT,
-  MIN_INLINE_MATH_HEIGHT,
   renderTexToHtml,
   setCachedMathSize,
 } from './katexDoc';
 
 interface LatexBlockProps {
   tex: string;
-  displayMode: boolean;
   maxWidth: number;
 }
 
 /**
- * Single display formula (centered) or standalone inline formula.
- * Same offline envelope as MathParagraphView: static pre-rendered HTML,
- * all resources inlined, navigation pinned to about:blank.
+ * Single centered display formula. Same offline envelope as
+ * MathParagraphView: static pre-rendered HTML, all resources inlined,
+ * navigation pinned to about:blank.
  */
-export const LatexBlock: React.FC<LatexBlockProps> = ({
-  tex,
-  displayMode,
-  maxWidth,
-}) => {
+export const LatexBlock: React.FC<LatexBlockProps> = ({tex, maxWidth}) => {
   const theme = useTheme();
   const styles = useMemo(() => createStyles(theme), [theme]);
-  const minHeight = displayMode
-    ? MIN_BLOCK_MATH_HEIGHT
-    : MIN_INLINE_MATH_HEIGHT;
   const cacheKey = useMemo(
-    () => `${displayMode ? 'block' : 'inline'}:${maxWidth}:${hashText(tex)}`,
-    [displayMode, maxWidth, tex],
+    () => `block:${maxWidth}:${hashText(tex)}`,
+    [maxWidth, tex],
   );
   const getInitialSize = useCallback(
     (): MeasuredSize =>
       getCachedMathSize(cacheKey) ||
       clampMeasuredSize(
+        {height: MIN_BLOCK_MATH_HEIGHT, width: maxWidth},
         {
-          height: minHeight,
-          width: displayMode ? maxWidth : Math.min(maxWidth, tex.length * 9),
+          minHeight: MIN_BLOCK_MATH_HEIGHT,
+          maxWidth,
+          fullWidth: true,
         },
-        {minHeight, maxWidth, fullWidth: displayMode},
       ),
-    [cacheKey, displayMode, maxWidth, minHeight, tex.length],
+    [cacheKey, maxWidth],
   );
   const [size, setSize] = useState<MeasuredSize>(getInitialSize);
   const [failed, setFailed] = useState(false);
-  const renderedMath = useMemo(
-    () => renderTexToHtml(tex, displayMode),
-    [displayMode, tex],
-  );
+  const renderedMath = useMemo(() => renderTexToHtml(tex, true), [tex]);
   const html = useMemo(
     () =>
       renderedMath
@@ -73,11 +62,10 @@ export const LatexBlock: React.FC<LatexBlockProps> = ({
               link: theme.colors.secondary,
               codeBackground: theme.colors.surface,
             },
-            {center: displayMode, pad: displayMode ? '8px 10px' : '2px 4px'},
+            {center: true, pad: '8px 10px'},
           )
         : undefined,
     [
-      displayMode,
       renderedMath,
       theme.colors.onSurface,
       theme.colors.surfaceContainerHigh,
@@ -95,9 +83,9 @@ export const LatexBlock: React.FC<LatexBlockProps> = ({
     (event: WebViewMessageEvent) => {
       try {
         const nextSize = clampMeasuredSize(JSON.parse(event.nativeEvent.data), {
-          minHeight,
+          minHeight: MIN_BLOCK_MATH_HEIGHT,
           maxWidth,
-          fullWidth: displayMode,
+          fullWidth: true,
         });
         setCachedMathSize(cacheKey, nextSize);
         setSize(nextSize);
@@ -105,7 +93,7 @@ export const LatexBlock: React.FC<LatexBlockProps> = ({
         // Keep the conservative size if measurement fails.
       }
     },
-    [cacheKey, displayMode, maxWidth, minHeight],
+    [cacheKey, maxWidth],
   );
 
   const handleShouldStartLoad = useCallback((request: {url?: string}) => {
@@ -116,85 +104,56 @@ export const LatexBlock: React.FC<LatexBlockProps> = ({
   if (!html || failed) {
     // Fallback shows the raw TeX so content is never lost (and stays
     // copyable/selectable via the native Text path).
-    if (displayMode) {
-      return (
-        <ScrollView
-          horizontal
-          nestedScrollEnabled
-          style={styles.blockFallbackScroll}
-          contentContainerStyle={styles.blockFallbackContent}>
-          <Text
-            testID="latex-block-fallback"
-            accessibilityLabel={tex}
-            style={styles.blockFallbackText}>
-            {tex}
-          </Text>
-        </ScrollView>
-      );
-    }
-    return (
-      <Text
-        testID="latex-block-fallback"
-        accessibilityLabel={tex}
-        style={styles.inlineFallbackText}>
-        {tex}
-      </Text>
-    );
-  }
-
-  const webView = (
-    <WebView
-      testID={
-        displayMode ? 'latex-math-block-webview' : 'latex-math-inline-webview'
-      }
-      accessibilityLabel={tex}
-      originWhitelist={['about:blank']}
-      source={{html, baseUrl: 'about:blank'}}
-      javaScriptEnabled
-      domStorageEnabled={false}
-      allowFileAccess={false}
-      allowUniversalAccessFromFileURLs={false}
-      javaScriptCanOpenWindowsAutomatically={false}
-      mixedContentMode="never"
-      setSupportMultipleWindows={false}
-      scrollEnabled={false}
-      showsHorizontalScrollIndicator={false}
-      showsVerticalScrollIndicator={false}
-      injectedJavaScript={MEASURE_SCRIPT}
-      onMessage={handleMessage}
-      onError={() => setFailed(true)}
-      onHttpError={() => setFailed(true)}
-      onShouldStartLoadWithRequest={handleShouldStartLoad}
-      style={[styles.webView, {height: size.height, width: size.width}]}
-    />
-  );
-
-  if (displayMode) {
     return (
       <ScrollView
         horizontal
         nestedScrollEnabled
-        style={styles.blockScroll}
-        contentContainerStyle={styles.blockContent}>
-        {webView}
+        style={styles.blockFallbackScroll}
+        contentContainerStyle={styles.blockFallbackContent}>
+        <Text
+          testID="latex-block-fallback"
+          accessibilityLabel={tex}
+          style={styles.blockFallbackText}>
+          {tex}
+        </Text>
       </ScrollView>
     );
   }
 
   return (
-    <View style={[styles.inlineContainer, {height: size.height}]}>
-      {webView}
-    </View>
+    <ScrollView
+      horizontal
+      nestedScrollEnabled
+      style={styles.blockScroll}
+      contentContainerStyle={styles.blockContent}>
+      <WebView
+        testID="latex-math-block-webview"
+        accessibilityLabel={tex}
+        originWhitelist={['about:blank']}
+        source={{html, baseUrl: 'about:blank'}}
+        javaScriptEnabled
+        domStorageEnabled={false}
+        allowFileAccess={false}
+        allowUniversalAccessFromFileURLs={false}
+        javaScriptCanOpenWindowsAutomatically={false}
+        mixedContentMode="never"
+        setSupportMultipleWindows={false}
+        scrollEnabled={false}
+        showsHorizontalScrollIndicator={false}
+        showsVerticalScrollIndicator={false}
+        injectedJavaScript={MEASURE_SCRIPT}
+        onMessage={handleMessage}
+        onError={() => setFailed(true)}
+        onHttpError={() => setFailed(true)}
+        onShouldStartLoadWithRequest={handleShouldStartLoad}
+        style={[styles.webView, {height: size.height, width: size.width}]}
+      />
+    </ScrollView>
   );
 };
 
 const createStyles = (theme: Theme) =>
   StyleSheet.create({
-    inlineContainer: {
-      backgroundColor: theme.colors.surfaceContainerHigh,
-      borderRadius: 4,
-      overflow: 'hidden',
-    },
     webView: {
       backgroundColor: 'transparent',
       opacity: 0.99,
@@ -206,14 +165,6 @@ const createStyles = (theme: Theme) =>
     },
     blockContent: {
       alignItems: 'center',
-    },
-    inlineFallbackText: {
-      color: theme.colors.onSurface,
-      backgroundColor: theme.colors.surfaceContainerHigh,
-      borderRadius: 4,
-      fontFamily: 'Courier',
-      fontSize: 14,
-      paddingHorizontal: 3,
     },
     blockFallbackScroll: {
       backgroundColor: theme.colors.surfaceContainerHigh,

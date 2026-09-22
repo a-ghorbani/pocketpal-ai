@@ -21,7 +21,6 @@ export interface MeasuredSize {
 
 export const MIN_PARAGRAPH_HEIGHT = 64;
 export const MIN_BLOCK_MATH_HEIGHT = 52;
-export const MIN_INLINE_MATH_HEIGHT = 30;
 export const MAX_WEBVIEW_HEIGHT = 480;
 const MAX_CACHE_ENTRIES = 200;
 
@@ -201,7 +200,7 @@ img, video, iframe, audio { display: none !important; }
 </html>`;
 }
 
-const MATH_TOKEN_RE = /<!--ppmath-(\d+)-->/g;
+const MATH_TOKEN_RE = /<!--ppmath-\d+-->/g;
 
 /**
  * Render one flow paragraph (markdown possibly containing inline math)

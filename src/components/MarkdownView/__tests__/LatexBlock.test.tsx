@@ -6,9 +6,7 @@ import {LatexBlock} from '../LatexBlock';
 
 describe('LatexBlock', () => {
   it('renders block math inside a locked-down WebView', () => {
-    const {getByTestId} = render(
-      <LatexBlock tex="x^2 + 1" displayMode maxWidth={300} />,
-    );
+    const {getByTestId} = render(<LatexBlock tex="x^2 + 1" maxWidth={300} />);
 
     const webView = getByTestId('latex-math-block-webview');
     expect(webView).toBeTruthy();
@@ -21,20 +19,8 @@ describe('LatexBlock', () => {
     expect(webView.props.originWhitelist).toEqual(['about:blank']);
   });
 
-  it('renders inline math in a compact WebView', () => {
-    const {getByTestId} = render(
-      <LatexBlock tex="E=mc^2" displayMode={false} maxWidth={300} />,
-    );
-
-    const webView = getByTestId('latex-math-inline-webview');
-    expect(webView.props.source.html).toContain('katex');
-    expect(webView.props.source.baseUrl).toBe('about:blank');
-  });
-
   it('blocks navigation away from about:blank', () => {
-    const {getByTestId} = render(
-      <LatexBlock tex="x" displayMode maxWidth={300} />,
-    );
+    const {getByTestId} = render(<LatexBlock tex="x" maxWidth={300} />);
 
     const webView = getByTestId('latex-math-block-webview');
     const gate = webView.props.onShouldStartLoadWithRequest;
@@ -44,7 +30,7 @@ describe('LatexBlock', () => {
 
   it('falls back to raw text when KaTeX cannot render', () => {
     const {getByTestId, queryByTestId} = render(
-      <LatexBlock tex="\\invalidcommand{{{[" displayMode maxWidth={300} />,
+      <LatexBlock tex="\\invalidcommand{{{[" maxWidth={300} />,
     );
 
     expect(queryByTestId('latex-math-block-webview')).toBeNull();
@@ -53,9 +39,7 @@ describe('LatexBlock', () => {
   });
 
   it('exposes the raw TeX for assistive tech', () => {
-    const {getByTestId} = render(
-      <LatexBlock tex={'\\alpha'} displayMode maxWidth={300} />,
-    );
+    const {getByTestId} = render(<LatexBlock tex={'\\alpha'} maxWidth={300} />);
 
     expect(
       getByTestId('latex-math-block-webview').props.accessibilityLabel,
