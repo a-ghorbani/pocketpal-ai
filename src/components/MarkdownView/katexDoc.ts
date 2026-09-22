@@ -84,7 +84,14 @@ export function setCachedMathSize(key: string, size: MeasuredSize): void {
   sizeCache.set(key, size);
 }
 
-/** Pre-render TeX to static HTML on the JS thread. Undefined => fallback. */
+/** Pre-render TeX to static HTML on the JS thread. Undefined => fallback.
+ *
+ * throwOnError is intentionally true (with strict kept at 'warn'): real
+ * parse errors — mismatched delimiters, undefined macros like `\ce`
+ * (mhchem is not bundled) — throw and become a clean `<code>` fallback
+ * instead of KaTeX's red echo text. Mere warnings (e.g. `\\` outside an
+ * environment) still render.
+ */
 export function renderTexToHtml(
   tex: string,
   displayMode: boolean,
@@ -92,7 +99,7 @@ export function renderTexToHtml(
   try {
     const html = renderToString(tex, {
       displayMode,
-      throwOnError: false,
+      throwOnError: true,
       trust: false,
       strict: 'warn',
       output: 'htmlAndMathml',
@@ -133,6 +140,7 @@ export function buildKatexDoc(
   return `<!doctype html>
 <html>
 <head>
+<meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
 <style>
 ${KATEX_CSS}

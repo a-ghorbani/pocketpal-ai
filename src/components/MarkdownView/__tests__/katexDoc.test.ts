@@ -27,6 +27,16 @@ describe('renderTexToHtml', () => {
   it('returns undefined for KaTeX errors', () => {
     expect(renderTexToHtml('\\invalidcommand{{{', true)).toBeUndefined();
   });
+
+  it('falls back for unsupported macros instead of echoing them', () => {
+    // mhchem is not bundled: \ce must become a clean code fallback,
+    // not KaTeX's red echo text.
+    expect(renderTexToHtml('\\ce{H2O}', false)).toBeUndefined();
+  });
+
+  it('still renders through strict warnings', () => {
+    expect(renderTexToHtml('a\\\\b', true)).toContain('katex');
+  });
 });
 
 describe('escapeHtml', () => {
@@ -85,6 +95,7 @@ describe('buildKatexDoc', () => {
     expect(doc).toContain('@font-face');
     expect(doc).toContain('#fff');
     expect(doc).toContain('#00f');
+    expect(doc).toContain('charset="utf-8"');
   });
 
   it('centers display math on request', () => {
