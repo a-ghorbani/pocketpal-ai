@@ -1,10 +1,16 @@
 import React, {useCallback, useEffect, useMemo, useState} from 'react';
-import {ScrollView, StyleSheet, Text} from 'react-native';
+import {ScrollView, StyleSheet, View} from 'react-native';
 import {WebView} from 'react-native-webview';
 import type {WebViewMessageEvent} from 'react-native-webview';
 
+import CodeHighlighter from 'react-native-code-highlighter';
+import {atomOneDark} from 'react-syntax-highlighter/dist/esm/styles/hljs';
+
 import {useTheme} from '../../hooks';
 import {Theme} from '../../utils/types';
+import {CodeBlockHeader} from '../CodeBlockHeader';
+
+import {codeHighlighterPreOverride} from './styles';
 
 import {
   buildKatexDoc,
@@ -102,21 +108,22 @@ export const LatexBlock: React.FC<LatexBlockProps> = ({tex, maxWidth}) => {
   }, []);
 
   if (!html || failed) {
-    // Fallback shows the raw TeX so content is never lost (and stays
-    // copyable/selectable via the native Text path).
+    // Fallback uses the standard code-block UI (language header + copy
+    // button) so rejected formulas look like every other code block.
     return (
-      <ScrollView
-        horizontal
-        nestedScrollEnabled
-        style={styles.blockFallbackScroll}
-        contentContainerStyle={styles.blockFallbackContent}>
-        <Text
-          testID="latex-block-fallback"
-          accessibilityLabel={tex}
-          style={styles.blockFallbackText}>
+      <View testID="latex-block-fallback" accessibilityLabel={tex}>
+        <CodeBlockHeader language="tex" content={tex} />
+        <CodeHighlighter
+          hljsStyle={atomOneDark}
+          language="tex"
+          textStyle={styles.codeText}
+          scrollViewProps={{
+            contentContainerStyle: styles.codeContent,
+          }}
+          customStyle={codeHighlighterPreOverride}>
           {tex}
-        </Text>
-      </ScrollView>
+        </CodeHighlighter>
+      </View>
     );
   }
 
@@ -166,18 +173,13 @@ const createStyles = (theme: Theme) =>
     blockContent: {
       alignItems: 'center',
     },
-    blockFallbackScroll: {
-      backgroundColor: theme.colors.surfaceContainerHigh,
-      borderRadius: 6,
-      marginVertical: 8,
-    },
-    blockFallbackContent: {
-      padding: 10,
-    },
-    blockFallbackText: {
-      color: theme.colors.onSurface,
+    codeText: {
       fontFamily: 'Courier',
-      fontSize: 15,
-      lineHeight: 22,
+    },
+    codeContent: {
+      backgroundColor: theme.colors.surface,
+      padding: 8,
+      borderRadius: 6,
+      marginTop: 4,
     },
   });
