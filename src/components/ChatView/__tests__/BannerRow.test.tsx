@@ -552,4 +552,39 @@ describe('BannerRow', () => {
     expect(queryByTestId('context-full-banner')).toBeNull();
     expect(queryByTestId('banner-percent')).toBeNull();
   });
+
+  it('renders Compact button on context-warning and triggers compactActiveSession on press', () => {
+    jest.spyOn(chatSessionStore, 'compactActiveSession').mockResolvedValue(true);
+    runInAction(() => {
+      chatSessionStore.lastCompletionResult = {
+        used: 3300,
+        contextFull: false,
+        isRemote: false,
+      };
+    });
+    const {getByTestId} = renderBanner();
+    const compactBtn = getByTestId('context-warning-compact');
+    expect(compactBtn).toBeTruthy();
+
+    fireEvent.press(compactBtn);
+    expect(chatSessionStore.compactActiveSession).toHaveBeenCalledTimes(1);
+  });
+
+  it('renders Compact button on context-full and triggers compactActiveSession on press', () => {
+    jest.spyOn(chatSessionStore, 'compactActiveSession').mockResolvedValue(true);
+    runInAction(() => {
+      chatSessionStore.lastCompletionResult = {
+        used: 4096,
+        contextFull: true,
+        isRemote: false,
+      };
+    });
+    const {getByTestId} = renderBanner();
+    const compactBtn = getByTestId('context-full-compact');
+    expect(compactBtn).toBeTruthy();
+
+    fireEvent.press(compactBtn);
+    expect(chatSessionStore.compactActiveSession).toHaveBeenCalledTimes(1);
+  });
 });
+

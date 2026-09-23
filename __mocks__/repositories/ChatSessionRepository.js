@@ -101,6 +101,23 @@ class ChatSessionRepository {
     return; // Mock: do nothing
   }
 
+  async softArchiveMessagesAndAddCompaction(
+    sessionId,
+    messageIdsToArchive,
+    compactionMessage,
+  ) {
+    return {
+      id: compactionMessage.id || 'mock-compaction-id',
+      sessionId,
+      text: compactionMessage.text || '',
+      type: compactionMessage.type || 'custom',
+      createdAt: compactionMessage.createdAt || Date.now(),
+      metadata: JSON.stringify(compactionMessage.metadata || {}),
+      position: 999,
+      toMessageObject: () => compactionMessage,
+    };
+  }
+
   async deleteMessage(id) {
     return; // Mock: do nothing
   }

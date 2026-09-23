@@ -8,6 +8,7 @@ import {
   StatusBar,
   StatusBarProps,
   View,
+  Text,
   TouchableOpacity,
   Keyboard,
 } from 'react-native';
@@ -1149,6 +1150,35 @@ export const ChatView = observer(
                 onNewChat={() => chatSessionStore.resetActiveSession()}
                 onIncreaseContext={() => setIncreaseSheetOpen(true)}
               />
+              {chatSessionStore.isCompacting ? (
+                <View
+                  testID="compaction-progress-bar"
+                  style={{
+                    flexDirection: 'row',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    paddingHorizontal: 16,
+                    paddingVertical: 8,
+                    backgroundColor: theme.colors.surfaceVariant,
+                    borderTopWidth: 1,
+                    borderTopColor: theme.colors.outline,
+                  }}>
+                  <View style={{flexDirection: 'row', alignItems: 'center', gap: 8}}>
+                    <CircularActivityIndicator color={theme.colors.primary} size={16} />
+                    <Text style={{fontSize: 13, color: theme.colors.onSurfaceVariant}}>
+                      {l10n.chat?.compacting || 'Compacting conversation…'}
+                    </Text>
+                  </View>
+                  <TouchableOpacity
+                    onPress={() => chatSessionStore.cancelCompaction()}
+                    accessibilityRole="button"
+                    style={{paddingHorizontal: 8, paddingVertical: 4}}>
+                    <Text style={{fontSize: 13, color: theme.colors.primary, fontWeight: '600'}}>
+                      {l10n.chat?.compactCancel || 'Cancel'}
+                    </Text>
+                  </TouchableOpacity>
+                </View>
+              ) : null}
               <ChatInput
                 {...{
                   ...unwrap(inputProps),
