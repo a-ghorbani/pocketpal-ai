@@ -93,7 +93,7 @@ describe('splitTextWithMath', () => {
   });
 
   it('never parses math inside fenced code blocks', () => {
-    const raw = '```latex\n$$x^2$$\n```';
+    const raw = '```\n$$x^2$$\n```';
     const segments = splitTextWithMath(raw);
     expect(segments.every(s => s.type === 'text')).toBe(true);
     expect(segments.map(s => s.raw).join('')).toBe(raw);
@@ -187,8 +187,45 @@ describe('splitTextWithMath', () => {
       expect(segments[1]).toMatchObject({content: 'x'});
     });
 
-    it('rejects space-adjacent dollars', () => {
-      for (const raw of ['A $ x$ B', 'A $x $ B', 'A $  $ B']) {
+    it('renders spaced dollars for unambiguous math', () => {
+      // Model style: padded delimiters with real TeX or short symbols.
+      for (const [raw, expected] of [
+        ['See $ \\rho $ ok', '\\rho'],
+        ['See $ s = \\rho $ ok', 's = \\rho'],
+        ['See $ i $ ok', 'i'],
+        ['See $ x$ ok', 'x'],
+        ['See $x $ ok', 'x'],
+        ['For $ \\text{Re}(s) > 1 $ holds', '\\text{Re}(s) > 1'],
+      ] as Array<[string, string]>) {
+        const segments = splitTextWithMath(raw);
+        const math = segments.find(s => s.type === 'math');
+        expect(math).toMatchObject({content: expected, displayMode: false});
+      }
+    });
+
+    it('renders the Riemann screenshot shapes', () => {
+      // Transcribed from on-device model output (spaced single dollars).
+      for (const [raw, expected] of [
+        ['for $ \\text{Re}(s) > 1 $.', '\\text{Re}(s) > 1'],
+        ['numbers $ s = \\rho $ such', 's = \\rho'],
+        ['where $ 0 < \\text{Re}(s) < 1 $.', '0 < \\text{Re}(s) < 1'],
+        ['at $ s = -2, -4, -6, \\dots $.', 's = -2, -4, -6, \\dots'],
+        [
+          'line $ \\text{Re}(s) = \\frac{1}{2} $.',
+          '\\text{Re}(s) = \\frac{1}{2}',
+        ],
+      ] as Array<[string, string]>) {
+        const math = splitTextWithMath(raw).find(s => s.type === 'math');
+        expect(math).toMatchObject({content: expected, displayMode: false});
+      }
+    });
+    it('rejects spaced dollars for prose and currency', () => {
+      for (const raw of [
+        'A $  $ B',
+        'A $ see above $ B',
+        'It costs $ 5 $ total',
+        'It costs $5 and $10 total',
+      ]) {
         expect(splitTextWithMath(raw).every(s => s.type === 'text')).toBe(true);
       }
     });
@@ -271,6 +308,63 @@ describe('splitTextWithMath', () => {
     it('does not mistake pipes without a delimiter row for tables', () => {
       const segments = splitTextWithMath('Either $a$ | or $b$');
       expect(segments.filter(s => s.type === 'math')).toHaveLength(2);
+    });
+  });
+
+  describe('math fences (GitHub ```math convention)', () => {
+    it('renders ```math as display math without the markers', () => {
+      const segments = splitTextWithMath('See:\n```math\n\\sqrt{3}\n```\ndone');
+      expect(segments.map(s => s.type)).toEqual(['text', 'math', 'text']);
+      expect(segments[1]).toMatchObject({
+        type: 'math',
+        content: '\\sqrt{3}',
+        displayMode: true,
+      });
+    });
+
+    it('accepts latex, tex and katex tags in any case, both markers', () => {
+      for (const tag of ['latex', 'TEX', 'katex', 'Math']) {
+        const segments = splitTextWithMath(`\`\`\`${tag}\nx\n\`\`\``);
+        expect(segments[0]).toMatchObject({type: 'math', content: 'x'});
+      }
+      const tilde = splitTextWithMath('~~~math\ny\n~~~');
+      expect(tilde[0]).toMatchObject({type: 'math', content: 'y'});
+    });
+
+    it('leaves untagged and empty math fences as text', () => {
+      expect(
+        splitTextWithMath('```python\n$x$\n```').every(s => s.type === 'text'),
+      ).toBe(true);
+      expect(
+        splitTextWithMath('```math\n\n```').every(s => s.type === 'text'),
+      ).toBe(true);
+    });
+
+    it('survives unclosed math fences without crashing', () => {
+      const raw = '```math\n\\sqrt{3}';
+      const segments = splitTextWithMath(raw);
+      expect(segments.map(s => s.raw).join('')).toBe(raw);
+    });
+  });
+
+  describe('double-escaped delimiters', () => {
+    it('collapses \\\\( \\\\) to inline math', () => {
+      const segments = splitTextWithMath('Value \\\\(x\\\\) here');
+      expect(segments.map(s => s.type)).toEqual(['text', 'math', 'text']);
+      expect(segments[1]).toMatchObject({content: 'x', displayMode: false});
+    });
+
+    it('collapses \\\\[ \\\\] to display math', () => {
+      const segments = splitTextWithMath('Value \\\\[a\\\\] here');
+      expect(segments[1]).toMatchObject({content: 'a', displayMode: true});
+    });
+
+    it('documents the code-span wart explicitly', () => {
+      // Normalization also touches code spans; showing `\(` instead of
+      // `\\(` there is the accepted rarer wart.
+      const segments = splitTextWithMath('Use `\\\\(` here');
+      expect(segments.every(s => s.type === 'text')).toBe(true);
+      expect(segments.map(s => s.raw).join('')).toBe('Use `\\(` here');
     });
   });
 

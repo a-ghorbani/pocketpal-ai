@@ -88,6 +88,18 @@ describe('MarkdownView LaTeX integration', () => {
     expect(getByText(`$$x_{${MAX_MATH_PER_MESSAGE}}$$`)).toBeTruthy();
   });
 
+  it('renders ```math fences as display math', () => {
+    const {getByTestId, queryByTestId} = render(
+      <MarkdownView
+        markdownText={'Intro:\n```math\n\\sqrt{3}\n```\nDone'}
+        maxMessageWidth={300}
+      />,
+    );
+
+    expect(getByTestId('latex-math-block-webview')).toBeTruthy();
+    expect(queryByTestId('latex-block-fallback')).toBeNull();
+  });
+
   it('renders the on-device screenshot response end to end', () => {
     // Transcribed from a real LFM2.5 answer (single-$ inline style plus
     // three $$ display blocks). 14 formulas, all under the cap: 9 inline

@@ -9,16 +9,24 @@
  * - `$$...$$`  block math (displayMode)
  * - `\[...\]`  block math (displayMode)
  * - `\(...\)`  inline math
- * - `$...$`    inline math, with guards: the opener needs a non-space
- *   after it and a non-digit before it; the closer needs a non-space
- *   before it and a non-digit after it; content must be non-blank and
- *   free of unescaped `$`. So `$5 and $10` stays text while
- *   `$2 \times 2$` renders.
+ * - `$...$`    inline math, with guards: the opener needs a non-digit
+ *   before it; the closer needs a non-digit after it; content must be
+ *   non-blank and free of unescaped `$`. Adjacent whitespace is allowed
+ *   only for unambiguous math — content with a TeX command or a very
+ *   short symbol (`$ \rho $`, `$ i $`) — so `$5 and $10` and `$ see
+ *   above $` stay text while real formulas render.
  *
  * Math inside fenced code blocks (``` / ~~~), inline code (`...`), and
  * GFM table blocks is never parsed — tables keep their layout and show
- * the raw TeX. Unclosed delimiters are returned as plain text so
- * streaming partial messages cannot crash or mis-render.
+ * the raw TeX. Exception: fenced blocks tagged math|latex|tex|katex
+ * (GitHub convention) render as display math. Unclosed delimiters are
+ * returned as plain text so streaming partial messages cannot crash
+ * or mis-render.
+ *
+ * Input is normalized first: doubled delimiters `\\(`, `\\)`, `\\[`,
+ * `\\]` (which models emit when double-escaping, e.g. through JSON)
+ * collapse to their single form. This also touches code spans — showing
+ * `\(` instead of `\\(` there is accepted as the rarer wart.
  */
 
 export interface LatexSegment {
@@ -80,7 +88,14 @@ interface Fence {
   index: number;
   end: number;
   raw: string;
+  /** Fenced content without the markers (may be partial while streaming). */
+  content: string;
+  /** Info-string language, e.g. ```math — empty when untagged. */
+  language: string;
 }
+
+/** Fence languages that carry math (GitHub ```math convention). */
+const MATH_FENCE_RE = /^(math|latex|tex|katex)\b/i;
 
 /**
  * Find the next fenced code block (``` or ~~~) from `from`. An unclosed
@@ -95,18 +110,27 @@ function findNextFence(text: string, from: number): Fence | undefined {
   }
   const index = match.index + (match[1] ? match[1].length : 0);
   const marker = match[2];
+  const language = (match[3] ?? '').trim().split(/\s+/)[0] ?? '';
   const contentStart = fenceRe.lastIndex;
   const closingRe = new RegExp(`(^|\\n)${marker}[ \\t]*(?=\\n|$)`, 'g');
   closingRe.lastIndex = contentStart;
   const close = closingRe.exec(text);
   if (!close) {
-    return {index, end: text.length, raw: text.slice(index)};
+    return {
+      index,
+      end: text.length,
+      raw: text.slice(index),
+      content: text.slice(contentStart),
+      language,
+    };
   }
   const closingIndex = close.index + (close[1] ? close[1].length : 0);
   return {
     index,
     end: closingIndex + marker.length,
     raw: text.slice(index, closingIndex + marker.length),
+    content: text.slice(contentStart, closingIndex),
+    language,
   };
 }
 
@@ -173,6 +197,21 @@ function contentHasRawDollar(content: string): boolean {
 }
 
 /**
+ * Accepted content for whitespace-relaxed `$...$` matches: real TeX (a
+ * backslash command) or a very short non-numeric symbol (`$ i $`).
+ * Models often pad delimiters with spaces; currency, bare numbers and
+ * prose never look like this, so `$5 and $10`, `$ 5 $` and `$ see
+ * above $` still stay text (and keep their dollar signs).
+ */
+function isRelaxedMathContent(content: string): boolean {
+  const trimmed = content.trim();
+  if (trimmed === '' || /^\d+$/.test(trimmed)) {
+    return false;
+  }
+  return trimmed.includes('\\') || trimmed.length <= 3;
+}
+
+/**
  * Earliest valid single-`$` inline match at/after `from`, or undefined.
  * See the file docblock for the guard rules. Unclosed/escaped/empty and
  * currency shapes all yield undefined (plain text, streaming-safe).
@@ -189,14 +228,11 @@ function findSingleDollarMath(
     }
     const afterOpen = text[open + 1];
     const beforeOpen = open > 0 ? text[open - 1] : '';
-    if (
-      afterOpen === undefined ||
-      /\s/.test(afterOpen) ||
-      isDigitChar(beforeOpen)
-    ) {
+    if (afterOpen === undefined || isDigitChar(beforeOpen)) {
       open += 1;
       continue;
     }
+    const relaxedOpen = /\s/.test(afterOpen);
     let close = open + 1;
     let exhausted = true;
     while (true) {
@@ -206,11 +242,18 @@ function findSingleDollarMath(
       }
       const beforeClose = text[close - 1];
       const afterClose = text[close + 1];
-      if (
-        beforeClose === undefined ||
-        /\s/.test(beforeClose) ||
-        isDigitChar(afterClose)
-      ) {
+      const strictClose =
+        beforeClose !== undefined &&
+        !/\s/.test(beforeClose) &&
+        !isDigitChar(afterClose);
+      // Whitespace before the closer is suspicious (prose/currency) —
+      // accept only unambiguous math content (see isRelaxedMathContent).
+      const relaxedClose =
+        !strictClose &&
+        beforeClose !== undefined &&
+        /\s/.test(beforeClose) &&
+        !isDigitChar(afterClose);
+      if (!strictClose && !relaxedClose) {
         close += 1;
         continue;
       }
@@ -224,6 +267,10 @@ function findSingleDollarMath(
         // later (e.g. `$5 and $x$` still yields `$x$`).
         exhausted = false;
         break;
+      }
+      if ((relaxedOpen || relaxedClose) && !isRelaxedMathContent(content)) {
+        close += 1;
+        continue;
       }
       return {
         index: open,
@@ -446,15 +493,18 @@ export function mathFallbackMarkdown(
 
 /**
  * Split a markdown message into text/math segments. Code (fenced + inline)
- * and table blocks are always preserved verbatim as text. Never throws; on
- * any unexpected input returns the whole message as a single text segment.
+ * and table blocks are always preserved verbatim as text, except
+ * math-tagged fences which become display math. Never throws; on any
+ * unexpected input returns the whole message as a single text segment.
  */
 export function splitTextWithMath(input: string): LatexSegment[] {
   try {
     if (!input) {
       return [];
     }
-    const tableRanges = findTableRanges(input);
+    // Collapse doubled delimiters from double-escaped model output.
+    const source = input.replace(/\\\\([()\[\]])/g, '\\$1');
+    const tableRanges = findTableRanges(source);
     const segments: LatexSegment[] = [];
     const splitChunk = (chunk: string, baseOffset: number): void => {
       for (const span of splitInlineCode(chunk, baseOffset)) {
@@ -466,19 +516,28 @@ export function splitTextWithMath(input: string): LatexSegment[] {
       }
     };
     let i = 0;
-    while (i < input.length) {
-      const fence = findNextFence(input, i);
+    while (i < source.length) {
+      const fence = findNextFence(source, i);
       if (!fence) {
         // No more fences: handle inline code + math for the remainder.
-        splitChunk(input.slice(i), i);
+        splitChunk(source.slice(i), i);
         break;
       }
       // Text before the fence.
       if (fence.index > i) {
-        splitChunk(input.slice(i, fence.index), i);
+        splitChunk(source.slice(i, fence.index), i);
       }
-      // The fence itself is verbatim text.
-      pushText(segments, fence.raw);
+      if (MATH_FENCE_RE.test(fence.language) && fence.content.trim() !== '') {
+        segments.push({
+          type: 'math',
+          content: fence.content.trim(),
+          displayMode: true,
+          raw: fence.raw,
+        });
+      } else {
+        // The fence itself is verbatim text.
+        pushText(segments, fence.raw);
+      }
       i = fence.end;
     }
     return segments;

@@ -28,6 +28,12 @@ describe('renderTexToHtml', () => {
     expect(renderTexToHtml('\\invalidcommand{{{', true)).toBeUndefined();
   });
 
+  it('supports user-defined macros in one pass', () => {
+    expect(
+      renderTexToHtml('\\newcommand{\\RR}{\\mathbb{R}}\\RR', false),
+    ).toContain('katex');
+  });
+
   it('falls back for unsupported macros instead of echoing them', () => {
     // mhchem is not bundled: \ce must become a clean code fallback,
     // not KaTeX's red echo text.
