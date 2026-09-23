@@ -39,16 +39,6 @@ export interface LatexSegment {
   raw: string;
 }
 
-/**
- * Memory/perf guard: each rendered formula mounts one WebView. Reasoning
- * blocks intentionally render no math, so the budget belongs to the actual
- * response. 20 covers long math answers (models rarely emit more); these
- * are tiny static KaTeX documents — far lighter than the interactive HTML
- * previews the docs' 5-WebView caution targets — and the app already
- * requires 6GB+ RAM devices. Beyond the cap, raw TeX falls back to code.
- */
-export const MAX_MATH_PER_MESSAGE = 20;
-
 interface Delimiter {
   open: string;
   close: string;
@@ -476,19 +466,6 @@ function splitNormalText(
     });
     i = m.end;
   }
-}
-
-/**
- * Fallback markdown for math that must stay visible without a WebView
- * (over the per-message cap). Code formatting keeps the TeX literal through
- * the markdown pipeline. Backticks are stripped — TeX never needs them.
- */
-export function mathFallbackMarkdown(
-  displayMode: boolean,
-  raw: string,
-): string {
-  const safe = raw.replace(/`/g, '');
-  return displayMode ? '```tex\n' + safe + '\n```' : '`' + safe + '`';
 }
 
 /**

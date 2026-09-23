@@ -4,12 +4,7 @@ import React, {useMemo} from 'react';
 import {marked} from 'marked';
 import {RenderHTMLSource} from 'react-native-render-html';
 
-import {
-  findTableRanges,
-  MAX_MATH_PER_MESSAGE,
-  mathFallbackMarkdown,
-  splitTextWithMath,
-} from '../../utils/latex';
+import {findTableRanges, splitTextWithMath} from '../../utils/latex';
 import type {LatexSegment} from '../../utils/latex';
 
 import {LatexBlock} from './LatexBlock';
@@ -52,10 +47,10 @@ const isNativeOnlyText = (raw: string): boolean =>
  * renders centered via `LatexBlock`. Runs of prose + inline math become
  * flow groups — each paragraph mounts one `MathParagraphView` so formulas
  * sit inside the sentence (punctuation attached) with true in-flow layout.
- * Code fences and tables stay native. At most MAX_MATH_PER_MESSAGE formulas
- * mount a WebView — beyond that the raw TeX falls back to code so content
- * is never lost. Messages without math produce exactly one text block,
- * identical to the previous behavior.
+ * Code fences and tables stay native. Every formula mounts a WebView
+ * (invalid TeX degrades to inline code inside the paragraph, and total
+ * WebView failure to a native fallback). Messages without math produce
+ * exactly one text block, identical to the previous behavior.
  *
  * NOTE: `selectable` is accepted for API compatibility but is currently
  * fixed at the provider level. If a caller ever needs a selectable variant
@@ -67,7 +62,6 @@ export const MarkdownView: React.FC<MarkdownViewProps> = React.memo(
       const segments = splitTextWithMath(markdownText);
       const out: RenderBlock[] = [];
       let flow: LatexSegment[] = [];
-      let mathCount = 0;
       let keyIndex = 0;
 
       const pushTextBlock = (raw: string): void => {
@@ -98,24 +92,11 @@ export const MarkdownView: React.FC<MarkdownViewProps> = React.memo(
           if (para.trim() === '') {
             continue;
           }
-          const paraSegments = splitTextWithMath(para);
-          const inlineCount = paraSegments.filter(
-            s => s.type === 'math',
-          ).length;
-          if (inlineCount === 0) {
+          const hasMath = splitTextWithMath(para).some(s => s.type === 'math');
+          if (!hasMath) {
             pushTextBlock(para);
-          } else if (mathCount + inlineCount <= MAX_MATH_PER_MESSAGE) {
-            mathCount += inlineCount;
-            out.push({key: `flow-${keyIndex++}`, kind: 'para', raw: para});
           } else {
-            // Over the WebView cap: native pieces, math as code.
-            for (const seg of paraSegments) {
-              if (seg.type === 'math') {
-                pushTextBlock(mathFallbackMarkdown(false, seg.raw));
-              } else {
-                pushTextBlock(seg.content);
-              }
-            }
+            out.push({key: `flow-${keyIndex++}`, kind: 'para', raw: para});
           }
         }
       };
@@ -123,23 +104,11 @@ export const MarkdownView: React.FC<MarkdownViewProps> = React.memo(
       for (const seg of segments) {
         if (seg.type === 'math' && seg.displayMode) {
           pushFlowParagraphs();
-          if (mathCount < MAX_MATH_PER_MESSAGE) {
-            mathCount += 1;
-            out.push({
-              key: `seg-${keyIndex++}`,
-              kind: 'math',
-              tex: seg.content,
-            });
-          } else {
-            // Over the WebView cap: show raw TeX as code so it stays
-            // readable without mounting more WebViews.
-            const fallbackMd = mathFallbackMarkdown(true, seg.raw);
-            out.push({
-              key: `seg-${keyIndex++}`,
-              kind: 'text',
-              source: {html: marked(fallbackMd) as string},
-            });
-          }
+          out.push({
+            key: `seg-${keyIndex++}`,
+            kind: 'math',
+            tex: seg.content,
+          });
           continue;
         }
         if (seg.type === 'text' && isNativeOnlyText(seg.raw)) {

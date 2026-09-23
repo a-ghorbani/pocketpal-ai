@@ -2,7 +2,6 @@ import React from 'react';
 
 import {render} from '../../../../jest/test-utils';
 
-import {MAX_MATH_PER_MESSAGE} from '../../../utils/latex';
 import {MarkdownView} from '../MarkdownView';
 
 describe('MarkdownView LaTeX integration', () => {
@@ -73,19 +72,16 @@ describe('MarkdownView LaTeX integration', () => {
     expect(getByTestId('latex-math-block-webview')).toBeTruthy();
   });
 
-  it(`caps WebViews at ${MAX_MATH_PER_MESSAGE} and shows the rest as code`, () => {
-    const formulas = Array.from({length: MAX_MATH_PER_MESSAGE + 1})
-      .map((_, i) => `$$x_{${i}}$$`)
-      .join('\n\n');
-    const {queryAllByTestId, getByText} = render(
+  it('renders every block formula with no cap', () => {
+    const formulas = Array.from({length: 25}, (_, i) => `$$x_{${i}}$$`).join(
+      '\n\n',
+    );
+    const {queryAllByTestId, queryByTestId} = render(
       <MarkdownView markdownText={formulas} maxMessageWidth={300} />,
     );
 
-    expect(queryAllByTestId('latex-math-block-webview')).toHaveLength(
-      MAX_MATH_PER_MESSAGE,
-    );
-    // The over-cap formula falls back to a visible code block, never lost.
-    expect(getByText(`$$x_{${MAX_MATH_PER_MESSAGE}}$$`)).toBeTruthy();
+    expect(queryAllByTestId('latex-math-block-webview')).toHaveLength(25);
+    expect(queryByTestId('latex-block-fallback')).toBeNull();
   });
 
   it('renders ```math fences as display math', () => {
@@ -102,8 +98,7 @@ describe('MarkdownView LaTeX integration', () => {
 
   it('renders the on-device screenshot response end to end', () => {
     // Transcribed from a real LFM2.5 answer (single-$ inline style plus
-    // three $$ display blocks). 14 formulas, all under the cap: 9 inline
-    // paragraphs + 3 display blocks mount WebViews, nothing falls back.
+    // three $$ display blocks). 14 formulas, every one mounts a WebView.
     const response = [
       'The quadratic formula is $x = \\frac{-b \\pm \\sqrt{b^2 - 4ac}}{2a}$.',
       'An integral example: $\\int_{0}^{\\infty} e^{-x^2} dx = \\frac{\\sqrt{\\pi}}{2}$.',
@@ -184,17 +179,13 @@ describe('MarkdownView LaTeX integration', () => {
     expect(queryAllByTestId('latex-paragraph-webview')).toHaveLength(1);
   });
 
-  it('deconstructs over-cap flows into native pieces', () => {
-    const crowded = Array.from({length: MAX_MATH_PER_MESSAGE + 1})
-      .map((_, i) => `$x_{${i}}$`)
-      .join(' ');
-    const {queryAllByTestId, queryByTestId, getByText} = render(
+  it('renders crowded flows with no cap', () => {
+    const crowded = Array.from({length: 25}, (_, i) => `$x_{${i}}$`).join(' ');
+    const {queryAllByTestId, queryByTestId} = render(
       <MarkdownView markdownText={crowded} maxMessageWidth={300} />,
     );
 
-    // One paragraph over budget: no WebView, every formula as code.
-    expect(queryAllByTestId('latex-paragraph-webview')).toHaveLength(0);
+    expect(queryAllByTestId('latex-paragraph-webview')).toHaveLength(1);
     expect(queryByTestId('latex-paragraph-fallback')).toBeNull();
-    expect(getByText(`$x_{${MAX_MATH_PER_MESSAGE}}$`)).toBeTruthy();
   });
 });

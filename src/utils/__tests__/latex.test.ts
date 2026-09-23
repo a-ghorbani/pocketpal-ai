@@ -1,8 +1,4 @@
-import {
-  MAX_MATH_PER_MESSAGE,
-  mathFallbackMarkdown,
-  splitTextWithMath,
-} from '../latex';
+import {splitTextWithMath} from '../latex';
 
 describe('splitTextWithMath', () => {
   it('returns no segments for empty input', () => {
@@ -136,8 +132,12 @@ describe('splitTextWithMath', () => {
     expect(segments.map(s => s.raw).join('')).toBe(raw);
   });
 
-  it('exposes a memory cap constant for the renderer', () => {
-    expect(MAX_MATH_PER_MESSAGE).toBe(20);
+  it('renders every formula without a cap', () => {
+    const formulas = Array.from({length: 25}, (_, i) => `$$x_{${i}}$$`).join(
+      '\n\n',
+    );
+    const segments = splitTextWithMath(formulas);
+    expect(segments.filter(s => s.type === 'math')).toHaveLength(25);
   });
 
   describe('single-dollar inline math', () => {
@@ -365,20 +365,6 @@ describe('splitTextWithMath', () => {
       const segments = splitTextWithMath('Use `\\\\(` here');
       expect(segments.every(s => s.type === 'text')).toBe(true);
       expect(segments.map(s => s.raw).join('')).toBe('Use `\\(` here');
-    });
-  });
-
-  describe('mathFallbackMarkdown', () => {
-    it('wraps block math as a tex code fence', () => {
-      expect(mathFallbackMarkdown(true, '$$x$$')).toBe('```tex\n$$x$$\n```');
-    });
-
-    it('wraps inline math as a code span', () => {
-      expect(mathFallbackMarkdown(false, '$x$')).toBe('`$x$`');
-    });
-
-    it('strips backticks so the fallback cannot break', () => {
-      expect(mathFallbackMarkdown(false, '$a`b$')).toBe('`$ab$`');
     });
   });
 });
