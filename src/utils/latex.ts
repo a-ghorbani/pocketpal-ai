@@ -18,10 +18,10 @@
  *
  * Math inside fenced code blocks (``` / ~~~), inline code (`...`), and
  * GFM table blocks is never parsed — tables keep their layout and show
- * the raw TeX. Exception: fenced blocks tagged math|latex|tex|katex
- * (GitHub convention) render as display math. Unclosed delimiters are
- * returned as plain text so streaming partial messages cannot crash
- * or mis-render.
+ * the raw TeX. Exception: fenced blocks tagged exactly ```math (GitHub
+ * convention) render as display math; ```latex and friends stay code.
+ * Unclosed delimiters are returned as plain text so streaming partial
+ * messages cannot crash or mis-render.
  *
  * Input is normalized first: doubled delimiters `\\(`, `\\)`, `\\[`,
  * `\\]` (which models emit when double-escaping, e.g. through JSON)
@@ -84,8 +84,9 @@ interface Fence {
   language: string;
 }
 
-/** Fence languages that carry math (GitHub ```math convention). */
-const MATH_FENCE_RE = /^(math|latex|tex|katex)\b/i;
+/** Only the ```math fence carries math (GitHub convention — ```latex and
+ * friends stay code so source keeps displaying as source). */
+const MATH_FENCE_RE = /^(math)$/i;
 
 /**
  * Find the next fenced code block (``` or ~~~) from `from`. An unclosed

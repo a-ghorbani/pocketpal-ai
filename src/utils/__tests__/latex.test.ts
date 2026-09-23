@@ -322,13 +322,22 @@ describe('splitTextWithMath', () => {
       });
     });
 
-    it('accepts latex, tex and katex tags in any case, both markers', () => {
-      for (const tag of ['latex', 'TEX', 'katex', 'Math']) {
+    it('renders only ```math fences as math', () => {
+      for (const tag of ['math', 'Math', 'MATH']) {
         const segments = splitTextWithMath(`\`\`\`${tag}\nx\n\`\`\``);
         expect(segments[0]).toMatchObject({type: 'math', content: 'x'});
       }
       const tilde = splitTextWithMath('~~~math\ny\n~~~');
       expect(tilde[0]).toMatchObject({type: 'math', content: 'y'});
+    });
+
+    it('leaves latex/tex/katex fences as code, like GitHub', () => {
+      for (const tag of ['latex', 'tex', 'katex', 'python', '']) {
+        const raw = `\`\`\`${tag}\n\\sqrt{3}\n\`\`\``;
+        const segments = splitTextWithMath(raw);
+        expect(segments.every(s => s.type === 'text')).toBe(true);
+        expect(segments.map(s => s.raw).join('')).toBe(raw);
+      }
     });
 
     it('leaves untagged and empty math fences as text', () => {
