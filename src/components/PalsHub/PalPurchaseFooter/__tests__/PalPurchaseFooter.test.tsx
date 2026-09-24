@@ -7,6 +7,7 @@ import {mockPremiumPalsHubPal} from '../../../../../jest/fixtures/pals';
 
 import {PalPurchaseFooter} from '../PalPurchaseFooter';
 import {palStore, purchaseStore} from '../../../../store';
+import {authService} from '../../../../services';
 import type {LedgerRecord} from '../../../../store/PurchaseStore';
 import type {Pal} from '../../../../types/pal';
 
@@ -79,6 +80,7 @@ describe('PalPurchaseFooter', () => {
   const originalOS = Platform.OS;
 
   beforeEach(() => {
+    (authService as any).isAuthenticated = false;
     runInAction(() => {
       (purchaseStore as any).reset();
       palStore.pals = [];
@@ -295,5 +297,74 @@ describe('PalPurchaseFooter', () => {
     unmount();
     expect(purchaseStore.endSession).toHaveBeenCalledWith('pal-1');
     expect(purchaseStore.recordFor('pal-1')?.status).toBe('unlocking');
+  });
+
+  describe('account', () => {
+    it('offers an in-app sign-in when signed out and Buy shows', () => {
+      purchasable();
+      const onSignInPress = jest.fn();
+      const {getByTestId, getByText} = setup({onSignInPress});
+      expect(getByText('Already own it? Sign in')).toBeTruthy();
+      fireEvent.press(getByTestId('purchase-signin-link'));
+      expect(onSignInPress).toHaveBeenCalled();
+    });
+
+    it('hides the sign-in line when signed in', () => {
+      purchasable();
+      (authService as any).isAuthenticated = true;
+      const {queryByTestId} = setup({onSignInPress: jest.fn()});
+      expect(queryByTestId('purchase-signin-link')).toBeNull();
+    });
+
+    const ready = () =>
+      runInAction(() => {
+        purchaseStore.records['pal-1'] = record('active');
+        setPhase('pal-1', 'ready');
+      });
+
+    it('prompts once after a signed-out purchase and links through sign-in', () => {
+      ready();
+      const onSignInPress = jest.fn();
+      const {getByTestId, getByText} = setup({onSignInPress});
+      expect(
+        getByText('Sign in to use it on your other devices too'),
+      ).toBeTruthy();
+      fireEvent.press(getByTestId('purchase-link-signin'));
+      expect(purchaseStore.requestLink).toHaveBeenCalled();
+      expect(onSignInPress).toHaveBeenCalled();
+    });
+
+    it('can dismiss the prompt', () => {
+      ready();
+      const {getByTestId, queryByTestId} = setup({onSignInPress: jest.fn()});
+      fireEvent.press(getByTestId('purchase-link-dismiss'));
+      expect(queryByTestId('purchase-link-prompt')).toBeNull();
+      expect(purchaseStore.requestLink).not.toHaveBeenCalled();
+    });
+
+    it('never prompts a signed-in user', () => {
+      ready();
+      (authService as any).isAuthenticated = true;
+      const {queryByTestId} = setup({onSignInPress: jest.fn()});
+      expect(queryByTestId('purchase-link-prompt')).toBeNull();
+    });
+
+    it('explains a purchase linked to another account', () => {
+      ready();
+      runInAction(() => {
+        purchaseStore.linkConflict = true;
+      });
+      const {getByTestId} = setup();
+      expect(getByTestId('purchase-link-conflict')).toBeTruthy();
+    });
+  });
+
+  it('offers Restore when the store account has no entitlement', () => {
+    runInAction(() => {
+      setPhase('pal-1', 'restore_needed');
+    });
+    const {getByTestId} = setup();
+    fireEvent.press(getByTestId('purchase-restore-button'));
+    expect(purchaseStore.restore).toHaveBeenCalled();
   });
 });

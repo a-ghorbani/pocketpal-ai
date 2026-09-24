@@ -1,3 +1,5 @@
+import {observable} from 'mobx';
+
 import {PurchaseStore, LEDGER_KEY} from '../PurchaseStore';
 import type {LedgerRecord, PurchaseStoreDeps} from '../PurchaseStore';
 import type {
@@ -204,10 +206,10 @@ export const createHarness = (
       }
     }),
   };
-  const auth = {
+  const auth = observable({
     isAuthenticated: options.signedIn ?? false,
-    user: options.signedIn ? {id: 'user-1'} : null,
-  };
+    user: (options.signedIn ? {id: 'user-1'} : null) as {id: string} | null,
+  });
   const api = {
     verify: jest.fn(
       async (

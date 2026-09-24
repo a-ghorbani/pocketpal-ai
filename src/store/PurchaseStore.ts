@@ -14,6 +14,7 @@ import type {
   StoreTransaction,
 } from '../services/iap/StorePort';
 import type {StorePlatform, VerifyResult} from '../services/iap/iapWire';
+import type {LinkOutcome} from '../services/iap/iapApi';
 import {palStore as defaultPalStore} from './PalStore';
 
 import type {PalsHubPal} from '../types/palshub';
@@ -130,6 +131,9 @@ export class PurchaseStore {
   availability: Availability = 'initializing';
   products = new Map<string, StoreProduct>();
   transient = new Map<string, TransientPhase>();
+  linkPending = false;
+  linkConflict = false;
+  isRestoring = false;
 
   private store: StorePort | null = null;
   private unsubscribeStore: (() => void) | null = null;
@@ -211,6 +215,15 @@ export class PurchaseStore {
         this.syncProducts();
       },
     );
+    reaction(
+      () => this.deps.auth.isAuthenticated,
+      signedIn => {
+        if (signedIn && this.linkPending) {
+          this.cancelLinkRequest();
+          this.link().catch(() => {});
+        }
+      },
+    );
   }
 
   get storePort(): StorePort {
@@ -266,6 +279,15 @@ export class PurchaseStore {
     return this.isLegacyInstall(palId);
   }
 
+  get needsLink(): boolean {
+    const userId = this.deps.auth.isAuthenticated
+      ? this.deps.auth.user?.id
+      : undefined;
+    return Object.values(this.records).some(
+      rec => rec.status === 'active' && rec.linkedUserId !== userId,
+    );
+  }
+
   isStoreOwned(palId: string): boolean {
     const status = this.records[palId]?.status;
     return status === 'active' || status === 'granted';
@@ -295,7 +317,7 @@ export class PurchaseStore {
     if (transient === 'invalid' && !rec) {
       return 'invalid';
     }
-    if (transient === 'restore_needed' && !this.isStoreOwned(palId)) {
+    if (transient === 'restore_needed' && !this.localPalFor(palId)) {
       return 'restore_needed';
     }
     if (!rec || rec.status === 'removed') {
@@ -747,6 +769,9 @@ export class PurchaseStore {
         if (this.watching.has(rec.palId)) {
           this.setTransient(rec.palId, 'ready');
         }
+        if (this.deps.auth.isAuthenticated) {
+          this.link().catch(() => {});
+        }
       } catch (error) {
         console.warn('Installing a purchased Pal failed:', error);
       }
@@ -1029,6 +1054,84 @@ export class PurchaseStore {
     }
     this.retries.set(rec.productId, {attempt: 0, tx});
     await this.processTransaction(tx, {});
+  }
+
+  requestLink(): void {
+    this.linkPending = true;
+  }
+
+  cancelLinkRequest(): void {
+    this.linkPending = false;
+  }
+
+  async link(): Promise<LinkOutcome | undefined> {
+    const userId = this.deps.auth.user?.id;
+    if (!this.deps.auth.isAuthenticated || !userId) {
+      return undefined;
+    }
+    await this.load();
+    const unlinked = Object.values(this.records).filter(
+      rec => rec.status === 'active' && rec.linkedUserId !== userId,
+    );
+    if (unlinked.length === 0) {
+      return undefined;
+    }
+    const txs = (await this.storePort.currentEntitlements()).filter(
+      tx =>
+        tx.state === 'purchased' &&
+        unlinked.some(rec => rec.productId === tx.productId),
+    );
+    if (txs.length === 0) {
+      return undefined;
+    }
+    let outcome: LinkOutcome;
+    try {
+      outcome = await this.deps.api.link(
+        platform(),
+        txs.map(tx => tx.proof),
+      );
+    } catch {
+      return undefined;
+    }
+    runInAction(() => {
+      this.linkConflict = outcome === 'conflict';
+    });
+    if (outcome === 'linked') {
+      for (const rec of unlinked) {
+        if (txs.some(tx => tx.productId === rec.productId)) {
+          await this.putRecord(rec.palId, {
+            productId: rec.productId,
+            linkedUserId: userId,
+          });
+        }
+      }
+    }
+    return outcome;
+  }
+
+  async restore(): Promise<void> {
+    runInAction(() => {
+      this.isRestoring = true;
+    });
+    try {
+      await this.deps.palStore.ready;
+      await this.load();
+      try {
+        await this.storePort.sync();
+      } catch (error) {
+        console.warn('Store sync failed:', error);
+      }
+      await this.drainQueue();
+      const txs = await this.storePort.currentEntitlements();
+      for (const tx of txs) {
+        await this.processTransaction(tx, {settledVerify: true, install: true});
+      }
+      await this.dropStalePending(txs, true);
+    } finally {
+      runInAction(() => {
+        this.isRestoring = false;
+      });
+    }
   }
 
   async installOwned(pal: PalsHubPal): Promise<boolean> {

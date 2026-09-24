@@ -47,7 +47,7 @@ import {
 
 // Services and stores
 import {authService, syncService} from '../../services';
-import {palStore, Pal} from '../../store';
+import {palStore, purchaseStore, Pal} from '../../store';
 import {hasVideoCapability} from '../../utils/pal-capabilities';
 
 import type {PalsHubPal} from '../../types/palshub';
@@ -444,7 +444,15 @@ export const PalsScreen: React.FC = observer(() => {
 
       {/* Auth Sheet */}
       {showAuth && (
-        <AuthSheet isVisible={showAuth} onClose={() => setShowAuth(false)} />
+        <AuthSheet
+          isVisible={showAuth}
+          onClose={() => {
+            setShowAuth(false);
+            if (!authService.isAuthenticated) {
+              purchaseStore.cancelLinkRequest();
+            }
+          }}
+        />
       )}
 
       {/* Palhub's Pal Detail Sheet */}

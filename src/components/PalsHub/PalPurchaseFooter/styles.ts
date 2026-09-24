@@ -21,6 +21,13 @@ export const createStyles = (theme: Theme) =>
       color: theme.colors.onSurfaceVariant,
       textAlign: 'center',
     },
+    prompt: {
+      alignItems: 'center',
+    },
+    promptActions: {
+      flexDirection: 'row',
+      gap: 8,
+    },
     status: {
       fontSize: 14,
       color: theme.colors.onSurface,

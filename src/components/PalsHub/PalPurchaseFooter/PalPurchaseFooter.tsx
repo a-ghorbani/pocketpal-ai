@@ -7,6 +7,7 @@ import {ActivityIndicator, Button, Text} from 'react-native-paper';
 import {useTheme} from '../../../hooks';
 import {t} from '../../../locales';
 import {L10nContext} from '../../../utils';
+import {authService} from '../../../services';
 import {palStore, purchaseStore} from '../../../store';
 import type {PalsHubPal} from '../../../types/palshub';
 
@@ -20,13 +21,14 @@ interface PalPurchaseFooterProps {
 }
 
 export const PalPurchaseFooter: React.FC<PalPurchaseFooterProps> = observer(
-  ({pal, onClose}) => {
+  ({pal, onClose, onSignInPress}) => {
     const theme = useTheme();
     const styles = createStyles(theme);
     const l10n = useContext(L10nContext);
     const copy = l10n.palsScreen.purchase;
     const [showModelStep, setShowModelStep] = useState(false);
     const [isOpening, setIsOpening] = useState(false);
+    const [linkPromptDismissed, setLinkPromptDismissed] = useState(false);
 
     useEffect(() => () => purchaseStore.endSession(pal.id), [pal.id]);
 
@@ -36,6 +38,12 @@ export const PalPurchaseFooter: React.FC<PalPurchaseFooterProps> = observer(
     const canBuy = purchaseStore.canBuy(pal);
     const owned = purchaseStore.isOwned(pal.id) || pal.is_owned === true;
     const localPal = palStore.pals.find(p => p.palshub_id === pal.id);
+    const signedIn = authService.isAuthenticated;
+
+    const handleLinkSignIn = () => {
+      purchaseStore.requestLink();
+      onSignInPress?.();
+    };
 
     const handleBuy = async () => {
       if ((await purchaseStore.buy(pal)) === 'close') {
@@ -70,6 +78,12 @@ export const PalPurchaseFooter: React.FC<PalPurchaseFooterProps> = observer(
       }
     };
 
+    const status = (message: string, testID: string) => (
+      <Text testID={testID} style={styles.status}>
+        {message}
+      </Text>
+    );
+
     const buyButton = (
       <>
         <Button
@@ -82,14 +96,43 @@ export const PalPurchaseFooter: React.FC<PalPurchaseFooterProps> = observer(
           {t(copy.buy, {price: product?.displayPrice ?? ''})}
         </Button>
         <Text style={styles.caption}>{copy.oneTime}</Text>
+        {!signedIn && onSignInPress && (
+          <Button
+            testID="purchase-signin-link"
+            mode="text"
+            compact
+            onPress={onSignInPress}>
+            {copy.signInLine}
+          </Button>
+        )}
       </>
     );
 
-    const status = (message: string, testID: string) => (
-      <Text testID={testID} style={styles.status}>
-        {message}
-      </Text>
+    const linkPrompt = !signedIn && !linkPromptDismissed && onSignInPress && (
+      <View style={styles.prompt} testID="purchase-link-prompt">
+        <Text style={styles.status}>{copy.linkPrompt}</Text>
+        <View style={styles.promptActions}>
+          <Button
+            testID="purchase-link-dismiss"
+            mode="text"
+            compact
+            onPress={() => setLinkPromptDismissed(true)}>
+            {copy.dismiss}
+          </Button>
+          <Button
+            testID="purchase-link-signin"
+            mode="text"
+            compact
+            onPress={handleLinkSignIn}>
+            {copy.linkSignIn}
+          </Button>
+        </View>
+      </View>
     );
+
+    const linkConflict =
+      purchaseStore.linkConflict &&
+      status(copy.linkConflict, 'purchase-link-conflict');
 
     const renderBody = () => {
       switch (phase) {
@@ -110,6 +153,8 @@ export const PalPurchaseFooter: React.FC<PalPurchaseFooterProps> = observer(
               {localPal && (
                 <PalModelStep localPal={localPal} onChatStarted={onClose} />
               )}
+              {linkPrompt}
+              {linkConflict}
             </>
           );
         case 'pending_payment':
@@ -144,6 +189,21 @@ export const PalPurchaseFooter: React.FC<PalPurchaseFooterProps> = observer(
             <>
               {status(copy.invalid, 'purchase-invalid')}
               {canBuy && buyButton}
+            </>
+          );
+        case 'restore_needed':
+          return (
+            <>
+              {status(copy.restoreNeeded, 'purchase-restore-needed')}
+              <Button
+                testID="purchase-restore-button"
+                mode="outlined"
+                onPress={() => purchaseStore.restore()}
+                loading={purchaseStore.isRestoring}
+                disabled={purchaseStore.isRestoring}
+                style={styles.button}>
+                {copy.restorePurchases}
+              </Button>
             </>
           );
       }

@@ -1132,6 +1132,13 @@
       "invalid": "We couldn't verify this purchase. Try Restore purchases, or contact support.",
       "recommendedModel": "Recommended model",
       "sampleExchange": "Sample conversation",
+      "signInLine": "Already own it? Sign in",
+      "linkPrompt": "Sign in to use it on your other devices too",
+      "linkSignIn": "Sign in",
+      "dismiss": "Not now",
+      "linkConflict": "These purchases are linked to another account.",
+      "restoreNeeded": "This purchase isn't on this device's store account yet.",
+      "restorePurchases": "Restore purchases",
       "modelStep": {
         "download": "Download · {{size}}",
         "startChat": "Start chat",

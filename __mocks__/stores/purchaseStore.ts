@@ -15,6 +15,8 @@ class MockPurchaseStore {
   phases = new Map<string, FlowPhase>();
   linkPending = false;
   linkConflict = false;
+  isRestoring = false;
+  needsLink = false;
 
   buy: jest.Mock;
   retry: jest.Mock;
@@ -103,6 +105,8 @@ class MockPurchaseStore {
     this.phases.clear();
     this.linkPending = false;
     this.linkConflict = false;
+    this.isRestoring = false;
+    this.needsLink = false;
   }
 }
 
