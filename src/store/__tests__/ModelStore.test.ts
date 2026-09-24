@@ -493,7 +493,6 @@ describe('ModelStore', () => {
       runInAction(() => {
         modelStore.pendingProjectionCleanupIds = [inFlightId, sharedId];
       });
-      const {downloadManager} = require('../../services/downloads');
       (downloadManager.isDownloading as jest.Mock).mockImplementation(
         (id: string) => id === inFlightId,
       );
