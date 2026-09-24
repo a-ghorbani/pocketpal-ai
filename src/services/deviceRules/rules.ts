@@ -4,7 +4,7 @@ import {parseDeviceRules} from './parse';
 import {getRulesUrl} from './rulesUrls';
 import {DeviceRules, Tier} from './types';
 
-// Online fetch of `rules.<platform>.json`. Returns null (→ bundled floor) on
+// Online fetch of `rules.<platform>.v2.json`. Returns null (→ bundled floor) on
 // any failure: network error, non-2xx, parse throw, platform mismatch, or a
 // parse that yields zero models across all tiers (an incompatible hosted JSON).
 // Never throws.
@@ -16,6 +16,7 @@ const hasAnyModels = (rules: DeviceRules): boolean =>
   TIERS.some(tier => rules.tiers[tier].models.length > 0);
 
 export async function fetchRules(
+  appVersion: string,
   platform: 'ios' | 'android' = Platform.OS as 'ios' | 'android',
 ): Promise<DeviceRules | null> {
   const controller = new AbortController();
@@ -28,12 +29,12 @@ export async function fetchRules(
       return null;
     }
     const json = await response.json();
-    const rules = parseDeviceRules(json);
+    const rules = parseDeviceRules(json, appVersion);
     if (rules.platform !== platform) {
       return null;
     }
-    // An incompatible-schema or otherwise model-less doc parses cleanly but
-    // resolves an empty list; fall to the bundled floor instead.
+    // A model-less doc (wrong tier shape, or every candidate gated out) parses
+    // cleanly but resolves an empty list; fall to the bundled floor instead.
     if (!hasAnyModels(rules)) {
       return null;
     }

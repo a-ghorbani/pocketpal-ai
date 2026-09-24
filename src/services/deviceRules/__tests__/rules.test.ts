@@ -9,7 +9,7 @@ const thinCandidate = {
 };
 
 const newSchemaDoc = {
-  schema_version: '1.2.0-draft',
+  schema_version: '2.0.0',
   platform: 'android',
   rules_version: '2026-06-10.1',
   classifier: {
@@ -55,31 +55,69 @@ describe('fetchRules', () => {
 
   it('returns parsed rules for a valid thin candidates doc', async () => {
     mockFetch(() => ({ok: true, json: async () => newSchemaDoc}));
-    const rules = await fetchRules('android');
+    const rules = await fetchRules('1.17.3', 'android');
     expect(rules).not.toBeNull();
     expect(rules?.tiers.mid.models).toHaveLength(1);
   });
 
+  it.each(['1.2.0-draft', '3.0.0', '2', 'v2.0.0', 'two'])(
+    'returns null (→ bundled floor) for schema_version %p',
+    async schemaVersion => {
+      mockFetch(() => ({
+        ok: true,
+        json: async () => ({...newSchemaDoc, schema_version: schemaVersion}),
+      }));
+      expect(await fetchRules('1.17.3', 'android')).toBeNull();
+    },
+  );
+
   it('returns null (→ bundled floor) for an old fat models[] schema doc', async () => {
     mockFetch(() => ({ok: true, json: async () => oldFatDoc}));
-    expect(await fetchRules('android')).toBeNull();
+    expect(await fetchRules('1.17.3', 'android')).toBeNull();
+  });
+
+  it('returns null (→ bundled floor) when every candidate is gated out', async () => {
+    mockFetch(() => ({
+      ok: true,
+      json: async () => ({
+        ...newSchemaDoc,
+        tiers: {
+          mid: {candidates: [{...thinCandidate, min_app_version: '99.0.0'}]},
+        },
+      }),
+    }));
+    expect(await fetchRules('1.17.3', 'android')).toBeNull();
+  });
+
+  it('passes the app version through to the gates', async () => {
+    mockFetch(() => ({
+      ok: true,
+      json: async () => ({
+        ...newSchemaDoc,
+        tiers: {
+          mid: {candidates: [{...thinCandidate, min_app_version: '1.17.3'}]},
+        },
+      }),
+    }));
+    expect(await fetchRules('1.17.3', 'android')).not.toBeNull();
+    expect(await fetchRules('1.17.2', 'android')).toBeNull();
   });
 
   it('returns null for garbage JSON that fails to parse', async () => {
     mockFetch(() => ({ok: true, json: async () => ({not: 'rules'})}));
-    expect(await fetchRules('android')).toBeNull();
+    expect(await fetchRules('1.17.3', 'android')).toBeNull();
   });
 
   it('returns null on a non-2xx response', async () => {
     mockFetch(() => ({ok: false, status: 404, json: async () => ({})}));
-    expect(await fetchRules('android')).toBeNull();
+    expect(await fetchRules('1.17.3', 'android')).toBeNull();
   });
 
   it('returns null on a network error', async () => {
     (global as unknown as {fetch: jest.Mock}).fetch = jest
       .fn()
       .mockRejectedValue(new Error('offline'));
-    expect(await fetchRules('android')).toBeNull();
+    expect(await fetchRules('1.17.3', 'android')).toBeNull();
   });
 
   it('returns null on a platform mismatch', async () => {
@@ -87,6 +125,6 @@ describe('fetchRules', () => {
       ok: true,
       json: async () => ({...newSchemaDoc, platform: 'ios'}),
     }));
-    expect(await fetchRules('android')).toBeNull();
+    expect(await fetchRules('1.17.3', 'android')).toBeNull();
   });
 });
