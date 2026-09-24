@@ -33,6 +33,7 @@ jest.mock('../../repositories/PalRepository', () => ({
     updatePal: jest.fn(),
     deletePal: jest.fn(),
     getPalById: jest.fn(),
+    getPalByPalshubId: jest.fn().mockResolvedValue(null),
     checkAndMigrateFromJSON: jest.fn(),
     getLocalPals: jest.fn(),
     getPalsHubPals: jest.fn(),

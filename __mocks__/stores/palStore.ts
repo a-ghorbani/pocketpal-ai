@@ -1,9 +1,14 @@
 import type {Pal, LegacyPalData} from '../../src/store/PalStore';
+import type {PalsHubPal} from '../../src/types/palshub';
 import {migrateLegacyPalToNew} from '../../src/utils/pal-migration';
 
 class MockPalStore {
   pals: Pal[] = [];
+  cachedPalsHubPals: PalsHubPal[] = [];
+  userLibrary: PalsHubPal[] = [];
+  userCreatedPals: PalsHubPal[] = [];
   isCheckoutEligible: boolean = false;
+  ready: Promise<void> = Promise.resolve();
 
   constructor() {
     // makeAutoObservable(this);
@@ -70,9 +75,27 @@ class MockPalStore {
   loadUserLibrary = jest.fn(async () => {});
   loadUserCreatedPals = jest.fn(async () => {});
 
+  getPalById = jest.fn((id: string) => this.pals.find(p => p.id === id));
+
   // PalsHub-related methods
   isPalsHubPalDownloaded = jest.fn(() => false);
   downloadPalsHubPal = jest.fn(async () => {});
+  installOwnedPal = jest.fn(async (pal: PalsHubPal) => ({
+    localPal: {
+      type: 'local',
+      id: `local-${pal.id}`,
+      name: pal.title,
+      systemPrompt: pal.system_prompt ?? '',
+      isSystemPromptChanged: false,
+      useAIPrompt: false,
+      parameters: {},
+      parameterSchema: [],
+      source: 'palshub',
+      palshub_id: pal.id,
+    } as Pal,
+    appliedPromptHash: 'hash',
+  }));
+  applyOwnedPalContent = jest.fn(async () => 'hash');
 }
 
 export const mockPalStore = new MockPalStore();

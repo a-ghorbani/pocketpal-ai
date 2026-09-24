@@ -25,7 +25,7 @@ import {HF_DOMAIN} from '../config/urls';
 
 import {palRepository} from '../repositories/PalRepository';
 
-import {hfAsModel} from '../utils';
+import {hashCode, hfAsModel} from '../utils';
 import {resolveHFModelForDownload} from '../utils/hfResolve';
 import {isUSStorefront} from '../utils/region';
 import NativeExternalContentLink from '../specs/NativeExternalContentLink';
@@ -55,6 +55,14 @@ import {downloadPalThumbnail, deletePalThumbnail} from '../utils/imageUtils';
 const LOOKIE_SEEDED_KEY = 'PalStore.builtin.Lookie.seeded';
 const PIP_SEEDED_KEY = 'PalStore.builtin.Pip.seeded';
 
+export const promptHash = (prompt: string): string =>
+  `${hashCode(prompt)}:${prompt.length}`;
+
+export interface OwnedPalInstall {
+  localPal: Pal;
+  appliedPromptHash?: string;
+}
+
 class PalStore {
   // Core pals storage
   pals: Pal[] = [];
@@ -75,9 +83,15 @@ class PalStore {
   migrationComplete: boolean = false;
   migrationVersion: string = '1.0';
 
+  readonly ready: Promise<void>;
+  private palshubInsertChains = new Map<string, Promise<unknown>>();
+
   constructor() {
-    makeAutoObservable(this);
-    this.initialize();
+    makeAutoObservable<PalStore, 'palshubInsertChains'>(this, {
+      ready: false,
+      palshubInsertChains: false,
+    });
+    this.ready = this.initialize();
     console.log('Pal store initialized');
     console.log('Pals number: ', this.pals.length);
   }
@@ -266,68 +280,165 @@ class PalStore {
    * Downloads a PalsHub pal and converts it to unified format
    */
   downloadPalsHubPal = async (palsHubPal: PalsHubPal): Promise<Pal> => {
-    try {
-      // For free pals, allow direct download without ownership check
-      // For premium pals, check ownership first
-      if (palsHubPal.price_cents > 0) {
-        const ownership = await palsHubService.checkPalOwnership(palsHubPal.id);
-        if (!ownership.owned) {
-          throw new Error('You must own this Pal to download it');
-        }
+    if (palsHubPal.price_cents > 0) {
+      const ownership = await palsHubService.checkPalOwnership(palsHubPal.id);
+      if (!ownership.owned) {
+        throw new Error('You must own this Pal to download it');
       }
+    }
+    const {pal} = await this.insertPalsHubPalOnce(palsHubPal.id, () =>
+      this.createPalFromPalsHub(palsHubPal),
+    );
+    return pal;
+  };
 
-      // Convert PalsHub pal to local format
-      const pal = await this.createLocalPalFromPalsHub(palsHubPal);
-      let relativeThumbnailPath: string | null = null;
+  installOwnedPal = async (
+    palsHubPal: PalsHubPal,
+    appliedPromptHash?: string,
+  ): Promise<OwnedPalInstall> => {
+    if (!palsHubPal.system_prompt) {
+      throw new Error('An owned Pal cannot be installed without its prompt');
+    }
+    const {pal, created} = await this.insertPalsHubPalOnce(palsHubPal.id, () =>
+      this.createPalFromPalsHub(palsHubPal),
+    );
+    if (created) {
+      return {localPal: pal, appliedPromptHash: promptHash(pal.systemPrompt)};
+    }
+    const hash = await this.applyOwnedPalContent(
+      pal.id,
+      palsHubPal,
+      appliedPromptHash,
+    );
+    return {
+      localPal: this.getPalById(pal.id) ?? pal,
+      appliedPromptHash: hash,
+    };
+  };
 
-      // Download thumbnail image if available
-      if (palsHubPal.thumbnail_url) {
-        try {
-          console.log('Downloading thumbnail for pal:', pal.name);
-          relativeThumbnailPath = await downloadPalThumbnail(
-            pal.id,
-            palsHubPal.thumbnail_url,
-          );
-
-          // Update the pal with the relative path (no file:// protocol)
-          pal.thumbnail_url = relativeThumbnailPath;
-          console.log(
-            'Thumbnail downloaded successfully:',
-            relativeThumbnailPath,
-          );
-        } catch (imageError) {
-          console.warn(
-            'Failed to download thumbnail, keeping remote URL:',
-            imageError,
-          );
-          // Keep the original remote URL as fallback
-          pal.thumbnail_url = palsHubPal.thumbnail_url;
-        }
-      }
-
-      try {
-        // Persist the pal to the database and add to store
-        return await this.addPal(pal);
-      } catch (dbError) {
-        // If database save fails, clean up the downloaded image
-        if (relativeThumbnailPath) {
-          try {
-            await deletePalThumbnail(relativeThumbnailPath);
-            console.log(
-              'Cleaned up thumbnail after database error:',
-              relativeThumbnailPath,
-            );
-          } catch (cleanupError) {
-            console.warn(
-              'Failed to cleanup thumbnail after database error:',
-              cleanupError,
-            );
+  insertPalsHubPalOnce = (
+    palshubId: string,
+    build: () => Promise<Pal>,
+  ): Promise<{pal: Pal; created: boolean}> => {
+    const previous =
+      this.palshubInsertChains.get(palshubId) ?? Promise.resolve();
+    const run = previous
+      .catch(() => undefined)
+      .then(async () => {
+        const existing = await palRepository.getPalByPalshubId(palshubId);
+        if (existing) {
+          if (!this.getPalById(existing.id)) {
+            runInAction(() => {
+              this.pals.push(existing);
+            });
           }
+          return {pal: existing, created: false};
         }
-        throw dbError;
+        return {pal: await build(), created: true};
+      });
+    this.palshubInsertChains.set(palshubId, run);
+    run
+      .finally(() => {
+        if (this.palshubInsertChains.get(palshubId) === run) {
+          this.palshubInsertChains.delete(palshubId);
+        }
+      })
+      .catch(() => undefined);
+    return run;
+  };
+
+  applyOwnedPalContent = async (
+    localPalId: string,
+    palsHubPal: PalsHubPal,
+    appliedPromptHash?: string,
+  ): Promise<string | undefined> => {
+    const current = this.getPalById(localPalId);
+    if (!current) {
+      return appliedPromptHash;
+    }
+    const fresh = await this.createLocalPalFromPalsHub(palsHubPal);
+    const updates: Partial<Pal> = {
+      name: fresh.name,
+      description: fresh.description,
+      pact: fresh.pact,
+      greeting: fresh.greeting,
+      defaultModel: fresh.defaultModel,
+      rawPalshubGenerationSettings: fresh.rawPalshubGenerationSettings,
+      categories: fresh.categories,
+      tags: fresh.tags,
+      creator_info: fresh.creator_info,
+      protection_level: fresh.protection_level,
+    };
+
+    if (palsHubPal.thumbnail_url) {
+      try {
+        updates.thumbnail_url = await downloadPalThumbnail(
+          localPalId,
+          palsHubPal.thumbnail_url,
+        );
+      } catch (imageError) {
+        console.warn('Failed to refresh thumbnail:', imageError);
       }
-    } catch (error) {
-      throw error;
+    }
+
+    let nextHash = appliedPromptHash;
+    const localHash = promptHash(current.systemPrompt);
+    const freshHash = promptHash(fresh.systemPrompt);
+    const promptIsOurs =
+      localHash === appliedPromptHash || localHash === freshHash;
+    if (fresh.systemPrompt && promptIsOurs) {
+      const keptParameters = Object.fromEntries(
+        fresh.parameterSchema
+          .filter(def => current.parameters?.[def.key] !== undefined)
+          .map(def => [def.key, current.parameters[def.key]]),
+      );
+      updates.systemPrompt = fresh.systemPrompt;
+      updates.originalSystemPrompt = fresh.originalSystemPrompt;
+      updates.parameterSchema = fresh.parameterSchema;
+      updates.parameters = {...fresh.parameters, ...keptParameters};
+      nextHash = freshHash;
+    }
+
+    await this.updatePal(localPalId, updates);
+    return nextHash;
+  };
+
+  private createPalFromPalsHub = async (
+    palsHubPal: PalsHubPal,
+  ): Promise<Pal> => {
+    const pal = await this.createLocalPalFromPalsHub(palsHubPal);
+    let relativeThumbnailPath: string | null = null;
+
+    if (palsHubPal.thumbnail_url) {
+      try {
+        relativeThumbnailPath = await downloadPalThumbnail(
+          pal.id,
+          palsHubPal.thumbnail_url,
+        );
+        pal.thumbnail_url = relativeThumbnailPath;
+      } catch (imageError) {
+        console.warn(
+          'Failed to download thumbnail, keeping remote URL:',
+          imageError,
+        );
+        pal.thumbnail_url = palsHubPal.thumbnail_url;
+      }
+    }
+
+    try {
+      return await this.addPal(pal);
+    } catch (dbError) {
+      if (relativeThumbnailPath) {
+        try {
+          await deletePalThumbnail(relativeThumbnailPath);
+        } catch (cleanupError) {
+          console.warn(
+            'Failed to cleanup thumbnail after database error:',
+            cleanupError,
+          );
+        }
+      }
+      throw dbError;
     }
   };
 

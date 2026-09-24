@@ -126,6 +126,14 @@ class PalRepository {
     }
   }
 
+  async getPalByPalshubId(palshubId: string): Promise<Pal | null> {
+    const [localPal] = await database.collections
+      .get<LocalPal>('local_pals')
+      .query(Q.where('palshub_id', palshubId))
+      .fetch();
+    return localPal ? localPal.toPal() : null;
+  }
+
   async getPalById(id: string): Promise<Pal | null> {
     try {
       const localPal = await database.collections
