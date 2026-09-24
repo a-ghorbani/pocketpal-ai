@@ -67,3 +67,42 @@ describe('AuthService.loadUserProfile', () => {
     errorSpy.mockRestore();
   });
 });
+
+describe('AuthService.signOut', () => {
+  it('leaves the purchase ledger and local Pals untouched', async () => {
+    jest.resetModules();
+    const removeItem = jest.fn();
+    const clear = jest.fn();
+    const multiRemove = jest.fn();
+    jest.doMock('@react-native-async-storage/async-storage', () => ({
+      getItem: jest.fn(async () => null),
+      setItem: jest.fn(),
+      removeItem,
+      clear,
+      multiRemove,
+    }));
+    jest.doMock('../supabase', () => ({
+      supabase: {
+        auth: {
+          onAuthStateChange: jest.fn(),
+          getSession: jest
+            .fn()
+            .mockResolvedValue({data: {session: null}, error: null}),
+          signOut: jest.fn().mockResolvedValue({error: null}),
+        },
+      },
+    }));
+    const deletePal = jest.fn();
+    jest.doMock('../../../repositories/PalRepository', () => ({
+      palRepository: {deletePal},
+    }));
+
+    const {authService} = require('../AuthService');
+    await authService.signOut();
+
+    expect(removeItem).not.toHaveBeenCalled();
+    expect(clear).not.toHaveBeenCalled();
+    expect(multiRemove).not.toHaveBeenCalled();
+    expect(deletePal).not.toHaveBeenCalled();
+  });
+});

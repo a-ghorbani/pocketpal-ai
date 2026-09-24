@@ -1139,6 +1139,8 @@
       "linkConflict": "These purchases are linked to another account.",
       "restoreNeeded": "This purchase isn't on this device's store account yet.",
       "restorePurchases": "Restore purchases",
+      "badgePending": "Pending",
+      "badgeUnlocking": "Unlocking",
       "modelStep": {
         "download": "Download · {{size}}",
         "startChat": "Start chat",

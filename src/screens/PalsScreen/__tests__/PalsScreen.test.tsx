@@ -632,4 +632,61 @@ describe('PalsScreen', () => {
       });
     });
   });
+
+  describe('purchases', () => {
+    const {runInAction} = require('mobx');
+    const {purchaseStore} = require('../../../store');
+
+    beforeEach(() => {
+      runInAction(() => purchaseStore.reset());
+    });
+
+    it('shows Restore purchases as the list footer when billing is ready', () => {
+      runInAction(() => {
+        purchaseStore.availability = 'ready';
+      });
+      const {getByTestId} = render(<PalsScreen />, {
+        withNavigation: true,
+        withSafeArea: true,
+        withBottomSheetProvider: true,
+      });
+      fireEvent.press(getByTestId('restore-purchases-row'));
+      expect(purchaseStore.restore).toHaveBeenCalled();
+    });
+
+    it.each(['initializing', 'unavailable'])(
+      'hides the restore row while billing is %s',
+      availability => {
+        runInAction(() => {
+          purchaseStore.availability = availability;
+        });
+        const {queryByTestId} = render(<PalsScreen />, {
+          withNavigation: true,
+          withSafeArea: true,
+          withBottomSheetProvider: true,
+        });
+        expect(queryByTestId('restore-purchases-row')).toBeNull();
+      },
+    );
+
+    it('lists a store-owned Pal that is not installed while signed out', () => {
+      runInAction(() => {
+        purchaseStore.records['store-pal'] = {
+          palId: 'store-pal',
+          source: 'store',
+          productId: 'pal.store',
+          transactionIds: [],
+          status: 'active',
+          title: 'Bought Pal',
+          updatedAt: 1,
+        };
+      });
+      const {getByTestId} = render(<PalsScreen />, {
+        withNavigation: true,
+        withSafeArea: true,
+        withBottomSheetProvider: true,
+      });
+      expect(getByTestId('palshub-pal-card-store-pal')).toBeTruthy();
+    });
+  });
 });

@@ -6,7 +6,7 @@ import {
   RefreshControl,
   useWindowDimensions,
 } from 'react-native';
-import {Text} from 'react-native-paper';
+import {Button, Text} from 'react-native-paper';
 import {observer} from 'mobx-react-lite';
 
 import {PlusIcon} from '../../assets/icons';
@@ -16,6 +16,7 @@ import {createStyles} from './styles';
 import {handlePalByType} from '../../utils/pal-type-guards';
 import {L10nContext} from '../../utils';
 import {chunkIntoRows, computePalGridLayout} from './palGridLayout';
+import {myPals} from './myPals';
 
 import type {PalGridItem} from './palGridLayout';
 
@@ -209,6 +210,16 @@ export const PalsScreen: React.FC = observer(() => {
     setShowPalSheet(true);
   };
 
+  const ownedPals = () =>
+    myPals(
+      palStore.getLocalPals(),
+      palStore.getDownloadedPalsHubPals(),
+      authService.isAuthenticated ? palStore.userLibrary : [],
+      authService.isAuthenticated ? palStore.userCreatedPals : [],
+      palStore.cachedPalsHubPals,
+      Object.values(purchaseStore.records),
+    );
+
   // Get filtered data based on current filter and search
   const getFilteredData = (): (PalsHubPal | Pal)[] => {
     if (isSearchExpanded && searchResults.length > 0) {
@@ -220,13 +231,10 @@ export const PalsScreen: React.FC = observer(() => {
     const hubPals = palStore.cachedPalsHubPals;
 
     switch (activeFilter) {
-      case 'my-pals':
-        return [
-          ...localPals,
-          ...downloadedPals,
-          ...palStore.userLibrary,
-          ...palStore.userCreatedPals,
-        ];
+      case 'my-pals': {
+        const {installed, notInstalled} = ownedPals();
+        return [...installed, ...notInstalled];
+      }
       case 'local':
         return [...localPals, ...downloadedPals];
       case 'video':
@@ -242,8 +250,10 @@ export const PalsScreen: React.FC = observer(() => {
       case 'premium':
         return hubPals.filter(p => p.price_cents > 0);
       case 'all':
-      default:
-        return [...localPals, ...downloadedPals, ...hubPals];
+      default: {
+        const {installed, notInstalled} = ownedPals();
+        return [...installed, ...notInstalled, ...hubPals];
+      }
     }
   };
 
@@ -255,70 +265,31 @@ export const PalsScreen: React.FC = observer(() => {
       return [{title: '', data: searchResults}];
     }
 
-    const localPals = palStore.getLocalPals();
-    const downloadedPals = palStore.getDownloadedPalsHubPals();
     const hubPals = palStore.cachedPalsHubPals;
 
     switch (activeFilter) {
-      case 'all': {
+      case 'all':
+      case 'my-pals': {
         const sections: Array<{title: string; data: (PalsHubPal | Pal)[]}> = [];
+        const {installed, notInstalled} = ownedPals();
 
-        // Add local pals section (includes both local and downloaded pals)
-        const allLocalPals = [...localPals, ...downloadedPals];
-        if (allLocalPals.length > 0) {
+        if (installed.length > 0) {
           sections.push({
             title: l10n.palsScreen.sectionTitles.myPalsLocal,
-            data: allLocalPals,
+            data: installed,
           });
         }
-        // if authenticated
-        if (authService.isAuthenticated) {
-          const allLibraryPals = [
-            ...palStore.userLibrary,
-            ...palStore.userCreatedPals,
-          ];
-          if (allLibraryPals.length > 0) {
-            sections.push({
-              title: l10n.palsScreen.sectionTitles.myLibrary,
-              data: allLibraryPals,
-            });
-          }
+        if (notInstalled.length > 0) {
+          sections.push({
+            title: l10n.palsScreen.sectionTitles.myLibrary,
+            data: notInstalled,
+          });
         }
-
-        // Add downloadable pals section if there are any
-        if (hubPals.length > 0) {
+        if (activeFilter === 'all' && hubPals.length > 0) {
           sections.push({
             title: l10n.palsScreen.sectionTitles.discoverPals,
             data: hubPals,
           });
-        }
-
-        return sections;
-      }
-      case 'my-pals': {
-        const sections: Array<{title: string; data: (PalsHubPal | Pal)[]}> = [];
-
-        // Add local pals section (includes both local and downloaded pals)
-        const allLocalPals = [...localPals, ...downloadedPals];
-        if (allLocalPals.length > 0) {
-          sections.push({
-            title: l10n.palsScreen.sectionTitles.myPalsLocal,
-            data: allLocalPals,
-          });
-        }
-
-        // if authenticated
-        if (authService.isAuthenticated) {
-          const allLibraryPals = [
-            ...palStore.userLibrary,
-            ...palStore.userCreatedPals,
-          ];
-          if (allLibraryPals.length > 0) {
-            sections.push({
-              title: l10n.palsScreen.sectionTitles.myLibrary,
-              data: allLibraryPals,
-            });
-          }
         }
 
         return sections;
@@ -339,6 +310,19 @@ export const PalsScreen: React.FC = observer(() => {
       </Text>
     </View>
   );
+
+  const restoreRow =
+    purchaseStore.availability === 'ready' ? (
+      <Button
+        testID="restore-purchases-row"
+        mode="text"
+        onPress={() => purchaseStore.restore()}
+        loading={purchaseStore.isRestoring}
+        disabled={purchaseStore.isRestoring}
+        style={styles.restoreRow}>
+        {l10n.palsScreen.purchase.restorePurchases}
+      </Button>
+    ) : null;
 
   const {columns, cardWidth} = computePalGridLayout(windowWidth);
   const filteredData = getFilteredData();
@@ -397,6 +381,7 @@ export const PalsScreen: React.FC = observer(() => {
                   onPalPress={handlePalPress}
                 />
               ))}
+          {restoreRow}
         </ScrollView>
       ) : (
         <FlatList
@@ -411,6 +396,7 @@ export const PalsScreen: React.FC = observer(() => {
           )}
           contentContainerStyle={styles.listContainer}
           ListEmptyComponent={renderEmptyState}
+          ListFooterComponent={restoreRow}
           refreshControl={
             <RefreshControl
               refreshing={refreshing}

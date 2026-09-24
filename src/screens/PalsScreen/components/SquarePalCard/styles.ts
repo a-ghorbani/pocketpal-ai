@@ -126,6 +126,18 @@ export const createStyles = (theme: Theme) =>
       justifyContent: 'center',
       zIndex: 10, // Ensure it appears above other elements
     },
+    purchaseBadge: {
+      backgroundColor: theme.colors.tertiaryContainer,
+      borderRadius: 8,
+      paddingHorizontal: 6,
+      paddingVertical: 2,
+    },
+    purchaseBadgeText: {
+      fontSize: 10,
+      fontWeight: '600',
+      color: theme.colors.onTertiaryContainer,
+      letterSpacing: 0.1,
+    },
     premiumBadgeText: {
       fontSize: 10,
       fontWeight: '600',

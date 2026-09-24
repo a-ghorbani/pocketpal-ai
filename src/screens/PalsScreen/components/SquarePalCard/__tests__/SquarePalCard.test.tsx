@@ -628,3 +628,78 @@ describe('SquarePalCard', () => {
     });
   });
 });
+
+describe('SquarePalCard purchase badges', () => {
+  const {runInAction} = require('mobx');
+  const {purchaseStore} = require('../../../../../store');
+
+  const hubCard = {
+    type: 'palshub',
+    id: 'pal-1',
+    creator_id: 'c',
+    title: 'Story Pal',
+    protection_level: 'reveal_on_purchase',
+    price_cents: 499,
+    allow_fork: true,
+    created_at: '',
+    updated_at: '',
+  } as PalsHubPal;
+
+  const localCard = {
+    type: 'local',
+    id: 'local-1',
+    name: 'Story Pal',
+    systemPrompt: 'x',
+    isSystemPromptChanged: false,
+    useAIPrompt: false,
+    parameters: {},
+    parameterSchema: [],
+    source: 'palshub',
+    palshub_id: 'pal-1',
+  } as Pal;
+
+  const withStatus = (status?: string) =>
+    runInAction(() => {
+      purchaseStore.reset();
+      if (status) {
+        purchaseStore.records['pal-1'] = {
+          palId: 'pal-1',
+          source: 'store',
+          productId: 'pal.1',
+          transactionIds: [],
+          status,
+          title: 'Story Pal',
+          updatedAt: 1,
+        };
+      }
+    });
+
+  it.each([
+    ['pending_payment', 'pal-badge-pending', 'Pending'],
+    ['unlocking', 'pal-badge-unlocking', 'Unlocking'],
+    ['granted', 'pal-badge-unlocking', 'Unlocking'],
+  ])('shows %s as %s on hub and local cards', (status, testID, label) => {
+    withStatus(status);
+    for (const card of [hubCard, localCard]) {
+      const {getByTestId, unmount} = render(
+        <SquarePalCard pal={card} onPress={jest.fn()} />,
+        {withNavigation: true},
+      );
+      expect(getByTestId(testID).props.children.props.children).toBe(label);
+      unmount();
+    }
+  });
+
+  it.each([undefined, 'active', 'unfulfillable', 'removed'])(
+    'shows no badge for %s',
+    status => {
+      withStatus(status);
+      const {queryByTestId} = render(
+        <SquarePalCard pal={hubCard} onPress={jest.fn()} />,
+        {withNavigation: true},
+      );
+      expect(queryByTestId('pal-badge-pending')).toBeNull();
+      expect(queryByTestId('pal-badge-unlocking')).toBeNull();
+    },
+  );
+});

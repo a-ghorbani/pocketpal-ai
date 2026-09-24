@@ -20,7 +20,7 @@ import {createStyles} from './styles';
 
 import type {Pal} from '../../../../store/PalStore';
 import {palStore} from '../../../../store/PalStore';
-import {modelStore} from '../../../../store';
+import {modelStore, purchaseStore} from '../../../../store';
 
 import type {PalsHubPal} from '../../../../types/palshub';
 
@@ -314,6 +314,22 @@ export const SquarePalCard: React.FC<SquarePalCardProps> = observer(
     const palCreator = isPalsHubPal(pal) ? pal.creator : undefined;
     const isProtected =
       isPalsHubPal(pal) && pal.protection_level === 'reveal_on_purchase';
+    const palshubId = isPalsHubPal(pal) ? pal.id : pal.palshub_id;
+    const purchaseStatus = palshubId
+      ? purchaseStore.recordFor(palshubId)?.status
+      : undefined;
+    const purchaseBadge =
+      purchaseStatus === 'pending_payment'
+        ? {
+            testID: 'pal-badge-pending',
+            label: l10n.palsScreen.purchase.badgePending,
+          }
+        : purchaseStatus === 'unlocking' || purchaseStatus === 'granted'
+          ? {
+              testID: 'pal-badge-unlocking',
+              label: l10n.palsScreen.purchase.badgeUnlocking,
+            }
+          : undefined;
 
     // Create card style with optional color theming
     const cardStyle = [
@@ -472,6 +488,15 @@ export const SquarePalCard: React.FC<SquarePalCardProps> = observer(
                       </View>
                     )}
                   </View>
+                  {purchaseBadge && (
+                    <View
+                      testID={purchaseBadge.testID}
+                      style={styles.purchaseBadge}>
+                      <Text style={styles.purchaseBadgeText} numberOfLines={1}>
+                        {purchaseBadge.label}
+                      </Text>
+                    </View>
+                  )}
                 </View>
               </View>
             </View>
