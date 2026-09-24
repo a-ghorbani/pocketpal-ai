@@ -50,6 +50,8 @@ import type {Model} from '../utils/types';
 import {downloadPalThumbnail, deletePalThumbnail} from '../utils/imageUtils';
 
 // Track each built-in separately so future defaults can still be introduced.
+// TODO: when adding another built-in pal, extract a shared seed-once helper
+// (check key, find existing, create, set key) instead of a third copy.
 const LOOKIE_SEEDED_KEY = 'PalStore.builtin.Lookie.seeded';
 const PIP_SEEDED_KEY = 'PalStore.builtin.Pip.seeded';
 
@@ -703,7 +705,9 @@ class PalStore {
   };
 
   /**
-   * Seed the default "Lookie" VideoPal once, preserving deletions and renames.
+   * Seed the default "Lookie" VideoPal once. After the first launch that
+   * records the seed, deletions and renames are preserved; on that launch a
+   * missing Lookie is created (installs that predate the key included).
    */
   private async initializeLookiePal(): Promise<void> {
     try {
@@ -753,7 +757,6 @@ class PalStore {
       } else {
         console.log('Lookie pal already exists, skipping creation');
       }
-      // Also mark existing installations; only persist after successful creation.
       await AsyncStorage.setItem(LOOKIE_SEEDED_KEY, 'true');
     } catch (error) {
       console.error('Error initializing Lookie pal:', error);
@@ -761,7 +764,9 @@ class PalStore {
   }
 
   /**
-   * Seed the default "Pip" recommended pal once, preserving deletions and renames.
+   * Seed the default "Pip" recommended pal once. After the first launch that
+   * records the seed, deletions and renames are preserved; on that launch a
+   * missing Pip is created (installs that predate the key included).
    *
    * Idempotent: a re-entry never overwrites an existing Pip record, so a
    * `defaultModel` bound from a prior session (e.g. by the onboarding
