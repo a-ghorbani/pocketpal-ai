@@ -1225,13 +1225,33 @@ describe('ModelStore', () => {
         expect(fetchRules).toHaveBeenCalledWith('4.5.6');
       });
 
-      it('resolves the same floor presets when the app version is unknown', async () => {
-        const known = await (modelStore as any).resolvePresets();
+      it('drops only the gated floor presets when the app version is unknown', async () => {
+        const gatedIds = new Set(
+          Object.values(
+            androidBundledRules.tiers as Record<
+              string,
+              {
+                candidates: Array<{
+                  hf_repo: string;
+                  hf_filename: string;
+                  min_app_version?: string;
+                }>;
+              }
+            >,
+          ).flatMap(tier =>
+            tier.candidates
+              .filter(c => c.min_app_version !== undefined)
+              .map(c => `${c.hf_repo}/${c.hf_filename}`),
+          ),
+        );
+        const known: Model[] = await (modelStore as any).resolvePresets();
         getVersion.mockReturnValue('unknown');
-        const unknown = await (modelStore as any).resolvePresets();
-        expect(known.length).toBeGreaterThan(0);
-        expect(unknown.map((m: Model) => m.id)).toEqual(
-          known.map((m: Model) => m.id),
+        const unknown: Model[] = await (modelStore as any).resolvePresets();
+        const knownIds = known.map(m => m.id);
+        expect(knownIds.some(id => gatedIds.has(id))).toBe(true);
+        expect(unknown.length).toBeGreaterThan(0);
+        expect(unknown.map(m => m.id)).toEqual(
+          knownIds.filter(id => !gatedIds.has(id)),
         );
       });
     });
