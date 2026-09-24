@@ -1118,6 +1118,20 @@
       "checkoutFailed": "Something went wrong. Please try again."
     },
     "purchase": {
+      "buy": "Get for {{price}}",
+      "oneTime": "One-time purchase. Yours to keep. No account needed.",
+      "owned": "Owned",
+      "pending": "Payment pending — we'll unlock it as soon as it clears",
+      "unlocking": "Paid — unlocking…",
+      "retry": "Retry",
+      "installing": "Unlocking…",
+      "readyIos": "{{name}} is yours to keep. It's tied to your App Store account — reinstall and tap Restore purchases to get it back.",
+      "readyAndroid": "{{name}} is yours to keep. It's tied to your Google Play account — reinstall and tap Restore purchases to get it back.",
+      "supportCode": "Support code: {{code}}",
+      "unfulfillable": "We couldn't deliver this. Support has been notified — ref {{code}}",
+      "invalid": "We couldn't verify this purchase. Try Restore purchases, or contact support.",
+      "recommendedModel": "Recommended model",
+      "sampleExchange": "Sample conversation",
       "modelStep": {
         "download": "Download · {{size}}",
         "startChat": "Start chat",

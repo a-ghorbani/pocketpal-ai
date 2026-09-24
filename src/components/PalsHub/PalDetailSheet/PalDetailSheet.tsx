@@ -8,15 +8,16 @@ import {Surface} from '../../ui';
 import {StarIcon, DownloadIcon, UserIcon} from '../../../assets/icons';
 
 import {useTheme} from '../../../hooks';
-import {L10nContext} from '../../../utils';
+import {formatBytes, L10nContext} from '../../../utils';
 import {getFullThumbnailUri} from '../../../utils/imageUtils';
 
 import {Sheet} from '../../Sheet';
+import {PalPurchaseFooter} from '../PalPurchaseFooter';
 import {createStyles} from './styles';
 
-import {authService, palsHubService} from '../../../services';
+import {palsHubService} from '../../../services';
 
-import {palStore, checkoutFlowStore} from '../../../store';
+import {palStore} from '../../../store';
 
 import type {PalsHubPal} from '../../../types/palshub';
 
@@ -24,7 +25,6 @@ import {
   getPalDisplayLabel,
   getPalActionText,
   shouldShowPalContent,
-  getPremiumInfoText,
 } from '../../../utils/palshub-display';
 
 interface PalDetailSheetProps {
@@ -46,7 +46,6 @@ export const PalDetailSheet: React.FC<PalDetailSheetProps> = observer(
 
     // Use detailed pal information if available, otherwise fall back to basic pal
     const displayPal = detailedPal || pal;
-    const checkoutStatus = checkoutFlowStore.status;
 
     // Fetch detailed pal information when sheet opens
     useEffect(() => {
@@ -77,17 +76,6 @@ export const PalDetailSheet: React.FC<PalDetailSheetProps> = observer(
       fetchPalDetails();
       // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [pal, isVisible]);
-
-    // After a purchase reconciles to owned, re-read the pal so the Buy button
-    // flips to Download. Ownership stays server-derived (re-fetched, not written).
-    useEffect(() => {
-      if (checkoutStatus === 'owned' && pal) {
-        palsHubService
-          .getPal(pal.id)
-          .then(setDetailedPal)
-          .catch(() => {});
-      }
-    }, [checkoutStatus, pal]);
 
     if (!displayPal) {
       return null;
@@ -124,73 +112,6 @@ export const PalDetailSheet: React.FC<PalDetailSheetProps> = observer(
       } finally {
         setIsLoading(false);
       }
-    };
-
-    const handleClose = () => {
-      checkoutFlowStore.reset();
-      onClose();
-    };
-
-    const handleBuyPress = () => {
-      // Send the user to sign-in rather than a 401 error when logged out.
-      if (!authService.isAuthenticated) {
-        onSignInPress?.();
-        return;
-      }
-      // Both platforms start directly. On Android the store runs the Play
-      // link-out prep (Play renders its own disclosure); there is no app sheet.
-      checkoutFlowStore.start(displayPal.id);
-    };
-
-    const isCheckoutInFlight =
-      checkoutStatus === 'creating' ||
-      checkoutStatus === 'linking' ||
-      checkoutStatus === 'browser_open' ||
-      checkoutStatus === 'finalizing';
-
-    const renderCheckoutFeedback = () => {
-      if (checkoutStatus === 'finalizing') {
-        return (
-          <View style={styles.infoTextContainer}>
-            <Text style={styles.infoText}>
-              {l10n.palsScreen.palDetailSheet.finalizingPurchase}
-            </Text>
-          </View>
-        );
-      }
-      if (checkoutStatus === 'processing_deferred') {
-        return (
-          <View style={styles.infoTextContainer}>
-            <Text style={styles.infoText}>
-              {l10n.palsScreen.palDetailSheet.processingPurchase}
-            </Text>
-          </View>
-        );
-      }
-      if (checkoutStatus === 'error') {
-        const kind = checkoutFlowStore.errorKind;
-        const message =
-          kind === '401'
-            ? l10n.palsScreen.palDetailSheet.checkoutSessionExpired
-            : kind === '404'
-              ? l10n.palsScreen.palDetailSheet.palNotAvailable
-              : l10n.palsScreen.palDetailSheet.checkoutFailed;
-        return (
-          <View style={styles.errorContainer}>
-            <Text style={styles.errorText}>{message}</Text>
-            {kind === '401' && (
-              <Button
-                testID="checkout-signin-button"
-                mode="contained"
-                onPress={() => onSignInPress?.()}
-                style={styles.errorButton}>
-                {l10n.palsScreen.palDetailSheet.signInAgain}
-              </Button>
-            )}
-          </View>
-        );
-      }
-      return null;
     };
 
     const formatDate = (dateString: string) => {
@@ -288,7 +209,7 @@ export const PalDetailSheet: React.FC<PalDetailSheetProps> = observer(
     return (
       <Sheet
         isVisible={isVisible}
-        onClose={handleClose}
+        onClose={onClose}
         title={displayPal.title}
         snapPoints={['85%']}>
         <Sheet.ScrollView contentContainerStyle={styles.scrollContent}>
@@ -359,6 +280,35 @@ export const PalDetailSheet: React.FC<PalDetailSheetProps> = observer(
               </View>
             </View>
           )}
+
+          {displayPal.sample_exchange && (
+            <View style={styles.section} testID="pal-sample-exchange">
+              <Text style={styles.sectionTitle}>
+                {l10n.palsScreen.purchase.sampleExchange}
+              </Text>
+              {displayPal.sample_exchange.map((turn, index) => (
+                <Text
+                  key={index}
+                  style={
+                    turn.role === 'user' ? styles.sampleUser : styles.samplePal
+                  }>
+                  {turn.text}
+                </Text>
+              ))}
+            </View>
+          )}
+
+          {displayPal.price_cents > 0 && displayPal.model_reference && (
+            <View style={styles.section} testID="pal-recommended-model">
+              <Text style={styles.sectionTitle}>
+                {l10n.palsScreen.purchase.recommendedModel}
+              </Text>
+              <Text style={styles.description}>
+                {displayPal.model_reference.filename} ·{' '}
+                {formatBytes(displayPal.model_reference.size)}
+              </Text>
+            </View>
+          )}
         </Sheet.ScrollView>
 
         <Sheet.Actions>
@@ -368,62 +318,38 @@ export const PalDetailSheet: React.FC<PalDetailSheetProps> = observer(
             </View>
           )}
 
-          {/* Show action button for free pals (regardless of ownership) or owned premium pals */}
-          {actionText &&
-            (displayPal.price_cents === 0 ||
-              (displayPal.price_cents > 0 && displayPal.is_owned)) && (
-              <>
-                {isDownloaded ? (
-                  <Button
-                    testID="downloaded-button"
-                    mode="contained"
-                    disabled
-                    icon={() => (
-                      <DownloadIcon stroke={theme.colors.onPrimary} />
-                    )}
-                    style={styles.primaryButton}>
-                    {l10n.palsScreen.palDetailSheet.downloaded}
-                  </Button>
-                ) : (
-                  <Button
-                    testID="download-button"
-                    mode="contained"
-                    onPress={handleAction}
-                    loading={isLoading}
-                    icon={() => (
-                      <DownloadIcon stroke={theme.colors.onPrimary} />
-                    )}
-                    style={styles.primaryButton}>
-                    {actionText}
-                  </Button>
-                )}
-              </>
-            )}
-
-          {/* Show buy button (eligible) or informational text (ineligible) for premium pals */}
-          {palLabel.type === 'premium' &&
-            !displayPal.is_owned &&
-            (palStore.isCheckoutEligible ? (
-              <View style={styles.buyActionColumn}>
+          {actionText && displayPal.price_cents === 0 && (
+            <>
+              {isDownloaded ? (
                 <Button
-                  testID="buy-button"
+                  testID="downloaded-button"
                   mode="contained"
-                  onPress={handleBuyPress}
-                  loading={
-                    checkoutStatus === 'creating' ||
-                    checkoutStatus === 'linking'
-                  }
-                  disabled={isCheckoutInFlight}
-                  style={styles.buyButton}>
-                  {l10n.palsScreen.palDetailSheet.buyOnPalshub}
+                  disabled
+                  icon={() => <DownloadIcon stroke={theme.colors.onPrimary} />}
+                  style={styles.primaryButton}>
+                  {l10n.palsScreen.palDetailSheet.downloaded}
                 </Button>
-                {renderCheckoutFeedback()}
-              </View>
-            ) : (
-              <View style={styles.infoTextContainer}>
-                <Text style={styles.infoText}>{getPremiumInfoText()}</Text>
-              </View>
-            ))}
+              ) : (
+                <Button
+                  testID="download-button"
+                  mode="contained"
+                  onPress={handleAction}
+                  loading={isLoading}
+                  icon={() => <DownloadIcon stroke={theme.colors.onPrimary} />}
+                  style={styles.primaryButton}>
+                  {actionText}
+                </Button>
+              )}
+            </>
+          )}
+
+          {displayPal.price_cents > 0 && (
+            <PalPurchaseFooter
+              pal={displayPal}
+              onClose={onClose}
+              onSignInPress={onSignInPress}
+            />
+          )}
         </Sheet.Actions>
       </Sheet>
     );
