@@ -271,16 +271,6 @@ export const PalDetailSheet: React.FC<PalDetailSheetProps> = observer(
             </View>
           )}
 
-          {!canViewContent && (
-            <View style={styles.section}>
-              <View style={styles.protectedContent}>
-                <Text style={styles.protectedText}>
-                  {l10n.palsScreen.palDetailSheet.premiumPalMessage}
-                </Text>
-              </View>
-            </View>
-          )}
-
           {displayPal.sample_exchange && (
             <View style={styles.section} testID="pal-sample-exchange">
               <Text style={styles.sectionTitle}>

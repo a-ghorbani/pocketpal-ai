@@ -1086,8 +1086,6 @@
       "download": "Descarregar",
       "getFree": "Obter Grátis"
     },
-    "premiumPalDescription": "Pal premium da comunidade palshub.ai",
-    "premiumInfoText": "Visite palshub.ai para explorar mais pals",
     "sortOptions": {
       "newest": "Mais Recentes",
       "oldest": "Mais Antigos",
@@ -1111,15 +1109,7 @@
       "error": "Erro",
       "failedToLoadDetails": "Falha ao carregar os pormenores do pal",
       "failedToDownload": "Falha ao descarregar o pal",
-      "premiumPalMessage": "Este é um Pal Premium.\n• Se já o desbloqueou com a sua conta Palshub, basta entrar para aceder todos os pormenores.\n• Ainda não desbloqueou? Visite a app palshub.ai para saber mais.",
-      "notAvailable": "N/D",
-      "buyOnPalshub": "Comprar no Palshub",
-      "finalizingPurchase": "A finalizar a sua compra…",
-      "processingPurchase": "A processar — será desbloqueado em breve.",
-      "checkoutSessionExpired": "A sua sessão expirou. Entre novamente para continuar.",
-      "signInAgain": "Entrar novamente",
-      "palNotAvailable": "Este pal não está disponível para compra no momento.",
-      "checkoutFailed": "Algo deu errado. Tente novamente."
+      "notAvailable": "N/D"
     },
     "prompt": "Prompt"
   },

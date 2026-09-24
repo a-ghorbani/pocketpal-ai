@@ -2,8 +2,6 @@ import {
   getPalDisplayLabel,
   getPalActionText,
   isPalFree,
-  isPalPremium,
-  getPremiumInfoText,
   shouldShowPalContent,
 } from '../palshub-display';
 import {
@@ -47,16 +45,6 @@ describe('palshub-display', () => {
     });
   });
 
-  describe('isPalPremium', () => {
-    it('returns true for premium pals', () => {
-      expect(isPalPremium(mockPremiumPalsHubPal)).toBe(true);
-    });
-
-    it('returns false for free pals', () => {
-      expect(isPalPremium(mockPalsHubPal)).toBe(false);
-    });
-  });
-
   describe('getPalActionText', () => {
     it('returns download text for owned pals', () => {
       const text = getPalActionText(mockOwnedPremiumPal, true);
@@ -71,14 +59,6 @@ describe('palshub-display', () => {
     it('returns null for unowned premium pals', () => {
       const text = getPalActionText(mockPremiumPalsHubPal, false);
       expect(text).toBeNull();
-    });
-  });
-
-  describe('getPremiumInfoText', () => {
-    it('returns a non-empty string', () => {
-      const text = getPremiumInfoText();
-      expect(typeof text).toBe('string');
-      expect(text.length).toBeGreaterThan(0);
     });
   });
 

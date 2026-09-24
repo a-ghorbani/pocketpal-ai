@@ -7,7 +7,6 @@ class MockPalStore {
   cachedPalsHubPals: PalsHubPal[] = [];
   userLibrary: PalsHubPal[] = [];
   userCreatedPals: PalsHubPal[] = [];
-  isCheckoutEligible: boolean = false;
   ready: Promise<void> = Promise.resolve();
 
   constructor() {

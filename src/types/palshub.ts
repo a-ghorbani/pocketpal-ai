@@ -316,15 +316,6 @@ export interface CreateReviewRequest {
   comment?: string; // Max 2000 characters
 }
 
-export interface CreatePurchaseRequest {
-  pal_id: string;
-}
-
-export interface PurchaseResponse {
-  checkout_url: string; // Stripe checkout URL
-  purchase_id: string;
-}
-
 // Error response interface
 export interface PalsHubErrorResponse {
   error: string;

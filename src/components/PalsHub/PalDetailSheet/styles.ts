@@ -157,19 +157,6 @@ export const createStyles = (theme: Theme) =>
       color: theme.colors.onSurfaceVariant,
       fontFamily: 'monospace',
     },
-    protectedContent: {
-      backgroundColor: theme.colors.errorContainer,
-      borderRadius: 12,
-      padding: 16,
-      alignItems: 'center',
-      marginTop: 8,
-    },
-    protectedText: {
-      fontSize: 14,
-      color: theme.colors.onErrorContainer,
-      textAlign: 'center',
-      marginTop: 8,
-    },
     primaryButton: {
       flex: 1,
       marginBottom: 12,

@@ -1052,8 +1052,6 @@
       "download": "Pobierz",
       "getFree": "Pobierz za darmo"
     },
-    "premiumPalDescription": "Kumpel premium ze społeczności palshub.ai",
-    "premiumInfoText": "Odwiedź stronę palshub.ai, aby poznać więcej Kumpli",
     "sortOptions": {
       "newest": "Najnowsze",
       "oldest": "Najstarsze",
@@ -1077,15 +1075,7 @@
       "error": "Błąd",
       "failedToLoadDetails": "Nie udało się załadować szczegółów Kumpla",
       "failedToDownload": "Nie udało się pobrać Kumpla",
-      "premiumPalMessage": "To jest Kumpel Premium.\n• Jeśli odblokowałeś go już za pomocą swojego konta Palshub, po prostu zaloguj się, aby uzyskać dostęp do wszystkich szczegółów.\n• Jeszcze go nie odblokowałeś? Odwiedź stronę palshub.ai, aby dowiedzieć się więcej.",
-      "notAvailable": "nie dot.",
-      "buyOnPalshub": "Kup na Palshub",
-      "finalizingPurchase": "Finalizujemy Twój zakup…",
-      "processingPurchase": "Przetwarzanie — dostęp zostanie wkrótce odblokowany.",
-      "checkoutSessionExpired": "Twoja sesja wygasła. Zaloguj się ponownie, aby kontynuować.",
-      "signInAgain": "Zaloguj się ponownie",
-      "palNotAvailable": "Ten Kumpel nie jest obecnie dostępny w sprzedaży.",
-      "checkoutFailed": "Coś poszło nie tak. Spróbuj ponownie."
+      "notAvailable": "nie dot."
     },
     "sectionTitles": {
       "myPalsLocal": "Moi Kumple (lokalni)",

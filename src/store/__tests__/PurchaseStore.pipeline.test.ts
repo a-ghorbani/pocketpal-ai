@@ -495,7 +495,7 @@ describe('PurchaseStore pipeline', () => {
       ],
       ['availability is missing', () => {}, {iap_enabled: undefined}],
       [
-        'the storefront has no product',
+        'the store returned no product',
         (h: any) => h.purchases.products.clear(),
         {},
       ],

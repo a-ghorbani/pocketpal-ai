@@ -1,12 +1,7 @@
 import React from 'react';
 import {Alert, Linking} from 'react-native';
 import {runInAction} from 'mobx';
-import {
-  render,
-  fireEvent,
-  waitFor,
-  within,
-} from '../../../../../jest/test-utils';
+import {render, fireEvent, waitFor} from '../../../../../jest/test-utils';
 
 import {PalDetailSheet} from '../PalDetailSheet';
 import {authService, palsHubService} from '../../../../services';
@@ -651,7 +646,7 @@ describe('PalDetailSheet', () => {
       );
     });
 
-    it('never renders web or checkout wording in the footer', async () => {
+    it('never renders web purchase wording', async () => {
       runInAction(() => {
         purchaseStore.availability = 'ready';
         purchaseStore.products.set('pal.abc', {
@@ -659,17 +654,13 @@ describe('PalDetailSheet', () => {
           displayPrice: '4,99 €',
         });
       });
-      const {getByTestId} = render(
+      const {getByTestId, queryByText} = render(
         <PalDetailSheet {...defaultProps} pal={buyablePal} />,
       );
       await waitFor(() => {
         expect(getByTestId('buy-button')).toBeTruthy();
       });
-      expect(
-        within(getByTestId('pal-purchase-footer')).queryByText(
-          /palshub\.ai|website|web|checkout/i,
-        ),
-      ).toBeNull();
+      expect(queryByText(/palshub\.ai|website|\bweb\b|check-?out/i)).toBeNull();
     });
   });
 });
