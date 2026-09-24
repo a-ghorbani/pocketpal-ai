@@ -1,4 +1,3 @@
-import {CompletionResultSnapshot} from '../../utils/completionTypes';
 import {MessageType} from '../../utils/types';
 
 export interface CompactionSettings {

@@ -467,7 +467,10 @@ async function applyEventToStore(
       if (shouldCompactSession(snapshot, effectiveNCtx)) {
         setTimeout(() => {
           chatSessionStore.compactActiveSession().catch(compactErr => {
-            console.warn('[useChatSession] auto-compaction failed:', compactErr);
+            console.warn(
+              '[useChatSession] auto-compaction failed:',
+              compactErr,
+            );
           });
         }, 100);
       }

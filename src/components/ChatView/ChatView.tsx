@@ -1153,27 +1153,21 @@ export const ChatView = observer(
               {chatSessionStore.isCompacting ? (
                 <View
                   testID="compaction-progress-bar"
-                  style={{
-                    flexDirection: 'row',
-                    alignItems: 'center',
-                    justifyContent: 'space-between',
-                    paddingHorizontal: 16,
-                    paddingVertical: 8,
-                    backgroundColor: theme.colors.surfaceVariant,
-                    borderTopWidth: 1,
-                    borderTopColor: theme.colors.outline,
-                  }}>
-                  <View style={{flexDirection: 'row', alignItems: 'center', gap: 8}}>
-                    <CircularActivityIndicator color={theme.colors.primary} size={16} />
-                    <Text style={{fontSize: 13, color: theme.colors.onSurfaceVariant}}>
+                  style={styles.compactionProgressBar}>
+                  <View style={styles.compactionProgressContent}>
+                    <CircularActivityIndicator
+                      color={theme.colors.primary}
+                      size={16}
+                    />
+                    <Text style={styles.compactionProgressText}>
                       {l10n.chat?.compacting || 'Compacting conversation…'}
                     </Text>
                   </View>
                   <TouchableOpacity
                     onPress={() => chatSessionStore.cancelCompaction()}
                     accessibilityRole="button"
-                    style={{paddingHorizontal: 8, paddingVertical: 4}}>
-                    <Text style={{fontSize: 13, color: theme.colors.primary, fontWeight: '600'}}>
+                    style={styles.compactionCancelButton}>
+                    <Text style={styles.compactionCancelText}>
                       {l10n.chat?.compactCancel || 'Cancel'}
                     </Text>
                   </TouchableOpacity>

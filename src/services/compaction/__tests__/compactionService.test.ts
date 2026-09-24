@@ -5,7 +5,10 @@ import {
   buildCompactionPrompt,
   executeCompaction,
 } from '../compactionService';
-import {CompletionResultSnapshot, CompletionEngine} from '../../../utils/completionTypes';
+import {
+  CompletionResultSnapshot,
+  CompletionEngine,
+} from '../../../utils/completionTypes';
 import {MessageType, User} from '../../../utils/types';
 import {assistant} from '../../../utils/chat';
 
@@ -155,11 +158,17 @@ describe('compactionService', () => {
 
       const sanitized = sanitizeMessage(msg);
       expect(sanitized?.role).toBe('assistant');
-      expect(sanitized?.sanitizedContent).toContain('I will search for the weather.');
+      expect(sanitized?.sanitizedContent).toContain(
+        'I will search for the weather.',
+      );
       expect(sanitized?.sanitizedContent).toContain('[Used Tool: web_search]');
-      expect(sanitized?.sanitizedContent).toContain('[Tool Result (web_search):');
+      expect(sanitized?.sanitizedContent).toContain(
+        '[Tool Result (web_search):',
+      );
       expect(sanitized?.sanitizedContent).toContain('(truncated)');
-      expect(sanitized?.sanitizedContent).toContain('The weather is sunny and 72°F.');
+      expect(sanitized?.sanitizedContent).toContain(
+        'The weather is sunny and 72°F.',
+      );
     });
 
     it('sanitizes existing compaction markers', () => {
@@ -176,13 +185,19 @@ describe('compactionService', () => {
       const sanitized = sanitizeMessage(msg);
       expect(sanitized).toEqual({
         role: 'system',
-        sanitizedContent: '[Prior Compaction Summary]: Prior summary of goals and facts.',
+        sanitizedContent:
+          '[Prior Compaction Summary]: Prior summary of goals and facts.',
       });
     });
   });
 
   describe('partitionMessagesForCompaction', () => {
-    const createMsg = (id: string, text: string, createdAt: number, isAssistant = false): MessageType.Text => ({
+    const createMsg = (
+      id: string,
+      text: string,
+      createdAt: number,
+      isAssistant = false,
+    ): MessageType.Text => ({
       id,
       type: 'text',
       author: isAssistant ? assistant : mockUser,
@@ -216,7 +231,12 @@ describe('compactionService', () => {
 
       const partition = partitionMessagesForCompaction(messages, 2);
       expect(partition).not.toBeNull();
-      expect(partition!.toPreserve.map(m => m.id)).toEqual(['5', '6', '7', '8']);
+      expect(partition!.toPreserve.map(m => m.id)).toEqual([
+        '5',
+        '6',
+        '7',
+        '8',
+      ]);
       expect(partition!.messageIdsToArchive).toEqual(['1', '2', '3', '4']);
       expect(partition!.toSummarize.length).toBe(4);
       // Marker timestamp should be midway between message 4 (4000) and message 5 (5000) = 4500
@@ -247,17 +267,30 @@ describe('compactionService', () => {
 
       const partition = partitionMessagesForCompaction(messages, 2);
       expect(partition).not.toBeNull();
-      expect(partition!.priorSummary).toBe('Round 1 summary: User is building an iOS app.');
+      expect(partition!.priorSummary).toBe(
+        'Round 1 summary: User is building an iOS app.',
+      );
       expect(partition!.messageIdsToArchive).toContain('comp_marker_1');
-      expect(partition!.toPreserve.map(m => m.id)).toEqual(['5', '6', '7', '8']);
+      expect(partition!.toPreserve.map(m => m.id)).toEqual([
+        '5',
+        '6',
+        '7',
+        '8',
+      ]);
     });
   });
 
   describe('buildCompactionPrompt', () => {
     it('builds structured prompt with required sections', () => {
       const messages = [
-        {role: 'user' as const, sanitizedContent: 'We are designing a database schema.'},
-        {role: 'assistant' as const, sanitizedContent: 'We should use SQLite with WatermelonDB.'},
+        {
+          role: 'user' as const,
+          sanitizedContent: 'We are designing a database schema.',
+        },
+        {
+          role: 'assistant' as const,
+          sanitizedContent: 'We should use SQLite with WatermelonDB.',
+        },
       ];
 
       const prompt = buildCompactionPrompt(messages);
@@ -267,18 +300,33 @@ describe('compactionService', () => {
       expect(prompt).toContain('### Key Decisions & Facts');
       expect(prompt).toContain('### Current State & Next Steps');
       expect(prompt).toContain('USER: We are designing a database schema.');
-      expect(prompt).toContain('ASSISTANT: We should use SQLite with WatermelonDB.');
+      expect(prompt).toContain(
+        'ASSISTANT: We should use SQLite with WatermelonDB.',
+      );
     });
 
     it('includes special focus instruction when provided', () => {
-      const messages = [{role: 'user' as const, sanitizedContent: 'Let us discuss indexing.'}];
-      const prompt = buildCompactionPrompt(messages, 'Focus heavily on index performance');
-      expect(prompt).toContain('Special User Focus: Give extra priority and detail to: "Focus heavily on index performance"');
+      const messages = [
+        {role: 'user' as const, sanitizedContent: 'Let us discuss indexing.'},
+      ];
+      const prompt = buildCompactionPrompt(
+        messages,
+        'Focus heavily on index performance',
+      );
+      expect(prompt).toContain(
+        'Special User Focus: Give extra priority and detail to: "Focus heavily on index performance"',
+      );
     });
 
     it('includes prior summary when chaining compactions', () => {
-      const messages = [{role: 'user' as const, sanitizedContent: 'Continuing the feature.'}];
-      const prompt = buildCompactionPrompt(messages, undefined, 'Initial setup completed.');
+      const messages = [
+        {role: 'user' as const, sanitizedContent: 'Continuing the feature.'},
+      ];
+      const prompt = buildCompactionPrompt(
+        messages,
+        undefined,
+        'Initial setup completed.',
+      );
       expect(prompt).toContain('### Previous Summary of Earlier Turns');
       expect(prompt).toContain('Initial setup completed.');
     });
@@ -293,7 +341,10 @@ describe('compactionService', () => {
         stopCompletion: jest.fn().mockResolvedValue(undefined),
       };
 
-      const result = await executeCompaction(mockEngine, 'Summarize this prompt');
+      const result = await executeCompaction(
+        mockEngine,
+        'Summarize this prompt',
+      );
 
       expect(mockEngine.completion).toHaveBeenCalledWith(
         expect.objectContaining({

@@ -7,7 +7,12 @@ import {CompletionEngine} from '../../utils/completionTypes';
 const mockUser: User = {id: 'user_1', firstName: 'Tester'};
 
 describe('ChatSessionStore compaction integration', () => {
-  const createMsg = (id: string, text: string, createdAt: number, isAssistant = false): MessageType.Text => ({
+  const createMsg = (
+    id: string,
+    text: string,
+    createdAt: number,
+    isAssistant = false,
+  ): MessageType.Text => ({
     id,
     type: 'text',
     author: isAssistant ? assistant : mockUser,
@@ -38,7 +43,10 @@ describe('ChatSessionStore compaction integration', () => {
       messagesLoaded: true,
       messages: [
         createMsg('1', 'Old message 1', 1000),
-        {...createMsg('2', 'Old message 2', 2000, true), metadata: {isCompacted: true}},
+        {
+          ...createMsg('2', 'Old message 2', 2000, true),
+          metadata: {isCompacted: true},
+        },
         createMsg('3', 'Recent message 3', 3000),
       ],
     };

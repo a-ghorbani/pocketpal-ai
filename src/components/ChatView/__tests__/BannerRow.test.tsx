@@ -554,7 +554,9 @@ describe('BannerRow', () => {
   });
 
   it('renders Compact button on context-warning and triggers compactActiveSession on press', () => {
-    jest.spyOn(chatSessionStore, 'compactActiveSession').mockResolvedValue(true);
+    jest
+      .spyOn(chatSessionStore, 'compactActiveSession')
+      .mockResolvedValue(true);
     runInAction(() => {
       chatSessionStore.lastCompletionResult = {
         used: 3300,
@@ -571,7 +573,9 @@ describe('BannerRow', () => {
   });
 
   it('renders Compact button on context-full and triggers compactActiveSession on press', () => {
-    jest.spyOn(chatSessionStore, 'compactActiveSession').mockResolvedValue(true);
+    jest
+      .spyOn(chatSessionStore, 'compactActiveSession')
+      .mockResolvedValue(true);
     runInAction(() => {
       chatSessionStore.lastCompletionResult = {
         used: 4096,
@@ -587,4 +591,3 @@ describe('BannerRow', () => {
     expect(chatSessionStore.compactActiveSession).toHaveBeenCalledTimes(1);
   });
 });
-

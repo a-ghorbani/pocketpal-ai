@@ -1,7 +1,7 @@
 import {renderHook, act} from '@testing-library/react-native';
 import {useChatSession} from '../useChatSession';
 import {chatSessionStore, modelStore} from '../../store';
-import {MessageType, User} from '../../utils/types';
+import {User} from '../../utils/types';
 import {assistant} from '../../utils/chat';
 
 const mockUser: User = {id: 'user_1', firstName: 'Tester'};
@@ -40,8 +40,20 @@ describe('useChatSession compaction', () => {
       title: 'Short chat',
       messagesLoaded: true,
       messages: [
-        {id: '1', type: 'text', author: mockUser, text: 'Hello', createdAt: 1000},
-        {id: '2', type: 'text', author: mockAssistant, text: 'Hi', createdAt: 2000},
+        {
+          id: '1',
+          type: 'text',
+          author: mockUser,
+          text: 'Hello',
+          createdAt: 1000,
+        },
+        {
+          id: '2',
+          type: 'text',
+          author: mockAssistant,
+          text: 'Hi',
+          createdAt: 2000,
+        },
       ],
     };
     chatSessionStore.sessions = [session as any];
@@ -75,12 +87,48 @@ describe('useChatSession compaction', () => {
       title: 'Long chat',
       messagesLoaded: true,
       messages: [
-        {id: '1', type: 'text', author: mockUser, text: 'Msg 1', createdAt: 1000},
-        {id: '2', type: 'text', author: mockAssistant, text: 'Msg 2', createdAt: 2000},
-        {id: '3', type: 'text', author: mockUser, text: 'Msg 3', createdAt: 3000},
-        {id: '4', type: 'text', author: mockAssistant, text: 'Msg 4', createdAt: 4000},
-        {id: '5', type: 'text', author: mockUser, text: 'Msg 5', createdAt: 5000},
-        {id: '6', type: 'text', author: mockAssistant, text: 'Msg 6', createdAt: 6000},
+        {
+          id: '1',
+          type: 'text',
+          author: mockUser,
+          text: 'Msg 1',
+          createdAt: 1000,
+        },
+        {
+          id: '2',
+          type: 'text',
+          author: mockAssistant,
+          text: 'Msg 2',
+          createdAt: 2000,
+        },
+        {
+          id: '3',
+          type: 'text',
+          author: mockUser,
+          text: 'Msg 3',
+          createdAt: 3000,
+        },
+        {
+          id: '4',
+          type: 'text',
+          author: mockAssistant,
+          text: 'Msg 4',
+          createdAt: 4000,
+        },
+        {
+          id: '5',
+          type: 'text',
+          author: mockUser,
+          text: 'Msg 5',
+          createdAt: 5000,
+        },
+        {
+          id: '6',
+          type: 'text',
+          author: mockAssistant,
+          text: 'Msg 6',
+          createdAt: 6000,
+        },
       ],
     };
     chatSessionStore.sessions = [session as any];

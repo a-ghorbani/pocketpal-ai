@@ -1,4 +1,7 @@
-import {CompletionResultSnapshot, CompletionEngine} from '../../utils/completionTypes';
+import {
+  CompletionResultSnapshot,
+  CompletionEngine,
+} from '../../utils/completionTypes';
 import {MessageType} from '../../utils/types';
 import {assistant} from '../../utils/chat';
 import {removeThinkingParts} from '../../utils/chat';
@@ -136,9 +139,7 @@ export function partitionMessagesForCompaction(
   preservedTurnCount = 2,
 ): CompactionPartition | null {
   // Filter out any messages already soft-archived in earlier compactions
-  const activeMessages = messages.filter(
-    msg => !msg.metadata?.isCompacted,
-  );
+  const activeMessages = messages.filter(msg => !msg.metadata?.isCompacted);
 
   // Normalize chronological order (oldest first)
   const chronological = [...activeMessages].sort(
@@ -183,7 +184,9 @@ export function partitionMessagesForCompaction(
     firstPreservedMsg.createdAt &&
     lastCompactedMsg &&
     lastCompactedMsg.createdAt
-      ? Math.floor((lastCompactedMsg.createdAt + firstPreservedMsg.createdAt) / 2)
+      ? Math.floor(
+          (lastCompactedMsg.createdAt + firstPreservedMsg.createdAt) / 2,
+        )
       : (lastCompactedMsg?.createdAt || Date.now()) + 1;
 
   return {
