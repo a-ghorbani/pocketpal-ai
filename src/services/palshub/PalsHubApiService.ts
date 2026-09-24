@@ -1,6 +1,6 @@
 import {authService} from './AuthService';
 import {getAuthHeaders} from './supabase';
-import {PALSHUB_API_BASE_URL} from '@env';
+import {getApiBase} from './apiBase';
 import type {
   PalsQuery,
   LibraryQuery,
@@ -10,6 +10,7 @@ import type {
   CategoriesResponse,
   TagsResponse,
   PalsHubPal,
+  SampleExchangeTurn,
 } from '../../types/palshub';
 
 export class PalsHubError extends Error {
@@ -23,7 +24,7 @@ export class PalsHubError extends Error {
 }
 
 // API Response types (matching the new API format)
-interface ApiPalResponse {
+export interface ApiPalResponse {
   id: string;
   title: string;
   description?: string;
@@ -82,7 +83,27 @@ interface ApiPalResponse {
   };
   images?: unknown[];
   models?: unknown[];
+  store_product_id?: string;
+  iap_enabled?: {ios?: boolean; android?: boolean};
+  sample_exchange?: unknown;
+  content_version?: number;
 }
+
+const parseSampleExchange = (
+  value: unknown,
+): SampleExchangeTurn[] | undefined => {
+  if (!Array.isArray(value)) {
+    return undefined;
+  }
+  const turns = value.filter(
+    (turn): turn is SampleExchangeTurn =>
+      turn != null &&
+      (turn.role === 'user' || turn.role === 'pal') &&
+      typeof turn.text === 'string' &&
+      turn.text.length > 0,
+  );
+  return turns.length > 0 ? turns : undefined;
+};
 
 interface ApiPalsResponse {
   pals: ApiPalResponse[];
@@ -148,7 +169,9 @@ export interface CheckoutSession {
 export type CheckoutErrorStatus = 'already_owned' | 401 | 404 | 500 | 'network';
 
 class PalsHubApiService {
-  private apiBase = PALSHUB_API_BASE_URL;
+  private get apiBase() {
+    return getApiBase();
+  }
 
   constructor() {}
 
@@ -234,7 +257,7 @@ class PalsHubApiService {
   }
 
   // Transform API pal response to internal format
-  private transformApiPal(apiPal: ApiPalResponse): PalsHubPal {
+  transformApiPal(apiPal: ApiPalResponse): PalsHubPal {
     return {
       type: 'palshub' as const,
       id: apiPal.id,
@@ -288,6 +311,10 @@ class PalsHubApiService {
       greeting: apiPal.greeting,
       images: apiPal.images,
       models: apiPal.models,
+      store_product_id: apiPal.store_product_id,
+      iap_enabled: apiPal.iap_enabled,
+      sample_exchange: parseSampleExchange(apiPal.sample_exchange),
+      content_version: apiPal.content_version,
     };
   }
 

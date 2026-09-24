@@ -522,4 +522,61 @@ describe('PalsHubApiService', () => {
       expect(result.greeting).toBeNull();
     });
   });
+
+  describe('in-app purchase fields', () => {
+    const minimal = {
+      id: 'pal-iap',
+      title: 'Paid Pal',
+      price_cents: 499,
+      is_free: false,
+      categories: [],
+      tags: [],
+      stats: {rating: null, review_count: 0},
+      is_owned: false,
+      created_at: '2024-01-01T00:00:00Z',
+    };
+
+    const loadService = () => {
+      jest.resetModules();
+      jest.doMock('@env', () => ({PALSHUB_API_BASE_URL: 'https://api.test'}));
+      jest.doMock('../supabase', () => ({
+        getAuthHeaders: jest.fn().mockResolvedValue({}),
+      }));
+      return require('../PalsHubApiService').palsHubApiService;
+    };
+
+    it('carries store product, availability and content version', () => {
+      const result = loadService().transformApiPal({
+        ...minimal,
+        store_product_id: 'pal.abc',
+        iap_enabled: {ios: true, android: false},
+        content_version: 7,
+      });
+      expect(result.store_product_id).toBe('pal.abc');
+      expect(result.iap_enabled).toEqual({ios: true, android: false});
+      expect(result.content_version).toBe(7);
+      expect(result.sample_exchange).toBeUndefined();
+    });
+
+    it('leaves the fields undefined when the API omits them', () => {
+      const result = loadService().transformApiPal(minimal);
+      expect(result.store_product_id).toBeUndefined();
+      expect(result.iap_enabled).toBeUndefined();
+    });
+
+    it('requests the e2e base override when set', async () => {
+      const service = loadService();
+      require('../apiBase').setApiBaseOverride('http://127.0.0.1:8787');
+      // @ts-ignore
+      global.fetch = jest.fn().mockResolvedValue({
+        ok: true,
+        json: async () => minimal,
+      });
+      await service.getPal('pal-iap');
+      expect(global.fetch).toHaveBeenCalledWith(
+        'http://127.0.0.1:8787/api/mobile/pals/pal-iap',
+        expect.any(Object),
+      );
+    });
+  });
 });
