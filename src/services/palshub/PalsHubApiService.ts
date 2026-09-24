@@ -1,6 +1,6 @@
 import {authService} from './AuthService';
 import {getAuthHeaders} from './supabase';
-import {getApiBase} from './apiBase';
+import {clientHeaders, getApiBase} from './apiBase';
 import type {
   PalsQuery,
   LibraryQuery,
@@ -213,6 +213,7 @@ class PalsHubApiService {
         ...options,
         headers: {
           ...headers,
+          ...clientHeaders(),
           ...options.headers,
         },
       });

@@ -325,7 +325,12 @@ describe('PurchaseStore pipeline', () => {
 
       await h.purchases.processTransaction(tx(), {});
 
-      expect(h.log).toEqual(['write:unlocking', 'write:', 'finish:tx-1']);
+      expect(h.log).toEqual([
+        'write:unlocking',
+        'write:',
+        'finish:tx-1',
+        'event:purchase_error',
+      ]);
       expect(h.storage.ledger()[PAL_ID]).toBeUndefined();
       expect(h.purchases.invalidTxIds.has('tx-1')).toBe(true);
       expect(h.purchases.flowFor(PAL_ID)).toBe('invalid');
@@ -535,6 +540,61 @@ describe('PurchaseStore pipeline', () => {
       expect(h.purchases.isOwned(PAL_ID)).toBe(false);
       h.auth.isAuthenticated = true;
       expect(h.purchases.isOwned(PAL_ID)).toBe(true);
+    });
+  });
+
+  describe('events', () => {
+    const readyHarness = () => {
+      const h = createHarness({signedIn: true});
+      runInAction(() => {
+        h.purchases.availability = 'ready';
+        h.purchases.products.set(PRODUCT, {
+          productId: PRODUCT,
+          displayPrice: '4,99 €',
+        });
+      });
+      h.binding.getBinding.mockImplementation(async () => {
+        h.log.push('binding');
+        return null;
+      });
+      return h;
+    };
+
+    it('sends buy_tap before fetching the binding', async () => {
+      const h = readyHarness();
+      await h.purchases.buy(hubPal());
+      expect(h.log.slice(0, 2)).toEqual(['event:buy_tap', 'binding']);
+      expect(h.events.send).toHaveBeenCalledWith(PAL_ID, 'buy_tap');
+    });
+
+    it.each([
+      [{kind: 'cancelled'}, 'purchase_cancelled'],
+      [
+        {kind: 'error', code: 'network-error', downgrade: false},
+        'purchase_error',
+      ],
+    ])('sends the outcome event for %p', async (outcome, type) => {
+      const h = readyHarness();
+      h.store.purchase.mockResolvedValueOnce(outcome as any);
+      await h.purchases.buy(hubPal());
+      expect(h.events.send.mock.calls).toEqual([
+        [PAL_ID, 'buy_tap'],
+        [PAL_ID, type],
+      ]);
+    });
+
+    it('sends purchase_error when the proof is invalid', async () => {
+      const h = readyHarness();
+      h.api.verify.mockResolvedValueOnce([result('invalid')]);
+      await h.purchases.buy(hubPal());
+      expect(h.events.send).toHaveBeenLastCalledWith(PAL_ID, 'purchase_error');
+    });
+
+    it('sends nothing but buy_tap for a completed purchase', async () => {
+      const h = readyHarness();
+      await h.purchases.buy(hubPal());
+      await settle(h);
+      expect(h.events.send).toHaveBeenCalledTimes(1);
     });
   });
 

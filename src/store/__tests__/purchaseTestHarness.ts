@@ -239,6 +239,11 @@ export const createHarness = (
   const binding = {
     getBinding: jest.fn(async (): Promise<Binding | null> => null),
   };
+  const events = {
+    send: jest.fn((palId: string, type: string) => {
+      log.push(`event:${type}`);
+    }),
+  };
   let clock = 1_000;
   const deps: PurchaseStoreDeps = {
     api: api as unknown as PurchaseStoreDeps['api'],
@@ -247,6 +252,7 @@ export const createHarness = (
     auth,
     storage,
     now: () => clock,
+    events,
   };
   const store = new StubStore(log);
   const purchases = new PurchaseStore(deps);
@@ -260,6 +266,7 @@ export const createHarness = (
     auth,
     api,
     binding,
+    events,
     log,
     deps,
     advance: (ms: number) => {

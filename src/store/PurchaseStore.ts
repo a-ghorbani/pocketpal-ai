@@ -8,6 +8,8 @@ import type {IapApi} from '../services/iap/iapApi';
 import {bindingSource} from '../services/iap/bindingSource';
 import type {BindingSource} from '../services/iap/bindingSource';
 import {NativeStore} from '../services/iap/NativeStore';
+import {palEvents} from '../services/palshub/palEvents';
+import type {PalEvents} from '../services/palshub/palEvents';
 import type {
   StorePort,
   StoreProduct,
@@ -103,6 +105,7 @@ export interface PurchaseStoreDeps {
     setItem(key: string, value: string): Promise<void>;
   };
   now: () => number;
+  events: PalEvents;
 }
 
 const SETTLED: ReadonlySet<LedgerStatus> = new Set([
@@ -609,6 +612,7 @@ export class PurchaseStore {
         await this.finishOnIOS(tx);
         this.invalidTxIds.add(txKey(tx));
         this.setTransient(key, 'invalid');
+        this.deps.events.send(key, 'purchase_error');
         return;
     }
   }
@@ -801,6 +805,7 @@ export class PurchaseStore {
     this.rememberPal(pal);
     this.watching.add(pal.id);
     this.setTransient(pal.id, 'paying');
+    this.deps.events.send(pal.id, 'buy_tap');
     try {
       const binding = this.deps.auth.isAuthenticated
         ? await this.deps.binding.getBinding()
@@ -818,8 +823,10 @@ export class PurchaseStore {
           await this.installOwned(pal);
           return 'stay';
         case 'cancelled':
+          this.deps.events.send(pal.id, 'purchase_cancelled');
           return 'close';
         default:
+          this.deps.events.send(pal.id, 'purchase_error');
           if (outcome.downgrade) {
             this.downgraded = true;
             runInAction(() => {
@@ -1169,4 +1176,5 @@ export const purchaseStore = new PurchaseStore({
   auth: authService,
   storage: AsyncStorage,
   now: () => Date.now(),
+  events: palEvents,
 });

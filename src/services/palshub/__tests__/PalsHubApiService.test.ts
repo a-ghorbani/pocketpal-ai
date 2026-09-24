@@ -579,4 +579,30 @@ describe('PalsHubApiService', () => {
       );
     });
   });
+
+  it('sends the in-app purchase client headers on every request', async () => {
+    jest.resetModules();
+    jest.doMock('@env', () => ({PALSHUB_API_BASE_URL: 'https://api.test'}));
+    jest.doMock('../supabase', () => ({
+      getAuthHeaders: jest.fn().mockResolvedValue({Authorization: 'Bearer t'}),
+    }));
+    // @ts-ignore
+    global.fetch = jest.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({
+        pals: [],
+        pagination: {page: 1, limit: 20, total: 0, has_more: false},
+        filters_applied: {},
+      }),
+    });
+    const {palsHubApiService} = require('../PalsHubApiService');
+    const {Platform} = require('react-native');
+
+    await palsHubApiService.getPals();
+
+    const headers = (global.fetch as jest.Mock).mock.calls[0][1].headers;
+    expect(headers['X-IAP-Capable']).toBe('1');
+    expect(headers['X-Client-Platform']).toBe(Platform.OS);
+    expect(headers.Authorization).toBe('Bearer t');
+  });
 });
