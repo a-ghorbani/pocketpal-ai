@@ -205,7 +205,13 @@
     "removeRemoteModel": "Remove {{modelName}} ({{serverName}})?",
     "retryConnection": "Retry",
     "enterUrlManually": "Enter URL manually",
-    "manageServers": "Manage Servers"
+    "manageServers": "Manage Servers",
+    "purchases": {
+      "title": "Purchases",
+      "statusOwned": "Owned",
+      "statusUnlocking": "Unlocking",
+      "link": "Sign in to use on other devices"
+    }
   },
   "memory": {
     "shortWarning": "Memory Warning",

@@ -279,6 +279,15 @@ export class PurchaseStore {
     return this.isLegacyInstall(palId);
   }
 
+  get storeOwnedRecords(): LedgerRecord[] {
+    return Object.values(this.records).filter(
+      rec =>
+        rec.status === 'active' ||
+        rec.status === 'granted' ||
+        rec.status === 'unfulfillable',
+    );
+  }
+
   get needsLink(): boolean {
     const userId = this.deps.auth.isAuthenticated
       ? this.deps.auth.user?.id
