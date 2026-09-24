@@ -25,19 +25,23 @@ buildscript {
 
 apply plugin: "com.facebook.react.rootproject"
 
+def onnxruntimeVersion = {
+    def packageJson = file("$rootDir/../node_modules/onnxruntime-react-native/package.json")
+    if (!packageJson.canRead()) {
+        throw new GradleException("Cannot read ${packageJson}; run yarn install")
+    }
+    def version = new groovy.json.JsonSlurper().parse(packageJson).version
+    if (!version) {
+        throw new GradleException("No version in ${packageJson}")
+    }
+    return version
+}()
+
 allprojects {
     configurations.all {
         resolutionStrategy {
-            // onnxruntime-react-native's own build.gradle declares this as
-            // "latest.integration" (a floating version), so every build
-            // resolves whatever is newest on Maven Central at build time.
-            // That makes libonnxruntime.so (the largest native library in
-            // the APK) unpinned and unreproducible across builds of the same
-            // commit, and a Maven Central rate limit while listing versions
-            // for a floating coordinate can fail the build outright. Force a
-            // concrete version matching the onnxruntime-react-native release
-            // in package.json.
-            force "com.microsoft.onnxruntime:onnxruntime-android:1.23.2"
+            // onnxruntime-react-native floats this at latest.integration; ship the AAR it was released with.
+            force "com.microsoft.onnxruntime:onnxruntime-android:${onnxruntimeVersion}"
         }
     }
 }
