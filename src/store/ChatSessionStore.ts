@@ -113,6 +113,9 @@ class ChatSessionStore {
   // Selection mode state
   isSelectionMode: boolean = false;
   selectedSessionIds: Set<string> = new Set();
+  // Search mode state
+  isSearchMode: boolean = false;
+  searchQuery: string = '';
 
   // UX state for the active agent run. Driven by `agentStateReducer`
   // from `AgentEvent`s emitted by the runner. The only writer is
@@ -370,6 +373,9 @@ class ChatSessionStore {
       // Do not copy completion settings from session to global settings
       // Instead, preserve global settings as they are
       this.exitEditMode();
+      // Search is a per-session view; don't carry it into a new chat.
+      this.isSearchMode = false;
+      this.searchQuery = '';
       this.activeSessionId = null;
       this.lastCompletionResult = undefined;
       this.dismissedBannerVariants = new Set();
@@ -413,6 +419,9 @@ class ChatSessionStore {
 
     runInAction(() => {
       this.exitEditMode();
+      // Search is a per-session view; don't carry a stale query across sessions.
+      this.isSearchMode = false;
+      this.searchQuery = '';
       this.activeSessionId = sessionId;
       // Don't modify global settings when changing sessions
       this.newChatPalId = undefined;
@@ -617,6 +626,10 @@ class ChatSessionStore {
         this.newChatPalId = undefined;
         this.newChatThinkingOverride = undefined;
         this.newChatReasoningEffort = undefined;
+        // Search is a per-session view; don't carry a stale query into the new
+        // session (reachable one tap away via Duplicate → createNewSession).
+        this.isSearchMode = false;
+        this.searchQuery = '';
       });
     } catch (error) {
       console.error('Failed to create new session:', error);
@@ -1430,6 +1443,48 @@ class ChatSessionStore {
 
   clearDraft(sessionId: string) {
     this.sessionDrafts.delete(sessionId);
+  }
+
+  // Search mode actions
+  enterSearchMode() {
+    runInAction(() => {
+      // Leave edit mode first: while editing, currentSessionMessages is sliced
+      // to the messages after the edit point, so search would otherwise scan a
+      // truncated conversation.
+      this.exitEditMode();
+      this.isSearchMode = true;
+      this.searchQuery = '';
+    });
+  }
+
+  exitSearchMode() {
+    runInAction(() => {
+      this.isSearchMode = false;
+      this.searchQuery = '';
+    });
+  }
+
+  setSearchQuery(query: string) {
+    this.searchQuery = query;
+  }
+
+  /**
+   * Number of messages in the active session whose text matches the current
+   * query. Search highlights in place (find-in-page) rather than filtering the
+   * message list, so this is a count only — the render list is never swapped.
+   *
+   * Matches on `derivedText`, so assistant replies (`assistant_turn` rows,
+   * whose `text` column is empty by design) are searched via their step
+   * content, not skipped.
+   */
+  get searchMatchCount(): number {
+    if (!this.isSearchMode || !this.searchQuery.trim()) {
+      return 0;
+    }
+    const query = this.searchQuery.toLowerCase().trim();
+    return this.currentSessionMessages.filter(msg =>
+      derivedText(msg).toLowerCase().includes(query),
+    ).length;
   }
 
   async setActivePal(palId: string | undefined): Promise<void> {

@@ -2669,4 +2669,162 @@ describe('chatSessionStore', () => {
       });
     });
   });
+
+  describe('Search mode', () => {
+    const setupSessionWithMessages = (messages: MessageType.Any[]) => {
+      const session = {
+        id: 'search-session',
+        title: 'Search Test Session',
+        date: new Date().toISOString(),
+        messages,
+        completionSettings: defaultCompletionSettings,
+        settingsSource: 'pal' as 'pal' | 'custom',
+      };
+      chatSessionStore.sessions = [session];
+      chatSessionStore.activeSessionId = session.id;
+    };
+
+    const userText = (id: string, text: string): MessageType.Text =>
+      ({
+        id,
+        type: 'text',
+        text,
+        author: {id: 'user1'},
+        createdAt: Date.now(),
+      }) as MessageType.Text;
+
+    // Assistant replies are assistant_turn rows: the content lives in
+    // steps[].content and the `text` column is empty by design.
+    const assistantTurn = (id: string, content: string): MessageType.Any =>
+      ({
+        id,
+        type: 'assistant_turn',
+        text: '',
+        steps: [{content}],
+        author: {id: 'assistant'},
+        createdAt: Date.now(),
+      }) as unknown as MessageType.Any;
+
+    beforeEach(() => {
+      chatSessionStore.exitEditMode();
+      chatSessionStore.exitSearchMode();
+    });
+
+    it('enters search mode with empty query', () => {
+      chatSessionStore.enterSearchMode();
+      expect(chatSessionStore.isSearchMode).toBe(true);
+      expect(chatSessionStore.searchQuery).toBe('');
+    });
+
+    it('exits search mode and clears query', () => {
+      chatSessionStore.enterSearchMode();
+      chatSessionStore.setSearchQuery('hello');
+      chatSessionStore.exitSearchMode();
+      expect(chatSessionStore.isSearchMode).toBe(false);
+      expect(chatSessionStore.searchQuery).toBe('');
+    });
+
+    it('sets search query', () => {
+      chatSessionStore.setSearchQuery('test query');
+      expect(chatSessionStore.searchQuery).toBe('test query');
+    });
+
+    it('leaves edit mode when search opens so the full conversation is searched', () => {
+      chatSessionStore.isEditMode = true;
+      chatSessionStore.editingMessageId = 'msg1';
+
+      chatSessionStore.enterSearchMode();
+
+      expect(chatSessionStore.isEditMode).toBe(false);
+      expect(chatSessionStore.editingMessageId).toBeNull();
+    });
+
+    describe('searchMatchCount', () => {
+      it('is 0 when not in search mode', () => {
+        setupSessionWithMessages([userText('msg1', 'Hello world')]);
+        chatSessionStore.isSearchMode = false;
+        expect(chatSessionStore.searchMatchCount).toBe(0);
+      });
+
+      it('is 0 when the query is only whitespace', () => {
+        setupSessionWithMessages([userText('msg1', 'Hello world')]);
+        chatSessionStore.enterSearchMode();
+        chatSessionStore.setSearchQuery('   ');
+        expect(chatSessionStore.searchMatchCount).toBe(0);
+      });
+
+      it('counts user messages that match, case-insensitively', () => {
+        setupSessionWithMessages([
+          userText('msg1', 'Hello world'),
+          userText('msg2', 'Goodbye world'),
+          userText('msg3', 'HELLO again'),
+        ]);
+        chatSessionStore.enterSearchMode();
+        chatSessionStore.setSearchQuery('hello');
+        expect(chatSessionStore.searchMatchCount).toBe(2);
+      });
+
+      // Guards the blocking bug: the old filter matched `msg.text`, which is
+      // always empty for assistant replies, so they never matched. Reverting
+      // searchMatchCount to `msg.type === 'text' && msg.text` turns this red.
+      it('counts assistant replies whose match lives in step content', () => {
+        setupSessionWithMessages([
+          userText('msg1', 'How do leaves make energy?'),
+          assistantTurn(
+            'msg2',
+            'Leaves use chlorophyll to turn sunlight into energy.',
+          ),
+        ]);
+        chatSessionStore.enterSearchMode();
+        chatSessionStore.setSearchQuery('energy');
+        expect(chatSessionStore.searchMatchCount).toBe(2);
+      });
+    });
+
+    describe('per-session reset', () => {
+      it('clears search state when a new session is created', async () => {
+        setupSessionWithMessages([userText('msg1', 'Hello world')]);
+        chatSessionStore.enterSearchMode();
+        chatSessionStore.setSearchQuery('hello');
+
+        (chatSessionRepository.createSession as jest.Mock).mockResolvedValue({
+          id: 'new-session',
+          title: 'New Session',
+          date: new Date().toISOString(),
+        });
+        (chatSessionRepository.getSessionById as jest.Mock).mockResolvedValue({
+          messages: [],
+          completionSettings: {getSettings: () => defaultCompletionSettings},
+        });
+
+        await chatSessionStore.createNewSession('New Session');
+
+        expect(chatSessionStore.isSearchMode).toBe(false);
+        expect(chatSessionStore.searchQuery).toBe('');
+      });
+
+      it('clears search state when switching to another session', async () => {
+        setupSessionWithMessages([userText('msg1', 'Hello world')]);
+        chatSessionStore.sessions = [
+          ...chatSessionStore.sessions,
+          {
+            id: 'other-session',
+            title: 'Other',
+            date: new Date().toISOString(),
+            messages: [],
+            messagesLoaded: true,
+            completionSettings: defaultCompletionSettings,
+            settingsSource: 'pal' as 'pal' | 'custom',
+          },
+        ];
+        chatSessionStore.enterSearchMode();
+        chatSessionStore.setSearchQuery('hello');
+
+        await chatSessionStore.setActiveSession('other-session');
+
+        expect(chatSessionStore.isSearchMode).toBe(false);
+        expect(chatSessionStore.searchQuery).toBe('');
+      });
+    });
+  });
 });

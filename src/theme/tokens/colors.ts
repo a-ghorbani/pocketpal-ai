@@ -65,6 +65,11 @@ export const lightColors: TokenColors = {
   // Figma `Color/Secondary/Default` — the secondary surface used by
   // small DS buttons (back chevron, audio glyph) over the muted canvas.
   secondaryDefault: '#f3f2f2',
+  // Search highlight: a deep amber that clears ~3:1 against the light message
+  // background (a bright yellow would be near-invisible on near-white); black
+  // text keeps the highlighted term readable.
+  searchHighlight: '#C77700',
+  onSearchHighlight: '#000000',
   // MD3 extras
   surfaceDisabled: withOpacity('#fcfcfc', 0.12),
   onSurfaceDisabled: withOpacity('#333333', 0.38),
@@ -202,6 +207,10 @@ export const darkColors: TokenColors = {
   mutedLight: '#3a3937',
   // Figma `Color/Secondary/Default` — dark binding from canonical file.
   secondaryDefault: '#2a2928',
+  // Search highlight: a bright amber that pops against the dark message
+  // background (~7:1); black text stays readable on it.
+  searchHighlight: '#FFB300',
+  onSearchHighlight: '#000000',
   // MD3 extras
   surfaceDisabled: withOpacity('#333333', 0.12),
   onSurfaceDisabled: withOpacity('#e5e5e6', 0.38),
