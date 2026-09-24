@@ -707,7 +707,6 @@
 					"-DFOLLY_USE_LIBCPP=1",
 					"-DFOLLY_CFG_NO_COROUTINES=1",
 					"-DFOLLY_HAVE_CLOCK_GETTIME=1",
-					"-DLM_GGML_METAL_EMBED_LIBRARY=1",
 				);
 				OTHER_LDFLAGS = (
 					"$(inherited)",
@@ -796,7 +795,6 @@
 					"-DFOLLY_USE_LIBCPP=1",
 					"-DFOLLY_CFG_NO_COROUTINES=1",
 					"-DFOLLY_HAVE_CLOCK_GETTIME=1",
-					"-DLM_GGML_METAL_EMBED_LIBRARY=1",
 				);
 				OTHER_LDFLAGS = (
 					"$(inherited)",
@@ -951,7 +949,6 @@
 					"-DFOLLY_USE_LIBCPP=1",
 					"-DFOLLY_CFG_NO_COROUTINES=1",
 					"-DFOLLY_HAVE_CLOCK_GETTIME=1",
-					"-DLM_GGML_METAL_EMBED_LIBRARY=1",
 				);
 				OTHER_LDFLAGS = (
 					"$(inherited)",

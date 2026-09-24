@@ -28,7 +28,7 @@ const isUsableDraft = (draft?: Model): draft is Model =>
   !!draft?.isDownloaded && isMTPCapable(draft);
 
 // A width mismatch on a paired draft is an uncatchable native abort
-// (LM_GGML_ASSERT → SIGABRT in init_mtp), so an unknown width is not paired.
+// (GGML_ASSERT → SIGABRT in init_mtp), so an unknown width is not paired.
 export const resolveDraftCandidate = (
   target: Model,
   models: Model[],
