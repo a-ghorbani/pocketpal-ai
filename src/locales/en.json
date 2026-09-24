@@ -1116,6 +1116,14 @@
       "signInAgain": "Sign in again",
       "palNotAvailable": "This pal is not available for purchase right now.",
       "checkoutFailed": "Something went wrong. Please try again."
+    },
+    "purchase": {
+      "modelStep": {
+        "download": "Download · {{size}}",
+        "startChat": "Start chat",
+        "needsMemory": "This Pal needs a device with at least {{size}} of memory for its smallest model.",
+        "noModelFits": "None of the available models fit this device."
+      }
     }
   },
   "validation": {
