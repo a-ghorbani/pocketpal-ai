@@ -11,6 +11,7 @@
 import {
   deriveEffectiveBackend,
   deriveLogSignals,
+  requestSatisfiedBy,
 } from '../../src/__automation__/logSignals';
 
 // -----------------------------------------------------------------------------
@@ -471,5 +472,45 @@ describe('deriveLogSignals — memory_buffers', () => {
     expect(signals.memory_buffers.kv_cache_total_mib).toBeCloseTo(8.5, 2);
     expect(signals.memory_buffers.compute_total_mib).toBeCloseTo(296.05, 2);
     expect(signals.memory_buffers.total_mib).toBeCloseTo(987.15, 2);
+  });
+});
+
+// -----------------------------------------------------------------------------
+// llama.rn >= 0.13.0-rc.5: ggml logs under its upstream, unprefixed names.
+// Lines are rendered from the vendored llama.cpp format strings.
+// -----------------------------------------------------------------------------
+
+describe('deriveLogSignals (unprefixed ggml log lines)', () => {
+  it.each([
+    'ggml_opencl: Adreno large buffer enabled',
+    'I/lm_ggml_opencl: Adreno large buffer enabled',
+  ])('reads large-buffer mode as enabled from %p', line => {
+    expect(deriveLogSignals([line]).large_buffer_enabled).toBe(true);
+  });
+
+  it('reads the unsupported large-buffer line', () => {
+    const signals = deriveLogSignals([
+      'ggml_opencl: Adreno large buffer requested but not supported by driver, will use regular buffer',
+    ]);
+    expect(signals.large_buffer_unsupported).toBe(true);
+    expect(signals.large_buffer_enabled).toBe(false);
+  });
+
+  it('does not take the FP16 support line for the device name', () => {
+    const signals = deriveLogSignals([
+      'ggml_opencl: device FP16 support: true',
+    ]);
+    expect(signals.opencl_device_name).toBeNull();
+  });
+
+  it('derives a full OpenCL offload that satisfies a gpu request', () => {
+    const backend = deriveEffectiveBackend(
+      deriveLogSignals([
+        'load_tensors:       OpenCL model buffer size =   900.00 MiB',
+        'load_tensors: offloaded 28/28 layers to GPU',
+      ]),
+    );
+    expect(backend).toBe('opencl');
+    expect(requestSatisfiedBy('gpu', backend)).toBe(true);
   });
 });

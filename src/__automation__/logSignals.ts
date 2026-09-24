@@ -118,7 +118,7 @@ export function deriveLogSignals(lines: string[]): LogSignals {
   // Calibrated against llama.rn 0.12.x output. Examples:
   //   "llama_model_load_from_file_impl: using device GPUOpenCL (QUALCOMM Adreno(TM) 840) ..."
   //   "load_tensors: offloaded 25/25 layers to GPU"
-  //   "lm_ggml_opencl: Adreno large buffer enabled"   (when env var set + supported)
+  //   "ggml_opencl: Adreno large buffer enabled"   (when env var set + supported)
   //   "Adreno large buffer requested but not supported by driver"  (regression case)
   // The device-name segment can itself contain parentheses (e.g.
   // "QUALCOMM Adreno(TM) 840"), so we anchor on the trailing ") (" separator
@@ -194,7 +194,7 @@ export function deriveLogSignals(lines: string[]): LogSignals {
       }
     }
 
-    if (/lm_ggml_opencl: Adreno large buffer enabled/.test(line)) {
+    if (/ggml_opencl: Adreno large buffer enabled/.test(line)) {
       signals.large_buffer_enabled = true;
     }
     if (lbUnsupportedRe.test(line)) {
