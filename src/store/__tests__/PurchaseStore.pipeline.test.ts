@@ -12,6 +12,7 @@ import {
   localPal,
   record,
   result,
+  stopAll,
   tx,
 } from './purchaseTestHarness';
 
@@ -39,6 +40,8 @@ describe('PurchaseStore pipeline', () => {
   beforeEach(() => {
     setOS('ios');
   });
+
+  afterEach(stopAll);
 
   afterAll(() => {
     setOS(originalOS as 'ios' | 'android');

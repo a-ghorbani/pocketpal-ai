@@ -5,7 +5,13 @@ import type {
   StorePort,
   StoreTransaction,
 } from '../../services/iap/StorePort';
-import type {VerifyResult} from '../../services/iap/iapWire';
+import type {
+  Binding,
+  RefreshResult,
+  StorePlatform,
+  StoreProof,
+  VerifyResult,
+} from '../../services/iap/iapWire';
 import type {Pal} from '../../types/pal';
 import type {PalsHubPal} from '../../types/palshub';
 
@@ -155,6 +161,12 @@ export class MemoryStorage {
   }
 }
 
+const created: PurchaseStore[] = [];
+
+export const stopAll = () => {
+  created.splice(0).forEach(store => store.stop());
+};
+
 export const createHarness = (
   options: {
     records?: LedgerRecord[];
@@ -197,17 +209,34 @@ export const createHarness = (
     user: options.signedIn ? {id: 'user-1'} : null,
   };
   const api = {
-    verify: jest.fn(async () => [result('active')]),
-    refresh: jest.fn(async () => ({
-      changed: [],
-      revoked: [],
-      removed: [],
-      unchanged: [],
-    })),
-    link: jest.fn(async () => 'linked' as const),
+    verify: jest.fn(
+      async (
+        _platform: StorePlatform,
+        _proofs: StoreProof[],
+      ): Promise<VerifyResult[]> => [result('active')],
+    ),
+    refresh: jest.fn(
+      async (
+        _proofs: StoreProof[],
+        _known: Record<string, number>,
+      ): Promise<RefreshResult> => ({
+        changed: [],
+        revoked: [],
+        removed: [],
+        unchanged: [],
+      }),
+    ),
+    link: jest.fn(
+      async (
+        _platform: StorePlatform,
+        _proofs: StoreProof[],
+      ): Promise<'linked' | 'conflict'> => 'linked',
+    ),
     binding: jest.fn(async () => ({})),
   };
-  const binding = {getBinding: jest.fn(async () => null)};
+  const binding = {
+    getBinding: jest.fn(async (): Promise<Binding | null> => null),
+  };
   let clock = 1_000;
   const deps: PurchaseStoreDeps = {
     api: api as unknown as PurchaseStoreDeps['api'],
@@ -220,6 +249,7 @@ export const createHarness = (
   const store = new StubStore(log);
   const purchases = new PurchaseStore(deps);
   purchases.setStore(store);
+  created.push(purchases);
   return {
     purchases,
     store,

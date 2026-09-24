@@ -1,5 +1,5 @@
 import {makeAutoObservable, reaction, runInAction, toJS} from 'mobx';
-import {Platform} from 'react-native';
+import {AppState, Platform} from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 import {authService} from '../services';
@@ -19,6 +19,9 @@ import {palStore as defaultPalStore} from './PalStore';
 import type {PalsHubPal} from '../types/palshub';
 
 export const LEDGER_KEY = 'purchase-ledger';
+export const RETRY_DELAYS_MS = [2_000, 4_000, 8_000, 16_000, 32_000];
+export const RETRY_STEADY_MS = 60_000;
+export const STALE_PENDING_MS = 72 * 60 * 60 * 1000;
 
 export type LedgerStatus =
   | 'pending_payment'
@@ -65,6 +68,11 @@ export type FlowPhase =
   | 'restore_needed';
 
 export type BuyResult = 'close' | 'stay';
+
+export interface StartOptions {
+  store?: StorePort;
+  beforeInit?: () => Promise<void>;
+}
 
 export interface ProcessOptions {
   settledVerify?: boolean;
@@ -135,6 +143,19 @@ export class PurchaseStore {
   private palByProduct = new Map<string, PalsHubPal>();
   private requestedProducts = new Set<string>();
   private watching = new Set<string>();
+  private started = false;
+  private downgraded = false;
+  private recovering: Promise<void> | null = null;
+  private recoverAgain = false;
+  private appStateSubscription: {remove: () => void} | null = null;
+  private retries = new Map<
+    string,
+    {
+      attempt: number;
+      tx: StoreTransaction;
+      timer?: ReturnType<typeof setTimeout>;
+    }
+  >();
   readonly invalidTxIds = new Set<string>();
 
   constructor(deps: PurchaseStoreDeps) {
@@ -153,6 +174,12 @@ export class PurchaseStore {
       | 'palByProduct'
       | 'requestedProducts'
       | 'watching'
+      | 'started'
+      | 'downgraded'
+      | 'recovering'
+      | 'recoverAgain'
+      | 'appStateSubscription'
+      | 'retries'
     >(this, {
       store: false,
       unsubscribeStore: false,
@@ -166,6 +193,12 @@ export class PurchaseStore {
       palByProduct: false,
       requestedProducts: false,
       watching: false,
+      started: false,
+      downgraded: false,
+      recovering: false,
+      recoverAgain: false,
+      appStateSubscription: false,
+      retries: false,
       invalidTxIds: false,
       storePort: false,
     });
@@ -476,6 +509,7 @@ export class PurchaseStore {
     const rec = this.recordForProduct(tx.productId);
 
     if (rec && isSettled(rec.status)) {
+      this.clearRetry(tx.productId);
       await this.runSettled(rec, tx, opts);
       return;
     }
@@ -502,8 +536,10 @@ export class PurchaseStore {
 
     const result = await this.verify(tx);
     if (!result) {
+      this.scheduleRetry(tx);
       return;
     }
+    this.clearRetry(tx.productId);
     const key = this.rekey(palId, result.palId);
 
     switch (result.status) {
@@ -751,6 +787,7 @@ export class PurchaseStore {
           return 'close';
         default:
           if (outcome.downgrade) {
+            this.downgraded = true;
             runInAction(() => {
               this.availability = 'unavailable';
             });
@@ -777,6 +814,221 @@ export class PurchaseStore {
         pendingSince: rec?.pendingSince ?? this.deps.now(),
       });
     });
+  }
+
+  async start({store, beforeInit}: StartOptions = {}): Promise<void> {
+    if (this.started) {
+      return;
+    }
+    this.started = true;
+    await beforeInit?.();
+    if (store) {
+      this.setStore(store);
+    }
+    this.appStateSubscription = AppState.addEventListener('change', state => {
+      if (state === 'active') {
+        this.recover().catch(() => {});
+      } else {
+        this.pauseRetries();
+      }
+    });
+    await this.deps.palStore.ready;
+    await this.recover();
+  }
+
+  stop(): void {
+    this.appStateSubscription?.remove();
+    this.appStateSubscription = null;
+    this.unsubscribeStore?.();
+    this.unsubscribeStore = null;
+    this.pauseRetries();
+    this.started = false;
+  }
+
+  recover(): Promise<void> {
+    if (this.recovering) {
+      this.recoverAgain = true;
+      return this.recovering;
+    }
+    const run = (async () => {
+      do {
+        this.recoverAgain = false;
+        await this.recoverOnce();
+      } while (this.recoverAgain);
+    })();
+    this.recovering = run.finally(() => {
+      this.recovering = null;
+    });
+    return this.recovering;
+  }
+
+  private async recoverOnce(): Promise<void> {
+    await this.deps.palStore.ready;
+    await this.load();
+    const available = await this.storePort.init();
+    runInAction(() => {
+      this.availability =
+        available && !this.downgraded ? 'ready' : 'unavailable';
+    });
+    await this.drainQueue();
+    if (!available) {
+      return;
+    }
+    const txs = await this.storeTransactions();
+    for (const tx of txs) {
+      if (this.invalidTxIds.has(txKey(tx))) {
+        continue;
+      }
+      const rec = this.recordForProduct(tx.productId);
+      if (!isSettled(rec?.status) || (Platform.OS === 'ios' && tx.unfinished)) {
+        await this.processTransaction(tx, {});
+      }
+    }
+    await this.dropStalePending(txs, false);
+    const refreshed = await this.refresh(txs);
+    if (refreshed) {
+      this.markLedgerWritable();
+    }
+  }
+
+  private async storeTransactions(): Promise<StoreTransaction[]> {
+    const [unfinished, entitled] = await Promise.all([
+      this.storePort.unfinished().catch(() => [] as StoreTransaction[]),
+      this.storePort.currentEntitlements(),
+    ]);
+    const merged = new Map<string, StoreTransaction>();
+    [...unfinished, ...entitled].forEach(tx => {
+      const key = txKey(tx);
+      const seen = merged.get(key);
+      merged.set(
+        key,
+        seen ? {...seen, unfinished: seen.unfinished || tx.unfinished} : tx,
+      );
+    });
+    return [...merged.values()];
+  }
+
+  private async dropStalePending(
+    txs: StoreTransaction[],
+    force: boolean,
+  ): Promise<void> {
+    const stale = Object.values(this.records).filter(rec => {
+      if (rec.status !== 'pending_payment') {
+        return false;
+      }
+      if (txs.some(tx => tx.productId === rec.productId)) {
+        return false;
+      }
+      if (Platform.OS === 'android') {
+        return this.storePort.queryOk;
+      }
+      return (
+        force ||
+        this.deps.now() - (rec.pendingSince ?? this.deps.now()) >
+          STALE_PENDING_MS
+      );
+    });
+    for (const rec of stale) {
+      await this.serialize(rec.productId, async () => {
+        if (this.records[rec.palId]?.status === 'pending_payment') {
+          await this.deleteRecord(rec.palId);
+        }
+      });
+    }
+  }
+
+  private async refresh(txs: StoreTransaction[]): Promise<boolean> {
+    const proofs = txs
+      .filter(tx => tx.state === 'purchased')
+      .map(tx => tx.proof);
+    const known = Object.fromEntries(
+      Object.values(this.records)
+        .filter(rec => rec.status === 'active')
+        .map(rec => [rec.palId, rec.contentVersion ?? 0]),
+    );
+    if (proofs.length === 0 && Object.keys(known).length === 0) {
+      return true;
+    }
+    let refreshed;
+    try {
+      refreshed = await this.deps.api.refresh(proofs, known);
+    } catch {
+      return false;
+    }
+    for (const pal of refreshed.changed) {
+      const rec = this.records[pal.id];
+      const local = this.localPalFor(pal.id);
+      if (rec?.status === 'active' && local) {
+        await this.serialize(rec.productId, () =>
+          this.applyContent(rec, local.id, pal, pal.content_version),
+        );
+      }
+    }
+    for (const palId of [...refreshed.revoked, ...refreshed.removed]) {
+      const rec = this.records[palId];
+      if (rec && rec.status !== 'removed') {
+        await this.serialize(rec.productId, () => this.removeOwnership(palId));
+      }
+    }
+    return true;
+  }
+
+  private scheduleRetry(tx: StoreTransaction): void {
+    const previous = this.retries.get(tx.productId);
+    if (previous?.timer) {
+      clearTimeout(previous.timer);
+    }
+    const attempt = previous?.attempt ?? 0;
+    const delay = RETRY_DELAYS_MS[attempt] ?? RETRY_STEADY_MS;
+    const entry: {
+      attempt: number;
+      tx: StoreTransaction;
+      timer?: ReturnType<typeof setTimeout>;
+    } = {attempt: attempt + 1, tx};
+    entry.timer = setTimeout(() => {
+      entry.timer = undefined;
+      this.processTransaction(tx, {}).catch(() => {});
+    }, delay);
+    this.retries.set(tx.productId, entry);
+  }
+
+  private clearRetry(productId: string): void {
+    const entry = this.retries.get(productId);
+    if (entry?.timer) {
+      clearTimeout(entry.timer);
+    }
+    this.retries.delete(productId);
+  }
+
+  private pauseRetries(): void {
+    this.retries.forEach(entry => {
+      if (entry.timer) {
+        clearTimeout(entry.timer);
+        entry.timer = undefined;
+      }
+    });
+  }
+
+  async retry(palId: string): Promise<void> {
+    await this.load();
+    const rec = this.records[palId];
+    if (!rec || isSettled(rec.status)) {
+      return;
+    }
+    const pending = this.retries.get(rec.productId);
+    const tx =
+      pending?.tx ??
+      (await this.storeTransactions()).find(
+        candidate => candidate.productId === rec.productId,
+      );
+    if (!tx) {
+      return;
+    }
+    if (pending?.timer) {
+      clearTimeout(pending.timer);
+    }
+    this.retries.set(rec.productId, {attempt: 0, tx});
+    await this.processTransaction(tx, {});
   }
 
   async installOwned(pal: PalsHubPal): Promise<boolean> {
