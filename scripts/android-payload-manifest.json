@@ -33,8 +33,8 @@
         {
           "lib": "librnllama_v8_2_dotprod_i8mm_hexagon_opencl.so",
           "mustExport": [
-            "lm_ggml_backend_hexagon_reg",
-            "lm_ggml_backend_is_hexagon"
+            "ggml_backend_hexagon_reg",
+            "ggml_backend_is_hexagon"
           ]
         }
       ],

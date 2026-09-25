@@ -93,8 +93,8 @@ function buildElf(symbols, {omitDynsym = false, emptyDynsym = false} = {}) {
 }
 
 const REQUIRED_HEXAGON_SYMBOLS = [
-  'lm_ggml_backend_hexagon_reg',
-  'lm_ggml_backend_is_hexagon',
+  'ggml_backend_hexagon_reg',
+  'ggml_backend_is_hexagon',
 ];
 
 /**
@@ -109,6 +109,9 @@ function hexagonDynsym({withRequired = true} = {}) {
     for (const name of REQUIRED_HEXAGON_SYMBOLS) {
       symbols.push({name, defined: true});
     }
+  }
+  for (const name of REQUIRED_HEXAGON_SYMBOLS) {
+    symbols.push({name: `lm_${name}`, defined: true});
   }
   symbols.push({name: 'lm_ggml_hexagon_session_init', defined: true});
   symbols.push({name: 'lm_ggml_backend_reg_count', defined: true});
@@ -284,12 +287,27 @@ describe('the Hexagon backend', () => {
     const entries = conformingEntries();
     entries['lib/arm64-v8a/librnllama_v8_2_dotprod_i8mm_hexagon_opencl.so'] =
       buildElf([
-        {name: 'lm_ggml_backend_hexagon_reg', defined: false},
+        {name: 'ggml_backend_hexagon_reg', defined: false},
+        {name: 'ggml_backend_is_hexagon', defined: true},
+      ]);
+    const {status, output} = gateApk(entries);
+    expect(status).toBe(1);
+    expect(output).toContain('MISSING  ggml_backend_hexagon_reg');
+  });
+
+  // Each pre-0.13.0-rc.5 name ends with its unprefixed successor, so a reader
+  // matching by substring or suffix would pass an old artifact.
+  it('fails when only the lm_-prefixed names of older llama.rn are defined', () => {
+    const entries = conformingEntries();
+    entries['lib/arm64-v8a/librnllama_v8_2_dotprod_i8mm_hexagon_opencl.so'] =
+      buildElf([
+        {name: 'lm_ggml_backend_hexagon_reg', defined: true},
         {name: 'lm_ggml_backend_is_hexagon', defined: true},
       ]);
     const {status, output} = gateApk(entries);
     expect(status).toBe(1);
-    expect(output).toContain('MISSING  lm_ggml_backend_hexagon_reg');
+    expect(output).toContain('MISSING  ggml_backend_hexagon_reg');
+    expect(output).toContain('MISSING  ggml_backend_is_hexagon');
   });
 
   it('names the llama.rn version the symbols were read from', () => {
@@ -420,7 +438,7 @@ describe('a check that cannot run', () => {
   it('fails when the library has no .dynsym section', () => {
     const entries = conformingEntries();
     entries['lib/arm64-v8a/librnllama_v8_2_dotprod_i8mm_hexagon_opencl.so'] =
-      buildElf([{name: 'lm_ggml_backend_hexagon_reg', defined: true}], {
+      buildElf([{name: 'ggml_backend_hexagon_reg', defined: true}], {
         omitDynsym: true,
       });
     const {status, output} = gateApk(entries);
