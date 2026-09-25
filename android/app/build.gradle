@@ -232,6 +232,15 @@ dependencies {
     implementation("com.squareup.okhttp3:okhttp:4.12.0")
 }
 
+// openiap-google declares Compose UI and Gson but none of its classes use them.
+configurations.matching {
+    it.name.endsWith('CompileClasspath') || it.name.endsWith('RuntimeClasspath')
+}.configureEach {
+    exclude group: 'androidx.compose.ui'
+    exclude group: 'androidx.compose.runtime'
+    exclude group: 'com.google.code.gson'
+}
+
 project.ext.vectoricons = [
     iconFontNames: [ 'MaterialIcons.ttf', 'MaterialCommunityIcons.ttf'  ] // Specify font files
 ]
