@@ -11,6 +11,11 @@
 import {
   deriveEffectiveBackend,
   deriveLogSignals,
+  emptyLogSignals,
+  requestSatisfiedBy,
+  type EffectiveBackend,
+  type LogSignals,
+  type RequestedBackend,
 } from '../../src/__automation__/logSignals';
 
 // -----------------------------------------------------------------------------
@@ -471,5 +476,102 @@ describe('deriveLogSignals — memory_buffers', () => {
     expect(signals.memory_buffers.kv_cache_total_mib).toBeCloseTo(8.5, 2);
     expect(signals.memory_buffers.compute_total_mib).toBeCloseTo(296.05, 2);
     expect(signals.memory_buffers.total_mib).toBeCloseTo(987.15, 2);
+  });
+});
+
+// -----------------------------------------------------------------------------
+// Metal (iOS, llama.rn 0.13.0-rc.5)
+// -----------------------------------------------------------------------------
+
+const IPHONE_METAL_LINES = [
+  'llama_prepare_model_devices: using device MTL0 (Apple A15 GPU) (unknown id) - 4095 MiB free',
+  'load_tensors:   CPU_Mapped model buffer size =    28.69 MiB',
+  'load_tensors:  MTL0_Mapped model buffer size =    82.41 MiB',
+  'load_tensors: offloaded 31/31 layers to GPU',
+  'llama_kv_cache:       MTL0 KV buffer size =    45.00 MiB',
+];
+
+const IOS_SIMULATOR_LINES = [
+  'llama_prepare_model_devices: using device MTL0 (Apple iOS simulator GPU) (unknown id) - 0 MiB free',
+  'load_tensors:   CPU_Mapped model buffer size =    82.41 MiB',
+  'load_tensors: offloaded 0/31 layers to GPU',
+  'llama_kv_cache:        CPU KV buffer size =    45.00 MiB',
+];
+
+function signalsWith(
+  weights_mib: Record<string, number>,
+  offloaded: number | null,
+  total: number | null,
+): LogSignals {
+  const signals = emptyLogSignals();
+  signals.memory_buffers.weights_mib = weights_mib;
+  signals.offloaded_layers = offloaded;
+  signals.total_layers = total;
+  return signals;
+}
+
+describe('deriveEffectiveBackend (Metal)', () => {
+  it('parses the iPhone device lines into MTL weight and KV keys', () => {
+    const signals = deriveLogSignals(IPHONE_METAL_LINES);
+    expect(signals.memory_buffers.weights_mib).toEqual({
+      CPU_Mapped: 28.69,
+      MTL0_Mapped: 82.41,
+    });
+    expect(signals.memory_buffers.kv_cache_mib).toEqual({MTL0: 45});
+    expect(signals.offloaded_layers).toBe(31);
+    expect(signals.total_layers).toBe(31);
+  });
+
+  it('returns "metal" on the iPhone full offload', () => {
+    const backend = deriveEffectiveBackend(
+      deriveLogSignals(IPHONE_METAL_LINES),
+    );
+    expect(backend).toBe('metal');
+    expect(requestSatisfiedBy('gpu', backend)).toBe(true);
+  });
+
+  it('returns "cpu+metal-partial" when offloaded < total', () => {
+    const backend = deriveEffectiveBackend(
+      signalsWith({CPU_Mapped: 40.1, MTL0_Mapped: 70.99}, 20, 31),
+    );
+    expect(backend).toBe('cpu+metal-partial');
+    expect(requestSatisfiedBy('gpu', backend)).toBe(true);
+  });
+
+  it('returns "metal" for an MTL0 key with no offload line', () => {
+    expect(deriveEffectiveBackend(signalsWith({MTL0: 82.41}, null, null))).toBe(
+      'metal',
+    );
+  });
+
+  it('returns "cpu" on the simulator (0 layers offloaded, no MTL weights)', () => {
+    const backend = deriveEffectiveBackend(
+      deriveLogSignals(IOS_SIMULATOR_LINES),
+    );
+    expect(backend).toBe('cpu');
+    expect(requestSatisfiedBy('gpu', backend)).toBe(false);
+  });
+});
+
+describe('requestSatisfiedBy', () => {
+  const cases: [RequestedBackend, EffectiveBackend, boolean][] = [
+    ['cpu', 'cpu', true],
+    ['cpu', 'opencl', false],
+    ['cpu', 'metal', false],
+    ['gpu', 'opencl', true],
+    ['gpu', 'cpu+opencl-partial', true],
+    ['gpu', 'metal', true],
+    ['gpu', 'cpu+metal-partial', true],
+    ['gpu', 'cpu', false],
+    ['gpu', 'hexagon', false],
+    ['gpu', 'unknown', false],
+    ['hexagon', 'hexagon', true],
+    ['hexagon', 'cpu+hexagon-partial', true],
+    ['hexagon', 'metal', false],
+    ['hexagon', 'cpu+metal-partial', false],
+  ];
+
+  it.each(cases)('requested %s, actual %s -> %s', (requested, actual, ok) => {
+    expect(requestSatisfiedBy(requested, actual)).toBe(ok);
   });
 });

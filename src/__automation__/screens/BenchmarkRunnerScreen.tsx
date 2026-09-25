@@ -21,6 +21,7 @@ import {
   deriveLogSignals,
   emptyLogSignals,
   requestSatisfiedBy,
+  type EffectiveBackend,
   type LogSignals,
 } from '../logSignals';
 import {
@@ -114,16 +115,6 @@ export interface BenchConfig {
    * value is echoed in the report's top-level `inter_cell_settle_ms`. */
   inter_cell_settle_ms?: number;
 }
-
-/** Effective backend after parsing native-log signals. Mirrors the
- * OpenCL pair with hexagon arms (WHAT §1c, §8 D2). */
-export type EffectiveBackend =
-  | 'cpu'
-  | 'opencl'
-  | 'cpu+opencl-partial'
-  | 'hexagon'
-  | 'cpu+hexagon-partial'
-  | 'unknown';
 
 interface BenchmarkRunRow {
   model_id: string;

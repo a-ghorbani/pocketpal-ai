@@ -25,17 +25,13 @@
 import * as fs from 'fs';
 import * as path from 'path';
 
+import type {EffectiveBackend} from '../../src/__automation__/logSignals';
+
 export interface BenchmarkRunReport {
   model_id: string;
   quant: string;
   requested_backend: 'cpu' | 'gpu' | 'hexagon';
-  effective_backend:
-    | 'cpu'
-    | 'opencl'
-    | 'cpu+opencl-partial'
-    | 'hexagon'
-    | 'cpu+hexagon-partial'
-    | 'unknown';
+  effective_backend: EffectiveBackend;
   pp_avg: number | null;
   tg_avg: number | null;
   wall_ms: number;
