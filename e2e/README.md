@@ -17,9 +17,9 @@ yarn install
 | `load-stress` | Download model, run multiple load/unload cycles with inference between each. Catches crash-on-reload bugs | ~5-10 min/device |
 | `thinking` | Loads Qwen3-0.6B (thinking model), verifies thinking toggle, thinking bubble appears, toggle off suppresses it | ~3-5 min/device |
 | `diagnostic` | Dumps Appium page source XML at each screen. For debugging selectors, not a real test | ~10s |
-| `benchmark-matrix` | Iterates {models} × {quants} × {backends} on Android, writes canonical JSON report per run. Measurement infrastructure, not an automated gate. | ~25-45 min |
+| `benchmark-matrix` | Iterates {models} × {quants} × {backends} on Android, writes canonical JSON report per run. iOS runs through `yarn bench:ios` instead. Measurement infrastructure, not an automated gate. | ~25-45 min |
 
-## Benchmark Matrix (Android)
+## Benchmark Matrix Runner
 
 Drives the in-app **BenchmarkRunnerScreen** via deep link (`pocketpal://e2e/benchmark`) — no WDIO required for ad-hoc runs. Three tiers gated by `BENCH_TIER`:
 
@@ -31,7 +31,7 @@ Drives the in-app **BenchmarkRunnerScreen** via deep link (`pocketpal://e2e/benc
 
 Model + quant rosters live in [`fixtures/benchmark-models.ts`](fixtures/benchmark-models.ts) (single source: `BENCHMARK_FULL_MODELS`; smaller tiers derived as id filters).
 
-**One-shot run** (assumes E2E-flavor APK is already installed on the device):
+**Android one-shot run** (assumes E2E-flavor APK is already installed on the device):
 
 ```bash
 # 1. Generate config + adb push to device
@@ -55,6 +55,27 @@ BENCH_TIER=full BENCH_MODELS=qwen3.5-2b BENCH_QUANTS=q4_0,q6_k yarn build:bench-
 ```
 
 Heavy models (Phi-3.5, Phi-4-mini, Gemma-4-E2B) are last in the `full` tier; if the OS ANR-kills the app on a heavy CPU bench, partial-row data from earlier cells survives in the JSON report.
+
+### iOS (physical iPhone)
+
+`yarn bench:ios` drives the same matrix with `xcrun devicectl` only (no Appium). It pushes `bench-config.json` into the app's `Documents`, sends the deep link to the already-running app (a link on cold launch is dropped), polls `Documents` for the new `benchmark-report-*.json` until the runner writes its terminal `outcome`, then pulls, stamps and pass-gates the report.
+
+> **`--app` replaces the App Store PocketPal.** iOS has no separate E2E bundle id, so installing the E2E build over `ai.pocketpal` wipes that app's data. Without `--app` the driver uses whatever is installed, which must be an E2E build.
+
+```bash
+# 1. Build the E2E IPA (development signing) -> ios/build/PocketPal.ipa
+yarn ios:build:ipa
+
+# 2. Preview: writes the config, prints the cell count and the devicectl plan, touches no device
+BENCH_TIER=smoke yarn bench:ios --device <udid> --dry-run
+
+# 3. Install and run (udid from `xcrun devicectl list devices`)
+BENCH_TIER=smoke yarn bench:ios --device <udid> --app ../ios/build/PocketPal.ipa
+```
+
+Keep the iPhone unlocked and on power, and do not lock it or switch apps during a run: a suspended app stops writing rows and the run ends `failed:timeout`. The runner holds the screen awake itself, so Auto-Lock need not be changed. Reports land in `e2e/debug-output/benchmarks/` (`--out` to change). Extra env: `BENCH_MAX_WAIT_MIN` (default 60), `BENCH_IOS_SETTLE_S` (15), `BENCH_IOS_START_TIMEOUT_S` (120), and `E2E_DEVICE_NAME` / `E2E_PLATFORM_VERSION` / `E2E_DEVICE_SOC` to override the stamped metadata. See `yarn bench:ios --help`.
+
+Baselines are per platform: `merge-bench-reports.ts` refuses to mix Android and iOS reports, and `benchmark-compare.ts` exits 2 on a cross-platform pair.
 
 ### Baselines (`baselines/benchmark/<device>.json`)
 
@@ -323,7 +344,7 @@ Pricing: $0.17 per device minute
 
 The `benchmark-matrix` spec is **measurement infrastructure**, not an automated gate. It iterates `{models} × {quants} × {backends}` on Android, drives the in-app Benchmark screen for each cell, and writes a canonical JSON report to `e2e/debug-output/benchmarks/benchmark-<device_slug>-<commit>.json`. The JSON is incremental: a mid-matrix crash preserves completed rows.
 
-v1 scope: Android only. iOS (Metal) and Hexagon NPU are explicit follow-ups. The matrix is 2 models × 8 quants × 2 backends = 32 runs at full scale; env-var filters reduce this.
+This spec is Android-only; iOS uses `yarn bench:ios` (see [Benchmark Matrix Runner](#benchmark-matrix-runner)). The matrix is 2 models × 8 quants × 2 backends = 32 runs at full scale; env-var filters reduce this.
 
 ### Usage
 
@@ -405,6 +426,8 @@ Derived from the structured `log_signals` payload, not regex on raw text:
 | `cpu` | No OpenCL init observed — pure CPU path. |
 | `opencl` | OpenCL initialised, all layers offloaded to GPU, no large-buffer regression. |
 | `cpu+opencl-partial` | OpenCL initialised but some layers ran on CPU, or `large_buffer_unsupported` triggered a fallback. |
+| `metal` | Weights on a Metal (`MTL*`) buffer with every layer offloaded (iOS). |
+| `cpu+metal-partial` | Metal buffer present but fewer layers offloaded than the model has. |
 | `unknown` | OpenCL initialised but layer counts absent — investigate `log_signals.raw_matches`. |
 
 A row where `requested_backend=gpu` but `effective_backend=cpu` is the canonical "silent CPU fallback" we want to catch. The comparison script flags this as a regression even when `pp_avg` / `tg_avg` numbers look fine.
