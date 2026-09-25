@@ -292,7 +292,7 @@ describe('contextInitParamsVersions', () => {
       expect(defaultSettings.cache_type_v).toBe('f16');
       expect(defaultSettings.n_gpu_layers).toBe(99);
       expect(defaultSettings.use_mlock).toBe(false);
-      expect(defaultSettings.use_mmap).toBe('true'); // Default for non-Android platforms
+      expect(defaultSettings.use_mmap).toBe('smart'); // Smart everywhere: resolves to true off-Android, size-based on Android
     });
 
     it('should include image_max_tokens with default value', () => {

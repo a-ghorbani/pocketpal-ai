@@ -98,7 +98,7 @@ import {capsMatchBinding} from '../utils/remoteCaps';
 import {resolveModelCaps} from '../utils/modelCaps';
 import type {CapabilityEnv, ModelCapabilityView} from '../utils/modelCaps';
 import {t} from '../locales';
-import {resolveUseMmap} from '../utils/memorySettings';
+import {resolveUseMmap, enforceMmapForLargeFile} from '../utils/memorySettings';
 import {
   createContextInitParams,
   createDefaultContextInitParams,
@@ -549,6 +549,17 @@ class ModelStore {
       effectiveUseMmap = true;
     }
 
+    // Safety clamp: malloc'ing a 1GB+ file is what OOM-kills Android on 2GB+
+    // models (explicit 'false' included) — enforceMmapForLargeFile flips it
+    // back on only when the malloc path provably doesn't fit.
+    if (!effectiveUseMmap && filePath) {
+      effectiveUseMmap = await enforceMmapForLargeFile(
+        effectiveUseMmap,
+        currentUseMmap ?? 'smart',
+        filePath,
+      );
+    }
+
     const mode = draftConfig?.mode ?? 'off';
     const speculative = mode !== 'off';
 
@@ -787,19 +798,22 @@ class ModelStore {
 
     await this.initializeGpuSettings(); // Should be awaited to ensure GPU settings are applied before initializing context
 
-    // Initialize available memory ceiling at app startup if not set
-    if (this.availableMemoryCeiling === undefined) {
-      try {
-        const availableBytes = await NativeHardwareInfo.getAvailableMemory();
-        runInAction(() => {
-          this.availableMemoryCeiling = availableBytes;
-        });
-      } catch (error) {
-        // Fallback when native call fails
-        console.warn(
-          '[ModelStore] Native getAvailableMemory failed, using fallback:',
-          error,
-        );
+    // Refresh the available-memory snapshot on every launch. Free RAM is
+    // point-in-time data: reusing a persisted value lets the ceiling go stale
+    // (warnings silently disappear), so always prefer a fresh reading and
+    // only fall back to history/heuristic when the native call fails.
+    try {
+      const availableBytes = await NativeHardwareInfo.getAvailableMemory();
+      runInAction(() => {
+        this.availableMemoryCeiling = availableBytes;
+      });
+    } catch (error) {
+      // Fallback when native call fails
+      console.warn(
+        '[ModelStore] Native getAvailableMemory failed, using fallback:',
+        error,
+      );
+      if (this.availableMemoryCeiling === undefined) {
         const totalMemory = await DeviceInfo.getTotalMemory();
         // Use conservative heuristic: min(60% of RAM, RAM - 1.2GB)
         const fallbackCeiling = Math.min(
@@ -2533,16 +2547,12 @@ class ModelStore {
         }
       });
 
-      // Update availableMemoryCeiling after release (clean state)
+      // Refresh the snapshot after release (clean state gives the best
+      // reading). Overwrite rather than max: free RAM only goes stale upward.
       try {
         const availableBytes = await NativeHardwareInfo.getAvailableMemory();
         runInAction(() => {
-          if (
-            this.availableMemoryCeiling === undefined ||
-            availableBytes > this.availableMemoryCeiling
-          ) {
-            this.availableMemoryCeiling = availableBytes;
-          }
+          this.availableMemoryCeiling = availableBytes;
         });
       } catch (error) {
         console.warn(
