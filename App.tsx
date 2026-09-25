@@ -37,6 +37,7 @@ import {MarkdownProvider} from './src/components/MarkdownView';
 import {AutomationBridge, BenchmarkRunnerScreen} from './src/__automation__';
 import {
   ChatScreen,
+  CustomToolsScreen,
   ModelsScreen,
   SettingsScreen,
   BenchmarkScreen,
@@ -174,6 +175,21 @@ const App = observer(() => {
                             options={{
                               headerStyle: styles.headerWithoutDivider,
                               title: currentL10n.screenTitles.appInfo,
+                            }}
+                          />
+
+                          {/*
+                      Custom HTTP tools manager. Hidden from the drawer
+                      sidebar via drawerItemStyle:{display:'none'}; the
+                      Settings card is the only way in.
+                    */}
+                          <Drawer.Screen
+                            name={ROUTES.CUSTOM_TOOLS}
+                            component={gestureHandlerRootHOC(CustomToolsScreen)}
+                            options={{
+                              headerStyle: styles.headerWithoutDivider,
+                              title: currentL10n.screenTitles.customTools,
+                              drawerItemStyle: {display: 'none'},
                             }}
                           />
 

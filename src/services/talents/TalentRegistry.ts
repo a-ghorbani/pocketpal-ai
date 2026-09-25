@@ -22,6 +22,11 @@ export class TalentRegistry {
     return this.engines.has(name);
   }
 
+  /** Remove an engine by name. Returns true when one was registered. */
+  unregister(name: string): boolean {
+    return this.engines.delete(name);
+  }
+
   /** Return all registered engines. */
   getAll(): TalentEngine[] {
     return Array.from(this.engines.values());

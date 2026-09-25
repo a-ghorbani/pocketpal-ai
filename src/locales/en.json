@@ -205,7 +205,13 @@
     "removeRemoteModel": "Remove {{modelName}} ({{serverName}})?",
     "retryConnection": "Retry",
     "enterUrlManually": "Enter URL manually",
-    "manageServers": "Manage Servers"
+    "manageServers": "Manage Servers",
+    "customTools": {
+      "title": "Custom tools",
+      "description": "Define your own HTTP tools, so a Pal can call a server you run.",
+      "count": "{{count}} defined",
+      "openButton": "Manage"
+    }
   },
   "memory": {
     "shortWarning": "Memory Warning",
@@ -1013,7 +1019,12 @@
         "total": "Total: ",
         "usage": "Usage: "
       },
-      "byteSizes": ["Bytes", "KB", "MB", "GB"]
+      "byteSizes": [
+        "Bytes",
+        "KB",
+        "MB",
+        "GB"
+      ]
     },
     "chatView": {
       "menuItems": {
@@ -1029,6 +1040,65 @@
       "importPals": "Import pals",
       "importSuccess": "Successfully imported {{count}} pal(s).",
       "importError": "Failed to import pals. Please check the file format."
+    },
+    "toolUsedChip": {
+      "expand": "Show tool details",
+      "collapse": "Hide tool details",
+      "argumentsLabel": "Arguments",
+      "responseLabel": "Response"
+    },
+    "customToolSheet": {
+      "createTitle": "New tool",
+      "editTitle": "Edit tool",
+      "nameLabel": "Name",
+      "namePlaceholder": "get_weather",
+      "descriptionLabel": "Description",
+      "descriptionPlaceholder": "What this tool does, for the model",
+      "urlLabel": "URL",
+      "urlPlaceholder": "http://127.0.0.1:8765/notes/{{id}}",
+      "queryLabel": "Query parameters",
+      "headersLabel": "Headers",
+      "bodyLabel": "Body (JSON)",
+      "addRow": "Add row",
+      "removeRow": "Remove",
+      "keyPlaceholder": "name",
+      "valuePlaceholder": "value or {{arg}}",
+      "rawSchemaLabel": "JSON Schema",
+      "responseLabel": "Response handling",
+      "extractLabel": "Extract (JSONPath subset)",
+      "fieldsLabel": "Fields (comma separated)",
+      "maxItemsLabel": "Max items",
+      "templateLabel": "Item template",
+      "maxCharsLabel": "Max characters",
+      "wrapUntrustedLabel": "Wrap the response as untrusted",
+      "timeoutLabel": "Timeout (ms)",
+      "requiresConfirmationLabel": "Ask before each call",
+      "secretsLabel": "Secrets",
+      "secretSet": "Set",
+      "secretNotSet": "Not set",
+      "secretPlaceholder": "Enter a value to replace it",
+      "secretMinLength": "A secret must be at least 4 characters.",
+      "secretClear": "Clear",
+      "nonLoopbackWarning": "This tool sends requests off this device. Only point it at a host you trust.",
+      "bodyJsonInvalid": "The body is not valid JSON.",
+      "schemaJsonInvalid": "The JSON Schema is not valid JSON.",
+      "saveFailed": "Couldn't save the secrets. Please try again.",
+      "save": "Save",
+      "errors": {
+        "shape_invalid": "This tool's shape is not valid.",
+        "name_invalid": "Use 1-64 characters: letters, digits, underscore or hyphen.",
+        "name_builtin": "\"{{name}}\" is a built-in talent name. Choose another.",
+        "name_taken": "\"{{name}}\" is already used by another tool.",
+        "description_empty": "Add a description so the model knows when to use this.",
+        "required_not_declared": "Required argument \"{{name}}\" is not declared in the parameters.",
+        "placeholder_undeclared": "{{name}} is used in the request but not declared as a parameter.",
+        "url_scheme": "The URL must start with http:// or https://.",
+        "url_userinfo": "Remove the user:password part of the URL.",
+        "url_placeholder_in_origin": "Placeholders are allowed in the path only, not in the host or port.",
+        "secret_placement": "A secret can only go in a query value or the Authorization header. Elsewhere PocketPal cannot keep the value out of what the model sees or what an export file carries.",
+        "body_not_allowed": "A {{method}} request cannot carry a body.",
+        "body_placeholder_mixed": "A body placeholder must be the whole value, with no text around it."
+      }
     }
   },
   "palsScreen": {
@@ -1175,7 +1245,8 @@
     "benchmark": "Benchmark",
     "settings": "Settings",
     "appInfo": "App Info",
-    "testCompletion": "Test Completion"
+    "testCompletion": "Test Completion",
+    "customTools": "Custom tools"
   },
   "chat": {
     "conversationReset": "Conversation reset!",
@@ -1241,6 +1312,14 @@
       "searchResultsTitle": "Search results",
       "showResultsAccessibilityLabel": "Show web search results for {{query}}",
       "openLinkError": "Couldn't open this link."
+    },
+    "toolConfirmation": {
+      "title": "Run this tool?",
+      "description": "{{name}} wants to run. Review what it will do before approving.",
+      "detailLabel": "Request",
+      "argumentsLabel": "Arguments",
+      "approve": "Approve",
+      "decline": "Decline"
     }
   },
   "htmlPreview": {
@@ -1580,5 +1659,27 @@
     "titleByPal": "{{name}} is downloading",
     "titleByModel": "{{name}} is downloading",
     "extraInProgress": "+{{count}} more in progress"
+  },
+  "customToolsScreen": {
+    "title": "Custom tools",
+    "empty": "No custom tools yet.",
+    "emptyHint": "Create one, or import the ready-made Termux example described in docs/custom-tools/README.md.",
+    "create": "New tool",
+    "import": "Import",
+    "export": "Export",
+    "exported": "Copied {{count}} tools to the clipboard.",
+    "exportEmpty": "There is nothing to export yet.",
+    "imported": "Imported {{count}} tools.",
+    "importRejected": "Skipped {{count}} that could not be imported.",
+    "importFailed": "Couldn't read that file.",
+    "delete": "Delete",
+    "edit": "Edit",
+    "deleteConfirmTitle": "Delete {{name}}?",
+    "deleteConfirmMessage": "Its stored secrets are deleted with it.",
+    "cancel": "Cancel",
+    "badgeNonLoopback": "Sends off device",
+    "badgeNoConfirmation": "No confirmation",
+    "badgeInvalid": "Invalid, edit to fix",
+    "badgeNameConflict": "Name in use, rename"
   }
 }

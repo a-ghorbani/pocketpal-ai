@@ -11,6 +11,10 @@ export const ROUTES = {
   // Dev tools route. Only available in debug mode.
   DEV_TOOLS: 'Dev Tools',
 
+  // Custom HTTP tools manager. Hidden from the drawer sidebar via
+  // drawerItemStyle:{display:'none'}; reached from the Settings card.
+  CUSTOM_TOOLS: 'Custom Tools',
+
   // E2E-only deep-link-driven matrix runner. Hidden from drawer sidebar via
   // drawerItemStyle:{display:'none'}; reachable only by the deep link
   // pocketpal://e2e/benchmark in the e2e flavor build. The URL prefix,

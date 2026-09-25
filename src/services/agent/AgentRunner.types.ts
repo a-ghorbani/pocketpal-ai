@@ -88,6 +88,17 @@ export const initialAgentUiState: AgentUiState = {
 };
 
 /**
+ * One pending confirmation. `detail` is the engine's secret-free one-liner
+ * from `confirmationDetail`, or null when it declares none or throws.
+ */
+export interface ToolConfirmationRequest {
+  call: AgentToolCall;
+  toolName: string;
+  args: Record<string, unknown>;
+  detail: string | null;
+}
+
+/**
  * Inputs to `runAgent`. The runner has no React/MobX/store imports —
  * the talent registry is injected via `talentLookup` and the message id
  * (already created by the hook before calling) is passed in.
@@ -112,4 +123,10 @@ export interface AgentRunOptions {
   messageId: string;
   maxTurns?: number;
   signal?: AbortSignal;
+  /**
+   * Asked before executing an engine that declares `requiresConfirmation`.
+   * Absent means such calls are declined (fail closed). A rejection counts as
+   * a decline; neither ever makes the run throw or emit `run_failed`.
+   */
+  confirmToolCall?(req: ToolConfirmationRequest): Promise<boolean>;
 }

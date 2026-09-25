@@ -49,6 +49,15 @@ export interface SystemPromptContext {
   activeTalents: ReadonlySet<string>;
 }
 
+/**
+ * Handed to `execute` only by engines that declare `timeoutMs`; the signal
+ * aborts on the deadline or on run abort. Engines that declare neither gate
+ * field are called with no second argument at all.
+ */
+export interface TalentExecuteContext {
+  signal: AbortSignal;
+}
+
 export interface TalentEngine {
   readonly name: string;
   /**
@@ -57,11 +66,34 @@ export interface TalentEngine {
    * banner trigger threshold.
    */
   readonly recommendedContextTokens?: number;
-  execute(args: Record<string, any>): Promise<TalentResult>;
+  /** When true, `AgentRunner` asks the user before calling `execute`. */
+  readonly requiresConfirmation?: boolean;
+  /** When a finite number > 0, `AgentRunner` races `execute` against this
+   *  deadline and the run signal, passing `ctx.signal`. */
+  readonly timeoutMs?: number;
+  /**
+   * Secret-free one-liner shown on the confirmation sheet. Must never resolve
+   * a `{{secret.*}}` placeholder or expose a credential.
+   */
+  confirmationDetail?(args: Record<string, any>): string | null;
+  execute(
+    args: Record<string, any>,
+    ctx?: TalentExecuteContext,
+  ): Promise<TalentResult>;
   toToolDefinition(): ToolDefinition;
   /**
    * Optional system-prompt fragment; folded into the single leading system
    * message by `assembleMessages` — a talent must never emit its own.
    */
   systemPromptFragment?(ctx: SystemPromptContext): string | null;
+}
+
+/**
+ * A producer of engines — `builtin`, `custom`, later `mcp`. A source owns the
+ * names it registers and never replaces a name owned by another source; the
+ * bridge re-reads `engines()` inside a MobX reaction.
+ */
+export interface TalentSource {
+  readonly id: string;
+  engines(): TalentEngine[];
 }
