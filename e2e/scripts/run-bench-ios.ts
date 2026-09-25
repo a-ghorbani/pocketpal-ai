@@ -38,6 +38,7 @@ const DEVICE_CONFIG_PATH = 'Documents/bench-config.json';
 const APP_PROCESS_PATH = 'PocketPal.app/PocketPal';
 const UNZIPPED_APP_PLACEHOLDER = '<unzipped>/Payload/*.app';
 const STABLE_COMPLETE_POLLS = 2;
+export const STALL_MS = 15 * 60_000;
 const DEFAULT_OUT = path.join(__dirname, '..', 'debug-output', 'benchmarks');
 
 export interface DriverOptions {
@@ -199,7 +200,12 @@ export type PollVerdict =
   | {state: 'starting'}
   | {state: 'running'; rows: number | null; stableCompletePolls: number}
   | {state: 'done'; markerMissing: boolean}
-  | {state: 'failed'; reason: FailureReason; detail: string};
+  | {
+      state: 'failed';
+      reason: FailureReason;
+      detail: string;
+      stalled?: boolean;
+    };
 
 export interface PollInput {
   /** `null`: no new report yet. `'unparsable'`: pulled mid-rewrite. */
@@ -207,6 +213,8 @@ export interface PollInput {
   expected: number;
   processAlive: boolean;
   stableCompletePolls: number;
+  rowsSeen: number;
+  sinceNewRowMs: number;
   elapsedMs: number;
   startTimeoutMs: number;
   maxWaitMs: number;
@@ -262,23 +270,40 @@ export function evaluatePoll(input: PollInput): PollVerdict {
   return {state: 'running', rows, stableCompletePolls};
 }
 
+const minutes = (ms: number) => Math.round(ms / 60_000);
+
 function timedOut(input: PollInput): PollVerdict {
+  const lastRow =
+    input.rowsSeen === 0
+      ? 'no row yet'
+      : `last new row ${minutes(input.sinceNewRowMs)} min ago`;
   return {
     state: 'failed',
     reason: 'timeout',
-    detail: `no terminal outcome within ${input.maxWaitMs / 60_000} min`,
+    detail: `max wait ${minutes(input.maxWaitMs)} min reached with ${input.rowsSeen}/${input.expected} rows; ${lastRow}`,
+    stalled: input.sinceNewRowMs >= STALL_MS,
   };
 }
 
-const FAILURE_HINTS: Record<FailureReason, string> = {
+const FAILURE_HINTS: Record<Exclude<FailureReason, 'timeout'>, string> = {
   autostart:
     'the deep link never started the matrix. Check that the installed app is an E2E build (yarn ios:build:ipa), that bench-config.json reached Documents, and that the app was running when the link arrived.',
   'count-mismatch': 'a row write was lost; inspect the report.',
   'runner-error': 'the runner aborted; the outcome names the error.',
   'app-exited': 'the app died mid-matrix (OOM or thermal).',
-  timeout:
-    'rows stopped arriving. The device was probably locked or the app backgrounded.',
 };
+
+function failureHint(
+  verdict: Extract<PollVerdict, {state: 'failed'}>,
+  maxWaitMs: number,
+): string {
+  if (verdict.reason !== 'timeout') {
+    return FAILURE_HINTS[verdict.reason];
+  }
+  return verdict.stalled
+    ? `no new row for ${minutes(STALL_MS)} min or more. The device was probably locked or the app backgrounded (a long model download looks the same).`
+    : `rows were still arriving. Rerun with a larger BENCH_MAX_WAIT_MIN (now ${minutes(maxWaitMs)}).`;
+}
 
 export interface DriverResult {
   state: 'dry-run' | 'done' | 'failed';
@@ -425,6 +450,7 @@ export async function run(
   let reportName: string | undefined;
   let lastGood: ParsedReport | null = null;
   let failedPulls = 0;
+  let lastNewRowAt = start;
   deps.log('waiting for report shell');
 
   for (;;) {
@@ -440,12 +466,16 @@ export async function run(
       }
     }
     const pulled = reportName ? pullReport(opts, reportName, deps) : null;
+    const now = deps.now();
     const current = pulled?.report === 'unparsable' ? null : pulled;
     if (pulled?.report === 'unparsable') {
       failedPulls++;
       deps.log(`pull failed (${failedPulls} in a row): ${pulled.error}`);
     } else if (current) {
       failedPulls = 0;
+      if (current.report.runs.length > (lastGood?.report.runs.length ?? 0)) {
+        lastNewRowAt = now;
+      }
       lastGood = current;
     }
     const verdict = evaluatePoll({
@@ -453,7 +483,9 @@ export async function run(
       expected,
       processAlive: pulled ? appAlive(opts.device, deps) : true,
       stableCompletePolls,
-      elapsedMs: deps.now() - start,
+      rowsSeen: lastGood?.report.runs.length ?? 0,
+      sinceNewRowMs: now - lastNewRowAt,
+      elapsedMs: now - start,
       startTimeoutMs: opts.startTimeoutMs,
       maxWaitMs: opts.maxWaitMs,
     });
@@ -504,7 +536,7 @@ export async function run(
     }
 
     deps.log(`failed:${verdict.reason}: ${verdict.detail}`);
-    deps.log(`hint: ${FAILURE_HINTS[verdict.reason]}`);
+    deps.log(`hint: ${failureHint(verdict, opts.maxWaitMs)}`);
     return {
       state: 'failed',
       expected,

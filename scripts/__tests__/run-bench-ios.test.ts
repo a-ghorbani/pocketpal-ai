@@ -4,6 +4,7 @@ import * as path from 'path';
 
 import {
   DEEP_LINK,
+  STALL_MS,
   buildPlan,
   evaluatePoll,
   isAppRunning,
@@ -232,6 +233,8 @@ describe('evaluatePoll', () => {
     expected: EXPECTED,
     processAlive: true,
     stableCompletePolls: 0,
+    rowsSeen: 0,
+    sinceNewRowMs: 60_000,
     elapsedMs: 60_000,
     startTimeoutMs: 120_000,
     maxWaitMs: 3_600_000,
@@ -298,8 +301,50 @@ describe('evaluatePoll', () => {
     ],
     [
       'rows still arriving at max wait',
-      {report: {runs: rows(40)}, elapsedMs: 3_600_000},
-      {state: 'failed', reason: 'timeout'},
+      {report: {runs: rows(40)}, rowsSeen: 40, elapsedMs: 3_600_000},
+      {
+        state: 'failed',
+        reason: 'timeout',
+        stalled: false,
+        detail:
+          'max wait 60 min reached with 40/72 rows; last new row 1 min ago',
+      },
+    ],
+    [
+      'no new row for the stall window at max wait',
+      {
+        report: {runs: rows(40)},
+        rowsSeen: 40,
+        sinceNewRowMs: STALL_MS,
+        elapsedMs: 3_600_000,
+      },
+      {state: 'failed', reason: 'timeout', stalled: true},
+    ],
+    [
+      'past the stall window overall, but a recent row',
+      {
+        report: {runs: rows(10)},
+        rowsSeen: 10,
+        sinceNewRowMs: STALL_MS - 60_000,
+        elapsedMs: STALL_MS + 5 * 60_000,
+        maxWaitMs: STALL_MS + 5 * 60_000,
+      },
+      {state: 'failed', reason: 'timeout', stalled: false},
+    ],
+    [
+      'max wait under the stall window with no row yet',
+      {
+        report: {runs: []},
+        maxWaitMs: 600_000,
+        elapsedMs: 600_000,
+        sinceNewRowMs: 600_000,
+      },
+      {
+        state: 'failed',
+        reason: 'timeout',
+        stalled: false,
+        detail: expect.stringContaining('0/72 rows; no row yet'),
+      },
     ],
     [
       'unparsable pull retries',
@@ -633,5 +678,38 @@ describe('run against a scripted device', () => {
     expect(logs).toContain(
       'pull failed (2 in a row): copy failed: device disconnected',
     );
+  });
+
+  const failureLines = (logs: string[]) => ({
+    detail: logs.find(l => l.startsWith('failed:timeout: ')) ?? '',
+    hints: logs.filter(l => l.startsWith('hint: ')),
+  });
+
+  it('times out with the max-wait hint while rows are still arriving past the stall window', async () => {
+    const pollMs = STALL_MS / 3;
+    const opts = options({dryRun: false, pollMs, maxWaitMs: 5 * pollMs});
+    const {deps, logs} = scriptedDevice({
+      pulls: [1, 2, 3, 4, 5].map(n => ({runs: okRows(n)})),
+    });
+    await expect(run(opts, deps)).resolves.toMatchObject({
+      state: 'failed',
+      reason: 'timeout',
+    });
+    const {detail, hints} = failureLines(logs);
+    expect(detail).toContain(`5/${expected} rows; last new row 0 min ago`);
+    expect(hints.some(h => h.includes('BENCH_MAX_WAIT_MIN'))).toBe(true);
+    expect(hints.some(h => h.includes('locked'))).toBe(false);
+  });
+
+  it('times out blaming a lock when no new row arrives for the stall window', async () => {
+    const opts = options({dryRun: false, maxWaitMs: STALL_MS + 2 * 30_000});
+    const {deps, logs} = scriptedDevice({pulls: [{runs: okRows(2)}]});
+    await expect(run(opts, deps)).resolves.toMatchObject({
+      state: 'failed',
+      reason: 'timeout',
+    });
+    const {detail, hints} = failureLines(logs);
+    expect(detail).toContain(`2/${expected} rows; last new row 16 min ago`);
+    expect(hints.some(h => h.includes('locked'))).toBe(true);
   });
 });
