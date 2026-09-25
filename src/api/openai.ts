@@ -7,22 +7,17 @@ import {
   ReasoningIntent,
   ToolCall,
 } from '../utils/completionTypes';
-import {RemoteModelCaps} from '../utils/types';
-
-/**
- * Raw API response shape from OpenAI /v1/models. The optional fields are what
- * a llama.cpp server adds: the first three arrive on the row itself, the last
- * is lifted from the sibling `models[]` array a single-model server emits.
- */
-export interface RemoteModelInfo {
-  id: string;
-  object: string;
-  owned_by: string;
-  status?: {value?: string; args?: string[]};
-  architecture?: {input_modalities?: string[]; output_modalities?: string[]};
-  meta?: {n_ctx?: number; n_ctx_train?: number; [key: string]: unknown};
-  capabilities?: string[];
-}
+import {RemoteModelInfo} from '../utils/types';
+import {
+  CONNECTION_TIMEOUT_MS,
+  IDLE_TIMEOUT_MS,
+  buildHeaders,
+  normalizeUrl,
+  resolveTimeout,
+} from './http';
+import {bodyExtras, readFinish} from './servers';
+import type {FinishRead, RemoteEndpoint} from './servers';
+import type {Samplers} from '../utils/samplerParams';
 
 /** Chat message type compatible with OpenAI API format */
 export interface OpenAIChatMessage {
@@ -71,9 +66,8 @@ export type OpenAIResponseFormat =
 export interface StreamChatParams {
   messages: OpenAIChatMessage[];
   model: string;
-  temperature?: number;
-  top_p?: number;
-  max_tokens?: number;
+  /** Every sampler the caller wants forwarded, under the app's own names. */
+  samplers: Samplers;
   stop?: string | string[];
   stream?: boolean;
   tools?: OpenAIToolDefinition[];
@@ -159,25 +153,6 @@ function assembleFinalToolCalls(
     }));
 }
 
-const CONNECTION_TIMEOUT_MS = 30000;
-const IDLE_TIMEOUT_MS = 60000;
-
-/**
- * Single normalization site for a per-server timeout. An undefined, NaN,
- * non-finite, or non-positive value falls back to the supplied default.
- * Callers (stores, engine, sheets) forward raw values; only this layer
- * enforces the floor.
- */
-function resolveTimeout(
-  timeoutMs: number | undefined,
-  fallback: number,
-): number {
-  if (timeoutMs == null || !Number.isFinite(timeoutMs) || timeoutMs <= 0) {
-    return fallback;
-  }
-  return timeoutMs;
-}
-
 /**
  * Lightweight type guard for SSE delta shape.
  * Returns true if the parsed object looks like an OpenAI chat completion chunk.
@@ -192,26 +167,6 @@ function isValidChatChunk(parsed: any): boolean {
   const choice = parsed.choices[0];
   // delta may be empty object {} or contain content/reasoning_content
   return choice.delta !== undefined || choice.finish_reason !== undefined;
-}
-
-/**
- * Build headers for OpenAI-compatible API requests.
- */
-function buildHeaders(apiKey?: string): Record<string, string> {
-  const headers: Record<string, string> = {
-    'Content-Type': 'application/json',
-  };
-  if (apiKey) {
-    headers.Authorization = `Bearer ${apiKey}`;
-  }
-  return headers;
-}
-
-/**
- * Normalize server URL: remove trailing slash.
- */
-function normalizeUrl(serverUrl: string): string {
-  return serverUrl.replace(/\/+$/, '');
 }
 
 /** Result from fetchModelsWithHeaders: models + raw response headers. */
@@ -314,74 +269,6 @@ export async function fetchModels(
 }
 
 /**
- * Fetch model capabilities from a llama.cpp server's GET /props endpoint.
- * Pure: parses the response into caps and never throws — a timeout, non-2xx,
- * or malformed body resolves to `{}` so the caller's models path and
- * connection are never affected. `/props` is llama.cpp-specific; callers gate
- * on serverType before invoking.
- *
- * `modelId` scopes the request (`?model=<id>`). A multi-model router answers
- * the bare form with a placeholder (`model_path: 'none'`, `n_ctx: 0`,
- * `modalities` absent) that describes no model, so a field is only ever
- * returned when the body describes an actually loaded model. Absent field =
- * unknown; the caller merges field-wise and never blanks a known value.
- *
- * Key names verified against live llama.cpp builds (b9910, b9976): context
- * window is `default_generation_settings.n_ctx` (top-level `n_ctx` is an
- * older-build fallback); vision is `modalities.vision`.
- */
-export async function fetchServerProps(
-  serverUrl: string,
-  apiKey?: string,
-  timeoutMs?: number,
-  modelId?: string,
-): Promise<RemoteModelCaps> {
-  const url =
-    `${normalizeUrl(serverUrl)}/props` +
-    (modelId ? `?model=${encodeURIComponent(modelId)}` : '');
-  const controller = new AbortController();
-  const timeout = setTimeout(
-    () => controller.abort(),
-    resolveTimeout(timeoutMs, PROPS_TIMEOUT_MS),
-  );
-
-  try {
-    const response = await fetch(url, {
-      method: 'GET',
-      headers: buildHeaders(apiKey),
-      signal: controller.signal,
-    });
-    if (!response.ok) {
-      return {};
-    }
-    const data = await response.json();
-    const caps: RemoteModelCaps = {};
-
-    const nCtx: unknown =
-      data?.default_generation_settings?.n_ctx ?? data?.n_ctx;
-    if (typeof nCtx === 'number' && Number.isFinite(nCtx) && nCtx > 0) {
-      caps.contextLength = nCtx;
-    }
-
-    const modelPath: unknown = data?.model_path;
-    const describesModel =
-      (typeof modelPath === 'string' &&
-        modelPath !== '' &&
-        modelPath !== 'none') ||
-      caps.contextLength !== undefined;
-    if (describesModel) {
-      caps.supportsVision = data?.modalities?.vision === true;
-    }
-
-    return caps;
-  } catch {
-    return {};
-  } finally {
-    clearTimeout(timeout);
-  }
-}
-
-/**
  * Test connection to an OpenAI-compatible server.
  * Returns ok status and model count.
  */
@@ -395,132 +282,6 @@ export async function testConnection(
     return {ok: true, modelCount: models.length};
   } catch (error: any) {
     return {ok: false, modelCount: 0, error: error.message || 'Unknown error'};
-  }
-}
-
-const DETECT_TIMEOUT_MS = 5000;
-
-// A fire-and-forget probe must neither inherit the 30 s connection default nor
-// an arbitrarily large user-set timeout.
-export const PROPS_TIMEOUT_MS = 5000;
-
-/**
- * Detect server type from response headers and model metadata.
- * Checks (cheapest first):
- * 1. Server header === 'llama.cpp'
- * 2. Any model owned_by === 'organization_owner' → LM Studio
- * 3. GET / body === 'Ollama is running' → Ollama
- * 4. Unknown → ''
- */
-export async function detectServerType(
-  serverUrl: string,
-  models: RemoteModelInfo[],
-  headers: Record<string, string>,
-): Promise<string> {
-  // 1. llama.cpp sets a Server header
-  const serverHeader = headers.server || headers.Server || '';
-  if (serverHeader === 'llama.cpp') {
-    return 'llama.cpp';
-  }
-
-  // 2. LM Studio sets owned_by to 'organization_owner'
-  if (models.some(m => m.owned_by === 'organization_owner')) {
-    return 'LM Studio';
-  }
-
-  // 3. Ollama responds with 'Ollama is running' at GET /
-  try {
-    const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), DETECT_TIMEOUT_MS);
-    try {
-      const response = await fetch(normalizeUrl(serverUrl), {
-        method: 'GET',
-        signal: controller.signal,
-      });
-      const body = await response.text();
-      if (body.trim() === 'Ollama is running') {
-        return 'Ollama';
-      }
-    } finally {
-      clearTimeout(timeout);
-    }
-  } catch {
-    // Probe failed — not Ollama
-  }
-
-  return '';
-}
-
-/**
- * Stream a chat completion from an OpenAI-compatible server.
- * POST /v1/chat/completions with stream: true
- *
- * Uses XMLHttpRequest with incremental events for React Native compatibility.
- * React Native's fetch does not expose response.body (ReadableStream), so
- * XMLHttpRequest with onprogress is the standard approach for SSE streaming.
- */
-/**
- * Translate the reasoning intent into the per-serverType wire payload. Gating
- * is keyed on the PERSISTED serverType (never live detection). An unknown /
- * strict server receives no reasoning controls — omit beats a 400.
- *
- * - llama.cpp: reasoning_format always 'auto' (no-op for non-reasoning models;
- *   prevents raw channel/think markers leaking into content). ON+effort →
- *   + chat_template_kwargs:{reasoning_effort}; OFF → + chat_template_kwargs:
- *   {enable_thinking:false}. (ignores unknown → safe)
- * - vLLM (modern): ON+effort → chat_template_kwargs:{reasoning_effort}; ON →
- *   nothing; OFF → chat_template_kwargs:{enable_thinking:false}. (ignores unknown)
- * - LM Studio: on/off only — its chat API ignores reasoning_effort. ON →
- *   nothing; OFF → chat_template_kwargs:{enable_thinking:false}.
- * - Ollama (/v1): OFF → reasoning_effort:'none' (safe no-op). NEVER think:true,
- *   NEVER a non-'none' effort (hard-400 risk). Graded effort deferred.
- * - OpenAI: reasoning_effort:<value> only when axis-2 effort is known for the
- *   model id; nothing for on/off (400 on misapplied params).
- * - unknown / old vLLM: omit everything.
- */
-export function buildReasoningPayload(
-  serverType: string | undefined,
-  reasoning: ReasoningIntent | undefined,
-): Record<string, any> {
-  if (!reasoning) {
-    return {};
-  }
-  const {enabled, effort} = reasoning;
-  switch (serverType) {
-    case 'llama.cpp':
-      // reasoning_format is always 'auto': a no-op for non-reasoning models and
-      // the value that extracts reasoning into reasoning_content instead of
-      // leaking raw channel/think markers into content (e.g. gemma-4 emits an
-      // empty <|channel>thought block even when thinking is off). On/off is
-      // carried solely by enable_thinking.
-      if (!enabled) {
-        return {
-          reasoning_format: 'auto',
-          chat_template_kwargs: {enable_thinking: false},
-        };
-      }
-      return effort
-        ? {
-            reasoning_format: 'auto',
-            chat_template_kwargs: {reasoning_effort: effort},
-          }
-        : {reasoning_format: 'auto'};
-    case 'vLLM':
-      if (!enabled) {
-        return {chat_template_kwargs: {enable_thinking: false}};
-      }
-      return effort ? {chat_template_kwargs: {reasoning_effort: effort}} : {};
-    case 'LM Studio':
-      // On/off only; the LM Studio chat API ignores reasoning_effort.
-      return enabled ? {} : {chat_template_kwargs: {enable_thinking: false}};
-    case 'Ollama':
-      // OFF sends a safe no-op; ON sends nothing (never think:true).
-      return enabled ? {} : {reasoning_effort: 'none'};
-    case 'OpenAI':
-      return effort ? {reasoning_effort: effort} : {};
-    default:
-      // unknown / old vLLM — omit everything.
-      return {};
   }
 }
 
@@ -672,16 +433,39 @@ async function encodeMessagesForRemote(
   return encoded;
 }
 
+/**
+ * The keys the transport owns. It writes them after the profile's, so a
+ * profile naming one would be silently overwritten — which is why the list is
+ * the type of the transport's own body rather than a copy kept beside it.
+ */
+export const TRANSPORT_BODY_KEYS = [
+  'model',
+  'messages',
+  'stream',
+  'stop',
+  'tools',
+  'tool_choice',
+  'response_format',
+] as const;
+
+export type TransportBodyKey = (typeof TRANSPORT_BODY_KEYS)[number];
+
+/**
+ * Stream a chat completion from an OpenAI-compatible server.
+ * POST /v1/chat/completions with stream: true
+ *
+ * Uses XMLHttpRequest with incremental events for React Native compatibility.
+ * React Native's fetch does not expose response.body (ReadableStream), so
+ * XMLHttpRequest with onprogress is the standard approach for SSE streaming.
+ */
 export async function streamChatCompletion(
   params: StreamChatParams,
-  serverUrl: string,
-  apiKey?: string,
+  endpoint: RemoteEndpoint,
   signal?: AbortSignal,
   onToken?: (data: CompletionStreamData) => void,
-  timeoutMs?: number,
-  serverType?: string,
 ): Promise<CompletionResult> {
-  const url = `${normalizeUrl(serverUrl)}/v1/chat/completions`;
+  const {apiKey, serverType, timeoutMs} = endpoint;
+  const url = `${normalizeUrl(endpoint.url)}/v1/chat/completions`;
   const connectionTimeoutMs = resolveTimeout(timeoutMs, CONNECTION_TIMEOUT_MS);
   const idleTimeoutMs = resolveTimeout(timeoutMs, IDLE_TIMEOUT_MS);
   // Only pay the async encode when a local image is actually attached; the
@@ -708,7 +492,7 @@ export async function streamChatCompletion(
     let tokensPredicted = 0;
     let lastProcessedLength = 0;
     let settled = false;
-    let serverTimings: CompletionResult['timings'] | undefined;
+    let serverFinish: FinishRead | undefined;
     // OpenAI streams partial tool_calls across chunks, indexed by
     // `delta.tool_calls[i].index`. Rebuild the per-call shape here so
     // the final result carries fully formed tool_calls and the streaming
@@ -763,6 +547,43 @@ export async function streamChatCompletion(
     };
 
     /**
+     * Fold one validated chunk into the accumulated turn and hand back its own
+     * delta. Every event goes through here, whether it arrived via onprogress
+     * or was left in the parser buffer for the flush at onload.
+     */
+    const accumulateChunk = (parsed: any) => {
+      const choice = parsed.choices[0];
+      const delta = choice.delta || {};
+      const content = delta.content || '';
+      const reasoningContent = delta.reasoning_content || delta.reasoning || '';
+
+      if (content) {
+        fullContent += content;
+        tokensPredicted++;
+      }
+      if (reasoningContent) {
+        fullReasoningContent += reasoningContent;
+      }
+      if (choice.finish_reason) {
+        finishReason = choice.finish_reason;
+      }
+
+      // The latest chunk that carries timings wins, whatever its
+      // finish_reason.
+      const finish = readFinish(parsed);
+      if (finish.timings) {
+        serverFinish = finish;
+      }
+
+      let toolCallsDelta: ToolCall[] | undefined;
+      if (Array.isArray(delta.tool_calls) && delta.tool_calls.length > 0) {
+        toolCallsDelta = applyToolCallDelta(toolCallAcc, delta.tool_calls);
+      }
+
+      return {content, reasoningContent, toolCallsDelta};
+    };
+
+    /**
      * Process new SSE data from the response.
      * Called from onprogress with the new text chunk.
      */
@@ -778,37 +599,11 @@ export async function streamChatCompletion(
 
         resetIdleTimer();
 
-        const parsed = event as any;
-        const choice = parsed.choices[0];
-        const delta = choice.delta || {};
-        const content = delta.content || '';
-        const reasoningContent =
-          delta.reasoning_content || delta.reasoning || '';
+        const {content, reasoningContent, toolCallsDelta} =
+          accumulateChunk(event);
 
-        if (content) {
-          fullContent += content;
-          tokensPredicted++;
-        }
-        if (reasoningContent) {
-          fullReasoningContent += reasoningContent;
-        }
-        if (choice.finish_reason) {
-          finishReason = choice.finish_reason;
-        }
-
-        // Extract server-side timings (llama.cpp includes these at event level)
-        if (parsed.timings) {
-          serverTimings = parsed.timings;
-        }
-
-        // When tool_calls deltas are present, forward a token event so
-        // the agent loop can react to a tool call beginning to assemble
-        // — same shape llama.rn emits.
-        let toolCallsDelta: ToolCall[] | undefined;
-        if (Array.isArray(delta.tool_calls) && delta.tool_calls.length > 0) {
-          toolCallsDelta = applyToolCallDelta(toolCallAcc, delta.tool_calls);
-        }
-
+        // A tool_calls delta gets a token event of its own so the agent loop
+        // can react to a call beginning to assemble — same shape llama.rn emits.
         if (
           onToken &&
           (content ||
@@ -912,7 +707,8 @@ export async function streamChatCompletion(
         processChunk(remaining);
       }
 
-      // Flush the SSE parser buffer
+      // Flush the SSE parser buffer: a server that closes the stream on a
+      // final frame with no trailing blank line leaves it here.
       for (const event of parser.flush()) {
         if (event === 'done') {
           break;
@@ -920,25 +716,7 @@ export async function streamChatCompletion(
         if (!isValidChatChunk(event)) {
           continue;
         }
-        const parsed = event as any;
-        const choice = parsed.choices[0];
-        const delta = choice.delta || {};
-        if (delta.content) {
-          fullContent += delta.content;
-          tokensPredicted++;
-        }
-        if (delta.reasoning_content || delta.reasoning) {
-          fullReasoningContent += delta.reasoning_content || delta.reasoning;
-        }
-        if (choice.finish_reason) {
-          finishReason = choice.finish_reason;
-        }
-        if (parsed.timings) {
-          serverTimings = parsed.timings;
-        }
-        if (Array.isArray(delta.tool_calls) && delta.tool_calls.length > 0) {
-          applyToolCallDelta(toolCallAcc, delta.tool_calls);
-        }
+        accumulateChunk(event);
       }
 
       // Mirror llama.rn's shape: undefined when no tool_calls were
@@ -958,29 +736,15 @@ export async function streamChatCompletion(
         return;
       }
 
-      // The server evaluates only the prompt tokens it did not already hold in
-      // its KV cache, so the prompt total is `prompt_n + cache_n`. The two keys
-      // are guarded separately: a build too old to report reuse omits `cache_n`
-      // entirely, while a cold prompt on a newer one reports 0, and those are
-      // different facts.
-      const promptTokens =
-        serverTimings &&
-        (serverTimings.prompt_n !== undefined ||
-          serverTimings.cache_n !== undefined)
-          ? (serverTimings.prompt_n ?? 0) + (serverTimings.cache_n ?? 0)
-          : undefined;
-
       const result: CompletionResult = {
         text: fullContent,
         content: fullContent,
         reasoning_content: fullReasoningContent || undefined,
         tool_calls: finalToolCalls,
-        // llama.cpp reports authoritative token counts on `timings`; the server
-        // count wins over the per-event tally. Each field is guarded on its own
-        // key so a server that emits only one does not zero the other.
-        tokens_evaluated: promptTokens,
-        tokens_predicted: serverTimings?.predicted_n ?? tokensPredicted,
-        timings: serverTimings,
+        // The server's own counts win over the per-event tally.
+        tokens_evaluated: serverFinish?.tokensEvaluated,
+        tokens_predicted: serverFinish?.tokensPredicted ?? tokensPredicted,
+        timings: serverFinish?.timings,
       };
 
       switch (finishReason) {
@@ -1040,32 +804,21 @@ export async function streamChatCompletion(
       // by the timeout handler that triggered xhr.abort()
     };
 
-    // Only include params with meaningful values — some providers (e.g. OpenAI
-    // with newer models) reject unsupported or empty params with 400 errors.
-    const requestBody: Record<string, any> = {
+    const transportBody: Partial<Record<TransportBodyKey, any>> = {
       model: params.model,
       messages: encodedMessages,
       stream: true,
     };
-    if (params.temperature != null) {
-      requestBody.temperature = params.temperature;
-    }
-    if (params.top_p != null) {
-      requestBody.top_p = params.top_p;
-    }
-    if (params.max_tokens != null) {
-      requestBody.max_completion_tokens = params.max_tokens;
-    }
     if (params.stop && params.stop.length > 0) {
-      requestBody.stop = params.stop;
+      transportBody.stop = params.stop;
     }
     // Only attach when the caller actually supplied them — empty arrays
     // cause some servers (and their schema validators) to choke.
     if (params.tools && params.tools.length > 0) {
-      requestBody.tools = params.tools;
+      transportBody.tools = params.tools;
     }
     if (params.tool_choice !== undefined) {
-      requestBody.tool_choice = params.tool_choice;
+      transportBody.tool_choice = params.tool_choice;
     }
     if (params.response_format) {
       // OpenAI requires `name` inside json_schema; llama.cpp / Ollama /
@@ -1075,7 +828,7 @@ export async function streamChatCompletion(
         params.response_format.type === 'json_schema' &&
         !params.response_format.json_schema.name
       ) {
-        requestBody.response_format = {
+        transportBody.response_format = {
           ...params.response_format,
           json_schema: {
             ...params.response_format.json_schema,
@@ -1083,25 +836,19 @@ export async function streamChatCompletion(
           },
         };
       } else {
-        requestBody.response_format = params.response_format;
+        transportBody.response_format = params.response_format;
       }
     }
-    // Per-serverType reasoning controls. Merge chat_template_kwargs rather than
-    // overwrite so a future caller-supplied kwarg is preserved.
-    const reasoningPayload = buildReasoningPayload(
-      serverType,
-      params.reasoning,
-    );
-    for (const [key, value] of Object.entries(reasoningPayload)) {
-      if (key === 'chat_template_kwargs') {
-        requestBody.chat_template_kwargs = {
-          ...requestBody.chat_template_kwargs,
-          ...value,
-        };
-      } else {
-        requestBody[key] = value;
-      }
-    }
+
+    // Every key beyond the transport's own comes from the server profile, and
+    // the transport's keys are spread last so a profile cannot shadow one.
+    const requestBody = {
+      ...bodyExtras(serverType, {
+        samplers: params.samplers,
+        reasoning: params.reasoning,
+      }),
+      ...transportBody,
+    };
     xhr.send(JSON.stringify(requestBody));
   });
 }

@@ -1185,6 +1185,47 @@ describe('useChatSession — AssistantTurn integration', () => {
       ).not.toBe('context-full');
     });
 
+    it('re-probes remote capabilities once the model has provably answered', async () => {
+      activateRemoteModel();
+      if (modelStore.context) {
+        modelStore.context.completion = jest.fn().mockResolvedValue({
+          text: 'hello',
+          content: 'hello',
+        });
+      }
+      const {result} = renderHook(() =>
+        useChatSession({current: null}, textMessage.author, mockAssistant),
+      );
+
+      await act(async () => {
+        await result.current.handleSendPress(textMessage);
+      });
+
+      expect(modelStore.reprobeRemoteCapsAfterCompletion).toHaveBeenCalledTimes(
+        1,
+      );
+    });
+
+    it('leaves a finished local turn alone', async () => {
+      if (modelStore.context) {
+        modelStore.context.completion = jest.fn().mockResolvedValue({
+          text: 'hello',
+          content: 'hello',
+        });
+      }
+      const {result} = renderHook(() =>
+        useChatSession({current: null}, textMessage.author, mockAssistant),
+      );
+
+      await act(async () => {
+        await result.current.handleSendPress(textMessage);
+      });
+
+      expect(
+        modelStore.reprobeRemoteCapsAfterCompletion,
+      ).not.toHaveBeenCalled();
+    });
+
     it('a remote turn with no timings reports no count at all', async () => {
       activateRemoteModel();
       if (modelStore.context) {

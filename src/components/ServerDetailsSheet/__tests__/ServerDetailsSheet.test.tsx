@@ -397,6 +397,91 @@ describe('ServerDetailsSheet', () => {
     });
   });
 
+  describe('after a save that invalidates discovery', () => {
+    const renderAndSave = (edit: (getByTestId: any) => void) => {
+      const onDismiss = jest.fn();
+      const {getByTestId} = render(
+        <ServerDetailsSheet
+          isVisible={true}
+          onDismiss={onDismiss}
+          serverId="srv-1"
+        />,
+      );
+      edit(getByTestId);
+      fireEvent.press(getByTestId('save-server-button'));
+      return onDismiss;
+    };
+    const editUrl = (getByTestId: any) =>
+      fireEvent.changeText(
+        getByTestId('server-details-url-input'),
+        'http://localhost:5678',
+      );
+    const editTimeout = (getByTestId: any) =>
+      fireEvent.changeText(getByTestId('server-details-timeout-input'), '600');
+
+    it('closes without waiting on an unreachable url', async () => {
+      (serverStore.updateServer as jest.Mock).mockReturnValueOnce(true);
+      (serverStore.fetchModelsForServer as jest.Mock).mockReturnValueOnce(
+        new Promise(() => {}),
+      );
+
+      const onDismiss = renderAndSave(editUrl);
+
+      await waitFor(() => {
+        expect(onDismiss).toHaveBeenCalled();
+      });
+      expect(serverStore.fetchModelsForServer).toHaveBeenCalledWith('srv-1');
+    });
+
+    it("refetches on the store's word, whatever the sheet edited", async () => {
+      (serverStore.updateServer as jest.Mock).mockReturnValueOnce(true);
+
+      const onDismiss = renderAndSave(editTimeout);
+
+      await waitFor(() => {
+        expect(onDismiss).toHaveBeenCalled();
+      });
+      expect(serverStore.fetchModelsForServer).toHaveBeenCalledWith('srv-1');
+    });
+
+    it('leaves the model list alone when the store kept it', async () => {
+      const onDismiss = renderAndSave(editUrl);
+
+      await waitFor(() => {
+        expect(onDismiss).toHaveBeenCalled();
+      });
+      expect(serverStore.fetchModelsForServer).not.toHaveBeenCalled();
+    });
+
+    it('refetches only once the new key is stored', async () => {
+      (serverStore.updateServer as jest.Mock).mockReturnValueOnce(true);
+      let keyStored!: () => void;
+      (serverStore.setApiKey as jest.Mock).mockReturnValueOnce(
+        new Promise<void>(resolve => {
+          keyStored = resolve;
+        }),
+      );
+
+      renderAndSave(getByTestId => {
+        editUrl(getByTestId);
+        fireEvent.changeText(
+          getByTestId('server-details-apikey-input'),
+          'sk-new-key',
+        );
+      });
+      await waitFor(() => {
+        expect(serverStore.setApiKey).toHaveBeenCalled();
+      });
+      expect(serverStore.fetchModelsForServer).not.toHaveBeenCalled();
+
+      keyStored();
+
+      await waitFor(() => {
+        expect(serverStore.fetchModelsForServer).toHaveBeenCalledWith('srv-1');
+      });
+    });
+  });
+
   it('persists a user-selected serverType on save', async () => {
     const {getByTestId} = render(
       <ServerDetailsSheet
