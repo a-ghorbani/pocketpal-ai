@@ -12,6 +12,14 @@ export const createStyles = (theme: Theme) =>
     codeLanguage: {
       color: theme.colors.onSurfaceVariant,
       fontSize: 12,
+      flex: 1,
+    },
+    actionsContainer: {
+      flexDirection: 'row',
+      alignItems: 'center',
+    },
+    iconButton: {
+      margin: 0,
     },
     iconTouchable: {
       padding: 4,

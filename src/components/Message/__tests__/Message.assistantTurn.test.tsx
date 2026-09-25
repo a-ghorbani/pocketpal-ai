@@ -5,6 +5,7 @@ import {observable, runInAction} from 'mobx';
 
 import {act, fireEvent, render} from '../../../../jest/test-utils';
 import {defaultDerivedMessageProps} from '../../../../jest/fixtures';
+import {mockUiStore} from '../../../../__mocks__/stores/uiStore';
 
 import {Message} from '../Message';
 import {MessageType, AgentStep} from '../../../utils/types';
@@ -41,13 +42,24 @@ jest.mock('../../TextMessage/TextMessage', () => {
 // Stub ReasoningBlock so tests can assert reasoning rendering without
 // pulling in marked/RenderHtml. The stub records the text it was
 // rendered with — that's the only contract Message owes the block.
-let mockReasoningBlockCalls: Array<{text: string; autoCollapse?: boolean}> = [];
+let mockReasoningBlockCalls: Array<{
+  text: string;
+  autoCollapse?: boolean;
+  initiallyCollapsed?: boolean;
+  renderMarkdown?: boolean;
+  renderLatex?: boolean;
+  renderTables?: boolean;
+}> = [];
 jest.mock('../../ReasoningBlock/ReasoningBlock', () => {
   return {
     ReasoningBlock: jest.fn((props: any) => {
       mockReasoningBlockCalls.push({
         text: props.text,
         autoCollapse: props.autoCollapse,
+        initiallyCollapsed: props.initiallyCollapsed,
+        renderMarkdown: props.renderMarkdown,
+        renderLatex: props.renderLatex,
+        renderTables: props.renderTables,
       });
       return <></>;
     }),
@@ -105,6 +117,18 @@ beforeEach(() => {
   mockTextMessageCalls = [];
   mockTalentSurfaceCalls = [];
   mockReasoningBlockCalls = [];
+  mockUiStore.messageRenderingSettings = {
+    renderMarkdown: true,
+    renderLatex: true,
+    renderTables: true,
+    showThinkingBlocks: true,
+    collapseThinkingByDefault: true,
+    hideModelTemplateTokens: true,
+    defaultCopyMode: 'clean',
+    wrapCodeLines: false,
+    useSyntaxHighlighting: true,
+    useCompactTables: false,
+  };
 });
 
 describe('Message — AssistantTurn renderer', () => {
@@ -405,7 +429,56 @@ describe('Message — AssistantTurn renderer', () => {
     );
     expect(mockReasoningBlockCalls).toHaveLength(1);
     expect(mockReasoningBlockCalls[0].text).toBe('thinking…');
+    expect(mockReasoningBlockCalls[0].initiallyCollapsed).toBe(true);
+    expect(mockReasoningBlockCalls[0].renderMarkdown).toBe(true);
+    expect(mockReasoningBlockCalls[0].renderLatex).toBe(true);
+    expect(mockReasoningBlockCalls[0].renderTables).toBe(true);
     expect(mockTextMessageCalls).toHaveLength(0);
+  });
+
+  it('#7a hides native reasoning when Show Thinking Blocks is disabled', () => {
+    mockUiStore.messageRenderingSettings.showThinkingBlocks = false;
+    const message = makeDerivedTurn([
+      {content: 'Final answer', reasoningContent: 'private reasoning'},
+    ]);
+
+    render(
+      <Message
+        message={message}
+        messageWidth={440}
+        onMessagePress={jest.fn()}
+        roundBorder
+        showAvatar
+        showName
+        showStatus
+      />,
+    );
+
+    expect(mockReasoningBlockCalls).toHaveLength(0);
+    expect(mockTextMessageCalls).toHaveLength(1);
+  });
+
+  it('#7b keeps native reasoning expanded when collapse by default is disabled', () => {
+    mockUiStore.messageRenderingSettings.collapseThinkingByDefault = false;
+    const message = makeDerivedTurn([
+      {content: 'Final answer', reasoningContent: 'visible reasoning'},
+    ]);
+
+    render(
+      <Message
+        message={message}
+        messageWidth={440}
+        onMessagePress={jest.fn()}
+        roundBorder
+        showAvatar
+        showName
+        showStatus
+      />,
+    );
+
+    expect(mockReasoningBlockCalls).toHaveLength(1);
+    expect(mockReasoningBlockCalls[0].initiallyCollapsed).toBe(false);
+    expect(mockReasoningBlockCalls[0].autoCollapse).toBe(false);
   });
 
   it('renders empty content when AssistantTurn has zero steps', () => {

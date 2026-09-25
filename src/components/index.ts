@@ -1,4 +1,5 @@
 export * from './AssistantTurnFooter';
+export * from './AssistantMessageRenderer';
 export * from './AttachmentButton';
 export * from './Avatar';
 export * from './Bubble';
