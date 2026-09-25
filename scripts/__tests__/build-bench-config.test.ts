@@ -13,7 +13,12 @@
  * would not run them.
  */
 
-import {buildConfig as buildSharedConfig} from '../../e2e/helpers/bench-runner';
+import {
+  assertRowsPass,
+  buildConfig as buildSharedConfig,
+  expectedCellCount,
+  type BenchReportRow,
+} from '../../e2e/helpers/bench-runner';
 import {buildScreenConfig} from '../../e2e/scripts/build-bench-config';
 import {
   getBenchmarkMatrix,
@@ -193,6 +198,80 @@ describe('parseSettingsAxes', () => {
     // explicit empty-after-trim list (e.g. '   ,   ').
     expect(() => parseSettingsAxes({BENCH_CACHE_TYPE_K: '   ,   '})).toThrow(
       /empty value list/,
+    );
+  });
+});
+
+describe('expectedCellCount', () => {
+  const benchEnvKeys = () =>
+    Object.keys(process.env).filter(k => k.startsWith('BENCH_'));
+
+  it('counts the default smoke tier as 3 models × 3 quants × 2 backends', () => {
+    const saved = Object.fromEntries(
+      benchEnvKeys().map(k => [k, process.env[k]]),
+    );
+    benchEnvKeys().forEach(k => delete process.env[k]);
+    try {
+      const cfg = buildSharedConfig(getBenchmarkMatrix());
+      expect(cfg.models.map(m => m.quants.length)).toEqual([3, 3, 3]);
+      expect(cfg.backends).toEqual(['cpu', 'gpu']);
+      expect(expectedCellCount(cfg)).toBe(18);
+    } finally {
+      Object.assign(process.env, saved);
+    }
+  });
+
+  it('multiplies by every axis value count', () => {
+    const cfg = {
+      models: [{quants: [1, 2]}, {quants: [1]}],
+      backends: ['cpu', 'gpu', 'hexagon'],
+      settings_axes: [{values: ['f16', 'q8_0']}, {values: [4, 6, 8]}],
+    };
+    expect(expectedCellCount(cfg)).toBe(3 * 3 * 2 * 3);
+  });
+
+  it('treats empty axes as a factor of one', () => {
+    expect(
+      expectedCellCount({
+        models: [{quants: [1]}],
+        backends: ['cpu'],
+        settings_axes: [],
+      }),
+    ).toBe(1);
+  });
+});
+
+describe('assertRowsPass', () => {
+  const row = (over: Partial<BenchReportRow> = {}): BenchReportRow => ({
+    model_id: 'qwen3-1.7b',
+    quant: 'q4_0',
+    requested_backend: 'gpu',
+    status: 'ok',
+    ...over,
+  });
+
+  it('fails a report with zero rows', () => {
+    expect(() => assertRowsPass({runs: []})).toThrow(
+      'Matrix produced zero rows',
+    );
+  });
+
+  it('passes when every row is ok', () => {
+    expect(() =>
+      assertRowsPass({runs: [row(), row({quant: 'q8_0'})]}),
+    ).not.toThrow();
+  });
+
+  it('names each failed cell and its error', () => {
+    expect(() =>
+      assertRowsPass({
+        runs: [
+          row(),
+          row({status: 'failed', error: 'backend-mismatch:gpu:cpu'}),
+        ],
+      }),
+    ).toThrow(
+      'Matrix completed but 1/2 cells failed: qwen3-1.7b::q4_0::gpu: backend-mismatch:gpu:cpu',
     );
   });
 });

@@ -32,7 +32,10 @@ import * as fs from 'fs';
 import * as path from 'path';
 import {execFileSync} from 'child_process';
 
-import {buildConfig as buildSharedConfig} from '../helpers/bench-runner';
+import {
+  buildConfig as buildSharedConfig,
+  expectedCellCount,
+} from '../helpers/bench-runner';
 import {getBenchmarkMatrix} from '../fixtures/benchmark-models';
 
 const REMOTE_PACKAGE = 'com.pocketpalai.e2e';
@@ -113,20 +116,9 @@ export function buildScreenConfig() {
 }
 
 function summarize(cfg: ReturnType<typeof buildScreenConfig>) {
-  // Cell-count formula: models × backends × prod(axis lengths || 1).
-  // No-axes case keeps the legacy formula (axesProduct = 1) so the trivial
-  // output is unchanged from before sweep support landed.
   const axes = (cfg as {settings_axes?: Array<{values: unknown[]}>})
     .settings_axes;
-  const axesProduct =
-    axes && axes.length > 0
-      ? axes.reduce((acc, a) => acc * a.values.length, 1)
-      : 1;
-  const baseCells = cfg.models.reduce(
-    (sum, m) => sum + m.quants.length * cfg.backends.length,
-    0,
-  );
-  const cellCount = baseCells * axesProduct;
+  const cellCount = expectedCellCount(cfg);
   console.error(`tier=${cfg.tier}`);
   console.error(
     `models=${cfg.models.length}, backends=${cfg.backends.join('+')}, cells=${cellCount}`,
