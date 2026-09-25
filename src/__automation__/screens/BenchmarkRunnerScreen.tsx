@@ -21,6 +21,7 @@ import {modelStore} from '../../store';
 import NativeHardwareInfo from '../../specs/NativeHardwareInfo';
 import {getDeviceOptions} from '../../utils/deviceSelection';
 import {getRecommendedThreadCount} from '../../utils/deviceCapabilities';
+import {activateKeepAwake, deactivateKeepAwake} from '../../utils/keepAwake';
 import type {Model} from '../../utils/types';
 import {
   BENCH_LOG_RE,
@@ -178,6 +179,8 @@ interface BenchmarkReport {
   /** Echo of `config.settings_axes` when the run had axes. Omitted when the
    * config had none (WHAT §1e, §9a — empty array MUST NOT be emitted). */
   settings_axes_used?: SettingsAxis[];
+  /** Terminal marker the host driver polls for. Absent while running. */
+  outcome?: 'complete' | `error:${string}`;
   runs: BenchmarkRunRow[];
 }
 
@@ -195,6 +198,17 @@ async function loadConfig(): Promise<BenchConfig> {
   }
   const raw = await RNFS.readFile(path, 'utf8');
   return JSON.parse(raw) as BenchConfig;
+}
+
+async function writeReportBestEffort(
+  path: string,
+  report: BenchmarkReport,
+): Promise<void> {
+  try {
+    await RNFS.writeFile(path, JSON.stringify(report, null, 2), 'utf8');
+  } catch (e) {
+    console.warn(`[BENCH] report write failed: ${String(e)}`);
+  }
 }
 
 async function trackPeakMemory(): Promise<{
@@ -551,6 +565,10 @@ export async function runMatrix(
   // logging on or benchmarkActive=true. Both cleanup calls in the
   // finally are idempotent — safe to call even if their setup
   // counterpart never ran or only partially ran.
+  let keepAwakeClaimed = false;
+  let report: BenchmarkReport | undefined;
+  let path: string | undefined;
+  let shellWritten = false;
   try {
     // Native log capture is global state in llama.rn — flip it on once for
     // the whole matrix. Per-cell scoping is done by attaching a fresh
@@ -567,10 +585,18 @@ export async function runMatrix(
     // The runner from this point on calls `initLlama` directly per cell;
     // it never touches `modelStore.context` / `modelStore.activeModelId`.
     await modelStore.enterBenchmarkMode();
+    // Claimed only after enterBenchmarkMode so a local chat's own
+    // deactivate has already run; the native flag is not ref-counted.
+    keepAwakeClaimed = true;
+    try {
+      activateKeepAwake();
+    } catch (e) {
+      console.warn(`[BENCH] keep-awake activate failed: ${String(e)}`);
+    }
     const startTimestamp = new Date().toISOString();
     const safeStamp = startTimestamp.replace(/[:.]/g, '-');
-    const path = reportPath(safeStamp);
-    const report: BenchmarkReport = {
+    path = reportPath(safeStamp);
+    report = {
       version: '1.1',
       platform: Platform.OS === 'ios' ? 'ios' : 'android',
       timestamp: startTimestamp,
@@ -587,6 +613,7 @@ export async function runMatrix(
 
     // Write the shell up front so even an early crash leaves a JSON file.
     await RNFS.writeFile(path, JSON.stringify(report, null, 2), 'utf8');
+    shellWritten = true;
 
     for (let i = 0; i < cells.length; i++) {
       const {model, variant, backend, overrides} = cells[i];
@@ -1036,8 +1063,24 @@ export async function runMatrix(
       }
     }
 
+    report.outcome = 'complete';
+    await writeReportBestEffort(path, report);
     setStatus('complete');
+  } catch (e) {
+    if (shellWritten && report && path && report.outcome === undefined) {
+      const msg = (e as Error).message ?? 'unknown';
+      report.outcome = `error:${msg.slice(0, TRUNCATE_ERROR)}`;
+      await writeReportBestEffort(path, report);
+    }
+    throw e;
   } finally {
+    if (keepAwakeClaimed) {
+      try {
+        deactivateKeepAwake();
+      } catch (e) {
+        console.warn(`[BENCH] keep-awake deactivate failed: ${String(e)}`);
+      }
+    }
     // Outer matrix-level finally: success and failure paths converge here.
     // No "restore settings" step is required — under the isolated
     // lifecycle the runner never wrote to `modelStore.contextInitParams`,

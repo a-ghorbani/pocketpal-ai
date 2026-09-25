@@ -74,6 +74,11 @@ const {
 // assert the initLlama payload.
 const {initLlama, addNativeLogListener, toggleNativeLog} = require('llama.rn');
 
+const {
+  activateKeepAwake,
+  deactivateKeepAwake,
+} = require('../../../utils/keepAwake');
+
 import {
   BenchmarkRunnerScreen,
   runMatrix,
@@ -456,6 +461,140 @@ describe('BenchmarkRunnerScreen', () => {
       ).rejects.toThrow('shell-write-failed');
       expect(modelStore.enterBenchmarkMode).toHaveBeenCalledTimes(1);
       expect(modelStore.exitBenchmarkMode).toHaveBeenCalledTimes(1);
+    });
+
+    // -------------------------------------------------------------------------
+    // Terminal outcome and keep-awake
+    // -------------------------------------------------------------------------
+
+    function writtenOutcomes(): unknown[] {
+      return RNFS.writeFile.mock.calls
+        .map((c: unknown[]) => JSON.parse(c[1] as string).outcome)
+        .filter((o: unknown) => o !== undefined);
+    }
+
+    it('writes outcome "complete" last, with one row per cell', async () => {
+      stubOpenCLLogs();
+      await runMatrix(VALID_CONFIG, setStatus, setLastCell);
+      const report = lastWrittenReport();
+      expect(report.outcome).toBe('complete');
+      expect(report.runs).toHaveLength(1);
+      expect(writtenOutcomes()).toEqual(['complete']);
+      expect(setStatus).toHaveBeenLastCalledWith('complete');
+    });
+
+    it('writes outcome "error:<msg>" and rethrows on a matrix-level throw after the shell', async () => {
+      stubOpenCLLogs();
+      setStatus.mockImplementationOnce(() => {
+        throw new Error('status-sink-broke');
+      });
+      await expect(
+        runMatrix(VALID_CONFIG, setStatus, setLastCell),
+      ).rejects.toThrow('status-sink-broke');
+      expect(writtenOutcomes()).toEqual(['error:status-sink-broke']);
+      expect(lastWrittenReport().outcome).toBe('error:status-sink-broke');
+    });
+
+    it('onRun sets error:<msg> status when the matrix throws after the shell', async () => {
+      stubOpenCLLogs();
+      const {getByTestId} = render(
+        <BenchmarkRunnerScreen
+          __runner={(cfg, set, last) =>
+            runMatrix(
+              cfg,
+              (st: string) => {
+                if (st.startsWith('running:')) {
+                  throw new Error('status-sink-broke');
+                }
+                set(st);
+              },
+              last,
+            )
+          }
+          __loadConfig={jest.fn().mockResolvedValue(VALID_CONFIG)}
+        />,
+      );
+      await act(async () => {
+        fireEvent.press(getByTestId('bench-run-button'));
+      });
+      await waitFor(() => {
+        expect(
+          getByTestId('bench-runner-screen-status').props.accessibilityLabel,
+        ).toBe('error:status-sink-broke');
+      });
+      expect(lastWrittenReport().outcome).toBe('error:status-sink-broke');
+    });
+
+    it('writes no second outcome when a throw follows the complete write', async () => {
+      stubOpenCLLogs();
+      setStatus.mockImplementation((st: string) => {
+        if (st === 'complete') {
+          throw new Error('complete-status-broke');
+        }
+      });
+      try {
+        await expect(
+          runMatrix(VALID_CONFIG, setStatus, setLastCell),
+        ).rejects.toThrow('complete-status-broke');
+        expect(writtenOutcomes()).toEqual(['complete']);
+      } finally {
+        setStatus.mockReset();
+      }
+    });
+
+    it('writes no outcome when the shell write fails', async () => {
+      RNFS.writeFile.mockRejectedValueOnce(new Error('shell-write-failed'));
+      await expect(
+        runMatrix(VALID_CONFIG, setStatus, setLastCell),
+      ).rejects.toThrow('shell-write-failed');
+      expect(RNFS.writeFile).toHaveBeenCalledTimes(1);
+      expect(writtenOutcomes()).toEqual([]);
+    });
+
+    it('claims keep-awake after enterBenchmarkMode and releases it in finally', async () => {
+      stubOpenCLLogs();
+      await runMatrix(VALID_CONFIG, setStatus, setLastCell);
+      expect(activateKeepAwake).toHaveBeenCalledTimes(1);
+      expect(deactivateKeepAwake).toHaveBeenCalledTimes(1);
+      const enter = (modelStore.enterBenchmarkMode as jest.Mock).mock
+        .invocationCallOrder[0];
+      const activate = activateKeepAwake.mock.invocationCallOrder[0];
+      const deactivate = deactivateKeepAwake.mock.invocationCallOrder[0];
+      expect(enter).toBeLessThan(activate);
+      expect(activate).toBeLessThan(deactivate);
+    });
+
+    it('runs the matrix and still deactivates when activateKeepAwake throws', async () => {
+      stubOpenCLLogs();
+      activateKeepAwake.mockImplementationOnce(() => {
+        throw new Error('no-native-module');
+      });
+      await runMatrix(VALID_CONFIG, setStatus, setLastCell);
+      expect(lastWrittenReport().runs[0].status).toBe('ok');
+      expect(lastWrittenReport().outcome).toBe('complete');
+      expect(deactivateKeepAwake).toHaveBeenCalledTimes(1);
+    });
+
+    it('a failing deactivateKeepAwake does not turn a complete run into an error', async () => {
+      stubOpenCLLogs();
+      deactivateKeepAwake.mockImplementationOnce(() => {
+        throw new Error('no-native-module');
+      });
+      await runMatrix(VALID_CONFIG, setStatus, setLastCell);
+      expect(setStatus).toHaveBeenLastCalledWith('complete');
+      expect(modelStore.exitBenchmarkMode).toHaveBeenCalledTimes(1);
+    });
+
+    it('touches neither keep-awake call when enterBenchmarkMode rejects', async () => {
+      (modelStore.enterBenchmarkMode as jest.Mock).mockRejectedValueOnce(
+        new Error('enter-failed'),
+      );
+      await expect(
+        runMatrix(VALID_CONFIG, setStatus, setLastCell),
+      ).rejects.toThrow('enter-failed');
+      expect(activateKeepAwake).not.toHaveBeenCalled();
+      expect(deactivateKeepAwake).not.toHaveBeenCalled();
+      expect(RNFS.writeFile).not.toHaveBeenCalled();
     });
 
     // -------------------------------------------------------------------------
