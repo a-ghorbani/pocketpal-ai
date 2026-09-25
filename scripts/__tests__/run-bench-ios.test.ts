@@ -1,0 +1,360 @@
+import * as fs from 'fs';
+import * as os from 'os';
+import * as path from 'path';
+
+import {
+  DEEP_LINK,
+  buildPlan,
+  evaluatePoll,
+  isAppRunning,
+  newestNewReport,
+  parseFileList,
+  run,
+  type DriverDeps,
+  type DriverOptions,
+  type PollInput,
+  type PollVerdict,
+} from '../../e2e/scripts/run-bench-ios';
+import {buildConfig, expectedCellCount} from '../../e2e/helpers/bench-runner';
+import {getBenchmarkMatrix} from '../../e2e/fixtures/benchmark-models';
+
+function recordingDeps(throwOn?: string) {
+  const calls: string[][] = [];
+  const deps: DriverDeps = {
+    exec: (file, args) => {
+      calls.push([file, ...args]);
+      if (throwOn && args.join(' ').includes(throwOn)) {
+        throw new Error('sentinel');
+      }
+      return '';
+    },
+    sleep: async () => undefined,
+    now: () => 0,
+    log: () => undefined,
+  };
+  return {calls, deps};
+}
+
+function options(over: Partial<DriverOptions> = {}): DriverOptions {
+  return {
+    device: 'DRYRUN',
+    out: fs.mkdtempSync(path.join(os.tmpdir(), 'bench-ios-test-')),
+    dryRun: true,
+    settleMs: 15_000,
+    startTimeoutMs: 120_000,
+    pollMs: 30_000,
+    maxWaitMs: 3_600_000,
+    ...over,
+  };
+}
+
+describe('buildPlan', () => {
+  const base = {device: 'X', configPath: '/tmp/c.json', settleMs: 15_000};
+
+  it('launches, settles, snapshots, pushes the config, then delivers the link warm', () => {
+    const plan = buildPlan(base);
+    expect(plan.map(s => s.kind)).toEqual([
+      'launch',
+      'settle',
+      'snapshot',
+      'push-config',
+      'deep-link',
+    ]);
+    const deepLink = plan[4];
+    expect(deepLink.kind === 'deep-link' && deepLink.argv).toEqual([
+      'devicectl',
+      'device',
+      'process',
+      'launch',
+      '--device',
+      'X',
+      '--payload-url',
+      DEEP_LINK,
+      'ai.pocketpal',
+    ]);
+  });
+
+  it('installs first only when an app bundle is given', () => {
+    const plan = buildPlan({...base, appBundle: '/b/PocketPal.app'});
+    expect(plan[0]).toEqual({
+      kind: 'install',
+      argv: [
+        'devicectl',
+        'device',
+        'install',
+        'app',
+        '--device',
+        'X',
+        '/b/PocketPal.app',
+      ],
+    });
+    expect(buildPlan(base).some(s => s.kind === 'install')).toBe(false);
+  });
+});
+
+describe('run', () => {
+  it('makes no device or unzip call on a dry run, with or without --app', async () => {
+    for (const app of [undefined, 'build/PocketPal.ipa']) {
+      const {calls, deps} = recordingDeps();
+      const result = await run(options({app}), deps);
+      expect(calls).toEqual([]);
+      expect(result.state).toBe('dry-run');
+      expect(fs.existsSync(result.configPath)).toBe(true);
+    }
+  });
+
+  it('prints an install step naming the unzipped bundle only for --app', async () => {
+    const {deps} = recordingDeps();
+    const withApp = await run(options({app: 'build/PocketPal.ipa'}), deps);
+    const withoutApp = await run(options(), deps);
+    expect(withApp.plan[0]).toMatchObject({kind: 'install'});
+    expect(
+      withApp.plan[0].kind === 'install' && withApp.plan[0].argv,
+    ).toContain('<unzipped>/Payload/*.app');
+    expect(withoutApp.plan.some(s => s.kind === 'install')).toBe(false);
+  });
+
+  it('reports the same cell count as the shared helper', async () => {
+    const {deps} = recordingDeps();
+    const result = await run(options(), deps);
+    expect(result.expected).toBe(
+      expectedCellCount(buildConfig(getBenchmarkMatrix())),
+    );
+  });
+
+  it.each([
+    ['with --app', 'build/PocketPal.app', true],
+    ['without --app', undefined, false],
+  ])(
+    'installs %s only, and as the first device mutation',
+    async (_label, app, installs) => {
+      const {calls, deps} = recordingDeps('process launch');
+      await expect(run(options({app, dryRun: false}), deps)).rejects.toThrow(
+        'sentinel',
+      );
+      const verbs = calls.map(c => c.slice(3, 5).join(' '));
+      expect(verbs.includes('install app')).toBe(installs);
+      expect(verbs[verbs.length - 1]).toBe('process launch');
+      if (installs) {
+        expect(verbs[0]).toBe('install app');
+      }
+    },
+  );
+});
+
+describe('run against a simulated device', () => {
+  const NAME = 'benchmark-report-2026-09-25T10-00-00-000Z.json';
+
+  function simulatedDevice(report: object, alive: boolean) {
+    let clock = 0;
+    let linked = false;
+    const deps: DriverDeps = {
+      exec: (_file, args) => {
+        const cmd = args.slice(2, 4).join(' ');
+        if (args.includes('--payload-url')) {
+          linked = true;
+        }
+        if (cmd === 'info files') {
+          return linked ? `${NAME}   1234` : '';
+        }
+        if (cmd === 'copy from') {
+          const dest = args[args.indexOf('--destination') + 1];
+          fs.writeFileSync(dest, JSON.stringify(report));
+        }
+        if (cmd === 'info processes') {
+          return alive ? '42 /x/PocketPal.app/PocketPal' : '';
+        }
+        return '';
+      },
+      sleep: async ms => {
+        clock += ms;
+      },
+      now: () => clock,
+      log: () => undefined,
+    };
+    return deps;
+  }
+
+  const fullRows = (n: number, status = 'ok') =>
+    Array.from({length: n}, () => ({
+      model_id: 'm',
+      quant: 'q',
+      requested_backend: 'gpu',
+      status,
+    }));
+
+  it('finishes done and stamps the pulled report when outcome is complete', async () => {
+    const opts = options({dryRun: false});
+    const expected = expectedCellCount(buildConfig(getBenchmarkMatrix()));
+    const result = await run(
+      opts,
+      simulatedDevice({runs: fullRows(expected), outcome: 'complete'}, true),
+    );
+    expect(result.state).toBe('done');
+    const stamped = JSON.parse(
+      fs.readFileSync(path.join(opts.out, NAME), 'utf8'),
+    );
+    expect(stamped.device).toBeDefined();
+    expect(stamped.commit).toBeDefined();
+  });
+
+  it('fails app-exited, not done, when the app is gone with every row but no outcome', async () => {
+    const opts = options({dryRun: false});
+    const expected = expectedCellCount(buildConfig(getBenchmarkMatrix()));
+    const result = await run(
+      opts,
+      simulatedDevice({runs: fullRows(expected)}, false),
+    );
+    expect(result).toMatchObject({state: 'failed', reason: 'app-exited'});
+  });
+
+  it('throws the pass gate when a completed matrix has a failed row', async () => {
+    const expected = expectedCellCount(buildConfig(getBenchmarkMatrix()));
+    await expect(
+      run(
+        options({dryRun: false}),
+        simulatedDevice(
+          {
+            runs: [...fullRows(expected - 1), ...fullRows(1, 'failed')],
+            outcome: 'complete',
+          },
+          true,
+        ),
+      ),
+    ).rejects.toThrow(/cells failed/);
+  });
+});
+
+describe('evaluatePoll', () => {
+  const EXPECTED = 72;
+  const input = (over: Partial<PollInput>): PollInput => ({
+    report: null,
+    expected: EXPECTED,
+    processAlive: true,
+    stableCompletePolls: 0,
+    elapsedMs: 60_000,
+    startTimeoutMs: 120_000,
+    maxWaitMs: 3_600_000,
+    ...over,
+  });
+  const rows = (n: number) =>
+    Array.from({length: n}, () => ({
+      model_id: 'm',
+      quant: 'q',
+      requested_backend: 'gpu',
+      status: 'ok',
+    }));
+
+  const cases: [
+    string,
+    Partial<PollInput>,
+    PollVerdict | Partial<PollVerdict>,
+  ][] = [
+    ['no report yet, within start timeout', {}, {state: 'starting'}],
+    [
+      'no report at the start timeout',
+      {elapsedMs: 120_000},
+      {state: 'failed', reason: 'autostart'},
+    ],
+    [
+      'shell seen',
+      {report: {runs: []}},
+      {state: 'running', rows: 0, stableCompletePolls: 0},
+    ],
+    [
+      'outcome complete, all rows',
+      {report: {runs: rows(72), outcome: 'complete'}},
+      {state: 'done', markerMissing: false},
+    ],
+    [
+      'outcome complete, 71 of 72 rows',
+      {report: {runs: rows(71), outcome: 'complete'}},
+      {state: 'failed', reason: 'count-mismatch'},
+    ],
+    [
+      'outcome error',
+      {report: {runs: rows(3), outcome: 'error:boom'}},
+      {state: 'failed', reason: 'runner-error', detail: 'error:boom'},
+    ],
+    [
+      'outcome complete wins over a gone process',
+      {report: {runs: rows(72), outcome: 'complete'}, processAlive: false},
+      {state: 'done', markerMissing: false},
+    ],
+    [
+      'process gone, all rows, no outcome',
+      {report: {runs: rows(72)}, processAlive: false},
+      {state: 'failed', reason: 'app-exited'},
+    ],
+    [
+      'all rows, no outcome, first sighting',
+      {report: {runs: rows(72)}},
+      {state: 'running', rows: 72, stableCompletePolls: 1},
+    ],
+    [
+      'all rows, no outcome, two more polls',
+      {report: {runs: rows(72)}, stableCompletePolls: 2},
+      {state: 'done', markerMissing: true},
+    ],
+    [
+      'rows still arriving at max wait',
+      {report: {runs: rows(40)}, elapsedMs: 3_600_000},
+      {state: 'failed', reason: 'timeout'},
+    ],
+    [
+      'unparsable pull retries',
+      {report: 'unparsable'},
+      {state: 'running', rows: null, stableCompletePolls: 0},
+    ],
+    [
+      'unparsable pull at max wait',
+      {report: 'unparsable', elapsedMs: 3_600_000},
+      {state: 'failed', reason: 'timeout'},
+    ],
+  ];
+
+  it.each(cases)('%s', (_label, over, expected) => {
+    expect(evaluatePoll(input(over))).toMatchObject(expected);
+  });
+});
+
+describe('report discovery', () => {
+  it('ignores reports in the snapshot and picks the newest new one', () => {
+    const snapshot = new Set([
+      'benchmark-report-2026-09-25T08-00-00-000Z.json',
+    ]);
+    expect(
+      newestNewReport(
+        [
+          'benchmark-report-2026-09-25T08-00-00-000Z.json',
+          'benchmark-report-2026-09-25T10-00-00-000Z.json',
+          'benchmark-report-2026-09-25T09-00-00-000Z.json',
+        ],
+        snapshot,
+      ),
+    ).toBe('benchmark-report-2026-09-25T10-00-00-000Z.json');
+    expect(newestNewReport([...snapshot], snapshot)).toBeUndefined();
+  });
+
+  it('reads report names from the first column of the file listing', () => {
+    const listing = [
+      'Files in Documents:',
+      'bench-config.json                                     1234',
+      'benchmark-report-2026-09-25T08-27-56-032Z.json       45678',
+      'benchmark-report-2026-09-25T09-13-28-296Z.json       45999',
+    ].join('\n');
+    expect(parseFileList(listing)).toEqual([
+      'benchmark-report-2026-09-25T08-27-56-032Z.json',
+      'benchmark-report-2026-09-25T09-13-28-296Z.json',
+    ]);
+  });
+
+  it('detects the app by its bundle executable path', () => {
+    expect(
+      isAppRunning(
+        '1234  /private/var/containers/Bundle/Application/X/PocketPal.app/PocketPal',
+      ),
+    ).toBe(true);
+    expect(isAppRunning('99  /usr/libexec/backboardd')).toBe(false);
+  });
+});
