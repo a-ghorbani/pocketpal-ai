@@ -4289,6 +4289,15 @@ describe('ModelStore', () => {
     beforeEach(() => {
       jest.clearAllMocks();
 
+      // Rebuild RNFS stubs: earlier suites permanently replace exists/stat
+      // implementations (clearAllMocks does not restore them), and the
+      // stateful deleted-files set may contain our fixture paths. These
+      // tests assume model files are present and valid.
+      (RNFS as any).__resetMockState?.();
+      (RNFS.exists as jest.Mock).mockResolvedValue(true);
+      (RNFS.stat as jest.Mock).mockResolvedValue({size: 2 * 10 ** 9});
+      (RNFS.read as jest.Mock).mockResolvedValue('GGUF');
+
       // Restore the original initContext method (may have been replaced by earlier tests)
       modelStore.initContext = originalInitContext;
 
