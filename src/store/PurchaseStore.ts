@@ -296,7 +296,9 @@ export class PurchaseStore {
       ? this.deps.auth.user?.id
       : undefined;
     return Object.values(this.records).some(
-      rec => rec.status === 'active' && rec.linkedUserId !== userId,
+      rec =>
+        rec.status === 'active' &&
+        (userId ? rec.linkedUserId !== userId : !rec.linkedUserId),
     );
   }
 

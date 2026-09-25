@@ -124,6 +124,37 @@ describe('PurchaseStore link and restore', () => {
       expect(h.purchases.needsLink).toBe(false);
     });
 
+    describe('needsLink', () => {
+      const unlinked = record('active', {palId: 'A', productId: 'pal.a'});
+      const linked = record('active', {
+        palId: 'B',
+        productId: 'pal.b',
+        linkedUserId: 'u1',
+      });
+
+      it.each([
+        ['an unlinked and a linked purchase', [unlinked, linked], true],
+        ['only a linked purchase', [linked], false],
+      ])('signed out with %s: %p', async (_name, records, expected) => {
+        const h = createHarness({records});
+        await h.purchases.load();
+        expect(h.purchases.needsLink).toBe(expected);
+      });
+
+      it.each([
+        ['u1', false],
+        ['u2', true],
+      ])(
+        'signed in as %s with only a u1 purchase: %p',
+        async (id, expected) => {
+          const h = createHarness({records: [linked]});
+          await h.purchases.load();
+          signIn(h, id);
+          expect(h.purchases.needsLink).toBe(expected);
+        },
+      );
+    });
+
     it('does nothing while signed out', async () => {
       const h = createHarness({records: [record('active')]});
       await expect(h.purchases.link()).resolves.toBeUndefined();
