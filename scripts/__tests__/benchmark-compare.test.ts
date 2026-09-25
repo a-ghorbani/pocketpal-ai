@@ -15,6 +15,7 @@
 import {
   BenchmarkMatrixReport,
   BenchmarkRunReport,
+  checkPlatforms,
   compareReports,
 } from '../../e2e/scripts/benchmark-compare';
 
@@ -604,5 +605,23 @@ describe('compareReports (benchmark-compare)', () => {
     const result = compareReports(baseline, current);
     expect(result.pass).toBe(true);
     expect(result.rows[0].flagged).toBe(false);
+  });
+});
+
+describe('checkPlatforms', () => {
+  it('rejects an android baseline against an ios report', () => {
+    expect(checkPlatforms({platform: 'android'}, {platform: 'ios'})).toMatch(
+      /platform mismatch: baseline android vs current ios/,
+    );
+  });
+
+  it('reads an absent platform as android on either side', () => {
+    expect(checkPlatforms({}, {platform: 'android'})).toBeNull();
+    expect(checkPlatforms({platform: 'android'}, {})).toBeNull();
+    expect(checkPlatforms({}, {platform: 'ios'})).not.toBeNull();
+  });
+
+  it('accepts two ios reports', () => {
+    expect(checkPlatforms({platform: 'ios'}, {platform: 'ios'})).toBeNull();
   });
 });
