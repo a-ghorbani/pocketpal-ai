@@ -674,7 +674,10 @@ describe('run against a scripted device', () => {
       state: 'failed',
       reason: 'timeout',
     });
-    expect(readStamped(opts.out).runs).toHaveLength(3);
+    expect(readStamped(opts.out)).toMatchObject({
+      runs: okRows(3),
+      device: 'iPhone 13 Pro',
+    });
     expect(logs).toContain(
       'pull failed (2 in a row): copy failed: device disconnected',
     );
@@ -711,5 +714,71 @@ describe('run against a scripted device', () => {
     const {detail, hints} = failureLines(logs);
     expect(detail).toContain(`2/${expected} rows; last new row 16 min ago`);
     expect(hints.some(h => h.includes('locked'))).toBe(true);
+  });
+
+  it('keeps the stall clock running through unparsable pulls', async () => {
+    const opts = options({dryRun: false, maxWaitMs: STALL_MS + 2 * 30_000});
+    const {deps, logs} = scriptedDevice({
+      pulls: [{runs: okRows(2)}, 'garbage'],
+    });
+    await expect(run(opts, deps)).resolves.toMatchObject({
+      state: 'failed',
+      reason: 'timeout',
+    });
+    const {detail, hints} = failureLines(logs);
+    expect(detail).toContain(`2/${expected} rows; last new row 16 min ago`);
+    expect(hints.some(h => h.includes('locked'))).toBe(true);
+    expect(readStamped(opts.out).runs).toHaveLength(2);
+  });
+
+  it('resets the failed-pull count after a good pull', async () => {
+    const opts = options({dryRun: false});
+    const {deps, logs} = scriptedDevice({
+      pulls: [{runs: okRows(1)}, 'throw', {runs: okRows(2)}, 'throw'],
+      alive: [true, true, true, false],
+    });
+    await expect(run(opts, deps)).resolves.toMatchObject({
+      state: 'failed',
+      reason: 'app-exited',
+    });
+    const pullFailures = logs.filter(l => l.startsWith('pull failed'));
+    expect(pullFailures).toHaveLength(2);
+    expect(
+      pullFailures.every(l => l.startsWith('pull failed (1 in a row)')),
+    ).toBe(true);
+    expect(readStamped(opts.out).runs).toHaveLength(2);
+  });
+
+  it('stamps nothing and reports no path when no pull ever parses', async () => {
+    const opts = options({dryRun: false});
+    const {deps, logs, calls} = scriptedDevice({
+      pulls: ['garbage'],
+      alive: [true, false],
+    });
+    const result = await run(opts, deps);
+    expect(result).toMatchObject({state: 'failed', reason: 'app-exited'});
+    expect(result.reportPath).toBeUndefined();
+    expect(logs).toContain('no parsed report; nothing stamped');
+    expect(logs.some(l => l.startsWith('report: '))).toBe(false);
+    expect(calls.some(a => a.slice(2, 4).join(' ') === 'info details')).toBe(
+      false,
+    );
+  });
+
+  it('completes by row count only on consecutive parsed pulls, never across an unparsable one', async () => {
+    const opts = options({dryRun: false});
+    const full = {runs: okRows(expected)};
+    const {deps, logs, calls} = scriptedDevice({
+      pulls: [full, full, 'garbage', full],
+    });
+    await expect(run(opts, deps)).resolves.toMatchObject({
+      state: 'done',
+      reportPath: path.join(opts.out, NEW),
+    });
+    expect(copied(calls)).toHaveLength(6);
+    expect(logs).toContain(
+      'warning: report has no outcome marker; completed by row count',
+    );
+    expect(readStamped(opts.out)).toMatchObject({device: 'iPhone 13 Pro'});
   });
 });
