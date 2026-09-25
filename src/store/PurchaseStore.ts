@@ -988,8 +988,14 @@ export class PurchaseStore {
       .map(tx => tx.proof);
     const known = Object.fromEntries(
       Object.values(this.records)
-        .filter(rec => rec.status === 'active')
-        .map(rec => [rec.palId, rec.contentVersion ?? 0]),
+        .filter(rec => rec.status === 'active' && rec.supportCode)
+        .map(rec => [
+          rec.palId,
+          {
+            contentVersion: rec.contentVersion ?? 0,
+            purchaseRef: rec.supportCode!,
+          },
+        ]),
     );
     if (proofs.length === 0 && Object.keys(known).length === 0) {
       return true;

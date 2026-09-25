@@ -10,6 +10,7 @@ import {
 } from './iapWire';
 import type {
   Binding,
+  KnownEntry,
   RefreshResult,
   StorePlatform,
   StoreProof,
@@ -92,7 +93,7 @@ const verify = async (
 
 const refresh = async (
   proofs: StoreProof[],
-  known: Record<string, number>,
+  known: Record<string, KnownEntry>,
 ): Promise<RefreshResult> => {
   const knownEntries = Object.entries(known);
   const knownBatches =

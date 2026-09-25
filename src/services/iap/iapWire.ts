@@ -33,6 +33,11 @@ export interface RefreshResult {
   unchanged: string[];
 }
 
+export interface KnownEntry {
+  contentVersion: number;
+  purchaseRef: string;
+}
+
 export interface Binding {
   appAccountToken?: string;
   obfuscatedAccountId?: string;
@@ -101,10 +106,15 @@ export const linkBody = verifyBody;
 
 export const refreshBody = (
   proofs: StoreProof[],
-  known: Record<string, number>,
+  known: Record<string, KnownEntry>,
 ) => ({
   transactions: proofs.map(proofToWire),
-  known,
+  known: Object.fromEntries(
+    Object.entries(known).map(([palId, entry]) => [
+      palId,
+      {content_version: entry.contentVersion, purchase_ref: entry.purchaseRef},
+    ]),
+  ),
 });
 
 const parseVerifyResult = (value: unknown): VerifyResult => {

@@ -9,6 +9,7 @@ import type {
 } from '../../services/iap/StorePort';
 import type {
   Binding,
+  KnownEntry,
   RefreshResult,
   StorePlatform,
   StoreProof,
@@ -220,7 +221,7 @@ export const createHarness = (
     refresh: jest.fn(
       async (
         _proofs: StoreProof[],
-        _known: Record<string, number>,
+        _known: Record<string, KnownEntry>,
       ): Promise<RefreshResult> => ({
         changed: [],
         revoked: [],

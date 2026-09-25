@@ -25,10 +25,15 @@ describe('iapWire', () => {
       });
     });
 
-    it('sends proofs and known versions on refresh', () => {
+    it('sends proofs and known versions with purchase refs on refresh', () => {
       expect(
-        refreshBody([{platform: 'ios', jws: 'jws-1'}], {'pal-1': 3}),
-      ).toEqual({transactions: ['jws-1'], known: {'pal-1': 3}});
+        refreshBody([{platform: 'ios', jws: 'jws-1'}], {
+          'pal-1': {contentVersion: 3, purchaseRef: 'SUP-1'},
+        }),
+      ).toEqual({
+        transactions: ['jws-1'],
+        known: {'pal-1': {content_version: 3, purchase_ref: 'SUP-1'}},
+      });
     });
   });
 

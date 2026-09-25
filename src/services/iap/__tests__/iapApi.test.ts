@@ -126,7 +126,9 @@ describe('iapApi', () => {
         jsonResponse({changed: [apiPal()], revoked: ['pal-2']}),
       );
 
-      const result = await iapApi.refresh([androidProof(1)], {'pal-1': 2});
+      const result = await iapApi.refresh([androidProof(1)], {
+        'pal-1': {contentVersion: 2, purchaseRef: 'GPA.1'},
+      });
 
       expect(fetchMock.mock.calls[0][0]).toBe(
         'https://palshub.ai/api/mobile/iap/entitlements/refresh',
@@ -135,7 +137,7 @@ describe('iapApi', () => {
       expect(sentHeaders()['X-IAP-Capable']).toBe('1');
       expect(sentBody()).toEqual({
         transactions: [{productId: 'pal.1', purchaseToken: 'token-1'}],
-        known: {'pal-1': 2},
+        known: {'pal-1': {content_version: 2, purchase_ref: 'GPA.1'}},
       });
       expect(result.changed[0].id).toBe('pal-1');
       expect(result.revoked).toEqual(['pal-2']);
@@ -152,7 +154,10 @@ describe('iapApi', () => {
         );
       });
       const known = Object.fromEntries(
-        Array.from({length: 201}, (_, i) => [`pal-${i}`, i]),
+        Array.from({length: 201}, (_, i) => [
+          `pal-${i}`,
+          {contentVersion: i, purchaseRef: `ref-${i}`},
+        ]),
       );
 
       const result = await iapApi.refresh([androidProof(1)], known);
@@ -160,7 +165,9 @@ describe('iapApi', () => {
       expect(REFRESH_MAX_KNOWN).toBe(200);
       expect(fetchMock).toHaveBeenCalledTimes(2);
       expect(Object.keys(sentBody(0).known)).toHaveLength(200);
-      expect(Object.keys(sentBody(1).known)).toHaveLength(1);
+      expect(sentBody(1).known).toEqual({
+        'pal-200': {content_version: 200, purchase_ref: 'ref-200'},
+      });
       expect(sentBody(1).transactions).toHaveLength(1);
       expect(result).toEqual({
         changed: [expect.objectContaining({id: 'pal-1'})],

@@ -1,6 +1,7 @@
 import {AppState, Platform} from 'react-native';
 import {runInAction} from 'mobx';
 
+import {refreshBody} from '../../services/iap/iapWire';
 import {
   RETRY_DELAYS_MS,
   RETRY_STEADY_MS,
@@ -190,8 +191,37 @@ describe('PurchaseStore recovery', () => {
 
       expect(h.api.refresh).toHaveBeenCalledWith(
         [{platform: 'ios', jws: 'jws-1'}],
-        {[PAL_ID]: 3},
+        {[PAL_ID]: {contentVersion: 3, purchaseRef: 'SUP-0'}},
       );
+    });
+
+    it('knows only active records that carry a support code', async () => {
+      setOS('ios');
+      const h = createHarness({
+        records: [
+          record('active', {palId: 'P1', supportCode: 'S1', contentVersion: 2}),
+          record('active', {
+            palId: 'P2',
+            productId: 'pal.p2',
+            supportCode: undefined,
+          }),
+          record('granted', {
+            palId: 'P3',
+            productId: 'pal.p3',
+            supportCode: 'S3',
+            grant: undefined,
+          }),
+        ],
+      });
+      h.store.currentEntitlements.mockResolvedValue([tx({unfinished: false})]);
+
+      await h.purchases.recover();
+
+      const [proofs, known] = h.api.refresh.mock.calls[0];
+      expect(known).toEqual({P1: {contentVersion: 2, purchaseRef: 'S1'}});
+      const body = JSON.stringify(refreshBody(proofs, known).known);
+      expect(body).not.toContain('jws-1');
+      expect(body).not.toContain('tx-');
     });
 
     it('applies changed content to an installed active Pal', async () => {
