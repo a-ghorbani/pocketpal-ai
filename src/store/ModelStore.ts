@@ -48,6 +48,7 @@ import {
   getSourceStorageDir,
 } from '../utils/modelSources';
 import {getRecommendedProjectionModel} from '../utils/multimodalHelpers';
+import {expandSplitModelFile} from '../utils/hf';
 import {isDraftOnlyModel} from '../utils/mtp';
 import {getOriginalModelName} from '../utils/formatters';
 import type {OnboardingPalModelEntry} from './onboarding/onboardingPals';
@@ -113,11 +114,22 @@ import NativeHardwareInfo from '../specs/NativeHardwareInfo';
 import {getModelMemoryRequirement} from '../utils/memoryEstimator';
 import {loadLlamaModelInfo} from 'llama.rn';
 
+function getSplitStorageRoot(entryPath: string, entryRFilename: string) {
+  const fallbackDir = entryPath.substring(0, entryPath.lastIndexOf('/'));
+  if (!entryRFilename.includes('/')) {
+    return fallbackDir;
+  }
+
+  const entrySuffix = `/${entryRFilename}`;
+  return entryPath.endsWith(entrySuffix)
+    ? entryPath.slice(0, -entrySuffix.length)
+    : fallbackDir;
+}
+
 /**
  * Factory function to create a Model object for a remote model from an OpenAI-compatible server.
  * Fills all required Model fields with sensible defaults.
- */
-function createRemoteModel(params: {
+ */ function createRemoteModel(params: {
   serverId: string;
   serverName: string;
   remoteModelId: string;
@@ -1483,10 +1495,40 @@ class ModelStore {
 
   async checkFileExists(model: Model) {
     const filePath = await this.getModelFullPath(model);
-    const exists = await RNFS.exists(filePath);
+    let exists = await RNFS.exists(filePath);
+    let sizeMatches = true;
+
+    // Split models only count as downloaded when every part is present.
+    if (exists && model.splitDownload && model.hfModelFile) {
+      try {
+        const dirPath = getSplitStorageRoot(
+          filePath,
+          model.splitDownload.entryRFilename,
+        );
+        let totalSize = 0;
+        for (const part of expandSplitModelFile(model.hfModelFile)) {
+          const partPath = `${dirPath}/${part.rfilename}`;
+          if (!(await RNFS.exists(partPath))) {
+            exists = false;
+            sizeMatches = false;
+            break;
+          }
+          totalSize += Number((await RNFS.stat(partPath)).size || 0);
+        }
+        if (exists && model.size > 0) {
+          sizeMatches =
+            totalSize > 0 &&
+            Math.abs(totalSize - model.size) / model.size <= 0.001;
+        }
+      } catch (err) {
+        console.log('Error checking split model files:', err);
+        exists = false;
+        sizeMatches = false;
+      }
+    }
 
     // Don't mark as downloaded if currently downloading
-    if (exists && !downloadManager.isDownloading(model.id)) {
+    if (exists && sizeMatches && !downloadManager.isDownloading(model.id)) {
       if (!model.isDownloaded) {
         console.log(
           'checkFileExists: marking as downloaded - this should not happen:',
@@ -1752,6 +1794,21 @@ class ModelStore {
     return false;
   };
 
+  private getSplitModelFilePaths = async (model: Model): Promise<string[]> => {
+    if (!model.splitDownload || !model.hfModelFile) {
+      return [await this.getModelFullPath(model)];
+    }
+
+    const entryPath = await this.getModelFullPath(model);
+    const dirPath = getSplitStorageRoot(
+      entryPath,
+      model.splitDownload.entryRFilename,
+    );
+    return expandSplitModelFile(model.hfModelFile).map(
+      part => `${dirPath}/${part.rfilename}`,
+    );
+  };
+
   deleteModel = async (model: Model) => {
     // id should work as well, as long as we are differentiating between models by origin.
     const modelIndex = this.models.findIndex(
@@ -1803,6 +1860,7 @@ class ModelStore {
     }
 
     const filePath = await this.getModelFullPath(_model);
+    const filePaths = await this.getSplitModelFilePaths(_model);
     if (_model.isLocal || _model.origin === ModelOrigin.LOCAL) {
       // Local models are always removed from the list, when the file is deleted.
 
@@ -1821,7 +1879,13 @@ class ModelStore {
 
       // Delete the file from internal storage
       try {
-        await RNFS.unlink(filePath);
+        await Promise.all(
+          filePaths.map(async path => {
+            if (await RNFS.exists(path)) {
+              await RNFS.unlink(path);
+            }
+          }),
+        );
       } catch (err) {
         console.error('Failed to delete local model file:', err);
       }
@@ -1831,7 +1895,13 @@ class ModelStore {
 
       try {
         if (filePath) {
-          await RNFS.unlink(filePath);
+          await Promise.all(
+            filePaths.map(async path => {
+              if (await RNFS.exists(path)) {
+                await RNFS.unlink(path);
+              }
+            }),
+          );
 
           // Check if we need to release context (if this model is currently active)
           const needsContextRelease = this.activeModelId === _model.id;

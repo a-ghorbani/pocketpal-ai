@@ -2268,6 +2268,109 @@ describe('ModelStore', () => {
       // Contrast with the cancel case: a genuine failure DOES surface an error.
       expect(modelStore.downloadError).not.toBeNull();
     });
+
+    it('should not mark partial files as downloaded when size does not match', async () => {
+      const model = {
+        ...presetModelFixture,
+        id: 'partial-model',
+        filename: 'partial-model.gguf',
+        size: 1000,
+        isDownloaded: false,
+      };
+      modelStore.models = [model];
+
+      (RNFS.exists as jest.Mock).mockResolvedValue(false);
+      (RNFS.stat as jest.Mock).mockResolvedValue({size: 100});
+      (downloadManager.isDownloading as jest.Mock).mockReturnValue(false);
+
+      await modelStore.checkFileExists(model);
+
+      expect(model.isDownloaded).toBe(false);
+    });
+
+    it('should check all split files relative to the repository root', async () => {
+      const model = {
+        ...presetModelFixture,
+        id: 'owner/repo/Q2_K/model.gguf-00001-of-00002.gguf',
+        filename: 'Q2_K/model.gguf-00001-of-00002.gguf',
+        size: 300,
+        origin: ModelOrigin.HF,
+        author: 'owner',
+        repo: 'repo',
+        isDownloaded: false,
+        hfModelFile: {
+          rfilename: 'Q2_K/model.gguf-00001-of-00002.gguf',
+          size: 300,
+          split: {
+            entryRFilename: 'Q2_K/model.gguf-00001-of-00002.gguf',
+            displayRFilename: 'Q2_K/model.gguf',
+            totalSize: 300,
+            totalParts: 2,
+            parts: [
+              {
+                rfilename: 'Q2_K/model.gguf-00001-of-00002.gguf',
+                index: 1,
+                total: 2,
+                size: 100,
+              },
+              {
+                rfilename: 'Q2_K/model.gguf-00002-of-00002.gguf',
+                index: 2,
+                total: 2,
+                size: 200,
+              },
+            ],
+          },
+        },
+        splitDownload: {
+          entryRFilename: 'Q2_K/model.gguf-00001-of-00002.gguf',
+          displayRFilename: 'Q2_K/model.gguf',
+          totalSize: 300,
+          totalParts: 2,
+          parts: [
+            {
+              rfilename: 'Q2_K/model.gguf-00001-of-00002.gguf',
+              index: 1,
+              total: 2,
+              size: 100,
+            },
+            {
+              rfilename: 'Q2_K/model.gguf-00002-of-00002.gguf',
+              index: 2,
+              total: 2,
+              size: 200,
+            },
+          ],
+        },
+      };
+      modelStore.models = [model as any];
+      (RNFS.exists as jest.Mock).mockResolvedValue(false);
+      (RNFS.exists as jest.Mock).mockImplementation(path =>
+        Promise.resolve(
+          [
+            '/path/to/documents/models/hf/owner/repo/Q2_K/model.gguf-00001-of-00002.gguf',
+            '/path/to/documents/models/hf/owner/repo/Q2_K/model.gguf-00002-of-00002.gguf',
+          ].includes(path),
+        ),
+      );
+      (RNFS.stat as jest.Mock)
+        .mockResolvedValueOnce({size: 100})
+        .mockResolvedValueOnce({size: 200});
+      (downloadManager.isDownloading as jest.Mock).mockReturnValue(false);
+
+      await modelStore.checkFileExists(model as any);
+
+      expect(RNFS.exists).toHaveBeenCalledWith(
+        '/path/to/documents/models/hf/owner/repo/Q2_K/model.gguf-00001-of-00002.gguf',
+      );
+      expect(RNFS.exists).toHaveBeenCalledWith(
+        '/path/to/documents/models/hf/owner/repo/Q2_K/model.gguf-00002-of-00002.gguf',
+      );
+      expect(RNFS.exists).not.toHaveBeenCalledWith(
+        '/path/to/documents/models/hf/owner/repo/Q2_K/Q2_K/model.gguf-00002-of-00002.gguf',
+      );
+      expect(model.isDownloaded).toBe(true);
+    });
   });
 
   describe('computed properties', () => {
