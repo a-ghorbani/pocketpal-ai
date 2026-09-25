@@ -29,4 +29,8 @@ export const createStyles = (theme: Theme) =>
       marginTop: 16,
       lineHeight: 24,
     },
+    restoreRow: {
+      alignSelf: 'center',
+      marginTop: 8,
+    },
   });

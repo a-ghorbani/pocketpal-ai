@@ -1087,8 +1087,6 @@
       "download": "Muat Turun",
       "getFree": "Dapatkan Percuma"
     },
-    "premiumPalDescription": "Pal premium daripada komuniti palshub.ai",
-    "premiumInfoText": "Lawati palshub.ai untuk meneroka lebih banyak pal",
     "sortOptions": {
       "newest": "Terbaharu",
       "oldest": "Terlama",
@@ -1112,15 +1110,7 @@
       "error": "Ralat",
       "failedToLoadDetails": "Gagal memuatkan butiran pal",
       "failedToDownload": "Gagal memuat turun pal",
-      "premiumPalMessage": "Ini adalah Pal Premium.\n• Jika anda sudah membukanya dengan akaun Palshub, hanya log masuk untuk mengakses butiran penuhnya.\n• Belum membukanya? Lawati aplikasi palshub.ai untuk maklumat lanjut.",
-      "notAvailable": "T/A",
-      "buyOnPalshub": "Beli di Palshub",
-      "finalizingPurchase": "Memuktamadkan pembelian anda…",
-      "processingPurchase": "Memproses — akan dibuka sebentar lagi.",
-      "checkoutSessionExpired": "Sesi anda telah tamat tempoh. Log masuk semula untuk meneruskan.",
-      "signInAgain": "Log masuk semula",
-      "palNotAvailable": "Pal ini tidak tersedia untuk dibeli buat masa ini.",
-      "checkoutFailed": "Sesuatu telah berlaku. Sila cuba lagi."
+      "notAvailable": "T/A"
     }
   },
   "validation": {

@@ -205,7 +205,13 @@
     "removeRemoteModel": "Remove {{modelName}} ({{serverName}})?",
     "retryConnection": "Retry",
     "enterUrlManually": "Enter URL manually",
-    "manageServers": "Manage Servers"
+    "manageServers": "Manage Servers",
+    "purchases": {
+      "title": "Purchases",
+      "statusOwned": "Owned",
+      "statusUnlocking": "Unlocking",
+      "link": "Sign in to use on other devices"
+    }
   },
   "memory": {
     "shortWarning": "Memory Warning",
@@ -1082,8 +1088,6 @@
       "download": "Download",
       "getFree": "Get Free"
     },
-    "premiumPalDescription": "Premium pal from the palshub.ai community",
-    "premiumInfoText": "Visit palshub.ai to explore more pals",
     "sortOptions": {
       "newest": "Newest",
       "oldest": "Oldest",
@@ -1107,15 +1111,39 @@
       "error": "Error",
       "failedToLoadDetails": "Failed to load pal details",
       "failedToDownload": "Failed to download pal",
-      "premiumPalMessage": "This is a Premium Pal.\n• If you've already unlocked it with your Palshub account, simply sign in to access the full details.\n• Haven't unlocked it yet? Visit palshub.ai app to learn more.",
-      "notAvailable": "N/A",
-      "buyOnPalshub": "Buy on Palshub",
-      "finalizingPurchase": "Finalizing your purchase…",
-      "processingPurchase": "Processing — will unlock shortly.",
-      "checkoutSessionExpired": "Your session expired. Sign in again to continue.",
-      "signInAgain": "Sign in again",
-      "palNotAvailable": "This pal is not available for purchase right now.",
-      "checkoutFailed": "Something went wrong. Please try again."
+      "notAvailable": "N/A"
+    },
+    "purchase": {
+      "buy": "Get for {{price}}",
+      "oneTime": "One-time purchase. Yours to keep. No account needed.",
+      "owned": "Owned",
+      "pending": "Payment pending — we'll unlock it as soon as it clears",
+      "unlocking": "Paid — unlocking…",
+      "retry": "Retry",
+      "installing": "Unlocking…",
+      "readyIos": "{{name}} is yours to keep. It's tied to your App Store account — reinstall and tap Restore purchases to get it back.",
+      "readyAndroid": "{{name}} is yours to keep. It's tied to your Google Play account — reinstall and tap Restore purchases to get it back.",
+      "supportCode": "Support code: {{code}}",
+      "unfulfillable": "We couldn't deliver this. Support has been notified — ref {{code}}",
+      "unfulfillableRefunded": "We couldn't deliver this, so your purchase has been refunded — ref {{code}}",
+      "invalid": "We couldn't verify this purchase. Try Restore purchases, or contact support.",
+      "recommendedModel": "Recommended model",
+      "sampleExchange": "Sample conversation",
+      "signInLine": "Already own it? Sign in",
+      "linkPrompt": "Sign in to use it on your other devices too",
+      "linkSignIn": "Sign in",
+      "dismiss": "Not now",
+      "linkConflict": "These purchases are linked to another account.",
+      "restoreNeeded": "This purchase isn't on this device's store account yet.",
+      "restorePurchases": "Restore purchases",
+      "badgePending": "Pending",
+      "badgeUnlocking": "Unlocking",
+      "modelStep": {
+        "download": "Download · {{size}}",
+        "startChat": "Start chat",
+        "needsMemory": "This Pal needs a device with at least {{size}} of memory for its smallest model.",
+        "noModelFits": "None of the available models fit this device."
+      }
     }
   },
   "validation": {

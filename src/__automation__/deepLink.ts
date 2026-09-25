@@ -8,6 +8,7 @@
  *   pocketpal://tts?cmd=download::<engine>
  *   pocketpal://tts?cmd=synthesize::<engine>
  *   pocketpal://tts?cmd=release
+ *   pocketpal://iap?cmd=<verb>::<arg>   (FakeStore script, see fakeStore.ts)
  *   pocketpal://e2e/benchmark   (Android: cold-launch path lives in
  *                                useDeepLinking.ts since RN's Android side
  *                                doesn't deliver the URL via DeepLinkService)
@@ -42,6 +43,11 @@ export async function dispatchAutomationDeepLink(
   if (params.host === 'tts' && params.queryParams?.cmd) {
     const {runTtsCommand} = require('./ttsAutomation');
     await runTtsCommand(params.queryParams.cmd);
+    return true;
+  }
+  if (params.host === 'iap' && params.queryParams?.cmd) {
+    const {fakeStore} = require('./fakeStore');
+    await fakeStore.run(params.queryParams.cmd);
     return true;
   }
   // pocketpal://e2e/benchmark — bench host. Match against the raw URL via

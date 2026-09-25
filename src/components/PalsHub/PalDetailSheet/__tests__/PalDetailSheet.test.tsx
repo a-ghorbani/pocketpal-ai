@@ -1,11 +1,11 @@
 import React from 'react';
-import {Alert, Linking, Platform} from 'react-native';
+import {Alert, Linking} from 'react-native';
 import {runInAction} from 'mobx';
-import {render, fireEvent, waitFor, act} from '../../../../../jest/test-utils';
+import {render, fireEvent, waitFor} from '../../../../../jest/test-utils';
 
 import {PalDetailSheet} from '../PalDetailSheet';
 import {authService, palsHubService} from '../../../../services';
-import {palStore, checkoutFlowStore} from '../../../../store';
+import {palStore, purchaseStore} from '../../../../store';
 import {
   createPalsHubPal,
   mockPalsHubPal,
@@ -73,15 +73,10 @@ describe('PalDetailSheet', () => {
     );
     // Reset downloadPalsHubPal to resolve successfully
     (palStore.downloadPalsHubPal as jest.Mock).mockResolvedValue(undefined);
-    // Reset isCheckoutEligible to false (default ineligible)
-    (palStore as any).isCheckoutEligible = false;
     // Default to logged-out; authenticated tests opt in explicitly.
     (authService as any).isAuthenticated = false;
-    // Reset checkout flow state between tests
     runInAction(() => {
-      checkoutFlowStore.status = 'idle';
-      checkoutFlowStore.palId = null;
-      checkoutFlowStore.errorKind = undefined;
+      (purchaseStore as any).reset();
     });
     // Reset defaultProps with a fresh mock for each test
     defaultProps = {
@@ -349,31 +344,28 @@ describe('PalDetailSheet', () => {
       );
     });
 
-    it('shows download button for owned premium pals', async () => {
-      const {getByText} = render(
+    it('shows Owned instead of Buy for owned premium pals', async () => {
+      const {getByTestId, queryByTestId} = render(
         <PalDetailSheet {...defaultProps} pal={mockOwnedPremiumPal} />,
       );
 
       await waitFor(() => {
-        expect(getByText(/Download/i)).toBeTruthy();
+        expect(getByTestId('owned-button')).toBeTruthy();
       });
+      expect(queryByTestId('buy-button')).toBeNull();
+      expect(queryByTestId('download-button')).toBeNull();
     });
 
-    it('downloads owned premium pal when download button is pressed', async () => {
+    it('downloads an account-owned premium pal from Owned', async () => {
       const {getByTestId} = render(
         <PalDetailSheet {...defaultProps} pal={mockOwnedPremiumPal} />,
       );
 
-      // Wait for component to render with the button
       await waitFor(() => {
-        expect(getByTestId('download-button')).toBeTruthy();
+        expect(getByTestId('owned-button')).toBeTruthy();
       });
+      fireEvent.press(getByTestId('owned-button'));
 
-      // Press the button
-      const downloadButton = getByTestId('download-button');
-      fireEvent.press(downloadButton);
-
-      // Verify download was called
       await waitFor(() => {
         expect(palStore.downloadPalsHubPal).toHaveBeenCalledWith(
           mockOwnedPremiumPal,
@@ -390,17 +382,6 @@ describe('PalDetailSheet', () => {
         expect(
           getByText('You are a helpful assistant from PalsHub.'),
         ).toBeTruthy();
-      });
-    });
-
-    it('does not show premium info text for owned premium pals', async () => {
-      const {getByTestId} = render(
-        <PalDetailSheet {...defaultProps} pal={mockOwnedPremiumPal} />,
-      );
-
-      await waitFor(() => {
-        // Should have actions but not the premium info text
-        expect(getByTestId('sheet-actions')).toBeTruthy();
       });
     });
   });
@@ -552,335 +533,134 @@ describe('PalDetailSheet', () => {
     });
   });
 
-  describe('Premium Buy Button (eligible vs ineligible)', () => {
+  describe('Purchase footer', () => {
+    const buyablePal = {
+      ...mockPremiumPalsHubPal,
+      store_product_id: 'pal.abc',
+      iap_enabled: {ios: true, android: true},
+      model_reference: {
+        repo_id: 'owner/repo',
+        filename: 'story-model.gguf',
+        author: 'owner',
+        downloadUrl: 'https://example.com/story-model.gguf',
+        size: 1.2 * 10 ** 9,
+      },
+    };
+
     beforeEach(() => {
-      (palsHubService.getPal as jest.Mock).mockResolvedValue(
-        mockPremiumPalsHubPal,
-      );
+      (palsHubService.getPal as jest.Mock).mockResolvedValue(buyablePal);
     });
 
-    it('shows buy button for eligible users viewing unowned premium pals', async () => {
-      (palStore as any).isCheckoutEligible = true;
-
-      const {getByTestId} = render(
-        <PalDetailSheet {...defaultProps} pal={mockPremiumPalsHubPal} />,
-      );
-
-      await waitFor(() => {
-        expect(getByTestId('buy-button')).toBeTruthy();
-      });
-    });
-
-    it('shows info text (not buy button) for ineligible users viewing unowned premium pals', async () => {
-      (palStore as any).isCheckoutEligible = false;
-
-      const {queryByTestId} = render(
-        <PalDetailSheet {...defaultProps} pal={mockPremiumPalsHubPal} />,
-      );
-
-      await waitFor(() => {
-        expect(queryByTestId('buy-button')).toBeNull();
-      });
-    });
-
-    it('starts the in-app checkout on iOS when buy button is pressed', async () => {
-      (palStore as any).isCheckoutEligible = true;
-      (authService as any).isAuthenticated = true;
-
-      const {getByTestId} = render(
-        <PalDetailSheet {...defaultProps} pal={mockPremiumPalsHubPal} />,
-      );
-
-      await waitFor(() => {
-        expect(getByTestId('buy-button')).toBeTruthy();
-      });
-
-      fireEvent.press(getByTestId('buy-button'));
-
-      // iOS (default Platform.OS in jest) drives the authenticated checkout
-      // flow, not the anonymous web URL.
-      expect(checkoutFlowStore.start).toHaveBeenCalledWith(
-        mockPremiumPalsHubPal.id,
-      );
-      expect(Linking.openURL).not.toHaveBeenCalled();
-    });
-
-    it('opens sign-in instead of checkout when logged out', async () => {
-      (palStore as any).isCheckoutEligible = true;
-      (authService as any).isAuthenticated = false;
-      const onSignInPress = jest.fn();
-
-      const {getByTestId} = render(
-        <PalDetailSheet
-          {...defaultProps}
-          pal={mockPremiumPalsHubPal}
-          onSignInPress={onSignInPress}
-        />,
-      );
-
-      await waitFor(() => {
-        expect(getByTestId('buy-button')).toBeTruthy();
-      });
-
-      fireEvent.press(getByTestId('buy-button'));
-
-      expect(onSignInPress).toHaveBeenCalled();
-      expect(checkoutFlowStore.start).not.toHaveBeenCalled();
-    });
-
-    it('opens sign-in on Android when logged out', async () => {
-      const original = Platform.OS;
-      Platform.OS = 'android';
-      (palStore as any).isCheckoutEligible = true;
-      (authService as any).isAuthenticated = false;
-      const onSignInPress = jest.fn();
-
-      const {getByTestId} = render(
-        <PalDetailSheet
-          {...defaultProps}
-          pal={mockPremiumPalsHubPal}
-          onSignInPress={onSignInPress}
-        />,
-      );
-
-      await waitFor(() => {
-        expect(getByTestId('buy-button')).toBeTruthy();
-      });
-
-      fireEvent.press(getByTestId('buy-button'));
-
-      expect(onSignInPress).toHaveBeenCalled();
-      expect(checkoutFlowStore.start).not.toHaveBeenCalled();
-
-      Platform.OS = original;
-    });
-
-    it('flips Buy to Download after the purchase reconciles to owned', async () => {
-      (palStore as any).isCheckoutEligible = true;
-      (authService as any).isAuthenticated = true;
-      // Initially not owned -> buy button shows.
-      (palsHubService.getPal as jest.Mock).mockResolvedValue(
-        mockPremiumPalsHubPal,
-      );
-
-      const {getByTestId, queryByTestId} = render(
-        <PalDetailSheet {...defaultProps} pal={mockPremiumPalsHubPal} />,
-      );
-      await waitFor(() => {
-        expect(getByTestId('buy-button')).toBeTruthy();
-      });
-
-      // Purchase reconciles to owned; the sheet re-reads ownership from the server.
-      (palsHubService.getPal as jest.Mock).mockResolvedValue(
-        mockOwnedPremiumPal,
-      );
-      await act(async () => {
-        runInAction(() => {
-          checkoutFlowStore.status = 'owned';
+    it('renders Buy with the store price when the Pal is purchasable', async () => {
+      runInAction(() => {
+        purchaseStore.availability = 'ready';
+        purchaseStore.products.set('pal.abc', {
+          productId: 'pal.abc',
+          displayPrice: '¥450',
         });
       });
 
-      await waitFor(() => {
-        expect(queryByTestId('buy-button')).toBeNull();
-        expect(getByTestId('download-button')).toBeTruthy();
-      });
-    });
-
-    it('does not show buy button for owned premium pals', async () => {
-      (palStore as any).isCheckoutEligible = true;
-      (palsHubService.getPal as jest.Mock).mockResolvedValue(
-        mockOwnedPremiumPal,
-      );
-
-      const {queryByTestId} = render(
-        <PalDetailSheet {...defaultProps} pal={mockOwnedPremiumPal} />,
-      );
-
-      await waitFor(() => {
-        expect(queryByTestId('buy-button')).toBeNull();
-      });
-    });
-
-    it('does not show buy button for free pals', async () => {
-      (palStore as any).isCheckoutEligible = true;
-      (palsHubService.getPal as jest.Mock).mockResolvedValue(mockPalsHubPal);
-
-      const {queryByTestId} = render(
-        <PalDetailSheet {...defaultProps} pal={mockPalsHubPal} />,
-      );
-
-      await waitFor(() => {
-        expect(queryByTestId('buy-button')).toBeNull();
-      });
-    });
-
-    it('starts checkout directly on Android (no app disclosure; Play renders it)', async () => {
-      const original = Platform.OS;
-      Platform.OS = 'android';
-      (palStore as any).isCheckoutEligible = true;
-      (authService as any).isAuthenticated = true;
-      (palsHubService.getPal as jest.Mock).mockResolvedValue(
-        mockPremiumPalsHubPal,
-      );
-
-      const {getByTestId, queryByTestId} = render(
-        <PalDetailSheet {...defaultProps} pal={mockPremiumPalsHubPal} />,
+      const {getByTestId, getByText} = render(
+        <PalDetailSheet {...defaultProps} pal={buyablePal} />,
       );
 
       await waitFor(() => {
         expect(getByTestId('buy-button')).toBeTruthy();
       });
-
-      fireEvent.press(getByTestId('buy-button'));
-
-      // No app-rendered consent gate; checkout starts immediately (the store
-      // runs the Play link-out prep, where Play renders the disclosure).
-      expect(queryByTestId('disclosure-continue-button')).toBeNull();
-      expect(checkoutFlowStore.start).toHaveBeenCalledWith(
-        mockPremiumPalsHubPal.id,
-      );
-      expect(Linking.openURL).not.toHaveBeenCalled();
-
-      Platform.OS = original;
+      expect(getByText('Get for ¥450')).toBeTruthy();
     });
 
-    it('starts checkout directly on iOS (no app disclosure gate)', async () => {
-      (palStore as any).isCheckoutEligible = true;
-      (authService as any).isAuthenticated = true;
-      (palsHubService.getPal as jest.Mock).mockResolvedValue(
-        mockPremiumPalsHubPal,
-      );
-
-      const {getByTestId, queryByTestId} = render(
-        <PalDetailSheet {...defaultProps} pal={mockPremiumPalsHubPal} />,
+    it('renders no footer action when the Pal is not purchasable', async () => {
+      const {queryByTestId, getByTestId} = render(
+        <PalDetailSheet {...defaultProps} pal={buyablePal} />,
       );
 
       await waitFor(() => {
-        expect(getByTestId('buy-button')).toBeTruthy();
+        expect(getByTestId('sheet-actions')).toBeTruthy();
       });
-
-      fireEvent.press(getByTestId('buy-button'));
-
-      expect(queryByTestId('disclosure-continue-button')).toBeNull();
-      expect(checkoutFlowStore.start).toHaveBeenCalledWith(
-        mockPremiumPalsHubPal.id,
-      );
+      expect(queryByTestId('buy-button')).toBeNull();
+      expect(queryByTestId('pal-purchase-footer')).toBeNull();
     });
 
-    it('shows the finalizing indicator while the purchase settles', async () => {
-      (palStore as any).isCheckoutEligible = true;
-      runInAction(() => {
-        checkoutFlowStore.status = 'finalizing';
-        checkoutFlowStore.palId = mockPremiumPalsHubPal.id;
-      });
-
-      const {getByText} = render(
-        <PalDetailSheet {...defaultProps} pal={mockPremiumPalsHubPal} />,
+    it('ends the scroll content with the recommended model and its size', async () => {
+      const {getByTestId, getByText} = render(
+        <PalDetailSheet {...defaultProps} pal={buyablePal} />,
       );
 
       await waitFor(() => {
-        expect(getByText('Finalizing your purchase…')).toBeTruthy();
+        expect(getByTestId('pal-recommended-model')).toBeTruthy();
       });
+      expect(getByText(/story-model/)).toBeTruthy();
+      expect(getByText(/1\.2 GB/)).toBeTruthy();
     });
 
-    it('shows the processing-deferred message after webhook lag', async () => {
-      (palStore as any).isCheckoutEligible = true;
-      runInAction(() => {
-        checkoutFlowStore.status = 'processing_deferred';
-        checkoutFlowStore.palId = mockPremiumPalsHubPal.id;
-      });
-
-      const {getByText} = render(
-        <PalDetailSheet {...defaultProps} pal={mockPremiumPalsHubPal} />,
+    it('shows a sample exchange only when the API supplies one', async () => {
+      const first = render(
+        <PalDetailSheet {...defaultProps} pal={buyablePal} />,
       );
-
       await waitFor(() => {
-        expect(getByText('Processing — will unlock shortly.')).toBeTruthy();
+        expect(first.getByTestId('pal-recommended-model')).toBeTruthy();
       });
-    });
+      expect(first.queryByTestId('pal-sample-exchange')).toBeNull();
+      first.unmount();
 
-    it('shows the not-available message on a 404 error without a sign-in control', async () => {
-      (palStore as any).isCheckoutEligible = true;
-      runInAction(() => {
-        checkoutFlowStore.status = 'error';
-        checkoutFlowStore.errorKind = '404';
+      (palsHubService.getPal as jest.Mock).mockResolvedValue({
+        ...buyablePal,
+        sample_exchange: [
+          {role: 'user', text: 'Tell me a story'},
+          {role: 'pal', text: 'Once upon a time'},
+        ],
       });
-
-      const {getByText, queryByTestId} = render(
-        <PalDetailSheet {...defaultProps} pal={mockPremiumPalsHubPal} />,
+      const second = render(
+        <PalDetailSheet {...defaultProps} pal={buyablePal} />,
       );
-
       await waitFor(() => {
-        expect(
-          getByText('This pal is not available for purchase right now.'),
-        ).toBeTruthy();
+        expect(second.getByText('Once upon a time')).toBeTruthy();
       });
-      expect(queryByTestId('checkout-signin-button')).toBeNull();
     });
 
-    it('disables the buy button while a checkout is creating', async () => {
-      (palStore as any).isCheckoutEligible = true;
+    it('keeps the purchase state when the sheet is closed', async () => {
       runInAction(() => {
-        checkoutFlowStore.status = 'creating';
-        checkoutFlowStore.palId = mockPremiumPalsHubPal.id;
+        purchaseStore.records['palshub-pal-2'] = {
+          palId: 'palshub-pal-2',
+          source: 'store',
+          productId: 'pal.abc',
+          transactionIds: [],
+          status: 'unlocking',
+          title: 'Premium PalsHub Pal',
+          updatedAt: 1,
+        };
       });
-
       const {getByTestId} = render(
-        <PalDetailSheet {...defaultProps} pal={mockPremiumPalsHubPal} />,
+        <PalDetailSheet {...defaultProps} pal={buyablePal} />,
       );
-
-      let buyButton: ReturnType<typeof getByTestId>;
       await waitFor(() => {
-        buyButton = getByTestId('buy-button');
-        expect(buyButton).toBeTruthy();
-      });
-
-      fireEvent.press(buyButton!);
-      // A second press while in flight must not start another checkout.
-      expect(checkoutFlowStore.start).not.toHaveBeenCalled();
-    });
-
-    it('resets the checkout flow when the sheet is closed', async () => {
-      (palStore as any).isCheckoutEligible = true;
-
-      const {getByTestId} = render(
-        <PalDetailSheet {...defaultProps} pal={mockPremiumPalsHubPal} />,
-      );
-
-      await waitFor(() => {
-        expect(getByTestId('buy-button')).toBeTruthy();
+        expect(getByTestId('purchase-unlocking')).toBeTruthy();
       });
 
       fireEvent.press(getByTestId('sheet-close-button'));
-      expect(checkoutFlowStore.reset).toHaveBeenCalled();
+
       expect(defaultProps.onClose).toHaveBeenCalled();
+      expect(purchaseStore.recordFor('palshub-pal-2')?.status).toBe(
+        'unlocking',
+      );
     });
 
-    it('renders "Sign in again" on a 401 error and calls onSignInPress', async () => {
-      (palStore as any).isCheckoutEligible = true;
-      (palsHubService.getPal as jest.Mock).mockResolvedValue(
-        mockPremiumPalsHubPal,
-      );
+    it('never renders web purchase wording', async () => {
       runInAction(() => {
-        checkoutFlowStore.status = 'error';
-        checkoutFlowStore.errorKind = '401';
+        purchaseStore.availability = 'ready';
+        purchaseStore.products.set('pal.abc', {
+          productId: 'pal.abc',
+          displayPrice: '4,99 €',
+        });
       });
-      const onSignInPress = jest.fn();
-
-      const {getByTestId} = render(
-        <PalDetailSheet
-          {...defaultProps}
-          pal={mockPremiumPalsHubPal}
-          onSignInPress={onSignInPress}
-        />,
+      const {getByTestId, queryByText} = render(
+        <PalDetailSheet {...defaultProps} pal={buyablePal} />,
       );
-
       await waitFor(() => {
-        expect(getByTestId('checkout-signin-button')).toBeTruthy();
+        expect(getByTestId('buy-button')).toBeTruthy();
       });
-
-      fireEvent.press(getByTestId('checkout-signin-button'));
-      expect(onSignInPress).toHaveBeenCalled();
+      expect(queryByText(/palshub\.ai|website|\bweb\b|check-?out/i)).toBeNull();
     });
   });
 });

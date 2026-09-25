@@ -14,7 +14,7 @@ import {
   GestureHandlerRootView,
 } from 'react-native-gesture-handler';
 
-import {ttsStore, uiStore} from './src/store';
+import {purchaseStore, ttsStore, uiStore} from './src/store';
 import {useTheme} from './src/hooks';
 import {useDeepLinking} from './src/hooks/useDeepLinking';
 import {Theme} from './src/utils/types';
@@ -34,7 +34,11 @@ import {
   HubRunSheetHost,
 } from './src/components';
 import {MarkdownProvider} from './src/components/MarkdownView';
-import {AutomationBridge, BenchmarkRunnerScreen} from './src/__automation__';
+import {
+  AutomationBridge,
+  BenchmarkRunnerScreen,
+  fakeStore,
+} from './src/__automation__';
 import {
   ChatScreen,
   ModelsScreen,
@@ -50,6 +54,10 @@ import {OnboardingStack} from './src/screens/OnboardingScreens';
 
 // Check if app is in debug mode
 const isDebugMode = __DEV__;
+
+if (__E2E__) {
+  fakeStore.restore();
+}
 
 const Drawer = createDrawerNavigator();
 
@@ -96,6 +104,12 @@ const App = observer(() => {
     ttsStore.init().catch(() => {
       // init() swallows its own errors; catch to satisfy no-floating-promises.
     });
+  }, []);
+
+  React.useEffect(() => {
+    purchaseStore
+      .start(__E2E__ ? {store: fakeStore, beforeInit: fakeStore.restore} : {})
+      .catch(error => console.warn('Purchase recovery failed:', error));
   }, []);
 
   return (

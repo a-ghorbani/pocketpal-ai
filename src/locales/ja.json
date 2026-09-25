@@ -1087,8 +1087,6 @@
       "download": "ダウンロード",
       "getFree": "無料で入手"
     },
-    "premiumPalDescription": "palshub.aiコミュニティのプレミアムPal",
-    "premiumInfoText": "アプリ外でpalshub.aiにアクセスして、より多くのPalを探索",
     "sortOptions": {
       "newest": "新着順",
       "oldest": "古い順",
@@ -1112,15 +1110,7 @@
       "error": "エラー",
       "failedToLoadDetails": "Palの詳細の読み込みに失敗しました",
       "failedToDownload": "Palのダウンロードに失敗しました",
-      "premiumPalMessage": "これはプレミアムPalです。\n• Palshubアカウントで既にアンロックしている場合は、サインインして詳細にアクセスしてください。\n• まだアンロックしていない場合は、palshub.aiアプリにアクセスして詳細をご確認ください。",
-      "notAvailable": "N/A",
-      "buyOnPalshub": "Palshubで購入",
-      "finalizingPurchase": "購入を完了処理中…",
-      "processingPurchase": "処理中 — まもなくアンロックされます。",
-      "checkoutSessionExpired": "セッションの有効期限が切れました。続行するには再度サインインしてください。",
-      "signInAgain": "再度サインイン",
-      "palNotAvailable": "このPalは現在購入できません。",
-      "checkoutFailed": "問題が発生しました。もう一度お試しください。"
+      "notAvailable": "N/A"
     }
   },
   "validation": {

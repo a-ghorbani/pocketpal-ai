@@ -83,6 +83,17 @@ export const byAccessibilityLabelContains = (label: string): string => {
 };
 
 /**
+ * Create selector for an element whose testID starts with `prefix` and that
+ * shows `text` itself or in a descendant
+ */
+export const withinTestIdPrefix = (prefix: string, text: string): string => {
+  if (isAndroid()) {
+    return `//*[starts-with(@resource-id, "${prefix}")][descendant-or-self::*[@text="${text}" or @content-desc="${text}"]]`;
+  }
+  return `-ios class chain:**/*[\`name BEGINSWITH "${prefix}"\`]/**/*[\`label == "${text}"\`]`;
+};
+
+/**
  * Create selector for native text elements (TextView on Android, StaticText on iOS)
  * Useful for extracting rendered text from React Native components
  */

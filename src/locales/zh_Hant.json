@@ -1333,15 +1333,7 @@
       "palAddedToCollection": "Pal 已新增至您的收藏！",
       "failedToLoadDetails": "載入 pal 詳情失敗",
       "failedToDownload": "下載 pal 失敗",
-      "premiumPalMessage": "這是高級 Pal。\n• 如果您已使用您的 Palshub 帳戶解鎖它，只需登入即可存取完整詳細資訊。\n• 還未解鎖？請前往 palshub.ai 應用程式了解更多。",
-      "notAvailable": "不適用",
-      "buyOnPalshub": "在 Palshub 上購買",
-      "finalizingPurchase": "正在完成您的購買…",
-      "processingPurchase": "處理中 — 稍後將解鎖。",
-      "checkoutSessionExpired": "您的連線已過期。請重新登入以繼續。",
-      "signInAgain": "重新登入",
-      "palNotAvailable": "此 pal 目前無法購買。",
-      "checkoutFailed": "發生錯誤。請重試。"
+      "notAvailable": "不適用"
     },
     "filters": {
       "myPals": "我的 Pal",
@@ -1393,8 +1385,6 @@
       "download": "下載",
       "getFree": "獲得免費版本"
     },
-    "premiumPalDescription": "來自 palshub.ai 社群的高級 pal",
-    "premiumInfoText": "前往 palshub.ai 探索更多 pal",
     "sortOptions": {
       "newest": "最新",
       "oldest": "最舊的",

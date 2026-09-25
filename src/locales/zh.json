@@ -1087,8 +1087,6 @@
       "download": "下载",
       "getFree": "免费获取"
     },
-    "premiumPalDescription": "来自 palshub.ai 社区的高级 Pal",
-    "premiumInfoText": "在应用外访问 palshub.ai 探索更多 Pal",
     "sortOptions": {
       "newest": "最新",
       "oldest": "最旧",
@@ -1112,15 +1110,7 @@
       "error": "错误",
       "failedToLoadDetails": "加载 Pal 详情失败",
       "failedToDownload": "下载 Pal 失败",
-      "premiumPalMessage": "这是一个高级 Pal。\n• 如果您已经通过 Palshub 账户解锁，请登录以访问完整详情。\n• 还没有解锁？请访问 palshub.ai 应用了解更多。",
-      "notAvailable": "N/A",
-      "buyOnPalshub": "在 Palshub 购买",
-      "finalizingPurchase": "正在完成您的购买…",
-      "processingPurchase": "处理中 — 即将解锁。",
-      "checkoutSessionExpired": "您的会话已过期，请重新登录以继续。",
-      "signInAgain": "重新登录",
-      "palNotAvailable": "此 Pal 目前无法购买。",
-      "checkoutFailed": "发生错误，请重试。"
+      "notAvailable": "N/A"
     }
   },
   "validation": {

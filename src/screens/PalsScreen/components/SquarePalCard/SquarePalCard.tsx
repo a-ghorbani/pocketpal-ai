@@ -20,14 +20,14 @@ import {createStyles} from './styles';
 
 import type {Pal} from '../../../../store/PalStore';
 import {palStore} from '../../../../store/PalStore';
-import {chatSessionStore, modelStore} from '../../../../store';
+import {modelStore, purchaseStore} from '../../../../store';
 
 import type {PalsHubPal} from '../../../../types/palshub';
 
 import {L10nContext} from '../../../../utils';
 import {t} from '../../../../locales';
 import {exportPal} from '../../../../utils/exportUtils';
-import {ROUTES} from '../../../../utils/navigationConstants';
+import {activatePalWithModel} from '../../../../utils/activatePal';
 import {getContrastColor} from '../../../../utils/colorUtils';
 import {getFullThumbnailUri} from '../../../../utils/imageUtils';
 import {getPalDisplayLabel} from '../../../../utils/palshub-display';
@@ -267,47 +267,8 @@ export const SquarePalCard: React.FC<SquarePalCardProps> = observer(
       }
     };
 
-    // 3-step pal activation logic from ChatPalModelPickerSheet
-    const activatePalAndNavigate = async (localPal: Pal) => {
-      // Step 1: Set the pal as active
-      await chatSessionStore.setActivePal(localPal.id);
-
-      // Step 2 & 3: Handle model loading logic
-      if (localPal.defaultModel) {
-        if (!modelStore.activeModel) {
-          // Step 2: No model loaded, load the pal's default model
-          const palDefaultModel = modelStore.availableModels.find(
-            m => m.id === localPal.defaultModel?.id,
-          );
-          if (palDefaultModel) {
-            await modelStore.selectModel(palDefaultModel);
-          }
-        } else if (localPal.defaultModel.id !== modelStore.activeModelId) {
-          // Step 3: Different model loaded, ask user
-          const palDefaultModel = modelStore.availableModels.find(
-            m => m.id === localPal.defaultModel?.id,
-          );
-          if (palDefaultModel) {
-            Alert.alert(
-              'Switch Model?',
-              `Switch to "${palDefaultModel.name}" for this pal?`,
-              [
-                {text: 'Keep Current', style: 'cancel'},
-                {
-                  text: 'Switch',
-                  onPress: () => {
-                    modelStore.selectModel(palDefaultModel);
-                  },
-                },
-              ],
-            );
-          }
-        }
-      }
-
-      // Navigate to chat
-      (navigation as any).navigate(ROUTES.CHAT);
-    };
+    const activatePalAndNavigate = (localPal: Pal) =>
+      activatePalWithModel(localPal, navigation as any);
 
     // Action handlers for local pals only
     const handleDelete = () => {
@@ -353,6 +314,22 @@ export const SquarePalCard: React.FC<SquarePalCardProps> = observer(
     const palCreator = isPalsHubPal(pal) ? pal.creator : undefined;
     const isProtected =
       isPalsHubPal(pal) && pal.protection_level === 'reveal_on_purchase';
+    const palshubId = isPalsHubPal(pal) ? pal.id : pal.palshub_id;
+    const purchaseStatus = palshubId
+      ? purchaseStore.recordFor(palshubId)?.status
+      : undefined;
+    const purchaseBadge =
+      purchaseStatus === 'pending_payment'
+        ? {
+            testID: 'pal-badge-pending',
+            label: l10n.palsScreen.purchase.badgePending,
+          }
+        : purchaseStatus === 'unlocking' || purchaseStatus === 'granted'
+          ? {
+              testID: 'pal-badge-unlocking',
+              label: l10n.palsScreen.purchase.badgeUnlocking,
+            }
+          : undefined;
 
     // Create card style with optional color theming
     const cardStyle = [
@@ -511,6 +488,15 @@ export const SquarePalCard: React.FC<SquarePalCardProps> = observer(
                       </View>
                     )}
                   </View>
+                  {purchaseBadge && (
+                    <View
+                      testID={purchaseBadge.testID}
+                      style={styles.purchaseBadge}>
+                      <Text style={styles.purchaseBadgeText} numberOfLines={1}>
+                        {purchaseBadge.label}
+                      </Text>
+                    </View>
+                  )}
                 </View>
               </View>
             </View>

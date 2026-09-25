@@ -83,5 +83,6 @@ module.exports = {
       '<rootDir>/__mocks__/external/@gorhom/bottom-sheet.js',
     '@pocketpalai/react-native-speech':
       '<rootDir>/__mocks__/external/@pocketpalai/react-native-speech.ts',
+    '^react-native-iap$': '<rootDir>/__mocks__/external/react-native-iap.ts',
   },
 };

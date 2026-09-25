@@ -157,34 +157,21 @@ export const createStyles = (theme: Theme) =>
       color: theme.colors.onSurfaceVariant,
       fontFamily: 'monospace',
     },
-    protectedContent: {
-      backgroundColor: theme.colors.errorContainer,
-      borderRadius: 12,
-      padding: 16,
-      alignItems: 'center',
-      marginTop: 8,
-    },
-    protectedText: {
-      fontSize: 14,
-      color: theme.colors.onErrorContainer,
-      textAlign: 'center',
-      marginTop: 8,
-    },
     primaryButton: {
       flex: 1,
       marginBottom: 12,
     },
-    // Buy button + its checkout feedback stack vertically and fill the row,
-    // so a wide error/finalizing message never squeezes the button.
-    buyActionColumn: {
-      flex: 1,
+    sampleUser: {
+      fontSize: 14,
+      lineHeight: 20,
+      color: theme.colors.onSurfaceVariant,
+      marginBottom: 4,
     },
-    buyButton: {
-      alignSelf: 'stretch',
-    },
-    errorButton: {
-      alignSelf: 'stretch',
-      marginTop: 8,
+    samplePal: {
+      fontSize: 14,
+      lineHeight: 20,
+      color: theme.colors.onSurface,
+      marginBottom: 8,
     },
     errorContainer: {
       backgroundColor: theme.colors.errorContainer,
@@ -203,16 +190,5 @@ export const createStyles = (theme: Theme) =>
     accountLinkContainer: {
       marginTop: 12,
       alignItems: 'center',
-    },
-    infoTextContainer: {
-      marginTop: 16,
-      alignItems: 'center',
-      paddingHorizontal: 20,
-    },
-    infoText: {
-      fontSize: 14,
-      color: theme.colors.onSurfaceVariant,
-      textAlign: 'center',
-      fontStyle: 'italic',
     },
   });

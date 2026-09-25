@@ -167,6 +167,18 @@ export interface PalsHubPal {
   is_owned?: boolean;
 
   // ============================================================================
+  // IN-APP PURCHASE
+  // ============================================================================
+  /** Store product id, identical on the App Store and Google Play */
+  store_product_id?: string;
+  /** Whether the Pal is purchasable in each platform's store */
+  iap_enabled?: {ios?: boolean; android?: boolean};
+  /** Optional short example conversation shown before purchase */
+  sample_exchange?: SampleExchangeTurn[];
+  /** Server content revision, compared on refresh */
+  content_version?: number;
+
+  // ============================================================================
   // PACT (Pal Action & Capability Treaty) — wire shape, snake_case
   // ============================================================================
   /**
@@ -208,6 +220,11 @@ export interface PalsHubPal {
    * as `unknown[]` until a concrete consumer arrives.
    */
   models?: unknown[];
+}
+
+export interface SampleExchangeTurn {
+  role: 'user' | 'pal';
+  text: string;
 }
 
 export interface PalsHubUserPal {
@@ -297,15 +314,6 @@ export interface CreateReviewRequest {
   pal_id: string;
   rating: number; // 1-5
   comment?: string; // Max 2000 characters
-}
-
-export interface CreatePurchaseRequest {
-  pal_id: string;
-}
-
-export interface PurchaseResponse {
-  checkout_url: string; // Stripe checkout URL
-  purchase_id: string;
 }
 
 // Error response interface
