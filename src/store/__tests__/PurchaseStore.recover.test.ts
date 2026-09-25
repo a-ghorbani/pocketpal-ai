@@ -3,11 +3,13 @@ import {runInAction} from 'mobx';
 
 import {refreshBody} from '../../services/iap/iapWire';
 import {
+  LEDGER_KEY,
   RETRY_DELAYS_MS,
   RETRY_STEADY_MS,
   STALE_PENDING_MS,
 } from '../PurchaseStore';
 import {
+  MemoryStorage,
   PAL_ID,
   PRODUCT,
   createHarness,
@@ -371,6 +373,58 @@ describe('PurchaseStore recovery', () => {
       });
       await h.purchases.recover();
       expect(h.purchases.recordFor(PAL_ID)?.status).toBe('removed');
+    });
+  });
+
+  describe('failed store query', () => {
+    const failQuery = (h: ReturnType<typeof createHarness>) =>
+      h.store.currentEntitlements.mockImplementation(async () => {
+        h.store.queryOk = false;
+        return [];
+      });
+
+    it('skips refresh and leaves the record as it is', async () => {
+      const h = createHarness({records: [record('active')]});
+      h.palStore.pals.push(localPal());
+      failQuery(h);
+
+      await h.purchases.recover();
+
+      expect(h.api.refresh).not.toHaveBeenCalled();
+      expect(h.purchases.recordFor(PAL_ID)).toEqual(record('active'));
+    });
+
+    it.each([
+      [false, 'keeps an unreadable ledger read-only'],
+      [true, 'marks an unreadable ledger writable after a refresh'],
+    ])('queryOk %p: %s', async (ok, _name) => {
+      const log: string[] = [];
+      const storage = new MemoryStorage(log);
+      const raw = JSON.stringify({version: 2, records: {}});
+      storage.values.set(LEDGER_KEY, raw);
+      const h = createHarness({storage, log});
+      if (!ok) {
+        failQuery(h);
+      }
+
+      await h.purchases.recover();
+      await h.purchases.processTransaction(tx({state: 'pending'}), {});
+
+      expect(storage.values.get(LEDGER_KEY) === raw).toBe(!ok);
+    });
+
+    it('iOS: still processes an unfinished transaction', async () => {
+      setOS('ios');
+      const h = createHarness({records: [record('unlocking')]});
+      h.store.unfinished.mockResolvedValue([tx()]);
+      failQuery(h);
+
+      await h.purchases.recover();
+      await h.purchases.drainQueue();
+
+      expect(h.api.verify).toHaveBeenCalled();
+      expect(h.purchases.recordFor(PAL_ID)?.status).toBe('active');
+      expect(h.api.refresh).not.toHaveBeenCalled();
     });
   });
 

@@ -920,6 +920,7 @@ export class PurchaseStore {
       return;
     }
     const txs = await this.storeTransactions();
+    const queryOk = this.storePort.queryOk;
     for (const tx of txs) {
       if (this.invalidTxIds.has(txKey(tx))) {
         continue;
@@ -929,7 +930,10 @@ export class PurchaseStore {
         await this.processTransaction(tx, {});
       }
     }
-    await this.dropStalePending(txs, false);
+    await this.dropStalePending(txs, false, queryOk);
+    if (!queryOk) {
+      return;
+    }
     const refreshed = await this.refresh(txs);
     if (refreshed) {
       this.markLedgerWritable();
@@ -956,6 +960,7 @@ export class PurchaseStore {
   private async dropStalePending(
     txs: StoreTransaction[],
     force: boolean,
+    queryOk: boolean,
   ): Promise<void> {
     const stale = Object.values(this.records).filter(rec => {
       if (rec.status !== 'pending_payment') {
@@ -965,7 +970,7 @@ export class PurchaseStore {
         return false;
       }
       if (Platform.OS === 'android') {
-        return this.storePort.queryOk;
+        return queryOk;
       }
       return (
         force ||
@@ -1149,10 +1154,11 @@ export class PurchaseStore {
       }
       await this.drainQueue();
       const txs = await this.storePort.currentEntitlements();
+      const queryOk = this.storePort.queryOk;
       for (const tx of txs) {
         await this.processTransaction(tx, {settledVerify: true, install: true});
       }
-      await this.dropStalePending(txs, true);
+      await this.dropStalePending(txs, true, queryOk);
     } finally {
       runInAction(() => {
         this.isRestoring = false;
