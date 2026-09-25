@@ -112,6 +112,8 @@
     "labels": {
       "localModel": "Local",
       "hfModel": "HF",
+      "hfMirrorModel": "HF Mirror",
+      "modelScopeModel": "ModelScope",
       "unknownGroup": "Inconnu",
       "availableToUse": "Prêt à utiliser",
       "availableToDownload": "Disponible au téléchargement",
@@ -119,6 +121,7 @@
     },
     "buttons": {
       "addFromHuggingFace": "Ajouter depuis Hugging Face",
+      "addFromModelSources": "Download Model",
       "addLocalModel": "Ajouter un modèle local",
       "reset": "Réinitialiser"
     },
@@ -176,6 +179,14 @@
       "noResults": "Aucun modèle trouvé",
       "loadingMore": "Chargement...",
       "searchPlaceholder": "Rechercher des modèles Hugging Face",
+      "source": "Source",
+      "sourceTitle": "Download Source",
+      "thirdPartySuffix": " (third-party)",
+      "sources": {
+        "huggingface": "Hugging Face",
+        "hf_mirror": "HF Mirror",
+        "modelscope": "ModelScope"
+      },
       "modelUpdatedLong": "Mis à jour il y a {{time}}",
       "modelUpdatedShort": "il y a {{time}}",
       "modelUpdatedJustNowLong": "Mis à jour à l'instant",
@@ -418,7 +429,8 @@
       "enableAndRetry": "Activer et réessayer",
       "goToSettings": "Aller aux paramètres",
       "tryAgain": "Réessayer",
-      "viewOnHuggingFace": "Voir le modèle sur HF ↗"
+      "viewOnHuggingFace": "Voir le modèle sur HF ↗",
+      "viewOnSource": "View Model Source ↗"
     },
     "headerRight": {
       "deleteChatTitle": "Supprimer la discussion",
@@ -466,7 +478,11 @@
       "saveChanges": "Enregistrer les modifications"
     },
     "modelsHeaderRight": {
+      "filtersGroup": "Filters",
+      "viewGroup": "View",
       "menuTitleHf": "Modèles Hugging Face",
+      "menuTitleHfMirror": "Hugging Face Mirror",
+      "menuTitleModelScope": "ModelScope Models",
       "menuTitleDownloaded": "Modèles téléchargés",
       "menuTitleGrouped": "Grouper par type de modèle",
       "menuTitleReset": "Réinitialiser la liste des modèles"

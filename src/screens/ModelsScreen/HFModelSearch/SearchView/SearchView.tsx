@@ -60,9 +60,13 @@ export const SearchView = observer(
       onChangeSearchQuery(query);
     };
 
+    // Read during render so the observer re-renders (and the effect below
+    // re-runs) when the store query changes elsewhere.
+    const storeSearchQuery = hfStore.searchQuery;
+
     useEffect(() => {
-      setSearchQuery(hfStore.searchQuery);
-    }, [hfStore.searchQuery]);
+      setSearchQuery(storeSearchQuery);
+    }, [storeSearchQuery]);
 
     const handleFiltersChange = useCallback(
       (newFilters: Partial<typeof hfStore.searchFilters>) => {

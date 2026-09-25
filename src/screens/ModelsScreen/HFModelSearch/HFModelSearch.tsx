@@ -36,11 +36,15 @@ export const HFModelSearch: React.FC<HFModelSearchProps> = observer(
 
     const debouncedSearch = useMemo(
       () =>
-        debounce(async (query: string) => {
+        debounce(async (_query: string) => {
           await hfStore.fetchModels();
         }, DEBOUNCE_DELAY),
       [], // Empty dependencies since we don't want to recreate this
     );
+
+    // Read during render so the observer re-renders (and the effect below
+    // re-runs) when the user switches model source elsewhere.
+    const selectedSource = hfStore.selectedSource;
 
     useEffect(() => {
       if (!visible) {
@@ -49,7 +53,7 @@ export const HFModelSearch: React.FC<HFModelSearchProps> = observer(
       debouncedSearch.cancel();
       setSelectedModel(null);
       setDetailsVisible(false);
-    }, [debouncedSearch, hfStore.selectedSource, visible]);
+    }, [debouncedSearch, selectedSource, visible]);
 
     // Update search query without triggering immediate search
     const handleSearchChange = useCallback(

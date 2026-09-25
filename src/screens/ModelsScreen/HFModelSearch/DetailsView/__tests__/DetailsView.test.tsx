@@ -5,6 +5,7 @@ import {
   act,
 } from '../../../../../../jest/test-utils';
 import {DetailsView} from '../DetailsView';
+import {hfStore} from '../../../../../store';
 import {
   mockHFModel1,
   mockHFModel2,
@@ -193,5 +194,19 @@ describe('DetailsView', () => {
 
       expect(queryByTestId('mtp-capability-badge')).toBeNull();
     });
+  });
+
+  it('renders loading state while model file details are loading', () => {
+    hfStore.error = null;
+    hfStore.modelDetailsLoading = true;
+    try {
+      const {getByText} = render(
+        <DetailsView hfModel={{...mockHFModel1, siblings: []}} />,
+      );
+
+      expect(getByText(l10n.en.models.search.loadingMore)).toBeDefined();
+    } finally {
+      hfStore.modelDetailsLoading = false;
+    }
   });
 });

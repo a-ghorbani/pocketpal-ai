@@ -1,13 +1,15 @@
 import React, {useContext, useEffect, useState} from 'react';
-import {View} from 'react-native';
+import {ActivityIndicator, Image, View} from 'react-native';
 
 import {Text, Chip, Tooltip} from 'react-native-paper';
+import {observer} from 'mobx-react';
 import {BottomSheetFlatList} from '@gorhom/bottom-sheet';
 
 import {ModelTypeTag, Sheet} from '../../../../components';
 
 import {urls} from '../../../../config';
 import {useTheme} from '../../../../hooks';
+import {hfStore} from '../../../../store';
 
 import {createStyles} from './styles';
 import {ModelFileCard} from './ModelFileCard';
@@ -27,14 +29,55 @@ interface DetailsViewProps {
   hfModel: HuggingFaceModel;
 }
 
-export const DetailsView = ({hfModel}: DetailsViewProps) => {
+export const DetailsView = observer(({hfModel}: DetailsViewProps) => {
   const theme = useTheme();
   const styles = createStyles(theme);
   const l10n = useContext(L10nContext);
+  const [avatarFailed, setAvatarFailed] = React.useState(false);
 
   const isVision = isVisionRepo(hfModel.siblings || []);
+  const sourceLabel =
+    l10n.models.search.sources[hfModel.source || 'huggingface'];
 
   const llmFiles = getLLMFiles(hfModel.siblings || []);
+  const detailsError =
+    hfStore.error?.context === 'modelDetails' ? hfStore.error : null;
+  const showLoading = hfStore.modelDetailsLoading && llmFiles.length === 0;
+  const showError = !showLoading && detailsError && llmFiles.length === 0;
+  const showEmpty = !showLoading && !showError && llmFiles.length === 0;
+
+  const renderEmptyState = () => {
+    if (showLoading) {
+      return (
+        <View style={styles.emptyStateContainer}>
+          <ActivityIndicator color={theme.colors.primary} />
+          <Text style={styles.emptyStateText}>
+            {l10n.models.search.loadingMore}
+          </Text>
+        </View>
+      );
+    }
+
+    if (showError) {
+      return (
+        <View style={styles.emptyStateContainer}>
+          <Text style={styles.errorText}>{detailsError.message}</Text>
+        </View>
+      );
+    }
+
+    if (showEmpty) {
+      return (
+        <View style={styles.emptyStateContainer}>
+          <Text style={styles.emptyStateText}>
+            {l10n.models.search.noResults}
+          </Text>
+        </View>
+      );
+    }
+
+    return null;
+  };
 
   const [isMTP, setIsMTP] = useState(false);
   useEffect(() => {
@@ -67,9 +110,25 @@ export const DetailsView = ({hfModel}: DetailsViewProps) => {
     <View style={styles.content}>
       <View style={styles.header}>
         <View style={styles.authorRow}>
+          <View style={styles.avatarContainer}>
+            {hfModel.avatarUrl && !avatarFailed ? (
+              <Image
+                source={{uri: hfModel.avatarUrl}}
+                style={styles.avatar}
+                onError={() => setAvatarFailed(true)}
+              />
+            ) : (
+              <Text style={styles.avatarText}>
+                {hfModel.author.slice(0, 1).toUpperCase()}
+              </Text>
+            )}
+          </View>
           <Text variant="headlineSmall" style={styles.modelAuthor}>
             {hfModel.author}
           </Text>
+          <Chip compact mode="outlined" textStyle={styles.statText}>
+            {sourceLabel}
+          </Chip>
           {isVision && (
             <ModelTypeTag
               type="vision"
@@ -100,6 +159,14 @@ export const DetailsView = ({hfModel}: DetailsViewProps) => {
             </Text>
           </Tooltip>
         </View>
+        {hfModel.description && (
+          <Text
+            variant="bodySmall"
+            style={styles.modelDescription}
+            numberOfLines={3}>
+            {hfModel.description}
+          </Text>
+        )}
         <View style={styles.modelStats}>
           <Chip
             icon="clock"
@@ -139,17 +206,21 @@ export const DetailsView = ({hfModel}: DetailsViewProps) => {
           {l10n.models.details.title}
         </Text>
       </View>
-      <BottomSheetFlatList
-        data={llmFiles}
-        keyExtractor={(item: ModelFile) => item.rfilename}
-        renderItem={renderItem}
-        renderScrollComponent={props => (
-          <Sheet.ScrollView bottomOffset={100} {...props} />
-        )}
-        contentContainerStyle={styles.list}
-      />
+      {llmFiles.length === 0 ? (
+        renderEmptyState()
+      ) : (
+        <BottomSheetFlatList
+          data={llmFiles}
+          keyExtractor={(item: ModelFile) => item.rfilename}
+          renderItem={renderItem}
+          renderScrollComponent={props => (
+            <Sheet.ScrollView bottomOffset={100} {...props} />
+          )}
+          contentContainerStyle={styles.list}
+        />
+      )}
       {/* TODO: Currently projection models are hidden from UI,
       we should add them to the model card like in a dropdown form.*/}
     </View>
   );
-};
+});
