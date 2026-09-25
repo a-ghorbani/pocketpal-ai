@@ -1061,6 +1061,56 @@ describe('BenchmarkRunnerScreen', () => {
       expect(row.init_ms).toBeGreaterThanOrEqual(0);
     });
 
+    function stubLines(lines: string[]) {
+      (addNativeLogListener as jest.Mock).mockImplementation(
+        (cb: (level: string, text: string) => void) => {
+          lines.forEach(line => cb('I', line));
+          return {remove: jest.fn()};
+        },
+      );
+    }
+
+    it('an iPhone GPU cell on Metal lands ok with effective_backend "metal"', async () => {
+      await onPlatform('ios', async () => {
+        getDeviceOptions.mockResolvedValue([
+          {id: 'cpu', label: 'CPU', devices: ['CPU']},
+          {id: 'gpu', label: 'GPU (Metal)', devices: ['Metal']},
+        ]);
+        stubLines([
+          'llama_prepare_model_devices: using device MTL0 (Apple A15 GPU) (unknown id) - 4095 MiB free',
+          'load_tensors:   CPU_Mapped model buffer size =    28.69 MiB',
+          'load_tensors:  MTL0_Mapped model buffer size =    82.41 MiB',
+          'load_tensors: offloaded 31/31 layers to GPU',
+          'llama_kv_cache:       MTL0 KV buffer size =    45.00 MiB',
+        ]);
+        await runMatrix(VALID_CONFIG, setStatus, setLastCell);
+        const report = lastWrittenReport();
+        expect(report.platform).toBe('ios');
+        expect(report.outcome).toBe('complete');
+        expect(report.runs[0]).toMatchObject({
+          status: 'ok',
+          effective_backend: 'metal',
+        });
+        expect(report.runs[0].init_ms).toBeGreaterThanOrEqual(0);
+      });
+    });
+
+    it('a GPU cell on the iOS simulator fails backend-mismatch:gpu:cpu', async () => {
+      await onPlatform('ios', async () => {
+        stubLines([
+          'llama_prepare_model_devices: using device MTL0 (Apple iOS simulator GPU) (unknown id) - 0 MiB free',
+          'load_tensors:   CPU_Mapped model buffer size =    82.41 MiB',
+          'load_tensors: offloaded 0/31 layers to GPU',
+          'llama_kv_cache:        CPU KV buffer size =    45.00 MiB',
+        ]);
+        await runMatrix(VALID_CONFIG, setStatus, setLastCell);
+        const row = lastWrittenReport().runs[0];
+        expect(row.status).toBe('failed');
+        expect(row.effective_backend).toBe('cpu');
+        expect(row.error).toContain('backend-mismatch:gpu:cpu');
+      });
+    });
+
     it('omits init_ms when initLlama rejects', async () => {
       stubOpenCLLogs();
       (initLlama as jest.Mock).mockRejectedValueOnce(new Error('init-failed'));
