@@ -63,7 +63,7 @@ const SMALL_MODEL = {
   author: 'bartowski',
   downloadUrl:
     'https://huggingface.co/bartowski/SmolLM2-135M-Instruct-GGUF/resolve/main/SmolLM2-135M-Instruct-Q4_0.gguf',
-  size: 91_700_000,
+  size: 91_893_088,
 };
 
 export const mockPal = (id: string): MockPal => ({
@@ -92,6 +92,7 @@ const apiPal = (pal: MockPal, withPrompt: boolean) => ({
   tags: [],
   stats: {rating: null, review_count: 0},
   is_owned: false,
+  creator: {id: 'e2e-creator', display_name: 'E2E Studio'},
   created_at: '2026-01-01T00:00:00Z',
   protection_level: 'reveal_on_purchase',
   store_product_id: pal.productId,

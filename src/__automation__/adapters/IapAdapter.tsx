@@ -9,7 +9,7 @@ import {fakeStore} from '../fakeStore';
  * as `pocketpal://iap?cmd=...`.
  *
  * Protocol: setValue('<verb>::<arg>') runs one command; the result shows
- * the FakeStore state as JSON. See fakeStore.ts for the verbs.
+ * the FakeStore state as JSON. The verbs are listed in src/__automation__/README.md.
  */
 export const IapAdapter: React.FC = () => {
   const [resultData, setResultData] = useState('');

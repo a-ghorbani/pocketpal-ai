@@ -5,7 +5,7 @@
  *   because the Android Linking listener only routes the benchmark URL.
  * - iOS: the automation deep link pocketpal://iap?cmd=...
  *
- * Verbs are documented in src/__automation__/fakeStore.ts.
+ * The verbs are listed in src/__automation__/README.md.
  */
 
 import {adb as runAdb} from './bench-runner';
