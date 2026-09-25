@@ -412,14 +412,25 @@ describe('run against a scripted device', () => {
       status: 'ok',
     }));
 
+  type Pull = object | 'garbage' | 'throw';
+  const sequence = <T>(steps: T | T[]) => {
+    const list = Array.isArray(steps) ? steps : [steps];
+    let i = 0;
+    return () => list[Math.min(i++, list.length - 1)];
+  };
+
   function scriptedDevice(opts: {
     report?: object;
+    pulls?: Pull[];
     preexisting?: string[];
-    alive?: boolean;
+    alive?: boolean | boolean[];
   }) {
     let clock = 0;
     let linked = false;
     const calls: string[][] = [];
+    const logs: string[] = [];
+    const nextPull = sequence<Pull | undefined>(opts.pulls ?? opts.report);
+    const nextAlive = sequence(opts.alive ?? true);
     const deps: DriverDeps = {
       exec: (_file, args) => {
         calls.push(args);
@@ -429,7 +440,7 @@ describe('run against a scripted device', () => {
         }
         if (cmd === 'info files') {
           const names = [...(opts.preexisting ?? [])];
-          if (linked && opts.report) {
+          if (linked && (opts.report || opts.pulls)) {
             names.push(NEW);
           }
           return names
@@ -438,10 +449,17 @@ describe('run against a scripted device', () => {
         }
         if (cmd === 'copy from') {
           const dest = args[args.indexOf('--destination') + 1];
-          fs.writeFileSync(dest, JSON.stringify(opts.report));
+          const pull = nextPull();
+          if (pull === 'throw') {
+            throw new Error('device disconnected');
+          }
+          fs.writeFileSync(
+            dest,
+            pull === 'garbage' ? '{"runs": [' : JSON.stringify(pull),
+          );
         }
         if (cmd === 'info processes') {
-          return opts.alive === false
+          return !nextAlive()
             ? ''
             : '45280   /private/var/containers/Bundle/Application/U/PocketPal.app/PocketPal';
         }
@@ -463,9 +481,11 @@ describe('run against a scripted device', () => {
         clock += ms;
       },
       now: () => clock,
-      log: () => undefined,
+      log: msg => {
+        logs.push(msg);
+      },
     };
-    return {deps, calls};
+    return {deps, calls, logs};
   }
 
   const readStamped = (out: string) =>
@@ -575,5 +595,43 @@ describe('run against a scripted device', () => {
     expect(
       calls.some(a => a.includes('delete') || a.includes('uninstall')),
     ).toBe(false);
+  });
+
+  it.each(['throw', 'garbage'] as const)(
+    'stamps the last parsed report when the final pull fails (%s) and the app is gone',
+    async mode => {
+      const opts = options({dryRun: false});
+      const {deps, logs} = scriptedDevice({
+        pulls: [{runs: okRows(3)}, mode],
+        alive: [true, false],
+      });
+      const result = await run(opts, deps);
+      expect(result).toMatchObject({
+        state: 'failed',
+        reason: 'app-exited',
+        reportPath: path.join(opts.out, NEW),
+      });
+      const stamped = readStamped(opts.out);
+      expect(stamped.runs).toHaveLength(3);
+      expect(stamped.device).toBe('iPhone 13 Pro');
+      expect(logs.some(l => l.startsWith('pull failed (1 in a row)'))).toBe(
+        true,
+      );
+    },
+  );
+
+  it('stamps the last parsed report on timeout and counts consecutive failed pulls', async () => {
+    const opts = options({dryRun: false, maxWaitMs: 3 * 30_000});
+    const {deps, logs} = scriptedDevice({
+      pulls: [{runs: okRows(3)}, 'throw'],
+    });
+    await expect(run(opts, deps)).resolves.toMatchObject({
+      state: 'failed',
+      reason: 'timeout',
+    });
+    expect(readStamped(opts.out).runs).toHaveLength(3);
+    expect(logs).toContain(
+      'pull failed (2 in a row): copy failed: device disconnected',
+    );
   });
 });

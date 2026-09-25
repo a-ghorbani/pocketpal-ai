@@ -274,9 +274,8 @@ const FAILURE_HINTS: Record<FailureReason, string> = {
   autostart:
     'the deep link never started the matrix. Check that the installed app is an E2E build (yarn ios:build:ipa), that bench-config.json reached Documents, and that the app was running when the link arrived.',
   'count-mismatch': 'a row write was lost; inspect the report.',
-  'runner-error': 'the runner aborted; the partial report is stamped.',
-  'app-exited':
-    'the app died mid-matrix (OOM or thermal); the partial report is stamped.',
+  'runner-error': 'the runner aborted; the outcome names the error.',
+  'app-exited': 'the app died mid-matrix (OOM or thermal).',
   timeout:
     'rows stopped arriving. The device was probably locked or the app backgrounded.',
 };
@@ -341,17 +340,34 @@ function readDeviceDetails(
   };
 }
 
+type ParsedReport = {file: string; report: BenchReportFile};
+type PulledReport =
+  | ParsedReport
+  | {file: string; report: 'unparsable'; error: string};
+
 function pullReport(
   opts: DriverOptions,
   name: string,
   deps: DriverDeps,
-): {file: string; report: BenchReportFile | 'unparsable'} {
+): PulledReport {
   const file = path.join(opts.out, name);
   try {
     deps.exec('xcrun', copyReportArgv(opts.device, name, file));
+  } catch (e) {
+    return {
+      file,
+      report: 'unparsable',
+      error: `copy failed: ${(e as Error).message}`,
+    };
+  }
+  try {
     return {file, report: JSON.parse(fs.readFileSync(file, 'utf8'))};
-  } catch {
-    return {file, report: 'unparsable'};
+  } catch (e) {
+    return {
+      file,
+      report: 'unparsable',
+      error: `not valid JSON: ${(e as Error).message}`,
+    };
   }
 }
 
@@ -407,8 +423,8 @@ export async function run(
   let stableCompletePolls = 0;
   let lastRows: number | null = null;
   let reportName: string | undefined;
-  let pulled: {file: string; report: BenchReportFile | 'unparsable'} | null =
-    null;
+  let lastGood: ParsedReport | null = null;
+  let failedPulls = 0;
   deps.log('waiting for report shell');
 
   for (;;) {
@@ -423,7 +439,15 @@ export async function run(
         deps.log(`listing reports failed: ${(e as Error).message}`);
       }
     }
-    pulled = reportName ? pullReport(opts, reportName, deps) : null;
+    const pulled = reportName ? pullReport(opts, reportName, deps) : null;
+    const current = pulled?.report === 'unparsable' ? null : pulled;
+    if (pulled?.report === 'unparsable') {
+      failedPulls++;
+      deps.log(`pull failed (${failedPulls} in a row): ${pulled.error}`);
+    } else if (current) {
+      failedPulls = 0;
+      lastGood = current;
+    }
     const verdict = evaluatePoll({
       report: pulled?.report ?? null,
       expected,
@@ -446,12 +470,17 @@ export async function run(
       continue;
     }
 
-    const report =
-      pulled && pulled.report !== 'unparsable' ? pulled.report : null;
-    if (pulled && report) {
-      stampReportMetadata(report, readDeviceDetails(opts.device, deps));
-      fs.writeFileSync(pulled.file, JSON.stringify(report, null, 2));
-      deps.log(`report: ${pulled.file} (${report.runs.length} rows)`);
+    if (lastGood) {
+      stampReportMetadata(
+        lastGood.report,
+        readDeviceDetails(opts.device, deps),
+      );
+      fs.writeFileSync(lastGood.file, JSON.stringify(lastGood.report, null, 2));
+      deps.log(
+        `report: ${lastGood.file} (${lastGood.report.runs.length} rows)`,
+      );
+    } else {
+      deps.log('no parsed report; nothing stamped');
     }
 
     if (verdict.state === 'done') {
@@ -460,17 +489,17 @@ export async function run(
           'warning: report has no outcome marker; completed by row count',
         );
       }
-      if (!report) {
+      if (!current) {
         throw new Error('completed without a parsed report');
       }
-      assertRowsPass(report);
+      assertRowsPass(current.report);
       deps.log('pass gate: all rows ok');
       return {
         state: 'done',
         expected,
         configPath,
         plan,
-        reportPath: pulled?.file,
+        reportPath: current.file,
       };
     }
 
@@ -482,7 +511,7 @@ export async function run(
       configPath,
       plan,
       reason: verdict.reason,
-      reportPath: pulled?.file,
+      reportPath: lastGood?.file,
     };
   }
 }
