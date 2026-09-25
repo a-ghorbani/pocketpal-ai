@@ -550,6 +550,10 @@ export class PurchaseStore {
 
     const palId = rec?.palId ?? this.palIdForProduct(tx.productId);
 
+    if (!opts.install && this.invalidTxIds.has(txKey(tx))) {
+      return;
+    }
+
     if (tx.state === 'pending') {
       if (!rec) {
         await this.putRecord(palId, {

@@ -341,6 +341,33 @@ describe('PurchaseStore pipeline', () => {
       expect(h.api.verify).toHaveBeenCalledTimes(1);
     });
 
+    it('judges a proof once when the listener and Buy both deliver it', async () => {
+      const h = createHarness();
+      h.api.verify.mockResolvedValueOnce([result('invalid')]);
+
+      await h.purchases.processTransaction(tx(), {settledVerify: true});
+      await h.purchases.processTransaction(tx(), {settledVerify: true});
+
+      expect(h.api.verify).toHaveBeenCalledTimes(1);
+      expect(h.events.send).toHaveBeenCalledTimes(1);
+      expect(h.purchases.recordFor(PAL_ID)).toBeUndefined();
+    });
+
+    it('re-verifies an invalid proof on an explicit install or restore', async () => {
+      const h = createHarness();
+      h.api.verify.mockResolvedValueOnce([result('invalid')]);
+      await h.purchases.processTransaction(tx(), {});
+
+      await h.purchases.processTransaction(tx(), {
+        settledVerify: true,
+        install: true,
+      });
+      await settle(h);
+
+      expect(h.api.verify).toHaveBeenCalledTimes(2);
+      expect(h.purchases.recordFor(PAL_ID)?.status).toBe('active');
+    });
+
     it.each(['granted', 'active', 'unfulfillable', 'removed'] as const)(
       'leaves a settled %s record unchanged',
       async status => {

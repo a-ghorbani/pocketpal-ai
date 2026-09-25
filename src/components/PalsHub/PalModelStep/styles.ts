@@ -8,6 +8,7 @@ export const createStyles = (theme: Theme) =>
     },
     modelName: {
       fontSize: 14,
+      textAlign: 'center',
       color: theme.colors.onSurfaceVariant,
     },
     message: {
