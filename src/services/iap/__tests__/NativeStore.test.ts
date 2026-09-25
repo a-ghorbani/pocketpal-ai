@@ -1,7 +1,11 @@
 import {Platform} from 'react-native';
 import * as RNIap from 'react-native-iap';
 
-import {NativeStore, EARLIER_TRANSACTION_MS} from '../NativeStore';
+import {
+  NativeStore,
+  EARLIER_TRANSACTION_MS,
+  PURCHASE_SETTLE_GRACE_MS,
+} from '../NativeStore';
 import type {StoreTransaction} from '../StorePort';
 
 const iap = RNIap as unknown as Record<string, jest.Mock>;
@@ -213,6 +217,142 @@ describe('NativeStore', () => {
         code: 'sku-not-found',
         downgrade: true,
       });
+    });
+  });
+
+  describe('purchase listener', () => {
+    it('receives already-delivered iOS transactions for the purchase only', () => {
+      captureListeners();
+      store.purchase('pal.a', null);
+      store.onTransaction(jest.fn());
+
+      const [[, purchaseOptions], [, globalOptions]] =
+        iap.purchaseUpdatedListener.mock.calls;
+      expect(purchaseOptions).toEqual({dedupeTransactionIOS: false});
+      expect(globalOptions).toBeUndefined();
+    });
+  });
+
+  describe('purchase without an update event', () => {
+    beforeEach(() => {
+      jest.useFakeTimers();
+    });
+
+    afterEach(() => {
+      jest.useRealTimers();
+    });
+
+    const settleAfterGrace = async (pending: Promise<unknown>) => {
+      await jest.advanceTimersByTimeAsync(PURCHASE_SETTLE_GRACE_MS);
+      return pending;
+    };
+
+    it('iOS: settles from the store query once the grace period ends', async () => {
+      setOS('ios');
+      const events = captureListeners();
+      iap.getAvailablePurchases.mockResolvedValueOnce([
+        purchase({productId: 'pal.other', id: 'other'}),
+        purchase({id: 'ios-tx-2', purchaseToken: 'jws-2'}),
+      ]);
+      const pending = store.purchase('pal.a', null);
+
+      await jest.advanceTimersByTimeAsync(PURCHASE_SETTLE_GRACE_MS - 1);
+      expect(iap.getAvailablePurchases).not.toHaveBeenCalled();
+
+      await expect(settleAfterGrace(pending)).resolves.toEqual({
+        kind: 'purchased',
+        tx: expect.objectContaining({
+          transactionId: 'ios-tx-2',
+          proof: {platform: 'ios', jws: 'jws-2'},
+        }),
+      });
+      expect(iap.getAvailablePurchases).toHaveBeenCalledWith({
+        onlyIncludeActiveItemsIOS: true,
+      });
+      expect(events.counts()).toEqual({updates: 0, errors: 0});
+    });
+
+    it('iOS: maps an unfinished pending transaction to pending', async () => {
+      setOS('ios');
+      captureListeners();
+      iap.getPendingTransactionsIOS.mockResolvedValueOnce([
+        purchase({purchaseState: 'pending'}),
+      ]);
+      await expect(
+        settleAfterGrace(store.purchase('pal.a', null)),
+      ).resolves.toEqual({kind: 'pending'});
+    });
+
+    it('iOS: maps an earlier transaction to already owned', async () => {
+      setOS('ios');
+      captureListeners();
+      iap.getAvailablePurchases.mockResolvedValueOnce([
+        purchase({transactionDate: Date.now() - EARLIER_TRANSACTION_MS - 1}),
+      ]);
+      await expect(
+        settleAfterGrace(store.purchase('pal.a', null)),
+      ).resolves.toEqual({kind: 'already_owned'});
+    });
+
+    it.each([
+      ['the store lists no transaction', () => {}],
+      [
+        'the store query throws',
+        () => iap.getAvailablePurchases.mockRejectedValueOnce(new Error('x')),
+      ],
+    ])(
+      'iOS: closes with a non-downgrade error when %s',
+      async (_n, arrange) => {
+        setOS('ios');
+        const events = captureListeners();
+        arrange();
+        await expect(
+          settleAfterGrace(store.purchase('pal.a', null)),
+        ).resolves.toEqual({kind: 'error', code: 'unknown', downgrade: false});
+        expect(events.counts()).toEqual({updates: 0, errors: 0});
+      },
+    );
+
+    it('iOS: an event within the grace period settles without a query', async () => {
+      setOS('ios');
+      const events = captureListeners();
+      const pending = store.purchase('pal.a', null);
+      await jest.advanceTimersByTimeAsync(1_000);
+
+      events.update(purchase());
+
+      await expect(pending).resolves.toMatchObject({kind: 'purchased'});
+      expect(jest.getTimerCount()).toBe(0);
+      await jest.advanceTimersByTimeAsync(PURCHASE_SETTLE_GRACE_MS);
+      expect(iap.getAvailablePurchases).not.toHaveBeenCalled();
+    });
+
+    it('iOS: resolves once when the event arrives after the fallback', async () => {
+      setOS('ios');
+      const events = captureListeners();
+      const resolved = jest.fn();
+      store.purchase('pal.a', null).then(resolved);
+
+      await jest.advanceTimersByTimeAsync(PURCHASE_SETTLE_GRACE_MS);
+      events.update(purchase());
+      await jest.advanceTimersByTimeAsync(0);
+
+      expect(resolved).toHaveBeenCalledTimes(1);
+      expect(resolved).toHaveBeenCalledWith(
+        expect.objectContaining({kind: 'error'}),
+      );
+    });
+
+    it('Android: waits for the event with no fallback', async () => {
+      setOS('android');
+      const events = captureListeners();
+      const pending = store.purchase('pal.a', null);
+      await jest.advanceTimersByTimeAsync(PURCHASE_SETTLE_GRACE_MS * 2);
+
+      expect(jest.getTimerCount()).toBe(0);
+      expect(iap.getAvailablePurchases).not.toHaveBeenCalled();
+      events.update(purchase());
+      await expect(pending).resolves.toMatchObject({kind: 'purchased'});
     });
   });
 

@@ -22,6 +22,7 @@ import type {
 } from './StorePort';
 
 export const EARLIER_TRANSACTION_MS = 60_000;
+export const PURCHASE_SETTLE_GRACE_MS = 5_000;
 
 const toTransaction = (
   purchase: Purchase,
@@ -60,6 +61,64 @@ const toTransaction = (
   };
 };
 
+const outcomeForPurchase = (
+  purchase: Purchase,
+  unfinished: boolean,
+  startedAt: number,
+): PurchaseOutcome | null => {
+  const tx = toTransaction(purchase, unfinished);
+  if (!tx) {
+    return null;
+  }
+  if (tx.state === 'pending') {
+    return {kind: 'pending'};
+  }
+  if (
+    Platform.OS === 'ios' &&
+    purchase.transactionDate < startedAt - EARLIER_TRANSACTION_MS
+  ) {
+    return {kind: 'already_owned'};
+  }
+  return {kind: 'purchased', tx};
+};
+
+const UNSETTLED_PURCHASE: PurchaseOutcome = {
+  kind: 'error',
+  code: 'unknown',
+  downgrade: false,
+};
+
+const outcomeFromStoreIOS = async (
+  productId: string,
+  startedAt: number,
+): Promise<PurchaseOutcome> => {
+  let unfinished: Purchase[];
+  let entitled: Purchase[];
+  try {
+    [unfinished, entitled] = await Promise.all([
+      getPendingTransactionsIOS(),
+      getAvailablePurchases({onlyIncludeActiveItemsIOS: true}),
+    ]);
+  } catch {
+    return UNSETTLED_PURCHASE;
+  }
+  const candidates = [
+    ...unfinished.map(purchase => ({purchase, unfinished: true})),
+    ...entitled.map(purchase => ({purchase, unfinished: false})),
+  ].filter(({purchase}) => purchase.productId === productId);
+  for (const candidate of candidates) {
+    const outcome = outcomeForPurchase(
+      candidate.purchase,
+      candidate.unfinished,
+      startedAt,
+    );
+    if (outcome) {
+      return outcome;
+    }
+  }
+  return UNSETTLED_PURCHASE;
+};
+
 const errorCode = (error: unknown): string | undefined =>
   (error as Partial<PurchaseError> | undefined)?.code;
 
@@ -92,35 +151,34 @@ export class NativeStore implements StorePort {
     const startedAt = Date.now();
     return new Promise(resolve => {
       let settled = false;
+      let graceTimer: ReturnType<typeof setTimeout> | undefined;
       const subscriptions: Array<{remove: () => void}> = [];
       const settle = (outcome: PurchaseOutcome) => {
         if (settled) {
           return;
         }
         settled = true;
+        clearTimeout(graceTimer);
         subscriptions.forEach(subscription => subscription.remove());
         resolve(outcome);
       };
       subscriptions.push(
-        purchaseUpdatedListener(purchase => {
-          if (purchase.productId !== productId) {
-            return;
-          }
-          const tx = toTransaction(purchase, Platform.OS === 'ios');
-          if (!tx) {
-            return;
-          }
-          if (tx.state === 'pending') {
-            settle({kind: 'pending'});
-          } else if (
-            Platform.OS === 'ios' &&
-            purchase.transactionDate < startedAt - EARLIER_TRANSACTION_MS
-          ) {
-            settle({kind: 'already_owned'});
-          } else {
-            settle({kind: 'purchased', tx});
-          }
-        }),
+        purchaseUpdatedListener(
+          purchase => {
+            if (purchase.productId !== productId) {
+              return;
+            }
+            const outcome = outcomeForPurchase(
+              purchase,
+              Platform.OS === 'ios',
+              startedAt,
+            );
+            if (outcome) {
+              settle(outcome);
+            }
+          },
+          {dedupeTransactionIOS: false},
+        ),
         purchaseErrorListener(error => {
           if (error.productId && error.productId !== productId) {
             return;
@@ -144,7 +202,17 @@ export class NativeStore implements StorePort {
           },
         },
         type: 'in-app',
-      }).catch(error => settle(outcomeForErrorCode(errorCode(error))));
+      }).then(
+        () => {
+          if (settled || Platform.OS !== 'ios') {
+            return;
+          }
+          graceTimer = setTimeout(() => {
+            outcomeFromStoreIOS(productId, startedAt).then(settle);
+          }, PURCHASE_SETTLE_GRACE_MS);
+        },
+        error => settle(outcomeForErrorCode(errorCode(error))),
+      );
     });
   }
 
