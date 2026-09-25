@@ -184,6 +184,15 @@ export interface Pal {
 }
 
 // Legacy pal type for backward compatibility
+type ClearablePalField =
+  | 'greeting'
+  | 'defaultModel'
+  | 'rawPalshubGenerationSettings';
+
+export type PalUpdate = Omit<Partial<Pal>, ClearablePalField> & {
+  [K in ClearablePalField]?: Pal[K] | null;
+};
+
 export type LegacyPalType = 'roleplay' | 'assistant' | 'video';
 
 // Built-in parameter schemas for existing pal types

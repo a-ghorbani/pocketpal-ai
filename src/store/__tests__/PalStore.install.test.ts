@@ -2,6 +2,7 @@ import {runInAction} from 'mobx';
 
 import {palStore, promptHash, settingsHash} from '../PalStore';
 import {defaultCompletionParams} from '../../utils/completionSettingsVersions';
+import {deriveToolSchemas} from '../../services/talents';
 import {palsHubService} from '../../services';
 import {palRepository} from '../../repositories/PalRepository';
 import type {Pal} from '../../types/pal';
@@ -164,6 +165,71 @@ describe('PalStore owned install', () => {
       palStore.installOwnedPal(hubPal({system_prompt: ''})),
     ).rejects.toThrow();
     expect(palRepository.createPal).not.toHaveBeenCalled();
+  });
+
+  describe('removed creator content', () => {
+    const full = () =>
+      hubPal({
+        description: 'Tells stories',
+        system_prompt: templated({hero: 'Knight'}),
+        pact: {version: 1, talents: [{name: 'web_search', required: true}]},
+        greeting: {text: 'Hello', suggested_prompts: ['Start']},
+        model_reference: {
+          repo_id: 'a',
+          filename: 'm1',
+          author: 'a',
+          downloadUrl: 'https://example.com/m1',
+          size: 1,
+        },
+        model_settings: {temperature: 0.5},
+      });
+    const bare = () =>
+      hubPal({
+        description: undefined,
+        system_prompt: 'Plain prompt.',
+        pact: undefined,
+        greeting: undefined,
+        model_reference: undefined,
+        model_settings: undefined,
+      });
+    const lastUpdates = () =>
+      (palRepository.updatePal as jest.Mock).mock.calls.at(-1)[1];
+
+    it('clears every field the creator removed', async () => {
+      const {localPal, applied} = await palStore.installOwnedPal(full());
+      expect(localPal.pact?.talents).toHaveLength(1);
+
+      await palStore.applyOwnedPalContent(localPal.id, bare(), applied);
+
+      expect(lastUpdates()).toMatchObject({
+        pact: {talents: []},
+        greeting: null,
+        description: '',
+        originalSystemPrompt: '',
+        defaultModel: null,
+        rawPalshubGenerationSettings: null,
+      });
+      const result = palStore.getPalById(localPal.id)!;
+      expect(result.systemPrompt).toBe('Plain prompt.');
+      expect(
+        deriveToolSchemas(result.pact?.talents.map(t => t.name)).map(
+          tool => tool.function.name,
+        ),
+      ).not.toContain('web_search');
+    });
+
+    it('keeps the template with a prompt the user edited', async () => {
+      const {localPal, applied} = await palStore.installOwnedPal(full());
+      await palStore.updatePal(localPal.id, {systemPrompt: 'My own prompt.'});
+
+      await palStore.applyOwnedPalContent(localPal.id, bare(), applied);
+
+      expect(lastUpdates()).not.toHaveProperty('originalSystemPrompt');
+      const result = palStore.getPalById(localPal.id)!;
+      expect(result.systemPrompt).toBe('My own prompt.');
+      expect(result.originalSystemPrompt).toBe(templated({hero: 'Knight'}));
+      expect(result.pact).toEqual({talents: []});
+    });
   });
 
   describe('settingsHash', () => {

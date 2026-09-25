@@ -34,7 +34,7 @@ import {defaultCompletionParams} from '../utils/completionSettingsVersions';
 import {parsePalsHubTemplate} from '../utils/palshub-template-parser';
 import {getDisplayNameFromFilename} from '../utils/formatters';
 
-import type {Pal, ParameterDefinition} from '../types/pal';
+import type {Pal, PalUpdate, ParameterDefinition} from '../types/pal';
 import type {
   ModelReference,
   PalsHubPal,
@@ -208,7 +208,7 @@ class PalStore {
   /**
    * Updates an existing pal
    */
-  updatePal = async (id: string, updates: Partial<Pal>): Promise<void> => {
+  updatePal = async (id: string, updates: PalUpdate): Promise<void> => {
     try {
       const updatedPal = await palRepository.updatePal(id, updates);
       if (updatedPal) {
@@ -350,11 +350,11 @@ class PalStore {
     }
     const fresh = await this.createLocalPalFromPalsHub(palsHubPal);
     const next: AppliedContent = {...applied};
-    const updates: Partial<Pal> = {
+    const updates: PalUpdate = {
       name: fresh.name,
-      description: fresh.description,
-      pact: fresh.pact,
-      greeting: fresh.greeting,
+      description: fresh.description ?? '',
+      pact: fresh.pact ?? {talents: []},
+      greeting: fresh.greeting ?? null,
       categories: fresh.categories,
       tags: fresh.tags,
       creator_info: fresh.creator_info,
@@ -376,7 +376,7 @@ class PalStore {
     if (
       isOurs(modelKey(current.defaultModel), applied.modelKey, freshModelKey)
     ) {
-      updates.defaultModel = fresh.defaultModel;
+      updates.defaultModel = fresh.defaultModel ?? null;
       next.modelKey = freshModelKey;
     }
 
@@ -388,7 +388,8 @@ class PalStore {
         freshSettingsHash,
       )
     ) {
-      updates.rawPalshubGenerationSettings = fresh.rawPalshubGenerationSettings;
+      updates.rawPalshubGenerationSettings =
+        fresh.rawPalshubGenerationSettings ?? null;
       next.settingsHash = freshSettingsHash;
     }
 
@@ -405,7 +406,7 @@ class PalStore {
           .map(def => [def.key, current.parameters[def.key]]),
       );
       updates.systemPrompt = fresh.systemPrompt;
-      updates.originalSystemPrompt = fresh.originalSystemPrompt;
+      updates.originalSystemPrompt = fresh.originalSystemPrompt ?? '';
       updates.parameterSchema = fresh.parameterSchema;
       updates.parameters = {...fresh.parameters, ...keptParameters};
       next.promptHash = freshHash;
