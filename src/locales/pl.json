@@ -213,6 +213,8 @@
       "useAddButtonForMore": "Użyj przycisku „+” aby znaleźć więcej modeli",
       "localModel": "Lokalne",
       "hfModel": "HF",
+      "hfMirrorModel": "HF Mirror",
+      "modelScopeModel": "ModelScope",
       "unknownGroup": "Nieznane",
       "availableToUse": "Gotowy do użycia"
     },
@@ -260,7 +262,8 @@
     "buttons": {
       "addLocalModel": "Dodaj Model Lokalny",
       "reset": "Zresetuj",
-      "addFromHuggingFace": "Dodaj z Hugging Face"
+      "addFromHuggingFace": "Dodaj z Hugging Face",
+      "addFromModelSources": "Download Model"
     },
     "modelsHeaderRight": {
       "menuTitleHf": "Modele Hugging Face",
@@ -316,6 +319,14 @@
       "noResults": "Nie znaleziono modeli",
       "loadingMore": "Ładowanie w toku...",
       "searchPlaceholder": "Wyszukaj modele Hugging Face",
+      "source": "Source",
+      "sourceTitle": "Download Source",
+      "thirdPartySuffix": " (third-party)",
+      "sources": {
+        "huggingface": "Hugging Face",
+        "hf_mirror": "HF Mirror",
+        "modelscope": "ModelScope"
+      },
       "modelUpdatedLong": "Zaktualizowano {{time}} temu",
       "modelUpdatedShort": "{{time}} temu",
       "modelUpdatedJustNowLong": "Przed chwilą zaktualizowano",
@@ -368,6 +379,7 @@
         "requiresProjectionModel": "Wymagany jest model projekcyjny",
         "downloadProjectionModel": "Pobierz model projekcyjny",
         "viewModelCardOnHuggingFace": "Zobacz Kartę Modelu na Hugging Face",
+        "viewModelCardOnSource": "View Model Source",
         "visionSupported": "Obsługiwane",
         "visionNotSupported": "Nieobsługiwane",
         "visionUnknown": "Nieznane",
@@ -705,7 +717,8 @@
       "enableAndRetry": "Włącz i Spróbuj ponownie",
       "goToSettings": "Nawiguj do Ustawień",
       "tryAgain": "Spróbuj ponownie",
-      "viewOnHuggingFace": "Zobacz Model na HF ↗"
+      "viewOnHuggingFace": "Zobacz Model na HF ↗",
+      "viewOnSource": "View Model Source ↗"
     },
     "headerRight": {
       "deleteChatTitle": "Usuń Czat",
@@ -767,7 +780,11 @@
       }
     },
     "modelsHeaderRight": {
+      "filtersGroup": "Filters",
+      "viewGroup": "View",
       "menuTitleHf": "Modele Hugging Face",
+      "menuTitleHfMirror": "Hugging Face Mirror",
+      "menuTitleModelScope": "ModelScope Models",
       "menuTitleDownloaded": "Pobrane Modele",
       "menuTitleGrouped": "Grupuj według Typu Modelu",
       "menuTitleReset": "Resetuj Listę Modeli"

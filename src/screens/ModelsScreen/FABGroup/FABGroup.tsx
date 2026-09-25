@@ -52,8 +52,8 @@ export const FABGroup: React.FC<FABGroupProps> = ({
       {
         testID: 'hf-fab',
         icon: HFIcon,
-        label: l10n.models.buttons.addFromHuggingFace,
-        accessibilityLabel: l10n.models.buttons.addFromHuggingFace,
+        label: l10n.models.buttons.addFromModelSources,
+        accessibilityLabel: l10n.models.buttons.addFromModelSources,
         style: styles.actionButton,
         onPress: () => {
           onAddHFModel();

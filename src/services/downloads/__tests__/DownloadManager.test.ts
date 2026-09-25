@@ -593,4 +593,179 @@ describe('DownloadManager', () => {
     const config = NativeModules.DownloadModule.startDownload.mock.calls[0][1];
     expect(config.authToken).toBeUndefined();
   });
+
+  describe('split GGUF downloads', () => {
+    const partOne = {
+      rfilename: 'model-00001-of-00002.gguf',
+      index: 1,
+      total: 2,
+      size: 100,
+      url: 'https://huggingface.co/o/r/resolve/main/model-00001-of-00002.gguf',
+    };
+    const partTwo = {
+      rfilename: 'model-00002-of-00002.gguf',
+      index: 2,
+      total: 2,
+      size: 200,
+      url: 'https://huggingface.co/o/r/resolve/main/model-00002-of-00002.gguf',
+    };
+    const splitModel = {
+      ...basicModel,
+      id: 'split-model',
+      filename: 'model-00001-of-00002.gguf',
+      size: 300,
+      downloadUrl: partOne.url,
+      splitDownload: {
+        entryRFilename: 'model-00001-of-00002.gguf',
+        displayRFilename: 'model.gguf',
+        totalSize: 300,
+        totalParts: 2,
+        parts: [partOne, partTwo],
+      },
+      hfModelFile: {
+        rfilename: 'model-00001-of-00002.gguf',
+        size: 300,
+        url: partOne.url,
+        split: {
+          entryRFilename: 'model-00001-of-00002.gguf',
+          displayRFilename: 'model.gguf',
+          totalSize: 300,
+          totalParts: 2,
+          parts: [partOne, partTwo],
+        },
+      },
+    };
+
+    const flush = (times = 5) => {
+      let chain: Promise<void> = Promise.resolve();
+      for (let i = 0; i < times; i++) {
+        chain = chain.then(() => new Promise(r => setTimeout(r, 0)));
+      }
+      return chain;
+    };
+
+    const completeListener = () =>
+      mockEventEmitter.addListener.mock.calls.find(
+        ([event]: any[]) => event === 'onDownloadComplete',
+      )?.[1];
+
+    beforeEach(() => {
+      (RNFS.stat as jest.Mock).mockResolvedValue({size: 100});
+      (RNFS.exists as jest.Mock).mockResolvedValue(true);
+    });
+
+    it('downloads every part and moves them into place (Android)', async () => {
+      NativeModules.DownloadModule.startDownload
+        .mockResolvedValueOnce({downloadId: 'part-1'})
+        .mockResolvedValueOnce({downloadId: 'part-2'});
+
+      const callbacks = {
+        onStart: jest.fn(),
+        onProgress: jest.fn(),
+        onComplete: jest.fn(),
+        onError: jest.fn(),
+      };
+      downloadManager.setCallbacks(callbacks);
+
+      const done = downloadManager.startDownload(
+        splitModel as any,
+        '/models/o/r/model-00001-of-00002.gguf',
+      );
+      await flush();
+      completeListener()({downloadId: 'part-1'});
+      await flush();
+      completeListener()({downloadId: 'part-2'});
+      await done;
+
+      expect(NativeModules.DownloadModule.startDownload).toHaveBeenCalledTimes(
+        2,
+      );
+      expect(RNFS.moveFile).toHaveBeenCalledTimes(2);
+      expect(callbacks.onComplete).toHaveBeenCalledWith('split-model');
+      expect(callbacks.onError).not.toHaveBeenCalled();
+      expect(downloadManager.isDownloading('split-model')).toBe(false);
+    });
+
+    it('rejects when the split file list is incomplete', async () => {
+      const broken = {
+        ...splitModel,
+        splitDownload: {...splitModel.splitDownload, totalParts: 3},
+      };
+
+      await expect(
+        downloadManager.startDownload(
+          broken as any,
+          '/models/o/r/model-00001-of-00002.gguf',
+        ),
+      ).rejects.toThrow('incomplete');
+      expect(NativeModules.DownloadModule.startDownload).not.toHaveBeenCalled();
+    });
+
+    it('rejects when a part has no download URL', async () => {
+      const noUrl = {
+        ...splitModel,
+        hfModelFile: {
+          ...splitModel.hfModelFile,
+          split: {
+            ...splitModel.splitDownload,
+            parts: [{...partOne, url: undefined}, partTwo],
+          },
+        },
+      };
+
+      await expect(
+        downloadManager.startDownload(
+          noUrl as any,
+          '/models/o/r/model-00001-of-00002.gguf',
+        ),
+      ).rejects.toThrow('no download URL');
+      expect(NativeModules.DownloadModule.startDownload).not.toHaveBeenCalled();
+    });
+
+    it('downloads every part on iOS', async () => {
+      (Platform as any).OS = 'ios';
+      (RNFS.downloadFile as jest.Mock)
+        .mockImplementationOnce(() => ({
+          jobId: 42,
+          promise: Promise.resolve({statusCode: 200}),
+        }))
+        .mockImplementationOnce(() => ({
+          jobId: 43,
+          promise: Promise.resolve({statusCode: 200}),
+        }));
+
+      const callbacks = {
+        onStart: jest.fn(),
+        onProgress: jest.fn(),
+        onComplete: jest.fn(),
+        onError: jest.fn(),
+      };
+      downloadManager.setCallbacks(callbacks);
+
+      await downloadManager.startDownload(
+        splitModel as any,
+        '/models/o/r/model-00001-of-00002.gguf',
+      );
+
+      expect(RNFS.downloadFile).toHaveBeenCalledTimes(2);
+      expect(RNFS.moveFile).toHaveBeenCalledTimes(2);
+      expect(callbacks.onComplete).toHaveBeenCalledWith('split-model');
+    });
+
+    it('cancels an in-flight split download with DownloadCancelledError', async () => {
+      NativeModules.DownloadModule.startDownload.mockResolvedValue({
+        downloadId: 'part-1',
+      });
+
+      const started = downloadManager.startDownload(
+        splitModel as any,
+        '/models/o/r/model-00001-of-00002.gguf',
+      );
+      await flush();
+
+      await downloadManager.cancelDownload('split-model');
+      await expect(started).rejects.toThrow(DownloadCancelledError);
+      expect(downloadManager.isDownloading('split-model')).toBe(false);
+    });
+  });
 });

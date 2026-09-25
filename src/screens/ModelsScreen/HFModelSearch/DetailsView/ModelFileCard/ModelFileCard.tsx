@@ -62,7 +62,12 @@ export const ModelFileCard: FC<ModelFileCardProps> = observer(
       () => createStyles(theme, isProjection),
       [theme, isProjection],
     );
-    const HF_YELLOW = '#FFD21E';
+    const sourceAccent =
+      hfModel.source === 'modelscope'
+        ? '#00A971'
+        : hfModel.source === 'hf_mirror'
+          ? '#5E8CFF'
+          : '#FFD21E';
 
     // Check if we have all the necessary data, as some are fetched async, like size.
     const isModelInfoReady = Boolean(
@@ -82,13 +87,18 @@ export const ModelFileCard: FC<ModelFileCardProps> = observer(
     const downloadProgress = storeModel?.progress || 0;
     const downloadSpeed = storeModel?.downloadSpeed;
 
+    const isSameSourceFile = useMemo(
+      () => (model: Model) => model.id === convertedModel.id,
+      [convertedModel.id],
+    );
+
     const isBookmarked = computed(() =>
-      modelStore.models.some(model => model.hfModelFile?.oid === modelFile.oid),
+      modelStore.models.some(isSameSourceFile),
     ).get();
 
     const isDownloaded = computed(() =>
       modelStore.models.some(
-        model => model.hfModelFile?.oid === modelFile.oid && model.isDownloaded,
+        model => isSameSourceFile(model) && model.isDownloaded,
       ),
     ).get();
 
@@ -150,9 +160,7 @@ export const ModelFileCard: FC<ModelFileCardProps> = observer(
 
     const handleUnbookmark = () => {
       if (isBookmarked) {
-        const model = modelStore.models.find(
-          (m: Model) => m.hfModelFile?.oid === modelFile.oid,
-        );
+        const model = modelStore.models.find(isSameSourceFile);
         if (model?.origin === ModelOrigin.PRESET) {
           Alert.alert(
             l10n.models.modelFile.alerts.cannotRemoveTitle,
@@ -215,9 +223,7 @@ export const ModelFileCard: FC<ModelFileCardProps> = observer(
     };
 
     const handleDelete = () => {
-      const model = modelStore.models.find(
-        m => m.hfModelFile?.oid === modelFile.oid,
-      );
+      const model = modelStore.models.find(isSameSourceFile);
       if (model?.isDownloaded) {
         Alert.alert(
           l10n.models.modelFile.alerts.deleteTitle,
@@ -275,7 +281,10 @@ export const ModelFileCard: FC<ModelFileCardProps> = observer(
         style={styles.fileCardContainer}
         testID={`model-file-card-${modelFile.rfilename}`}>
         <LinearGradient
-          colors={[theme.dark ? HF_YELLOW + '90' : HF_YELLOW, 'transparent']}
+          colors={[
+            theme.dark ? sourceAccent + '90' : sourceAccent,
+            'transparent',
+          ]}
           locations={[1, 1]}
           start={{x: 0, y: 0}}
           end={{x: 1, y: 0}}

@@ -11,6 +11,8 @@ export const mockHFStore = {
   queryConfig: true,
   hfToken: '',
   useHfToken: true,
+  selectedSource: 'huggingface',
+  modelDetailsLoading: false,
   searchFilters: {
     author: '',
     sortBy: 'relevance' as const,

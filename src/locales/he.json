@@ -245,6 +245,8 @@
     "labels": {
       "localModel": "מקומי",
       "hfModel": "HF",
+      "hfMirrorModel": "HF Mirror",
+      "modelScopeModel": "ModelScope",
       "unknownGroup": "לא ידוע",
       "availableToUse": "מוכן לשימוש",
       "availableToDownload": "זמין להורדה",
@@ -293,6 +295,7 @@
     },
     "buttons": {
       "addFromHuggingFace": "הוסף מ-Hugging Face",
+      "addFromModelSources": "Download Model",
       "addLocalModel": "הוסף מודל מקומי",
       "reset": "איפוס"
     },
@@ -350,6 +353,14 @@
       "noResults": "לא נמצאו מודלים",
       "loadingMore": "טוען עוד...",
       "searchPlaceholder": "חפש מודלי Hugging Face",
+      "source": "Source",
+      "sourceTitle": "Download Source",
+      "thirdPartySuffix": " (third-party)",
+      "sources": {
+        "huggingface": "Hugging Face",
+        "hf_mirror": "HF Mirror",
+        "modelscope": "ModelScope"
+      },
       "modelUpdatedLong": "עודכן לפני {{time}}",
       "modelUpdatedShort": "לפני {{time}}",
       "modelUpdatedJustNowLong": "עודכן עכשיו",
@@ -393,6 +404,7 @@
         "requiresProjectionModel": "דורש מודל שכבת התאמה",
         "downloadProjectionModel": "הורד מודל שכבת התאמה",
         "viewModelCardOnHuggingFace": "הצג כרטיס מודל ב-Hugging Face",
+        "viewModelCardOnSource": "View Model Source",
         "visionSupported": "נתמך",
         "visionNotSupported": "לא נתמך",
         "visionUnknown": "לא ידוע",
@@ -738,7 +750,8 @@
       "enableAndRetry": "הפעלה וניסיון חוזר",
       "goToSettings": "עבור אל ההגדרות",
       "tryAgain": "נסה שוב",
-      "viewOnHuggingFace": "הצג מודל ב-HF ↖"
+      "viewOnHuggingFace": "הצג מודל ב-HF ↖",
+      "viewOnSource": "View Model Source ↗"
     },
     "headerRight": {
       "deleteChatTitle": "מחק צ'אט",
@@ -800,7 +813,11 @@
       }
     },
     "modelsHeaderRight": {
+      "filtersGroup": "Filters",
+      "viewGroup": "View",
       "menuTitleHf": "מודלי Hugging Face",
+      "menuTitleHfMirror": "Hugging Face Mirror",
+      "menuTitleModelScope": "ModelScope Models",
       "menuTitleDownloaded": "מודלים שהורדו",
       "menuTitleGrouped": "קיבוץ לפי סוג מודל",
       "menuTitleReset": "איפוס רשימת מודלים"
