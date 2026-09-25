@@ -25,12 +25,28 @@ const {useRoute} = require('@react-navigation/native') as {
 // Mock RNFS at the module path the screen imports.
 jest.mock('@dr.pogodin/react-native-fs', () => ({
   ExternalDirectoryPath: '/mock/external',
+  DocumentDirectoryPath: '/mock/documents',
   exists: jest.fn().mockResolvedValue(true),
   readFile: jest.fn(),
   writeFile: jest.fn().mockResolvedValue(undefined),
 }));
 
 const RNFS = require('@dr.pogodin/react-native-fs');
+
+async function onPlatform(os: 'ios' | 'android', fn: () => Promise<void>) {
+  const originalOS = Platform.OS;
+  Platform.OS = os;
+  try {
+    await fn();
+  } finally {
+    Platform.OS = originalOS;
+  }
+}
+
+function lastWrittenReport() {
+  const calls = RNFS.writeFile.mock.calls;
+  return JSON.parse(calls[calls.length - 1][1]);
+}
 
 // Mock the deviceSelection helper so the GPU/Hexagon paths are testable.
 jest.mock('../../../utils/deviceSelection', () => ({
@@ -854,6 +870,66 @@ describe('BenchmarkRunnerScreen', () => {
     // -------------------------------------------------------------------------
     // Report shape
     // -------------------------------------------------------------------------
+
+    it.each([
+      ['ios', '/mock/documents'],
+      ['android', '/mock/external'],
+    ] as const)(
+      'on %s reads the config from and writes the report to %s',
+      async (os, dir) => {
+        await onPlatform(os, async () => {
+          RNFS.exists.mockResolvedValueOnce(false);
+          const {getByTestId} = render(<BenchmarkRunnerScreen />);
+          await act(async () => {
+            fireEvent.press(getByTestId('bench-run-button'));
+          });
+          await waitFor(() => {
+            expect(
+              getByTestId('bench-runner-screen-status').props
+                .accessibilityLabel,
+            ).toBe('error:bench-config-missing');
+          });
+          expect(RNFS.exists).toHaveBeenCalledWith(`${dir}/bench-config.json`);
+
+          stubOpenCLLogs();
+          await runMatrix(VALID_CONFIG, setStatus, setLastCell);
+          const paths = RNFS.writeFile.mock.calls.map(
+            (c: unknown[]) => c[0] as string,
+          );
+          expect(paths.length).toBeGreaterThan(0);
+          for (const path of paths) {
+            expect(path.startsWith(`${dir}/benchmark-report-`)).toBe(true);
+          }
+          expect(lastWrittenReport().platform).toBe(os);
+        });
+      },
+    );
+
+    it('ok rows carry a finite, non-negative init_ms', async () => {
+      stubOpenCLLogs();
+      await runMatrix(VALID_CONFIG, setStatus, setLastCell);
+      const row = lastWrittenReport().runs[0];
+      expect(row.status).toBe('ok');
+      expect(Number.isFinite(row.init_ms)).toBe(true);
+      expect(row.init_ms).toBeGreaterThanOrEqual(0);
+    });
+
+    it('a backend-mismatch row keeps init_ms because initLlama resolved', async () => {
+      stubCPULogs();
+      await runMatrix(VALID_CONFIG, setStatus, setLastCell);
+      const row = lastWrittenReport().runs[0];
+      expect(row.error).toContain('backend-mismatch:gpu:cpu');
+      expect(row.init_ms).toBeGreaterThanOrEqual(0);
+    });
+
+    it('omits init_ms when initLlama rejects', async () => {
+      stubOpenCLLogs();
+      (initLlama as jest.Mock).mockRejectedValueOnce(new Error('init-failed'));
+      await runMatrix(VALID_CONFIG, setStatus, setLastCell);
+      const row = lastWrittenReport().runs[0];
+      expect(row.status).toBe('failed');
+      expect('init_ms' in row).toBe(false);
+    });
 
     it('persists config.bench at the top level of the report (not DEFAULT_BENCH)', async () => {
       stubOpenCLLogs();

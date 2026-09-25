@@ -1,5 +1,12 @@
 import React, {useCallback, useEffect, useRef, useState} from 'react';
-import {Button, ScrollView, StyleSheet, Text, View} from 'react-native';
+import {
+  Button,
+  Platform,
+  ScrollView,
+  StyleSheet,
+  Text,
+  View,
+} from 'react-native';
 import {useRoute} from '@react-navigation/native';
 import RNDeviceInfo from 'react-native-device-info';
 import {
@@ -42,9 +49,13 @@ const RNFS = require('@dr.pogodin/react-native-fs');
 // DCE the literal as dead code. We log it from onRun below.
 const BENCH_RUN_MATRIX = 'BENCH_RUN_MATRIX';
 
-const CONFIG_PATH = `${RNFS.ExternalDirectoryPath}/bench-config.json`;
+const benchDir = (): string =>
+  Platform.OS === 'ios'
+    ? RNFS.DocumentDirectoryPath
+    : RNFS.ExternalDirectoryPath;
+const configPath = () => `${benchDir()}/bench-config.json`;
 const reportPath = (timestamp: string) =>
-  `${RNFS.ExternalDirectoryPath}/benchmark-report-${timestamp}.json`;
+  `${benchDir()}/benchmark-report-${timestamp}.json`;
 
 type Status = string; // 'idle' | 'downloading:<f>[ <pct>%]' | 'running:<i/n>:<tag>' (tag may include /<key=val;...> override suffix) | 'cell-failed:<i/n>:<msg>' | 'complete' | 'error:<msg>'
 
@@ -124,6 +135,8 @@ interface BenchmarkRunRow {
   pp_avg: number | null;
   tg_avg: number | null;
   wall_ms: number;
+  /** Wall ms of the `initLlama` await. Absent when init threw or never ran. */
+  init_ms?: number;
   peak_memory_mb: number | null;
   log_signals: LogSignals;
   init_settings: Record<string, unknown>;
@@ -153,7 +166,7 @@ interface BenchmarkRunRow {
 
 interface BenchmarkReport {
   version: '1.1';
-  platform: 'android';
+  platform: 'android' | 'ios';
   timestamp: string;
   preseeded: boolean;
   bench: {pp: number; tg: number; pl: number; nr: number};
@@ -175,11 +188,12 @@ const PEAK_POLL_MS = 1000;
 const DEFAULT_INTER_CELL_SETTLE_MS = 2000;
 
 async function loadConfig(): Promise<BenchConfig> {
-  const exists = await RNFS.exists(CONFIG_PATH);
+  const path = configPath();
+  const exists = await RNFS.exists(path);
   if (!exists) {
     throw new Error('bench-config-missing');
   }
-  const raw = await RNFS.readFile(CONFIG_PATH, 'utf8');
+  const raw = await RNFS.readFile(path, 'utf8');
   return JSON.parse(raw) as BenchConfig;
 }
 
@@ -558,7 +572,7 @@ export async function runMatrix(
     const path = reportPath(safeStamp);
     const report: BenchmarkReport = {
       version: '1.1',
-      platform: 'android',
+      platform: Platform.OS === 'ios' ? 'ios' : 'android',
       timestamp: startTimestamp,
       preseeded: true, // pessimistic — flips false on first downloading: transition
       bench,
@@ -616,6 +630,7 @@ export async function runMatrix(
       // the try body a throw lands. Distinct from `modelStore.context` —
       // the runner never assigns to that.
       let ctx: LlamaContext | null = null;
+      let initMs: number | undefined;
       // Post-init snapshot, hoisted so the catch path can pick between the
       // standard fingerprint (post-init available) and the `req:`-prefixed
       // fingerprint (pre-init failure). WHAT 9d explicitly requires this
@@ -800,7 +815,9 @@ export async function runMatrix(
         //    ONLY native-load entrypoint — `modelStore.initContext` /
         //    `selectModel` are gated by `benchmarkActive` and would throw
         //    if accidentally invoked.
+        const initStart = Date.now();
         ctx = await initLlama(cellParams);
+        initMs = Date.now() - initStart;
 
         // 6. Validate the actual backend satisfies the requested backend.
         //    Partial offload (cpu+opencl-partial, cpu+hexagon-partial) IS
@@ -866,6 +883,7 @@ export async function runMatrix(
           pp_avg: speedPp,
           tg_avg: speedTg,
           wall_ms: wall,
+          init_ms: initMs,
           peak_memory_mb:
             typeof peakBytes === 'number'
               ? Math.round((peakBytes / (1024 * 1024)) * 100) / 100
@@ -919,6 +937,7 @@ export async function runMatrix(
           pp_avg: null,
           tg_avg: null,
           wall_ms: Date.now() - tStart,
+          init_ms: initMs,
           peak_memory_mb: null,
           log_signals: partialSignals,
           init_settings: postInitSnapshot ?? {},
