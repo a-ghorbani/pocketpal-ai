@@ -188,12 +188,15 @@ class IapMockServer {
     return pal;
   }
 
-  /** A creator update: only verify and refresh serve it; the listing keeps the old content. */
+  /**
+   * A creator update: only verify and refresh serve it. The listing keeps the
+   * old title, which is what lets the creator-update check fail when the app
+   * never applies the update.
+   */
   updatePal(id: string, changes: Partial<MockPal>): void {
     this.content.set(id, {...this.served(this.known.get(id)!), ...changes});
   }
 
-  /** Record the store's refund of every purchase of this Pal. */
   refund(palId: string): void {
     this.issued.forEach((issuedPalId, ref) => {
       if (issuedPalId === palId) {

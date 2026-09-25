@@ -183,7 +183,6 @@ export interface Pal {
   updated_at?: string;
 }
 
-// Legacy pal type for backward compatibility
 type ClearablePalField =
   | 'greeting'
   | 'defaultModel'
@@ -193,6 +192,7 @@ export type PalUpdate = Omit<Partial<Pal>, ClearablePalField> & {
   [K in ClearablePalField]?: Pal[K] | null;
 };
 
+// Legacy pal type for backward compatibility
 export type LegacyPalType = 'roleplay' | 'assistant' | 'video';
 
 // Built-in parameter schemas for existing pal types

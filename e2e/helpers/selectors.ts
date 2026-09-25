@@ -88,7 +88,7 @@ export const byAccessibilityLabelContains = (label: string): string => {
  */
 export const withinTestIdPrefix = (prefix: string, text: string): string => {
   if (isAndroid()) {
-    return `//*[contains(@resource-id, "${prefix}")][descendant-or-self::*[@text="${text}" or @content-desc="${text}"]]`;
+    return `//*[starts-with(@resource-id, "${prefix}")][descendant-or-self::*[@text="${text}" or @content-desc="${text}"]]`;
   }
   return `-ios class chain:**/*[\`name BEGINSWITH "${prefix}"\`]/**/*[\`label == "${text}"\`]`;
 };
