@@ -44,15 +44,8 @@ export interface RecordedRequest {
   body: any;
 }
 
-interface RefreshScript {
-  changed?: string[];
-  revoked?: string[];
-  removed?: string[];
-}
-
 interface MockScript {
   verify: MockVerifyStatus[];
-  refresh: RefreshScript;
   linkStatus: number;
   offline: boolean;
 }
@@ -77,7 +70,6 @@ export const mockPal = (id: string): MockPal => ({
 
 const defaultScript = (): MockScript => ({
   verify: [],
-  refresh: {},
   linkStatus: 200,
   offline: false,
 });
@@ -102,6 +94,18 @@ const apiPal = (pal: MockPal, withPrompt: boolean) => ({
   ...(withPrompt ? {system_prompt: pal.systemPrompt} : {}),
 });
 
+const REFRESH_MAX_KNOWN = 200;
+
+const tokenOf = (transaction: unknown): string | undefined => {
+  if (typeof transaction === 'string') {
+    return transaction;
+  }
+  if (transaction && typeof transaction === 'object') {
+    return (transaction as {purchaseToken?: string}).purchaseToken;
+  }
+  return undefined;
+};
+
 const productIdOf = (transaction: unknown): string | undefined => {
   if (typeof transaction === 'string') {
     return transaction.split('.').slice(1, -1).join('.');
@@ -112,6 +116,32 @@ const productIdOf = (transaction: unknown): string | undefined => {
   return undefined;
 };
 
+const supportCodeOf = (transaction: unknown): string =>
+  `E2E-${tokenOf(transaction)?.split('.').pop()}`;
+
+interface KnownEntry {
+  content_version: number;
+  purchase_ref: string;
+}
+
+const parseKnown = (known: unknown): Record<string, KnownEntry> | null => {
+  if (!known || typeof known !== 'object' || Array.isArray(known)) {
+    return null;
+  }
+  const entries = Object.entries(known as Record<string, unknown>);
+  const valid = entries.every(([, entry]) => {
+    const e = entry as Partial<KnownEntry> | null;
+    return (
+      typeof e?.content_version === 'number' &&
+      typeof e.purchase_ref === 'string' &&
+      e.purchase_ref.length > 0
+    );
+  });
+  return valid && entries.length <= REFRESH_MAX_KNOWN
+    ? (known as Record<string, KnownEntry>)
+    : null;
+};
+
 class IapMockServer {
   private server: http.Server | null = null;
   private state: MockScript = defaultScript();
@@ -119,6 +149,9 @@ class IapMockServer {
   private held: Array<() => void> = [];
   private holding = false;
   private known = new Map<string, MockPal>();
+  private content = new Map<string, MockPal>();
+  private issued = new Map<string, string>();
+  private refunded = new Set<string>();
   private verdicts = new Map<string, MockVerifyStatus>();
   pals: MockPal[] = [];
 
@@ -155,10 +188,22 @@ class IapMockServer {
     return pal;
   }
 
+  /** A creator update: only verify and refresh serve it; the listing keeps the old content. */
   updatePal(id: string, changes: Partial<MockPal>): void {
-    const pal = {...this.known.get(id)!, ...changes};
-    this.known.set(id, pal);
-    this.pals = this.pals.map(p => (p.id === id ? pal : p));
+    this.content.set(id, {...this.served(this.known.get(id)!), ...changes});
+  }
+
+  /** Record the store's refund of every purchase of this Pal. */
+  refund(palId: string): void {
+    this.issued.forEach((issuedPalId, ref) => {
+      if (issuedPalId === palId) {
+        this.refunded.add(`${palId} ${ref}`);
+      }
+    });
+  }
+
+  issuedRefs(): ReadonlySet<string> {
+    return new Set(this.issued.keys());
   }
 
   script(changes: Partial<MockScript>): void {
@@ -184,6 +229,10 @@ class IapMockServer {
 
   private palById(id: string): MockPal | undefined {
     return this.known.get(id);
+  }
+
+  private served(pal: MockPal): MockPal {
+    return this.content.get(pal.id) ?? pal;
   }
 
   private send(res: http.ServerResponse, status: number, body?: unknown) {
@@ -254,15 +303,7 @@ class IapMockServer {
       req.method === 'POST' &&
       path === '/api/mobile/iap/entitlements/refresh'
     ) {
-      const pick = (ids: string[] = []) => ids.filter(id => this.known.has(id));
-      this.send(res, 200, {
-        changed: pick(this.state.refresh.changed).map(id =>
-          apiPal(this.palById(id)!, true),
-        ),
-        revoked: pick(this.state.refresh.revoked),
-        removed: pick(this.state.refresh.removed),
-        unchanged: [],
-      });
+      this.refresh(body, res);
       return;
     }
     if (req.method === 'POST' && path === '/api/mobile/iap/link') {
@@ -301,12 +342,17 @@ class IapMockServer {
       this.send(res, 200, {
         results: transactions.map(transaction => {
           const pal = this.palByProduct(productIdOf(transaction));
+          const served = pal && this.served(pal);
+          const supportCode = supportCodeOf(transaction);
+          if (pal) {
+            this.issued.set(supportCode, pal.id);
+          }
           return {
             pal_id: pal?.id ?? 'unknown',
             status: next,
-            content_version: pal?.contentVersion,
-            pal: pal ? apiPal(pal, next === 'active') : undefined,
-            support_code: 'E2E-SUPPORT-1',
+            content_version: served?.contentVersion,
+            pal: served ? apiPal(served, next === 'active') : undefined,
+            support_code: supportCode,
           };
         }),
       });
@@ -317,6 +363,43 @@ class IapMockServer {
       respond();
     }
   }
+
+  private refresh(body: any, res: http.ServerResponse) {
+    const known = parseKnown(body?.known);
+    if (!known) {
+      this.send(res, 400, {error: 'known is malformed'});
+      return;
+    }
+    const transactions: unknown[] = Array.isArray(body?.transactions)
+      ? body.transactions
+      : [];
+    const proven = new Set(
+      transactions.map(
+        transaction => this.palByProduct(productIdOf(transaction))?.id,
+      ),
+    );
+    const changed: unknown[] = [];
+    const revoked: string[] = [];
+    const unchanged: string[] = [];
+    for (const [palId, entry] of Object.entries(known)) {
+      const pal = this.palById(palId);
+      if (!pal) {
+        continue;
+      }
+      const served = this.served(pal);
+      if (this.refunded.has(`${palId} ${entry.purchase_ref}`)) {
+        revoked.push(palId);
+      } else if (
+        proven.has(palId) &&
+        entry.content_version < served.contentVersion
+      ) {
+        changed.push(apiPal(served, true));
+      } else {
+        unchanged.push(palId);
+      }
+    }
+    this.send(res, 200, {changed, revoked, removed: [], unchanged});
+  }
 }
 
 export const iapMockServer = new IapMockServer();
@@ -326,6 +409,7 @@ export const assertMockTraffic = (requests: RecordedRequest[]): string[] => {
   const problems: string[] = [];
   const noAuth = /\/iap\/verify$|\/iap\/entitlements\/refresh$|\/event$/;
   const eventTypes = ['buy_tap', 'purchase_cancelled', 'purchase_error'];
+  const issued = iapMockServer.issuedRefs();
   for (const request of requests) {
     if (noAuth.test(request.path) && request.headers.authorization) {
       problems.push(`${request.path} carried Authorization`);
@@ -337,6 +421,13 @@ export const assertMockTraffic = (requests: RecordedRequest[]): string[] => {
       !['ios', 'android'].includes(String(request.headers['x-client-platform']))
     ) {
       problems.push(`${request.path} missing X-Client-Platform`);
+    }
+    if (request.path.endsWith('/entitlements/refresh')) {
+      Object.values(request.body?.known ?? {}).forEach((entry: any) => {
+        if (!issued.has(entry?.purchase_ref)) {
+          problems.push(`refresh sent unissued ref ${entry?.purchase_ref}`);
+        }
+      });
     }
     if (request.path.endsWith('/event')) {
       const keys = Object.keys(request.body ?? {});

@@ -68,7 +68,7 @@ describe('In-app purchase', () => {
 
     await buyPage.waitFor('purchase-ready', 60000);
     expect(await buyPage.text('purchase-support-code')).toContain(
-      'E2E-SUPPORT-1',
+      'E2E-fake-tx-',
     );
     await buyPage.downloadModel();
     await buyPage.startChat(TIMEOUTS.download);
@@ -128,7 +128,7 @@ describe('In-app purchase', () => {
 
     await buyPage.buy();
     expect(await buyPage.text('purchase-unfulfillable', 60000)).toContain(
-      'E2E-SUPPORT-1',
+      'E2E-fake-tx-',
     );
     expect(await buyPage.isShown('buy-button', 1000)).toBe(false);
   });

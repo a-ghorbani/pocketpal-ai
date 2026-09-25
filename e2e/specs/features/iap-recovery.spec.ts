@@ -10,7 +10,7 @@ import {ChatPage} from '../../pages/ChatPage';
 import {DrawerPage} from '../../pages/DrawerPage';
 import {PalBuyPage} from '../../pages/PalBuyPage';
 import {TIMEOUTS} from '../../fixtures/models';
-import {byText} from '../../helpers/selectors';
+import {withinTestIdPrefix} from '../../helpers/selectors';
 import {saveFailureScreenshot} from '../../helpers/screenshots';
 import {assertMockTraffic, iapMockServer} from '../../helpers/iapMockServer';
 import {
@@ -121,7 +121,7 @@ describe('In-app purchase recovery', () => {
     await buyToOwned(pal.id);
 
     await iapCommand(`refund::${pal.productId}`);
-    iapMockServer.script({refresh: {revoked: [pal.id]}});
+    iapMockServer.refund(pal.id);
     await relaunchApp();
     await openPals();
     await buyPage.openPal(pal.id);
@@ -145,14 +145,13 @@ describe('In-app purchase recovery', () => {
       title: 'E2E Updated Pal',
       contentVersion: 2,
     });
-    iapMockServer.script({refresh: {changed: [pal.id]}});
     await relaunchApp();
     await openPals();
 
-    await buyPage.scrollToCard('local-pal-card');
-    await browser.$(byText('E2E Updated Pal')).waitForDisplayed({
-      timeout: 30000,
-    });
+    await buyPage.scrollToCard('local-pal-card-');
+    await browser
+      .$(withinTestIdPrefix('local-pal-card-', 'E2E Updated Pal'))
+      .waitForDisplayed({timeout: 30000});
   });
 
   it('returns Buy after a declined pending payment', async () => {
