@@ -50,6 +50,9 @@ react {
     //   A list of extra flags to pass to the 'bundle' commands.
     //   See https://github.com/react-native-community/cli/blob/main/docs/commands.md#bundle
     // extraPackagerArgs = []
+    if (project.hasProperty("metroMaxWorkers")) {
+        extraPackagerArgs = ["--max-workers", project.property("metroMaxWorkers").toString()]
+    }
 
     /* Hermes Commands */
     //   The hermes compiler command to run. By default it is 'hermesc'
@@ -80,6 +83,11 @@ def enableProguardInReleaseBuilds = false
  */
 def jscFlavor = 'io.github.react-native-community:jsc-android:2026004.+'
 
+def reactNativeArchitectures() {
+    def value = project.getProperties().get("reactNativeArchitectures")
+    return value ? value.split(",") : ["arm64-v8a", "x86_64"]
+}
+
 android {
     ndkVersion rootProject.ext.ndkVersion
     buildToolsVersion rootProject.ext.buildToolsVersion
@@ -93,7 +101,7 @@ android {
         versionCode 147
         versionName "1.17.3"
         ndk {
-            abiFilters "arm64-v8a", "x86_64"
+            abiFilters (*reactNativeArchitectures())
         }
     }
     externalNativeBuild {
@@ -103,6 +111,15 @@ android {
             // shim) into libappmodules.so. The replacement file must
             // include ReactNative-application.cmake — see jni/CMakeLists.txt.
             path file("src/main/jni/CMakeLists.txt")
+        }
+    }
+    packaging {
+        // Deduplicate worklets native lib: react-native-worklets and
+        // react-native-reanimated both ship libworklets.so for the same ABI.
+        // Without pickFirst, debug/release merges fail with
+        // "More than one file was found with OS independent path".
+        jniLibs {
+            pickFirsts += ['lib/**/libworklets.so']
         }
     }
     signingConfigs {
