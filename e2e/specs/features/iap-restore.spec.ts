@@ -88,10 +88,10 @@ describe('In-app purchase restore', () => {
     await buyPage.waitFor('purchase-link-prompt', 60000);
 
     await buyPage.startLinkSignIn();
-    await buyPage.closeSheet();
+    await buyPage.closeAllSheets();
     await buyPage.openPal(pal.id);
     await buyPage.waitFor('owned-button');
-    await buyPage.closeSheet();
+    await buyPage.closeAllSheets();
 
     const second = listPal('iap-prompt-dismiss');
     await openPalsWith(openPals, {products: second.products});

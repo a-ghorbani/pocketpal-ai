@@ -101,7 +101,7 @@ describe('In-app purchase', () => {
     await buyPage.buy();
     await buyPage.waitFor('purchase-pending');
     await buyPage.closeSheet();
-    await buyPage.waitFor('pal-badge-pending');
+    await buyPage.waitForInList('pal-badge-pending');
 
     await iapCommand('approve_pending');
     await buyPage.waitGone('pal-badge-pending', 60000);

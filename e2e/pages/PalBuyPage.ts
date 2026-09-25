@@ -4,6 +4,7 @@
  */
 
 import {BasePage} from './BasePage';
+import {Gestures} from '../helpers/gestures';
 import {byTestId} from '../helpers/selectors';
 
 declare const browser: WebdriverIO.Browser;
@@ -15,19 +16,7 @@ export class PalBuyPage extends BasePage {
   }
 
   async scrollToCard(testId: string): Promise<void> {
-    try {
-      if (driver.isAndroid) {
-        await browser.$(
-          `android=new UiScrollable(new UiSelector().scrollable(true)).scrollIntoView(new UiSelector().resourceIdMatches(".*${testId}.*"))`,
-        );
-      } else {
-        await browser.execute('mobile: scroll', {
-          predicateString: `name == "${testId}"`,
-        });
-      }
-    } catch {
-      // Already visible, or nothing to scroll.
-    }
+    await Gestures.scrollToElement(byTestId(testId), 8);
   }
 
   async openPal(palId: string, timeout = 20000): Promise<void> {
@@ -52,7 +41,15 @@ export class PalBuyPage extends BasePage {
 
   async text(testId: string, timeout = 20000): Promise<string> {
     const element = await this.waitForElement(byTestId(testId), timeout);
-    return element.getText();
+    const own = (await element.getText()).trim();
+    if (own || !driver.isAndroid) {
+      return own;
+    }
+    const parts: string[] = [];
+    for (const child of await element.$$('.//android.widget.TextView')) {
+      parts.push((await child.getText()).trim());
+    }
+    return parts.filter(Boolean).join(' ');
   }
 
   async buy(timeout = 20000): Promise<void> {
@@ -76,12 +73,15 @@ export class PalBuyPage extends BasePage {
     await this.tap(byTestId('model-step-download'), timeout);
   }
 
+  async waitForInList(testId: string, timeout = 20000): Promise<void> {
+    await this.scrollToCard(testId);
+    await this.waitFor(testId, timeout);
+  }
+
   async startChat(timeout = 300000): Promise<void> {
-    const button = await this.waitForEnabled(
-      byTestId('model-step-start-chat'),
-      timeout,
-    );
-    await button.click();
+    await this.waitGone('model-step-download', timeout);
+    await this.waitGone('model-step-progress', timeout);
+    await this.tap(byTestId('model-step-start-chat'), timeout);
   }
 
   async closeSheet(): Promise<void> {
@@ -93,7 +93,18 @@ export class PalBuyPage extends BasePage {
     await browser.pause(500);
   }
 
+  async closeAllSheets(): Promise<void> {
+    for (let i = 0; i < 3; i++) {
+      if (!(await this.isShown('sheet-close-button', 1500))) {
+        return;
+      }
+      await this.tap(byTestId('sheet-close-button'));
+      await browser.pause(600);
+    }
+  }
+
   async restoreFromList(timeout = 20000): Promise<void> {
+    await this.scrollToCard('restore-purchases-row');
     await this.tap(byTestId('restore-purchases-row'), timeout);
   }
 

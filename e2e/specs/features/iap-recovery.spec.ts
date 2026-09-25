@@ -103,11 +103,11 @@ describe('In-app purchase recovery', () => {
     await buyPage.tapRetry();
     await buyPage.waitFor('purchase-unlocking');
     await buyPage.closeSheet();
-    await buyPage.waitFor('pal-badge-unlocking');
+    await buyPage.waitForInList('pal-badge-unlocking');
 
     await relaunchApp();
     await openPals();
-    await buyPage.waitFor('pal-badge-unlocking', 30000);
+    await buyPage.waitForInList('pal-badge-unlocking', 30000);
 
     iapMockServer.script({offline: false});
     await buyPage.openPal(pal.id);

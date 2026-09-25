@@ -118,6 +118,7 @@ class IapMockServer {
   private held: Array<() => void> = [];
   private holding = false;
   private known = new Map<string, MockPal>();
+  private verdicts = new Map<string, MockVerifyStatus>();
   pals: MockPal[] = [];
 
   async start(port = IAP_MOCK_PORT): Promise<void> {
@@ -142,6 +143,7 @@ class IapMockServer {
     this.state = defaultScript();
     this.log = [];
     this.pals = [];
+    this.verdicts.clear();
   }
 
   /** List a fresh Pal for this test; earlier tests' Pals stay verifiable. */
@@ -277,8 +279,16 @@ class IapMockServer {
   }
 
   private verify(body: any, res: http.ServerResponse) {
-    const [next = 'active', ...rest] = this.state.verify;
-    this.state.verify = rest;
+    const key = JSON.stringify(body?.transactions ?? []);
+    const settled = this.verdicts.get(key);
+    const [scripted = 'active', ...rest] = this.state.verify;
+    const next = settled ?? scripted;
+    if (!settled) {
+      this.state.verify = rest;
+      if (next !== 'fail') {
+        this.verdicts.set(key, next);
+      }
+    }
     const respond = () => {
       if (next === 'fail') {
         this.send(res, 503, {error: 'unavailable'});
