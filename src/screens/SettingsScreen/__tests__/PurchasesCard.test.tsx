@@ -1,4 +1,5 @@
 import React from 'react';
+import {Platform} from 'react-native';
 import {runInAction} from 'mobx';
 
 import {render, fireEvent} from '../../../../jest/test-utils';
@@ -132,5 +133,28 @@ describe('PurchasesCard', () => {
     );
     expect(getByTestId('purchase-row-a')).toBeTruthy();
     expect(queryByTestId('settings-restore-purchases')).toBeNull();
+  });
+
+  describe('undeliverable copy', () => {
+    const originalOS = Platform.OS;
+    afterEach(() => {
+      (Platform as any).OS = originalOS;
+    });
+
+    it.each([
+      [
+        'ios',
+        "We couldn't deliver this. Support has been notified — ref SUP-b",
+      ],
+      [
+        'android',
+        "We couldn't deliver this, so your purchase has been refunded — ref SUP-b",
+      ],
+    ])('uses the %s wording', (os, copy) => {
+      (Platform as any).OS = os;
+      setRecords(rec('b', 'unfulfillable'));
+      const {getByText} = render(<PurchasesCard onSignInPress={jest.fn()} />);
+      expect(getByText(copy)).toBeTruthy();
+    });
   });
 });

@@ -1,5 +1,5 @@
 import React, {useContext} from 'react';
-import {View} from 'react-native';
+import {Platform, View} from 'react-native';
 
 import {observer} from 'mobx-react-lite';
 import {Button, Card, Text} from 'react-native-paper';
@@ -33,9 +33,14 @@ export const PurchasesCard: React.FC<PurchasesCardProps> = observer(
 
     const statusText = (record: LedgerRecord) => {
       if (record.status === 'unfulfillable') {
-        return t(l10n.palsScreen.purchase.unfulfillable, {
-          code: record.supportCode ?? '',
-        });
+        return t(
+          Platform.OS === 'android'
+            ? l10n.palsScreen.purchase.unfulfillableRefunded
+            : l10n.palsScreen.purchase.unfulfillable,
+          {
+            code: record.supportCode ?? '',
+          },
+        );
       }
       const status =
         record.status === 'active' ? copy.statusOwned : copy.statusUnlocking;

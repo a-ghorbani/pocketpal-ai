@@ -1125,6 +1125,7 @@
       "readyAndroid": "{{name}} is yours to keep. It's tied to your Google Play account — reinstall and tap Restore purchases to get it back.",
       "supportCode": "Support code: {{code}}",
       "unfulfillable": "We couldn't deliver this. Support has been notified — ref {{code}}",
+      "unfulfillableRefunded": "We couldn't deliver this, so your purchase has been refunded — ref {{code}}",
       "invalid": "We couldn't verify this purchase. Try Restore purchases, or contact support.",
       "recommendedModel": "Recommended model",
       "sampleExchange": "Sample conversation",

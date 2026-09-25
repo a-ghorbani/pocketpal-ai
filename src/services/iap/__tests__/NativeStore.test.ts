@@ -274,6 +274,17 @@ describe('NativeStore', () => {
       });
     });
 
+    it.each(['removed', 'unfulfillable', 'revoked', 'invalid'])(
+      'never finishes, acknowledges or consumes on Android after %s',
+      async () => {
+        setOS('android');
+        await store.finish({...tx, unfinished: false});
+        expect(iap.finishTransaction).not.toHaveBeenCalled();
+        expect(iap.acknowledgePurchaseAndroid).not.toHaveBeenCalled();
+        expect(iap.consumePurchaseAndroid).not.toHaveBeenCalled();
+      },
+    );
+
     it('never finishes, acknowledges or consumes on Android', async () => {
       setOS('android');
       await store.finish(tx);

@@ -181,7 +181,12 @@ export const PalPurchaseFooter: React.FC<PalPurchaseFooterProps> = observer(
           );
         case 'unfulfillable':
           return status(
-            t(copy.unfulfillable, {code: record?.supportCode ?? ''}),
+            t(
+              Platform.OS === 'android'
+                ? copy.unfulfillableRefunded
+                : copy.unfulfillable,
+              {code: record?.supportCode ?? ''},
+            ),
             'purchase-unfulfillable',
           );
         case 'invalid':

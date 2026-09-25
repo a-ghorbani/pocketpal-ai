@@ -300,16 +300,19 @@ describe('PurchaseStore pipeline', () => {
   describe('Android', () => {
     beforeEach(() => setOS('android'));
 
-    it.each(['active', 'unfulfillable', 'revoked', 'invalid'] as const)(
-      'never finishes after verify %s',
-      async status => {
-        const h = createHarness();
-        h.api.verify.mockResolvedValueOnce([result(status)]);
-        await h.purchases.processTransaction(tx({unfinished: false}), {});
-        await settle(h);
-        expect(h.store.finish).not.toHaveBeenCalled();
-      },
-    );
+    it.each([
+      'active',
+      'unfulfillable',
+      'revoked',
+      'removed',
+      'invalid',
+    ] as const)('never finishes after verify %s', async status => {
+      const h = createHarness();
+      h.api.verify.mockResolvedValueOnce([result(status)]);
+      await h.purchases.processTransaction(tx({unfinished: false}), {});
+      await settle(h);
+      expect(h.store.finish).not.toHaveBeenCalled();
+    });
 
     it('never finishes a replayed settled transaction', async () => {
       const h = createHarness({records: [record('granted')]});

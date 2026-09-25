@@ -178,7 +178,23 @@ describe('PalPurchaseFooter', () => {
     expect(getByTestId('purchase-installing')).toBeTruthy();
   });
 
+  it.each([
+    ['ios', "We couldn't deliver this. Support has been notified — ref SUP-7"],
+    [
+      'android',
+      "We couldn't deliver this, so your purchase has been refunded — ref SUP-7",
+    ],
+  ])('shows the %s undeliverable copy', (os, copy) => {
+    (Platform as any).OS = os;
+    runInAction(() => {
+      purchaseStore.records['pal-1'] = record('unfulfillable');
+    });
+    const {getByText} = setup();
+    expect(getByText(copy)).toBeTruthy();
+  });
+
   it('shows the support reference for an undeliverable purchase and no Buy', () => {
+    (Platform as any).OS = 'ios';
     purchasable();
     runInAction(() => {
       purchaseStore.records['pal-1'] = record('unfulfillable');
