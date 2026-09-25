@@ -236,6 +236,11 @@ dependencies {
 
     // OkHttp for DownloadModule (network requests)
     implementation("com.squareup.okhttp3:okhttp:4.12.0")
+
+    // WatermelonDB JSI adapter (see include in android/settings.gradle).
+    // The app enables `jsi: true`, and autolinking only covers the legacy
+    // bridge (native/android), so this explicit dependency is required.
+    implementation project(':watermelondb-jsi')
 }
 
 project.ext.vectoricons = [
