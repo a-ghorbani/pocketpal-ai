@@ -282,6 +282,25 @@ describe('PurchaseStore recovery', () => {
       expect(h.purchases.recordFor(PAL_ID)?.status).toBe('active');
     });
 
+    it('leaves an unchanged Pal as it is', async () => {
+      const h = createHarness({records: [record('active')]});
+      h.palStore.pals.push(localPal());
+      h.api.refresh.mockResolvedValue({
+        changed: [],
+        revoked: [],
+        removed: [],
+        unchanged: [PAL_ID],
+      });
+
+      await h.purchases.recover();
+
+      expect(h.purchases.recordFor(PAL_ID)).toEqual(
+        expect.objectContaining({status: 'active', contentVersion: 3}),
+      );
+      expect(h.palStore.deletePal).not.toHaveBeenCalled();
+      expect(h.palStore.applyOwnedPalContent).not.toHaveBeenCalled();
+    });
+
     it('never touches a legacy install without a record', async () => {
       const h = createHarness();
       const legacy = localPal('web-pal');
