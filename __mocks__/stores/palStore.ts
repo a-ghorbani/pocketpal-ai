@@ -92,9 +92,9 @@ class MockPalStore {
       source: 'palshub',
       palshub_id: pal.id,
     } as Pal,
-    appliedPromptHash: 'hash',
+    applied: {promptHash: 'hash'},
   }));
-  applyOwnedPalContent = jest.fn(async () => 'hash');
+  applyOwnedPalContent = jest.fn(async () => ({promptHash: 'hash'}));
 }
 
 export const mockPalStore = new MockPalStore();

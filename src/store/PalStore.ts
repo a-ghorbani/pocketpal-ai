@@ -55,10 +55,48 @@ const PIP_SEEDED_KEY = 'PalStore.builtin.Pip.seeded';
 export const promptHash = (prompt: string): string =>
   `${hashCode(prompt)}:${prompt.length}`;
 
+const stableStringify = (value: unknown): string => {
+  if (Array.isArray(value)) {
+    return `[${value.map(stableStringify).join(',')}]`;
+  }
+  if (value !== null && typeof value === 'object') {
+    const object = value as Record<string, unknown>;
+    const entries = Object.keys(object)
+      .sort()
+      .filter(key => object[key] !== undefined)
+      .map(key => `${JSON.stringify(key)}:${stableStringify(object[key])}`);
+    return `{${entries.join(',')}}`;
+  }
+  return JSON.stringify(value) ?? 'null';
+};
+
+export const modelKey = (model?: Model | null): string => model?.id ?? '';
+
+export const settingsHash = (raw?: Record<string, unknown> | null): string =>
+  promptHash(stableStringify({...defaultCompletionParams, ...(raw ?? {})}));
+
+export interface AppliedContent {
+  promptHash?: string;
+  modelKey?: string;
+  settingsHash?: string;
+}
+
 export interface OwnedPalInstall {
   localPal: Pal;
-  appliedPromptHash?: string;
+  applied: AppliedContent;
 }
+
+const appliedContentOf = (pal: Pal): AppliedContent => ({
+  promptHash: promptHash(pal.systemPrompt),
+  modelKey: modelKey(pal.defaultModel),
+  settingsHash: settingsHash(pal.rawPalshubGenerationSettings),
+});
+
+const isOurs = (
+  local: string,
+  applied: string | undefined,
+  fresh: string,
+): boolean => local === applied || local === fresh;
 
 class PalStore {
   // Core pals storage
@@ -255,7 +293,7 @@ class PalStore {
 
   installOwnedPal = async (
     palsHubPal: PalsHubPal,
-    appliedPromptHash?: string,
+    applied: AppliedContent = {},
   ): Promise<OwnedPalInstall> => {
     if (!palsHubPal.system_prompt) {
       throw new Error('An owned Pal cannot be installed without its prompt');
@@ -264,17 +302,10 @@ class PalStore {
       this.createPalFromPalsHub(palsHubPal),
     );
     if (created) {
-      return {localPal: pal, appliedPromptHash: promptHash(pal.systemPrompt)};
+      return {localPal: pal, applied: appliedContentOf(pal)};
     }
-    const hash = await this.applyOwnedPalContent(
-      pal.id,
-      palsHubPal,
-      appliedPromptHash,
-    );
-    return {
-      localPal: this.getPalById(pal.id) ?? pal,
-      appliedPromptHash: hash,
-    };
+    const next = await this.applyOwnedPalContent(pal.id, palsHubPal, applied);
+    return {localPal: this.getPalById(pal.id) ?? pal, applied: next};
   };
 
   insertPalsHubPalOnce = (
@@ -311,20 +342,19 @@ class PalStore {
   applyOwnedPalContent = async (
     localPalId: string,
     palsHubPal: PalsHubPal,
-    appliedPromptHash?: string,
-  ): Promise<string | undefined> => {
+    applied: AppliedContent = {},
+  ): Promise<AppliedContent> => {
     const current = this.getPalById(localPalId);
     if (!current) {
-      return appliedPromptHash;
+      return applied;
     }
     const fresh = await this.createLocalPalFromPalsHub(palsHubPal);
+    const next: AppliedContent = {...applied};
     const updates: Partial<Pal> = {
       name: fresh.name,
       description: fresh.description,
       pact: fresh.pact,
       greeting: fresh.greeting,
-      defaultModel: fresh.defaultModel,
-      rawPalshubGenerationSettings: fresh.rawPalshubGenerationSettings,
       categories: fresh.categories,
       tags: fresh.tags,
       creator_info: fresh.creator_info,
@@ -342,11 +372,32 @@ class PalStore {
       }
     }
 
-    let nextHash = appliedPromptHash;
-    const localHash = promptHash(current.systemPrompt);
+    const freshModelKey = modelKey(fresh.defaultModel);
+    if (
+      isOurs(modelKey(current.defaultModel), applied.modelKey, freshModelKey)
+    ) {
+      updates.defaultModel = fresh.defaultModel;
+      next.modelKey = freshModelKey;
+    }
+
+    const freshSettingsHash = settingsHash(fresh.rawPalshubGenerationSettings);
+    if (
+      isOurs(
+        settingsHash(current.rawPalshubGenerationSettings),
+        applied.settingsHash,
+        freshSettingsHash,
+      )
+    ) {
+      updates.rawPalshubGenerationSettings = fresh.rawPalshubGenerationSettings;
+      next.settingsHash = freshSettingsHash;
+    }
+
     const freshHash = promptHash(fresh.systemPrompt);
-    const promptIsOurs =
-      localHash === appliedPromptHash || localHash === freshHash;
+    const promptIsOurs = isOurs(
+      promptHash(current.systemPrompt),
+      applied.promptHash,
+      freshHash,
+    );
     if (fresh.systemPrompt && promptIsOurs) {
       const keptParameters = Object.fromEntries(
         fresh.parameterSchema
@@ -357,11 +408,11 @@ class PalStore {
       updates.originalSystemPrompt = fresh.originalSystemPrompt;
       updates.parameterSchema = fresh.parameterSchema;
       updates.parameters = {...fresh.parameters, ...keptParameters};
-      nextHash = freshHash;
+      next.promptHash = freshHash;
     }
 
     await this.updatePal(localPalId, updates);
-    return nextHash;
+    return next;
   };
 
   private createPalFromPalsHub = async (

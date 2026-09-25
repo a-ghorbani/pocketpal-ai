@@ -18,6 +18,7 @@ import type {
 import type {StorePlatform, VerifyResult} from '../services/iap/iapWire';
 import type {LinkOutcome} from '../services/iap/iapApi';
 import {palStore as defaultPalStore} from './PalStore';
+import type {AppliedContent} from './PalStore';
 
 import type {PalsHubPal} from '../types/palshub';
 
@@ -43,6 +44,8 @@ export interface LedgerRecord {
   pendingSince?: number;
   contentVersion?: number;
   appliedPromptHash?: string;
+  appliedModelKey?: string;
+  appliedSettingsHash?: string;
   supportCode?: string;
   grant?: PalsHubPal;
   title: string;
@@ -128,6 +131,18 @@ const platform = (): StorePlatform =>
 
 const txKey = (tx: StoreTransaction): string =>
   tx.transactionId ?? `${tx.productId}:${tx.state}`;
+
+const appliedOf = (rec: LedgerRecord): AppliedContent => ({
+  promptHash: rec.appliedPromptHash,
+  modelKey: rec.appliedModelKey,
+  settingsHash: rec.appliedSettingsHash,
+});
+
+const appliedFields = (applied: AppliedContent) => ({
+  appliedPromptHash: applied.promptHash,
+  appliedModelKey: applied.modelKey,
+  appliedSettingsHash: applied.settingsHash,
+});
 
 export class PurchaseStore {
   records: Record<string, LedgerRecord> = {};
@@ -717,15 +732,15 @@ export class PurchaseStore {
     pal: PalsHubPal,
     contentVersion: number | undefined,
   ): Promise<void> {
-    const hash = await this.deps.palStore.applyOwnedPalContent(
+    const applied = await this.deps.palStore.applyOwnedPalContent(
       localPalId,
       pal,
-      rec.appliedPromptHash,
+      appliedOf(rec),
     );
     await this.putRecord(rec.palId, {
       productId: rec.productId,
       contentVersion: contentVersion ?? rec.contentVersion,
-      appliedPromptHash: hash,
+      ...appliedFields(applied),
       title: pal.title,
       thumbnailUrl: pal.thumbnail_url ?? rec.thumbnailUrl,
     });
@@ -775,15 +790,15 @@ export class PurchaseStore {
     );
     for (const rec of granted) {
       try {
-        const {appliedPromptHash} = await this.deps.palStore.installOwnedPal(
+        const {applied} = await this.deps.palStore.installOwnedPal(
           rec.grant!,
-          rec.appliedPromptHash,
+          appliedOf(rec),
         );
         await this.putRecord(rec.palId, {
           productId: rec.productId,
           status: 'active',
           grant: undefined,
-          appliedPromptHash,
+          ...appliedFields(applied),
         });
         if (this.watching.has(rec.palId)) {
           this.setTransient(rec.palId, 'ready');

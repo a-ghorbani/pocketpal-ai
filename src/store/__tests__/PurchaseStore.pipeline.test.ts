@@ -254,7 +254,7 @@ describe('PurchaseStore pipeline', () => {
       expect(h.palStore.applyOwnedPalContent).toHaveBeenCalledWith(
         'local-pal-1',
         expect.objectContaining({title: 'New'}),
-        'hash-3',
+        {promptHash: 'hash-3', modelKey: undefined, settingsHash: undefined},
       );
       expect(h.purchases.recordFor(PAL_ID)).toMatchObject({
         status: 'active',

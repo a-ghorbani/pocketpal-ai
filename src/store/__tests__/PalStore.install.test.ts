@@ -1,9 +1,11 @@
 import {runInAction} from 'mobx';
 
-import {palStore, promptHash} from '../PalStore';
+import {palStore, promptHash, settingsHash} from '../PalStore';
+import {defaultCompletionParams} from '../../utils/completionSettingsVersions';
 import {palsHubService} from '../../services';
 import {palRepository} from '../../repositories/PalRepository';
 import type {Pal} from '../../types/pal';
+import type {Model} from '../../utils/types';
 import type {PalsHubPal} from '../../types/palshub';
 
 jest.mock('@react-native-async-storage/async-storage', () => {
@@ -98,14 +100,17 @@ describe('PalStore owned install', () => {
   });
 
   it('installs without an ownership check', async () => {
-    const {localPal, appliedPromptHash} =
-      await palStore.installOwnedPal(hubPal());
+    const {localPal, applied} = await palStore.installOwnedPal(hubPal());
 
     expect(palsHubService.checkPalOwnership).not.toHaveBeenCalled();
     expect(localPal.palshub_id).toBe('hub-1');
     expect(localPal.systemPrompt).toBe('You tell stories.');
     expect(localPal.thumbnail_url).toBeUndefined();
-    expect(appliedPromptHash).toBe(promptHash('You tell stories.'));
+    expect(applied).toEqual({
+      promptHash: promptHash('You tell stories.'),
+      modelKey: '',
+      settingsHash: settingsHash(undefined),
+    });
     expect(palStore.pals).toHaveLength(1);
   });
 
@@ -145,10 +150,9 @@ describe('PalStore owned install', () => {
       palshub_id: 'hub-1',
     } as Pal);
 
-    const {localPal} = await palStore.installOwnedPal(
-      hubPal(),
-      promptHash('You tell stories.'),
-    );
+    const {localPal} = await palStore.installOwnedPal(hubPal(), {
+      promptHash: promptHash('You tell stories.'),
+    });
 
     expect(localPal.id).toBe('db-only');
     expect(palRepository.createPal).not.toHaveBeenCalled();
@@ -162,6 +166,154 @@ describe('PalStore owned install', () => {
     expect(palRepository.createPal).not.toHaveBeenCalled();
   });
 
+  describe('settingsHash', () => {
+    it('ignores key order at every level', () => {
+      expect(settingsHash({temperature: 0.5, extra: {a: 1, b: [1, 2]}})).toBe(
+        settingsHash({extra: {b: [1, 2], a: 1}, temperature: 0.5}),
+      );
+    });
+
+    it('changes when a nested value changes', () => {
+      expect(settingsHash({extra: {a: 1}})).not.toBe(
+        settingsHash({extra: {a: 2}}),
+      );
+    });
+
+    it('treats a settings object merged with the defaults as the same', () => {
+      expect(settingsHash({...defaultCompletionParams, temperature: 0.5})).toBe(
+        settingsHash({temperature: 0.5}),
+      );
+    });
+  });
+
+  describe('user-owned model and settings', () => {
+    const modelRef = (repo: string, filename: string) => ({
+      repo_id: repo,
+      filename,
+      author: repo,
+      downloadUrl: `https://example.com/${filename}`,
+      size: 1,
+    });
+    const userModel = {id: 'b/mine'} as Model;
+    const s1 = {temperature: 0.5};
+    const s2 = {temperature: 0.9};
+
+    const install = (overrides: Partial<PalsHubPal> = {}) =>
+      palStore.installOwnedPal(
+        hubPal({
+          model_reference: modelRef('a', 'm1'),
+          model_settings: s1,
+          ...overrides,
+        }),
+      );
+
+    const current = (id: string) => palStore.getPalById(id)!;
+
+    it('keeps a model the user chose and updates untouched settings', async () => {
+      const {localPal, applied} = await install();
+      expect(applied.modelKey).toBe('a/m1');
+      await palStore.updatePal(localPal.id, {defaultModel: userModel});
+
+      const next = await palStore.applyOwnedPalContent(
+        localPal.id,
+        hubPal({model_reference: modelRef('a', 'm2'), model_settings: s2}),
+        applied,
+      );
+
+      expect(current(localPal.id).defaultModel?.id).toBe('b/mine');
+      expect(current(localPal.id).rawPalshubGenerationSettings).toEqual(s2);
+      expect(next).toEqual({
+        ...applied,
+        modelKey: 'a/m1',
+        settingsHash: settingsHash(s2),
+      });
+    });
+
+    it('keeps settings the user changed and updates an untouched model', async () => {
+      const {localPal, applied} = await install();
+      await palStore.updatePal(localPal.id, {
+        rawPalshubGenerationSettings: {temperature: 0.1},
+      });
+
+      const next = await palStore.applyOwnedPalContent(
+        localPal.id,
+        hubPal({model_reference: modelRef('a', 'm2'), model_settings: s2}),
+        applied,
+      );
+
+      expect(current(localPal.id).defaultModel?.id).toBe('a/m2');
+      expect(current(localPal.id).rawPalshubGenerationSettings).toEqual({
+        temperature: 0.1,
+      });
+      expect(next.modelKey).toBe('a/m2');
+      expect(next.settingsHash).toBe(applied.settingsHash);
+    });
+
+    it('still updates settings after an editor save that changed none', async () => {
+      const {localPal, applied} = await install();
+      await palStore.updatePal(localPal.id, {
+        name: 'Renamed',
+        rawPalshubGenerationSettings: {...defaultCompletionParams, ...s1},
+      });
+
+      const next = await palStore.applyOwnedPalContent(
+        localPal.id,
+        hubPal({model_reference: modelRef('a', 'm1'), model_settings: s2}),
+        applied,
+      );
+
+      expect(current(localPal.id).rawPalshubGenerationSettings).toEqual(s2);
+      expect(next.settingsHash).toBe(settingsHash(s2));
+    });
+
+    it('advances the key when the user already picked the new model', async () => {
+      const {localPal, applied} = await install();
+      await palStore.updatePal(localPal.id, {
+        defaultModel: {id: 'a/m2'} as Model,
+      });
+
+      const next = await palStore.applyOwnedPalContent(
+        localPal.id,
+        hubPal({model_reference: modelRef('a', 'm2'), model_settings: s1}),
+        applied,
+      );
+
+      expect(next.modelKey).toBe('a/m2');
+    });
+
+    it('keeps a changed model when the creator removes theirs', async () => {
+      const {localPal, applied} = await install();
+      await palStore.updatePal(localPal.id, {defaultModel: userModel});
+
+      const next = await palStore.applyOwnedPalContent(
+        localPal.id,
+        hubPal({model_reference: undefined, model_settings: s1}),
+        applied,
+      );
+
+      const updates = (palRepository.updatePal as jest.Mock).mock.calls.at(
+        -1,
+      )[1];
+      expect(updates).not.toHaveProperty('defaultModel');
+      expect(current(localPal.id).defaultModel?.id).toBe('b/mine');
+      expect(next.modelKey).toBe('a/m1');
+    });
+
+    it('keeps a user model when the record predates model tracking', async () => {
+      const {localPal, applied} = await install();
+      await palStore.updatePal(localPal.id, {defaultModel: userModel});
+
+      const next = await palStore.applyOwnedPalContent(
+        localPal.id,
+        hubPal({model_reference: modelRef('a', 'm2'), model_settings: s1}),
+        {promptHash: applied.promptHash},
+      );
+
+      expect(current(localPal.id).defaultModel?.id).toBe('b/mine');
+      expect(next.modelKey).toBeUndefined();
+    });
+  });
+
   describe('applyOwnedPalContent', () => {
     const installWith = async (prompt: string) => {
       const {localPal} = await palStore.installOwnedPal(
@@ -173,10 +325,10 @@ describe('PalStore owned install', () => {
     it('replaces a prompt whose hash matches the applied hash', async () => {
       const local = await installWith('Version one.');
 
-      const hash = await palStore.applyOwnedPalContent(
+      const {promptHash: hash} = await palStore.applyOwnedPalContent(
         local.id,
         hubPal({title: 'Story Pal 2', system_prompt: 'Version two.'}),
-        promptHash('Version one.'),
+        {promptHash: promptHash('Version one.')},
       );
 
       expect(hash).toBe(promptHash('Version two.'));
@@ -189,10 +341,10 @@ describe('PalStore owned install', () => {
       const local = await installWith('Version one.');
       await palStore.updatePal(local.id, {systemPrompt: 'My own prompt.'});
 
-      const hash = await palStore.applyOwnedPalContent(
+      const {promptHash: hash} = await palStore.applyOwnedPalContent(
         local.id,
         hubPal({description: 'New description', system_prompt: 'Version two.'}),
-        promptHash('Version one.'),
+        {promptHash: promptHash('Version one.')},
       );
 
       expect(hash).toBe(promptHash('Version one.'));
@@ -207,7 +359,7 @@ describe('PalStore owned install', () => {
       await palStore.applyOwnedPalContent(
         local.id,
         hubPal({system_prompt: undefined}),
-        promptHash('Version one.'),
+        {promptHash: promptHash('Version one.')},
       );
 
       const updates = (palRepository.updatePal as jest.Mock).mock.calls.at(
@@ -219,7 +371,7 @@ describe('PalStore owned install', () => {
 
     it('keeps user parameters for keys the new schema still has', async () => {
       const first = templated({hero: 'Knight', place: 'Castle'});
-      const {localPal, appliedPromptHash} = await palStore.installOwnedPal(
+      const {localPal, applied} = await palStore.installOwnedPal(
         hubPal({system_prompt: first}),
       );
       await palStore.updatePal(localPal.id, {
@@ -229,7 +381,7 @@ describe('PalStore owned install', () => {
       await palStore.applyOwnedPalContent(
         localPal.id,
         hubPal({system_prompt: templated({hero: 'Knight', era: 'Future'})}),
-        appliedPromptHash,
+        applied,
       );
 
       expect(palStore.getPalById(localPal.id)!.parameters).toEqual({

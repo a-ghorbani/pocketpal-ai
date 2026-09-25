@@ -242,6 +242,43 @@ describe('PurchaseStore recovery', () => {
       expect(h.purchases.recordFor(PAL_ID)?.contentVersion).toBe(4);
     });
 
+    it('passes and persists every applied key', async () => {
+      const h = createHarness({
+        records: [
+          record('active', {
+            appliedModelKey: 'a/m1',
+            appliedSettingsHash: 's1',
+          }),
+        ],
+      });
+      h.palStore.pals.push(localPal());
+      h.palStore.applyOwnedPalContent.mockResolvedValueOnce({
+        promptHash: 'p2',
+        modelKey: 'a/m1',
+        settingsHash: 's2',
+      });
+      h.api.refresh.mockResolvedValue({
+        changed: [hubPal({content_version: 4})],
+        revoked: [],
+        removed: [],
+        unchanged: [],
+      });
+
+      await h.purchases.recover();
+
+      expect(h.palStore.applyOwnedPalContent).toHaveBeenCalledWith(
+        'local-pal-1',
+        expect.anything(),
+        {promptHash: 'hash-3', modelKey: 'a/m1', settingsHash: 's1'},
+      );
+      expect(h.storage.ledger()[PAL_ID]).toMatchObject({
+        contentVersion: 4,
+        appliedPromptHash: 'p2',
+        appliedModelKey: 'a/m1',
+        appliedSettingsHash: 's2',
+      });
+    });
+
     it('does not install a changed Pal the user deleted', async () => {
       const h = createHarness({records: [record('active')]});
       h.api.refresh.mockResolvedValue({

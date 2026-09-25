@@ -2,6 +2,7 @@ import {observable} from 'mobx';
 
 import {PurchaseStore, LEDGER_KEY} from '../PurchaseStore';
 import type {LedgerRecord, PurchaseStoreDeps} from '../PurchaseStore';
+import type {AppliedContent} from '../PalStore';
 import type {
   PurchaseOutcome,
   StorePort,
@@ -196,9 +197,11 @@ export const createHarness = (
         local = localPal(pal.id);
         pals.push(local);
       }
-      return {localPal: local, appliedPromptHash: `hash-${pal.id}`};
+      return {localPal: local, applied: {promptHash: `hash-${pal.id}`}};
     }),
-    applyOwnedPalContent: jest.fn(async () => 'hash-new'),
+    applyOwnedPalContent: jest.fn(
+      async (): Promise<AppliedContent> => ({promptHash: 'hash-new'}),
+    ),
     deletePal: jest.fn(async (id: string) => {
       log.push(`delete:${id}`);
       const index = pals.findIndex(p => p.id === id);
