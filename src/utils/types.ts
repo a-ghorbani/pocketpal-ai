@@ -597,6 +597,7 @@ export interface Model {
   completionSettings: CompletionParams;
   hfModelFile?: ModelFile;
   hfModel?: HuggingFaceModel;
+  splitDownload?: SplitModelFile;
   hash?: string;
 
   // Provenance marker: set on models materialized from the device-rule preset
@@ -637,6 +638,29 @@ export interface ModelFile {
     pointerSize: number;
   };
   canFitInStorage?: boolean;
+  split?: SplitModelFile;
+}
+
+export interface SplitModelFilePart {
+  rfilename: string;
+  index: number;
+  total: number;
+  size?: number;
+  url?: string;
+  oid?: string;
+  lfs?: {
+    oid: string;
+    size: number;
+    pointerSize: number;
+  };
+}
+
+export interface SplitModelFile {
+  entryRFilename: string;
+  displayRFilename: string;
+  totalSize?: number;
+  totalParts: number;
+  parts: SplitModelFilePart[];
 }
 
 // Model data from HuggingFace search models
@@ -681,6 +705,7 @@ export interface ModelFileDetails {
     pointerSize: number;
   };
   path: string;
+  split?: SplitModelFile;
 }
 
 export interface GGUFSpecs {
