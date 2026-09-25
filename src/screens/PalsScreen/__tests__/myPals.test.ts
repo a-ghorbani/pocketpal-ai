@@ -49,25 +49,19 @@ describe('myPals', () => {
       [rec('p1')],
     );
     expect(result.installed.map(p => p.id)).toEqual(['local-p1']);
-    expect(result.notInstalled).toEqual([]);
+    expect(result.purchased).toEqual([]);
+    expect(result.library).toEqual([]);
   });
 
   it('uses the listing card before the record snapshot', () => {
     const result = myPals([], [], [], [], [hub('p1', 'Listed')], [rec('p1')]);
-    expect(result.notInstalled).toEqual([
+    expect(result.purchased).toEqual([
       expect.objectContaining({id: 'p1', title: 'Listed'}),
     ]);
   });
 
   it('builds an owned snapshot card when nothing else lists the Pal', () => {
-    const [card] = myPals(
-      [],
-      [],
-      [],
-      [],
-      [],
-      [rec('p1', 'granted')],
-    ).notInstalled;
+    const [card] = myPals([], [], [], [], [], [rec('p1', 'granted')]).purchased;
     expect(card).toMatchObject({
       type: 'palshub',
       id: 'p1',
@@ -86,27 +80,28 @@ describe('myPals', () => {
       [],
       [],
       [rec('p1', 'pending_payment')],
-    ).notInstalled;
+    ).purchased;
     expect(card.is_owned).toBe(false);
   });
 
   it.each(['unfulfillable', 'removed'] as const)(
     'excludes %s records',
     status => {
-      expect(
-        myPals([], [], [], [], [], [rec('p1', status)]).notInstalled,
-      ).toEqual([]);
+      expect(myPals([], [], [], [], [], [rec('p1', status)]).purchased).toEqual(
+        [],
+      );
     },
   );
 
   it('shows one card for a store purchase also in the signed-in library', () => {
     const result = myPals([], [], [hub('p1')], [], [], [rec('p1')]);
-    expect(result.notInstalled.map(p => p.id)).toEqual(['p1']);
+    expect(result.library.map(p => p.id)).toEqual(['p1']);
+    expect(result.purchased).toEqual([]);
   });
 
   it('dedupes library and created Pals', () => {
     const result = myPals([], [], [hub('p1')], [hub('p1'), hub('p2')], [], []);
-    expect(result.notInstalled.map(p => p.id)).toEqual(['p1', 'p2']);
+    expect(result.library.map(p => p.id)).toEqual(['p1', 'p2']);
   });
 
   it('keeps store-owned Pals when signed out', () => {
@@ -119,6 +114,6 @@ describe('myPals', () => {
       [rec('p1')],
     );
     expect(result.installed.map(p => p.id)).toEqual(['mine']);
-    expect(result.notInstalled.map(p => p.id)).toEqual(['p1']);
+    expect(result.purchased.map(p => p.id)).toEqual(['p1']);
   });
 });

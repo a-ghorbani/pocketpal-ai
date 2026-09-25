@@ -21,7 +21,8 @@ const listed = (rec: LedgerRecord) =>
 
 export interface MyPals {
   installed: Pal[];
-  notInstalled: PalsHubPal[];
+  purchased: PalsHubPal[];
+  library: PalsHubPal[];
 }
 
 export const myPals = (
@@ -44,22 +45,24 @@ export const myPals = (
     return true;
   });
 
-  const notInstalled: PalsHubPal[] = [];
-  const add = (card: PalsHubPal) => {
-    if (!seen.has(card.id)) {
+  const collect = (cards: PalsHubPal[]) =>
+    cards.filter(card => {
+      if (seen.has(card.id)) {
+        return false;
+      }
       seen.add(card.id);
-      notInstalled.push(card);
-    }
-  };
+      return true;
+    });
   const hubById = new Map(
     [...hub, ...library, ...created].map(pal => [pal.id, pal]),
   );
 
-  library.forEach(add);
-  created.forEach(add);
-  records
-    .filter(listed)
-    .forEach(rec => add(hubById.get(rec.palId) ?? snapshotCard(rec)));
+  const accountCards = collect([...library, ...created]);
+  const purchased = collect(
+    records
+      .filter(listed)
+      .map(rec => hubById.get(rec.palId) ?? snapshotCard(rec)),
+  );
 
-  return {installed, notInstalled};
+  return {installed, purchased, library: accountCards};
 };

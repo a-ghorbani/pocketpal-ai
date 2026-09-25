@@ -232,8 +232,8 @@ export const PalsScreen: React.FC = observer(() => {
 
     switch (activeFilter) {
       case 'my-pals': {
-        const {installed, notInstalled} = ownedPals();
-        return [...installed, ...notInstalled];
+        const {installed, purchased, library} = ownedPals();
+        return [...installed, ...purchased, ...library];
       }
       case 'local':
         return [...localPals, ...downloadedPals];
@@ -251,8 +251,8 @@ export const PalsScreen: React.FC = observer(() => {
         return hubPals.filter(p => p.price_cents > 0);
       case 'all':
       default: {
-        const {installed, notInstalled} = ownedPals();
-        return [...installed, ...notInstalled, ...hubPals];
+        const {installed, purchased, library} = ownedPals();
+        return [...installed, ...purchased, ...library, ...hubPals];
       }
     }
   };
@@ -271,18 +271,18 @@ export const PalsScreen: React.FC = observer(() => {
       case 'all':
       case 'my-pals': {
         const sections: Array<{title: string; data: (PalsHubPal | Pal)[]}> = [];
-        const {installed, notInstalled} = ownedPals();
+        const {installed, purchased, library} = ownedPals();
 
-        if (installed.length > 0) {
+        if (installed.length + purchased.length > 0) {
           sections.push({
             title: l10n.palsScreen.sectionTitles.myPalsLocal,
-            data: installed,
+            data: [...installed, ...purchased],
           });
         }
-        if (notInstalled.length > 0) {
+        if (library.length > 0) {
           sections.push({
             title: l10n.palsScreen.sectionTitles.myLibrary,
-            data: notInstalled,
+            data: library,
           });
         }
         if (activeFilter === 'all' && hubPals.length > 0) {
