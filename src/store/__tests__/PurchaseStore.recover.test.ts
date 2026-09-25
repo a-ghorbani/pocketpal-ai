@@ -254,7 +254,7 @@ describe('PurchaseStore recovery', () => {
       h.palStore.pals.push(localPal());
       h.palStore.applyOwnedPalContent.mockResolvedValueOnce({
         promptHash: 'p2',
-        modelKey: 'a/m1',
+        modelKey: 'a/m2',
         settingsHash: 's2',
       });
       h.api.refresh.mockResolvedValue({
@@ -274,7 +274,36 @@ describe('PurchaseStore recovery', () => {
       expect(h.storage.ledger()[PAL_ID]).toMatchObject({
         contentVersion: 4,
         appliedPromptHash: 'p2',
-        appliedModelKey: 'a/m1',
+        appliedModelKey: 'a/m2',
+        appliedSettingsHash: 's2',
+      });
+    });
+
+    it('passes and persists every applied key when installing a grant', async () => {
+      const h = createHarness({
+        records: [
+          record('granted', {
+            appliedModelKey: 'a/m1',
+            appliedSettingsHash: 's1',
+          }),
+        ],
+      });
+      h.store.init.mockResolvedValue(false);
+      h.palStore.installOwnedPal.mockResolvedValueOnce({
+        localPal: localPal(),
+        applied: {promptHash: 'p2', modelKey: 'a/m2', settingsHash: 's2'},
+      });
+
+      await h.purchases.recover();
+
+      expect(h.palStore.installOwnedPal).toHaveBeenCalledWith(
+        expect.objectContaining({id: PAL_ID}),
+        {promptHash: 'hash-3', modelKey: 'a/m1', settingsHash: 's1'},
+      );
+      expect(h.storage.ledger()[PAL_ID]).toMatchObject({
+        status: 'active',
+        appliedPromptHash: 'p2',
+        appliedModelKey: 'a/m2',
         appliedSettingsHash: 's2',
       });
     });
@@ -481,6 +510,26 @@ describe('PurchaseStore recovery', () => {
       ]);
       await h.purchases.recover();
       expect(h.purchases.recordFor(PAL_ID)?.status).toBe('pending_payment');
+    });
+
+    it('Android: judges the query by its own result, not a later one', async () => {
+      setOS('android');
+      const h = createHarness({
+        records: [
+          record('pending_payment', {palId: 'P2', productId: 'pal.p2'}),
+        ],
+      });
+      h.store.currentEntitlements.mockResolvedValue([androidTx()]);
+      h.api.verify.mockImplementation(async () => {
+        h.store.queryOk = false;
+        return [result('active')];
+      });
+
+      await h.purchases.recover();
+
+      expect(h.api.verify).toHaveBeenCalled();
+      expect(h.purchases.recordFor('P2')).toBeUndefined();
+      expect(h.api.refresh).toHaveBeenCalled();
     });
 
     it('Android: keeps it when the store query failed', async () => {

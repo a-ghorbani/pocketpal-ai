@@ -190,15 +190,19 @@ export const createHarness = (
     pals,
     userLibrary: [] as PalsHubPal[],
     cachedPalsHubPals: [] as PalsHubPal[],
-    installOwnedPal: jest.fn(async (pal: PalsHubPal) => {
-      log.push(`install:${pal.id}`);
-      let local = pals.find(p => p.palshub_id === pal.id);
-      if (!local) {
-        local = localPal(pal.id);
-        pals.push(local);
-      }
-      return {localPal: local, applied: {promptHash: `hash-${pal.id}`}};
-    }),
+    installOwnedPal: jest.fn(
+      async (
+        pal: PalsHubPal,
+      ): Promise<{localPal: Pal; applied: AppliedContent}> => {
+        log.push(`install:${pal.id}`);
+        let local = pals.find(p => p.palshub_id === pal.id);
+        if (!local) {
+          local = localPal(pal.id);
+          pals.push(local);
+        }
+        return {localPal: local, applied: {promptHash: `hash-${pal.id}`}};
+      },
+    ),
     applyOwnedPalContent: jest.fn(
       async (): Promise<AppliedContent> => ({promptHash: 'hash-new'}),
     ),
