@@ -73,7 +73,7 @@ BENCH_TIER=smoke yarn bench:ios --device <udid> --dry-run
 BENCH_TIER=smoke yarn bench:ios --device <udid> --app ../ios/build/PocketPal.ipa
 ```
 
-Keep the iPhone unlocked and on power, and do not lock it or switch apps during a run: a suspended app stops writing rows and the run ends `failed:timeout`. The runner holds the screen awake itself, so Auto-Lock need not be changed. Reports land in `e2e/debug-output/benchmarks/` (`--out` to change). Extra env: `BENCH_MAX_WAIT_MIN` (default 60), `BENCH_IOS_SETTLE_S` (15), `BENCH_IOS_START_TIMEOUT_S` (120), and `E2E_DEVICE_NAME` / `E2E_PLATFORM_VERSION` / `E2E_DEVICE_SOC` to override the stamped metadata. See `yarn bench:ios --help`.
+Keep the iPhone unlocked and on power, and do not lock it or switch apps during a run: a suspended app stops writing rows and the run ends `failed:timeout`. The runner holds the screen awake itself, so Auto-Lock need not be changed. Reports land in `e2e/debug-output/benchmarks/` (`--out` to change). Extra env: `BENCH_MAX_WAIT_MIN` (default 60, enough for `smoke` and `focused` at the tier-table runtimes; `full` takes ~3 h on Android and is not yet timed on iOS, so run it with `BENCH_MAX_WAIT_MIN=240`), `BENCH_IOS_SETTLE_S` (15), `BENCH_IOS_START_TIMEOUT_S` (120), and `E2E_DEVICE_NAME` / `E2E_PLATFORM_VERSION` / `E2E_DEVICE_SOC` to override the stamped metadata. See `yarn bench:ios --help`. A timeout names its cause: with no new row for 15 min it blames a lock or backgrounding, and with rows still arriving it reports rows seen against expected and asks for a larger `BENCH_MAX_WAIT_MIN`.
 
 Baselines are per platform: `merge-bench-reports.ts` refuses to mix Android and iOS reports, and `benchmark-compare.ts` exits 2 on a cross-platform pair.
 
@@ -488,8 +488,10 @@ Flags rows where either `pp_avg` or `tg_avg` delta exceeds `|delta%| > 15` (over
 
 ### Known limitations (v1)
 
-- Android only. iOS Metal benchmarking is a follow-up.
-- Hexagon NPU tier excluded.
+- `yarn bench:ios` drives physical iPhones only: `devicectl` cannot target a simulator.
+- On an iOS simulator the in-app runner reports GPU cells as `cpu`, so they fail `backend-mismatch`.
+- `yarn bench:ios --app` replaces the App Store build and wipes its data.
+- Hexagon NPU tier excluded (Android only; no iOS equivalent).
 - Preseed requires the E2E-flavor APK (see above).
 - Static IQ1_S rung is substituted with IQ2_M for Qwen3 1.7B and Gemma 3 1B — neither is published at IQ1_S by bartowski or lmstudio-community. The canonical rung label in the JSON remains `iq1_s` so reports are comparable when IQ1_S eventually ships.
 - LFM2 1.2B slot 3 is deferred: no publisher has a complete 8-quant set.
