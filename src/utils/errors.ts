@@ -49,7 +49,12 @@ export interface ErrorState {
     | 'server'
     | 'multimodal'
     | 'unknown';
-  service?: 'huggingface' | 'firebase' | 'localapi';
+  service?:
+    | 'huggingface'
+    | 'hf_mirror'
+    | 'modelscope'
+    | 'firebase'
+    | 'localapi';
   message: string;
   context: 'search' | 'download' | 'modelDetails' | 'chat' | 'modelInit';
   recoverable: boolean;
@@ -75,6 +80,11 @@ export function createErrorState(
   let message = l10nObject.errors.unexpectedError;
   let recoverable = true;
   let errorService = service;
+  // HF-specific copy (mentions Hugging Face tokens) only applies where HF
+  // tokens are valid: huggingface.co and the HF-compatible hf-mirror.com.
+  // ModelScope uses a different account system — it keeps generic copy.
+  const isHFSourcedService = () =>
+    errorService === 'huggingface' || errorService === 'hf_mirror';
 
   if (axios.isAxiosError(error)) {
     const statusCode = error.response?.status;
@@ -84,41 +94,40 @@ export function createErrorState(
       const url = error.config?.url || '';
       if (url.includes('huggingface.co') || url.includes('hf.co')) {
         errorService = 'huggingface';
+      } else if (url.includes('hf-mirror.com')) {
+        errorService = 'hf_mirror';
+      } else if (url.includes('modelscope.cn')) {
+        errorService = 'modelscope';
       }
     }
 
     if (statusCode === 401) {
       code = 'authentication';
-      message =
-        errorService === 'huggingface'
-          ? context === 'search'
-            ? l10nObject.errors.hfAuthenticationErrorSearch
-            : l10nObject.errors.hfAuthenticationError
-          : l10nObject.errors.authenticationError;
+      message = isHFSourcedService()
+        ? context === 'search'
+          ? l10nObject.errors.hfAuthenticationErrorSearch
+          : l10nObject.errors.hfAuthenticationError
+        : l10nObject.errors.authenticationError;
     } else if (statusCode === 403) {
       code = 'authorization';
-      message =
-        errorService === 'huggingface'
-          ? l10nObject.errors.hfAuthorizationError
-          : l10nObject.errors.authorizationError;
+      message = isHFSourcedService()
+        ? l10nObject.errors.hfAuthorizationError
+        : l10nObject.errors.authorizationError;
     } else if (statusCode && statusCode >= 500) {
       code = 'server';
-      message =
-        errorService === 'huggingface'
-          ? l10nObject.errors.hfServerError
-          : l10nObject.errors.serverError;
+      message = isHFSourcedService()
+        ? l10nObject.errors.hfServerError
+        : l10nObject.errors.serverError;
     } else if (error.code === 'ECONNABORTED' || error.code === 'ETIMEDOUT') {
       code = 'network';
-      message =
-        errorService === 'huggingface'
-          ? l10nObject.errors.hfNetworkTimeout
-          : l10nObject.errors.networkTimeout;
+      message = isHFSourcedService()
+        ? l10nObject.errors.hfNetworkTimeout
+        : l10nObject.errors.networkTimeout;
     } else if (error.code === 'ERR_NETWORK') {
       code = 'network';
-      message =
-        errorService === 'huggingface'
-          ? l10nObject.errors.hfNetworkError
-          : l10nObject.errors.networkError;
+      message = isHFSourcedService()
+        ? l10nObject.errors.hfNetworkError
+        : l10nObject.errors.networkError;
     }
   } else if (error instanceof NetworkError) {
     code = 'network';
@@ -137,22 +146,19 @@ export function createErrorState(
 
         if (statusCode === 401) {
           code = 'authentication';
-          message =
-            errorService === 'huggingface'
-              ? l10nObject.errors.hfAuthenticationError
-              : l10nObject.errors.authenticationError;
+          message = isHFSourcedService()
+            ? l10nObject.errors.hfAuthenticationError
+            : l10nObject.errors.authenticationError;
         } else if (statusCode === 403) {
           code = 'authorization';
-          message =
-            errorService === 'huggingface'
-              ? l10nObject.errors.hfAuthorizationError
-              : l10nObject.errors.authorizationError;
+          message = isHFSourcedService()
+            ? l10nObject.errors.hfAuthorizationError
+            : l10nObject.errors.authorizationError;
         } else if (statusCode >= 500) {
           code = 'server';
-          message =
-            errorService === 'huggingface'
-              ? l10nObject.errors.hfServerError
-              : l10nObject.errors.serverError;
+          message = isHFSourcedService()
+            ? l10nObject.errors.hfServerError
+            : l10nObject.errors.serverError;
         } else {
           // Other status codes (400, 404, etc.) - preserve the original message
           message = error.message;

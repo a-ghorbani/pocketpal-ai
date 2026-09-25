@@ -52,8 +52,8 @@ describe('ErrorSnackbar', () => {
     // Check that the error message is displayed
     expect(getByText(l10n.en.errors.hfAuthenticationError)).toBeTruthy();
 
-    // Check that the "Add Token" action is available for HF auth errors
-    const addTokenButton = getByText('Add Token');
+    // Check that the localized token action is available for HF auth errors
+    const addTokenButton = getByText(l10n.en.settings.setTokenButton);
     fireEvent.press(addTokenButton);
     expect(mockSettings).toHaveBeenCalled();
   });
@@ -81,8 +81,8 @@ describe('ErrorSnackbar', () => {
     // Check that the error message is displayed
     expect(getByText('Network connection error')).toBeTruthy();
 
-    // For recoverable errors, check that "Retry" action is available
-    const retryButton = getByText('Retry');
+    // For recoverable errors, check that localized retry action is available
+    const retryButton = getByText(l10n.en.settings.retryConnection);
     fireEvent.press(retryButton);
     expect(mockRetry).toHaveBeenCalled();
   });
@@ -106,8 +106,8 @@ describe('ErrorSnackbar', () => {
     // Check that the error message is displayed
     expect(getByText('Server unavailable')).toBeTruthy();
 
-    // For non-recoverable errors without retry, check "Dismiss" action
-    const dismissButton = getByText('Dismiss');
+    // For non-recoverable errors without retry, check localized dismiss action
+    const dismissButton = getByText(l10n.en.common.dismiss);
     fireEvent.press(dismissButton);
     expect(mockDismiss).toHaveBeenCalled();
   });

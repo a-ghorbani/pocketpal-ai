@@ -14,10 +14,45 @@ export const createStyles = (theme: Theme) =>
     divider: {
       marginVertical: 12,
     },
+    modelRow: {
+      flexDirection: 'row',
+      gap: 12,
+      alignItems: 'flex-start',
+    },
+    avatarContainer: {
+      width: 38,
+      height: 38,
+      borderRadius: 8,
+      backgroundColor: theme.colors.surfaceVariant,
+      alignItems: 'center',
+      justifyContent: 'center',
+      overflow: 'hidden',
+      borderWidth: StyleSheet.hairlineWidth,
+      borderColor: theme.colors.outline,
+    },
+    avatar: {
+      width: 38,
+      height: 38,
+    },
+    avatarText: {
+      fontSize: 16,
+      fontWeight: '600',
+      color: theme.colors.onSurfaceVariant,
+    },
+    modelContent: {
+      flex: 1,
+      minWidth: 0,
+    },
+    authorRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 6,
+      marginBottom: 2,
+    },
     modelAuthor: {
       fontSize: 14,
       color: theme.colors.onSurfaceVariant,
-      marginBottom: 2,
+      flexShrink: 1,
     },
     modelNameContainer: {
       flexDirection: 'row',
@@ -30,10 +65,18 @@ export const createStyles = (theme: Theme) =>
       fontWeight: '500',
       color: theme.colors.onSurface,
     },
+    modelDescription: {
+      fontSize: 13,
+      lineHeight: 18,
+      color: theme.colors.onSurfaceVariant,
+      marginBottom: 6,
+    },
     statsContainer: {
       flexDirection: 'row',
       alignItems: 'center',
+      flexWrap: 'wrap',
       gap: 12,
+      paddingLeft: 50,
     },
     statItem: {
       flexDirection: 'row',
@@ -57,6 +100,9 @@ export const createStyles = (theme: Theme) =>
       color: theme.colors.onSurfaceVariant,
     },
     gatedChipText: {
+      fontSize: 10,
+    },
+    sourceChipText: {
       fontSize: 10,
     },
     emptyStateContainer: {

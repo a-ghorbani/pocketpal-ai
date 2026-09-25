@@ -24,22 +24,32 @@ export const HFModelSearch: React.FC<HFModelSearchProps> = observer(
     const [selectedModel, setSelectedModel] = useState<HuggingFaceModel | null>(
       null,
     );
+    const latestModelSelection = React.useRef(0);
 
     // Clear state when closed
     useEffect(() => {
       if (!visible) {
         setSelectedModel(null);
+        setDetailsVisible(false);
       }
     }, [visible]);
 
     const debouncedSearch = useMemo(
       () =>
         debounce(async (query: string) => {
-          hfStore.setSearchQuery(query);
           await hfStore.fetchModels();
         }, DEBOUNCE_DELAY),
       [], // Empty dependencies since we don't want to recreate this
     );
+
+    useEffect(() => {
+      if (!visible) {
+        return;
+      }
+      debouncedSearch.cancel();
+      setSelectedModel(null);
+      setDetailsVisible(false);
+    }, [debouncedSearch, hfStore.selectedSource, visible]);
 
     // Update search query without triggering immediate search
     const handleSearchChange = useCallback(
@@ -55,10 +65,22 @@ export const HFModelSearch: React.FC<HFModelSearchProps> = observer(
       }
     }, [handleSearchChange, visible]);
 
+    useEffect(
+      () => () => {
+        debouncedSearch.cancel();
+      },
+      [debouncedSearch],
+    );
+
     const handleModelSelect = async (model: HuggingFaceModel) => {
+      const selectionId = latestModelSelection.current + 1;
+      latestModelSelection.current = selectionId;
       setSelectedModel(model);
       setDetailsVisible(true);
       await hfStore.fetchModelData(model.id);
+      if (selectionId !== latestModelSelection.current) {
+        return;
+      }
       const updatedModel = hfStore.getModelById(model.id);
       if (updatedModel) {
         setSelectedModel({...updatedModel});
