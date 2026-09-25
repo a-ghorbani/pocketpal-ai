@@ -9,6 +9,7 @@ import {useTheme} from '../../../hooks';
 import {modelStore} from '../../../store';
 import {t} from '../../../locales';
 import {formatBytes, L10nContext} from '../../../utils';
+import {getOriginalModelName} from '../../../utils/formatters';
 import {activatePalWithModel} from '../../../utils/activatePal';
 import {downloadModel} from '../../../utils/downloadModel';
 import type {Pal} from '../../../types/pal';
@@ -79,7 +80,7 @@ export const PalModelStep: React.FC<PalModelStepProps> = observer(
     return (
       <View style={styles.container} testID="model-step">
         <Text style={styles.modelName} numberOfLines={1}>
-          {model.name}
+          {getOriginalModelName(model)}
         </Text>
         {!isAvailable && (
           <>

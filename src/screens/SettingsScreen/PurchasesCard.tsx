@@ -68,14 +68,16 @@ export const PurchasesCard: React.FC<PurchasesCardProps> = observer(
             {records.map(record => (
               <View
                 key={record.palId}
-                style={styles.textContainer}
+                style={styles.switchContainer}
                 testID={`purchase-row-${record.palId}`}>
-                <Text variant="titleMedium" style={styles.textLabel}>
-                  {record.title}
-                </Text>
-                <Text variant="labelSmall" style={styles.textDescription}>
-                  {statusText(record)}
-                </Text>
+                <View style={styles.textContainer}>
+                  <Text variant="titleMedium" style={styles.textLabel}>
+                    {record.title}
+                  </Text>
+                  <Text variant="labelSmall" style={styles.textDescription}>
+                    {statusText(record)}
+                  </Text>
+                </View>
               </View>
             ))}
             {records.length > 0 && <Divider style={styles.divider} />}

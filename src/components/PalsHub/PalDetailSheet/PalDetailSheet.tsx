@@ -9,6 +9,7 @@ import {StarIcon, DownloadIcon, UserIcon} from '../../../assets/icons';
 
 import {useTheme} from '../../../hooks';
 import {formatBytes, L10nContext} from '../../../utils';
+import {getDisplayNameFromFilename} from '../../../utils/formatters';
 import {getFullThumbnailUri} from '../../../utils/imageUtils';
 
 import {Sheet} from '../../Sheet';
@@ -294,8 +295,10 @@ export const PalDetailSheet: React.FC<PalDetailSheetProps> = observer(
                 {l10n.palsScreen.purchase.recommendedModel}
               </Text>
               <Text style={styles.description}>
-                {displayPal.model_reference.filename} ·{' '}
-                {formatBytes(displayPal.model_reference.size)}
+                {getDisplayNameFromFilename(
+                  displayPal.model_reference.filename,
+                )}{' '}
+                · {formatBytes(displayPal.model_reference.size)}
               </Text>
             </View>
           )}

@@ -590,7 +590,7 @@ describe('PalDetailSheet', () => {
       await waitFor(() => {
         expect(getByTestId('pal-recommended-model')).toBeTruthy();
       });
-      expect(getByText(/story-model\.gguf/)).toBeTruthy();
+      expect(getByText(/story-model/)).toBeTruthy();
       expect(getByText(/1\.2 GB/)).toBeTruthy();
     });
 
