@@ -18,6 +18,7 @@ import {
   TalentSurface,
   TextMessage,
   TextMessageTopLevelProps,
+  CompactionMarker,
 } from '..';
 
 import {MessageType} from '../../utils/types';
@@ -172,6 +173,15 @@ export const Message = observer(
             {message.text}
           </Text>
         </View>
+      );
+    }
+
+    if (message.type === 'custom' && message.metadata?.compaction === true) {
+      return (
+        <CompactionMarker
+          message={message as MessageType.Custom}
+          messageWidth={messageWidth}
+        />
       );
     }
 
