@@ -245,6 +245,8 @@
     "labels": {
       "localModel": "Local",
       "hfModel": "HF",
+      "hfMirrorModel": "HF Mirror",
+      "modelScopeModel": "ModelScope",
       "unknownGroup": "Unknown",
       "availableToUse": "Ready to Use",
       "availableToDownload": "Available to Download",
@@ -293,6 +295,7 @@
     },
     "buttons": {
       "addFromHuggingFace": "Add from Hugging Face",
+      "addFromModelSources": "Download Model",
       "addLocalModel": "Add Local Model",
       "reset": "Reset"
     },
@@ -350,6 +353,14 @@
       "noResults": "No models found",
       "loadingMore": "Loading more...",
       "searchPlaceholder": "Search Hugging Face models",
+      "source": "Source",
+      "sourceTitle": "Download Source",
+      "thirdPartySuffix": " (third-party)",
+      "sources": {
+        "huggingface": "Hugging Face",
+        "hf_mirror": "HF Mirror",
+        "modelscope": "ModelScope"
+      },
       "modelUpdatedLong": "Updated {{time}} ago",
       "modelUpdatedShort": "{{time}} ago",
       "modelUpdatedJustNowLong": "Updated just now",
@@ -405,6 +416,7 @@
         "requiresProjectionModel": "Requires projection model",
         "downloadProjectionModel": "Download projection model",
         "viewModelCardOnHuggingFace": "View Model Card on Hugging Face",
+        "viewModelCardOnSource": "View Model Source",
         "draftOnlyReason": "Draft-only model. Pick it under Settings → Speculative decoding."
       },
       "accessibility": {
@@ -757,7 +769,8 @@
       "enableAndRetry": "Enable and Retry",
       "goToSettings": "Go to Settings",
       "tryAgain": "Try Again",
-      "viewOnHuggingFace": "View Model on HF ↗"
+      "viewOnHuggingFace": "View Model on HF ↗",
+      "viewOnSource": "View Model Source ↗"
     },
     "headerRight": {
       "deleteChatTitle": "Delete Chat",
@@ -819,7 +832,11 @@
       }
     },
     "modelsHeaderRight": {
+      "filtersGroup": "Filters",
+      "viewGroup": "View",
       "menuTitleHf": "Hugging Face Models",
+      "menuTitleHfMirror": "Hugging Face Mirror",
+      "menuTitleModelScope": "ModelScope Models",
       "menuTitleDownloaded": "Downloaded Models",
       "menuTitleGrouped": "Group by Model Type",
       "menuTitleReset": "Reset Models List"
@@ -1013,7 +1030,12 @@
         "total": "Total: ",
         "usage": "Usage: "
       },
-      "byteSizes": ["Bytes", "KB", "MB", "GB"]
+      "byteSizes": [
+        "Bytes",
+        "KB",
+        "MB",
+        "GB"
+      ]
     },
     "chatView": {
       "menuItems": {

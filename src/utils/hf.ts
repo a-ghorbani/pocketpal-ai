@@ -4,7 +4,7 @@
  */
 
 import {urls} from '../config';
-import type {HuggingFaceModel, ModelFile} from './types';
+import type {HuggingFaceModel, ModelFile, ModelSourceId} from './types';
 
 // Regex pattern for detecting sharded GGUF files
 const RE_GGUF_SHARD_FILE =
@@ -33,10 +33,13 @@ export function filterValidGGUFFiles(siblings: any[]): any[] {
 export function addModelFileDownloadUrls(
   modelId: string,
   siblings: any[],
+  domain?: string,
 ): ModelFile[] {
   return siblings.map(sibling => ({
     ...sibling,
-    url: urls.modelDownloadFile(modelId, sibling.rfilename),
+    url: domain
+      ? urls.hfCompatibleModelDownloadFile(domain, modelId, sibling.rfilename)
+      : urls.modelDownloadFile(modelId, sibling.rfilename),
   }));
 }
 
@@ -50,9 +53,47 @@ export function addModelFileDownloadUrls(
 export function normalizeModelSiblings(
   modelId: string,
   siblings: any[],
+  domain?: string,
 ): ModelFile[] {
   const filteredSiblings = filterValidGGUFFiles(siblings);
-  return addModelFileDownloadUrls(modelId, filteredSiblings);
+  return addModelFileDownloadUrls(modelId, filteredSiblings, domain);
+}
+
+function getString(value: any): string | undefined {
+  if (typeof value !== 'string') {
+    return undefined;
+  }
+
+  const trimmed = value.trim();
+  return trimmed.length > 0 ? trimmed : undefined;
+}
+
+function firstString(...values: any[]): string | undefined {
+  for (const value of values) {
+    const text = getString(value);
+    if (text) {
+      return text;
+    }
+  }
+
+  return undefined;
+}
+
+function getHFModelAvatar(model: HuggingFaceModel): string | undefined {
+  const author = getString(model.author);
+
+  return firstString(
+    model.avatarUrl,
+    (model as any).avatar_url,
+    (model as any).avatar,
+    (model as any).authorData?.avatarUrl,
+    (model as any).authorData?.avatar_url,
+    (model as any).authorData?.avatar,
+    (model as any).owner?.avatarUrl,
+    (model as any).owner?.avatar_url,
+    (model as any).owner?.avatar,
+    author ? `${urls.modelWebPage(author)}.png` : undefined,
+  );
 }
 
 /**
@@ -64,11 +105,24 @@ export function normalizeModelSiblings(
  */
 export function processHFSearchResults(
   models: HuggingFaceModel[],
+  options?: {
+    source?: ModelSourceId;
+    domain?: string;
+  },
 ): HuggingFaceModel[] {
   return models.map(model => ({
     ...model,
-    url: urls.modelWebPage(model.id),
-    siblings: normalizeModelSiblings(model.id, model.siblings || []),
+    source: options?.source || model.source || 'huggingface',
+    sourceRepoId: model.sourceRepoId || model.id,
+    url: options?.domain
+      ? urls.hfCompatibleModelWebPage(options.domain, model.id)
+      : urls.modelWebPage(model.id),
+    avatarUrl: getHFModelAvatar(model),
+    siblings: normalizeModelSiblings(
+      model.id,
+      model.siblings || [],
+      options?.domain,
+    ),
   }));
 }
 
@@ -81,6 +135,7 @@ export function processHFSearchResults(
 export function createSiblingsFromFileDetails(
   modelId: string,
   fileDetails: any[],
+  domain?: string,
 ): ModelFile[] {
   // Convert file details to siblings format
   const siblings = fileDetails.map(file => ({
@@ -91,7 +146,7 @@ export function createSiblingsFromFileDetails(
   }));
 
   // Apply the same normalization as HFStore
-  return normalizeModelSiblings(modelId, siblings);
+  return normalizeModelSiblings(modelId, siblings, domain);
 }
 
 /**

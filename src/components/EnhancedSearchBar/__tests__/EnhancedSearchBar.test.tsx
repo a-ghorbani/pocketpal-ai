@@ -16,6 +16,8 @@ jest.mock('../../../hooks', () => ({
       primary: '#007bff',
       primaryContainer: '#e3f2fd',
       onPrimaryContainer: '#0d47a1',
+      btnPrimaryBg: '#e3f2fd',
+      secondary: '#007bff',
     },
     dark: false,
   }),
@@ -107,6 +109,10 @@ describe('EnhancedSearchBar', () => {
     const sortButton = getByTestId('filter-button-sort');
     expect(sortButton).toBeTruthy();
     fireEvent.press(sortButton);
+
+    const sourceButton = getByTestId('filter-button-source');
+    expect(sourceButton).toBeTruthy();
+    fireEvent.press(sourceButton);
   });
 
   it('shows active filter indicator when filters are applied', () => {

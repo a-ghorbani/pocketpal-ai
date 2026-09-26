@@ -14,7 +14,7 @@ import {
   toApiCompletionParams,
 } from '../utils/completionTypes';
 
-import {fetchModelFilesDetails} from '../api/hf';
+import {fetchModelFilesDetailsFromSource} from '../api/modelSources';
 import {
   LocalCompletionEngine,
   OpenAICompletionEngine,
@@ -41,6 +41,12 @@ import {
   inferRepoFromModelId,
   parseSizeLabel,
 } from '../utils';
+import {
+  buildSourceModelId,
+  getModelSource,
+  getRepoIdFromModelId,
+  getSourceStorageDir,
+} from '../utils/modelSources';
 import {getRecommendedProjectionModel} from '../utils/multimodalHelpers';
 import {isDraftOnlyModel} from '../utils/mtp';
 import {getOriginalModelName} from '../utils/formatters';
@@ -311,9 +317,14 @@ class ModelStore {
           });
         }
 
-        const errorState = createErrorState(error, 'download', 'huggingface', {
-          modelId,
-        });
+        const errorState = createErrorState(
+          error,
+          'download',
+          getModelSource(model),
+          {
+            modelId,
+          },
+        );
 
         runInAction(() => {
           this.downloadError = errorState;
@@ -1014,10 +1025,14 @@ class ModelStore {
       model => model.origin !== ModelOrigin.PRESET || model.isDownloaded,
     );
 
-    // Handle HF and LOCAL models
+    // Handle repository-backed source models and LOCAL models
     mergedModels.forEach(model => {
       if (
-        model.origin === ModelOrigin.HF ||
+        [
+          ModelOrigin.HF,
+          ModelOrigin.HF_MIRROR,
+          ModelOrigin.MODELSCOPE,
+        ].includes(model.origin) ||
         model.origin === ModelOrigin.LOCAL ||
         model.isLocal
       ) {
@@ -1026,7 +1041,13 @@ class ModelStore {
           const defaultSettings = getLocalModelDefaultSettings();
           model.defaultChatTemplate = {...defaultSettings.chatTemplate};
           model.defaultStopWords = defaultSettings.completionParams.stop;
-        } else if (model.origin === ModelOrigin.HF) {
+        } else if (
+          [
+            ModelOrigin.HF,
+            ModelOrigin.HF_MIRROR,
+            ModelOrigin.MODELSCOPE,
+          ].includes(model.origin)
+        ) {
           const defaultSettings = getHFDefaultSettings(
             model.hfModel as HuggingFaceModel,
           );
@@ -1044,8 +1065,15 @@ class ModelStore {
           ...(model.defaultStopWords || []),
         ];
 
-        // Infer repo from model.id if missing (for existing HF models)
-        if (model.origin === ModelOrigin.HF && !model.repo) {
+        // Infer repo from model.id if missing (for existing source models)
+        if (
+          [
+            ModelOrigin.HF,
+            ModelOrigin.HF_MIRROR,
+            ModelOrigin.MODELSCOPE,
+          ].includes(model.origin) &&
+          !model.repo
+        ) {
           const inferredRepo = inferRepoFromModelId(model.id);
           if (inferredRepo) {
             model.repo = inferredRepo;
@@ -1053,6 +1081,21 @@ class ModelStore {
               `[ModelStore] Inferred repo "${inferredRepo}" from model.id: ${model.id}`,
             );
           }
+        }
+
+        if (!model.source) {
+          model.source = getModelSource(model);
+        }
+
+        if (!model.sourceRepoId) {
+          model.sourceRepoId =
+            model.hfModel?.sourceRepoId ||
+            model.hfModel?.id ||
+            getRepoIdFromModelId(model.id);
+        }
+
+        if (!model.sourceWebUrl && model.hfUrl) {
+          model.sourceWebUrl = model.hfUrl;
         }
       }
     });
@@ -1243,7 +1286,7 @@ class ModelStore {
    * - LOCAL: Uses the model's fullPath property
    * - PRESET: Checks both legacy path (DocumentDirectoryPath/filename) and
    *          new path (DocumentDirectoryPath/models/preset/author/filename)
-   * - HF: Uses DocumentDirectoryPath/models/hf/author/filename
+   * - HF/HF mirror/ModelScope: Uses DocumentDirectoryPath/models/<source>/author/repo/filename
    *
    * IMPORTANT: This logic is duplicated in native Swift code for iOS Shortcuts
    * See: ios/PocketPal/AppIntents/PalDataProvider.swift - parseModelPath() method
@@ -1302,9 +1345,15 @@ class ModelStore {
       return newPath;
     }
 
-    // For HF models, use author/repo/model structure with backwards compatibility
-    if (model.origin === ModelOrigin.HF) {
+    // For repository-backed source models, use author/repo/model structure.
+    if (
+      [ModelOrigin.HF, ModelOrigin.HF_MIRROR, ModelOrigin.MODELSCOPE].includes(
+        model.origin,
+      )
+    ) {
       const author = model.author || 'unknown';
+      const source = getModelSource(model);
+      const sourceDir = getSourceStorageDir(source);
 
       // Try to get repo from model, or infer from model.id, or fallback to 'unknown'
       let repo = model.repo;
@@ -1312,20 +1361,24 @@ class ModelStore {
         repo = inferRepoFromModelId(model.id) || 'unknown';
       }
 
-      // Old path structure (for backwards compatibility)
-      const oldPath = `${RNFS.DocumentDirectoryPath}/models/hf/${author}/${model.filename}`;
+      const oldPath =
+        source === 'huggingface'
+          ? `${RNFS.DocumentDirectoryPath}/models/hf/${author}/${model.filename}`
+          : '';
 
       // New path structure includes repository name
-      const newPath = `${RNFS.DocumentDirectoryPath}/models/hf/${author}/${repo}/${model.filename}`;
+      const newPath = `${RNFS.DocumentDirectoryPath}/models/${sourceDir}/${author}/${repo}/${model.filename}`;
 
-      // Check if file exists at old path (backwards compatibility)
-      // This handles: existing downloads, models after reset, models after app update
-      try {
-        if (await RNFS.exists(oldPath)) {
-          return oldPath;
+      if (oldPath) {
+        // Check if file exists at old path (backwards compatibility)
+        // This handles: existing downloads, models after reset, models after app update
+        try {
+          if (await RNFS.exists(oldPath)) {
+            return oldPath;
+          }
+        } catch (err) {
+          console.log('Error checking old HF model path:', err);
         }
-      } catch (err) {
-        console.log('Error checking old HF model path:', err);
       }
 
       // Otherwise use new path
@@ -1598,9 +1651,13 @@ class ModelStore {
       return;
     }
 
+    const source = getModelSource(model);
+
     try {
       const destinationPath = await this.getModelFullPath(model);
-      const authToken = hfStore.shouldUseToken ? hfStore.hfToken : null;
+      const authToken = hfStore.shouldUseTokenForSource(source)
+        ? hfStore.hfToken
+        : null;
       await downloadManager.startDownload(model, destinationPath, authToken);
 
       // For vision models, automatically download the projection model
@@ -1616,7 +1673,7 @@ class ModelStore {
       console.error('Failed to start download:', err);
 
       // Create proper error state for the snackbar system
-      const errorState = createErrorState(err, 'download', 'huggingface', {
+      const errorState = createErrorState(err, 'download', source, {
         modelId,
       });
 
@@ -2739,9 +2796,12 @@ class ModelStore {
       if (newModel.supportsMultimodal && options?.projectionModelId) {
         // Validate that selected projection model exists in repository
         const mmprojFiles = getMmprojFiles(hfModel.siblings || []);
+        const source = hfModel.source || 'huggingface';
+        const repoId = hfModel.sourceRepoId || hfModel.id;
         const selectedExists = mmprojFiles.some(
           file =>
-            `${hfModel.id}/${file.rfilename}` === options.projectionModelId,
+            buildSourceModelId(source, repoId, file.rfilename) ===
+            options.projectionModelId,
         );
 
         if (selectedExists) {
@@ -2760,7 +2820,7 @@ class ModelStore {
       await new Promise(resolve => setTimeout(resolve, 200));
 
       // Use the centralized download method which handles mmproj automatically
-      this.checkSpaceAndDownload(newModel.id);
+      await this.checkSpaceAndDownload(newModel.id);
 
       // The error handling is now done in the downloadManager callbacks
     } catch (error) {
@@ -2807,10 +2867,16 @@ class ModelStore {
     ) {
       // Get the mmproj files from the repository
       const mmprojFiles = getMmprojFiles(hfModel.siblings || []);
+      const source = hfModel.source || 'huggingface';
+      const repoId = hfModel.sourceRepoId || hfModel.id;
 
       // Add each projection model to the store if it doesn't exist
       for (const mmprojFile of mmprojFiles) {
-        const projModelId = `${hfModel.id}/${mmprojFile.rfilename}`;
+        const projModelId = buildSourceModelId(
+          source,
+          repoId,
+          mmprojFile.rfilename,
+        );
         const existingProjModel = this.models.find(m => m.id === projModelId);
 
         if (!existingProjModel) {
@@ -2825,8 +2891,8 @@ class ModelStore {
       // If we're working with an existing model, update its projection model references
       // to ensure they're current with what's now in the store
       if (storeModel) {
-        const updatedCompatibleModels = mmprojFiles.map(
-          file => `${hfModel.id}/${file.rfilename}`,
+        const updatedCompatibleModels = mmprojFiles.map(file =>
+          buildSourceModelId(source, repoId, file.rfilename),
         );
 
         runInAction(() => {
@@ -2845,7 +2911,11 @@ class ModelStore {
               mmprojFilenames,
             );
             if (recommendedFile) {
-              storeModel.defaultProjectionModel = `${hfModel.id}/${recommendedFile}`;
+              storeModel.defaultProjectionModel = buildSourceModelId(
+                source,
+                repoId,
+                recommendedFile,
+              );
             }
           }
         });
@@ -2855,13 +2925,13 @@ class ModelStore {
     // If this is a projection model, check if we need to update any vision models
     if (newModel.modelType === ModelType.PROJECTION) {
       // Get the repository ID from the model ID
-      const repoId = newModel.id.split('/').slice(0, 2).join('/');
+      const repoId = getRepoIdFromModelId(newModel.id);
 
       // Find vision models from the same repository
       const visionModels = this.models.filter(
         m =>
           m.supportsMultimodal &&
-          m.id.startsWith(repoId) &&
+          (!repoId || getRepoIdFromModelId(m.id) === repoId) &&
           m.id !== newModel.id,
       );
 
@@ -3028,8 +3098,10 @@ class ModelStore {
       model.ggufMetadata = undefined;
     });
 
-    const hfModels = this.models.filter(
-      model => model.origin === ModelOrigin.HF,
+    const hfModels = this.models.filter(model =>
+      [ModelOrigin.HF, ModelOrigin.HF_MIRROR, ModelOrigin.MODELSCOPE].includes(
+        model.origin,
+      ),
     );
     hfModels.forEach(model => {
       const defaultSettings = getHFDefaultSettings(
@@ -3862,7 +3934,7 @@ class ModelStore {
   };
 
   /**
-   * Fetches and updates model file details from HuggingFace.
+   * Fetches and updates source model file details.
    * This is used when we need to get the lfs.oid for integrity checks.
    * @param model - The model to update
    * @returns Promise<void>
@@ -3873,7 +3945,15 @@ class ModelStore {
     }
 
     try {
-      const fileDetails = await fetchModelFilesDetails(model.hfModel.id);
+      const source = getModelSource(model);
+      const authToken = hfStore.shouldUseTokenForSource(source)
+        ? hfStore.hfToken
+        : null;
+      const fileDetails = await fetchModelFilesDetailsFromSource({
+        source,
+        modelId: model.hfModel.sourceRepoId || model.hfModel.id,
+        authToken,
+      });
       const matchingFile = fileDetails.find(
         file => file.path === model.hfModelFile?.rfilename,
       );

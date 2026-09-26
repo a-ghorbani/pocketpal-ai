@@ -372,7 +372,11 @@
       }
     },
     "modelsHeaderRight": {
+      "filtersGroup": "Filters",
+      "viewGroup": "View",
       "menuTitleHf": "Модели от Hugging Face",
+      "menuTitleHfMirror": "Hugging Face Mirror",
+      "menuTitleModelScope": "ModelScope Models",
       "menuTitleDownloaded": "Загруженные модели",
       "menuTitleGrouped": "Группировать по типу модели",
       "menuTitleReset": "Сбросить список моделей"
@@ -638,7 +642,8 @@
       "enableAndRetry": "Включить и повторить",
       "goToSettings": "В настройки",
       "tryAgain": "Повторить",
-      "viewOnHuggingFace": "Открыть на HF ↗"
+      "viewOnHuggingFace": "Открыть на HF ↗",
+      "viewOnSource": "View Model Source ↗"
     },
     "hfTokenSheet": {
       "title": "Токен Hugging Face",
@@ -874,6 +879,8 @@
     "labels": {
       "localModel": "Локальная",
       "hfModel": "HF",
+      "hfMirrorModel": "HF Mirror",
+      "modelScopeModel": "ModelScope",
       "unknownGroup": "Неизвестно",
       "availableToUse": "Готово к использованию",
       "availableToDownload": "Доступно для загрузки",
@@ -881,6 +888,7 @@
     },
     "buttons": {
       "addFromHuggingFace": "Добавить из Hugging Face",
+      "addFromModelSources": "Download Model",
       "addLocalModel": "Добавить локальную модель",
       "reset": "Сброс"
     },
@@ -894,6 +902,14 @@
       "noResults": "Модели не найдены",
       "loadingMore": "Загрузка дополнительных данных...",
       "searchPlaceholder": "Поиск моделей на Hugging Face",
+      "source": "Source",
+      "sourceTitle": "Download Source",
+      "thirdPartySuffix": " (third-party)",
+      "sources": {
+        "huggingface": "Hugging Face",
+        "hf_mirror": "HF Mirror",
+        "modelscope": "ModelScope"
+      },
       "modelUpdatedLong": "Обновлено {{time}} назад",
       "modelUpdatedShort": "{{time}} назад",
       "modelUpdatedJustNowLong": "Обновлено только что",
@@ -937,6 +953,7 @@
         "requiresProjectionModel": "Требуется модель проекции",
         "downloadProjectionModel": "Загрузить модель проекции",
         "viewModelCardOnHuggingFace": "Открыть карточку модели на Hugging Face",
+        "viewModelCardOnSource": "View Model Source",
         "visionSupported": "Поддерживается",
         "visionNotSupported": "Не поддерживается",
         "visionUnknown": "Неизвестно",

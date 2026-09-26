@@ -245,6 +245,8 @@
     "labels": {
       "localModel": "محلی",
       "hfModel": "HF",
+      "hfMirrorModel": "HF Mirror",
+      "modelScopeModel": "ModelScope",
       "unknownGroup": "نامشخص",
       "availableToUse": "آماده استفاده",
       "availableToDownload": "قابل دانلود",
@@ -293,6 +295,7 @@
     },
     "buttons": {
       "addFromHuggingFace": "افزودن از Hugging Face",
+      "addFromModelSources": "Download Model",
       "addLocalModel": "افزودن مدل محلی",
       "reset": "بازنشانی"
     },
@@ -350,6 +353,14 @@
       "noResults": "مدلی یافت نشد",
       "loadingMore": "بارگذاری بیشتر...",
       "searchPlaceholder": "جستجوی مدل‌های Hugging Face",
+      "source": "Source",
+      "sourceTitle": "Download Source",
+      "thirdPartySuffix": " (third-party)",
+      "sources": {
+        "huggingface": "Hugging Face",
+        "hf_mirror": "HF Mirror",
+        "modelscope": "ModelScope"
+      },
       "modelUpdatedLong": "{{time}} پیش به‌روزرسانی شده",
       "modelUpdatedShort": "{{time}} پیش",
       "modelUpdatedJustNowLong": "همین الان به‌روزرسانی شده",
@@ -393,6 +404,7 @@
         "requiresProjectionModel": "نیاز به مدل پروجکشن",
         "downloadProjectionModel": "دانلود مدل پروجکشن",
         "viewModelCardOnHuggingFace": "مشاهده کارت مدل در Hugging Face",
+        "viewModelCardOnSource": "View Model Source",
         "visionSupported": "پشتیبانی می‌شود",
         "visionNotSupported": "پشتیبانی نمی‌شود",
         "visionUnknown": "نامشخص",
@@ -738,7 +750,8 @@
       "enableAndRetry": "فعال‌سازی و تلاش مجدد",
       "goToSettings": "رفتن به تنظیمات",
       "tryAgain": "تلاش مجدد",
-      "viewOnHuggingFace": "مشاهده مدل در HF ↗"
+      "viewOnHuggingFace": "مشاهده مدل در HF ↗",
+      "viewOnSource": "View Model Source ↗"
     },
     "headerRight": {
       "deleteChatTitle": "حذف چت",
@@ -800,7 +813,11 @@
       }
     },
     "modelsHeaderRight": {
+      "filtersGroup": "Filters",
+      "viewGroup": "View",
       "menuTitleHf": "مدل‌های Hugging Face",
+      "menuTitleHfMirror": "Hugging Face Mirror",
+      "menuTitleModelScope": "ModelScope Models",
       "menuTitleDownloaded": "مدل‌های دانلود شده",
       "menuTitleGrouped": "گروه‌بندی بر اساس نوع مدل",
       "menuTitleReset": "بازنشانی لیست مدل‌ها"
