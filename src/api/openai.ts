@@ -197,7 +197,7 @@ function isValidChatChunk(parsed: any): boolean {
 /**
  * Build headers for OpenAI-compatible API requests.
  */
-function buildHeaders(apiKey?: string): Record<string, string> {
+export function buildHeaders(apiKey?: string): Record<string, string> {
   const headers: Record<string, string> = {
     'Content-Type': 'application/json',
   };
@@ -218,6 +218,12 @@ function normalizeUrl(serverUrl: string): string {
 export interface FetchModelsResult {
   models: RemoteModelInfo[];
   headers: Record<string, string>;
+  /**
+   * Whether the body carried a top-level `models` array. A single-model
+   * llama.cpp server emits one; a router does not. Being a property of the
+   * response rather than of a row, it still answers when `data` is empty.
+   */
+  hasModelsKey: boolean;
 }
 
 /**
@@ -289,6 +295,8 @@ export async function fetchModelsWithHeaders(
         data.models,
       ),
       headers: responseHeaders,
+      hasModelsKey:
+        typeof data === 'object' && data !== null && 'models' in data,
     };
   } catch (error: any) {
     if (error.name === 'AbortError') {

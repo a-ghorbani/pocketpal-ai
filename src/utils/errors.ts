@@ -27,6 +27,22 @@ export class AppCheckError extends Error {
 }
 
 /**
+ * RemoteModelRequestWithdrawnError - the operation that would have made a
+ * remote model ready ended with no outcome, because the user stopped it.
+ *
+ * Carried as a type rather than as an absent message so a surface decides what
+ * a withdrawal looks like, rather than reading it out of a missing string: an
+ * error carrying no message has more than one cause, and the other one is
+ * something that must still be reported.
+ */
+export class RemoteModelRequestWithdrawnError extends Error {
+  constructor() {
+    super('Remote model request withdrawn');
+    this.name = 'RemoteModelRequestWithdrawnError';
+  }
+}
+
+/**
  * ServerError - Used for backend server errors
  * Examples: 500 errors, API unavailable, etc.
  */

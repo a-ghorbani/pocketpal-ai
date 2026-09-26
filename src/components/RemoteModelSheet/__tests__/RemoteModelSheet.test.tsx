@@ -1,5 +1,5 @@
 import React from 'react';
-import {render, fireEvent, waitFor} from '../../../../jest/test-utils';
+import {render, fireEvent, waitFor, within} from '../../../../jest/test-utils';
 import {RemoteModelSheet} from '../RemoteModelSheet';
 import {serverStore} from '../../../store';
 import {
@@ -8,6 +8,8 @@ import {
   fetchModelsWithHeaders,
 } from '../../../api/openai';
 import {routerModelsBody} from '../../../../jest/fixtures/remoteModelList';
+import {l10n} from '../../../locales';
+import {routerWireEvents} from '../../../../jest/fixtures/routerWire';
 
 const mockedFetchModels = fetchModels as jest.Mock;
 const mockedFetchModelsWithHeaders = fetchModelsWithHeaders as jest.Mock;
@@ -53,9 +55,18 @@ jest.mock('lodash/debounce', () => (fn: any) => {
   return debounced;
 });
 
+/**
+ * What the store's own fetch would have left behind. The sheet asks the store
+ * to read the list rather than reading it itself, so a test seeds the result
+ * instead of the response.
+ */
+const seedServerModels = (rows: any[], serverId = 'srv-1') =>
+  serverStore.serverModels.set(serverId, rows);
+
 describe('RemoteModelSheet', () => {
   beforeEach(() => {
     jest.clearAllMocks();
+    serverStore.serverModels.clear();
   });
 
   it('renders nothing when not visible', () => {
@@ -313,23 +324,21 @@ describe('RemoteModelSheet', () => {
     });
   });
 
-  // Tapping a saved server's chip probes via fetchModels using THAT server's
-  // stored requestTimeoutMs (raw), so a saved slow server does not red-X at
-  // the 30s default.
+  // Tapping a saved server's chip reads the list through the store, which is
+  // what stamps the shape of the response beside the rows. A read issued here
+  // would leave that stamp unwritten and every consumer of it guessing.
   describe('chip-press probe feed', () => {
-    it('passes the saved server requestTimeoutMs to fetchModels on chip press', async () => {
-      serverStore.servers = [
-        {
-          id: 'srv-1',
-          name: 'Slow Server',
-          url: 'http://localhost:1234',
-          requestTimeoutMs: 600000,
-        },
-      ];
+    const savedServer = {
+      id: 'srv-1',
+      name: 'Slow Server',
+      url: 'http://localhost:1234',
+      requestTimeoutMs: 600000,
+    };
+
+    it('reads the list through the store rather than fetching it', async () => {
+      serverStore.servers = [savedServer];
       (serverStore.getApiKey as jest.Mock).mockResolvedValue(undefined);
-      mockedFetchModels.mockResolvedValueOnce([
-        {id: 'llama-7b', object: 'model', owned_by: 'system'},
-      ]);
+      seedServerModels([{id: 'llama-7b', object: 'model', owned_by: 'system'}]);
 
       const {getByTestId} = render(
         <RemoteModelSheet isVisible={true} onDismiss={jest.fn()} />,
@@ -338,35 +347,28 @@ describe('RemoteModelSheet', () => {
       fireEvent.press(getByTestId('server-chip-srv-1'));
 
       await waitFor(() => {
-        expect(mockedFetchModels).toHaveBeenCalledWith(
-          'http://localhost:1234',
-          undefined,
-          600000,
-        );
+        expect(serverStore.fetchModelsForServer).toHaveBeenCalledWith('srv-1');
       });
-      // The add-path probe must NOT be involved in the chip flow.
+      expect(mockedFetchModels).not.toHaveBeenCalled();
       expect(mockedFetchModelsWithHeaders).not.toHaveBeenCalled();
     });
 
-    it('forwards undefined for a saved server without requestTimeoutMs', async () => {
-      serverStore.servers = [
-        {id: 'srv-1', name: 'Default Server', url: 'http://localhost:1234'},
-      ];
+    it('reports a chip whose server could not be read as offline', async () => {
+      serverStore.servers = [savedServer];
       (serverStore.getApiKey as jest.Mock).mockResolvedValue(undefined);
-      mockedFetchModels.mockResolvedValueOnce([]);
+      (serverStore.fetchModelsForServer as jest.Mock).mockResolvedValueOnce({
+        ok: false,
+        error: 'Network request failed',
+      });
 
-      const {getByTestId} = render(
+      const {getByTestId, getByText} = render(
         <RemoteModelSheet isVisible={true} onDismiss={jest.fn()} />,
       );
 
       fireEvent.press(getByTestId('server-chip-srv-1'));
 
       await waitFor(() => {
-        expect(mockedFetchModels).toHaveBeenCalledWith(
-          'http://localhost:1234',
-          undefined,
-          undefined,
-        );
+        expect(getByText(/Network request failed/)).toBeTruthy();
       });
     });
   });
@@ -388,7 +390,7 @@ describe('RemoteModelSheet', () => {
         },
       ];
       (serverStore.getApiKey as jest.Mock).mockResolvedValue(undefined);
-      mockedFetchModels.mockResolvedValueOnce(rows);
+      seedServerModels(rows);
 
       const view = render(
         <RemoteModelSheet isVisible={true} onDismiss={jest.fn()} />,
@@ -449,8 +451,480 @@ describe('RemoteModelSheet', () => {
     it('issues no request of its own to answer', async () => {
       await openViaChip('llama.cpp');
 
-      expect(mockedFetchModels).toHaveBeenCalledTimes(1);
+      expect(mockedFetchModels).not.toHaveBeenCalled();
       expect(mockedFetchModelsWithHeaders).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('router model management', () => {
+    const ROWS = routerModelsBody.data as any[];
+    const LOADED = 'gemma-4-e2b';
+    const UNLOADED = 'ggml-org/gemma-4-31B-it-GGUF:Q8_0';
+    /** A model this app has business about that the server does not list. */
+    const PENDING_REF = 'ggml-org/gemma-3-270m-it-GGUF:Q8_0';
+
+    const openRouter = async (
+      serverType: string | undefined = 'llama.cpp',
+      rows: any[] = ROWS,
+    ) => {
+      serverStore.servers = [
+        {
+          id: 'srv-1',
+          name: 'router',
+          url: 'http://localhost:8080',
+          serverType,
+        },
+      ];
+      (serverStore.getApiKey as jest.Mock).mockResolvedValue(undefined);
+      seedServerModels(rows);
+
+      const view = render(
+        <RemoteModelSheet isVisible={true} onDismiss={jest.fn()} />,
+      );
+      fireEvent.press(view.getByTestId('server-chip-srv-1'));
+      await waitFor(() => {
+        expect(view.queryByText(LOADED)).toBeTruthy();
+      });
+      return view;
+    };
+
+    beforeEach(() => {
+      serverStore.routerEvents = {};
+      serverStore.routerOps = {};
+      serverStore.routerReasons = {};
+      serverStore.routerStreamCap = {};
+      serverStore.routerObservedEviction = new Set();
+      serverStore.routerListShape = {};
+    });
+
+    it('opens the stream and asks for no capabilities per row', async () => {
+      await openRouter();
+
+      expect(serverStore.openRouterStream).toHaveBeenCalledWith('srv-1');
+      expect(serverStore.fetchRemoteModelCaps).not.toHaveBeenCalled();
+      expect(mockedFetchModels).not.toHaveBeenCalled();
+    });
+
+    it('groups rows by what the server says about them', async () => {
+      const {getByTestId} = await openRouter();
+
+      expect(getByTestId(`router-row-${LOADED}`)).toBeTruthy();
+      expect(getByTestId(`router-unload-${LOADED}`)).toBeTruthy();
+      expect(getByTestId(`router-load-${UNLOADED}`)).toBeTruthy();
+    });
+
+    it('shows the resident count as a fact and predicts nothing', async () => {
+      const {getByTestId, queryByText} = await openRouter();
+
+      expect(getByTestId('router-resident-count')).toBeTruthy();
+      expect(queryByText(/evict/i)).toBeNull();
+    });
+
+    it('mentions eviction only once one has been seen', async () => {
+      const first = await openRouter();
+      expect(first.queryByTestId('router-eviction-note')).toBeNull();
+      first.unmount();
+
+      serverStore.routerObservedEviction = new Set(['srv-1']);
+      const second = await openRouter();
+
+      expect(second.getByTestId('router-eviction-note')).toBeTruthy();
+    });
+
+    it('never calls a model sleeping, whatever the row says', async () => {
+      const rows = ROWS.map(row =>
+        row.id === LOADED
+          ? {...row, status: {...row.status, value: 'sleeping'}}
+          : row,
+      );
+      const {queryByText, getByTestId} = await openRouter('llama.cpp', rows);
+
+      expect(queryByText(/sleeping/i)).toBeNull();
+      expect(getByTestId(`router-unload-${LOADED}`)).toBeTruthy();
+    });
+
+    it('renders a determinate bar for a load reporting zero progress', async () => {
+      serverStore.routerOps = {
+        [`srv-1/${UNLOADED}`]: {
+          kind: 'load',
+          attempt: 1,
+          phase: 'active',
+          serverId: 'srv-1',
+          key: `srv-1/${UNLOADED}`,
+          startedAt: Date.now(),
+          requestSeq: 0,
+          lastEvidenceAt: Date.now(),
+        },
+      };
+      serverStore.routerEvents = {
+        [`srv-1/${UNLOADED}`]: {progress: {value: 0}, at: Date.now()},
+      };
+      const {getByTestId} = await openRouter();
+
+      // A determinate bar announces a value; an indeterminate one announces
+      // none, so this distinguishes zero progress from no progress.
+      const bar = getByTestId(`router-progress-${UNLOADED}`);
+      expect(bar.props.accessibilityValue).toEqual({min: 0, max: 100, now: 0});
+    });
+
+    it('says a model is being released rather than offering a second unload', async () => {
+      serverStore.routerOps = {
+        [`srv-1/${LOADED}`]: {
+          kind: 'unload',
+          attempt: 1,
+          phase: 'requested',
+          serverId: 'srv-1',
+          key: `srv-1/${LOADED}`,
+          startedAt: Date.now(),
+          requestSeq: 0,
+          lastEvidenceAt: Date.now(),
+        },
+      };
+      const {getByTestId, queryByTestId} = await openRouter();
+
+      expect(getByTestId(`router-unloading-${LOADED}`)).toBeTruthy();
+      expect(queryByTestId(`router-unload-${LOADED}`)).toBeNull();
+    });
+
+    it.each(['unknown', 'absent'])(
+      'offers no download field while the stream has answered %s',
+      async cap => {
+        serverStore.routerStreamCap = {'srv-1': cap as any};
+        const {queryByTestId} = await openRouter();
+
+        expect(queryByTestId('router-download-field')).toBeNull();
+      },
+    );
+
+    it('offers the download field once the stream has answered', async () => {
+      serverStore.routerStreamCap = {'srv-1': 'present'};
+      const {getByTestId} = await openRouter();
+
+      expect(getByTestId('router-download-field')).toBeTruthy();
+    });
+
+    it('renders the router surface for a server that lists nothing', async () => {
+      serverStore.routerListShape = {
+        'srv-1': {hasModelsKey: false, seq: 1, stale: false},
+      };
+      serverStore.servers = [
+        {
+          id: 'srv-1',
+          name: 'router',
+          url: 'http://localhost:8080',
+          serverType: 'llama.cpp',
+        },
+      ];
+      (serverStore.getApiKey as jest.Mock).mockResolvedValue(undefined);
+      seedServerModels([]);
+
+      const {getByText, queryByTestId} = render(
+        <RemoteModelSheet isVisible={true} onDismiss={jest.fn()} />,
+      );
+      fireEvent.press(getByText('router'));
+      await waitFor(() => {
+        expect(queryByTestId('router-resident-count')).toBeTruthy();
+      });
+    });
+
+    it('leaves a server with no router evidence exactly as it was', async () => {
+      const plain = [
+        {id: 'solo', object: 'model', owned_by: 'llamacpp'},
+      ] as any[];
+      const {queryByTestId, getByText} = await (async () => {
+        serverStore.servers = [
+          {
+            id: 'srv-1',
+            name: 'router',
+            url: 'http://localhost:8080',
+            serverType: 'llama.cpp',
+          },
+        ];
+        (serverStore.getApiKey as jest.Mock).mockResolvedValue(undefined);
+        seedServerModels(plain);
+        const view = render(
+          <RemoteModelSheet isVisible={true} onDismiss={jest.fn()} />,
+        );
+        fireEvent.press(view.getByTestId('server-chip-srv-1'));
+        await waitFor(() => expect(view.queryByText('solo')).toBeTruthy());
+        return view;
+      })();
+
+      expect(queryByTestId('router-row-solo')).toBeNull();
+      expect(queryByTestId('router-resident-count')).toBeNull();
+      expect(getByText('solo')).toBeTruthy();
+      expect(serverStore.openRouterStream).not.toHaveBeenCalled();
+    });
+
+    // A download the server has not finished has no row of its own, so the
+    // rows alone leave the fetch invisible, its Cancel unreachable and the
+    // copy for one that never arrived with nowhere to render.
+    describe('a model the server has no row for', () => {
+      const PENDING = 'ggml-org/gemma-3-270m-it-GGUF:Q8_0';
+      const key = `srv-1/${PENDING}`;
+
+      it('lists a download in flight with its cancel', async () => {
+        serverStore.routerOps = {
+          [key]: {
+            kind: 'download',
+            attempt: 1,
+            phase: 'requested',
+            serverId: 'srv-1',
+            key,
+            startedAt: Date.now(),
+            requestSeq: 0,
+            lastEvidenceAt: Date.now(),
+          },
+        };
+
+        const {getByTestId} = await openRouter();
+
+        expect(getByTestId(`router-row-${PENDING}`)).toBeTruthy();
+        expect(getByTestId(`router-cancel-${PENDING}`)).toBeTruthy();
+        expect(getByTestId(`router-state-${PENDING}`).props.children).toBe(
+          'Downloading',
+        );
+      });
+
+      it('renders the copy for a download that never arrived', async () => {
+        serverStore.routerReasons = {[key]: {cause: 'download-not-fetched'}};
+
+        const {getByTestId} = await openRouter();
+
+        expect(getByTestId(`router-reason-${PENDING}`)).toBeTruthy();
+        expect(getByTestId(`router-dismiss-${PENDING}`)).toBeTruthy();
+      });
+
+      it('reads the bar from the bytes the stream reported', async () => {
+        const tick = routerWireEvents('sse-download-sequence.txt').find(
+          event => event.event === 'download_progress',
+        );
+        const files = Object.values(tick.data.progress) as any[];
+        const total = files.reduce((sum, file) => sum + file.total, 0);
+
+        serverStore.routerOps = {
+          [key]: {
+            kind: 'download',
+            attempt: 1,
+            phase: 'active',
+            serverId: 'srv-1',
+            key,
+            startedAt: Date.now(),
+            requestSeq: 0,
+            lastEvidenceAt: Date.now(),
+          },
+        };
+        serverStore.routerEvents = {
+          [key]: {
+            bytes: {done: total / 2, total, urls: files.length},
+            at: Date.now(),
+          },
+        };
+
+        const {getByTestId} = await openRouter();
+        // A determinate bar announces its value; an indeterminate one
+        // announces none, which is what a parsed byte total was buying.
+        expect(
+          getByTestId(`router-progress-${PENDING}`).props.accessibilityValue,
+        ).toEqual({min: 0, max: 100, now: 50});
+      });
+    });
+
+    // While an operation holds a row, the operation is what the row says: the
+    // list has an answer of its own and reading both is how two of them end
+    // up on screen at once.
+    it('lets the operation say what the row is doing', async () => {
+      serverStore.routerOps = {
+        [`srv-1/${UNLOADED}`]: {
+          kind: 'load',
+          attempt: 1,
+          phase: 'active',
+          serverId: 'srv-1',
+          key: `srv-1/${UNLOADED}`,
+          startedAt: Date.now(),
+          requestSeq: 0,
+          lastEvidenceAt: Date.now(),
+        },
+      };
+      const {getByTestId, queryByTestId} = await openRouter();
+
+      expect(getByTestId(`router-state-${UNLOADED}`).props.children).toBe(
+        'Loading',
+      );
+      expect(getByTestId(`router-progress-${UNLOADED}`)).toBeTruthy();
+      expect(getByTestId(`router-cancel-${UNLOADED}`)).toBeTruthy();
+      expect(queryByTestId(`router-load-${UNLOADED}`)).toBeNull();
+    });
+
+    // Posting a second one collides with the load already running, and the
+    // row it would collide with is not this app's to cancel.
+    it('offers no load for a model the server is already loading', async () => {
+      const rows = ROWS.map(row =>
+        row.id === UNLOADED
+          ? {...row, status: {...row.status, value: 'loading'}}
+          : row,
+      );
+      const {queryByTestId} = await openRouter('llama.cpp', rows);
+
+      expect(queryByTestId(`router-load-${UNLOADED}`)).toBeNull();
+      expect(queryByTestId(`router-cancel-${UNLOADED}`)).toBeNull();
+      expect(queryByTestId(`router-progress-${UNLOADED}`)).toBeNull();
+    });
+
+    // The device capture: the desktop stopped answering mid-load, and the row
+    // went on calling itself loaded underneath the note saying so.
+    it('makes no claim for a row the last fetch could not refresh', async () => {
+      serverStore.routerListShape = {
+        'srv-1': {hasModelsKey: false, seq: 1, stale: true},
+      };
+      const {queryByTestId, getByTestId} = await openRouter();
+
+      expect(queryByTestId(`router-state-${LOADED}`)).toBeNull();
+      expect(queryByTestId(`router-unload-${LOADED}`)).toBeNull();
+      expect(getByTestId('router-resident-count').props.children).toBe(
+        '0 resident',
+      );
+    });
+
+    // The picker's own rows — a model this app has business about that the
+    // server does not list — carry no state the server vouched for, so there
+    // is nothing here to load.
+    it('offers no load for a model the server has no row for', async () => {
+      const key = `srv-1/${PENDING_REF}`;
+      serverStore.routerReasons = {[key]: {cause: 'download-not-fetched'}};
+
+      const {getByTestId, queryByTestId} = await openRouter();
+
+      expect(getByTestId(`router-row-${PENDING_REF}`)).toBeTruthy();
+      expect(queryByTestId(`router-load-${PENDING_REF}`)).toBeNull();
+      expect(queryByTestId(`router-state-${PENDING_REF}`)).toBeNull();
+    });
+
+    // The row has no state of its own until the weights land, so the group it
+    // sits in can only come from the operation.
+    it('files a download with no row of its own under Downloading', async () => {
+      const key = `srv-1/${PENDING_REF}`;
+      serverStore.routerOps = {
+        [key]: {
+          kind: 'download',
+          attempt: 1,
+          phase: 'active',
+          serverId: 'srv-1',
+          key,
+          startedAt: Date.now(),
+          requestSeq: 0,
+          lastEvidenceAt: Date.now(),
+        },
+      };
+
+      const {getByTestId} = await openRouter();
+
+      expect(
+        within(getByTestId('router-group-downloading')).getByTestId(
+          `router-row-${PENDING_REF}`,
+        ),
+      ).toBeTruthy();
+    });
+
+    // A model the server is still fetching is nothing a session can bind to,
+    // whether or not the server already lists a row under that name.
+    it('does not let a model being fetched be selected', async () => {
+      const key = `srv-1/${UNLOADED}`;
+      serverStore.routerOps = {
+        [key]: {
+          kind: 'download',
+          attempt: 1,
+          phase: 'active',
+          serverId: 'srv-1',
+          key,
+          startedAt: Date.now(),
+          requestSeq: 0,
+          lastEvidenceAt: Date.now(),
+        },
+      };
+
+      const {getByTestId} = await openRouter();
+      fireEvent.press(getByTestId(`router-select-${UNLOADED}`));
+
+      expect(
+        getByTestId('add-model-button').props.accessibilityState?.disabled,
+      ).toBe(true);
+    });
+
+    // On a server that has stopped answering, the operation lives on for the
+    // ninety seconds the reach bound takes. It must not go on offering a
+    // Cancel that cancels nothing or a bar for work nobody awaits — and it
+    // must not go quiet either: cancelling posts an unload, and that is what
+    // the row says is happening.
+    it('presents an operation the user withdrew as the unload it now is', async () => {
+      const key = `srv-1/${UNLOADED}`;
+      serverStore.routerOps = {
+        [key]: {
+          kind: 'load',
+          attempt: 1,
+          phase: 'active',
+          serverId: 'srv-1',
+          key,
+          startedAt: Date.now(),
+          requestSeq: 0,
+          lastEvidenceAt: Date.now(),
+          cancelled: true,
+        },
+      };
+
+      const {getByTestId, queryByTestId} = await openRouter();
+
+      expect(queryByTestId(`router-cancel-${UNLOADED}`)).toBeNull();
+      expect(queryByTestId(`router-progress-${UNLOADED}`)).toBeNull();
+      expect(getByTestId(`router-unloading-${UNLOADED}`)).toBeTruthy();
+    });
+
+    // The field used to show the server's words alone, which said nothing
+    // about what had gone wrong. It carries the app's cause now, with the
+    // server's words quoted rather than spoken in the app's voice.
+    it('names the failure and quotes the server when a download is refused', async () => {
+      (serverStore.startRouterDownload as jest.Mock).mockResolvedValue({
+        accepted: false,
+        message: 'File Not Found',
+      });
+      serverStore.routerStreamCap = {'srv-1': 'present'};
+      const {getByTestId, getByText} = await openRouter();
+
+      fireEvent.changeText(
+        getByTestId('router-download-input'),
+        'owner/repo:Q8_0',
+      );
+      fireEvent.press(getByTestId('router-download-button'));
+
+      await waitFor(() => {
+        expect(
+          getByText(
+            `${l10n.en.settings.routerModels.downloadNotFetched} “File Not Found”`,
+          ),
+        ).toBeTruthy();
+      });
+    });
+
+    // A row that is one accessibility target announces itself and swallows
+    // every control inside it, so Load, Unload, Cancel and the star cannot be
+    // reached and activating any of them selects the model instead.
+    it('leaves every control in a row its own accessibility target', async () => {
+      const {getByTestId} = await openRouter();
+
+      expect(getByTestId(`router-select-${LOADED}`).props.accessible).toBe(
+        false,
+      );
+      expect(getByTestId(`router-unload-${LOADED}`)).toBeTruthy();
+    });
+
+    // The sibling surfaces this sheet renders do not exist yet, so the
+    // degraded path is the one that actually ships first.
+    it('renders without favourites, last-used or presence', async () => {
+      const {getByTestId, queryByTestId} = await openRouter();
+
+      expect(queryByTestId(`router-favourite-${LOADED}`)).toBeNull();
+      expect(getByTestId(`router-row-${LOADED}`)).toBeTruthy();
+      expect(getByTestId(`router-load-${UNLOADED}`)).toBeTruthy();
     });
   });
 });
