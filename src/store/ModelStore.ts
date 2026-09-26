@@ -42,6 +42,7 @@ import {
   parseSizeLabel,
 } from '../utils';
 import {getRecommendedProjectionModel} from '../utils/multimodalHelpers';
+import {validateLocalModelFileForLoad} from '../utils/modelFileValidation';
 import {isDraftOnlyModel} from '../utils/mtp';
 import {getOriginalModelName} from '../utils/formatters';
 import type {OnboardingPalModelEntry} from './onboarding/onboardingPals';
@@ -2287,6 +2288,18 @@ class ModelStore {
     if (!filePath) {
       throw new Error('Model path is undefined');
     }
+
+    // Pre-flight: catch missing/truncated/corrupt files here with an
+    // actionable message instead of a generic native "failed to load model".
+    await validateLocalModelFileForLoad({
+      entryPath: filePath,
+      storageRoot: filePath.substring(0, filePath.lastIndexOf('/')),
+      expectedSize:
+        model.hfModelFile?.size ||
+        model.hfModelFile?.lfs?.size ||
+        model.size ||
+        undefined,
+    });
 
     runInAction(() => {
       this.isMultimodalActive = false; // Reset until we confirm it's enabled
