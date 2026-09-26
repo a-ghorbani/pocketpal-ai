@@ -177,3 +177,20 @@ jest.mock('../src/database', () => {
 jest.mock('../src/services', () => {
   return require('../__mocks__/services');
 });
+
+// Folder persistence is exercised with the real repository in its own suite.
+jest.mock('../src/repositories/ChatFolderRepository', () => ({
+  FOLDER_NAME_LIMIT: 60,
+  normalizeFolderName: jest.requireActual(
+    '../src/repositories/ChatFolderRepository',
+  ).normalizeFolderName,
+  chatFolderRepository: {
+    getAll: jest.fn().mockResolvedValue([]),
+    create: jest.fn(),
+    rename: jest.fn(),
+    remove: jest.fn(),
+    moveSessions: jest.fn(),
+    exportFolder: jest.fn().mockResolvedValue(undefined),
+    resolveImportedFolder: jest.fn(),
+  },
+}));

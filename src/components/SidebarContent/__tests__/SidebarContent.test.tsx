@@ -120,8 +120,12 @@ describe('SidebarContent Component', () => {
       const {getByTestId} = render(<TestNavigator />);
 
       // Checkboxes should be present for each session
-      expect(getByTestId('checkbox-session-1')).toBeTruthy();
-      expect(getByTestId('checkbox-session-2')).toBeTruthy();
+      expect(
+        getByTestId('checkbox-session-1', {includeHiddenElements: true}),
+      ).toBeTruthy();
+      expect(
+        getByTestId('checkbox-session-2', {includeHiddenElements: true}),
+      ).toBeTruthy();
     });
 
     it('tapping session toggles selection in selection mode', () => {
@@ -149,7 +153,9 @@ describe('SidebarContent Component', () => {
       const {getByTestId} = render(<TestNavigator />);
 
       // Tap checkbox
-      const checkbox = getByTestId('checkbox-session-1');
+      const checkbox = getByTestId('checkbox-session-1', {
+        includeHiddenElements: true,
+      });
       fireEvent.press(checkbox);
 
       // Verify toggleSessionSelection was called
