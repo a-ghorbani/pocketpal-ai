@@ -57,7 +57,6 @@ beforeEach(() => {
     }),
   };
 });
-
 // Mock the applyChatTemplate function from utils/chat
 const applyChatTemplateSpy = jest
   .spyOn(require('../../utils/chat'), 'applyChatTemplate')
@@ -328,6 +327,33 @@ describe('useChatSession', () => {
       'Do not produce Markdown or HTML tables',
     );
     expect(typedSystem.content).toBe('Base assistant prompt');
+  });
+
+  it('returns a playback result only for voice sends and preserves typed send booleans', async () => {
+    modelStore.setActiveModel(mockBasicModel.id);
+    if (modelStore.context) {
+      modelStore.context.completion = jest.fn().mockResolvedValue({
+        timings: {total: 100},
+        usage: {},
+      });
+    }
+    (ttsStore.onAssistantMessageComplete as jest.Mock).mockResolvedValue(
+      'completed',
+    );
+    const {result} = renderHook(() =>
+      useChatSession({current: null}, textMessage.author, mockAssistant),
+    );
+    let voiceResult;
+    let typedResult;
+    await act(async () => {
+      voiceResult = await result.current.handleSendPress({
+        ...textMessage,
+        metadata: {voiceConversation: true},
+      });
+      typedResult = await result.current.handleSendPress(textMessage);
+    });
+    expect(voiceResult).toEqual({narration: 'completed'});
+    expect(typedResult).toBe(true);
   });
 
   it('should render parametrized system prompt when pal has parameters', async () => {

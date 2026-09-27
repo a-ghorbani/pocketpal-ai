@@ -2,6 +2,7 @@ import React, {useRef} from 'react';
 
 import {toJS, runInAction} from 'mobx';
 import type {JinjaFormattedChatResult} from 'llama.rn';
+import type {TTSPlaybackOutcome} from '../store/TTSStore';
 
 import {chatSessionRepository} from '../repositories/ChatSessionRepository';
 
@@ -242,7 +243,7 @@ type TtsRunState = {
   started: boolean;
   prevContent: string;
   prevReasoning: string;
-  completion?: Promise<unknown>;
+  completion?: Promise<TTSPlaybackOutcome>;
 };
 
 // Normalise a finished turn's result into the snapshot the banner reads.
@@ -541,7 +542,7 @@ export const useChatSession = (
 
   const handleSendPress = async (
     message: MessageType.PartialText,
-  ): Promise<boolean> => {
+  ): Promise<boolean | {narration: TTSPlaybackOutcome}> => {
     const engine = modelStore.engine;
     if (!engine) {
       await addSystemMessage(l10n.chat.modelNotLoaded);
@@ -756,8 +757,10 @@ export const useChatSession = (
       modelStore.setIsStreaming(false);
       chatSessionStore.setIsGenerating(false);
       chatSessionStore.setIsStopping(false);
-      await tts.completion;
-      return true;
+      const narration = await tts.completion;
+      return message.metadata?.voiceConversation === true
+        ? {narration: narration ?? 'none'}
+        : true;
     } catch (error) {
       console.error('Completion error:', error);
       modelStore.setInferencing(false);

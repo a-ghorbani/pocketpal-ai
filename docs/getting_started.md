@@ -230,6 +230,16 @@ table-free spoken response, reads it with the selected voice, and listens
 again. The response instruction is best-effort and a model may not always
 follow it.
 
+A short double blip sounds after your speech has been captured and listening
+has stopped. A single beep sounds after the complete spoken response finishes,
+before the microphone restarts, to signal that it is your turn. These cues
+follow media volume (the same volume as narration) and are suppressed when the
+device is silent, vibrating, muted, or in Do Not Disturb. Silence retries and
+recognition errors do not play the listening cue; skipped or failed narration
+does not play the narration cue. Cancelled turns do not add further cues. The
+second cue precedes the microphone restart; it does not mean the recognizer
+is already listening.
+
 The microphone button turns hands-free conversation off. The gray speaker Stop
 only skips the current audio; generation can finish silently before listening
 resumes. Turning text-to-speech off also ends hands-free conversation, while

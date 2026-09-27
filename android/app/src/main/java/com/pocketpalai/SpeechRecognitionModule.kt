@@ -2,9 +2,12 @@ package com.pocketpal
 
 import android.Manifest
 import android.app.KeyguardManager
+import android.app.NotificationManager
 import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
+import android.media.AudioManager
+import android.media.ToneGenerator
 import android.os.Build
 import android.os.Handler
 import android.os.Looper
@@ -36,6 +39,9 @@ class SpeechRecognitionModule(
   private var activeRequestId: String? = null
   private var captureTimeout: Runnable? = null
   private var resultTimeout: Runnable? = null
+  private var cueGenerator: ToneGenerator? = null
+  private var cueCompletion: Runnable? = null
+  private var cuePromise: Promise? = null
 
   init {
     reactContext.addLifecycleEventListener(this)
@@ -46,6 +52,72 @@ class SpeechRecognitionModule(
   override fun addListener(eventName: String) = Unit
 
   override fun removeListeners(count: Double) = Unit
+
+  override fun playTurnCue(cue: String, promise: Promise) {
+    runOnMain(promise) {
+      val toneType: Int
+      val durationMs: Int
+      when (cue) {
+        "narrationEnded" -> {
+          toneType = ToneGenerator.TONE_PROP_PROMPT
+          durationMs = 200
+        }
+        "listeningEnded" -> {
+          toneType = ToneGenerator.TONE_PROP_BEEP2
+          durationMs = 270
+        }
+        else -> {
+          promise.reject("INVALID_CUE", "Unknown conversation turn cue")
+          return@runOnMain
+        }
+      }
+      val audio = reactContext.getSystemService(Context.AUDIO_SERVICE) as AudioManager
+      val notifications = reactContext.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+      val keyguard = reactContext.getSystemService(Context.KEYGUARD_SERVICE) as KeyguardManager
+      if (
+        activeRequestId != null ||
+        !reactContext.hasCurrentActivity() ||
+        reactContext.lifecycleState != LifecycleState.RESUMED ||
+        keyguard.isDeviceLocked ||
+        audio.ringerMode != AudioManager.RINGER_MODE_NORMAL ||
+        audio.isStreamMute(AudioManager.STREAM_MUSIC) ||
+        audio.getStreamVolume(AudioManager.STREAM_MUSIC) == 0 ||
+        notifications.currentInterruptionFilter != NotificationManager.INTERRUPTION_FILTER_ALL
+      ) {
+        promise.resolve(false)
+        return@runOnMain
+      }
+      finishTurnCue(false)
+      val generator = ToneGenerator(AudioManager.STREAM_MUSIC, 45)
+      if (!generator.startTone(toneType, durationMs)) {
+        generator.release()
+        promise.reject("CUE_PLAYBACK_FAILED", "Unable to start conversation turn cue")
+        return@runOnMain
+      }
+      cueGenerator = generator
+      cuePromise = promise
+      cueCompletion = Runnable { finishTurnCue(true) }.also {
+        mainHandler.postDelayed(it, durationMs + 40L)
+      }
+    }
+  }
+
+  override fun cancelTurnCue(promise: Promise) {
+    runOnMain(promise) {
+      finishTurnCue(false)
+      promise.resolve(null)
+    }
+  }
+
+  private fun finishTurnCue(completed: Boolean) {
+    cueCompletion?.let(mainHandler::removeCallbacks)
+    cueCompletion = null
+    cueGenerator?.stopTone()
+    cueGenerator?.release()
+    cueGenerator = null
+    cuePromise?.resolve(completed)
+    cuePromise = null
+  }
 
   override fun getCapability(locale: String, promise: Promise) {
     runOnMain(promise) {
@@ -99,6 +171,7 @@ class SpeechRecognitionModule(
 
   override fun start(requestId: String, locale: String, promise: Promise) {
     runOnMain(promise) {
+      finishTurnCue(false)
       if (activeRequestId != null) {
         promise.reject("RECOGNIZER_BUSY", "A speech recognition request is already active")
         return@runOnMain
@@ -355,18 +428,25 @@ class SpeechRecognitionModule(
 
   override fun onHostPause() {
     mainHandler.post {
+      finishTurnCue(false)
       activeRequestId?.let { emit(it, "cancelled") }
       clearActive(null, cancel = true)
     }
   }
 
   override fun onHostDestroy() {
-    mainHandler.post { clearActive(null, cancel = true) }
+    mainHandler.post {
+      finishTurnCue(false)
+      clearActive(null, cancel = true)
+    }
   }
 
   override fun invalidate() {
     reactContext.removeLifecycleEventListener(this)
-    mainHandler.post { clearActive(null, cancel = true) }
+    mainHandler.post {
+      finishTurnCue(false)
+      clearActive(null, cancel = true)
+    }
     super.invalidate()
   }
 

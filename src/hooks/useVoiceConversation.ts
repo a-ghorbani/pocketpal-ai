@@ -1,6 +1,10 @@
 import * as React from 'react';
 import {AppState} from 'react-native';
 
+import {
+  cancelConversationCue,
+  playConversationCue,
+} from '../services/conversationCues';
 import {ttsStore} from '../store';
 import {MessageType} from '../utils/types';
 import {useSpeechRecognition} from './useSpeechRecognition';
@@ -22,6 +26,14 @@ interface UseVoiceConversationOptions {
 
 const RETRY_DELAY_MS = 400;
 
+async function playCue(cue: 'listeningEnded' | 'narrationEnded') {
+  try {
+    await playConversationCue(cue);
+  } catch (error) {
+    console.warn('[useVoiceConversation] turn cue failed:', error);
+  }
+}
+
 export function useVoiceConversation({
   contextKey,
   recognitionEnabled,
@@ -39,6 +51,7 @@ export function useVoiceConversation({
   const activeContextRef = React.useRef<string | null>(null);
   const awaitingSessionCreationRef = React.useRef(false);
   const turnPendingRef = React.useRef(false);
+  const turnInProgressRef = React.useRef(false);
 
   const clearRetry = React.useCallback(() => {
     if (retryTimerRef.current) {
@@ -53,6 +66,7 @@ export function useVoiceConversation({
       activeRef.current = false;
       activeContextRef.current = null;
       awaitingSessionCreationRef.current = false;
+      cancelConversationCue();
       clearRetry();
       setActive(false);
       setPhase('off');
@@ -61,6 +75,7 @@ export function useVoiceConversation({
         onStopGeneration?.();
       }
       turnPendingRef.current = false;
+      turnInProgressRef.current = false;
     },
     [clearRetry, onStopGeneration],
   );
@@ -89,43 +104,61 @@ export function useVoiceConversation({
   );
 
   const handleFinalText = React.useCallback(
-    (text: string) => {
+    async (text: string) => {
       const epoch = epochRef.current;
-      if (!activeRef.current || !text.trim()) {
+      if (!activeRef.current || !text.trim() || turnInProgressRef.current) {
         return;
       }
+      turnInProgressRef.current = true;
       setPhase('responding');
-      turnPendingRef.current = true;
-      awaitingSessionCreationRef.current =
-        contextKey.startsWith('__new_chat__:');
-      onSendTranscript({
-        type: 'text',
-        text: text.trim(),
-        metadata: {voiceConversation: true},
-      })
-        .then(outcome => {
-          turnPendingRef.current = false;
-          awaitingSessionCreationRef.current = false;
-          if (
-            outcome === false ||
-            !activeRef.current ||
-            epochRef.current !== epoch ||
-            !ttsStore.conversationAutoSpeakEnabled
-          ) {
-            if (outcome === false && activeRef.current) {
-              deactivate(false);
-            }
-            return;
-          }
-          scheduleListening(epoch);
-        })
-        .catch(() => {
-          turnPendingRef.current = false;
-          awaitingSessionCreationRef.current = false;
-          if (activeRef.current && epochRef.current === epoch) {
-            deactivate(false);
-          }
+      try {
+        await playCue('listeningEnded');
+        if (!activeRef.current || epochRef.current !== epoch) {
+          return;
+        }
+        turnPendingRef.current = true;
+        awaitingSessionCreationRef.current =
+          contextKey.startsWith('__new_chat__:');
+        const outcome = await onSendTranscript({
+          type: 'text',
+          text: text.trim(),
+          metadata: {voiceConversation: true},
         });
+        if (
+          !activeRef.current ||
+          epochRef.current !== epoch ||
+          !ttsStore.conversationAutoSpeakEnabled
+        ) {
+          return;
+        }
+        turnPendingRef.current = false;
+        if (outcome === false) {
+          deactivate(false);
+          return;
+        }
+        if (
+          outcome !== null &&
+          typeof outcome === 'object' &&
+          'narration' in outcome &&
+          outcome.narration === 'completed'
+        ) {
+          await playCue('narrationEnded');
+        }
+        if (activeRef.current && epochRef.current === epoch) {
+          scheduleListening(epoch);
+        }
+      } catch (error) {
+        if (activeRef.current && epochRef.current === epoch) {
+          console.warn('[useVoiceConversation] spoken turn failed:', error);
+          deactivate(false);
+        }
+      } finally {
+        if (epochRef.current === epoch) {
+          turnPendingRef.current = false;
+          turnInProgressRef.current = false;
+          awaitingSessionCreationRef.current = false;
+        }
+      }
     },
     [contextKey, deactivate, onSendTranscript, scheduleListening],
   );
@@ -205,7 +238,9 @@ export function useVoiceConversation({
 
   React.useEffect(
     () => () => {
+      epochRef.current += 1;
       activeRef.current = false;
+      cancelConversationCue();
       clearRetry();
       ttsStore.setConversationAutoSpeak(false);
     },
@@ -223,6 +258,7 @@ export function useVoiceConversation({
     activeContextRef.current = contextKey;
     awaitingSessionCreationRef.current = false;
     turnPendingRef.current = false;
+    turnInProgressRef.current = false;
     ttsStore.setConversationAutoSpeak(true);
     setActive(true);
     setPhase('starting');

@@ -16,6 +16,8 @@ export interface Spec extends TurboModule {
   stop(requestId: string): Promise<void>;
   cancel(requestId: string): Promise<void>;
   requestModelDownload(locale: string): Promise<string>;
+  playTurnCue(cue: 'narrationEnded' | 'listeningEnded'): Promise<boolean>;
+  cancelTurnCue(): Promise<void>;
 }
 
 export default Platform.OS === 'android'

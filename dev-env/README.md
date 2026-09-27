@@ -9,6 +9,16 @@ This directory contains two dependency-free Python tools:
 
 ## Requirements
 
+Conversation-mode audio acceptance requires an Android 12+ physical device
+with installed on-device recognition and a selected PocketPal voice. The
+retained Android 11 emulator below cannot test hands-free recognition. On a
+supported device, check that a successful spoken turn yields a double blip
+after listening stops and a single beep after narration fully drains, before
+the next listening turn. Verify both system and neural voices, silence retries,
+audio skip, cancellation/background, media volume, silent/vibrate/DND, and
+headphone/Bluetooth routes; ensure the recognizer never captures a cue. Android
+builds and the automated smoke test do not establish audible timing.
+
 - Python 3.10 or newer
 - Docker Desktop or Docker Engine on x86-64 Linux
 - Hardware virtualization enabled

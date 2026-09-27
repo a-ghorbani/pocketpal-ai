@@ -6,6 +6,39 @@ import type {Engine, StreamingHandle, Voice} from '../../types';
 import {getSystemVoices} from './voices';
 
 const SYSTEM_SPEECH_DRAIN_TIMEOUT_MS = 120_000;
+const SYSTEM_SPEECH_START_TIMEOUT_MS = 1_000;
+
+async function waitForSystemSpeechDrain(
+  isCancelled: () => boolean,
+  hasFinished: () => boolean,
+  hasFailed: () => boolean,
+) {
+  const deadline = Date.now() + SYSTEM_SPEECH_DRAIN_TIMEOUT_MS;
+  const startupDeadline = Date.now() + SYSTEM_SPEECH_START_TIMEOUT_MS;
+  let observedSpeaking = false;
+  let consecutiveIdleChecks = 0;
+  while (!isCancelled() && consecutiveIdleChecks < 2) {
+    if (hasFailed()) {
+      throw new Error('System speech playback failed');
+    }
+    if (Date.now() >= deadline) {
+      throw new Error('System speech playback did not finish in time');
+    }
+    const speaking = await Speech.isSpeaking();
+    observedSpeaking ||= speaking || hasFinished();
+    consecutiveIdleChecks =
+      observedSpeaking && !speaking ? consecutiveIdleChecks + 1 : 0;
+    if (!observedSpeaking && Date.now() >= startupDeadline) {
+      throw new Error('System speech playback was not observed');
+    }
+    if (!isCancelled() && consecutiveIdleChecks < 2) {
+      await new Promise(resolve => setTimeout(resolve, 40));
+    }
+    if (hasFailed()) {
+      throw new Error('System speech playback failed');
+    }
+  }
+}
 
 /**
  * Thin wrapper around the OS native TTS path exposed by
@@ -13,6 +46,7 @@ const SYSTEM_SPEECH_DRAIN_TIMEOUT_MS = 120_000;
  */
 export class SystemEngine implements Engine {
   readonly id = 'system' as const;
+  private playbackVersion = 0;
 
   async isInstalled(): Promise<boolean> {
     return true;
@@ -34,7 +68,28 @@ export class SystemEngine implements Engine {
   }
 
   async play(text: string, voice: Voice): Promise<void> {
-    await ttsRuntime.acquire(this, () => Speech.speak(text, voice.id));
+    const version = ++this.playbackVersion;
+    let finished = false;
+    let failed = false;
+    const finishSubscription = Speech.onFinish(() => {
+      finished = true;
+    });
+    const errorSubscription = Speech.onError(() => {
+      failed = true;
+    });
+    try {
+      await ttsRuntime.acquire(this, async () => {
+        await Speech.speak(text, voice.id);
+        await waitForSystemSpeechDrain(
+          () => this.playbackVersion !== version,
+          () => finished,
+          () => failed,
+        );
+      });
+    } finally {
+      finishSubscription.remove();
+      errorSubscription.remove();
+    }
   }
 
   /**
@@ -52,38 +107,45 @@ export class SystemEngine implements Engine {
       waitFor,
     );
     let cancelled = false;
+    let finished = false;
+    let failed = false;
+    const finishSubscription = Speech.onFinish(() => {
+      finished = true;
+    });
+    const errorSubscription = Speech.onError(() => {
+      failed = true;
+    });
+    const removeListeners = () => {
+      finishSubscription.remove();
+      errorSubscription.remove();
+    };
     return {
       appendText: delegate.appendText,
       async finalize() {
-        await delegate.finalize();
-        const deadline = Date.now() + SYSTEM_SPEECH_DRAIN_TIMEOUT_MS;
-        const startupDeadline = Date.now() + 1_000;
-        let observedSpeaking = false;
-        let consecutiveIdleChecks = 0;
-        while (!cancelled && consecutiveIdleChecks < 2) {
-          if (Date.now() >= deadline) {
-            throw new Error('System speech playback did not finish in time');
-          }
-          const speaking = await Speech.isSpeaking();
-          observedSpeaking ||= speaking;
-          consecutiveIdleChecks =
-            observedSpeaking && !speaking ? consecutiveIdleChecks + 1 : 0;
-          if (!observedSpeaking && Date.now() >= startupDeadline) {
-            return;
-          }
-          if (!cancelled && consecutiveIdleChecks < 2) {
-            await new Promise(resolve => setTimeout(resolve, 40));
-          }
+        try {
+          await delegate.finalize();
+          await waitForSystemSpeechDrain(
+            () => cancelled,
+            () => finished,
+            () => failed,
+          );
+        } finally {
+          removeListeners();
         }
       },
       async cancel() {
         cancelled = true;
-        await delegate.cancel();
+        try {
+          await delegate.cancel();
+        } finally {
+          removeListeners();
+        }
       },
     };
   }
 
   async stop(): Promise<void> {
+    this.playbackVersion += 1;
     await Speech.stop();
   }
 }

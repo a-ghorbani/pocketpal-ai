@@ -175,10 +175,10 @@ export function useSpeechRecognition({
         ) {
           finalCommittedRef.current = true;
           const transcript = event.text?.trim();
+          reset();
           if (transcript) {
             onFinalText(appendTranscript(draftAtStartRef.current, transcript));
           }
-          reset();
         }
       },
     );

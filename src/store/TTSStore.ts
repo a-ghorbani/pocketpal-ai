@@ -174,6 +174,7 @@ export class TTSStore {
   private streamStripper: ThinkingStripper | null = null;
   private streamPlaceholderEmitted: boolean = false;
   private skippedMessageIds = new Set<string>();
+  private playbackRevision = 0;
 
   constructor() {
     makeAutoObservable(this, {}, {autoBind: true});
@@ -424,6 +425,7 @@ export class TTSStore {
   async stop(): Promise<void> {
     const state = this.playbackState;
     const voice = this.currentVoice;
+    this.playbackRevision += 1;
     runInAction(() => {
       this.playbackState = {mode: 'idle'};
     });
@@ -455,16 +457,19 @@ export class TTSStore {
   async stopForDictation(): Promise<void> {
     const state = this.playbackState;
     const voice = this.currentVoice;
+    const revision = ++this.playbackRevision;
     if (state.mode === 'streaming') {
       await state.handle.cancel();
     } else if (voice) {
       await getEngine(voice.engine).stop();
     }
-    runInAction(() => {
-      this.playbackState = {mode: 'idle'};
-    });
-    this.streamStripper = null;
-    this.streamPlaceholderEmitted = false;
+    if (this.playbackRevision === revision) {
+      runInAction(() => {
+        this.playbackState = {mode: 'idle'};
+      });
+      this.streamStripper = null;
+      this.streamPlaceholderEmitted = false;
+    }
   }
 
   /**
@@ -475,12 +480,20 @@ export class TTSStore {
     text: string,
     opts?: {hadReasoning?: boolean; voiceOverride?: Voice},
   ): Promise<void> {
+    await this.playWithOutcome(messageId, text, opts);
+  }
+
+  private async playWithOutcome(
+    messageId: string,
+    text: string,
+    opts?: {hadReasoning?: boolean; voiceOverride?: Voice},
+  ): Promise<TTSPlaybackOutcome> {
     if (!this.isTTSAvailable) {
-      return;
+      return 'none';
     }
     const voice = opts?.voiceOverride ?? this.currentVoice;
     if (!voice) {
-      return;
+      return 'none';
     }
 
     await this.stop();
@@ -492,7 +505,11 @@ export class TTSStore {
     const spokenText = hadNonEmptyThink
       ? `${pickThinkingPlaceholder()} ${cleanText}`
       : cleanText;
+    if (!spokenText.trim()) {
+      return 'none';
+    }
 
+    const revision = ++this.playbackRevision;
     runInAction(() => {
       this.playbackState = {mode: 'playing', messageId};
     });
@@ -507,14 +524,13 @@ export class TTSStore {
       } else {
         await engine.play(spokenText, voice);
       }
+      return this.playbackRevision === revision ? 'completed' : 'skipped';
     } catch (err) {
       console.warn('[TTSStore] play failed:', err);
+      return 'failed';
     } finally {
       runInAction(() => {
-        if (
-          this.playbackState.mode === 'playing' &&
-          this.playbackState.messageId === messageId
-        ) {
+        if (this.playbackRevision === revision) {
           this.playbackState = {mode: 'idle'};
         }
       });
@@ -613,6 +629,7 @@ export class TTSStore {
             inferenceSteps: this.supertonicSteps,
           })
         : engine.playStreaming(voice, stopDone);
+    this.playbackRevision += 1;
     runInAction(() => {
       this.playbackState = {mode: 'streaming', messageId, handle};
     });
@@ -666,6 +683,7 @@ export class TTSStore {
     }
     const state = this.playbackState;
     if (state.mode === 'streaming' && state.messageId === messageId) {
+      const revision = this.playbackRevision;
       const stripper = this.streamStripper;
       if (stripper != null) {
         const leftover = stripper.flush();
@@ -679,18 +697,18 @@ export class TTSStore {
       }
       try {
         await state.handle.finalize();
-        return this.skippedMessageIds.delete(messageId)
+        const skipped = this.skippedMessageIds.delete(messageId);
+        return skipped || this.playbackRevision !== revision
           ? 'skipped'
-          : 'completed';
+          : text.trim()
+            ? 'completed'
+            : 'none';
       } catch (err) {
         console.warn('[TTSStore] finalize failed:', err);
         return 'failed';
       } finally {
         runInAction(() => {
-          if (
-            this.playbackState.mode === 'streaming' &&
-            this.playbackState.messageId === messageId
-          ) {
+          if (this.playbackRevision === revision) {
             this.playbackState = {mode: 'idle'};
             // Only reset stripper if this message still owns it —
             // a new message may have already set its own stripper.
@@ -710,8 +728,10 @@ export class TTSStore {
       return messageId === this.lastSpokenMessageId ? 'skipped' : 'none';
     }
     this.lastSpokenMessageId = messageId;
-    await this.play(messageId, text, {hadReasoning: opts?.hadReasoning});
-    return this.skippedMessageIds.delete(messageId) ? 'skipped' : 'completed';
+    const outcome = await this.playWithOutcome(messageId, text, {
+      hadReasoning: opts?.hadReasoning,
+    });
+    return this.skippedMessageIds.delete(messageId) ? 'skipped' : outcome;
   }
 
   // --- Per-engine download actions --------------------------------------

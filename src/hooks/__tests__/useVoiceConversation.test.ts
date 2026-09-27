@@ -1,14 +1,24 @@
 import {act, renderHook} from '@testing-library/react-native';
 
 import {ttsStore} from '../../store';
+import {
+  cancelConversationCue,
+  playConversationCue,
+} from '../../services/conversationCues';
 import {useSpeechRecognition} from '../useSpeechRecognition';
 import {useVoiceConversation} from '../useVoiceConversation';
 
 jest.mock('../useSpeechRecognition', () => ({
   useSpeechRecognition: jest.fn(),
 }));
+jest.mock('../../services/conversationCues', () => ({
+  playConversationCue: jest.fn().mockResolvedValue(undefined),
+  cancelConversationCue: jest.fn(),
+}));
 
 const mockUseSpeechRecognition = useSpeechRecognition as jest.Mock;
+const mockPlayCue = playConversationCue as jest.Mock;
+const mockCancelCue = cancelConversationCue as jest.Mock;
 
 describe('useVoiceConversation', () => {
   const recognition = {
@@ -32,6 +42,10 @@ describe('useVoiceConversation', () => {
 
   beforeEach(() => {
     jest.useFakeTimers();
+    jest.clearAllMocks();
+    mockPlayCue.mockResolvedValue(undefined);
+    recognition.start.mockResolvedValue(undefined);
+    recognition.cancel.mockResolvedValue(undefined);
     mockUseSpeechRecognition.mockReturnValue(recognition);
     (ttsStore as any).deviceMeetsMemory = true;
     (ttsStore as any).userTTSOverride = null;
@@ -69,6 +83,8 @@ describe('useVoiceConversation', () => {
       await Promise.resolve();
     });
 
+    expect(mockPlayCue).toHaveBeenCalledWith('listeningEnded');
+    expect(mockPlayCue).not.toHaveBeenCalledWith('narrationEnded');
     expect(onSendTranscript).toHaveBeenCalledWith({
       type: 'text',
       text: 'hello',
@@ -104,7 +120,7 @@ describe('useVoiceConversation', () => {
     expect(onStopGeneration).not.toHaveBeenCalled();
   });
 
-  it('microphone stop exits conversation and cancels generation', () => {
+  it('microphone stop exits conversation and cancels generation', async () => {
     const onStopGeneration = jest.fn();
     const {result} = renderHook(() =>
       useVoiceConversation({
@@ -116,16 +132,19 @@ describe('useVoiceConversation', () => {
       }),
     );
 
-    act(() => {
+    await act(async () => {
       result.current.start();
       const options = mockUseSpeechRecognition.mock.calls.at(-1)[0];
       options.onFinalText('cancel this turn');
+      await Promise.resolve();
+      await Promise.resolve();
       result.current.stop();
     });
 
     expect(recognition.cancel).toHaveBeenCalled();
     expect(ttsStore.stop).toHaveBeenCalled();
     expect(onStopGeneration).toHaveBeenCalledTimes(1);
+    expect(mockCancelCue).toHaveBeenCalled();
   });
 
   it('retries ordinary silence without sending an empty message', () => {
@@ -151,6 +170,7 @@ describe('useVoiceConversation', () => {
 
     expect(recognition.start).toHaveBeenCalledTimes(2);
     expect(onSendTranscript).not.toHaveBeenCalled();
+    expect(mockPlayCue).not.toHaveBeenCalled();
   });
 
   it('keeps conversation active when the first spoken turn creates its session', async () => {
@@ -177,8 +197,10 @@ describe('useVoiceConversation', () => {
       result.current.start();
     });
     const options = mockUseSpeechRecognition.mock.calls.at(-1)[0];
-    act(() => {
+    await act(async () => {
       options.onFinalText('hello');
+      await Promise.resolve();
+      await Promise.resolve();
     });
     rerender({contextKey: 'session-1:pal-1:'});
 
@@ -192,4 +214,146 @@ describe('useVoiceConversation', () => {
     });
     expect(recognition.start).toHaveBeenCalledTimes(2);
   });
+
+  it('waits for a captured-speech cue before sending and suppresses a stale send', async () => {
+    let finishCue: () => void = () => {};
+    mockPlayCue.mockImplementationOnce(
+      () => new Promise<void>(resolve => (finishCue = resolve)),
+    );
+    const onSendTranscript = jest.fn().mockResolvedValue(true);
+    const {result} = renderHook(() =>
+      useVoiceConversation({
+        contextKey: 'chat-1',
+        recognitionEnabled: true,
+        onSendTranscript,
+        onOpenVoiceSetup: jest.fn(),
+      }),
+    );
+    act(() => {
+      result.current.start();
+      mockUseSpeechRecognition.mock.calls.at(-1)[0].onFinalText('hello');
+    });
+    expect(onSendTranscript).not.toHaveBeenCalled();
+    act(() => result.current.stop());
+    await act(async () => finishCue());
+    expect(onSendTranscript).not.toHaveBeenCalled();
+    expect(mockPlayCue).toHaveBeenCalledTimes(1);
+  });
+
+  it('ignores duplicate finals while the listening cue is still playing', async () => {
+    let finishCue: () => void = () => {};
+    mockPlayCue.mockImplementationOnce(
+      () => new Promise<void>(resolve => (finishCue = resolve)),
+    );
+    const onSendTranscript = jest.fn().mockResolvedValue(true);
+    const {result} = renderHook(() =>
+      useVoiceConversation({
+        contextKey: 'chat-1',
+        recognitionEnabled: true,
+        onSendTranscript,
+        onOpenVoiceSetup: jest.fn(),
+      }),
+    );
+    act(() => {
+      result.current.start();
+      const options = mockUseSpeechRecognition.mock.calls.at(-1)[0];
+      options.onFinalText('hello');
+      options.onFinalText('hello again');
+    });
+    expect(mockPlayCue).toHaveBeenCalledTimes(1);
+    await act(async () => {
+      finishCue();
+      await Promise.resolve();
+    });
+    expect(onSendTranscript).toHaveBeenCalledTimes(1);
+  });
+
+  it('plays the narration cue only after completed playback and before listening again', async () => {
+    let finishNarration: () => void = () => {};
+    mockPlayCue.mockImplementationOnce(() => Promise.resolve());
+    mockPlayCue.mockImplementationOnce(
+      () => new Promise<void>(resolve => (finishNarration = resolve)),
+    );
+    const {result} = renderHook(() =>
+      useVoiceConversation({
+        contextKey: 'chat-1',
+        recognitionEnabled: true,
+        onSendTranscript: jest.fn().mockResolvedValue({narration: 'completed'}),
+        onOpenVoiceSetup: jest.fn(),
+      }),
+    );
+    act(() => {
+      result.current.start();
+      mockUseSpeechRecognition.mock.calls.at(-1)[0].onFinalText('hello');
+    });
+    await act(async () => {
+      await Promise.resolve();
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+    expect(mockPlayCue.mock.calls.map(call => call[0])).toEqual([
+      'listeningEnded',
+      'narrationEnded',
+    ]);
+    act(() => jest.advanceTimersByTime(400));
+    expect(recognition.start).toHaveBeenCalledTimes(1);
+    await act(async () => finishNarration());
+    act(() => jest.advanceTimersByTime(400));
+    expect(recognition.start).toHaveBeenCalledTimes(2);
+  });
+
+  it('stops a pending narration cue without reopening the microphone', async () => {
+    let finishNarration: () => void = () => {};
+    mockPlayCue.mockImplementationOnce(() => Promise.resolve());
+    mockPlayCue.mockImplementationOnce(
+      () => new Promise<void>(resolve => (finishNarration = resolve)),
+    );
+    const {result} = renderHook(() =>
+      useVoiceConversation({
+        contextKey: 'chat-1',
+        recognitionEnabled: true,
+        onSendTranscript: jest.fn().mockResolvedValue({narration: 'completed'}),
+        onOpenVoiceSetup: jest.fn(),
+      }),
+    );
+    act(() => {
+      result.current.start();
+      mockUseSpeechRecognition.mock.calls.at(-1)[0].onFinalText('hello');
+    });
+    await act(async () => {
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+    act(() => result.current.stop());
+    await act(async () => finishNarration());
+    act(() => jest.advanceTimersByTime(400));
+    expect(mockCancelCue).toHaveBeenCalled();
+    expect(recognition.start).toHaveBeenCalledTimes(1);
+  });
+
+  it.each(['skipped', 'failed', 'none'])(
+    'does not play a narration cue for %s playback',
+    async narration => {
+      const {result} = renderHook(() =>
+        useVoiceConversation({
+          contextKey: 'chat-1',
+          recognitionEnabled: true,
+          onSendTranscript: jest.fn().mockResolvedValue({narration}),
+          onOpenVoiceSetup: jest.fn(),
+        }),
+      );
+      act(() => {
+        result.current.start();
+        mockUseSpeechRecognition.mock.calls.at(-1)[0].onFinalText('hello');
+      });
+      await act(async () => {
+        await Promise.resolve();
+        await Promise.resolve();
+      });
+      expect(mockPlayCue).toHaveBeenCalledTimes(1);
+      expect(mockPlayCue).toHaveBeenCalledWith('listeningEnded');
+      act(() => jest.advanceTimersByTime(400));
+      expect(recognition.start).toHaveBeenCalledTimes(2);
+    },
+  );
 });
