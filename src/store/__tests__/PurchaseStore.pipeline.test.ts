@@ -2,6 +2,9 @@ import {Platform} from 'react-native';
 import {runInAction} from 'mobx';
 
 import {LEDGER_KEY, PurchaseStore} from '../PurchaseStore';
+import * as RNIap from 'react-native-iap';
+
+import {NativeStore} from '../../services/iap/NativeStore';
 import {
   PAL_ID,
   PRODUCT,
@@ -421,6 +424,69 @@ describe('PurchaseStore pipeline', () => {
 
       expect(h.log.slice(0, 2)).toEqual(['write:granted', 'finish:tx-1']);
       expect(h.store.finish).toHaveBeenCalledTimes(1);
+    });
+  });
+
+  describe('Android against react-native-iap', () => {
+    const iap = RNIap as unknown as Record<string, jest.Mock>;
+
+    const nativeTx = async () => {
+      iap.getAvailablePurchases.mockResolvedValueOnce([
+        {
+          id: 'GPA.9',
+          transactionId: 'GPA.9',
+          productId: PRODUCT,
+          purchaseState: 'purchased',
+          purchaseToken: 'token-9',
+          isAcknowledgedAndroid: false,
+          transactionDate: Date.now(),
+        },
+      ]);
+      const store = new NativeStore();
+      const [purchase] = await store.currentEntitlements();
+      return {store, purchase};
+    };
+
+    beforeEach(() => {
+      setOS('android');
+      iap.finishTransaction.mockClear();
+      iap.acknowledgePurchaseAndroid.mockClear();
+      iap.consumePurchaseAndroid.mockClear();
+    });
+
+    it.each(['removed', 'unfulfillable', 'revoked', 'invalid'] as const)(
+      'never calls finishTransaction after verify %s',
+      async status => {
+        const h = createHarness();
+        const {store, purchase} = await nativeTx();
+        h.purchases.setStore(store);
+        h.api.verify.mockResolvedValueOnce([result(status)]);
+
+        await h.purchases.processTransaction(purchase, {});
+        await settle(h);
+
+        expect(purchase.unfinished).toBe(true);
+        expect(iap.finishTransaction).toHaveBeenCalledTimes(0);
+        expect(iap.acknowledgePurchaseAndroid).toHaveBeenCalledTimes(0);
+        expect(iap.consumePurchaseAndroid).toHaveBeenCalledTimes(0);
+      },
+    );
+
+    it('calls finishTransaction once, non-consumable, after verify active', async () => {
+      const h = createHarness();
+      const {store, purchase} = await nativeTx();
+      h.purchases.setStore(store);
+
+      await h.purchases.processTransaction(purchase, {});
+      await h.purchases.processTransaction(purchase, {});
+      await settle(h);
+
+      expect(iap.finishTransaction).toHaveBeenCalledTimes(1);
+      expect(iap.finishTransaction).toHaveBeenCalledWith({
+        purchase: expect.objectContaining({id: 'GPA.9'}),
+        isConsumable: false,
+      });
+      expect(iap.consumePurchaseAndroid).toHaveBeenCalledTimes(0);
     });
   });
 
