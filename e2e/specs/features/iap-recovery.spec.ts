@@ -1,7 +1,8 @@
 /**
  * In-app purchase recovery: kill during verify, verify offline across a
- * restart, refund removal, creator content update, tombstones and a declined
- * pending payment, against the e2e FakeStore and the host mock server.
+ * restart, refund removal, opt-in creator updates (applied and declined),
+ * withdrawal, tombstones and a declined pending payment, against the e2e
+ * FakeStore and the host mock server.
  */
 
 import {expect} from '@wdio/globals';
@@ -9,6 +10,7 @@ import {expect} from '@wdio/globals';
 import {ChatPage} from '../../pages/ChatPage';
 import {DrawerPage} from '../../pages/DrawerPage';
 import {PalBuyPage} from '../../pages/PalBuyPage';
+import {SettingsPage} from '../../pages/SettingsPage';
 import {TIMEOUTS} from '../../fixtures/models';
 import {withinTestIdPrefix} from '../../helpers/selectors';
 import {saveFailureScreenshot} from '../../helpers/screenshots';
@@ -29,6 +31,7 @@ describe('In-app purchase recovery', () => {
   const chatPage = new ChatPage();
   const drawerPage = new DrawerPage();
   const buyPage = new PalBuyPage();
+  const settingsPage = new SettingsPage();
 
   const openPals = async () => {
     await chatPage.waitForReady(TIMEOUTS.appReady);
@@ -45,6 +48,25 @@ describe('In-app purchase recovery', () => {
     iapMockServer
       .requests()
       .filter(request => request.path === '/api/mobile/iap/verify').length;
+
+  const localCardTitled = (title: string) =>
+    browser.$(withinTestIdPrefix('local-pal-card-', title));
+
+  const waitForLocalTitle = async (title: string, timeout = 30000) => {
+    await buyPage.scrollToCard('local-pal-card-');
+    await localCardTitled(title).waitForDisplayed({timeout});
+  };
+
+  const buyWithPendingUpdate = async (id: string, title: string) => {
+    const {pal, products} = listPal(id);
+    await openPalsWith(openPals, {products});
+    await buyToOwned(pal.id);
+    iapMockServer.updatePal(pal.id, {title, contentVersion: 2});
+    await relaunchApp();
+    await openPals();
+    await waitForLocalTitle(pal.title);
+    return pal;
+  };
 
   const buyToOwned = async (palId: string) => {
     await buyPage.openPal(palId);
@@ -136,22 +158,84 @@ describe('In-app purchase recovery', () => {
     expect(verifyCount()).toBe(before);
   });
 
-  it('applies a creator update to an installed Pal', async () => {
-    const {pal, products} = listPal('iap-update');
-    await openPalsWith(openPals, {products});
-    await buyToOwned(pal.id);
+  it('applies a creator update only after the user confirms it', async () => {
+    await buyWithPendingUpdate('iap-update', 'E2E Updated Pal');
 
-    iapMockServer.updatePal(pal.id, {
-      title: 'E2E Updated Pal',
-      contentVersion: 2,
-    });
+    await buyPage.tapUpdateBadge();
+    await buyPage.tapUpdate();
+    await buyPage.confirmUpdate();
+    await buyPage.waitGone('pal-update-prompt');
+    await buyPage.closeSheet();
+
+    await waitForLocalTitle('E2E Updated Pal');
+    expect(await buyPage.hasUpdateBadge()).toBe(false);
+  });
+
+  it('keeps the installed version working when the user declines the update', async () => {
+    const pal = await buyWithPendingUpdate('iap-decline', 'E2E Declined Pal');
+
+    await buyPage.tapUpdateBadge();
+    await buyPage.tapUpdate();
+    await buyPage.cancelUpdate();
+    await buyPage.waitFor('pal-update-prompt');
+    await buyPage.closeSheet();
+
     await relaunchApp();
     await openPals();
+    await waitForLocalTitle(pal.title);
+    expect(await buyPage.hasUpdateBadge(30000)).toBe(true);
+    expect(await localCardTitled('E2E Declined Pal').isDisplayed()).toBe(false);
 
-    await buyPage.scrollToCard('local-pal-card-');
-    await browser
-      .$(withinTestIdPrefix('local-pal-card-', 'E2E Updated Pal'))
-      .waitForDisplayed({timeout: 30000});
+    await buyPage.tapUpdateBadge();
+    await buyPage.tapOwned();
+    if (await buyPage.isShown('model-step-download', 5000)) {
+      await buyPage.downloadModel();
+    }
+    await buyPage.waitFor('model-step-start-chat', 300000);
+  });
+
+  it('removes a withdrawn Pal and keeps its support code in Settings', async () => {
+    const {pal, products} = listPal('iap-withdraw');
+    await openPalsWith(openPals, {products});
+    await buyToOwned(pal.id);
+    await waitForLocalTitle(pal.title);
+
+    iapMockServer.withdraw(pal.id);
+    await relaunchApp();
+    await openPals();
+    await localCardTitled(pal.title).waitForDisplayed({
+      timeout: 30000,
+      reverse: true,
+    });
+
+    await relaunchApp();
+    await chatPage.waitForReady(TIMEOUTS.appReady);
+    await chatPage.openDrawer();
+    await drawerPage.navigateToSettings();
+    await settingsPage.waitForReady();
+    await buyPage.scrollToCard(`purchase-row-${pal.id}`);
+    const row = await buyPage.text(`purchase-row-${pal.id}`);
+    expect(row).toContain(
+      driver.isAndroid ? 'refunded' : 'no longer available',
+    );
+    expect(row).toContain('E2E-');
+  });
+
+  it('shows the withdrawn note when verify reports the purchase removed', async () => {
+    const {pal, products} = listPal('iap-withdrawn-verify');
+    iapMockServer.script({verify: ['removed']});
+    await openPalsWith(openPals, {products});
+    await buyPage.openPal(pal.id);
+
+    await buyPage.buy();
+    const note = await buyPage.text('purchase-unfulfillable', 60000);
+    expect(note).toContain(
+      driver.isAndroid ? 'refunded' : 'no longer available',
+    );
+    if (driver.isAndroid) {
+      expect(note).toContain('E2E-');
+    }
+    expect(await buyPage.isShown('buy-button', 1000)).toBe(false);
   });
 
   it('returns Buy after a declined pending payment', async () => {

@@ -5,7 +5,11 @@
 
 import {BasePage} from './BasePage';
 import {Gestures} from '../helpers/gestures';
-import {byTestId} from '../helpers/selectors';
+import {
+  byExactTestId,
+  byTestId,
+  testIdWithinPrefix,
+} from '../helpers/selectors';
 
 declare const browser: WebdriverIO.Browser;
 declare const driver: WebdriverIO.Browser;
@@ -101,6 +105,33 @@ export class PalBuyPage extends BasePage {
       await this.tap(byTestId('sheet-close-button'));
       await browser.pause(600);
     }
+  }
+
+  async tapUpdateBadge(timeout = 30000): Promise<void> {
+    await this.scrollToCard('local-pal-card-');
+    await this.tap(
+      testIdWithinPrefix('local-pal-card-', 'pal-badge-update'),
+      timeout,
+    );
+  }
+
+  async hasUpdateBadge(timeout = 3000): Promise<boolean> {
+    return this.isElementDisplayed(
+      testIdWithinPrefix('local-pal-card-', 'pal-badge-update'),
+      timeout,
+    );
+  }
+
+  async tapUpdate(timeout = 20000): Promise<void> {
+    await this.tap(byExactTestId('pal-update-button'), timeout);
+  }
+
+  async confirmUpdate(timeout = 20000): Promise<void> {
+    await this.tap(byExactTestId('pal-update-confirm'), timeout);
+  }
+
+  async cancelUpdate(timeout = 20000): Promise<void> {
+    await this.tap(byExactTestId('pal-update-cancel'), timeout);
   }
 
   async restoreFromList(timeout = 20000): Promise<void> {

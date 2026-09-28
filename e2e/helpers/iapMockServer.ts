@@ -28,6 +28,7 @@ export interface MockPal {
   productId: string;
   contentVersion: number;
   systemPrompt: string;
+  changeNote?: string;
   modelReference?: {
     repo_id: string;
     filename: string;
@@ -92,6 +93,7 @@ const apiPal = (pal: MockPal, withPrompt: boolean) => ({
   content_version: pal.contentVersion,
   model_reference: pal.modelReference,
   ...(withPrompt ? {system_prompt: pal.systemPrompt} : {}),
+  ...(pal.changeNote ? {change_note: pal.changeNote} : {}),
 });
 
 const REFRESH_MAX_KNOWN = 200;
@@ -152,6 +154,7 @@ class IapMockServer {
   private content = new Map<string, MockPal>();
   private issued = new Map<string, string>();
   private refunded = new Set<string>();
+  private withdrawn = new Set<string>();
   private verdicts = new Map<string, MockVerifyStatus>();
   pals: MockPal[] = [];
 
@@ -203,6 +206,11 @@ class IapMockServer {
         this.refunded.add(`${palId} ${ref}`);
       }
     });
+  }
+
+  /** An operator withdrawal: refresh reports the Pal as removed. */
+  withdraw(palId: string): void {
+    this.withdrawn.add(palId);
   }
 
   issuedRefs(): ReadonlySet<string> {
@@ -383,6 +391,7 @@ class IapMockServer {
     );
     const changed: unknown[] = [];
     const revoked: string[] = [];
+    const removed: string[] = [];
     const unchanged: string[] = [];
     for (const [palId, entry] of Object.entries(known)) {
       const pal = this.palById(palId);
@@ -390,7 +399,9 @@ class IapMockServer {
         continue;
       }
       const served = this.served(pal);
-      if (this.refunded.has(`${palId} ${entry.purchase_ref}`)) {
+      if (this.withdrawn.has(palId)) {
+        removed.push(palId);
+      } else if (this.refunded.has(`${palId} ${entry.purchase_ref}`)) {
         revoked.push(palId);
       } else if (
         proven.has(palId) &&
@@ -401,7 +412,7 @@ class IapMockServer {
         unchanged.push(palId);
       }
     }
-    this.send(res, 200, {changed, revoked, removed: [], unchanged});
+    this.send(res, 200, {changed, revoked, removed, unchanged});
   }
 }
 

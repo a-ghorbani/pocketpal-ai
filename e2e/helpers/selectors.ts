@@ -94,6 +94,26 @@ export const withinTestIdPrefix = (prefix: string, text: string): string => {
 };
 
 /**
+ * Exact testID match; byTestId matches any id that contains the given one.
+ */
+export const byExactTestId = (testId: string): string => {
+  if (isAndroid()) {
+    return `//*[@resource-id="${testId}"]`;
+  }
+  return `~${testId}`;
+};
+
+/**
+ * An element by exact testID inside the first element whose testID starts with prefix.
+ */
+export const testIdWithinPrefix = (prefix: string, testId: string): string => {
+  if (isAndroid()) {
+    return `//*[starts-with(@resource-id, "${prefix}")]//*[@resource-id="${testId}"]`;
+  }
+  return `-ios class chain:**/*[\`name BEGINSWITH "${prefix}"\`]/**/*[\`name == "${testId}"\`]`;
+};
+
+/**
  * Create selector for native text elements (TextView on Android, StaticText on iOS)
  * Useful for extracting rendered text from React Native components
  */
