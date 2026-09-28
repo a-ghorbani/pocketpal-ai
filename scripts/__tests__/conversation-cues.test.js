@@ -12,29 +12,29 @@ const native = fs.readFileSync(
 );
 
 describe('Android conversation turn cue contract', () => {
-  it('uses two full distinct patterns on the media stream', () => {
+  it('uses two explicit distinct PCM patterns on the media stream', () => {
     expect(native).toMatch(
-      /"narrationEnded"\s*->\s*\{[\s\S]*?TONE_PROP_PROMPT[\s\S]*?durationMs = 200/,
+      /"narrationEnded"\s*->\s*listOf\(ToneSegment\(880\.0, 150\)\)/,
     );
     expect(native).toMatch(
-      /"listeningEnded"\s*->\s*\{[\s\S]*?TONE_PROP_BEEP2[\s\S]*?durationMs = 270/,
+      /"listeningEnded"\s*->\s*listOf\([\s\S]*?ToneSegment\(1046\.5, 90\),[\s\S]*?ToneSegment\(0\.0, 55\),[\s\S]*?ToneSegment\(1318\.5, 105\)/,
     );
-    expect(native).toContain('ToneGenerator(AudioManager.STREAM_MUSIC, 45)');
-    expect(native).toContain('mainHandler.postDelayed(it, durationMs + 40L)');
+    expect(native).toContain('.setUsage(AudioAttributes.USAGE_MEDIA)');
+    expect(native).toContain('.setTransferMode(AudioTrack.MODE_STATIC)');
+    expect(native).toContain('CUE_AMPLITUDE = 0.7');
+    expect(native).toContain(
+      'mainHandler.postDelayed(it, cueAudio.durationMs + CUE_COMPLETION_GRACE_MS)',
+    );
   });
 
-  it('suppresses silent, muted, interrupted and active-recognizer cues', () => {
+  it('suppresses unavailable media and active-recognizer cues', () => {
     expect(native).toContain('activeRequestId != null');
-    expect(native).toContain(
-      'audio.ringerMode != AudioManager.RINGER_MODE_NORMAL',
-    );
     expect(native).toContain('audio.isStreamMute(AudioManager.STREAM_MUSIC)');
     expect(native).toContain(
       'audio.getStreamVolume(AudioManager.STREAM_MUSIC) == 0',
     );
-    expect(native).toContain(
-      'notifications.currentInterruptionFilter != NotificationManager.INTERRUPTION_FILTER_ALL',
-    );
+    expect(native).not.toContain('audio.ringerMode');
+    expect(native).not.toContain('currentInterruptionFilter');
     expect(native).toContain('finishTurnCue(false)');
   });
 });

@@ -16,8 +16,10 @@ supported device, check that a successful spoken turn yields a double blip
 after listening stops and a single beep after narration fully drains, before
 the next listening turn. Verify both system and neural voices, silence retries,
 audio skip, cancellation/background, media volume, silent/vibrate/DND, and
-headphone/Bluetooth routes; ensure the recognizer never captures a cue. Android
-builds and the automated smoke test do not establish audible timing.
+headphone/Bluetooth routes; cues should remain audible with nonzero media
+volume in silent/vibrate/DND modes, and the recognizer must never capture a
+cue. Android builds and the automated smoke test do not establish audible
+timing.
 
 - Python 3.10 or newer
 - Docker Desktop or Docker Engine on x86-64 Linux

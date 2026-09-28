@@ -2,12 +2,13 @@ package com.pocketpal
 
 import android.Manifest
 import android.app.KeyguardManager
-import android.app.NotificationManager
 import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
+import android.media.AudioAttributes
+import android.media.AudioFormat
 import android.media.AudioManager
-import android.media.ToneGenerator
+import android.media.AudioTrack
 import android.os.Build
 import android.os.Handler
 import android.os.Looper
@@ -28,6 +29,8 @@ import com.facebook.react.module.annotations.ReactModule
 import com.facebook.react.modules.core.DeviceEventManagerModule
 import com.pocketpal.specs.NativeSpeechRecognitionSpec
 import java.util.concurrent.Executor
+import kotlin.math.PI
+import kotlin.math.sin
 
 @ReactModule(name = NativeSpeechRecognitionSpec.NAME)
 class SpeechRecognitionModule(
@@ -39,7 +42,7 @@ class SpeechRecognitionModule(
   private var activeRequestId: String? = null
   private var captureTimeout: Runnable? = null
   private var resultTimeout: Runnable? = null
-  private var cueGenerator: ToneGenerator? = null
+  private var cueTrack: AudioTrack? = null
   private var cueCompletion: Runnable? = null
   private var cuePromise: Promise? = null
 
@@ -55,49 +58,78 @@ class SpeechRecognitionModule(
 
   override fun playTurnCue(cue: String, promise: Promise) {
     runOnMain(promise) {
-      val toneType: Int
-      val durationMs: Int
-      when (cue) {
-        "narrationEnded" -> {
-          toneType = ToneGenerator.TONE_PROP_PROMPT
-          durationMs = 200
-        }
-        "listeningEnded" -> {
-          toneType = ToneGenerator.TONE_PROP_BEEP2
-          durationMs = 270
-        }
-        else -> {
-          promise.reject("INVALID_CUE", "Unknown conversation turn cue")
-          return@runOnMain
-        }
+      val cueAudio = cueAudio(cue) ?: run {
+        promise.reject("INVALID_CUE", "Unknown conversation turn cue")
+        return@runOnMain
       }
       val audio = reactContext.getSystemService(Context.AUDIO_SERVICE) as AudioManager
-      val notifications = reactContext.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
       val keyguard = reactContext.getSystemService(Context.KEYGUARD_SERVICE) as KeyguardManager
       if (
         activeRequestId != null ||
         !reactContext.hasCurrentActivity() ||
         reactContext.lifecycleState != LifecycleState.RESUMED ||
         keyguard.isDeviceLocked ||
-        audio.ringerMode != AudioManager.RINGER_MODE_NORMAL ||
         audio.isStreamMute(AudioManager.STREAM_MUSIC) ||
-        audio.getStreamVolume(AudioManager.STREAM_MUSIC) == 0 ||
-        notifications.currentInterruptionFilter != NotificationManager.INTERRUPTION_FILTER_ALL
+        audio.getStreamVolume(AudioManager.STREAM_MUSIC) == 0
       ) {
         promise.resolve(false)
         return@runOnMain
       }
       finishTurnCue(false)
-      val generator = ToneGenerator(AudioManager.STREAM_MUSIC, 45)
-      if (!generator.startTone(toneType, durationMs)) {
-        generator.release()
-        promise.reject("CUE_PLAYBACK_FAILED", "Unable to start conversation turn cue")
-        return@runOnMain
-      }
-      cueGenerator = generator
-      cuePromise = promise
-      cueCompletion = Runnable { finishTurnCue(true) }.also {
-        mainHandler.postDelayed(it, durationMs + 40L)
+      var track: AudioTrack? = null
+      try {
+        track = AudioTrack.Builder()
+          .setAudioAttributes(
+            AudioAttributes.Builder()
+              .setUsage(AudioAttributes.USAGE_MEDIA)
+              .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION)
+              .build()
+          )
+          .setAudioFormat(
+            AudioFormat.Builder()
+              .setEncoding(AudioFormat.ENCODING_PCM_16BIT)
+              .setSampleRate(CUE_SAMPLE_RATE)
+              .setChannelMask(AudioFormat.CHANNEL_OUT_MONO)
+              .build()
+          )
+          .setBufferSizeInBytes(cueAudio.samples.size * Short.SIZE_BYTES)
+          .setTransferMode(AudioTrack.MODE_STATIC)
+          .build()
+        val written = track.write(
+          cueAudio.samples,
+          0,
+          cueAudio.samples.size,
+          AudioTrack.WRITE_BLOCKING
+        )
+        if (written != cueAudio.samples.size) {
+          track.release()
+          promise.reject("CUE_PLAYBACK_FAILED", "Unable to buffer conversation turn cue")
+          return@runOnMain
+        }
+        track.setNotificationMarkerPosition(cueAudio.samples.size)
+        track.setPlaybackPositionUpdateListener(
+          object : AudioTrack.OnPlaybackPositionUpdateListener {
+            override fun onMarkerReached(audioTrack: AudioTrack) {
+              finishTurnCue(true)
+            }
+
+            override fun onPeriodicNotification(audioTrack: AudioTrack) = Unit
+          },
+          mainHandler
+        )
+        cueTrack = track
+        cuePromise = promise
+        cueCompletion = Runnable { finishTurnCue(true) }.also {
+          mainHandler.postDelayed(it, cueAudio.durationMs + CUE_COMPLETION_GRACE_MS)
+        }
+        track.play()
+      } catch (error: Exception) {
+        cueCompletion?.let(mainHandler::removeCallbacks)
+        cueCompletion = null
+        cueTrack = null
+        cuePromise = null
+        track?.release()
+        promise.reject("CUE_PLAYBACK_FAILED", error.message, error)
       }
     }
   }
@@ -112,11 +144,50 @@ class SpeechRecognitionModule(
   private fun finishTurnCue(completed: Boolean) {
     cueCompletion?.let(mainHandler::removeCallbacks)
     cueCompletion = null
-    cueGenerator?.stopTone()
-    cueGenerator?.release()
-    cueGenerator = null
+    cueTrack?.let { track ->
+      if (track.playState == AudioTrack.PLAYSTATE_PLAYING) {
+        track.stop()
+      }
+      track.release()
+    }
+    cueTrack = null
     cuePromise?.resolve(completed)
     cuePromise = null
+  }
+
+  private fun cueAudio(cue: String): CueAudio? {
+    val segments = when (cue) {
+      "narrationEnded" -> listOf(ToneSegment(880.0, 150))
+      "listeningEnded" -> listOf(
+        ToneSegment(1046.5, 90),
+        ToneSegment(0.0, 55),
+        ToneSegment(1318.5, 105)
+      )
+      else -> return null
+    }
+    val samples = segments.flatMap { segment ->
+      val sampleCount = CUE_SAMPLE_RATE * segment.durationMs / 1000
+      val fadeSamples = minOf(CUE_FADE_SAMPLES, sampleCount / 2)
+      List(sampleCount) { index ->
+        if (segment.frequencyHz == 0.0) {
+          0
+        } else {
+          val envelope = when {
+            index < fadeSamples -> index.toDouble() / fadeSamples
+            index >= sampleCount - fadeSamples ->
+              (sampleCount - index - 1).toDouble() / fadeSamples
+            else -> 1.0
+          }
+          (
+            sin(2.0 * PI * segment.frequencyHz * index / CUE_SAMPLE_RATE) *
+              envelope *
+              Short.MAX_VALUE *
+              CUE_AMPLITUDE
+          ).toInt()
+        }
+      }
+    }.map(Int::toShort).toShortArray()
+    return CueAudio(samples, segments.sumOf(ToneSegment::durationMs).toLong())
   }
 
   override fun getCapability(locale: String, promise: Promise) {
@@ -454,5 +525,12 @@ class SpeechRecognitionModule(
     const val EVENT_NAME = "speechRecognitionEvent"
     private const val MAX_CAPTURE_MS = 60_000L
     private const val RESULT_TIMEOUT_MS = 10_000L
+    private const val CUE_SAMPLE_RATE = 44_100
+    private const val CUE_AMPLITUDE = 0.7
+    private const val CUE_FADE_SAMPLES = 220
+    private const val CUE_COMPLETION_GRACE_MS = 80L
   }
+
+  private data class CueAudio(val samples: ShortArray, val durationMs: Long)
+  private data class ToneSegment(val frequencyHz: Double, val durationMs: Int)
 }
