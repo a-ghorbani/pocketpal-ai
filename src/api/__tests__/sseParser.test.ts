@@ -166,11 +166,15 @@ describe('SSEParser', () => {
           ),
         ];
       } catch (error) {
+        const enumerableError = {...(error as SSEProtocolError)};
         expect(error).toMatchObject({
           name: 'SSEProtocolError',
           event: 'response.test',
           data: '{bad}',
         });
+        expect(Object.keys(error as SSEProtocolError)).not.toContain('data');
+        expect(enumerableError).not.toHaveProperty('data');
+        expect(JSON.stringify(error)).not.toContain('{bad}');
       }
     });
   });

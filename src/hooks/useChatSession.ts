@@ -49,6 +49,51 @@ import {
   type AgentEvent,
   type AgentUiState,
 } from '../services/agent';
+
+const SAFE_COMPLETION_ERROR_NAMES = new Set([
+  'AbortError',
+  'Error',
+  'EvalError',
+  'RangeError',
+  'ReferenceError',
+  'ResponsesStreamProtocolError',
+  'SSEProtocolError',
+  'SyntaxError',
+  'TypeError',
+  'URIError',
+]);
+const SAFE_COMPLETION_ERROR_CODES = new Set([
+  'invalid-completed-response',
+  'invalid-lifecycle',
+  'malformed-event',
+  'premature-eof',
+  'response-cancelled',
+  'response-error',
+  'response-failed',
+  'response-incomplete',
+  'unsupported-output',
+]);
+
+const completionErrorMetadata = (
+  error: unknown,
+): {name: string; code?: string} => {
+  if (typeof error !== 'object' || error === null) {
+    return {name: 'UnknownError'};
+  }
+
+  const {name, code} = error as {name?: unknown; code?: unknown};
+  const safeName =
+    typeof name === 'string' && SAFE_COMPLETION_ERROR_NAMES.has(name)
+      ? name
+      : 'UnknownError';
+  const safeCode =
+    typeof code === 'string' && SAFE_COMPLETION_ERROR_CODES.has(code)
+      ? code
+      : undefined;
+
+  return safeCode ? {name: safeName, code: safeCode} : {name: safeName};
+};
+
 // Helper function to prepare completion parameters using OpenAI-compatible
 // messages API. Creates the empty `assistant_turn` row up-front so the
 // active-vs-persisted predicate sees the right "last message" before the
@@ -762,7 +807,7 @@ export const useChatSession = (
         ? {narration: narration ?? 'none'}
         : true;
     } catch (error) {
-      console.error('Completion error:', error);
+      console.error('Completion error:', completionErrorMetadata(error));
       modelStore.setInferencing(false);
       modelStore.setIsStreaming(false);
       chatSessionStore.setIsGenerating(false);

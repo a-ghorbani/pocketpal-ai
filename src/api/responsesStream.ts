@@ -88,7 +88,12 @@ export class ResponsesStreamProtocolError extends Error {
     this.name = 'ResponsesStreamProtocolError';
     this.code = code;
     this.eventType = options.eventType;
-    this.partialResult = options.partialResult;
+    Object.defineProperty(this, 'partialResult', {
+      value: options.partialResult,
+      enumerable: false,
+      writable: false,
+      configurable: false,
+    });
   }
 }
 

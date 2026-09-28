@@ -1087,21 +1087,31 @@ describe('ResponsesStreamReducer', () => {
         content: [{type: 'output_text', text: 'partial'}],
       },
     });
-    expect(() =>
+    let thrown: unknown;
+    try {
       reducer.reduce({
         type: 'error',
         error: {
           message: 'server body must not leak',
           opaque_reasoning: 'must-not-appear',
         },
-      }),
-    ).toThrow(
-      expect.objectContaining({
-        code: 'response-error',
-        message: 'The Responses stream reported an error.',
-        partialResult: expect.objectContaining({content: 'partial'}),
-      }),
+      });
+    } catch (error) {
+      thrown = error;
+    }
+
+    expect(thrown).toBeInstanceOf(ResponsesStreamProtocolError);
+    const enumerableError = {...(thrown as ResponsesStreamProtocolError)};
+    expect(thrown).toMatchObject({
+      code: 'response-error',
+      message: 'The Responses stream reported an error.',
+      partialResult: expect.objectContaining({content: 'partial'}),
+    });
+    expect(Object.keys(thrown as ResponsesStreamProtocolError)).not.toContain(
+      'partialResult',
     );
+    expect(enumerableError).not.toHaveProperty('partialResult');
+    expect(JSON.stringify(thrown)).not.toContain('partial');
   });
 
   it('errors on EOF or DONE without a terminal event', () => {

@@ -104,10 +104,16 @@ describe('useChatSession', () => {
 
   it('should handle general errors during completion', async () => {
     const errorMessage = 'Some general error';
+    const completionError = Object.assign(new Error(errorMessage), {
+      code: 'premature-eof',
+      data: 'PRIVATE_RAW_SSE',
+      partialResult: {content: 'PRIVATE_PARTIAL_RESPONSE'},
+    });
+    const errorSpy = jest.spyOn(console, 'error').mockImplementation(() => {});
     if (modelStore.context) {
       modelStore.context.completion = jest
         .fn()
-        .mockRejectedValueOnce(new Error(errorMessage));
+        .mockRejectedValueOnce(completionError);
     }
 
     const {result} = renderHook(() =>
@@ -124,6 +130,15 @@ describe('useChatSession', () => {
         author: assistant,
       }),
     );
+    expect(errorSpy).toHaveBeenCalledWith('Completion error:', {
+      name: 'Error',
+      code: 'premature-eof',
+    });
+    const logged = JSON.stringify(errorSpy.mock.calls);
+    expect(logged).not.toContain(errorMessage);
+    expect(logged).not.toContain('PRIVATE_RAW_SSE');
+    expect(logged).not.toContain('PRIVATE_PARTIAL_RESPONSE');
+    errorSpy.mockRestore();
   });
 
   it('maps the speculative draft-context failure to friendly copy', async () => {

@@ -816,10 +816,7 @@ describe('useChatSession — AssistantTurn integration', () => {
     expect(execute).not.toHaveBeenCalled();
     expect(modelStore.context?.completion).toHaveBeenCalledTimes(1);
     expect(chatSessionStore.appendToolOutcome).not.toHaveBeenCalled();
-    expect(errorSpy).toHaveBeenCalledWith(
-      'Completion error:',
-      expect.objectContaining({message: 'atomic write failed'}),
-    );
+    expect(errorSpy).toHaveBeenCalledWith('Completion error:', {name: 'Error'});
 
     (talentRegistry as any).engines.delete('calculate');
     errorSpy.mockRestore();

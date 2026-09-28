@@ -63,13 +63,18 @@ export interface FramedSSEEvent<T = unknown> {
 
 export class SSEProtocolError extends Error {
   readonly event?: string;
-  readonly data: string;
+  readonly data!: string;
 
   constructor(message: string, data: string, event?: string) {
     super(message);
     this.name = 'SSEProtocolError';
     this.event = event;
-    this.data = data;
+    Object.defineProperty(this, 'data', {
+      value: data,
+      enumerable: false,
+      writable: false,
+      configurable: false,
+    });
   }
 }
 
