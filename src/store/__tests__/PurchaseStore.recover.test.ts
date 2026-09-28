@@ -70,17 +70,61 @@ describe('PurchaseStore recovery', () => {
       );
     });
 
-    it('Android: drives a purchase from the store list, never finishing', async () => {
+    it('Android: drives a purchase from the store list and acknowledges it once', async () => {
       setOS('android');
       const h = createHarness({records: [record('unlocking')]});
-      h.store.currentEntitlements.mockResolvedValue([androidTx()]);
+      h.store.currentEntitlements.mockResolvedValue([
+        androidTx({unfinished: true}),
+      ]);
 
       await h.purchases.recover();
       await h.purchases.drainQueue();
+      await h.purchases.recover();
 
       expect(h.purchases.recordFor(PAL_ID)?.status).toBe('active');
+      expect(h.store.finish).toHaveBeenCalledTimes(1);
+    });
+
+    it.each(['active', 'granted'] as const)(
+      'Android: acknowledges an unacknowledged purchase on a settled %s record',
+      async status => {
+        setOS('android');
+        const h = createHarness({records: [record(status)]});
+        h.store.currentEntitlements.mockResolvedValue([
+          androidTx({unfinished: true}),
+        ]);
+
+        await h.purchases.recover();
+
+        expect(h.store.finish).toHaveBeenCalledTimes(1);
+        expect(h.api.verify).not.toHaveBeenCalled();
+      },
+    );
+
+    it('Android: leaves an acknowledged settled purchase alone', async () => {
+      setOS('android');
+      const h = createHarness({records: [record('active')]});
+      h.store.currentEntitlements.mockResolvedValue([androidTx()]);
+
+      await h.purchases.recover();
+
       expect(h.store.finish).not.toHaveBeenCalled();
     });
+
+    it.each(['removed', 'unfulfillable'] as const)(
+      'Android: never acknowledges an unacknowledged purchase on a %s record',
+      async status => {
+        setOS('android');
+        const h = createHarness({records: [record(status)]});
+        h.store.currentEntitlements.mockResolvedValue([
+          androidTx({unfinished: true}),
+        ]);
+
+        await h.purchases.recover();
+
+        expect(h.store.finish).not.toHaveBeenCalled();
+      },
+    );
 
     it('iOS: installs a persisted grant offline and finishes without verifying', async () => {
       setOS('ios');

@@ -51,7 +51,9 @@ const toTransaction = (
         ? purchase.transactionId
         : undefined,
     state,
-    unfinished: false,
+    unfinished:
+      state === 'purchased' &&
+      !('isAcknowledgedAndroid' in purchase && purchase.isAcknowledgedAndroid),
     proof: {
       platform: 'android',
       productId: purchase.productId,
@@ -248,9 +250,6 @@ export class NativeStore implements StorePort {
   }
 
   async finish(tx: StoreTransaction): Promise<void> {
-    if (Platform.OS !== 'ios') {
-      return;
-    }
     await finishTransaction({
       purchase: tx.handle as Purchase,
       isConsumable: false,

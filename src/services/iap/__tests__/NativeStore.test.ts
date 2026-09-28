@@ -130,7 +130,7 @@ describe('NativeStore', () => {
         kind: 'purchased',
         tx: expect.objectContaining({
           transactionId: 'GPA.1',
-          unfinished: false,
+          unfinished: true,
           proof: {
             platform: 'android',
             productId: 'pal.a',
@@ -398,6 +398,24 @@ describe('NativeStore', () => {
       expect(tx.unfinished).toBe(true);
     });
 
+    it.each([
+      ['an unacknowledged purchase', {isAcknowledgedAndroid: false}, true],
+      ['an acknowledged purchase', {isAcknowledgedAndroid: true}, false],
+      [
+        'a pending purchase',
+        {isAcknowledgedAndroid: false, purchaseState: 'pending'},
+        false,
+      ],
+    ])(
+      'Android: marks %s unfinished only while it needs acknowledging',
+      async (_label, overrides, unfinished) => {
+        setOS('android');
+        iap.getAvailablePurchases.mockResolvedValueOnce([purchase(overrides)]);
+        const [tx] = await store.currentEntitlements();
+        expect(tx.unfinished).toBe(unfinished);
+      },
+    );
+
     it('has no unfinished list on Android', async () => {
       setOS('android');
       await expect(store.unfinished()).resolves.toEqual([]);
@@ -448,22 +466,14 @@ describe('NativeStore', () => {
       });
     });
 
-    it.each(['removed', 'unfulfillable', 'revoked', 'invalid'])(
-      'never finishes, acknowledges or consumes on Android after %s',
-      async () => {
-        setOS('android');
-        await store.finish({...tx, unfinished: false});
-        expect(iap.finishTransaction).not.toHaveBeenCalled();
-        expect(iap.acknowledgePurchaseAndroid).not.toHaveBeenCalled();
-        expect(iap.consumePurchaseAndroid).not.toHaveBeenCalled();
-      },
-    );
-
-    it('never finishes, acknowledges or consumes on Android', async () => {
+    it('acknowledges as non-consumable on Android and never consumes', async () => {
       setOS('android');
       await store.finish(tx);
-      expect(iap.finishTransaction).not.toHaveBeenCalled();
-      expect(iap.acknowledgePurchaseAndroid).not.toHaveBeenCalled();
+      expect(iap.finishTransaction).toHaveBeenCalledTimes(1);
+      expect(iap.finishTransaction).toHaveBeenCalledWith({
+        purchase: {id: 'tx-1'},
+        isConsumable: false,
+      });
       expect(iap.consumePurchaseAndroid).not.toHaveBeenCalled();
     });
   });

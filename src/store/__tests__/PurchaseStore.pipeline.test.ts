@@ -343,24 +343,84 @@ describe('PurchaseStore pipeline', () => {
   describe('Android', () => {
     beforeEach(() => setOS('android'));
 
+    it('acknowledges an active purchase once, after the grant is written', async () => {
+      const h = createHarness();
+      await h.purchases.processTransaction(tx(), {});
+      await settle(h);
+
+      expect(h.log.slice(0, 3)).toEqual([
+        'write:unlocking',
+        'write:granted',
+        'finish:tx-1',
+      ]);
+      expect(h.store.finish).toHaveBeenCalledTimes(1);
+    });
+
     it.each([
-      'active',
       'unfulfillable',
       'revoked',
       'removed',
       'invalid',
-    ] as const)('never finishes after verify %s', async status => {
+      'pending',
+      'failed',
+      'unavailable',
+    ] as const)('never acknowledges after verify %s', async status => {
       const h = createHarness();
       h.api.verify.mockResolvedValueOnce([result(status)]);
-      await h.purchases.processTransaction(tx({unfinished: false}), {});
+      await h.purchases.processTransaction(tx(), {});
       await settle(h);
       expect(h.store.finish).not.toHaveBeenCalled();
     });
 
-    it('never finishes a replayed settled transaction', async () => {
-      const h = createHarness({records: [record('granted')]});
-      await h.purchases.processTransaction(tx(), {});
+    it('never re-acknowledges an acknowledged purchase on an open record', async () => {
+      const h = createHarness({records: [record('unlocking')]});
+      await h.purchases.processTransaction(tx({unfinished: false}), {});
+      await settle(h);
+      expect(h.purchases.recordFor(PAL_ID)?.status).toBe('active');
       expect(h.store.finish).not.toHaveBeenCalled();
+    });
+
+    it('never acknowledges a pending purchase', async () => {
+      const h = createHarness();
+      await h.purchases.processTransaction(
+        tx({state: 'pending', unfinished: false}),
+        {},
+      );
+      expect(h.store.finish).not.toHaveBeenCalled();
+    });
+
+    it.each(['granted', 'active'] as const)(
+      'acknowledges an unacknowledged replay on a %s record once',
+      async status => {
+        const h = createHarness({records: [record(status)]});
+        await h.purchases.processTransaction(tx(), {});
+        await h.purchases.processTransaction(tx(), {});
+        expect(h.store.finish).toHaveBeenCalledTimes(1);
+      },
+    );
+
+    it('leaves an acknowledged replay alone', async () => {
+      const h = createHarness({records: [record('active')]});
+      await h.purchases.processTransaction(tx({unfinished: false}), {});
+      expect(h.store.finish).not.toHaveBeenCalled();
+    });
+
+    it.each(['removed', 'unfulfillable'] as const)(
+      'never acknowledges a replay on a %s record',
+      async status => {
+        const h = createHarness({records: [record(status)]});
+        await h.purchases.processTransaction(tx(), {});
+        expect(h.store.finish).not.toHaveBeenCalled();
+      },
+    );
+
+    it('acknowledges a revived tombstone after the grant is written', async () => {
+      const h = createHarness({records: [record('removed')]});
+      await h.purchases.processTransaction(tx(), {settledVerify: true});
+      await settle(h);
+
+      expect(h.log.slice(0, 2)).toEqual(['write:granted', 'finish:tx-1']);
+      expect(h.store.finish).toHaveBeenCalledTimes(1);
     });
   });
 
@@ -426,18 +486,22 @@ describe('PurchaseStore pipeline', () => {
   });
 
   describe('ordering and crashes', () => {
-    it('handles two deliveries of one transaction once', async () => {
-      const h = createHarness();
-      await Promise.all([
-        h.purchases.processTransaction(tx(), {settledVerify: true}),
-        h.purchases.processTransaction(tx(), {settledVerify: true}),
-      ]);
-      await settle(h);
+    it.each(['ios', 'android'] as const)(
+      '%s: handles two deliveries of one transaction once',
+      async os => {
+        setOS(os);
+        const h = createHarness();
+        await Promise.all([
+          h.purchases.processTransaction(tx(), {settledVerify: true}),
+          h.purchases.processTransaction(tx(), {settledVerify: true}),
+        ]);
+        await settle(h);
 
-      expect(h.palStore.installOwnedPal).toHaveBeenCalledTimes(1);
-      expect(h.store.finish).toHaveBeenCalledTimes(2);
-      expect(h.purchases.recordFor(PAL_ID)?.status).toBe('active');
-    });
+        expect(h.palStore.installOwnedPal).toHaveBeenCalledTimes(1);
+        expect(h.store.finish).toHaveBeenCalledTimes(1);
+        expect(h.purchases.recordFor(PAL_ID)?.status).toBe('active');
+      },
+    );
 
     it('waits for the Pal store to be ready', async () => {
       const h = createHarness();

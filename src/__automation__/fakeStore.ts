@@ -73,7 +73,7 @@ class FakeStore implements StorePort {
       transactionId:
         fake.state === 'purchased' ? fake.transactionId : undefined,
       state: fake.state,
-      unfinished: Platform.OS === 'ios' && fake.unfinished,
+      unfinished: fake.unfinished,
       proof:
         Platform.OS === 'ios'
           ? {
@@ -176,9 +176,6 @@ class FakeStore implements StorePort {
   }
 
   async finish(tx: StoreTransaction): Promise<void> {
-    if (Platform.OS !== 'ios') {
-      return;
-    }
     this.finished.push(String(tx.handle));
     this.state.owned = this.state.owned.map(fake =>
       fake.transactionId === tx.handle ? {...fake, unfinished: false} : fake,

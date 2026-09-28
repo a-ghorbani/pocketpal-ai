@@ -177,6 +177,7 @@ export class PurchaseStore {
     }
   >();
   readonly invalidTxIds = new Set<string>();
+  private readonly finishedTxs = new Set<string>();
 
   constructor(deps: PurchaseStoreDeps) {
     this.deps = deps;
@@ -200,6 +201,7 @@ export class PurchaseStore {
       | 'recoverAgain'
       | 'appStateSubscription'
       | 'retries'
+      | 'finishedTxs'
     >(this, {
       store: false,
       unsubscribeStore: false,
@@ -220,6 +222,7 @@ export class PurchaseStore {
       appStateSubscription: false,
       retries: false,
       invalidTxIds: false,
+      finishedTxs: false,
       storePort: false,
     });
     reaction(
@@ -538,14 +541,22 @@ export class PurchaseStore {
     return this.serialize(tx.productId, () => this.runTransaction(tx, opts));
   }
 
-  private async finishOnIOS(tx: StoreTransaction): Promise<void> {
-    if (Platform.OS !== 'ios') {
+  private async finish(tx: StoreTransaction): Promise<void> {
+    const key = txKey(tx);
+    if (this.finishedTxs.has(key)) {
       return;
     }
     try {
       await this.storePort.finish(tx);
+      this.finishedTxs.add(key);
     } catch (error) {
       console.warn('Finishing the transaction failed:', error);
+    }
+  }
+
+  private async finishOnIOS(tx: StoreTransaction): Promise<void> {
+    if (Platform.OS === 'ios') {
+      await this.finish(tx);
     }
   }
 
@@ -607,7 +618,9 @@ export class PurchaseStore {
     switch (result.status) {
       case 'active':
         await this.writeGrant(key, tx, result);
-        await this.finishOnIOS(tx);
+        if (tx.unfinished || Platform.OS === 'ios') {
+          await this.finish(tx);
+        }
         this.drainQueue().catch(() => {});
         return;
       case 'pending':
@@ -654,7 +667,10 @@ export class PurchaseStore {
     opts: ProcessOptions,
   ): Promise<void> {
     if (tx.unfinished) {
-      await this.finishOnIOS(tx);
+      const delivered =
+        tx.state === 'purchased' &&
+        (rec.status === 'active' || rec.status === 'granted');
+      await (delivered ? this.finish(tx) : this.finishOnIOS(tx));
     }
     if (rec.status === 'unfulfillable' || !opts.settledVerify) {
       return;
@@ -666,6 +682,9 @@ export class PurchaseStore {
     if (rec.status === 'removed') {
       if (result.status === 'active') {
         await this.writeGrant(rec.palId, tx, result);
+        if (tx.unfinished) {
+          await this.finish(tx);
+        }
         this.drainQueue().catch(() => {});
       }
       return;
@@ -1053,7 +1072,7 @@ export class PurchaseStore {
         continue;
       }
       const rec = this.recordForProduct(tx.productId);
-      if (!isSettled(rec?.status) || (Platform.OS === 'ios' && tx.unfinished)) {
+      if (!isSettled(rec?.status) || tx.unfinished) {
         await this.processTransaction(tx, {});
       }
     }

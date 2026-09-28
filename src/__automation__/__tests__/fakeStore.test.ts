@@ -129,12 +129,15 @@ describe('fakeStore', () => {
     await expect(fakeStore.currentEntitlements()).resolves.toEqual([]);
   });
 
-  it('never finishes on Android', async () => {
+  it('finishes on Android too', async () => {
     setOS('android');
     await fakeStore.purchase('pal.a', null);
     const [tx] = await fakeStore.currentEntitlements();
+    expect(tx.unfinished).toBe(true);
     await fakeStore.finish(tx);
-    expect(fakeStore.finished).toEqual([]);
+    expect(fakeStore.finished).toEqual([String(tx.handle)]);
+    const [after] = await fakeStore.currentEntitlements();
+    expect(after.unfinished).toBe(false);
   });
 
   it('entitles, refunds and seeds unfinished transactions', async () => {
