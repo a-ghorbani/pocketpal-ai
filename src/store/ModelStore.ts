@@ -27,6 +27,7 @@ import {
 import {uiStore, hfStore} from '.';
 import {serverStore} from './ServerStore';
 import {chatSessionStore} from './ChatSessionStore';
+import {startupSelectionStore} from './StartupSelectionStore';
 import {
   draftCacheDefaults,
   effectiveDraftModeOf,
@@ -261,6 +262,7 @@ class ModelStore {
   // Projection models orphaned by the vision heal, awaiting deletion; drained
   // every launch (see drainPendingProjectionCleanup).
   pendingProjectionCleanupIds: string[] = [];
+  initializationComplete: boolean = false;
 
   constructor() {
     makeAutoObservable(this, {
@@ -287,10 +289,19 @@ class ModelStore {
         'pendingProjectionCleanupIds',
       ],
       storage: AsyncStorage,
-    }).then(async () => {
-      await this.initializeThreadCount();
-      this.initializeStore();
-    });
+    })
+      .then(async () => {
+        await this.initializeThreadCount();
+        await this.initializeStore();
+      })
+      .catch(error => {
+        console.error('Failed to initialize ModelStore:', error);
+      })
+      .finally(() => {
+        runInAction(() => {
+          this.initializationComplete = true;
+        });
+      });
 
     this.setupAppStateListener();
 
@@ -2386,6 +2397,7 @@ class ModelStore {
         this.activeRemoteBinding = undefined;
         this.activeContextSettings = contextInitParams;
         this.setActiveModel(model.id);
+        this.lastUsedModelId = model.id;
         this.pendingModelId = null;
       });
 
@@ -2432,10 +2444,6 @@ class ModelStore {
       });
 
       throw error;
-    } finally {
-      runInAction(() => {
-        this.lastUsedModelId = model.id;
-      });
     }
   }
 
@@ -2786,11 +2794,25 @@ class ModelStore {
    * - Remote models: calls setRemoteModel()
    * - Local models: calls initContext()
    */
-  selectModel = async (model: Model): Promise<void> => {
+  selectModel = async (
+    model: Model,
+    options: {rememberForStartup?: boolean} = {},
+  ): Promise<void> => {
     if (model.origin === ModelOrigin.REMOTE) {
       await this.setRemoteModel(model);
     } else {
       await this.initContext(model);
+    }
+
+    if (
+      options.rememberForStartup &&
+      this.activeModelId === model.id &&
+      this.engine
+    ) {
+      const server = model.serverId
+        ? serverStore.servers.find(candidate => candidate.id === model.serverId)
+        : undefined;
+      startupSelectionStore.rememberModel(model, server);
     }
   };
 

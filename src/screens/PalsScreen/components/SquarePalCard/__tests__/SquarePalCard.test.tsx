@@ -299,7 +299,9 @@ describe('SquarePalCard', () => {
       });
 
       await waitFor(() => {
-        expect(chatSessionStore.setActivePal).toHaveBeenCalledWith(pal.id);
+        expect(chatSessionStore.setActivePal).toHaveBeenCalledWith(pal.id, {
+          rememberForStartup: true,
+        });
         expect(mockNavigate).toHaveBeenCalledWith('Chat');
       });
     });

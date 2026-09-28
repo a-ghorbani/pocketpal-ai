@@ -34,7 +34,7 @@ export const ModelNotLoadedMessage: React.FC = () => {
   const loadModelDirectly = () => {
     if (lastUsedModel) {
       modelStore
-        .selectModel(lastUsedModel)
+        .selectModel(lastUsedModel, {rememberForStartup: true})
         .then(() => {
           console.log('initialized');
         })

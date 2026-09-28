@@ -53,7 +53,7 @@ import {t} from '../../locales';
 import {getModelMemoryRequirement} from '../../utils/memoryEstimator';
 import {CONTEXT_LADDER} from '../../utils/bannerVariantResolver';
 
-import {chatSessionStore, modelStore} from '../../store';
+import {chatSessionStore, modelStore, startupSelectionStore} from '../../store';
 
 import {MessageType, User} from '../../utils/types';
 import {Pal} from '../../types/pal';
@@ -392,6 +392,12 @@ export const ChatView = observer(
     // devices/n_gpu_layers via initContext's "already loaded → skip" path.
     React.useEffect(() => {
       if (modelStore.benchmarkActive) {
+        return;
+      }
+      if (
+        startupSelectionStore.isRestoring ||
+        startupSelectionStore.suppressPalDefaultAutoLoad
+      ) {
         return;
       }
       if (activePal) {

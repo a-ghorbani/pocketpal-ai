@@ -20,8 +20,10 @@ import {
   chatSessionStore,
   palStore,
   serverStore,
+  startupSelectionStore,
   uiStore,
 } from '../../store';
+import {restoreStartupSelection} from '../../services/startupSelection';
 import {hasVideoCapability} from '../../utils/pal-capabilities';
 
 import {L10nContext} from '../../utils';
@@ -58,6 +60,20 @@ export const ChatScreen: React.FC = observer(() => {
     sessionId: string;
   } | null>(null);
   const l10n = React.useContext(L10nContext);
+  const startupStoresReady =
+    startupSelectionStore.hydrationComplete &&
+    modelStore.initializationComplete &&
+    serverStore.initializationComplete &&
+    palStore.migrationComplete &&
+    chatSessionStore.migrationComplete;
+
+  React.useEffect(() => {
+    if (startupStoresReady) {
+      restoreStartupSelection().catch(error => {
+        console.error('[StartupSelection] Failed to restore selection:', error);
+      });
+    }
+  }, [startupStoresReady]);
 
   const activePalId = chatSessionStore.activePalId;
   const activePal = activePalId

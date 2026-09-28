@@ -1,0 +1,16 @@
+export const mockStartupSelectionStore = {
+  hasPalPreference: false,
+  palId: undefined,
+  modelSelection: undefined,
+  hydrationComplete: false,
+  restoreAttempted: false,
+  isRestoring: false,
+  suppressPalDefaultAutoLoad: false,
+  rememberPal: jest.fn(),
+  clearPalPreference: jest.fn(),
+  rememberModel: jest.fn(),
+  clearModelPreference: jest.fn(),
+  markRestoreStarted: jest.fn(),
+  markRestoreFinished: jest.fn(),
+  markModelRestoreFailed: jest.fn(),
+};

@@ -1,6 +1,7 @@
 jest.unmock('../ChatSessionStore'); // this is not really needed, as only importing from store is mocked.
 
 import {chatSessionStore, defaultCompletionSettings} from '../ChatSessionStore';
+import {startupSelectionStore} from '../StartupSelectionStore';
 import {chatSessionRepository} from '../../repositories/ChatSessionRepository';
 
 import {MessageType} from '../../utils/types';
@@ -1422,6 +1423,20 @@ describe('chatSessionStore', () => {
       await chatSessionStore.setActivePal('pal2');
 
       expect(chatSessionStore.newChatPalId).toBe('pal2');
+    });
+
+    it('remembers only explicitly designated Pal choices for startup', async () => {
+      startupSelectionStore.hasPalPreference = false;
+      startupSelectionStore.palId = undefined;
+
+      await chatSessionStore.setActivePal('pal1');
+      expect(startupSelectionStore.hasPalPreference).toBe(false);
+
+      await chatSessionStore.setActivePal(undefined, {
+        rememberForStartup: true,
+      });
+      expect(startupSelectionStore.hasPalPreference).toBe(true);
+      expect(startupSelectionStore.palId).toBeUndefined();
     });
 
     it('preserves active pal ID when resetting active session', () => {

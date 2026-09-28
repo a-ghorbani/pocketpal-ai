@@ -270,7 +270,9 @@ export const SquarePalCard: React.FC<SquarePalCardProps> = observer(
     // 3-step pal activation logic from ChatPalModelPickerSheet
     const activatePalAndNavigate = async (localPal: Pal) => {
       // Step 1: Set the pal as active
-      await chatSessionStore.setActivePal(localPal.id);
+      await chatSessionStore.setActivePal(localPal.id, {
+        rememberForStartup: true,
+      });
 
       // Step 2 & 3: Handle model loading logic
       if (localPal.defaultModel) {
@@ -280,7 +282,9 @@ export const SquarePalCard: React.FC<SquarePalCardProps> = observer(
             m => m.id === localPal.defaultModel?.id,
           );
           if (palDefaultModel) {
-            await modelStore.selectModel(palDefaultModel);
+            await modelStore.selectModel(palDefaultModel, {
+              rememberForStartup: true,
+            });
           }
         } else if (localPal.defaultModel.id !== modelStore.activeModelId) {
           // Step 3: Different model loaded, ask user
@@ -296,7 +300,9 @@ export const SquarePalCard: React.FC<SquarePalCardProps> = observer(
                 {
                   text: 'Switch',
                   onPress: () => {
-                    modelStore.selectModel(palDefaultModel);
+                    modelStore.selectModel(palDefaultModel, {
+                      rememberForStartup: true,
+                    });
                   },
                 },
               ],

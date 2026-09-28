@@ -247,7 +247,9 @@ describe('SystemPromptSection', () => {
     fireEvent.press(getByText('Generate System Prompt'));
 
     await waitFor(() => {
-      expect(modelStore.selectModel).toHaveBeenCalledWith(modelsList[1]);
+      expect(modelStore.selectModel).toHaveBeenCalledWith(modelsList[1], {
+        rememberForStartup: true,
+      });
     });
   });
 

@@ -145,9 +145,9 @@ export const ChatPalModelPickerSheet = observer(
     const handleModelSelect = React.useCallback(
       async (model: (typeof modelStore.availableModels)[0]) => {
         try {
+          await modelStore.selectModel(model, {rememberForStartup: true});
           onModelSelect?.(model.id);
           onClose();
-          modelStore.selectModel(model);
         } catch (e) {
           console.log(`Error: ${e}`);
         }
@@ -157,7 +157,9 @@ export const ChatPalModelPickerSheet = observer(
 
     const handlePalSelect = React.useCallback(
       async (pal: (typeof palStore.pals)[0] | undefined) => {
-        await chatSessionStore.setActivePal(pal?.id);
+        await chatSessionStore.setActivePal(pal?.id, {
+          rememberForStartup: true,
+        });
         if (
           pal?.defaultModel &&
           modelStore.activeModel &&
@@ -179,8 +181,17 @@ export const ChatPalModelPickerSheet = observer(
                 },
                 {
                   text: l10n.components.chatPalModelPickerSheet.switchButton,
-                  onPress: () => {
-                    modelStore.selectModel(palDefaultModel);
+                  onPress: async () => {
+                    try {
+                      await modelStore.selectModel(palDefaultModel, {
+                        rememberForStartup: true,
+                      });
+                    } catch (error) {
+                      console.error(
+                        'Failed to switch to Pal default model:',
+                        error,
+                      );
+                    }
                   },
                 },
               ],

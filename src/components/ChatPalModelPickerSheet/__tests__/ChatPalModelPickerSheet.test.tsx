@@ -246,7 +246,10 @@ describe('ChatPalModelPickerSheet', () => {
     await waitFor(() => {
       expect(defaultProps.onModelSelect).toHaveBeenCalledWith('model1');
       expect(defaultProps.onClose).toHaveBeenCalled();
-      expect(modelStore.selectModel).toHaveBeenCalled();
+      expect(modelStore.selectModel).toHaveBeenCalledWith(
+        expect.objectContaining({id: 'model1'}),
+        {rememberForStartup: true},
+      );
     });
   });
 
@@ -270,7 +273,9 @@ describe('ChatPalModelPickerSheet', () => {
     fireEvent.press(palItem);
 
     await waitFor(() => {
-      expect(chatSessionStore.setActivePal).toHaveBeenCalledWith('pal1');
+      expect(chatSessionStore.setActivePal).toHaveBeenCalledWith('pal1', {
+        rememberForStartup: true,
+      });
       expect(defaultProps.onPalSelect).toHaveBeenCalledWith('pal1');
       expect(defaultProps.onClose).toHaveBeenCalled();
     });

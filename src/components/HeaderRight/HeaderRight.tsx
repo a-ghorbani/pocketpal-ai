@@ -57,7 +57,7 @@ export const HeaderRight: React.FC = observer(() => {
   );
 
   const onSelectModel = (model: Model) => {
-    modelStore.selectModel(model);
+    modelStore.selectModel(model, {rememberForStartup: true});
     closeMenu();
   };
 

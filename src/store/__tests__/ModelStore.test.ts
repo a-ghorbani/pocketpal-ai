@@ -29,7 +29,7 @@ import {
 } from '../../../jest/fixtures/models';
 import * as RNFS from '@dr.pogodin/react-native-fs';
 
-import {modelStore, uiStore, serverStore} from '..';
+import {modelStore, uiStore, serverStore, startupSelectionStore} from '..';
 import {LOOKIE_DEFAULT_MODEL} from '../builtinPalModels';
 import {classify} from '../../services/deviceRules/classify';
 import {getVisionModelSizeBreakdown} from '../../utils/multimodalHelpers';
@@ -2219,6 +2219,42 @@ describe('ModelStore', () => {
       modelStore.lastUsedModelId = model.id;
 
       expect(modelStore.lastUsedModel).toEqual(model);
+    });
+  });
+
+  describe('startup model preference', () => {
+    it('remembers an explicitly selected model only after activation succeeds', async () => {
+      const model = {...presetModelFixture, isDownloaded: true};
+      modelStore.models = [model];
+      modelStore.activeModelId = model.id;
+      modelStore.context = new LlamaContext(mockLlamaContextParams);
+      modelStore.engine = {} as any;
+      startupSelectionStore.modelSelection = undefined;
+
+      await modelStore.selectModel(model, {rememberForStartup: true});
+
+      expect(startupSelectionStore.modelSelection).toMatchObject({
+        modelId: model.id,
+        origin: model.origin,
+      });
+    });
+
+    it('does not replace the preference when activation fails', async () => {
+      const previous = {
+        modelId: 'previous-model',
+        origin: ModelOrigin.LOCAL,
+      };
+      startupSelectionStore.modelSelection = previous;
+      modelStore.benchmarkActive = true;
+
+      await expect(
+        modelStore.selectModel(presetModelFixture, {
+          rememberForStartup: true,
+        }),
+      ).rejects.toThrow('benchmark mode is active');
+
+      expect(startupSelectionStore.modelSelection).toEqual(previous);
+      modelStore.benchmarkActive = false;
     });
   });
 

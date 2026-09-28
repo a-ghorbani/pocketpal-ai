@@ -21,6 +21,7 @@ import {deriveToolSchemas} from '../services/talents';
 import {AgentUiState, initialAgentUiState} from '../services/agent';
 import {isResponsesReplayState} from '../api/responsesTypes';
 import {mergeCompletionParameterLayers} from '../utils/generationParameterModes';
+import {startupSelectionStore} from './StartupSelectionStore';
 
 /**
  * Update payload accepted by `updateMessage` / `updateMessageStreaming`.
@@ -1483,7 +1484,10 @@ class ChatSessionStore {
     this.sessionDrafts.delete(sessionId);
   }
 
-  async setActivePal(palId: string | undefined): Promise<void> {
+  async setActivePal(
+    palId: string | undefined,
+    options: {rememberForStartup?: boolean} = {},
+  ): Promise<void> {
     if (this.activeSessionId) {
       const session = this.sessions.find(s => s.id === this.activeSessionId);
       if (session) {
@@ -1500,6 +1504,10 @@ class ChatSessionStore {
       }
     } else {
       this.newChatPalId = palId;
+    }
+
+    if (options.rememberForStartup) {
+      startupSelectionStore.rememberPal(palId);
     }
   }
 

@@ -70,6 +70,7 @@ class ServerStore {
   isLoading = false;
   error: string | null = null;
   privacyNoticeAcknowledged = false;
+  initializationComplete = false;
 
   private lastFetchTime = 0;
   private appStateSubscription: any = null;
@@ -92,10 +93,19 @@ class ServerStore {
         'remoteCatalogMetadata',
       ],
       storage: AsyncStorage,
-    }).then(() => {
-      // After hydration, fetch models for all servers
-      this.fetchAllRemoteModels();
-    });
+    })
+      .then(async () => {
+        // After hydration, fetch models for all servers
+        await this.fetchAllRemoteModels();
+      })
+      .catch(error => {
+        console.error('Failed to initialize ServerStore:', error);
+      })
+      .finally(() => {
+        runInAction(() => {
+          this.initializationComplete = true;
+        });
+      });
 
     this.setupAppStateListener();
   }
