@@ -343,6 +343,40 @@ describe('NativeStore', () => {
       );
     });
 
+    it('iOS: queries nothing after a cancel that settles before the request returns', async () => {
+      setOS('ios');
+      let requested = (_value: null) => {};
+      iap.requestPurchase.mockReturnValueOnce(
+        new Promise(resolve => {
+          requested = resolve;
+        }),
+      );
+      const events = captureListeners();
+      const pending = store.purchase('pal.a', null);
+
+      events.error({code: 'user-cancelled', productId: 'pal.a'});
+      requested(null);
+      await jest.advanceTimersByTimeAsync(PURCHASE_SETTLE_GRACE_MS * 2);
+
+      await expect(pending).resolves.toMatchObject({kind: 'cancelled'});
+      expect(iap.getAvailablePurchases).not.toHaveBeenCalled();
+      expect(iap.getPendingTransactionsIOS).not.toHaveBeenCalled();
+    });
+
+    it('iOS: takes a purchase listed as both unfinished and entitled as unfinished', async () => {
+      setOS('ios');
+      captureListeners();
+      iap.getPendingTransactionsIOS.mockResolvedValueOnce([purchase()]);
+      iap.getAvailablePurchases.mockResolvedValueOnce([purchase()]);
+
+      await expect(
+        settleAfterGrace(store.purchase('pal.a', null)),
+      ).resolves.toEqual({
+        kind: 'purchased',
+        tx: expect.objectContaining({transactionId: 'tx-1', unfinished: true}),
+      });
+    });
+
     it('Android: waits for the event with no fallback', async () => {
       setOS('android');
       const events = captureListeners();

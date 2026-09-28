@@ -3,11 +3,13 @@ import {runInAction} from 'mobx';
 
 import {
   PAL_ID,
+  PRODUCT,
   createHarness,
   flush,
   hubPal,
   localPal,
   record,
+  result,
   stopAll,
   tx,
 } from './purchaseTestHarness';
@@ -246,6 +248,34 @@ describe('PurchaseStore link and restore', () => {
         });
       });
       expect(h.purchases.canBuy(hubPal())).toBe(true);
+    });
+
+    it('Android: judges stale pending by its own query, not a later one', async () => {
+      (Platform as any).OS = 'android';
+      const h = createHarness({
+        records: [
+          record('pending_payment', {palId: 'P2', productId: 'pal.p2'}),
+        ],
+      });
+      h.store.currentEntitlements.mockResolvedValue([
+        tx({
+          unfinished: false,
+          proof: {
+            platform: 'android',
+            productId: PRODUCT,
+            purchaseToken: 'tok',
+          },
+        }),
+      ]);
+      h.api.verify.mockImplementation(async () => {
+        h.store.queryOk = false;
+        return [result('active')];
+      });
+
+      await h.purchases.restore();
+
+      expect(h.api.verify).toHaveBeenCalled();
+      expect(h.purchases.recordFor('P2')).toBeUndefined();
     });
 
     it('still restores when the store sync fails', async () => {
