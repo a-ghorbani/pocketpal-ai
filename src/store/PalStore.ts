@@ -35,6 +35,7 @@ import {parsePalsHubTemplate} from '../utils/palshub-template-parser';
 import {getDisplayNameFromFilename} from '../utils/formatters';
 
 import type {Pal, PalUpdate, ParameterDefinition} from '../types/pal';
+import type {CreatorField} from '../services/iap/creatorContent';
 import type {
   ModelReference,
   PalsHubPal,
@@ -414,6 +415,76 @@ class PalStore {
 
     await this.updatePal(localPalId, updates);
     return next;
+  };
+
+  applyCreatorUpdate = async (
+    localPalId: string,
+    palsHubPal: PalsHubPal,
+    fields: ReadonlySet<CreatorField>,
+  ): Promise<void> => {
+    const current = this.getPalById(localPalId);
+    if (!current || fields.size === 0) {
+      return;
+    }
+    const fresh = await this.createLocalPalFromPalsHub(
+      fields.has('model_reference')
+        ? palsHubPal
+        : {...palsHubPal, model_reference: undefined},
+    );
+    const updates: PalUpdate = {};
+    if (fields.has('title')) {
+      updates.name = fresh.name;
+    }
+    if (fields.has('description')) {
+      updates.description = fresh.description ?? '';
+    }
+    if (fields.has('system_prompt') && fresh.systemPrompt) {
+      const keptParameters = Object.fromEntries(
+        fresh.parameterSchema
+          .filter(def => current.parameters?.[def.key] !== undefined)
+          .map(def => [def.key, current.parameters[def.key]]),
+      );
+      updates.systemPrompt = fresh.systemPrompt;
+      updates.originalSystemPrompt = fresh.originalSystemPrompt ?? '';
+      updates.parameterSchema = fresh.parameterSchema;
+      updates.parameters = {...fresh.parameters, ...keptParameters};
+    }
+    if (fields.has('model_reference')) {
+      updates.defaultModel = fresh.defaultModel ?? null;
+    }
+    if (fields.has('model_settings')) {
+      updates.rawPalshubGenerationSettings =
+        fresh.rawPalshubGenerationSettings ?? null;
+    }
+    if (fields.has('pact')) {
+      updates.pact = fresh.pact ?? {talents: []};
+    }
+    if (fields.has('greeting')) {
+      updates.greeting = fresh.greeting ?? null;
+    }
+    if (fields.has('categories')) {
+      updates.categories = fresh.categories;
+    }
+    if (fields.has('tags')) {
+      updates.tags = fresh.tags;
+    }
+    if (fields.has('creator')) {
+      updates.creator_info = fresh.creator_info;
+    }
+    if (fields.has('protection_level')) {
+      updates.protection_level = fresh.protection_level;
+    }
+    if (fields.has('thumbnail_url') && palsHubPal.thumbnail_url) {
+      try {
+        updates.thumbnail_url = await downloadPalThumbnail(
+          localPalId,
+          palsHubPal.thumbnail_url,
+        );
+      } catch (imageError) {
+        console.warn('Failed to refresh thumbnail:', imageError);
+      }
+    }
+    await this.updatePal(localPalId, updates);
   };
 
   private createPalFromPalsHub = async (
