@@ -17,8 +17,9 @@ import type {
 } from '../services/iap/StorePort';
 import type {StorePlatform, VerifyResult} from '../services/iap/iapWire';
 import type {LinkOutcome} from '../services/iap/iapApi';
+import {changedCreatorFields} from '../services/iap/creatorContent';
+import type {CreatorContent} from '../services/iap/creatorContent';
 import {palStore as defaultPalStore} from './PalStore';
-import type {AppliedContent} from './PalStore';
 
 import type {PalsHubPal} from '../types/palshub';
 
@@ -43,15 +44,23 @@ export interface LedgerRecord {
   status: LedgerStatus;
   pendingSince?: number;
   contentVersion?: number;
-  appliedPromptHash?: string;
-  appliedModelKey?: string;
-  appliedSettingsHash?: string;
+  applied?: CreatorContent;
+  pendingUpdate?: PendingUpdate;
   supportCode?: string;
   grant?: PalsHubPal;
+  grantContent?: CreatorContent;
+  grantVersion?: number;
   title: string;
   thumbnailUrl?: string;
   linkedUserId?: string;
   updatedAt: number;
+}
+
+export interface PendingUpdate {
+  pal: PalsHubPal;
+  content: CreatorContent;
+  contentVersion: number;
+  changeNote?: string;
 }
 
 interface Ledger {
@@ -94,7 +103,7 @@ type PalStoreDep = Pick<
   | 'userLibrary'
   | 'cachedPalsHubPals'
   | 'installOwnedPal'
-  | 'applyOwnedPalContent'
+  | 'applyCreatorUpdate'
   | 'deletePal'
 >;
 
@@ -131,18 +140,6 @@ const platform = (): StorePlatform =>
 
 const txKey = (tx: StoreTransaction): string =>
   tx.transactionId ?? `${tx.productId}:${tx.state}`;
-
-const appliedOf = (rec: LedgerRecord): AppliedContent => ({
-  promptHash: rec.appliedPromptHash,
-  modelKey: rec.appliedModelKey,
-  settingsHash: rec.appliedSettingsHash,
-});
-
-const appliedFields = (applied: AppliedContent) => ({
-  appliedPromptHash: applied.promptHash,
-  appliedModelKey: applied.modelKey,
-  appliedSettingsHash: applied.settingsHash,
-});
 
 export class PurchaseStore {
   records: Record<string, LedgerRecord> = {};
@@ -314,6 +311,15 @@ export class PurchaseStore {
       rec =>
         rec.status === 'active' &&
         (userId ? rec.linkedUserId !== userId : !rec.linkedUserId),
+    );
+  }
+
+  updateAvailable(palId: string): boolean {
+    const rec = this.records[palId];
+    return (
+      rec?.status === 'active' &&
+      rec.pendingUpdate !== undefined &&
+      this.localPalFor(palId) !== undefined
     );
   }
 
@@ -670,15 +676,14 @@ export class PurchaseStore {
     if (result.status !== 'active' || !result.pal) {
       return;
     }
-    const local = this.localPalFor(rec.palId);
-    if (local) {
-      if ((result.contentVersion ?? 0) > (rec.contentVersion ?? 0)) {
-        await this.applyContent(
-          rec,
-          local.id,
-          result.pal,
-          result.contentVersion,
-        );
+    if (this.localPalFor(rec.palId)) {
+      if (result.content) {
+        await this.offerUpdate(rec.palId, {
+          pal: result.pal,
+          content: result.content,
+          contentVersion: result.contentVersion ?? 0,
+          changeNote: result.changeNote,
+        });
       }
       return;
     }
@@ -711,7 +716,9 @@ export class PurchaseStore {
         productId: tx.productId,
         status: 'granted',
         grant: result.pal,
-        contentVersion: result.contentVersion,
+        grantContent: result.content,
+        grantVersion: result.contentVersion,
+        pendingUpdate: undefined,
         supportCode: result.supportCode ?? rec?.supportCode,
         transactionIds: this.withTransactionId(rec, tx),
         title: result.pal?.title ?? rec?.title ?? '',
@@ -726,23 +733,66 @@ export class PurchaseStore {
     return this.deps.palStore.pals.find(pal => pal.palshub_id === palId);
   }
 
-  private async applyContent(
-    rec: LedgerRecord,
-    localPalId: string,
-    pal: PalsHubPal,
-    contentVersion: number | undefined,
+  private async offerUpdate(
+    palId: string,
+    update: PendingUpdate,
   ): Promise<void> {
-    const applied = await this.deps.palStore.applyOwnedPalContent(
-      localPalId,
-      pal,
-      appliedOf(rec),
-    );
-    await this.putRecord(rec.palId, {
+    const rec = this.records[palId];
+    if (
+      rec?.status !== 'active' ||
+      !this.localPalFor(palId) ||
+      !update.pal.system_prompt ||
+      update.contentVersion <= (rec.contentVersion ?? 0) ||
+      update.contentVersion <= (rec.pendingUpdate?.contentVersion ?? -1)
+    ) {
+      return;
+    }
+    if (changedCreatorFields(rec.applied, update.content).size === 0) {
+      await this.putRecord(palId, {
+        productId: rec.productId,
+        contentVersion: update.contentVersion,
+        applied: update.content,
+        pendingUpdate: undefined,
+      });
+      return;
+    }
+    await this.putRecord(palId, {
       productId: rec.productId,
-      contentVersion: contentVersion ?? rec.contentVersion,
-      ...appliedFields(applied),
-      title: pal.title,
-      thumbnailUrl: pal.thumbnail_url ?? rec.thumbnailUrl,
+      pendingUpdate: update,
+    });
+  }
+
+  async applyUpdate(palId: string, shownVersion: number): Promise<void> {
+    await this.load();
+    const productId = this.records[palId]?.productId;
+    if (!productId) {
+      return;
+    }
+    await this.serialize(productId, async () => {
+      const rec = this.records[palId];
+      const pending = rec?.pendingUpdate;
+      const local = this.localPalFor(palId);
+      if (
+        rec?.status !== 'active' ||
+        !pending ||
+        pending.contentVersion !== shownVersion ||
+        !local
+      ) {
+        return;
+      }
+      await this.deps.palStore.applyCreatorUpdate(
+        local.id,
+        pending.pal,
+        changedCreatorFields(rec.applied, pending.content),
+      );
+      await this.putRecord(palId, {
+        productId,
+        contentVersion: pending.contentVersion,
+        applied: pending.content,
+        pendingUpdate: undefined,
+        title: pending.pal.title,
+        thumbnailUrl: pending.pal.thumbnail_url ?? rec.thumbnailUrl,
+      });
     });
   }
 
@@ -753,7 +803,14 @@ export class PurchaseStore {
     }
     await this.putRecord(
       palId,
-      {productId: rec.productId, status: 'removed', grant: undefined},
+      {
+        productId: rec.productId,
+        status: 'removed',
+        grant: undefined,
+        grantContent: undefined,
+        grantVersion: undefined,
+        pendingUpdate: undefined,
+      },
       true,
     );
     const keptByLibrary =
@@ -790,15 +847,14 @@ export class PurchaseStore {
     );
     for (const rec of granted) {
       try {
-        const {applied} = await this.deps.palStore.installOwnedPal(
-          rec.grant!,
-          appliedOf(rec),
-        );
+        const {created} = await this.deps.palStore.installOwnedPal(rec.grant!);
         await this.putRecord(rec.palId, {
           productId: rec.productId,
           status: 'active',
           grant: undefined,
-          ...appliedFields(applied),
+          grantContent: undefined,
+          grantVersion: undefined,
+          ...this.adoptGrant(rec, created),
         });
         if (this.watching.has(rec.palId)) {
           this.setTransient(rec.palId, 'ready');
@@ -810,6 +866,27 @@ export class PurchaseStore {
         console.warn('Installing a purchased Pal failed:', error);
       }
     }
+  }
+
+  private adoptGrant(
+    rec: LedgerRecord,
+    created: boolean,
+  ): Partial<LedgerRecord> {
+    const content = rec.grantContent;
+    const version = rec.grantVersion ?? rec.contentVersion;
+    if (created || !rec.applied) {
+      return {applied: content, contentVersion: version};
+    }
+    if (content && changedCreatorFields(rec.applied, content).size > 0) {
+      return {
+        pendingUpdate: {
+          pal: rec.grant!,
+          content,
+          contentVersion: version ?? 0,
+        },
+      };
+    }
+    return {contentVersion: version};
   }
 
   private rememberPal(pal: PalsHubPal) {
@@ -1028,12 +1105,16 @@ export class PurchaseStore {
     } catch {
       return false;
     }
-    for (const {pal} of refreshed.changed) {
+    for (const {pal, content, changeNote} of refreshed.changed) {
       const rec = this.records[pal.id];
-      const local = this.localPalFor(pal.id);
-      if (rec?.status === 'active' && local) {
+      if (rec?.status === 'active') {
         await this.serialize(rec.productId, () =>
-          this.applyContent(rec, local.id, pal, pal.content_version),
+          this.offerUpdate(pal.id, {
+            pal,
+            content,
+            contentVersion: pal.content_version ?? 0,
+            changeNote,
+          }),
         );
       }
     }

@@ -2,13 +2,16 @@ import {observable} from 'mobx';
 
 import {PurchaseStore, LEDGER_KEY} from '../PurchaseStore';
 import type {LedgerRecord, PurchaseStoreDeps} from '../PurchaseStore';
-import type {AppliedContent} from '../PalStore';
 import type {
   PurchaseOutcome,
   StorePort,
   StoreTransaction,
 } from '../../services/iap/StorePort';
 import {projectCreatorContent} from '../../services/iap/creatorContent';
+import type {
+  CreatorContent,
+  CreatorField,
+} from '../../services/iap/creatorContent';
 import type {
   Binding,
   ChangedPal,
@@ -40,12 +43,12 @@ export const hubPal = (overrides: Partial<PalsHubPal> = {}): PalsHubPal => ({
   ...overrides,
 });
 
+export const contentOf = (pal: PalsHubPal): CreatorContent =>
+  projectCreatorContent(pal as unknown as Record<string, unknown>);
+
 export const changedPal = (overrides: Partial<PalsHubPal> = {}): ChangedPal => {
   const pal = hubPal(overrides);
-  return {
-    pal,
-    content: projectCreatorContent(pal as unknown as Record<string, unknown>),
-  };
+  return {pal, content: contentOf(pal)};
 };
 
 export const tx = (
@@ -63,14 +66,23 @@ export const tx = (
 export const result = (
   status: VerifyResult['status'],
   overrides: Partial<VerifyResult> = {},
-): VerifyResult => ({
-  palId: PAL_ID,
-  status,
-  contentVersion: 3,
-  supportCode: 'SUP-1',
-  pal: status === 'active' ? hubPal({content_version: 3}) : undefined,
-  ...overrides,
-});
+): VerifyResult => {
+  const pal =
+    'pal' in overrides
+      ? overrides.pal
+      : status === 'active'
+        ? hubPal({content_version: 3})
+        : undefined;
+  return {
+    palId: PAL_ID,
+    status,
+    contentVersion: 3,
+    supportCode: 'SUP-1',
+    pal,
+    content: pal ? contentOf(pal) : undefined,
+    ...overrides,
+  };
+};
 
 export const record = (
   status: LedgerRecord['status'],
@@ -82,11 +94,13 @@ export const record = (
   transactionIds: ['tx-0'],
   status,
   contentVersion: 3,
-  appliedPromptHash: 'hash-3',
+  applied: contentOf(hubPal()),
   supportCode: 'SUP-0',
   title: 'Story Pal',
   updatedAt: 1,
-  ...(status === 'granted' ? {grant: hubPal()} : {}),
+  ...(status === 'granted'
+    ? {grant: hubPal(), grantContent: contentOf(hubPal()), grantVersion: 3}
+    : {}),
   ...(status === 'pending_payment' ? {pendingSince: 1} : {}),
   ...overrides,
 });
@@ -201,20 +215,25 @@ export const createHarness = (
     userLibrary: [] as PalsHubPal[],
     cachedPalsHubPals: [] as PalsHubPal[],
     installOwnedPal: jest.fn(
-      async (
-        pal: PalsHubPal,
-      ): Promise<{localPal: Pal; applied: AppliedContent}> => {
+      async (pal: PalsHubPal): Promise<{localPal: Pal; created: boolean}> => {
         log.push(`install:${pal.id}`);
-        let local = pals.find(p => p.palshub_id === pal.id);
-        if (!local) {
-          local = localPal(pal.id);
-          pals.push(local);
+        const existing = pals.find(p => p.palshub_id === pal.id);
+        if (existing) {
+          return {localPal: existing, created: false};
         }
-        return {localPal: local, applied: {promptHash: `hash-${pal.id}`}};
+        const local = localPal(pal.id);
+        pals.push(local);
+        return {localPal: local, created: true};
       },
     ),
-    applyOwnedPalContent: jest.fn(
-      async (): Promise<AppliedContent> => ({promptHash: 'hash-new'}),
+    applyCreatorUpdate: jest.fn(
+      async (
+        localPalId: string,
+        _pal: PalsHubPal,
+        _fields: ReadonlySet<CreatorField>,
+      ) => {
+        log.push(`apply:${localPalId}`);
+      },
     ),
     deletePal: jest.fn(async (id: string) => {
       log.push(`delete:${id}`);

@@ -227,7 +227,7 @@ describe('PurchaseStore recovery', () => {
       expect(body).not.toContain('tx-');
     });
 
-    it('applies changed content to an installed active Pal', async () => {
+    it('offers changed content to an installed active Pal without applying it', async () => {
       const h = createHarness({records: [record('active')]});
       h.palStore.pals.push(localPal());
       h.api.refresh.mockResolvedValue({
@@ -239,73 +239,10 @@ describe('PurchaseStore recovery', () => {
 
       await h.purchases.recover();
 
-      expect(h.palStore.applyOwnedPalContent).toHaveBeenCalled();
-      expect(h.purchases.recordFor(PAL_ID)?.contentVersion).toBe(4);
-    });
-
-    it('passes and persists every applied key', async () => {
-      const h = createHarness({
-        records: [
-          record('active', {
-            appliedModelKey: 'a/m1',
-            appliedSettingsHash: 's1',
-          }),
-        ],
-      });
-      h.palStore.pals.push(localPal());
-      h.palStore.applyOwnedPalContent.mockResolvedValueOnce({
-        promptHash: 'p2',
-        modelKey: 'a/m2',
-        settingsHash: 's2',
-      });
-      h.api.refresh.mockResolvedValue({
-        changed: [changedPal({content_version: 4})],
-        revoked: [],
-        removed: [],
-        unchanged: [],
-      });
-
-      await h.purchases.recover();
-
-      expect(h.palStore.applyOwnedPalContent).toHaveBeenCalledWith(
-        'local-pal-1',
-        expect.anything(),
-        {promptHash: 'hash-3', modelKey: 'a/m1', settingsHash: 's1'},
-      );
-      expect(h.storage.ledger()[PAL_ID]).toMatchObject({
-        contentVersion: 4,
-        appliedPromptHash: 'p2',
-        appliedModelKey: 'a/m2',
-        appliedSettingsHash: 's2',
-      });
-    });
-
-    it('passes and persists every applied key when installing a grant', async () => {
-      const h = createHarness({
-        records: [
-          record('granted', {
-            appliedModelKey: 'a/m1',
-            appliedSettingsHash: 's1',
-          }),
-        ],
-      });
-      h.store.init.mockResolvedValue(false);
-      h.palStore.installOwnedPal.mockResolvedValueOnce({
-        localPal: localPal(),
-        applied: {promptHash: 'p2', modelKey: 'a/m2', settingsHash: 's2'},
-      });
-
-      await h.purchases.recover();
-
-      expect(h.palStore.installOwnedPal).toHaveBeenCalledWith(
-        expect.objectContaining({id: PAL_ID}),
-        {promptHash: 'hash-3', modelKey: 'a/m1', settingsHash: 's1'},
-      );
-      expect(h.storage.ledger()[PAL_ID]).toMatchObject({
-        status: 'active',
-        appliedPromptHash: 'p2',
-        appliedModelKey: 'a/m2',
-        appliedSettingsHash: 's2',
+      expect(h.palStore.applyCreatorUpdate).not.toHaveBeenCalled();
+      expect(h.purchases.recordFor(PAL_ID)).toMatchObject({
+        contentVersion: 3,
+        pendingUpdate: {contentVersion: 4, pal: {title: 'Edited'}},
       });
     });
 
@@ -320,8 +257,9 @@ describe('PurchaseStore recovery', () => {
 
       await h.purchases.recover();
 
-      expect(h.palStore.applyOwnedPalContent).not.toHaveBeenCalled();
+      expect(h.palStore.applyCreatorUpdate).not.toHaveBeenCalled();
       expect(h.palStore.installOwnedPal).not.toHaveBeenCalled();
+      expect(h.purchases.recordFor(PAL_ID)?.pendingUpdate).toBeUndefined();
     });
 
     it.each(['revoked', 'removed'] as const)(
@@ -397,7 +335,7 @@ describe('PurchaseStore recovery', () => {
         expect.objectContaining({status: 'active', contentVersion: 3}),
       );
       expect(h.palStore.deletePal).not.toHaveBeenCalled();
-      expect(h.palStore.applyOwnedPalContent).not.toHaveBeenCalled();
+      expect(h.palStore.applyCreatorUpdate).not.toHaveBeenCalled();
     });
 
     it('never touches a legacy install without a record', async () => {
@@ -416,7 +354,7 @@ describe('PurchaseStore recovery', () => {
       await h.purchases.recover();
 
       expect(h.palStore.deletePal).not.toHaveBeenCalled();
-      expect(h.palStore.applyOwnedPalContent).not.toHaveBeenCalled();
+      expect(h.palStore.applyCreatorUpdate).not.toHaveBeenCalled();
       expect(h.purchases.isOwned('web-pal')).toBe(true);
     });
 

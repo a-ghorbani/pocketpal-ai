@@ -24,7 +24,7 @@ import {HF_DOMAIN} from '../config/urls';
 
 import {palRepository} from '../repositories/PalRepository';
 
-import {hashCode, hfAsModel} from '../utils';
+import {hfAsModel} from '../utils';
 import {resolveHFModelForDownload} from '../utils/hfResolve';
 import {palsHubService} from '../services';
 import {registerDefaultTalents} from '../services/talents';
@@ -53,51 +53,10 @@ import {downloadPalThumbnail, deletePalThumbnail} from '../utils/imageUtils';
 const LOOKIE_SEEDED_KEY = 'PalStore.builtin.Lookie.seeded';
 const PIP_SEEDED_KEY = 'PalStore.builtin.Pip.seeded';
 
-export const promptHash = (prompt: string): string =>
-  `${hashCode(prompt)}:${prompt.length}`;
-
-const stableStringify = (value: unknown): string => {
-  if (Array.isArray(value)) {
-    return `[${value.map(stableStringify).join(',')}]`;
-  }
-  if (value !== null && typeof value === 'object') {
-    const object = value as Record<string, unknown>;
-    const entries = Object.keys(object)
-      .sort()
-      .filter(key => object[key] !== undefined)
-      .map(key => `${JSON.stringify(key)}:${stableStringify(object[key])}`);
-    return `{${entries.join(',')}}`;
-  }
-  return JSON.stringify(value) ?? 'null';
-};
-
-export const modelKey = (model?: Model | null): string => model?.id ?? '';
-
-export const settingsHash = (raw?: Record<string, unknown> | null): string =>
-  promptHash(stableStringify({...defaultCompletionParams, ...(raw ?? {})}));
-
-export interface AppliedContent {
-  promptHash?: string;
-  modelKey?: string;
-  settingsHash?: string;
-}
-
 export interface OwnedPalInstall {
   localPal: Pal;
-  applied: AppliedContent;
+  created: boolean;
 }
-
-const appliedContentOf = (pal: Pal): AppliedContent => ({
-  promptHash: promptHash(pal.systemPrompt),
-  modelKey: modelKey(pal.defaultModel),
-  settingsHash: settingsHash(pal.rawPalshubGenerationSettings),
-});
-
-const isOurs = (
-  local: string,
-  applied: string | undefined,
-  fresh: string,
-): boolean => local === applied || local === fresh;
 
 class PalStore {
   // Core pals storage
@@ -294,7 +253,6 @@ class PalStore {
 
   installOwnedPal = async (
     palsHubPal: PalsHubPal,
-    applied: AppliedContent = {},
   ): Promise<OwnedPalInstall> => {
     if (!palsHubPal.system_prompt) {
       throw new Error('An owned Pal cannot be installed without its prompt');
@@ -302,11 +260,7 @@ class PalStore {
     const {pal, created} = await this.insertPalsHubPalOnce(palsHubPal.id, () =>
       this.createPalFromPalsHub(palsHubPal),
     );
-    if (created) {
-      return {localPal: pal, applied: appliedContentOf(pal)};
-    }
-    const next = await this.applyOwnedPalContent(pal.id, palsHubPal, applied);
-    return {localPal: this.getPalById(pal.id) ?? pal, applied: next};
+    return {localPal: pal, created};
   };
 
   insertPalsHubPalOnce = (
@@ -338,83 +292,6 @@ class PalStore {
       })
       .catch(() => undefined);
     return run;
-  };
-
-  applyOwnedPalContent = async (
-    localPalId: string,
-    palsHubPal: PalsHubPal,
-    applied: AppliedContent = {},
-  ): Promise<AppliedContent> => {
-    const current = this.getPalById(localPalId);
-    if (!current) {
-      return applied;
-    }
-    const fresh = await this.createLocalPalFromPalsHub(palsHubPal);
-    const next: AppliedContent = {...applied};
-    const updates: PalUpdate = {
-      name: fresh.name,
-      description: fresh.description ?? '',
-      pact: fresh.pact ?? {talents: []},
-      greeting: fresh.greeting ?? null,
-      categories: fresh.categories,
-      tags: fresh.tags,
-      creator_info: fresh.creator_info,
-      protection_level: fresh.protection_level,
-    };
-
-    if (palsHubPal.thumbnail_url) {
-      try {
-        updates.thumbnail_url = await downloadPalThumbnail(
-          localPalId,
-          palsHubPal.thumbnail_url,
-        );
-      } catch (imageError) {
-        console.warn('Failed to refresh thumbnail:', imageError);
-      }
-    }
-
-    const freshModelKey = modelKey(fresh.defaultModel);
-    if (
-      isOurs(modelKey(current.defaultModel), applied.modelKey, freshModelKey)
-    ) {
-      updates.defaultModel = fresh.defaultModel ?? null;
-      next.modelKey = freshModelKey;
-    }
-
-    const freshSettingsHash = settingsHash(fresh.rawPalshubGenerationSettings);
-    if (
-      isOurs(
-        settingsHash(current.rawPalshubGenerationSettings),
-        applied.settingsHash,
-        freshSettingsHash,
-      )
-    ) {
-      updates.rawPalshubGenerationSettings =
-        fresh.rawPalshubGenerationSettings ?? null;
-      next.settingsHash = freshSettingsHash;
-    }
-
-    const freshHash = promptHash(fresh.systemPrompt);
-    const promptIsOurs = isOurs(
-      promptHash(current.systemPrompt),
-      applied.promptHash,
-      freshHash,
-    );
-    if (fresh.systemPrompt && promptIsOurs) {
-      const keptParameters = Object.fromEntries(
-        fresh.parameterSchema
-          .filter(def => current.parameters?.[def.key] !== undefined)
-          .map(def => [def.key, current.parameters[def.key]]),
-      );
-      updates.systemPrompt = fresh.systemPrompt;
-      updates.originalSystemPrompt = fresh.originalSystemPrompt ?? '';
-      updates.parameterSchema = fresh.parameterSchema;
-      updates.parameters = {...fresh.parameters, ...keptParameters};
-      next.promptHash = freshHash;
-    }
-
-    await this.updatePal(localPalId, updates);
-    return next;
   };
 
   applyCreatorUpdate = async (

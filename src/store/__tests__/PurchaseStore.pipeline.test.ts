@@ -6,6 +6,7 @@ import {
   PAL_ID,
   PRODUCT,
   MemoryStorage,
+  contentOf,
   createHarness,
   flush,
   hubPal,
@@ -82,10 +83,10 @@ describe('PurchaseStore pipeline', () => {
         status: 'active',
         supportCode: 'SUP-1',
         contentVersion: 3,
-        appliedPromptHash: 'hash-pal-1',
         transactionIds: ['tx-1'],
         title: 'Story Pal',
       });
+      expect(h.storage.ledger()[PAL_ID].applied).toEqual(contentOf(hubPal()));
       expect(h.storage.ledger()[PAL_ID].grant).toBeUndefined();
     });
 
@@ -242,7 +243,7 @@ describe('PurchaseStore pipeline', () => {
       expect(h.palStore.deletePal).not.toHaveBeenCalled();
     });
 
-    it('applies newer content to an installed active Pal', async () => {
+    it('offers newer content to an installed active Pal without applying it', async () => {
       const h = createHarness({records: [record('active')]});
       h.palStore.pals.push(localPal());
       h.api.verify.mockResolvedValueOnce([
@@ -251,24 +252,22 @@ describe('PurchaseStore pipeline', () => {
 
       await h.purchases.processTransaction(tx(), {settledVerify: true});
 
-      expect(h.palStore.applyOwnedPalContent).toHaveBeenCalledWith(
-        'local-pal-1',
-        expect.objectContaining({title: 'New'}),
-        {promptHash: 'hash-3', modelKey: undefined, settingsHash: undefined},
-      );
+      expect(h.palStore.applyCreatorUpdate).not.toHaveBeenCalled();
       expect(h.purchases.recordFor(PAL_ID)).toMatchObject({
         status: 'active',
-        contentVersion: 4,
-        appliedPromptHash: 'hash-new',
-        title: 'New',
+        contentVersion: 3,
+        title: 'Story Pal',
+        pendingUpdate: {contentVersion: 4, pal: {title: 'New'}},
       });
+      expect(h.purchases.updateAvailable(PAL_ID)).toBe(true);
     });
 
-    it('does not reapply the same content version', async () => {
+    it('does not offer the same content version', async () => {
       const h = createHarness({records: [record('active')]});
       h.palStore.pals.push(localPal());
       await h.purchases.processTransaction(tx(), {settledVerify: true});
-      expect(h.palStore.applyOwnedPalContent).not.toHaveBeenCalled();
+      expect(h.purchases.recordFor(PAL_ID)?.pendingUpdate).toBeUndefined();
+      expect(h.palStore.applyCreatorUpdate).not.toHaveBeenCalled();
     });
 
     it('reinstalls an active Pal that is not installed only when asked', async () => {
