@@ -1,6 +1,8 @@
 import {palsHubApiService} from '../palshub/PalsHubApiService';
 import type {ApiPalResponse} from '../palshub/PalsHubApiService';
 import type {PalsHubPal} from '../../types/palshub';
+import {projectCreatorContent} from './creatorContent';
+import type {CreatorContent} from './creatorContent';
 
 export type StorePlatform = 'ios' | 'android';
 
@@ -23,11 +25,19 @@ export interface VerifyResult {
   status: VerifyStatus;
   contentVersion?: number;
   pal?: PalsHubPal;
+  content?: CreatorContent;
+  changeNote?: string;
   supportCode?: string;
 }
 
+export interface ChangedPal {
+  pal: PalsHubPal;
+  content: CreatorContent;
+  changeNote?: string;
+}
+
 export interface RefreshResult {
-  changed: PalsHubPal[];
+  changed: ChangedPal[];
   revoked: string[];
   removed: string[];
   unchanged: string[];
@@ -79,17 +89,26 @@ const stringList = (value: unknown, field: string): string[] => {
   return value;
 };
 
-const parsePal = (value: unknown): PalsHubPal => {
+const changeNoteOf = (value: unknown): string | undefined =>
+  typeof value === 'string' && value.trim().length > 0
+    ? value.trim()
+    : undefined;
+
+const parsePal = (value: unknown): ChangedPal => {
   if (!isRecord(value) || typeof value.id !== 'string') {
     throw new IapWireError('pal is malformed');
   }
+  let pal: PalsHubPal;
   try {
-    return palsHubApiService.transformApiPal(
-      value as unknown as ApiPalResponse,
-    );
+    pal = palsHubApiService.transformApiPal(value as unknown as ApiPalResponse);
   } catch {
     throw new IapWireError('pal is malformed');
   }
+  return {
+    pal,
+    content: projectCreatorContent(value),
+    changeNote: changeNoteOf(value.change_note),
+  };
 };
 
 const proofToWire = (proof: StoreProof) =>
@@ -125,15 +144,18 @@ const parseVerifyResult = (value: unknown): VerifyResult => {
   if (!SERVER_STATUSES.includes(status)) {
     throw new IapWireError('verify status is unknown');
   }
-  const pal =
+  const parsed =
     value.pal === undefined || value.pal === null
       ? undefined
       : parsePal(value.pal);
+  const pal = parsed?.pal;
   const result: VerifyResult = {
     palId: value.pal_id,
     status,
     contentVersion: optionalNumber(value.content_version),
     pal,
+    content: parsed?.content,
+    changeNote: parsed?.changeNote,
     supportCode: optionalString(value.support_code),
   };
   if (status === 'active' && !pal?.system_prompt) {

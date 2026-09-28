@@ -109,7 +109,7 @@ const refresh = async (
       auth: false,
     });
     const result = parseRefresh(json);
-    result.changed.forEach(pal => changed.set(pal.id, pal));
+    result.changed.forEach(entry => changed.set(entry.pal.id, entry));
     result.revoked.forEach(id => revoked.add(id));
     result.removed.forEach(id => removed.add(id));
     result.unchanged.forEach(id => unchanged.add(id));

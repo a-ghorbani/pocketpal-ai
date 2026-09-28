@@ -1028,7 +1028,7 @@ export class PurchaseStore {
     } catch {
       return false;
     }
-    for (const pal of refreshed.changed) {
+    for (const {pal} of refreshed.changed) {
       const rec = this.records[pal.id];
       const local = this.localPalFor(pal.id);
       if (rec?.status === 'active' && local) {

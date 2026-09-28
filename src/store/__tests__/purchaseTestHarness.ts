@@ -8,8 +8,10 @@ import type {
   StorePort,
   StoreTransaction,
 } from '../../services/iap/StorePort';
+import {projectCreatorContent} from '../../services/iap/creatorContent';
 import type {
   Binding,
+  ChangedPal,
   KnownEntry,
   RefreshResult,
   StorePlatform,
@@ -37,6 +39,14 @@ export const hubPal = (overrides: Partial<PalsHubPal> = {}): PalsHubPal => ({
   iap_enabled: {ios: true, android: true},
   ...overrides,
 });
+
+export const changedPal = (overrides: Partial<PalsHubPal> = {}): ChangedPal => {
+  const pal = hubPal(overrides);
+  return {
+    pal,
+    content: projectCreatorContent(pal as unknown as Record<string, unknown>),
+  };
+};
 
 export const tx = (
   overrides: Partial<StoreTransaction> = {},

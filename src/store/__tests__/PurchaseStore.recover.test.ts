@@ -12,6 +12,7 @@ import {
   MemoryStorage,
   PAL_ID,
   PRODUCT,
+  changedPal,
   createHarness,
   flush,
   hubPal,
@@ -230,7 +231,7 @@ describe('PurchaseStore recovery', () => {
       const h = createHarness({records: [record('active')]});
       h.palStore.pals.push(localPal());
       h.api.refresh.mockResolvedValue({
-        changed: [hubPal({content_version: 4, title: 'Edited'})],
+        changed: [changedPal({content_version: 4, title: 'Edited'})],
         revoked: [],
         removed: [],
         unchanged: [],
@@ -258,7 +259,7 @@ describe('PurchaseStore recovery', () => {
         settingsHash: 's2',
       });
       h.api.refresh.mockResolvedValue({
-        changed: [hubPal({content_version: 4})],
+        changed: [changedPal({content_version: 4})],
         revoked: [],
         removed: [],
         unchanged: [],
@@ -311,7 +312,7 @@ describe('PurchaseStore recovery', () => {
     it('does not install a changed Pal the user deleted', async () => {
       const h = createHarness({records: [record('active')]});
       h.api.refresh.mockResolvedValue({
-        changed: [hubPal({content_version: 4})],
+        changed: [changedPal({content_version: 4})],
         revoked: [],
         removed: [],
         unchanged: [],
@@ -404,7 +405,7 @@ describe('PurchaseStore recovery', () => {
       const legacy = localPal('web-pal');
       h.palStore.pals.push(legacy);
       h.api.refresh.mockResolvedValue({
-        changed: [hubPal({id: 'web-pal'})],
+        changed: [changedPal({id: 'web-pal'})],
         revoked: ['web-pal'],
         removed: [],
         unchanged: [],

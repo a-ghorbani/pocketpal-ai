@@ -139,7 +139,7 @@ describe('iapApi', () => {
         transactions: [{productId: 'pal.1', purchaseToken: 'token-1'}],
         known: {'pal-1': {content_version: 2, purchase_ref: 'GPA.1'}},
       });
-      expect(result.changed[0].id).toBe('pal-1');
+      expect(result.changed[0].pal.id).toBe('pal-1');
       expect(result.revoked).toEqual(['pal-2']);
     });
 
@@ -150,7 +150,12 @@ describe('iapApi', () => {
         return jsonResponse(
           call === 1
             ? {changed: [apiPal()], revoked: ['a'], unchanged: ['u1']}
-            : {removed: ['b'], revoked: ['a'], unchanged: ['u2']},
+            : {
+                changed: [apiPal({change_note: 'Typo fixed'})],
+                removed: ['b'],
+                revoked: ['a'],
+                unchanged: ['u2'],
+              },
         );
       });
       const known = Object.fromEntries(
@@ -170,7 +175,12 @@ describe('iapApi', () => {
       });
       expect(sentBody(1).transactions).toHaveLength(1);
       expect(result).toEqual({
-        changed: [expect.objectContaining({id: 'pal-1'})],
+        changed: [
+          expect.objectContaining({
+            pal: expect.objectContaining({id: 'pal-1'}),
+            changeNote: 'Typo fixed',
+          }),
+        ],
         revoked: ['a'],
         removed: ['b'],
         unchanged: ['u1', 'u2'],

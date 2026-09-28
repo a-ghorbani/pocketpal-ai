@@ -81,6 +81,46 @@ describe('iapWire', () => {
       },
     );
 
+    it('projects the creator content from the raw pal', () => {
+      const [result] = parseVerify(
+        verifyResponse([
+          {
+            pal_id: 'pal-1',
+            status: 'active',
+            pal: apiPal({
+              model_settings: undefined,
+              protection_level: undefined,
+            }),
+          },
+        ]),
+      );
+      expect(result.content?.system_prompt).toBe('You tell stories.');
+      expect(result.content?.model_settings).toBeUndefined();
+      expect(result.content?.protection_level).toBeUndefined();
+      expect(result.pal?.model_settings).toEqual({});
+      expect(result.pal?.protection_level).toBe('public');
+    });
+
+    it.each([
+      ['Typo fixed', 'Typo fixed'],
+      ['  Typo fixed  ', 'Typo fixed'],
+      [undefined, undefined],
+      ['', undefined],
+      ['   ', undefined],
+      [42, undefined],
+      [{text: 'x'}, undefined],
+    ])('reads change note %p as %p', (note, expected) => {
+      const [verified] = parseVerify(
+        verifyResponse([
+          {pal_id: 'pal-1', status: 'active', pal: apiPal({change_note: note})},
+        ]),
+      );
+      const refreshed = parseRefresh({changed: [apiPal({change_note: note})]});
+      expect(verified.status).toBe('active');
+      expect(verified.changeNote).toBe(expected);
+      expect(refreshed.changed[0].changeNote).toBe(expected);
+    });
+
     it('treats an active result without a pal as failed', () => {
       const [result] = parseVerify(
         verifyResponse([{pal_id: 'pal-1', status: 'active'}]),
@@ -139,7 +179,8 @@ describe('iapWire', () => {
         removed: ['pal-3'],
         unchanged: ['pal-4'],
       });
-      expect(result.changed[0].content_version).toBe(4);
+      expect(result.changed[0].pal.content_version).toBe(4);
+      expect(result.changed[0].content.title).toBe('Story Pal');
       expect(result.revoked).toEqual(['pal-2']);
       expect(result.removed).toEqual(['pal-3']);
       expect(result.unchanged).toEqual(['pal-4']);
