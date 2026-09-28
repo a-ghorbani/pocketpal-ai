@@ -630,8 +630,11 @@ export class PurchaseStore {
         await this.finishOnIOS(tx);
         return;
       case 'revoked':
-      case 'removed':
         await this.removeOwnership(key);
+        await this.finishOnIOS(tx);
+        return;
+      case 'removed':
+        await this.withdraw(key, result.supportCode);
         await this.finishOnIOS(tx);
         return;
       case 'invalid':
@@ -652,10 +655,7 @@ export class PurchaseStore {
     if (tx.unfinished) {
       await this.finishOnIOS(tx);
     }
-    if (rec.status === 'unfulfillable' || rec.status === 'granted') {
-      return;
-    }
-    if (!opts.settledVerify) {
+    if (rec.status === 'unfulfillable' || !opts.settledVerify) {
       return;
     }
     const result = await this.verify(tx);
@@ -669,11 +669,15 @@ export class PurchaseStore {
       }
       return;
     }
-    if (result.status === 'revoked' || result.status === 'removed') {
+    if (result.status === 'revoked') {
       await this.removeOwnership(rec.palId);
       return;
     }
-    if (result.status !== 'active' || !result.pal) {
+    if (result.status === 'removed') {
+      await this.withdraw(rec.palId, result.supportCode);
+      return;
+    }
+    if (rec.status === 'granted' || result.status !== 'active' || !result.pal) {
       return;
     }
     if (this.localPalFor(rec.palId)) {
@@ -813,6 +817,31 @@ export class PurchaseStore {
       },
       true,
     );
+    await this.deleteLocalUnlessLibrary(palId);
+  }
+
+  private async withdraw(palId: string, supportCode?: string): Promise<void> {
+    const rec = this.records[palId];
+    if (!rec) {
+      return;
+    }
+    await this.putRecord(
+      palId,
+      {
+        productId: rec.productId,
+        status: 'unfulfillable',
+        supportCode: supportCode ?? rec.supportCode,
+        grant: undefined,
+        grantContent: undefined,
+        grantVersion: undefined,
+        pendingUpdate: undefined,
+      },
+      true,
+    );
+    await this.deleteLocalUnlessLibrary(palId);
+  }
+
+  private async deleteLocalUnlessLibrary(palId: string): Promise<void> {
     const keptByLibrary =
       this.deps.auth.isAuthenticated &&
       this.deps.palStore.userLibrary.some(pal => pal.id === palId);
@@ -1118,10 +1147,16 @@ export class PurchaseStore {
         );
       }
     }
-    for (const palId of [...refreshed.revoked, ...refreshed.removed]) {
+    const removals = [
+      ...refreshed.revoked.map(palId => ({palId, withdrawn: false})),
+      ...refreshed.removed.map(palId => ({palId, withdrawn: true})),
+    ];
+    for (const {palId, withdrawn} of removals) {
       const rec = this.records[palId];
-      if (rec && rec.status !== 'removed') {
-        await this.serialize(rec.productId, () => this.removeOwnership(palId));
+      if (rec && rec.status !== 'removed' && rec.status !== 'unfulfillable') {
+        await this.serialize(rec.productId, () =>
+          withdrawn ? this.withdraw(palId) : this.removeOwnership(palId),
+        );
       }
     }
     return true;

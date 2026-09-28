@@ -404,4 +404,117 @@ describe('PurchaseStore creator updates', () => {
       expect(rec?.applied).toEqual(contentOf(v1()));
     });
   });
+
+  describe('removal', () => {
+    const refreshLists = (lists: {revoked?: string[]; removed?: string[]}) => ({
+      changed: [],
+      revoked: lists.revoked ?? [],
+      removed: lists.removed ?? [],
+      unchanged: [],
+    });
+
+    it('withdraws an iOS purchase whose verify says removed and finishes it', async () => {
+      const h = createHarness({records: [record('unlocking')]});
+      h.api.verify.mockResolvedValueOnce([result('removed')]);
+
+      await h.purchases.processTransaction(tx(), {});
+
+      expect(h.purchases.recordFor(PAL_ID)?.status).toBe('unfulfillable');
+      expect(h.store.finish).toHaveBeenCalledTimes(1);
+    });
+
+    it.each(['revoked', 'removed'] as const)(
+      'keeps an unfulfillable record on a later %s',
+      async list => {
+        const h = createHarness({
+          records: [record('unfulfillable', {supportCode: 'SUP-7'})],
+        });
+        h.api.refresh.mockResolvedValue(refreshLists({[list]: [PAL_ID]}));
+        h.store.currentEntitlements.mockResolvedValue([
+          tx({unfinished: false}),
+        ]);
+
+        await h.purchases.recover();
+
+        expect(h.purchases.recordFor(PAL_ID)).toMatchObject({
+          status: 'unfulfillable',
+          supportCode: 'SUP-7',
+        });
+      },
+    );
+
+    it('never verifies an unfulfillable record', async () => {
+      const h = createHarness({records: [record('unfulfillable')]});
+
+      await h.purchases.processTransaction(tx(), {settledVerify: true});
+
+      expect(h.api.verify).not.toHaveBeenCalled();
+      expect(h.purchases.recordFor(PAL_ID)?.status).toBe('unfulfillable');
+    });
+
+    it.each(['revoked', 'removed'] as const)(
+      'leaves a refund tombstone as it is on a verify %s',
+      async status => {
+        const h = createHarness({records: [record('removed')]});
+        h.api.verify.mockResolvedValueOnce([result(status)]);
+
+        await h.purchases.processTransaction(tx(), {settledVerify: true});
+
+        expect(h.purchases.recordFor(PAL_ID)?.status).toBe('removed');
+      },
+    );
+
+    it('leaves a refund tombstone as it is on a refresh removed', async () => {
+      const h = createHarness({records: [record('removed')]});
+      h.api.refresh.mockResolvedValue(refreshLists({removed: [PAL_ID]}));
+      h.store.currentEntitlements.mockResolvedValue([tx({unfinished: false})]);
+
+      await h.purchases.recover();
+
+      expect(h.purchases.recordFor(PAL_ID)?.status).toBe('removed');
+    });
+
+    it('Android: withdraws an installed Pal without finishing', async () => {
+      (Platform as any).OS = 'android';
+      const h = installed({pendingUpdate: pending(v2())});
+      h.api.refresh.mockResolvedValue(refreshLists({removed: [PAL_ID]}));
+
+      await h.purchases.recover();
+
+      const rec = h.purchases.recordFor(PAL_ID);
+      expect(rec).toMatchObject({
+        status: 'unfulfillable',
+        supportCode: 'SUP-0',
+      });
+      expect(rec?.pendingUpdate).toBeUndefined();
+      expect(h.palStore.deletePal).toHaveBeenCalledWith('local-pal-1');
+      expect(h.store.finish).not.toHaveBeenCalled();
+      expect(h.purchases.storeOwnedRecords).toHaveLength(1);
+    });
+
+    it('keeps the local copy of a withdrawn Pal the signed-in library lists', async () => {
+      const h = createHarness({records: [record('active')], signedIn: true});
+      h.palStore.pals.push(localPal());
+      h.palStore.userLibrary.push(hubPal());
+      h.api.refresh.mockResolvedValue(refreshLists({removed: [PAL_ID]}));
+
+      await h.purchases.recover();
+
+      expect(h.purchases.recordFor(PAL_ID)?.status).toBe('unfulfillable');
+      expect(h.palStore.deletePal).not.toHaveBeenCalled();
+    });
+
+    it('keeps a Pal the store still verifies and the listing no longer shows', async () => {
+      const h = installed();
+      h.store.currentEntitlements.mockResolvedValue([tx({unfinished: false})]);
+      h.api.refresh.mockResolvedValue(refreshLists({}));
+
+      await h.purchases.recover();
+      await h.purchases.processTransaction(tx(), {settledVerify: true});
+
+      expect(h.purchases.recordFor(PAL_ID)?.status).toBe('active');
+      expect(h.palStore.deletePal).not.toHaveBeenCalled();
+      expect(h.purchases.isOwned(PAL_ID)).toBe(true);
+    });
+  });
 });

@@ -262,9 +262,12 @@ describe('PurchaseStore recovery', () => {
       expect(h.purchases.recordFor(PAL_ID)?.pendingUpdate).toBeUndefined();
     });
 
-    it.each(['revoked', 'removed'] as const)(
-      'removes a %s Pal: tombstone and local delete',
-      async list => {
+    it.each([
+      ['revoked', 'removed'],
+      ['removed', 'unfulfillable'],
+    ] as const)(
+      'removes a %s Pal as %s and deletes the local copy',
+      async (list, status) => {
         const h = createHarness({records: [record('active')]});
         h.palStore.pals.push(localPal());
         h.api.refresh.mockResolvedValue({
@@ -276,7 +279,10 @@ describe('PurchaseStore recovery', () => {
 
         await h.purchases.recover();
 
-        expect(h.purchases.recordFor(PAL_ID)?.status).toBe('removed');
+        expect(h.purchases.recordFor(PAL_ID)).toMatchObject({
+          status,
+          supportCode: 'SUP-0',
+        });
         expect(h.palStore.deletePal).toHaveBeenCalledWith('local-pal-1');
       },
     );

@@ -141,23 +141,42 @@ describe('PurchaseStore pipeline', () => {
       expect(h.palStore.installOwnedPal).not.toHaveBeenCalled();
     });
 
-    it.each(['revoked', 'removed'] as const)(
-      'writes a tombstone and deletes the local Pal on %s',
-      async status => {
+    it.each([
+      ['revoked', 'removed'],
+      ['removed', 'unfulfillable'],
+    ] as const)(
+      'writes %s as %s, deletes the local Pal, then finishes',
+      async (verified, status) => {
         const h = createHarness({records: [record('unlocking')]});
         h.palStore.pals.push(localPal());
-        h.api.verify.mockResolvedValueOnce([result(status)]);
+        h.api.verify.mockResolvedValueOnce([
+          result(verified, {supportCode: 'SUP-9'}),
+        ]);
 
         await h.purchases.processTransaction(tx(), {});
 
         expect(h.log).toEqual([
           'write:unlocking',
-          'write:removed',
+          `write:${status}`,
           'delete:local-pal-1',
           'finish:tx-1',
         ]);
       },
     );
+
+    it('keeps the support code of a withdrawn purchase', async () => {
+      const h = createHarness({records: [record('unlocking')]});
+      h.api.verify.mockResolvedValueOnce([
+        result('removed', {supportCode: 'SUP-9'}),
+      ]);
+
+      await h.purchases.processTransaction(tx(), {});
+
+      expect(h.storage.ledger()[PAL_ID]).toMatchObject({
+        status: 'unfulfillable',
+        supportCode: 'SUP-9',
+      });
+    });
 
     it('moves pending payment to unlocking when the payment clears', async () => {
       const h = createHarness({records: [record('pending_payment')]});
@@ -193,15 +212,40 @@ describe('PurchaseStore pipeline', () => {
   });
 
   describe('settled records', () => {
-    it.each(['granted', 'unfulfillable'] as const)(
-      'finishes an unfinished transaction on %s without verifying',
-      async status => {
-        const h = createHarness({records: [record(status)]});
+    it('finishes an unfinished transaction on unfulfillable without verifying', async () => {
+      const h = createHarness({records: [record('unfulfillable')]});
+      await h.purchases.processTransaction(tx(), {settledVerify: true});
+
+      expect(h.store.finish).toHaveBeenCalledTimes(1);
+      expect(h.api.verify).not.toHaveBeenCalled();
+      expect(h.purchases.recordFor(PAL_ID)?.status).toBe('unfulfillable');
+    });
+
+    it('leaves a granted record to the install queue on an active verify', async () => {
+      const h = createHarness({records: [record('granted')]});
+      await h.purchases.processTransaction(tx(), {settledVerify: true});
+
+      expect(h.store.finish).toHaveBeenCalledTimes(1);
+      expect(h.purchases.recordFor(PAL_ID)?.status).toBe('granted');
+      expect(h.palStore.installOwnedPal).not.toHaveBeenCalled();
+    });
+
+    it.each([
+      ['revoked', 'removed'],
+      ['removed', 'unfulfillable'],
+    ] as const)(
+      'removes a granted Pal on %s as %s',
+      async (verified, status) => {
+        const h = createHarness({records: [record('granted')]});
+        h.palStore.pals.push(localPal());
+        h.api.verify.mockResolvedValueOnce([result(verified)]);
+
         await h.purchases.processTransaction(tx(), {settledVerify: true});
 
-        expect(h.store.finish).toHaveBeenCalledTimes(1);
-        expect(h.api.verify).not.toHaveBeenCalled();
-        expect(h.purchases.recordFor(PAL_ID)?.status).toBe(status);
+        const rec = h.purchases.recordFor(PAL_ID);
+        expect(rec?.status).toBe(status);
+        expect(rec?.grant).toBeUndefined();
+        expect(h.palStore.deletePal).toHaveBeenCalledWith('local-pal-1');
       },
     );
 
