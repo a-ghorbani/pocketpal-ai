@@ -25,17 +25,13 @@
 import * as fs from 'fs';
 import * as path from 'path';
 
+import type {EffectiveBackend} from '../../src/__automation__/logSignals';
+
 export interface BenchmarkRunReport {
   model_id: string;
   quant: string;
   requested_backend: 'cpu' | 'gpu' | 'hexagon';
-  effective_backend:
-    | 'cpu'
-    | 'opencl'
-    | 'cpu+opencl-partial'
-    | 'hexagon'
-    | 'cpu+hexagon-partial'
-    | 'unknown';
+  effective_backend: EffectiveBackend;
   pp_avg: number | null;
   tg_avg: number | null;
   wall_ms: number;
@@ -135,6 +131,19 @@ function pctDelta(base: number | null, cur: number | null): number | null {
   if (base === null || cur === null) return null;
   if (base === 0) return null;
   return Math.round(((cur - base) / base) * 10000) / 100; // 2 dp
+}
+
+/** Returns the error message when the two reports come from different
+ * platforms. A report without `platform` predates iOS and is Android. */
+export function checkPlatforms(
+  baseline: {platform?: string},
+  current: {platform?: string},
+): string | null {
+  const base = baseline.platform ?? 'android';
+  const cur = current.platform ?? 'android';
+  return base === cur
+    ? null
+    : `platform mismatch: baseline ${base} vs current ${cur}; cross-platform comparison is unsupported`;
 }
 
 export function compareReports(
@@ -316,6 +325,12 @@ function main(): void {
     current = JSON.parse(fs.readFileSync(curPath, 'utf8'));
   } catch (e) {
     console.error(`Failed to parse report files: ${(e as Error).message}`);
+    process.exit(2);
+  }
+
+  const platformError = checkPlatforms(baseline, current);
+  if (platformError) {
+    console.error(platformError);
     process.exit(2);
   }
 

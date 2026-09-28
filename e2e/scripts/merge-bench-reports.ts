@@ -338,6 +338,13 @@ export function mergeReports(
   }
   const version = (versions.values().next().value as string) ?? '1.0';
 
+  const platforms = new Set(reports.map(r => r.platform ?? 'android'));
+  if (platforms.size > 1) {
+    throw new Error(
+      `mixed platform: ${[...platforms].join(',')}; baselines are per platform`,
+    );
+  }
+
   // WHAT 4h I1: every v1.1 row MUST carry non-null settings_fingerprint
   // and settings_overrides. Surfacing this here (rather than letting
   // rowKey silently fall back to 'app-default' under undefined) keeps a

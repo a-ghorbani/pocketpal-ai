@@ -77,6 +77,8 @@ export type EffectiveBackend =
   | 'cpu+opencl-partial'
   | 'hexagon'
   | 'cpu+hexagon-partial'
+  | 'metal'
+  | 'cpu+metal-partial'
   | 'unknown';
 
 // Larger than strictly necessary on purpose — when a cell goes wrong we
@@ -281,6 +283,7 @@ export function deriveLogSignals(lines: string[]): LogSignals {
  * Decision order:
  *   - HTP* keys present -> hexagon (full, or cpu+hexagon-partial via offloaded counts)
  *   - OpenCL key present -> opencl (full, or cpu+opencl-partial via large_buffer_unsupported / offloaded counts)
+ *   - MTL* key present -> metal (full, or cpu+metal-partial via offloaded counts)
  *   - only CPU/CPU_REPACK keys -> cpu
  *   - empty weight set: fall back to log-init heuristics:
  *       * hexagon_init -> unknown (Hexagon registry-allocation fires even when the model never runs there)
@@ -294,6 +297,7 @@ export function deriveEffectiveBackend(signals: LogSignals): EffectiveBackend {
   const wKeys = Object.keys(signals.memory_buffers.weights_mib);
   const hasHTP = wKeys.some(k => k.startsWith('HTP'));
   const hasOpenCL = wKeys.some(k => k === 'OpenCL');
+  const hasMetal = wKeys.some(k => k.startsWith('MTL'));
   const hasOnlyCPU =
     wKeys.length > 0 && wKeys.every(k => k === 'CPU' || k === 'CPU_REPACK');
 
@@ -320,6 +324,17 @@ export function deriveEffectiveBackend(signals: LogSignals): EffectiveBackend {
       return 'cpu+opencl-partial';
     }
     return 'opencl';
+  }
+
+  if (hasMetal) {
+    if (
+      signals.offloaded_layers !== null &&
+      signals.total_layers !== null &&
+      signals.offloaded_layers < signals.total_layers
+    ) {
+      return 'cpu+metal-partial';
+    }
+    return 'metal';
   }
 
   if (hasOnlyCPU) {
@@ -365,7 +380,7 @@ export type RequestedBackend = 'cpu' | 'gpu' | 'hexagon';
 /**
  * Returns true when the actual backend the cell landed on satisfies the
  * cell's `requested_backend`. Partial offload (cpu+opencl-partial,
- * cpu+hexagon-partial) IS considered a satisfied request — the runner
+ * cpu+metal-partial, cpu+hexagon-partial) IS considered a satisfied request — the runner
  * landed on the requested backend, just incompletely; the report's
  * `effective_backend` field carries the partial signal so operators can
  * still spot it. Mismatch happens when the cell asked for one backend
@@ -382,7 +397,12 @@ export function requestSatisfiedBy(
     case 'cpu':
       return actual === 'cpu';
     case 'gpu':
-      return actual === 'opencl' || actual === 'cpu+opencl-partial';
+      return (
+        actual === 'opencl' ||
+        actual === 'cpu+opencl-partial' ||
+        actual === 'metal' ||
+        actual === 'cpu+metal-partial'
+      );
     case 'hexagon':
       return actual === 'hexagon' || actual === 'cpu+hexagon-partial';
   }
