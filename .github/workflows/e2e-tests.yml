@@ -275,3 +275,11 @@ jobs:
             -no-window -gpu swiftshader_indirect -no-snapshot
             -noaudio -no-boot-anim -camera-back none -partition-size 4096
           script: bash .github/scripts/smoke-e2e-apk.sh
+
+      - name: Upload E2E failure diagnostics
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: e2e-debug-output
+          path: e2e/debug-output
+          if-no-files-found: ignore
