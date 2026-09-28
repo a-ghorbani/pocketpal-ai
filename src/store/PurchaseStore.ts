@@ -50,6 +50,7 @@ export interface LedgerRecord {
   grant?: PalsHubPal;
   grantContent?: CreatorContent;
   grantVersion?: number;
+  withdrawnAfterDelivery?: boolean;
   title: string;
   thumbnailUrl?: string;
   linkedUserId?: string;
@@ -831,6 +832,9 @@ export class PurchaseStore {
         productId: rec.productId,
         status: 'unfulfillable',
         supportCode: supportCode ?? rec.supportCode,
+        ...(rec.status === 'active' || rec.status === 'granted'
+          ? {withdrawnAfterDelivery: true}
+          : {}),
         grant: undefined,
         grantContent: undefined,
         grantVersion: undefined,

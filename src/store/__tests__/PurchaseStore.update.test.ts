@@ -443,6 +443,35 @@ describe('PurchaseStore creator updates', () => {
       },
     );
 
+    it.each([
+      ['an open', 'unlocking', undefined],
+      ['a delivered', 'active', true],
+      ['a granted', 'granted', true],
+    ] as const)(
+      'marks whether %s record was withdrawn after delivery',
+      async (_label, status, delivered) => {
+        const h = createHarness({records: [record(status)]});
+        h.api.verify.mockResolvedValueOnce([result('removed')]);
+
+        await h.purchases.processTransaction(tx(), {settledVerify: true});
+
+        const rec = h.purchases.recordFor(PAL_ID);
+        expect(rec?.status).toBe('unfulfillable');
+        expect(rec?.withdrawnAfterDelivery).toBe(delivered);
+      },
+    );
+
+    it('leaves a verify-time unfulfillable unmarked', async () => {
+      const h = createHarness({records: [record('unlocking')]});
+      h.api.verify.mockResolvedValueOnce([result('unfulfillable')]);
+
+      await h.purchases.processTransaction(tx(), {});
+
+      expect(h.purchases.recordFor(PAL_ID)?.withdrawnAfterDelivery).toBe(
+        undefined,
+      );
+    });
+
     it('never verifies an unfulfillable record', async () => {
       const h = createHarness({records: [record('unfulfillable')]});
 
@@ -485,6 +514,7 @@ describe('PurchaseStore creator updates', () => {
       expect(rec).toMatchObject({
         status: 'unfulfillable',
         supportCode: 'SUP-0',
+        withdrawnAfterDelivery: true,
       });
       expect(rec?.pendingUpdate).toBeUndefined();
       expect(h.palStore.deletePal).toHaveBeenCalledWith('local-pal-1');

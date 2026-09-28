@@ -12,6 +12,8 @@ import {palStore, purchaseStore} from '../../../store';
 import type {PalsHubPal} from '../../../types/palshub';
 import type {PendingUpdate} from '../../../store/PurchaseStore';
 
+import {undeliverableText} from '../../../utils/undeliverableCopy';
+
 import {PalModelStep} from '../PalModelStep';
 import {createStyles} from './styles';
 
@@ -243,14 +245,12 @@ export const PalPurchaseFooter: React.FC<PalPurchaseFooterProps> = observer(
             </>
           );
         case 'unfulfillable':
-          return Platform.OS === 'android' ? (
-            status(
-              t(copy.unfulfillableRefunded, {code: record?.supportCode ?? ''}),
-              'purchase-unfulfillable',
-            )
-          ) : (
+          return (
             <>
-              {status(copy.noLongerAvailable, 'purchase-unfulfillable')}
+              {status(
+                undeliverableText(record, copy),
+                'purchase-unfulfillable',
+              )}
               {record?.supportCode &&
                 status(
                   t(copy.supportCode, {code: record.supportCode}),

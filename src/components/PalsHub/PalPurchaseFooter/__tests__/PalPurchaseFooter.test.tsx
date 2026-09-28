@@ -192,17 +192,32 @@ describe('PalPurchaseFooter', () => {
     );
   });
 
-  it('shows the Android refunded copy', () => {
-    (Platform as any).OS = 'android';
-    runInAction(() => {
-      purchaseStore.records['pal-1'] = record('unfulfillable');
-    });
-    const {getByTestId, queryByTestId} = setup();
-    expect(getByTestId('purchase-unfulfillable')).toHaveTextContent(
-      "We couldn't deliver this, so your purchase has been refunded — ref SUP-7",
-    );
-    expect(queryByTestId('purchase-support-code')).toBeNull();
-  });
+  it.each([
+    [
+      false,
+      "This purchase couldn't be completed. Google will refund it automatically within 3 days.",
+    ],
+    [
+      true,
+      'This Pal was withdrawn. Your purchase is being refunded to your Google Play account.',
+    ],
+  ])(
+    'shows the Android copy for withdrawn after delivery %p with the support code',
+    (delivered, text) => {
+      (Platform as any).OS = 'android';
+      runInAction(() => {
+        purchaseStore.records['pal-1'] = record(
+          'unfulfillable',
+          delivered ? {withdrawnAfterDelivery: true} : {},
+        );
+      });
+      const {getByTestId} = setup();
+      expect(getByTestId('purchase-unfulfillable')).toHaveTextContent(text);
+      expect(getByTestId('purchase-support-code')).toHaveTextContent(
+        'Support code: SUP-7',
+      );
+    },
+  );
 
   it('shows no Buy for an undeliverable purchase', () => {
     (Platform as any).OS = 'ios';

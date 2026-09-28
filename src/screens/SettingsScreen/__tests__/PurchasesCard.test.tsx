@@ -144,17 +144,38 @@ describe('PurchasesCard', () => {
     it.each([
       [
         'ios',
+        false,
+        'This Pal is no longer available. Request a refund from Apple at reportaproblem.apple.com.\nSupport code: SUP-b',
+      ],
+      [
+        'ios',
+        true,
         'This Pal is no longer available. Request a refund from Apple at reportaproblem.apple.com.\nSupport code: SUP-b',
       ],
       [
         'android',
-        "We couldn't deliver this, so your purchase has been refunded — ref SUP-b",
+        false,
+        "This purchase couldn't be completed. Google will refund it automatically within 3 days.\nSupport code: SUP-b",
       ],
-    ])('uses the %s wording', (os, copy) => {
-      (Platform as any).OS = os;
-      setRecords(rec('b', 'unfulfillable'));
-      const {getByText} = render(<PurchasesCard onSignInPress={jest.fn()} />);
-      expect(getByText(copy)).toBeTruthy();
-    });
+      [
+        'android',
+        true,
+        'This Pal was withdrawn. Your purchase is being refunded to your Google Play account.\nSupport code: SUP-b',
+      ],
+    ])(
+      'uses the %s wording (withdrawn after delivery: %p)',
+      (os, delivered, copy) => {
+        (Platform as any).OS = os;
+        setRecords(
+          rec(
+            'b',
+            'unfulfillable',
+            delivered ? {withdrawnAfterDelivery: true} : {},
+          ),
+        );
+        const {getByText} = render(<PurchasesCard onSignInPress={jest.fn()} />);
+        expect(getByText(copy)).toBeTruthy();
+      },
+    );
   });
 });

@@ -1,5 +1,5 @@
 import React, {useContext} from 'react';
-import {Platform, View} from 'react-native';
+import {View} from 'react-native';
 
 import {observer} from 'mobx-react-lite';
 import {Button, Card, Text} from 'react-native-paper';
@@ -11,6 +11,7 @@ import {L10nContext} from '../../utils';
 import {authService} from '../../services';
 import {purchaseStore} from '../../store';
 import type {LedgerRecord} from '../../store/PurchaseStore';
+import {undeliverableText} from '../../utils/undeliverableCopy';
 
 import {createStyles} from './styles';
 
@@ -33,13 +34,12 @@ export const PurchasesCard: React.FC<PurchasesCardProps> = observer(
 
     const statusText = (record: LedgerRecord) => {
       if (record.status === 'unfulfillable') {
-        const code = record.supportCode ?? '';
-        return Platform.OS === 'android'
-          ? t(l10n.palsScreen.purchase.unfulfillableRefunded, {code})
-          : `${l10n.palsScreen.purchase.noLongerAvailable}\n${t(
-              l10n.palsScreen.purchase.supportCode,
-              {code},
-            )}`;
+        const text = undeliverableText(record, l10n.palsScreen.purchase);
+        return record.supportCode
+          ? `${text}\n${t(l10n.palsScreen.purchase.supportCode, {
+              code: record.supportCode,
+            })}`
+          : text;
       }
       const status =
         record.status === 'active' ? copy.statusOwned : copy.statusUnlocking;
