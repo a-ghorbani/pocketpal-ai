@@ -1138,6 +1138,7 @@
       "restorePurchases": "Restore purchases",
       "badgePending": "Pending",
       "badgeUnlocking": "Unlocking",
+      "badgeUpdate": "Update available",
       "modelStep": {
         "download": "Download · {{size}}",
         "startChat": "Start chat",

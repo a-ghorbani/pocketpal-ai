@@ -58,7 +58,8 @@ const SectionGrid: React.FC<{
   columns: number;
   cardWidth: number;
   onPalPress: (pal: PalGridItem) => void;
-}> = ({section, columns, cardWidth, onPalPress}) => (
+  onUpdatePress: (palshubId: string) => void;
+}> = ({section, columns, cardWidth, onPalPress, onUpdatePress}) => (
   <View>
     {section.title ? <SectionDivider label={section.title} /> : null}
     {chunkIntoRows(section.data, columns).map(row => (
@@ -67,6 +68,7 @@ const SectionGrid: React.FC<{
         row={row}
         cardWidth={cardWidth}
         onPalPress={onPalPress}
+        onUpdatePress={onUpdatePress}
       />
     ))}
   </View>
@@ -202,6 +204,16 @@ export const PalsScreen: React.FC = observer(() => {
         setShowPalDetail(true);
       },
     });
+  };
+
+  const handleUpdatePress = (palshubId: string) => {
+    const pal =
+      palStore.cachedPalsHubPals.find(hubPal => hubPal.id === palshubId) ??
+      purchaseStore.recordFor(palshubId)?.pendingUpdate?.pal;
+    if (pal) {
+      setSelectedPal(pal);
+      setShowPalDetail(true);
+    }
   };
 
   const handleEditPal = (pal: Pal) => {
@@ -379,6 +391,7 @@ export const PalsScreen: React.FC = observer(() => {
                   columns={columns}
                   cardWidth={cardWidth}
                   onPalPress={handlePalPress}
+                  onUpdatePress={handleUpdatePress}
                 />
               ))}
           {restoreRow}
@@ -392,6 +405,7 @@ export const PalsScreen: React.FC = observer(() => {
               row={item}
               cardWidth={cardWidth}
               onPalPress={handlePalPress}
+              onUpdatePress={handleUpdatePress}
             />
           )}
           contentContainerStyle={styles.listContainer}

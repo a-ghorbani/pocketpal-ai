@@ -658,7 +658,9 @@ describe('SquarePalCard purchase badges', () => {
     palshub_id: 'pal-1',
   } as Pal;
 
-  const withStatus = (status?: string) =>
+  const pendingUpdate = {pal: hubCard, content: {}, contentVersion: 2};
+
+  const withStatus = (status?: string, pending = false) =>
     runInAction(() => {
       purchaseStore.reset();
       if (status) {
@@ -670,6 +672,7 @@ describe('SquarePalCard purchase badges', () => {
           status,
           title: 'Story Pal',
           updatedAt: 1,
+          ...(pending ? {pendingUpdate} : {}),
         };
       }
     });
@@ -702,4 +705,43 @@ describe('SquarePalCard purchase badges', () => {
       expect(queryByTestId('pal-badge-unlocking')).toBeNull();
     },
   );
+
+  it('shows the update badge on hub and local cards and opens the update', () => {
+    withStatus('active', true);
+    for (const card of [hubCard, localCard]) {
+      const onPress = jest.fn();
+      const onUpdatePress = jest.fn();
+      const {getByTestId, unmount} = render(
+        <SquarePalCard
+          pal={card}
+          onPress={onPress}
+          onUpdatePress={onUpdatePress}
+        />,
+        {withNavigation: true},
+      );
+      const badge = getByTestId('pal-badge-update');
+      expect(badge).toHaveTextContent('Update available');
+
+      fireEvent.press(badge);
+
+      expect(onUpdatePress).toHaveBeenCalledWith('pal-1');
+      expect(onPress).not.toHaveBeenCalled();
+      unmount();
+    }
+  });
+
+  it.each([
+    ['active without a pending update', 'active', false],
+    ['pending with a stale update', 'pending_payment', true],
+    ['unlocking with a stale update', 'unlocking', true],
+    ['removed with a stale update', 'removed', true],
+    ['no record', undefined, false],
+  ])('shows no update badge when %s', (_label, status, pending) => {
+    withStatus(status, pending);
+    const {queryByTestId} = render(
+      <SquarePalCard pal={hubCard} onPress={jest.fn()} />,
+      {withNavigation: true},
+    );
+    expect(queryByTestId('pal-badge-update')).toBeNull();
+  });
 });

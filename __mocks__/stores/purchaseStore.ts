@@ -29,6 +29,7 @@ class MockPurchaseStore {
   start: jest.Mock;
   isOwned: jest.Mock;
   canBuy: jest.Mock;
+  applyUpdate: jest.Mock;
 
   constructor() {
     makeAutoObservable(this, {
@@ -43,6 +44,7 @@ class MockPurchaseStore {
       start: false,
       isOwned: false,
       canBuy: false,
+      applyUpdate: false,
     });
     this.buy = jest.fn().mockResolvedValue('stay');
     this.retry = jest.fn().mockResolvedValue(undefined);
@@ -53,6 +55,7 @@ class MockPurchaseStore {
     this.cancelLinkRequest = jest.fn();
     this.endSession = jest.fn();
     this.start = jest.fn().mockResolvedValue(undefined);
+    this.applyUpdate = jest.fn().mockResolvedValue(undefined);
     this.isOwned = jest.fn(
       (palId: string) =>
         this.records[palId]?.status === 'active' ||
@@ -73,6 +76,11 @@ class MockPurchaseStore {
 
   recordFor(palId: string): LedgerRecord | undefined {
     return this.records[palId];
+  }
+
+  updateAvailable(palId: string): boolean {
+    const rec = this.records[palId];
+    return rec?.status === 'active' && rec.pendingUpdate !== undefined;
   }
 
   isStoreOwned(palId: string): boolean {

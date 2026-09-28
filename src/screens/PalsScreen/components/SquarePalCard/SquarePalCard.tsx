@@ -38,6 +38,7 @@ interface SquarePalCardProps {
   pal: PalsHubPal | Pal;
   onPress: () => void;
   isLocal?: boolean;
+  onUpdatePress?: (palshubId: string) => void;
 }
 
 const generateParameterSummary = (pal: Pal): string => {
@@ -205,7 +206,7 @@ const PalThumbnail: React.FC<{
 };
 
 export const SquarePalCard: React.FC<SquarePalCardProps> = observer(
-  ({pal, onPress, isLocal = false}) => {
+  ({pal, onPress, isLocal = false, onUpdatePress}) => {
     const theme = useTheme();
     const styles = createStyles(theme);
     const l10n = useContext(L10nContext);
@@ -330,6 +331,10 @@ export const SquarePalCard: React.FC<SquarePalCardProps> = observer(
               label: l10n.palsScreen.purchase.badgeUnlocking,
             }
           : undefined;
+    const updatePalId =
+      palshubId && purchaseStore.updateAvailable(palshubId)
+        ? palshubId
+        : undefined;
 
     // Create card style with optional color theming
     const cardStyle = [
@@ -496,6 +501,16 @@ export const SquarePalCard: React.FC<SquarePalCardProps> = observer(
                         {purchaseBadge.label}
                       </Text>
                     </View>
+                  )}
+                  {updatePalId && (
+                    <TouchableOpacity
+                      testID="pal-badge-update"
+                      style={styles.purchaseBadge}
+                      onPress={() => onUpdatePress?.(updatePalId)}>
+                      <Text style={styles.purchaseBadgeText} numberOfLines={1}>
+                        {l10n.palsScreen.purchase.badgeUpdate}
+                      </Text>
+                    </TouchableOpacity>
                   )}
                 </View>
               </View>

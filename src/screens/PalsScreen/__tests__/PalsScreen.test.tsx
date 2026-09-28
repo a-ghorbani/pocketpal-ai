@@ -1,5 +1,5 @@
 import React from 'react';
-import {act, fireEvent, waitFor} from '@testing-library/react-native';
+import {act, fireEvent, waitFor, within} from '@testing-library/react-native';
 
 import {render} from '../../../../jest/test-utils';
 
@@ -765,6 +765,65 @@ describe('PalsScreen', () => {
       expect(tree.indexOf('palshub-pal-card-lib-pal')).toBeGreaterThan(
         libraryTitle,
       );
+    });
+
+    describe('update badge', () => {
+      const withPendingUpdate = (listed: boolean) =>
+        runInAction(() => {
+          palStore.pals = [
+            createPal({
+              id: 'local-store',
+              name: 'Old title',
+              source: 'palshub',
+              palshub_id: 'store-pal',
+            }),
+          ];
+          palStore.cachedPalsHubPals = listed
+            ? [createPalsHubPal({id: 'store-pal', title: 'Listed title'})]
+            : [];
+          purchaseStore.records['store-pal'] = {
+            palId: 'store-pal',
+            source: 'store',
+            productId: 'pal.store',
+            transactionIds: [],
+            status: 'active',
+            title: 'Old title',
+            updatedAt: 1,
+            pendingUpdate: {
+              pal: createPalsHubPal({id: 'store-pal', title: 'New title'}),
+              content: {},
+              contentVersion: 2,
+            },
+          };
+        });
+
+      it('opens the detail sheet with the listing Pal', async () => {
+        withPendingUpdate(true);
+        const {getByTestId, getAllByText} = renderSections();
+        const before = getAllByText('Listed title').length;
+
+        fireEvent.press(
+          within(getByTestId('local-pal-card-local-store')).getByTestId(
+            'pal-badge-update',
+          ),
+        );
+
+        await waitFor(() =>
+          expect(getAllByText('Listed title').length).toBeGreaterThan(before),
+        );
+      });
+
+      it('opens the detail sheet with the pending Pal when the listing lacks it', async () => {
+        withPendingUpdate(false);
+        const {getByTestId, queryByText, getAllByText} = renderSections();
+        expect(queryByText('New title')).toBeNull();
+
+        fireEvent.press(getByTestId('pal-badge-update'));
+
+        await waitFor(() =>
+          expect(getAllByText('New title').length).toBeGreaterThan(0),
+        );
+      });
     });
   });
 });
