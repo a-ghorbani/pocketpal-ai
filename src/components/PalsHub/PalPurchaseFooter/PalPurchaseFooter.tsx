@@ -1,4 +1,4 @@
-import React, {useContext, useEffect, useState} from 'react';
+import React, {useContext, useEffect, useRef, useState} from 'react';
 import {Alert, Platform, View} from 'react-native';
 
 import {observer} from 'mobx-react-lite';
@@ -10,6 +10,7 @@ import {L10nContext} from '../../../utils';
 import {authService} from '../../../services';
 import {palStore, purchaseStore} from '../../../store';
 import type {PalsHubPal} from '../../../types/palshub';
+import type {PendingUpdate} from '../../../store/PurchaseStore';
 
 import {PalModelStep} from '../PalModelStep';
 import {createStyles} from './styles';
@@ -29,6 +30,9 @@ export const PalPurchaseFooter: React.FC<PalPurchaseFooterProps> = observer(
     const [showModelStep, setShowModelStep] = useState(false);
     const [isOpening, setIsOpening] = useState(false);
     const [linkPromptDismissed, setLinkPromptDismissed] = useState(false);
+    const [confirmingUpdate, setConfirmingUpdate] = useState(false);
+    const [applyingUpdate, setApplyingUpdate] = useState(false);
+    const applying = useRef(false);
 
     useEffect(() => () => purchaseStore.endSession(pal.id), [pal.id]);
 
@@ -39,6 +43,9 @@ export const PalPurchaseFooter: React.FC<PalPurchaseFooterProps> = observer(
     const owned = purchaseStore.isOwned(pal.id) || pal.is_owned === true;
     const localPal = palStore.pals.find(p => p.palshub_id === pal.id);
     const signedIn = authService.isAuthenticated;
+    const pendingUpdate = purchaseStore.updateAvailable(pal.id)
+      ? record?.pendingUpdate
+      : undefined;
 
     const handleLinkSignIn = () => {
       purchaseStore.requestLink();
@@ -78,6 +85,21 @@ export const PalPurchaseFooter: React.FC<PalPurchaseFooterProps> = observer(
       }
     };
 
+    const handleConfirmUpdate = async (shownVersion: number) => {
+      if (applying.current) {
+        return;
+      }
+      applying.current = true;
+      setApplyingUpdate(true);
+      try {
+        await purchaseStore.applyUpdate(pal.id, shownVersion);
+      } finally {
+        applying.current = false;
+        setApplyingUpdate(false);
+        setConfirmingUpdate(false);
+      }
+    };
+
     const status = (message: string, testID: string) => (
       <Text testID={testID} style={styles.status}>
         {message}
@@ -96,6 +118,9 @@ export const PalPurchaseFooter: React.FC<PalPurchaseFooterProps> = observer(
           {t(copy.buy, {price: product?.displayPrice ?? ''})}
         </Button>
         <Text style={styles.caption}>{copy.oneTime}</Text>
+        <Text testID="purchase-updates-optional" style={styles.caption}>
+          {copy.updatesOptional}
+        </Text>
         {!signedIn && onSignInPress && (
           <Button
             testID="purchase-signin-link"
@@ -133,6 +158,44 @@ export const PalPurchaseFooter: React.FC<PalPurchaseFooterProps> = observer(
     const linkConflict =
       purchaseStore.linkConflict &&
       status(copy.linkConflict, 'purchase-link-conflict');
+
+    const renderUpdate = ({contentVersion, changeNote}: PendingUpdate) =>
+      confirmingUpdate ? (
+        <>
+          {status(copy.updateConfirmText, 'pal-update-confirm-text')}
+          <View style={styles.promptActions}>
+            <Button
+              testID="pal-update-cancel"
+              mode="text"
+              onPress={() => setConfirmingUpdate(false)}
+              disabled={applyingUpdate}>
+              {copy.updateCancel}
+            </Button>
+            <Button
+              testID="pal-update-confirm"
+              mode="contained"
+              onPress={() => handleConfirmUpdate(contentVersion)}
+              loading={applyingUpdate}
+              disabled={applyingUpdate}>
+              {copy.updateConfirm}
+            </Button>
+          </View>
+        </>
+      ) : (
+        <>
+          {status(
+            t(copy.updatePrompt, {note: changeNote ? `: ${changeNote}` : ''}),
+            'pal-update-prompt',
+          )}
+          <Button
+            testID="pal-update-button"
+            mode="outlined"
+            onPress={() => setConfirmingUpdate(true)}
+            style={styles.button}>
+            {copy.updateButton}
+          </Button>
+        </>
+      );
 
     const renderBody = () => {
       switch (phase) {
@@ -180,14 +243,20 @@ export const PalPurchaseFooter: React.FC<PalPurchaseFooterProps> = observer(
             </>
           );
         case 'unfulfillable':
-          return status(
-            t(
-              Platform.OS === 'android'
-                ? copy.unfulfillableRefunded
-                : copy.unfulfillable,
-              {code: record?.supportCode ?? ''},
-            ),
-            'purchase-unfulfillable',
+          return Platform.OS === 'android' ? (
+            status(
+              t(copy.unfulfillableRefunded, {code: record?.supportCode ?? ''}),
+              'purchase-unfulfillable',
+            )
+          ) : (
+            <>
+              {status(copy.noLongerAvailable, 'purchase-unfulfillable')}
+              {record?.supportCode &&
+                status(
+                  t(copy.supportCode, {code: record.supportCode}),
+                  'purchase-support-code',
+                )}
+            </>
           );
         case 'invalid':
           return (
@@ -217,15 +286,18 @@ export const PalPurchaseFooter: React.FC<PalPurchaseFooterProps> = observer(
       }
       if (owned) {
         return (
-          <Button
-            testID="owned-button"
-            mode="contained"
-            onPress={handleOwned}
-            loading={isOpening}
-            disabled={isOpening}
-            style={styles.button}>
-            {copy.owned}
-          </Button>
+          <>
+            <Button
+              testID="owned-button"
+              mode="contained"
+              onPress={handleOwned}
+              loading={isOpening}
+              disabled={isOpening}
+              style={styles.button}>
+              {copy.owned}
+            </Button>
+            {pendingUpdate && renderUpdate(pendingUpdate)}
+          </>
         );
       }
       if (canBuy || phase === 'paying') {

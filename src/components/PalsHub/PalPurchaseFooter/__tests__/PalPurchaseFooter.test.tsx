@@ -1,5 +1,5 @@
 import React from 'react';
-import {Platform} from 'react-native';
+import {Alert, Platform} from 'react-native';
 import {runInAction} from 'mobx';
 
 import {render, fireEvent, waitFor} from '../../../../../jest/test-utils';
@@ -178,34 +178,150 @@ describe('PalPurchaseFooter', () => {
     expect(getByTestId('purchase-installing')).toBeTruthy();
   });
 
-  it.each([
-    ['ios', "We couldn't deliver this. Support has been notified — ref SUP-7"],
-    [
-      'android',
-      "We couldn't deliver this, so your purchase has been refunded — ref SUP-7",
-    ],
-  ])('shows the %s undeliverable copy', (os, copy) => {
-    (Platform as any).OS = os;
+  it('shows the iOS no-longer-available copy with the support code', () => {
+    (Platform as any).OS = 'ios';
     runInAction(() => {
       purchaseStore.records['pal-1'] = record('unfulfillable');
     });
-    const {getByText} = setup();
-    expect(getByText(copy)).toBeTruthy();
+    const {getByTestId} = setup();
+    expect(getByTestId('purchase-unfulfillable')).toHaveTextContent(
+      'This Pal is no longer available. Request a refund from Apple at reportaproblem.apple.com.',
+    );
+    expect(getByTestId('purchase-support-code')).toHaveTextContent(
+      'Support code: SUP-7',
+    );
   });
 
-  it('shows the support reference for an undeliverable purchase and no Buy', () => {
+  it('shows the Android refunded copy', () => {
+    (Platform as any).OS = 'android';
+    runInAction(() => {
+      purchaseStore.records['pal-1'] = record('unfulfillable');
+    });
+    const {getByTestId, queryByTestId} = setup();
+    expect(getByTestId('purchase-unfulfillable')).toHaveTextContent(
+      "We couldn't deliver this, so your purchase has been refunded — ref SUP-7",
+    );
+    expect(queryByTestId('purchase-support-code')).toBeNull();
+  });
+
+  it('shows no Buy for an undeliverable purchase', () => {
     (Platform as any).OS = 'ios';
     purchasable();
     runInAction(() => {
       purchaseStore.records['pal-1'] = record('unfulfillable');
     });
-    const {getByText, queryByTestId} = setup();
-    expect(
-      getByText(
-        "We couldn't deliver this. Support has been notified — ref SUP-7",
-      ),
-    ).toBeTruthy();
+    const {queryByTestId} = setup();
     expect(queryByTestId('buy-button')).toBeNull();
+  });
+
+  it('says creator updates are optional under the one-time line', () => {
+    purchasable();
+    const {getByTestId, toJSON} = setup();
+    expect(getByTestId('purchase-updates-optional')).toHaveTextContent(
+      'Creator updates are optional — the version you buy stays yours.',
+    );
+    const text = JSON.stringify(toJSON());
+    expect(
+      text.indexOf('One-time purchase. Yours to keep. No account needed.'),
+    ).toBeLessThan(text.indexOf('Creator updates are optional'));
+  });
+
+  it('leaves out the updates line without Buy', () => {
+    runInAction(() => {
+      purchaseStore.records['pal-1'] = record('active');
+    });
+    const {queryByTestId} = setup();
+    expect(queryByTestId('purchase-updates-optional')).toBeNull();
+  });
+
+  describe('creator update', () => {
+    const withUpdate = (changeNote?: string) =>
+      runInAction(() => {
+        purchaseStore.records['pal-1'] = record('active', {
+          pendingUpdate: {
+            pal: {...pal, title: 'Story Pal 2'},
+            content: {},
+            contentVersion: 4,
+            ...(changeNote ? {changeNote} : {}),
+          },
+        });
+        palStore.pals = [localPal];
+      });
+
+    it.each([
+      [
+        undefined,
+        "Update available from its creator. Your current version keeps working if you don't update.",
+      ],
+      [
+        'Fixes a typo',
+        "Update available from its creator: Fixes a typo. Your current version keeps working if you don't update.",
+      ],
+    ])('prompts with note %p beside Owned', (note, text) => {
+      withUpdate(note);
+      const {getByTestId} = setup();
+      expect(getByTestId('owned-button')).toBeTruthy();
+      expect(getByTestId('pal-update-prompt')).toHaveTextContent(text);
+      expect(getByTestId('pal-update-button')).toHaveTextContent('Update');
+    });
+
+    it('shows no prompt without a pending update', () => {
+      runInAction(() => {
+        purchaseStore.records['pal-1'] = record('active');
+        palStore.pals = [localPal];
+      });
+      const {queryByTestId} = setup();
+      expect(queryByTestId('pal-update-prompt')).toBeNull();
+      expect(queryByTestId('pal-update-button')).toBeNull();
+    });
+
+    it('confirms inline and cancels back to the prompt', () => {
+      const alert = jest.spyOn(Alert, 'alert');
+      withUpdate();
+      const {getByTestId, getByText, queryByTestId} = setup();
+
+      fireEvent.press(getByTestId('pal-update-button'));
+
+      expect(
+        getByText(
+          "The creator's changes will replace this Pal's copy of those parts, including your edits there. Everything else stays as it is.",
+        ).props.testID,
+      ).toBe('pal-update-confirm-text');
+      expect(queryByTestId('pal-update-prompt')).toBeNull();
+
+      fireEvent.press(getByTestId('pal-update-cancel'));
+
+      expect(getByTestId('pal-update-prompt')).toBeTruthy();
+      expect(purchaseStore.applyUpdate).not.toHaveBeenCalled();
+      expect(alert).not.toHaveBeenCalled();
+    });
+
+    it('applies the shown version once for a double tap', async () => {
+      let finish = () => {};
+      (purchaseStore.applyUpdate as jest.Mock).mockImplementationOnce(
+        () =>
+          new Promise<void>(resolve => {
+            finish = resolve;
+          }),
+      );
+      withUpdate();
+      const {getByTestId, queryByTestId} = setup();
+      fireEvent.press(getByTestId('pal-update-button'));
+
+      fireEvent.press(getByTestId('pal-update-confirm'));
+      fireEvent.press(getByTestId('pal-update-confirm'));
+
+      expect(purchaseStore.applyUpdate).toHaveBeenCalledTimes(1);
+      expect(purchaseStore.applyUpdate).toHaveBeenCalledWith('pal-1', 4);
+      runInAction(() => {
+        purchaseStore.records['pal-1'] = record('active');
+      });
+      finish();
+      await waitFor(() =>
+        expect(queryByTestId('pal-update-confirm-text')).toBeNull(),
+      );
+      expect(queryByTestId('pal-update-prompt')).toBeNull();
+    });
   });
 
   it('shows the invalid-proof message with Buy back', () => {

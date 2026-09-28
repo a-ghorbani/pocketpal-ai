@@ -33,14 +33,13 @@ export const PurchasesCard: React.FC<PurchasesCardProps> = observer(
 
     const statusText = (record: LedgerRecord) => {
       if (record.status === 'unfulfillable') {
-        return t(
-          Platform.OS === 'android'
-            ? l10n.palsScreen.purchase.unfulfillableRefunded
-            : l10n.palsScreen.purchase.unfulfillable,
-          {
-            code: record.supportCode ?? '',
-          },
-        );
+        const code = record.supportCode ?? '';
+        return Platform.OS === 'android'
+          ? t(l10n.palsScreen.purchase.unfulfillableRefunded, {code})
+          : `${l10n.palsScreen.purchase.noLongerAvailable}\n${t(
+              l10n.palsScreen.purchase.supportCode,
+              {code},
+            )}`;
       }
       const status =
         record.status === 'active' ? copy.statusOwned : copy.statusUnlocking;

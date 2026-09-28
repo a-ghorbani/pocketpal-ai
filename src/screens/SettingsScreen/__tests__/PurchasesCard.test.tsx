@@ -57,7 +57,7 @@ describe('PurchasesCard', () => {
     expect(getByText('Owned · Support code: SUP-a')).toBeTruthy();
     expect(
       getByText(
-        "We couldn't deliver this. Support has been notified — ref SUP-b",
+        'This Pal is no longer available. Request a refund from Apple at reportaproblem.apple.com.\nSupport code: SUP-b',
       ),
     ).toBeTruthy();
     expect(getByTestId('purchase-row-c')).toBeTruthy();
@@ -144,7 +144,7 @@ describe('PurchasesCard', () => {
     it.each([
       [
         'ios',
-        "We couldn't deliver this. Support has been notified — ref SUP-b",
+        'This Pal is no longer available. Request a refund from Apple at reportaproblem.apple.com.\nSupport code: SUP-b',
       ],
       [
         'android',
