@@ -61,9 +61,9 @@ describe('In-app purchase recovery', () => {
     await localCardTitled(title).waitForDisplayed({timeout});
   };
 
-  const rowSays = (palId: string, text: string) =>
+  const textContaining = (text: string) =>
     driver.isAndroid
-      ? `//*[@resource-id="purchase-row-${palId}"]//*[contains(@text, "${text}")]`
+      ? `//*[contains(@text, "${text}")]`
       : `-ios predicate string:label CONTAINS "${text}"`;
 
   const buyWithPendingUpdate = async (id: string, title: string) => {
@@ -214,31 +214,35 @@ describe('In-app purchase recovery', () => {
 
     iapMockServer.withdraw(pal.id);
     await relaunchApp();
-    await openPals();
-    await localCardTitled(pal.title).waitForDisplayed({
-      timeout: 30000,
-      reverse: true,
-    });
-
-    await relaunchApp();
     await chatPage.waitForReady(TIMEOUTS.appReady);
     await chatPage.openDrawer();
     await drawerPage.navigateToSettings();
     await settingsPage.waitForReady();
     await buyPage.scrollToCard(`purchase-row-${pal.id}`);
-    await browser
-      .$(
-        rowSays(
-          pal.id,
-          driver.isAndroid
-            ? 'This Pal was withdrawn. Your purchase is being refunded to your Google Play account.'
-            : 'This Pal is no longer available.',
-        ),
-      )
-      .waitForDisplayed({timeout: 20000});
-    await browser
-      .$(rowSays(pal.id, 'Support code: E2E-'))
-      .waitForDisplayed({timeout: 5000});
+    const note = await browser.$(
+      textContaining(
+        driver.isAndroid
+          ? 'This Pal was withdrawn.'
+          : 'This Pal is no longer available.',
+      ),
+    );
+    await note.waitForDisplayed({timeout: 20000});
+    const text = await note.getText();
+    expect(text).toContain(
+      driver.isAndroid
+        ? 'This Pal was withdrawn. Your purchase is being refunded to your Google Play account.'
+        : 'This Pal is no longer available. Request a refund from Apple at reportaproblem.apple.com.',
+    );
+    expect(text).toContain('Support code: E2E-');
+
+    await chatPage.openDrawer();
+    await drawerPage.navigateToPals();
+    expect(
+      await Gestures.scrollToElement(
+        withinTestIdPrefix('local-pal-card-', pal.title),
+        10,
+      ),
+    ).toBe(false);
   });
 
   it('shows the withdrawn note when verify reports the purchase removed', async () => {
