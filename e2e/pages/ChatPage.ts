@@ -324,10 +324,32 @@ export class ChatPage extends BasePage {
    * Open the pal/model picker sheet by tapping the pal selector button.
    */
   async openPalPicker(): Promise<void> {
+    await this.dismissKeyboard();
     const palBtn = browser.$(byAccessibilityLabel('Select Pal'));
     await palBtn.waitForDisplayed({timeout: 5000});
     await palBtn.click();
     await browser.pause(500);
+
+    const modelsTab = browser.$(byText('Models'));
+    const opened = await modelsTab
+      .waitForDisplayed({timeout: 2000})
+      .then(() => true)
+      .catch(() => false);
+    if (!opened) {
+      const location = await palBtn.getLocation();
+      const size = await palBtn.getSize();
+      await browser
+        .action('pointer', {parameters: {pointerType: 'touch'}})
+        .move({
+          x: Math.floor(location.x + size.width / 2),
+          y: Math.floor(location.y + size.height / 2),
+        })
+        .down()
+        .up()
+        .perform();
+    }
+
+    await modelsTab.waitForDisplayed({timeout: 5000});
   }
 
   /**
