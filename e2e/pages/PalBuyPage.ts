@@ -107,19 +107,24 @@ export class PalBuyPage extends BasePage {
     }
   }
 
+  private readonly localUpdateBadge = testIdWithinPrefix(
+    'local-pal-card-',
+    'pal-badge-update',
+  );
+
   async tapUpdateBadge(timeout = 30000): Promise<void> {
-    await this.scrollToCard('local-pal-card-');
-    await this.tap(
-      testIdWithinPrefix('local-pal-card-', 'pal-badge-update'),
-      timeout,
-    );
+    await Gestures.scrollToElement(this.localUpdateBadge, 8);
+    await this.tap(this.localUpdateBadge, timeout);
   }
 
   async hasUpdateBadge(timeout = 3000): Promise<boolean> {
-    return this.isElementDisplayed(
-      testIdWithinPrefix('local-pal-card-', 'pal-badge-update'),
-      timeout,
-    );
+    await Gestures.scrollToElement(this.localUpdateBadge, 8);
+    return this.isElementDisplayed(this.localUpdateBadge, timeout);
+  }
+
+  /** Scrolls the whole list; false only when no card shows the badge. */
+  async anyUpdateBadgeInList(): Promise<boolean> {
+    return Gestures.scrollToElement(byExactTestId('pal-badge-update'), 10);
   }
 
   async tapUpdate(timeout = 20000): Promise<void> {

@@ -127,7 +127,8 @@ describe('In-app purchase', () => {
     await buyPage.openPal(pal.id);
 
     await buyPage.buy();
-    expect(await buyPage.text('purchase-unfulfillable', 60000)).toContain(
+    await buyPage.waitFor('purchase-unfulfillable', 60000);
+    expect(await buyPage.text('purchase-support-code')).toContain(
       'E2E-fake-tx-',
     );
     expect(await buyPage.isShown('buy-button', 1000)).toBe(false);

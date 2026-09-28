@@ -12,6 +12,7 @@ import {DrawerPage} from '../../pages/DrawerPage';
 import {PalBuyPage} from '../../pages/PalBuyPage';
 import {SettingsPage} from '../../pages/SettingsPage';
 import {TIMEOUTS} from '../../fixtures/models';
+import {Gestures} from '../../helpers/gestures';
 import {withinTestIdPrefix} from '../../helpers/selectors';
 import {saveFailureScreenshot} from '../../helpers/screenshots';
 import {assertMockTraffic, iapMockServer} from '../../helpers/iapMockServer';
@@ -53,9 +54,17 @@ describe('In-app purchase recovery', () => {
     browser.$(withinTestIdPrefix('local-pal-card-', title));
 
   const waitForLocalTitle = async (title: string, timeout = 30000) => {
-    await buyPage.scrollToCard('local-pal-card-');
+    await Gestures.scrollToElement(
+      withinTestIdPrefix('local-pal-card-', title),
+      8,
+    );
     await localCardTitled(title).waitForDisplayed({timeout});
   };
+
+  const rowSays = (palId: string, text: string) =>
+    driver.isAndroid
+      ? `//*[@resource-id="purchase-row-${palId}"]//*[contains(@text, "${text}")]`
+      : `-ios predicate string:label CONTAINS "${text}"`;
 
   const buyWithPendingUpdate = async (id: string, title: string) => {
     const {pal, products} = listPal(id);
@@ -166,9 +175,12 @@ describe('In-app purchase recovery', () => {
     await buyPage.confirmUpdate();
     await buyPage.waitGone('pal-update-prompt');
     await buyPage.closeSheet();
-
     await waitForLocalTitle('E2E Updated Pal');
-    expect(await buyPage.hasUpdateBadge()).toBe(false);
+
+    await relaunchApp();
+    await openPals();
+    await waitForLocalTitle('E2E Updated Pal');
+    expect(await buyPage.anyUpdateBadgeInList()).toBe(false);
   });
 
   it('keeps the installed version working when the user declines the update', async () => {
@@ -214,11 +226,19 @@ describe('In-app purchase recovery', () => {
     await drawerPage.navigateToSettings();
     await settingsPage.waitForReady();
     await buyPage.scrollToCard(`purchase-row-${pal.id}`);
-    const row = await buyPage.text(`purchase-row-${pal.id}`);
-    expect(row).toContain(
-      driver.isAndroid ? 'refunded' : 'no longer available',
-    );
-    expect(row).toContain('E2E-');
+    await browser
+      .$(
+        rowSays(
+          pal.id,
+          driver.isAndroid
+            ? 'This Pal was withdrawn. Your purchase is being refunded to your Google Play account.'
+            : 'This Pal is no longer available.',
+        ),
+      )
+      .waitForDisplayed({timeout: 20000});
+    await browser
+      .$(rowSays(pal.id, 'Support code: E2E-'))
+      .waitForDisplayed({timeout: 5000});
   });
 
   it('shows the withdrawn note when verify reports the purchase removed', async () => {
@@ -228,13 +248,14 @@ describe('In-app purchase recovery', () => {
     await buyPage.openPal(pal.id);
 
     await buyPage.buy();
-    const note = await buyPage.text('purchase-unfulfillable', 60000);
-    expect(note).toContain(
-      driver.isAndroid ? 'refunded' : 'no longer available',
+    expect(await buyPage.text('purchase-unfulfillable', 60000)).toBe(
+      driver.isAndroid
+        ? "This purchase couldn't be completed. Google will refund it automatically within 3 days."
+        : 'This Pal is no longer available. Request a refund from Apple at reportaproblem.apple.com.',
     );
-    if (driver.isAndroid) {
-      expect(note).toContain('E2E-');
-    }
+    expect(await buyPage.text('purchase-support-code')).toContain(
+      'Support code: E2E-',
+    );
     expect(await buyPage.isShown('buy-button', 1000)).toBe(false);
   });
 
