@@ -2,6 +2,7 @@ import {runInAction} from 'mobx';
 
 import {palStore} from '../PalStore';
 import {resolveHFModelForDownload} from '../../utils/hfResolve';
+import {downloadPalThumbnail} from '../../utils/imageUtils';
 import type {CreatorField} from '../../services/iap/creatorContent';
 import {palsHubService} from '../../services';
 import {palRepository} from '../../repositories/PalRepository';
@@ -297,6 +298,41 @@ describe('PalStore owned install', () => {
       expect(palStore.getPalById(id)!.thumbnail_url).toBe(
         'pal-images/mine.png',
       );
+    });
+
+    it('reports a failed thumbnail and still writes the other fields', async () => {
+      const id = await installEdited();
+      (downloadPalThumbnail as jest.Mock).mockRejectedValueOnce(
+        new Error('offline'),
+      );
+
+      const outcome = await palStore.applyCreatorUpdate(
+        id,
+        {
+          ...v1(),
+          title: 'New title',
+          thumbnail_url: 'https://example.com/v2.png',
+        },
+        new Set<CreatorField>(['title', 'thumbnail_url']),
+      );
+
+      expect(outcome).toEqual({thumbnailFailed: true});
+      expect(lastUpdates()).toEqual({name: 'New title'});
+      expect(palStore.getPalById(id)!.thumbnail_url).toBe(
+        'pal-images/mine.png',
+      );
+    });
+
+    it('reports no failure when the thumbnail downloads', async () => {
+      const id = await installEdited();
+
+      const outcome = await palStore.applyCreatorUpdate(
+        id,
+        {...v1(), thumbnail_url: 'https://example.com/v2.png'},
+        new Set<CreatorField>(['thumbnail_url']),
+      );
+
+      expect(outcome).toEqual({thumbnailFailed: false});
     });
 
     it('resolves the model only when it changed', async () => {

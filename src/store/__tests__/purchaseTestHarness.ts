@@ -233,6 +233,7 @@ export const createHarness = (
         _fields: ReadonlySet<CreatorField>,
       ) => {
         log.push(`apply:${localPalId}`);
+        return {thumbnailFailed: false};
       },
     ),
     deletePal: jest.fn(async (id: string) => {

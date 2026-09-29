@@ -204,6 +204,37 @@ describe('PurchaseStore creator updates', () => {
       expect(h.purchases.updateAvailable(PAL_ID)).toBe(false);
     });
 
+    it('keeps the old thumbnail as applied when its download fails', async () => {
+      const oldThumb = 'https://example.com/v1.png';
+      const newThumb = 'https://example.com/v2.png';
+      const h = installed({
+        applied: contentOf(hubPal({thumbnail_url: oldThumb})),
+        thumbnailUrl: oldThumb,
+        pendingUpdate: pending(v2({thumbnail_url: newThumb})),
+      });
+      h.palStore.applyCreatorUpdate.mockResolvedValueOnce({
+        thumbnailFailed: true,
+      });
+
+      await h.purchases.applyUpdate(PAL_ID, 4);
+
+      const rec = h.purchases.recordFor(PAL_ID);
+      expect(rec?.contentVersion).toBe(4);
+      expect(rec?.applied?.title).toBe('Story Pal 2');
+      expect(rec?.applied?.thumbnail_url).toBe(oldThumb);
+      expect(rec?.thumbnailUrl).toBe(oldThumb);
+
+      await refreshWith(h, [v2({content_version: 5, thumbnail_url: newThumb})]);
+      await h.purchases.applyUpdate(PAL_ID, 5);
+
+      expect([...h.palStore.applyCreatorUpdate.mock.calls[1][2]]).toEqual([
+        'thumbnail_url',
+      ]);
+      expect(h.purchases.recordFor(PAL_ID)?.applied?.thumbnail_url).toBe(
+        newThumb,
+      );
+    });
+
     it('treats every field as changed without an applied snapshot', async () => {
       const h = installed({applied: undefined, pendingUpdate: pending(v2())});
 

@@ -862,7 +862,7 @@ export class PurchaseStore {
       ) {
         return;
       }
-      await this.deps.palStore.applyCreatorUpdate(
+      const {thumbnailFailed} = await this.deps.palStore.applyCreatorUpdate(
         local.id,
         pending.pal,
         changedCreatorFields(rec.applied, pending.content),
@@ -870,10 +870,14 @@ export class PurchaseStore {
       await this.putRecord(palId, {
         productId,
         contentVersion: pending.contentVersion,
-        applied: pending.content,
+        applied: thumbnailFailed
+          ? {...pending.content, thumbnail_url: rec.applied?.thumbnail_url}
+          : pending.content,
         pendingUpdate: undefined,
         title: pending.pal.title,
-        thumbnailUrl: pending.pal.thumbnail_url ?? rec.thumbnailUrl,
+        thumbnailUrl: thumbnailFailed
+          ? rec.thumbnailUrl
+          : (pending.pal.thumbnail_url ?? rec.thumbnailUrl),
       });
     });
   }

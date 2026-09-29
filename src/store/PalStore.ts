@@ -96,19 +96,18 @@ const CREATOR_UPDATES: Record<
     if (!palsHubPal.thumbnail_url) {
       return {};
     }
-    try {
-      return {
-        thumbnail_url: await downloadPalThumbnail(
-          localPalId,
-          palsHubPal.thumbnail_url,
-        ),
-      };
-    } catch (imageError) {
-      console.warn('Failed to refresh thumbnail:', imageError);
-      return {};
-    }
+    return {
+      thumbnail_url: await downloadPalThumbnail(
+        localPalId,
+        palsHubPal.thumbnail_url,
+      ),
+    };
   },
 };
+
+export interface CreatorUpdateResult {
+  thumbnailFailed: boolean;
+}
 
 export interface OwnedPalInstall {
   localPal: Pal;
@@ -355,10 +354,10 @@ class PalStore {
     localPalId: string,
     palsHubPal: PalsHubPal,
     fields: ReadonlySet<CreatorField>,
-  ): Promise<void> => {
+  ): Promise<CreatorUpdateResult> => {
     const current = this.getPalById(localPalId);
     if (!current || fields.size === 0) {
-      return;
+      return {thumbnailFailed: false};
     }
     const fresh = await this.createLocalPalFromPalsHub(
       fields.has('model_reference')
@@ -367,10 +366,20 @@ class PalStore {
     );
     const context = {fresh, current, palsHubPal, localPalId};
     const updates: PalUpdate = {};
+    let thumbnailFailed = false;
     for (const field of fields) {
-      Object.assign(updates, await CREATOR_UPDATES[field](context));
+      try {
+        Object.assign(updates, await CREATOR_UPDATES[field](context));
+      } catch (error) {
+        if (field !== 'thumbnail_url') {
+          throw error;
+        }
+        console.warn('Failed to refresh thumbnail:', error);
+        thumbnailFailed = true;
+      }
     }
     await this.updatePal(localPalId, updates);
+    return {thumbnailFailed};
   };
 
   private createPalFromPalsHub = async (
