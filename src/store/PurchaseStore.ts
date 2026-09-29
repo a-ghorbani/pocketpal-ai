@@ -48,9 +48,7 @@ export interface LedgerRecord {
   applied?: CreatorContent;
   pendingUpdate?: PendingUpdate;
   supportCode?: string;
-  grant?: PalsHubPal;
-  grantContent?: CreatorContent;
-  grantVersion?: number;
+  grant?: GrantedVersion;
   withdrawnAfterDelivery?: boolean;
   title: string;
   thumbnailUrl?: string;
@@ -64,6 +62,10 @@ export interface PendingUpdate {
   contentVersion: number;
   changeNote?: string;
 }
+
+export type GrantedVersion = Omit<PendingUpdate, 'contentVersion'> & {
+  contentVersion?: number;
+};
 
 interface Ledger {
   version: 1;
@@ -797,9 +799,15 @@ export class PurchaseStore {
       {
         productId: tx.productId,
         status: 'granted',
-        grant: result.pal,
-        grantContent: result.content,
-        grantVersion: result.contentVersion,
+        grant:
+          result.pal && result.content
+            ? {
+                pal: result.pal,
+                content: result.content,
+                contentVersion: result.contentVersion,
+                changeNote: result.changeNote,
+              }
+            : undefined,
         pendingUpdate: undefined,
         supportCode: result.supportCode ?? rec?.supportCode,
         transactionIds: this.withTransactionId(rec, tx),
@@ -893,8 +901,6 @@ export class PurchaseStore {
         productId: rec.productId,
         status: 'removed',
         grant: undefined,
-        grantContent: undefined,
-        grantVersion: undefined,
         pendingUpdate: undefined,
       },
       true,
@@ -917,8 +923,6 @@ export class PurchaseStore {
           ? {withdrawnAfterDelivery: true}
           : {}),
         grant: undefined,
-        grantContent: undefined,
-        grantVersion: undefined,
         pendingUpdate: undefined,
       },
       true,
@@ -961,14 +965,13 @@ export class PurchaseStore {
     );
     for (const rec of granted) {
       try {
-        const {created} = await this.deps.palStore.installOwnedPal(rec.grant!);
+        const grant = rec.grant!;
+        const {created} = await this.deps.palStore.installOwnedPal(grant.pal);
         await this.putRecord(rec.palId, {
           productId: rec.productId,
           status: 'active',
           grant: undefined,
-          grantContent: undefined,
-          grantVersion: undefined,
-          ...this.adoptGrant(rec, created),
+          ...this.adoptGrant(rec, grant, created),
         });
         if (this.watching.has(rec.palId)) {
           this.setTransient(rec.palId, 'ready');
@@ -984,21 +987,15 @@ export class PurchaseStore {
 
   private adoptGrant(
     rec: LedgerRecord,
+    grant: GrantedVersion,
     created: boolean,
   ): Partial<LedgerRecord> {
-    const content = rec.grantContent;
-    const version = rec.grantVersion ?? rec.contentVersion;
+    const version = grant.contentVersion ?? rec.contentVersion;
     if (created || !rec.applied) {
-      return {applied: content, contentVersion: version};
+      return {applied: grant.content, contentVersion: version};
     }
-    if (content && changedCreatorFields(rec.applied, content).size > 0) {
-      return {
-        pendingUpdate: {
-          pal: rec.grant!,
-          content,
-          contentVersion: version ?? 0,
-        },
-      };
+    if (changedCreatorFields(rec.applied, grant.content).size > 0) {
+      return {pendingUpdate: {...grant, contentVersion: version ?? 0}};
     }
     return {contentVersion: version};
   }

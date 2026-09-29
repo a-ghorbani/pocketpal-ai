@@ -99,7 +99,7 @@ export const record = (
   title: 'Story Pal',
   updatedAt: 1,
   ...(status === 'granted'
-    ? {grant: hubPal(), grantContent: contentOf(hubPal()), grantVersion: 3}
+    ? {grant: {pal: hubPal(), content: contentOf(hubPal()), contentVersion: 3}}
     : {}),
   ...(status === 'pending_payment' ? {pendingSince: 1} : {}),
   ...overrides,

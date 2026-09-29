@@ -325,9 +325,7 @@ describe('PurchaseStore creator updates', () => {
   describe('grant', () => {
     const grantV2 = () =>
       record('granted', {
-        grant: v2(),
-        grantContent: contentOf(v2()),
-        grantVersion: 4,
+        grant: {pal: v2(), content: contentOf(v2()), contentVersion: 4},
       });
 
     it('installs a new Pal with the full version as the applied snapshot', async () => {
@@ -343,7 +341,7 @@ describe('PurchaseStore creator updates', () => {
       expect(rec).toMatchObject({status: 'active', contentVersion: 4});
       expect(rec?.applied).toEqual(contentOf(v2()));
       expect(rec?.pendingUpdate).toBeUndefined();
-      expect(rec?.grantContent).toBeUndefined();
+      expect(rec?.grant).toBeUndefined();
     });
 
     it('adopts an existing row without a snapshot as the grant version', async () => {
@@ -377,13 +375,56 @@ describe('PurchaseStore creator updates', () => {
       expect(h.palStore.applyCreatorUpdate).not.toHaveBeenCalled();
     });
 
+    it('keeps the change note when a grant becomes the pending update', async () => {
+      const h = createHarness({
+        records: [
+          record('granted', {
+            grant: {
+              pal: v2(),
+              content: contentOf(v2()),
+              contentVersion: 4,
+              changeNote: 'Fixed the greeting',
+            },
+          }),
+        ],
+      });
+      h.palStore.pals.push({...localPal(), name: 'My edit'});
+
+      await h.purchases.drainQueue();
+
+      const rec = h.purchases.recordFor(PAL_ID);
+      expect(rec?.pendingUpdate).toMatchObject({
+        contentVersion: 4,
+        changeNote: 'Fixed the greeting',
+      });
+      expect(rec?.grant).toBeUndefined();
+    });
+
+    it('stores the verify change note with the grant', async () => {
+      const h = createHarness();
+      h.api.verify.mockResolvedValue([
+        result('active', {changeNote: 'Fixed the greeting'}),
+      ]);
+      h.palStore.installOwnedPal.mockRejectedValueOnce(new Error('db'));
+
+      await h.purchases.processTransaction(tx(), {});
+      await flush();
+
+      expect(h.purchases.recordFor(PAL_ID)?.grant).toMatchObject({
+        contentVersion: 3,
+        changeNote: 'Fixed the greeting',
+      });
+    });
+
     it('advances the version for an equal grant on an existing row', async () => {
       const h = createHarness({
         records: [
           record('granted', {
-            grant: hubPal(),
-            grantContent: contentOf(hubPal()),
-            grantVersion: 4,
+            grant: {
+              pal: hubPal(),
+              content: contentOf(hubPal()),
+              contentVersion: 4,
+            },
           }),
         ],
       });
