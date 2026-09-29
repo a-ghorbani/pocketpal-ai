@@ -73,9 +73,9 @@ describe('PurchaseStore recovery', () => {
     it('Android: drives a purchase from the store list and acknowledges it once', async () => {
       setOS('android');
       const h = createHarness({records: [record('unlocking')]});
-      h.store.currentEntitlements.mockResolvedValue([
-        androidTx({unfinished: true}),
-      ]);
+      h.store.currentEntitlements
+        .mockResolvedValueOnce([androidTx({unfinished: true})])
+        .mockResolvedValue([androidTx()]);
 
       await h.purchases.recover();
       await h.purchases.drainQueue();
@@ -227,6 +227,91 @@ describe('PurchaseStore recovery', () => {
       expect(third).toBe(first);
       await first;
       expect(h.store.init).toHaveBeenCalledTimes(2);
+    });
+  });
+
+  describe('acknowledgement retry', () => {
+    let warn: jest.SpyInstance;
+    beforeEach(() => {
+      warn = jest.spyOn(console, 'warn').mockImplementation(() => {});
+    });
+    afterEach(() => warn.mockRestore());
+
+    it('Android: acknowledges again when the next query still reports it unacknowledged', async () => {
+      setOS('android');
+      const h = createHarness({records: [record('active')]});
+      h.store.currentEntitlements.mockResolvedValue([
+        androidTx({unfinished: true}),
+      ]);
+
+      await h.purchases.recover();
+      await h.purchases.recover();
+
+      expect(h.store.finish).toHaveBeenCalledTimes(2);
+    });
+
+    it('Android: retries an acknowledgement that failed on the next query', async () => {
+      setOS('android');
+      const h = createHarness({records: [record('active')]});
+      h.store.currentEntitlements.mockResolvedValue([
+        androidTx({unfinished: true}),
+      ]);
+      h.store.finish.mockRejectedValueOnce(new Error('billing'));
+
+      await h.purchases.recover();
+      await h.purchases.recover();
+
+      expect(h.store.finish).toHaveBeenCalledTimes(2);
+      await expect(h.store.finish.mock.results[1].value).resolves.toBe(
+        undefined,
+      );
+    });
+
+    it('Android: retries on the query restore makes', async () => {
+      setOS('android');
+      const h = createHarness({records: [record('active')]});
+      h.store.currentEntitlements.mockResolvedValue([
+        androidTx({unfinished: true}),
+      ]);
+
+      await h.purchases.recover();
+      await h.purchases.restore();
+
+      expect(h.store.finish).toHaveBeenCalledTimes(2);
+    });
+
+    it('Android: never acknowledges a purchase the query reports acknowledged', async () => {
+      setOS('android');
+      const h = createHarness({records: [record('active')]});
+      h.store.currentEntitlements.mockResolvedValue([androidTx()]);
+
+      await h.purchases.recover();
+      await h.purchases.recover();
+
+      expect(h.store.finish).not.toHaveBeenCalled();
+    });
+
+    it('iOS: finishes a transaction once across recoveries', async () => {
+      setOS('ios');
+      const h = createHarness({records: [record('active')]});
+      h.store.unfinished.mockResolvedValue([tx()]);
+
+      await h.purchases.recover();
+      await h.purchases.recover();
+
+      expect(h.store.finish).toHaveBeenCalledTimes(1);
+    });
+
+    it('iOS: finishes again on the next recovery after a failed finish', async () => {
+      setOS('ios');
+      const h = createHarness({records: [record('active')]});
+      h.store.unfinished.mockResolvedValue([tx()]);
+      h.store.finish.mockRejectedValueOnce(new Error('storekit'));
+
+      await h.purchases.recover();
+      await h.purchases.recover();
+
+      expect(h.store.finish).toHaveBeenCalledTimes(2);
     });
   });
 

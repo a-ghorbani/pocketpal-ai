@@ -412,6 +412,18 @@ describe('PurchaseStore pipeline', () => {
       },
     );
 
+    it('acknowledges a second delivery in one query after the first failed', async () => {
+      const warn = jest.spyOn(console, 'warn').mockImplementation(() => {});
+      const h = createHarness({records: [record('active')]});
+      h.store.finish.mockRejectedValueOnce(new Error('billing'));
+
+      await h.purchases.processTransaction(tx(), {});
+      await h.purchases.processTransaction(tx(), {});
+
+      expect(h.store.finish).toHaveBeenCalledTimes(2);
+      warn.mockRestore();
+    });
+
     it('leaves an acknowledged replay alone', async () => {
       const h = createHarness({records: [record('active')]});
       await h.purchases.processTransaction(tx({unfinished: false}), {});

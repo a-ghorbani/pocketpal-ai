@@ -560,6 +560,12 @@ export class PurchaseStore {
     }
   }
 
+  private resetAndroidAckMemo(): void {
+    if (Platform.OS === 'android') {
+      this.finishedTxs.clear();
+    }
+  }
+
   private async finishOnIOS(tx: StoreTransaction): Promise<void> {
     if (Platform.OS === 'ios') {
       await this.finish(tx);
@@ -1143,6 +1149,7 @@ export class PurchaseStore {
     if (!available) {
       return;
     }
+    this.resetAndroidAckMemo();
     const txs = await this.storeTransactions();
     const queryOk = this.storePort.queryOk;
     for (const tx of txs) {
@@ -1390,6 +1397,7 @@ export class PurchaseStore {
         console.warn('Store sync failed:', error);
       }
       await this.drainQueue();
+      this.resetAndroidAckMemo();
       const txs = await this.storePort.currentEntitlements();
       const queryOk = this.storePort.queryOk;
       for (const tx of txs) {
