@@ -338,6 +338,25 @@ describe('PalPurchaseFooter', () => {
       expect(purchaseStore.applyUpdate).not.toHaveBeenCalledWith('pal-1', 5);
     });
 
+    it('shows the error alert when the update fails and closes the confirm step', async () => {
+      const alert = jest.spyOn(Alert, 'alert').mockImplementation(() => {});
+      (purchaseStore.applyUpdate as jest.Mock).mockRejectedValueOnce(
+        new Error('Disk full'),
+      );
+      withUpdate();
+      const {getByTestId, queryByTestId} = setup();
+      fireEvent.press(getByTestId('pal-update-button'));
+
+      fireEvent.press(getByTestId('pal-update-confirm'));
+
+      await waitFor(() =>
+        expect(alert).toHaveBeenCalledWith('Error', 'Disk full'),
+      );
+      expect(queryByTestId('pal-update-confirm-text')).toBeNull();
+      expect(getByTestId('pal-update-prompt')).toBeTruthy();
+      alert.mockRestore();
+    });
+
     it('applies the shown version once for a double tap', async () => {
       let finish = () => {};
       (purchaseStore.applyUpdate as jest.Mock).mockImplementationOnce(

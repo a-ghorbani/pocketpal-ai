@@ -60,6 +60,14 @@ export const PalPurchaseFooter: React.FC<PalPurchaseFooterProps> = observer(
       }
     };
 
+    const alertError = (error: unknown) =>
+      Alert.alert(
+        l10n.palsScreen.palDetailSheet.error,
+        error instanceof Error
+          ? error.message
+          : l10n.palsScreen.palDetailSheet.failedToDownload,
+      );
+
     const handleOwned = async () => {
       if (localPal) {
         setShowModelStep(true);
@@ -76,12 +84,7 @@ export const PalPurchaseFooter: React.FC<PalPurchaseFooterProps> = observer(
           setShowModelStep(true);
         }
       } catch (error) {
-        Alert.alert(
-          l10n.palsScreen.palDetailSheet.error,
-          error instanceof Error
-            ? error.message
-            : l10n.palsScreen.palDetailSheet.failedToDownload,
-        );
+        alertError(error);
       } finally {
         setIsOpening(false);
       }
@@ -95,6 +98,8 @@ export const PalPurchaseFooter: React.FC<PalPurchaseFooterProps> = observer(
       setApplyingUpdate(true);
       try {
         await purchaseStore.applyUpdate(pal.id, shownVersion);
+      } catch (error) {
+        alertError(error);
       } finally {
         applying.current = false;
         setApplyingUpdate(false);
