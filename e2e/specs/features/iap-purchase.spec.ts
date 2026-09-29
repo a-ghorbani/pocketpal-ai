@@ -134,15 +134,20 @@ describe('In-app purchase', () => {
     expect(await buyPage.isShown('buy-button', 1000)).toBe(false);
   });
 
-  it('reports an invalid proof and offers Buy again', async () => {
+  it('holds an unverifiable purchase with its support code and no Buy', async () => {
     const {pal, products} = listPal('iap-invalid');
     iapMockServer.script({verify: ['invalid']});
     await openPalsWith(openPals, {products});
     await buyPage.openPal(pal.id);
 
     await buyPage.buy();
-    await buyPage.waitFor('purchase-invalid', 60000);
-    await buyPage.waitFor('buy-button');
+    expect(await buyPage.text('purchase-held-invalid', 60000)).toBe(
+      "We couldn't unlock this purchase. Contact support with this code.",
+    );
+    expect(await buyPage.text('purchase-support-code')).toContain(
+      'Support code: E2E-fake-tx-',
+    );
+    expect(await buyPage.isShown('buy-button', 1000)).toBe(false);
 
     expect(eventsSent(iapMockServer.requests())).toEqual([
       'buy_tap',
