@@ -1,6 +1,6 @@
 import {Theme} from '../../utils/types';
 
-export const createTableStyles = (theme: Theme) => ({
+export const createTableStyles = (theme: Theme, compact = false) => ({
   tableOuter: {
     borderWidth: 1,
     borderColor: theme.colors.outline,
@@ -23,10 +23,10 @@ export const createTableStyles = (theme: Theme) => ({
     backgroundColor: theme.colors.surfaceContainerHigh,
   },
   cell: {
-    width: 100,
+    width: compact ? 84 : 100,
     flexGrow: 1,
     flexShrink: 0,
-    padding: 4,
+    padding: compact ? 3 : 4,
   },
   headerCell: {
     backgroundColor: theme.colors.surfaceContainerHigh,

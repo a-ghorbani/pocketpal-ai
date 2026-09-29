@@ -43,18 +43,21 @@ interface ThinkingBubbleProps {
    * toggles, this prop no longer drives state.
    */
   autoCollapse?: boolean;
+  /** Start hidden for renderer-owned thinking tags. */
+  initiallyCollapsed?: boolean;
 }
 
 export const ThinkingBubble: React.FC<ThinkingBubbleProps> = ({
   children,
   autoCollapse,
+  initiallyCollapsed = false,
 }) => {
   const theme = useTheme();
   const l10n = useContext(L10nContext);
   const styles = createStyles(theme);
 
   const [bubbleState, setBubbleState] = useState<BubbleState>(
-    BubbleState.PARTIAL,
+    initiallyCollapsed ? BubbleState.COLLAPSED : BubbleState.PARTIAL,
   );
 
   // Track animation state to optimize rendering

@@ -114,6 +114,29 @@ describe('MarkdownView Component', () => {
     expect(getByText(/console\.log/)).toBeTruthy();
   });
 
+  it('shows literal source when markdown rendering is disabled', () => {
+    const {getByText} = render(
+      <MarkdownView
+        markdownText="**literal markdown**"
+        maxMessageWidth={300}
+        renderMarkdown={false}
+      />,
+    );
+
+    expect(getByText('**literal markdown**')).toBeTruthy();
+  });
+
+  it('renders supported inline math through the math renderer fallback', () => {
+    const {getByText} = render(
+      <MarkdownView
+        markdownText="Energy is $E = mc^2$."
+        maxMessageWidth={300}
+      />,
+    );
+
+    expect(getByText('E = mc^2')).toBeTruthy();
+  });
+
   describe('Link Rendering', () => {
     const lightLink = themeFixtures.lightTheme.colors.secondary;
     const darkLink = themeFixtures.darkTheme.colors.secondary;
