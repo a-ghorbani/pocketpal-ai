@@ -1221,7 +1221,10 @@ export class PurchaseStore {
         .map(rec => [
           rec.palId,
           {
-            contentVersion: rec.contentVersion ?? 0,
+            contentVersion: Math.max(
+              rec.contentVersion ?? 0,
+              rec.pendingUpdate?.contentVersion ?? 0,
+            ),
             purchaseRef: rec.supportCode!,
           },
         ]),

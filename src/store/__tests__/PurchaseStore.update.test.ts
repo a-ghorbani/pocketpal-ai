@@ -175,13 +175,26 @@ describe('PurchaseStore creator updates', () => {
       expect(h.palStore.applyCreatorUpdate).not.toHaveBeenCalled();
     });
 
-    it('keeps sending the applied version while an update is pending', async () => {
-      const h = installed({pendingUpdate: pending(v2())});
+    it('sends the pending version while a declined update is pending', async () => {
+      const h = installed({
+        contentVersion: 2,
+        pendingUpdate: pending(v2({content_version: 3})),
+      });
 
-      await refreshWith(h, [v2()]);
+      await refreshWith(h, []);
 
       const [, known] = h.api.refresh.mock.calls[0];
       expect(known[PAL_ID].contentVersion).toBe(3);
+      expect(h.purchases.recordFor(PAL_ID)?.contentVersion).toBe(2);
+    });
+
+    it('sends the applied version without a pending update', async () => {
+      const h = installed({contentVersion: 2});
+
+      await refreshWith(h, []);
+
+      const [, known] = h.api.refresh.mock.calls[0];
+      expect(known[PAL_ID].contentVersion).toBe(2);
     });
   });
 
