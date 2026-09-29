@@ -500,6 +500,46 @@ describe('PurchaseStore pipeline', () => {
     });
   });
 
+  describe('one response with a grant and a revocation', () => {
+    it.each(['ios', 'android'] as const)(
+      '%s: ends revoked with no grant and no Android finish',
+      async os => {
+        setOS(os);
+        const {iapApi} = require('../../services/iap/iapApi');
+        const {
+          verifyResponse,
+          apiPal,
+          jsonResponse,
+        } = require('../../../jest/fixtures/iap');
+        (global as any).fetch = jest.fn(async () =>
+          jsonResponse(
+            verifyResponse([
+              {
+                pal_id: PAL_ID,
+                status: 'active',
+                content_version: 3,
+                pal: apiPal({store_product_id: PRODUCT}),
+                support_code: 'SUP-1',
+              },
+              {pal_id: PAL_ID, status: 'revoked', support_code: 'SUP-1'},
+            ]),
+          ),
+        );
+        const h = createHarness({records: [record('unlocking')]});
+        h.deps.api = iapApi;
+        h.palStore.pals.push(localPal());
+
+        await h.purchases.processTransaction(tx(), {});
+        await settle(h);
+
+        expect(h.purchases.recordFor(PAL_ID)?.status).toBe('removed');
+        expect(h.palStore.installOwnedPal).not.toHaveBeenCalled();
+        expect(h.log).not.toContain('write:granted');
+        expect(h.store.finish).toHaveBeenCalledTimes(os === 'ios' ? 1 : 0);
+      },
+    );
+  });
+
   describe('invalid proof without a support code', () => {
     const invalidNoCode = () => result('invalid', {supportCode: undefined});
 

@@ -120,6 +120,87 @@ describe('iapApi', () => {
     });
   });
 
+  describe('revocation wins', () => {
+    const active = {
+      pal_id: 'pal-1',
+      status: 'active',
+      content_version: 3,
+      pal: apiPal(),
+      support_code: 'SUP-1',
+    };
+    const revoked = {pal_id: 'pal-1', status: 'revoked', support_code: 'SUP-2'};
+
+    it('turns an active result revoked when one response also revokes that pal', async () => {
+      fetchMock.mockResolvedValue(
+        jsonResponse(verifyResponse([active, revoked])),
+      );
+      const results = await iapApi.verify('ios', [
+        {platform: 'ios', jws: 'a'},
+        {platform: 'ios', jws: 'b'},
+      ]);
+      expect(results.map(result => result.status)).toEqual([
+        'revoked',
+        'revoked',
+      ]);
+      expect(results[0].pal).toBeUndefined();
+    });
+
+    it('applies across merged verify chunks', async () => {
+      fetchMock
+        .mockResolvedValueOnce(
+          jsonResponse(
+            verifyResponse(
+              Array.from(
+                {length: VERIFY_MAX_TRANSACTIONS.android},
+                () => active,
+              ),
+            ),
+          ),
+        )
+        .mockResolvedValueOnce(jsonResponse(verifyResponse([revoked])));
+      const results = await iapApi.verify(
+        'android',
+        Array.from({length: VERIFY_MAX_TRANSACTIONS.android + 1}, (_, i) =>
+          androidProof(i),
+        ),
+      );
+      expect(fetchMock).toHaveBeenCalledTimes(2);
+      expect(new Set(results.map(result => result.status))).toEqual(
+        new Set(['revoked']),
+      );
+    });
+
+    it('keeps an active result for another pal', async () => {
+      fetchMock.mockResolvedValue(
+        jsonResponse(verifyResponse([active, {...revoked, pal_id: 'pal-2'}])),
+      );
+      const [first] = await iapApi.verify('ios', [
+        {platform: 'ios', jws: 'a'},
+        {platform: 'ios', jws: 'b'},
+      ]);
+      expect(first.status).toBe('active');
+    });
+
+    it('drops a changed pal that the refresh also revokes, across chunks', async () => {
+      let call = 0;
+      fetchMock.mockImplementation(async () => {
+        call += 1;
+        return jsonResponse(
+          call === 1 ? {changed: [apiPal()]} : {revoked: ['pal-1']},
+        );
+      });
+      const known = Object.fromEntries(
+        Array.from({length: REFRESH_MAX_KNOWN + 1}, (_, i) => [
+          `pal-${i}`,
+          {contentVersion: 1, purchaseRef: `ref-${i}`},
+        ]),
+      );
+      const result = await iapApi.refresh([], known);
+      expect(result.changed).toEqual([]);
+      expect(result.revoked).toEqual(['pal-1']);
+    });
+  });
+
   describe('refresh', () => {
     it('posts proofs and known versions without auth', async () => {
       fetchMock.mockResolvedValue(

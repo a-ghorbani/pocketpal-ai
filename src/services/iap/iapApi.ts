@@ -75,6 +75,17 @@ const request = async (
   }
 };
 
+const revocationWins = (results: VerifyResult[]): VerifyResult[] => {
+  const revoked = new Map(
+    results
+      .filter(result => result.status === 'revoked')
+      .map(result => [result.palId, result]),
+  );
+  return results.map(result =>
+    result.status === 'active' ? (revoked.get(result.palId) ?? result) : result,
+  );
+};
+
 const verify = async (
   platform: StorePlatform,
   proofs: StoreProof[],
@@ -88,7 +99,7 @@ const verify = async (
     });
     results.push(...parseVerify(json));
   }
-  return results;
+  return revocationWins(results);
 };
 
 const refresh = async (
@@ -115,7 +126,7 @@ const refresh = async (
     result.unchanged.forEach(id => unchanged.add(id));
   }
   return {
-    changed: [...changed.values()],
+    changed: [...changed.values()].filter(entry => !revoked.has(entry.pal.id)),
     revoked: [...revoked],
     removed: [...removed],
     unchanged: [...unchanged],
