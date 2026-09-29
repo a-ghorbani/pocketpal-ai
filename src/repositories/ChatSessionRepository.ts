@@ -249,15 +249,20 @@ class ChatSessionRepository {
     completionSettings: CompletionParams = defaultCompletionSettings,
     activePalId?: string,
     settingsSource?: 'pal' | 'custom',
+    folderId?: string | null,
   ): Promise<ChatSession> {
     let newSession: any;
 
     await database.write(async () => {
+      if (folderId) {
+        await database.collections.get('chat_folders').find(folderId);
+      }
       // Create session
       newSession = await database.collections
         .get('chat_sessions')
         .create((record: any) => {
           record.title = title;
+          record.folderId = folderId || null;
           record.date = new Date().toISOString();
           if (activePalId) {
             record.activePalId = activePalId;

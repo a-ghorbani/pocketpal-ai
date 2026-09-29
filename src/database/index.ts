@@ -3,6 +3,7 @@ import SQLiteAdapter from '@nozbe/watermelondb/adapters/sqlite';
 import schema from './schema';
 import migrations from './migrations';
 import {
+  ChatFolder,
   ChatSession,
   Message,
   CompletionSetting,
@@ -26,6 +27,7 @@ const adapter = new SQLiteAdapter({
 export const database = new Database({
   adapter,
   modelClasses: [
+    ChatFolder,
     ChatSession,
     Message,
     CompletionSetting,
@@ -38,6 +40,7 @@ export const database = new Database({
 });
 
 export {
+  ChatFolder,
   ChatSession,
   Message,
   CompletionSetting,

@@ -9,6 +9,10 @@ import {Platform} from 'react-native';
 import {v4 as uuidv4} from 'uuid';
 import 'react-native-get-random-values';
 
+import {
+  chatFolderRepository,
+  normalizeFolderName,
+} from '../repositories/ChatFolderRepository';
 import {chatSessionRepository} from '../repositories/ChatSessionRepository';
 import {MessageType} from './types';
 import {CompletionParams} from './completionTypes';
@@ -26,6 +30,9 @@ export interface ImportedChatSession {
   messages: ImportedMessage[];
   completionSettings: CompletionParams;
   activePalId?: string;
+  folder?: {name: string};
+  pinned?: boolean;
+  settingsSource?: 'pal' | 'custom';
 }
 
 /**
@@ -132,6 +139,16 @@ const validateSingleSession = (session: any): ImportedChatSession => {
     session.messages = [];
   }
 
+  if (session.folder !== undefined && session.folder !== null) {
+    if (
+      typeof session.folder !== 'object' ||
+      typeof session.folder.name !== 'string'
+    ) {
+      throw new Error('Invalid folder');
+    }
+    session.folder = {name: normalizeFolderName(session.folder.name)};
+  }
+
   // Validate messages
   session.messages = session.messages.map((msg: any) => {
     if (!msg.id) {
@@ -224,17 +241,31 @@ const importSingleSession = async (
           text: msg.text || '',
           type: msg.type as any,
           metadata: msg.metadata || {},
+          ...(msg.type === 'assistant_turn'
+            ? {steps: msg.metadata?.steps || []}
+            : {}),
+          ...(msg.type === 'text' && msg.metadata?.imageUris
+            ? {imageUris: msg.metadata.imageUris}
+            : {}),
           createdAt: msg.createdAt || Date.now(),
         }) as MessageType.Any,
     );
 
     // Create a new session in the database
-    await chatSessionRepository.createSession(
+    const folderId = session.folder
+      ? await chatFolderRepository.resolveImportedFolder(session.folder.name)
+      : null;
+    const created = await chatSessionRepository.createSession(
       session.title,
       messages,
       session.completionSettings,
       session.activePalId,
+      session.settingsSource === 'custom' ? 'custom' : 'pal',
+      folderId,
     );
+    if (session.pinned === true) {
+      await chatSessionRepository.setSessionPinned(created.id, true);
+    }
   } catch (error) {
     console.error('Error importing single session:', error);
     throw error;

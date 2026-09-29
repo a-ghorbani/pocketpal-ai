@@ -153,5 +153,29 @@ export default schemaMigrations({
         }),
       ],
     },
+    {
+      toVersion: 9,
+      steps: [
+        createTable({
+          name: 'chat_folders',
+          columns: [
+            {name: 'name', type: 'string'},
+            {name: 'created_at', type: 'number'},
+            {name: 'updated_at', type: 'number'},
+          ],
+        }),
+        addColumns({
+          table: 'chat_sessions',
+          columns: [
+            {
+              name: 'folder_id',
+              type: 'string',
+              isOptional: true,
+              isIndexed: true,
+            },
+          ],
+        }),
+      ],
+    },
   ],
 });

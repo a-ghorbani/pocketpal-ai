@@ -13,6 +13,8 @@ import {
   CompletionParams,
   CompletionResultSnapshot,
 } from '../utils/completionTypes';
+import {chatFolderRepository} from '../repositories/ChatFolderRepository';
+import type {ChatFolder} from '../database';
 import {chatSessionRepository} from '../repositories/ChatSessionRepository';
 import {defaultCompletionParams} from '../utils/completionSettingsVersions';
 import {derivedText} from '../utils/chat';
@@ -44,6 +46,7 @@ export interface SessionMetaData {
   completionSettings: CompletionParams;
   activePalId?: string;
   pinned?: boolean;
+  folderId?: string | null;
   settingsSource: 'pal' | 'custom'; // Explicit choice: use pal settings or custom settings
   messagesLoaded?: boolean; // Track if messages are loaded for lazy loading
 }
@@ -72,6 +75,114 @@ delete defaultCompletionSettings.stop;
 
 class ChatSessionStore {
   sessions: SessionMetaData[] = [];
+  folders: {id: string; name: string}[] = [];
+  folderFilter: string | null = null; // null = all, 'unfiled' = no valid folder
+  sessionSearch = '';
+
+  get visibleSessions(): SessionMetaData[] {
+    const query = this.sessionSearch.trim().toLocaleLowerCase();
+    const folderIds = new Set(this.folders.map(f => f.id));
+    return this.sessions.filter(session => {
+      const folderId =
+        session.folderId && folderIds.has(session.folderId)
+          ? session.folderId
+          : null;
+      return (
+        (this.folderFilter === null ||
+          (this.folderFilter === 'unfiled'
+            ? !folderId
+            : folderId === this.folderFilter)) &&
+        (!query || session.title.toLocaleLowerCase().includes(query))
+      );
+    });
+  }
+
+  setFolderFilter(id: string | null) {
+    this.exitSelectionMode();
+    this.folderFilter = id;
+  }
+
+  setSessionSearch(query: string) {
+    this.exitSelectionMode();
+    this.sessionSearch = query;
+  }
+
+  get newSessionFolderId(): string | null {
+    return this.folders.some(f => f.id === this.folderFilter)
+      ? this.folderFilter
+      : null;
+  }
+
+  async loadFolders() {
+    const folders = await chatFolderRepository.getAll();
+    runInAction(() => {
+      this.folders = folders.map(f => ({id: f.id, name: f.name}));
+      if (
+        this.folderFilter !== 'unfiled' &&
+        !this.folders.some(f => f.id === this.folderFilter)
+      ) {
+        this.setFolderFilter(null);
+      }
+    });
+  }
+
+  async createFolder(
+    name: string,
+    sessionIds: string[] = [],
+  ): Promise<ChatFolder> {
+    const folder = await chatFolderRepository.create(name, sessionIds);
+    runInAction(() => {
+      this.folders.push({id: folder.id, name: folder.name});
+      this.folders.sort((a, b) => a.name.localeCompare(b.name));
+      this.sessions.forEach(session => {
+        if (sessionIds.includes(session.id)) {
+          session.folderId = folder.id;
+        }
+      });
+      this.exitSelectionMode();
+    });
+    return folder;
+  }
+
+  async renameFolder(id: string, name: string) {
+    await chatFolderRepository.rename(id, name);
+    runInAction(() => {
+      const folder = this.folders.find(f => f.id === id);
+      if (folder) {
+        folder.name = name.trim();
+      }
+      this.folders.sort((a, b) => a.name.localeCompare(b.name));
+    });
+  }
+
+  async deleteFolder(id: string) {
+    await chatFolderRepository.remove(id);
+    runInAction(() => {
+      this.folders = this.folders.filter(f => f.id !== id);
+      this.sessions.forEach(session => {
+        if (session.folderId === id) {
+          session.folderId = null;
+        }
+      });
+      if (this.folderFilter === id) {
+        this.setFolderFilter('unfiled');
+      }
+      this.exitSelectionMode();
+    });
+  }
+
+  async moveSessionsToFolder(ids: string[], folderId: string | null) {
+    await chatFolderRepository.moveSessions(ids, folderId);
+    runInAction(() => {
+      this.sessions.forEach(session => {
+        if (ids.includes(session.id)) {
+          session.folderId = folderId;
+        }
+      });
+      this.exitSelectionMode();
+    });
+  }
+
   activeSessionId: string | null = null;
   isEditMode: boolean = false;
   editingMessageId: string | null = null;
@@ -168,6 +279,7 @@ class ChatSessionStore {
 
       // Load data from database (whether migration happened or not)
       await this.loadSessionList();
+      await this.loadFolders();
       await this.loadGlobalSettings();
     } catch (error) {
       console.error('Failed to initialize ChatSessionStore:', error);
@@ -307,12 +419,21 @@ class ChatSessionStore {
           activePalId: session.activePalId,
           settingsSource: (session.settingsSource as 'pal' | 'custom') || 'pal',
           pinned: session.pinned || false,
+          folderId: session.folderId || null,
           messagesLoaded: false, // Mark as not loaded for lazy loading
         });
       }
 
       runInAction(() => {
-        this.sessions = sessionMetadata;
+        // Refresh metadata without discarding a loaded conversation or streaming state.
+        this.sessions = sessionMetadata.map(metadata => {
+          const loaded = this.sessions.find(
+            session => session.id === metadata.id && session.messagesLoaded,
+          );
+          return loaded
+            ? {...metadata, messages: loaded.messages, messagesLoaded: true}
+            : metadata;
+        });
       });
     } catch (error) {
       console.error('Failed to load session list:', error);
@@ -353,10 +474,14 @@ class ChatSessionStore {
   async duplicateSession(id: string) {
     const session = this.sessions.find(s => s.id === id);
     if (session) {
+      if (!session.messagesLoaded) {
+        await this.loadSessionMessages(id);
+      }
       await this.createNewSession(
         `${session.title} - Copy`,
         session.messages,
         session.completionSettings,
+        session.folderId || null,
       );
     }
   }
@@ -551,6 +676,7 @@ class ChatSessionStore {
     title: string,
     initialMessages: MessageType.Any[] = [],
     completionSettings: CompletionParams = defaultCompletionSettings,
+    folderId: string | null = this.newSessionFolderId,
   ): Promise<void> {
     try {
       // If the user has staged a thinking override for the new-chat path,
@@ -571,6 +697,7 @@ class ChatSessionStore {
         completionSettings,
         this.newChatPalId,
         birthSource,
+        ...(folderId ? [folderId] : []),
       );
 
       // Get the full session data
@@ -602,6 +729,7 @@ class ChatSessionStore {
         completionSettings: settings,
         settingsSource: birthSource, // 'custom' if a thinking override was staged, else stored source
         pinned: false,
+        folderId,
         messagesLoaded: true, // Mark as loaded since we have the messages
       };
 
@@ -1135,8 +1263,8 @@ class ChatSessionStore {
   }
 
   get groupedSessions(): SessionGroup {
-    const pinnedSessions = this.sessions.filter(s => s.pinned);
-    const unpinnedSessions = this.sessions.filter(s => !s.pinned);
+    const pinnedSessions = this.visibleSessions.filter(s => s.pinned);
+    const unpinnedSessions = this.visibleSessions.filter(s => !s.pinned);
 
     const groups: SessionGroup = unpinnedSessions.reduce(
       (acc: SessionGroup, session) => {
@@ -1324,8 +1452,10 @@ class ChatSessionStore {
 
   get allSelected(): boolean {
     return (
-      this.sessions.length > 0 &&
-      this.selectedSessionIds.size === this.sessions.length
+      this.visibleSessions.length > 0 &&
+      this.visibleSessions.every(session =>
+        this.selectedSessionIds.has(session.id),
+      )
     );
   }
 
@@ -1359,9 +1489,9 @@ class ChatSessionStore {
 
   selectAllSessions() {
     runInAction(() => {
-      this.sessions.forEach(session => {
-        this.selectedSessionIds.add(session.id);
-      });
+      this.selectedSessionIds = new Set(
+        this.visibleSessions.map(session => session.id),
+      );
     });
   }
 
@@ -1373,7 +1503,9 @@ class ChatSessionStore {
 
   async bulkDeleteSessions(): Promise<void> {
     try {
-      const idsToDelete = Array.from(this.selectedSessionIds);
+      const idsToDelete = this.visibleSessions
+        .filter(session => this.selectedSessionIds.has(session.id))
+        .map(session => session.id);
 
       // Delete from database
       await chatSessionRepository.deleteSessions(idsToDelete);
@@ -1403,7 +1535,9 @@ class ChatSessionStore {
 
   async bulkExportSessions(): Promise<void> {
     try {
-      const idsToExport = Array.from(this.selectedSessionIds);
+      const idsToExport = this.visibleSessions
+        .filter(session => this.selectedSessionIds.has(session.id))
+        .map(session => session.id);
       await chatSessionRepository.exportSessions(idsToExport);
 
       runInAction(() => {
