@@ -41,6 +41,8 @@ interface SquarePalCardProps {
   onUpdatePress?: (palshubId: string) => void;
 }
 
+const UPDATE_BADGE_HIT_SLOP = {top: 13, bottom: 13, left: 4, right: 4};
+
 const generateParameterSummary = (pal: Pal): string => {
   // Safety check for parameters
   if (!pal.parameters || typeof pal.parameters !== 'object') {
@@ -351,7 +353,17 @@ export const SquarePalCard: React.FC<SquarePalCardProps> = observer(
           testID={`${isPalsHubPal(pal) ? 'palshub' : 'local'}-pal-card-${pal.id}`}
           style={styles.container}
           onPress={onPress}
-          activeOpacity={0.7}>
+          activeOpacity={0.7}
+          {...(updatePalId && {
+            accessibilityActions: [
+              {name: 'update', label: l10n.palsScreen.purchase.badgeUpdate},
+            ],
+            onAccessibilityAction: event => {
+              if (event.nativeEvent.actionName === 'update') {
+                onUpdatePress?.(updatePalId);
+              }
+            },
+          })}>
           <Card elevation={0} style={cardStyle} contentStyle={styles.cardInner}>
             <View style={styles.cardContent}>
               {/* Thumbnail */}
@@ -506,6 +518,9 @@ export const SquarePalCard: React.FC<SquarePalCardProps> = observer(
                     <TouchableOpacity
                       testID="pal-badge-update"
                       style={styles.purchaseBadge}
+                      accessibilityRole="button"
+                      accessibilityLabel={l10n.palsScreen.purchase.badgeUpdate}
+                      hitSlop={UPDATE_BADGE_HIT_SLOP}
                       onPress={() => onUpdatePress?.(updatePalId)}>
                       <Text style={styles.purchaseBadgeText} numberOfLines={1}>
                         {l10n.palsScreen.purchase.badgeUpdate}

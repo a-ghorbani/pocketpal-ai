@@ -730,6 +730,55 @@ describe('SquarePalCard purchase badges', () => {
     }
   });
 
+  it('makes the update badge an accessible button with a 44dp target', () => {
+    withStatus('active', true);
+    const {getByTestId} = render(
+      <SquarePalCard pal={hubCard} onPress={jest.fn()} />,
+      {withNavigation: true},
+    );
+    const badge = getByTestId('pal-badge-update');
+    expect(badge.props.accessibilityRole).toBe('button');
+    expect(badge.props.accessibilityLabel).toBe('Update available');
+    const {top, bottom} = badge.props.hitSlop;
+    expect(top + bottom).toBeGreaterThanOrEqual(26);
+  });
+
+  it('opens the update from the card accessibility action', () => {
+    withStatus('active', true);
+    const onPress = jest.fn();
+    const onUpdatePress = jest.fn();
+    const {getByTestId} = render(
+      <SquarePalCard
+        pal={localCard}
+        onPress={onPress}
+        onUpdatePress={onUpdatePress}
+      />,
+      {withNavigation: true},
+    );
+    const card = getByTestId('local-pal-card-local-1');
+    expect(card.props.accessibilityActions).toEqual([
+      {name: 'update', label: 'Update available'},
+    ]);
+
+    fireEvent(card, 'accessibilityAction', {
+      nativeEvent: {actionName: 'update'},
+    });
+
+    expect(onUpdatePress).toHaveBeenCalledWith('pal-1');
+    expect(onPress).not.toHaveBeenCalled();
+  });
+
+  it('offers no card update action without an update', () => {
+    withStatus('active', false);
+    const {getByTestId} = render(
+      <SquarePalCard pal={hubCard} onPress={jest.fn()} />,
+      {withNavigation: true},
+    );
+    expect(
+      getByTestId('palshub-pal-card-pal-1').props.accessibilityActions,
+    ).toBeUndefined();
+  });
+
   it.each([
     ['active without a pending update', 'active', false],
     ['pending with a stale update', 'pending_payment', true],
