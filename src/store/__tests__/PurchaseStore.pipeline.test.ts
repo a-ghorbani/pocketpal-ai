@@ -950,6 +950,21 @@ describe('PurchaseStore pipeline', () => {
       });
     };
 
+    it('shows an update only while the Pal is installed', async () => {
+      const pendingUpdate = {
+        pal: hubPal({content_version: 4, title: 'Story Pal 2'}),
+        content: contentOf(hubPal({content_version: 4, title: 'Story Pal 2'})),
+        contentVersion: 4,
+      };
+      const h = createHarness({records: [record('active', {pendingUpdate})]});
+      await h.purchases.load();
+
+      expect(h.purchases.updateAvailable(PAL_ID)).toBe(false);
+
+      h.palStore.pals.push(localPal());
+      expect(h.purchases.updateAvailable(PAL_ID)).toBe(true);
+    });
+
     it('allows Buy when every condition holds', () => {
       const h = createHarness();
       ready(h);

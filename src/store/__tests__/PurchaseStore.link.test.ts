@@ -323,6 +323,59 @@ describe('PurchaseStore link and restore', () => {
       });
     });
 
+    it('Android: acknowledges a restored held purchase on the next recovery after a failed acknowledgement', async () => {
+      (Platform as any).OS = 'android';
+      const warn = jest.spyOn(console, 'warn').mockImplementation(() => {});
+      const heldTx = tx({
+        proof: {platform: 'android', productId: PRODUCT, purchaseToken: 'tok'},
+      });
+      const h = createHarness({records: [record('unlocking')]});
+      h.api.verify.mockResolvedValueOnce([
+        result('invalid', {supportCode: 'SUP-H'}),
+      ]);
+      await h.purchases.processTransaction(heldTx, {});
+      expect(h.purchases.recordFor(PAL_ID)?.status).toBe('held_invalid');
+      expect(h.purchases.invalidTxIds.has('tx-1')).toBe(true);
+      h.store.currentEntitlements.mockResolvedValue([heldTx]);
+      h.store.finish.mockRejectedValueOnce(new Error('billing'));
+
+      await h.purchases.restore();
+      expect(h.purchases.recordFor(PAL_ID)?.status).toBe('active');
+      expect(h.store.finish).toHaveBeenCalledTimes(1);
+
+      await h.purchases.recover();
+
+      expect(h.store.finish).toHaveBeenCalledTimes(2);
+      warn.mockRestore();
+    });
+
+    it('never replaces the grant of a record still waiting to install', async () => {
+      const warn = jest.spyOn(console, 'warn').mockImplementation(() => {});
+      const h = createHarness({records: [record('granted')]});
+      h.palStore.installOwnedPal.mockRejectedValue(new Error('db'));
+      h.store.currentEntitlements.mockResolvedValue([tx({unfinished: false})]);
+      const seen: {status?: string; installed: boolean}[] = [];
+      h.api.verify.mockImplementation(async () => {
+        seen.push({
+          status: h.purchases.recordFor(PAL_ID)?.status,
+          installed: h.purchases.localPalFor(PAL_ID) !== undefined,
+        });
+        return [
+          result('active', {pal: hubPal({title: 'Other', content_version: 9})}),
+        ];
+      });
+
+      await h.purchases.restore();
+
+      expect(h.palStore.installOwnedPal).toHaveBeenCalled();
+      expect(seen).toEqual([{status: 'granted', installed: false}]);
+      const rec = h.purchases.recordFor(PAL_ID);
+      expect(rec?.status).toBe('granted');
+      expect(rec?.grant?.pal.title).toBe('Story Pal');
+      expect(rec?.grant?.contentVersion).toBe(3);
+      warn.mockRestore();
+    });
+
     it('still restores when the store sync fails', async () => {
       const h = createHarness();
       h.store.sync.mockRejectedValueOnce(new Error('cancelled'));
