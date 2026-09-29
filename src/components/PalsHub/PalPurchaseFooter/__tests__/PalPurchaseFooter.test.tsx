@@ -2,7 +2,7 @@ import React from 'react';
 import {Alert, Platform} from 'react-native';
 import {runInAction} from 'mobx';
 
-import {render, fireEvent, waitFor} from '../../../../../jest/test-utils';
+import {act, render, fireEvent, waitFor} from '../../../../../jest/test-utils';
 import {mockPremiumPalsHubPal} from '../../../../../jest/fixtures/pals';
 
 import {PalPurchaseFooter} from '../PalPurchaseFooter';
@@ -309,6 +309,31 @@ describe('PalPurchaseFooter', () => {
       expect(getByTestId('pal-update-prompt')).toBeTruthy();
       expect(purchaseStore.applyUpdate).not.toHaveBeenCalled();
       expect(alert).not.toHaveBeenCalled();
+    });
+
+    it('never confirms a newer version than the prompt the user saw', () => {
+      withUpdate('First fix');
+      const {getByTestId, queryByTestId} = setup();
+      fireEvent.press(getByTestId('pal-update-button'));
+
+      act(() =>
+        runInAction(() => {
+          purchaseStore.records['pal-1'] = record('active', {
+            pendingUpdate: {
+              pal: {...pal, title: 'Story Pal 3'},
+              content: {},
+              contentVersion: 5,
+              changeNote: 'Second fix',
+            },
+          });
+        }),
+      );
+      const confirm = queryByTestId('pal-update-confirm');
+      if (confirm) {
+        fireEvent.press(confirm);
+      }
+
+      expect(purchaseStore.applyUpdate).not.toHaveBeenCalledWith('pal-1', 5);
     });
 
     it('applies the shown version once for a double tap', async () => {

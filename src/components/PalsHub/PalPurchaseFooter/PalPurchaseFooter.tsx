@@ -32,7 +32,7 @@ export const PalPurchaseFooter: React.FC<PalPurchaseFooterProps> = observer(
     const [showModelStep, setShowModelStep] = useState(false);
     const [isOpening, setIsOpening] = useState(false);
     const [linkPromptDismissed, setLinkPromptDismissed] = useState(false);
-    const [confirmingUpdate, setConfirmingUpdate] = useState(false);
+    const [confirmingUpdate, setConfirmingUpdate] = useState<number>();
     const [applyingUpdate, setApplyingUpdate] = useState(false);
     const applying = useRef(false);
 
@@ -98,7 +98,7 @@ export const PalPurchaseFooter: React.FC<PalPurchaseFooterProps> = observer(
       } finally {
         applying.current = false;
         setApplyingUpdate(false);
-        setConfirmingUpdate(false);
+        setConfirmingUpdate(undefined);
       }
     };
 
@@ -162,14 +162,14 @@ export const PalPurchaseFooter: React.FC<PalPurchaseFooterProps> = observer(
       status(copy.linkConflict, 'purchase-link-conflict');
 
     const renderUpdate = ({contentVersion, changeNote}: PendingUpdate) =>
-      confirmingUpdate ? (
+      confirmingUpdate === contentVersion ? (
         <>
           {status(copy.updateConfirmText, 'pal-update-confirm-text')}
           <View style={styles.promptActions}>
             <Button
               testID="pal-update-cancel"
               mode="text"
-              onPress={() => setConfirmingUpdate(false)}
+              onPress={() => setConfirmingUpdate(undefined)}
               disabled={applyingUpdate}>
               {copy.updateCancel}
             </Button>
@@ -192,7 +192,7 @@ export const PalPurchaseFooter: React.FC<PalPurchaseFooterProps> = observer(
           <Button
             testID="pal-update-button"
             mode="outlined"
-            onPress={() => setConfirmingUpdate(true)}
+            onPress={() => setConfirmingUpdate(contentVersion)}
             style={styles.button}>
             {copy.updateButton}
           </Button>
