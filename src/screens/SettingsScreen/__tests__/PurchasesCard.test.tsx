@@ -135,6 +135,16 @@ describe('PurchasesCard', () => {
     expect(queryByTestId('settings-restore-purchases')).toBeNull();
   });
 
+  it('lists a held purchase with its code', () => {
+    setRecords(rec('h', 'held_invalid'));
+    const {getByText} = render(<PurchasesCard onSignInPress={jest.fn()} />);
+    expect(
+      getByText(
+        "We couldn't unlock this purchase. Contact support with this code.\nSupport code: SUP-h",
+      ),
+    ).toBeTruthy();
+  });
+
   describe('undeliverable copy', () => {
     const originalOS = Platform.OS;
     afterEach(() => {

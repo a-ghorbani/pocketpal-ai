@@ -258,6 +258,26 @@ export const PalPurchaseFooter: React.FC<PalPurchaseFooterProps> = observer(
                 )}
             </>
           );
+        case 'held_invalid':
+          return (
+            <>
+              {status(copy.heldInvalid, 'purchase-held-invalid')}
+              {record?.supportCode &&
+                status(
+                  t(copy.supportCode, {code: record.supportCode}),
+                  'purchase-support-code',
+                )}
+              <Button
+                testID="purchase-restore-button"
+                mode="outlined"
+                onPress={() => purchaseStore.restore()}
+                loading={purchaseStore.isRestoring}
+                disabled={purchaseStore.isRestoring}
+                style={styles.button}>
+                {copy.restorePurchases}
+              </Button>
+            </>
+          );
         case 'invalid':
           return (
             <>

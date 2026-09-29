@@ -34,6 +34,7 @@ export type LedgerStatus =
   | 'granted'
   | 'active'
   | 'unfulfillable'
+  | 'held_invalid'
   | 'removed';
 
 export interface LedgerRecord {
@@ -79,6 +80,7 @@ export type FlowPhase =
   | 'granted'
   | 'active'
   | 'unfulfillable'
+  | 'held_invalid'
   | 'ready'
   | 'invalid'
   | 'restore_needed';
@@ -125,6 +127,7 @@ const SETTLED: ReadonlySet<LedgerStatus> = new Set([
   'granted',
   'active',
   'unfulfillable',
+  'held_invalid',
   'removed',
 ]);
 
@@ -303,7 +306,8 @@ export class PurchaseStore {
       rec =>
         rec.status === 'active' ||
         rec.status === 'granted' ||
-        rec.status === 'unfulfillable',
+        rec.status === 'unfulfillable' ||
+        rec.status === 'held_invalid',
     );
   }
 
@@ -652,10 +656,22 @@ export class PurchaseStore {
         await this.finishOnIOS(tx);
         return;
       case 'invalid':
-        await this.deleteRecord(key, true);
+        if (result.supportCode) {
+          await this.putRecord(
+            key,
+            {
+              productId: tx.productId,
+              status: 'held_invalid',
+              supportCode: result.supportCode,
+            },
+            true,
+          );
+        } else {
+          await this.deleteRecord(key, true);
+          this.setTransient(key, 'invalid');
+        }
         await this.finishOnIOS(tx);
         this.invalidTxIds.add(txKey(tx));
-        this.setTransient(key, 'invalid');
         this.deps.events.send(key, 'purchase_error');
         return;
     }
@@ -671,6 +687,12 @@ export class PurchaseStore {
         tx.state === 'purchased' &&
         (rec.status === 'active' || rec.status === 'granted');
       await (delivered ? this.finish(tx) : this.finishOnIOS(tx));
+    }
+    if (rec.status === 'held_invalid') {
+      if (opts.install) {
+        await this.reverifyHeld(rec, tx);
+      }
+      return;
     }
     if (rec.status === 'unfulfillable' || !opts.settledVerify) {
       return;
@@ -714,6 +736,40 @@ export class PurchaseStore {
     if (opts.install) {
       await this.writeGrant(rec.palId, tx, result);
       await this.drainQueue();
+    }
+  }
+
+  private async reverifyHeld(
+    rec: LedgerRecord,
+    tx: StoreTransaction,
+  ): Promise<void> {
+    const result = await this.verify(tx);
+    switch (result?.status) {
+      case 'active':
+        this.invalidTxIds.delete(txKey(tx));
+        await this.writeGrant(rec.palId, tx, result);
+        if (tx.unfinished) {
+          await this.finish(tx);
+        }
+        await this.drainQueue();
+        return;
+      case 'revoked':
+        await this.removeOwnership(rec.palId);
+        return;
+      case 'removed':
+        await this.withdraw(rec.palId, result.supportCode);
+        return;
+      case 'unfulfillable':
+        await this.putRecord(
+          rec.palId,
+          {
+            productId: rec.productId,
+            status: 'unfulfillable',
+            supportCode: result.supportCode ?? rec.supportCode,
+          },
+          true,
+        );
+        return;
     }
   }
 

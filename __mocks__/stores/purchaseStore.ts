@@ -102,7 +102,8 @@ class MockPurchaseStore {
       rec =>
         rec.status === 'active' ||
         rec.status === 'granted' ||
-        rec.status === 'unfulfillable',
+        rec.status === 'unfulfillable' ||
+        rec.status === 'held_invalid',
     );
   }
 

@@ -1128,6 +1128,7 @@
       "notCompleted": "This purchase couldn't be completed. Google will refund it automatically within 3 days.",
       "withdrawnRefunding": "This Pal was withdrawn. Your purchase is being refunded to your Google Play account.",
       "invalid": "We couldn't verify this purchase. Try Restore purchases, or contact support.",
+      "heldInvalid": "We couldn't unlock this purchase. Contact support with this code.",
       "recommendedModel": "Recommended model",
       "sampleExchange": "Sample conversation",
       "signInLine": "Already own it? Sign in",

@@ -339,6 +339,23 @@ describe('PalPurchaseFooter', () => {
     });
   });
 
+  it('holds an unverifiable purchase with its code, Restore and no Buy', () => {
+    purchasable();
+    runInAction(() => {
+      purchaseStore.records['pal-1'] = record('held_invalid');
+    });
+    const {getByTestId, queryByTestId} = setup();
+    expect(getByTestId('purchase-held-invalid')).toHaveTextContent(
+      "We couldn't unlock this purchase. Contact support with this code.",
+    );
+    expect(getByTestId('purchase-support-code')).toHaveTextContent(
+      'Support code: SUP-7',
+    );
+    expect(queryByTestId('buy-button')).toBeNull();
+    fireEvent.press(getByTestId('purchase-restore-button'));
+    expect(purchaseStore.restore).toHaveBeenCalled();
+  });
+
   it('shows the invalid-proof message with Buy back', () => {
     purchasable();
     runInAction(() => {

@@ -199,7 +199,9 @@ describe('PurchaseStore recovery', () => {
 
     it('skips a transaction whose proof was invalid this session', async () => {
       const h = createHarness();
-      h.api.verify.mockResolvedValueOnce([result('invalid')]);
+      h.api.verify.mockResolvedValueOnce([
+        result('invalid', {supportCode: undefined}),
+      ]);
       await h.purchases.processTransaction(tx(), {});
       h.store.currentEntitlements.mockResolvedValue([tx()]);
       h.store.unfinished.mockResolvedValue([tx()]);

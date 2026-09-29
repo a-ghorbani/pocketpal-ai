@@ -383,6 +383,16 @@ describe('PurchaseStore pipeline', () => {
       expect(h.store.finish).not.toHaveBeenCalled();
     });
 
+    it('never acknowledges an invalid proof without a support code', async () => {
+      const h = createHarness();
+      h.api.verify.mockResolvedValueOnce([
+        result('invalid', {supportCode: undefined}),
+      ]);
+      await h.purchases.processTransaction(tx(), {});
+      expect(h.purchases.recordFor(PAL_ID)).toBeUndefined();
+      expect(h.store.finish).not.toHaveBeenCalled();
+    });
+
     it('never acknowledges a pending purchase', async () => {
       const h = createHarness();
       await h.purchases.processTransaction(
@@ -490,10 +500,12 @@ describe('PurchaseStore pipeline', () => {
     });
   });
 
-  describe('invalid proof', () => {
+  describe('invalid proof without a support code', () => {
+    const invalidNoCode = () => result('invalid', {supportCode: undefined});
+
     it('deletes the open record before finishing and does not retry', async () => {
       const h = createHarness({records: [record('pending_payment')]});
-      h.api.verify.mockResolvedValueOnce([result('invalid')]);
+      h.api.verify.mockResolvedValueOnce([invalidNoCode()]);
 
       await h.purchases.processTransaction(tx(), {});
 
@@ -512,7 +524,7 @@ describe('PurchaseStore pipeline', () => {
 
     it('judges a proof once when the listener and Buy both deliver it', async () => {
       const h = createHarness();
-      h.api.verify.mockResolvedValueOnce([result('invalid')]);
+      h.api.verify.mockResolvedValueOnce([invalidNoCode()]);
 
       await h.purchases.processTransaction(tx(), {settledVerify: true});
       await h.purchases.processTransaction(tx(), {settledVerify: true});
@@ -524,7 +536,7 @@ describe('PurchaseStore pipeline', () => {
 
     it('re-verifies an invalid proof on an explicit install or restore', async () => {
       const h = createHarness();
-      h.api.verify.mockResolvedValueOnce([result('invalid')]);
+      h.api.verify.mockResolvedValueOnce([invalidNoCode()]);
       await h.purchases.processTransaction(tx(), {});
 
       await h.purchases.processTransaction(tx(), {
@@ -541,12 +553,104 @@ describe('PurchaseStore pipeline', () => {
       'leaves a settled %s record unchanged',
       async status => {
         const h = createHarness({records: [record(status)]});
-        h.api.verify.mockResolvedValue([result('invalid')]);
+        h.api.verify.mockResolvedValue([invalidNoCode()]);
 
         await h.purchases.processTransaction(tx(), {settledVerify: true});
 
         expect(h.purchases.recordFor(PAL_ID)?.status).toBe(status);
         expect(h.purchases.flowFor(PAL_ID)).not.toBe('invalid');
+      },
+    );
+  });
+
+  describe('invalid proof with a support code', () => {
+    const invalidWithCode = () => result('invalid', {supportCode: 'SUP-9'});
+
+    it('holds the record with its code, hides Buy and finishes on iOS', async () => {
+      const h = createHarness({records: [record('unlocking')]});
+      h.api.verify.mockResolvedValueOnce([invalidWithCode()]);
+
+      await h.purchases.processTransaction(tx(), {});
+
+      expect(h.log).toEqual([
+        'write:unlocking',
+        'write:held_invalid',
+        'finish:tx-1',
+        'event:purchase_error',
+      ]);
+      expect(h.storage.ledger()[PAL_ID]).toMatchObject({
+        status: 'held_invalid',
+        supportCode: 'SUP-9',
+      });
+      expect(h.purchases.flowFor(PAL_ID)).toBe('held_invalid');
+      runInAction(() => {
+        h.purchases.availability = 'ready';
+        h.purchases.products.set(PRODUCT, {
+          productId: PRODUCT,
+          displayPrice: '$4.99',
+        });
+      });
+      expect(h.purchases.canBuy(hubPal())).toBe(false);
+      expect(h.purchases.isOwned(PAL_ID)).toBe(false);
+    });
+
+    it('Android: holds it without any finish call', async () => {
+      setOS('android');
+      const h = createHarness({records: [record('unlocking')]});
+      h.api.verify.mockResolvedValueOnce([invalidWithCode()]);
+
+      await h.purchases.processTransaction(tx(), {});
+
+      expect(h.purchases.recordFor(PAL_ID)?.status).toBe('held_invalid');
+      expect(h.store.finish).not.toHaveBeenCalled();
+    });
+
+    it('never re-verifies on the listener or recovery', async () => {
+      const h = createHarness({records: [record('held_invalid')]});
+      h.store.currentEntitlements.mockResolvedValue([tx({unfinished: false})]);
+
+      await h.purchases.processTransaction(tx(), {settledVerify: true});
+      await h.purchases.recover();
+
+      expect(h.api.verify).not.toHaveBeenCalled();
+      expect(h.purchases.recordFor(PAL_ID)?.status).toBe('held_invalid');
+    });
+
+    it.each(['ios', 'android'] as const)(
+      '%s: a restore that verifies active clears it and grants',
+      async os => {
+        setOS(os);
+        const h = createHarness({records: [record('held_invalid')]});
+        h.store.currentEntitlements.mockResolvedValue([tx()]);
+
+        await h.purchases.restore();
+        await settle(h);
+
+        expect(h.purchases.recordFor(PAL_ID)?.status).toBe('active');
+        expect(h.store.finish).toHaveBeenCalledTimes(1);
+      },
+    );
+
+    it.each([
+      ['invalid', 'held_invalid'],
+      ['pending', 'held_invalid'],
+      ['revoked', 'removed'],
+      ['removed', 'unfulfillable'],
+      ['unfulfillable', 'unfulfillable'],
+    ] as const)(
+      'on an explicit re-verify, %s leaves it %s',
+      async (verdict, status) => {
+        setOS('android');
+        const h = createHarness({records: [record('held_invalid')]});
+        h.api.verify.mockResolvedValueOnce([result(verdict)]);
+
+        await h.purchases.processTransaction(tx(), {
+          settledVerify: true,
+          install: true,
+        });
+
+        expect(h.purchases.recordFor(PAL_ID)?.status).toBe(status);
+        expect(h.store.finish).not.toHaveBeenCalled();
       },
     );
   });
