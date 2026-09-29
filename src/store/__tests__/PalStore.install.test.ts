@@ -6,6 +6,7 @@ import {downloadPalThumbnail} from '../../utils/imageUtils';
 import type {CreatorField} from '../../services/iap/creatorContent';
 import {palsHubService} from '../../services';
 import {palRepository} from '../../repositories/PalRepository';
+import * as templateParser from '../../utils/palshub-template-parser';
 import type {Pal} from '../../types/pal';
 import type {Model} from '../../utils/types';
 import type {PalsHubPal} from '../../types/palshub';
@@ -321,6 +322,31 @@ describe('PalStore owned install', () => {
       expect(palStore.getPalById(id)!.thumbnail_url).toBe(
         'pal-images/mine.png',
       );
+    });
+
+    it('writes nothing when a field other than the thumbnail fails', async () => {
+      const id = await installEdited();
+      const warn = jest.spyOn(console, 'warn').mockImplementation(() => {});
+      const spy = jest
+        .spyOn(templateParser, 'parsePalsHubTemplate')
+        .mockReturnValueOnce({
+          cleanSystemPrompt: 'New prompt.',
+          parameterSchema: undefined,
+          defaultParameters: {},
+        } as any);
+
+      await expect(
+        palStore.applyCreatorUpdate(
+          id,
+          {...v1(), title: 'New title'},
+          new Set<CreatorField>(['title', 'system_prompt']),
+        ),
+      ).rejects.toThrow(TypeError);
+
+      expect(palRepository.updatePal).not.toHaveBeenCalled();
+      expect(warn).not.toHaveBeenCalled();
+      spy.mockRestore();
+      warn.mockRestore();
     });
 
     it('reports no failure when the thumbnail downloads', async () => {

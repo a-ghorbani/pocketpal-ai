@@ -813,6 +813,24 @@ describe('PalsScreen', () => {
         );
       });
 
+      it('opens the detail sheet from the card update accessibility action', async () => {
+        withPendingUpdate(true);
+        const {getByTestId, getAllByText} = renderSections();
+        const before = getAllByText('Listed title').length;
+
+        fireEvent(
+          getByTestId('local-pal-card-local-store'),
+          'accessibilityAction',
+          {
+            nativeEvent: {actionName: 'update'},
+          },
+        );
+
+        await waitFor(() =>
+          expect(getAllByText('Listed title').length).toBeGreaterThan(before),
+        );
+      });
+
       it('opens the detail sheet with the pending Pal when the listing lacks it', async () => {
         withPendingUpdate(false);
         const {getByTestId, queryByText, getAllByText} = renderSections();

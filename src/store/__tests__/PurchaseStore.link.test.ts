@@ -305,6 +305,35 @@ describe('PurchaseStore link and restore', () => {
         expect(h.purchases.recordFor(PAL_ID)?.status).toBe('held_invalid');
       });
 
+      it('Android: keeps a hold written after the query started', async () => {
+        (Platform as any).OS = 'android';
+        const h = createHarness({records: [held()]});
+        h.api.verify.mockResolvedValueOnce([
+          result('invalid', {palId: 'P2', supportCode: 'SUP-2'}),
+        ]);
+        h.store.currentEntitlements.mockImplementation(async () => {
+          await h.purchases.processTransaction(
+            tx({
+              productId: 'pal.p2',
+              transactionId: 'tx-2',
+              unfinished: false,
+              proof: {
+                platform: 'android',
+                productId: 'pal.p2',
+                purchaseToken: 'tok-2',
+              },
+            }),
+            {},
+          );
+          return [];
+        });
+
+        await h.purchases.restore();
+
+        expect(h.purchases.recordFor('P2')?.status).toBe('held_invalid');
+        expect(h.purchases.recordFor(PAL_ID)).toBeUndefined();
+      });
+
       it('iOS: keeps it after a successful query without the product', async () => {
         const h = createHarness({records: [held()]});
 
