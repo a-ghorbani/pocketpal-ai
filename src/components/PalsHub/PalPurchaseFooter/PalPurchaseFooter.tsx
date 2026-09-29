@@ -186,7 +186,9 @@ export const PalPurchaseFooter: React.FC<PalPurchaseFooterProps> = observer(
       ) : (
         <>
           {status(
-            t(copy.updatePrompt, {note: changeNote ? `: ${changeNote}` : ''}),
+            changeNote
+              ? t(copy.updatePromptWithNote, {note: changeNote})
+              : copy.updatePrompt,
             'pal-update-prompt',
           )}
           <Button

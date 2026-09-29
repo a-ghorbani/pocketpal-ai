@@ -299,9 +299,11 @@ describe('PalPurchaseFooter', () => {
 
       expect(
         getByText(
-          "The creator's changes will replace this Pal's copy of those parts, including your edits there. Everything else stays as it is.",
+          'Updating replaces the parts the creator changed, including any edits you made to those parts. Everything else stays as it is.',
         ).props.testID,
       ).toBe('pal-update-confirm-text');
+      expect(getByTestId('pal-update-confirm')).toHaveTextContent('Update');
+      expect(getByTestId('pal-update-cancel')).toHaveTextContent('Cancel');
       expect(queryByTestId('pal-update-prompt')).toBeNull();
 
       fireEvent.press(getByTestId('pal-update-cancel'));
