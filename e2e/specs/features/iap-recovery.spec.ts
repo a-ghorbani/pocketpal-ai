@@ -245,7 +245,7 @@ describe('In-app purchase recovery', () => {
     ).toBe(false);
   });
 
-  it('shows the withdrawn note when verify reports the purchase removed', async () => {
+  it('shows the undelivered copy when verify reports a new purchase removed', async () => {
     const {pal, products} = listPal('iap-withdrawn-verify');
     iapMockServer.script({verify: ['removed']});
     await openPalsWith(openPals, {products});

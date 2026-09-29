@@ -104,7 +104,7 @@ export const byExactTestId = (testId: string): string => {
 };
 
 /**
- * An element by exact testID inside the first element whose testID starts with prefix.
+ * An element by exact testID inside any element whose testID starts with prefix.
  */
 export const testIdWithinPrefix = (prefix: string, testId: string): string => {
   if (isAndroid()) {
