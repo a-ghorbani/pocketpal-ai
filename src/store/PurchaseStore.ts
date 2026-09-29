@@ -1149,6 +1149,7 @@ export class PurchaseStore {
     if (!available) {
       return;
     }
+    const held = this.androidHeldPalIds();
     this.resetAndroidAckMemo();
     const txs = await this.storeTransactions();
     const queryOk = this.storePort.queryOk;
@@ -1161,7 +1162,7 @@ export class PurchaseStore {
         await this.processTransaction(tx, {});
       }
     }
-    await this.dropStalePending(txs, false, queryOk);
+    await this.dropStalePending(txs, false, queryOk, held);
     if (!queryOk) {
       return;
     }
@@ -1188,10 +1189,19 @@ export class PurchaseStore {
     return [...merged.values()];
   }
 
+  private androidHeldPalIds(): string[] {
+    return Platform.OS === 'android'
+      ? Object.values(this.records)
+          .filter(rec => rec.status === 'held_invalid')
+          .map(rec => rec.palId)
+      : [];
+  }
+
   private async dropStalePending(
     txs: StoreTransaction[],
     force: boolean,
     queryOk: boolean,
+    heldPalIds: string[],
   ): Promise<void> {
     const stale = Object.values(this.records).filter(rec => {
       if (rec.status !== 'pending_payment') {
@@ -1212,6 +1222,22 @@ export class PurchaseStore {
     for (const rec of stale) {
       await this.serialize(rec.productId, async () => {
         if (this.records[rec.palId]?.status === 'pending_payment') {
+          await this.deleteRecord(rec.palId);
+        }
+      });
+    }
+    if (!queryOk) {
+      return;
+    }
+    const unlisted = heldPalIds
+      .map(palId => this.records[palId])
+      .filter(
+        (rec): rec is LedgerRecord =>
+          rec !== undefined && !txs.some(tx => tx.productId === rec.productId),
+      );
+    for (const rec of unlisted) {
+      await this.serialize(rec.productId, async () => {
+        if (this.records[rec.palId]?.status === 'held_invalid') {
           await this.deleteRecord(rec.palId);
         }
       });
@@ -1264,7 +1290,12 @@ export class PurchaseStore {
     ];
     for (const {palId, withdrawn} of removals) {
       const rec = this.records[palId];
-      if (rec && rec.status !== 'removed' && rec.status !== 'unfulfillable') {
+      if (
+        rec &&
+        rec.status !== 'removed' &&
+        rec.status !== 'unfulfillable' &&
+        !(Platform.OS === 'android' && rec.status === 'held_invalid')
+      ) {
         await this.serialize(rec.productId, () =>
           withdrawn ? this.withdraw(palId) : this.removeOwnership(palId),
         );
@@ -1397,13 +1428,14 @@ export class PurchaseStore {
         console.warn('Store sync failed:', error);
       }
       await this.drainQueue();
+      const held = this.androidHeldPalIds();
       this.resetAndroidAckMemo();
       const txs = await this.storePort.currentEntitlements();
       const queryOk = this.storePort.queryOk;
       for (const tx of txs) {
         await this.processTransaction(tx, {settledVerify: true, install: true});
       }
-      await this.dropStalePending(txs, true, queryOk);
+      await this.dropStalePending(txs, true, queryOk, held);
     } finally {
       runInAction(() => {
         this.isRestoring = false;

@@ -278,6 +278,51 @@ describe('PurchaseStore link and restore', () => {
       expect(h.purchases.recordFor('P2')).toBeUndefined();
     });
 
+    describe('held purchase', () => {
+      const held = () => record('held_invalid', {supportCode: 'SUP-H'});
+      const failQuery = (h: ReturnType<typeof createHarness>) =>
+        h.store.currentEntitlements.mockImplementation(async () => {
+          h.store.queryOk = false;
+          return [];
+        });
+
+      it('Android: clears it when a successful query no longer lists the product', async () => {
+        (Platform as any).OS = 'android';
+        const h = createHarness({records: [held()]});
+
+        await h.purchases.restore();
+
+        expect(h.purchases.recordFor(PAL_ID)).toBeUndefined();
+      });
+
+      it('Android: keeps it when the store query failed', async () => {
+        (Platform as any).OS = 'android';
+        const h = createHarness({records: [held()]});
+        failQuery(h);
+
+        await h.purchases.restore();
+
+        expect(h.purchases.recordFor(PAL_ID)?.status).toBe('held_invalid');
+      });
+
+      it('iOS: keeps it after a successful query without the product', async () => {
+        const h = createHarness({records: [held()]});
+
+        await h.purchases.restore();
+
+        expect(h.purchases.recordFor(PAL_ID)?.status).toBe('held_invalid');
+      });
+
+      it('iOS: keeps it when the store query failed', async () => {
+        const h = createHarness({records: [held()]});
+        failQuery(h);
+
+        await h.purchases.restore();
+
+        expect(h.purchases.recordFor(PAL_ID)?.status).toBe('held_invalid');
+      });
+    });
+
     it('still restores when the store sync fails', async () => {
       const h = createHarness();
       h.store.sync.mockRejectedValueOnce(new Error('cancelled'));

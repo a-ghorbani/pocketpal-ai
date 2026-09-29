@@ -640,6 +640,129 @@ describe('PurchaseStore recovery', () => {
     });
   });
 
+  describe('held purchase', () => {
+    const held = () => record('held_invalid', {supportCode: 'SUP-H'});
+    const buyable = (h: ReturnType<typeof createHarness>) => {
+      runInAction(() => {
+        h.purchases.products.set(PRODUCT, {
+          productId: PRODUCT,
+          displayPrice: '$4.99',
+        });
+      });
+      return h.purchases.canBuy(hubPal());
+    };
+    const refreshLists = (lists: {revoked?: string[]; removed?: string[]}) => ({
+      changed: [],
+      revoked: lists.revoked ?? [],
+      removed: lists.removed ?? [],
+      unchanged: [],
+    });
+
+    it('Android: clears it when a successful query no longer lists the product', async () => {
+      setOS('android');
+      const h = createHarness({records: [held()]});
+
+      await h.purchases.recover();
+
+      expect(h.purchases.recordFor(PAL_ID)).toBeUndefined();
+      expect(h.storage.ledger()[PAL_ID]).toBeUndefined();
+      expect(buyable(h)).toBe(true);
+    });
+
+    it('Android: keeps it when the store query failed', async () => {
+      setOS('android');
+      const h = createHarness({records: [held()]});
+      h.store.currentEntitlements.mockImplementation(async () => {
+        h.store.queryOk = false;
+        return [];
+      });
+
+      await h.purchases.recover();
+
+      expect(h.purchases.recordFor(PAL_ID)).toEqual(held());
+      expect(buyable(h)).toBe(false);
+    });
+
+    it('Android: keeps it while the query lists the purchase, without finishing or verifying', async () => {
+      setOS('android');
+      const h = createHarness({records: [held()]});
+      h.store.currentEntitlements.mockResolvedValue([
+        androidTx({unfinished: true}),
+      ]);
+
+      await h.purchases.recover();
+
+      expect(h.purchases.recordFor(PAL_ID)?.status).toBe('held_invalid');
+      expect(h.store.finish).not.toHaveBeenCalled();
+      expect(h.api.verify).not.toHaveBeenCalled();
+    });
+
+    it('iOS: keeps it when a successful query no longer lists the product', async () => {
+      setOS('ios');
+      const h = createHarness({records: [held()]});
+
+      await h.purchases.recover();
+
+      expect(h.purchases.recordFor(PAL_ID)?.status).toBe('held_invalid');
+    });
+
+    it('Android: keeps a hold written after the query started', async () => {
+      setOS('android');
+      const h = createHarness({records: [held()]});
+      h.api.verify.mockResolvedValueOnce([
+        result('invalid', {palId: 'P2', supportCode: 'SUP-2'}),
+      ]);
+      h.store.currentEntitlements.mockImplementation(async () => {
+        await h.purchases.processTransaction(
+          androidTx({productId: 'pal.p2', transactionId: 'tx-2'}),
+          {},
+        );
+        return [];
+      });
+
+      await h.purchases.recover();
+
+      expect(h.purchases.recordFor('P2')?.status).toBe('held_invalid');
+      expect(h.purchases.recordFor(PAL_ID)).toBeUndefined();
+    });
+
+    it.each(['revoked', 'removed'] as const)(
+      'Android: leaves it as it is on a refresh %s',
+      async list => {
+        setOS('android');
+        const h = createHarness({records: [held()]});
+        h.store.currentEntitlements.mockResolvedValue([
+          androidTx({unfinished: true}),
+        ]);
+        h.api.refresh.mockResolvedValue(refreshLists({[list]: [PAL_ID]}));
+
+        await h.purchases.recover();
+
+        expect(h.api.refresh).toHaveBeenCalled();
+        expect(h.purchases.recordFor(PAL_ID)).toEqual(held());
+      },
+    );
+
+    it.each([
+      ['revoked', 'removed'],
+      ['removed', 'unfulfillable'],
+    ] as const)(
+      'iOS: a refresh %s still moves it to %s',
+      async (list, status) => {
+        setOS('ios');
+        const h = createHarness({records: [held()]});
+        h.store.currentEntitlements.mockResolvedValue([
+          tx({unfinished: false}),
+        ]);
+        h.api.refresh.mockResolvedValue(refreshLists({[list]: [PAL_ID]}));
+
+        await h.purchases.recover();
+
+        expect(h.purchases.recordFor(PAL_ID)?.status).toBe(status);
+      },
+    );
+  });
+
   describe('backoff and retry', () => {
     it('retries a failed verify at 2, 4, 8, 16, 32 seconds, then every minute', async () => {
       jest.useFakeTimers();
