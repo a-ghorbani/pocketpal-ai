@@ -566,7 +566,9 @@ export class PurchaseStore {
 
   private async verify(tx: StoreTransaction): Promise<VerifyResult | null> {
     try {
-      const [result] = await this.deps.api.verify(platform(), [tx.proof]);
+      const results = await this.deps.api.verify(platform(), [tx.proof]);
+      const result =
+        results.find(candidate => candidate.status === 'active') ?? results[0];
       return result && !RETRYABLE_RESULTS.has(result.status) ? result : null;
     } catch {
       return null;

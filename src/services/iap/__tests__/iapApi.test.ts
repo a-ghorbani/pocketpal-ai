@@ -120,7 +120,7 @@ describe('iapApi', () => {
     });
   });
 
-  describe('revocation wins', () => {
+  describe('revocation wins for the same purchase', () => {
     const active = {
       pal_id: 'pal-1',
       status: 'active',
@@ -128,9 +128,9 @@ describe('iapApi', () => {
       pal: apiPal(),
       support_code: 'SUP-1',
     };
-    const revoked = {pal_id: 'pal-1', status: 'revoked', support_code: 'SUP-2'};
+    const revoked = {pal_id: 'pal-1', status: 'revoked', support_code: 'SUP-1'};
 
-    it('turns an active result revoked when one response also revokes that pal', async () => {
+    it('turns an active result revoked when the same purchase is also revoked', async () => {
       fetchMock.mockResolvedValue(
         jsonResponse(verifyResponse([active, revoked])),
       );
@@ -170,15 +170,23 @@ describe('iapApi', () => {
       );
     });
 
-    it('keeps an active result for another pal', async () => {
+    it('keeps an active purchase when a different purchase of the Pal is revoked', async () => {
       fetchMock.mockResolvedValue(
-        jsonResponse(verifyResponse([active, {...revoked, pal_id: 'pal-2'}])),
+        jsonResponse(
+          verifyResponse([
+            {...revoked, support_code: 'SUP-A'},
+            {...active, support_code: 'SUP-B'},
+          ]),
+        ),
       );
-      const [first] = await iapApi.verify('ios', [
+      const results = await iapApi.verify('ios', [
         {platform: 'ios', jws: 'a'},
         {platform: 'ios', jws: 'b'},
       ]);
-      expect(first.status).toBe('active');
+      expect(results.map(result => result.status)).toEqual([
+        'revoked',
+        'active',
+      ]);
     });
 
     it('drops a changed pal that the refresh also revokes, across chunks', async () => {

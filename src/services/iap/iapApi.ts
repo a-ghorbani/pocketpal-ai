@@ -75,14 +75,19 @@ const request = async (
   }
 };
 
+const purchaseKey = (result: VerifyResult) =>
+  `${result.palId} ${result.supportCode}`;
+
 const revocationWins = (results: VerifyResult[]): VerifyResult[] => {
   const revoked = new Map(
     results
-      .filter(result => result.status === 'revoked')
-      .map(result => [result.palId, result]),
+      .filter(result => result.status === 'revoked' && result.supportCode)
+      .map(result => [purchaseKey(result), result]),
   );
   return results.map(result =>
-    result.status === 'active' ? (revoked.get(result.palId) ?? result) : result,
+    result.status === 'active' && result.supportCode
+      ? (revoked.get(purchaseKey(result)) ?? result)
+      : result,
   );
 };
 

@@ -501,41 +501,68 @@ describe('PurchaseStore pipeline', () => {
   });
 
   describe('one response with a grant and a revocation', () => {
+    const respond = (results: Array<Record<string, unknown>>) => {
+      const {
+        verifyResponse,
+        jsonResponse,
+      } = require('../../../jest/fixtures/iap');
+      (global as any).fetch = jest.fn(async () =>
+        jsonResponse(verifyResponse(results)),
+      );
+    };
+    const activeWith = (code: string) => {
+      const {apiPal} = require('../../../jest/fixtures/iap');
+      return {
+        pal_id: PAL_ID,
+        status: 'active',
+        content_version: 3,
+        pal: apiPal({store_product_id: PRODUCT}),
+        support_code: code,
+      };
+    };
+    const revokedWith = (code: string) => ({
+      pal_id: PAL_ID,
+      status: 'revoked',
+      support_code: code,
+    });
+    const run = async () => {
+      const {iapApi} = require('../../services/iap/iapApi');
+      const h = createHarness({records: [record('unlocking')]});
+      h.deps.api = iapApi;
+      h.palStore.pals.push(localPal());
+      await h.purchases.processTransaction(tx(), {});
+      await settle(h);
+      return h;
+    };
+
     it.each(['ios', 'android'] as const)(
-      '%s: ends revoked with no grant and no Android finish',
+      '%s: the same purchase active and revoked ends removed, no grant',
       async os => {
         setOS(os);
-        const {iapApi} = require('../../services/iap/iapApi');
-        const {
-          verifyResponse,
-          apiPal,
-          jsonResponse,
-        } = require('../../../jest/fixtures/iap');
-        (global as any).fetch = jest.fn(async () =>
-          jsonResponse(
-            verifyResponse([
-              {
-                pal_id: PAL_ID,
-                status: 'active',
-                content_version: 3,
-                pal: apiPal({store_product_id: PRODUCT}),
-                support_code: 'SUP-1',
-              },
-              {pal_id: PAL_ID, status: 'revoked', support_code: 'SUP-1'},
-            ]),
-          ),
-        );
-        const h = createHarness({records: [record('unlocking')]});
-        h.deps.api = iapApi;
-        h.palStore.pals.push(localPal());
+        respond([activeWith('SUP-1'), revokedWith('SUP-1')]);
 
-        await h.purchases.processTransaction(tx(), {});
-        await settle(h);
+        const h = await run();
 
         expect(h.purchases.recordFor(PAL_ID)?.status).toBe('removed');
         expect(h.palStore.installOwnedPal).not.toHaveBeenCalled();
         expect(h.log).not.toContain('write:granted');
         expect(h.store.finish).toHaveBeenCalledTimes(os === 'ios' ? 1 : 0);
+      },
+    );
+
+    it.each(['ios', 'android'] as const)(
+      '%s: a refunded purchase beside an active one keeps the Pal owned',
+      async os => {
+        setOS(os);
+        respond([revokedWith('SUP-A'), activeWith('SUP-B')]);
+
+        const h = await run();
+
+        expect(h.purchases.recordFor(PAL_ID)).toMatchObject({
+          status: 'active',
+          supportCode: 'SUP-B',
+        });
+        expect(h.palStore.deletePal).not.toHaveBeenCalled();
       },
     );
   });
