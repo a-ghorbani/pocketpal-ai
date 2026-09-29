@@ -902,6 +902,7 @@ export class PurchaseStore {
         status: 'removed',
         grant: undefined,
         pendingUpdate: undefined,
+        ...(this.keptByLibrary(palId) ? {} : {applied: undefined}),
       },
       true,
     );
@@ -924,18 +925,24 @@ export class PurchaseStore {
           : {}),
         grant: undefined,
         pendingUpdate: undefined,
+        applied: undefined,
       },
       true,
     );
     await this.deleteLocalUnlessLibrary(palId);
   }
 
-  private async deleteLocalUnlessLibrary(palId: string): Promise<void> {
-    const keptByLibrary =
+  private keptByLibrary(palId: string): boolean {
+    return (
+      this.localPalFor(palId) !== undefined &&
       this.deps.auth.isAuthenticated &&
-      this.deps.palStore.userLibrary.some(pal => pal.id === palId);
+      this.deps.palStore.userLibrary.some(pal => pal.id === palId)
+    );
+  }
+
+  private async deleteLocalUnlessLibrary(palId: string): Promise<void> {
     const local = this.localPalFor(palId);
-    if (local && !keptByLibrary) {
+    if (local && !this.keptByLibrary(palId)) {
       await this.deps.palStore.deletePal(local.id);
     }
   }

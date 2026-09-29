@@ -459,8 +459,7 @@ describe('PurchaseStore creator updates', () => {
   });
 
   describe('refund', () => {
-    it('clears the pending update and keeps the applied snapshot', async () => {
-      const h = installed({pendingUpdate: pending(v2())});
+    const refundOnRefresh = (h: ReturnType<typeof createHarness>) =>
       h.api.refresh.mockResolvedValue({
         changed: [],
         revoked: [PAL_ID],
@@ -468,12 +467,63 @@ describe('PurchaseStore creator updates', () => {
         unchanged: [],
       });
 
+    it('keeps the applied snapshot when the signed-in library keeps the Pal', async () => {
+      const h = createHarness({
+        records: [record('active', {pendingUpdate: pending(v2())})],
+        signedIn: true,
+      });
+      h.palStore.pals.push(localPal());
+      h.palStore.userLibrary.push(hubPal());
+      refundOnRefresh(h);
+
       await h.purchases.recover();
 
       const rec = h.purchases.recordFor(PAL_ID);
       expect(rec?.status).toBe('removed');
       expect(rec?.pendingUpdate).toBeUndefined();
       expect(rec?.applied).toEqual(contentOf(v1()));
+      expect(h.palStore.deletePal).not.toHaveBeenCalled();
+    });
+
+    it('clears the applied snapshot when signed out', async () => {
+      const h = installed({pendingUpdate: pending(v2())});
+      refundOnRefresh(h);
+
+      await h.purchases.recover();
+
+      const rec = h.purchases.recordFor(PAL_ID);
+      expect(rec?.status).toBe('removed');
+      expect(rec?.pendingUpdate).toBeUndefined();
+      expect(rec?.applied).toBeUndefined();
+      expect(h.storage.ledger()[PAL_ID].applied).toBeUndefined();
+    });
+
+    it('clears the applied snapshot when no local Pal exists', async () => {
+      const h = createHarness({records: [record('active')], signedIn: true});
+      h.palStore.userLibrary.push(hubPal());
+      refundOnRefresh(h);
+
+      await h.purchases.recover();
+
+      expect(h.purchases.recordFor(PAL_ID)?.applied).toBeUndefined();
+    });
+
+    it('installs the full version when a cleared tombstone is revived', async () => {
+      const h = createHarness({
+        records: [record('removed', {applied: undefined})],
+      });
+      h.palStore.pals.push(localPal());
+      h.api.verify.mockResolvedValueOnce([
+        result('active', {contentVersion: 4, pal: v2()}),
+      ]);
+
+      await h.purchases.processTransaction(tx(), {settledVerify: true});
+      await h.purchases.drainQueue();
+
+      const rec = h.purchases.recordFor(PAL_ID);
+      expect(rec).toMatchObject({status: 'active', contentVersion: 4});
+      expect(rec?.applied).toEqual(contentOf(v2()));
+      expect(rec?.pendingUpdate).toBeUndefined();
     });
   });
 
@@ -589,6 +639,7 @@ describe('PurchaseStore creator updates', () => {
         withdrawnAfterDelivery: true,
       });
       expect(rec?.pendingUpdate).toBeUndefined();
+      expect(rec?.applied).toBeUndefined();
       expect(h.palStore.deletePal).toHaveBeenCalledWith('local-pal-1');
       expect(h.store.finish).not.toHaveBeenCalled();
       expect(h.purchases.storeOwnedRecords).toHaveLength(1);
@@ -603,6 +654,7 @@ describe('PurchaseStore creator updates', () => {
       await h.purchases.recover();
 
       expect(h.purchases.recordFor(PAL_ID)?.status).toBe('unfulfillable');
+      expect(h.purchases.recordFor(PAL_ID)?.applied).toBeUndefined();
       expect(h.palStore.deletePal).not.toHaveBeenCalled();
     });
 
