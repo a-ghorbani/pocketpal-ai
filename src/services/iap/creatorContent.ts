@@ -1,21 +1,20 @@
-export const CREATOR_FIELDS = [
-  'title',
-  'description',
-  'system_prompt',
-  'model_reference',
-  'model_settings',
-  'pact',
-  'greeting',
-  'categories',
-  'tags',
-  'thumbnail_url',
-  'creator',
-  'protection_level',
-] as const;
-
-export type CreatorField = (typeof CREATOR_FIELDS)[number];
+export type CreatorField =
+  | 'title'
+  | 'description'
+  | 'system_prompt'
+  | 'model_reference'
+  | 'model_settings'
+  | 'pact'
+  | 'greeting'
+  | 'categories'
+  | 'tags'
+  | 'thumbnail_url'
+  | 'creator'
+  | 'protection_level';
 
 export type CreatorContent = Partial<Record<CreatorField, unknown>>;
+
+type RawPal = Record<string, unknown>;
 
 const isRecord = (value: unknown): value is Record<string, unknown> =>
   typeof value === 'object' && value !== null && !Array.isArray(value);
@@ -43,7 +42,7 @@ const projectGreeting = (value: unknown): unknown =>
     ? {text: value.text, suggested_prompts: value.suggested_prompts}
     : value;
 
-const projectCreator = (raw: Record<string, unknown>): unknown => {
+const projectCreator = (raw: RawPal): unknown => {
   const creator = isRecord(raw.creator) ? raw.creator : {};
   return {
     id: raw.creator_id ?? creator.id,
@@ -52,22 +51,25 @@ const projectCreator = (raw: Record<string, unknown>): unknown => {
   };
 };
 
-export const projectCreatorContent = (
-  raw: Record<string, unknown>,
-): CreatorContent => ({
-  title: raw.title,
-  description: raw.description,
-  system_prompt: raw.system_prompt,
-  model_reference: raw.model_reference,
-  model_settings: raw.model_settings,
-  pact: projectPact(raw.pact),
-  greeting: projectGreeting(raw.greeting),
-  categories: names(raw.categories),
-  tags: names(raw.tags),
-  thumbnail_url: raw.thumbnail_url,
-  creator: projectCreator(raw),
-  protection_level: raw.protection_level,
-});
+const PROJECT: Record<CreatorField, (raw: RawPal) => unknown> = {
+  title: raw => raw.title,
+  description: raw => raw.description,
+  system_prompt: raw => raw.system_prompt,
+  model_reference: raw => raw.model_reference,
+  model_settings: raw => raw.model_settings,
+  pact: raw => projectPact(raw.pact),
+  greeting: raw => projectGreeting(raw.greeting),
+  categories: raw => names(raw.categories),
+  tags: raw => names(raw.tags),
+  thumbnail_url: raw => raw.thumbnail_url,
+  creator: projectCreator,
+  protection_level: raw => raw.protection_level,
+};
+
+export const CREATOR_FIELDS = Object.keys(PROJECT) as CreatorField[];
+
+export const projectCreatorContent = (raw: RawPal): CreatorContent =>
+  Object.fromEntries(CREATOR_FIELDS.map(field => [field, PROJECT[field](raw)]));
 
 export const normalise = (value: unknown): unknown => {
   if (value === undefined || value === null || value === '') {

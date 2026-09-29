@@ -53,6 +53,63 @@ import {downloadPalThumbnail, deletePalThumbnail} from '../utils/imageUtils';
 const LOOKIE_SEEDED_KEY = 'PalStore.builtin.Lookie.seeded';
 const PIP_SEEDED_KEY = 'PalStore.builtin.Pip.seeded';
 
+interface CreatorUpdateContext {
+  fresh: Pal;
+  current: Pal;
+  palsHubPal: PalsHubPal;
+  localPalId: string;
+}
+
+const CREATOR_UPDATES: Record<
+  CreatorField,
+  (context: CreatorUpdateContext) => PalUpdate | Promise<PalUpdate>
+> = {
+  title: ({fresh}) => ({name: fresh.name}),
+  description: ({fresh}) => ({description: fresh.description ?? ''}),
+  system_prompt: ({fresh, current}) => {
+    if (!fresh.systemPrompt) {
+      return {};
+    }
+    const keptParameters = Object.fromEntries(
+      fresh.parameterSchema
+        .filter(def => current.parameters?.[def.key] !== undefined)
+        .map(def => [def.key, current.parameters[def.key]]),
+    );
+    return {
+      systemPrompt: fresh.systemPrompt,
+      originalSystemPrompt: fresh.originalSystemPrompt ?? '',
+      parameterSchema: fresh.parameterSchema,
+      parameters: {...fresh.parameters, ...keptParameters},
+    };
+  },
+  model_reference: ({fresh}) => ({defaultModel: fresh.defaultModel ?? null}),
+  model_settings: ({fresh}) => ({
+    rawPalshubGenerationSettings: fresh.rawPalshubGenerationSettings ?? null,
+  }),
+  pact: ({fresh}) => ({pact: fresh.pact ?? {talents: []}}),
+  greeting: ({fresh}) => ({greeting: fresh.greeting ?? null}),
+  categories: ({fresh}) => ({categories: fresh.categories}),
+  tags: ({fresh}) => ({tags: fresh.tags}),
+  creator: ({fresh}) => ({creator_info: fresh.creator_info}),
+  protection_level: ({fresh}) => ({protection_level: fresh.protection_level}),
+  thumbnail_url: async ({palsHubPal, localPalId}) => {
+    if (!palsHubPal.thumbnail_url) {
+      return {};
+    }
+    try {
+      return {
+        thumbnail_url: await downloadPalThumbnail(
+          localPalId,
+          palsHubPal.thumbnail_url,
+        ),
+      };
+    } catch (imageError) {
+      console.warn('Failed to refresh thumbnail:', imageError);
+      return {};
+    }
+  },
+};
+
 export interface OwnedPalInstall {
   localPal: Pal;
   created: boolean;
@@ -308,58 +365,10 @@ class PalStore {
         ? palsHubPal
         : {...palsHubPal, model_reference: undefined},
     );
+    const context = {fresh, current, palsHubPal, localPalId};
     const updates: PalUpdate = {};
-    if (fields.has('title')) {
-      updates.name = fresh.name;
-    }
-    if (fields.has('description')) {
-      updates.description = fresh.description ?? '';
-    }
-    if (fields.has('system_prompt') && fresh.systemPrompt) {
-      const keptParameters = Object.fromEntries(
-        fresh.parameterSchema
-          .filter(def => current.parameters?.[def.key] !== undefined)
-          .map(def => [def.key, current.parameters[def.key]]),
-      );
-      updates.systemPrompt = fresh.systemPrompt;
-      updates.originalSystemPrompt = fresh.originalSystemPrompt ?? '';
-      updates.parameterSchema = fresh.parameterSchema;
-      updates.parameters = {...fresh.parameters, ...keptParameters};
-    }
-    if (fields.has('model_reference')) {
-      updates.defaultModel = fresh.defaultModel ?? null;
-    }
-    if (fields.has('model_settings')) {
-      updates.rawPalshubGenerationSettings =
-        fresh.rawPalshubGenerationSettings ?? null;
-    }
-    if (fields.has('pact')) {
-      updates.pact = fresh.pact ?? {talents: []};
-    }
-    if (fields.has('greeting')) {
-      updates.greeting = fresh.greeting ?? null;
-    }
-    if (fields.has('categories')) {
-      updates.categories = fresh.categories;
-    }
-    if (fields.has('tags')) {
-      updates.tags = fresh.tags;
-    }
-    if (fields.has('creator')) {
-      updates.creator_info = fresh.creator_info;
-    }
-    if (fields.has('protection_level')) {
-      updates.protection_level = fresh.protection_level;
-    }
-    if (fields.has('thumbnail_url') && palsHubPal.thumbnail_url) {
-      try {
-        updates.thumbnail_url = await downloadPalThumbnail(
-          localPalId,
-          palsHubPal.thumbnail_url,
-        );
-      } catch (imageError) {
-        console.warn('Failed to refresh thumbnail:', imageError);
-      }
+    for (const field of fields) {
+      Object.assign(updates, await CREATOR_UPDATES[field](context));
     }
     await this.updatePal(localPalId, updates);
   };
