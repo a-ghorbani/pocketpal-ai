@@ -437,6 +437,99 @@ describe('PurchaseStore pipeline', () => {
     });
   });
 
+  describe('purchase ref', () => {
+    const refreshKnown = async (h: ReturnType<typeof createHarness>) => {
+      h.store.currentEntitlements.mockResolvedValue([tx({unfinished: false})]);
+      await h.purchases.recover();
+      return h.api.refresh.mock.calls.at(-1)![1];
+    };
+
+    it.each([
+      ['with', true],
+      ['without', false],
+    ])(
+      'replaces the stored code on a settled active verify %s a local Pal',
+      async (_label, installedHere) => {
+        const h = createHarness({
+          records: [record('active', {supportCode: 'A'})],
+        });
+        if (installedHere) {
+          h.palStore.pals.push(localPal());
+        }
+        h.api.verify.mockResolvedValueOnce([
+          result('active', {supportCode: 'B'}),
+        ]);
+
+        await h.purchases.processTransaction(tx(), {settledVerify: true});
+
+        expect(h.storage.ledger()[PAL_ID].supportCode).toBe('B');
+        expect((await refreshKnown(h))[PAL_ID].purchaseRef).toBe('B');
+      },
+    );
+
+    it('takes the new code when a tombstone is revived', async () => {
+      const h = createHarness({
+        records: [record('removed', {supportCode: 'A'})],
+      });
+      h.api.verify.mockResolvedValueOnce([
+        result('active', {supportCode: 'B'}),
+      ]);
+
+      await h.purchases.processTransaction(tx(), {settledVerify: true});
+
+      expect(h.purchases.recordFor(PAL_ID)?.supportCode).toBe('B');
+    });
+
+    it.each([
+      ['a settled active record', 'active'],
+      ['a revived tombstone', 'removed'],
+    ] as const)(
+      'drops the old code of %s when verify sends none',
+      async (_label, status) => {
+        const h = createHarness({
+          records: [record(status, {supportCode: 'A'})],
+        });
+        h.palStore.pals.push(localPal());
+        h.api.verify.mockResolvedValueOnce([
+          result('active', {supportCode: undefined}),
+        ]);
+
+        await h.purchases.processTransaction(tx(), {settledVerify: true});
+
+        expect(h.purchases.recordFor(PAL_ID)?.supportCode).toBeUndefined();
+      },
+    );
+
+    it('Android: delivers an active purchase without a code, warns once and leaves it out of known', async () => {
+      setOS('android');
+      const warn = jest.spyOn(console, 'warn').mockImplementation(() => {});
+      const h = createHarness();
+      h.api.verify.mockResolvedValueOnce([
+        result('active', {supportCode: undefined}),
+      ]);
+      const unacknowledged = tx({
+        proof: {platform: 'android', productId: PRODUCT, purchaseToken: 'tok'},
+      });
+
+      await h.purchases.processTransaction(unacknowledged, {});
+      await settle(h);
+
+      const rec = h.purchases.recordFor(PAL_ID);
+      expect(rec?.status).toBe('active');
+      expect(rec?.supportCode).toBeUndefined();
+      expect(h.palStore.installOwnedPal).toHaveBeenCalledTimes(1);
+      expect(h.store.finish).toHaveBeenCalledTimes(1);
+      const warnings = warn.mock.calls.filter(args =>
+        String(args[0]).includes('support code'),
+      );
+      expect(warnings).toHaveLength(1);
+      expect(JSON.stringify(warnings)).toContain(PAL_ID);
+      expect(JSON.stringify(warnings)).not.toContain('tok');
+      expect(await refreshKnown(h)).toEqual({});
+      warn.mockRestore();
+    });
+  });
+
   describe('Android against react-native-iap', () => {
     const iap = RNIap as unknown as Record<string, jest.Mock>;
 

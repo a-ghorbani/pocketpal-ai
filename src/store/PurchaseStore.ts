@@ -571,6 +571,12 @@ export class PurchaseStore {
       const results = await this.deps.api.verify(platform(), [tx.proof]);
       const result =
         results.find(candidate => candidate.status === 'active') ?? results[0];
+      if (result?.status === 'active' && !result.supportCode) {
+        console.warn(
+          'Verify returned an active purchase without a support code:',
+          result.palId,
+        );
+      }
       return result && !RETRYABLE_RESULTS.has(result.status) ? result : null;
     } catch {
       return null;
@@ -726,6 +732,12 @@ export class PurchaseStore {
     if (rec.status === 'granted' || result.status !== 'active' || !result.pal) {
       return;
     }
+    if (rec.supportCode !== result.supportCode) {
+      await this.putRecord(rec.palId, {
+        productId: rec.productId,
+        supportCode: result.supportCode,
+      });
+    }
     if (this.localPalFor(rec.palId)) {
       if (result.content) {
         await this.offerUpdate(rec.palId, {
@@ -809,7 +821,7 @@ export class PurchaseStore {
               }
             : undefined,
         pendingUpdate: undefined,
-        supportCode: result.supportCode ?? rec?.supportCode,
+        supportCode: result.supportCode,
         transactionIds: this.withTransactionId(rec, tx),
         title: result.pal?.title ?? rec?.title ?? '',
         thumbnailUrl: result.pal?.thumbnail_url ?? rec?.thumbnailUrl,
