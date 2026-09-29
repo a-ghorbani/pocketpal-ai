@@ -140,4 +140,32 @@ export const createStyles = ({theme}: {theme: Theme}) =>
       justifyContent: 'flex-end' as const,
       marginTop: 2,
     },
+    compactionProgressBar: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      paddingHorizontal: 16,
+      paddingVertical: 8,
+      backgroundColor: theme.colors.surfaceVariant,
+      borderTopWidth: 1,
+      borderTopColor: theme.colors.outline,
+    },
+    compactionProgressContent: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 8,
+    },
+    compactionProgressText: {
+      fontSize: 13,
+      color: theme.colors.onSurfaceVariant,
+    },
+    compactionCancelButton: {
+      paddingHorizontal: 8,
+      paddingVertical: 4,
+    },
+    compactionCancelText: {
+      fontSize: 13,
+      color: theme.colors.primary,
+      fontWeight: '600',
+    },
   });

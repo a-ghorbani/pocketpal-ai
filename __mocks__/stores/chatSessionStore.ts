@@ -133,6 +133,11 @@ export const mockChatSessionStore = {
   recordCompletionSnapshot: jest.fn(),
   setBannerDismissed: jest.fn(),
   markPalLoadHintSeen: jest.fn(),
+  // Compaction state & actions
+  isCompacting: false,
+  compactActiveSession: jest.fn().mockResolvedValue(true),
+  cancelCompaction: jest.fn(),
+  resetContextMetrics: jest.fn(),
 };
 
 Object.defineProperty(mockChatSessionStore, 'isGeneratingToolCall', {
@@ -143,7 +148,14 @@ Object.defineProperty(mockChatSessionStore, 'isGeneratingToolCall', {
 });
 
 Object.defineProperty(mockChatSessionStore, 'currentSessionMessages', {
-  get: jest.fn(() => []),
+  get: jest.fn(() => {
+    const session = mockChatSessionStore.sessions.find(
+      s => s.id === mockChatSessionStore.activeSessionId,
+    );
+    return (
+      session?.messages?.filter((m: any) => !m.metadata?.isCompacted) || []
+    );
+  }),
   configurable: true,
 });
 
