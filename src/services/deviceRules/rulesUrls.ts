@@ -7,4 +7,4 @@ const JSDELIVR_BASE =
 // 'ios', so the iOS rules file covers iPad too.
 export const getRulesUrl = (
   platform: 'ios' | 'android' = Platform.OS as 'ios' | 'android',
-): string => `${JSDELIVR_BASE}/rules.${platform}.json`;
+): string => `${JSDELIVR_BASE}/rules.${platform}.v2.json`;

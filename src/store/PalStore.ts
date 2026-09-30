@@ -19,6 +19,7 @@
 import {v4 as uuidv4} from 'uuid';
 import {makeAutoObservable, runInAction} from 'mobx';
 import {Platform} from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 import {HF_DOMAIN} from '../config/urls';
 
@@ -62,6 +63,10 @@ const hasColorPair = (
       typeof value === 'string' &&
       value.toLowerCase() === expected[index].toLowerCase(),
   );
+
+const LOOKIE_SEEDED_KEY = 'PalStore.builtin.Lookie.seeded';
+const PIP_SEEDED_KEY = 'PalStore.builtin.Pip.seeded';
+const SCOUT_SEEDED_KEY = 'PalStore.builtin.Scout.seeded';
 
 class PalStore {
   // Core pals storage
@@ -716,10 +721,16 @@ class PalStore {
   };
 
   /**
-   * Initialize the default "Lookie" VideoPal if it doesn't exist
+   * Seed the default "Lookie" VideoPal once. After the first launch that
+   * records the seed, deletions and renames are preserved; on that launch a
+   * missing Lookie is created (installs that predate the key included).
    */
   private async initializeLookiePal(): Promise<void> {
     try {
+      if ((await AsyncStorage.getItem(LOOKIE_SEEDED_KEY)) === 'true') {
+        return;
+      }
+
       // Check if Lookie already exists
       const lookiePal = this.pals.find(
         p => p.capabilities?.video === true && p.name === 'Lookie',
@@ -762,13 +773,16 @@ class PalStore {
       } else {
         console.log('Lookie pal already exists, skipping creation');
       }
+      await AsyncStorage.setItem(LOOKIE_SEEDED_KEY, 'true');
     } catch (error) {
       console.error('Error initializing Lookie pal:', error);
     }
   }
 
   /**
-   * Initialize the default "Pip" recommended pal if it doesn't exist.
+   * Seed the default "Pip" recommended pal once. After the first launch that
+   * records the seed, deletions and renames are preserved; on that launch a
+   * missing Pip is created (installs that predate the key included).
    *
    * Idempotent: a re-entry never overwrites an existing Pip record, so a
    * `defaultModel` bound from a prior session (e.g. by the onboarding
@@ -776,10 +790,15 @@ class PalStore {
    */
   private async initializePipPal(): Promise<void> {
     try {
+      if ((await AsyncStorage.getItem(PIP_SEEDED_KEY)) === 'true') {
+        return;
+      }
+
       const existing = this.pals.find(
         p => p.name === 'Pip' && p.source === 'local',
       );
       if (existing) {
+        await AsyncStorage.setItem(PIP_SEEDED_KEY, 'true');
         return;
       }
 
@@ -801,6 +820,7 @@ class PalStore {
       };
 
       await this.addPal(palData);
+      await AsyncStorage.setItem(PIP_SEEDED_KEY, 'true');
     } catch (error) {
       console.error('Error initializing Pip pal:', error);
     }
@@ -814,6 +834,10 @@ class PalStore {
    */
   private async initializeScoutPal(): Promise<void> {
     try {
+      if ((await AsyncStorage.getItem(SCOUT_SEEDED_KEY)) === 'true') {
+        return;
+      }
+
       const existing = this.pals.find(
         p => p.name === 'Scout' && p.source === 'local',
       );
@@ -824,6 +848,7 @@ class PalStore {
         ) {
           await this.updatePal(existing.id, {color: SCOUT_WARM_DARK_COLORS});
         }
+        await AsyncStorage.setItem(SCOUT_SEEDED_KEY, 'true');
         return;
       }
 
@@ -862,6 +887,7 @@ class PalStore {
       };
 
       await this.addPal(palData);
+      await AsyncStorage.setItem(SCOUT_SEEDED_KEY, 'true');
     } catch (error) {
       console.error('Error initializing Scout pal:', error);
     }
