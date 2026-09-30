@@ -203,6 +203,12 @@
   "components": {
     "modelSettingsSheet": {
       "reasoningSection": "Разважанне"
+    },
+    "modelsHeaderRight": {
+      "filtersGroup": "Filters",
+      "viewGroup": "View",
+      "menuTitleHfMirror": "Hugging Face Mirror",
+      "menuTitleModelScope": "ModelScope Models"
     }
   },
   "voiceAndSpeech": {
@@ -343,6 +349,8 @@
     "labels": {
       "localModel": "Лакальная",
       "hfModel": "HF",
+      "hfMirrorModel": "HF Mirror",
+      "modelScopeModel": "ModelScope",
       "unknownGroup": "Невядома",
       "availableToUse": "Гатова да выкарыстання",
       "availableToDownload": "Даступна для спампоўвання"

@@ -245,6 +245,8 @@
     "labels": {
       "localModel": "Lokal",
       "hfModel": "HF",
+      "hfMirrorModel": "HF Mirror",
+      "modelScopeModel": "ModelScope",
       "unknownGroup": "Tidak Diketahui",
       "availableToUse": "Siap Digunakan",
       "availableToDownload": "Tersedia untuk Diunduh",
@@ -293,6 +295,7 @@
     },
     "buttons": {
       "addFromHuggingFace": "Tambah dari Hugging Face",
+      "addFromModelSources": "Download Model",
       "addLocalModel": "Tambah Model Lokal",
       "reset": "Atur Ulang"
     },
@@ -350,6 +353,14 @@
       "noResults": "Model tidak ditemukan",
       "loadingMore": "Memuat lebih banyak...",
       "searchPlaceholder": "Cari model Hugging Face",
+      "source": "Source",
+      "sourceTitle": "Download Source",
+      "thirdPartySuffix": " (third-party)",
+      "sources": {
+        "huggingface": "Hugging Face",
+        "hf_mirror": "HF Mirror",
+        "modelscope": "ModelScope"
+      },
       "modelUpdatedLong": "Diperbarui {{time}} lalu",
       "modelUpdatedShort": "{{time}} lalu",
       "modelUpdatedJustNowLong": "Diperbarui baru saja",
@@ -393,6 +404,7 @@
         "requiresProjectionModel": "Memerlukan model proyeksi",
         "downloadProjectionModel": "Unduh model proyeksi",
         "viewModelCardOnHuggingFace": "Lihat Kartu Model di Hugging Face",
+        "viewModelCardOnSource": "View Model Source",
         "visionSupported": "Didukung",
         "visionNotSupported": "Tidak didukung",
         "visionUnknown": "Tidak diketahui",
@@ -738,7 +750,8 @@
       "enableAndRetry": "Aktifkan dan Coba Lagi",
       "goToSettings": "Buka Pengaturan",
       "tryAgain": "Coba Lagi",
-      "viewOnHuggingFace": "Lihat Model di HF ↗"
+      "viewOnHuggingFace": "Lihat Model di HF ↗",
+      "viewOnSource": "View Model Source ↗"
     },
     "headerRight": {
       "deleteChatTitle": "Hapus Obrolan",
@@ -800,7 +813,11 @@
       }
     },
     "modelsHeaderRight": {
+      "filtersGroup": "Filters",
+      "viewGroup": "View",
       "menuTitleHf": "Model Hugging Face",
+      "menuTitleHfMirror": "Hugging Face Mirror",
+      "menuTitleModelScope": "ModelScope Models",
       "menuTitleDownloaded": "Model yang Diunduh",
       "menuTitleGrouped": "Kelompokkan Berdasarkan Jenis Model",
       "menuTitleReset": "Atur Ulang Daftar Model"

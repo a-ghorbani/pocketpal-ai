@@ -245,6 +245,8 @@
     "labels": {
       "localModel": "Local",
       "hfModel": "HF",
+      "hfMirrorModel": "HF Mirror",
+      "modelScopeModel": "ModelScope",
       "unknownGroup": "Desconocido",
       "availableToUse": "Listo para usar",
       "availableToDownload": "Disponible para descargar",
@@ -293,6 +295,7 @@
     },
     "buttons": {
       "addFromHuggingFace": "Añadir desde Hugging Face",
+      "addFromModelSources": "Download Model",
       "addLocalModel": "Añadir modelo local",
       "reset": "Restablecer"
     },
@@ -350,6 +353,14 @@
       "noResults": "No se encontraron modelos",
       "loadingMore": "Cargando más...",
       "searchPlaceholder": "Buscar modelos en Hugging Face",
+      "source": "Source",
+      "sourceTitle": "Download Source",
+      "thirdPartySuffix": " (third-party)",
+      "sources": {
+        "huggingface": "Hugging Face",
+        "hf_mirror": "HF Mirror",
+        "modelscope": "ModelScope"
+      },
       "modelUpdatedLong": "Actualizado hace {{time}}",
       "modelUpdatedShort": "Hace {{time}}",
       "modelUpdatedJustNowLong": "Actualizado justo ahora",
@@ -423,6 +434,7 @@
         "requiresProjectionModel": "Requiere modelo de proyección",
         "downloadProjectionModel": "Descargar modelo de proyección",
         "viewModelCardOnHuggingFace": "Ver ficha del modelo en Hugging Face",
+        "viewModelCardOnSource": "View Model Source",
         "draftOnlyReason": "Modelo exclusivo para borrador. Selecciónalo en Ajustes → Decodificación especulativa."
       }
     },
@@ -785,7 +797,8 @@
       "enableAndRetry": "Activar y reintentar",
       "goToSettings": "Ir a ajustes",
       "tryAgain": "Volver a intentar",
-      "viewOnHuggingFace": "Ver modelo en HF ↗"
+      "viewOnHuggingFace": "Ver modelo en HF ↗",
+      "viewOnSource": "View Model Source ↗"
     },
     "headerRight": {
       "deleteChatTitle": "Eliminar chat",
@@ -847,7 +860,11 @@
       }
     },
     "modelsHeaderRight": {
+      "filtersGroup": "Filters",
+      "viewGroup": "View",
       "menuTitleHf": "Modelos de Hugging Face",
+      "menuTitleHfMirror": "Hugging Face Mirror",
+      "menuTitleModelScope": "ModelScope Models",
       "menuTitleDownloaded": "Modelos descargados",
       "menuTitleGrouped": "Agrupar por tipo de modelo",
       "menuTitleReset": "Restablecer lista de modelos"
