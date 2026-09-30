@@ -1,9 +1,10 @@
-import React from 'react';
+import React, {useContext} from 'react';
 import {View} from 'react-native';
 import {Portal, Snackbar, Text} from 'react-native-paper';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 
 import {useTheme} from '../../hooks';
+import {L10nContext} from '../../utils';
 import {ErrorState} from '../../utils/errors';
 import {createStyles} from './styles';
 
@@ -23,6 +24,7 @@ export const ErrorSnackbar: React.FC<ErrorSnackbarProps> = ({
   onReport,
 }) => {
   const theme = useTheme();
+  const l10n = useContext(L10nContext);
 
   if (!error) {
     return null;
@@ -36,7 +38,10 @@ export const ErrorSnackbar: React.FC<ErrorSnackbarProps> = ({
     if (error.code === 'authentication' || error.code === 'authorization') {
       switch (error.service) {
         case 'huggingface':
+        case 'hf_mirror':
           return 'key-alert'; // Specific icon for HF auth issues
+        case 'modelscope':
+          return 'cloud-alert-outline';
         case 'firebase':
           return 'firebase'; // Firebase-specific icon
         default:
@@ -66,7 +71,10 @@ export const ErrorSnackbar: React.FC<ErrorSnackbarProps> = ({
       (error.code === 'authentication' || error.code === 'authorization') &&
       onSettings
     ) {
-      const label = error.service === 'huggingface' ? 'Add Token' : 'Settings';
+      const label =
+        error.service === 'huggingface' || error.service === 'hf_mirror'
+          ? l10n.settings.setTokenButton
+          : l10n.screenTitles.settings;
 
       return {
         label,
@@ -78,7 +86,7 @@ export const ErrorSnackbar: React.FC<ErrorSnackbarProps> = ({
     // For model init errors, show report option
     if (error.context === 'modelInit' && onReport) {
       return {
-        label: 'Report',
+        label: l10n.components.modelErrorReportSheet.submit,
         onPress: onReport,
         labelStyle: {color: theme.colors.secondary},
       };
@@ -87,7 +95,7 @@ export const ErrorSnackbar: React.FC<ErrorSnackbarProps> = ({
     // For recoverable errors, show retry button
     if (error.recoverable && onRetry) {
       return {
-        label: 'Retry',
+        label: l10n.settings.retryConnection,
         onPress: onRetry,
         labelStyle: {color: theme.colors.secondary},
       };
@@ -95,7 +103,7 @@ export const ErrorSnackbar: React.FC<ErrorSnackbarProps> = ({
 
     // Default action is just to dismiss
     return {
-      label: 'Dismiss',
+      label: l10n.common.dismiss,
       onPress: onDismiss,
       labelStyle: {color: theme.colors.secondary},
     };

@@ -246,6 +246,8 @@
       "localModel": "Локальний",
       "unknownGroup": "Невідомо",
       "hfModel": "HF",
+      "hfMirrorModel": "HF Mirror",
+      "modelScopeModel": "ModelScope",
       "availableToUse": "Готовий до використання",
       "availableToDownload": "Доступно для завантаження",
       "useAddButtonForMore": "Натисніть кнопку «+», щоб переглянути інші моделі"
@@ -293,6 +295,7 @@
     },
     "buttons": {
       "addFromHuggingFace": "Додати з Hugging Face",
+      "addFromModelSources": "Download Model",
       "addLocalModel": "Додати локальну модель",
       "reset": "Скинути"
     },
@@ -350,6 +353,14 @@
       "noResults": "Моделей не знайдено",
       "loadingMore": "Завантажується...",
       "searchPlaceholder": "Пошук моделей Hugging Face",
+      "source": "Source",
+      "sourceTitle": "Download Source",
+      "thirdPartySuffix": " (third-party)",
+      "sources": {
+        "huggingface": "Hugging Face",
+        "hf_mirror": "HF Mirror",
+        "modelscope": "ModelScope"
+      },
       "modelUpdatedLong": "Оновлено {{time}} тому",
       "modelUpdatedShort": "{{time}} тому",
       "modelUpdatedJustNowLong": "Щойно оновлено",
@@ -393,6 +404,7 @@
         "requiresProjectionModel": "Потрібна модель проекції",
         "downloadProjectionModel": "Завантажити модель прогнозування",
         "viewModelCardOnHuggingFace": "Переглянути картку моделі на Hugging Face",
+        "viewModelCardOnSource": "View Model Source",
         "visionSupported": "Підтримується",
         "visionNotSupported": "Не підтримується",
         "visionUnknown": "Невідомо",
@@ -746,7 +758,8 @@
       "enableAndRetry": "Увімкнути та спробувати ще раз",
       "goToSettings": "Перейти до налаштувань",
       "tryAgain": "Спробувати ще Рфаз",
-      "viewOnHuggingFace": "Переглянути модель на HF ↗"
+      "viewOnHuggingFace": "Переглянути модель на HF ↗",
+      "viewOnSource": "View Model Source ↗"
     },
     "headerRight": {
       "deleteChatTitle": "Видалити чат",
@@ -808,7 +821,11 @@
       }
     },
     "modelsHeaderRight": {
+      "filtersGroup": "Filters",
+      "viewGroup": "View",
       "menuTitleHf": "Моделі Hugging Face",
+      "menuTitleHfMirror": "Hugging Face Mirror",
+      "menuTitleModelScope": "ModelScope Models",
       "menuTitleDownloaded": "Завантажені моделі",
       "menuTitleGrouped": "Групувати за типом моделі",
       "menuTitleReset": "Оновити список моделей"

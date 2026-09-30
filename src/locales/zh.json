@@ -245,6 +245,8 @@
     "labels": {
       "localModel": "本地",
       "hfModel": "HF",
+      "hfMirrorModel": "HF镜像",
+      "modelScopeModel": "魔搭",
       "unknownGroup": "未知",
       "availableToUse": "可使用",
       "availableToDownload": "可下载",
@@ -293,6 +295,7 @@
     },
     "buttons": {
       "addFromHuggingFace": "从 Hugging Face 添加",
+      "addFromModelSources": "下载模型",
       "addLocalModel": "添加本地模型",
       "reset": "重置"
     },
@@ -350,6 +353,14 @@
       "noResults": "找不到模型",
       "loadingMore": "加载中...",
       "searchPlaceholder": "搜索 Hugging Face 模型",
+      "source": "来源",
+      "sourceTitle": "下载来源",
+      "thirdPartySuffix": "（第三方）",
+      "sources": {
+        "huggingface": "Hugging Face",
+        "hf_mirror": "HF镜像",
+        "modelscope": "魔搭"
+      },
       "modelUpdatedLong": "{{time}} 前更新",
       "modelUpdatedShort": "{{time}} 前",
       "modelUpdatedJustNowLong": "刚刚更新",
@@ -393,6 +404,7 @@
         "requiresProjectionModel": "需要投影模型",
         "downloadProjectionModel": "下载投影模型",
         "viewModelCardOnHuggingFace": "在 Hugging Face 上查看模型卡片",
+        "viewModelCardOnSource": "查看模型来源",
         "visionSupported": "支持",
         "visionNotSupported": "不支持",
         "visionUnknown": "未知",
@@ -738,7 +750,8 @@
       "enableAndRetry": "启用并重试",
       "goToSettings": "前往设置",
       "tryAgain": "重试",
-      "viewOnHuggingFace": "在HF上查看模型 ↗"
+      "viewOnHuggingFace": "在HF上查看模型 ↗",
+      "viewOnSource": "查看模型来源 ↗"
     },
     "headerRight": {
       "deleteChatTitle": "删除聊天",
@@ -800,7 +813,11 @@
       }
     },
     "modelsHeaderRight": {
+      "filtersGroup": "筛选",
+      "viewGroup": "视图",
       "menuTitleHf": "Hugging Face模型",
+      "menuTitleHfMirror": "Hugging Face镜像",
+      "menuTitleModelScope": "魔搭模型",
       "menuTitleDownloaded": "已下载模型",
       "menuTitleGrouped": "按模型类型分组",
       "menuTitleReset": "重置模型列表"

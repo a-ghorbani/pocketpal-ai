@@ -245,6 +245,8 @@
     "labels": {
       "localModel": "ローカル",
       "hfModel": "HF",
+      "hfMirrorModel": "HF Mirror",
+      "modelScopeModel": "ModelScope",
       "unknownGroup": "不明",
       "availableToUse": "使用可能",
       "availableToDownload": "ダウンロード可能",
@@ -293,6 +295,7 @@
     },
     "buttons": {
       "addFromHuggingFace": "Hugging Faceから追加",
+      "addFromModelSources": "Download Model",
       "addLocalModel": "ローカルモデルを追加",
       "reset": "リセット"
     },
@@ -350,6 +353,14 @@
       "noResults": "モデルが見つかりません",
       "loadingMore": "読み込み中...",
       "searchPlaceholder": "Hugging Faceモデルを検索",
+      "source": "Source",
+      "sourceTitle": "Download Source",
+      "thirdPartySuffix": " (third-party)",
+      "sources": {
+        "huggingface": "Hugging Face",
+        "hf_mirror": "HF Mirror",
+        "modelscope": "ModelScope"
+      },
       "modelUpdatedLong": "{{time}}前に更新",
       "modelUpdatedShort": "{{time}}前",
       "modelUpdatedJustNowLong": "たった今更新",
@@ -393,6 +404,7 @@
         "requiresProjectionModel": "投影モデルが必要",
         "downloadProjectionModel": "投影モデルをダウンロード",
         "viewModelCardOnHuggingFace": "Hugging Faceでモデルカードを表示",
+        "viewModelCardOnSource": "View Model Source",
         "visionSupported": "対応",
         "visionNotSupported": "非対応",
         "visionUnknown": "不明",
@@ -738,7 +750,8 @@
       "enableAndRetry": "トークンを有効にして再試行",
       "goToSettings": "設定へ移動",
       "tryAgain": "再試行",
-      "viewOnHuggingFace": "HFでモデルを表示 ↗"
+      "viewOnHuggingFace": "HFでモデルを表示 ↗",
+      "viewOnSource": "View Model Source ↗"
     },
     "headerRight": {
       "deleteChatTitle": "チャットを削除",
@@ -800,7 +813,11 @@
       }
     },
     "modelsHeaderRight": {
+      "filtersGroup": "Filters",
+      "viewGroup": "View",
       "menuTitleHf": "Hugging Faceモデル",
+      "menuTitleHfMirror": "Hugging Face Mirror",
+      "menuTitleModelScope": "ModelScope Models",
       "menuTitleDownloaded": "ダウンロード済みモデル",
       "menuTitleGrouped": "モデルタイプでグループ化",
       "menuTitleReset": "モデルリストをリセット"

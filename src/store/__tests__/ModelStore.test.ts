@@ -61,6 +61,12 @@ jest.mock('../../api/hf', () => ({
   fetchModelFilesDetails: jest.fn(),
 }));
 
+// Mock the source-routed model API (only the file-details fetcher is used
+// through this module under test)
+jest.mock('../../api/modelSources', () => ({
+  fetchModelFilesDetailsFromSource: jest.fn(),
+}));
+
 // Mock the download manager
 jest.mock('../../services/downloads', () => {
   class MockDownloadCancelledError extends Error {
@@ -4171,7 +4177,9 @@ describe('ModelStore', () => {
 
   // Add tests for fetchAndUpdateModelFileDetails
   describe('fetchAndUpdateModelFileDetails', () => {
-    const {fetchModelFilesDetails} = require('../../api/hf');
+    const {
+      fetchModelFilesDetailsFromSource,
+    } = require('../../api/modelSources');
 
     beforeEach(() => {
       jest.clearAllMocks();
@@ -4186,7 +4194,7 @@ describe('ModelStore', () => {
       await modelStore.fetchAndUpdateModelFileDetails(model as any);
 
       // Should not throw or call any APIs
-      expect(fetchModelFilesDetails).not.toHaveBeenCalled();
+      expect(fetchModelFilesDetailsFromSource).not.toHaveBeenCalled();
     });
 
     it('should update model file details when matching file found', async () => {
@@ -4207,11 +4215,15 @@ describe('ModelStore', () => {
         },
       ];
 
-      fetchModelFilesDetails.mockResolvedValue(mockFileDetails);
+      fetchModelFilesDetailsFromSource.mockResolvedValue(mockFileDetails);
 
       await modelStore.fetchAndUpdateModelFileDetails(model as any);
 
-      expect(fetchModelFilesDetails).toHaveBeenCalledWith('test/model');
+      expect(fetchModelFilesDetailsFromSource).toHaveBeenCalledWith({
+        source: 'huggingface',
+        modelId: 'test/model',
+        authToken: 'mockPass', // hfToken from keychain mock
+      });
       expect(model.hfModelFile.lfs).toEqual({oid: 'test-oid', size: 1000});
     });
 
@@ -4222,7 +4234,9 @@ describe('ModelStore', () => {
         hfModelFile: {rfilename: 'model.gguf', lfs: undefined},
       };
 
-      fetchModelFilesDetails.mockRejectedValue(new Error('API error'));
+      fetchModelFilesDetailsFromSource.mockRejectedValue(
+        new Error('API error'),
+      );
 
       const consoleErrorSpy = jest.spyOn(console, 'error').mockImplementation();
 
@@ -4250,11 +4264,15 @@ describe('ModelStore', () => {
         },
       ];
 
-      fetchModelFilesDetails.mockResolvedValue(mockFileDetails);
+      fetchModelFilesDetailsFromSource.mockResolvedValue(mockFileDetails);
 
       await modelStore.fetchAndUpdateModelFileDetails(model as any);
 
-      expect(fetchModelFilesDetails).toHaveBeenCalledWith('test/model');
+      expect(fetchModelFilesDetailsFromSource).toHaveBeenCalledWith({
+        source: 'huggingface',
+        modelId: 'test/model',
+        authToken: 'mockPass', // hfToken from keychain mock
+      });
       expect(model.hfModelFile.lfs).toBeUndefined();
     });
 
@@ -4272,11 +4290,15 @@ describe('ModelStore', () => {
         },
       ];
 
-      fetchModelFilesDetails.mockResolvedValue(mockFileDetails);
+      fetchModelFilesDetailsFromSource.mockResolvedValue(mockFileDetails);
 
       await modelStore.fetchAndUpdateModelFileDetails(model as any);
 
-      expect(fetchModelFilesDetails).toHaveBeenCalledWith('test/model');
+      expect(fetchModelFilesDetailsFromSource).toHaveBeenCalledWith({
+        source: 'huggingface',
+        modelId: 'test/model',
+        authToken: 'mockPass', // hfToken from keychain mock
+      });
       expect(model.hfModelFile.lfs).toBeUndefined();
     });
   });

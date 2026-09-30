@@ -460,8 +460,12 @@ export enum ModelOrigin {
   PRESET = 'preset',
   LOCAL = 'local',
   HF = 'hf',
+  HF_MIRROR = 'hf_mirror',
+  MODELSCOPE = 'modelscope',
   REMOTE = 'remote',
 }
+
+export type ModelSourceId = 'huggingface' | 'hf_mirror' | 'modelscope';
 
 export interface ServerConfig {
   id: string;
@@ -552,6 +556,9 @@ export interface Model {
   isDownloaded: boolean;
   downloadUrl: string;
   hfUrl: string;
+  source?: ModelSourceId;
+  sourceRepoId?: string;
+  sourceWebUrl?: string;
   progress: number; // Progress as a percentage
   downloadSpeed?: string;
   filename: string;
@@ -651,6 +658,11 @@ export interface HuggingFaceModel {
   model_id: string;
   siblings: ModelFile[];
   url?: string;
+  source?: ModelSourceId;
+  sourceRepoId?: string;
+  avatarUrl?: string;
+  description?: string;
+  modelSize?: number;
   specs?: GGUFSpecs;
 }
 
