@@ -170,5 +170,68 @@ export const createStyles = (theme: Theme) => {
     addButton: {
       flex: 1,
     },
+    routerGroupHeader: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      marginTop: 12,
+      marginBottom: 4,
+    },
+    routerGroupTitle: {
+      fontSize: 13,
+      fontWeight: '600',
+      color: theme.colors.onSurfaceVariant,
+    },
+    routerGroupCount: {
+      fontSize: 12,
+      color: theme.colors.onSurfaceVariant,
+    },
+    routerRowMeta: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 8,
+    },
+    routerRowState: {
+      fontSize: 12,
+      color: theme.colors.onSurfaceVariant,
+    },
+    routerRowProgress: {
+      height: 3,
+      borderRadius: 2,
+      marginTop: 6,
+      marginHorizontal: 16,
+    },
+    routerNote: {
+      backgroundColor: theme.colors.surfaceVariant,
+      borderRadius: 8,
+      padding: 12,
+      marginTop: 12,
+    },
+    routerNoteText: {
+      fontSize: 12,
+      color: theme.colors.onSurfaceVariant,
+    },
+    routerReasonRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      marginHorizontal: 16,
+    },
+    routerReasonText: {
+      fontSize: 12,
+      color: theme.colors.error,
+      flex: 1,
+    },
+    routerDownloadSection: {
+      marginTop: 16,
+    },
+    routerDownloadRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 8,
+    },
+    routerDownloadInput: {
+      flex: 1,
+    },
   });
 };

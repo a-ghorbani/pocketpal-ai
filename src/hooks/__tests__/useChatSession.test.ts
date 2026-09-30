@@ -26,6 +26,8 @@ import {
 import {l10n} from '../../locales';
 import {assistant} from '../../utils/chat';
 import {ModelOrigin} from '../../utils/types';
+import type {RouterFailure} from '../../utils/routerState';
+import {RemoteModelRequestWithdrawnError} from '../../utils/errors';
 
 const mockAssistant = {
   id: 'h3o3lc5xj',
@@ -100,6 +102,175 @@ describe('useChatSession', () => {
       text: l10n.en.chat.modelNotLoaded,
       type: 'text',
       metadata: {system: true},
+    });
+  });
+
+  describe('remote model readiness', () => {
+    const readiness = () =>
+      modelStore.ensureActiveRemoteModelReady as jest.Mock;
+
+    /** Enough turns for the send path to reach the readiness call. */
+    const settleMicrotasks = async () => {
+      for (let i = 0; i < 20; i++) {
+        await Promise.resolve();
+      }
+    };
+
+    it('holds the send until the server reports the model ready', async () => {
+      let reportReady: (outcome: string) => void = () => {};
+      readiness().mockReturnValueOnce(
+        new Promise<string>(resolve => {
+          reportReady = resolve;
+        }),
+      );
+
+      const {result} = renderHook(() =>
+        useChatSession({current: null}, textMessage.author, mockAssistant),
+      );
+
+      let send: Promise<void> = Promise.resolve();
+      await act(async () => {
+        send = result.current.handleSendPress(textMessage);
+        await settleMicrotasks();
+      });
+
+      expect(readiness()).toHaveBeenCalled();
+      expect(modelStore.context?.completion).not.toHaveBeenCalled();
+
+      await act(async () => {
+        reportReady('ready');
+        await send;
+      });
+
+      expect(modelStore.context?.completion).toHaveBeenCalled();
+    });
+
+    const bindTo = (reason?: RouterFailure) => {
+      modelStore.activeRemoteBinding = {
+        modelId: 'srv-1/alpha',
+        serverId: 'srv-1',
+        remoteModelId: 'alpha',
+        url: 'http://desktop:8080',
+      } as any;
+      serverStore.routerReasons = reason ? {'srv-1/alpha': reason} : {};
+    };
+
+    afterEach(() => {
+      modelStore.activeRemoteBinding = undefined;
+      serverStore.routerReasons = {};
+    });
+
+    it('sends nothing and renders the record the operation left', async () => {
+      readiness().mockResolvedValueOnce('failed');
+      bindTo({cause: 'load-failed'});
+
+      const {result} = renderHook(() =>
+        useChatSession({current: null}, textMessage.author, mockAssistant),
+      );
+
+      await act(async () => {
+        await result.current.handleSendPress(textMessage);
+      });
+
+      expect(modelStore.context?.completion).not.toHaveBeenCalled();
+      expect(chatSessionStore.addMessageToCurrentSession).toHaveBeenCalledWith(
+        expect.objectContaining({
+          text: l10n.en.settings.routerModels.loadFailed,
+          author: assistant,
+          metadata: {system: true},
+        }),
+      );
+    });
+
+    // Stopping the load is the user's own act, so they know why the turn did
+    // not run. Recognised as an outcome, not guessed at from a missing record.
+    it('sends nothing and says nothing when the user withdrew the request', async () => {
+      readiness().mockResolvedValueOnce('withdrawn');
+      bindTo(undefined);
+
+      const {result} = renderHook(() =>
+        useChatSession({current: null}, textMessage.author, mockAssistant),
+      );
+
+      await act(async () => {
+        await result.current.handleSendPress(textMessage);
+      });
+
+      expect(modelStore.context?.completion).not.toHaveBeenCalled();
+      expect(
+        chatSessionStore.addMessageToCurrentSession,
+      ).not.toHaveBeenCalledWith(
+        expect.objectContaining({metadata: {system: true}}),
+      );
+    });
+
+    // A failure that left no record is not a withdrawal: the turn is still
+    // waiting and is owed an account of why it stopped.
+    it('sends nothing and names the wait when a failure left no record', async () => {
+      readiness().mockResolvedValueOnce('failed');
+      bindTo(undefined);
+
+      const {result} = renderHook(() =>
+        useChatSession({current: null}, textMessage.author, mockAssistant),
+      );
+
+      await act(async () => {
+        await result.current.handleSendPress(textMessage);
+      });
+
+      expect(modelStore.context?.completion).not.toHaveBeenCalled();
+      expect(chatSessionStore.addMessageToCurrentSession).toHaveBeenCalledWith(
+        expect.objectContaining({
+          text: l10n.en.settings.routerModels.waitStopped,
+          metadata: {system: true},
+        }),
+      );
+    });
+  });
+
+  // The engine refuses a turn whose readiness request the user withdrew. That
+  // is a decision the catch makes about the error it caught, never about the
+  // error's message being empty: an absence has more than one cause, and the
+  // other one is a native throw that would then vanish in silence.
+  describe('a completion refused because the request was withdrawn', () => {
+    const rejectWith = (error: Error) => {
+      if (modelStore.context) {
+        modelStore.context.completion = jest.fn().mockRejectedValueOnce(error);
+      }
+    };
+
+    const send = async () => {
+      const {result} = renderHook(() =>
+        useChatSession({current: null}, textMessage.author, mockAssistant),
+      );
+      await act(async () => {
+        await result.current.handleSendPress(textMessage);
+      });
+    };
+
+    it('says nothing at all', async () => {
+      rejectWith(new RemoteModelRequestWithdrawnError());
+
+      await send();
+
+      expect(
+        chatSessionStore.addMessageToCurrentSession,
+      ).not.toHaveBeenCalledWith(
+        expect.objectContaining({metadata: {system: true}}),
+      );
+    });
+
+    it('still reports an unrelated error that happens to carry no message', async () => {
+      rejectWith(new Error(''));
+
+      await send();
+
+      expect(chatSessionStore.addMessageToCurrentSession).toHaveBeenCalledWith(
+        expect.objectContaining({
+          text: `${l10n.en.chat.completionFailed}${l10n.en.errors.unexpectedError}`,
+          author: assistant,
+        }),
+      );
     });
   });
 

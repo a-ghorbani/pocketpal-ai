@@ -11,7 +11,7 @@ jest.mock('mobx-persist-store', () => ({
 }));
 
 jest.mock('../../api/openai', () => ({
-  fetchModels: jest.fn(),
+  fetchModelsWithHeaders: jest.fn(),
   fetchServerProps: jest.fn(),
   testConnection: jest.fn(),
   PROPS_TIMEOUT_MS: 5000,
@@ -34,7 +34,15 @@ const persistedProperties: string[] = (
   jest.requireMock('mobx-persist-store').makePersistable as jest.Mock
 ).mock.calls[0][1].properties;
 
-const mockedFetchModels = openaiModule.fetchModels as jest.Mock;
+const mockedFetchModels = openaiModule.fetchModelsWithHeaders as jest.Mock;
+
+/** The shape fetchModelsWithHeaders resolves. `hasModelsKey` is the
+ * router/direct discriminator, false being the router side. */
+const listResult = (models: any[], hasModelsKey = true) => ({
+  models,
+  headers: {},
+  hasModelsKey,
+});
 const mockedFetchServerProps = openaiModule.fetchServerProps as jest.Mock;
 const mockedTestConnection = openaiModule.testConnection as jest.Mock;
 const {PROPS_TIMEOUT_MS} = openaiModule;
@@ -53,6 +61,7 @@ describe('ServerStore', () => {
       serverStore.privacyNoticeAcknowledged = false;
       serverStore.remoteReasoning = {};
       serverStore.remoteCaps = {};
+      serverStore.routerListShape = {};
     });
   });
 
@@ -466,7 +475,7 @@ describe('ServerStore', () => {
 
     it('derives from the fetch alone for a newly added llama.cpp server', async () => {
       mockedFetchModels.mockResolvedValue(
-        routerModelsBody.data as RemoteModelInfo[],
+        listResult(routerModelsBody.data as RemoteModelInfo[], false),
       );
       const id = serverStore.addServer({
         name: 'router',
@@ -670,7 +679,7 @@ describe('ServerStore', () => {
         {id: 'llama-7b', object: 'model', owned_by: 'system'},
         {id: 'codellama', object: 'model', owned_by: 'library'},
       ];
-      mockedFetchModels.mockResolvedValueOnce(mockModels);
+      mockedFetchModels.mockResolvedValueOnce(listResult(mockModels));
       (Keychain.getGenericPassword as jest.Mock).mockResolvedValueOnce(false);
 
       await serverStore.fetchModelsForServer(id);
@@ -710,7 +719,7 @@ describe('ServerStore', () => {
       });
       jest.clearAllMocks();
 
-      mockedFetchModels.mockResolvedValueOnce([]);
+      mockedFetchModels.mockResolvedValueOnce(listResult([]));
       (Keychain.getGenericPassword as jest.Mock).mockResolvedValueOnce(false);
 
       await serverStore.fetchModelsForServer(id);
@@ -731,7 +740,7 @@ describe('ServerStore', () => {
       });
       jest.clearAllMocks();
 
-      mockedFetchModels.mockResolvedValueOnce([]);
+      mockedFetchModels.mockResolvedValueOnce(listResult([]));
       (Keychain.getGenericPassword as jest.Mock).mockResolvedValueOnce(false);
 
       await serverStore.fetchModelsForServer(id);
@@ -751,7 +760,7 @@ describe('ServerStore', () => {
       });
       jest.clearAllMocks();
 
-      mockedFetchModels.mockResolvedValueOnce([]);
+      mockedFetchModels.mockResolvedValueOnce(listResult([]));
       (Keychain.getGenericPassword as jest.Mock).mockResolvedValueOnce(false);
 
       const before = Date.now();
@@ -770,7 +779,7 @@ describe('ServerStore', () => {
       jest.clearAllMocks();
 
       const mockModels = [{id: 'm', object: 'model', owned_by: 'system'}];
-      mockedFetchModels.mockResolvedValueOnce(mockModels);
+      mockedFetchModels.mockResolvedValueOnce(listResult(mockModels));
       (Keychain.getGenericPassword as jest.Mock).mockResolvedValueOnce(false);
 
       await serverStore.fetchModelsForServer(id);
@@ -800,7 +809,7 @@ describe('ServerStore', () => {
       });
       jest.clearAllMocks();
 
-      mockedFetchModels.mockResolvedValue([]);
+      mockedFetchModels.mockResolvedValue(listResult([]));
       (Keychain.getGenericPassword as jest.Mock).mockResolvedValue(false);
 
       await serverStore.fetchAllRemoteModels();
