@@ -15,7 +15,9 @@ import {debounce} from 'lodash';
 import {observer} from 'mobx-react-lite';
 import {toJS} from 'mobx';
 import {SafeAreaView} from 'react-native-safe-area-context';
-import {useIsFocused} from '@react-navigation/native';
+import {useIsFocused, useNavigation} from '@react-navigation/native';
+import type {ParamListBase} from '@react-navigation/native';
+import type {DrawerNavigationProp} from '@react-navigation/drawer';
 import {
   Switch,
   Text,
@@ -56,7 +58,9 @@ import {
   hfStore,
   ttsStore,
   searchProviderStore,
+  customToolStore,
 } from '../../store';
+import {ROUTES} from '../../utils/navigationConstants';
 import type {SearchProviderId} from '../../services/search/types';
 
 import {CacheType, ModelType} from '../../utils/types';
@@ -85,6 +89,7 @@ export const SettingsScreen: React.FC = observer(() => {
   const theme = useTheme();
   const styles = createStyles(theme);
   const isFocused = useIsFocused();
+  const navigation = useNavigation<DrawerNavigationProp<ParamListBase>>();
   const [contextSize, setContextSize] = useState(
     modelStore.contextInitParams.n_ctx.toString(),
   );
@@ -1041,6 +1046,29 @@ export const SettingsScreen: React.FC = observer(() => {
                       uiStore.setAutoNavigateToChat(value)
                     }
                   />
+                </View>
+              </View>
+            </Card.Content>
+          </Card>
+
+          {/* Custom tools: navigation only, the manager owns every write. */}
+          <Card elevation={0} style={styles.card} testID="custom-tools-card">
+            <Card.Title title={l10n.settings.customTools.title} />
+            <Card.Content>
+              <View style={styles.settingItemContainer}>
+                <Text>{l10n.settings.customTools.description}</Text>
+                <View style={styles.switchContainer}>
+                  <Text variant="titleMedium" style={styles.textLabel}>
+                    {t(l10n.settings.customTools.count, {
+                      count: customToolStore.toolCount,
+                    })}
+                  </Text>
+                  <Button
+                    testID="custom-tools-open-button"
+                    mode="outlined"
+                    onPress={() => navigation.navigate(ROUTES.CUSTOM_TOOLS)}>
+                    {l10n.settings.customTools.openButton}
+                  </Button>
                 </View>
               </View>
             </Card.Content>

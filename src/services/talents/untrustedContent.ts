@@ -21,6 +21,23 @@ const makeNonce = (): string =>
     .toString(36)
     .slice(2)}`;
 
+const MARKER_LINE = new RegExp(`^-{5} (?:BEGIN|END) ${MARKER_BASE} \\S+ -{5}$`);
+const NOTE_LINE = new RegExp(
+  `^The text between the BEGIN/END ${MARKER_BASE} markers`,
+);
+
+/**
+ * Undo the wrapper for display only. The model still receives the wrapped
+ * text; this just keeps the envelope out of the user's face when they expand
+ * a tool call. Lives here so it cannot drift from `wrapUntrusted`'s format.
+ */
+export const stripUntrusted = (content: string): string =>
+  content
+    .split('\n')
+    .filter(line => !MARKER_LINE.test(line) && !NOTE_LINE.test(line))
+    .join('\n')
+    .trim();
+
 export const wrapUntrusted = (content: string): string => {
   const nonce = makeNonce();
   const begin = `----- BEGIN ${MARKER_BASE} ${nonce} -----`;

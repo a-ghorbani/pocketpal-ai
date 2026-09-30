@@ -38,6 +38,7 @@ import {
   talentRegistry,
 } from '../services/talents';
 import type {ToolDefinition} from '../services/talents/types';
+import type {ToolConfirmationRequest} from '../services/agent/AgentRunner.types';
 import {
   agentStateReducer,
   createTriggerMarkerCache,
@@ -477,6 +478,13 @@ async function applyEventToStore(
   }
 }
 
+export interface PendingToolConfirmation {
+  callId: string;
+  toolName: string;
+  argsJson: string;
+  detail: string | null;
+}
+
 export const useChatSession = (
   currentMessageInfo: React.MutableRefObject<{
     createdAt: number;
@@ -497,6 +505,83 @@ export const useChatSession = (
   // AbortController for the active run. Replaced per run; signal is
   // forwarded to runAgent for stop-mid-tool semantics.
   const abortRef = useRef<AbortController | null>(null);
+
+  // Pending confirmation lives here, not in a store: ChatScreen is the only
+  // consumer, and hook state gets unmount clearing for free without touching
+  // the chat single-writer rule.
+  const [pendingToolConfirmation, setPendingToolConfirmation] =
+    React.useState<PendingToolConfirmation | null>(null);
+  const confirmationRef = useRef<{
+    callId: string;
+    resolve: (approved: boolean) => void;
+  } | null>(null);
+
+  // First answer for a callId wins; any other id, or a second answer for one
+  // already settled, is a no-op. That is what makes a late onDismiss from the
+  // previous call's close animation harmless while the next call is pending.
+  const resolveToolConfirmation = React.useCallback(
+    (callId: string, approved: boolean) => {
+      const pending = confirmationRef.current;
+      if (!pending || pending.callId !== callId) {
+        return;
+      }
+      confirmationRef.current = null;
+      setPendingToolConfirmation(null);
+      // Stop already released the screen, so a late answer must not take it
+      // back; only a run that is still generating gets it re-taken.
+      if (chatSessionStore.isGenerating && !chatSessionStore.isStopping) {
+        try {
+          activateKeepAwake();
+        } catch (error) {
+          console.error(
+            'Failed to activate keep awake after a confirmation:',
+            error,
+          );
+        }
+      }
+      pending.resolve(approved);
+    },
+    [],
+  );
+
+  const clearPendingToolConfirmation = React.useCallback(() => {
+    const pending = confirmationRef.current;
+    if (pending) {
+      confirmationRef.current = null;
+      pending.resolve(false);
+    }
+    setPendingToolConfirmation(null);
+  }, []);
+
+  const confirmToolCall = React.useCallback(
+    (request: ToolConfirmationRequest) =>
+      new Promise<boolean>(resolve => {
+        confirmationRef.current = {callId: request.call.id, resolve};
+        setPendingToolConfirmation({
+          callId: request.call.id,
+          toolName: request.toolName,
+          argsJson: JSON.stringify(request.args ?? {}, null, 2),
+          detail: request.detail,
+        });
+        // The answer can take minutes; nothing is generating meanwhile, so let
+        // the screen sleep until it arrives.
+        try {
+          deactivateKeepAwake();
+        } catch (error) {
+          console.error(
+            'Failed to deactivate keep awake while a confirmation is pending:',
+            error,
+          );
+        }
+      }),
+    [],
+  );
+
+  // A pending confirmation never outlives the screen that hosts it.
+  React.useEffect(
+    () => clearPendingToolConfirmation,
+    [clearPendingToolConfirmation],
+  );
 
   const addMessage = async (message: MessageType.Any) => {
     await chatSessionStore.addMessageToCurrentSession(message);
@@ -645,6 +730,7 @@ export const useChatSession = (
         triggerMarkers,
         messageId: messageInfo.id,
         signal: abortRef.current.signal,
+        confirmToolCall,
       });
 
       // The chunk-cycle would otherwise run entirely via microtask
@@ -891,6 +977,7 @@ export const useChatSession = (
         await addSystemMessage(`${l10n.chat.completionFailed}${errorMessage}`);
       }
     } finally {
+      clearPendingToolConfirmation();
       try {
         deactivateKeepAwake();
       } catch (error) {
@@ -942,5 +1029,7 @@ export const useChatSession = (
     handleSendPress,
     handleResetConversation,
     handleStopPress,
+    pendingToolConfirmation,
+    resolveToolConfirmation,
   };
 };
