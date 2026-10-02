@@ -206,9 +206,9 @@
       "resultsCountOne": "결과 1개",
       "searchResultsTitle": "검색 결과",
       "showResultsAccessibilityLabel": "{{query}}에 대한 웹 검색 결과 표시",
-      "openLinkError": "이 링크를 열 수 없어요."
+      "openLinkError": "이 링크를 열 수 없습니다."
     },
-    "contextFullRemote": "대화 내용이 최대 길이에 도달했습니다. 새 채팅을 시작하세요.",
+    "contextFullRemote": "대화 공간이 가득 찼습니다. 새 채팅을 시작하세요.⁠",
     "speculativeInitFailed": "이 기기에서 이 모델의 추측 디코딩을 시작할 수 없어요 — 드래프트 컨텍스트에 필요한 메모리가 부족한 것 같아요. 설정 → 고급 설정에서 추측 디코딩을 끄고 다시 시도해 주세요."
   },
   "common": {
@@ -369,9 +369,9 @@
       "saveChanges": "변경 사항 저장",
       "reasoningSection": "추론",
       "isReasoningModel": "추론 모델",
-      "isReasoningModelHelp": "자동 감지되지 않더라도 이 모델의 추론 제어 옵션을 표시합니다.",
+      "isReasoningModelHelp": "자동 감지되지 않더라도 이 모델의 사고 제어를 표시합니다.",
       "supportsEffort": "단계별 추론 강도 지원",
-      "effortValues": "이 모델이 지원하는 추론 강도 수준",
+      "effortValues": "이 모델이 지원하는 추론 강도 단계",
       "effortLevels": {
         "minimal": "최소",
         "low": "낮음",
@@ -1501,11 +1501,11 @@
       "title": "당신의 Pal을 만나보세요.",
       "titleAccent": "Pal.",
       "body": "당신의 휴대폰 안에 사는 똑똑한 작은 친구들.\n설정을 시작해 보세요 - 시간이 잠시 걸립니다.",
-      "cta": "둘러볼게요",
-      "eyebrow": "PocketPal에 오신 걸 환영해요"
+      "cta": "둘러보기",
+      "eyebrow": "PocketPal에 오신 걸 환영합니다"
     },
     "screen2": {
-      "title": "언제나,\n어디서나.",
+      "title": "언제\n어디서나.",
       "body": "Pal은 여러분의 휴대폰 안에 살아요.\n인터넷도, 신호도 필요 없어요 - 비행기 안에서도, 오지에서도, 외딴 마을에서도 작동해요.",
       "highlight": "인터넷도, 신호도 필요 없어요",
       "cta": "다음",
