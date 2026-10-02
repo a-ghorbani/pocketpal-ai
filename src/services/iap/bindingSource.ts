@@ -1,11 +1,12 @@
 import {authService} from '../palshub/AuthService';
+import {ACCOUNT_LINK_ENABLED} from './accountLink';
 import {iapApi} from './iapApi';
 import type {Binding} from './iapWire';
 
 export const BINDING_TIMEOUT_MS = 2000;
 
 const getBinding = async (): Promise<Binding | null> => {
-  if (!authService.isAuthenticated) {
+  if (!ACCOUNT_LINK_ENABLED || !authService.isAuthenticated) {
     return null;
   }
   let timer: ReturnType<typeof setTimeout> | undefined;

@@ -11,6 +11,13 @@ import {authService} from '../../../../services';
 import type {LedgerRecord} from '../../../../store/PurchaseStore';
 import type {Pal} from '../../../../types/pal';
 
+let mockAccountLinkEnabled = true;
+jest.mock('../../../../services/iap/accountLink', () => ({
+  get ACCOUNT_LINK_ENABLED() {
+    return mockAccountLinkEnabled;
+  },
+}));
+
 jest.mock('../../PalModelStep', () => {
   const {Text} = require('react-native');
   return {
@@ -80,6 +87,7 @@ describe('PalPurchaseFooter', () => {
   const originalOS = Platform.OS;
 
   beforeEach(() => {
+    mockAccountLinkEnabled = true;
     (authService as any).isAuthenticated = false;
     runInAction(() => {
       (purchaseStore as any).reset();
@@ -557,6 +565,21 @@ describe('PalPurchaseFooter', () => {
       (authService as any).isAuthenticated = true;
       const {queryByTestId} = setup({onSignInPress: jest.fn()});
       expect(queryByTestId('purchase-link-prompt')).toBeNull();
+    });
+
+    it('does not prompt after a signed-out purchase while account linking is off', () => {
+      mockAccountLinkEnabled = false;
+      ready();
+      const {getByTestId, queryByTestId} = setup({onSignInPress: jest.fn()});
+      expect(getByTestId('purchase-ready')).toBeTruthy();
+      expect(queryByTestId('purchase-link-prompt')).toBeNull();
+    });
+
+    it('keeps the in-app sign-in line while account linking is off', () => {
+      mockAccountLinkEnabled = false;
+      purchasable();
+      const {getByTestId} = setup({onSignInPress: jest.fn()});
+      expect(getByTestId('purchase-signin-link')).toBeTruthy();
     });
 
     it('explains a purchase linked to another account', () => {

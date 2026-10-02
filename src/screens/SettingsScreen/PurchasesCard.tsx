@@ -9,6 +9,7 @@ import {useTheme} from '../../hooks';
 import {t} from '../../locales';
 import {L10nContext} from '../../utils';
 import {authService} from '../../services';
+import {ACCOUNT_LINK_ENABLED} from '../../services/iap/accountLink';
 import {purchaseStore} from '../../store';
 import type {LedgerRecord} from '../../store/PurchaseStore';
 import {undeliverableText} from '../../utils/undeliverableCopy';
@@ -102,7 +103,7 @@ export const PurchasesCard: React.FC<PurchasesCardProps> = observer(
                 {l10n.palsScreen.purchase.restorePurchases}
               </Button>
             )}
-            {purchaseStore.needsLink && (
+            {ACCOUNT_LINK_ENABLED && purchaseStore.needsLink && (
               <Button
                 testID="settings-link-purchases"
                 mode="text"

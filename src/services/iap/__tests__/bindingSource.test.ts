@@ -6,10 +6,18 @@ jest.mock('../../palshub/AuthService', () => ({
   authService: {isAuthenticated: true},
 }));
 
+let mockAccountLinkEnabled = true;
+jest.mock('../accountLink', () => ({
+  get ACCOUNT_LINK_ENABLED() {
+    return mockAccountLinkEnabled;
+  },
+}));
+
 describe('bindingSource', () => {
   let bindingSpy: jest.SpyInstance;
 
   beforeEach(() => {
+    mockAccountLinkEnabled = true;
     (authService as any).isAuthenticated = true;
     bindingSpy = jest.spyOn(iapApi, 'binding');
   });
@@ -23,6 +31,14 @@ describe('bindingSource', () => {
     (authService as any).isAuthenticated = false;
     await expect(bindingSource.getBinding()).resolves.toBeNull();
     expect(bindingSpy).not.toHaveBeenCalled();
+  });
+
+  it('returns null without a request while account linking is off', async () => {
+    mockAccountLinkEnabled = false;
+    jest.useFakeTimers();
+    await expect(bindingSource.getBinding()).resolves.toBeNull();
+    expect(bindingSpy).not.toHaveBeenCalled();
+    expect(jest.getTimerCount()).toBe(0);
   });
 
   it('returns the server binding when signed in', async () => {

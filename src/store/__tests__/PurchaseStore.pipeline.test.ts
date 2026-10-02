@@ -5,6 +5,9 @@ import {LEDGER_KEY, PurchaseStore} from '../PurchaseStore';
 import * as RNIap from 'react-native-iap';
 
 import {NativeStore} from '../../services/iap/NativeStore';
+import {bindingSource} from '../../services/iap/bindingSource';
+import {iapApi} from '../../services/iap/iapApi';
+import {authService} from '../../services/palshub/AuthService';
 import {
   PAL_ID,
   PRODUCT,
@@ -1145,6 +1148,27 @@ describe('PurchaseStore pipeline', () => {
       expect(signedIn.store.purchase).toHaveBeenCalledWith(PRODUCT, {
         appAccountToken: 'uuid',
       });
+    });
+
+    it('buys with a null binding and no binding request while account linking is off', async () => {
+      const h = readyHarness(true);
+      h.deps.binding = bindingSource;
+      runInAction(() => {
+        authService.isAuthenticated = true;
+      });
+      const bindingSpy = jest
+        .spyOn(iapApi, 'binding')
+        .mockResolvedValue({appAccountToken: 'uuid'} as any);
+      try {
+        await h.purchases.buy(hubPal());
+        expect(bindingSpy).not.toHaveBeenCalled();
+        expect(h.store.purchase).toHaveBeenCalledWith(PRODUCT, null);
+      } finally {
+        runInAction(() => {
+          authService.isAuthenticated = false;
+        });
+        bindingSpy.mockRestore();
+      }
     });
 
     it('records a pending purchase', async () => {

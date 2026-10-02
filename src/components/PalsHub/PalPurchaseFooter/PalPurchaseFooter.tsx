@@ -8,6 +8,7 @@ import {useTheme} from '../../../hooks';
 import {t} from '../../../locales';
 import {L10nContext} from '../../../utils';
 import {authService} from '../../../services';
+import {ACCOUNT_LINK_ENABLED} from '../../../services/iap/accountLink';
 import {palStore, purchaseStore} from '../../../store';
 import type {PalsHubPal} from '../../../types/palshub';
 import type {PendingUpdate} from '../../../store/PurchaseStore';
@@ -140,7 +141,12 @@ export const PalPurchaseFooter: React.FC<PalPurchaseFooterProps> = observer(
       </>
     );
 
-    const linkPrompt = !signedIn && !linkPromptDismissed && onSignInPress && (
+    const offerLink =
+      ACCOUNT_LINK_ENABLED &&
+      !signedIn &&
+      !linkPromptDismissed &&
+      onSignInPress;
+    const linkPrompt = offerLink && (
       <View style={styles.prompt} testID="purchase-link-prompt">
         <Text style={styles.status}>{copy.linkPrompt}</Text>
         <View style={styles.promptActions}>

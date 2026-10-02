@@ -9,6 +9,13 @@ import {palStore, purchaseStore} from '../../../store';
 import {authService} from '../../../services';
 import type {LedgerRecord} from '../../../store/PurchaseStore';
 
+let mockAccountLinkEnabled = true;
+jest.mock('../../../services/iap/accountLink', () => ({
+  get ACCOUNT_LINK_ENABLED() {
+    return mockAccountLinkEnabled;
+  },
+}));
+
 const rec = (
   palId: string,
   status: LedgerRecord['status'],
@@ -34,6 +41,7 @@ const setRecords = (...records: LedgerRecord[]) =>
 
 describe('PurchasesCard', () => {
   beforeEach(() => {
+    mockAccountLinkEnabled = true;
     (authService as any).isAuthenticated = false;
     runInAction(() => {
       (purchaseStore as any).reset();
@@ -106,6 +114,19 @@ describe('PurchasesCard', () => {
     fireEvent.press(getByTestId('settings-link-purchases'));
     expect(purchaseStore.link).toHaveBeenCalled();
     expect(onSignInPress).not.toHaveBeenCalled();
+  });
+
+  it('hides the link row while account linking is off', () => {
+    mockAccountLinkEnabled = false;
+    setRecords(rec('a', 'active'));
+    runInAction(() => {
+      (purchaseStore as any).needsLink = true;
+    });
+    const {getByTestId, queryByTestId} = render(
+      <PurchasesCard onSignInPress={jest.fn()} />,
+    );
+    expect(getByTestId('settings-restore-purchases')).toBeTruthy();
+    expect(queryByTestId('settings-link-purchases')).toBeNull();
   });
 
   it('hides the link row when everything is linked', () => {

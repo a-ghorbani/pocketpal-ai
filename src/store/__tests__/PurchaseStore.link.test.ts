@@ -14,6 +14,13 @@ import {
   tx,
 } from './purchaseTestHarness';
 
+let mockAccountLinkEnabled = true;
+jest.mock('../../services/iap/accountLink', () => ({
+  get ACCOUNT_LINK_ENABLED() {
+    return mockAccountLinkEnabled;
+  },
+}));
+
 jest.mock('../PalStore', () => ({
   palStore: {
     ready: Promise.resolve(),
@@ -33,6 +40,7 @@ describe('PurchaseStore link and restore', () => {
   const originalOS = Platform.OS;
 
   beforeEach(() => {
+    mockAccountLinkEnabled = true;
     (Platform as any).OS = 'ios';
   });
 
@@ -184,6 +192,55 @@ describe('PurchaseStore link and restore', () => {
       });
       expect(h.api.link).toHaveBeenCalledTimes(1);
       expect(h.purchases.linkPending).toBe(false);
+    });
+  });
+
+  describe('with account linking off', () => {
+    beforeEach(() => {
+      mockAccountLinkEnabled = false;
+    });
+
+    it('ignores a link request and makes no call on sign-in', async () => {
+      const h = createHarness({records: [record('active')]});
+      h.store.currentEntitlements.mockResolvedValue([tx()]);
+      await h.purchases.load();
+
+      h.purchases.requestLink();
+      expect(h.purchases.linkPending).toBe(false);
+      signIn(h);
+      await flush();
+      await flush();
+
+      expect(h.api.link).not.toHaveBeenCalled();
+    });
+
+    it('returns from link without a request when signed in', async () => {
+      const h = createHarness({records: [record('active')], signedIn: true});
+      h.store.currentEntitlements.mockResolvedValue([tx()]);
+
+      await expect(h.purchases.link()).resolves.toBeUndefined();
+
+      expect(h.api.link).not.toHaveBeenCalled();
+      expect(h.store.currentEntitlements).not.toHaveBeenCalled();
+    });
+
+    it('makes no link call after a signed-in purchase', async () => {
+      const h = createHarness({signedIn: true});
+      h.store.currentEntitlements.mockResolvedValue([tx()]);
+      runInAction(() => {
+        h.purchases.availability = 'ready';
+        h.purchases.products.set(hubPal().store_product_id!, {
+          productId: hubPal().store_product_id!,
+          displayPrice: '$4.99',
+        });
+      });
+
+      await h.purchases.buy(hubPal());
+      await h.purchases.drainQueue();
+      await flush();
+
+      expect(h.purchases.recordFor(PAL_ID)?.status).toBe('active');
+      expect(h.api.link).not.toHaveBeenCalled();
     });
   });
 

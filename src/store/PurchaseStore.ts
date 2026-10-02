@@ -3,6 +3,7 @@ import {AppState, Platform} from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 import {authService} from '../services';
+import {ACCOUNT_LINK_ENABLED} from '../services/iap/accountLink';
 import {iapApi} from '../services/iap/iapApi';
 import type {IapApi} from '../services/iap/iapApi';
 import {bindingSource} from '../services/iap/bindingSource';
@@ -1363,6 +1364,9 @@ export class PurchaseStore {
   }
 
   requestLink(): void {
+    if (!ACCOUNT_LINK_ENABLED) {
+      return;
+    }
     this.linkPending = true;
   }
 
@@ -1372,7 +1376,7 @@ export class PurchaseStore {
 
   async link(): Promise<LinkOutcome | undefined> {
     const userId = this.deps.auth.user?.id;
-    if (!this.deps.auth.isAuthenticated || !userId) {
+    if (!ACCOUNT_LINK_ENABLED || !this.deps.auth.isAuthenticated || !userId) {
       return undefined;
     }
     await this.load();
