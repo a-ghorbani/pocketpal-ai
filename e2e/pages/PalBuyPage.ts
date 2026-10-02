@@ -143,12 +143,4 @@ export class PalBuyPage extends BasePage {
     await this.scrollToCard('restore-purchases-row');
     await this.tap(byTestId('restore-purchases-row'), timeout);
   }
-
-  async dismissLinkPrompt(timeout = 20000): Promise<void> {
-    await this.tap(byTestId('purchase-link-dismiss'), timeout);
-  }
-
-  async startLinkSignIn(timeout = 20000): Promise<void> {
-    await this.tap(byTestId('purchase-link-signin'), timeout);
-  }
 }

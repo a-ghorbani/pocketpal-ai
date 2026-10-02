@@ -1,9 +1,8 @@
 /**
  * In-app purchase restore and account: a fresh install recovers store
- * entitlements silently, Restore purchases uses the store sync, and the
- * post-purchase sign-in prompt can be dismissed or cancelled without losing
- * the Pal. The e2e build has no account backend, so link outcomes are
- * covered by unit tests.
+ * entitlements silently, Restore purchases uses the store sync, and a
+ * signed-out purchase offers no account-link prompt while account linking is
+ * off.
  */
 
 import {expect} from '@wdio/globals';
@@ -80,25 +79,13 @@ describe('In-app purchase restore', () => {
     await buyPage.waitFor('owned-button', 60000);
   });
 
-  it('keeps the Pal when the sign-in prompt is dismissed or sign-in is cancelled', async () => {
+  it('shows no sign-in prompt after a signed-out purchase', async () => {
     const {pal, products} = listPal('iap-prompt');
     await openPalsWith(openPals, {products});
     await buyPage.openPal(pal.id);
     await buyPage.buy();
-    await buyPage.waitFor('purchase-link-prompt', 60000);
-
-    await buyPage.startLinkSignIn();
-    await buyPage.closeAllSheets();
-    await buyPage.openPal(pal.id);
-    await buyPage.waitFor('owned-button');
-    await buyPage.closeAllSheets();
-
-    const second = listPal('iap-prompt-dismiss');
-    await openPalsWith(openPals, {products: second.products});
-    await buyPage.openPal(second.pal.id);
-    await buyPage.buy();
-    await buyPage.dismissLinkPrompt(60000);
-    expect(await buyPage.isShown('purchase-link-prompt', 1000)).toBe(false);
+    await buyPage.waitFor('purchase-ready', 60000);
     await buyPage.waitFor('model-step');
+    expect(await buyPage.isShown('purchase-link-prompt', 1000)).toBe(false);
   });
 });
