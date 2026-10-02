@@ -68,7 +68,9 @@ describe('fakeStore', () => {
 
     await fakeStore.finish(tx);
     await expect(fakeStore.unfinished()).resolves.toEqual([]);
-    await expect(fakeStore.currentEntitlements()).resolves.toHaveLength(1);
+    expect((await fakeStore.currentEntitlements()).transactions).toHaveLength(
+      1,
+    );
   });
 
   it('applies next outcomes once', async () => {
@@ -95,7 +97,7 @@ describe('fakeStore', () => {
   it('keeps an already-owned product entitled', async () => {
     await fakeStore.run('next::already_owned');
     await fakeStore.purchase('pal.a', null);
-    const txs = await fakeStore.currentEntitlements();
+    const {transactions: txs} = await fakeStore.currentEntitlements();
     expect(txs.map(tx => tx.productId)).toEqual(['pal.a']);
   });
 
@@ -104,7 +106,10 @@ describe('fakeStore', () => {
     await expect(fakeStore.purchase('pal.a', null)).resolves.toEqual({
       kind: 'pending',
     });
-    await expect(fakeStore.currentEntitlements()).resolves.toEqual([]);
+    await expect(fakeStore.currentEntitlements()).resolves.toEqual({
+      ok: true,
+      transactions: [],
+    });
 
     const listener = jest.fn();
     const unsubscribe = fakeStore.onTransaction(listener);
@@ -114,29 +119,40 @@ describe('fakeStore', () => {
     expect(listener).toHaveBeenCalledWith(
       expect.objectContaining({productId: 'pal.a', state: 'purchased'}),
     );
-    await expect(fakeStore.currentEntitlements()).resolves.toHaveLength(1);
+    expect((await fakeStore.currentEntitlements()).transactions).toHaveLength(
+      1,
+    );
   });
 
   it('lists pending purchases on Android and drops declined ones', async () => {
     setOS('android');
     await fakeStore.run('next::pending');
     await fakeStore.purchase('pal.a', null);
-    const [pendingTx] = await fakeStore.currentEntitlements();
+    const {
+      transactions: [pendingTx],
+    } = await fakeStore.currentEntitlements();
     expect(pendingTx.state).toBe('pending');
     expect(pendingTx.proof.platform).toBe('android');
 
     await fakeStore.run('decline_pending');
-    await expect(fakeStore.currentEntitlements()).resolves.toEqual([]);
+    await expect(fakeStore.currentEntitlements()).resolves.toEqual({
+      ok: true,
+      transactions: [],
+    });
   });
 
   it('finishes on Android too', async () => {
     setOS('android');
     await fakeStore.purchase('pal.a', null);
-    const [tx] = await fakeStore.currentEntitlements();
+    const {
+      transactions: [tx],
+    } = await fakeStore.currentEntitlements();
     expect(tx.unfinished).toBe(true);
     await fakeStore.finish(tx);
     expect(fakeStore.finished).toEqual([String(tx.handle)]);
-    const [after] = await fakeStore.currentEntitlements();
+    const {
+      transactions: [after],
+    } = await fakeStore.currentEntitlements();
     expect(after.unfinished).toBe(false);
   });
 
@@ -148,14 +164,19 @@ describe('fakeStore', () => {
     ]);
     await fakeStore.run('refund::pal.a');
     expect(
-      (await fakeStore.currentEntitlements()).map(tx => tx.productId),
+      (await fakeStore.currentEntitlements()).transactions.map(
+        tx => tx.productId,
+      ),
     ).toEqual(['pal.b']);
   });
 
   it('reports unavailable billing', async () => {
     await fakeStore.run('unavailable');
     await expect(fakeStore.init()).resolves.toBe(false);
-    expect(fakeStore.queryOk).toBe(false);
+    await expect(fakeStore.currentEntitlements()).resolves.toEqual({
+      ok: false,
+      transactions: [],
+    });
     await fakeStore.run('unavailable::off');
     await expect(fakeStore.init()).resolves.toBe(true);
   });

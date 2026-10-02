@@ -53,7 +53,10 @@ describe('PurchaseStore link and restore', () => {
   describe('link', () => {
     it('links after a requested sign-in, exactly once', async () => {
       const h = createHarness({records: [record('active')]});
-      h.store.currentEntitlements.mockResolvedValue([tx()]);
+      h.store.currentEntitlements.mockResolvedValue({
+        ok: true,
+        transactions: [tx()],
+      });
       await h.purchases.load();
 
       h.purchases.requestLink();
@@ -88,7 +91,10 @@ describe('PurchaseStore link and restore', () => {
     it('keeps the Pal and reports a conflict on 409', async () => {
       const h = createHarness({records: [record('active')], signedIn: true});
       h.palStore.pals.push(localPal());
-      h.store.currentEntitlements.mockResolvedValue([tx()]);
+      h.store.currentEntitlements.mockResolvedValue({
+        ok: true,
+        transactions: [tx()],
+      });
       h.api.link.mockResolvedValueOnce('conflict');
 
       await expect(h.purchases.link()).resolves.toBe('conflict');
@@ -107,14 +113,17 @@ describe('PurchaseStore link and restore', () => {
         ],
         signedIn: true,
       });
-      h.store.currentEntitlements.mockResolvedValue([
-        tx(),
-        tx({
-          productId: 'pal.2',
-          transactionId: 'tx-2',
-          proof: {platform: 'ios', jws: 'jws-2'},
-        }),
-      ]);
+      h.store.currentEntitlements.mockResolvedValue({
+        ok: true,
+        transactions: [
+          tx(),
+          tx({
+            productId: 'pal.2',
+            transactionId: 'tx-2',
+            proof: {platform: 'ios', jws: 'jws-2'},
+          }),
+        ],
+      });
 
       await h.purchases.link();
 
@@ -174,7 +183,10 @@ describe('PurchaseStore link and restore', () => {
     it('links silently after a signed-in purchase, with the binding passed', async () => {
       const h = createHarness({signedIn: true});
       h.binding.getBinding.mockResolvedValueOnce({appAccountToken: 'uuid'});
-      h.store.currentEntitlements.mockResolvedValue([tx()]);
+      h.store.currentEntitlements.mockResolvedValue({
+        ok: true,
+        transactions: [tx()],
+      });
       runInAction(() => {
         h.purchases.availability = 'ready';
         h.purchases.products.set(hubPal().store_product_id!, {
@@ -202,7 +214,10 @@ describe('PurchaseStore link and restore', () => {
 
     it('ignores a link request and makes no call on sign-in', async () => {
       const h = createHarness({records: [record('active')]});
-      h.store.currentEntitlements.mockResolvedValue([tx()]);
+      h.store.currentEntitlements.mockResolvedValue({
+        ok: true,
+        transactions: [tx()],
+      });
       await h.purchases.load();
 
       h.purchases.requestLink();
@@ -216,7 +231,10 @@ describe('PurchaseStore link and restore', () => {
 
     it('returns from link without a request when signed in', async () => {
       const h = createHarness({records: [record('active')], signedIn: true});
-      h.store.currentEntitlements.mockResolvedValue([tx()]);
+      h.store.currentEntitlements.mockResolvedValue({
+        ok: true,
+        transactions: [tx()],
+      });
 
       await expect(h.purchases.link()).resolves.toBeUndefined();
 
@@ -226,7 +244,10 @@ describe('PurchaseStore link and restore', () => {
 
     it('makes no link call after a signed-in purchase', async () => {
       const h = createHarness({signedIn: true});
-      h.store.currentEntitlements.mockResolvedValue([tx()]);
+      h.store.currentEntitlements.mockResolvedValue({
+        ok: true,
+        transactions: [tx()],
+      });
       runInAction(() => {
         h.purchases.availability = 'ready';
         h.purchases.products.set(hubPal().store_product_id!, {
@@ -247,7 +268,10 @@ describe('PurchaseStore link and restore', () => {
   describe('owned Pal that is not installed', () => {
     it('reinstalls from current entitlements without a store sync', async () => {
       const h = createHarness({records: [record('active')]});
-      h.store.currentEntitlements.mockResolvedValue([tx({unfinished: false})]);
+      h.store.currentEntitlements.mockResolvedValue({
+        ok: true,
+        transactions: [tx({unfinished: false})],
+      });
 
       await expect(h.purchases.installOwned(hubPal())).resolves.toBe(true);
       await h.purchases.drainQueue();
@@ -267,7 +291,10 @@ describe('PurchaseStore link and restore', () => {
       expect(h.purchases.flowFor(PAL_ID)).toBe('restore_needed');
       expect(h.palStore.deletePal).not.toHaveBeenCalled();
 
-      h.store.currentEntitlements.mockResolvedValue([tx({unfinished: false})]);
+      h.store.currentEntitlements.mockResolvedValue({
+        ok: true,
+        transactions: [tx({unfinished: false})],
+      });
       await h.purchases.restore();
       await h.purchases.drainQueue();
       expect(h.purchases.flowFor(PAL_ID)).toBe('ready');
@@ -283,7 +310,10 @@ describe('PurchaseStore link and restore', () => {
   describe('restore', () => {
     it('syncs, then installs every entitlement', async () => {
       const h = createHarness();
-      h.store.currentEntitlements.mockResolvedValue([tx({unfinished: false})]);
+      h.store.currentEntitlements.mockResolvedValue({
+        ok: true,
+        transactions: [tx({unfinished: false})],
+      });
 
       await h.purchases.restore();
       await h.purchases.drainQueue();
@@ -314,18 +344,24 @@ describe('PurchaseStore link and restore', () => {
           record('pending_payment', {palId: 'P2', productId: 'pal.p2'}),
         ],
       });
-      h.store.currentEntitlements.mockResolvedValue([
-        tx({
-          unfinished: false,
-          proof: {
-            platform: 'android',
-            productId: PRODUCT,
-            purchaseToken: 'tok',
-          },
-        }),
-      ]);
+      h.store.currentEntitlements.mockResolvedValue({
+        ok: true,
+        transactions: [
+          tx({
+            unfinished: false,
+            proof: {
+              platform: 'android',
+              productId: PRODUCT,
+              purchaseToken: 'tok',
+            },
+          }),
+        ],
+      });
       h.api.verify.mockImplementation(async () => {
-        h.store.queryOk = false;
+        h.store.currentEntitlements.mockResolvedValue({
+          ok: false,
+          transactions: [],
+        });
         return [result('active')];
       });
 
@@ -338,9 +374,9 @@ describe('PurchaseStore link and restore', () => {
     describe('held purchase', () => {
       const held = () => record('held_invalid', {supportCode: 'SUP-H'});
       const failQuery = (h: ReturnType<typeof createHarness>) =>
-        h.store.currentEntitlements.mockImplementation(async () => {
-          h.store.queryOk = false;
-          return [];
+        h.store.currentEntitlements.mockResolvedValue({
+          ok: false,
+          transactions: [],
         });
 
       it('Android: clears it when a successful query no longer lists the product', async () => {
@@ -382,7 +418,7 @@ describe('PurchaseStore link and restore', () => {
             }),
             {},
           );
-          return [];
+          return {ok: true, transactions: []};
         });
 
         await h.purchases.restore();
@@ -422,7 +458,10 @@ describe('PurchaseStore link and restore', () => {
       await h.purchases.processTransaction(heldTx, {});
       expect(h.purchases.recordFor(PAL_ID)?.status).toBe('held_invalid');
       expect(h.purchases.invalidTxIds.has('tx-1')).toBe(true);
-      h.store.currentEntitlements.mockResolvedValue([heldTx]);
+      h.store.currentEntitlements.mockResolvedValue({
+        ok: true,
+        transactions: [heldTx],
+      });
       h.store.finish.mockRejectedValueOnce(new Error('billing'));
 
       await h.purchases.restore();
@@ -439,7 +478,10 @@ describe('PurchaseStore link and restore', () => {
       const warn = jest.spyOn(console, 'warn').mockImplementation(() => {});
       const h = createHarness({records: [record('granted')]});
       h.palStore.installOwnedPal.mockRejectedValue(new Error('db'));
-      h.store.currentEntitlements.mockResolvedValue([tx({unfinished: false})]);
+      h.store.currentEntitlements.mockResolvedValue({
+        ok: true,
+        transactions: [tx({unfinished: false})],
+      });
       const seen: {status?: string; installed: boolean}[] = [];
       h.api.verify.mockImplementation(async () => {
         seen.push({
@@ -465,7 +507,10 @@ describe('PurchaseStore link and restore', () => {
     it('still restores when the store sync fails', async () => {
       const h = createHarness();
       h.store.sync.mockRejectedValueOnce(new Error('cancelled'));
-      h.store.currentEntitlements.mockResolvedValue([tx({unfinished: false})]);
+      h.store.currentEntitlements.mockResolvedValue({
+        ok: true,
+        transactions: [tx({unfinished: false})],
+      });
 
       await h.purchases.restore();
       await h.purchases.drainQueue();

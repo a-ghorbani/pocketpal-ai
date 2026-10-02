@@ -455,7 +455,10 @@ describe('PurchaseStore creator updates', () => {
         records: [record('active', {pendingUpdate: pending(v2())})],
       });
       expect(h.purchases.updateAvailable(PAL_ID)).toBe(false);
-      h.store.currentEntitlements.mockResolvedValue([tx()]);
+      h.store.currentEntitlements.mockResolvedValue({
+        ok: true,
+        transactions: [tx()],
+      });
       h.api.verify.mockResolvedValueOnce([
         result('active', {contentVersion: 4, pal: v2()}),
       ]);
@@ -565,9 +568,10 @@ describe('PurchaseStore creator updates', () => {
           records: [record('unfulfillable', {supportCode: 'SUP-7'})],
         });
         h.api.refresh.mockResolvedValue(refreshLists({[list]: [PAL_ID]}));
-        h.store.currentEntitlements.mockResolvedValue([
-          tx({unfinished: false}),
-        ]);
+        h.store.currentEntitlements.mockResolvedValue({
+          ok: true,
+          transactions: [tx({unfinished: false})],
+        });
 
         await h.purchases.recover();
 
@@ -631,7 +635,10 @@ describe('PurchaseStore creator updates', () => {
     it('leaves a refund tombstone as it is on a refresh removed', async () => {
       const h = createHarness({records: [record('removed')]});
       h.api.refresh.mockResolvedValue(refreshLists({removed: [PAL_ID]}));
-      h.store.currentEntitlements.mockResolvedValue([tx({unfinished: false})]);
+      h.store.currentEntitlements.mockResolvedValue({
+        ok: true,
+        transactions: [tx({unfinished: false})],
+      });
 
       await h.purchases.recover();
 
@@ -673,7 +680,10 @@ describe('PurchaseStore creator updates', () => {
 
     it('keeps a Pal the store still verifies and the listing no longer shows', async () => {
       const h = installed();
-      h.store.currentEntitlements.mockResolvedValue([tx({unfinished: false})]);
+      h.store.currentEntitlements.mockResolvedValue({
+        ok: true,
+        transactions: [tx({unfinished: false})],
+      });
       h.api.refresh.mockResolvedValue(refreshLists({}));
 
       await h.purchases.recover();

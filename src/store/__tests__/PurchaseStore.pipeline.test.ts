@@ -454,7 +454,10 @@ describe('PurchaseStore pipeline', () => {
 
   describe('purchase ref', () => {
     const refreshKnown = async (h: ReturnType<typeof createHarness>) => {
-      h.store.currentEntitlements.mockResolvedValue([tx({unfinished: false})]);
+      h.store.currentEntitlements.mockResolvedValue({
+        ok: true,
+        transactions: [tx({unfinished: false})],
+      });
       await h.purchases.recover();
       return h.api.refresh.mock.calls.at(-1)![1];
     };
@@ -561,7 +564,9 @@ describe('PurchaseStore pipeline', () => {
         },
       ]);
       const store = new NativeStore();
-      const [purchase] = await store.currentEntitlements();
+      const {
+        transactions: [purchase],
+      } = await store.currentEntitlements();
       return {store, purchase};
     };
 
@@ -782,7 +787,10 @@ describe('PurchaseStore pipeline', () => {
 
     it('never re-verifies on the listener or recovery', async () => {
       const h = createHarness({records: [record('held_invalid')]});
-      h.store.currentEntitlements.mockResolvedValue([tx({unfinished: false})]);
+      h.store.currentEntitlements.mockResolvedValue({
+        ok: true,
+        transactions: [tx({unfinished: false})],
+      });
 
       await h.purchases.processTransaction(tx(), {settledVerify: true});
       await h.purchases.recover();
@@ -796,7 +804,10 @@ describe('PurchaseStore pipeline', () => {
       async os => {
         setOS(os);
         const h = createHarness({records: [record('held_invalid')]});
-        h.store.currentEntitlements.mockResolvedValue([tx()]);
+        h.store.currentEntitlements.mockResolvedValue({
+          ok: true,
+          transactions: [tx()],
+        });
 
         await h.purchases.restore();
         await settle(h);
@@ -1181,7 +1192,10 @@ describe('PurchaseStore pipeline', () => {
     it('restores silently when already owned', async () => {
       const h = readyHarness();
       h.store.purchase.mockResolvedValueOnce({kind: 'already_owned'});
-      h.store.currentEntitlements.mockResolvedValueOnce([tx()]);
+      h.store.currentEntitlements.mockResolvedValueOnce({
+        ok: true,
+        transactions: [tx()],
+      });
 
       await expect(h.purchases.buy(hubPal())).resolves.toBe('stay');
       await settle(h);
@@ -1235,7 +1249,10 @@ describe('PurchaseStore pipeline', () => {
         record('removed', {palId: 'pal-2', productId: 'pal.2'}),
       ],
     });
-    h.store.currentEntitlements.mockResolvedValue([tx()]);
+    h.store.currentEntitlements.mockResolvedValue({
+      ok: true,
+      transactions: [tx()],
+    });
     await h.purchases.drainQueue();
     await h.purchases.processTransaction(tx(), {
       settledVerify: true,

@@ -14,6 +14,11 @@ export interface StoreTransaction {
   handle: unknown;
 }
 
+export interface StoreQuery {
+  ok: boolean;
+  transactions: StoreTransaction[];
+}
+
 export type PurchaseOutcome =
   | {kind: 'purchased'; tx: StoreTransaction}
   | {kind: 'pending'}
@@ -22,7 +27,6 @@ export type PurchaseOutcome =
   | {kind: 'error'; code: string; downgrade: boolean};
 
 export interface StorePort {
-  readonly queryOk: boolean;
   init(): Promise<boolean>;
   fetchProducts(productIds: string[]): Promise<StoreProduct[]>;
   purchase(
@@ -30,7 +34,7 @@ export interface StorePort {
     binding: Binding | null,
   ): Promise<PurchaseOutcome>;
   unfinished(): Promise<StoreTransaction[]>;
-  currentEntitlements(): Promise<StoreTransaction[]>;
+  currentEntitlements(): Promise<StoreQuery>;
   sync(): Promise<void>;
   finish(tx: StoreTransaction): Promise<void>;
   onTransaction(listener: (tx: StoreTransaction) => void): () => void;

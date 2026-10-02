@@ -7,6 +7,7 @@ import type {Binding} from '../services/iap/iapWire';
 import type {
   PurchaseOutcome,
   StorePort,
+  StoreQuery,
   StoreProduct,
   StoreTransaction,
 } from '../services/iap/StorePort';
@@ -46,10 +47,6 @@ class FakeStore implements StorePort {
   lastBinding: Binding | null = null;
   finished: string[] = [];
   syncCount = 0;
-
-  get queryOk(): boolean {
-    return !this.state.unavailable;
-  }
 
   restore = async (): Promise<void> => {
     try {
@@ -160,15 +157,15 @@ class FakeStore implements StorePort {
       .map(tx => this.toTransaction(tx));
   }
 
-  async currentEntitlements(): Promise<StoreTransaction[]> {
+  async currentEntitlements(): Promise<StoreQuery> {
     if (this.state.unavailable) {
-      return [];
+      return {ok: false, transactions: []};
     }
     const listed =
       Platform.OS === 'android'
         ? [...this.state.owned, ...this.state.pending]
         : this.state.owned;
-    return listed.map(tx => this.toTransaction(tx));
+    return {ok: true, transactions: listed.map(tx => this.toTransaction(tx))};
   }
 
   async sync(): Promise<void> {

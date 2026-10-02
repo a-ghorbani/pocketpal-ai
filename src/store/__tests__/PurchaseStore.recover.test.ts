@@ -22,6 +22,7 @@ import {
   stopAll,
   tx,
 } from './purchaseTestHarness';
+import type {StoreTransaction} from '../../services/iap/StorePort';
 
 jest.mock('../PalStore', () => ({
   palStore: {
@@ -74,8 +75,11 @@ describe('PurchaseStore recovery', () => {
       setOS('android');
       const h = createHarness({records: [record('unlocking')]});
       h.store.currentEntitlements
-        .mockResolvedValueOnce([androidTx({unfinished: true})])
-        .mockResolvedValue([androidTx()]);
+        .mockResolvedValueOnce({
+          ok: true,
+          transactions: [androidTx({unfinished: true})],
+        })
+        .mockResolvedValue({ok: true, transactions: [androidTx()]});
 
       await h.purchases.recover();
       await h.purchases.drainQueue();
@@ -90,9 +94,10 @@ describe('PurchaseStore recovery', () => {
       async status => {
         setOS('android');
         const h = createHarness({records: [record(status)]});
-        h.store.currentEntitlements.mockResolvedValue([
-          androidTx({unfinished: true}),
-        ]);
+        h.store.currentEntitlements.mockResolvedValue({
+          ok: true,
+          transactions: [androidTx({unfinished: true})],
+        });
 
         await h.purchases.recover();
 
@@ -104,7 +109,10 @@ describe('PurchaseStore recovery', () => {
     it('Android: leaves an acknowledged settled purchase alone', async () => {
       setOS('android');
       const h = createHarness({records: [record('active')]});
-      h.store.currentEntitlements.mockResolvedValue([androidTx()]);
+      h.store.currentEntitlements.mockResolvedValue({
+        ok: true,
+        transactions: [androidTx()],
+      });
 
       await h.purchases.recover();
 
@@ -116,9 +124,10 @@ describe('PurchaseStore recovery', () => {
       async status => {
         setOS('android');
         const h = createHarness({records: [record(status)]});
-        h.store.currentEntitlements.mockResolvedValue([
-          androidTx({unfinished: true}),
-        ]);
+        h.store.currentEntitlements.mockResolvedValue({
+          ok: true,
+          transactions: [androidTx({unfinished: true})],
+        });
 
         await h.purchases.recover();
 
@@ -161,15 +170,18 @@ describe('PurchaseStore recovery', () => {
     it('installs every entitlement on a fresh install without an account prompt', async () => {
       setOS('ios');
       const h = createHarness();
-      h.store.currentEntitlements.mockResolvedValue([
-        tx({unfinished: false}),
-        tx({
-          productId: 'pal.2',
-          transactionId: 'tx-2',
-          unfinished: false,
-          proof: {platform: 'ios', jws: 'jws-2'},
-        }),
-      ]);
+      h.store.currentEntitlements.mockResolvedValue({
+        ok: true,
+        transactions: [
+          tx({unfinished: false}),
+          tx({
+            productId: 'pal.2',
+            transactionId: 'tx-2',
+            unfinished: false,
+            proof: {platform: 'ios', jws: 'jws-2'},
+          }),
+        ],
+      });
       h.api.verify.mockImplementation(async (_platform, proofs: any) => [
         result('active', {
           palId: proofs[0].jws === 'jws-1' ? PAL_ID : 'pal-2',
@@ -188,7 +200,10 @@ describe('PurchaseStore recovery', () => {
     it('does not re-drive a tombstone or call verify for it', async () => {
       setOS('ios');
       const h = createHarness({records: [record('removed')]});
-      h.store.currentEntitlements.mockResolvedValue([tx({unfinished: false})]);
+      h.store.currentEntitlements.mockResolvedValue({
+        ok: true,
+        transactions: [tx({unfinished: false})],
+      });
 
       await h.purchases.recover();
 
@@ -203,7 +218,10 @@ describe('PurchaseStore recovery', () => {
         result('invalid', {supportCode: undefined}),
       ]);
       await h.purchases.processTransaction(tx(), {});
-      h.store.currentEntitlements.mockResolvedValue([tx()]);
+      h.store.currentEntitlements.mockResolvedValue({
+        ok: true,
+        transactions: [tx()],
+      });
       h.store.unfinished.mockResolvedValue([tx()]);
 
       await h.purchases.recover();
@@ -240,9 +258,10 @@ describe('PurchaseStore recovery', () => {
     it('Android: acknowledges again when the next query still reports it unacknowledged', async () => {
       setOS('android');
       const h = createHarness({records: [record('active')]});
-      h.store.currentEntitlements.mockResolvedValue([
-        androidTx({unfinished: true}),
-      ]);
+      h.store.currentEntitlements.mockResolvedValue({
+        ok: true,
+        transactions: [androidTx({unfinished: true})],
+      });
 
       await h.purchases.recover();
       await h.purchases.recover();
@@ -253,9 +272,10 @@ describe('PurchaseStore recovery', () => {
     it('Android: retries an acknowledgement that failed on the next query', async () => {
       setOS('android');
       const h = createHarness({records: [record('active')]});
-      h.store.currentEntitlements.mockResolvedValue([
-        androidTx({unfinished: true}),
-      ]);
+      h.store.currentEntitlements.mockResolvedValue({
+        ok: true,
+        transactions: [androidTx({unfinished: true})],
+      });
       h.store.finish.mockRejectedValueOnce(new Error('billing'));
 
       await h.purchases.recover();
@@ -270,9 +290,10 @@ describe('PurchaseStore recovery', () => {
     it('Android: retries on the query restore makes', async () => {
       setOS('android');
       const h = createHarness({records: [record('active')]});
-      h.store.currentEntitlements.mockResolvedValue([
-        androidTx({unfinished: true}),
-      ]);
+      h.store.currentEntitlements.mockResolvedValue({
+        ok: true,
+        transactions: [androidTx({unfinished: true})],
+      });
 
       await h.purchases.recover();
       await h.purchases.restore();
@@ -283,7 +304,10 @@ describe('PurchaseStore recovery', () => {
     it('Android: never acknowledges a purchase the query reports acknowledged', async () => {
       setOS('android');
       const h = createHarness({records: [record('active')]});
-      h.store.currentEntitlements.mockResolvedValue([androidTx()]);
+      h.store.currentEntitlements.mockResolvedValue({
+        ok: true,
+        transactions: [androidTx()],
+      });
 
       await h.purchases.recover();
       await h.purchases.recover();
@@ -319,7 +343,10 @@ describe('PurchaseStore recovery', () => {
     it('sends proofs and known versions of active records', async () => {
       setOS('ios');
       const h = createHarness({records: [record('active')]});
-      h.store.currentEntitlements.mockResolvedValue([tx({unfinished: false})]);
+      h.store.currentEntitlements.mockResolvedValue({
+        ok: true,
+        transactions: [tx({unfinished: false})],
+      });
 
       await h.purchases.recover();
 
@@ -347,7 +374,10 @@ describe('PurchaseStore recovery', () => {
           }),
         ],
       });
-      h.store.currentEntitlements.mockResolvedValue([tx({unfinished: false})]);
+      h.store.currentEntitlements.mockResolvedValue({
+        ok: true,
+        transactions: [tx({unfinished: false})],
+      });
 
       await h.purchases.recover();
 
@@ -449,7 +479,10 @@ describe('PurchaseStore recovery', () => {
     it('removes nothing when the store stops listing a Pal', async () => {
       const h = createHarness({records: [record('active')]});
       h.palStore.pals.push(localPal());
-      h.store.currentEntitlements.mockResolvedValue([]);
+      h.store.currentEntitlements.mockResolvedValue({
+        ok: true,
+        transactions: [],
+      });
 
       await h.purchases.recover();
 
@@ -485,7 +518,10 @@ describe('PurchaseStore recovery', () => {
         removed: [],
         unchanged: [],
       });
-      h.store.currentEntitlements.mockResolvedValue([tx({unfinished: false})]);
+      h.store.currentEntitlements.mockResolvedValue({
+        ok: true,
+        transactions: [tx({unfinished: false})],
+      });
       h.api.verify.mockResolvedValue([result('pending')]);
 
       await h.purchases.recover();
@@ -520,9 +556,9 @@ describe('PurchaseStore recovery', () => {
 
   describe('failed store query', () => {
     const failQuery = (h: ReturnType<typeof createHarness>) =>
-      h.store.currentEntitlements.mockImplementation(async () => {
-        h.store.queryOk = false;
-        return [];
+      h.store.currentEntitlements.mockResolvedValue({
+        ok: false,
+        transactions: [],
       });
 
     it('skips refresh and leaves the record as it is', async () => {
@@ -555,6 +591,41 @@ describe('PurchaseStore recovery', () => {
       expect(storage.values.get(LEDGER_KEY) === raw).toBe(!ok);
     });
 
+    it.each([true, false])(
+      'Android: acts on its own query ok %p, not an overlapping query',
+      async ok => {
+        setOS('android');
+        const h = createHarness({
+          records: [
+            record('active'),
+            record('pending_payment', {palId: 'P2', productId: 'pal.p2'}),
+          ],
+        });
+        let releaseUnfinished: ((txs: StoreTransaction[]) => void) | undefined;
+        h.store.unfinished.mockImplementationOnce(
+          () =>
+            new Promise<StoreTransaction[]>(resolve => {
+              releaseUnfinished = resolve;
+            }),
+        );
+        h.store.currentEntitlements
+          .mockResolvedValueOnce({ok, transactions: []})
+          .mockResolvedValueOnce({ok: !ok, transactions: []});
+
+        const recovering = h.purchases.recover();
+        while (!releaseUnfinished) {
+          await flush();
+        }
+        await h.purchases.installOwned(hubPal());
+        releaseUnfinished([]);
+        await recovering;
+
+        expect(h.store.currentEntitlements).toHaveBeenCalledTimes(2);
+        expect(h.api.refresh).toHaveBeenCalledTimes(ok ? 1 : 0);
+        expect(h.purchases.recordFor('P2') === undefined).toBe(ok);
+      },
+    );
+
     it('iOS: still processes an unfinished transaction', async () => {
       setOS('ios');
       const h = createHarness({records: [record('unlocking')]});
@@ -581,9 +652,10 @@ describe('PurchaseStore recovery', () => {
     it('Android: keeps it while the store still lists the pending purchase', async () => {
       setOS('android');
       const h = createHarness({records: [record('pending_payment')]});
-      h.store.currentEntitlements.mockResolvedValue([
-        androidTx({state: 'pending', transactionId: undefined}),
-      ]);
+      h.store.currentEntitlements.mockResolvedValue({
+        ok: true,
+        transactions: [androidTx({state: 'pending', transactionId: undefined})],
+      });
       await h.purchases.recover();
       expect(h.purchases.recordFor(PAL_ID)?.status).toBe('pending_payment');
     });
@@ -595,9 +667,15 @@ describe('PurchaseStore recovery', () => {
           record('pending_payment', {palId: 'P2', productId: 'pal.p2'}),
         ],
       });
-      h.store.currentEntitlements.mockResolvedValue([androidTx()]);
+      h.store.currentEntitlements.mockResolvedValue({
+        ok: true,
+        transactions: [androidTx()],
+      });
       h.api.verify.mockImplementation(async () => {
-        h.store.queryOk = false;
+        h.store.currentEntitlements.mockResolvedValue({
+          ok: false,
+          transactions: [],
+        });
         return [result('active')];
       });
 
@@ -611,7 +689,10 @@ describe('PurchaseStore recovery', () => {
     it('Android: keeps it when the store query failed', async () => {
       setOS('android');
       const h = createHarness({records: [record('pending_payment')]});
-      h.store.queryOk = false;
+      h.store.currentEntitlements.mockResolvedValue({
+        ok: false,
+        transactions: [],
+      });
       await h.purchases.recover();
       expect(h.purchases.recordFor(PAL_ID)?.status).toBe('pending_payment');
     });
@@ -672,9 +753,9 @@ describe('PurchaseStore recovery', () => {
     it('Android: keeps it when the store query failed', async () => {
       setOS('android');
       const h = createHarness({records: [held()]});
-      h.store.currentEntitlements.mockImplementation(async () => {
-        h.store.queryOk = false;
-        return [];
+      h.store.currentEntitlements.mockResolvedValue({
+        ok: false,
+        transactions: [],
       });
 
       await h.purchases.recover();
@@ -686,9 +767,10 @@ describe('PurchaseStore recovery', () => {
     it('Android: keeps it while the query lists the purchase, without finishing or verifying', async () => {
       setOS('android');
       const h = createHarness({records: [held()]});
-      h.store.currentEntitlements.mockResolvedValue([
-        androidTx({unfinished: true}),
-      ]);
+      h.store.currentEntitlements.mockResolvedValue({
+        ok: true,
+        transactions: [androidTx({unfinished: true})],
+      });
 
       await h.purchases.recover();
 
@@ -717,7 +799,7 @@ describe('PurchaseStore recovery', () => {
           androidTx({productId: 'pal.p2', transactionId: 'tx-2'}),
           {},
         );
-        return [];
+        return {ok: true, transactions: []};
       });
 
       await h.purchases.recover();
@@ -731,9 +813,10 @@ describe('PurchaseStore recovery', () => {
       async list => {
         setOS('android');
         const h = createHarness({records: [held()]});
-        h.store.currentEntitlements.mockResolvedValue([
-          androidTx({unfinished: true}),
-        ]);
+        h.store.currentEntitlements.mockResolvedValue({
+          ok: true,
+          transactions: [androidTx({unfinished: true})],
+        });
         h.api.refresh.mockResolvedValue(refreshLists({[list]: [PAL_ID]}));
 
         await h.purchases.recover();
@@ -751,9 +834,10 @@ describe('PurchaseStore recovery', () => {
       async (list, status) => {
         setOS('ios');
         const h = createHarness({records: [held()]});
-        h.store.currentEntitlements.mockResolvedValue([
-          tx({unfinished: false}),
-        ]);
+        h.store.currentEntitlements.mockResolvedValue({
+          ok: true,
+          transactions: [tx({unfinished: false})],
+        });
         h.api.refresh.mockResolvedValue(refreshLists({[list]: [PAL_ID]}));
 
         await h.purchases.recover();
@@ -816,7 +900,10 @@ describe('PurchaseStore recovery', () => {
     it('retries from the store list after a restart', async () => {
       setOS('android');
       const h = createHarness({records: [record('unlocking')]});
-      h.store.currentEntitlements.mockResolvedValue([androidTx()]);
+      h.store.currentEntitlements.mockResolvedValue({
+        ok: true,
+        transactions: [androidTx()],
+      });
 
       await h.purchases.retry(PAL_ID);
       await h.purchases.drainQueue();

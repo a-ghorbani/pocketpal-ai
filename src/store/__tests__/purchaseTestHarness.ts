@@ -5,6 +5,7 @@ import type {LedgerRecord, PurchaseStoreDeps} from '../PurchaseStore';
 import type {
   PurchaseOutcome,
   StorePort,
+  StoreQuery,
   StoreTransaction,
 } from '../../services/iap/StorePort';
 import {projectCreatorContent} from '../../services/iap/creatorContent';
@@ -122,7 +123,6 @@ export const localPal = (palshubId = PAL_ID): Pal =>
   }) as Pal;
 
 export class StubStore implements StorePort {
-  queryOk = true;
   private listeners = new Set<(tx: StoreTransaction) => void>();
   constructor(private log: string[]) {}
 
@@ -134,7 +134,9 @@ export class StubStore implements StorePort {
     async (): Promise<PurchaseOutcome> => ({kind: 'purchased', tx: tx()}),
   );
   unfinished = jest.fn(async (): Promise<StoreTransaction[]> => []);
-  currentEntitlements = jest.fn(async (): Promise<StoreTransaction[]> => []);
+  currentEntitlements = jest.fn(
+    async (): Promise<StoreQuery> => ({ok: true, transactions: []}),
+  );
   sync = jest.fn(async () => {
     this.log.push('sync');
   });

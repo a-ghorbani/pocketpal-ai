@@ -411,7 +411,9 @@ describe('NativeStore', () => {
       async (_label, overrides, unfinished) => {
         setOS('android');
         iap.getAvailablePurchases.mockResolvedValueOnce([purchase(overrides)]);
-        const [tx] = await store.currentEntitlements();
+        const {
+          transactions: [tx],
+        } = await store.currentEntitlements();
         expect(tx.unfinished).toBe(unfinished);
       },
     );
@@ -428,22 +430,30 @@ describe('NativeStore', () => {
         purchase(),
         purchase({productId: 'pal.b', purchaseState: 'pending'}),
       ]);
-      const txs = await store.currentEntitlements();
-      expect(store.queryOk).toBe(true);
-      expect(txs.map(tx => tx.state)).toEqual(['purchased', 'pending']);
+      const {ok, transactions} = await store.currentEntitlements();
+      expect(ok).toBe(true);
+      expect(transactions.map(tx => tx.state)).toEqual([
+        'purchased',
+        'pending',
+      ]);
     });
 
-    it('returns nothing and clears queryOk when the query fails', async () => {
+    it('returns nothing and marks the query failed when it throws', async () => {
       iap.getAvailablePurchases.mockRejectedValueOnce(new Error('offline'));
-      await expect(store.currentEntitlements()).resolves.toEqual([]);
-      expect(store.queryOk).toBe(false);
+      await expect(store.currentEntitlements()).resolves.toEqual({
+        ok: false,
+        transactions: [],
+      });
     });
 
     it('drops purchases without a token', async () => {
       iap.getAvailablePurchases.mockResolvedValueOnce([
         purchase({purchaseToken: null}),
       ]);
-      await expect(store.currentEntitlements()).resolves.toEqual([]);
+      await expect(store.currentEntitlements()).resolves.toEqual({
+        ok: true,
+        transactions: [],
+      });
     });
   });
 

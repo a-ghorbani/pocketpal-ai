@@ -18,6 +18,7 @@ import type {
   PurchaseOutcome,
   StorePort,
   StoreProduct,
+  StoreQuery,
   StoreTransaction,
 } from './StorePort';
 
@@ -125,8 +126,6 @@ const errorCode = (error: unknown): string | undefined =>
   (error as Partial<PurchaseError> | undefined)?.code;
 
 export class NativeStore implements StorePort {
-  queryOk = false;
-
   async init(): Promise<boolean> {
     try {
       return (await initConnection()) === true;
@@ -228,18 +227,19 @@ export class NativeStore implements StorePort {
       .filter((tx): tx is StoreTransaction => tx !== null);
   }
 
-  async currentEntitlements(): Promise<StoreTransaction[]> {
+  async currentEntitlements(): Promise<StoreQuery> {
     try {
       const purchases = await getAvailablePurchases({
         onlyIncludeActiveItemsIOS: true,
       });
-      this.queryOk = true;
-      return purchases
-        .map(purchase => toTransaction(purchase, false))
-        .filter((tx): tx is StoreTransaction => tx !== null);
+      return {
+        ok: true,
+        transactions: purchases
+          .map(purchase => toTransaction(purchase, false))
+          .filter((tx): tx is StoreTransaction => tx !== null),
+      };
     } catch {
-      this.queryOk = false;
-      return [];
+      return {ok: false, transactions: []};
     }
   }
 

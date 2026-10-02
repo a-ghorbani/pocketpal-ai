@@ -14,6 +14,7 @@ import type {PalEvents} from '../services/palshub/palEvents';
 import type {
   StorePort,
   StoreProduct,
+  StoreQuery,
   StoreTransaction,
 } from '../services/iap/StorePort';
 import type {StorePlatform, VerifyResult} from '../services/iap/iapWire';
@@ -1152,8 +1153,7 @@ export class PurchaseStore {
     }
     const held = this.androidHeldPalIds();
     this.resetAndroidAckMemo();
-    const txs = await this.storeTransactions();
-    const queryOk = this.storePort.queryOk;
+    const {ok, transactions: txs} = await this.storeTransactions();
     for (const tx of txs) {
       if (this.invalidTxIds.has(txKey(tx))) {
         continue;
@@ -1163,8 +1163,8 @@ export class PurchaseStore {
         await this.processTransaction(tx, {});
       }
     }
-    await this.dropStalePending(txs, false, queryOk, held);
-    if (!queryOk) {
+    await this.dropStalePending(txs, false, ok, held);
+    if (!ok) {
       return;
     }
     const refreshed = await this.refresh(txs);
@@ -1173,8 +1173,8 @@ export class PurchaseStore {
     }
   }
 
-  private async storeTransactions(): Promise<StoreTransaction[]> {
-    const [unfinished, entitled] = await Promise.all([
+  private async storeTransactions(): Promise<StoreQuery> {
+    const [unfinished, {ok, transactions: entitled}] = await Promise.all([
       this.storePort.unfinished().catch(() => [] as StoreTransaction[]),
       this.storePort.currentEntitlements(),
     ]);
@@ -1187,7 +1187,7 @@ export class PurchaseStore {
         seen ? {...seen, unfinished: seen.unfinished || tx.unfinished} : tx,
       );
     });
-    return [...merged.values()];
+    return {ok, transactions: [...merged.values()]};
   }
 
   private androidHeldPalIds(): string[] {
@@ -1350,7 +1350,7 @@ export class PurchaseStore {
     const pending = this.retries.get(rec.productId);
     const tx =
       pending?.tx ??
-      (await this.storeTransactions()).find(
+      (await this.storeTransactions()).transactions.find(
         candidate => candidate.productId === rec.productId,
       );
     if (!tx) {
@@ -1386,7 +1386,8 @@ export class PurchaseStore {
     if (unlinked.length === 0) {
       return undefined;
     }
-    const txs = (await this.storePort.currentEntitlements()).filter(
+    const {transactions} = await this.storePort.currentEntitlements();
+    const txs = transactions.filter(
       tx =>
         tx.state === 'purchased' &&
         unlinked.some(rec => rec.productId === tx.productId),
@@ -1434,12 +1435,12 @@ export class PurchaseStore {
       await this.drainQueue();
       const held = this.androidHeldPalIds();
       this.resetAndroidAckMemo();
-      const txs = await this.storePort.currentEntitlements();
-      const queryOk = this.storePort.queryOk;
+      const {ok, transactions: txs} =
+        await this.storePort.currentEntitlements();
       for (const tx of txs) {
         await this.processTransaction(tx, {settledVerify: true, install: true});
       }
-      await this.dropStalePending(txs, true, queryOk, held);
+      await this.dropStalePending(txs, true, ok, held);
     } finally {
       runInAction(() => {
         this.isRestoring = false;
@@ -1451,7 +1452,9 @@ export class PurchaseStore {
     this.rememberPal(pal);
     this.watching.add(pal.id);
     const productId = this.records[pal.id]?.productId ?? pal.store_product_id;
-    const txs = productId ? await this.storePort.currentEntitlements() : [];
+    const txs = productId
+      ? (await this.storePort.currentEntitlements()).transactions
+      : [];
     const tx = txs.find(
       candidate =>
         candidate.productId === productId && candidate.state === 'purchased',
