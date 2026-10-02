@@ -634,9 +634,9 @@ describe('PurchaseStore pipeline', () => {
       support_code: code,
     });
     const run = async () => {
-      const {iapApi} = require('../../services/iap/iapApi');
+      const {iapApi: realApi} = require('../../services/iap/iapApi');
       const h = createHarness({records: [record('unlocking')]});
-      h.deps.api = iapApi;
+      h.deps.api = realApi;
       h.palStore.pals.push(localPal());
       await h.purchases.processTransaction(tx(), {});
       await settle(h);
