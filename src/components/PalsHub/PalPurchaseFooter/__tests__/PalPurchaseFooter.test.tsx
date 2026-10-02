@@ -109,7 +109,7 @@ describe('PalPurchaseFooter', () => {
     const name = text.indexOf('Story Pal');
     const button = text.indexOf('Get for 4,99 €');
     const line = text.indexOf(
-      'One-time purchase. Yours to keep. No account needed.',
+      'One-time purchase. No subscription. No account needed.',
     );
     expect(name).toBeLessThan(button);
     expect(button).toBeLessThan(line);
@@ -245,7 +245,7 @@ describe('PalPurchaseFooter', () => {
     );
     const text = JSON.stringify(toJSON());
     expect(
-      text.indexOf('One-time purchase. Yours to keep. No account needed.'),
+      text.indexOf('One-time purchase. No subscription. No account needed.'),
     ).toBeLessThan(text.indexOf('Creator updates are optional'));
   });
 
@@ -437,7 +437,7 @@ describe('PalPurchaseFooter', () => {
     const {getByText, getByTestId} = setup();
     expect(
       getByText(
-        `Story Pal is yours to keep. It's tied to your ${store} account — reinstall and tap Restore purchases to get it back.`,
+        `Story Pal is yours to use, with no subscription. It's tied to your ${store} account — reinstall and tap Restore purchases to get it back.`,
       ),
     ).toBeTruthy();
     expect(getByText('Support code: SUP-7')).toBeTruthy();
