@@ -10,6 +10,7 @@ import {
   ContextInitParams,
   RemoteSessionBinding,
 } from '../../src/utils/types';
+import type {Samplers} from '../../src/utils/samplerParams';
 import {LlamaContext} from 'llama.rn';
 import {CompletionEngine} from '../../src/utils/completionTypes';
 import {createDefaultContextInitParams} from '../../src/utils/contextInitParamsVersions';
@@ -18,6 +19,7 @@ import {
   effectiveDraftModeOf,
 } from '../../src/store/draftResolution';
 import {resolveModelCaps} from '../../src/utils/modelCaps';
+import {samplerDefaultsFor} from '../../src/utils/remoteCaps';
 import type {
   CapabilityEnv,
   ModelCapabilityView,
@@ -91,6 +93,7 @@ class MockModelStore {
   enterBenchmarkMode: jest.Mock;
   exitBenchmarkMode: jest.Mock;
   recordReasoningObserved: jest.Mock;
+  reprobeRemoteCapsAfterCompletion: jest.Mock;
   setReasoningOverride: jest.Mock;
   benchmarkActive: boolean = false;
   isContextLoading: boolean = false;
@@ -110,6 +113,7 @@ class MockModelStore {
       initContext: false,
       selectModel: false,
       setRemoteModel: false,
+      reprobeRemoteCapsAfterCompletion: false,
       checkSpaceAndDownload: false,
       getDownloadProgress: false,
       manualReleaseContext: false,
@@ -170,6 +174,7 @@ class MockModelStore {
     this.initContext = jest.fn().mockResolvedValue(Promise.resolve());
     this.selectModel = jest.fn().mockResolvedValue(Promise.resolve());
     this.setRemoteModel = jest.fn().mockResolvedValue(Promise.resolve());
+    this.reprobeRemoteCapsAfterCompletion = jest.fn();
     this.checkSpaceAndDownload = jest.fn().mockResolvedValue(undefined);
     this.getDownloadProgress = jest.fn();
     this.manualReleaseContext = jest.fn();
@@ -296,6 +301,14 @@ class MockModelStore {
 
   get activeModelCaps(): ModelCapabilityView {
     return this.capsFor(this.activeModel);
+  }
+
+  get activeSamplerDefaults(): Samplers | undefined {
+    return samplerDefaultsFor(
+      this.activeModel,
+      mockServerStore.remoteCaps,
+      this.activeRemoteBinding,
+    );
   }
 
   get displayModels(): Model[] {

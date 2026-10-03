@@ -23,7 +23,11 @@ import {useTheme} from '../../hooks';
 import {serverStore} from '../../store';
 import {L10nContext} from '../../utils';
 import {parseTimeoutMs} from '../../utils/timeout';
-import {SERVER_TYPE_DROPDOWN_OPTIONS} from '../../utils/serverTypes';
+import {
+  SERVER_TYPE_DROPDOWN_OPTIONS,
+  ServerType,
+  toServerType,
+} from '../../utils/serverTypes';
 import {testConnection} from '../../api/openai';
 import {t} from '../../locales';
 
@@ -45,7 +49,7 @@ export const ServerDetailsSheet: React.FC<ServerDetailsSheetProps> = observer(
     const [url, setUrl] = useState('');
     const [apiKey, setApiKey] = useState('');
     const [timeoutSeconds, setTimeoutSeconds] = useState('');
-    const [serverType, setServerType] = useState('unknown');
+    const [serverType, setServerType] = useState<ServerType>('unknown');
     const [secureTextEntry, setSecureTextEntry] = useState(true);
     const [isProbing, setIsProbing] = useState(false);
     const [probeResult, setProbeResult] = useState<{
@@ -55,6 +59,7 @@ export const ServerDetailsSheet: React.FC<ServerDetailsSheetProps> = observer(
     const [isSaving, setIsSaving] = useState(false);
 
     const apiKeyRef = useRef(apiKey);
+    const storedApiKeyRef = useRef('');
     useEffect(() => {
       apiKeyRef.current = apiKey;
     }, [apiKey]);
@@ -81,6 +86,7 @@ export const ServerDetailsSheet: React.FC<ServerDetailsSheetProps> = observer(
         serverStore.getApiKey(serverId).then(key => {
           setApiKey(key || '');
           apiKeyRef.current = key || '';
+          storedApiKeyRef.current = key || '';
         });
         setProbeResult(null);
         setSecureTextEntry(true);
@@ -154,17 +160,21 @@ export const ServerDetailsSheet: React.FC<ServerDetailsSheetProps> = observer(
       }
       setIsSaving(true);
       try {
-        serverStore.updateServer(serverId, {
+        const invalidated = serverStore.updateServer(serverId, {
           url: url.trim(),
           requestTimeoutMs: parseTimeoutMs(timeoutSeconds),
           serverType,
         });
-        if (apiKey.trim()) {
-          await serverStore.setApiKey(serverId, apiKey.trim());
+        const newKey = apiKey.trim();
+        if (newKey) {
+          await serverStore.setApiKey(serverId, newKey);
         } else {
           await serverStore.removeApiKey(serverId);
         }
         onDismiss();
+        if (invalidated || newKey !== storedApiKeyRef.current) {
+          serverStore.fetchModelsForServer(serverId);
+        }
       } finally {
         setIsSaving(false);
       }
@@ -251,7 +261,7 @@ export const ServerDetailsSheet: React.FC<ServerDetailsSheetProps> = observer(
               testID="server-type-dropdown"
               value={serverType}
               options={SERVER_TYPE_DROPDOWN_OPTIONS}
-              onChange={setServerType}
+              onChange={value => setServerType(toServerType(value))}
             />
             <Text style={styles.apiKeyDescription}>
               {l10n.settings.serverTypeHelp}

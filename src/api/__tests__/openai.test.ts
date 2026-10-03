@@ -1,19 +1,37 @@
 import {
+  __clearRemoteImageCache,
   fetchModels,
   fetchModelsWithHeaders,
-  fetchServerProps,
-  detectServerType,
   testConnection,
   streamChatCompletion,
-  buildReasoningPayload,
-  __clearRemoteImageCache,
 } from '../openai';
+import type {StreamChatParams} from '../openai';
+import type {RemoteEndpoint} from '../servers';
 import {
   directTextModelsBody,
   directVisionModelsBody,
   routerModelsBody,
 } from '../../../jest/fixtures/remoteModelList';
 import {cacheReuseTimings} from '../../../jest/fixtures/llamaServerTimings';
+import {runInAction} from 'mobx';
+
+import {serverStore} from '../../store';
+
+/**
+ * The endpoint a streamed turn goes to. `serverType` is taken raw, because a
+ * persisted value need not be a member of the union and these tests pin what
+ * the free-string values reach.
+ */
+const endpointFor = (
+  overrides: Partial<Omit<RemoteEndpoint, 'serverType'>> & {
+    serverType?: string;
+  } = {},
+): RemoteEndpoint => ({
+  url: 'http://localhost:1234',
+  remoteModelId: 'test-model',
+  serverType: 'unknown',
+  ...(overrides as Partial<RemoteEndpoint>),
+});
 
 /** Build a minimal Headers-like object for fetch mocks. */
 function mockHeaders(entries: Record<string, string> = {}) {
@@ -302,80 +320,6 @@ describe('fetchModelsWithHeaders', () => {
   });
 });
 
-describe('detectServerType', () => {
-  beforeEach(() => {
-    jest.clearAllMocks();
-  });
-
-  it('detects llama.cpp from Server header', async () => {
-    const result = await detectServerType(
-      'http://localhost:8080',
-      [{id: 'model-1', object: 'model', owned_by: 'system'}],
-      {server: 'llama.cpp'},
-    );
-    expect(result).toBe('llama.cpp');
-  });
-
-  it('detects LM Studio from owned_by field', async () => {
-    const result = await detectServerType(
-      'http://localhost:1234',
-      [{id: 'model-1', object: 'model', owned_by: 'organization_owner'}],
-      {},
-    );
-    expect(result).toBe('LM Studio');
-  });
-
-  it('detects Ollama from GET / response', async () => {
-    global.fetch = jest.fn().mockResolvedValueOnce({
-      text: () => Promise.resolve('Ollama is running'),
-    });
-
-    const result = await detectServerType(
-      'http://localhost:11434',
-      [{id: 'model-1', object: 'model', owned_by: 'ollama'}],
-      {},
-    );
-    expect(result).toBe('Ollama');
-    expect(global.fetch).toHaveBeenCalledWith(
-      'http://localhost:11434',
-      expect.objectContaining({method: 'GET'}),
-    );
-  });
-
-  it('returns empty string for unknown server', async () => {
-    global.fetch = jest.fn().mockResolvedValueOnce({
-      text: () => Promise.resolve('<html>Not Ollama</html>'),
-    });
-
-    const result = await detectServerType(
-      'http://localhost:9999',
-      [{id: 'model-1', object: 'model', owned_by: 'custom'}],
-      {},
-    );
-    expect(result).toBe('');
-  });
-
-  it('returns empty string when Ollama probe fails', async () => {
-    global.fetch = jest.fn().mockRejectedValueOnce(new Error('Network error'));
-
-    const result = await detectServerType(
-      'http://localhost:9999',
-      [{id: 'model-1', object: 'model', owned_by: 'custom'}],
-      {},
-    );
-    expect(result).toBe('');
-  });
-
-  it('prefers llama.cpp header over LM Studio owned_by', async () => {
-    const result = await detectServerType(
-      'http://localhost:8080',
-      [{id: 'model-1', object: 'model', owned_by: 'organization_owner'}],
-      {server: 'llama.cpp'},
-    );
-    expect(result).toBe('llama.cpp');
-  });
-});
-
 describe('testConnection', () => {
   beforeEach(() => {
     jest.clearAllMocks();
@@ -463,230 +407,6 @@ describe('testConnection', () => {
     await expect(
       testConnection('http://localhost:1234', undefined, undefined),
     ).resolves.toEqual({ok: true, modelCount: 1});
-  });
-});
-
-describe('fetchServerProps', () => {
-  beforeEach(() => {
-    jest.clearAllMocks();
-  });
-
-  it('parses contextLength from default_generation_settings.n_ctx and vision', async () => {
-    global.fetch = jest.fn().mockResolvedValueOnce({
-      ok: true,
-      json: () =>
-        Promise.resolve({
-          default_generation_settings: {n_ctx: 4096},
-          modalities: {vision: true, audio: false},
-        }),
-    });
-
-    const props = await fetchServerProps('http://localhost:8080');
-
-    expect(global.fetch).toHaveBeenCalledWith(
-      'http://localhost:8080/props',
-      expect.objectContaining({method: 'GET'}),
-    );
-    expect(props).toEqual({contextLength: 4096, supportsVision: true});
-  });
-
-  it('falls back to top-level n_ctx and reports vision false when not present', async () => {
-    global.fetch = jest.fn().mockResolvedValueOnce({
-      ok: true,
-      json: () => Promise.resolve({n_ctx: 8192}),
-    });
-
-    const props = await fetchServerProps('http://localhost:8080');
-    expect(props).toEqual({contextLength: 8192, supportsVision: false});
-  });
-
-  it('returns supportsVision false (defined, not omitted) when vision is off', async () => {
-    global.fetch = jest.fn().mockResolvedValueOnce({
-      ok: true,
-      json: () =>
-        Promise.resolve({
-          default_generation_settings: {n_ctx: 4096},
-          modalities: {vision: false},
-        }),
-    });
-
-    const props = await fetchServerProps('http://localhost:8080');
-    // Defined false on a 2xx probe clears a stale true on a model swap; a
-    // failed probe would return {} instead.
-    expect(props).toEqual({contextLength: 4096, supportsVision: false});
-  });
-
-  it('resolves to empty caps on a non-2xx response', async () => {
-    global.fetch = jest.fn().mockResolvedValueOnce({ok: false, status: 404});
-
-    await expect(fetchServerProps('http://localhost:8080')).resolves.toEqual(
-      {},
-    );
-  });
-
-  it('resolves to empty caps on a network error (never throws)', async () => {
-    global.fetch = jest.fn().mockRejectedValueOnce(new Error('boom'));
-
-    await expect(fetchServerProps('http://localhost:8080')).resolves.toEqual(
-      {},
-    );
-  });
-
-  it('resolves to empty caps on malformed JSON', async () => {
-    global.fetch = jest.fn().mockResolvedValueOnce({
-      ok: true,
-      json: () => Promise.reject(new Error('bad json')),
-    });
-
-    await expect(fetchServerProps('http://localhost:8080')).resolves.toEqual(
-      {},
-    );
-  });
-
-  it('scopes the request to a model id when one is supplied', async () => {
-    global.fetch = jest.fn().mockResolvedValueOnce({
-      ok: true,
-      json: () =>
-        Promise.resolve({
-          model_path: '/models/gemma-4-e2b.gguf',
-          default_generation_settings: {n_ctx: 8192},
-          modalities: {vision: true, video: true, audio: true},
-        }),
-    });
-
-    const props = await fetchServerProps(
-      'http://localhost:8080',
-      undefined,
-      undefined,
-      'gemma-4-e2b',
-    );
-
-    expect(global.fetch).toHaveBeenCalledWith(
-      'http://localhost:8080/props?model=gemma-4-e2b',
-      expect.objectContaining({method: 'GET'}),
-    );
-    expect(props).toEqual({contextLength: 8192, supportsVision: true});
-  });
-
-  it('url-encodes a model id containing a slash', async () => {
-    global.fetch = jest.fn().mockResolvedValueOnce({
-      ok: true,
-      json: () => Promise.resolve({n_ctx: 4096}),
-    });
-
-    await fetchServerProps(
-      'http://localhost:8080',
-      undefined,
-      undefined,
-      'unsloth/gemma-3-4b',
-    );
-
-    expect(global.fetch).toHaveBeenCalledWith(
-      'http://localhost:8080/props?model=unsloth%2Fgemma-3-4b',
-      expect.objectContaining({method: 'GET'}),
-    );
-  });
-
-  it('returns empty caps for a router placeholder body', async () => {
-    global.fetch = jest.fn().mockResolvedValueOnce({
-      ok: true,
-      json: () =>
-        Promise.resolve({
-          role: 'router',
-          model_path: 'none',
-          default_generation_settings: {n_ctx: 0},
-          modalities: null,
-        }),
-    });
-
-    const props = await fetchServerProps('http://localhost:8080');
-
-    // n_ctx 0 is "unknown", not a window, and vision is undecidable on a body
-    // that describes no model — both fields stay absent.
-    expect(props).toEqual({});
-  });
-
-  it('omits contextLength when n_ctx is zero, negative, or not a number', async () => {
-    for (const n_ctx of [0, -1, NaN, '4096']) {
-      global.fetch = jest.fn().mockResolvedValueOnce({
-        ok: true,
-        json: () =>
-          Promise.resolve({
-            model_path: '/models/m.gguf',
-            n_ctx,
-            modalities: {},
-          }),
-      });
-
-      const props = await fetchServerProps('http://localhost:8080');
-      expect(props.contextLength).toBeUndefined();
-    }
-  });
-
-  it('reports vision false when a real model body carries no modalities key', async () => {
-    global.fetch = jest.fn().mockResolvedValueOnce({
-      ok: true,
-      json: () =>
-        Promise.resolve({
-          model_path: '/models/old-build.gguf',
-          default_generation_settings: {n_ctx: 2048},
-        }),
-    });
-
-    const props = await fetchServerProps('http://localhost:8080');
-    expect(props).toEqual({contextLength: 2048, supportsVision: false});
-  });
-
-  it('decides vision from model_path alone when no window is reported', async () => {
-    global.fetch = jest.fn().mockResolvedValueOnce({
-      ok: true,
-      json: () =>
-        Promise.resolve({
-          model_path: '/models/m.gguf',
-          n_ctx: 0,
-          modalities: {vision: true},
-        }),
-    });
-
-    const props = await fetchServerProps('http://localhost:8080');
-    expect(props).toEqual({supportsVision: true});
-  });
-
-  it('bounds an omitted timeout at the props default, not the connection default', async () => {
-    jest.useFakeTimers();
-    const setTimeoutSpy = jest.spyOn(global, 'setTimeout');
-    global.fetch = jest.fn().mockResolvedValueOnce({
-      ok: true,
-      json: () => Promise.resolve({}),
-    });
-
-    await fetchServerProps('http://localhost:8080');
-
-    expect(setTimeoutSpy).toHaveBeenCalledWith(expect.any(Function), 5000);
-    setTimeoutSpy.mockRestore();
-    jest.useRealTimers();
-  });
-
-  it('falls back to the props default when the server timeout is unusable', async () => {
-    jest.useFakeTimers();
-    const setTimeoutSpy = jest.spyOn(global, 'setTimeout');
-    global.fetch = jest.fn().mockResolvedValue({
-      ok: true,
-      json: () => Promise.resolve({}),
-    });
-
-    for (const timeout of [0, -1, NaN]) {
-      setTimeoutSpy.mockClear();
-      await fetchServerProps('http://localhost:8080', undefined, timeout);
-      expect(setTimeoutSpy).toHaveBeenCalledWith(expect.any(Function), 5000);
-    }
-
-    setTimeoutSpy.mockClear();
-    await fetchServerProps('http://localhost:8080', undefined, 20000);
-    expect(setTimeoutSpy).toHaveBeenCalledWith(expect.any(Function), 20000);
-
-    setTimeoutSpy.mockRestore();
-    jest.useRealTimers();
   });
 });
 
@@ -793,9 +513,12 @@ describe('streamChatCompletion', () => {
   it('streams tokens and returns full completion result', async () => {
     const onToken = jest.fn();
     const resultPromise = streamChatCompletion(
-      {messages: [{role: 'user', content: 'Hi'}], model: 'test-model'},
-      'http://localhost:1234',
-      undefined,
+      {
+        samplers: {},
+        messages: [{role: 'user', content: 'Hi'}],
+        model: 'test-model',
+      },
+      endpointFor(),
       undefined,
       onToken,
     );
@@ -841,15 +564,12 @@ describe('streamChatCompletion', () => {
   it('sends correct request headers and body', async () => {
     const resultPromise = streamChatCompletion(
       {
+        samplers: {temperature: 0.7, top_p: 0.9, n_predict: 100},
         messages: [{role: 'user', content: 'Hi'}],
         model: 'test-model',
-        temperature: 0.7,
-        top_p: 0.9,
-        max_tokens: 100,
         stop: ['</s>'],
       },
-      'http://localhost:1234',
-      'sk-key',
+      endpointFor({apiKey: 'sk-key'}),
     );
 
     const xhr = MockXHR.instances[0];
@@ -883,6 +603,7 @@ describe('streamChatCompletion', () => {
 
     const resultPromise = streamChatCompletion(
       {
+        samplers: {},
         messages: [
           {
             role: 'user',
@@ -894,7 +615,7 @@ describe('streamChatCompletion', () => {
         ],
         model: 'test-model',
       },
-      'http://localhost:1234',
+      endpointFor(),
     );
 
     await new Promise(r => setImmediate(r));
@@ -917,6 +638,7 @@ describe('streamChatCompletion', () => {
 
     const resultPromise = streamChatCompletion(
       {
+        samplers: {},
         messages: [
           {
             role: 'user',
@@ -931,7 +653,7 @@ describe('streamChatCompletion', () => {
         ],
         model: 'test-model',
       },
-      'http://localhost:1234',
+      endpointFor(),
     );
 
     await new Promise(r => setImmediate(r));
@@ -957,8 +679,12 @@ describe('streamChatCompletion', () => {
     const RNFS = require('@dr.pogodin/react-native-fs');
 
     const resultPromise = streamChatCompletion(
-      {messages: [{role: 'user', content: 'plain text'}], model: 'test-model'},
-      'http://localhost:1234',
+      {
+        samplers: {},
+        messages: [{role: 'user', content: 'plain text'}],
+        model: 'test-model',
+      },
+      endpointFor(),
     );
 
     await new Promise(r => setImmediate(r));
@@ -999,8 +725,12 @@ describe('streamChatCompletion', () => {
     (RNFS.readFile as jest.Mock).mockResolvedValue('QUJD');
 
     const p1 = streamChatCompletion(
-      {messages: [imageMessage('file:///tmp/cached.png')], model: 'm'},
-      'http://localhost:1234',
+      {
+        samplers: {},
+        messages: [imageMessage('file:///tmp/cached.png')],
+        model: 'm',
+      },
+      endpointFor(),
     );
     await new Promise(r => setImmediate(r));
     const body1 = JSON.parse(MockXHR.instances[0].requestBody);
@@ -1010,8 +740,12 @@ describe('streamChatCompletion', () => {
     await finishStream(MockXHR.instances[0], p1);
 
     const p2 = streamChatCompletion(
-      {messages: [imageMessage('file:///tmp/cached.png')], model: 'm'},
-      'http://localhost:1234',
+      {
+        samplers: {},
+        messages: [imageMessage('file:///tmp/cached.png')],
+        model: 'm',
+      },
+      endpointFor(),
     );
     await new Promise(r => setImmediate(r));
     const body2 = JSON.parse(MockXHR.instances[1].requestBody);
@@ -1033,8 +767,8 @@ describe('streamChatCompletion', () => {
 
     const send = async (path: string) => {
       const p = streamChatCompletion(
-        {messages: [imageMessage(path)], model: 'm'},
-        'http://localhost:1234',
+        {samplers: {}, messages: [imageMessage(path)], model: 'm'},
+        endpointFor(),
       );
       await new Promise(r => setImmediate(r));
       await finishStream(MockXHR.instances[MockXHR.instances.length - 1], p);
@@ -1064,12 +798,20 @@ describe('streamChatCompletion', () => {
     // both miss the read-side lookup and both call the cache setter; the second
     // set hits the `has()` guard and does not double-count the entry.
     const p1 = streamChatCompletion(
-      {messages: [imageMessage('file:///tmp/race.png')], model: 'm'},
-      'http://localhost:1234',
+      {
+        samplers: {},
+        messages: [imageMessage('file:///tmp/race.png')],
+        model: 'm',
+      },
+      endpointFor(),
     );
     const p2 = streamChatCompletion(
-      {messages: [imageMessage('file:///tmp/race.png')], model: 'm'},
-      'http://localhost:1234',
+      {
+        samplers: {},
+        messages: [imageMessage('file:///tmp/race.png')],
+        model: 'm',
+      },
+      endpointFor(),
     );
     await new Promise(r => setImmediate(r));
     await finishStream(MockXHR.instances[0], p1);
@@ -1078,8 +820,12 @@ describe('streamChatCompletion', () => {
 
     // A subsequent send is a plain cache hit — the raced entry cached cleanly.
     const p3 = streamChatCompletion(
-      {messages: [imageMessage('file:///tmp/race.png')], model: 'm'},
-      'http://localhost:1234',
+      {
+        samplers: {},
+        messages: [imageMessage('file:///tmp/race.png')],
+        model: 'm',
+      },
+      endpointFor(),
     );
     await new Promise(r => setImmediate(r));
     await finishStream(MockXHR.instances[2], p3);
@@ -1091,8 +837,12 @@ describe('streamChatCompletion', () => {
     (RNFS.readFile as jest.Mock).mockResolvedValueOnce('QUJD');
 
     const p = streamChatCompletion(
-      {messages: [imageMessage('content://media/1234')], model: 'm'},
-      'http://localhost:1234',
+      {
+        samplers: {},
+        messages: [imageMessage('content://media/1234')],
+        model: 'm',
+      },
+      endpointFor(),
     );
     await new Promise(r => setImmediate(r));
     const body = JSON.parse(MockXHR.instances[0].requestBody);
@@ -1107,8 +857,12 @@ describe('streamChatCompletion', () => {
     (RNFS.stat as jest.Mock).mockResolvedValueOnce({size: 20 * 1024 * 1024});
 
     const p = streamChatCompletion(
-      {messages: [imageMessage('file:///tmp/huge.png')], model: 'm'},
-      'http://localhost:1234',
+      {
+        samplers: {},
+        messages: [imageMessage('file:///tmp/huge.png')],
+        model: 'm',
+      },
+      endpointFor(),
     );
     await new Promise(r => setImmediate(r));
     const body = JSON.parse(MockXHR.instances[0].requestBody);
@@ -1126,8 +880,12 @@ describe('streamChatCompletion', () => {
     (RNFS.readFile as jest.Mock).mockResolvedValueOnce('QUJD');
 
     const p = streamChatCompletion(
-      {messages: [imageMessage('file:///tmp/nostat.png')], model: 'm'},
-      'http://localhost:1234',
+      {
+        samplers: {},
+        messages: [imageMessage('file:///tmp/nostat.png')],
+        model: 'm',
+      },
+      endpointFor(),
     );
     await new Promise(r => setImmediate(r));
     const body = JSON.parse(MockXHR.instances[0].requestBody);
@@ -1143,8 +901,12 @@ describe('streamChatCompletion', () => {
     (RNFS.readFile as jest.Mock).mockResolvedValueOnce('QUJD');
 
     const p = streamChatCompletion(
-      {messages: [imageMessage('file:///tmp/statfail.png')], model: 'm'},
-      'http://localhost:1234',
+      {
+        samplers: {},
+        messages: [imageMessage('file:///tmp/statfail.png')],
+        model: 'm',
+      },
+      endpointFor(),
     );
     await new Promise(r => setImmediate(r));
     const body = JSON.parse(MockXHR.instances[0].requestBody);
@@ -1162,6 +924,7 @@ describe('streamChatCompletion', () => {
 
     const p = streamChatCompletion(
       {
+        samplers: {},
         messages: [
           {
             role: 'user',
@@ -1173,7 +936,7 @@ describe('streamChatCompletion', () => {
         ],
         model: 'm',
       },
-      'http://localhost:1234',
+      endpointFor(),
     );
     await new Promise(r => setImmediate(r));
     const body = JSON.parse(MockXHR.instances[0].requestBody);
@@ -1192,6 +955,7 @@ describe('streamChatCompletion', () => {
     const schema = {type: 'object', properties: {name: {type: 'string'}}};
     const resultPromise = streamChatCompletion(
       {
+        samplers: {},
         messages: [{role: 'user', content: 'Hi'}],
         model: 'test-model',
         response_format: {
@@ -1199,7 +963,7 @@ describe('streamChatCompletion', () => {
           json_schema: {strict: true, schema},
         },
       },
-      'http://localhost:1234',
+      endpointFor(),
     );
 
     const xhr = MockXHR.instances[0];
@@ -1221,6 +985,7 @@ describe('streamChatCompletion', () => {
     const schema = {type: 'object', properties: {x: {type: 'number'}}};
     const resultPromise = streamChatCompletion(
       {
+        samplers: {},
         messages: [{role: 'user', content: 'Hi'}],
         model: 'test-model',
         response_format: {
@@ -1228,7 +993,7 @@ describe('streamChatCompletion', () => {
           json_schema: {name: 'custom', strict: false, schema},
         },
       },
-      'http://localhost:1234',
+      endpointFor(),
     );
 
     const xhr = MockXHR.instances[0];
@@ -1245,8 +1010,12 @@ describe('streamChatCompletion', () => {
 
   it('maps finish_reason "length" to stopped_limit', async () => {
     const resultPromise = streamChatCompletion(
-      {messages: [{role: 'user', content: 'Hi'}], model: 'test-model'},
-      'http://localhost:1234',
+      {
+        samplers: {},
+        messages: [{role: 'user', content: 'Hi'}],
+        model: 'test-model',
+      },
+      endpointFor(),
     );
 
     const xhr = MockXHR.instances[0];
@@ -1266,8 +1035,12 @@ describe('streamChatCompletion', () => {
 
   it('maps finish_reason "content_filter" to interrupted', async () => {
     const resultPromise = streamChatCompletion(
-      {messages: [{role: 'user', content: 'Hi'}], model: 'test-model'},
-      'http://localhost:1234',
+      {
+        samplers: {},
+        messages: [{role: 'user', content: 'Hi'}],
+        model: 'test-model',
+      },
+      endpointFor(),
     );
 
     const xhr = MockXHR.instances[0];
@@ -1287,9 +1060,12 @@ describe('streamChatCompletion', () => {
   it('skips malformed SSE events', async () => {
     const onToken = jest.fn();
     const resultPromise = streamChatCompletion(
-      {messages: [{role: 'user', content: 'Hi'}], model: 'test-model'},
-      'http://localhost:1234',
-      undefined,
+      {
+        samplers: {},
+        messages: [{role: 'user', content: 'Hi'}],
+        model: 'test-model',
+      },
+      endpointFor(),
       undefined,
       onToken,
     );
@@ -1311,9 +1087,12 @@ describe('streamChatCompletion', () => {
   it('handles reasoning_content in streaming delta', async () => {
     const onToken = jest.fn();
     const resultPromise = streamChatCompletion(
-      {messages: [{role: 'user', content: 'Hi'}], model: 'test-model'},
-      'http://localhost:1234',
-      undefined,
+      {
+        samplers: {},
+        messages: [{role: 'user', content: 'Hi'}],
+        model: 'test-model',
+      },
+      endpointFor(),
       undefined,
       onToken,
     );
@@ -1343,9 +1122,12 @@ describe('streamChatCompletion', () => {
   it('handles delta.reasoning field (LM Studio format)', async () => {
     const onToken = jest.fn();
     const resultPromise = streamChatCompletion(
-      {messages: [{role: 'user', content: 'Hi'}], model: 'test-model'},
-      'http://localhost:1234',
-      undefined,
+      {
+        samplers: {},
+        messages: [{role: 'user', content: 'Hi'}],
+        model: 'test-model',
+      },
+      endpointFor(),
       undefined,
       onToken,
     );
@@ -1374,8 +1156,12 @@ describe('streamChatCompletion', () => {
 
   it('rejects on 401 response', async () => {
     const resultPromise = streamChatCompletion(
-      {messages: [{role: 'user', content: 'Hi'}], model: 'test-model'},
-      'http://localhost:1234',
+      {
+        samplers: {},
+        messages: [{role: 'user', content: 'Hi'}],
+        model: 'test-model',
+      },
+      endpointFor(),
     );
 
     const xhr = MockXHR.instances[0];
@@ -1388,8 +1174,12 @@ describe('streamChatCompletion', () => {
 
   it('rejects on network error', async () => {
     const resultPromise = streamChatCompletion(
-      {messages: [{role: 'user', content: 'Hi'}], model: 'test-model'},
-      'http://localhost:1234',
+      {
+        samplers: {},
+        messages: [{role: 'user', content: 'Hi'}],
+        model: 'test-model',
+      },
+      endpointFor(),
     );
 
     const xhr = MockXHR.instances[0];
@@ -1400,8 +1190,12 @@ describe('streamChatCompletion', () => {
 
   it('rejects on server error response with body', async () => {
     const resultPromise = streamChatCompletion(
-      {messages: [{role: 'user', content: 'Hi'}], model: 'test-model'},
-      'http://localhost:1234',
+      {
+        samplers: {},
+        messages: [{role: 'user', content: 'Hi'}],
+        model: 'test-model',
+      },
+      endpointFor(),
     );
 
     const xhr = MockXHR.instances[0];
@@ -1417,9 +1211,12 @@ describe('streamChatCompletion', () => {
   it('handles abort via AbortController', async () => {
     const controller = new AbortController();
     const resultPromise = streamChatCompletion(
-      {messages: [{role: 'user', content: 'Hi'}], model: 'test-model'},
-      'http://localhost:1234',
-      undefined,
+      {
+        samplers: {},
+        messages: [{role: 'user', content: 'Hi'}],
+        model: 'test-model',
+      },
+      endpointFor(),
       controller.signal,
     );
 
@@ -1439,8 +1236,12 @@ describe('streamChatCompletion', () => {
 
   it('captures server-side timings from SSE events (llama.cpp)', async () => {
     const resultPromise = streamChatCompletion(
-      {messages: [{role: 'user', content: 'Hi'}], model: 'test-model'},
-      'http://localhost:1234',
+      {
+        samplers: {},
+        messages: [{role: 'user', content: 'Hi'}],
+        model: 'test-model',
+      },
+      endpointFor(),
     );
 
     const xhr = MockXHR.instances[0];
@@ -1466,10 +1267,72 @@ describe('streamChatCompletion', () => {
     expect(result.stopped_eos).toBe(true);
   });
 
+  it('keeps the timings of the last event that carried them', async () => {
+    const resultPromise = streamChatCompletion(
+      {
+        samplers: {},
+        messages: [{role: 'user', content: 'Hi'}],
+        model: 'test-model',
+      },
+      endpointFor(),
+    );
+
+    const xhr = MockXHR.instances[0];
+    xhr.simulateHeaders(200);
+    xhr.simulateProgress(
+      'data: {"choices":[{"delta":{"content":"Hi"},"finish_reason":null}],"timings":{"prompt_n":1,"predicted_n":1}}\n\n',
+    );
+    xhr.simulateProgress(
+      'data: {"choices":[{"delta":{},"finish_reason":"stop"}],"timings":{"prompt_n":9,"predicted_n":4}}\n\n',
+    );
+    xhr.simulateProgress('data: [DONE]\n\n');
+    xhr.simulateLoad();
+
+    const result = await resultPromise;
+    expect(result.timings).toEqual({prompt_n: 9, predicted_n: 4});
+    expect(result.tokens_evaluated).toBe(9);
+    expect(result.tokens_predicted).toBe(4);
+  });
+
+  it('reads the final frame that arrives without a trailing blank line', async () => {
+    const resultPromise = streamChatCompletion(
+      {
+        samplers: {},
+        messages: [{role: 'user', content: 'Hi'}],
+        model: 'test-model',
+      },
+      endpointFor(),
+    );
+
+    const xhr = MockXHR.instances[0];
+    xhr.simulateHeaders(200);
+    xhr.simulateProgress(
+      'data: {"choices":[{"delta":{"content":"Hel"},"finish_reason":null}]}\n\n',
+    );
+    // No terminating "\n\n", so the SSE parser holds this frame in its buffer
+    // and only the flush at onload can reach it.
+    xhr.simulateProgress(
+      'data: {"choices":[{"delta":{"content":"lo","reasoning_content":"why"},"finish_reason":"stop"}],"timings":{"prompt_n":7,"cache_n":2,"predicted_n":5}}',
+    );
+    xhr.simulateLoad();
+
+    const result = await resultPromise;
+    expect(result.timings).toEqual({prompt_n: 7, cache_n: 2, predicted_n: 5});
+    expect(result.tokens_evaluated).toBe(9);
+    expect(result.tokens_predicted).toBe(5);
+    expect(result.content).toBe('Hello');
+    expect(result.reasoning_content).toBe('why');
+    expect(result.stopped_eos).toBe(true);
+  });
+
   it('reconciles token counts from timings prompt_n/predicted_n', async () => {
     const resultPromise = streamChatCompletion(
-      {messages: [{role: 'user', content: 'Hi'}], model: 'test-model'},
-      'http://localhost:1234',
+      {
+        samplers: {},
+        messages: [{role: 'user', content: 'Hi'}],
+        model: 'test-model',
+      },
+      endpointFor(),
     );
 
     const xhr = MockXHR.instances[0];
@@ -1491,8 +1354,12 @@ describe('streamChatCompletion', () => {
 
   it('adds the cache-reused prefix to the evaluated prompt count', async () => {
     const resultPromise = streamChatCompletion(
-      {messages: [{role: 'user', content: 'Hi'}], model: 'test-model'},
-      'http://localhost:1234',
+      {
+        samplers: {},
+        messages: [{role: 'user', content: 'Hi'}],
+        model: 'test-model',
+      },
+      endpointFor(),
     );
 
     const xhr = MockXHR.instances[0];
@@ -1529,8 +1396,12 @@ describe('streamChatCompletion', () => {
 
     const finish = async (timings: Record<string, number>) => {
       const resultPromise = streamChatCompletion(
-        {messages: [{role: 'user', content: 'Hi'}], model: 'test-model'},
-        'http://localhost:1234',
+        {
+          samplers: {},
+          messages: [{role: 'user', content: 'Hi'}],
+          model: 'test-model',
+        },
+        endpointFor(),
       );
       const xhr = MockXHR.instances[MockXHR.instances.length - 1];
       xhr.simulateHeaders(200);
@@ -1562,8 +1433,12 @@ describe('streamChatCompletion', () => {
 
   it('guards each timings token key independently (only predicted_n)', async () => {
     const resultPromise = streamChatCompletion(
-      {messages: [{role: 'user', content: 'Hi'}], model: 'test-model'},
-      'http://localhost:1234',
+      {
+        samplers: {},
+        messages: [{role: 'user', content: 'Hi'}],
+        model: 'test-model',
+      },
+      endpointFor(),
     );
 
     const xhr = MockXHR.instances[0];
@@ -1585,8 +1460,12 @@ describe('streamChatCompletion', () => {
 
   it('guards each timings token key independently (only prompt_n)', async () => {
     const resultPromise = streamChatCompletion(
-      {messages: [{role: 'user', content: 'Hi'}], model: 'test-model'},
-      'http://localhost:1234',
+      {
+        samplers: {},
+        messages: [{role: 'user', content: 'Hi'}],
+        model: 'test-model',
+      },
+      endpointFor(),
     );
 
     const xhr = MockXHR.instances[0];
@@ -1612,8 +1491,12 @@ describe('streamChatCompletion', () => {
 
   it('guards each timings token key independently (only cache_n)', async () => {
     const resultPromise = streamChatCompletion(
-      {messages: [{role: 'user', content: 'Hi'}], model: 'test-model'},
-      'http://localhost:1234',
+      {
+        samplers: {},
+        messages: [{role: 'user', content: 'Hi'}],
+        model: 'test-model',
+      },
+      endpointFor(),
     );
 
     const xhr = MockXHR.instances[0];
@@ -1638,8 +1521,12 @@ describe('streamChatCompletion', () => {
 
   it('returns no timings when server does not provide them', async () => {
     const resultPromise = streamChatCompletion(
-      {messages: [{role: 'user', content: 'Hi'}], model: 'test-model'},
-      'http://localhost:1234',
+      {
+        samplers: {},
+        messages: [{role: 'user', content: 'Hi'}],
+        model: 'test-model',
+      },
+      endpointFor(),
     );
 
     const xhr = MockXHR.instances[0];
@@ -1665,9 +1552,12 @@ describe('streamChatCompletion', () => {
 
     await expect(
       streamChatCompletion(
-        {messages: [{role: 'user', content: 'Hi'}], model: 'test-model'},
-        'http://localhost:1234',
-        undefined,
+        {
+          samplers: {},
+          messages: [{role: 'user', content: 'Hi'}],
+          model: 'test-model',
+        },
+        endpointFor(),
         controller.signal,
       ),
     ).rejects.toThrow('Completion aborted');
@@ -1691,12 +1581,13 @@ describe('streamChatCompletion', () => {
     it('forwards tools and tool_choice in the request body', async () => {
       const resultPromise = streamChatCompletion(
         {
+          samplers: {},
           messages: [{role: 'user', content: 'What is 2+2?'}],
           model: 'test-model',
           tools: [calculateTool],
           tool_choice: 'auto',
         },
-        'http://localhost:1234',
+        endpointFor(),
       );
 
       const xhr = MockXHR.instances[0];
@@ -1715,8 +1606,12 @@ describe('streamChatCompletion', () => {
 
     it('omits tools/tool_choice from the body when caller did not supply them', async () => {
       const resultPromise = streamChatCompletion(
-        {messages: [{role: 'user', content: 'hi'}], model: 'test-model'},
-        'http://localhost:1234',
+        {
+          samplers: {},
+          messages: [{role: 'user', content: 'hi'}],
+          model: 'test-model',
+        },
+        endpointFor(),
       );
       const xhr = MockXHR.instances[0];
       const body = JSON.parse(xhr.requestBody);
@@ -1734,11 +1629,12 @@ describe('streamChatCompletion', () => {
     it('omits empty tools array (some servers reject it)', async () => {
       const resultPromise = streamChatCompletion(
         {
+          samplers: {},
           messages: [{role: 'user', content: 'hi'}],
           model: 'test-model',
           tools: [],
         },
-        'http://localhost:1234',
+        endpointFor(),
       );
       const xhr = MockXHR.instances[0];
       const body = JSON.parse(xhr.requestBody);
@@ -1756,12 +1652,12 @@ describe('streamChatCompletion', () => {
       const onToken = jest.fn();
       const resultPromise = streamChatCompletion(
         {
+          samplers: {},
           messages: [{role: 'user', content: 'What is 2+2?'}],
           model: 'test-model',
           tools: [calculateTool],
         },
-        'http://localhost:1234',
-        undefined,
+        endpointFor(),
         undefined,
         onToken,
       );
@@ -1829,11 +1725,12 @@ describe('streamChatCompletion', () => {
     it('handles parallel tool_calls indexed across chunks', async () => {
       const resultPromise = streamChatCompletion(
         {
+          samplers: {},
           messages: [{role: 'user', content: 'Hi'}],
           model: 'test-model',
           tools: [calculateTool],
         },
-        'http://localhost:1234',
+        endpointFor(),
       );
 
       const xhr = MockXHR.instances[0];
@@ -1871,12 +1768,12 @@ describe('streamChatCompletion', () => {
     // headers well past the 30s default without a premature reject.
     it('honours a raised connection timeout (does not abort before configured value)', async () => {
       const resultPromise = streamChatCompletion(
-        {messages: [{role: 'user', content: 'Hi'}], model: 'test-model'},
-        'http://localhost:1234',
-        undefined,
-        undefined,
-        undefined,
-        600000,
+        {
+          samplers: {},
+          messages: [{role: 'user', content: 'Hi'}],
+          model: 'test-model',
+        },
+        endpointFor({timeoutMs: 600000}),
       );
       // Surface any rejection deterministically without an unhandled promise.
       let rejected: Error | null = null;
@@ -1912,8 +1809,12 @@ describe('streamChatCompletion', () => {
     // existing 30s default.
     it('aborts at the 30s default connection timeout when timeoutMs is omitted', async () => {
       const resultPromise = streamChatCompletion(
-        {messages: [{role: 'user', content: 'Hi'}], model: 'test-model'},
-        'http://localhost:1234',
+        {
+          samplers: {},
+          messages: [{role: 'user', content: 'Hi'}],
+          model: 'test-model',
+        },
+        endpointFor(),
       );
 
       // Drive past the 30s default — no headers received.
@@ -1926,12 +1827,12 @@ describe('streamChatCompletion', () => {
     // via the idle guard (not the connection guard).
     it('aborts at the configured idle timeout after connecting', async () => {
       const resultPromise = streamChatCompletion(
-        {messages: [{role: 'user', content: 'Hi'}], model: 'test-model'},
-        'http://localhost:1234',
-        undefined,
-        undefined,
-        undefined,
-        120000,
+        {
+          samplers: {},
+          messages: [{role: 'user', content: 'Hi'}],
+          model: 'test-model',
+        },
+        endpointFor({timeoutMs: 120000}),
       );
 
       const xhr = MockXHR.instances[0];
@@ -1954,12 +1855,12 @@ describe('streamChatCompletion', () => {
     // durations changed, not the per-chunk reset structure.
     it('resets the idle timer on each chunk (healthy stream outlives total timeout)', async () => {
       const resultPromise = streamChatCompletion(
-        {messages: [{role: 'user', content: 'Hi'}], model: 'test-model'},
-        'http://localhost:1234',
-        undefined,
-        undefined,
-        undefined,
-        100000,
+        {
+          samplers: {},
+          messages: [{role: 'user', content: 'Hi'}],
+          model: 'test-model',
+        },
+        endpointFor({timeoutMs: 100000}),
       );
       let rejected: Error | null = null;
       resultPromise.catch((e: Error) => {
@@ -2008,12 +1909,12 @@ describe('streamChatCompletion', () => {
         'falls back to the 30s default when timeoutMs is %s',
         async (_label, badValue) => {
           const resultPromise = streamChatCompletion(
-            {messages: [{role: 'user', content: 'Hi'}], model: 'test-model'},
-            'http://localhost:1234',
-            undefined,
-            undefined,
-            undefined,
-            badValue as number | undefined,
+            {
+              samplers: {},
+              messages: [{role: 'user', content: 'Hi'}],
+              model: 'test-model',
+            },
+            endpointFor({timeoutMs: badValue as number | undefined}),
           );
           let rejected: Error | null = null;
           resultPromise.catch((e: Error) => {
@@ -2035,12 +1936,12 @@ describe('streamChatCompletion', () => {
       // the configured value, not the default.
       it('passes a positive finite timeoutMs through (guard fires at configured value)', async () => {
         const resultPromise = streamChatCompletion(
-          {messages: [{role: 'user', content: 'Hi'}], model: 'test-model'},
-          'http://localhost:1234',
-          undefined,
-          undefined,
-          undefined,
-          5000,
+          {
+            samplers: {},
+            messages: [{role: 'user', content: 'Hi'}],
+            model: 'test-model',
+          },
+          endpointFor({timeoutMs: 5000}),
         );
         let rejected: Error | null = null;
         resultPromise.catch((e: Error) => {
@@ -2060,89 +1961,6 @@ describe('streamChatCompletion', () => {
   });
 });
 
-describe('buildReasoningPayload (per-serverType gating)', () => {
-  it('returns empty when no reasoning intent', () => {
-    expect(buildReasoningPayload('llama.cpp', undefined)).toEqual({});
-  });
-
-  it('llama.cpp ON sends reasoning_format auto', () => {
-    expect(buildReasoningPayload('llama.cpp', {enabled: true})).toEqual({
-      reasoning_format: 'auto',
-    });
-  });
-
-  it('llama.cpp ON+effort sends reasoning_format auto + reasoning_effort', () => {
-    expect(
-      buildReasoningPayload('llama.cpp', {enabled: true, effort: 'high'}),
-    ).toEqual({
-      reasoning_format: 'auto',
-      chat_template_kwargs: {reasoning_effort: 'high'},
-    });
-  });
-
-  it('llama.cpp OFF sends enable_thinking:false + reasoning_format auto', () => {
-    expect(buildReasoningPayload('llama.cpp', {enabled: false})).toEqual({
-      reasoning_format: 'auto',
-      chat_template_kwargs: {enable_thinking: false},
-    });
-  });
-
-  it('LM Studio is on/off only — no graded effort', () => {
-    expect(buildReasoningPayload('LM Studio', {enabled: false})).toEqual({
-      chat_template_kwargs: {enable_thinking: false},
-    });
-    expect(buildReasoningPayload('LM Studio', {enabled: true})).toEqual({});
-    // Even when an effort is set, LM Studio never sends reasoning_effort.
-    const onEffort = buildReasoningPayload('LM Studio', {
-      enabled: true,
-      effort: 'high',
-    });
-    expect(onEffort).toEqual({});
-    expect(onEffort).not.toHaveProperty('reasoning_effort');
-  });
-
-  it('vLLM ON+effort sends chat_template_kwargs.reasoning_effort', () => {
-    expect(
-      buildReasoningPayload('vLLM', {enabled: true, effort: 'max'}),
-    ).toEqual({chat_template_kwargs: {reasoning_effort: 'max'}});
-    // ON without an effort sends nothing.
-    expect(buildReasoningPayload('vLLM', {enabled: true})).toEqual({});
-  });
-
-  it('vLLM OFF sends enable_thinking:false', () => {
-    expect(buildReasoningPayload('vLLM', {enabled: false})).toEqual({
-      chat_template_kwargs: {enable_thinking: false},
-    });
-  });
-
-  it('Ollama OFF sends only reasoning_effort none and never think:true', () => {
-    const off = buildReasoningPayload('Ollama', {enabled: false});
-    expect(off).toEqual({reasoning_effort: 'none'});
-    expect(off).not.toHaveProperty('think');
-    // ON sends nothing — never think:true, never a non-none effort.
-    const on = buildReasoningPayload('Ollama', {enabled: true, effort: 'high'});
-    expect(on).toEqual({});
-    expect(on).not.toHaveProperty('think');
-    expect(on).not.toHaveProperty('reasoning_effort');
-  });
-
-  it('OpenAI sends reasoning_effort only when effort is known', () => {
-    expect(
-      buildReasoningPayload('OpenAI', {enabled: true, effort: 'medium'}),
-    ).toEqual({reasoning_effort: 'medium'});
-    // No effort known → omit everything (no enable_thinking, no 400 bait).
-    expect(buildReasoningPayload('OpenAI', {enabled: true})).toEqual({});
-    expect(buildReasoningPayload('OpenAI', {enabled: false})).toEqual({});
-  });
-
-  it('unknown serverType omits everything', () => {
-    expect(buildReasoningPayload(undefined, {enabled: false})).toEqual({});
-    expect(
-      buildReasoningPayload('something-else', {enabled: false, effort: 'low'}),
-    ).toEqual({});
-  });
-});
-
 describe('streamChatCompletion reasoning payload', () => {
   let originalXHR: typeof XMLHttpRequest;
   beforeEach(() => {
@@ -2157,16 +1975,12 @@ describe('streamChatCompletion reasoning payload', () => {
   it('attaches the gated payload by serverType', async () => {
     const resultPromise = streamChatCompletion(
       {
+        samplers: {},
         messages: [{role: 'user', content: 'Hi'}],
         model: 'm',
         reasoning: {enabled: false},
       },
-      'http://localhost:1234',
-      undefined,
-      undefined,
-      undefined,
-      undefined,
-      'llama.cpp',
+      endpointFor({serverType: 'llama.cpp'}),
     );
     const xhr = MockXHR.instances[0];
     const body = JSON.parse(xhr.requestBody);
@@ -2186,16 +2000,12 @@ describe('streamChatCompletion reasoning payload', () => {
   it('omits reasoning controls for an unknown serverType', async () => {
     const resultPromise = streamChatCompletion(
       {
+        samplers: {},
         messages: [{role: 'user', content: 'Hi'}],
         model: 'm',
         reasoning: {enabled: false, effort: 'high'},
       },
-      'http://localhost:1234',
-      undefined,
-      undefined,
-      undefined,
-      undefined,
-      undefined,
+      endpointFor(),
     );
     const xhr = MockXHR.instances[0];
     const body = JSON.parse(xhr.requestBody);
@@ -2210,5 +2020,135 @@ describe('streamChatCompletion reasoning payload', () => {
     );
     xhr.simulateLoad();
     await resultPromise;
+  });
+});
+
+describe('streamChatCompletion sampler payload', () => {
+  let originalXHR: typeof XMLHttpRequest;
+  beforeEach(() => {
+    originalXHR = global.XMLHttpRequest;
+    (global as any).XMLHttpRequest = MockXHR;
+    MockXHR.instances = [];
+  });
+  afterEach(() => {
+    global.XMLHttpRequest = originalXHR;
+  });
+
+  /** Send one turn and return the parsed request body. */
+  const bodyOf = async (
+    params: Partial<StreamChatParams>,
+    serverType?: string,
+  ): Promise<any> => {
+    const resultPromise = streamChatCompletion(
+      {
+        samplers: {},
+        messages: [{role: 'user', content: 'Hi'}],
+        model: 'm',
+        ...params,
+      },
+      endpointFor({serverType}),
+    );
+    const xhr = MockXHR.instances[MockXHR.instances.length - 1];
+    const body = JSON.parse(xhr.requestBody);
+    xhr.simulateHeaders(200);
+    xhr.simulateProgress(
+      'data: {"choices":[{"delta":{},"finish_reason":"stop"}]}\n\ndata: [DONE]\n\n',
+    );
+    xhr.simulateLoad();
+    await resultPromise;
+    return body;
+  };
+
+  it('carries the changed samplers alongside the unconditional fields', async () => {
+    const body = await bodyOf(
+      {
+        samplers: {
+          temperature: 0.7,
+          top_p: 0.9,
+          n_predict: 100,
+          top_k: 10,
+          penalty_repeat: 1.2,
+        },
+        stop: ['</s>'],
+      },
+      'llama.cpp',
+    );
+
+    expect(body.top_k).toBe(10);
+    expect(body.repeat_penalty).toBe(1.2);
+    expect(body.temperature).toBe(0.7);
+    expect(body.top_p).toBe(0.9);
+    expect(body.max_completion_tokens).toBe(100);
+    expect(body.stop).toEqual(['</s>']);
+    expect(body.stream).toBe(true);
+  });
+
+  it('omits a non-finite sampler handed straight to the transport', async () => {
+    // `pickSamplers` drops non-finite values before the engine fills
+    // `samplers`, so every other test reaches the transport with them already
+    // gone. This caller bypasses it, which is what pins the transport-side
+    // finite rule: without it the two filters mask each other and either can
+    // be removed with nothing failing.
+    const body = await bodyOf(
+      {
+        samplers: {
+          temperature: NaN,
+          top_p: Infinity,
+          n_predict: -Infinity,
+          top_k: 10,
+        },
+      },
+      'llama.cpp',
+    );
+
+    expect(body).not.toHaveProperty('temperature');
+    expect(body).not.toHaveProperty('top_p');
+    expect(body).not.toHaveProperty('max_completion_tokens');
+    expect(body.top_k).toBe(10);
+  });
+
+  it('sends an unknown server type the same body as before', async () => {
+    const body = await bodyOf({
+      samplers: {
+        temperature: 0.7,
+        top_p: 0.9,
+        n_predict: 100,
+        top_k: 10,
+        penalty_repeat: 1.2,
+      },
+      stop: ['</s>'],
+    });
+
+    expect(body).toEqual({
+      model: 'm',
+      messages: [{role: 'user', content: 'Hi'}],
+      stream: true,
+      temperature: 0.7,
+      top_p: 0.9,
+      max_completion_tokens: 100,
+      stop: ['</s>'],
+    });
+  });
+
+  it('builds the same body whether or not a probe has landed', async () => {
+    const params = {samplers: {top_k: 10, penalty_repeat: 1.2, seed: 7}};
+    const before = await bodyOf(params, 'llama.cpp');
+
+    runInAction(() => {
+      serverStore.remoteCaps = {
+        'srv/m': {
+          samplerDefaults: {top_k: 40, penalty_repeat: 1.0, temperature: 0.8},
+          probedUrl: 'http://localhost:1234',
+        },
+      };
+    });
+
+    const after = await bodyOf(params, 'llama.cpp');
+
+    expect(after).toEqual(before);
+
+    runInAction(() => {
+      serverStore.remoteCaps = {};
+    });
   });
 });

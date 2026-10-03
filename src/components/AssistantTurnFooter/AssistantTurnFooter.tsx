@@ -15,6 +15,8 @@ import {styles} from './styles';
 import {chatSessionStore} from '../../store';
 import {L10nContext} from '../../utils';
 import {derivedText} from '../../utils/chat';
+import type {PersistedTurnTimings} from '../../utils/completionTypes';
+import {finiteNumber} from '../../utils/finite';
 import {MessageType} from '../../utils/types';
 import {t} from '../../locales';
 
@@ -31,8 +33,9 @@ export const AssistantTurnFooter: React.FC<AssistantTurnFooterProps> = observer(
   ({message}) => {
     const theme = useTheme();
     const l10n = useContext(L10nContext);
-    const {copyable, timings, interrupted, truncationLikely, completionResult} =
+    const {copyable, interrupted, truncationLikely, completionResult} =
       message.metadata || {};
+    const timings: PersistedTurnTimings | undefined = message.metadata?.timings;
 
     if (!timings && !copyable && !interrupted) {
       return null;
@@ -48,33 +51,56 @@ export const AssistantTurnFooter: React.FC<AssistantTurnFooterProps> = observer(
 
     const componentStyles = styles({theme});
 
+    // A stored row is whatever the server said when the message was written,
+    // so every value is read as unknown: a part is rendered only for a finite
+    // number, and zero stays a number.
+    const msPerToken = finiteNumber(timings?.predicted_per_token_ms);
+    const tokensPerSec = finiteNumber(timings?.predicted_per_second);
+    const promptTokensPerSec = finiteNumber(timings?.prompt_per_second);
+    const cachedTokens = finiteNumber(timings?.cache_n);
+    const ttft = finiteNumber(timings?.time_to_first_token_ms);
+
     const timingParts: string[] = [];
-    if (timings?.predicted_per_token_ms != null) {
+    if (msPerToken !== undefined) {
       timingParts.push(
-        t(l10n.components.bubble.msPerToken, {
-          value: timings.predicted_per_token_ms.toFixed(),
-        }),
+        t(l10n.components.bubble.msPerToken, {value: msPerToken.toFixed()}),
       );
     }
-    if (timings?.predicted_per_second != null) {
+    if (tokensPerSec !== undefined) {
       timingParts.push(
         t(l10n.components.bubble.tokensPerSec, {
-          value: timings.predicted_per_second.toFixed(2),
+          value: tokensPerSec.toFixed(2),
         }),
       );
     }
-    if (timings?.time_to_first_token_ms != null) {
+    // llama.rn reports both of these on local turns too, so origin gates them
+    // rather than presence; the local footer is a separate decision.
+    const isRemoteTurn = completionResult?.isRemote === true;
+    if (isRemoteTurn && promptTokensPerSec !== undefined) {
       timingParts.push(
-        t(l10n.components.bubble.ttft, {
-          value: timings.time_to_first_token_ms,
+        t(l10n.components.bubble.promptTokensPerSec, {
+          value: promptTokensPerSec.toFixed(2),
         }),
       );
+    }
+    // Zero is included: a build that does not report prompt-cache reuse omits
+    // the key entirely, while a cold prompt on a build that does reports 0.
+    // Those are different facts and read differently.
+    if (isRemoteTurn && cachedTokens !== undefined) {
+      timingParts.push(
+        t(l10n.components.bubble.cachedTokens, {
+          value: String(cachedTokens),
+        }),
+      );
+    }
+    if (ttft !== undefined) {
+      timingParts.push(t(l10n.components.bubble.ttft, {value: ttft}));
     }
     const fullTimingsString = timingParts.join(', ');
 
-    const draftTokens = timings?.draft_tokens;
-    const draftAccepted = timings?.draft_tokens_accepted ?? 0;
-    const showDraft = draftTokens != null && draftTokens > 0;
+    const draftTokens = finiteNumber(timings?.draft_tokens);
+    const draftAccepted = finiteNumber(timings?.draft_tokens_accepted) ?? 0;
+    const showDraft = draftTokens !== undefined && draftTokens > 0;
     const draftPct = showDraft
       ? Math.round((draftAccepted / draftTokens) * 100)
       : 0;

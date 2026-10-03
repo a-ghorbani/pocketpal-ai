@@ -1,7 +1,9 @@
 /**
- * User-selectable server types. Gates the per-server reasoning wire payload
- * (see api/openai.ts buildReasoningPayload). detectServerType seeds the value
- * best-effort; the user's selection wins.
+ * User-selectable server types. Selects the server's profile (`api/servers/`,
+ * one per type): its sampler send names, its request body beyond the
+ * transport's own keys, its final-chunk reading, its models-list row parsing
+ * and its discovery flags. detectServerType seeds the value best-effort; the
+ * user's selection wins.
  */
 export const SERVER_TYPE_OPTIONS = [
   'llama.cpp',
@@ -13,6 +15,19 @@ export const SERVER_TYPE_OPTIONS = [
 ] as const;
 
 export type ServerTypeOption = (typeof SERVER_TYPE_OPTIONS)[number];
+
+export type ServerType = ServerTypeOption;
+
+/**
+ * Persisted records are not type-checked on hydration, and detection may fail,
+ * so a stored value can be a legacy empty string or any free string. An exact,
+ * case-sensitive match keeps `'Llama.CPP'` out of the llama.cpp wire.
+ */
+export function toServerType(raw: unknown): ServerType {
+  return SERVER_TYPE_OPTIONS.includes(raw as ServerType)
+    ? (raw as ServerType)
+    : 'unknown';
+}
 
 /**
  * Server-type options shaped for the ui Dropdown. Trigger testID is
@@ -30,7 +45,10 @@ export const SERVER_TYPE_DROPDOWN_OPTIONS = SERVER_TYPE_OPTIONS.map(option => ({
  * heuristic (api.openai.com → OpenAI). detectServerType cannot classify
  * OpenAI or vLLM, so the user can correct it on the server sheet.
  */
-export function seedServerType(detected: string, url: string): string {
+export function seedServerType(
+  detected: ServerType | undefined,
+  url: string,
+): ServerType {
   if (detected) {
     return detected;
   }

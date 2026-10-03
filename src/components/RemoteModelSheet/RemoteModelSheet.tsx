@@ -29,16 +29,15 @@ import {isLocalHost} from '../../utils/network';
 import {parseTimeoutMs} from '../../utils/timeout';
 import {
   SERVER_TYPE_DROPDOWN_OPTIONS,
+  ServerType,
   seedServerType,
+  toServerType,
 } from '../../utils/serverTypes';
-import {ServerConfig} from '../../utils/types';
-import {
-  RemoteModelInfo,
-  fetchModels,
-  fetchModelsWithHeaders,
-  detectServerType,
-} from '../../api/openai';
-import {deriveListCaps} from '../../utils/listCaps';
+import {RemoteModelInfo, ServerConfig} from '../../utils/types';
+import {fetchModels, fetchModelsWithHeaders} from '../../api/openai';
+import {detectServerType} from '../../api/servers/detect';
+import {deriveListCaps} from '../../api/servers';
+import {profileFor} from '../../api/servers';
 import {t} from '../../locales';
 
 import {createStyles} from './styles';
@@ -61,7 +60,7 @@ export const RemoteModelSheet: React.FC<RemoteModelSheetProps> = observer(
     const [serverName, setServerName] = useState('');
     const [apiKey, setApiKey] = useState('');
     const [timeoutSeconds, setTimeoutSeconds] = useState('');
-    const [serverType, setServerType] = useState('unknown');
+    const [serverType, setServerType] = useState<ServerType>('unknown');
     const [secureTextEntry, setSecureTextEntry] = useState(true);
 
     // Auto-probe
@@ -561,7 +560,7 @@ export const RemoteModelSheet: React.FC<RemoteModelSheetProps> = observer(
                   testID="server-type-dropdown"
                   value={serverType}
                   options={SERVER_TYPE_DROPDOWN_OPTIONS}
-                  onChange={setServerType}
+                  onChange={value => setServerType(toServerType(value))}
                 />
                 <Text style={styles.apiKeyDescription}>
                   {l10n.settings.serverTypeHelp}
@@ -617,7 +616,8 @@ export const RemoteModelSheet: React.FC<RemoteModelSheetProps> = observer(
                         {l10n.settings.alreadyAdded}
                       </Text>
                     )}
-                    {serverTypeInEffect === 'llama.cpp' && (
+                    {profileFor(serverTypeInEffect).readListRow !==
+                      undefined && (
                       <View
                         style={styles.modelVisionSlot}
                         testID={`remote-model-row-vision-${model.id}`}
