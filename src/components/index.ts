@@ -76,3 +76,4 @@ export * from './InputSlider';
 export * from './MemoryRequirement';
 export * from './RemoteModelSheet';
 export * from './ServerDetailsSheet';
+export * from './QuickGenSettingsSheet';
