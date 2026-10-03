@@ -104,11 +104,9 @@ describe('PalPurchaseFooter', () => {
     const {getByTestId, getByText, toJSON} = setup();
 
     expect(getByTestId('buy-button')).toBeTruthy();
-    expect(getByText('Get for 4,99 €')).toBeTruthy();
+    expect(getByText('4,99 €')).toBeTruthy();
     const text = JSON.stringify(toJSON());
-    expect(text.indexOf('Story Pal')).toBeLessThan(
-      text.indexOf('Get for 4,99 €'),
-    );
+    expect(text.indexOf('Story Pal')).toBeLessThan(text.indexOf('4,99 €'));
   });
 
   it('takes the price only from the store product', () => {
@@ -128,10 +126,12 @@ describe('PalPurchaseFooter', () => {
     runInAction(() => {
       setPhase('pal-1', 'paying');
     });
-    const {getByTestId} = setup();
-    expect(getByTestId('buy-button').props.accessibilityState?.disabled).toBe(
-      true,
+    const {getByTestId, queryByTestId} = setup();
+    expect(getByTestId('purchase-paying')).toHaveProp(
+      'accessibilityLabel',
+      'Unlocking',
     );
+    expect(queryByTestId('buy-button')).toBeNull();
   });
 
   it('buys and closes the sheet on a cancel or error', async () => {
@@ -158,7 +158,7 @@ describe('PalPurchaseFooter', () => {
       purchaseStore.records['pal-1'] = record('pending_payment');
     });
     const {getByText, queryByTestId} = setup();
-    expect(getByText('Payment pending')).toBeTruthy();
+    expect(getByText('Pending')).toBeTruthy();
     expect(queryByTestId('buy-button')).toBeNull();
   });
 
@@ -166,8 +166,11 @@ describe('PalPurchaseFooter', () => {
     runInAction(() => {
       purchaseStore.records['pal-1'] = record('unlocking');
     });
-    const {getByText, getByTestId} = setup();
-    expect(getByText('Unlocking…')).toBeTruthy();
+    const {getByTestId} = setup();
+    expect(getByTestId('purchase-unlocking')).toHaveProp(
+      'accessibilityLabel',
+      'Unlocking',
+    );
     fireEvent.press(getByTestId('purchase-retry-button'));
     expect(purchaseStore.retry).toHaveBeenCalledWith('pal-1');
   });
@@ -177,9 +180,9 @@ describe('PalPurchaseFooter', () => {
       purchaseStore.records['pal-1'] = record('granted');
     });
     const {getByTestId} = setup();
-    expect(getByTestId('purchase-installing')).toBeTruthy();
-    expect(getByTestId('purchase-installing-text')).toHaveTextContent(
-      'Unlocking…',
+    expect(getByTestId('purchase-installing')).toHaveProp(
+      'accessibilityLabel',
+      'Unlocking',
     );
   });
 
@@ -420,8 +423,17 @@ describe('PalPurchaseFooter', () => {
       purchasable();
       runInAction(mutate);
       const {getByTestId, queryByTestId} = setup({pal: shown});
-      expect(getByTestId('owned-button')).toBeTruthy();
+      expect(getByTestId('owned-button')).toHaveTextContent('Install');
       expect(queryByTestId('buy-button')).toBeNull();
+    });
+
+    it('labels the owned button Open when the Pal is installed', () => {
+      runInAction(() => {
+        purchaseStore.records['pal-1'] = record('active');
+        palStore.pals = [localPal];
+      });
+      const {getByTestId} = setup();
+      expect(getByTestId('owned-button')).toHaveTextContent('Open');
     });
 
     it('opens the model step for an installed Pal', async () => {

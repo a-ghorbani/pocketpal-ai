@@ -677,21 +677,38 @@ describe('SquarePalCard purchase badges', () => {
       }
     });
 
-  it.each([
-    ['pending_payment', 'pal-badge-pending', 'Pending'],
-    ['unlocking', 'pal-badge-unlocking', 'Unlocking'],
-    ['granted', 'pal-badge-unlocking', 'Unlocking'],
-  ])('shows %s as %s on hub and local cards', (status, testID, label) => {
-    withStatus(status);
+  const renderCards = (
+    assert: (getByTestId: ReturnType<typeof render>['getByTestId']) => void,
+  ) => {
     for (const card of [hubCard, localCard]) {
       const {getByTestId, unmount} = render(
         <SquarePalCard pal={card} onPress={jest.fn()} />,
         {withNavigation: true},
       );
-      expect(getByTestId(testID).props.children.props.children).toBe(label);
+      assert(getByTestId);
       unmount();
     }
+  };
+
+  it('shows pending_payment as a Pending badge on hub and local cards', () => {
+    withStatus('pending_payment');
+    renderCards(getByTestId =>
+      expect(getByTestId('pal-badge-pending')).toHaveTextContent('Pending'),
+    );
   });
+
+  it.each(['unlocking', 'granted'])(
+    'shows %s as a progress badge on hub and local cards',
+    status => {
+      withStatus(status);
+      renderCards(getByTestId =>
+        expect(getByTestId('pal-badge-unlocking')).toHaveProp(
+          'accessibilityLabel',
+          'Unlocking',
+        ),
+      );
+    },
+  );
 
   it.each([undefined, 'active', 'unfulfillable', 'removed'])(
     'shows no badge for %s',

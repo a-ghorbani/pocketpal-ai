@@ -3,7 +3,13 @@ import {View, TouchableOpacity, Image, Alert} from 'react-native';
 
 import {observer} from 'mobx-react-lite';
 import {useNavigation} from '@react-navigation/native';
-import {Text, Card, Chip, IconButton} from 'react-native-paper';
+import {
+  ActivityIndicator,
+  Text,
+  Card,
+  Chip,
+  IconButton,
+} from 'react-native-paper';
 
 import {
   StarIcon,
@@ -321,18 +327,9 @@ export const SquarePalCard: React.FC<SquarePalCardProps> = observer(
     const purchaseStatus = palshubId
       ? purchaseStore.recordFor(palshubId)?.status
       : undefined;
-    const purchaseBadge =
-      purchaseStatus === 'pending_payment'
-        ? {
-            testID: 'pal-badge-pending',
-            label: l10n.palsScreen.purchase.badgePending,
-          }
-        : purchaseStatus === 'unlocking' || purchaseStatus === 'granted'
-          ? {
-              testID: 'pal-badge-unlocking',
-              label: l10n.palsScreen.purchase.badgeUnlocking,
-            }
-          : undefined;
+    const isPending = purchaseStatus === 'pending_payment';
+    const isUnlocking =
+      purchaseStatus === 'unlocking' || purchaseStatus === 'granted';
     const updatePalId =
       palshubId && purchaseStore.updateAvailable(palshubId)
         ? palshubId
@@ -505,14 +502,23 @@ export const SquarePalCard: React.FC<SquarePalCardProps> = observer(
                       </View>
                     )}
                   </View>
-                  {purchaseBadge && (
+                  {isPending && (
                     <View
-                      testID={purchaseBadge.testID}
+                      testID="pal-badge-pending"
                       style={styles.purchaseBadge}>
                       <Text style={styles.purchaseBadgeText} numberOfLines={1}>
-                        {purchaseBadge.label}
+                        {l10n.palsScreen.purchase.badgePending}
                       </Text>
                     </View>
+                  )}
+                  {isUnlocking && (
+                    <ActivityIndicator
+                      testID="pal-badge-unlocking"
+                      size={12}
+                      accessibilityLabel={
+                        l10n.palsScreen.purchase.badgeUnlocking
+                      }
+                    />
                   )}
                   {updatePalId && (
                     <TouchableOpacity

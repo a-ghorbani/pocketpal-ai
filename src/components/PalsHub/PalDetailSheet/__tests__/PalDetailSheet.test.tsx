@@ -567,7 +567,7 @@ describe('PalDetailSheet', () => {
       await waitFor(() => {
         expect(getByTestId('buy-button')).toBeTruthy();
       });
-      expect(getByText('Get for ¥450')).toBeTruthy();
+      expect(getByText('¥450')).toBeTruthy();
     });
 
     it('renders no footer action when the Pal is not purchasable', async () => {

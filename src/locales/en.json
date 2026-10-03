@@ -208,7 +208,7 @@
     "manageServers": "Manage Servers",
     "purchases": {
       "title": "Purchases",
-      "statusOwned": "Owned",
+      "statusOwned": "Purchased",
       "statusUnlocking": "Unlocking",
       "link": "Sign in to use on other devices"
     }
@@ -1114,12 +1114,12 @@
       "notAvailable": "N/A"
     },
     "purchase": {
-      "buy": "Get for {{price}}",
-      "owned": "Owned",
-      "pending": "Payment pending",
-      "unlocking": "Unlocking…",
+      "buy": "{{price}}",
+      "open": "Open",
+      "install": "Install",
+      "pending": "Pending",
+      "unlocking": "Unlocking",
       "retry": "Retry",
-      "installing": "Unlocking…",
       "supportCode": "Support code: {{code}}",
       "noLongerAvailable": "This Pal is no longer available. You can {{refundLink}}.",
       "refundLink": "ask Apple for a refund",

@@ -113,14 +113,16 @@ export const PalPurchaseFooter: React.FC<PalPurchaseFooterProps> = observer(
       </Text>
     );
 
+    const progress = (testID: string) => (
+      <ActivityIndicator testID={testID} accessibilityLabel={copy.unlocking} />
+    );
+
     const buyButton = (
       <>
         <Button
           testID="buy-button"
           mode="contained"
           onPress={handleBuy}
-          loading={phase === 'paying'}
-          disabled={phase === 'paying'}
           style={styles.button}>
           {t(copy.buy, {price: product?.displayPrice ?? ''})}
         </Button>
@@ -224,7 +226,7 @@ export const PalPurchaseFooter: React.FC<PalPurchaseFooterProps> = observer(
         case 'unlocking':
           return (
             <>
-              {status(copy.unlocking, 'purchase-unlocking')}
+              {progress('purchase-unlocking')}
               <Button
                 testID="purchase-retry-button"
                 mode="outlined"
@@ -235,12 +237,7 @@ export const PalPurchaseFooter: React.FC<PalPurchaseFooterProps> = observer(
             </>
           );
         case 'granted':
-          return (
-            <>
-              <ActivityIndicator testID="purchase-installing" />
-              {status(copy.installing, 'purchase-installing-text')}
-            </>
-          );
+          return progress('purchase-installing');
         case 'unfulfillable':
           return (
             <>
@@ -309,13 +306,16 @@ export const PalPurchaseFooter: React.FC<PalPurchaseFooterProps> = observer(
               loading={isOpening}
               disabled={isOpening}
               style={styles.button}>
-              {copy.owned}
+              {localPal ? copy.open : copy.install}
             </Button>
             {pendingUpdate && renderUpdate(pendingUpdate)}
           </>
         );
       }
-      if (canBuy || phase === 'paying') {
+      if (phase === 'paying') {
+        return progress('purchase-paying');
+      }
+      if (canBuy) {
         return buyButton;
       }
       return null;

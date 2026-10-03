@@ -66,7 +66,7 @@ describe('In-app purchase', () => {
     await openPalsWith(openPals, {products});
     await buyPage.openPal(pal.id);
 
-    expect(await buyPage.buyLabel()).toBe('Get for 4,99 €');
+    expect(await buyPage.buyLabel()).toBe('4,99 €');
     await buyPage.buy();
 
     await buyPage.waitFor('purchase-ready', 60000);
@@ -80,7 +80,7 @@ describe('In-app purchase', () => {
     await settingsPage.waitForReady();
     await buyPage.scrollToCard(`purchase-row-${pal.id}`);
     await browser
-      .$(byPartialText('Owned · Support code: E2E-fake-tx-'))
+      .$(byPartialText('Purchased · Support code: E2E-fake-tx-'))
       .waitForDisplayed({timeout: 20000});
 
     expect(eventsSent(iapMockServer.requests())).toEqual(['buy_tap']);

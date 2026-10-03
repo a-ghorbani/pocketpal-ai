@@ -62,7 +62,7 @@ describe('PurchasesCard', () => {
     );
 
     expect(getByTestId('purchases-card')).toBeTruthy();
-    expect(getByText('Owned · Support code: SUP-a')).toBeTruthy();
+    expect(getByText('Purchased · Support code: SUP-a')).toBeTruthy();
     expect(
       getByText(
         'This Pal is no longer available. You can ask Apple for a refund.\nSupport code: SUP-b',
