@@ -202,13 +202,13 @@
       "searched": "검색함: {{query}}",
       "noResults": "결과 없음",
       "noResultsFor": "{{query}}에 대한 결과 없음",
-      "resultsCount": "{{count}}개 결과",
+      "resultsCount": "결과 {{count}}개",
       "resultsCountOne": "결과 1개",
       "searchResultsTitle": "검색 결과",
       "showResultsAccessibilityLabel": "{{query}}에 대한 웹 검색 결과 표시",
-      "openLinkError": "이 링크를 열 수 없어요."
+      "openLinkError": "이 링크를 열 수 없습니다."
     },
-    "contextFullRemote": "대화 공간이 가득 찼습니다. 새 채팅을 시작해 주세요.",
+    "contextFullRemote": "대화 공간이 가득 찼습니다. 새 채팅을 시작하세요.⁠",
     "speculativeInitFailed": "이 기기에서 이 모델의 추측 디코딩을 시작할 수 없어요 — 드래프트 컨텍스트에 필요한 메모리가 부족한 것 같아요. 설정 → 고급 설정에서 추측 디코딩을 끄고 다시 시도해 주세요."
   },
   "common": {
@@ -369,9 +369,9 @@
       "saveChanges": "변경 사항 저장",
       "reasoningSection": "추론",
       "isReasoningModel": "추론 모델",
-      "isReasoningModelHelp": "자동으로 감지되지 않았더라도 이 모델의 사고 제어를 표시해요.",
-      "supportsEffort": "단계별 강도 지원",
-      "effortValues": "이 모델이 지원하는 강도 단계",
+      "isReasoningModelHelp": "자동 감지되지 않더라도 이 모델의 사고 제어를 표시합니다.",
+      "supportsEffort": "단계별 추론 강도 지원",
+      "effortValues": "이 모델이 지원하는 추론 강도 단계",
       "effortLevels": {
         "minimal": "최소",
         "low": "낮음",
@@ -1224,19 +1224,19 @@
     "languageSheetTitle": "언어",
     "languageSearchPlaceholder": "언어 검색",
     "speculativeDecoding": "추측 디코딩",
-    "speculativeDecodingDescription": "작은 드래프트 모델(또는 내장 MTP 모델)로 토큰을 미리 예측해 생성 속도를 높여요. 실험적 기능이에요.",
-    "speculativeNotMTPCapable": "현재 활성 모델은 추측 디코딩을 지원하지 않고 호환되는 드래프트 모델도 연결돼 있지 않아, 이 모델에서는 꺼진 상태로 아무 효과가 없어요. 지원되는 모델에는 자동으로 적용돼요.",
+    "speculativeDecodingDescription": "소형 드래프트 모델(또는 내장 MTP 모델)을 사용하여 토큰을 예측하고 생성 속도를 높입니다. 실험적 기능입니다.",
+    "speculativeNotMTPCapable": "현재 활성 모델은 추측 디코딩을 지원하지 않으며 호환되는 드래프트 모델도 연결되지 않아 이 기능은 꺼진 상태로 유지되며 아무런 영향을 주지 않습니다. 지원 가능한 모델에는 자동으로 적용됩니다.",
     "speculativeDraftModel": "드래프트 모델",
-    "speculativeDraftModelDescription": "활성 모델을 위해 토큰을 미리 작성해요.",
+    "speculativeDraftModelDescription": "활성 모델을 위해 토큰을 미리 생성합니다.",
     "speculativeDraftModelNone": "없음 (내장 MTP)",
-    "speculativeDraftModelIgnoredOverridden": "현재 활성 모델에 자체 드래프트 모델이 포함돼 있어, 이 선택은 무시돼요.",
-    "speculativeDraftModelIgnoredIncompatible": "이 드래프트 모델은 활성 모델과 호환되지 않아, 무시돼요.",
-    "speculativeDraftModelIgnoredNotCapable": "이 모델에는 드래프트 레이어가 없어, 드래프트 모델로 사용할 수 없어요.",
+    "speculativeDraftModelIgnoredOverridden": "활성 모델에 자체 드래프트 모델이 포함되어 있어 이 선택은 무시됩니다.",
+    "speculativeDraftModelIgnoredIncompatible": "이 드래프트 모델은 활성 모델과 호환되지 않아 무시됩니다.",
+    "speculativeDraftModelIgnoredNotCapable": "이 모델에는 드래프트 레이어가 없어, 드래프트 모델로 사용할 수 없습니다.",
     "speculativeDraftKeyCacheType": "드래프트 키 캐시 유형",
     "speculativeDraftValueCacheType": "드래프트 값 캐시 유형",
     "speculativeDraftNGpuLayers": "드래프트 GPU 레이어",
-    "speculativeDraftNGpuLayersDescription": "GPU에 오프로드할 드래프트 모델 레이어 수예요.",
-    "speculativeDraftCacheTypeInactiveDescription": "추측 디코딩이 실행되면 적용돼요."
+    "speculativeDraftNGpuLayersDescription": "GPU로 오프로드할 드래프트 모델 레이어 수입니다.",
+    "speculativeDraftCacheTypeInactiveDescription": "추측 디코딩이 실행되면 적용됩니다."
   },
   "storage": {
     "checkFailed": "저장공간 확인 실패",
@@ -1501,11 +1501,11 @@
       "title": "당신의 Pal을 만나보세요.",
       "titleAccent": "Pal.",
       "body": "당신의 휴대폰 안에 사는 똑똑한 작은 친구들.\n설정을 시작해 보세요 - 시간이 잠시 걸립니다.",
-      "cta": "둘러볼게요",
-      "eyebrow": "PocketPal에 오신 걸 환영해요"
+      "cta": "둘러보기",
+      "eyebrow": "PocketPal에 오신 걸 환영합니다"
     },
     "screen2": {
-      "title": "언제나,\n어디서나.",
+      "title": "언제\n어디서나.",
       "body": "Pal은 여러분의 휴대폰 안에 살아요.\n인터넷도, 신호도 필요 없어요 - 비행기 안에서도, 오지에서도, 외딴 마을에서도 작동해요.",
       "highlight": "인터넷도, 신호도 필요 없어요",
       "cta": "다음",
