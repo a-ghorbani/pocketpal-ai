@@ -4,16 +4,53 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import {makePersistable} from 'mobx-persist-store';
 import * as Keychain from 'react-native-keychain';
 
-import {fetchModels, testConnection, RemoteModelInfo} from '../api/openai';
-import {ServerConfig} from '../utils/types';
+import {
+  fetchModels,
+  fetchServerProps,
+  testConnection,
+  PROPS_TIMEOUT_MS,
+  RemoteModelInfo,
+} from '../api/openai';
+import {RemoteModelCaps, ServerConfig} from '../utils/types';
+import {ReasoningCapability} from '../utils/reasoningCapability';
+import {deriveListCapsMap} from '../utils/listCaps';
+import type {ListDerivedCaps} from '../utils/listCaps';
 
 const KEYCHAIN_SERVICE_PREFIX = 'pocketpal-server-';
 
 /** Minimum interval between auto-fetch cycles (ms) */
 const FETCH_THROTTLE_MS = 60000;
 
+/**
+ * The capability fields of a `RemoteModelCaps` entry — everything except the
+ * provenance the entry carries. Enumerated once so the usability check and the
+ * no-op write check cannot drift apart when a field is added.
+ */
+const CAPS_FIELDS = ['contextLength', 'supportsVision'] as const;
+
+/**
+ * Shared by every path that invalidates per-model state, so a new map cannot
+ * be added to one and forgotten in the other.
+ */
+function dropServerEntries<T>(
+  map: Record<string, T>,
+  serverId: string,
+): Record<string, T> {
+  const prefix = `${serverId}/`;
+  return Object.fromEntries(
+    Object.entries(map).filter(([k]) => !k.startsWith(prefix)),
+  );
+}
+
 class ServerStore {
   servers: ServerConfig[] = [];
+  // Remote reasoning capability keyed by full model id (`${serverId}/${remoteModelId}`).
+  // Remote Models are rebuilt each launch and not persisted, so their capability
+  // lives here and persists with the store.
+  remoteReasoning: Record<string, ReasoningCapability> = {};
+  // Server-reported capabilities keyed by the same full model id. /props
+  // answers per model on a multi-model server, so caps cannot live per server.
+  remoteCaps: Record<string, RemoteModelCaps> = {};
   serverModels: Map<string, RemoteModelInfo[]> = observable.map();
   userSelectedModels: Array<{serverId: string; remoteModelId: string}> = [];
   isLoading = false;
@@ -34,6 +71,8 @@ class ServerStore {
         'servers',
         'privacyNoticeAcknowledged',
         'userSelectedModels',
+        'remoteReasoning',
+        'remoteCaps',
       ],
       storage: AsyncStorage,
     }).then(() => {
@@ -57,8 +96,26 @@ class ServerStore {
 
   updateServer(id: string, updates: Partial<ServerConfig>): void {
     const server = this.servers.find(s => s.id === id);
-    if (server) {
-      Object.assign(server, updates);
+    if (!server) {
+      return;
+    }
+    // Caps and the model list are both what the configured backend reported.
+    // Repointing the url or switching the server type makes them describe
+    // something else: resolveRemoteCaps has no way to tell, and a stale
+    // single-entry list would let servesOnlyModel clear the bare-retry gate
+    // against a router. Drop both and let the next probe / fetch repopulate.
+    // Reasoning state survives: it carries user declarations, and it is not
+    // server-reported.
+    const invalidatesDiscovery =
+      (updates.url !== undefined && updates.url !== server.url) ||
+      (updates.serverType !== undefined &&
+        updates.serverType !== server.serverType);
+
+    Object.assign(server, updates);
+
+    if (invalidatesDiscovery) {
+      this.remoteCaps = dropServerEntries(this.remoteCaps, id);
+      this.serverModels.delete(id);
     }
   }
 
@@ -69,6 +126,8 @@ class ServerStore {
     this.userSelectedModels = this.userSelectedModels.filter(
       m => m.serverId !== id,
     );
+    this.remoteReasoning = dropServerEntries(this.remoteReasoning, id);
+    this.remoteCaps = dropServerEntries(this.remoteCaps, id);
     // Clean up API key from keychain
     this.removeApiKey(id);
   }
@@ -88,6 +147,30 @@ class ServerStore {
     );
   }
 
+  /**
+   * Learn-from-stream writer for a remote model. Flips axis-1 to learned 'yes'
+   * the first time the model actually emits reasoning. Idempotent and monotonic:
+   * a no-op once axis-1 is already 'yes', and never overrides a user declaration.
+   */
+  recordRemoteReasoningObserved(modelId: string): void {
+    const existing = this.remoteReasoning[modelId];
+    if (existing?.source === 'user' || existing?.isReasoning === 'yes') {
+      return;
+    }
+    this.remoteReasoning[modelId] = {
+      isReasoning: 'yes',
+      source: 'learned',
+      supportsEffort: existing?.supportsEffort ?? false,
+      effortValues: existing?.effortValues ?? [],
+      effortSource: existing?.effortSource ?? 'none',
+    };
+  }
+
+  /** Manual model-card override for a remote model. Top of precedence. */
+  setRemoteReasoningOverride(modelId: string, cap: ReasoningCapability): void {
+    this.remoteReasoning[modelId] = cap;
+  }
+
   removeServerIfOrphaned(serverId: string): void {
     const hasModels = this.userSelectedModels.some(
       m => m.serverId === serverId,
@@ -95,6 +178,16 @@ class ServerStore {
     if (!hasModels) {
       this.removeServer(serverId);
     }
+  }
+
+  /**
+   * What the fetched model lists say about each model, keyed by full model id.
+   * A computed with no writer and no persistence: `serverModels` is already
+   * replaced by every fetch, dropped when a server url or type changes and
+   * dropped with the server, so these cannot outlive the url they came from.
+   */
+  get listCaps(): Record<string, ListDerivedCaps> {
+    return deriveListCapsMap(this.servers, this.serverModels);
   }
 
   getModelsNotYetAdded(serverId: string): RemoteModelInfo[] {
@@ -185,6 +278,116 @@ class ServerStore {
         this.isLoading = false;
       });
     }
+  }
+
+  /**
+   * Probe GET /props for one remote model and merge what it reports into
+   * remoteCaps. llama.cpp only; callers invoke it detached, and it never
+   * throws or rejects.
+   *
+   * At most two requests: the scoped one, and — only when the server is
+   * provably serving this one model — a bare retry, which is what a
+   * single-model llama-server has always answered correctly. On a multi-model
+   * server the bare form describes whichever model happens to be resident, so
+   * it is never issued there and the caps simply stay unknown.
+   *
+   * Merges field-wise within one backend: a response that resolves only one
+   * field must not blank a known other, and a probe that resolves nothing
+   * writes nothing. Across backends there is nothing to merge — an entry
+   * probed against another url is replaced, not blended.
+   *
+   * The written entry carries the url it was probed against, so a reader can
+   * tell whether it describes the backend a live session is bound to.
+   *
+   * A shorter server timeout is honoured, a longer one is not:
+   * `requestTimeoutMs` is a free numeric input, and detached work must stay
+   * bounded by `PROPS_TIMEOUT_MS` per request.
+   *
+   * `resolvedApiKey` undefined is indistinguishable from a keyless server, so
+   * the probe re-reads the Keychain in that case.
+   */
+  async fetchRemoteModelCaps(
+    serverId: string,
+    remoteModelId: string,
+    resolvedApiKey?: string,
+  ): Promise<void> {
+    const server = this.servers.find(s => s.id === serverId);
+    if (!server || server.serverType !== 'llama.cpp') {
+      return;
+    }
+
+    const isUnusable = (caps: RemoteModelCaps) =>
+      CAPS_FIELDS.every(f => caps[f] === undefined);
+
+    // Snapshot: `server` is the live observable, so updateServer mutates it
+    // in place while the probe is in flight.
+    const probedUrl = server.url;
+    const probedType = server.serverType;
+
+    const timeoutMs = Math.min(
+      server.requestTimeoutMs ?? PROPS_TIMEOUT_MS,
+      PROPS_TIMEOUT_MS,
+    );
+
+    const apiKey = resolvedApiKey ?? (await this.getApiKey(serverId));
+    let caps = await fetchServerProps(
+      probedUrl,
+      apiKey,
+      timeoutMs,
+      remoteModelId,
+    );
+
+    if (isUnusable(caps) && this.servesOnlyModel(serverId, remoteModelId)) {
+      caps = await fetchServerProps(probedUrl, apiKey, timeoutMs);
+    }
+
+    if (isUnusable(caps)) {
+      return;
+    }
+
+    runInAction(() => {
+      // The probe is detached, so the server may have been removed or
+      // repointed while it was in flight. Both prune this key, and both make
+      // the answer describe a backend that is no longer configured — writing
+      // now would resurrect it.
+      const current = this.servers.find(s => s.id === serverId);
+      if (
+        !current ||
+        current.url !== probedUrl ||
+        current.serverType !== probedType
+      ) {
+        return;
+      }
+      const key = `${serverId}/${remoteModelId}`;
+      const prior = this.remoteCaps[key];
+      const sameBackend = prior?.probedUrl === probedUrl;
+      const merged: RemoteModelCaps = {
+        ...(sameBackend ? prior : undefined),
+        ...caps,
+        probedUrl,
+      };
+      if (
+        prior &&
+        prior.probedUrl === merged.probedUrl &&
+        CAPS_FIELDS.every(f => prior[f] === merged[f])
+      ) {
+        return;
+      }
+      this.remoteCaps[key] = merged;
+    });
+  }
+
+  /**
+   * True only when the server's model list is known and holds exactly this one
+   * model. The list is not persisted, so an absent one means unknown, and
+   * unknown does not pass: a genuine single-model server that was offline
+   * during the post-hydration fetch is skipped here too. Losing a bare retry
+   * costs nothing but an unknown capability; taking one on a multi-model
+   * server would attribute the resident model's props to this one.
+   */
+  private servesOnlyModel(serverId: string, remoteModelId: string): boolean {
+    const models = this.serverModels.get(serverId);
+    return models?.length === 1 && models[0].id === remoteModelId;
   }
 
   async fetchAllRemoteModels(): Promise<void> {

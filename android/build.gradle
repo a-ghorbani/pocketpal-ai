@@ -24,3 +24,24 @@ buildscript {
 }
 
 apply plugin: "com.facebook.react.rootproject"
+
+def onnxruntimeVersion = {
+    def packageJson = file("$rootDir/../node_modules/onnxruntime-react-native/package.json")
+    if (!packageJson.canRead()) {
+        throw new GradleException("Cannot read ${packageJson}; run yarn install")
+    }
+    def version = new groovy.json.JsonSlurper().parse(packageJson).version
+    if (!version) {
+        throw new GradleException("No version in ${packageJson}")
+    }
+    return version
+}()
+
+allprojects {
+    configurations.all {
+        resolutionStrategy {
+            // onnxruntime-react-native floats this at latest.integration; ship the AAR it was released with.
+            force "com.microsoft.onnxruntime:onnxruntime-android:${onnxruntimeVersion}"
+        }
+    }
+}

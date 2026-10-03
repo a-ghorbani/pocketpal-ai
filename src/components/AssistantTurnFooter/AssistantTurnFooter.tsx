@@ -27,20 +27,6 @@ interface AssistantTurnFooterProps {
   message: MessageType.Any;
 }
 
-/**
- * Turn-level chrome (timing + copy + interrupt status) rendered once per
- * assistant row, below all step blocks. Each slot is gated only by field
- * presence:
- *
- *   - `metadata.timings` present       → render the timing line
- *   - `metadata.copyable` true         → render the copy button
- *   - `metadata.interrupted` true      → render the interrupted status
- *   - `metadata.truncationLikely` true → upgrade status to "cut off"
- *
- * On a turn aborted mid-stream with partial content, `copyable` is true
- * but `timings` is absent — the footer renders the copy button alone.
- * Used by both AssistantTurn rows and legacy assistant Text rows.
- */
 export const AssistantTurnFooter: React.FC<AssistantTurnFooterProps> = observer(
   ({message}) => {
     const theme = useTheme();
@@ -52,10 +38,8 @@ export const AssistantTurnFooter: React.FC<AssistantTurnFooterProps> = observer(
       return null;
     }
 
-    // The sticky context-full banner is the single stronger surface for the
-    // newest turn, so the footer drops its "cut off" wording on that turn and
-    // shows plain interrupted status instead. Only the turn that drives the
-    // banner is suppressed (its snapshot is the store's live one).
+    // The sticky context-full banner is the stronger surface for the turn that
+    // drives it, so that turn shows plain interrupted status instead of "cut off".
     const suppressTruncated =
       truncationLikely === true &&
       completionResult != null &&
@@ -64,8 +48,6 @@ export const AssistantTurnFooter: React.FC<AssistantTurnFooterProps> = observer(
 
     const componentStyles = styles({theme});
 
-    // Build timing string from whichever parts are available. Each part
-    // is independent; missing parts are omitted from the joined string.
     const timingParts: string[] = [];
     if (timings?.predicted_per_token_ms != null) {
       timingParts.push(
@@ -90,6 +72,20 @@ export const AssistantTurnFooter: React.FC<AssistantTurnFooterProps> = observer(
     }
     const fullTimingsString = timingParts.join(', ');
 
+    const draftTokens = timings?.draft_tokens;
+    const draftAccepted = timings?.draft_tokens_accepted ?? 0;
+    const showDraft = draftTokens != null && draftTokens > 0;
+    const draftPct = showDraft
+      ? Math.round((draftAccepted / draftTokens) * 100)
+      : 0;
+    const draftString = showDraft
+      ? t(l10n.components.bubble.draftAccepted, {
+          accepted: String(draftAccepted),
+          total: String(draftTokens),
+          pct: String(draftPct),
+        })
+      : '';
+
     const copyToClipboard = () => {
       if (message.type !== 'text' && message.type !== 'assistant_turn') {
         return;
@@ -113,6 +109,11 @@ export const AssistantTurnFooter: React.FC<AssistantTurnFooterProps> = observer(
         {timings && fullTimingsString ? (
           <Text style={componentStyles.timing} testID="footer-timing">
             {fullTimingsString}
+          </Text>
+        ) : null}
+        {showDraft ? (
+          <Text style={componentStyles.timing} testID="message-draft-tokens">
+            {draftString}
           </Text>
         ) : null}
         {interrupted ? (

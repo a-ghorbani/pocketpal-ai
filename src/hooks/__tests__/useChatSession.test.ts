@@ -1,5 +1,6 @@
 import {LlamaContext} from 'llama.rn';
 import {renderHook, act, waitFor} from '@testing-library/react-native';
+import {runInAction} from 'mobx';
 
 import {textMessage} from '../../../jest/fixtures';
 import {sessionFixtures} from '../../../jest/fixtures/chatSessions';
@@ -11,17 +12,20 @@ import {
 } from '../../../jest/fixtures/models';
 
 import {useChatSession} from '../useChatSession';
+import {isReadUrlAllowed} from '../../services/talents';
 
 import {
   chatSessionStore,
   modelStore,
   palStore,
+  serverStore,
   ttsStore,
   uiStore,
 } from '../../store';
 
 import {l10n} from '../../locales';
 import {assistant} from '../../utils/chat';
+import {ModelOrigin} from '../../utils/types';
 
 const mockAssistant = {
   id: 'h3o3lc5xj',
@@ -118,6 +122,31 @@ describe('useChatSession', () => {
     expect(chatSessionStore.addMessageToCurrentSession).toHaveBeenCalledWith(
       expect.objectContaining({
         text: `Completion failed: ${errorMessage}`,
+        author: assistant,
+      }),
+    );
+  });
+
+  it('maps the speculative draft-context failure to friendly copy', async () => {
+    // Low-RAM devices throw this at first completion; the raw native string
+    // must not reach the chat.
+    if (modelStore.context) {
+      modelStore.context.completion = jest
+        .fn()
+        .mockRejectedValueOnce(new Error('failed to create MTP draft context'));
+    }
+
+    const {result} = renderHook(() =>
+      useChatSession({current: null}, textMessage.author, mockAssistant),
+    );
+
+    await act(async () => {
+      await result.current.handleSendPress(textMessage);
+    });
+
+    expect(chatSessionStore.addMessageToCurrentSession).toHaveBeenCalledWith(
+      expect.objectContaining({
+        text: l10n.en.chat.speculativeInitFailed,
         author: assistant,
       }),
     );
@@ -332,9 +361,6 @@ describe('useChatSession', () => {
   });
 
   it('emits multimodal warning when user sends an image but multimodal is disabled', async () => {
-    // modelStore.isMultimodalEnabled is mocked to return false by default
-    // (see __mocks__/stores/modelStore.ts). The hook should call
-    // uiStore.setChatWarning with the multimodal-not-enabled message.
     if (modelStore.context) {
       modelStore.context.completion = jest
         .fn()
@@ -354,6 +380,58 @@ describe('useChatSession', () => {
     const arg = (uiStore.setChatWarning as jest.Mock).mock.calls[0][0];
     // The warning carries the multimodalNotEnabled message text.
     expect(JSON.stringify(arg)).toContain(l10n.en.chat.multimodalNotEnabled);
+  });
+
+  it('sends an image on a remote model whose probe reported vision', async () => {
+    runInAction(() => {
+      modelStore.models = [
+        {
+          id: 'srv-1/gemma-4-e2b',
+          origin: ModelOrigin.REMOTE,
+          serverId: 'srv-1',
+          remoteModelId: 'gemma-4-e2b',
+        } as any,
+      ];
+      modelStore.activeModelId = 'srv-1/gemma-4-e2b';
+      serverStore.remoteCaps = {'srv-1/gemma-4-e2b': {supportsVision: true}};
+    });
+    if (modelStore.context) {
+      modelStore.context.completion = jest
+        .fn()
+        .mockResolvedValue({text: 'ok', content: 'ok', timings: {}});
+    }
+
+    const {result} = renderHook(() =>
+      useChatSession({current: null}, textMessage.author, mockAssistant),
+    );
+    await act(async () => {
+      await result.current.handleSendPress({
+        text: 'look at this',
+        type: 'text',
+        imageUris: ['file:///photo.jpg'],
+      });
+    });
+
+    const sent = (modelStore.engine!.completion as jest.Mock).mock
+      .calls[0][0] as {messages: Array<{role: string; content: any}>};
+    const lastUser = [...sent.messages].reverse().find(m => m.role === 'user')!;
+    expect(lastUser.content).toEqual(
+      expect.arrayContaining([
+        {type: 'image_url', image_url: {url: 'file:///photo.jpg'}},
+      ]),
+    );
+
+    const warnings = (uiStore.setChatWarning as jest.Mock).mock.calls;
+    expect(
+      warnings.some(call =>
+        JSON.stringify(call[0]).includes(l10n.en.chat.multimodalNotEnabled),
+      ),
+    ).toBe(false);
+
+    runInAction(() => {
+      serverStore.remoteCaps = {};
+      modelStore.activeModelId = undefined;
+    });
   });
 
   it('should use system prompt as-is when pal has no parameters', async () => {
@@ -411,6 +489,174 @@ describe('useChatSession', () => {
     expect(capturedMessages.some(msg => msg.role === 'system')).toBe(true);
     const systemMessage = capturedMessages.find(msg => msg.role === 'system');
     expect(systemMessage.content).toBe('You are a helpful assistant.');
+  });
+
+  describe('search grounding', () => {
+    const webSearchTool = {
+      type: 'function',
+      function: {name: 'web_search', description: '', parameters: {}},
+    };
+
+    const activateSearchTools = async () => {
+      const baseSettings =
+        await chatSessionStore.getCurrentCompletionSettings();
+      (
+        chatSessionStore.getCurrentCompletionSettings as jest.Mock
+      ).mockResolvedValueOnce({...baseSettings, tools: [webSearchTool]});
+    };
+
+    const useSessionWithPal = (systemPrompt: string) => {
+      const pal = {
+        id: 'search-pal-id',
+        type: 'local' as const,
+        name: 'Search Pal',
+        systemPrompt,
+        parameters: {},
+        parameterSchema: [],
+        isSystemPromptChanged: false,
+        useAIPrompt: false,
+        source: 'local' as const,
+      };
+      palStore.pals = [pal];
+      chatSessionStore.sessions = [
+        {
+          id: 'search-session-id',
+          activePalId: pal.id,
+          title: 'Search Session',
+          date: new Date().toISOString().split('T')[0],
+          messages: [],
+          completionSettings: mockDefaultCompletionParams,
+          settingsSource: 'pal' as const,
+        },
+      ];
+      chatSessionStore.activeSessionId = 'search-session-id';
+      return pal;
+    };
+
+    const captureMessages = () => {
+      const captured: {messages: any[]} = {messages: []};
+      if (modelStore.context) {
+        modelStore.context.completion = jest
+          .fn()
+          .mockImplementation((params, _onData) => {
+            captured.messages = params.messages || [];
+            return Promise.resolve({timings: {total: 100}, usage: {}});
+          });
+      }
+      return captured;
+    };
+
+    const send = async () => {
+      const {result} = renderHook(() =>
+        useChatSession({current: null}, textMessage.author, mockAssistant),
+      );
+      await act(async () => {
+        await result.current.handleSendPress(textMessage);
+      });
+    };
+
+    // Strict templates reject a second system message ("must be at the
+    // beginning"), so grounding folds into the pal's system message.
+    it('sends exactly one system message carrying both the pal prompt and the grounding', async () => {
+      const pal = useSessionWithPal('You are a research assistant.');
+      await activateSearchTools();
+      const captured = captureMessages();
+
+      await send();
+
+      const systemMessages = captured.messages.filter(
+        msg => msg.role === 'system',
+      );
+      expect(systemMessages).toHaveLength(1);
+
+      const today = new Date().toISOString().slice(0, 10);
+      expect(systemMessages[0].content).toContain(
+        'You are a research assistant.',
+      );
+      expect(systemMessages[0].content).toContain(`Today's date is ${today}`);
+      expect(systemMessages[0].content).toContain('web_search');
+
+      // Composition happens at assembly time only.
+      expect(pal.systemPrompt).toBe('You are a research assistant.');
+    });
+
+    it('sends the grounding as the sole system message when the pal has no system prompt', async () => {
+      useSessionWithPal('');
+      await activateSearchTools();
+      const captured = captureMessages();
+
+      await send();
+
+      const systemMessages = captured.messages.filter(
+        msg => msg.role === 'system',
+      );
+      expect(systemMessages).toHaveLength(1);
+
+      const today = new Date().toISOString().slice(0, 10);
+      expect(systemMessages[0].content).toContain(`Today's date is ${today}`);
+      expect(systemMessages[0].content).toContain('web_search');
+    });
+
+    it('leaves the pal system message alone when no search tools are active', async () => {
+      useSessionWithPal('You are a research assistant.');
+      const captured = captureMessages();
+
+      await send();
+
+      const systemMessages = captured.messages.filter(
+        msg => msg.role === 'system',
+      );
+      expect(systemMessages).toHaveLength(1);
+      expect(systemMessages[0].content).toBe('You are a research assistant.');
+    });
+
+    it('seeds the read_url allowlist from URLs the user wrote', async () => {
+      useSessionWithPal('');
+      await activateSearchTools();
+      captureMessages();
+
+      const {result} = renderHook(() =>
+        useChatSession({current: null}, textMessage.author, mockAssistant),
+      );
+      await act(async () => {
+        await result.current.handleSendPress({
+          ...textMessage,
+          text: 'summarize https://user.example.com/doc please',
+        });
+      });
+
+      expect(isReadUrlAllowed('https://user.example.com/doc')).toBe(true);
+      expect(isReadUrlAllowed('https://other.example.com/x')).toBe(false);
+    });
+  });
+
+  it('omits the search grounding line when no search tools are active', async () => {
+    let capturedMessages: any[] = [];
+    if (modelStore.context) {
+      modelStore.context.completion = jest
+        .fn()
+        .mockImplementation((params, _onData) => {
+          capturedMessages = params.messages || [];
+          return Promise.resolve({timings: {total: 100}, usage: {}});
+        });
+    }
+
+    const {result} = renderHook(() =>
+      useChatSession({current: null}, textMessage.author, mockAssistant),
+    );
+
+    await act(async () => {
+      await result.current.handleSendPress(textMessage);
+    });
+
+    expect(
+      capturedMessages.some(
+        msg =>
+          msg.role === 'system' &&
+          typeof msg.content === 'string' &&
+          msg.content.includes("Today's date is"),
+      ),
+    ).toBe(false);
   });
 
   describe('TTS streaming wiring', () => {

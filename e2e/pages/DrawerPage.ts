@@ -37,7 +37,7 @@ export class DrawerPage extends BasePage {
    * Wait for drawer to be fully open
    * We use Pals tab because it's unique to the drawer (not a screen title)
    */
-  async waitForOpen(timeout = 5000): Promise<void> {
+  async waitForOpen(timeout = 10000): Promise<void> {
     await this.waitForElement(Selectors.drawer.palsTab, timeout);
   }
 

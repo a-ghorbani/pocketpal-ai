@@ -30,7 +30,9 @@
     "ok": "باشه",
     "close": "بستن",
     "clear": "پاک کردن همه",
-    "gallery": "گالری"
+    "gallery": "گالری",
+    "stop": "توقف",
+    "noResults": "نتیجه‌ای یافت نشد"
   },
   "settings": {
     "modelInitializationSettings": "تنظیمات راه‌اندازی مدل",
@@ -157,7 +159,53 @@
     "manageServers": "مدیریت سرورها",
     "ttsAvailability": "تبدیل متن به گفتار",
     "ttsAvailabilityDescription": "خواندن پاسخ‌ها با صدای بلند.",
-    "ttsAvailabilityLowMemoryWarning": "حافظه دستگاه شما کم است — ممکن است این قابلیت به‌درستی کار نکند."
+    "ttsAvailabilityLowMemoryWarning": "حافظه دستگاه شما کم است — ممکن است این قابلیت به‌درستی کار نکند.",
+    "requestTimeout": "مهلت درخواست (ثانیه)",
+    "requestTimeoutHelp": "حداکثر زمان انتظار برای پاسخ سرور کند. برای مقدار پیش‌فرض خالی بگذارید.",
+    "requestTimeoutPlaceholder": "اختیاری - برای مقدار پیش‌فرض خالی بگذارید",
+    "serverType": "نوع سرور",
+    "serverTypeHelp": "به‌صورت خودکار تشخیص داده می‌شود؛ اگر درست نیست تغییرش بدهید.",
+    "internetSearch": {
+      "title": "جستجوی اینترنتی",
+      "description": "بگذارید پَل‌ها با ابزارهای خودشان در وب جستجو کنند. کلید API خودتان را بیاورید — PocketPal هرگز کلیدهای شما را نگه نمی‌دارد و درخواست‌هایتان را هدایت نمی‌کند.",
+      "providerLabel": "ارائه‌دهنده جستجو",
+      "providerGated": "به‌زودی",
+      "keyLabel": "کلید API",
+      "keyIsSet": "کلید برای {{provider}} تنظیم شده است.",
+      "keyNotSet": "کلیدی برای {{provider}} تنظیم نشده است.",
+      "setKeyButton": "تنظیم کلید",
+      "updateKeyButton": "به‌روزرسانی کلید",
+      "clearKeyButton": "پاک کردن کلید",
+      "keyInputPlaceholder": "کلید API {{provider}} خود را جای‌گذاری کنید",
+      "keyUpdateError": "به‌روزرسانی کلید ممکن نشد. لطفاً دوباره تلاش کنید.",
+      "showKeyAccessibilityLabel": "نمایش کلید API",
+      "hideKeyAccessibilityLabel": "مخفی کردن کلید API",
+      "resultCountLabel": "تعداد نتایج در هر جستجو",
+      "resultCountDescription": "نتایج کمتر فضای بیشتری در context مدل باقی می‌گذارد.",
+      "consentTitle": "جستجوها از دستگاه شما خارج می‌شوند",
+      "consentDescription": "وقتی یک پَل در وب جستجو می‌کند، درخواست شما از طریق اینترنت به ارائه‌دهنده انتخاب‌شده ارسال می‌شود. وقتی یک پَل صفحه‌ای را می‌خواند، اگر ارائه‌دهنده انتخاب‌شده خواننده اختصاصی نداشته باشد، ممکن است به‌جای آن آدرس و محتوای صفحه به یک سرویس خواننده پیش‌فرض (r.jina.ai) ارسال شود. کلیدها و درخواست‌ها هرگز به PocketPal ارسال نمی‌شوند.",
+      "consentAccept": "متوجه شدم",
+      "consentRequired": "برای تنظیم کلید و فعال‌سازی جستجو، توضیحات بالا را بپذیرید.",
+      "consentGivenTitle": "جستجوی وب فعال است",
+      "consentGivenDescription": "همان‌طور که در بالا توضیح داده شد، درخواست‌ها و خواندن صفحات ممکن است از دستگاه شما خارج شوند.",
+      "consentRevoke": "لغو دسترسی"
+    },
+    "languageSheetTitle": "زبان",
+    "languageSearchPlaceholder": "جستجوی زبان‌ها",
+    "speculativeDecoding": "رمزگشایی گمانه‌زنانه",
+    "speculativeDecodingDescription": "از یک مدل پیش‌نویس کوچک (یا یک مدل MTP توکار) برای پیش‌بینی توکن‌ها و سریع‌تر کردن تولید استفاده کنید. آزمایشی.",
+    "speculativeNotMTPCapable": "مدل فعال از رمزگشایی گمانه‌زنانه پشتیبانی نمی‌کند و مدل پیش‌نویس سازگاری هم برایش انتخاب نشده، برای همین این گزینه برایش خاموش می‌ماند و تأثیری ندارد. برای مدل‌هایی که پشتیبانی می‌کنند به‌صورت خودکار اعمال می‌شود.",
+    "speculativeDraftModel": "مدل پیش‌نویس",
+    "speculativeDraftModelDescription": "برای مدل فعال، توکن‌ها را پیش‌نویس می‌کند.",
+    "speculativeDraftModelNone": "هیچ‌کدام (MTP توکار)",
+    "speculativeDraftModelIgnoredOverridden": "مدل فعال مدل پیش‌نویس خودش را دارد، برای همین این انتخاب نادیده گرفته می‌شود.",
+    "speculativeDraftModelIgnoredIncompatible": "این مدل پیش‌نویس با مدل فعال سازگار نیست، برای همین نادیده گرفته می‌شود.",
+    "speculativeDraftModelIgnoredNotCapable": "این مدل هیچ لایه پیش‌نویسی ندارد، برای همین نمی‌توان از آن به‌عنوان مدل پیش‌نویس استفاده کرد.",
+    "speculativeDraftKeyCacheType": "نوع کش Key پیش‌نویس",
+    "speculativeDraftValueCacheType": "نوع کش Value پیش‌نویس",
+    "speculativeDraftNGpuLayers": "لایه‌های GPU پیش‌نویس",
+    "speculativeDraftNGpuLayersDescription": "تعداد لایه‌های مدل پیش‌نویس که روی GPU بارگذاری می‌شوند.",
+    "speculativeDraftCacheTypeInactiveDescription": "به‌محض اجرای رمزگشایی گمانه‌زنانه اعمال می‌شود."
   },
   "memory": {
     "shortWarning": "هشدار حافظه",
@@ -344,7 +392,11 @@
         "author": "نویسنده",
         "requiresProjectionModel": "نیاز به مدل پروجکشن",
         "downloadProjectionModel": "دانلود مدل پروجکشن",
-        "viewModelCardOnHuggingFace": "مشاهده کارت مدل در Hugging Face"
+        "viewModelCardOnHuggingFace": "مشاهده کارت مدل در Hugging Face",
+        "visionSupported": "پشتیبانی می‌شود",
+        "visionNotSupported": "پشتیبانی نمی‌شود",
+        "visionUnknown": "نامشخص",
+        "draftOnlyReason": "مدل فقط پیش‌نویس. آن را از مسیر تنظیمات → رمزگشایی گمانه‌زنانه انتخاب کنید."
       },
       "accessibility": {
         "expandDetails": "نمایش جزئیات",
@@ -405,7 +457,9 @@
       "multilingual": "چندزبانه",
       "rewriting": "بازنویسی",
       "creativity": "نوشتن خلاقانه",
-      "vision": "بینایی"
+      "vision": "بینایی",
+      "mtp": "گمانه‌زنانه (MTP)",
+      "mtpDraft": "پیش‌نویس گمانه‌زنانه"
     },
     "hubRun": {
       "title": "دانلود مدل",
@@ -453,13 +507,14 @@
     "supportProject": "حمایت از پروژه",
     "supportProjectDescription": "اگر از استفاده PocketPal AI لذت می‌برید، لطفاً حمایت از پروژه را در نظر بگیرید:",
     "githubButton": "ستاره در GitHub",
-    "orText": "یا",
     "orBy": "یا با",
-    "sponsorButton": "حامی مالی شوید",
     "versionCopiedTitle": "نسخه کپی شد",
     "versionCopiedDescription": "اطلاعات نسخه در کلیپ‌بورد کپی شد",
     "privacyPolicy": "سیاست حریم خصوصی",
-    "termsOfService": "شرایط استفاده از خدمات"
+    "termsOfService": "شرایط استفاده از خدمات",
+    "tour": "تور معرفی",
+    "tourDescription": "صفحه‌های خوش‌آمدگویی را دوباره ببینید تا با امکانات PocketPal AI آشنا شوید.",
+    "showIntroButton": "نمایش دوباره معرفی"
   },
   "feedback": {
     "title": "ارسال بازخورد",
@@ -533,7 +588,9 @@
       "activateModelTitle": "برای شروع یک مدل را فعال کنید",
       "activateModelDescription": "مدل را انتخاب و دانلود کنید. بعد از دانلود، روی بارگذاری کنار مدل بزنید و گفتگو را شروع کنید.",
       "activateModelButton": "انتخاب مدل",
-      "loading": "در حال بارگذاری..."
+      "loading": "در حال بارگذاری...",
+      "gettingReadyTitle": "{{name}} در حال آماده‌شدن است",
+      "gettingReadyDescription": "همین که پَل شما آماده گفتگو شد به شما خبر می‌دهیم. روی نوار بالای صفحه بزنید تا روند کار را ببینید."
     },
     "chatInput": {
       "inputPlaceholder": "پیام",
@@ -542,7 +599,8 @@
         "disableThinking": "غیرفعال‌سازی حالت تفکر",
         "thinkingEnabled": "حالت تفکر فعال شد",
         "thinkingDisabled": "حالت تفکر غیرفعال شد",
-        "thinkText": "تفکر"
+        "thinkText": "تفکر",
+        "cycleEffort": "میزان استدلال: {{level}}. برای تغییر میزان دوبار ضربه بزنید"
       }
     },
     "contentReportSheet": {
@@ -693,7 +751,8 @@
       "exportCurrentSession": "خروجی جلسه فعلی",
       "exportAllSessions": "خروجی همه جلسات",
       "exportChatSession": "خروجی جلسه چت",
-      "importSessions": "ورود جلسات"
+      "importSessions": "ورود جلسات",
+      "exportCurrentSessionMarkdown": "خروجی به صورت Markdown"
     },
     "hfTokenSheet": {
       "title": "توکن Hugging Face",
@@ -725,7 +784,20 @@
     },
     "modelSettingsSheet": {
       "modelSettings": "تنظیمات مدل",
-      "saveChanges": "ذخیره تغییرات"
+      "saveChanges": "ذخیره تغییرات",
+      "reasoningSection": "استدلال",
+      "isReasoningModel": "مدل استدلالی",
+      "isReasoningModelHelp": "نمایش کنترل تفکر برای این مدل، حتی اگر به‌صورت خودکار تشخیص داده نشده باشد.",
+      "supportsEffort": "پشتیبانی از میزان استدلال درجه‌بندی‌شده",
+      "effortValues": "میزان‌های استدلالی که این مدل پشتیبانی می‌کند",
+      "effortLevels": {
+        "minimal": "حداقل",
+        "low": "کم",
+        "medium": "متوسط",
+        "high": "زیاد",
+        "xhigh": "خیلی زیاد",
+        "max": "حداکثر"
+      }
     },
     "modelsHeaderRight": {
       "menuTitleHf": "مدل‌های Hugging Face",
@@ -757,12 +829,16 @@
       "talentNames": {
         "render_html": "پیش‌نمایش HTML",
         "calculate": "عبارت‌های ریاضی",
-        "datetime": "تاریخ و زمان"
+        "datetime": "تاریخ و زمان",
+        "web_search": "جستجوی وب",
+        "read_url": "خواندن صفحه وب"
       },
       "talentDescriptions": {
         "render_html": "نمایش اسناد HTML به‌صورت درون‌خطی در چت",
         "calculate": "محاسبه عبارت‌های ریاضی",
-        "datetime": "دریافت تاریخ و زمان فعلی"
+        "datetime": "دریافت تاریخ و زمان فعلی",
+        "web_search": "جستجوی اینترنت برای اطلاعات به‌روز (به کلید API در تنظیمات نیاز دارد)",
+        "read_url": "خواندن کامل محتوای یک صفحه وب (به کلید API در تنظیمات نیاز دارد)"
       },
       "greeting": {
         "sectionLabel": "خوش‌آمدگویی",
@@ -905,8 +981,11 @@
         "threeWeeksAgo": "۳ هفته پیش",
         "fourWeeksAgo": "۴ هفته پیش",
         "lastMonth": "ماه گذشته",
-        "older": "قدیمی‌تر"
-      }
+        "older": "قدیمی‌تر",
+        "pinned": "سنجاق‌شده"
+      },
+      "pin": "سنجاق کردن",
+      "unpin": "لغو سنجاق"
     },
     "usageStats": {
       "tooltip": {
@@ -942,7 +1021,8 @@
       "tokensPerSec": "{{value}} توکن/ثانیه",
       "ttft": "{{value}}ms TTFT",
       "interrupted": "متوقف شد",
-      "truncated": "قطع شد — احتمالاً context پر شده"
+      "truncated": "قطع شد — احتمالاً context پر شده",
+      "draftAccepted": "پیش‌نویس: {{accepted}}/{{total}} ({{pct}}%)"
     },
     "pendingIndicator": {
       "preparingTool": "در حال آماده‌سازی ابزار",
@@ -1154,7 +1234,19 @@
     "generatingPreview": "در حال تولید پیش‌نمایش… ({{tokens}} توکن)",
     "generatingPreviewPending": "در حال تولید پیش‌نمایش…",
     "toolUsedChip": "از {{name}} استفاده شد",
-    "toolErrorBlock": "{{name}} ناموفق بود"
+    "toolErrorBlock": "{{name}} ناموفق بود",
+    "webSearch": {
+      "searched": "جستجو شد: {{query}}",
+      "noResults": "نتیجه‌ای یافت نشد",
+      "noResultsFor": "نتیجه‌ای برای {{query}} یافت نشد",
+      "resultsCount": "{{count}} نتیجه",
+      "resultsCountOne": "۱ نتیجه",
+      "searchResultsTitle": "نتایج جستجو",
+      "showResultsAccessibilityLabel": "نمایش نتایج جستجوی وب برای {{query}}",
+      "openLinkError": "باز کردن این لینک ممکن نشد."
+    },
+    "contextFullRemote": "گنجایش گفتگو پر شد. یک چت جدید شروع کنید.",
+    "speculativeInitFailed": "این دستگاه نتوانست رمزگشایی گمانه‌زنانه را برای این مدل شروع کند — به‌احتمال زیاد حافظه کافی برای context پیش‌نویس وجود ندارد. رمزگشایی گمانه‌زنانه را از مسیر تنظیمات → تنظیمات پیشرفته خاموش کنید و دوباره تلاش کنید."
   },
   "benchmark": {
     "title": "بنچمارک",
@@ -1351,7 +1443,44 @@
     "engineRetryCta": "تلاش مجدد",
     "voicesEmptyState": "هیچ صدایی یافت نشد.",
     "kokoroDeviceNote": "ممکن است برخی صداها روی همه دستگاه‌ها کار نکنند.",
-    "insufficientStorage": "فضای کافی نیست — برای نصب این موتور {{requiredMb}} MB فضا آزاد کنید ({{freeMb}} MB در دسترس است)."
+    "insufficientStorage": "فضای کافی نیست — برای نصب این موتور {{requiredMb}} MB فضا آزاد کنید ({{freeMb}} MB در دسترس است).",
+    "supertonicLanguageLabel": "زبان",
+    "supertonicLanguageAuto": "خودکار",
+    "supertonicLanguageSheetTitle": "زبان",
+    "supertonicLanguageSearchPlaceholder": "جستجوی زبان‌ها",
+    "supertonicLanguageNames": {
+      "ar": "عربی",
+      "bg": "بلغاری",
+      "hr": "کرواتی",
+      "cs": "چکی",
+      "da": "دانمارکی",
+      "nl": "هلندی",
+      "en": "انگلیسی",
+      "et": "استونیایی",
+      "fi": "فنلاندی",
+      "fr": "فرانسوی",
+      "de": "آلمانی",
+      "el": "یونانی",
+      "hi": "هندی",
+      "hu": "مجاری",
+      "id": "اندونزیایی",
+      "it": "ایتالیایی",
+      "ja": "ژاپنی",
+      "ko": "کره‌ای",
+      "lv": "لتونیایی",
+      "lt": "لیتوانیایی",
+      "pl": "لهستانی",
+      "pt": "پرتغالی",
+      "ro": "رومانیایی",
+      "ru": "روسی",
+      "sk": "اسلواکی",
+      "sl": "اسلوونیایی",
+      "es": "اسپانیایی",
+      "sv": "سوئدی",
+      "tr": "ترکی",
+      "uk": "اوکراینی",
+      "vi": "ویتنامی"
+    }
   },
   "htmlPreview": {
     "defaultTitle": "پیش‌نمایش",
@@ -1360,5 +1489,101 @@
     "copyHtml": "کپی HTML",
     "closePreview": "بستن پیش‌نمایش",
     "openFullscreen": "باز کردن تمام‌صفحه: {{title}}"
+  },
+  "onboarding": {
+    "back": "بازگشت",
+    "skip": "رد کردن",
+    "skipForNow": "فعلاً رد کن",
+    "splash": {
+      "brand": "PocketPal"
+    },
+    "screen1": {
+      "title": "با پَل‌هایت آشنا شو.",
+      "titleAccent": "پَل‌هایت.",
+      "body": "دوستان کوچک و باهوشی که داخل گوشی تو زندگی می‌کنند.\nبیا با هم آماده‌ات کنیم - فقط یک دقیقه طول می‌کشد.",
+      "cta": "بگرد و نشانم بده",
+      "eyebrow": "به PocketPal خوش آمدی"
+    },
+    "screen2": {
+      "title": "هر زمان،\nهر جا.",
+      "body": "پَل‌هایت داخل گوشی تو زندگی می‌کنند.\nبدون اینترنت، بدون آنتن - توی هواپیما، دور از شبکه و در روستاهای دورافتاده هم کار می‌کنند.",
+      "highlight": "بدون اینترنت، بدون آنتن",
+      "cta": "بعدی",
+      "eyebrow": "ایده",
+      "titleAccent": "هر زمان،"
+    },
+    "screen3": {
+      "title": "کوچک‌تر،\nاما مال خودت.",
+      "titleAccent": "کوچک‌تر،",
+      "body": "پَل‌های روی گوشی‌ات سریع و خصوصی‌اند - اما سبک‌تر از هوش مصنوعی ابری. مثل یک همراه جیبی، نه یک پیشگوی همه‌چیزدان.",
+      "highlight": "سریع و خصوصی",
+      "cta": "متوجه شدم",
+      "eyebrow": "یک یادآوری"
+    },
+    "screen4": {
+      "title": "هیچ‌چیز از گوشی‌ات بیرون نمی‌رود.",
+      "titleAccent": "بیرون نمی‌رود",
+      "body": "بدون حساب کاربری. بدون فضای ابری. بدون ردیابی. گفتگوهایت مال خودت می‌مانند.",
+      "highlight": "بدون حساب کاربری. بدون فضای ابری. بدون ردیابی.",
+      "cta": "شروع کنیم",
+      "eyebrow": "تضمین حریم خصوصی"
+    },
+    "screen5": {
+      "title": "پَلت را برای چه می‌خواهی؟",
+      "body": "انتخاب کن دوست داری درباره چه چیزی صحبت کنی - ما پَلی متناسب با گوشی‌ات پیدا می‌کنیم.",
+      "topic": {
+        "smartchat": "گفتگوی هوشمند",
+        "coding": "برنامه‌نویسی",
+        "education": "آموزش",
+        "roleplay": "نقش‌آفرینی",
+        "creative_writing": "نوشتن خلاقانه",
+        "else": "دنبال چیز دیگری هستی؟"
+      },
+      "topicDescription": {
+        "smartchat": "همراه صمیمی روزمره",
+        "coding": "کدنویسی، رفع اشکال، توضیح",
+        "education": "یادگیری، توضیح، آزمون",
+        "roleplay": "شخصیت‌ها، سناریوها",
+        "creative_writing": "داستان‌ها، ایده‌ها، پیش‌نویس‌ها",
+        "else": "بعداً همه پَل‌ها را در برنامه ببین"
+      }
+    },
+    "screen6": {
+      "cta": "دانلود {{name}}",
+      "ctaTemplate": "دانلود {{name}} ({{size}})",
+      "useTemplate": "استفاده از {{name}}",
+      "deviceRamSuffix": "گیگابایت RAM",
+      "deviceFreeSuffix": "گیگابایت آزاد",
+      "recommended": "پیشنهادی",
+      "downloaded": "دانلود شده",
+      "modelTier": {
+        "quick": "سریع",
+        "balanced": "متعادل",
+        "best": "بهترین"
+      },
+      "subtitleTemplate": "{{name}} با یک مدل هوش مصنوعی کوچک روی گوشی‌ات فکر می‌کند - یکی را که مناسب است انتخاب کن.",
+      "pal": {
+        "pip": {
+          "body": "یک پَل عالی برایت پیدا کردیم - یک همراه صمیمی روزمره. به اندازه کافی باهوش برای بیشتر کارها، و به اندازه کافی سبک برای هر گوشی."
+        },
+        "codie": {
+          "body": "با Codie آشنا شو — هم‌برنامه‌نویس محلی تو. کد می‌خواند، کد می‌نویسد و بخش‌های پیچیده را توضیح می‌دهد، بدون اینکه هرگز از گوشی‌ات بیرون برود."
+        },
+        "sage": {
+          "body": "Sage صبور و کنجکاو است و ایده‌ها را قدم‌به‌قدم برایت توضیح می‌دهد. یک همدرس که توی جیبت داری."
+        },
+        "echo": {
+          "body": "Echo یک همراه همه‌فن‌حریف برای نقش‌آفرینی است — در نقش می‌ماند، صحنه‌ها را می‌سازد و هر جا داستانت برود همراهت می‌آید."
+        },
+        "muse": {
+          "body": "Muse در نوشتن کمکت می‌کند. عبارت‌ها را پیشنهاد می‌دهد، ریتم را پیدا می‌کند و لحن تو را حفظ می‌کند."
+        }
+      }
+    }
+  },
+  "downloadBanner": {
+    "titleByPal": "{{name}} در حال دانلود است",
+    "titleByModel": "{{name}} در حال دانلود است",
+    "extraInProgress": "+{{count}} مورد دیگر در حال انجام"
   }
 }

@@ -127,6 +127,45 @@ describe('AssistantTurnFooter', () => {
     expect(queryByTestId('footer-copy')).toBeTruthy();
   });
 
+  it('renders draft acceptance when speculative draft_tokens > 0', () => {
+    const message = baseTurn({
+      metadata: {
+        timings: {
+          predicted_per_second: 80,
+          draft_tokens: 12,
+          draft_tokens_accepted: 9,
+        },
+      },
+    });
+    const {getByTestId, getByText} = render(
+      <AssistantTurnFooter message={message} />,
+    );
+    expect(getByTestId('message-draft-tokens')).toBeTruthy();
+    expect(getByText('draft: 9/12 (75%)')).toBeTruthy();
+  });
+
+  it('does not render draft acceptance when draft_tokens is 0', () => {
+    const message = baseTurn({
+      metadata: {
+        timings: {
+          predicted_per_second: 80,
+          draft_tokens: 0,
+          draft_tokens_accepted: 0,
+        },
+      },
+    });
+    const {queryByTestId} = render(<AssistantTurnFooter message={message} />);
+    expect(queryByTestId('message-draft-tokens')).toBeNull();
+  });
+
+  it('does not render draft acceptance when draft_tokens is absent (non-speculative turn)', () => {
+    const message = baseTurn({
+      metadata: {timings: {predicted_per_second: 80}},
+    });
+    const {queryByTestId} = render(<AssistantTurnFooter message={message} />);
+    expect(queryByTestId('message-draft-tokens')).toBeNull();
+  });
+
   it('renders "Interrupted" status when metadata.interrupted is set', () => {
     const message = baseTurn({
       metadata: {copyable: true, interrupted: true},

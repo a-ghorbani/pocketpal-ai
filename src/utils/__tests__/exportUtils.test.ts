@@ -17,7 +17,10 @@ import {
   exportAllChatSessions,
   exportPal,
   exportAllPals,
+  exportChatSessionAsMarkdown,
 } from '../exportUtils';
+import {userId} from '../chat';
+import {format} from 'date-fns';
 import {ensureLegacyStoragePermission} from '../androidPermission';
 
 // Mock dependencies
@@ -46,6 +49,10 @@ jest.mock('@dr.pogodin/react-native-fs', () => ({
 }));
 
 jest.mock('date-fns', () => ({
+  // Return-only mock with the fixed value the filename tests rely on. Tests
+  // that need to assert WHICH date was formatted (export time vs session date)
+  // read `format.mock.calls` — `jest.fn()` records arguments regardless of
+  // return value.
   format: jest.fn().mockReturnValue('2024-01-01_12-00-00'),
 }));
 
@@ -621,6 +628,274 @@ describe('exportUtils', () => {
       const filename = 'test_thumbnail.jpg';
       const expected = `/mock/document/path/pal-images/test_thumbnail.jpg`;
       expect(getAbsoluteThumbnailPath(filename)).toBe(expected);
+    });
+  });
+
+  describe('exportChatSessionAsMarkdown', () => {
+    // `createdAt` ascends with the argument order so fixtures can be written
+    // newest-first (see the ordering note on the repository mock below) while
+    // still carrying truthful timestamps.
+    const makeTextMessage = (
+      id: string,
+      author: string,
+      text: string,
+      createdAt = 1704067200000,
+    ): any => ({
+      id,
+      author,
+      text,
+      type: 'text',
+      metadata: null,
+      createdAt,
+      toMessageObject: () => ({
+        id,
+        type: 'text',
+        text,
+        author: {id: author},
+        createdAt,
+        metadata: {},
+      }),
+    });
+
+    const writtenMarkdown = () => {
+      const call = (RNFS.writeFile as jest.Mock).mock.calls.at(-1);
+      return {path: call?.[0] as string, content: call?.[1] as string};
+    };
+
+    beforeEach(() => {
+      // IMPORTANT: `getSessionById` queries `Q.sortBy('position', Q.desc)` and
+      // `addMessageToSession` assigns `highestPosition + 1`, so the real array
+      // is NEWEST FIRST — the same convention ChatSessionStore documents
+      // ("messages are in reverse order, ie 0 is the latest"). Fixtures must
+      // match that order or an ordering bug stays invisible.
+      chatSessionRepository.getSessionById = jest.fn().mockResolvedValue({
+        session: {
+          id: 'session-1',
+          title: 'My Chat',
+          date: '2024-01-01T00:00:00Z',
+          activePalId: null,
+        },
+        messages: [
+          makeTextMessage('m2', 'assistant-1', 'It is 4.', 1704067260000),
+          makeTextMessage('m1', userId, 'What is 2+2?', 1704067200000),
+        ],
+        completionSettings: {settings: '{}'},
+      } as any);
+    });
+
+    it('writes a .md file and shares it with a markdown mime type', async () => {
+      await exportChatSessionAsMarkdown('session-1');
+
+      const {path} = writtenMarkdown();
+      expect(path).toMatch(/\.md$/);
+      expect(Share.open).toHaveBeenCalledWith(
+        expect.objectContaining({type: 'text/markdown'}),
+      );
+    });
+
+    it('renders the title, headings and message text as markdown', async () => {
+      await exportChatSessionAsMarkdown('session-1');
+
+      const {content} = writtenMarkdown();
+      expect(content).toContain('# My Chat');
+      expect(content).toContain('### User');
+      expect(content).toContain('What is 2+2?');
+      expect(content).toContain('### Assistant');
+      expect(content).toContain('It is 4.');
+    });
+
+    it('writes the transcript in chronological order, oldest first', async () => {
+      await exportChatSessionAsMarkdown('session-1');
+
+      const {content} = writtenMarkdown();
+      // Positional, not membership: `toContain` alone passes in any order.
+      expect(content.indexOf('What is 2+2?')).toBeLessThan(
+        content.indexOf('It is 4.'),
+      );
+      expect(content.match(/^### (User|Assistant)$/gm)).toEqual([
+        '### User',
+        '### Assistant',
+      ]);
+    });
+
+    it('stamps the export time, not the session creation date', async () => {
+      // `session.date` is only ever set at creation and never refreshed, so a
+      // chat started years ago must not claim to have been exported then.
+      const sessionCreated = '2020-06-15T08:30:00Z';
+      (chatSessionRepository.getSessionById as jest.Mock).mockResolvedValueOnce(
+        {
+          session: {
+            id: 'session-old',
+            title: 'Old Chat',
+            date: sessionCreated,
+            activePalId: null,
+          },
+          messages: [makeTextMessage('m1', userId, 'Hi')],
+          completionSettings: {settings: '{}'},
+        } as any,
+      );
+
+      await exportChatSessionAsMarkdown('session-old');
+
+      // `format` is mocked to a fixed string, so the rendered output cannot
+      // reveal which date was used — assert on the argument instead.
+      const formattedDates = (format as jest.Mock).mock.calls
+        .filter(([, pattern]) => pattern === 'yyyy-MM-dd HH:mm')
+        .map(([date]) => (date as Date).toISOString());
+
+      expect(formattedDates).toHaveLength(1);
+      expect(formattedDates[0]).not.toBe(
+        new Date(sessionCreated).toISOString(),
+      );
+    });
+
+    it('attributes authorship by user id rather than message order', async () => {
+      // Assistant speaks first here; role must follow the author id.
+      (chatSessionRepository.getSessionById as jest.Mock).mockResolvedValueOnce(
+        {
+          session: {
+            id: 'session-2',
+            title: 'Greeting',
+            date: '2024-01-01T00:00:00Z',
+            activePalId: null,
+          },
+          // Newest first: the Pal's greeting is the OLDEST message here, so it
+          // sits last in the repository's array and first in the transcript.
+          messages: [
+            makeTextMessage('m2', userId, 'Hello.', 1704067260000),
+            makeTextMessage('m1', 'assistant-1', 'Hi there!', 1704067200000),
+          ],
+          completionSettings: {settings: '{}'},
+        } as any,
+      );
+
+      await exportChatSessionAsMarkdown('session-2');
+
+      const {content} = writtenMarkdown();
+      // A Pal greeting means the assistant legitimately speaks first; role must
+      // follow the author id, and the greeting must lead the transcript.
+      expect(content.indexOf('Hi there!')).toBeLessThan(
+        content.indexOf('Hello.'),
+      );
+      expect(content.match(/^### (User|Assistant)$/gm)).toEqual([
+        '### Assistant',
+        '### User',
+      ]);
+    });
+
+    it('exports assistant_turn content, whose text column is empty by design', async () => {
+      (chatSessionRepository.getSessionById as jest.Mock).mockResolvedValueOnce(
+        {
+          session: {
+            id: 'session-3',
+            title: 'Turn Based',
+            date: '2024-01-01T00:00:00Z',
+            activePalId: null,
+          },
+          messages: [
+            {
+              id: 'm1',
+              author: 'assistant-1',
+              text: '',
+              type: 'assistant_turn',
+              metadata: null,
+              createdAt: 1704067200000,
+              toMessageObject: () => ({
+                id: 'm1',
+                type: 'assistant_turn',
+                author: {id: 'assistant-1'},
+                createdAt: 1704067200000,
+                metadata: {},
+                steps: [{content: 'First part.'}, {content: 'Second part.'}],
+              }),
+            },
+          ],
+          completionSettings: {settings: '{}'},
+        } as any,
+      );
+
+      await exportChatSessionAsMarkdown('session-3');
+
+      const {content} = writtenMarkdown();
+      expect(content).toContain('First part.');
+      expect(content).toContain('Second part.');
+    });
+
+    it('collapses a multi-line title so it stays a single heading', async () => {
+      // Titles are derived from the user's first message, so they can contain
+      // newlines — and a `#` starting the second line shifts the structure.
+      (chatSessionRepository.getSessionById as jest.Mock).mockResolvedValueOnce(
+        {
+          session: {
+            id: 'session-4',
+            title: 'Multi\nline # title',
+            date: '2024-01-01T00:00:00Z',
+            activePalId: null,
+          },
+          messages: [makeTextMessage('m1', userId, 'Hi')],
+          completionSettings: {settings: '{}'},
+        } as any,
+      );
+
+      await exportChatSessionAsMarkdown('session-4');
+
+      const {content} = writtenMarkdown();
+      expect(content).toContain('# Multi line # title');
+      expect(content.match(/^#[^#]/gm)).toHaveLength(1);
+    });
+
+    it('notes attached images instead of dropping them silently', async () => {
+      const withImages = makeTextMessage('m1', userId, 'Look at this');
+      // `toExportedMessage` reads the raw `metadata` column, not the in-memory
+      // object, so the URIs have to be on the JSON string.
+      withImages.metadata = JSON.stringify({
+        imageUris: ['file:///a.png', 'file:///b.png'],
+      });
+      (chatSessionRepository.getSessionById as jest.Mock).mockResolvedValueOnce(
+        {
+          session: {
+            id: 'session-5',
+            title: 'With Images',
+            date: '2024-01-01T00:00:00Z',
+            activePalId: null,
+          },
+          messages: [withImages],
+          completionSettings: {settings: '{}'},
+        } as any,
+      );
+
+      await exportChatSessionAsMarkdown('session-5');
+
+      const {content} = writtenMarkdown();
+      // One note per attachment, none dropped silently.
+      const noteCount = content.split('_[image]_').length - 1;
+      expect(noteCount).toBe(2);
+      // The note follows the text it belongs to, inside the same section.
+      expect(content.indexOf('Look at this')).toBeLessThan(
+        content.indexOf('_[image]_'),
+      );
+      // The on-device temp URI must never leak into a shared transcript.
+      expect(content).not.toContain('file:///a.png');
+      expect(content).not.toContain('file:///b.png');
+    });
+
+    it('throws when the session does not exist', async () => {
+      (chatSessionRepository.getSessionById as jest.Mock).mockResolvedValueOnce(
+        null,
+      );
+
+      await expect(exportChatSessionAsMarkdown('nonexistent')).rejects.toThrow(
+        'Session not found',
+      );
+    });
+
+    it('still shares the JSON export as application/json', async () => {
+      // The mimeType parameter defaults, so the existing export is unchanged.
+      await exportChatSession('session-1');
+
+      expect(Share.open).toHaveBeenCalledWith(
+        expect.objectContaining({type: 'application/json'}),
+      );
     });
   });
 });

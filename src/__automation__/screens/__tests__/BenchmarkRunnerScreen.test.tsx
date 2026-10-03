@@ -1,4 +1,5 @@
 import React from 'react';
+import {Platform} from 'react-native';
 import {act} from 'react-test-renderer';
 
 import {fireEvent, render, waitFor} from '../../../../jest/test-utils';
@@ -24,12 +25,28 @@ const {useRoute} = require('@react-navigation/native') as {
 // Mock RNFS at the module path the screen imports.
 jest.mock('@dr.pogodin/react-native-fs', () => ({
   ExternalDirectoryPath: '/mock/external',
+  DocumentDirectoryPath: '/mock/documents',
   exists: jest.fn().mockResolvedValue(true),
   readFile: jest.fn(),
   writeFile: jest.fn().mockResolvedValue(undefined),
 }));
 
 const RNFS = require('@dr.pogodin/react-native-fs');
+
+async function onPlatform(os: 'ios' | 'android', fn: () => Promise<void>) {
+  const originalOS = Platform.OS;
+  Platform.OS = os;
+  try {
+    await fn();
+  } finally {
+    Platform.OS = originalOS;
+  }
+}
+
+function lastWrittenReport() {
+  const calls = RNFS.writeFile.mock.calls;
+  return JSON.parse(calls[calls.length - 1][1]);
+}
 
 // Mock the deviceSelection helper so the GPU/Hexagon paths are testable.
 jest.mock('../../../utils/deviceSelection', () => ({
@@ -56,6 +73,11 @@ const {
 // Re-grab the llama.rn mocks so tests can drive the native log stream and
 // assert the initLlama payload.
 const {initLlama, addNativeLogListener, toggleNativeLog} = require('llama.rn');
+
+const {
+  activateKeepAwake,
+  deactivateKeepAwake,
+} = require('../../../utils/keepAwake');
 
 import {
   BenchmarkRunnerScreen,
@@ -442,6 +464,140 @@ describe('BenchmarkRunnerScreen', () => {
     });
 
     // -------------------------------------------------------------------------
+    // Terminal outcome and keep-awake
+    // -------------------------------------------------------------------------
+
+    function writtenOutcomes(): unknown[] {
+      return RNFS.writeFile.mock.calls
+        .map((c: unknown[]) => JSON.parse(c[1] as string).outcome)
+        .filter((o: unknown) => o !== undefined);
+    }
+
+    it('writes outcome "complete" last, with one row per cell', async () => {
+      stubOpenCLLogs();
+      await runMatrix(VALID_CONFIG, setStatus, setLastCell);
+      const report = lastWrittenReport();
+      expect(report.outcome).toBe('complete');
+      expect(report.runs).toHaveLength(1);
+      expect(writtenOutcomes()).toEqual(['complete']);
+      expect(setStatus).toHaveBeenLastCalledWith('complete');
+    });
+
+    it('writes outcome "error:<msg>" and rethrows on a matrix-level throw after the shell', async () => {
+      stubOpenCLLogs();
+      setStatus.mockImplementationOnce(() => {
+        throw new Error('status-sink-broke');
+      });
+      await expect(
+        runMatrix(VALID_CONFIG, setStatus, setLastCell),
+      ).rejects.toThrow('status-sink-broke');
+      expect(writtenOutcomes()).toEqual(['error:status-sink-broke']);
+      expect(lastWrittenReport().outcome).toBe('error:status-sink-broke');
+    });
+
+    it('onRun sets error:<msg> status when the matrix throws after the shell', async () => {
+      stubOpenCLLogs();
+      const {getByTestId} = render(
+        <BenchmarkRunnerScreen
+          __runner={(cfg, set, last) =>
+            runMatrix(
+              cfg,
+              (st: string) => {
+                if (st.startsWith('running:')) {
+                  throw new Error('status-sink-broke');
+                }
+                set(st);
+              },
+              last,
+            )
+          }
+          __loadConfig={jest.fn().mockResolvedValue(VALID_CONFIG)}
+        />,
+      );
+      await act(async () => {
+        fireEvent.press(getByTestId('bench-run-button'));
+      });
+      await waitFor(() => {
+        expect(
+          getByTestId('bench-runner-screen-status').props.accessibilityLabel,
+        ).toBe('error:status-sink-broke');
+      });
+      expect(lastWrittenReport().outcome).toBe('error:status-sink-broke');
+    });
+
+    it('writes no second outcome when a throw follows the complete write', async () => {
+      stubOpenCLLogs();
+      setStatus.mockImplementation((st: string) => {
+        if (st === 'complete') {
+          throw new Error('complete-status-broke');
+        }
+      });
+      try {
+        await expect(
+          runMatrix(VALID_CONFIG, setStatus, setLastCell),
+        ).rejects.toThrow('complete-status-broke');
+        expect(writtenOutcomes()).toEqual(['complete']);
+      } finally {
+        setStatus.mockReset();
+      }
+    });
+
+    it('writes no outcome when the shell write fails', async () => {
+      RNFS.writeFile.mockRejectedValueOnce(new Error('shell-write-failed'));
+      await expect(
+        runMatrix(VALID_CONFIG, setStatus, setLastCell),
+      ).rejects.toThrow('shell-write-failed');
+      expect(RNFS.writeFile).toHaveBeenCalledTimes(1);
+      expect(writtenOutcomes()).toEqual([]);
+    });
+
+    it('claims keep-awake after enterBenchmarkMode and releases it in finally', async () => {
+      stubOpenCLLogs();
+      await runMatrix(VALID_CONFIG, setStatus, setLastCell);
+      expect(activateKeepAwake).toHaveBeenCalledTimes(1);
+      expect(deactivateKeepAwake).toHaveBeenCalledTimes(1);
+      const enter = (modelStore.enterBenchmarkMode as jest.Mock).mock
+        .invocationCallOrder[0];
+      const activate = activateKeepAwake.mock.invocationCallOrder[0];
+      const deactivate = deactivateKeepAwake.mock.invocationCallOrder[0];
+      expect(enter).toBeLessThan(activate);
+      expect(activate).toBeLessThan(deactivate);
+    });
+
+    it('runs the matrix and still deactivates when activateKeepAwake throws', async () => {
+      stubOpenCLLogs();
+      activateKeepAwake.mockImplementationOnce(() => {
+        throw new Error('no-native-module');
+      });
+      await runMatrix(VALID_CONFIG, setStatus, setLastCell);
+      expect(lastWrittenReport().runs[0].status).toBe('ok');
+      expect(lastWrittenReport().outcome).toBe('complete');
+      expect(deactivateKeepAwake).toHaveBeenCalledTimes(1);
+    });
+
+    it('a failing deactivateKeepAwake does not turn a complete run into an error', async () => {
+      stubOpenCLLogs();
+      deactivateKeepAwake.mockImplementationOnce(() => {
+        throw new Error('no-native-module');
+      });
+      await runMatrix(VALID_CONFIG, setStatus, setLastCell);
+      expect(setStatus).toHaveBeenLastCalledWith('complete');
+      expect(modelStore.exitBenchmarkMode).toHaveBeenCalledTimes(1);
+    });
+
+    it('touches neither keep-awake call when enterBenchmarkMode rejects', async () => {
+      (modelStore.enterBenchmarkMode as jest.Mock).mockRejectedValueOnce(
+        new Error('enter-failed'),
+      );
+      await expect(
+        runMatrix(VALID_CONFIG, setStatus, setLastCell),
+      ).rejects.toThrow('enter-failed');
+      expect(activateKeepAwake).not.toHaveBeenCalled();
+      expect(deactivateKeepAwake).not.toHaveBeenCalled();
+      expect(RNFS.writeFile).not.toHaveBeenCalled();
+    });
+
+    // -------------------------------------------------------------------------
     // initLlama is the SOLE native-load entrypoint (no modelStore.initContext)
     // -------------------------------------------------------------------------
 
@@ -495,14 +651,67 @@ describe('BenchmarkRunnerScreen', () => {
       stubHexagonLogs();
       getDeviceOptions.mockResolvedValueOnce([
         {id: 'cpu', label: 'CPU', devices: ['CPU']},
-        {id: 'hexagon', label: 'Hexagon', devices: ['HTP*']},
+        {id: 'hexagon', label: 'Hexagon', devices: ['HTP0']},
       ]);
       const cfg: BenchConfig = {...VALID_CONFIG, backends: ['hexagon']};
       await runMatrix(cfg, setStatus, setLastCell);
       const [paramsArg] = (initLlama as jest.Mock).mock.calls[0];
-      expect(paramsArg.devices).toEqual(['HTP*']);
+      expect(paramsArg.devices).toEqual(['HTP0']);
       expect(paramsArg.n_gpu_layers).toBe(99);
     });
+
+    it.each([['HTP0', 'HTP1', 'HTP2', 'HTP3', 'HTP4', 'HTP5'], ['HTP3']])(
+      'uses real discovery for Hexagon sessions %j',
+      async (...names) => {
+        const originalOS = Platform.OS;
+        Platform.OS = 'android';
+        const {getBackendDevicesInfo} = require('llama.rn');
+        const actualSelection = jest.requireActual(
+          '../../../utils/deviceSelection',
+        );
+        getBackendDevicesInfo.mockResolvedValue(
+          names.map(deviceName => ({
+            deviceName,
+            type: 'accel',
+            backend: 'HTP',
+          })),
+        );
+        getDeviceOptions.mockImplementationOnce(
+          actualSelection.getDeviceOptions,
+        );
+        stubHexagonLogs();
+        const saved = JSON.parse(JSON.stringify(modelStore.contextInitParams));
+        try {
+          const cfg: BenchConfig = {
+            ...VALID_CONFIG,
+            backends: ['hexagon'],
+            settings_axes: [{name: 'flash_attn_type', values: ['on']}],
+          };
+          await runMatrix(cfg, setStatus, setLastCell);
+          const lastWrite =
+            RNFS.writeFile.mock.calls[RNFS.writeFile.mock.calls.length - 1];
+          const report = JSON.parse(lastWrite[1]);
+          expect(initLlama).toHaveBeenCalledTimes(1);
+          expect(initLlama.mock.calls[0][0]).toMatchObject({
+            devices: [names[0]],
+            n_gpu_layers: 99,
+            flash_attn_type: 'on',
+          });
+          expect(report.runs[0]).toMatchObject({
+            status: 'ok',
+            effective_init_params: {
+              devices: [names[0]],
+              n_gpu_layers: 99,
+              flash_attn_type: 'on',
+            },
+          });
+          expect(modelStore.contextInitParams).toEqual(saved);
+        } finally {
+          Platform.OS = originalOS;
+          getBackendDevicesInfo.mockReset().mockResolvedValue([]);
+        }
+      },
+    );
 
     // -------------------------------------------------------------------------
     // Per-cell context release (sole release site is the per-cell finally)
@@ -800,6 +1009,116 @@ describe('BenchmarkRunnerScreen', () => {
     // -------------------------------------------------------------------------
     // Report shape
     // -------------------------------------------------------------------------
+
+    it.each([
+      ['ios', '/mock/documents'],
+      ['android', '/mock/external'],
+    ] as const)(
+      'on %s reads the config from and writes the report to %s',
+      async (os, dir) => {
+        await onPlatform(os, async () => {
+          RNFS.exists.mockResolvedValueOnce(false);
+          const {getByTestId} = render(<BenchmarkRunnerScreen />);
+          await act(async () => {
+            fireEvent.press(getByTestId('bench-run-button'));
+          });
+          await waitFor(() => {
+            expect(
+              getByTestId('bench-runner-screen-status').props
+                .accessibilityLabel,
+            ).toBe('error:bench-config-missing');
+          });
+          expect(RNFS.exists).toHaveBeenCalledWith(`${dir}/bench-config.json`);
+
+          stubOpenCLLogs();
+          await runMatrix(VALID_CONFIG, setStatus, setLastCell);
+          const paths = RNFS.writeFile.mock.calls.map(
+            (c: unknown[]) => c[0] as string,
+          );
+          expect(paths.length).toBeGreaterThan(0);
+          for (const path of paths) {
+            expect(path.startsWith(`${dir}/benchmark-report-`)).toBe(true);
+          }
+          expect(lastWrittenReport().platform).toBe(os);
+        });
+      },
+    );
+
+    it('ok rows carry a finite, non-negative init_ms', async () => {
+      stubOpenCLLogs();
+      await runMatrix(VALID_CONFIG, setStatus, setLastCell);
+      const row = lastWrittenReport().runs[0];
+      expect(row.status).toBe('ok');
+      expect(Number.isFinite(row.init_ms)).toBe(true);
+      expect(row.init_ms).toBeGreaterThanOrEqual(0);
+    });
+
+    it('a backend-mismatch row keeps init_ms because initLlama resolved', async () => {
+      stubCPULogs();
+      await runMatrix(VALID_CONFIG, setStatus, setLastCell);
+      const row = lastWrittenReport().runs[0];
+      expect(row.error).toContain('backend-mismatch:gpu:cpu');
+      expect(row.init_ms).toBeGreaterThanOrEqual(0);
+    });
+
+    function stubLines(lines: string[]) {
+      (addNativeLogListener as jest.Mock).mockImplementation(
+        (cb: (level: string, text: string) => void) => {
+          lines.forEach(line => cb('I', line));
+          return {remove: jest.fn()};
+        },
+      );
+    }
+
+    it('an iPhone GPU cell on Metal lands ok with effective_backend "metal"', async () => {
+      await onPlatform('ios', async () => {
+        getDeviceOptions.mockResolvedValue([
+          {id: 'cpu', label: 'CPU', devices: ['CPU']},
+          {id: 'gpu', label: 'GPU (Metal)', devices: ['Metal']},
+        ]);
+        stubLines([
+          'llama_prepare_model_devices: using device MTL0 (Apple A15 GPU) (unknown id) - 4095 MiB free',
+          'load_tensors:   CPU_Mapped model buffer size =    28.69 MiB',
+          'load_tensors:  MTL0_Mapped model buffer size =    82.41 MiB',
+          'load_tensors: offloaded 31/31 layers to GPU',
+          'llama_kv_cache:       MTL0 KV buffer size =    45.00 MiB',
+        ]);
+        await runMatrix(VALID_CONFIG, setStatus, setLastCell);
+        const report = lastWrittenReport();
+        expect(report.platform).toBe('ios');
+        expect(report.outcome).toBe('complete');
+        expect(report.runs[0]).toMatchObject({
+          status: 'ok',
+          effective_backend: 'metal',
+        });
+        expect(report.runs[0].init_ms).toBeGreaterThanOrEqual(0);
+      });
+    });
+
+    it('a GPU cell on the iOS simulator fails backend-mismatch:gpu:cpu', async () => {
+      await onPlatform('ios', async () => {
+        stubLines([
+          'llama_prepare_model_devices: using device MTL0 (Apple iOS simulator GPU) (unknown id) - 0 MiB free',
+          'load_tensors:   CPU_Mapped model buffer size =    82.41 MiB',
+          'load_tensors: offloaded 0/31 layers to GPU',
+          'llama_kv_cache:        CPU KV buffer size =    45.00 MiB',
+        ]);
+        await runMatrix(VALID_CONFIG, setStatus, setLastCell);
+        const row = lastWrittenReport().runs[0];
+        expect(row.status).toBe('failed');
+        expect(row.effective_backend).toBe('cpu');
+        expect(row.error).toContain('backend-mismatch:gpu:cpu');
+      });
+    });
+
+    it('omits init_ms when initLlama rejects', async () => {
+      stubOpenCLLogs();
+      (initLlama as jest.Mock).mockRejectedValueOnce(new Error('init-failed'));
+      await runMatrix(VALID_CONFIG, setStatus, setLastCell);
+      const row = lastWrittenReport().runs[0];
+      expect(row.status).toBe('failed');
+      expect('init_ms' in row).toBe(false);
+    });
 
     it('persists config.bench at the top level of the report (not DEFAULT_BENCH)', async () => {
       stubOpenCLLogs();
@@ -1326,10 +1645,10 @@ describe('BenchmarkRunnerScreen', () => {
         filePath: '/mock/path/m.gguf',
         base: DEFAULT_BENCH_BASE_PARAMS,
         overrides: {} as any,
-        devices: ['HTP*'],
+        devices: ['HTP0'],
         n_gpu_layers: 99,
       });
-      expect(params.devices).toEqual(['HTP*']);
+      expect(params.devices).toEqual(['HTP0']);
       expect(params.n_gpu_layers).toBe(99);
       expect(params.model).toBe('/mock/path/m.gguf');
     });

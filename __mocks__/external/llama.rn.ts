@@ -50,6 +50,8 @@ export const loadLlamaModelInfo = jest.fn();
 
 export const initLlama = jest.fn();
 
+export const getBackendDevicesInfo = jest.fn().mockResolvedValue([]);
+
 export const toggleNativeLog = jest.fn().mockResolvedValue(undefined);
 
 export const addNativeLogListener = jest.fn().mockReturnValue({

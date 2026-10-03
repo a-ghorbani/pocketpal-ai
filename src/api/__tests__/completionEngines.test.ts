@@ -56,6 +56,42 @@ describe('LocalCompletionEngine', () => {
     expect(result.timings).toEqual({predicted_per_second: 50});
   });
 
+  it('carries speculative draft_tokens counters from the native result', async () => {
+    const mockResult = {
+      text: 'spec',
+      content: 'spec',
+      timings: {predicted_per_second: 80},
+      tokens_predicted: 10,
+      tokens_evaluated: 4,
+      draft_tokens: 12,
+      draft_tokens_accepted: 9,
+      truncated: false,
+      stopped_eos: true,
+    };
+
+    (mockContext.completion as jest.Mock).mockResolvedValueOnce(mockResult);
+
+    const result = await engine.completion({} as any);
+
+    expect(result.draft_tokens).toBe(12);
+    expect(result.draft_tokens_accepted).toBe(9);
+  });
+
+  it('leaves draft_tokens undefined when the native result omits them', async () => {
+    const mockResult = {
+      text: 'no-spec',
+      content: 'no-spec',
+      tokens_predicted: 3,
+    };
+
+    (mockContext.completion as jest.Mock).mockResolvedValueOnce(mockResult);
+
+    const result = await engine.completion({} as any);
+
+    expect(result.draft_tokens).toBeUndefined();
+    expect(result.draft_tokens_accepted).toBeUndefined();
+  });
+
   it('passes callback to LlamaContext and maps token data', async () => {
     const mockResult = {
       text: 'result',
@@ -140,12 +176,14 @@ describe('OpenAICompletionEngine', () => {
         max_tokens: 200,
         stop: ['</s>'],
         stream: true,
+        reasoning: undefined,
       },
       'http://localhost:1234',
       'sk-key',
       expect.any(Object), // AbortSignal
       onToken,
       undefined, // timeoutMs
+      undefined, // serverType
     );
 
     expect(result).toEqual(mockResult);
@@ -188,6 +226,7 @@ describe('OpenAICompletionEngine', () => {
       expect.any(Object),
       undefined,
       undefined,
+      undefined,
     );
   });
 
@@ -218,6 +257,7 @@ describe('OpenAICompletionEngine', () => {
       expect.any(Object),
       undefined,
       undefined,
+      undefined,
     );
   });
 
@@ -246,6 +286,7 @@ describe('OpenAICompletionEngine', () => {
       'http://localhost:1234',
       'sk-key',
       expect.any(Object),
+      undefined,
       undefined,
       undefined,
     );
@@ -299,6 +340,7 @@ describe('OpenAICompletionEngine', () => {
       expect.any(Object), // AbortSignal
       undefined, // callback
       600000, // raw timeoutMs forwarded, not normalized
+      undefined, // serverType
     );
   });
 
@@ -319,6 +361,33 @@ describe('OpenAICompletionEngine', () => {
       expect.any(Object),
       undefined,
       undefined,
+      undefined,
+    );
+  });
+
+  it('forwards params.reasoning and the constructed serverType', async () => {
+    const typedEngine = new OpenAICompletionEngine(
+      'http://localhost:1234',
+      'test-model',
+      'sk-key',
+      undefined,
+      'Ollama',
+    );
+    mockedStreamChat.mockResolvedValueOnce({text: '', content: ''});
+
+    await typedEngine.completion({
+      messages: [{role: 'user', content: 'Hi'}],
+      reasoning: {enabled: false},
+    } as any);
+
+    expect(mockedStreamChat).toHaveBeenCalledWith(
+      expect.objectContaining({reasoning: {enabled: false}}),
+      'http://localhost:1234',
+      'sk-key',
+      expect.any(Object),
+      undefined,
+      undefined,
+      'Ollama',
     );
   });
 });

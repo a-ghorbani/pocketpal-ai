@@ -230,6 +230,22 @@ describe('mergeReports', () => {
     );
   });
 
+  it('throws when input reports mix platforms', () => {
+    const reports = [
+      {version: '1.1', platform: 'android', runs: [makeRow({})]},
+      {version: '1.1', platform: 'ios', runs: [makeRow({pp_avg: 200})]},
+    ];
+    expect(() => mergeReports(reports, new Set())).toThrow(/mixed platform/);
+  });
+
+  it('treats a missing platform as android when merging with android reports', () => {
+    const reports = [
+      {version: '1.1', runs: [makeRow({})]},
+      {version: '1.1', platform: 'android', runs: [makeRow({pp_avg: 200})]},
+    ];
+    expect(() => mergeReports(reports, new Set())).not.toThrow();
+  });
+
   it('treats missing version as 1.0 (legacy default) — mixing missing with explicit 1.1 is fatal', () => {
     const reports = [
       {runs: [makeRow({})]}, // missing version -> 1.0

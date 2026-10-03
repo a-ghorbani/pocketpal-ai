@@ -14,7 +14,10 @@ import type {
 } from './AgentRunner.types';
 import type {TalentResult} from '../talents/types';
 
-const DEFAULT_MAX_TURNS = 5;
+export const DEFAULT_MAX_TURNS = 5;
+
+const BUDGET_EXHAUSTED_NUDGE =
+  '(Tool budget exhausted. Answer now using only the information gathered above; if it is insufficient, say what is missing.)';
 
 /**
  * Bridge a synchronous-callback engine into an async iterator. The
@@ -276,6 +279,7 @@ export async function* runAgent(
 
   let messages = initialParams.messages;
   let turn = 0;
+  let forceFinal = false;
   // Holds the engine's CompletionResult after each turn finishes.
   // Mutated from inside the streaming-bridge `.then` handler (the
   // `as CompletionResult | null` cast is a TS hint so that the
@@ -286,10 +290,11 @@ export async function* runAgent(
   const callIdSeed = Date.now();
 
   try {
-    while (turn < maxTurns) {
+    while (turn < maxTurns || forceFinal) {
       if (signal?.aborted) {
         break;
       }
+      const isForcedFinal = forceFinal;
 
       yield {type: 'step_started', turn, isFollowUp: turn > 0};
 
@@ -309,7 +314,9 @@ export async function* runAgent(
 
       // Bridge engine streaming callback into the iterator.
       const queue = new EventQueue<AgentEvent>();
-      const turnParams: ApiCompletionParams = {...initialParams, messages};
+      const turnParams: ApiCompletionParams = isForcedFinal
+        ? {...initialParams, messages, tools: undefined}
+        : {...initialParams, messages};
 
       // Track engine failure separately so we can fully await the
       // promise (no unhandled rejection) before yielding the
@@ -345,7 +352,13 @@ export async function* runAgent(
             }
             if (delta.content) {
               accumulatedText += delta.content;
-              if (!markerSeenThisStep && triggerMarkers.length > 0) {
+              // Forced final has no tools, so a marker-shaped string in the
+              // answer must not flip the UI into tool-call mode.
+              if (
+                !isForcedFinal &&
+                !markerSeenThisStep &&
+                triggerMarkers.length > 0
+              ) {
                 const matched = triggerMarkers.find(m =>
                   accumulatedText.includes(m),
                 );
@@ -391,7 +404,10 @@ export async function* runAgent(
       // writer lands them on step.toolCalls with ids that match the
       // upcoming outcomes by construction.
       const finishedResult = lastResult;
-      const rawToolCalls = finishedResult?.tool_calls ?? [];
+      // Forced final is text-only; ignore any tool_calls a confused model emits.
+      const rawToolCalls = isForcedFinal
+        ? []
+        : (finishedResult?.tool_calls ?? []);
       const callsWithoutMetrics =
         rawToolCalls.length === 0
           ? undefined
@@ -414,6 +430,10 @@ export async function* runAgent(
           : callsWithoutMetrics;
 
       yield {type: 'step_finished', turn, toolCalls: calls};
+
+      if (isForcedFinal) {
+        break;
+      }
 
       if (!finishedResult) {
         break;
@@ -464,6 +484,19 @@ export async function* runAgent(
         finishedResult.reasoning_content,
       );
       turn += 1;
+
+      if (turn >= maxTurns) {
+        // Cap reached mid tool-request: run one closing no-tools completion so
+        // the run never ends on an unanswered tool request.
+        forceFinal = true;
+        messages = [
+          ...(messages ?? []),
+          {
+            role: 'user',
+            content: BUDGET_EXHAUSTED_NUDGE,
+          } as unknown as NonNullable<ApiCompletionParams['messages']>[number],
+        ];
+      }
     }
 
     const result: AgentRunResult = {

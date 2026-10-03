@@ -308,6 +308,26 @@ export const remoteModel: Model = createModel({
   remoteModelId: 'gpt-3.5-turbo',
 });
 
+// A second model on the same server, so capability cases can show that entries
+// are per model and not per server.
+export const remoteModelSibling: Model = createModel({
+  id: 'server1/text-only-model',
+  name: 'text-only-model',
+  author: 'Test LM Studio',
+  origin: ModelOrigin.REMOTE,
+  isDownloaded: true,
+  isLocal: false,
+  size: 0,
+  params: 0,
+  downloadUrl: '',
+  hfUrl: '',
+  progress: 0,
+  filename: '',
+  serverId: 'server1',
+  serverName: 'Test LM Studio',
+  remoteModelId: 'text-only-model',
+});
+
 export const modelsList: Model[] = [
   basicModel,
   downloadedModel,

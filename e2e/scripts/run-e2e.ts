@@ -525,9 +525,18 @@ function listModels(): void {
 function buildApps(
   platform: 'ios' | 'android' | 'both',
   dryRun: boolean,
+  spec: string,
 ): void {
+  // E2E builds default to __E2E_SKIP_ONBOARDING__=true (babel.config.js) so the
+  // OnboardingStack is bypassed and the other specs reach the chat shell
+  // directly. The onboarding spec is the one exception — it needs the flow to
+  // actually mount, so build that variant with E2E_SKIP_ONBOARDING=false. It is
+  // a distinct binary; run the onboarding spec in its own build/--skip-build
+  // cycle, not bundled with specs that expect onboarding bypassed.
+  const onboardingPrefix =
+    spec === 'onboarding' ? 'E2E_SKIP_ONBOARDING=false ' : '';
   if (platform === 'ios' || platform === 'both') {
-    const cmd = 'yarn ios:build:e2e';
+    const cmd = `${onboardingPrefix}yarn ios:build:e2e`;
     if (dryRun) {
       console.log(`[DRY RUN] Would run: ${cmd} (cwd: ${REPO_ROOT})`);
     } else {
@@ -539,7 +548,7 @@ function buildApps(
     // E2E runs must target the e2e flavor (com.pocketpalai.e2e) so the
     // automation bridge is present. The prod flavor's APK has the
     // bridge DCE-stripped and specs would silently fail.
-    const cmd = 'cd android && E2E_BUILD=true ./gradlew assembleE2eReleaseE2e';
+    const cmd = `cd android && ${onboardingPrefix}E2E_BUILD=true ./gradlew assembleE2eReleaseE2e`;
     if (dryRun) {
       console.log(`[DRY RUN] Would run: ${cmd} (cwd: ${REPO_ROOT})`);
     } else {
@@ -1080,7 +1089,7 @@ async function main(): Promise<void> {
   if (args.dryRun) {
     printDryRun(args, platforms, devices, models, reportDir, gitInfo);
     if (!args.skipBuild && args.mode === 'local') {
-      buildApps(args.platform, true);
+      buildApps(args.platform, true, args.spec);
     }
     return;
   }
@@ -1091,7 +1100,7 @@ async function main(): Promise<void> {
   // Build step
   if (!args.skipBuild && args.mode === 'local') {
     console.log('Building apps...\n');
-    buildApps(args.platform, false);
+    buildApps(args.platform, false, args.spec);
   } else if (args.skipBuild) {
     console.log('Skipping build step (--skip-build)\n');
   }

@@ -51,6 +51,27 @@ export const config: Options.Testrunner = {
       'appium:autoGrantPermissions': true,
       // Skip lock handling - emulator should be unlocked manually or have no lock
       'appium:skipUnlock': true,
+      // UiAutomator2's host-side listener defaults to 8200, which collides
+      // when the adb server is remote/shared; override when another service
+      // holds the port there.
+      ...(process.env.E2E_SYSTEM_PORT && {
+        'appium:systemPort': Number(process.env.E2E_SYSTEM_PORT),
+      }),
+      // With a remote adb server (ssh-tunneled), every adb round-trip pays
+      // network latency; the 30s instrumentation-launch default is too tight.
+      ...(process.env.E2E_ADB_SLOW && {
+        'appium:uiautomator2ServerLaunchTimeout': 180000,
+        'appium:uiautomator2ServerInstallTimeout': 180000,
+        'appium:adbExecTimeout': 120000,
+      }),
+      // Remote adb server: `adb forward` listeners live on the adb-server
+      // host, not this machine, so the driver must connect there instead of
+      // 127.0.0.1. The driver's port-free precheck still probes IPv4
+      // localhost, so when the route is an ssh tunnel it must bind [::1]
+      // only and the host here must resolve to it (e.g. 'localhost').
+      ...(process.env.E2E_REMOTE_ADB_HOST && {
+        'appium:remoteAdbHost': process.env.E2E_REMOTE_ADB_HOST,
+      }),
       // Only include UDID if explicitly set (real devices need it)
       ...(DEVICE_UDID && {'appium:udid': DEVICE_UDID}),
     },

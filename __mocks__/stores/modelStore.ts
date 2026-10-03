@@ -3,11 +3,25 @@ import {computed, makeAutoObservable, observable} from 'mobx';
 import {modelsList} from '../../jest/fixtures/models';
 
 import {downloadManager} from '../services/downloads';
+import {mockServerStore} from './serverStore';
 
-import {Model, ContextInitParams} from '../../src/utils/types';
+import {
+  Model,
+  ContextInitParams,
+  RemoteSessionBinding,
+} from '../../src/utils/types';
 import {LlamaContext} from 'llama.rn';
 import {CompletionEngine} from '../../src/utils/completionTypes';
 import {createDefaultContextInitParams} from '../../src/utils/contextInitParamsVersions';
+import {
+  draftCacheDefaults,
+  effectiveDraftModeOf,
+} from '../../src/store/draftResolution';
+import {resolveModelCaps} from '../../src/utils/modelCaps';
+import type {
+  CapabilityEnv,
+  ModelCapabilityView,
+} from '../../src/utils/modelCaps';
 
 class MockModelStore {
   models = modelsList;
@@ -20,6 +34,9 @@ class MockModelStore {
   isStreaming = false;
   context: LlamaContext | undefined = undefined;
   engine: CompletionEngine | undefined = undefined;
+  isMultimodalActive: boolean = false;
+  activeContextSettings: ContextInitParams | undefined = undefined;
+  activeRemoteBinding: RemoteSessionBinding | undefined = undefined;
 
   // Memory calibration variables
   availableMemoryCeiling: number | undefined = 5 * 1e9; // 5GB ceiling
@@ -66,8 +83,15 @@ class MockModelStore {
   setCacheTypeV: jest.Mock;
   setUseMmap: jest.Mock;
   setNoExtraBufts: jest.Mock;
+  setSpeculativeEnabled: jest.Mock;
+  setSelectedDraftModel: jest.Mock;
+  setSpecDraftNGpuLayers: jest.Mock;
+  setSpecDraftCacheTypeK: jest.Mock;
+  setSpecDraftCacheTypeV: jest.Mock;
   enterBenchmarkMode: jest.Mock;
   exitBenchmarkMode: jest.Mock;
+  recordReasoningObserved: jest.Mock;
+  setReasoningOverride: jest.Mock;
   benchmarkActive: boolean = false;
   isContextLoading: boolean = false;
   loadingModel: Model | undefined;
@@ -113,13 +137,23 @@ class MockModelStore {
       setCacheTypeV: false,
       setUseMmap: false,
       setNoExtraBufts: false,
+      setSpeculativeEnabled: false,
+      setSelectedDraftModel: false,
+      setSpecDraftNGpuLayers: false,
+      setSpecDraftCacheTypeK: false,
+      setSpecDraftCacheTypeV: false,
       enterBenchmarkMode: false,
       exitBenchmarkMode: false,
+      recordReasoningObserved: false,
+      setReasoningOverride: false,
       contextId: computed,
       lastUsedModel: computed,
       activeModel: computed,
+      activeModelCaps: computed,
       displayModels: computed,
       availableModels: computed,
+      effectiveDraftMode: computed,
+      effectiveDraftCacheDefaults: computed,
       isDownloading: computed,
       activeDownloads: computed,
     });
@@ -183,8 +217,25 @@ class MockModelStore {
     this.setCacheTypeV = jest.fn();
     this.setUseMmap = jest.fn();
     this.setNoExtraBufts = jest.fn();
+    this.setSpeculativeEnabled = jest.fn();
+    this.setSelectedDraftModel = jest.fn();
+    this.setSpecDraftNGpuLayers = jest.fn();
+    this.setSpecDraftCacheTypeK = jest.fn();
+    this.setSpecDraftCacheTypeV = jest.fn();
     this.enterBenchmarkMode = jest.fn().mockResolvedValue(undefined);
     this.exitBenchmarkMode = jest.fn();
+    this.recordReasoningObserved = jest.fn();
+    // Mirror the real writer so tests exercise the live override → resolver →
+    // pill reactive chain. Local ids mutate Model.reasoning on the observable
+    // model; remote ids route to ServerStore (kept as a spy fallback here).
+    this.setReasoningOverride = jest.fn((modelId: string, cap: any) => {
+      const localModel = this.models.find(m => m.id === modelId);
+      if (!localModel) {
+        return;
+      }
+      localModel.reasoning = cap;
+      localModel.supportsThinking = cap.isReasoning === 'yes';
+    });
   }
 
   setActiveModel = (modelId: string) => {
@@ -226,6 +277,27 @@ class MockModelStore {
     return this.models.find(model => model.id === this.activeModelId);
   }
 
+  // Delegates to the real resolver over the live mock stores rather than
+  // returning a fixed answer, so consumer suites exercise the actual
+  // capability chain and stay reactive to store mutations.
+  private get capabilityEnv(): CapabilityEnv {
+    return {
+      remoteCaps: mockServerStore.remoteCaps,
+      listCaps: mockServerStore.listCaps,
+      binding: this.activeRemoteBinding,
+      isMultimodalActive: this.isMultimodalActive,
+      activeContextSettings: this.activeContextSettings,
+      activeModelId: this.activeModelId,
+    };
+  }
+
+  capsFor = (model: Model | undefined): ModelCapabilityView =>
+    resolveModelCaps(model, this.capabilityEnv);
+
+  get activeModelCaps(): ModelCapabilityView {
+    return this.capsFor(this.activeModel);
+  }
+
   get displayModels(): Model[] {
     // Filter out projection models for display purposes
     return this.models.filter(model => model.modelType !== 'projection');
@@ -239,13 +311,19 @@ class MockModelStore {
     return this.models.filter(model => model.isDownloaded);
   }
 
-  isModelAvailable(modelId: string) {
-    return this.availableModels.some(model => model.id === modelId);
+  get effectiveDraftMode() {
+    return effectiveDraftModeOf(this);
   }
 
-  async isMultimodalEnabled(): Promise<boolean> {
-    // Mock implementation - return false by default for tests
-    return false;
+  get effectiveDraftCacheDefaults() {
+    return draftCacheDefaults(
+      this.effectiveDraftMode,
+      this.contextInitParams.flash_attn_type === 'on',
+    );
+  }
+
+  isModelAvailable(modelId: string) {
+    return this.availableModels.some(model => model.id === modelId);
   }
 
   async getModelFullPath(model: Model): Promise<string> {

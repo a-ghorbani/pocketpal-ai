@@ -1,9 +1,10 @@
-import React, {useMemo, useState} from 'react';
+import React, {useContext, useMemo, useState} from 'react';
 import {View, Text} from 'react-native';
 import {BottomSheetFlatList} from '@gorhom/bottom-sheet';
 
 import {CheckMdIcon, SearchIcon} from '../../assets/icons';
 import {useTheme} from '../../hooks';
+import {L10nContext} from '../../utils';
 import {Pressable} from '../ui/primitives/Pressable';
 import {Sheet} from '../Sheet';
 
@@ -48,6 +49,7 @@ export const SearchableSelectSheet: React.FC<SearchableSelectSheetProps> = ({
   optionTestIDPrefix = 'searchable-select-option',
 }) => {
   const theme = useTheme();
+  const l10n = useContext(L10nContext);
   const styles = createStyles(theme);
   const [query, setQuery] = useState('');
 
@@ -59,15 +61,14 @@ export const SearchableSelectSheet: React.FC<SearchableSelectSheetProps> = ({
     return options.filter(o => o.label.toLowerCase().includes(q));
   }, [options, query]);
 
-  const handleSelect = (next: string) => {
-    onSelect(next);
-    onClose();
-  };
-
-  // Reset the query whenever the sheet is dismissed so a reopen starts clean.
   const handleClose = () => {
     setQuery('');
     onClose();
+  };
+
+  const handleSelect = (next: string) => {
+    onSelect(next);
+    handleClose();
   };
 
   const renderItem = ({item}: {item: SearchableSelectOption}) => {
@@ -98,6 +99,9 @@ export const SearchableSelectSheet: React.FC<SearchableSelectSheetProps> = ({
       onClose={handleClose}
       title={title}
       snapPoints={['75%']}
+      // Default "interactive" slides the whole sheet up by the keyboard
+      // height, putting the header under the status bar.
+      keyboardBehavior="extend"
       enablePanDownToClose
       enableContentPanningGesture={false}>
       {isVisible ? (
@@ -126,6 +130,11 @@ export const SearchableSelectSheet: React.FC<SearchableSelectSheetProps> = ({
             keyboardShouldPersistTaps="handled"
             style={styles.list}
             contentContainerStyle={styles.listContent}
+            ListEmptyComponent={
+              <Text testID={`${testID}-empty`} style={styles.emptyText}>
+                {l10n.common.noResults}
+              </Text>
+            }
           />
         </View>
       ) : null}

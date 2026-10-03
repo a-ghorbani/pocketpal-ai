@@ -38,6 +38,31 @@ export async function getAvailableDevices(): Promise<
   }
 }
 
+function selectHexagonDevice(devices: NativeBackendDeviceInfo[]) {
+  return devices.find(
+    device =>
+      device.deviceName?.startsWith('HTP') && !/[*?]/.test(device.deviceName),
+  );
+}
+
+export async function resolveDeviceSelection(selection: {
+  devices?: string[];
+  n_gpu_layers?: number;
+}): Promise<{devices?: string[]; n_gpu_layers?: number}> {
+  const snapshot = {...selection, devices: selection.devices?.slice()};
+  if (
+    Platform.OS !== 'android' ||
+    !snapshot.devices?.some(name => name.startsWith('HTP'))
+  ) {
+    return snapshot;
+  }
+
+  const device = selectHexagonDevice(await getAvailableDevices());
+  return device
+    ? {...snapshot, devices: [device.deviceName]}
+    : {devices: ['CPU'], n_gpu_layers: 0};
+}
+
 /**
  * Get device selection options based on platform and available devices
  * @returns Array of device options for UI presentation
@@ -93,8 +118,7 @@ export async function getDeviceOptions(): Promise<DeviceOption[]> {
 
   // Android: Build options based on available devices
   const devices = await getAvailableDevices();
-  const hexagonDevs = devices.filter(d => d.deviceName?.startsWith('HTP'));
-  const hasHexagon = hexagonDevs.length > 0;
+  const hexagonDevice = selectHexagonDevice(devices);
   const gpuDev = devices.find(d => d.type === 'gpu');
 
   // Option 1: CPU (always available, recommended for reliability)
@@ -129,21 +153,21 @@ export async function getDeviceOptions(): Promise<DeviceOption[]> {
   }
 
   // Option 3: Hexagon (if available)
-  if (hasHexagon) {
+  if (hexagonDevice) {
     // Hexagon varies, but 'off' is safest
     // Conservative: only allow 'off' to avoid runtime errors
     options.push({
       id: 'hexagon',
       label: 'Hexagon',
       description: 'Qualcomm NPU (Experimental, fastest but may be unstable)',
-      devices: ['HTP*'], // Wildcard for all HTP devices
+      devices: [hexagonDevice.deviceName],
       n_gpu_layers: 99,
       default_flash_attn_type: 'off',
       valid_flash_attn_types: ['off'], // Conservative: only 'off' is guaranteed safe
       tag: 'Experimental',
       experimental: true,
       platform: 'android',
-      deviceInfo: hexagonDevs[0],
+      deviceInfo: hexagonDevice,
     });
   }
 

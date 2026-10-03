@@ -10,10 +10,53 @@ import {DrawerPage} from '../pages/DrawerPage';
 import {ModelsPage} from '../pages/ModelsPage';
 import {HFSearchSheet} from '../pages/HFSearchSheet';
 import {ModelDetailsSheet} from '../pages/ModelDetailsSheet';
-import {Selectors} from './selectors';
+import {Selectors, byTestId} from './selectors';
+import {Gestures} from './gestures';
 import {TIMEOUTS, ModelTestConfig, ModelQuantVariant} from '../fixtures/models';
 
 declare const browser: WebdriverIO.Browser;
+
+/**
+ * Wait for a model's card to appear on the Models screen after a download.
+ *
+ * Fails fast on the app's download-error dialog: once that is up the download
+ * is over, so waiting out the remaining minutes only buys a timeout that names
+ * the wrong thing.
+ */
+export async function waitForModelDownloaded(
+  downloadFile: string,
+  timeout: number = TIMEOUTS.download,
+): Promise<void> {
+  const cardSelector = Selectors.modelCard.cardContainer(downloadFile);
+  const deadline = Date.now() + timeout;
+
+  while (Date.now() < deadline) {
+    if (
+      await browser
+        .$(cardSelector)
+        .isDisplayed()
+        .catch(() => false)
+    ) {
+      return;
+    }
+    if (
+      await browser
+        .$(byTestId('download-error-dialog'))
+        .isDisplayed()
+        .catch(() => false)
+    ) {
+      const reason = await browser
+        .$(byTestId('error-message-text'))
+        .getText()
+        .catch(() => 'unknown');
+      throw new Error(`Download failed for ${downloadFile}: ${reason}`);
+    }
+    await browser.pause(1000);
+  }
+  throw new Error(
+    `Model card for ${downloadFile} did not appear within ${timeout}ms`,
+  );
+}
 
 /**
  * Dismiss memory/performance warning alert if it appears.
@@ -89,6 +132,51 @@ export async function waitForAiMessage(
 }
 
 /**
+ * Expand a downloaded model card and switch its Vision toggle off. No-op when
+ * the card exposes no vision row (non-multimodal model) or the toggle already
+ * reads off.
+ */
+async function disableVisionOnCard(filename: string): Promise<void> {
+  const card = browser.$(Selectors.modelCard.cardContainer(filename));
+  // `.//`-scoped so Android evaluates the child query against THIS card —
+  // an absolute testID XPath is document-global and can expand a sibling.
+  const expand = (browser as any).isAndroid
+    ? card.$('.//*[contains(@resource-id, "expand-details-button")]')
+    : card.$('~expand-details-button');
+  await expand.waitForExist({timeout: 10000});
+  await expand.click();
+  await browser.pause(600);
+
+  // The switch carries its own testID: RN view-flattening turns the row
+  // container into a leaf in the a11y tree, so a child query under the row
+  // can never match. Scroll BEFORE concluding it is absent — an off-screen
+  // toggle also reads as not existing, and skipping then silently leaves
+  // vision ON (the failure this helper exists to prevent).
+  const visionSwitch = browser.$(byTestId('vision-toggle-switch'));
+  const reachable = await Gestures.scrollToElement(
+    byTestId('vision-toggle-switch'),
+    5,
+  );
+  if (!reachable && !(await visionSwitch.isExisting().catch(() => false))) {
+    console.log(`[disableVision] no vision toggle on ${filename}; skipping`);
+    return;
+  }
+  // Android exposes `checked`, iOS `value` ("1"/"0"); anything unreadable
+  // falls through to a click, which is correct for the fresh-install default.
+  const isAndroid = (browser as any).isAndroid;
+  const state = isAndroid
+    ? await visionSwitch.getAttribute('checked').catch(() => null)
+    : await visionSwitch.getAttribute('value').catch(() => null);
+  if (state === 'false' || state === '0') {
+    console.log(`[disableVision] already off on ${filename}`);
+    return;
+  }
+  await visionSwitch.click();
+  await browser.pause(400);
+  console.log(`[disableVision] vision switched off on ${filename}`);
+}
+
+/**
  * Download a model from HuggingFace and load it.
  * After completion, the app auto-navigates to the Chat screen.
  *
@@ -132,8 +220,12 @@ export async function downloadAndLoadModel(
   const containerSelector = Selectors.modelCard.cardContainer(
     model.downloadFile,
   );
+  await waitForModelDownloaded(model.downloadFile, downloadTimeout);
   const modelCardContainer = browser.$(containerSelector);
-  await modelCardContainer.waitForDisplayed({timeout: downloadTimeout});
+
+  if (model.disableVisionBeforeLoad) {
+    await disableVisionOnCard(model.downloadFile);
+  }
 
   // Find and click load button
   const loadBtn = modelCardContainer.$(Selectors.modelCard.loadButtonElement);
@@ -192,8 +284,8 @@ export async function downloadAndLoadModelVariant(
   const containerSelector = Selectors.modelCard.cardContainer(
     variant.downloadFile,
   );
+  await waitForModelDownloaded(variant.downloadFile, downloadTimeout);
   const modelCardContainer = browser.$(containerSelector);
-  await modelCardContainer.waitForDisplayed({timeout: downloadTimeout});
 
   const loadBtn = modelCardContainer.$(Selectors.modelCard.loadButtonElement);
   await loadBtn.waitForDisplayed({timeout: 10000});

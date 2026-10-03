@@ -248,6 +248,44 @@ describe('useMemoryCheck', () => {
     expect(result.current.shortMemoryWarning).toBe(l10n.en.memory.memoryTight);
   });
 
+  it('sums a paired draft size into the memory-fit chain', async () => {
+    // ceiling/total = 3GB; localModel.size = 2GB → 2.4GB requirement fits alone.
+    // A 1GB draft pushes the requirement to (2GB + 1GB) × 1.2 = 3.6GB, which no
+    // longer fits — proving the draft size flows through useMemoryCheck →
+    // getMemoryFitDetails → getModelMemoryRequirement (the badge/fitStatus chain),
+    // not just the hasEnoughMemory chain.
+    runInAction(() => {
+      modelStore.availableMemoryCeiling = 3 * 1e9;
+      modelStore.largestSuccessfulLoad = 3 * 1e9;
+    });
+    (DeviceInfo.getTotalMemory as jest.Mock).mockResolvedValue(3 * 1e9);
+
+    const draftModel = {size: 1 * 1e9} as any; // 1GB draft
+
+    const {result: fitsAlone, waitForNextUpdate: waitAlone} = renderHook(() =>
+      useMemoryCheck(localModel),
+    );
+    try {
+      await waitAlone();
+    } catch {
+      // Ignoring timeout
+    }
+    expect(fitsAlone.current.fitStatus).toBe('fits');
+
+    const {result: withDraft, waitForNextUpdate: waitDraft} = renderHook(() =>
+      useMemoryCheck(localModel, undefined, draftModel),
+    );
+    try {
+      await waitDraft();
+    } catch {
+      // Ignoring timeout
+    }
+
+    // Adding the draft alone tips the same target over the ceiling.
+    expect(withDraft.current.fitStatus).not.toBe('fits');
+    expect(withDraft.current.shortMemoryWarning).toBeTruthy();
+  });
+
   it('returns lowMemory for wont_fit status', async () => {
     // Set ceiling and total memory so requirement exceeds both
     runInAction(() => {

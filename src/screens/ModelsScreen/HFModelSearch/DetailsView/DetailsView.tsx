@@ -1,4 +1,4 @@
-import React, {useContext} from 'react';
+import React, {useContext, useEffect, useState} from 'react';
 import {View} from 'react-native';
 
 import {Text, Chip, Tooltip} from 'react-native-paper';
@@ -6,6 +6,7 @@ import {BottomSheetFlatList} from '@gorhom/bottom-sheet';
 
 import {ModelTypeTag, Sheet} from '../../../../components';
 
+import {urls} from '../../../../config';
 import {useTheme} from '../../../../hooks';
 
 import {createStyles} from './styles';
@@ -19,6 +20,7 @@ import {
   timeAgo,
   isVisionRepo,
   getLLMFiles,
+  probeRemoteMTPCapability,
 } from '../../../../utils';
 
 interface DetailsViewProps {
@@ -30,11 +32,32 @@ export const DetailsView = ({hfModel}: DetailsViewProps) => {
   const styles = createStyles(theme);
   const l10n = useContext(L10nContext);
 
-  // Check if this is a vision repository
   const isVision = isVisionRepo(hfModel.siblings || []);
 
-  // Get LLM files (non-mmproj files) - projection models are hidden from UI
   const llmFiles = getLLMFiles(hfModel.siblings || []);
+
+  const [isMTP, setIsMTP] = useState(false);
+  useEffect(() => {
+    // A new model must not wear the previous model's badge while its own
+    // probe is in flight.
+    setIsMTP(false);
+    const firstLLM = llmFiles[0];
+    if (!firstLLM) {
+      return;
+    }
+    let cancelled = false;
+    const ggufUrl = urls.modelDownloadFile(hfModel.id, firstLLM.rfilename);
+    // A probe that could not run stays silent rather than claiming a capability.
+    probeRemoteMTPCapability(ggufUrl).then(capability => {
+      if (!cancelled) {
+        setIsMTP(capability === 'capable');
+      }
+    });
+    return () => {
+      cancelled = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [hfModel.id]);
 
   const renderItem = ({item}: {item: ModelFile}) => (
     <ModelFileCard key={item.rfilename} modelFile={item} hfModel={hfModel} />
@@ -53,6 +76,17 @@ export const DetailsView = ({hfModel}: DetailsViewProps) => {
               label={l10n.models?.vision || 'Vision'}
               size="medium"
             />
+          )}
+          {isMTP && (
+            <Chip
+              icon="rocket-launch-outline"
+              compact
+              style={styles.stat}
+              textStyle={styles.statText}
+              mode="outlined"
+              testID="mtp-capability-badge">
+              {l10n.models.modelCapabilities.mtp}
+            </Chip>
           )}
         </View>
         <View style={styles.titleContainer}>

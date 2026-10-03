@@ -124,10 +124,18 @@ describe('resolveBannerVariant', () => {
       expect(result.variant).toBe('none');
     });
 
-    it('does not fire for remote sessions', () => {
+    it('fires for a remote session once its context window is known', () => {
       const result = resolveBannerVariant(
         snap({used: 3277, isRemote: true}),
-        baseInput({isRemote: true}),
+        baseInput({isRemote: true, effectiveNCtx: 4096}),
+      );
+      expect(result.variant).toBe('context-warning');
+    });
+
+    it('does not fire for a remote session without a known context window', () => {
+      const result = resolveBannerVariant(
+        snap({used: 3277, isRemote: true}),
+        baseInput({isRemote: true, effectiveNCtx: undefined}),
       );
       expect(result.variant).not.toBe('context-warning');
     });
@@ -205,6 +213,50 @@ describe('resolveBannerVariant', () => {
     });
   });
 
+  describe('remote llama.cpp context banners (relaxed)', () => {
+    // A length-truncation at the server's real window resolves context-full,
+    // the same machinery a local model uses.
+    it('resolves context-full on a remote length truncation at the window', () => {
+      const result = resolveBannerVariant(
+        snap({
+          isRemote: true,
+          contextFull: true,
+          finishReason: 'length',
+          used: 4096,
+        }),
+        baseInput({isRemote: true, effectiveNCtx: 4096}),
+      );
+      expect(result.variant).toBe('context-full');
+      expect(result.ratio).toBe(1);
+    });
+
+    // A near-limit remote turn (>0.8 of the window) resolves context-warning.
+    it('resolves context-warning near the remote window', () => {
+      const result = resolveBannerVariant(
+        snap({isRemote: true, used: 7000}),
+        baseInput({isRemote: true, effectiveNCtx: 8192}),
+      );
+      expect(result.variant).toBe('context-warning');
+      expect(result.ratio).toBeCloseTo(7000 / 8192, 3);
+    });
+
+    // A length cap from a small user max_tokens (well below the window) fails
+    // the freshness gate, and hedged excludes length — so no banner.
+    it('shows no false full banner for a max_tokens length cap', () => {
+      const result = resolveBannerVariant(
+        snap({
+          isRemote: true,
+          contextFull: true,
+          finishReason: 'length',
+          tokensPredicted: 256,
+          used: 300,
+        }),
+        baseInput({isRemote: true, effectiveNCtx: 32768}),
+      );
+      expect(result.variant).toBe('none');
+    });
+  });
+
   describe('html-soft-cap (precedence 4)', () => {
     it('fires at 4 previews when no context variant matches', () => {
       const result = resolveBannerVariant(
@@ -252,6 +304,47 @@ describe('resolveBannerVariant', () => {
       const result = resolveBannerVariant(snap({used: 100}), baseInput());
       expect(result.variant).toBe('none');
       expect(result.ratio).toBeUndefined();
+    });
+  });
+
+  describe('unknown versus zero token count', () => {
+    it('does not fire the full banner when the token count is unknown', () => {
+      const result = resolveBannerVariant(
+        snap({contextFull: true, used: undefined}),
+        baseInput(),
+      );
+      expect(result.variant).toBe('none');
+      expect(result.ratio).toBeUndefined();
+    });
+
+    it('still hedges a remote turn when the token count is unknown', () => {
+      const result = resolveBannerVariant(
+        snap({
+          used: undefined,
+          isRemote: true,
+          tokensPredicted: 600,
+          content: 'cut off here',
+        }),
+        baseInput({isRemote: true}),
+      );
+      expect(result.variant).toBe('context-remote-hedged');
+    });
+
+    it('treats a zero token count as a real number, not as unknown', () => {
+      const input = baseInput({effectiveNCtx: AUTOCLEAR_RUNWAY});
+
+      const counted = resolveBannerVariant(
+        snap({contextFull: true, used: 0}),
+        input,
+      );
+      expect(counted.variant).toBe('context-full');
+      expect(counted.ratio).toBe(0);
+
+      const uncounted = resolveBannerVariant(
+        snap({contextFull: true, used: undefined}),
+        input,
+      );
+      expect(uncounted.variant).toBe('none');
     });
   });
 

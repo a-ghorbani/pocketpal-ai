@@ -1,5 +1,5 @@
 import {makeAutoObservable, runInAction} from 'mobx';
-import {format, isToday, isYesterday} from 'date-fns';
+import {isToday, isYesterday} from 'date-fns';
 import * as RNFS from '@dr.pogodin/react-native-fs';
 
 import {
@@ -43,6 +43,7 @@ export interface SessionMetaData {
   messages: MessageType.Any[];
   completionSettings: CompletionParams;
   activePalId?: string;
+  pinned?: boolean;
   settingsSource: 'pal' | 'custom'; // Explicit choice: use pal settings or custom settings
   messagesLoaded?: boolean; // Track if messages are loaded for lazy loading
 }
@@ -53,6 +54,7 @@ interface SessionGroup {
 
 // Default group names in English as fallback
 const DEFAULT_GROUP_NAMES = {
+  pinned: 'Pinned',
   today: 'Today',
   yesterday: 'Yesterday',
   thisWeek: 'This week',
@@ -96,6 +98,11 @@ class ChatSessionStore {
   // persists; cleared on session creation, new-chat reset, and session
   // switch.
   newChatThinkingOverride: boolean | undefined = undefined;
+  // User's manual graded-effort choice in the no-session chat path, paired with
+  // newChatThinkingOverride. Carries the effort grade (low/medium/high) so a
+  // graded pill round-trips before the first message creates a session; cleared
+  // alongside newChatThinkingOverride.
+  newChatReasoningEffort: string | undefined = undefined;
   // Store localized date group names
   dateGroupNames: typeof DEFAULT_GROUP_NAMES = DEFAULT_GROUP_NAMES;
   // Migration status
@@ -299,6 +306,7 @@ class ChatSessionStore {
           completionSettings,
           activePalId: session.activePalId,
           settingsSource: (session.settingsSource as 'pal' | 'custom') || 'pal',
+          pinned: session.pinned || false,
           messagesLoaded: false, // Mark as not loaded for lazy loading
         });
       }
@@ -358,6 +366,7 @@ class ChatSessionStore {
       this.newChatPalId = this.activePalId;
       this.newChatSettingsSource = 'pal'; // Reset to default for new chat
       this.newChatThinkingOverride = undefined;
+      this.newChatReasoningEffort = undefined;
       // Do not copy completion settings from session to global settings
       // Instead, preserve global settings as they are
       this.exitEditMode();
@@ -409,6 +418,7 @@ class ChatSessionStore {
       this.newChatPalId = undefined;
       this.newChatSettingsSource = 'pal'; // Reset for consistency
       this.newChatThinkingOverride = undefined;
+      this.newChatReasoningEffort = undefined;
       this.lastCompletionResult = this.hydrateCompletionSnapshot(session);
       this.dismissedBannerVariants = new Set();
       this.consecutiveFullFailures = 0;
@@ -591,6 +601,7 @@ class ChatSessionStore {
         messages,
         completionSettings: settings,
         settingsSource: birthSource, // 'custom' if a thinking override was staged, else stored source
+        pinned: false,
         messagesLoaded: true, // Mark as loaded since we have the messages
       };
 
@@ -605,6 +616,7 @@ class ChatSessionStore {
         this.activeSessionId = newSession.id;
         this.newChatPalId = undefined;
         this.newChatThinkingOverride = undefined;
+        this.newChatReasoningEffort = undefined;
       });
     } catch (error) {
       console.error('Failed to create new session:', error);
@@ -1123,10 +1135,13 @@ class ChatSessionStore {
   }
 
   get groupedSessions(): SessionGroup {
-    const groups: SessionGroup = this.sessions.reduce(
+    const pinnedSessions = this.sessions.filter(s => s.pinned);
+    const unpinnedSessions = this.sessions.filter(s => !s.pinned);
+
+    const groups: SessionGroup = unpinnedSessions.reduce(
       (acc: SessionGroup, session) => {
         const date = new Date(session.date);
-        let dateKey: string = format(date, 'MMMM dd, yyyy');
+        let dateKey: string;
         const today = new Date();
         const daysAgo = Math.ceil(
           (today.getTime() - date.getTime()) / (1000 * 3600 * 24),
@@ -1174,8 +1189,14 @@ class ChatSessionStore {
       this.dateGroupNames.older,
     ];
 
-    // Create a new object with keys in the desired order
     const orderedGroups: SessionGroup = {};
+
+    if (pinnedSessions.length > 0) {
+      orderedGroups[this.dateGroupNames.pinned] = pinnedSessions.sort(
+        (a, b) => new Date(b.date).getTime() - new Date(a.date).getTime(),
+      );
+    }
+
     orderedKeys.forEach(key => {
       if (groups[key]) {
         orderedGroups[key] = groups[key].sort(
@@ -1431,6 +1452,24 @@ class ChatSessionStore {
     }
   }
 
+  async togglePinSession(sessionId: string): Promise<void> {
+    const session = this.sessions.find(s => s.id === sessionId);
+    if (!session) {
+      return;
+    }
+
+    const pinned = !session.pinned;
+
+    try {
+      await chatSessionRepository.setSessionPinned(sessionId, pinned);
+      runInAction(() => {
+        session.pinned = pinned;
+      });
+    } catch (error) {
+      console.error('Failed to toggle pin session:', error);
+    }
+  }
+
   /**
    * Resolves completion settings according to the precedence hierarchy:
    * System Defaults → Global User Settings → Pal-Specific Settings → Session-Specific Settings (only if explicitly modified)
@@ -1475,12 +1514,19 @@ class ChatSessionStore {
     }
 
     // No-session-only: apply user's explicit thinking override last so it
-    // wins over pal's enable_thinking. Single-key overlay — does NOT touch
-    // any other field, and does NOT affect tool availability.
+    // wins over pal's enable_thinking. Overlays the local enable_thinking flag
+    // AND the reasoning carrier (so the remote wire path honors the on/off
+    // intent for the first message of the new chat, not just local thinking).
+    // Does NOT touch any other field, and does NOT affect tool availability.
     if (!sessionId && this.newChatThinkingOverride !== undefined) {
       resolvedSettings = {
         ...resolvedSettings,
         enable_thinking: this.newChatThinkingOverride,
+        reasoning: {
+          ...resolvedSettings.reasoning,
+          enabled: this.newChatThinkingOverride,
+          effort: this.newChatReasoningEffort,
+        },
       };
     }
 

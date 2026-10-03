@@ -58,6 +58,14 @@ export interface RuleMmproj {
   modalities?: string[]; // forward-compat hint; engine reports actual support at load
 }
 
+// Unlike mmproj, the draft is usually a DIFFERENT repo, so it does not ride
+// hfAsModel sibling pairing and gets its own download stub.
+export interface RuleDraft {
+  hfRepo: string;
+  hfFilename: string;
+  sizeBytes: number;
+}
+
 // One flat candidate from the wire `tiers[T].candidates[]` array (parsed into
 // the internal `tiers[T].models[]`). The app builds a minimal {hfModel,
 // modelFile} pair from it and feeds the unchanged hfAsModel; HF-derivable data
@@ -73,6 +81,7 @@ export interface RuleCandidate {
   minRamGb?: number;
   multimodal?: boolean;
   mmproj?: RuleMmproj; // present iff multimodal
+  draft?: RuleDraft; // optional speculative-decoding draft model (cross-repo)
 }
 
 export interface DeviceRules {

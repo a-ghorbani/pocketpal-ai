@@ -41,17 +41,23 @@ const EXPECTED_SECTIONS = [
 
 const ALL_LANGUAGES: AvailableLanguage[] = [
   'en',
+  'es',
   'fa',
   'he',
   'id',
   'ja',
   'ko',
   'ms',
+  'pl',
+  'pt',
+  'pt_BR',
   'ru',
   'uk',
   'zh',
   'zh_Hant',
 ];
+
+const NON_EN_LANGUAGES = ALL_LANGUAGES.filter(l => l !== 'en');
 
 describe('l10n object', () => {
   it('supports all expected languages', () => {
@@ -78,18 +84,7 @@ describe('l10n object', () => {
     expect(l10n.en).toEqual(enData);
   });
 
-  it.each([
-    'fa',
-    'he',
-    'id',
-    'ja',
-    'ko',
-    'ms',
-    'ru',
-    'uk',
-    'zh',
-    'zh_Hant',
-  ] as AvailableLanguage[])(
+  it.each(NON_EN_LANGUAGES)(
     'l10n.%s contains translations where they exist',
     lang => {
       const langData = require(`../${lang}.json`);
@@ -98,18 +93,7 @@ describe('l10n object', () => {
     },
   );
 
-  it.each([
-    'fa',
-    'he',
-    'id',
-    'ja',
-    'ko',
-    'ms',
-    'ru',
-    'uk',
-    'zh',
-    'zh_Hant',
-  ] as AvailableLanguage[])(
+  it.each(NON_EN_LANGUAGES)(
     'returns cached result on repeated access for %s',
     lang => {
       const first = l10n[lang];
@@ -147,17 +131,9 @@ describe('l10n object', () => {
   });
 
   it('supports in operator for all languages', () => {
-    expect('en' in l10n).toBe(true);
-    expect('fa' in l10n).toBe(true);
-    expect('he' in l10n).toBe(true);
-    expect('id' in l10n).toBe(true);
-    expect('ja' in l10n).toBe(true);
-    expect('ko' in l10n).toBe(true);
-    expect('ms' in l10n).toBe(true);
-    expect('ru' in l10n).toBe(true);
-    expect('uk' in l10n).toBe(true);
-    expect('zh' in l10n).toBe(true);
-    expect('zh_Hant' in l10n).toBe(true);
+    for (const lang of ALL_LANGUAGES) {
+      expect(lang in l10n).toBe(true);
+    }
     expect('xx' in l10n).toBe(false);
     expect('fr' in l10n).toBe(false);
   });
@@ -211,13 +187,24 @@ describe('exports', () => {
     }
   });
 
+  it('every display name carries its parenthesised locale code', () => {
+    for (const lang of supportedLanguages) {
+      expect(languageDisplayNames[lang]).toContain(`(${lang.toUpperCase()})`);
+    }
+  });
+
   it('languageDisplayNames contains expected values', () => {
     expect(languageDisplayNames.en).toBe('English (EN)');
+    expect(languageDisplayNames.es).toBe('Español (ES)');
+    expect(languageDisplayNames.fa).toBe('\u0641\u0627\u0631\u0633\u06CC (FA)');
     expect(languageDisplayNames.he).toBe('\u05E2\u05D1\u05E8\u05D9\u05EA (HE)');
     expect(languageDisplayNames.id).toBe('Indonesia (ID)');
     expect(languageDisplayNames.ja).toBe('\u65E5\u672C\u8A9E (JA)');
     expect(languageDisplayNames.ko).toBe('\uD55C\uAD6D\uC5B4 (KO)');
     expect(languageDisplayNames.ms).toBe('Melayu (MS)');
+    expect(languageDisplayNames.pl).toBe('Polski (PL)');
+    expect(languageDisplayNames.pt).toBe('Português (PT)');
+    expect(languageDisplayNames.pt_BR).toBe('Português (PT_BR)');
     expect(languageDisplayNames.ru).toBe(
       '\u0420\u0443\u0441\u0441\u043A\u0438\u0439 (RU)',
     );
@@ -227,6 +214,15 @@ describe('exports', () => {
     expect(languageDisplayNames.zh).toBe('\u4E2D\u6587 (ZH)');
     expect(languageDisplayNames.zh_Hant).toBe(
       '\u7E41\u9AD4\u4E2D\u6587 (ZH_HANT)',
+    );
+  });
+
+  it('resolves pt and pt_BR to different translations', () => {
+    // European vs Brazilian Portuguese are separate locales, and their
+    // Settings header strings happen to be identical — so a wiring mistake
+    // that pointed both at one JSON would not show up on screen.
+    expect(l10n.pt.settings.useMmapDescription).not.toBe(
+      l10n.pt_BR.settings.useMmapDescription,
     );
   });
 
@@ -256,18 +252,7 @@ describe('lazy loading', () => {
     });
   });
 
-  it.each([
-    'fa',
-    'he',
-    'id',
-    'ja',
-    'ko',
-    'ms',
-    'ru',
-    'uk',
-    'zh',
-    'zh_Hant',
-  ] as AvailableLanguage[])('accessing %s populates the cache', lang => {
+  it.each(NON_EN_LANGUAGES)('accessing %s populates the cache', lang => {
     jest.isolateModules(() => {
       const freshModule = require('../index');
       expect(freshModule._testGetCacheKeys()).toEqual(['en']);
@@ -284,8 +269,7 @@ describe('lazy loading', () => {
       expect(freshModule._testGetCacheKeys()).toEqual(['en']);
 
       // Access each non-en language
-      const nonEn = ALL_LANGUAGES.filter(l => l !== 'en');
-      for (const lang of nonEn) {
+      for (const lang of NON_EN_LANGUAGES) {
         const _data = freshModule.l10n[lang];
         expect(_data).toBeDefined();
       }
@@ -313,20 +297,8 @@ describe('type safety', () => {
 
   it('keyof typeof l10n resolves to literal union', () => {
     // At runtime we verify the keys match
-    const keys: Array<keyof typeof l10n> = [
-      'en',
-      'fa',
-      'he',
-      'id',
-      'ja',
-      'ko',
-      'ms',
-      'ru',
-      'uk',
-      'zh',
-      'zh_Hant',
-    ];
-    expect(Object.keys(l10n).sort()).toEqual(keys.sort());
+    const keys: Array<keyof typeof l10n> = ALL_LANGUAGES;
+    expect(Object.keys(l10n).sort()).toEqual([...keys].sort());
 
     // This would cause a compile error if the type were wrong:
     const lang: keyof typeof l10n = 'en';
@@ -397,4 +369,24 @@ describe('t() interpolation helper', () => {
     const result = t('{{a}} and {{b}}', {});
     expect(result).toBe('{{a}} and {{b}}');
   });
+});
+
+// ChatSessionStore.groupedSessions keys its result map by these translated
+// labels, so two equal values silently drop a whole group from the sidebar and
+// an empty one renders a blank header. Nothing else guards that.
+describe('sidebar date-group labels stay usable as map keys', () => {
+  it.each(ALL_LANGUAGES)(
+    'l10n.%s dateGroups are distinct and non-empty',
+    lang => {
+      const dateGroups = l10n[lang].components.sidebarContent.dateGroups;
+      const values = Object.values(dateGroups);
+
+      for (const value of values) {
+        expect(typeof value).toBe('string');
+        expect(value.trim()).not.toBe('');
+      }
+
+      expect(new Set(values).size).toBe(values.length);
+    },
+  );
 });

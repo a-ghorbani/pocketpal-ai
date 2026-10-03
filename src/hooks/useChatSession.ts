@@ -11,13 +11,18 @@ import {
   chatSessionStore,
   modelStore,
   palStore,
+  serverStore,
   ttsStore,
   uiStore,
 } from '../store';
+import {resolveReasoningCapability} from '../utils/reasoningCapability';
 
 import {MessageType, ModelOrigin, User} from '../utils/types';
 import {createMultimodalWarning} from '../utils/errors';
-import {resolveSystemMessages} from '../utils/systemPromptResolver';
+import {
+  assembleMessages,
+  resolveSystemMessages,
+} from '../utils/systemPromptResolver';
 import {convertToChatMessages, removeThinkingParts} from '../utils/chat';
 import {activateKeepAwake, deactivateKeepAwake} from '../utils/keepAwake';
 import {
@@ -27,11 +32,16 @@ import {
   CompletionResult,
   CompletionResultSnapshot,
 } from '../utils/completionTypes';
-import {talentRegistry} from '../services/talents';
+import {
+  collectSystemPromptFragments,
+  seedReadUrlAllowlist,
+  talentRegistry,
+} from '../services/talents';
 import type {ToolDefinition} from '../services/talents/types';
 import {
   agentStateReducer,
   createTriggerMarkerCache,
+  DEFAULT_MAX_TURNS,
   initialAgentUiState,
   runAgent,
   type AgentEvent,
@@ -120,14 +130,24 @@ const prepareCompletion = async ({
     });
   }
 
-  const messages = [
-    ...systemMessages,
+  // Talent-contributed system-prompt fragments (e.g. search grounding). Kept on
+  // the initial messages array so they persist across every follow-up tool turn.
+  const sessionToolNames = (
+    (sessionCompletionSettings?.tools as ToolDefinition[] | undefined) ?? []
+  ).map(tool => tool.function?.name ?? '');
+  const systemPromptFragments = collectSystemPromptFragments(sessionToolNames, {
+    now: new Date(),
+    maxToolTurns: DEFAULT_MAX_TURNS,
+  });
+
+  const messages = assembleMessages(systemMessages, systemPromptFragments, [
     ...chatMessages,
-    {
-      role: 'user',
-      content: userMessageContent,
-    },
-  ];
+    {role: 'user', content: userMessageContent},
+  ]);
+
+  // Reseed the read_url exfiltration allowlist for this run; the trust policy
+  // (which sources count) lives in the talents module.
+  seedReadUrlAllowlist(messages, currentMessages);
 
   const completionParamsWithAppProps = {
     ...sessionCompletionSettings,
@@ -139,8 +159,35 @@ const prepareCompletion = async ({
     completionParamsWithAppProps as CompletionParams,
   );
 
-  if (cleanCompletionParams.enable_thinking) {
-    cleanCompletionParams.reasoning_format = 'auto';
+  // reasoning_format is always 'auto' for the local (llama.rn) path: a no-op for
+  // non-reasoning models and the value that extracts reasoning into
+  // reasoning_content instead of leaking raw channel/think markers into content
+  // (e.g. gemma-4 emits an empty <|channel>thought block even when thinking is
+  // off). On/off is carried solely by enable_thinking. "Off" stays a best-effort
+  // hint — it never strips reasoning the model still returns (rendered by
+  // ReasoningBlock); separate from include_thinking_in_context, which only
+  // governs what prior <think> we SEND.
+  const isReasoningCapable =
+    resolveReasoningCapability(
+      modelStore.activeModel,
+      serverStore.remoteReasoning,
+    ).isReasoning !== 'no';
+  cleanCompletionParams.reasoning_format = 'auto';
+  // The enable_thinking:false hint only matters for reasoning-capable models;
+  // a non-reasoning model would just ignore it.
+  if (isReasoningCapable && !cleanCompletionParams.enable_thinking) {
+    cleanCompletionParams.chat_template_kwargs = {
+      ...cleanCompletionParams.chat_template_kwargs,
+      enable_thinking: false,
+    };
+  }
+  // Graded effort (gpt-oss-style): carried by the resolver-populated intent.
+  const reasoningEffort = cleanCompletionParams.reasoning?.effort;
+  if (reasoningEffort) {
+    cleanCompletionParams.chat_template_kwargs = {
+      ...cleanCompletionParams.chat_template_kwargs,
+      reasoning_effort: reasoningEffort,
+    };
   }
 
   // Create the empty AssistantTurn row in the store BEFORE the run
@@ -196,10 +243,14 @@ type TtsRunState = {
 // and (remote only) a 'length' finish reason derived from `stopped_limit`.
 function deriveSnapshotFromResult(
   result: CompletionResult,
-  effectiveNCtx: number | undefined,
   isRemote: boolean,
 ): CompletionResultSnapshot {
-  const used = (result.tokens_evaluated ?? 0) + (result.tokens_predicted ?? 0);
+  // Without a prompt term the total is a predicted-only tally, which is not an
+  // occupancy number on either path.
+  const used =
+    result.tokens_evaluated === undefined
+      ? undefined
+      : result.tokens_evaluated + (result.tokens_predicted ?? 0);
   // Local turns set context_full/truncated directly; finishReason only bridges
   // the remote engine's signal (stopped_limit) into the OR predicate below, so
   // it is intentionally remote-only.
@@ -251,15 +302,31 @@ async function applyEventToStore(
       });
       return;
     case 'token': {
-      // Capture time-to-first-token on the first content/reasoning token.
-      if (
-        ctx.timeToFirstTokenMs.value === null &&
-        (event.delta.content || event.delta.reasoningContent)
-      ) {
+      const hasFirstTokenSignal = !!(
+        event.delta.content || event.delta.reasoningContent
+      );
+      if (ctx.timeToFirstTokenMs.value === null && hasFirstTokenSignal) {
         ctx.timeToFirstTokenMs.value = Date.now() - ctx.completionStartTime;
       }
       if (!modelStore.isStreaming) {
         modelStore.setIsStreaming(true);
+      }
+      // Learn-from-stream: the first time a model emits reasoning while the
+      // resolver does not already know it reasons, persist the learned flag so
+      // the pill becomes reachable on the next render. The store writer is
+      // idempotent and never downgrades a user/learned 'yes'.
+      if (
+        event.delta.reasoningContent &&
+        event.delta.reasoningContent.length > 0
+      ) {
+        const activeModel = modelStore.activeModel;
+        if (
+          activeModel &&
+          resolveReasoningCapability(activeModel, serverStore.remoteReasoning)
+            .isReasoning !== 'yes'
+        ) {
+          modelStore.recordReasoningObserved(activeModel.id);
+        }
       }
       // TTS streaming hooks. Open a StreamingHandle on the first token
       // that carries content OR reasoning, then forward each new
@@ -358,14 +425,21 @@ async function applyEventToStore(
       const finalResult = event.result.finalResult;
       const snapshot = deriveSnapshotFromResult(
         finalResult,
-        modelStore.activeContextSettings?.n_ctx,
         modelStore.activeModel?.origin === ModelOrigin.REMOTE,
       );
+      const draftTimings =
+        finalResult.draft_tokens != null && finalResult.draft_tokens > 0
+          ? {
+              draft_tokens: finalResult.draft_tokens,
+              draft_tokens_accepted: finalResult.draft_tokens_accepted,
+            }
+          : {};
       await chatSessionStore.updateMessage(ctx.messageId, ctx.sessionId, {
         metadata: {
           timings: {
             ...(finalResult.timings ?? {}),
             time_to_first_token_ms: ctx.timeToFirstTokenMs.value,
+            ...draftTimings,
           },
           copyable: true,
           multimodal: ctx.hasImages && ctx.isMultimodalEnabled,
@@ -456,7 +530,7 @@ export const useChatSession = (
     const imageUris = message.imageUris;
     const hasImages = !!(imageUris && imageUris.length > 0);
 
-    const isMultimodalEnabled = await modelStore.isMultimodalEnabled();
+    const isMultimodalEnabled = modelStore.activeModelCaps.visionActive;
 
     const currentMessages = toJS(chatSessionStore.currentSessionMessages);
 
@@ -690,6 +764,13 @@ export const useChatSession = (
       // CompletionResult flag upstream when available.
       const isContextFullError = /context is full/i.test(errorMessage);
       const treatAsContextFull = isToolArgsParseError || isContextFullError;
+      // Low-RAM devices can fail to allocate the speculative draft context at
+      // first completion (the load-time memory check has no term for it).
+      // LLAMARN-DEP: string-coupled to the throw in rn-completion.cpp; a
+      // reword would silently demote this back to the raw dump.
+      const isSpeculativeInitError = /failed to create MTP draft context/i.test(
+        errorMessage,
+      );
 
       // Error rollback path. The empty/in-flight AssistantTurn row
       // already exists; preserve any partial steps and tag with
@@ -717,15 +798,17 @@ export const useChatSession = (
         const hasPartialContent = hasAnyStepContent || hasLegacyText;
 
         if (hasPartialContent) {
-          // No finalResult on the abort path. truncationLikely is the
-          // n_ctx-exhaustion signal; when set, treat the turn as full and
-          // pin `used` to the loaded n_ctx so the sticky banner's freshness
-          // gate holds.
+          // No finalResult on the abort path, so no turn reported a count.
+          // truncationLikely is the n_ctx-exhaustion signal: when set, treat
+          // the turn as full and pin `used` to the context window so the
+          // sticky banner's freshness gate holds. Otherwise the count is
+          // unknown, which is not zero.
           const isRemote =
             modelStore.activeModel?.origin === ModelOrigin.REMOTE;
-          const effectiveNCtx = modelStore.activeContextSettings?.n_ctx;
+          const effectiveNCtx =
+            modelStore.activeModelCaps.effectiveContextLength;
           const abortSnapshot: CompletionResultSnapshot = {
-            used: treatAsContextFull ? (effectiveNCtx ?? 0) : 0,
+            used: treatAsContextFull ? effectiveNCtx : undefined,
             contextFull: treatAsContextFull,
             isRemote,
           };
@@ -756,9 +839,10 @@ export const useChatSession = (
           if (isContextFullError) {
             const isRemote =
               modelStore.activeModel?.origin === ModelOrigin.REMOTE;
-            const effectiveNCtx = modelStore.activeContextSettings?.n_ctx;
+            const effectiveNCtx =
+              modelStore.activeModelCaps.effectiveContextLength;
             chatSessionStore.recordCompletionSnapshot({
-              used: effectiveNCtx ?? 0,
+              used: effectiveNCtx,
               contextFull: true,
               isRemote,
             });
@@ -793,11 +877,13 @@ export const useChatSession = (
         // No turn content to attach the hint to — fall back to a
         // friendly system message instead of the raw native error dump.
         await addSystemMessage(l10n.chat.toolCallTruncated);
+      } else if (isSpeculativeInitError) {
+        await addSystemMessage(l10n.chat.speculativeInitFailed);
       } else if (isContextFullError) {
         // No turn to attach to; surface the banner via a store snapshot
         // rather than dumping the raw "Context is full" native error.
         chatSessionStore.recordCompletionSnapshot({
-          used: modelStore.activeContextSettings?.n_ctx ?? 0,
+          used: modelStore.activeModelCaps.effectiveContextLength,
           contextFull: true,
           isRemote: modelStore.activeModel?.origin === ModelOrigin.REMOTE,
         });
@@ -856,6 +942,5 @@ export const useChatSession = (
     handleSendPress,
     handleResetConversation,
     handleStopPress,
-    isMultimodalEnabled: async () => await modelStore.isMultimodalEnabled(),
   };
 };

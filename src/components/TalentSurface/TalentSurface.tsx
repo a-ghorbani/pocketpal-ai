@@ -1,11 +1,14 @@
 import React from 'react';
 
 import {talentUIRegistry} from '../../services/talents/TalentUIRegistry';
+import {registerDefaultTalentUIs} from '../../services/talents/registerTalentUIs';
 import {AgentStep} from '../../utils/types';
 
 import {ToolErrorBlock} from '../ToolErrorBlock';
 import {ToolMetricsFooter} from '../ToolMetricsFooter';
 import {ToolUsedChip} from '../ToolUsedChip';
+
+registerDefaultTalentUIs();
 
 interface TalentSurfaceProps {
   /**

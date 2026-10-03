@@ -8,10 +8,6 @@ import {
   CompletionStreamData,
 } from '../utils/completionTypes';
 
-/**
- * LocalCompletionEngine wraps LlamaContext conforming to the CompletionEngine interface.
- * Thin wrapper that delegates all calls 1:1 to the native context.
- */
 export class LocalCompletionEngine implements CompletionEngine {
   constructor(private context: LlamaContext) {}
 
@@ -41,6 +37,8 @@ export class LocalCompletionEngine implements CompletionEngine {
       timings: result.timings,
       tokens_predicted: result.tokens_predicted,
       tokens_evaluated: result.tokens_evaluated,
+      draft_tokens: result.draft_tokens,
+      draft_tokens_accepted: result.draft_tokens_accepted,
       truncated: result.truncated,
       stopped_eos: result.stopped_eos,
       stopped_limit: result.stopped_limit,
@@ -56,10 +54,6 @@ export class LocalCompletionEngine implements CompletionEngine {
   }
 }
 
-/**
- * OpenAICompletionEngine implements the CompletionEngine interface
- * using fetch + SSE parsing for OpenAI-compatible servers.
- */
 export class OpenAICompletionEngine implements CompletionEngine {
   private abortController: AbortController | null = null;
 
@@ -68,6 +62,7 @@ export class OpenAICompletionEngine implements CompletionEngine {
     private modelId: string,
     private apiKey?: string,
     private timeoutMs?: number,
+    private serverType?: string,
   ) {}
 
   async completion(
@@ -85,18 +80,20 @@ export class OpenAICompletionEngine implements CompletionEngine {
         max_tokens: params.n_predict,
         stop: params.stop,
         stream: true,
-        // Cast at the boundary: llama.rn's `tools` typedef is
-        // structurally compatible with OpenAI's function-tool shape but
-        // lives under a different name.
+        // llama.rn's `tools` typedef is structurally compatible with OpenAI's
+        // function-tool shape but lives under a different name.
         tools: (params as any).tools,
         tool_choice: (params as any).tool_choice,
         response_format: (params as any).response_format,
+        // Reasoning intent carried on the params; openai.ts owns the wire shape.
+        reasoning: params.reasoning,
       },
       this.serverUrl,
       this.apiKey,
       this.abortController.signal,
       callback,
       this.timeoutMs,
+      this.serverType,
     );
   }
 

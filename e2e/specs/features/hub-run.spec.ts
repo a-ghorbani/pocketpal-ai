@@ -15,16 +15,14 @@
  *   yarn test:android:local --spec specs/features/hub-run.spec.ts
  */
 
-import * as fs from 'fs';
-import * as path from 'path';
 import {expect} from '@wdio/globals';
 import {ChatPage} from '../../pages/ChatPage';
 import {DrawerPage} from '../../pages/DrawerPage';
 import {ModelsPage} from '../../pages/ModelsPage';
 import {ModelDetailsSheet} from '../../pages/ModelDetailsSheet';
 import {Selectors, byTestId, nativeTextElement} from '../../helpers/selectors';
+import {saveFailureScreenshot} from '../../helpers/screenshots';
 import {QUICK_TEST_MODEL, TIMEOUTS} from '../../fixtures/models';
-import {SCREENSHOT_DIR} from '../../wdio.shared.conf';
 
 declare const driver: WebdriverIO.Browser;
 declare const browser: WebdriverIO.Browser;
@@ -88,18 +86,7 @@ describe('Hub Run Deep Link', () => {
 
   afterEach(async function (this: Mocha.Context) {
     if (this.currentTest?.state === 'failed') {
-      const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
-      const testName = this.currentTest.title.replace(/\s+/g, '-');
-      try {
-        if (!fs.existsSync(SCREENSHOT_DIR)) {
-          fs.mkdirSync(SCREENSHOT_DIR, {recursive: true});
-        }
-        await driver.saveScreenshot(
-          path.join(SCREENSHOT_DIR, `failure-${testName}-${timestamp}.png`),
-        );
-      } catch (e) {
-        console.error('Failed to capture screenshot:', (e as Error).message);
-      }
+      await saveFailureScreenshot(this.currentTest.title);
     }
   });
 

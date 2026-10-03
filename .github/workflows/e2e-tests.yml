@@ -16,6 +16,16 @@ env:
 jobs:
   build-android:
     runs-on: ubuntu-latest
+    env:
+      # Declared here rather than in android/gradle.properties: llama.rn's own
+      # android/gradle.properties sets rnllamaBuildFromSource, and a subproject's
+      # value beats the root project's, so only an environment property or -P wins.
+      ORG_GRADLE_PROJECT_rnllamaBuildFromSource: 'true'
+      # This job caches no node_modules, so llama.rn's postinstall runs every
+      # time and downloads ~100 MB of prebuilt jniLibs plus the iOS xcframework.
+      # A from-source Android build uses neither. The DSP libraries under bin/
+      # are tarball content and arrive regardless.
+      RNLLAMA_SKIP_POSTINSTALL: '1'
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -36,6 +46,16 @@ jobs:
 
       - name: Install dependencies
         run: yarn install --frozen-lockfile
+
+      - name: Derive the rnllama variant allowlist from the payload manifest
+        run: |
+          set -euo pipefail
+          VARIANTS=$(node scripts/verify-android-payload.js --print-variants)
+          echo "Declared allowlist: $VARIANTS"
+          echo "ORG_GRADLE_PROJECT_rnllamaVariants=$VARIANTS" >> "$GITHUB_ENV"
+
+      - name: Set up the Hexagon SDK
+        uses: ./.github/actions/setup-hexagon-sdk
 
       - name: Create dummy google-services.json for CI
         run: |
@@ -103,12 +123,59 @@ jobs:
             -dname "CN=CI Build, OU=CI, O=PocketPal, L=CI, S=CI, C=US"
 
       - name: Build Android E2E APK
+        working-directory: android
         env:
           APP_RELEASE_STORE_PASSWORD: dummy-ci-password
           APP_RELEASE_KEY_PASSWORD: dummy-ci-password
         run: |
-          cd android
-          E2E_BUILD=true ./gradlew assembleE2eReleaseE2e
+          set -euo pipefail
+          if [ "${ORG_GRADLE_PROJECT_rnllamaBuildFromSource:-}" != "true" ]; then
+            echo "::error::ORG_GRADLE_PROJECT_rnllamaBuildFromSource is '${ORG_GRADLE_PROJECT_rnllamaBuildFromSource:-<unset>}', expected 'true'."
+            exit 1
+          fi
+          E2E_BUILD=true ./gradlew assembleE2eReleaseE2e 2>&1 | tee android-build.log
+
+      # COUPLING: the string grepped for below is upstream's, printed by
+      # node_modules/llama.rn/android/build.gradle next to its rnllamaVariants
+      # lookup. A llama.rn upgrade that rewords it fails this step. The fix is
+      # to update the literal, not to delete the check.
+      - name: Verify the variant allowlist reached the llama.rn build
+        run: |
+          set -euo pipefail
+          VARIANTS=$(node scripts/verify-android-payload.js --print-variants)
+          if ! grep -qF "Building rnllama variants: $VARIANTS" android/android-build.log; then
+            echo "::error::llama.rn did not report building the declared variant set."
+            echo "Expected: $VARIANTS"
+            echo "In the build log:"
+            grep -F "rnllama variants" android/android-build.log || echo "  (no such line at all)"
+            echo ""
+            echo "Two different causes look identical here. Either ORG_GRADLE_PROJECT_rnllamaVariants"
+            echo "did not reach the llama.rn subproject, or upstream changed the wording of the line"
+            echo "this step greps for (android/build.gradle, the println next to rnllamaVariants)."
+            echo "Check the wording first — a llama.rn upgrade is the more common reason."
+            exit 1
+          fi
+          echo "OK: llama.rn reported the declared variant list (extras, if any, are permitted and are reported by the payload check)."
+
+      # This build may ADD test scaffolding — different flavor, automation
+      # bridge, debuggable, dummy signing — but it must not SUBTRACT production
+      # capability, which is what this asserts. The manifest describes only the
+      # native payload, and that does not vary by flavor, so it applies here
+      # unchanged. The mirror of this is ci.yml's DCE check, which asserts the
+      # prod artifact carries none of the test code this one is allowed to add.
+      - name: Verify the Android payload
+        run: |
+          node scripts/verify-android-payload.js \
+            --apk android/app/build/outputs/apk/e2e/releaseE2e/app-e2e-releaseE2e.apk \
+            --report payload-report.txt
+
+      - name: Upload payload report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: payload-report
+          path: payload-report.txt
+          if-no-files-found: ignore
 
       - name: Upload APK artifact
         uses: actions/upload-artifact@v4

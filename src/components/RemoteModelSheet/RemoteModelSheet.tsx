@@ -16,6 +16,7 @@ import {
   ActivityIndicator,
   Icon,
 } from 'react-native-paper';
+import {Dropdown} from '../ui';
 import {observer} from 'mobx-react';
 import {runInAction} from 'mobx';
 import debounce from 'lodash/debounce';
@@ -26,6 +27,10 @@ import {serverStore} from '../../store';
 import {L10nContext} from '../../utils';
 import {isLocalHost} from '../../utils/network';
 import {parseTimeoutMs} from '../../utils/timeout';
+import {
+  SERVER_TYPE_DROPDOWN_OPTIONS,
+  seedServerType,
+} from '../../utils/serverTypes';
 import {ServerConfig} from '../../utils/types';
 import {
   RemoteModelInfo,
@@ -33,10 +38,11 @@ import {
   fetchModelsWithHeaders,
   detectServerType,
 } from '../../api/openai';
+import {deriveListCaps} from '../../utils/listCaps';
 import {t} from '../../locales';
 
 import {createStyles} from './styles';
-import {EyeIcon, EyeOffIcon} from '../../assets/icons';
+import {ChatIcon, EyeIcon, EyeOffIcon} from '../../assets/icons';
 
 interface RemoteModelSheetProps {
   isVisible: boolean;
@@ -55,6 +61,7 @@ export const RemoteModelSheet: React.FC<RemoteModelSheetProps> = observer(
     const [serverName, setServerName] = useState('');
     const [apiKey, setApiKey] = useState('');
     const [timeoutSeconds, setTimeoutSeconds] = useState('');
+    const [serverType, setServerType] = useState('unknown');
     const [secureTextEntry, setSecureTextEntry] = useState(true);
 
     // Auto-probe
@@ -100,6 +107,7 @@ export const RemoteModelSheet: React.FC<RemoteModelSheetProps> = observer(
         setApiKey('');
         setTimeoutSeconds('');
         timeoutSecondsRef.current = '';
+        setServerType('unknown');
         setSecureTextEntry(true);
         setIsProbing(false);
         setProbeResult(null);
@@ -144,6 +152,7 @@ export const RemoteModelSheet: React.FC<RemoteModelSheetProps> = observer(
             setSelectedModelId(models[0].id);
           }
           const detected = await detectServerType(trimmedUrl, models, headers);
+          setServerType(seedServerType(detected, trimmedUrl));
           setServerName(prev => {
             if (prev) {
               return prev;
@@ -266,6 +275,7 @@ export const RemoteModelSheet: React.FC<RemoteModelSheetProps> = observer(
             name: serverName.trim(),
             url: url.trim(),
             requestTimeoutMs: parseTimeoutMs(timeoutSeconds),
+            serverType,
           });
           if (apiKey.trim()) {
             await serverStore.setApiKey(serverId, apiKey.trim());
@@ -287,6 +297,7 @@ export const RemoteModelSheet: React.FC<RemoteModelSheetProps> = observer(
       url,
       apiKey,
       timeoutSeconds,
+      serverType,
       onModelAdded,
       onDismiss,
     ]);
@@ -294,6 +305,11 @@ export const RemoteModelSheet: React.FC<RemoteModelSheetProps> = observer(
     const selectedServer = selectedServerId
       ? serverStore.servers.find(s => s.id === selectedServerId)
       : null;
+
+    // The type in effect, which is not always the type this sheet detected:
+    // pressing a known-server chip never calls setServerType, so on the very
+    // routers this exists for the local state is still 'unknown'.
+    const serverTypeInEffect = selectedServer?.serverType ?? serverType;
 
     const showPostConnection = probeResult?.ok === true;
     // Show API key + server name fields when probe attempted (success OR auth failure)
@@ -538,6 +554,19 @@ export const RemoteModelSheet: React.FC<RemoteModelSheetProps> = observer(
                   {l10n.settings.requestTimeoutHelp}
                 </Text>
               </View>
+
+              <View style={styles.inputSpacing}>
+                <Text>{l10n.settings.serverType}</Text>
+                <Dropdown
+                  testID="server-type-dropdown"
+                  value={serverType}
+                  options={SERVER_TYPE_DROPDOWN_OPTIONS}
+                  onChange={setServerType}
+                />
+                <Text style={styles.apiKeyDescription}>
+                  {l10n.settings.serverTypeHelp}
+                </Text>
+              </View>
             </>
           )}
 
@@ -551,6 +580,7 @@ export const RemoteModelSheet: React.FC<RemoteModelSheetProps> = observer(
                 const servId = selectedServerId || '';
                 const alreadyAdded =
                   !!selectedServerId && isModelAlreadyAdded(servId, model.id);
+                const listCaps = deriveListCaps(model, serverTypeInEffect);
                 return (
                   <TouchableOpacity
                     key={model.id}
@@ -586,6 +616,35 @@ export const RemoteModelSheet: React.FC<RemoteModelSheetProps> = observer(
                       <Text style={styles.alreadyAddedText}>
                         {l10n.settings.alreadyAdded}
                       </Text>
+                    )}
+                    {serverTypeInEffect === 'llama.cpp' && (
+                      <View
+                        style={styles.modelVisionSlot}
+                        testID={`remote-model-row-vision-${model.id}`}
+                        accessible={true}
+                        accessibilityLabel={`${l10n.models.modelCard.labels.vision}: ${
+                          listCaps.supportsVision === true
+                            ? l10n.models.modelCard.labels.visionSupported
+                            : listCaps.supportsVision === false
+                              ? l10n.models.modelCard.labels.visionNotSupported
+                              : l10n.models.modelCard.labels.visionUnknown
+                        }`}>
+                        {listCaps.supportsVision === true ? (
+                          <EyeIcon
+                            width={16}
+                            height={16}
+                            stroke={theme.colors.iconModelTypeVision}
+                          />
+                        ) : listCaps.supportsVision === false ? (
+                          <ChatIcon
+                            width={16}
+                            height={16}
+                            stroke={theme.colors.iconModelTypeText}
+                          />
+                        ) : (
+                          <Text style={styles.modelVisionUnknown}>—</Text>
+                        )}
+                      </View>
                     )}
                   </TouchableOpacity>
                 );

@@ -16,6 +16,7 @@ export default class ChatSession extends Model {
   @text('date') date!: string;
   @text('active_pal_id') activePalId?: string;
   @text('settings_source') settingsSource?: string;
+  @field('pinned') pinned!: boolean;
   @field('created_at') createdAt!: number;
   @field('updated_at') updatedAt!: number;
 }

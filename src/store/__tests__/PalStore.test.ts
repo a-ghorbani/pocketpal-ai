@@ -1,12 +1,26 @@
 import {runInAction} from 'mobx';
+import {Platform} from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import {palStore} from '../PalStore';
 import {palsHubService} from '../../services';
+import {isUSStorefront} from '../../utils/region';
 import {palRepository} from '../../repositories/PalRepository';
 import type {Pal} from '../../types/pal';
 import type {PalsHubPal} from '../../types/palshub';
 import * as imageUtils from '../../utils/imageUtils';
 import {resolveHFModelForDownload} from '../../utils/hfResolve';
 import {LOOKIE_DEFAULT_MODEL} from '../builtinPalModels';
+
+jest.mock('@react-native-async-storage/async-storage', () => {
+  const values = new Map<string, string>();
+  return {
+    getItem: jest.fn(async (key: string) => values.get(key) ?? null),
+    setItem: jest.fn(async (key: string, value: string) => {
+      values.set(key, value);
+    }),
+    clear: jest.fn(async () => values.clear()),
+  };
+});
 
 // Mock dependencies
 jest.mock('../../utils/hfResolve', () => ({
@@ -47,6 +61,28 @@ jest.mock('mobx-persist-store', () => ({
   makePersistable: jest.fn(),
 }));
 
+// Eligibility writer dependencies: iOS StoreKit storefront + Android probe.
+jest.mock('../../utils/region', () => ({
+  isUSStorefront: jest.fn(),
+}));
+
+// Toggle the module per test via a getter so the null-module fail-closed path
+// can be exercised here. prepareExternalLink / reportExternalContentLink are
+// stubbed so a test can assert the probe never mints a token, launches, or reports.
+const makeExternalContentLink = () => ({
+  isExternalContentLinkAvailable: jest.fn(),
+  prepareExternalLink: jest.fn(),
+  reportExternalContentLink: jest.fn(),
+});
+let mockExternalContentLink: ReturnType<typeof makeExternalContentLink> | null =
+  makeExternalContentLink();
+jest.mock('../../specs/NativeExternalContentLink', () => ({
+  __esModule: true,
+  get default() {
+    return mockExternalContentLink;
+  },
+}));
+
 describe('PalStore', () => {
   const mockPal: Pal = {
     type: 'local',
@@ -80,8 +116,9 @@ describe('PalStore', () => {
     updated_at: '2023-01-01T00:00:00Z',
   };
 
-  beforeEach(() => {
+  beforeEach(async () => {
     jest.clearAllMocks();
+    await AsyncStorage.clear();
 
     // Reset store state
     runInAction(() => {
@@ -187,6 +224,112 @@ describe('PalStore', () => {
     });
   });
 
+  describe('checkout eligibility writer', () => {
+    const originalOS = Platform.OS;
+    const originalE2E = (global as any).__E2E__;
+
+    const runWriter = () => (palStore as any).checkCheckoutEligibility();
+
+    beforeEach(() => {
+      // Exercise the real per-platform branch (prod path), not the E2E override.
+      (global as any).__E2E__ = false;
+      mockExternalContentLink = makeExternalContentLink();
+      (isUSStorefront as jest.Mock).mockReset();
+      runInAction(() => {
+        (palStore as any).isCheckoutEligible = false;
+      });
+    });
+
+    afterEach(() => {
+      Platform.OS = originalOS;
+      (global as any).__E2E__ = originalE2E;
+    });
+
+    it('Android: EXTERNAL_CONTENT_LINK available -> eligible (locale irrelevant)', async () => {
+      Platform.OS = 'android';
+      mockExternalContentLink!.isExternalContentLinkAvailable.mockResolvedValue(
+        true,
+      );
+
+      await runWriter();
+
+      expect(
+        mockExternalContentLink!.isExternalContentLinkAvailable,
+      ).toHaveBeenCalledTimes(1);
+      expect(isUSStorefront).not.toHaveBeenCalled();
+      // Probe is side-effect-free: never mints a token, launches, or reports.
+      expect(
+        mockExternalContentLink!.prepareExternalLink,
+      ).not.toHaveBeenCalled();
+      expect(
+        mockExternalContentLink!.reportExternalContentLink,
+      ).not.toHaveBeenCalled();
+      expect(palStore.isCheckoutEligible).toBe(true);
+    });
+
+    it('Android: program unavailable -> ineligible (info text)', async () => {
+      Platform.OS = 'android';
+      mockExternalContentLink!.isExternalContentLinkAvailable.mockResolvedValue(
+        false,
+      );
+
+      await runWriter();
+
+      expect(palStore.isCheckoutEligible).toBe(false);
+    });
+
+    it('Android: null module -> ineligible (fail-closed)', async () => {
+      Platform.OS = 'android';
+      mockExternalContentLink = null;
+
+      await runWriter();
+
+      expect(isUSStorefront).not.toHaveBeenCalled();
+      expect(palStore.isCheckoutEligible).toBe(false);
+    });
+
+    it('Android: probe throws -> ineligible (fail-closed, resets a stale true)', async () => {
+      Platform.OS = 'android';
+      // Pre-seed true so this guards the catch resetting the flag, not the default.
+      (palStore as any).isCheckoutEligible = true;
+      mockExternalContentLink!.isExternalContentLinkAvailable.mockRejectedValue(
+        new Error('billing setup failed'),
+      );
+      const warnSpy = jest.spyOn(console, 'warn').mockImplementation();
+
+      await runWriter();
+
+      expect(palStore.isCheckoutEligible).toBe(false);
+      warnSpy.mockRestore();
+    });
+
+    it('E2E build: forces eligibility without probing the platform', async () => {
+      Platform.OS = 'android';
+      (global as any).__E2E__ = true;
+
+      await runWriter();
+
+      expect(palStore.isCheckoutEligible).toBe(true);
+      expect(
+        mockExternalContentLink!.isExternalContentLinkAvailable,
+      ).not.toHaveBeenCalled();
+      expect(isUSStorefront).not.toHaveBeenCalled();
+    });
+
+    it('iOS: keeps StoreKit storefront signal, never probes Play', async () => {
+      Platform.OS = 'ios';
+      (isUSStorefront as jest.Mock).mockResolvedValue(true);
+
+      await runWriter();
+
+      expect(isUSStorefront).toHaveBeenCalledTimes(1);
+      expect(
+        mockExternalContentLink!.isExternalContentLinkAvailable,
+      ).not.toHaveBeenCalled();
+      expect(palStore.isCheckoutEligible).toBe(true);
+    });
+  });
+
   describe('Pip seeding', () => {
     const callInitializePipPal = async () =>
       (palStore as any).initializePipPal();
@@ -276,6 +419,73 @@ describe('PalStore', () => {
 
       const names = palStore.pals.map(p => p.name).sort();
       expect(names).toEqual(['Lookie', 'Pip']);
+    });
+  });
+
+  describe.each([
+    ['Lookie', 'initializeLookiePal'],
+    ['Pip', 'initializePipPal'],
+  ])('%s seed persistence', (name, initializer) => {
+    const seed = () => (palStore as any)[initializer]();
+
+    beforeEach(() => {
+      (palRepository.createPal as jest.Mock).mockImplementation(
+        async (data: Partial<Pal>) => ({...mockPal, ...data}),
+      );
+      (palRepository.deletePal as jest.Mock).mockResolvedValue(true);
+    });
+
+    it('does not recreate a deleted default pal on the next initialization', async () => {
+      await seed();
+      await palStore.deletePal(palStore.pals[0].id);
+      expect(palStore.pals).toHaveLength(0);
+      (palRepository.createPal as jest.Mock).mockClear();
+
+      await seed();
+
+      expect(palRepository.createPal).not.toHaveBeenCalled();
+      expect(palStore.pals).toHaveLength(0);
+    });
+
+    it('does not recreate a default pal after it is renamed', async () => {
+      await seed();
+      runInAction(() => {
+        palStore.pals[0].name = 'My renamed pal';
+      });
+      (palRepository.createPal as jest.Mock).mockClear();
+
+      await seed();
+
+      expect(palRepository.createPal).not.toHaveBeenCalled();
+      expect(palStore.pals).toHaveLength(1);
+      expect(palStore.pals[0].name).toBe('My renamed pal');
+    });
+
+    it('records existing default pals before they are deleted', async () => {
+      runInAction(() => {
+        palStore.pals = [{...mockPal, name, capabilities: {video: true}}];
+      });
+      await seed();
+      expect(palRepository.createPal).not.toHaveBeenCalled();
+      await palStore.deletePal(mockPal.id);
+
+      await seed();
+
+      expect(palRepository.createPal).not.toHaveBeenCalled();
+      expect(palStore.pals).toHaveLength(0);
+    });
+
+    it('retries seeding after creation fails', async () => {
+      (palRepository.createPal as jest.Mock).mockRejectedValueOnce(
+        new Error('Database unavailable'),
+      );
+      await seed();
+      expect(palStore.pals).toHaveLength(0);
+
+      await seed();
+
+      expect(palRepository.createPal).toHaveBeenCalledTimes(2);
+      expect(palStore.pals[0].name).toBe(name);
     });
   });
 

@@ -1,10 +1,6 @@
-import {Model, GGUFMetadata, ContextInitParams} from './types';
+import {Model, GGUFMetadata, ContextInitParams, CacheType} from './types';
 
-/**
- * Validate that GGUF metadata has valid numeric values for core fields.
- * Returns false if any required field is NaN, undefined, or non-positive.
- * This catches corrupted metadata from older app versions.
- */
+// Guards against corrupted metadata persisted by older app versions.
 function isValidGGUFMetadata(metadata: GGUFMetadata): boolean {
   const requiredFields = [
     metadata.n_layers,
@@ -21,10 +17,7 @@ function isValidGGUFMetadata(metadata: GGUFMetadata): boolean {
   );
 }
 
-/**
- * Get bytes per element for KV cache based on quantization type
- * Reference: llama.cpp cache type sizes
- */
+// Sizes mirror llama.cpp's cache types.
 export function getKVCacheTypeBytes(cacheType: string): number {
   const typeMap: Record<string, number> = {
     f32: 4.0,
@@ -39,9 +32,6 @@ export function getKVCacheTypeBytes(cacheType: string): number {
   return typeMap[cacheType.toLowerCase()] || 2.0; // Default to f16
 }
 
-/**
- * Calculate KV cache memory requirement using GGUF metadata and context settings
- */
 function calculateKVCacheMemory(
   metadata: GGUFMetadata,
   contextSettings: ContextInitParams,
@@ -72,9 +62,6 @@ function calculateKVCacheMemory(
   return keyCacheSize + valueCacheSize;
 }
 
-/**
- * Calculate compute buffer memory requirement
- */
 function calculateComputeBuffer(
   metadata: GGUFMetadata,
   contextSettings: ContextInitParams,
@@ -84,58 +71,59 @@ function calculateComputeBuffer(
   const n_embd = Number(metadata.n_embd);
   const {n_ubatch} = contextSettings;
 
-  // Compute buffer: (n_vocab + n_embd) × n_ubatch × 4 bytes
   return (n_vocab + n_embd) * n_ubatch * 4;
 }
 
-/**
- * Get model memory requirement estimate in bytes
- *
- * When GGUF metadata is available:
- *   Uses accurate formula: (Weights + KV Cache + Compute Buffer) × 1.1
- *
- * When GGUF metadata is NOT available:
- *   Uses fallback: (modelSize + mmProjSize) × 1.2
- *
- * @param model - The model to estimate memory for
- * @param projectionModel - Optional mmproj model for multimodal
- * @param contextSettings - Optional context settings (n_ctx, cache types, etc.)
- * @returns Estimated memory requirement in bytes
- */
+const RUNTIME_OVERHEAD = 1.1;
+const RUNTIME_OVERHEAD_WITHOUT_METADATA = 1.2;
+
 export function getModelMemoryRequirement(
   model: Model,
   projectionModel?: Model,
   contextSettings?: ContextInitParams,
+  draftModel?: Model,
 ): number {
   const mmProjSize = projectionModel?.size || 0;
+  const draftSize = draftModel?.size || 0;
 
-  // If GGUF metadata is available and valid, use accurate formula
+  // A paired draft runs with its own KV cache, sized by the target's n_ctx —
+  // there is no separate draft n_ctx.
+  let draftKvCacheSize = 0;
+  if (
+    draftModel?.ggufMetadata &&
+    contextSettings &&
+    isValidGGUFMetadata(draftModel.ggufMetadata)
+  ) {
+    draftKvCacheSize = calculateKVCacheMemory(draftModel.ggufMetadata, {
+      ...contextSettings,
+      cache_type_k: (contextSettings.spec_draft_cache_type_k ||
+        'f16') as CacheType,
+      cache_type_v: (contextSettings.spec_draft_cache_type_v ||
+        'f16') as CacheType,
+    });
+  }
+
   if (
     model.ggufMetadata &&
     contextSettings &&
     isValidGGUFMetadata(model.ggufMetadata)
   ) {
     const metadata = model.ggufMetadata;
-
-    // Weights: already quantized in GGUF file
     const weightsSize = model.size;
-
-    // KV Cache: depends on context length, architecture, and cache quantization
     const kvCacheSize = calculateKVCacheMemory(metadata, contextSettings);
-
-    // Compute Buffer: temporary buffers for inference
     const computeBuffer = calculateComputeBuffer(metadata, contextSettings);
 
-    // Total: (Weights + KV Cache + Compute) × 1.1 overhead + mmproj
     const baseMemory = weightsSize + kvCacheSize + computeBuffer;
-    const totalMemory = baseMemory * 1.1 + mmProjSize * 1.1;
+    const totalMemory =
+      baseMemory * RUNTIME_OVERHEAD +
+      mmProjSize * RUNTIME_OVERHEAD +
+      (draftSize + draftKvCacheSize) * RUNTIME_OVERHEAD;
 
     return totalMemory;
   }
 
-  // Fallback: simple size-based estimation
-  const totalSize = model.size + mmProjSize;
-  const estimated = totalSize * 1.2; // 20% overhead (more conservative when no metadata)
+  const totalSize = model.size + mmProjSize + draftSize;
+  const estimated = totalSize * RUNTIME_OVERHEAD_WITHOUT_METADATA;
 
   return estimated;
 }

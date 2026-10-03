@@ -19,11 +19,13 @@ import {MemoryFitStatus} from '../utils/memoryDisplay';
  *
  * @param model - The model to check
  * @param projectionModel - Optional mmproj model for multimodal
+ * @param draftModel - Optional speculative draft model loaded alongside the target
  * @returns true if device has enough memory
  */
 export const hasEnoughMemory = async (
   model: Model,
   projectionModel?: Model,
+  draftModel?: Model,
 ): Promise<boolean> => {
   // Try to fetch GGUF metadata if not available but model is downloaded
   // After fetching, get the updated model from store (if it exists there)
@@ -66,6 +68,7 @@ export const hasEnoughMemory = async (
     modelForCalc,
     projectionModel,
     modelStore.contextInitParams,
+    draftModel,
   );
 
   return memoryRequirement <= ceiling;
@@ -78,6 +81,7 @@ async function getMemoryFitDetails(
   model: Model,
   projectionModel: Model | undefined,
   contextInitParams: ContextInitParams,
+  draftModel?: Model,
 ): Promise<{
   status: MemoryFitStatus;
   requiredBytes: number;
@@ -88,6 +92,7 @@ async function getMemoryFitDetails(
     model,
     projectionModel,
     contextInitParams,
+    draftModel,
   );
 
   // Get device total memory
@@ -117,10 +122,12 @@ async function getMemoryFitDetails(
  *
  * @param model - The model to check (or a partial model with at least size)
  * @param projectionModel - Optional mmproj model for multimodal
+ * @param draftModel - Optional speculative draft model loaded alongside the target
  */
 export const useMemoryCheck = (
   model: Model | {size: number; supportsMultimodal?: boolean},
   projectionModel?: Model,
+  draftModel?: Model,
 ) => {
   const l10n = React.useContext(L10nContext);
   const [memoryWarning, setMemoryWarning] = useState('');
@@ -153,6 +160,7 @@ export const useMemoryCheck = (
             model as Model,
             projectionModel,
             contextInitParams,
+            draftModel,
           );
 
         setFitStatus(status);
@@ -203,7 +211,14 @@ export const useMemoryCheck = (
     };
 
     checkMemory();
-  }, [model, projectionModel, l10n, calibrationCeiling, contextInitParams]);
+  }, [
+    model,
+    projectionModel,
+    draftModel,
+    l10n,
+    calibrationCeiling,
+    contextInitParams,
+  ]);
 
   return {memoryWarning, shortMemoryWarning, multimodalWarning, fitStatus};
 };

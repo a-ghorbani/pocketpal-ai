@@ -1,25 +1,14 @@
-/**
- * Context initialization parameters version constants and migration utilities
- *
- * When adding new parameters:
- * 1. Add the parameter to the createContextInitParams function
- * 2. Increment CURRENT_CONTEXT_INIT_PARAMS_VERSION
- * 3. Add a migration step in migrateContextInitParams to handle the new parameter
- */
+// When adding a parameter:
+// 1. Add it to createContextInitParams
+// 2. Increment CURRENT_CONTEXT_INIT_PARAMS_VERSION
+// 3. Add a migration step in migrateContextInitParams
 
 import {ContextParams} from 'llama.rn';
 import {ContextInitParams, LegacyContextInitParams} from './types';
 import {Platform} from 'react-native';
 
-// Current version of the context init params schema
-// Increment this when adding new parameters or changing existing ones
-export const CURRENT_CONTEXT_INIT_PARAMS_VERSION = '2.2';
+export const CURRENT_CONTEXT_INIT_PARAMS_VERSION = '2.3';
 
-/**
- * Creates properly versioned ContextInitParams from ContextParams (excluding model)
- * @param params The context parameters without the model field
- * @returns ContextInitParams with proper version
- */
 export const createContextInitParams = (
   params: Omit<ContextParams, 'model'>,
 ): ContextInitParams => {
@@ -60,14 +49,11 @@ export const createContextInitParams = (
 
     // v2.2+
     no_extra_bufts: (params as any).no_extra_bufts ?? false, // Default ON: repack enabled (mmap OFF + repack ON is optimal on Android)
+
+    speculativeEnabled: (params as any).speculativeEnabled ?? false,
   };
 };
 
-/**
- * Migrates context initialization parameters from older versions to the current version
- * @param params The parameters object to migrate (can be any version)
- * @returns The migrated parameters object
- */
 export function migrateContextInitParams(
   params: ContextInitParams | LegacyContextInitParams | any,
 ): ContextInitParams {
@@ -128,8 +114,7 @@ export function migrateContextInitParams(
         }
       }
 
-      // Keep no_gpu_devices for now (marked deprecated, will be removed in future version)
-      // delete migratedParams.no_gpu_devices;
+      // no_gpu_devices is kept on the record: deprecated, not yet removed.
     }
 
     // Migrate flash_attn boolean to flash_attn_type string
@@ -145,8 +130,7 @@ export function migrateContextInitParams(
         migratedParams.flash_attn_type = 'off';
       }
 
-      // Keep flash_attn for now (marked deprecated, will be removed in future version)
-      // delete migratedParams.flash_attn;
+      // flash_attn is kept on the record: deprecated, not yet removed.
     } else if (!migratedParams.flash_attn_type) {
       // No flash_attn or flash_attn_type, set platform-specific default
       migratedParams.flash_attn_type = Platform.OS === 'ios' ? 'auto' : 'off';
@@ -194,17 +178,20 @@ export function migrateContextInitParams(
     migratedParams.version = '2.2';
   }
 
+  if (migratedParams.version === '2.2') {
+    if (migratedParams.speculativeEnabled === undefined) {
+      migratedParams.speculativeEnabled = false;
+    }
+
+    migratedParams.version = '2.3';
+  }
+
   // Ensure the final version is set correctly
   migratedParams.version = CURRENT_CONTEXT_INIT_PARAMS_VERSION;
 
   return migratedParams as ContextInitParams;
 }
 
-/**
- * Validates that an object has all required fields for ContextInitParams
- * @param params The parameters to validate
- * @returns true if valid, false otherwise
- */
 export function validateContextInitParams(
   params: any,
 ): params is ContextInitParams {
@@ -221,19 +208,9 @@ export function validateContextInitParams(
     'use_mmap',
   ];
 
-  // Check required fields
-  const hasRequiredFields = requiredFields.every(field => field in params);
-
-  // For v2.0+, also check for new optional fields (but don't require them)
-  // kv_unified, n_parallel, devices, flash_attn_type
-
-  return hasRequiredFields;
+  return requiredFields.every(field => field in params);
 }
 
-/**
- * Creates default ContextInitParams with sensible defaults
- * Used as fallback when parameters are corrupted or missing
- */
 export function createDefaultContextInitParams(): ContextInitParams {
   return {
     version: CURRENT_CONTEXT_INIT_PARAMS_VERSION,
@@ -258,5 +235,7 @@ export function createDefaultContextInitParams(): ContextInitParams {
 
     // v2.2 parameters
     no_extra_bufts: false, // Repack ON: mmap OFF + repack ON is optimal on Android
+
+    speculativeEnabled: false,
   };
 }

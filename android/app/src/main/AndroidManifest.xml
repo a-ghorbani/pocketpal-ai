@@ -12,6 +12,8 @@
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.CAMERA" />
     <uses-permission android:name="android.permission.RECORD_AUDIO" />
+    <uses-feature android:name="android.hardware.camera" android:required="false" />
+    <uses-feature android:name="android.hardware.camera.any" android:required="false" />
 
     <!-- Needed only for devices running Android 9 (API 28) or lower -->
     <!-- Currently used for storing chat sessions (/Download) -->
@@ -51,6 +53,15 @@
             <category android:name="android.intent.category.DEFAULT" />
             <category android:name="android.intent.category.BROWSABLE" />
             <data android:scheme="pocketpal" android:host="hub" />
+        </intent-filter>
+        <!-- Checkout callback for the in-app PalsHub purchase flow. Scoped to
+             host=checkout so it is routed to AuthSessionModule, not the
+             hub deep-link path. -->
+        <intent-filter>
+            <action android:name="android.intent.action.VIEW" />
+            <category android:name="android.intent.category.DEFAULT" />
+            <category android:name="android.intent.category.BROWSABLE" />
+            <data android:scheme="pocketpal" android:host="checkout" />
         </intent-filter>
       </activity>
 

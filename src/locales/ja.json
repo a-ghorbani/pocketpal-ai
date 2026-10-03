@@ -30,7 +30,9 @@
     "ok": "OK",
     "close": "閉じる",
     "clear": "すべてクリア",
-    "gallery": "ギャラリー"
+    "gallery": "ギャラリー",
+    "stop": "停止",
+    "noResults": "結果がありません"
   },
   "settings": {
     "modelInitializationSettings": "モデル初期化設定",
@@ -157,7 +159,53 @@
     "removeRemoteModel": "{{modelName}}（{{serverName}}）を削除しますか？",
     "retryConnection": "再試行",
     "enterUrlManually": "URLを手動で入力",
-    "manageServers": "サーバーを管理"
+    "manageServers": "サーバーを管理",
+    "requestTimeout": "リクエストのタイムアウト（秒）",
+    "requestTimeoutHelp": "応答が遅いサーバーを待つ最大時間です。空欄にするとデフォルトが使われます。",
+    "requestTimeoutPlaceholder": "任意 - 空欄でデフォルト",
+    "serverType": "サーバータイプ",
+    "serverTypeHelp": "自動検出されます。誤っている場合は変更してください。",
+    "internetSearch": {
+      "title": "インターネット検索",
+      "description": "Palが自分のツールでウェブを検索できるようにします。APIキーはご自身のものをご用意ください。PocketPalがキーを保持したり、クエリを中継したりすることは一切ありません。",
+      "providerLabel": "検索プロバイダー",
+      "providerGated": "近日公開",
+      "keyLabel": "APIキー",
+      "keyIsSet": "{{provider}}のキーが設定されています。",
+      "keyNotSet": "{{provider}}のキーは設定されていません。",
+      "setKeyButton": "キーを設定",
+      "updateKeyButton": "キーを更新",
+      "clearKeyButton": "キーをクリア",
+      "keyInputPlaceholder": "{{provider}}のAPIキーを貼り付けてください",
+      "keyUpdateError": "キーを更新できませんでした。もう一度お試しください。",
+      "showKeyAccessibilityLabel": "APIキーを表示",
+      "hideKeyAccessibilityLabel": "APIキーを非表示",
+      "resultCountLabel": "検索ごとの結果数",
+      "resultCountDescription": "結果数を減らすと、モデルのコンテキストに余裕が生まれます。",
+      "consentTitle": "検索はデバイスの外に送信されます",
+      "consentDescription": "Palがウェブを検索すると、クエリはインターネット経由で選択したプロバイダーに送信されます。Palがページを読み取る際、選択したプロバイダーに独自のリーダーがない場合は、代わりにURLとページの内容がデフォルトのリーダーサービス（r.jina.ai）に送信されることがあります。キーとクエリがPocketPalに送信されることは一切ありません。",
+      "consentAccept": "理解しました",
+      "consentRequired": "キーを設定して検索を有効にするには、上記の説明に同意してください。",
+      "consentGivenTitle": "ウェブ検索が有効になっています",
+      "consentGivenDescription": "上記のとおり、クエリとページの読み取りがデバイスの外に送信されることがあります。",
+      "consentRevoke": "取り消す"
+    },
+    "languageSheetTitle": "言語",
+    "languageSearchPlaceholder": "言語を検索",
+    "speculativeDecoding": "投機的デコード",
+    "speculativeDecodingDescription": "小さなドラフトモデル（または埋め込みのMTPモデル）を使ってトークンを予測し、生成を高速化します。実験的機能です。",
+    "speculativeNotMTPCapable": "現在のモデルは投機的デコードに対応しておらず、互換性のあるドラフトモデルも設定されていないため、この設定はオフのままで効果はありません。対応モデルには自動的に適用されます。",
+    "speculativeDraftModel": "ドラフトモデル",
+    "speculativeDraftModelDescription": "現在のモデル向けにトークンのドラフトを生成します。",
+    "speculativeDraftModelNone": "なし（埋め込みMTP）",
+    "speculativeDraftModelIgnoredOverridden": "現在のモデルには専用のドラフトモデルが付属しているため、この選択は無視されます。",
+    "speculativeDraftModelIgnoredIncompatible": "このドラフトモデルは現在のモデルと互換性がないため、無視されます。",
+    "speculativeDraftModelIgnoredNotCapable": "このモデルにはドラフトレイヤーが含まれていないため、ドラフトモデルとして使用できません。",
+    "speculativeDraftKeyCacheType": "ドラフトのキーキャッシュタイプ",
+    "speculativeDraftValueCacheType": "ドラフトの値キャッシュタイプ",
+    "speculativeDraftNGpuLayers": "ドラフトのGPUレイヤー",
+    "speculativeDraftNGpuLayersDescription": "GPUにオフロードするドラフトモデルのレイヤー数。",
+    "speculativeDraftCacheTypeInactiveDescription": "投機的デコードが実行されると適用されます。"
   },
   "memory": {
     "shortWarning": "メモリ警告",
@@ -344,7 +392,11 @@
         "author": "作者",
         "requiresProjectionModel": "投影モデルが必要",
         "downloadProjectionModel": "投影モデルをダウンロード",
-        "viewModelCardOnHuggingFace": "Hugging Faceでモデルカードを表示"
+        "viewModelCardOnHuggingFace": "Hugging Faceでモデルカードを表示",
+        "visionSupported": "対応",
+        "visionNotSupported": "非対応",
+        "visionUnknown": "不明",
+        "draftOnlyReason": "ドラフト専用モデルです。設定 → 投機的デコードで選択してください。"
       },
       "accessibility": {
         "expandDetails": "詳細を展開",
@@ -405,7 +457,9 @@
       "multilingual": "多言語対応",
       "rewriting": "文章の書き換え",
       "creativity": "創作文章",
-      "vision": "ビジョン"
+      "vision": "ビジョン",
+      "mtp": "投機的（MTP）",
+      "mtpDraft": "投機的ドラフト"
     },
     "hubRun": {
       "title": "モデルをダウンロード",
@@ -453,13 +507,14 @@
     "supportProject": "プロジェクトを応援する",
     "supportProjectDescription": "PocketPal AIをご利用いただき楽しんでいただけているなら、以下の方法でプロジェクトを応援いただけると幸いです：",
     "githubButton": "GitHubでスターをつける",
-    "orText": "または",
     "orBy": "または",
-    "sponsorButton": "スポンサーになる",
     "versionCopiedTitle": "バージョンをコピーしました",
     "versionCopiedDescription": "バージョン情報がクリップボードにコピーされました",
     "privacyPolicy": "プライバシーポリシー",
-    "termsOfService": "利用規約"
+    "termsOfService": "利用規約",
+    "tour": "ツアー",
+    "tourDescription": "ウェルカム画面をもう一度見て、PocketPal AIでできることを確認しましょう。",
+    "showIntroButton": "イントロをもう一度見る"
   },
   "feedback": {
     "title": "フィードバックを送信",
@@ -533,7 +588,9 @@
       "activateModelTitle": "開始するにはモデルを有効化してください",
       "activateModelDescription": "モデルを選択してダウンロードしてください、ダウンロード後、モデルの横にある読み込みをタップしてチャットを開始します",
       "activateModelButton": "モデルを選択",
-      "loading": "読み込み中..."
+      "loading": "読み込み中...",
+      "gettingReadyTitle": "{{name}}が準備中です",
+      "gettingReadyDescription": "パルがチャットできるようになったらすぐにお知らせします。上部のバナーをタップすると進み具合を確認できます。"
     },
     "chatInput": {
       "inputPlaceholder": "メッセージを入力",
@@ -542,7 +599,8 @@
         "disableThinking": "思考モードを無効にする",
         "thinkingEnabled": "思考モードが有効",
         "thinkingDisabled": "思考モードが無効",
-        "thinkText": "思考"
+        "thinkText": "思考",
+        "cycleEffort": "推論の努力レベル：{{level}}。ダブルタップで努力レベルを切り替えます"
       }
     },
     "contentReportSheet": {
@@ -693,7 +751,8 @@
       "exportCurrentSession": "現在のセッションをエクスポート",
       "exportAllSessions": "すべてのセッションをエクスポート",
       "exportChatSession": "チャットをエクスポート",
-      "importSessions": "セッションをインポート"
+      "importSessions": "セッションをインポート",
+      "exportCurrentSessionMarkdown": "Markdown形式でエクスポート"
     },
     "hfTokenSheet": {
       "title": "Hugging Face トークン",
@@ -725,7 +784,20 @@
     },
     "modelSettingsSheet": {
       "modelSettings": "モデル設定",
-      "saveChanges": "変更を保存"
+      "saveChanges": "変更を保存",
+      "reasoningSection": "推論",
+      "isReasoningModel": "推論モデル",
+      "isReasoningModelHelp": "自動検出されなかった場合でも、このモデルで思考コントロールを表示します。",
+      "supportsEffort": "段階的な努力レベルに対応",
+      "effortValues": "このモデルが対応する努力レベル",
+      "effortLevels": {
+        "minimal": "最小",
+        "low": "低",
+        "medium": "中",
+        "high": "高",
+        "xhigh": "非常に高",
+        "max": "最大"
+      }
     },
     "modelsHeaderRight": {
       "menuTitleHf": "Hugging Faceモデル",
@@ -757,12 +829,16 @@
       "talentNames": {
         "render_html": "HTMLプレビュー",
         "calculate": "数式",
-        "datetime": "日付と時刻"
+        "datetime": "日付と時刻",
+        "web_search": "ウェブ検索",
+        "read_url": "ウェブページを読み取る"
       },
       "talentDescriptions": {
         "render_html": "HTMLドキュメントをチャット内にインライン表示します",
         "calculate": "数式を計算します",
-        "datetime": "現在の日付と時刻を取得します"
+        "datetime": "現在の日付と時刻を取得します",
+        "web_search": "最新情報をインターネットで検索します（設定でAPIキーが必要です）",
+        "read_url": "ウェブページの全内容を読み取ります（設定でAPIキーが必要です）"
       },
       "greeting": {
         "sectionLabel": "あいさつ",
@@ -905,8 +981,11 @@
         "threeWeeksAgo": "3週間前",
         "fourWeeksAgo": "4週間前",
         "lastMonth": "先月",
-        "older": "それ以前"
-      }
+        "older": "それ以前",
+        "pinned": "ピン留め済み"
+      },
+      "pin": "ピン留め",
+      "unpin": "ピン留めを解除"
     },
     "usageStats": {
       "tooltip": {
@@ -942,7 +1021,8 @@
       "tokensPerSec": "{{value}} トークン/秒",
       "ttft": "{{value}}ms TTFT",
       "interrupted": "中断されました",
-      "truncated": "途中で停止 — コンテキストが満杯の可能性"
+      "truncated": "途中で停止 — コンテキストが満杯の可能性",
+      "draftAccepted": "ドラフト: {{accepted}}/{{total}} ({{pct}}%)"
     },
     "pendingIndicator": {
       "preparingTool": "ツールを準備中",
@@ -1154,7 +1234,19 @@
     "generatingPreview": "プレビューを生成中...（{{tokens}}トークン）",
     "generatingPreviewPending": "プレビューを生成中…",
     "toolUsedChip": "{{name}}を使用",
-    "toolErrorBlock": "{{name}}が失敗しました"
+    "toolErrorBlock": "{{name}}が失敗しました",
+    "webSearch": {
+      "searched": "検索しました：{{query}}",
+      "noResults": "結果なし",
+      "noResultsFor": "{{query}}の結果が見つかりません",
+      "resultsCount": "{{count}}件の結果",
+      "resultsCountOne": "1件の結果",
+      "searchResultsTitle": "検索結果",
+      "showResultsAccessibilityLabel": "{{query}}のウェブ検索結果を表示",
+      "openLinkError": "このリンクを開けませんでした。"
+    },
+    "contextFullRemote": "会話の余裕がなくなりました。新しいチャットを始めてください。",
+    "speculativeInitFailed": "このデバイスではこのモデルの投機的デコードを開始できませんでした。ドラフトコンテキスト用のメモリが不足している可能性が高いです。設定 → 詳細設定で投機的デコードをオフにして、もう一度お試しください。"
   },
   "benchmark": {
     "title": "ベンチマーク",
@@ -1359,6 +1451,139 @@
     "engineRetryCta": "再試行",
     "voicesEmptyState": "音声が見つかりません。",
     "kokoroDeviceNote": "一部の音声はすべてのデバイスで動作しない場合があります。",
-    "insufficientStorage": "空き容量が不足しています。このエンジンをインストールするには{{requiredMb}} MBを空けてください（現在{{freeMb}} MB利用可能）。"
+    "insufficientStorage": "空き容量が不足しています。このエンジンをインストールするには{{requiredMb}} MBを空けてください（現在{{freeMb}} MB利用可能）。",
+    "supertonicLanguageLabel": "言語",
+    "supertonicLanguageAuto": "自動",
+    "supertonicLanguageSheetTitle": "言語",
+    "supertonicLanguageSearchPlaceholder": "言語を検索",
+    "supertonicLanguageNames": {
+      "ar": "アラビア語",
+      "bg": "ブルガリア語",
+      "hr": "クロアチア語",
+      "cs": "チェコ語",
+      "da": "デンマーク語",
+      "nl": "オランダ語",
+      "en": "英語",
+      "et": "エストニア語",
+      "fi": "フィンランド語",
+      "fr": "フランス語",
+      "de": "ドイツ語",
+      "el": "ギリシャ語",
+      "hi": "ヒンディー語",
+      "hu": "ハンガリー語",
+      "id": "インドネシア語",
+      "it": "イタリア語",
+      "ja": "日本語",
+      "ko": "韓国語",
+      "lv": "ラトビア語",
+      "lt": "リトアニア語",
+      "pl": "ポーランド語",
+      "pt": "ポルトガル語",
+      "ro": "ルーマニア語",
+      "ru": "ロシア語",
+      "sk": "スロバキア語",
+      "sl": "スロベニア語",
+      "es": "スペイン語",
+      "sv": "スウェーデン語",
+      "tr": "トルコ語",
+      "uk": "ウクライナ語",
+      "vi": "ベトナム語"
+    }
+  },
+  "onboarding": {
+    "back": "戻る",
+    "skip": "スキップ",
+    "skipForNow": "今はスキップ",
+    "splash": {
+      "brand": "PocketPal"
+    },
+    "screen1": {
+      "title": "あなたのパルに会いましょう。",
+      "titleAccent": "パルに。",
+      "body": "あなたのスマホの中に住む、賢くて小さな友だち。\nセットアップを始めましょう。すぐに終わります。",
+      "cta": "案内してもらう",
+      "eyebrow": "PocketPalへようこそ"
+    },
+    "screen2": {
+      "title": "いつでも、\nどこでも。",
+      "body": "パルはあなたのスマホの中にいます。\nインターネットも電波もいりません。飛行機の中でも、電波の届かない場所でも、辺ぴな村でも使えます。",
+      "highlight": "インターネットも電波もいらない",
+      "cta": "次へ",
+      "eyebrow": "コンセプト",
+      "titleAccent": "いつでも、"
+    },
+    "screen3": {
+      "title": "小さくても、\nあなただけのもの。",
+      "titleAccent": "小さくても、",
+      "body": "スマホの中のパルは、すばやくてプライベート。でもクラウドAIよりは軽量です。何でも知っている賢者ではなく、ポケットに入る相棒だと考えてください。",
+      "highlight": "すばやくてプライベート",
+      "cta": "わかりました",
+      "eyebrow": "ちょっとひとこと"
+    },
+    "screen4": {
+      "title": "何もスマホの外に出ません。",
+      "titleAccent": "外に出ません",
+      "body": "アカウント不要。クラウドなし。トラッキングなし。あなたの会話はあなたのものです。",
+      "highlight": "アカウント不要。クラウドなし。トラッキングなし。",
+      "cta": "始める",
+      "eyebrow": "プライバシーをお約束"
+    },
+    "screen5": {
+      "title": "パルを何に使いますか？",
+      "body": "話したいことを選んでください。あなたのスマホに合ったパルをご案内します。",
+      "topic": {
+        "smartchat": "スマートチャット",
+        "coding": "コーディング",
+        "education": "学習",
+        "roleplay": "ロールプレイ",
+        "creative_writing": "創作",
+        "else": "ほかをお探しですか？"
+      },
+      "topicDescription": {
+        "smartchat": "毎日のフレンドリーな相棒",
+        "coding": "コード作成、デバッグ、解説",
+        "education": "学ぶ、解説する、クイズ",
+        "roleplay": "キャラクター、シナリオ",
+        "creative_writing": "物語、アイデア、下書き",
+        "else": "あとでアプリ内ですべてのパルを見る"
+      }
+    },
+    "screen6": {
+      "cta": "{{name}}をダウンロード",
+      "ctaTemplate": "{{name}}をダウンロード（{{size}}）",
+      "useTemplate": "{{name}}を使う",
+      "deviceRamSuffix": "GB RAM",
+      "deviceFreeSuffix": "GB空き",
+      "recommended": "おすすめ",
+      "downloaded": "ダウンロード済み",
+      "modelTier": {
+        "quick": "高速",
+        "balanced": "バランス",
+        "best": "最高品質"
+      },
+      "subtitleTemplate": "{{name}}はスマホ上の小さなAIモデルを使って考えます。ぴったりのものを選んでください。",
+      "pal": {
+        "pip": {
+          "body": "あなたにぴったりのパルが見つかりました。毎日使えるフレンドリーな相棒です。たいていのことに対応できる賢さで、どんなスマホでも動く軽さです。"
+        },
+        "codie": {
+          "body": "Codieを紹介します。あなたのローカルなペアプログラマーです。コードを読み、コードを書き、難しい部分を解説します。すべてスマホの中だけで完結します。"
+        },
+        "sage": {
+          "body": "Sageは辛抱強く、好奇心旺盛で、アイデアを一歩ずつ一緒に考えてくれます。ポケットに入る学習の相棒です。"
+        },
+        "echo": {
+          "body": "Echoは多才なロールプレイの相棒です。キャラクターを保ち、情景を描き、物語の行く先までどこまでもついていきます。"
+        },
+        "muse": {
+          "body": "Museは文章作成を手伝います。言い回しを提案し、リズムを見つけ、あなたのトーンをそのまま保ちます。"
+        }
+      }
+    }
+  },
+  "downloadBanner": {
+    "titleByPal": "{{name}}をダウンロード中",
+    "titleByModel": "{{name}}をダウンロード中",
+    "extraInProgress": "他に{{count}}件進行中"
   }
 }

@@ -1,10 +1,19 @@
 import {
   fetchModels,
   fetchModelsWithHeaders,
+  fetchServerProps,
   detectServerType,
   testConnection,
   streamChatCompletion,
+  buildReasoningPayload,
+  __clearRemoteImageCache,
 } from '../openai';
+import {
+  directTextModelsBody,
+  directVisionModelsBody,
+  routerModelsBody,
+} from '../../../jest/fixtures/remoteModelList';
+import {cacheReuseTimings} from '../../../jest/fixtures/llamaServerTimings';
 
 /** Build a minimal Headers-like object for fetch mocks. */
 function mockHeaders(entries: Record<string, string> = {}) {
@@ -200,6 +209,97 @@ describe('fetchModelsWithHeaders', () => {
     abortSpy.mockRestore();
     jest.useRealTimers();
   });
+
+  describe('models[] capabilities', () => {
+    const serve = (body: unknown) => {
+      global.fetch = jest.fn().mockResolvedValueOnce({
+        ok: true,
+        headers: mockHeaders({server: 'llama.cpp'}),
+        json: () => Promise.resolve(body),
+      });
+    };
+
+    it('carries a direct server capabilities onto its data row', async () => {
+      serve(directVisionModelsBody);
+
+      const {models} = await fetchModelsWithHeaders('http://localhost:8080');
+
+      expect(models).toHaveLength(1);
+      expect(models[0].id).toBe('gemma-4-e2b');
+      expect(models[0].capabilities).toEqual(['completion', 'multimodal']);
+      expect(models[0].meta?.n_ctx).toBe(8192);
+    });
+
+    it('distinguishes a text-only direct server by the same field', async () => {
+      serve(directTextModelsBody);
+
+      const {models} = await fetchModelsWithHeaders('http://localhost:8080');
+
+      expect(models[0].capabilities).toEqual(['completion']);
+    });
+
+    it('returns a router body untouched, models[] being absent there', async () => {
+      serve(routerModelsBody);
+
+      const {models} = await fetchModelsWithHeaders('http://localhost:8080');
+
+      expect(models).toEqual(routerModelsBody.data);
+      expect(models.some(m => 'capabilities' in m)).toBe(false);
+    });
+
+    it('leaves rows alone when no entry names them', async () => {
+      serve({
+        data: [
+          {id: 'a', object: 'model', owned_by: 'x'},
+          {id: 'b', object: 'model', owned_by: 'x'},
+        ],
+        models: [{name: 'c', model: 'c', capabilities: ['completion']}],
+      });
+
+      const {models} = await fetchModelsWithHeaders('http://localhost:8080');
+
+      expect(models.some(m => 'capabilities' in m)).toBe(false);
+    });
+
+    it('pairs a lone row with a lone entry whatever the entry calls itself', async () => {
+      serve({
+        data: [{id: 'a', object: 'model', owned_by: 'x'}],
+        models: [{name: 'something-else', capabilities: ['completion']}],
+      });
+
+      const {models} = await fetchModelsWithHeaders('http://localhost:8080');
+
+      expect(models[0].capabilities).toEqual(['completion']);
+    });
+
+    it('never pairs an id-less row with a nameless entry', async () => {
+      serve({
+        data: [
+          {object: 'model', owned_by: 'x'},
+          {id: 'b', object: 'model', owned_by: 'x'},
+        ],
+        models: [
+          {capabilities: ['multimodal']},
+          {name: 'other', capabilities: ['completion']},
+        ],
+      });
+
+      const {models} = await fetchModelsWithHeaders('http://localhost:8080');
+
+      expect(models.some(m => 'capabilities' in m)).toBe(false);
+    });
+
+    it('ignores a models field that is not an array', async () => {
+      serve({
+        data: [{id: 'a', object: 'model', owned_by: 'x'}],
+        models: {name: 'a', capabilities: ['completion']},
+      });
+
+      const {models} = await fetchModelsWithHeaders('http://localhost:8080');
+
+      expect(models[0].capabilities).toBeUndefined();
+    });
+  });
 });
 
 describe('detectServerType', () => {
@@ -366,6 +466,230 @@ describe('testConnection', () => {
   });
 });
 
+describe('fetchServerProps', () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+  });
+
+  it('parses contextLength from default_generation_settings.n_ctx and vision', async () => {
+    global.fetch = jest.fn().mockResolvedValueOnce({
+      ok: true,
+      json: () =>
+        Promise.resolve({
+          default_generation_settings: {n_ctx: 4096},
+          modalities: {vision: true, audio: false},
+        }),
+    });
+
+    const props = await fetchServerProps('http://localhost:8080');
+
+    expect(global.fetch).toHaveBeenCalledWith(
+      'http://localhost:8080/props',
+      expect.objectContaining({method: 'GET'}),
+    );
+    expect(props).toEqual({contextLength: 4096, supportsVision: true});
+  });
+
+  it('falls back to top-level n_ctx and reports vision false when not present', async () => {
+    global.fetch = jest.fn().mockResolvedValueOnce({
+      ok: true,
+      json: () => Promise.resolve({n_ctx: 8192}),
+    });
+
+    const props = await fetchServerProps('http://localhost:8080');
+    expect(props).toEqual({contextLength: 8192, supportsVision: false});
+  });
+
+  it('returns supportsVision false (defined, not omitted) when vision is off', async () => {
+    global.fetch = jest.fn().mockResolvedValueOnce({
+      ok: true,
+      json: () =>
+        Promise.resolve({
+          default_generation_settings: {n_ctx: 4096},
+          modalities: {vision: false},
+        }),
+    });
+
+    const props = await fetchServerProps('http://localhost:8080');
+    // Defined false on a 2xx probe clears a stale true on a model swap; a
+    // failed probe would return {} instead.
+    expect(props).toEqual({contextLength: 4096, supportsVision: false});
+  });
+
+  it('resolves to empty caps on a non-2xx response', async () => {
+    global.fetch = jest.fn().mockResolvedValueOnce({ok: false, status: 404});
+
+    await expect(fetchServerProps('http://localhost:8080')).resolves.toEqual(
+      {},
+    );
+  });
+
+  it('resolves to empty caps on a network error (never throws)', async () => {
+    global.fetch = jest.fn().mockRejectedValueOnce(new Error('boom'));
+
+    await expect(fetchServerProps('http://localhost:8080')).resolves.toEqual(
+      {},
+    );
+  });
+
+  it('resolves to empty caps on malformed JSON', async () => {
+    global.fetch = jest.fn().mockResolvedValueOnce({
+      ok: true,
+      json: () => Promise.reject(new Error('bad json')),
+    });
+
+    await expect(fetchServerProps('http://localhost:8080')).resolves.toEqual(
+      {},
+    );
+  });
+
+  it('scopes the request to a model id when one is supplied', async () => {
+    global.fetch = jest.fn().mockResolvedValueOnce({
+      ok: true,
+      json: () =>
+        Promise.resolve({
+          model_path: '/models/gemma-4-e2b.gguf',
+          default_generation_settings: {n_ctx: 8192},
+          modalities: {vision: true, video: true, audio: true},
+        }),
+    });
+
+    const props = await fetchServerProps(
+      'http://localhost:8080',
+      undefined,
+      undefined,
+      'gemma-4-e2b',
+    );
+
+    expect(global.fetch).toHaveBeenCalledWith(
+      'http://localhost:8080/props?model=gemma-4-e2b',
+      expect.objectContaining({method: 'GET'}),
+    );
+    expect(props).toEqual({contextLength: 8192, supportsVision: true});
+  });
+
+  it('url-encodes a model id containing a slash', async () => {
+    global.fetch = jest.fn().mockResolvedValueOnce({
+      ok: true,
+      json: () => Promise.resolve({n_ctx: 4096}),
+    });
+
+    await fetchServerProps(
+      'http://localhost:8080',
+      undefined,
+      undefined,
+      'unsloth/gemma-3-4b',
+    );
+
+    expect(global.fetch).toHaveBeenCalledWith(
+      'http://localhost:8080/props?model=unsloth%2Fgemma-3-4b',
+      expect.objectContaining({method: 'GET'}),
+    );
+  });
+
+  it('returns empty caps for a router placeholder body', async () => {
+    global.fetch = jest.fn().mockResolvedValueOnce({
+      ok: true,
+      json: () =>
+        Promise.resolve({
+          role: 'router',
+          model_path: 'none',
+          default_generation_settings: {n_ctx: 0},
+          modalities: null,
+        }),
+    });
+
+    const props = await fetchServerProps('http://localhost:8080');
+
+    // n_ctx 0 is "unknown", not a window, and vision is undecidable on a body
+    // that describes no model — both fields stay absent.
+    expect(props).toEqual({});
+  });
+
+  it('omits contextLength when n_ctx is zero, negative, or not a number', async () => {
+    for (const n_ctx of [0, -1, NaN, '4096']) {
+      global.fetch = jest.fn().mockResolvedValueOnce({
+        ok: true,
+        json: () =>
+          Promise.resolve({
+            model_path: '/models/m.gguf',
+            n_ctx,
+            modalities: {},
+          }),
+      });
+
+      const props = await fetchServerProps('http://localhost:8080');
+      expect(props.contextLength).toBeUndefined();
+    }
+  });
+
+  it('reports vision false when a real model body carries no modalities key', async () => {
+    global.fetch = jest.fn().mockResolvedValueOnce({
+      ok: true,
+      json: () =>
+        Promise.resolve({
+          model_path: '/models/old-build.gguf',
+          default_generation_settings: {n_ctx: 2048},
+        }),
+    });
+
+    const props = await fetchServerProps('http://localhost:8080');
+    expect(props).toEqual({contextLength: 2048, supportsVision: false});
+  });
+
+  it('decides vision from model_path alone when no window is reported', async () => {
+    global.fetch = jest.fn().mockResolvedValueOnce({
+      ok: true,
+      json: () =>
+        Promise.resolve({
+          model_path: '/models/m.gguf',
+          n_ctx: 0,
+          modalities: {vision: true},
+        }),
+    });
+
+    const props = await fetchServerProps('http://localhost:8080');
+    expect(props).toEqual({supportsVision: true});
+  });
+
+  it('bounds an omitted timeout at the props default, not the connection default', async () => {
+    jest.useFakeTimers();
+    const setTimeoutSpy = jest.spyOn(global, 'setTimeout');
+    global.fetch = jest.fn().mockResolvedValueOnce({
+      ok: true,
+      json: () => Promise.resolve({}),
+    });
+
+    await fetchServerProps('http://localhost:8080');
+
+    expect(setTimeoutSpy).toHaveBeenCalledWith(expect.any(Function), 5000);
+    setTimeoutSpy.mockRestore();
+    jest.useRealTimers();
+  });
+
+  it('falls back to the props default when the server timeout is unusable', async () => {
+    jest.useFakeTimers();
+    const setTimeoutSpy = jest.spyOn(global, 'setTimeout');
+    global.fetch = jest.fn().mockResolvedValue({
+      ok: true,
+      json: () => Promise.resolve({}),
+    });
+
+    for (const timeout of [0, -1, NaN]) {
+      setTimeoutSpy.mockClear();
+      await fetchServerProps('http://localhost:8080', undefined, timeout);
+      expect(setTimeoutSpy).toHaveBeenCalledWith(expect.any(Function), 5000);
+    }
+
+    setTimeoutSpy.mockClear();
+    await fetchServerProps('http://localhost:8080', undefined, 20000);
+    expect(setTimeoutSpy).toHaveBeenCalledWith(expect.any(Function), 20000);
+
+    setTimeoutSpy.mockRestore();
+    jest.useRealTimers();
+  });
+});
+
 // Mock XMLHttpRequest for streaming tests
 type XHREventHandler = (() => void) | null;
 
@@ -456,6 +780,7 @@ describe('streamChatCompletion', () => {
 
   beforeEach(() => {
     jest.clearAllMocks();
+    __clearRemoteImageCache();
     MockXHR.instances = [];
     originalXHR = global.XMLHttpRequest;
     (global as any).XMLHttpRequest = MockXHR;
@@ -550,6 +875,317 @@ describe('streamChatCompletion', () => {
     xhr.simulateLoad();
 
     await resultPromise;
+  });
+
+  it('encodes a local image path to a data URI on the remote wire', async () => {
+    const RNFS = require('@dr.pogodin/react-native-fs');
+    (RNFS.readFile as jest.Mock).mockResolvedValueOnce('QUJD');
+
+    const resultPromise = streamChatCompletion(
+      {
+        messages: [
+          {
+            role: 'user',
+            content: [
+              {type: 'text', text: 'what is this?'},
+              {type: 'image_url', image_url: {url: 'file:///tmp/photo.png'}},
+            ],
+          },
+        ],
+        model: 'test-model',
+      },
+      'http://localhost:1234',
+    );
+
+    await new Promise(r => setImmediate(r));
+    const xhr = MockXHR.instances[0];
+    const body = JSON.parse(xhr.requestBody);
+    expect(body.messages[0].content[1].image_url.url).toBe(
+      'data:image/png;base64,QUJD',
+    );
+
+    xhr.simulateHeaders(200);
+    xhr.simulateProgress(
+      'data: {"choices":[{"delta":{},"finish_reason":"stop"}]}\n\ndata: [DONE]\n\n',
+    );
+    xhr.simulateLoad();
+    await resultPromise;
+  });
+
+  it('passes through data: and http image urls unchanged', async () => {
+    const RNFS = require('@dr.pogodin/react-native-fs');
+
+    const resultPromise = streamChatCompletion(
+      {
+        messages: [
+          {
+            role: 'user',
+            content: [
+              {
+                type: 'image_url',
+                image_url: {url: 'data:image/jpeg;base64,ZZ'},
+              },
+              {type: 'image_url', image_url: {url: 'https://ex.com/a.png'}},
+            ],
+          },
+        ],
+        model: 'test-model',
+      },
+      'http://localhost:1234',
+    );
+
+    await new Promise(r => setImmediate(r));
+    const xhr = MockXHR.instances[0];
+    const body = JSON.parse(xhr.requestBody);
+    expect(body.messages[0].content[0].image_url.url).toBe(
+      'data:image/jpeg;base64,ZZ',
+    );
+    expect(body.messages[0].content[1].image_url.url).toBe(
+      'https://ex.com/a.png',
+    );
+    expect(RNFS.readFile).not.toHaveBeenCalled();
+
+    xhr.simulateHeaders(200);
+    xhr.simulateProgress(
+      'data: {"choices":[{"delta":{},"finish_reason":"stop"}]}\n\ndata: [DONE]\n\n',
+    );
+    xhr.simulateLoad();
+    await resultPromise;
+  });
+
+  it('leaves a text-only message array untouched', async () => {
+    const RNFS = require('@dr.pogodin/react-native-fs');
+
+    const resultPromise = streamChatCompletion(
+      {messages: [{role: 'user', content: 'plain text'}], model: 'test-model'},
+      'http://localhost:1234',
+    );
+
+    await new Promise(r => setImmediate(r));
+    const xhr = MockXHR.instances[0];
+    const body = JSON.parse(xhr.requestBody);
+    expect(body.messages[0].content).toBe('plain text');
+    expect(RNFS.readFile).not.toHaveBeenCalled();
+
+    xhr.simulateHeaders(200);
+    xhr.simulateProgress(
+      'data: {"choices":[{"delta":{},"finish_reason":"stop"}]}\n\ndata: [DONE]\n\n',
+    );
+    xhr.simulateLoad();
+    await resultPromise;
+  });
+
+  // Drive a stream to completion so its promise settles after the request
+  // body has been inspected.
+  const finishStream = async (
+    xhr: MockXHR,
+    resultPromise: Promise<unknown>,
+  ) => {
+    xhr.simulateHeaders(200);
+    xhr.simulateProgress(
+      'data: {"choices":[{"delta":{},"finish_reason":"stop"}]}\n\ndata: [DONE]\n\n',
+    );
+    xhr.simulateLoad();
+    await resultPromise;
+  };
+
+  const imageMessage = (url: string) => ({
+    role: 'user',
+    content: [{type: 'image_url', image_url: {url}}],
+  });
+
+  it('encodes a local image once and re-uses the cache on the next send', async () => {
+    const RNFS = require('@dr.pogodin/react-native-fs');
+    (RNFS.readFile as jest.Mock).mockResolvedValue('QUJD');
+
+    const p1 = streamChatCompletion(
+      {messages: [imageMessage('file:///tmp/cached.png')], model: 'm'},
+      'http://localhost:1234',
+    );
+    await new Promise(r => setImmediate(r));
+    const body1 = JSON.parse(MockXHR.instances[0].requestBody);
+    expect(body1.messages[0].content[0].image_url.url).toBe(
+      'data:image/png;base64,QUJD',
+    );
+    await finishStream(MockXHR.instances[0], p1);
+
+    const p2 = streamChatCompletion(
+      {messages: [imageMessage('file:///tmp/cached.png')], model: 'm'},
+      'http://localhost:1234',
+    );
+    await new Promise(r => setImmediate(r));
+    const body2 = JSON.parse(MockXHR.instances[1].requestBody);
+    expect(body2.messages[0].content[0].image_url.url).toBe(
+      'data:image/png;base64,QUJD',
+    );
+    await finishStream(MockXHR.instances[1], p2);
+
+    // The second send hit the cache — the file was read from disk only once.
+    expect(RNFS.readFile).toHaveBeenCalledTimes(1);
+  });
+
+  it('evicts oldest-first once cached bytes exceed the 24MB budget', async () => {
+    const RNFS = require('@dr.pogodin/react-native-fs');
+    // ~9MB base64 per image; three exceed the 24MB cache budget, so caching the
+    // third evicts the oldest (first) entry.
+    const big = 'A'.repeat(9 * 1024 * 1024);
+    (RNFS.readFile as jest.Mock).mockResolvedValue(big);
+
+    const send = async (path: string) => {
+      const p = streamChatCompletion(
+        {messages: [imageMessage(path)], model: 'm'},
+        'http://localhost:1234',
+      );
+      await new Promise(r => setImmediate(r));
+      await finishStream(MockXHR.instances[MockXHR.instances.length - 1], p);
+    };
+
+    // Fill: A (oldest) → B → C. Caching C pushes bytes over budget and evicts A.
+    await send('file:///tmp/a.png');
+    await send('file:///tmp/b.png');
+    await send('file:///tmp/c.png');
+    expect(RNFS.readFile).toHaveBeenCalledTimes(3);
+
+    // The two newest paths are still resident — re-sending them is a cache hit.
+    await send('file:///tmp/c.png');
+    await send('file:///tmp/b.png');
+    expect(RNFS.readFile).toHaveBeenCalledTimes(3);
+
+    // The oldest path was evicted, so re-sending it re-reads from disk.
+    await send('file:///tmp/a.png');
+    expect(RNFS.readFile).toHaveBeenCalledTimes(4);
+  });
+
+  it('dedups a concurrent double-encode of the same path (race-safe cache set)', async () => {
+    const RNFS = require('@dr.pogodin/react-native-fs');
+    (RNFS.readFile as jest.Mock).mockResolvedValue('QUJD');
+
+    // Two sends of the same new path start before either populates the cache, so
+    // both miss the read-side lookup and both call the cache setter; the second
+    // set hits the `has()` guard and does not double-count the entry.
+    const p1 = streamChatCompletion(
+      {messages: [imageMessage('file:///tmp/race.png')], model: 'm'},
+      'http://localhost:1234',
+    );
+    const p2 = streamChatCompletion(
+      {messages: [imageMessage('file:///tmp/race.png')], model: 'm'},
+      'http://localhost:1234',
+    );
+    await new Promise(r => setImmediate(r));
+    await finishStream(MockXHR.instances[0], p1);
+    await finishStream(MockXHR.instances[1], p2);
+    expect(RNFS.readFile).toHaveBeenCalledTimes(2);
+
+    // A subsequent send is a plain cache hit — the raced entry cached cleanly.
+    const p3 = streamChatCompletion(
+      {messages: [imageMessage('file:///tmp/race.png')], model: 'm'},
+      'http://localhost:1234',
+    );
+    await new Promise(r => setImmediate(r));
+    await finishStream(MockXHR.instances[2], p3);
+    expect(RNFS.readFile).toHaveBeenCalledTimes(2);
+  });
+
+  it('maps a dotless path to image/jpeg (no invalid image// MIME)', async () => {
+    const RNFS = require('@dr.pogodin/react-native-fs');
+    (RNFS.readFile as jest.Mock).mockResolvedValueOnce('QUJD');
+
+    const p = streamChatCompletion(
+      {messages: [imageMessage('content://media/1234')], model: 'm'},
+      'http://localhost:1234',
+    );
+    await new Promise(r => setImmediate(r));
+    const body = JSON.parse(MockXHR.instances[0].requestBody);
+    expect(body.messages[0].content[0].image_url.url).toBe(
+      'data:image/jpeg;base64,QUJD',
+    );
+    await finishStream(MockXHR.instances[0], p);
+  });
+
+  it('skips inlining a file whose successful stat exceeds the size cap', async () => {
+    const RNFS = require('@dr.pogodin/react-native-fs');
+    (RNFS.stat as jest.Mock).mockResolvedValueOnce({size: 20 * 1024 * 1024});
+
+    const p = streamChatCompletion(
+      {messages: [imageMessage('file:///tmp/huge.png')], model: 'm'},
+      'http://localhost:1234',
+    );
+    await new Promise(r => setImmediate(r));
+    const body = JSON.parse(MockXHR.instances[0].requestBody);
+    // Left unchanged; the server surfaces the failure.
+    expect(body.messages[0].content[0].image_url.url).toBe(
+      'file:///tmp/huge.png',
+    );
+    expect(RNFS.readFile).not.toHaveBeenCalled();
+    await finishStream(MockXHR.instances[0], p);
+  });
+
+  it('encodes anyway when stat is unavailable (undefined result)', async () => {
+    const RNFS = require('@dr.pogodin/react-native-fs');
+    // stat is an unconfigured jest.fn() → resolves undefined.
+    (RNFS.readFile as jest.Mock).mockResolvedValueOnce('QUJD');
+
+    const p = streamChatCompletion(
+      {messages: [imageMessage('file:///tmp/nostat.png')], model: 'm'},
+      'http://localhost:1234',
+    );
+    await new Promise(r => setImmediate(r));
+    const body = JSON.parse(MockXHR.instances[0].requestBody);
+    expect(body.messages[0].content[0].image_url.url).toBe(
+      'data:image/png;base64,QUJD',
+    );
+    await finishStream(MockXHR.instances[0], p);
+  });
+
+  it('encodes anyway when stat rejects (healthy image not dropped)', async () => {
+    const RNFS = require('@dr.pogodin/react-native-fs');
+    (RNFS.stat as jest.Mock).mockRejectedValueOnce(new Error('stat failed'));
+    (RNFS.readFile as jest.Mock).mockResolvedValueOnce('QUJD');
+
+    const p = streamChatCompletion(
+      {messages: [imageMessage('file:///tmp/statfail.png')], model: 'm'},
+      'http://localhost:1234',
+    );
+    await new Promise(r => setImmediate(r));
+    const body = JSON.parse(MockXHR.instances[0].requestBody);
+    expect(body.messages[0].content[0].image_url.url).toBe(
+      'data:image/png;base64,QUJD',
+    );
+    await finishStream(MockXHR.instances[0], p);
+  });
+
+  it('degrades per-image: a read failure leaves that part but encodes siblings', async () => {
+    const RNFS = require('@dr.pogodin/react-native-fs');
+    (RNFS.readFile as jest.Mock)
+      .mockRejectedValueOnce(new Error('read failed'))
+      .mockResolvedValueOnce('QUJD');
+
+    const p = streamChatCompletion(
+      {
+        messages: [
+          {
+            role: 'user',
+            content: [
+              {type: 'image_url', image_url: {url: 'file:///tmp/bad.png'}},
+              {type: 'image_url', image_url: {url: 'file:///tmp/ok.png'}},
+            ],
+          },
+        ],
+        model: 'm',
+      },
+      'http://localhost:1234',
+    );
+    await new Promise(r => setImmediate(r));
+    const body = JSON.parse(MockXHR.instances[0].requestBody);
+    // The failed image is left unchanged; the sibling still encodes and the
+    // completion promise does not reject.
+    expect(body.messages[0].content[0].image_url.url).toBe(
+      'file:///tmp/bad.png',
+    );
+    expect(body.messages[0].content[1].image_url.url).toBe(
+      'data:image/png;base64,QUJD',
+    );
+    await finishStream(MockXHR.instances[0], p);
   });
 
   it('forwards response_format and injects json_schema.name for OpenAI compatibility', async () => {
@@ -830,6 +1466,176 @@ describe('streamChatCompletion', () => {
     expect(result.stopped_eos).toBe(true);
   });
 
+  it('reconciles token counts from timings prompt_n/predicted_n', async () => {
+    const resultPromise = streamChatCompletion(
+      {messages: [{role: 'user', content: 'Hi'}], model: 'test-model'},
+      'http://localhost:1234',
+    );
+
+    const xhr = MockXHR.instances[0];
+    xhr.simulateHeaders(200);
+    xhr.simulateProgress(
+      'data: {"choices":[{"delta":{"content":"Hello"},"finish_reason":null}]}\n\n',
+    );
+    xhr.simulateProgress(
+      'data: {"choices":[{"delta":{},"finish_reason":"stop"}],"timings":{"prompt_n":3000,"predicted_n":500}}\n\n',
+    );
+    xhr.simulateProgress('data: [DONE]\n\n');
+    xhr.simulateLoad();
+
+    const result = await resultPromise;
+    // Server counts win over the single content-bearing per-event tally.
+    expect(result.tokens_evaluated).toBe(3000);
+    expect(result.tokens_predicted).toBe(500);
+  });
+
+  it('adds the cache-reused prefix to the evaluated prompt count', async () => {
+    const resultPromise = streamChatCompletion(
+      {messages: [{role: 'user', content: 'Hi'}], model: 'test-model'},
+      'http://localhost:1234',
+    );
+
+    const xhr = MockXHR.instances[0];
+    xhr.simulateHeaders(200);
+    xhr.simulateProgress(
+      'data: {"choices":[{"delta":{"content":"Hello"},"finish_reason":null}]}\n\n',
+    );
+    xhr.simulateProgress(
+      `data: {"choices":[{"delta":{},"finish_reason":"stop"}],"timings":${JSON.stringify(
+        cacheReuseTimings,
+      )}}\n\n`,
+    );
+    xhr.simulateProgress('data: [DONE]\n\n');
+    xhr.simulateLoad();
+
+    const result = await resultPromise;
+    // The server evaluated one token and reused thirty-one, so reading
+    // `prompt_n` alone reports 1 for a prompt of 32.
+    expect(cacheReuseTimings.prompt_n).toBe(1);
+    expect(result.tokens_evaluated).toBe(32);
+    expect(result.tokens_predicted).toBe(3);
+    // The total the context banner reads off the snapshot.
+    expect(
+      (result.tokens_evaluated ?? 0) + (result.tokens_predicted ?? 0),
+    ).toBe(35);
+  });
+
+  // Both shapes are projected from the capture rather than retyped, so each
+  // still carries the finish chunk's full nine-key `timings` object.
+  it('distinguishes a reported cache_n of 0 from an absent one', async () => {
+    const coldTimings = {...cacheReuseTimings, cache_n: 0};
+    const preReuseTimings: Record<string, number> = {...cacheReuseTimings};
+    delete preReuseTimings.cache_n;
+
+    const finish = async (timings: Record<string, number>) => {
+      const resultPromise = streamChatCompletion(
+        {messages: [{role: 'user', content: 'Hi'}], model: 'test-model'},
+        'http://localhost:1234',
+      );
+      const xhr = MockXHR.instances[MockXHR.instances.length - 1];
+      xhr.simulateHeaders(200);
+      xhr.simulateProgress(
+        'data: {"choices":[{"delta":{"content":"Hello"},"finish_reason":null}]}\n\n',
+      );
+      xhr.simulateProgress(
+        `data: {"choices":[{"delta":{},"finish_reason":"stop"}],"timings":${JSON.stringify(
+          timings,
+        )}}\n\n`,
+      );
+      xhr.simulateProgress('data: [DONE]\n\n');
+      xhr.simulateLoad();
+      return resultPromise;
+    };
+
+    // A cold prompt on a build that reports reuse: 0 is a real count.
+    const cold = await finish(coldTimings);
+    expect(cold.tokens_evaluated).toBe(cacheReuseTimings.prompt_n);
+    expect(cold.timings?.cache_n).toBe(0);
+
+    // A build too old to report reuse omits the key. Same total, and the app
+    // degrades to it rather than below it — but a different fact, and the
+    // result keeps the two apart.
+    const preReuse = await finish(preReuseTimings);
+    expect(preReuse.tokens_evaluated).toBe(cacheReuseTimings.prompt_n);
+    expect(preReuse.timings?.cache_n).toBeUndefined();
+  });
+
+  it('guards each timings token key independently (only predicted_n)', async () => {
+    const resultPromise = streamChatCompletion(
+      {messages: [{role: 'user', content: 'Hi'}], model: 'test-model'},
+      'http://localhost:1234',
+    );
+
+    const xhr = MockXHR.instances[0];
+    xhr.simulateHeaders(200);
+    xhr.simulateProgress(
+      'data: {"choices":[{"delta":{"content":"Hello"},"finish_reason":null}]}\n\n',
+    );
+    xhr.simulateProgress(
+      'data: {"choices":[{"delta":{},"finish_reason":"stop"}],"timings":{"predicted_n":7}}\n\n',
+    );
+    xhr.simulateProgress('data: [DONE]\n\n');
+    xhr.simulateLoad();
+
+    const result = await resultPromise;
+    // Missing prompt_n stays unset; predicted_n still wins.
+    expect(result.tokens_evaluated).toBeUndefined();
+    expect(result.tokens_predicted).toBe(7);
+  });
+
+  it('guards each timings token key independently (only prompt_n)', async () => {
+    const resultPromise = streamChatCompletion(
+      {messages: [{role: 'user', content: 'Hi'}], model: 'test-model'},
+      'http://localhost:1234',
+    );
+
+    const xhr = MockXHR.instances[0];
+    xhr.simulateHeaders(200);
+    xhr.simulateProgress(
+      'data: {"choices":[{"delta":{"content":"Hello"},"finish_reason":null}]}\n\n',
+    );
+    xhr.simulateProgress(
+      'data: {"choices":[{"delta":{},"finish_reason":"stop"}],"timings":{"prompt_n":3000}}\n\n',
+    );
+    xhr.simulateProgress('data: [DONE]\n\n');
+    xhr.simulateLoad();
+
+    const result = await resultPromise;
+    // prompt_n sets tokens_evaluated; absent predicted_n must NOT zero the
+    // per-event tally — it keeps the single content-bearing event count.
+    expect(result.tokens_evaluated).toBe(3000);
+    expect(result.tokens_predicted).toBe(1);
+    // A build too old to report prompt-cache reuse omits the key outright, and
+    // must degrade to the prompt count it does report — never below it.
+    expect(result.timings?.cache_n).toBeUndefined();
+  });
+
+  it('guards each timings token key independently (only cache_n)', async () => {
+    const resultPromise = streamChatCompletion(
+      {messages: [{role: 'user', content: 'Hi'}], model: 'test-model'},
+      'http://localhost:1234',
+    );
+
+    const xhr = MockXHR.instances[0];
+    xhr.simulateHeaders(200);
+    xhr.simulateProgress(
+      'data: {"choices":[{"delta":{"content":"Hello"},"finish_reason":null}]}\n\n',
+    );
+    xhr.simulateProgress(
+      `data: {"choices":[{"delta":{},"finish_reason":"stop"}],"timings":${JSON.stringify(
+        {cache_n: cacheReuseTimings.cache_n},
+      )}}\n\n`,
+    );
+    xhr.simulateProgress('data: [DONE]\n\n');
+    xhr.simulateLoad();
+
+    const result = await resultPromise;
+    // A fully reused prompt evaluates nothing, so the whole count arrives on
+    // cache_n and prompt_n is absent. Reading prompt_n alone loses it.
+    expect(result.tokens_evaluated).toBe(31);
+    expect(result.timings?.prompt_n).toBeUndefined();
+  });
+
   it('returns no timings when server does not provide them', async () => {
     const resultPromise = streamChatCompletion(
       {messages: [{role: 'user', content: 'Hi'}], model: 'test-model'},
@@ -848,6 +1654,9 @@ describe('streamChatCompletion', () => {
 
     const result = await resultPromise;
     expect(result.timings).toBeUndefined();
+    // No timings → prompt count unset, predicted keeps the per-event tally.
+    expect(result.tokens_evaluated).toBeUndefined();
+    expect(result.tokens_predicted).toBe(1);
   });
 
   it('rejects immediately if signal already aborted', async () => {
@@ -1248,5 +2057,158 @@ describe('streamChatCompletion', () => {
         await expect(resultPromise).rejects.toThrow('Connection timed out');
       });
     });
+  });
+});
+
+describe('buildReasoningPayload (per-serverType gating)', () => {
+  it('returns empty when no reasoning intent', () => {
+    expect(buildReasoningPayload('llama.cpp', undefined)).toEqual({});
+  });
+
+  it('llama.cpp ON sends reasoning_format auto', () => {
+    expect(buildReasoningPayload('llama.cpp', {enabled: true})).toEqual({
+      reasoning_format: 'auto',
+    });
+  });
+
+  it('llama.cpp ON+effort sends reasoning_format auto + reasoning_effort', () => {
+    expect(
+      buildReasoningPayload('llama.cpp', {enabled: true, effort: 'high'}),
+    ).toEqual({
+      reasoning_format: 'auto',
+      chat_template_kwargs: {reasoning_effort: 'high'},
+    });
+  });
+
+  it('llama.cpp OFF sends enable_thinking:false + reasoning_format auto', () => {
+    expect(buildReasoningPayload('llama.cpp', {enabled: false})).toEqual({
+      reasoning_format: 'auto',
+      chat_template_kwargs: {enable_thinking: false},
+    });
+  });
+
+  it('LM Studio is on/off only — no graded effort', () => {
+    expect(buildReasoningPayload('LM Studio', {enabled: false})).toEqual({
+      chat_template_kwargs: {enable_thinking: false},
+    });
+    expect(buildReasoningPayload('LM Studio', {enabled: true})).toEqual({});
+    // Even when an effort is set, LM Studio never sends reasoning_effort.
+    const onEffort = buildReasoningPayload('LM Studio', {
+      enabled: true,
+      effort: 'high',
+    });
+    expect(onEffort).toEqual({});
+    expect(onEffort).not.toHaveProperty('reasoning_effort');
+  });
+
+  it('vLLM ON+effort sends chat_template_kwargs.reasoning_effort', () => {
+    expect(
+      buildReasoningPayload('vLLM', {enabled: true, effort: 'max'}),
+    ).toEqual({chat_template_kwargs: {reasoning_effort: 'max'}});
+    // ON without an effort sends nothing.
+    expect(buildReasoningPayload('vLLM', {enabled: true})).toEqual({});
+  });
+
+  it('vLLM OFF sends enable_thinking:false', () => {
+    expect(buildReasoningPayload('vLLM', {enabled: false})).toEqual({
+      chat_template_kwargs: {enable_thinking: false},
+    });
+  });
+
+  it('Ollama OFF sends only reasoning_effort none and never think:true', () => {
+    const off = buildReasoningPayload('Ollama', {enabled: false});
+    expect(off).toEqual({reasoning_effort: 'none'});
+    expect(off).not.toHaveProperty('think');
+    // ON sends nothing — never think:true, never a non-none effort.
+    const on = buildReasoningPayload('Ollama', {enabled: true, effort: 'high'});
+    expect(on).toEqual({});
+    expect(on).not.toHaveProperty('think');
+    expect(on).not.toHaveProperty('reasoning_effort');
+  });
+
+  it('OpenAI sends reasoning_effort only when effort is known', () => {
+    expect(
+      buildReasoningPayload('OpenAI', {enabled: true, effort: 'medium'}),
+    ).toEqual({reasoning_effort: 'medium'});
+    // No effort known → omit everything (no enable_thinking, no 400 bait).
+    expect(buildReasoningPayload('OpenAI', {enabled: true})).toEqual({});
+    expect(buildReasoningPayload('OpenAI', {enabled: false})).toEqual({});
+  });
+
+  it('unknown serverType omits everything', () => {
+    expect(buildReasoningPayload(undefined, {enabled: false})).toEqual({});
+    expect(
+      buildReasoningPayload('something-else', {enabled: false, effort: 'low'}),
+    ).toEqual({});
+  });
+});
+
+describe('streamChatCompletion reasoning payload', () => {
+  let originalXHR: typeof XMLHttpRequest;
+  beforeEach(() => {
+    originalXHR = global.XMLHttpRequest;
+    (global as any).XMLHttpRequest = MockXHR;
+    MockXHR.instances = [];
+  });
+  afterEach(() => {
+    global.XMLHttpRequest = originalXHR;
+  });
+
+  it('attaches the gated payload by serverType', async () => {
+    const resultPromise = streamChatCompletion(
+      {
+        messages: [{role: 'user', content: 'Hi'}],
+        model: 'm',
+        reasoning: {enabled: false},
+      },
+      'http://localhost:1234',
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      'llama.cpp',
+    );
+    const xhr = MockXHR.instances[0];
+    const body = JSON.parse(xhr.requestBody);
+    expect(body.reasoning_format).toBe('auto');
+    expect(body.chat_template_kwargs).toEqual({enable_thinking: false});
+    // The internal carrier is never sent on the wire.
+    expect(body).not.toHaveProperty('reasoning');
+
+    xhr.simulateHeaders(200);
+    xhr.simulateProgress(
+      'data: {"choices":[{"delta":{},"finish_reason":"stop"}]}\n\ndata: [DONE]\n\n',
+    );
+    xhr.simulateLoad();
+    await resultPromise;
+  });
+
+  it('omits reasoning controls for an unknown serverType', async () => {
+    const resultPromise = streamChatCompletion(
+      {
+        messages: [{role: 'user', content: 'Hi'}],
+        model: 'm',
+        reasoning: {enabled: false, effort: 'high'},
+      },
+      'http://localhost:1234',
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+    );
+    const xhr = MockXHR.instances[0];
+    const body = JSON.parse(xhr.requestBody);
+    expect(body).not.toHaveProperty('reasoning_format');
+    expect(body).not.toHaveProperty('chat_template_kwargs');
+    expect(body).not.toHaveProperty('reasoning_effort');
+    expect(body).not.toHaveProperty('think');
+
+    xhr.simulateHeaders(200);
+    xhr.simulateProgress(
+      'data: {"choices":[{"delta":{},"finish_reason":"stop"}]}\n\ndata: [DONE]\n\n',
+    );
+    xhr.simulateLoad();
+    await resultPromise;
   });
 });

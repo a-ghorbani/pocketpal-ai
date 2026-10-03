@@ -3,51 +3,31 @@ import {CompletionParams as LlamaRNCompletionParams} from 'llama.rn';
 export type {ToolCall} from 'llama.rn';
 import type {ToolCall} from 'llama.rn';
 
-// Alias allows flexibility to switch API providers later
-// We should move towards OpenAI Compatible API Params
-export type ApiCompletionParams = LlamaRNCompletionParams;
+// `enabled: false` is a best-effort hint — reasoning the model still returns is
+// never stripped from what is displayed.
+export interface ReasoningIntent {
+  enabled: boolean;
+  effort?: string;
+}
 
-/**
- * App-specific completion parameters that are not part of the llama.rn API.
- * These parameters are used only within the app and should be stripped before
- * sending to the llama.rn API.
- */
-export type AppOnlyCompletionParams = {
-  /**
-   * Schema version for the completion parameters.
-   * Used for migrations when the schema changes.
-   */
-  version?: number;
-
-  /**
-   * Whether to include thinking parts in the context sent to the model.
-   * When false, thinking parts are removed from the context to save context space.
-   */
-  include_thinking_in_context?: boolean;
-  // Add other PocketPal-only fields here
+export type ApiCompletionParams = LlamaRNCompletionParams & {
+  reasoning?: ReasoningIntent;
 };
 
-/**
- * List of keys that are app-specific and should be stripped before
- * sending to the llama.rn API.
- */
+// Stripped before the params reach llama.rn.
+export type AppOnlyCompletionParams = {
+  version?: number;
+  // False drops prior thinking parts from the sent context to save space.
+  include_thinking_in_context?: boolean;
+};
+
 const APP_ONLY_KEYS: (keyof AppOnlyCompletionParams)[] = [
   'version',
   'include_thinking_in_context',
 ];
 
-/**
- * The merged type used throughout the app.
- * This includes both API parameters and app-specific parameters.
- */
 export type CompletionParams = ApiCompletionParams & AppOnlyCompletionParams;
 
-/**
- * Strips PocketPal-specific fields before sending to llama.rn.
- *
- * @param params - The app completion parameters that may include app-specific properties
- * @returns A clean API completion parameters object with only properties supported by the API
- */
 export function toApiCompletionParams(
   params: CompletionParams,
 ): ApiCompletionParams {
@@ -60,10 +40,6 @@ export function toApiCompletionParams(
   return apiParams as ApiCompletionParams;
 }
 
-/**
- * Streaming callback data shape for CompletionEngine.
- * Matches the fields consumed by useChatSession streaming handler.
- */
 export interface CompletionStreamData {
   token?: string;
   content?: string;
@@ -72,11 +48,8 @@ export interface CompletionStreamData {
   accumulated_text?: string;
 }
 
-/**
- * Completion result shape for CompletionEngine.
- * Mirrors NativeCompletionResult from llama.rn, excluding local-only fields
- * (chat_format, tokens_cached, completion_probabilities).
- */
+// Mirrors llama.rn's NativeCompletionResult minus the local-only fields
+// (chat_format, tokens_cached, completion_probabilities).
 export interface CompletionResult {
   text: string;
   content: string;
@@ -87,10 +60,15 @@ export interface CompletionResult {
     predicted_ms?: number;
     prompt_per_second?: number;
     prompt_ms?: number;
+    prompt_n?: number;
+    cache_n?: number;
+    predicted_n?: number;
     [key: string]: number | undefined;
   };
   tokens_predicted?: number;
   tokens_evaluated?: number;
+  draft_tokens?: number;
+  draft_tokens_accepted?: number;
   truncated?: boolean;
   stopped_eos?: boolean;
   stopped_limit?: number;
@@ -100,31 +78,21 @@ export interface CompletionResult {
   interrupted?: boolean;
 }
 
-/**
- * Normalised snapshot of a finished turn, written once at the completion
- * boundary. Mirrored on the message metadata and on the session store so the
- * banner resolver reads it without recomputing.
- *
- * `used` is `tokens_evaluated + tokens_predicted` — `tokens_cached` is not
- * exposed at the engine boundary, so on prompt-cache-reuse turns this
- * under-counts KV occupancy.
- *
- * `contextFull` is the OR of context_full / truncated / truncationLikely /
- * (remote) finishReason === 'length', frozen at write time.
- */
+// An absent `used` means the count is unknown, and must never be shown as zero.
+// llama.rn's local `tokens_evaluated` is the whole prompt; a llama.cpp server's
+// `timings.prompt_n` is only the part it evaluated, the reused prefix being in
+// `cache_n`.
 export interface CompletionResultSnapshot {
   content?: string;
   reasoning_content?: string;
-  used: number;
+  used?: number;
   contextFull: boolean;
   tokensPredicted?: number;
   finishReason?: string;
   isRemote: boolean;
 }
 
-/**
- * Variants the chat banner slot can resolve to, in precedence order.
- */
+// Declared in precedence order.
 export type BannerVariant =
   | 'context-full'
   | 'context-warning'
@@ -132,10 +100,6 @@ export type BannerVariant =
   | 'html-soft-cap'
   | 'none';
 
-/**
- * CompletionEngine interface formalizes the completion contract.
- * Both LocalCompletionEngine and OpenAICompletionEngine implement this.
- */
 export interface CompletionEngine {
   completion(
     params: ApiCompletionParams,

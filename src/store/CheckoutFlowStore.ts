@@ -3,21 +3,24 @@ import {makeAutoObservable, runInAction} from 'mobx';
 import {PALSHUB_API_BASE_URL} from '@env';
 
 import NativeAuthSession from '../specs/NativeAuthSession';
+import NativeExternalContentLink from '../specs/NativeExternalContentLink';
 import {palsHubApiService} from '../services/palshub/PalsHubApiService';
 import {palsHubService} from '../services';
 
 /**
  * CheckoutFlowStore
  *
- * App-global owner of the PalsHub in-app checkout state (iOS). Sole writer of
- * checkout state; ownership is never written here (read live from the server).
- * The checkout page is opened via ASWebAuthenticationSession; its success/cancel
- * callback arrives on the session promise and is consumed inline here.
+ * App-global owner of the PalsHub in-app checkout state on both platforms. Sole
+ * writer of checkout state; ownership is never written here (read live from the
+ * server). The checkout page is opened via the native auth session
+ * (ASWebAuthenticationSession on iOS, Chrome Custom Tab on Android); its
+ * success/cancel callback arrives on the session promise and is consumed inline.
  */
 
 export type CheckoutStatus =
   | 'idle'
   | 'creating'
+  | 'linking'
   | 'browser_open'
   | 'finalizing'
   | 'owned'
@@ -69,6 +72,10 @@ class CheckoutFlowStore {
   purchaseId?: string;
   errorKind?: CheckoutErrorKind;
 
+  // Fresh external-transaction token from the Android link-out prep, held only
+  // between prep and the post-ownership report; never persisted, cleared on reset.
+  private reportToken?: string;
+
   // Bumped on reset to abort an in-flight reconcile poll.
   private epoch = 0;
 
@@ -77,11 +84,12 @@ class CheckoutFlowStore {
   }
 
   // True while a checkout is in flight; a new press is a no-op then.
-  // Includes browser_open so a second start cannot run while the auth
-  // session is presented.
+  // Includes linking (Play disclosure) and browser_open so a second start
+  // cannot run while the link-out prep or the auth session is presented.
   get isInFlight(): boolean {
     return (
       this.status === 'creating' ||
+      this.status === 'linking' ||
       this.status === 'browser_open' ||
       this.status === 'finalizing'
     );
@@ -104,6 +112,10 @@ class CheckoutFlowStore {
       this.purchaseId = undefined;
       this.errorKind = undefined;
     });
+    // Pin to the current epoch: a reset() during the create network window
+    // bumps the epoch, so a resolved (or rejected) session must not reopen a
+    // stray tab or clobber the now-idle flow.
+    const myEpoch = this.epoch;
 
     const successUrl = `${PALSHUB_API_BASE_URL}/app-return/checkout/success`;
     const cancelUrl = `${PALSHUB_API_BASE_URL}/app-return/checkout/cancel`;
@@ -113,21 +125,66 @@ class CheckoutFlowStore {
         successUrl,
         cancelUrl,
       });
+      if (this.epoch !== myEpoch) {
+        return;
+      }
       if (!isAllowedCheckoutUrl(session.checkout_url)) {
         throw new Error('checkout_url is not an allowed checkout host');
       }
       runInAction(() => {
         this.purchaseId = session.purchase_id;
-        this.status = 'browser_open';
       });
-      // iOS-only flow; the spec is never null here, but guard rather than assert.
+      // The spec is null only as an Android build/registration defect (the
+      // module not added to getPackages); that maps to a silent cancel here
+      // rather than crashing on a null openAuth. On iOS it is always present.
       const authSession = NativeAuthSession;
       if (!authSession) {
+        this.setStatus('browser_open');
         this.onReturn(palId, 'cancel');
         return;
       }
+      // Android (link-out prep present): run eligibility -> token ->
+      // launchExternalLink (Play renders its disclosure) before the tab; the
+      // Custom Tab opens only on 'launched'. iOS (prep absent) opens directly.
+      const linkPrep = NativeExternalContentLink;
+      if (linkPrep) {
+        this.setStatus('linking');
+        const prep = await linkPrep.prepareExternalLink(session.checkout_url);
+        if (this.epoch !== myEpoch) {
+          return;
+        }
+        if (prep.outcome !== 'launched') {
+          console.warn(
+            `[checkout] prepareExternalLink outcome="${prep.outcome}" — see Android logcat tag ExternalContentLinkModule for the Billing responseCode/debugMessage`,
+          );
+        }
+        if (prep.outcome === 'launched') {
+          this.reportToken = prep.token;
+          this.setStatus('browser_open');
+          await this.openAuthAndHandle(
+            authSession,
+            palId,
+            session.checkout_url,
+          );
+          return;
+        }
+        if (prep.outcome === 'error') {
+          runInAction(() => {
+            this.errorKind = 'network';
+            this.status = 'error';
+          });
+          return;
+        }
+        // 'user_canceled' (Play disclosure declined) or 'ineligible': silent.
+        this.setStatus('cancelled');
+        return;
+      }
+      this.setStatus('browser_open');
       await this.openAuthAndHandle(authSession, palId, session.checkout_url);
     } catch (error) {
+      if (this.epoch !== myEpoch) {
+        return;
+      }
       const status = (error as {details?: {status?: unknown}})?.details?.status;
       if (status === 'already_owned') {
         this.setStatus('owned');
@@ -147,9 +204,10 @@ class CheckoutFlowStore {
     }
   }
 
-  // Open the checkout page in ASWebAuthenticationSession and consume the
-  // captured pocketpal://checkout/{success|cancel} callback. A reject
-  // (user-dismiss / session error) is a silent cancel (matches a cancel callback).
+  // Open the checkout page in the native auth session (ASWebAuthenticationSession
+  // on iOS, Chrome Custom Tab on Android) and consume the captured
+  // pocketpal://checkout/{success|cancel} callback. A reject (user-dismiss /
+  // session error) is a silent cancel (matches a cancel callback).
   private async openAuthAndHandle(
     authSession: NonNullable<typeof NativeAuthSession>,
     palId: string,
@@ -220,6 +278,7 @@ class CheckoutFlowStore {
         }
         if (owned) {
           this.setStatus('owned');
+          this.reportExternalContentLink();
           return;
         }
       } catch {
@@ -232,6 +291,23 @@ class CheckoutFlowStore {
     }
   }
 
+  // Best-effort External Content Links report, fired once after reconcile
+  // confirms ownership (Android only — the spec is null on iOS). Threads the
+  // token minted during the link-out prep. Never gates, blocks, or fails the
+  // checkout: a rejection is swallowed and the state is untouched. Not fired on
+  // the already-owned (400) path: no external transaction occurred.
+  private reportExternalContentLink() {
+    const purchaseId = this.purchaseId;
+    const token = this.reportToken;
+    if (!NativeExternalContentLink || !purchaseId || !token) {
+      return;
+    }
+    NativeExternalContentLink.reportExternalContentLink(
+      purchaseId,
+      token,
+    ).catch(() => {});
+  }
+
   reset() {
     runInAction(() => {
       this.epoch += 1;
@@ -239,6 +315,7 @@ class CheckoutFlowStore {
       this.palId = null;
       this.purchaseId = undefined;
       this.errorKind = undefined;
+      this.reportToken = undefined;
     });
   }
 }

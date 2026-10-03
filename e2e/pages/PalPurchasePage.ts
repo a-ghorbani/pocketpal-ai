@@ -4,9 +4,16 @@
  */
 
 import {BasePage} from './BasePage';
-import {byTestId} from '../helpers/selectors';
+import {adb as runAdb} from '../helpers/bench-runner';
+import {byTestId, isAndroid} from '../helpers/selectors';
 
 declare const browser: WebdriverIO.Browser;
+
+// Host-side adb against the device under test, via the shared argv-based
+// helper (shell-metacharacter injection is structurally impossible).
+// E2E_DEVICE_UDID targets a specific device; otherwise the sole attached one.
+const adb = (...args: string[]): string =>
+  runAdb(process.env.E2E_DEVICE_UDID, ...args);
 
 export class PalPurchasePage extends BasePage {
   private palCard(palId: string): string {
@@ -18,11 +25,25 @@ export class PalPurchasePage extends BasePage {
   private get downloadButton(): string {
     return byTestId('download-button');
   }
+  // Paper's outlined TextInput puts the testID resource-id on a container View;
+  // the editable node is an inner EditText. Target it directly on Android so
+  // setValue lands on the field, not the non-editable wrapper.
+  private editableInput(testId: string): string {
+    if (isAndroid()) {
+      return `//*[contains(@resource-id, "${testId}")]//android.widget.EditText | //android.widget.EditText[contains(@resource-id, "${testId}")]`;
+    }
+    return byTestId(testId);
+  }
   private get emailInput(): string {
-    return byTestId('email-input');
+    return this.editableInput('email-input');
   }
   private get passwordInput(): string {
-    return byTestId('password-input');
+    return this.editableInput('password-input');
+  }
+  // The AuthSheet visibility probe can match the container; keep a plain
+  // resource-id match for the "is the sheet open?" check.
+  private get emailInputProbe(): string {
+    return byTestId('email-input');
   }
   private get authSubmit(): string {
     return byTestId('auth-submit-button');
@@ -53,9 +74,13 @@ export class PalPurchasePage extends BasePage {
 
   /** Dismiss the post-submit confirmation alert ("OK") if one appears. */
   async dismissAlertIfPresent(timeout = 4000): Promise<void> {
-    const ok = browser.$(
-      '-ios predicate string:type == "XCUIElementTypeButton" AND (label == "OK" OR label == "Ok")',
-    );
+    const ok = isAndroid()
+      ? browser.$(
+          '//*[@resource-id="android:id/button1" or @text="OK" or @text="Ok"]',
+        )
+      : browser.$(
+          '-ios predicate string:type == "XCUIElementTypeButton" AND (label == "OK" OR label == "Ok")',
+        );
     try {
       await ok.waitForDisplayed({timeout});
       await ok.click();
@@ -76,18 +101,23 @@ export class PalPurchasePage extends BasePage {
   ): Promise<void> {
     for (let i = 0; i < attempts; i++) {
       await this.tapBuy();
-      const authOpened = await this.isElementDisplayed(this.emailInput, 4000);
+      const authOpened = await this.isElementDisplayed(
+        this.emailInputProbe,
+        4000,
+      );
       if (!authOpened) {
         return; // checkout started
       }
       await this.fillAndSubmitSignIn(email, password);
       await this.dismissAlertIfPresent();
-      await this.waitForElementToDisappear(this.emailInput, 15000).catch(
+      await this.waitForElementToDisappear(this.emailInputProbe, 15000).catch(
         () => {},
       );
       await browser.pause(2500); // let the session + observable state settle
     }
-    throw new Error('Buy kept routing to sign-in; authentication never settled');
+    throw new Error(
+      'Buy kept routing to sign-in; authentication never settled',
+    );
   }
 
   /**
@@ -109,5 +139,83 @@ export class PalPurchasePage extends BasePage {
   /** The reconcile poll flips Buy -> Download once ownership is granted. */
   async waitForDownloadButton(timeout = 30000): Promise<void> {
     await this.waitForElement(this.downloadButton, timeout);
+  }
+
+  /** Resumed-activity line from the activity stack (host-side adb). */
+  private resumedActivityLine(): string {
+    return (
+      adb('shell', 'dumpsys', 'activity', 'activities').match(
+        /ResumedActivity.*$/m,
+      )?.[0] ?? ''
+    );
+  }
+
+  private static readonly CHROME_FG =
+    /CustomTab|com\.android\.chrome|org\.chromium/i;
+  private static readonly APP_FG =
+    /com\.pocketpalai\.e2e\/com\.pocketpal\.MainActivity/;
+
+  /**
+   * Once the checkout Custom Tab takes the foreground, dismiss it with hardware
+   * BACK and wait for PocketPal to return. Best-effort: the e2e harness checkout
+   * page auto-completes fast, so if the success redirect wins before the tab is
+   * caught, this returns without a BACK (the callback already fired). Either way
+   * the app is left to settle; the caller asserts the checkout reaches a
+   * terminal state and never wedges in browser_open. Android-only.
+   */
+  async backOutOfCustomTabWhenItOpens(timeout = 15000): Promise<void> {
+    const deadline = Date.now() + timeout;
+    let fired = false;
+    while (Date.now() < deadline) {
+      const line = this.resumedActivityLine();
+      if (
+        PalPurchasePage.CHROME_FG.test(line) &&
+        !PalPurchasePage.APP_FG.test(line)
+      ) {
+        adb('shell', 'input', 'keyevent', '4');
+        fired = true;
+        break;
+      }
+      await browser.pause(120);
+    }
+    if (fired) {
+      await browser
+        .waitUntil(
+          async () => PalPurchasePage.APP_FG.test(this.resumedActivityLine()),
+          {timeout: 10000, interval: 300},
+        )
+        .catch(() => {});
+    }
+  }
+
+  /**
+   * Wait for the checkout to reach a terminal UI state and report which one:
+   * 'download' (ownership granted -> Download button) or 'buy' (cancelled/idle
+   * -> Buy button enabled). Throws if neither is reachable within the timeout,
+   * which is the wedged-in-browser_open failure the dismiss fix must prevent.
+   */
+  async waitForCheckoutSettled(timeout = 30000): Promise<'download' | 'buy'> {
+    let result: 'download' | 'buy' | undefined;
+    await browser.waitUntil(
+      async () => {
+        if (await this.isElementDisplayed(this.downloadButton, 800)) {
+          result = 'download';
+          return true;
+        }
+        const buy = browser.$(this.buyButton);
+        if ((await buy.isDisplayed()) && (await buy.isEnabled())) {
+          result = 'buy';
+          return true;
+        }
+        return false;
+      },
+      {
+        timeout,
+        interval: 500,
+        timeoutMsg:
+          'checkout never reached a terminal state (no Download and no enabled Buy) -- wedged in browser_open',
+      },
+    );
+    return result as 'download' | 'buy';
   }
 }

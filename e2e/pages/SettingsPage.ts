@@ -78,20 +78,24 @@ export class SettingsPage extends BasePage {
   }
 
   /**
-   * Tap the language selector button to open the language menu.
+   * Tap the language selector button and wait for the picker sheet to settle.
    */
   async openLanguageMenu(): Promise<void> {
     await this.tap(Selectors.settings.languageSelectorButton);
-    // Brief pause for menu animation
-    await browser.pause(500);
+    await this.waitForElement(Selectors.settings.languageSheet);
   }
 
   /**
-   * Select a language from the open language menu.
+   * Select a language from the open language picker.
+   * The list is virtualized, so the row is filtered into view by typing the
+   * language code before tapping it.
    * @param lang - Language code (e.g., 'en', 'id', 'ja', 'zh')
    */
   async selectLanguage(lang: string): Promise<void> {
+    await this.typeText(Selectors.settings.languageSearch, lang);
     await this.tap(Selectors.settings.languageOption(lang));
+    // The sheet animates out; a lingering backdrop would eat the next gesture.
+    await this.waitForElementToDisappear(Selectors.settings.languageSheet);
     // Wait for re-render after language change
     await browser.pause(1000);
   }

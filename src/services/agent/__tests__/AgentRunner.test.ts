@@ -314,6 +314,111 @@ describe('runAgent', () => {
     expect(events.find(e => e.type === 'run_failed')).toBeUndefined();
   });
 
+  it('#5b turn cap with pending tool requests → one forced no-tools completion produces the final answer', async () => {
+    const seenParams: ApiCompletionParams[] = [];
+    // Tool-calls whenever tools are offered; a text answer once they are not.
+    const engine: CompletionEngine = {
+      completion: jest.fn(async (p: ApiCompletionParams, cb) => {
+        seenParams.push(p);
+        if (p.tools) {
+          return {
+            text: '',
+            content: '',
+            tool_calls: [
+              {
+                id: `c-${seenParams.length}`,
+                type: 'function',
+                function: {name: 'datetime', arguments: '{}'},
+              },
+            ],
+          } as CompletionResult;
+        }
+        cb?.({content: 'Answer from gathered results.'});
+        return {
+          text: 'Answer from gathered results.',
+          content: 'Answer from gathered results.',
+        } as CompletionResult;
+      }),
+      stopCompletion: jest.fn(async () => {}),
+    };
+    const datetime = makeTalent('datetime', () => ({
+      type: 'text',
+      summary: 'now',
+    }));
+
+    const events = await collect(
+      runAgent({
+        engine,
+        initialParams: {messages: [], tools: [{}]} as any,
+        allowedTalentNames: ['datetime'],
+        talentLookup: () => datetime,
+        messageId: 'msg',
+        triggerMarkers: [],
+        maxTurns: 2,
+      }),
+    );
+
+    // 2 budgeted turns + exactly one forced closing completion.
+    expect(engine.completion).toHaveBeenCalledTimes(3);
+    const forcedParams = seenParams[2];
+    expect(forcedParams.tools).toBeUndefined();
+    const forcedMessages = (forcedParams.messages ?? []) as any[];
+    const lastMessage = forcedMessages[forcedMessages.length - 1];
+    expect(lastMessage.role).toBe('user');
+    expect(lastMessage.content).toContain('Tool budget exhausted');
+
+    // The forced turn streams and finishes like a normal final turn.
+    const stepStarts = events.filter(e => e.type === 'step_started');
+    expect(stepStarts).toHaveLength(3);
+    expect((stepStarts[2] as any).isFollowUp).toBe(true);
+    const finalToken = events.find(
+      e =>
+        e.type === 'token' &&
+        (e as any).delta.content === 'Answer from gathered results.',
+    );
+    expect(finalToken).toBeDefined();
+    const stepFinishes = events.filter(e => e.type === 'step_finished');
+    expect((stepFinishes[2] as any).toolCalls).toBeUndefined();
+
+    const finished = events[events.length - 1] as Extract<
+      AgentEvent,
+      {type: 'run_finished'}
+    >;
+    expect(finished.type).toBe('run_finished');
+    expect(finished.result.hitMaxTurns).toBe(true);
+    expect(finished.result.finalResult.content).toBe(
+      'Answer from gathered results.',
+    );
+  });
+
+  it('#5c no forced completion when the model answers within the turn budget', async () => {
+    const engine = makeScriptedEngine({
+      scripts: [
+        {
+          tokens: [{content: 'direct answer'}],
+          result: {text: 'direct answer', content: 'direct answer'},
+        },
+      ],
+    });
+    const events = await collect(
+      runAgent({
+        engine,
+        initialParams: {messages: [], tools: [{}]} as any,
+        allowedTalentNames: [],
+        talentLookup: () => undefined,
+        messageId: 'msg',
+        triggerMarkers: [],
+        maxTurns: 2,
+      }),
+    );
+    expect(engine.completion).toHaveBeenCalledTimes(1);
+    const finished = events[events.length - 1] as Extract<
+      AgentEvent,
+      {type: 'run_finished'}
+    >;
+    expect(finished.result.hitMaxTurns).toBe(false);
+  });
+
   it('#6 malformed JSON args → tool_call_finished with error outcome', async () => {
     const engine = makeScriptedEngine({
       scripts: [

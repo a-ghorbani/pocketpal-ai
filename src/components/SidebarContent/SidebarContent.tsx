@@ -18,6 +18,7 @@ import {
   PalIcon,
   SettingsIcon,
   ShareIcon,
+  StarIcon,
   TrashIcon,
   AppInfoIcon,
 } from '../../assets/icons';
@@ -33,11 +34,13 @@ const isDebugMode = __DEV__;
 interface SessionItemProps {
   session: SessionMetaData;
   isActive: boolean;
+  isPinned: boolean;
   onPress: (sessionId: string) => void;
   onLongPress: (sessionId: string, event: any) => void;
   menuVisible: string | null;
   menuPosition: {x: number; y: number};
   onMenuDismiss: () => void;
+  onPressPin: (sessionId: string) => void;
   onPressRename: (session: SessionMetaData) => void;
   onPressDelete: (sessionId: string) => void;
   onPressExport: (sessionId: string) => void;
@@ -55,11 +58,13 @@ const SessionItem = React.memo<SessionItemProps>(
   ({
     session,
     isActive,
+    isPinned,
     onPress,
     onLongPress,
     menuVisible,
     menuPosition,
     onMenuDismiss,
+    onPressPin,
     onPressRename,
     onPressDelete,
     onPressExport,
@@ -104,6 +109,17 @@ const SessionItem = React.memo<SessionItemProps>(
             active={isActive}
             label={session.title}
             style={styles.sessionDrawerItem}
+            right={
+              isPinned
+                ? () => (
+                    <StarIcon
+                      width={14}
+                      height={14}
+                      fill={theme.colors.primary}
+                    />
+                  )
+                : undefined
+            }
           />
         </TouchableOpacity>
         {!isSelectionMode && (
@@ -114,6 +130,31 @@ const SessionItem = React.memo<SessionItemProps>(
             style={styles.menu}
             contentStyle={{}}
             anchorPosition="bottom">
+            <Menu.Item
+              testID={`session-pin-${session.id}`}
+              onPress={() => {
+                onPressPin(session.id);
+                onMenuDismiss();
+              }}
+              label={
+                isPinned
+                  ? l10n.components.sidebarContent.unpin
+                  : l10n.components.sidebarContent.pin
+              }
+              leadingIcon={() => (
+                <StarIcon
+                  width={20}
+                  height={20}
+                  // star.svg is stroke-only and .svgrrc binds that stroke to the
+                  // fill prop, so fill='none' paints nothing. Omitting fill is
+                  // what yields an outline; no test can catch this (svg is mocked).
+                  {...(isPinned
+                    ? {fill: theme.colors.primary}
+                    : {stroke: theme.colors.primary})}
+                />
+              )}
+            />
+            <Divider style={styles.menuDivider} />
             <Menu.Item
               onPress={() => {
                 onPressRename(session);
@@ -349,6 +390,10 @@ export const SidebarContent: React.FC<DrawerContentComponentProps> = observer(
       [l10n, closeMenu],
     );
 
+    const handlePressPin = React.useCallback(async (sessionId: string) => {
+      await chatSessionStore.togglePinSession(sessionId);
+    }, []);
+
     const handlePressExport = React.useCallback(
       async (sessionId: string) => {
         try {
@@ -449,11 +494,13 @@ export const SidebarContent: React.FC<DrawerContentComponentProps> = observer(
           <SessionItem
             session={item}
             isActive={isActive}
+            isPinned={item.pinned || false}
             onPress={handleSessionPress}
             onLongPress={handleSessionLongPress}
             menuVisible={menuVisible}
             menuPosition={menuPosition}
             onMenuDismiss={closeMenu}
+            onPressPin={handlePressPin}
             onPressRename={handlePressRename}
             onPressDelete={onPressDelete}
             onPressExport={handlePressExport}
@@ -473,6 +520,7 @@ export const SidebarContent: React.FC<DrawerContentComponentProps> = observer(
         menuVisible,
         menuPosition,
         closeMenu,
+        handlePressPin,
         handlePressRename,
         onPressDelete,
         handlePressExport,

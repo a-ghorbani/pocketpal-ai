@@ -36,6 +36,7 @@ export const mockChatSessionStore = {
   activeSessionId: 'session-1',
   newChatCompletionSettings: mockDefaultCompletionSettings,
   newChatThinkingOverride: undefined as boolean | undefined,
+  newChatReasoningEffort: undefined as string | undefined,
   isMigrating: false,
   migrationComplete: true,
   // Draft autosave
@@ -88,7 +89,9 @@ export const mockChatSessionStore = {
   deselectAllSessions: jest.fn(),
   bulkDeleteSessions: jest.fn().mockResolvedValue(undefined),
   bulkExportSessions: jest.fn().mockResolvedValue(undefined),
+  togglePinSession: jest.fn().mockResolvedValue(undefined),
   dateGroupNames: {
+    pinned: 'Pinned',
     today: 'Today',
     yesterday: 'Yesterday',
     thisWeek: 'This week',

@@ -47,7 +47,10 @@ describe('typography tokens', () => {
   });
 
   describe('Latin locales render Fraunces', () => {
-    const latinLocales: AvailableLanguage[] = ['en', 'id', 'ms'];
+    // pt / pt_BR are load-bearing here: Portuguese diacritics are all Latin-1
+    // and covered by the bundled Fraunces subset, so these locales must NOT
+    // fall back to Inter the way pl does.
+    const latinLocales: AvailableLanguage[] = ['en', 'id', 'ms', 'pt', 'pt_BR'];
 
     it.each(latinLocales)(
       'headlineH1 in %s resolves to Fraunces-Medium at 36 / 50',

@@ -23,7 +23,18 @@ const BottomSheetBase = React.forwardRef((props, ref) => {
 // Mock FlatList that actually renders items
 const BottomSheetFlatList = React.forwardRef((props, ref) => {
   React.useImperativeHandle(ref, createMockRef, []);
-  const {data, renderItem, keyExtractor, ...restProps} = props;
+  const {data, renderItem, keyExtractor, ListEmptyComponent, ...restProps} =
+    props;
+
+  if (!data?.length && ListEmptyComponent) {
+    return React.createElement(
+      View,
+      {...restProps},
+      React.isValidElement(ListEmptyComponent)
+        ? ListEmptyComponent
+        : React.createElement(ListEmptyComponent),
+    );
+  }
 
   return React.createElement(
     View,

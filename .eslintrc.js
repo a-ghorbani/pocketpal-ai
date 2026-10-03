@@ -39,6 +39,11 @@ module.exports = {
   },
   overrides: [
     {
+      // Build/CI tooling: Node CommonJS, not React Native.
+      files: ['scripts/**/*.js'],
+      env: {node: true, es2021: true},
+    },
+    {
       // Nothing inside src/ (outside src/__automation__/) may import from
       // the automation bridge. The bridge only ships in the E2E flavor and
       // any stray import could drag it into the prod bundle, defeating DCE.

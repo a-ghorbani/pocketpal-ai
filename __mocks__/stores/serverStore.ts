@@ -1,12 +1,25 @@
 import {makeAutoObservable, observable} from 'mobx';
 
-import {ServerConfig} from '../../src/utils/types';
+import {RemoteModelCaps, ServerConfig} from '../../src/utils/types';
+import {ReasoningCapability} from '../../src/utils/reasoningCapability';
 import {RemoteModelInfo} from '../../src/api/openai';
+import {deriveListCapsMap} from '../../src/utils/listCaps';
 
 class MockServerStore {
   servers: ServerConfig[] = [];
   serverModels: Map<string, RemoteModelInfo[]> = observable.map();
+
+  // Derived from the live mock state, exactly as the real store derives it, so
+  // a suite that mutates `servers` or `serverModels` exercises the real
+  // derivation and stays reactive. A fixed answer here would let the card
+  // scenarios pass with the derivation broken.
+  get listCaps() {
+    return deriveListCapsMap(this.servers, this.serverModels);
+  }
+
   userSelectedModels: Array<{serverId: string; remoteModelId: string}> = [];
+  remoteReasoning: Record<string, ReasoningCapability> = {};
+  remoteCaps: Record<string, RemoteModelCaps> = {};
   isLoading = false;
   error: string | null = null;
   privacyNoticeAcknowledged = false;
@@ -18,6 +31,7 @@ class MockServerStore {
   getApiKey: jest.Mock;
   removeApiKey: jest.Mock;
   fetchModelsForServer: jest.Mock;
+  fetchRemoteModelCaps: jest.Mock;
   fetchAllRemoteModels: jest.Mock;
   testServerConnection: jest.Mock;
   acknowledgePrivacyNotice: jest.Mock;
@@ -26,6 +40,8 @@ class MockServerStore {
   removeServerIfOrphaned: jest.Mock;
   getModelsNotYetAdded: jest.Mock;
   getUserSelectedModelsForServer: jest.Mock;
+  recordRemoteReasoningObserved: jest.Mock;
+  setRemoteReasoningOverride: jest.Mock;
 
   constructor() {
     makeAutoObservable(this, {
@@ -36,6 +52,7 @@ class MockServerStore {
       getApiKey: false,
       removeApiKey: false,
       fetchModelsForServer: false,
+      fetchRemoteModelCaps: false,
       fetchAllRemoteModels: false,
       testServerConnection: false,
       acknowledgePrivacyNotice: false,
@@ -44,6 +61,8 @@ class MockServerStore {
       removeServerIfOrphaned: false,
       getModelsNotYetAdded: false,
       getUserSelectedModelsForServer: false,
+      recordRemoteReasoningObserved: false,
+      setRemoteReasoningOverride: false,
     });
     this.addServer = jest.fn().mockReturnValue('mock-server-id');
     this.updateServer = jest.fn();
@@ -52,6 +71,7 @@ class MockServerStore {
     this.getApiKey = jest.fn().mockResolvedValue(undefined);
     this.removeApiKey = jest.fn().mockResolvedValue(undefined);
     this.fetchModelsForServer = jest.fn().mockResolvedValue(undefined);
+    this.fetchRemoteModelCaps = jest.fn().mockResolvedValue(undefined);
     this.fetchAllRemoteModels = jest.fn().mockResolvedValue(undefined);
     this.testServerConnection = jest
       .fn()
@@ -62,6 +82,8 @@ class MockServerStore {
     this.removeServerIfOrphaned = jest.fn();
     this.getModelsNotYetAdded = jest.fn().mockReturnValue([]);
     this.getUserSelectedModelsForServer = jest.fn().mockReturnValue([]);
+    this.recordRemoteReasoningObserved = jest.fn();
+    this.setRemoteReasoningOverride = jest.fn();
   }
 }
 

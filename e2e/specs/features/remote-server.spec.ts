@@ -26,8 +26,9 @@ import {
   nativeTextElement,
 } from '../../helpers/selectors';
 import {Gestures} from '../../helpers/gestures';
+import {readControlEnabled, tapControl} from '../../helpers/control-state';
+import {saveFailureScreenshot} from '../../helpers/screenshots';
 import {TIMEOUTS} from '../../fixtures/models';
-import {SCREENSHOT_DIR} from '../../wdio.shared.conf';
 
 declare const driver: WebdriverIO.Browser;
 declare const browser: WebdriverIO.Browser;
@@ -64,18 +65,7 @@ describe('Remote Server Features', () => {
 
   afterEach(async function (this: Mocha.Context) {
     if (this.currentTest?.state === 'failed') {
-      const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
-      const testName = this.currentTest.title.replace(/\s+/g, '-');
-      try {
-        if (!fs.existsSync(SCREENSHOT_DIR)) {
-          fs.mkdirSync(SCREENSHOT_DIR, {recursive: true});
-        }
-        await driver.saveScreenshot(
-          path.join(SCREENSHOT_DIR, `failure-${testName}-${timestamp}.png`),
-        );
-      } catch (e) {
-        console.error('Failed to capture screenshot:', (e as Error).message);
-      }
+      await saveFailureScreenshot(this.currentTest.title);
     }
   });
 
@@ -95,6 +85,11 @@ describe('Remote Server Features', () => {
     await urlInput.clearValue();
     await urlInput.setValue(SERVER_CONFIG.url);
     console.log(`Entered server URL: ${SERVER_CONFIG.url}`);
+
+    // Dismiss the keyboard so it does not cover the lower sheet (#783 added a
+    // Server Type dropdown that makes the sheet taller; the keyboard blocks
+    // both the probe-revealed fields and scrolling to the model list).
+    await modelsPage.hideKeyboard();
 
     // Wait for auto-probe to fire (800ms debounce + network time)
     await browser.pause(3000);
@@ -156,33 +151,53 @@ describe('Remote Server Features', () => {
     );
     expect(isConnected).toBe(true);
 
-    // Select a model — either by hint or tap the first radio button
+    // Select a model. With #783 the sheet is taller (Server Type dropdown), so
+    // the model list sits below the fold — scroll by existence (controls deep
+    // in a bottom sheet report isDisplayed=false on iOS) before selecting.
     if (REMOTE_MODEL_HINT) {
-      const modelEl = browser.$(byPartialText(REMOTE_MODEL_HINT));
-      const visible = await modelEl
-        .waitForDisplayed({timeout: 5000})
-        .then(() => true)
-        .catch(() => false);
-      if (visible) {
-        await modelEl.click();
+      // The list gets ~36px of viewport before the sheet is scrolled, and the
+      // pinned Add Model button is painted across the first row -- a tap on the
+      // row's centre lands on that button instead. Scroll the row clear of it
+      // first, with a gesture that starts below the text inputs.
+      const rowSelector = byPartialText(REMOTE_MODEL_HINT);
+      // Unscrolled, the row is clipped to ~10px (measured [42,2204][1038,2214]),
+      // which already sits above the button and so reads as reachable while
+      // being far too small to tap. Scroll once so the list has real rows before
+      // asking whether anything is clear.
+      await Gestures.swipeUpInSheetBelowInputs();
+      await browser.pause(400);
+      const reachable = await Gestures.scrollInSheetClearOfOverlay(
+        rowSelector,
+        Selectors.remoteModel.addModelButton,
+        12,
+        Gestures.swipeUpInSheetBelowInputs,
+      );
+      if (reachable) {
+        await tapControl(rowSelector);
         console.log(`Selected model matching "${REMOTE_MODEL_HINT}"`);
+        await browser.pause(500);
+      } else {
+        console.log(
+          `Model "${REMOTE_MODEL_HINT}" never came clear of Add Model`,
+        );
       }
     } else {
-      // If only one model, it's auto-selected.
-      // If multiple models, select the first unchecked radio button.
+      // No hint: a single returned model auto-selects. Otherwise scroll the
+      // first unchecked radio into view and tap it.
       const addBtn = browser.$(Selectors.remoteModel.addModelButton);
       const alreadyEnabled = await addBtn.isEnabled().catch(() => false);
       if (!alreadyEnabled) {
         // react-native-paper RadioButton renders as XCUIElementTypeOther
         // with value="radio button, unchecked"
-        const firstRadio = browser.$(
-          '-ios predicate string:value == "radio button, unchecked"',
-        );
-        const radioVisible = await firstRadio
-          .waitForDisplayed({timeout: 3000})
+        const radioSelector =
+          '-ios predicate string:value == "radio button, unchecked"';
+        await Gestures.scrollInSheetToElementExists(radioSelector, 12);
+        const firstRadio = browser.$(radioSelector);
+        const radioExists = await firstRadio
+          .waitForExist({timeout: 3000})
           .then(() => true)
           .catch(() => false);
-        if (radioVisible) {
+        if (radioExists) {
           await firstRadio.click();
           console.log('Selected first model from radio list');
           await browser.pause(500);
@@ -190,19 +205,39 @@ describe('Remote Server Features', () => {
       }
     }
 
-    // Scroll to and tap "Add Model" button
+    // Scroll to and tap "Add Model" (enabled once a model is selected).
+    await Gestures.scrollInSheetToElementExists(
+      Selectors.remoteModel.addModelButton,
+      6,
+    );
     const addButton = browser.$(Selectors.remoteModel.addModelButton);
-    const addVisible = await addButton.isDisplayed().catch(() => false);
-    if (!addVisible) {
-      await Gestures.swipeUpInSheet();
-      await browser.pause(300);
-    }
-    await addButton.waitForDisplayed({timeout: 5000});
-    await addButton.waitForEnabled({timeout: 5000});
-    await addButton.click();
-    await browser.pause(1000);
+    await addButton.waitForExist({timeout: 5000});
+    // The button only enables once a model is selected, and its wrapper is
+    // always enabled -- so the real control decides whether the tap is worth
+    // making at all.
+    await browser.waitUntil(
+      () => readControlEnabled(Selectors.remoteModel.addModelButton),
+      {
+        timeout: 8000,
+        timeoutMsg: 'Add Model stayed disabled: no model was selected',
+      },
+    );
+    await tapControl(Selectors.remoteModel.addModelButton);
 
-    console.log('Remote model added successfully');
+    // Assert the model actually landed. The later sub-tests drive the card this
+    // step creates, so without an outcome check they fail against an empty
+    // Models screen, far from the cause.
+    await modelsPage.waitForReady();
+    const readyGroup = browser.$(
+      Selectors.models.modelAccordion('Ready to Use'),
+    );
+    await readyGroup.waitForDisplayed({timeout: TIMEOUTS.element});
+
+    if (REMOTE_MODEL_HINT) {
+      const addedCard = browser.$(byPartialText(REMOTE_MODEL_HINT));
+      await addedCard.waitForDisplayed({timeout: TIMEOUTS.element});
+    }
+    console.log('Remote model added and visible on the Models screen');
   });
 
   it('should select and chat with a remote model', async () => {
@@ -318,9 +353,7 @@ describe('Remote Server Features', () => {
 
         if (responseText && responseText.length > 0) {
           const stopButton = browser.$(Selectors.chat.stopButton);
-          const stopVisible = await stopButton
-            .isDisplayed()
-            .catch(() => false);
+          const stopVisible = await stopButton.isDisplayed().catch(() => false);
           if (!stopVisible) {
             break;
           }

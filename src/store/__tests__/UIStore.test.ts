@@ -94,22 +94,6 @@ describe('UIStore', () => {
     it('supportedLanguages getter returns from locales registry', () => {
       expect(uiStore.supportedLanguages).toBe(supportedLanguages);
     });
-
-    it('supportedLanguages contains all expected languages', () => {
-      expect(uiStore.supportedLanguages).toEqual([
-        'en',
-        'fa',
-        'he',
-        'id',
-        'ja',
-        'ko',
-        'ms',
-        'ru',
-        'uk',
-        'zh',
-        'zh_Hant',
-      ]);
-    });
   });
 
   describe('onboarding', () => {

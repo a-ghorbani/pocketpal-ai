@@ -93,28 +93,6 @@ export const createStyles = (theme: Theme, insets: EdgeInsets) =>
       marginVertical: theme.spacing.default,
       opacity: 0.7,
     },
-    supportButton: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      justifyContent: 'center',
-      backgroundColor: theme.colors.primary,
-      padding: theme.spacing.default,
-      borderRadius: theme.borders.default,
-      gap: theme.spacing.default / 2,
-      shadowColor: theme.colors.primary,
-      shadowOffset: {
-        width: 0,
-        height: 2,
-      },
-      shadowOpacity: 0.2,
-      shadowRadius: 4,
-      elevation: 2,
-    },
-    supportButtonText: {
-      ...theme.fonts.titleMedium,
-      color: theme.colors.onPrimary,
-      letterSpacing: 0.5,
-    },
     feedbackButtonContent: {
       flexDirection: 'row-reverse',
     },

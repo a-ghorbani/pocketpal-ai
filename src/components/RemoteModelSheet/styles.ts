@@ -114,11 +114,21 @@ export const createStyles = (theme: Theme) => {
       color: theme.colors.onSurface,
       marginLeft: 8,
     },
+    modelVisionSlot: {
+      width: 20,
+      marginStart: 12,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    modelVisionUnknown: {
+      fontSize: 14,
+      color: theme.colors.onSurfaceVariant,
+    },
     alreadyAddedText: {
       fontSize: 12,
       color: theme.colors.onSurfaceVariant,
       fontStyle: 'italic',
-      marginLeft: 4,
+      marginStart: 4,
     },
     noModelsText: {
       fontSize: 14,

@@ -1,0 +1,42 @@
+name: Set up ccache
+description: >-
+  Install ccache if absent, restore its cache, and export its configuration.
+  llama.rn's CMake picks ccache up on its own if the binary is on PATH.
+
+# Kept in one place because the settings below are not tuning knobs — the NDK
+# is reinstalled on every run and `yarn install` rewrites mtimes under
+# node_modules, so at ccache's defaults nearly every object misses. A copy of
+# this that silently lost `compiler_check=content` would still be green, just
+# slow, and would read as a cold cache rather than as a misconfigured one.
+inputs:
+  max-size:
+    description: Maximum ccache size
+    required: false
+    default: 2G
+
+runs:
+  using: composite
+  steps:
+    - name: Cache ccache
+      uses: actions/cache@v4
+      with:
+        path: ~/.ccache
+        key: ccache-android-${{ github.sha }}
+        restore-keys: ccache-android-
+
+    - name: Install and configure ccache
+      shell: bash
+      env:
+        CCACHE_MAX_SIZE: ${{ inputs.max-size }}
+      run: |
+        set -euo pipefail
+        if ! command -v ccache >/dev/null 2>&1; then
+          sudo apt-get update && sudo apt-get install -y ccache
+        fi
+        {
+          echo "CCACHE_DIR=$HOME/.ccache"
+          echo "CCACHE_MAXSIZE=$CCACHE_MAX_SIZE"
+          echo "CCACHE_COMPILERCHECK=content"
+          echo "CCACHE_SLOPPINESS=time_macros,include_file_mtime,include_file_ctime"
+        } >> "$GITHUB_ENV"
+        CCACHE_DIR="$HOME/.ccache" ccache --zero-stats
