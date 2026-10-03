@@ -1,12 +1,13 @@
 import {
   IapWireError,
+  UNKNOWN_CONTENT_VERSION,
   parseBinding,
   parseRefresh,
   parseVerify,
   refreshBody,
   verifyBody,
 } from '../iapWire';
-import {apiPal, verifyResponse} from '../../../../jest/fixtures/iap';
+import {apiPal, verifyResponse, version} from '../../../../jest/fixtures/iap';
 
 describe('iapWire', () => {
   describe('bodies', () => {
@@ -25,14 +26,34 @@ describe('iapWire', () => {
       });
     });
 
-    it('sends proofs and known versions with purchase refs on refresh', () => {
-      expect(
-        refreshBody([{platform: 'ios', jws: 'jws-1'}], {
-          'pal-1': {contentVersion: 3, purchaseRef: 'SUP-1'},
-        }),
-      ).toEqual({
-        transactions: ['jws-1'],
-        known: {'pal-1': {content_version: 3, purchase_ref: 'SUP-1'}},
+    it('sends the refresh body the server parser accepts', () => {
+      const body = refreshBody(
+        'android',
+        [{platform: 'android', productId: 'pal.a', purchaseToken: 'tok'}],
+        {
+          'pal-1': {contentVersion: version(3), purchaseRef: 'GPA.1'},
+          'pal-2': {purchaseRef: 'GPA.2'},
+          'pal-3': {
+            contentVersion: 4 as unknown as string,
+            purchaseRef: 'GPA.3',
+          },
+        },
+      );
+
+      expect(body).toEqual({
+        platform: 'android',
+        transactions: [{productId: 'pal.a', purchaseToken: 'tok'}],
+        known: {
+          'pal-1': {content_version: version(3), purchase_ref: 'GPA.1'},
+          'pal-2': {
+            content_version: UNKNOWN_CONTENT_VERSION,
+            purchase_ref: 'GPA.2',
+          },
+          'pal-3': {
+            content_version: UNKNOWN_CONTENT_VERSION,
+            purchase_ref: 'GPA.3',
+          },
+        },
       });
     });
   });
@@ -42,7 +63,7 @@ describe('iapWire', () => {
       const [result] = parseVerify(verifyResponse());
       expect(result.palId).toBe('pal-1');
       expect(result.status).toBe('active');
-      expect(result.contentVersion).toBe(3);
+      expect(result.contentVersion).toBe(version(3));
       expect(result.supportCode).toBe('SUP-1');
       expect(result.pal?.system_prompt).toBe('You tell stories.');
       expect(result.pal?.store_product_id).toBe(
@@ -174,12 +195,12 @@ describe('iapWire', () => {
   describe('parseRefresh', () => {
     it('maps all four lists', () => {
       const result = parseRefresh({
-        changed: [apiPal({content_version: 4})],
+        changed: [apiPal({content_version: version(4)})],
         revoked: ['pal-2'],
         removed: ['pal-3'],
         unchanged: ['pal-4'],
       });
-      expect(result.changed[0].pal.content_version).toBe(4);
+      expect(result.changed[0].pal.content_version).toBe(version(4));
       expect(result.changed[0].content.title).toBe('Story Pal');
       expect(result.revoked).toEqual(['pal-2']);
       expect(result.removed).toEqual(['pal-3']);

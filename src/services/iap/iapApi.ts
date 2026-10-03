@@ -108,6 +108,7 @@ const verify = async (
 };
 
 const refresh = async (
+  platform: StorePlatform,
   proofs: StoreProof[],
   known: Record<string, KnownEntry>,
 ): Promise<RefreshResult> => {
@@ -121,7 +122,7 @@ const refresh = async (
   for (const batch of knownBatches) {
     const json = await request('/api/mobile/iap/entitlements/refresh', {
       method: 'POST',
-      body: refreshBody(proofs, Object.fromEntries(batch)),
+      body: refreshBody(platform, proofs, Object.fromEntries(batch)),
       auth: false,
     });
     const result = parseRefresh(json);

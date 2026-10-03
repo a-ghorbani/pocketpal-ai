@@ -10,6 +10,7 @@ import {palStore, purchaseStore} from '../../../../store';
 import {authService} from '../../../../services';
 import type {LedgerRecord} from '../../../../store/PurchaseStore';
 import type {Pal} from '../../../../types/pal';
+import {version} from '../../../../../jest/fixtures/iap';
 
 let mockAccountLinkEnabled = true;
 jest.mock('../../../../services/iap/accountLink', () => ({
@@ -245,7 +246,7 @@ describe('PalPurchaseFooter', () => {
           pendingUpdate: {
             pal: {...pal, title: 'Story Pal 2'},
             content: {},
-            contentVersion: 4,
+            contentVersion: version(4),
             ...(changeNote ? {changeNote} : {}),
           },
         });
@@ -309,7 +310,7 @@ describe('PalPurchaseFooter', () => {
             pendingUpdate: {
               pal: {...pal, title: 'Story Pal 3'},
               content: {},
-              contentVersion: 5,
+              contentVersion: version(5),
               changeNote: 'Second fix',
             },
           });
@@ -358,7 +359,10 @@ describe('PalPurchaseFooter', () => {
       fireEvent.press(getByTestId('pal-update-confirm'));
 
       expect(purchaseStore.applyUpdate).toHaveBeenCalledTimes(1);
-      expect(purchaseStore.applyUpdate).toHaveBeenCalledWith('pal-1', 4);
+      expect(purchaseStore.applyUpdate).toHaveBeenCalledWith(
+        'pal-1',
+        version(4),
+      );
       runInAction(() => {
         purchaseStore.records['pal-1'] = record('active');
       });

@@ -17,6 +17,7 @@ import type {
   StoreQuery,
   StoreTransaction,
 } from '../services/iap/StorePort';
+import {UNKNOWN_CONTENT_VERSION} from '../services/iap/iapWire';
 import type {StorePlatform, VerifyResult} from '../services/iap/iapWire';
 import type {LinkOutcome} from '../services/iap/iapApi';
 import {changedCreatorFields} from '../services/iap/creatorContent';
@@ -46,7 +47,7 @@ export interface LedgerRecord {
   transactionIds: string[];
   status: LedgerStatus;
   pendingSince?: number;
-  contentVersion?: number;
+  contentVersion?: string;
   applied?: CreatorContent;
   pendingUpdate?: PendingUpdate;
   supportCode?: string;
@@ -61,12 +62,12 @@ export interface LedgerRecord {
 export interface PendingUpdate {
   pal: PalsHubPal;
   content: CreatorContent;
-  contentVersion: number;
+  contentVersion: string;
   changeNote?: string;
 }
 
 export type GrantedVersion = Omit<PendingUpdate, 'contentVersion'> & {
-  contentVersion?: number;
+  contentVersion?: string;
 };
 
 interface Ledger {
@@ -748,7 +749,7 @@ export class PurchaseStore {
         await this.offerUpdate(rec.palId, {
           pal: result.pal,
           content: result.content,
-          contentVersion: result.contentVersion ?? 0,
+          contentVersion: result.contentVersion ?? UNKNOWN_CONTENT_VERSION,
           changeNote: result.changeNote,
         });
       }
@@ -849,8 +850,8 @@ export class PurchaseStore {
       rec?.status !== 'active' ||
       !this.localPalFor(palId) ||
       !update.pal.system_prompt ||
-      update.contentVersion <= (rec.contentVersion ?? 0) ||
-      update.contentVersion <= (rec.pendingUpdate?.contentVersion ?? -1)
+      update.contentVersion === rec.contentVersion ||
+      update.contentVersion === rec.pendingUpdate?.contentVersion
     ) {
       return;
     }
@@ -869,7 +870,7 @@ export class PurchaseStore {
     });
   }
 
-  async applyUpdate(palId: string, shownVersion: number): Promise<void> {
+  async applyUpdate(palId: string, shownVersion: string): Promise<void> {
     await this.load();
     const productId = this.records[palId]?.productId;
     if (!productId) {
@@ -1019,7 +1020,12 @@ export class PurchaseStore {
       return {applied: grant.content, contentVersion: version};
     }
     if (changedCreatorFields(rec.applied, grant.content).size > 0) {
-      return {pendingUpdate: {...grant, contentVersion: version ?? 0}};
+      return {
+        pendingUpdate: {
+          ...grant,
+          contentVersion: version ?? UNKNOWN_CONTENT_VERSION,
+        },
+      };
     }
     return {contentVersion: version};
   }
@@ -1245,10 +1251,8 @@ export class PurchaseStore {
         .map(rec => [
           rec.palId,
           {
-            contentVersion: Math.max(
-              rec.contentVersion ?? 0,
-              rec.pendingUpdate?.contentVersion ?? 0,
-            ),
+            contentVersion:
+              rec.pendingUpdate?.contentVersion ?? rec.contentVersion,
             purchaseRef: rec.supportCode!,
           },
         ]),
@@ -1258,7 +1262,7 @@ export class PurchaseStore {
     }
     let refreshed;
     try {
-      refreshed = await this.deps.api.refresh(proofs, known);
+      refreshed = await this.deps.api.refresh(platform(), proofs, known);
     } catch {
       return false;
     }
@@ -1269,7 +1273,7 @@ export class PurchaseStore {
           this.offerUpdate(pal.id, {
             pal,
             content,
-            contentVersion: pal.content_version ?? 0,
+            contentVersion: pal.content_version ?? UNKNOWN_CONTENT_VERSION,
             changeNote,
           }),
         );

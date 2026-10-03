@@ -23,7 +23,7 @@ export type VerifyStatus =
 export interface VerifyResult {
   palId: string;
   status: VerifyStatus;
-  contentVersion?: number;
+  contentVersion?: string;
   pal?: PalsHubPal;
   content?: CreatorContent;
   changeNote?: string;
@@ -44,9 +44,11 @@ export interface RefreshResult {
 }
 
 export interface KnownEntry {
-  contentVersion: number;
+  contentVersion?: string;
   purchaseRef: string;
 }
+
+export const UNKNOWN_CONTENT_VERSION = '0';
 
 export interface Binding {
   appAccountToken?: string;
@@ -75,9 +77,6 @@ const isRecord = (value: unknown): value is Record<string, unknown> =>
 
 const optionalString = (value: unknown): string | undefined =>
   typeof value === 'string' && value.length > 0 ? value : undefined;
-
-const optionalNumber = (value: unknown): number | undefined =>
-  typeof value === 'number' && Number.isFinite(value) ? value : undefined;
 
 const stringList = (value: unknown, field: string): string[] => {
   if (value === undefined || value === null) {
@@ -123,15 +122,25 @@ export const verifyBody = (platform: StorePlatform, proofs: StoreProof[]) => ({
 
 export const linkBody = verifyBody;
 
+const contentVersionHint = (value: unknown): string =>
+  typeof value === 'string' && value.length > 0 && value.length <= 64
+    ? value
+    : UNKNOWN_CONTENT_VERSION;
+
 export const refreshBody = (
+  platform: StorePlatform,
   proofs: StoreProof[],
   known: Record<string, KnownEntry>,
 ) => ({
+  platform,
   transactions: proofs.map(proofToWire),
   known: Object.fromEntries(
     Object.entries(known).map(([palId, entry]) => [
       palId,
-      {content_version: entry.contentVersion, purchase_ref: entry.purchaseRef},
+      {
+        content_version: contentVersionHint(entry.contentVersion),
+        purchase_ref: entry.purchaseRef,
+      },
     ]),
   ),
 });
@@ -152,7 +161,7 @@ const parseVerifyResult = (value: unknown): VerifyResult => {
   const result: VerifyResult = {
     palId: value.pal_id,
     status,
-    contentVersion: optionalNumber(value.content_version),
+    contentVersion: optionalString(value.content_version),
     pal,
     content: parsed?.content,
     changeNote: parsed?.changeNote,

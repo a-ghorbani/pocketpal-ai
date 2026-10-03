@@ -13,6 +13,7 @@ import {
   apiPal,
   jsonResponse,
   verifyResponse,
+  version,
 } from '../../../../jest/fixtures/iap';
 
 jest.mock('../../palshub/supabase', () => ({
@@ -124,7 +125,7 @@ describe('iapApi', () => {
     const active = {
       pal_id: 'pal-1',
       status: 'active',
-      content_version: 3,
+      content_version: version(3),
       pal: apiPal(),
       support_code: 'SUP-1',
     };
@@ -200,10 +201,10 @@ describe('iapApi', () => {
       const known = Object.fromEntries(
         Array.from({length: REFRESH_MAX_KNOWN + 1}, (_, i) => [
           `pal-${i}`,
-          {contentVersion: 1, purchaseRef: `ref-${i}`},
+          {contentVersion: version(1), purchaseRef: `ref-${i}`},
         ]),
       );
-      const result = await iapApi.refresh([], known);
+      const result = await iapApi.refresh('android', [], known);
       expect(result.changed).toEqual([]);
       expect(result.revoked).toEqual(['pal-1']);
     });
@@ -215,8 +216,8 @@ describe('iapApi', () => {
         jsonResponse({changed: [apiPal()], revoked: ['pal-2']}),
       );
 
-      const result = await iapApi.refresh([androidProof(1)], {
-        'pal-1': {contentVersion: 2, purchaseRef: 'GPA.1'},
+      const result = await iapApi.refresh('android', [androidProof(1)], {
+        'pal-1': {contentVersion: version(2), purchaseRef: 'GPA.1'},
       });
 
       expect(fetchMock.mock.calls[0][0]).toBe(
@@ -225,8 +226,9 @@ describe('iapApi', () => {
       expect(sentHeaders().Authorization).toBeUndefined();
       expect(sentHeaders()['X-IAP-Capable']).toBe('1');
       expect(sentBody()).toEqual({
+        platform: 'android',
         transactions: [{productId: 'pal.1', purchaseToken: 'token-1'}],
-        known: {'pal-1': {content_version: 2, purchase_ref: 'GPA.1'}},
+        known: {'pal-1': {content_version: version(2), purchase_ref: 'GPA.1'}},
       });
       expect(result.changed[0].pal.id).toBe('pal-1');
       expect(result.revoked).toEqual(['pal-2']);
@@ -250,17 +252,17 @@ describe('iapApi', () => {
       const known = Object.fromEntries(
         Array.from({length: 201}, (_, i) => [
           `pal-${i}`,
-          {contentVersion: i, purchaseRef: `ref-${i}`},
+          {contentVersion: version(1), purchaseRef: `ref-${i}`},
         ]),
       );
 
-      const result = await iapApi.refresh([androidProof(1)], known);
+      const result = await iapApi.refresh('android', [androidProof(1)], known);
 
       expect(REFRESH_MAX_KNOWN).toBe(200);
       expect(fetchMock).toHaveBeenCalledTimes(2);
       expect(Object.keys(sentBody(0).known)).toHaveLength(200);
       expect(sentBody(1).known).toEqual({
-        'pal-200': {content_version: 200, purchase_ref: 'ref-200'},
+        'pal-200': {content_version: version(1), purchase_ref: 'ref-200'},
       });
       expect(sentBody(1).transactions).toHaveLength(1);
       expect(result).toEqual({
@@ -278,7 +280,7 @@ describe('iapApi', () => {
 
     it('sends one request when nothing is known', async () => {
       fetchMock.mockResolvedValue(jsonResponse({}));
-      await iapApi.refresh([androidProof(1)], {});
+      await iapApi.refresh('android', [androidProof(1)], {});
       expect(fetchMock).toHaveBeenCalledTimes(1);
       expect(sentBody().known).toEqual({});
     });

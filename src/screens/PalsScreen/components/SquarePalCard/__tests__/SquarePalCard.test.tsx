@@ -13,6 +13,7 @@ import {palStore, chatSessionStore, modelStore} from '../../../../../store';
 import {downloadedModel} from '../../../../../../jest/fixtures/models';
 import type {Pal} from '../../../../../store/PalStore';
 import type {PalsHubPal} from '../../../../../types/palshub';
+import {version} from '../../../../../../jest/fixtures/iap';
 
 // Mock navigation
 const mockNavigate = jest.fn();
@@ -658,7 +659,7 @@ describe('SquarePalCard purchase badges', () => {
     palshub_id: 'pal-1',
   } as Pal;
 
-  const pendingUpdate = {pal: hubCard, content: {}, contentVersion: 2};
+  const pendingUpdate = {pal: hubCard, content: {}, contentVersion: version(2)};
 
   const withStatus = (status?: string, pending = false) =>
     runInAction(() => {

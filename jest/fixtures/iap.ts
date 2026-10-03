@@ -1,3 +1,6 @@
+export const version = (day: number) =>
+  `2026-08-${String(day).padStart(2, '0')}T07:06:23.411027+00:00`;
+
 export const apiPal = (overrides: Record<string, unknown> = {}) => ({
   id: 'pal-1',
   title: 'Story Pal',
@@ -13,7 +16,7 @@ export const apiPal = (overrides: Record<string, unknown> = {}) => ({
   protection_level: 'reveal_on_purchase',
   store_product_id: 'pal.0123456789abcdef0123456789abcdef',
   iap_enabled: {ios: true, android: true},
-  content_version: 3,
+  content_version: version(3),
   system_prompt: 'You tell stories.',
   ...overrides,
 });
@@ -23,7 +26,7 @@ export const verifyResponse = (
     {
       pal_id: 'pal-1',
       status: 'active',
-      content_version: 3,
+      content_version: version(3),
       pal: apiPal(),
       support_code: 'SUP-1',
     },

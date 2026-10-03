@@ -9,6 +9,7 @@ import {PalGridRow} from '../components';
 import {authService, syncService} from '../../../services';
 import {palStore} from '../../../store';
 import {createPal, createPalsHubPal} from '../../../../jest/fixtures/pals';
+import {version} from '../../../../jest/fixtures/iap';
 
 // Mirrors the real hook: the width change re-renders from inside the component,
 // which is what rotation does. A parent re-render cannot, since observer() memoises.
@@ -792,7 +793,7 @@ describe('PalsScreen', () => {
             pendingUpdate: {
               pal: createPalsHubPal({id: 'store-pal', title: 'New title'}),
               content: {},
-              contentVersion: 2,
+              contentVersion: version(2),
             },
           };
         });

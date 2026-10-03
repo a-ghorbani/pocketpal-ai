@@ -450,11 +450,11 @@ describe('PalsHubApiService', () => {
         ...minimal,
         store_product_id: 'pal.abc',
         iap_enabled: {ios: true, android: false},
-        content_version: 7,
+        content_version: '2026-08-10T07:06:23.411027+00:00',
       });
       expect(result.store_product_id).toBe('pal.abc');
       expect(result.iap_enabled).toEqual({ios: true, android: false});
-      expect(result.content_version).toBe(7);
+      expect(result.content_version).toBe('2026-08-10T07:06:23.411027+00:00');
       expect(result.sample_exchange).toBeUndefined();
     });
 

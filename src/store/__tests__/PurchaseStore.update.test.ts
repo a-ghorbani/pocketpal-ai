@@ -13,6 +13,7 @@ import {
   result,
   stopAll,
   tx,
+  version,
 } from './purchaseTestHarness';
 import type {PalsHubPal} from '../../types/palshub';
 
@@ -27,10 +28,10 @@ jest.mock('../PalStore', () => ({
 
 const originalOS = Platform.OS;
 
-const v1 = () => hubPal({content_version: 3});
+const v1 = () => hubPal({content_version: version(3)});
 const v2 = (overrides: Partial<PalsHubPal> = {}) =>
   hubPal({
-    content_version: 4,
+    content_version: version(4),
     title: 'Story Pal 2',
     system_prompt: 'You tell tales.',
     ...overrides,
@@ -39,7 +40,7 @@ const v2 = (overrides: Partial<PalsHubPal> = {}) =>
 const pending = (pal: PalsHubPal, changeNote?: string): PendingUpdate => ({
   pal,
   content: contentOf(pal),
-  contentVersion: pal.content_version ?? 0,
+  contentVersion: pal.content_version!,
   ...(changeNote ? {changeNote} : {}),
 });
 
@@ -84,9 +85,9 @@ describe('PurchaseStore creator updates', () => {
 
       expect(h.palStore.applyCreatorUpdate).not.toHaveBeenCalled();
       expect(h.purchases.recordFor(PAL_ID)).toMatchObject({
-        contentVersion: 3,
+        contentVersion: version(3),
         title: 'Story Pal',
-        pendingUpdate: {contentVersion: 4, changeNote: 'Typo fixed'},
+        pendingUpdate: {contentVersion: version(4), changeNote: 'Typo fixed'},
       });
       expect(h.purchases.recordFor(PAL_ID)?.applied).toEqual(contentOf(v1()));
       expect(h.purchases.updateAvailable(PAL_ID)).toBe(true);
@@ -95,29 +96,33 @@ describe('PurchaseStore creator updates', () => {
     it('stores a newer settled verify version as pending', async () => {
       const h = installed();
       h.api.verify.mockResolvedValueOnce([
-        result('active', {contentVersion: 4, pal: v2(), changeNote: 'Fix'}),
+        result('active', {
+          contentVersion: version(4),
+          pal: v2(),
+          changeNote: 'Fix',
+        }),
       ]);
 
       await h.purchases.processTransaction(tx(), {settledVerify: true});
 
       expect(h.palStore.applyCreatorUpdate).not.toHaveBeenCalled();
       expect(h.purchases.recordFor(PAL_ID)?.pendingUpdate).toMatchObject({
-        contentVersion: 4,
+        contentVersion: version(4),
         changeNote: 'Fix',
       });
     });
 
     it.each([
-      ['an equal version', v2({content_version: 3})],
-      ['a missing version', v2({content_version: undefined})],
-      ['an older version', v2({content_version: 2})],
+      ['an equal version', v2({content_version: version(3)})],
       ['a version without a prompt', v2({system_prompt: undefined})],
     ])('ignores %s', async (_label, pal) => {
       const h = installed();
 
       await refreshWith(h, [pal]);
 
-      expect(h.purchases.recordFor(PAL_ID)).toMatchObject({contentVersion: 3});
+      expect(h.purchases.recordFor(PAL_ID)).toMatchObject({
+        contentVersion: version(3),
+      });
       expect(h.purchases.recordFor(PAL_ID)?.pendingUpdate).toBeUndefined();
     });
 
@@ -133,10 +138,12 @@ describe('PurchaseStore creator updates', () => {
     it('replaces a pending version with a newer one and keeps the applied base', async () => {
       const h = installed({pendingUpdate: pending(v2())});
 
-      await refreshWith(h, [v2({content_version: 5, description: 'Tales'})]);
+      await refreshWith(h, [
+        v2({content_version: version(5), description: 'Tales'}),
+      ]);
 
       expect(h.purchases.recordFor(PAL_ID)?.pendingUpdate?.contentVersion).toBe(
-        5,
+        version(5),
       );
       expect(h.purchases.recordFor(PAL_ID)?.applied).toEqual(contentOf(v1()));
     });
@@ -149,27 +156,31 @@ describe('PurchaseStore creator updates', () => {
 
       expect(h.storage.writes).toHaveLength(writes);
       expect(h.purchases.recordFor(PAL_ID)?.pendingUpdate?.contentVersion).toBe(
-        4,
-      );
-    });
-
-    it('does not take an older version over a pending one', async () => {
-      const h = installed({pendingUpdate: pending(v2({content_version: 5}))});
-
-      await refreshWith(h, [v2()]);
-
-      expect(h.purchases.recordFor(PAL_ID)?.pendingUpdate?.contentVersion).toBe(
-        5,
+        version(4),
       );
     });
 
     it('advances silently and clears pending when nothing changed', async () => {
       const h = installed({pendingUpdate: pending(v2())});
 
-      await refreshWith(h, [hubPal({content_version: 5})]);
+      await refreshWith(h, [hubPal({content_version: version(5)})]);
 
       const rec = h.purchases.recordFor(PAL_ID);
-      expect(rec?.contentVersion).toBe(5);
+      expect(rec?.contentVersion).toBe(version(5));
+      expect(rec?.pendingUpdate).toBeUndefined();
+      expect(h.purchases.updateAvailable(PAL_ID)).toBe(false);
+      expect(h.palStore.applyCreatorUpdate).not.toHaveBeenCalled();
+    });
+
+    it('records the version of an unchanged Pal it had no version for', async () => {
+      const h = installed({contentVersion: undefined});
+
+      await refreshWith(h, [hubPal({content_version: version(5)})]);
+
+      const [, , known] = h.api.refresh.mock.calls[0];
+      expect(known[PAL_ID].contentVersion).toBeUndefined();
+      const rec = h.purchases.recordFor(PAL_ID);
+      expect(rec?.contentVersion).toBe(version(5));
       expect(rec?.pendingUpdate).toBeUndefined();
       expect(h.purchases.updateAvailable(PAL_ID)).toBe(false);
       expect(h.palStore.applyCreatorUpdate).not.toHaveBeenCalled();
@@ -177,24 +188,24 @@ describe('PurchaseStore creator updates', () => {
 
     it('sends the pending version while a declined update is pending', async () => {
       const h = installed({
-        contentVersion: 2,
-        pendingUpdate: pending(v2({content_version: 3})),
+        contentVersion: version(2),
+        pendingUpdate: pending(v2({content_version: version(3)})),
       });
 
       await refreshWith(h, []);
 
-      const [, known] = h.api.refresh.mock.calls[0];
-      expect(known[PAL_ID].contentVersion).toBe(3);
-      expect(h.purchases.recordFor(PAL_ID)?.contentVersion).toBe(2);
+      const [, , known] = h.api.refresh.mock.calls[0];
+      expect(known[PAL_ID].contentVersion).toBe(version(3));
+      expect(h.purchases.recordFor(PAL_ID)?.contentVersion).toBe(version(2));
     });
 
     it('sends the applied version without a pending update', async () => {
-      const h = installed({contentVersion: 2});
+      const h = installed({contentVersion: version(2)});
 
       await refreshWith(h, []);
 
-      const [, known] = h.api.refresh.mock.calls[0];
-      expect(known[PAL_ID].contentVersion).toBe(2);
+      const [, , known] = h.api.refresh.mock.calls[0];
+      expect(known[PAL_ID].contentVersion).toBe(version(2));
     });
   });
 
@@ -202,7 +213,7 @@ describe('PurchaseStore creator updates', () => {
     it('writes only the changed fields and advances the applied snapshot', async () => {
       const h = installed({pendingUpdate: pending(v2())});
 
-      await h.purchases.applyUpdate(PAL_ID, 4);
+      await h.purchases.applyUpdate(PAL_ID, version(4));
 
       expect(h.palStore.applyCreatorUpdate).toHaveBeenCalledTimes(1);
       const [localId, pal, fields] =
@@ -211,7 +222,10 @@ describe('PurchaseStore creator updates', () => {
       expect(pal).toMatchObject({title: 'Story Pal 2'});
       expect([...fields]).toEqual(['title', 'system_prompt']);
       const rec = h.purchases.recordFor(PAL_ID);
-      expect(rec).toMatchObject({contentVersion: 4, title: 'Story Pal 2'});
+      expect(rec).toMatchObject({
+        contentVersion: version(4),
+        title: 'Story Pal 2',
+      });
       expect(rec?.applied).toEqual(contentOf(v2()));
       expect(rec?.pendingUpdate).toBeUndefined();
       expect(h.purchases.updateAvailable(PAL_ID)).toBe(false);
@@ -229,16 +243,18 @@ describe('PurchaseStore creator updates', () => {
         thumbnailFailed: true,
       });
 
-      await h.purchases.applyUpdate(PAL_ID, 4);
+      await h.purchases.applyUpdate(PAL_ID, version(4));
 
       const rec = h.purchases.recordFor(PAL_ID);
-      expect(rec?.contentVersion).toBe(4);
+      expect(rec?.contentVersion).toBe(version(4));
       expect(rec?.applied?.title).toBe('Story Pal 2');
       expect(rec?.applied?.thumbnail_url).toBe(oldThumb);
       expect(rec?.thumbnailUrl).toBe(oldThumb);
 
-      await refreshWith(h, [v2({content_version: 5, thumbnail_url: newThumb})]);
-      await h.purchases.applyUpdate(PAL_ID, 5);
+      await refreshWith(h, [
+        v2({content_version: version(5), thumbnail_url: newThumb}),
+      ]);
+      await h.purchases.applyUpdate(PAL_ID, version(5));
 
       expect([...h.palStore.applyCreatorUpdate.mock.calls[1][2]]).toEqual([
         'thumbnail_url',
@@ -251,7 +267,7 @@ describe('PurchaseStore creator updates', () => {
     it('treats every field as changed without an applied snapshot', async () => {
       const h = installed({applied: undefined, pendingUpdate: pending(v2())});
 
-      await h.purchases.applyUpdate(PAL_ID, 4);
+      await h.purchases.applyUpdate(PAL_ID, version(4));
 
       const fields = h.palStore.applyCreatorUpdate.mock.calls[0][2];
       expect(fields.size).toBe(12);
@@ -261,21 +277,23 @@ describe('PurchaseStore creator updates', () => {
       const h = installed({pendingUpdate: pending(v2())});
 
       await Promise.all([
-        h.purchases.applyUpdate(PAL_ID, 4),
-        h.purchases.applyUpdate(PAL_ID, 4),
+        h.purchases.applyUpdate(PAL_ID, version(4)),
+        h.purchases.applyUpdate(PAL_ID, version(4)),
       ]);
 
       expect(h.palStore.applyCreatorUpdate).toHaveBeenCalledTimes(1);
     });
 
     it('does nothing for a version the user did not see', async () => {
-      const h = installed({pendingUpdate: pending(v2({content_version: 5}))});
+      const h = installed({
+        pendingUpdate: pending(v2({content_version: version(5)})),
+      });
 
-      await h.purchases.applyUpdate(PAL_ID, 4);
+      await h.purchases.applyUpdate(PAL_ID, version(4));
 
       expect(h.palStore.applyCreatorUpdate).not.toHaveBeenCalled();
       expect(h.purchases.recordFor(PAL_ID)?.pendingUpdate?.contentVersion).toBe(
-        5,
+        version(5),
       );
     });
 
@@ -288,7 +306,7 @@ describe('PurchaseStore creator updates', () => {
     ])('does nothing with %s', async (_label, overrides) => {
       const h = installed(overrides);
 
-      await h.purchases.applyUpdate(PAL_ID, 4);
+      await h.purchases.applyUpdate(PAL_ID, version(4));
 
       expect(h.palStore.applyCreatorUpdate).not.toHaveBeenCalled();
     });
@@ -303,7 +321,7 @@ describe('PurchaseStore creator updates', () => {
       });
       await h.purchases.recover();
 
-      await h.purchases.applyUpdate(PAL_ID, 4);
+      await h.purchases.applyUpdate(PAL_ID, version(4));
 
       expect(h.palStore.applyCreatorUpdate).not.toHaveBeenCalled();
     });
@@ -312,11 +330,13 @@ describe('PurchaseStore creator updates', () => {
       const h = installed({pendingUpdate: pending(v2())});
       h.storage.failOnWrite = 1;
 
-      await expect(h.purchases.applyUpdate(PAL_ID, 4)).rejects.toThrow();
+      await expect(
+        h.purchases.applyUpdate(PAL_ID, version(4)),
+      ).rejects.toThrow();
 
       const relaunched = createHarness({storage: h.storage});
       relaunched.palStore.pals.push(localPal());
-      await relaunched.purchases.applyUpdate(PAL_ID, 4);
+      await relaunched.purchases.applyUpdate(PAL_ID, version(4));
 
       expect(relaunched.palStore.applyCreatorUpdate.mock.calls[0][2]).toEqual(
         h.palStore.applyCreatorUpdate.mock.calls[0][2],
@@ -338,7 +358,11 @@ describe('PurchaseStore creator updates', () => {
   describe('grant', () => {
     const grantV2 = () =>
       record('granted', {
-        grant: {pal: v2(), content: contentOf(v2()), contentVersion: 4},
+        grant: {
+          pal: v2(),
+          content: contentOf(v2()),
+          contentVersion: version(4),
+        },
       });
 
     it('installs a new Pal with the full version as the applied snapshot', async () => {
@@ -351,7 +375,7 @@ describe('PurchaseStore creator updates', () => {
       await h.purchases.drainQueue();
 
       const rec = h.purchases.recordFor(PAL_ID);
-      expect(rec).toMatchObject({status: 'active', contentVersion: 4});
+      expect(rec).toMatchObject({status: 'active', contentVersion: version(4)});
       expect(rec?.applied).toEqual(contentOf(v2()));
       expect(rec?.pendingUpdate).toBeUndefined();
       expect(rec?.grant).toBeUndefined();
@@ -368,7 +392,7 @@ describe('PurchaseStore creator updates', () => {
       await h.purchases.drainQueue();
 
       const rec = h.purchases.recordFor(PAL_ID);
-      expect(rec).toMatchObject({status: 'active', contentVersion: 4});
+      expect(rec).toMatchObject({status: 'active', contentVersion: version(4)});
       expect(rec?.applied).toEqual(contentOf(v2()));
       expect(h.purchases.updateAvailable(PAL_ID)).toBe(false);
       expect(h.palStore.applyCreatorUpdate).not.toHaveBeenCalled();
@@ -381,9 +405,9 @@ describe('PurchaseStore creator updates', () => {
       await h.purchases.drainQueue();
 
       const rec = h.purchases.recordFor(PAL_ID);
-      expect(rec).toMatchObject({status: 'active', contentVersion: 3});
+      expect(rec).toMatchObject({status: 'active', contentVersion: version(3)});
       expect(rec?.applied).toEqual(contentOf(v1()));
-      expect(rec?.pendingUpdate?.contentVersion).toBe(4);
+      expect(rec?.pendingUpdate?.contentVersion).toBe(version(4));
       expect(h.purchases.updateAvailable(PAL_ID)).toBe(true);
       expect(h.palStore.applyCreatorUpdate).not.toHaveBeenCalled();
     });
@@ -395,7 +419,7 @@ describe('PurchaseStore creator updates', () => {
             grant: {
               pal: v2(),
               content: contentOf(v2()),
-              contentVersion: 4,
+              contentVersion: version(4),
               changeNote: 'Fixed the greeting',
             },
           }),
@@ -407,7 +431,7 @@ describe('PurchaseStore creator updates', () => {
 
       const rec = h.purchases.recordFor(PAL_ID);
       expect(rec?.pendingUpdate).toMatchObject({
-        contentVersion: 4,
+        contentVersion: version(4),
         changeNote: 'Fixed the greeting',
       });
       expect(rec?.grant).toBeUndefined();
@@ -424,7 +448,7 @@ describe('PurchaseStore creator updates', () => {
       await flush();
 
       expect(h.purchases.recordFor(PAL_ID)?.grant).toMatchObject({
-        contentVersion: 3,
+        contentVersion: version(3),
         changeNote: 'Fixed the greeting',
       });
     });
@@ -436,7 +460,7 @@ describe('PurchaseStore creator updates', () => {
             grant: {
               pal: hubPal(),
               content: contentOf(hubPal()),
-              contentVersion: 4,
+              contentVersion: version(4),
             },
           }),
         ],
@@ -446,7 +470,7 @@ describe('PurchaseStore creator updates', () => {
       await h.purchases.drainQueue();
 
       const rec = h.purchases.recordFor(PAL_ID);
-      expect(rec).toMatchObject({status: 'active', contentVersion: 4});
+      expect(rec).toMatchObject({status: 'active', contentVersion: version(4)});
       expect(rec?.pendingUpdate).toBeUndefined();
     });
 
@@ -460,7 +484,7 @@ describe('PurchaseStore creator updates', () => {
         transactions: [tx()],
       });
       h.api.verify.mockResolvedValueOnce([
-        result('active', {contentVersion: 4, pal: v2()}),
+        result('active', {contentVersion: version(4), pal: v2()}),
       ]);
 
       await h.purchases.installOwned(v2());
@@ -468,7 +492,7 @@ describe('PurchaseStore creator updates', () => {
       await h.purchases.drainQueue();
 
       const rec = h.purchases.recordFor(PAL_ID);
-      expect(rec).toMatchObject({status: 'active', contentVersion: 4});
+      expect(rec).toMatchObject({status: 'active', contentVersion: version(4)});
       expect(rec?.pendingUpdate).toBeUndefined();
       expect(h.palStore.installOwnedPal).toHaveBeenCalledTimes(1);
     });
@@ -530,14 +554,14 @@ describe('PurchaseStore creator updates', () => {
       });
       h.palStore.pals.push(localPal());
       h.api.verify.mockResolvedValueOnce([
-        result('active', {contentVersion: 4, pal: v2()}),
+        result('active', {contentVersion: version(4), pal: v2()}),
       ]);
 
       await h.purchases.processTransaction(tx(), {settledVerify: true});
       await h.purchases.drainQueue();
 
       const rec = h.purchases.recordFor(PAL_ID);
-      expect(rec).toMatchObject({status: 'active', contentVersion: 4});
+      expect(rec).toMatchObject({status: 'active', contentVersion: version(4)});
       expect(rec?.applied).toEqual(contentOf(v2()));
       expect(rec?.pendingUpdate).toBeUndefined();
     });

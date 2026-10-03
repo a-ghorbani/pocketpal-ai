@@ -32,7 +32,7 @@ export const PalPurchaseFooter: React.FC<PalPurchaseFooterProps> = observer(
     const [showModelStep, setShowModelStep] = useState(false);
     const [isOpening, setIsOpening] = useState(false);
     const [linkPromptDismissed, setLinkPromptDismissed] = useState(false);
-    const [confirmingUpdate, setConfirmingUpdate] = useState<number>();
+    const [confirmingUpdate, setConfirmingUpdate] = useState<string>();
     const [applyingUpdate, setApplyingUpdate] = useState(false);
     const applying = useRef(false);
 
@@ -90,7 +90,7 @@ export const PalPurchaseFooter: React.FC<PalPurchaseFooterProps> = observer(
       }
     };
 
-    const handleConfirmUpdate = async (shownVersion: number) => {
+    const handleConfirmUpdate = async (shownVersion: string) => {
       if (applying.current) {
         return;
       }

@@ -21,6 +21,7 @@ import {
   result,
   stopAll,
   tx,
+  version,
 } from './purchaseTestHarness';
 import type {StoreTransaction} from '../../services/iap/StorePort';
 
@@ -351,8 +352,9 @@ describe('PurchaseStore recovery', () => {
       await h.purchases.recover();
 
       expect(h.api.refresh).toHaveBeenCalledWith(
+        'ios',
         [{platform: 'ios', jws: 'jws-1'}],
-        {[PAL_ID]: {contentVersion: 3, purchaseRef: 'SUP-0'}},
+        {[PAL_ID]: {contentVersion: version(3), purchaseRef: 'SUP-0'}},
       );
     });
 
@@ -360,7 +362,11 @@ describe('PurchaseStore recovery', () => {
       setOS('ios');
       const h = createHarness({
         records: [
-          record('active', {palId: 'P1', supportCode: 'S1', contentVersion: 2}),
+          record('active', {
+            palId: 'P1',
+            supportCode: 'S1',
+            contentVersion: version(2),
+          }),
           record('active', {
             palId: 'P2',
             productId: 'pal.p2',
@@ -381,9 +387,11 @@ describe('PurchaseStore recovery', () => {
 
       await h.purchases.recover();
 
-      const [proofs, known] = h.api.refresh.mock.calls[0];
-      expect(known).toEqual({P1: {contentVersion: 2, purchaseRef: 'S1'}});
-      const body = JSON.stringify(refreshBody(proofs, known).known);
+      const [platform, proofs, known] = h.api.refresh.mock.calls[0];
+      expect(known).toEqual({
+        P1: {contentVersion: version(2), purchaseRef: 'S1'},
+      });
+      const body = JSON.stringify(refreshBody(platform, proofs, known).known);
       expect(body).not.toContain('jws-1');
       expect(body).not.toContain('tx-');
     });
@@ -392,7 +400,7 @@ describe('PurchaseStore recovery', () => {
       const h = createHarness({records: [record('active')]});
       h.palStore.pals.push(localPal());
       h.api.refresh.mockResolvedValue({
-        changed: [changedPal({content_version: 4, title: 'Edited'})],
+        changed: [changedPal({content_version: version(4), title: 'Edited'})],
         revoked: [],
         removed: [],
         unchanged: [],
@@ -402,15 +410,15 @@ describe('PurchaseStore recovery', () => {
 
       expect(h.palStore.applyCreatorUpdate).not.toHaveBeenCalled();
       expect(h.purchases.recordFor(PAL_ID)).toMatchObject({
-        contentVersion: 3,
-        pendingUpdate: {contentVersion: 4, pal: {title: 'Edited'}},
+        contentVersion: version(3),
+        pendingUpdate: {contentVersion: version(4), pal: {title: 'Edited'}},
       });
     });
 
     it('does not install a changed Pal the user deleted', async () => {
       const h = createHarness({records: [record('active')]});
       h.api.refresh.mockResolvedValue({
-        changed: [changedPal({content_version: 4})],
+        changed: [changedPal({content_version: version(4)})],
         revoked: [],
         removed: [],
         unchanged: [],
@@ -502,7 +510,7 @@ describe('PurchaseStore recovery', () => {
       await h.purchases.recover();
 
       expect(h.purchases.recordFor(PAL_ID)).toEqual(
-        expect.objectContaining({status: 'active', contentVersion: 3}),
+        expect.objectContaining({status: 'active', contentVersion: version(3)}),
       );
       expect(h.palStore.deletePal).not.toHaveBeenCalled();
       expect(h.palStore.applyCreatorUpdate).not.toHaveBeenCalled();

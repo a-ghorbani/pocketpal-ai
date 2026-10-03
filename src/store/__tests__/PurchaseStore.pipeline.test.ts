@@ -21,6 +21,7 @@ import {
   result,
   stopAll,
   tx,
+  version,
 } from './purchaseTestHarness';
 
 jest.mock('../PalStore', () => ({
@@ -88,7 +89,7 @@ describe('PurchaseStore pipeline', () => {
       expect(h.storage.ledger()[PAL_ID]).toMatchObject({
         status: 'active',
         supportCode: 'SUP-1',
-        contentVersion: 3,
+        contentVersion: version(3),
         transactionIds: ['tx-1'],
         title: 'Story Pal',
       });
@@ -297,7 +298,10 @@ describe('PurchaseStore pipeline', () => {
       const h = createHarness({records: [record('active')]});
       h.palStore.pals.push(localPal());
       h.api.verify.mockResolvedValueOnce([
-        result('active', {contentVersion: 4, pal: hubPal({title: 'New'})}),
+        result('active', {
+          contentVersion: version(4),
+          pal: hubPal({title: 'New'}),
+        }),
       ]);
 
       await h.purchases.processTransaction(tx(), {settledVerify: true});
@@ -305,9 +309,9 @@ describe('PurchaseStore pipeline', () => {
       expect(h.palStore.applyCreatorUpdate).not.toHaveBeenCalled();
       expect(h.purchases.recordFor(PAL_ID)).toMatchObject({
         status: 'active',
-        contentVersion: 3,
+        contentVersion: version(3),
         title: 'Story Pal',
-        pendingUpdate: {contentVersion: 4, pal: {title: 'New'}},
+        pendingUpdate: {contentVersion: version(4), pal: {title: 'New'}},
       });
       expect(h.purchases.updateAvailable(PAL_ID)).toBe(true);
     });
@@ -459,7 +463,7 @@ describe('PurchaseStore pipeline', () => {
         transactions: [tx({unfinished: false})],
       });
       await h.purchases.recover();
-      return h.api.refresh.mock.calls.at(-1)![1];
+      return h.api.refresh.mock.calls.at(-1)![2];
     };
 
     it.each([
@@ -628,7 +632,7 @@ describe('PurchaseStore pipeline', () => {
       return {
         pal_id: PAL_ID,
         status: 'active',
-        content_version: 3,
+        content_version: version(3),
         pal: apiPal({store_product_id: PRODUCT}),
         support_code: code,
       };
@@ -966,9 +970,11 @@ describe('PurchaseStore pipeline', () => {
 
     it('shows an update only while the Pal is installed', async () => {
       const pendingUpdate = {
-        pal: hubPal({content_version: 4, title: 'Story Pal 2'}),
-        content: contentOf(hubPal({content_version: 4, title: 'Story Pal 2'})),
-        contentVersion: 4,
+        pal: hubPal({content_version: version(4), title: 'Story Pal 2'}),
+        content: contentOf(
+          hubPal({content_version: version(4), title: 'Story Pal 2'}),
+        ),
+        contentVersion: version(4),
       };
       const h = createHarness({records: [record('active', {pendingUpdate})]});
       await h.purchases.load();

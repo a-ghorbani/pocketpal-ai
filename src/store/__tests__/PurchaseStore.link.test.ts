@@ -12,6 +12,7 @@ import {
   result,
   stopAll,
   tx,
+  version,
 } from './purchaseTestHarness';
 
 let mockAccountLinkEnabled = true;
@@ -489,7 +490,9 @@ describe('PurchaseStore link and restore', () => {
           installed: h.purchases.localPalFor(PAL_ID) !== undefined,
         });
         return [
-          result('active', {pal: hubPal({title: 'Other', content_version: 9})}),
+          result('active', {
+            pal: hubPal({title: 'Other', content_version: version(9)}),
+          }),
         ];
       });
 
@@ -500,7 +503,7 @@ describe('PurchaseStore link and restore', () => {
       const rec = h.purchases.recordFor(PAL_ID);
       expect(rec?.status).toBe('granted');
       expect(rec?.grant?.pal.title).toBe('Story Pal');
-      expect(rec?.grant?.contentVersion).toBe(3);
+      expect(rec?.grant?.contentVersion).toBe(version(3));
       warn.mockRestore();
     });
 

@@ -23,6 +23,9 @@ import type {
   VerifyResult,
 } from '../../services/iap/iapWire';
 import type {Pal} from '../../types/pal';
+import {version} from '../../../jest/fixtures/iap';
+
+export {version};
 import type {PalsHubPal} from '../../types/palshub';
 
 export const PRODUCT = 'pal.0123456789abcdef0123456789abcdef';
@@ -72,12 +75,12 @@ export const result = (
     'pal' in overrides
       ? overrides.pal
       : status === 'active'
-        ? hubPal({content_version: 3})
+        ? hubPal({content_version: version(3)})
         : undefined;
   return {
     palId: PAL_ID,
     status,
-    contentVersion: 3,
+    contentVersion: version(3),
     supportCode: 'SUP-1',
     pal,
     content: pal ? contentOf(pal) : undefined,
@@ -94,13 +97,19 @@ export const record = (
   productId: PRODUCT,
   transactionIds: ['tx-0'],
   status,
-  contentVersion: 3,
+  contentVersion: version(3),
   applied: contentOf(hubPal()),
   supportCode: 'SUP-0',
   title: 'Story Pal',
   updatedAt: 1,
   ...(status === 'granted'
-    ? {grant: {pal: hubPal(), content: contentOf(hubPal()), contentVersion: 3}}
+    ? {
+        grant: {
+          pal: hubPal(),
+          content: contentOf(hubPal()),
+          contentVersion: version(3),
+        },
+      }
     : {}),
   ...(status === 'pending_payment' ? {pendingSince: 1} : {}),
   ...overrides,
@@ -259,6 +268,7 @@ export const createHarness = (
     ),
     refresh: jest.fn(
       async (
+        _platform: StorePlatform,
         _proofs: StoreProof[],
         _known: Record<string, KnownEntry>,
       ): Promise<RefreshResult> => ({

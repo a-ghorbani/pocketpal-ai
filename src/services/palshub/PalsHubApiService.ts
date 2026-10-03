@@ -86,7 +86,7 @@ export interface ApiPalResponse {
   store_product_id?: string;
   iap_enabled?: {ios?: boolean; android?: boolean};
   sample_exchange?: unknown;
-  content_version?: number;
+  content_version?: string;
 }
 
 const parseSampleExchange = (
