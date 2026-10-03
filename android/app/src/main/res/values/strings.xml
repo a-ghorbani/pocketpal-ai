@@ -1,3 +1,4 @@
 <resources>
     <string name="app_name">PocketPal</string>
+    <string name="voice_chat_app_name">PocketPal Voice Chat</string>
 </resources>

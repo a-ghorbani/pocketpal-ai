@@ -34,6 +34,7 @@ class MainApplication : Application(), ReactApplication {
               add(ExternalContentLinkPackage())
               add(DownloadPackage())
               add(SpeechRecognitionPackage())
+              add(VoiceChatLauncherPackage())
             }
 
         override fun getJSMainModuleName(): String = "index"
@@ -52,6 +53,7 @@ class MainApplication : Application(), ReactApplication {
 
   override fun onCreate() {
     super.onCreate()
+    VoiceChatLauncher.setEnabled(this, false)
     // Enable Adreno large buffer support on Qualcomm A7X/A8X GPUs.
     // The OpenCL backend in llama.rn self-gates on GPU family and the
     // cl_qcom_large_buffer extension — this is a no-op on non-Adreno devices.

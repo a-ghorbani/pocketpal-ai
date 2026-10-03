@@ -1267,6 +1267,9 @@
   },
   "chat": {
     "conversationReset": "Conversation reset!",
+    "voiceLaunchBusyTitle": "PocketPal is still responding",
+    "voiceLaunchBusyMessage": "Stop the current response before starting a new voice chat.",
+    "voiceLaunchUnavailableMessage": "Load a model and select a Pal that supports hands-free conversation before using the voice chat launcher.",
     "modelNotLoaded": "Model not loaded. Please initialize the model.",
     "completionFailed": "Completion failed: ",
     "toolCallTruncated": "Tool call cut off — the model likely ran out of room. Try a larger context or a smaller request.",

@@ -9,9 +9,15 @@ import com.facebook.react.uimanager.DisplayMetricsHolder
 import androidx.core.view.WindowCompat   // for edge-to-edge pre API 35
 import android.content.Intent
 import android.content.res.Configuration
+import android.net.Uri
 import android.os.Bundle
 
 class MainActivity : ReactActivity() {
+
+  companion object {
+    private const val VOICE_CHAT_ALIAS = ".VoiceChatActivity"
+    private const val VOICE_CHAT_URL = "pocketpal://assistant/new-chat"
+  }
 
   /**
    * Returns the name of the main component registered from JavaScript. This is used to schedule
@@ -27,6 +33,7 @@ class MainActivity : ReactActivity() {
       DefaultReactActivityDelegate(this, mainComponentName, fabricEnabled)
 
   override fun onCreate(savedInstanceState: Bundle?) {
+      setIntent(normalizeVoiceChatIntent(intent))
       // Prevent react-native-screens from restoring fragments after process death
       // This fixes the "Screen fragments should never be restored" crash
       // See: https://github.com/software-mansion/react-native-screens/issues/17
@@ -56,11 +63,22 @@ class MainActivity : ReactActivity() {
    * DeepLinkService via the RN Linking 'url' event.
    */
   override fun onNewIntent(intent: Intent) {
-      super.onNewIntent(intent)
-      if (forwardCheckoutCallback(intent)) {
+      val normalizedIntent = normalizeVoiceChatIntent(intent)
+      super.onNewIntent(normalizedIntent)
+      if (forwardCheckoutCallback(normalizedIntent)) {
           return
       }
-      setIntent(intent)
+      setIntent(normalizedIntent)
+  }
+
+  private fun normalizeVoiceChatIntent(source: Intent): Intent {
+      if (source.component?.className?.endsWith(VOICE_CHAT_ALIAS) != true) {
+          return source
+      }
+      return Intent(source).apply {
+          action = Intent.ACTION_VIEW
+          data = Uri.parse(VOICE_CHAT_URL)
+      }
   }
 
   private fun forwardCheckoutCallback(intent: Intent): Boolean {

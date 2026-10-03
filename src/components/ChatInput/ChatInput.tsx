@@ -34,8 +34,10 @@ import {createStyles} from './styles';
 
 import {
   chatSessionStore,
+  deepLinkStore,
   modelStore,
   palStore,
+  startupSelectionStore,
   ttsStore,
   uiStore,
 } from '../../store';
@@ -268,6 +270,66 @@ export const ChatInput = observer(
     const dictationActive = conversation.active;
     const {clearError: clearDictationError, requestModelDownload} = dictation;
     const speechInputL10n = l10n.components.chatInput.speechInput;
+    const pendingVoiceRequestId =
+      deepLinkStore.pendingVoiceConversationRequestId;
+    const startupSelectionReady =
+      startupSelectionStore.restoreAttempted &&
+      !startupSelectionStore.isRestoring;
+
+    React.useEffect(() => {
+      if (pendingVoiceRequestId === null) {
+        return;
+      }
+      if (conversation.active) {
+        deepLinkStore.consumeVoiceConversationRequest(pendingVoiceRequestId);
+        return;
+      }
+      if (!isDictationEligible) {
+        return;
+      }
+      if (
+        isStreaming ||
+        isStopVisible ||
+        isCameraActive ||
+        isVideoCapable ||
+        !startupSelectionReady ||
+        !modelStore.engine ||
+        modelStore.isContextLoading
+      ) {
+        deepLinkStore.consumeVoiceConversationRequest(pendingVoiceRequestId);
+        return;
+      }
+      if (value.trim() || selectedImages.length > 0) {
+        handleChangeText('');
+        setSelectedImages([]);
+        return;
+      }
+
+      conversation.start();
+      deepLinkStore.consumeVoiceConversationRequest(pendingVoiceRequestId);
+    }, [
+      conversation,
+      handleChangeText,
+      isCameraActive,
+      isDictationEligible,
+      isStreaming,
+      isStopVisible,
+      isVideoCapable,
+      pendingVoiceRequestId,
+      selectedImages,
+      setSelectedImages,
+      startupSelectionReady,
+      value,
+    ]);
+
+    React.useEffect(() => {
+      if (pendingVoiceRequestId === null || !isDictationEligible) {
+        return;
+      }
+      return () => {
+        deepLinkStore.consumeVoiceConversationRequest(pendingVoiceRequestId);
+      };
+    }, [isDictationEligible, pendingVoiceRequestId]);
 
     React.useEffect(() => {
       if (!dictation.errorCode) {
@@ -382,6 +444,9 @@ export const ChatInput = observer(
     };
 
     const handleConversationPress = () => {
+      if (pendingVoiceRequestId !== null) {
+        deepLinkStore.consumeVoiceConversationRequest(pendingVoiceRequestId);
+      }
       if (conversation.active) {
         conversation.stop();
         return;

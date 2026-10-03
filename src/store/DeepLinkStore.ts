@@ -11,6 +11,8 @@ import type {HubRunRequest} from '../services/hubRunLink';
 class DeepLinkStore {
   pendingMessage: string | null = null;
   pendingHubRun: HubRunRequest | null = null;
+  pendingVoiceConversationRequestId: number | null = null;
+  private nextVoiceConversationRequestId = 1;
 
   constructor() {
     makeAutoObservable(this);
@@ -37,6 +39,27 @@ class DeepLinkStore {
   clearPendingHubRun() {
     runInAction(() => {
       this.pendingHubRun = null;
+    });
+  }
+
+  requestVoiceConversation() {
+    runInAction(() => {
+      this.pendingVoiceConversationRequestId = this
+        .nextVoiceConversationRequestId++;
+    });
+  }
+
+  clearVoiceConversationRequest() {
+    runInAction(() => {
+      this.pendingVoiceConversationRequestId = null;
+    });
+  }
+
+  consumeVoiceConversationRequest(requestId: number) {
+    runInAction(() => {
+      if (this.pendingVoiceConversationRequestId === requestId) {
+        this.pendingVoiceConversationRequestId = null;
+      }
     });
   }
 }

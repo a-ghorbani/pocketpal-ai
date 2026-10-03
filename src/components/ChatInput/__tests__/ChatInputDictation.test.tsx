@@ -6,7 +6,13 @@ import {IconButton} from 'react-native-paper';
 
 import {user} from '../../../../jest/fixtures';
 import {render} from '../../../../jest/test-utils';
-import {chatSessionStore, modelStore, palStore} from '../../../store';
+import {
+  chatSessionStore,
+  deepLinkStore,
+  modelStore,
+  palStore,
+  startupSelectionStore,
+} from '../../../store';
 import {UserContext} from '../../../utils';
 import {useVoiceConversation} from '../../../hooks/useVoiceConversation';
 import {ChatInput} from '../ChatInput';
@@ -52,6 +58,10 @@ describe('ChatInput dictation', () => {
     mockUseVoiceConversation.mockReturnValue(conversationResult);
     runInAction(() => {
       modelStore.activeModelId = 'test-model-id';
+      modelStore.engine = undefined;
+      deepLinkStore.pendingVoiceConversationRequestId = null;
+      startupSelectionStore.restoreAttempted = true;
+      startupSelectionStore.isRestoring = false;
     });
     jest.clearAllMocks();
   });
@@ -72,6 +82,144 @@ describe('ChatInput dictation', () => {
 
     expect(conversationResult.start).toHaveBeenCalledTimes(1);
     expect(onSendPress).not.toHaveBeenCalled();
+  });
+
+  it('starts a pending launcher voice request once the model is ready', () => {
+    runInAction(() => {
+      modelStore.engine = {} as any;
+      deepLinkStore.pendingVoiceConversationRequestId = 42;
+    });
+
+    render(
+      <UserContext.Provider value={user}>
+        <ChatInput onSendPress={jest.fn()} />
+      </UserContext.Provider>,
+    );
+
+    expect(conversationResult.start).toHaveBeenCalledTimes(1);
+    expect(deepLinkStore.consumeVoiceConversationRequest).toHaveBeenCalledWith(
+      42,
+    );
+  });
+
+  it('abandons a launcher voice request when the model is unavailable', () => {
+    runInAction(() => {
+      deepLinkStore.pendingVoiceConversationRequestId = 43;
+    });
+
+    render(
+      <UserContext.Provider value={user}>
+        <ChatInput onSendPress={jest.fn()} />
+      </UserContext.Provider>,
+    );
+
+    expect(conversationResult.start).not.toHaveBeenCalled();
+    expect(deepLinkStore.consumeVoiceConversationRequest).toHaveBeenCalledWith(
+      43,
+    );
+  });
+
+  it('abandons a launcher voice request while startup selections settle', () => {
+    runInAction(() => {
+      modelStore.engine = {} as any;
+      startupSelectionStore.isRestoring = true;
+      deepLinkStore.pendingVoiceConversationRequestId = 44;
+    });
+
+    render(
+      <UserContext.Provider value={user}>
+        <ChatInput onSendPress={jest.fn()} />
+      </UserContext.Provider>,
+    );
+
+    expect(conversationResult.start).not.toHaveBeenCalled();
+    expect(deepLinkStore.consumeVoiceConversationRequest).toHaveBeenCalledWith(
+      44,
+    );
+  });
+
+  it('does not stop a manually active conversation for a pending request', () => {
+    mockUseVoiceConversation.mockReturnValue({
+      ...conversationResult,
+      active: true,
+    });
+    runInAction(() => {
+      modelStore.engine = {} as any;
+      deepLinkStore.pendingVoiceConversationRequestId = 45;
+    });
+
+    render(
+      <UserContext.Provider value={user}>
+        <ChatInput onSendPress={jest.fn()} />
+      </UserContext.Provider>,
+    );
+
+    expect(conversationResult.stop).not.toHaveBeenCalled();
+    expect(deepLinkStore.consumeVoiceConversationRequest).toHaveBeenCalledWith(
+      45,
+    );
+  });
+
+  it('clears a pending request before a manual conversation interaction', () => {
+    runInAction(() => {
+      modelStore.engine = {} as any;
+      deepLinkStore.pendingVoiceConversationRequestId = 46;
+    });
+    const onChangeText = jest.fn();
+    const onDefaultImagesChange = jest.fn();
+    const {getByTestId} = render(
+      <UserContext.Provider value={user}>
+        <ChatInput
+          defaultImages={[]}
+          onDefaultImagesChange={onDefaultImagesChange}
+          onSendPress={jest.fn()}
+          textInputProps={{value: 'draft', onChangeText}}
+        />
+      </UserContext.Provider>,
+    );
+
+    fireEvent.press(getByTestId('dictation-button'));
+
+    expect(deepLinkStore.consumeVoiceConversationRequest).toHaveBeenCalledWith(
+      46,
+    );
+    expect(conversationResult.start).not.toHaveBeenCalled();
+  });
+
+  it('clears a claimed request when the chat loses focus', () => {
+    runInAction(() => {
+      modelStore.engine = {} as any;
+      deepLinkStore.pendingVoiceConversationRequestId = 47;
+    });
+    const onChangeText = jest.fn();
+    const onDefaultImagesChange = jest.fn();
+    const {rerender} = render(
+      <UserContext.Provider value={user}>
+        <ChatInput
+          defaultImages={[]}
+          isDictationEligible
+          onDefaultImagesChange={onDefaultImagesChange}
+          onSendPress={jest.fn()}
+          textInputProps={{value: 'draft', onChangeText}}
+        />
+      </UserContext.Provider>,
+    );
+
+    rerender(
+      <UserContext.Provider value={user}>
+        <ChatInput
+          defaultImages={[]}
+          isDictationEligible={false}
+          onDefaultImagesChange={onDefaultImagesChange}
+          onSendPress={jest.fn()}
+          textInputProps={{value: 'draft', onChangeText}}
+        />
+      </UserContext.Provider>,
+    );
+
+    expect(deepLinkStore.consumeVoiceConversationRequest).toHaveBeenCalledWith(
+      47,
+    );
   });
 
   it('shows partial text and uses the same button to stop conversation', () => {

@@ -13,18 +13,30 @@
  *   `useNavigation()` without a full screen tree.
  */
 
-import {Alert, Linking} from 'react-native';
-import {renderHook} from '@testing-library/react-native';
+import {Alert, AppState, Linking} from 'react-native';
+import {act, renderHook} from '@testing-library/react-native';
+import {runInAction} from 'mobx';
 
 import {useDeepLinking} from '../useDeepLinking';
 import {ROUTES} from '../../utils/navigationConstants';
 import {deepLinkService} from '../../services/DeepLinkService';
-import {checkoutFlowStore, chatSessionStore, palStore} from '../../store';
+import {setVoiceChatLauncherEnabled} from '../../services/voiceChatLauncher';
+import {
+  checkoutFlowStore,
+  chatSessionStore,
+  deepLinkStore,
+  modelStore,
+  palStore,
+} from '../../store';
 
 // Stable navigate spy that we re-assert across the file. The hook reads
 // `useNavigation()` once per render, so capturing the function from a
 // module-level mock keeps the spy alive across re-renders.
 const mockNavigate = jest.fn();
+
+jest.mock('../../services/voiceChatLauncher', () => ({
+  setVoiceChatLauncherEnabled: jest.fn(),
+}));
 
 jest.mock('@react-navigation/native', () => {
   const actualNav = jest.requireActual('@react-navigation/native');
@@ -56,7 +68,19 @@ describe('useDeepLinking — cold-launch routing', () => {
 
   beforeEach(() => {
     jest.clearAllMocks();
+    modelStore.inferencing = false;
+    modelStore.engine = {} as any;
+    modelStore.isContextLoading = false;
+    chatSessionStore.isGenerating = false;
+    chatSessionStore.isStopping = false;
+    deepLinkStore.pendingVoiceConversationRequestId = null;
+    (palStore as any).pals = [];
+    Object.defineProperty(chatSessionStore, 'activePalId', {
+      get: jest.fn(() => null),
+      configurable: true,
+    });
     getInitialURLSpy = jest.spyOn(Linking, 'getInitialURL');
+    getInitialURLSpy.mockResolvedValue(null);
     // The prod hub/run Linking effect surfaces an Alert on invalid links.
     // Benchmark URLs are invalid hub links, so silence the Alert here.
     alertSpy = jest.spyOn(Alert, 'alert').mockImplementation(() => {});
@@ -139,6 +163,109 @@ describe('useDeepLinking — cold-launch routing', () => {
     await Promise.resolve();
     await Promise.resolve();
 
+    expect(mockNavigate).not.toHaveBeenCalled();
+  });
+
+  it('starts a fresh voice chat for an assistant launch URL', async () => {
+    (global as any).__E2E__ = false;
+    getInitialURLSpy.mockResolvedValue('pocketpal://assistant/new-chat');
+
+    renderHook(() => useDeepLinking());
+
+    await Promise.resolve();
+    await Promise.resolve();
+
+    expect(chatSessionStore.resetActiveSession).toHaveBeenCalledTimes(1);
+    expect(deepLinkStore.requestVoiceConversation).toHaveBeenCalledTimes(1);
+    expect(mockNavigate).toHaveBeenCalledWith(ROUTES.CHAT);
+  });
+
+  it('rejects a voice launch instead of parking it without a model', async () => {
+    (global as any).__E2E__ = false;
+    modelStore.engine = undefined;
+    getInitialURLSpy.mockResolvedValue('pocketpal://assistant/new-chat');
+
+    renderHook(() => useDeepLinking());
+
+    await Promise.resolve();
+    await Promise.resolve();
+
+    expect(Alert.alert).toHaveBeenCalled();
+    expect(deepLinkStore.clearVoiceConversationRequest).toHaveBeenCalled();
+    expect(deepLinkStore.requestVoiceConversation).not.toHaveBeenCalled();
+    expect(chatSessionStore.resetActiveSession).not.toHaveBeenCalled();
+    expect(mockNavigate).not.toHaveBeenCalled();
+  });
+
+  it('rejects a voice launch for a video-capable Pal', async () => {
+    (global as any).__E2E__ = false;
+    (palStore as any).pals = [{id: 'video-pal', capabilities: {video: true}}];
+    Object.defineProperty(chatSessionStore, 'activePalId', {
+      get: jest.fn(() => 'video-pal'),
+      configurable: true,
+    });
+    getInitialURLSpy.mockResolvedValue('pocketpal://assistant/new-chat');
+
+    renderHook(() => useDeepLinking());
+
+    await Promise.resolve();
+    await Promise.resolve();
+
+    expect(deepLinkStore.requestVoiceConversation).not.toHaveBeenCalled();
+    expect(chatSessionStore.resetActiveSession).not.toHaveBeenCalled();
+    expect(mockNavigate).not.toHaveBeenCalled();
+  });
+
+  it('enables the launcher only while a model engine is ready', () => {
+    const {unmount} = renderHook(() => useDeepLinking());
+
+    expect(setVoiceChatLauncherEnabled).toHaveBeenLastCalledWith(true);
+
+    act(() => {
+      runInAction(() => {
+        modelStore.engine = undefined;
+      });
+    });
+
+    expect(setVoiceChatLauncherEnabled).toHaveBeenLastCalledWith(false);
+    unmount();
+  });
+
+  it('clears a pending request when the app leaves the foreground', () => {
+    let appStateHandler: ((state: string) => void) | undefined;
+    const remove = jest.fn();
+    const appStateSpy = jest
+      .spyOn(AppState, 'addEventListener')
+      .mockImplementation((event: any, handler: any) => {
+        if (event === 'change') {
+          appStateHandler = handler;
+        }
+        return {remove} as any;
+      });
+    deepLinkStore.pendingVoiceConversationRequestId = 99;
+
+    const {unmount} = renderHook(() => useDeepLinking());
+    act(() => appStateHandler?.('background'));
+
+    expect(deepLinkStore.clearVoiceConversationRequest).toHaveBeenCalled();
+    unmount();
+    expect(remove).toHaveBeenCalled();
+    appStateSpy.mockRestore();
+  });
+
+  it('does not replace an active generation with a voice chat', async () => {
+    (global as any).__E2E__ = false;
+    modelStore.inferencing = true;
+    getInitialURLSpy.mockResolvedValue('pocketpal://assistant/new-chat');
+
+    renderHook(() => useDeepLinking());
+
+    await Promise.resolve();
+    await Promise.resolve();
+
+    expect(Alert.alert).toHaveBeenCalled();
+    expect(chatSessionStore.resetActiveSession).not.toHaveBeenCalled();
+    expect(deepLinkStore.requestVoiceConversation).not.toHaveBeenCalled();
     expect(mockNavigate).not.toHaveBeenCalled();
   });
 

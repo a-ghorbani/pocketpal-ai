@@ -67,6 +67,19 @@
             <data android:scheme="pocketpal" android:host="checkout" />
         </intent-filter>
       </activity>
+      <activity-alias
+        android:name=".VoiceChatActivity"
+        android:targetActivity=".MainActivity"
+        android:label="@string/voice_chat_app_name"
+        android:icon="@mipmap/ic_launcher"
+        android:roundIcon="@mipmap/ic_launcher_round"
+        android:enabled="false"
+        android:exported="true">
+        <intent-filter>
+            <action android:name="android.intent.action.MAIN" />
+            <category android:name="android.intent.category.LAUNCHER" />
+        </intent-filter>
+      </activity-alias>
 
         <!-- Optional native library for OpenCL (GPU acceleration) -->
         <uses-native-library

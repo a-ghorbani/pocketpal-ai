@@ -33,11 +33,19 @@ jest.mock('../../../store', () => ({
   chatSessionStore: {
     activePalId: null,
   },
+  deepLinkStore: {
+    pendingVoiceConversationRequestId: null,
+    consumeVoiceConversationRequest: jest.fn(),
+  },
   modelStore: {
     activeModel: null,
   },
   palStore: {
     pals: [],
+  },
+  startupSelectionStore: {
+    restoreAttempted: true,
+    isRestoring: false,
   },
   uiStore: {
     colorScheme: 'light',
