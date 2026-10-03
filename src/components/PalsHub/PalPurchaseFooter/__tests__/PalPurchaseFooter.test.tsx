@@ -1,5 +1,5 @@
 import React from 'react';
-import {Alert, Platform} from 'react-native';
+import {Alert, Linking, Platform} from 'react-native';
 import {runInAction} from 'mobx';
 
 import {act, render, fireEvent, waitFor} from '../../../../../jest/test-utils';
@@ -99,20 +99,16 @@ describe('PalPurchaseFooter', () => {
     (Platform as any).OS = originalOS;
   });
 
-  it('renders name, the store-priced Buy button and the one-time line in order', () => {
+  it('renders the name above the store-priced Buy button', () => {
     purchasable();
     const {getByTestId, getByText, toJSON} = setup();
 
     expect(getByTestId('buy-button')).toBeTruthy();
     expect(getByText('Get for 4,99 €')).toBeTruthy();
     const text = JSON.stringify(toJSON());
-    const name = text.indexOf('Story Pal');
-    const button = text.indexOf('Get for 4,99 €');
-    const line = text.indexOf(
-      'One-time purchase. No subscription. No account needed.',
+    expect(text.indexOf('Story Pal')).toBeLessThan(
+      text.indexOf('Get for 4,99 €'),
     );
-    expect(name).toBeLessThan(button);
-    expect(button).toBeLessThan(line);
   });
 
   it('takes the price only from the store product', () => {
@@ -162,9 +158,7 @@ describe('PalPurchaseFooter', () => {
       purchaseStore.records['pal-1'] = record('pending_payment');
     });
     const {getByText, queryByTestId} = setup();
-    expect(
-      getByText("Payment pending — we'll unlock it as soon as it clears"),
-    ).toBeTruthy();
+    expect(getByText('Payment pending')).toBeTruthy();
     expect(queryByTestId('buy-button')).toBeNull();
   });
 
@@ -173,7 +167,7 @@ describe('PalPurchaseFooter', () => {
       purchaseStore.records['pal-1'] = record('unlocking');
     });
     const {getByText, getByTestId} = setup();
-    expect(getByText('Paid — unlocking…')).toBeTruthy();
+    expect(getByText('Unlocking…')).toBeTruthy();
     fireEvent.press(getByTestId('purchase-retry-button'));
     expect(purchaseStore.retry).toHaveBeenCalledWith('pal-1');
   });
@@ -184,31 +178,34 @@ describe('PalPurchaseFooter', () => {
     });
     const {getByTestId} = setup();
     expect(getByTestId('purchase-installing')).toBeTruthy();
+    expect(getByTestId('purchase-installing-text')).toHaveTextContent(
+      'Unlocking…',
+    );
   });
 
-  it('shows the iOS no-longer-available copy with the support code', () => {
+  it('shows the iOS no-longer-available copy with a refund link and the support code', () => {
     (Platform as any).OS = 'ios';
+    const openURL = jest.spyOn(Linking, 'openURL').mockResolvedValue(true);
     runInAction(() => {
       purchaseStore.records['pal-1'] = record('unfulfillable');
     });
     const {getByTestId} = setup();
     expect(getByTestId('purchase-unfulfillable')).toHaveTextContent(
-      'This Pal is no longer available. Request a refund from Apple at reportaproblem.apple.com.',
+      'This Pal is no longer available. You can ask Apple for a refund.',
     );
     expect(getByTestId('purchase-support-code')).toHaveTextContent(
       'Support code: SUP-7',
     );
+
+    fireEvent.press(getByTestId('purchase-refund-link'));
+
+    expect(openURL).toHaveBeenCalledWith('https://reportaproblem.apple.com');
+    openURL.mockRestore();
   });
 
   it.each([
-    [
-      false,
-      "This purchase couldn't be completed. Google will refund it automatically within 3 days.",
-    ],
-    [
-      true,
-      'This Pal was withdrawn. Your purchase is being refunded to your Google Play account.',
-    ],
+    [false, "This purchase couldn't be completed. Google will refund you."],
+    [true, 'This Pal was withdrawn. Contact support for a refund.'],
   ])(
     'shows the Android copy for withdrawn after delivery %p with the support code',
     (delivered, text) => {
@@ -219,8 +216,9 @@ describe('PalPurchaseFooter', () => {
           delivered ? {withdrawnAfterDelivery: true} : {},
         );
       });
-      const {getByTestId} = setup();
+      const {getByTestId, queryByTestId} = setup();
       expect(getByTestId('purchase-unfulfillable')).toHaveTextContent(text);
+      expect(queryByTestId('purchase-refund-link')).toBeNull();
       expect(getByTestId('purchase-support-code')).toHaveTextContent(
         'Support code: SUP-7',
       );
@@ -235,26 +233,6 @@ describe('PalPurchaseFooter', () => {
     });
     const {queryByTestId} = setup();
     expect(queryByTestId('buy-button')).toBeNull();
-  });
-
-  it('says creator updates are optional under the one-time line', () => {
-    purchasable();
-    const {getByTestId, toJSON} = setup();
-    expect(getByTestId('purchase-updates-optional')).toHaveTextContent(
-      'Creator updates are optional — the version you buy stays yours.',
-    );
-    const text = JSON.stringify(toJSON());
-    expect(
-      text.indexOf('One-time purchase. No subscription. No account needed.'),
-    ).toBeLessThan(text.indexOf('Creator updates are optional'));
-  });
-
-  it('leaves out the updates line without Buy', () => {
-    runInAction(() => {
-      purchaseStore.records['pal-1'] = record('active');
-    });
-    const {queryByTestId} = setup();
-    expect(queryByTestId('purchase-updates-optional')).toBeNull();
   });
 
   describe('creator update', () => {
@@ -272,13 +250,10 @@ describe('PalPurchaseFooter', () => {
       });
 
     it.each([
-      [
-        undefined,
-        "Update available from its creator. Your current version keeps working if you don't update.",
-      ],
+      [undefined, 'A new version from the creator is available.'],
       [
         'Fixes a typo',
-        "Update available from its creator: Fixes a typo. Your current version keeps working if you don't update.",
+        'A new version from the creator is available: Fixes a typo.',
       ],
     ])('prompts with note %p beside Owned', (note, text) => {
       withUpdate(note);
@@ -306,9 +281,8 @@ describe('PalPurchaseFooter', () => {
       fireEvent.press(getByTestId('pal-update-button'));
 
       expect(
-        getByText(
-          'Updating replaces the parts the creator changed, including any edits you made to those parts. Everything else stays as it is.',
-        ).props.testID,
+        getByText('This replaces your edits to the parts the creator changed.')
+          .props.testID,
       ).toBe('pal-update-confirm-text');
       expect(getByTestId('pal-update-confirm')).toHaveTextContent('Update');
       expect(getByTestId('pal-update-cancel')).toHaveTextContent('Cancel');
@@ -416,32 +390,20 @@ describe('PalPurchaseFooter', () => {
       setPhase('pal-1', 'invalid');
     });
     const {getByText, getByTestId} = setup();
-    expect(
-      getByText(
-        "We couldn't verify this purchase. Try Restore purchases, or contact support.",
-      ),
-    ).toBeTruthy();
+    expect(getByText("We couldn't verify this purchase.")).toBeTruthy();
     expect(getByTestId('buy-button')).toBeTruthy();
   });
 
-  it.each([
-    ['ios', 'App Store'],
-    ['android', 'Google Play'],
-  ])('shows the %s confirmation, support code and model step', (os, store) => {
-    (Platform as any).OS = os;
+  it('shows only the model step once the purchase is ready', () => {
     runInAction(() => {
       purchaseStore.records['pal-1'] = record('active');
       setPhase('pal-1', 'ready');
       palStore.pals = [localPal];
     });
-    const {getByText, getByTestId} = setup();
-    expect(
-      getByText(
-        `Story Pal is yours to use, with no subscription. It's tied to your ${store} account — reinstall and tap Restore purchases to get it back.`,
-      ),
-    ).toBeTruthy();
-    expect(getByText('Support code: SUP-7')).toBeTruthy();
+    const {getByTestId, queryByTestId} = setup();
+    expect(getByTestId('purchase-ready')).toBeTruthy();
     expect(getByTestId('model-step-mock')).toBeTruthy();
+    expect(queryByTestId('purchase-support-code')).toBeNull();
   });
 
   describe('owned', () => {
@@ -597,6 +559,9 @@ describe('PalPurchaseFooter', () => {
       setPhase('pal-1', 'restore_needed');
     });
     const {getByTestId} = setup();
+    expect(getByTestId('purchase-restore-needed')).not.toHaveTextContent(
+      /store account/,
+    );
     fireEvent.press(getByTestId('purchase-restore-button'));
     expect(purchaseStore.restore).toHaveBeenCalled();
   });

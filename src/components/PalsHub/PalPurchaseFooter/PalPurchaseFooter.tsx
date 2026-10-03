@@ -1,5 +1,5 @@
 import React, {useContext, useEffect, useRef, useState} from 'react';
-import {Alert, Platform, View} from 'react-native';
+import {Alert, View} from 'react-native';
 
 import {observer} from 'mobx-react-lite';
 import {ActivityIndicator, Button, Text} from 'react-native-paper';
@@ -13,9 +13,8 @@ import {palStore, purchaseStore} from '../../../store';
 import type {PalsHubPal} from '../../../types/palshub';
 import type {PendingUpdate} from '../../../store/PurchaseStore';
 
-import {undeliverableText} from '../../../utils/undeliverableCopy';
-
 import {PalModelStep} from '../PalModelStep';
+import {UndeliverableText} from '../UndeliverableText';
 import {createStyles} from './styles';
 
 interface PalPurchaseFooterProps {
@@ -125,10 +124,6 @@ export const PalPurchaseFooter: React.FC<PalPurchaseFooterProps> = observer(
           style={styles.button}>
           {t(copy.buy, {price: product?.displayPrice ?? ''})}
         </Button>
-        <Text style={styles.caption}>{copy.oneTime}</Text>
-        <Text testID="purchase-updates-optional" style={styles.caption}>
-          {copy.updatesOptional}
-        </Text>
         {!signedIn && onSignInPress && (
           <Button
             testID="purchase-signin-link"
@@ -216,24 +211,13 @@ export const PalPurchaseFooter: React.FC<PalPurchaseFooterProps> = observer(
       switch (phase) {
         case 'ready':
           return (
-            <>
-              {status(
-                t(Platform.OS === 'ios' ? copy.readyIos : copy.readyAndroid, {
-                  name: pal.title,
-                }),
-                'purchase-ready',
-              )}
-              {record?.supportCode &&
-                status(
-                  t(copy.supportCode, {code: record.supportCode}),
-                  'purchase-support-code',
-                )}
+            <View style={styles.group} testID="purchase-ready">
               {localPal && (
                 <PalModelStep localPal={localPal} onChatStarted={onClose} />
               )}
               {linkPrompt}
               {linkConflict}
-            </>
+            </View>
           );
         case 'pending_payment':
           return status(copy.pending, 'purchase-pending');
@@ -260,10 +244,9 @@ export const PalPurchaseFooter: React.FC<PalPurchaseFooterProps> = observer(
         case 'unfulfillable':
           return (
             <>
-              {status(
-                undeliverableText(record, copy),
-                'purchase-unfulfillable',
-              )}
+              <Text testID="purchase-unfulfillable" style={styles.status}>
+                <UndeliverableText record={record} />
+              </Text>
               {record?.supportCode &&
                 status(
                   t(copy.supportCode, {code: record.supportCode}),
@@ -300,8 +283,7 @@ export const PalPurchaseFooter: React.FC<PalPurchaseFooterProps> = observer(
           );
         case 'restore_needed':
           return (
-            <>
-              {status(copy.restoreNeeded, 'purchase-restore-needed')}
+            <View style={styles.group} testID="purchase-restore-needed">
               <Button
                 testID="purchase-restore-button"
                 mode="outlined"
@@ -311,7 +293,7 @@ export const PalPurchaseFooter: React.FC<PalPurchaseFooterProps> = observer(
                 style={styles.button}>
                 {copy.restorePurchases}
               </Button>
-            </>
+            </View>
           );
       }
       if (showModelStep && localPal) {

@@ -5,6 +5,7 @@ import {observer} from 'mobx-react-lite';
 import {Button, Card, Text} from 'react-native-paper';
 
 import {Divider} from '../../components';
+import {UndeliverableText} from '../../components/PalsHub';
 import {useTheme} from '../../hooks';
 import {t} from '../../locales';
 import {L10nContext} from '../../utils';
@@ -12,7 +13,6 @@ import {authService} from '../../services';
 import {ACCOUNT_LINK_ENABLED} from '../../services/iap/accountLink';
 import {purchaseStore} from '../../store';
 import type {LedgerRecord} from '../../store/PurchaseStore';
-import {undeliverableText} from '../../utils/undeliverableCopy';
 
 import {createStyles} from './styles';
 
@@ -39,14 +39,22 @@ export const PurchasesCard: React.FC<PurchasesCardProps> = observer(
         record.status === 'held_invalid'
       ) {
         const text =
-          record.status === 'held_invalid'
-            ? l10n.palsScreen.purchase.heldInvalid
-            : undeliverableText(record, l10n.palsScreen.purchase);
-        return record.supportCode
-          ? `${text}\n${t(l10n.palsScreen.purchase.supportCode, {
+          record.status === 'held_invalid' ? (
+            l10n.palsScreen.purchase.heldInvalid
+          ) : (
+            <UndeliverableText record={record} />
+          );
+        return record.supportCode ? (
+          <>
+            {text}
+            {'\n'}
+            {t(l10n.palsScreen.purchase.supportCode, {
               code: record.supportCode,
-            })}`
-          : text;
+            })}
+          </>
+        ) : (
+          text
+        );
       }
       const status =
         record.status === 'active' ? copy.statusOwned : copy.statusUnlocking;

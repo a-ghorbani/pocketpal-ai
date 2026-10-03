@@ -16,10 +16,8 @@ export const createStyles = (theme: Theme) =>
     button: {
       alignSelf: 'stretch',
     },
-    caption: {
-      fontSize: 12,
-      color: theme.colors.onSurfaceVariant,
-      textAlign: 'center',
+    group: {
+      gap: 8,
     },
     prompt: {
       alignItems: 'center',
