@@ -3,7 +3,13 @@ import {View, TouchableOpacity, Image, Alert} from 'react-native';
 
 import {observer} from 'mobx-react-lite';
 import {useNavigation} from '@react-navigation/native';
-import {Text, Card, Chip, IconButton} from 'react-native-paper';
+import {
+  ActivityIndicator,
+  Text,
+  Card,
+  Chip,
+  IconButton,
+} from 'react-native-paper';
 
 import {
   StarIcon,
@@ -20,14 +26,14 @@ import {createStyles} from './styles';
 
 import type {Pal} from '../../../../store/PalStore';
 import {palStore} from '../../../../store/PalStore';
-import {chatSessionStore, modelStore} from '../../../../store';
+import {modelStore, purchaseStore} from '../../../../store';
 
 import type {PalsHubPal} from '../../../../types/palshub';
 
 import {L10nContext} from '../../../../utils';
 import {t} from '../../../../locales';
 import {exportPal} from '../../../../utils/exportUtils';
-import {ROUTES} from '../../../../utils/navigationConstants';
+import {activatePalWithModel} from '../../../../utils/activatePal';
 import {getContrastColor} from '../../../../utils/colorUtils';
 import {getFullThumbnailUri} from '../../../../utils/imageUtils';
 import {getPalDisplayLabel} from '../../../../utils/palshub-display';
@@ -38,7 +44,10 @@ interface SquarePalCardProps {
   pal: PalsHubPal | Pal;
   onPress: () => void;
   isLocal?: boolean;
+  onUpdatePress?: (palshubId: string) => void;
 }
+
+const UPDATE_BADGE_HIT_SLOP = {top: 13, bottom: 13, left: 4, right: 4};
 
 const generateParameterSummary = (pal: Pal): string => {
   // Safety check for parameters
@@ -205,7 +214,7 @@ const PalThumbnail: React.FC<{
 };
 
 export const SquarePalCard: React.FC<SquarePalCardProps> = observer(
-  ({pal, onPress, isLocal = false}) => {
+  ({pal, onPress, isLocal = false, onUpdatePress}) => {
     const theme = useTheme();
     const styles = createStyles(theme);
     const l10n = useContext(L10nContext);
@@ -267,47 +276,8 @@ export const SquarePalCard: React.FC<SquarePalCardProps> = observer(
       }
     };
 
-    // 3-step pal activation logic from ChatPalModelPickerSheet
-    const activatePalAndNavigate = async (localPal: Pal) => {
-      // Step 1: Set the pal as active
-      await chatSessionStore.setActivePal(localPal.id);
-
-      // Step 2 & 3: Handle model loading logic
-      if (localPal.defaultModel) {
-        if (!modelStore.activeModel) {
-          // Step 2: No model loaded, load the pal's default model
-          const palDefaultModel = modelStore.availableModels.find(
-            m => m.id === localPal.defaultModel?.id,
-          );
-          if (palDefaultModel) {
-            await modelStore.selectModel(palDefaultModel);
-          }
-        } else if (localPal.defaultModel.id !== modelStore.activeModelId) {
-          // Step 3: Different model loaded, ask user
-          const palDefaultModel = modelStore.availableModels.find(
-            m => m.id === localPal.defaultModel?.id,
-          );
-          if (palDefaultModel) {
-            Alert.alert(
-              'Switch Model?',
-              `Switch to "${palDefaultModel.name}" for this pal?`,
-              [
-                {text: 'Keep Current', style: 'cancel'},
-                {
-                  text: 'Switch',
-                  onPress: () => {
-                    modelStore.selectModel(palDefaultModel);
-                  },
-                },
-              ],
-            );
-          }
-        }
-      }
-
-      // Navigate to chat
-      (navigation as any).navigate(ROUTES.CHAT);
-    };
+    const activatePalAndNavigate = (localPal: Pal) =>
+      activatePalWithModel(localPal, navigation as any);
 
     // Action handlers for local pals only
     const handleDelete = () => {
@@ -353,6 +323,17 @@ export const SquarePalCard: React.FC<SquarePalCardProps> = observer(
     const palCreator = isPalsHubPal(pal) ? pal.creator : undefined;
     const isProtected =
       isPalsHubPal(pal) && pal.protection_level === 'reveal_on_purchase';
+    const palshubId = isPalsHubPal(pal) ? pal.id : pal.palshub_id;
+    const purchaseStatus = palshubId
+      ? purchaseStore.recordFor(palshubId)?.status
+      : undefined;
+    const isPending = purchaseStatus === 'pending_payment';
+    const isUnlocking =
+      purchaseStatus === 'unlocking' || purchaseStatus === 'granted';
+    const updatePalId =
+      palshubId && purchaseStore.updateAvailable(palshubId)
+        ? palshubId
+        : undefined;
 
     // Create card style with optional color theming
     const cardStyle = [
@@ -369,7 +350,17 @@ export const SquarePalCard: React.FC<SquarePalCardProps> = observer(
           testID={`${isPalsHubPal(pal) ? 'palshub' : 'local'}-pal-card-${pal.id}`}
           style={styles.container}
           onPress={onPress}
-          activeOpacity={0.7}>
+          activeOpacity={0.7}
+          {...(updatePalId && {
+            accessibilityActions: [
+              {name: 'update', label: l10n.palsScreen.purchase.badgeUpdate},
+            ],
+            onAccessibilityAction: event => {
+              if (event.nativeEvent.actionName === 'update') {
+                onUpdatePress?.(updatePalId);
+              }
+            },
+          })}>
           <Card elevation={0} style={cardStyle} contentStyle={styles.cardInner}>
             <View style={styles.cardContent}>
               {/* Thumbnail */}
@@ -511,6 +502,37 @@ export const SquarePalCard: React.FC<SquarePalCardProps> = observer(
                       </View>
                     )}
                   </View>
+                  {isPending && (
+                    <View
+                      testID="pal-badge-pending"
+                      style={styles.purchaseBadge}>
+                      <Text style={styles.purchaseBadgeText} numberOfLines={1}>
+                        {l10n.palsScreen.purchase.badgePending}
+                      </Text>
+                    </View>
+                  )}
+                  {isUnlocking && (
+                    <ActivityIndicator
+                      testID="pal-badge-unlocking"
+                      size={12}
+                      accessibilityLabel={
+                        l10n.palsScreen.purchase.badgeUnlocking
+                      }
+                    />
+                  )}
+                  {updatePalId && (
+                    <TouchableOpacity
+                      testID="pal-badge-update"
+                      style={styles.purchaseBadge}
+                      accessibilityRole="button"
+                      accessibilityLabel={l10n.palsScreen.purchase.badgeUpdate}
+                      hitSlop={UPDATE_BADGE_HIT_SLOP}
+                      onPress={() => onUpdatePress?.(updatePalId)}>
+                      <Text style={styles.purchaseBadgeText} numberOfLines={1}>
+                        {l10n.palsScreen.purchase.badgeUpdate}
+                      </Text>
+                    </TouchableOpacity>
+                  )}
                 </View>
               </View>
             </View>

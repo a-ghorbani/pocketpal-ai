@@ -205,7 +205,13 @@
     "removeRemoteModel": "Remove {{modelName}} ({{serverName}})?",
     "retryConnection": "Retry",
     "enterUrlManually": "Enter URL manually",
-    "manageServers": "Manage Servers"
+    "manageServers": "Manage Servers",
+    "purchases": {
+      "title": "Purchases",
+      "statusOwned": "Purchased",
+      "statusUnlocking": "Unlocking",
+      "link": "Sign in to use on other devices"
+    }
   },
   "memory": {
     "shortWarning": "Memory Warning",
@@ -1091,8 +1097,6 @@
       "download": "Download",
       "getFree": "Get Free"
     },
-    "premiumPalDescription": "Premium pal from the palshub.ai community",
-    "premiumInfoText": "Visit palshub.ai to explore more pals",
     "sortOptions": {
       "newest": "Newest",
       "oldest": "Oldest",
@@ -1116,15 +1120,45 @@
       "error": "Error",
       "failedToLoadDetails": "Failed to load pal details",
       "failedToDownload": "Failed to download pal",
-      "premiumPalMessage": "This is a Premium Pal.\n• If you've already unlocked it with your Palshub account, simply sign in to access the full details.\n• Haven't unlocked it yet? Visit palshub.ai app to learn more.",
-      "notAvailable": "N/A",
-      "buyOnPalshub": "Buy on Palshub",
-      "finalizingPurchase": "Finalizing your purchase…",
-      "processingPurchase": "Processing — will unlock shortly.",
-      "checkoutSessionExpired": "Your session expired. Sign in again to continue.",
-      "signInAgain": "Sign in again",
-      "palNotAvailable": "This pal is not available for purchase right now.",
-      "checkoutFailed": "Something went wrong. Please try again."
+      "notAvailable": "N/A"
+    },
+    "purchase": {
+      "buy": "{{price}}",
+      "open": "Open",
+      "install": "Install",
+      "pending": "Pending",
+      "unlocking": "Unlocking",
+      "retry": "Retry",
+      "supportCode": "Support code: {{code}}",
+      "noLongerAvailable": "This Pal is no longer available. You can {{refundLink}}.",
+      "refundLink": "ask Apple for a refund",
+      "notCompleted": "This purchase couldn't be completed. Google will refund you.",
+      "withdrawnRefunding": "This Pal was withdrawn. Contact support for a refund.",
+      "invalid": "We couldn't verify this purchase.",
+      "heldInvalid": "We couldn't unlock this purchase. Contact support with this code.",
+      "recommendedModel": "Recommended model",
+      "sampleExchange": "Sample conversation",
+      "signInLine": "Already own it? Sign in",
+      "linkPrompt": "Sign in to use it on your other devices too",
+      "linkSignIn": "Sign in",
+      "dismiss": "Not now",
+      "linkConflict": "These purchases are linked to another account.",
+      "restorePurchases": "Restore purchases",
+      "badgePending": "Pending",
+      "badgeUnlocking": "Unlocking",
+      "badgeUpdate": "Update available",
+      "updatePrompt": "A new version from the creator is available.",
+      "updatePromptWithNote": "A new version from the creator is available: {{note}}.",
+      "updateButton": "Update",
+      "updateConfirmText": "This replaces your edits to the parts the creator changed.",
+      "updateConfirm": "Update",
+      "updateCancel": "Cancel",
+      "modelStep": {
+        "download": "Download · {{size}}",
+        "startChat": "Start chat",
+        "needsMemory": "This Pal needs a device with at least {{size}} of memory for its smallest model.",
+        "noModelFits": "This device doesn't have enough memory for this Pal."
+      }
     }
   },
   "validation": {

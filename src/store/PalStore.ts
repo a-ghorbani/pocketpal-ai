@@ -18,7 +18,6 @@
 
 import {v4 as uuidv4} from 'uuid';
 import {makeAutoObservable, runInAction} from 'mobx';
-import {Platform} from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 import {HF_DOMAIN} from '../config/urls';
@@ -27,8 +26,6 @@ import {palRepository} from '../repositories/PalRepository';
 
 import {hfAsModel} from '../utils';
 import {resolveHFModelForDownload} from '../utils/hfResolve';
-import {isUSStorefront} from '../utils/region';
-import NativeExternalContentLink from '../specs/NativeExternalContentLink';
 import {palsHubService} from '../services';
 import {registerDefaultTalents} from '../services/talents';
 import {LOOKIE_DEFAULT_MODEL} from './builtinPalModels';
@@ -37,7 +34,8 @@ import {defaultCompletionParams} from '../utils/completionSettingsVersions';
 import {parsePalsHubTemplate} from '../utils/palshub-template-parser';
 import {getDisplayNameFromFilename} from '../utils/formatters';
 
-import type {Pal, ParameterDefinition} from '../types/pal';
+import type {Pal, PalUpdate, ParameterDefinition} from '../types/pal';
+import type {CreatorField} from '../services/iap/creatorContent';
 import type {
   ModelReference,
   PalsHubPal,
@@ -55,6 +53,67 @@ import {downloadPalThumbnail, deletePalThumbnail} from '../utils/imageUtils';
 const LOOKIE_SEEDED_KEY = 'PalStore.builtin.Lookie.seeded';
 const PIP_SEEDED_KEY = 'PalStore.builtin.Pip.seeded';
 
+interface CreatorUpdateContext {
+  fresh: Pal;
+  current: Pal;
+  palsHubPal: PalsHubPal;
+  localPalId: string;
+}
+
+const CREATOR_UPDATES: Record<
+  CreatorField,
+  (context: CreatorUpdateContext) => PalUpdate | Promise<PalUpdate>
+> = {
+  title: ({fresh}) => ({name: fresh.name}),
+  description: ({fresh}) => ({description: fresh.description ?? ''}),
+  system_prompt: ({fresh, current}) => {
+    if (!fresh.systemPrompt) {
+      return {};
+    }
+    const keptParameters = Object.fromEntries(
+      fresh.parameterSchema
+        .filter(def => current.parameters?.[def.key] !== undefined)
+        .map(def => [def.key, current.parameters[def.key]]),
+    );
+    return {
+      systemPrompt: fresh.systemPrompt,
+      originalSystemPrompt: fresh.originalSystemPrompt ?? '',
+      parameterSchema: fresh.parameterSchema,
+      parameters: {...fresh.parameters, ...keptParameters},
+    };
+  },
+  model_reference: ({fresh}) => ({defaultModel: fresh.defaultModel ?? null}),
+  model_settings: ({fresh}) => ({
+    rawPalshubGenerationSettings: fresh.rawPalshubGenerationSettings ?? null,
+  }),
+  pact: ({fresh}) => ({pact: fresh.pact ?? {talents: []}}),
+  greeting: ({fresh}) => ({greeting: fresh.greeting ?? null}),
+  categories: ({fresh}) => ({categories: fresh.categories}),
+  tags: ({fresh}) => ({tags: fresh.tags}),
+  creator: ({fresh}) => ({creator_info: fresh.creator_info}),
+  protection_level: ({fresh}) => ({protection_level: fresh.protection_level}),
+  thumbnail_url: async ({palsHubPal, localPalId}) => {
+    if (!palsHubPal.thumbnail_url) {
+      return {};
+    }
+    return {
+      thumbnail_url: await downloadPalThumbnail(
+        localPalId,
+        palsHubPal.thumbnail_url,
+      ),
+    };
+  },
+};
+
+export interface CreatorUpdateResult {
+  thumbnailFailed: boolean;
+}
+
+export interface OwnedPalInstall {
+  localPal: Pal;
+  created: boolean;
+}
+
 class PalStore {
   // Core pals storage
   pals: Pal[] = [];
@@ -67,17 +126,20 @@ class PalStore {
   searchFilters: SearchFilters = {};
   syncState: SyncState = {status: 'idle'};
 
-  // Checkout eligibility state
-  isCheckoutEligible: boolean = false;
-
   // Migration state
   isMigrating: boolean = false;
   migrationComplete: boolean = false;
   migrationVersion: string = '1.0';
 
+  readonly ready: Promise<void>;
+  private palshubInsertChains = new Map<string, Promise<unknown>>();
+
   constructor() {
-    makeAutoObservable(this);
-    this.initialize();
+    makeAutoObservable<PalStore, 'palshubInsertChains'>(this, {
+      ready: false,
+      palshubInsertChains: false,
+    });
+    this.ready = this.initialize();
     console.log('Pal store initialized');
     console.log('Pals number: ', this.pals.length);
   }
@@ -103,9 +165,6 @@ class PalStore {
       // Register talent engines (idempotent)
       registerDefaultTalents();
 
-      // Check checkout eligibility for buy button gating
-      this.checkCheckoutEligibility();
-
       console.log('Pal store initialization completed');
 
       runInAction(() => {
@@ -117,36 +176,6 @@ class PalStore {
       runInAction(() => {
         this.isMigrating = false;
         this.migrationComplete = false;
-      });
-    }
-  }
-
-  private async checkCheckoutEligibility() {
-    // E2E builds have no App Store storefront, so force eligibility to
-    // exercise the buy button. Compiled out of prod (`__E2E__` is false).
-    if (__E2E__) {
-      runInAction(() => {
-        this.isCheckoutEligible = true;
-      });
-      return;
-    }
-
-    try {
-      // Gate on real purchase eligibility per platform, not device locale:
-      // Android queries Play EXTERNAL_CONTENT_LINK availability; iOS keeps the
-      // StoreKit storefront signal. A null Android module or a thrown probe
-      // leaves the flag false (fail-closed → info-text fallback).
-      const eligible =
-        Platform.OS === 'android'
-          ? await NativeExternalContentLink?.isExternalContentLinkAvailable()
-          : await isUSStorefront();
-      runInAction(() => {
-        this.isCheckoutEligible = eligible === true;
-      });
-    } catch (error) {
-      console.warn('Failed to check checkout eligibility:', error);
-      runInAction(() => {
-        this.isCheckoutEligible = false;
       });
     }
   }
@@ -195,7 +224,7 @@ class PalStore {
   /**
    * Updates an existing pal
    */
-  updatePal = async (id: string, updates: Partial<Pal>): Promise<void> => {
+  updatePal = async (id: string, updates: PalUpdate): Promise<void> => {
     try {
       const updatedPal = await palRepository.updatePal(id, updates);
       if (updatedPal) {
@@ -266,68 +295,129 @@ class PalStore {
    * Downloads a PalsHub pal and converts it to unified format
    */
   downloadPalsHubPal = async (palsHubPal: PalsHubPal): Promise<Pal> => {
-    try {
-      // For free pals, allow direct download without ownership check
-      // For premium pals, check ownership first
-      if (palsHubPal.price_cents > 0) {
-        const ownership = await palsHubService.checkPalOwnership(palsHubPal.id);
-        if (!ownership.owned) {
-          throw new Error('You must own this Pal to download it');
-        }
+    if (palsHubPal.price_cents > 0) {
+      const ownership = await palsHubService.checkPalOwnership(palsHubPal.id);
+      if (!ownership.owned) {
+        throw new Error('You must own this Pal to download it');
       }
+    }
+    const {pal} = await this.insertPalsHubPalOnce(palsHubPal.id, () =>
+      this.createPalFromPalsHub(palsHubPal),
+    );
+    return pal;
+  };
 
-      // Convert PalsHub pal to local format
-      const pal = await this.createLocalPalFromPalsHub(palsHubPal);
-      let relativeThumbnailPath: string | null = null;
+  installOwnedPal = async (
+    palsHubPal: PalsHubPal,
+  ): Promise<OwnedPalInstall> => {
+    if (!palsHubPal.system_prompt) {
+      throw new Error('An owned Pal cannot be installed without its prompt');
+    }
+    const {pal, created} = await this.insertPalsHubPalOnce(palsHubPal.id, () =>
+      this.createPalFromPalsHub(palsHubPal),
+    );
+    return {localPal: pal, created};
+  };
 
-      // Download thumbnail image if available
-      if (palsHubPal.thumbnail_url) {
-        try {
-          console.log('Downloading thumbnail for pal:', pal.name);
-          relativeThumbnailPath = await downloadPalThumbnail(
-            pal.id,
-            palsHubPal.thumbnail_url,
-          );
-
-          // Update the pal with the relative path (no file:// protocol)
-          pal.thumbnail_url = relativeThumbnailPath;
-          console.log(
-            'Thumbnail downloaded successfully:',
-            relativeThumbnailPath,
-          );
-        } catch (imageError) {
-          console.warn(
-            'Failed to download thumbnail, keeping remote URL:',
-            imageError,
-          );
-          // Keep the original remote URL as fallback
-          pal.thumbnail_url = palsHubPal.thumbnail_url;
-        }
-      }
-
-      try {
-        // Persist the pal to the database and add to store
-        return await this.addPal(pal);
-      } catch (dbError) {
-        // If database save fails, clean up the downloaded image
-        if (relativeThumbnailPath) {
-          try {
-            await deletePalThumbnail(relativeThumbnailPath);
-            console.log(
-              'Cleaned up thumbnail after database error:',
-              relativeThumbnailPath,
-            );
-          } catch (cleanupError) {
-            console.warn(
-              'Failed to cleanup thumbnail after database error:',
-              cleanupError,
-            );
+  insertPalsHubPalOnce = (
+    palshubId: string,
+    build: () => Promise<Pal>,
+  ): Promise<{pal: Pal; created: boolean}> => {
+    const previous =
+      this.palshubInsertChains.get(palshubId) ?? Promise.resolve();
+    const run = previous
+      .catch(() => undefined)
+      .then(async () => {
+        const existing = await palRepository.getPalByPalshubId(palshubId);
+        if (existing) {
+          if (!this.getPalById(existing.id)) {
+            runInAction(() => {
+              this.pals.push(existing);
+            });
           }
+          return {pal: existing, created: false};
         }
-        throw dbError;
+        return {pal: await build(), created: true};
+      });
+    this.palshubInsertChains.set(palshubId, run);
+    run
+      .finally(() => {
+        if (this.palshubInsertChains.get(palshubId) === run) {
+          this.palshubInsertChains.delete(palshubId);
+        }
+      })
+      .catch(() => undefined);
+    return run;
+  };
+
+  applyCreatorUpdate = async (
+    localPalId: string,
+    palsHubPal: PalsHubPal,
+    fields: ReadonlySet<CreatorField>,
+  ): Promise<CreatorUpdateResult> => {
+    const current = this.getPalById(localPalId);
+    if (!current || fields.size === 0) {
+      return {thumbnailFailed: false};
+    }
+    const fresh = await this.createLocalPalFromPalsHub(
+      fields.has('model_reference')
+        ? palsHubPal
+        : {...palsHubPal, model_reference: undefined},
+    );
+    const context = {fresh, current, palsHubPal, localPalId};
+    const updates: PalUpdate = {};
+    let thumbnailFailed = false;
+    for (const field of fields) {
+      try {
+        Object.assign(updates, await CREATOR_UPDATES[field](context));
+      } catch (error) {
+        if (field !== 'thumbnail_url') {
+          throw error;
+        }
+        console.warn('Failed to refresh thumbnail:', error);
+        thumbnailFailed = true;
       }
-    } catch (error) {
-      throw error;
+    }
+    await this.updatePal(localPalId, updates);
+    return {thumbnailFailed};
+  };
+
+  private createPalFromPalsHub = async (
+    palsHubPal: PalsHubPal,
+  ): Promise<Pal> => {
+    const pal = await this.createLocalPalFromPalsHub(palsHubPal);
+    let relativeThumbnailPath: string | null = null;
+
+    if (palsHubPal.thumbnail_url) {
+      try {
+        relativeThumbnailPath = await downloadPalThumbnail(
+          pal.id,
+          palsHubPal.thumbnail_url,
+        );
+        pal.thumbnail_url = relativeThumbnailPath;
+      } catch (imageError) {
+        console.warn(
+          'Failed to download thumbnail, keeping remote URL:',
+          imageError,
+        );
+        pal.thumbnail_url = palsHubPal.thumbnail_url;
+      }
+    }
+
+    try {
+      return await this.addPal(pal);
+    } catch (dbError) {
+      if (relativeThumbnailPath) {
+        try {
+          await deletePalThumbnail(relativeThumbnailPath);
+        } catch (cleanupError) {
+          console.warn(
+            'Failed to cleanup thumbnail after database error:',
+            cleanupError,
+          );
+        }
+      }
+      throw dbError;
     }
   };
 
