@@ -1,6 +1,15 @@
 pluginManagement { includeBuild("../node_modules/@react-native/gradle-plugin") }
 plugins { id("com.facebook.react.settings") }
 extensions.configure(com.facebook.react.ReactSettingsExtension){ ex -> ex.autolinkLibrariesFromCommand() }
+// WatermelonDB JSI adapter is not covered by autolinking: the package's
+// react-native.config.js only links native/android (legacy bridge), while the
+// app enables `jsi: true` in src/database/index.ts and needs native/android-jsi.
+// Without this include, clean builds fail at configuration time with
+// "Project with path ':watermelondb-jsi' could not be found in project ':app'"
+// (verified on a clean checkout: adding only the app-side `implementation`
+// line breaks configuration; this include fixes it).
+include ':watermelondb-jsi'
+project(':watermelondb-jsi').projectDir = new File(rootProject.projectDir, '../node_modules/@nozbe/watermelondb/native/android-jsi')
 rootProject.name = 'PocketPal'
 include ':app'
 includeBuild('../node_modules/@react-native/gradle-plugin')
