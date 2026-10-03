@@ -171,7 +171,6 @@ export class PurchaseStore {
   private requestedProducts = new Set<string>();
   private watching = new Set<string>();
   private started = false;
-  private downgraded = false;
   private recovering: Promise<void> | null = null;
   private recoverAgain = false;
   private appStateSubscription: {remove: () => void} | null = null;
@@ -203,7 +202,6 @@ export class PurchaseStore {
       | 'requestedProducts'
       | 'watching'
       | 'started'
-      | 'downgraded'
       | 'recovering'
       | 'recoverAgain'
       | 'appStateSubscription'
@@ -223,7 +221,6 @@ export class PurchaseStore {
       requestedProducts: false,
       watching: false,
       started: false,
-      downgraded: false,
       recovering: false,
       recoverAgain: false,
       appStateSubscription: false,
@@ -1063,12 +1060,6 @@ export class PurchaseStore {
           return 'close';
         default:
           this.deps.events.send(pal.id, 'purchase_error');
-          if (outcome.downgrade) {
-            this.downgraded = true;
-            runInAction(() => {
-              this.availability = 'unavailable';
-            });
-          }
           return 'close';
       }
     } finally {
@@ -1144,8 +1135,7 @@ export class PurchaseStore {
     await this.load();
     const available = await this.storePort.init();
     runInAction(() => {
-      this.availability =
-        available && !this.downgraded ? 'ready' : 'unavailable';
+      this.availability = available ? 'ready' : 'unavailable';
     });
     await this.drainQueue();
     if (!available) {

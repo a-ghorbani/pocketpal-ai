@@ -194,19 +194,19 @@ describe('NativeStore', () => {
       ['already-owned', {kind: 'already_owned'}],
       ['duplicate-purchase', {kind: 'already_owned'}],
       ['user-cancelled', {kind: 'cancelled'}],
-      ['billing-unavailable', {kind: 'error', downgrade: true}],
-      ['iap-not-available', {kind: 'error', downgrade: true}],
-      ['developer-error', {kind: 'error', downgrade: true}],
-      ['feature-not-supported', {kind: 'error', downgrade: true}],
-      ['item-unavailable', {kind: 'error', downgrade: true}],
-      ['sku-not-found', {kind: 'error', downgrade: true}],
-      ['network-error', {kind: 'error', downgrade: false}],
-      ['service-error', {kind: 'error', downgrade: false}],
+      ['billing-unavailable', {kind: 'error', code: 'billing-unavailable'}],
+      ['iap-not-available', {kind: 'error', code: 'iap-not-available'}],
+      ['developer-error', {kind: 'error', code: 'developer-error'}],
+      ['feature-not-supported', {kind: 'error', code: 'feature-not-supported'}],
+      ['item-unavailable', {kind: 'error', code: 'item-unavailable'}],
+      ['sku-not-found', {kind: 'error', code: 'sku-not-found'}],
+      ['network-error', {kind: 'error', code: 'network-error'}],
+      ['service-error', {kind: 'error', code: 'service-error'}],
     ])('maps error %s', async (code, expected) => {
       const events = captureListeners();
       const pending = store.purchase('pal.a', null);
       events.error({code, message: 'x'});
-      await expect(pending).resolves.toMatchObject(expected);
+      await expect(pending).resolves.toEqual(expected);
     });
 
     it('maps a rejected request by its code', async () => {
@@ -215,7 +215,6 @@ describe('NativeStore', () => {
       await expect(store.purchase('pal.a', null)).resolves.toEqual({
         kind: 'error',
         code: 'sku-not-found',
-        downgrade: true,
       });
     });
   });
@@ -300,18 +299,15 @@ describe('NativeStore', () => {
         'the store query throws',
         () => iap.getAvailablePurchases.mockRejectedValueOnce(new Error('x')),
       ],
-    ])(
-      'iOS: closes with a non-downgrade error when %s',
-      async (_n, arrange) => {
-        setOS('ios');
-        const events = captureListeners();
-        arrange();
-        await expect(
-          settleAfterGrace(store.purchase('pal.a', null)),
-        ).resolves.toEqual({kind: 'error', code: 'unknown', downgrade: false});
-        expect(events.counts()).toEqual({updates: 0, errors: 0});
-      },
-    );
+    ])('iOS: closes with an error when %s', async (_n, arrange) => {
+      setOS('ios');
+      const events = captureListeners();
+      arrange();
+      await expect(
+        settleAfterGrace(store.purchase('pal.a', null)),
+      ).resolves.toEqual({kind: 'error', code: 'unknown'});
+      expect(events.counts()).toEqual({updates: 0, errors: 0});
+    });
 
     it('iOS: an event within the grace period settles without a query', async () => {
       setOS('ios');

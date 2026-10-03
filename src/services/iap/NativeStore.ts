@@ -85,11 +85,7 @@ const outcomeForPurchase = (
   return {kind: 'purchased', tx};
 };
 
-const UNSETTLED_PURCHASE: PurchaseOutcome = {
-  kind: 'error',
-  code: 'unknown',
-  downgrade: false,
-};
+const UNSETTLED_PURCHASE: PurchaseOutcome = {kind: 'error', code: 'unknown'};
 
 const outcomeFromStoreIOS = async (
   productId: string,

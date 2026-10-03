@@ -84,8 +84,8 @@ describe('fakeStore', () => {
   });
 
   it.each([
-    ['error:developer-error', {kind: 'error', downgrade: true}],
-    ['error:network-error', {kind: 'error', downgrade: false}],
+    ['error:developer-error', {kind: 'error', code: 'developer-error'}],
+    ['error:network-error', {kind: 'error', code: 'network-error'}],
     ['already_owned', {kind: 'already_owned'}],
   ])('maps next::%s', async (next, expected) => {
     await fakeStore.run(`next::${next}`);

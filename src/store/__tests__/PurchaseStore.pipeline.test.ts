@@ -1077,10 +1077,7 @@ describe('PurchaseStore pipeline', () => {
 
     it.each([
       [{kind: 'cancelled'}, 'purchase_cancelled'],
-      [
-        {kind: 'error', code: 'network-error', downgrade: false},
-        'purchase_error',
-      ],
+      [{kind: 'error', code: 'network-error'}, 'purchase_error'],
     ])('sends the outcome event for %p', async (outcome, type) => {
       const h = readyHarness();
       h.store.purchase.mockResolvedValueOnce(outcome as any);
@@ -1211,28 +1208,27 @@ describe('PurchaseStore pipeline', () => {
       expect(h.purchases.flowFor(PAL_ID)).toBe('restore_needed');
     });
 
-    it('downgrades availability on a store refusal', async () => {
+    it('keeps Buy available after a declined payment', async () => {
       const h = readyHarness();
+      const declined = hubPal({id: 'pal-2', store_product_id: 'pal.2'});
+      runInAction(() => {
+        h.purchases.products.set('pal.2', {
+          productId: 'pal.2',
+          displayPrice: '4,99 €',
+        });
+      });
       h.store.purchase.mockResolvedValueOnce({
         kind: 'error',
-        code: 'developer-error',
-        downgrade: true,
+        code: 'billing-unavailable',
       });
-      await expect(h.purchases.buy(hubPal())).resolves.toBe('close');
-      expect(h.purchases.availability).toBe('unavailable');
-      expect(h.purchases.canBuy(hubPal())).toBe(false);
-    });
-
-    it('keeps availability on other errors', async () => {
-      const h = readyHarness();
-      h.store.purchase.mockResolvedValueOnce({
-        kind: 'error',
-        code: 'network-error',
-        downgrade: false,
-      });
-      await expect(h.purchases.buy(hubPal())).resolves.toBe('close');
+      await expect(h.purchases.buy(declined)).resolves.toBe('close');
       expect(h.purchases.availability).toBe('ready');
-      expect(h.purchases.recordFor(PAL_ID)).toBeUndefined();
+      expect(h.purchases.canBuy(declined)).toBe(true);
+
+      await h.purchases.buy(hubPal());
+      await settle(h);
+      expect(h.purchases.flowFor(PAL_ID)).toBe('ready');
+      expect(h.purchases.recordFor('pal-2')).toBeUndefined();
     });
 
     it('does nothing when Buy is not allowed', async () => {

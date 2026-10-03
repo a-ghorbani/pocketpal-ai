@@ -24,7 +24,7 @@ export type PurchaseOutcome =
   | {kind: 'pending'}
   | {kind: 'already_owned'}
   | {kind: 'cancelled'}
-  | {kind: 'error'; code: string; downgrade: boolean};
+  | {kind: 'error'; code: string};
 
 export interface StorePort {
   init(): Promise<boolean>;
