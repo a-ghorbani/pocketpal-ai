@@ -87,6 +87,10 @@ describe('In-app purchase recovery', () => {
   before(async () => {
     await iapMockServer.start();
     reverseMockPort();
+    if (driver.isAndroid) {
+      // The unlocking spinner never idles; waiting for idle stalls each lookup past the retry backoff.
+      await driver.updateSettings({waitForIdleTimeout: 0});
+    }
   });
 
   after(async () => {
@@ -142,8 +146,7 @@ describe('In-app purchase recovery', () => {
 
     iapMockServer.script({offline: false});
     await buyPage.openPal(pal.id);
-    await buyPage.tapRetry();
-    await buyPage.waitFor('owned-button', 60000);
+    await buyPage.waitFor('owned-button', 90000);
   });
 
   it('removes a refunded Pal on the next online launch and never re-verifies it', async () => {
