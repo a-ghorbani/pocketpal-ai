@@ -35,7 +35,7 @@ import {MessageType} from '../../utils/types';
 import {L10nContext, UserContext} from '../../utils';
 import {t} from '../../locales';
 
-import {SendButton, StopButton, Menu, VoiceChip} from '..';
+import {SendButton, StopButton, Menu, VoiceChip, MicButton} from '..';
 
 export interface ChatInputTopLevelProps {
   /** Whether the AI is currently streaming tokens */
@@ -72,6 +72,8 @@ export interface ChatInputTopLevelProps {
   isThinkingEnabled?: boolean;
   /** Callback when thinking toggle is pressed */
   onThinkingToggle?: (enabled: boolean) => void;
+  /** Append a voice transcript to the composer (never auto-sent). */
+  appendTranscript?: (text: string) => void;
   /** Whether the model supports graded reasoning effort (axis 2) */
   supportsEffort?: boolean;
   /** The graded effort value set, e.g. ['low','medium','high'] */
@@ -139,6 +141,7 @@ export const ChatInput = observer(
     showThinkingToggle = false,
     isThinkingEnabled = false,
     onThinkingToggle,
+    appendTranscript,
     supportsEffort = false,
     effortValues = [],
     reasoningEffort,
@@ -647,6 +650,12 @@ export const ChatInput = observer(
                     {l10n.chat.cannotSendWithoutModel}
                   </Text>
                 </View>
+              )}
+
+              {/* Voice input (ASR) — push-to-talk mic. Self-gates: returns
+                  null when voice input is unavailable. */}
+              {appendTranscript && (
+                <MicButton appendTranscript={appendTranscript} />
               )}
 
               {/* Voice chip (TTS) — always present so users can stop
