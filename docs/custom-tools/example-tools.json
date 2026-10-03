@@ -1,0 +1,52 @@
+{
+  "version": 1,
+  "tools": [
+    {
+      "name": "get_time",
+      "description": "Read the current date and time from the local demo server.",
+      "parameters": {
+        "type": "object",
+        "properties": {}
+      },
+      "request": {
+        "method": "GET",
+        "url": "http://127.0.0.1:8765/time"
+      },
+      "response": {
+        "template": "The device clock reads {{human}}."
+      },
+      "timeoutMs": 5000,
+      "requiresConfirmation": true
+    },
+    {
+      "name": "add_note",
+      "description": "Store a short note on the device under a given id.",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "Identifier to store the note under."
+          },
+          "text": {
+            "type": "string",
+            "description": "The note text."
+          }
+        },
+        "required": ["id", "text"]
+      },
+      "request": {
+        "method": "POST",
+        "url": "http://127.0.0.1:8765/notes/{{id}}",
+        "body": {
+          "text": "{{text}}"
+        }
+      },
+      "response": {
+        "template": "Saved note {{saved}}."
+      },
+      "timeoutMs": 5000,
+      "requiresConfirmation": true
+    }
+  ]
+}

@@ -44,6 +44,11 @@ yarn-error.log
 package-lock.json
 .yarn
 
+# python
+#
+__pycache__/
+*.pyc
+
 # fastlane
 #
 # It is recommended to not store the screenshots in the git repo. Instead, use fastlane to re-generate the

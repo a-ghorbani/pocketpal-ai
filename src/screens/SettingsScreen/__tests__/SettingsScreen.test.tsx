@@ -12,13 +12,17 @@ import {
 
 import {SettingsScreen} from '../SettingsScreen';
 
-import {modelStore, uiStore, ttsStore} from '../../../store';
+import {modelStore, uiStore, ttsStore, customToolStore} from '../../../store';
 import {l10n} from '../../../locales';
 
 jest.useFakeTimers();
 
 const render = (ui: React.ReactElement, options: any = {}) =>
-  baseRender(ui, {withBottomSheetProvider: true, ...options});
+  baseRender(ui, {
+    withBottomSheetProvider: true,
+    withNavigation: true,
+    ...options,
+  });
 
 describe('SettingsScreen', () => {
   beforeEach(() => {
@@ -1319,6 +1323,35 @@ describe('SettingsScreen', () => {
     await waitFor(() => {
       // Should show effective value clamped to n_ctx (2048)
       expect(getByText(/effective: 2048/)).toBeTruthy();
+    });
+  });
+
+  describe('Custom tools card', () => {
+    it('shows how many tools are defined and offers a way in', () => {
+      runInAction(() => {
+        (customToolStore as any).tools = [
+          {
+            id: 'tool-1',
+            name: 'get_time',
+            description: 'Read the clock',
+            parameters: {type: 'object', properties: {}},
+            request: {method: 'GET', url: 'http://127.0.0.1:8765/time'},
+            timeoutMs: 15000,
+            requiresConfirmation: true,
+          },
+        ];
+      });
+
+      const {getByTestId} = render(<SettingsScreen />);
+
+      expect(getByTestId('custom-tools-card')).toHaveTextContent(/1/);
+      expect(getByTestId('custom-tools-open-button')).toBeTruthy();
+    });
+
+    it('opens the manager without writing anything itself', () => {
+      const {getByTestId} = render(<SettingsScreen />);
+      fireEvent.press(getByTestId('custom-tools-open-button'));
+      expect(getByTestId('custom-tools-card')).toBeTruthy();
     });
   });
 });
