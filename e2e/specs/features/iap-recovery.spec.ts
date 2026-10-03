@@ -87,10 +87,6 @@ describe('In-app purchase recovery', () => {
   before(async () => {
     await iapMockServer.start();
     reverseMockPort();
-    if (driver.isAndroid) {
-      // The unlocking spinner never idles; waiting for idle stalls each lookup past the retry backoff.
-      await driver.updateSettings({waitForIdleTimeout: 0});
-    }
   });
 
   after(async () => {
@@ -127,27 +123,41 @@ describe('In-app purchase recovery', () => {
     await buyPage.waitFor('owned-button', 60000);
   });
 
-  it('keeps Unlocking across a restart while offline, then unlocks', async () => {
-    const {pal, products} = listPal('iap-offline');
-    iapMockServer.script({offline: true});
-    await openPalsWith(openPals, {products});
-    await buyPage.openPal(pal.id);
+  const withoutIdleWait = async (run: () => Promise<void>) => {
+    if (!driver.isAndroid) {
+      return run();
+    }
+    // The unlocking spinner never idles, so each lookup would wait out the idle timeout.
+    await driver.updateSettings({waitForIdleTimeout: 0});
+    try {
+      await run();
+    } finally {
+      await driver.updateSettings({waitForIdleTimeout: 10000});
+    }
+  };
 
-    await buyPage.buy();
-    await buyPage.waitFor('purchase-unlocking', 60000);
-    await buyPage.tapRetry();
-    await buyPage.waitFor('purchase-unlocking');
-    await buyPage.closeSheet();
-    await buyPage.waitForInList('pal-badge-unlocking');
+  it('keeps Unlocking across a restart while offline, then unlocks', () =>
+    withoutIdleWait(async () => {
+      const {pal, products} = listPal('iap-offline');
+      iapMockServer.script({offline: true});
+      await openPalsWith(openPals, {products});
+      await buyPage.openPal(pal.id);
 
-    await relaunchApp();
-    await openPals();
-    await buyPage.waitForInList('pal-badge-unlocking', 30000);
+      await buyPage.buy();
+      await buyPage.waitFor('purchase-unlocking', 60000);
+      await buyPage.tapRetry();
+      await buyPage.waitFor('purchase-unlocking');
+      await buyPage.closeSheet();
+      await buyPage.waitForInList('pal-badge-unlocking');
 
-    iapMockServer.script({offline: false});
-    await buyPage.openPal(pal.id);
-    await buyPage.waitFor('owned-button', 90000);
-  });
+      await relaunchApp();
+      await openPals();
+      await buyPage.waitForInList('pal-badge-unlocking', 30000);
+
+      iapMockServer.script({offline: false});
+      await buyPage.openPal(pal.id);
+      await buyPage.waitFor('owned-button', 90000);
+    }));
 
   it('removes a refunded Pal on the next online launch and never re-verifies it', async () => {
     const {pal, products} = listPal('iap-refund');
