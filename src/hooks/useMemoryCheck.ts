@@ -5,12 +5,47 @@ import {t} from '../locales';
 import {Model, ContextInitParams} from '../utils/types';
 import {isHighEndDevice} from '../utils/deviceCapabilities';
 import {getModelMemoryRequirement} from '../utils/memoryEstimator';
+import NativeHardwareInfo from '../specs/NativeHardwareInfo';
 // Note: This creates a circular dependency with ModelStore (which imports hasEnoughMemory).
 // This is intentional and runtime-safe because:
 // 1. modelStore is instantiated after class definition
 // 2. hasEnoughMemory is only called at runtime, not during module initialization
 import {modelStore} from '../store';
 import {MemoryFitStatus} from '../utils/memoryDisplay';
+
+/**
+ * Resolve how much RAM a model load may use right now.
+ *
+ * Free RAM is point-in-time data: the persisted calibration
+ * (largestSuccessfulLoad / availableMemoryCeiling) must never raise the
+ * ceiling above what is actually free, or warnings silently disappear as the
+ * stored maximum ratchets up. Prefer a live reading; fall back to history,
+ * then to a static heuristic.
+ */
+export async function getAvailableMemoryCeiling(): Promise<number> {
+  const historicalBase = Math.max(
+    modelStore.largestSuccessfulLoad ?? 0,
+    modelStore.availableMemoryCeiling ?? 0,
+  );
+
+  try {
+    const liveFreeBytes = await NativeHardwareInfo.getAvailableMemory();
+    if (liveFreeBytes > 0) {
+      return historicalBase > 0
+        ? Math.min(liveFreeBytes, historicalBase)
+        : liveFreeBytes;
+    }
+  } catch {
+    // Native call failed (e.g. missing module) — use stored calibration.
+  }
+
+  if (historicalBase > 0) {
+    return historicalBase;
+  }
+
+  const totalMemory = await DeviceInfo.getTotalMemory();
+  return Math.max(Math.min(totalMemory * 0.6, totalMemory - 1.2 * 1e9), 0);
+}
 
 /**
  * Check if there's enough memory to load a model.
@@ -44,25 +79,7 @@ export const hasEnoughMemory = async (
   }
 
   // Get calibration data from ModelStore
-  const {largestSuccessfulLoad, availableMemoryCeiling} = modelStore;
-
-  // Calculate ceiling from calibration data
-  let ceiling: number;
-  if (
-    largestSuccessfulLoad !== undefined ||
-    availableMemoryCeiling !== undefined
-  ) {
-    // Use the maximum of both calibration signals
-    ceiling = Math.max(largestSuccessfulLoad ?? 0, availableMemoryCeiling ?? 0);
-  } else {
-    // Cold start: no calibration data yet, use conservative fallback
-    const totalMemory = await DeviceInfo.getTotalMemory();
-    // Use heuristic: min(60% of RAM, RAM - 1.2GB)
-    ceiling = Math.max(
-      Math.min(totalMemory * 0.6, totalMemory - 1.2 * 1e9),
-      0, // Ensure non-negative
-    );
-  }
+  const ceiling = await getAvailableMemoryCeiling();
 
   const memoryRequirement = getModelMemoryRequirement(
     modelForCalc,
@@ -98,11 +115,7 @@ async function getMemoryFitDetails(
   // Get device total memory
   const totalMemory = await DeviceInfo.getTotalMemory();
 
-  // Get learned available ceiling (already includes fallback from ModelStore.initializeStore)
-  const availableBytes = Math.max(
-    modelStore.largestSuccessfulLoad ?? 0,
-    modelStore.availableMemoryCeiling ?? 0,
-  );
+  const availableBytes = await getAvailableMemoryCeiling();
 
   // Determine status
   let status: MemoryFitStatus;
