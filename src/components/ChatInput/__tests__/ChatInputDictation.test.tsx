@@ -142,8 +142,7 @@ describe('ChatInput dictation', () => {
     );
 
     const dictationButtons = UNSAFE_getAllByType(IconButton).filter(
-      button =>
-        button.props.testID === 'dictation-button',
+      button => button.props.testID === 'dictation-button',
     );
     expect(dictationButtons).toHaveLength(1);
     expect(dictationButtons[0].props.iconColor).toBe('#B89A62');
