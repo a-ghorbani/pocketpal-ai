@@ -3411,7 +3411,7 @@ PODS:
   - WatermelonDB (0.28.0):
     - React
     - simdjson
-  - whisper-rn (0.6.0):
+  - whisper-rn (0.7.4):
     - boost
     - DoubleConversion
     - fast_float
@@ -3923,7 +3923,7 @@ SPEC CHECKSUMS:
   SocketRocket: d4aabe649be1e368d1318fdf28a022d714d65748
   VisionCamera: 30b358b807324c692064f78385e9a732ce1bebfe
   WatermelonDB: 75e467adbaf2cb2809780fb3eda7ce4964e11778
-  whisper-rn: acf55c00e559367bbce7dd2a358a7df042b0457f
+  whisper-rn: 76738a4660429cdfaa9a32faaf15478828c8af90
   Yoga: 526f25666395d30c297d53154398ffd249eaf9e1
 
 PODFILE CHECKSUM: 3a370d8d42bfc2c9914e925926ccce1b5a57622e
