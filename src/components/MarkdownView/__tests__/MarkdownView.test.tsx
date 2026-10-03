@@ -8,7 +8,8 @@ import {render, fireEvent} from '../../../../jest/test-utils';
 import {themeFixtures} from '../../../../jest/fixtures/theme';
 import {useTheme} from '../../../hooks';
 
-import {MarkdownView} from '../MarkdownView';
+import {MarkdownView, highlightSearchMatches} from '../MarkdownView';
+import {SearchQueryContext} from '../../../utils';
 
 describe('MarkdownView Component', () => {
   it('renders markdown content correctly', () => {
@@ -310,6 +311,119 @@ describe('MarkdownView Component', () => {
       rerender(<MarkdownView markdownText="Second" maxMessageWidth={300} />);
 
       expect(getByText('Second')).toBeTruthy();
+    });
+  });
+
+  describe('Search highlighting', () => {
+    it('renders without highlighting when search query is empty', () => {
+      const {getByText} = render(
+        <SearchQueryContext.Provider value="">
+          <MarkdownView markdownText="Hello world" maxMessageWidth={300} />
+        </SearchQueryContext.Provider>,
+      );
+
+      expect(getByText('Hello world')).toBeTruthy();
+    });
+
+    it('renders without highlighting when no context is provided', () => {
+      const {getByText} = render(
+        <MarkdownView markdownText="Hello world" maxMessageWidth={300} />,
+      );
+
+      expect(getByText('Hello world')).toBeTruthy();
+    });
+
+    // Guards the MarkdownProvider registration: without the `mark` element
+    // model + tagsStyles, the matched term would not carry the highlight token.
+    it('styles a matched term with the search-highlight token', () => {
+      const {getByText} = render(
+        <SearchQueryContext.Provider value="world">
+          <MarkdownView markdownText="Hello world" maxMessageWidth={300} />
+        </SearchQueryContext.Provider>,
+      );
+
+      const flattened =
+        StyleSheet.flatten(getByText('world').props.style) || {};
+      expect(flattened.backgroundColor).toBe(
+        themeFixtures.lightTheme.colors.searchHighlight,
+      );
+    });
+  });
+
+  describe('highlightSearchMatches', () => {
+    it('returns html unchanged for an empty or whitespace query', () => {
+      const html = '<p>Hello world</p>';
+      expect(highlightSearchMatches(html, '')).toBe(html);
+      expect(highlightSearchMatches(html, '   ')).toBe(html);
+    });
+
+    it('wraps a plain text match in a mark tag', () => {
+      expect(highlightSearchMatches('<p>Hello world</p>', 'world')).toBe(
+        '<p>Hello <mark>world</mark></p>',
+      );
+    });
+
+    it('matches case-insensitively', () => {
+      expect(highlightSearchMatches('<p>HELLO world</p>', 'hello')).toBe(
+        '<p><mark>HELLO</mark> world</p>',
+      );
+    });
+
+    it('highlights every occurrence', () => {
+      expect(highlightSearchMatches('<p>ab ab ab</p>', 'ab')).toBe(
+        '<p><mark>ab</mark> <mark>ab</mark> <mark>ab</mark></p>',
+      );
+    });
+
+    it('treats regex special characters in the query literally', () => {
+      expect(highlightSearchMatches('<p>a.b and axb</p>', 'a.b')).toBe(
+        '<p><mark>a.b</mark> and axb</p>',
+      );
+    });
+
+    it('does not highlight an entity spelling that is not in the text', () => {
+      // The text is "Tom & Jerry"; "amp" only appears in the &amp; spelling,
+      // so it must not match, and the entity must stay intact.
+      const html = '<p>Tom &amp; Jerry</p>';
+      expect(highlightSearchMatches(html, 'amp')).toBe(html);
+    });
+
+    it('highlights around an entity without corrupting it', () => {
+      expect(highlightSearchMatches('<p>a &amp; apple</p>', 'a')).toBe(
+        '<p><mark>a</mark> &amp; <mark>a</mark>pple</p>',
+      );
+    });
+
+    it('highlights a query containing an escaped character (apostrophe)', () => {
+      // marked() escapes ' to &#39;; the store counted this match on the raw
+      // text, so the highlight must agree by matching the decoded character.
+      expect(highlightSearchMatches('<p>I don&#39;t recall</p>', "don't")).toBe(
+        '<p>I <mark>don&#39;t</mark> recall</p>',
+      );
+    });
+
+    it('highlights past a self-closing <code/> instead of disabling the rest', () => {
+      // A self-closing <code/> has no closing tag; counting it would leak
+      // codeDepth and suppress every later match in the message.
+      expect(
+        highlightSearchMatches(
+          '<p><code/>hello world and more hello</p>',
+          'hello',
+        ),
+      ).toBe(
+        '<p><code/><mark>hello</mark> world and more <mark>hello</mark></p>',
+      );
+    });
+
+    it('does not inject marks inside code blocks', () => {
+      const html = '<pre><code>const amp = 1;</code></pre>';
+      expect(highlightSearchMatches(html, 'amp')).toBe(html);
+    });
+
+    it('does not match across tag boundaries', () => {
+      // "hello world" is split by a <strong> tag, so it must not match.
+      const html = '<p>hello <strong>world</strong></p>';
+      expect(highlightSearchMatches(html, 'hello world')).toBe(html);
     });
   });
 });

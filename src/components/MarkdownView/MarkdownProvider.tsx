@@ -1,6 +1,8 @@
 import React, {useMemo} from 'react';
 
 import {
+  HTMLContentModel,
+  HTMLElementModel,
   RenderHTMLConfigProvider,
   TRenderEngineProvider,
   defaultSystemFonts,
@@ -48,16 +50,39 @@ const renderers = {
   ...tableRenderers,
 };
 
+// Element models include the `mark` tag used for in-conversation search
+// highlighting (injected by MarkdownView.highlightSearchMatches). Stable
+// at module scope so it never invalidates the render engine.
+const customHTMLElementModels = {
+  ...tableHTMLElementModels,
+  mark: HTMLElementModel.fromCustomModel({
+    tagName: 'mark',
+    contentModel: HTMLContentModel.textual,
+  }),
+};
+
 export const MarkdownProvider: React.FC<React.PropsWithChildren> = ({
   children,
 }) => {
   const theme = useTheme();
-  const tagsStyles = useMemo(() => createTagsStyles(theme), [theme]);
+  const tagsStyles = useMemo(
+    () => ({
+      ...createTagsStyles(theme),
+      // Dedicated search-highlight tokens (not the near-white tertiary
+      // container, which was invisible in light mode). borderRadius is inert on
+      // nested RN <Text>, so it's omitted.
+      mark: {
+        backgroundColor: theme.colors.searchHighlight,
+        color: theme.colors.onSearchHighlight,
+      },
+    }),
+    [theme],
+  );
 
   return (
     <TRenderEngineProvider
       tagsStyles={tagsStyles}
-      customHTMLElementModels={tableHTMLElementModels}
+      customHTMLElementModels={customHTMLElementModels}
       systemFonts={SYSTEM_FONTS}>
       <RenderHTMLConfigProvider
         defaultTextProps={DEFAULT_TEXT_PROPS}
