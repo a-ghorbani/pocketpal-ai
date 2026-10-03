@@ -9155,10 +9155,10 @@ which@^2.0.1:
   dependencies:
     isexe "^2.0.0"
 
-whisper.rn@0.6.0:
-  version "0.6.0"
-  resolved "https://registry.yarnpkg.com/whisper.rn/-/whisper.rn-0.6.0.tgz#b291301f425c3902c7c3e5e4de8392adb188f041"
-  integrity sha512-zuwIdiZzUYZDZSrGRBrM7kNknWWYCPT6BcGgmhTlZ5Z8k0QTtHRV/RxhmqrXZ8PAgh8FtUyrH3aQJptrsOHDDA==
+whisper.rn@0.7.4:
+  version "0.7.4"
+  resolved "https://registry.yarnpkg.com/whisper.rn/-/whisper.rn-0.7.4.tgz#832252daa65b068744d5e5f5d32fccb7526aa8d8"
+  integrity sha512-9MyWFoRmUWHDHLhjm4dZgZzxG2fFNuClOPE/Ne5KXlm0vSi4It5oS2xZi9WfPEfUGHcgPMiVviv9t18zC4BSNw==
   dependencies:
     safe-buffer "^5.2.1"
 
