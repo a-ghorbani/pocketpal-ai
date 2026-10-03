@@ -15,7 +15,11 @@ import {TIMEOUTS} from '../../fixtures/models';
 import {Gestures} from '../../helpers/gestures';
 import {withinTestIdPrefix} from '../../helpers/selectors';
 import {saveFailureScreenshot} from '../../helpers/screenshots';
-import {assertMockTraffic, iapMockServer} from '../../helpers/iapMockServer';
+import {
+  UPDATED_CONTENT_VERSION,
+  assertMockTraffic,
+  iapMockServer,
+} from '../../helpers/iapMockServer';
 import {
   appId,
   iapCommand,
@@ -70,7 +74,10 @@ describe('In-app purchase recovery', () => {
     const {pal, products} = listPal(id);
     await openPalsWith(openPals, {products});
     await buyToOwned(pal.id);
-    iapMockServer.updatePal(pal.id, {title, contentVersion: 2});
+    iapMockServer.updatePal(pal.id, {
+      title,
+      contentVersion: UPDATED_CONTENT_VERSION,
+    });
     await relaunchApp();
     await openPals();
     await waitForLocalTitle(pal.title);

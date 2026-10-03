@@ -26,7 +26,7 @@ export interface MockPal {
   id: string;
   title: string;
   productId: string;
-  contentVersion: number;
+  contentVersion: string;
   systemPrompt: string;
   changeNote?: string;
   modelReference?: {
@@ -60,11 +60,13 @@ const SMALL_MODEL = {
   size: 91_893_088,
 };
 
+export const UPDATED_CONTENT_VERSION = '2026-02-01T09:30:00.123456+00:00';
+
 export const mockPal = (id: string): MockPal => ({
   id,
   title: `E2E ${id}`,
   productId: `pal.${crypto.createHash('md5').update(id).digest('hex')}`,
-  contentVersion: 1,
+  contentVersion: '2026-01-01T09:30:00.123456+00:00',
   systemPrompt: 'You are a storyteller. Keep replies to one sentence.',
   modelReference: SMALL_MODEL,
 });
@@ -122,9 +124,18 @@ const supportCodeOf = (transaction: unknown): string =>
   `E2E-${tokenOf(transaction)?.split('.').pop()}`;
 
 interface KnownEntry {
-  content_version: number;
+  content_version: string;
   purchase_ref: string;
 }
+
+const ISO_TIMESTAMP =
+  /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d+)?(Z|[+-]\d{2}:\d{2})$/;
+
+const hasExactKeys = (value: unknown, keys: string[]): boolean =>
+  !!value &&
+  typeof value === 'object' &&
+  !Array.isArray(value) &&
+  Object.keys(value).every(key => keys.includes(key));
 
 const parseKnown = (known: unknown): Record<string, KnownEntry> | null => {
   if (!known || typeof known !== 'object' || Array.isArray(known)) {
@@ -134,7 +145,10 @@ const parseKnown = (known: unknown): Record<string, KnownEntry> | null => {
   const valid = entries.every(([, entry]) => {
     const e = entry as Partial<KnownEntry> | null;
     return (
-      typeof e?.content_version === 'number' &&
+      hasExactKeys(e, ['content_version', 'purchase_ref']) &&
+      typeof e?.content_version === 'string' &&
+      e.content_version.length >= 1 &&
+      e.content_version.length <= 64 &&
       typeof e.purchase_ref === 'string' &&
       e.purchase_ref.length > 0
     );
@@ -143,6 +157,9 @@ const parseKnown = (known: unknown): Record<string, KnownEntry> | null => {
     ? (known as Record<string, KnownEntry>)
     : null;
 };
+
+const isNewerThanHint = (served: string, hint: string): boolean =>
+  !ISO_TIMESTAMP.test(hint) || Date.parse(served) > Date.parse(hint);
 
 class IapMockServer {
   private server: http.Server | null = null;
@@ -376,7 +393,14 @@ class IapMockServer {
   }
 
   private refresh(body: any, res: http.ServerResponse) {
-    const known = parseKnown(body?.known);
+    if (
+      !hasExactKeys(body, ['platform', 'transactions', 'known']) ||
+      !['ios', 'android'].includes(body.platform)
+    ) {
+      this.send(res, 400, {error: 'body is malformed'});
+      return;
+    }
+    const known = parseKnown(body.known);
     if (!known) {
       this.send(res, 400, {error: 'known is malformed'});
       return;
@@ -405,7 +429,7 @@ class IapMockServer {
         revoked.push(palId);
       } else if (
         proven.has(palId) &&
-        entry.content_version < served.contentVersion
+        isNewerThanHint(served.contentVersion, entry.content_version)
       ) {
         changed.push(apiPal(served, true));
       } else {
