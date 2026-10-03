@@ -9,7 +9,9 @@ import {expect} from '@wdio/globals';
 import {ChatPage} from '../../pages/ChatPage';
 import {DrawerPage} from '../../pages/DrawerPage';
 import {PalBuyPage} from '../../pages/PalBuyPage';
+import {SettingsPage} from '../../pages/SettingsPage';
 import {TIMEOUTS} from '../../fixtures/models';
+import {byPartialText} from '../../helpers/selectors';
 import {saveFailureScreenshot} from '../../helpers/screenshots';
 import {
   assertMockTraffic,
@@ -26,6 +28,7 @@ describe('In-app purchase', () => {
   const chatPage = new ChatPage();
   const drawerPage = new DrawerPage();
   const buyPage = new PalBuyPage();
+  const settingsPage = new SettingsPage();
 
   const openPals = async () => {
     await chatPage.waitForReady(TIMEOUTS.appReady);
@@ -58,7 +61,7 @@ describe('In-app purchase', () => {
     expect(assertMockTraffic(iapMockServer.requests())).toEqual([]);
   });
 
-  it('buys with the store price, unlocks, and starts a chat after the model step', async () => {
+  it('buys with the store price, unlocks, starts a chat after the model step, and lists the support code in Settings', async () => {
     const {pal, products} = listPal('iap-buy');
     await openPalsWith(openPals, {products});
     await buyPage.openPal(pal.id);
@@ -67,12 +70,18 @@ describe('In-app purchase', () => {
     await buyPage.buy();
 
     await buyPage.waitFor('purchase-ready', 60000);
-    expect(await buyPage.text('purchase-support-code')).toContain(
-      'E2E-fake-tx-',
-    );
+    expect(await buyPage.isShown('purchase-support-code', 1000)).toBe(false);
     await buyPage.downloadModel();
     await buyPage.startChat(TIMEOUTS.download);
     await chatPage.waitForReady(TIMEOUTS.appReady);
+
+    await chatPage.openDrawer();
+    await drawerPage.navigateToSettings();
+    await settingsPage.waitForReady();
+    await buyPage.scrollToCard(`purchase-row-${pal.id}`);
+    await browser
+      .$(byPartialText('Owned · Support code: E2E-fake-tx-'))
+      .waitForDisplayed({timeout: 20000});
 
     expect(eventsSent(iapMockServer.requests())).toEqual(['buy_tap']);
   });

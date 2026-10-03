@@ -123,7 +123,7 @@ describe('In-app purchase recovery', () => {
     await buyPage.waitFor('owned-button', 60000);
   });
 
-  it('keeps Paid — unlocking across a restart while offline, then unlocks', async () => {
+  it('keeps Unlocking across a restart while offline, then unlocks', async () => {
     const {pal, products} = listPal('iap-offline');
     iapMockServer.script({offline: true});
     await openPalsWith(openPals, {products});
@@ -230,8 +230,8 @@ describe('In-app purchase recovery', () => {
     const text = await note.getText();
     expect(text).toContain(
       driver.isAndroid
-        ? 'This Pal was withdrawn. Your purchase is being refunded to your Google Play account.'
-        : 'This Pal is no longer available. Request a refund from Apple at reportaproblem.apple.com.',
+        ? 'This Pal was withdrawn. Contact support for a refund.'
+        : 'This Pal is no longer available. You can ask Apple for a refund.',
     );
     expect(text).toContain('Support code: E2E-');
 
@@ -254,8 +254,8 @@ describe('In-app purchase recovery', () => {
     await buyPage.buy();
     expect(await buyPage.text('purchase-unfulfillable', 60000)).toBe(
       driver.isAndroid
-        ? "This purchase couldn't be completed. Google will refund it automatically within 3 days."
-        : 'This Pal is no longer available. Request a refund from Apple at reportaproblem.apple.com.',
+        ? "This purchase couldn't be completed. Google will refund you."
+        : 'This Pal is no longer available. You can ask Apple for a refund.',
     );
     expect(await buyPage.text('purchase-support-code')).toContain(
       'Support code: E2E-',
