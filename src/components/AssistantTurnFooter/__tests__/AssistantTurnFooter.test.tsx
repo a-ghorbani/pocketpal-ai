@@ -177,6 +177,27 @@ describe('AssistantTurnFooter', () => {
     expect(getByText('Interrupted')).toBeTruthy();
   });
 
+  it.each([
+    ['refused', undefined, 'Response refused'],
+    ['incomplete', 'max_output_tokens', 'Output limit reached'],
+    ['incomplete', 'unknown', 'Response incomplete'],
+    ['failed', undefined, 'Response failed'],
+  ])(
+    'renders the specific Responses status for %s',
+    (responseStatus, incompleteReason, expected) => {
+      const message = baseTurn({
+        metadata: {
+          copyable: true,
+          interrupted: true,
+          responseStatus,
+          incompleteReason,
+        },
+      });
+      const {getByText} = render(<AssistantTurnFooter message={message} />);
+      expect(getByText(expected)).toBeTruthy();
+    },
+  );
+
   it('upgrades the status to "Cut off — likely context full" when truncationLikely is set', () => {
     const message = baseTurn({
       metadata: {copyable: true, interrupted: true, truncationLikely: true},

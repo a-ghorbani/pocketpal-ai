@@ -57,6 +57,10 @@ import {
   ttsStore,
   searchProviderStore,
 } from '../../store';
+import {
+  MAX_RESULT_COUNT,
+  MIN_RESULT_COUNT,
+} from '../../store/SearchProviderStore';
 import type {SearchProviderId} from '../../services/search/types';
 
 import {CacheType, ModelType} from '../../utils/types';
@@ -1164,6 +1168,36 @@ export const SettingsScreen: React.FC = observer(() => {
             </Card.Content>
           </Card>
 
+          {/* Diagnostics */}
+          <Card elevation={0} style={styles.card}>
+            <Card.Title title={l10n.settings.diagnostics} />
+            <Card.Content>
+              <View style={styles.settingItemContainer}>
+                <View style={styles.switchContainer}>
+                  <View style={styles.textContainer}>
+                    <Text variant="titleMedium" style={styles.textLabel}>
+                      {l10n.settings.responsesProtocolLogging}
+                    </Text>
+                    <Text variant="labelSmall" style={styles.textDescription}>
+                      {l10n.settings.responsesProtocolLoggingDescription}
+                    </Text>
+                  </View>
+                  <Switch
+                    testID="responses-protocol-logging-switch"
+                    value={uiStore.responsesProtocolLogging}
+                    accessibilityLabel={l10n.settings.responsesProtocolLogging}
+                    accessibilityHint={
+                      l10n.settings.responsesProtocolLoggingDescription
+                    }
+                    onValueChange={value =>
+                      uiStore.setResponsesProtocolLogging(value)
+                    }
+                  />
+                </View>
+              </View>
+            </Card.Content>
+          </Card>
+
           {/* Internet Search */}
           <Card elevation={0} style={styles.card} testID="internet-search-card">
             <Card.Title title={l10n.settings.internetSearch.title} />
@@ -1315,13 +1349,38 @@ export const SettingsScreen: React.FC = observer(() => {
                     onValueChange={value =>
                       searchProviderStore.setResultCount(Math.round(value))
                     }
-                    min={1}
-                    max={8}
+                    min={MIN_RESULT_COUNT}
+                    max={MAX_RESULT_COUNT}
                     step={1}
                   />
                   <Text variant="labelSmall" style={styles.textDescription}>
                     {l10n.settings.internetSearch.resultCountDescription}
                   </Text>
+                </View>
+
+                <Divider style={styles.divider} />
+                <View style={styles.switchContainer}>
+                  <View style={styles.textContainer}>
+                    <Text variant="titleMedium" style={styles.textLabel}>
+                      {l10n.settings.internetSearch.fullResultsLabel}
+                    </Text>
+                    <Text variant="labelSmall" style={styles.textDescription}>
+                      {l10n.settings.internetSearch.fullResultsDescription}
+                    </Text>
+                  </View>
+                  <Switch
+                    testID="full-search-results-switch"
+                    value={searchProviderStore.fullSearchResults}
+                    accessibilityLabel={
+                      l10n.settings.internetSearch.fullResultsLabel
+                    }
+                    accessibilityHint={
+                      l10n.settings.internetSearch.fullResultsDescription
+                    }
+                    onValueChange={value =>
+                      searchProviderStore.setFullSearchResults(value)
+                    }
+                  />
                 </View>
               </View>
             </Card.Content>

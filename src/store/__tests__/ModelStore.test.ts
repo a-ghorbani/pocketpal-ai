@@ -28,12 +28,15 @@ import {
   mockHFModel1,
 } from '../../../jest/fixtures/models';
 import * as RNFS from '@dr.pogodin/react-native-fs';
+import DeviceInfo from 'react-native-device-info';
 
-import {modelStore, uiStore, serverStore} from '..';
+import {modelStore, uiStore, serverStore, startupSelectionStore} from '..';
 import {LOOKIE_DEFAULT_MODEL} from '../builtinPalModels';
 import {classify} from '../../services/deviceRules/classify';
 import {getVisionModelSizeBreakdown} from '../../utils/multimodalHelpers';
 import {MODEL_LIST_VERSION} from '../ModelStore';
+import {CURRENT_COMPLETION_SETTINGS_VERSION} from '../../utils/completionSettingsVersions';
+import * as parseModule from '../../services/deviceRules/parse';
 import {parseDeviceRules} from '../../services/deviceRules/parse';
 import {fetchRules} from '../../services/deviceRules/rules';
 import {readDeviceSignals} from '../../services/deviceRules/signals';
@@ -44,6 +47,7 @@ import {
   getCpuCoreCount,
   getRecommendedThreadCount,
 } from '../../utils/deviceCapabilities';
+import {chatSessionRepository} from '../../repositories/ChatSessionRepository';
 
 // Mock deviceCapabilities
 jest.mock('../../utils/deviceCapabilities', () => ({
@@ -491,7 +495,6 @@ describe('ModelStore', () => {
       runInAction(() => {
         modelStore.pendingProjectionCleanupIds = [inFlightId, sharedId];
       });
-      const {downloadManager} = require('../../services/downloads');
       (downloadManager.isDownloading as jest.Mock).mockImplementation(
         (id: string) => id === inFlightId,
       );
@@ -570,7 +573,7 @@ describe('ModelStore', () => {
     };
 
     const makeRules = (models: any[]) => ({
-      schemaVersion: '1.2.0-draft',
+      schemaVersion: '2.0.0',
       platform: 'android',
       rulesVersion: '2026-06-10.1',
       classifier: midOnlyClassifier,
@@ -767,7 +770,7 @@ describe('ModelStore', () => {
 
     it('android: parses + classifies non-low and resolves origin:HF presets', () => {
       Platform.OS = 'android';
-      const rules = parseDeviceRules(androidBundledRules);
+      const rules = parseDeviceRules(androidBundledRules, '1.17.3');
       const signals = {ramBytes: 16 * 1e9, socModel: 'SM8850'};
       const tier = classify(signals as any, rules.classifier, 'android');
       expect(tier).not.toBe('low');
@@ -783,7 +786,7 @@ describe('ModelStore', () => {
 
     it('ios: parses + classifies non-low and resolves origin:HF presets', () => {
       Platform.OS = 'ios';
-      const rules = parseDeviceRules(iosBundledRules);
+      const rules = parseDeviceRules(iosBundledRules, '1.17.3');
       const signals = {ramBytes: 8 * 1e9, machine: 'iPhone16,1'};
       const tier = classify(signals as any, rules.classifier, 'ios');
       expect(tier).not.toBe('low');
@@ -807,7 +810,7 @@ describe('ModelStore', () => {
         ['ios', iosBundledRules],
       ] as const) {
         Platform.OS = os;
-        const rules = parseDeviceRules(raw);
+        const rules = parseDeviceRules(raw, '1.17.3');
         const signals = {
           ramBytes: 16 * 1e9,
           socModel: 'SM8850',
@@ -827,7 +830,7 @@ describe('ModelStore', () => {
 
     it('android: resolved LLMs defer oid/lfs to download (none baked)', () => {
       Platform.OS = 'android';
-      const rules = parseDeviceRules(androidBundledRules);
+      const rules = parseDeviceRules(androidBundledRules, '1.17.3');
       const signals = {ramBytes: 16 * 1e9, socModel: 'SM8850'};
       const presets = modelStore.resolvePresetModels(rules, signals as any);
       const llms = presets.filter(m => !isProjection(m.id));
@@ -840,14 +843,14 @@ describe('ModelStore', () => {
     });
 
     it('all four tiers parse to a non-empty, origin:HF model set on android', () => {
-      const rules = parseDeviceRules(androidBundledRules);
+      const rules = parseDeviceRules(androidBundledRules, '1.17.3');
       for (const tier of ['low', 'mid', 'high', 'flagship'] as const) {
         expect(rules.tiers[tier].models.length).toBeGreaterThan(0);
       }
     });
 
     it('all four tiers parse to a non-empty, origin:HF model set on ios', () => {
-      const rules = parseDeviceRules(iosBundledRules);
+      const rules = parseDeviceRules(iosBundledRules, '1.17.3');
       for (const tier of ['low', 'mid', 'high', 'flagship'] as const) {
         expect(rules.tiers[tier].models.length).toBeGreaterThan(0);
       }
@@ -1197,6 +1200,64 @@ describe('ModelStore', () => {
       expect(modelStore.rulesVersion).toBeTruthy();
     });
 
+    describe('with the running app version from DeviceInfo', () => {
+      const getVersion = DeviceInfo.getVersion as jest.Mock;
+      let defaultGetVersion: (() => string) | undefined;
+      beforeEach(() => {
+        defaultGetVersion = getVersion.getMockImplementation();
+        getVersion.mockReturnValue('4.5.6');
+      });
+      afterEach(() => {
+        getVersion.mockImplementation(defaultGetVersion);
+      });
+
+      it('parses the bundled floor with it', async () => {
+        const parseSpy = jest.spyOn(parseModule, 'parseDeviceRules');
+        try {
+          await (modelStore as any).resolvePresets();
+          expect(parseSpy).toHaveBeenCalledTimes(1);
+          expect(parseSpy).toHaveBeenCalledWith(expect.anything(), '4.5.6');
+        } finally {
+          parseSpy.mockRestore();
+        }
+      });
+
+      it('fetches the online rules with it', async () => {
+        await (modelStore as any).upgradeToFetchedRules();
+        expect(fetchRules).toHaveBeenCalledWith('4.5.6');
+      });
+
+      it('drops only the gated floor presets when the app version is unknown', async () => {
+        const gatedIds = new Set(
+          Object.values(
+            androidBundledRules.tiers as Record<
+              string,
+              {
+                candidates: Array<{
+                  hf_repo: string;
+                  hf_filename: string;
+                  min_app_version?: string;
+                }>;
+              }
+            >,
+          ).flatMap(tier =>
+            tier.candidates
+              .filter(c => c.min_app_version !== undefined)
+              .map(c => `${c.hf_repo}/${c.hf_filename}`),
+          ),
+        );
+        const known: Model[] = await (modelStore as any).resolvePresets();
+        getVersion.mockReturnValue('unknown');
+        const unknown: Model[] = await (modelStore as any).resolvePresets();
+        const knownIds = known.map(m => m.id);
+        expect(knownIds.some(id => gatedIds.has(id))).toBe(true);
+        expect(unknown.length).toBeGreaterThan(0);
+        expect(unknown.map(m => m.id)).toEqual(
+          knownIds.filter(id => !gatedIds.has(id)),
+        );
+      });
+    });
+
     it('returns [] and completes when bundled parse throws (startup not bricked)', async () => {
       (readDeviceSignals as jest.Mock).mockRejectedValue(
         new Error('signals exploded'),
@@ -1205,28 +1266,31 @@ describe('ModelStore', () => {
     });
 
     it('upgrades to fetched rules and reconciles when newer rules arrive', async () => {
-      const fetchedRules = parseDeviceRules({
-        schema_version: '1.2.0-draft',
-        platform: 'android',
-        rules_version: '2999-01-01.1',
-        classifier: {
-          ram_bands: [{id: 'all', max_bytes: null}],
-          tier_matrix: [{ram_band: 'all', soc_class: 'mid', tier: 'mid'}],
-          soc_model_to_class: {SM8850: 'mid'},
-        },
-        tiers: {
-          mid: {
-            candidates: [
-              {
-                model: 'fetched',
-                hf_repo: 'ggml-org/fetched-repo',
-                hf_filename: 'fetched.gguf',
-                size_bytes: 500,
-              },
-            ],
+      const fetchedRules = parseDeviceRules(
+        {
+          schema_version: '2.0.0',
+          platform: 'android',
+          rules_version: '2999-01-01.1',
+          classifier: {
+            ram_bands: [{id: 'all', max_bytes: null}],
+            tier_matrix: [{ram_band: 'all', soc_class: 'mid', tier: 'mid'}],
+            soc_model_to_class: {SM8850: 'mid'},
+          },
+          tiers: {
+            mid: {
+              candidates: [
+                {
+                  model: 'fetched',
+                  hf_repo: 'ggml-org/fetched-repo',
+                  hf_filename: 'fetched.gguf',
+                  size_bytes: 500,
+                },
+              ],
+            },
           },
         },
-      });
+        '1.17.3',
+      );
       (fetchRules as jest.Mock).mockResolvedValue(fetchedRules);
 
       await (modelStore as any).upgradeToFetchedRules();
@@ -2217,6 +2281,42 @@ describe('ModelStore', () => {
       modelStore.lastUsedModelId = model.id;
 
       expect(modelStore.lastUsedModel).toEqual(model);
+    });
+  });
+
+  describe('startup model preference', () => {
+    it('remembers an explicitly selected model only after activation succeeds', async () => {
+      const model = {...presetModelFixture, isDownloaded: true};
+      modelStore.models = [model];
+      modelStore.activeModelId = model.id;
+      modelStore.context = new LlamaContext(mockLlamaContextParams);
+      modelStore.engine = {} as any;
+      startupSelectionStore.modelSelection = undefined;
+
+      await modelStore.selectModel(model, {rememberForStartup: true});
+
+      expect(startupSelectionStore.modelSelection).toMatchObject({
+        modelId: model.id,
+        origin: model.origin,
+      });
+    });
+
+    it('does not replace the preference when activation fails', async () => {
+      const previous = {
+        modelId: 'previous-model',
+        origin: ModelOrigin.LOCAL,
+      };
+      startupSelectionStore.modelSelection = previous;
+      modelStore.benchmarkActive = true;
+
+      await expect(
+        modelStore.selectModel(presetModelFixture, {
+          rememberForStartup: true,
+        }),
+      ).rejects.toThrow('benchmark mode is active');
+
+      expect(startupSelectionStore.modelSelection).toEqual(previous);
+      modelStore.benchmarkActive = false;
     });
   });
 
@@ -3950,6 +4050,45 @@ describe('ModelStore', () => {
       expect(onComplete).toHaveBeenCalledWith('Response text');
     });
 
+    it('applies model omission policy at the direct native boundary', async () => {
+      const mockContext = new LlamaContext({
+        contextId: 1,
+      } as ConstructorParameters<typeof LlamaContext>[0]);
+      (mockContext.isMultimodalEnabled as jest.Mock).mockResolvedValue(true);
+      (mockContext.completion as jest.Mock).mockResolvedValue({
+        text: 'Response text',
+      });
+      modelStore.context = mockContext;
+      modelStore.models = [
+        {
+          ...basicModel,
+          id: 'active-model',
+          completionSettings: {
+            temperature: 0.8,
+            generationParameterModes: {temperature: 'omit'},
+          },
+          stopWords: [],
+        },
+      ];
+      modelStore.activeModelId = 'active-model';
+      const settingsSpy = jest
+        .spyOn(chatSessionRepository, 'getGlobalCompletionSettings')
+        .mockResolvedValue({temperature: 0.7});
+
+      await modelStore.startImageCompletion({
+        prompt: 'Test prompt',
+        image_path: '/path/to/image.jpg',
+      });
+
+      const nativeParams = (mockContext.completion as jest.Mock).mock
+        .calls[0][0];
+      expect(
+        Object.prototype.hasOwnProperty.call(nativeParams, 'temperature'),
+      ).toBe(false);
+      expect(nativeParams).not.toHaveProperty('generationParameterModes');
+      settingsSpy.mockRestore();
+    });
+
     it('should handle completion error', async () => {
       const mockContext = {
         isMultimodalEnabled: jest.fn().mockResolvedValue(true),
@@ -5100,6 +5239,219 @@ describe('ModelStore', () => {
       ).resolves.toBeUndefined();
       await new Promise(setImmediate);
       probe.mockRestore();
+    });
+  });
+
+  describe('setRemoteModel protocol binding', () => {
+    let getApiKeySpy: jest.SpyInstance;
+    let probeSpy: jest.SpyInstance;
+    const remoteModel = {
+      id: 'srv-1/protocol-model',
+      name: 'protocol-model',
+      origin: ModelOrigin.REMOTE,
+      serverId: 'srv-1',
+      remoteModelId: 'protocol-model',
+    } as any;
+
+    beforeEach(() => {
+      runInAction(() => {
+        modelStore.context = undefined;
+        modelStore.engine = undefined;
+        modelStore.activeRemoteBinding = undefined;
+        modelStore.activeModelId = undefined;
+        serverStore.servers = [
+          {
+            id: 'srv-1',
+            name: 'Remote',
+            url: 'https://api.example.com',
+            serverType: 'OpenAI',
+            apiMode: 'auto',
+            credentialRevision: 4,
+          },
+        ];
+        serverStore.serverModels.clear();
+        serverStore.remoteModelPreferences = {};
+        serverStore.remoteCatalogMetadata = {};
+      });
+      getApiKeySpy = jest
+        .spyOn(serverStore, 'getApiKey')
+        .mockResolvedValue('sk-test');
+      probeSpy = jest
+        .spyOn(serverStore, 'fetchRemoteModelCaps')
+        .mockResolvedValue(undefined);
+    });
+
+    afterEach(() => {
+      probeSpy.mockRestore();
+      getApiKeySpy.mockRestore();
+    });
+
+    it('snapshots catalog protocol, capabilities, and credential revision', async () => {
+      runInAction(() => {
+        serverStore.serverModels.set('srv-1', [
+          {
+            id: 'protocol-model',
+            object: 'model',
+            owned_by: 'system',
+            supported_endpoints: ['/responses'],
+            capabilities: {
+              supports: {
+                vision: true,
+                reasoning_effort: ['low', 'high'],
+                temperature: false,
+                top_p: true,
+              },
+              limits: {max_context_window_tokens: 128000},
+            },
+          },
+        ]);
+      });
+
+      await modelStore.setRemoteModel(remoteModel);
+
+      expect(modelStore.activeRemoteBinding).toMatchObject({
+        wireApi: 'responses',
+        credentialRevision: 4,
+        protocolCapabilities: {
+          advertisedEndpoints: ['responses'],
+          supportsVision: true,
+          contextLength: 128000,
+          reasoningEffortValues: ['low', 'high'],
+          responsesSampling: {
+            temperature: {supported: false, source: 'live-catalog'},
+            topP: {supported: true, source: 'live-catalog'},
+          },
+        },
+      });
+    });
+
+    it('uses a model override before server mode and catalog', async () => {
+      runInAction(() => {
+        serverStore.servers[0].apiMode = 'chat-completions';
+        serverStore.serverModels.set('srv-1', [
+          {
+            id: 'protocol-model',
+            object: 'model',
+            owned_by: 'system',
+            supported_endpoints: ['/v1/chat/completions'],
+          },
+        ]);
+        serverStore.remoteModelPreferences[remoteModel.id] = {
+          wireApi: 'responses',
+        };
+      });
+
+      await modelStore.setRemoteModel(remoteModel);
+
+      expect(modelStore.activeRemoteBinding?.wireApi).toBe('responses');
+    });
+
+    it('recreates and snapshots persisted remote generation overrides', async () => {
+      runInAction(() => {
+        serverStore.userSelectedModels = [
+          {serverId: 'srv-1', remoteModelId: 'protocol-model'},
+        ];
+      });
+      serverStore.setRemoteModelGenerationSettings(remoteModel.id, {
+        temperature: 0.37,
+        generationParameterModes: {temperature: 'omit'},
+      });
+      const recreated = modelStore.remoteModels[0];
+
+      expect(recreated.completionSettings).toEqual({
+        version: CURRENT_COMPLETION_SETTINGS_VERSION,
+        temperature: 0.37,
+        generationParameterModes: {temperature: 'omit'},
+      });
+
+      await modelStore.setRemoteModel(recreated);
+      serverStore.setRemoteModelGenerationMode(
+        remoteModel.id,
+        'temperature',
+        'send',
+      );
+
+      expect(modelStore.activeModelCompletionSettings).toEqual({
+        version: CURRENT_COMPLETION_SETTINGS_VERSION,
+        temperature: 0.37,
+        generationParameterModes: {temperature: 'omit'},
+      });
+      expect(modelStore.activeRemoteBinding?.generationSettings).toEqual({
+        version: CURRENT_COMPLETION_SETTINGS_VERSION,
+        temperature: 0.37,
+        generationParameterModes: {temperature: 'omit'},
+      });
+    });
+
+    it('fails explicitly for a catalog-only unsupported model', async () => {
+      runInAction(() => {
+        modelStore.activeModelId = 'existing/model';
+        serverStore.serverModels.set('srv-1', [
+          {
+            id: 'protocol-model',
+            object: 'model',
+            owned_by: 'system',
+            supported_endpoints: ['/embeddings'],
+          },
+        ]);
+      });
+
+      await expect(modelStore.setRemoteModel(remoteModel)).rejects.toThrow(
+        'does not advertise a supported API endpoint',
+      );
+      expect(modelStore.activeModelId).toBe('existing/model');
+    });
+
+    it('allows an unsupported catalog model when manually overridden', async () => {
+      runInAction(() => {
+        serverStore.serverModels.set('srv-1', [
+          {
+            id: 'protocol-model',
+            object: 'model',
+            owned_by: 'system',
+            supported_endpoints: ['/embeddings'],
+          },
+        ]);
+        serverStore.remoteModelPreferences[remoteModel.id] = {
+          wireApi: 'chat-completions',
+        };
+      });
+
+      await modelStore.setRemoteModel(remoteModel);
+
+      expect(modelStore.activeRemoteBinding?.wireApi).toBe('chat-completions');
+    });
+
+    it('keeps the active binding snapshot unchanged after server edits', async () => {
+      await modelStore.setRemoteModel(remoteModel);
+      const binding = modelStore.activeRemoteBinding;
+
+      serverStore.updateServer('srv-1', {
+        url: 'https://new.example.com',
+        serverType: 'GitHub Copilot',
+      });
+
+      expect(modelStore.activeRemoteBinding).toBe(binding);
+      expect(modelStore.activeRemoteBinding).toMatchObject({
+        url: 'https://api.example.com',
+        serverType: 'OpenAI',
+        credentialRevision: 4,
+        wireApi: 'chat-completions',
+      });
+    });
+
+    it('uses compatibility defaults for legacy missing protocol settings', async () => {
+      runInAction(() => {
+        serverStore.servers[0].apiMode = undefined;
+        serverStore.servers[0].credentialRevision = undefined;
+      });
+
+      await modelStore.setRemoteModel(remoteModel);
+
+      expect(modelStore.activeRemoteBinding).toMatchObject({
+        wireApi: 'chat-completions',
+        credentialRevision: 0,
+      });
     });
   });
 

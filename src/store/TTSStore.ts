@@ -38,6 +38,8 @@ export type TTSPlaybackState =
   | {mode: 'streaming'; messageId: string; handle: StreamingHandle}
   | {mode: 'playing'; messageId: string};
 
+export type TTSPlaybackOutcome = 'completed' | 'skipped' | 'failed' | 'none';
+
 /**
  * State machine for a neural-engine model download lifecycle.
  * Derived from the engine's `isInstalled()` on `init()` — never
@@ -115,7 +117,13 @@ export class TTSStore {
 
   // Persisted user preferences
   autoSpeakEnabled: boolean = false;
+  // Transient requirement owned by hands-free conversation. Never persisted.
+  conversationAutoSpeakEnabled: boolean = false;
   currentVoice: Voice | null = null;
+
+  get effectiveAutoSpeakEnabled(): boolean {
+    return this.autoSpeakEnabled || this.conversationAutoSpeakEnabled;
+  }
   /**
    * Supertonic diffusion-step count. Persisted so a user's quality
    * preference survives restart. Missing values default to 5 on first load.
@@ -165,6 +173,8 @@ export class TTSStore {
   // Per-streaming-session state for stripping `<think>…</think>` markup.
   private streamStripper: ThinkingStripper | null = null;
   private streamPlaceholderEmitted: boolean = false;
+  private skippedMessageIds = new Set<string>();
+  private playbackRevision = 0;
 
   constructor() {
     makeAutoObservable(this, {}, {autoBind: true});
@@ -276,6 +286,7 @@ export class TTSStore {
   setAutoSpeak(on: boolean) {
     this.autoSpeakEnabled = on;
     if (!on) {
+      this.conversationAutoSpeakEnabled = false;
       // Turning auto-speak off frees the active neural engine's RAM
       // proactively — the user has signaled they don't want passive
       // playback. Re-init is lazy on the next preview / message replay.
@@ -285,6 +296,22 @@ export class TTSStore {
           console.warn('[TTSStore] release on auto-speak off failed:', err);
         });
     }
+  }
+
+  setConversationAutoSpeak(on: boolean): void {
+    this.conversationAutoSpeakEnabled = on;
+  }
+
+  async skipCurrentPlayback(): Promise<void> {
+    const state = this.playbackState;
+    if (
+      state.mode !== 'idle' &&
+      this.conversationAutoSpeakEnabled &&
+      !state.messageId.startsWith('preview:')
+    ) {
+      this.skippedMessageIds.add(state.messageId);
+    }
+    await this.stop();
   }
 
   /**
@@ -297,6 +324,9 @@ export class TTSStore {
   setUserTTSOverride(value: boolean): void {
     const wasAvailable = this.isTTSAvailable;
     this.userTTSOverride = value;
+    if (!value) {
+      this.conversationAutoSpeakEnabled = false;
+    }
     if (wasAvailable && !value) {
       this.stop()
         .then(() => ttsRuntime.release())
@@ -308,6 +338,9 @@ export class TTSStore {
 
   setCurrentVoice(v: Voice | null) {
     this.currentVoice = v;
+    if (v == null) {
+      this.conversationAutoSpeakEnabled = false;
+    }
   }
 
   setSupertonicSteps(steps: SupertonicSteps) {
@@ -392,6 +425,7 @@ export class TTSStore {
   async stop(): Promise<void> {
     const state = this.playbackState;
     const voice = this.currentVoice;
+    this.playbackRevision += 1;
     runInAction(() => {
       this.playbackState = {mode: 'idle'};
     });
@@ -403,6 +437,7 @@ export class TTSStore {
       } catch (err) {
         console.warn('[TTSStore] streaming cancel failed:', err);
       }
+
       return;
     }
     if (voice) {
@@ -415,6 +450,29 @@ export class TTSStore {
   }
 
   /**
+   * Establish confirmed silence before opening the microphone. Unlike the
+   * ordinary UI stop path, failures propagate so dictation never starts while
+   * PocketPal may still be speaking.
+   */
+  async stopForDictation(): Promise<void> {
+    const state = this.playbackState;
+    const voice = this.currentVoice;
+    const revision = ++this.playbackRevision;
+    if (state.mode === 'streaming') {
+      await state.handle.cancel();
+    } else if (voice) {
+      await getEngine(voice.engine).stop();
+    }
+    if (this.playbackRevision === revision) {
+      runInAction(() => {
+        this.playbackState = {mode: 'idle'};
+      });
+      this.streamStripper = null;
+      this.streamPlaceholderEmitted = false;
+    }
+  }
+
+  /**
    * Speak `text` as a single utterance (replay path).
    */
   async play(
@@ -422,12 +480,20 @@ export class TTSStore {
     text: string,
     opts?: {hadReasoning?: boolean; voiceOverride?: Voice},
   ): Promise<void> {
+    await this.playWithOutcome(messageId, text, opts);
+  }
+
+  private async playWithOutcome(
+    messageId: string,
+    text: string,
+    opts?: {hadReasoning?: boolean; voiceOverride?: Voice},
+  ): Promise<TTSPlaybackOutcome> {
     if (!this.isTTSAvailable) {
-      return;
+      return 'none';
     }
     const voice = opts?.voiceOverride ?? this.currentVoice;
     if (!voice) {
-      return;
+      return 'none';
     }
 
     await this.stop();
@@ -439,7 +505,11 @@ export class TTSStore {
     const spokenText = hadNonEmptyThink
       ? `${pickThinkingPlaceholder()} ${cleanText}`
       : cleanText;
+    if (!spokenText.trim()) {
+      return 'none';
+    }
 
+    const revision = ++this.playbackRevision;
     runInAction(() => {
       this.playbackState = {mode: 'playing', messageId};
     });
@@ -454,14 +524,13 @@ export class TTSStore {
       } else {
         await engine.play(spokenText, voice);
       }
+      return this.playbackRevision === revision ? 'completed' : 'skipped';
     } catch (err) {
       console.warn('[TTSStore] play failed:', err);
+      return 'failed';
     } finally {
       runInAction(() => {
-        if (
-          this.playbackState.mode === 'playing' &&
-          this.playbackState.messageId === messageId
-        ) {
+        if (this.playbackRevision === revision) {
           this.playbackState = {mode: 'idle'};
         }
       });
@@ -527,9 +596,14 @@ export class TTSStore {
 
   /** First token / message creation. Opens a streaming session. */
   onAssistantMessageStart(messageId: string): void {
+    for (const skippedId of this.skippedMessageIds) {
+      if (skippedId !== messageId) {
+        this.skippedMessageIds.delete(skippedId);
+      }
+    }
     if (
       !this.isTTSAvailable ||
-      !this.autoSpeakEnabled ||
+      !this.effectiveAutoSpeakEnabled ||
       this.currentVoice == null ||
       messageId === this.lastSpokenMessageId
     ) {
@@ -555,6 +629,7 @@ export class TTSStore {
             inferenceSteps: this.supertonicSteps,
           })
         : engine.playStreaming(voice, stopDone);
+    this.playbackRevision += 1;
     runInAction(() => {
       this.playbackState = {mode: 'streaming', messageId, handle};
     });
@@ -598,13 +673,17 @@ export class TTSStore {
   }
 
   /** Final completion — flushes streaming or falls back to replay. */
-  onAssistantMessageComplete(
+  async onAssistantMessageComplete(
     messageId: string,
     text: string,
     opts?: {hadReasoning?: boolean},
-  ) {
+  ): Promise<TTSPlaybackOutcome> {
+    if (this.skippedMessageIds.delete(messageId)) {
+      return 'skipped';
+    }
     const state = this.playbackState;
     if (state.mode === 'streaming' && state.messageId === messageId) {
+      const revision = this.playbackRevision;
       const stripper = this.streamStripper;
       if (stripper != null) {
         const leftover = stripper.flush();
@@ -616,40 +695,43 @@ export class TTSStore {
           state.handle.appendText(leftover);
         }
       }
-      state.handle
-        .finalize()
-        .catch(err => {
-          console.warn('[TTSStore] finalize failed:', err);
-        })
-        .finally(() => {
-          runInAction(() => {
-            if (
-              this.playbackState.mode === 'streaming' &&
-              this.playbackState.messageId === messageId
-            ) {
-              this.playbackState = {mode: 'idle'};
-              // Only reset stripper if this message still owns it —
-              // a new message may have already set its own stripper.
-              this.streamStripper = null;
-              this.streamPlaceholderEmitted = false;
-            }
-          });
+      try {
+        await state.handle.finalize();
+        const skipped = this.skippedMessageIds.delete(messageId);
+        return skipped || this.playbackRevision !== revision
+          ? 'skipped'
+          : text.trim()
+            ? 'completed'
+            : 'none';
+      } catch (err) {
+        console.warn('[TTSStore] finalize failed:', err);
+        return 'failed';
+      } finally {
+        runInAction(() => {
+          if (this.playbackRevision === revision) {
+            this.playbackState = {mode: 'idle'};
+            // Only reset stripper if this message still owns it —
+            // a new message may have already set its own stripper.
+            this.streamStripper = null;
+            this.streamPlaceholderEmitted = false;
+          }
         });
-      return;
+      }
     }
 
     if (
       !this.isTTSAvailable ||
-      !this.autoSpeakEnabled ||
+      !this.effectiveAutoSpeakEnabled ||
       this.currentVoice == null ||
       messageId === this.lastSpokenMessageId
     ) {
-      return;
+      return messageId === this.lastSpokenMessageId ? 'skipped' : 'none';
     }
     this.lastSpokenMessageId = messageId;
-    this.play(messageId, text, {hadReasoning: opts?.hadReasoning}).catch(() => {
-      // play() already logs and recovers; swallow to satisfy no-floating-promises.
+    const outcome = await this.playWithOutcome(messageId, text, {
+      hadReasoning: opts?.hadReasoning,
     });
+    return this.skippedMessageIds.delete(messageId) ? 'skipped' : outcome;
   }
 
   // --- Per-engine download actions --------------------------------------
@@ -775,6 +857,7 @@ export class TTSStore {
       this.setDownloadError(id, null);
       if (this.currentVoice?.engine === id) {
         this.currentVoice = null;
+        this.conversationAutoSpeakEnabled = false;
       }
     });
   }

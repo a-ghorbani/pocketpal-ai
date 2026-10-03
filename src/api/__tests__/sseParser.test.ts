@@ -1,4 +1,12 @@
-import {parseSSELine, SSEParser} from '../sseParser';
+import fs from 'fs';
+import path from 'path';
+
+import {
+  FramedSSEParser,
+  parseSSELine,
+  SSEParser,
+  SSEProtocolError,
+} from '../sseParser';
 
 describe('parseSSELine', () => {
   it('parses a valid data line with JSON', () => {
@@ -82,6 +90,92 @@ describe('SSEParser', () => {
       const events = [...parser.feed(chunk)];
       expect(events).toHaveLength(1);
       expect(events[0]).toEqual({value: 42});
+    });
+  });
+
+  describe('FramedSSEParser', () => {
+    const fixture = fs.readFileSync(
+      path.join(__dirname, 'fixtures/responses/representative.sse'),
+      'utf8',
+    );
+    const expected = [
+      {
+        event: 'response.output_text.delta',
+        data: {type: 'response.output_text.delta', delta: 'Hi 👋'},
+      },
+      {
+        event: 'response.completed',
+        data: {
+          type: 'response.completed',
+          response: {id: 'resp_sanitized'},
+        },
+      },
+    ];
+
+    function parseChunks(chunks: string[]) {
+      const framedParser = new FramedSSEParser();
+      return [
+        ...chunks.flatMap(chunk => [...framedParser.feed(chunk)]),
+        ...framedParser.flush(),
+      ];
+    }
+
+    it('parses event/data fields, comments, optional spaces and multiline data', () => {
+      expect(parseChunks([fixture])).toEqual(expected);
+    });
+
+    it('supports CRLF framing', () => {
+      expect(parseChunks([fixture.replace(/\n/g, '\r\n')])).toEqual(expected);
+    });
+
+    it('parses the fixture at every two-chunk character boundary', () => {
+      for (let split = 0; split <= fixture.length; split++) {
+        expect(
+          parseChunks([fixture.slice(0, split), fixture.slice(split)]),
+        ).toEqual(expected);
+      }
+    });
+
+    it('parses one JS character per chunk, including a split surrogate pair', () => {
+      const chunks = Array.from({length: fixture.length}, (_, index) =>
+        fixture.slice(index, index + 1),
+      );
+      expect(parseChunks(chunks)).toEqual(expected);
+    });
+
+    it('flushes an unterminated final event', () => {
+      expect(parseChunks(['event: response.test\ndata: {"ok":true}'])).toEqual([
+        {event: 'response.test', data: {ok: true}},
+      ]);
+    });
+
+    it('ignores comment-only keepalive frames', () => {
+      expect(parseChunks([': ping\n\n: another\n\n'])).toEqual([]);
+    });
+
+    it('surfaces malformed required JSON as a protocol error', () => {
+      const framedParser = new FramedSSEParser();
+      expect(() => [
+        ...framedParser.feed('event: response.test\ndata: {bad}\n\n'),
+      ]).toThrow(SSEProtocolError);
+
+      try {
+        [
+          ...new FramedSSEParser().feed(
+            'event: response.test\ndata: {bad}\n\n',
+          ),
+        ];
+      } catch (error) {
+        const enumerableError = {...(error as SSEProtocolError)};
+        expect(error).toMatchObject({
+          name: 'SSEProtocolError',
+          event: 'response.test',
+          data: '{bad}',
+        });
+        expect(Object.keys(error as SSEProtocolError)).not.toContain('data');
+        expect(enumerableError).not.toHaveProperty('data');
+        expect(JSON.stringify(error)).not.toContain('{bad}');
+      }
     });
   });
 

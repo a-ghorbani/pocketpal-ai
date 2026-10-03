@@ -85,6 +85,9 @@ function stepToApiMessages(step: AgentStep): ChatMessage[] {
   if (step.reasoningContent) {
     assistantMsg.reasoning_content = step.reasoningContent;
   }
+  if (step.responsesState) {
+    assistantMsg.responsesState = step.responsesState;
+  }
   const outcomes = step.toolOutcomes ?? [];
   const outcomeIds = new Set(outcomes.map(o => o.callId));
   const toolMsgs: ChatMessage[] = outcomes.map(o => ({
@@ -212,10 +215,13 @@ export async function applyChatTemplate(
   let formattedChat: string | JinjaFormattedChatResult | undefined;
 
   try {
+    const wireMessages = messages.map(
+      ({responsesState: _internal, ...msg}) => msg,
+    );
     // Model's custom chat template. This uses chat-formatter, which is based on Nunjucks (as opposed to Jinja2).
     if (modelChatTemplate?.chatTemplate) {
       // Convert multimodal messages to text-only for chat-formatter compatibility
-      const textOnlyMessages = messages.map(msg => ({
+      const textOnlyMessages = wireMessages.map(msg => ({
         ...msg,
         content: Array.isArray(msg.content)
           ? msg.content.find(part => part.type === 'text')?.text || ''
@@ -227,12 +233,12 @@ export async function applyChatTemplate(
       }) as string;
     } else if (contextChatTemplate) {
       // Context's model-specific chat template. This uses llama.cpp's getFormattedChat.
-      formattedChat = await context?.getFormattedChat(messages);
+      formattedChat = await context?.getFormattedChat(wireMessages);
     }
 
     if (!formattedChat) {
       // Default chat template - convert multimodal messages to text-only for chat-formatter compatibility
-      const textOnlyMessages = messages.map(msg => ({
+      const textOnlyMessages = wireMessages.map(msg => ({
         ...msg,
         content: Array.isArray(msg.content)
           ? msg.content.find(part => part.type === 'text')?.text || ''

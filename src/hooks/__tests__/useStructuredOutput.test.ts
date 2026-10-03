@@ -1,8 +1,11 @@
 import {renderHook, act} from '@testing-library/react-hooks';
 import {useStructuredOutput} from '../useStructuredOutput';
-import {modelStore} from '../../store';
+import {chatSessionStore, modelStore} from '../../store';
 
 jest.mock('../../store', () => ({
+  chatSessionStore: {
+    getCurrentCompletionSettings: jest.fn().mockResolvedValue({}),
+  },
   modelStore: {
     engine: {
       completion: jest.fn(),
@@ -17,9 +20,10 @@ describe('useStructuredOutput', () => {
     jest.clearAllMocks();
     (modelStore as any).engine = {
       completion: jest.fn(),
-      stopCompletion: jest.fn(),
+      stopCompletion: jest.fn().mockResolvedValue(undefined),
     };
     (modelStore as any).activeModel = undefined;
+    (modelStore as any).activeModelCompletionSettings = undefined;
   });
 
   it('should generate structured output successfully', async () => {
@@ -87,7 +91,80 @@ describe('useStructuredOutput', () => {
     );
   });
 
-  it('should handle invalid JSON response', async () => {
+  it('forwards resolved generation modes without mutating the resolved settings', async () => {
+    const resolved = {
+      temperature: 0.7,
+      seed: -1,
+      generationParameterModes: {
+        temperature: 'omit',
+        seed: 'send',
+      },
+    };
+    (
+      chatSessionStore.getCurrentCompletionSettings as jest.Mock
+    ).mockResolvedValueOnce(resolved);
+    (modelStore as any).activeModelCompletionSettings = {
+      temperature: 0.7,
+    };
+    (modelStore.engine!.completion as jest.Mock).mockResolvedValueOnce({
+      text: '{"key":"value"}',
+    });
+    const {result} = renderHook(() => useStructuredOutput());
+
+    await act(async () => {
+      await result.current.generate('test', {});
+    });
+
+    expect(chatSessionStore.getCurrentCompletionSettings).toHaveBeenCalledWith({
+      temperature: 0.7,
+    });
+    expect(modelStore.engine!.completion).toHaveBeenCalledWith(
+      expect.objectContaining({
+        seed: -1,
+        generationParameterModes: {
+          temperature: 'omit',
+          seed: 'send',
+        },
+      }),
+    );
+    expect(resolved).toEqual({
+      temperature: 0.7,
+      seed: -1,
+      generationParameterModes: {
+        temperature: 'omit',
+        seed: 'send',
+      },
+    });
+  });
+
+  it('stops an in-flight request without awaiting the completion result', async () => {
+    let resolveCompletion!: (value: {text: string}) => void;
+    (modelStore.engine!.completion as jest.Mock).mockReturnValueOnce(
+      new Promise(resolve => {
+        resolveCompletion = resolve;
+      }),
+    );
+    const {result} = renderHook(() => useStructuredOutput());
+    let generation!: Promise<unknown>;
+
+    act(() => {
+      generation = result.current.generate('test', {});
+    });
+    await act(async () => {
+      await Promise.resolve();
+      result.current.stop();
+    });
+
+    expect(modelStore.engine!.stopCompletion).toHaveBeenCalledTimes(1);
+    expect(result.current.isGenerating).toBe(false);
+
+    await act(async () => {
+      resolveCompletion({text: '{}'});
+      await generation;
+    });
+  });
+
+  it('rejects invalid JSON response', async () => {
     const mockResponse = {text: 'invalid json'};
     (modelStore.engine!.completion as jest.Mock).mockResolvedValueOnce(
       mockResponse,
@@ -95,12 +172,41 @@ describe('useStructuredOutput', () => {
 
     const {result} = renderHook(() => useStructuredOutput());
 
-    let output;
+    let error;
     await act(async () => {
-      output = await result.current.generate('test', {});
+      try {
+        await result.current.generate('test', {});
+      } catch (caught) {
+        error = caught;
+      }
     });
 
-    expect(output).toEqual({prompt: '', error: expect.any(Error)});
+    expect(error).toBeInstanceOf(Error);
+    expect(result.current.isGenerating).toBe(false);
+  });
+
+  it.each([
+    {
+      text: '{}',
+      terminal_status: 'incomplete',
+      incomplete_reason: 'max_output_tokens',
+      interrupted: true,
+    },
+    {
+      text: 'No',
+      terminal_status: 'incomplete',
+      refusal: 'No',
+      interrupted: true,
+    },
+  ])('rejects non-completed Responses output', async completionResult => {
+    (modelStore.engine!.completion as jest.Mock).mockResolvedValueOnce(
+      completionResult,
+    );
+    const {result} = renderHook(() => useStructuredOutput());
+
+    await expect(
+      act(async () => result.current.generate('test', {})),
+    ).rejects.toThrow();
     expect(result.current.isGenerating).toBe(false);
   });
 

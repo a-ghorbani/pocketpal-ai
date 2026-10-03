@@ -8,10 +8,7 @@ import {
   palStore,
 } from '../../store';
 import {styles} from './styles';
-import {
-  COMPLETION_PARAMS_METADATA,
-  validateCompletionSettings,
-} from '../../utils/modelSettings';
+import {processCompletionSettingsDraft} from '../../services/completion/completionSettingsDraft';
 import {Alert, View} from 'react-native';
 import {Button, SegmentedButtons, Text} from 'react-native-paper';
 import {L10nContext} from '../../utils';
@@ -186,49 +183,11 @@ export const ChatGenerationSettingsSheet = ({
 
   const handleSaveSettings = async () => {
     // Convert string values to numbers where needed
-    const processedSettings = Object.entries(settings).reduce(
-      (acc, [key, value]) => {
-        const metadata = COMPLETION_PARAMS_METADATA[key];
-        if (metadata?.validation.type === 'numeric') {
-          // Handle numeric conversion
-          let numValue: number;
-          if (typeof value === 'string') {
-            numValue = Number(value);
-          } else if (typeof value === 'number') {
-            numValue = value;
-          } else {
-            // If it's neither string nor number, treat as invalid. Most probably won't happen.
-            acc.errors[key] =
-              l10n.components.chatGenerationSettingsSheet.invalidNumericValuesMessage;
-            return acc;
-          }
-
-          if (Number.isNaN(numValue)) {
-            acc.errors[key] =
-              l10n.components.chatGenerationSettingsSheet.invalidNumericValuesMessage;
-          } else {
-            acc.settings[key] = numValue;
-          }
-        } else {
-          // For non-numeric values, keep as is
-          acc.settings[key] = value;
-        }
-        return acc;
-      },
-      {settings: {}, errors: {}} as {
-        settings: typeof settings;
-        errors: Record<string, string>;
-      },
+    const processedSettings = processCompletionSettingsDraft(
+      settings,
+      l10n.components.chatGenerationSettingsSheet.invalidNumericValuesMessage,
     );
-
-    // Validate the converted values
-    const validationResult = validateCompletionSettings(
-      processedSettings.settings,
-    );
-    const allErrors = {
-      ...processedSettings.errors,
-      ...validationResult.errors,
-    };
+    const allErrors = processedSettings.errors;
 
     if (Object.keys(allErrors).length > 0) {
       Alert.alert(
@@ -351,6 +310,7 @@ export const ChatGenerationSettingsSheet = ({
           settings={settings}
           onChange={updateSettings}
           disabled={isUsingPalSettings}
+          allowInherit={!isEditingPresetSettings}
         />
       </Sheet.ScrollView>
       <Sheet.Actions>

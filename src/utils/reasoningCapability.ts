@@ -19,6 +19,7 @@ export interface ReasoningCapability {
 
 import {ModelOrigin} from './types';
 import type {Model} from './types';
+import type {RemoteProtocolCapabilities} from './remoteProtocol';
 
 /**
  * Canonical axis-2 effort levels, in pill-cycle order from lowest to highest
@@ -70,6 +71,7 @@ const UNKNOWN: ReasoningCapability = {
 export function resolveReasoningCapability(
   model: Model | undefined,
   remoteReasoning: Record<string, ReasoningCapability>,
+  catalogCapabilities?: RemoteProtocolCapabilities,
 ): ReasoningCapability {
   if (!model) {
     return UNKNOWN;
@@ -81,7 +83,22 @@ export function resolveReasoningCapability(
       : model.reasoning;
 
   let resolved: ReasoningCapability;
-  if (stored) {
+  if (stored?.source === 'user') {
+    resolved = stored;
+  } else if (
+    model.origin === ModelOrigin.REMOTE &&
+    catalogCapabilities?.reasoningEffortValues?.length
+  ) {
+    resolved = {
+      isReasoning: 'yes',
+      source: stored?.source === 'learned' ? 'learned' : 'detected',
+      supportsEffort: true,
+      effortValues: orderEffortValues(
+        catalogCapabilities.reasoningEffortValues,
+      ),
+      effortSource: 'detected',
+    };
+  } else if (stored) {
     resolved = stored;
   } else if (model.supportsThinking === true) {
     resolved = {...UNKNOWN, isReasoning: 'yes', source: 'detected'};

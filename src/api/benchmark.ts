@@ -23,6 +23,9 @@ export async function submitBenchmark(
   deviceInfo: DeviceInfo,
   benchmarkResult: BenchmarkResult,
 ): Promise<{message: string; id: number}> {
+  if (!__ENABLE_PALSHUB__) {
+    throw new Error('Benchmark submission is disabled in this build.');
+  }
   try {
     // Check network connectivity first
     const isConnected = await checkConnectivity();

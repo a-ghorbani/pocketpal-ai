@@ -25,16 +25,35 @@ import {L10nContext} from '../../utils';
 import {parseTimeoutMs} from '../../utils/timeout';
 import {SERVER_TYPE_DROPDOWN_OPTIONS} from '../../utils/serverTypes';
 import {testConnection} from '../../api/openai';
+import {isLocalHost} from '../../utils/network';
 import {t} from '../../locales';
 
 import {createStyles} from './styles';
 import {EyeIcon, EyeOffIcon} from '../../assets/icons';
+import {
+  resolveRemoteProtocol,
+  type RemoteApiMode,
+} from '../../utils/remoteProtocol';
+import {
+  API_MODE_VALUES,
+  protocolLabel,
+  protocolSourceLabel,
+  protocolWarningKey,
+} from '../RemoteModelSheet/protocolUi';
 
 interface ServerDetailsSheetProps {
   isVisible: boolean;
   onDismiss: () => void;
   serverId: string | null;
 }
+
+const hasSameOrigin = (left: string, right: string): boolean => {
+  try {
+    return new URL(left).origin === new URL(right).origin;
+  } catch {
+    return false;
+  }
+};
 
 export const ServerDetailsSheet: React.FC<ServerDetailsSheetProps> = observer(
   ({isVisible, onDismiss, serverId}) => {
@@ -46,6 +65,7 @@ export const ServerDetailsSheet: React.FC<ServerDetailsSheetProps> = observer(
     const [apiKey, setApiKey] = useState('');
     const [timeoutSeconds, setTimeoutSeconds] = useState('');
     const [serverType, setServerType] = useState('unknown');
+    const [apiMode, setApiMode] = useState<RemoteApiMode>('auto');
     const [secureTextEntry, setSecureTextEntry] = useState(true);
     const [isProbing, setIsProbing] = useState(false);
     const [probeResult, setProbeResult] = useState<{
@@ -64,6 +84,15 @@ export const ServerDetailsSheet: React.FC<ServerDetailsSheetProps> = observer(
       timeoutSecondsRef.current = timeoutSeconds;
     }, [timeoutSeconds]);
 
+    const serverTypeRef = useRef(serverType);
+    const probeGenerationRef = useRef(0);
+
+    const invalidateProbe = useCallback(() => {
+      probeGenerationRef.current += 1;
+      setProbeResult(null);
+      setIsProbing(false);
+    }, []);
+
     // Load server data when sheet opens
     useEffect(() => {
       if (isVisible && serverId) {
@@ -77,6 +106,8 @@ export const ServerDetailsSheet: React.FC<ServerDetailsSheetProps> = observer(
           setTimeoutSeconds(seconds);
           timeoutSecondsRef.current = seconds;
           setServerType(server.serverType || 'unknown');
+          serverTypeRef.current = server.serverType || 'unknown';
+          setApiMode(server.apiMode || 'auto');
         }
         serverStore.getApiKey(serverId).then(key => {
           setApiKey(key || '');
@@ -85,6 +116,8 @@ export const ServerDetailsSheet: React.FC<ServerDetailsSheetProps> = observer(
         setProbeResult(null);
         setSecureTextEntry(true);
         setIsSaving(false);
+      } else {
+        probeGenerationRef.current += 1;
       }
     }, [isVisible, serverId]);
 
@@ -97,7 +130,7 @@ export const ServerDetailsSheet: React.FC<ServerDetailsSheetProps> = observer(
       : [];
 
     const probeServer = useCallback(
-      async (probeUrl: string) => {
+      async (probeUrl: string, probeServerType: string) => {
         const trimmedUrl = probeUrl.trim();
         if (!trimmedUrl) {
           return;
@@ -105,28 +138,46 @@ export const ServerDetailsSheet: React.FC<ServerDetailsSheetProps> = observer(
         try {
           // Validate URL format — throws on invalid
           const parsed = new URL(trimmedUrl);
-          if (!parsed.hostname) {
+          if (
+            !parsed.hostname ||
+            (parsed.protocol !== 'https:' && !isLocalHost(trimmedUrl))
+          ) {
             throw new Error('No hostname');
           }
         } catch {
           return;
         }
+        const probeGeneration = ++probeGenerationRef.current;
         setIsProbing(true);
         setProbeResult(null);
         try {
-          const key = apiKeyRef.current.trim() || undefined;
           const savedServer = serverId
             ? serverStore.servers.find(s => s.id === serverId)
             : undefined;
+          const key =
+            savedServer && hasSameOrigin(trimmedUrl, savedServer.url)
+              ? apiKeyRef.current.trim() || undefined
+              : undefined;
           const timeoutMs =
             parseTimeoutMs(timeoutSecondsRef.current) ??
             savedServer?.requestTimeoutMs;
-          const result = await testConnection(trimmedUrl, key, timeoutMs);
-          setProbeResult({ok: result.ok, error: result.error});
+          const result = await testConnection(
+            trimmedUrl,
+            key,
+            timeoutMs,
+            probeServerType,
+          );
+          if (probeGeneration === probeGenerationRef.current) {
+            setProbeResult({ok: result.ok, error: result.error});
+          }
         } catch (error: any) {
-          setProbeResult({ok: false, error: error.message});
+          if (probeGeneration === probeGenerationRef.current) {
+            setProbeResult({ok: false, error: error.message});
+          }
         } finally {
-          setIsProbing(false);
+          if (probeGeneration === probeGenerationRef.current) {
+            setIsProbing(false);
+          }
         }
       },
       [serverId],
@@ -140,9 +191,22 @@ export const ServerDetailsSheet: React.FC<ServerDetailsSheetProps> = observer(
     // Re-probe on apiKey blur
     const handleApiKeyBlur = useCallback(() => {
       if (url.trim()) {
-        debouncedProbe(url);
+        debouncedProbe(url, serverTypeRef.current);
       }
     }, [url, debouncedProbe]);
+
+    const handleServerTypeChange = useCallback(
+      (value: string) => {
+        serverTypeRef.current = value;
+        setServerType(value);
+        debouncedProbe.cancel();
+        invalidateProbe();
+        if (url.trim()) {
+          debouncedProbe(url, value);
+        }
+      },
+      [url, debouncedProbe, invalidateProbe],
+    );
 
     const toggleSecureEntry = () => {
       setSecureTextEntry(!secureTextEntry);
@@ -158,6 +222,7 @@ export const ServerDetailsSheet: React.FC<ServerDetailsSheetProps> = observer(
           url: url.trim(),
           requestTimeoutMs: parseTimeoutMs(timeoutSeconds),
           serverType,
+          apiMode,
         });
         if (apiKey.trim()) {
           await serverStore.setApiKey(serverId, apiKey.trim());
@@ -168,7 +233,16 @@ export const ServerDetailsSheet: React.FC<ServerDetailsSheetProps> = observer(
       } finally {
         setIsSaving(false);
       }
-    }, [serverId, server, url, apiKey, timeoutSeconds, serverType, onDismiss]);
+    }, [
+      serverId,
+      server,
+      url,
+      apiKey,
+      timeoutSeconds,
+      serverType,
+      apiMode,
+      onDismiss,
+    ]);
 
     const handleRemoveServer = useCallback(() => {
       if (!serverId || !server) {
@@ -204,6 +278,28 @@ export const ServerDetailsSheet: React.FC<ServerDetailsSheetProps> = observer(
     if (!server) {
       return null;
     }
+    const protocolOptions = API_MODE_VALUES.map(value => ({
+      value,
+      label:
+        value === 'auto'
+          ? l10n.settings.apiProtocolAuto
+          : value === 'chat-completions'
+            ? l10n.settings.apiProtocolChatCompletions
+            : l10n.settings.apiProtocolResponses,
+      testID: `api-protocol-option-${value}`,
+    }));
+    const protocolLabels = {
+      chatCompletions: l10n.settings.apiProtocolChatCompletions,
+      responses: l10n.settings.apiProtocolResponses,
+      unsupported: l10n.settings.apiProtocolUnsupported,
+    };
+    const sourceLabels = {
+      modelOverride: l10n.settings.apiProtocolSourceModel,
+      serverOverride: l10n.settings.apiProtocolSourceServer,
+      liveCatalog: l10n.settings.apiProtocolSourceLiveCatalog,
+      cachedCatalog: l10n.settings.apiProtocolSourceCachedCatalog,
+      compatibilityDefault: l10n.settings.apiProtocolSourceCompatibility,
+    };
 
     return (
       <Sheet
@@ -219,8 +315,10 @@ export const ServerDetailsSheet: React.FC<ServerDetailsSheetProps> = observer(
               label={l10n.settings.serverUrl}
               defaultValue={url}
               onChangeText={text => {
+                debouncedProbe.cancel();
+                invalidateProbe();
                 setUrl(text);
-                debouncedProbe(text);
+                debouncedProbe(text, serverTypeRef.current);
               }}
               placeholder={l10n.settings.serverUrlPlaceholder}
               autoCapitalize="none"
@@ -251,10 +349,23 @@ export const ServerDetailsSheet: React.FC<ServerDetailsSheetProps> = observer(
               testID="server-type-dropdown"
               value={serverType}
               options={SERVER_TYPE_DROPDOWN_OPTIONS}
-              onChange={setServerType}
+              onChange={handleServerTypeChange}
             />
             <Text style={styles.apiKeyDescription}>
               {l10n.settings.serverTypeHelp}
+            </Text>
+          </View>
+
+          <View style={styles.inputSpacing}>
+            <Text>{l10n.settings.apiProtocol}</Text>
+            <Dropdown
+              testID="api-protocol-dropdown"
+              value={apiMode}
+              options={protocolOptions}
+              onChange={value => setApiMode(value as RemoteApiMode)}
+            />
+            <Text style={styles.apiKeyDescription}>
+              {l10n.settings.apiProtocolHelp}
             </Text>
           </View>
 
@@ -339,12 +450,49 @@ export const ServerDetailsSheet: React.FC<ServerDetailsSheetProps> = observer(
               <Text style={styles.modelsSectionLabel}>
                 {l10n.settings.modelsUsingServer}
               </Text>
-              {userModels.map(m => (
-                <View key={m.remoteModelId} style={styles.modelItem}>
-                  <View style={styles.modelDot} />
-                  <Text style={styles.modelItemText}>{m.remoteModelId}</Text>
-                </View>
-              ))}
+              {userModels.map(m => {
+                const modelId = `${serverId}/${m.remoteModelId}`;
+                const protocol = resolveRemoteProtocol({
+                  modelPreference:
+                    serverStore.getRemoteModelPreference?.(modelId),
+                  apiMode,
+                  catalog: serverStore.getRemoteCatalogModel?.(modelId),
+                });
+                const warning = protocolWarningKey(protocol);
+                return (
+                  <View key={m.remoteModelId} style={styles.modelItem}>
+                    <View style={styles.modelDot} />
+                    <View style={styles.modelItemDetails}>
+                      <Text style={styles.modelItemText}>
+                        {m.remoteModelId}
+                      </Text>
+                      <Text
+                        testID={`server-model-protocol-${m.remoteModelId}`}
+                        style={styles.protocolText}>
+                        {t(l10n.settings.apiProtocolEffective, {
+                          protocol: protocolLabel(
+                            protocol.wireApi,
+                            protocolLabels,
+                          ),
+                          source: protocolSourceLabel(
+                            protocol.source,
+                            sourceLabels,
+                          ),
+                        })}
+                      </Text>
+                      {warning && (
+                        <Text style={styles.protocolWarning}>
+                          {warning === 'unsupported'
+                            ? l10n.settings.apiProtocolWarningUnsupported
+                            : warning === 'contradiction'
+                              ? l10n.settings.apiProtocolWarningContradiction
+                              : l10n.settings.apiProtocolWarningUnknown}
+                        </Text>
+                      )}
+                    </View>
+                  </View>
+                );
+              })}
             </View>
           )}
 

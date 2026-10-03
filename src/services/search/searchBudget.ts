@@ -91,6 +91,17 @@ export const budgetHits = (
   return out;
 };
 
+export const prepareFullHits = (
+  hits: SearchHit[],
+  maxResults: number,
+): SearchHit[] =>
+  hits.slice(0, Math.max(0, maxResults)).map(hit => ({
+    title: toPlainText(hit.title),
+    url: hit.url,
+    snippet: toPlainText(hit.snippet),
+    ...(hit.publishedAt ? {publishedAt: hit.publishedAt} : {}),
+  }));
+
 export const budgetPage = (
   page: PageContent,
   tokenCeiling: number,
@@ -124,22 +135,25 @@ const cacheKey = (
   providerId: SearchProviderId,
   query: string,
   maxResults: number,
-): string => `${providerId}::${maxResults}::${query}`;
+  fullResults: boolean,
+): string => `${providerId}::${maxResults}::${fullResults}::${query}`;
 
 export const getCachedHits = (
   providerId: SearchProviderId,
   query: string,
   maxResults: number,
+  fullResults: boolean,
 ): SearchHit[] | undefined =>
-  searchCache.get(cacheKey(providerId, query, maxResults));
+  searchCache.get(cacheKey(providerId, query, maxResults, fullResults));
 
 export const setCachedHits = (
   providerId: SearchProviderId,
   query: string,
   maxResults: number,
+  fullResults: boolean,
   hits: SearchHit[],
 ): void => {
-  const key = cacheKey(providerId, query, maxResults);
+  const key = cacheKey(providerId, query, maxResults, fullResults);
   // Re-insert moves the key to newest so eviction stays LRU-ish on overwrite.
   searchCache.delete(key);
   searchCache.set(key, hits);

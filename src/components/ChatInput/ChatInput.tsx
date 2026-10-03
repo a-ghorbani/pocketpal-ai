@@ -8,6 +8,8 @@ import {
   Alert,
   ScrollView,
   Image,
+  Linking,
+  Platform,
 } from 'react-native';
 import {launchCamera, launchImageLibrary} from 'react-native-image-picker';
 import {useCameraPermission} from 'react-native-vision-camera';
@@ -26,14 +28,23 @@ import {
 } from '../../assets/icons';
 
 import {useTheme} from '../../hooks';
+import {useVoiceConversation} from '../../hooks/useVoiceConversation';
 
 import {createStyles} from './styles';
 
-import {chatSessionStore, modelStore, palStore, uiStore} from '../../store';
+import {
+  chatSessionStore,
+  modelStore,
+  palStore,
+  ttsStore,
+  uiStore,
+} from '../../store';
 
 import {MessageType} from '../../utils/types';
 import {L10nContext, UserContext} from '../../utils';
+import {isLightColor, withOpacity} from '../../utils/colorUtils';
 import {t} from '../../locales';
+import {GenerationParameterMode} from '../../utils/completionTypes';
 
 import {SendButton, StopButton, Menu, VoiceChip} from '..';
 
@@ -42,7 +53,7 @@ export interface ChatInputTopLevelProps {
   isStreaming?: boolean;
   /** Will be called on {@link SendButton} tap. Has {@link MessageType.PartialText} which can
    * be transformed to {@link MessageType.Text} and added to the messages list. */
-  onSendPress: (message: MessageType.PartialText) => void;
+  onSendPress: (message: MessageType.PartialText) => Promise<unknown> | void;
   onStopPress?: () => void;
   onCancelEdit?: () => void;
   onPalBtnPress?: () => void;
@@ -66,12 +77,23 @@ export interface ChatInputTopLevelProps {
   /** Whether to show the image upload button */
   showImageUpload?: boolean;
   isVisionEnabled?: boolean;
+  /** Whether this mounted input is the active foreground chat. */
+  isDictationEligible?: boolean;
+  /** Identity used to discard speech results after chat/edit target changes. */
+  dictationContextKey?: string;
   /** Whether to show the thinking toggle button */
   showThinkingToggle?: boolean;
   /** Whether thinking mode is currently enabled */
   isThinkingEnabled?: boolean;
   /** Callback when thinking toggle is pressed */
   onThinkingToggle?: (enabled: boolean) => void;
+  /** Omission/inheritance policy for thinking. Undefined preserves legacy behavior. */
+  thinkingMode?: GenerationParameterMode;
+  /** Updates thinking policy while retaining the explicit On/Off value. */
+  onThinkingModeChange?: (
+    mode: GenerationParameterMode,
+    enabled?: boolean,
+  ) => void;
   /** Whether the model supports graded reasoning effort (axis 2) */
   supportsEffort?: boolean;
   /** The graded effort value set, e.g. ['low','medium','high'] */
@@ -80,6 +102,13 @@ export interface ChatInputTopLevelProps {
   reasoningEffort?: string;
   /** Callback to cycle the graded effort state (off -> values -> off) */
   onEffortCycle?: () => void;
+  /** Omission/inheritance policy for reasoning effort. */
+  reasoningEffortMode?: GenerationParameterMode;
+  /** Updates effort policy while retaining the explicit level. */
+  onReasoningEffortModeChange?: (
+    mode: GenerationParameterMode,
+    effort?: string,
+  ) => void;
 }
 
 export interface ChatInputAdditionalProps {
@@ -97,6 +126,11 @@ export interface ChatInputAdditionalProps {
   isThinkingEnabled?: boolean;
   /** Callback when thinking toggle is pressed */
   onThinkingToggle?: (enabled: boolean) => void;
+  thinkingMode?: GenerationParameterMode;
+  onThinkingModeChange?: (
+    mode: GenerationParameterMode,
+    enabled?: boolean,
+  ) => void;
   /** Whether the model supports graded reasoning effort (axis 2) */
   supportsEffort?: boolean;
   /** The graded effort value set, e.g. ['low','medium','high'] */
@@ -105,6 +139,11 @@ export interface ChatInputAdditionalProps {
   reasoningEffort?: string;
   /** Callback to cycle the graded effort state (off -> values -> off) */
   onEffortCycle?: () => void;
+  reasoningEffortMode?: GenerationParameterMode;
+  onReasoningEffortModeChange?: (
+    mode: GenerationParameterMode,
+    effort?: string,
+  ) => void;
 }
 
 export type ChatInputProps = ChatInputTopLevelProps & ChatInputAdditionalProps;
@@ -134,15 +173,21 @@ export const ChatInput = observer(
     onPromptTextChange,
     showImageUpload = false,
     isVisionEnabled = false,
+    isDictationEligible = true,
+    dictationContextKey = 'chat',
     defaultImages,
     onDefaultImagesChange,
     showThinkingToggle = false,
     isThinkingEnabled = false,
     onThinkingToggle,
+    thinkingMode,
+    onThinkingModeChange,
     supportsEffort = false,
     effortValues = [],
     reasoningEffort,
     onEffortCycle,
+    reasoningEffortMode,
+    onReasoningEffortModeChange,
   }: ChatInputProps) => {
     const l10n = React.useContext(L10nContext);
     const theme = useTheme();
@@ -182,6 +227,102 @@ export const ChatInput = observer(
       isVideoCapable && promptText !== undefined
         ? promptText
         : (textInputProps?.value ?? text);
+    const onInputChangeText = textInputProps?.onChangeText;
+
+    const handleChangeText = React.useCallback(
+      (newText: string) => {
+        if (isVideoCapable && onPromptTextChange) {
+          onPromptTextChange(newText);
+        } else {
+          setText(newText);
+          onInputChangeText?.(newText);
+        }
+      },
+      [isVideoCapable, onInputChangeText, onPromptTextChange],
+    );
+
+    const handleConversationSend = React.useCallback(
+      (message: MessageType.PartialText) =>
+        Promise.resolve(onSendPress(message)),
+      [onSendPress],
+    );
+    const handleStopConversationGeneration = React.useCallback(() => {
+      onStopPress?.();
+    }, [onStopPress]);
+    const handleOpenVoiceSetup = React.useCallback(() => {
+      ttsStore.openSetupSheet();
+    }, []);
+    const conversation = useVoiceConversation({
+      contextKey: dictationContextKey,
+      recognitionEnabled:
+        isDictationEligible &&
+        !isStreaming &&
+        !isStopVisible &&
+        !isCameraActive &&
+        !isVideoCapable,
+      onSendTranscript: handleConversationSend,
+      onStopGeneration: handleStopConversationGeneration,
+      onOpenVoiceSetup: handleOpenVoiceSetup,
+    });
+    const dictation = conversation.recognition;
+    const dictationActive = conversation.active;
+    const {clearError: clearDictationError, requestModelDownload} = dictation;
+    const speechInputL10n = l10n.components.chatInput.speechInput;
+
+    React.useEffect(() => {
+      if (!dictation.errorCode) {
+        return;
+      }
+      const speech = speechInputL10n;
+      const messages: Record<string, string> = {
+        UNSUPPORTED_ANDROID: speech.unsupportedAndroid,
+        ON_DEVICE_UNAVAILABLE: speech.unavailable,
+        LANGUAGE_UNSUPPORTED: speech.languageUnsupported,
+        LANGUAGE_UNAVAILABLE: speech.languageUnavailable,
+        LANGUAGE_PENDING: speech.languagePending,
+        PERMISSION_DENIED: speech.permissionDenied,
+        PERMISSION_BLOCKED: speech.permissionBlocked,
+        NO_MATCH: speech.noMatch,
+        NO_SPEECH: speech.noSpeech,
+        TIMEOUT: speech.timeout,
+        RESULT_TIMEOUT: speech.timeout,
+        AUDIO_ERROR: speech.audioError,
+        RECOGNIZER_BUSY: speech.busy,
+        UNEXPECTED_NETWORK: speech.offlineFailure,
+        NATIVE_MODULE_ERROR: speech.unavailable,
+      };
+      const buttons: Array<{text: string; onPress?: () => void}> = [];
+      if (
+        dictation.errorCode === 'LANGUAGE_DOWNLOAD_REQUIRED' ||
+        dictation.errorCode === 'LANGUAGE_UNAVAILABLE'
+      ) {
+        buttons.push({
+          text: speech.download,
+          onPress: requestModelDownload,
+        });
+      }
+      if (dictation.errorCode === 'PERMISSION_BLOCKED') {
+        buttons.push({
+          text: speech.openSettings,
+          onPress: Linking.openSettings,
+        });
+      }
+      buttons.push({text: l10n.common.ok, onPress: clearDictationError});
+      Alert.alert(
+        speech.errorTitle,
+        dictation.errorCode === 'LANGUAGE_DOWNLOAD_REQUIRED'
+          ? speech.languageDownloadRequired
+          : (messages[dictation.errorCode] ?? speech.failed),
+        buttons,
+        {onDismiss: clearDictationError},
+      );
+    }, [
+      clearDictationError,
+      dictation.errorCode,
+      l10n.common.ok,
+      requestModelDownload,
+      speechInputL10n,
+    ]);
 
     React.useEffect(() => {
       if (isEditMode) {
@@ -211,15 +352,6 @@ export const ChatInput = observer(
       }).start();
     }, [isPickerVisible, iconRotation]);
 
-    const handleChangeText = (newText: string) => {
-      if (isVideoCapable && onPromptTextChange) {
-        onPromptTextChange(newText);
-      } else {
-        setText(newText);
-        textInputProps?.onChangeText?.(newText);
-      }
-    };
-
     const handleSend = () => {
       const trimmedValue = value.trim();
       if (trimmedValue) {
@@ -247,6 +379,34 @@ export const ChatInput = observer(
         // Clear selected images after sending
         setSelectedImages([]);
       }
+    };
+
+    const handleConversationPress = () => {
+      if (conversation.active) {
+        conversation.stop();
+        return;
+      }
+      if (value.trim() || selectedImages.length > 0 || isEditMode) {
+        Alert.alert(
+          speechInputL10n.conversationUnavailableTitle,
+          speechInputL10n.conversationNeedsEmptyComposer,
+        );
+        return;
+      }
+      if (!hasActiveModel) {
+        ReactNativeHapticFeedback.trigger('notificationWarning', hapticOptions);
+        setShowModelWarning(true);
+        setTimeout(() => setShowModelWarning(false), 3000);
+        return;
+      }
+      conversation.start();
+    };
+
+    const handleGenerationStop = () => {
+      if (conversation.active) {
+        conversation.stop(false);
+      }
+      onStopPress?.();
     };
 
     // Handle plus button press to show image upload menu
@@ -280,7 +440,18 @@ export const ChatInput = observer(
           quality: 0.8,
         });
 
-        if (result.assets && result.assets.length > 0 && result.assets[0].uri) {
+        if (result.errorCode === 'camera_unavailable') {
+          Alert.alert(l10n.camera.errorTitle, l10n.camera.noDevice);
+        } else if (result.errorCode) {
+          Alert.alert(
+            l10n.errors.cameraErrorTitle,
+            l10n.errors.cameraErrorMessage,
+          );
+        } else if (
+          result.assets &&
+          result.assets.length > 0 &&
+          result.assets[0].uri
+        ) {
           const newImages = [...selectedImages, result.assets[0].uri];
           setSelectedImages(newImages);
         }
@@ -360,12 +531,20 @@ export const ChatInput = observer(
     });
 
     const onSurfaceColor = currentActivePal?.color?.[0] || theme.colors.text;
-    const onSurfaceColorVariant = onSurfaceColor + '55'; // for disabled state or placeholder text
+    const hasDarkPalSurface =
+      !!currentActivePal?.color &&
+      !!inputBackgroundColor &&
+      !isLightColor(inputBackgroundColor);
+    const onSurfaceColorVariant = hasDarkPalSurface
+      ? withOpacity(onSurfaceColor, 0.9)
+      : onSurfaceColor + '55';
+    const disabledOnSurfaceColor = onSurfaceColor + '55';
     // // Plus button state
-    const isPlusButtonEnabled = !isStreaming && isVisionEnabled;
+    const isPlusButtonEnabled =
+      !isStreaming && !conversation.active && isVisionEnabled;
     const plusColor = isPlusButtonEnabled
       ? onSurfaceColor
-      : onSurfaceColorVariant;
+      : disabledOnSurfaceColor;
 
     // Localize the current graded-effort tier through the same table the
     // model-settings chips use; fall back to the raw token for an unlisted one.
@@ -374,6 +553,44 @@ export const ChatInput = observer(
       reasoningEffort && reasoningEffort in effortLevelLabels
         ? effortLevelLabels[reasoningEffort as keyof typeof effortLevelLabels]
         : reasoningEffort;
+    const thinkingUsesProviderDefault = thinkingMode === 'omit';
+    const thinkingIsInherited = thinkingMode === 'inherit';
+    const effortUsesProviderDefault = reasoningEffortMode === 'omit';
+    const thinkingLabel = thinkingUsesProviderDefault
+      ? l10n.components.chatInput.thinkingToggle.providerDefault
+      : thinkingIsInherited
+        ? l10n.components.chatInput.thinkingToggle.inherited
+        : supportsEffort &&
+            isThinkingEnabled &&
+            (effortUsesProviderDefault || reasoningEffort)
+          ? effortUsesProviderDefault
+            ? l10n.components.chatInput.thinkingToggle.effortDefault
+            : localizedEffort
+          : isThinkingEnabled
+            ? l10n.components.chatInput.thinkingToggle.on
+            : l10n.components.chatInput.thinkingToggle.off;
+
+    const handleThinkingPress = () => {
+      if (supportsEffort && effortValues.length > 0) {
+        if (onReasoningEffortModeChange && effortUsesProviderDefault) {
+          onReasoningEffortModeChange('send', effortValues[0]);
+          return;
+        }
+        onEffortCycle?.();
+        return;
+      }
+      if (onThinkingModeChange) {
+        if (thinkingUsesProviderDefault || thinkingIsInherited) {
+          onThinkingModeChange('send', true);
+        } else if (isThinkingEnabled) {
+          onThinkingModeChange('send', false);
+        } else {
+          onThinkingModeChange('omit');
+        }
+        return;
+      }
+      onThinkingToggle?.(!isThinkingEnabled);
+    };
 
     return (
       <View style={styles.container}>
@@ -480,7 +697,7 @@ export const ChatInput = observer(
               editable={
                 isVideoCapable
                   ? !isStreaming && !isCameraActive
-                  : textInputProps?.editable !== false
+                  : textInputProps?.editable !== false && !conversation.active
               }
               testID="chat-input"
               accessibilityLabel="Message input"
@@ -582,24 +799,27 @@ export const ChatInput = observer(
                     isThinkingEnabled && {backgroundColor: onSurfaceColor},
                     {borderColor: onSurfaceColorVariant},
                   ]}
-                  onPress={() =>
-                    supportsEffort && effortValues.length > 0
-                      ? onEffortCycle?.()
-                      : onThinkingToggle?.(!isThinkingEnabled)
-                  }
+                  onPress={handleThinkingPress}
                   accessibilityLabel={
-                    supportsEffort && effortValues.length > 0
-                      ? t(
-                          l10n.components.chatInput.thinkingToggle.cycleEffort,
-                          {
-                            level: localizedEffort ?? '',
-                          },
-                        )
-                      : isThinkingEnabled
+                    thinkingUsesProviderDefault
+                      ? l10n.components.chatInput.thinkingToggle
+                          .useExplicitThinking
+                      : thinkingIsInherited
                         ? l10n.components.chatInput.thinkingToggle
-                            .disableThinking
-                        : l10n.components.chatInput.thinkingToggle
-                            .enableThinking
+                            .useExplicitThinking
+                        : supportsEffort && effortValues.length > 0
+                          ? t(
+                              l10n.components.chatInput.thinkingToggle
+                                .cycleEffort,
+                              {
+                                level: localizedEffort ?? '',
+                              },
+                            )
+                          : isThinkingEnabled
+                            ? l10n.components.chatInput.thinkingToggle
+                                .disableThinking
+                            : l10n.components.chatInput.thinkingToggle
+                                .enableThinking
                   }
                   accessibilityRole="button">
                   <AtomIcon
@@ -619,9 +839,11 @@ export const ChatInput = observer(
                         ? {color: inputBackgroundColor}
                         : {color: onSurfaceColorVariant},
                     ]}>
-                    {supportsEffort && isThinkingEnabled && reasoningEffort
-                      ? localizedEffort
-                      : l10n.components.chatInput.thinkingToggle.thinkText}
+                    {thinkingMode || reasoningEffortMode
+                      ? thinkingLabel
+                      : supportsEffort && isThinkingEnabled && reasoningEffort
+                        ? localizedEffort
+                        : l10n.components.chatInput.thinkingToggle.thinkText}
                   </Text>
                 </TouchableOpacity>
               )}
@@ -629,6 +851,63 @@ export const ChatInput = observer(
 
             {/* Right Controls */}
             <View style={styles.rightControls}>
+              {Platform.OS === 'android' && !isVideoCapable && (
+                <View style={styles.dictationControls}>
+                  <IconButton
+                    icon={
+                      conversation.phase === 'finishing'
+                        ? 'progress-clock'
+                        : conversation.active
+                          ? 'stop-circle'
+                          : 'microphone'
+                    }
+                    size={20}
+                    iconColor={hasDarkPalSurface ? onSurfaceColor : undefined}
+                    disabled={
+                      !conversation.active &&
+                      (!isDictationEligible ||
+                        !hasActiveModel ||
+                        isStreaming ||
+                        !!isStopVisible ||
+                        isCameraActive)
+                    }
+                    onPress={handleConversationPress}
+                    accessibilityLabel={
+                      conversation.active
+                        ? speechInputL10n.stopConversation
+                        : speechInputL10n.startConversation
+                    }
+                    accessibilityState={{
+                      selected: conversation.active,
+                      busy:
+                        conversation.phase === 'starting' ||
+                        conversation.phase === 'finishing' ||
+                        conversation.phase === 'responding',
+                    }}
+                    testID="dictation-button"
+                  />
+                  {dictationActive && (
+                    <Text
+                      numberOfLines={1}
+                      style={[
+                        styles.dictationStatus,
+                        hasDarkPalSurface && {
+                          color: onSurfaceColorVariant,
+                        },
+                      ]}
+                      testID="dictation-status">
+                      {dictation.partialText ||
+                        (conversation.phase === 'finishing'
+                          ? speechInputL10n.finishing
+                          : conversation.phase === 'responding'
+                            ? speechInputL10n.responding
+                            : conversation.phase === 'starting'
+                              ? speechInputL10n.starting
+                              : speechInputL10n.listening)}
+                    </Text>
+                  )}
+                </View>
+              )}
               {/* Helper text for model not loaded */}
               {showModelWarning && !hasActiveModel && (
                 <View style={styles.helperTextContainer}>
@@ -641,11 +920,18 @@ export const ChatInput = observer(
               {/* Voice chip (TTS) — always present so users can stop
                   audio independently of text generation. Self-gates:
                   returns null when TTS is unavailable. */}
-              <VoiceChip />
+              <VoiceChip
+                collapsedForegroundColor={
+                  hasDarkPalSurface ? onSurfaceColorVariant : undefined
+                }
+              />
 
               {/* Send/Stop Button */}
               {isStopVisible ? (
-                <StopButton color={onSurfaceColor} onPress={onStopPress} />
+                <StopButton
+                  color={onSurfaceColor}
+                  onPress={handleGenerationStop}
+                />
               ) : isVideoCapable && !isCameraActive ? (
                 /* Compact Start Video Button for Video Pals */
                 <TouchableOpacity
@@ -669,7 +955,8 @@ export const ChatInput = observer(
                   </Text>
                 </TouchableOpacity>
               ) : (
-                isSendButtonVisible && (
+                isSendButtonVisible &&
+                !conversation.active && (
                   <View style={{opacity: sendButtonOpacity}}>
                     <SendButton color={onSurfaceColor} onPress={handleSend} />
                   </View>

@@ -26,13 +26,14 @@ export const SEARCH_PROVIDERS: SearchProviderMeta[] = [
 ];
 
 const DEFAULT_PROVIDER: SearchProviderId = 'brave';
-const DEFAULT_RESULT_COUNT = 5;
-const MIN_RESULT_COUNT = 1;
-const MAX_RESULT_COUNT = 8;
+export const DEFAULT_RESULT_COUNT = 5;
+export const MIN_RESULT_COUNT = 1;
+export const MAX_RESULT_COUNT = 20;
 
 class SearchProviderStore {
   activeProviderId: SearchProviderId = DEFAULT_PROVIDER;
   resultCount: number = DEFAULT_RESULT_COUNT;
+  fullSearchResults = true;
   hasConsentedToSearch = false;
 
   /** In-memory mirror of each provider's BYOK key (source of truth: Keychain). */
@@ -43,7 +44,12 @@ class SearchProviderStore {
 
     makePersistable(this, {
       name: 'SearchProviderStore',
-      properties: ['activeProviderId', 'resultCount', 'hasConsentedToSearch'],
+      properties: [
+        'activeProviderId',
+        'resultCount',
+        'fullSearchResults',
+        'hasConsentedToSearch',
+      ],
       storage: AsyncStorage,
     }).then(() => this.normalizeHydratedPrefs());
 
@@ -66,9 +72,13 @@ class SearchProviderStore {
           )
         : DEFAULT_RESULT_COUNT;
     const consent = (this.hasConsentedToSearch as unknown) === true;
+    const rawFullSearchResults: unknown = this.fullSearchResults;
+    const fullSearchResults =
+      typeof rawFullSearchResults === 'boolean' ? rawFullSearchResults : true;
     runInAction(() => {
       this.activeProviderId = provider;
       this.resultCount = count;
+      this.fullSearchResults = fullSearchResults;
       this.hasConsentedToSearch = consent;
     });
   }
@@ -128,6 +138,12 @@ class SearchProviderStore {
     );
     runInAction(() => {
       this.resultCount = clamped;
+    });
+  }
+
+  setFullSearchResults(enabled: boolean) {
+    runInAction(() => {
+      this.fullSearchResults = enabled;
     });
   }
 

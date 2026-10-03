@@ -213,7 +213,65 @@ describe('RemoteModelSheet', () => {
       const call = mockedFetchModelsWithHeaders.mock.calls.at(-1)!;
       expect(call[0]).toBe('http://localhost:5678');
       expect(call[2]).toBe(600000);
+      expect(call[3]).toBe('unknown');
       expect(mockedFetchModels).not.toHaveBeenCalled();
+    });
+
+    it('ignores a stale manual probe result after the URL changes', async () => {
+      let resolveFirst!: (value: {
+        models: any[];
+        headers: Record<string, string>;
+      }) => void;
+      let resolveSecond!: (value: {
+        models: any[];
+        headers: Record<string, string>;
+      }) => void;
+      const firstProbe = new Promise(resolve => {
+        resolveFirst = resolve;
+      });
+      const secondProbe = new Promise(resolve => {
+        resolveSecond = resolve;
+      });
+      mockedFetchModelsWithHeaders
+        .mockImplementationOnce(() => firstProbe)
+        .mockImplementationOnce(() => secondProbe);
+
+      const {getByTestId, getByText, queryByText} = render(
+        <RemoteModelSheet isVisible={true} onDismiss={jest.fn()} />,
+      );
+
+      fireEvent.changeText(
+        getByTestId('remote-url-input'),
+        'http://localhost:1111',
+      );
+      await waitFor(() => {
+        expect(mockedFetchModelsWithHeaders).toHaveBeenCalledTimes(1);
+      });
+
+      fireEvent.changeText(
+        getByTestId('remote-url-input'),
+        'http://localhost:2222',
+      );
+      await waitFor(() => {
+        expect(mockedFetchModelsWithHeaders).toHaveBeenCalledTimes(2);
+      });
+
+      resolveSecond({
+        models: [{id: 'current-model', object: 'model', owned_by: 'test'}],
+        headers: {},
+      });
+      await waitFor(() => {
+        expect(getByText('current-model')).toBeTruthy();
+      });
+
+      resolveFirst({
+        models: [{id: 'stale-model', object: 'model', owned_by: 'test'}],
+        headers: {},
+      });
+      await waitFor(() => {
+        expect(queryByText('stale-model')).toBeNull();
+        expect(getByText('current-model')).toBeTruthy();
+      });
     });
 
     // Adding a model on the new-server path persists the timeout
@@ -251,36 +309,47 @@ describe('RemoteModelSheet', () => {
       });
     });
 
-    // The server-type dropdown is seeded by detectServerType (mocked to ''),
-    // so it falls back to 'unknown'. Selecting an override persists through the
-    // addServer call.
-    it('persists a user-selected serverType when adding a new server', async () => {
+    // A manual selection is sent with the probe and must not be replaced by a
+    // later best-effort detection result.
+    it('forwards and persists a manual GitHub Copilot type selection', async () => {
       mockedFetchModelsWithHeaders.mockResolvedValue({
         models: [{id: 'llama-7b', object: 'model', owned_by: 'system'}],
         headers: {},
       });
+      mockedDetectServerType.mockResolvedValueOnce('llama.cpp');
 
       const {getByTestId, getByText} = render(
         <RemoteModelSheet isVisible={true} onDismiss={jest.fn()} />,
       );
+
+      expect(getByTestId('server-type-dropdown')).toBeTruthy();
+      expect(mockedFetchModelsWithHeaders).not.toHaveBeenCalled();
+      fireEvent.press(getByTestId('server-type-dropdown'));
+      fireEvent.press(getByTestId('server-type-option-GitHub Copilot'));
 
       fireEvent.changeText(
         getByTestId('remote-url-input'),
         'http://localhost:1234',
       );
       await waitFor(() => {
-        expect(getByTestId('server-type-dropdown')).toBeTruthy();
         expect(getByText('llama-7b')).toBeTruthy();
       });
 
-      // Open the dropdown and override the seeded value.
-      fireEvent.press(getByTestId('server-type-dropdown'));
-      fireEvent.press(getByTestId('server-type-option-Ollama'));
+      expect(mockedFetchModelsWithHeaders).toHaveBeenLastCalledWith(
+        'http://localhost:1234',
+        undefined,
+        undefined,
+        'GitHub Copilot',
+      );
+      expect(getByTestId('server-type-dropdown').props.accessibilityLabel).toBe(
+        'GitHub Copilot',
+      );
+
       fireEvent.press(getByTestId('add-model-button'));
 
       await waitFor(() => {
         expect(serverStore.addServer).toHaveBeenCalledWith(
-          expect.objectContaining({serverType: 'Ollama'}),
+          expect.objectContaining({serverType: 'GitHub Copilot'}),
         );
       });
     });
@@ -311,6 +380,113 @@ describe('RemoteModelSheet', () => {
         );
       });
     });
+
+    it('selects a protocol before probing and persists it without an extra models request', async () => {
+      mockedFetchModelsWithHeaders.mockResolvedValue({
+        models: [{id: 'response-model', object: 'model', owned_by: 'system'}],
+        headers: {},
+      });
+      const {getByTestId} = render(
+        <RemoteModelSheet isVisible={true} onDismiss={jest.fn()} />,
+      );
+
+      fireEvent.press(getByTestId('api-protocol-dropdown'));
+      fireEvent.press(getByTestId('api-protocol-option-responses'));
+      expect(mockedFetchModelsWithHeaders).not.toHaveBeenCalled();
+
+      fireEvent.changeText(
+        getByTestId('remote-url-input'),
+        'http://localhost:1234',
+      );
+      await waitFor(() => {
+        expect(mockedFetchModelsWithHeaders).toHaveBeenCalledTimes(1);
+        expect(
+          getByTestId('add-model-button').props.accessibilityState?.disabled,
+        ).toBe(false);
+      });
+      fireEvent.press(getByTestId('add-model-button'));
+      await waitFor(() =>
+        expect(serverStore.addServer).toHaveBeenCalledWith(
+          expect.objectContaining({apiMode: 'responses'}),
+        ),
+      );
+      expect(mockedFetchModelsWithHeaders).toHaveBeenCalledTimes(1);
+    });
+
+    it('labels catalog, unsupported, and compatibility-default protocol states', async () => {
+      mockedFetchModelsWithHeaders.mockResolvedValue({
+        models: [
+          {
+            id: 'responses-only',
+            object: 'model',
+            owned_by: 'system',
+            supported_endpoints: ['/responses'],
+          },
+          {
+            id: 'unsupported',
+            object: 'model',
+            owned_by: 'system',
+            supported_endpoints: ['/embeddings'],
+          },
+          {id: 'legacy', object: 'model', owned_by: 'system'},
+        ],
+        headers: {},
+      });
+      const {getByTestId} = render(
+        <RemoteModelSheet isVisible={true} onDismiss={jest.fn()} />,
+      );
+      fireEvent.changeText(
+        getByTestId('remote-url-input'),
+        'http://localhost:1234',
+      );
+
+      await waitFor(() => {
+        expect(
+          getByTestId('remote-model-row-protocol-responses-only'),
+        ).toHaveTextContent('Effective endpoint: Responses · live catalog');
+        expect(
+          getByTestId('remote-model-row-warning-unsupported'),
+        ).toHaveTextContent(
+          'This model does not advertise a supported endpoint. Choose a manual protocol override to use it.',
+        );
+        expect(
+          getByTestId('remote-model-row-warning-legacy'),
+        ).toHaveTextContent(
+          'Endpoint support is unknown. Chat Completions is selected for compatibility; this does not confirm generation will succeed.',
+        );
+      });
+    });
+
+    it('warns when a manual server protocol contradicts the catalog', async () => {
+      mockedFetchModelsWithHeaders.mockResolvedValue({
+        models: [
+          {
+            id: 'chat-only',
+            object: 'model',
+            owned_by: 'system',
+            supported_endpoints: ['/chat/completions'],
+          },
+        ],
+        headers: {},
+      });
+      const {getByTestId} = render(
+        <RemoteModelSheet isVisible={true} onDismiss={jest.fn()} />,
+      );
+      fireEvent.press(getByTestId('api-protocol-dropdown'));
+      fireEvent.press(getByTestId('api-protocol-option-responses'));
+      fireEvent.changeText(
+        getByTestId('remote-url-input'),
+        'http://localhost:1234',
+      );
+
+      await waitFor(() =>
+        expect(
+          getByTestId('remote-model-row-warning-chat-only'),
+        ).toHaveTextContent(
+          'The manual protocol conflicts with the model catalog and may fail.',
+        ),
+      );
+    });
   });
 
   // Tapping a saved server's chip probes via fetchModels using THAT server's
@@ -324,6 +500,7 @@ describe('RemoteModelSheet', () => {
           name: 'Slow Server',
           url: 'http://localhost:1234',
           requestTimeoutMs: 600000,
+          serverType: 'GitHub Copilot',
         },
       ];
       (serverStore.getApiKey as jest.Mock).mockResolvedValue(undefined);
@@ -342,6 +519,7 @@ describe('RemoteModelSheet', () => {
           'http://localhost:1234',
           undefined,
           600000,
+          'GitHub Copilot',
         );
       });
       // The add-path probe must NOT be involved in the chip flow.
@@ -364,6 +542,7 @@ describe('RemoteModelSheet', () => {
       await waitFor(() => {
         expect(mockedFetchModels).toHaveBeenCalledWith(
           'http://localhost:1234',
+          undefined,
           undefined,
           undefined,
         );

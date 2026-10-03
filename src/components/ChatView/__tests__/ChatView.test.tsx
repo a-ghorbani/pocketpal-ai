@@ -1,6 +1,7 @@
 //import {fireEvent, render} from '@testing-library/react-native';
 import * as React from 'react';
 import {runInAction} from 'mobx';
+import {StyleSheet} from 'react-native';
 
 import {
   fileMessage,
@@ -11,11 +12,14 @@ import {
 import {l10n} from '../../../locales';
 import {MessageType} from '../../../utils/types';
 import {ChatView} from '../ChatView';
+import {createStyles} from '../styles';
 import {fireEvent, render} from '../../../../jest/test-utils';
 import {ChatEmptyPlaceholder} from '../../ChatEmptyPlaceholder';
 import {chatSessionStore, modelStore} from '../../../store';
 import {registerDefaultTalents} from '../../../services/talents';
 import DeviceInfo from 'react-native-device-info';
+import {themeFixtures} from '../../../../jest/fixtures/theme';
+import type {Pal} from '../../../types/pal';
 
 // talentRegistry (src/services/talents) is the real singleton in Jest; register
 // the built-in engines so render_html (recommendedContextTokens=4096) drives the
@@ -204,6 +208,45 @@ describe('chat', () => {
     );
 
     expect(ChatEmptyPlaceholder).toHaveBeenCalled();
+  });
+
+  it('keeps the dark chat canvas black behind Scout warm composer surfaces', () => {
+    const scout: Pal = {
+      id: 'scout-colors',
+      type: 'local',
+      name: 'Scout',
+      systemPrompt: 'Scout',
+      isSystemPromptChanged: false,
+      useAIPrompt: false,
+      parameters: {},
+      parameterSchema: [],
+      source: 'local',
+      color: ['#B89A62', '#30291F'],
+      created_at: '2026-09-19T00:00:00Z',
+      updated_at: '2026-09-19T00:00:00Z',
+    };
+
+    const {getByTestId} = render(
+      <ChatView
+        messages={[]}
+        onSendPress={jest.fn()}
+        user={user}
+        activePal={scout}
+      />,
+      {
+        theme: themeFixtures.darkTheme,
+        withNavigation: true,
+        withBottomSheetProvider: true,
+      },
+    );
+    expect(
+      StyleSheet.flatten(getByTestId('chat-composer-container').props.style)
+        .backgroundColor,
+    ).toBe('#30291F');
+    expect(
+      createStyles({theme: themeFixtures.darkTheme}).chatContainer
+        .backgroundColor,
+    ).toBe('#000000');
   });
 
   // ---------------------------------------------------------------------------

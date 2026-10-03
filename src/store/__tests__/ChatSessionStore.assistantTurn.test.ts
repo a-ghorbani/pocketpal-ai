@@ -6,6 +6,8 @@ import {AgentStep, AgentToolOutcome, MessageType} from '../../utils/types';
 import {initialAgentUiState} from '../../services/agent';
 
 jest.spyOn(chatSessionRepository, 'updateMessage');
+(chatSessionRepository.persistFinalAssistantSteps as jest.Mock) = jest.fn();
+jest.spyOn(chatSessionRepository, 'persistFinalAssistantSteps');
 jest.spyOn(chatSessionRepository, 'updateSessionTitle');
 
 const author = {id: 'assistant'};
@@ -32,6 +34,9 @@ describe('ChatSessionStore — AssistantTurn extensions', () => {
     chatSessionStore.activeSessionId = null;
     chatSessionStore.agentUiState = {...initialAgentUiState};
     (chatSessionRepository.updateMessage as jest.Mock).mockResolvedValue(true);
+    (
+      chatSessionRepository.persistFinalAssistantSteps as jest.Mock
+    ).mockResolvedValue(undefined);
     (chatSessionRepository.updateSessionTitle as jest.Mock).mockResolvedValue(
       undefined,
     );
@@ -391,10 +396,130 @@ describe('ChatSessionStore — AssistantTurn extensions', () => {
         .messages[0] as MessageType.AssistantTurn;
       expect(updated.steps[0]).toEqual({content: 'preamble'});
       expect(updated.steps[1].partial).toBe(false);
-      expect(chatSessionRepository.updateMessage).toHaveBeenCalledWith(
-        turn.id,
-        {steps: updated.steps},
-      );
+      expect(
+        chatSessionRepository.persistFinalAssistantSteps,
+      ).toHaveBeenCalledWith(turn.id, updated.steps);
+    });
+
+    it('atomically persists the authoritative final payload after consuming pending streaming content', async () => {
+      jest.useFakeTimers();
+      const dateNowSpy = jest.spyOn(Date, 'now').mockReturnValue(2_000_000);
+      try {
+        (chatSessionStore as any).lastStreamingUpdateTime = 2_000_000;
+        const turn = makeAssistantTurn([{content: 'old', partial: true}]);
+        chatSessionStore.sessions = [
+          {
+            id: 'session1',
+            title: '',
+            date: '',
+            messages: [turn],
+            completionSettings: defaultCompletionSettings,
+            settingsSource: 'pal',
+          },
+        ];
+        chatSessionStore.activeSessionId = 'session1';
+        chatSessionStore.updateActiveStepStreaming(turn.id, 'session1', {
+          content: 'pending',
+          reasoningContent: 'pending reasoning',
+        });
+
+        const responsesState = {
+          version: 1 as const,
+          binding: {
+            wireApi: 'responses' as const,
+            serverUrl: 'https://api.example.com',
+            modelId: 'responses-model',
+          },
+          output: [],
+          terminalStatus: 'completed' as const,
+        };
+        const toolCalls = [
+          {
+            id: 'call-1',
+            type: 'function' as const,
+            function: {name: 'calculate', arguments: '{}'},
+          },
+        ];
+        await chatSessionStore.persistFinalActiveStep(turn.id, 'session1', {
+          content: 'final',
+          reasoningContent: 'final reasoning',
+          toolCalls,
+          responsesState,
+        });
+
+        const updated = chatSessionStore.sessions[0]
+          .messages[0] as MessageType.AssistantTurn;
+        expect(updated.steps[0]).toEqual({
+          content: 'final',
+          reasoningContent: 'final reasoning',
+          toolCalls,
+          responsesState,
+          partial: false,
+        });
+        expect(chatSessionRepository.updateMessage).not.toHaveBeenCalled();
+        expect(
+          chatSessionRepository.persistFinalAssistantSteps,
+        ).toHaveBeenCalledTimes(1);
+      } finally {
+        dateNowSpy.mockRestore();
+        jest.useRealTimers();
+      }
+    });
+
+    it('throws on final persistence failure and leaves memory partial', async () => {
+      const turn = makeAssistantTurn([{content: 'streaming', partial: true}]);
+      chatSessionStore.sessions = [
+        {
+          id: 'session1',
+          title: '',
+          date: '',
+          messages: [turn],
+          completionSettings: defaultCompletionSettings,
+          settingsSource: 'pal',
+        },
+      ];
+      chatSessionStore.activeSessionId = 'session1';
+      (
+        chatSessionRepository.persistFinalAssistantSteps as jest.Mock
+      ).mockRejectedValueOnce(new Error('DB write failed'));
+
+      await expect(
+        chatSessionStore.persistFinalActiveStep(turn.id, 'session1', {
+          content: 'final',
+          reasoningContent: 'reasoning',
+          toolCalls: [],
+          responsesState: undefined,
+        }),
+      ).rejects.toThrow('DB write failed');
+
+      expect(
+        (chatSessionStore.sessions[0].messages[0] as MessageType.AssistantTurn)
+          .steps[0],
+      ).toEqual({content: 'streaming', partial: true});
+    });
+
+    it('rejects invalid final replay state before touching persistence', async () => {
+      const turn = makeAssistantTurn([{content: 'streaming', partial: true}]);
+      chatSessionStore.sessions = [
+        {
+          id: 'session1',
+          title: '',
+          date: '',
+          messages: [turn],
+          completionSettings: defaultCompletionSettings,
+          settingsSource: 'pal',
+        },
+      ];
+
+      await expect(
+        chatSessionStore.persistFinalActiveStep(turn.id, 'session1', {
+          content: 'final',
+          responsesState: {version: 99} as any,
+        }),
+      ).rejects.toThrow('Cannot persist invalid Responses state');
+      expect(
+        chatSessionRepository.persistFinalAssistantSteps,
+      ).not.toHaveBeenCalled();
     });
   });
 

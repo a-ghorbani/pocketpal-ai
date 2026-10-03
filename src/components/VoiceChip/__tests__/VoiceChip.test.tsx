@@ -6,13 +6,14 @@ import {fireEvent, render} from '../../../../jest/test-utils';
 import {L10nContext} from '../../../utils';
 import {l10n} from '../../../locales';
 import {ttsStore} from '../../../store';
+import {VolumeMinIcon} from '../../../assets/icons';
 
 import {VoiceChip} from '../VoiceChip';
 
-const renderChip = () =>
+const renderChip = (collapsedForegroundColor?: string) =>
   render(
     <L10nContext.Provider value={l10n.en}>
-      <VoiceChip />
+      <VoiceChip collapsedForegroundColor={collapsedForegroundColor} />
     </L10nContext.Provider>,
   );
 
@@ -30,6 +31,7 @@ describe('VoiceChip', () => {
       ttsStore.userTTSOverride = null;
       ttsStore.currentVoice = null;
       ttsStore.autoSpeakEnabled = false;
+      ttsStore.conversationAutoSpeakEnabled = false;
       ttsStore.playbackState = {mode: 'idle'};
     });
   });
@@ -83,6 +85,36 @@ describe('VoiceChip', () => {
     expect(ttsStore.setAutoSpeak).toHaveBeenCalledWith(false);
   });
 
+  it('speaker tap during playback skips audio without toggling auto-speak', () => {
+    runInAction(() => {
+      ttsStore.currentVoice = systemVoice;
+      ttsStore.conversationAutoSpeakEnabled = true;
+      ttsStore.playbackState = {
+        mode: 'playing',
+        messageId: 'voice-reply',
+      };
+    });
+
+    const {getByTestId} = renderChip();
+    fireEvent.press(getByTestId('voicechip-speaker'));
+
+    expect(ttsStore.skipCurrentPlayback).toHaveBeenCalledTimes(1);
+    expect(ttsStore.setAutoSpeak).not.toHaveBeenCalled();
+  });
+
+  it('conversation override displays TTS on without changing the saved preference', () => {
+    runInAction(() => {
+      ttsStore.currentVoice = systemVoice;
+      ttsStore.autoSpeakEnabled = false;
+      ttsStore.conversationAutoSpeakEnabled = true;
+    });
+
+    const {getByTestId} = renderChip();
+    expect(getByTestId('voicechip-speaker').props.accessibilityState).toEqual({
+      selected: true,
+    });
+  });
+
   it('voice-chosen: secondary tap opens setup sheet, does not toggle', () => {
     runInAction(() => {
       ttsStore.currentVoice = systemVoice;
@@ -110,5 +142,36 @@ describe('VoiceChip', () => {
     // Pressable synthesizes an accessibilityState object; the selected key
     // should be undefined pre-setup since the component doesn't pass it.
     expect(speaker.props.accessibilityState?.selected).toBeUndefined();
+  });
+
+  it('uses a composer foreground override only in the collapsed state', () => {
+    runInAction(() => {
+      ttsStore.currentVoice = systemVoice;
+      ttsStore.autoSpeakEnabled = false;
+    });
+    const {UNSAFE_getAllByType, rerender} = renderChip(
+      'rgba(184, 154, 98, 0.9)',
+    );
+
+    expect(
+      UNSAFE_getAllByType(VolumeMinIcon).some(
+        icon => icon.props.stroke === 'rgba(184, 154, 98, 0.9)',
+      ),
+    ).toBe(true);
+
+    runInAction(() => {
+      ttsStore.autoSpeakEnabled = true;
+    });
+    rerender(
+      <L10nContext.Provider value={l10n.en}>
+        <VoiceChip collapsedForegroundColor="rgba(184, 154, 98, 0.9)" />
+      </L10nContext.Provider>,
+    );
+
+    expect(
+      UNSAFE_getAllByType(VolumeMinIcon).some(
+        icon => icon.props.stroke === 'rgba(184, 154, 98, 0.9)',
+      ),
+    ).toBe(false);
   });
 });

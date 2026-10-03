@@ -15,6 +15,7 @@ export type {
 } from './types';
 export {
   budgetHits,
+  prepareFullHits,
   budgetPage,
   getCachedHits,
   setCachedHits,

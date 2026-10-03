@@ -109,10 +109,22 @@ export const createStyles = (theme: Theme) => {
       opacity: 0.5,
     },
     modelName: {
-      flex: 1,
       fontSize: 14,
       color: theme.colors.onSurface,
+    },
+    modelDetails: {
+      flex: 1,
       marginLeft: 8,
+    },
+    protocolText: {
+      marginTop: 2,
+      fontSize: 11,
+      color: theme.colors.onSurfaceVariant,
+    },
+    protocolWarning: {
+      marginTop: 2,
+      fontSize: 11,
+      color: theme.colors.error,
     },
     modelVisionSlot: {
       width: 20,

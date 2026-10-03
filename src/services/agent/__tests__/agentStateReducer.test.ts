@@ -7,6 +7,12 @@ const noopRunResult = {
   hitMaxTurns: false,
   finalResult: {text: '', content: ''} as any,
 };
+const finishedStep = (turn: number): AgentEvent => ({
+  type: 'step_finished',
+  turn,
+  step: {content: ''},
+  completionResult: {text: '', content: ''},
+});
 
 describe('agentStateReducer', () => {
   // ---------- Story Test Requirements (Reducer) #1–#7 ----------
@@ -220,7 +226,7 @@ describe('agentStateReducer', () => {
       pendingTalentNames: [],
       hitMaxTurns: false,
     };
-    const next = agentStateReducer(before, {type: 'step_finished', turn: 0});
+    const next = agentStateReducer(before, finishedStep(0));
     expect(next).toEqual(before);
   });
 
@@ -328,10 +334,10 @@ describe('agentStateReducer', () => {
           responseContent: '42',
         },
       },
-      {type: 'step_finished', turn: 0},
+      finishedStep(0),
       {type: 'step_started', turn: 1, isFollowUp: true},
       {type: 'token', delta: {content: 'The answer is 42'}},
-      {type: 'step_finished', turn: 1},
+      finishedStep(1),
       {type: 'run_finished', result: {...noopRunResult}},
     ];
 

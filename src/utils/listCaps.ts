@@ -1,5 +1,6 @@
 import type {RemoteModelInfo} from '../api/openai';
 import type {ServerConfig} from './types';
+import {normalizeRemoteCatalogModel} from './remoteCatalog';
 
 /**
  * What a `GET /v1/models` row already says about a model, before anything is
@@ -74,7 +75,19 @@ export function deriveListCaps(
   serverType: string | undefined,
 ): ListDerivedCaps {
   const caps: ListDerivedCaps = {tier: 'list'};
-  if (!row || serverType !== 'llama.cpp') {
+  if (!row) {
+    return caps;
+  }
+
+  const catalog = normalizeRemoteCatalogModel(row);
+  if (catalog.capabilities.supportsVision !== undefined) {
+    caps.supportsVision = catalog.capabilities.supportsVision;
+  }
+  if (catalog.capabilities.contextLength !== undefined) {
+    caps.contextLength = catalog.capabilities.contextLength;
+  }
+
+  if (serverType !== 'llama.cpp') {
     return caps;
   }
 
@@ -98,7 +111,6 @@ export function deriveListCaps(
   if (contextLength !== undefined) {
     caps.contextLength = contextLength;
   }
-
   return caps;
 }
 

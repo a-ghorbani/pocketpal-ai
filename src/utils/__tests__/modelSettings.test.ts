@@ -225,6 +225,33 @@ describe('modelSettings', () => {
       expect(result.isValid).toBe(false);
       expect(result.errors.n_predict).toBe('Value must be at least -1');
     });
+
+    it('validates only effective Send or legacy values', () => {
+      const omitted = validateCompletionSettings({
+        temperature: 999,
+        generationParameterModes: {temperature: 'omit'},
+      });
+      const inherited = validateCompletionSettings({
+        temperature: 999,
+        generationParameterModes: {temperature: 'inherit'},
+      });
+      const sent = validateCompletionSettings({
+        temperature: 999,
+        generationParameterModes: {temperature: 'send'},
+      });
+
+      expect(omitted.isValid).toBe(true);
+      expect(inherited.isValid).toBe(true);
+      expect(sent.errors.temperature).toBeDefined();
+    });
+
+    it('rejects a Send mode without its retained custom value', () => {
+      const result = validateCompletionSettings({
+        generationParameterModes: {temperature: 'send'},
+      });
+
+      expect(result.errors.temperature).toBe('This field is required');
+    });
   });
 
   describe('COMPLETION_PARAMS_METADATA', () => {

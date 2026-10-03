@@ -5,12 +5,20 @@ import {MD3Theme} from 'react-native-paper';
 import {TemplateConfig} from 'chat-formatter';
 import {ContextParams, TokenData} from 'llama.rn';
 import {CompletionParams} from './completionTypes';
+import type {RemoteGenerationSettings} from './completionTypes';
 import {PreviewData} from '@flyerhq/react-native-link-preview';
 import {MD3Colors, MD3Typescale} from 'react-native-paper/lib/typescript/types';
 import type {TokenRadius, TokenStroke, TokenTypography} from '../theme/tokens';
 import {SkillKey} from '.';
 import type {TalentResult} from '../services/talents/types';
 import type {ReasoningCapability} from './reasoningCapability';
+import type {ResponsesReplayState} from '../api/responsesTypes';
+import type {
+  RemoteApiMode,
+  RemoteModelPreference,
+  RemoteProtocolCapabilities,
+  RemoteWireApi,
+} from './remoteProtocol';
 
 /**
  * One model-emitted tool call within an `AgentStep`. The `arguments` field
@@ -69,6 +77,8 @@ export interface AgentStep {
   toolOutcomes?: AgentToolOutcome[];
   /** True while this step is still streaming. Cleared on step_finished. */
   partial?: boolean;
+  /** Validated provider state needed to continue a Responses conversation. */
+  responsesState?: ResponsesReplayState;
 }
 
 export namespace MessageType {
@@ -454,6 +464,8 @@ export type ChatMessage = {
   reasoning_content?: string;
   tool_calls?: Array<import('llama.rn').ToolCall>;
   tool_call_id?: string;
+  /** Internal provider replay metadata; never serialized to Chat/llama.rn. */
+  responsesState?: ResponsesReplayState;
 };
 
 export enum ModelOrigin {
@@ -469,15 +481,19 @@ export interface ServerConfig {
   url: string; // Base URL e.g. "http://192.168.1.100:1234"
   lastConnected?: number; // Timestamp
   requestTimeoutMs?: number; // Per-server network timeout in ms; undefined = API default
-  // User-selectable server type; gates the per-server reasoning wire payload.
+  // User-selectable server type; gates provider-specific request behavior.
   // detectServerType seeds it best-effort; user selection wins. undefined = unknown.
   serverType?:
     | 'llama.cpp'
     | 'LM Studio'
     | 'Ollama'
     | 'OpenAI'
+    | 'GitHub Copilot'
     | 'vLLM'
     | string;
+  /** Missing is the legacy-compatible Auto mode. */
+  apiMode?: RemoteApiMode;
+  credentialRevision?: number;
 }
 
 /**
@@ -512,7 +528,13 @@ export interface RemoteSessionBinding {
   remoteModelId: string;
   url: string;
   serverType?: string;
+  wireApi?: RemoteWireApi;
+  protocolCapabilities?: RemoteProtocolCapabilities;
+  credentialRevision?: number;
+  generationSettings?: RemoteGenerationSettings;
 }
+
+export type {RemoteModelPreference};
 
 export enum ModelType {
   PROJECTION = 'projection',

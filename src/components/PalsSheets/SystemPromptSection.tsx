@@ -200,7 +200,9 @@ export const SystemPromptSection = observer(
         }
 
         if (modelStore.activeModelId !== selectedModel.id) {
-          await modelStore.selectModel(selectedModel);
+          await modelStore.selectModel(selectedModel, {
+            rememberForStartup: true,
+          });
           if (!modelStore.engine) {
             console.error('Failed to initialize completion engine');
             return;

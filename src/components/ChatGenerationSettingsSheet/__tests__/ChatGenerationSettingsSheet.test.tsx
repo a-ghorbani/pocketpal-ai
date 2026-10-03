@@ -28,6 +28,13 @@ jest.mock('../../CompletionSettings', () => {
           testID="mock-settings-update"
           onPress={() => onChange('temperature', '3.0')} // Value above max of 2
         />
+        <TouchableOpacity
+          testID="mock-settings-invalid-omitted"
+          onPress={() => {
+            onChange('temperature', 'not-a-number');
+            onChange('generationParameterModes', {temperature: 'omit'});
+          }}
+        />
       </View>
     ),
   };
@@ -226,5 +233,26 @@ describe('ChatGenerationSettingsSheet', () => {
     expect(
       chatSessionStore.updateSessionCompletionSettings,
     ).not.toHaveBeenCalled();
+  });
+
+  it('retains but does not parse an invalid omitted numeric value', async () => {
+    const {getByTestId, getByText} = render(
+      <ChatGenerationSettingsSheet {...defaultProps} />,
+    );
+
+    fireEvent.press(getByTestId('mock-settings-invalid-omitted'));
+    await act(async () => {
+      fireEvent.press(getByText('Save'));
+    });
+
+    expect(
+      chatSessionStore.updateSessionCompletionSettings,
+    ).toHaveBeenCalledWith(
+      expect.objectContaining({
+        temperature: 'not-a-number',
+        generationParameterModes: {temperature: 'omit'},
+      }),
+    );
+    expect(Alert.alert).not.toHaveBeenCalled();
   });
 });

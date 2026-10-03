@@ -305,50 +305,54 @@ export const BenchResultCard = ({result, onDelete, onShare}: Props) => {
           </Text>
         </View>
 
-        <View style={styles.footer}>
-          {result.submitted ? (
-            <View style={styles.shareContainer}>
-              <Text variant="bodySmall" style={styles.submittedText}>
-                {l10n.benchmark.benchmarkResultCard.actions.submittedText}{' '}
-                <Text onPress={openLeaderboard} style={styles.leaderboardLink}>
-                  {l10n.benchmark.benchmarkResultCard.actions.leaderboardLink}
+        {__ENABLE_PALSHUB__ ? (
+          <View style={styles.footer}>
+            {result.submitted ? (
+              <View style={styles.shareContainer}>
+                <Text variant="bodySmall" style={styles.submittedText}>
+                  {l10n.benchmark.benchmarkResultCard.actions.submittedText}{' '}
+                  <Text
+                    onPress={openLeaderboard}
+                    style={styles.leaderboardLink}>
+                    {l10n.benchmark.benchmarkResultCard.actions.leaderboardLink}
+                  </Text>
                 </Text>
-              </Text>
-            </View>
-          ) : !result.oid ? (
-            <Tooltip
-              title={
-                l10n.benchmark.benchmarkResultCard.actions.cannotShareTooltip
-              }>
-              <View style={styles.tooltipContainer}>
-                <Text variant="bodySmall" style={styles.disabledText}>
-                  {l10n.benchmark.benchmarkResultCard.actions.cannotShare}
-                </Text>
-                <Text style={styles.infoIcon}>ⓘ</Text>
               </View>
-            </Tooltip>
-          ) : (
-            <View style={styles.actionContainer}>
-              <Button
-                testID="submit-benchmark-button"
-                mode="outlined"
-                onPress={handleSubmit}
-                loading={isSubmitting}
-                disabled={isSubmitting}
-                icon="share"
-                compact
-                style={styles.submitButton}>
-                {l10n.benchmark.benchmarkResultCard.actions.submitButton}
-              </Button>
-              <Text
-                variant="bodySmall"
-                onPress={openLeaderboard}
-                style={styles.leaderboardLink}>
-                {l10n.benchmark.benchmarkResultCard.actions.viewLeaderboard}
-              </Text>
-            </View>
-          )}
-        </View>
+            ) : !result.oid ? (
+              <Tooltip
+                title={
+                  l10n.benchmark.benchmarkResultCard.actions.cannotShareTooltip
+                }>
+                <View style={styles.tooltipContainer}>
+                  <Text variant="bodySmall" style={styles.disabledText}>
+                    {l10n.benchmark.benchmarkResultCard.actions.cannotShare}
+                  </Text>
+                  <Text style={styles.infoIcon}>ⓘ</Text>
+                </View>
+              </Tooltip>
+            ) : (
+              <View style={styles.actionContainer}>
+                <Button
+                  testID="submit-benchmark-button"
+                  mode="outlined"
+                  onPress={handleSubmit}
+                  loading={isSubmitting}
+                  disabled={isSubmitting}
+                  icon="share"
+                  compact
+                  style={styles.submitButton}>
+                  {l10n.benchmark.benchmarkResultCard.actions.submitButton}
+                </Button>
+                <Text
+                  variant="bodySmall"
+                  onPress={openLeaderboard}
+                  style={styles.leaderboardLink}>
+                  {l10n.benchmark.benchmarkResultCard.actions.viewLeaderboard}
+                </Text>
+              </View>
+            )}
+          </View>
+        ) : null}
 
         {submitError && (
           <View style={[styles.errorContainer, getErrorStyle()]}>

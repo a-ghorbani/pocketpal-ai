@@ -75,15 +75,31 @@ export function resolveModelCaps(
     // legacy zero in a probe entry must not discard a usable listed window.
     const confirmed = resolveRemoteCaps(model, env.remoteCaps, env.binding);
     const listed = env.listCaps[model.id];
+    const boundCatalog =
+      isActiveModel && env.binding?.modelId === model.id
+        ? env.binding.protocolCapabilities
+        : undefined;
+    const declaredVision =
+      confirmed.supportsVision ??
+      boundCatalog?.supportsVision ??
+      listed?.supportsVision;
+    const declaredContext =
+      positive(confirmed.contextLength) ??
+      positive(boundCatalog?.contextLength) ??
+      positive(listed?.contextLength);
+    const catalogCanActivateVision =
+      env.binding?.serverType !== 'llama.cpp' &&
+      boundCatalog?.supportsVision === true;
     return {
-      vision: triState(confirmed.supportsVision ?? listed?.supportsVision),
-      contextLength:
-        positive(confirmed.contextLength) ?? positive(listed?.contextLength),
-      // The session axis reads the probe alone: a listed value describes how
-      // the server is configured, never what the live session can do.
-      visionActive: isActiveModel && confirmed.supportsVision === true,
+      vision: triState(declaredVision),
+      contextLength: declaredContext,
+      visionActive:
+        isActiveModel &&
+        (confirmed.supportsVision === true ||
+          (confirmed.supportsVision === undefined && catalogCanActivateVision)),
       effectiveContextLength: isActiveModel
-        ? positive(confirmed.contextLength)
+        ? (positive(confirmed.contextLength) ??
+          positive(boundCatalog?.contextLength))
         : undefined,
     };
   }

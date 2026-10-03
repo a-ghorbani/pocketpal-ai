@@ -4,9 +4,9 @@ import {CompletionSettings} from '../CompletionSettings';
 import {CompletionParams} from '../../utils/completionTypes';
 import {chatSessionStore, defaultCompletionSettings} from '../../store';
 import {
-  COMPLETION_PARAMS_METADATA,
-  validateCompletionSettings,
-} from '../../utils/modelSettings';
+  inheritedCompletionSettings,
+  processCompletionSettingsDraft,
+} from '../../services/completion/completionSettingsDraft';
 import {Alert, View} from 'react-native';
 import {Button, Text, Icon} from 'react-native-paper';
 import {L10nContext} from '../../utils';
@@ -123,15 +123,18 @@ export const PalGenerationSettingsSheet = ({
   const theme = useTheme();
   const styles = createStyles(theme);
 
+  const inheritedSettings = (): CompletionParams =>
+    inheritedCompletionSettings(defaultCompletionSettings);
+
   const [settings, setSettings] = useState<CompletionParams>(
-    (completionSettings as CompletionParams) || defaultCompletionSettings,
+    (completionSettings as CompletionParams) || inheritedSettings(),
   );
   const [resetMenuVisible, setResetMenuVisible] = useState(false);
 
   // Update settings when completionSettings changes
   useEffect(() => {
     setSettings(
-      (completionSettings as CompletionParams) || defaultCompletionSettings,
+      (completionSettings as CompletionParams) || inheritedSettings(),
     );
   }, [completionSettings]);
 
@@ -142,53 +145,18 @@ export const PalGenerationSettingsSheet = ({
   const onCloseSheet = () => {
     // Reset to original settings
     setSettings(
-      (completionSettings as CompletionParams) || defaultCompletionSettings,
+      (completionSettings as CompletionParams) || inheritedSettings(),
     );
     onClose();
   };
 
   const handleSaveSettings = async () => {
     // Convert string values to numbers where needed
-    const processedSettings = Object.entries(settings).reduce(
-      (acc, [key, value]) => {
-        const metadata = COMPLETION_PARAMS_METADATA[key];
-        if (metadata?.validation.type === 'numeric') {
-          let numValue: number;
-          if (typeof value === 'string') {
-            numValue = Number(value);
-          } else if (typeof value === 'number') {
-            numValue = value;
-          } else {
-            acc.errors[key] =
-              l10n.components.palGenerationSettingsSheet.invalidNumericValuesMessage;
-            return acc;
-          }
-
-          if (Number.isNaN(numValue)) {
-            acc.errors[key] =
-              l10n.components.palGenerationSettingsSheet.invalidNumericValuesMessage;
-          } else {
-            acc.settings[key] = numValue;
-          }
-        } else {
-          acc.settings[key] = value;
-        }
-        return acc;
-      },
-      {settings: {}, errors: {}} as {
-        settings: typeof settings;
-        errors: Record<string, string>;
-      },
+    const processedSettings = processCompletionSettingsDraft(
+      settings,
+      l10n.components.palGenerationSettingsSheet.invalidNumericValuesMessage,
     );
-
-    // Validate the converted values
-    const validationResult = validateCompletionSettings(
-      processedSettings.settings,
-    );
-    const allErrors = {
-      ...processedSettings.errors,
-      ...validationResult.errors,
-    };
+    const allErrors = processedSettings.errors;
 
     if (Object.keys(allErrors).length > 0) {
       Alert.alert(
@@ -240,7 +208,11 @@ export const PalGenerationSettingsSheet = ({
           palName={palName}
           hasCustomSettings={hasCustomSettings}
         />
-        <CompletionSettings settings={settings} onChange={updateSettings} />
+        <CompletionSettings
+          settings={settings}
+          onChange={updateSettings}
+          allowInherit
+        />
       </Sheet.ScrollView>
       <Sheet.Actions>
         <View style={styles.actionsContainer}>

@@ -46,9 +46,13 @@ jest.mock('../../../store', () => ({
     isTTSAvailable: false,
     currentVoice: null,
     autoSpeakEnabled: false,
+    conversationAutoSpeakEnabled: false,
+    effectiveAutoSpeakEnabled: false,
     playbackState: {mode: 'idle'},
     openSetupSheet: jest.fn(),
     setAutoSpeak: jest.fn(),
+    setConversationAutoSpeak: jest.fn(),
+    stop: jest.fn().mockResolvedValue(undefined),
   },
 }));
 
@@ -328,6 +332,125 @@ describe('ChatInput Thinking Toggle', () => {
 
     expect(mockOnEffortCycle).toHaveBeenCalledTimes(1);
     expect(mockOnThinkingToggle).not.toHaveBeenCalled();
+  });
+
+  it.each([
+    {
+      title: 'provider default',
+      thinkingMode: 'omit' as const,
+      enabled: false,
+      label: 'Default',
+    },
+    {
+      title: 'explicit On',
+      thinkingMode: 'send' as const,
+      enabled: true,
+      label: 'On',
+    },
+    {
+      title: 'explicit Off',
+      thinkingMode: 'send' as const,
+      enabled: false,
+      label: 'Off',
+    },
+  ])('renders the $title thinking state', ({thinkingMode, enabled, label}) => {
+    const {getByText} = render(
+      <UserContext.Provider value={mockUser}>
+        <ChatInput
+          {...defaultProps}
+          showThinkingToggle
+          thinkingMode={thinkingMode}
+          isThinkingEnabled={enabled}
+          onThinkingModeChange={jest.fn()}
+        />
+      </UserContext.Provider>,
+    );
+
+    expect(getByText(label)).toBeTruthy();
+  });
+
+  it('cycles provider default to explicit On, explicit Off, then provider default', () => {
+    const onThinkingModeChange = jest.fn();
+    const {getByTestId, rerender} = render(
+      <UserContext.Provider value={mockUser}>
+        <ChatInput
+          {...defaultProps}
+          showThinkingToggle
+          thinkingMode="omit"
+          isThinkingEnabled={false}
+          onThinkingModeChange={onThinkingModeChange}
+        />
+      </UserContext.Provider>,
+    );
+
+    fireEvent.press(getByTestId('thinking-toggle'));
+    expect(onThinkingModeChange).toHaveBeenLastCalledWith('send', true);
+
+    rerender(
+      <UserContext.Provider value={mockUser}>
+        <ChatInput
+          {...defaultProps}
+          showThinkingToggle
+          thinkingMode="send"
+          isThinkingEnabled
+          onThinkingModeChange={onThinkingModeChange}
+        />
+      </UserContext.Provider>,
+    );
+    fireEvent.press(getByTestId('thinking-toggle'));
+    expect(onThinkingModeChange).toHaveBeenLastCalledWith('send', false);
+
+    rerender(
+      <UserContext.Provider value={mockUser}>
+        <ChatInput
+          {...defaultProps}
+          showThinkingToggle
+          thinkingMode="send"
+          isThinkingEnabled={false}
+          onThinkingModeChange={onThinkingModeChange}
+        />
+      </UserContext.Provider>,
+    );
+    fireEvent.press(getByTestId('thinking-toggle'));
+    expect(onThinkingModeChange).toHaveBeenLastCalledWith('omit');
+  });
+
+  it('distinguishes provider-default effort from an explicit localized level', () => {
+    const onReasoningEffortModeChange = jest.fn();
+    const {getByText, getByTestId, rerender} = render(
+      <UserContext.Provider value={mockUser}>
+        <ChatInput
+          {...defaultProps}
+          showThinkingToggle
+          isThinkingEnabled
+          supportsEffort
+          effortValues={['low', 'medium', 'high']}
+          reasoningEffort="high"
+          reasoningEffortMode="omit"
+          onReasoningEffortModeChange={onReasoningEffortModeChange}
+        />
+      </UserContext.Provider>,
+    );
+
+    expect(getByText('Default effort')).toBeTruthy();
+    fireEvent.press(getByTestId('thinking-toggle'));
+    expect(onReasoningEffortModeChange).toHaveBeenCalledWith('send', 'low');
+
+    rerender(
+      <UserContext.Provider value={mockUser}>
+        <ChatInput
+          {...defaultProps}
+          showThinkingToggle
+          isThinkingEnabled
+          supportsEffort
+          effortValues={['low', 'medium', 'high']}
+          reasoningEffort="high"
+          reasoningEffortMode="send"
+          onEffortCycle={jest.fn()}
+        />
+      </UserContext.Provider>,
+    );
+    expect(getByText('High')).toBeTruthy();
   });
 
   it('should handle missing onThinkingToggle callback gracefully', () => {

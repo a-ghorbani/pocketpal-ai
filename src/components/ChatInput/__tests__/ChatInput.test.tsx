@@ -1,6 +1,6 @@
 import {fireEvent, waitFor} from '@testing-library/react-native';
 import * as React from 'react';
-import {ScrollView, Alert} from 'react-native';
+import {ScrollView, Alert, StyleSheet} from 'react-native';
 import {launchCamera, launchImageLibrary} from 'react-native-image-picker';
 import {runInAction} from 'mobx';
 
@@ -9,6 +9,7 @@ import {l10n} from '../../../locales';
 import {UserContext} from '../../../utils';
 import {ChatInput} from '../ChatInput';
 import {render} from '../../../../jest/test-utils';
+import {themeFixtures} from '../../../../jest/fixtures/theme';
 import {palStore, chatSessionStore, modelStore} from '../../../store';
 import ReactNativeHapticFeedback from 'react-native-haptic-feedback';
 
@@ -21,6 +22,27 @@ jest.mock('react-native-image-picker', () => ({
 jest.spyOn(Alert, 'alert');
 
 const renderScrollable = () => <ScrollView />;
+
+const relativeLuminance = ([red, green, blue]: number[]) =>
+  [red, green, blue]
+    .map(channel => channel / 255)
+    .map(channel =>
+      channel <= 0.04045 ? channel / 12.92 : ((channel + 0.055) / 1.055) ** 2.4,
+    )
+    .reduce(
+      (luminance, channel, index) =>
+        luminance + channel * [0.2126, 0.7152, 0.0722][index],
+      0,
+    );
+
+const contrastRatio = (foreground: number[], background: number[]) => {
+  const foregroundLuminance = relativeLuminance(foreground);
+  const backgroundLuminance = relativeLuminance(background);
+  return (
+    (Math.max(foregroundLuminance, backgroundLuminance) + 0.05) /
+    (Math.min(foregroundLuminance, backgroundLuminance) + 0.05)
+  );
+};
 
 describe('input', () => {
   it('send button', () => {
@@ -330,6 +352,141 @@ describe('input', () => {
     expect(onPalBtnPress).toHaveBeenCalledTimes(1);
   });
 
+  it.each([
+    ['light', themeFixtures.lightTheme],
+    ['dark', themeFixtures.darkTheme],
+  ])(
+    'keeps the Scout composer foreground readable in the %s app theme',
+    (_mode, theme) => {
+      const originalPals = palStore.pals;
+      const originalActivePalId = Object.getOwnPropertyDescriptor(
+        chatSessionStore,
+        'activePalId',
+      );
+      runInAction(() => {
+        palStore.pals = [
+          {
+            type: 'local',
+            id: 'scout-colors',
+            name: 'Scout',
+            description: 'Scout',
+            systemPrompt: 'Scout',
+            isSystemPromptChanged: false,
+            useAIPrompt: false,
+            parameters: {},
+            parameterSchema: [],
+            source: 'local',
+            color: ['#B89A62', '#30291F'],
+            created_at: '2026-09-19T00:00:00Z',
+            updated_at: '2026-09-19T00:00:00Z',
+          },
+        ];
+      });
+      Object.defineProperty(chatSessionStore, 'activePalId', {
+        get: jest.fn(() => 'scout-colors'),
+        configurable: true,
+      });
+
+      const {getByPlaceholderText, getByText, unmount} = render(
+        <UserContext.Provider value={user}>
+          <ChatInput
+            onSendPress={jest.fn()}
+            inputBackgroundColor="#30291F"
+            showThinkingToggle
+            isThinkingEnabled={false}
+            onThinkingToggle={jest.fn()}
+          />
+        </UserContext.Provider>,
+        {theme},
+      );
+
+      expect(
+        getByPlaceholderText(l10n.en.components.chatInput.inputPlaceholder)
+          .props.placeholderTextColor,
+      ).toBe('rgba(184, 154, 98, 0.9)');
+      expect(StyleSheet.flatten(getByText('Think').props.style).color).toBe(
+        'rgba(184, 154, 98, 0.9)',
+      );
+
+      unmount();
+      runInAction(() => {
+        palStore.pals = originalPals;
+      });
+      if (originalActivePalId) {
+        Object.defineProperty(
+          chatSessionStore,
+          'activePalId',
+          originalActivePalId,
+        );
+      }
+    },
+  );
+
+  it('meets text contrast for the Scout primary and secondary foregrounds', () => {
+    const gold = [0xb8, 0x9a, 0x62];
+    const background = [0x30, 0x29, 0x1f];
+    const secondary = gold.map(
+      (channel, index) => channel * 0.9 + background[index] * 0.1,
+    );
+
+    expect(contrastRatio(gold, background)).toBeGreaterThanOrEqual(4.5);
+    expect(contrastRatio(secondary, background)).toBeGreaterThanOrEqual(4.5);
+  });
+
+  it('preserves the existing muted foreground for a light Pal composer', () => {
+    const originalPals = palStore.pals;
+    const originalActivePalId = Object.getOwnPropertyDescriptor(
+      chatSessionStore,
+      'activePalId',
+    );
+    runInAction(() => {
+      palStore.pals = [
+        {
+          type: 'local',
+          id: 'light-pal',
+          name: 'Light Pal',
+          description: 'Light Pal',
+          systemPrompt: 'Light Pal',
+          isSystemPromptChanged: false,
+          useAIPrompt: false,
+          parameters: {},
+          parameterSchema: [],
+          source: 'local',
+          color: ['#16324F', '#E8F1F8'],
+          created_at: '2026-09-19T00:00:00Z',
+          updated_at: '2026-09-19T00:00:00Z',
+        },
+      ];
+    });
+    Object.defineProperty(chatSessionStore, 'activePalId', {
+      get: jest.fn(() => 'light-pal'),
+      configurable: true,
+    });
+
+    const {getByPlaceholderText, unmount} = render(
+      <UserContext.Provider value={user}>
+        <ChatInput onSendPress={jest.fn()} inputBackgroundColor="#E8F1F8" />
+      </UserContext.Provider>,
+    );
+
+    expect(
+      getByPlaceholderText(l10n.en.components.chatInput.inputPlaceholder).props
+        .placeholderTextColor,
+    ).toBe('#16324F55');
+
+    unmount();
+    runInAction(() => {
+      palStore.pals = originalPals;
+    });
+    if (originalActivePalId) {
+      Object.defineProperty(
+        chatSessionStore,
+        'activePalId',
+        originalActivePalId,
+      );
+    }
+  });
+
   it('shows video button for video pal type', async () => {
     expect.assertions(1);
 
@@ -634,6 +791,107 @@ describe('input', () => {
       // Test that the component renders correctly even when camera errors are configured
       expect(plusButton).toBeTruthy();
       expect(launchCamera).toHaveBeenCalledTimes(0); // Not called until menu interaction
+    });
+
+    const renderWithImageUpload = () =>
+      render(
+        <UserContext.Provider value={user}>
+          <ChatInput
+            {...{
+              onSendPress: jest.fn(),
+              showImageUpload: true,
+              isVisionEnabled: true,
+              sendButtonVisibilityMode: 'editing',
+            }}
+          />
+        </UserContext.Provider>,
+      );
+
+    const pressCameraMenuItem = async (
+      screen: ReturnType<typeof renderWithImageUpload>,
+    ) => {
+      fireEvent.press(screen.getByLabelText('Add image'));
+      fireEvent.press(await screen.findByText(l10n.en.camera.takePhoto));
+    };
+
+    it('adds the captured photo to the selection', async () => {
+      (launchCamera as jest.Mock).mockResolvedValue({
+        assets: [{uri: 'file://test-photo.jpg'}],
+      });
+
+      const screen = renderWithImageUpload();
+      await pressCameraMenuItem(screen);
+
+      expect(await screen.findByLabelText('Remove image 1')).toBeTruthy();
+      expect(Alert.alert).not.toHaveBeenCalled();
+    });
+
+    it('alerts that no camera device was found when the camera is unavailable', async () => {
+      (launchCamera as jest.Mock).mockResolvedValue({
+        errorCode: 'camera_unavailable',
+      });
+
+      const screen = renderWithImageUpload();
+      await pressCameraMenuItem(screen);
+
+      await waitFor(() => {
+        expect(Alert.alert).toHaveBeenCalledWith(
+          l10n.en.camera.errorTitle,
+          l10n.en.camera.noDevice,
+        );
+      });
+      expect(launchCamera).toHaveBeenCalledTimes(1);
+      expect(screen.queryByLabelText('Remove image 1')).toBeNull();
+    });
+
+    it('alerts with the generic camera error for other error codes', async () => {
+      (launchCamera as jest.Mock).mockResolvedValue({
+        errorCode: 'others',
+        errorMessage: 'x',
+      });
+
+      const screen = renderWithImageUpload();
+      await pressCameraMenuItem(screen);
+
+      await waitFor(() => {
+        expect(Alert.alert).toHaveBeenCalledWith(
+          l10n.en.errors.cameraErrorTitle,
+          l10n.en.errors.cameraErrorMessage,
+        );
+      });
+    });
+
+    it('stays silent when the camera is cancelled', async () => {
+      (launchCamera as jest.Mock).mockResolvedValue({didCancel: true});
+
+      const screen = renderWithImageUpload();
+      await pressCameraMenuItem(screen);
+
+      await waitFor(() => {
+        expect(launchCamera).toHaveBeenCalledTimes(1);
+      });
+      expect(Alert.alert).not.toHaveBeenCalled();
+    });
+
+    it('closes the menu and re-enables auto-release after a camera error', async () => {
+      (launchCamera as jest.Mock).mockResolvedValue({
+        errorCode: 'camera_unavailable',
+      });
+
+      const screen = renderWithImageUpload();
+      await pressCameraMenuItem(screen);
+
+      await waitFor(() => {
+        expect(modelStore.enableAutoRelease).toHaveBeenCalledWith(
+          'camera-photo',
+        );
+      });
+      expect(modelStore.disableAutoRelease).toHaveBeenCalledWith(
+        'camera-photo',
+      );
+      await waitFor(() => {
+        expect(screen.queryByText(l10n.en.camera.takePhoto)).toBeNull();
+      });
     });
 
     it('handles image library selection successfully', async () => {

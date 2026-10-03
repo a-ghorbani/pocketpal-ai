@@ -258,6 +258,33 @@ describe('PalGenerationSettingsSheet', () => {
         expect(defaultProps.onClose).not.toHaveBeenCalled();
       });
     });
+
+    it('retains but does not parse an invalid omitted numeric value', async () => {
+      const {getByText} = render(
+        <L10nContext.Provider value={l10n.en}>
+          <PalGenerationSettingsSheet
+            {...defaultProps}
+            completionSettings={{
+              ...mockCompletionParams,
+              temperature: 'not-a-number' as any,
+              generationParameterModes: {temperature: 'omit'},
+            }}
+          />
+        </L10nContext.Provider>,
+      );
+
+      fireEvent.press(getByText(l10n.en.common.save));
+
+      await waitFor(() => {
+        expect(defaultProps.onUpdateSettings).toHaveBeenCalledWith(
+          expect.objectContaining({
+            temperature: 'not-a-number',
+            generationParameterModes: {temperature: 'omit'},
+          }),
+        );
+      });
+      expect(Alert.alert).not.toHaveBeenCalled();
+    });
   });
 
   describe('Reset Functionality', () => {

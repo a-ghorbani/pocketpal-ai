@@ -32,4 +32,12 @@ export const styles = StyleSheet.create({
     gap: 8,
     marginBottom: 12,
   },
+  statusText: {
+    marginBottom: 8,
+    opacity: 0.75,
+  },
+  warningText: {
+    marginBottom: 12,
+    color: '#b3261e',
+  },
 });

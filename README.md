@@ -56,6 +56,7 @@ Most AI apps are a thin window onto someone else's server — every message you 
 
 - **🧠 On-device chat** — run GGUF language models (Gemma, Qwen, Phi, Llama, and more) fully offline.
 - **🗣️ Text-to-speech** — give your assistant a voice with on-device neural TTS (Kokoro and other engines), no cloud calls.
+- **🎙️ On-device dictation on Android** — dictate an editable prompt using Android's local speech recognizer, with no cloud-recognition fallback.
 - **🎭 Pals** — create personalized assistants with their own model, system prompt, and personality (Assistant and Roleplay types).
 - **🛍️ [PalsHub](https://palshub.ai/)** — discover and install community Pals, including premium ones via in-app checkout.
 - **🛠️ Talents & tools** — let capable Pals call built-in tools (calculator, date/time, rich HTML rendering) inside a tool-use loop.
@@ -66,10 +67,10 @@ Most AI apps are a thin window onto someone else's server — every message you 
 
 ## Get the app
 
-| Platform | |
-| --- | --- |
-| **iOS / iPadOS** | [![Download on the App Store](https://img.shields.io/badge/App_Store-Download-0D96F6?logo=apple&logoColor=white)](https://apps.apple.com/us/app/pocketpal-ai/id6502579498) |
-| **Android** | [![Get it on Google Play](https://img.shields.io/badge/Google_Play-Get_it-414141?logo=googleplay&logoColor=white)](https://play.google.com/store/apps/details?id=com.pocketpalai) |
+| Platform         |                                                                                                                                                                                   |
+| ---------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **iOS / iPadOS** | [![Download on the App Store](https://img.shields.io/badge/App_Store-Download-0D96F6?logo=apple&logoColor=white)](https://apps.apple.com/us/app/pocketpal-ai/id6502579498)        |
+| **Android**      | [![Get it on Google Play](https://img.shields.io/badge/Google_Play-Get_it-414141?logo=googleplay&logoColor=white)](https://play.google.com/store/apps/details?id=com.pocketpalai) |
 
 **Three steps to your first chat:**
 
@@ -87,12 +88,12 @@ PocketPal is a four-layer stack, from the silicon up to the chat UI. Each layer 
   <img src="assets/images and logos/stack-diagram-dark.png" alt="PocketPal AI on-device stack — UI & Tool Use → Bridging → Engine → Hardware" width="100%">
 </div>
 
-| Layer | What runs here |
-| --- | --- |
+| Layer             | What runs here                                                                                                                                                                                                                                                                                                                                                                      |
+| ----------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | **UI & Tool Use** | The React Native app (UI via React Native Paper, state via MobX, chat history in WatermelonDB). The **`AgentRunner`** drives each chat turn — streaming tokens, dispatching **Talents** (tools) when the model calls them, and feeding results back for follow-up reasoning. **Pals** are configurable personas; **PalsHub** is the in-app marketplace for sharing and buying them. |
-| **Bridging** | Native modules that connect JavaScript to the engines. [`llama.rn`](https://github.com/mybigday/llama.rn) bridges LLM inference over JSI; [`react-native-speech`](https://github.com/a-ghorbani/react-native-speech) and `onnxruntime-react-native` bridge text-to-speech. |
-| **Engine** | The inference engines. **llama.cpp** runs language models in the quantized **GGUF** format. **ONNX Runtime** runs TTS voice models in the **ONNX** format. |
-| **Hardware** | Where the math actually happens. PocketPal targets **CPU** (universal fallback), **GPU** (Metal on iOS, OpenCL on Qualcomm Adreno for Android), and **NPU** (Qualcomm Hexagon) — falling back gracefully and offloading partial layers when a full backend isn't available. |
+| **Bridging**      | Native modules that connect JavaScript to the engines. [`llama.rn`](https://github.com/mybigday/llama.rn) bridges LLM inference over JSI; [`react-native-speech`](https://github.com/a-ghorbani/react-native-speech) and `onnxruntime-react-native` bridge text-to-speech.                                                                                                          |
+| **Engine**        | The inference engines. **llama.cpp** runs language models in the quantized **GGUF** format. **ONNX Runtime** runs TTS voice models in the **ONNX** format.                                                                                                                                                                                                                          |
+| **Hardware**      | Where the math actually happens. PocketPal targets **CPU** (universal fallback), **GPU** (Metal on iOS, OpenCL on Qualcomm Adreno for Android), and **NPU** (Qualcomm Hexagon) — falling back gracefully and offloading partial layers when a full backend isn't available.                                                                                                         |
 
 ## Using the app
 
@@ -116,9 +117,12 @@ PocketPal is a four-layer stack, from the silicon up to the chat UI. Each layer 
 
 1. Make sure a model is loaded.
 2. Open the **Chat** page and start talking.
-3. The screen stays awake during inference and deactivates when idle.
-4. **Copy** a full response with the copy icon, or long-press a paragraph to copy just that.
-5. **Edit** any of your messages with a long-press — the AI regenerates from your change. Hit **retry** for a fresh answer, optionally with a different model.
+3. On Android 12 or newer, tap the microphone to dictate one prompt locally. Review or edit the transcript, then tap **Send**. Availability depends on the phone's installed on-device speech service and language model.
+4. The screen stays awake during inference and deactivates when idle.
+5. **Copy** a full response with the copy icon, or long-press a paragraph to copy just that.
+6. **Edit** any of your messages with a long-press — the AI regenerates from your change. Hit **retry** for a fresh answer, optionally with a different model.
+
+Dictation is foreground-only and never sends automatically. Downloading a missing speech-language model may require a network connection, but recognition then uses Android's explicitly on-device service. Sending the resulting prompt can still use the network if you selected a remote language model; system TTS voices can also have provider-specific network behavior.
 
 <img src="assets/images and logos/Chat.png" alt="Chat" width="83%">
 </details>
@@ -129,6 +133,7 @@ PocketPal is a four-layer stack, from the silicon up to the chat UI. Each layer 
 <br/>
 
 Create personalized assistants:
+
 - **Assistant Pal** — pick a default model, set a system prompt (write it yourself or have the app generate one), and customize the chat input color.
 - **Roleplay Pal** — everything above, plus location, the AI's role, and other contextual parameters.
 
@@ -185,6 +190,9 @@ PocketPal is a standard React Native app. If you can build a React Native projec
 
 See the [React Native environment setup](https://reactnative.dev/docs/set-up-your-environment) for platform details.
 
+For Docker-based Android APK installation and full GitHub artifact acceptance,
+see [`dev-env/README.md`](dev-env/README.md).
+
 ### Clone, install & run
 
 ```bash
@@ -200,7 +208,11 @@ yarn ios                      # build + run on iOS simulator
 yarn android                  # build + run on Android emulator
 ```
 
-Core on-device chat works without any backend keys; only PalsHub/auth features need additional configuration.
+Core on-device chat works without backend keys. Centralized PalsHub account,
+checkout, synchronization, feedback, and benchmark-submission integrations are
+disabled in this build. User-owned credentials remain supported for Hugging
+Face downloads, remote AI servers, and configured search providers; they are
+stored in the platform keychain.
 
 > **Native-change rule:** if you change `package.json`, a native module, `ios/`, `android/`, the Podfile, or `build.gradle`, re-run `pod install` and rebuild both platforms — a JS reload won't pick up native changes.
 
@@ -236,6 +248,7 @@ src/
 ├── locales/        # i18n JSON + lazy loader (index.ts is the registry)
 └── hooks/  api/  theme/  utils/  config/  specs/
 ```
+
 </details>
 
 <details>
@@ -245,16 +258,16 @@ src/
 
 Versions are pinned in [`package.json`](package.json); the highlights:
 
-| Area | Choice |
-| --- | --- |
-| Framework | React Native `0.82.1`, React `19.1.1` (New Architecture) |
-| Language | TypeScript `5.0.4` |
-| UI | React Native Paper `5.14.5`, React Navigation |
-| State | MobX `6` (`mobx`, `mobx-react`, `mobx-persist-store`) |
-| Persistence | WatermelonDB (chat history), AsyncStorage (settings), Keychain (secrets) |
-| LLM | `llama.rn` `0.13.0-rc.3` → llama.cpp b10829 · GGUF |
-| TTS | `react-native-speech` `2.3.1` + `onnxruntime-react-native` `1.23.2` · ONNX |
-| Tooling | Yarn 1 (Classic), ESLint, Prettier, Jest, Husky + Commitlint |
+| Area        | Choice                                                                     |
+| ----------- | -------------------------------------------------------------------------- |
+| Framework   | React Native `0.82.1`, React `19.1.1` (New Architecture)                   |
+| Language    | TypeScript `5.0.4`                                                         |
+| UI          | React Native Paper `5.14.5`, React Navigation                              |
+| State       | MobX `6` (`mobx`, `mobx-react`, `mobx-persist-store`)                      |
+| Persistence | WatermelonDB (chat history), AsyncStorage (settings), Keychain (secrets)   |
+| LLM         | `llama.rn` `0.13.0-rc.5` → llama.cpp b11118 · GGUF                         |
+| TTS         | `react-native-speech` `2.3.1` + `onnxruntime-react-native` `1.23.2` · ONNX |
+| Tooling     | Yarn 1 (Classic), ESLint, Prettier, Jest, Husky + Commitlint               |
 
 </details>
 
@@ -265,13 +278,14 @@ Versions are pinned in [`package.json`](package.json); the highlights:
 
 A **Talent** is a tool the model can call mid-conversation. Engines are registered in a `TalentRegistry`, exposed to the model as tool schemas; the `AgentRunner` detects a call, runs the engine, and returns the result for the next turn.
 
-| Talent | Engine | Does |
-| --- | --- | --- |
-| `calculate` | `CalculateEngine` | Arithmetic / expression evaluation |
-| `datetime` | `DatetimeEngine` | Current date / time |
+| Talent        | Engine             | Does                                |
+| ------------- | ------------------ | ----------------------------------- |
+| `calculate`   | `CalculateEngine`  | Arithmetic / expression evaluation  |
+| `datetime`    | `DatetimeEngine`   | Current date / time                 |
 | `render_html` | `RenderHtmlEngine` | Renders model-produced HTML in chat |
 
 Good first contributions:
+
 - A new **Talent** — implement a `TalentEngine` and register it in `src/services/talents/`.
 - A new **TTS engine** — add it under `src/services/tts/engines/`.
 - A new **locale** — add a JSON file in `src/locales/` (or translate on [Weblate](https://hosted.weblate.org/projects/pocketpal-ai/)).

@@ -21,6 +21,10 @@ class MockTTSStore {
     | {mode: 'streaming'; messageId: string}
     | {mode: 'playing'; messageId: string} = {mode: 'idle'};
   autoSpeakEnabled = false;
+  conversationAutoSpeakEnabled = false;
+  get effectiveAutoSpeakEnabled(): boolean {
+    return this.autoSpeakEnabled || this.conversationAutoSpeakEnabled;
+  }
   currentVoice: any = null;
   isSetupSheetOpen = false;
   lastSpokenMessageId: string | null = null;
@@ -44,7 +48,10 @@ class MockTTSStore {
   preview: jest.Mock;
   isPreviewingVoice: jest.Mock;
   stop: jest.Mock;
+  stopForDictation: jest.Mock;
+  skipCurrentPlayback: jest.Mock;
   setAutoSpeak: jest.Mock;
+  setConversationAutoSpeak: jest.Mock;
   setUserTTSOverride: jest.Mock;
   setCurrentVoice: jest.Mock;
   setSupertonicSteps: jest.Mock;
@@ -71,7 +78,10 @@ class MockTTSStore {
       preview: false,
       isPreviewingVoice: false,
       stop: false,
+      stopForDictation: false,
+      skipCurrentPlayback: false,
       setAutoSpeak: false,
+      setConversationAutoSpeak: false,
       setUserTTSOverride: false,
       setCurrentVoice: false,
       setSupertonicSteps: false,
@@ -96,7 +106,10 @@ class MockTTSStore {
     this.preview = jest.fn().mockResolvedValue(undefined);
     this.isPreviewingVoice = jest.fn().mockReturnValue(false);
     this.stop = jest.fn().mockResolvedValue(undefined);
+    this.stopForDictation = jest.fn().mockResolvedValue(undefined);
+    this.skipCurrentPlayback = jest.fn().mockResolvedValue(undefined);
     this.setAutoSpeak = jest.fn();
+    this.setConversationAutoSpeak = jest.fn();
     this.setUserTTSOverride = jest.fn();
     this.setCurrentVoice = jest.fn();
     this.setSupertonicSteps = jest.fn();

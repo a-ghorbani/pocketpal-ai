@@ -173,7 +173,9 @@ describe('ModelCard', () => {
       fireEvent.press(getByTestId('load-button'));
     });
 
-    expect(modelStore.selectModel).toHaveBeenCalledWith(downloadedModel);
+    expect(modelStore.selectModel).toHaveBeenCalledWith(downloadedModel, {
+      rememberForStartup: true,
+    });
     expect(mockNavigate).not.toHaveBeenCalled();
 
     uiStore.autoNavigatetoChat = true;

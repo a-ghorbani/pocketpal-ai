@@ -176,7 +176,16 @@ export const validateCompletionSettings = (
   const errors: Record<string, string> = {};
 
   Object.entries(COMPLETION_PARAMS_METADATA).forEach(([key, metadata]) => {
-    if (key in settings && metadata) {
+    const mode =
+      settings.generationParameterModes?.[
+        key as keyof NonNullable<CompletionParams['generationParameterModes']>
+      ];
+    if (
+      (key in settings || mode === 'send') &&
+      metadata &&
+      mode !== 'omit' &&
+      mode !== 'inherit'
+    ) {
       const result = validateNumericField(settings[key], metadata.validation);
       if (!result.isValid && result.errorMessage) {
         errors[key] = result.errorMessage;

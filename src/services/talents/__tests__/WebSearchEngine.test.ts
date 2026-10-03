@@ -20,6 +20,7 @@ const makeAccess = (overrides: Partial<SearchAccess> = {}): SearchAccess => {
     getActiveProvider: () => provider,
     canSearch: () => true,
     getResultCount: () => 3,
+    getFullSearchResults: () => true,
     readWithDefaultReader: jest.fn(),
     ...overrides,
   };
@@ -58,6 +59,43 @@ describe('WebSearchEngine', () => {
     }
   });
 
+  it('returns all 20 complete provider results when full results are enabled', async () => {
+    const hits = Array.from({length: 20}, (_, index) =>
+      hit({
+        title: `Result ${index + 1} ${'title '.repeat(40)}TITLE-TAIL-${index + 1}`,
+        url: `https://example.com/${index + 1}/${'u'.repeat(2100)}`,
+        snippet: `${'snippet '.repeat(150)}SNIPPET-TAIL-${index + 1}`,
+        publishedAt: `2026-01-${String(index + 1).padStart(2, '0')}`,
+      }),
+    );
+    const provider: SearchProvider = {
+      id: 'tavily',
+      search: jest.fn().mockResolvedValue(hits),
+    };
+    const access = makeAccess({
+      getActiveProvider: () => provider,
+      getResultCount: () => 20,
+      getFullSearchResults: () => true,
+    });
+
+    const result = await new WebSearchEngine(access).execute({query: 'mars'});
+
+    expect(result.type).toBe('search');
+    if (result.type === 'search') {
+      expect(result.results).toHaveLength(20);
+      for (let index = 1; index <= 20; index++) {
+        expect(result.results[index - 1].title).toContain(
+          `TITLE-TAIL-${index}`,
+        );
+        expect(result.results[index - 1].snippet).toContain(
+          `SNIPPET-TAIL-${index}`,
+        );
+        expect(result.summary).toContain(`TITLE-TAIL-${index}`);
+        expect(result.summary).toContain(`SNIPPET-TAIL-${index}`);
+      }
+    }
+  });
+
   it('returns an error result when search is not enabled (never silent)', async () => {
     const access = makeAccess({canSearch: () => false});
     const result = await new WebSearchEngine(access).execute({query: 'mars'});
@@ -84,7 +122,10 @@ describe('WebSearchEngine', () => {
       id: 'tavily',
       search: jest.fn().mockResolvedValue([hit({title: 'Mars'})]),
     };
-    const access = makeAccess({getActiveProvider: () => provider});
+    const access = makeAccess({
+      getActiveProvider: () => provider,
+      getFullSearchResults: () => false,
+    });
     const result = await new WebSearchEngine(access).execute({query: 'mars'});
     if (result.type === 'search') {
       expect(result.summary).toContain('UNTRUSTED WEB CONTENT');
@@ -97,7 +138,10 @@ describe('WebSearchEngine', () => {
       id: 'tavily',
       search: jest.fn().mockResolvedValue([]),
     };
-    const access = makeAccess({getActiveProvider: () => provider});
+    const access = makeAccess({
+      getActiveProvider: () => provider,
+      getFullSearchResults: () => false,
+    });
     const result = await new WebSearchEngine(access).execute({query: 'zzz'});
     expect(result.type).toBe('error');
     if (result.type === 'error') {
@@ -130,7 +174,12 @@ describe('WebSearchEngine', () => {
 
   it('passes its own recommendedContextTokens to budgetHits as the token ceiling', async () => {
     const spy = jest.spyOn(budget, 'budgetHits');
-    const engine = new WebSearchEngine(makeAccess({getResultCount: () => 5}));
+    const engine = new WebSearchEngine(
+      makeAccess({
+        getResultCount: () => 5,
+        getFullSearchResults: () => false,
+      }),
+    );
     expect(engine.recommendedContextTokens).toBe(1000);
     await engine.execute({query: 'mars'});
     expect(spy).toHaveBeenCalledWith(
@@ -153,6 +202,69 @@ describe('WebSearchEngine', () => {
     await engine.execute({query: 'mars'});
     await engine.execute({query: 'mars'});
     expect(search).toHaveBeenCalledTimes(1);
+  });
+
+  it('keeps full and bounded cache entries separate when the setting changes', async () => {
+    let fullResults = true;
+    const oversized = `${'word '.repeat(100)}CONTENT-TAIL`;
+    const search = jest
+      .fn()
+      .mockResolvedValue([hit({snippet: oversized, url: 'https://e.com/a'})]);
+    const provider: SearchProvider = {id: 'tavily', search};
+    const engine = new WebSearchEngine(
+      makeAccess({
+        getActiveProvider: () => provider,
+        getFullSearchResults: () => fullResults,
+      }),
+    );
+
+    const full = await engine.execute({query: 'mars'});
+    fullResults = false;
+    const bounded = await engine.execute({query: 'mars'});
+    fullResults = true;
+    const fullCached = await engine.execute({query: 'mars'});
+
+    expect(search).toHaveBeenCalledTimes(2);
+    expect(full.type).toBe('search');
+    expect(bounded.type).toBe('search');
+    expect(fullCached.type).toBe('search');
+    if (
+      full.type === 'search' &&
+      bounded.type === 'search' &&
+      fullCached.type === 'search'
+    ) {
+      expect(full.results[0].snippet).toContain('CONTENT-TAIL');
+      expect(bounded.results[0].snippet).not.toContain('CONTENT-TAIL');
+      expect(fullCached.results[0].snippet).toContain('CONTENT-TAIL');
+    }
+  });
+
+  it('uses the output mode captured before an in-flight provider response', async () => {
+    let fullResults = true;
+    let resolveSearch!: (hits: SearchHit[]) => void;
+    const search = jest.fn(
+      () =>
+        new Promise<SearchHit[]>(resolve => {
+          resolveSearch = resolve;
+        }),
+    );
+    const provider: SearchProvider = {id: 'tavily', search};
+    const engine = new WebSearchEngine(
+      makeAccess({
+        getActiveProvider: () => provider,
+        getFullSearchResults: () => fullResults,
+      }),
+    );
+    const pending = engine.execute({query: 'mars'});
+
+    fullResults = false;
+    resolveSearch([hit({snippet: `${'word '.repeat(100)}CONTENT-TAIL`})]);
+    const result = await pending;
+
+    expect(result.type).toBe('search');
+    if (result.type === 'search') {
+      expect(result.results[0].snippet).toContain('CONTENT-TAIL');
+    }
   });
 
   it('re-hits the provider after an empty result (no empty-result lockout)', async () => {
@@ -185,7 +297,10 @@ describe('WebSearchEngine', () => {
       .mockResolvedValueOnce([hit({url: longUrl})])
       .mockResolvedValueOnce([hit({title: 'Mars', url: 'https://m.com'})]);
     const provider: SearchProvider = {id: 'tavily', search};
-    const access = makeAccess({getActiveProvider: () => provider});
+    const access = makeAccess({
+      getActiveProvider: () => provider,
+      getFullSearchResults: () => false,
+    });
     const engine = new WebSearchEngine(access);
 
     const first = await engine.execute({query: 'mars'});
@@ -201,7 +316,10 @@ describe('WebSearchEngine', () => {
       id: 'tavily',
       search: jest.fn().mockResolvedValue([hit({title: 'Mars'})]),
     };
-    const access = makeAccess({getActiveProvider: () => provider});
+    const access = makeAccess({
+      getActiveProvider: () => provider,
+      getFullSearchResults: () => false,
+    });
     const result = await new WebSearchEngine(access).execute({query: 'mars'});
     const today = new Date().toISOString().slice(0, 10);
     if (result.type === 'search') {
@@ -282,9 +400,12 @@ describe('WebSearchEngine', () => {
       id: 'tavily',
       search: jest.fn().mockResolvedValue([hit({snippet: oversized})]),
     };
-    const access = makeAccess({getActiveProvider: () => provider});
+    const access = makeAccess({
+      getActiveProvider: () => provider,
+      getFullSearchResults: () => false,
+    });
     await new WebSearchEngine(access).execute({query: 'mars'});
-    const stored = spy.mock.calls[0][3];
+    const stored = spy.mock.calls[0][4];
     expect(stored[0].snippet.length).toBeLessThan(oversized.length);
     spy.mockRestore();
   });

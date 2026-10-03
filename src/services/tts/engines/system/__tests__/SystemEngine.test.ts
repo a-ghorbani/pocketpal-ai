@@ -6,6 +6,9 @@ import type {Voice} from '../../../types';
 
 import {
   __getCreatedStreams,
+  __emitError,
+  __emitFinish,
+  __finishListenerCount,
   __resetCreatedStreams,
   __resetFinishListeners,
 } from '../../../../../../__mocks__/external/@pocketpalai/react-native-speech';
@@ -65,6 +68,10 @@ describe('SystemEngine streaming', () => {
   });
 
   it('finalize forwards to the lib stream', async () => {
+    (Speech.isSpeaking as jest.Mock)
+      .mockResolvedValueOnce(true)
+      .mockResolvedValueOnce(false)
+      .mockResolvedValueOnce(false);
     const handle = new SystemEngine().playStreaming(VOICE);
 
     handle.appendText('Hi.');
@@ -72,6 +79,41 @@ describe('SystemEngine streaming', () => {
 
     const [stream] = __getCreatedStreams();
     expect(stream!.finalize).toHaveBeenCalledTimes(1);
+    expect(Speech.isSpeaking).toHaveBeenCalledTimes(3);
+    expect(__finishListenerCount()).toBe(0);
+  });
+
+  it('accepts a short utterance that finishes before the first speaking poll', async () => {
+    const engine = new SystemEngine();
+    (Speech.speak as jest.Mock).mockImplementationOnce(async () => {
+      __emitFinish();
+    });
+    (Speech.isSpeaking as jest.Mock).mockResolvedValue(false);
+
+    await engine.play('Hi', VOICE);
+
+    expect(__finishListenerCount()).toBe(0);
+  });
+
+  it('rejects a system speech error rather than treating idle as completed', async () => {
+    const engine = new SystemEngine();
+    (Speech.speak as jest.Mock).mockImplementationOnce(async () => {
+      __emitError();
+    });
+    await expect(engine.play('Hi', VOICE)).rejects.toThrow(
+      'System speech playback failed',
+    );
+    expect(__finishListenerCount()).toBe(0);
+  });
+
+  it('does not mistake cancellation for natural completion', async () => {
+    (Speech.isSpeaking as jest.Mock).mockResolvedValue(true);
+    const handle = new SystemEngine().playStreaming(VOICE);
+    await flush();
+    const finalize = handle.finalize();
+    await handle.cancel();
+    await finalize;
+    expect(__finishListenerCount()).toBe(0);
   });
 
   it('cancel forwards to the lib stream and blocks further appends', async () => {

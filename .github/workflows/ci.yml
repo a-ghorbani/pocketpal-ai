@@ -100,6 +100,9 @@ jobs:
       - name: Run unit tests
         run: yarn test --coverage
 
+      - name: Verify disabled centralized integrations
+        run: yarn test:disabled-build
+
   # Job for Android build
   build-android:
     runs-on: ubuntu-latest

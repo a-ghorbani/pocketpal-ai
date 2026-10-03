@@ -619,7 +619,7 @@ export const ModelCard: React.FC<ModelCardProps> = observer(
           modelStore.manualReleaseContext();
         } else {
           try {
-            await modelStore.selectModel(model);
+            await modelStore.selectModel(model, {rememberForStartup: true});
             if (uiStore.autoNavigatetoChat) {
               navigation.navigate('Chat');
             }

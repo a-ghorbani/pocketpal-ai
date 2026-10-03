@@ -118,12 +118,11 @@ export const Selectors = {
     get modelsTab(): string {
       return byText('Models');
     },
-    // Pals tab doubles as the drawer-open indicator (DrawerPage.isOpen /
-    // waitForOpen / waitForClose), so it must survive a language switch.
-    // Match the app's stable testID (SidebarContent drawer-item-pals) instead
-    // of the English label.
     get palsTab(): string {
       return byTestId('drawer-item-pals');
+    },
+    get openIndicator(): string {
+      return byTestId('drawer-item-chat');
     },
     get benchmarkTab(): string {
       return byText('Benchmark');
@@ -138,6 +137,7 @@ export const Selectors = {
     get input(): string {
       return byTestId('chat-input');
     },
+
     get sendButton(): string {
       return byTestId('send-button');
     },
@@ -682,6 +682,15 @@ export const Selectors = {
     get addModelButton(): string {
       return byTestId('add-model-button');
     },
+    get protocolDropdown(): string {
+      return byTestId('api-protocol-dropdown');
+    },
+    protocolOption: (value: string): string =>
+      byTestId(`api-protocol-option-${value}`),
+    protocolRow: (modelId: string): string =>
+      byTestId(`remote-model-row-protocol-${modelId}`),
+    protocolWarning: (modelId: string): string =>
+      byTestId(`remote-model-row-warning-${modelId}`),
   },
 
   // Server details sheet (edit/delete server)

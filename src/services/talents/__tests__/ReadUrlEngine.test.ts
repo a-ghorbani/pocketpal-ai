@@ -13,6 +13,7 @@ const makeAccess = (overrides: Partial<SearchAccess> = {}): SearchAccess => {
     getActiveProvider: () => provider,
     canSearch: () => true,
     getResultCount: () => 3,
+    getFullSearchResults: () => true,
     readWithDefaultReader: jest
       .fn()
       .mockResolvedValue({url: 'https://e.com', text: 'fallback body'}),

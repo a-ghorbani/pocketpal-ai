@@ -1,5 +1,7 @@
 import {chatSessionRepository} from '../ChatSessionRepository';
 
+(chatSessionRepository.persistFinalAssistantSteps as jest.Mock) = jest.fn();
+
 // Mock the database
 jest.mock('../../database', () => ({
   database: {
@@ -39,6 +41,9 @@ describe('ChatSessionRepository', () => {
     expect(typeof chatSessionRepository.deleteSession).toBe('function');
     expect(typeof chatSessionRepository.addMessageToSession).toBe('function');
     expect(typeof chatSessionRepository.updateMessage).toBe('function');
+    expect(typeof chatSessionRepository.persistFinalAssistantSteps).toBe(
+      'function',
+    );
     expect(typeof chatSessionRepository.updateSessionCompletionSettings).toBe(
       'function',
     );

@@ -2,6 +2,7 @@ import React, {useRef} from 'react';
 
 import {toJS, runInAction} from 'mobx';
 import type {JinjaFormattedChatResult} from 'llama.rn';
+import type {TTSPlaybackOutcome} from '../store/TTSStore';
 
 import {chatSessionRepository} from '../repositories/ChatSessionRepository';
 
@@ -22,6 +23,7 @@ import {createMultimodalWarning} from '../utils/errors';
 import {
   assembleMessages,
   resolveSystemMessages,
+  VOICE_CONVERSATION_SYSTEM_PROMPT,
 } from '../utils/systemPromptResolver';
 import {convertToChatMessages, removeThinkingParts} from '../utils/chat';
 import {activateKeepAwake, deactivateKeepAwake} from '../utils/keepAwake';
@@ -47,6 +49,51 @@ import {
   type AgentEvent,
   type AgentUiState,
 } from '../services/agent';
+
+const SAFE_COMPLETION_ERROR_NAMES = new Set([
+  'AbortError',
+  'Error',
+  'EvalError',
+  'RangeError',
+  'ReferenceError',
+  'ResponsesStreamProtocolError',
+  'SSEProtocolError',
+  'SyntaxError',
+  'TypeError',
+  'URIError',
+]);
+const SAFE_COMPLETION_ERROR_CODES = new Set([
+  'invalid-completed-response',
+  'invalid-lifecycle',
+  'malformed-event',
+  'premature-eof',
+  'response-cancelled',
+  'response-error',
+  'response-failed',
+  'response-incomplete',
+  'unsupported-output',
+]);
+
+const completionErrorMetadata = (
+  error: unknown,
+): {name: string; code?: string} => {
+  if (typeof error !== 'object' || error === null) {
+    return {name: 'UnknownError'};
+  }
+
+  const {name, code} = error as {name?: unknown; code?: unknown};
+  const safeName =
+    typeof name === 'string' && SAFE_COMPLETION_ERROR_NAMES.has(name)
+      ? name
+      : 'UnknownError';
+  const safeCode =
+    typeof code === 'string' && SAFE_COMPLETION_ERROR_CODES.has(code)
+      ? code
+      : undefined;
+
+  return safeCode ? {name: safeName, code: safeCode} : {name: safeName};
+};
+
 // Helper function to prepare completion parameters using OpenAI-compatible
 // messages API. Creates the empty `assistant_turn` row up-front so the
 // active-vs-persisted predicate sees the right "last message" before the
@@ -73,7 +120,9 @@ const prepareCompletion = async ({
   currentMessages: MessageType.Any[];
 }) => {
   const sessionCompletionSettings =
-    await chatSessionStore.getCurrentCompletionSettings();
+    await chatSessionStore.getCurrentCompletionSettings(
+      modelStore.activeModelCompletionSettings,
+    );
   const stopWords = toJS(modelStore.activeModel?.stopWords);
 
   // Check if we have images and if multimodal is enabled
@@ -139,6 +188,9 @@ const prepareCompletion = async ({
     now: new Date(),
     maxToolTurns: DEFAULT_MAX_TURNS,
   });
+  if (message.metadata?.voiceConversation === true) {
+    systemPromptFragments.push(VOICE_CONVERSATION_SYSTEM_PROMPT);
+  }
 
   const messages = assembleMessages(systemMessages, systemPromptFragments, [
     ...chatMessages,
@@ -236,11 +288,12 @@ type TtsRunState = {
   started: boolean;
   prevContent: string;
   prevReasoning: string;
+  completion?: Promise<TTSPlaybackOutcome>;
 };
 
 // Normalise a finished turn's result into the snapshot the banner reads.
-// `contextFull` is frozen here as the OR of the native full/truncated flags
-// and (remote only) a 'length' finish reason derived from `stopped_limit`.
+// Responses output-token exhaustion is not evidence that the input context is
+// full. Chat Completions retains its legacy length mapping.
 function deriveSnapshotFromResult(
   result: CompletionResult,
   isRemote: boolean,
@@ -255,7 +308,13 @@ function deriveSnapshotFromResult(
   // the remote engine's signal (stopped_limit) into the OR predicate below, so
   // it is intentionally remote-only.
   const finishReason =
-    isRemote && result.stopped_limit === 1 ? 'length' : undefined;
+    result.incomplete_reason === 'max_output_tokens'
+      ? 'output-limit'
+      : isRemote &&
+          result.terminal_status === undefined &&
+          result.stopped_limit === 1
+        ? 'length'
+        : undefined;
   const contextFull =
     result.context_full === true ||
     result.truncated === true ||
@@ -267,6 +326,9 @@ function deriveSnapshotFromResult(
     contextFull,
     tokensPredicted: result.tokens_predicted,
     finishReason,
+    terminalStatus: result.terminal_status,
+    incompleteReason: result.incomplete_reason,
+    refusal: result.refusal,
     isRemote,
   };
 }
@@ -297,6 +359,8 @@ async function applyEventToStore(
       // persist here — the message was added before the run started.
       return;
     case 'step_started':
+      ctx.tts.prevContent = '';
+      ctx.tts.prevReasoning = '';
       await chatSessionStore.pushAgentStep(ctx.messageId, ctx.sessionId, {
         partial: true,
       });
@@ -372,8 +436,8 @@ async function applyEventToStore(
       // this delta to avoid clobbering existing content with empty.
       // toolCalls are not written here — the reducer still consumes
       // `event.delta.toolCalls` for pendingTalentNames, but the
-      // canonical step.toolCalls write happens after step_finished via
-      // appendToolCall so ids match outcomes by construction.
+      // canonical step.toolCalls write is part of the atomic
+      // step_finished snapshot so ids match outcomes by construction.
       const partial: Partial<MessageType.AssistantTurn['steps'][number]> = {};
       if (event.delta.content) {
         partial.content = event.delta.content.replace(/^\s+/, '');
@@ -405,18 +469,15 @@ async function applyEventToStore(
       );
       return;
     case 'step_finished':
-      // Land step.toolCalls AFTER step_finished with the runner's
-      // authoritative normalized ids so they match outcomes' callIds by
-      // construction. Skipped for text-only and final-of-chain steps
-      // (no payload attached).
-      if (event.toolCalls && event.toolCalls.length > 0) {
-        await chatSessionStore.appendToolCall(
-          ctx.messageId,
-          ctx.sessionId,
-          event.toolCalls,
-        );
-      }
-      await chatSessionStore.finalizeActiveStep(ctx.messageId, ctx.sessionId);
+      // This awaited writer first consumes any throttled streaming
+      // partial, then atomically persists the authoritative final
+      // snapshot. The generator remains suspended at its yield until
+      // this resolves, so a rejection halts the run before any tool.
+      await chatSessionStore.persistFinalActiveStep(
+        ctx.messageId,
+        ctx.sessionId,
+        event.step,
+      );
       return;
     case 'run_finished': {
       // Final timings + observability for hit-max-turns. Kept here
@@ -442,6 +503,14 @@ async function applyEventToStore(
             ...draftTimings,
           },
           copyable: true,
+          ...(finalResult.interrupted ? {interrupted: true} : {}),
+          ...(finalResult.refusal ? {responseStatus: 'refused'} : {}),
+          ...(!finalResult.refusal && finalResult.terminal_status
+            ? {responseStatus: finalResult.terminal_status}
+            : {}),
+          ...(finalResult.incomplete_reason
+            ? {incompleteReason: finalResult.incomplete_reason}
+            : {}),
           multimodal: ctx.hasImages && ctx.isMultimodalEnabled,
           completionResult: snapshot,
           ...(event.result.hitMaxTurns ? {hitMaxTurns: true} : {}),
@@ -457,10 +526,12 @@ async function applyEventToStore(
       // enforces auto-speak / voice / idempotency gating internally.
       // Wrapped defensively — UI-path errors must not bubble.
       try {
-        ttsStore.onAssistantMessageComplete(
-          ctx.messageId,
-          finalResult.text ?? '',
-          {hadReasoning: !!finalResult.reasoning_content?.trim()},
+        ctx.tts.completion = Promise.resolve(
+          ttsStore.onAssistantMessageComplete(
+            ctx.messageId,
+            finalResult.text ?? '',
+            {hadReasoning: !!finalResult.reasoning_content?.trim()},
+          ),
         );
       } catch (ttsErr) {
         console.warn('[useChatSession] TTS complete hook failed:', ttsErr);
@@ -514,21 +585,25 @@ export const useChatSession = (
     await addMessage(textMessage);
   };
 
-  const handleSendPress = async (message: MessageType.PartialText) => {
+  const handleSendPress = async (
+    message: MessageType.PartialText,
+  ): Promise<boolean | {narration: TTSPlaybackOutcome}> => {
     const engine = modelStore.engine;
     if (!engine) {
       await addSystemMessage(l10n.chat.modelNotLoaded);
-      return;
+      return false;
     }
 
     const contextId = modelStore.contextId;
     if (!contextId) {
       await addSystemMessage(l10n.chat.modelNotLoaded);
-      return;
+      return false;
     }
 
     const imageUris = message.imageUris;
     const hasImages = !!(imageUris && imageUris.length > 0);
+    const runAbortController = new AbortController();
+    abortRef.current = runAbortController;
 
     const isMultimodalEnabled = modelStore.activeModelCaps.visionActive;
 
@@ -589,11 +664,10 @@ export const useChatSession = (
     // tool call whose function.name isn't in this list.
     const palTalents = (pal?.pact?.talents ?? []).map(t => t.name);
 
-    abortRef.current = new AbortController();
     const completionStartTime = Date.now();
     const timeToFirstTokenMs: {value: number | null} = {value: null};
     const tts: TtsRunState = {
-      enabled: ttsStore.autoSpeakEnabled,
+      enabled: ttsStore.effectiveAutoSpeakEnabled,
       started: false,
       prevContent: '',
       prevReasoning: '',
@@ -644,7 +718,7 @@ export const useChatSession = (
         talentLookup: name => talentRegistry.get(name),
         triggerMarkers,
         messageId: messageInfo.id,
-        signal: abortRef.current.signal,
+        signal: runAbortController.signal,
       });
 
       // The chunk-cycle would otherwise run entirely via microtask
@@ -666,7 +740,7 @@ export const useChatSession = (
       const TOOL_TOKEN_BUCKET = 10;
 
       for await (const event of events) {
-        if (abortRef.current?.signal.aborted && event.type === 'token') {
+        if (runAbortController.signal.aborted && event.type === 'token') {
           continue;
         }
 
@@ -728,8 +802,12 @@ export const useChatSession = (
       modelStore.setIsStreaming(false);
       chatSessionStore.setIsGenerating(false);
       chatSessionStore.setIsStopping(false);
+      const narration = await tts.completion;
+      return message.metadata?.voiceConversation === true
+        ? {narration: narration ?? 'none'}
+        : true;
     } catch (error) {
-      console.error('Completion error:', error);
+      console.error('Completion error:', completionErrorMetadata(error));
       modelStore.setInferencing(false);
       modelStore.setIsStreaming(false);
       chatSessionStore.setIsGenerating(false);
@@ -746,6 +824,10 @@ export const useChatSession = (
       });
 
       const errorMessage = (error as Error).message;
+      const responseErrorCode =
+        typeof (error as {code?: unknown}).code === 'string'
+          ? (error as {code: string}).code
+          : undefined;
       // Native tool-call parser throws on truncated JSON when the model
       // ran out of context mid-args (most often `render_html` with a
       // long string). Detect by error shape and route through the
@@ -818,6 +900,9 @@ export const useChatSession = (
             {
               metadata: {
                 interrupted: true,
+                ...(responseErrorCode
+                  ? {responseErrorCode, responseStatus: 'failed'}
+                  : {}),
                 copyable: true,
                 completionResult: abortSnapshot,
                 ...(isToolArgsParseError ? {truncationLikely: true} : {}),
@@ -890,6 +975,7 @@ export const useChatSession = (
       } else {
         await addSystemMessage(`${l10n.chat.completionFailed}${errorMessage}`);
       }
+      return false;
     } finally {
       try {
         deactivateKeepAwake();
@@ -905,6 +991,9 @@ export const useChatSession = (
   };
 
   const handleStopPress = async () => {
+    if (!chatSessionStore.isGenerating && !modelStore.inferencing) {
+      return;
+    }
     // Enter the `stopping` state IMMEDIATELY: the user gets visible
     // feedback ("Stopping…") and the send button is gated off so a
     // new completion can't try to use the still-busy native context.

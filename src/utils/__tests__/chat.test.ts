@@ -314,6 +314,63 @@ describe('convertToChatMessages — AssistantTurn', () => {
     ]);
   });
 
+  it('carries each persisted step Responses state only on its assistant message', () => {
+    const firstState = {
+      version: 1 as const,
+      binding: {
+        wireApi: 'responses' as const,
+        serverUrl: 'https://api.example.test',
+        modelId: 'responses-model',
+      },
+      output: [
+        {
+          type: 'function_call' as const,
+          id: 'item-1',
+          call_id: 'call-1',
+          name: 'calculate',
+          arguments: '{}',
+        },
+      ],
+      terminalStatus: 'completed' as const,
+    };
+    const secondState = {
+      ...firstState,
+      output: [
+        {
+          type: 'message' as const,
+          id: 'message-2',
+          role: 'assistant' as const,
+          content: [{type: 'output_text' as const, text: 'done'}],
+        },
+      ],
+    };
+    const result = convertToChatMessages([
+      makeAssistantTurn([
+        {
+          content: '',
+          toolCalls: [
+            {id: 'call-1', function: {name: 'calculate', arguments: '{}'}},
+          ],
+          toolOutcomes: [
+            {
+              callId: 'call-1',
+              toolName: 'calculate',
+              result: {type: 'text', summary: '2'},
+              responseContent: '2',
+            },
+          ],
+          responsesState: firstState,
+        },
+        {content: 'done', responsesState: secondState},
+      ]),
+    ]);
+
+    expect(result[0].responsesState).toBe(firstState);
+    expect(result[1].role).toBe('tool');
+    expect(result[1].responsesState).toBeUndefined();
+    expect(result[2].responsesState).toBe(secondState);
+  });
+
   it('#3 step with empty content but tool_calls → assistant message with empty content + tool_calls + sentinel "aborted" tool response (orphan-pair guard)', () => {
     // A persisted step with toolCalls and no toolOutcomes is the
     // abort/crash recovery shape. The orphan-pair guard in
@@ -652,5 +709,38 @@ describe('Test Danube2 Chat Templates', () => {
     expect(result).toBe(
       'System prompt. </s><|prompt|>Hi there!</s><|answer|>Nice to meet you!</s><|prompt|>Can I ask a question?</s><|answer|>',
     );
+  });
+
+  it('strips internal Responses state before the llama.rn formatter boundary', async () => {
+    const context = {
+      model: {metadata: {'tokenizer.chat_template': 'template'}},
+      getFormattedChat: jest.fn(async () => 'formatted'),
+    };
+    const responsesState = {
+      version: 1 as const,
+      binding: {
+        wireApi: 'responses' as const,
+        serverUrl: 'https://api.example.test',
+        modelId: 'responses-model',
+      },
+      output: [],
+      terminalStatus: 'completed' as const,
+    };
+
+    await applyChatTemplate(
+      [
+        {
+          role: 'assistant',
+          content: 'answer',
+          responsesState,
+        },
+      ],
+      null,
+      context as any,
+    );
+
+    expect(context.getFormattedChat).toHaveBeenCalledWith([
+      {role: 'assistant', content: 'answer'},
+    ]);
   });
 });

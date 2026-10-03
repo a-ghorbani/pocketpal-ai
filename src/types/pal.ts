@@ -1,4 +1,5 @@
 import type {Model} from '../utils/types';
+import type {CompletionParams} from '../utils/completionTypes';
 
 export type ParameterType = 'text' | 'select' | 'combobox' | 'datetime_tag';
 
@@ -105,7 +106,7 @@ export interface Pal {
   // GENERATION SETTINGS
   // ============================================================================
   /** Local completion settings (temperature, top_p, max_tokens, etc.) */
-  completionSettings?: Record<string, any>;
+  completionSettings?: CompletionParams;
 
   // ============================================================================
   // PACT (Pal Action & Capability Treaty)

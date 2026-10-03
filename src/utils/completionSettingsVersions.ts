@@ -14,7 +14,7 @@ import {CompletionParams} from './completionTypes';
 
 // Current version of the completion settings schema
 // Increment this when adding new settings or changing existing ones
-export const CURRENT_COMPLETION_SETTINGS_VERSION = 4;
+export const CURRENT_COMPLETION_SETTINGS_VERSION = 5;
 
 /**
  * Default completion parameters used throughout the app
@@ -93,7 +93,12 @@ export function migrateCompletionSettings(settings: any): any {
     migratedSettings.version = 4;
   }
 
-  // Add future migrations here as needed
+  if (migratedSettings.version < 5) {
+    // Modes are intentionally empty for legacy settings. An absent per-field
+    // mode retains the pre-v5 behavior until the user explicitly chooses one.
+    migratedSettings.generationParameterModes = {};
+    migratedSettings.version = 5;
+  }
 
   return migratedSettings;
 }

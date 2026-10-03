@@ -10,8 +10,13 @@
     "e2e:models:android": "npx ts-node scripts/run-e2e.ts --platform android --each-model",
     "e2e:aws": "npx ts-node scripts/run-aws-device-farm.ts",
     "build:bench-config": "npx ts-node scripts/build-bench-config.ts",
+    "bench:ios": "npx ts-node scripts/run-bench-ios.ts",
     "analyze:tts-audio": "npx tsx scripts/analyze-tts-audio.ts",
     "test:analyze-tts-audio": "npx tsx scripts/__tests__/analyze-tts-audio.test.ts",
+    "fixture:remote-responses": "node -r ts-node/register fixtures/remote-responses-server.ts",
+    "test:remote-responses-fixture": "node --test -r ts-node/register fixtures/__tests__/remote-responses-server.test.ts",
+    "e2e:remote-responses:android": "node -r ts-node/register scripts/run-remote-responses.ts",
+    "typecheck:remote-responses": "tsc -p tsconfig.remote-responses.json",
     "typecheck": "tsc --noEmit"
   },
   "packageManager": "yarn@1.22.22",

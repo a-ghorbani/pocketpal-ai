@@ -1,9 +1,3 @@
-import {getApp} from '@react-native-firebase/app';
-import {
-  ReactNativeFirebaseAppCheckProvider,
-  initializeAppCheck as fbInitializeAppCheck,
-} from '@react-native-firebase/app-check';
-
 import {APPCHECK_DEBUG_TOKEN_ANDROID, APPCHECK_DEBUG_TOKEN_IOS} from '@env';
 
 // Track initialization status
@@ -11,11 +5,22 @@ let isAppCheckInitialized = false;
 let appCheckInstance: any;
 
 export const initializeAppCheck = async () => {
+  if (!__ENABLE_PALSHUB__) {
+    throw new Error('Firebase App Check is disabled in this build.');
+  }
   if (isAppCheckInitialized) {
     return;
   }
 
   try {
+    const {getApp} =
+      require('@react-native-firebase/app') as typeof import('@react-native-firebase/app');
+    const {
+      ReactNativeFirebaseAppCheckProvider,
+      initializeAppCheck: fbInitializeAppCheck,
+    } =
+      require('@react-native-firebase/app-check') as typeof import('@react-native-firebase/app-check');
+
     // Ensure Firebase app is initialized first
     const app = getApp();
     if (!app) {
@@ -60,6 +65,9 @@ export const initializeAppCheck = async () => {
 
 // Get a fresh App Check token
 export const getAppCheckToken = async () => {
+  if (!__ENABLE_PALSHUB__) {
+    throw new Error('Firebase App Check is disabled in this build.');
+  }
   try {
     const {token} = await appCheckInstance.getToken();
     return token;

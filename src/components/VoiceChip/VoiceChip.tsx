@@ -31,14 +31,20 @@ const pickSpeakerIcon = (autoSpeakEnabled: boolean, isPlaying: boolean) => {
  * split-pill — speaker + divider + chevron — when active, playing, or when
  * setup is still needed. Hidden entirely when TTS is unavailable.
  */
-export const VoiceChip: React.FC = observer(() => {
+type VoiceChipProps = {
+  collapsedForegroundColor?: string;
+};
+
+const VoiceChipComponent: React.FC<VoiceChipProps> = ({
+  collapsedForegroundColor,
+}) => {
   const theme = useTheme();
   const l10n = useContext(L10nContext);
   const styles = createStyles(theme);
 
   const isAvailable = ttsStore.isTTSAvailable;
   const currentVoice = ttsStore.currentVoice;
-  const autoSpeakEnabled = ttsStore.autoSpeakEnabled;
+  const autoSpeakEnabled = ttsStore.effectiveAutoSpeakEnabled;
   const playbackState = ttsStore.playbackState;
   const isPlaying =
     playbackState.mode === 'playing' || playbackState.mode === 'streaming';
@@ -68,7 +74,7 @@ export const VoiceChip: React.FC = observer(() => {
       return;
     }
     if (isPlaying) {
-      ttsStore.stop().catch(() => {});
+      ttsStore.skipCurrentPlayback().catch(() => {});
       return;
     }
     ttsStore.setAutoSpeak(!autoSpeakEnabled);
@@ -79,9 +85,12 @@ export const VoiceChip: React.FC = observer(() => {
   };
 
   const CurrentSpeakerIcon = pickSpeakerIcon(autoSpeakEnabled, isPlaying);
-  const speakerIconColor = isPlaying
-    ? theme.colors.primary
-    : theme.colors.onSurfaceVariant;
+  const speakerIconColor =
+    !shouldExpand && collapsedForegroundColor
+      ? collapsedForegroundColor
+      : isPlaying
+        ? theme.colors.primary
+        : theme.colors.onSurfaceVariant;
 
   const containerAnimStyle = {
     backgroundColor: progress.interpolate({
@@ -92,7 +101,7 @@ export const VoiceChip: React.FC = observer(() => {
   // Icon goes from 50% (dimmed / "off") to 100% (live) as the pill opens.
   const iconOpacity = progress.interpolate({
     inputRange: [0, 1],
-    outputRange: [0.5, 1],
+    outputRange: [collapsedForegroundColor ? 1 : 0.5, 1],
   });
   const rightSideStyle = {
     width: progress.interpolate({
@@ -146,4 +155,6 @@ export const VoiceChip: React.FC = observer(() => {
       </Animated.View>
     </Animated.View>
   );
-});
+};
+
+export const VoiceChip = observer(VoiceChipComponent);

@@ -12,6 +12,40 @@ import {derivedText, userId} from './chat';
 import {getAbsoluteThumbnailPath, isLocalThumbnailPath} from './imageUtils';
 import type {Pal} from '../types/pal';
 import type {Message} from '../database';
+import {isResponsesReplayState} from '../api/responsesTypes';
+
+const parseExportMetadata = (metadata?: string): Record<string, any> => {
+  try {
+    const parsed = JSON.parse(metadata || '{}');
+    return parsed && typeof parsed === 'object' && !Array.isArray(parsed)
+      ? parsed
+      : {};
+  } catch {
+    return {};
+  }
+};
+
+const validatedBackupMetadata = (msg: Message): Record<string, any> => {
+  const metadata = parseExportMetadata(msg.metadata);
+  if (msg.type !== 'assistant_turn' || !Array.isArray(metadata.steps)) {
+    return metadata;
+  }
+  metadata.steps.forEach((step: unknown, index: number) => {
+    if (!step || typeof step !== 'object' || Array.isArray(step)) {
+      return;
+    }
+    const responsesState = (step as {responsesState?: unknown}).responsesState;
+    if (
+      responsesState !== undefined &&
+      !isResponsesReplayState(responsesState)
+    ) {
+      throw new Error(
+        `Cannot export invalid Responses replay state in message ${msg.id}, step ${index}`,
+      );
+    }
+  });
+  return metadata;
+};
 
 /**
  * Project a WatermelonDB Message into the export DTO. For
@@ -26,7 +60,7 @@ const toExportedMessage = (msg: Message) => {
     author: msg.author,
     text: derivedText(inMemory),
     type: msg.type,
-    metadata: msg.metadata ? JSON.parse(msg.metadata) : {},
+    metadata: validatedBackupMetadata(msg),
     createdAt: msg.createdAt,
   };
 };

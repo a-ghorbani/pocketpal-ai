@@ -1,6 +1,7 @@
 jest.unmock('../ChatSessionStore'); // this is not really needed, as only importing from store is mocked.
 
 import {chatSessionStore, defaultCompletionSettings} from '../ChatSessionStore';
+import {startupSelectionStore} from '../StartupSelectionStore';
 import {chatSessionRepository} from '../../repositories/ChatSessionRepository';
 
 import {MessageType} from '../../utils/types';
@@ -692,6 +693,58 @@ describe('chatSessionStore', () => {
         0.7,
       );
     });
+
+    it('passes nested Responses state through the clone create path', async () => {
+      const responsesState = {
+        version: 1 as const,
+        binding: {
+          wireApi: 'responses' as const,
+          serverUrl: 'https://foreign.example.com',
+          modelId: 'responses-model',
+        },
+        output: [],
+        terminalStatus: 'completed' as const,
+      };
+      const assistantTurn: MessageType.AssistantTurn = {
+        id: 'assistant-1',
+        type: 'assistant_turn',
+        author: {id: 'assistant'},
+        createdAt: 1,
+        metadata: {},
+        steps: [{content: 'answer', responsesState}],
+      };
+      chatSessionStore.sessions = [
+        {
+          id: 'session1',
+          title: 'Responses Session',
+          date: new Date().toISOString(),
+          messages: [assistantTurn],
+          completionSettings: defaultCompletionSettings,
+          settingsSource: 'pal',
+        },
+      ];
+      (chatSessionRepository.createSession as jest.Mock).mockResolvedValue({
+        id: 'new-session',
+        date: new Date().toISOString(),
+      });
+      (chatSessionRepository.getSessionById as jest.Mock).mockResolvedValue({
+        messages: [{toMessageObject: () => assistantTurn}],
+        completionSettings: null,
+      });
+
+      await chatSessionStore.duplicateSession('session1');
+
+      expect(chatSessionRepository.createSession).toHaveBeenCalledWith(
+        'Responses Session - Copy',
+        [assistantTurn],
+        defaultCompletionSettings,
+        undefined,
+        'pal',
+      );
+      const clonedTurn = chatSessionStore.sessions[1]
+        .messages[0] as MessageType.AssistantTurn;
+      expect(clonedTurn.steps[0].responsesState).toEqual(responsesState);
+    });
   });
 
   // Tests from ChatSessionStoreExtended.test.ts
@@ -1370,6 +1423,20 @@ describe('chatSessionStore', () => {
       await chatSessionStore.setActivePal('pal2');
 
       expect(chatSessionStore.newChatPalId).toBe('pal2');
+    });
+
+    it('remembers only explicitly designated Pal choices for startup', async () => {
+      startupSelectionStore.hasPalPreference = false;
+      startupSelectionStore.palId = undefined;
+
+      await chatSessionStore.setActivePal('pal1');
+      expect(startupSelectionStore.hasPalPreference).toBe(false);
+
+      await chatSessionStore.setActivePal(undefined, {
+        rememberForStartup: true,
+      });
+      expect(startupSelectionStore.hasPalPreference).toBe(true);
+      expect(startupSelectionStore.palId).toBeUndefined();
     });
 
     it('preserves active pal ID when resetting active session', () => {

@@ -26,27 +26,29 @@ export class DrawerPage extends BasePage {
   }
 
   /**
-   * Check if drawer is open (by checking if Pals tab is visible)
-   * We use Pals because it's unique to the drawer and not a screen title
+   * Check if drawer is open using a stable drawer item test ID.
    */
   async isOpen(): Promise<boolean> {
-    return this.isElementDisplayed(Selectors.drawer.palsTab, 3000);
+    return this.isElementDisplayed(Selectors.drawer.openIndicator, 3000);
   }
 
   /**
    * Wait for drawer to be fully open
-   * We use Pals tab because it's unique to the drawer (not a screen title)
+   * The chat item remains available when optional integrations are disabled.
    */
   async waitForOpen(timeout = 10000): Promise<void> {
-    await this.waitForElement(Selectors.drawer.palsTab, timeout);
+    await this.waitForElement(Selectors.drawer.openIndicator, timeout);
   }
 
   /**
    * Wait for drawer to close
-   * We use Pals tab because it's unique to the drawer and won't appear elsewhere
+   * Wait for the drawer-specific chat item to disappear.
    */
   async waitForClose(timeout = 5000): Promise<void> {
-    await this.waitForElementToDisappear(Selectors.drawer.palsTab, timeout);
+    await this.waitForElementToDisappear(
+      Selectors.drawer.openIndicator,
+      timeout,
+    );
   }
 
   /**

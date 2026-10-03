@@ -544,13 +544,15 @@ export const SidebarContent: React.FC<DrawerContentComponentProps> = observer(
               style={styles.menuDrawerItem}
               testID="drawer-item-chat"
             />
-            <Drawer.Item
-              label={l10n.components.sidebarContent.menuItems.pals}
-              icon={() => <PalIcon stroke={theme.colors.primary} />}
-              onPress={() => props.navigation.navigate(ROUTES.PALS)}
-              style={styles.menuDrawerItem}
-              testID="drawer-item-pals"
-            />
+            {__ENABLE_PALSHUB__ ? (
+              <Drawer.Item
+                label={l10n.components.sidebarContent.menuItems.pals}
+                icon={() => <PalIcon stroke={theme.colors.primary} />}
+                onPress={() => props.navigation.navigate(ROUTES.PALS)}
+                style={styles.menuDrawerItem}
+                testID="drawer-item-pals"
+              />
+            ) : null}
             <Drawer.Item
               label={l10n.components.sidebarContent.menuItems.models}
               icon={() => <ModelIcon stroke={theme.colors.primary} />}

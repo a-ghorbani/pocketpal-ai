@@ -228,6 +228,59 @@ describe('resolveModelCaps', () => {
       expect(caps.visionActive).toBe(false);
       expect(caps.effectiveContextLength).toBeUndefined();
     });
+
+    it('uses the immutable binding catalog snapshot for an active hosted model', () => {
+      const caps = resolveModelCaps(
+        remoteModel(),
+        env({
+          activeModelId: 'srv/gemma-4-e2b',
+          binding: {
+            modelId: 'srv/gemma-4-e2b',
+            serverId: 'srv',
+            remoteModelId: 'gemma-4-e2b',
+            url: 'https://example.test',
+            serverType: 'GitHub Copilot',
+            protocolCapabilities: {
+              supportsVision: true,
+              contextLength: 128000,
+            },
+          },
+          listCaps: {
+            'srv/gemma-4-e2b': {
+              tier: 'list',
+              supportsVision: false,
+              contextLength: 4096,
+            },
+          },
+        }),
+      );
+
+      expect(caps).toEqual({
+        vision: 'yes',
+        visionActive: true,
+        contextLength: 128000,
+        effectiveContextLength: 128000,
+      });
+    });
+
+    it('does not treat a llama catalog snapshot as probe confirmation', () => {
+      const caps = resolveModelCaps(
+        remoteModel(),
+        env({
+          activeModelId: 'srv/gemma-4-e2b',
+          binding: {
+            modelId: 'srv/gemma-4-e2b',
+            serverId: 'srv',
+            remoteModelId: 'gemma-4-e2b',
+            url: 'http://localhost:8080',
+            serverType: 'llama.cpp',
+            protocolCapabilities: {supportsVision: true},
+          },
+        }),
+      );
+      expect(caps.vision).toBe('yes');
+      expect(caps.visionActive).toBe(false);
+    });
   });
 
   describe('local', () => {

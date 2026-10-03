@@ -31,8 +31,15 @@ export const AssistantTurnFooter: React.FC<AssistantTurnFooterProps> = observer(
   ({message}) => {
     const theme = useTheme();
     const l10n = useContext(L10nContext);
-    const {copyable, timings, interrupted, truncationLikely, completionResult} =
-      message.metadata || {};
+    const {
+      copyable,
+      timings,
+      interrupted,
+      truncationLikely,
+      completionResult,
+      responseStatus,
+      incompleteReason,
+    } = message.metadata || {};
 
     if (!timings && !copyable && !interrupted) {
       return null;
@@ -71,6 +78,16 @@ export const AssistantTurnFooter: React.FC<AssistantTurnFooterProps> = observer(
       );
     }
     const fullTimingsString = timingParts.join(', ');
+    const responseStatusText =
+      responseStatus === 'refused'
+        ? l10n.components.bubble.responseRefused
+        : incompleteReason === 'max_output_tokens'
+          ? l10n.components.bubble.outputLimitReached
+          : responseStatus === 'failed'
+            ? l10n.components.bubble.responseFailed
+            : responseStatus === 'incomplete'
+              ? l10n.components.bubble.responseIncomplete
+              : undefined;
 
     const draftTokens = timings?.draft_tokens;
     const draftAccepted = timings?.draft_tokens_accepted ?? 0;
@@ -120,9 +137,10 @@ export const AssistantTurnFooter: React.FC<AssistantTurnFooterProps> = observer(
           <Text
             style={componentStyles.interruptedStatus}
             testID="footer-interrupted-status">
-            {truncationLikely && !suppressTruncated
-              ? l10n.components.bubble.truncated
-              : l10n.components.bubble.interrupted}
+            {responseStatusText ??
+              (truncationLikely && !suppressTruncated
+                ? l10n.components.bubble.truncated
+                : l10n.components.bubble.interrupted)}
           </Text>
         ) : null}
       </View>

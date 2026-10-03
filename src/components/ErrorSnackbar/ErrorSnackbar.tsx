@@ -76,7 +76,7 @@ export const ErrorSnackbar: React.FC<ErrorSnackbarProps> = ({
     }
 
     // For model init errors, show report option
-    if (error.context === 'modelInit' && onReport) {
+    if (__ENABLE_PALSHUB__ && error.context === 'modelInit' && onReport) {
       return {
         label: 'Report',
         onPress: onReport,

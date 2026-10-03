@@ -74,7 +74,7 @@ describe('migrateCompletionSettings', () => {
     };
     const migrated = migrateCompletionSettings(settings);
 
-    expect(migrated.version).toBe(4);
+    expect(migrated.version).toBe(CURRENT_COMPLETION_SETTINGS_VERSION);
     expect(migrated.n_predict).toBe(-1);
     expect(migrated.temperature).toBe(0.7);
   });
@@ -90,7 +90,7 @@ describe('migrateCompletionSettings', () => {
     };
     const migrated = migrateCompletionSettings(settings);
 
-    expect(migrated.version).toBe(4);
+    expect(migrated.version).toBe(CURRENT_COMPLETION_SETTINGS_VERSION);
     expect(migrated.n_predict).toBe(2048);
   });
 
@@ -101,7 +101,7 @@ describe('migrateCompletionSettings', () => {
     };
     const migrated = migrateCompletionSettings(settings);
 
-    expect(migrated.version).toBe(4);
+    expect(migrated.version).toBe(CURRENT_COMPLETION_SETTINGS_VERSION);
     expect(migrated.n_predict).toBe(500);
   });
 
@@ -125,7 +125,7 @@ describe('migrateCompletionSettings', () => {
     expect(migrated.top_p).toBe(0.9);
   });
 
-  it('should migrate from v0 to v4 applying all migrations including conditional n_predict', () => {
+  it('should migrate from v0 through all migrations including conditional n_predict', () => {
     const settings = {
       version: 0,
       temperature: 0.5,
@@ -133,7 +133,7 @@ describe('migrateCompletionSettings', () => {
     };
     const migrated = migrateCompletionSettings(settings);
 
-    expect(migrated.version).toBe(4);
+    expect(migrated.version).toBe(CURRENT_COMPLETION_SETTINGS_VERSION);
     expect(migrated.include_thinking_in_context).toBe(
       defaultCompletionParams.include_thinking_in_context,
     );
@@ -145,7 +145,7 @@ describe('migrateCompletionSettings', () => {
     expect(migrated.temperature).toBe(0.5);
   });
 
-  it('should migrate from v0 to v4 preserving custom n_predict', () => {
+  it('should migrate from v0 preserving custom n_predict', () => {
     const settings = {
       version: 0,
       temperature: 0.5,
@@ -153,7 +153,7 @@ describe('migrateCompletionSettings', () => {
     };
     const migrated = migrateCompletionSettings(settings);
 
-    expect(migrated.version).toBe(4);
+    expect(migrated.version).toBe(CURRENT_COMPLETION_SETTINGS_VERSION);
     expect(migrated.n_predict).toBe(2048);
   });
 
@@ -165,6 +165,10 @@ describe('migrateCompletionSettings', () => {
       jinja: false,
       enable_thinking: false,
       n_predict: 2048,
+      generationParameterModes: {
+        temperature: 'omit' as const,
+        enable_thinking: 'send' as const,
+      },
     };
     const migrated = migrateCompletionSettings(settings);
 
@@ -178,8 +182,9 @@ describe('migrateCompletionSettings', () => {
     };
     const migrated = migrateCompletionSettings(settings);
 
-    expect(migrated.version).toBe(4);
+    expect(migrated.version).toBe(CURRENT_COMPLETION_SETTINGS_VERSION);
     expect(migrated.n_predict).toBe(1024);
+    expect(migrated.generationParameterModes).toEqual({});
   });
 
   it('should preserve existing values during migration', () => {
@@ -251,7 +256,7 @@ describe('defaultCompletionParams', () => {
     expect(defaultCompletionParams.n_predict).toBe(-1);
   });
 
-  it('should have CURRENT_COMPLETION_SETTINGS_VERSION equal to 4', () => {
-    expect(CURRENT_COMPLETION_SETTINGS_VERSION).toBe(4);
+  it('should have CURRENT_COMPLETION_SETTINGS_VERSION equal to 5', () => {
+    expect(CURRENT_COMPLETION_SETTINGS_VERSION).toBe(5);
   });
 });

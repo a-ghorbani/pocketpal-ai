@@ -23,6 +23,22 @@ const defaultCompletionSettings = {...defaultCompletionParams};
 delete defaultCompletionSettings.prompt;
 delete defaultCompletionSettings.stop;
 
+const metadataObject = (metadata: unknown): Record<string, any> =>
+  metadata && typeof metadata === 'object' && !Array.isArray(metadata)
+    ? {...metadata}
+    : {};
+
+const parseStoredMetadata = (metadata: unknown): Record<string, any> => {
+  if (typeof metadata !== 'string') {
+    return {};
+  }
+  try {
+    return metadataObject(JSON.parse(metadata || '{}'));
+  } catch {
+    return {};
+  }
+};
+
 class ChatSessionRepository {
   // Check if we need to migrate from JSON files
   async checkAndMigrateFromJSON(): Promise<boolean> {
@@ -88,7 +104,7 @@ class ChatSessionRepository {
               typeof msg.author === 'string'
                 ? msg.author
                 : msg.author?.id || 'unknown';
-            const metadata = msg.metadata || {};
+            const metadata = metadataObject(msg.metadata);
 
             // Store author data in metadata for reconstruction
             if (typeof msg.author === 'object' && msg.author !== null) {
@@ -282,7 +298,7 @@ class ChatSessionRepository {
         const msg = initialMessages[i];
 
         const authorId = msg.author.id;
-        const metadata = msg.metadata || {};
+        const metadata = metadataObject(msg.metadata);
 
         if (
           msg.author.firstName ||
@@ -437,7 +453,7 @@ class ChatSessionRepository {
       const authorId = message.author.id;
 
       // Store additional author data in metadata
-      const metadata = message.metadata || {};
+      const metadata = metadataObject(message.metadata);
       if (
         message.author.firstName ||
         message.author.lastName ||
@@ -521,7 +537,7 @@ class ChatSessionRepository {
             // Streaming`/`appendToolOutcome` paths that write the whole
             // `steps` array wholesale; ad-hoc `{metadata: {interrupted}}`
             // calls (e.g. error rollback) MUST NOT clobber metadata.steps.
-            const existingMetadata = JSON.parse(record.metadata || '{}');
+            const existingMetadata = parseStoredMetadata(record.metadata);
             record.metadata = JSON.stringify({
               ...existingMetadata,
               ...update.metadata,
@@ -531,7 +547,7 @@ class ChatSessionRepository {
           // metadata.steps on disk. The schema column is unchanged; the
           // asymmetry (top-level on type, nested on disk) is intentional.
           if ('steps' in update && update.steps !== undefined) {
-            const existingMetadata = JSON.parse(record.metadata || '{}');
+            const existingMetadata = parseStoredMetadata(record.metadata);
             record.metadata = JSON.stringify({
               ...existingMetadata,
               steps: update.steps,
@@ -545,6 +561,31 @@ class ChatSessionRepository {
       console.error('Error updating message:', error);
       return false;
     }
+  }
+
+  async persistFinalAssistantSteps(
+    id: string,
+    steps: MessageType.AssistantTurn['steps'],
+  ): Promise<void> {
+    const message = await database.collections
+      .get('messages')
+      .find(id)
+      .catch(() => null);
+
+    if (!message) {
+      throw new Error(
+        `Message with ID ${id} not found in database, cannot finalize step`,
+      );
+    }
+
+    await database.write(async () => {
+      await message.update((record: any) => {
+        record.metadata = JSON.stringify({
+          ...parseStoredMetadata(record.metadata),
+          steps,
+        });
+      });
+    });
   }
 
   // Update session completion settings

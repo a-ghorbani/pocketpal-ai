@@ -15,6 +15,7 @@ import {CompletionParams} from './completionTypes';
 import {migrateCompletionSettings} from './completionSettingsVersions';
 import {palStore} from '../store';
 import type {Pal, ParameterDefinition} from '../types/pal';
+import {isResponsesReplayState} from '../api/responsesTypes';
 
 /**
  * Interface for imported chat session data
@@ -39,6 +40,34 @@ export interface ImportedMessage {
   metadata?: Record<string, any>;
   createdAt?: number;
 }
+
+const validatedImportedMetadata = (
+  metadata: unknown,
+  messageId: string,
+): Record<string, any> => {
+  const normalized: Record<string, any> =
+    metadata && typeof metadata === 'object' && !Array.isArray(metadata)
+      ? {...metadata}
+      : {};
+  if (!Array.isArray(normalized.steps)) {
+    return normalized;
+  }
+  normalized.steps.forEach((step: unknown, index: number) => {
+    if (!step || typeof step !== 'object' || Array.isArray(step)) {
+      return;
+    }
+    const responsesState = (step as {responsesState?: unknown}).responsesState;
+    if (
+      responsesState !== undefined &&
+      !isResponsesReplayState(responsesState)
+    ) {
+      throw new Error(
+        `Invalid Responses replay state in message ${messageId}, step ${index}`,
+      );
+    }
+  });
+  return normalized;
+};
 
 /**
  * Pick a JSON file using document picker
@@ -150,6 +179,7 @@ const validateSingleSession = (session: any): ImportedChatSession => {
       msg.createdAt = Date.now();
     }
 
+    msg.metadata = validatedImportedMetadata(msg.metadata, msg.id);
     return msg;
   });
 
@@ -216,17 +246,33 @@ const importSingleSession = async (
 ): Promise<void> => {
   try {
     // Map messages to the correct format
-    const messages = session.messages.map(
-      msg =>
-        ({
+    const messages = session.messages.map(msg => {
+      const metadata = validatedImportedMetadata(msg.metadata, msg.id);
+      if (msg.type === 'assistant_turn') {
+        const {steps: storedSteps, ...metadataWithoutSteps} = metadata;
+        const steps = Array.isArray(storedSteps)
+          ? storedSteps
+          : msg.text
+            ? [{content: msg.text}]
+            : [];
+        return {
           id: msg.id,
           author: {id: msg.author},
-          text: msg.text || '',
-          type: msg.type as any,
-          metadata: msg.metadata || {},
+          type: 'assistant_turn',
+          steps,
+          metadata: metadataWithoutSteps,
           createdAt: msg.createdAt || Date.now(),
-        }) as MessageType.Any,
-    );
+        } as MessageType.AssistantTurn;
+      }
+      return {
+        id: msg.id,
+        author: {id: msg.author},
+        text: msg.text || '',
+        type: msg.type as any,
+        metadata,
+        createdAt: msg.createdAt || Date.now(),
+      } as MessageType.Any;
+    });
 
     // Create a new session in the database
     await chatSessionRepository.createSession(

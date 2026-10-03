@@ -1,5 +1,6 @@
 import {runInAction} from 'mobx';
 import {Platform} from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import {palStore} from '../PalStore';
 import {palsHubService} from '../../services';
 import {isUSStorefront} from '../../utils/region';
@@ -9,6 +10,17 @@ import type {PalsHubPal} from '../../types/palshub';
 import * as imageUtils from '../../utils/imageUtils';
 import {resolveHFModelForDownload} from '../../utils/hfResolve';
 import {LOOKIE_DEFAULT_MODEL} from '../builtinPalModels';
+
+jest.mock('@react-native-async-storage/async-storage', () => {
+  const values = new Map<string, string>();
+  return {
+    getItem: jest.fn(async (key: string) => values.get(key) ?? null),
+    setItem: jest.fn(async (key: string, value: string) => {
+      values.set(key, value);
+    }),
+    clear: jest.fn(async () => values.clear()),
+  };
+});
 
 // Mock dependencies
 jest.mock('../../utils/hfResolve', () => ({
@@ -104,8 +116,9 @@ describe('PalStore', () => {
     updated_at: '2023-01-01T00:00:00Z',
   };
 
-  beforeEach(() => {
+  beforeEach(async () => {
     jest.clearAllMocks();
+    await AsyncStorage.clear();
 
     // Reset store state
     runInAction(() => {
@@ -406,6 +419,295 @@ describe('PalStore', () => {
 
       const names = palStore.pals.map(p => p.name).sort();
       expect(names).toEqual(['Lookie', 'Pip']);
+    });
+  });
+
+  describe('Scout seeding', () => {
+    const callInitializeScoutPal = async () =>
+      (palStore as any).initializeScoutPal();
+
+    beforeEach(() => {
+      runInAction(() => {
+        palStore.pals = [];
+      });
+      (palRepository.createPal as jest.Mock).mockImplementation(
+        async (palData: any) => ({
+          ...palData,
+          id: `scout-${Math.random().toString(36).slice(2, 8)}`,
+          created_at: '2026-09-14T00:00:00Z',
+          updated_at: '2026-09-14T00:00:00Z',
+        }),
+      );
+    });
+
+    it('seeds Scout with the exact native talents and no model binding', async () => {
+      await callInitializeScoutPal();
+
+      const scout = palStore.pals.find(
+        p => p.name === 'Scout' && p.source === 'local',
+      );
+      expect(scout).toMatchObject({
+        type: 'local',
+        capabilities: {web: true, tools: true},
+        pact: {
+          talents: [
+            {name: 'web_search', necessity: 'required'},
+            {name: 'read_url', necessity: 'required'},
+            {name: 'calculate', necessity: 'required'},
+            {name: 'datetime', necessity: 'required'},
+            {name: 'render_html', necessity: 'required'},
+          ],
+        },
+      });
+      expect(scout?.defaultModel).toBeUndefined();
+      expect(scout?.color).toEqual(['#B89A62', '#30291F']);
+      expect(scout?.greeting?.suggestedPrompts).toHaveLength(3);
+      expect(resolveHFModelForDownload).not.toHaveBeenCalled();
+      expect(palsHubService.getPal).not.toHaveBeenCalled();
+    });
+
+    it('does not duplicate Scout when initialized repeatedly', async () => {
+      await callInitializeScoutPal();
+      await callInitializeScoutPal();
+
+      expect(
+        palStore.pals.filter(p => p.name === 'Scout' && p.source === 'local'),
+      ).toHaveLength(1);
+      expect(palRepository.createPal).toHaveBeenCalledTimes(1);
+    });
+
+    it('preserves an existing same-named local Scout unchanged', async () => {
+      const existingScout: Pal = {
+        ...mockPal,
+        id: 'scout-existing',
+        name: 'Scout',
+        source: 'local',
+        systemPrompt: 'My customized Scout prompt',
+        defaultModel: {id: 'custom-model', name: 'Custom Model'} as any,
+        pact: {
+          talents: [{name: 'calculate', necessity: 'required'}],
+        },
+        greeting: {
+          text: 'Custom greeting',
+          suggestedPrompts: ['Custom prompt'],
+        },
+      };
+      runInAction(() => {
+        palStore.pals = [existingScout];
+      });
+
+      await callInitializeScoutPal();
+
+      expect(palStore.pals).toHaveLength(1);
+      expect(palStore.pals[0]).toMatchObject({
+        id: 'scout-existing',
+        systemPrompt: 'My customized Scout prompt',
+        defaultModel: {id: 'custom-model', name: 'Custom Model'},
+        pact: {
+          talents: [{name: 'calculate', necessity: 'required'}],
+        },
+        greeting: {
+          text: 'Custom greeting',
+          suggestedPrompts: ['Custom prompt'],
+        },
+      });
+      expect(palRepository.createPal).not.toHaveBeenCalled();
+      expect(palRepository.updatePal).not.toHaveBeenCalled();
+    });
+
+    it.each([
+      ['#16324F', '#E8F1F8'],
+      ['#16324f', '#e8f1f8'],
+    ])(
+      'upgrades an existing original-color Scout without changing its other settings',
+      async (foreground, background) => {
+        const existingScout: Pal = {
+          ...mockPal,
+          id: 'scout-existing',
+          name: 'Scout',
+          source: 'local',
+          color: [foreground, background],
+          systemPrompt: 'My customized Scout prompt',
+          greeting: {
+            text: 'Custom greeting',
+            suggestedPrompts: ['Custom prompt'],
+          },
+        };
+        const updatedScout = {
+          ...existingScout,
+          color: ['#B89A62', '#30291F'] as [string, string],
+        };
+        (palRepository.updatePal as jest.Mock).mockResolvedValue(updatedScout);
+        runInAction(() => {
+          palStore.pals = [existingScout];
+        });
+
+        await callInitializeScoutPal();
+
+        expect(palRepository.updatePal).toHaveBeenCalledWith('scout-existing', {
+          color: ['#B89A62', '#30291F'],
+        });
+        expect(palStore.pals).toEqual([updatedScout]);
+        expect(palStore.pals[0]).toMatchObject({
+          id: 'scout-existing',
+          systemPrompt: 'My customized Scout prompt',
+          greeting: {
+            text: 'Custom greeting',
+            suggestedPrompts: ['Custom prompt'],
+          },
+        });
+        expect(palRepository.createPal).not.toHaveBeenCalled();
+      },
+    );
+
+    it('does not rewrite a customized Scout color or the upgraded palette', async () => {
+      const customScout: Pal = {
+        ...mockPal,
+        id: 'scout-custom',
+        name: 'Scout',
+        source: 'local',
+        color: ['#123456', '#654321'],
+      };
+      runInAction(() => {
+        palStore.pals = [customScout];
+      });
+
+      await callInitializeScoutPal();
+      expect(palRepository.updatePal).not.toHaveBeenCalled();
+
+      runInAction(() => {
+        palStore.pals = [{...customScout, color: ['#B89A62', '#30291F']}];
+      });
+      await callInitializeScoutPal();
+
+      expect(palRepository.updatePal).not.toHaveBeenCalled();
+    });
+
+    it('leaves the original color in memory when persistence fails and retries later', async () => {
+      const existingScout: Pal = {
+        ...mockPal,
+        id: 'scout-existing',
+        name: 'Scout',
+        source: 'local',
+        color: ['#16324F', '#E8F1F8'],
+      };
+      const error = new Error('write failed');
+      (palRepository.updatePal as jest.Mock).mockRejectedValueOnce(error);
+      const consoleSpy = jest.spyOn(console, 'error').mockImplementation();
+      runInAction(() => {
+        palStore.pals = [existingScout];
+      });
+
+      await callInitializeScoutPal();
+
+      expect(palStore.pals[0].color).toEqual(['#16324F', '#E8F1F8']);
+      expect(consoleSpy).toHaveBeenCalledWith('Error updating pal:', error);
+      expect(consoleSpy).toHaveBeenCalledWith(
+        'Error initializing Scout pal:',
+        error,
+      );
+
+      const updatedScout: Pal = {
+        ...existingScout,
+        color: ['#B89A62', '#30291F'],
+      };
+      (palRepository.updatePal as jest.Mock).mockResolvedValue(updatedScout);
+      await callInitializeScoutPal();
+
+      expect(palRepository.updatePal).toHaveBeenCalledTimes(2);
+      expect(palStore.pals[0].color).toEqual(['#B89A62', '#30291F']);
+      consoleSpy.mockRestore();
+    });
+
+    it('adds Scout to an existing built-in-only database', async () => {
+      const existingPals: Pal[] = [
+        {
+          ...mockPal,
+          id: 'lookie-existing',
+          name: 'Lookie',
+          capabilities: {video: true},
+        },
+        {...mockPal, id: 'pip-existing', name: 'Pip'},
+      ];
+      (palRepository.getAllPals as jest.Mock).mockResolvedValue(existingPals);
+
+      // eslint-disable-next-line no-new
+      new (palStore.constructor as any)();
+      await new Promise(resolve => setTimeout(resolve, 100));
+
+      const createdNames = (
+        palRepository.createPal as jest.Mock
+      ).mock.calls.map(call => call[0]?.name);
+      expect(createdNames).toEqual(['Scout']);
+      expect(resolveHFModelForDownload).not.toHaveBeenCalled();
+    });
+  });
+
+  describe.each([
+    ['Lookie', 'initializeLookiePal'],
+    ['Pip', 'initializePipPal'],
+    ['Scout', 'initializeScoutPal'],
+  ])('%s seed persistence', (name, initializer) => {
+    const seed = () => (palStore as any)[initializer]();
+
+    beforeEach(() => {
+      (palRepository.createPal as jest.Mock).mockImplementation(
+        async (data: Partial<Pal>) => ({...mockPal, ...data}),
+      );
+      (palRepository.deletePal as jest.Mock).mockResolvedValue(true);
+    });
+
+    it('does not recreate a deleted default pal on the next initialization', async () => {
+      await seed();
+      await palStore.deletePal(palStore.pals[0].id);
+      expect(palStore.pals).toHaveLength(0);
+      (palRepository.createPal as jest.Mock).mockClear();
+
+      await seed();
+
+      expect(palRepository.createPal).not.toHaveBeenCalled();
+      expect(palStore.pals).toHaveLength(0);
+    });
+
+    it('does not recreate a default pal after it is renamed', async () => {
+      await seed();
+      runInAction(() => {
+        palStore.pals[0].name = 'My renamed pal';
+      });
+      (palRepository.createPal as jest.Mock).mockClear();
+
+      await seed();
+
+      expect(palRepository.createPal).not.toHaveBeenCalled();
+      expect(palStore.pals).toHaveLength(1);
+      expect(palStore.pals[0].name).toBe('My renamed pal');
+    });
+
+    it('records existing default pals before they are deleted', async () => {
+      runInAction(() => {
+        palStore.pals = [{...mockPal, name, capabilities: {video: true}}];
+      });
+      await seed();
+      expect(palRepository.createPal).not.toHaveBeenCalled();
+      await palStore.deletePal(mockPal.id);
+
+      await seed();
+
+      expect(palRepository.createPal).not.toHaveBeenCalled();
+      expect(palStore.pals).toHaveLength(0);
+    });
+
+    it('retries seeding after creation fails', async () => {
+      (palRepository.createPal as jest.Mock).mockRejectedValueOnce(
+        new Error('Database unavailable'),
+      );
+      await seed();
+      expect(palStore.pals).toHaveLength(0);
+
+      await seed();
+
+      expect(palRepository.createPal).toHaveBeenCalledTimes(2);
+      expect(palStore.pals[0].name).toBe(name);
     });
   });
 

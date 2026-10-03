@@ -5,9 +5,15 @@ on:
   # "Use workflow from" selector (or `gh workflow run --ref <branch>`);
   # checkout below builds whatever ref the run was dispatched on.
   workflow_dispatch:
+    inputs:
+      artifact_run_id:
+        description: Existing successful build run to smoke-test without rebuilding
+        required: false
+        type: string
 
 permissions:
   contents: read
+  actions: read
 
 env:
   NODE_VERSION: '22'
@@ -15,6 +21,7 @@ env:
 
 jobs:
   build-android:
+    if: inputs.artifact_run_id == ''
     runs-on: ubuntu-latest
     env:
       # Declared here rather than in android/gradle.properties: llama.rn's own
@@ -26,6 +33,8 @@ jobs:
       # A from-source Android build uses neither. The DSP libraries under bin/
       # are tarball content and arrive regardless.
       RNLLAMA_SKIP_POSTINSTALL: '1'
+      ENABLE_PALSHUB_INTEGRATION: 'false'
+      ENABLE_AUTHENTICATION: 'false'
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -46,6 +55,31 @@ jobs:
 
       - name: Install dependencies
         run: yarn install --frozen-lockfile
+
+      - name: Verify centralized native integrations are excluded
+        run: |
+          set -euo pipefail
+          node node_modules/react-native/cli.js config > react-native-config.json
+          node - <<'NODE'
+          const config = require('./react-native-config.json');
+          const disabled = [
+            '@react-native-firebase/app',
+            '@react-native-firebase/app-check',
+            '@react-native-google-signin/google-signin',
+          ];
+          const linked = disabled.filter(name => config.dependencies[name]);
+          if (linked.length > 0) {
+            throw new Error(`Disabled native dependencies are linked: ${linked.join(', ')}`);
+          }
+          console.log('OK: centralized native integrations are excluded.');
+          NODE
+
+      - name: Verify disabled integrations do not initialize
+        run: |
+          yarn jest \
+            src/services/palshub/__tests__/disabledBuild.test.ts \
+            --runInBand \
+            --coverage=false
 
       - name: Derive the rnllama variant allowlist from the payload manifest
         run: |
@@ -101,8 +135,8 @@ jobs:
           SUPABASE_ANON_KEY=dummy-anon-key-for-ci-builds
           PALSHUB_API_BASE_URL=https://dummy-palshub-api.com
           APP_URL=pocketpal://app
-          ENABLE_PALSHUB_INTEGRATION=true
-          ENABLE_AUTHENTICATION=true
+          ENABLE_PALSHUB_INTEGRATION=false
+          ENABLE_AUTHENTICATION=false
           ENABLE_OFFLINE_MODE=true
           GOOGLE_IOS_CLIENT_ID=dummy-ios-client-id.apps.googleusercontent.com
           GOOGLE_WEB_CLIENT_ID=dummy-web-client-id.apps.googleusercontent.com
@@ -183,3 +217,69 @@ jobs:
           name: e2e-android-apk
           path: android/app/build/outputs/apk/e2e/releaseE2e/app-e2e-releaseE2e.apk
           retention-days: 30
+
+  smoke-android:
+    name: install-launch-and-protocol
+    needs: build-android
+    if: >-
+      always() &&
+      (needs.build-android.result == 'success' || inputs.artifact_run_id != '')
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    env:
+      APPIUM_HOME: ${{ github.workspace }}/e2e/.appium
+
+    steps:
+      - name: Checkout smoke script
+        uses: actions/checkout@v4
+
+      - name: Download APK artifact
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        with:
+          name: e2e-android-apk
+          path: apk
+          run-id: ${{ inputs.artifact_run_id || github.run_id }}
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'yarn'
+          cache-dependency-path: e2e/yarn.lock
+
+      - name: Install E2E dependencies and Android driver
+        run: |
+          set -euo pipefail
+          yarn --cwd e2e install --frozen-lockfile
+          cd e2e
+          npx appium driver install \
+            --source=npm appium-uiautomator2-driver@3.8.1
+
+      - name: Enable KVM
+        run: |
+          set -euo pipefail
+          test -e /dev/kvm
+          sudo chmod 0666 /dev/kvm
+          test -r /dev/kvm
+          test -w /dev/kvm
+
+      - name: Install, prove foreground launch, and exercise Responses
+        uses: ReactiveCircus/android-emulator-runner@a421e43855164a8197daf9d8d40fe71c6996bb0d # v2.38.0
+        with:
+          api-level: 35
+          target: default
+          arch: x86_64
+          disable-animations: true
+          emulator-options: >-
+            -no-window -gpu swiftshader_indirect -no-snapshot
+            -noaudio -no-boot-anim -camera-back none -partition-size 4096
+          script: bash .github/scripts/smoke-e2e-apk.sh
+
+      - name: Upload E2E failure diagnostics
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: e2e-debug-output
+          path: e2e/debug-output
+          if-no-files-found: ignore

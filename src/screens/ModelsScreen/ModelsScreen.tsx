@@ -161,7 +161,7 @@ export const ModelsScreen: React.FC = observer(() => {
       if (modelId) {
         const model = modelStore.models.find(m => m.id === modelId);
         if (model) {
-          modelStore.selectModel(model);
+          modelStore.selectModel(model, {rememberForStartup: true});
         }
       }
     }
@@ -454,11 +454,13 @@ export const ModelsScreen: React.FC = observer(() => {
         onClose={handleCloseSettings}
         model={selectedModel}
       />
-      <ModelErrorReportSheet
-        isVisible={isErrorReportVisible}
-        onClose={handleCloseErrorReport}
-        error={errorToReport}
-      />
+      {__ENABLE_PALSHUB__ ? (
+        <ModelErrorReportSheet
+          isVisible={isErrorReportVisible}
+          onClose={handleCloseErrorReport}
+          error={errorToReport}
+        />
+      ) : null}
       <RemoteModelSheet
         isVisible={remoteModelSheetVisible}
         onDismiss={() => setRemoteModelSheetVisible(false)}

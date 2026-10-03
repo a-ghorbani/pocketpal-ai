@@ -2,6 +2,12 @@ import {CompletionParams as LlamaRNCompletionParams} from 'llama.rn';
 
 export type {ToolCall} from 'llama.rn';
 import type {ToolCall} from 'llama.rn';
+import type {
+  CompletionProviderState,
+  ResponsesIncompleteReason,
+  ResponsesTerminalStatus,
+  ResponsesUsage,
+} from '../api/responsesTypes';
 
 // `enabled: false` is a best-effort hint — reasoning the model still returns is
 // never stripped from what is displayed.
@@ -10,8 +16,50 @@ export interface ReasoningIntent {
   effort?: string;
 }
 
+export type GenerationParameterMode = 'inherit' | 'send' | 'omit';
+
+export const OPTIONAL_GENERATION_PARAMETER_KEYS = [
+  'n_predict',
+  'temperature',
+  'top_k',
+  'top_p',
+  'min_p',
+  'xtc_threshold',
+  'xtc_probability',
+  'typical_p',
+  'penalty_last_n',
+  'penalty_repeat',
+  'penalty_freq',
+  'penalty_present',
+  'mirostat',
+  'mirostat_tau',
+  'mirostat_eta',
+  'seed',
+  'n_probs',
+  'stop',
+  'jinja',
+  'enable_thinking',
+  'reasoning',
+  'reasoning_effort',
+  'include_thinking_in_context',
+] as const;
+
+export type OptionalGenerationParameter =
+  (typeof OPTIONAL_GENERATION_PARAMETER_KEYS)[number];
+
+export type GenerationParameterModes = Partial<
+  Record<OptionalGenerationParameter, GenerationParameterMode>
+>;
+
 export type ApiCompletionParams = LlamaRNCompletionParams & {
   reasoning?: ReasoningIntent;
+  max_tokens?: number;
+  reasoning_effort?: string;
+  /**
+   * App-owned intent metadata. Engines must resolve and remove it immediately
+   * before constructing wire JSON or invoking llama.rn.
+   */
+  generationParameterModes?: GenerationParameterModes;
 };
 
 // Stripped before the params reach llama.rn.
@@ -27,6 +75,37 @@ const APP_ONLY_KEYS: (keyof AppOnlyCompletionParams)[] = [
 ];
 
 export type CompletionParams = ApiCompletionParams & AppOnlyCompletionParams;
+
+export type RemoteGenerationSettings = Partial<
+  Pick<
+    CompletionParams,
+    | 'version'
+    | 'n_predict'
+    | 'temperature'
+    | 'top_k'
+    | 'top_p'
+    | 'min_p'
+    | 'xtc_threshold'
+    | 'xtc_probability'
+    | 'typical_p'
+    | 'penalty_last_n'
+    | 'penalty_repeat'
+    | 'penalty_freq'
+    | 'penalty_present'
+    | 'mirostat'
+    | 'mirostat_tau'
+    | 'mirostat_eta'
+    | 'seed'
+    | 'n_probs'
+    | 'stop'
+    | 'jinja'
+    | 'enable_thinking'
+    | 'reasoning'
+    | 'reasoning_effort'
+    | 'include_thinking_in_context'
+    | 'generationParameterModes'
+  >
+>;
 
 export function toApiCompletionParams(
   params: CompletionParams,
@@ -76,6 +155,11 @@ export interface CompletionResult {
   stopping_word?: string;
   context_full?: boolean;
   interrupted?: boolean;
+  terminal_status?: ResponsesTerminalStatus;
+  incomplete_reason?: ResponsesIncompleteReason;
+  refusal?: string;
+  usage?: ResponsesUsage;
+  provider_state?: CompletionProviderState;
 }
 
 // An absent `used` means the count is unknown, and must never be shown as zero.
@@ -89,6 +173,9 @@ export interface CompletionResultSnapshot {
   contextFull: boolean;
   tokensPredicted?: number;
   finishReason?: string;
+  terminalStatus?: ResponsesTerminalStatus;
+  incompleteReason?: ResponsesIncompleteReason;
+  refusal?: string;
   isRemote: boolean;
 }
 

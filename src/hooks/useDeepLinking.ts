@@ -9,7 +9,6 @@ import {useEffect, useCallback} from 'react';
 import {Alert, Linking} from 'react-native';
 import {useNavigation} from '@react-navigation/native';
 import {deepLinkService, DeepLinkParams} from '../services/DeepLinkService';
-import {isHubLink, parseHubRunURL} from '../services/hubRunLink';
 import {chatSessionStore, palStore, deepLinkStore, uiStore} from '../store';
 import {ROUTES} from '../utils/navigationConstants';
 import {
@@ -71,6 +70,10 @@ export const useDeepLinking = () => {
   // An invalid link surfaces a message and writes nothing (validation precedes
   // side effects).
   const handleHubRunLink = useCallback((url: string) => {
+    if (!__ENABLE_PALSHUB__) {
+      return;
+    }
+    const {parseHubRunURL} = require('../services/hubRunLink');
     const request = parseHubRunURL(url);
     if (!request) {
       Alert.alert(
@@ -109,7 +112,10 @@ export const useDeepLinking = () => {
       // Handle hub/run download deep links (iOS native-emitter path). Only the
       // exact hub/run route is handled; unknown hub paths are ignored silently,
       // matching the prod Linking path.
-      if (isHubLink(params.url)) {
+      if (
+        __ENABLE_PALSHUB__ &&
+        require('../services/hubRunLink').isHubLink(params.url)
+      ) {
         handleHubRunLink(params.url);
       }
     },
@@ -188,7 +194,11 @@ export const useDeepLinking = () => {
   useEffect(() => {
     Linking.getInitialURL()
       .then(url => {
-        if (url && isHubLink(url)) {
+        if (
+          __ENABLE_PALSHUB__ &&
+          url &&
+          require('../services/hubRunLink').isHubLink(url)
+        ) {
           handleHubRunLink(url);
         }
       })
@@ -201,7 +211,11 @@ export const useDeepLinking = () => {
     let sub: {remove: () => void} | null = null;
     try {
       sub = Linking.addEventListener('url', ({url}) => {
-        if (url && isHubLink(url)) {
+        if (
+          __ENABLE_PALSHUB__ &&
+          url &&
+          require('../services/hubRunLink').isHubLink(url)
+        ) {
           handleHubRunLink(url);
         }
       });

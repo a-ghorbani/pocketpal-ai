@@ -1,13 +1,14 @@
 /**
- * User-selectable server types. Gates the per-server reasoning wire payload
- * (see api/openai.ts buildReasoningPayload). detectServerType seeds the value
- * best-effort; the user's selection wins.
+ * User-selectable server types. Gates provider-specific request behavior in
+ * api/openai.ts. detectServerType seeds the value best-effort; the user's
+ * selection wins.
  */
 export const SERVER_TYPE_OPTIONS = [
   'llama.cpp',
   'LM Studio',
   'Ollama',
   'OpenAI',
+  'GitHub Copilot',
   'vLLM',
   'unknown',
 ] as const;

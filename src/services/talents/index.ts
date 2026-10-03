@@ -41,6 +41,7 @@ function createSearchAccess(): SearchAccess {
     },
     canSearch: () => searchProviderStore.canSearch,
     getResultCount: () => searchProviderStore.resultCount,
+    getFullSearchResults: () => searchProviderStore.fullSearchResults,
     readWithDefaultReader,
   };
 }

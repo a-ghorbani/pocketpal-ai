@@ -153,7 +153,9 @@ class PalsHubApiService {
   constructor() {}
 
   private isConfigured(): boolean {
-    return !!(this.apiBase && this.apiBase !== 'undefined');
+    return (
+      __ENABLE_PALSHUB__ && !!(this.apiBase && this.apiBase !== 'undefined')
+    );
   }
 
   // Get authentication headers using fresh session from Supabase

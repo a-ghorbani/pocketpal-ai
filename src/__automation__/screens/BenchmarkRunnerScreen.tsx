@@ -1,5 +1,12 @@
 import React, {useCallback, useEffect, useRef, useState} from 'react';
-import {Button, ScrollView, StyleSheet, Text, View} from 'react-native';
+import {
+  Button,
+  Platform,
+  ScrollView,
+  StyleSheet,
+  Text,
+  View,
+} from 'react-native';
 import {useRoute} from '@react-navigation/native';
 import RNDeviceInfo from 'react-native-device-info';
 import {
@@ -14,6 +21,7 @@ import {modelStore} from '../../store';
 import NativeHardwareInfo from '../../specs/NativeHardwareInfo';
 import {getDeviceOptions} from '../../utils/deviceSelection';
 import {getRecommendedThreadCount} from '../../utils/deviceCapabilities';
+import {activateKeepAwake, deactivateKeepAwake} from '../../utils/keepAwake';
 import type {Model} from '../../utils/types';
 import {
   BENCH_LOG_RE,
@@ -21,6 +29,7 @@ import {
   deriveLogSignals,
   emptyLogSignals,
   requestSatisfiedBy,
+  type EffectiveBackend,
   type LogSignals,
 } from '../logSignals';
 import {
@@ -41,9 +50,13 @@ const RNFS = require('@dr.pogodin/react-native-fs');
 // DCE the literal as dead code. We log it from onRun below.
 const BENCH_RUN_MATRIX = 'BENCH_RUN_MATRIX';
 
-const CONFIG_PATH = `${RNFS.ExternalDirectoryPath}/bench-config.json`;
+const benchDir = (): string =>
+  Platform.OS === 'ios'
+    ? RNFS.DocumentDirectoryPath
+    : RNFS.ExternalDirectoryPath;
+const configPath = () => `${benchDir()}/bench-config.json`;
 const reportPath = (timestamp: string) =>
-  `${RNFS.ExternalDirectoryPath}/benchmark-report-${timestamp}.json`;
+  `${benchDir()}/benchmark-report-${timestamp}.json`;
 
 type Status = string; // 'idle' | 'downloading:<f>[ <pct>%]' | 'running:<i/n>:<tag>' (tag may include /<key=val;...> override suffix) | 'cell-failed:<i/n>:<msg>' | 'complete' | 'error:<msg>'
 
@@ -115,16 +128,6 @@ export interface BenchConfig {
   inter_cell_settle_ms?: number;
 }
 
-/** Effective backend after parsing native-log signals. Mirrors the
- * OpenCL pair with hexagon arms (WHAT §1c, §8 D2). */
-export type EffectiveBackend =
-  | 'cpu'
-  | 'opencl'
-  | 'cpu+opencl-partial'
-  | 'hexagon'
-  | 'cpu+hexagon-partial'
-  | 'unknown';
-
 interface BenchmarkRunRow {
   model_id: string;
   quant: string;
@@ -133,6 +136,8 @@ interface BenchmarkRunRow {
   pp_avg: number | null;
   tg_avg: number | null;
   wall_ms: number;
+  /** Wall ms of the `initLlama` await. Absent when init threw or never ran. */
+  init_ms?: number;
   peak_memory_mb: number | null;
   log_signals: LogSignals;
   init_settings: Record<string, unknown>;
@@ -162,7 +167,7 @@ interface BenchmarkRunRow {
 
 interface BenchmarkReport {
   version: '1.1';
-  platform: 'android';
+  platform: 'android' | 'ios';
   timestamp: string;
   preseeded: boolean;
   bench: {pp: number; tg: number; pl: number; nr: number};
@@ -174,6 +179,8 @@ interface BenchmarkReport {
   /** Echo of `config.settings_axes` when the run had axes. Omitted when the
    * config had none (WHAT §1e, §9a — empty array MUST NOT be emitted). */
   settings_axes_used?: SettingsAxis[];
+  /** Terminal marker the host driver polls for. Absent while running. */
+  outcome?: 'complete' | `error:${string}`;
   runs: BenchmarkRunRow[];
 }
 
@@ -184,12 +191,24 @@ const PEAK_POLL_MS = 1000;
 const DEFAULT_INTER_CELL_SETTLE_MS = 2000;
 
 async function loadConfig(): Promise<BenchConfig> {
-  const exists = await RNFS.exists(CONFIG_PATH);
+  const path = configPath();
+  const exists = await RNFS.exists(path);
   if (!exists) {
     throw new Error('bench-config-missing');
   }
-  const raw = await RNFS.readFile(CONFIG_PATH, 'utf8');
+  const raw = await RNFS.readFile(path, 'utf8');
   return JSON.parse(raw) as BenchConfig;
+}
+
+async function writeReportBestEffort(
+  path: string,
+  report: BenchmarkReport,
+): Promise<void> {
+  try {
+    await RNFS.writeFile(path, JSON.stringify(report, null, 2), 'utf8');
+  } catch (e) {
+    console.warn(`[BENCH] report write failed: ${String(e)}`);
+  }
 }
 
 async function trackPeakMemory(): Promise<{
@@ -546,6 +565,10 @@ export async function runMatrix(
   // logging on or benchmarkActive=true. Both cleanup calls in the
   // finally are idempotent — safe to call even if their setup
   // counterpart never ran or only partially ran.
+  let keepAwakeClaimed = false;
+  let report: BenchmarkReport | undefined;
+  let path: string | undefined;
+  let shellWritten = false;
   try {
     // Native log capture is global state in llama.rn — flip it on once for
     // the whole matrix. Per-cell scoping is done by attaching a fresh
@@ -562,12 +585,20 @@ export async function runMatrix(
     // The runner from this point on calls `initLlama` directly per cell;
     // it never touches `modelStore.context` / `modelStore.activeModelId`.
     await modelStore.enterBenchmarkMode();
+    // Claimed only after enterBenchmarkMode so a local chat's own
+    // deactivate has already run; the native flag is not ref-counted.
+    keepAwakeClaimed = true;
+    try {
+      activateKeepAwake();
+    } catch (e) {
+      console.warn(`[BENCH] keep-awake activate failed: ${String(e)}`);
+    }
     const startTimestamp = new Date().toISOString();
     const safeStamp = startTimestamp.replace(/[:.]/g, '-');
-    const path = reportPath(safeStamp);
-    const report: BenchmarkReport = {
+    path = reportPath(safeStamp);
+    report = {
       version: '1.1',
-      platform: 'android',
+      platform: Platform.OS === 'ios' ? 'ios' : 'android',
       timestamp: startTimestamp,
       preseeded: true, // pessimistic — flips false on first downloading: transition
       bench,
@@ -582,6 +613,7 @@ export async function runMatrix(
 
     // Write the shell up front so even an early crash leaves a JSON file.
     await RNFS.writeFile(path, JSON.stringify(report, null, 2), 'utf8');
+    shellWritten = true;
 
     for (let i = 0; i < cells.length; i++) {
       const {model, variant, backend, overrides} = cells[i];
@@ -625,6 +657,7 @@ export async function runMatrix(
       // the try body a throw lands. Distinct from `modelStore.context` —
       // the runner never assigns to that.
       let ctx: LlamaContext | null = null;
+      let initMs: number | undefined;
       // Post-init snapshot, hoisted so the catch path can pick between the
       // standard fingerprint (post-init available) and the `req:`-prefixed
       // fingerprint (pre-init failure). WHAT 9d explicitly requires this
@@ -809,7 +842,9 @@ export async function runMatrix(
         //    ONLY native-load entrypoint — `modelStore.initContext` /
         //    `selectModel` are gated by `benchmarkActive` and would throw
         //    if accidentally invoked.
+        const initStart = Date.now();
         ctx = await initLlama(cellParams);
+        initMs = Date.now() - initStart;
 
         // 6. Validate the actual backend satisfies the requested backend.
         //    Partial offload (cpu+opencl-partial, cpu+hexagon-partial) IS
@@ -875,6 +910,7 @@ export async function runMatrix(
           pp_avg: speedPp,
           tg_avg: speedTg,
           wall_ms: wall,
+          init_ms: initMs,
           peak_memory_mb:
             typeof peakBytes === 'number'
               ? Math.round((peakBytes / (1024 * 1024)) * 100) / 100
@@ -928,6 +964,7 @@ export async function runMatrix(
           pp_avg: null,
           tg_avg: null,
           wall_ms: Date.now() - tStart,
+          init_ms: initMs,
           peak_memory_mb: null,
           log_signals: partialSignals,
           init_settings: postInitSnapshot ?? {},
@@ -1026,8 +1063,24 @@ export async function runMatrix(
       }
     }
 
+    report.outcome = 'complete';
+    await writeReportBestEffort(path, report);
     setStatus('complete');
+  } catch (e) {
+    if (shellWritten && report && path && report.outcome === undefined) {
+      const msg = (e as Error).message ?? 'unknown';
+      report.outcome = `error:${msg.slice(0, TRUNCATE_ERROR)}`;
+      await writeReportBestEffort(path, report);
+    }
+    throw e;
   } finally {
+    if (keepAwakeClaimed) {
+      try {
+        deactivateKeepAwake();
+      } catch (e) {
+        console.warn(`[BENCH] keep-awake deactivate failed: ${String(e)}`);
+      }
+    }
     // Outer matrix-level finally: success and failure paths converge here.
     // No "restore settings" step is required — under the isolated
     // lifecycle the runner never wrote to `modelStore.contextInitParams`,

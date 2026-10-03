@@ -253,6 +253,124 @@ describe('exportUtils', () => {
       // derivedText joins step.content with two newlines.
       expect(parsed.messages[0].text).toBe('Let me check\n\nThe answer is 42');
     });
+
+    it('preserves valid Responses replay state in JSON backups', async () => {
+      const responsesState = {
+        version: 1,
+        binding: {
+          wireApi: 'responses',
+          serverUrl: 'https://api.example.com',
+          modelId: 'responses-model',
+        },
+        output: [],
+        terminalStatus: 'completed',
+      };
+      (chatSessionRepository.getSessionById as jest.Mock).mockResolvedValueOnce(
+        {
+          ...mockSessionData,
+          messages: [
+            {
+              ...mockSessionData.messages[0],
+              id: 'assistant-1',
+              author: 'assistant',
+              type: 'assistant_turn',
+              metadata: JSON.stringify({
+                steps: [{content: 'answer', responsesState}],
+              }),
+              toMessageObject: () => ({
+                id: 'assistant-1',
+                type: 'assistant_turn',
+                author: {id: 'assistant'},
+                steps: [{content: 'answer', responsesState}],
+                metadata: {},
+              }),
+            },
+          ],
+        },
+      );
+
+      await exportChatSession('session-1');
+
+      const parsed = JSON.parse((RNFS.writeFile as jest.Mock).mock.calls[0][1]);
+      expect(parsed.messages[0].metadata.steps[0].responsesState).toEqual(
+        responsesState,
+      );
+    });
+
+    it('rejects invalid Responses replay state in JSON backups', async () => {
+      (chatSessionRepository.getSessionById as jest.Mock).mockResolvedValueOnce(
+        {
+          ...mockSessionData,
+          messages: [
+            {
+              ...mockSessionData.messages[0],
+              id: 'assistant-1',
+              type: 'assistant_turn',
+              metadata: JSON.stringify({
+                steps: [
+                  {content: 'visible', responsesState: {version: 'corrupt'}},
+                ],
+              }),
+            },
+          ],
+        },
+      );
+
+      await expect(exportChatSession('session-1')).rejects.toThrow(
+        'Cannot export invalid Responses replay state',
+      );
+      expect(RNFS.writeFile).not.toHaveBeenCalled();
+    });
+
+    it('does not include opaque replay or encrypted content in Markdown', async () => {
+      const responsesState = {
+        version: 1,
+        binding: {
+          wireApi: 'responses',
+          serverUrl: 'https://api.example.com',
+          modelId: 'responses-model',
+        },
+        output: [
+          {
+            type: 'reasoning',
+            id: 'reasoning-1',
+            summary: [],
+            encrypted_content: 'secret-ciphertext',
+          },
+        ],
+        terminalStatus: 'completed',
+      };
+      (chatSessionRepository.getSessionById as jest.Mock).mockResolvedValueOnce(
+        {
+          ...mockSessionData,
+          messages: [
+            {
+              ...mockSessionData.messages[0],
+              id: 'assistant-1',
+              author: 'assistant',
+              type: 'assistant_turn',
+              metadata: JSON.stringify({
+                steps: [{content: 'visible answer', responsesState}],
+              }),
+              toMessageObject: () => ({
+                id: 'assistant-1',
+                type: 'assistant_turn',
+                author: {id: 'assistant'},
+                steps: [{content: 'visible answer', responsesState}],
+                metadata: {},
+              }),
+            },
+          ],
+        },
+      );
+
+      await exportChatSessionAsMarkdown('session-1');
+
+      const markdown = (RNFS.writeFile as jest.Mock).mock.calls[0][1];
+      expect(markdown).toContain('visible answer');
+      expect(markdown).not.toContain('responsesState');
+      expect(markdown).not.toContain('secret-ciphertext');
+    });
   });
 
   describe('exportAllChatSessions', () => {

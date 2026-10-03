@@ -1,0 +1,15 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "noEmit": true,
+    "rootDir": ".."
+  },
+  "include": [
+    "fixtures/remote-responses-server.ts",
+    "fixtures/__tests__/remote-responses-server.test.ts",
+    "helpers/remote-responses.ts",
+    "scripts/run-remote-responses.ts",
+    "specs/features/remote-chat-fallback.spec.ts",
+    "specs/features/remote-responses.spec.ts"
+  ]
+}

@@ -130,6 +130,40 @@ describe('resolveReasoningCapability', () => {
     const m = remoteModel();
     expect(resolveReasoningCapability(m, {}).isReasoning).toBe('unknown');
   });
+
+  it('merges catalog reasoning effort for a remote model', () => {
+    expect(
+      resolveReasoningCapability(
+        remoteModel(),
+        {},
+        {
+          reasoningEffortValues: ['high', 'low'],
+        },
+      ),
+    ).toMatchObject({
+      isReasoning: 'yes',
+      source: 'detected',
+      supportsEffort: true,
+      effortValues: ['low', 'high'],
+      effortSource: 'detected',
+    });
+  });
+
+  it('keeps a user reasoning override above catalog metadata', () => {
+    const model = remoteModel();
+    const override = cap({
+      isReasoning: 'no',
+      source: 'user',
+      supportsEffort: false,
+    });
+    expect(
+      resolveReasoningCapability(
+        model,
+        {[model.id]: override},
+        {reasoningEffortValues: ['low', 'high']},
+      ),
+    ).toMatchObject({isReasoning: 'no', source: 'user'});
+  });
 });
 
 describe('orderEffortValues', () => {

@@ -58,16 +58,16 @@ export class ChatPage extends BasePage {
    *
    * The single tap is occasionally missed on Android (the drawer never opens),
    * which then fails the downstream waitForOpen. Tap, verify the drawer
-   * actually opened (the Pals item appears), and retry the tap if it didn't —
+   * actually opened (the Chat drawer item appears), and retry the tap if it didn't —
    * checking "already open" first so a retry can't toggle an open drawer shut.
    */
   async openDrawer(): Promise<void> {
     for (let attempt = 0; attempt < 3; attempt++) {
-      if (await this.isElementDisplayed(Selectors.drawer.palsTab, 1000)) {
+      if (await this.isElementDisplayed(Selectors.drawer.openIndicator, 1000)) {
         return;
       }
       await this.tap(Selectors.chat.menuButton);
-      if (await this.isElementDisplayed(Selectors.drawer.palsTab, 5000)) {
+      if (await this.isElementDisplayed(Selectors.drawer.openIndicator, 5000)) {
         return;
       }
     }
@@ -207,10 +207,7 @@ export class ChatPage extends BasePage {
       // Clamp the tap inside the toggle bounds. The chip-avoidance offset above
       // can otherwise compute an x just past an edge, so the tap misses the
       // button and the toggle never flips.
-      x = Math.min(
-        loc.x + size.width - 4,
-        Math.max(loc.x + 4, x),
-      );
+      x = Math.min(loc.x + size.width - 4, Math.max(loc.x + 4, x));
       await browser
         .action('pointer', {parameters: {pointerType: 'touch'}})
         .move({x, y})
@@ -327,25 +324,56 @@ export class ChatPage extends BasePage {
    * Open the pal/model picker sheet by tapping the pal selector button.
    */
   async openPalPicker(): Promise<void> {
+    await this.dismissKeyboard();
     const palBtn = browser.$(byAccessibilityLabel('Select Pal'));
     await palBtn.waitForDisplayed({timeout: 5000});
     await palBtn.click();
     await browser.pause(500);
+
+    const modelsTab = browser.$(byText('Models'));
+    const opened = await modelsTab
+      .waitForDisplayed({timeout: 2000})
+      .then(() => true)
+      .catch(() => false);
+    if (!opened) {
+      const location = await palBtn.getLocation();
+      const size = await palBtn.getSize();
+      await browser
+        .action('pointer', {parameters: {pointerType: 'touch'}})
+        .move({
+          x: Math.floor(location.x + size.width / 2),
+          y: Math.floor(location.y + size.height / 2),
+        })
+        .down()
+        .up()
+        .perform();
+    }
+
+    await modelsTab.waitForDisplayed({timeout: 5000});
   }
 
   /**
    * Select a pal by name from the pal picker sheet (must be open).
-   * Swipes left to reach the Pals tab since the picker defaults to Models.
+   * Uses the visible tab control and retains a gesture fallback for platforms
+   * where the tab text is not exposed as a tappable accessibility element.
    */
   async selectPal(palName: string): Promise<void> {
-    // The picker shows Models tab by default.
-    // Swipe right to reach the Pals tab (Pals is to the left of Models).
-    // Swipe right to reach the Pals tab, then find the pal by partial text.
-    // The first swipe can land short / the list can still be settling, so
-    // retry the swipe+lookup before giving up (the pal-picker tab transition
-    // is gesture-driven and flaky on a fresh model load).
+    const palsTab = browser.$(byText('Pals'));
+    const canTapPalsTab = await palsTab
+      .waitForDisplayed({timeout: 5000})
+      .then(() => true)
+      .catch(() => false);
+    if (canTapPalsTab) {
+      await palsTab.click();
+      await browser.pause(500);
+    }
+
     const palItem = browser.$(byPartialText(palName));
-    for (let attempt = 0; attempt < 3; attempt++) {
+    const foundAfterTabPress = await palItem
+      .waitForDisplayed({timeout: 5000})
+      .then(() => true)
+      .catch(() => false);
+    if (!foundAfterTabPress) {
       await Gestures.swipe({
         startXPercent: 0.2,
         startYPercent: 0.7,
@@ -354,15 +382,23 @@ export class ChatPage extends BasePage {
         duration: 300,
       });
       await browser.pause(500);
-      const found = await palItem
-        .waitForDisplayed({timeout: 5000})
-        .then(() => true)
-        .catch(() => false);
-      if (found) {
-        break;
-      }
     }
+
     await palItem.waitForDisplayed({timeout: 5000});
+    const location = await palItem.getLocation();
+    const size = await palItem.getSize();
+    const windowSize = await browser.getWindowSize();
+    if (location.y + size.height / 2 > windowSize.height * 0.72) {
+      await Gestures.swipe({
+        startXPercent: 0.5,
+        startYPercent: 0.68,
+        endXPercent: 0.5,
+        endYPercent: 0.42,
+        duration: 300,
+      });
+      await browser.pause(500);
+      await palItem.waitForDisplayed({timeout: 5000});
+    }
     await palItem.click();
     await browser.pause(500);
   }

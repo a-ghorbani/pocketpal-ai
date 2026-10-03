@@ -7,6 +7,14 @@ export interface SystemPromptDependencies {
   model?: Model | null;
 }
 
+export const VOICE_CONVERSATION_SYSTEM_PROMPT =
+  'This is a spoken conversation. Use concise, natural prose in the ' +
+  "user's language, normally one to three short sentences unless more " +
+  'detail is needed. Do not produce Markdown or HTML tables. Summarize ' +
+  'comparisons and the most important findings in prose rather than listing ' +
+  'table cells. Preserve essential qualifications and any required source ' +
+  'attribution.';
+
 /**
  * Resolves the system prompt based on priority:
  * 1. Pal's system prompt (with parameter rendering if needed)

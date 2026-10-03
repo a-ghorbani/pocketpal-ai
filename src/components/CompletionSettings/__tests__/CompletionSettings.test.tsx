@@ -166,4 +166,186 @@ describe('CompletionSettings', () => {
     fireEvent.press(mirostatV2Button);
     expect(mockOnChange).toHaveBeenCalledWith('mirostat', 2);
   });
+
+  describe('generation parameter modes', () => {
+    it.each([
+      ['temperature', 'temperature-mode-send'],
+      ['seed', 'seed-mode-send'],
+      ['jinja', 'jinja-mode-send'],
+      ['stop', 'stop-mode-send'],
+      ['reasoning', 'reasoning-mode-send'],
+    ] as const)(
+      'changes only the %s mode and retains its custom value',
+      (name, testID) => {
+        const onChange = jest.fn();
+        const settings = {
+          ...mockCompletionParams,
+          temperature: 0.73,
+          seed: 0,
+          jinja: false,
+          stop: ['END'],
+          reasoning: {enabled: false, effort: 'high'},
+          generationParameterModes: {[name]: 'omit' as const},
+        };
+        const {getByTestId} = render(
+          <CompletionSettings
+            settings={settings}
+            onChange={onChange}
+            allowInherit
+          />,
+        );
+
+        fireEvent.press(getByTestId(testID));
+
+        expect(onChange).toHaveBeenCalledWith(
+          'generationParameterModes',
+          expect.objectContaining({[name]: 'send'}),
+        );
+        expect(onChange).not.toHaveBeenCalledWith(name, expect.anything());
+        expect(settings[name]).toEqual(
+          {
+            temperature: 0.73,
+            seed: 0,
+            jinja: false,
+            stop: ['END'],
+            reasoning: {enabled: false, effort: 'high'},
+          }[name],
+        );
+      },
+    );
+
+    it('does not validate an invalid retained numeric value while omitted', () => {
+      const {getByTestId, queryByText} = render(
+        <CompletionSettings
+          settings={{
+            ...mockCompletionParams,
+            seed: 'invalid' as any,
+            generationParameterModes: {seed: 'omit'},
+          }}
+          onChange={jest.fn()}
+        />,
+      );
+
+      expect(getByTestId('seed-input').props.editable).toBe(false);
+      expect(queryByText('Please enter a valid number')).toBeNull();
+    });
+
+    it.each([
+      ['temperature', 0],
+      ['jinja', false],
+      ['n_predict', -1],
+    ] as const)(
+      'keeps the explicit %s sentinel distinct from omission',
+      (key, value) => {
+        const settings = {
+          ...mockCompletionParams,
+          [key]: value,
+          generationParameterModes: {[key]: 'send' as const},
+        };
+        const {getByTestId} = render(
+          <CompletionSettings settings={settings} onChange={jest.fn()} />,
+        );
+
+        expect(getByTestId(`${key}-effective-source`)).toHaveTextContent(
+          'Effective source: custom value',
+        );
+        expect(getByTestId(`${key}-mode-omit`)).toBeTruthy();
+      },
+    );
+
+    it('keeps dependent Mirostat modes visible but disables their values when Mirostat is omitted', () => {
+      const {getByTestId} = render(
+        <CompletionSettings
+          settings={{
+            ...mockCompletionParams,
+            mirostat: 2,
+            generationParameterModes: {mirostat: 'omit'},
+          }}
+          onChange={jest.fn()}
+          allowInherit
+        />,
+      );
+
+      expect(getByTestId('mirostat_tau-mode-send')).toBeTruthy();
+      expect(getByTestId('mirostat_eta-mode-send')).toBeTruthy();
+      expect(getByTestId('mirostat_tau-slider').props.disabled).toBe(true);
+      expect(getByTestId('mirostat_eta-slider').props.disabled).toBe(true);
+    });
+
+    it('distinguishes provider default, explicit thinking On, explicit thinking Off, and explicit effort', () => {
+      const onChange = jest.fn();
+      const {getByTestId, rerender} = render(
+        <CompletionSettings
+          settings={{
+            ...mockCompletionParams,
+            reasoning: {enabled: false, effort: 'high'},
+            generationParameterModes: {
+              reasoning: 'omit',
+              enable_thinking: 'omit',
+              reasoning_effort: 'omit',
+            },
+          }}
+          onChange={onChange}
+          allowInherit
+        />,
+      );
+
+      expect(getByTestId('reasoning-effective-source')).toHaveTextContent(
+        'Effective source: provider/native default (parameter is not sent)',
+      );
+      fireEvent.press(getByTestId('reasoning-mode-send'));
+      expect(onChange).toHaveBeenCalledWith(
+        'generationParameterModes',
+        expect.objectContaining({
+          reasoning: 'send',
+          enable_thinking: 'send',
+        }),
+      );
+
+      rerender(
+        <CompletionSettings
+          settings={{
+            ...mockCompletionParams,
+            reasoning: {enabled: false, effort: 'high'},
+            generationParameterModes: {
+              reasoning: 'send',
+              enable_thinking: 'send',
+              reasoning_effort: 'send',
+            },
+          }}
+          onChange={onChange}
+          allowInherit
+        />,
+      );
+      fireEvent.press(getByTestId('reasoning-value-on'));
+      fireEvent.press(getByTestId('reasoning-value-off'));
+      fireEvent.press(getByTestId('reasoning-effort-low'));
+      expect(onChange).toHaveBeenCalledWith(
+        'reasoning',
+        expect.objectContaining({enabled: true}),
+      );
+      expect(onChange).toHaveBeenCalledWith(
+        'reasoning',
+        expect.objectContaining({enabled: false}),
+      );
+      expect(onChange).toHaveBeenCalledWith('reasoning_effort', 'low');
+    });
+
+    it('uses localized labels and explains that omission uses the provider default', () => {
+      const {getAllByText, getByTestId} = render(
+        <CompletionSettings
+          settings={mockCompletionParams}
+          onChange={jest.fn()}
+          allowInherit
+        />,
+      );
+
+      expect(getAllByText('Use provider default').length).toBeGreaterThan(0);
+      expect(getAllByText('Use custom value').length).toBeGreaterThan(0);
+      expect(getAllByText('Inherit').length).toBeGreaterThan(0);
+      expect(getByTestId('temperature-effective-source')).not.toHaveTextContent(
+        'disabled',
+      );
+    });
+  });
 });

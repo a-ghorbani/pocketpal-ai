@@ -4,6 +4,10 @@ import {makePersistable} from 'mobx-persist-store';
 import {makeAutoObservable, runInAction} from 'mobx';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import {
+  responsesDiagnosticsController,
+  type ResponsesDiagnosticsController,
+} from '../api/responsesDiagnostics';
+import {
   l10n,
   supportedLanguages as localesSupportedLanguages,
   type AvailableLanguage,
@@ -15,6 +19,11 @@ import {
   type OnboardingStep,
   type TopicKey,
 } from './onboarding/types';
+
+type ResponsesDiagnosticsControl = Pick<
+  ResponsesDiagnosticsController,
+  'enable' | 'disableAndClear'
+>;
 
 export class UIStore {
   static readonly GROUP_KEYS = {
@@ -48,6 +57,8 @@ export class UIStore {
 
   displayMemUsage = false;
 
+  responsesProtocolLogging = false;
+
   iOSBackgroundDownloading = true;
 
   benchmarkShareDialog = {
@@ -79,6 +90,8 @@ export class UIStore {
   // state isn't pre-dismissed.
   dismissedDownloadIds: string[] = [];
 
+  private responsesDiagnosticsController: ResponsesDiagnosticsControl;
+
   hasWarnedToolCompat(modelId: string): boolean {
     return this.toolCompatWarnedModels.includes(modelId);
   }
@@ -108,8 +121,13 @@ export class UIStore {
     });
   }
 
-  constructor() {
-    makeAutoObservable(this);
+  constructor(
+    responsesDiagnosticsControl: ResponsesDiagnosticsControl = responsesDiagnosticsController,
+  ) {
+    this.responsesDiagnosticsController = responsesDiagnosticsControl;
+    makeAutoObservable<this, 'responsesDiagnosticsController'>(this, {
+      responsesDiagnosticsController: false,
+    });
     makePersistable(this, {
       name: 'UIStore',
       properties: [
@@ -128,6 +146,8 @@ export class UIStore {
 
     // backwards compatibility. Removed this from the ui settings screen.
     this.iOSBackgroundDownloading = true;
+
+    this.responsesDiagnosticsController.disableAndClear();
   }
 
   setValue<T extends keyof typeof this.pageStates>(
@@ -174,6 +194,28 @@ export class UIStore {
   setDisplayMemUsage(value: boolean) {
     runInAction(() => {
       this.displayMemUsage = value;
+    });
+  }
+
+  setResponsesProtocolLogging(value: boolean) {
+    if (value) {
+      this.responsesDiagnosticsController.enable();
+    } else {
+      this.responsesDiagnosticsController.disableAndClear();
+    }
+
+    runInAction(() => {
+      this.responsesProtocolLogging = value;
+    });
+  }
+
+  attachResponsesDiagnosticsController(
+    controller: ResponsesDiagnosticsControl,
+  ) {
+    this.responsesDiagnosticsController = controller;
+    controller.disableAndClear();
+    runInAction(() => {
+      this.responsesProtocolLogging = false;
     });
   }
 

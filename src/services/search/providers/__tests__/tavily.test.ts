@@ -37,6 +37,23 @@ describe('TavilyProvider', () => {
     ]);
   });
 
+  it('requests 20 basic results in one search request', async () => {
+    (global.fetch as jest.Mock).mockReturnValue(okJson({results: []}));
+    const provider = new TavilyProvider(() => 'key');
+
+    await provider.search('mars', {maxResults: 20});
+
+    expect(global.fetch).toHaveBeenCalledTimes(1);
+    const [, init] = (global.fetch as jest.Mock).mock.calls[0];
+    expect(JSON.parse(init.body)).toEqual(
+      expect.objectContaining({
+        query: 'mars',
+        max_results: 20,
+        search_depth: 'basic',
+      }),
+    );
+  });
+
   it('keeps url and title when snippet is empty', async () => {
     (global.fetch as jest.Mock).mockReturnValue(
       okJson({results: [{title: 'T', url: 'https://e.com/x'}]}),

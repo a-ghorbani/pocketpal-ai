@@ -58,6 +58,19 @@ export const createStyles = (theme: Theme) => {
       fontSize: 14,
       color: theme.colors.onSurface,
     },
+    modelItemDetails: {
+      flex: 1,
+    },
+    protocolText: {
+      marginTop: 2,
+      fontSize: 11,
+      color: theme.colors.onSurfaceVariant,
+    },
+    protocolWarning: {
+      marginTop: 2,
+      fontSize: 11,
+      color: theme.colors.error,
+    },
     buttonsContainer: {
       flexDirection: 'row',
       justifyContent: 'space-between',

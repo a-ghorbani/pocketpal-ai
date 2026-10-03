@@ -1,7 +1,7 @@
 import React from 'react';
-import {fireEvent, render, act} from '../../../../jest/test-utils';
+import {fireEvent, render, act, waitFor} from '../../../../jest/test-utils';
 import {ModelSettingsSheet} from '../ModelSettingsSheet';
-import {modelStore} from '../../../store';
+import {modelStore, serverStore} from '../../../store';
 import {Model, ModelOrigin} from '../../../utils/types';
 import {defaultCompletionParams} from '../../../utils/completionSettingsVersions';
 
@@ -93,6 +93,13 @@ describe('ModelSettingsSheet', () => {
 
   beforeEach(() => {
     jest.clearAllMocks();
+    (serverStore as any).getRemoteModelPreference = jest.fn();
+    (serverStore as any).setRemoteModelPreference = jest.fn();
+    (serverStore as any).setRemoteModelGenerationSettings = jest.fn();
+    (serverStore as any).getRemoteCatalogModel = jest.fn();
+    serverStore.servers = [];
+    serverStore.remoteReasoning = {};
+    modelStore.activeRemoteBinding = undefined;
   });
 
   it('renders correctly when visible', () => {
@@ -214,6 +221,49 @@ describe('ModelSettingsSheet', () => {
 
     // The state updates are handled by useEffect, which is tested implicitly
     // through the save/cancel/reset tests
+  });
+
+  it('isolates a model parameter override from other models', async () => {
+    const target = {
+      ...mockModel,
+      completionSettings: {
+        ...mockModel.completionSettings,
+        temperature: 0.25,
+      },
+    };
+    const other = {
+      ...mockModel,
+      id: 'other-model',
+      completionSettings: {
+        ...mockModel.completionSettings,
+        temperature: 0.9,
+      },
+    };
+    modelStore.models = [target, other];
+    const {getByTestId, getByText} = render(
+      <ModelSettingsSheet {...defaultProps} model={target} />,
+    );
+
+    await waitFor(() =>
+      expect(getByTestId('temperature-mode-omit')).toBeTruthy(),
+    );
+    await act(async () => {
+      fireEvent.press(getByTestId('temperature-mode-omit'));
+    });
+    await act(async () => {
+      fireEvent.press(getByText('Save Changes'));
+    });
+
+    expect(modelStore.models[0].completionSettings.temperature).toBe(0.25);
+    expect(
+      modelStore.models[0].completionSettings.generationParameterModes
+        ?.temperature,
+    ).toBe('omit');
+    expect(modelStore.models[1].completionSettings.temperature).toBe(0.9);
+    expect(
+      modelStore.models[1].completionSettings.generationParameterModes
+        ?.temperature,
+    ).toBeUndefined();
   });
 
   describe('reasoning override', () => {
@@ -415,6 +465,8 @@ describe('ModelSettingsSheet', () => {
       ...mockModel,
       id: 'server-1/remote-x',
       origin: ModelOrigin.REMOTE,
+      serverId: 'server-1',
+      remoteModelId: 'remote-x',
     };
     const remoteProps = {...defaultProps, model: remoteModel};
 
@@ -449,6 +501,135 @@ describe('ModelSettingsSheet', () => {
       expect(modelStore.updateModelChatTemplate).not.toHaveBeenCalled();
       expect(modelStore.updateModelStopWords).not.toHaveBeenCalled();
       expect(modelStore.updateModelName).not.toHaveBeenCalled();
+    });
+
+    it('shows inherited server protocol and a manual model override', async () => {
+      serverStore.servers = [
+        {
+          id: 'server-1',
+          name: 'Remote',
+          url: 'https://example.test',
+          apiMode: 'responses',
+        },
+      ];
+      const {getByTestId} = render(<ModelSettingsSheet {...remoteProps} />);
+      expect(getByTestId('model-effective-protocol')).toHaveTextContent(
+        'Effective endpoint: Responses · manual server override',
+      );
+
+      fireEvent.press(getByTestId('model-api-protocol-dropdown'));
+      fireEvent.press(
+        getByTestId('model-api-protocol-option-chat-completions'),
+      );
+      expect(getByTestId('model-effective-protocol')).toHaveTextContent(
+        'Effective endpoint: Chat Completions · manual model override',
+      );
+    });
+
+    it('persists protocol and remote vision preferences together', async () => {
+      const {getByTestId, getByText} = render(
+        <ModelSettingsSheet {...remoteProps} />,
+      );
+      fireEvent.press(getByTestId('model-api-protocol-dropdown'));
+      fireEvent.press(getByTestId('model-api-protocol-option-responses'));
+      fireEvent.press(getByTestId('remote-vision-dropdown'));
+      fireEvent.press(getByTestId('remote-vision-option-on'));
+      fireEvent.press(getByText('Save Changes'));
+
+      expect(serverStore.setRemoteModelPreference).toHaveBeenCalledWith(
+        remoteModel.id,
+        expect.objectContaining({wireApi: 'responses', vision: 'on'}),
+      );
+    });
+
+    it('persists remote generation overrides and requires reselection', async () => {
+      const {getByTestId, getByText, queryByTestId} = render(
+        <ModelSettingsSheet {...remoteProps} />,
+      );
+      await waitFor(() =>
+        expect(getByTestId('temperature-mode-omit')).toBeTruthy(),
+      );
+
+      fireEvent.press(getByTestId('temperature-mode-omit'));
+      expect(queryByTestId('remote-reselect-required')).toBeNull();
+      fireEvent.press(getByText('Save Changes'));
+
+      expect(serverStore.setRemoteModelGenerationSettings).toHaveBeenCalledWith(
+        remoteModel.id,
+        expect.objectContaining({
+          generationParameterModes: expect.objectContaining({
+            temperature: 'omit',
+          }),
+        }),
+      );
+    });
+
+    it('restores saved preferences and labels cached catalog resolution', () => {
+      (serverStore.getRemoteModelPreference as jest.Mock).mockReturnValue({
+        vision: 'off',
+      });
+      (serverStore.getRemoteCatalogModel as jest.Mock).mockReturnValue({
+        endpointSupport: 'known',
+        capabilities: {advertisedEndpoints: ['responses']},
+        provenance: 'cached',
+      });
+      const {getByTestId} = render(<ModelSettingsSheet {...remoteProps} />);
+      expect(
+        getByTestId('model-api-protocol-dropdown').props.accessibilityLabel,
+      ).toBe('Inherit');
+      expect(
+        getByTestId('remote-vision-dropdown').props.accessibilityLabel,
+      ).toBe('Off');
+      expect(getByTestId('model-effective-protocol')).toHaveTextContent(
+        'Effective endpoint: Responses · cached catalog',
+      );
+    });
+
+    it('shows a reselect-required notice for an active preference edit', () => {
+      modelStore.activeRemoteBinding = {
+        modelId: remoteModel.id,
+        serverId: 'server-1',
+        remoteModelId: 'remote-x',
+        url: 'https://example.test',
+        wireApi: 'chat-completions',
+      };
+      const {getByTestId} = render(<ModelSettingsSheet {...remoteProps} />);
+      fireEvent.press(getByTestId('remote-vision-dropdown'));
+      fireEvent.press(getByTestId('remote-vision-option-off'));
+      expect(getByTestId('remote-reselect-required')).toBeTruthy();
+    });
+
+    it('disables incompatible reasoning controls without overwriting values', async () => {
+      serverStore.remoteReasoning[remoteModel.id] = {
+        isReasoning: 'yes',
+        source: 'user',
+        supportsEffort: true,
+        effortValues: ['low', 'high'],
+        effortSource: 'user',
+      };
+      (serverStore.getRemoteCatalogModel as jest.Mock).mockReturnValue({
+        endpointSupport: 'known',
+        capabilities: {advertisedEndpoints: []},
+        provenance: 'live',
+      });
+      const {getByTestId, getByText} = render(
+        <ModelSettingsSheet {...remoteProps} />,
+      );
+      expect(getByTestId('reasoning-is-reasoning-switch').props.disabled).toBe(
+        true,
+      );
+      expect(
+        getByTestId('effort-chip-low').props.accessibilityState?.disabled,
+      ).toBe(true);
+
+      fireEvent.press(getByTestId('remote-vision-dropdown'));
+      fireEvent.press(getByTestId('remote-vision-option-auto'));
+      fireEvent.press(getByText('Save Changes'));
+      expect(modelStore.setReasoningOverride).not.toHaveBeenCalled();
+      expect(serverStore.remoteReasoning[remoteModel.id].effortValues).toEqual([
+        'low',
+        'high',
+      ]);
     });
   });
 });

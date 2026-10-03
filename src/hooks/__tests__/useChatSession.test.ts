@@ -57,7 +57,6 @@ beforeEach(() => {
     }),
   };
 });
-
 // Mock the applyChatTemplate function from utils/chat
 const applyChatTemplateSpy = jest
   .spyOn(require('../../utils/chat'), 'applyChatTemplate')
@@ -105,10 +104,16 @@ describe('useChatSession', () => {
 
   it('should handle general errors during completion', async () => {
     const errorMessage = 'Some general error';
+    const completionError = Object.assign(new Error(errorMessage), {
+      code: 'premature-eof',
+      data: 'PRIVATE_RAW_SSE',
+      partialResult: {content: 'PRIVATE_PARTIAL_RESPONSE'},
+    });
+    const errorSpy = jest.spyOn(console, 'error').mockImplementation(() => {});
     if (modelStore.context) {
       modelStore.context.completion = jest
         .fn()
-        .mockRejectedValueOnce(new Error(errorMessage));
+        .mockRejectedValueOnce(completionError);
     }
 
     const {result} = renderHook(() =>
@@ -125,6 +130,15 @@ describe('useChatSession', () => {
         author: assistant,
       }),
     );
+    expect(errorSpy).toHaveBeenCalledWith('Completion error:', {
+      name: 'Error',
+      code: 'premature-eof',
+    });
+    const logged = JSON.stringify(errorSpy.mock.calls);
+    expect(logged).not.toContain(errorMessage);
+    expect(logged).not.toContain('PRIVATE_RAW_SSE');
+    expect(logged).not.toContain('PRIVATE_PARTIAL_RESPONSE');
+    errorSpy.mockRestore();
   });
 
   it('maps the speculative draft-context failure to friendly copy', async () => {
@@ -287,6 +301,75 @@ describe('useChatSession', () => {
       }
     },
   );
+
+  it('adds concise table-free guidance only to voice conversation turns', async () => {
+    const testModel = {
+      ...mockBasicModel,
+      id: 'voice-guidance-model',
+      chatTemplate: {
+        ...mockBasicModel.chatTemplate,
+        systemPrompt: 'Base assistant prompt',
+      },
+    };
+    modelStore.models = [testModel];
+    modelStore.setActiveModel(testModel.id);
+
+    const captured: any[][] = [];
+    if (modelStore.context) {
+      modelStore.context.completion = jest
+        .fn()
+        .mockImplementation((params, _onData) => {
+          captured.push(params.messages || []);
+          return Promise.resolve({timings: {total: 100}, usage: {}});
+        });
+    }
+
+    const {result} = renderHook(() =>
+      useChatSession({current: null}, textMessage.author, mockAssistant),
+    );
+    await act(async () => {
+      await result.current.handleSendPress({
+        ...textMessage,
+        metadata: {voiceConversation: true},
+      });
+      await result.current.handleSendPress(textMessage);
+    });
+
+    const voiceSystem = captured[0].find(msg => msg.role === 'system');
+    const typedSystem = captured[1].find(msg => msg.role === 'system');
+    expect(voiceSystem.content).toContain('Base assistant prompt');
+    expect(voiceSystem.content).toContain(
+      'Do not produce Markdown or HTML tables',
+    );
+    expect(typedSystem.content).toBe('Base assistant prompt');
+  });
+
+  it('returns a playback result only for voice sends and preserves typed send booleans', async () => {
+    modelStore.setActiveModel(mockBasicModel.id);
+    if (modelStore.context) {
+      modelStore.context.completion = jest.fn().mockResolvedValue({
+        timings: {total: 100},
+        usage: {},
+      });
+    }
+    (ttsStore.onAssistantMessageComplete as jest.Mock).mockResolvedValue(
+      'completed',
+    );
+    const {result} = renderHook(() =>
+      useChatSession({current: null}, textMessage.author, mockAssistant),
+    );
+    let voiceResult;
+    let typedResult;
+    await act(async () => {
+      voiceResult = await result.current.handleSendPress({
+        ...textMessage,
+        metadata: {voiceConversation: true},
+      });
+      typedResult = await result.current.handleSendPress(textMessage);
+    });
+    expect(voiceResult).toEqual({narration: 'completed'});
+    expect(typedResult).toBe(true);
+  });
 
   it('should render parametrized system prompt when pal has parameters', async () => {
     // Create a mock pal with parametrized system prompt

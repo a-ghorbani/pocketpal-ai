@@ -1,6 +1,41 @@
 import {Model} from '@nozbe/watermelondb';
 import {field, text} from '@nozbe/watermelondb/decorators';
 import {AgentStep, MessageType, User} from '../../utils/types';
+import {isResponsesReplayState} from '../../api/responsesTypes';
+
+const parseMetadata = (metadata?: string): Record<string, any> => {
+  try {
+    const parsed = JSON.parse(metadata || '{}');
+    return parsed && typeof parsed === 'object' && !Array.isArray(parsed)
+      ? parsed
+      : {};
+  } catch {
+    return {};
+  }
+};
+
+const readableSteps = (value: unknown, legacyText?: string): AgentStep[] => {
+  const steps = Array.isArray(value)
+    ? value.filter(
+        (step): step is AgentStep =>
+          !!step && typeof step === 'object' && !Array.isArray(step),
+      )
+    : [];
+  const sanitized = steps.map(step => {
+    if (
+      step.responsesState !== undefined &&
+      !isResponsesReplayState(step.responsesState)
+    ) {
+      const visibleStep = {...step};
+      delete visibleStep.responsesState;
+      return visibleStep;
+    }
+    return step;
+  });
+  return sanitized.length === 0 && legacyText
+    ? [{content: legacyText}]
+    : sanitized;
+};
 
 export default class Message extends Model {
   static table = 'messages';
@@ -18,7 +53,7 @@ export default class Message extends Model {
   @field('position') position!: number;
 
   toMessageObject(): MessageType.Any {
-    const rawMetadata = JSON.parse(this.metadata || '{}');
+    const rawMetadata = parseMetadata(this.metadata);
 
     const author: User = {
       id: this.author,
@@ -47,7 +82,7 @@ export default class Message extends Model {
       // persistence layer (ChatSessionRepository) is the sole writer of
       // `metadata.steps` on the way back to disk.
       const {steps: liftedSteps, ...metadataWithoutSteps} = rawMetadata;
-      const steps: AgentStep[] = Array.isArray(liftedSteps) ? liftedSteps : [];
+      const steps = readableSteps(liftedSteps, this.text);
       return {
         id: this.id,
         type: 'assistant_turn',

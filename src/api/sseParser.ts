@@ -55,3 +55,106 @@ export class SSEParser {
     this.buffer = '';
   }
 }
+
+export interface FramedSSEEvent<T = unknown> {
+  event?: string;
+  data: T;
+}
+
+export class SSEProtocolError extends Error {
+  readonly event?: string;
+  readonly data!: string;
+
+  constructor(message: string, data: string, event?: string) {
+    super(message);
+    this.name = 'SSEProtocolError';
+    this.event = event;
+    Object.defineProperty(this, 'data', {
+      value: data,
+      enumerable: false,
+      writable: false,
+      configurable: false,
+    });
+  }
+}
+
+/**
+ * Parses framed SSE events whose data payload is required to be JSON.
+ * Unlike SSEParser, malformed data is a protocol failure rather than ignored.
+ */
+export class FramedSSEParser<T = unknown> {
+  private buffer = '';
+  private event?: string;
+  private dataLines: string[] = [];
+
+  *feed(chunk: string): Generator<FramedSSEEvent<T>> {
+    this.buffer += chunk;
+
+    let newlineIndex = this.buffer.indexOf('\n');
+    while (newlineIndex !== -1) {
+      let line = this.buffer.slice(0, newlineIndex);
+      this.buffer = this.buffer.slice(newlineIndex + 1);
+      if (line.endsWith('\r')) {
+        line = line.slice(0, -1);
+      }
+      yield* this.processLine(line);
+      newlineIndex = this.buffer.indexOf('\n');
+    }
+  }
+
+  *flush(): Generator<FramedSSEEvent<T>> {
+    if (this.buffer.length > 0) {
+      const line = this.buffer.endsWith('\r')
+        ? this.buffer.slice(0, -1)
+        : this.buffer;
+      this.buffer = '';
+      yield* this.processLine(line);
+    }
+    yield* this.dispatch();
+  }
+
+  private *processLine(line: string): Generator<FramedSSEEvent<T>> {
+    if (line === '') {
+      yield* this.dispatch();
+      return;
+    }
+    if (line.startsWith(':')) {
+      return;
+    }
+
+    const colonIndex = line.indexOf(':');
+    const field = colonIndex === -1 ? line : line.slice(0, colonIndex);
+    let value = colonIndex === -1 ? '' : line.slice(colonIndex + 1);
+    if (value.startsWith(' ')) {
+      value = value.slice(1);
+    }
+
+    if (field === 'event') {
+      this.event = value;
+    } else if (field === 'data') {
+      this.dataLines.push(value);
+    }
+  }
+
+  private *dispatch(): Generator<FramedSSEEvent<T>> {
+    if (this.dataLines.length === 0) {
+      this.event = undefined;
+      return;
+    }
+
+    const event = this.event;
+    const data = this.dataLines.join('\n');
+    this.event = undefined;
+    this.dataLines = [];
+
+    try {
+      yield {event, data: JSON.parse(data) as T};
+    } catch {
+      throw new SSEProtocolError(
+        `Malformed JSON in SSE${event ? ` event "${event}"` : ' event'}`,
+        data,
+        event,
+      );
+    }
+  }
+}

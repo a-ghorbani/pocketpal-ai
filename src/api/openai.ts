@@ -5,9 +5,12 @@ import {
   CompletionResult,
   CompletionStreamData,
   ReasoningIntent,
+  GenerationParameterModes,
   ToolCall,
 } from '../utils/completionTypes';
 import {RemoteModelCaps} from '../utils/types';
+import {resolveRequestTimeout, xhrHttpError} from './xhrStream';
+import {applyGenerationParameterModes} from '../utils/generationParameterModes';
 
 /**
  * Raw API response shape from OpenAI /v1/models. The optional fields are what
@@ -18,10 +21,11 @@ export interface RemoteModelInfo {
   id: string;
   object: string;
   owned_by: string;
+  supported_endpoints?: string[];
   status?: {value?: string; args?: string[]};
   architecture?: {input_modalities?: string[]; output_modalities?: string[]};
   meta?: {n_ctx?: number; n_ctx_train?: number; [key: string]: unknown};
-  capabilities?: string[];
+  capabilities?: string[] | Record<string, unknown>;
 }
 
 /** Chat message type compatible with OpenAI API format */
@@ -81,6 +85,23 @@ export interface StreamChatParams {
   response_format?: OpenAIResponseFormat;
   /** Reasoning on/off + effort intent; translated to a per-serverType payload. */
   reasoning?: ReasoningIntent;
+  generationParameterModes?: GenerationParameterModes;
+  top_k?: number;
+  min_p?: number;
+  xtc_threshold?: number;
+  xtc_probability?: number;
+  typical_p?: number;
+  penalty_last_n?: number;
+  penalty_repeat?: number;
+  penalty_freq?: number;
+  penalty_present?: number;
+  mirostat?: number;
+  mirostat_tau?: number;
+  mirostat_eta?: number;
+  seed?: number;
+  n_probs?: number;
+  jinja?: boolean;
+  enable_thinking?: boolean;
 }
 
 /**
@@ -172,10 +193,7 @@ function resolveTimeout(
   timeoutMs: number | undefined,
   fallback: number,
 ): number {
-  if (timeoutMs == null || !Number.isFinite(timeoutMs) || timeoutMs <= 0) {
-    return fallback;
-  }
-  return timeoutMs;
+  return resolveRequestTimeout(timeoutMs, fallback);
 }
 
 /**
@@ -197,12 +215,28 @@ function isValidChatChunk(parsed: any): boolean {
 /**
  * Build headers for OpenAI-compatible API requests.
  */
-function buildHeaders(apiKey?: string): Record<string, string> {
+const GITHUB_COPILOT_SERVER_TYPE = 'GitHub Copilot';
+
+// Derived from the published Copilot CLI 1.0.83 Linux distribution, with the
+// deliberately requested "-test" suffix applied to each complete value.
+const GITHUB_COPILOT_HEADERS = {
+  'Copilot-Integration-Id': 'copilot-developer-cli-test',
+  'User-Agent': 'copilot/1.0.83 (linux v24.20.0) term/unknown-test',
+  'Editor-Version': 'copilot/1.0.83-test',
+} as const;
+
+export function buildHeaders(
+  apiKey?: string,
+  serverType?: string,
+): Record<string, string> {
   const headers: Record<string, string> = {
     'Content-Type': 'application/json',
   };
   if (apiKey) {
     headers.Authorization = `Bearer ${apiKey}`;
+  }
+  if (serverType === GITHUB_COPILOT_SERVER_TYPE) {
+    Object.assign(headers, GITHUB_COPILOT_HEADERS);
   }
   return headers;
 }
@@ -210,8 +244,28 @@ function buildHeaders(apiKey?: string): Record<string, string> {
 /**
  * Normalize server URL: remove trailing slash.
  */
-function normalizeUrl(serverUrl: string): string {
+export function normalizeUrl(serverUrl: string): string {
+  const parsed = new URL(serverUrl);
+  const isLocal =
+    parsed.hostname === 'localhost' ||
+    parsed.hostname === '::1' ||
+    parsed.hostname.startsWith('127.') ||
+    parsed.hostname.startsWith('10.') ||
+    parsed.hostname.startsWith('192.168.') ||
+    /^172\.(1[6-9]|2\d|3[01])\./.test(parsed.hostname);
+  if ((!isLocal && parsed.protocol !== 'https:') || !parsed.hostname) {
+    throw new Error('Remote AI servers must use HTTPS.');
+  }
   return serverUrl.replace(/\/+$/, '');
+}
+
+export function buildOpenAIUrl(
+  serverUrl: string,
+  endpoint: 'models' | 'chat/completions' | 'responses',
+  serverType?: string,
+): string {
+  const prefix = serverType === GITHUB_COPILOT_SERVER_TYPE ? '' : '/v1';
+  return `${normalizeUrl(serverUrl)}${prefix}/${endpoint}`;
 }
 
 /** Result from fetchModelsWithHeaders: models + raw response headers. */
@@ -253,8 +307,9 @@ export async function fetchModelsWithHeaders(
   serverUrl: string,
   apiKey?: string,
   timeoutMs?: number,
+  serverType?: string,
 ): Promise<FetchModelsResult> {
-  const url = `${normalizeUrl(serverUrl)}/v1/models`;
+  const url = buildOpenAIUrl(serverUrl, 'models', serverType);
   const controller = new AbortController();
   const timeout = setTimeout(
     () => controller.abort(),
@@ -264,7 +319,7 @@ export async function fetchModelsWithHeaders(
   try {
     const response = await fetch(url, {
       method: 'GET',
-      headers: buildHeaders(apiKey),
+      headers: buildHeaders(apiKey, serverType),
       signal: controller.signal,
     });
 
@@ -308,8 +363,14 @@ export async function fetchModels(
   serverUrl: string,
   apiKey?: string,
   timeoutMs?: number,
+  serverType?: string,
 ): Promise<RemoteModelInfo[]> {
-  const {models} = await fetchModelsWithHeaders(serverUrl, apiKey, timeoutMs);
+  const {models} = await fetchModelsWithHeaders(
+    serverUrl,
+    apiKey,
+    timeoutMs,
+    serverType,
+  );
   return models;
 }
 
@@ -389,9 +450,10 @@ export async function testConnection(
   serverUrl: string,
   apiKey?: string,
   timeoutMs?: number,
+  serverType?: string,
 ): Promise<{ok: boolean; modelCount: number; error?: string}> {
   try {
-    const models = await fetchModels(serverUrl, apiKey, timeoutMs);
+    const models = await fetchModels(serverUrl, apiKey, timeoutMs, serverType);
     return {ok: true, modelCount: models.length};
   } catch (error: any) {
     return {ok: false, modelCount: 0, error: error.message || 'Unknown error'};
@@ -535,7 +597,9 @@ function isLocalImageUrl(url: string | undefined): url is string {
 }
 
 /** True when any message carries a local-path image that must be encoded. */
-function hasLocalImageAttachment(messages: OpenAIChatMessage[]): boolean {
+export function hasLocalImageAttachment(
+  messages: OpenAIChatMessage[],
+): boolean {
   return messages.some(
     m =>
       Array.isArray(m.content) &&
@@ -654,11 +718,15 @@ async function encodeImagePart(part: {
  * Encodes sequentially (outer messages and inner parts) so peak heap is one
  * base64 buffer at a time on a long or multi-image history.
  */
-async function encodeMessagesForRemote(
-  messages: OpenAIChatMessage[],
-): Promise<OpenAIChatMessage[]> {
-  const encoded: OpenAIChatMessage[] = [];
+export async function encodeMessagesForRemote<T extends OpenAIChatMessage>(
+  messages: T[],
+  signal?: AbortSignal,
+): Promise<T[]> {
+  const encoded: T[] = [];
   for (const message of messages) {
+    if (signal?.aborted) {
+      throw new Error('Completion aborted');
+    }
     if (!Array.isArray(message.content)) {
       encoded.push(message);
       continue;
@@ -666,8 +734,11 @@ async function encodeMessagesForRemote(
     const content: typeof message.content = [];
     for (const part of message.content) {
       content.push(await encodeImagePart(part));
+      if (signal?.aborted) {
+        throw new Error('Completion aborted');
+      }
     }
-    encoded.push({...message, content});
+    encoded.push({...message, content} as T);
   }
   return encoded;
 }
@@ -681,22 +752,28 @@ export async function streamChatCompletion(
   timeoutMs?: number,
   serverType?: string,
 ): Promise<CompletionResult> {
-  const url = `${normalizeUrl(serverUrl)}/v1/chat/completions`;
+  if (signal?.aborted) {
+    throw new Error('Completion aborted');
+  }
+  const url = buildOpenAIUrl(serverUrl, 'chat/completions', serverType);
   const connectionTimeoutMs = resolveTimeout(timeoutMs, CONNECTION_TIMEOUT_MS);
   const idleTimeoutMs = resolveTimeout(timeoutMs, IDLE_TIMEOUT_MS);
   // Only pay the async encode when a local image is actually attached; the
   // common text path stays synchronous so callers see the request built in the
   // same tick.
   const encodedMessages = hasLocalImageAttachment(params.messages)
-    ? await encodeMessagesForRemote(params.messages)
+    ? await encodeMessagesForRemote(params.messages, signal)
     : params.messages;
+  if (signal?.aborted) {
+    throw new Error('Completion aborted');
+  }
 
   return new Promise<CompletionResult>((resolve, reject) => {
     const xhr = new XMLHttpRequest();
     xhr.open('POST', url);
 
     // Set headers
-    const headers = buildHeaders(apiKey);
+    const headers = buildHeaders(apiKey, serverType);
     for (const [key, value] of Object.entries(headers)) {
       xhr.setRequestHeader(key, value);
     }
@@ -719,6 +796,7 @@ export async function streamChatCompletion(
     const connectionTimer = setTimeout(() => {
       if (!settled) {
         settled = true;
+        cleanup();
         xhr.abort();
         reject(new Error('Connection timed out'));
       }
@@ -852,31 +930,7 @@ export async function streamChatCompletion(
         settled = true;
         cleanup();
 
-        let errorMessage = `Server error: ${xhr.status}`;
-        try {
-          const errorBody = JSON.parse(xhr.responseText);
-          const detail =
-            errorBody?.error?.message || errorBody?.error || xhr.responseText;
-          errorMessage = `Server error: ${xhr.status} — ${detail}`;
-          console.log(
-            '[OpenAI] Error:',
-            errorBody?.error?.message || errorBody?.error,
-          );
-        } catch {
-          if (xhr.responseText) {
-            errorMessage = `Server error: ${xhr.status} — ${xhr.responseText.substring(0, 200)}`;
-            console.log(
-              '[OpenAI] Error (raw):',
-              xhr.responseText.substring(0, 200),
-            );
-          }
-        }
-
-        if (xhr.status === 401) {
-          reject(new Error('Unauthorized: Invalid or missing API key'));
-        } else {
-          reject(new Error(errorMessage));
-        }
+        reject(xhrHttpError(xhr.status, xhr.responseText));
         xhr.abort();
       }
     };
@@ -1042,55 +1096,91 @@ export async function streamChatCompletion(
 
     // Only include params with meaningful values — some providers (e.g. OpenAI
     // with newer models) reject unsupported or empty params with 400 errors.
+    const effectiveParams = applyGenerationParameterModes(params);
     const requestBody: Record<string, any> = {
-      model: params.model,
+      model: effectiveParams.model,
       messages: encodedMessages,
       stream: true,
     };
-    if (params.temperature != null) {
-      requestBody.temperature = params.temperature;
+    if (effectiveParams.temperature !== undefined) {
+      requestBody.temperature = effectiveParams.temperature;
     }
-    if (params.top_p != null) {
-      requestBody.top_p = params.top_p;
+    if (effectiveParams.top_p !== undefined) {
+      requestBody.top_p = effectiveParams.top_p;
     }
-    if (params.max_tokens != null) {
-      requestBody.max_completion_tokens = params.max_tokens;
+    if (effectiveParams.max_tokens !== undefined) {
+      requestBody.max_completion_tokens = effectiveParams.max_tokens;
     }
-    if (params.stop && params.stop.length > 0) {
-      requestBody.stop = params.stop;
+    if (
+      effectiveParams.stop !== undefined &&
+      (effectiveParams.stop.length > 0 ||
+        params.generationParameterModes?.stop === 'send')
+    ) {
+      requestBody.stop = effectiveParams.stop;
+    }
+    const extensionKeys = [
+      'top_k',
+      'min_p',
+      'xtc_threshold',
+      'xtc_probability',
+      'typical_p',
+      'mirostat',
+      'mirostat_tau',
+      'mirostat_eta',
+      'seed',
+      'n_probs',
+      'jinja',
+      'enable_thinking',
+    ] as const;
+    for (const key of extensionKeys) {
+      if (effectiveParams[key] !== undefined) {
+        requestBody[key] = effectiveParams[key];
+      }
+    }
+    if (effectiveParams.penalty_last_n !== undefined) {
+      requestBody.repeat_last_n = effectiveParams.penalty_last_n;
+    }
+    if (effectiveParams.penalty_repeat !== undefined) {
+      requestBody.repeat_penalty = effectiveParams.penalty_repeat;
+    }
+    if (effectiveParams.penalty_freq !== undefined) {
+      requestBody.frequency_penalty = effectiveParams.penalty_freq;
+    }
+    if (effectiveParams.penalty_present !== undefined) {
+      requestBody.presence_penalty = effectiveParams.penalty_present;
     }
     // Only attach when the caller actually supplied them — empty arrays
     // cause some servers (and their schema validators) to choke.
-    if (params.tools && params.tools.length > 0) {
-      requestBody.tools = params.tools;
+    if (effectiveParams.tools && effectiveParams.tools.length > 0) {
+      requestBody.tools = effectiveParams.tools;
     }
-    if (params.tool_choice !== undefined) {
-      requestBody.tool_choice = params.tool_choice;
+    if (effectiveParams.tool_choice !== undefined) {
+      requestBody.tool_choice = effectiveParams.tool_choice;
     }
-    if (params.response_format) {
+    if (effectiveParams.response_format) {
       // OpenAI requires `name` inside json_schema; llama.cpp / Ollama /
       // LM Studio ignore it. Inject a default so the same call works
       // everywhere.
       if (
-        params.response_format.type === 'json_schema' &&
-        !params.response_format.json_schema.name
+        effectiveParams.response_format.type === 'json_schema' &&
+        !effectiveParams.response_format.json_schema.name
       ) {
         requestBody.response_format = {
-          ...params.response_format,
+          ...effectiveParams.response_format,
           json_schema: {
-            ...params.response_format.json_schema,
+            ...effectiveParams.response_format.json_schema,
             name: 'response',
           },
         };
       } else {
-        requestBody.response_format = params.response_format;
+        requestBody.response_format = effectiveParams.response_format;
       }
     }
     // Per-serverType reasoning controls. Merge chat_template_kwargs rather than
     // overwrite so a future caller-supplied kwarg is preserved.
     const reasoningPayload = buildReasoningPayload(
       serverType,
-      params.reasoning,
+      effectiveParams.reasoning,
     );
     for (const [key, value] of Object.entries(reasoningPayload)) {
       if (key === 'chat_template_kwargs') {
@@ -1102,6 +1192,10 @@ export async function streamChatCompletion(
         requestBody[key] = value;
       }
     }
-    xhr.send(JSON.stringify(requestBody));
+    const finalRequestBody = applyGenerationParameterModes({
+      ...requestBody,
+      generationParameterModes: params.generationParameterModes,
+    });
+    xhr.send(JSON.stringify(finalRequestBody));
   });
 }

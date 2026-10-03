@@ -53,7 +53,7 @@ import {t} from '../../locales';
 import {getModelMemoryRequirement} from '../../utils/memoryEstimator';
 import {CONTEXT_LADDER} from '../../utils/bannerVariantResolver';
 
-import {chatSessionStore, modelStore} from '../../store';
+import {chatSessionStore, modelStore, startupSelectionStore} from '../../store';
 
 import {MessageType, User} from '../../utils/types';
 import {Pal} from '../../types/pal';
@@ -394,6 +394,12 @@ export const ChatView = observer(
       if (modelStore.benchmarkActive) {
         return;
       }
+      if (
+        startupSelectionStore.isRestoring ||
+        startupSelectionStore.suppressPalDefaultAutoLoad
+      ) {
+        return;
+      }
       if (activePal) {
         if (!modelStore.activeModel && activePal.defaultModel) {
           const palDefaultModel = modelStore.availableModels.find(
@@ -515,12 +521,13 @@ export const ChatView = observer(
         if (chatSessionStore.isEditMode) {
           await chatSessionStore.commitEdit();
         }
-        onSendPress(message);
+        const sessionId = chatSessionStore.activeSessionId;
         setInputText('');
-        if (chatSessionStore.activeSessionId) {
-          chatSessionStore.clearDraft(chatSessionStore.activeSessionId);
+        if (sessionId) {
+          chatSessionStore.clearDraft(sessionId);
         }
         Keyboard.dismiss();
+        return onSendPress(message);
       },
       [onSendPress],
     );
@@ -733,15 +740,17 @@ export const ChatView = observer(
         });
       }
 
-      baseItems.push({
-        label: reportContentLabel,
-        onPress: () => {
-          setIsReportSheetVisible(true);
-          handleMenuDismiss();
-        },
-        icon: () => <AlertIcon stroke={theme.colors.primary} />,
-        disabled: false,
-      });
+      if (__ENABLE_PALSHUB__) {
+        baseItems.push({
+          label: reportContentLabel,
+          onPress: () => {
+            setIsReportSheetVisible(true);
+            handleMenuDismiss();
+          },
+          icon: () => <AlertIcon stroke={theme.colors.primary} />,
+          disabled: false,
+        });
+      }
 
       return baseItems;
     }, [
@@ -1130,12 +1139,15 @@ export const ChatView = observer(
           </View>
 
           {/* Main chat container */}
-          <Reanimated.View style={styles.chatContainer}>
+          <Reanimated.View
+            testID="chat-message-container"
+            style={styles.chatContainer}>
             {customContent}
             {renderChatList()}
 
             {/* Chat input */}
             <Reanimated.View
+              testID="chat-composer-container"
               onLayout={onLayoutChatInput}
               style={[
                 styles.inputContainer,
@@ -1164,6 +1176,12 @@ export const ChatView = observer(
                   sendButtonVisibilityMode,
                   showImageUpload,
                   isVisionEnabled,
+                  isDictationEligible: isFocused,
+                  dictationContextKey: [
+                    chatSessionStore.activeSessionId ?? '__new_chat__',
+                    activePal?.id ?? '',
+                    chatSessionStore.editingMessageId ?? '',
+                  ].join(':'),
                   defaultImages: inputImages,
                   onDefaultImagesChange: setInputImages,
                   textInputProps: {
@@ -1235,10 +1253,12 @@ export const ChatView = observer(
           </Menu>
 
           {/* Content report sheet */}
-          <ContentReportSheet
-            isVisible={isReportSheetVisible}
-            onClose={() => setIsReportSheetVisible(false)}
-          />
+          {__ENABLE_PALSHUB__ ? (
+            <ContentReportSheet
+              isVisible={isReportSheetVisible}
+              onClose={() => setIsReportSheetVisible(false)}
+            />
+          ) : null}
 
           {increaseSheetOpen && activeModel && currentNCtx !== undefined ? (
             <IncreaseContextSheet

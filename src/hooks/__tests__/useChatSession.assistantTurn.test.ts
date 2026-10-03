@@ -22,6 +22,9 @@ const mockAssistant = {id: 'h3o3lc5xj'};
 
 beforeEach(() => {
   jest.clearAllMocks();
+  (chatSessionStore.persistFinalActiveStep as jest.Mock).mockResolvedValue(
+    undefined,
+  );
 
   palStore.pals = [] as any;
   chatSessionStore.sessions = sessionFixtures as any;
@@ -90,8 +93,12 @@ describe('useChatSession — AssistantTurn integration', () => {
     expect(chatSessionStore.pushAgentStep).toHaveBeenCalled();
     // Per-token writes go through updateActiveStepStreaming.
     expect(chatSessionStore.updateActiveStepStreaming).toHaveBeenCalled();
-    // step_finished triggers finalizeActiveStep.
-    expect(chatSessionStore.finalizeActiveStep).toHaveBeenCalled();
+    // step_finished atomically persists the authoritative final snapshot.
+    expect(chatSessionStore.persistFinalActiveStep).toHaveBeenCalledWith(
+      expect.any(String),
+      expect.any(String),
+      expect.objectContaining({content: 'Hello there'}),
+    );
     // run_finished writes timings.
     expect(chatSessionStore.updateMessage).toHaveBeenCalledWith(
       expect.any(String),
@@ -103,6 +110,52 @@ describe('useChatSession — AssistantTurn integration', () => {
         }),
       }),
     );
+  });
+
+  it('persists final Responses state exactly once on the active step', async () => {
+    const responsesState = {
+      version: 1 as const,
+      binding: {
+        wireApi: 'responses' as const,
+        serverUrl: 'https://api.example.test',
+        modelId: 'responses-model',
+      },
+      output: [
+        {
+          type: 'message' as const,
+          id: 'message-1',
+          role: 'assistant' as const,
+          content: [{type: 'output_text' as const, text: 'final'}],
+        },
+      ],
+      terminalStatus: 'completed' as const,
+    };
+    if (modelStore.context) {
+      modelStore.context.completion = jest.fn().mockResolvedValue({
+        text: 'final',
+        content: 'final',
+        terminal_status: 'completed',
+        provider_state: {wireApi: 'responses', responses: responsesState},
+      });
+    }
+
+    const {result} = renderHook(() =>
+      useChatSession({current: null}, textMessage.author, mockAssistant),
+    );
+    await act(async () => {
+      await result.current.handleSendPress(textMessage);
+    });
+
+    const persisted = (
+      chatSessionStore.persistFinalActiveStep as jest.Mock
+    ).mock.calls.filter(call => call[2]?.responsesState !== undefined);
+    expect(persisted).toHaveLength(1);
+    expect(persisted[0][2]).toEqual({
+      content: 'final',
+      reasoningContent: undefined,
+      toolCalls: undefined,
+      responsesState,
+    });
   });
 
   it('#2 run_finished with hitMaxTurns:true → metadata.hitMaxTurns written, console.warn emitted, no run_failed surfacing', async () => {
@@ -562,7 +615,8 @@ describe('useChatSession — AssistantTurn integration', () => {
       });
     }
 
-    const appendToolCallSpy = chatSessionStore.appendToolCall as jest.Mock;
+    const persistFinalStepSpy =
+      chatSessionStore.persistFinalActiveStep as jest.Mock;
     const appendToolOutcomeSpy =
       chatSessionStore.appendToolOutcome as jest.Mock;
 
@@ -573,17 +627,19 @@ describe('useChatSession — AssistantTurn integration', () => {
       await result.current.handleSendPress(textMessage);
     });
 
-    expect(appendToolCallSpy).toHaveBeenCalled();
+    expect(persistFinalStepSpy).toHaveBeenCalled();
     expect(appendToolOutcomeSpy).toHaveBeenCalled();
 
     // For every appendToolCall invocation, every call.id MUST match a
     // subsequently-appended outcome.callId (within the same step).
     // The invariant: step.toolCalls[i].id === outcome.callId by
     // construction.
-    const callsArgs = appendToolCallSpy.mock.calls;
+    const callsArgs = persistFinalStepSpy.mock.calls.filter(
+      c => c[2]?.toolCalls?.length,
+    );
     const outcomeArgs = appendToolOutcomeSpy.mock.calls;
     const calledIds = callsArgs.flatMap(c =>
-      (c[2] as Array<{id: string}>).map(x => x.id),
+      (c[2].toolCalls as Array<{id: string}>).map(x => x.id),
     );
     const outcomeCallIds = outcomeArgs.map(
       c => (c[2] as {callId: string}).callId,
@@ -597,6 +653,173 @@ describe('useChatSession — AssistantTurn integration', () => {
 
     // Cleanup
     (talentRegistry as any).engines.delete('calculate');
+  });
+
+  it('awaits atomic final-step persistence before the first handler and engine follow-up', async () => {
+    const order: string[] = [];
+    const talent: TalentEngine = {
+      name: 'calculate',
+      execute: async () => {
+        order.push('handler');
+        return {type: 'text', summary: '4'} as TalentResult;
+      },
+      toToolDefinition: () => ({
+        type: 'function',
+        function: {name: 'calculate', description: '', parameters: {}},
+      }),
+    };
+    talentRegistry.register(talent);
+    palStore.pals = [
+      {
+        id: 'pal-1',
+        type: 'local',
+        name: 'Calc Pal',
+        systemPrompt: '',
+        parameters: {},
+        parameterSchema: [],
+        isSystemPromptChanged: false,
+        useAIPrompt: false,
+        source: 'local',
+        pact: {talents: [{name: 'calculate', necessity: 'optional'}]},
+      } as any,
+    ];
+    chatSessionStore.sessions = [
+      {
+        id: 'session-1',
+        title: '',
+        date: '',
+        messages: [],
+        completionSettings: {},
+        settingsSource: 'pal',
+        activePalId: 'pal-1',
+      } as any,
+    ];
+    chatSessionStore.activeSessionId = 'session-1';
+    (chatSessionStore.persistFinalActiveStep as jest.Mock).mockImplementation(
+      async (_id, _sessionId, step) => {
+        order.push(step.toolCalls?.length ? 'persist-tool' : 'persist-final');
+      },
+    );
+    let turn = 0;
+    if (modelStore.context) {
+      modelStore.context.completion = jest.fn().mockImplementation(async () => {
+        turn += 1;
+        order.push(`engine-${turn}`);
+        return turn === 1
+          ? {
+              text: '',
+              content: 'final-only preamble',
+              tool_calls: [
+                {
+                  id: 'call-1',
+                  type: 'function',
+                  function: {name: 'calculate', arguments: '{}'},
+                },
+              ],
+            }
+          : {text: 'done', content: 'done'};
+      });
+    }
+
+    const {result} = renderHook(() =>
+      useChatSession({current: null}, textMessage.author, mockAssistant),
+    );
+    await act(async () => {
+      await result.current.handleSendPress(textMessage);
+    });
+
+    expect(order.indexOf('persist-tool')).toBeLessThan(
+      order.indexOf('handler'),
+    );
+    expect(order.indexOf('handler')).toBeLessThan(order.indexOf('engine-2'));
+    expect(
+      (chatSessionStore.persistFinalActiveStep as jest.Mock).mock.calls[0][2],
+    ).toEqual(
+      expect.objectContaining({
+        content: 'final-only preamble',
+        toolCalls: [
+          expect.objectContaining({
+            id: 'call-1',
+            function: expect.objectContaining({name: 'calculate'}),
+          }),
+        ],
+      }),
+    );
+
+    (talentRegistry as any).engines.delete('calculate');
+  });
+
+  it('persistence rejection halts the generator with zero tool executions or follow-up', async () => {
+    const errorSpy = jest.spyOn(console, 'error').mockImplementation(() => {});
+    const execute = jest.fn(
+      async () => ({type: 'text', summary: 'must not run'}) as TalentResult,
+    );
+    const talent: TalentEngine = {
+      name: 'calculate',
+      execute,
+      toToolDefinition: () => ({
+        type: 'function',
+        function: {name: 'calculate', description: '', parameters: {}},
+      }),
+    };
+    talentRegistry.register(talent);
+    palStore.pals = [
+      {
+        id: 'pal-1',
+        type: 'local',
+        name: 'Calc Pal',
+        systemPrompt: '',
+        parameters: {},
+        parameterSchema: [],
+        isSystemPromptChanged: false,
+        useAIPrompt: false,
+        source: 'local',
+        pact: {talents: [{name: 'calculate', necessity: 'optional'}]},
+      } as any,
+    ];
+    chatSessionStore.sessions = [
+      {
+        id: 'session-1',
+        title: '',
+        date: '',
+        messages: [],
+        completionSettings: {},
+        settingsSource: 'pal',
+        activePalId: 'pal-1',
+      } as any,
+    ];
+    chatSessionStore.activeSessionId = 'session-1';
+    (
+      chatSessionStore.persistFinalActiveStep as jest.Mock
+    ).mockRejectedValueOnce(new Error('atomic write failed'));
+    if (modelStore.context) {
+      modelStore.context.completion = jest.fn().mockResolvedValue({
+        text: '',
+        content: '',
+        tool_calls: [
+          {
+            id: 'call-1',
+            type: 'function',
+            function: {name: 'calculate', arguments: '{}'},
+          },
+        ],
+      });
+    }
+
+    const {result} = renderHook(() =>
+      useChatSession({current: null}, textMessage.author, mockAssistant),
+    );
+    await act(async () => {
+      await result.current.handleSendPress(textMessage);
+    });
+
+    expect(execute).not.toHaveBeenCalled();
+    expect(modelStore.context?.completion).toHaveBeenCalledTimes(1);
+    expect(chatSessionStore.appendToolOutcome).not.toHaveBeenCalled();
+    expect(errorSpy).toHaveBeenCalledWith('Completion error:', {name: 'Error'});
+
+    (talentRegistry as any).engines.delete('calculate');
+    errorSpy.mockRestore();
   });
 
   it('handleStopPress aborts the in-flight runner before stopCompletion fires', async () => {
@@ -729,7 +952,8 @@ describe('useChatSession — AssistantTurn integration', () => {
       });
     }
 
-    const appendToolCallSpy = chatSessionStore.appendToolCall as jest.Mock;
+    const persistFinalStepSpy =
+      chatSessionStore.persistFinalActiveStep as jest.Mock;
     const appendToolOutcomeSpy =
       chatSessionStore.appendToolOutcome as jest.Mock;
 
@@ -741,11 +965,11 @@ describe('useChatSession — AssistantTurn integration', () => {
     });
 
     // appendToolCall called once for the multi-tool step (turn 0).
-    const toolCallCalls = appendToolCallSpy.mock.calls.filter(
-      c => (c[2] as Array<{id: string}>).length === 2,
+    const toolCallCalls = persistFinalStepSpy.mock.calls.filter(
+      c => c[2]?.toolCalls?.length === 2,
     );
     expect(toolCallCalls).toHaveLength(1);
-    const calls = toolCallCalls[0][2] as Array<{
+    const calls = toolCallCalls[0][2].toolCalls as Array<{
       id: string;
       function: {name: string};
     }>;
@@ -864,7 +1088,8 @@ describe('useChatSession — AssistantTurn integration', () => {
       });
     }
 
-    const appendToolCallSpy = chatSessionStore.appendToolCall as jest.Mock;
+    const persistFinalStepSpy =
+      chatSessionStore.persistFinalActiveStep as jest.Mock;
     const appendToolOutcomeSpy =
       chatSessionStore.appendToolOutcome as jest.Mock;
 
@@ -876,12 +1101,15 @@ describe('useChatSession — AssistantTurn integration', () => {
     });
 
     // appendToolCall fired twice — once per tool-using step.
-    expect(appendToolCallSpy).toHaveBeenCalledTimes(2);
+    const persistedToolSteps = persistFinalStepSpy.mock.calls.filter(
+      c => c[2]?.toolCalls?.length,
+    );
+    expect(persistedToolSteps).toHaveLength(2);
 
     // Each appendToolCall list has exactly one call with a non-empty
     // synthetic id; ids are distinct across steps (seed + turn).
-    const allCalledIds = appendToolCallSpy.mock.calls.flatMap(c =>
-      (c[2] as Array<{id: string}>).map(x => x.id),
+    const allCalledIds = persistedToolSteps.flatMap(c =>
+      (c[2].toolCalls as Array<{id: string}>).map(x => x.id),
     );
     expect(allCalledIds).toHaveLength(2);
     expect(allCalledIds.every(id => id.length > 0)).toBe(true);
@@ -966,7 +1194,8 @@ describe('useChatSession — AssistantTurn integration', () => {
       });
     }
 
-    const appendToolCallSpy = chatSessionStore.appendToolCall as jest.Mock;
+    const persistFinalStepSpy =
+      chatSessionStore.persistFinalActiveStep as jest.Mock;
     const appendToolOutcomeSpy =
       chatSessionStore.appendToolOutcome as jest.Mock;
 
@@ -981,15 +1210,18 @@ describe('useChatSession — AssistantTurn integration', () => {
     await act(async () => {
       // Spin a few microtasks until appendToolCall fires.
       for (let i = 0; i < 30; i++) {
-        if (appendToolCallSpy.mock.calls.length > 0) {
+        if (persistFinalStepSpy.mock.calls.some(c => c[2]?.toolCalls?.length)) {
           break;
         }
         await Promise.resolve();
       }
     });
 
-    expect(appendToolCallSpy).toHaveBeenCalled();
-    const calls = appendToolCallSpy.mock.calls[0][2] as Array<{
+    const persistedToolCall = persistFinalStepSpy.mock.calls.find(
+      c => c[2]?.toolCalls?.length,
+    );
+    expect(persistedToolCall).toBeDefined();
+    const calls = persistedToolCall![2].toolCalls as Array<{
       id: string;
     }>;
     expect(calls).toHaveLength(1);

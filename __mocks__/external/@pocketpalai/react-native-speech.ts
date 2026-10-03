@@ -10,6 +10,7 @@
 
 type FinishListener = (event: {utteranceId?: string}) => void;
 const finishListeners = new Set<FinishListener>();
+const errorListeners = new Set<FinishListener>();
 
 const onFinish = jest.fn((listener: FinishListener) => {
   finishListeners.add(listener);
@@ -18,6 +19,10 @@ const onFinish = jest.fn((listener: FinishListener) => {
       finishListeners.delete(listener);
     }),
   };
+});
+const onError = jest.fn((listener: FinishListener) => {
+  errorListeners.add(listener);
+  return {remove: jest.fn(() => errorListeners.delete(listener))};
 });
 
 /**
@@ -31,12 +36,19 @@ export const __emitFinish = (utteranceId?: string) => {
   }
 };
 
+export const __emitError = () => {
+  for (const listener of Array.from(errorListeners)) {
+    listener({});
+  }
+};
+
 /** Test helper: number of currently-registered onFinish listeners. */
 export const __finishListenerCount = () => finishListeners.size;
 
 /** Test helper: clear listeners between tests. */
 export const __resetFinishListeners = () => {
   finishListeners.clear();
+  errorListeners.clear();
 };
 
 export interface MockSpeechStream {
@@ -75,6 +87,7 @@ const Speech = {
   initialize: jest.fn().mockResolvedValue(undefined),
   speak: jest.fn().mockResolvedValue(undefined),
   stop: jest.fn().mockResolvedValue(undefined),
+  isSpeaking: jest.fn().mockResolvedValue(false),
   release: jest.fn().mockResolvedValue(undefined),
   getAvailableVoices: jest.fn().mockResolvedValue([
     {
@@ -86,6 +99,7 @@ const Speech = {
   ]),
   createSpeechStream,
   onFinish,
+  onError,
 };
 
 export default Speech;

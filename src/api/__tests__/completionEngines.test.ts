@@ -5,12 +5,17 @@ import {
   OpenAICompletionEngine,
 } from '../completionEngines';
 import * as openaiModule from '../openai';
+import * as responsesModule from '../responses';
 
 jest.mock('../openai', () => ({
   streamChatCompletion: jest.fn(),
 }));
+jest.mock('../responses', () => ({
+  streamResponses: jest.fn(),
+}));
 
 const mockedStreamChat = openaiModule.streamChatCompletion as jest.Mock;
+const mockedStreamResponses = responsesModule.streamResponses as jest.Mock;
 
 describe('LocalCompletionEngine', () => {
   let mockContext: LlamaContext;
@@ -134,6 +139,42 @@ describe('LocalCompletionEngine', () => {
     await engine.stopCompletion();
     expect(mockContext.stopCompletion).toHaveBeenCalled();
   });
+
+  it('removes omitted native arguments while preserving valid Send sentinels', async () => {
+    (mockContext.completion as jest.Mock).mockResolvedValueOnce({
+      text: '',
+      content: '',
+    });
+
+    await engine.completion({
+      temperature: 0.7,
+      top_p: 0,
+      seed: -1,
+      jinja: false,
+      generationParameterModes: {
+        temperature: 'omit',
+        top_p: 'send',
+        seed: 'send',
+        jinja: 'send',
+      },
+    });
+
+    const nativeParams = (mockContext.completion as jest.Mock).mock.calls[0][0];
+    expect(
+      Object.prototype.hasOwnProperty.call(nativeParams, 'temperature'),
+    ).toBe(false);
+    expect(Object.prototype.hasOwnProperty.call(nativeParams, 'top_p')).toBe(
+      true,
+    );
+    expect(Object.prototype.hasOwnProperty.call(nativeParams, 'seed')).toBe(
+      true,
+    );
+    expect(Object.prototype.hasOwnProperty.call(nativeParams, 'jinja')).toBe(
+      true,
+    );
+    expect(nativeParams).toMatchObject({top_p: 0, seed: -1, jinja: false});
+    expect(nativeParams).not.toHaveProperty('generationParameterModes');
+  });
 });
 
 describe('OpenAICompletionEngine', () => {
@@ -219,6 +260,43 @@ describe('OpenAICompletionEngine', () => {
     expect(mockedStreamChat).toHaveBeenCalledWith(
       expect.objectContaining({
         tools: [calculateTool],
+        tool_choice: 'auto',
+      }),
+      'http://localhost:1234',
+      'sk-key',
+      expect.any(Object),
+      undefined,
+      undefined,
+      undefined,
+    );
+  });
+
+  it('forwards every Scout function to Chat Completions unchanged', async () => {
+    mockedStreamChat.mockResolvedValueOnce({text: '', content: ''});
+    const scoutTools = [
+      'web_search',
+      'read_url',
+      'calculate',
+      'datetime',
+      'render_html',
+    ].map(name => ({
+      type: 'function' as const,
+      function: {
+        name,
+        description: `${name} description`,
+        parameters: {type: 'object'},
+      },
+    }));
+
+    await engine.completion({
+      messages: [{role: 'user', content: 'Help me research something'}],
+      tools: scoutTools,
+      tool_choice: 'auto',
+    } as any);
+
+    expect(mockedStreamChat).toHaveBeenCalledWith(
+      expect.objectContaining({
+        tools: scoutTools,
         tool_choice: 'auto',
       }),
       'http://localhost:1234',
@@ -365,13 +443,13 @@ describe('OpenAICompletionEngine', () => {
     );
   });
 
-  it('forwards params.reasoning and the constructed serverType', async () => {
+  it('forwards params.reasoning and the constructed GitHub Copilot serverType', async () => {
     const typedEngine = new OpenAICompletionEngine(
       'http://localhost:1234',
       'test-model',
       'sk-key',
       undefined,
-      'Ollama',
+      'GitHub Copilot',
     );
     mockedStreamChat.mockResolvedValueOnce({text: '', content: ''});
 
@@ -387,7 +465,211 @@ describe('OpenAICompletionEngine', () => {
       expect.any(Object),
       undefined,
       undefined,
-      'Ollama',
+      'GitHub Copilot',
+    );
+  });
+
+  it('forwards every explicitly enabled remote-only generation parameter', async () => {
+    mockedStreamChat.mockResolvedValueOnce({text: '', content: ''});
+
+    await engine.completion({
+      messages: [{role: 'user', content: 'Hi'}],
+      top_k: 0,
+      min_p: 0,
+      xtc_threshold: 0,
+      xtc_probability: 0,
+      typical_p: 0,
+      penalty_last_n: -1,
+      penalty_repeat: 0,
+      penalty_freq: 0,
+      penalty_present: 0,
+      mirostat: 0,
+      mirostat_tau: 0,
+      mirostat_eta: 0,
+      seed: -1,
+      n_probs: 0,
+      jinja: false,
+      enable_thinking: false,
+      generationParameterModes: {
+        top_k: 'send',
+        min_p: 'send',
+        xtc_threshold: 'send',
+        xtc_probability: 'send',
+        typical_p: 'send',
+        penalty_last_n: 'send',
+        penalty_repeat: 'send',
+        penalty_freq: 'send',
+        penalty_present: 'send',
+        mirostat: 'send',
+        mirostat_tau: 'send',
+        mirostat_eta: 'send',
+        seed: 'send',
+        n_probs: 'send',
+        jinja: 'send',
+        enable_thinking: 'send',
+      },
+    } as any);
+
+    expect(mockedStreamChat).toHaveBeenCalledWith(
+      expect.objectContaining({
+        top_k: 0,
+        min_p: 0,
+        xtc_threshold: 0,
+        xtc_probability: 0,
+        typical_p: 0,
+        penalty_last_n: -1,
+        penalty_repeat: 0,
+        penalty_freq: 0,
+        penalty_present: 0,
+        mirostat: 0,
+        mirostat_tau: 0,
+        mirostat_eta: 0,
+        seed: -1,
+        n_probs: 0,
+        jinja: false,
+        enable_thinking: false,
+      }),
+      expect.anything(),
+      expect.anything(),
+      expect.any(AbortSignal),
+      undefined,
+      undefined,
+      undefined,
+    );
+  });
+
+  it('dispatches Responses with replay input and immutable binding', async () => {
+    const responsesEngine = new OpenAICompletionEngine(
+      'https://api.githubcopilot.com',
+      'gpt-5.6-terra',
+      'test-key',
+      45000,
+      'GitHub Copilot',
+      {
+        modelId: 'server-1/gpt-5.6-terra',
+        serverId: 'server-1',
+        remoteModelId: 'gpt-5.6-terra',
+        url: 'https://api.githubcopilot.com',
+        serverType: 'GitHub Copilot',
+        wireApi: 'responses',
+        credentialRevision: 3,
+        protocolCapabilities: {
+          advertisedEndpoints: ['responses'],
+          reasoningEffortValues: ['low', 'high'],
+        },
+      },
+    );
+    mockedStreamResponses.mockResolvedValueOnce({
+      text: 'done',
+      content: 'done',
+      terminal_status: 'completed',
+    });
+
+    const result = await responsesEngine.completion({
+      messages: [{role: 'user', content: 'Synthetic request'}],
+      tools: [],
+      reasoning: {enabled: true, effort: 'high'},
+    } as any);
+
+    expect(mockedStreamChat).not.toHaveBeenCalled();
+    expect(mockedStreamResponses).toHaveBeenCalledWith(
+      expect.objectContaining({
+        model: 'gpt-5.6-terra',
+        messages: [{role: 'user', content: 'Synthetic request'}],
+        reasoning: {enabled: true, effort: 'high'},
+      }),
+      'https://api.githubcopilot.com',
+      'test-key',
+      expect.any(AbortSignal),
+      undefined,
+      45000,
+      'GitHub Copilot',
+      expect.objectContaining({
+        wireApi: 'responses',
+        serverId: 'server-1',
+        modelId: 'gpt-5.6-terra',
+        credentialRevision: 3,
+      }),
+      expect.objectContaining({
+        input: [{role: 'user', content: 'Synthetic request'}],
+        includeReasoningEncryptedContent: true,
+        parameterPolicy: {
+          sampling: {
+            temperature: {
+              supported: false,
+              source: 'provider-verification',
+              reasoningModes: ['absent'],
+            },
+          },
+          reasoning: expect.objectContaining({
+            supportsEffort: true,
+            supportsEncryptedContent: true,
+          }),
+        },
+      }),
+    );
+    expect(result.content).toBe('done');
+  });
+
+  it('does not apply provider evidence to Chat Completions', async () => {
+    const chatEngine = new OpenAICompletionEngine(
+      'https://api.githubcopilot.com',
+      'gpt-5.6-terra',
+      'test-key',
+      undefined,
+      'GitHub Copilot',
+    );
+    mockedStreamChat.mockResolvedValueOnce({text: 'ok', content: 'ok'});
+
+    await chatEngine.completion({
+      messages: [{role: 'user', content: 'test'}],
+      temperature: 0.7,
+      top_p: 0.9,
+    } as any);
+
+    expect(mockedStreamChat).toHaveBeenCalledWith(
+      expect.objectContaining({temperature: 0.7, top_p: 0.9}),
+      expect.anything(),
+      expect.anything(),
+      expect.anything(),
+      undefined,
+      undefined,
+      'GitHub Copilot',
+    );
+    expect(mockedStreamResponses).not.toHaveBeenCalled();
+  });
+
+  it('strips Responses metadata before Chat Completions', async () => {
+    mockedStreamChat.mockResolvedValueOnce({text: 'ok', content: 'ok'});
+    await engine.completion({
+      messages: [
+        {
+          role: 'assistant',
+          content: 'prior',
+          responsesState: {
+            version: 1,
+            binding: {
+              wireApi: 'responses',
+              serverUrl: 'https://other.test',
+              modelId: 'other',
+            },
+            output: [],
+            terminalStatus: 'completed',
+          },
+        },
+      ],
+    } as any);
+
+    expect(mockedStreamChat).toHaveBeenCalledWith(
+      expect.objectContaining({
+        messages: [{role: 'assistant', content: 'prior'}],
+      }),
+      expect.anything(),
+      expect.anything(),
+      expect.anything(),
+      undefined,
+      undefined,
+      undefined,
     );
   });
 });

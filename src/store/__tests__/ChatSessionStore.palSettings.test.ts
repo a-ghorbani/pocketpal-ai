@@ -144,6 +144,133 @@ describe('ChatSessionStore - Pal Settings', () => {
       expect(result.top_k).toBe(40); // From session settings (default value)
       expect(result.n_predict).toBe(200); // From session settings
     });
+
+    it('places a remote model override between Pal and session layers', async () => {
+      chatSessionStore.newChatCompletionSettings = {
+        temperature: 0.8,
+        generationParameterModes: {temperature: 'send'},
+      };
+      palStore.pals.push({
+        type: 'local',
+        id: 'test-pal-id',
+        name: 'Test Pal',
+        description: 'Test pal for settings',
+        systemPrompt: 'Test prompt',
+        isSystemPromptChanged: false,
+        useAIPrompt: false,
+        parameters: {},
+        parameterSchema: [],
+        completionSettings: {
+          temperature: 0.6,
+          generationParameterModes: {temperature: 'send'},
+        },
+        source: 'local',
+      });
+      const remoteOverride: CompletionParams = {
+        temperature: 0.4,
+        generationParameterModes: {temperature: 'omit'},
+      };
+
+      const modelResult = await chatSessionStore.resolveCompletionSettings(
+        undefined,
+        'test-pal-id',
+        remoteOverride,
+      );
+
+      expect(modelResult.temperature).toBe(0.4);
+      expect(modelResult.generationParameterModes?.temperature).toBe('omit');
+
+      chatSessionStore.sessions = [
+        {
+          id: 'test-session',
+          title: 'Test Session',
+          date: '2024-01-01',
+          messages: [],
+          completionSettings: {
+            temperature: 0.2,
+            generationParameterModes: {temperature: 'send'},
+          },
+          activePalId: 'test-pal-id',
+          settingsSource: 'custom',
+        },
+      ];
+      const sessionResult = await chatSessionStore.resolveCompletionSettings(
+        'test-session',
+        'test-pal-id',
+        remoteOverride,
+      );
+
+      expect(sessionResult.temperature).toBe(0.2);
+      expect(sessionResult.generationParameterModes?.temperature).toBe('send');
+    });
+
+    it.each([
+      ['new chat', undefined, undefined],
+      [
+        'existing custom session',
+        'scout-session',
+        {
+          id: 'scout-session',
+          title: 'Scout session',
+          date: '2026-09-14',
+          messages: [],
+          completionSettings: {
+            ...defaultCompletionSettings,
+            temperature: 0.25,
+          },
+          activePalId: 'scout-id',
+          settingsSource: 'custom' as const,
+        },
+      ],
+    ])(
+      'keeps all Scout tool schemas for a %s',
+      async (_label, sessionId, session) => {
+        const scout: Pal = {
+          type: 'local',
+          id: 'scout-id',
+          name: 'Scout',
+          systemPrompt: 'Scout prompt',
+          isSystemPromptChanged: false,
+          useAIPrompt: false,
+          parameters: {},
+          parameterSchema: [],
+          source: 'local',
+          pact: {
+            talents: [
+              {name: 'web_search', necessity: 'required'},
+              {name: 'read_url', necessity: 'required'},
+              {name: 'calculate', necessity: 'required'},
+              {name: 'datetime', necessity: 'required'},
+              {name: 'render_html', necessity: 'required'},
+            ],
+          },
+        };
+        palStore.pals.push(scout);
+        if (session) {
+          chatSessionStore.sessions = [session];
+        }
+
+        const result = await chatSessionStore.resolveCompletionSettings(
+          sessionId,
+          scout.id,
+        );
+
+        expect(
+          ((result.tools ?? []) as Array<{function: {name: string}}>)
+            .map(tool => tool.function.name)
+            .sort(),
+        ).toEqual([
+          'calculate',
+          'datetime',
+          'read_url',
+          'render_html',
+          'web_search',
+        ]);
+        if (session) {
+          expect(result.temperature).toBe(0.25);
+        }
+      },
+    );
   });
 
   describe('getCurrentCompletionSettings', () => {

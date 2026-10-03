@@ -202,6 +202,34 @@ describe('deriveListCaps', () => {
     });
   });
 
+  describe('normalized protocol catalog capabilities', () => {
+    it('reads Copilot vision and context without calling it a probe', () => {
+      const row = {
+        id: 'gpt',
+        object: 'model',
+        owned_by: 'github',
+        capabilities: {
+          supports: {vision: true},
+          limits: {max_context_window_tokens: 128000},
+        },
+      } as RemoteModelInfo;
+
+      expect(deriveListCaps(row, 'GitHub Copilot')).toEqual({
+        tier: 'list',
+        supportsVision: true,
+        contextLength: 128000,
+      });
+    });
+
+    it('lets llama architecture metadata beat a coarse capability array', () => {
+      const row = {
+        ...routerRow(TEXT),
+        capabilities: ['multimodal'],
+      };
+      expect(deriveListCaps(row, 'llama.cpp').supportsVision).toBe(false);
+    });
+  });
+
   describe('the tier brand', () => {
     it('is enforced by the compiler, not at runtime', () => {
       const listed: ListDerivedCaps = {tier: 'list', supportsVision: true};

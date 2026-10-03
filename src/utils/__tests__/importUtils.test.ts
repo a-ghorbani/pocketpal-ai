@@ -2,11 +2,15 @@ import * as RNFS from '@dr.pogodin/react-native-fs';
 import {pick} from '@react-native-documents/picker';
 import {palStore} from '../../store';
 import {
+  importChatSessions,
   readJsonFile,
   validateImportedData,
   ImportedChatSession,
   importPals,
 } from '../importUtils';
+import {chatSessionRepository} from '../../repositories/ChatSessionRepository';
+
+jest.spyOn(chatSessionRepository, 'createSession');
 
 describe('importUtils', () => {
   beforeEach(() => {
@@ -71,6 +75,113 @@ describe('importUtils', () => {
       expect(result.date).toBeDefined();
       expect(result.messages).toEqual([]);
       expect(result.completionSettings).toBeDefined();
+    });
+
+    it('preserves valid versioned Responses state in assistant steps', () => {
+      const responsesState = {
+        version: 1,
+        binding: {
+          wireApi: 'responses',
+          serverUrl: 'https://api.example.com',
+          modelId: 'responses-model',
+        },
+        output: [],
+        terminalStatus: 'completed',
+      };
+      const session = {
+        title: 'Responses session',
+        date: '2026-09-13T00:00:00.000Z',
+        messages: [
+          {
+            id: 'assistant-1',
+            author: 'assistant',
+            type: 'assistant_turn',
+            metadata: {steps: [{content: 'answer', responsesState}]},
+          },
+        ],
+        completionSettings: {},
+      };
+
+      const result = validateImportedData(session) as ImportedChatSession;
+      expect(result.messages[0].metadata?.steps[0].responsesState).toEqual(
+        responsesState,
+      );
+    });
+
+    it('rejects invalid Responses state instead of allowing replay', () => {
+      expect(() =>
+        validateImportedData({
+          title: 'Invalid replay',
+          date: '2026-09-13T00:00:00.000Z',
+          messages: [
+            {
+              id: 'assistant-1',
+              author: 'assistant',
+              type: 'assistant_turn',
+              text: 'visible answer',
+              metadata: {
+                steps: [
+                  {content: 'visible answer', responsesState: {version: 99}},
+                ],
+              },
+            },
+          ],
+          completionSettings: {},
+        }),
+      ).toThrow(
+        'Invalid Responses replay state in message assistant-1, step 0',
+      );
+    });
+  });
+
+  describe('importChatSessions', () => {
+    it('lifts backup metadata.steps and preserves foreign Responses bindings', async () => {
+      const responsesState = {
+        version: 1,
+        binding: {
+          wireApi: 'responses',
+          serverUrl: 'https://foreign.example.com',
+          modelId: 'responses-model',
+        },
+        output: [],
+        terminalStatus: 'completed',
+      };
+      (pick as jest.Mock).mockResolvedValue([
+        {
+          uri: 'file://responses-backup.json',
+          name: 'responses-backup.json',
+          type: 'application/json',
+        },
+      ]);
+      (RNFS.readFile as jest.Mock).mockResolvedValue(
+        JSON.stringify({
+          title: 'Responses backup',
+          date: '2026-09-13T00:00:00.000Z',
+          messages: [
+            {
+              id: 'assistant-1',
+              author: 'assistant',
+              type: 'assistant_turn',
+              text: 'answer',
+              metadata: {
+                copyable: true,
+                steps: [{content: 'answer', responsesState}],
+              },
+            },
+          ],
+          completionSettings: {},
+        }),
+      );
+
+      await expect(importChatSessions()).resolves.toBe(1);
+
+      const importedMessages = (
+        chatSessionRepository.createSession as jest.Mock
+      ).mock.calls[0][1];
+      expect(importedMessages[0].metadata).toEqual({copyable: true});
+      expect(importedMessages[0].steps[0].responsesState).toEqual(
+        responsesState,
+      );
     });
   });
 

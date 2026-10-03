@@ -1,11 +1,16 @@
-import React, {useState, useEffect, memo, useContext} from 'react';
+import React, {useState, useEffect, memo, useContext, useCallback} from 'react';
 import {Button, Text, Divider, Switch, Chip} from 'react-native-paper';
 
 import {ModelSettings} from '../../screens/ModelsScreen/ModelSettings';
 import {Sheet} from '../Sheet';
 import {ProjectionModelSelector} from '../ProjectionModelSelector';
 import {Model, ModelOrigin} from '../../utils/types';
-import {modelStore, serverStore} from '../../store';
+import {
+  chatSessionStore,
+  defaultCompletionSettings,
+  modelStore,
+  serverStore,
+} from '../../store';
 import {chatTemplates} from '../../utils/chat';
 import {
   resolveReasoningCapability,
@@ -15,8 +20,27 @@ import {
 } from '../../utils/reasoningCapability';
 
 import {styles} from './styles';
-import {View} from 'react-native';
+import {Alert, View} from 'react-native';
 import {L10nContext} from '../../utils';
+import {Dropdown} from '../ui';
+import {
+  resolveRemoteProtocol,
+  type RemoteModelPreference,
+} from '../../utils/remoteProtocol';
+import {t} from '../../locales';
+import {
+  MODEL_API_MODE_VALUES,
+  type ModelApiMode,
+  protocolLabel,
+  protocolSourceLabel,
+  protocolWarningKey,
+} from '../RemoteModelSheet/protocolUi';
+import {CompletionSettings} from '../CompletionSettings';
+import {CompletionParams} from '../../utils/completionTypes';
+import {
+  modelCompletionSettingsDraft,
+  processCompletionSettingsDraft,
+} from '../../services/completion/completionSettingsDraft';
 
 interface ModelSettingsSheetProps {
   isVisible: boolean;
@@ -33,16 +57,44 @@ export const ModelSettingsSheet: React.FC<ModelSettingsSheetProps> = memo(
     const [tempStopWords, setTempStopWords] = useState<string[]>(
       model?.stopWords || [],
     );
+    const [tempCompletionSettings, setTempCompletionSettings] =
+      useState<CompletionParams>(
+        model?.completionSettings || defaultCompletionSettings,
+      );
     const l10n = useContext(L10nContext);
 
     // Remote models have no local-only settings (chat template, stop words,
     // tokens) — only the reasoning override applies to them.
     const isRemote = model?.origin === ModelOrigin.REMOTE;
+    const seedPreference = (): RemoteModelPreference =>
+      model ? serverStore.getRemoteModelPreference?.(model.id) || {} : {};
+    const [remoteApiMode, setRemoteApiMode] = useState<ModelApiMode>(
+      () => seedPreference().wireApi || 'inherit',
+    );
+    const [remoteVision, setRemoteVision] = useState<'auto' | 'on' | 'off'>(
+      () => seedPreference().vision || 'auto',
+    );
+    const [remotePreferenceDirty, setRemotePreferenceDirty] = useState(false);
+    const [generationOverridesDirty, setGenerationOverridesDirty] =
+      useState(false);
 
     // Reasoning override (seeded from the resolver so the controls show the
     // effective state). Axis-1 is reasoning yes/no; axis-2 graded effort + set.
+    const capabilitySnapshot = useCallback(() => {
+      if (!model || model.origin !== ModelOrigin.REMOTE) {
+        return undefined;
+      }
+      const binding = modelStore.activeRemoteBinding;
+      return binding?.modelId === model.id
+        ? binding.protocolCapabilities
+        : serverStore.getRemoteCatalogModel?.(model.id)?.capabilities;
+    }, [model]);
     const seedReasoning = () =>
-      resolveReasoningCapability(model, serverStore.remoteReasoning);
+      resolveReasoningCapability(
+        model,
+        serverStore.remoteReasoning,
+        capabilitySnapshot(),
+      );
     const [isReasoningModel, setIsReasoningModel] = useState(
       () => seedReasoning().isReasoning === 'yes',
     );
@@ -89,16 +141,31 @@ export const ModelSettingsSheet: React.FC<ModelSettingsSheetProps> = memo(
         setTempModelName(model.name);
         setTempChatTemplate(model.chatTemplate);
         setTempStopWords(model.stopWords || []);
+        const preference =
+          serverStore.getRemoteModelPreference?.(model.id) || {};
+        setRemoteApiMode(preference.wireApi || 'inherit');
+        setRemoteVision(preference.vision || 'auto');
+        setRemotePreferenceDirty(false);
+        setGenerationOverridesDirty(false);
         const cap = resolveReasoningCapability(
           model,
           serverStore.remoteReasoning,
+          capabilitySnapshot(),
         );
         setIsReasoningModel(cap.isReasoning === 'yes');
         setSupportsEffort(cap.supportsEffort);
         setEffortSet(orderEffortValues(cap.effortValues));
         setReasoningDirty(false);
+        const loadCompletionSettings = async () => {
+          const inherited = await chatSessionStore.resolveCompletionSettings();
+          const raw = model.completionSettings || {};
+          setTempCompletionSettings(
+            modelCompletionSettingsDraft(inherited, raw),
+          );
+        };
+        loadCompletionSettings();
       }
-    }, [model]);
+    }, [model, capabilitySnapshot]);
 
     const handleSettingsUpdate = (name: string, value: any) => {
       setTempChatTemplate(prev => {
@@ -112,12 +179,54 @@ export const ModelSettingsSheet: React.FC<ModelSettingsSheetProps> = memo(
       setTempModelName(name);
     };
 
+    const handleCompletionSettingsUpdate = (name: string, value: any) => {
+      setGenerationOverridesDirty(true);
+      setTempCompletionSettings(previous => ({...previous, [name]: value}));
+    };
+
+    const processCompletionSettings = (): CompletionParams | undefined => {
+      const processed = processCompletionSettingsDraft(
+        tempCompletionSettings,
+        l10n.components.chatGenerationSettingsSheet.invalidNumericValuesMessage,
+      );
+      const {errors} = processed;
+      if (Object.keys(errors).length > 0) {
+        Alert.alert(
+          l10n.components.chatGenerationSettingsSheet.invalidValues,
+          l10n.components.chatGenerationSettingsSheet.pleaseCorrect +
+            '\n' +
+            Object.entries(errors)
+              .map(([key, message]) => `• ${key}: ${message}`)
+              .join('\n'),
+          [{text: l10n.common.ok}],
+        );
+        return undefined;
+      }
+      return processed.settings;
+    };
+
     const handleSaveSettings = () => {
       if (model) {
+        const processedCompletionSettings = processCompletionSettings();
+        if (!processedCompletionSettings) {
+          return;
+        }
         if (!isRemote) {
           modelStore.updateModelName(model.id, tempModelName);
           modelStore.updateModelChatTemplate(model.id, tempChatTemplate);
           modelStore.updateModelStopWords(model.id, tempStopWords);
+          const persistedModel = modelStore.models.find(
+            candidate => candidate.id === model.id,
+          );
+          if (persistedModel) {
+            persistedModel.completionSettings = processedCompletionSettings;
+          }
+        } else {
+          serverStore.setRemoteModelGenerationSettings(
+            model.id,
+            processedCompletionSettings,
+          );
+          model.completionSettings = processedCompletionSettings;
         }
         // Persist a source:'user' reasoning override only when the user
         // actually touched a reasoning control. Otherwise leave the existing
@@ -131,6 +240,13 @@ export const ModelSettingsSheet: React.FC<ModelSettingsSheetProps> = memo(
             effortValues:
               isReasoningModel && supportsEffort ? effortValues : [],
             effortSource: isReasoningModel && supportsEffort ? 'user' : 'none',
+          });
+        }
+        if (isRemote && remotePreferenceDirty) {
+          serverStore.setRemoteModelPreference?.(model.id, {
+            ...serverStore.getRemoteModelPreference?.(model.id),
+            wireApi: remoteApiMode === 'inherit' ? undefined : remoteApiMode,
+            vision: remoteVision,
           });
         }
         onClose();
@@ -162,6 +278,55 @@ export const ModelSettingsSheet: React.FC<ModelSettingsSheetProps> = memo(
     if (!model) {
       return null;
     }
+    const modelServer = isRemote
+      ? serverStore.servers.find(candidate => candidate.id === model.serverId)
+      : undefined;
+    const protocol = isRemote
+      ? resolveRemoteProtocol({
+          modelPreference: {
+            ...serverStore.getRemoteModelPreference?.(model.id),
+            wireApi: remoteApiMode === 'inherit' ? undefined : remoteApiMode,
+          },
+          apiMode: modelServer?.apiMode,
+          catalog: serverStore.getRemoteCatalogModel?.(model.id),
+        })
+      : undefined;
+    const binding = modelStore.activeRemoteBinding;
+    const reselectRequired =
+      isRemote &&
+      binding?.modelId === model.id &&
+      (remotePreferenceDirty ||
+        generationOverridesDirty ||
+        (protocol?.wireApi !== undefined &&
+          binding.wireApi !== protocol.wireApi));
+    const protocolWarning = protocol ? protocolWarningKey(protocol) : undefined;
+    const apiOptions = MODEL_API_MODE_VALUES.map(value => ({
+      value,
+      label:
+        value === 'inherit'
+          ? l10n.settings.apiProtocolInherit
+          : value === 'chat-completions'
+            ? l10n.settings.apiProtocolChatCompletions
+            : l10n.settings.apiProtocolResponses,
+      testID: `model-api-protocol-option-${value}`,
+    }));
+    const visionOptions = [
+      {
+        value: 'auto',
+        label: l10n.components.modelSettingsSheet.remoteVisionAuto,
+        testID: 'remote-vision-option-auto',
+      },
+      {
+        value: 'on',
+        label: l10n.components.modelSettingsSheet.remoteVisionOn,
+        testID: 'remote-vision-option-on',
+      },
+      {
+        value: 'off',
+        label: l10n.components.modelSettingsSheet.remoteVisionOff,
+        testID: 'remote-vision-option-off',
+      },
+    ];
 
     return (
       <Sheet
@@ -183,6 +348,87 @@ export const ModelSettingsSheet: React.FC<ModelSettingsSheetProps> = memo(
               onStopWordsChange={value => setTempStopWords(value || [])}
               onModelNameChange={handleModelNameChange}
             />
+          )}
+
+          <Divider style={styles.multimodalDivider} />
+          <Text style={styles.multimodalSectionTitle}>
+            {l10n.components.modelSettingsSheet.generationOverrides}
+          </Text>
+          <Text variant="bodySmall" style={styles.reasoningHelp}>
+            {l10n.components.modelSettingsSheet.generationOverridesHelp}
+          </Text>
+          <CompletionSettings
+            settings={tempCompletionSettings}
+            onChange={handleCompletionSettingsUpdate}
+            allowInherit
+          />
+
+          {isRemote && protocol && (
+            <>
+              <Text style={styles.multimodalSectionTitle}>
+                {l10n.components.modelSettingsSheet.remoteProtocolSection}
+              </Text>
+              <Text>{l10n.settings.apiProtocol}</Text>
+              <Dropdown
+                testID="model-api-protocol-dropdown"
+                value={remoteApiMode}
+                options={apiOptions}
+                onChange={value => {
+                  setRemoteApiMode(value as ModelApiMode);
+                  setRemotePreferenceDirty(true);
+                }}
+              />
+              <Text variant="bodySmall" style={styles.reasoningHelp}>
+                {l10n.components.modelSettingsSheet.remoteProtocolHelp}
+              </Text>
+              <Text testID="model-effective-protocol" style={styles.statusText}>
+                {t(l10n.settings.apiProtocolEffective, {
+                  protocol: protocolLabel(protocol.wireApi, {
+                    chatCompletions: l10n.settings.apiProtocolChatCompletions,
+                    responses: l10n.settings.apiProtocolResponses,
+                    unsupported: l10n.settings.apiProtocolUnsupported,
+                  }),
+                  source: protocolSourceLabel(protocol.source, {
+                    modelOverride: l10n.settings.apiProtocolSourceModel,
+                    serverOverride: l10n.settings.apiProtocolSourceServer,
+                    liveCatalog: l10n.settings.apiProtocolSourceLiveCatalog,
+                    cachedCatalog: l10n.settings.apiProtocolSourceCachedCatalog,
+                    compatibilityDefault:
+                      l10n.settings.apiProtocolSourceCompatibility,
+                  }),
+                })}
+              </Text>
+              {protocolWarning && (
+                <Text style={styles.warningText}>
+                  {protocolWarning === 'unsupported'
+                    ? l10n.settings.apiProtocolWarningUnsupported
+                    : protocolWarning === 'contradiction'
+                      ? l10n.settings.apiProtocolWarningContradiction
+                      : l10n.settings.apiProtocolWarningUnknown}
+                </Text>
+              )}
+              <Text>{l10n.components.modelSettingsSheet.remoteVision}</Text>
+              <Dropdown
+                testID="remote-vision-dropdown"
+                value={remoteVision}
+                options={visionOptions}
+                onChange={value => {
+                  setRemoteVision(value as 'auto' | 'on' | 'off');
+                  setRemotePreferenceDirty(true);
+                }}
+              />
+              <Text variant="bodySmall" style={styles.reasoningHelp}>
+                {l10n.components.modelSettingsSheet.remoteVisionHelp}
+              </Text>
+              {reselectRequired && (
+                <Text
+                  testID="remote-reselect-required"
+                  style={styles.warningText}>
+                  {l10n.components.modelSettingsSheet.reselectRequired}
+                </Text>
+              )}
+              <Divider style={styles.multimodalDivider} />
+            </>
           )}
 
           {/* Multimodal Settings Section */}
@@ -216,6 +462,7 @@ export const ModelSettingsSheet: React.FC<ModelSettingsSheetProps> = memo(
               testID="reasoning-is-reasoning-switch"
               value={isReasoningModel}
               onValueChange={onIsReasoningModelChange}
+              disabled={isRemote && protocol?.supported === false}
             />
           </View>
           <Text variant="bodySmall" style={styles.reasoningHelp}>
@@ -229,6 +476,7 @@ export const ModelSettingsSheet: React.FC<ModelSettingsSheetProps> = memo(
                   testID="reasoning-supports-effort-switch"
                   value={supportsEffort}
                   onValueChange={onSupportsEffortChange}
+                  disabled={isRemote && protocol?.supported === false}
                 />
               </View>
               {supportsEffort && (
@@ -243,6 +491,7 @@ export const ModelSettingsSheet: React.FC<ModelSettingsSheetProps> = memo(
                         testID={`effort-chip-${level}`}
                         selected={effortSet.includes(level)}
                         showSelectedCheck
+                        disabled={isRemote && protocol?.supported === false}
                         onPress={() => onEffortLevelToggle(level)}>
                         {l10n.components.modelSettingsSheet.effortLevels[level]}
                       </Chip>

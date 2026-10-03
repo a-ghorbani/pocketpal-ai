@@ -483,6 +483,16 @@ describe('TTSStore', () => {
       expect(store.playbackState.mode).toBe('idle');
       expect(mockSystemStop).toHaveBeenCalled();
     });
+
+    it('propagates stop failures when preparing for dictation', async () => {
+      const store = await makeStore();
+      store.setCurrentVoice(SYSTEM_VOICE);
+      mockSystemStop.mockRejectedValueOnce(new Error('audio still active'));
+
+      await expect(store.stopForDictation()).rejects.toThrow(
+        'audio still active',
+      );
+    });
   });
 
   describe('streaming callbacks', () => {
@@ -507,6 +517,58 @@ describe('TTSStore', () => {
         expect(store.playbackState.messageId).toBe('msg-1');
       }
       expect(store.lastSpokenMessageId).toBe('msg-1');
+    });
+
+    it('uses a transient conversation override without changing the saved preference', async () => {
+      const store = await makeStore();
+      store.setCurrentVoice(SYSTEM_VOICE);
+      expect(store.autoSpeakEnabled).toBe(false);
+
+      store.setConversationAutoSpeak(true);
+      store.onAssistantMessageStart('voice-turn');
+
+      expect(store.effectiveAutoSpeakEnabled).toBe(true);
+      expect(store.autoSpeakEnabled).toBe(false);
+      expect(store.playbackState.mode).toBe('streaming');
+
+      store.setConversationAutoSpeak(false);
+      expect(store.effectiveAutoSpeakEnabled).toBe(false);
+      expect(store.autoSpeakEnabled).toBe(false);
+    });
+
+    it('explicit auto-speak off also disables the conversation override', async () => {
+      const store = await setupEligible();
+      store.setConversationAutoSpeak(true);
+
+      store.setAutoSpeak(false);
+
+      expect(store.autoSpeakEnabled).toBe(false);
+      expect(store.conversationAutoSpeakEnabled).toBe(false);
+      expect(store.effectiveAutoSpeakEnabled).toBe(false);
+    });
+
+    it('speaker stop skips only the current reply and permits the next reply', async () => {
+      const store = await setupEligible();
+      store.setConversationAutoSpeak(true);
+      store.onAssistantMessageStart('msg-skip');
+      store.onAssistantMessageChunk('msg-skip', 'part one');
+
+      await store.skipCurrentPlayback();
+      const outcome = await store.onAssistantMessageComplete(
+        'msg-skip',
+        'part one part two',
+      );
+
+      expect(outcome).toBe('skipped');
+      expect(lastSystemHandle!.cancel).toHaveBeenCalledTimes(1);
+      expect(lastSystemHandle!.finalize).not.toHaveBeenCalled();
+      expect(store.effectiveAutoSpeakEnabled).toBe(true);
+
+      store.onAssistantMessageStart('msg-next');
+      expect(store.playbackState).toEqual(
+        expect.objectContaining({mode: 'streaming', messageId: 'msg-next'}),
+      );
+      expect(store.lastSpokenMessageId).toBe('msg-next');
     });
 
     it('onAssistantMessageStart guard: same messageId twice → only one handle opened', async () => {
@@ -579,6 +641,44 @@ describe('TTSStore', () => {
       // engine.play() is NOT called — finalize is the streaming flush path.
       expect(mockSystemPlay).not.toHaveBeenCalled();
       expect(store.playbackState.mode).toBe('idle');
+    });
+
+    it('reports a skipped outcome if a streaming turn is stopped during finalize', async () => {
+      const store = await setupEligible();
+      store.onAssistantMessageStart('msg-1');
+      let resolveFinalize: () => void = () => {};
+      lastSystemHandle!.finalize.mockImplementationOnce(
+        () => new Promise<void>(resolve => (resolveFinalize = resolve)),
+      );
+      const outcome = store.onAssistantMessageComplete('msg-1', 'hello');
+      await store.stop();
+      resolveFinalize();
+      await expect(outcome).resolves.toBe('skipped');
+    });
+
+    it('does not claim replay completion after playback failed or was stopped', async () => {
+      const store = await setupEligible();
+      mockSystemPlay.mockRejectedValueOnce(new Error('audio failed'));
+      await expect(
+        store.onAssistantMessageComplete('msg-failed', 'hello'),
+      ).resolves.toBe('failed');
+      let resolvePlay: () => void = () => {};
+      mockSystemPlay.mockImplementationOnce(
+        () => new Promise<void>(resolve => (resolvePlay = resolve)),
+      );
+      const outcome = store.onAssistantMessageComplete('msg-stopped', 'hello');
+      await flush();
+      await store.stop();
+      resolvePlay();
+      await expect(outcome).resolves.toBe('skipped');
+    });
+
+    it('does not claim completion for an empty fallback response', async () => {
+      const store = await setupEligible();
+      await expect(
+        store.onAssistantMessageComplete('msg-empty', '  '),
+      ).resolves.toBe('none');
+      expect(mockSystemPlay).not.toHaveBeenCalled();
     });
 
     it('fallback: onAssistantMessageComplete without a prior start calls engine.play()', async () => {

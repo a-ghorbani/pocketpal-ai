@@ -19,6 +19,9 @@ import {derivedText} from '../utils/chat';
 import {palStore} from './PalStore';
 import {deriveToolSchemas} from '../services/talents';
 import {AgentUiState, initialAgentUiState} from '../services/agent';
+import {isResponsesReplayState} from '../api/responsesTypes';
+import {mergeCompletionParameterLayers} from '../utils/generationParameterModes';
+import {startupSelectionStore} from './StartupSelectionStore';
 
 /**
  * Update payload accepted by `updateMessage` / `updateMessageStreaming`.
@@ -29,6 +32,11 @@ import {AgentUiState, initialAgentUiState} from '../services/agent';
 type MessageUpdate =
   | Partial<MessageType.Text>
   | Partial<Omit<MessageType.AssistantTurn, 'type' | 'id' | 'author'>>;
+
+type FinalAgentStep = Pick<
+  AgentStep,
+  'content' | 'reasoningContent' | 'toolCalls' | 'responsesState'
+>;
 
 const NEW_SESSION_TITLE = 'New Session';
 const TITLE_LIMIT = 40;
@@ -1003,50 +1011,94 @@ class ChatSessionStore {
     }
   }
 
-  /**
-   * Mark the active (last) step as no longer streaming. Writes the
-   * whole `steps` array wholesale.
-   */
-  async finalizeActiveStep(id: string, sessionId: string): Promise<void> {
-    // Drain any pending throttled update first so the final partial
-    // content for this step lands BEFORE we mark it `partial: false`
-    // and replace the array. Otherwise a late-firing timer could
-    // either (a) write to a stale array reference or (b) write to
-    // whatever step happens to be lastIdx after this finalize completes.
-    this.flushStreamingUpdate();
+  async persistFinalActiveStep(
+    id: string,
+    sessionId: string,
+    finalStep: FinalAgentStep,
+  ): Promise<void> {
+    if (
+      finalStep.responsesState !== undefined &&
+      !isResponsesReplayState(finalStep.responsesState)
+    ) {
+      throw new Error(
+        `Cannot persist invalid Responses state for message ${id}`,
+      );
+    }
     const targetSessionId = sessionId || this.activeSessionId;
     if (!targetSessionId) {
-      return;
+      throw new Error('Cannot finalize step without a target session');
     }
     const session = this.sessions.find(s => s.id === targetSessionId);
     if (!session) {
-      return;
+      throw new Error(`Session ${targetSessionId} not found`);
     }
     const index = session.messages.findIndex(msg => msg.id === id);
     if (index < 0) {
-      return;
+      throw new Error(`Message ${id} not found in session ${targetSessionId}`);
     }
     const message = session.messages[index];
     if (message.type !== 'assistant_turn') {
-      return;
+      throw new Error(`Message ${id} is not an assistant turn`);
     }
     const turn = message as MessageType.AssistantTurn;
     if (!turn.steps || turn.steps.length === 0) {
-      return;
+      throw new Error(`Assistant turn ${id} has no active step`);
     }
-    let nextSteps: AgentStep[] = [];
+
+    let pendingPartial: Partial<AgentStep> | undefined;
+    const pending = this.pendingStreamingUpdate;
+    if (this.streamingThrottleTimer) {
+      clearTimeout(this.streamingThrottleTimer);
+      this.streamingThrottleTimer = null;
+    }
+    if (
+      pending?.kind === 'step' &&
+      pending.id === id &&
+      (pending.sessionId || this.activeSessionId) === targetSessionId
+    ) {
+      pendingPartial = pending.partial;
+      this.pendingStreamingUpdate = null;
+      this.lastStreamingUpdateTime = Date.now();
+    } else if (pending) {
+      this.applyStreamingUpdate();
+    }
+
+    const lastIdx = turn.steps.length - 1;
+    const nextLast: AgentStep = {
+      ...turn.steps[lastIdx],
+      ...pendingPartial,
+      content: finalStep.content,
+      reasoningContent: finalStep.reasoningContent,
+      toolCalls: finalStep.toolCalls,
+      responsesState: finalStep.responsesState,
+      partial: false,
+    };
+    const nextSteps = [...turn.steps.slice(0, lastIdx), nextLast];
+
+    await chatSessionRepository.persistFinalAssistantSteps(id, nextSteps);
     runInAction(() => {
-      const lastIdx = turn.steps.length - 1;
-      const last = turn.steps[lastIdx];
-      const nextLast: AgentStep = {...last, partial: false};
-      nextSteps = [...turn.steps.slice(0, lastIdx), nextLast];
       turn.steps = nextSteps;
     });
-    try {
-      await chatSessionRepository.updateMessage(id, {steps: nextSteps});
-    } catch (error) {
-      console.error('Failed to persist finalizeActiveStep:', error);
+  }
+
+  /**
+   * Legacy finalizer retained until the runner is wired to provide the
+   * authoritative final payload to `persistFinalActiveStep`.
+   */
+  async finalizeActiveStep(id: string, sessionId: string): Promise<void> {
+    const targetSessionId = sessionId || this.activeSessionId;
+    const session = this.sessions.find(s => s.id === targetSessionId);
+    const message = session?.messages.find(msg => msg.id === id);
+    if (message?.type !== 'assistant_turn' || message.steps.length === 0) {
+      return;
     }
+    const activeStep = message.steps[message.steps.length - 1];
+    await this.persistFinalActiveStep(id, sessionId, {
+      content: activeStep.content,
+      reasoningContent: activeStep.reasoningContent,
+      toolCalls: activeStep.toolCalls,
+      responsesState: activeStep.responsesState,
+    });
   }
 
   async updateSessionCompletionSettings(settings: CompletionParams) {
@@ -1432,7 +1484,10 @@ class ChatSessionStore {
     this.sessionDrafts.delete(sessionId);
   }
 
-  async setActivePal(palId: string | undefined): Promise<void> {
+  async setActivePal(
+    palId: string | undefined,
+    options: {rememberForStartup?: boolean} = {},
+  ): Promise<void> {
     if (this.activeSessionId) {
       const session = this.sessions.find(s => s.id === this.activeSessionId);
       if (session) {
@@ -1449,6 +1504,10 @@ class ChatSessionStore {
       }
     } else {
       this.newChatPalId = palId;
+    }
+
+    if (options.rememberForStartup) {
+      startupSelectionStore.rememberPal(palId);
     }
   }
 
@@ -1472,32 +1531,29 @@ class ChatSessionStore {
 
   /**
    * Resolves completion settings according to the precedence hierarchy:
-   * System Defaults → Global User Settings → Pal-Specific Settings → Session-Specific Settings (only if explicitly modified)
+   * System Defaults → Global User Settings → Pal-Specific Settings →
+   * Model Override → Session-Specific Settings (only if explicitly modified)
    */
   async resolveCompletionSettings(
     sessionId?: string,
     palId?: string,
+    modelCompletionSettings?: CompletionParams,
   ): Promise<CompletionParams> {
     // Start with system defaults
-    let resolvedSettings: CompletionParams = {...defaultCompletionSettings};
-
-    // Apply global user settings
-    resolvedSettings = {
-      ...resolvedSettings,
-      ...this.newChatCompletionSettings,
-    };
+    const layers: Array<CompletionParams | undefined> = [
+      defaultCompletionSettings,
+      this.newChatCompletionSettings,
+    ];
 
     // Apply pal-specific settings if available
+    let pactTools: CompletionParams['tools'];
     if (palId) {
       // Use in-memory pal store as the source of truth (avoids cache invalidation issues)
       const pal = palStore.pals.find(p => p.id === palId);
       const palSettings = pal?.completionSettings;
 
       if (palSettings) {
-        resolvedSettings = {
-          ...resolvedSettings,
-          ...palSettings,
-        };
+        layers.push(palSettings);
       }
 
       // Inject tool schemas from pact.talents (PACT → completionSettings.tools)
@@ -1505,12 +1561,18 @@ class ChatSessionStore {
       if (talentNames && talentNames.length > 0) {
         const tools = deriveToolSchemas(talentNames);
         if (tools.length > 0) {
-          resolvedSettings = {
-            ...resolvedSettings,
-            tools,
-          };
+          pactTools = tools;
         }
       }
+    }
+
+    // Model settings are an explicit override layer for both local and remote
+    // models. Remote records normally contain an empty object.
+    layers.push(modelCompletionSettings);
+
+    let resolvedSettings = mergeCompletionParameterLayers(...layers);
+    if (pactTools) {
+      resolvedSettings = {...resolvedSettings, tools: pactTools};
     }
 
     // No-session-only: apply user's explicit thinking override last so it
@@ -1539,10 +1601,13 @@ class ChatSessionStore {
         // Preserve PACT-derived tools — custom settings control generation
         // params (temperature, etc.) but pact.talents is the source of truth
         // for tool availability.
-        const pactTools = resolvedSettings.tools;
-        resolvedSettings = session.completionSettings;
-        if (pactTools) {
-          resolvedSettings = {...resolvedSettings, tools: pactTools};
+        const resolvedPactTools = resolvedSettings.tools;
+        resolvedSettings = mergeCompletionParameterLayers(
+          resolvedSettings,
+          session.completionSettings,
+        );
+        if (resolvedPactTools) {
+          resolvedSettings = {...resolvedSettings, tools: resolvedPactTools};
         }
       }
     }
@@ -1553,7 +1618,9 @@ class ChatSessionStore {
   /**
    * Gets the effective completion settings for the current context
    */
-  async getCurrentCompletionSettings(): Promise<CompletionParams> {
+  async getCurrentCompletionSettings(
+    modelCompletionSettings?: CompletionParams,
+  ): Promise<CompletionParams> {
     const activePalId = this.activeSessionId
       ? this.sessions.find(s => s.id === this.activeSessionId)?.activePalId
       : this.newChatPalId;
@@ -1561,6 +1628,7 @@ class ChatSessionStore {
     return this.resolveCompletionSettings(
       this.activeSessionId || undefined,
       activePalId,
+      modelCompletionSettings,
     );
   }
 }

@@ -31,6 +31,24 @@ function makeMessage(raw: Record<string, any> = {}): Message {
 }
 
 describe('Message.toMessageObject', () => {
+  const responsesState = {
+    version: 1 as const,
+    binding: {
+      wireApi: 'responses' as const,
+      serverUrl: 'https://api.example.com',
+      modelId: 'responses-model',
+    },
+    output: [
+      {
+        type: 'message' as const,
+        id: 'output-1',
+        role: 'assistant' as const,
+        content: [{type: 'output_text' as const, text: 'visible'}],
+      },
+    ],
+    terminalStatus: 'completed' as const,
+  };
+
   // ---------- Story Test Requirements (Persistence) #1, #2, #3 ----------
 
   it('#1 lifts metadata.steps to top-level steps for assistant_turn', () => {
@@ -102,6 +120,41 @@ describe('Message.toMessageObject', () => {
     });
     const obj = msg.toMessageObject() as MessageType.AssistantTurn;
     expect(obj.steps).toEqual([]);
+  });
+
+  it('preserves valid Responses state nested under a lifted step', () => {
+    const responsesMessage = makeMessage({
+      type: 'assistant_turn',
+      metadata: JSON.stringify({
+        steps: [{content: 'visible', responsesState}],
+      }),
+    });
+    const obj = responsesMessage.toMessageObject() as MessageType.AssistantTurn;
+    expect(obj.steps[0].responsesState).toEqual(responsesState);
+  });
+
+  it('strips invalid Responses state while preserving visible step content', () => {
+    const corruptStateMessage = makeMessage({
+      type: 'assistant_turn',
+      metadata: JSON.stringify({
+        steps: [{content: 'still readable', responsesState: {version: 99}}],
+      }),
+    });
+    const obj =
+      corruptStateMessage.toMessageObject() as MessageType.AssistantTurn;
+    expect(obj.steps).toEqual([{content: 'still readable'}]);
+  });
+
+  it('keeps corrupt legacy assistant rows visibly readable from text', () => {
+    const corruptMetadataMessage = makeMessage({
+      type: 'assistant_turn',
+      text: 'legacy visible answer',
+      metadata: '{not-json',
+    });
+    const obj =
+      corruptMetadataMessage.toMessageObject() as MessageType.AssistantTurn;
+    expect(obj.steps).toEqual([{content: 'legacy visible answer'}]);
+    expect(obj.metadata).toEqual({});
   });
 
   it('falls back to {} metadata when metadata field is empty string', () => {

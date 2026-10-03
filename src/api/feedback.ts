@@ -66,6 +66,9 @@ export type ModelLoadErrorReportData = {
 export async function submitContentReport(
   reportData: Omit<ContentReportData, 'appFeedbackId'>,
 ): Promise<{message: string}> {
+  if (!__ENABLE_PALSHUB__) {
+    throw new Error('Content reporting is disabled in this build.');
+  }
   try {
     // Check network connectivity first
     const isConnected = await checkConnectivity();
@@ -148,6 +151,9 @@ export async function submitContentReport(
 export async function submitFeedback(
   feedbackData: Omit<FeedbackData, 'appFeedbackId'>,
 ): Promise<{message: string}> {
+  if (!__ENABLE_PALSHUB__) {
+    throw new Error('Feedback submission is disabled in this build.');
+  }
   try {
     // Check network connectivity first
     const isConnected = await checkConnectivity();
@@ -243,6 +249,9 @@ export async function submitFeedback(
 export async function submitModelLoadErrorReport(
   reportData: Omit<ModelLoadErrorReportData, 'appFeedbackId'>,
 ): Promise<{message: string}> {
+  if (!__ENABLE_PALSHUB__) {
+    throw new Error('Model error reporting is disabled in this build.');
+  }
   try {
     // Check network connectivity first
     const isConnected = await checkConnectivity();

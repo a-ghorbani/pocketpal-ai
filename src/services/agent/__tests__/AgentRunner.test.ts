@@ -7,6 +7,7 @@ import type {
   CompletionStreamData,
 } from '../../../utils/completionTypes';
 import type {TalentEngine, TalentResult} from '../../talents/types';
+import {WebSearchEngine} from '../../talents/WebSearchEngine';
 
 /**
  * Helper: build a CompletionEngine whose `completion()` invokes the
@@ -150,6 +151,79 @@ describe('runAgent', () => {
     const finished = events.filter(e => e.type === 'tool_call_finished');
     expect(finished).toHaveLength(1);
     expect((finished[0] as any).outcome.responseContent).toBe('4');
+  });
+
+  it('executes web_search and replays its grounded result on the follow-up', async () => {
+    const engine = makeScriptedEngine({
+      scripts: [
+        {
+          tokens: [],
+          result: {
+            text: '',
+            content: '',
+            tool_calls: [
+              {
+                id: 'search-call',
+                type: 'function',
+                function: {
+                  name: 'web_search',
+                  arguments: '{"query":"PocketPal release"}',
+                },
+              },
+            ],
+          },
+        },
+        {
+          tokens: [{content: 'PocketPal has a new release.'}],
+          result: {
+            text: 'PocketPal has a new release.',
+            content: 'PocketPal has a new release.',
+          },
+        },
+      ],
+    });
+    const provider = {
+      id: 'test-search',
+      search: jest.fn().mockResolvedValue(
+        Array.from({length: 20}, (_, index) => ({
+          title: `PocketPal release ${index + 1}`,
+          url: `https://example.com/releases/${index + 1}`,
+          snippet: `${'detail '.repeat(100)}CONTENT-TAIL-${index + 1}`,
+        })),
+      ),
+    };
+    const webSearch = new WebSearchEngine({
+      canSearch: () => true,
+      getActiveProvider: () => provider,
+      getResultCount: () => 20,
+      getFullSearchResults: () => true,
+      readWithDefaultReader: jest.fn(),
+    } as any);
+
+    await collect(
+      runAgent({
+        engine,
+        initialParams: baseParams,
+        allowedTalentNames: ['web_search'],
+        talentLookup: name => (name === 'web_search' ? webSearch : undefined),
+        messageId: 'msg-search',
+        triggerMarkers: [],
+      }),
+    );
+
+    expect(provider.search).toHaveBeenCalledWith('PocketPal release', {
+      maxResults: 20,
+    });
+    const followUpParams = (engine.completion as jest.Mock).mock.calls[1][0];
+    expect(followUpParams.messages).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          role: 'tool',
+          tool_call_id: 'search-call',
+          content: expect.stringContaining('CONTENT-TAIL-20'),
+        }),
+      ]),
+    );
   });
 
   it('#3 tool call but second turn yields no further tool_calls → run finishes after follow-up', async () => {
@@ -362,6 +436,7 @@ describe('runAgent', () => {
     expect(engine.completion).toHaveBeenCalledTimes(3);
     const forcedParams = seenParams[2];
     expect(forcedParams.tools).toBeUndefined();
+    expect((forcedParams as any).tool_choice).toBeUndefined();
     const forcedMessages = (forcedParams.messages ?? []) as any[];
     const lastMessage = forcedMessages[forcedMessages.length - 1];
     expect(lastMessage.role).toBe('user');
@@ -378,7 +453,7 @@ describe('runAgent', () => {
     );
     expect(finalToken).toBeDefined();
     const stepFinishes = events.filter(e => e.type === 'step_finished');
-    expect((stepFinishes[2] as any).toolCalls).toBeUndefined();
+    expect((stepFinishes[2] as any).step.toolCalls).toBeUndefined();
 
     const finished = events[events.length - 1] as Extract<
       AgentEvent,
@@ -1302,10 +1377,12 @@ describe('runAgent', () => {
     );
     const stepFinished = events.find(
       (e): e is Extract<AgentEvent, {type: 'step_finished'}> =>
-        e.type === 'step_finished' && !!e.toolCalls && e.toolCalls.length > 0,
+        e.type === 'step_finished' &&
+        !!e.step.toolCalls &&
+        e.step.toolCalls.length > 0,
     );
     expect(stepFinished).toBeDefined();
-    const call = stepFinished!.toolCalls![0];
+    const call = stepFinished!.step.toolCalls![0];
     expect(call.metrics).toBeDefined();
     expect(call.metrics!.tokens).toBe(stages.length);
     // Duration is wall-clock — assert it's a non-negative finite number
@@ -1384,10 +1461,12 @@ describe('runAgent', () => {
     );
     const stepFinished = events.find(
       (e): e is Extract<AgentEvent, {type: 'step_finished'}> =>
-        e.type === 'step_finished' && !!e.toolCalls && e.toolCalls.length > 0,
+        e.type === 'step_finished' &&
+        !!e.step.toolCalls &&
+        e.step.toolCalls.length > 0,
     );
     expect(stepFinished).toBeDefined();
-    const calls = stepFinished!.toolCalls!;
+    const calls = stepFinished!.step.toolCalls!;
     expect(calls).toHaveLength(2);
     expect(calls[0].metrics?.tokens).toBe(2);
     expect(calls[1].metrics?.tokens).toBe(2);
@@ -1417,6 +1496,282 @@ describe('runAgent', () => {
         e.type === 'step_finished',
     );
     expect(stepFinished).toBeDefined();
-    expect(stepFinished!.toolCalls).toBeUndefined();
+    expect(stepFinished!.step.toolCalls).toBeUndefined();
+  });
+
+  it('step_finished carries the authoritative final snapshot and Responses state exactly once', async () => {
+    const responsesState = {
+      version: 1 as const,
+      binding: {
+        wireApi: 'responses' as const,
+        serverUrl: 'https://api.example.test',
+        modelId: 'responses-model',
+      },
+      output: [
+        {
+          type: 'message' as const,
+          id: 'message-1',
+          role: 'assistant' as const,
+          status: 'completed' as const,
+          content: [{type: 'output_text' as const, text: 'final answer'}],
+        },
+      ],
+      terminalStatus: 'completed' as const,
+    };
+    const engine = makeScriptedEngine({
+      scripts: [
+        {
+          tokens: [{content: 'partial'}, {reasoning_content: 'draft'}],
+          result: {
+            text: 'final answer',
+            content: 'final answer',
+            reasoning_content: 'final reasoning',
+            terminal_status: 'completed',
+            usage: {inputTokens: 12, outputTokens: 3, totalTokens: 15},
+            provider_state: {wireApi: 'responses', responses: responsesState},
+          },
+        },
+      ],
+    });
+
+    const events = await collect(
+      runAgent({
+        engine,
+        initialParams: baseParams,
+        allowedTalentNames: [],
+        talentLookup: () => undefined,
+        messageId: 'msg',
+        triggerMarkers: [],
+      }),
+    );
+    const finishes = events.filter(
+      (event): event is Extract<AgentEvent, {type: 'step_finished'}> =>
+        event.type === 'step_finished',
+    );
+    expect(finishes).toHaveLength(1);
+    expect(finishes[0].step).toEqual({
+      content: 'final answer',
+      reasoningContent: 'final reasoning',
+      toolCalls: undefined,
+      responsesState,
+    });
+    expect(finishes[0].completionResult.usage?.totalTokens).toBe(15);
+  });
+
+  it.each([
+    ['incomplete', {terminal_status: 'incomplete' as const}],
+    ['failed', {terminal_status: 'failed' as const}],
+    ['cancelled', {terminal_status: 'cancelled' as const}],
+    [
+      'refused',
+      {
+        terminal_status: 'completed' as const,
+        refusal: 'not allowed',
+      },
+    ],
+    [
+      'interrupted',
+      {
+        terminal_status: 'completed' as const,
+        interrupted: true,
+      },
+    ],
+  ])('%s results never dispatch tools', async (_label, terminalFields) => {
+    const execute = jest.fn(
+      () =>
+        ({
+          type: 'text',
+          summary: 'should not run',
+        }) as TalentResult,
+    );
+    const talent = makeTalent('calculate', execute);
+    const engine = makeScriptedEngine({
+      scripts: [
+        {
+          tokens: [],
+          result: {
+            text: '',
+            content: '',
+            tool_calls: [
+              {
+                id: 'call-terminal',
+                type: 'function',
+                function: {name: 'calculate', arguments: '{}'},
+              },
+            ],
+            ...terminalFields,
+          },
+        },
+      ],
+    });
+
+    const events = await collect(
+      runAgent({
+        engine,
+        initialParams: baseParams,
+        allowedTalentNames: ['calculate'],
+        talentLookup: () => talent,
+        messageId: 'msg',
+        triggerMarkers: [],
+      }),
+    );
+    expect(execute).not.toHaveBeenCalled();
+    expect(events.some(event => event.type === 'tool_call_started')).toBe(
+      false,
+    );
+    expect(engine.completion).toHaveBeenCalledTimes(1);
+  });
+
+  it('rechecks abort between sequential calls', async () => {
+    const controller = new AbortController();
+    const firstExecute = jest.fn(() => {
+      controller.abort();
+      return {type: 'text', summary: 'first done'} as TalentResult;
+    });
+    const secondExecute = jest.fn(
+      () => ({type: 'text', summary: 'must not run'}) as TalentResult,
+    );
+    const first = makeTalent('first', firstExecute);
+    const second = makeTalent('second', secondExecute);
+    const engine = makeScriptedEngine({
+      scripts: [
+        {
+          tokens: [],
+          result: {
+            text: '',
+            content: '',
+            terminal_status: 'completed',
+            tool_calls: [
+              {
+                id: 'call-first',
+                type: 'function',
+                function: {name: 'first', arguments: '{}'},
+              },
+              {
+                id: 'call-second',
+                type: 'function',
+                function: {name: 'second', arguments: '{}'},
+              },
+            ],
+          },
+        },
+      ],
+    });
+
+    const events = await collect(
+      runAgent({
+        engine,
+        initialParams: baseParams,
+        allowedTalentNames: ['first', 'second'],
+        talentLookup: name => (name === 'first' ? first : second),
+        messageId: 'msg',
+        triggerMarkers: [],
+        signal: controller.signal,
+      }),
+    );
+    expect(firstExecute).toHaveBeenCalledTimes(1);
+    expect(secondExecute).not.toHaveBeenCalled();
+    expect(
+      events
+        .filter(
+          (event): event is Extract<AgentEvent, {type: 'tool_call_finished'}> =>
+            event.type === 'tool_call_finished',
+        )
+        .map(event => event.outcome.callId),
+    ).toEqual(['call-first']);
+  });
+
+  it('same-run follow-up carries Responses state and exact multi-call ids', async () => {
+    const responsesState = {
+      version: 1 as const,
+      binding: {
+        wireApi: 'responses' as const,
+        serverUrl: 'https://api.example.test',
+        modelId: 'responses-model',
+      },
+      output: [
+        {
+          type: 'function_call' as const,
+          id: 'item-a',
+          call_id: 'call-a',
+          name: 'calculate',
+          arguments: '{"expression":"1+1"}',
+          status: 'completed' as const,
+        },
+        {
+          type: 'function_call' as const,
+          id: 'item-b',
+          call_id: 'call-b',
+          name: 'datetime',
+          arguments: '{}',
+          status: 'completed' as const,
+        },
+      ],
+      terminalStatus: 'completed' as const,
+    };
+    const seenParams: ApiCompletionParams[] = [];
+    const engine: CompletionEngine = {
+      completion: jest.fn(async (params): Promise<CompletionResult> => {
+        seenParams.push(params);
+        if (seenParams.length === 1) {
+          return {
+            text: '',
+            content: '',
+            terminal_status: 'completed',
+            tool_calls: [
+              {
+                id: 'call-a',
+                type: 'function',
+                function: {
+                  name: 'calculate',
+                  arguments: '{"expression":"1+1"}',
+                },
+              },
+              {
+                id: 'call-b',
+                type: 'function',
+                function: {name: 'datetime', arguments: '{}'},
+              },
+            ],
+            provider_state: {wireApi: 'responses', responses: responsesState},
+          } as CompletionResult;
+        }
+        return {
+          text: 'done',
+          content: 'done',
+          terminal_status: 'completed',
+        };
+      }),
+      stopCompletion: jest.fn(async () => {}),
+    };
+
+    const events = await collect(
+      runAgent({
+        engine,
+        initialParams: baseParams,
+        allowedTalentNames: ['calculate', 'datetime'],
+        talentLookup: name =>
+          makeTalent(name, () => ({type: 'text', summary: `${name}-result`})),
+        messageId: 'msg',
+        triggerMarkers: [],
+      }),
+    );
+    const followUpMessages = (seenParams[1].messages ?? []) as any[];
+    const assistantMessage = followUpMessages.find(
+      message => message.role === 'assistant',
+    );
+    expect(assistantMessage.responsesState).toBe(responsesState);
+    expect(assistantMessage.tool_calls.map((call: any) => call.id)).toEqual([
+      'call-a',
+      'call-b',
+    ]);
+    expect(
+      events
+        .filter(
+          (event): event is Extract<AgentEvent, {type: 'tool_call_finished'}> =>
+            event.type === 'tool_call_finished',
+        )
+        .map(event => event.outcome.callId),
+    ).toEqual(['call-a', 'call-b']);
   });
 });

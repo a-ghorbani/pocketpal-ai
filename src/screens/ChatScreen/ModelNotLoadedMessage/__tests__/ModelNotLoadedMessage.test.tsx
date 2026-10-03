@@ -73,7 +73,9 @@ describe('ModelNotLoadedMessage', () => {
       fireEvent.press(getByText(l10n.en.chat.load));
     });
 
-    expect(modelStore.selectModel).toHaveBeenCalledWith(basicModel);
+    expect(modelStore.selectModel).toHaveBeenCalledWith(basicModel, {
+      rememberForStartup: true,
+    });
   });
 
   it('handles model loading error correctly', async () => {
@@ -94,7 +96,9 @@ describe('ModelNotLoadedMessage', () => {
     // Wait for the promise to resolve/reject
     await new Promise(resolve => setTimeout(resolve, 0));
 
-    expect(modelStore.selectModel).toHaveBeenCalledWith(basicModel);
+    expect(modelStore.selectModel).toHaveBeenCalledWith(basicModel, {
+      rememberForStartup: true,
+    });
     expect(consoleSpy).toHaveBeenCalledWith(`Error: ${mockError}`);
 
     consoleSpy.mockRestore();

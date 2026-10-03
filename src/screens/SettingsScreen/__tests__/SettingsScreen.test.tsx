@@ -2,6 +2,7 @@ import React from 'react';
 import {getBackendDevicesInfo} from 'llama.rn';
 import {Platform, Keyboard} from 'react-native';
 import {runInAction} from 'mobx';
+import {makePersistable} from 'mobx-persist-store';
 
 import {
   fireEvent,
@@ -12,7 +13,13 @@ import {
 
 import {SettingsScreen} from '../SettingsScreen';
 
-import {modelStore, uiStore, ttsStore} from '../../../store';
+import {
+  modelStore,
+  searchProviderStore,
+  uiStore,
+  ttsStore,
+} from '../../../store';
+import {UIStore as ActualUIStore} from '../../../store/UIStore';
 import {l10n} from '../../../locales';
 
 jest.useFakeTimers();
@@ -23,6 +30,14 @@ const render = (ui: React.ReactElement, options: any = {}) =>
 describe('SettingsScreen', () => {
   beforeEach(() => {
     jest.clearAllMocks();
+    Object.assign(uiStore, {
+      responsesProtocolLogging: false,
+      setResponsesProtocolLogging: jest.fn(),
+    });
+    Object.assign(searchProviderStore, {
+      resultCount: 5,
+      fullSearchResults: true,
+    });
     jest.spyOn(Keyboard, 'dismiss');
     // Ensure clean timer state for each test
     jest.clearAllTimers();
@@ -85,6 +100,34 @@ describe('SettingsScreen', () => {
     expect(getByText('Model Loading Settings')).toBeTruthy();
     expect(getByText('App Settings')).toBeTruthy();
     expect(getByDisplayValue('2048')).toBeTruthy(); // Context size
+  });
+
+  it('configures up to 20 results and toggles full search output', () => {
+    jest.useFakeTimers();
+    const {getByTestId} = render(<SettingsScreen />, {
+      withSafeArea: true,
+      withNavigation: true,
+    });
+    const slider = getByTestId('search-result-count-slider');
+    expect(slider.props.minimumValue).toBe(1);
+    expect(slider.props.maximumValue).toBe(20);
+    expect(slider.props.step).toBe(1);
+
+    act(() => {
+      fireEvent(slider, 'valueChange', 20);
+      jest.advanceTimersByTime(301);
+    });
+    expect(searchProviderStore.setResultCount).toHaveBeenCalledWith(20);
+
+    const fullResults = getByTestId('full-search-results-switch');
+    expect(fullResults.props.value).toBe(true);
+    expect(fullResults.props.accessibilityLabel).toBe(
+      'Send full search results',
+    );
+    fireEvent(fullResults, 'onValueChange', false);
+    expect(searchProviderStore.setFullSearchResults).toHaveBeenCalledWith(
+      false,
+    );
   });
 
   it('updates context size correctly', async () => {
@@ -252,6 +295,70 @@ describe('SettingsScreen', () => {
     });
 
     expect(uiStore.setDisplayMemUsage).toHaveBeenCalledWith(true);
+  });
+
+  it('renders and toggles Responses protocol diagnostics in release UI', async () => {
+    const {getByTestId, getByText} = render(<SettingsScreen />, {
+      withSafeArea: true,
+      withNavigation: true,
+    });
+
+    expect(getByText('Diagnostics')).toBeTruthy();
+    expect(getByText('Responses protocol logging')).toBeTruthy();
+    expect(
+      getByText(l10n.en.settings.responsesProtocolLoggingDescription),
+    ).toBeTruthy();
+
+    const diagnosticsSwitch = getByTestId('responses-protocol-logging-switch');
+    expect(diagnosticsSwitch.props.value).toBe(false);
+
+    await act(async () => {
+      fireEvent(diagnosticsSwitch, 'valueChange', true);
+    });
+
+    expect(uiStore.setResponsesProtocolLogging).toHaveBeenCalledWith(true);
+  });
+
+  describe('Responses diagnostics store state', () => {
+    const makeController = () => ({
+      enable: jest.fn(),
+      disableAndClear: jest.fn(),
+    });
+
+    it('is memory-only and off for each cold store instance', () => {
+      const controller = makeController();
+      const firstStore = new ActualUIStore(controller);
+
+      firstStore.setResponsesProtocolLogging(true);
+      expect(firstStore.responsesProtocolLogging).toBe(true);
+      expect(makePersistable).toHaveBeenLastCalledWith(
+        firstStore,
+        expect.objectContaining({
+          properties: expect.not.arrayContaining(['responsesProtocolLogging']),
+        }),
+      );
+
+      const restartedStore = new ActualUIStore(controller);
+      expect(restartedStore.responsesProtocolLogging).toBe(false);
+      expect(controller.disableAndClear).toHaveBeenCalledTimes(2);
+    });
+
+    it('enables future tracing and disables then clears immediately', () => {
+      const controller = makeController();
+      const store = new ActualUIStore(controller);
+      controller.enable.mockClear();
+      controller.disableAndClear.mockClear();
+
+      store.setResponsesProtocolLogging(true);
+      expect(controller.enable).toHaveBeenCalledTimes(1);
+
+      store.setResponsesProtocolLogging(false);
+      expect(controller.disableAndClear).toHaveBeenCalledTimes(1);
+      expect(store.responsesProtocolLogging).toBe(false);
+      expect(controller.enable.mock.invocationCallOrder[0]).toBeLessThan(
+        controller.disableAndClear.mock.invocationCallOrder[0],
+      );
+    });
   });
 
   it('renders image max tokens slider in advanced settings', async () => {

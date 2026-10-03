@@ -15,6 +15,7 @@ import {
 } from 'react-native-gesture-handler';
 
 import {ttsStore, uiStore} from './src/store';
+import {responsesDiagnosticsController} from './src/api/responsesDiagnostics';
 import {useTheme} from './src/hooks';
 import {useDeepLinking} from './src/hooks/useDeepLinking';
 import {Theme} from './src/utils/types';
@@ -26,12 +27,10 @@ import {ROUTES} from './src/utils/navigationConstants';
 import {
   SidebarContent,
   ModelsHeaderRight,
-  PalHeaderRight,
   HeaderLeft,
   AppWithMigration,
   TTSSetupSheet,
   DownloadOverlay,
-  HubRunSheetHost,
 } from './src/components';
 import {MarkdownProvider} from './src/components/MarkdownView';
 import {AutomationBridge, BenchmarkRunnerScreen} from './src/__automation__';
@@ -45,8 +44,19 @@ import {
   // Dev tools screen. Only available in debug mode.
   DevToolsScreen,
 } from './src/screens';
-import PalsScreen from './src/screens/PalsScreen';
 import {OnboardingStack} from './src/screens/OnboardingScreens';
+
+uiStore.attachResponsesDiagnosticsController(responsesDiagnosticsController);
+
+const PalsScreen = __ENABLE_PALSHUB__
+  ? require('./src/screens/PalsScreen').default
+  : null;
+const PalHeaderRight = __ENABLE_PALSHUB__
+  ? require('./src/components/PalHeaderRight').PalHeaderRight
+  : null;
+const HubRunSheetHost = __ENABLE_PALSHUB__
+  ? require('./src/components/HubRunSheetHost').HubRunSheetHost
+  : null;
 
 // Check if app is in debug mode
 const isDebugMode = __DEV__;
@@ -134,15 +144,18 @@ const App = observer(() => {
                               headerShown: false,
                             }}
                           />
-                          <Drawer.Screen
-                            name={ROUTES.PALS}
-                            component={gestureHandlerRootHOC(PalsScreen)}
-                            options={{
-                              headerRight: () => <PalHeaderRight />,
-                              headerStyle: styles.headerWithoutDivider,
-                              title: currentL10n.screenTitles.pals,
-                            }}
-                          />
+                          {__ENABLE_PALSHUB__ && PalsScreen ? (
+                            <Drawer.Screen
+                              name={ROUTES.PALS}
+                              component={gestureHandlerRootHOC(PalsScreen)}
+                              options={{
+                                headerRight: () =>
+                                  PalHeaderRight ? <PalHeaderRight /> : null,
+                                headerStyle: styles.headerWithoutDivider,
+                                title: currentL10n.screenTitles.pals,
+                              }}
+                            />
+                          ) : null}
                           <Drawer.Screen
                             name={ROUTES.MODELS}
                             component={gestureHandlerRootHOC(ModelsScreen)}
@@ -215,7 +228,9 @@ const App = observer(() => {
                     />
                     <TTSSetupSheet />
                     <DownloadOverlay />
-                    <HubRunSheetHost />
+                    {__ENABLE_PALSHUB__ && HubRunSheetHost ? (
+                      <HubRunSheetHost />
+                    ) : null}
                   </BottomSheetModalProvider>
                 </NavigationContainer>
               </MarkdownProvider>

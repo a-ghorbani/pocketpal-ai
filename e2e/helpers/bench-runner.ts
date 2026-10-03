@@ -59,6 +59,72 @@ export function buildConfig(matrix: ReturnType<typeof getBenchmarkMatrix>) {
   return base;
 }
 
+/** Mirrors `runMatrix`'s cell loop: model quants × backends × axis values. */
+export function expectedCellCount(cfg: {
+  models: Array<{quants: unknown[]}>;
+  backends: unknown[];
+  settings_axes?: Array<{values: unknown[]}>;
+}): number {
+  const quantCount = cfg.models.reduce((sum, m) => sum + m.quants.length, 0);
+  const axesProduct = (cfg.settings_axes ?? []).reduce(
+    (acc, a) => acc * a.values.length,
+    1,
+  );
+  return quantCount * cfg.backends.length * axesProduct;
+}
+
+export interface BenchReportRow {
+  model_id: string;
+  quant: string;
+  requested_backend: string;
+  status: string;
+  error?: string;
+  reason?: string;
+}
+
+export interface BenchReportFile {
+  runs: BenchReportRow[];
+  outcome?: string;
+  device?: string;
+  soc?: string | null;
+  os_version?: string;
+  commit?: string;
+  llama_rn_version?: string;
+}
+
+/** Fills the top-level fields the on-device runner cannot know. */
+export function stampReportMetadata(
+  report: BenchReportFile,
+  meta: {device: string; osVersion: string},
+): void {
+  report.device = meta.device;
+  report.soc = process.env.E2E_DEVICE_SOC || null;
+  report.os_version = meta.osVersion;
+  report.commit = getCommitHash();
+  report.llama_rn_version = getLlamaRnVersion();
+}
+
+/** A matrix whose every cell failed still ends `complete`, so the rows are
+ * the pass gate. */
+export function assertRowsPass(report: BenchReportFile): void {
+  if (!report.runs.length) {
+    throw new Error('Matrix produced zero rows');
+  }
+  const failed = report.runs.filter(r => r.status !== 'ok');
+  if (failed.length > 0) {
+    const summary = failed
+      .map(
+        r =>
+          `${r.model_id}::${r.quant}::${r.requested_backend}: ` +
+          String(r.error ?? r.reason ?? 'unknown').slice(0, 120),
+      )
+      .join('; ');
+    throw new Error(
+      `Matrix completed but ${failed.length}/${report.runs.length} cells failed: ${summary}`,
+    );
+  }
+}
+
 export function pushConfig(
   matrix: ReturnType<typeof getBenchmarkMatrix>,
   udid?: string,

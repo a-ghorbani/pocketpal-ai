@@ -124,6 +124,7 @@ export const mockChatSessionStore = {
   updateActiveStepStreaming: jest.fn(),
   appendToolCall: jest.fn().mockResolvedValue(undefined),
   appendToolOutcome: jest.fn().mockResolvedValue(undefined),
+  persistFinalActiveStep: jest.fn().mockResolvedValue(undefined),
   finalizeActiveStep: jest.fn().mockResolvedValue(undefined),
   // Context-limit banner state
   lastCompletionResult: undefined as CompletionResultSnapshot | undefined,

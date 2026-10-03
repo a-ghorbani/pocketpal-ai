@@ -126,47 +126,11 @@ function normalizeToolCallIds(
  */
 async function executeOne(
   call: AgentToolCall,
-  allowedTalentNames: string[],
-  talentLookup: (name: string) => ReturnType<AgentRunOptions['talentLookup']>,
+  handler: NonNullable<ReturnType<AgentRunOptions['talentLookup']>>,
+  parsedArgs: Record<string, unknown>,
 ): Promise<AgentToolOutcome> {
   const fnName = call.function?.name ?? '';
   const callId = call.id;
-
-  if (!fnName || !allowedTalentNames.includes(fnName)) {
-    const summary = fnName
-      ? `Talent "${fnName}" is not enabled for this Pal`
-      : 'Unknown talent (no function name)';
-    const result: TalentResult = {
-      type: 'error',
-      summary,
-      errorMessage: summary,
-    };
-    return {callId, toolName: fnName, result, responseContent: summary};
-  }
-
-  const handler = talentLookup(fnName);
-  if (!handler) {
-    const summary = `Talent "${fnName}" is not available on this device`;
-    const result: TalentResult = {
-      type: 'error',
-      summary,
-      errorMessage: summary,
-    };
-    return {callId, toolName: fnName, result, responseContent: summary};
-  }
-
-  let parsedArgs: Record<string, unknown> = {};
-  try {
-    parsedArgs = JSON.parse(call.function?.arguments || '{}');
-  } catch {
-    const summary = `Error: invalid JSON arguments for ${fnName}`;
-    const result: TalentResult = {
-      type: 'error',
-      summary,
-      errorMessage: summary,
-    };
-    return {callId, toolName: fnName, result, responseContent: summary};
-  }
 
   try {
     const toolResult = await handler.execute(parsedArgs);
@@ -188,6 +152,91 @@ async function executeOne(
   }
 }
 
+type ValidatedToolCall =
+  | {
+      call: AgentToolCall;
+      handler: NonNullable<ReturnType<AgentRunOptions['talentLookup']>>;
+      parsedArgs: Record<string, unknown>;
+    }
+  | {call: AgentToolCall; error: AgentToolOutcome};
+
+function invalidToolOutcome(
+  call: AgentToolCall,
+  summary: string,
+): AgentToolOutcome {
+  const result: TalentResult = {
+    type: 'error',
+    summary,
+    errorMessage: summary,
+  };
+  return {
+    callId: call.id,
+    toolName: call.function?.name ?? '',
+    result,
+    responseContent: summary,
+  };
+}
+
+function validateToolCall(
+  call: AgentToolCall,
+  allowedTalentNames: string[],
+  talentLookup: AgentRunOptions['talentLookup'],
+): ValidatedToolCall {
+  const fnName = call.function?.name ?? '';
+  if (!fnName || !allowedTalentNames.includes(fnName)) {
+    return {
+      call,
+      error: invalidToolOutcome(
+        call,
+        fnName
+          ? `Talent "${fnName}" is not enabled for this Pal`
+          : 'Unknown talent (no function name)',
+      ),
+    };
+  }
+  const handler = talentLookup(fnName);
+  if (!handler) {
+    return {
+      call,
+      error: invalidToolOutcome(
+        call,
+        `Talent "${fnName}" is not available on this device`,
+      ),
+    };
+  }
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(call.function?.arguments || '{}');
+  } catch {
+    return {
+      call,
+      error: invalidToolOutcome(
+        call,
+        `Error: invalid JSON arguments for ${fnName}`,
+      ),
+    };
+  }
+  if (typeof parsed !== 'object' || parsed === null || Array.isArray(parsed)) {
+    return {
+      call,
+      error: invalidToolOutcome(
+        call,
+        `Error: invalid JSON arguments for ${fnName}`,
+      ),
+    };
+  }
+  return {call, handler, parsedArgs: parsed as Record<string, unknown>};
+}
+
+function mayExecuteTools(result: CompletionResult): boolean {
+  return (
+    (result.terminal_status === undefined ||
+      result.terminal_status === 'completed') &&
+    !result.refusal &&
+    result.interrupted !== true
+  );
+}
+
 /**
  * Build the API messages array for the next turn after a tool round.
  * The previous turn's assistant message + its tool responses are
@@ -200,6 +249,7 @@ function buildNextTurnMessages(
   toolCalls: AgentToolCall[],
   outcomes: AgentToolOutcome[],
   reasoningContent?: string,
+  responsesState?: ChatMessage['responsesState'],
 ): ApiCompletionParams['messages'] {
   const assistantMsg: ChatMessage = {
     role: 'assistant',
@@ -215,6 +265,9 @@ function buildNextTurnMessages(
   };
   if (reasoningContent && reasoningContent.length > 0) {
     assistantMsg.reasoning_content = reasoningContent;
+  }
+  if (responsesState) {
+    assistantMsg.responsesState = responsesState;
   }
   const toolMsgs: ChatMessage[] = outcomes.map(o => ({
     role: 'tool',
@@ -315,7 +368,12 @@ export async function* runAgent(
       // Bridge engine streaming callback into the iterator.
       const queue = new EventQueue<AgentEvent>();
       const turnParams: ApiCompletionParams = isForcedFinal
-        ? {...initialParams, messages, tools: undefined}
+        ? {
+            ...initialParams,
+            messages,
+            tools: undefined,
+            tool_choice: undefined,
+          }
         : {...initialParams, messages};
 
       // Track engine failure separately so we can fully await the
@@ -400,9 +458,8 @@ export async function* runAgent(
       }
 
       // Compute normalized tool calls BEFORE the step_finished yield so
-      // the event payload can carry them. The hook's appendToolCall
-      // writer lands them on step.toolCalls with ids that match the
-      // upcoming outcomes by construction.
+      // the atomic final-step payload lands ids that match upcoming
+      // outcome callIds by construction.
       const finishedResult = lastResult;
       // Forced final is text-only; ignore any tool_calls a confused model emits.
       const rawToolCalls = isForcedFinal
@@ -429,13 +486,31 @@ export async function* runAgent(
             }))
           : callsWithoutMetrics;
 
-      yield {type: 'step_finished', turn, toolCalls: calls};
+      if (!finishedResult) {
+        throw new Error('Completion finished without a result');
+      }
+      const responsesState = finishedResult.provider_state?.responses;
+      yield {
+        type: 'step_finished',
+        turn,
+        step: {
+          content: finishedResult.content ?? '',
+          reasoningContent: finishedResult.reasoning_content,
+          toolCalls: calls,
+          responsesState,
+        },
+        completionResult: finishedResult,
+      };
 
       if (isForcedFinal) {
         break;
       }
 
-      if (!finishedResult) {
+      // The consumer awaits atomic final-step persistence while the
+      // generator is suspended at step_finished. Recheck abort and
+      // terminal eligibility immediately after that await, before any
+      // handler can observe the call.
+      if (signal?.aborted || !mayExecuteTools(finishedResult)) {
         break;
       }
 
@@ -444,14 +519,22 @@ export async function* runAgent(
         break;
       }
 
+      const validatedCalls = calls.map(call =>
+        validateToolCall(call, allowedTalentNames, talentLookup),
+      );
       const outcomes: AgentToolOutcome[] = [];
-      for (const call of calls) {
+      for (const validated of validatedCalls) {
+        // Abort/terminal eligibility is rechecked immediately before
+        // every sequential call, including between calls.
+        if (signal?.aborted || !mayExecuteTools(finishedResult)) {
+          break;
+        }
+        const {call} = validated;
         yield {type: 'tool_call_started', call};
-        const outcome = await executeOne(
-          call,
-          allowedTalentNames,
-          talentLookup,
-        );
+        const outcome =
+          'error' in validated
+            ? validated.error
+            : await executeOne(call, validated.handler, validated.parsedArgs);
         outcomes.push(outcome);
         yield {type: 'tool_call_finished', outcome};
       }
@@ -482,6 +565,7 @@ export async function* runAgent(
         calls,
         outcomes,
         finishedResult.reasoning_content,
+        responsesState,
       );
       turn += 1;
 

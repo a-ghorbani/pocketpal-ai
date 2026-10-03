@@ -13,6 +13,10 @@ import {
   CompletionEngine,
   toApiCompletionParams,
 } from '../utils/completionTypes';
+import {
+  applyGenerationParameterModes,
+  mergeCompletionParameterLayers,
+} from '../utils/generationParameterModes';
 
 import {fetchModelFilesDetails} from '../api/hf';
 import {
@@ -23,6 +27,7 @@ import {
 import {uiStore, hfStore} from '.';
 import {serverStore} from './ServerStore';
 import {chatSessionStore} from './ChatSessionStore';
+import {startupSelectionStore} from './StartupSelectionStore';
 import {
   draftCacheDefaults,
   effectiveDraftModeOf,
@@ -116,6 +121,7 @@ function createRemoteModel(params: {
   serverName: string;
   remoteModelId: string;
   modelName: string;
+  completionSettings?: CompletionParams;
 }): Model {
   const emptyChatTemplate = {
     name: '',
@@ -143,8 +149,22 @@ function createRemoteModel(params: {
     chatTemplate: emptyChatTemplate,
     defaultStopWords: [],
     stopWords: [],
-    defaultCompletionSettings: {} as CompletionParams,
-    completionSettings: {} as CompletionParams,
+    defaultCompletionSettings: {},
+    completionSettings: params.completionSettings
+      ? {
+          ...params.completionSettings,
+          stop: params.completionSettings.stop
+            ? [...params.completionSettings.stop]
+            : params.completionSettings.stop,
+          reasoning: params.completionSettings.reasoning
+            ? {...params.completionSettings.reasoning}
+            : undefined,
+          generationParameterModes: params.completionSettings
+            .generationParameterModes
+            ? {...params.completionSettings.generationParameterModes}
+            : undefined,
+        }
+      : {},
     serverId: params.serverId,
     serverName: params.serverName,
     remoteModelId: params.remoteModelId,
@@ -242,6 +262,7 @@ class ModelStore {
   // Projection models orphaned by the vision heal, awaiting deletion; drained
   // every launch (see drainPendingProjectionCleanup).
   pendingProjectionCleanupIds: string[] = [];
+  initializationComplete: boolean = false;
 
   constructor() {
     makeAutoObservable(this, {
@@ -268,10 +289,19 @@ class ModelStore {
         'pendingProjectionCleanupIds',
       ],
       storage: AsyncStorage,
-    }).then(async () => {
-      await this.initializeThreadCount();
-      this.initializeStore();
-    });
+    })
+      .then(async () => {
+        await this.initializeThreadCount();
+        await this.initializeStore();
+      })
+      .catch(error => {
+        console.error('Failed to initialize ModelStore:', error);
+      })
+      .finally(() => {
+        runInAction(() => {
+          this.initializationComplete = true;
+        });
+      });
 
     this.setupAppStateListener();
 
@@ -933,7 +963,7 @@ class ModelStore {
     try {
       const signals = await readDeviceSignals();
       const bundledRaw = Platform.OS === 'ios' ? iosRulesRaw : androidRulesRaw;
-      const rules = parseDeviceRules(bundledRaw);
+      const rules = parseDeviceRules(bundledRaw, DeviceInfo.getVersion());
       const tier = classify(
         signals,
         rules.classifier,
@@ -956,7 +986,7 @@ class ModelStore {
   // already-applied bundled presets in place.
   private upgradeToFetchedRules = async (): Promise<void> => {
     try {
-      const fetched = await fetchRules();
+      const fetched = await fetchRules(DeviceInfo.getVersion());
       if (!fetched) {
         return;
       }
@@ -2367,6 +2397,7 @@ class ModelStore {
         this.activeRemoteBinding = undefined;
         this.activeContextSettings = contextInitParams;
         this.setActiveModel(model.id);
+        this.lastUsedModelId = model.id;
         this.pendingModelId = null;
       });
 
@@ -2413,10 +2444,6 @@ class ModelStore {
       });
 
       throw error;
-    } finally {
-      runInAction(() => {
-        this.lastUsedModelId = model.id;
-      });
     }
   }
 
@@ -2580,6 +2607,13 @@ class ModelStore {
     );
   }
 
+  get activeModelCompletionSettings(): CompletionParams | undefined {
+    if (this.activeRemoteBinding?.generationSettings) {
+      return this.activeRemoteBinding.generationSettings;
+    }
+    return this.activeModel?.completionSettings;
+  }
+
   private get capabilityEnv(): CapabilityEnv {
     return {
       remoteCaps: serverStore.remoteCaps,
@@ -2647,6 +2681,9 @@ class ModelStore {
           serverName: server.name,
           remoteModelId: selected.remoteModelId,
           modelName: selected.remoteModelId,
+          completionSettings: serverStore.getRemoteModelGenerationSettings(
+            `${selected.serverId}/${selected.remoteModelId}`,
+          ),
         }),
       );
     }
@@ -2666,30 +2703,82 @@ class ModelStore {
       throw new Error('Model is missing remote configuration');
     }
 
-    // Release any existing context (local or remote)
-    await this.releaseContext();
-
-    const apiKey = await serverStore.getApiKey(model.serverId);
     const server = serverStore.servers.find(s => s.id === model.serverId);
     if (!server) {
       throw new Error('Server not found');
     }
+    const catalog = serverStore.getRemoteCatalogModel(model.id);
+    const protocol = serverStore.resolveRemoteModelProtocol(model.id);
+    if (!protocol.supported || !protocol.wireApi) {
+      throw new Error(
+        `Model "${model.remoteModelId}" does not advertise a supported API endpoint. Set a manual model or server API override to continue.`,
+      );
+    }
+    const bindingSnapshot = {
+      url: server.url,
+      serverType: server.serverType,
+      requestTimeoutMs: server.requestTimeoutMs,
+      credentialRevision:
+        Number.isSafeInteger(server.credentialRevision) &&
+        (server.credentialRevision ?? -1) >= 0
+          ? server.credentialRevision!
+          : 0,
+      wireApi: protocol.wireApi,
+      generationSettings: serverStore.getRemoteModelGenerationSettings(
+        model.id,
+      ),
+      protocolCapabilities: catalog
+        ? {
+            ...catalog.capabilities,
+            advertisedEndpoints: catalog.capabilities.advertisedEndpoints
+              ? [...catalog.capabilities.advertisedEndpoints]
+              : undefined,
+            reasoningEffortValues: catalog.capabilities.reasoningEffortValues
+              ? [...catalog.capabilities.reasoningEffortValues]
+              : undefined,
+          }
+        : undefined,
+    };
+    const apiKey = await serverStore.getApiKey(model.serverId);
+    const currentServer = serverStore.servers.find(
+      candidate => candidate.id === model.serverId,
+    );
+    if (
+      !currentServer ||
+      currentServer.url !== bindingSnapshot.url ||
+      currentServer.serverType !== bindingSnapshot.serverType ||
+      (currentServer.credentialRevision ?? 0) !==
+        bindingSnapshot.credentialRevision
+    ) {
+      throw new Error('Server configuration changed while selecting model');
+    }
+
+    // Release only after validation, so a rejected catalog-only model does not
+    // tear down the currently active session.
+    await this.releaseContext();
+
+    const activeBinding = {
+      modelId: model.id,
+      serverId: model.serverId!,
+      remoteModelId: model.remoteModelId!,
+      url: bindingSnapshot.url,
+      serverType: bindingSnapshot.serverType,
+      wireApi: bindingSnapshot.wireApi,
+      protocolCapabilities: bindingSnapshot.protocolCapabilities,
+      credentialRevision: bindingSnapshot.credentialRevision,
+      generationSettings: bindingSnapshot.generationSettings,
+    };
 
     runInAction(() => {
       this.engine = new OpenAICompletionEngine(
-        server.url,
+        bindingSnapshot.url,
         model.remoteModelId!,
         apiKey,
-        server.requestTimeoutMs,
-        server.serverType,
+        bindingSnapshot.requestTimeoutMs,
+        bindingSnapshot.serverType,
+        activeBinding,
       );
-      this.activeRemoteBinding = {
-        modelId: model.id,
-        serverId: model.serverId!,
-        remoteModelId: model.remoteModelId!,
-        url: server.url,
-        serverType: server.serverType,
-      };
+      this.activeRemoteBinding = activeBinding;
       this.setActiveModel(model.id);
       // Do NOT set lastUsedModelId for remote models -- server may be offline on next launch
     });
@@ -2705,11 +2794,25 @@ class ModelStore {
    * - Remote models: calls setRemoteModel()
    * - Local models: calls initContext()
    */
-  selectModel = async (model: Model): Promise<void> => {
+  selectModel = async (
+    model: Model,
+    options: {rememberForStartup?: boolean} = {},
+  ): Promise<void> => {
     if (model.origin === ModelOrigin.REMOTE) {
       await this.setRemoteModel(model);
     } else {
       await this.initContext(model);
+    }
+
+    if (
+      options.rememberForStartup &&
+      this.activeModelId === model.id &&
+      this.engine
+    ) {
+      const server = model.serverId
+        ? serverStore.servers.find(candidate => candidate.id === model.serverId)
+        : undefined;
+      startupSelectionStore.rememberModel(model, server);
     }
   };
 
@@ -3808,8 +3911,12 @@ class ModelStore {
         this.isStreaming = true;
       });
 
-      const completionParams =
+      const globalCompletionParams =
         await chatSessionRepository.getGlobalCompletionSettings();
+      const completionParams = mergeCompletionParameterLayers(
+        globalCompletionParams,
+        this.activeModel?.completionSettings,
+      );
       const stopWords = toJS(modelStore.activeModel?.stopWords);
 
       // Create completion params with app-specific properties
@@ -3829,7 +3936,7 @@ class ModelStore {
 
       // Create the completion promise and register it for safe context release
       const completionPromise = this.context.completion(
-        cleanCompletionParams,
+        applyGenerationParameterModes(cleanCompletionParams),
         data => {
           if (data.token) {
             params.onToken?.(data.token);

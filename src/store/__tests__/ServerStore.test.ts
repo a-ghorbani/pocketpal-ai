@@ -27,6 +27,7 @@ jest
 import {serverStore} from '../ServerStore';
 import {routerModelsBody} from '../../../jest/fixtures/remoteModelList';
 import type {RemoteModelInfo} from '../../api/openai';
+import {CURRENT_COMPLETION_SETTINGS_VERSION} from '../../utils/completionSettingsVersions';
 
 // Captured at import time: the constructor runs once, and `clearAllMocks`
 // between tests would otherwise erase the only call there ever is.
@@ -53,6 +54,8 @@ describe('ServerStore', () => {
       serverStore.privacyNoticeAcknowledged = false;
       serverStore.remoteReasoning = {};
       serverStore.remoteCaps = {};
+      serverStore.remoteModelPreferences = {};
+      serverStore.remoteCatalogMetadata = {};
     });
   });
 
@@ -518,7 +521,297 @@ describe('ServerStore', () => {
         'userSelectedModels',
         'remoteReasoning',
         'remoteCaps',
+        'remoteModelPreferences',
+        'remoteCatalogMetadata',
       ]);
+    });
+  });
+
+  describe('remote protocol state', () => {
+    const addCatalogServer = () =>
+      serverStore.addServer({
+        name: 'Copilot',
+        url: 'https://api.example.com/',
+        serverType: 'GitHub Copilot',
+        apiMode: 'auto',
+      });
+
+    it('persists model preferences across discovery invalidation', () => {
+      const id = addCatalogServer();
+      const modelId = `${id}/responses-model`;
+      serverStore.setRemoteModelPreference(modelId, {wireApi: 'responses'});
+
+      serverStore.updateServer(id, {url: 'https://other.example.com'});
+
+      expect(serverStore.getRemoteModelPreference(modelId)).toEqual({
+        wireApi: 'responses',
+      });
+    });
+
+    it('retains remote custom values while toggling omit and Send modes', () => {
+      const id = addCatalogServer();
+      const modelId = `${id}/responses-model`;
+      serverStore.setRemoteModelGenerationSettings(modelId, {
+        temperature: 0.42,
+        generationParameterModes: {temperature: 'omit'},
+      });
+
+      serverStore.setRemoteModelGenerationMode(modelId, 'temperature', 'send');
+
+      expect(serverStore.getRemoteModelGenerationSettings(modelId)).toEqual({
+        version: CURRENT_COMPLETION_SETTINGS_VERSION,
+        temperature: 0.42,
+        generationParameterModes: {temperature: 'send'},
+      });
+    });
+
+    it('round-trips hydrated generation settings and clones nested values', () => {
+      const id = addCatalogServer();
+      const modelId = `${id}/responses-model`;
+      runInAction(() => {
+        serverStore.remoteModelPreferences = {
+          [modelId]: {
+            generationSettings: {
+              temperature: 0.25,
+              stop: ['END'],
+              reasoning: {enabled: true, effort: 'high'},
+              generationParameterModes: {
+                temperature: 'omit',
+                stop: 'send',
+              },
+            },
+          },
+        };
+      });
+
+      const hydrated = serverStore.getRemoteModelGenerationSettings(modelId);
+      hydrated!.stop!.push('MUTATED');
+      hydrated!.reasoning!.effort = 'low';
+      hydrated!.generationParameterModes!.temperature = 'send';
+
+      expect(serverStore.getRemoteModelGenerationSettings(modelId)).toEqual({
+        temperature: 0.25,
+        stop: ['END'],
+        reasoning: {enabled: true, effort: 'high'},
+        generationParameterModes: {
+          temperature: 'omit',
+          stop: 'send',
+        },
+      });
+    });
+
+    it('keeps generation overrides across discovery invalidation', () => {
+      const id = addCatalogServer();
+      const modelId = `${id}/responses-model`;
+      serverStore.setRemoteModelGenerationSettings(modelId, {
+        temperature: 0.2,
+        generationParameterModes: {temperature: 'omit'},
+      });
+
+      serverStore.updateServer(id, {url: 'https://other.example.com'});
+
+      expect(serverStore.getRemoteModelGenerationSettings(modelId)).toEqual({
+        version: CURRENT_COMPLETION_SETTINGS_VERSION,
+        temperature: 0.2,
+        generationParameterModes: {temperature: 'omit'},
+      });
+    });
+
+    it('clears generation settings while preserving protocol and vision preferences', () => {
+      const id = addCatalogServer();
+      const modelId = `${id}/responses-model`;
+      serverStore.setRemoteModelPreference(modelId, {
+        wireApi: 'responses',
+        vision: 'off',
+        generationSettings: {
+          temperature: 0.2,
+          generationParameterModes: {temperature: 'omit'},
+        },
+      });
+
+      serverStore.clearRemoteModelGenerationSettings(modelId);
+
+      expect(serverStore.getRemoteModelPreference(modelId)).toEqual({
+        wireApi: 'responses',
+        vision: 'off',
+      });
+      expect(
+        serverStore.getRemoteModelGenerationSettings(modelId),
+      ).toBeUndefined();
+    });
+
+    it('removes an empty preference after clearing its only generation settings', () => {
+      const id = addCatalogServer();
+      const modelId = `${id}/responses-model`;
+      serverStore.setRemoteModelGenerationSettings(modelId, {
+        temperature: 0.2,
+      });
+
+      serverStore.clearRemoteModelGenerationSettings(modelId);
+      serverStore.clearRemoteModelGenerationSettings(modelId);
+
+      expect(serverStore.getRemoteModelPreference(modelId)).toBeUndefined();
+    });
+
+    it('removes preferences and cached metadata with a selected model', () => {
+      const id = addCatalogServer();
+      const modelId = `${id}/responses-model`;
+      serverStore.addUserSelectedModel(id, 'responses-model');
+      serverStore.setRemoteModelPreference(modelId, {
+        wireApi: 'responses',
+        generationSettings: {
+          temperature: 0.2,
+          generationParameterModes: {temperature: 'omit'},
+        },
+      });
+      runInAction(() => {
+        serverStore.remoteCatalogMetadata[modelId] = {
+          serverId: id,
+          normalizedUrl: 'https://api.example.com',
+          serverType: 'GitHub Copilot',
+          credentialRevision: 0,
+          endpointSupport: 'known',
+          provenance: 'cached',
+          capabilities: {advertisedEndpoints: ['responses']},
+        };
+      });
+
+      serverStore.removeUserSelectedModel(id, 'responses-model');
+
+      expect(serverStore.getRemoteModelPreference(modelId)).toBeUndefined();
+      expect(serverStore.remoteCatalogMetadata[modelId]).toBeUndefined();
+    });
+
+    it('removes generation settings with their server', () => {
+      const id = addCatalogServer();
+      const modelId = `${id}/responses-model`;
+      serverStore.setRemoteModelGenerationSettings(modelId, {
+        temperature: 0.2,
+      });
+
+      serverStore.removeServer(id);
+
+      expect(
+        serverStore.getRemoteModelGenerationSettings(modelId),
+      ).toBeUndefined();
+    });
+
+    it('resolves model override before server mode and catalog', () => {
+      const id = addCatalogServer();
+      const modelId = `${id}/model`;
+      serverStore.updateServer(id, {apiMode: 'chat-completions'});
+      serverStore.setRemoteModelPreference(modelId, {wireApi: 'responses'});
+      runInAction(() => {
+        serverStore.serverModels.set(id, [
+          {
+            id: 'model',
+            object: 'model',
+            owned_by: 'system',
+            supported_endpoints: ['/v1/chat/completions'],
+          },
+        ]);
+      });
+
+      expect(serverStore.resolveRemoteModelProtocol(modelId)).toMatchObject({
+        wireApi: 'responses',
+        source: 'model-override',
+        supported: true,
+        warning: 'contradicts-catalog',
+      });
+    });
+
+    it('uses a matching cached catalog when the live list is unavailable', () => {
+      const id = addCatalogServer();
+      const modelId = `${id}/model`;
+      runInAction(() => {
+        serverStore.remoteCatalogMetadata[modelId] = {
+          serverId: id,
+          normalizedUrl: 'https://api.example.com',
+          serverType: 'GitHub Copilot',
+          credentialRevision: 0,
+          endpointSupport: 'known',
+          provenance: 'cached',
+          capabilities: {advertisedEndpoints: ['responses']},
+        };
+      });
+
+      expect(serverStore.resolveRemoteModelProtocol(modelId)).toEqual({
+        wireApi: 'responses',
+        source: 'cached-catalog',
+        supported: true,
+      });
+    });
+
+    it('keeps sampling capability provenance tied to live and cached catalogs', () => {
+      const id = addCatalogServer();
+      const modelId = `${id}/model`;
+      const row = {
+        id: 'model',
+        object: 'model',
+        owned_by: 'system',
+        supported_endpoints: ['/responses'],
+        capabilities: {supports: {temperature: false, top_p: true}},
+      };
+      runInAction(() => {
+        serverStore.serverModels.set(id, [row]);
+        serverStore.remoteCatalogMetadata[modelId] = {
+          serverId: id,
+          normalizedUrl: 'https://api.example.com',
+          serverType: 'GitHub Copilot',
+          credentialRevision: 0,
+          endpointSupport: 'known',
+          provenance: 'cached',
+          capabilities: {
+            advertisedEndpoints: ['responses'],
+            responsesSampling: {
+              temperature: {supported: false, source: 'cached-catalog'},
+              topP: {supported: true, source: 'cached-catalog'},
+            },
+          },
+        };
+      });
+
+      expect(
+        serverStore.getRemoteCatalogModel(modelId)?.capabilities
+          .responsesSampling,
+      ).toEqual({
+        temperature: {supported: false, source: 'live-catalog'},
+        topP: {supported: true, source: 'live-catalog'},
+      });
+
+      runInAction(() => {
+        serverStore.serverModels.delete(id);
+      });
+      expect(
+        serverStore.getRemoteCatalogModel(modelId)?.capabilities
+          .responsesSampling,
+      ).toEqual({
+        temperature: {supported: false, source: 'cached-catalog'},
+        topP: {supported: true, source: 'cached-catalog'},
+      });
+    });
+
+    it('rejects cached metadata from another credential revision', () => {
+      const id = addCatalogServer();
+      const modelId = `${id}/model`;
+      runInAction(() => {
+        serverStore.servers[0].credentialRevision = 3;
+        serverStore.remoteCatalogMetadata[modelId] = {
+          serverId: id,
+          normalizedUrl: 'https://api.example.com',
+          serverType: 'GitHub Copilot',
+          credentialRevision: 2,
+          endpointSupport: 'known',
+          provenance: 'cached',
+          capabilities: {advertisedEndpoints: ['responses']},
+        };
+      });
+
+      expect(serverStore.getRemoteCatalogModel(modelId)).toBeUndefined();
+      expect(serverStore.resolveRemoteModelProtocol(modelId)).toMatchObject({
+        wireApi: 'chat-completions',
+        source: 'compatibility-default',
+      });
     });
   });
 
@@ -594,6 +887,46 @@ describe('ServerStore', () => {
   });
 
   describe('API key management', () => {
+    it('increments persisted credential revision and invalidates discovery', async () => {
+      const id = serverStore.addServer({
+        name: 'Server',
+        url: 'https://api.example.com',
+      });
+      runInAction(() => {
+        serverStore.serverModels.set(id, [
+          {id: 'model', object: 'model', owned_by: 'system'},
+        ]);
+        serverStore.remoteCatalogMetadata[`${id}/model`] = {
+          serverId: id,
+          normalizedUrl: 'https://api.example.com',
+          credentialRevision: 0,
+          endpointSupport: 'unknown',
+          provenance: 'cached',
+          capabilities: {},
+        };
+      });
+
+      await serverStore.setApiKey(id, 'sk-test-key');
+
+      expect(serverStore.servers[0].credentialRevision).toBe(1);
+      expect(serverStore.serverModels.has(id)).toBe(false);
+      expect(serverStore.remoteCatalogMetadata[`${id}/model`]).toBeUndefined();
+    });
+
+    it('increments a legacy missing credential revision on key removal', async () => {
+      const id = serverStore.addServer({
+        name: 'Server',
+        url: 'https://api.example.com',
+      });
+      runInAction(() => {
+        serverStore.servers[0].credentialRevision = undefined;
+      });
+
+      await serverStore.removeApiKey(id);
+
+      expect(serverStore.servers[0].credentialRevision).toBe(1);
+    });
+
     it('setApiKey stores key in Keychain', async () => {
       await serverStore.setApiKey('server-1', 'sk-test-key');
 
@@ -678,6 +1011,105 @@ describe('ServerStore', () => {
       expect(serverStore.serverModels.get(id)).toEqual(mockModels);
       expect(serverStore.isLoading).toBe(false);
       expect(serverStore.error).toBeNull();
+      expect(serverStore.remoteCatalogMetadata[`${id}/llama-7b`]).toMatchObject(
+        {
+          serverId: id,
+          normalizedUrl: 'http://localhost:1234',
+          credentialRevision: 0,
+          endpointSupport: 'unknown',
+          provenance: 'cached',
+        },
+      );
+    });
+
+    it('does not commit an older fetch after the server URL changes', async () => {
+      const id = serverStore.addServer({
+        name: 'Server',
+        url: 'https://old.example.com',
+      });
+      let resolveFetch!: (models: RemoteModelInfo[]) => void;
+      mockedFetchModels.mockReturnValueOnce(
+        new Promise(resolve => {
+          resolveFetch = resolve;
+        }),
+      );
+      (Keychain.getGenericPassword as jest.Mock).mockResolvedValueOnce(false);
+
+      const fetchPromise = serverStore.fetchModelsForServer(id);
+      await new Promise(setImmediate);
+      serverStore.updateServer(id, {url: 'https://new.example.com'});
+      resolveFetch([{id: 'stale', object: 'model', owned_by: 'system'}]);
+      await fetchPromise;
+
+      expect(serverStore.serverModels.has(id)).toBe(false);
+      expect(serverStore.remoteCatalogMetadata[`${id}/stale`]).toBeUndefined();
+    });
+
+    it('does not send a loaded key after the server URL changes', async () => {
+      const id = serverStore.addServer({
+        name: 'Server',
+        url: 'https://old.example.com',
+      });
+      let resolveCredentials!: (credentials: {
+        username: string;
+        password: string;
+        service: string;
+        storage: string;
+      }) => void;
+      (Keychain.getGenericPassword as jest.Mock).mockReturnValueOnce(
+        new Promise(resolve => {
+          resolveCredentials = resolve;
+        }),
+      );
+
+      const fetchPromise = serverStore.fetchModelsForServer(id);
+      serverStore.updateServer(id, {url: 'https://new.example.com'});
+      resolveCredentials({
+        username: 'apiKey',
+        password: 'sk-original',
+        service: `pocketpal-server-${id}`,
+        storage: 'keychain',
+      });
+      await fetchPromise;
+
+      expect(mockedFetchModels).not.toHaveBeenCalled();
+    });
+
+    it('lets only the newest overlapping fetch commit', async () => {
+      const id = serverStore.addServer({
+        name: 'Server',
+        url: 'https://api.example.com',
+      });
+      let resolveOld!: (models: RemoteModelInfo[]) => void;
+      mockedFetchModels
+        .mockReturnValueOnce(
+          new Promise(resolve => {
+            resolveOld = resolve;
+          }),
+        )
+        .mockResolvedValueOnce([
+          {
+            id: 'new',
+            object: 'model',
+            owned_by: 'system',
+            supported_endpoints: ['/responses'],
+          },
+        ]);
+      (Keychain.getGenericPassword as jest.Mock).mockResolvedValue(false);
+
+      const oldFetch = serverStore.fetchModelsForServer(id);
+      await new Promise(setImmediate);
+      await serverStore.fetchModelsForServer(id);
+      resolveOld([{id: 'old', object: 'model', owned_by: 'system'}]);
+      await oldFetch;
+
+      expect(serverStore.serverModels.get(id)?.map(model => model.id)).toEqual([
+        'new',
+      ]);
+      expect(serverStore.remoteCatalogMetadata[`${id}/new`]).toMatchObject({
+        capabilities: {advertisedEndpoints: ['responses']},
+      });
+      expect(serverStore.remoteCatalogMetadata[`${id}/old`]).toBeUndefined();
     });
 
     it('sets error on failure', async () => {
@@ -707,6 +1139,7 @@ describe('ServerStore', () => {
         name: 'Slow Server',
         url: 'http://localhost:1234',
         requestTimeoutMs: 600000,
+        serverType: 'GitHub Copilot',
       });
       jest.clearAllMocks();
 
@@ -719,6 +1152,7 @@ describe('ServerStore', () => {
         'http://localhost:1234',
         undefined,
         600000,
+        'GitHub Copilot',
       );
     });
 
@@ -738,6 +1172,7 @@ describe('ServerStore', () => {
 
       expect(mockedFetchModels).toHaveBeenCalledWith(
         'http://localhost:1234',
+        undefined,
         undefined,
         undefined,
       );
@@ -834,6 +1269,7 @@ describe('ServerStore', () => {
         'http://localhost:1234',
         undefined,
         undefined,
+        undefined,
       );
     });
 
@@ -852,6 +1288,7 @@ describe('ServerStore', () => {
         name: 'Slow Server',
         url: 'http://localhost:1234',
         requestTimeoutMs: 600000,
+        serverType: 'GitHub Copilot',
       });
 
       (Keychain.getGenericPassword as jest.Mock).mockResolvedValueOnce(false);
@@ -863,7 +1300,42 @@ describe('ServerStore', () => {
         'http://localhost:1234',
         undefined,
         600000,
+        'GitHub Copilot',
       );
+    });
+
+    it('does not test with a loaded key after configuration changes', async () => {
+      const id = serverStore.addServer({
+        name: 'Server',
+        url: 'https://old.example.com',
+      });
+      let resolveCredentials!: (credentials: {
+        username: string;
+        password: string;
+        service: string;
+        storage: string;
+      }) => void;
+      (Keychain.getGenericPassword as jest.Mock).mockReturnValueOnce(
+        new Promise(resolve => {
+          resolveCredentials = resolve;
+        }),
+      );
+
+      const connectionPromise = serverStore.testServerConnection(id);
+      serverStore.updateServer(id, {url: 'https://new.example.com'});
+      resolveCredentials({
+        username: 'apiKey',
+        password: 'sk-original',
+        service: `pocketpal-server-${id}`,
+        storage: 'keychain',
+      });
+
+      await expect(connectionPromise).resolves.toEqual({
+        ok: false,
+        modelCount: 0,
+        error: 'Server configuration changed',
+      });
+      expect(mockedTestConnection).not.toHaveBeenCalled();
     });
 
     it('passes API key to testConnection', async () => {
@@ -883,6 +1355,7 @@ describe('ServerStore', () => {
       expect(mockedTestConnection).toHaveBeenCalledWith(
         'http://localhost:1234',
         'sk-key',
+        undefined,
         undefined,
       );
     });
