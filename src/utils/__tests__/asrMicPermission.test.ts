@@ -1,3 +1,4 @@
+import {AppState, Platform} from 'react-native';
 import {RESULTS, check, request, openSettings} from 'react-native-permissions';
 
 import {ensureMicPermission, openMicSettings} from '../asrMicPermission';
@@ -55,6 +56,65 @@ describe('ensureMicPermission', () => {
 
   it('returns denied when the permission API throws', async () => {
     mockCheck.mockRejectedValue(new Error('boom'));
+    expect(await ensureMicPermission()).toBe('denied');
+  });
+});
+
+describe('ensureMicPermission on Android', () => {
+  const originalOS = Platform.OS;
+  let appStateListener: ((state: string) => void) | undefined;
+  const removeSubscription = jest.fn();
+
+  beforeEach(() => {
+    jest.clearAllMocks();
+    jest.useFakeTimers();
+    Platform.OS = 'android';
+    jest
+      .spyOn(AppState, 'addEventListener')
+      .mockImplementation((_type, listener) => {
+        appStateListener = listener as (state: string) => void;
+        return {remove: removeSubscription} as any;
+      });
+    mockCheck.mockResolvedValue(RESULTS.DENIED);
+  });
+
+  afterEach(() => {
+    jest.useRealTimers();
+    Platform.OS = originalOS;
+    appStateListener = undefined;
+  });
+
+  it('returns blocked when no dialog appears and the request never settles', async () => {
+    mockRequest.mockReturnValue(new Promise(() => {}));
+    const pending = ensureMicPermission();
+    await jest.advanceTimersByTimeAsync(1500);
+    expect(await pending).toBe('blocked');
+    expect(removeSubscription).toHaveBeenCalled();
+  });
+
+  it('waits for the answer while the system dialog is showing', async () => {
+    let answer: (status: string) => void = () => {};
+    mockRequest.mockReturnValue(
+      new Promise(resolve => {
+        answer = resolve;
+      }),
+    );
+    const pending = ensureMicPermission();
+    await jest.advanceTimersByTimeAsync(0);
+    appStateListener?.('background');
+    await jest.advanceTimersByTimeAsync(10_000);
+    answer(RESULTS.GRANTED);
+    expect(await pending).toBe('granted');
+  });
+
+  it('returns the request result when it settles before the window', async () => {
+    mockRequest.mockResolvedValue(RESULTS.DENIED);
+    expect(await ensureMicPermission()).toBe('denied');
+    expect(removeSubscription).toHaveBeenCalled();
+  });
+
+  it('returns denied when the request rejects', async () => {
+    mockRequest.mockRejectedValue(new Error('no activity'));
     expect(await ensureMicPermission()).toBe('denied');
   });
 });

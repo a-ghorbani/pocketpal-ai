@@ -1,4 +1,4 @@
-import {Platform} from 'react-native';
+import {AppState, Platform} from 'react-native';
 
 import {
   PERMISSIONS,
@@ -6,6 +6,7 @@ import {
   check,
   request,
   openSettings,
+  type PermissionStatus,
 } from 'react-native-permissions';
 
 /**
@@ -22,6 +23,37 @@ const MIC_PERMISSION =
     ? PERMISSIONS.IOS.MICROPHONE
     : PERMISSIONS.ANDROID.RECORD_AUDIO;
 
+const ANDROID_NO_DIALOG_MS = 1500;
+
+// Android 16 answers a request for a user-fixed permission without showing a
+// dialog, and React Native delivers permission results only on the next
+// onResume, so request() would stay pending until the app is backgrounded.
+// A real dialog takes the app out of 'active'; if that never happens, no
+// dialog was shown and the permission is blocked.
+function requestAndroid(): Promise<PermissionStatus> {
+  return new Promise((resolve, reject) => {
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    const subscription = AppState.addEventListener('change', state => {
+      if (state !== 'active') {
+        clearTimeout(timer);
+      }
+    });
+    const settle = (finish: () => void) => {
+      clearTimeout(timer);
+      subscription.remove();
+      finish();
+    };
+    timer = setTimeout(
+      () => settle(() => resolve(RESULTS.BLOCKED)),
+      ANDROID_NO_DIALOG_MS,
+    );
+    request(MIC_PERMISSION).then(
+      status => settle(() => resolve(status)),
+      err => settle(() => reject(err)),
+    );
+  });
+}
+
 /**
  * Ensure RECORD_AUDIO (Android) / NSMicrophoneUsageDescription (iOS) is
  * granted, requesting it if needed. Returns the mapped result so the caller
@@ -36,7 +68,10 @@ export async function ensureMicPermission(): Promise<MicPermissionResult> {
     if (current === RESULTS.BLOCKED || current === RESULTS.UNAVAILABLE) {
       return 'blocked';
     }
-    const result = await request(MIC_PERMISSION);
+    const result =
+      Platform.OS === 'android'
+        ? await requestAndroid()
+        : await request(MIC_PERMISSION);
     if (result === RESULTS.GRANTED || result === RESULTS.LIMITED) {
       return 'granted';
     }
