@@ -26,9 +26,6 @@ interface DownloadDao {
     @Delete
     suspend fun deleteDownload(download: DownloadEntity)
 
-    @Query("UPDATE downloads SET downloadedBytes = :bytes, totalBytes = :totalBytes, status = :status WHERE id = :downloadId")
-    suspend fun updateProgress(downloadId: String, bytes: Long, totalBytes: Long, status: DownloadStatus)
-
     @Query("UPDATE downloads SET status = :status, error = :error WHERE id = :downloadId")
     suspend fun updateStatus(downloadId: String, status: DownloadStatus, error: String? = null)
 
