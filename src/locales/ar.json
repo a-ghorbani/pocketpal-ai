@@ -665,7 +665,307 @@
         "invalid": "رمز غير صالح أو منتهي الصلاحية",
         "gatedModelAccess": "تم رفض الوصول إلى هذا النموذج المقيّد"
       },
-      "gatedModelIndicator": "يتطلب رمزًا"
+      "gatedModelIndicator": "يتطلب رمزًا",
+      "tokenRequired": "يتطلب هذا النموذج رمز وصول من Hugging Face",
+      "searchErrorHint": "رمز Hugging Face API الخاص بك غير صالح أو منتهي الصلاحية. لمتابعة البحث، يرجى إما إزالة الرمز أو تعطيل مصادقة الرمز في الإعدادات.",
+      "disableAndRetry": "تعطيل الرمز وإعادة المحاولة"
+    },
+    "modelSettingsSheet": {
+      "modelSettings": "إعدادات النموذج",
+      "saveChanges": "حفظ التغييرات",
+      "reasoningSection": "الاستدلال",
+      "isReasoningModel": "نموذج الاستدلال",
+      "isReasoningModelHelp": "إظهار عنصر التحكم في التفكير لهذا النموذج، حتى إذا لم يتم اكتشافه تلقائيًا.",
+      "supportsEffort": "يدعم الجهد المتدرج",
+      "effortValues": "مستويات الجهد التي يدعمها هذا النموذج",
+      "effortLevels": {
+        "minimal": "‎أدنى",
+        "low": "منخفض",
+        "medium": "متوسط",
+        "high": "عالي",
+        "xhigh": "عالي جدًا",
+        "max": "أقصى"
+      }
+    },
+    "modelsHeaderRight": {
+      "menuTitleHf": "نماذج Hugging Face",
+      "menuTitleDownloaded": "النماذج المُنزَّلة",
+      "menuTitleGrouped": "تجميع حسب نوع النموذج",
+      "menuTitleReset": "إعادة تعيين قائمة النماذج"
+    },
+    "modelsResetDialog": {
+      "proceedWithReset": "المتابعة بإعادة التعيين",
+      "confirmReset": "تأكيد إعادة التعيين"
+    },
+    "palSheet": {
+      "title": {
+        "edit": "تحرير الرفيق",
+        "newPal": "رفيق جديد",
+        "newVideoPal": "رفيق فيديو جديد"
+      },
+      "description": "الوصف",
+      "descriptionPlaceholder": "أدخل وصفًا موجزًا لرفيقك",
+      "parameters": "المعاملات",
+      "generationSettings": "إعدادات التوليد",
+      "configureGenerationSettings": "تكوين إعدادات التوليد",
+      "validation": {
+        "nameRequired": "الاسم مطلوب"
+      },
+      "talents": "المهارات",
+      "talentNames": {
+        "render_html": "‏معاينة HTML",
+        "calculate": "‎التعبيرات الرياضية",
+        "datetime": "التاريخ والوقت",
+        "web_search": "البحث في الويب",
+        "read_url": "قراءة صفحة ويب"
+      },
+      "talentDescriptions": {
+        "render_html": "عرض مستندات HTML مباشرةً في الدردشة",
+        "calculate": "تقييم التعبيرات الرياضية",
+        "datetime": "الحصول على التاريخ والوقت الحاليين",
+        "web_search": "البحث في الإنترنت عن معلومات حديثة (يتطلب مفتاح API في الإعدادات)",
+        "read_url": "قراءة المحتوى الكامل لصفحة ويب (يتطلب مفتاح API في الإعدادات)"
+      },
+      "greeting": {
+        "sectionLabel": "التحية",
+        "textLabel": "رسالة التحية",
+        "textPlaceholder": "ماذا يجب أن يقول هذا الرفيق في دردشة فارغة؟"
+      }
+    },
+    "assistantPalSheet": {
+      "title": {
+        "create": "إنشاء رفيق مساعد",
+        "edit": "تحرير الرفيق المساعد"
+      },
+      "palName": "اسم الرفيق",
+      "palNamePlaceholder": "الاسم",
+      "defaultModel": "‎النموذج الافتراضي",
+      "defaultModelPlaceholder": "اختر النموذج",
+      "create": "‎إنشاء"
+    },
+    "modelNotAvailable": {
+      "noModelsDownloaded": "‎ليس لديك أي نماذج مُنزَّلة بعد. يرجى تنزيل نموذج أولاً.",
+      "downloadAModel": "تنزيل نموذج",
+      "defaultModelNotDownloaded": "يوصي هذا الرفيق بنموذج معيّن يحتاج إلى تنزيل، أو يمكنك اختيار نموذج مختلف.",
+      "modelNotDownloadedShort": "النموذج غير مُنزَّل",
+      "recommendedModel": "النموذج الموصى به",
+      "cancelDownload": "إلغاء التنزيل",
+      "download": "تنزيل"
+    },
+    "roleplayPalSheet": {
+      "title": {
+        "create": "إنشاء رفيق لعب الأدوار",
+        "edit": "تحرير رفيق لعب الأدوار"
+      },
+      "palName": "اسم الرفيق",
+      "palNamePlaceholder": "الاسم",
+      "defaultModel": "النموذج الافتراضي",
+      "defaultModelPlaceholder": "اختر النموذج",
+      "descriptionSection": "الوصف",
+      "world": "العالم",
+      "worldPlaceholder": "فانتازيا",
+      "location": "الموقع",
+      "locationPlaceholder": "الغابة المسحورة",
+      "locationSublabel": "أين تدور القصة؟",
+      "aiRole": "دور الذكاء الاصطناعي",
+      "aiRolePlaceholder": "إلدارا، روح غابة مؤذية",
+      "aiRoleSublabel": "‎حدّد الدور للشخصية",
+      "userRole": "دور المستخدم",
+      "userRolePlaceholder": "السير إلاندور، فارس شجاع",
+      "userRoleSublabel": "من أنت؟",
+      "situation": "الموقف",
+      "situationPlaceholder": "مهمة إنقاذ، حلّ لغز",
+      "toneStyle": "النبرة/الأسلوب",
+      "toneStylePlaceholder": "جدّي",
+      "create": "إنشاء"
+    },
+    "lookiePalSheet": {
+      "title": {
+        "create": "إنشاء الرفيق Lookie",
+        "edit": "تحرير الرفيق Lookie"
+      },
+      "palName": "اسم الرفيق",
+      "palNamePlaceholder": "أدخل اسمًا لرفيق Lookie الخاص بك",
+      "visionModel": "نموذج الرؤية",
+      "visionModelPlaceholder": "اختر نموذج رؤية",
+      "requiredModelsSection": "النماذج المطلوبة",
+      "captureInterval": "فترة الالتقاط",
+      "captureIntervalHelper": "الوقت بين عمليات الالتقاط التلقائي بالمللي ثانية",
+      "create": "إنشاء"
+    },
+    "sendButton": {
+      "accessibilityLabel": "إرسال"
+    },
+    "systemPromptSection": {
+      "modelSelector": {
+        "label": "اختر نموذجًا للتوليد*",
+        "sublabel": "موصى به: Llama 3.2 3B أو Qwen3 4B Instruct 2507.",
+        "placeholder": "اختر النموذج"
+      },
+      "generatingPrompt": {
+        "label": "الغرض والسياق",
+        "placeholder": "صف الدور أو الغرض أو السيناريو لهذا الرفيق..."
+      },
+      "buttons": {
+        "loadingModel": "‏جارٍ تحميل النموذج...",
+        "stopGenerating": "إيقاف التوليد",
+        "resetParameters": "إعادة تعيين المعاملات",
+        "resetTemplate": "إعادة تعيين القالب"
+      },
+      "systemPrompt": {
+        "placeholder": "‎أنت مساعد مفيد"
+      }
+    },
+    "sidebarContent": {
+      "menuItems": {
+        "chat": "دردشة",
+        "models": "النماذج",
+        "pals": "الرفاق",
+        "benchmark": "اختبار الأداء",
+        "settings": "الإعدادات",
+        "appInfo": "‎معلومات التطبيق",
+        "testCompletion": "‎إكمال الاختبار"
+      },
+      "deleteChatTitle": "حذف الدردشة",
+      "deleteChatMessage": "هل أنت متأكد أنك تريد حذف هذه الدردشة؟",
+      "select": "تحديد",
+      "nSelected": "تم تحديد {{count}}",
+      "selectAll": "تحديد الكل",
+      "deselectAll": "إلغاء تحديد الكل",
+      "exportCount": "تصدير ({{count}})",
+      "deleteCount": "حذف ({{count}})",
+      "bulkDeleteTitle": "حذف جلسات الدردشة",
+      "bulkDeleteMessage": "حذف {{count}} جلسة دردشة؟ لا يمكن التراجع عن هذا الإجراء.",
+      "bulkDeleteError": "تعذّر حذف جلسات الدردشة. يرجى المحاولة مرة أخرى.",
+      "exportError": "تعذّر تصدير جلسة الدردشة. يرجى المحاولة مرة أخرى.",
+      "bulkExportError": "تعذّر تصدير جلسات الدردشة. يرجى المحاولة مرة أخرى.",
+      "pin": "تثبيت",
+      "unpin": "‎إلغاء التثبيت",
+      "dateGroups": {
+        "pinned": "مثبّت",
+        "today": "اليوم",
+        "yesterday": "أمس",
+        "thisWeek": "هذا الأسبوع",
+        "lastWeek": "‎الأسبوع الماضي",
+        "twoWeeksAgo": "منذ أسبوعين",
+        "threeWeeksAgo": "منذ 3 أسابيع",
+        "fourWeeksAgo": "منذ 4 أسابيع",
+        "lastMonth": "الشهر الماضي",
+        "older": "الأقدم"
+      }
+    },
+    "usageStats": {
+      "tooltip": {
+        "title": "استخدام الذاكرة",
+        "used": "المستخدم: ",
+        "total": "الإجمالي: ",
+        "usage": "الاستخدام: "
+      },
+      "byteSizes": [
+        "بايت",
+        "كيلوبايت",
+        "ميغابايت",
+        "غيغابايت"
+      ]
+    },
+    "chatView": {
+      "menuItems": {
+        "copy": "نسخ",
+        "regenerate": "إعادة التوليد",
+        "regenerateWith": "إعادة التوليد باستخدام",
+        "edit": "تعديل",
+        "reportContent": "الإبلاغ عن المحتوى"
+      }
+    },
+    "palHeaderRight": {
+      "exportAllPals": "تصدير جميع الرفاق",
+      "importPals": "‏استيراد الرفاق",
+      "importSuccess": "تم استيراد {{count}} رفيق بنجاح.",
+      "importError": "تعذّر استيراد الرفاق. يرجى التحقق من تنسيق الملف."
+    }
+  },
+  "palsScreen": {
+    "sectionTitles": {
+      "myPalsLocal": "رفاقي (محلي)",
+      "myLibrary": "مكتبتي (palshub.ai)",
+      "discoverPals": "استكشف الرفاق (palshub.ai)"
+    },
+    "videoAnalysis": "تحليل الفيديو",
+    "videoAnalysisDescription": "هذا مساعد ذكاء اصطناعي قائم على الفيديو يقدم تعليقًا فوريًا على تدفقات الفيديو من كاميرا جهازك.",
+    "captureInterval": "فترة الالتقاط",
+    "captureIntervalUnit": "مللي ثانية",
+    "world": "العالم",
+    "toneStyle": "النبرة/الأسلوب",
+    "aiRole": "دور الذكاء الاصطناعي",
+    "userRole": "دوري",
+    "assistant": "المساعد",
+    "roleplay": "لعب الأدوار",
+    "video": "فيديو",
+    "deletePal": "حذف الرفيق",
+    "deletePalMessage": "هل أنت متأكد أنك تريد حذف هذا الرفيق؟",
+    "missingModel": "نموذج مفقود",
+    "missingModelMessage": "النموذج الافتراضي \"{{modelName}}\" لهذا الرفيق غير متاح. يرجى تنزيله في نافذة التعديل أو اختيار نموذج مختلف.",
+    "search": "بحث",
+    "profile": "الملف الشخصي",
+    "signIn": "تسجيل الدخول",
+    "addPal": "إضافة رفيق",
+    "signInToAccessLibrary": "سجّل الدخول للوصول إلى مكتبتك من palshub.ai",
+    "signOut": "تسجيل الخروج",
+    "signOutConfirmation": "هل أنت متأكد أنك تريد تسجيل الخروج؟",
+    "signOutError": "تعذّر تسجيل الخروج. يرجى المحاولة مرة أخرى.",
+    "account": "الحساب",
+    "signInToPalsHub": "تسجيل الدخول إلى PalsHub",
+    "signInDescription": "يمكنك الوصول إلى مكتبتك، وإنشاء رفاق خاصين، والمزامنة عبر الأجهزة",
+    "searchAllPals": "ابحث في جميع الرفاق...",
+    "deletePalConfirmation": "هل أنت متأكد أنك تريد حذف \"{{palName}}\"؟",
+    "filters": {
+      "all": "الكل",
+      "myPals": "‬رفاقي",
+      "local": "محلي",
+      "video": "فيديو",
+      "free": "مجاني",
+      "premium": "مدفوع"
+    },
+    "labels": {
+      "free": "مجاني",
+      "premium": "مدفوع",
+      "private": "خاص",
+      "download": "تنزيل",
+      "getFree": "احصل عليه مجانًا"
+    },
+    "premiumPalDescription": "رفيق مميز من مجتمع palshub.ai",
+    "premiumInfoText": "زُر palshub.ai لاستكشاف المزيد من الرفاق",
+    "sortOptions": {
+      "newest": "الأحدث",
+      "oldest": "الأقدم",
+      "rating": "الأعلى تقييمًا",
+      "popular": "الأكثر شعبية"
+    },
+    "palDetailSheet": {
+      "by": "بواسطة",
+      "unknown": "غير معروف",
+      "rating": "التقييم",
+      "reviews": "المراجعات",
+      "created": "تم الإنشاء",
+      "description": "الوصف",
+      "noDescriptionAvailable": "‎لا يوجد وصف متاح.",
+      "categories": "الفئات",
+      "tags": "‎الوسوم",
+      "downloaded": "تم التنزيل",
+      "success": "نجاح",
+      "palAddedToCollection": "تمت إضافة الرفيق إلى مجموعتك!",
+      "error": "خطأ",
+      "failedToLoadDetails": "تعذّر تحميل تفاصيل الرفيق",
+      "failedToDownload": "تعذّر تنزيل الرفيق",
+      "premiumPalMessage": "هذا رفيق مميز.\n• إذا قمت بفتحه بالفعل باستخدام حساب Palshub الخاص بك، فما عليك سوى تسجيل الدخول للوصول إلى التفاصيل الكاملة.\n• لم تفتحه بعد؟ تفضّل بزيارة تطبيق palshub.ai لمعرفة المزيد.",
+      "notAvailable": "غير متاح",
+      "buyOnPalshub": "اشترِ على Palshub",
+      "finalizingPurchase": "جارٍ إتمام عملية الشراء…",
+      "processingPurchase": "قيد المعالجة — سيتم الفتح قريبًا.",
+      "checkoutSessionExpired": "انتهت جلستك. سجّل الدخول مرة أخرى للمتابعة.",
+      "signInAgain": "تسجيل الدخول مرة أخرى",
+      "palNotAvailable": "هذا الرفيق غير متاح للشراء حاليًا.",
+      "checkoutFailed": "حدث خطأ ما. يرجى المحاولة مرة أخرى."
     }
   }
 }
