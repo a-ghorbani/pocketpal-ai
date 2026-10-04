@@ -1,13 +1,14 @@
 package com.pocketpal.download
 
 import android.util.Log
-import androidx.lifecycle.Observer
 import androidx.work.*
 import com.facebook.react.bridge.*
 import com.facebook.react.module.annotations.ReactModule
 import com.facebook.react.modules.core.DeviceEventManagerModule
 import com.pocketpal.specs.NativeDownloadModuleSpec
 import kotlinx.coroutines.*
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.first
 import java.io.File
 import java.util.*
@@ -18,8 +19,7 @@ class DownloadModule(reactContext: ReactApplicationContext) : NativeDownloadModu
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
     private val downloadDao = DownloadDatabase.getInstance(reactContext).downloadDao()
     private val workManager = WorkManager.getInstance(reactContext)
-    // Map to store work observers by download ID
-    private val workObservers = mutableMapOf<String, Observer<List<WorkInfo>>>()
+    private val collectors = mutableMapOf<String, Job>()
 
     init {
         Log.d(TAG, "Initializing DownloadModule")
@@ -43,15 +43,6 @@ class DownloadModule(reactContext: ReactApplicationContext) : NativeDownloadModu
         reactApplicationContext
             .getJSModule(DeviceEventManagerModule.RCTDeviceEventEmitter::class.java)
             .emit(eventName, params)
-    }
-
-    private fun removeWorkObserver(downloadId: String) {
-        workObservers.remove(downloadId)?.let { observer ->
-            Log.d(TAG, "Removing work observer for download: $downloadId")
-            val workName = getWorkName(downloadId)
-            workManager.getWorkInfosForUniqueWorkLiveData(workName)
-                .removeObserver(observer)
-        }
     }
 
     override fun startDownload(url: String, config: ReadableMap, promise: Promise) {
@@ -109,7 +100,7 @@ class DownloadModule(reactContext: ReactApplicationContext) : NativeDownloadModu
                 val workRequest = DownloadWorker.createWorkRequest(downloadId, progressInterval)
                 Log.d(TAG, "Created work request: ${workRequest.id}")
                 
-                createAndRegisterObserver(downloadId)
+                attach(downloadId)
 
                 // Enqueue the work
                 workManager.enqueueUniqueWork(
@@ -144,7 +135,7 @@ class DownloadModule(reactContext: ReactApplicationContext) : NativeDownloadModu
                     return@launch
                 }
                 
-                createAndRegisterObserver(downloadId)
+                attach(downloadId)
                 
                 Log.d(TAG, "Successfully re-attached observer for download: $downloadId")
                 promise.resolve(true)
@@ -366,11 +357,8 @@ class DownloadModule(reactContext: ReactApplicationContext) : NativeDownloadModu
 
     override fun onCatalystInstanceDestroy() {
         Log.d(TAG, "Cleaning up DownloadModule")
-        // Clean up all observers
-        workObservers.entries.forEach { (downloadId, observer) ->
-            removeWorkObserver(downloadId)
-        }
-        workObservers.clear()
+        collectors.values.forEach { it.cancel() }
+        collectors.clear()
         super.onCatalystInstanceDestroy()
         scope.cancel()
     }
@@ -431,85 +419,36 @@ class DownloadModule(reactContext: ReactApplicationContext) : NativeDownloadModu
         }
     }
 
-    private fun createAndRegisterObserver(downloadId: String): Observer<List<WorkInfo>> {
-        Log.d(TAG, "Creating observer for download: $downloadId")
-        
-        // Create a new observer for this download
-        val observer = Observer<List<WorkInfo>> { workInfos ->
-            val workInfo = workInfos.firstOrNull() ?: return@Observer
-            Log.d(TAG, "Work state changed: ${workInfo.state} for ID: $downloadId")
-            
-            when (workInfo.state) {
-                WorkInfo.State.RUNNING -> {
-                    val progress = workInfo.progress.getLong(DownloadWorker.KEY_PROGRESS, 0)
-                    val total = workInfo.progress.getLong(DownloadWorker.KEY_TOTAL, 0)
-                    Log.d(TAG, "Download progress: $progress/$total for ID: $downloadId")
-                    sendProgressEvent(downloadId, progress, total)
+    private fun attach(downloadId: String) {
+        collectors.remove(downloadId)?.cancel()
+        Log.d(TAG, "Collecting row for download: $downloadId")
+        collectors[downloadId] = scope.launch {
+            downloadDao.observe(downloadId)
+                .filterNotNull()
+                .distinctUntilChanged { a, b ->
+                    a.status == b.status && a.downloadedBytes == b.downloadedBytes && a.totalBytes == b.totalBytes
                 }
-                WorkInfo.State.SUCCEEDED -> {
-                    Log.d(TAG, "Download succeeded for ID: $downloadId")
-                    scope.launch {
-                        val downloadInfo = downloadDao.getDownload(downloadId)
-                        if (downloadInfo != null) {
-                            Log.d(TAG, "Sending completion event for ID: $downloadId")
-                            sendCompletionEvent(downloadId, downloadInfo.destination)
-                        } else {
-                            Log.w(TAG, "Download info not found for completed download: $downloadId")
-                        }
-                            
-                        // Log final database state after completion
-                        logEntireDownloadDatabase()
-                            
-                        removeWorkObserver(downloadId)
-                    }
-                }
-                WorkInfo.State.FAILED -> {
-                    Log.e(TAG, "Download failed for ID: $downloadId")
-                    scope.launch {
-                        val downloadInfo = downloadDao.getDownload(downloadId)
-                        if (downloadInfo != null) {
-                            Log.e(TAG, "Error details for ID $downloadId: ${downloadInfo.error}")
-                            sendFailureEvent(downloadId, downloadInfo.error ?: "Unknown error")
-                        } else {
-                            Log.w(TAG, "Download info not found for failed download: $downloadId")
-                        }
-                            
-                        // Log final database state after failure
-                        logEntireDownloadDatabase()
-                            
-                        removeWorkObserver(downloadId)
-                    }
-                }
-                WorkInfo.State.CANCELLED -> {
-                    Log.d(TAG, "Download cancelled for ID: $downloadId")
-                    
-                    // Log final database state after cancellation
-                    scope.launch {
-                        logEntireDownloadDatabase()
-                        removeWorkObserver(downloadId)
-                    }
-                }
-                else -> {
-                    Log.d(TAG, "Work state: ${workInfo.state} for ID: $downloadId")
-                }
-            }
+                .first { row -> emitRow(row) }
+            logEntireDownloadDatabase()
         }
-        
-        // Remove any existing observer
-        workObservers[downloadId]?.let { oldObserver ->
-            Log.d(TAG, "Removing existing observer for download: $downloadId")
-            val workName = getWorkName(downloadId)
-            workManager.getWorkInfosForUniqueWorkLiveData(workName)
-                .removeObserver(oldObserver)
+    }
+
+    private fun emitRow(row: DownloadEntity): Boolean = when (row.status) {
+        DownloadStatus.RUNNING -> {
+            sendProgressEvent(row.id, row.downloadedBytes, row.totalBytes)
+            false
         }
-        
-        // Register the new observer
-        workObservers[downloadId] = observer
-        val workName = getWorkName(downloadId)
-        workManager.getWorkInfosForUniqueWorkLiveData(workName)
-            .observeForever(observer)
-        
-        return observer
+        DownloadStatus.COMPLETED -> {
+            sendCompletionEvent(row.id, row.destination)
+            true
+        }
+        DownloadStatus.FAILED -> {
+            Log.e(TAG, "Download failed for ID: ${row.id}: ${row.error}")
+            sendFailureEvent(row.id, row.error ?: "Unknown error")
+            true
+        }
+        DownloadStatus.CANCELLED -> true
+        DownloadStatus.QUEUED, DownloadStatus.PAUSED -> false
     }
 
     companion object {
