@@ -309,6 +309,363 @@
         "removeError": "فشل في إزالة النموذج.",
         "alreadyDownloadedTitle": "النموذج مُنزَّل بالفعل"
       }
+    },
+    "modelDescription": {
+      "size": "الحجم: ",
+      "parameters": "المعلمات: ",
+      "separator": " | ",
+      "notAvailable": "N/A"
+    },
+    "modelCapabilities": {
+      "questionAnswering": "الإجابة عن الأسئلة",
+      "summarization": "التلخيص",
+      "reasoning": "الاستدلال",
+      "roleplay": "لعب الأدوار",
+      "instructions": "اتباع التعليمات",
+      "code": "توليد التعليمات البرمجية",
+      "math": "حل المسائل الرياضية",
+      "multilingual": "متعدد اللغات",
+      "rewriting": "إعادة الصياغة",
+      "creativity": "الكتابة الإبداعية",
+      "vision": "الرؤية",
+      "mtp": "التنبؤات (MTP)"
+    }
+  },
+  "completionParams": {
+    "include_thinking_in_context": "تضمين أجزاء تفكير واستدلال الذكاء الاصطناعي في السياق المُرسل إلى النموذج. قد يؤدي تعطيل هذا الخيار إلى توفير مساحة في السياق، لكنه قد يؤثر في الأداء.",
+    "jinja": "تفعيل قوالب Jinja لتنسيق المحادثة. عند تفعيل هذا الخيار، يُستخدم نظام قوالب المحادثة المستند إلى Jinja لتحسين التوافق مع النماذج الحديثة.",
+    "grammar": "فرض قواعد محددة لضمان التزام النص المُنشأ ببنية أو تنسيق معيّن",
+    "stop": "تحديد عبارات معيّنة لإيقاف إنشاء النص",
+    "n_predict": "الحد الأقصى لعدد الرموز التي يمكن إنشاؤها. اختر «غير محدود» لإزالة الحد، أو «مخصص» لتحديد قيمة معينة.",
+    "n_probs": "إظهار احتمالات الكلمات البديلة.",
+    "top_k": "التحكم في الإبداع من خلال حصر اختيار الكلمات في أكثر K خيارات احتمالًا. القيم الأقل تجعل الردود أكثر تركيزًا",
+    "top_p": "الموازنة بين الإبداع والترابط. تسمح القيم الأعلى (القريبة من 1.0) بردود أكثر إبداعًا، لكنها قد تكون أقل تركيزًا",
+    "min_p": "الحد الأدنى لاحتمال قبول الرمز. استبعاد الكلمات غير المحتملة لتقليل الردود غير المنطقية أو الخارجة عن السياق",
+    "temperature": "التحكم في مستوى الإبداع والتوقّع. القيم الأعلى تجعل الردود أكثر إبداعًا، لكنها أقل تركيزًا",
+    "penalty_last_n": "تحديد مدى الرجوع إلى النص السابق لاكتشاف التكرار. تساعد القيم الأكبر على منع التكرار على المدى الطويل",
+    "penalty_repeat": "تقليل تكرار الكلمات. القيم الأعلى تجعل الردود أكثر تنوعًا في استخدام الكلمات",
+    "penalty_freq": "تقليل استخدام الكلمات المتكررة. القيم الأعلى تشجّع على تنويع المفردات",
+    "penalty_present": "تقليل تكرار الأفكار والمواضيع. القيم الأعلى تشجّع على تنويع المحتوى",
+    "mirostat": "تحكم متقدم في إبداع الردود. اضبطه على 1 أو 2 (سلاسة أكبر) لضبط العشوائية والترابط تلقائيًا وفي الوقت الفعلي.",
+    "mirostat_tau": "تحديد مستوى الإبداع في Mirostat. القيم الأعلى تعطي ردودًا أكثر تنوعًا وإبداعًا، بينما القيم الأقل تجعل الردود أكثر تركيزًا.",
+    "mirostat_eta": "سرعة ضبط الإبداع في Mirostat. القيم الأعلى تعني ضبطًا أسرع",
+    "dry_multiplier": "قوة ميزة DRY (عدم تكرار الكلام). القيم الأعلى تقلّل التكرار بشكل أكبر",
+    "dry_base": "مقدار تقليل التكرار الأساسي في وضع DRY. القيم الأعلى تمنع التكرار بشكل أكبر",
+    "dry_allowed_length": "‎عدد الكلمات التي يمكن تكرارها قبل تطبيق تقليل التكرار في DRY",
+    "dry_penalty_last_n": "‏مدى الرجوع لاكتشاف التكرار في وضع DRY",
+    "dry_sequence_breakers": "الرموز التي تعيد ضبط فحص التكرار في وضع DRY",
+    "ignore_eos": "متابعة إنشاء النص حتى إذا أراد النموذج التوقف. مفيد لإجبار النموذج على إنشاء ردود أطول",
+    "logit_bias": "التحكم في مدى احتمال ظهور كلمات معيّنة في الرد",
+    "seed": "تحديد قيمة البداية لمولّد الأرقام العشوائية. مفيد للحصول على نتائج متطابقة عند تكرار العملية",
+    "xtc_probability": "تحديد احتمال حذف الرموز باستخدام XTC. القيمة 0 تعني تعطيل الميزة",
+    "xtc_threshold": "تحديد الحد الأدنى لاحتمال حذف الرموز باستخدام XTC. القيم الأكبر من 0.5 تعطل XTC",
+    "typical_p": "تفعيل أخذ العينات المحلية المعتادة باستخدام المعامل p. القيمة 1.0 تعني تعطيل الميزة"
+  },
+  "about": {
+    "screenTitle": "معلومات التطبيق",
+    "description": "تطبيق يتيح لك تشغيل نماذج اللغة مباشرة على هاتفك. يعتمد على llama.cpp وllama.rn.",
+    "supportProject": "دعم المشروع",
+    "supportProjectDescription": "إذا أعجبك استخدام PocketPal AI، يُرجى دعم المشروع من خلال:",
+    "githubButton": "وضع نجمة على GitHub",
+    "orBy": "أو من خلال",
+    "versionCopiedTitle": "تم نسخ الإصدار",
+    "versionCopiedDescription": "تم نسخ معلومات الإصدار إلى الحافظة",
+    "tour": "جولة",
+    "tourDescription": "إعادة عرض شاشات الترحيب للتعرّف على ما يقدمه PocketPal AI.",
+    "showIntroButton": "عرض المقدمة مرة أخرى",
+    "privacyPolicy": "سياسة الخصوصية",
+    "termsOfService": "شروط الخدمة"
+  },
+  "feedback": {
+    "title": "إرسال ملاحظات",
+    "description": "رأيك يهمنا! أخبرنا كيف يساعدك PocketPal AI وما الذي يمكننا تحسينه ليصبح أكثر فائدة لك.",
+    "shareThoughtsButton": "مشاركة أفكارك",
+    "useCase": {
+      "label": "فيما تستخدم PocketPal AI؟",
+      "placeholder": "مثل التلخيص، وتمثيل الأدوار، وغيرها."
+    },
+    "featureRequests": {
+      "label": "طلب ميزة",
+      "placeholder": "ما الميزات التي تود رؤيتها؟"
+    },
+    "generalFeedback": {
+      "label": "ملاحظات عامة",
+      "placeholder": "شاركنا أي أفكار أخرى لديك."
+    },
+    "usageFrequency": {
+      "label": "كم مرة تستخدم PocketPal AI؟ (اختياري)",
+      "options": {
+        "daily": "يومياً",
+        "weekly": "أسبوعياً",
+        "monthly": "شهرياً",
+        "rarely": "نادرًا"
+      }
+    },
+    "email": {
+      "label": "البريد الإلكتروني للتواصل (اختياري)",
+      "placeholder": "عنوان بريدك الإلكتروني"
+    },
+    "submit": "إرسال الملاحظات",
+    "validation": {
+      "required": "يرجى تقديم بعض الملاحظات على الأقل"
+    },
+    "success": "شكرًا لك على ملاحظاتك!",
+    "error": {
+      "general": "خطأ في إرسال الملاحظات. يرجى المحاولة مرة أخرى."
+    }
+  },
+  "components": {
+    "attachmentButton": {
+      "attachmentButtonAccessibilityLabel": "إرسال الوسائط"
+    },
+    "bubble": {
+      "msPerToken": "{{value}} ms/رمز",
+      "tokensPerSec": "{{value}} رمز/ثانية",
+      "promptTokensPerSec": "{{value}} رمز الإدخال/ثانية",
+      "cachedTokens": "{{value}} مخزّن مؤقتًا",
+      "ttft": "{{value}}ms TTFT",
+      "draftAccepted": "المسودة: {{accepted}}/{{total}} ({{pct}}%)",
+      "interrupted": "مقاطَع",
+      "truncated": "تم القطع — على الأرجح السياق ممتلئ"
+    },
+    "exportUtils": {
+      "fileSaved": "تم حفظ الملف",
+      "fileSavedMessage": "تم حفظ الملف في مجلد التنزيلات باسم {{filename}}",
+      "share": "مشاركة",
+      "ok": "حسنًا",
+      "shareError": "خطأ في المشاركة",
+      "shareErrorMessage": "تعذر مشاركة الملف. يرجى المحاولة مرة أخرى.",
+      "saveError": "خطأ في الحفظ في مجلد التنزيلات",
+      "saveOptions": "خيارات الحفظ",
+      "saveOptionsMessage": "تعذّر الحفظ مباشرةً في مجلد التنزيلات. هل تريد مشاركة الملف بدلاً من ذلك؟",
+      "cancel": "إلغاء",
+      "shareContentErrorMessage": "تعذّرت مشاركة المحتوى. يرجى المحاولة مرة أخرى.",
+      "exportError": "خطأ في التصدير",
+      "exportErrorMessage": "حدث خطأ أثناء تصدير الملف. يرجى المحاولة مرة أخرى.",
+      "permissionRequired": "إذن التخزين مطلوب",
+      "permissionMessage": "نحتاج إلى إذن لحفظ التصدير في مجلد التنزيلات.",
+      "permissionDenied": "تم رفض الإذن",
+      "permissionDeniedMessage": "بدون إذن التخزين، سيتم تعطيل ميزة التصدير.",
+      "continue": "‏متابعة"
+    },
+    "thinkingBubble": {
+      "reasoning": "الاستدلال"
+    },
+    "pendingIndicator": {
+      "preparingTool": "جارٍ تحضير الأداة",
+      "buildingPage": "جارٍ إنشاء الصفحة",
+      "calculating": "‏جارٍ الحساب",
+      "lookingUpTime": "جارٍ البحث عن الوقت",
+      "stopping": "جارٍ الإيقاف…"
+    },
+    "toolMetrics": {
+      "tokens": "{{count}} رمز",
+      "elapsed": "{{seconds}} ثانية"
+    },
+    "chatEmptyPlaceholder": {
+      "noModelsTitle": "لا توجد نماذج متاحة",
+      "noModelsDescription": "نزّل نموذجًا لبدء الدردشة مع PocketPal",
+      "noModelsButton": "تنزيل النموذج",
+      "activateModelTitle": "فعّل النموذج للبدء",
+      "activateModelDescription": "اختر النموذج ونزّله. بعد التنزيل، اضغط على \"تحميل\" بجانب النموذج وابدأ الدردشة.",
+      "activateModelButton": "اختر النموذج",
+      "loading": "جارٍ التحميل...",
+      "gettingReadyTitle": "{{name}} يستعد",
+      "gettingReadyDescription": "سنُعلمك في اللحظة التي يصبح فيها رفيقك جاهزًا للدردشة. اضغط على الشريط في الأعلى لمتابعة سير العمل."
+    },
+    "chatInput": {
+      "inputPlaceholder": "رسالة",
+      "thinkingToggle": {
+        "enableThinking": "تفعيل وضع التفكير",
+        "disableThinking": "تعطيل وضع التفكير",
+        "thinkingEnabled": "تم تفعيل وضع التفكير",
+        "thinkingDisabled": "تم تعطيل وضع التفكير",
+        "thinkText": "تفكير",
+        "cycleEffort": "‎مستوى جهد الاستدلال: {{level}}. اضغط مرتين لتبديل مستوى الجهد"
+      }
+    },
+    "contentReportSheet": {
+      "title": "الإبلاغ عن المحتوى",
+      "privacyNote": "نحن لا نرسل أي محتوى من الرسائل أو تفاصيل المحادثة. يرجى وصف المشكلة المحددة التي واجهتها.",
+      "categoryLabel": "فئة الإبلاغ",
+      "selectCategory": "اختر فئة",
+      "categories": {
+        "hate": "خطاب كراهية",
+        "sexual": "محتوى جنسي",
+        "selfHarm": "إيذاء النفس",
+        "violence": "العنف",
+        "other": "أخرى"
+      },
+      "descriptionLabel": "الوصف",
+      "descriptionPlaceholder": "يرجى وصف المشكلة المتعلقة بهذا المحتوى...",
+      "includeModelInfo": "تضمين معلومات النموذج",
+      "includeModelInfoDescription": "ضمّن اسم النموذج ومعرّفه لمساعدتنا في التحقيق",
+      "noActiveModelNote": "لا يوجد نموذج نشط حاليًا",
+      "submit": "إرسال الإبلاغ",
+      "validation": {
+        "title": "‎معلومات ناقصة",
+        "message": "يرجى اختيار فئة وتقديم وصف."
+      },
+      "success": {
+        "title": "تم إرسال الإبلاغ",
+        "message": "شكرًا لك على إبلاغك. سنراجعه ونتخذ الإجراء المناسب."
+      },
+      "error": {
+        "title": "فشل الإبلاغ",
+        "message": "تعذّر إرسال الإبلاغ. يرجى المحاولة مرة أخرى."
+      }
+    },
+    "modelErrorReportSheet": {
+      "title": "الإبلاغ عن مشكلة في تحميل النموذج",
+      "privacyNote": "ساعدنا في تحسين PocketPal من خلال مشاركة تفاصيل حول هذا الخطأ. راجع أدناه ما سيتم مشاركته - يمكنك إلغاء تحديد أي عناصر لا تفضّل تضمينها.",
+      "errorMessage": "رسالة الخطأ",
+      "modelInfo": "‎معلومات النموذج",
+      "modelName": "الاسم",
+      "modelSource": "المصدر",
+      "modelSize": "الحجم",
+      "contextParams": "معاملات السياق",
+      "deviceInfo": "معلومات الجهاز",
+      "deviceModel": "الجهاز",
+      "osVersion": "نظام التشغيل",
+      "memoryInfo": "الذاكرة",
+      "cpuArchitecture": "CPU",
+      "isEmulator": "محاكي",
+      "additionalInfoLabel": "سياق إضافي (اختياري)",
+      "additionalInfoPlaceholder": "أي تفاصيل إضافية قد تساعدنا في فهم المشكلة...",
+      "submit": "إرسال الإبلاغ",
+      "success": {
+        "title": "تم إرسال الإبلاغ",
+        "message": "شكرًا لمساعدتك في تحسين PocketPal. سيساعدنا إبلاغك في إصلاح هذه المشكلة."
+      },
+      "error": {
+        "title": "فشل الإبلاغ",
+        "message": "تعذّر إرسال الإبلاغ. يرجى المحاولة لاحقًا."
+      }
+    },
+    "completionSettings": {
+      "serverDefault": "افتراضي الخادم",
+      "usingServerDefault": "استخدام افتراضي الخادم: {{value}}",
+      "usingServerDefaultUnreported": "استخدام افتراضي الخادم (غير مُبلَّغ عنه)",
+      "resetToServerDefault": "افتراضي الخادم: {{value}} · إعادة تعيين",
+      "resetToServerDefaultAccessibilityLabel": "إعادة تعيين {{name}} إلى افتراضي الخادم، {{value}}"
+    },
+    "chatGenerationSettingsSheet": {
+      "invalidValues": "قيم غير صالحة",
+      "invalidNumericValuesMessage": "يجب أن يكون رقمًا صالحًا",
+      "pleaseCorrect": "يرجى تصحيح ما يلي:",
+      "ok": "حسنًا",
+      "saveChanges": "حفظ التغييرات",
+      "saveAsPreset": "حفظ كإعداد مسبق",
+      "title_session": "إعدادات توليد الدردشة (الجلسة)",
+      "title_preset": "إعدادات توليد الدردشة (الإعداد المسبق)",
+      "resetToSystemDefaults": "إعادة التعيين إلى إعدادات النظام الافتراضية",
+      "resetToPreset": "إعادة التعيين إلى الإعداد المسبق",
+      "applytoPresetAlert": {
+        "title": "نجاح",
+        "message": "سيتم تطبيق هذه الإعدادات على جميع الجلسات المستقبلية"
+      },
+      "palSettings": "إعدادات الرفيق",
+      "settingsSource": "مصدر الإعدادات"
+    },
+    "palGenerationSettingsSheet": {
+      "title": "إعدادات التوليد - {{palName}}",
+      "invalidValues": "قيم غير صالحة",
+      "invalidNumericValuesMessage": "يجب أن يكون رقمًا صالحًا",
+      "pleaseCorrect": "‏يرجى تصحيح ما يلي:",
+      "ok": "حسنًا",
+      "error": "خطأ",
+      "failedToSave": "تعذّر حفظ إعدادات الرفيق",
+      "resetToGlobal": "إعادة التعيين إلى الإعدادات الافتراضية العامة",
+      "resetToSystem": "إعادة التعيين إلى إعدادات النظام الافتراضية",
+      "clearPalSettings": "‎مسح إعدادات الرفيق",
+      "customSettingsFor": "إعدادات مخصصة لـ {{palName}}",
+      "inheritedSettingsFor": "إعدادات موروثة لـ {{palName}}"
+    },
+    "chatHeaderTitle": {
+      "defaultTitle": "دردشة"
+    },
+    "fileMessage": {
+      "fileButtonAccessibilityLabel": "ملف"
+    },
+    "chatPalModelPickerSheet": {
+      "modelsTab": "النماذج",
+      "palsTab": "الرفاق",
+      "noPal": "لا يوجد رفيق",
+      "disablePal": "تعطيل الرفيق النشط",
+      "noDescription": "لا يوجد وصف",
+      "assistantType": "‏المساعد",
+      "roleplayType": "لعب الأدوار",
+      "videoType": "فيديو",
+      "confirmationTitle": "تأكيد",
+      "modelSwitchMessage": "هذا الرفيق له نموذج افتراضي مختلف ({{modelName}}). هل تريد التبديل إلى النموذج الافتراضي للرفيق؟",
+      "keepButton": "‎إبقاء",
+      "switchButton": "تبديل"
+    },
+    "downloadErrorDialog": {
+      "downloadFailedTitle": "فشل التنزيل",
+      "downloadFailedMessage": "تعذّر تنزيل النموذج: {{message}}",
+      "unauthorizedTitle": "فشل المصادقة",
+      "unauthorizedMessage": "يبدو أن رمز Hugging Face الخاص بك غير صالح أو منتهي الصلاحية. يرجى تحديث الرمز في الإعدادات.",
+      "forbiddenTitle": "‎تم رفض الوصول",
+      "forbiddenMessage": "ليس لديك إذن للوصول إلى هذا النموذج. يرجى التأكد من:",
+      "forbiddenSteps": [
+        "رمزك لديه إذن \"قراءة\"",
+        "لقد طلبت الوصول إلى هذا النموذج وتم منحك إياه",
+        "وافق مالك النموذج على طلب وصولك"
+      ],
+      "getTokenTitle": "احصل على رمز Hugging Face",
+      "getTokenMessage": "يتطلب هذا النموذج رمز Hugging Face لتنزيله.",
+      "getTokenSteps": [
+        "انتقل إلى huggingface.co وسجّل الدخول",
+        "انتقل إلى الإعدادات > رموز الوصول",
+        "أنشئ رمزًا جديدًا بصلاحية \"قراءة\"",
+        "انسخ الرمز والصقه في حقل الرمز"
+      ],
+      "tokenDisabledTitle": "الرمز معطّل",
+      "tokenDisabledMessage": "لديك رمز Hugging Face مُعيَّن، لكنه معطّل حاليًا. يتطلب هذا النموذج رمزًا لتنزيله. فعّل رمزك للمتابعة.",
+      "enableAndRetry": "تفعيل وإعادة المحاولة",
+      "goToSettings": "الانتقال إلى الإعدادات",
+      "tryAgain": "‎إعادة المحاولة",
+      "viewOnHuggingFace": "عرض النموذج على HF ↗"
+    },
+    "headerRight": {
+      "deleteChatTitle": "حذف الدردشة",
+      "deleteChatMessage": "هل أنت متأكد أنك تريد حذف هذه الدردشة؟",
+      "generationSettings": "إعدادات التوليد",
+      "model": "النموذج",
+      "duplicateChatHistory": "تكرار سجل الدردشة",
+      "makeChatTemporary": "‎جعل الدردشة مؤقتة",
+      "export": "تصدير/استيراد",
+      "exportCurrentSession": "تصدير الجلسة الحالية",
+      "exportCurrentSessionMarkdown": "تصدير بصيغة Markdown",
+      "exportAllSessions": "تصدير جميع الجلسات",
+      "exportChatSession": "تصدير جلسة الدردشة",
+      "importSessions": "استيراد الجلسات"
+    },
+    "hfTokenSheet": {
+      "title": "رمز Hugging Face",
+      "description": "مطلوب للوصول إلى النماذج المقيّدة",
+      "inputLabel": "رمز الوصول الشخصي",
+      "inputPlaceholder": "‏الصق رمزك هنا",
+      "save": "حفظ الرمز",
+      "saved": "تم حفظ الرمز بنجاح",
+      "reset": "إعادة تعيين الرمز",
+      "resetSuccess": "تمت إزالة الرمز بنجاح",
+      "instructions": "كيفية الحصول على رمز:",
+      "instructionsSteps": [
+        "انتقل إلى huggingface.co وسجّل الدخول",
+        "انتقل إلى الإعدادات > رموز الوصول",
+        "أنشئ رمزًا جديدًا بصلاحية \"قراءة\"",
+        "انسخ الرمز والصقه أدناه"
+      ],
+      "getTokenLink": "احصل على رمز من huggingface.co ↗",
+      "error": {
+        "saving": "خطأ في حفظ الرمز",
+        "missing": "رمز Hugging Face مطلوب",
+        "invalid": "رمز غير صالح أو منتهي الصلاحية",
+        "gatedModelAccess": "تم رفض الوصول إلى هذا النموذج المقيّد"
+      },
+      "gatedModelIndicator": "يتطلب رمزًا"
     }
   }
 }
