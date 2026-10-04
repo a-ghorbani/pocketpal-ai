@@ -163,6 +163,13 @@ android {
         }
     }
 
+    testOptions {
+        unitTests.includeAndroidResources = true
+        unitTests.all {
+            systemProperty "robolectric.conscryptMode", "OFF"
+        }
+    }
+
     flavorDimensions "distribution"
     productFlavors {
         prod {
@@ -230,6 +237,15 @@ dependencies {
 
     // OkHttp for DownloadModule (network requests)
     implementation("com.squareup.okhttp3:okhttp:4.12.0")
+
+    testImplementation("junit:junit:4.13.2")
+    testImplementation("org.robolectric:robolectric:4.16")
+    testImplementation("androidx.test:core-ktx:1.7.0")
+    testImplementation("androidx.room:room-testing:$room_version")
+    testImplementation("androidx.sqlite:sqlite-bundled-jvm:2.6.1")
+    testImplementation("com.squareup.okhttp3:mockwebserver:4.12.0")
+    testImplementation("androidx.work:work-testing:2.10.5")
+    testImplementation("org.jetbrains.kotlinx:kotlinx-coroutines-test:1.9.0")
 }
 
 // openiap-google's Compose helper (IapContext) is unreferenced; Gson is used by OpenIapModule.

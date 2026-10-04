@@ -5,11 +5,13 @@ import androidx.room.Database
 import androidx.room.Room
 import androidx.room.RoomDatabase
 import androidx.room.migration.Migration
+import androidx.sqlite.SQLiteConnection
 import androidx.sqlite.db.SupportSQLiteDatabase
+import androidx.sqlite.execSQL
 
 @Database(
     entities = [DownloadEntity::class],
-    version = 2,
+    version = 3,
     exportSchema = false
 )
 abstract class DownloadDatabase : RoomDatabase() {
@@ -24,6 +26,21 @@ abstract class DownloadDatabase : RoomDatabase() {
             }
         }
 
+        private val MIGRATION_2_3_SQL = listOf(
+            "ALTER TABLE downloads ADD COLUMN etag TEXT",
+            "ALTER TABLE downloads ADD COLUMN stalledRuns INTEGER NOT NULL DEFAULT 0",
+        )
+
+        val MIGRATION_2_3 = object : Migration(2, 3) {
+            override fun migrate(database: SupportSQLiteDatabase) {
+                MIGRATION_2_3_SQL.forEach(database::execSQL)
+            }
+
+            override fun migrate(connection: SQLiteConnection) {
+                MIGRATION_2_3_SQL.forEach(connection::execSQL)
+            }
+        }
+
         @Volatile
         private var INSTANCE: DownloadDatabase? = null
 
@@ -34,7 +51,7 @@ abstract class DownloadDatabase : RoomDatabase() {
                     DownloadDatabase::class.java,
                     DATABASE_NAME
                 )
-                .addMigrations(MIGRATION_1_2)
+                .addMigrations(MIGRATION_1_2, MIGRATION_2_3)
                 .build()
                 .also { INSTANCE = it }
             }
