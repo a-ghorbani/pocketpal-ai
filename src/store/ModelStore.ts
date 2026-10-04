@@ -321,7 +321,6 @@ class ModelStore {
         const model = this.models.find(m => m.id === modelId);
         if (model) {
           runInAction(() => {
-            model.progress = 0;
             model.isDownloaded = false;
           });
         }

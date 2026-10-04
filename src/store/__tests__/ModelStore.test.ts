@@ -118,6 +118,9 @@ const presetModelFixture: Model = createModel({
   params: 2614341888,
 }) as Model;
 
+const registeredDownloadCallbacks = (downloadManager.setCallbacks as jest.Mock)
+  .mock.calls[0][0];
+
 describe('ModelStore', () => {
   let showErrorSpy: jest.SpyInstance;
 
@@ -2148,28 +2151,15 @@ describe('ModelStore', () => {
       expect(model.progress).toBe(0);
     });
 
-    it('should update model state on download error', () => {
-      const model = presetModelFixture;
+    it('keeps download progress and records the error when a download fails', () => {
+      const model = {...presetModelFixture, progress: 42, isDownloaded: false};
       modelStore.models = [model];
 
-      // Set up callbacks directly
-      const callbacks = {
-        onError: (modelId: string) => {
-          const _model = modelStore.models.find(m => m.id === modelId);
-          if (_model) {
-            runInAction(() => {
-              _model.progress = 0;
-              model.isDownloaded = false;
-            });
-          }
-        },
-      };
+      registeredDownloadCallbacks.onError(model.id, new Error('stalled'));
 
-      // Trigger error callback
-      callbacks.onError(model.id);
-
-      expect(model.progress).toBe(0);
-      expect(model.isDownloaded).toBe(false);
+      expect(modelStore.models[0].progress).toBe(42);
+      expect(modelStore.models[0].isDownloaded).toBe(false);
+      expect(modelStore.downloadError?.metadata?.modelId).toBe(model.id);
     });
 
     it('should not set downloadError when a download is cancelled', async () => {
