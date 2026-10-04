@@ -146,10 +146,15 @@ export class NativeStore implements StorePort {
     if (Platform.OS !== 'ios') {
       return undefined;
     }
+    // A failed lookup emits an id-less purchase error; with no listener,
+    // iOS buffers it and hands it to the next Buy, which then fails.
+    const drain = purchaseErrorListener(() => {});
     try {
       return await getStorefront();
     } catch {
       return undefined;
+    } finally {
+      drain.remove();
     }
   }
 
