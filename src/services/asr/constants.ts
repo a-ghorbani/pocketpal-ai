@@ -23,12 +23,15 @@ export const ASR_CHANNELS = 1;
 export const ASR_BITS_PER_SAMPLE = 16;
 
 /**
- * Energy-VAD floor. A captured buffer whose RMS amplitude (normalized to
- * [0,1]) is below this, or whose voiced duration is shorter than
- * `ASR_MIN_SPEECH_MS`, is treated as silence and never decoded — Whisper is
- * autoregressive and hallucinates text on silence. See energyVad.ts.
+ * Energy-VAD floor. A frame whose RMS amplitude (normalized to [0,1]) reaches
+ * this counts as voiced; a buffer with less than `ASR_MIN_SPEECH_MS` of voiced
+ * frames is treated as silence and never decoded — Whisper is autoregressive
+ * and hallucinates text on silence. See energyVad.ts.
  */
 export const ASR_VAD_RMS_FLOOR = 0.01;
+
+/** Energy-VAD frame length (ms). */
+export const ASR_VAD_FRAME_MS = 30;
 
 /** Minimum voiced duration (ms) required before a buffer is decoded. */
 export const ASR_MIN_SPEECH_MS = 300;

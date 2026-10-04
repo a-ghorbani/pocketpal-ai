@@ -37,6 +37,31 @@ describe('energyVad', () => {
     expect(result.rms).toBeGreaterThan(0.01);
     expect(result.durationMs).toBeGreaterThanOrEqual(300);
   });
+
+  it('passes quiet speech that silence around it pulls below the floor overall', () => {
+    // 4 s of near-silence, then 1 s of speech-level signal just above the
+    // floor: whole-buffer RMS is under the floor, the voiced frames are not.
+    const samples = new Float32Array(SECONDS(5));
+    samples.fill(0.001);
+    for (let i = SECONDS(4); i < samples.length; i++) {
+      samples[i] = Math.sin((i / 16) * Math.PI) * 0.03;
+    }
+    const result = energyVad(samples);
+    expect(result.rms).toBeLessThan(0.01);
+    expect(result.voicedMs).toBeGreaterThanOrEqual(300);
+    expect(result.passed).toBe(true);
+  });
+
+  it('rejects a short loud click inside a long silence', () => {
+    const samples = new Float32Array(SECONDS(3));
+    samples.fill(0.001);
+    for (let i = SECONDS(1); i < SECONDS(1.1); i++) {
+      samples[i] = 0.5;
+    }
+    const result = energyVad(samples);
+    expect(result.voicedMs).toBeLessThan(300);
+    expect(result.passed).toBe(false);
+  });
 });
 
 describe('int16PcmToFloat32', () => {
