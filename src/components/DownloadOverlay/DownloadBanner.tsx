@@ -31,12 +31,78 @@ const formatSize = (bytes: number): string => {
  *     model so the user can resume from the Models screen.
  *   - × icon  → dismisses the banner for this download only. Download
  *     continues. Dismissal clears when the download disappears.
+ *
+ * A failed download that is not running again replaces the progress row
+ * with a Retry pill; × there clears the error.
  */
 export const DownloadBanner: React.FC = observer(() => {
   const theme = useTheme();
   const styles = createStyles(theme);
   const navigation = useNavigation<NavigationProp<any>>();
   const l10n = useContext(L10nContext);
+
+  const failedId = modelStore.downloadError?.metadata?.modelId;
+  const failedModel =
+    failedId && !modelStore.isDownloading(failedId)
+      ? modelStore.models.find(m => m.id === failedId)
+      : undefined;
+  if (failedModel) {
+    const failedTitle = l10n.downloadBanner.failedTitle.replace(
+      '{{name}}',
+      failedModel.name,
+    );
+    const activeCount = modelStore.activeDownloads.length;
+    return (
+      <View testID="download-banner-failed" style={styles.root}>
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel={failedTitle}
+          onPress={() => navigation.navigate(ROUTES.MODELS as never)}
+          style={styles.body}>
+          <View
+            accessibilityElementsHidden
+            importantForAccessibility="no-hide-descendants"
+            style={styles.avatar}
+          />
+          <View style={[styles.content, styles.titleRow]}>
+            <Text
+              style={[styles.title, styles.failedTitle]}
+              numberOfLines={1}
+              ellipsizeMode="tail">
+              {failedTitle}
+            </Text>
+            {activeCount > 0 ? (
+              <View testID="download-banner-extra-badge" style={styles.badge}>
+                <Text style={styles.badgeText}>{`+${activeCount}`}</Text>
+              </View>
+            ) : null}
+          </View>
+        </Pressable>
+        <Pressable
+          testID="download-banner-retry"
+          accessibilityRole="button"
+          accessibilityLabel={l10n.downloadBanner.retry}
+          onPress={() => modelStore.retryDownload()}
+          style={styles.stop}
+          hitSlop={8}>
+          <Text style={styles.stopText}>{l10n.downloadBanner.retry}</Text>
+        </Pressable>
+        <Pressable
+          testID="download-banner-dismiss"
+          accessibilityRole="button"
+          accessibilityLabel={l10n.common.dismiss}
+          onPress={() => modelStore.clearDownloadError()}
+          style={styles.dismiss}
+          hitSlop={8}>
+          <XIcon
+            width={14}
+            height={14}
+            stroke={theme.colors.onSurfaceVariant}
+          />
+        </Pressable>
+      </View>
+    );
+  }
 
   const visible = modelStore.activeDownloads.find(
     d => !uiStore.isDownloadBannerDismissed(d.modelId),

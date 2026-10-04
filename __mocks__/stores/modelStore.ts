@@ -11,6 +11,7 @@ import {
   RemoteSessionBinding,
 } from '../../src/utils/types';
 import type {Samplers} from '../../src/utils/samplerParams';
+import type {ErrorState} from '../../src/utils/errors';
 import {LlamaContext} from 'llama.rn';
 import {CompletionEngine} from '../../src/utils/completionTypes';
 import {createDefaultContextInitParams} from '../../src/utils/contextInitParamsVersions';
@@ -45,6 +46,9 @@ class MockModelStore {
   largestSuccessfulLoad: number | undefined = 4 * 1e9; // 4GB largest successful load
 
   refreshDownloadStatuses: jest.Mock;
+  retryDownload: jest.Mock;
+  clearDownloadError: jest.Mock;
+  downloadError: ErrorState | null = null;
   addLocalModel: jest.Mock;
   removeModelByFullPath: jest.Mock;
   setNContext: jest.Mock;
@@ -103,6 +107,8 @@ class MockModelStore {
     makeAutoObservable(this, {
       engine: observable.ref,
       refreshDownloadStatuses: false,
+      retryDownload: false,
+      clearDownloadError: false,
       addLocalModel: false,
       removeModelByFullPath: false,
       setNContext: false,
@@ -159,9 +165,11 @@ class MockModelStore {
       effectiveDraftMode: computed,
       effectiveDraftCacheDefaults: computed,
       isDownloading: computed,
-      activeDownloads: computed,
+      activeDownloads: false,
     });
     this.refreshDownloadStatuses = jest.fn();
+    this.retryDownload = jest.fn();
+    this.clearDownloadError = jest.fn();
     this.addLocalModel = jest.fn();
     this.removeModelByFullPath = jest.fn();
     this.setNContext = jest.fn();

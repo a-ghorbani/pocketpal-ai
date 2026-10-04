@@ -1622,6 +1622,8 @@
   "downloadBanner": {
     "titleByPal": "{{name}} is downloading",
     "titleByModel": "{{name}} is downloading",
-    "extraInProgress": "+{{count}} more in progress"
+    "extraInProgress": "+{{count}} more in progress",
+    "failedTitle": "{{name}} couldn't finish downloading",
+    "retry": "Retry"
   }
 }
