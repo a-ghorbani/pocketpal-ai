@@ -1,0 +1,322 @@
+import {LlamaContext} from 'llama.rn';
+import {renderHook, act, waitFor} from '@testing-library/react-native';
+
+import {textMessage} from '../../../jest/fixtures';
+import {sessionFixtures} from '../../../jest/fixtures/chatSessions';
+import {
+  mockLlamaContextParams,
+  modelsList,
+} from '../../../jest/fixtures/models';
+
+import {useChatSession} from '../useChatSession';
+import {chatSessionStore, modelStore, palStore} from '../../store';
+import type {
+  CompletionResult,
+  CompletionStreamData,
+} from '../../utils/completionTypes';
+import type {MessageType} from '../../utils/types';
+
+const mockAssistant = {id: 'assistant'};
+const user = textMessage.author;
+
+type PendingCompletion = {
+  emit: (data: CompletionStreamData) => void;
+  finish: (result?: Partial<CompletionResult>) => void;
+};
+
+/** An engine whose completions stay pending until the test finishes them. */
+function installEngine() {
+  const completions: PendingCompletion[] = [];
+  const engine = {
+    completion: jest.fn(
+      (_params: unknown, onData?: (data: CompletionStreamData) => void) =>
+        new Promise<CompletionResult>(resolve => {
+          completions.push({
+            emit: data => onData?.(data),
+            finish: result =>
+              resolve({text: '', content: '', ...result} as CompletionResult),
+          });
+        }),
+    ),
+    stopCompletion: jest.fn(async () => {}),
+  };
+  modelStore.engine = engine;
+  return {engine, completions};
+}
+
+const userBubbles = () =>
+  (chatSessionStore.addMessageToCurrentSession as jest.Mock).mock.calls
+    .map(([message]) => message as MessageType.Any)
+    .filter(message => message.type === 'text' && message.author === user);
+
+const lastCallArg = (fn: unknown) => {
+  const calls = (fn as jest.Mock).mock.calls;
+  return calls[calls.length - 1]?.[0];
+};
+
+function renderSession() {
+  return renderHook(() => useChatSession({current: null}, user, mockAssistant))
+    .result;
+}
+
+beforeEach(() => {
+  palStore.pals = [] as any;
+  chatSessionStore.sessions = sessionFixtures as any;
+  chatSessionStore.activeSessionId = 'session-1';
+  modelStore.models = modelsList as any;
+  modelStore.activeModelId = undefined;
+  modelStore.context = new LlamaContext(mockLlamaContextParams);
+  modelStore.setInferencing(false);
+  modelStore.setIsStreaming(false);
+});
+
+describe('useChatSession Stop and the generation lease', () => {
+  it('Stop clears the run UI at once; an immediate send waits for the drain behind "Stopping…"', async () => {
+    const {engine, completions} = installEngine();
+    const session = renderSession();
+
+    let first!: Promise<void>;
+    await act(async () => {
+      first = session.current.handleSendPress(textMessage);
+    });
+    await waitFor(() => expect(engine.completion).toHaveBeenCalledTimes(1));
+    expect(modelStore.inferencing).toBe(true);
+    expect(userBubbles()).toHaveLength(1);
+
+    await session.current.handleStopPress();
+
+    expect(modelStore.inferencing).toBe(false);
+    expect(modelStore.isStreaming).toBe(false);
+    expect(lastCallArg(chatSessionStore.setIsGenerating)).toBe(false);
+    expect(lastCallArg(chatSessionStore.setAgentUiState).status).toBe('idle');
+    expect(chatSessionStore.setIsStopping).not.toHaveBeenCalledWith(true);
+
+    let second!: Promise<void>;
+    await act(async () => {
+      second = session.current.handleSendPress({
+        ...textMessage,
+        text: 'again',
+      });
+    });
+    expect(chatSessionStore.setIsStopping).toHaveBeenLastCalledWith(true);
+    expect(userBubbles()).toHaveLength(1);
+    expect(engine.completion).toHaveBeenCalledTimes(1);
+
+    await act(async () => {
+      completions[0].finish({interrupted: true});
+      await first;
+    });
+    await waitFor(() => expect(engine.completion).toHaveBeenCalledTimes(2));
+    expect(chatSessionStore.setIsStopping).toHaveBeenLastCalledWith(false);
+    expect(userBubbles()).toHaveLength(2);
+    expect(userBubbles()[1]).toMatchObject({text: 'again'});
+    expect(modelStore.inferencing).toBe(true);
+
+    await act(async () => {
+      completions[1].finish({text: 'ok', content: 'ok'});
+      await second;
+    });
+    expect(modelStore.inferencing).toBe(false);
+    expect(modelStore.isGenerationBusy).toBe(false);
+  });
+
+  it('a release-initiated abort clears the run UI at once and still persists the turn at drain', async () => {
+    const {engine, completions} = installEngine();
+    const session = renderSession();
+
+    let sending!: Promise<void>;
+    await act(async () => {
+      sending = session.current.handleSendPress(textMessage);
+    });
+    await waitFor(() => expect(engine.completion).toHaveBeenCalledTimes(1));
+    completions[0].emit({content: 'partial answer'});
+    await waitFor(() => expect(modelStore.isStreaming).toBe(true));
+
+    modelStore.abortActiveGeneration();
+
+    expect(modelStore.inferencing).toBe(false);
+    expect(modelStore.isStreaming).toBe(false);
+    expect(chatSessionStore.updateMessage).not.toHaveBeenCalled();
+
+    await act(async () => {
+      completions[0].finish({
+        text: 'partial answer',
+        content: 'partial answer',
+        interrupted: true,
+      });
+      await sending;
+    });
+    expect(chatSessionStore.updateMessage).toHaveBeenCalledWith(
+      expect.anything(),
+      'session-1',
+      expect.objectContaining({
+        metadata: expect.objectContaining({copyable: true}),
+      }),
+    );
+    expect(chatSessionStore.setAgentUiState).not.toHaveBeenCalledWith(
+      expect.objectContaining({status: 'done'}),
+    );
+  });
+
+  it('a lease aborted before the hook attaches its listener never shows a run', async () => {
+    const {engine} = installEngine();
+    const acquire = modelStore.acquireGeneration as jest.Mock;
+    const realAcquire = acquire.getMockImplementation()!;
+    acquire.mockImplementationOnce(async () => {
+      const lease = await realAcquire();
+      lease.abort();
+      return lease;
+    });
+    const session = renderSession();
+
+    await act(async () => {
+      await session.current.handleSendPress(textMessage);
+    });
+
+    expect(modelStore.inferencing).toBe(false);
+    expect(chatSessionStore.setIsGenerating).not.toHaveBeenCalledWith(true);
+    expect(engine.completion).not.toHaveBeenCalled();
+    expect(modelStore.isGenerationBusy).toBe(false);
+  });
+
+  it('a lease aborted while the prompt is prepared starts no completion and leaves no Stop button', async () => {
+    const {engine} = installEngine();
+    let releaseSettings!: () => void;
+    (
+      chatSessionStore.getCurrentCompletionSettings as jest.Mock
+    ).mockImplementationOnce(
+      () =>
+        new Promise(resolve => {
+          releaseSettings = () => resolve({});
+        }),
+    );
+    const session = renderSession();
+
+    let sending!: Promise<void>;
+    await act(async () => {
+      sending = session.current.handleSendPress(textMessage);
+    });
+    await waitFor(() => expect(releaseSettings).toBeDefined());
+    modelStore.abortActiveGeneration();
+    expect(modelStore.inferencing).toBe(false);
+
+    await act(async () => {
+      releaseSettings();
+      await sending;
+    });
+    expect(engine.completion).not.toHaveBeenCalled();
+    expect(modelStore.inferencing).toBe(false);
+    expect(lastCallArg(chatSessionStore.setIsGenerating)).toBe(false);
+  });
+
+  it('two sends during one drain run in order, and isStopping clears when the first acquires', async () => {
+    const {engine, completions} = installEngine();
+    const session = renderSession();
+
+    let first!: Promise<void>;
+    await act(async () => {
+      first = session.current.handleSendPress(textMessage);
+    });
+    await waitFor(() => expect(engine.completion).toHaveBeenCalledTimes(1));
+    await session.current.handleStopPress();
+
+    let second!: Promise<void>;
+    let third!: Promise<void>;
+    await act(async () => {
+      second = session.current.handleSendPress({...textMessage, text: 'two'});
+      third = session.current.handleSendPress({...textMessage, text: 'three'});
+    });
+
+    await act(async () => {
+      completions[0].finish({interrupted: true});
+      await first;
+    });
+    await waitFor(() => expect(engine.completion).toHaveBeenCalledTimes(2));
+    expect(chatSessionStore.setIsStopping).toHaveBeenLastCalledWith(false);
+    expect(userBubbles().map(m => (m as MessageType.Text).text)).toEqual([
+      textMessage.text,
+      'two',
+    ]);
+
+    await act(async () => {
+      completions[1].finish({text: 'a', content: 'a'});
+      await second;
+    });
+    await waitFor(() => expect(engine.completion).toHaveBeenCalledTimes(3));
+    expect(userBubbles().map(m => (m as MessageType.Text).text)).toEqual([
+      textMessage.text,
+      'two',
+      'three',
+    ]);
+
+    await act(async () => {
+      completions[2].finish({text: 'b', content: 'b'});
+      await third;
+    });
+  });
+
+  it("after Stop, a session switch does not redirect the run's remaining writes", async () => {
+    const {engine, completions} = installEngine();
+    const session = renderSession();
+
+    let sending!: Promise<void>;
+    await act(async () => {
+      sending = session.current.handleSendPress(textMessage);
+    });
+    await waitFor(() => expect(engine.completion).toHaveBeenCalledTimes(1));
+    await session.current.handleStopPress();
+    chatSessionStore.activeSessionId = 'session-2';
+
+    await act(async () => {
+      completions[0].finish({interrupted: true});
+      await sending;
+    });
+
+    expect(chatSessionStore.finalizeActiveStep).toHaveBeenCalledWith(
+      expect.anything(),
+      'session-1',
+    );
+    expect(chatSessionStore.updateMessage).toHaveBeenCalledWith(
+      expect.anything(),
+      'session-1',
+      expect.objectContaining({
+        metadata: expect.objectContaining({copyable: true}),
+      }),
+    );
+  });
+
+  it('a store write that throws mid-stream stops and awaits the completion before the lease ends', async () => {
+    const {engine, completions} = installEngine();
+    const consoleError = jest
+      .spyOn(console, 'error')
+      .mockImplementation(() => {});
+    (
+      chatSessionStore.updateActiveStepStreaming as jest.Mock
+    ).mockImplementationOnce(() => {
+      throw new Error('store write failed');
+    });
+    const session = renderSession();
+
+    let settled = false;
+    let sending!: Promise<void>;
+    await act(async () => {
+      sending = session.current.handleSendPress(textMessage).then(() => {
+        settled = true;
+      });
+    });
+    await waitFor(() => expect(engine.completion).toHaveBeenCalledTimes(1));
+    completions[0].emit({content: 'boom'});
+
+    await waitFor(() => expect(engine.stopCompletion).toHaveBeenCalled());
+    expect(settled).toBe(false);
+    expect(modelStore.isGenerationBusy).toBe(true);
+
+    await act(async () => {
+      completions[0].finish({interrupted: true});
+      await sending;
+    });
+    expect(modelStore.inferencing).toBe(false);
+    expect(modelStore.isGenerationBusy).toBe(false);
+    consoleError.mockRestore();
+  });
+});

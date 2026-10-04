@@ -80,12 +80,9 @@ interface PendingIndicatorProps {
    */
   toolCallTokenCount?: number;
   /**
-   * True between the user pressing Stop and the runner actually
-   * exiting (native llama.rn finishing its in-flight `llama_decode`
-   * chunk). When true, the indicator overrides any tool-call label /
-   * count / elapsed suffix with a single "Stopping…" message — the
-   * user-facing signal that "your stop was received, native is
-   * winding down at its next chunk boundary."
+   * True while a new send waits for the previous, stopped run to drain.
+   * Overrides any tool-call label / count / elapsed suffix with a single
+   * "Stopping…" message.
    */
   isStopping?: boolean;
 }
@@ -129,9 +126,8 @@ export const PendingIndicator: React.FC<PendingIndicatorProps> = ({
   }, [inToolCallMode]);
 
   // Build the label suffix.
-  // - In `stopping` mode we override everything with "Stopping…" so
-  //   the user knows their tap registered while we wait for native
-  //   to wind down at the next chunk boundary.
+  // - In `stopping` mode we override everything with "Stopping…" while
+  //   a send waits for the previous run to drain.
   // - Otherwise it reads "Building page · 120 tokens · 4s" once the
   //   thresholds are crossed (see MIN_TOKENS / elapsed >= 1).
   let suffix: string | null = null;

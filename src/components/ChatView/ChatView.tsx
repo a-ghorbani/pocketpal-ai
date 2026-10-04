@@ -823,10 +823,8 @@ export const ChatView = observer(
       agentStatus === 'prefill' ||
       agentStatus === 'generating_tool_call' ||
       agentStatus === 'executing_tool' ||
-      // Keep the indicator visible during the user-initiated stop
-      // window so they see the "Stopping…" feedback even if status
-      // had been `streaming_text` (no indicator) at the moment of the
-      // tap. Cleared together with `isStopping` once the runner exits.
+      // A send waiting for a stopped run to drain shows "Stopping…"
+      // while the agent status is already idle.
       chatSessionStore.isStopping;
     const activeRunPendingTalentNames =
       chatSessionStore.agentUiState.pendingTalentNames;

@@ -177,25 +177,38 @@ describe('useChatSession', () => {
     expect(modelStore.context?.stopCompletion).not.toHaveBeenCalled();
   });
 
-  it('handleStopPress sets isStopping immediately so the UI can gate sends', async () => {
-    // Simulate a real in-flight chat: inferencing is true and the
-    // engine has been wired (mock above). The stop press should:
-    //   - flip isStopping to true (UI feedback + send-button gate)
-    //   - leave inferencing alone (cleared later by the runner exit)
-    // The cleanup of isStopping happens in the for-await loop, so it
-    // is exercised in `should set inferencing correctly during send`.
-    modelStore.setInferencing(true);
+  it('handleStopPress aborts the run and clears the run UI at once, without isStopping', async () => {
+    let resolveCompletion!: (value: any) => void;
+    modelStore.context!.completion = jest.fn(
+      () =>
+        new Promise(resolve => {
+          resolveCompletion = resolve;
+        }),
+    ) as any;
     const {result} = renderHook(() =>
       useChatSession({current: null}, textMessage.author, mockAssistant),
     );
 
+    let sending!: Promise<void>;
+    await act(async () => {
+      sending = result.current.handleSendPress(textMessage);
+    });
+    await waitFor(() =>
+      expect(modelStore.context!.completion).toHaveBeenCalled(),
+    );
+    expect(modelStore.inferencing).toBe(true);
+
     await result.current.handleStopPress();
 
-    expect(chatSessionStore.setIsStopping).toHaveBeenCalledWith(true);
-    // inferencing flag is NOT cleared by handleStopPress anymore — the
-    // runner's for-await cleanup is the single owner of that.
-    const calls = (chatSessionStore.setIsGenerating as jest.Mock).mock.calls;
-    expect(calls.find(c => c[0] === false)).toBeUndefined();
+    expect(modelStore.inferencing).toBe(false);
+    expect(chatSessionStore.setIsGenerating).toHaveBeenLastCalledWith(false);
+    expect(chatSessionStore.setIsStopping).not.toHaveBeenCalledWith(true);
+    expect(modelStore.engine!.stopCompletion).toHaveBeenCalled();
+
+    await act(async () => {
+      resolveCompletion({text: '', content: '', interrupted: true});
+      await sending;
+    });
   });
 
   it('should set inferencing correctly during send', async () => {
