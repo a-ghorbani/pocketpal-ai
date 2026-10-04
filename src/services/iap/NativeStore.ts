@@ -4,6 +4,7 @@ import {
   finishTransaction,
   getAvailablePurchases,
   getPendingTransactionsIOS,
+  getStorefront,
   initConnection,
   purchaseErrorListener,
   purchaseUpdatedListener,
@@ -139,6 +140,17 @@ export class NativeStore implements StorePort {
       productId: product.id,
       displayPrice: product.displayPrice,
     }));
+  }
+
+  async storefront(): Promise<string | undefined> {
+    if (Platform.OS !== 'ios') {
+      return undefined;
+    }
+    try {
+      return await getStorefront();
+    } catch {
+      return undefined;
+    }
   }
 
   purchase(

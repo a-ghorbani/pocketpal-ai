@@ -17,6 +17,7 @@ class MockPurchaseStore {
   linkConflict = false;
   isRestoring = false;
   needsLink = false;
+  showsLicenseNotice = false;
 
   buy: jest.Mock;
   retry: jest.Mock;
@@ -116,6 +117,7 @@ class MockPurchaseStore {
     this.linkConflict = false;
     this.isRestoring = false;
     this.needsLink = false;
+    this.showsLicenseNotice = false;
   }
 }
 

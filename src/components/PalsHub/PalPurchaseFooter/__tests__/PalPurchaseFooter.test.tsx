@@ -581,4 +581,49 @@ describe('PalPurchaseFooter', () => {
     fireEvent.press(getByTestId('purchase-restore-button'));
     expect(purchaseStore.restore).toHaveBeenCalled();
   });
+
+  describe('licence notice', () => {
+    const showNotice = (shown: boolean) =>
+      runInAction(() => {
+        (purchaseStore as any).showsLicenseNotice = shown;
+      });
+
+    it('states the licence with both terms links above Buy', () => {
+      purchasable();
+      showNotice(true);
+      const openURL = jest
+        .spyOn(Linking, 'openURL')
+        .mockResolvedValue(undefined);
+      const {getByTestId} = setup();
+
+      expect(getByTestId('purchase-license-notice')).toHaveTextContent(
+        "You're buying a license to use this Pal. Terms of Sale · Apple Media Services Terms",
+      );
+      fireEvent.press(getByTestId('purchase-terms-of-sale-link'));
+      fireEvent.press(getByTestId('purchase-apple-terms-link'));
+      expect(openURL.mock.calls).toEqual([
+        ['https://palshub.ai/legal/terms-of-sale'],
+        ['https://www.apple.com/legal/internet-services/itunes/us/terms.html'],
+      ]);
+      openURL.mockRestore();
+    });
+
+    it('shows nothing when the storefront needs no notice', () => {
+      purchasable();
+      showNotice(false);
+      const {queryByTestId, getByTestId} = setup();
+      expect(getByTestId('buy-button')).toBeTruthy();
+      expect(queryByTestId('purchase-license-notice')).toBeNull();
+    });
+
+    it('is not shown once the Pal is owned', () => {
+      purchasable();
+      showNotice(true);
+      runInAction(() => {
+        purchaseStore.records['pal-1'] = record('active');
+      });
+      const {queryByTestId} = setup();
+      expect(queryByTestId('purchase-license-notice')).toBeNull();
+    });
+  });
 });

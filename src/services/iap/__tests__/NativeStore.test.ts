@@ -508,4 +508,24 @@ describe('NativeStore', () => {
     events.update(purchase());
     expect(listener).toHaveBeenCalledTimes(1);
   });
+
+  describe('storefront', () => {
+    it('iOS: returns the StoreKit storefront country code', async () => {
+      setOS('ios');
+      iap.getStorefront.mockResolvedValueOnce('USA');
+      await expect(store.storefront()).resolves.toBe('USA');
+    });
+
+    it('iOS: a failed lookup reads as unknown', async () => {
+      setOS('ios');
+      iap.getStorefront.mockRejectedValueOnce(new Error('no storefront'));
+      await expect(store.storefront()).resolves.toBeUndefined();
+    });
+
+    it('Android: never asks the store', async () => {
+      setOS('android');
+      await expect(store.storefront()).resolves.toBeUndefined();
+      expect(iap.getStorefront).not.toHaveBeenCalled();
+    });
+  });
 });

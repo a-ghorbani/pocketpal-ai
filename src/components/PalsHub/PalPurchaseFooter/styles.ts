@@ -31,4 +31,8 @@ export const createStyles = (theme: Theme) =>
       color: theme.colors.onSurface,
       textAlign: 'center',
     },
+    link: {
+      color: theme.colors.primary,
+      textDecorationLine: 'underline',
+    },
   });

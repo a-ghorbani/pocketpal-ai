@@ -139,6 +139,7 @@ export class StubStore implements StorePort {
   fetchProducts = jest.fn(async (ids: string[]) =>
     ids.map(productId => ({productId, displayPrice: '4,99 €'})),
   );
+  storefront = jest.fn(async (): Promise<string | undefined> => undefined);
   purchase = jest.fn(
     async (): Promise<PurchaseOutcome> => ({kind: 'purchased', tx: tx()}),
   );
