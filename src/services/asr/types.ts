@@ -54,8 +54,10 @@ export type AsrProgressCallback = (progress: number) => void;
 export interface VadResult {
   /** True when the buffer carries enough voiced signal to decode. */
   passed: boolean;
-  /** Measured RMS amplitude (normalized 0..1). */
+  /** RMS amplitude of the whole buffer (normalized 0..1). */
   rms: number;
+  /** Total duration of the voiced frames in ms. */
+  voicedMs: number;
   /** Captured duration in ms. */
   durationMs: number;
 }
@@ -77,11 +79,12 @@ export interface AsrEngine {
   /** Reclaim a tier's stale model dir before a (re)download. Idempotent. */
   reclaimLegacySpace(tier: AsrTier): Promise<void>;
   /**
-   * Transcribe a captured 16 kHz mono PCM buffer (base64-encoded float32).
+   * Transcribe a captured 16 kHz mono PCM buffer (base64-encoded signed
+   * 16-bit little-endian).
    * Runs entirely on-device; no network. `language` defaults to auto-detect.
    */
   transcribe(
-    pcmBase64Float32: string,
+    pcmBase64Int16: string,
     opts?: {tier: AsrTier; language?: string},
   ): Promise<string>;
   /** Release any loaded native whisper context. */

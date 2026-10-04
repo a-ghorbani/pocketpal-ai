@@ -66,8 +66,9 @@ describe('usePushToTalk', () => {
       expect(asrStore.setCaptureState).toHaveBeenCalledWith('recording'),
     );
 
+    const chunk = loudPcmChunkBase64();
     act(() => {
-      dataCallback?.(loudPcmChunkBase64());
+      dataCallback?.(chunk);
     });
 
     await act(async () => {
@@ -75,8 +76,36 @@ describe('usePushToTalk', () => {
     });
 
     await waitFor(() => expect(mockTranscribe).toHaveBeenCalled());
+    // whisper.rn's transcribeData decodes signed 16-bit PCM, so the captured
+    // bytes go through unchanged.
+    expect(mockTranscribe).toHaveBeenCalledWith(chunk, {tier: 'small'});
     expect(onTranscript).toHaveBeenCalledWith('hello world');
     // The whisper context is freed once transcription settles.
+    await waitFor(() => expect(mockRelease).toHaveBeenCalled());
+  });
+
+  it('reports an empty transcript instead of dropping it silently', async () => {
+    mockTranscribe.mockResolvedValue('');
+    const onTranscript = jest.fn();
+    const {result} = renderHook(() => usePushToTalk({onTranscript}));
+
+    await act(async () => {
+      result.current.onPressIn();
+    });
+    await waitFor(() =>
+      expect(asrStore.setCaptureState).toHaveBeenCalledWith('recording'),
+    );
+    act(() => {
+      dataCallback?.(loudPcmChunkBase64());
+    });
+    await act(async () => {
+      result.current.onPressOut();
+    });
+
+    await waitFor(() =>
+      expect(asrStore.setError).toHaveBeenCalledWith('too_short'),
+    );
+    expect(onTranscript).not.toHaveBeenCalled();
     await waitFor(() => expect(mockRelease).toHaveBeenCalled());
   });
 

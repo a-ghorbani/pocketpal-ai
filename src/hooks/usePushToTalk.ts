@@ -41,16 +41,6 @@ function concatChunks(chunks: Uint8Array[]): Uint8Array {
   return out;
 }
 
-/** Base64-encode a Float32Array's raw little-endian bytes for whisper. */
-function float32ToBase64(samples: Float32Array): string {
-  const bytes = new Uint8Array(
-    samples.buffer,
-    samples.byteOffset,
-    samples.byteLength,
-  );
-  return fromByteArray(bytes);
-}
-
 /**
  * Push-to-talk capture lifecycle for the composer mic button.
  *
@@ -114,13 +104,15 @@ export function usePushToTalk(
 
     asrStore.setCaptureState('transcribing');
     try {
-      const text = await whisperAsrEngine.transcribe(float32ToBase64(samples), {
+      const text = await whisperAsrEngine.transcribe(fromByteArray(pcm), {
         tier: asrStore.selectedTier,
       });
-      asrStore.setCaptureState('idle');
-      if (text.length > 0) {
-        onTranscriptRef.current(text);
+      if (text.length === 0) {
+        asrStore.setError('too_short');
+        return;
       }
+      asrStore.setCaptureState('idle');
+      onTranscriptRef.current(text);
     } catch (err) {
       console.warn('[usePushToTalk] transcribe failed:', err);
       asrStore.setError('transcribe_failed');

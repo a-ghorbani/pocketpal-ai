@@ -180,7 +180,7 @@ export class WhisperAsrEngine implements AsrEngine {
   }
 
   async transcribe(
-    pcmBase64Float32: string,
+    pcmBase64Int16: string,
     opts?: {tier: AsrTier; language?: string},
   ): Promise<string> {
     const tier = opts?.tier ?? 'small';
@@ -188,8 +188,9 @@ export class WhisperAsrEngine implements AsrEngine {
       throw new Error(`ASR model not installed for tier ${tier}`);
     }
     const context = await this.ensureContext(tier);
-    // transcribeData consumes base64-encoded float32 PCM (16 kHz mono).
-    const {promise} = context.transcribeData(pcmBase64Float32, {
+    // transcribeData decodes the buffer as signed 16-bit PCM, whatever
+    // whisper.rn's own doc comment says.
+    const {promise} = context.transcribeData(pcmBase64Int16, {
       language: opts?.language ?? 'auto',
     });
     const result = await promise;
