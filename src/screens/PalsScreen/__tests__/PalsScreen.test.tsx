@@ -1,5 +1,5 @@
 import React from 'react';
-import {act, fireEvent, waitFor} from '@testing-library/react-native';
+import {act, fireEvent, waitFor, within} from '@testing-library/react-native';
 
 import {render} from '../../../../jest/test-utils';
 
@@ -9,6 +9,7 @@ import {PalGridRow} from '../components';
 import {authService, syncService} from '../../../services';
 import {palStore} from '../../../store';
 import {createPal, createPalsHubPal} from '../../../../jest/fixtures/pals';
+import {version} from '../../../../jest/fixtures/iap';
 
 // Mirrors the real hook: the width change re-renders from inside the component,
 // which is what rotation does. A parent re-render cannot, since observer() memoises.
@@ -629,6 +630,218 @@ describe('PalsScreen', () => {
         const flatRows = UNSAFE_getAllByType(PalGridRow);
         expect(flatRows.map(row => row.props.row.items.length)).toEqual([4, 1]);
         flatRows.forEach(row => expect(row.props.cardWidth).toBeCloseTo(180));
+      });
+    });
+  });
+
+  describe('purchases', () => {
+    const {runInAction} = require('mobx');
+    const {purchaseStore} = require('../../../store');
+
+    beforeEach(() => {
+      runInAction(() => purchaseStore.reset());
+    });
+
+    it('shows Restore purchases as the list footer when billing is ready', () => {
+      runInAction(() => {
+        purchaseStore.availability = 'ready';
+      });
+      const {getByTestId} = render(<PalsScreen />, {
+        withNavigation: true,
+        withSafeArea: true,
+        withBottomSheetProvider: true,
+      });
+      fireEvent.press(getByTestId('restore-purchases-row'));
+      expect(purchaseStore.restore).toHaveBeenCalled();
+    });
+
+    it.each(['initializing', 'unavailable'])(
+      'hides the restore row while billing is %s',
+      availability => {
+        runInAction(() => {
+          purchaseStore.availability = availability;
+        });
+        const {queryByTestId} = render(<PalsScreen />, {
+          withNavigation: true,
+          withSafeArea: true,
+          withBottomSheetProvider: true,
+        });
+        expect(queryByTestId('restore-purchases-row')).toBeNull();
+      },
+    );
+
+    it('lists a store-owned Pal that is not installed while signed out', () => {
+      runInAction(() => {
+        purchaseStore.records['store-pal'] = {
+          palId: 'store-pal',
+          source: 'store',
+          productId: 'pal.store',
+          transactionIds: [],
+          status: 'active',
+          title: 'Bought Pal',
+          updatedAt: 1,
+        };
+      });
+      const {getByTestId} = render(<PalsScreen />, {
+        withNavigation: true,
+        withSafeArea: true,
+        withBottomSheetProvider: true,
+      });
+      expect(getByTestId('palshub-pal-card-store-pal')).toBeTruthy();
+    });
+
+    const flatten = (node: any, out: string[] = []): string[] => {
+      if (node == null) {
+        return out;
+      }
+      if (typeof node === 'string') {
+        out.push(node);
+        return out;
+      }
+      if (Array.isArray(node)) {
+        node.forEach(child => flatten(child, out));
+        return out;
+      }
+      if (node.props?.testID) {
+        out.push(node.props.testID);
+      }
+      flatten(node.children, out);
+      return out;
+    };
+
+    const renderSections = () =>
+      render(<PalsScreen />, {
+        withNavigation: true,
+        withSafeArea: true,
+        withBottomSheetProvider: true,
+      });
+
+    const addStorePurchase = () =>
+      runInAction(() => {
+        palStore.pals = [
+          createPal({id: 'mine', name: 'Mine', source: 'local'}),
+        ];
+        palStore.cachedPalsHubPals = [
+          createPalsHubPal({id: 'hub-listed', title: 'Listed'}),
+        ];
+        purchaseStore.records['store-pal'] = {
+          palId: 'store-pal',
+          source: 'store',
+          productId: 'pal.store',
+          transactionIds: [],
+          status: 'pending_payment',
+          title: 'Bought Pal',
+          updatedAt: 1,
+        };
+      });
+
+    it('keeps store purchases out of the account library section when signed out', () => {
+      addStorePurchase();
+      const {getByText, queryByText, toJSON} = renderSections();
+
+      expect(getByText('My Pals (local)')).toBeTruthy();
+      expect(queryByText('My Library (palshub.ai)')).toBeNull();
+      const tree = flatten(toJSON());
+      expect(tree.indexOf('My Pals (local)')).toBeLessThan(
+        tree.indexOf('palshub-pal-card-store-pal'),
+      );
+    });
+
+    it('lists only account Pals under the library section when signed in', () => {
+      authService.isAuthenticated = true;
+      addStorePurchase();
+      runInAction(() => {
+        palStore.userLibrary = [
+          createPalsHubPal({id: 'lib-pal', title: 'Library Pal'}),
+        ];
+      });
+      const {getByText, toJSON} = renderSections();
+
+      expect(getByText('My Library (palshub.ai)')).toBeTruthy();
+      const tree = flatten(toJSON());
+      const libraryTitle = tree.indexOf('My Library (palshub.ai)');
+      expect(tree.indexOf('palshub-pal-card-store-pal')).toBeLessThan(
+        libraryTitle,
+      );
+      expect(tree.indexOf('palshub-pal-card-lib-pal')).toBeGreaterThan(
+        libraryTitle,
+      );
+    });
+
+    describe('update badge', () => {
+      const withPendingUpdate = (listed: boolean) =>
+        runInAction(() => {
+          palStore.pals = [
+            createPal({
+              id: 'local-store',
+              name: 'Old title',
+              source: 'palshub',
+              palshub_id: 'store-pal',
+            }),
+          ];
+          palStore.cachedPalsHubPals = listed
+            ? [createPalsHubPal({id: 'store-pal', title: 'Listed title'})]
+            : [];
+          purchaseStore.records['store-pal'] = {
+            palId: 'store-pal',
+            source: 'store',
+            productId: 'pal.store',
+            transactionIds: [],
+            status: 'active',
+            title: 'Old title',
+            updatedAt: 1,
+            pendingUpdate: {
+              pal: createPalsHubPal({id: 'store-pal', title: 'New title'}),
+              content: {},
+              contentVersion: version(2),
+            },
+          };
+        });
+
+      it('opens the detail sheet with the listing Pal', async () => {
+        withPendingUpdate(true);
+        const {getByTestId, getAllByText} = renderSections();
+        const before = getAllByText('Listed title').length;
+
+        fireEvent.press(
+          within(getByTestId('local-pal-card-local-store')).getByTestId(
+            'pal-badge-update',
+          ),
+        );
+
+        await waitFor(() =>
+          expect(getAllByText('Listed title').length).toBeGreaterThan(before),
+        );
+      });
+
+      it('opens the detail sheet from the card update accessibility action', async () => {
+        withPendingUpdate(true);
+        const {getByTestId, getAllByText} = renderSections();
+        const before = getAllByText('Listed title').length;
+
+        fireEvent(
+          getByTestId('local-pal-card-local-store'),
+          'accessibilityAction',
+          {
+            nativeEvent: {actionName: 'update'},
+          },
+        );
+
+        await waitFor(() =>
+          expect(getAllByText('Listed title').length).toBeGreaterThan(before),
+        );
+      });
+
+      it('opens the detail sheet with the pending Pal when the listing lacks it', async () => {
+        withPendingUpdate(false);
+        const {getByTestId, queryByText, getAllByText} = renderSections();
+        expect(queryByText('New title')).toBeNull();
+
+        fireEvent.press(getByTestId('pal-badge-update'));
+
+        await waitFor(() =>
+          expect(getAllByText('New title').length).toBeGreaterThan(0),
+        );
       });
     });
   });

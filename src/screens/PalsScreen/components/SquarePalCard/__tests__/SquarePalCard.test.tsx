@@ -13,6 +13,7 @@ import {palStore, chatSessionStore, modelStore} from '../../../../../store';
 import {downloadedModel} from '../../../../../../jest/fixtures/models';
 import type {Pal} from '../../../../../store/PalStore';
 import type {PalsHubPal} from '../../../../../types/palshub';
+import {version} from '../../../../../../jest/fixtures/iap';
 
 // Mock navigation
 const mockNavigate = jest.fn();
@@ -626,5 +627,188 @@ describe('SquarePalCard', () => {
         });
       }
     });
+  });
+});
+
+describe('SquarePalCard purchase badges', () => {
+  const {runInAction} = require('mobx');
+  const {purchaseStore} = require('../../../../../store');
+
+  const hubCard = {
+    type: 'palshub',
+    id: 'pal-1',
+    creator_id: 'c',
+    title: 'Story Pal',
+    protection_level: 'reveal_on_purchase',
+    price_cents: 499,
+    allow_fork: true,
+    created_at: '',
+    updated_at: '',
+  } as PalsHubPal;
+
+  const localCard = {
+    type: 'local',
+    id: 'local-1',
+    name: 'Story Pal',
+    systemPrompt: 'x',
+    isSystemPromptChanged: false,
+    useAIPrompt: false,
+    parameters: {},
+    parameterSchema: [],
+    source: 'palshub',
+    palshub_id: 'pal-1',
+  } as Pal;
+
+  const pendingUpdate = {pal: hubCard, content: {}, contentVersion: version(2)};
+
+  const withStatus = (status?: string, pending = false) =>
+    runInAction(() => {
+      purchaseStore.reset();
+      if (status) {
+        purchaseStore.records['pal-1'] = {
+          palId: 'pal-1',
+          source: 'store',
+          productId: 'pal.1',
+          transactionIds: [],
+          status,
+          title: 'Story Pal',
+          updatedAt: 1,
+          ...(pending ? {pendingUpdate} : {}),
+        };
+      }
+    });
+
+  const renderCards = (
+    assert: (getByTestId: ReturnType<typeof render>['getByTestId']) => void,
+  ) => {
+    for (const card of [hubCard, localCard]) {
+      const {getByTestId, unmount} = render(
+        <SquarePalCard pal={card} onPress={jest.fn()} />,
+        {withNavigation: true},
+      );
+      assert(getByTestId);
+      unmount();
+    }
+  };
+
+  it('shows pending_payment as a Pending badge on hub and local cards', () => {
+    withStatus('pending_payment');
+    renderCards(getByTestId =>
+      expect(getByTestId('pal-badge-pending')).toHaveTextContent('Pending'),
+    );
+  });
+
+  it.each(['unlocking', 'granted'])(
+    'shows %s as a progress badge on hub and local cards',
+    status => {
+      withStatus(status);
+      renderCards(getByTestId =>
+        expect(getByTestId('pal-badge-unlocking')).toHaveProp(
+          'accessibilityLabel',
+          'Unlocking',
+        ),
+      );
+    },
+  );
+
+  it.each([undefined, 'active', 'unfulfillable', 'removed'])(
+    'shows no badge for %s',
+    status => {
+      withStatus(status);
+      const {queryByTestId} = render(
+        <SquarePalCard pal={hubCard} onPress={jest.fn()} />,
+        {withNavigation: true},
+      );
+      expect(queryByTestId('pal-badge-pending')).toBeNull();
+      expect(queryByTestId('pal-badge-unlocking')).toBeNull();
+    },
+  );
+
+  it('shows the update badge on hub and local cards and opens the update', () => {
+    withStatus('active', true);
+    for (const card of [hubCard, localCard]) {
+      const onPress = jest.fn();
+      const onUpdatePress = jest.fn();
+      const {getByTestId, unmount} = render(
+        <SquarePalCard
+          pal={card}
+          onPress={onPress}
+          onUpdatePress={onUpdatePress}
+        />,
+        {withNavigation: true},
+      );
+      const badge = getByTestId('pal-badge-update');
+      expect(badge).toHaveTextContent('Update available');
+
+      fireEvent.press(badge);
+
+      expect(onUpdatePress).toHaveBeenCalledWith('pal-1');
+      expect(onPress).not.toHaveBeenCalled();
+      unmount();
+    }
+  });
+
+  it('makes the update badge an accessible button with a 44dp target', () => {
+    withStatus('active', true);
+    const {getByTestId} = render(
+      <SquarePalCard pal={hubCard} onPress={jest.fn()} />,
+      {withNavigation: true},
+    );
+    const badge = getByTestId('pal-badge-update');
+    expect(badge.props.accessibilityRole).toBe('button');
+    expect(badge.props.accessibilityLabel).toBe('Update available');
+    const {top, bottom} = badge.props.hitSlop;
+    expect(top + bottom).toBeGreaterThanOrEqual(26);
+  });
+
+  it('opens the update from the card accessibility action', () => {
+    withStatus('active', true);
+    const onPress = jest.fn();
+    const onUpdatePress = jest.fn();
+    const {getByTestId} = render(
+      <SquarePalCard
+        pal={localCard}
+        onPress={onPress}
+        onUpdatePress={onUpdatePress}
+      />,
+      {withNavigation: true},
+    );
+    const card = getByTestId('local-pal-card-local-1');
+    expect(card.props.accessibilityActions).toEqual([
+      {name: 'update', label: 'Update available'},
+    ]);
+
+    fireEvent(card, 'accessibilityAction', {
+      nativeEvent: {actionName: 'update'},
+    });
+
+    expect(onUpdatePress).toHaveBeenCalledWith('pal-1');
+    expect(onPress).not.toHaveBeenCalled();
+  });
+
+  it('offers no card update action without an update', () => {
+    withStatus('active', false);
+    const {getByTestId} = render(
+      <SquarePalCard pal={hubCard} onPress={jest.fn()} />,
+      {withNavigation: true},
+    );
+    expect(
+      getByTestId('palshub-pal-card-pal-1').props.accessibilityActions,
+    ).toBeUndefined();
+  });
+
+  it.each([
+    ['active without a pending update', 'active', false],
+    ['pending with a stale update', 'pending_payment', true],
+    ['unlocking with a stale update', 'unlocking', true],
+    ['removed with a stale update', 'removed', true],
+    ['no record', undefined, false],
+  ])('shows no update badge when %s', (_label, status, pending) => {
+    withStatus(status, pending);
+    const {queryByTestId} = render(
+      <SquarePalCard pal={hubCard} onPress={jest.fn()} />,
+      {withNavigation: true},
+    );
+    expect(queryByTestId('pal-badge-update')).toBeNull();
   });
 });

@@ -83,10 +83,30 @@ target 'PocketPal' do
     # Workaround: pin the fmt pod to C++17 so it skips the consteval code path
     # that Apple clang 21 (Xcode 26.4.1) rejects. Tracking facebook/react-native#55601.
     # Remove once RN vendors a fmt release that is clang-21-compatible.
+    # glog's logging.h includes log_severity.h and vlog_is_on.h inside
+    # namespace google, which is illegal as a module import once a Swift C++
+    # interop target (NitroModules) imports the React headers. Keep those two
+    # headers textual in glog's module map.
+    glog_modulemap = File.join(installer.sandbox.root, 'Target Support Files', 'glog', 'glog-textual.modulemap')
+    File.write(glog_modulemap, <<~MODULEMAP)
+      framework module glog {
+        umbrella header "glog-umbrella.h"
+        textual header "log_severity.h"
+        textual header "vlog_is_on.h"
+        export *
+        module * { export * }
+      }
+    MODULEMAP
+
     installer.pods_project.targets.each do |target|
       if target.name == 'fmt'
         target.build_configurations.each do |config|
           config.build_settings['CLANG_CXX_LANGUAGE_STANDARD'] = 'c++17'
+        end
+      end
+      if target.name == 'glog'
+        target.build_configurations.each do |config|
+          config.build_settings['MODULEMAP_FILE'] = '${PODS_ROOT}/Target Support Files/glog/glog-textual.modulemap'
         end
       end
     end
