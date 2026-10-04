@@ -704,7 +704,9 @@
       "ttft": "{{value}}毫秒 TTFT",
       "interrupted": "被打斷",
       "truncated": "已截斷 — 可能是上下文已滿",
-      "draftAccepted": "草稿：{{accepted}}/{{total}}（{{pct}}%）"
+      "draftAccepted": "草稿：{{accepted}}/{{total}}（{{pct}}%）",
+      "promptTokensPerSec": "{{value}} prompt tokens/sec",
+      "cachedTokens": "{{value}} 已快取"
     },
     "thinkingBubble": {
       "reasoning": "推理"
@@ -756,6 +758,13 @@
     "toolMetrics": {
       "tokens": "{{count}} 個詞元",
       "elapsed": "{{seconds}} 秒"
+    },
+    "completionSettings": {
+      "serverDefault": "伺服器預設值",
+      "usingServerDefault": "使用伺服器預設值：{{value}}",
+      "usingServerDefaultUnreported": "使用伺服器預設值（未回報）",
+      "resetToServerDefault": "伺服器預設值：{{value}} · 重置",
+      "resetToServerDefaultAccessibilityLabel": "將 {{name}} 恢復至伺服器預設值，{{value}}"
     }
   },
   "feedback": {
