@@ -112,17 +112,21 @@ const refresh = async (
   proofs: StoreProof[],
   known: Record<string, KnownEntry>,
 ): Promise<RefreshResult> => {
-  const knownEntries = Object.entries(known);
-  const knownBatches =
-    knownEntries.length > 0 ? chunk(knownEntries, REFRESH_MAX_KNOWN) : [[]];
+  const proofBatches = chunk(proofs, VERIFY_MAX_TRANSACTIONS[platform]);
+  const knownBatches = chunk(Object.entries(known), REFRESH_MAX_KNOWN);
+  const requests = Math.max(proofBatches.length, knownBatches.length, 1);
   const changed = new Map<string, RefreshResult['changed'][number]>();
   const revoked = new Set<string>();
   const removed = new Set<string>();
   const unchanged = new Set<string>();
-  for (const batch of knownBatches) {
+  for (let i = 0; i < requests; i++) {
     const json = await request('/api/mobile/iap/entitlements/refresh', {
       method: 'POST',
-      body: refreshBody(platform, proofs, Object.fromEntries(batch)),
+      body: refreshBody(
+        platform,
+        proofBatches[i] ?? [],
+        Object.fromEntries(knownBatches[i] ?? []),
+      ),
       auth: false,
     });
     const result = parseRefresh(json);

@@ -264,7 +264,7 @@ describe('iapApi', () => {
       expect(sentBody(1).known).toEqual({
         'pal-200': {content_version: version(1), purchase_ref: 'ref-200'},
       });
-      expect(sentBody(1).transactions).toHaveLength(1);
+      expect(sentBody(1).transactions).toEqual([]);
       expect(result).toEqual({
         changed: [
           expect.objectContaining({
@@ -276,6 +276,37 @@ describe('iapApi', () => {
         removed: ['b'],
         unchanged: ['u1', 'u2'],
       });
+    });
+
+    it('splits 11 Android proofs into two requests within the caps and merges the lists', async () => {
+      let call = 0;
+      fetchMock.mockImplementation(async () => {
+        call += 1;
+        return jsonResponse(
+          call === 1
+            ? {changed: [apiPal()], unchanged: ['u1']}
+            : {revoked: ['r1'], unchanged: ['u2']},
+        );
+      });
+      const proofs = Array.from({length: 11}, (_, i) => androidProof(i));
+      const known = {
+        'pal-1': {contentVersion: version(1), purchaseRef: 'GPA.1'},
+      };
+
+      const result = await iapApi.refresh('android', proofs, known);
+
+      expect(fetchMock).toHaveBeenCalledTimes(2);
+      expect(sentBody(0).transactions).toHaveLength(10);
+      expect(sentBody(0).known).toEqual({
+        'pal-1': {content_version: version(1), purchase_ref: 'GPA.1'},
+      });
+      expect(sentBody(1).transactions).toEqual([
+        {productId: 'pal.10', purchaseToken: 'token-10'},
+      ]);
+      expect(sentBody(1).known).toEqual({});
+      expect(result.changed.map(entry => entry.pal.id)).toEqual(['pal-1']);
+      expect(result.revoked).toEqual(['r1']);
+      expect(result.unchanged).toEqual(['u1', 'u2']);
     });
 
     it('sends one request when nothing is known', async () => {
