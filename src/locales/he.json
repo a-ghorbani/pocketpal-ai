@@ -1087,8 +1087,6 @@
       "download": "הורדה",
       "getFree": "קבל בחינם"
     },
-    "premiumPalDescription": "Pal פרימיום מקהילת palshub.ai",
-    "premiumInfoText": "בקרו באתר palshub.ai כדי לגלות עוד Pals",
     "sortOptions": {
       "newest": "החדש ביותר",
       "oldest": "הישן ביותר",
@@ -1112,15 +1110,7 @@
       "error": "שגיאה",
       "failedToLoadDetails": "טעינת פרטי ה-Pal נכשלה",
       "failedToDownload": "הורדת Pal נכשלה",
-      "premiumPalMessage": "זהו Pal פרימיום. \n• אם כבר פתחת את הנעילה שלו באמצעות חשבון Palshub שלך, פשוט היכנס כדי לגשת לפרטים המלאים. \n• עדיין לא פתחת את הנעילה? בקר באפליקציית palshub.ai למידע נוסף.",
-      "notAvailable": "N/A",
-      "buyOnPalshub": "קנה ב-Palshub",
-      "finalizingPurchase": "משלים את הרכישה שלך…",
-      "processingPurchase": "מעבד — ייפתח בקרוב.",
-      "checkoutSessionExpired": "הסשן שלך פג. התחבר שוב כדי להמשיך.",
-      "signInAgain": "התחבר שוב",
-      "palNotAvailable": "ה-Pal הזה אינו זמין לרכישה כעת.",
-      "checkoutFailed": "משהו השתבש. אנא נסה שוב."
+      "notAvailable": "N/A"
     }
   },
   "validation": {
