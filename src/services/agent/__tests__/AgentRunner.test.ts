@@ -1419,4 +1419,128 @@ describe('runAgent', () => {
     expect(stepFinished).toBeDefined();
     expect(stepFinished!.toolCalls).toBeUndefined();
   });
+
+  describe('abort contract', () => {
+    function pendingEngine() {
+      let finish!: (result: CompletionResult) => void;
+      const engine: CompletionEngine = {
+        completion: jest.fn(
+          () =>
+            new Promise<CompletionResult>(resolve => {
+              finish = resolve;
+            }),
+        ),
+        stopCompletion: jest.fn(async () => {}),
+      };
+      return {engine, finish: (r: CompletionResult) => finish(r)};
+    }
+
+    const flush = async () => {
+      for (let i = 0; i < 10; i += 1) {
+        await Promise.resolve();
+      }
+    };
+
+    afterEach(() => {
+      jest.useRealTimers();
+    });
+
+    it('abort while step_started is handled → step_finished with no calls, no completion', async () => {
+      const controller = new AbortController();
+      const engine = makeScriptedEngine({scripts: []});
+      const events: AgentEvent[] = [];
+      for await (const e of runAgent({
+        engine,
+        initialParams: baseParams,
+        allowedTalentNames: [],
+        talentLookup: () => undefined,
+        messageId: 'msg',
+        triggerMarkers: [],
+        signal: controller.signal,
+      })) {
+        events.push(e);
+        if (e.type === 'step_started') {
+          controller.abort();
+        }
+      }
+
+      expect(engine.completion).not.toHaveBeenCalled();
+      expect(events.map(e => e.type)).toEqual([
+        'run_started',
+        'step_started',
+        'step_finished',
+        'run_finished',
+      ]);
+      expect((events[2] as any).toolCalls).toBeUndefined();
+    });
+
+    it('re-asserts stopCompletion while an aborted completion is unsettled', async () => {
+      jest.useFakeTimers();
+      const controller = new AbortController();
+      const {engine, finish} = pendingEngine();
+      const run = collect(
+        runAgent({
+          engine,
+          initialParams: baseParams,
+          allowedTalentNames: [],
+          talentLookup: () => undefined,
+          messageId: 'msg',
+          triggerMarkers: [],
+          signal: controller.signal,
+        }),
+      );
+      await flush();
+      expect(engine.completion).toHaveBeenCalledTimes(1);
+
+      controller.abort();
+      expect(engine.stopCompletion).toHaveBeenCalledTimes(1);
+      jest.advanceTimersByTime(300);
+      expect(engine.stopCompletion).toHaveBeenCalledTimes(4);
+
+      finish({text: '', content: ''} as CompletionResult);
+      const events = await run;
+      jest.advanceTimersByTime(1000);
+
+      expect(engine.stopCompletion).toHaveBeenCalledTimes(4);
+      expect(engine.completion).toHaveBeenCalledTimes(1);
+      expect(events[events.length - 1].type).toBe('run_finished');
+    });
+
+    it('a consumer that stops iterating mid-completion waits for the engine to settle', async () => {
+      const {engine} = pendingEngine();
+      let finish!: (result: CompletionResult) => void;
+      (engine.completion as jest.Mock).mockImplementation(
+        (_p: ApiCompletionParams, cb?: (d: CompletionStreamData) => void) =>
+          new Promise<CompletionResult>(resolve => {
+            cb?.({content: 'partial'});
+            finish = resolve;
+          }),
+      );
+      const iterator = runAgent({
+        engine,
+        initialParams: baseParams,
+        allowedTalentNames: [],
+        talentLookup: () => undefined,
+        messageId: 'msg',
+        triggerMarkers: [],
+      });
+      let event = await iterator.next();
+      while (!event.done && event.value.type !== 'token') {
+        event = await iterator.next();
+      }
+
+      let returned = false;
+      const returning = iterator.return(undefined).then(() => {
+        returned = true;
+      });
+      await flush();
+
+      expect(engine.stopCompletion).toHaveBeenCalled();
+      expect(returned).toBe(false);
+
+      finish({text: 'partial', content: 'partial'} as CompletionResult);
+      await returning;
+      expect(returned).toBe(true);
+    });
+  });
 });
