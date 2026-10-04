@@ -69,7 +69,7 @@ describe('In-app purchase', () => {
     expect(await buyPage.buyLabel()).toBe('4,99 €');
     await buyPage.buy();
 
-    await buyPage.waitFor('purchase-ready', 60000);
+    await buyPage.waitForReady();
     expect(await buyPage.isShown('purchase-support-code', 1000)).toBe(false);
     await buyPage.downloadModel();
     await buyPage.startChat(TIMEOUTS.download);
@@ -124,7 +124,7 @@ describe('In-app purchase', () => {
     await buyPage.openPal(pal.id);
 
     await buyPage.buy();
-    await buyPage.waitFor('purchase-ready', 60000);
+    await buyPage.waitForReady();
 
     expect(eventsSent(iapMockServer.requests())).toEqual(['buy_tap']);
   });

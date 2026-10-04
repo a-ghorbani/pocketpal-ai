@@ -35,6 +35,27 @@ export class PalBuyPage extends BasePage {
     await this.waitForElement(byTestId(testId), timeout);
   }
 
+  async waitForReady(timeout = 60000): Promise<void> {
+    const steps = [
+      'model-step-start-chat',
+      'model-step-download',
+      'model-step-progress',
+      'model-step-too-large',
+    ];
+    await browser.waitUntil(
+      async () => {
+        for (const step of steps) {
+          const element = await browser.$(byTestId(step));
+          if (await element.isDisplayed().catch(() => false)) {
+            return true;
+          }
+        }
+        return false;
+      },
+      {timeout, timeoutMsg: 'the model step never showed'},
+    );
+  }
+
   async isShown(testId: string, timeout = 3000): Promise<boolean> {
     return this.isElementDisplayed(byTestId(testId), timeout);
   }

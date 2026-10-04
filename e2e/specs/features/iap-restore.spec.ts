@@ -84,8 +84,7 @@ describe('In-app purchase restore', () => {
     await openPalsWith(openPals, {products});
     await buyPage.openPal(pal.id);
     await buyPage.buy();
-    await buyPage.waitFor('purchase-ready', 60000);
-    await buyPage.waitFor('model-step');
+    await buyPage.waitForReady();
     expect(await buyPage.isShown('purchase-link-prompt', 1000)).toBe(false);
   });
 });

@@ -87,7 +87,7 @@ describe('In-app purchase recovery', () => {
   const buyToOwned = async (palId: string) => {
     await buyPage.openPal(palId);
     await buyPage.buy();
-    await buyPage.waitFor('purchase-ready', 60000);
+    await buyPage.waitForReady();
     await buyPage.closeSheet();
   };
 
