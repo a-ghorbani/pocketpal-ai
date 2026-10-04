@@ -6,9 +6,20 @@ import {render} from '../../../../jest/test-utils';
 import {createModel} from '../../../../jest/fixtures/models';
 
 import {DownloadBanner} from '../DownloadBanner';
-import {modelStore} from '../../../store';
+import {modelStore, uiStore} from '../../../store';
 import {downloadManager} from '../../../services/downloads';
 import {createErrorState} from '../../../utils/errors';
+import {ROUTES} from '../../../utils/navigationConstants';
+
+const mockNavigate = jest.fn();
+
+jest.mock('@react-navigation/native', () => {
+  const actualNav = jest.requireActual('@react-navigation/native');
+  return {
+    ...actualNav,
+    useNavigation: () => ({navigate: mockNavigate}),
+  };
+});
 
 const failedModel = createModel({
   id: 'failed-model',
@@ -28,14 +39,14 @@ const failWith = (modelId?: string) =>
     );
   });
 
-const withActiveDownloads = (count: number) =>
+const withActiveDownloads = (count: number, bytesTotal = 0) =>
   jest.spyOn(modelStore, 'activeDownloads', 'get').mockReturnValue(
     Array.from({length: count}, () => ({
       modelId: runningModel.id,
       model: runningModel,
       progress: 30,
       bytesDownloaded: 0,
-      bytesTotal: 0,
+      bytesTotal,
       etaLabel: '',
     })) as any,
   );
@@ -125,5 +136,54 @@ describe('DownloadBanner', () => {
 
     expect(getByTestId('download-banner-stop')).toBeTruthy();
     expect(queryByTestId('download-banner-failed')).toBeNull();
+  });
+
+  it('opens the Models screen from the failure row body', () => {
+    failWith(failedModel.id);
+
+    const {getByLabelText} = render(<DownloadBanner />, {withNavigation: true});
+    fireEvent.press(getByLabelText("Failed Model couldn't finish downloading"));
+
+    expect(mockNavigate).toHaveBeenCalledWith(ROUTES.MODELS);
+  });
+
+  it('cancels the visible download from the progress row Stop pill', () => {
+    withActiveDownloads(1);
+
+    const {getByTestId} = render(<DownloadBanner />, {withNavigation: true});
+    fireEvent.press(getByTestId('download-banner-stop'));
+
+    expect(modelStore.cancelDownload).toHaveBeenCalledWith(runningModel.id);
+    expect(modelStore.clearDownloadError).not.toHaveBeenCalled();
+  });
+
+  it('dismisses only the banner from the progress row', () => {
+    withActiveDownloads(1);
+
+    const {getByTestId} = render(<DownloadBanner />, {withNavigation: true});
+    fireEvent.press(getByTestId('download-banner-dismiss'));
+
+    expect(uiStore.dismissDownloadBanner).toHaveBeenCalledWith(runningModel.id);
+    expect(modelStore.clearDownloadError).not.toHaveBeenCalled();
+  });
+
+  it('opens the Models screen from the progress row body', () => {
+    withActiveDownloads(1);
+
+    const {getByTestId} = render(<DownloadBanner />, {withNavigation: true});
+    fireEvent.press(getByTestId('download-banner'));
+
+    expect(mockNavigate).toHaveBeenCalledWith(ROUTES.MODELS);
+  });
+
+  it.each([
+    [90 * 1024 * 1024, '90 MB'],
+    [3 * 1024 * 1024 * 1024, '3.0 GB'],
+  ])('labels a %d-byte download as %s', (bytes, label) => {
+    withActiveDownloads(1, bytes);
+
+    const {getByText} = render(<DownloadBanner />, {withNavigation: true});
+
+    expect(getByText(label)).toBeTruthy();
   });
 });
