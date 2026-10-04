@@ -86,7 +86,6 @@ export interface ApiPalResponse {
   store_product_id?: string;
   iap_enabled?: {ios?: boolean; android?: boolean};
   sample_exchange?: unknown;
-  content_version?: string;
 }
 
 const parseSampleExchange = (
@@ -297,7 +296,6 @@ class PalsHubApiService {
       store_product_id: apiPal.store_product_id,
       iap_enabled: apiPal.iap_enabled,
       sample_exchange: parseSampleExchange(apiPal.sample_exchange),
-      content_version: apiPal.content_version,
     };
   }
 

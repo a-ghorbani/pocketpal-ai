@@ -491,7 +491,7 @@ describe('PurchaseStore link and restore', () => {
         });
         return [
           result('active', {
-            pal: hubPal({title: 'Other', content_version: version(9)}),
+            pal: hubPal({title: 'Other', updated_at: version(9)}),
           }),
         ];
       });

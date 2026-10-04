@@ -33,6 +33,7 @@ export interface VerifyResult {
 export interface ChangedPal {
   pal: PalsHubPal;
   content: CreatorContent;
+  contentVersion?: string;
   changeNote?: string;
 }
 
@@ -106,6 +107,7 @@ const parsePal = (value: unknown): ChangedPal => {
   return {
     pal,
     content: projectCreatorContent(value),
+    contentVersion: optionalString(value.updated_at),
     changeNote: changeNoteOf(value.change_note),
   };
 };

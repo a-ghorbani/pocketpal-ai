@@ -52,7 +52,7 @@ export const contentOf = (pal: PalsHubPal): CreatorContent =>
 
 export const changedPal = (overrides: Partial<PalsHubPal> = {}): ChangedPal => {
   const pal = hubPal(overrides);
-  return {pal, content: contentOf(pal)};
+  return {pal, content: contentOf(pal), contentVersion: pal.updated_at};
 };
 
 export const tx = (
@@ -75,7 +75,7 @@ export const result = (
     'pal' in overrides
       ? overrides.pal
       : status === 'active'
-        ? hubPal({content_version: version(3)})
+        ? hubPal({updated_at: version(3)})
         : undefined;
   return {
     palId: PAL_ID,

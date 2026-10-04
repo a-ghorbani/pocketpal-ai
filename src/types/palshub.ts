@@ -175,8 +175,6 @@ export interface PalsHubPal {
   iap_enabled?: {ios?: boolean; android?: boolean};
   /** Optional short example conversation shown before purchase */
   sample_exchange?: SampleExchangeTurn[];
-  /** Server content revision, compared on refresh */
-  content_version?: string;
 
   // ============================================================================
   // PACT (Pal Action & Capability Treaty) — wire shape, snake_case

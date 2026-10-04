@@ -195,12 +195,12 @@ describe('iapWire', () => {
   describe('parseRefresh', () => {
     it('maps all four lists', () => {
       const result = parseRefresh({
-        changed: [apiPal({content_version: version(4)})],
+        changed: [apiPal({updated_at: version(4)})],
         revoked: ['pal-2'],
         removed: ['pal-3'],
         unchanged: ['pal-4'],
       });
-      expect(result.changed[0].pal.content_version).toBe(version(4));
+      expect(result.changed[0].contentVersion).toBe(version(4));
       expect(result.changed[0].content.title).toBe('Story Pal');
       expect(result.revoked).toEqual(['pal-2']);
       expect(result.removed).toEqual(['pal-3']);

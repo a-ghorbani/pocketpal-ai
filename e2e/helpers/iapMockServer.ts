@@ -92,7 +92,7 @@ const apiPal = (pal: MockPal, withPrompt: boolean) => ({
   protection_level: 'reveal_on_purchase',
   store_product_id: pal.productId,
   iap_enabled: {ios: true, android: true},
-  content_version: pal.contentVersion,
+  updated_at: pal.contentVersion,
   model_reference: pal.modelReference,
   ...(withPrompt ? {system_prompt: pal.systemPrompt} : {}),
   ...(pal.changeNote ? {change_note: pal.changeNote} : {}),
@@ -135,7 +135,7 @@ const hasExactKeys = (value: unknown, keys: string[]): boolean =>
   !!value &&
   typeof value === 'object' &&
   !Array.isArray(value) &&
-  Object.keys(value).every(key => keys.includes(key));
+  Object.keys(value).sort().join() === [...keys].sort().join();
 
 const parseKnown = (known: unknown): Record<string, KnownEntry> | null => {
   if (!known || typeof known !== 'object' || Array.isArray(known)) {

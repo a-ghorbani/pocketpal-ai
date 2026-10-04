@@ -28,10 +28,10 @@ jest.mock('../PalStore', () => ({
 
 const originalOS = Platform.OS;
 
-const v1 = () => hubPal({content_version: version(3)});
+const v1 = () => hubPal({updated_at: version(3)});
 const v2 = (overrides: Partial<PalsHubPal> = {}) =>
   hubPal({
-    content_version: version(4),
+    updated_at: version(4),
     title: 'Story Pal 2',
     system_prompt: 'You tell tales.',
     ...overrides,
@@ -40,7 +40,7 @@ const v2 = (overrides: Partial<PalsHubPal> = {}) =>
 const pending = (pal: PalsHubPal, changeNote?: string): PendingUpdate => ({
   pal,
   content: contentOf(pal),
-  contentVersion: pal.content_version!,
+  contentVersion: pal.updated_at!,
   ...(changeNote ? {changeNote} : {}),
 });
 
@@ -113,7 +113,7 @@ describe('PurchaseStore creator updates', () => {
     });
 
     it.each([
-      ['an equal version', v2({content_version: version(3)})],
+      ['an equal version', v2({updated_at: version(3)})],
       ['a version without a prompt', v2({system_prompt: undefined})],
     ])('ignores %s', async (_label, pal) => {
       const h = installed();
@@ -139,7 +139,7 @@ describe('PurchaseStore creator updates', () => {
       const h = installed({pendingUpdate: pending(v2())});
 
       await refreshWith(h, [
-        v2({content_version: version(5), description: 'Tales'}),
+        v2({updated_at: version(5), description: 'Tales'}),
       ]);
 
       expect(h.purchases.recordFor(PAL_ID)?.pendingUpdate?.contentVersion).toBe(
@@ -163,7 +163,7 @@ describe('PurchaseStore creator updates', () => {
     it('advances silently and clears pending when nothing changed', async () => {
       const h = installed({pendingUpdate: pending(v2())});
 
-      await refreshWith(h, [hubPal({content_version: version(5)})]);
+      await refreshWith(h, [hubPal({updated_at: version(5)})]);
 
       const rec = h.purchases.recordFor(PAL_ID);
       expect(rec?.contentVersion).toBe(version(5));
@@ -172,10 +172,28 @@ describe('PurchaseStore creator updates', () => {
       expect(h.palStore.applyCreatorUpdate).not.toHaveBeenCalled();
     });
 
+    it('offers a second creator update after the first one is applied', async () => {
+      const h = installed();
+      await refreshWith(h, [v2()]);
+      await h.purchases.applyUpdate(PAL_ID, version(4));
+
+      await refreshWith(h, [
+        v2({updated_at: version(5), description: 'Tales'}),
+      ]);
+
+      const [, , known] = h.api.refresh.mock.calls[1];
+      expect(known[PAL_ID].contentVersion).toBe(version(4));
+      expect(h.purchases.recordFor(PAL_ID)).toMatchObject({
+        contentVersion: version(4),
+        pendingUpdate: {contentVersion: version(5)},
+      });
+      expect(h.purchases.updateAvailable(PAL_ID)).toBe(true);
+    });
+
     it('records the version of an unchanged Pal it had no version for', async () => {
       const h = installed({contentVersion: undefined});
 
-      await refreshWith(h, [hubPal({content_version: version(5)})]);
+      await refreshWith(h, [hubPal({updated_at: version(5)})]);
 
       const [, , known] = h.api.refresh.mock.calls[0];
       expect(known[PAL_ID].contentVersion).toBeUndefined();
@@ -189,7 +207,7 @@ describe('PurchaseStore creator updates', () => {
     it('sends the pending version while a declined update is pending', async () => {
       const h = installed({
         contentVersion: version(2),
-        pendingUpdate: pending(v2({content_version: version(3)})),
+        pendingUpdate: pending(v2({updated_at: version(3)})),
       });
 
       await refreshWith(h, []);
@@ -252,7 +270,7 @@ describe('PurchaseStore creator updates', () => {
       expect(rec?.thumbnailUrl).toBe(oldThumb);
 
       await refreshWith(h, [
-        v2({content_version: version(5), thumbnail_url: newThumb}),
+        v2({updated_at: version(5), thumbnail_url: newThumb}),
       ]);
       await h.purchases.applyUpdate(PAL_ID, version(5));
 
@@ -286,7 +304,7 @@ describe('PurchaseStore creator updates', () => {
 
     it('does nothing for a version the user did not see', async () => {
       const h = installed({
-        pendingUpdate: pending(v2({content_version: version(5)})),
+        pendingUpdate: pending(v2({updated_at: version(5)})),
       });
 
       await h.purchases.applyUpdate(PAL_ID, version(4));

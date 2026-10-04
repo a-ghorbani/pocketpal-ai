@@ -445,16 +445,14 @@ describe('PalsHubApiService', () => {
       return require('../PalsHubApiService').palsHubApiService;
     };
 
-    it('carries store product, availability and content version', () => {
+    it('carries store product and availability', () => {
       const result = loadService().transformApiPal({
         ...minimal,
         store_product_id: 'pal.abc',
         iap_enabled: {ios: true, android: false},
-        content_version: '2026-08-10T07:06:23.411027+00:00',
       });
       expect(result.store_product_id).toBe('pal.abc');
       expect(result.iap_enabled).toEqual({ios: true, android: false});
-      expect(result.content_version).toBe('2026-08-10T07:06:23.411027+00:00');
       expect(result.sample_exchange).toBeUndefined();
     });
 

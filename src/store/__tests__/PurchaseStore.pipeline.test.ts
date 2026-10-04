@@ -970,9 +970,9 @@ describe('PurchaseStore pipeline', () => {
 
     it('shows an update only while the Pal is installed', async () => {
       const pendingUpdate = {
-        pal: hubPal({content_version: version(4), title: 'Story Pal 2'}),
+        pal: hubPal({updated_at: version(4), title: 'Story Pal 2'}),
         content: contentOf(
-          hubPal({content_version: version(4), title: 'Story Pal 2'}),
+          hubPal({updated_at: version(4), title: 'Story Pal 2'}),
         ),
         contentVersion: version(4),
       };

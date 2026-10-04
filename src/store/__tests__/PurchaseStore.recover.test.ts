@@ -400,7 +400,7 @@ describe('PurchaseStore recovery', () => {
       const h = createHarness({records: [record('active')]});
       h.palStore.pals.push(localPal());
       h.api.refresh.mockResolvedValue({
-        changed: [changedPal({content_version: version(4), title: 'Edited'})],
+        changed: [changedPal({updated_at: version(4), title: 'Edited'})],
         revoked: [],
         removed: [],
         unchanged: [],
@@ -418,7 +418,7 @@ describe('PurchaseStore recovery', () => {
     it('does not install a changed Pal the user deleted', async () => {
       const h = createHarness({records: [record('active')]});
       h.api.refresh.mockResolvedValue({
-        changed: [changedPal({content_version: version(4)})],
+        changed: [changedPal({updated_at: version(4)})],
         revoked: [],
         removed: [],
         unchanged: [],

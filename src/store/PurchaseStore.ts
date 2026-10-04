@@ -1266,14 +1266,19 @@ export class PurchaseStore {
     } catch {
       return false;
     }
-    for (const {pal, content, changeNote} of refreshed.changed) {
+    for (const {
+      pal,
+      content,
+      contentVersion,
+      changeNote,
+    } of refreshed.changed) {
       const rec = this.records[pal.id];
       if (rec?.status === 'active') {
         await this.serialize(rec.productId, () =>
           this.offerUpdate(pal.id, {
             pal,
             content,
-            contentVersion: pal.content_version ?? UNKNOWN_CONTENT_VERSION,
+            contentVersion: contentVersion ?? UNKNOWN_CONTENT_VERSION,
             changeNote,
           }),
         );

@@ -16,7 +16,7 @@ export const apiPal = (overrides: Record<string, unknown> = {}) => ({
   protection_level: 'reveal_on_purchase',
   store_product_id: 'pal.0123456789abcdef0123456789abcdef',
   iap_enabled: {ios: true, android: true},
-  content_version: version(3),
+  updated_at: version(3),
   system_prompt: 'You tell stories.',
   ...overrides,
 });
