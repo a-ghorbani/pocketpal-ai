@@ -97,6 +97,23 @@ const REQUIRED_HEXAGON_SYMBOLS = [
   'ggml_backend_is_hexagon',
 ];
 
+const CORE_PATCH_MARKER = 'rnllama_patch_abort_v1';
+const JSI_PATCH_MARKER = 'rnllama_jsi_patch_ownership_v1';
+
+const isJniWrapper = lib => lib.startsWith('librnllama_jni');
+
+/** A library as the patched from-source build emits it: its marker defined. */
+function patchedElf(lib) {
+  return buildElf([
+    {
+      name: isJniWrapper(lib) ? JSI_PATCH_MARKER : CORE_PATCH_MARKER,
+      defined: true,
+    },
+    {name: 'lm_ggml_backend_reg_count', defined: true},
+    {name: 'malloc', defined: false},
+  ]);
+}
+
 /**
  * A `.dynsym` carrying the two required symbols as defined entries unless
  * `withRequired` is false, plus hexagon-named and non-matching noise so a
@@ -110,6 +127,7 @@ function hexagonDynsym({withRequired = true} = {}) {
       symbols.push({name, defined: true});
     }
   }
+  symbols.push({name: CORE_PATCH_MARKER, defined: true});
   for (const name of REQUIRED_HEXAGON_SYMBOLS) {
     symbols.push({name: `lm_${name}`, defined: true});
   }
@@ -145,13 +163,13 @@ function conformingEntries(prefix = '') {
   const entries = {};
   for (const abi of manifest.abis) {
     for (const lib of abi.requiredLibs) {
-      entries[`${prefix}lib/${abi.abi}/${lib}`] = PLAIN_ELF;
+      entries[`${prefix}lib/${abi.abi}/${lib}`] =
+        /_hexagon/.test(lib) && !isJniWrapper(lib)
+          ? hexagonDynsym()
+          : patchedElf(lib);
     }
     for (const asset of abi.requiredAssets) {
       entries[`${prefix}${asset}`] = buildDspStub();
-    }
-    for (const rule of abi.requiredSymbols) {
-      entries[`${prefix}lib/${abi.abi}/${rule.lib}`] = hexagonDynsym();
     }
   }
   return entries;
@@ -376,6 +394,81 @@ describe('the Hexagon backend', () => {
     expect(status).toBe(0);
     expect(output).toContain('llama.rn 0.0.0-installed');
     expect(output).not.toContain('0.0.0-declared');
+  });
+});
+
+describe('the llama.rn patch markers', () => {
+  const coreLibs = abi => abi.requiredLibs.filter(lib => !isJniWrapper(lib));
+
+  it('are demanded of every required library, core and wrapper alike', () => {
+    for (const abi of manifest.abis) {
+      for (const lib of abi.requiredLibs) {
+        const demanded = abi.requiredSymbols
+          .filter(rule => rule.lib === lib)
+          .flatMap(rule => rule.mustExport);
+        expect(demanded).toContain(
+          isJniWrapper(lib) ? JSI_PATCH_MARKER : CORE_PATCH_MARKER,
+        );
+      }
+    }
+  });
+
+  it('fails when a core library lacks the core marker, with the patch hint', () => {
+    const entries = conformingEntries();
+    entries['lib/arm64-v8a/librnllama_v8_2_dotprod.so'] = PLAIN_ELF;
+    const {status, output} = gateApk(entries);
+    expect(status).toBe(1);
+    expect(output).toContain(`MISSING  ${CORE_PATCH_MARKER}`);
+    expect(output).toContain(
+      `lib/arm64-v8a/librnllama_v8_2_dotprod.so in app-prod-release.apk does not export ${CORE_PATCH_MARKER}`,
+    );
+    expect(output).toContain('patches/');
+    expect(output).not.toContain('Hexagon (NPU) backend was not compiled');
+  });
+
+  it('fails when a JNI wrapper lacks the JSI marker', () => {
+    const entries = conformingEntries();
+    entries['lib/x86_64/librnllama_jni_x86_64.so'] = PLAIN_ELF;
+    const {status, output} = gateApk(entries);
+    expect(status).toBe(1);
+    expect(output).toContain(
+      `lib/x86_64/librnllama_jni_x86_64.so in app-prod-release.apk does not export ${JSI_PATCH_MARKER}`,
+    );
+  });
+
+  // Prebuilt core libraries next to wrappers compiled from patched sources:
+  // the JSI half of the fix without the abort half.
+  it('fails a prebuilt-shaped artifact that carries only the JSI marker', () => {
+    const entries = conformingEntries();
+    for (const abi of manifest.abis) {
+      for (const lib of coreLibs(abi)) {
+        entries[`lib/${abi.abi}/${lib}`] = /_hexagon/.test(lib)
+          ? buildElf(
+              REQUIRED_HEXAGON_SYMBOLS.map(name => ({name, defined: true})),
+            )
+          : PLAIN_ELF;
+      }
+    }
+    const {status, output} = gateApk(entries);
+    expect(status).toBe(1);
+    for (const abi of manifest.abis) {
+      for (const lib of coreLibs(abi)) {
+        expect(output).toContain(
+          `lib/${abi.abi}/${lib} in app-prod-release.apk does not export ${CORE_PATCH_MARKER}`,
+        );
+      }
+    }
+    expect(output).not.toContain(`does not export ${JSI_PATCH_MARKER}`);
+  });
+
+  it('fails when a marker is only an undefined import', () => {
+    const entries = conformingEntries();
+    entries['lib/arm64-v8a/librnllama.so'] = buildElf([
+      {name: CORE_PATCH_MARKER, defined: false},
+    ]);
+    const {status, output} = gateApk(entries);
+    expect(status).toBe(1);
+    expect(output).toContain(`MISSING  ${CORE_PATCH_MARKER}`);
   });
 });
 

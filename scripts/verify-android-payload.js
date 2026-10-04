@@ -457,13 +457,18 @@ function checkSymbolRule({rule, archive, artifactName, entry, report, fail}) {
     );
   }
   if (missing.length > 0) {
+    const why = rule.why
+      ? [rule.why]
+      : [
+          'The Hexagon (NPU) backend was not compiled into this build, so Snapdragon devices',
+          'will fall back to the CPU. Point HEXAGON_SDK_ROOT and HEXAGON_TOOLS_ROOT at an SDK',
+          'containing ipc/fastrpc/remote/ship/android_aarch64/libcdsprpc.so and rebuild.',
+          `Background: ${ISSUE_URL}`,
+        ];
     fail(
       [
         `${entry} in ${artifactName} does not export ${missing.join(', ')}.`,
-        'The Hexagon (NPU) backend was not compiled into this build, so Snapdragon devices',
-        'will fall back to the CPU. Point HEXAGON_SDK_ROOT and HEXAGON_TOOLS_ROOT at an SDK',
-        'containing ipc/fastrpc/remote/ship/android_aarch64/libcdsprpc.so and rebuild.',
-        `Background: ${ISSUE_URL}`,
+        ...why,
       ].join('\n      '),
     );
   }
