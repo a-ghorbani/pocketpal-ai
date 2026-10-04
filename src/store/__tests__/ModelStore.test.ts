@@ -4033,13 +4033,41 @@ describe('ModelStore', () => {
       modelStore.isStreaming = false;
       runInAction(() => {
         modelStore.isMultimodalActive = true;
+        modelStore.engine = {
+          completion: jest.fn(),
+          stopCompletion: jest.fn(),
+        } as any;
       });
     });
 
     afterEach(() => {
       runInAction(() => {
         modelStore.isMultimodalActive = false;
+        modelStore.engine = undefined;
       });
+    });
+
+    it('skips the frame while another generation holds the lease', async () => {
+      const mockContext = {
+        completion: jest.fn().mockResolvedValue({text: 'Response text'}),
+      };
+      modelStore.context = mockContext as any;
+      const held = await modelStore.acquireGeneration();
+      const onComplete = jest.fn();
+      const onError = jest.fn();
+
+      await modelStore.startImageCompletion({
+        prompt: 'Test prompt',
+        image_path: '/path/to/image.jpg',
+        onComplete,
+        onError,
+      });
+
+      expect(mockContext.completion).not.toHaveBeenCalled();
+      expect(onComplete).not.toHaveBeenCalled();
+      expect(onError).not.toHaveBeenCalled();
+      expect(modelStore.inferencing).toBe(false);
+      held!.end();
     });
 
     it('should throw error when no context available', async () => {

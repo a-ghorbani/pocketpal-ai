@@ -3,6 +3,12 @@
  * This runs after the test environment is set up, so lifecycle hooks like afterEach are available
  */
 
+import {mockModelStore} from '../__mocks__/stores/modelStore';
+
+beforeEach(() => {
+  mockModelStore.resetGenerationSlot();
+});
+
 afterEach(() => {
   // Clear all timers to prevent memory leaks
   jest.clearAllTimers();
