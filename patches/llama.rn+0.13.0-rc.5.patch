@@ -1,0 +1,1093 @@
+diff --git a/node_modules/llama.rn/cpp/jsi/JSICompletion.h b/node_modules/llama.rn/cpp/jsi/JSICompletion.h
+index d6cf4b6..e0e4218 100644
+--- a/node_modules/llama.rn/cpp/jsi/JSICompletion.h
++++ b/node_modules/llama.rn/cpp/jsi/JSICompletion.h
+@@ -161,7 +161,7 @@ namespace rnllama_jsi {
+         res["draft_tokens_accepted"] = c.num_draft_tokens_accepted;
+         res["truncated"] = c.truncated;
+         res["context_full"] = c.context_full;
+-        res["interrupted"] = c.is_interrupted;
++        res["interrupted"] = static_cast<bool>(c.is_interrupted);
+         res["stopped_eos"] = c.stopped_eos;
+         res["stopped_word"] = c.stopped_word;
+         res["stopped_limit"] = c.stopped_limit;
+diff --git a/node_modules/llama.rn/cpp/jsi/JSIContext.h b/node_modules/llama.rn/cpp/jsi/JSIContext.h
+index a11a0d5..86e119c 100644
+--- a/node_modules/llama.rn/cpp/jsi/JSIContext.h
++++ b/node_modules/llama.rn/cpp/jsi/JSIContext.h
+@@ -1,32 +1,42 @@
+ #pragma once
+ #include "JSINativeHeaders.h"
+-#include <functional>
++#include <memory>
+ #include <mutex>
+ #include <unordered_map>
++#include <utility>
+ #include <vector>
+ 
+ namespace rnllama_jsi {
++    // Registered contexts are reachable only through shared ownership: every task
++    // holds a reference while it runs, and release destroys a context only once
++    // it is the sole owner.
+     template<typename T>
+     class ContextManager {
+     private:
+-        std::unordered_map<int, long> contextMap;
++        std::unordered_map<int, std::shared_ptr<T>> contextMap;
+         std::mutex contextMutex;
+ 
+     public:
+-        void add(int contextId, long contextPtr) {
++        void add(int contextId, std::shared_ptr<T> context) {
+             std::lock_guard<std::mutex> lock(contextMutex);
+-            contextMap[contextId] = contextPtr;
++            contextMap[contextId] = std::move(context);
+         }
+ 
+-        void remove(int contextId) {
++        std::shared_ptr<T> take(int contextId) {
+             std::lock_guard<std::mutex> lock(contextMutex);
+-            contextMap.erase(contextId);
++            auto it = contextMap.find(contextId);
++            if (it == contextMap.end()) {
++                return nullptr;
++            }
++            auto context = std::move(it->second);
++            contextMap.erase(it);
++            return context;
+         }
+ 
+-        long get(int contextId) {
++        std::shared_ptr<T> get(int contextId) {
+             std::lock_guard<std::mutex> lock(contextMutex);
+             auto it = contextMap.find(contextId);
+-            return (it != contextMap.end()) ? it->second : 0;
++            return (it != contextMap.end()) ? it->second : nullptr;
+         }
+ 
+         size_t size() {
+@@ -34,39 +44,19 @@ namespace rnllama_jsi {
+             return contextMap.size();
+         }
+ 
+-        std::vector<std::pair<int, long>> snapshot() {
++        std::vector<std::shared_ptr<T>> takeAll() {
+             std::lock_guard<std::mutex> lock(contextMutex);
+-            std::vector<std::pair<int, long>> items;
++            std::vector<std::shared_ptr<T>> items;
+             items.reserve(contextMap.size());
+-            for (const auto& entry : contextMap) {
+-                items.push_back(entry);
++            for (auto& entry : contextMap) {
++                items.push_back(std::move(entry.second));
+             }
++            contextMap.clear();
+             return items;
+         }
+-        
+-        void clear(std::function<void(long)> deleter = nullptr) {
+-            // Take a snapshot and clear the map first, then delete objects.
+-            // This ensures any concurrent lookups via get() will return 0 (not found)
+-            // rather than a dangling pointer while deletion is in progress.
+-            std::vector<long> toDelete;
+-            {
+-                std::lock_guard<std::mutex> lock(contextMutex);
+-                if (deleter) {
+-                    toDelete.reserve(contextMap.size());
+-                    for (auto& pair : contextMap) {
+-                        toDelete.push_back(pair.second);
+-                    }
+-                }
+-                contextMap.clear();
+-            }
+-            // Delete outside the lock to avoid potential deadlocks
+-            if (deleter) {
+-                for (long ptr : toDelete) {
+-                    deleter(ptr);
+-                }
+-            }
+-        }
+     };
+ 
++    using ContextRef = std::shared_ptr<rnllama::llama_rn_context>;
++
+     extern ContextManager<rnllama::llama_rn_context> g_llamaContexts;
+ }
+diff --git a/node_modules/llama.rn/cpp/jsi/JSITaskManager.cpp b/node_modules/llama.rn/cpp/jsi/JSITaskManager.cpp
+index a35bbf0..df5bfb4 100644
+--- a/node_modules/llama.rn/cpp/jsi/JSITaskManager.cpp
++++ b/node_modules/llama.rn/cpp/jsi/JSITaskManager.cpp
+@@ -1,12 +1,7 @@
+ #include "JSITaskManager.h"
+-#include <chrono>
+ 
+ namespace rnllama_jsi {
+ 
+-// Timeout for waiting on tasks to complete.
+-// This prevents indefinite blocking if a task fails to call finishTask().
+-static constexpr auto TASK_WAIT_TIMEOUT = std::chrono::milliseconds(5000);
+-
+ TaskManager& TaskManager::getInstance() {
+     static TaskManager instance;
+     return instance;
+@@ -32,13 +27,10 @@ void TaskManager::finishTask(int contextId) {
+     if (totalTasks > 0) {
+         totalTasks -= 1;
+     }
+-
+-    cv.notify_all();
+ }
+ 
+ void TaskManager::beginShutdown() {
+     shuttingDown.store(true, std::memory_order_relaxed);
+-    cv.notify_all();
+ }
+ 
+ void TaskManager::reset() {
+@@ -48,39 +40,12 @@ void TaskManager::reset() {
+         totalTasks = 0;
+     }
+     shuttingDown.store(false, std::memory_order_relaxed);
+-    cv.notify_all();
+ }
+ 
+ bool TaskManager::isShuttingDown() const {
+     return shuttingDown.load(std::memory_order_relaxed);
+ }
+ 
+-void TaskManager::waitForContext(int contextId, int targetCount) {
+-    if (contextId < 0) {
+-        return;
+-    }
+-
+-    std::unique_lock<std::mutex> lock(mutex);
+-    cv.wait_for(lock, TASK_WAIT_TIMEOUT, [this, contextId, targetCount]() {
+-        if (shuttingDown.load(std::memory_order_relaxed)) {
+-            return true;
+-        }
+-        auto it = activeTasks.find(contextId);
+-        int count = it != activeTasks.end() ? it->second : 0;
+-        return count <= targetCount;
+-    });
+-}
+-
+-void TaskManager::waitForAll(int targetCount) {
+-    std::unique_lock<std::mutex> lock(mutex);
+-    cv.wait_for(lock, TASK_WAIT_TIMEOUT, [this, targetCount]() {
+-        if (shuttingDown.load(std::memory_order_relaxed)) {
+-            return true;
+-        }
+-        return totalTasks <= targetCount;
+-    });
+-}
+-
+ TaskFinishGuard::TaskFinishGuard(int contextId, bool tracked)
+     : contextId(contextId), tracked(tracked) {}
+ 
+diff --git a/node_modules/llama.rn/cpp/jsi/JSITaskManager.h b/node_modules/llama.rn/cpp/jsi/JSITaskManager.h
+index 13ffe4b..57b06a4 100644
+--- a/node_modules/llama.rn/cpp/jsi/JSITaskManager.h
++++ b/node_modules/llama.rn/cpp/jsi/JSITaskManager.h
+@@ -1,7 +1,6 @@
+ #pragma once
+ 
+ #include <atomic>
+-#include <condition_variable>
+ #include <mutex>
+ #include <unordered_map>
+ 
+@@ -17,17 +16,10 @@ namespace rnllama_jsi {
+         void reset();
+         bool isShuttingDown() const;
+ 
+-        // Wait until all tracked tasks for the given context complete.
+-        void waitForContext(int contextId, int targetCount = 0);
+-
+-        // Wait until no tracked tasks remain.
+-        void waitForAll(int targetCount = 0);
+-
+     private:
+         TaskManager() = default;
+ 
+         std::mutex mutex;
+-        std::condition_variable cv;
+         std::unordered_map<int, int> activeTasks;
+         int totalTasks = 0;
+         std::atomic<bool> shuttingDown{false};
+diff --git a/node_modules/llama.rn/cpp/jsi/JSIUtils.cpp b/node_modules/llama.rn/cpp/jsi/JSIUtils.cpp
+index a61f5e9..d30a9b6 100644
+--- a/node_modules/llama.rn/cpp/jsi/JSIUtils.cpp
++++ b/node_modules/llama.rn/cpp/jsi/JSIUtils.cpp
+@@ -159,8 +159,7 @@ namespace rnllama_jsi {
+                             }
+                         }
+ 
+-                        // If we couldn't schedule invokeAsync, finish the task now to prevent
+-                        // waitForContext from hanging forever
++                        // If we couldn't schedule invokeAsync, finish the task now.
+                         if (!invokeScheduled && shouldTrack) {
+                             TaskManager::getInstance().finishTask(contextId);
+                         }
+@@ -188,7 +187,7 @@ namespace rnllama_jsi {
+                 callback(shouldProceed);
+             });
+         } catch (...) {
+-            // invokeAsync failed - finish task to prevent waitForContext hanging
++            // invokeAsync failed - finish the task now
+             if (shouldTrack) {
+                 TaskManager::getInstance().finishTask(contextId);
+             }
+diff --git a/node_modules/llama.rn/cpp/jsi/JSIUtils.h b/node_modules/llama.rn/cpp/jsi/JSIUtils.h
+index eb52272..9ff97ad 100644
+--- a/node_modules/llama.rn/cpp/jsi/JSIUtils.h
++++ b/node_modules/llama.rn/cpp/jsi/JSIUtils.h
+@@ -33,7 +33,6 @@ namespace rnllama_jsi {
+     );
+ 
+     // Schedule an async callback on the JS thread with TaskManager tracking.
+-    // This ensures releaseContext will wait for all pending callbacks before deletion.
+     // The callback receives a bool indicating if it should proceed (false if shutting down).
+     void invokeAsyncTracked(
+         std::shared_ptr<react::CallInvoker> callInvoker,
+diff --git a/node_modules/llama.rn/cpp/jsi/RNLlamaJSI.cpp b/node_modules/llama.rn/cpp/jsi/RNLlamaJSI.cpp
+index c4c4fbb..680f0bf 100644
+--- a/node_modules/llama.rn/cpp/jsi/RNLlamaJSI.cpp
++++ b/node_modules/llama.rn/cpp/jsi/RNLlamaJSI.cpp
+@@ -13,11 +13,13 @@
+ 
+ #include <algorithm>
+ #include <atomic>
++#include <chrono>
+ #include <map>
+ #include <memory>
+ #include <mutex>
+ #include <stdexcept>
+ #include <string>
++#include <thread>
+ #include <utility>
+ #include <vector>
+ 
+@@ -57,6 +59,10 @@ static void log(LogLevel level, const char* format, ...) {
+ 
+ static std::once_flag backend_init_once;
+ 
++extern "C" __attribute__((visibility("default"), used)) int rnllama_jsi_patch_ownership_v1(void) {
++    return 1;
++}
++
+ #if defined(__ANDROID__)
+ static bool shouldExcludeHexagonDevice(ggml_backend_dev_t dev) {
+ #if defined(GGML_USE_HEXAGON)
+@@ -169,7 +175,7 @@ namespace rnllama_jsi {
+         return g_llamaContexts.size() >= static_cast<size_t>(limit);
+     }
+ 
+-    static bool isContextBusy(rnllama::llama_rn_context* ctx) {
++    static bool isContextBusy(const ContextRef& ctx) {
+         if (ctx == nullptr) {
+             return false;
+         }
+@@ -181,7 +187,7 @@ namespace rnllama_jsi {
+         return ctx->slot_manager && ctx->slot_manager->has_pending_work();
+     }
+ 
+-    static void throwIfContextBusy(rnllama::llama_rn_context* ctx) {
++    static void throwIfContextBusy(const ContextRef& ctx) {
+         if (isContextBusy(ctx)) {
+             throw std::runtime_error("Context is busy");
+         }
+@@ -485,20 +491,34 @@ namespace rnllama_jsi {
+         }
+     }
+ 
+-    void addContext(int contextId, long contextPtr) {
+-        g_llamaContexts.add(contextId, contextPtr);
++    static ContextRef getContextOrThrow(int contextId) {
++        auto ctx = g_llamaContexts.get(contextId);
++        if (!ctx) {
++            throw std::runtime_error("Context not found");
++        }
++        return ctx;
+     }
+ 
+-    void removeContext(int contextId) {
+-        g_llamaContexts.remove(contextId);
++    // Called once the context is out of the registry, so no new task can reach it.
++    static void stopForRelease(const ContextRef& ctx) {
++#ifndef RNLLAMA_USE_FRAMEWORK_HEADERS
++        ctx->releasing = true;
++#endif
++        if (ctx->completion) {
++            ctx->completion->is_interrupted = true;
++        }
++        if (ctx->slot_manager) {
++            ctx->slot_manager->stop_processing_loop();
++        }
+     }
+ 
+-    rnllama::llama_rn_context* getContextOrThrow(int contextId) {
+-        long ctxPtr = g_llamaContexts.get(contextId);
+-        if (!ctxPtr) {
+-            throw std::runtime_error("Context not found");
++    // A task may still hold the context; it is destroyed only by its last owner
++    // here, never under a running task.
++    static void destroyWhenSoleOwner(ContextRef ctx) {
++        while (ctx.use_count() > 1) {
++            std::this_thread::sleep_for(std::chrono::milliseconds(10));
+         }
+-        return reinterpret_cast<rnllama::llama_rn_context*>(ctxPtr);
++        ctx.reset();
+     }
+ 
+     void installJSIBindings(
+@@ -691,7 +711,8 @@ namespace rnllama_jsi {
+                              }
+                          }
+ 
+-                         addContext(contextId, (long)ctx);
++                         ContextRef ctxRef(ctx);
++                         g_llamaContexts.add(contextId, ctxRef);
+ 
+                          std::string androidLibName = "";
+                          #if defined(__ANDROID__)
+@@ -702,7 +723,7 @@ namespace rnllama_jsi {
+                              {"reasonNoGPU", reasonNoGPU},
+                              {"systemInfo", common_params_get_system_info(ctx->params)},
+                              // Model metadata and chat template capabilities
+-                             {"model", modelDetailsJson(ctx)},
++                             {"model", modelDetailsJson(ctxRef.get())},
+                              {"devices", usedDevices},
+                              {"androidLib", androidLibName},
+                          });
+@@ -770,7 +791,7 @@ namespace rnllama_jsi {
+                 return createPromiseTask(runtime, callInvoker, [contextId, path]() -> PromiseResultGenerator {
+                     auto ctx = getContextOrThrow(contextId);
+                     throwIfContextBusy(ctx);
+-                    json result = rnllama_jsi::loadSession(ctx, path);
++                    json result = rnllama_jsi::loadSession(ctx.get(), path);
+                     return [result](jsi::Runtime& rt) {
+                         return fromJson(rt, result);
+                     };
+@@ -790,7 +811,7 @@ namespace rnllama_jsi {
+                 return createPromiseTask(runtime, callInvoker, [contextId, path, size]() -> PromiseResultGenerator {
+                     auto ctx = getContextOrThrow(contextId);
+                     throwIfContextBusy(ctx);
+-                    int tokens_saved = rnllama_jsi::saveSession(ctx, path, size);
++                    int tokens_saved = rnllama_jsi::saveSession(ctx.get(), path, size);
+                     return [tokens_saved](jsi::Runtime& rt) {
+                         return jsi::Value(tokens_saved);
+                     };
+@@ -1051,7 +1072,7 @@ namespace rnllama_jsi {
+                 throwIfContextBusy(ctx);
+                 ctx->completion->rewind();
+ 
+-                parseCompletionParams(params, ctx);
++                parseCompletionParams(params, ctx.get());
+ 
+                 std::vector<std::string> mediaPaths;
+                 // media_paths: string | string[]
+@@ -1157,7 +1178,7 @@ namespace rnllama_jsi {
+ 
+                                 auto runtime = runtimePtr;
+                                 if (runtime) {
+-                                    json tokenResult = tokenResultJson(ctx, output_copy);
++                                    json tokenResult = tokenResultJson(ctx.get(), output_copy);
+                                     if (has_partial_output) {
+                                         addChatOutputFields(tokenResult, partial_output);
+                                     }
+@@ -1178,7 +1199,7 @@ namespace rnllama_jsi {
+                     ctx->completion->endCompletion();
+ 
+                     // Snapshot the result here, before another task can touch the context
+-                    CompletionResult result = completionResult(ctx);
++                    CompletionResult result = completionResult(ctx.get());
+ 
+                     return [contextId, result](jsi::Runtime& rt) -> jsi::Value {
+                         if (!g_llamaContexts.get(contextId)) {
+@@ -1287,7 +1308,7 @@ namespace rnllama_jsi {
+ 
+                 auto ctxPtr = getContextOrThrow(contextId);
+                 auto originalParams = ctxPtr->params;
+-                parseCompletionParams(params, ctxPtr);
++                parseCompletionParams(params, ctxPtr.get());
+                 common_params cparams = ctxPtr->params;
+                 ctxPtr->params = originalParams;
+ 
+@@ -1326,7 +1347,14 @@ namespace rnllama_jsi {
+                     auto tokenizeResult = ctx->tokenize(cparams.prompt, mediaPaths);
+                     std::vector<llama_token> tokens = tokenizeResult.tokens;
+ 
+-                    auto tokenCallback = [contextId, callInvoker, ctx, runtimePtr](const rnllama::completion_token_output& token) {
++                    // The slot manager that stores this callback is owned by the context,
++                    // so a strong reference here would keep the context alive forever.
++                    std::weak_ptr<rnllama::llama_rn_context> weakCtx = ctx;
++                    auto tokenCallback = [contextId, callInvoker, weakCtx, runtimePtr](const rnllama::completion_token_output& token) {
++                        auto ctx = weakCtx.lock();
++                        if (!ctx) {
++                            return;
++                        }
+                         int requestId = token.request_id;
+                         rnllama::completion_chat_output parsed_output;
+                         bool has_parsed_output = false;
+@@ -1344,7 +1372,7 @@ namespace rnllama_jsi {
+ 
+                         auto callbacks = RequestManager::getInstance().getRequest(contextId, requestId);
+                         if (callbacks.onToken) {
+-                            json tokenResult = tokenResultJson(ctx, token);
++                            json tokenResult = tokenResultJson(ctx.get(), token);
+                             if (has_parsed_output) {
+                                 addChatOutputFields(tokenResult, parsed_output);
+                             }
+@@ -1420,7 +1448,7 @@ namespace rnllama_jsi {
+                     if (result == rnllama::llama_rn_cancel_result::QUEUED) {
+                         auto callbacks = RequestManager::getInstance().takeRequest(contextId, requestId);
+                         if (callbacks.onComplete) {
+-                            json response = parallelCompletionResultJson(ctx, createQueuedCancellationSnapshot(requestId));
++                            json response = parallelCompletionResultJson(ctx.get(), createQueuedCancellationSnapshot(requestId));
+                             callbacks.onComplete->call(runtime, fromJson(runtime, response));
+                         }
+                     }
+@@ -1630,12 +1658,9 @@ namespace rnllama_jsi {
+                 int contextId = (int)arguments[0].asNumber();
+                 int subscriberId = (int)arguments[1].asNumber();
+ 
+-                long ctxPtr = g_llamaContexts.get(contextId);
+-                if (ctxPtr) {
+-                    auto ctx = reinterpret_cast<rnllama::llama_rn_context*>(ctxPtr);
+-                    if (ctx->slot_manager) {
+-                        ctx->slot_manager->remove_status_subscriber(subscriberId);
+-                    }
++                auto ctx = g_llamaContexts.get(contextId);
++                if (ctx && ctx->slot_manager) {
++                    ctx->slot_manager->remove_status_subscriber(subscriberId);
+                 }
+ 
+                 return jsi::Value::undefined();
+@@ -1650,33 +1675,17 @@ namespace rnllama_jsi {
+                  int contextId = (int)arguments[0].asNumber();
+                  return createPromiseTask(runtime, callInvoker, [contextId]() -> PromiseResultGenerator {
+                      RequestManager::getInstance().clearContext(contextId);
+-                     long ctxPtr = g_llamaContexts.get(contextId);
+-                     if (ctxPtr) {
+-                         auto ctx = reinterpret_cast<rnllama::llama_rn_context*>(ctxPtr);
+-                         if (ctx->completion) {
+-                             ctx->completion->is_interrupted = true;
+-                         }
+-                         if (ctx->slot_manager) {
+-                             ctx->slot_manager->stop_processing_loop();
+-                         }
++                     auto ctx = g_llamaContexts.take(contextId);
++                     if (ctx) {
++                         stopForRelease(ctx);
+                      }
+ 
+-                     // Wait for ALL other tasks on this context to complete (including their
+-                     // invokeAsync callbacks) before deleting. This prevents race conditions
+-                     // where we delete the context while a completion's JS callback is still
+-                     // accessing ctx->completion.
+-                     TaskManager::getInstance().waitForContext(contextId, 0);
+                      if (TaskManager::getInstance().isShuttingDown()) {
+                          return [](jsi::Runtime& rt) { return jsi::Value::undefined(); };
+                      }
+ 
+-                     if (ctxPtr) {
+-                         auto ctx = reinterpret_cast<rnllama::llama_rn_context*>(ctxPtr);
+-                         // Remove from map FIRST, then delete.
+-                         // This ensures any concurrent lookups via g_llamaContexts.get()
+-                         // will return 0 (not found) rather than a dangling pointer.
+-                         removeContext(contextId);
+-                         delete ctx;
++                     if (ctx) {
++                         destroyWhenSoleOwner(std::move(ctx));
+                      }
+                      return [](jsi::Runtime& rt) { return jsi::Value::undefined(); };
+                  }, contextId, false);  // trackTask=false - release should not count itself
+@@ -1691,33 +1700,18 @@ namespace rnllama_jsi {
+                  return createPromiseTask(runtime, callInvoker, []() -> PromiseResultGenerator {
+                      RequestManager::getInstance().clearAll();
+ 
+-                     auto contexts = g_llamaContexts.snapshot();
+-                     for (const auto& entry : contexts) {
+-                         long ctxPtr = entry.second;
+-                         if (!ctxPtr) {
+-                             continue;
+-                         }
+-                         auto ctx = reinterpret_cast<rnllama::llama_rn_context*>(ctxPtr);
+-                         if (ctx->completion) {
+-                             ctx->completion->is_interrupted = true;
+-                         }
+-                         if (ctx->slot_manager) {
+-                             ctx->slot_manager->stop_processing_loop();
+-                         }
++                     auto contexts = g_llamaContexts.takeAll();
++                     for (const auto& ctx : contexts) {
++                         stopForRelease(ctx);
+                      }
+ 
+-                     // Wait for ALL tasks to complete (including their invokeAsync callbacks)
+-                     TaskManager::getInstance().waitForAll(0);
+                      if (TaskManager::getInstance().isShuttingDown()) {
+                          return [](jsi::Runtime& rt) { return jsi::Value::undefined(); };
+                      }
+ 
+-                     g_llamaContexts.clear([](long ptr) {
+-                        if (ptr) {
+-                            auto ctx = reinterpret_cast<rnllama::llama_rn_context*>(ptr);
+-                            delete ctx;
+-                        }
+-                     });
++                     for (auto& ctx : contexts) {
++                         destroyWhenSoleOwner(std::move(ctx));
++                     }
+                      return [](jsi::Runtime& rt) { return jsi::Value::undefined(); };
+                  }, -1, false);  // contextId=-1 (not tracked), trackTask=false
+             }
+@@ -1914,7 +1908,7 @@ namespace rnllama_jsi {
+                     if (!ctx->isVocoderEnabled()) throw std::runtime_error("Vocoder is not enabled");
+ 
+                     try {
+-                        auto audio_result = ctx->tts_wrapper->getFormattedAudioCompletion(ctx, speaker, textToSpeak, speakerId);
++                        auto audio_result = ctx->tts_wrapper->getFormattedAudioCompletion(ctx.get(), speaker, textToSpeak, speakerId);
+                         json res = json::object({{"prompt", audio_result.prompt}});
+                         if (!audio_result.grammar.empty()) {
+                             res["grammar"] = audio_result.grammar;
+@@ -1940,7 +1934,7 @@ namespace rnllama_jsi {
+                 return createPromiseTask(runtime, callInvoker, [contextId]() -> PromiseResultGenerator {
+                     auto ctx = getContextOrThrow(contextId);
+                     if (!ctx->isVocoderEnabled()) throw std::runtime_error("Vocoder is not enabled");
+-                    auto cap = ctx->tts_wrapper->getTTSCapabilities(ctx);
++                    auto cap = ctx->tts_wrapper->getTTSCapabilities(ctx.get());
+                     json res = json::object({
+                         {"type", cap.type},
+                         {"promptKind", cap.prompt_kind},
+@@ -1969,7 +1963,7 @@ namespace rnllama_jsi {
+                     if (!ctx->isVocoderEnabled()) throw std::runtime_error("Vocoder is not enabled");
+ 
+                     try {
+-                        auto audio_data = ctx->tts_wrapper->decodeAudioTokens(ctx, tokens);
++                        auto audio_data = ctx->tts_wrapper->decodeAudioTokens(ctx.get(), tokens);
+                         return [audio_data](jsi::Runtime& rt) {
+                             return makeFloat32Array(rt, audio_data);
+                         };
+@@ -2032,7 +2026,7 @@ namespace rnllama_jsi {
+                     }
+ 
+                     try {
+-                        auto r = ctx->tts_wrapper->generateAudioCodes(ctx, opts, cb);
++                        auto r = ctx->tts_wrapper->generateAudioCodes(ctx.get(), opts, cb);
+                         json res = json::object({
+                             {"codes", r.codes},
+                             {"nCodebook", r.n_codebook},
+@@ -2069,14 +2063,14 @@ namespace rnllama_jsi {
+                     auto ctx = getContextOrThrow(contextId);
+                     if (!ctx->isVocoderEnabled()) throw std::runtime_error("Vocoder is not enabled");
+ 
+-                    auto cap = ctx->tts_wrapper->getTTSCapabilities(ctx);
++                    auto cap = ctx->tts_wrapper->getTTSCapabilities(ctx.get());
+                     std::string family = cap.family;
+ 
+                     // Without an explicit emotion the speaker keeps rn_speaker's
+                     // default; the encoder only reads it when has_emotion is set.
+                     const bool has_emotion = opts.hasEmotion();
+                     const int speakerId = ctx->tts_wrapper->createSpeaker(
+-                        ctx, pcm, opts.inputSampleRate, opts.refText,
++                        ctx.get(), pcm, opts.inputSampleRate, opts.refText,
+                         has_emotion ? opts.emotion : 0.5f, has_emotion, opts.bake);
+ 
+                     const rnllama::rn_speaker * spk = ctx->tts_wrapper->getSpeaker(speakerId);
+@@ -2108,7 +2102,7 @@ namespace rnllama_jsi {
+                     auto ctx = getContextOrThrow(contextId);
+                     if (!ctx->isVocoderEnabled()) throw std::runtime_error("Vocoder is not enabled");
+ 
+-                    ctx->tts_wrapper->bakeSpeaker(ctx, speakerId);
++                    ctx->tts_wrapper->bakeSpeaker(ctx.get(), speakerId);
+ 
+                     const rnllama::rn_speaker * spk = ctx->tts_wrapper->getSpeaker(speakerId);
+                     if (!spk) throw std::runtime_error("bakeSpeaker: speaker id not found");
+@@ -2157,7 +2151,7 @@ namespace rnllama_jsi {
+                     if (!ctx->isVocoderEnabled()) throw std::runtime_error("Vocoder is not enabled");
+ 
+                     try {
+-                        auto audio_data = ctx->tts_wrapper->decodeAudioEmbeddings(ctx, embeddings, embeddingDim);
++                        auto audio_data = ctx->tts_wrapper->decodeAudioEmbeddings(ctx.get(), embeddings, embeddingDim);
+                         return [audio_data](jsi::Runtime& rt) {
+                             return makeFloat32Array(rt, audio_data);
+                         };
+@@ -2232,19 +2226,9 @@ namespace rnllama_jsi {
+         llama_log_set(llama_log_callback_default, nullptr);
+ 
+         RequestManager::getInstance().clearAll();
+-        auto contexts = g_llamaContexts.snapshot();
+-        for (const auto& entry : contexts) {
+-            long ctxPtr = entry.second;
+-            if (!ctxPtr) {
+-                continue;
+-            }
+-            auto ctx = reinterpret_cast<rnllama::llama_rn_context*>(ctxPtr);
+-            if (ctx->completion) {
+-                ctx->completion->is_interrupted = true;
+-            }
+-            if (ctx->slot_manager) {
+-                ctx->slot_manager->stop_processing_loop();
+-            }
++        auto contexts = g_llamaContexts.takeAll();
++        for (const auto& ctx : contexts) {
++            stopForRelease(ctx);
+         }
+ 
+         if (contexts.empty()) {
+@@ -2253,12 +2237,9 @@ namespace rnllama_jsi {
+         }
+         ThreadPool::getInstance().shutdown();
+ 
+-        g_llamaContexts.clear([](long ptr) {
+-            if (ptr) {
+-                auto ctx = reinterpret_cast<rnllama::llama_rn_context*>(ptr);
+-                delete ctx;
+-            }
+-        });
++        for (auto& ctx : contexts) {
++            destroyWhenSoleOwner(std::move(ctx));
++        }
+         g_context_limit.store(-1);
+     }
+ }
+diff --git a/node_modules/llama.rn/cpp/jsi/RNLlamaJSI.h b/node_modules/llama.rn/cpp/jsi/RNLlamaJSI.h
+index 7a065cb..5012051 100644
+--- a/node_modules/llama.rn/cpp/jsi/RNLlamaJSI.h
++++ b/node_modules/llama.rn/cpp/jsi/RNLlamaJSI.h
+@@ -9,8 +9,6 @@ using namespace facebook;
+ 
+ namespace rnllama_jsi {
+     // Context management functions
+-    void addContext(int contextId, long contextPtr);
+-    void removeContext(int contextId);
+     void setContextLimit(int64_t limit);
+ #if defined(__ANDROID__)
+     void setAndroidLoadedLibrary(const std::string& name);
+diff --git a/node_modules/llama.rn/cpp/rn-completion.cpp b/node_modules/llama.rn/cpp/rn-completion.cpp
+index 13a2abe..ebb0ab7 100644
+--- a/node_modules/llama.rn/cpp/rn-completion.cpp
++++ b/node_modules/llama.rn/cpp/rn-completion.cpp
+@@ -584,7 +584,10 @@ void llama_rn_context_completion::loadPrompt(const std::vector<std::string> &med
+         );
+     } else {
+         // Multimodal path - process all media paths
+-        processMedia(parent_ctx->params.prompt, media_paths);
++        if (!processMedia(parent_ctx->params.prompt, media_paths)) {
++            stopAfterAbortedDecode();
++            return;
++        }
+         num_prompt_tokens = embd.size();
+         // Placeholder tokens are not vocab ids; no delimiter scan on media prompts.
+         boundary_ckpts.clear();
+@@ -608,6 +611,10 @@ void llama_rn_context_completion::loadPrompt(const std::vector<std::string> &med
+                 }
+ 
+                 int ret = llama_encode(parent_ctx->ctx, llama_batch_get_one(embd.data() + n_past_batch, n_eval));
++                if (ret == 2) {
++                    stopAfterAbortedDecode();
++                    return;
++                }
+                 if (ret < 0) {
+                     LOG_ERROR("Failed to encode token batch, code: %d, n_eval: %d, n_past_batch: %d", ret, n_eval, n_past_batch);
+                     has_next_token = false;
+@@ -651,6 +658,7 @@ void llama_rn_context_completion::beginCompletion(int chat_format, common_reason
+     llama_perf_context_reset(parent_ctx->ctx);
+     resetGenerationTimings();
+     is_predicting = true;
++    parent_ctx->completion_active = true;
+ 
+     current_chat_format = chat_format;
+     current_reasoning_format = reasoning_format;
+@@ -667,6 +675,27 @@ void llama_rn_context_completion::endCompletion() {
+         embd.resize(n_past);
+     }
+     is_predicting = false;
++    parent_ctx->completion_active = false;
++}
++
++// The abort callback stopped a decode: a stop, not an error. Memory and embd
++// keep only the fully committed prefix [0, n_past) so the next prompt's prefix
++// match never reuses cells a partial batch wrote.
++void llama_rn_context_completion::stopAfterAbortedDecode() {
++    is_interrupted = true;
++    has_next_token = false;
++    if (n_past < 0) {
++        n_past = 0;
++    }
++    auto * mem = llama_get_memory(parent_ctx->ctx);
++    if (!llama_memory_seq_rm(mem, 0, n_past, -1)) {
++        llama_memory_seq_rm(mem, 0, 0, -1);
++        n_past = 0;
++    }
++    if ((size_t) n_past < embd.size()) {
++        embd.resize(n_past);
++    }
++    LOG_INFO("Decoding interrupted, n_past: %d", n_past);
+ }
+ 
+ void llama_rn_context_completion::resetGenerationTimings() {
+@@ -810,6 +839,11 @@ void llama_rn_context_completion::evalMTPPrompt() {
+         }
+ 
+         const int ret = llama_decode(parent_ctx->ctx, spec_batch);
++        if (ret == 2) {
++            n_past = (llama_pos) offset;
++            stopAfterAbortedDecode();
++            return;
++        }
+         if (ret != 0) {
+             // Memory holds only [0, offset); trim embd so a later prefix match
+             // can't claim never-decoded cells (mirrors nextToken).
+@@ -904,6 +938,11 @@ bool llama_rn_context_completion::refillMTPTokens() {
+     }
+ 
+     const int ret = llama_decode(parent_ctx->ctx, spec_batch);
++    if (ret == 2) {
++        n_past = spec_n_past;
++        stopAfterAbortedDecode();
++        return false;
++    }
+     if (ret != 0) {
+         throw std::runtime_error("failed to evaluate MTP target batch, ret=" + std::to_string(ret));
+     }
+@@ -976,6 +1015,9 @@ completion_token_output llama_rn_context_completion::nextTokenMTP() {
+ 
+     if (spec == nullptr) {
+         initMTP();
++        if (!has_next_token) {
++            return result;
++        }
+     }
+     startGenerationTiming();
+ 
+@@ -1149,6 +1191,10 @@ completion_token_output llama_rn_context_completion::nextToken()
+             b.token = nullptr;
+             const int rc = llama_decode(parent_ctx->ctx, b);
+             llama_batch_free(b);
++            if (rc == 2) {
++                stopAfterAbortedDecode();
++                return result;
++            }
+             if (rc) {
+                 LOG_ERROR("failed to eval speaker prefix, rows=%d", emb_rows);
+                 has_next_token = false;
+@@ -1200,6 +1246,10 @@ completion_token_output llama_rn_context_completion::nextToken()
+         b.token = nullptr;
+         const int rc = llama_decode(parent_ctx->ctx, b);
+         llama_batch_free(b);
++        if (rc == 2) {
++            stopAfterAbortedDecode();
++            return result;
++        }
+         if (rc) {
+             LOG_ERROR("failed to eval talker prefix, rows=%d", rows);
+             has_next_token = false;
+@@ -1280,6 +1330,10 @@ completion_token_output llama_rn_context_completion::nextToken()
+         if (!parent_ctx->tts_wrapper->tryChatterboxPrefill(
+                 parent_ctx, text,
+                 ref_pcm, ref_n_samples, ref_sr, cfg_weight)) {
++            if (parent_ctx->abortRequested()) {
++                stopAfterAbortedDecode();
++                return result;
++            }
+             LOG_ERROR("tryChatterboxPrefill failed");
+             has_next_token = false;
+             return result;
+@@ -1324,6 +1378,10 @@ completion_token_output llama_rn_context_completion::nextToken()
+         const int new_past = parent_ctx->tts_wrapper->tryRealtimePrefill(
+             parent_ctx, (int) n_past);
+         if (new_past < 0) {
++            if (parent_ctx->abortRequested()) {
++                stopAfterAbortedDecode();
++                return result;
++            }
+             LOG_ERROR("tryRealtimePrefill failed");
+             has_next_token = false;
+             return result;
+@@ -1414,6 +1472,10 @@ completion_token_output llama_rn_context_completion::nextToken()
+             b.token        = nullptr;
+             const int rc = llama_decode(parent_ctx->ctx, b);
+             llama_batch_free(b);
++            if (rc == 2) {
++                stopAfterAbortedDecode();
++                return result;
++            }
+             if (rc) {
+                 LOG_ERROR("failed to eval codec_lm TTS embd, n_past: %d", n_past);
+                 embd.resize(n_past);
+@@ -1448,6 +1510,11 @@ completion_token_output llama_rn_context_completion::nextToken()
+                 b.logits[i]    = 1;
+             }
+             const int rc = llama_decode(parent_ctx->ctx, b);
++            if (rc == 2) {
++                llama_batch_free(b);
++                stopAfterAbortedDecode();
++                return result;
++            }
+             if (rc) {
+                 llama_batch_free(b);
+                 LOG_ERROR("failed to eval continuous TTS prompt, n_eval: %d, n_past: %d",
+@@ -1471,7 +1538,12 @@ completion_token_output llama_rn_context_completion::nextToken()
+             }
+             llama_batch_free(b);
+         } else {
+-            if (llama_decode(parent_ctx->ctx, llama_batch_get_one(&embd[n_past], n_eval)))
++            const int rc = llama_decode(parent_ctx->ctx, llama_batch_get_one(&embd[n_past], n_eval));
++            if (rc == 2) {
++                stopAfterAbortedDecode();
++                return result;
++            }
++            if (rc)
+             {
+                 LOG_ERROR("failed to eval, n_eval: %d, n_past: %d, n_threads: %d, embd: %s",
+                     n_eval,
+@@ -2128,7 +2200,7 @@ json llama_rn_context_completion::bench(int pp, int tg, int pl, int nr) {
+     return result_json;
+ }
+ 
+-void llama_rn_context_completion::processMedia(
++bool llama_rn_context_completion::processMedia(
+     const std::string &prompt,
+     const std::vector<std::string> &media_paths
+ ) {
+@@ -2151,7 +2223,10 @@ void llama_rn_context_completion::processMedia(
+     auto invalidate = [this](size_t n) {
+         eraseStateCheckpointsAfter(n);
+     };
+-    parent_ctx->mtmd_wrapper->processMedia(
++    auto aborted = [this]() {
++        return parent_ctx->abortRequested();
++    };
++    return parent_ctx->mtmd_wrapper->processMedia(
+         parent_ctx->ctx,
+         prompt,
+         media_paths,
+@@ -2165,7 +2240,8 @@ void llama_rn_context_completion::processMedia(
+         0,  // Use sequence ID 0 for non-parallel mode
+         recover,
+         capture,
+-        invalidate
++        invalidate,
++        aborted
+     );
+ }
+ 
+diff --git a/node_modules/llama.rn/cpp/rn-completion.h b/node_modules/llama.rn/cpp/rn-completion.h
+index c7e9bab..4b917b7 100644
+--- a/node_modules/llama.rn/cpp/rn-completion.h
++++ b/node_modules/llama.rn/cpp/rn-completion.h
+@@ -79,7 +79,7 @@ struct llama_rn_context_completion {
+ 
+     // Completion state fields
+     bool is_predicting = false;
+-    bool is_interrupted = false;
++    std::atomic<bool> is_interrupted{false};
+     bool has_next_token = false;
+     std::string prefill_text;
+     std::string generated_text;
+@@ -191,6 +191,7 @@ struct llama_rn_context_completion {
+     // all — used to recover the last boundary as the cold-ingest frontier).
+     std::vector<llama_pos> computeMessageBoundaries(const std::vector<llama_token> &tokens,
+                                                     llama_pos min_gap) const;
++    void stopAfterAbortedDecode();
+     void beginCompletion();
+     void beginCompletion(int chat_format, common_reasoning_format reasoning_format, const std::string &generation_prompt = "", const std::string &chat_parser = "");
+     void endCompletion();
+@@ -215,8 +216,8 @@ struct llama_rn_context_completion {
+     // Benchmarking methods
+     json bench(int pp, int tg, int pl, int nr);
+ 
+-    // Multimodal processing methods
+-    void processMedia(
++    // Multimodal processing methods; false when the abort callback stopped it
++    bool processMedia(
+       const std::string &prompt,
+       const std::vector<std::string> &media_paths
+     );
+diff --git a/node_modules/llama.rn/cpp/rn-llama.cpp b/node_modules/llama.rn/cpp/rn-llama.cpp
+index a64f257..70d3d22 100644
+--- a/node_modules/llama.rn/cpp/rn-llama.cpp
++++ b/node_modules/llama.rn/cpp/rn-llama.cpp
+@@ -128,6 +128,23 @@ void install_ggml_abort_handler() {
+     ggml_set_abort_callback(ggml_abort_log_callback);
+ }
+ 
++extern "C" __attribute__((visibility("default"), used)) int rnllama_patch_abort_v1(void) {
++    return 1;
++}
++
++// Runs per graph node on a compute thread: reads atomics only.
++static bool llama_rn_abort_callback(void *data) {
++    return static_cast<const llama_rn_context *>(data)->abortRequested();
++}
++
++bool llama_rn_context::abortRequested() const {
++    if (releasing.load(std::memory_order_relaxed)) {
++        return true;
++    }
++    return completion_active.load(std::memory_order_relaxed) &&
++        completion->is_interrupted.load(std::memory_order_relaxed);
++}
++
+ static const std::vector<ggml_type> kv_cache_types = {
+     GGML_TYPE_F32,
+     GGML_TYPE_F16,
+@@ -519,6 +536,13 @@ bool llama_rn_context::attachThreadpoolsIfAvailable() {
+ }
+ 
+ llama_rn_context::~llama_rn_context() {
++    if (ctx != nullptr) {
++        llama_set_abort_callback(ctx, nullptr, nullptr);
++    }
++    if (completion != nullptr && completion->spec_ctx != nullptr) {
++        llama_set_abort_callback(completion->spec_ctx.get(), nullptr, nullptr);
++    }
++
+     // Disable parallel mode first (cleans up slot_manager)
+     disableParallelMode();
+ 
+@@ -570,6 +594,7 @@ bool llama_rn_context::loadModel(common_params &params_)
+         }
+         return false;
+     }
++    llama_set_abort_callback(ctx, llama_rn_abort_callback, this);
+ 
+     if (params.speculative.has_dft() &&
+         has_speculative_type(params.speculative, COMMON_SPECULATIVE_TYPE_DRAFT_MTP)) {
+@@ -648,7 +673,11 @@ llama_context * llama_rn_context::createMTPDraftContext(const common_params &par
+     cparams.type_v = params_for_context.speculative.draft.cache_type_v;
+     cparams.ctx_other = ctx;
+ 
+-    return llama_init_from_model(model_dft, cparams);
++    llama_context * draft_ctx = llama_init_from_model(model_dft, cparams);
++    if (draft_ctx != nullptr) {
++        llama_set_abort_callback(draft_ctx, llama_rn_abort_callback, const_cast<llama_rn_context *>(this));
++    }
++    return draft_ctx;
+ }
+ 
+ 
+diff --git a/node_modules/llama.rn/cpp/rn-llama.h b/node_modules/llama.rn/cpp/rn-llama.h
+index 7c62e2d..2234ff2 100644
+--- a/node_modules/llama.rn/cpp/rn-llama.h
++++ b/node_modules/llama.rn/cpp/rn-llama.h
+@@ -1,6 +1,7 @@
+ #ifndef RNLLAMA_H
+ #define RNLLAMA_H
+ 
++#include <atomic>
+ #include <sstream>
+ #include <iostream>
+ #include <thread>
+@@ -200,6 +201,11 @@ struct llama_rn_context {
+ 
+     // Cache management
+     void clearCache(bool clear_data = false);
++
++    // Read by the llama abort callback on compute threads; see abortRequested().
++    std::atomic<bool> releasing{false};
++    std::atomic<bool> completion_active{false};
++    bool abortRequested() const;
+ };
+ 
+ // Utility functions
+diff --git a/node_modules/llama.rn/cpp/rn-mtmd.hpp b/node_modules/llama.rn/cpp/rn-mtmd.hpp
+index 0065b43..4ebdc2c 100644
+--- a/node_modules/llama.rn/cpp/rn-mtmd.hpp
++++ b/node_modules/llama.rn/cpp/rn-mtmd.hpp
+@@ -24,6 +24,8 @@ using mtmd_state_recover_fn =
+ using mtmd_state_capture_fn =
+     std::function<void(const std::vector<llama_token> &, size_t)>;
+ using mtmd_state_invalidate_fn = std::function<void(size_t)>;
++// aborted() -> did the llama abort callback stop the last decode?
++using mtmd_aborted_fn = std::function<bool()>;
+ 
+ // MTMD context structure
+ struct llama_rn_context_mtmd {
+@@ -52,7 +54,9 @@ struct llama_rn_context_mtmd {
+     ~llama_rn_context_mtmd();
+ 
+     // Process media
+-    void processMedia(
++    // Returns false when an aborted decode stopped it; embd then holds the
++    // committed prefix [0, n_past).
++    bool processMedia(
+         llama_context *ctx,
+         const std::string &prompt,
+         const std::vector<std::string> &media_paths,
+@@ -66,7 +70,8 @@ struct llama_rn_context_mtmd {
+         int32_t seq_id,  // Sequence ID for parallel slots
+         mtmd_state_recover_fn recover = nullptr,
+         mtmd_state_capture_fn capture = nullptr,
+-        mtmd_state_invalidate_fn invalidate = nullptr
++        mtmd_state_invalidate_fn invalidate = nullptr,
++        mtmd_aborted_fn aborted = nullptr
+     );
+ 
+     // Check if multimodal is enabled
+@@ -414,7 +419,7 @@ inline mtmd_tokenize_result tokenizeWithMedia(llama_rn_context_mtmd *mtmd_wrappe
+     return result;
+ }
+ 
+-inline void llama_rn_context_mtmd::processMedia(
++inline bool llama_rn_context_mtmd::processMedia(
+     llama_context *ctx,
+     const std::string &prompt,
+     const std::vector<std::string> &media_paths,
+@@ -428,7 +433,8 @@ inline void llama_rn_context_mtmd::processMedia(
+     int32_t seq_id,  // Sequence ID for parallel slots
+     mtmd_state_recover_fn recover,
+     mtmd_state_capture_fn capture,
+-    mtmd_state_invalidate_fn invalidate
++    mtmd_state_invalidate_fn invalidate,
++    mtmd_aborted_fn aborted
+ ) {
+     // Multimodal path
+     std::string full_prompt = prompt;
+@@ -658,6 +664,12 @@ inline void llama_rn_context_mtmd::processMedia(
+             );
+             if (res != 0) {
+                 mtmd_input_chunks_free(chunks);
++                if (aborted && aborted()) {
++                    embd.assign(all_tokens.begin(), all_tokens.begin() + n_past);
++                    // The chunk identities past n_past were never committed.
++                    bitmap_past_hashes_ref.clear();
++                    return false;
++                }
+                 throw std::runtime_error("Failed to evaluate chunks");
+             }
+             n_past = new_n_past;
+@@ -691,6 +703,7 @@ inline void llama_rn_context_mtmd::processMedia(
+     // Clean up media resources
+     LOG_INFO("[DEBUG] Cleaning up resources");
+     mtmd_input_chunks_free(chunks);
++    return true;
+ }
+ 
+ inline llama_rn_context_mtmd::llama_rn_context_mtmd(
+diff --git a/node_modules/llama.rn/cpp/rn-tts.cpp b/node_modules/llama.rn/cpp/rn-tts.cpp
+index f646e9d..66a967d 100644
+--- a/node_modules/llama.rn/cpp/rn-tts.cpp
++++ b/node_modules/llama.rn/cpp/rn-tts.cpp
+@@ -2731,6 +2731,9 @@ int llama_rn_context_tts::tryRealtimePrefill(llama_rn_context * main_ctx, int n_
+     b.token = nullptr;
+     const int rc = llama_decode(main_ctx->ctx, b);
+     llama_batch_free(b);
++    if (rc == 2) {
++        return -1;
++    }
+     if (rc) {
+         LOG_ERROR("tryRealtimePrefill: prefill decode failed (n_rows=%d)", n_rows);
+         return -1;
+@@ -2848,6 +2851,9 @@ bool llama_rn_context_tts::tryChatterboxPrefill(
+     }
+     const int rc = llama_decode(main_ctx->ctx, b);
+     llama_batch_free(b);
++    if (rc == 2) {
++        return false;
++    }
+     if (rc != 0) {
+         LOG_ERROR("tryChatterboxPrefill: llama_decode prefill failed");
+         return false;
