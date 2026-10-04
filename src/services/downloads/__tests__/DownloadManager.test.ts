@@ -5,6 +5,11 @@ import * as RNFS from '@dr.pogodin/react-native-fs';
 import {basicModel} from '../../../../jest/fixtures/models';
 
 import {DownloadManager, DownloadCancelledError} from '../DownloadManager';
+import {ensureNotificationPermission} from '../../../utils/androidPermission';
+
+jest.mock('../../../utils/androidPermission', () => ({
+  ensureNotificationPermission: jest.fn().mockResolvedValue(undefined),
+}));
 
 jest.mock('react-native', () => {
   // Create a shared mock for DownloadModule inside the factory
@@ -104,6 +109,33 @@ describe('DownloadManager', () => {
       }),
     );
     expect(callbacks.onStart).toHaveBeenCalledWith('model-1');
+    expect(downloadManager.isDownloading('model-1')).toBe(true);
+  });
+
+  it('asks for notification permission before starting on Android', async () => {
+    const order: string[] = [];
+    (ensureNotificationPermission as jest.Mock).mockImplementation(async () => {
+      order.push('permission');
+    });
+    NativeModules.DownloadModule.startDownload.mockImplementation(async () => {
+      order.push('start');
+      return {downloadId: 'download123'};
+    });
+
+    await downloadManager.startDownload(basicModel, '/path/to/model.bin');
+
+    expect(order).toEqual(['permission', 'start']);
+  });
+
+  it('starts the download after the notification permission is denied', async () => {
+    (ensureNotificationPermission as jest.Mock).mockResolvedValue(undefined);
+    NativeModules.DownloadModule.startDownload.mockResolvedValue({
+      downloadId: 'download123',
+    });
+
+    await downloadManager.startDownload(basicModel, '/path/to/model.bin');
+
+    expect(NativeModules.DownloadModule.startDownload).toHaveBeenCalled();
     expect(downloadManager.isDownloading('model-1')).toBe(true);
   });
 

@@ -11,6 +11,7 @@ import {
 
 import {Model} from '../../utils/types';
 import {formatBytes, hasEnoughSpace, hfUserAgent} from '../../utils';
+import {ensureNotificationPermission} from '../../utils/androidPermission';
 import {uiStore} from '../../store';
 import NativeDownloadModule from '../../specs/NativeDownloadModule';
 import type {
@@ -495,6 +496,7 @@ export class DownloadManager {
         progressInterval: 1000,
         ...(authToken ? {authToken} : {}),
       };
+      await ensureNotificationPermission();
       const response: DownloadResponse =
         await NativeDownloadModule.startDownload(model.downloadUrl!, config);
 

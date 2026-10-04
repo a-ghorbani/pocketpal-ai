@@ -40,3 +40,17 @@ export async function ensureLegacyStoragePermission() {
   }
   return granted;
 }
+
+export async function ensureNotificationPermission(): Promise<void> {
+  if (Platform.OS !== 'android' || Number(Platform.Version) < 34) {
+    return;
+  }
+  const permission = PermissionsAndroid.PERMISSIONS.POST_NOTIFICATIONS;
+  try {
+    if (!(await PermissionsAndroid.check(permission))) {
+      await PermissionsAndroid.request(permission);
+    }
+  } catch (error) {
+    console.warn('Notification permission request failed:', error);
+  }
+}
