@@ -66,9 +66,10 @@ const setenvNames = [
     .matchAll(/Os\.setenv\(\s*"([^"]+)"/g),
 ].map(match => match[1]);
 
+// Rules carrying a `why` demand the llama.rn patch markers, not backend symbols.
 const hexagonMustExport = MANIFEST.abis.flatMap(abi =>
   abi.requiredSymbols
-    .filter(rule => rule.lib.includes('hexagon'))
+    .filter(rule => rule.lib.includes('hexagon') && !rule.why)
     .flatMap(rule => rule.mustExport),
 );
 
