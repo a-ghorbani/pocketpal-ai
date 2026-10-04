@@ -1,7 +1,6 @@
 package com.pocketpal.download
 
 import android.util.Log
-import androidx.work.*
 import com.facebook.react.bridge.*
 import com.facebook.react.module.annotations.ReactModule
 import com.facebook.react.modules.core.DeviceEventManagerModule
@@ -10,15 +9,16 @@ import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.first
-import java.io.File
-import java.util.*
-import androidx.concurrent.futures.await
 
 @ReactModule(name = NativeDownloadModuleSpec.NAME)
 class DownloadModule(reactContext: ReactApplicationContext) : NativeDownloadModuleSpec(reactContext) {
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
     private val downloadDao = DownloadDatabase.getInstance(reactContext).downloadDao()
-    private val workManager = WorkManager.getInstance(reactContext)
+    private val controller = DownloadController(
+        downloadDao,
+        DownloadRuns.process,
+        DownloadScheduler(reactContext, DownloadRuns.process),
+    )
     private val collectors = mutableMapOf<String, Job>()
 
     init {
@@ -49,9 +49,6 @@ class DownloadModule(reactContext: ReactApplicationContext) : NativeDownloadModu
         Log.d(TAG, "Starting download with config: $config")
         scope.launch {
             try {
-                val downloadId = UUID.randomUUID().toString()
-                Log.d(TAG, "Generated download ID: $downloadId")
-
                 val destination = config.getString("destination")
                     ?: throw IllegalArgumentException("Destination path is required")
                 Log.d(TAG, "Destination path: $destination")
@@ -79,35 +76,10 @@ class DownloadModule(reactContext: ReactApplicationContext) : NativeDownloadModu
                 }
                 Log.d(TAG, "Priority: $priority")
 
-                val download = DownloadEntity(
-                    id = downloadId,
-                    url = url,
-                    destination = destination,
-                    totalBytes = 0,
-                    downloadedBytes = 0,
-                    status = DownloadStatus.QUEUED,
-                    priority = priority,
-                    networkType = networkType,
-                    createdAt = System.currentTimeMillis(),
-                    authToken = authToken
+                val downloadId = controller.start(
+                    DownloadController.StartRequest(url, destination, authToken, priority, networkType, progressInterval)
                 )
-
-                withContext(Dispatchers.IO) {
-                    Log.d(TAG, "Inserting download into database: $download")
-                    downloadDao.insertDownload(download)
-                }
-
-                val workRequest = DownloadWorker.createWorkRequest(downloadId, progressInterval)
-                Log.d(TAG, "Created work request: ${workRequest.id}")
-                
                 attach(downloadId)
-
-                // Enqueue the work
-                workManager.enqueueUniqueWork(
-                    getWorkName(downloadId),
-                    androidx.work.ExistingWorkPolicy.REPLACE,
-                    workRequest
-                )
 
                 val response = Arguments.createMap().apply {
                     putString("downloadId", downloadId)
@@ -125,9 +97,7 @@ class DownloadModule(reactContext: ReactApplicationContext) : NativeDownloadModu
         Log.d(TAG, "Re-attaching observer for download: $downloadId")
         scope.launch {
             try {
-                val download = withContext(Dispatchers.IO) {
-                    downloadDao.getDownload(downloadId)
-                }
+                val download = controller.reattach(downloadId)
                 
                 if (download == null) {
                     Log.w(TAG, "No download found to re-attach observer: $downloadId")
@@ -150,15 +120,7 @@ class DownloadModule(reactContext: ReactApplicationContext) : NativeDownloadModu
         Log.d(TAG, "Getting active downloads")
         scope.launch {
             try {
-                val downloads = withContext(Dispatchers.IO) {
-                    Log.d(TAG, "Fetching downloads from database")
-                    downloadDao.getAllDownloads().first()
-                        .filter { 
-                            it.status == DownloadStatus.QUEUED || 
-                            it.status == DownloadStatus.RUNNING ||
-                            it.status == DownloadStatus.PAUSED 
-                        }
-                }
+                val downloads = controller.active()
                 Log.d(TAG, "Found ${downloads.size} active downloads")
 
                 val result = Arguments.createArray()
@@ -202,10 +164,7 @@ class DownloadModule(reactContext: ReactApplicationContext) : NativeDownloadModu
         Log.d(TAG, "Pausing download: $downloadId")
         scope.launch {
             try {
-                withContext(Dispatchers.IO) {
-                    Log.d(TAG, "Updating status to PAUSED for: $downloadId")
-                    downloadDao.updateStatus(downloadId, DownloadStatus.PAUSED)
-                }
+                controller.pause(downloadId)
                 promise.resolve(true)
             } catch (e: Exception) {
                 Log.e(TAG, "Failed to pause download: $downloadId", e)
@@ -218,30 +177,7 @@ class DownloadModule(reactContext: ReactApplicationContext) : NativeDownloadModu
         Log.d(TAG, "Resuming download: $downloadId")
         scope.launch {
             try {
-                withContext(Dispatchers.IO) {
-                    val download = downloadDao.getDownload(downloadId)
-                    if (download != null) {
-                        Log.d(TAG, "Updating status to QUEUED for: $downloadId")
-                        downloadDao.updateStatus(downloadId, DownloadStatus.QUEUED)
-                        
-                        // Create new work request only if there isn't one running
-                        val workName = getWorkName(downloadId)
-                        val workInfo = workManager.getWorkInfosForUniqueWork(workName).await().firstOrNull()
-                        if (workInfo == null || workInfo.state.isFinished) {
-                            Log.d(TAG, "Creating new work request for: $downloadId")
-                            val workRequest = DownloadWorker.createWorkRequest(downloadId)
-                            workManager.enqueueUniqueWork(
-                                workName,
-                                androidx.work.ExistingWorkPolicy.REPLACE,
-                                workRequest
-                            )
-                        } else {
-                            Log.d(TAG, "Work is already running for: $downloadId")
-                        }
-                    } else {
-                        Log.w(TAG, "No download found to resume: $downloadId")
-                    }
-                }
+                controller.resume(downloadId)
                 promise.resolve(true)
             } catch (e: Exception) {
                 Log.e(TAG, "Failed to resume download: $downloadId", e)
@@ -254,18 +190,7 @@ class DownloadModule(reactContext: ReactApplicationContext) : NativeDownloadModu
         Log.d(TAG, "Retrying download: $downloadId")
         scope.launch {
             try {
-                withContext(Dispatchers.IO) {
-                    val download = downloadDao.getDownload(downloadId)
-                    if (download != null) {
-                        Log.d(TAG, "Updating status to QUEUED for: $downloadId")
-                        downloadDao.updateStatus(downloadId, DownloadStatus.QUEUED)
-                        Log.d(TAG, "Creating new work request for: $downloadId")
-                        val workRequest = DownloadWorker.createWorkRequest(downloadId)
-                        workManager.enqueue(workRequest)
-                    } else {
-                        Log.w(TAG, "No download found to retry: $downloadId")
-                    }
-                }
+                controller.retry(downloadId)
                 promise.resolve(true)
             } catch (e: Exception) {
                 Log.e(TAG, "Failed to retry download: $downloadId", e)
@@ -278,38 +203,8 @@ class DownloadModule(reactContext: ReactApplicationContext) : NativeDownloadModu
         Log.d(TAG, "Cancelling download: $downloadId")
         scope.launch {
             try {
-                // First update the database to mark as cancelled
-                withContext(Dispatchers.IO) {
-                    val download = downloadDao.getDownload(downloadId)
-                    if (download != null) {
-                        Log.d(TAG, "Updating status to CANCELLED for download: $downloadId")
-                        downloadDao.updateStatus(downloadId, DownloadStatus.CANCELLED, "Download cancelled by user")
-                        
-                        // Clean up the partial download file
-                        val file = File(download.destination)
-                        if (file.exists()) {
-                            Log.d(TAG, "Deleting partial download file: ${file.absolutePath}")
-                            file.delete()
-                        }
-                    }
-                }
+                controller.cancel(downloadId)
 
-                // Cancel the work using the work name format
-                val workName = getWorkName(downloadId)
-                val operation = workManager.cancelUniqueWork(workName)
-                
-                // Wait for cancellation to complete
-                withContext(Dispatchers.IO) {
-                    try {
-                        operation.result.await()
-                    } catch (e: Exception) {
-                        Log.e(TAG, "Error waiting for work cancellation", e)
-                    }
-                }
-
-                // Force stop any ongoing work
-                workManager.pruneWork()
-                
                 // Send cancellation event to notify the JS side
                 sendCancellationEvent(downloadId)
                 
@@ -445,6 +340,7 @@ class DownloadModule(reactContext: ReactApplicationContext) : NativeDownloadModu
         DownloadStatus.FAILED -> {
             Log.e(TAG, "Download failed for ID: ${row.id}: ${row.error}")
             sendFailureEvent(row.id, row.error ?: "Unknown error")
+            controller.onFailedEmitted(row.id)
             true
         }
         DownloadStatus.CANCELLED -> true
@@ -453,6 +349,5 @@ class DownloadModule(reactContext: ReactApplicationContext) : NativeDownloadModu
 
     companion object {
         private const val TAG = "DownloadModule"
-        private fun getWorkName(downloadId: String) = "download_$downloadId"
     }
 } 

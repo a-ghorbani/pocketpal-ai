@@ -26,11 +26,17 @@ interface DownloadDao {
     @Delete
     suspend fun deleteDownload(download: DownloadEntity)
 
-    @Query("UPDATE downloads SET status = :status, error = :error WHERE id = :downloadId")
-    suspend fun updateStatus(downloadId: String, status: DownloadStatus, error: String? = null)
-
     @Query("UPDATE downloads SET status = :to, error = :error WHERE id = :downloadId AND status IN (:from)")
     suspend fun casStatus(downloadId: String, from: List<String>, to: DownloadStatus, error: String? = null): Int
+
+    @Query("UPDATE downloads SET status = 'QUEUED', stalledRuns = 0, error = NULL WHERE id = :downloadId AND status IN (:from)")
+    suspend fun requeue(downloadId: String, from: List<String>): Int
+
+    @Query("UPDATE downloads SET authToken = :authToken WHERE id = :downloadId")
+    suspend fun setAuthToken(downloadId: String, authToken: String?)
+
+    @Query("UPDATE downloads SET url = :url, etag = NULL, totalBytes = 0, downloadedBytes = 0 WHERE id = :downloadId")
+    suspend fun resetResource(downloadId: String, url: String)
 
     @Query("UPDATE downloads SET downloadedBytes = :bytes, totalBytes = :totalBytes, stalledRuns = 0 WHERE id = :downloadId AND status = 'RUNNING'")
     suspend fun writeProgress(downloadId: String, bytes: Long, totalBytes: Long): Int
