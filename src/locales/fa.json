@@ -1087,8 +1087,6 @@
       "download": "دانلود",
       "getFree": "دریافت رایگان"
     },
-    "premiumPalDescription": "پَل ویژه از جامعه palshub.ai",
-    "premiumInfoText": "برای کشف پَل‌های بیشتر به palshub.ai سر بزنید",
     "sortOptions": {
       "newest": "جدیدترین",
       "oldest": "قدیمی‌ترین",
@@ -1112,15 +1110,7 @@
       "error": "خطا",
       "failedToLoadDetails": "بارگذاری جزئیات پَل با مشکل مواجه شد",
       "failedToDownload": "دانلود پَل با مشکل مواجه شد",
-      "premiumPalMessage": "این یک پَل ویژه است.\n• اگر قبلاً با حساب Palshub خود آن را فعال کرده‌اید، کافی است وارد شوید تا به جزئیات کامل دسترسی پیدا کنید.\n• هنوز فعال نکرده‌اید؟ برای اطلاعات بیشتر به برنامه palshub.ai مراجعه کنید.",
-      "notAvailable": "ندارد",
-      "buyOnPalshub": "خرید در Palshub",
-      "finalizingPurchase": "در حال نهایی‌سازی خرید شما…",
-      "processingPurchase": "در حال پردازش — به‌زودی فعال می‌شود.",
-      "checkoutSessionExpired": "نشست شما منقضی شد. برای ادامه دوباره وارد شوید.",
-      "signInAgain": "ورود مجدد",
-      "palNotAvailable": "این پَل در حال حاضر برای خرید در دسترس نیست.",
-      "checkoutFailed": "مشکلی پیش آمد. لطفاً دوباره تلاش کنید."
+      "notAvailable": "ندارد"
     }
   },
   "validation": {

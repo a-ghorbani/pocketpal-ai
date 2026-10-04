@@ -1087,8 +1087,6 @@
       "download": "Unduh",
       "getFree": "Dapatkan Gratis"
     },
-    "premiumPalDescription": "Pal premium dari komunitas palshub.ai",
-    "premiumInfoText": "Kunjungi palshub.ai untuk menjelajahi lebih banyak pal",
     "sortOptions": {
       "newest": "Terbaru",
       "oldest": "Terlama",
@@ -1112,15 +1110,7 @@
       "error": "Kesalahan",
       "failedToLoadDetails": "Gagal memuat detail pal",
       "failedToDownload": "Gagal mengunduh pal",
-      "premiumPalMessage": "Ini adalah Pal Premium.\n• Jika Anda sudah membukanya dengan akun Palshub, cukup masuk untuk mengakses detail lengkapnya.\n• Belum membukanya? Kunjungi aplikasi palshub.ai untuk informasi lebih lanjut.",
-      "notAvailable": "T/A",
-      "buyOnPalshub": "Beli di Palshub",
-      "finalizingPurchase": "Menyelesaikan pembelian Anda…",
-      "processingPurchase": "Memproses — akan segera terbuka.",
-      "checkoutSessionExpired": "Sesi Anda telah berakhir. Masuk lagi untuk melanjutkan.",
-      "signInAgain": "Masuk Lagi",
-      "palNotAvailable": "Pal ini sedang tidak tersedia untuk dibeli saat ini.",
-      "checkoutFailed": "Terjadi kesalahan. Silakan coba lagi."
+      "notAvailable": "T/A"
     }
   },
   "validation": {

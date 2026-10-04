@@ -933,8 +933,6 @@
       "download": "تنزيل",
       "getFree": "احصل عليه مجانًا"
     },
-    "premiumPalDescription": "رفيق مميز من مجتمع palshub.ai",
-    "premiumInfoText": "زُر palshub.ai لاستكشاف المزيد من الرفاق",
     "sortOptions": {
       "newest": "الأحدث",
       "oldest": "الأقدم",
@@ -957,15 +955,7 @@
       "error": "خطأ",
       "failedToLoadDetails": "تعذّر تحميل تفاصيل الرفيق",
       "failedToDownload": "تعذّر تنزيل الرفيق",
-      "premiumPalMessage": "هذا رفيق مميز.\n• إذا قمت بفتحه بالفعل باستخدام حساب Palshub الخاص بك، فما عليك سوى تسجيل الدخول للوصول إلى التفاصيل الكاملة.\n• لم تفتحه بعد؟ تفضّل بزيارة تطبيق palshub.ai لمعرفة المزيد.",
-      "notAvailable": "غير متاح",
-      "buyOnPalshub": "اشترِ على Palshub",
-      "finalizingPurchase": "جارٍ إتمام عملية الشراء…",
-      "processingPurchase": "قيد المعالجة — سيتم الفتح قريبًا.",
-      "checkoutSessionExpired": "انتهت جلستك. سجّل الدخول مرة أخرى للمتابعة.",
-      "signInAgain": "تسجيل الدخول مرة أخرى",
-      "palNotAvailable": "هذا الرفيق غير متاح للشراء حاليًا.",
-      "checkoutFailed": "حدث خطأ ما. يرجى المحاولة مرة أخرى."
+      "notAvailable": "غير متاح"
     }
   }
 }

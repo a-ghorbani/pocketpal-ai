@@ -1087,8 +1087,6 @@
       "download": "Завантажити",
       "getFree": "Отримати Безкоштовно"
     },
-    "premiumPalDescription": "Преміум-користувач із спільноти palshub.ai",
-    "premiumInfoText": "Завітайте на сайт palshub.ai, щоб знайти нових друзів",
     "sortOptions": {
       "newest": "Новійша",
       "oldest": "Старіша",
@@ -1112,15 +1110,7 @@
       "error": "Помилка",
       "failedToLoadDetails": "Не вдалося завантажити інформацію про Pal",
       "failedToDownload": "Не вдалося завантажити pal",
-      "premiumPalMessage": "Це Преміум-Pal.\n• Якщо ви вже розблокували його за допомогою свого облікового запису Palshub, просто увійдіть, щоб переглянути повну інформацію.\n• Ще не розблокували? Зайдіть у додаток palshub.ai, щоб дізнатися більше.",
-      "notAvailable": "Н/Д",
-      "buyOnPalshub": "Купити на Palshub",
-      "finalizingPurchase": "Завершується оформлення вашої покупки…",
-      "processingPurchase": "Обробка — доступ буде відкрито незабаром.",
-      "checkoutSessionExpired": "Термін дії вашої сесії закінчився. Увійдіть знову, щоб продовжити.",
-      "signInAgain": "Увійти знову",
-      "palNotAvailable": "Цей pal наразі недоступний для покупки.",
-      "checkoutFailed": "Щось пішло не так. Спробуйте ще раз."
+      "notAvailable": "Н/Д"
     }
   },
   "validation": {
