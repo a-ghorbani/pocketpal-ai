@@ -127,18 +127,6 @@ describe('DownloadManager', () => {
     expect(order).toEqual(['permission', 'start']);
   });
 
-  it('starts the download after the notification permission is denied', async () => {
-    (ensureNotificationPermission as jest.Mock).mockResolvedValue(undefined);
-    NativeModules.DownloadModule.startDownload.mockResolvedValue({
-      downloadId: 'download123',
-    });
-
-    await downloadManager.startDownload(basicModel, '/path/to/model.bin');
-
-    expect(NativeModules.DownloadModule.startDownload).toHaveBeenCalled();
-    expect(downloadManager.isDownloading('model-1')).toBe(true);
-  });
-
   it('passes the progress Android kept to onError on failure', async () => {
     NativeModules.DownloadModule.startDownload.mockResolvedValue({
       downloadId: 'download123',

@@ -41,10 +41,9 @@ export async function ensureLegacyStoragePermission() {
   return granted;
 }
 
-export async function ensureNotificationPermission(): Promise<void> {
-  if (Platform.OS !== 'android' || Number(Platform.Version) < 34) {
-    return;
-  }
+let notificationPermissionAsked: Promise<void> | undefined;
+
+async function askNotificationPermission(): Promise<void> {
   const permission = PermissionsAndroid.PERMISSIONS.POST_NOTIFICATIONS;
   try {
     if (!(await PermissionsAndroid.check(permission))) {
@@ -53,4 +52,13 @@ export async function ensureNotificationPermission(): Promise<void> {
   } catch (error) {
     console.warn('Notification permission request failed:', error);
   }
+}
+
+/** Asks at most once per app session, so chained downloads never re-prompt. */
+export function ensureNotificationPermission(): Promise<void> {
+  if (Platform.OS !== 'android' || Number(Platform.Version) < 34) {
+    return Promise.resolve();
+  }
+  notificationPermissionAsked ??= askNotificationPermission();
+  return notificationPermissionAsked;
 }
