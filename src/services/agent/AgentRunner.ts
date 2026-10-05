@@ -5,7 +5,7 @@ import type {
 } from '../../utils/completionTypes';
 import type {ChatMessage} from '../../utils/types';
 import type {AgentToolCall, AgentToolOutcome} from '../../utils/types';
-import {stopUntilSettled} from '../../utils/stopUntilSettled';
+import {stopQuietly} from '../../utils/stopQuietly';
 
 import type {
   AgentEvent,
@@ -260,8 +260,14 @@ export async function* runAgent(
   // The runner is the only layer holding both the abort signal and the
   // engine, so it owns the abort -> engine.stopCompletion translation, for
   // as long as a completion it started is unsettled.
-  const stopEngine = () => engine.stopCompletion?.();
+  const stopEngine = () => stopQuietly(() => engine.stopCompletion?.());
   let unsettledCompletion: Promise<void> | null = null;
+  const onAbort = () => {
+    if (unsettledCompletion) {
+      stopEngine();
+    }
+  };
+  signal?.addEventListener('abort', onAbort, {once: true});
 
   let messages = initialParams.messages;
   let turn = 0;
@@ -370,9 +376,6 @@ export async function* runAgent(
           queue.finish();
         });
       unsettledCompletion = completionPromise;
-      if (signal) {
-        stopUntilSettled(completionPromise, signal, stopEngine);
-      }
 
       // Drain the queue until the engine completes. The queue closes
       // when `completionPromise` resolves (success or failure both
@@ -514,12 +517,12 @@ export async function* runAgent(
   } catch (error) {
     yield {type: 'run_failed', error: error as Error};
   } finally {
-    // Reached with a completion still running only when the consumer stopped
-    // iterating or a yield threw; the run must not end before the engine does.
+    signal?.removeEventListener('abort', onAbort);
     if (unsettledCompletion) {
-      const stopNow = new AbortController();
-      stopNow.abort();
-      await stopUntilSettled(unsettledCompletion, stopNow.signal, stopEngine);
+      if (!signal?.aborted) {
+        stopEngine();
+      }
+      await unsettledCompletion;
     }
   }
 }

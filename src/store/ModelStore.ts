@@ -46,7 +46,7 @@ import {
 import {getRecommendedProjectionModel} from '../utils/multimodalHelpers';
 import {isDraftOnlyModel} from '../utils/mtp';
 import {getOriginalModelName} from '../utils/formatters';
-import {stopUntilSettled} from '../utils/stopUntilSettled';
+import {stopQuietly} from '../utils/stopQuietly';
 import type {OnboardingPalModelEntry} from './onboarding/onboardingPals';
 
 import {downloadManager, DownloadCancelledError} from '../services/downloads';
@@ -3772,6 +3772,7 @@ class ModelStore {
       return;
     }
     const context = this.context;
+    const onAbort = () => stopQuietly(() => context.stopCompletion());
 
     runInAction(() => {
       this.inferencing = true;
@@ -3834,6 +3835,9 @@ class ModelStore {
 
       const completionParams =
         await chatSessionRepository.getGlobalCompletionSettings();
+      if (lease.signal.aborted) {
+        return;
+      }
       const stopWords = toJS(modelStore.activeModel?.stopWords);
 
       // Create completion params with app-specific properties
@@ -3859,9 +3863,7 @@ class ModelStore {
           }
         },
       );
-      await stopUntilSettled(completionPromise, lease.signal, () =>
-        context.stopCompletion(),
-      );
+      lease.signal.addEventListener('abort', onAbort, {once: true});
       const result = await completionPromise;
 
       params.onComplete?.(result.text);
@@ -3871,6 +3873,7 @@ class ModelStore {
         error instanceof Error ? error : new Error(String(error)),
       );
     } finally {
+      lease.signal.removeEventListener('abort', onAbort);
       runInAction(() => {
         this.inferencing = false;
         this.isStreaming = false;

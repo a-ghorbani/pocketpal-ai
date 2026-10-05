@@ -1011,6 +1011,7 @@ describe('runAgent', () => {
     expect(events[events.length - 1].type).toBe('run_finished');
     // No second step_started (abort caught at the turn boundary).
     expect(events.filter(e => e.type === 'step_started')).toHaveLength(1);
+    expect(engine.stopCompletion).not.toHaveBeenCalled();
   });
 
   it('#17 backpressure: many tokens emitted before consumer pulls → all events delivered in order', async () => {
@@ -1474,39 +1475,19 @@ describe('runAgent', () => {
       expect((events[2] as any).toolCalls).toBeUndefined();
     });
 
-    it('re-asserts stopCompletion while an aborted completion is unsettled', async () => {
-      jest.useFakeTimers();
-      const controller = new AbortController();
-      const {engine, finish} = pendingEngine();
-      const run = collect(
-        runAgent({
-          engine,
-          initialParams: baseParams,
-          allowedTalentNames: [],
-          talentLookup: () => undefined,
-          messageId: 'msg',
-          triggerMarkers: [],
-          signal: controller.signal,
-        }),
-      );
-      await flush();
-      expect(engine.completion).toHaveBeenCalledTimes(1);
+    function runWith(engine: CompletionEngine, signal?: AbortSignal) {
+      return runAgent({
+        engine,
+        initialParams: baseParams,
+        allowedTalentNames: [],
+        talentLookup: () => undefined,
+        messageId: 'msg',
+        triggerMarkers: [],
+        signal,
+      });
+    }
 
-      controller.abort();
-      expect(engine.stopCompletion).toHaveBeenCalledTimes(1);
-      jest.advanceTimersByTime(300);
-      expect(engine.stopCompletion).toHaveBeenCalledTimes(4);
-
-      finish({text: '', content: ''} as CompletionResult);
-      const events = await run;
-      jest.advanceTimersByTime(1000);
-
-      expect(engine.stopCompletion).toHaveBeenCalledTimes(4);
-      expect(engine.completion).toHaveBeenCalledTimes(1);
-      expect(events[events.length - 1].type).toBe('run_finished');
-    });
-
-    it('a consumer that stops iterating mid-completion waits for the engine to settle', async () => {
+    function streamingPendingEngine() {
       const {engine} = pendingEngine();
       let finish!: (result: CompletionResult) => void;
       (engine.completion as jest.Mock).mockImplementation(
@@ -1516,18 +1497,44 @@ describe('runAgent', () => {
             finish = resolve;
           }),
       );
-      const iterator = runAgent({
+      return {
         engine,
-        initialParams: baseParams,
-        allowedTalentNames: [],
-        talentLookup: () => undefined,
-        messageId: 'msg',
-        triggerMarkers: [],
-      });
+        finish: () =>
+          finish({text: 'partial', content: 'partial'} as CompletionResult),
+      };
+    }
+
+    async function nextToken(iterator: AsyncGenerator<AgentEvent>) {
       let event = await iterator.next();
       while (!event.done && event.value.type !== 'token') {
         event = await iterator.next();
       }
+    }
+
+    it('sends one stopCompletion per abort while a completion is unsettled', async () => {
+      jest.useFakeTimers();
+      const controller = new AbortController();
+      const {engine, finish} = pendingEngine();
+      const run = collect(runWith(engine, controller.signal));
+      await flush();
+      expect(engine.completion).toHaveBeenCalledTimes(1);
+
+      controller.abort();
+      jest.advanceTimersByTime(1000);
+      expect(engine.stopCompletion).toHaveBeenCalledTimes(1);
+
+      finish({text: '', content: ''} as CompletionResult);
+      const events = await run;
+
+      expect(engine.stopCompletion).toHaveBeenCalledTimes(1);
+      expect(engine.completion).toHaveBeenCalledTimes(1);
+      expect(events[events.length - 1].type).toBe('run_finished');
+    });
+
+    it('a consumer that stops iterating mid-completion stops it once and waits for it to settle', async () => {
+      const {engine, finish} = streamingPendingEngine();
+      const iterator = runWith(engine);
+      await nextToken(iterator);
 
       let returned = false;
       const returning = iterator.return(undefined).then(() => {
@@ -1535,12 +1542,72 @@ describe('runAgent', () => {
       });
       await flush();
 
-      expect(engine.stopCompletion).toHaveBeenCalled();
+      expect(engine.stopCompletion).toHaveBeenCalledTimes(1);
       expect(returned).toBe(false);
 
-      finish({text: 'partial', content: 'partial'} as CompletionResult);
+      finish();
       await returning;
       expect(returned).toBe(true);
+      expect(engine.stopCompletion).toHaveBeenCalledTimes(1);
     });
+
+    it('an abort followed by return() stops once', async () => {
+      const controller = new AbortController();
+      const {engine, finish} = streamingPendingEngine();
+      const iterator = runWith(engine, controller.signal);
+      await nextToken(iterator);
+
+      controller.abort();
+      const returning = iterator.return(undefined);
+      await flush();
+      finish();
+      await returning;
+
+      expect(engine.stopCompletion).toHaveBeenCalledTimes(1);
+    });
+
+    it('an abort while return() awaits the completion stops once', async () => {
+      const controller = new AbortController();
+      const {engine, finish} = streamingPendingEngine();
+      const iterator = runWith(engine, controller.signal);
+      await nextToken(iterator);
+
+      const returning = iterator.return(undefined);
+      await flush();
+      controller.abort();
+      await flush();
+      finish();
+      await returning;
+
+      expect(engine.stopCompletion).toHaveBeenCalledTimes(1);
+    });
+
+    it.each([
+      [
+        'throws synchronously',
+        () => {
+          throw new Error('Context not found');
+        },
+      ],
+      ['returns undefined', () => undefined],
+    ])(
+      'an abort whose stopCompletion %s neither throws nor keeps the run alive',
+      async (_label, stop) => {
+        const warn = jest.spyOn(console, 'warn').mockImplementation(() => {});
+        const controller = new AbortController();
+        const {engine, finish} = pendingEngine();
+        (engine.stopCompletion as jest.Mock).mockImplementation(stop);
+        const run = collect(runWith(engine, controller.signal));
+        await flush();
+
+        expect(() => controller.abort()).not.toThrow();
+        finish({text: '', content: ''} as CompletionResult);
+        const events = await run;
+
+        expect(engine.stopCompletion).toHaveBeenCalledTimes(1);
+        expect(events[events.length - 1].type).toBe('run_finished');
+        warn.mockRestore();
+      },
+    );
   });
 });

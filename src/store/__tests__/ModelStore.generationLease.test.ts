@@ -4,6 +4,7 @@ import {runInAction} from 'mobx';
 import {LlamaContext} from 'llama.rn';
 
 import {modelStore} from '..';
+import {chatSessionRepository} from '../../repositories/ChatSessionRepository';
 import {basicModel} from '../../../jest/fixtures/models';
 
 jest.mock('../../utils/deviceCapabilities', () => ({
@@ -206,9 +207,8 @@ describe('ModelStore generation lease', () => {
       expect(context.completion).toHaveBeenCalledTimes(1);
 
       modelStore.abortActiveGeneration();
+      await new Promise(resolve => setTimeout(resolve, 1000));
       expect(context.stopCompletion).toHaveBeenCalledTimes(1);
-      await new Promise(resolve => setTimeout(resolve, 250));
-      expect(context.stopCompletion.mock.calls.length).toBeGreaterThan(1);
 
       const releasing = modelStore.releaseContext();
       await flush();
@@ -222,5 +222,65 @@ describe('ModelStore generation lease', () => {
       expect(context.releaseMultimodal).toHaveBeenCalledTimes(1);
       expect(context.release).toHaveBeenCalledTimes(1);
     });
+
+    it('skips the completion when the lease is aborted while settings load', async () => {
+      const {context} = loadFakeModel({multimodal: true});
+      const settings = deferred<any>();
+      jest
+        .spyOn(chatSessionRepository, 'getGlobalCompletionSettings')
+        .mockReturnValueOnce(settings.promise);
+
+      const running = modelStore.startImageCompletion({
+        prompt: 'what is this?',
+        image_path: '/frame1.jpg',
+      });
+      await flush();
+      modelStore.abortActiveGeneration();
+      settings.resolve({});
+      await running;
+
+      expect(context.completion).not.toHaveBeenCalled();
+      expect(context.stopCompletion).not.toHaveBeenCalled();
+      expect(modelStore.inferencing).toBe(false);
+      const next = modelStore.tryAcquireGeneration();
+      expect(next).not.toBeNull();
+      next?.end();
+    });
+
+    it.each([
+      [
+        'throws synchronously',
+        () => {
+          throw new Error('Context not found');
+        },
+      ],
+      ['returns undefined', () => undefined],
+    ])(
+      'an abort whose stopCompletion %s does not throw, and the completion still settles',
+      async (_label, stop) => {
+        const warn = jest.spyOn(console, 'warn').mockImplementation(() => {});
+        const {context} = loadFakeModel({multimodal: true});
+        context.stopCompletion.mockImplementation(stop);
+        const frame = deferred<{text: string}>();
+        context.completion.mockReturnValueOnce(frame.promise);
+        const onComplete = jest.fn();
+
+        const running = modelStore.startImageCompletion({
+          prompt: 'what is this?',
+          image_path: '/frame1.jpg',
+          onComplete,
+        });
+        await waitUntil(() => context.completion.mock.calls.length === 1);
+
+        expect(() => modelStore.abortActiveGeneration()).not.toThrow();
+        frame.resolve({text: 'a cat'});
+        await running;
+
+        expect(context.stopCompletion).toHaveBeenCalledTimes(1);
+        expect(onComplete).toHaveBeenCalledWith('a cat');
+        expect(modelStore.inferencing).toBe(false);
+        warn.mockRestore();
+      },
+    );
   });
 });
