@@ -79,7 +79,6 @@ export const ModelFileCard: FC<ModelFileCardProps> = observer(
     const isDownloading = storeModel
       ? modelStore.isDownloading(storeModel.id)
       : false;
-    const downloadProgress = storeModel?.progress || 0;
     const downloadSpeed = storeModel?.downloadSpeed;
 
     const isBookmarked = computed(() =>
@@ -91,6 +90,8 @@ export const ModelFileCard: FC<ModelFileCardProps> = observer(
         model => model.hfModelFile?.oid === modelFile.oid && model.isDownloaded,
       ),
     ).get();
+    const downloadProgress =
+      isDownloading || isDownloaded ? storeModel?.progress || 0 : 0;
 
     // Resolve projection model for memory check
     // Resolve projection model for memory check

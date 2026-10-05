@@ -36,5 +36,5 @@ export interface DownloadEventCallbacks {
   onStart?: (modelId: string) => void;
   onProgress?: (modelId: string, progress: DownloadProgress) => void;
   onComplete?: (modelId: string) => void;
-  onError?: (modelId: string, error: Error) => void;
+  onError?: (modelId: string, error: Error, keptProgress?: number) => void;
 }

@@ -279,7 +279,7 @@ export const ProjectionModelSelector = observer(
                                   />
                                 </TouchableOpacity>
                               </View>
-                            ) : projModel.progress > 0 ? (
+                            ) : modelStore.isDownloading(projModel.id) ? (
                               <View style={styles.downloadProgress}>
                                 <ActivityIndicator
                                   size="small"
