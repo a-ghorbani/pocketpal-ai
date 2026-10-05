@@ -32,7 +32,11 @@ export const RouterModelPreparing: React.FC = observer(() => {
   if (record.failure) {
     const label = routerFailureLabel(record.failure.cause, l10n);
     return (
-      <View style={styles.container} testID="router-model-preparing">
+      <View
+        style={styles.container}
+        testID="router-model-preparing"
+        accessibilityRole="alert"
+        accessibilityLiveRegion="polite">
         <View style={styles.row}>
           <Text
             variant="bodySmall"
@@ -61,7 +65,10 @@ export const RouterModelPreparing: React.FC = observer(() => {
   const determinate = typeof value === 'number' && value >= 0 && value <= 1;
 
   return (
-    <View style={styles.container} testID="router-model-preparing">
+    <View
+      style={styles.container}
+      testID="router-model-preparing"
+      accessibilityLiveRegion="polite">
       <View style={styles.row}>
         <Text
           variant="bodySmall"

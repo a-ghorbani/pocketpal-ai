@@ -74,6 +74,21 @@ describe('RouterModelPreparing', () => {
     expect(routerStore.dismiss).toHaveBeenCalledWith('srv-1', 'alpha');
   });
 
+  it('announces the banner politely, and a failure as an alert', () => {
+    seed('srv-1/alpha', {kind: 'load'});
+    const running = render(<RouterModelPreparing />);
+    const runningBanner = running.getByTestId('router-model-preparing');
+    expect(runningBanner.props.accessibilityLiveRegion).toBe('polite');
+    expect(runningBanner.props.accessibilityRole).toBeUndefined();
+    running.unmount();
+
+    seed('srv-1/alpha', {kind: 'load', failure: {cause: 'load-failed'}});
+    const failed = render(<RouterModelPreparing />);
+    const banner = failed.getByTestId('router-model-preparing');
+    expect(banner.props.accessibilityLiveRegion).toBe('polite');
+    expect(banner.props.accessibilityRole).toBe('alert');
+  });
+
   it.each([
     ['an unload', 'srv-1/alpha', {kind: 'unload'}],
     ['a load of another model', 'srv-1/beta', {kind: 'load'}],
