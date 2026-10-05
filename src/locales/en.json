@@ -206,6 +206,28 @@
     "retryConnection": "Retry",
     "enterUrlManually": "Enter URL manually",
     "manageServers": "Manage Servers",
+    "routerModels": {
+      "loadedGroup": "Loaded",
+      "availableGroup": "Available",
+      "residentCount": "{{count}} resident",
+      "load": "Load",
+      "unload": "Unload",
+      "cancel": "Cancel",
+      "unloading": "Unloading…",
+      "stateLoading": "Loading",
+      "stateLoaded": "Loaded",
+      "stateResident": "Resident",
+      "stateUnloaded": "Not loaded",
+      "evictionNote": "This server has released a model on its own while you were connected. Loading another may release one again.",
+      "loadFailed": "This model did not load.",
+      "unloadNotReleased": "The server did not release this model.",
+      "serverUnreachable": "Could not reach this server.",
+      "waitStopped": "Stopped waiting for this model.",
+      "dismiss": "Dismiss",
+      "unloadBoundTitle": "Unload this model?",
+      "unloadBoundBody": "This chat uses it. It loads again when you send your next message.",
+      "unloadBoundConfirm": "Unload"
+    },
     "purchases": {
       "title": "Purchases",
       "statusOwned": "Purchased",
@@ -1287,7 +1309,9 @@
       "searchResultsTitle": "Search results",
       "showResultsAccessibilityLabel": "Show web search results for {{query}}",
       "openLinkError": "Couldn't open this link."
-    }
+    },
+    "preparingModel": "Preparing model on the server…",
+    "preparingDroppedTurn": "Still loading on the server. Your message was not sent."
   },
   "htmlPreview": {
     "defaultTitle": "Preview",
