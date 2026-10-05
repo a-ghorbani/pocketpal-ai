@@ -773,7 +773,7 @@ index 7a065cb..5012051 100644
  #if defined(__ANDROID__)
      void setAndroidLoadedLibrary(const std::string& name);
 diff --git a/node_modules/llama.rn/cpp/rn-completion.cpp b/node_modules/llama.rn/cpp/rn-completion.cpp
-index 13a2abe..fd3377a 100644
+index 13a2abe..9fbadb0 100644
 --- a/node_modules/llama.rn/cpp/rn-completion.cpp
 +++ b/node_modules/llama.rn/cpp/rn-completion.cpp
 @@ -584,7 +584,10 @@ void llama_rn_context_completion::loadPrompt(const std::vector<std::string> &med
@@ -807,7 +807,7 @@ index 13a2abe..fd3377a 100644
  
      current_chat_format = chat_format;
      current_reasoning_format = reasoning_format;
-@@ -667,6 +675,27 @@ void llama_rn_context_completion::endCompletion() {
+@@ -667,6 +675,65 @@ void llama_rn_context_completion::endCompletion() {
          embd.resize(n_past);
      }
      is_predicting = false;
@@ -824,6 +824,10 @@ index 13a2abe..fd3377a 100644
 +        n_past = 0;
 +    }
 +    auto * mem = llama_get_memory(parent_ctx->ctx);
++    if (llama_model_is_recurrent(parent_ctx->model) || llama_model_is_hybrid(parent_ctx->model)) {
++        restoreAfterAbortedDecode(mem);
++        return;
++    }
 +    if (!llama_memory_seq_rm(mem, 0, n_past, -1)) {
 +        llama_memory_seq_rm(mem, 0, 0, -1);
 +        n_past = 0;
@@ -832,10 +836,44 @@ index 13a2abe..fd3377a 100644
 +        embd.resize(n_past);
 +    }
 +    LOG_INFO("Decoding interrupted, n_past: %d", n_past);
++}
++
++// A partial graph leaves recurrent state written for only some layers, and with
++// MTP the rollback rows too, so even a seq_rm that succeeds would keep mixed
++// state. Rewind to a snapshot instead. Text-only: on M-RoPE models a token count
++// is not a position, and an abort inside media ingest drops the media hashes.
++void llama_rn_context_completion::restoreAfterAbortedDecode(llama_memory_t mem) {
++    const size_t committed = std::min((size_t) n_past, embd.size());
++    const auto committed_end = embd.begin() + committed;
++    const char * clear_reason = nullptr;
++    int idx = -1;
++    if (!state_cache_enabled) {
++        clear_reason = "state cache off";
++    } else if (std::find(embd.begin(), committed_end, LLAMA_TOKEN_NULL) != committed_end) {
++        clear_reason = "media";
++    } else if ((idx = findStateCheckpoint(embd, committed)) < 0) {
++        clear_reason = "no checkpoint";
++    } else if (!restoreStateCheckpoint((size_t) idx)) {
++        clear_reason = "restore failed";
++    }
++
++    if (clear_reason == nullptr) {
++        const llama_pos k = (llama_pos) state_checkpoints[idx].n_tokens();
++        llama_memory_seq_rm(mem, 0, k, -1);
++        n_past = k;
++        embd.resize(k);
++        LOG_INFO("Decoding interrupted, restored state checkpoint, n_past: %d", n_past);
++        return;
++    }
++    llama_memory_clear(mem, false);
++    clearStateCheckpoints();
++    n_past = 0;
++    embd.clear();
++    LOG_INFO("Decoding interrupted, no usable state checkpoint (%s), cleared memory", clear_reason);
  }
  
  void llama_rn_context_completion::resetGenerationTimings() {
-@@ -810,6 +839,11 @@ void llama_rn_context_completion::evalMTPPrompt() {
+@@ -810,6 +877,11 @@ void llama_rn_context_completion::evalMTPPrompt() {
          }
  
          const int ret = llama_decode(parent_ctx->ctx, spec_batch);
@@ -847,7 +885,7 @@ index 13a2abe..fd3377a 100644
          if (ret != 0) {
              // Memory holds only [0, offset); trim embd so a later prefix match
              // can't claim never-decoded cells (mirrors nextToken).
-@@ -818,8 +852,12 @@ void llama_rn_context_completion::evalMTPPrompt() {
+@@ -818,8 +890,12 @@ void llama_rn_context_completion::evalMTPPrompt() {
              throw std::runtime_error("failed to evaluate MTP prompt batch, ret=" + std::to_string(ret));
          }
          if (!common_speculative_process(spec, spec_batch)) {
@@ -861,7 +899,7 @@ index 13a2abe..fd3377a 100644
              throw std::runtime_error("failed to process MTP prompt batch");
          }
  
-@@ -904,10 +942,20 @@ bool llama_rn_context_completion::refillMTPTokens() {
+@@ -904,10 +980,20 @@ bool llama_rn_context_completion::refillMTPTokens() {
      }
  
      const int ret = llama_decode(parent_ctx->ctx, spec_batch);
@@ -882,7 +920,7 @@ index 13a2abe..fd3377a 100644
          throw std::runtime_error("failed to process MTP target batch");
      }
  
-@@ -976,6 +1024,9 @@ completion_token_output llama_rn_context_completion::nextTokenMTP() {
+@@ -976,6 +1062,9 @@ completion_token_output llama_rn_context_completion::nextTokenMTP() {
  
      if (spec == nullptr) {
          initMTP();
@@ -892,7 +930,7 @@ index 13a2abe..fd3377a 100644
      }
      startGenerationTiming();
  
-@@ -1149,6 +1200,10 @@ completion_token_output llama_rn_context_completion::nextToken()
+@@ -1149,6 +1238,10 @@ completion_token_output llama_rn_context_completion::nextToken()
              b.token = nullptr;
              const int rc = llama_decode(parent_ctx->ctx, b);
              llama_batch_free(b);
@@ -903,7 +941,7 @@ index 13a2abe..fd3377a 100644
              if (rc) {
                  LOG_ERROR("failed to eval speaker prefix, rows=%d", emb_rows);
                  has_next_token = false;
-@@ -1200,6 +1255,10 @@ completion_token_output llama_rn_context_completion::nextToken()
+@@ -1200,6 +1293,10 @@ completion_token_output llama_rn_context_completion::nextToken()
          b.token = nullptr;
          const int rc = llama_decode(parent_ctx->ctx, b);
          llama_batch_free(b);
@@ -914,7 +952,7 @@ index 13a2abe..fd3377a 100644
          if (rc) {
              LOG_ERROR("failed to eval talker prefix, rows=%d", rows);
              has_next_token = false;
-@@ -1280,6 +1339,10 @@ completion_token_output llama_rn_context_completion::nextToken()
+@@ -1280,6 +1377,10 @@ completion_token_output llama_rn_context_completion::nextToken()
          if (!parent_ctx->tts_wrapper->tryChatterboxPrefill(
                  parent_ctx, text,
                  ref_pcm, ref_n_samples, ref_sr, cfg_weight)) {
@@ -925,7 +963,7 @@ index 13a2abe..fd3377a 100644
              LOG_ERROR("tryChatterboxPrefill failed");
              has_next_token = false;
              return result;
-@@ -1324,6 +1387,10 @@ completion_token_output llama_rn_context_completion::nextToken()
+@@ -1324,6 +1425,10 @@ completion_token_output llama_rn_context_completion::nextToken()
          const int new_past = parent_ctx->tts_wrapper->tryRealtimePrefill(
              parent_ctx, (int) n_past);
          if (new_past < 0) {
@@ -936,7 +974,7 @@ index 13a2abe..fd3377a 100644
              LOG_ERROR("tryRealtimePrefill failed");
              has_next_token = false;
              return result;
-@@ -1414,6 +1481,10 @@ completion_token_output llama_rn_context_completion::nextToken()
+@@ -1414,6 +1519,10 @@ completion_token_output llama_rn_context_completion::nextToken()
              b.token        = nullptr;
              const int rc = llama_decode(parent_ctx->ctx, b);
              llama_batch_free(b);
@@ -947,7 +985,7 @@ index 13a2abe..fd3377a 100644
              if (rc) {
                  LOG_ERROR("failed to eval codec_lm TTS embd, n_past: %d", n_past);
                  embd.resize(n_past);
-@@ -1448,6 +1519,11 @@ completion_token_output llama_rn_context_completion::nextToken()
+@@ -1448,6 +1557,11 @@ completion_token_output llama_rn_context_completion::nextToken()
                  b.logits[i]    = 1;
              }
              const int rc = llama_decode(parent_ctx->ctx, b);
@@ -959,7 +997,7 @@ index 13a2abe..fd3377a 100644
              if (rc) {
                  llama_batch_free(b);
                  LOG_ERROR("failed to eval continuous TTS prompt, n_eval: %d, n_past: %d",
-@@ -1471,7 +1547,12 @@ completion_token_output llama_rn_context_completion::nextToken()
+@@ -1471,7 +1585,12 @@ completion_token_output llama_rn_context_completion::nextToken()
              }
              llama_batch_free(b);
          } else {
@@ -973,7 +1011,7 @@ index 13a2abe..fd3377a 100644
              {
                  LOG_ERROR("failed to eval, n_eval: %d, n_past: %d, n_threads: %d, embd: %s",
                      n_eval,
-@@ -2128,7 +2209,7 @@ json llama_rn_context_completion::bench(int pp, int tg, int pl, int nr) {
+@@ -2128,7 +2247,7 @@ json llama_rn_context_completion::bench(int pp, int tg, int pl, int nr) {
      return result_json;
  }
  
@@ -982,7 +1020,7 @@ index 13a2abe..fd3377a 100644
      const std::string &prompt,
      const std::vector<std::string> &media_paths
  ) {
-@@ -2151,7 +2232,10 @@ void llama_rn_context_completion::processMedia(
+@@ -2151,7 +2270,10 @@ void llama_rn_context_completion::processMedia(
      auto invalidate = [this](size_t n) {
          eraseStateCheckpointsAfter(n);
      };
@@ -994,7 +1032,7 @@ index 13a2abe..fd3377a 100644
          parent_ctx->ctx,
          prompt,
          media_paths,
-@@ -2165,7 +2249,8 @@ void llama_rn_context_completion::processMedia(
+@@ -2165,7 +2287,8 @@ void llama_rn_context_completion::processMedia(
          0,  // Use sequence ID 0 for non-parallel mode
          recover,
          capture,
@@ -1005,7 +1043,7 @@ index 13a2abe..fd3377a 100644
  }
  
 diff --git a/node_modules/llama.rn/cpp/rn-completion.h b/node_modules/llama.rn/cpp/rn-completion.h
-index c7e9bab..4b917b7 100644
+index c7e9bab..4bc125a 100644
 --- a/node_modules/llama.rn/cpp/rn-completion.h
 +++ b/node_modules/llama.rn/cpp/rn-completion.h
 @@ -79,7 +79,7 @@ struct llama_rn_context_completion {
@@ -1017,15 +1055,16 @@ index c7e9bab..4b917b7 100644
      bool has_next_token = false;
      std::string prefill_text;
      std::string generated_text;
-@@ -191,6 +191,7 @@ struct llama_rn_context_completion {
+@@ -191,6 +191,8 @@ struct llama_rn_context_completion {
      // all — used to recover the last boundary as the cold-ingest frontier).
      std::vector<llama_pos> computeMessageBoundaries(const std::vector<llama_token> &tokens,
                                                      llama_pos min_gap) const;
 +    void stopAfterAbortedDecode();
++    void restoreAfterAbortedDecode(llama_memory_t mem);
      void beginCompletion();
      void beginCompletion(int chat_format, common_reasoning_format reasoning_format, const std::string &generation_prompt = "", const std::string &chat_parser = "");
      void endCompletion();
-@@ -215,8 +216,8 @@ struct llama_rn_context_completion {
+@@ -215,8 +217,8 @@ struct llama_rn_context_completion {
      // Benchmarking methods
      json bench(int pp, int tg, int pl, int nr);
  
