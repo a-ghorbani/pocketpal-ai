@@ -21,9 +21,7 @@ const formatSize = (bytes: number): string => {
   return `${Math.round(bytes / (1024 * 1024))} MB`;
 };
 
-// The user's mental model is "Pip is downloading", not the filename, so a
-// download owned by a local pal is named after the pal. Manual downloads from
-// the Models screen fall back to the model name.
+// Users think "Pip is downloading", not the filename.
 const ownerOf = (modelId: string, modelName: string) => {
   const pal = palStore.pals.find(
     p =>
@@ -42,9 +40,7 @@ const ownerOf = (modelId: string, modelName: string) => {
  *     model so the user can resume from the Models screen.
  *   - × icon  → dismisses the banner for this download only. Download
  *     continues. Dismissal clears when the download disappears.
- *
- * A failed download that is not running again replaces the progress row
- * with a Retry pill; × there clears the error.
+ *   - Failed → Retry replaces Stop; × clears the error.
  */
 export const DownloadBanner: React.FC = observer(() => {
   const theme = useTheme();
