@@ -710,6 +710,11 @@ export class RouterStore {
     this.seenSeq.delete(serverId);
     this.prevResident.delete(serverId);
     this.observedEviction.delete(serverId);
+    for (const key of Array.from(this.released)) {
+      if (key.startsWith(`${serverId}/`)) {
+        this.released.delete(key);
+      }
+    }
     delete this.streamCap[serverId];
     this.streamDropped.delete(serverId);
     this.lastPollAt.delete(serverId);

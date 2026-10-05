@@ -437,3 +437,31 @@ describe('eviction', () => {
     expect(store.observedEviction.has(serverId)).toBe(false);
   });
 });
+
+describe('server edits', () => {
+  it('forgets a settled unload when the server is repointed', async () => {
+    await read(rows({[ALPHA]: 'loaded'}));
+    store.setPickerServer(serverId);
+    await flush();
+    openStream();
+    store.unload(serverId, ALPHA);
+    await flush();
+    await read(rows());
+    expect(store.recordFor(serverId, ALPHA)).toBeUndefined();
+
+    runInAction(() => {
+      serverStore.updateServer(serverId, {url: 'http://other:8080'});
+    });
+    await read(rows({[ALPHA]: 'loaded'}));
+    store.setPickerServer(serverId);
+    await flush();
+    live()[0].handlers.onOpen();
+    live()[0].handlers.onEvent({
+      model: ALPHA,
+      event: 'status_change',
+      data: {status: 'unloaded', exit_code: 0},
+    });
+
+    expect(store.observedEviction.has(serverId)).toBe(true);
+  });
+});
