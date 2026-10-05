@@ -1,5 +1,11 @@
 import React, {useContext} from 'react';
-import {Alert, TouchableOpacity, View} from 'react-native';
+import {
+  Alert,
+  StyleProp,
+  TouchableOpacity,
+  View,
+  ViewStyle,
+} from 'react-native';
 import {Button, ProgressBar, RadioButton, Text} from 'react-native-paper';
 import {observer} from 'mobx-react';
 
@@ -67,7 +73,10 @@ interface RouterModelRowsProps {
   selectedModelId: string | null;
   onSelect: (modelId: string) => void;
   isAlreadyAdded: (modelId: string) => boolean;
-  renderVisionSlot: (model: RemoteModelInfo) => React.ReactNode;
+  renderVisionSlot: (
+    model: RemoteModelInfo,
+    style?: StyleProp<ViewStyle>,
+  ) => React.ReactNode;
 }
 
 export const RouterModelRows: React.FC<RouterModelRowsProps> = observer(
@@ -175,12 +184,16 @@ export const RouterModelRows: React.FC<RouterModelRowsProps> = observer(
             testID={`router-detail-${model.id}`}>
             {alreadyAdded && (
               <Text
-                style={[styles.alreadyAddedText, styles.modelRowDisabled]}
+                style={[
+                  styles.alreadyAddedText,
+                  styles.routerDetailItem,
+                  styles.modelRowDisabled,
+                ]}
                 testID={`router-added-${model.id}`}>
                 {l10n.settings.alreadyAdded}
               </Text>
             )}
-            {renderVisionSlot(model)}
+            {renderVisionSlot(model, styles.routerDetailItem)}
             {label && (
               <Text
                 style={styles.routerRowState}

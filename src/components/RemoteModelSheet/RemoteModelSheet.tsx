@@ -6,7 +6,7 @@ import React, {
   useMemo,
   useRef,
 } from 'react';
-import {View, TouchableOpacity} from 'react-native';
+import {StyleProp, TouchableOpacity, View, ViewStyle} from 'react-native';
 import {
   Text,
   Button,
@@ -325,14 +325,17 @@ export const RemoteModelSheet: React.FC<RemoteModelSheetProps> = observer(
       return () => routerStore.setPickerServer(null);
     }, [isVisible, isRouter, selectedServerId]);
 
-    const renderVisionSlot = (model: RemoteModelInfo) => {
+    const renderVisionSlot = (
+      model: RemoteModelInfo,
+      style?: StyleProp<ViewStyle>,
+    ) => {
       if (profileFor(serverTypeInEffect).readListRow === undefined) {
         return null;
       }
       const listCaps = deriveListCaps(model, serverTypeInEffect);
       return (
         <View
-          style={styles.modelVisionSlot}
+          style={[styles.modelVisionSlot, style]}
           testID={`remote-model-row-vision-${model.id}`}
           accessible={true}
           accessibilityLabel={`${l10n.models.modelCard.labels.vision}: ${

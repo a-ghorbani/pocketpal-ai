@@ -193,6 +193,9 @@ export const createStyles = (theme: Theme) => {
       gap: 8,
       marginStart: 44,
     },
+    routerDetailItem: {
+      marginStart: 0,
+    },
     routerRowAction: {
       marginStart: 'auto',
     },

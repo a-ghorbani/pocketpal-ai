@@ -720,6 +720,23 @@ describe('RemoteModelSheet', () => {
       expect(within(detail).getByTestId(`router-state-${id}`)).toBeTruthy();
     });
 
+    it('starts the detail line at the same indent with or without the added label', async () => {
+      serverStore.userSelectedModels = [
+        {serverId: ROUTER, remoteModelId: 'added'},
+      ];
+      const view = await openRouter([
+        row('added', 'loaded'),
+        row('fresh', 'unloaded'),
+      ]);
+      const marginStart = (testID: string) =>
+        StyleSheet.flatten(view.getByTestId(testID).props.style)?.marginStart ??
+        0;
+
+      expect(marginStart('router-added-added')).toBe(0);
+      expect(marginStart('remote-model-row-vision-fresh')).toBe(0);
+      expect(marginStart('remote-model-row-vision-added')).toBe(0);
+    });
+
     it('unloads any other model without asking', async () => {
       const alert = jest.spyOn(Alert, 'alert');
       const view = await openRouter([row('other', 'loaded')]);
