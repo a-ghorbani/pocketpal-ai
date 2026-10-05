@@ -97,10 +97,46 @@ export class ModelDetailsSheet extends BasePage {
     }
 
     if (exists) {
-      await browser
-        .$(fileCardSelector)
-        .$(Selectors.modelDetails.downloadButtonElement)
-        .click();
+      const button = () =>
+        browser
+          .$(fileCardSelector)
+          .$(Selectors.modelDetails.downloadButtonElement);
+      // Existing is not tappable: an off-screen button ignores the click, as
+      // does one still disabled while model info loads or still moving with
+      // the sheet scroll (slow phones).
+      for (
+        let i = 0;
+        i < 6 &&
+        !(await button()
+          .isDisplayed()
+          .catch(() => false));
+        i++
+      ) {
+        await Gestures.swipeUpInSheet();
+        await browser.pause(500);
+      }
+      let lastY: number | undefined;
+      await browser.waitUntil(
+        async () => {
+          const y = await button()
+            .getLocation('y')
+            .catch(() => undefined);
+          const settled = y !== undefined && y === lastY;
+          lastY = y;
+          return (
+            settled &&
+            (await button()
+              .isEnabled()
+              .catch(() => false))
+          );
+        },
+        {
+          timeout,
+          interval: 300,
+          timeoutMsg: `download button for ${filename} never settled enabled`,
+        },
+      );
+      await button().click();
     } else {
       console.log(
         `[tapDownloadForFile] no download button on card for ${filename} ` +
