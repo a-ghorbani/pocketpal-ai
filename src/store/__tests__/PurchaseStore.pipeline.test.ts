@@ -500,7 +500,9 @@ describe('PurchaseStore pipeline', () => {
         result('active', {supportCode: 'B'}),
       ]);
 
-      await h.purchases.processTransaction(tx(), {settledVerify: true});
+      await h.purchases.processTransaction(tx({transactionId: 'tx-0'}), {
+        settledVerify: true,
+      });
 
       expect(h.purchases.recordFor(PAL_ID)?.supportCode).toBe('B');
     });
@@ -519,7 +521,9 @@ describe('PurchaseStore pipeline', () => {
           result('active', {supportCode: undefined}),
         ]);
 
-        await h.purchases.processTransaction(tx(), {settledVerify: true});
+        await h.purchases.processTransaction(tx({transactionId: 'tx-0'}), {
+          settledVerify: true,
+        });
 
         expect(h.purchases.recordFor(PAL_ID)?.supportCode).toBeUndefined();
       },
