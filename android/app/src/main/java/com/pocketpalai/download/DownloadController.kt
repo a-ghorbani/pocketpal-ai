@@ -74,8 +74,10 @@ class DownloadController(
                 sorted.drop(1).forEach { retire(it) }
                 sorted.first()
             }
-        val reportOnce = runs.reportOnceIds()
-        return newest + all.filter { it.id in reportOnce && it.status == DownloadStatus.FAILED }
+        val liveDestinations = newest.map { it.destination }.toSet()
+        return newest + all.filter {
+            it.status == DownloadStatus.FAILED && it.failureUnreported && it.destination !in liveDestinations
+        }
     }
 
     suspend fun reattach(downloadId: String): DownloadEntity? {
@@ -89,7 +91,7 @@ class DownloadController(
         return row
     }
 
-    fun onFailedEmitted(downloadId: String) = runs.clearReportOnce(downloadId)
+    suspend fun onFailedEmitted(downloadId: String) = dao.markFailureReported(downloadId)
 
     private suspend fun insert(request: StartRequest): DownloadEntity =
         DownloadEntity(

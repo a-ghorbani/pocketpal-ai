@@ -328,7 +328,7 @@ class DownloadModule(reactContext: ReactApplicationContext) : NativeDownloadModu
         }
     }
 
-    private fun emitRow(row: DownloadEntity): Boolean = when (row.status) {
+    private suspend fun emitRow(row: DownloadEntity): Boolean = when (row.status) {
         DownloadStatus.RUNNING -> {
             sendProgressEvent(row.id, row.downloadedBytes, row.totalBytes)
             false

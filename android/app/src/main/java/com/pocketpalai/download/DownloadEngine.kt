@@ -87,9 +87,7 @@ class DownloadEngine(
                 Outcome.DONE
             }
             End.Stopped -> if (signal.userStop) {
-                if (dao.casStatus(id, RUNNING, DownloadStatus.FAILED, STOPPED_ERROR) == 1) {
-                    runs.markReportOnce(id)
-                }
+                dao.casStatus(id, RUNNING, DownloadStatus.FAILED, STOPPED_ERROR)
                 Outcome.DONE
             } else if (dao.casStatus(id, RUNNING, DownloadStatus.QUEUED) == 1) {
                 Outcome.RESCHEDULE

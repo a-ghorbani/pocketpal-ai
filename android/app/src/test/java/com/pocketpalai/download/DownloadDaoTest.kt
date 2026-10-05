@@ -59,6 +59,34 @@ class DownloadDaoTest {
     }
 
     @Test
+    fun aFailedWriteAwaitsReportingUntilMarkedOrRequeued() = runBlocking {
+        dao.insertDownload(downloadRow("a", "/m/a.gguf", DownloadStatus.RUNNING))
+
+        dao.casStatus("a", listOf("RUNNING"), DownloadStatus.FAILED, "boom")
+        assertEquals(true, dao.getDownload("a")!!.failureUnreported)
+
+        dao.markFailureReported("a")
+        assertEquals(false, dao.getDownload("a")!!.failureUnreported)
+
+        dao.casStatus("a", listOf("FAILED"), DownloadStatus.FAILED, "again")
+        dao.requeue("a", listOf("FAILED"))
+        val row = dao.getDownload("a")!!
+        assertEquals(DownloadStatus.QUEUED, row.status)
+        assertEquals(false, row.failureUnreported)
+    }
+
+    @Test
+    fun aStalledFailureAwaitsReportingAndCancelClearsIt() = runBlocking {
+        dao.insertDownload(downloadRow("a", "/m/a.gguf", DownloadStatus.RUNNING))
+
+        dao.endTransientRun("a", 5, DownloadStatus.FAILED, "stalled")
+        assertEquals(true, dao.getDownload("a")!!.failureUnreported)
+
+        dao.casStatus("a", listOf("FAILED"), DownloadStatus.CANCELLED)
+        assertEquals(false, dao.getDownload("a")!!.failureUnreported)
+    }
+
+    @Test
     fun progressResetsStalledRuns() = runBlocking {
         dao.insertDownload(downloadRow("a", "/m/a.gguf", DownloadStatus.RUNNING, stalledRuns = 3))
 

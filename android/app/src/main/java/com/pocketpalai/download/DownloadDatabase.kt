@@ -29,6 +29,7 @@ abstract class DownloadDatabase : RoomDatabase() {
         private val MIGRATION_2_3_SQL = listOf(
             "ALTER TABLE downloads ADD COLUMN etag TEXT",
             "ALTER TABLE downloads ADD COLUMN stalledRuns INTEGER NOT NULL DEFAULT 0",
+            "ALTER TABLE downloads ADD COLUMN failureUnreported INTEGER NOT NULL DEFAULT 0",
         )
 
         val MIGRATION_2_3 = object : Migration(2, 3) {

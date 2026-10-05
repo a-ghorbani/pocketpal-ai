@@ -45,7 +45,7 @@ class DownloadMigrationTest {
     }
 
     @Test
-    fun rowsSurviveTheUpgradeWithEmptyValidators() = runBlocking {
+    fun rowsSurviveTheUpgradeWithEmptyValidatorsAndNoPendingFailure() = runBlocking {
         val database = Room.databaseBuilder(context, DownloadDatabase::class.java, path.absolutePath)
             .setDriver(BundledSQLiteDriver())
             .addMigrations(DownloadDatabase.MIGRATION_2_3)
@@ -58,12 +58,14 @@ class DownloadMigrationTest {
         assertEquals(1_000L, inFlight.totalBytes)
         assertNull(inFlight.etag)
         assertEquals(0, inFlight.stalledRuns)
+        assertEquals(false, inFlight.failureUnreported)
 
         val sameDestination = dao.byDestination("/models/b.gguf")
         assertEquals(listOf("newer", "older"), sameDestination.map { it.id })
         sameDestination.forEach {
             assertNull(it.etag)
             assertEquals(0, it.stalledRuns)
+            assertEquals(false, it.failureUnreported)
         }
         database.close()
     }

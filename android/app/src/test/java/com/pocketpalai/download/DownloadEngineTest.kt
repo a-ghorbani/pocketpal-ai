@@ -249,6 +249,7 @@ class DownloadEngineTest {
         assertEquals(DownloadStatus.FAILED, row().status)
         assertEquals(DownloadEngine.STALLED_ERROR, row().error)
         assertEquals(5, row().stalledRuns)
+        assertTrue(row().failureUnreported)
     }
 
     @Test
@@ -276,6 +277,7 @@ class DownloadEngineTest {
         assertEquals(1, requests.size)
         assertEquals(DownloadStatus.FAILED, row().status)
         assertEquals("Client error: 404", row().error)
+        assertTrue(row().failureUnreported)
     }
 
     @Test
@@ -471,7 +473,7 @@ class DownloadEngineTest {
     }
 
     @Test
-    fun userStopFailsAndIsReportedOnce() = runBlocking {
+    fun userStopFailsAndAwaitsReporting() = runBlocking {
         insert()
         serve({ throttled() })
         val signal = runs.register(ID)
@@ -483,7 +485,7 @@ class DownloadEngineTest {
         assertEquals(Outcome.DONE, withTimeout(5_000) { running.await() })
         assertEquals(DownloadStatus.FAILED, row().status)
         assertEquals(DownloadEngine.STOPPED_ERROR, row().error)
-        assertEquals(setOf(ID), runs.reportOnceIds())
+        assertTrue(row().failureUnreported)
         assertTrue(part.length() > 0)
     }
 

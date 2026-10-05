@@ -186,15 +186,41 @@ class DownloadControllerTest {
     }
 
     @Test
-    fun activeIncludesAReportOnceFailureUntilEmitted() = runBlocking {
-        insert("stopped", DownloadStatus.FAILED)
-        insert("other", DownloadStatus.FAILED, dest = "$destination-2")
-        runs.markReportOnce("stopped")
+    fun activeIncludesAnUnreportedFailureUntilEmitted() = runBlocking {
+        insert("failed", DownloadStatus.RUNNING)
+        insert("seen", DownloadStatus.FAILED, dest = "$destination-2")
+        dao.casStatus("failed", listOf("RUNNING"), DownloadStatus.FAILED, "Client error: 404")
 
-        assertEquals(listOf("stopped"), controller.active().map { it.id })
+        assertEquals(listOf("failed"), controller.active().map { it.id })
 
-        controller.onFailedEmitted("stopped")
+        controller.onFailedEmitted("failed")
         assertTrue(controller.active().isEmpty())
+    }
+
+    @Test
+    fun anUnreportedFailureSurvivesAProcessRestart() = runBlocking {
+        insert("failed", DownloadStatus.RUNNING)
+        dao.casStatus("failed", listOf("RUNNING"), DownloadStatus.FAILED, DownloadEngine.STALLED_ERROR)
+
+        val coldStart = DownloadController(dao, DownloadRuns(), FakeScheduler())
+
+        assertEquals(listOf("failed"), coldStart.active().map { it.id })
+        assertEquals(DownloadEngine.STALLED_ERROR, coldStart.active().single().error)
+    }
+
+    @Test
+    fun anUnreportedFailureIsHiddenBehindALiveRowAndClearedOnReuse() = runBlocking {
+        insert("failed", DownloadStatus.RUNNING, createdAt = 1)
+        dao.casStatus("failed", listOf("RUNNING"), DownloadStatus.FAILED, "boom")
+        insert("live", DownloadStatus.QUEUED, createdAt = 2)
+
+        assertEquals(listOf("live"), controller.active().map { it.id })
+
+        controller.cancel("live")
+        val id = start()
+
+        assertEquals("failed", id)
+        assertFalse(row(id).failureUnreported)
     }
 
     @Test

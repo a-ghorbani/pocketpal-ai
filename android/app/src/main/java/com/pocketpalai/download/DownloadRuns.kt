@@ -27,7 +27,6 @@ class StopSignal {
 class DownloadRuns {
     private val locks = ConcurrentHashMap<String, Mutex>()
     private val signals = ConcurrentHashMap<String, Set<StopSignal>>()
-    private val reportOnce: MutableSet<String> = ConcurrentHashMap.newKeySet()
 
     suspend fun <T> withDestinationLock(destination: String, block: suspend () -> T): T =
         locks.computeIfAbsent(destination) { Mutex() }.withLock { block() }
@@ -47,16 +46,6 @@ class DownloadRuns {
     }
 
     fun isActive(downloadId: String): Boolean = !signals[downloadId].isNullOrEmpty()
-
-    fun markReportOnce(downloadId: String) {
-        reportOnce.add(downloadId)
-    }
-
-    fun clearReportOnce(downloadId: String) {
-        reportOnce.remove(downloadId)
-    }
-
-    fun reportOnceIds(): Set<String> = reportOnce.toSet()
 
     companion object {
         val process = DownloadRuns()
