@@ -285,6 +285,47 @@ describe('useChatSession Stop and the generation lease', () => {
     );
   });
 
+  it('a run aborted while timers are paused (app backgrounded) still drains', async () => {
+    jest.useFakeTimers();
+    let now = 0;
+    const performanceNow = jest
+      .spyOn(performance, 'now')
+      .mockImplementation(() => now);
+    const flushPromises = async () => {
+      for (let i = 0; i < 50; i += 1) {
+        await Promise.resolve();
+      }
+    };
+    try {
+      const {engine, completions} = installEngine();
+      const session = renderSession();
+
+      let sendSettled = false;
+      await act(async () => {
+        session.current.handleSendPress(textMessage).then(() => {
+          sendSettled = true;
+        });
+        await flushPromises();
+      });
+      expect(engine.completion).toHaveBeenCalledTimes(1);
+
+      now = 1000;
+      completions[0].emit({content: 'partial'});
+      await act(flushPromises);
+
+      modelStore.abortActiveGeneration();
+      completions[0].finish({interrupted: true});
+      await act(flushPromises);
+
+      expect(engine.stopCompletion).toHaveBeenCalled();
+      expect(sendSettled).toBe(true);
+      expect(modelStore.isGenerationBusy).toBe(false);
+    } finally {
+      performanceNow.mockRestore();
+      jest.useRealTimers();
+    }
+  });
+
   it('a store write that throws mid-stream stops and awaits the completion before the lease ends', async () => {
     const {engine, completions} = installEngine();
     const consoleError = jest

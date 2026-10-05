@@ -483,6 +483,27 @@ async function applyEventToStore(
   }
 }
 
+/**
+ * Lets queued touches dispatch. Ends at once when `signal` aborts: JS timers
+ * do not fire while the app is backgrounded, and a release there waits for
+ * this run to drain.
+ */
+function yieldToTouches(signal: AbortSignal): Promise<void> {
+  return new Promise(resolve => {
+    if (signal.aborted) {
+      resolve();
+      return;
+    }
+    const done = () => {
+      clearTimeout(timer);
+      signal.removeEventListener('abort', done);
+      resolve();
+    };
+    const timer = setTimeout(done, 0);
+    signal.addEventListener('abort', done);
+  });
+}
+
 export const useChatSession = (
   currentMessageInfo: React.MutableRefObject<{
     createdAt: number;
@@ -707,8 +728,8 @@ export const useChatSession = (
       // The chunk-cycle would otherwise run entirely via microtask
       // resumption from queue.next(), starving the macrotask queue
       // where touch events ride — Stop taps could sit for tens of
-      // seconds during long streams. A setTimeout(_, 0) yield every
-      // YIELD_INTERVAL_MS lets touches dispatch. The yield also
+      // seconds during long streams. A yield every YIELD_INTERVAL_MS
+      // lets touches dispatch. The yield also
       // decouples native production from consumption, so a backlog
       // can grow on fast models; the abort guard below drops queued
       // token events on stop while lifecycle events still run.
@@ -776,7 +797,7 @@ export const useChatSession = (
         });
 
         if (performance.now() - lastYieldTs >= YIELD_INTERVAL_MS) {
-          await new Promise(resolve => setTimeout(resolve, 0));
+          await yieldToTouches(lease.signal);
           lastYieldTs = performance.now();
         }
 
