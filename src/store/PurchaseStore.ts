@@ -139,7 +139,7 @@ const SETTLED: ReadonlySet<LedgerStatus> = new Set([
 export const isSettled = (status: LedgerStatus | undefined): boolean =>
   status !== undefined && SETTLED.has(status);
 
-const blocksBuy = (rec: LedgerRecord | undefined): boolean =>
+const isLive = (rec: LedgerRecord | undefined): boolean =>
   rec !== undefined && rec.status !== 'removed';
 
 const reopensTombstone = (rec: LedgerRecord, tx: StoreTransaction): boolean =>
@@ -363,10 +363,10 @@ export class PurchaseStore {
       this.productFor(pal.store_product_id) !== undefined &&
       !this.isOwned(pal.id) &&
       !pal.is_owned &&
-      !blocksBuy(this.records[pal.id]) &&
+      !isLive(this.records[pal.id]) &&
       !(
         pal.store_product_id &&
-        blocksBuy(this.recordForProduct(pal.store_product_id))
+        isLive(this.recordForProduct(pal.store_product_id))
       )
     );
   }
@@ -646,7 +646,7 @@ export class PurchaseStore {
     }
 
     if (tx.state === 'pending') {
-      if (!rec) {
+      if (!isLive(rec)) {
         await this.putRecord(palId, {
           productId: tx.productId,
           status: 'pending_payment',
@@ -1115,13 +1115,14 @@ export class PurchaseStore {
     return this.serialize(productId, async () => {
       await this.load();
       const rec = this.recordForProduct(productId);
-      if (rec && rec.status !== 'pending_payment') {
+      const open = isLive(rec) ? rec : undefined;
+      if (open && open.status !== 'pending_payment') {
         return;
       }
       await this.putRecord(rec?.palId ?? palId, {
         productId,
         status: 'pending_payment',
-        pendingSince: rec?.pendingSince ?? this.deps.now(),
+        pendingSince: open?.pendingSince ?? this.deps.now(),
       });
     });
   }

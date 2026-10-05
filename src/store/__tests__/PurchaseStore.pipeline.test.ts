@@ -1357,6 +1357,39 @@ describe('PurchaseStore pipeline', () => {
       },
     );
 
+    it('records a pending re-purchase from Buy, then unlocks it when paid', async () => {
+      const h = tombstone({pendingSince: 1});
+      await h.purchases.load();
+      ready(h);
+      h.advance(500);
+      h.store.purchase.mockResolvedValueOnce({kind: 'pending'});
+
+      await expect(h.purchases.buy(hubPal())).resolves.toBe('stay');
+
+      expect(h.purchases.recordFor(PAL_ID)).toMatchObject({
+        status: 'pending_payment',
+        pendingSince: 1_500,
+      });
+      expect(h.purchases.flowFor(PAL_ID)).toBe('pending_payment');
+
+      await h.purchases.processTransaction(tx(), {});
+      await settle(h);
+      expect(h.purchases.recordFor(PAL_ID)?.status).toBe('active');
+    });
+
+    it('records a pending transaction it does not hold', async () => {
+      const h = tombstone();
+      h.advance(500);
+
+      await h.purchases.processTransaction(tx({state: 'pending'}), {});
+
+      expect(h.api.verify).not.toHaveBeenCalled();
+      expect(h.storage.ledger()[PAL_ID]).toMatchObject({
+        status: 'pending_payment',
+        pendingSince: 1_500,
+      });
+    });
+
     it('Android: verifies a transaction without an id and never acknowledges a revoke', async () => {
       setOS('android');
       const h = tombstone();
