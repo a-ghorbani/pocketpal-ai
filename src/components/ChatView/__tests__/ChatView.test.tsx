@@ -474,4 +474,89 @@ describe('chat', () => {
       expect(drafts.has('session-1')).toBe(false);
     });
   });
+
+  describe('while a send waits for a stopped run to drain', () => {
+    const answer = {
+      ...textMessage,
+      id: 'assistant-answer',
+      author: {id: 'assistant'},
+      text: 'answer',
+    };
+    const menuLabels = l10n.en.components.chatView.menuItems;
+    const options = {withNavigation: true, withBottomSheetProvider: true};
+
+    beforeEach(() => {
+      runInAction(() => {
+        modelStore.activeModelId = 'test-model-id';
+      });
+      chatSessionStore.isStopping = true;
+    });
+
+    afterEach(() => {
+      chatSessionStore.isStopping = false;
+    });
+
+    const isDisabled = (label: string, getByText: (t: string) => any) => {
+      let node = getByText(label);
+      while (node) {
+        const state = node.props.accessibilityState;
+        if (state && 'disabled' in state) {
+          return state.disabled;
+        }
+        node = node.parent;
+      }
+      return undefined;
+    };
+
+    it('keeps the composer text and sends nothing when the send funnel is called', async () => {
+      const onSendPress = jest.fn();
+      const {getByPlaceholderText} = render(
+        <ChatView messages={[]} onSendPress={onSendPress} user={user} />,
+        options,
+      );
+      const composer = getByPlaceholderText(
+        l10n.en.components.chatInput.inputPlaceholder,
+      );
+      fireEvent.changeText(composer, 'second message');
+
+      let chatInput = composer;
+      while (!chatInput.props.onSendPress) {
+        chatInput = chatInput.parent!;
+      }
+      await act(async () => {
+        await chatInput.props.onSendPress({
+          type: 'text',
+          text: 'second message',
+        });
+      });
+
+      expect(onSendPress).not.toHaveBeenCalled();
+      expect(composer.props.value).toBe('second message');
+    });
+
+    it.each([
+      [
+        'an assistant row',
+        answer,
+        [menuLabels.regenerate, menuLabels.regenerateWith],
+      ],
+      ['a user row', textMessage, [menuLabels.edit]],
+    ])(
+      'disables the row-deleting menu items on %s, but not Copy',
+      (_row, message, deleting) => {
+        const {getAllByTestId, getByText} = render(
+          <ChatView messages={[message]} onSendPress={jest.fn()} user={user} />,
+          options,
+        );
+        fireEvent(getAllByTestId('ContentContainer')[0], 'onLongPress', {
+          nativeEvent: {pageX: 0, pageY: 0},
+        });
+
+        for (const label of deleting) {
+          expect(isDisabled(label, getByText)).toBe(true);
+        }
+        expect(isDisabled(menuLabels.copy, getByText)).toBe(false);
+      },
+    );
+  });
 });

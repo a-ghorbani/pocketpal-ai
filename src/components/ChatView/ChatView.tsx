@@ -519,6 +519,9 @@ export const ChatView = observer(
     // ============ MESSAGE INPUT HANDLERS ============
     const wrappedOnSendPress = React.useCallback(
       async (message: MessageType.PartialText) => {
+        if (chatSessionStore.isStopping) {
+          return;
+        }
         const draftKey = chatSessionStore.activeSessionId ?? NEW_CHAT_DRAFT_KEY;
         if (chatSessionStore.isEditMode) {
           await chatSessionStore.commitEdit();
@@ -677,6 +680,7 @@ export const ChatView = observer(
       reportContent: reportContentLabel,
     } = l10n.components.chatView.menuItems;
 
+    const isStopping = chatSessionStore.isStopping;
     const menuItems = React.useMemo((): MenuItem[] => {
       if (
         !selectedMessage ||
@@ -710,13 +714,13 @@ export const ChatView = observer(
             handleMenuDismiss();
           },
           icon: () => <RefreshIcon stroke={theme.colors.primary} />,
-          disabled: !hasActiveModel,
+          disabled: !hasActiveModel || isStopping,
         });
 
         baseItems.push({
           label: regenerateWithLabel,
           icon: () => <GridIcon stroke={theme.colors.primary} />,
-          disabled: false,
+          disabled: isStopping,
           submenu: models.map(model => ({
             label: model.name,
             width: Math.min(300, size.width),
@@ -736,7 +740,7 @@ export const ChatView = observer(
             handleMenuDismiss();
           },
           icon: () => <PencilLineIcon stroke={theme.colors.primary} />,
-          disabled: !hasActiveModel,
+          disabled: !hasActiveModel || isStopping,
         });
       }
 
@@ -753,6 +757,7 @@ export const ChatView = observer(
       return baseItems;
     }, [
       selectedMessage,
+      isStopping,
       user.id,
       handleCopy,
       handleTryAgain,

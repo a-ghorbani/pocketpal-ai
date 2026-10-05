@@ -172,6 +172,7 @@ export const ChatInput = observer(
     // State for showing "model not loaded" helper text
     const [showModelWarning, setShowModelWarning] = React.useState(false);
     const isEditMode = chatSessionStore.isEditMode;
+    const isStopping = chatSessionStore.isStopping;
 
     const styles = createStyles({theme, isEditMode});
 
@@ -362,7 +363,8 @@ export const ChatInput = observer(
       user &&
       !isVideoCapable && // Hide send button for video-capable pals
       (sendButtonVisibilityMode === 'always' || value.trim());
-    const isSendButtonEnabled = value.trim().length > 0 && hasActiveModel;
+    const isSendButtonEnabled =
+      value.trim().length > 0 && hasActiveModel && !isStopping;
     const sendButtonOpacity = isSendButtonEnabled ? 1 : 0.4;
 
     const rotateInterpolate = iconRotation.interpolate({
@@ -682,7 +684,14 @@ export const ChatInput = observer(
               ) : (
                 isSendButtonVisible && (
                   <View style={{opacity: sendButtonOpacity}}>
-                    <SendButton color={onSurfaceColor} onPress={handleSend} />
+                    <SendButton
+                      color={onSurfaceColor}
+                      onPress={handleSend}
+                      touchableOpacityProps={{
+                        disabled: isStopping,
+                        accessibilityState: {disabled: isStopping},
+                      }}
+                    />
                   </View>
                 )
               )}
