@@ -32,6 +32,7 @@ const path = require('path');
 
 const DEFAULT_MANIFEST = path.join(__dirname, 'android-payload-manifest.json');
 const ISSUE_URL = 'https://github.com/a-ghorbani/pocketpal-ai/issues/858';
+const RULE_KINDS = ['backend', 'patch-marker'];
 
 const SHT_DYNSYM = 11;
 const SHN_UNDEF = 0;
@@ -113,6 +114,9 @@ function assertRuleDemandsSomething(rule, manifestPath) {
   if (rule.mustExport.length === 0) {
     refuse('asserts nothing');
   }
+  if (!RULE_KINDS.includes(rule.kind)) {
+    refuse('has no kind backend or patch-marker');
+  }
 }
 
 function refuseAbi(abi, manifestPath, why) {
@@ -168,6 +172,7 @@ function assertAcceleratorFloors(abi, manifestPath) {
   if (
     !(abi.requiredSymbols || []).some(
       rule =>
+        rule.kind === 'backend' &&
         /_hexagon/.test(rule.lib || '') &&
         !/^librnllama_jni/.test(rule.lib || ''),
     )
@@ -457,14 +462,15 @@ function checkSymbolRule({rule, archive, artifactName, entry, report, fail}) {
     );
   }
   if (missing.length > 0) {
-    const why = rule.why
-      ? [rule.why]
-      : [
-          'The Hexagon (NPU) backend was not compiled into this build, so Snapdragon devices',
-          'will fall back to the CPU. Point HEXAGON_SDK_ROOT and HEXAGON_TOOLS_ROOT at an SDK',
-          'containing ipc/fastrpc/remote/ship/android_aarch64/libcdsprpc.so and rebuild.',
-          `Background: ${ISSUE_URL}`,
-        ];
+    const why =
+      rule.kind === 'patch-marker'
+        ? [rule.why]
+        : [
+            'The Hexagon (NPU) backend was not compiled into this build, so Snapdragon devices',
+            'will fall back to the CPU. Point HEXAGON_SDK_ROOT and HEXAGON_TOOLS_ROOT at an SDK',
+            'containing ipc/fastrpc/remote/ship/android_aarch64/libcdsprpc.so and rebuild.',
+            `Background: ${ISSUE_URL}`,
+          ];
     fail(
       [
         `${entry} in ${artifactName} does not export ${missing.join(', ')}.`,

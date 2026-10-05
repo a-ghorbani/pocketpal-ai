@@ -491,6 +491,55 @@ describe('the llama.rn patch markers', () => {
   });
 });
 
+describe('the rule kind', () => {
+  const backendRule = rules => rules.find(rule => rule.kind === 'backend');
+
+  function gateWithManifest(edit, entries = conformingEntries()) {
+    const edited = JSON.parse(JSON.stringify(manifest));
+    edit(edited.abis[0].requiredSymbols);
+    const manifestPath = path.join(workspace, 'kind.json');
+    fs.writeFileSync(manifestPath, JSON.stringify(edited));
+    return gateApk(entries, ['--manifest', manifestPath]);
+  }
+
+  it.each([
+    ['no kind', rule => delete rule.kind],
+    [
+      'an unknown kind',
+      rule => {
+        rule.kind = 'other';
+      },
+    ],
+  ])('refuses a rule with %s', (_label, edit) => {
+    const {status, output} = gateWithManifest(rules => edit(rules[0]));
+    expect(status).toBe(1);
+    expect(output).toContain('has no kind backend or patch-marker');
+  });
+
+  it("prints a patch-marker rule's why when its symbol is missing", () => {
+    const entries = conformingEntries();
+    entries['lib/arm64-v8a/librnllama.so'] = PLAIN_ELF;
+    const {status, output} = gateWithManifest(rules => {
+      rules.find(rule => rule.lib === 'librnllama.so').why = 'marker why';
+    }, entries);
+    expect(status).toBe(1);
+    expect(output).toContain('marker why');
+    expect(output).not.toContain('Hexagon (NPU) backend was not compiled');
+  });
+
+  it('prints the Hexagon text for a backend rule, even one carrying a why', () => {
+    const entries = conformingEntries();
+    entries['lib/arm64-v8a/librnllama_v8_2_dotprod_i8mm_hexagon_opencl.so'] =
+      hexagonDynsym({withRequired: false});
+    const {status, output} = gateWithManifest(rules => {
+      backendRule(rules).why = 'stray why';
+    }, entries);
+    expect(status).toBe(1);
+    expect(output).toContain('Hexagon (NPU) backend was not compiled');
+    expect(output).not.toContain('stray why');
+  });
+});
+
 describe('the declared payload', () => {
   it('fails when a required library is missing, naming the entry', () => {
     const entries = conformingEntries();
@@ -721,7 +770,11 @@ describe('a check that cannot run', () => {
       'an accelerator ABI whose only rule examines a different library',
       abis => {
         abis[0].requiredSymbols = [
-          {lib: 'librnllama.so', mustExport: ['lm_ggml_backend_reg_count']},
+          {
+            lib: 'librnllama.so',
+            kind: 'backend',
+            mustExport: ['lm_ggml_backend_reg_count'],
+          },
         ];
       },
       'no symbol rule examining it',
@@ -732,9 +785,19 @@ describe('a check that cannot run', () => {
         abis[0].requiredSymbols = [
           {
             lib: 'librnllama_jni_v8_2_dotprod_i8mm_hexagon_opencl.so',
+            kind: 'backend',
             mustExport: ['Java_com_rnllama_RNLlama_nativeSetLoadedLibrary'],
           },
         ];
+      },
+      'no symbol rule examining it',
+    ],
+    [
+      'an accelerator ABI whose only accelerator rule checks the patch marker',
+      abis => {
+        abis[0].requiredSymbols = abis[0].requiredSymbols.filter(
+          rule => rule.kind !== 'backend',
+        );
       },
       'no symbol rule examining it',
     ],
@@ -752,6 +815,7 @@ describe('a check that cannot run', () => {
         abis[1].requiredSymbols = [
           {
             lib: 'librnllama_x86_64.so',
+            kind: 'backend',
             mustExport: ['lm_ggml_backend_reg_count'],
           },
         ];
@@ -839,7 +903,11 @@ describe('a check that cannot run', () => {
             requiredLibs: ['librnllama.so', 'librnllama_jni.so'],
             requiredAssets: [],
             requiredSymbols: [
-              {lib: 'librnllama.so', mustExport: ['lm_ggml_backend_reg_count']},
+              {
+                lib: 'librnllama.so',
+                kind: 'backend',
+                mustExport: ['lm_ggml_backend_reg_count'],
+              },
             ],
           },
         ],
