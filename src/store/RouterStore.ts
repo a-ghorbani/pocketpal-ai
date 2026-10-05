@@ -10,10 +10,15 @@ import {
 
 import {serverStore} from './ServerStore';
 import {profileFor} from '../api/servers';
-import {postLoad, postUnload} from '../api/llamaServer/router';
-import type {RouterTarget} from '../api/llamaServer/router';
+import {
+  openRouterEvents,
+  postLoad,
+  postUnload,
+} from '../api/llamaServer/router';
+import type {RouterEventsHandle, RouterTarget} from '../api/llamaServer/router';
 import {
   hasRouterStatus,
+  reduceRouterEvent,
   rowExitCode,
   rowStateFromList,
   serverReason,
@@ -35,6 +40,11 @@ import type {RemoteSessionBinding, ServerConfig} from '../utils/types';
 export type RecordOutcome = 'ready' | 'failed' | 'withdrawn' | 'not-router';
 /** `stopped` is per caller: its own signal ended its wait, not the record. */
 export type WaitOutcome = RecordOutcome | 'stopped';
+
+export type StreamCap = 'unknown' | 'present' | 'absent';
+
+export const ROUTER_POLL_MS = 4000;
+export const ROUTER_TICK_MS = 1000;
 
 export interface RecordDetail {
   progress?: LoadProgress;
@@ -116,7 +126,17 @@ export class RouterRecord {
  */
 export class RouterStore {
   records = observable.map<string, RouterRecord>({}, {deep: false});
+  /** Whether a server's build has `/models/sse`; only a 404 says it has not. */
+  streamCap: Record<string, StreamCap> = {};
+  stream: {serverId: string; state: 'connecting' | 'open'} | null = null;
+  pickerServerId: string | null = null;
 
+  /** Servers whose stream ended on its own; polled, not reopened. */
+  private streamDropped = new Set<string>();
+  private streamHandle: RouterEventsHandle | null = null;
+  private streamToken = 0;
+  private lastPollAt = new Map<string, number>();
+  private ticker: ReturnType<typeof setInterval> | null = null;
   private reads = new Map<
     string,
     {current: Promise<void>; next?: Promise<void>}
@@ -125,12 +145,62 @@ export class RouterStore {
   private disposers: IReactionDisposer[] = [];
 
   constructor() {
-    makeAutoObservable<this, 'reads' | 'seenSeq' | 'disposers'>(this, {
+    makeAutoObservable<
+      this,
+      | 'streamDropped'
+      | 'streamHandle'
+      | 'streamToken'
+      | 'lastPollAt'
+      | 'ticker'
+      | 'reads'
+      | 'seenSeq'
+      | 'disposers'
+    >(this, {
       records: false,
+      stream: observable.ref,
+      streamDropped: observable,
+      streamHandle: false,
+      streamToken: false,
+      lastPollAt: false,
+      ticker: false,
       reads: false,
       seenSeq: false,
       disposers: false,
     });
+  }
+
+  /**
+   * At most one stream app-wide: to the server the picker shows, else to the
+   * server of the most recent load or unload in flight. None while
+   * backgrounded, and never to one whose stream is absent or has dropped.
+   */
+  get desiredStreamServer(): string | null {
+    if (!serverStore.appActive) {
+      return null;
+    }
+    const candidates: string[] = [];
+    if (this.pickerServerId && this.isRouter(this.pickerServerId)) {
+      candidates.push(this.pickerServerId);
+    }
+    const latest = this.allInFlight.at(-1);
+    if (latest) {
+      candidates.push(latest.serverId);
+    }
+    return (
+      candidates.find(
+        id => this.streamCap[id] !== 'absent' && !this.streamDropped.has(id),
+      ) ?? null
+    );
+  }
+
+  get hasInFlight(): boolean {
+    return this.allInFlight.length > 0;
+  }
+
+  private get allInFlight(): RouterRecord[] {
+    return Array.from<RouterRecord>(this.records.values()).filter(record =>
+      this.owns(record),
+    );
   }
 
   /** Router evidence: the type can be one, and its list says it is one. */
@@ -233,6 +303,15 @@ export class RouterStore {
     this.unload(serverId, remoteModelId);
   }
 
+  /** The picker shows this server; a dropped stream there may reopen. */
+  setPickerServer(serverId: string | null): void {
+    this.activate();
+    this.pickerServerId = serverId;
+    if (serverId) {
+      this.streamDropped.delete(serverId);
+    }
+  }
+
   dismiss(serverId: string, remoteModelId: string): void {
     const record = this.recordFor(serverId, remoteModelId);
     if (record?.failure) {
@@ -246,6 +325,8 @@ export class RouterStore {
       dispose();
     }
     this.disposers = [];
+    this.stopTicker();
+    this.closeStream();
   }
 
   private now(): number {
@@ -253,9 +334,7 @@ export class RouterStore {
   }
 
   private inFlight(serverId: string): RouterRecord[] {
-    return Array.from<RouterRecord>(this.records.values()).filter(
-      record => record.serverId === serverId && this.owns(record),
-    );
+    return this.allInFlight.filter(record => record.serverId === serverId);
   }
 
   private async acquire(
@@ -357,6 +436,7 @@ export class RouterStore {
   ): RouterRecord {
     const record = new RouterRecord(kind, server, remoteModelId, this.now());
     this.records.set(record.key, record);
+    this.streamDropped.delete(server.id);
     return record;
   }
 
@@ -539,6 +619,144 @@ export class RouterStore {
       }
     }
     this.seenSeq.delete(serverId);
+    delete this.streamCap[serverId];
+    this.streamDropped.delete(serverId);
+    this.lastPollAt.delete(serverId);
+    if (this.stream?.serverId === serverId) {
+      this.closeStream();
+    }
+  }
+
+  private followStream(serverId: string | null): void {
+    if (this.stream?.serverId === serverId) {
+      return;
+    }
+    this.closeStream();
+    if (serverId) {
+      this.openStream(serverId);
+    }
+  }
+
+  private closeStream(): void {
+    const handle = this.streamHandle;
+    this.streamToken++;
+    this.streamHandle = null;
+    this.stream = null;
+    handle?.close();
+  }
+
+  private async openStream(serverId: string): Promise<void> {
+    const server = serverStore.servers.find(s => s.id === serverId);
+    if (!server) {
+      return;
+    }
+    const token = ++this.streamToken;
+    const current = () => token === this.streamToken;
+    this.stream = {serverId, state: 'connecting'};
+    const apiKey = await serverStore.getApiKey(serverId);
+    if (!current()) {
+      return;
+    }
+    const handle = openRouterEvents(
+      {url: server.url, apiKey, timeoutMs: server.requestTimeoutMs},
+      {
+        onOpen: () =>
+          runInAction(() => {
+            if (current()) {
+              this.streamCap[serverId] = 'present';
+              this.stream = {serverId, state: 'open'};
+            }
+          }),
+        onEvent: payload => {
+          if (current()) {
+            this.applyEvent(serverId, payload);
+          }
+        },
+        onEnd: status =>
+          runInAction(() => {
+            if (!current()) {
+              return;
+            }
+            this.streamToken++;
+            this.streamHandle = null;
+            this.stream = null;
+            if (status === 404) {
+              this.streamCap[serverId] = 'absent';
+            }
+            this.streamDropped.add(serverId);
+          }),
+      },
+    );
+    if (current()) {
+      this.streamHandle = handle;
+    }
+  }
+
+  /**
+   * The only writer of a record's detail. An event corroborates or asks for
+   * a read; it never ends a record.
+   */
+  private applyEvent(serverId: string, payload: object): void {
+    const effect = reduceRouterEvent(payload);
+    if (effect.kind === 'ignore') {
+      return;
+    }
+    if (effect.kind === 'read') {
+      this.requestRead(serverId);
+      return;
+    }
+    const record = this.recordFor(serverId, effect.model);
+    if (record?.kind === 'load' && this.owns(record)) {
+      if (effect.status === 'loading') {
+        this.corroborate(record);
+      }
+      if (effect.progress || effect.exitCode !== undefined) {
+        record.detail = {
+          ...record.detail,
+          ...(effect.progress && {progress: effect.progress}),
+          ...(effect.exitCode !== undefined && {exitCode: effect.exitCode}),
+        };
+      }
+    }
+    if (effect.status !== undefined && effect.status !== 'loading') {
+      this.requestRead(serverId);
+    }
+  }
+
+  private startTicker(): void {
+    if (!this.ticker) {
+      this.ticker = setInterval(() => this.tick(), ROUTER_TICK_MS);
+    }
+  }
+
+  private stopTicker(): void {
+    if (this.ticker) {
+      clearInterval(this.ticker);
+      this.ticker = null;
+    }
+  }
+
+  private tick(): void {
+    this.runPolls();
+  }
+
+  /** Servers with work in flight and no open stream are read on a timer. */
+  private runPolls(): void {
+    const now = this.now();
+    const servers = new Set(this.allInFlight.map(record => record.serverId));
+    for (const serverId of servers) {
+      if (this.stream?.serverId === serverId && this.stream.state === 'open') {
+        this.lastPollAt.delete(serverId);
+        continue;
+      }
+      const last = this.lastPollAt.get(serverId);
+      if (last === undefined) {
+        this.lastPollAt.set(serverId, now);
+      } else if (now - last >= ROUTER_POLL_MS) {
+        this.lastPollAt.set(serverId, now);
+        this.requestRead(serverId);
+      }
+    }
   }
 
   private activate(): void {
@@ -579,6 +797,16 @@ export class RouterStore {
           }
         },
         {equals: comparer.structural},
+      ),
+      reaction(
+        () => this.desiredStreamServer,
+        serverId => this.followStream(serverId),
+        {fireImmediately: true},
+      ),
+      reaction(
+        () => this.hasInFlight,
+        run => (run ? this.startTicker() : this.stopTicker()),
+        {fireImmediately: true},
       ),
     );
   }
