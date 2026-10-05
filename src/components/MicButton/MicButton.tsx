@@ -48,7 +48,7 @@ export const MicButton: React.FC<MicButtonProps> = observer(({onStart}) => {
         <MicrophoneIcon
           width={18}
           height={18}
-          stroke={theme.colors.onSurfaceVariant}
+          color={theme.colors.onSurfaceVariant}
         />
       </Pressable>
     );
@@ -65,7 +65,7 @@ export const MicButton: React.FC<MicButtonProps> = observer(({onStart}) => {
       <MicrophoneIcon
         width={18}
         height={18}
-        stroke={theme.colors.onSurfaceVariant}
+        color={theme.colors.onSurfaceVariant}
       />
     </Pressable>
   );

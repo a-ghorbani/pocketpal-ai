@@ -6,6 +6,7 @@ import {fireEvent, render} from '../../../../jest/test-utils';
 import {L10nContext} from '../../../utils';
 import {l10n} from '../../../locales';
 import {asrStore} from '../../../store';
+import {lightTheme} from '../../../utils/theme';
 
 const mockNavigate = jest.fn();
 jest.mock('@react-navigation/native', () => ({
@@ -64,6 +65,14 @@ describe('MicButton', () => {
     expect(queryByTestId('mic-button-setup')).toBeNull();
     fireEvent.press(getByTestId('mic-button'));
     expect(onStart).toHaveBeenCalledTimes(1);
+  });
+
+  it('colours the icon through `color`, which its currentColor strokes use', () => {
+    const {getByTestId} = renderMic();
+    const icon = getByTestId('mic-button').findAll(
+      node => node.props.color !== undefined,
+    )[0];
+    expect(icon.props.color).toBe(lightTheme.colors.onSurfaceVariant);
   });
 
   it('is disabled while the permission prompt is open', () => {
