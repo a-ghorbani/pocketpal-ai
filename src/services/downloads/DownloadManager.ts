@@ -182,7 +182,11 @@ export class DownloadManager {
             job.state.isDownloading = false;
           });
           // Ensure callback is called before removing the job
-          this.callbacks.onError?.(job.model.id, new Error(event.error));
+          this.callbacks.onError?.(
+            job.model.id,
+            new Error(event.error),
+            event.progress ?? 0,
+          );
           runInAction(() => {
             this.downloadJobs.delete(job.model.id);
           });

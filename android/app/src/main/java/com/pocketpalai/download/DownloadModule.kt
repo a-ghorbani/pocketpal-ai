@@ -130,11 +130,7 @@ class DownloadModule(reactContext: ReactApplicationContext) : NativeDownloadModu
                         putString("id", download.id)
                         putString("url", download.url)
                         putString("destination", download.destination)
-                        putDouble("progress", 
-                            if (download.totalBytes > 0) 
-                                (download.downloadedBytes.toDouble() / download.totalBytes.toDouble()) * 100 
-                            else 0.0
-                        )
+                        putDouble("progress", percent(download.downloadedBytes, download.totalBytes))
                         putString("status", download.status.name)
                     })
                 }
@@ -221,7 +217,7 @@ class DownloadModule(reactContext: ReactApplicationContext) : NativeDownloadModu
             putString("downloadId", downloadId)
             putDouble("bytesWritten", bytesWritten.toDouble())
             putDouble("totalBytes", totalBytes.toDouble())
-            putDouble("progress", if (totalBytes > 0) (bytesWritten.toDouble() / totalBytes.toDouble()) * 100 else 0.0)
+            putDouble("progress", percent(bytesWritten, totalBytes))
         }
         sendEvent("onDownloadProgress", params)
     }
@@ -234,10 +230,11 @@ class DownloadModule(reactContext: ReactApplicationContext) : NativeDownloadModu
         sendEvent("onDownloadComplete", params)
     }
 
-    private fun sendFailureEvent(downloadId: String, error: String) {
+    private fun sendFailureEvent(downloadId: String, error: String, progress: Double) {
         val params = Arguments.createMap().apply {
             putString("downloadId", downloadId)
             putString("error", error)
+            putDouble("progress", progress)
         }
         sendEvent("onDownloadFailed", params)
     }
@@ -328,23 +325,18 @@ class DownloadModule(reactContext: ReactApplicationContext) : NativeDownloadModu
         }
     }
 
-    private suspend fun emitRow(row: DownloadEntity): Boolean = when (row.status) {
-        DownloadStatus.RUNNING -> {
-            sendProgressEvent(row.id, row.downloadedBytes, row.totalBytes)
-            false
+    private suspend fun emitRow(row: DownloadEntity): Boolean {
+        when (val event = row.event()) {
+            is RowEvent.Progress -> sendProgressEvent(row.id, event.bytesWritten, event.totalBytes)
+            is RowEvent.Completed -> sendCompletionEvent(row.id, event.filePath)
+            is RowEvent.Failed -> {
+                Log.e(TAG, "Download failed for ID: ${row.id}: ${event.error}")
+                sendFailureEvent(row.id, event.error, event.progress)
+                controller.onFailedEmitted(row.id)
+            }
+            null -> {}
         }
-        DownloadStatus.COMPLETED -> {
-            sendCompletionEvent(row.id, row.destination)
-            true
-        }
-        DownloadStatus.FAILED -> {
-            Log.e(TAG, "Download failed for ID: ${row.id}: ${row.error}")
-            sendFailureEvent(row.id, row.error ?: "Unknown error")
-            controller.onFailedEmitted(row.id)
-            true
-        }
-        DownloadStatus.CANCELLED -> true
-        DownloadStatus.QUEUED, DownloadStatus.PAUSED -> false
+        return row.status.endsObservation
     }
 
     companion object {

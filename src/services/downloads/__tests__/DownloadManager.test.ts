@@ -139,6 +139,23 @@ describe('DownloadManager', () => {
     expect(downloadManager.isDownloading('model-1')).toBe(true);
   });
 
+  it('passes the progress Android kept to onError on failure', async () => {
+    NativeModules.DownloadModule.startDownload.mockResolvedValue({
+      downloadId: 'download123',
+    });
+    const onError = jest.fn();
+    downloadManager.setCallbacks({onError});
+    await downloadManager.startDownload(basicModel, '/path/to/model.bin');
+    const [, emitFailure] = mockEventEmitter.addListener.mock.calls.find(
+      ([name]: [string]) => name === 'onDownloadFailed',
+    );
+
+    emitFailure({downloadId: 'download123', error: 'stalled', progress: 40});
+
+    expect(onError).toHaveBeenCalledWith('model-1', expect.any(Error), 40);
+    expect(downloadManager.isDownloading('model-1')).toBe(false);
+  });
+
   it('starts a download on iOS', async () => {
     (Platform as any).OS = 'ios';
 

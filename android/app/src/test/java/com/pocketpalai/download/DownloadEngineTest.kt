@@ -191,6 +191,7 @@ class DownloadEngineTest {
 
         assertEquals(DownloadStatus.FAILED, row().status)
         assertEquals(DownloadEngine.REMOTE_CHANGED_ERROR, row().error)
+        assertEquals(0L, row().downloadedBytes)
         assertFalse(part.exists())
         assertFalse(destination.exists())
     }
@@ -234,6 +235,7 @@ class DownloadEngineTest {
 
         assertEquals(DownloadStatus.FAILED, row().status)
         assertEquals(DownloadEngine.SIZE_MISMATCH_ERROR, row().error)
+        assertEquals(0L, row().downloadedBytes)
         assertFalse(part.exists())
         assertFalse(destination.exists())
     }
@@ -307,6 +309,7 @@ class DownloadEngineTest {
         assertEquals(DownloadStatus.FAILED, row().status)
         assertTrue(row().error!!.contains("No space left on device"))
         assertEquals(100L, part.length())
+        assertEquals(100L, row().downloadedBytes)
         assertEquals(1, requests.size)
     }
 

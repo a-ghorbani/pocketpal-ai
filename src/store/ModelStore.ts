@@ -316,11 +316,12 @@ class ModelStore {
           }
         }
       },
-      onError: (modelId, error) => {
+      onError: (modelId, error, keptProgress) => {
         console.error('Download error for model', modelId, error);
         const model = this.models.find(m => m.id === modelId);
         if (model) {
           runInAction(() => {
+            model.progress = keptProgress ?? 0;
             model.isDownloaded = false;
           });
         }

@@ -95,7 +95,8 @@ class DownloadEngine(
                 Outcome.DONE
             }
             is End.Failed -> {
-                dao.casStatus(id, RUNNING, DownloadStatus.FAILED, end.error)
+                val part = File(row.destination + PART_SUFFIX)
+                dao.fail(id, end.error, if (part.exists()) part.length() else 0)
                 Outcome.DONE
             }
             is End.GaveUp -> {

@@ -2151,14 +2151,24 @@ describe('ModelStore', () => {
       expect(model.progress).toBe(0);
     });
 
-    it('keeps download progress and records the error when a download fails', () => {
+    it('keeps the progress the native side kept when a download fails', () => {
       const model = {...presetModelFixture, progress: 42, isDownloaded: false};
       modelStore.models = [model];
 
-      registeredDownloadCallbacks.onError(model.id, new Error('stalled'));
+      registeredDownloadCallbacks.onError(model.id, new Error('stalled'), 40);
 
-      expect(modelStore.models[0].progress).toBe(42);
+      expect(modelStore.models[0].progress).toBe(40);
       expect(modelStore.models[0].isDownloaded).toBe(false);
+      expect(modelStore.downloadError?.metadata?.modelId).toBe(model.id);
+    });
+
+    it('resets progress when a failed download kept no bytes', () => {
+      const model = {...presetModelFixture, progress: 42, isDownloaded: false};
+      modelStore.models = [model];
+
+      registeredDownloadCallbacks.onError(model.id, new Error('Network'));
+
+      expect(modelStore.models[0].progress).toBe(0);
       expect(modelStore.downloadError?.metadata?.modelId).toBe(model.id);
     });
 
