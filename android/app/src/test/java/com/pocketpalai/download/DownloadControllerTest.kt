@@ -1,6 +1,10 @@
 package com.pocketpal.download
 
 import androidx.test.core.app.ApplicationProvider
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.runBlocking
 import org.junit.After
 import org.junit.Assert.assertEquals
@@ -14,6 +18,7 @@ import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
 import java.io.File
+import java.util.concurrent.atomic.AtomicInteger
 
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [34])
@@ -237,6 +242,38 @@ class DownloadControllerTest {
 
         scheduler.events.clear()
         controller.reattach("newer")
+        assertTrue(scheduler.events.isEmpty())
+    }
+
+    @Test
+    fun concurrentStartsForOneDestinationShareOneRow() = runBlocking {
+        val slowReads = object : DownloadDao by dao {
+            override suspend fun byDestination(destination: String): List<DownloadEntity> =
+                dao.byDestination(destination).also { delay(100) }
+        }
+        val newIds = AtomicInteger()
+        val racing = DownloadController(slowReads, runs, scheduler, newId = { "race-${newIds.incrementAndGet()}" })
+        val request = DownloadController.StartRequest(URL, destination, null, 0, NetworkType.ANY, 500)
+
+        val started = (1..2).map { async(Dispatchers.Default) { racing.start(request) } }.awaitAll()
+
+        assertEquals(1, started.toSet().size)
+        assertEquals(1, dao.byDestination(destination).size)
+    }
+
+    @Test
+    fun reattachOfARowThatFinishedMeanwhileSchedulesNothing() = runBlocking {
+        insert("a", DownloadStatus.RUNNING)
+        val finishesOnRead = object : DownloadDao by dao {
+            override suspend fun byDestination(destination: String): List<DownloadEntity> {
+                dao.casStatus("a", listOf("RUNNING"), DownloadStatus.COMPLETED)
+                return dao.byDestination(destination)
+            }
+        }
+
+        val row = DownloadController(finishesOnRead, runs, scheduler).reattach("a")
+
+        assertEquals("a", row?.id)
         assertTrue(scheduler.events.isEmpty())
     }
 

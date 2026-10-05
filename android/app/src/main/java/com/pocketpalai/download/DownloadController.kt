@@ -1,7 +1,10 @@
 package com.pocketpal.download
 
 import android.util.Log
+import kotlinx.coroutines.CoroutineDispatcher
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.withContext
 import java.io.File
 import java.util.UUID
 
@@ -11,6 +14,7 @@ class DownloadController(
     private val scheduler: RunnerScheduler,
     private val clock: () -> Long = System::currentTimeMillis,
     private val newId: () -> String = { UUID.randomUUID().toString() },
+    private val io: CoroutineDispatcher = Dispatchers.IO,
 ) {
     data class StartRequest(
         val url: String,
@@ -21,7 +25,11 @@ class DownloadController(
         val progressIntervalMs: Long,
     )
 
-    suspend fun start(request: StartRequest): String {
+    suspend fun start(request: StartRequest): String = withContext(io) {
+        runs.withStartLock(request.destination) { startLocked(request) }
+    }
+
+    private suspend fun startLocked(request: StartRequest): String {
         val rows = dao.byDestination(request.destination)
         val reusable = rows.firstOrNull { it.status in REUSABLE }
             ?.takeIf { dao.requeue(it.id, REUSABLE_NAMES) == 1 }
@@ -41,31 +49,32 @@ class DownloadController(
         return kept.id
     }
 
-    suspend fun pause(downloadId: String) {
+    suspend fun pause(downloadId: String) = withContext(io) {
         dao.casStatus(downloadId, ACTIVE_NAMES, DownloadStatus.PAUSED)
         scheduler.cancelRunners(downloadId)
     }
 
-    suspend fun resume(downloadId: String) {
+    suspend fun resume(downloadId: String) = withContext(io) {
         if (dao.requeue(downloadId, listOf(DownloadStatus.PAUSED.name)) == 1) {
             scheduler.schedule(downloadId, dao.getDownload(downloadId)?.totalBytes ?: 0)
         }
     }
 
-    suspend fun retry(downloadId: String) {
+    suspend fun retry(downloadId: String) = withContext(io) {
         if (dao.requeue(downloadId, listOf(DownloadStatus.FAILED.name)) == 1) {
             scheduler.schedule(downloadId, dao.getDownload(downloadId)?.totalBytes ?: 0)
         }
     }
 
-    suspend fun cancel(downloadId: String) {
-        val row = dao.getDownload(downloadId) ?: return
-        if (dao.casStatus(downloadId, REUSABLE_NAMES, DownloadStatus.CANCELLED, CANCELLED_ERROR) == 0) return
-        scheduler.cancelRunners(downloadId)
-        deletePart(row.destination)
+    suspend fun cancel(downloadId: String): Unit = withContext(io) {
+        val row = dao.getDownload(downloadId) ?: return@withContext
+        if (dao.casStatus(downloadId, REUSABLE_NAMES, DownloadStatus.CANCELLED, CANCELLED_ERROR) == 1) {
+            scheduler.cancelRunners(downloadId)
+            deletePart(row.destination)
+        }
     }
 
-    suspend fun active(): List<DownloadEntity> {
+    suspend fun active(): List<DownloadEntity> = withContext(io) {
         val all = dao.getAllDownloads().first()
         val newest = all.filter { it.status in LIVE }
             .groupBy { it.destination }
@@ -75,23 +84,24 @@ class DownloadController(
                 sorted.first()
             }
         val liveDestinations = newest.map { it.destination }.toSet()
-        return newest + all.filter {
+        newest + all.filter {
             it.status == DownloadStatus.FAILED && it.failureUnreported && it.destination !in liveDestinations
         }
     }
 
-    suspend fun reattach(downloadId: String): DownloadEntity? {
-        val row = dao.getDownload(downloadId) ?: return null
-        if (row.status !in ACTIVE) return row
-        val newestLive = dao.byDestination(row.destination).first { it.status in LIVE }
+    suspend fun reattach(downloadId: String): DownloadEntity? = withContext(io) {
+        val row = dao.getDownload(downloadId) ?: return@withContext null
+        if (row.status !in ACTIVE) return@withContext row
+        val newestLive = dao.byDestination(row.destination).firstOrNull { it.status in LIVE }
         when {
+            newestLive == null -> {}
             newestLive.id != row.id -> retire(row)
             !scheduler.hasRunner(row.id) -> scheduler.schedule(row.id, row.totalBytes)
         }
-        return row
+        row
     }
 
-    suspend fun onFailedEmitted(downloadId: String) = dao.markFailureReported(downloadId)
+    suspend fun onFailedEmitted(downloadId: String) = withContext(io) { dao.markFailureReported(downloadId) }
 
     private suspend fun insert(request: StartRequest): DownloadEntity =
         DownloadEntity(

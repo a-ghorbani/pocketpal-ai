@@ -26,10 +26,14 @@ class StopSignal {
 
 class DownloadRuns {
     private val locks = ConcurrentHashMap<String, Mutex>()
+    private val startLocks = ConcurrentHashMap<String, Mutex>()
     private val signals = ConcurrentHashMap<String, Set<StopSignal>>()
 
     suspend fun <T> withDestinationLock(destination: String, block: suspend () -> T): T =
         locks.computeIfAbsent(destination) { Mutex() }.withLock { block() }
+
+    suspend fun <T> withStartLock(destination: String, block: suspend () -> T): T =
+        startLocks.computeIfAbsent(destination) { Mutex() }.withLock { block() }
 
     fun register(downloadId: String): StopSignal {
         val signal = StopSignal()
