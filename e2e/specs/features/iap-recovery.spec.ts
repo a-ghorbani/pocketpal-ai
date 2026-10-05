@@ -58,10 +58,21 @@ describe('In-app purchase recovery', () => {
     browser.$(withinTestIdPrefix('local-pal-card-', title));
 
   const waitForLocalTitle = async (title: string, timeout = 30000) => {
-    await Gestures.scrollToElement(
-      withinTestIdPrefix('local-pal-card-', title),
-      8,
-    );
+    const card = withinTestIdPrefix('local-pal-card-', title);
+    // On a short screen a swipe can fling the card past the top of the list.
+    if (!(await Gestures.scrollToElement(card, 8))) {
+      for (
+        let i = 0;
+        i < 8 &&
+        !(await localCardTitled(title)
+          .isDisplayed()
+          .catch(() => false));
+        i++
+      ) {
+        await Gestures.swipeDown();
+        await driver.pause(300);
+      }
+    }
     await localCardTitled(title).waitForDisplayed({timeout});
   };
 
