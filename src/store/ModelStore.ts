@@ -23,6 +23,7 @@ import {
 
 import {uiStore, hfStore} from '.';
 import {serverStore} from './ServerStore';
+import {routerStore} from './RouterStore';
 import {chatSessionStore} from './ChatSessionStore';
 import {
   draftCacheDefaults,
@@ -2702,22 +2703,29 @@ class ModelStore {
     }
 
     const serverType = toServerType(server.serverType);
+    const hasRouter = profileFor(serverType).hasRouter;
+    const binding = {
+      modelId: model.id,
+      serverId: model.serverId,
+      remoteModelId: model.remoteModelId,
+      url: server.url,
+      serverType,
+    };
+    const endpoint = {
+      url: server.url,
+      remoteModelId: model.remoteModelId,
+      apiKey,
+      timeoutMs: server.requestTimeoutMs,
+      serverType,
+    };
 
     runInAction(() => {
-      this.engine = new OpenAICompletionEngine({
-        url: server.url,
-        remoteModelId: model.remoteModelId!,
-        apiKey,
-        timeoutMs: server.requestTimeoutMs,
-        serverType,
-      });
-      this.activeRemoteBinding = {
-        modelId: model.id,
-        serverId: model.serverId!,
-        remoteModelId: model.remoteModelId!,
-        url: server.url,
-        serverType,
-      };
+      this.engine = hasRouter
+        ? new OpenAICompletionEngine(endpoint, {
+            ensureReady: signal => routerStore.ensureReady(binding, signal),
+          })
+        : new OpenAICompletionEngine(endpoint);
+      this.activeRemoteBinding = binding;
       this.setActiveModel(model.id);
       // Do NOT set lastUsedModelId for remote models -- server may be offline on next launch
     });
@@ -2725,6 +2733,11 @@ class ModelStore {
     serverStore
       .fetchRemoteModelCaps(model.serverId, model.remoteModelId, apiKey)
       .catch(() => {});
+    if (hasRouter) {
+      routerStore
+        .ensureLoaded(model.serverId, model.remoteModelId)
+        .catch(() => {});
+    }
   };
 
   /**

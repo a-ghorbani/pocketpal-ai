@@ -26,6 +26,10 @@ import {
 import {l10n} from '../../locales';
 import {assistant} from '../../utils/chat';
 import {ModelOrigin} from '../../utils/types';
+import {
+  RemoteModelNotReadyError,
+  RemoteModelRequestWithdrawnError,
+} from '../../utils/errors';
 
 const mockAssistant = {
   id: 'h3o3lc5xj',
@@ -150,6 +154,49 @@ describe('useChatSession', () => {
         author: assistant,
       }),
     );
+  });
+
+  describe('a remote model that never became ready', () => {
+    const failWith = (error: Error) => {
+      if (modelStore.context) {
+        modelStore.context.completion = jest.fn().mockRejectedValueOnce(error);
+      }
+    };
+    const systemMessages = () =>
+      (chatSessionStore.addMessageToCurrentSession as jest.Mock).mock.calls
+        .map(([message]) => message)
+        .filter(message => message.metadata?.system);
+
+    const send = async () => {
+      const {result} = renderHook(() =>
+        useChatSession({current: null}, textMessage.author, mockAssistant),
+      );
+      await act(async () => {
+        await result.current.handleSendPress(textMessage);
+      });
+    };
+
+    it('adds nothing when the user cancelled the load', async () => {
+      failWith(new RemoteModelRequestWithdrawnError());
+
+      await send();
+
+      expect(systemMessages()).toEqual([]);
+    });
+
+    it("adds one message with the app's sentence for the cause", async () => {
+      const error = new RemoteModelNotReadyError('server-unreachable');
+      failWith(error);
+
+      await send();
+
+      const messages = systemMessages();
+      expect(messages).toHaveLength(1);
+      expect(messages[0].text).toBe(
+        l10n.en.settings.routerModels.serverUnreachable,
+      );
+      expect(messages[0].text).not.toContain(error.message);
+    });
   });
 
   it('should reset the conversation', () => {

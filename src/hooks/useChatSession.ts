@@ -19,7 +19,12 @@ import type {PersistedTurnTimings} from '../utils/completionTypes';
 import {resolveReasoningCapability} from '../utils/reasoningCapability';
 
 import {MessageType, ModelOrigin, User} from '../utils/types';
-import {createMultimodalWarning} from '../utils/errors';
+import {
+  RemoteModelNotReadyError,
+  RemoteModelRequestWithdrawnError,
+  createMultimodalWarning,
+} from '../utils/errors';
+import {routerFailureLabel} from '../utils/routerCopy';
 import {
   assembleMessages,
   resolveSystemMessages,
@@ -876,6 +881,10 @@ export const useChatSession = (
       if (turnAbsorbedError) {
         // Footer already surfaces interrupted / truncationLikely; nothing
         // more to add to chat.
+      } else if (error instanceof RemoteModelRequestWithdrawnError) {
+        // The user cancelled the load this turn waited on.
+      } else if (error instanceof RemoteModelNotReadyError) {
+        await addSystemMessage(routerFailureLabel(error.cause, l10n));
       } else if (errorMessage.includes('network')) {
         await addSystemMessage(l10n.common.networkError);
       } else if (isToolArgsParseError) {
