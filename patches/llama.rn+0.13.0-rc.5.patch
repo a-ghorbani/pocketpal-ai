@@ -250,7 +250,7 @@ index eb52272..9ff97ad 100644
      void invokeAsyncTracked(
          std::shared_ptr<react::CallInvoker> callInvoker,
 diff --git a/node_modules/llama.rn/cpp/jsi/RNLlamaJSI.cpp b/node_modules/llama.rn/cpp/jsi/RNLlamaJSI.cpp
-index c4c4fbb..c443366 100644
+index c4c4fbb..5aa029c 100644
 --- a/node_modules/llama.rn/cpp/jsi/RNLlamaJSI.cpp
 +++ b/node_modules/llama.rn/cpp/jsi/RNLlamaJSI.cpp
 @@ -13,11 +13,13 @@
@@ -271,7 +271,7 @@ index c4c4fbb..c443366 100644
  
  static std::once_flag backend_init_once;
  
-+extern "C" __attribute__((visibility("default"), used)) int rnllama_jsi_patch_ownership_v1(void) {
++extern "C" __attribute__((visibility("default"), used)) int rnllama_jsi_patch_ownership_v2(void) {
 +    return 1;
 +}
 +
@@ -1076,14 +1076,14 @@ index c7e9bab..4bc125a 100644
        const std::vector<std::string> &media_paths
      );
 diff --git a/node_modules/llama.rn/cpp/rn-llama.cpp b/node_modules/llama.rn/cpp/rn-llama.cpp
-index a64f257..70d3d22 100644
+index a64f257..a3bcccb 100644
 --- a/node_modules/llama.rn/cpp/rn-llama.cpp
 +++ b/node_modules/llama.rn/cpp/rn-llama.cpp
 @@ -128,6 +128,23 @@ void install_ggml_abort_handler() {
      ggml_set_abort_callback(ggml_abort_log_callback);
  }
  
-+extern "C" __attribute__((visibility("default"), used)) int rnllama_patch_abort_v1(void) {
++extern "C" __attribute__((visibility("default"), used)) int rnllama_patch_abort_v2(void) {
 +    return 1;
 +}
 +

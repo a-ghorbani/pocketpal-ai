@@ -97,8 +97,8 @@ const REQUIRED_HEXAGON_SYMBOLS = [
   'ggml_backend_is_hexagon',
 ];
 
-const CORE_PATCH_MARKER = 'rnllama_patch_abort_v1';
-const JSI_PATCH_MARKER = 'rnllama_jsi_patch_ownership_v1';
+const CORE_PATCH_MARKER = 'rnllama_patch_abort_v2';
+const JSI_PATCH_MARKER = 'rnllama_jsi_patch_ownership_v2';
 
 const isJniWrapper = lib => lib.startsWith('librnllama_jni');
 
@@ -459,6 +459,25 @@ describe('the llama.rn patch markers', () => {
       }
     }
     expect(output).not.toContain(`does not export ${JSI_PATCH_MARKER}`);
+  });
+
+  it('fails an artifact built from the previous patch, carrying only the _v1 markers', () => {
+    const previous = {
+      [CORE_PATCH_MARKER]: 'rnllama_patch_abort_v1',
+      [JSI_PATCH_MARKER]: 'rnllama_jsi_patch_ownership_v1',
+    };
+    const entries = conformingEntries();
+    for (const [name, elf] of Object.entries(entries)) {
+      let bytes = elf.toString('latin1');
+      for (const [current, old] of Object.entries(previous)) {
+        bytes = bytes.split(current).join(old);
+      }
+      entries[name] = Buffer.from(bytes, 'latin1');
+    }
+    const {status, output} = gateApk(entries);
+    expect(status).toBe(1);
+    expect(output).toContain(`MISSING  ${CORE_PATCH_MARKER}`);
+    expect(output).toContain(`MISSING  ${JSI_PATCH_MARKER}`);
   });
 
   it('fails when a marker is only an undefined import', () => {
