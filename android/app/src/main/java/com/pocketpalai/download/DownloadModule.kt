@@ -46,7 +46,7 @@ class DownloadModule(reactContext: ReactApplicationContext) : NativeDownloadModu
     }
 
     override fun startDownload(url: String, config: ReadableMap, promise: Promise) {
-        Log.d(TAG, "Starting download with config: $config")
+        Log.d(TAG, "Starting download")
         scope.launch {
             try {
                 val destination = config.getString("destination")
