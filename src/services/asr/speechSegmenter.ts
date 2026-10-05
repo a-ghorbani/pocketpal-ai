@@ -1,5 +1,6 @@
 import {
   ASR_MAX_SEGMENT_MS,
+  ASR_MIN_SEGMENT_MS,
   ASR_SAMPLE_RATE,
   ASR_SEGMENT_LEAD_IN_MS,
   ASR_SEGMENT_PAUSE_MS,
@@ -37,9 +38,9 @@ function concat(chunks: Uint8Array[]): Uint8Array {
 
 /**
  * Splits a live 16-bit PCM stream into segments at pauses, so each can be
- * transcribed while the user keeps speaking. A segment ends after
- * `ASR_SEGMENT_PAUSE_MS` of silence that follows speech, or at
- * `ASR_MAX_SEGMENT_MS`. Silence before any speech is trimmed to a short
+ * transcribed while the user keeps speaking. A segment of at least
+ * `ASR_MIN_SEGMENT_MS` ends after `ASR_SEGMENT_PAUSE_MS` of silence that
+ * follows speech; any segment ends at `ASR_MAX_SEGMENT_MS`. Silence before any speech is trimmed to a short
  * lead-in, so long pauses are never buffered or decoded.
  */
 export class SpeechSegmenter {
@@ -65,10 +66,10 @@ export class SpeechSegmenter {
       this.trimLeadIn();
       return;
     }
-    if (
-      this.silentBytes >= ASR_SEGMENT_PAUSE_MS * BYTES_PER_MS ||
-      this.bytes >= ASR_MAX_SEGMENT_MS * BYTES_PER_MS
-    ) {
+    const atPause =
+      this.silentBytes >= ASR_SEGMENT_PAUSE_MS * BYTES_PER_MS &&
+      this.bytes >= ASR_MIN_SEGMENT_MS * BYTES_PER_MS;
+    if (atPause || this.bytes >= ASR_MAX_SEGMENT_MS * BYTES_PER_MS) {
       this.onSegment(this.take());
     }
   }

@@ -20,6 +20,12 @@ export const ASR_RECORD_WARNING_MS = 10_000;
 export const ASR_SEGMENT_PAUSE_MS = 700;
 
 /**
+ * A pause only ends a segment this long (ms). Whisper decodes a fixed 30 s
+ * window per call, so a short segment costs as much as a long one.
+ */
+export const ASR_MIN_SEGMENT_MS = 15_000;
+
+/**
  * A segment is cut here even without a pause (ms), inside whisper's 30 s
  * window.
  */

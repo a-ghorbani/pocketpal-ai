@@ -1,5 +1,6 @@
 import {
   ASR_MAX_SEGMENT_MS,
+  ASR_MIN_SEGMENT_MS,
   ASR_SEGMENT_LEAD_IN_MS,
   ASR_SEGMENT_PAUSE_MS,
 } from '../constants';
@@ -33,13 +34,13 @@ describe('SpeechSegmenter', () => {
     const segments: Uint8Array[] = [];
     const segmenter = new SpeechSegmenter(s => segments.push(s));
 
-    push(segmenter, speech, 1000);
+    push(segmenter, speech, ASR_MIN_SEGMENT_MS);
     push(segmenter, silence, ASR_SEGMENT_PAUSE_MS - CHUNK_MS);
     expect(segments).toHaveLength(0);
     push(segmenter, silence, CHUNK_MS);
     expect(segments).toHaveLength(1);
     expect(segments[0].length).toBe(
-      (1000 + ASR_SEGMENT_PAUSE_MS) * BYTES_PER_MS,
+      (ASR_MIN_SEGMENT_MS + ASR_SEGMENT_PAUSE_MS) * BYTES_PER_MS,
     );
 
     push(segmenter, speech, 500);
@@ -60,6 +61,18 @@ describe('SpeechSegmenter', () => {
     expect(segmenter.flush()?.length).toBe(
       (1000 + ASR_SEGMENT_PAUSE_MS - CHUNK_MS) * BYTES_PER_MS,
     );
+  });
+
+  it('does not cut a segment shorter than the minimum at a pause', () => {
+    const segments: Uint8Array[] = [];
+    const segmenter = new SpeechSegmenter(s => segments.push(s));
+
+    push(segmenter, speech, 3000);
+    push(segmenter, silence, 2000);
+    push(segmenter, speech, 3000);
+
+    expect(segments).toHaveLength(0);
+    expect(segmenter.flush()?.length).toBe(8000 * BYTES_PER_MS);
   });
 
   it('keeps only a short lead-in of silence before speech', () => {

@@ -6,7 +6,7 @@ import AudioRecord from '@fugood/react-native-audio-pcm-stream';
 
 import {useVoiceCapture} from '../useVoiceCapture';
 import {asrStore} from '../../store';
-import {whisperAsrEngine} from '../../services/asr';
+import {ASR_MIN_SEGMENT_MS, whisperAsrEngine} from '../../services/asr';
 import * as micPerm from '../../utils/asrMicPermission';
 
 const mockEnsureMicPermission = jest.spyOn(micPerm, 'ensureMicPermission');
@@ -37,6 +37,7 @@ function pcmChunkBase64(ms: number, amplitude: number): string {
 
 const loudPcmChunkBase64 = () => pcmChunkBase64(1000, 0.3);
 const silentPcmChunkBase64 = () => pcmChunkBase64(1000, 0);
+const longSpeechPcmBase64 = () => pcmChunkBase64(ASR_MIN_SEGMENT_MS, 0.3);
 
 describe('useVoiceCapture', () => {
   let dataCallback: ((chunk: string) => void) | null = null;
@@ -111,9 +112,8 @@ describe('useVoiceCapture', () => {
       .mockResolvedValueOnce('second part');
     const {result, onTranscript} = await startRecording();
 
-    const firstSpeech = loudPcmChunkBase64();
     act(() => {
-      dataCallback?.(firstSpeech);
+      dataCallback?.(longSpeechPcmBase64());
       dataCallback?.(silentPcmChunkBase64());
     });
     await waitFor(() => expect(mockTranscribe).toHaveBeenCalledTimes(1));
@@ -146,7 +146,7 @@ describe('useVoiceCapture', () => {
     const {result, onTranscript} = await startRecording();
 
     act(() => {
-      dataCallback?.(loudPcmChunkBase64());
+      dataCallback?.(longSpeechPcmBase64());
       dataCallback?.(silentPcmChunkBase64());
     });
     await waitFor(() => expect(mockTranscribe).toHaveBeenCalledTimes(1));
