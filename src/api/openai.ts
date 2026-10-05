@@ -171,10 +171,19 @@ function isValidChatChunk(parsed: any): boolean {
   return choice.delta !== undefined || choice.finish_reason !== undefined;
 }
 
+const isObject = (value: unknown): value is object =>
+  typeof value === 'object' && value !== null;
+
 /** Result from fetchModelsWithHeaders: models + raw response headers. */
 export interface FetchModelsResult {
   models: RemoteModelInfo[];
   headers: Record<string, string>;
+  /**
+   * Present when the body carried a top-level `models` key: a single-model
+   * llama.cpp server emits one, a router does not. A property of the response
+   * rather than of a row, so it still answers when `data` is empty.
+   */
+  hasModelsKey?: true;
 }
 
 /**
@@ -237,6 +246,7 @@ export async function fetchModelsWithHeaders(
       data.models,
     ),
     headers: responseHeaders,
+    ...(isObject(data) && 'models' in data && {hasModelsKey: true}),
   };
 }
 

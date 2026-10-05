@@ -11,6 +11,14 @@ const mockedFetchModels = fetchModels as jest.Mock;
 const mockedFetchModelsWithHeaders = fetchModelsWithHeaders as jest.Mock;
 const mockedDetectServerType = detectServerType as jest.Mock;
 
+const seedChipList = (rows: any[]) =>
+  (serverStore.fetchModelsForServer as jest.Mock).mockImplementationOnce(
+    async (serverId: string) => {
+      serverStore.serverModels.set(serverId, rows);
+      return {ok: true};
+    },
+  );
+
 // Mock the Sheet component following HFTokenSheet test pattern
 jest.mock('../../Sheet', () => {
   const {View, Button} = require('react-native');
@@ -315,11 +323,10 @@ describe('RemoteModelSheet', () => {
     });
   });
 
-  // Tapping a saved server's chip probes via fetchModels using THAT server's
-  // stored requestTimeoutMs (raw), so a saved slow server does not red-X at
-  // the 30s default.
+  // A saved server's chip reads its list through the store's own fetch, the
+  // one writer of the list; the slow-server timeout is that fetch's to honour.
   describe('chip-press probe feed', () => {
-    it('passes the saved server requestTimeoutMs to fetchModels on chip press', async () => {
+    it('reads the list through the store and renders its rows', async () => {
       serverStore.servers = [
         {
           id: 'srv-1',
@@ -329,46 +336,40 @@ describe('RemoteModelSheet', () => {
         },
       ];
       (serverStore.getApiKey as jest.Mock).mockResolvedValue(undefined);
-      mockedFetchModels.mockResolvedValueOnce([
-        {id: 'llama-7b', object: 'model', owned_by: 'system'},
-      ]);
+      seedChipList([{id: 'llama-7b', object: 'model', owned_by: 'system'}]);
 
-      const {getByTestId} = render(
+      const {getByTestId, getByText} = render(
         <RemoteModelSheet isVisible={true} onDismiss={jest.fn()} />,
       );
 
       fireEvent.press(getByTestId('server-chip-srv-1'));
 
       await waitFor(() => {
-        expect(mockedFetchModels).toHaveBeenCalledWith(
-          'http://localhost:1234',
-          undefined,
-          600000,
-        );
+        expect(getByText('llama-7b')).toBeTruthy();
       });
-      // The add-path probe must NOT be involved in the chip flow.
+      expect(serverStore.fetchModelsForServer).toHaveBeenCalledWith('srv-1');
+      expect(mockedFetchModels).not.toHaveBeenCalled();
       expect(mockedFetchModelsWithHeaders).not.toHaveBeenCalled();
     });
 
-    it('forwards undefined for a saved server without requestTimeoutMs', async () => {
+    it('shows the failure text of the read unchanged', async () => {
       serverStore.servers = [
         {id: 'srv-1', name: 'Default Server', url: 'http://localhost:1234'},
       ];
       (serverStore.getApiKey as jest.Mock).mockResolvedValue(undefined);
-      mockedFetchModels.mockResolvedValueOnce([]);
+      (serverStore.fetchModelsForServer as jest.Mock).mockResolvedValueOnce({
+        ok: false,
+        error: 'Connection timed out',
+      });
 
-      const {getByTestId} = render(
+      const {getByTestId, getByText} = render(
         <RemoteModelSheet isVisible={true} onDismiss={jest.fn()} />,
       );
 
       fireEvent.press(getByTestId('server-chip-srv-1'));
 
       await waitFor(() => {
-        expect(mockedFetchModels).toHaveBeenCalledWith(
-          'http://localhost:1234',
-          undefined,
-          undefined,
-        );
+        expect(getByText(/Connection timed out/)).toBeTruthy();
       });
     });
   });
@@ -391,7 +392,7 @@ describe('RemoteModelSheet', () => {
         },
       ];
       (serverStore.getApiKey as jest.Mock).mockResolvedValue(undefined);
-      mockedFetchModels.mockResolvedValueOnce(rows);
+      seedChipList(rows);
 
       const view = render(
         <RemoteModelSheet isVisible={true} onDismiss={jest.fn()} />,
@@ -468,7 +469,7 @@ describe('RemoteModelSheet', () => {
     it('issues no request of its own to answer', async () => {
       await openViaChip('llama.cpp');
 
-      expect(mockedFetchModels).toHaveBeenCalledTimes(1);
+      expect(serverStore.fetchModelsForServer).toHaveBeenCalledTimes(1);
       expect(mockedFetchModelsWithHeaders).not.toHaveBeenCalled();
     });
   });

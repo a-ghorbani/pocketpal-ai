@@ -18,7 +18,6 @@ import {
 } from 'react-native-paper';
 import {Dropdown} from '../ui';
 import {observer} from 'mobx-react';
-import {runInAction} from 'mobx';
 import debounce from 'lodash/debounce';
 
 import {Sheet, TextInput} from '..';
@@ -34,7 +33,7 @@ import {
   toServerType,
 } from '../../utils/serverTypes';
 import {RemoteModelInfo, ServerConfig} from '../../utils/types';
-import {fetchModels, fetchModelsWithHeaders} from '../../api/openai';
+import {fetchModelsWithHeaders} from '../../api/openai';
 import {detectServerType} from '../../api/servers/detect';
 import {deriveListCaps} from '../../api/servers';
 import {profileFor} from '../../api/servers';
@@ -227,14 +226,12 @@ export const RemoteModelSheet: React.FC<RemoteModelSheetProps> = observer(
         const key = await serverStore.getApiKey(server.id);
         apiKeyRef.current = key || '';
         setApiKey(key || '');
-        const models = await fetchModels(
-          server.url,
-          key || undefined,
-          server.requestTimeoutMs,
-        );
-        runInAction(() => {
-          serverStore.serverModels.set(server.id, models);
-        });
+        const result = await serverStore.fetchModelsForServer(server.id);
+        if (!result.ok) {
+          setProbeResult({ok: false, error: result.error});
+          return;
+        }
+        const models = serverStore.serverModels.get(server.id) ?? [];
         const notYetAdded = serverStore.getModelsNotYetAdded(server.id);
         setAvailableModels(models);
         if (notYetAdded.length === 1) {
