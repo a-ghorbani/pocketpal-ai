@@ -21,6 +21,17 @@ const formatSize = (bytes: number): string => {
   return `${Math.round(bytes / (1024 * 1024))} MB`;
 };
 
+// The user's mental model is "Pip is downloading", not the filename, so a
+// download owned by a local pal is named after the pal. Manual downloads from
+// the Models screen fall back to the model name.
+const ownerOf = (modelId: string, modelName: string) => {
+  const pal = palStore.pals.find(
+    p =>
+      p.source === 'local' && p.defaultModel && p.defaultModel.id === modelId,
+  );
+  return {pal, subject: pal ? pal.name : modelName};
+};
+
 /**
  * Sticky single-row banner showing the first non-dismissed active download.
  *
@@ -47,8 +58,9 @@ export const DownloadBanner: React.FC = observer(() => {
       ? modelStore.models.find(m => m.id === failedId)
       : undefined;
   if (failedModel) {
-    const failedTitle = l10n.downloadBanner.failedTitle.replace(
-      '{{name}}',
+    const failedTitle = l10n.downloadBanner.failedTitle;
+    const {pal: failedPal, subject: failedSubject} = ownerOf(
+      failedModel.id,
       failedModel.name,
     );
     const activeCount = modelStore.activeDownloads.length;
@@ -56,26 +68,35 @@ export const DownloadBanner: React.FC = observer(() => {
       <View testID="download-banner-failed" style={styles.root}>
         <Pressable
           accessibilityRole="button"
-          accessibilityLabel={failedTitle}
+          accessibilityLabel={`${failedTitle}, ${failedSubject}`}
           onPress={() => navigation.navigate(ROUTES.MODELS as never)}
           style={styles.body}>
           <View
             accessibilityElementsHidden
             importantForAccessibility="no-hide-descendants"
-            style={styles.avatar}
+            style={[
+              styles.avatar,
+              failedPal?.color?.[0]
+                ? {backgroundColor: failedPal.color[0]}
+                : null,
+            ]}
           />
-          <View style={[styles.content, styles.titleRow]}>
-            <Text
-              style={[styles.title, styles.failedTitle]}
-              numberOfLines={1}
-              ellipsizeMode="tail">
-              {failedTitle}
+          <View style={styles.content}>
+            <View style={styles.titleRow}>
+              <Text
+                style={[styles.title, styles.failedTitle]}
+                numberOfLines={1}>
+                {failedTitle}
+              </Text>
+              {activeCount > 0 ? (
+                <View testID="download-banner-extra-badge" style={styles.badge}>
+                  <Text style={styles.badgeText}>{`+${activeCount}`}</Text>
+                </View>
+              ) : null}
+            </View>
+            <Text style={styles.eta} numberOfLines={1} ellipsizeMode="tail">
+              {failedSubject}
             </Text>
-            {activeCount > 0 ? (
-              <View testID="download-banner-extra-badge" style={styles.badge}>
-                <Text style={styles.badgeText}>{`+${activeCount}`}</Text>
-              </View>
-            ) : null}
           </View>
         </Pressable>
         <Pressable
@@ -111,17 +132,7 @@ export const DownloadBanner: React.FC = observer(() => {
     return null;
   }
 
-  // Match the download's model id to a local pal so we can show the pal
-  // name (the user's mental model is "Pip is downloading", not the
-  // filename). Falls back to the model name when no pal owns it (manual
-  // download from Models screen).
-  const pal = palStore.pals.find(
-    p =>
-      p.source === 'local' &&
-      p.defaultModel &&
-      p.defaultModel.id === visible.modelId,
-  );
-  const subject = pal ? pal.name : visible.model.name;
+  const {pal, subject} = ownerOf(visible.modelId, visible.model.name);
   const title = (
     pal ? l10n.downloadBanner.titleByPal : l10n.downloadBanner.titleByModel
   ).replace('{{name}}', subject);

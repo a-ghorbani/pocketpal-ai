@@ -1623,7 +1623,7 @@
     "titleByPal": "{{name}} is downloading",
     "titleByModel": "{{name}} is downloading",
     "extraInProgress": "+{{count}} more in progress",
-    "failedTitle": "{{name}} couldn't finish downloading",
+    "failedTitle": "Download didn't finish",
     "retry": "Retry"
   }
 }

@@ -6,7 +6,7 @@ import {render} from '../../../../jest/test-utils';
 import {createModel} from '../../../../jest/fixtures/models';
 
 import {DownloadBanner} from '../DownloadBanner';
-import {modelStore, uiStore} from '../../../store';
+import {modelStore, palStore, uiStore} from '../../../store';
 import {downloadManager} from '../../../services/downloads';
 import {createErrorState} from '../../../utils/errors';
 import {ROUTES} from '../../../utils/navigationConstants';
@@ -58,6 +58,7 @@ describe('DownloadBanner', () => {
     runInAction(() => {
       modelStore.models = [failedModel, runningModel];
       modelStore.downloadError = null;
+      palStore.pals = [];
     });
   });
 
@@ -73,8 +74,30 @@ describe('DownloadBanner', () => {
     });
 
     expect(getByTestId('download-banner-failed')).toBeTruthy();
-    expect(getByText("Failed Model couldn't finish downloading")).toBeTruthy();
+    expect(getByText("Download didn't finish")).toBeTruthy();
+    expect(getByText('Failed Model')).toBeTruthy();
     expect(getByTestId('download-banner-retry')).toBeTruthy();
+  });
+
+  it('names a failed pal download after the pal, like the progress row', () => {
+    runInAction(() => {
+      palStore.pals = [
+        {
+          id: 'pal-1',
+          name: 'Pip',
+          source: 'local',
+          defaultModel: failedModel,
+        } as any,
+      ];
+    });
+    failWith(failedModel.id);
+
+    const {getByText, queryByText} = render(<DownloadBanner />, {
+      withNavigation: true,
+    });
+
+    expect(getByText('Pip')).toBeTruthy();
+    expect(queryByText('Failed Model')).toBeNull();
   });
 
   it('takes precedence over a progress row and counts active downloads', () => {
@@ -142,7 +165,7 @@ describe('DownloadBanner', () => {
     failWith(failedModel.id);
 
     const {getByLabelText} = render(<DownloadBanner />, {withNavigation: true});
-    fireEvent.press(getByLabelText("Failed Model couldn't finish downloading"));
+    fireEvent.press(getByLabelText("Download didn't finish, Failed Model"));
 
     expect(mockNavigate).toHaveBeenCalledWith(ROUTES.MODELS);
   });
