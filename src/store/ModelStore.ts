@@ -5,7 +5,7 @@ import {v4 as uuidv4} from 'uuid';
 import 'react-native-get-random-values';
 import {makePersistable} from 'mobx-persist-store';
 import * as RNFS from '@dr.pogodin/react-native-fs';
-import {computed, makeAutoObservable, runInAction, toJS} from 'mobx';
+import {comparer, computed, makeAutoObservable, runInAction, toJS} from 'mobx';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import {ContextParams, LlamaContext, initLlama} from 'llama.rn';
 import {
@@ -261,7 +261,7 @@ class ModelStore {
     makeAutoObservable<ModelStore, 'postCompletionProbeFor'>(this, {
       postCompletionProbeFor: false,
       activeModel: computed,
-      activeModelCaps: computed,
+      activeModelCaps: computed({equals: comparer.structural}),
       activeSamplerDefaults: computed,
       contextId: computed,
       remoteModels: computed,
