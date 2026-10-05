@@ -1254,6 +1254,24 @@ describe('PurchaseStore pipeline', () => {
         },
       );
 
+      it('installs and stays when the listed purchase verifies active', async () => {
+        const h = await refunded();
+        h.store.currentEntitlements.mockResolvedValueOnce({
+          ok: true,
+          transactions: [tx({transactionId: 'tx-0'})],
+        });
+        h.api.verify.mockResolvedValueOnce([result('active')]);
+
+        await expect(h.purchases.buy(hubPal())).resolves.toBe('stay');
+        await settle(h);
+
+        expect(h.purchases.recordFor(PAL_ID)?.status).toBe('active');
+        expect(h.events.send).not.toHaveBeenCalledWith(
+          PAL_ID,
+          'purchase_error',
+        );
+      });
+
       it('offers restore when the store lists no purchase', async () => {
         const h = await refunded();
 

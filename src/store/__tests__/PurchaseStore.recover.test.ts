@@ -947,6 +947,36 @@ describe('PurchaseStore recovery', () => {
         expect(h.purchases.recordFor(PAL_ID)?.status).toBe('unlocking');
       });
 
+      it('Android: keeps it when it unlocks while the query runs', async () => {
+        setOS('android');
+        const h = await unverified();
+        h.api.verify.mockResolvedValueOnce([result('active')]);
+        h.store.currentEntitlements.mockImplementation(async () => {
+          await h.purchases.processTransaction(
+            androidTx({unfinished: true}),
+            {},
+          );
+          return {ok: true, transactions: []};
+        });
+
+        await h.purchases.recover();
+
+        expect(h.purchases.recordFor(PAL_ID)?.status).toBe('active');
+      });
+
+      it.each(['granted', 'active', 'unfulfillable'] as const)(
+        'Android: never drops an owned %s record the query no longer lists',
+        async status => {
+          setOS('android');
+          const h = createHarness({records: [record(status)]});
+
+          await h.purchases.recover();
+
+          expect(h.purchases.recordFor(PAL_ID)).toBeDefined();
+          expect(h.storage.ledger()[PAL_ID]).toBeDefined();
+        },
+      );
+
       it('iOS: keeps it when a successful query no longer lists the product', async () => {
         setOS('ios');
         const h = await unverified();
