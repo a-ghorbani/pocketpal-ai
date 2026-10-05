@@ -8,7 +8,7 @@ import {act, fireEvent, render} from '../../../../jest/test-utils';
 import {L10nContext} from '../../../utils';
 import {l10n} from '../../../locales';
 import {asrStore} from '../../../store';
-import {ASR_LEVEL_HISTORY} from '../../../services/asr';
+import {ASR_LEVEL_HISTORY, ASR_MAX_RECORD_MS} from '../../../services/asr';
 
 import {VoiceRecordingBar} from '../VoiceRecordingBar';
 
@@ -30,6 +30,7 @@ describe('VoiceRecordingBar', () => {
     runInAction(() => {
       asrStore.captureState = 'recording';
       asrStore.inputLevels = [];
+      asrStore.recordingStartedAt = Date.now();
     });
   });
 
@@ -63,6 +64,29 @@ describe('VoiceRecordingBar', () => {
     const secondLast = heights[ASR_LEVEL_HISTORY - 2];
     expect(last).toBeGreaterThan(secondLast);
     expect(secondLast).toBeGreaterThan(heights[0]);
+  });
+
+  it('shows the elapsed time, highlighted near the cap', () => {
+    const now = 1_000_000_000;
+    const dateNow = jest.spyOn(Date, 'now').mockReturnValue(now);
+    runInAction(() => {
+      asrStore.recordingStartedAt = now - 65_000;
+    });
+    const {getByTestId} = renderBar();
+    const timer = getByTestId('voice-elapsed');
+    expect(timer.props.children).toBe('1:05');
+    const normalColor = StyleSheet.flatten(timer.props.style).color;
+
+    act(() => {
+      runInAction(() => {
+        asrStore.recordingStartedAt = now - (ASR_MAX_RECORD_MS - 5_000);
+      });
+    });
+
+    const nearCap = getByTestId('voice-elapsed');
+    expect(nearCap.props.children).toBe('2:55');
+    expect(StyleSheet.flatten(nearCap.props.style).color).not.toBe(normalColor);
+    dateNow.mockRestore();
   });
 
   it('shows a transcribing state with cancel but no stop', () => {

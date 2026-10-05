@@ -34,6 +34,11 @@ function stripNonSpeechTags(text: string): string {
 export class WhisperAsrEngine implements AsrEngine {
   private context: WhisperContext | null = null;
   private loadedTier: AsrTier | null = null;
+  private loading: {tier: AsrTier; promise: Promise<WhisperContext>} | null =
+    null;
+  // Bumped by release(); a load that finishes after a release frees its
+  // context instead of keeping it.
+  private generation = 0;
   private stopTranscription: (() => Promise<void>) | null = null;
 
   private getRoot(): string {
@@ -170,27 +175,53 @@ export class WhisperAsrEngine implements AsrEngine {
     }
   }
 
-  private async ensureContext(tier: AsrTier): Promise<WhisperContext> {
+  private ensureContext(tier: AsrTier): Promise<WhisperContext> {
     if (this.context && this.loadedTier === tier) {
-      return this.context;
+      return Promise.resolve(this.context);
     }
-    if (this.context) {
-      await this.release();
+    if (this.loading?.tier === tier) {
+      return this.loading.promise;
     }
-    const context = await initWhisper({
-      filePath: this.getModelPath(tier),
-      // CoreML sidecar is an optional accelerator; absence degrades to the
-      // GGUF CPU path. Falling back to CPU never blocks transcription.
-      useCoreMLIos: Platform.OS === 'ios',
-    });
-    this.context = context;
-    this.loadedTier = tier;
-    return context;
+    const previous = this.loading?.promise;
+    const generation = this.generation;
+    const promise = (async () => {
+      await previous?.catch(() => {});
+      await this.releaseContext();
+      const context = await initWhisper({
+        filePath: this.getModelPath(tier),
+        // CoreML sidecar is an optional accelerator; absence degrades to the
+        // GGUF CPU path. Falling back to CPU never blocks transcription.
+        useCoreMLIos: Platform.OS === 'ios',
+      });
+      if (generation !== this.generation) {
+        await context.release().catch(() => {});
+        throw new Error('ASR context released while loading');
+      }
+      this.context = context;
+      this.loadedTier = tier;
+      return context;
+    })();
+    const loading = {tier, promise};
+    this.loading = loading;
+    promise
+      .finally(() => {
+        if (this.loading === loading) {
+          this.loading = null;
+        }
+      })
+      .catch(() => {});
+    return promise;
+  }
+
+  async prepare(tier: AsrTier): Promise<void> {
+    if (await this.isInstalled(tier)) {
+      await this.ensureContext(tier);
+    }
   }
 
   async transcribe(
     pcmBase64Int16: string,
-    opts?: {tier: AsrTier; language?: string},
+    opts?: {tier: AsrTier; language?: string; prompt?: string},
   ): Promise<string> {
     const tier = opts?.tier ?? 'small';
     if (!(await this.isInstalled(tier))) {
@@ -201,6 +232,7 @@ export class WhisperAsrEngine implements AsrEngine {
     // whisper.rn's own doc comment says.
     const {stop, promise} = context.transcribeData(pcmBase64Int16, {
       language: opts?.language ?? 'auto',
+      prompt: opts?.prompt,
     });
     this.stopTranscription = stop;
     try {
@@ -216,14 +248,21 @@ export class WhisperAsrEngine implements AsrEngine {
   }
 
   async release(): Promise<void> {
-    if (this.context) {
+    this.generation++;
+    this.loading = null;
+    await this.releaseContext();
+  }
+
+  private async releaseContext(): Promise<void> {
+    const context = this.context;
+    this.context = null;
+    this.loadedTier = null;
+    if (context) {
       try {
-        await this.context.release();
+        await context.release();
       } catch (err) {
         console.warn('[WhisperAsrEngine] release failed:', err);
       }
-      this.context = null;
-      this.loadedTier = null;
     }
   }
 }

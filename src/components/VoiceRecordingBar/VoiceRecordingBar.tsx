@@ -1,4 +1,4 @@
-import React, {useContext} from 'react';
+import React, {useContext, useEffect, useState} from 'react';
 import {ActivityIndicator, Pressable, View} from 'react-native';
 
 import {observer} from 'mobx-react';
@@ -7,7 +7,11 @@ import {Text} from 'react-native-paper';
 import {useTheme} from '../../hooks';
 import {asrStore} from '../../store';
 import {L10nContext} from '../../utils';
-import {ASR_LEVEL_HISTORY} from '../../services/asr';
+import {
+  ASR_LEVEL_HISTORY,
+  ASR_MAX_RECORD_MS,
+  ASR_RECORD_WARNING_MS,
+} from '../../services/asr';
 import {XIcon} from '../../assets/icons';
 
 import {BAR_MIN_HEIGHT, BAR_RANGE, createStyles} from './styles';
@@ -42,10 +46,38 @@ const LevelBars: React.FC<{
   );
 });
 
+function formatElapsed(ms: number): string {
+  const seconds = Math.floor(ms / 1000);
+  return `${Math.floor(seconds / 60)}:${String(seconds % 60).padStart(2, '0')}`;
+}
+
+const ElapsedTimer: React.FC<{styles: ReturnType<typeof createStyles>}> =
+  observer(({styles}) => {
+    const startedAt = asrStore.recordingStartedAt;
+    const [now, setNow] = useState(Date.now());
+    useEffect(() => {
+      const interval = setInterval(() => setNow(Date.now()), 250);
+      return () => clearInterval(interval);
+    }, []);
+    if (startedAt === null) {
+      return null;
+    }
+    const elapsed = Math.max(0, now - startedAt);
+    const nearCap = ASR_MAX_RECORD_MS - elapsed <= ASR_RECORD_WARNING_MS;
+    return (
+      <Text
+        variant="labelLarge"
+        style={[styles.timer, nearCap && styles.timerWarning]}
+        testID="voice-elapsed">
+        {formatElapsed(elapsed)}
+      </Text>
+    );
+  });
+
 /**
  * Replaces the composer's control row while a voice capture is recording or
- * being transcribed: cancel, a live input-level waveform (or a transcribing
- * label), and stop.
+ * being transcribed: cancel, a live input-level waveform with the elapsed time
+ * (or a transcribing label), and stop.
  */
 export const VoiceRecordingBar: React.FC<VoiceRecordingBarProps> = observer(
   ({onCancel, onStop}) => {
@@ -74,7 +106,10 @@ export const VoiceRecordingBar: React.FC<VoiceRecordingBarProps> = observer(
             {l10n.voiceInput.transcribingLabel}
           </Text>
         ) : (
-          <LevelBars styles={styles} label={l10n.voiceInput.recordingLabel} />
+          <>
+            <LevelBars styles={styles} label={l10n.voiceInput.recordingLabel} />
+            <ElapsedTimer styles={styles} />
+          </>
         )}
 
         {isTranscribing ? (

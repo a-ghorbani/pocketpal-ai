@@ -78,6 +78,8 @@ export class ASRStore {
   lastError: AsrErrorKind | null = null;
   // Loudness (0..1) of the most recent captured chunks, oldest first.
   inputLevels: number[] = [];
+  // Date.now() when the current recording started; null when not recording.
+  recordingStartedAt: number | null = null;
 
   constructor() {
     makeAutoObservable(this, {inputLevels: observable.ref}, {autoBind: true});
@@ -292,6 +294,9 @@ export class ASRStore {
     }
     if (state === 'recording') {
       this.inputLevels = [];
+      this.recordingStartedAt = Date.now();
+    } else {
+      this.recordingStartedAt = null;
     }
   }
 
@@ -306,11 +311,13 @@ export class ASRStore {
   setError(kind: AsrErrorKind): void {
     this.captureState = 'error';
     this.lastError = kind;
+    this.recordingStartedAt = null;
   }
 
   resetCapture(): void {
     this.captureState = 'idle';
     this.lastError = null;
+    this.recordingStartedAt = null;
   }
 }
 

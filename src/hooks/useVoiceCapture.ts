@@ -10,7 +10,9 @@ import {
   ASR_CHANNELS,
   ASR_CHUNK_BYTES,
   ASR_MAX_RECORD_MS,
+  ASR_PROMPT_CHARS,
   ASR_SAMPLE_RATE,
+  SpeechSegmenter,
   energyVad,
   inputLevel,
   int16PcmToFloat32,
@@ -29,49 +31,80 @@ interface UseVoiceCaptureReturn {
   cancel: () => void;
 }
 
-/** Concatenate accumulated 16-bit PCM byte chunks into one Uint8Array. */
-function concatChunks(chunks: Uint8Array[]): Uint8Array {
-  let total = 0;
-  for (const c of chunks) {
-    total += c.length;
-  }
-  const out = new Uint8Array(total);
-  let offset = 0;
-  for (const c of chunks) {
-    out.set(c, offset);
-    offset += c.length;
-  }
-  return out;
-}
-
 /**
  * Tap-to-start, tap-to-stop capture lifecycle for the composer mic.
  *
- * start  → ensure mic permission → start 16 kHz mono PCM capture, buffer
- *          chunks bounded by ASR_MAX_RECORD_MS, and publish each chunk's
- *          loudness to `asrStore.inputLevels` for the waveform.
- * stop   → stop capture → energy-VAD gate (a silent capture is dropped without
- *          decoding) → on-device whisper transcribe → onTranscript append.
- * cancel → discard the capture or abandon the in-flight transcription.
+ * start  → ensure mic permission → load the whisper model and start 16 kHz
+ *          mono PCM capture, publishing each chunk's loudness to
+ *          `asrStore.inputLevels` for the waveform. `SpeechSegmenter` cuts the
+ *          stream at pauses and each segment is transcribed while the user
+ *          keeps speaking, so stop only waits for the last one.
+ * stop   → transcribe the remaining audio → join the segment texts →
+ *          onTranscript append. Silent segments are never decoded.
+ * cancel → discard the capture and any transcription in progress.
  *
- * Native capture is released on stop, cancel, error, max-ms, AppState
- * background, and unmount, so the mic is never leaked. All work is on-device:
- * the only network in the ASR subsystem is the model download.
+ * All engine work runs through one serial queue, so a release never cuts
+ * across a load or a transcription. Native capture is released on stop,
+ * cancel, error, max-ms, AppState background, and unmount. All work is
+ * on-device: the only network in the ASR subsystem is the model download.
  */
 export function useVoiceCapture(
   options: UseVoiceCaptureOptions,
 ): UseVoiceCaptureReturn {
   const {onTranscript} = options;
 
-  const chunksRef = useRef<Uint8Array[]>([]);
   const recordingRef = useRef(false);
-  // Bumped by start and cancel; async work from an older session drops its
-  // result instead of writing capture state.
+  // Bumped by start and cancel; work from an older session drops its result
+  // instead of writing capture state.
   const sessionRef = useRef(0);
+  const segmenterRef = useRef<SpeechSegmenter | null>(null);
+  const engineQueueRef = useRef<Promise<void>>(Promise.resolve());
+  const textsRef = useRef<string[]>([]);
+  const failedRef = useRef(false);
   const listenerRef = useRef<{remove: () => void} | null>(null);
   const maxTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const onTranscriptRef = useRef(onTranscript);
   onTranscriptRef.current = onTranscript;
+
+  const enqueueEngine = useCallback((work: () => Promise<void>) => {
+    engineQueueRef.current = engineQueueRef.current.then(work).catch(err => {
+      console.warn('[useVoiceCapture] engine work failed:', err);
+    });
+  }, []);
+
+  const releaseEngine = useCallback(() => {
+    enqueueEngine(() => whisperAsrEngine.release());
+  }, [enqueueEngine]);
+
+  const transcribeSegment = useCallback(
+    (pcm: Uint8Array, session: number) => {
+      enqueueEngine(async () => {
+        if (session !== sessionRef.current || failedRef.current) {
+          return;
+        }
+        // Whisper hallucinates on silence — never decode a silent segment.
+        if (!energyVad(int16PcmToFloat32(pcm)).passed) {
+          return;
+        }
+        const prompt = textsRef.current.join(' ').slice(-ASR_PROMPT_CHARS);
+        try {
+          const text = await whisperAsrEngine.transcribe(fromByteArray(pcm), {
+            tier: asrStore.selectedTier,
+            prompt: prompt || undefined,
+          });
+          if (session === sessionRef.current && text.length > 0) {
+            textsRef.current.push(text);
+          }
+        } catch (err) {
+          if (session === sessionRef.current) {
+            console.warn('[useVoiceCapture] transcribe failed:', err);
+            failedRef.current = true;
+          }
+        }
+      });
+    },
+    [enqueueEngine],
+  );
 
   const teardownCapture = useCallback(() => {
     recordingRef.current = false;
@@ -83,59 +116,40 @@ export function useVoiceCapture(
     listenerRef.current = null;
     // Native stop() returns the bare native value (effectively void on both
     // platforms; the .d.ts Promise<string> type is wrong). Wrap so a synchronous
-    // undefined return can't throw and abort teardown/transcribe.
+    // undefined return can't throw and abort teardown.
     Promise.resolve(AudioRecord.stop()).catch(() => {});
   }, []);
 
-  const discardCapture = useCallback(() => {
-    chunksRef.current = [];
-    teardownCapture();
-  }, [teardownCapture]);
-
-  const finishAndTranscribe = useCallback(
+  const finish = useCallback(
     async (session: number) => {
-      if (!recordingRef.current) {
+      if (!recordingRef.current || session !== sessionRef.current) {
         return;
       }
       teardownCapture();
-
-      const pcm = concatChunks(chunksRef.current);
-      chunksRef.current = [];
-
-      // Whisper hallucinates on silence — never decode a capture without
-      // speech. The flat waveform already told the user nothing was heard.
-      if (!energyVad(int16PcmToFloat32(pcm)).passed) {
-        asrStore.resetCapture();
-        return;
+      const tail = segmenterRef.current?.flush();
+      segmenterRef.current = null;
+      if (tail) {
+        transcribeSegment(tail, session);
       }
 
       asrStore.setCaptureState('transcribing');
-      try {
-        const text = await whisperAsrEngine.transcribe(fromByteArray(pcm), {
-          tier: asrStore.selectedTier,
-        });
-        if (session !== sessionRef.current) {
-          return;
-        }
-        asrStore.resetCapture();
-        if (text.length > 0) {
-          onTranscriptRef.current(text);
-        }
-      } catch (err) {
-        if (session !== sessionRef.current) {
-          return;
-        }
-        console.warn('[useVoiceCapture] transcribe failed:', err);
+      await engineQueueRef.current;
+      if (session !== sessionRef.current) {
+        return;
+      }
+      // Free the ~400 MB whisper context once idle; the next capture reloads it.
+      releaseEngine();
+      if (failedRef.current) {
         asrStore.setError('transcribe_failed');
-      } finally {
-        // Free the ~400 MB whisper context once idle; re-init from the local
-        // model on the next utterance is cheap. Best-effort — never block append.
-        whisperAsrEngine.release().catch(err => {
-          console.warn('[useVoiceCapture] context release failed:', err);
-        });
+        return;
+      }
+      asrStore.resetCapture();
+      const text = textsRef.current.join(' ');
+      if (text.length > 0) {
+        onTranscriptRef.current(text);
       }
     },
-    [teardownCapture],
+    [releaseEngine, teardownCapture, transcribeSegment],
   );
 
   const start = useCallback(() => {
@@ -172,6 +186,8 @@ export function useVoiceCapture(
         asrStore.setError('permission_denied');
         return;
       }
+      const tier = asrStore.selectedTier;
+      enqueueEngine(() => whisperAsrEngine.prepare(tier));
       try {
         await AudioRecord.init({
           sampleRate: ASR_SAMPLE_RATE,
@@ -183,6 +199,7 @@ export function useVoiceCapture(
       } catch (err) {
         console.warn('[useVoiceCapture] audio init failed:', err);
         if (session === sessionRef.current) {
+          releaseEngine();
           asrStore.setError('transcribe_failed');
         }
         return;
@@ -190,12 +207,16 @@ export function useVoiceCapture(
       if (session !== sessionRef.current) {
         return;
       }
-      chunksRef.current = [];
+      textsRef.current = [];
+      failedRef.current = false;
+      segmenterRef.current = new SpeechSegmenter(pcm =>
+        transcribeSegment(pcm, session),
+      );
       recordingRef.current = true;
       listenerRef.current = AudioRecord.on('data', (chunk: string) => {
         if (recordingRef.current) {
           const bytes = toByteArray(chunk);
-          chunksRef.current.push(bytes);
+          segmenterRef.current?.push(bytes);
           asrStore.pushInputLevel(inputLevel(int16PcmToFloat32(bytes)));
         }
       });
@@ -203,27 +224,27 @@ export function useVoiceCapture(
       asrStore.setCaptureState('recording');
       maxTimerRef.current = setTimeout(() => {
         // Reaching the cap ends capture as if the user tapped stop.
-        finishAndTranscribe(session).catch(() => {});
+        finish(session).catch(() => {});
       }, ASR_MAX_RECORD_MS);
     })();
-  }, [finishAndTranscribe]);
+  }, [enqueueEngine, finish, releaseEngine, transcribeSegment]);
 
   const stop = useCallback(() => {
-    finishAndTranscribe(sessionRef.current).catch(() => {});
-  }, [finishAndTranscribe]);
+    finish(sessionRef.current).catch(() => {});
+  }, [finish]);
 
   const cancel = useCallback(() => {
     sessionRef.current++;
     if (recordingRef.current) {
-      discardCapture();
+      teardownCapture();
     }
-    if (asrStore.captureState === 'transcribing') {
-      whisperAsrEngine.cancelTranscription().catch(err => {
-        console.warn('[useVoiceCapture] cancel transcription failed:', err);
-      });
-    }
+    segmenterRef.current = null;
+    whisperAsrEngine.cancelTranscription().catch(err => {
+      console.warn('[useVoiceCapture] cancel transcription failed:', err);
+    });
+    releaseEngine();
     asrStore.resetCapture();
-  }, [discardCapture]);
+  }, [releaseEngine, teardownCapture]);
 
   // Release capture on background and unmount so the mic is never leaked.
   useEffect(() => {

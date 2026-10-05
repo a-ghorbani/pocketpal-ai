@@ -191,6 +191,90 @@ describe('WhisperAsrEngine', () => {
       ).resolves.toBe('');
     });
 
+    it('loads the model once when prepare and transcribe overlap', async () => {
+      mockExists.mockResolvedValue(true);
+      mockReadFile.mockResolvedValue(
+        JSON.stringify({version: ASR_MODEL_VERSION}),
+      );
+      mockInitWhisper.mockResolvedValue({
+        transcribeData: jest.fn().mockReturnValue({
+          stop: jest.fn(),
+          promise: Promise.resolve({
+            result: 'hi',
+            language: 'en',
+            isAborted: false,
+          }),
+        }),
+        release: jest.fn().mockResolvedValue(undefined),
+      });
+
+      await Promise.all([
+        engine.prepare('small'),
+        engine.transcribe('base64pcm', {tier: 'small'}),
+      ]);
+
+      expect(mockInitWhisper).toHaveBeenCalledTimes(1);
+    });
+
+    it('frees a model that finishes loading after a release', async () => {
+      mockExists.mockResolvedValue(true);
+      mockReadFile.mockResolvedValue(
+        JSON.stringify({version: ASR_MODEL_VERSION}),
+      );
+      const lateContext = {
+        transcribeData: jest.fn(),
+        release: jest.fn().mockResolvedValue(undefined),
+      };
+      let finishLoad: (c: typeof lateContext) => void = () => {};
+      mockInitWhisper.mockReturnValueOnce(
+        new Promise(resolve => {
+          finishLoad = resolve;
+        }),
+      );
+
+      const preparing = engine.prepare('small');
+      await new Promise(resolve => setImmediate(resolve));
+      await engine.release();
+      finishLoad(lateContext);
+
+      await expect(preparing).rejects.toThrow();
+      expect(lateContext.release).toHaveBeenCalledTimes(1);
+    });
+
+    it('does not load a tier that is not installed', async () => {
+      mockExists.mockResolvedValue(false);
+
+      await engine.prepare('small');
+
+      expect(mockInitWhisper).not.toHaveBeenCalled();
+    });
+
+    it('passes earlier text to whisper as the prompt', async () => {
+      mockExists.mockResolvedValue(true);
+      mockReadFile.mockResolvedValue(
+        JSON.stringify({version: ASR_MODEL_VERSION}),
+      );
+      const transcribeData = jest.fn().mockReturnValue({
+        stop: jest.fn(),
+        promise: Promise.resolve({
+          result: 'more',
+          language: 'en',
+          isAborted: false,
+        }),
+      });
+      mockInitWhisper.mockResolvedValue({
+        transcribeData,
+        release: jest.fn().mockResolvedValue(undefined),
+      });
+
+      await engine.transcribe('base64pcm', {tier: 'small', prompt: 'before'});
+
+      expect(transcribeData).toHaveBeenCalledWith(
+        'base64pcm',
+        expect.objectContaining({prompt: 'before'}),
+      );
+    });
+
     it('treats cancel with no decode in flight as a no-op', async () => {
       await expect(engine.cancelTranscription()).resolves.toBeUndefined();
     });

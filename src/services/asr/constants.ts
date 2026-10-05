@@ -8,10 +8,28 @@ import type {AsrTier, AsrTierManifest} from './types';
 export const ASR_MIN_RAM_BYTES = 4 * 1024 * 1024 * 1024;
 
 /**
- * Maximum recording length (ms). Bounds the in-memory PCM buffer; reaching it
- * ends capture as if the user tapped stop.
+ * Maximum recording length (ms). Reaching it ends capture as if the user
+ * tapped stop.
  */
-export const ASR_MAX_RECORD_MS = 30_000;
+export const ASR_MAX_RECORD_MS = 180_000;
+
+/** The recording timer is highlighted for this long before the cap (ms). */
+export const ASR_RECORD_WARNING_MS = 10_000;
+
+/** Silence after speech that ends a segment for transcription (ms). */
+export const ASR_SEGMENT_PAUSE_MS = 700;
+
+/**
+ * A segment is cut here even without a pause (ms), inside whisper's 30 s
+ * window.
+ */
+export const ASR_MAX_SEGMENT_MS = 25_000;
+
+/** Silence kept before speech when a segment starts (ms). */
+export const ASR_SEGMENT_LEAD_IN_MS = 300;
+
+/** Trailing characters of earlier segments passed to whisper as context. */
+export const ASR_PROMPT_CHARS = 200;
 
 /** Bytes per captured PCM chunk: 50 ms of 16 kHz mono 16-bit audio. */
 export const ASR_CHUNK_BYTES = 1600;

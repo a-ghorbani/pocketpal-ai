@@ -80,12 +80,15 @@ export interface AsrEngine {
   /**
    * Transcribe a captured 16 kHz mono PCM buffer (base64-encoded signed
    * 16-bit little-endian).
-   * Runs entirely on-device; no network. `language` defaults to auto-detect.
+   * Runs entirely on-device; no network. `language` defaults to auto-detect;
+   * `prompt` is preceding text that carries context across segments.
    */
   transcribe(
     pcmBase64Int16: string,
-    opts?: {tier: AsrTier; language?: string},
+    opts?: {tier: AsrTier; language?: string; prompt?: string},
   ): Promise<string>;
+  /** Load the tier's model ahead of `transcribe`. A no-op when not installed. */
+  prepare(tier: AsrTier): Promise<void>;
   /** Stop an in-flight `transcribe`, which then resolves to ''. */
   cancelTranscription(): Promise<void>;
   /** Release any loaded native whisper context. */

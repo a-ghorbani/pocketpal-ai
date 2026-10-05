@@ -31,6 +31,7 @@ declare module 'whisper.rn' {
   }
   export interface TranscribeOptions {
     language?: string;
+    prompt?: string;
   }
   export class WhisperContext {
     transcribe(

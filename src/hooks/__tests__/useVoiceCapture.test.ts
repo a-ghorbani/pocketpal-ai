@@ -16,23 +16,27 @@ const mockCancelTranscription = jest.spyOn(
   'cancelTranscription',
 );
 const mockRelease = jest.spyOn(whisperAsrEngine, 'release');
+const mockPrepare = jest.spyOn(whisperAsrEngine, 'prepare');
 const mockAudioInit = AudioRecord.init as jest.Mock;
 const mockAudioStart = AudioRecord.start as jest.Mock;
 const mockAudioStop = AudioRecord.stop as jest.Mock;
 const mockAudioOn = AudioRecord.on as jest.Mock;
 
-// Build a base64-encoded chunk of loud, long-enough 16-bit PCM so the
-// energy-VAD gate passes (1 s of speech-level signal).
-function loudPcmChunkBase64(): string {
-  const samples = 16000; // 1 s @ 16 kHz
+// Base64-encoded 16-bit PCM: `ms` of speech-level signal (passes the energy
+// gate) or of silence.
+function pcmChunkBase64(ms: number, amplitude: number): string {
+  const samples = ms * 16; // 16 kHz
   const bytes = new Uint8Array(samples * 2);
   for (let i = 0; i < samples; i++) {
-    const v = Math.round(Math.sin((i / 16) * Math.PI) * 0.3 * 0x7fff);
+    const v = Math.round(Math.sin((i / 16) * Math.PI) * amplitude * 0x7fff);
     bytes[i * 2] = v & 0xff; // eslint-disable-line no-bitwise
     bytes[i * 2 + 1] = (v >> 8) & 0xff; // eslint-disable-line no-bitwise
   }
   return fromByteArray(bytes);
 }
+
+const loudPcmChunkBase64 = () => pcmChunkBase64(1000, 0.3);
+const silentPcmChunkBase64 = () => pcmChunkBase64(1000, 0);
 
 describe('useVoiceCapture', () => {
   let dataCallback: ((chunk: string) => void) | null = null;
@@ -50,6 +54,7 @@ describe('useVoiceCapture', () => {
     mockTranscribe.mockResolvedValue('hello world');
     mockCancelTranscription.mockResolvedValue(undefined);
     mockRelease.mockResolvedValue(undefined);
+    mockPrepare.mockResolvedValue(undefined);
     // Native init() returns void on the JS bridge (the .d.ts is wrong).
     mockAudioInit.mockReturnValue(undefined);
     // Native stop() returns undefined (void), not a Promise — the real contract.
@@ -90,6 +95,85 @@ describe('useVoiceCapture', () => {
     expect(mockTranscribe).toHaveBeenCalledWith(chunk, {tier: 'small'});
     expect(asrStore.captureState).toBe('idle');
     // The whisper context is freed once transcription settles.
+    await waitFor(() => expect(mockRelease).toHaveBeenCalled());
+  });
+
+  it('loads the model as soon as recording starts', async () => {
+    await startRecording();
+
+    await waitFor(() => expect(mockPrepare).toHaveBeenCalledWith('small'));
+    expect(mockTranscribe).not.toHaveBeenCalled();
+  });
+
+  it('transcribes at a pause while still recording, with earlier text as context', async () => {
+    mockTranscribe
+      .mockResolvedValueOnce('first part')
+      .mockResolvedValueOnce('second part');
+    const {result, onTranscript} = await startRecording();
+
+    const firstSpeech = loudPcmChunkBase64();
+    act(() => {
+      dataCallback?.(firstSpeech);
+      dataCallback?.(silentPcmChunkBase64());
+    });
+    await waitFor(() => expect(mockTranscribe).toHaveBeenCalledTimes(1));
+    expect(asrStore.captureState).toBe('recording');
+    expect(mockTranscribe.mock.calls[0][1]).toEqual({
+      tier: 'small',
+      prompt: undefined,
+    });
+
+    act(() => {
+      dataCallback?.(loudPcmChunkBase64());
+    });
+    await act(async () => {
+      result.current.stop();
+    });
+
+    await waitFor(() =>
+      expect(onTranscript).toHaveBeenCalledWith('first part second part'),
+    );
+    expect(mockTranscribe).toHaveBeenCalledTimes(2);
+    expect(mockTranscribe.mock.calls[1][1]).toEqual({
+      tier: 'small',
+      prompt: 'first part',
+    });
+    await waitFor(() => expect(mockRelease).toHaveBeenCalled());
+  });
+
+  it('reports a failed segment once recording stops', async () => {
+    mockTranscribe.mockRejectedValueOnce(new Error('decode failed'));
+    const {result, onTranscript} = await startRecording();
+
+    act(() => {
+      dataCallback?.(loudPcmChunkBase64());
+      dataCallback?.(silentPcmChunkBase64());
+    });
+    await waitFor(() => expect(mockTranscribe).toHaveBeenCalledTimes(1));
+    expect(asrStore.setError).not.toHaveBeenCalled();
+
+    act(() => {
+      dataCallback?.(loudPcmChunkBase64());
+    });
+    await act(async () => {
+      result.current.stop();
+    });
+
+    await waitFor(() =>
+      expect(asrStore.setError).toHaveBeenCalledWith('transcribe_failed'),
+    );
+    expect(mockTranscribe).toHaveBeenCalledTimes(1);
+    expect(onTranscript).not.toHaveBeenCalled();
+  });
+
+  it('releases the preloaded model on cancel', async () => {
+    const {result} = await startRecording();
+    await waitFor(() => expect(mockPrepare).toHaveBeenCalled());
+
+    act(() => {
+      result.current.cancel();
+    });
+
     await waitFor(() => expect(mockRelease).toHaveBeenCalled());
   });
 

@@ -233,6 +233,17 @@ describe('ASRStore', () => {
       expect(store.inputLevels).toEqual([]);
     });
 
+    it('records when a recording started and clears it after', async () => {
+      await store.init();
+      store.setCaptureState('recording');
+      expect(store.recordingStartedAt).not.toBeNull();
+      store.setCaptureState('transcribing');
+      expect(store.recordingStartedAt).toBeNull();
+      store.setCaptureState('recording');
+      store.resetCapture();
+      expect(store.recordingStartedAt).toBeNull();
+    });
+
     it('clears lastError when leaving the error state', async () => {
       await store.init();
       store.setError('transcribe_failed');

@@ -38,6 +38,7 @@ class MockASRStore {
   captureState: CaptureState = 'idle';
   lastError: AsrErrorKind | null = null;
   inputLevels: number[] = [];
+  recordingStartedAt: number | null = null;
 
   init: jest.Mock;
   setUserASROverride: jest.Mock;
@@ -83,6 +84,7 @@ class MockASRStore {
     this.setCaptureState = jest.fn((s: CaptureState) => {
       runInAction(() => {
         this.captureState = s;
+        this.recordingStartedAt = s === 'recording' ? Date.now() : null;
       });
     });
     this.setError = jest.fn((k: AsrErrorKind) => {

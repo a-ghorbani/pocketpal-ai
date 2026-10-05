@@ -45,6 +45,15 @@ export const createStyles = (theme: Theme) =>
       borderRadius: 1.5,
       backgroundColor: theme.colors.onSurfaceVariant,
     },
+    timer: {
+      minWidth: 36,
+      textAlign: 'right',
+      color: theme.colors.onSurfaceVariant,
+      fontVariant: ['tabular-nums'],
+    },
+    timerWarning: {
+      color: theme.colors.error,
+    },
     transcribingText: {
       flex: 1,
       textAlign: 'center',
