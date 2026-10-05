@@ -2,10 +2,11 @@
  * Turns an abort into a level-triggered stop: from the first abort until
  * `pending` settles, `stop` runs at once and then every `intervalMs`.
  *
- * A single stop can be lost. llama.rn's `completion` awaits chat formatting
- * before its native call starts, and that call clears the native interrupt
- * flag, so a stop sent in between does nothing. Repeating it until the call
- * settles closes that window.
+ * llama.rn's `completion` formats the prompt before its native call, and that
+ * call clears the native interrupt flag. The llama.rn patch re-applies a stop
+ * requested in between, so the first stop is enough on its own. The repeats
+ * are a fallback that runs only while JS timers fire, which they do not while
+ * the app is backgrounded.
  *
  * Resolves when `pending` settles; never rejects.
  */

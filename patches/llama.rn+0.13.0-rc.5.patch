@@ -1091,3 +1091,43 @@ index f646e9d..66a967d 100644
      if (rc != 0) {
          LOG_ERROR("tryChatterboxPrefill: llama_decode prefill failed");
          return false;
+diff --git a/node_modules/llama.rn/src/index.ts b/node_modules/llama.rn/src/index.ts
+index c4a0542..1ea9259 100644
+--- a/node_modules/llama.rn/src/index.ts
++++ b/node_modules/llama.rn/src/index.ts
+@@ -396,6 +396,8 @@
+ export class LlamaContext {
+   id: number
+ 
++  private stopRequests = 0
++
+   gpu: boolean = false
+ 
+   reasonNoGPU: string = ''
+@@ -832,6 +834,7 @@
+     params: CompletionParams & { speaker?: LlamaSpeaker },
+     callback?: (data: TokenData) => void,
+   ): Promise<NativeCompletionResult> {
++    const stopRequestsAtStart = this.stopRequests
+     const nativeParams: NativeCompletionRequestParams & {
+       speakerId?: number
+     } = {
+@@ -919,11 +922,16 @@
+     if (!nativeParams.prompt && !params.embedding && !nativeParams.media_paths)
+       throw new Error('Prompt is required')
+ 
+-    const { llamaCompletion } = getJsi()
+-    return llamaCompletion(this.id, nativeParams, callback)
++    const { llamaCompletion, llamaStopCompletion } = getJsi()
++    const result = llamaCompletion(this.id, nativeParams, callback)
++    // llamaCompletion clears the native stop flag, so a stop that arrived
++    // while the prompt was formatted is applied again here.
++    if (this.stopRequests !== stopRequestsAtStart) llamaStopCompletion(this.id)
++    return result
+   }
+ 
+   stopCompletion(): Promise<void> {
++    this.stopRequests += 1
+     const { llamaStopCompletion } = getJsi()
+     return llamaStopCompletion(this.id)
+   }
