@@ -260,6 +260,18 @@ describe('bounds', () => {
     });
   });
 
+  it('judges an unload at the settle bound only on a read that started after it', async () => {
+    await read(rows({[ALPHA]: 'loaded'}));
+    mockedFetch.mockImplementation(() => new Promise(() => {}));
+
+    store.unload(serverId, ALPHA);
+    await elapse(ROUTER_UNLOAD_SETTLE_MS + 5000);
+
+    const record = store.recordFor(serverId, ALPHA)!;
+    expect(record.failure).toBeUndefined();
+    expect(store.owns(record)).toBe(true);
+  });
+
   it('ends an unload with no claim when the list cannot say', async () => {
     await read(rows({[ALPHA]: 'loaded'}));
     mockedFetch.mockImplementation(async () =>

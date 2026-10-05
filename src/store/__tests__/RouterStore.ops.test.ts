@@ -2,6 +2,7 @@ import {runInAction} from 'mobx';
 
 import * as openaiModule from '../../api/openai';
 import * as routerApi from '../../api/llamaServer/router';
+import * as Keychain from 'react-native-keychain';
 
 jest.mock('mobx-persist-store', () => ({
   makePersistable: jest.fn().mockReturnValue(Promise.resolve()),
@@ -531,6 +532,73 @@ describe('cancel and stop', () => {
     await flush();
 
     expect(store.recordFor(serverId, TARGET)).toBeUndefined();
+  });
+
+  it('posts no load when it is cancelled while the key is read', async () => {
+    const key = deferred<{password: string; username: string}>();
+    (Keychain.getGenericPassword as jest.Mock).mockReturnValueOnce(key.promise);
+    const waiting = store.ensureLoaded(serverId, TARGET);
+    await flush();
+
+    store.cancel(serverId, TARGET);
+    key.resolve({password: 'mockPass', username: 'mockUser'});
+    await flush();
+
+    await expect(waiting).resolves.toBe('withdrawn');
+    expect(mockedLoad).not.toHaveBeenCalled();
+  });
+
+  it('keeps the unload a cancel started when the aborted request rejects', async () => {
+    const answer = deferred<{status: number; body: unknown}>();
+    mockedLoad.mockReturnValueOnce(answer.promise);
+    const unloadAnswer = deferred<typeof accepted>();
+    mockedUnload.mockReturnValueOnce(unloadAnswer.promise);
+    store.ensureLoaded(serverId, TARGET);
+    await flush();
+    const load = store.recordFor(serverId, TARGET)!;
+
+    store.cancel(serverId, TARGET);
+    await flush();
+    const unload = store.recordFor(serverId, TARGET)!;
+    answer.reject(new Error('Aborted'));
+    await flush();
+
+    expect(load.failure).toBeUndefined();
+    expect(store.recordFor(serverId, TARGET)).toBe(unload);
+    expect(store.owns(unload)).toBe(true);
+  });
+
+  it('posts no unload for a server repointed while the key is read', async () => {
+    await read(routerRows({[TARGET]: 'loaded'}));
+    const key = deferred<{password: string; username: string}>();
+    (Keychain.getGenericPassword as jest.Mock).mockReturnValueOnce(key.promise);
+    store.unload(serverId, TARGET);
+    await flush();
+
+    runInAction(() =>
+      serverStore.updateServer(serverId, {url: 'http://other:8080'}),
+    );
+    key.resolve({password: 'mockPass', username: 'mockUser'});
+    await flush();
+
+    expect(mockedUnload).not.toHaveBeenCalled();
+  });
+
+  it('asks for no read when an unload answers after its server was repointed', async () => {
+    await read(routerRows({[TARGET]: 'loaded'}));
+    const unloadAnswer = deferred<typeof accepted>();
+    mockedUnload.mockReturnValueOnce(unloadAnswer.promise);
+    store.unload(serverId, TARGET);
+    await flush();
+    mockedFetch.mockClear();
+
+    runInAction(() =>
+      serverStore.updateServer(serverId, {url: 'http://other:8080'}),
+    );
+    unloadAnswer.resolve(accepted);
+    await flush();
+
+    expect(mockedFetch).not.toHaveBeenCalled();
   });
 
   it('refuses an unload while a record is in flight on the key', async () => {
