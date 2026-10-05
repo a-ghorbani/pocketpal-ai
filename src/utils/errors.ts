@@ -4,6 +4,7 @@
 
 import axios from 'axios';
 import {uiStore} from '../store/UIStore';
+import type {RouterFailure} from '../store/routerVerdicts';
 /**
  * NetworkError - Used for connectivity-related errors
  * Examples: No internet connection, timeout, etc.
@@ -23,6 +24,31 @@ export class AppCheckError extends Error {
   constructor(message: string) {
     super(message);
     this.name = 'AppCheckError';
+  }
+}
+
+/**
+ * The router load a remote model needed was stopped by the user. A type of
+ * its own so a surface can stay silent: the user knows why it ended.
+ */
+export class RemoteModelRequestWithdrawnError extends Error {
+  constructor() {
+    super('Remote model request withdrawn');
+    this.name = 'RemoteModelRequestWithdrawnError';
+  }
+}
+
+/**
+ * The remote model never became ready. Carries only the cause, so a surface
+ * shows the app's own sentence for it and never the server's words.
+ */
+export class RemoteModelNotReadyError extends Error {
+  readonly cause: RouterFailure['cause'];
+
+  constructor(cause: RouterFailure['cause']) {
+    super(`Remote model not ready: ${cause}`);
+    this.name = 'RemoteModelNotReadyError';
+    this.cause = cause;
   }
 }
 
