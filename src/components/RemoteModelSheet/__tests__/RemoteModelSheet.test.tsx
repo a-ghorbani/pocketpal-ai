@@ -1,7 +1,9 @@
 import React from 'react';
-import {render, fireEvent, waitFor} from '../../../../jest/test-utils';
+import {Alert} from 'react-native';
+import {runInAction} from 'mobx';
+import {render, fireEvent, waitFor, within} from '../../../../jest/test-utils';
 import {RemoteModelSheet} from '../RemoteModelSheet';
-import {serverStore} from '../../../store';
+import {modelStore, routerStore, serverStore} from '../../../store';
 import {fetchModels, fetchModelsWithHeaders} from '../../../api/openai';
 import {detectServerType} from '../../../api/servers/detect';
 import {routerModelsBody} from '../../../../jest/fixtures/remoteModelList';
@@ -471,6 +473,263 @@ describe('RemoteModelSheet', () => {
 
       expect(serverStore.fetchModelsForServer).toHaveBeenCalledTimes(1);
       expect(mockedFetchModelsWithHeaders).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('router rows', () => {
+    const ROUTER = 'srv-r';
+    const KEY = (id: string) => `${ROUTER}/${id}`;
+    const row = (id: string, value: string, extra = {}) => ({
+      id,
+      object: 'model',
+      status: {value, ...extra},
+    });
+
+    const openRouter = async (
+      rows: any[],
+      serverType: ServerType = 'llama.cpp',
+    ) => {
+      serverStore.servers = [
+        {id: ROUTER, name: 'desk', url: 'http://desk:8080', serverType},
+      ];
+      (serverStore.getApiKey as jest.Mock).mockResolvedValue(undefined);
+      (serverStore.fetchModelsForServer as jest.Mock).mockImplementationOnce(
+        async (serverId: string) => {
+          runInAction(() => {
+            serverStore.serverModels.set(serverId, rows);
+            serverStore.listReads = {
+              [serverId]: {seq: 1, hasModelsKey: false, stale: false},
+            };
+          });
+          return {ok: true};
+        },
+      );
+      const view = render(
+        <RemoteModelSheet isVisible={true} onDismiss={jest.fn()} />,
+      );
+      fireEvent.press(view.getByTestId(`server-chip-${ROUTER}`));
+      await waitFor(() => {
+        expect(view.queryByText(rows[0].id)).toBeTruthy();
+      });
+      return view;
+    };
+
+    const seedRecord = (id: string, record: Record<string, unknown>) => {
+      const seeded = {key: KEY(id), ...record};
+      routerStore.records.set(KEY(id), seeded as any);
+      return seeded;
+    };
+
+    beforeEach(() => {
+      routerStore.records.clear();
+      routerStore.observedEviction.clear();
+      serverStore.serverModels.clear();
+      serverStore.listReads = {};
+      modelStore.activeRemoteBinding = undefined;
+    });
+
+    it.each([
+      ['a load of ours', 'unloaded', 'load', 'loaded', 'Loading', 'cancel'],
+      ['an unload of ours', 'loaded', 'unload', 'loaded', 'Unloading…', null],
+      ['a loaded row', 'loaded', null, 'loaded', 'Loaded', 'unload'],
+      ['a sleeping row', 'sleeping', null, 'loaded', 'Resident', 'unload'],
+      [
+        'a row another client loads',
+        'loading',
+        null,
+        'loaded',
+        'Loading',
+        null,
+      ],
+      ['an unloaded row', 'unloaded', null, 'available', 'Not loaded', 'load'],
+      ['an unreadable row', 'hibernating', null, 'available', null, 'load'],
+      ['a downloading row', 'downloading', null, 'available', null, null],
+    ])('presents %s', async (_label, value, kind, group, label, action) => {
+      if (kind) {
+        seedRecord('m', {kind});
+      }
+      const view = await openRouter([row('m', value)]);
+
+      const groupView = within(view.getByTestId(`router-group-${group}`));
+      expect(groupView.getByTestId('router-row-m')).toBeTruthy();
+      if (label) {
+        expect(view.getByTestId('router-state-m')).toHaveTextContent(label);
+      } else {
+        expect(view.queryByTestId('router-state-m')).toBeNull();
+      }
+      const actions = ['load', 'unload', 'cancel'].filter(
+        name => view.queryByTestId(`router-${name}-m`) !== null,
+      );
+      expect(actions).toEqual(action ? [action] : []);
+    });
+
+    it('presents a failed row as not loaded', async () => {
+      const view = await openRouter([
+        row('m', 'unloaded', {failed: true, exit_code: 1}),
+      ]);
+
+      expect(view.getByTestId('router-state-m')).toHaveTextContent(
+        'Not loaded',
+      );
+    });
+
+    it('claims nothing about a row from a stale list', async () => {
+      const view = await openRouter([row('m', 'loaded')]);
+      runInAction(() => {
+        serverStore.listReads[ROUTER].stale = true;
+      });
+
+      await waitFor(() => {
+        expect(view.queryByTestId('router-state-m')).toBeNull();
+      });
+      expect(
+        within(view.getByTestId('router-group-available')).getByTestId(
+          'router-row-m',
+        ),
+      ).toBeTruthy();
+    });
+
+    it('never says sleeping', async () => {
+      const view = await openRouter([row('m', 'sleeping')]);
+
+      expect(view.queryByText(/sleeping/i)).toBeNull();
+    });
+
+    it('counts resident rows', async () => {
+      const view = await openRouter([
+        row('a', 'loaded'),
+        row('b', 'sleeping'),
+        row('c', 'loading'),
+        row('d', 'unloaded'),
+      ]);
+
+      expect(view.getByTestId('router-resident-count')).toHaveTextContent(
+        '2 resident',
+      );
+    });
+
+    it('shows a determinate bar only for a progress value in range', async () => {
+      seedRecord('a', {kind: 'load', detail: {progress: {value: 0}}});
+      seedRecord('b', {kind: 'load', detail: {progress: {value: 2}}});
+      const view = await openRouter([
+        row('a', 'unloaded'),
+        row('b', 'unloaded'),
+      ]);
+
+      expect(
+        view.getByTestId('router-progress-a').props.accessibilityValue,
+      ).toEqual({min: 0, max: 100, now: 0});
+      expect(
+        view.getByTestId('router-progress-b').props.accessibilityValue,
+      ).toEqual({});
+    });
+
+    it('wires load and cancel to the store', async () => {
+      seedRecord('b', {kind: 'load'});
+      const view = await openRouter([
+        row('a', 'unloaded'),
+        row('b', 'unloaded'),
+      ]);
+
+      fireEvent.press(view.getByTestId('router-load-a'));
+      fireEvent.press(view.getByTestId('router-cancel-b'));
+
+      expect(routerStore.ensureLoaded).toHaveBeenCalledWith(ROUTER, 'a');
+      expect(routerStore.cancel).toHaveBeenCalledWith(ROUTER, 'b');
+    });
+
+    it('confirms before unloading the model this chat uses', async () => {
+      const alert = jest.spyOn(Alert, 'alert');
+      modelStore.activeRemoteBinding = {
+        modelId: KEY('bound'),
+        serverId: ROUTER,
+        remoteModelId: 'bound',
+        url: 'http://desk:8080',
+        serverType: 'llama.cpp',
+      };
+      const view = await openRouter([row('bound', 'loaded')]);
+
+      fireEvent.press(view.getByTestId('router-unload-bound'));
+
+      expect(alert).toHaveBeenCalledTimes(1);
+      expect(routerStore.unload).not.toHaveBeenCalled();
+      const buttons = alert.mock.calls[0][2] as any[];
+      buttons.find(button => button.style === 'destructive').onPress();
+      expect(routerStore.unload).toHaveBeenCalledWith(ROUTER, 'bound');
+    });
+
+    it('unloads any other model without asking', async () => {
+      const alert = jest.spyOn(Alert, 'alert');
+      const view = await openRouter([row('other', 'loaded')]);
+
+      fireEvent.press(view.getByTestId('router-unload-other'));
+
+      expect(alert).not.toHaveBeenCalled();
+      expect(routerStore.unload).toHaveBeenCalledWith(ROUTER, 'other');
+    });
+
+    it('shows a failure with the server words as plain text, and dismisses it', async () => {
+      seedRecord('m', {
+        kind: 'load',
+        failure: {cause: 'load-failed', message: '**bold** [x](http://e)'},
+      });
+      const view = await openRouter([row('m', 'unloaded')]);
+
+      const reason = view.getByTestId('router-reason-m');
+      expect(reason.type).toBe('Text');
+      expect(reason).toHaveTextContent(
+        'This model did not load. **bold** [x](http://e)',
+      );
+      fireEvent.press(view.getByTestId('router-dismiss-m'));
+      expect(routerStore.dismiss).toHaveBeenCalledWith(ROUTER, 'm');
+    });
+
+    it('shows the eviction note only once the store observed one', async () => {
+      const view = await openRouter([row('m', 'loaded')]);
+      expect(view.queryByTestId('router-eviction-note')).toBeNull();
+
+      runInAction(() => {
+        routerStore.observedEviction.add(ROUTER);
+      });
+
+      await waitFor(() => {
+        expect(view.getByTestId('router-eviction-note')).toBeTruthy();
+      });
+    });
+
+    it('tells the store which server the picker shows', async () => {
+      const view = await openRouter([row('m', 'loaded')]);
+
+      expect(routerStore.setPickerServer).toHaveBeenLastCalledWith(ROUTER);
+      view.unmount();
+      expect(routerStore.setPickerServer).toHaveBeenLastCalledWith(null);
+    });
+
+    it('asks the server for nothing beyond the list', async () => {
+      await openRouter([row('m', 'loaded'), row('n', 'unloaded')]);
+
+      expect(serverStore.fetchRemoteModelCaps).not.toHaveBeenCalled();
+      expect(routerStore.ensureLoaded).not.toHaveBeenCalled();
+    });
+
+    it.each([
+      [
+        'a non-router llama.cpp server',
+        'llama.cpp',
+        [{id: 'm', object: 'model'}],
+      ],
+      [
+        'a router-shaped list on another server type',
+        'Ollama',
+        [row('m', 'loaded')],
+      ],
+    ])('renders the plain picker for %s', async (_label, serverType, rows) => {
+      const view = await openRouter(rows, serverType as ServerType);
+
+      expect(view.queryByTestId('router-group-loaded')).toBeNull();
+      expect(view.queryByTestId('router-row-m')).toBeNull();
+      expect(view.queryByTestId('router-resident-count')).toBeNull();
+      expect(routerStore.setPickerServer).not.toHaveBeenCalled();
     });
   });
 });

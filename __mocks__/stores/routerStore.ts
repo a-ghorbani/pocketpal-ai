@@ -15,12 +15,14 @@ import type {RouterRecord} from '../../src/store/RouterStore';
  */
 class MockRouterStore {
   records = observable.map<string, Partial<RouterRecord>>();
+  observedEviction = new Set<string>();
 
   ensureLoaded: jest.Mock;
   ensureReady: jest.Mock;
   unload: jest.Mock;
   cancel: jest.Mock;
   dismiss: jest.Mock;
+  setPickerServer: jest.Mock;
 
   constructor() {
     makeAutoObservable(this, {
@@ -29,12 +31,14 @@ class MockRouterStore {
       unload: false,
       cancel: false,
       dismiss: false,
+      setPickerServer: false,
     });
     this.ensureLoaded = jest.fn().mockResolvedValue('ready');
     this.ensureReady = jest.fn().mockResolvedValue(undefined);
     this.unload = jest.fn();
     this.cancel = jest.fn();
     this.dismiss = jest.fn();
+    this.setPickerServer = jest.fn();
   }
 
   isRouter(serverId: string): boolean {
@@ -55,6 +59,17 @@ class MockRouterStore {
       remoteModelId,
       mockServerStore.listReads[serverId]?.stale !== false,
     );
+  }
+
+  residentCount(serverId: string): number {
+    return (mockServerStore.serverModels.get(serverId) ?? []).filter(row => {
+      const record = this.recordFor(serverId, row.id);
+      if (record?.kind === 'unload' && record && this.owns(record)) {
+        return false;
+      }
+      const state = this.rowState(serverId, row.id);
+      return state === 'loaded' || state === 'sleeping';
+    }).length;
   }
 
   recordFor(serverId: string, remoteModelId: string) {

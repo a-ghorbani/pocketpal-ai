@@ -22,7 +22,7 @@ import debounce from 'lodash/debounce';
 
 import {Sheet, TextInput} from '..';
 import {useTheme} from '../../hooks';
-import {serverStore} from '../../store';
+import {routerStore, serverStore} from '../../store';
 import {L10nContext} from '../../utils';
 import {isLocalHost} from '../../utils/network';
 import {parseTimeoutMs} from '../../utils/timeout';
@@ -40,6 +40,7 @@ import {profileFor} from '../../api/servers';
 import {t} from '../../locales';
 
 import {createStyles} from './styles';
+import {RouterModelRows} from './RouterModelRows';
 import {ChatIcon, EyeIcon, EyeOffIcon} from '../../assets/icons';
 
 interface RemoteModelSheetProps {
@@ -313,6 +314,53 @@ export const RemoteModelSheet: React.FC<RemoteModelSheetProps> = observer(
     const showServerFields =
       probeResult !== null && !isProbing && !selectedServerId;
 
+    const isRouter =
+      !!selectedServerId && routerStore.isRouter(selectedServerId);
+
+    useEffect(() => {
+      if (!isVisible || !isRouter || !selectedServerId) {
+        return undefined;
+      }
+      routerStore.setPickerServer(selectedServerId);
+      return () => routerStore.setPickerServer(null);
+    }, [isVisible, isRouter, selectedServerId]);
+
+    const renderVisionSlot = (model: RemoteModelInfo) => {
+      if (profileFor(serverTypeInEffect).readListRow === undefined) {
+        return null;
+      }
+      const listCaps = deriveListCaps(model, serverTypeInEffect);
+      return (
+        <View
+          style={styles.modelVisionSlot}
+          testID={`remote-model-row-vision-${model.id}`}
+          accessible={true}
+          accessibilityLabel={`${l10n.models.modelCard.labels.vision}: ${
+            listCaps.supportsVision === true
+              ? l10n.models.modelCard.labels.visionSupported
+              : listCaps.supportsVision === false
+                ? l10n.models.modelCard.labels.visionNotSupported
+                : l10n.models.modelCard.labels.visionUnknown
+          }`}>
+          {listCaps.supportsVision === true ? (
+            <EyeIcon
+              width={16}
+              height={16}
+              stroke={theme.colors.iconModelTypeVision}
+            />
+          ) : listCaps.supportsVision === false ? (
+            <ChatIcon
+              width={16}
+              height={16}
+              stroke={theme.colors.iconModelTypeText}
+            />
+          ) : (
+            <Text style={styles.modelVisionUnknown}>—</Text>
+          )}
+        </View>
+      );
+    };
+
     return (
       <Sheet
         isVisible={isVisible}
@@ -566,8 +614,20 @@ export const RemoteModelSheet: React.FC<RemoteModelSheetProps> = observer(
             </>
           )}
 
+          {showPostConnection && isRouter && selectedServerId && (
+            <RouterModelRows
+              serverId={selectedServerId}
+              selectedModelId={selectedModelId}
+              onSelect={setSelectedModelId}
+              isAlreadyAdded={modelId =>
+                isModelAlreadyAdded(selectedServerId, modelId)
+              }
+              renderVisionSlot={renderVisionSlot}
+            />
+          )}
+
           {/* Model Selection */}
-          {showPostConnection && availableModels.length >= 1 && (
+          {showPostConnection && !isRouter && availableModels.length >= 1 && (
             <View style={styles.modelListSection}>
               <Text style={styles.modelListLabel}>
                 {l10n.settings.selectModel}
@@ -576,7 +636,6 @@ export const RemoteModelSheet: React.FC<RemoteModelSheetProps> = observer(
                 const servId = selectedServerId || '';
                 const alreadyAdded =
                   !!selectedServerId && isModelAlreadyAdded(servId, model.id);
-                const listCaps = deriveListCaps(model, serverTypeInEffect);
                 return (
                   <TouchableOpacity
                     key={model.id}
@@ -613,36 +672,7 @@ export const RemoteModelSheet: React.FC<RemoteModelSheetProps> = observer(
                         {l10n.settings.alreadyAdded}
                       </Text>
                     )}
-                    {profileFor(serverTypeInEffect).readListRow !==
-                      undefined && (
-                      <View
-                        style={styles.modelVisionSlot}
-                        testID={`remote-model-row-vision-${model.id}`}
-                        accessible={true}
-                        accessibilityLabel={`${l10n.models.modelCard.labels.vision}: ${
-                          listCaps.supportsVision === true
-                            ? l10n.models.modelCard.labels.visionSupported
-                            : listCaps.supportsVision === false
-                              ? l10n.models.modelCard.labels.visionNotSupported
-                              : l10n.models.modelCard.labels.visionUnknown
-                        }`}>
-                        {listCaps.supportsVision === true ? (
-                          <EyeIcon
-                            width={16}
-                            height={16}
-                            stroke={theme.colors.iconModelTypeVision}
-                          />
-                        ) : listCaps.supportsVision === false ? (
-                          <ChatIcon
-                            width={16}
-                            height={16}
-                            stroke={theme.colors.iconModelTypeText}
-                          />
-                        ) : (
-                          <Text style={styles.modelVisionUnknown}>—</Text>
-                        )}
-                      </View>
-                    )}
+                    {renderVisionSlot(model)}
                   </TouchableOpacity>
                 );
               })}
@@ -650,7 +680,7 @@ export const RemoteModelSheet: React.FC<RemoteModelSheetProps> = observer(
           )}
 
           {/* No models available */}
-          {showPostConnection && availableModels.length === 0 && (
+          {showPostConnection && !isRouter && availableModels.length === 0 && (
             <Text style={styles.noModelsText}>
               {l10n.settings.noModelsAvailable}
             </Text>
