@@ -12,6 +12,7 @@ import {
   CONNECTION_TIMEOUT_MS,
   IDLE_TIMEOUT_MS,
   buildHeaders,
+  fetchWithTimeout,
   normalizeUrl,
   resolveTimeout,
 } from './http';
@@ -210,49 +211,32 @@ export async function fetchModelsWithHeaders(
   timeoutMs?: number,
 ): Promise<FetchModelsResult> {
   const url = `${normalizeUrl(serverUrl)}/v1/models`;
-  const controller = new AbortController();
-  const timeout = setTimeout(
-    () => controller.abort(),
-    resolveTimeout(timeoutMs, CONNECTION_TIMEOUT_MS),
+  const response = await fetchWithTimeout(
+    url,
+    {method: 'GET', headers: buildHeaders(apiKey)},
+    {timeoutMs: resolveTimeout(timeoutMs, CONNECTION_TIMEOUT_MS)},
   );
 
-  try {
-    const response = await fetch(url, {
-      method: 'GET',
-      headers: buildHeaders(apiKey),
-      signal: controller.signal,
-    });
-
-    if (!response.ok) {
-      if (response.status === 401) {
-        throw new Error('Unauthorized: Invalid or missing API key');
-      }
-      throw new Error(
-        `Server error: ${response.status} ${response.statusText}`,
-      );
+  if (!response.ok) {
+    if (response.status === 401) {
+      throw new Error('Unauthorized: Invalid or missing API key');
     }
-
-    const responseHeaders: Record<string, string> = {};
-    response.headers.forEach((value: string, key: string) => {
-      responseHeaders[key] = value;
-    });
-
-    const data = await response.json();
-    return {
-      models: liftModelEntryCapabilities(
-        (data.data || []) as RemoteModelInfo[],
-        data.models,
-      ),
-      headers: responseHeaders,
-    };
-  } catch (error: any) {
-    if (error.name === 'AbortError') {
-      throw new Error('Connection timed out');
-    }
-    throw error;
-  } finally {
-    clearTimeout(timeout);
+    throw new Error(`Server error: ${response.status} ${response.statusText}`);
   }
+
+  const responseHeaders: Record<string, string> = {};
+  response.headers.forEach((value: string, key: string) => {
+    responseHeaders[key] = value;
+  });
+
+  const data = await response.json();
+  return {
+    models: liftModelEntryCapabilities(
+      (data.data || []) as RemoteModelInfo[],
+      data.models,
+    ),
+    headers: responseHeaders,
+  };
 }
 
 /**
