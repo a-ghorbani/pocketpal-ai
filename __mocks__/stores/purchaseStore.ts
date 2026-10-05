@@ -66,7 +66,7 @@ class MockPurchaseStore {
       (pal: PalsHubPal) =>
         this.availability === 'ready' &&
         !!this.productFor(pal.store_product_id) &&
-        !this.records[pal.id] &&
+        (!this.records[pal.id] || this.records[pal.id].status === 'removed') &&
         !pal.is_owned,
     );
   }

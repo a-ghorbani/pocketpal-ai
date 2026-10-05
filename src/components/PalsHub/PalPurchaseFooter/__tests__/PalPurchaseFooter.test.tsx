@@ -239,6 +239,17 @@ describe('PalPurchaseFooter', () => {
     expect(queryByTestId('buy-button')).toBeNull();
   });
 
+  it('shows Buy with the store price again after a refund', () => {
+    purchasable();
+    runInAction(() => {
+      purchaseStore.records['pal-1'] = record('removed');
+    });
+    const {getByTestId, getByText, queryByTestId} = setup();
+    expect(getByTestId('buy-button')).toBeTruthy();
+    expect(getByText('4,99 €')).toBeTruthy();
+    expect(queryByTestId('owned-button')).toBeNull();
+  });
+
   describe('creator update', () => {
     const withUpdate = (changeNote?: string) =>
       runInAction(() => {
