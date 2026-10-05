@@ -216,8 +216,8 @@ async function nativeScrollIntoView(selector: string): Promise<boolean> {
  */
 async function dragUpInSheet(): Promise<void> {
   await swipe({
-    startYPercent: 0.65,
-    endYPercent: 0.25,
+    startYPercent: 0.6,
+    endYPercent: 0.4,
     duration: 300,
     holdMs: 300,
   });
