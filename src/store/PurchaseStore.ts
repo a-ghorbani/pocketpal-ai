@@ -1096,9 +1096,15 @@ export class PurchaseStore {
         case 'pending':
           await this.recordPending(pal.id, productId);
           return 'stay';
-        case 'already_owned':
-          await this.installOwned(pal);
+        case 'already_owned': {
+          const listed = await this.installOwned(pal);
+          const rec = this.records[pal.id] ?? this.recordForProduct(productId);
+          if (listed && rec?.status === 'removed') {
+            this.deps.events.send(pal.id, 'purchase_error');
+            return 'close';
+          }
           return 'stay';
+        }
         case 'cancelled':
           this.deps.events.send(pal.id, 'purchase_cancelled');
           return 'close';

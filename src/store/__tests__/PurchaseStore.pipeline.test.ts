@@ -1219,6 +1219,54 @@ describe('PurchaseStore pipeline', () => {
       expect(h.purchases.flowFor(PAL_ID)).toBe('restore_needed');
     });
 
+    describe('already owned on a refunded record', () => {
+      const refunded = async () => {
+        const h = createHarness({records: [record('removed')]});
+        await h.purchases.load();
+        runInAction(() => {
+          h.purchases.availability = 'ready';
+          h.purchases.products.set(PRODUCT, {
+            productId: PRODUCT,
+            displayPrice: '4,99 €',
+          });
+        });
+        h.store.purchase.mockResolvedValueOnce({kind: 'already_owned'});
+        return h;
+      };
+
+      it.each(['revoked', 'unavailable'] as const)(
+        'closes with a purchase error when the listed purchase verifies %s',
+        async verdict => {
+          const h = await refunded();
+          h.store.currentEntitlements.mockResolvedValueOnce({
+            ok: true,
+            transactions: [tx({transactionId: 'tx-0'})],
+          });
+          h.api.verify.mockResolvedValueOnce([result(verdict)]);
+
+          await expect(h.purchases.buy(hubPal())).resolves.toBe('close');
+
+          expect(h.events.send).toHaveBeenLastCalledWith(
+            PAL_ID,
+            'purchase_error',
+          );
+          expect(h.purchases.recordFor(PAL_ID)?.status).toBe('removed');
+        },
+      );
+
+      it('offers restore when the store lists no purchase', async () => {
+        const h = await refunded();
+
+        await expect(h.purchases.buy(hubPal())).resolves.toBe('stay');
+
+        expect(h.purchases.flowFor(PAL_ID)).toBe('restore_needed');
+        expect(h.events.send).not.toHaveBeenCalledWith(
+          PAL_ID,
+          'purchase_error',
+        );
+      });
+    });
+
     it('keeps Buy available after a declined payment', async () => {
       const h = readyHarness();
       const declined = hubPal({id: 'pal-2', store_product_id: 'pal.2'});
