@@ -30,12 +30,18 @@ class DownloadJobService : JobService() {
         val progressInterval = params.extras.getLong(KEY_PROGRESS_INTERVAL, DownloadWorker.DEFAULT_PROGRESS_INTERVAL)
         val notifications = DownloadNotifications(this)
         val notificationId = downloadId.hashCode()
-        fun post(title: String, downloaded: Long, total: Long) = setNotification(
-            params,
-            notificationId,
-            notifications.progress(title, downloaded, total),
-            JOB_END_NOTIFICATION_POLICY_REMOVE,
-        )
+        var posted: Pair<String, Int?>? = null
+        fun post(title: String, downloaded: Long, total: Long) {
+            val shown = title to DownloadNotifications.percent(downloaded, total)
+            if (shown == posted) return
+            posted = shown
+            setNotification(
+                params,
+                notificationId,
+                notifications.progress(shown.first, shown.second),
+                JOB_END_NOTIFICATION_POLICY_REMOVE,
+            )
+        }
         post(getString(R.string.download_channel_name), 0, 0)
 
         val entry = Running(DownloadRuns.process.register(downloadId))

@@ -56,7 +56,7 @@ class DownloadWorkerTest {
             dao.insertDownload(downloadRow(ID, destination.path, url = server.url("/model.gguf").toString()))
         }
         return TestListenableWorkerBuilder<DownloadWorker>(context)
-            .setInputData(workDataOf(DownloadWorker.KEY_DOWNLOAD_ID to ID))
+            .setInputData(workDataOf(DownloadWorker.KEY_DOWNLOAD_ID to ID, DownloadWorker.KEY_PROGRESS_INTERVAL to 0L))
             .setWorkerFactory(object : WorkerFactory() {
                 override fun createWorker(appContext: Context, workerClassName: String, workerParameters: WorkerParameters) =
                     DownloadWorker(appContext, workerParameters, engine, runs)

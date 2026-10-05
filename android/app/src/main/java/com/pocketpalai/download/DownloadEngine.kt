@@ -14,6 +14,7 @@ import kotlinx.coroutines.withContext
 import okhttp3.OkHttpClient
 import okhttp3.Request
 import okhttp3.Response
+import java.io.BufferedOutputStream
 import java.io.File
 import java.io.FileOutputStream
 import java.io.IOException
@@ -27,7 +28,9 @@ class DownloadEngine(
     private val client: OkHttpClient = sharedClient,
     private val now: () -> Long = SystemClock::elapsedRealtime,
     private val sleep: suspend (Long) -> Unit = { delay(it) },
-    private val openPart: (File, Boolean) -> OutputStream = { file, append -> FileOutputStream(file, append) },
+    private val openPart: (File, Boolean) -> OutputStream = { file, append ->
+        BufferedOutputStream(FileOutputStream(file, append), BUFFER_SIZE)
+    },
 ) {
     enum class Outcome { RESCHEDULE, DONE }
 
@@ -262,24 +265,30 @@ class DownloadEngine(
                 while (true) {
                     val read = input.read(buffer)
                     if (read < 0) break
-                    try {
-                        out.write(buffer, 0, read)
-                    } catch (e: IOException) {
-                        return Attempt.Finished(End.Failed(storageError(e)))
-                    }
+                    storageFailure { out.write(buffer, 0, read) }?.let { return it }
                     written += read
                     bytesWritten += read
                     lastByteAt = now()
                     if (signal.stopped) return Attempt.Finished(End.Stopped)
                     if (lastByteAt - lastProgressAt >= progressIntervalMs) {
                         lastProgressAt = lastByteAt
+                        storageFailure { out.flush() }?.let { return it }
                         if (dao.writeProgress(row.id, written, totalBytes) == 0) return Attempt.Finished(End.Stopped)
                         onProgress(written, totalBytes)
                     }
                 }
+                storageFailure { out.flush() }?.let { return it }
             }
             return Attempt.Finished(End.Completed)
         }
+
+        private inline fun storageFailure(write: () -> Unit): Attempt? =
+            try {
+                write()
+                null
+            } catch (e: IOException) {
+                Attempt.Finished(End.Failed(storageError(e)))
+            }
 
         private suspend fun commit(): End {
             val length = part.length()

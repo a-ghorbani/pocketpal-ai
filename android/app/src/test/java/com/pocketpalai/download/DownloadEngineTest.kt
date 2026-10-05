@@ -410,7 +410,7 @@ class DownloadEngineTest {
     fun resumeWaitsForTheUnwindingRunsStopWrite() = runBlocking {
         insert()
         serve({ throttled() }, honest())
-        val first = async(Dispatchers.Default) { engine().run(ID, runs.register(ID), 1_000) }
+        val first = async(Dispatchers.Default) { engine().run(ID, runs.register(ID), 0) }
         awaitPartBytes()
 
         dao.casStatus(ID, listOf("RUNNING"), DownloadStatus.PAUSED)
@@ -445,7 +445,7 @@ class DownloadEngineTest {
     fun systemStopMidBodyRequeuesAndKeepsPart() = runBlocking {
         insert()
         serve({ throttled() })
-        val running = async(Dispatchers.Default) { engine().run(ID, runs.register(ID), 1_000) }
+        val running = async(Dispatchers.Default) { engine().run(ID, runs.register(ID), 0) }
         awaitPartBytes()
 
         runs.stop(ID)
@@ -460,7 +460,7 @@ class DownloadEngineTest {
         insert()
         serve({ throttled() })
         val signal = runs.register(ID)
-        val job = launch(Dispatchers.Default) { engine().run(ID, signal, 1_000) }
+        val job = launch(Dispatchers.Default) { engine().run(ID, signal, 0) }
         awaitPartBytes()
 
         val started = System.nanoTime()
@@ -480,7 +480,7 @@ class DownloadEngineTest {
         insert()
         serve({ throttled() })
         val signal = runs.register(ID)
-        val running = async(Dispatchers.Default) { engine().run(ID, signal, 1_000) }
+        val running = async(Dispatchers.Default) { engine().run(ID, signal, 0) }
         awaitPartBytes()
 
         signal.stop(user = true)
