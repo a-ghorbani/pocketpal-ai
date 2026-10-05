@@ -313,6 +313,75 @@ class DownloadEngineTest {
         assertEquals(1, requests.size)
     }
 
+    private class FullDisk(
+        file: File,
+        append: Boolean,
+        private val capacity: Long = Long.MAX_VALUE,
+        private val flushesBeforeFull: Int = Int.MAX_VALUE,
+        private val failOnClose: Boolean = false,
+    ) : java.io.OutputStream() {
+        private val file = java.io.FileOutputStream(file, append)
+        var accepted = 0L
+            private set
+        private var flushes = 0
+
+        override fun write(b: Int) = write(byteArrayOf(b.toByte()), 0, 1)
+
+        override fun write(b: ByteArray, off: Int, len: Int) {
+            if (accepted + len > capacity) throw IOException(NO_SPACE)
+            file.write(b, off, len)
+            accepted += len
+        }
+
+        override fun flush() {
+            if (++flushes > flushesBeforeFull) throw IOException(NO_SPACE)
+        }
+
+        override fun close() {
+            file.close()
+            if (failOnClose) throw IOException(NO_SPACE)
+        }
+    }
+
+    private fun runOutOfSpace(interval: Long, disk: (File, Boolean) -> FullDisk): FullDisk {
+        insert(totalBytes = content.size.toLong(), etag = E1)
+        serve(honest())
+        var opened: FullDisk? = null
+        assertEquals(Outcome.DONE, run(engine(openPart = { file, append -> disk(file, append).also { opened = it } }), interval))
+        return opened!!
+    }
+
+    private fun assertFailedOnStorage(disk: FullDisk) {
+        assertEquals(1, requests.size)
+        assertEquals(DownloadStatus.FAILED, row().status)
+        assertTrue(row().error!!.contains(NO_SPACE))
+        assertEquals(disk.accepted, part.length())
+        assertFalse(destination.exists())
+    }
+
+    @Test
+    fun fullDiskOnABufferedWriteFails() {
+        val disk = runOutOfSpace(interval = Long.MAX_VALUE) { file, append -> FullDisk(file, append, capacity = 100_000) }
+
+        assertFailedOnStorage(disk)
+        assertTrue(disk.accepted < content.size)
+    }
+
+    @Test
+    fun fullDiskOnAProgressFlushFails() {
+        val disk = runOutOfSpace(interval = 0) { file, append -> FullDisk(file, append, flushesBeforeFull = 1) }
+
+        assertFailedOnStorage(disk)
+        assertTrue(disk.accepted < content.size)
+    }
+
+    @Test
+    fun fullDiskOnTheFinalCloseFails() {
+        val disk = runOutOfSpace(interval = Long.MAX_VALUE) { file, append -> FullDisk(file, append, failOnClose = true) }
+
+        assertFailedOnStorage(disk)
+    }
+
     @Test
     fun unverifiedPeerIsPermanent() {
         insert()
@@ -502,5 +571,6 @@ class DownloadEngineTest {
         const val E1 = "\"etag-1\""
         const val E2 = "\"etag-2\""
         const val E3 = "\"etag-3\""
+        const val NO_SPACE = "No space left on device"
     }
 }

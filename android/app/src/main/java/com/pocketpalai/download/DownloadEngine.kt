@@ -18,6 +18,7 @@ import java.io.BufferedOutputStream
 import java.io.File
 import java.io.FileOutputStream
 import java.io.IOException
+import java.io.InputStream
 import java.io.OutputStream
 import java.util.concurrent.TimeUnit
 import javax.net.ssl.SSLPeerUnverifiedException
@@ -28,9 +29,7 @@ class DownloadEngine(
     private val client: OkHttpClient = sharedClient,
     private val now: () -> Long = SystemClock::elapsedRealtime,
     private val sleep: suspend (Long) -> Unit = { delay(it) },
-    private val openPart: (File, Boolean) -> OutputStream = { file, append ->
-        BufferedOutputStream(FileOutputStream(file, append), BUFFER_SIZE)
-    },
+    private val openPart: (File, Boolean) -> OutputStream = { file, append -> FileOutputStream(file, append) },
 ) {
     enum class Outcome { RESCHEDULE, DONE }
 
@@ -252,43 +251,46 @@ class DownloadEngine(
 
         private suspend fun write(response: Response, append: Boolean, start: Long): Attempt {
             val body = response.body ?: return Attempt.Transient
-            val output = try {
+            val raw = try {
                 openPart(part, append)
             } catch (e: IOException) {
                 return Attempt.Finished(End.Failed(storageError(e)))
             }
+            val out = BufferedOutputStream(raw, BUFFER_SIZE)
+            return try {
+                val attempt = copy(body.byteStream(), out, start)
+                if (attempt == Attempt.Finished(End.Completed)) storage { out.close() } else closeKeepingBytes(out, raw)
+                attempt
+            } catch (e: StorageFailure) {
+                closeQuietly(raw)
+                Attempt.Finished(End.Failed(storageError(e.error)))
+            } catch (e: Throwable) {
+                closeKeepingBytes(out, raw)
+                throw e
+            }
+        }
+
+        private suspend fun copy(input: InputStream, out: OutputStream, start: Long): Attempt {
             var written = start
             var lastProgressAt = now()
-            output.use { out ->
-                val input = body.byteStream()
-                val buffer = ByteArray(BUFFER_SIZE)
-                while (true) {
-                    val read = input.read(buffer)
-                    if (read < 0) break
-                    storageFailure { out.write(buffer, 0, read) }?.let { return it }
-                    written += read
-                    bytesWritten += read
-                    lastByteAt = now()
-                    if (signal.stopped) return Attempt.Finished(End.Stopped)
-                    if (lastByteAt - lastProgressAt >= progressIntervalMs) {
-                        lastProgressAt = lastByteAt
-                        storageFailure { out.flush() }?.let { return it }
-                        if (dao.writeProgress(row.id, written, totalBytes) == 0) return Attempt.Finished(End.Stopped)
-                        onProgress(written, totalBytes)
-                    }
+            val buffer = ByteArray(BUFFER_SIZE)
+            while (true) {
+                val read = input.read(buffer)
+                if (read < 0) break
+                storage { out.write(buffer, 0, read) }
+                written += read
+                bytesWritten += read
+                lastByteAt = now()
+                if (signal.stopped) return Attempt.Finished(End.Stopped)
+                if (lastByteAt - lastProgressAt >= progressIntervalMs) {
+                    lastProgressAt = lastByteAt
+                    storage { out.flush() }
+                    if (dao.writeProgress(row.id, written, totalBytes) == 0) return Attempt.Finished(End.Stopped)
+                    onProgress(written, totalBytes)
                 }
-                storageFailure { out.flush() }?.let { return it }
             }
             return Attempt.Finished(End.Completed)
         }
-
-        private inline fun storageFailure(write: () -> Unit): Attempt? =
-            try {
-                write()
-                null
-            } catch (e: IOException) {
-                Attempt.Finished(End.Failed(storageError(e)))
-            }
 
         private suspend fun commit(): End {
             val length = part.length()
@@ -317,6 +319,30 @@ class DownloadEngine(
         response.header("ETag")?.takeUnless { it.startsWith("W/") }
 
     private fun storageError(e: IOException) = "Could not write the download: ${e.message}"
+
+    private class StorageFailure(val error: IOException) : Exception(error)
+
+    private inline fun <T> storage(block: () -> T): T =
+        try {
+            block()
+        } catch (e: IOException) {
+            throw StorageFailure(e)
+        }
+
+    private fun closeKeepingBytes(out: OutputStream, raw: OutputStream) {
+        try {
+            out.close()
+        } catch (e: IOException) {
+            closeQuietly(raw)
+        }
+    }
+
+    private fun closeQuietly(raw: OutputStream) {
+        try {
+            raw.close()
+        } catch (_: IOException) {
+        }
+    }
 
     companion object {
         private const val TAG = "DownloadEngine"
