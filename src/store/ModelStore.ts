@@ -2491,8 +2491,6 @@ class ModelStore {
     }
 
     try {
-      // A completion outside the generation lease (structured output) is
-      // stopped by native release itself, which waits for it to return.
       if (this.isMultimodalActive) {
         console.log('Releasing multimodal context first');
         try {

@@ -7,11 +7,13 @@ import type {Pal} from '../../../types/pal';
 import {modelsList} from '../../../../jest/fixtures/models';
 import type {ParameterDefinition} from '../../../types/pal';
 
+let mockSheetRendersClosed = false;
+
 // Mock the Sheet component
 jest.mock('../../Sheet/Sheet', () => {
   const {View, Button, ScrollView} = require('react-native');
   const MockSheet = ({children, isVisible, onClose, title}) => {
-    if (!isVisible) {
+    if (!isVisible && !mockSheetRendersClosed) {
       return null;
     }
     return (
@@ -55,6 +57,9 @@ jest.mock('../../../hooks/useStructuredOutput', () => ({
   useStructuredOutput: jest.fn(() => ({
     generate: jest.fn(),
     isGenerating: false,
+    isBusy: false,
+    stop: jest.fn(),
+    cancel: jest.fn(),
   })),
 }));
 
@@ -128,6 +133,32 @@ describe('PalSheet', () => {
       const {queryByTestId} = renderPalSheet(createBasicPal(), false);
 
       expect(queryByTestId('sheet')).toBeNull();
+    });
+
+    it('tells the system prompt section when the sheet closes', () => {
+      mockSheetRendersClosed = true;
+      try {
+        const pal = createBasicPal();
+        const {rerender, UNSAFE_root} = renderPalSheet(pal);
+        const sectionIsVisible = () =>
+          UNSAFE_root.findAll(
+            node =>
+              typeof node.type !== 'string' &&
+              node.props.closeSheet !== undefined &&
+              node.props.validateFields !== undefined,
+          )[0].props.isVisible;
+        expect(sectionIsVisible()).toBe(true);
+
+        rerender(
+          <L10nContext.Provider value={l10n.en}>
+            <PalSheet isVisible={false} onClose={mockOnClose} pal={pal} />
+          </L10nContext.Provider>,
+        );
+
+        expect(sectionIsVisible()).toBe(false);
+      } finally {
+        mockSheetRendersClosed = false;
+      }
     });
 
     it('renders with correct title for editing existing pal', () => {

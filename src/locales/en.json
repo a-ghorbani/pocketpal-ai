@@ -981,7 +981,8 @@
       },
       "warnings": {
         "promptChanged": "System prompt has been manually changed"
-      }
+      },
+      "generationBusy": "A reply is still running. Try again when it's done."
     },
     "sidebarContent": {
       "menuItems": {
