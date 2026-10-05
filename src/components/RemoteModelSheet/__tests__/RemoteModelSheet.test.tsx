@@ -1,8 +1,9 @@
 import React from 'react';
-import {Alert} from 'react-native';
+import {Alert, StyleSheet} from 'react-native';
 import {runInAction} from 'mobx';
 import {render, fireEvent, waitFor, within} from '../../../../jest/test-utils';
 import {RemoteModelSheet} from '../RemoteModelSheet';
+import {l10n} from '../../../locales';
 import {modelStore, routerStore, serverStore} from '../../../store';
 import {fetchModels, fetchModelsWithHeaders} from '../../../api/openai';
 import {detectServerType} from '../../../api/servers/detect';
@@ -525,6 +526,7 @@ describe('RemoteModelSheet', () => {
       routerStore.observedEviction.clear();
       serverStore.serverModels.clear();
       serverStore.listReads = {};
+      serverStore.userSelectedModels = [];
       modelStore.activeRemoteBinding = undefined;
     });
 
@@ -656,6 +658,41 @@ describe('RemoteModelSheet', () => {
       const buttons = alert.mock.calls[0][2] as any[];
       buttons.find(button => button.style === 'destructive').onPress();
       expect(routerStore.unload).toHaveBeenCalledWith(ROUTER, 'bound');
+    });
+
+    it('dims only the selection of an already-added row, not its actions', async () => {
+      serverStore.userSelectedModels = [
+        {serverId: ROUTER, remoteModelId: 'added'},
+      ];
+      const view = await openRouter([row('added', 'loaded')]);
+      const opacityOf = (node: any) =>
+        StyleSheet.flatten(node.props.style)?.opacity;
+      const dimmedBetween = (node: any, until: any) => {
+        for (
+          let current = node;
+          current && current !== until;
+          current = current.parent
+        ) {
+          if (opacityOf(current) !== undefined && opacityOf(current) < 1) {
+            return true;
+          }
+        }
+        return false;
+      };
+
+      const rowNode = view.getByTestId('router-row-added');
+      expect(
+        dimmedBetween(view.getByTestId('router-unload-added'), rowNode),
+      ).toBe(false);
+      expect(
+        dimmedBetween(view.getByTestId('router-state-added'), rowNode),
+      ).toBe(false);
+      expect(opacityOf(view.getByTestId('router-select-added'))).toBe(0.5);
+      expect(
+        within(view.getByTestId('router-select-added')).getByText(
+          l10n.en.settings.alreadyAdded,
+        ),
+      ).toBeTruthy();
     });
 
     it('unloads any other model without asking', async () => {

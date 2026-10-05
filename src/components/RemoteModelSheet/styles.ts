@@ -186,6 +186,11 @@ export const createStyles = (theme: Theme) => {
       fontSize: 12,
       color: theme.colors.onSurfaceVariant,
     },
+    routerRowSelect: {
+      flex: 1,
+      flexDirection: 'row',
+      alignItems: 'center',
+    },
     routerRowMeta: {
       flexDirection: 'row',
       alignItems: 'center',

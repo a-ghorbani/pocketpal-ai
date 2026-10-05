@@ -152,26 +152,33 @@ export const RouterModelRows: React.FC<RouterModelRowsProps> = observer(
       const failure = record?.failure;
       return (
         <View key={model.id} testID={`router-row-${model.id}`}>
-          <TouchableOpacity
-            testID={`router-select-${model.id}`}
-            // Each control in the row is its own target; a focusable row
-            // would swallow them and select the model instead.
-            accessible={false}
-            activeOpacity={selectable ? 0.6 : 1}
-            style={[styles.modelRow, alreadyAdded && styles.modelRowDisabled]}
-            onPress={select}>
-            <RadioButton
-              value={model.id}
-              status={
-                alreadyAdded || selectedModelId === model.id
-                  ? 'checked'
-                  : 'unchecked'
-              }
-              onPress={select}
-              disabled={!selectable}
-              uncheckedColor={theme.colors.onSurfaceVariant}
-            />
-            <Text style={styles.modelName}>{model.id}</Text>
+          <View style={styles.modelRow}>
+            <TouchableOpacity
+              testID={`router-select-${model.id}`}
+              activeOpacity={selectable ? 0.6 : 1}
+              style={[
+                styles.routerRowSelect,
+                alreadyAdded && styles.modelRowDisabled,
+              ]}
+              onPress={select}>
+              <RadioButton
+                value={model.id}
+                status={
+                  alreadyAdded || selectedModelId === model.id
+                    ? 'checked'
+                    : 'unchecked'
+                }
+                onPress={select}
+                disabled={!selectable}
+                uncheckedColor={theme.colors.onSurfaceVariant}
+              />
+              <Text style={styles.modelName}>{model.id}</Text>
+              {alreadyAdded && (
+                <Text style={styles.alreadyAddedText}>
+                  {l10n.settings.alreadyAdded}
+                </Text>
+              )}
+            </TouchableOpacity>
             <View style={styles.routerRowMeta}>
               {renderVisionSlot(model)}
               {label && (
@@ -191,7 +198,7 @@ export const RouterModelRows: React.FC<RouterModelRowsProps> = observer(
                 </Button>
               )}
             </View>
-          </TouchableOpacity>
+          </View>
           {progress && (
             <ProgressBar
               testID={`router-progress-${model.id}`}
