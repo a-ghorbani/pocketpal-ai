@@ -26,8 +26,10 @@ import {
 import type {ListRowState, LoadProgress} from '../api/llamaServer/routerWire';
 import {
   loadFailure,
+  loadMaxFailure,
   loadVerdict,
   unloadReleased,
+  unloadSettleFailure,
   unreachableFailure,
 } from './routerVerdicts';
 import type {RecordKind, RecordPhase, RouterFailure} from './routerVerdicts';
@@ -45,6 +47,12 @@ export type StreamCap = 'unknown' | 'present' | 'absent';
 
 export const ROUTER_POLL_MS = 4000;
 export const ROUTER_TICK_MS = 1000;
+export const ROUTER_ACK_MS = 20000;
+export const ROUTER_EVIDENCE_MS = 45000;
+export const ROUTER_UNREACHABLE_MS = 90000;
+export const ROUTER_LOAD_MAX_MS = 10 * 60 * 1000;
+/** Longer than the 10 s the server allows a child to stop. */
+export const ROUTER_UNLOAD_SETTLE_MS = 30000;
 
 export interface RecordDetail {
   progress?: LoadProgress;
@@ -85,6 +93,8 @@ export class RouterRecord {
   postedAfterSeq = Number.POSITIVE_INFINITY;
   lastEvidenceAt: number;
   lastReadOkAt?: number;
+  /** An event for this model arrived: the server was reachable then. */
+  lastEventAt?: number;
   verdictRequested = false;
   detail?: RecordDetail = undefined;
   droppedTurn = false;
@@ -130,7 +140,23 @@ export class RouterStore {
   streamCap: Record<string, StreamCap> = {};
   stream: {serverId: string; state: 'connecting' | 'open'} | null = null;
   pickerServerId: string | null = null;
+  /** Servers where a model left without this app asking. */
+  observedEviction = new Set<string>();
 
+  /**
+   * Follows the app state, but only flips back to true together with the
+   * foreground reads it starts, so the stream reopens after them.
+   */
+  private foreground = true;
+  private foregroundReadsPending = 0;
+  /** Wall time minus the time spent in the background this session. */
+  private clock = {
+    backgroundedTotalMs: 0,
+    backgroundedAt: undefined as number | undefined,
+  };
+  private prevResident = new Map<string, Set<string>>();
+  /** Keys whose unload this app just saw settle; their exit is not news. */
+  private released = new Set<string>();
   /** Servers whose stream ended on its own; polled, not reopened. */
   private streamDropped = new Set<string>();
   private streamHandle: RouterEventsHandle | null = null;
@@ -147,6 +173,11 @@ export class RouterStore {
   constructor() {
     makeAutoObservable<
       this,
+      | 'foreground'
+      | 'foregroundReadsPending'
+      | 'clock'
+      | 'prevResident'
+      | 'released'
       | 'streamDropped'
       | 'streamHandle'
       | 'streamToken'
@@ -158,6 +189,11 @@ export class RouterStore {
     >(this, {
       records: false,
       stream: observable.ref,
+      foreground: observable,
+      foregroundReadsPending: observable,
+      clock: false,
+      prevResident: false,
+      released: false,
       streamDropped: observable,
       streamHandle: false,
       streamToken: false,
@@ -175,7 +211,7 @@ export class RouterStore {
    * backgrounded, and never to one whose stream is absent or has dropped.
    */
   get desiredStreamServer(): string | null {
-    if (!serverStore.appActive) {
+    if (!this.foreground || this.foregroundReadsPending > 0) {
       return null;
     }
     const candidates: string[] = [];
@@ -223,6 +259,18 @@ export class RouterStore {
       remoteModelId,
       serverStore.listReads[serverId]?.stale !== false,
     );
+  }
+
+  /** Rows the list shows loaded or sleeping, minus any this app is unloading. */
+  residentCount(serverId: string): number {
+    return (serverStore.serverModels.get(serverId) ?? []).filter(row => {
+      const record = this.recordFor(serverId, row.id);
+      if (record?.kind === 'unload' && this.owns(record)) {
+        return false;
+      }
+      const state = this.rowState(serverId, row.id);
+      return state === 'loaded' || state === 'sleeping';
+    }).length;
   }
 
   recordFor(serverId: string, remoteModelId: string): RouterRecord | undefined {
@@ -329,8 +377,15 @@ export class RouterStore {
     this.closeStream();
   }
 
+  /** The foreground clock: frozen while backgrounded. */
   private now(): number {
-    return Date.now();
+    const wall = Date.now();
+    const {backgroundedTotalMs, backgroundedAt} = this.clock;
+    return (
+      wall -
+      backgroundedTotalMs -
+      (backgroundedAt === undefined ? 0 : wall - backgroundedAt)
+    );
   }
 
   private inFlight(serverId: string): RouterRecord[] {
@@ -436,6 +491,7 @@ export class RouterStore {
   ): RouterRecord {
     const record = new RouterRecord(kind, server, remoteModelId, this.now());
     this.records.set(record.key, record);
+    this.released.delete(record.key);
     this.streamDropped.delete(server.id);
     return record;
   }
@@ -457,6 +513,9 @@ export class RouterStore {
       record.failure = failure;
     } else {
       this.records.delete(record.key);
+    }
+    if (record.kind === 'unload' && outcome === 'ready') {
+      this.released.add(record.key);
     }
     record.settle(outcome);
     record.controller.abort();
@@ -568,8 +627,10 @@ export class RouterStore {
       for (const record of records) {
         this.end(record, 'not-router');
       }
+      this.prevResident.delete(serverId);
       return;
     }
+    this.checkEviction(serverId);
     const rows = serverStore.serverModels.get(serverId) ?? [];
     const now = this.now();
     for (const record of records) {
@@ -604,6 +665,34 @@ export class RouterStore {
           break;
       }
     }
+    this.prevResident.set(serverId, this.residentIds(serverId));
+  }
+
+  private residentIds(serverId: string): Set<string> {
+    const ids = (serverStore.serverModels.get(serverId) ?? [])
+      .map(row => row.id)
+      .filter(id => {
+        const state = this.rowState(serverId, id);
+        return state === 'loaded' || state === 'sleeping';
+      });
+    return new Set(ids);
+  }
+
+  /**
+   * A model resident at the last read and gone now, with no unload of ours
+   * in flight, was evicted. Runs before the verdicts of the same read, so an
+   * unload of ours is still in flight when its model goes.
+   */
+  private checkEviction(serverId: string): void {
+    for (const id of this.prevResident.get(serverId) ?? []) {
+      const state = this.rowState(serverId, id);
+      const record = this.recordFor(serverId, id);
+      const ownUnload = record?.kind === 'unload' && this.owns(record);
+      if ((state === 'unloaded' || state === 'absent') && !ownUnload) {
+        this.observedEviction.add(serverId);
+        return;
+      }
+    }
   }
 
   /** A server removed, repointed or retyped: what this store held for it goes. */
@@ -619,6 +708,8 @@ export class RouterStore {
       }
     }
     this.seenSeq.delete(serverId);
+    this.prevResident.delete(serverId);
+    this.observedEviction.delete(serverId);
     delete this.streamCap[serverId];
     this.streamDropped.delete(serverId);
     this.lastPollAt.delete(serverId);
@@ -706,7 +797,19 @@ export class RouterStore {
       return;
     }
     const record = this.recordFor(serverId, effect.model);
-    if (record?.kind === 'load' && this.owns(record)) {
+    const inFlight = record !== undefined && this.owns(record);
+    if (inFlight) {
+      record.lastEventAt = this.now();
+    }
+    if (
+      !inFlight &&
+      effect.status === 'unloaded' &&
+      (effect.exitCode === undefined || effect.exitCode === 0) &&
+      !this.released.delete(`${serverId}/${effect.model}`)
+    ) {
+      this.observedEviction.add(serverId);
+    }
+    if (record?.kind === 'load' && inFlight) {
       if (effect.status === 'loading') {
         this.corroborate(record);
       }
@@ -738,6 +841,98 @@ export class RouterStore {
 
   private tick(): void {
     this.runPolls();
+    this.runBounds();
+  }
+
+  /** A watchdog only asks the list; the list answers. */
+  private runBounds(): void {
+    const now = this.now();
+    for (const record of this.allInFlight) {
+      const heardAt = Math.max(
+        record.startedAt,
+        record.lastReadOkAt ?? 0,
+        record.lastEventAt ?? 0,
+      );
+      if (now - heardAt >= ROUTER_UNREACHABLE_MS) {
+        this.end(record, 'failed', unreachableFailure());
+      } else if (record.kind === 'load') {
+        this.boundLoad(record, now);
+      } else if (now - record.startedAt >= ROUTER_UNLOAD_SETTLE_MS) {
+        this.settleUnload(record);
+      }
+    }
+  }
+
+  private boundLoad(record: RouterRecord, now: number): void {
+    if (now - record.startedAt >= ROUTER_LOAD_MAX_MS) {
+      this.end(
+        record,
+        'failed',
+        loadMaxFailure(
+          this.postRequestRow(record),
+          record.reason,
+          record.detail?.exitCode,
+        ),
+      );
+      return;
+    }
+    const window =
+      record.phase === 'requested' ? ROUTER_ACK_MS : ROUTER_EVIDENCE_MS;
+    if (now - record.lastEvidenceAt >= window) {
+      this.askList(record);
+    }
+  }
+
+  private settleUnload(record: RouterRecord): void {
+    const row = this.postRequestRow(record);
+    if (row === undefined) {
+      if (!this.reads.has(record.serverId)) {
+        this.requestRead(record.serverId);
+      }
+      return;
+    }
+    if (unloadReleased(row)) {
+      this.end(record, 'ready');
+    } else {
+      this.end(record, 'failed', unloadSettleFailure(row));
+    }
+  }
+
+  /** The row as of the latest read, if that read started after the request. */
+  private postRequestRow(record: RouterRecord): ListRowState | undefined {
+    const read = serverStore.listReads[record.serverId];
+    return read && read.seq > record.postedAfterSeq
+      ? this.rowState(record.serverId, record.remoteModelId)
+      : undefined;
+  }
+
+  /**
+   * Backgrounded, the clock freezes and the ticker and stream stop; records
+   * and their waiters stay. Back in the foreground, every server with work in
+   * flight is read before the stream may reopen.
+   */
+  private onAppActive(active: boolean): void {
+    const wall = Date.now();
+    if (!active) {
+      this.clock.backgroundedAt ??= wall;
+      this.foreground = false;
+      return;
+    }
+    if (this.clock.backgroundedAt !== undefined) {
+      this.clock.backgroundedTotalMs += wall - this.clock.backgroundedAt;
+      this.clock.backgroundedAt = undefined;
+    }
+    this.streamDropped.clear();
+    const servers = new Set(this.allInFlight.map(record => record.serverId));
+    this.foregroundReadsPending = servers.size;
+    this.foreground = true;
+    for (const serverId of servers) {
+      this.requestRead(serverId).finally(() =>
+        runInAction(() => {
+          this.foregroundReadsPending--;
+        }),
+      );
+    }
   }
 
   /** Servers with work in flight and no open stream are read on a timer. */
@@ -765,8 +960,16 @@ export class RouterStore {
     }
     for (const [serverId, read] of Object.entries(serverStore.listReads)) {
       this.seenSeq.set(serverId, read.seq);
+      this.prevResident.set(serverId, this.residentIds(serverId));
+    }
+    if (!serverStore.appActive) {
+      this.onAppActive(false);
     }
     this.disposers.push(
+      reaction(
+        () => serverStore.appActive,
+        active => this.onAppActive(active),
+      ),
       reaction(
         () =>
           Object.entries(serverStore.listReads).map(
@@ -804,7 +1007,7 @@ export class RouterStore {
         {fireImmediately: true},
       ),
       reaction(
-        () => this.hasInFlight,
+        () => this.foreground && this.hasInFlight,
         run => (run ? this.startTicker() : this.stopTicker()),
         {fireImmediately: true},
       ),
