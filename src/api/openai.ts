@@ -1,6 +1,7 @@
 import * as RNFS from '@dr.pogodin/react-native-fs';
 
-import {SSEParser} from './sseParser';
+import {openEventStream} from './eventStream';
+import type {SSEEvent} from './eventStream';
 import {
   CompletionResult,
   CompletionStreamData,
@@ -460,22 +461,15 @@ export async function streamChatCompletion(
     : params.messages;
 
   return new Promise<CompletionResult>((resolve, reject) => {
-    const xhr = new XMLHttpRequest();
-    xhr.open('POST', url);
-
-    // Set headers
-    const headers = buildHeaders(apiKey);
-    for (const [key, value] of Object.entries(headers)) {
-      xhr.setRequestHeader(key, value);
+    if (signal?.aborted) {
+      reject(new Error('Completion aborted'));
+      return;
     }
 
-    const parser = new SSEParser();
     let fullContent = '';
     let fullReasoningContent = '';
     let finishReason: string | null = null;
     let tokensPredicted = 0;
-    let lastProcessedLength = 0;
-    let settled = false;
     let serverFinish: FinishRead | undefined;
     // OpenAI streams partial tool_calls across chunks, indexed by
     // `delta.tool_calls[i].index`. Rebuild the per-call shape here so
@@ -483,51 +477,19 @@ export async function streamChatCompletion(
     // callback sees a running snapshot.
     const toolCallAcc: ToolCallAccumulator = new Map();
 
-    // Connection timeout: abort if no headers received in time
-    const connectionTimer = setTimeout(() => {
-      if (!settled) {
-        settled = true;
-        xhr.abort();
-        reject(new Error('Connection timed out'));
-      }
-    }, connectionTimeoutMs);
-
     // Idle timeout: abort if no data received between chunks
     let idleTimer: ReturnType<typeof setTimeout> | null = null;
+    const clearIdleTimer = () => {
+      if (idleTimer) {
+        clearTimeout(idleTimer);
+      }
+    };
     const resetIdleTimer = () => {
-      if (idleTimer) {
-        clearTimeout(idleTimer);
-      }
+      clearIdleTimer();
       idleTimer = setTimeout(() => {
-        if (!settled) {
-          settled = true;
-          cleanup();
-          xhr.abort();
-          reject(new Error('Idle timeout: no data received'));
-        }
+        stream.close();
+        reject(new Error('Idle timeout: no data received'));
       }, idleTimeoutMs);
-    };
-
-    // Handle external abort signal
-    const onAbort = () => {
-      xhr.abort();
-    };
-    if (signal) {
-      if (signal.aborted) {
-        reject(new Error('Completion aborted'));
-        return;
-      }
-      signal.addEventListener('abort', onAbort, {once: true});
-    }
-
-    const cleanup = () => {
-      clearTimeout(connectionTimer);
-      if (idleTimer) {
-        clearTimeout(idleTimer);
-      }
-      if (signal) {
-        signal.removeEventListener('abort', onAbort);
-      }
     };
 
     /**
@@ -567,12 +529,8 @@ export async function streamChatCompletion(
       return {content, reasoningContent, toolCallsDelta};
     };
 
-    /**
-     * Process new SSE data from the response.
-     * Called from onprogress with the new text chunk.
-     */
-    const processChunk = (chunk: string) => {
-      for (const event of parser.feed(chunk)) {
+    const processEvents = (events: Iterable<SSEEvent>) => {
+      for (const event of events) {
         if (event === 'done') {
           return;
         }
@@ -606,94 +564,12 @@ export async function streamChatCompletion(
       }
     };
 
-    xhr.onreadystatechange = () => {
-      if (xhr.readyState === XMLHttpRequest.HEADERS_RECEIVED) {
-        // Headers received — clear connection timeout
-        clearTimeout(connectionTimer);
+    const onLoad = (flushed: Iterable<SSEEvent>) => {
+      clearIdleTimer();
 
-        if (xhr.status !== 200) {
-          // Don't reject yet — wait for onload to read the error body
-          clearTimeout(connectionTimer);
-        } else {
-          resetIdleTimer();
-        }
-      }
-
-      // When the full response is available for non-200 status, read the error body
-      if (
-        xhr.readyState === XMLHttpRequest.DONE &&
-        xhr.status !== 200 &&
-        xhr.status !== 0
-      ) {
-        if (settled) {
-          return;
-        }
-        settled = true;
-        cleanup();
-
-        let errorMessage = `Server error: ${xhr.status}`;
-        try {
-          const errorBody = JSON.parse(xhr.responseText);
-          const detail =
-            errorBody?.error?.message || errorBody?.error || xhr.responseText;
-          errorMessage = `Server error: ${xhr.status} — ${detail}`;
-          console.log(
-            '[OpenAI] Error:',
-            errorBody?.error?.message || errorBody?.error,
-          );
-        } catch {
-          if (xhr.responseText) {
-            errorMessage = `Server error: ${xhr.status} — ${xhr.responseText.substring(0, 200)}`;
-            console.log(
-              '[OpenAI] Error (raw):',
-              xhr.responseText.substring(0, 200),
-            );
-          }
-        }
-
-        if (xhr.status === 401) {
-          reject(new Error('Unauthorized: Invalid or missing API key'));
-        } else {
-          reject(new Error(errorMessage));
-        }
-        xhr.abort();
-      }
-    };
-
-    xhr.onprogress = () => {
-      // After `xhr.abort()` the OS may still deliver bytes already
-      // queued in the receive buffer via further onprogress firings.
-      // Drop them — but consume the offset so onload (if it ever
-      // fires) doesn't double-process them.
-      if (signal?.aborted) {
-        lastProcessedLength = xhr.responseText.length;
-        return;
-      }
-      // Extract only the new data since last onprogress
-      const newText = xhr.responseText.substring(lastProcessedLength);
-      lastProcessedLength = xhr.responseText.length;
-
-      if (newText) {
-        processChunk(newText);
-      }
-    };
-
-    xhr.onload = () => {
-      if (settled) {
-        return;
-      }
-      settled = true;
-      cleanup();
-
-      // Process any remaining data not yet seen in onprogress
-      const remaining = xhr.responseText.substring(lastProcessedLength);
-      if (remaining) {
-        processChunk(remaining);
-      }
-
-      // Flush the SSE parser buffer: a server that closes the stream on a
-      // final frame with no trailing blank line leaves it here.
-      for (const event of parser.flush()) {
+      // A server that closes the stream on a final frame with no trailing
+      // blank line leaves it in the parser buffer.
+      for (const event of flushed) {
         if (event === 'done') {
           break;
         }
@@ -707,7 +583,6 @@ export async function streamChatCompletion(
       // observed during the stream.
       const finalToolCalls = assembleFinalToolCalls(toolCallAcc);
 
-      // Build result
       if (signal?.aborted) {
         resolve({
           text: fullContent,
@@ -753,39 +628,31 @@ export async function streamChatCompletion(
       resolve(result);
     };
 
-    xhr.onerror = () => {
-      if (settled) {
-        return;
-      }
-      settled = true;
-      cleanup();
+    const onHttpError = (status: number, responseText: string) => {
+      clearIdleTimer();
 
-      if (signal?.aborted) {
-        reject(new Error('Completion aborted'));
+      let errorMessage = `Server error: ${status}`;
+      try {
+        const errorBody = JSON.parse(responseText);
+        const detail =
+          errorBody?.error?.message || errorBody?.error || responseText;
+        errorMessage = `Server error: ${status} — ${detail}`;
+        console.log(
+          '[OpenAI] Error:',
+          errorBody?.error?.message || errorBody?.error,
+        );
+      } catch {
+        if (responseText) {
+          errorMessage = `Server error: ${status} — ${responseText.substring(0, 200)}`;
+          console.log('[OpenAI] Error (raw):', responseText.substring(0, 200));
+        }
+      }
+
+      if (status === 401) {
+        reject(new Error('Unauthorized: Invalid or missing API key'));
       } else {
-        reject(new Error('Network error'));
+        reject(new Error(errorMessage));
       }
-    };
-
-    xhr.onabort = () => {
-      if (settled) {
-        return;
-      }
-      settled = true;
-      cleanup();
-
-      if (signal?.aborted) {
-        // Externally aborted — resolve with partial content
-        resolve({
-          text: fullContent,
-          content: fullContent,
-          reasoning_content: fullReasoningContent || undefined,
-          tokens_predicted: tokensPredicted,
-          interrupted: true,
-        });
-      }
-      // If not externally aborted, the reject was already called
-      // by the timeout handler that triggered xhr.abort()
     };
 
     const transportBody: Partial<Record<TransportBodyKey, any>> = {
@@ -833,6 +700,44 @@ export async function streamChatCompletion(
       }),
       ...transportBody,
     };
-    xhr.send(JSON.stringify(requestBody));
+
+    const stream = openEventStream(
+      url,
+      {
+        method: 'POST',
+        headers: buildHeaders(apiKey),
+        body: JSON.stringify(requestBody),
+        connectTimeoutMs: connectionTimeoutMs,
+        signal,
+      },
+      {
+        onOpen: resetIdleTimer,
+        onEvents: processEvents,
+        onLoad,
+        onHttpError,
+        onNetworkError: () => {
+          clearIdleTimer();
+          reject(
+            new Error(signal?.aborted ? 'Completion aborted' : 'Network error'),
+          );
+        },
+        onConnectTimeout: () => {
+          clearIdleTimer();
+          reject(new Error('Connection timed out'));
+        },
+        onAbort: () => {
+          clearIdleTimer();
+          if (signal?.aborted) {
+            resolve({
+              text: fullContent,
+              content: fullContent,
+              reasoning_content: fullReasoningContent || undefined,
+              tokens_predicted: tokensPredicted,
+              interrupted: true,
+            });
+          }
+        },
+      },
+    );
   });
 }
