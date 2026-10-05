@@ -17,6 +17,7 @@ import * as fs from 'fs';
 import * as path from 'path';
 import * as os from 'os';
 import {byTestId} from './selectors';
+import {withBridgeElements} from './automation-bridge';
 
 declare const driver: WebdriverIO.Browser;
 
@@ -47,8 +48,10 @@ async function sendCommand(command: string): Promise<void> {
   const isAndroid = (driver as any).isAndroid;
 
   if (isAndroid) {
-    const input = await driver.$(byTestId('memory-snapshot-label'));
-    await input.setValue(command);
+    await withBridgeElements(async () => {
+      const input = await driver.$(byTestId('memory-snapshot-label'));
+      await input.setValue(command);
+    });
   } else {
     // iOS: use deep link (onChangeText doesn't fire from XCUITest sendKeys)
     const encoded = encodeURIComponent(command);
@@ -78,19 +81,22 @@ export async function readSnapshots(): Promise<MemorySnapshot[]> {
     await sendCommand('read::snapshots');
     await driver.pause(2000);
 
-    const resultEl = await driver.$(byTestId('memory-snapshot-result'));
-    let data: string | null = null;
-    for (let i = 0; i < 10; i++) {
-      await driver.pause(1000);
-      data = await resultEl.getAttribute('content-desc');
-      if (data && data.startsWith('[')) {
-        break;
+    const data = await withBridgeElements(async () => {
+      const resultEl = await driver.$(byTestId('memory-snapshot-result'));
+      let text: string | null = null;
+      for (let i = 0; i < 10; i++) {
+        await driver.pause(1000);
+        text = await resultEl.getAttribute('content-desc');
+        if (text && text.startsWith('[')) {
+          break;
+        }
+        text = await resultEl.getText();
+        if (text && text.startsWith('[')) {
+          break;
+        }
       }
-      data = await resultEl.getText();
-      if (data && data.startsWith('[')) {
-        break;
-      }
-    }
+      return text;
+    });
     if (!data || !data.startsWith('[')) {
       throw new Error(
         `Failed to read snapshots from Android. Got: ${JSON.stringify(data?.slice(0, 200))}`,
@@ -101,8 +107,11 @@ export async function readSnapshots(): Promise<MemorySnapshot[]> {
     // iOS: determine device type from UDID env var
     // Simulator UDIDs are UUID format (8-4-4-4-12 hex), real device UDIDs are not
     const udid = process.env.E2E_DEVICE_UDID || '';
-    const isSimulator = !udid ||
-      /^[0-9A-F]{8}-[0-9A-F]{4}-[0-9A-F]{4}-[0-9A-F]{4}-[0-9A-F]{12}$/i.test(udid);
+    const isSimulator =
+      !udid ||
+      /^[0-9A-F]{8}-[0-9A-F]{4}-[0-9A-F]{4}-[0-9A-F]{4}-[0-9A-F]{12}$/i.test(
+        udid,
+      );
 
     if (isSimulator) {
       // Simulator: read directly from filesystem via simctl. Prefer the
@@ -117,9 +126,7 @@ export async function readSnapshots(): Promise<MemorySnapshot[]> {
       return JSON.parse(data);
     } else {
       // Real device: use ios-deploy to download from app container
-      const tmpDir = fs.mkdtempSync(
-        path.join(os.tmpdir(), 'memory-profile-'),
-      );
+      const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'memory-profile-'));
       execSync(
         `ios-deploy --id ${udid} --bundle_id ${IOS_BUNDLE_ID} --download=/Documents/${SNAPSHOTS_FILENAME} --to ${tmpDir}`,
         {timeout: 15000},
