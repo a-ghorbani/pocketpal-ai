@@ -91,7 +91,7 @@ export class ModelDetailsSheet extends BasePage {
         .catch(() => false);
     let exists = await findButton();
     for (let i = 0; i < 6 && !exists; i++) {
-      await Gestures.swipeUpInSheet();
+      await Gestures.dragUpInSheet();
       await browser.pause(300);
       exists = await findButton();
     }
@@ -112,7 +112,7 @@ export class ModelDetailsSheet extends BasePage {
           .catch(() => false));
         i++
       ) {
-        await Gestures.swipeUpInSheet();
+        await Gestures.dragUpInSheet();
         await browser.pause(500);
       }
       let lastY: number | undefined;
