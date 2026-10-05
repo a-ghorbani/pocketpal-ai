@@ -345,7 +345,11 @@
         "legacy": {
           "message": "‎صيغة تكميم قديمة، وقد لا يعمل النموذج.",
           "shortMessage": "تكميم قديم"
-        }
+        },
+        "multiple": "{{count}} تحذيرات"
+      },
+      "labels": {
+        "downloadSpeed": "{{speed}}"
       }
     },
     "modelDescription": {
@@ -366,7 +370,111 @@
       "rewriting": "إعادة الصياغة",
       "creativity": "الكتابة الإبداعية",
       "vision": "الرؤية",
-      "mtp": "التنبؤات (MTP)"
+      "mtp": "التنبؤات (MTP)",
+      "mtpDraft": "المسودة التخمينية"
+    },
+    "search": {
+      "noResults": "لم يتم العثور على نماذج",
+      "loadingMore": "جارٍ تحميل المزيد...",
+      "searchPlaceholder": "البحث عن نماذج Hugging Face",
+      "modelUpdatedLong": "تم التحديث قبل {{time}}",
+      "modelUpdatedShort": "منذ {{time}}",
+      "modelUpdatedJustNowLong": "تم التحديث الآن",
+      "modelUpdatedJustNowShort": "الآن",
+      "errorOccurred": "تعذر تحميل النماذج. يُرجى المحاولة مرة أخرى.",
+      "filters": {
+        "author": "المؤلف",
+        "authorPlaceholder": "تصفية حسب المؤلف...",
+        "sortBy": "ترتيب حسب",
+        "clearFilters": "مسح الفلاتر",
+        "showFilters": "عرض الفلاتر",
+        "hideFilters": "إخفاء الفلاتر",
+        "sortRelevance": "الأكثر صلة",
+        "sortDownloads": "التنزيلات",
+        "sortRecent": "محدث حديثاً",
+        "sortLikes": "الأكثر إعجابًا"
+      }
+    },
+    "hubRun": {
+      "title": "تنزيل النموذج",
+      "resolving": "جارٍ تحميل تفاصيل النموذج…",
+      "cancel": "إلغاء",
+      "retry": "‍إعادة المحاولة",
+      "invalidLinkTitle": "الرابط غير صالح",
+      "invalidLinkMessage": "رابط Hugging Face هذا مفقود أو يحتوي على نموذج أو ملف غير صالح.",
+      "resolveError": "تعذر تحميل تفاصيل النموذج. تحقق من اتصالك بالإنترنت وحاول مرة أخرى."
+    },
+    "modelCard": {
+      "alerts": {
+        "deleteTitle": "حذف النموذج",
+        "deleteMessage": "هل أنت متأكد من حذف هذا النموذج؟",
+        "removeTitle": "إزالة النموذج",
+        "removeMessage": "هل أنت متأكد من إزالة هذا النموذج من القائمة؟"
+      },
+      "buttons": {
+        "settings": "الإعدادات",
+        "download": "تنزيل",
+        "remove": "إزالة",
+        "load": "تحميل",
+        "offload": "إلغاء التحميل"
+      },
+      "labels": {
+        "skills": "المهارات: ",
+        "vision": "الرؤية",
+        "visionSupported": "مدعوم",
+        "visionNotSupported": "غير مدعوم",
+        "visionUnknown": "غير معروف",
+        "capabilities": "القدرات.",
+        "modelName": "اسم النموذج",
+        "contextLength": "طول السياق",
+        "architecture": "البنية",
+        "author": "المؤلف",
+        "requiresProjectionModel": "يتطلب نموذج عرض",
+        "downloadProjectionModel": "‎تنزيل نموذج العرض",
+        "viewModelCardOnHuggingFace": "عرض بطاقة النموذج على Hugging Face",
+        "draftOnlyReason": "نموذج مسودة فقط. اختره من الإعدادات ← فك الترميز التخميني."
+      },
+      "accessibility": {
+        "expandDetails": "‎توسيع التفاصيل",
+        "collapseDetails": "طي التفاصيل",
+        "memoryWarning": "تحذير الذاكرة",
+        "integrityWarning": "تحذير السلامة",
+        "downloadProgress": "تقدم التنزيل",
+        "loadingIndicator": "جارٍ التحميل",
+        "loadButton": "تحميل النموذج",
+        "offloadButton": "إلغاء تحميل النموذج",
+        "downloadButton": "تنزيل النموذج",
+        "settingsButton": "إعدادات النموذج",
+        "deleteButton": "حذف النموذج",
+        "removeButton": "‎إزالة النموذج",
+        "expandDetailsButton": "توسيع تفاصيل النموذج",
+        "memoryWarningButton": "عرض تفاصيل تحذير الذاكرة",
+        "integrityWarningButton": "عرض تفاصيل تحذير السلامة",
+        "memoryWarningSnackbar": "إشعار تحذير الذاكرة"
+      }
+    },
+    "modelSettings": {
+      "template": {
+        "label": "القالب:",
+        "editButton": "تعديل",
+        "dialogTitle": "تعديل قالب الدردشة",
+        "note1": "ملاحظة: قد يؤدي تغيير القالب إلى تغيير BOS وEOS وموجه النظام.",
+        "note2": "يستخدم Nunjucks. اتركه فارغًا لاستخدام قالب النموذج.",
+        "placeholder": "أدخل قالب الدردشة هنا...",
+        "closeButton": "إغلاق"
+      },
+      "stopWords": {
+        "placeholder": "إضافة كلمة توقف جديدة",
+        "label": "كلمات التوقف"
+      },
+      "tokenSettings": {
+        "bos": "BOS",
+        "eos": "EOS",
+        "bosTokenPlaceholder": "رمز BOS",
+        "eosTokenPlaceholder": "رمز EOS",
+        "addGenerationPrompt": "إضافة تعليمات التوليد",
+        "systemPrompt": "تعليمات النظام"
+      }
     }
   },
   "completionParams": {
@@ -461,7 +569,7 @@
       "tokensPerSec": "{{value}} رمز/ثانية",
       "promptTokensPerSec": "{{value}} رمز الإدخال/ثانية",
       "cachedTokens": "{{value}} مخزّن مؤقتًا",
-      "ttft": "{{value}}ms TTFT",
+      "ttft": "{{value}} مللي ثانية لزمن الوصول لأول رمز",
       "draftAccepted": "المسودة: {{accepted}}/{{total}} ({{pct}}%)",
       "interrupted": "مقاطَع",
       "truncated": "تم القطع — على الأرجح السياق ممتلئ"
@@ -747,7 +855,9 @@
       "generationSettings": "إعدادات التوليد",
       "configureGenerationSettings": "تكوين إعدادات التوليد",
       "validation": {
-        "nameRequired": "الاسم مطلوب"
+        "nameRequired": "الاسم مطلوب",
+        "generatingPromptRequired": "إنشاء prompt مطلوب عند استخدام prompt الذكاء الاصطناعي",
+        "promptModelRequired": "نموذج توليد الـ prompt مطلوب عند استخدام prompt الذكاء الاصطناعي"
       },
       "talents": "المهارات",
       "talentNames": {
@@ -767,7 +877,11 @@
       "greeting": {
         "sectionLabel": "التحية",
         "textLabel": "رسالة التحية",
-        "textPlaceholder": "ماذا يجب أن يقول هذا الرفيق في دردشة فارغة؟"
+        "textPlaceholder": "ماذا يجب أن يقول هذا الرفيق في دردشة فارغة؟",
+        "suggestedPromptsLabel": "الـ prompts المقترحة",
+        "addPromptButton": "إضافة prompt",
+        "promptPlaceholder": "prompt قصير للشريحة",
+        "removePromptLabel": "إزالة الـ prompt"
       }
     },
     "assistantPalSheet": {
@@ -779,7 +893,11 @@
       "palNamePlaceholder": "الاسم",
       "defaultModel": "‎النموذج الافتراضي",
       "defaultModelPlaceholder": "اختر النموذج",
-      "create": "‎إنشاء"
+      "create": "‎إنشاء",
+      "validation": {
+        "generatingPromptRequired": "إنشاء prompt مطلوب",
+        "promptModelRequired": "نموذج توليد الـ prompt مطلوب"
+      }
     },
     "modelNotAvailable": {
       "noModelsDownloaded": "‎ليس لديك أي نماذج مُنزَّلة بعد. يرجى تنزيل نموذج أولاً.",
@@ -815,7 +933,10 @@
       "situationPlaceholder": "مهمة إنقاذ، حلّ لغز",
       "toneStyle": "النبرة/الأسلوب",
       "toneStylePlaceholder": "جدّي",
-      "create": "إنشاء"
+      "create": "إنشاء",
+      "validation": {
+        "promptModelRequired": "نموذج توليد Prompt مطلوب"
+      }
     },
     "lookiePalSheet": {
       "title": {
@@ -848,10 +969,18 @@
         "loadingModel": "‏جارٍ تحميل النموذج...",
         "stopGenerating": "إيقاف التوليد",
         "resetParameters": "إعادة تعيين المعاملات",
-        "resetTemplate": "إعادة تعيين القالب"
+        "resetTemplate": "إعادة تعيين القالب",
+        "generatePrompt": "‏إنشاء Prompt النظام"
       },
       "systemPrompt": {
-        "placeholder": "‎أنت مساعد مفيد"
+        "placeholder": "‎أنت مساعد مفيد",
+        "label": "Prompt النظام",
+        "sublabel": "لا تتردد في التحرير والتجربة للعثور على الـ prompt الأمثل لسيناريوك"
+      },
+      "sectionTitle": "‎Prompt النظام",
+      "useAIPrompt": "استخدم الذكاء الاصطناعي لإنشاء prompt النظام",
+      "warnings": {
+        "promptChanged": "تم تغيير prompt النظام يدويًا"
       }
     },
     "sidebarContent": {
@@ -993,7 +1122,51 @@
       "error": "خطأ",
       "failedToLoadDetails": "تعذّر تحميل تفاصيل الرفيق",
       "failedToDownload": "تعذّر تنزيل الرفيق",
-      "notAvailable": "غير متاح"
+      "notAvailable": "غير متاح",
+      "systemPrompt": "Prompt النظام"
+    },
+    "systemPrompt": "Prompt النظام",
+    "prompt": "Prompt",
+    "purchase": {
+      "buy": "{{price}}",
+      "open": "مفتوح",
+      "install": "تثبيت",
+      "pending": "قيد الانتظار",
+      "unlocking": "جارٍ الفتح",
+      "retry": "‏إعادة المحاولة",
+      "supportCode": "رمز الدعم: {{code}}",
+      "noLongerAvailable": "‪لم يعد هذا الرفيق متاحًا. يمكنك {{refundLink}}.",
+      "refundLink": "اسأل Apple حول عملية استرداد",
+      "notCompleted": "تعذّر إتمام عملية الشراء هذه. ستقوم Google برد المبلغ إليك.",
+      "withdrawnRefunding": "تم سحب هذا الرفيق. تواصل مع الدعم لاسترداد المبلغ.",
+      "invalid": "تعذّر التحقق من عملية الشراء هذه.",
+      "heldInvalid": "تعذّر فتح عملية الشراء هذه. تواصل مع الدعم مع هذا الرمز.",
+      "recommendedModel": "النموذج الموصى به",
+      "sampleExchange": "محادثة نموذجية",
+      "signInLine": "هل تملكه بالفعل؟ سجّل الدخول",
+      "licenseNotice": "أنت تشتري ترخيصًا لاستخدام هذا الرفيق.",
+      "termsOfSale": "شروط البيع",
+      "appleMediaTerms": "شروط خدمات وسائط Apple",
+      "linkPrompt": "سجّل الدخول لاستخدامه على أجهزتك الأخرى أيضًا",
+      "linkSignIn": "تسجيل الدخول",
+      "dismiss": "‎ليس الآن",
+      "linkConflict": "عمليات الشراء هذه مرتبطة بحساب آخر.",
+      "restorePurchases": "استعادة المشتريات",
+      "badgePending": "قيد الانتظار",
+      "badgeUnlocking": "جارٍ الفتح",
+      "badgeUpdate": "يتوفر تحديث",
+      "updatePrompt": "يتوفر إصدار جديد من المنشئ.",
+      "updatePromptWithNote": "يتوفر إصدار جديد من المنشئ: {{note}}.",
+      "updateButton": "تحديث",
+      "updateConfirmText": "‎سيؤدي هذا إلى استبدال تعديلاتك للأجزاء التي غيّرها المنشئ.",
+      "updateConfirm": "تحديث",
+      "updateCancel": "إلغاء",
+      "modelStep": {
+        "download": "تنزيل · {{size}}",
+        "startChat": "ابدء الدردشة",
+        "needsMemory": "يحتاج هذا الرفيق إلى جهاز بذاكرة لا تقل عن {{size}} لأصغر نموذج لديه.",
+        "noModelFits": "لا يمتلك هذا الجهاز ذاكرة كافية لهذا الرفيق."
+      }
     }
   },
   "validation": {
@@ -1003,7 +1176,8 @@
     "aiRoleRequired": "دور الذكاء الاصطناعي مطلوب",
     "userRoleRequired": "دور المستخدم مطلوب",
     "situationRequired": "الموقف مطلوب",
-    "toneStyleRequired": "النبرة/الأسلوب مطلوب"
+    "toneStyleRequired": "النبرة/الأسلوب مطلوب",
+    "systemPromptRequired": "prompt النظام مطلوب"
   },
   "camera": {
     "permissionTitle": "إذن الكاميرا مطلوب",
@@ -1041,7 +1215,8 @@
       "howToUse": "‎كيفية الاستخدام:",
       "step2": "• اضغط على زر الكاميرا لبدء تحليل الفيديو المباشر",
       "step3": "• اضبط تكرار اللقطات أثناء تشغيل الكاميرا",
-      "step4": "‏• انتقل إلى رفيق آخر للدردشة النصية العادية"
+      "step4": "‏• انتقل إلى رفيق آخر للدردشة النصية العادية",
+      "step1": "• حرّر الـ prompt (اختياري) لتوجيه التحليل"
     }
   },
   "screenTitles": {
@@ -1203,7 +1378,8 @@
         "tokenGeneration": "توليد الرموز",
         "totalTime": "الوقت الإجمالي",
         "peakMemory": "ذروة الذاكرة",
-        "tokensPerSecond": "رمز/ثانية"
+        "tokensPerSecond": "رمز/ثانية",
+        "promptProcessing": "معالجة الـ prompt"
       },
       "actions": {
         "deleteButton": " ",
@@ -1246,7 +1422,8 @@
         "gpuVendor": "المورّد",
         "metalSupport": "دعم Metal",
         "openclSupport": "دعم OpenCL",
-        "openclRequirement": "يتطلب i8mm وdotprod"
+        "openclRequirement": "يتطلب i8mm وdotprod",
+        "gpuRenderer": "المُصيّر"
       },
       "instructions": {
         "format": "FP16: {{fp16}}, DotProd: {{dotProd}}, SVE: {{sve}}, I8MM: {{i8mm}}",
