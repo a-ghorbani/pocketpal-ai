@@ -236,7 +236,7 @@ export async function downloadAndLoadModel(
   await dismissPerformanceWarningIfPresent();
 
   // Verify we're on chat screen (auto-navigates after load)
-  await chatPage.waitForReady();
+  await chatPage.waitForReady(TIMEOUTS.appReady);
 
   console.log(`Model loaded successfully: ${model.id}`);
 }
@@ -292,7 +292,7 @@ export async function downloadAndLoadModelVariant(
   await loadBtn.click();
 
   await dismissPerformanceWarningIfPresent();
-  await chatPage.waitForReady();
+  await chatPage.waitForReady(TIMEOUTS.appReady);
 
   console.log(
     `Model variant loaded: ${model.id} / ${variant.quant} (${variant.downloadFile})`,

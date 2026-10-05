@@ -464,7 +464,7 @@ async function downloadAndLoadTarget(model: ModelTestConfig): Promise<void> {
   // Multimodal repo -> a performance/memory warning may appear; Continue loads
   // text-only (no projection was downloaded, so multimodal stays off).
   await dismissPerformanceWarningIfPresent();
-  await chatPage.waitForReady();
+  await chatPage.waitForReady(TIMEOUTS.appReady);
   console.log(`Target loaded (text-only): ${model.id}`);
 }
 
