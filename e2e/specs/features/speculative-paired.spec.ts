@@ -38,8 +38,6 @@
  *
  * Usage:
  *   yarn e2e:ios --spec speculative-paired --devices virtual-only
- *   (long downloads: prefix with E2E_MOCHA_TIMEOUT=1800000 — a per-test
- *   this.timeout() cannot raise wdio's mochaOpts ceiling)
  */
 
 import * as fs from 'fs';
@@ -513,7 +511,11 @@ async function waitForDraftFooter(
   throw new Error('draft-tokens footer did not appear within timeout');
 }
 
-describe('Speculative Decoding / separate-draft (paired) MTP', () => {
+describe('Speculative Decoding / separate-draft (paired) MTP', function () {
+  // Two sequential downloads (98 MB draft + ~3.5 GB target) plus load and
+  // generation exceed the 10-min suite default.
+  this.timeout(Number(process.env.E2E_MOCHA_TIMEOUT) || 1_800_000);
+
   let chatPage: ChatPage;
   let settingsPage: SettingsPage;
 
@@ -543,11 +545,6 @@ describe('Speculative Decoding / separate-draft (paired) MTP', () => {
   });
 
   it('paired engagement: a separate MTP draft paired to a target produces draft tokens', async function (this: Mocha.Context) {
-    // Two sequential downloads (98 MB draft + ~3.5 GB target) plus load and
-    // generation exceed the 10-min suite default. this.timeout() does not
-    // override wdio's mochaOpts.timeout, so long runs must ALSO raise
-    // E2E_MOCHA_TIMEOUT (see usage header); this call covers plain mocha.
-    this.timeout(Number(process.env.E2E_MOCHA_TIMEOUT) || 1_800_000);
 
     // 1) Download the separate MTP draft (not loaded) so it is pickable and its
     //    width/MTP metadata is known.

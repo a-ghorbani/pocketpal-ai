@@ -35,7 +35,9 @@ const MAX_WAIT_MS =
   parseInt(process.env.BENCH_MAX_WAIT_MIN || '60', 10) * 60_000;
 const POLL_MS = 5000;
 
-describe('Benchmark Matrix', () => {
+describe('Benchmark Matrix', function () {
+  this.timeout(MAX_WAIT_MS + 60_000);
+
   const matrix = getBenchmarkMatrix();
   const udid = process.env.E2E_DEVICE_UDID;
   let outDir: string;
@@ -55,9 +57,7 @@ describe('Benchmark Matrix', () => {
     await deepLinkLaunch();
   });
 
-  it('runs the matrix and writes a JSON report', async function (this: Mocha.Context) {
-    this.timeout(MAX_WAIT_MS + 60_000);
-
+  it('runs the matrix and writes a JSON report', async () => {
     // No tap: the deep link carried `?autostart=1`, so the screen self-starts
     // the matrix once it mounts (the fix for HyperOS / MediaTek dropping
     // injected taps). We just wait for the status element to appear, then

@@ -378,7 +378,10 @@ async function toggleCardDetails(downloadFile: string): Promise<void> {
   await browser.pause(800);
 }
 
-describe('Speculative decoding — visual states', () => {
+describe('Speculative decoding — visual states', function () {
+  // Two probe waits plus two model downloads exceed the default per-test cap.
+  this.timeout(1200000);
+
   before(async () => {
     const chatPage = new ChatPage();
     const settingsPage = new SettingsPage();
@@ -407,9 +410,7 @@ describe('Speculative decoding — visual states', () => {
     }
   });
 
-  it('shows the MTP badge in the HF search details view', async function (this: Mocha.Context) {
-    // Two probe waits plus two model downloads exceed the default per-test cap.
-    this.timeout(1200000);
+  it('shows the MTP badge in the HF search details view', async () => {
     const drawerPage = new DrawerPage();
     const modelsPage = new ModelsPage();
     await new ChatPage().openDrawer();
