@@ -296,6 +296,7 @@ async function swipeUpInSheetBelowInputs(): Promise<void> {
     startYPercent: 0.78,
     endYPercent: 0.42,
     duration: 300,
+    holdMs: 300,
   });
 }
 
@@ -315,7 +316,7 @@ async function scrollInSheetClearOfOverlay(
   selector: string,
   overlay: string,
   maxScrolls = 8,
-  scroll: () => Promise<void> = swipeUpInSheet,
+  scroll: () => Promise<void> = dragUpInSheet,
 ): Promise<boolean> {
   for (let i = 0; i < maxScrolls; i++) {
     const element = browser.$(selector);
