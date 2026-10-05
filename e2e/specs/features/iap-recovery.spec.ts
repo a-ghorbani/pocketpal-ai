@@ -249,14 +249,15 @@ describe('In-app purchase recovery', () => {
     await chatPage.openDrawer();
     await drawerPage.navigateToSettings();
     await settingsPage.waitForReady();
-    await buyPage.scrollToCard(`purchase-row-${pal.id}`);
-    const note = await browser.$(
-      textContaining(
-        driver.isAndroid
-          ? 'This Pal was withdrawn.'
-          : 'This Pal is no longer available.',
-      ),
+    const noteSelector = textContaining(
+      driver.isAndroid
+        ? 'This Pal was withdrawn.'
+        : 'This Pal is no longer available.',
     );
+    // Scroll to the text leaf: iOS never reports the purchase-row container
+    // as displayed, so scrolling to the row overshoots the note.
+    await Gestures.scrollToElement(noteSelector, 8);
+    const note = await browser.$(noteSelector);
     await note.waitForDisplayed({timeout: 20000});
     const text = await note.getText();
     expect(text).toContain(

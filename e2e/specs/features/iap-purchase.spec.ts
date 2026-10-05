@@ -12,6 +12,7 @@ import {PalBuyPage} from '../../pages/PalBuyPage';
 import {SettingsPage} from '../../pages/SettingsPage';
 import {TIMEOUTS} from '../../fixtures/models';
 import {byPartialText} from '../../helpers/selectors';
+import {Gestures} from '../../helpers/gestures';
 import {saveFailureScreenshot} from '../../helpers/screenshots';
 import {
   assertMockTraffic,
@@ -78,10 +79,9 @@ describe('In-app purchase', () => {
     await chatPage.openDrawer();
     await drawerPage.navigateToSettings();
     await settingsPage.waitForReady();
-    await buyPage.scrollToCard(`purchase-row-${pal.id}`);
-    await browser
-      .$(byPartialText('Purchased · Support code: E2E-fake-tx-'))
-      .waitForDisplayed({timeout: 20000});
+    const purchased = byPartialText('Purchased · Support code: E2E-fake-tx-');
+    await Gestures.scrollToElement(purchased, 8);
+    await browser.$(purchased).waitForDisplayed({timeout: 20000});
 
     expect(eventsSent(iapMockServer.requests())).toEqual(['buy_tap']);
   });
