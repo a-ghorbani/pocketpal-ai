@@ -71,6 +71,27 @@ const isSuccess = (status: number) => status >= 200 && status < 300;
 
 const noop = () => {};
 
+/** The promise's value, or `stopped` as soon as the signal aborts. */
+function untilAborted<T>(
+  promise: Promise<T>,
+  signal?: AbortSignal,
+): Promise<T | 'stopped'> {
+  if (!signal) {
+    return promise;
+  }
+  if (signal.aborted) {
+    return Promise.resolve('stopped');
+  }
+  return new Promise(resolve => {
+    const onAbort = () => resolve('stopped');
+    signal.addEventListener('abort', onAbort, {once: true});
+    promise.then(value => {
+      signal.removeEventListener('abort', onAbort);
+      resolve(value);
+    });
+  });
+}
+
 /**
  * One router operation on one model. It owns its abort controller and its
  * promise, so withdrawing it and proving a late answer still belongs to it
@@ -405,9 +426,14 @@ export class RouterStore {
       if (step.kind === 'done') {
         return step.result;
       }
-      if (step.kind === 'read') {
-        await this.requestRead(serverId);
-      } else if ((await step.unload).outcome === 'stopped') {
+      const waited =
+        step.kind === 'read'
+          ? await untilAborted(
+              this.reads.get(serverId)?.current ?? this.startRead(serverId),
+              signal,
+            )
+          : (await step.unload).outcome;
+      if (waited === 'stopped' || signal?.aborted) {
         return {outcome: 'stopped'};
       }
     }

@@ -192,6 +192,53 @@ describe('router evidence gate', () => {
     expect(order).toEqual(['read', 'load']);
   });
 
+  it('lets Stop end the wait for that first read, and posts nothing after it', async () => {
+    const firstRead = deferred<ReturnType<typeof list>>();
+    mockedFetch.mockReturnValueOnce(firstRead.promise);
+    const caller = new AbortController();
+    let settled = false;
+    const ready = store
+      .ensureReady(
+        {
+          modelId: `${serverId}/${TARGET}`,
+          serverId,
+          remoteModelId: TARGET,
+          url: 'http://desk:8080',
+          serverType: 'llama.cpp',
+        },
+        caller.signal,
+      )
+      .then(() => {
+        settled = true;
+      });
+    await flush();
+
+    caller.abort();
+    await flush();
+    expect(settled).toBe(true);
+    await ready;
+
+    firstRead.resolve(list(routerRows()));
+    await flush();
+    expect(mockedLoad).not.toHaveBeenCalled();
+    expect(store.recordFor(serverId, TARGET)).toBeUndefined();
+  });
+
+  it('shares one first read between select and a send that follows it', async () => {
+    const firstRead = deferred<ReturnType<typeof list>>();
+    mockedFetch.mockReturnValueOnce(firstRead.promise);
+
+    store.ensureLoaded(serverId, TARGET);
+    await flush();
+    store.ensureLoaded(serverId, TARGET, new AbortController().signal);
+    await flush();
+    firstRead.resolve(list(routerRows()));
+    await flush();
+
+    expect(mockedFetch).toHaveBeenCalledTimes(1);
+    expect(mockedLoad).toHaveBeenCalledTimes(1);
+  });
+
   it('gives up as no router when that first read fails', async () => {
     mockedFetch.mockRejectedValueOnce(new Error('Network error'));
 
