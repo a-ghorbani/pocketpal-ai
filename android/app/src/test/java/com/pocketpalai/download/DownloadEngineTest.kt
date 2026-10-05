@@ -255,6 +255,20 @@ class DownloadEngineTest {
     }
 
     @Test
+    fun stallBoundFailureRecordsTheKeptPart() {
+        insert(stalledRuns = DownloadEngine.MAX_STALLED_RUNS - 1)
+        writePart(100)
+        serve({ MockResponse().setSocketPolicy(SocketPolicy.DISCONNECT_AFTER_REQUEST) })
+
+        assertEquals(Outcome.DONE, run())
+
+        assertEquals(DownloadStatus.FAILED, row().status)
+        assertEquals(DownloadEngine.MAX_STALLED_RUNS, row().stalledRuns)
+        assertEquals(100L, row().downloadedBytes)
+        assertEquals(100L, part.length())
+    }
+
+    @Test
     fun runThatWroteBytesResetsTheStallCount() {
         insert(stalledRuns = 4)
         serve(
@@ -559,6 +573,7 @@ class DownloadEngineTest {
         assertEquals(DownloadEngine.STOPPED_ERROR, row().error)
         assertTrue(row().failureUnreported)
         assertTrue(part.length() > 0)
+        assertEquals(part.length(), row().downloadedBytes)
     }
 
     @Test

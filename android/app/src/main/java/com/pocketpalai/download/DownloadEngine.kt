@@ -78,6 +78,7 @@ class DownloadEngine(
 
     private suspend fun finish(row: DownloadEntity, signal: StopSignal, end: End): Outcome {
         val id = row.id
+        fun keptBytes() = File(row.destination + PART_SUFFIX).let { if (it.exists()) it.length() else 0 }
         Log.d(TAG, "Run for $id ended: $end")
         return when (end) {
             End.Completed -> {
@@ -89,7 +90,7 @@ class DownloadEngine(
                 Outcome.DONE
             }
             End.Stopped -> if (signal.userStop) {
-                dao.casStatus(id, RUNNING, DownloadStatus.FAILED, STOPPED_ERROR)
+                dao.fail(id, STOPPED_ERROR, keptBytes())
                 Outcome.DONE
             } else if (dao.casStatus(id, RUNNING, DownloadStatus.QUEUED) == 1) {
                 Outcome.RESCHEDULE
@@ -97,14 +98,13 @@ class DownloadEngine(
                 Outcome.DONE
             }
             is End.Failed -> {
-                val part = File(row.destination + PART_SUFFIX)
-                dao.fail(id, end.error, if (part.exists()) part.length() else 0)
+                dao.fail(id, end.error, keptBytes())
                 Outcome.DONE
             }
             is End.GaveUp -> {
                 val stalledRuns = if (end.wroteBytes) 0 else row.stalledRuns + 1
                 if (stalledRuns >= MAX_STALLED_RUNS) {
-                    dao.endTransientRun(id, stalledRuns, DownloadStatus.FAILED, STALLED_ERROR)
+                    dao.fail(id, STALLED_ERROR, keptBytes(), stalledRuns)
                     Outcome.DONE
                 } else if (dao.endTransientRun(id, stalledRuns, DownloadStatus.QUEUED) == 1) {
                     Outcome.RESCHEDULE

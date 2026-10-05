@@ -47,8 +47,8 @@ interface DownloadDao {
     @Query("UPDATE downloads SET etag = :etag, totalBytes = :totalBytes, downloadedBytes = :downloadedBytes WHERE id = :downloadId AND status = 'RUNNING'")
     suspend fun writeValidators(downloadId: String, etag: String?, totalBytes: Long, downloadedBytes: Long): Int
 
-    @Query("UPDATE downloads SET status = 'FAILED', error = :error, downloadedBytes = :downloadedBytes, failureUnreported = 1 WHERE id = :downloadId AND status = 'RUNNING'")
-    suspend fun fail(downloadId: String, error: String, downloadedBytes: Long): Int
+    @Query("UPDATE downloads SET status = 'FAILED', error = :error, downloadedBytes = :downloadedBytes, stalledRuns = COALESCE(:stalledRuns, stalledRuns), failureUnreported = 1 WHERE id = :downloadId AND status = 'RUNNING'")
+    suspend fun fail(downloadId: String, error: String, downloadedBytes: Long, stalledRuns: Int? = null): Int
 
     @Query("UPDATE downloads SET stalledRuns = :stalledRuns, status = :to, error = :error, failureUnreported = (:to = 'FAILED') WHERE id = :downloadId AND status = 'RUNNING'")
     suspend fun endTransientRun(downloadId: String, stalledRuns: Int, to: DownloadStatus, error: String? = null): Int
