@@ -17,6 +17,7 @@ import * as fs from 'fs';
 import * as path from 'path';
 import * as os from 'os';
 import {byTestId} from './selectors';
+import {withBridgeElements} from './automation-bridge';
 
 declare const driver: WebdriverIO.Browser;
 
@@ -47,8 +48,10 @@ async function sendCommand(command: string): Promise<void> {
   const isAndroid = (driver as any).isAndroid;
 
   if (isAndroid) {
-    const input = await driver.$(byTestId('memory-snapshot-label'));
-    await input.setValue(command);
+    await withBridgeElements(async () => {
+      const input = await driver.$(byTestId('memory-snapshot-label'));
+      await input.setValue(command);
+    });
   } else {
     // iOS: use deep link (onChangeText doesn't fire from XCUITest sendKeys)
     const encoded = encodeURIComponent(command);
@@ -78,19 +81,22 @@ export async function readSnapshots(): Promise<MemorySnapshot[]> {
     await sendCommand('read::snapshots');
     await driver.pause(2000);
 
-    const resultEl = await driver.$(byTestId('memory-snapshot-result'));
-    let data: string | null = null;
-    for (let i = 0; i < 10; i++) {
-      await driver.pause(1000);
-      data = await resultEl.getAttribute('content-desc');
-      if (data && data.startsWith('[')) {
-        break;
+    const data = await withBridgeElements(async () => {
+      const resultEl = await driver.$(byTestId('memory-snapshot-result'));
+      let text: string | null = null;
+      for (let i = 0; i < 10; i++) {
+        await driver.pause(1000);
+        text = await resultEl.getAttribute('content-desc');
+        if (text && text.startsWith('[')) {
+          break;
+        }
+        text = await resultEl.getText();
+        if (text && text.startsWith('[')) {
+          break;
+        }
       }
-      data = await resultEl.getText();
-      if (data && data.startsWith('[')) {
-        break;
-      }
-    }
+      return text;
+    });
     if (!data || !data.startsWith('[')) {
       throw new Error(
         `Failed to read snapshots from Android. Got: ${JSON.stringify(data?.slice(0, 200))}`,

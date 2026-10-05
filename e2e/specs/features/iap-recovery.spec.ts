@@ -58,10 +58,21 @@ describe('In-app purchase recovery', () => {
     browser.$(withinTestIdPrefix('local-pal-card-', title));
 
   const waitForLocalTitle = async (title: string, timeout = 30000) => {
-    await Gestures.scrollToElement(
-      withinTestIdPrefix('local-pal-card-', title),
-      8,
-    );
+    const card = withinTestIdPrefix('local-pal-card-', title);
+    // On a short screen a swipe can fling the card past the top of the list.
+    if (!(await Gestures.scrollToElement(card, 8))) {
+      for (
+        let i = 0;
+        i < 8 &&
+        !(await localCardTitled(title)
+          .isDisplayed()
+          .catch(() => false));
+        i++
+      ) {
+        await Gestures.swipeDown();
+        await driver.pause(300);
+      }
+    }
     await localCardTitled(title).waitForDisplayed({timeout});
   };
 
@@ -238,14 +249,15 @@ describe('In-app purchase recovery', () => {
     await chatPage.openDrawer();
     await drawerPage.navigateToSettings();
     await settingsPage.waitForReady();
-    await buyPage.scrollToCard(`purchase-row-${pal.id}`);
-    const note = await browser.$(
-      textContaining(
-        driver.isAndroid
-          ? 'This Pal was withdrawn.'
-          : 'This Pal is no longer available.',
-      ),
+    const noteSelector = textContaining(
+      driver.isAndroid
+        ? 'This Pal was withdrawn.'
+        : 'This Pal is no longer available.',
     );
+    // Scroll to the text leaf: iOS never reports the purchase-row container
+    // as displayed, so scrolling to the row overshoots the note.
+    await Gestures.scrollToElement(noteSelector, 8);
+    const note = await browser.$(noteSelector);
     await note.waitForDisplayed({timeout: 20000});
     const text = await note.getText();
     expect(text).toContain(

@@ -135,19 +135,25 @@ export const nativeTextInput = (): string => {
   return '-ios class chain:**/XCUIElementTypeTextField';
 };
 
+const drawerItem = (id: string, label: string): string =>
+  isAndroid() ? byTestId(`drawer-item-${id}`) : byText(label);
+
 /**
  * Predefined selectors organized by screen/feature
  * All use getters for lazy evaluation at runtime
  */
 export const Selectors = {
-  // Navigation drawer - use text labels for reliable tapping
-  // react-native-paper Drawer.Item doesn't always respond to testID taps
+  // Navigation drawer. iOS taps the text label: a react-native-paper
+  // Drawer.Item doesn't always respond to a testID tap there. Android uses the
+  // item's testID, because a bare label also matches controls on the screen
+  // behind the drawer (a model card's "Settings" gear), whose tap lands on
+  // whichever drawer row covers it.
   drawer: {
     get chatTab(): string {
-      return byText('Chat');
+      return drawerItem('chat', 'Chat');
     },
     get modelsTab(): string {
-      return byText('Models');
+      return drawerItem('models', 'Models');
     },
     // Pals tab doubles as the drawer-open indicator (DrawerPage.isOpen /
     // waitForOpen / waitForClose), so it must survive a language switch.
@@ -157,10 +163,10 @@ export const Selectors = {
       return byTestId('drawer-item-pals');
     },
     get benchmarkTab(): string {
-      return byText('Benchmark');
+      return drawerItem('benchmark', 'Benchmark');
     },
     get settingsTab(): string {
-      return byText('Settings');
+      return drawerItem('settings', 'Settings');
     },
   },
 

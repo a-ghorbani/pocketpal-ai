@@ -90,17 +90,60 @@ export class ModelDetailsSheet extends BasePage {
         .then(() => true)
         .catch(() => false);
     let exists = await findButton();
-    for (let i = 0; i < 6 && !exists; i++) {
-      await Gestures.swipeUpInSheet();
+    for (let i = 0; i < 10 && !exists; i++) {
+      await Gestures.dragUpInSheet();
       await browser.pause(300);
       exists = await findButton();
     }
 
     if (exists) {
-      await browser
-        .$(fileCardSelector)
-        .$(Selectors.modelDetails.downloadButtonElement)
-        .click();
+      const button = () =>
+        browser
+          .$(fileCardSelector)
+          .$(Selectors.modelDetails.downloadButtonElement);
+      // Existing is not tappable: an off-screen button ignores the click, as
+      // does one still disabled while model info loads or still moving with
+      // the sheet scroll (slow phones).
+      for (
+        let i = 0;
+        i < 10 &&
+        !(await button()
+          .isDisplayed()
+          .catch(() => false));
+        i++
+      ) {
+        await Gestures.dragUpInSheet();
+        await browser.pause(500);
+      }
+      if (
+        !(await button()
+          .isDisplayed()
+          .catch(() => false))
+      ) {
+        throw new Error(`download button for ${filename} never came into view`);
+      }
+      let lastY: number | undefined;
+      await browser.waitUntil(
+        async () => {
+          const y = await button()
+            .getLocation('y')
+            .catch(() => undefined);
+          const settled = y !== undefined && y === lastY;
+          lastY = y;
+          return (
+            settled &&
+            (await button()
+              .isEnabled()
+              .catch(() => false))
+          );
+        },
+        {
+          timeout,
+          interval: 300,
+          timeoutMsg: `download button for ${filename} never settled enabled`,
+        },
+      );
+      await button().click();
     } else {
       console.log(
         `[tapDownloadForFile] no download button on card for ${filename} ` +
@@ -122,7 +165,7 @@ export class ModelDetailsSheet extends BasePage {
     // We use isExisting instead of isDisplayed due to iOS sheet visibility bug
     const found = await Gestures.scrollInSheetToElementExists(
       fileCardSelector,
-      5,
+      10,
     );
     if (!found) {
       // Fallback: element might already be in DOM but needs scroll into view

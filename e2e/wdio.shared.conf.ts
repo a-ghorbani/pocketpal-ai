@@ -51,9 +51,9 @@ export const config: Options.Testrunner = {
 
   mochaOpts: {
     ui: 'bdd',
-    // 10 minutes - model downloads and inference can be slow. A per-test
-    // this.timeout() does not override this, so specs that pull multi-GB
-    // fixtures onto a real device raise it through the environment instead.
+    // 10 minutes - model downloads and inference can be slow. wdio arms a
+    // test's or hook's timer before its body runs, so a this.timeout() inside
+    // one is ignored; specs that need longer call it in the describe callback.
     timeout: Number(process.env.E2E_MOCHA_TIMEOUT) || 600000,
   },
 } as Options.Testrunner;

@@ -15,6 +15,7 @@
 
 import {execSync} from 'child_process';
 import {byTestId} from './selectors';
+import {withBridgeElements} from './automation-bridge';
 
 declare const driver: WebdriverIO.Browser;
 
@@ -32,8 +33,10 @@ interface TtsStatus {
 async function sendCommand(command: string): Promise<void> {
   const isAndroid = (driver as any).isAndroid;
   if (isAndroid) {
-    const input = await driver.$(byTestId('tts-command-input'));
-    await input.setValue(command);
+    await withBridgeElements(async () => {
+      const input = await driver.$(byTestId('tts-command-input'));
+      await input.setValue(command);
+    });
   } else {
     const encoded = encodeURIComponent(command);
     await driver.execute('mobile: deepLink', {
@@ -46,14 +49,14 @@ async function sendCommand(command: string): Promise<void> {
 async function readStatus(): Promise<TtsStatus> {
   const isAndroid = (driver as any).isAndroid;
   if (isAndroid) {
-    const input = await driver.$(byTestId('tts-command-input'));
-    await input.setValue('read::status');
-    await driver.pause(500);
-    const resultEl = await driver.$(byTestId('tts-command-result'));
-    let data: string | null = await resultEl.getAttribute('content-desc');
-    if (!data || !data.startsWith('{')) {
-      data = await resultEl.getText();
-    }
+    const data = await withBridgeElements(async () => {
+      const input = await driver.$(byTestId('tts-command-input'));
+      await input.setValue('read::status');
+      await driver.pause(500);
+      const resultEl = await driver.$(byTestId('tts-command-result'));
+      const label: string | null = await resultEl.getAttribute('content-desc');
+      return label && label.startsWith('{') ? label : resultEl.getText();
+    });
     if (!data || !data.startsWith('{')) {
       return {};
     }

@@ -148,7 +148,7 @@ describe('Hub Run Deep Link', () => {
     await dismissPerformanceWarningIfPresent();
 
     // Loading auto-navigates back to chat.
-    await chatPage.waitForReady();
+    await chatPage.waitForReady(TIMEOUTS.appReady);
     await chatPage.resetChat();
 
     // First chat.
