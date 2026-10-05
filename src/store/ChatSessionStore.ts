@@ -66,6 +66,8 @@ const DEFAULT_GROUP_NAMES = {
   older: 'Older',
 };
 
+export const NEW_CHAT_DRAFT_KEY = '__new_chat__';
+
 export const defaultCompletionSettings = {...defaultCompletionParams};
 delete defaultCompletionSettings.prompt;
 delete defaultCompletionSettings.stop;
@@ -1425,6 +1427,14 @@ class ChatSessionStore {
 
   clearDraft(sessionId: string) {
     this.sessionDrafts.delete(sessionId);
+  }
+
+  restoreUnsentText(sessionId: string | null, text: string) {
+    if (sessionId !== null && !this.sessions.some(s => s.id === sessionId)) {
+      return;
+    }
+    const key = sessionId ?? NEW_CHAT_DRAFT_KEY;
+    this.saveDraft(key, [text, this.getDraft(key)].filter(Boolean).join('\n'));
   }
 
   async setActivePal(palId: string | undefined): Promise<void> {

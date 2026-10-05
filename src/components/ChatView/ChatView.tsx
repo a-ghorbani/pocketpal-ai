@@ -53,7 +53,7 @@ import {t} from '../../locales';
 import {getModelMemoryRequirement} from '../../utils/memoryEstimator';
 import {CONTEXT_LADDER} from '../../utils/bannerVariantResolver';
 
-import {chatSessionStore, modelStore} from '../../store';
+import {NEW_CHAT_DRAFT_KEY, chatSessionStore, modelStore} from '../../store';
 
 import {MessageType, User} from '../../utils/types';
 import {Pal} from '../../types/pal';
@@ -369,18 +369,25 @@ export const ChatView = observer(
     // ============ DRAFT AUTOSAVE ============
     // Save draft on session switch, restore draft for new session
     const prevSessionId = usePrevious(chatSessionStore.activeSessionId);
+    const syncedDraftRef = React.useRef('');
     React.useEffect(() => {
-      const NEW_CHAT_DRAFT_KEY = '__new_chat__';
       const prevKey = prevSessionId ?? NEW_CHAT_DRAFT_KEY;
       const newKey = chatSessionStore.activeSessionId ?? NEW_CHAT_DRAFT_KEY;
 
-      // Save draft for the session we're leaving
-      if (prevKey !== newKey) {
-        chatSessionStore.saveDraft(prevKey, inputTextRef.current);
+      // This runs after the switch, so a cancelled send may already have put
+      // its text into the draft being left: keep it rather than overwrite it.
+      const typed = inputTextRef.current;
+      if (prevKey !== newKey && typed !== syncedDraftRef.current) {
+        const stored = chatSessionStore.getDraft(prevKey);
+        chatSessionStore.saveDraft(
+          prevKey,
+          stored === syncedDraftRef.current ? typed : `${stored}\n${typed}`,
+        );
       }
 
       // Restore draft for the session we're entering
       const draft = chatSessionStore.getDraft(newKey);
+      syncedDraftRef.current = draft;
       setInputText(draft);
       // eslint-disable-next-line react-hooks/exhaustive-deps -- MobX observer makes activeSessionId reactive
     }, [chatSessionStore.activeSessionId]);
@@ -512,14 +519,14 @@ export const ChatView = observer(
     // ============ MESSAGE INPUT HANDLERS ============
     const wrappedOnSendPress = React.useCallback(
       async (message: MessageType.PartialText) => {
+        const draftKey = chatSessionStore.activeSessionId ?? NEW_CHAT_DRAFT_KEY;
         if (chatSessionStore.isEditMode) {
           await chatSessionStore.commitEdit();
         }
         onSendPress(message);
         setInputText('');
-        if (chatSessionStore.activeSessionId) {
-          chatSessionStore.clearDraft(chatSessionStore.activeSessionId);
-        }
+        syncedDraftRef.current = '';
+        chatSessionStore.clearDraft(draftKey);
         Keyboard.dismiss();
       },
       [onSendPress],

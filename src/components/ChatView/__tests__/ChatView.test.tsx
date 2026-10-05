@@ -11,9 +11,9 @@ import {
 import {l10n} from '../../../locales';
 import {MessageType} from '../../../utils/types';
 import {ChatView} from '../ChatView';
-import {fireEvent, render} from '../../../../jest/test-utils';
+import {act, fireEvent, render} from '../../../../jest/test-utils';
 import {ChatEmptyPlaceholder} from '../../ChatEmptyPlaceholder';
-import {chatSessionStore, modelStore} from '../../../store';
+import {NEW_CHAT_DRAFT_KEY, chatSessionStore, modelStore} from '../../../store';
 import {registerDefaultTalents} from '../../../services/talents';
 import DeviceInfo from 'react-native-device-info';
 
@@ -358,6 +358,120 @@ describe('chat', () => {
       const newChat = getByTestId('increase-context-new-chat');
       fireEvent.press(newChat);
       expect(chatSessionStore.resetActiveSession).toHaveBeenCalledTimes(1);
+    });
+  });
+
+  describe('composer draft across a chat switch', () => {
+    const drafts = new Map<string, string>();
+    const props = {messages: [], onSendPress: jest.fn(), user};
+    const options = {withNavigation: true, withBottomSheetProvider: true};
+
+    beforeEach(() => {
+      drafts.clear();
+      (chatSessionStore.saveDraft as jest.Mock).mockImplementation(
+        (key: string, text: string) =>
+          text.trim() ? drafts.set(key, text) : drafts.delete(key),
+      );
+      (chatSessionStore.getDraft as jest.Mock).mockImplementation(
+        (key: string) => drafts.get(key) ?? '',
+      );
+      (chatSessionStore.clearDraft as jest.Mock).mockImplementation(
+        (key: string) => drafts.delete(key),
+      );
+      runInAction(() => {
+        modelStore.activeModelId = 'test-model-id';
+      });
+    });
+
+    afterEach(() => {
+      chatSessionStore.activeSessionId = 'session-1';
+      (chatSessionStore.saveDraft as jest.Mock).mockReset();
+      (chatSessionStore.getDraft as jest.Mock).mockReset().mockReturnValue('');
+      (chatSessionStore.clearDraft as jest.Mock).mockReset();
+    });
+
+    const renderChat = () => {
+      const utils = render(<ChatView {...props} />, options);
+      const composer = () =>
+        utils.getByPlaceholderText(
+          l10n.en.components.chatInput.inputPlaceholder,
+        );
+      const type = (text: string) => fireEvent.changeText(composer(), text);
+      const send = () =>
+        fireEvent.press(
+          utils.getByLabelText(
+            l10n.en.components.sendButton.accessibilityLabel,
+          ),
+        );
+      const switchTo = (sessionId: string | null, writeBefore?: () => void) =>
+        act(() => {
+          chatSessionStore.activeSessionId = sessionId;
+          writeBefore?.();
+          utils.rerender(<ChatView {...props} messages={[]} />);
+        });
+      return {composer, type, send, switchTo};
+    };
+
+    it('saves typed text for the chat being left', () => {
+      const {type, switchTo} = renderChat();
+      type('foo');
+      switchTo('session-2');
+      expect(chatSessionStore.saveDraft).toHaveBeenCalledWith(
+        'session-1',
+        'foo',
+      );
+      expect(drafts.get('session-1')).toBe('foo');
+    });
+
+    it('keeps a draft written for the chat being left after the composer last synced', () => {
+      const {type, send, switchTo} = renderChat();
+      type('first');
+      send();
+      switchTo('session-2', () => drafts.set('session-1', 'hi'));
+      expect(chatSessionStore.saveDraft).not.toHaveBeenCalledWith(
+        'session-1',
+        '',
+      );
+      expect(drafts.get('session-1')).toBe('hi');
+    });
+
+    it('joins text typed since then after that draft', () => {
+      const {type, send, switchTo} = renderChat();
+      type('first');
+      send();
+      type('bar');
+      switchTo('session-2', () => drafts.set('session-1', 'hi'));
+      expect(drafts.get('session-1')).toBe('hi\nbar');
+    });
+
+    it('clears the new-chat draft when sending from the new-chat screen', () => {
+      chatSessionStore.activeSessionId = null;
+      drafts.set(NEW_CHAT_DRAFT_KEY, 'foo');
+      const {composer, send, switchTo} = renderChat();
+      expect(composer().props.value).toBe('foo');
+      send();
+      switchTo('created-session');
+      expect(chatSessionStore.clearDraft).toHaveBeenCalledWith(
+        NEW_CHAT_DRAFT_KEY,
+      );
+      expect(drafts.get(NEW_CHAT_DRAFT_KEY)).toBeUndefined();
+    });
+
+    it('deletes the draft when the composer was cleared before leaving', () => {
+      drafts.set('session-1', 'foo');
+      const {composer, type, switchTo} = renderChat();
+      expect(composer().props.value).toBe('foo');
+      type('');
+      switchTo('session-2');
+      expect(drafts.has('session-1')).toBe(false);
+    });
+
+    it('clears the chat draft on send', () => {
+      drafts.set('session-1', 'foo');
+      const {send} = renderChat();
+      send();
+      expect(chatSessionStore.clearDraft).toHaveBeenCalledWith('session-1');
+      expect(drafts.has('session-1')).toBe(false);
     });
   });
 });

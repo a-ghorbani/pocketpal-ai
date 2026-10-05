@@ -1,6 +1,10 @@
 jest.unmock('../ChatSessionStore'); // this is not really needed, as only importing from store is mocked.
 
-import {chatSessionStore, defaultCompletionSettings} from '../ChatSessionStore';
+import {
+  NEW_CHAT_DRAFT_KEY,
+  chatSessionStore,
+  defaultCompletionSettings,
+} from '../ChatSessionStore';
 import {chatSessionRepository} from '../../repositories/ChatSessionRepository';
 
 import {MessageType} from '../../utils/types';
@@ -2224,6 +2228,42 @@ describe('chatSessionStore', () => {
       chatSessionStore.clearDraft('session1');
       expect(chatSessionStore.getDraft('session1')).toBe('');
       expect(chatSessionStore.getDraft('session2')).toBe('draft B');
+    });
+
+    describe('restoreUnsentText', () => {
+      beforeEach(() => {
+        chatSessionStore.sessionDrafts.clear();
+        chatSessionStore.sessions = [
+          {id: 'session-a', title: 'A', date: '', messages: []} as any,
+        ];
+      });
+
+      it('puts the text into the session draft when there is none', () => {
+        chatSessionStore.restoreUnsentText('session-a', 'hi');
+        expect(chatSessionStore.getDraft('session-a')).toBe('hi');
+      });
+
+      it('joins with an existing draft, restored text first', () => {
+        chatSessionStore.saveDraft('session-a', 'bar');
+        chatSessionStore.restoreUnsentText('session-a', 'hi');
+        expect(chatSessionStore.getDraft('session-a')).toBe('hi\nbar');
+      });
+
+      it('keeps the existing draft when the text is empty', () => {
+        chatSessionStore.saveDraft('session-a', 'bar');
+        chatSessionStore.restoreUnsentText('session-a', '');
+        expect(chatSessionStore.getDraft('session-a')).toBe('bar');
+      });
+
+      it('writes nothing for a session that no longer exists', () => {
+        chatSessionStore.restoreUnsentText('deleted-session', 'hi');
+        expect(chatSessionStore.sessionDrafts.size).toBe(0);
+      });
+
+      it('uses the new-chat key when the send came from the new-chat screen', () => {
+        chatSessionStore.restoreUnsentText(null, 'hi');
+        expect(chatSessionStore.getDraft(NEW_CHAT_DRAFT_KEY)).toBe('hi');
+      });
     });
   });
 
