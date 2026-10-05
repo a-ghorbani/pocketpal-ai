@@ -361,3 +361,121 @@ describe('useChatSession Stop and the generation lease', () => {
     consoleError.mockRestore();
   });
 });
+
+describe('useChatSession: a send whose chat changed while it waited', () => {
+  async function sendWhileHeld(changeChat: () => void, text = 'hi') {
+    const installed = installEngine();
+    const session = renderSession();
+    const held = (await modelStore.acquireGeneration())!;
+
+    let sending!: Promise<void>;
+    await act(async () => {
+      sending = session.current.handleSendPress({...textMessage, text});
+    });
+    expect(chatSessionStore.setIsStopping).toHaveBeenLastCalledWith(true);
+
+    changeChat();
+    await act(async () => {
+      held.end();
+    });
+    return {...installed, sending};
+  }
+
+  const expectNoRun = async ({
+    engine,
+    sending,
+  }: Awaited<ReturnType<typeof sendWhileHeld>>) => {
+    await act(async () => {
+      await sending;
+    });
+    expect(chatSessionStore.addMessageToCurrentSession).not.toHaveBeenCalled();
+    expect(chatSessionStore.createNewSession).not.toHaveBeenCalled();
+    expect(engine.completion).not.toHaveBeenCalled();
+    const next = modelStore.tryAcquireGeneration();
+    expect(next).not.toBeNull();
+    next?.end();
+  };
+
+  it('is cancelled when another chat is opened, and its text becomes the original chat draft', async () => {
+    const sent = await sendWhileHeld(() => {
+      chatSessionStore.activeSessionId = 'session-2';
+    });
+    await expectNoRun(sent);
+    expect(chatSessionStore.restoreUnsentText).toHaveBeenCalledWith(
+      'session-1',
+      'hi',
+    );
+  });
+
+  it('is cancelled when a new chat is started', async () => {
+    const sent = await sendWhileHeld(() => {
+      chatSessionStore.activeSessionId = null;
+    });
+    await expectNoRun(sent);
+    expect(chatSessionStore.restoreUnsentText).toHaveBeenCalledWith(
+      'session-1',
+      'hi',
+    );
+  });
+
+  it('sent from the new-chat screen, then another chat opened: the text goes back to the new chat', async () => {
+    chatSessionStore.activeSessionId = null;
+    const sent = await sendWhileHeld(() => {
+      chatSessionStore.activeSessionId = 'session-2';
+    });
+    await expectNoRun(sent);
+    expect(chatSessionStore.restoreUnsentText).toHaveBeenCalledWith(null, 'hi');
+  });
+
+  it('is sent normally when the user switched away and back before it was granted', async () => {
+    const {engine, completions, sending} = await sendWhileHeld(() => {
+      chatSessionStore.activeSessionId = 'session-2';
+      chatSessionStore.activeSessionId = 'session-1';
+    });
+    await waitFor(() => expect(engine.completion).toHaveBeenCalledTimes(1));
+    expect(userBubbles().map(m => (m as MessageType.Text).text)).toEqual([
+      'hi',
+    ]);
+    expect(chatSessionStore.restoreUnsentText).not.toHaveBeenCalled();
+    await act(async () => {
+      completions[0].finish({text: 'a', content: 'a'});
+      await sending;
+    });
+  });
+
+  it('writes no row when the original chat was deleted during the wait', async () => {
+    const sent = await sendWhileHeld(() => {
+      chatSessionStore.sessions = chatSessionStore.sessions.filter(
+        s => s.id !== 'session-1',
+      );
+      chatSessionStore.activeSessionId = null;
+    });
+    await expectNoRun(sent);
+    expect(chatSessionStore.restoreUnsentText).toHaveBeenCalledWith(
+      'session-1',
+      'hi',
+    );
+  });
+
+  it('adds no "model not loaded" message to the other chat when the model went away too', async () => {
+    const {engine} = installEngine();
+    const session = renderSession();
+    (modelStore.acquireGeneration as jest.Mock).mockImplementationOnce(
+      async () => {
+        chatSessionStore.activeSessionId = 'session-2';
+        return null;
+      },
+    );
+
+    await act(async () => {
+      await session.current.handleSendPress({...textMessage, text: 'hi'});
+    });
+
+    expect(chatSessionStore.addMessageToCurrentSession).not.toHaveBeenCalled();
+    expect(engine.completion).not.toHaveBeenCalled();
+    expect(chatSessionStore.restoreUnsentText).toHaveBeenCalledWith(
+      'session-1',
+      'hi',
+    );
+  });
+});

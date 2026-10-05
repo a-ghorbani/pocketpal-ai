@@ -541,12 +541,18 @@ export const useChatSession = (
   };
 
   const handleSendPress = async (message: MessageType.PartialText) => {
+    const sentFrom = chatSessionStore.activeSessionId;
     // The previous run is still draining; "Stopping…" covers the wait.
     if (modelStore.isGenerationBusy) {
       chatSessionStore.setIsStopping(true);
     }
     const lease = await modelStore.acquireGeneration();
     chatSessionStore.setIsStopping(false);
+    if (chatSessionStore.activeSessionId !== sentFrom) {
+      lease?.end();
+      chatSessionStore.restoreUnsentText(sentFrom, message.text);
+      return;
+    }
     if (!lease) {
       await addSystemMessage(l10n.chat.modelNotLoaded);
       return;
