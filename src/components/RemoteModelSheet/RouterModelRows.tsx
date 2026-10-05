@@ -152,52 +152,52 @@ export const RouterModelRows: React.FC<RouterModelRowsProps> = observer(
       const failure = record?.failure;
       return (
         <View key={model.id} testID={`router-row-${model.id}`}>
-          <View style={styles.modelRow}>
-            <TouchableOpacity
-              testID={`router-select-${model.id}`}
-              activeOpacity={selectable ? 0.6 : 1}
-              style={[
-                styles.routerRowSelect,
-                alreadyAdded && styles.modelRowDisabled,
-              ]}
-              onPress={select}>
-              <RadioButton
-                value={model.id}
-                status={
-                  alreadyAdded || selectedModelId === model.id
-                    ? 'checked'
-                    : 'unchecked'
-                }
-                onPress={select}
-                disabled={!selectable}
-                uncheckedColor={theme.colors.onSurfaceVariant}
-              />
-              <Text style={styles.modelName}>{model.id}</Text>
-              {alreadyAdded && (
-                <Text style={styles.alreadyAddedText}>
-                  {l10n.settings.alreadyAdded}
-                </Text>
-              )}
-            </TouchableOpacity>
-            <View style={styles.routerRowMeta}>
-              {renderVisionSlot(model)}
-              {label && (
-                <Text
-                  style={styles.routerRowState}
-                  testID={`router-state-${model.id}`}>
-                  {labels[label]}
-                </Text>
-              )}
-              {action && (
-                <Button
-                  compact
-                  mode="text"
-                  testID={`router-${action}-${model.id}`}
-                  onPress={() => actions[action](model.id)}>
-                  {actionLabels[action]}
-                </Button>
-              )}
-            </View>
+          <TouchableOpacity
+            testID={`router-select-${model.id}`}
+            activeOpacity={selectable ? 0.6 : 1}
+            style={[styles.modelRow, alreadyAdded && styles.modelRowDisabled]}
+            onPress={select}>
+            <RadioButton
+              value={model.id}
+              status={
+                alreadyAdded || selectedModelId === model.id
+                  ? 'checked'
+                  : 'unchecked'
+              }
+              onPress={select}
+              disabled={!selectable}
+              uncheckedColor={theme.colors.onSurfaceVariant}
+            />
+            <Text style={styles.modelName}>{model.id}</Text>
+          </TouchableOpacity>
+          <View
+            style={styles.routerRowDetail}
+            testID={`router-detail-${model.id}`}>
+            {alreadyAdded && (
+              <Text
+                style={[styles.alreadyAddedText, styles.modelRowDisabled]}
+                testID={`router-added-${model.id}`}>
+                {l10n.settings.alreadyAdded}
+              </Text>
+            )}
+            {renderVisionSlot(model)}
+            {label && (
+              <Text
+                style={styles.routerRowState}
+                testID={`router-state-${model.id}`}>
+                {labels[label]}
+              </Text>
+            )}
+            {action && (
+              <Button
+                compact
+                mode="text"
+                style={styles.routerRowAction}
+                testID={`router-${action}-${model.id}`}
+                onPress={() => actions[action](model.id)}>
+                {actionLabels[action]}
+              </Button>
+            )}
           </View>
           {progress && (
             <ProgressBar

@@ -186,15 +186,15 @@ export const createStyles = (theme: Theme) => {
       fontSize: 12,
       color: theme.colors.onSurfaceVariant,
     },
-    routerRowSelect: {
-      flex: 1,
+    routerRowDetail: {
       flexDirection: 'row',
-      alignItems: 'center',
-    },
-    routerRowMeta: {
-      flexDirection: 'row',
+      flexWrap: 'wrap',
       alignItems: 'center',
       gap: 8,
+      marginStart: 44,
+    },
+    routerRowAction: {
+      marginStart: 'auto',
     },
     routerRowState: {
       fontSize: 12,

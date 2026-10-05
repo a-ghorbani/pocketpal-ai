@@ -689,10 +689,35 @@ describe('RemoteModelSheet', () => {
       ).toBe(false);
       expect(opacityOf(view.getByTestId('router-select-added'))).toBe(0.5);
       expect(
-        within(view.getByTestId('router-select-added')).getByText(
+        within(view.getByTestId('router-detail-added')).getByText(
           l10n.en.settings.alreadyAdded,
         ),
       ).toBeTruthy();
+    });
+
+    it('gives the model name its own line, with state and actions below it', async () => {
+      const id = 'bartowski/mistralai_Ministral-3-3B-Instruct-2512-GGUF:Q4_K_M';
+      const view = await openRouter([row(id, 'unloaded')]);
+      const flat = (node: any) => StyleSheet.flatten(node.props.style) ?? {};
+
+      const rowNode = view.getByTestId(`router-row-${id}`);
+      const select = view.getByTestId(`router-select-${id}`);
+      const detail = view.getByTestId(`router-detail-${id}`);
+      const name = within(select).getByText(id);
+
+      expect(flat(rowNode).flexDirection ?? 'column').toBe('column');
+      expect(within(select).queryByTestId(`router-detail-${id}`) === null).toBe(
+        true,
+      );
+      expect(
+        within(rowNode).queryByTestId(`router-detail-${id}`) !== null,
+      ).toBe(true);
+      expect(flat(select).flexDirection).toBe('row');
+      expect(flat(name).flex).toBe(1);
+      expect(within(select).queryByTestId(`router-load-${id}`)).toBeNull();
+      expect(within(select).queryByTestId(`router-state-${id}`)).toBeNull();
+      expect(within(detail).getByTestId(`router-load-${id}`)).toBeTruthy();
+      expect(within(detail).getByTestId(`router-state-${id}`)).toBeTruthy();
     });
 
     it('unloads any other model without asking', async () => {
