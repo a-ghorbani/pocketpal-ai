@@ -1311,7 +1311,7 @@
       "openLinkError": "Couldn't open this link."
     },
     "preparingModel": "Preparing model on the server…",
-    "preparingDroppedTurn": "Still loading on the server. Your message was not sent."
+    "preparingDroppedTurn": "Still loading on the server. Send again when it's ready."
   },
   "htmlPreview": {
     "defaultTitle": "Preview",

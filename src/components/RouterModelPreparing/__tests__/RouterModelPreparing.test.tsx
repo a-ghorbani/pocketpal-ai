@@ -43,7 +43,7 @@ describe('RouterModelPreparing', () => {
     expect(routerStore.unload).not.toHaveBeenCalled();
   });
 
-  it('says the load goes on and the message was not sent after Stop', () => {
+  it('says the load goes on after Stop, without claiming the message was dropped', () => {
     seed('srv-1/alpha', {kind: 'load', droppedTurn: true});
 
     const {getByTestId} = render(<RouterModelPreparing />);
@@ -51,6 +51,7 @@ describe('RouterModelPreparing', () => {
     expect(getByTestId('router-model-preparing-label')).toHaveTextContent(
       l10n.en.chat.preparingDroppedTurn,
     );
+    expect(l10n.en.chat.preparingDroppedTurn).not.toMatch(/not sent/i);
     expect(getByTestId('router-model-preparing-progress')).toBeTruthy();
   });
 
