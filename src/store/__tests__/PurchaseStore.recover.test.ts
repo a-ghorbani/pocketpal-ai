@@ -127,7 +127,7 @@ describe('PurchaseStore recovery', () => {
         const h = createHarness({records: [record(status)]});
         h.store.currentEntitlements.mockResolvedValue({
           ok: true,
-          transactions: [androidTx({unfinished: true})],
+          transactions: [androidTx({unfinished: true, transactionId: 'tx-0'})],
         });
 
         await h.purchases.recover();
@@ -207,9 +207,15 @@ describe('PurchaseStore recovery', () => {
       });
 
       await h.purchases.recover();
+      runInAction(() => {
+        h.purchases.products.set(PRODUCT, {
+          productId: PRODUCT,
+          displayPrice: '4,99 €',
+        });
+      });
 
       expect(h.api.verify).not.toHaveBeenCalled();
-      expect(h.purchases.canBuy(hubPal())).toBe(false);
+      expect(h.purchases.canBuy(hubPal())).toBe(true);
       expect(h.purchases.flowFor(PAL_ID)).toBe('idle');
     });
 
@@ -559,6 +565,126 @@ describe('PurchaseStore recovery', () => {
       });
       await h.purchases.recover();
       expect(h.purchases.recordFor(PAL_ID)?.status).toBe('removed');
+    });
+  });
+
+  describe('re-purchase after a refund', () => {
+    const refundedOnRefresh = async (h: ReturnType<typeof createHarness>) => {
+      h.api.refresh.mockResolvedValueOnce({
+        changed: [],
+        revoked: [PAL_ID],
+        removed: [],
+        unchanged: [],
+      });
+      await h.purchases.recover();
+      runInAction(() => {
+        h.purchases.products.set(PRODUCT, {
+          productId: PRODUCT,
+          displayPrice: '4,99 €',
+        });
+      });
+    };
+    const newPurchase = () =>
+      Platform.OS === 'android' ? androidTx({unfinished: true}) : tx();
+    const outcomeLog = (log: string[]) =>
+      log.filter(entry => /^(write|finish):/.test(entry));
+
+    it.each(['ios', 'android'] as const)(
+      '%s: buys the Pal again and verifies the new purchase',
+      async os => {
+        setOS(os);
+        const h = createHarness({
+          records: [record('active', {supportCode: 'SUP-A'})],
+        });
+        h.palStore.pals.push(localPal());
+        await refundedOnRefresh(h);
+        expect(h.purchases.recordFor(PAL_ID)?.status).toBe('removed');
+        expect(h.palStore.pals).toHaveLength(0);
+        expect(h.purchases.canBuy(hubPal())).toBe(true);
+
+        h.store.purchase.mockResolvedValueOnce({
+          kind: 'purchased',
+          tx: newPurchase(),
+        });
+        h.api.verify.mockResolvedValueOnce([
+          result('active', {supportCode: 'SUP-B'}),
+        ]);
+        h.log.length = 0;
+
+        await h.purchases.buy(hubPal());
+        await h.purchases.drainQueue();
+
+        expect(outcomeLog(h.log)).toEqual([
+          'write:unlocking',
+          'write:granted',
+          'finish:tx-1',
+          'write:active',
+        ]);
+        expect(h.api.verify).toHaveBeenCalledTimes(1);
+        expect(h.purchases.recordFor(PAL_ID)).toMatchObject({
+          status: 'active',
+          supportCode: 'SUP-B',
+        });
+
+        await h.purchases.recover();
+        expect(h.api.refresh.mock.calls.at(-1)![2][PAL_ID].purchaseRef).toBe(
+          'SUP-B',
+        );
+      },
+    );
+
+    it.each(['ios', 'android'] as const)(
+      '%s: reaches the same state when the listener delivers the purchase first',
+      async os => {
+        setOS(os);
+        const h = createHarness({records: [record('active')]});
+        await refundedOnRefresh(h);
+        const purchased = newPurchase();
+        h.store.purchase.mockImplementationOnce(async () => {
+          h.store.emit(purchased);
+          return {kind: 'purchased', tx: purchased};
+        });
+        h.log.length = 0;
+
+        await h.purchases.buy(hubPal());
+        await h.purchases.drainQueue();
+
+        expect(h.purchases.recordFor(PAL_ID)?.status).toBe('active');
+        expect(h.log.filter(entry => entry === 'write:unlocking')).toHaveLength(
+          1,
+        );
+        expect(h.store.finish).toHaveBeenCalledTimes(1);
+        expect(h.palStore.installOwnedPal).toHaveBeenCalledTimes(1);
+      },
+    );
+
+    it('Android: re-buys after a delivered purchase is refunded through refresh', async () => {
+      setOS('android');
+      const warn = jest.spyOn(console, 'warn').mockImplementation(() => {});
+      const h = createHarness({records: [record('active')]});
+      h.store.currentEntitlements.mockResolvedValueOnce({
+        ok: true,
+        transactions: [androidTx({unfinished: true, transactionId: 'tx-0'})],
+      });
+      h.store.finish.mockRejectedValueOnce(new Error('billing'));
+      await refundedOnRefresh(h);
+      expect(h.purchases.recordFor(PAL_ID)?.status).toBe('removed');
+
+      h.store.purchase.mockResolvedValueOnce({
+        kind: 'purchased',
+        tx: newPurchase(),
+      });
+      h.log.length = 0;
+      await h.purchases.buy(hubPal());
+      await h.purchases.drainQueue();
+
+      expect(outcomeLog(h.log).slice(0, 3)).toEqual([
+        'write:unlocking',
+        'write:granted',
+        'finish:tx-1',
+      ]);
+      expect(h.purchases.recordFor(PAL_ID)?.status).toBe('active');
+      warn.mockRestore();
     });
   });
 
@@ -964,7 +1090,9 @@ describe('PurchaseStore recovery', () => {
         h.palStore.pals.push(localPal());
         h.api.verify.mockResolvedValue([result('unavailable')]);
 
-        await h.purchases.processTransaction(tx(), {settledVerify: true});
+        await h.purchases.processTransaction(tx({transactionId: 'tx-0'}), {
+          settledVerify: true,
+        });
 
         expect(h.purchases.recordFor(PAL_ID)?.status).toBe(status);
         expect(h.palStore.deletePal).not.toHaveBeenCalled();

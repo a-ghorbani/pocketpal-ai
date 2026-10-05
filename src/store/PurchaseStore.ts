@@ -139,6 +139,13 @@ const SETTLED: ReadonlySet<LedgerStatus> = new Set([
 export const isSettled = (status: LedgerStatus | undefined): boolean =>
   status !== undefined && SETTLED.has(status);
 
+const blocksBuy = (rec: LedgerRecord | undefined): boolean =>
+  rec !== undefined && rec.status !== 'removed';
+
+const reopensTombstone = (rec: LedgerRecord, tx: StoreTransaction): boolean =>
+  rec.status === 'removed' &&
+  !(tx.transactionId && rec.transactionIds.includes(tx.transactionId));
+
 const RETRYABLE_RESULTS: ReadonlySet<VerifyResult['status']> = new Set([
   'failed',
   'unavailable',
@@ -356,8 +363,11 @@ export class PurchaseStore {
       this.productFor(pal.store_product_id) !== undefined &&
       !this.isOwned(pal.id) &&
       !pal.is_owned &&
-      !this.records[pal.id] &&
-      !(pal.store_product_id && this.recordForProduct(pal.store_product_id))
+      !blocksBuy(this.records[pal.id]) &&
+      !(
+        pal.store_product_id &&
+        blocksBuy(this.recordForProduct(pal.store_product_id))
+      )
     );
   }
 
@@ -623,7 +633,7 @@ export class PurchaseStore {
     await this.load();
     const rec = this.recordForProduct(tx.productId);
 
-    if (rec && isSettled(rec.status)) {
+    if (rec && isSettled(rec.status) && !reopensTombstone(rec, tx)) {
       this.clearRetry(tx.productId);
       await this.runSettled(rec, tx, opts);
       return;

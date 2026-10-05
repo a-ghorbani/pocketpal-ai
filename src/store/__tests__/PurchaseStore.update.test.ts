@@ -668,7 +668,9 @@ describe('PurchaseStore creator updates', () => {
         const h = createHarness({records: [record('removed')]});
         h.api.verify.mockResolvedValueOnce([result(status)]);
 
-        await h.purchases.processTransaction(tx(), {settledVerify: true});
+        await h.purchases.processTransaction(tx({transactionId: 'tx-0'}), {
+          settledVerify: true,
+        });
 
         expect(h.purchases.recordFor(PAL_ID)?.status).toBe('removed');
       },
