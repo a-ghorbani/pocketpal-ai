@@ -1,6 +1,6 @@
 import React from 'react';
 import {runInAction} from 'mobx';
-import {fireEvent} from '@testing-library/react-native';
+import {fireEvent, within} from '@testing-library/react-native';
 
 import {render} from '../../../../jest/test-utils';
 import {createModel} from '../../../../jest/fixtures/models';
@@ -111,6 +111,25 @@ describe('DownloadBanner', () => {
     expect(getByTestId('download-banner-failed')).toBeTruthy();
     expect(queryByTestId('download-banner-stop')).toBeNull();
     expect(getByTestId('download-banner-extra-badge')).toHaveTextContent('+2');
+  });
+
+  it('keeps the status alone on the first line and announces the count', () => {
+    withActiveDownloads(2);
+    failWith(failedModel.id);
+
+    const {getByTestId, getByLabelText} = render(<DownloadBanner />, {
+      withNavigation: true,
+    });
+
+    const detail = within(getByTestId('download-banner-failed-detail'));
+    expect(detail.getByText('Failed Model')).toBeTruthy();
+    expect(detail.getByText('+2')).toBeTruthy();
+    expect(detail.queryByText("Download didn't finish")).toBeNull();
+    expect(
+      getByLabelText(
+        "Download didn't finish, Failed Model, +2 more in progress",
+      ),
+    ).toBeTruthy();
   });
 
   it('retries from the Retry pill', () => {

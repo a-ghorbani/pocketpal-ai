@@ -56,6 +56,9 @@ export const bannerStyles = (theme: Theme) =>
     failedTitle: {
       color: theme.colors.error,
     },
+    failedSubject: {
+      flexShrink: 1,
+    },
     eta: {
       ...theme.typography.captionS,
       color: theme.colors.outlineVariant,

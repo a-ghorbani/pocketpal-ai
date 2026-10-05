@@ -64,11 +64,23 @@ export const DownloadBanner: React.FC = observer(() => {
       failedModel.name,
     );
     const activeCount = modelStore.activeDownloads.length;
+    const failedLabel = [
+      failedTitle,
+      failedSubject,
+      ...(activeCount > 0
+        ? [
+            l10n.downloadBanner.extraInProgress.replace(
+              '{{count}}',
+              String(activeCount),
+            ),
+          ]
+        : []),
+    ].join(', ');
     return (
       <View testID="download-banner-failed" style={styles.root}>
         <Pressable
           accessibilityRole="button"
-          accessibilityLabel={`${failedTitle}, ${failedSubject}`}
+          accessibilityLabel={failedLabel}
           onPress={() => navigation.navigate(ROUTES.MODELS as never)}
           style={styles.body}>
           <View
@@ -82,11 +94,17 @@ export const DownloadBanner: React.FC = observer(() => {
             ]}
           />
           <View style={styles.content}>
-            <View style={styles.titleRow}>
+            <Text style={[styles.title, styles.failedTitle]} numberOfLines={1}>
+              {failedTitle}
+            </Text>
+            <View
+              testID="download-banner-failed-detail"
+              style={styles.titleRow}>
               <Text
-                style={[styles.title, styles.failedTitle]}
-                numberOfLines={1}>
-                {failedTitle}
+                style={[styles.eta, styles.failedSubject]}
+                numberOfLines={1}
+                ellipsizeMode="tail">
+                {failedSubject}
               </Text>
               {activeCount > 0 ? (
                 <View testID="download-banner-extra-badge" style={styles.badge}>
@@ -94,9 +112,6 @@ export const DownloadBanner: React.FC = observer(() => {
                 </View>
               ) : null}
             </View>
-            <Text style={styles.eta} numberOfLines={1} ellipsizeMode="tail">
-              {failedSubject}
-            </Text>
           </View>
         </Pressable>
         <Pressable
