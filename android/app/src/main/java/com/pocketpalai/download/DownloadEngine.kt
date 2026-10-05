@@ -160,7 +160,12 @@ class DownloadEngine(
                 it.id != row.id && it.status == DownloadStatus.COMPLETED && it.createdAt > row.createdAt
             }
             if (newerCompleted) return End.Superseded
-            if (row.totalBytes > 0 && file.length() == row.totalBytes) {
+            if (row.totalBytes <= 0) {
+                Log.d(TAG, "Discarding in-place file of unknown size for ${row.id}")
+                if (!file.delete()) return End.Failed("Could not remove the previous download")
+                return null
+            }
+            if (file.length() == row.totalBytes) {
                 dao.writeProgress(row.id, row.totalBytes, row.totalBytes)
                 return End.Completed
             }

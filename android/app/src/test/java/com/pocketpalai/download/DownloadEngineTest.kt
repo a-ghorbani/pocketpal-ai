@@ -351,7 +351,7 @@ class DownloadEngineTest {
 
     @Test
     fun inPlacePartialIsAdoptedAndResumed() {
-        insert(status = DownloadStatus.RUNNING)
+        insert(status = DownloadStatus.RUNNING, totalBytes = content.size.toLong())
         destination.writeBytes(content.copyOfRange(0, 100))
         serve(honest())
 
@@ -359,6 +359,31 @@ class DownloadEngineTest {
 
         assertEquals("bytes=100-", requests.single().getHeader("Range"))
         assertNull(requests.single().getHeader("If-Range"))
+        assertCompleted()
+    }
+
+    @Test
+    fun fullLengthInPlaceFileCommitsWithoutARequest() {
+        insert(status = DownloadStatus.RUNNING, totalBytes = content.size.toLong())
+        destination.writeBytes(content)
+        serve(honest())
+
+        assertEquals(Outcome.DONE, run())
+
+        assertEquals(0, requests.size)
+        assertCompleted()
+        assertEquals(content.size.toLong(), row().downloadedBytes)
+    }
+
+    @Test
+    fun inPlaceFileOfUnknownSizeIsNeverSplicedIntoANewDownload() {
+        insert(status = DownloadStatus.RUNNING)
+        destination.writeBytes(ByteArray(100) { 7 })
+        serve({ partial(it.getHeader("Range")?.removePrefix("bytes=")?.removeSuffix("-")?.toInt() ?: 0) })
+
+        run()
+
+        assertNull(requests.single().getHeader("Range"))
         assertCompleted()
     }
 
