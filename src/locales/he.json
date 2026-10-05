@@ -193,19 +193,19 @@
     "languageSheetTitle": "שפה",
     "languageSearchPlaceholder": "חפש שפות",
     "speculativeDecoding": "פענוח ספקולטיבי",
-    "speculativeDecodingDescription": "השתמש במודל טיוטה קטן (או במודל MTP מוטמע) כדי לנחש טוקנים ולהאיץ את היצירה. ניסיוני.",
-    "speculativeNotMTPCapable": "המודל הפעיל לא תומך בפענוח ספקולטיבי ולא משויך אליו מודל טיוטה תואם, אז ההגדרה נשארת כבויה עבורו וללא השפעה. היא חלה אוטומטית על מודלים שתומכים בכך.",
+    "speculativeDecodingDescription": "השתמש במודל טיוטה קטן (או במודל MTP מוטמע) כדי לחזות טוקנים ולהאיץ את היצירה. ניסיוני.",
+    "speculativeNotMTPCapable": "המודל הפעיל אינו תומך בפענוח ספקולטיבי ולא משויך אליו מודל טיוטה תואם, ולכן ההגדרה נשארת כבויה עבורו וללא השפעה. היא חלה אוטומטית על מודלים שתומכים בכך.",
     "speculativeDraftModel": "מודל טיוטה",
     "speculativeDraftModelDescription": "מכין טיוטת טוקנים עבור המודל הפעיל.",
     "speculativeDraftModelNone": "ללא (MTP מוטמע)",
-    "speculativeDraftModelIgnoredOverridden": "למודל הפעיל יש כבר מודל טיוטה משלו, אז הבחירה הזו לא נלקחת בחשבון.",
-    "speculativeDraftModelIgnoredIncompatible": "מודל הטיוטה הזה לא תואם למודל הפעיל, אז הוא לא נלקח בחשבון.",
-    "speculativeDraftModelIgnoredNotCapable": "למודל הזה אין שכבות טיוטה, אז אי אפשר להשתמש בו כמודל טיוטה.",
+    "speculativeDraftModelIgnoredOverridden": "למודל הפעיל יש מודל טיוטה משלו, ולכן הבחירה הזו לא נלקחת בחשבון.",
+    "speculativeDraftModelIgnoredIncompatible": "מודל הטיוטה הזה אינו תואם למודל הפעיל, ולכן הוא אינו נלקח בחשבון.",
+    "speculativeDraftModelIgnoredNotCapable": "למודל הזה אין שכבות טיוטה, ולכן אי אפשר להשתמש בו כמודל טיוטה.",
     "speculativeDraftKeyCacheType": "סוג מטמון מפתח לטיוטה",
     "speculativeDraftValueCacheType": "סוג מטמון ערך לטיוטה",
     "speculativeDraftNGpuLayers": "שכבות GPU לטיוטה",
-    "speculativeDraftNGpuLayersDescription": "כמות השכבות של מודל הטיוטה שיועברו ל-GPU.",
-    "speculativeDraftCacheTypeInactiveDescription": "ייכנס לתוקף ברגע שפענוח ספקולטיבי יפעל."
+    "speculativeDraftNGpuLayersDescription": "מספר השכבות של מודל הטיוטה שיועברו ל-GPU.",
+    "speculativeDraftCacheTypeInactiveDescription": "ההגדרה תיכנס לתוקף כאשר פענוח ספקולטיבי יפעל."
   },
   "memory": {
     "shortWarning": "אזהרת זיכרון",
@@ -396,7 +396,7 @@
         "visionSupported": "נתמך",
         "visionNotSupported": "לא נתמך",
         "visionUnknown": "לא ידוע",
-        "draftOnlyReason": "מודל לטיוטה בלבד. בחר אותו תחת הגדרות → פענוח ספקולטיבי."
+        "draftOnlyReason": "מודל לטיוטה בלבד. בחר אותו בהגדרות ← פענוח ספקולטיבי."
       },
       "accessibility": {
         "expandDetails": "הרחב פרטים",
@@ -1021,7 +1021,7 @@
       "tokensPerSec": "{{value}} טוקנים/שנ'",
       "ttft": "{{value}}מ.ש. TTFT",
       "interrupted": "הופסק",
-      "truncated": "נקטע — ככל הנראה ההקשר מלא",
+      "truncated": "נעצר — ככל הנראה ההקשר מלא",
       "draftAccepted": "טיוטה: {{accepted}}/{{total}} ({{pct}}%)"
     },
     "pendingIndicator": {
@@ -1184,7 +1184,7 @@
     "pleaseLoadModel": "טען מודל כדי לשוחח.",
     "multimodalNotEnabled": "רב-מודאליות אינה מופעלת עבור מודל זה. תמונות יוצגו אך לא יעובדו על ידי ה-AI.",
     "cannotSendWithoutModel": "טען מודל תחילה",
-    "toolCallTruncated": "קריאת הכלי נקטעה — ככל הנראה הקשר המודל התמלא. נסה להשתמש בהקשר גדול יותר או שלח בקשה קטנה יותר.",
+    "toolCallTruncated": "קריאת הכלי נקטעה — ככל הנראה הקשר המודל התמלא. נסה להשתמש בהקשר גדול יותר או לשלוח בקשה קטנה יותר.",
     "toolCompatWarning": "מודל זה עשוי שלא לתמוך בקריאה לכלי. התוצאות עלולות להיות לא אמינות.",
     "softCapWarning": "פתח צ'אט חדש לביצועים מיטביים.",
     "generatingPreview": "מייצר תצוגה מקדימה... ({{tokens}} טוקנים)",
@@ -1236,7 +1236,7 @@
       "openLinkError": "לא ניתן היה לפתוח את הקישור הזה."
     },
     "contextFullRemote": "נגמר המקום בשיחה. פתח צ'אט חדש.",
-    "speculativeInitFailed": "המכשיר הזה לא הצליח להפעיל פענוח ספקולטיבי עבור המודל הזה — כנראה שאין מספיק זיכרון עבור הקשר מודל הטיוטה. כבה את הפענוח הספקולטיבי תחת הגדרות → הגדרות מתקדמות ונסה שוב."
+    "speculativeInitFailed": "המכשיר הזה לא הצליח להפעיל פענוח ספקולטיבי עבור המודל הזה — כנראה שאין מספיק זיכרון עבור ההקשר של מודל הטיוטה. כבה את הפענוח הספקולטיבי בהגדרות ← הגדרות מתקדמות ונסה שוב."
   },
   "benchmark": {
     "title": "מבחן ביצועים",
@@ -1394,7 +1394,7 @@
   },
   "htmlPreview": {
     "defaultTitle": "תצוגה מקדימה",
-    "showPreview": "הצג תצוגה מקדימה מרונדרת",
+    "showPreview": "הצג תצוגה מקדימה מעובדת",
     "showCode": "הצג קוד HTML",
     "copyHtml": "העתק HTML",
     "closePreview": "סגור תצוגה מקדימה",
@@ -1420,7 +1420,7 @@
     "engineChipSupertonic": "Supertonic",
     "engineChipSystem": "מערכת",
     "stepsCount": "{{steps}} צעדים",
-    "engineKittenTagline": "תפיסת הזיכרון הקטנה ביותר. אמין. הכי טוב במכשירים ישנים.",
+    "engineKittenTagline": "צריכת הזיכרון הקטנה ביותר. אמין. הכי טוב במכשירים חלשים.",
     "engineKokoroTagline": "האיכות הגבוהה ביותר. איטי יותר להפעלה. ייתכן שחלק מהקולות לא יעבדו בכל המכשירים.",
     "engineSupertonicTagline": "המהיר ביותר להפעלה. צורך יותר זיכרון RAM. עלול להשמיט מילים מדי פעם.",
     "engineSystemTagline": "קולות מובנים של מערכת ההפעלה. זמינים תמיד, ללא צורך בהתקנה.",
