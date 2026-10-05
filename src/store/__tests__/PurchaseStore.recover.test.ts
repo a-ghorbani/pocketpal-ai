@@ -884,6 +884,79 @@ describe('PurchaseStore recovery', () => {
       expect(buyable(h)).toBe(true);
     });
 
+    describe('unverified purchase the store refunded', () => {
+      const unverified = async () => {
+        const h = createHarness();
+        runInAction(() => {
+          h.palStore.cachedPalsHubPals.push(hubPal());
+        });
+        h.api.verify.mockRejectedValue(new Error('offline'));
+        await h.purchases.processTransaction(androidTx({unfinished: true}), {});
+        expect(h.purchases.recordFor(PAL_ID)?.status).toBe('unlocking');
+        return h;
+      };
+
+      it('Android: drops it and its retry when a successful query no longer lists the product', async () => {
+        jest.useFakeTimers();
+        setOS('android');
+        const h = await unverified();
+
+        await h.purchases.recover();
+
+        expect(h.purchases.recordFor(PAL_ID)).toBeUndefined();
+        expect(h.storage.ledger()[PAL_ID]).toBeUndefined();
+        expect(buyable(h)).toBe(true);
+
+        await jest.advanceTimersByTimeAsync(RETRY_STEADY_MS * 2);
+        expect(h.api.verify).toHaveBeenCalledTimes(1);
+        expect(h.purchases.recordFor(PAL_ID)).toBeUndefined();
+      });
+
+      it('Android: drops it on a restore that no longer lists the product', async () => {
+        setOS('android');
+        const h = await unverified();
+
+        await h.purchases.restore();
+
+        expect(h.purchases.recordFor(PAL_ID)).toBeUndefined();
+      });
+
+      it('Android: keeps it while the query lists the purchase', async () => {
+        setOS('android');
+        const h = await unverified();
+        h.store.currentEntitlements.mockResolvedValue({
+          ok: true,
+          transactions: [androidTx({unfinished: true})],
+        });
+
+        await h.purchases.recover();
+
+        expect(h.purchases.recordFor(PAL_ID)?.status).toBe('unlocking');
+      });
+
+      it('Android: keeps it when the store query failed', async () => {
+        setOS('android');
+        const h = await unverified();
+        h.store.currentEntitlements.mockResolvedValue({
+          ok: false,
+          transactions: [],
+        });
+
+        await h.purchases.recover();
+
+        expect(h.purchases.recordFor(PAL_ID)?.status).toBe('unlocking');
+      });
+
+      it('iOS: keeps it when a successful query no longer lists the product', async () => {
+        setOS('ios');
+        const h = await unverified();
+
+        await h.purchases.recover();
+
+        expect(h.purchases.recordFor(PAL_ID)?.status).toBe('unlocking');
+      });
+    });
+
     it('Android: keeps it when the store query failed', async () => {
       setOS('android');
       const h = createHarness({records: [held()]});

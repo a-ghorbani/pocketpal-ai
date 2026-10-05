@@ -102,6 +102,8 @@ export interface ProcessOptions {
   install?: boolean;
 }
 
+type RecordSnapshot = Pick<LedgerRecord, 'palId' | 'status'>;
+
 type TransientPhase = 'paying' | 'ready' | 'invalid' | 'restore_needed';
 
 type PalStoreDep = Pick<
@@ -1187,7 +1189,7 @@ export class PurchaseStore {
     if (!available) {
       return;
     }
-    const held = this.androidHeldPalIds();
+    const unconfirmed = this.androidUnconfirmedRecords();
     this.resetAndroidAckMemo();
     const {ok, transactions: txs} = await this.storeTransactions();
     for (const tx of txs) {
@@ -1199,7 +1201,7 @@ export class PurchaseStore {
         await this.processTransaction(tx, {});
       }
     }
-    await this.dropStalePending(txs, false, ok, held);
+    await this.dropStalePending(txs, false, ok, unconfirmed);
     if (!ok) {
       return;
     }
@@ -1226,11 +1228,13 @@ export class PurchaseStore {
     return {ok, transactions: [...merged.values()]};
   }
 
-  private androidHeldPalIds(): string[] {
+  private androidUnconfirmedRecords(): RecordSnapshot[] {
     return Platform.OS === 'android'
       ? Object.values(this.records)
-          .filter(rec => rec.status === 'held_invalid')
-          .map(rec => rec.palId)
+          .filter(
+            rec => rec.status === 'held_invalid' || rec.status === 'unlocking',
+          )
+          .map(({palId, status}) => ({palId, status}))
       : [];
   }
 
@@ -1238,7 +1242,7 @@ export class PurchaseStore {
     txs: StoreTransaction[],
     force: boolean,
     queryOk: boolean,
-    heldPalIds: string[],
+    unconfirmed: RecordSnapshot[],
   ): Promise<void> {
     const stale = Object.values(this.records).filter(rec => {
       if (rec.status !== 'pending_payment') {
@@ -1266,16 +1270,15 @@ export class PurchaseStore {
     if (!queryOk) {
       return;
     }
-    const unlisted = heldPalIds
-      .map(palId => this.records[palId])
-      .filter(
-        (rec): rec is LedgerRecord =>
-          rec !== undefined && !txs.some(tx => tx.productId === rec.productId),
-      );
-    for (const rec of unlisted) {
+    for (const {palId, status} of unconfirmed) {
+      const rec = this.records[palId];
+      if (!rec || txs.some(tx => tx.productId === rec.productId)) {
+        continue;
+      }
       await this.serialize(rec.productId, async () => {
-        if (this.records[rec.palId]?.status === 'held_invalid') {
-          await this.deleteRecord(rec.palId);
+        if (this.records[palId]?.status === status) {
+          this.clearRetry(rec.productId);
+          await this.deleteRecord(palId);
         }
       });
     }
@@ -1472,14 +1475,14 @@ export class PurchaseStore {
         console.warn('Store sync failed:', error);
       }
       await this.drainQueue();
-      const held = this.androidHeldPalIds();
+      const unconfirmed = this.androidUnconfirmedRecords();
       this.resetAndroidAckMemo();
       const {ok, transactions: txs} =
         await this.storePort.currentEntitlements();
       for (const tx of txs) {
         await this.processTransaction(tx, {settledVerify: true, install: true});
       }
-      await this.dropStalePending(txs, true, ok, held);
+      await this.dropStalePending(txs, true, ok, unconfirmed);
     } finally {
       runInAction(() => {
         this.isRestoring = false;
