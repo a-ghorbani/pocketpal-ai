@@ -336,6 +336,28 @@ describe('backgrounding', () => {
     expect(store.owns(record)).toBe(true);
   });
 
+  it('reopens a stream that ended on its own once the app returns', async () => {
+    mockedFetch.mockImplementation(async () =>
+      list(rows({[ALPHA]: 'loading'})),
+    );
+    store.ensureLoaded(serverId, ALPHA);
+    await flush();
+    streams[0].closed = true;
+    streams[0].handlers.onEnd();
+    await flush();
+    expect(live()).toHaveLength(0);
+
+    runInAction(() => {
+      serverStore.appActive = false;
+    });
+    runInAction(() => {
+      serverStore.appActive = true;
+    });
+    await flush();
+
+    expect(live()).toHaveLength(1);
+  });
+
   it('reopens the stream only after the foreground read settles', async () => {
     store.ensureLoaded(serverId, ALPHA);
     await flush();
