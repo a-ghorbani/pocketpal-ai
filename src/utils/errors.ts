@@ -28,8 +28,9 @@ export class AppCheckError extends Error {
 }
 
 /**
- * The router load a remote model needed was stopped by the user. A type of
- * its own so a surface can stay silent: the user knows why it ended.
+ * The router load a remote model needed was withdrawn by the user's own
+ * action: a cancel, or an edit or removal of its server. A type of its own so
+ * a surface can stay silent: the user knows why it ended.
  */
 export class RemoteModelRequestWithdrawnError extends Error {
   constructor() {

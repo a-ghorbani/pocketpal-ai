@@ -882,7 +882,8 @@ export const useChatSession = (
         // Footer already surfaces interrupted / truncationLikely; nothing
         // more to add to chat.
       } else if (error instanceof RemoteModelRequestWithdrawnError) {
-        // The user cancelled the load this turn waited on.
+        // The load this turn waited on was withdrawn: the user cancelled it,
+        // or edited or removed its server.
       } else if (error instanceof RemoteModelNotReadyError) {
         await addSystemMessage(routerFailureLabel(error.cause, l10n));
       } else if (errorMessage.includes('network')) {

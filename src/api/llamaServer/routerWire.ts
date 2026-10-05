@@ -185,8 +185,9 @@ const SERVER_TEXT_MAX = 200;
 /**
  * The words a server gave for a refusal, bounded where they enter so that what
  * is held is bounded too. Counted in code points, so a cut never splits a
- * surrogate pair; a code point is at most two UTF-16 units, so twice the cap
- * always holds the cap and the whole body is never walked.
+ * surrogate pair. Only four times the cap in UTF-16 units is walked: a code
+ * point is at most two units, and the rest leaves room for whitespace runs
+ * that collapse to one space.
  */
 export function serverReason(body: unknown): string | undefined {
   const source = body as Record<string, any> | null | undefined;

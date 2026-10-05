@@ -151,8 +151,8 @@ export class RouterRecord {
 }
 
 /**
- * llama-server router mode: loads and unloads one model at a time on a
- * server whose list says it is a router. Reads `ServerStore` and never writes
+ * llama-server router mode: loads and unloads models, one operation per
+ * model, on a server whose list says it is a router. Reads `ServerStore` and never writes
  * it; the list `ServerStore` fetches is the only verdict source.
  */
 export class RouterStore {
