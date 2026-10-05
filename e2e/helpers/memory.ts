@@ -107,11 +107,8 @@ export async function readSnapshots(): Promise<MemorySnapshot[]> {
     // iOS: determine device type from UDID env var
     // Simulator UDIDs are UUID format (8-4-4-4-12 hex), real device UDIDs are not
     const udid = process.env.E2E_DEVICE_UDID || '';
-    const isSimulator =
-      !udid ||
-      /^[0-9A-F]{8}-[0-9A-F]{4}-[0-9A-F]{4}-[0-9A-F]{4}-[0-9A-F]{12}$/i.test(
-        udid,
-      );
+    const isSimulator = !udid ||
+      /^[0-9A-F]{8}-[0-9A-F]{4}-[0-9A-F]{4}-[0-9A-F]{4}-[0-9A-F]{12}$/i.test(udid);
 
     if (isSimulator) {
       // Simulator: read directly from filesystem via simctl. Prefer the
@@ -126,7 +123,9 @@ export async function readSnapshots(): Promise<MemorySnapshot[]> {
       return JSON.parse(data);
     } else {
       // Real device: use ios-deploy to download from app container
-      const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'memory-profile-'));
+      const tmpDir = fs.mkdtempSync(
+        path.join(os.tmpdir(), 'memory-profile-'),
+      );
       execSync(
         `ios-deploy --id ${udid} --bundle_id ${IOS_BUNDLE_ID} --download=/Documents/${SNAPSHOTS_FILENAME} --to ${tmpDir}`,
         {timeout: 15000},

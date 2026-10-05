@@ -36,7 +36,9 @@ const MAX_WAIT_MS =
 const POLL_MS = 5000;
 
 describe('Benchmark Matrix', function () {
-  this.timeout(MAX_WAIT_MS + 60_000);
+  this.timeout(
+    Math.max(Number(process.env.E2E_MOCHA_TIMEOUT) || 0, MAX_WAIT_MS + 60_000),
+  );
 
   const matrix = getBenchmarkMatrix();
   const udid = process.env.E2E_DEVICE_UDID;

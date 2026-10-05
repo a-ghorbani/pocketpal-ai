@@ -545,7 +545,6 @@ describe('Speculative Decoding / separate-draft (paired) MTP', function () {
   });
 
   it('paired engagement: a separate MTP draft paired to a target produces draft tokens', async function (this: Mocha.Context) {
-
     // 1) Download the separate MTP draft (not loaded) so it is pickable and its
     //    width/MTP metadata is known.
     await downloadModelOnly(DRAFT_MODEL);

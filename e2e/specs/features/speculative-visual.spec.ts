@@ -380,7 +380,7 @@ async function toggleCardDetails(downloadFile: string): Promise<void> {
 
 describe('Speculative decoding — visual states', function () {
   // Two probe waits plus two model downloads exceed the default per-test cap.
-  this.timeout(1200000);
+  this.timeout(Math.max(Number(process.env.E2E_MOCHA_TIMEOUT) || 0, 1200000));
 
   before(async () => {
     const chatPage = new ChatPage();
