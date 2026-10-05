@@ -8,10 +8,16 @@ import type {AsrTier, AsrTierManifest} from './types';
 export const ASR_MIN_RAM_BYTES = 4 * 1024 * 1024 * 1024;
 
 /**
- * Maximum push-to-talk recording length (ms). Bounds the in-memory PCM
- * buffer; reaching it ends capture as if the user released the button.
+ * Maximum recording length (ms). Bounds the in-memory PCM buffer; reaching it
+ * ends capture as if the user tapped stop.
  */
 export const ASR_MAX_RECORD_MS = 30_000;
+
+/** Bytes per captured PCM chunk: 50 ms of 16 kHz mono 16-bit audio. */
+export const ASR_CHUNK_BYTES = 1600;
+
+/** Number of recent chunk levels kept for the recording waveform. */
+export const ASR_LEVEL_HISTORY = 40;
 
 /** Capture sample rate (Hz). Whisper operates on 16 kHz mono PCM. */
 export const ASR_SAMPLE_RATE = 16_000;

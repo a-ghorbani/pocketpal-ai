@@ -11,7 +11,7 @@ import {
 
 /**
  * Outcome of a microphone-permission request, mapped to the three states the
- * push-to-talk capture flow cares about:
+ * voice capture flow cares about:
  * - `granted`  → start capture
  * - `denied`   → user declined this time; can be re-prompted
  * - `blocked`  → permanently denied (don't-ask-again); must open Settings

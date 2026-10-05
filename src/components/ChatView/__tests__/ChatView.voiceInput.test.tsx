@@ -17,14 +17,17 @@ jest.mock('../../ChatEmptyPlaceholder', () => ({
   ChatEmptyPlaceholder: jest.fn(() => null),
 }));
 
-// Capture the transcript callback ChatView passes down through MicButton, so a
+// Capture the transcript callback ChatView passes down through ChatInput, so a
 // transcript can be injected without driving the (un-mockable) native mic. The
 // callback IS ChatView's real `appendTranscript` seam — that is what's tested.
 let capturedOnTranscript: ((text: string) => void) | null = null;
-jest.mock('../../../hooks/usePushToTalk', () => ({
-  usePushToTalk: ({onTranscript}: {onTranscript: (t: string) => void}) => {
+const mockStart = jest.fn();
+const mockStop = jest.fn();
+const mockCancel = jest.fn();
+jest.mock('../../../hooks/useVoiceCapture', () => ({
+  useVoiceCapture: ({onTranscript}: {onTranscript: (t: string) => void}) => {
     capturedOnTranscript = onTranscript;
-    return {onPressIn: jest.fn(), onPressOut: jest.fn()};
+    return {start: mockStart, stop: mockStop, cancel: mockCancel};
   },
 }));
 
@@ -32,8 +35,7 @@ describe('ChatView voice-input append seam', () => {
   beforeEach(() => {
     jest.clearAllMocks();
     capturedOnTranscript = null;
-    // Gate open + selected tier ready so MicButton mounts and registers the
-    // transcript callback.
+    // Gate open + selected tier ready so the mic is actionable.
     runInAction(() => {
       asrStore.deviceMeetsMemory = true;
       asrStore.userASROverride = true;
@@ -88,6 +90,37 @@ describe('ChatView voice-input append seam', () => {
     act(() => capturedOnTranscript?.('and eggs'));
 
     expect(getByTestId('chat-input').props.value).toBe('buy milk and eggs');
+  });
+
+  it('starts a capture from the mic', () => {
+    const {getByTestId} = renderChat();
+
+    fireEvent.press(getByTestId('mic-button'));
+
+    expect(mockStart).toHaveBeenCalledTimes(1);
+  });
+
+  it('replaces the control row with the recording bar while recording', () => {
+    const {getByTestId, queryByTestId} = renderChat();
+    expect(queryByTestId('voice-recording-bar')).toBeNull();
+
+    act(() => {
+      asrStore.setCaptureState('recording');
+    });
+
+    expect(getByTestId('voice-recording-bar')).toBeTruthy();
+    expect(queryByTestId('mic-button')).toBeNull();
+    expect(queryByTestId('send-button')).toBeNull();
+    fireEvent.press(getByTestId('voice-stop-button'));
+    expect(mockStop).toHaveBeenCalledTimes(1);
+    fireEvent.press(getByTestId('voice-cancel-button'));
+    expect(mockCancel).toHaveBeenCalledTimes(1);
+
+    act(() => {
+      asrStore.resetCapture();
+    });
+    expect(queryByTestId('voice-recording-bar')).toBeNull();
+    expect(getByTestId('mic-button')).toBeTruthy();
   });
 
   it('surfaces a capture error in a transient snackbar', () => {

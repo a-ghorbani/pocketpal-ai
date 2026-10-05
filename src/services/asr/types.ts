@@ -20,7 +20,7 @@ export type AsrDownloadState =
   | 'ready'
   | 'error';
 
-/** Push-to-talk capture state machine. */
+/** Voice capture state machine. */
 export type CaptureState =
   | 'idle'
   | 'requesting_perm'
@@ -32,7 +32,6 @@ export type CaptureState =
 export type AsrErrorKind =
   | 'permission_denied'
   | 'permission_blocked'
-  | 'too_short'
   | 'transcribe_failed'
   | 'not_installed';
 
@@ -87,6 +86,8 @@ export interface AsrEngine {
     pcmBase64Int16: string,
     opts?: {tier: AsrTier; language?: string},
   ): Promise<string>;
+  /** Stop an in-flight `transcribe`, which then resolves to ''. */
+  cancelTranscription(): Promise<void>;
   /** Release any loaded native whisper context. */
   release(): Promise<void>;
 }

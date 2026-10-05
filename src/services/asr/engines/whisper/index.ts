@@ -11,6 +11,14 @@ import {
 } from '../../constants';
 import type {AsrEngine, AsrProgressCallback, AsrTier} from '../../types';
 
+// Whisper writes non-speech as bracketed tags such as "[Music]",
+// "[BLANK_AUDIO]" or "(music)", and whisper.rn has no option to suppress them.
+const NON_SPEECH_TAG = /\[[^\]]*\]|\([^)]*\)/g;
+
+function stripNonSpeechTags(text: string): string {
+  return text.replace(NON_SPEECH_TAG, ' ').replace(/\s+/g, ' ').trim();
+}
+
 /**
  * Whisper ASR engine (whisper.rn / whisper.cpp GGML models).
  *
@@ -26,6 +34,7 @@ import type {AsrEngine, AsrProgressCallback, AsrTier} from '../../types';
 export class WhisperAsrEngine implements AsrEngine {
   private context: WhisperContext | null = null;
   private loadedTier: AsrTier | null = null;
+  private stopTranscription: (() => Promise<void>) | null = null;
 
   private getRoot(): string {
     return Platform.OS === 'ios'
@@ -190,11 +199,20 @@ export class WhisperAsrEngine implements AsrEngine {
     const context = await this.ensureContext(tier);
     // transcribeData decodes the buffer as signed 16-bit PCM, whatever
     // whisper.rn's own doc comment says.
-    const {promise} = context.transcribeData(pcmBase64Int16, {
+    const {stop, promise} = context.transcribeData(pcmBase64Int16, {
       language: opts?.language ?? 'auto',
     });
-    const result = await promise;
-    return result.result.trim();
+    this.stopTranscription = stop;
+    try {
+      const result = await promise;
+      return result.isAborted ? '' : stripNonSpeechTags(result.result);
+    } finally {
+      this.stopTranscription = null;
+    }
+  }
+
+  async cancelTranscription(): Promise<void> {
+    await this.stopTranscription?.();
   }
 
   async release(): Promise<void> {

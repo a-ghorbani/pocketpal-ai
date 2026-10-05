@@ -19,6 +19,7 @@ jest
 
 import {
   ASR_INSUFFICIENT_STORAGE,
+  ASR_LEVEL_HISTORY,
   ASR_MIN_RAM_BYTES,
   whisperAsrEngine,
 } from '../../services/asr';
@@ -208,12 +209,28 @@ describe('ASRStore', () => {
       await store.init();
       store.setCaptureState('recording');
       expect(store.captureState).toBe('recording');
-      store.setError('too_short');
+      store.setError('transcribe_failed');
       expect(store.captureState).toBe('error');
-      expect(store.lastError).toBe('too_short');
+      expect(store.lastError).toBe('transcribe_failed');
       store.resetCapture();
       expect(store.captureState).toBe('idle');
       expect(store.lastError).toBeNull();
+    });
+
+    it('keeps only the most recent input levels, cleared per recording', async () => {
+      await store.init();
+      store.setCaptureState('recording');
+      for (let i = 0; i < ASR_LEVEL_HISTORY + 5; i++) {
+        store.pushInputLevel(i);
+      }
+      expect(store.inputLevels).toHaveLength(ASR_LEVEL_HISTORY);
+      expect(store.inputLevels[0]).toBe(5);
+      expect(store.inputLevels[ASR_LEVEL_HISTORY - 1]).toBe(
+        ASR_LEVEL_HISTORY + 4,
+      );
+
+      store.setCaptureState('recording');
+      expect(store.inputLevels).toEqual([]);
     });
 
     it('clears lastError when leaving the error state', async () => {

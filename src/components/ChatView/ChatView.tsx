@@ -209,8 +209,6 @@ function asrErrorMessage(kind: AsrErrorKind, l10n: L10n): string {
       return l10n.voiceInput.errorPermissionDenied;
     case 'permission_blocked':
       return l10n.voiceInput.errorPermissionBlocked;
-    case 'too_short':
-      return l10n.voiceInput.errorTooShort;
     case 'transcribe_failed':
       return l10n.voiceInput.errorTranscribeFailed;
     case 'not_installed':

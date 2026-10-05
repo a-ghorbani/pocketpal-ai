@@ -119,5 +119,80 @@ describe('WhisperAsrEngine', () => {
       // The decode path never reaches out to the network.
       expect(mockDownloadFile).not.toHaveBeenCalled();
     });
+
+    it('stops an in-flight decode on cancel and returns no text', async () => {
+      mockExists.mockResolvedValue(true);
+      mockReadFile.mockResolvedValue(
+        JSON.stringify({version: ASR_MODEL_VERSION}),
+      );
+      let finish: (r: object) => void = () => {};
+      const stop = jest.fn(async () =>
+        finish({result: ' partial', language: 'en', isAborted: true}),
+      );
+      mockInitWhisper.mockResolvedValue({
+        transcribeData: jest.fn().mockReturnValue({
+          stop,
+          promise: new Promise(resolve => {
+            finish = resolve;
+          }),
+        }),
+        release: jest.fn().mockResolvedValue(undefined),
+      });
+
+      const pending = engine.transcribe('base64pcm', {tier: 'small'});
+      await new Promise(resolve => setImmediate(resolve));
+      await engine.cancelTranscription();
+
+      expect(stop).toHaveBeenCalledTimes(1);
+      await expect(pending).resolves.toBe('');
+    });
+
+    it('strips non-speech tags from the transcript', async () => {
+      mockExists.mockResolvedValue(true);
+      mockReadFile.mockResolvedValue(
+        JSON.stringify({version: ASR_MODEL_VERSION}),
+      );
+      mockInitWhisper.mockResolvedValue({
+        transcribeData: jest.fn().mockReturnValue({
+          stop: jest.fn(),
+          promise: Promise.resolve({
+            result: ' [Music] And so my fellow Americans (applause) ask not ',
+            language: 'en',
+            isAborted: false,
+          }),
+        }),
+        release: jest.fn().mockResolvedValue(undefined),
+      });
+
+      await expect(
+        engine.transcribe('base64pcm', {tier: 'small'}),
+      ).resolves.toBe('And so my fellow Americans ask not');
+    });
+
+    it('returns no text when the transcript is only non-speech tags', async () => {
+      mockExists.mockResolvedValue(true);
+      mockReadFile.mockResolvedValue(
+        JSON.stringify({version: ASR_MODEL_VERSION}),
+      );
+      mockInitWhisper.mockResolvedValue({
+        transcribeData: jest.fn().mockReturnValue({
+          stop: jest.fn(),
+          promise: Promise.resolve({
+            result: ' [BLANK_AUDIO] ',
+            language: 'en',
+            isAborted: false,
+          }),
+        }),
+        release: jest.fn().mockResolvedValue(undefined),
+      });
+
+      await expect(
+        engine.transcribe('base64pcm', {tier: 'small'}),
+      ).resolves.toBe('');
+    });
+
+    it('treats cancel with no decode in flight as a no-op', async () => {
+      await expect(engine.cancelTranscription()).resolves.toBeUndefined();
+    });
   });
 });

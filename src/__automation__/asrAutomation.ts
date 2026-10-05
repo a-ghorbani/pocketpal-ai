@@ -16,11 +16,19 @@ import {asrStore} from '../store/ASRStore';
  *   state::ready          gate open + selected tier installed → mic at rest
  *   state::not-installed  gate open + no tier installed → setup affordance
  *   state::low-memory     device below RAM gate → toggle OFF + helper line
+ *   state::recording      recording bar with a fixed speech-like waveform
+ *   state::transcribing   recording bar in its transcribing state
  *   state::error-capture  transcribe failure → composer error snackbar
  *   state::error-blocked  blocked permission → snackbar + open-Settings action
  *   state::error-disk     selected tier disk-blocked → Settings storage line
  */
 const ASR_AUTOMATION_STATE = 'ASR_AUTOMATION_STATE';
+
+// Two short phrases after a pause, so a capture shows silence and speech.
+const WAVEFORM = [
+  0, 0, 0, 0, 0.02, 0.05, 0.3, 0.7, 0.85, 0.6, 0.75, 0.9, 0.5, 0.2, 0.05, 0.02,
+  0, 0, 0.03, 0.4, 0.8, 0.65, 0.9, 0.7, 0.35, 0.1, 0.02, 0, 0, 0,
+];
 
 export async function runAsrCommand(cmd: string): Promise<void> {
   console.log(`[${ASR_AUTOMATION_STATE}] ${cmd}`);
@@ -34,6 +42,15 @@ export async function runAsrCommand(cmd: string): Promise<void> {
   }
   if (cmd === 'state::low-memory') {
     forceState({meetsMemory: false, override: null, selectedTierReady: false});
+    return;
+  }
+  if (cmd === 'state::recording' || cmd === 'state::transcribing') {
+    forceState({meetsMemory: true, override: true, selectedTierReady: true});
+    runInAction(() => {
+      asrStore.captureState =
+        cmd === 'state::recording' ? 'recording' : 'transcribing';
+      asrStore.inputLevels = WAVEFORM;
+    });
     return;
   }
   if (cmd === 'state::error-capture') {

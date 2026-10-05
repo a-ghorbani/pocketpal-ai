@@ -11,7 +11,6 @@ type CaptureState =
 type AsrErrorKind =
   | 'permission_denied'
   | 'permission_blocked'
-  | 'too_short'
   | 'transcribe_failed'
   | 'not_installed';
 
@@ -38,6 +37,7 @@ class MockASRStore {
   freeDiskBytes: number | null = null;
   captureState: CaptureState = 'idle';
   lastError: AsrErrorKind | null = null;
+  inputLevels: number[] = [];
 
   init: jest.Mock;
   setUserASROverride: jest.Mock;
@@ -49,6 +49,7 @@ class MockASRStore {
   setCaptureState: jest.Mock;
   setError: jest.Mock;
   resetCapture: jest.Mock;
+  pushInputLevel: jest.Mock;
 
   constructor() {
     makeAutoObservable(this, {
@@ -62,6 +63,7 @@ class MockASRStore {
       setCaptureState: false,
       setError: false,
       resetCapture: false,
+      pushInputLevel: false,
     });
     this.init = jest.fn().mockResolvedValue(undefined);
     this.setUserASROverride = jest.fn((v: boolean) => {
@@ -87,6 +89,11 @@ class MockASRStore {
       runInAction(() => {
         this.captureState = 'error';
         this.lastError = k;
+      });
+    });
+    this.pushInputLevel = jest.fn((level: number) => {
+      runInAction(() => {
+        this.inputLevels = [...this.inputLevels, level];
       });
     });
     this.resetCapture = jest.fn(() => {

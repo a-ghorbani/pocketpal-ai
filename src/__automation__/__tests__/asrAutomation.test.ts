@@ -39,6 +39,20 @@ describe('runAsrCommand', () => {
     expect(asrStore.asrAvailable).toBe(false);
   });
 
+  it('state::recording → recording bar with a waveform', async () => {
+    await runAsrCommand('state::recording');
+
+    expect(asrStore.isSelectedTierReady).toBe(true);
+    expect(asrStore.captureState).toBe('recording');
+    expect(asrStore.inputLevels.length).toBeGreaterThan(0);
+  });
+
+  it('state::transcribing → recording bar in its transcribing state', async () => {
+    await runAsrCommand('state::transcribing');
+
+    expect(asrStore.captureState).toBe('transcribing');
+  });
+
   it('state::error-capture → composer transcribe-failed error', async () => {
     await runAsrCommand('state::error-capture');
 

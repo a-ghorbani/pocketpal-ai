@@ -25,17 +25,30 @@ import {
   AtomIcon,
 } from '../../assets/icons';
 
-import {useTheme} from '../../hooks';
+import {useTheme, useVoiceCapture} from '../../hooks';
 
 import {createStyles} from './styles';
 
-import {chatSessionStore, modelStore, palStore, uiStore} from '../../store';
+import {
+  asrStore,
+  chatSessionStore,
+  modelStore,
+  palStore,
+  uiStore,
+} from '../../store';
 
 import {MessageType} from '../../utils/types';
 import {L10nContext, UserContext} from '../../utils';
 import {t} from '../../locales';
 
-import {SendButton, StopButton, Menu, VoiceChip, MicButton} from '..';
+import {
+  SendButton,
+  StopButton,
+  Menu,
+  VoiceChip,
+  MicButton,
+  VoiceRecordingBar,
+} from '..';
 
 export interface ChatInputTopLevelProps {
   /** Whether the AI is currently streaming tokens */
@@ -155,6 +168,13 @@ export const ChatInput = observer(
     const iconRotation = React.useRef(new Animated.Value(0)).current;
     const activePalId = chatSessionStore.activePalId;
     const currentActivePal = palStore.pals.find(pal => pal.id === activePalId);
+
+    const voiceCapture = useVoiceCapture({
+      onTranscript: appendTranscript ?? (() => {}),
+    });
+    const isVoiceCaptureActive =
+      asrStore.captureState === 'recording' ||
+      asrStore.captureState === 'transcribing';
 
     // Camera permission hook from react-native-vision-camera
     const {hasPermission, requestPermission} = useCameraPermission();
@@ -502,201 +522,207 @@ export const ChatInput = observer(
           </View>
 
           {/* Control Bar (Bottom Row) */}
-          <View style={styles.controlBar}>
-            {/* Left Controls */}
-            <View style={styles.leftControls}>
-              {/* Plus Button for Image Upload (only for regular chat) */}
-              {showImageUpload && !isVideoCapable && (
-                <Menu
-                  visible={showImageUploadMenu}
-                  onDismiss={() => setShowImageUploadMenu(false)}
-                  anchorPosition="top"
-                  anchor={
-                    <TouchableOpacity
-                      style={styles.plusButton}
-                      disabled={!isPlusButtonEnabled}
-                      onPress={
-                        isPlusButtonEnabled ? handlePlusButtonPress : () => {}
-                      }
-                      accessibilityLabel="Add image"
-                      accessibilityRole="button">
-                      <PlusIcon width={20} height={20} stroke={plusColor} />
-                    </TouchableOpacity>
-                  }>
-                  <Menu.Item
-                    label={l10n.camera?.takePhoto || 'Camera'}
-                    icon="camera"
-                    onPress={handleTakePhoto}
-                  />
-                  <Menu.Item
-                    label={l10n.common?.gallery || 'Gallery'}
-                    icon="image"
-                    onPress={handleSelectImages}
-                  />
-                </Menu>
-              )}
+          {isVoiceCaptureActive ? (
+            <VoiceRecordingBar
+              onCancel={voiceCapture.cancel}
+              onStop={voiceCapture.stop}
+            />
+          ) : (
+            <View style={styles.controlBar}>
+              {/* Left Controls */}
+              <View style={styles.leftControls}>
+                {/* Plus Button for Image Upload (only for regular chat) */}
+                {showImageUpload && !isVideoCapable && (
+                  <Menu
+                    visible={showImageUploadMenu}
+                    onDismiss={() => setShowImageUploadMenu(false)}
+                    anchorPosition="top"
+                    anchor={
+                      <TouchableOpacity
+                        style={styles.plusButton}
+                        disabled={!isPlusButtonEnabled}
+                        onPress={
+                          isPlusButtonEnabled ? handlePlusButtonPress : () => {}
+                        }
+                        accessibilityLabel="Add image"
+                        accessibilityRole="button">
+                        <PlusIcon width={20} height={20} stroke={plusColor} />
+                      </TouchableOpacity>
+                    }>
+                    <Menu.Item
+                      label={l10n.camera?.takePhoto || 'Camera'}
+                      icon="camera"
+                      onPress={handleTakePhoto}
+                    />
+                    <Menu.Item
+                      label={l10n.common?.gallery || 'Gallery'}
+                      icon="image"
+                      onPress={handleSelectImages}
+                    />
+                  </Menu>
+                )}
 
-              {/* Pal Selector */}
-              <View style={styles.palSelector}>
-                <TouchableOpacity
-                  style={[
-                    styles.palBtn,
-                    {
-                      backgroundColor:
-                        uiStore.colorScheme === 'dark'
-                          ? theme.colors.inverseOnSurface
-                          : theme.colors.inverseSurface,
-                    },
-                    currentActivePal?.color && {
-                      backgroundColor: currentActivePal?.color?.[0],
-                    },
-                  ]}
-                  onPress={onPalBtnPress}
-                  accessibilityLabel="Select Pal"
-                  accessibilityRole="button">
-                  <Animated.View
-                    style={{
-                      transform: [{rotate: rotateInterpolate}],
-                    }}>
-                    <ChevronUpIcon stroke={inputBackgroundColor} />
-                  </Animated.View>
-                </TouchableOpacity>
-
-                {/* Pal Name Display */}
-                {currentActivePal?.name && hasActiveModel && (
-                  <Text
+                {/* Pal Selector */}
+                <View style={styles.palSelector}>
+                  <TouchableOpacity
                     style={[
-                      styles.palNameCompact,
+                      styles.palBtn,
                       {
-                        color: onSurfaceColor,
+                        backgroundColor:
+                          uiStore.colorScheme === 'dark'
+                            ? theme.colors.inverseOnSurface
+                            : theme.colors.inverseSurface,
                       },
-                    ]}>
-                    Pal:{' '}
+                      currentActivePal?.color && {
+                        backgroundColor: currentActivePal?.color?.[0],
+                      },
+                    ]}
+                    onPress={onPalBtnPress}
+                    accessibilityLabel="Select Pal"
+                    accessibilityRole="button">
+                    <Animated.View
+                      style={{
+                        transform: [{rotate: rotateInterpolate}],
+                      }}>
+                      <ChevronUpIcon stroke={inputBackgroundColor} />
+                    </Animated.View>
+                  </TouchableOpacity>
+
+                  {/* Pal Name Display */}
+                  {currentActivePal?.name && hasActiveModel && (
                     <Text
                       style={[
-                        styles.palNameValueCompact,
+                        styles.palNameCompact,
                         {
                           color: onSurfaceColor,
                         },
                       ]}>
-                      {currentActivePal?.name}
+                      Pal:{' '}
+                      <Text
+                        style={[
+                          styles.palNameValueCompact,
+                          {
+                            color: onSurfaceColor,
+                          },
+                        ]}>
+                        {currentActivePal?.name}
+                      </Text>
                     </Text>
-                  </Text>
+                  )}
+                </View>
+
+                {/* Thinking Toggle Button. Graded models (axis-2) cycle
+                  off -> low -> medium -> high; effortless models toggle
+                  on/off. The label shows the current effort when graded. */}
+                {showThinkingToggle && !isCameraActive && (
+                  <TouchableOpacity
+                    testID="thinking-toggle"
+                    style={[
+                      styles.thinkingToggleLeft,
+                      isThinkingEnabled && {backgroundColor: onSurfaceColor},
+                      {borderColor: onSurfaceColorVariant},
+                    ]}
+                    onPress={() =>
+                      supportsEffort && effortValues.length > 0
+                        ? onEffortCycle?.()
+                        : onThinkingToggle?.(!isThinkingEnabled)
+                    }
+                    accessibilityLabel={
+                      supportsEffort && effortValues.length > 0
+                        ? t(
+                            l10n.components.chatInput.thinkingToggle
+                              .cycleEffort,
+                            {
+                              level: localizedEffort ?? '',
+                            },
+                          )
+                        : isThinkingEnabled
+                          ? l10n.components.chatInput.thinkingToggle
+                              .disableThinking
+                          : l10n.components.chatInput.thinkingToggle
+                              .enableThinking
+                    }
+                    accessibilityRole="button">
+                    <AtomIcon
+                      width={14}
+                      height={14}
+                      stroke={
+                        isThinkingEnabled
+                          ? inputBackgroundColor
+                          : onSurfaceColorVariant
+                      }
+                      strokeWidth={2}
+                    />
+                    <Text
+                      style={[
+                        styles.thinkingToggleText,
+                        isThinkingEnabled
+                          ? {color: inputBackgroundColor}
+                          : {color: onSurfaceColorVariant},
+                      ]}>
+                      {supportsEffort && isThinkingEnabled && reasoningEffort
+                        ? localizedEffort
+                        : l10n.components.chatInput.thinkingToggle.thinkText}
+                    </Text>
+                  </TouchableOpacity>
                 )}
               </View>
 
-              {/* Thinking Toggle Button. Graded models (axis-2) cycle
-                  off -> low -> medium -> high; effortless models toggle
-                  on/off. The label shows the current effort when graded. */}
-              {showThinkingToggle && !isCameraActive && (
-                <TouchableOpacity
-                  testID="thinking-toggle"
-                  style={[
-                    styles.thinkingToggleLeft,
-                    isThinkingEnabled && {backgroundColor: onSurfaceColor},
-                    {borderColor: onSurfaceColorVariant},
-                  ]}
-                  onPress={() =>
-                    supportsEffort && effortValues.length > 0
-                      ? onEffortCycle?.()
-                      : onThinkingToggle?.(!isThinkingEnabled)
-                  }
-                  accessibilityLabel={
-                    supportsEffort && effortValues.length > 0
-                      ? t(
-                          l10n.components.chatInput.thinkingToggle.cycleEffort,
-                          {
-                            level: localizedEffort ?? '',
-                          },
-                        )
-                      : isThinkingEnabled
-                        ? l10n.components.chatInput.thinkingToggle
-                            .disableThinking
-                        : l10n.components.chatInput.thinkingToggle
-                            .enableThinking
-                  }
-                  accessibilityRole="button">
-                  <AtomIcon
-                    width={14}
-                    height={14}
-                    stroke={
-                      isThinkingEnabled
-                        ? inputBackgroundColor
-                        : onSurfaceColorVariant
-                    }
-                    strokeWidth={2}
-                  />
-                  <Text
-                    style={[
-                      styles.thinkingToggleText,
-                      isThinkingEnabled
-                        ? {color: inputBackgroundColor}
-                        : {color: onSurfaceColorVariant},
-                    ]}>
-                    {supportsEffort && isThinkingEnabled && reasoningEffort
-                      ? localizedEffort
-                      : l10n.components.chatInput.thinkingToggle.thinkText}
-                  </Text>
-                </TouchableOpacity>
-              )}
-            </View>
+              {/* Right Controls */}
+              <View style={styles.rightControls}>
+                {/* Helper text for model not loaded */}
+                {showModelWarning && !hasActiveModel && (
+                  <View style={styles.helperTextContainer}>
+                    <Text variant="bodySmall" style={styles.helperText}>
+                      {l10n.chat.cannotSendWithoutModel}
+                    </Text>
+                  </View>
+                )}
 
-            {/* Right Controls */}
-            <View style={styles.rightControls}>
-              {/* Helper text for model not loaded */}
-              {showModelWarning && !hasActiveModel && (
-                <View style={styles.helperTextContainer}>
-                  <Text variant="bodySmall" style={styles.helperText}>
-                    {l10n.chat.cannotSendWithoutModel}
-                  </Text>
-                </View>
-              )}
-
-              {/* Voice input (ASR) — push-to-talk mic. Self-gates: returns
-                  null when voice input is unavailable. */}
-              {appendTranscript && (
-                <MicButton appendTranscript={appendTranscript} />
-              )}
-
-              {/* Voice chip (TTS) — always present so users can stop
+                {/* Voice chip (TTS) — always present so users can stop
                   audio independently of text generation. Self-gates:
                   returns null when TTS is unavailable. */}
-              <VoiceChip />
+                <VoiceChip />
 
-              {/* Send/Stop Button */}
-              {isStopVisible ? (
-                <StopButton color={onSurfaceColor} onPress={onStopPress} />
-              ) : isVideoCapable && !isCameraActive ? (
-                /* Compact Start Video Button for Video Pals */
-                <TouchableOpacity
-                  style={[
-                    styles.compactVideoButton,
-                    {
-                      backgroundColor: onSurfaceColor,
-                    },
-                  ]}
-                  onPress={onStartCamera}
-                  accessibilityLabel="Start video analysis"
-                  accessibilityRole="button">
-                  <VideoRecorderIcon
-                    width={16}
-                    height={16}
-                    stroke="white"
-                    strokeWidth={2}
-                  />
-                  <Text style={styles.compactButtonText}>
-                    {l10n.video.startCamera}
-                  </Text>
-                </TouchableOpacity>
-              ) : (
-                isSendButtonVisible && (
-                  <View style={{opacity: sendButtonOpacity}}>
-                    <SendButton color={onSurfaceColor} onPress={handleSend} />
-                  </View>
-                )
-              )}
+                {/* Voice input (ASR) mic. Self-gates: returns null when voice
+                  input is unavailable. */}
+                {appendTranscript && <MicButton onStart={voiceCapture.start} />}
+
+                {/* Send/Stop Button */}
+                {isStopVisible ? (
+                  <StopButton color={onSurfaceColor} onPress={onStopPress} />
+                ) : isVideoCapable && !isCameraActive ? (
+                  /* Compact Start Video Button for Video Pals */
+                  <TouchableOpacity
+                    style={[
+                      styles.compactVideoButton,
+                      {
+                        backgroundColor: onSurfaceColor,
+                      },
+                    ]}
+                    onPress={onStartCamera}
+                    accessibilityLabel="Start video analysis"
+                    accessibilityRole="button">
+                    <VideoRecorderIcon
+                      width={16}
+                      height={16}
+                      stroke="white"
+                      strokeWidth={2}
+                    />
+                    <Text style={styles.compactButtonText}>
+                      {l10n.video.startCamera}
+                    </Text>
+                  </TouchableOpacity>
+                ) : (
+                  isSendButtonVisible && (
+                    <View style={{opacity: sendButtonOpacity}}>
+                      <SendButton color={onSurfaceColor} onPress={handleSend} />
+                    </View>
+                  )
+                )}
+              </View>
             </View>
-          </View>
+          )}
         </View>
       </View>
     );

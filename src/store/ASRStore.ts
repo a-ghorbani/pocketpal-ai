@@ -4,7 +4,7 @@ import {
   type NativeEventSubscription,
 } from 'react-native';
 
-import {makeAutoObservable, runInAction} from 'mobx';
+import {makeAutoObservable, observable, runInAction} from 'mobx';
 import {makePersistable} from 'mobx-persist-store';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import DeviceInfo from 'react-native-device-info';
@@ -13,6 +13,7 @@ import {
   ASR_DEFAULT_TIER,
   ASR_DISK_HEADROOM_FACTOR,
   ASR_INSUFFICIENT_STORAGE,
+  ASR_LEVEL_HISTORY,
   ASR_MIN_RAM_BYTES,
   ASR_TIERS,
   ASR_TIER_ORDER,
@@ -35,9 +36,10 @@ import type {
  * is downloaded per tier on demand and is never routed through the LLM
  * `ModelStore`; this store is the sole owner of ASR install/download state.
  *
- * Capture is push-to-talk: a hook drives the `captureState` FSM and calls
- * `transcribe` on release; the resolved text is appended to the composer by
- * the caller (never auto-sent).
+ * Capture is tap-to-start, tap-to-stop: a hook drives the `captureState` FSM,
+ * feeds `inputLevels` for the recording waveform, and calls `transcribe` on
+ * stop; the resolved text is appended to the composer by the caller (never
+ * auto-sent).
  */
 export class ASRStore {
   // Set once in init() from getTotalMemory() >= ASR_MIN_RAM_BYTES; never
@@ -74,9 +76,11 @@ export class ASRStore {
   // Transient capture session state.
   captureState: CaptureState = 'idle';
   lastError: AsrErrorKind | null = null;
+  // Loudness (0..1) of the most recent captured chunks, oldest first.
+  inputLevels: number[] = [];
 
   constructor() {
-    makeAutoObservable(this, {}, {autoBind: true});
+    makeAutoObservable(this, {inputLevels: observable.ref}, {autoBind: true});
     makePersistable(this, {
       name: 'ASRStore',
       properties: ['userASROverride', 'selectedTier'],
@@ -279,13 +283,24 @@ export class ASRStore {
     return this.downloadModel(tier);
   }
 
-  // --- Capture FSM (driven by the push-to-talk hook) ----------------------
+  // --- Capture FSM (driven by useVoiceCapture) ---------------------------
 
   setCaptureState(state: CaptureState): void {
     this.captureState = state;
     if (state !== 'error') {
       this.lastError = null;
     }
+    if (state === 'recording') {
+      this.inputLevels = [];
+    }
+  }
+
+  pushInputLevel(level: number): void {
+    const levels = this.inputLevels.concat(level);
+    this.inputLevels =
+      levels.length > ASR_LEVEL_HISTORY
+        ? levels.slice(levels.length - ASR_LEVEL_HISTORY)
+        : levels;
   }
 
   setError(kind: AsrErrorKind): void {
