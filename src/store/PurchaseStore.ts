@@ -158,6 +158,7 @@ export class PurchaseStore {
   linkPending = false;
   linkConflict = false;
   isRestoring = false;
+  storefront: string | undefined = undefined;
 
   private store: StorePort | null = null;
   private unsubscribeStore: (() => void) | null = null;
@@ -172,6 +173,7 @@ export class PurchaseStore {
   private requestedProducts = new Set<string>();
   private watching = new Set<string>();
   private started = false;
+  private storefrontRead = false;
   private recovering: Promise<void> | null = null;
   private recoverAgain = false;
   private appStateSubscription: {remove: () => void} | null = null;
@@ -203,6 +205,7 @@ export class PurchaseStore {
       | 'requestedProducts'
       | 'watching'
       | 'started'
+      | 'storefrontRead'
       | 'recovering'
       | 'recoverAgain'
       | 'appStateSubscription'
@@ -222,6 +225,7 @@ export class PurchaseStore {
       requestedProducts: false,
       watching: false,
       started: false,
+      storefrontRead: false,
       recovering: false,
       recoverAgain: false,
       appStateSubscription: false,
@@ -263,6 +267,13 @@ export class PurchaseStore {
     this.unsubscribeStore = store.onTransaction(tx => {
       this.processTransaction(tx, {settledVerify: true}).catch(() => {});
     });
+  }
+
+  get showsLicenseNotice(): boolean {
+    return (
+      Platform.OS === 'ios' &&
+      (this.storefront === undefined || this.storefront === 'USA')
+    );
   }
 
   productFor(productId: string | undefined): StoreProduct | undefined {
@@ -387,6 +398,21 @@ export class PurchaseStore {
         this.transient.delete(palId);
       }
     });
+  }
+
+  private readStorefront(): void {
+    if (this.storefrontRead) {
+      return;
+    }
+    this.storefrontRead = true;
+    this.storePort
+      .storefront()
+      .then(code =>
+        runInAction(() => {
+          this.storefront = code;
+        }),
+      )
+      .catch(() => {});
   }
 
   async syncProducts(): Promise<void> {
@@ -1143,6 +1169,9 @@ export class PurchaseStore {
     runInAction(() => {
       this.availability = available ? 'ready' : 'unavailable';
     });
+    if (available) {
+      this.readStorefront();
+    }
     await this.drainQueue();
     if (!available) {
       return;

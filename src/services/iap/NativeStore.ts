@@ -4,6 +4,7 @@ import {
   finishTransaction,
   getAvailablePurchases,
   getPendingTransactionsIOS,
+  getStorefront,
   initConnection,
   purchaseErrorListener,
   purchaseUpdatedListener,
@@ -139,6 +140,22 @@ export class NativeStore implements StorePort {
       productId: product.id,
       displayPrice: product.displayPrice,
     }));
+  }
+
+  async storefront(): Promise<string | undefined> {
+    if (Platform.OS !== 'ios') {
+      return undefined;
+    }
+    // A failed lookup emits an id-less purchase error; with no listener,
+    // iOS buffers it and hands it to the next Buy, which then fails.
+    const drain = purchaseErrorListener(() => {});
+    try {
+      return await getStorefront();
+    } catch {
+      return undefined;
+    } finally {
+      drain.remove();
+    }
   }
 
   purchase(
