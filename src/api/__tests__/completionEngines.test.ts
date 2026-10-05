@@ -413,3 +413,99 @@ describe('OpenAICompletionEngine', () => {
     );
   });
 });
+
+describe('OpenAICompletionEngine readiness', () => {
+  const ENDPOINT: RemoteEndpoint = {
+    url: 'http://localhost:8080',
+    remoteModelId: 'router-model',
+    serverType: 'llama.cpp',
+  };
+  const params = {messages: [{role: 'user', content: 'Hi'}]} as any;
+
+  beforeEach(() => {
+    jest.clearAllMocks();
+    jest.useRealTimers();
+    mockedStreamChat.mockResolvedValue({text: 'ok', content: 'ok'});
+  });
+
+  it('waits for readiness before the request, then sends it', async () => {
+    const order: string[] = [];
+    const ensureReady = jest.fn(async (_signal: AbortSignal) => {
+      order.push('ready');
+    });
+    mockedStreamChat.mockImplementationOnce(async () => {
+      order.push('request');
+      return {text: 'ok', content: 'ok'};
+    });
+    const engine = new OpenAICompletionEngine(ENDPOINT, {ensureReady});
+
+    await engine.completion(params);
+
+    expect(order).toEqual(['ready', 'request']);
+    expect(ensureReady.mock.calls[0][0]).toBe(
+      mockedStreamChat.mock.calls[0][2],
+    );
+  });
+
+  it('resolves interrupted with no request when stopped while waiting', async () => {
+    let signal!: AbortSignal;
+    const engine = new OpenAICompletionEngine(ENDPOINT, {
+      ensureReady: s =>
+        new Promise(resolve => {
+          signal = s;
+          s.addEventListener('abort', () => resolve());
+        }),
+    });
+
+    const pending = engine.completion(params);
+    await Promise.resolve();
+    await engine.stopCompletion();
+
+    await expect(pending).resolves.toEqual({
+      text: '',
+      content: '',
+      interrupted: true,
+      tokens_predicted: 0,
+    });
+    expect(signal.aborted).toBe(true);
+    expect(mockedStreamChat).not.toHaveBeenCalled();
+  });
+
+  it('passes a readiness failure through', async () => {
+    const failure = new Error('not ready');
+    const engine = new OpenAICompletionEngine(ENDPOINT, {
+      ensureReady: () => Promise.reject(failure),
+    });
+
+    await expect(engine.completion(params)).rejects.toBe(failure);
+    expect(mockedStreamChat).not.toHaveBeenCalled();
+  });
+
+  it('puts no timeout of its own on readiness', async () => {
+    jest.useFakeTimers();
+    const engine = new OpenAICompletionEngine(ENDPOINT, {
+      ensureReady: () => new Promise(() => {}),
+    });
+    let settled = false;
+    engine.completion(params).then(
+      () => (settled = true),
+      () => (settled = true),
+    );
+
+    jest.advanceTimersByTime(60 * 60 * 1000);
+    await Promise.resolve();
+
+    expect(settled).toBe(false);
+    expect(jest.getTimerCount()).toBe(0);
+    jest.useRealTimers();
+  });
+
+  it('sends exactly as before when no readiness is given', async () => {
+    const engine = new OpenAICompletionEngine(ENDPOINT);
+
+    await engine.completion(params);
+
+    expect(mockedStreamChat).toHaveBeenCalledTimes(1);
+    expect(mockedStreamChat.mock.calls[0][1]).toBe(ENDPOINT);
+  });
+});

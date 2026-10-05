@@ -57,16 +57,35 @@ export class LocalCompletionEngine implements CompletionEngine {
   }
 }
 
+export interface RemoteEngineOptions {
+  /**
+   * Awaited before the request, with the signal Stop aborts. The engine
+   * applies no timeout of its own: whoever supplies this bounds it.
+   */
+  ensureReady?: (signal: AbortSignal) => Promise<void>;
+}
+
 export class OpenAICompletionEngine implements CompletionEngine {
   private abortController: AbortController | null = null;
 
-  constructor(private endpoint: RemoteEndpoint) {}
+  constructor(
+    private endpoint: RemoteEndpoint,
+    private options: RemoteEngineOptions = {},
+  ) {}
 
   async completion(
     params: ApiCompletionParams,
     callback?: (data: CompletionStreamData) => void,
   ): Promise<CompletionResult> {
-    this.abortController = new AbortController();
+    const controller = new AbortController();
+    this.abortController = controller;
+
+    if (this.options.ensureReady) {
+      await this.options.ensureReady(controller.signal);
+      if (controller.signal.aborted) {
+        return {text: '', content: '', interrupted: true, tokens_predicted: 0};
+      }
+    }
 
     return streamChatCompletion(
       {
@@ -84,7 +103,7 @@ export class OpenAICompletionEngine implements CompletionEngine {
         reasoning: params.reasoning,
       },
       this.endpoint,
-      this.abortController.signal,
+      controller.signal,
       callback,
     );
   }
