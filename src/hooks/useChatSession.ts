@@ -521,7 +521,6 @@ export const useChatSession = (
   // passed into AgentRunOptions.triggerMarkers so the runner has no
   // direct dependency on the cache, modelStore, or getFormattedChat.
   const triggerCacheRef = useRef(createTriggerMarkerCache());
-  // The lease of this hook's active run; Stop aborts it.
   const leaseRef = useRef<GenerationLease | null>(null);
 
   const addMessage = async (message: MessageType.Any) => {
@@ -542,7 +541,6 @@ export const useChatSession = (
 
   const handleSendPress = async (message: MessageType.PartialText) => {
     const sentFrom = chatSessionStore.activeSessionId;
-    // The previous run is still draining; "Stopping…" covers the wait.
     if (modelStore.isGenerationBusy) {
       chatSessionStore.setIsStopping(true);
     }
@@ -559,8 +557,7 @@ export const useChatSession = (
     }
     leaseRef.current = lease;
 
-    // Clears the shared run UI the moment the run is aborted (Stop, or a
-    // release), not when it has drained. Idempotent.
+    // Run UI clears on abort, not on drain.
     let uiStopped = false;
     const uiStop = () => {
       if (uiStopped) {
@@ -734,8 +731,8 @@ export const useChatSession = (
       // The chunk-cycle would otherwise run entirely via microtask
       // resumption from queue.next(), starving the macrotask queue
       // where touch events ride — Stop taps could sit for tens of
-      // seconds during long streams. A yield every YIELD_INTERVAL_MS
-      // lets touches dispatch. The yield also
+      // seconds during long streams. A setTimeout(_, 0) yield every
+      // YIELD_INTERVAL_MS lets touches dispatch. The yield also
       // decouples native production from consumption, so a backlog
       // can grow on fast models; the abort guard below drops queued
       // token events on stop while lifecycle events still run.
@@ -813,8 +810,6 @@ export const useChatSession = (
       }
     } catch (error) {
       console.error('Completion error:', error);
-      // Reset agentUiState back to idle so renderers don't get
-      // stuck in a failed state across the next user message.
       runUi.stop();
 
       // Stop any in-flight TTS — the completion errored, so buffered
@@ -977,8 +972,6 @@ export const useChatSession = (
   };
 
   const handleStopPress = async () => {
-    // The run's abort listener clears the run UI at once; the next send
-    // waits for the run to drain.
     leaseRef.current?.abort();
     // Stop any in-flight TTS so buffered audio doesn't keep playing
     // after the user tapped Stop.

@@ -835,8 +835,6 @@ export const ChatView = observer(
       agentStatus === 'prefill' ||
       agentStatus === 'generating_tool_call' ||
       agentStatus === 'executing_tool' ||
-      // A send waiting for a stopped run to drain shows "Stopping…"
-      // while the agent status is already idle.
       chatSessionStore.isStopping;
     const activeRunPendingTalentNames =
       chatSessionStore.agentUiState.pendingTalentNames;

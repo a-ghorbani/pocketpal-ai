@@ -197,7 +197,6 @@ export const VideoPalScreen = observer(({activePal}: VideoPalScreenProps) => {
         return;
       }
 
-      // A frame arriving while a generation runs is dropped, not queued.
       if (modelStore.isGenerationBusy) {
         return;
       }

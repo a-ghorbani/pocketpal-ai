@@ -78,14 +78,7 @@ class ChatSessionStore {
   isEditMode: boolean = false;
   editingMessageId: string | null = null;
   isGenerating: boolean = false;
-  /**
-   * True while a send waits for the previous, already stopped run to
-   * drain before it can take the generation lease. The wait is short on
-   * backends that honour the abort callback and one decode batch on the
-   * others, so the pending indicator shows "Stopping…" for it.
-   *
-   * Written only by `useChatSession`'s send path, around its acquire.
-   */
+  /** A send is waiting for a stopped run to drain. */
   isStopping: boolean = false;
   newChatCompletionSettings: CompletionParams = defaultCompletionSettings;
   newChatPalId: string | undefined = undefined;

@@ -3385,7 +3385,6 @@ class ModelStore {
       this.grantableEngine,
     );
 
-  /** Never waits: null while another generation holds or awaits the lease. */
   tryAcquireGeneration = (): GenerationLease | null =>
     this.generationSlot.tryAcquire(this.grantableEngine);
 
