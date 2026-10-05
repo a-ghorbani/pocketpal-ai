@@ -3,6 +3,8 @@
  * Provides reusable gesture actions using W3C WebDriver Actions API
  */
 
+import {byTestId} from './selectors';
+
 // WebdriverIO globals - available during test execution
 declare const browser: WebdriverIO.Browser;
 declare const driver: WebdriverIO.Browser;
@@ -300,6 +302,26 @@ async function swipeUpInSheetBelowInputs(): Promise<void> {
   });
 }
 
+async function dragDownInSheet(): Promise<void> {
+  await swipe({
+    startYPercent: 0.4,
+    endYPercent: 0.6,
+    duration: 300,
+    holdMs: 300,
+  });
+}
+
+/** Bottom edge of the topmost sheet's header (its close button), or 0. */
+async function sheetHeaderBottom(): Promise<number> {
+  const buttons = browser.$$(byTestId('sheet-close-button'));
+  const count = await buttons.length;
+  const top = count > 0 ? buttons[count - 1] : undefined;
+  if (!top || !(await top.isExisting().catch(() => false))) {
+    return 0;
+  }
+  return (await top.getLocation('y')) + (await top.getSize('height'));
+}
+
 /**
  * Scroll within a sheet until `selector` sits fully above `overlay`.
  *
@@ -327,8 +349,15 @@ async function scrollInSheetClearOfOverlay(
       const overlayTop = (await overlayEl.isExisting().catch(() => false))
         ? (await overlayEl.getLocation()).y
         : (await getScreenSize()).height;
-      if (loc.y >= 0 && loc.y + size.height <= overlayTop) {
+      const headerBottom = await sheetHeaderBottom();
+      if (loc.y >= headerBottom && loc.y + size.height <= overlayTop) {
         return true;
+      }
+      if (loc.y < headerBottom) {
+        // Scrolled under the sheet header, where a tap hits the header.
+        await dragDownInSheet();
+        await driver.pause(300);
+        continue;
       }
     }
     await scroll();
