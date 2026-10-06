@@ -205,7 +205,13 @@
     "speculativeDraftValueCacheType": "ドラフトの値キャッシュタイプ",
     "speculativeDraftNGpuLayers": "ドラフトのGPUレイヤー",
     "speculativeDraftNGpuLayersDescription": "GPUにオフロードするドラフトモデルのレイヤー数。",
-    "speculativeDraftCacheTypeInactiveDescription": "投機的デコードが実行されると適用されます。"
+    "speculativeDraftCacheTypeInactiveDescription": "投機的デコードが実行されると適用されます。",
+    "purchases": {
+      "title": "購入履歴",
+      "statusOwned": "購入済み",
+      "statusUnlocking": "ロック解除中",
+      "link": "他のデバイスで使うにはサインイン"
+    }
   },
   "memory": {
     "shortWarning": "メモリ警告",
@@ -1022,7 +1028,9 @@
       "ttft": "{{value}}ms TTFT",
       "interrupted": "中断されました",
       "truncated": "途中で停止 — コンテキストが満杯の可能性",
-      "draftAccepted": "ドラフト: {{accepted}}/{{total}} ({{pct}}%)"
+      "draftAccepted": "ドラフト: {{accepted}}/{{total}} ({{pct}}%)",
+      "promptTokensPerSec": "{{value}} プロンプトトークン/秒",
+      "cachedTokens": "{{value}} キャッシュ済み"
     },
     "pendingIndicator": {
       "preparingTool": "ツールを準備中",
@@ -1034,6 +1042,13 @@
     "toolMetrics": {
       "tokens": "{{count}}トークン",
       "elapsed": "{{seconds}}秒"
+    },
+    "completionSettings": {
+      "serverDefault": "サーバーのデフォルト",
+      "usingServerDefault": "サーバーのデフォルトを使用中: {{value}}",
+      "usingServerDefaultUnreported": "サーバーのデフォルトを使用中（値は未報告）",
+      "resetToServerDefault": "サーバーのデフォルト: {{value}} · リセット",
+      "resetToServerDefaultAccessibilityLabel": "{{name}}をサーバーのデフォルト（{{value}}）にリセット"
     }
   },
   "palsScreen": {
@@ -1111,6 +1126,47 @@
       "failedToLoadDetails": "Palの詳細の読み込みに失敗しました",
       "failedToDownload": "Palのダウンロードに失敗しました",
       "notAvailable": "N/A"
+    },
+    "purchase": {
+      "buy": "{{price}}",
+      "open": "開く",
+      "install": "インストール",
+      "pending": "保留中",
+      "unlocking": "ロック解除中",
+      "retry": "再試行",
+      "supportCode": "サポートコード: {{code}}",
+      "noLongerAvailable": "このPalは提供終了しました。{{refundLink}}できます。",
+      "refundLink": "Appleに返金を依頼",
+      "notCompleted": "この購入を完了できませんでした。Googleから返金されます。",
+      "withdrawnRefunding": "このPalは公開停止になりました。返金についてはサポートにお問い合わせください。",
+      "invalid": "この購入を確認できませんでした。",
+      "heldInvalid": "この購入のロックを解除できませんでした。このコードを添えてサポートにお問い合わせください。",
+      "recommendedModel": "推奨モデル",
+      "sampleExchange": "会話例",
+      "signInLine": "すでにお持ちの方はサインイン",
+      "licenseNotice": "このPalを利用するためのライセンスを購入します。",
+      "termsOfSale": "販売条件",
+      "appleMediaTerms": "Apple メディアサービス利用規約",
+      "linkPrompt": "他のデバイスでも使うにはサインインしてください",
+      "linkSignIn": "サインイン",
+      "dismiss": "今はしない",
+      "linkConflict": "これらの購入は別のアカウントに紐付けられています。",
+      "restorePurchases": "購入を復元",
+      "badgePending": "保留中",
+      "badgeUnlocking": "ロック解除中",
+      "badgeUpdate": "更新あり",
+      "updatePrompt": "作者による新しいバージョンが公開されています。",
+      "updatePromptWithNote": "作者による新しいバージョンが公開されています: {{note}}。",
+      "updateButton": "更新",
+      "updateConfirmText": "作者が変更した部分については、あなたの編集内容が上書きされます。",
+      "updateConfirm": "更新",
+      "updateCancel": "キャンセル",
+      "modelStep": {
+        "download": "ダウンロード · {{size}}",
+        "startChat": "チャットを開始",
+        "needsMemory": "このPalの最小モデルを動かすには、{{size}}以上のメモリを搭載したデバイスが必要です。",
+        "noModelFits": "このデバイスにはこのPalを動かすのに十分なメモリがありません。"
+      }
     }
   },
   "validation": {
@@ -1574,6 +1630,8 @@
   "downloadBanner": {
     "titleByPal": "{{name}}をダウンロード中",
     "titleByModel": "{{name}}をダウンロード中",
-    "extraInProgress": "他に{{count}}件進行中"
+    "extraInProgress": "他に{{count}}件進行中",
+    "failedTitle": "ダウンロードが完了しませんでした",
+    "retry": "再試行"
   }
 }
