@@ -205,7 +205,13 @@
     "speculativeDraftValueCacheType": "סוג מטמון ערך לטיוטה",
     "speculativeDraftNGpuLayers": "שכבות GPU לטיוטה",
     "speculativeDraftNGpuLayersDescription": "מספר השכבות של מודל הטיוטה שיועברו ל-GPU.",
-    "speculativeDraftCacheTypeInactiveDescription": "ההגדרה תיכנס לתוקף כאשר פענוח ספקולטיבי יפעל."
+    "speculativeDraftCacheTypeInactiveDescription": "ההגדרה תיכנס לתוקף כאשר פענוח ספקולטיבי יפעל.",
+    "purchases": {
+      "title": "רכישות",
+      "statusOwned": "נרכש",
+      "statusUnlocking": "בשחרור",
+      "link": "התחבר כדי להשתמש במכשירים אחרים"
+    }
   },
   "memory": {
     "shortWarning": "אזהרת זיכרון",
@@ -1022,7 +1028,9 @@
       "ttft": "{{value}}מ.ש. TTFT",
       "interrupted": "הופסק",
       "truncated": "נעצר — ככל הנראה ההקשר מלא",
-      "draftAccepted": "טיוטה: {{accepted}}/{{total}} ({{pct}}%)"
+      "draftAccepted": "טיוטה: {{accepted}}/{{total}} ({{pct}}%)",
+      "promptTokensPerSec": "{{value}} טוקני הנחיה/שנ'",
+      "cachedTokens": "{{value}} מהמטמון"
     },
     "pendingIndicator": {
       "preparingTool": "מכין כלי",
@@ -1034,6 +1042,13 @@
     "toolMetrics": {
       "tokens": "{{count}} טוקנים",
       "elapsed": "{{seconds}} ש'"
+    },
+    "completionSettings": {
+      "serverDefault": "ברירת המחדל של השרת",
+      "usingServerDefault": "שימוש בברירת המחדל של השרת: {{value}}",
+      "usingServerDefaultUnreported": "שימוש בברירת המחדל של השרת (לא מדווח)",
+      "resetToServerDefault": "ברירת המחדל של השרת: {{value}} · איפוס",
+      "resetToServerDefaultAccessibilityLabel": "אפס את {{name}} לברירת המחדל של השרת, {{value}}"
     }
   },
   "palsScreen": {
@@ -1111,6 +1126,47 @@
       "failedToLoadDetails": "טעינת פרטי ה-Pal נכשלה",
       "failedToDownload": "הורדת Pal נכשלה",
       "notAvailable": "N/A"
+    },
+    "purchase": {
+      "buy": "{{price}}",
+      "open": "פתח",
+      "install": "התקן",
+      "pending": "בהמתנה",
+      "unlocking": "בשחרור",
+      "retry": "נסה שוב",
+      "supportCode": "קוד תמיכה: {{code}}",
+      "noLongerAvailable": "Pal זה אינו זמין יותר. אפשר {{refundLink}}.",
+      "refundLink": "לבקש החזר כספי מ-Apple",
+      "notCompleted": "לא ניתן היה להשלים את הרכישה הזו. Google תחזיר לך את הכסף.",
+      "withdrawnRefunding": "Pal זה הוסר מהמכירה. פנה לתמיכה לקבלת החזר כספי.",
+      "invalid": "לא הצלחנו לאמת את הרכישה הזו.",
+      "heldInvalid": "לא הצלחנו לשחרר את הרכישה הזו. פנה לתמיכה עם הקוד הזה.",
+      "recommendedModel": "מודל מומלץ",
+      "sampleExchange": "שיחה לדוגמה",
+      "signInLine": "כבר יש לך? התחבר",
+      "licenseNotice": "אתה רוכש רישיון שימוש ב-Pal הזה.",
+      "termsOfSale": "תנאי המכירה",
+      "appleMediaTerms": "תנאי השימוש של Apple Media Services",
+      "linkPrompt": "התחבר כדי להשתמש בו גם במכשירים האחרים שלך",
+      "linkSignIn": "התחברות",
+      "dismiss": "לא עכשיו",
+      "linkConflict": "הרכישות האלה מקושרות לחשבון אחר.",
+      "restorePurchases": "שחזור רכישות",
+      "badgePending": "בהמתנה",
+      "badgeUnlocking": "בשחרור",
+      "badgeUpdate": "עדכון זמין",
+      "updatePrompt": "גרסה חדשה מהיוצר זמינה.",
+      "updatePromptWithNote": "גרסה חדשה מהיוצר זמינה: {{note}}.",
+      "updateButton": "עדכן",
+      "updateConfirmText": "הפעולה תחליף את העריכות שלך בחלקים שהיוצר שינה.",
+      "updateConfirm": "עדכן",
+      "updateCancel": "ביטול",
+      "modelStep": {
+        "download": "הורדה · {{size}}",
+        "startChat": "פתח צ'אט",
+        "needsMemory": "Pal זה דורש מכשיר עם {{size}} זיכרון לפחות עבור המודל הקטן ביותר שלו.",
+        "noModelFits": "למכשיר הזה אין מספיק זיכרון עבור Pal זה."
+      }
     }
   },
   "validation": {
@@ -1574,6 +1630,8 @@
   "downloadBanner": {
     "titleByPal": "{{name}} בהורדה",
     "titleByModel": "{{name}} בהורדה",
-    "extraInProgress": "+{{count}} נוספים בתהליך"
+    "extraInProgress": "+{{count}} נוספים בתהליך",
+    "failedTitle": "ההורדה לא הושלמה",
+    "retry": "נסה שוב"
   }
 }
