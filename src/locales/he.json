@@ -185,7 +185,7 @@
       "consentTitle": "החיפושים יוצאים מהמכשיר שלך",
       "consentDescription": "כאשר Pal מחפש ברשת, השאילתה שלך נשלחת לספק שנבחר דרך האינטרנט. כאשר Pal קורא דף, ייתכן שכתובת ה-URL ותוכן הדף יישלחו במקום זאת לשירות קריאה כברירת מחדל (r.jina.ai) אם לספק שנבחר אין קורא מובנה. מפתחות ושאילתות לעולם אינם נשלחים ל-PocketPal.",
       "consentAccept": "הבנתי",
-      "consentRequired": "אשר את הגילוי שלמעלה כדי להגדיר מפתח ולהפעיל חיפוש.",
+      "consentRequired": "אשר את הגילוי הנאות שלמעלה כדי להגדיר מפתח ולהפעיל חיפוש.",
       "consentGivenTitle": "חיפוש ברשת מופעל",
       "consentGivenDescription": "שאילתות וקריאות של דפים עשויות לצאת מהמכשיר שלך כמתואר למעלה.",
       "consentRevoke": "בטל הסכמה"
@@ -209,7 +209,7 @@
     "purchases": {
       "title": "רכישות",
       "statusOwned": "נרכש",
-      "statusUnlocking": "בשחרור",
+      "statusUnlocking": "פותח נעילה",
       "link": "התחבר כדי להשתמש במכשירים אחרים"
     }
   },
@@ -794,15 +794,15 @@
       "reasoningSection": "חשיבה",
       "isReasoningModel": "מודל חשיבה",
       "isReasoningModelHelp": "הצג את פקד החשיבה עבור מודל זה, גם אם הוא לא זוהה אוטומטית.",
-      "supportsEffort": "תומך במאמץ מדורג",
-      "effortValues": "רמות המאמץ שמודל זה תומך בהן",
+      "supportsEffort": "תומך ברמות חשיבה",
+      "effortValues": "רמות החשיבה שמודל זה תומך בהן",
       "effortLevels": {
         "minimal": "מינימלי",
         "low": "נמוך",
         "medium": "בינוני",
         "high": "גבוה",
         "xhigh": "גבוה מאוד",
-        "max": "מרבי"
+        "max": "מקסימלי"
       }
     },
     "modelsHeaderRight": {
@@ -1027,7 +1027,7 @@
       "tokensPerSec": "{{value}} טוקנים/שנ'",
       "ttft": "{{value}}מ.ש. TTFT",
       "interrupted": "הופסק",
-      "truncated": "נעצר — ככל הנראה ההקשר מלא",
+      "truncated": "נקטע — ככל הנראה ההקשר מלא",
       "draftAccepted": "טיוטה: {{accepted}}/{{total}} ({{pct}}%)",
       "promptTokensPerSec": "{{value}} טוקני הנחיה/שנ'",
       "cachedTokens": "{{value}} מהמטמון"
@@ -1132,12 +1132,12 @@
       "open": "פתח",
       "install": "התקן",
       "pending": "בהמתנה",
-      "unlocking": "בשחרור",
+      "unlocking": "פותח נעילה",
       "retry": "נסה שוב",
       "supportCode": "קוד תמיכה: {{code}}",
       "noLongerAvailable": "Pal זה אינו זמין יותר. אפשר {{refundLink}}.",
-      "refundLink": "לבקש החזר כספי מ-Apple",
-      "notCompleted": "לא ניתן היה להשלים את הרכישה הזו. Google תחזיר לך את הכסף.",
+      "refundLink": "בקש החזר כספי מ-Apple",
+      "notCompleted": "לא ניתן היה להשלים את הרכישה הזו. Google תשיב לך את הכסף.",
       "withdrawnRefunding": "Pal זה הוסר מהמכירה. פנה לתמיכה לקבלת החזר כספי.",
       "invalid": "לא הצלחנו לאמת את הרכישה הזו.",
       "heldInvalid": "לא הצלחנו לשחרר את הרכישה הזו. פנה לתמיכה עם הקוד הזה.",
@@ -1153,7 +1153,7 @@
       "linkConflict": "הרכישות האלה מקושרות לחשבון אחר.",
       "restorePurchases": "שחזור רכישות",
       "badgePending": "בהמתנה",
-      "badgeUnlocking": "בשחרור",
+      "badgeUnlocking": "פותח נעילה",
       "badgeUpdate": "עדכון זמין",
       "updatePrompt": "גרסה חדשה מהיוצר זמינה.",
       "updatePromptWithNote": "גרסה חדשה מהיוצר זמינה: {{note}}.",
@@ -1450,7 +1450,7 @@
   },
   "htmlPreview": {
     "defaultTitle": "תצוגה מקדימה",
-    "showPreview": "הצג תצוגה מקדימה מעובדת",
+    "showPreview": "הצג תצוגה מקדימה מרונדרת",
     "showCode": "הצג קוד HTML",
     "copyHtml": "העתק HTML",
     "closePreview": "סגור תצוגה מקדימה",
@@ -1476,7 +1476,7 @@
     "engineChipSupertonic": "Supertonic",
     "engineChipSystem": "מערכת",
     "stepsCount": "{{steps}} צעדים",
-    "engineKittenTagline": "צריכת הזיכרון הקטנה ביותר. אמין. הכי טוב במכשירים חלשים.",
+    "engineKittenTagline": "צריכת הזיכרון הקטנה ביותר. אמין. הכי טוב במכשירים ישנים.",
     "engineKokoroTagline": "האיכות הגבוהה ביותר. איטי יותר להפעלה. ייתכן שחלק מהקולות לא יעבדו בכל המכשירים.",
     "engineSupertonicTagline": "המהיר ביותר להפעלה. צורך יותר זיכרון RAM. עלול להשמיט מילים מדי פעם.",
     "engineSystemTagline": "קולות מובנים של מערכת ההפעלה. זמינים תמיד, ללא צורך בהתקנה.",
@@ -1515,7 +1515,7 @@
       "fr": "צרפתית",
       "de": "גרמנית",
       "el": "יוונית",
-      "hi": "הינדי",
+      "hi": "הינדית",
       "hu": "הונגרית",
       "id": "אינדונזית",
       "it": "איטלקית",
@@ -1586,7 +1586,7 @@
         "else": "מחפשים משהו אחר?"
       },
       "topicDescription": {
-        "smartchat": "חבר ידידותי לכל יום",
+        "smartchat": "חבר ידידותי ליום-יום",
         "coding": "כתיבת קוד, ניפוי באגים, הסברים",
         "education": "ללמוד, להסביר, להיבחן",
         "roleplay": "דמויות ותרחישים",
