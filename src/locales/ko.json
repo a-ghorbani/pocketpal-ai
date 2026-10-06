@@ -208,7 +208,7 @@
       "showResultsAccessibilityLabel": "{{query}}에 대한 웹 검색 결과 표시",
       "openLinkError": "이 링크를 열 수 없습니다."
     },
-    "contextFullRemote": "대화 공간이 가득 찼습니다. 새 채팅을 시작하세요.⁠",
+    "contextFullRemote": "대화 공간이 가득 찼습니다. 새 채팅을 시작하세요.",
     "speculativeInitFailed": "이 기기에서 이 모델의 추측 디코딩을 시작할 수 없어요 — 드래프트 컨텍스트에 필요한 메모리가 부족한 것 같아요. 설정 → 고급 설정에서 추측 디코딩을 끄고 다시 시도해 주세요."
   },
   "common": {
