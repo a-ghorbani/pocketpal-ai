@@ -4,6 +4,7 @@ import {format} from 'date-fns';
 import Share from 'react-native-share';
 import * as RNFS from '@dr.pogodin/react-native-fs';
 
+import {chatFolderRepository} from '../repositories/ChatFolderRepository';
 import {chatSessionRepository} from '../repositories/ChatSessionRepository';
 
 import {uiStore, palStore} from '../store';
@@ -54,6 +55,9 @@ export const exportChatSession = async (sessionId: string): Promise<void> => {
         ? JSON.parse(completionSettings.settings)
         : {},
       activePalId: session.activePalId,
+      folder: await chatFolderRepository.exportFolder(session.folderId),
+      pinned: session.pinned,
+      settingsSource: session.settingsSource,
     };
 
     // Create a filename with the session title and date
@@ -106,6 +110,9 @@ export const exportAllChatSessions = async (): Promise<void> => {
             ? JSON.parse(completionSettings.settings)
             : {},
           activePalId: sessionInfo.activePalId,
+          folder: await chatFolderRepository.exportFolder(sessionInfo.folderId),
+          pinned: sessionInfo.pinned,
+          settingsSource: sessionInfo.settingsSource,
         });
       }
     }
