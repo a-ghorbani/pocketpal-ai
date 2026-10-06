@@ -205,7 +205,13 @@
     "apiKeyDescription": "Se almacena de forma segura en el dispositivo.",
     "remoteModel": "Remoto",
     "remotePrivacyNotice": "Los mensajes enviados a servidores remotos salen de tu dispositivo. Conéctate solo a servidores de confianza.",
-    "remoteIndicator": "Remoto"
+    "remoteIndicator": "Remoto",
+    "purchases": {
+      "title": "Compras",
+      "statusOwned": "Comprado",
+      "statusUnlocking": "Desbloqueando",
+      "link": "Inicia sesión para usarlo en otros dispositivos"
+    }
   },
   "memory": {
     "shortWarning": "Advertencia de memoria",
@@ -564,7 +570,9 @@
       "ttft": "{{value}} ms TTFT",
       "draftAccepted": "borrador: {{accepted}}/{{total}} ({{pct}}%)",
       "interrupted": "Interrumpido",
-      "truncated": "Truncado — posible límite de contexto alcanzado"
+      "truncated": "Truncado — posible límite de contexto alcanzado",
+      "promptTokensPerSec": "{{value}} tokens de prompt/seg",
+      "cachedTokens": "{{value}} en caché"
     },
     "exportUtils": {
       "fileSaved": "Archivo guardado",
@@ -1034,6 +1042,13 @@
       "importPals": "Importar pals",
       "importSuccess": "Se importaron {{count}} pal(s) con éxito.",
       "importError": "No se pudieron importar los pals. Revisa el formato del archivo."
+    },
+    "completionSettings": {
+      "serverDefault": "predeterminado del servidor",
+      "usingServerDefault": "Usando el valor predeterminado del servidor: {{value}}",
+      "usingServerDefaultUnreported": "Usando el valor predeterminado del servidor (no indicado)",
+      "resetToServerDefault": "Predeterminado del servidor: {{value}} · Restablecer",
+      "resetToServerDefaultAccessibilityLabel": "Restablecer {{name}} al valor predeterminado del servidor, {{value}}"
     }
   },
   "palsScreen": {
@@ -1111,6 +1126,47 @@
       "failedToLoadDetails": "Error al cargar los detalles del Pal",
       "failedToDownload": "Error al descargar el Pal",
       "notAvailable": "N/D"
+    },
+    "purchase": {
+      "buy": "{{price}}",
+      "open": "Abrir",
+      "install": "Instalar",
+      "pending": "Pendiente",
+      "unlocking": "Desbloqueando",
+      "retry": "Reintentar",
+      "supportCode": "Código de soporte: {{code}}",
+      "noLongerAvailable": "Este Pal ya no está disponible. Puedes {{refundLink}}.",
+      "refundLink": "pedir un reembolso a Apple",
+      "notCompleted": "No se pudo completar esta compra. Google te hará el reembolso.",
+      "withdrawnRefunding": "Este Pal se ha retirado. Contacta con soporte para obtener un reembolso.",
+      "invalid": "No pudimos verificar esta compra.",
+      "heldInvalid": "No pudimos desbloquear esta compra. Contacta con soporte y facilita este código.",
+      "recommendedModel": "Modelo recomendado",
+      "sampleExchange": "Conversación de ejemplo",
+      "signInLine": "¿Ya lo tienes? Inicia sesión",
+      "licenseNotice": "Estás comprando una licencia para usar este Pal.",
+      "termsOfSale": "Condiciones de venta",
+      "appleMediaTerms": "Términos de los Servicios Multimedia de Apple",
+      "linkPrompt": "Inicia sesión para usarlo también en tus otros dispositivos",
+      "linkSignIn": "Iniciar sesión",
+      "dismiss": "Ahora no",
+      "linkConflict": "Estas compras están vinculadas a otra cuenta.",
+      "restorePurchases": "Restaurar compras",
+      "badgePending": "Pendiente",
+      "badgeUnlocking": "Desbloqueando",
+      "badgeUpdate": "Actualización disponible",
+      "updatePrompt": "Hay una nueva versión del creador disponible.",
+      "updatePromptWithNote": "Hay una nueva versión del creador disponible: {{note}}.",
+      "updateButton": "Actualizar",
+      "updateConfirmText": "Esto reemplazará tus cambios en las partes que el creador modificó.",
+      "updateConfirm": "Actualizar",
+      "updateCancel": "Cancelar",
+      "modelStep": {
+        "download": "Descargar · {{size}}",
+        "startChat": "Iniciar chat",
+        "needsMemory": "Este Pal necesita un dispositivo con al menos {{size}} de memoria para su modelo más pequeño.",
+        "noModelFits": "Este dispositivo no tiene suficiente memoria para este Pal."
+      }
     }
   },
   "validation": {
@@ -1574,6 +1630,8 @@
   "downloadBanner": {
     "titleByPal": "{{name}} se está descargando",
     "titleByModel": "{{name}} se está descargando",
-    "extraInProgress": "+{{count}} más en progreso"
+    "extraInProgress": "+{{count}} más en progreso",
+    "failedTitle": "La descarga no se completó",
+    "retry": "Reintentar"
   }
 }
