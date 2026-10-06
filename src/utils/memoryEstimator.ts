@@ -47,6 +47,11 @@ function calculateKVCacheMemory(
 
   const {n_ctx, cache_type_k, cache_type_v} = contextSettings;
 
+  // Parallel sequences each need their own KV cache. The app defaults to
+  // n_parallel=1 (blocking completion), but honor larger values so the
+  // download-screen warning stays honest when the user raises it.
+  const nParallel = Math.max(contextSettings.n_parallel ?? 1, 1);
+
   // For SWA (Sliding Window Attention) models like Gemma
   const effectiveCtx = sliding_window ? Math.min(n_ctx, sliding_window) : n_ctx;
 
@@ -59,7 +64,7 @@ function calculateKVCacheMemory(
   const valueCacheSize =
     n_layers * effectiveCtx * n_embd_head_v * n_head_kv * bytesPerV;
 
-  return keyCacheSize + valueCacheSize;
+  return (keyCacheSize + valueCacheSize) * nParallel;
 }
 
 function calculateComputeBuffer(
