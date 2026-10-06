@@ -43,6 +43,12 @@ export interface TokenColors {
   // Design-system `Color/Secondary/Default` — small DS button surface.
   secondaryDefault: string;
 
+  // In-conversation search highlight (find-in-page). Kept distinct from the
+  // container tokens so it can clear ~3:1 against the message background in
+  // both themes.
+  searchHighlight: string;
+  onSearchHighlight: string;
+
   // MD3 extras
   surfaceDisabled: string;
   onSurfaceDisabled: string;

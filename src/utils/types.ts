@@ -292,6 +292,9 @@ export interface SemanticColors {
   mutedLight: string;
   // Figma `Color/Secondary/Default` — small DS button surface.
   secondaryDefault: string;
+  // In-conversation search highlight (find-in-page).
+  searchHighlight: string;
+  onSearchHighlight: string;
 
   // Interactive states
   stateLayerOpacity: number;

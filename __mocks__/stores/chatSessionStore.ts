@@ -1,4 +1,5 @@
 import {sessionFixtures} from '../../jest/fixtures/chatSessions';
+import {derivedText} from '../../src/utils/chat';
 import type {
   BannerVariant,
   CompletionResultSnapshot,
@@ -47,6 +48,9 @@ export const mockChatSessionStore = {
   // Selection mode state
   isSelectionMode: false,
   selectedSessionIds: new Set<string>(),
+  // Search mode state
+  isSearchMode: false,
+  searchQuery: '',
   loadSessionList: jest.fn().mockResolvedValue(undefined),
   loadGlobalSettings: jest.fn().mockResolvedValue(undefined),
   deleteSession: jest.fn().mockResolvedValue(undefined),
@@ -81,6 +85,10 @@ export const mockChatSessionStore = {
   getCurrentCompletionSettings: jest
     .fn()
     .mockResolvedValue(mockDefaultCompletionSettings),
+  // Search mode methods
+  enterSearchMode: jest.fn(),
+  exitSearchMode: jest.fn(),
+  setSearchQuery: jest.fn(),
   // Selection mode methods
   enterSelectionMode: jest.fn(),
   exitSelectionMode: jest.fn(),
@@ -159,6 +167,26 @@ Object.defineProperty(mockChatSessionStore, 'shouldShowHeaderDivider', {
 
 Object.defineProperty(mockChatSessionStore, 'selectedCount', {
   get: jest.fn(() => mockChatSessionStore.selectedSessionIds.size),
+  configurable: true,
+});
+
+// Derive from state (like selectedCount / allSelected) rather than a frozen
+// constant, so search tests can't pass vacuously.
+Object.defineProperty(mockChatSessionStore, 'searchMatchCount', {
+  get: jest.fn(() => {
+    if (
+      !mockChatSessionStore.isSearchMode ||
+      !mockChatSessionStore.searchQuery.trim()
+    ) {
+      return 0;
+    }
+    const query = mockChatSessionStore.searchQuery.toLowerCase().trim();
+    const messages = (mockChatSessionStore as any)
+      .currentSessionMessages as any[];
+    return messages.filter(msg =>
+      derivedText(msg).toLowerCase().includes(query),
+    ).length;
+  }),
   configurable: true,
 });
 

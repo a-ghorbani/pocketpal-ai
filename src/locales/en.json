@@ -1278,6 +1278,9 @@
     "generatingPreviewPending": "Generating preview…",
     "toolUsedChip": "used {{name}}",
     "toolErrorBlock": "{{name}} failed",
+    "searchMessages": "Search messages...",
+    "closeSearch": "Close search",
+    "noResults": "No results",
     "webSearch": {
       "searched": "Searched: {{query}}",
       "noResults": "No results",
