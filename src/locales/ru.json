@@ -1245,7 +1245,13 @@
     "speculativeDraftValueCacheType": "Тип кэша значений черновой модели",
     "speculativeDraftNGpuLayers": "Слои черновой модели на GPU",
     "speculativeDraftNGpuLayersDescription": "Количество слоёв черновой модели, переносимых на GPU.",
-    "speculativeDraftCacheTypeInactiveDescription": "Применяется при запуске спекулятивного декодирования."
+    "speculativeDraftCacheTypeInactiveDescription": "Применяется при запуске спекулятивного декодирования.",
+    "purchases": {
+      "title": "Покупки",
+      "statusOwned": "Куплено",
+      "statusUnlocking": "Разблокировка",
+      "link": "Войдите, чтобы использовать на других устройствах"
+    }
   },
   "storage": {
     "checkFailed": "Не удалось проверить хранилище",
@@ -1336,6 +1342,47 @@
       "failedToLoadDetails": "Не удалось загрузить сведения о Pal",
       "failedToDownload": "Не удалось загрузить Pal",
       "notAvailable": "Н/Д"
+    },
+    "purchase": {
+      "buy": "{{price}}",
+      "open": "Открыть",
+      "install": "Установить",
+      "pending": "Ожидание",
+      "unlocking": "Разблокировка",
+      "retry": "Повторить",
+      "supportCode": "Код поддержки: {{code}}",
+      "noLongerAvailable": "Этот Pal больше недоступен. Вы можете {{refundLink}}.",
+      "refundLink": "запросить возврат средств у Apple",
+      "notCompleted": "Не удалось завершить покупку. Google вернёт вам средства.",
+      "withdrawnRefunding": "Этот Pal снят с публикации. Обратитесь в поддержку, чтобы вернуть средства.",
+      "invalid": "Не удалось проверить эту покупку.",
+      "heldInvalid": "Не удалось разблокировать покупку. Обратитесь в поддержку с этим кодом.",
+      "recommendedModel": "Рекомендуемая модель",
+      "sampleExchange": "Пример диалога",
+      "signInLine": "Уже купили? Войдите",
+      "licenseNotice": "Вы покупаете лицензию на использование этого Pal.",
+      "termsOfSale": "Условия продажи",
+      "appleMediaTerms": "Условия Медиасервисов Apple",
+      "linkPrompt": "Войдите, чтобы использовать его и на других устройствах",
+      "linkSignIn": "Войти",
+      "dismiss": "Не сейчас",
+      "linkConflict": "Эти покупки привязаны к другому аккаунту.",
+      "restorePurchases": "Восстановить покупки",
+      "badgePending": "Ожидание",
+      "badgeUnlocking": "Разблокировка",
+      "badgeUpdate": "Доступно обновление",
+      "updatePrompt": "Доступна новая версия от автора.",
+      "updatePromptWithNote": "Доступна новая версия от автора: {{note}}.",
+      "updateButton": "Обновить",
+      "updateConfirmText": "Ваши правки в тех частях, которые изменил автор, будут заменены.",
+      "updateConfirm": "Обновить",
+      "updateCancel": "Отмена",
+      "modelStep": {
+        "download": "Загрузить · {{size}}",
+        "startChat": "Начать чат",
+        "needsMemory": "Для самой маленькой модели этого Pal нужно устройство с объёмом памяти не менее {{size}}.",
+        "noModelFits": "На этом устройстве недостаточно памяти для этого Pal."
+      }
     }
   },
   "camera": {
@@ -1583,6 +1630,8 @@
   "downloadBanner": {
     "titleByPal": "{{name}} загружается",
     "titleByModel": "{{name}} загружается",
-    "extraInProgress": "+{{count}} в очереди"
+    "extraInProgress": "+{{count}} в очереди",
+    "failedTitle": "Загрузка не завершена",
+    "retry": "Повторить"
   }
 }
