@@ -744,7 +744,9 @@
       "ttft": "{{value}}ms TTFT",
       "interrupted": "중단됨",
       "truncated": "응답 중단됨 — 컨텍스트가 가득 참",
-      "draftAccepted": "드래프트: {{accepted}}/{{total}} ({{pct}}%)"
+      "draftAccepted": "드래프트: {{accepted}}/{{total}} ({{pct}}%)",
+      "promptTokensPerSec": "{{value}} 프롬프트 토큰/초",
+      "cachedTokens": "{{value}} 캐시됨"
     },
     "pendingIndicator": {
       "preparingTool": "도구 준비 중",
@@ -756,6 +758,13 @@
     "toolMetrics": {
       "tokens": "{{count}} 토큰",
       "elapsed": "{{seconds}}초"
+    },
+    "completionSettings": {
+      "serverDefault": "서버 기본값",
+      "usingServerDefault": "서버 기본값 사용 중: {{value}}",
+      "usingServerDefaultUnreported": "서버 기본값 사용 중 (값 알 수 없음)",
+      "resetToServerDefault": "서버 기본값: {{value}} · 재설정",
+      "resetToServerDefaultAccessibilityLabel": "{{name}} 설정을 서버 기본값 {{value}}(으)로 재설정"
     }
   },
   "feedback": {
@@ -1236,7 +1245,13 @@
     "speculativeDraftValueCacheType": "드래프트 값 캐시 유형",
     "speculativeDraftNGpuLayers": "드래프트 GPU 레이어",
     "speculativeDraftNGpuLayersDescription": "GPU로 오프로드할 드래프트 모델 레이어 수입니다.",
-    "speculativeDraftCacheTypeInactiveDescription": "추측 디코딩이 실행되면 적용됩니다."
+    "speculativeDraftCacheTypeInactiveDescription": "추측 디코딩이 실행되면 적용됩니다.",
+    "purchases": {
+      "title": "구매 항목",
+      "statusOwned": "구매 완료",
+      "statusUnlocking": "잠금 해제 중",
+      "link": "다른 기기에서 사용하려면 로그인"
+    }
   },
   "storage": {
     "checkFailed": "저장공간 확인 실패",
@@ -1327,6 +1342,47 @@
       "failedToLoadDetails": "Pal 세부정보 로드에 실패함",
       "failedToDownload": "Pal 다운로드 실패",
       "notAvailable": "비어있음"
+    },
+    "purchase": {
+      "buy": "{{price}}",
+      "open": "열기",
+      "install": "설치",
+      "pending": "처리 중",
+      "unlocking": "잠금 해제 중",
+      "retry": "다시 시도",
+      "supportCode": "지원 코드: {{code}}",
+      "noLongerAvailable": "이 Pal은 더 이상 제공되지 않습니다. {{refundLink}}.",
+      "refundLink": "Apple에 환불을 요청할 수 있습니다",
+      "notCompleted": "구매를 완료하지 못했습니다. Google에서 환불해 드립니다.",
+      "withdrawnRefunding": "이 Pal은 제공이 중단되었습니다. 환불이 필요하시면 고객지원에 문의해 주세요.",
+      "invalid": "이 구매를 확인할 수 없습니다.",
+      "heldInvalid": "이 구매의 잠금을 해제할 수 없습니다. 이 코드와 함께 고객지원에 문의해 주세요.",
+      "recommendedModel": "추천 모델",
+      "sampleExchange": "예시 대화",
+      "signInLine": "이미 구매하셨나요? 로그인",
+      "licenseNotice": "이 Pal을 사용할 수 있는 라이선스를 구매합니다.",
+      "termsOfSale": "판매 약관",
+      "appleMediaTerms": "Apple 미디어 서비스 이용약관",
+      "linkPrompt": "다른 기기에서도 사용하려면 로그인하세요",
+      "linkSignIn": "로그인",
+      "dismiss": "나중에",
+      "linkConflict": "이 구매 항목은 다른 계정에 연결되어 있습니다.",
+      "restorePurchases": "구매 복원",
+      "badgePending": "처리 중",
+      "badgeUnlocking": "잠금 해제 중",
+      "badgeUpdate": "업데이트 있음",
+      "updatePrompt": "제작자가 올린 새 버전이 있습니다.",
+      "updatePromptWithNote": "제작자가 올린 새 버전이 있습니다: {{note}}.",
+      "updateButton": "업데이트",
+      "updateConfirmText": "제작자가 변경한 부분에 내가 수정한 내용은 덮어쓰기됩니다.",
+      "updateConfirm": "업데이트",
+      "updateCancel": "취소",
+      "modelStep": {
+        "download": "다운로드 · {{size}}",
+        "startChat": "채팅 시작",
+        "needsMemory": "이 Pal의 가장 작은 모델을 사용하려면 메모리가 {{size}} 이상인 기기가 필요합니다.",
+        "noModelFits": "이 기기는 이 Pal을 실행할 메모리가 부족합니다."
+      }
     }
   },
   "video": {
@@ -1574,6 +1630,8 @@
   "downloadBanner": {
     "titleByPal": "{{name}}이 다운로드 중",
     "titleByModel": "{{name}}이 다운로드 중",
-    "extraInProgress": "+{{count}}개 추가 진행 중"
+    "extraInProgress": "+{{count}}개 추가 진행 중",
+    "failedTitle": "다운로드가 완료되지 않았습니다",
+    "retry": "다시 시도"
   }
 }
