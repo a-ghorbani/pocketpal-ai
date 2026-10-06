@@ -205,7 +205,13 @@
     "speculativeDraftValueCacheType": "Jenis Cache Nilai Draf",
     "speculativeDraftNGpuLayers": "Lapisan GPU Draf",
     "speculativeDraftNGpuLayersDescription": "Bilangan lapisan model draf yang dimuatkan ke GPU.",
-    "speculativeDraftCacheTypeInactiveDescription": "Digunakan sebaik sahaja penyahkodan spekulatif berjalan."
+    "speculativeDraftCacheTypeInactiveDescription": "Digunakan sebaik sahaja penyahkodan spekulatif berjalan.",
+    "purchases": {
+      "title": "Pembelian",
+      "statusOwned": "Dibeli",
+      "statusUnlocking": "Membuka kunci",
+      "link": "Log masuk untuk menggunakannya pada peranti lain"
+    }
   },
   "memory": {
     "shortWarning": "Amaran Memori",
@@ -1022,7 +1028,9 @@
       "ttft": "{{value}}ms TTFT",
       "interrupted": "Terganggu",
       "truncated": "Terpotong — kemungkinan konteks penuh",
-      "draftAccepted": "draf: {{accepted}}/{{total}} ({{pct}}%)"
+      "draftAccepted": "draf: {{accepted}}/{{total}} ({{pct}}%)",
+      "promptTokensPerSec": "{{value}} token prompt/saat",
+      "cachedTokens": "{{value}} dalam cache"
     },
     "pendingIndicator": {
       "preparingTool": "Menyediakan alat",
@@ -1034,6 +1042,13 @@
     "toolMetrics": {
       "tokens": "{{count}} token",
       "elapsed": "{{seconds}}s"
+    },
+    "completionSettings": {
+      "serverDefault": "lalai pelayan",
+      "usingServerDefault": "Menggunakan lalai pelayan: {{value}}",
+      "usingServerDefaultUnreported": "Menggunakan lalai pelayan (tidak dilaporkan)",
+      "resetToServerDefault": "Lalai pelayan: {{value}} · Tetap Semula",
+      "resetToServerDefaultAccessibilityLabel": "Tetapkan semula {{name}} kepada lalai pelayan, {{value}}"
     }
   },
   "palsScreen": {
@@ -1111,6 +1126,47 @@
       "failedToLoadDetails": "Gagal memuatkan butiran pal",
       "failedToDownload": "Gagal memuat turun pal",
       "notAvailable": "T/A"
+    },
+    "purchase": {
+      "buy": "{{price}}",
+      "open": "Buka",
+      "install": "Pasang",
+      "pending": "Menunggu",
+      "unlocking": "Membuka kunci",
+      "retry": "Cuba lagi",
+      "supportCode": "Kod sokongan: {{code}}",
+      "noLongerAvailable": "Pal ini tidak lagi tersedia. Anda boleh {{refundLink}}.",
+      "refundLink": "minta bayaran balik daripada Apple",
+      "notCompleted": "Pembelian ini tidak dapat diselesaikan. Google akan mengembalikan bayaran anda.",
+      "withdrawnRefunding": "Pal ini telah ditarik balik. Hubungi sokongan untuk mendapatkan bayaran balik.",
+      "invalid": "Kami tidak dapat mengesahkan pembelian ini.",
+      "heldInvalid": "Kami tidak dapat membuka kunci pembelian ini. Hubungi sokongan dengan kod ini.",
+      "recommendedModel": "Model yang disyorkan",
+      "sampleExchange": "Contoh perbualan",
+      "signInLine": "Sudah memilikinya? Log masuk",
+      "licenseNotice": "Anda membeli lesen untuk menggunakan Pal ini.",
+      "termsOfSale": "Terma Jualan",
+      "appleMediaTerms": "Terma Perkhidmatan Media Apple",
+      "linkPrompt": "Log masuk untuk menggunakannya pada peranti anda yang lain juga",
+      "linkSignIn": "Log Masuk",
+      "dismiss": "Bukan sekarang",
+      "linkConflict": "Pembelian ini dipautkan ke akaun lain.",
+      "restorePurchases": "Pulihkan pembelian",
+      "badgePending": "Menunggu",
+      "badgeUnlocking": "Membuka kunci",
+      "badgeUpdate": "Kemas kini tersedia",
+      "updatePrompt": "Versi baharu daripada pencipta kini tersedia.",
+      "updatePromptWithNote": "Versi baharu daripada pencipta kini tersedia: {{note}}.",
+      "updateButton": "Kemas Kini",
+      "updateConfirmText": "Ini akan menggantikan suntingan anda pada bahagian yang diubah oleh pencipta.",
+      "updateConfirm": "Kemas Kini",
+      "updateCancel": "Batal",
+      "modelStep": {
+        "download": "Muat Turun · {{size}}",
+        "startChat": "Mulakan sembang",
+        "needsMemory": "Pal ini memerlukan peranti dengan sekurang-kurangnya {{size}} memori untuk model terkecilnya.",
+        "noModelFits": "Peranti ini tidak mempunyai memori yang mencukupi untuk Pal ini."
+      }
     }
   },
   "validation": {
@@ -1574,6 +1630,8 @@
   "downloadBanner": {
     "titleByPal": "{{name}} sedang dimuat turun",
     "titleByModel": "{{name}} sedang dimuat turun",
-    "extraInProgress": "+{{count}} lagi sedang berjalan"
+    "extraInProgress": "+{{count}} lagi sedang berjalan",
+    "failedTitle": "Muat turun tidak selesai",
+    "retry": "Cuba lagi"
   }
 }
