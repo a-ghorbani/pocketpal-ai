@@ -149,6 +149,76 @@ describe('FirecrawlProvider', () => {
       );
     });
 
+    it('fails from status 400 up and passes below it', async () => {
+      const provider = new FirecrawlProvider(() => 'key');
+      const scrape = (statusCode: number) =>
+        okJson({
+          success: true,
+          data: {markdown: 'body', metadata: {statusCode}},
+        });
+
+      (global.fetch as jest.Mock).mockReturnValue(scrape(399));
+      await expect(provider.read('https://e.com/p')).resolves.toEqual({
+        url: 'https://e.com/p',
+        text: 'body',
+      });
+
+      for (const code of [400, 500]) {
+        (global.fetch as jest.Mock).mockReturnValue(scrape(code));
+        await expect(provider.read('https://e.com/p')).rejects.toThrow(
+          new Error(`page returned ${code}`),
+        );
+      }
+    });
+
+    it('reports scrape failed before the page status', async () => {
+      (global.fetch as jest.Mock).mockReturnValue(
+        okJson({
+          success: false,
+          error: 'upstream detail',
+          data: {markdown: 'x', metadata: {statusCode: 404}},
+        }),
+      );
+      const provider = new FirecrawlProvider(() => 'key');
+      await expect(provider.read('https://e.com/p')).rejects.toThrow(
+        new Error('scrape failed'),
+      );
+    });
+
+    describe('client timeout', () => {
+      beforeEach(() => {
+        jest.useFakeTimers();
+        (global.fetch as jest.Mock).mockImplementation(
+          (_url: string, init: RequestInit) =>
+            new Promise((_resolve, reject) => {
+              init.signal?.addEventListener('abort', () => {
+                const e = new Error('Aborted');
+                e.name = 'AbortError';
+                reject(e);
+              });
+            }),
+        );
+      });
+
+      afterEach(() => {
+        jest.useRealTimers();
+      });
+
+      it('gives up on a stalled scrape at 12 s, not later', async () => {
+        const provider = new FirecrawlProvider(() => 'key');
+        let error: unknown;
+        provider.read('https://e.com/p').catch(e => {
+          error = e;
+        });
+
+        await jest.advanceTimersByTimeAsync(11999);
+        expect(error).toBeUndefined();
+
+        await jest.advanceTimersByTimeAsync(1);
+        expect(error).toEqual(new Error('timed out'));
+      });
+    });
+
     it('throws when the body has no success flag or no data', async () => {
       const provider = new FirecrawlProvider(() => 'key');
       for (const body of [{error: 'x'}, {success: true, data: null}, {}]) {
