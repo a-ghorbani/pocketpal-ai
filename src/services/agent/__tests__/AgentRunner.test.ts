@@ -1490,6 +1490,64 @@ describe('runAgent', () => {
       expect(execute.mock.calls[0]).toHaveLength(1);
     });
 
+    it('continues to the follow-up turn when a search times out without Stop', async () => {
+      jest.useFakeTimers();
+      try {
+        resetSearchCache();
+        const controller = new AbortController();
+        global.fetch = abortableFetch();
+        const access: SearchAccess = {
+          getActiveProvider: () => new TavilyProvider(() => 'key'),
+          canSearch: () => true,
+          getResultCount: () => 3,
+          readWithDefaultReader: jest.fn(),
+        };
+        const engine = makeScriptedEngine({
+          scripts: [
+            {
+              tokens: [],
+              result: {
+                text: '',
+                content: '',
+                tool_calls: [
+                  {
+                    id: 'c0',
+                    type: 'function',
+                    function: {
+                      name: 'web_search',
+                      arguments: JSON.stringify({query: 'mars'}),
+                    },
+                  },
+                ],
+              },
+            },
+            {tokens: [], result: {text: 'done', content: 'done'}},
+          ],
+        });
+
+        const done = collect(
+          runAgent({
+            engine,
+            initialParams: baseParams,
+            allowedTalentNames: ['web_search'],
+            talentLookup: () => new WebSearchEngine(access),
+            messageId: 'msg',
+            triggerMarkers: [],
+            signal: controller.signal,
+          }),
+        );
+        await jest.advanceTimersByTimeAsync(12000);
+        const events = await done;
+
+        const finished = events.find(e => e.type === 'tool_call_finished');
+        expect((finished as any).outcome.result.errorMessage).toBe('timed out');
+        expect(engine.completion).toHaveBeenCalledTimes(2);
+        expect(controller.signal.aborted).toBe(false);
+      } finally {
+        jest.useRealTimers();
+      }
+    });
+
     it('cancels both searches of a batch when Stop lands during the first', async () => {
       resetSearchCache();
       const controller = new AbortController();

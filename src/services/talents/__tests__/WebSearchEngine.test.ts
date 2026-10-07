@@ -343,6 +343,42 @@ describe('WebSearchEngine', () => {
       expect(global.fetch).not.toHaveBeenCalled();
     });
 
+    it('reports a provider timeout as "timed out" while a run signal is live', async () => {
+      global.fetch = abortableFetch();
+      const run = new AbortController();
+
+      const pending = new WebSearchEngine(tavilyAccess()).execute(
+        {query: 'mars'},
+        {signal: run.signal},
+      );
+      jest.advanceTimersByTime(12000);
+      const result = await pending;
+      run.abort();
+
+      expect(result).toEqual({
+        type: 'error',
+        summary: 'web_search: timed out',
+        errorMessage: 'timed out',
+      });
+    });
+
+    it('leaves no listener on the run signal after several searches', async () => {
+      global.fetch = abortableFetch({body: '{"results":[]}'});
+      const run = new AbortController();
+      const add = jest.spyOn(run.signal, 'addEventListener');
+      const remove = jest.spyOn(run.signal, 'removeEventListener');
+      const engine = new WebSearchEngine(tavilyAccess());
+
+      for (const query of ['mars', 'venus', 'pluto']) {
+        await engine.execute({query}, {signal: run.signal});
+      }
+
+      expect(global.fetch).toHaveBeenCalledTimes(3);
+      expect(add).toHaveBeenCalledTimes(3);
+      expect(remove.mock.calls).toEqual(add.mock.calls);
+      expect(jest.getTimerCount()).toBe(0);
+    });
+
     it('serves a cache hit with no network even when the signal is aborted', async () => {
       global.fetch = abortableFetch();
       budget.setCachedHits('tavily', 'mars', 3, [hit({title: 'Cached'})]);
