@@ -128,6 +128,7 @@ async function executeOne(
   call: AgentToolCall,
   allowedTalentNames: string[],
   talentLookup: (name: string) => ReturnType<AgentRunOptions['talentLookup']>,
+  signal?: AbortSignal,
 ): Promise<AgentToolOutcome> {
   const fnName = call.function?.name ?? '';
   const callId = call.id;
@@ -169,7 +170,9 @@ async function executeOne(
   }
 
   try {
-    const toolResult = await handler.execute(parsedArgs);
+    const toolResult = await (signal
+      ? handler.execute(parsedArgs, {signal})
+      : handler.execute(parsedArgs));
     return {
       callId,
       toolName: fnName,
@@ -451,6 +454,7 @@ export async function* runAgent(
           call,
           allowedTalentNames,
           talentLookup,
+          signal,
         );
         outcomes.push(outcome);
         yield {type: 'tool_call_finished', outcome};
