@@ -101,7 +101,10 @@ describe('FirecrawlProvider', () => {
       (global.fetch as jest.Mock).mockReturnValue(
         okJson({
           success: true,
-          data: {markdown: '# Page\n\nBody', metadata: {title: 'Page'}},
+          data: {
+            markdown: '# Page\n\nBody',
+            metadata: {title: 'Page', statusCode: 200},
+          },
         }),
       );
       const provider = new FirecrawlProvider(() => 'key');
@@ -123,13 +126,26 @@ describe('FirecrawlProvider', () => {
       expect(page.title).toBeUndefined();
     });
 
-    it('throws on success: false with the API error message', async () => {
+    it('throws a fixed message on success: false, never the API error text', async () => {
       (global.fetch as jest.Mock).mockReturnValue(
         okJson({success: false, error: 'Site not supported'}),
       );
       const provider = new FirecrawlProvider(() => 'key');
       await expect(provider.read('https://e.com/p')).rejects.toThrow(
-        'Site not supported',
+        new Error('scrape failed'),
+      );
+    });
+
+    it('throws when the scraped page returned an error status', async () => {
+      (global.fetch as jest.Mock).mockReturnValue(
+        okJson({
+          success: true,
+          data: {markdown: 'Not found', metadata: {statusCode: 404}},
+        }),
+      );
+      const provider = new FirecrawlProvider(() => 'key');
+      await expect(provider.read('https://e.com/p')).rejects.toThrow(
+        new Error('page returned 404'),
       );
     });
 
@@ -137,7 +153,9 @@ describe('FirecrawlProvider', () => {
       const provider = new FirecrawlProvider(() => 'key');
       for (const body of [{error: 'x'}, {success: true, data: null}, {}]) {
         (global.fetch as jest.Mock).mockReturnValue(okJson(body));
-        await expect(provider.read('https://e.com/p')).rejects.toThrow();
+        await expect(provider.read('https://e.com/p')).rejects.toThrow(
+          new Error('scrape failed'),
+        );
       }
     });
 
@@ -148,7 +166,9 @@ describe('FirecrawlProvider', () => {
         json: () => Promise.resolve({}),
       });
       const provider = new FirecrawlProvider(() => 'key');
-      await expect(provider.read('https://e.com/p')).rejects.toThrow(/failed/i);
+      await expect(provider.read('https://e.com/p')).rejects.toThrow(
+        new Error('request failed (402)'),
+      );
     });
 
     it('throws when no key is set without calling fetch', async () => {

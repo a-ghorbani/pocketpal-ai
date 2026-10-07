@@ -18,10 +18,9 @@ interface FirecrawlSearchResponse {
 
 interface FirecrawlScrapeResponse {
   success?: boolean;
-  error?: string;
   data?: {
     markdown?: string;
-    metadata?: {title?: string};
+    metadata?: {title?: string; statusCode?: number};
   } | null;
 }
 
@@ -52,7 +51,11 @@ export class FirecrawlProvider implements SearchProvider {
       timeout: SCRAPE_SERVER_TIMEOUT_MS,
     });
     if (res.success !== true || !res.data) {
-      throw new Error(res.error || 'scrape failed');
+      throw new Error('scrape failed');
+    }
+    const code = res.data.metadata?.statusCode;
+    if (code !== undefined && code >= 400) {
+      throw new Error(`page returned ${code}`);
     }
     return {
       url,
