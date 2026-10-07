@@ -21,7 +21,11 @@ export class ParallelProvider implements SearchProvider {
 
   constructor(private getKey: () => string) {}
 
-  async search(query: string, opts: SearchOptions): Promise<SearchHit[]> {
+  async search(
+    query: string,
+    opts: SearchOptions,
+    signal?: AbortSignal,
+  ): Promise<SearchHit[]> {
     const key = requireKey(this.getKey(), 'Parallel');
     const data = await fetchJson<ParallelResponse>(
       'https://api.parallel.ai/v1/search',
@@ -32,6 +36,7 @@ export class ParallelProvider implements SearchProvider {
           objective: query,
           max_results: opts.maxResults,
         }),
+        signal,
       },
     );
     return (data.results ?? []).map(r => ({

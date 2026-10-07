@@ -41,9 +41,11 @@ export const createSearchProvider = (
 /** Fallback reader for providers without native read(): r.jina.ai returns clean plain text, no key. */
 export const readWithDefaultReader = async (
   url: string,
+  signal?: AbortSignal,
 ): Promise<PageContent> => {
   const text = await fetchText(`https://r.jina.ai/${encodeURI(url)}`, {
     method: 'GET',
+    signal,
   });
   return {url, text};
 };

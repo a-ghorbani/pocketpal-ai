@@ -1,5 +1,6 @@
 import {
   TalentEngine,
+  TalentExecuteContext,
   TalentResult,
   ToolDefinition,
   SystemPromptContext,
@@ -40,7 +41,10 @@ export class WebSearchEngine implements TalentEngine {
 
   constructor(private access: SearchAccess) {}
 
-  async execute(args: Record<string, any>): Promise<TalentResult> {
+  async execute(
+    args: Record<string, any>,
+    ctx?: TalentExecuteContext,
+  ): Promise<TalentResult> {
     const query = typeof args.query === 'string' ? args.query.trim() : '';
     if (!query) {
       return {
@@ -69,7 +73,7 @@ export class WebSearchEngine implements TalentEngine {
       if (cached) {
         hits = cached;
       } else {
-        hits = await provider.search(query, {maxResults});
+        hits = await provider.search(query, {maxResults}, ctx?.signal);
       }
     } catch (e) {
       const errMsg = e instanceof Error ? e.message : String(e);

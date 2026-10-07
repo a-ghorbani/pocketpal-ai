@@ -1,4 +1,9 @@
-import {TalentEngine, TalentResult, ToolDefinition} from './types';
+import {
+  TalentEngine,
+  TalentExecuteContext,
+  TalentResult,
+  ToolDefinition,
+} from './types';
 import type {SearchAccess} from './searchAccess';
 import type {PageContent} from '../search/types';
 import {budgetPage} from '../search/searchBudget';
@@ -31,7 +36,10 @@ export class ReadUrlEngine implements TalentEngine {
 
   constructor(private access: SearchAccess) {}
 
-  async execute(args: Record<string, any>): Promise<TalentResult> {
+  async execute(
+    args: Record<string, any>,
+    ctx?: TalentExecuteContext,
+  ): Promise<TalentResult> {
     const url = typeof args.url === 'string' ? args.url.trim() : '';
     if (!url) {
       return {
@@ -75,8 +83,8 @@ export class ReadUrlEngine implements TalentEngine {
     let page: PageContent;
     try {
       page = provider.read
-        ? await provider.read(targetUrl)
-        : await this.access.readWithDefaultReader(targetUrl);
+        ? await provider.read(targetUrl, ctx?.signal)
+        : await this.access.readWithDefaultReader(targetUrl, ctx?.signal);
     } catch (e) {
       const errMsg = e instanceof Error ? e.message : String(e);
       return {
