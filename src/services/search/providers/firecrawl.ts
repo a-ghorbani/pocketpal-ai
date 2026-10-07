@@ -35,22 +35,10 @@ export class FirecrawlProvider implements SearchProvider {
   constructor(private getKey: () => string) {}
 
   async search(query: string, opts: SearchOptions): Promise<SearchHit[]> {
-    const key = requireKey(this.getKey(), 'Firecrawl');
-    const data = await fetchJson<FirecrawlSearchResponse>(
-      'https://api.firecrawl.dev/v2/search',
-      {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${key}`,
-        },
-        body: JSON.stringify({
-          query,
-          limit: opts.maxResults,
-          origin: 'pocketpal',
-        }),
-      },
-    );
+    const data = await this.post<FirecrawlSearchResponse>('/search', {
+      query,
+      limit: opts.maxResults,
+    });
     return (data.data?.web ?? []).map(r => ({
       title: r.title ?? '',
       url: r.url ?? '',
@@ -59,22 +47,13 @@ export class FirecrawlProvider implements SearchProvider {
   }
 
   async read(url: string): Promise<PageContent> {
-    const key = requireKey(this.getKey(), 'Firecrawl');
-    const res = await fetchJson<FirecrawlScrapeResponse>(
-      'https://api.firecrawl.dev/v2/scrape',
+    const res = await this.post<FirecrawlScrapeResponse>(
+      '/scrape',
       {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${key}`,
-        },
-        body: JSON.stringify({
-          url,
-          formats: ['markdown'],
-          onlyMainContent: true,
-          timeout: SCRAPE_SERVER_TIMEOUT_MS,
-          origin: 'pocketpal',
-        }),
+        url,
+        formats: ['markdown'],
+        onlyMainContent: true,
+        timeout: SCRAPE_SERVER_TIMEOUT_MS,
       },
       SCRAPE_CLIENT_TIMEOUT_MS,
     );
@@ -86,5 +65,25 @@ export class FirecrawlProvider implements SearchProvider {
       ...(res.data.metadata?.title ? {title: res.data.metadata.title} : {}),
       text: res.data.markdown ?? '',
     };
+  }
+
+  private post<T>(
+    path: string,
+    body: Record<string, unknown>,
+    timeoutMs?: number,
+  ): Promise<T> {
+    const key = requireKey(this.getKey(), 'Firecrawl');
+    return fetchJson<T>(
+      `https://api.firecrawl.dev/v2${path}`,
+      {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${key}`,
+        },
+        body: JSON.stringify({...body, origin: 'pocketpal'}),
+      },
+      timeoutMs,
+    );
   }
 }
