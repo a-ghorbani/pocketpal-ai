@@ -172,7 +172,7 @@ describe('FirecrawlProvider', () => {
         url: 'https://e.com/p',
         formats: ['markdown'],
         onlyMainContent: true,
-        timeout: 25000,
+        timeout: 10000,
         origin: 'pocketpal',
       });
     });

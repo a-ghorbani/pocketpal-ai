@@ -25,9 +25,7 @@ interface FirecrawlScrapeResponse {
   } | null;
 }
 
-// A scrape renders the page server-side, so it needs longer than the 12s default.
-const SCRAPE_SERVER_TIMEOUT_MS = 25000;
-const SCRAPE_CLIENT_TIMEOUT_MS = 30000;
+const SCRAPE_SERVER_TIMEOUT_MS = 10000;
 
 export class FirecrawlProvider implements SearchProvider {
   readonly id = 'firecrawl' as const;
@@ -47,16 +45,12 @@ export class FirecrawlProvider implements SearchProvider {
   }
 
   async read(url: string): Promise<PageContent> {
-    const res = await this.post<FirecrawlScrapeResponse>(
-      '/scrape',
-      {
-        url,
-        formats: ['markdown'],
-        onlyMainContent: true,
-        timeout: SCRAPE_SERVER_TIMEOUT_MS,
-      },
-      SCRAPE_CLIENT_TIMEOUT_MS,
-    );
+    const res = await this.post<FirecrawlScrapeResponse>('/scrape', {
+      url,
+      formats: ['markdown'],
+      onlyMainContent: true,
+      timeout: SCRAPE_SERVER_TIMEOUT_MS,
+    });
     if (res.success !== true || !res.data) {
       throw new Error(res.error || 'scrape failed');
     }
@@ -67,23 +61,15 @@ export class FirecrawlProvider implements SearchProvider {
     };
   }
 
-  private post<T>(
-    path: string,
-    body: Record<string, unknown>,
-    timeoutMs?: number,
-  ): Promise<T> {
+  private post<T>(path: string, body: Record<string, unknown>): Promise<T> {
     const key = requireKey(this.getKey(), 'Firecrawl');
-    return fetchJson<T>(
-      `https://api.firecrawl.dev/v2${path}`,
-      {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${key}`,
-        },
-        body: JSON.stringify({...body, origin: 'pocketpal'}),
+    return fetchJson<T>(`https://api.firecrawl.dev/v2${path}`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${key}`,
       },
-      timeoutMs,
-    );
+      body: JSON.stringify({...body, origin: 'pocketpal'}),
+    });
   }
 }
