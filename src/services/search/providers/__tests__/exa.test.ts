@@ -55,12 +55,20 @@ describe('ExaProvider', () => {
     });
   });
 
-  it('returns [] for an empty or missing-field search body without throwing', async () => {
+  it('throws when the body has no results array', async () => {
     const provider = new ExaProvider(() => 'key');
-    for (const body of [{}, {results: null}, {results: []}]) {
+    for (const body of [null, {}, {results: null}]) {
       (global.fetch as jest.Mock).mockReturnValue(okJson(body));
-      await expect(provider.search('q', {maxResults: 3})).resolves.toEqual([]);
+      await expect(provider.search('q', {maxResults: 3})).rejects.toThrow(
+        /^unexpected response$/,
+      );
     }
+  });
+
+  it('returns [] for an explicit empty results array', async () => {
+    (global.fetch as jest.Mock).mockReturnValue(okJson({results: []}));
+    const provider = new ExaProvider(() => 'key');
+    await expect(provider.search('q', {maxResults: 3})).resolves.toEqual([]);
   });
 
   it('reads to empty text when the contents body has no result', async () => {

@@ -38,12 +38,20 @@ describe('ParallelProvider', () => {
     expect(provider.read).toBeUndefined();
   });
 
-  it('returns [] for an empty or missing-field body without throwing', async () => {
+  it('throws when the body has no results array', async () => {
     const provider = new ParallelProvider(() => 'key');
-    for (const body of [{}, {results: null}, {results: []}]) {
+    for (const body of [null, {}, {results: null}]) {
       (global.fetch as jest.Mock).mockReturnValue(okJson(body));
-      await expect(provider.search('q', {maxResults: 3})).resolves.toEqual([]);
+      await expect(provider.search('q', {maxResults: 3})).rejects.toThrow(
+        /^unexpected response$/,
+      );
     }
+  });
+
+  it('returns [] for an explicit empty results array', async () => {
+    (global.fetch as jest.Mock).mockReturnValue(okJson({results: []}));
+    const provider = new ParallelProvider(() => 'key');
+    await expect(provider.search('q', {maxResults: 3})).resolves.toEqual([]);
   });
 
   it('drops a hit with missing excerpts to an empty snippet, keeping url', async () => {
