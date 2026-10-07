@@ -3,6 +3,7 @@ import type {SearchAccess} from '../searchAccess';
 import type {SearchHit, SearchProvider} from '../../search/types';
 import * as budget from '../../search/searchBudget';
 import {resetSearchCache} from '../../search/searchBudget';
+import {BraveProvider} from '../../search/providers/brave';
 
 const hit = (overrides: Partial<SearchHit> = {}): SearchHit => ({
   title: 'Title',
@@ -287,6 +288,41 @@ describe('WebSearchEngine', () => {
     const stored = spy.mock.calls[0][3];
     expect(stored[0].snippet.length).toBeLessThan(oversized.length);
     spy.mockRestore();
+  });
+
+  describe('with the Brave provider', () => {
+    const braveAccess = () =>
+      makeAccess({getActiveProvider: () => new BraveProvider(() => 'key')});
+    const respond = (body: unknown) => {
+      global.fetch = jest.fn().mockResolvedValue({
+        ok: true,
+        status: 200,
+        text: () => Promise.resolve(JSON.stringify(body)),
+      });
+    };
+
+    it('reports a non-search body as an error, not as no results', async () => {
+      respond({web: {results: []}});
+      const result = await new WebSearchEngine(braveAccess()).execute({
+        query: 'mars',
+      });
+      expect(result).toEqual({
+        type: 'error',
+        summary: 'web_search: unexpected response',
+        errorMessage: 'unexpected response',
+      });
+    });
+
+    it('reports a search envelope without web hits as no results', async () => {
+      respond({type: 'search'});
+      const result = await new WebSearchEngine(braveAccess()).execute({
+        query: 'mars',
+      });
+      expect(result.type).toBe('error');
+      if (result.type === 'error') {
+        expect(result.summary).toMatch(/no results for "mars"/);
+      }
+    });
   });
 
   describe('systemPromptFragment', () => {
