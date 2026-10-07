@@ -9,6 +9,7 @@ interface BraveResult {
 }
 
 interface BraveResponse {
+  type?: string;
   web?: {results?: BraveResult[]};
 }
 
@@ -22,13 +23,16 @@ export class BraveProvider implements SearchProvider {
     const url = `https://api.search.brave.com/res/v1/web/search?q=${encodeURIComponent(
       query,
     )}&count=${opts.maxResults}`;
-    const data = await fetchJson<BraveResponse>(url, {
+    const data = await fetchJson<BraveResponse | null>(url, {
       method: 'GET',
       headers: {
         Accept: 'application/json',
         'X-Subscription-Token': key,
       },
     });
+    if (data?.type !== 'search') {
+      throw new Error('unexpected response');
+    }
     return (data.web?.results ?? []).map(r => ({
       title: r.title ?? '',
       url: r.url ?? '',
