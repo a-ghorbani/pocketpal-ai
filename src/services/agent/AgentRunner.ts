@@ -460,11 +460,7 @@ export async function* runAgent(
         yield {type: 'tool_call_finished', outcome};
       }
 
-      // Stop-mid-tool: if the abort fired during execution, the
-      // outcomes for in-flight calls have been emitted (we don't
-      // cancel synchronous-ish talents). Bail out at this turn
-      // boundary; the next turn would just be a follow-up the user
-      // doesn't want.
+      // Tools cancel themselves via ctx.signal; the runner only stops at the turn boundary.
       if (signal?.aborted) {
         break;
       }
