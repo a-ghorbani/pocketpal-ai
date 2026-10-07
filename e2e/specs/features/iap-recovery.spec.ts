@@ -166,7 +166,7 @@ describe('In-app purchase recovery', () => {
       await buyPage.waitFor('owned-button', 90000);
     }));
 
-  it('removes a refunded Pal on the next online launch and never re-verifies it', async () => {
+  it('returns a refunded Pal to Buy, never re-verifies the refund, and sells it again', async () => {
     const {pal, products} = listPal('iap-refund');
     await openPalsWith(openPals, {products});
     await buyToOwned(pal.id);
@@ -178,13 +178,16 @@ describe('In-app purchase recovery', () => {
     await buyPage.openPal(pal.id);
 
     expect(await buyPage.isShown('owned-button', 5000)).toBe(false);
-    expect(await buyPage.isShown('buy-button', 1000)).toBe(false);
+    expect(await buyPage.isShown('buy-button', 5000)).toBe(true);
 
     const before = verifyCount();
     await relaunchApp();
     await openPals();
     await browser.pause(3000);
     expect(verifyCount()).toBe(before);
+
+    await buyToOwned(pal.id);
+    expect(verifyCount()).toBeGreaterThan(before);
   });
 
   it('applies a creator update only after the user confirms it', async () => {
