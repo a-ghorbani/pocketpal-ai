@@ -1,7 +1,11 @@
+import {abortableFetch} from '../../../../jest/abortableFetch';
+
 import {ReadUrlEngine} from '../ReadUrlEngine';
 import type {SearchAccess} from '../searchAccess';
 import type {SearchProvider, PageContent} from '../../search/types';
 import * as budget from '../../search/searchBudget';
+import * as search from '../../search';
+import {ExaProvider} from '../../search/providers/exa';
 import {allowReadUrls, resetReadUrlAllowlist} from '../readUrlAllowlist';
 
 const makeAccess = (overrides: Partial<SearchAccess> = {}): SearchAccess => {
@@ -44,7 +48,7 @@ describe('ReadUrlEngine', () => {
     const result = await new ReadUrlEngine(access).execute({
       url: 'https://e.com/p',
     });
-    expect(read).toHaveBeenCalledWith('https://e.com/p');
+    expect(read).toHaveBeenCalledWith('https://e.com/p', undefined);
     expect(result.type).toBe('text');
     if (result.type === 'text') {
       expect(result.summary).toContain('full page body');
@@ -64,7 +68,10 @@ describe('ReadUrlEngine', () => {
     const result = await new ReadUrlEngine(access).execute({
       url: 'https://e.com/x',
     });
-    expect(readWithDefaultReader).toHaveBeenCalledWith('https://e.com/x');
+    expect(readWithDefaultReader).toHaveBeenCalledWith(
+      'https://e.com/x',
+      undefined,
+    );
     expect(result.type).toBe('text');
   });
 
@@ -214,10 +221,8 @@ describe('ReadUrlEngine', () => {
         url: 'https://e.com/p#conversation-secret',
       });
       expect(result.type).toBe('text');
-      expect(read).toHaveBeenCalledWith('https://e.com/p');
-      expect(read).not.toHaveBeenCalledWith(
-        expect.stringContaining('conversation-secret'),
-      );
+      expect(read).toHaveBeenCalledWith('https://e.com/p', undefined);
+      expect(read.mock.calls[0][0]).not.toContain('conversation-secret');
     });
 
     it('accepts the same URL once allowlisted', async () => {
@@ -235,6 +240,68 @@ describe('ReadUrlEngine', () => {
       allowReadUrls(['https://fresh.example.org/a']);
       const after = await engine.execute({url: 'https://fresh.example.org/a'});
       expect(after.type).toBe('text');
+    });
+  });
+
+  describe('cancellation', () => {
+    const defaultReaderAccess = () =>
+      makeAccess({
+        getActiveProvider: () => ({id: 'brave', search: jest.fn()}),
+        readWithDefaultReader: search.readWithDefaultReader,
+      });
+    const exaAccess = () =>
+      makeAccess({getActiveProvider: () => new ExaProvider(() => 'key')});
+
+    beforeEach(() => {
+      jest.useFakeTimers();
+    });
+
+    afterEach(() => {
+      jest.useRealTimers();
+    });
+
+    it.each([
+      ['the default reader', defaultReaderAccess, 'https://r.jina.ai/'],
+      ['Exa native read', exaAccess, 'https://api.exa.ai/contents'],
+    ])(
+      'returns "cancelled" when the run aborts mid-read via %s',
+      async (_label, access, endpoint) => {
+        const run = new AbortController();
+        let fetchedUrl = '';
+        global.fetch = abortableFetch({
+          onCall: (_init, url) => {
+            fetchedUrl = url;
+            run.abort();
+          },
+        });
+
+        const result = await new ReadUrlEngine(access()).execute(
+          {url: 'https://e.com/p'},
+          {signal: run.signal},
+        );
+
+        expect(result).toEqual({
+          type: 'error',
+          summary: 'read_url: cancelled',
+          errorMessage: 'cancelled',
+        });
+        expect(fetchedUrl.startsWith(endpoint)).toBe(true);
+        expect(jest.getTimerCount()).toBe(0);
+      },
+    );
+
+    it('returns "cancelled" without fetching when the signal is already aborted', async () => {
+      global.fetch = abortableFetch();
+      const run = new AbortController();
+      run.abort();
+
+      const result = await new ReadUrlEngine(defaultReaderAccess()).execute(
+        {url: 'https://e.com/p'},
+        {signal: run.signal},
+      );
+
+      expect(result).toMatchObject({type: 'error', errorMessage: 'cancelled'});
+      expect(global.fetch).not.toHaveBeenCalled();
     });
   });
 });

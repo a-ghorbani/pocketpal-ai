@@ -1,8 +1,12 @@
+import {abortableFetch} from '../../../../jest/abortableFetch';
+
 import {WebSearchEngine} from '../WebSearchEngine';
 import type {SearchAccess} from '../searchAccess';
 import type {SearchHit, SearchProvider} from '../../search/types';
 import * as budget from '../../search/searchBudget';
 import {resetSearchCache} from '../../search/searchBudget';
+import {TavilyProvider} from '../../search/providers/tavily';
+import * as readUrlAllowlist from '../readUrlAllowlist';
 
 const hit = (overrides: Partial<SearchHit> = {}): SearchHit => ({
   title: 'Title',
@@ -287,6 +291,72 @@ describe('WebSearchEngine', () => {
     const stored = spy.mock.calls[0][3];
     expect(stored[0].snippet.length).toBeLessThan(oversized.length);
     spy.mockRestore();
+  });
+
+  describe('cancellation', () => {
+    const tavilyAccess = () =>
+      makeAccess({getActiveProvider: () => new TavilyProvider(() => 'key')});
+
+    beforeEach(() => {
+      jest.useFakeTimers();
+    });
+
+    afterEach(() => {
+      jest.useRealTimers();
+      jest.restoreAllMocks();
+    });
+
+    it('returns "cancelled" when the run aborts mid-search, caching and allowlisting nothing', async () => {
+      const run = new AbortController();
+      global.fetch = abortableFetch({onCall: () => run.abort()});
+      const setCached = jest.spyOn(budget, 'setCachedHits');
+      const allow = jest.spyOn(readUrlAllowlist, 'allowReadUrls');
+
+      const result = await new WebSearchEngine(tavilyAccess()).execute(
+        {query: 'mars'},
+        {signal: run.signal},
+      );
+
+      expect(result).toEqual({
+        type: 'error',
+        summary: 'web_search: cancelled',
+        errorMessage: 'cancelled',
+      });
+      expect(setCached).not.toHaveBeenCalled();
+      expect(allow).not.toHaveBeenCalled();
+      expect(budget.getCachedHits('tavily', 'mars', 3)).toBeUndefined();
+      jest.advanceTimersByTime(13000);
+      expect(jest.getTimerCount()).toBe(0);
+    });
+
+    it('returns "cancelled" without fetching when the signal is already aborted', async () => {
+      global.fetch = abortableFetch();
+      const run = new AbortController();
+      run.abort();
+
+      const result = await new WebSearchEngine(tavilyAccess()).execute(
+        {query: 'mars'},
+        {signal: run.signal},
+      );
+
+      expect(result).toMatchObject({type: 'error', errorMessage: 'cancelled'});
+      expect(global.fetch).not.toHaveBeenCalled();
+    });
+
+    it('serves a cache hit with no network even when the signal is aborted', async () => {
+      global.fetch = abortableFetch();
+      budget.setCachedHits('tavily', 'mars', 3, [hit({title: 'Cached'})]);
+      const run = new AbortController();
+      run.abort();
+
+      const result = await new WebSearchEngine(tavilyAccess()).execute(
+        {query: 'mars'},
+        {signal: run.signal},
+      );
+
+      expect(result.type).toBe('search');
+      expect(global.fetch).not.toHaveBeenCalled();
+    });
   });
 
   describe('systemPromptFragment', () => {
