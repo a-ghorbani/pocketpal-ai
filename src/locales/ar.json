@@ -1630,6 +1630,8 @@
   "downloadBanner": {
     "titleByPal": "{{name}} قيد التنزيل",
     "titleByModel": "{{name}} قيد التنزيل",
-    "extraInProgress": "+{{count}} أخرى قيد التقدم"
+    "extraInProgress": "+{{count}} أخرى قيد التقدم",
+    "failedTitle": "لم يكتمل التنزيل",
+    "retry": "إعادة المحاولة"
   }
 }
