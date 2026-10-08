@@ -66,6 +66,8 @@ const DEFAULT_GROUP_NAMES = {
   older: 'Older',
 };
 
+export const NEW_CHAT_DRAFT_KEY = '__new_chat__';
+
 export const defaultCompletionSettings = {...defaultCompletionParams};
 delete defaultCompletionSettings.prompt;
 delete defaultCompletionSettings.stop;
@@ -76,19 +78,7 @@ class ChatSessionStore {
   isEditMode: boolean = false;
   editingMessageId: string | null = null;
   isGenerating: boolean = false;
-  /**
-   * True between the moment the user taps Stop and the moment the
-   * runner's loop has actually finished (i.e. native llama.rn has
-   * returned from its in-flight `llama_decode` chunk and the for-await
-   * loop in `useChatSession` exits). During this window the JS layer
-   * cannot start a new completion (the native context is still busy)
-   * — the send button must be disabled and the user needs visible
-   * "Stopping…" feedback so they don't mistake the silent gap for the
-   * stop having succeeded already.
-   *
-   * Cleared in the same place that clears `isGenerating` (after the
-   * for-await loop ends, success or failure).
-   */
+  /** A send is waiting for a stopped run to drain. */
   isStopping: boolean = false;
   newChatCompletionSettings: CompletionParams = defaultCompletionSettings;
   newChatPalId: string | undefined = undefined;
@@ -1430,6 +1420,14 @@ class ChatSessionStore {
 
   clearDraft(sessionId: string) {
     this.sessionDrafts.delete(sessionId);
+  }
+
+  restoreUnsentText(sessionId: string | null, text: string) {
+    if (sessionId !== null && !this.sessions.some(s => s.id === sessionId)) {
+      return;
+    }
+    const key = sessionId ?? NEW_CHAT_DRAFT_KEY;
+    this.saveDraft(key, [text, this.getDraft(key)].filter(Boolean).join('\n'));
   }
 
   async setActivePal(palId: string | undefined): Promise<void> {

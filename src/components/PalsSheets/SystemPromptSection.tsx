@@ -1,4 +1,4 @@
-import React, {useContext, useState, useMemo} from 'react';
+import React, {useContext, useEffect, useMemo, useRef, useState} from 'react';
 import {View} from 'react-native';
 import {Button, Text, IconButton} from 'react-native-paper';
 import {observer} from 'mobx-react-lite';
@@ -20,6 +20,7 @@ import {L10nContext} from '../../utils';
 import type {ParameterDefinition} from '../../types/pal';
 
 interface SystemPromptSectionProps {
+  isVisible: boolean;
   hideGeneratingPrompt?: boolean;
   validateFields?: () => Promise<boolean>;
   closeSheet: () => void;
@@ -28,6 +29,7 @@ interface SystemPromptSectionProps {
 
 export const SystemPromptSection = observer(
   ({
+    isVisible,
     hideGeneratingPrompt,
     validateFields,
     closeSheet,
@@ -43,7 +45,22 @@ export const SystemPromptSection = observer(
     const promptGenerationModel = watch('promptGenerationModel');
     const isLoadingModel = modelStore.isContextLoading;
 
-    const {generate, isGenerating, stop} = useStructuredOutput();
+    const {generate, isGenerating, isBusy, stop, cancel} =
+      useStructuredOutput();
+
+    const closesRef = useRef(0);
+    useEffect(() => {
+      if (!isVisible) {
+        closesRef.current += 1;
+        cancel();
+      }
+    }, [isVisible, cancel]);
+    useEffect(
+      () => () => {
+        closesRef.current += 1;
+      },
+      [],
+    );
 
     // Smart display mode state
     const [showTemplateMode, setShowTemplateMode] = useState(false);
@@ -182,10 +199,12 @@ export const SystemPromptSection = observer(
     };
 
     const handleGeneratePrompt = async () => {
+      const closes = closesRef.current;
+      const closedSince = () => closesRef.current !== closes;
       // Validate form fields if validateFields is provided
       if (validateFields) {
         const isValid = await validateFields();
-        if (!isValid) {
+        if (!isValid || closedSince()) {
           return;
         }
       }
@@ -201,6 +220,9 @@ export const SystemPromptSection = observer(
 
         if (modelStore.activeModelId !== selectedModel.id) {
           await modelStore.selectModel(selectedModel);
+          if (closedSince()) {
+            return;
+          }
           if (!modelStore.engine) {
             console.error('Failed to initialize completion engine');
             return;
@@ -220,6 +242,9 @@ export const SystemPromptSection = observer(
 
         const generatingPrompt = buildGenerationPrompt();
         const result = await generate(generatingPrompt, schema);
+        if (result === undefined) {
+          return;
+        }
         setValue('systemPrompt', result?.prompt);
 
         // Only set originalSystemPrompt if it's not already set (preserve PalsHub templates)
@@ -358,6 +383,14 @@ export const SystemPromptSection = observer(
                   ? l10n.components.systemPromptSection.buttons.stopGenerating
                   : l10n.components.systemPromptSection.buttons.generatePrompt}
             </Button>
+            {isBusy && (
+              <Text
+                variant="bodySmall"
+                style={styles.generateBusyText}
+                testID="generate-busy-text">
+                {l10n.components.systemPromptSection.generationBusy}
+              </Text>
+            )}
           </>
         )}
 

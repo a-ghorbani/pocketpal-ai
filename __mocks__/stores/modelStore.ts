@@ -14,6 +14,7 @@ import type {Samplers} from '../../src/utils/samplerParams';
 import type {ErrorState} from '../../src/utils/errors';
 import {LlamaContext} from 'llama.rn';
 import {CompletionEngine} from '../../src/utils/completionTypes';
+import {GenerationSlot} from '../../src/store/generationLease';
 import {createDefaultContextInitParams} from '../../src/utils/contextInitParamsVersions';
 import {
   draftCacheDefaults,
@@ -99,6 +100,11 @@ class MockModelStore {
   recordReasoningObserved: jest.Mock;
   reprobeRemoteCapsAfterCompletion: jest.Mock;
   setReasoningOverride: jest.Mock;
+  acquireGeneration: jest.Mock;
+  tryAcquireGeneration: jest.Mock;
+  abortActiveGeneration: jest.Mock;
+  // A real slot, so lease ordering behaves as in the store.
+  generationSlot = new GenerationSlot();
   benchmarkActive: boolean = false;
   isContextLoading: boolean = false;
   loadingModel: Model | undefined;
@@ -156,6 +162,11 @@ class MockModelStore {
       exitBenchmarkMode: false,
       recordReasoningObserved: false,
       setReasoningOverride: false,
+      acquireGeneration: false,
+      tryAcquireGeneration: false,
+      abortActiveGeneration: false,
+      generationSlot: false,
+      isGenerationBusy: false,
       contextId: computed,
       lastUsedModel: computed,
       activeModel: computed,
@@ -236,6 +247,18 @@ class MockModelStore {
     this.setSpecDraftCacheTypeK = jest.fn();
     this.setSpecDraftCacheTypeV = jest.fn();
     this.enterBenchmarkMode = jest.fn().mockResolvedValue(undefined);
+    this.acquireGeneration = jest.fn(() =>
+      this.generationSlot.acquire(
+        () => Promise.resolve(),
+        () => this.engine ?? null,
+      ),
+    );
+    this.tryAcquireGeneration = jest.fn(() =>
+      this.generationSlot.tryAcquire(() => this.engine ?? null),
+    );
+    this.abortActiveGeneration = jest.fn(() => {
+      this.generationSlot.abortActive();
+    });
     this.exitBenchmarkMode = jest.fn();
     this.recordReasoningObserved = jest.fn();
     // Mirror the real writer so tests exercise the live override → resolver →
@@ -263,9 +286,14 @@ class MockModelStore {
     this.isStreaming = value;
   };
 
-  // Safe context release methods
-  registerCompletionPromise = jest.fn();
-  clearCompletionPromise = jest.fn();
+  get isGenerationBusy(): boolean {
+    return this.generationSlot.isBusy;
+  }
+
+  /** A lease a test left held must not make a later test's send wait. */
+  resetGenerationSlot = () => {
+    this.generationSlot = new GenerationSlot();
+  };
 
   get contextId(): string | undefined {
     if (this.context) {

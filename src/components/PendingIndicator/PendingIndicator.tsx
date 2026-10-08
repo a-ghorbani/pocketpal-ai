@@ -79,14 +79,7 @@ interface PendingIndicatorProps {
    * generation. Surfaced once it crosses {@link MIN_TOKENS}.
    */
   toolCallTokenCount?: number;
-  /**
-   * True between the user pressing Stop and the runner actually
-   * exiting (native llama.rn finishing its in-flight `llama_decode`
-   * chunk). When true, the indicator overrides any tool-call label /
-   * count / elapsed suffix with a single "Stopping…" message — the
-   * user-facing signal that "your stop was received, native is
-   * winding down at its next chunk boundary."
-   */
+  /** Shows "Stopping…" in place of any label. */
   isStopping?: boolean;
 }
 

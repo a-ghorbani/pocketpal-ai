@@ -83,6 +83,48 @@ describe('input', () => {
     expect(textInput.props).toHaveProperty('value', '');
   });
 
+  describe('while a send waits for a stopped run to drain', () => {
+    beforeEach(() => {
+      runInAction(() => {
+        modelStore.activeModelId = 'test-model-id';
+      });
+      chatSessionStore.isStopping = true;
+    });
+
+    afterEach(() => {
+      chatSessionStore.isStopping = false;
+    });
+
+    it('disables Send, announced as disabled, and keeps the typed text', () => {
+      const onSendPress = jest.fn();
+      const {getByPlaceholderText, getByLabelText} = render(
+        <UserContext.Provider value={user}>
+          <ChatInput
+            {...{
+              onSendPress,
+              renderScrollable,
+              sendButtonVisibilityMode: 'editing',
+            }}
+          />
+        </UserContext.Provider>,
+      );
+      const textInput = getByPlaceholderText(
+        l10n.en.components.chatInput.inputPlaceholder,
+      );
+      fireEvent.changeText(textInput, 'second message');
+      const button = getByLabelText(
+        l10n.en.components.sendButton.accessibilityLabel,
+      );
+
+      expect(button.props.accessibilityState).toEqual(
+        expect.objectContaining({disabled: true}),
+      );
+      fireEvent.press(button);
+      expect(onSendPress).not.toHaveBeenCalled();
+      expect(textInput.props.value).toBe('second message');
+    });
+  });
+
   it('sends a text message if onChangeText and value are provided', () => {
     expect.assertions(2);
     // Set up an active model for the test

@@ -15,6 +15,7 @@ import {
   ttsStore,
   uiStore,
 } from '../store';
+import type {GenerationLease} from '../store/generationLease';
 import type {PersistedTurnTimings} from '../utils/completionTypes';
 import {resolveReasoningCapability} from '../utils/reasoningCapability';
 
@@ -482,6 +483,27 @@ async function applyEventToStore(
   }
 }
 
+/**
+ * Lets queued touches dispatch. Ends at once when `signal` aborts: JS timers
+ * do not fire while the app is backgrounded, and a release there waits for
+ * this run to drain.
+ */
+function yieldToTouches(signal: AbortSignal): Promise<void> {
+  return new Promise(resolve => {
+    if (signal.aborted) {
+      resolve();
+      return;
+    }
+    const done = () => {
+      clearTimeout(timer);
+      signal.removeEventListener('abort', done);
+      resolve();
+    };
+    const timer = setTimeout(done, 0);
+    signal.addEventListener('abort', done);
+  });
+}
+
 export const useChatSession = (
   currentMessageInfo: React.MutableRefObject<{
     createdAt: number;
@@ -499,9 +521,7 @@ export const useChatSession = (
   // passed into AgentRunOptions.triggerMarkers so the runner has no
   // direct dependency on the cache, modelStore, or getFormattedChat.
   const triggerCacheRef = useRef(createTriggerMarkerCache());
-  // AbortController for the active run. Replaced per run; signal is
-  // forwarded to runAgent for stop-mid-tool semantics.
-  const abortRef = useRef<AbortController | null>(null);
+  const leaseRef = useRef<GenerationLease | null>(null);
 
   const addMessage = async (message: MessageType.Any) => {
     await chatSessionStore.addMessageToCurrentSession(message);
@@ -520,12 +540,68 @@ export const useChatSession = (
   };
 
   const handleSendPress = async (message: MessageType.PartialText) => {
-    const engine = modelStore.engine;
-    if (!engine) {
+    const sentFrom = chatSessionStore.activeSessionId;
+    if (modelStore.isGenerationBusy) {
+      chatSessionStore.setIsStopping(true);
+    }
+    const lease = await modelStore.acquireGeneration();
+    chatSessionStore.setIsStopping(false);
+    if (chatSessionStore.activeSessionId !== sentFrom) {
+      lease?.end();
+      chatSessionStore.restoreUnsentText(sentFrom, message.text);
+      return;
+    }
+    if (!lease) {
       await addSystemMessage(l10n.chat.modelNotLoaded);
       return;
     }
+    leaseRef.current = lease;
 
+    // Run UI clears on abort, not on drain.
+    let uiStopped = false;
+    const uiStop = () => {
+      if (uiStopped) {
+        return;
+      }
+      uiStopped = true;
+      modelStore.setInferencing(false);
+      modelStore.setIsStreaming(false);
+      chatSessionStore.setIsGenerating(false);
+      chatSessionStore.setAgentUiState(initialAgentUiState);
+      chatSessionStore.setToolCallTokenCount(0);
+      try {
+        deactivateKeepAwake();
+      } catch (error) {
+        console.error('Failed to deactivate keep awake after chat:', error);
+      }
+    };
+    if (lease.signal.aborted) {
+      uiStop();
+    } else {
+      lease.signal.addEventListener('abort', uiStop);
+    }
+
+    try {
+      await sendUnderLease(message, lease, {
+        stop: uiStop,
+        isStopped: () => uiStopped,
+      });
+    } finally {
+      lease.signal.removeEventListener('abort', uiStop);
+      uiStop();
+      if (leaseRef.current === lease) {
+        leaseRef.current = null;
+      }
+      lease.end();
+    }
+  };
+
+  const sendUnderLease = async (
+    message: MessageType.PartialText,
+    lease: GenerationLease,
+    runUi: {stop: () => void; isStopped: () => boolean},
+  ) => {
+    const engine = lease.engine;
     const contextId = modelStore.contextId;
     if (!contextId) {
       await addSystemMessage(l10n.chat.modelNotLoaded);
@@ -554,14 +630,15 @@ export const useChatSession = (
       },
     };
     await addMessage(textMessage);
-    modelStore.setInferencing(true);
-    modelStore.setIsStreaming(false);
-    chatSessionStore.setIsGenerating(true);
-
-    try {
-      activateKeepAwake();
-    } catch (error) {
-      console.error('Failed to activate keep awake during chat:', error);
+    if (!lease.signal.aborted) {
+      modelStore.setInferencing(true);
+      modelStore.setIsStreaming(false);
+      chatSessionStore.setIsGenerating(true);
+      try {
+        activateKeepAwake();
+      } catch (error) {
+        console.error('Failed to activate keep awake during chat:', error);
+      }
     }
 
     const activeSession = chatSessionStore.sessions.find(
@@ -594,7 +671,6 @@ export const useChatSession = (
     // tool call whose function.name isn't in this list.
     const palTalents = (pal?.pact?.talents ?? []).map(t => t.name);
 
-    abortRef.current = new AbortController();
     const completionStartTime = Date.now();
     const timeToFirstTokenMs: {value: number | null} = {value: null};
     const tts: TtsRunState = {
@@ -649,7 +725,7 @@ export const useChatSession = (
         talentLookup: name => talentRegistry.get(name),
         triggerMarkers,
         messageId: messageInfo.id,
-        signal: abortRef.current.signal,
+        signal: lease.signal,
       });
 
       // The chunk-cycle would otherwise run entirely via microtask
@@ -671,7 +747,7 @@ export const useChatSession = (
       const TOOL_TOKEN_BUCKET = 10;
 
       for await (const event of events) {
-        if (abortRef.current?.signal.aborted && event.type === 'token') {
+        if (lease.signal.aborted && event.type === 'token') {
           continue;
         }
 
@@ -682,7 +758,9 @@ export const useChatSession = (
         const nextUiState = agentStateReducer(uiState, event);
         if (nextUiState !== uiState) {
           uiState = nextUiState;
-          chatSessionStore.setAgentUiState(nextUiState);
+          if (!runUi.isStopped()) {
+            chatSessionStore.setAgentUiState(nextUiState);
+          }
         }
 
         switch (event.type) {
@@ -692,7 +770,9 @@ export const useChatSession = (
           case 'run_finished':
           case 'run_failed':
             toolCallTokensRaw = 0;
-            chatSessionStore.setToolCallTokenCount(0);
+            if (!runUi.isStopped()) {
+              chatSessionStore.setToolCallTokenCount(0);
+            }
             break;
           case 'token':
             if (event.delta.toolCalls && event.delta.toolCalls.length > 0) {
@@ -720,7 +800,7 @@ export const useChatSession = (
         });
 
         if (performance.now() - lastYieldTs >= YIELD_INTERVAL_MS) {
-          await new Promise(resolve => setTimeout(resolve, 0));
+          await yieldToTouches(lease.signal);
           lastYieldTs = performance.now();
         }
 
@@ -728,21 +808,9 @@ export const useChatSession = (
           throw event.error;
         }
       }
-
-      modelStore.setInferencing(false);
-      modelStore.setIsStreaming(false);
-      chatSessionStore.setIsGenerating(false);
-      chatSessionStore.setIsStopping(false);
     } catch (error) {
       console.error('Completion error:', error);
-      modelStore.setInferencing(false);
-      modelStore.setIsStreaming(false);
-      chatSessionStore.setIsGenerating(false);
-      chatSessionStore.setIsStopping(false);
-      // Reset agentUiState back to idle so renderers don't get
-      // stuck in a failed state across the next user message.
-      chatSessionStore.setAgentUiState(initialAgentUiState);
-      chatSessionStore.setToolCallTokenCount(0);
+      runUi.stop();
 
       // Stop any in-flight TTS — the completion errored, so buffered
       // audio should not keep playing.
@@ -895,12 +963,6 @@ export const useChatSession = (
       } else {
         await addSystemMessage(`${l10n.chat.completionFailed}${errorMessage}`);
       }
-    } finally {
-      try {
-        deactivateKeepAwake();
-      } catch (error) {
-        console.error('Failed to deactivate keep awake after chat:', error);
-      }
     }
   };
 
@@ -910,37 +972,12 @@ export const useChatSession = (
   };
 
   const handleStopPress = async () => {
-    // Enter the `stopping` state IMMEDIATELY: the user gets visible
-    // feedback ("Stopping…") and the send button is gated off so a
-    // new completion can't try to use the still-busy native context.
-    // We do NOT touch `inferencing` / `isGenerating` here — those get
-    // cleared by the for-await cleanup in handleSendPress once the
-    // runner has actually exited (native llama.rn has returned from
-    // its current llama_decode chunk; see ChatSessionStore.isStopping
-    // for the rationale).
-    chatSessionStore.setIsStopping(true);
-    // The runner's abort listener owns engine.stopCompletion — this
-    // signal is the single source of stop intent.
-    abortRef.current?.abort();
+    leaseRef.current?.abort();
     // Stop any in-flight TTS so buffered audio doesn't keep playing
-    // after the user tapped Stop. Inferencing/isStreaming/isGenerating
-    // flags are NOT cleared here — those get cleared by the for-await
-    // cleanup in handleSendPress once the runner has actually exited.
+    // after the user tapped Stop.
     ttsStore.stop().catch(err => {
       console.warn('[useChatSession] TTS stop on user-stop failed:', err);
     });
-
-    // Note: deactivateKeepAwake intentionally stays here so the device
-    // can sleep as soon as the user signals stop, even if native is
-    // still finishing the current chunk.
-    try {
-      deactivateKeepAwake();
-    } catch (error) {
-      console.error(
-        'Failed to deactivate keep awake after stopping chat:',
-        error,
-      );
-    }
   };
 
   return {

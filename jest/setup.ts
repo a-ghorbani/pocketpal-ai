@@ -113,6 +113,7 @@ jest.mock('../src/store', () => {
     UIStore,
     uiStore: mockUiStore,
     chatSessionStore: mockChatSessionStore,
+    NEW_CHAT_DRAFT_KEY: '__new_chat__',
     hfStore: mockHFStore,
     benchmarkStore: mockBenchmarkStore,
     palStore: mockPalStore,

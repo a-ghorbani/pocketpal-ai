@@ -197,4 +197,64 @@ describe('VideoPalScreen', () => {
       expect(getByLabelText('Start video analysis')).toBeTruthy();
     });
   });
+
+  describe('under the generation lease', () => {
+    function openCamera() {
+      const videoPal = makeVideoPal();
+      (palStore as any).pals.push(videoPal);
+      Object.defineProperty(chatSessionStore, 'activePalId', {
+        get: jest.fn(() => videoPal.id),
+        configurable: true,
+      });
+      modelStore.context = new LlamaContext(mockLlamaContextParams);
+      runInAction(() => {
+        modelStore.models = [
+          {id: 'model-1', origin: ModelOrigin.PRESET, supportsMultimodal: true},
+        ] as any;
+        modelStore.activeModelId = 'model-1';
+        modelStore.isMultimodalActive = true;
+        modelStore.engine = {
+          completion: jest.fn(),
+          stopCompletion: jest.fn(),
+        };
+      });
+      return render(<VideoPalScreen activePal={videoPal} />);
+    }
+
+    afterEach(() => {
+      runInAction(() => {
+        modelStore.engine = undefined;
+      });
+      delete (modelStore as any).startImageCompletion;
+    });
+
+    it('closing the camera aborts the running generation', async () => {
+      const {getByLabelText, getByTestId} = openCamera();
+      fireEvent.press(getByLabelText('Start video analysis'));
+      await waitFor(() => expect(getByTestId('close-button')).toBeTruthy());
+
+      fireEvent.press(getByTestId('close-button'));
+
+      expect(modelStore.abortActiveGeneration).toHaveBeenCalledTimes(1);
+    });
+
+    it('drops a frame that arrives while a generation holds the lease', async () => {
+      (modelStore as any).startImageCompletion = jest.fn();
+      const {getByLabelText, getByTestId, UNSAFE_root} = openCamera();
+      fireEvent.press(getByLabelText('Start video analysis'));
+      await waitFor(() => expect(getByTestId('close-button')).toBeTruthy());
+      const capture = (frame: string) =>
+        UNSAFE_root.findAll(
+          node => typeof node.props.onCapture === 'function',
+        )[0].props.onCapture(frame);
+      const held = modelStore.tryAcquireGeneration();
+
+      await capture('data:frame');
+      expect((modelStore as any).startImageCompletion).not.toHaveBeenCalled();
+
+      held!.end();
+      await capture('data:frame');
+      expect((modelStore as any).startImageCompletion).toHaveBeenCalledTimes(1);
+    });
+  });
 });

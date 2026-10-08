@@ -24,6 +24,7 @@ import {
 import {uiStore, hfStore} from '.';
 import {serverStore} from './ServerStore';
 import {chatSessionStore} from './ChatSessionStore';
+import {GenerationSlot, type GenerationLease} from './generationLease';
 import {
   draftCacheDefaults,
   effectiveDraftModeOf,
@@ -45,6 +46,7 @@ import {
 import {getRecommendedProjectionModel} from '../utils/multimodalHelpers';
 import {isDraftOnlyModel} from '../utils/mtp';
 import {getOriginalModelName} from '../utils/formatters';
+import {stopQuietly} from '../utils/stopQuietly';
 import type {OnboardingPalModelEntry} from './onboarding/onboardingPals';
 
 import {downloadManager, DownloadCancelledError} from '../services/downloads';
@@ -220,9 +222,10 @@ class ModelStore {
   inferencing: boolean = false;
   isStreaming: boolean = false;
 
-  // Track active completion promise for safe context release
-  // This prevents race condition where context is freed while completion is still running
-  private activeCompletionPromise: Promise<any> | null = null;
+  // The in-flight chat run or VideoPal completion; release aborts it and
+  // waits for it to end before freeing the context.
+  private generationSlot = new GenerationSlot();
+  private isReleasingContext = false;
 
   // Mutex to serialize model load/release operations to prevent memory leaks
   private contextOperationMutex: Promise<void> = Promise.resolve();
@@ -257,8 +260,14 @@ class ModelStore {
   pendingProjectionCleanupIds: string[] = [];
 
   constructor() {
-    makeAutoObservable<ModelStore, 'postCompletionProbeFor'>(this, {
+    makeAutoObservable<
+      ModelStore,
+      'postCompletionProbeFor' | 'generationSlot' | 'isReleasingContext'
+    >(this, {
       postCompletionProbeFor: false,
+      generationSlot: false,
+      isReleasingContext: false,
+      isGenerationBusy: false,
       activeModel: computed,
       activeModelCaps: computed,
       activeSamplerDefaults: computed,
@@ -2444,6 +2453,16 @@ class ModelStore {
   ) => {
     console.log('attempt to release');
     chatSessionStore.exitEditMode();
+    this.isReleasingContext = true;
+    try {
+      await this.generationSlot.abortActive();
+      return await this.releaseEngine(clearActiveModel);
+    } finally {
+      this.isReleasingContext = false;
+    }
+  };
+
+  private releaseEngine = async (clearActiveModel: boolean) => {
     if (!this.context) {
       // For remote models or deletion scenarios, clear engine and state
       if (this.engine || clearActiveModel) {
@@ -2472,45 +2491,6 @@ class ModelStore {
     }
 
     try {
-      // IMPORTANT: Stop-Await-Release Pattern
-      // This prevents race condition where completion callback fires after context is freed
-      // which causes SIGSEGV in isMultimodalEnabled/createCompletionResult
-      if (
-        this.inferencing ||
-        this.isStreaming ||
-        this.activeCompletionPromise
-      ) {
-        console.log('Stopping active completion before context release');
-
-        // Step 1: Signal the completion to stop
-        try {
-          await this.context.stopCompletion();
-        } catch (stopError) {
-          console.warn('Error stopping completion:', stopError);
-          // Continue with release even if stop fails
-        }
-
-        // Step 2: Wait for the completion promise to actually finish
-        // This is critical - stopCompletion() only signals, it doesn't wait
-        if (this.activeCompletionPromise) {
-          console.log('Waiting for completion promise to finish...');
-          try {
-            // Wait for promise to settle (ignore errors, just wait for it to complete)
-            await this.activeCompletionPromise.catch(() => {});
-          } catch {
-            // Ignore any errors, we just need to wait
-          }
-          this.activeCompletionPromise = null;
-        }
-
-        // Clear inference flags
-        runInAction(() => {
-          this.inferencing = false;
-          this.isStreaming = false;
-        });
-      }
-
-      // Step 3: Now safe to release - First check if multimodal is enabled and release it if needed
       if (this.isMultimodalActive) {
         console.log('Releasing multimodal context first');
         try {
@@ -3393,21 +3373,29 @@ class ModelStore {
   }
 
   /**
-   * Register an active completion promise for safe context release.
-   * This should be called when starting a completion operation.
-   * @param promise The completion promise to track
+   * Waits for every earlier generation to end and for any context operation
+   * queued by then (a model switch) to finish, then grants a lease on the
+   * current engine; null when no model is ready.
    */
-  registerCompletionPromise(promise: Promise<any>) {
-    this.activeCompletionPromise = promise;
+  acquireGeneration = (): Promise<GenerationLease | null> =>
+    this.generationSlot.acquire(
+      () => this.contextOperationMutex,
+      this.grantableEngine,
+    );
+
+  tryAcquireGeneration = (): GenerationLease | null =>
+    this.generationSlot.tryAcquire(this.grantableEngine);
+
+  abortActiveGeneration = (): void => {
+    this.generationSlot.abortActive();
+  };
+
+  get isGenerationBusy(): boolean {
+    return this.generationSlot.isBusy;
   }
 
-  /**
-   * Clear the active completion promise.
-   * This should be called when the completion finishes (success or error).
-   */
-  clearCompletionPromise() {
-    this.activeCompletionPromise = null;
-  }
+  private grantableEngine = (): CompletionEngine | null =>
+    this.isReleasingContext ? null : (this.engine ?? null);
 
   /**
    * Get compatible projection models for a given LLM
@@ -3777,6 +3765,13 @@ class ModelStore {
       throw new Error('Multimodal is not enabled for this model');
     }
 
+    const lease = this.tryAcquireGeneration();
+    if (!lease) {
+      return;
+    }
+    const context = this.context;
+    const onAbort = () => stopQuietly(() => context.stopCompletion());
+
     runInAction(() => {
       this.inferencing = true;
       this.isStreaming = false;
@@ -3838,6 +3833,9 @@ class ModelStore {
 
       const completionParams =
         await chatSessionRepository.getGlobalCompletionSettings();
+      if (lease.signal.aborted) {
+        return;
+      }
       const stopWords = toJS(modelStore.activeModel?.stopWords);
 
       // Create completion params with app-specific properties
@@ -3855,8 +3853,7 @@ class ModelStore {
         completionParamsWithAppProps,
       );
 
-      // Create the completion promise and register it for safe context release
-      const completionPromise = this.context.completion(
+      const completionPromise = context.completion(
         cleanCompletionParams,
         data => {
           if (data.token) {
@@ -3864,28 +3861,22 @@ class ModelStore {
           }
         },
       );
-
-      // Register the promise so releaseContext can wait for it
-      this.registerCompletionPromise(completionPromise);
-
+      lease.signal.addEventListener('abort', onAbort, {once: true});
       const result = await completionPromise;
-
-      // Clear the promise after completion finishes
-      this.clearCompletionPromise();
 
       params.onComplete?.(result.text);
     } catch (error) {
-      // Clear the promise on error too
-      this.clearCompletionPromise();
       console.error('Error in multi-image completion:', error);
       params.onError?.(
         error instanceof Error ? error : new Error(String(error)),
       );
     } finally {
+      lease.signal.removeEventListener('abort', onAbort);
       runInAction(() => {
         this.inferencing = false;
         this.isStreaming = false;
       });
+      lease.end();
     }
   };
 
