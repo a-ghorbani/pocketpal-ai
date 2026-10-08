@@ -1475,6 +1475,22 @@ describe('runAgent', () => {
       expect((events[2] as any).toolCalls).toBeUndefined();
     });
 
+    it('a signal aborted before the run → one empty step, no completion', async () => {
+      const controller = new AbortController();
+      controller.abort();
+      const engine = makeScriptedEngine({scripts: []});
+      const events = await collect(runWith(engine, controller.signal));
+
+      expect(engine.completion).not.toHaveBeenCalled();
+      expect(engine.stopCompletion).not.toHaveBeenCalled();
+      expect(events.map(e => e.type)).toEqual([
+        'run_started',
+        'step_started',
+        'step_finished',
+        'run_finished',
+      ]);
+    });
+
     function runWith(engine: CompletionEngine, signal?: AbortSignal) {
       return runAgent({
         engine,

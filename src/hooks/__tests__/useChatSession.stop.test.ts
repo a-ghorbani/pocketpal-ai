@@ -14,7 +14,8 @@ import type {
   CompletionResult,
   CompletionStreamData,
 } from '../../utils/completionTypes';
-import type {MessageType} from '../../utils/types';
+import {convertToChatMessages} from '../../utils/chat';
+import type {AgentStep, MessageType} from '../../utils/types';
 
 const mockAssistant = {id: 'assistant'};
 const user = textMessage.author;
@@ -477,5 +478,111 @@ describe('useChatSession: a send whose chat changed while it waited', () => {
       'session-1',
       'hi',
     );
+  });
+});
+
+describe('useChatSession: the turn a Stop leaves in the chat', () => {
+  /** Replays the run's step writes the way ChatSessionStore applies them. */
+  function persistedTurn(): MessageType.AssistantTurn {
+    const emptyTurn = (
+      chatSessionStore.addMessageToCurrentSession as jest.Mock
+    ).mock.calls
+      .map(([message]) => message as MessageType.Any)
+      .find(message => message.type === 'assistant_turn')!;
+    const writes = (
+      [
+        'pushAgentStep',
+        'updateActiveStepStreaming',
+        'finalizeActiveStep',
+      ] as const
+    )
+      .flatMap(name => {
+        const {calls, invocationCallOrder} = (
+          chatSessionStore[name] as jest.Mock
+        ).mock;
+        return calls.map((args, i) => ({
+          name,
+          fields: args[2] as Partial<AgentStep>,
+          order: invocationCallOrder[i],
+        }));
+      })
+      .sort((a, b) => a.order - b.order);
+    const steps: AgentStep[] = [];
+    for (const {name, fields} of writes) {
+      if (name === 'pushAgentStep') {
+        steps.push(fields);
+      } else if (steps.length > 0) {
+        const last = steps.length - 1;
+        steps[last] = {
+          ...steps[last],
+          ...(name === 'finalizeActiveStep' ? {partial: false} : fields),
+        };
+      }
+    }
+    const metadata = (chatSessionStore.updateMessage as jest.Mock).mock.calls
+      .map(([, , update]) => update.metadata)
+      .reduce((acc, next) => ({...acc, ...next}), emptyTurn.metadata);
+    return {...(emptyTurn as MessageType.AssistantTurn), steps, metadata};
+  }
+
+  const nextPromptRoles = (turn: MessageType.AssistantTurn) =>
+    convertToChatMessages([
+      {...textMessage, id: 'follow-up', text: 'follow-up'},
+      turn,
+      textMessage,
+    ]).map(message => message.role);
+
+  async function stopInPrefill() {
+    const {engine, completions} = installEngine();
+    const session = renderSession();
+    let sending!: Promise<void>;
+    await act(async () => {
+      sending = session.current.handleSendPress(textMessage);
+    });
+    await waitFor(() => expect(engine.completion).toHaveBeenCalledTimes(1));
+    await session.current.handleStopPress();
+    await act(async () => {
+      completions[0].finish({interrupted: true});
+      await sending;
+    });
+    return persistedTurn();
+  }
+
+  async function stopBeforeStart() {
+    const {engine} = installEngine();
+    let releaseSettings!: () => void;
+    (
+      chatSessionStore.getCurrentCompletionSettings as jest.Mock
+    ).mockImplementationOnce(
+      () =>
+        new Promise(resolve => {
+          releaseSettings = () => resolve({});
+        }),
+    );
+    const session = renderSession();
+    let sending!: Promise<void>;
+    await act(async () => {
+      sending = session.current.handleSendPress(textMessage);
+    });
+    await waitFor(() => expect(releaseSettings).toBeDefined());
+    await session.current.handleStopPress();
+    await act(async () => {
+      releaseSettings();
+      await sending;
+    });
+    expect(engine.completion).not.toHaveBeenCalled();
+    return persistedTurn();
+  }
+
+  it('a Stop before the completion starts leaves the same turn as a Stop in prefill, and the next prompt alternates', async () => {
+    const inPrefill = await stopInPrefill();
+    jest.clearAllMocks();
+    const beforeStart = await stopBeforeStart();
+
+    expect(inPrefill.steps).toEqual([{partial: false}]);
+    expect(beforeStart.steps).toEqual(inPrefill.steps);
+    expect(beforeStart.metadata?.copyable).toBe(true);
+    expect(nextPromptRoles(inPrefill)).toEqual(['user', 'assistant', 'user']);
+    expect(nextPromptRoles(beforeStart)).toEqual(['user', 'assistant', 'user']);
   });
 });

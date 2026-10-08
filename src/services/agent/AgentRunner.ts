@@ -283,9 +283,6 @@ export async function* runAgent(
 
   try {
     while (turn < maxTurns || forceFinal) {
-      if (signal?.aborted) {
-        break;
-      }
       const isForcedFinal = forceFinal;
 
       yield {type: 'step_started', turn, isFollowUp: turn > 0};
