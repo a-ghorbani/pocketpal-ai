@@ -14,7 +14,10 @@ import {
   GoogleSignin,
   statusCodes,
 } from '@react-native-google-signin/google-signin';
-import {appleAuth} from '@invertase/react-native-apple-authentication';
+import {
+  appleAuth,
+  type AppleRequestResponseFullName,
+} from '@invertase/react-native-apple-authentication';
 
 export interface Profile {
   id: string;
@@ -316,7 +319,7 @@ class AuthService {
         return;
       }
 
-      const {error} = await supabase!.auth.signInWithIdToken({
+      const {data, error} = await supabase!.auth.signInWithIdToken({
         provider: 'apple',
         token: response.identityToken,
         nonce: response.nonce,
@@ -327,7 +330,10 @@ class AuthService {
           this.error = error.message;
         });
         console.error('Supabase Apple sign-in error:', error);
+        return;
       }
+
+      await this.storeFirstAppleName(data.user.id, response.fullName);
     } catch (error: any) {
       const errorMessage =
         error?.code === appleAuth.Error.CANCELED
@@ -342,6 +348,38 @@ class AuthService {
         this.isLoading = false;
       });
     }
+  }
+
+  private async storeFirstAppleName(
+    userId: string,
+    appleName: AppleRequestResponseFullName | null,
+  ) {
+    const fullName = [appleName?.givenName, appleName?.familyName]
+      .map(part => part?.trim())
+      .filter(Boolean)
+      .join(' ');
+    const hasStoredName =
+      this.profile?.id === userId && !!this.profile.full_name;
+    if (!fullName || hasStoredName) {
+      return;
+    }
+
+    const results = await Promise.allSettled([
+      supabase!.auth.updateUser({data: {full_name: fullName}}),
+      supabase!
+        .from('profiles')
+        .update({full_name: fullName, updated_at: new Date().toISOString()})
+        .eq('id', userId),
+    ]);
+    results.forEach(result => {
+      const failure =
+        result.status === 'rejected' ? result.reason : result.value.error;
+      if (failure) {
+        console.error('Error storing Apple name:', failure);
+      }
+    });
+
+    await this.loadUserProfile(userId);
   }
 
   async signInWithEmail(email: string, password: string): Promise<boolean> {
