@@ -40,11 +40,6 @@ const mockAuthService = {
     success: true,
   }),
 
-  updateProfile: jest.fn().mockResolvedValue({
-    success: true,
-    profile: mockProfile,
-  }),
-
   deleteAccount: jest.fn().mockResolvedValue({
     success: true,
   }),

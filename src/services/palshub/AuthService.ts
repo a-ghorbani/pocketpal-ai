@@ -544,54 +544,6 @@ class AuthService {
     }
   }
 
-  async updateProfile(updates: Partial<Profile>) {
-    if (!this.user) {
-      runInAction(() => {
-        this.error = 'User not authenticated';
-      });
-      return;
-    }
-
-    if (!this.isSupabaseConfigured()) {
-      runInAction(() => {
-        this.error = 'Authentication not configured';
-      });
-      return;
-    }
-
-    try {
-      runInAction(() => {
-        this.isLoading = true;
-        this.error = null;
-      });
-
-      const {error} = await supabase!.from('profiles').upsert({
-        id: this.user.id,
-        ...updates,
-        updated_at: new Date().toISOString(),
-      });
-
-      if (error) {
-        runInAction(() => {
-          this.error = error.message;
-        });
-        console.error('Profile update error:', error);
-      } else {
-        // Reload profile
-        await this.loadUserProfile(this.user.id);
-      }
-    } catch (error) {
-      runInAction(() => {
-        this.error = 'Failed to update profile';
-      });
-      console.error('Profile update error:', error);
-    } finally {
-      runInAction(() => {
-        this.isLoading = false;
-      });
-    }
-  }
-
   clearError() {
     runInAction(() => {
       this.error = null;
