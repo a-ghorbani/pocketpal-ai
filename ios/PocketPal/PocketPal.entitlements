@@ -40,5 +40,10 @@
 	-->
 	<key>com.apple.developer.kernel.extended-virtual-addressing</key>
 	<true/>
+
+	<key>com.apple.developer.applesignin</key>
+	<array>
+		<string>Default</string>
+	</array>
 </dict>
 </plist>
