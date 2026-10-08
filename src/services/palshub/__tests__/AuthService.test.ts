@@ -106,3 +106,132 @@ describe('AuthService.signOut', () => {
     expect(deletePal).not.toHaveBeenCalled();
   });
 });
+
+describe('AuthService.signInWithApple', () => {
+  const appleResponse = {
+    identityToken: 'apple-id-token',
+    nonce: 'raw-nonce',
+    fullName: null,
+  };
+
+  const setup = ({
+    env,
+    signInResult = {data: {user: {id: 'u1'}}, error: null},
+  }: {
+    env?: Record<string, string>;
+    signInResult?: {data: any; error: any};
+  } = {}) => {
+    jest.resetModules();
+    jest.spyOn(console, 'error').mockImplementation(() => {});
+
+    if (env) {
+      jest.doMock('@env', () => env);
+    }
+
+    const signInWithIdToken = jest.fn().mockResolvedValue(signInResult);
+    jest.doMock('../supabase', () => ({
+      supabase: {
+        auth: {
+          onAuthStateChange: jest.fn(),
+          getSession: jest
+            .fn()
+            .mockResolvedValue({data: {session: null}, error: null}),
+          signInWithIdToken,
+        },
+      },
+    }));
+
+    const {appleAuth} = require('@invertase/react-native-apple-authentication');
+    const {authService} = require('../AuthService');
+    return {authService, appleAuth, signInWithIdToken};
+  };
+
+  afterEach(() => {
+    jest.restoreAllMocks();
+    jest.dontMock('@env');
+  });
+
+  it('requests email and name and sends the raw nonce to Supabase', async () => {
+    const {authService, appleAuth, signInWithIdToken} = setup();
+    appleAuth.performRequest.mockResolvedValue(appleResponse);
+
+    await authService.signInWithApple();
+
+    expect(appleAuth.performRequest).toHaveBeenCalledWith({
+      requestedOperation: appleAuth.Operation.LOGIN,
+      requestedScopes: [appleAuth.Scope.EMAIL, appleAuth.Scope.FULL_NAME],
+    });
+    expect(signInWithIdToken).toHaveBeenCalledWith({
+      provider: 'apple',
+      token: 'apple-id-token',
+      nonce: 'raw-nonce',
+    });
+    expect(authService.error).toBeNull();
+    expect(authService.isLoading).toBe(false);
+  });
+
+  it('reports a cancelled Apple sheet without calling Supabase', async () => {
+    const {authService, appleAuth, signInWithIdToken} = setup();
+    appleAuth.performRequest.mockRejectedValue({code: '1001'});
+
+    await authService.signInWithApple();
+
+    expect(signInWithIdToken).not.toHaveBeenCalled();
+    expect(authService.error).toBe('Sign-in was cancelled');
+    expect(authService.isAuthenticated).toBe(false);
+    expect(authService.isLoading).toBe(false);
+  });
+
+  it('reports other Apple failures generically', async () => {
+    const {authService, appleAuth, signInWithIdToken} = setup();
+    appleAuth.performRequest.mockRejectedValue({code: '1000'});
+
+    await authService.signInWithApple();
+
+    expect(signInWithIdToken).not.toHaveBeenCalled();
+    expect(authService.error).toBe('Failed to sign in with Apple');
+    expect(authService.isLoading).toBe(false);
+  });
+
+  it('reports a missing identity token without calling Supabase', async () => {
+    const {authService, appleAuth, signInWithIdToken} = setup();
+    appleAuth.performRequest.mockResolvedValue({
+      ...appleResponse,
+      identityToken: null,
+    });
+
+    await authService.signInWithApple();
+
+    expect(signInWithIdToken).not.toHaveBeenCalled();
+    expect(authService.error).toBe('No ID token received from Apple');
+    expect(authService.isLoading).toBe(false);
+  });
+
+  it('surfaces the Supabase error when the token is rejected', async () => {
+    const {authService, appleAuth} = setup({
+      signInResult: {
+        data: {user: null},
+        error: {message: 'Nonces mismatch'},
+      },
+    });
+    appleAuth.performRequest.mockResolvedValue(appleResponse);
+
+    await authService.signInWithApple();
+
+    expect(authService.error).toBe('Nonces mismatch');
+    expect(authService.isAuthenticated).toBe(false);
+    expect(authService.isLoading).toBe(false);
+  });
+
+  it('does nothing but report when Supabase is not configured', async () => {
+    const {authService, appleAuth, signInWithIdToken} = setup({
+      env: {SUPABASE_URL: '', SUPABASE_ANON_KEY: ''},
+    });
+
+    await authService.signInWithApple();
+
+    expect(appleAuth.performRequest).not.toHaveBeenCalled();
+    expect(signInWithIdToken).not.toHaveBeenCalled();
+    expect(authService.error).toBe('Authentication not configured');
+  });
+});

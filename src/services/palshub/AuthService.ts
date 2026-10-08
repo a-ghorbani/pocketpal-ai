@@ -14,6 +14,7 @@ import {
   GoogleSignin,
   statusCodes,
 } from '@react-native-google-signin/google-signin';
+import {appleAuth} from '@invertase/react-native-apple-authentication';
 
 export interface Profile {
   id: string;
@@ -281,6 +282,61 @@ class AuthService {
         this.error = errorMessage;
       });
       console.error('Google sign-in error:', error);
+    } finally {
+      runInAction(() => {
+        this.isLoading = false;
+      });
+    }
+  }
+
+  async signInWithApple() {
+    if (!this.isSupabaseConfigured()) {
+      runInAction(() => {
+        this.error = 'Authentication not configured';
+      });
+      return;
+    }
+
+    try {
+      runInAction(() => {
+        this.isLoading = true;
+        this.error = null;
+      });
+
+      const response = await appleAuth.performRequest({
+        requestedOperation: appleAuth.Operation.LOGIN,
+        requestedScopes: [appleAuth.Scope.EMAIL, appleAuth.Scope.FULL_NAME],
+      });
+
+      if (!response.identityToken) {
+        runInAction(() => {
+          this.error = 'No ID token received from Apple';
+        });
+        console.error('No ID token present in Apple sign-in response');
+        return;
+      }
+
+      const {error} = await supabase!.auth.signInWithIdToken({
+        provider: 'apple',
+        token: response.identityToken,
+        nonce: response.nonce,
+      });
+
+      if (error) {
+        runInAction(() => {
+          this.error = error.message;
+        });
+        console.error('Supabase Apple sign-in error:', error);
+      }
+    } catch (error: any) {
+      const errorMessage =
+        error?.code === appleAuth.Error.CANCELED
+          ? 'Sign-in was cancelled'
+          : 'Failed to sign in with Apple';
+      runInAction(() => {
+        this.error = errorMessage;
+      });
+      console.error('Apple sign-in error:', error);
     } finally {
       runInAction(() => {
         this.isLoading = false;
