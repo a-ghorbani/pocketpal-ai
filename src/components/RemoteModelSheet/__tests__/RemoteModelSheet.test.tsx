@@ -9,8 +9,37 @@ import {fetchModels, fetchModelsWithHeaders} from '../../../api/openai';
 import {detectServerType} from '../../../api/servers/detect';
 import {routerModelsBody} from '../../../../jest/fixtures/remoteModelList';
 import type {ServerType} from '../../../utils/serverTypes';
+import {useTheme} from '../../../hooks/useTheme';
+import {themeFixtures} from '../../../../jest/fixtures/theme';
 
 const mockedFetchModels = fetchModels as jest.Mock;
+
+const rgb = (hex: string) =>
+  [1, 3, 5].map(i => parseInt(hex.slice(i, i + 2), 16));
+const blend = (fg: string, bg: string, alpha: number) => {
+  const [f, b] = [rgb(fg), rgb(bg)];
+  return (
+    '#' +
+    f
+      .map((v, i) =>
+        Math.round(v * alpha + b[i] * (1 - alpha))
+          .toString(16)
+          .padStart(2, '0'),
+      )
+      .join('')
+  );
+};
+const luminance = (hex: string) => {
+  const [r, g, b] = rgb(hex).map(v => {
+    const c = v / 255;
+    return c <= 0.03928 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4;
+  });
+  return 0.2126 * r + 0.7152 * g + 0.0722 * b;
+};
+const contrast = (a: string, b: string) => {
+  const [hi, lo] = [luminance(a), luminance(b)].sort((x, y) => y - x);
+  return (hi + 0.05) / (lo + 0.05);
+};
 const mockedFetchModelsWithHeaders = fetchModelsWithHeaders as jest.Mock;
 const mockedDetectServerType = detectServerType as jest.Mock;
 
@@ -703,7 +732,7 @@ describe('RemoteModelSheet', () => {
       const view = await openRouter([row('added', 'loaded')]);
       const select = view.getByTestId('router-select-added');
 
-      expect(opacityOf(select)).toBe(0.5);
+      expect(opacityOf(select)).toBeLessThan(1);
       expect(view.queryByText(l10n.en.settings.alreadyAdded)).toBeNull();
       expect(
         within(select).UNSAFE_getByProps({value: 'added'}).props.status,
@@ -716,13 +745,57 @@ describe('RemoteModelSheet', () => {
       ).toBe(false);
     });
 
+    it.each([
+      ['light', themeFixtures.lightTheme],
+      ['dark', themeFixtures.darkTheme],
+    ])(
+      'keeps a dimmed radio and name at 3:1 or more in the %s theme',
+      async (_mode, theme) => {
+        (useTheme as jest.Mock).mockReturnValue(theme);
+        serverStore.userSelectedModels = [
+          {serverId: ROUTER, remoteModelId: 'added'},
+        ];
+        const view = await openRouter([
+          row('added', 'loaded'),
+          row('m', 'downloading'),
+        ]);
+
+        for (const id of ['added', 'm']) {
+          const select = view.getByTestId(`router-select-${id}`);
+          const radio = within(select).UNSAFE_getByProps({value: id});
+          const name = within(select).getByText(id);
+          const radioColor =
+            radio.props.status === 'checked'
+              ? theme.colors.primary
+              : radio.props.uncheckedColor;
+          const ratios = [
+            radioColor,
+            StyleSheet.flatten(name.props.style).color,
+          ].map(fg =>
+            contrast(
+              blend(fg, theme.colors.background, opacityOf(select)),
+              theme.colors.background,
+            ),
+          );
+
+          expect(radio.props.disabled).toBeFalsy();
+          expect(Math.min(...ratios)).toBeGreaterThanOrEqual(3);
+          expect(select.props.accessibilityState).toEqual({
+            checked: id === 'added',
+            disabled: true,
+          });
+        }
+        (useTheme as jest.Mock).mockReturnValue(themeFixtures.lightTheme);
+      },
+    );
+
     it('dims a row another client is downloading and does not select it', async () => {
       const view = await openRouter([row('m', 'downloading')]);
       const select = view.getByTestId('router-select-m');
 
       fireEvent.press(select);
 
-      expect(opacityOf(select)).toBe(0.5);
+      expect(opacityOf(select)).toBeLessThan(1);
       expect(within(select).UNSAFE_getByProps({value: 'm'}).props.status).toBe(
         'unchecked',
       );

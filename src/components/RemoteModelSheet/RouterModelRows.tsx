@@ -158,36 +158,46 @@ export const RouterModelRows: React.FC<RouterModelRowsProps> = observer(
         }
       };
       const failure = record?.failure;
+      const checked = alreadyAdded || selectedModelId === model.id;
+      const vision = supportsVision(model);
       return (
         <View key={model.id} testID={`router-row-${model.id}`}>
           <View style={styles.routerRow}>
             <TouchableOpacity
               testID={`router-select-${model.id}`}
+              accessible
+              accessibilityRole="radio"
+              accessibilityState={{checked, disabled: !selectable}}
+              accessibilityLabel={
+                vision
+                  ? `${model.id}, ${l10n.models.modelCard.labels.vision}`
+                  : model.id
+              }
               activeOpacity={selectable ? 0.6 : 1}
               style={[
                 styles.modelRow,
                 styles.routerSelect,
-                !selectable && styles.modelRowDisabled,
+                !selectable && styles.routerRowDimmed,
               ]}
               onPress={select}>
-              <RadioButton
-                value={model.id}
-                status={
-                  alreadyAdded || selectedModelId === model.id
-                    ? 'checked'
-                    : 'unchecked'
-                }
-                onPress={select}
-                disabled={!selectable}
-                uncheckedColor={theme.colors.onSurfaceVariant}
-              />
+              <View pointerEvents="none">
+                <RadioButton
+                  value={model.id}
+                  status={checked ? 'checked' : 'unchecked'}
+                  uncheckedColor={
+                    selectable
+                      ? theme.colors.onSurfaceVariant
+                      : theme.colors.onSurface
+                  }
+                />
+              </View>
               <Text
                 style={styles.modelName}
                 numberOfLines={1}
                 ellipsizeMode="middle">
                 {model.id}
               </Text>
-              {supportsVision(model) && (
+              {vision && (
                 <View
                   style={styles.routerVision}
                   testID={`router-vision-${model.id}`}

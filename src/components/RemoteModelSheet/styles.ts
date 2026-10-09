@@ -170,6 +170,9 @@ export const createStyles = (theme: Theme) => {
     addButton: {
       flex: 1,
     },
+    routerRowDimmed: {
+      opacity: 0.6,
+    },
     routerRow: {
       flexDirection: 'row',
       alignItems: 'center',
