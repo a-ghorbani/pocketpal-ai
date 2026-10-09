@@ -55,6 +55,7 @@ import {getModelMemoryRequirement} from '../../utils/memoryEstimator';
 import {CONTEXT_LADDER} from '../../utils/bannerVariantResolver';
 
 import {chatSessionStore, modelStore} from '../../store';
+import type {UndoneSend} from '../../hooks/useChatSession';
 
 import {MessageType, User} from '../../utils/types';
 import {Pal} from '../../types/pal';
@@ -112,11 +113,17 @@ const animate = () => {
   LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
 };
 
+const prependText = (first: string, rest: string) =>
+  rest ? `${first}\n${rest}` : first;
+
 dayjs.extend(calendar);
 
 export type ChatTopLevelProps = ChatInputTopLevelProps & MessageTopLevelProps;
 
-export interface ChatProps extends ChatTopLevelProps {
+export interface ChatProps extends Omit<ChatTopLevelProps, 'onSendPress'> {
+  onSendPress: (
+    message: MessageType.PartialText,
+  ) => Promise<UndoneSend | undefined> | void;
   /** If {@link ChatProps.dateFormat} and/or {@link ChatProps.timeFormat} is not enough to
    * customize date headers in your case, use this to return an arbitrary
    * string based on a `dateTime` of a particular message. Can be helpful to
@@ -511,19 +518,41 @@ export const ChatView = observer(
     const previousChatMessages = usePrevious(chatMessages);
 
     // ============ MESSAGE INPUT HANDLERS ============
+    const restoreUndone = React.useCallback(
+      ({message, sessionId}: UndoneSend) => {
+        if (!chatSessionStore.sessions.some(s => s.id === sessionId)) {
+          return;
+        }
+        if (sessionId === chatSessionStore.activeSessionId) {
+          setInputText(prev => prependText(message.text, prev));
+          setInputImages(prev => [...(message.imageUris ?? []), ...prev]);
+        } else {
+          chatSessionStore.saveDraft(
+            sessionId,
+            prependText(message.text, chatSessionStore.getDraft(sessionId)),
+          );
+        }
+      },
+      [],
+    );
+
     const wrappedOnSendPress = React.useCallback(
       async (message: MessageType.PartialText) => {
         if (chatSessionStore.isEditMode) {
           await chatSessionStore.commitEdit();
         }
-        onSendPress(message);
+        const sent = onSendPress(message);
         setInputText('');
         if (chatSessionStore.activeSessionId) {
           chatSessionStore.clearDraft(chatSessionStore.activeSessionId);
         }
         Keyboard.dismiss();
+        const undone = await sent;
+        if (undone) {
+          restoreUndone(undone);
+        }
       },
-      [onSendPress],
+      [onSendPress, restoreUndone],
     );
 
     const handleCancelEdit = React.useCallback(() => {
