@@ -1,4 +1,4 @@
-import {routerFailureLabel} from '../routerCopy';
+import {routerFailureLabel, routerFailureMessage} from '../routerCopy';
 import {l10n} from '../../locales';
 
 const en = l10n.en;
@@ -22,5 +22,19 @@ describe('routerFailureLabel', () => {
     ] as const;
     const sentences = causes.map(cause => routerFailureLabel(cause, en));
     expect(new Set(sentences).size).toBe(causes.length);
+  });
+});
+
+describe('routerFailureMessage', () => {
+  it('sets the server words apart on their own line, quoted', () => {
+    expect(routerFailureMessage('load-failed', 'out of memory', en)).toBe(
+      `${en.settings.routerModels.loadFailed}\n“out of memory”`,
+    );
+  });
+
+  it('is the app sentence alone without server words', () => {
+    expect(routerFailureMessage('load-failed', undefined, en)).toBe(
+      en.settings.routerModels.loadFailed,
+    );
   });
 });

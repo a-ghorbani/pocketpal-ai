@@ -1,4 +1,5 @@
 import {LlamaContext} from 'llama.rn';
+import {AccessibilityInfo} from 'react-native';
 import {renderHook, act, waitFor} from '@testing-library/react-native';
 import {runInAction} from 'mobx';
 
@@ -12,6 +13,7 @@ import {
 } from '../../../jest/fixtures/models';
 
 import {useChatSession} from '../useChatSession';
+import {chatSessionRepository} from '../../repositories/ChatSessionRepository';
 import {isReadUrlAllowed} from '../../services/talents';
 
 import {
@@ -156,46 +158,277 @@ describe('useChatSession', () => {
     );
   });
 
-  describe('a remote model that never became ready', () => {
+  describe('a router turn that ends before its request', () => {
+    type Row = {id: string; type: string; [key: string]: unknown};
+    type Session = {id: string; title: string; messages: Row[]};
+    let sessions: Session[];
+    let nextId: number;
+    const deleteMessage = jest.spyOn(chatSessionRepository, 'deleteMessage');
+    const announce = jest.spyOn(AccessibilityInfo, 'announceForAccessibility');
+    const addToCurrent =
+      chatSessionStore.addMessageToCurrentSession as jest.Mock;
+
+    const activeSession = () =>
+      sessions.find(s => s.id === chatSessionStore.activeSessionId);
+    const userRow = (id: string, text: string): Row => ({
+      id,
+      type: 'text',
+      text,
+      author: textMessage.author,
+      createdAt: 0,
+    });
+    const assistantRow = (id: string, text: string): Row => ({
+      id,
+      type: 'text',
+      text,
+      author: assistant,
+      createdAt: 0,
+    });
+
     const failWith = (error: Error) => {
-      if (modelStore.context) {
-        modelStore.context.completion = jest.fn().mockRejectedValueOnce(error);
-      }
+      modelStore.context!.completion = jest.fn().mockRejectedValueOnce(error);
     };
-    const systemMessages = () =>
-      (chatSessionStore.addMessageToCurrentSession as jest.Mock).mock.calls
-        .map(([message]) => message)
-        .filter(message => message.metadata?.system);
-
-    const send = async () => {
-      const {result} = renderHook(() =>
-        useChatSession({current: null}, textMessage.author, mockAssistant),
+    const failWhenReleased = () => {
+      let release!: (error: Error) => void;
+      modelStore.context!.completion = jest.fn(
+        () => new Promise((_resolve, reject) => (release = reject)),
       );
+      return (error: Error) => release(error);
+    };
+    const renderSession = (ref = {current: null}) =>
+      renderHook(() => useChatSession(ref, textMessage.author, mockAssistant))
+        .result;
+    const send = async (result = renderSession()) => {
+      let undone: unknown;
       await act(async () => {
-        await result.current.handleSendPress(textMessage);
+        undone = await result.current.handleSendPress(textMessage);
       });
+      return undone;
     };
 
-    it('adds nothing when the user cancelled the load', async () => {
+    beforeEach(() => {
+      nextId = 0;
+      sessions = [{id: 'S', title: 'text', messages: []}];
+      chatSessionStore.sessions = sessions as any;
+      chatSessionStore.activeSessionId = 'S';
+      addToCurrent.mockImplementation(async (message: Row) => {
+        message.id = `row-${++nextId}`;
+        if (!activeSession()) {
+          sessions.push({id: 'N', title: 'New Session', messages: []});
+          chatSessionStore.activeSessionId = 'N';
+        }
+        activeSession()!.messages.unshift(message);
+      });
+      deleteMessage.mockResolvedValue(undefined);
+    });
+
+    afterEach(() => {
+      addToCurrent.mockResolvedValue(undefined);
+      deleteMessage.mockReset();
+      Object.defineProperty(chatSessionStore, 'currentSessionMessages', {
+        get: jest.fn(() => []),
+        configurable: true,
+      });
+    });
+
+    it('removes its user and assistant rows and hands the input back', async () => {
+      failWith(new RemoteModelRequestWithdrawnError());
+
+      const undone = await send();
+
+      expect(deleteMessage.mock.calls.map(([id]) => id).sort()).toEqual([
+        'row-1',
+        'row-2',
+      ]);
+      expect(sessions[0].messages).toEqual([]);
+      expect(undone).toEqual({message: textMessage, sessionId: 'S'});
+      expect(chatSessionStore.addMessageToSession).not.toHaveBeenCalled();
+      expect(
+        addToCurrent.mock.calls.filter(([m]) => m.metadata?.system),
+      ).toEqual([]);
+      expect(modelStore.inferencing).toBe(false);
+    });
+
+    it('resets the title of a chat the send created', async () => {
+      sessions = [];
+      chatSessionStore.sessions = sessions as any;
+      chatSessionStore.activeSessionId = null as any;
+      failWith(new RemoteModelRequestWithdrawnError());
+
+      const undone = await send();
+
+      expect(
+        chatSessionStore.updateSessionTitleBySessionId,
+      ).toHaveBeenCalledWith('N', 'New Session');
+      expect(sessions[0].messages).toEqual([]);
+      expect(undone).toEqual({message: textMessage, sessionId: 'N'});
+    });
+
+    it('keeps the title of a chat that already existed', async () => {
       failWith(new RemoteModelRequestWithdrawnError());
 
       await send();
 
-      expect(systemMessages()).toEqual([]);
+      expect(
+        chatSessionStore.updateSessionTitleBySessionId,
+      ).not.toHaveBeenCalled();
     });
 
-    it("adds one message with the app's sentence for the cause", async () => {
+    it('sends alternating roles when the same text is sent again', async () => {
+      sessions[0].messages = [
+        assistantRow('a1', 'hi there'),
+        userRow('u1', 'hello'),
+      ];
+      Object.defineProperty(chatSessionStore, 'currentSessionMessages', {
+        get: jest.fn(() => [...sessions[0].messages]),
+        configurable: true,
+      });
+      const requests: Array<Array<{role: string; content: unknown}>> = [];
+      const completion = modelStore.engine!.completion;
+      modelStore.engine!.completion = jest.fn((params, onData) => {
+        requests.push(params.messages!.map(m => ({...m})) as any);
+        return completion(params, onData);
+      });
+      const result = renderSession();
+      failWith(new RemoteModelRequestWithdrawnError());
+      await send(result);
+
+      await send(result);
+
+      const resent = requests[1].filter(m => m.role !== 'system');
+      expect(resent.map(m => m.role)).toEqual(['user', 'assistant', 'user']);
+      expect(resent[2].content).toBe(textMessage.text);
+    });
+
+    it('keeps Send blocked until the user row is deleted', async () => {
+      const atDelete: Array<{inferencing: boolean; generatingEnded: boolean}> =
+        [];
+      deleteMessage.mockImplementation(async () => {
+        atDelete.push({
+          inferencing: modelStore.inferencing,
+          generatingEnded: (
+            chatSessionStore.setIsGenerating as jest.Mock
+          ).mock.calls.some(([value]) => value === false),
+        });
+      });
+      failWith(new RemoteModelRequestWithdrawnError());
+
+      await send();
+
+      expect(atDelete).toHaveLength(2);
+      expect(atDelete).toEqual(
+        atDelete.map(() => ({inferencing: true, generatingEnded: false})),
+      );
+      expect(modelStore.inferencing).toBe(false);
+    });
+
+    it('ends the run even when the undo fails', async () => {
+      sessions = [];
+      chatSessionStore.sessions = sessions as any;
+      chatSessionStore.activeSessionId = null as any;
+      deleteMessage.mockRejectedValue(new Error('db locked'));
+      (
+        chatSessionStore.updateSessionTitleBySessionId as jest.Mock
+      ).mockRejectedValueOnce(new Error('db locked'));
+      failWith(new RemoteModelRequestWithdrawnError());
+      const result = renderSession();
+
+      await act(async () => {
+        await result.current.handleSendPress(textMessage).catch(() => {});
+      });
+
+      expect(modelStore.inferencing).toBe(false);
+      expect(
+        (chatSessionStore.setIsGenerating as jest.Mock).mock.calls.at(-1),
+      ).toEqual([false]);
+    });
+
+    it('deletes its own rows when a later send replaced the shared message info', async () => {
+      const ref: {current: any} = {current: null};
+      const result = renderSession(ref);
+      const release = failWhenReleased();
+      let sending!: Promise<unknown>;
+      act(() => {
+        sending = result.current.handleSendPress(textMessage);
+      });
+      await waitFor(() => expect(ref.current).not.toBeNull());
+
+      ref.current = {createdAt: 0, id: 'other-turn', sessionId: 'T'};
+      await act(async () => {
+        release(new RemoteModelRequestWithdrawnError());
+        await sending;
+      });
+
+      expect(deleteMessage.mock.calls.map(([id]) => id).sort()).toEqual([
+        'row-1',
+        'row-2',
+      ]);
+    });
+
+    it('keeps a turn that already has step content and undoes nothing', async () => {
+      modelStore.context!.completion = jest.fn(async () => {
+        const turn = sessions[0].messages.find(
+          m => m.type === 'assistant_turn',
+        )!;
+        turn.steps = [{content: 'partial', toolCalls: []}];
+        throw new RemoteModelRequestWithdrawnError();
+      });
+
+      const undone = await send();
+
+      expect(undone).toBeUndefined();
+      expect(deleteMessage).not.toHaveBeenCalled();
+      expect(chatSessionStore.updateMessage).toHaveBeenCalledWith(
+        'row-2',
+        'S',
+        expect.objectContaining({
+          metadata: expect.objectContaining({interrupted: true}),
+        }),
+      );
+      expect(sessions[0].messages.map(m => m.id)).toEqual(['row-2', 'row-1']);
+    });
+
+    it("adds one message to the turn's chat with the server words set apart", async () => {
+      const release = failWhenReleased();
+      const result = renderSession();
+      let sending!: Promise<unknown>;
+      act(() => {
+        sending = result.current.handleSendPress(textMessage);
+      });
+      await waitFor(() => expect(sessions[0].messages).toHaveLength(2));
+
+      chatSessionStore.activeSessionId = 'T';
+      await act(async () => {
+        release(new RemoteModelNotReadyError('load-failed', 'out of memory'));
+        await sending;
+      });
+
+      const text = `${l10n.en.settings.routerModels.loadFailed}\n“out of memory”`;
+      expect(chatSessionStore.addMessageToSession).toHaveBeenCalledTimes(1);
+      expect(chatSessionStore.addMessageToSession).toHaveBeenCalledWith(
+        'S',
+        expect.objectContaining({text, metadata: {system: true}}),
+      );
+      expect(
+        addToCurrent.mock.calls.filter(([m]) => m.metadata?.system),
+      ).toEqual([]);
+      expect(announce).toHaveBeenCalledTimes(1);
+      expect(announce).toHaveBeenCalledWith(text);
+      expect(sessions[0].messages.map(m => m.id)).toEqual(['row-1']);
+    });
+
+    it("adds the app's sentence alone when the server gave no words", async () => {
       const error = new RemoteModelNotReadyError('server-unreachable');
       failWith(error);
 
       await send();
 
-      const messages = systemMessages();
-      expect(messages).toHaveLength(1);
-      expect(messages[0].text).toBe(
-        l10n.en.settings.routerModels.serverUnreachable,
+      expect(chatSessionStore.addMessageToSession).toHaveBeenCalledWith(
+        'S',
+        expect.objectContaining({
+          text: l10n.en.settings.routerModels.serverUnreachable,
+        }),
       );
-      expect(messages[0].text).not.toContain(error.message);
     });
   });
 
