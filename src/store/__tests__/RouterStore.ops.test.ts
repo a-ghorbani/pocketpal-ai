@@ -767,6 +767,29 @@ describe('ensureReady', () => {
     }
   });
 
+  it.each([
+    ['a refused request', 'out of memory', 'out of memory'],
+    ['an exit code alone', undefined, undefined],
+  ])(
+    'carries the server words of %s on a failure',
+    async (_label, reason, serverMessage) => {
+      jest.spyOn(store as any, 'acquire').mockResolvedValueOnce({
+        outcome: 'failed',
+        record: {
+          reason,
+          failure: {cause: 'load-failed', message: 'exit code 1'},
+        },
+      });
+
+      const error = await store
+        .ensureReady(binding(), new AbortController().signal)
+        .catch(e => e);
+
+      expect(error).toBeInstanceOf(RemoteModelNotReadyError);
+      expect(error.serverMessage).toBe(serverMessage);
+    },
+  );
+
   it.each(['ready', 'not-router', 'stopped'])(
     'resolves a %s wait',
     async outcome => {

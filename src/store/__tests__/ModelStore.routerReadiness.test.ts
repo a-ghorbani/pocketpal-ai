@@ -4,6 +4,7 @@ import {routerStore} from '../RouterStore';
 import {OpenAICompletionEngine} from '../../api/completionEngines';
 import {streamChatCompletion} from '../../api/openai';
 import type {ServerType} from '../../utils/serverTypes';
+import {RemoteModelRequestWithdrawnError} from '../../utils/errors';
 
 jest.mock('../ServerStore', () => ({
   serverStore: {
@@ -141,7 +142,9 @@ describe('remote model readiness', () => {
 
     await modelStore.setRemoteModel(remoteModel('beta'));
 
-    await expect(waiting).resolves.toMatchObject({interrupted: true});
+    await expect(waiting).rejects.toBeInstanceOf(
+      RemoteModelRequestWithdrawnError,
+    );
     expect(mockedStream).not.toHaveBeenCalled();
     expect(mockedEnsureLoaded).toHaveBeenLastCalledWith('server-1', 'beta');
     expect(routerStore.cancel).not.toHaveBeenCalled();

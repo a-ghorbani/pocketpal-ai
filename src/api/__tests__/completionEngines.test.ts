@@ -6,6 +6,7 @@ import {
 } from '../completionEngines';
 import * as openaiModule from '../openai';
 import type {RemoteEndpoint} from '../servers';
+import {RemoteModelRequestWithdrawnError} from '../../utils/errors';
 
 jest.mock('../openai', () => ({
   streamChatCompletion: jest.fn(),
@@ -447,7 +448,7 @@ describe('OpenAICompletionEngine readiness', () => {
     );
   });
 
-  it('resolves interrupted with no request when stopped while waiting', async () => {
+  it('rejects as withdrawn with no request when stopped while waiting', async () => {
     let signal!: AbortSignal;
     const engine = new OpenAICompletionEngine(ENDPOINT, {
       ensureReady: s =>
@@ -461,12 +462,9 @@ describe('OpenAICompletionEngine readiness', () => {
     await Promise.resolve();
     await engine.stopCompletion();
 
-    await expect(pending).resolves.toEqual({
-      text: '',
-      content: '',
-      interrupted: true,
-      tokens_predicted: 0,
-    });
+    await expect(pending).rejects.toBeInstanceOf(
+      RemoteModelRequestWithdrawnError,
+    );
     expect(signal.aborted).toBe(true);
     expect(mockedStreamChat).not.toHaveBeenCalled();
   });

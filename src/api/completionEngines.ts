@@ -10,6 +10,7 @@ import {
   CompletionStreamData,
   normaliseTimings,
 } from '../utils/completionTypes';
+import {RemoteModelRequestWithdrawnError} from '../utils/errors';
 
 export class LocalCompletionEngine implements CompletionEngine {
   constructor(private context: LlamaContext) {}
@@ -83,7 +84,7 @@ export class OpenAICompletionEngine implements CompletionEngine {
     if (this.options.ensureReady) {
       await this.options.ensureReady(controller.signal);
       if (controller.signal.aborted) {
-        return {text: '', content: '', interrupted: true, tokens_predicted: 0};
+        throw new RemoteModelRequestWithdrawnError();
       }
     }
 

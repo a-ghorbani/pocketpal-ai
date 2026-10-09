@@ -40,16 +40,19 @@ export class RemoteModelRequestWithdrawnError extends Error {
 }
 
 /**
- * The remote model never became ready. Carries only the cause, so a surface
- * shows the app's own sentence for it and never the server's words.
+ * The remote model never became ready. `serverMessage` holds only the
+ * server's own bounded words, so a surface can set them apart from the app's
+ * sentence for the cause.
  */
 export class RemoteModelNotReadyError extends Error {
   readonly cause: RouterFailure['cause'];
+  readonly serverMessage?: string;
 
-  constructor(cause: RouterFailure['cause']) {
+  constructor(cause: RouterFailure['cause'], serverMessage?: string) {
     super(`Remote model not ready: ${cause}`);
     this.name = 'RemoteModelNotReadyError';
     this.cause = cause;
+    this.serverMessage = serverMessage;
   }
 }
 
