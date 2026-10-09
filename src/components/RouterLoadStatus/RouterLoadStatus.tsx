@@ -38,13 +38,6 @@ export const RouterLoadStatus: React.FC = observer(() => {
     return null;
   }
   const {remoteModelId: model, fraction} = load;
-  const label =
-    fraction === undefined
-      ? t(l10n.chat.routerLoading, {model})
-      : t(l10n.chat.routerLoadingPercent, {
-          model,
-          percent: Math.round(fraction * 100),
-        });
 
   return (
     <View
@@ -56,9 +49,23 @@ export const RouterLoadStatus: React.FC = observer(() => {
         <Text
           variant="bodyMedium"
           style={styles.label}
+          numberOfLines={1}
+          ellipsizeMode="middle"
           testID="chat-router-loading-label">
-          {label}
+          {fraction === undefined
+            ? t(l10n.chat.routerLoading, {model})
+            : t(l10n.chat.routerLoadingModel, {model})}
         </Text>
+        {fraction !== undefined && (
+          <Text
+            variant="bodyMedium"
+            style={styles.percent}
+            testID="chat-router-loading-percent">
+            {t(l10n.chat.routerLoadingPercent, {
+              percent: Math.round(fraction * 100),
+            })}
+          </Text>
+        )}
       </View>
       <View style={styles.barTrack}>
         <ProgressBar

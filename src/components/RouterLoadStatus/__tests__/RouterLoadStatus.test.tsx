@@ -1,4 +1,5 @@
 import React from 'react';
+import {StyleSheet} from 'react-native';
 
 import {render} from '../../../../jest/test-utils';
 import {RouterLoadStatus} from '../RouterLoadStatus';
@@ -37,7 +38,10 @@ describe('RouterLoadStatus', () => {
     const {getByTestId} = render(<RouterLoadStatus />);
 
     expect(getByTestId('chat-router-loading-label')).toHaveTextContent(
-      'Loading alpha on the server · 40%',
+      'Loading alpha on the server',
+    );
+    expect(getByTestId('chat-router-loading-percent')).toHaveTextContent(
+      '· 40%',
     );
     expect(
       getByTestId('chat-router-loading-bar').props.accessibilityValue,
@@ -53,20 +57,38 @@ describe('RouterLoadStatus', () => {
 
     const {getByTestId} = render(<RouterLoadStatus />);
 
-    expect(getByTestId('chat-router-loading-label')).toHaveTextContent(
-      'Loading alpha on the server · 75%',
+    expect(getByTestId('chat-router-loading-percent')).toHaveTextContent(
+      '· 75%',
     );
   });
 
   it('shows no percent before the first progress reading', () => {
     seedLoad();
 
-    const {getByTestId} = render(<RouterLoadStatus />);
+    const {getByTestId, queryByTestId} = render(<RouterLoadStatus />);
 
     expect(getByTestId('chat-router-loading-label')).toHaveTextContent(
       'Loading alpha on the server…',
     );
-    expect(getByTestId('chat-router-loading-label')).not.toHaveTextContent('%');
+    expect(queryByTestId('chat-router-loading-percent')).toBeNull();
+  });
+
+  it('cuts a long model name in the middle and never the percent', () => {
+    seedLoad({value: 0.65});
+
+    const {getByTestId} = render(<RouterLoadStatus />);
+
+    const label = getByTestId('chat-router-loading-label');
+    const percent = getByTestId('chat-router-loading-percent');
+    expect(label.props.numberOfLines).toBe(1);
+    expect(label.props.ellipsizeMode).toBe('middle');
+    expect(StyleSheet.flatten(label.props.style).flexShrink).toBe(1);
+    expect(percent.props.numberOfLines).toBeUndefined();
+    expect(StyleSheet.flatten(percent.props.style).flexShrink).toBe(0);
+    expect(
+      StyleSheet.flatten(getByTestId('chat-router-loading').props.style)
+        .maxWidth,
+    ).toBe('100%');
   });
 
   it('announces politely and offers no control', () => {

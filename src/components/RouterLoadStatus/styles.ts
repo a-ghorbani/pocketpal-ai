@@ -6,6 +6,7 @@ export const createStyles = (theme: Theme) =>
   StyleSheet.create({
     container: {
       alignSelf: 'flex-start',
+      maxWidth: '100%',
       paddingTop: 6,
       paddingBottom: 16,
       paddingHorizontal: 12,
@@ -18,6 +19,10 @@ export const createStyles = (theme: Theme) =>
     },
     label: {
       flexShrink: 1,
+      color: theme.colors.onSurfaceVariant,
+    },
+    percent: {
+      flexShrink: 0,
       color: theme.colors.onSurfaceVariant,
     },
     barTrack: {

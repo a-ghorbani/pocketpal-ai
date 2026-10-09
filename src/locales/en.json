@@ -1307,7 +1307,8 @@
       "openLinkError": "Couldn't open this link."
     },
     "routerLoading": "Loading {{model}} on the server…",
-    "routerLoadingPercent": "Loading {{model}} on the server · {{percent}}%"
+    "routerLoadingModel": "Loading {{model}} on the server",
+    "routerLoadingPercent": "· {{percent}}%"
   },
   "htmlPreview": {
     "defaultTitle": "Preview",
