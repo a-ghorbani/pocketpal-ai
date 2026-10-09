@@ -36,7 +36,6 @@ const mockedUnload = routerApi.postUnload as jest.Mock;
 const mockedEvents = routerApi.openRouterEvents as jest.Mock;
 
 const ALPHA = 'alpha';
-const BETA = 'beta';
 
 const rows = (states: Record<string, string> = {}): any[] =>
   routerWireJson('router-v1-models.json').data.map((row: any) =>
@@ -381,109 +380,41 @@ describe('backgrounding', () => {
   });
 });
 
-describe('eviction', () => {
-  it('notes a model another load pushed out, and counts what stays', async () => {
-    await read(rows({[ALPHA]: 'loaded'}));
-    expect(store.residentCount(serverId)).toBe(1);
-
-    store.ensureLoaded(serverId, BETA);
-    await flush();
-    await read(rows({[BETA]: 'loaded'}));
-
-    expect(store.observedEviction.has(serverId)).toBe(true);
-    expect(store.residentCount(serverId)).toBe(1);
-  });
-
-  it('does not note an unload of our own', async () => {
-    store.ensureLoaded(serverId, BETA);
-    await flush();
-    await read(rows({[ALPHA]: 'loaded'}));
-
-    store.unload(serverId, ALPHA);
-    await flush();
-    await read(rows());
-
-    expect(store.recordFor(serverId, ALPHA)).toBeUndefined();
-    expect(store.observedEviction.has(serverId)).toBe(false);
-  });
-
-  it('does not note a cancelled load', async () => {
+describe('server edits', () => {
+  it('reads the new address after an edit, not the read still out to the old one', async () => {
+    runInAction(() => {
+      serverStore.listReads = {};
+    });
+    const stale = deferred<ReturnType<typeof list>>();
+    mockedFetch.mockReturnValueOnce(stale.promise);
     store.ensureLoaded(serverId, ALPHA);
     await flush();
-
-    store.cancel(serverId, ALPHA);
-    await read(rows({[ALPHA]: 'loaded'}));
-    expect(store.recordFor(serverId, ALPHA)!.kind).toBe('unload');
-    await read(rows());
-
-    expect(store.recordFor(serverId, ALPHA)).toBeUndefined();
-    expect(store.observedEviction.has(serverId)).toBe(false);
-  });
-
-  it('notes a clean exit on the stream with no operation of ours', async () => {
-    store.setPickerServer(serverId);
-    await flush();
-    openStream();
-
-    live()[0].handlers.onEvent({
-      model: ALPHA,
-      event: 'status_change',
-      data: {status: 'unloaded', exit_code: 1},
-    });
-    expect(store.observedEviction.has(serverId)).toBe(false);
-
-    live()[0].handlers.onEvent({
-      model: ALPHA,
-      event: 'status_change',
-      data: {status: 'unloaded', exit_code: 0},
-    });
-    expect(store.observedEviction.has(serverId)).toBe(true);
-  });
-
-  it('does not note the exit of a model whose unload just settled', async () => {
-    await read(rows({[ALPHA]: 'loaded'}));
-    store.setPickerServer(serverId);
-    await flush();
-    openStream();
-
-    store.unload(serverId, ALPHA);
-    await flush();
-    await read(rows());
-    expect(store.recordFor(serverId, ALPHA)).toBeUndefined();
-    live()[0].handlers.onEvent({
-      model: ALPHA,
-      event: 'status_change',
-      data: {status: 'unloaded', exit_code: 0},
-    });
-
-    expect(store.observedEviction.has(serverId)).toBe(false);
-  });
-});
-
-describe('server edits', () => {
-  it('forgets a settled unload when the server is repointed', async () => {
-    await read(rows({[ALPHA]: 'loaded'}));
-    store.setPickerServer(serverId);
-    await flush();
-    openStream();
-    store.unload(serverId, ALPHA);
-    await flush();
-    await read(rows());
-    expect(store.recordFor(serverId, ALPHA)).toBeUndefined();
+    expect(mockedFetch).toHaveBeenCalledTimes(1);
 
     runInAction(() => {
       serverStore.updateServer(serverId, {url: 'http://other:8080'});
     });
-    await read(rows({[ALPHA]: 'loaded'}));
-    store.setPickerServer(serverId);
+    store.ensureLoaded(serverId, ALPHA);
     await flush();
-    live()[0].handlers.onOpen();
-    live()[0].handlers.onEvent({
-      model: ALPHA,
-      event: 'status_change',
-      data: {status: 'unloaded', exit_code: 0},
-    });
 
-    expect(store.observedEviction.has(serverId)).toBe(true);
+    expect(mockedFetch).toHaveBeenCalledTimes(2);
+    stale.resolve(list(rows()));
+    await flush();
+  });
+});
+
+describe('a caller whose signal already ended', () => {
+  it('is released at once and leaves the load running', async () => {
+    store.ensureLoaded(serverId, ALPHA);
+    await flush();
+    const record = store.recordFor(serverId, ALPHA)!;
+    const ended = new AbortController();
+    ended.abort();
+
+    await expect((store as any).join(record, ended.signal)).resolves.toEqual({
+      outcome: 'stopped',
+      record,
+    });
+    expect(store.owns(record)).toBe(true);
   });
 });

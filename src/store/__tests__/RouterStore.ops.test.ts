@@ -560,10 +560,7 @@ describe('cancel and stop', () => {
     await expect(send).resolves.toBe('stopped');
     expect(store.owns(record)).toBe(true);
     expect(record.controller.signal.aborted).toBe(false);
-    expect(record.droppedTurn).toBe(true);
 
-    store.ensureLoaded(serverId, TARGET);
-    expect(record.droppedTurn).toBe(false);
     await read(routerRows({[TARGET]: 'loaded'}));
     await expect(select).resolves.toBe('ready');
   });

@@ -118,7 +118,6 @@ export class RouterRecord {
   lastEventAt?: number;
   verdictRequested = false;
   detail?: RecordDetail = undefined;
-  droppedTurn = false;
   failure?: RouterFailure = undefined;
   /** Bounded words from a refused request, kept for a later failure. */
   reason?: string;
@@ -144,7 +143,6 @@ export class RouterRecord {
       phase: observable,
       verdictRequested: observable,
       detail: observable.ref,
-      droppedTurn: observable,
       failure: observable.ref,
     });
   }
@@ -161,9 +159,6 @@ export class RouterStore {
   streamCap: Record<string, StreamCap> = {};
   stream: {serverId: string; state: 'connecting' | 'open'} | null = null;
   pickerServerId: string | null = null;
-  /** Servers where a model left without this app asking. */
-  observedEviction = new Set<string>();
-
   /**
    * Follows the app state, but only flips back to true together with the
    * foreground reads it starts, so the stream reopens after them.
@@ -175,9 +170,6 @@ export class RouterStore {
     backgroundedTotalMs: 0,
     backgroundedAt: undefined as number | undefined,
   };
-  private prevResident = new Map<string, Set<string>>();
-  /** Keys whose unload this app just saw settle; their exit is not news. */
-  private released = new Set<string>();
   /** Servers whose stream ended on its own; polled, not reopened. */
   private streamDropped = new Set<string>();
   private streamHandle: RouterEventsHandle | null = null;
@@ -197,8 +189,6 @@ export class RouterStore {
       | 'foreground'
       | 'foregroundReadsPending'
       | 'clock'
-      | 'prevResident'
-      | 'released'
       | 'streamDropped'
       | 'streamHandle'
       | 'streamToken'
@@ -213,8 +203,6 @@ export class RouterStore {
       foreground: observable,
       foregroundReadsPending: observable,
       clock: false,
-      prevResident: false,
-      released: false,
       streamDropped: observable,
       streamHandle: false,
       streamToken: false,
@@ -280,18 +268,6 @@ export class RouterStore {
       remoteModelId,
       serverStore.listReads[serverId]?.stale !== false,
     );
-  }
-
-  /** Rows the list shows loaded or sleeping, minus any this app is unloading. */
-  residentCount(serverId: string): number {
-    return (serverStore.serverModels.get(serverId) ?? []).filter(row => {
-      const record = this.recordFor(serverId, row.id);
-      if (record?.kind === 'unload' && this.owns(record)) {
-        return false;
-      }
-      const state = this.rowState(serverId, row.id);
-      return state === 'loaded' || state === 'sleeping';
-    }).length;
   }
 
   recordFor(serverId: string, remoteModelId: string): RouterRecord | undefined {
@@ -482,33 +458,15 @@ export class RouterStore {
   }
 
   /** The record's outcome, or `stopped` if the caller's signal ends first. */
-  private join(record: RouterRecord, signal?: AbortSignal): Promise<Joined> {
-    if (record.kind === 'load') {
-      record.droppedTurn = false;
-    }
-    const settled = record.done.then(outcome => ({outcome, record}));
-    if (!signal) {
-      return settled;
-    }
-    return new Promise(resolve => {
-      const onAbort = () => {
-        runInAction(() => {
-          if (record.kind === 'load' && this.owns(record)) {
-            record.droppedTurn = true;
-          }
-        });
-        resolve({outcome: 'stopped', record});
-      };
-      if (signal.aborted) {
-        onAbort();
-        return;
-      }
-      signal.addEventListener('abort', onAbort, {once: true});
-      settled.then(result => {
-        signal.removeEventListener('abort', onAbort);
-        resolve(result);
-      });
-    });
+  private async join(
+    record: RouterRecord,
+    signal?: AbortSignal,
+  ): Promise<Joined> {
+    const result = await untilAborted(
+      record.done.then(outcome => ({outcome, record})),
+      signal,
+    );
+    return result === 'stopped' ? {outcome: 'stopped', record} : result;
   }
 
   private start(
@@ -518,7 +476,6 @@ export class RouterStore {
   ): RouterRecord {
     const record = new RouterRecord(kind, server, remoteModelId, this.now());
     this.records.set(record.key, record);
-    this.released.delete(record.key);
     this.streamDropped.delete(server.id);
     return record;
   }
@@ -540,9 +497,6 @@ export class RouterStore {
       record.failure = failure;
     } else {
       this.records.delete(record.key);
-    }
-    if (record.kind === 'unload' && outcome === 'ready') {
-      this.released.add(record.key);
     }
     record.settle(outcome);
     record.controller.abort();
@@ -654,10 +608,8 @@ export class RouterStore {
       for (const record of records) {
         this.end(record, 'not-router');
       }
-      this.prevResident.delete(serverId);
       return;
     }
-    this.checkEviction(serverId);
     const rows = serverStore.serverModels.get(serverId) ?? [];
     const now = this.now();
     for (const record of records) {
@@ -692,34 +644,6 @@ export class RouterStore {
           break;
       }
     }
-    this.prevResident.set(serverId, this.residentIds(serverId));
-  }
-
-  private residentIds(serverId: string): Set<string> {
-    const ids = (serverStore.serverModels.get(serverId) ?? [])
-      .map(row => row.id)
-      .filter(id => {
-        const state = this.rowState(serverId, id);
-        return state === 'loaded' || state === 'sleeping';
-      });
-    return new Set(ids);
-  }
-
-  /**
-   * A model resident at the last read and gone now, with no unload of ours
-   * in flight, was evicted. Runs before the verdicts of the same read, so an
-   * unload of ours is still in flight when its model goes.
-   */
-  private checkEviction(serverId: string): void {
-    for (const id of this.prevResident.get(serverId) ?? []) {
-      const state = this.rowState(serverId, id);
-      const record = this.recordFor(serverId, id);
-      const ownUnload = record?.kind === 'unload' && this.owns(record);
-      if ((state === 'unloaded' || state === 'absent') && !ownUnload) {
-        this.observedEviction.add(serverId);
-        return;
-      }
-    }
   }
 
   /** A server removed, repointed or retyped: what this store held for it goes. */
@@ -735,13 +659,7 @@ export class RouterStore {
       }
     }
     this.seenSeq.delete(serverId);
-    this.prevResident.delete(serverId);
-    this.observedEviction.delete(serverId);
-    for (const key of Array.from(this.released)) {
-      if (key.startsWith(`${serverId}/`)) {
-        this.released.delete(key);
-      }
-    }
+    this.reads.delete(serverId);
     delete this.streamCap[serverId];
     this.streamDropped.delete(serverId);
     this.lastPollAt.delete(serverId);
@@ -832,14 +750,6 @@ export class RouterStore {
     const inFlight = record !== undefined && this.owns(record);
     if (inFlight) {
       record.lastEventAt = this.now();
-    }
-    if (
-      !inFlight &&
-      effect.status === 'unloaded' &&
-      (effect.exitCode === undefined || effect.exitCode === 0) &&
-      !this.released.delete(`${serverId}/${effect.model}`)
-    ) {
-      this.observedEviction.add(serverId);
     }
     if (record?.kind === 'load' && inFlight) {
       if (effect.status === 'loading') {
@@ -992,7 +902,6 @@ export class RouterStore {
     }
     for (const [serverId, read] of Object.entries(serverStore.listReads)) {
       this.seenSeq.set(serverId, read.seq);
-      this.prevResident.set(serverId, this.residentIds(serverId));
     }
     if (!serverStore.appActive) {
       this.onAppActive(false);
