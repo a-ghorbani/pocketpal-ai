@@ -9,6 +9,7 @@ import {
   ToolCall,
 } from '../utils/completionTypes';
 import {RemoteModelInfo} from '../utils/types';
+import {RemoteHttpError} from '../utils/errors';
 import {
   CONNECTION_TIMEOUT_MS,
   IDLE_TIMEOUT_MS,
@@ -642,10 +643,14 @@ export async function streamChatCompletion(
       clearIdleTimer();
 
       let errorMessage = `Server error: ${status}`;
+      let serverMessage: string | undefined;
       try {
         const errorBody = JSON.parse(responseText);
         const detail =
           errorBody?.error?.message || errorBody?.error || responseText;
+        if (typeof errorBody?.error?.message === 'string') {
+          serverMessage = errorBody.error.message;
+        }
         errorMessage = `Server error: ${status} — ${detail}`;
         console.log(
           '[OpenAI] Error:',
@@ -661,7 +666,7 @@ export async function streamChatCompletion(
       if (status === 401) {
         reject(new Error('Unauthorized: Invalid or missing API key'));
       } else {
-        reject(new Error(errorMessage));
+        reject(new RemoteHttpError(errorMessage, status, serverMessage));
       }
     };
 

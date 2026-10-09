@@ -298,19 +298,23 @@ export class RouterStore {
   /**
    * Readiness for the completion engine. A session whose url no longer
    * matches the server it was bound to stays on its own backend untouched.
+   * With `reread`, a list read that starts now decides, not the cached one.
+   * True only when this router made the model ready.
    */
   async ensureReady(
     binding: RemoteSessionBinding,
     signal: AbortSignal,
-  ): Promise<void> {
+    options?: {reread: boolean},
+  ): Promise<boolean> {
     const server = serverStore.servers.find(s => s.id === binding.serverId);
     if (!server || server.url !== binding.url) {
-      return;
+      return false;
     }
     const {outcome, record} = await this.acquire(
       binding.serverId,
       binding.remoteModelId,
       signal,
+      options?.reread === true,
     );
     if (outcome === 'withdrawn') {
       throw new RemoteModelRequestWithdrawnError();
@@ -321,6 +325,7 @@ export class RouterStore {
         record?.reason,
       );
     }
+    return outcome === 'ready';
   }
 
   unload(serverId: string, remoteModelId: string): void {
@@ -394,11 +399,19 @@ export class RouterStore {
     serverId: string,
     remoteModelId: string,
     signal?: AbortSignal,
+    reread = false,
   ): Promise<Joined> {
     this.activate();
     let listRead = false;
     for (;;) {
-      const step = this.decide(serverId, remoteModelId, signal, listRead);
+      const step = this.decide(
+        serverId,
+        remoteModelId,
+        signal,
+        listRead,
+        reread,
+      );
+      const fresh = reread && !listRead;
       listRead = true;
       if (step.kind === 'done') {
         return step.result;
@@ -406,7 +419,10 @@ export class RouterStore {
       const waited =
         step.kind === 'read'
           ? await untilAborted(
-              this.reads.get(serverId)?.current ?? this.startRead(serverId),
+              fresh
+                ? this.requestRead(serverId)
+                : (this.reads.get(serverId)?.current ??
+                    this.startRead(serverId)),
               signal,
             )
           : (await step.unload).outcome;
@@ -425,6 +441,7 @@ export class RouterStore {
     remoteModelId: string,
     signal: AbortSignal | undefined,
     listRead: boolean,
+    reread: boolean,
   ):
     | {kind: 'done'; result: Joined | Promise<Joined>}
     | {kind: 'read'}
@@ -433,7 +450,7 @@ export class RouterStore {
     if (!server || !profileFor(server.serverType).hasRouter) {
       return {kind: 'done', result: {outcome: 'not-router'}};
     }
-    if (!listRead && !serverStore.listReads[serverId]) {
+    if (!listRead && (reread || !serverStore.listReads[serverId])) {
       return {kind: 'read'};
     }
     if (!this.isRouter(serverId)) {

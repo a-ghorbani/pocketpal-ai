@@ -2722,7 +2722,8 @@ class ModelStore {
     runInAction(() => {
       this.engine = hasRouter
         ? new OpenAICompletionEngine(endpoint, {
-            ensureReady: signal => routerStore.ensureReady(binding, signal),
+            ensureReady: (signal, options) =>
+              routerStore.ensureReady(binding, signal, options),
           })
         : new OpenAICompletionEngine(endpoint);
       this.activeRemoteBinding = binding;

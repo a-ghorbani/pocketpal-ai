@@ -51,6 +51,15 @@ export function loadFraction(progress?: LoadProgress): number | undefined {
   return index < 0 ? undefined : (index + value) / stages.length;
 }
 
+/** A router's answer to a completion for a model it does not have loaded. */
+export const isModelNotLoaded = (error: unknown): boolean => {
+  const {status, serverMessage} = (error ?? {}) as {
+    status?: unknown;
+    serverMessage?: unknown;
+  };
+  return status === 400 && serverMessage === 'model is not loaded';
+};
+
 /** The fields of a `/v1/models` row this module reads. */
 export interface RouterListRow {
   id?: string;

@@ -22,6 +22,7 @@ export type RouterWireFixture =
   | 'router-v1-models.json'
   | 'unload-not-running-400.json'
   | 'unload-not-found-400.json'
+  | 'completion-not-loaded-400.json'
   | 'sse-load-sequence.txt'
   | 'sse-download-sequence.txt'
   | 'sse-unregistered-404.txt'

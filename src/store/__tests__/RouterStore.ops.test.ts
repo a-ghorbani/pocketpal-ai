@@ -787,16 +787,58 @@ describe('ensureReady', () => {
     },
   );
 
-  it.each(['ready', 'not-router', 'stopped'])(
-    'resolves a %s wait',
-    async outcome => {
-      jest.spyOn(store as any, 'acquire').mockResolvedValueOnce({outcome});
+  it.each([
+    ['ready', true],
+    ['not-router', false],
+    ['stopped', false],
+  ])('resolves a %s wait as %s', async (outcome, ready) => {
+    jest.spyOn(store as any, 'acquire').mockResolvedValueOnce({outcome});
 
-      await expect(
-        store.ensureReady(binding(), new AbortController().signal),
-      ).resolves.toBeUndefined();
-    },
-  );
+    await expect(
+      store.ensureReady(binding(), new AbortController().signal),
+    ).resolves.toBe(ready);
+  });
+
+  it('reads the list again before trusting a loaded row when asked to', async () => {
+    await read(routerRows({[TARGET]: 'loaded'}));
+    jest.clearAllMocks();
+    mockedFetch.mockResolvedValueOnce(list(routerRows()));
+
+    const waiting = store.ensureReady(binding(), new AbortController().signal, {
+      reread: true,
+    });
+    await flush();
+
+    expect(mockedFetch).toHaveBeenCalledTimes(1);
+    expect(mockedLoad).toHaveBeenCalledTimes(1);
+    expect(mockedFetch.mock.invocationCallOrder[0]).toBeLessThan(
+      mockedLoad.mock.invocationCallOrder[0],
+    );
+    await read(routerRows({[TARGET]: 'loaded'}));
+    await expect(waiting).resolves.toBe(true);
+  });
+
+  it('trusts a loaded row it has not been asked to read again', async () => {
+    await read(routerRows({[TARGET]: 'loaded'}));
+    jest.clearAllMocks();
+
+    await expect(
+      store.ensureReady(binding(), new AbortController().signal),
+    ).resolves.toBe(true);
+    expect(mockedFetch).not.toHaveBeenCalled();
+    expect(mockedLoad).not.toHaveBeenCalled();
+  });
+
+  it('starts no load on a server that is no longer a router', async () => {
+    mockedFetch.mockResolvedValueOnce(list(directTextModelsBody.data, true));
+
+    await expect(
+      store.ensureReady(binding(), new AbortController().signal, {
+        reread: true,
+      }),
+    ).resolves.toBe(false);
+    expect(mockedLoad).not.toHaveBeenCalled();
+  });
 
   it('leaves a session bound to another url alone', async () => {
     const acquire = jest.spyOn(store as any, 'acquire');

@@ -56,6 +56,19 @@ export class RemoteModelNotReadyError extends Error {
   }
 }
 
+/** A non-2xx answer to a remote request, with the server's own message. */
+export class RemoteHttpError extends Error {
+  readonly status: number;
+  readonly serverMessage?: string;
+
+  constructor(message: string, status: number, serverMessage?: string) {
+    super(message);
+    this.name = 'RemoteHttpError';
+    this.status = status;
+    this.serverMessage = serverMessage;
+  }
+}
+
 /**
  * ServerError - Used for backend server errors
  * Examples: 500 errors, API unavailable, etc.
