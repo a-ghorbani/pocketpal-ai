@@ -6,7 +6,7 @@ import React, {
   useMemo,
   useRef,
 } from 'react';
-import {StyleProp, TouchableOpacity, View, ViewStyle} from 'react-native';
+import {TouchableOpacity, View} from 'react-native';
 import {
   Text,
   Button,
@@ -325,17 +325,14 @@ export const RemoteModelSheet: React.FC<RemoteModelSheetProps> = observer(
       return () => routerStore.setPickerServer(null);
     }, [isVisible, isRouter, selectedServerId]);
 
-    const renderVisionSlot = (
-      model: RemoteModelInfo,
-      style?: StyleProp<ViewStyle>,
-    ) => {
+    const renderVisionSlot = (model: RemoteModelInfo) => {
       if (profileFor(serverTypeInEffect).readListRow === undefined) {
         return null;
       }
       const listCaps = deriveListCaps(model, serverTypeInEffect);
       return (
         <View
-          style={[styles.modelVisionSlot, style]}
+          style={styles.modelVisionSlot}
           testID={`remote-model-row-vision-${model.id}`}
           accessible={true}
           accessibilityLabel={`${l10n.models.modelCard.labels.vision}: ${
@@ -625,7 +622,10 @@ export const RemoteModelSheet: React.FC<RemoteModelSheetProps> = observer(
               isAlreadyAdded={modelId =>
                 isModelAlreadyAdded(selectedServerId, modelId)
               }
-              renderVisionSlot={renderVisionSlot}
+              supportsVision={model =>
+                deriveListCaps(model, serverTypeInEffect).supportsVision ===
+                true
+              }
             />
           )}
 
@@ -669,7 +669,12 @@ export const RemoteModelSheet: React.FC<RemoteModelSheetProps> = observer(
                       disabled={alreadyAdded}
                       uncheckedColor={theme.colors.onSurfaceVariant}
                     />
-                    <Text style={styles.modelName}>{model.id}</Text>
+                    <Text
+                      style={styles.modelName}
+                      numberOfLines={1}
+                      ellipsizeMode="middle">
+                      {model.id}
+                    </Text>
                     {alreadyAdded && (
                       <Text style={styles.alreadyAddedText}>
                         {l10n.settings.alreadyAdded}

@@ -170,54 +170,40 @@ export const createStyles = (theme: Theme) => {
     addButton: {
       flex: 1,
     },
-    routerGroupHeader: {
+    routerRow: {
       flexDirection: 'row',
       alignItems: 'center',
-      justifyContent: 'space-between',
-      marginTop: 12,
-      marginBottom: 4,
     },
-    routerGroupTitle: {
+    routerSelect: {
+      flex: 1,
+      minWidth: 0,
+    },
+    routerVision: {
+      marginStart: 8,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    routerStatus: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 6,
+      marginStart: 8,
+    },
+    routerPercent: {
       fontSize: 13,
-      fontWeight: '600',
       color: theme.colors.onSurfaceVariant,
     },
-    routerGroupCount: {
-      fontSize: 12,
-      color: theme.colors.onSurfaceVariant,
+    routerDot: {
+      width: 10,
+      height: 10,
+      borderRadius: 5,
+      marginHorizontal: 7,
+      backgroundColor: theme.colors.statusLoaded,
     },
-    routerRowDetail: {
-      flexDirection: 'row',
-      flexWrap: 'wrap',
-      alignItems: 'center',
-      gap: 8,
-      marginStart: 44,
-    },
-    routerDetailItem: {
-      marginStart: 0,
-    },
-    routerRowAction: {
-      marginStart: 'auto',
-    },
-    routerRowState: {
-      fontSize: 12,
-      color: theme.colors.onSurfaceVariant,
-    },
-    routerRowProgress: {
-      height: 3,
-      borderRadius: 2,
-      marginTop: 6,
-      marginHorizontal: 16,
-    },
-    routerNote: {
-      backgroundColor: theme.colors.surfaceVariant,
-      borderRadius: 8,
-      padding: 12,
-      marginTop: 12,
-    },
-    routerNoteText: {
-      fontSize: 12,
-      color: theme.colors.onSurfaceVariant,
+    routerPower: {
+      width: 44,
+      height: 44,
+      margin: 0,
     },
     routerReasonRow: {
       flexDirection: 'row',
