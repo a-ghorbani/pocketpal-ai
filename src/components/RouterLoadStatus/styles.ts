@@ -1,29 +1,31 @@
 import {StyleSheet} from 'react-native';
+
 import {Theme} from '../../utils/types';
 
 export const createStyles = (theme: Theme) =>
   StyleSheet.create({
     container: {
-      paddingHorizontal: 16,
-      paddingVertical: 10,
-      backgroundColor: theme.colors.surfaceVariant,
+      alignSelf: 'flex-start',
+      paddingTop: 6,
+      paddingBottom: 16,
+      paddingHorizontal: 12,
+      gap: 8,
     },
     row: {
       flexDirection: 'row',
       alignItems: 'center',
-      justifyContent: 'space-between',
-      marginBottom: 8,
+      gap: 8,
     },
     label: {
+      flexShrink: 1,
       color: theme.colors.onSurfaceVariant,
-      flex: 1,
     },
-    progress: {
-      height: 4,
+    barTrack: {
+      width: 180,
+      marginLeft: 22,
+    },
+    bar: {
+      height: 3,
       borderRadius: 2,
-    },
-    reason: {
-      color: theme.colors.error,
-      flex: 1,
     },
   });

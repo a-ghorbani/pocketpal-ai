@@ -42,7 +42,7 @@ import {
 
 import ImageView from './ImageView';
 import {BannerRow} from './BannerRow';
-import {RouterModelPreparing} from '../RouterModelPreparing';
+import {RouterLoadStatus, boundRouterLoad} from '../RouterLoadStatus';
 import {createStyles} from './styles';
 
 import {IncreaseContextSheet} from '../IncreaseContextSheet';
@@ -198,13 +198,17 @@ export interface ChatProps extends Omit<ChatTopLevelProps, 'onSendPress'> {
  * its deps), and FlatList would unmount + remount the header every
  * ~50ms — killing both Animated.loop and setInterval.
  */
-const PendingIndicatorView: React.FC = observer(() => (
-  <PendingIndicator
-    pendingTalentNames={chatSessionStore.agentUiState.pendingTalentNames}
-    toolCallTokenCount={chatSessionStore.toolCallTokenCount}
-    isStopping={chatSessionStore.isStopping}
-  />
-));
+const PendingIndicatorView: React.FC = observer(() =>
+  !chatSessionStore.isStopping && boundRouterLoad() ? (
+    <RouterLoadStatus />
+  ) : (
+    <PendingIndicator
+      pendingTalentNames={chatSessionStore.agentUiState.pendingTalentNames}
+      toolCallTokenCount={chatSessionStore.toolCallTokenCount}
+      isStopping={chatSessionStore.isStopping}
+    />
+  ),
+);
 
 /** Entry component, represents the complete chat */
 export const ChatView = observer(
@@ -1172,7 +1176,6 @@ export const ChatView = observer(
                 inputContainerAnimatedStyle,
                 {backgroundColor: inputBackgroundColor},
               ]}>
-              <RouterModelPreparing />
               <BannerRow
                 messages={messages}
                 htmlPreviewCount={htmlPreviewCount}

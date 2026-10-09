@@ -1311,8 +1311,8 @@
       "showResultsAccessibilityLabel": "Show web search results for {{query}}",
       "openLinkError": "Couldn't open this link."
     },
-    "preparingModel": "Preparing model on the server…",
-    "preparingDroppedTurn": "Still loading on the server. Send again when it's ready."
+    "routerLoading": "Loading {{model}} on the server…",
+    "routerLoadingPercent": "Loading {{model}} on the server · {{percent}}%"
   },
   "htmlPreview": {
     "defaultTitle": "Preview",
