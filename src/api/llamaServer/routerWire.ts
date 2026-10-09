@@ -33,6 +33,24 @@ export interface LoadProgress {
   value?: number;
 }
 
+/**
+ * Overall fraction across the load's stages. The server fixes `stages` before
+ * the load starts and reports each stage 0 to 1 in order, so this never falls.
+ * Undefined when the reading is not one this rule can place.
+ */
+export function loadFraction(progress?: LoadProgress): number | undefined {
+  const value = progress?.value;
+  if (value === undefined || !(value >= 0 && value <= 1)) {
+    return undefined;
+  }
+  const stages = progress?.stages;
+  if (!stages) {
+    return value;
+  }
+  const index = progress?.current ? stages.indexOf(progress.current) : -1;
+  return index < 0 ? undefined : (index + value) / stages.length;
+}
+
 /** The fields of a `/v1/models` row this module reads. */
 export interface RouterListRow {
   id?: string;

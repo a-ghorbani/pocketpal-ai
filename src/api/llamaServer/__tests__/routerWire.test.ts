@@ -1,5 +1,6 @@
 import {
   hasRouterStatus,
+  loadFraction,
   mapRowStatus,
   reduceRouterEvent,
   rowExitCode,
@@ -215,6 +216,53 @@ describe('reduceRouterEvent on shapes it does not recognise', () => {
       data: {status: 'loading', progress: {value: '0.5'}},
     }) as Update;
     expect(effect.progress).toBeUndefined();
+  });
+});
+
+describe('loadFraction', () => {
+  const stages = ['text_model', 'spec_model', 'mmproj_model'];
+
+  it.each([
+    ['no progress', undefined, undefined],
+    ['a single stage', {value: 0.4}, 0.4],
+    [
+      'the second of three stages',
+      {stages, current: 'spec_model', value: 0.5},
+      0.5,
+    ],
+    [
+      'a stage not in the list',
+      {stages, current: 'draft', value: 0.5},
+      undefined,
+    ],
+    ['no current stage', {stages, value: 0.5}, undefined],
+    ['a value that is not a number', {value: NaN}, undefined],
+    ['a value below zero', {value: -0.1}, undefined],
+    ['a value above one', {value: 1.1}, undefined],
+  ])('reads %s', (_label, progress, expected) => {
+    expect(loadFraction(progress)).toBe(expected);
+  });
+
+  it('rises without restarting across the stages of one load', () => {
+    const fractions = stages
+      .flatMap(current => [0, 1].map(value => ({stages, current, value})))
+      .map(progress => loadFraction(progress)!);
+
+    fractions.slice(1).forEach((fraction, i) => {
+      expect(fraction).toBeGreaterThanOrEqual(fractions[i]);
+    });
+    expect(fractions.at(-1)).toBe(1);
+  });
+
+  it('reads the captured load stream from zero to one', () => {
+    const fractions = forModel(loadStream, 'alpha')
+      .map(event => reduceRouterEvent(event))
+      .filter((effect): effect is Update => effect.kind === 'update')
+      .map(effect => loadFraction(effect.progress))
+      .filter(fraction => fraction !== undefined);
+
+    expect(fractions[0]).toBe(0);
+    expect(fractions.at(-1)).toBe(1);
   });
 });
 
