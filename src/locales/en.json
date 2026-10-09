@@ -218,7 +218,7 @@
       "unloadNotReleased": "The server did not release this model.",
       "serverUnreachable": "Could not reach this server.",
       "waitStopped": "Stopped waiting for this model.",
-      "failureWithServerWords": "{{label}}\n“{{message}}”",
+      "failureWithServerWords": "{{label}}\n\n“{{message}}”",
       "dismiss": "Dismiss",
       "unloadBoundTitle": "Unload this model?",
       "unloadBoundBody": "This chat uses it. It loads again when you send your next message.",

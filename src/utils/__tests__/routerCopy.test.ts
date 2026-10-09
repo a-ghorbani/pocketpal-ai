@@ -28,7 +28,7 @@ describe('routerFailureLabel', () => {
 describe('routerFailureMessage', () => {
   it('sets the server words apart on their own line, quoted', () => {
     expect(routerFailureMessage('load-failed', 'out of memory', en)).toBe(
-      `${en.settings.routerModels.loadFailed}\n“out of memory”`,
+      `${en.settings.routerModels.loadFailed}\n\n“out of memory”`,
     );
   });
 

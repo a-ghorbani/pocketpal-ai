@@ -403,7 +403,7 @@ describe('useChatSession', () => {
         await sending;
       });
 
-      const text = `${l10n.en.settings.routerModels.loadFailed}\n“out of memory”`;
+      const text = `${l10n.en.settings.routerModels.loadFailed}\n\n“out of memory”`;
       expect(chatSessionStore.addMessageToSession).toHaveBeenCalledTimes(1);
       expect(chatSessionStore.addMessageToSession).toHaveBeenCalledWith(
         'S',
