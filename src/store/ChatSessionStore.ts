@@ -30,7 +30,7 @@ type MessageUpdate =
   | Partial<MessageType.Text>
   | Partial<Omit<MessageType.AssistantTurn, 'type' | 'id' | 'author'>>;
 
-const NEW_SESSION_TITLE = 'New Session';
+export const NEW_SESSION_TITLE = 'New Session';
 const TITLE_LIMIT = 40;
 
 // Coalesce per-token writes into batched UI flushes (~33 Hz).
@@ -514,7 +514,29 @@ class ChatSessionStore {
         palIdForSettings,
       );
       await this.createNewSession(NEW_SESSION_TITLE, [message], settings);
+      const created = this.sessions.find(s => s.id === this.activeSessionId);
+      if (created?.messages[0]) {
+        message.id = created.messages[0].id;
+      }
     }
+  }
+
+  async addMessageToSession(
+    sessionId: string,
+    message: MessageType.Any,
+  ): Promise<void> {
+    const session = this.sessions.find(s => s.id === sessionId);
+    if (!session) {
+      return;
+    }
+    const newMessage = await chatSessionRepository.addMessageToSession(
+      sessionId,
+      message,
+    );
+    message.id = newMessage.id;
+    runInAction(() => {
+      session.messages.unshift(message);
+    });
   }
 
   get currentSessionMessages(): MessageType.Any[] {

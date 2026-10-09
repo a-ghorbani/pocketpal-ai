@@ -124,6 +124,7 @@ jest.mock('../src/store', () => {
     searchProviderStore: mockSearchProviderStore,
     purchaseStore: mockPurchaseStore,
     defaultCompletionSettings: mockDefaultCompletionSettings,
+    NEW_SESSION_TITLE: 'New Session',
   };
 });
 

@@ -52,6 +52,7 @@ export const mockChatSessionStore = {
   deleteSession: jest.fn().mockResolvedValue(undefined),
   setActiveSession: jest.fn().mockResolvedValue(undefined),
   addMessageToCurrentSession: jest.fn().mockResolvedValue(undefined),
+  addMessageToSession: jest.fn().mockResolvedValue(undefined),
   resetActiveSession: jest.fn(),
   updateSessionTitle: jest.fn().mockResolvedValue(undefined),
   updateSessionTitleBySessionId: jest.fn().mockResolvedValue(undefined),

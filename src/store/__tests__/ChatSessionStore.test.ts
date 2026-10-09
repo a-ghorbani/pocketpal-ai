@@ -225,6 +225,79 @@ describe('chatSessionStore', () => {
       expect(chatSessionStore.sessions[0].messages.length).toBe(1);
       expect(chatSessionStore.sessions[0].messages[0]).toEqual(mockMessage);
     });
+
+    it('gives the first message of a new session the persisted row id', async () => {
+      const sent = {...mockMessage, id: ''};
+      (chatSessionRepository.createSession as jest.Mock).mockResolvedValue({
+        id: 'new-session',
+        title: 'New Session',
+        date: new Date().toISOString(),
+      });
+      (chatSessionRepository.getSessionById as jest.Mock).mockResolvedValue({
+        messages: [{toMessageObject: () => ({...sent, id: 'row-1'})}],
+        completionSettings: {getSettings: () => defaultCompletionSettings},
+      });
+
+      await chatSessionStore.addMessageToCurrentSession(sent);
+
+      expect(sent.id).toBe('row-1');
+    });
+
+    it('leaves the id empty when the new session cannot be created', async () => {
+      const sent = {...mockMessage, id: ''};
+      (chatSessionRepository.createSession as jest.Mock).mockRejectedValueOnce(
+        new Error('db down'),
+      );
+
+      await expect(
+        chatSessionStore.addMessageToCurrentSession(sent),
+      ).resolves.toBeUndefined();
+
+      expect(sent.id).toBe('');
+      expect(chatSessionStore.activeSessionId).toBeNull();
+    });
+  });
+
+  describe('addMessageToSession', () => {
+    const makeSession = (id: string) => ({
+      id,
+      title: id,
+      date: new Date().toISOString(),
+      messages: [] as MessageType.Any[],
+      completionSettings: defaultCompletionSettings,
+      settingsSource: 'pal' as 'pal' | 'custom',
+    });
+
+    it('adds to the named session and leaves the active one unchanged', async () => {
+      const active = makeSession('active');
+      const other = makeSession('other');
+      chatSessionStore.sessions = [active, other];
+      chatSessionStore.activeSessionId = 'active';
+      (
+        chatSessionRepository.addMessageToSession as jest.Mock
+      ).mockResolvedValueOnce({id: 'row-9'});
+      const message = {...mockMessage, id: ''};
+
+      await chatSessionStore.addMessageToSession('other', message);
+
+      expect(chatSessionRepository.addMessageToSession).toHaveBeenCalledWith(
+        'other',
+        message,
+      );
+      expect(message.id).toBe('row-9');
+      expect(chatSessionStore.sessions[1].messages).toEqual([message]);
+      expect(chatSessionStore.sessions[0].messages).toEqual([]);
+    });
+
+    it('writes nothing for a session that no longer exists', async () => {
+      chatSessionStore.sessions = [makeSession('active')];
+
+      await expect(
+        chatSessionStore.addMessageToSession('gone', {...mockMessage}),
+      ).resolves.toBeUndefined();
+
+      expect(chatSessionRepository.addMessageToSession).not.toHaveBeenCalled();
+    });
   });
 
   describe('updateMessage', () => {
