@@ -205,7 +205,13 @@
     "speculativeDraftValueCacheType": "草稿模型值缓存类型",
     "speculativeDraftNGpuLayers": "草稿模型 GPU 层数",
     "speculativeDraftNGpuLayersDescription": "卸载到 GPU 的草稿模型层数。",
-    "speculativeDraftCacheTypeInactiveDescription": "推测解码运行后即生效。"
+    "speculativeDraftCacheTypeInactiveDescription": "推测解码运行后即生效。",
+    "purchases": {
+      "title": "购买项目",
+      "statusOwned": "已购买",
+      "statusUnlocking": "解锁中",
+      "link": "登录后可在其他设备使用"
+    }
   },
   "memory": {
     "shortWarning": "内存警告",
@@ -1022,7 +1028,9 @@
       "ttft": "{{value}}毫秒 TTFT",
       "interrupted": "被中断",
       "truncated": "已截断 — 可能是上下文已满",
-      "draftAccepted": "草稿：{{accepted}}/{{total}}（{{pct}}%）"
+      "draftAccepted": "草稿：{{accepted}}/{{total}}（{{pct}}%）",
+      "promptTokensPerSec": "{{value}} 提示词 tokens/秒",
+      "cachedTokens": "已缓存 {{value}}"
     },
     "pendingIndicator": {
       "preparingTool": "正在准备工具",
@@ -1034,6 +1042,13 @@
     "toolMetrics": {
       "tokens": "{{count}} 个 token",
       "elapsed": "{{seconds}}秒"
+    },
+    "completionSettings": {
+      "serverDefault": "服务器默认值",
+      "usingServerDefault": "使用服务器默认值：{{value}}",
+      "usingServerDefaultUnreported": "使用服务器默认值（未提供具体值）",
+      "resetToServerDefault": "服务器默认值：{{value}} · 重置",
+      "resetToServerDefaultAccessibilityLabel": "将 {{name}} 重置为服务器默认值 {{value}}"
     }
   },
   "palsScreen": {
@@ -1087,8 +1102,6 @@
       "download": "下载",
       "getFree": "免费获取"
     },
-    "premiumPalDescription": "来自 palshub.ai 社区的高级 Pal",
-    "premiumInfoText": "在应用外访问 palshub.ai 探索更多 Pal",
     "sortOptions": {
       "newest": "最新",
       "oldest": "最旧",
@@ -1112,15 +1125,48 @@
       "error": "错误",
       "failedToLoadDetails": "加载 Pal 详情失败",
       "failedToDownload": "下载 Pal 失败",
-      "premiumPalMessage": "这是一个高级 Pal。\n• 如果您已经通过 Palshub 账户解锁，请登录以访问完整详情。\n• 还没有解锁？请访问 palshub.ai 应用了解更多。",
-      "notAvailable": "N/A",
-      "buyOnPalshub": "在 Palshub 购买",
-      "finalizingPurchase": "正在完成您的购买…",
-      "processingPurchase": "处理中 — 即将解锁。",
-      "checkoutSessionExpired": "您的会话已过期，请重新登录以继续。",
-      "signInAgain": "重新登录",
-      "palNotAvailable": "此 Pal 目前无法购买。",
-      "checkoutFailed": "发生错误，请重试。"
+      "notAvailable": "N/A"
+    },
+    "purchase": {
+      "buy": "{{price}}",
+      "open": "打开",
+      "install": "安装",
+      "pending": "待处理",
+      "unlocking": "解锁中",
+      "retry": "重试",
+      "supportCode": "客服代码：{{code}}",
+      "noLongerAvailable": "此 Pal 已不再提供，您可以{{refundLink}}。",
+      "refundLink": "向 Apple 申请退款",
+      "notCompleted": "此次购买未能完成，Google 将为您退款。",
+      "withdrawnRefunding": "此 Pal 已下架，请联系客服申请退款。",
+      "invalid": "我们无法验证此次购买。",
+      "heldInvalid": "我们无法解锁此次购买，请凭此代码联系客服。",
+      "recommendedModel": "推荐模型",
+      "sampleExchange": "对话示例",
+      "signInLine": "已经拥有？登录",
+      "licenseNotice": "您购买的是此 Pal 的使用许可。",
+      "termsOfSale": "销售条款",
+      "appleMediaTerms": "Apple 媒体服务条款",
+      "linkPrompt": "登录后也可在您的其他设备上使用",
+      "linkSignIn": "登录",
+      "dismiss": "以后再说",
+      "linkConflict": "这些购买项目已关联到另一个账户。",
+      "restorePurchases": "恢复购买",
+      "badgePending": "待处理",
+      "badgeUnlocking": "解锁中",
+      "badgeUpdate": "有可用更新",
+      "updatePrompt": "创作者发布了新版本。",
+      "updatePromptWithNote": "创作者发布了新版本：{{note}}。",
+      "updateButton": "更新",
+      "updateConfirmText": "这会覆盖您对创作者改动部分所做的修改。",
+      "updateConfirm": "更新",
+      "updateCancel": "取消",
+      "modelStep": {
+        "download": "下载 · {{size}}",
+        "startChat": "开始聊天",
+        "needsMemory": "此 Pal 的最小模型需要设备至少有 {{size}} 内存。",
+        "noModelFits": "此设备的内存不足以运行此 Pal。"
+      }
     }
   },
   "validation": {
@@ -1584,6 +1630,8 @@
   "downloadBanner": {
     "titleByPal": "{{name}} 正在下载",
     "titleByModel": "{{name}} 正在下载",
-    "extraInProgress": "另有 {{count}} 个正在进行"
+    "extraInProgress": "另有 {{count}} 个正在进行",
+    "failedTitle": "下载未完成",
+    "retry": "重试"
   }
 }

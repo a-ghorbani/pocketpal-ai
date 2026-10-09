@@ -175,7 +175,7 @@
     "contextMoreRoom": "更多空間",
     "increaseContextTitle": "給此對話更多空間",
     "increaseContextBody": "空間是模型的運作記憶 — 指它一次能記住此對話的內容量。更多的空間代表在回覆被截斷前可以進行更長的對話。",
-    "increaseContextTokensUnit": "Token",
+    "increaseContextTokensUnit": "token",
     "increaseContextWordsRam": "約 {{words}} 字 · 約 {{ram}} RAM",
     "increaseContextFitsChip": "符合要求",
     "increaseContextTightChip": "空間不足",
@@ -209,7 +209,7 @@
       "openLinkError": "無法開啟此連結。"
     },
     "contextFullRemote": "對話空間不足。請開始新對話。",
-    "speculativeInitFailed": "此裝置無法為此模型啟動推測解碼，很可能是草稿內容的記憶體不足。請在「設定 → 進階設定」中關閉推測解碼後再試一次。"
+    "speculativeInitFailed": "此裝置無法為此模型啟動投機解碼（Speculative Decoding）——最可能的原因是記憶體不足以容納草稿內容。請在「設定」→「進階設定」中關閉「投機解碼」，然後再試一次。"
   },
   "common": {
     "cancel": "取消",
@@ -458,7 +458,7 @@
         "max": "最高"
       },
       "isReasoningModelHelp": "顯示此模型的思考控制，即使未自動偵測到。",
-      "supportsEffort": "支援漸進式強度",
+      "supportsEffort": "支援分級努力程度",
       "effortValues": "此模型支援的強度層級"
     },
     "assistantPalSheet": {
@@ -653,7 +653,7 @@
       "talents": "技能",
       "talentNames": {
         "render_html": "HTML 預覽",
-        "calculate": "數學算式",
+        "calculate": "數學表達式",
         "datetime": "日期與時間",
         "web_search": "網路搜尋",
         "read_url": "讀取網頁"
@@ -703,8 +703,10 @@
       "tokensPerSec": "{{value}} 詞元/秒",
       "ttft": "{{value}}毫秒 TTFT",
       "interrupted": "被打斷",
-      "truncated": "已截斷 — 可能是上下文已滿",
-      "draftAccepted": "草稿：{{accepted}}/{{total}}（{{pct}}%）"
+      "truncated": "中斷 — 可能上下文已滿",
+      "draftAccepted": "草稿：{{accepted}}/{{total}}（{{pct}}%）",
+      "promptTokensPerSec": "{{value}} prompt tokens/sec",
+      "cachedTokens": "{{value}} 已快取"
     },
     "thinkingBubble": {
       "reasoning": "推理"
@@ -756,11 +758,18 @@
     "toolMetrics": {
       "tokens": "{{count}} 個詞元",
       "elapsed": "{{seconds}} 秒"
+    },
+    "completionSettings": {
+      "serverDefault": "伺服器預設值",
+      "usingServerDefault": "使用伺服器預設值：{{value}}",
+      "usingServerDefaultUnreported": "使用伺服器預設值（未回報）",
+      "resetToServerDefault": "伺服器預設值：{{value}} · 重置",
+      "resetToServerDefaultAccessibilityLabel": "將 {{name}} 恢復至伺服器預設值，{{value}}"
     }
   },
   "feedback": {
     "title": "送出反饋",
-    "description": "請讓我們聽見您的心聲！告訴我們 PocketPal AI 對您的幫助，以及我們該如何進一步提升實用性。",
+    "description": "您的意見很重要！請告訴我們 PocketPal AI 如何幫助您，以及我們能做些什麼讓它變得更實用。",
     "shareThoughtsButton": "分享您的想法",
     "useCase": {
       "label": "您正在使用 PocketPal AI 做什麼？",
@@ -1227,16 +1236,22 @@
     "speculativeDecodingDescription": "使用小型草稿模型（或內嵌的 MTP 模型）預測 token，加速生成。實驗性功能。",
     "speculativeNotMTPCapable": "目前使用的模型不支援推測解碼，也未搭配相容的草稿模型，因此此設定對它無效並維持關閉。對支援的模型會自動套用。",
     "speculativeDraftModel": "草稿模型",
-    "speculativeDraftModelDescription": "為目前使用的模型草擬 token。",
+    "speculativeDraftModelDescription": "當前模型的草稿 token。",
     "speculativeDraftModelNone": "無（內嵌 MTP）",
-    "speculativeDraftModelIgnoredOverridden": "目前使用的模型自帶草稿模型，因此會忽略此選擇。",
+    "speculativeDraftModelIgnoredOverridden": "目由於當前模型自帶其對應的草稿模型，因此此項選擇將被忽略。",
     "speculativeDraftModelIgnoredIncompatible": "此草稿模型與目前使用的模型不相容，因此會被忽略。",
     "speculativeDraftModelIgnoredNotCapable": "此模型不含草稿層，因此無法用作草稿模型。",
     "speculativeDraftKeyCacheType": "草稿鍵快取類型",
     "speculativeDraftValueCacheType": "草稿值快取類型",
     "speculativeDraftNGpuLayers": "草稿 GPU 層數",
     "speculativeDraftNGpuLayersDescription": "要卸載到 GPU 的草稿模型層數。",
-    "speculativeDraftCacheTypeInactiveDescription": "推測解碼啟動後即會套用。"
+    "speculativeDraftCacheTypeInactiveDescription": "推測解碼啟動後即會套用。",
+    "purchases": {
+      "title": "購買項目",
+      "statusOwned": "已購買",
+      "statusUnlocking": "解鎖中",
+      "link": "登入以在其他裝置上使用"
+    }
   },
   "storage": {
     "checkFailed": "無法檢查存儲",
@@ -1333,15 +1348,7 @@
       "palAddedToCollection": "Pal 已新增至您的收藏！",
       "failedToLoadDetails": "載入 pal 詳情失敗",
       "failedToDownload": "下載 pal 失敗",
-      "premiumPalMessage": "這是高級 Pal。\n• 如果您已使用您的 Palshub 帳戶解鎖它，只需登入即可存取完整詳細資訊。\n• 還未解鎖？請前往 palshub.ai 應用程式了解更多。",
-      "notAvailable": "不適用",
-      "buyOnPalshub": "在 Palshub 上購買",
-      "finalizingPurchase": "正在完成您的購買…",
-      "processingPurchase": "處理中 — 稍後將解鎖。",
-      "checkoutSessionExpired": "您的連線已過期。請重新登入以繼續。",
-      "signInAgain": "重新登入",
-      "palNotAvailable": "此 pal 目前無法購買。",
-      "checkoutFailed": "發生錯誤。請重試。"
+      "notAvailable": "不適用"
     },
     "filters": {
       "myPals": "我的 Pal",
@@ -1393,13 +1400,52 @@
       "download": "下載",
       "getFree": "獲得免費版本"
     },
-    "premiumPalDescription": "來自 palshub.ai 社群的高級 pal",
-    "premiumInfoText": "前往 palshub.ai 探索更多 pal",
     "sortOptions": {
       "newest": "最新",
       "oldest": "最舊的",
       "rating": "最高評級",
       "popular": "最受歡迎"
+    },
+    "purchase": {
+      "buy": "{{price}}",
+      "open": "開啟",
+      "install": "安裝",
+      "pending": "待處理",
+      "unlocking": "解鎖中",
+      "retry": "重試",
+      "supportCode": "支援碼：{{code}}",
+      "noLongerAvailable": "此 Pal 已不再可用。您可以 {{refundLink}}。",
+      "refundLink": "向 Apple 申請退款",
+      "notCompleted": "此購買無法完成。Google 將會為您退款。",
+      "withdrawnRefunding": "此 Pal 已撤回。請聯繫客服申請退款。",
+      "invalid": "無法驗證此筆購買。",
+      "heldInvalid": "我們無法解鎖此項購買。請提供此代碼給客服。",
+      "recommendedModel": "推薦模型",
+      "sampleExchange": "範例對話",
+      "signInLine": "已擁有？登入",
+      "licenseNotice": "您正在購買此 Pal 的使用授權。",
+      "termsOfSale": "銷售條款",
+      "appleMediaTerms": "Apple 媒體服務條款",
+      "linkPrompt": "登入以在您的其他裝置上使用",
+      "linkSignIn": "登入",
+      "dismiss": "現在不是時候",
+      "linkConflict": "這些購買項目與另一個帳號連結。",
+      "restorePurchases": "恢復購買項目",
+      "badgePending": "待處理",
+      "badgeUnlocking": "解鎖中",
+      "badgeUpdate": "有可用更新",
+      "updatePrompt": "創作者發布了新版本。",
+      "updatePromptWithNote": "創作者發布了新版本：{{note}}。",
+      "updateButton": "更新",
+      "updateConfirmText": "此操作將取代您對創作者修改部分的編輯內容。",
+      "updateConfirm": "更新",
+      "updateCancel": "取消",
+      "modelStep": {
+        "download": "下載 · {{size}}",
+        "startChat": "開始對話",
+        "needsMemory": "此 Pal 需要至少 {{size}} 記憶體的裝置來執行其最小模型。",
+        "noModelFits": "此裝置的記憶體不足以運行此 Pal。"
+      }
     }
   },
   "voiceAndSpeech": {
@@ -1584,6 +1630,8 @@
   "downloadBanner": {
     "titleByPal": "{{name}} 正在下載中",
     "titleByModel": "{{name}} 正在下載中",
-    "extraInProgress": "還有 {{count}} 個正在處理中"
+    "extraInProgress": "還有 {{count}} 個正在處理中",
+    "failedTitle": "下載未完成",
+    "retry": "重試"
   }
 }

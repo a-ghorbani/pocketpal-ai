@@ -1,0 +1,1637 @@
+{
+  "common": {
+    "cancel": "إلغاء",
+    "delete": "حذف",
+    "dismiss": "تجاهل",
+    "rename": "إعادة التسمية",
+    "reset": "إعادة ضبط",
+    "save": "حفظ",
+    "stop": "إيقاف",
+    "update": "تحديث",
+    "error": "خطأ",
+    "export": "تصدير",
+    "networkError": "حدث خطأ في الشبكة. يُرجى المحاولة مرة أخرى.",
+    "downloadETA": "ETA",
+    "calculating": "جارٍ الحساب...",
+    "second": "ثانية",
+    "seconds": "ثواني",
+    "year": "سنة",
+    "years": "سنوات",
+    "month": "شهر",
+    "months": "شهور",
+    "week": "أسبوع",
+    "weeks": "أسابيع",
+    "day": "يوم",
+    "days": "أيام",
+    "hour": "ساعة",
+    "hours": "ساعات",
+    "minute": "دقيقة",
+    "minutes": "دقائق",
+    "justNow": "منذ قليل",
+    "ok": "حسنًا",
+    "close": "إغلاق",
+    "clear": "مسح الكل",
+    "gallery": "المعرض",
+    "noResults": "لا توجد نتائج"
+  },
+  "settings": {
+    "modelInitializationSettings": "إعدادات تهيئة النموذج",
+    "metal": "Metal",
+    "metalDescription": "واجهة برمجة تطبيقات مُسرَّعة بواسطة عتاد Apple.",
+    "metalRequiresNewerIOS": "يتطلب تسريع Metal نظام iOS 18 أو أحدث. يُرجى ترقية جهازك لاستخدام هذه الميزة.",
+    "openCL": "OpenCL (تجريبي)",
+    "openCLDescription": "تسريع GPU لوحدات معالجة الرسومات Adreno. معالجة أسرع للمطالبات، لكن قد لا تكون عملية التوليد أسرع دائمًا.",
+    "openCLNotAvailable": "OpenCL غير متاح على هذا الجهاز. يتطلب وحدة معالجة رسومات Adreno مع دعم ميزتي i8mm و dotprod في وحدة المعالجة المركزية.",
+    "openCLMissingCPUFeatures": "‎يتطلب OpenCL دعم ميزتي i8mm وdotprod في وحدة المعالجة المركزية، وهما غير متاحتين على هذا الجهاز.",
+    "openCLQuantizationNote": "ملاحظة: تعمل النماذج المكمَّمة بصيغة Q4_0 بأفضل أداء مع OpenCL.",
+    "openCLDocsLink": "راجع توثيق OpenCL في llama.cpp للاطلاع على التفاصيل.",
+    "layersOnGPU": "الطبقات على GPU: {{gpuLayers}}",
+    "deviceSelection": "اختيار الجهاز",
+    "deviceSelectionIOS": "الجهاز (Metal)",
+    "deviceSelectionIOSDescription": "اختر وحدة معالجة الرسومات Metal أو وضع المعالجة باستخدام CPU فقط",
+    "deviceSelectionAndroidDescription": "‎اختر جهاز المعالجة (CPU أو GPU أو وحدة NPU من نوع Hexagon)",
+    "cpuOnlyNoAccelerators": "وحدة المعالجة المركزية CPU فقط - لم يتم اكتشاف أي مسرّعات hardware",
+    "contextSize": "حجم السياق",
+    "contextSizePlaceholder": "أدخل حجم السياق (الحد الأدنى {{minContextSize}})",
+    "invalidContextSizeError": "يُرجى إدخال رقم صالح (الحد الأدنى {{minContextSize}})",
+    "modelReloadNotice": "يجب إعادة تحميل النموذج لتطبيق التغييرات.",
+    "advancedSettings": "الإعدادات المتقدمة",
+    "batchSize": "حجم الدفعة",
+    "batchSizeDescription": "حجم الدفعة: {{batchSize}}{{effectiveBatch}}",
+    "effectiveLabel": "الفعلي",
+    "physicalBatchSize": "حجم الدفعة الفعلي",
+    "physicalBatchSizeDescription": "‎حجم الدفعة الفعلي: {{physicalBatchSize}}{{effectivePhysicalBatch}}",
+    "cpuThreads": "خيوط المعالجة المركزية CPU",
+    "cpuThreadsDescription": "يُستخدم {{threads}} من أصل {{maxThreads}} خيط معالجة متاح",
+    "imageMaxTokens": "الحد الأقصى لرموز الصور",
+    "imageMaxTokensDescription": "الحد الأقصى للرموز لمعالجة الصور: {{tokens}}{{effectiveTokens}} (الأقل = أسرع، تفاصيل أقل)",
+    "flashAttention": "الانتباه السريع (Flash Attention)",
+    "flashAttentionDescription": "تفعيل Flash Attention لمعالجة أسرع",
+    "flashAttentionIOSDescription": "‎آلية انتباه موفِّرة للذاكرة (تُفعَّل تلقائيًا على Metal)",
+    "flashAttentionAndroidDescription": "‎يجب تعطيله عند حفظ حالة OpenCL أو تحميلها",
+    "flashAttentionAuto": "تلقائي",
+    "flashAttentionOn": "يعمل",
+    "flashAttentionOff": "متوقف",
+    "keyCacheType": "نوع ذاكرة التخزين المؤقت للمفاتيح",
+    "keyCacheTypeDescription": "اختر نوع ذاكرة التخزين المؤقت لحساب المفاتيح",
+    "keyCacheTypeDisabledDescription": "فعّل Flash Attention لتغيير نوع ذاكرة التخزين المؤقت",
+    "valueCacheType": "نوع ذاكرة التخزين المؤقت للقيم",
+    "valueCacheTypeDescription": "اختر نوع ذاكرة التخزين المؤقت لحساب القيم",
+    "valueCacheTypeDisabledDescription": "‏فعّل Flash Attention لتغيير نوع ذاكرة التخزين المؤقت",
+    "memorySettings": "إعدادات الذاكرة",
+    "useMlock": "استخدم قفل الذاكرة",
+    "useMlockDescription": "إجبار النظام على إبقاء النموذج في ذاكرة RAM بدلًا من نقله إلى الذاكرة الافتراضية أو ضغطه",
+    "useMmap": "تعيين الذاكرة",
+    "useMmapDescription": "استخدم الملفات المعينة في الذاكرة لتحميل النموذج بشكل أسرع",
+    "useMmapTrue": "مفعّل",
+    "useMmapFalse": "معطل",
+    "useMmapTrueDescription": "استخدم تعيين الذاكرة دائمًا لتحميل أسرع",
+    "useMmapFalseDescription": "يُنصح بتعطيله عند تفعيل إعادة حزم الأوزان لتجنب مضاعفة استخدام الذاكرة",
+    "weightRepacking": "تفعيل إعادة حزم الأوزان",
+    "weightRepackingDescription": "‏معالجة أسرع للمطالبات مع استهلاك إضافي ضئيل للذاكرة عند تعطيل تعيين الذاكرة. لا تتأثر سرعة توليد الرموز.",
+    "speculativeDecoding": "التوليد التخميني",
+    "speculativeDecodingDescription": "استخدم نموذجًا صغيرًا للمسودة (أو نموذج MTP مضمّنًا) للتنبؤ بالرموز وتسريع التوليد. تجريبي.",
+    "speculativeNotMTPCapable": "النموذج النشط لا يدعم التوليد التخميني، ولا يوجد نموذج مسودة متوافق مرتبط به، لذلك سيظل هذا الخيار معطّلًا لهذا النموذج دون أي تأثير. يُطبَّق تلقائيًا على النماذج التي تدعمه.",
+    "speculativeDraftModel": "نموذج المسودة",
+    "speculativeDraftModelDescription": "يتنبأ بالرموز للنموذج النشط.",
+    "speculativeDraftModelNone": "لا شيء (MTP مضمّن)",
+    "speculativeDraftModelIgnoredOverridden": "يأتي النموذج النشط مع نموذج مسودة خاص به، لذا يتم تجاهل هذا الاختيار.",
+    "speculativeDraftModelIgnoredIncompatible": "نموذج المسودة هذا غير متوافق مع النموذج النشط، لذا يتم تجاهله.",
+    "speculativeDraftModelIgnoredNotCapable": "هذا النموذج لا يحتوي على طبقات مسودة، لذا لا يمكن استخدامه كنموذج مسودة.",
+    "speculativeDraftKeyCacheType": "نوع ذاكرة التخزين المؤقت لمفاتيح نموذج المسودة",
+    "speculativeDraftValueCacheType": "نوع ذاكرة التخزين المؤقت لقيم نموذج المسودة",
+    "speculativeDraftNGpuLayers": "طبقات نموذج المسودة على GPU",
+    "speculativeDraftNGpuLayersDescription": "‪عدد طبقات نموذج المسودة التي سيتم نقلها إلى GPU.",
+    "speculativeDraftCacheTypeInactiveDescription": "يُطبَّق عند تشغيل التوليد التخميني.",
+    "ttsAvailability": "تحويل النص إلى كلام",
+    "ttsAvailabilityDescription": "قراءة ردود المساعد بصوت عالٍ.",
+    "ttsAvailabilityLowMemoryWarning": "ذاكرة جهازك منخفضة — قد لا يعمل هذا بشكل موثوق.",
+    "modelLoadingSettings": "إعدادات تحميل النموذج",
+    "autoOffloadLoad": "النقل/التحميل التلقائي",
+    "autoOffloadLoadDescription": "نقل النموذج إلى الذاكرة الافتراضية عند انتقال التطبيق إلى الخلفية.",
+    "autoNavigateToChat": "الانتقال تلقائيًا إلى الدردشة",
+    "autoNavigateToChatDescription": "الانتقال إلى الدردشة عند بدء التحميل.",
+    "appSettings": "إعدادات التطبيق",
+    "language": "اللغة",
+    "languageSheetTitle": "اللغة",
+    "languageSearchPlaceholder": "بحث اللغات",
+    "darkMode": "الوضع الداكن",
+    "displayMemoryUsage": "عرض استخدام الذاكرة",
+    "displayMemoryUsageDescription": "عرض استخدام الذاكرة في صفحة الدردشة.",
+    "exportOptions": "خيارات التصدير",
+    "exportLegacyChats": "تصدير المحادثات القديمة",
+    "exportLegacyChatsDescription": "استخدم هذا الخيار إذا فشلت عملية النقل أو كنت بحاجة إلى استعادة جلسات المحادثات القديمة.",
+    "exportButton": "تصدير",
+    "importChats": "استيراد جلسات المحادثات",
+    "importChatsDescription": "استيراد جلسات المحادثات من ملف JSON مُصدَّر.",
+    "importButton": "استيراد",
+    "importSuccess": "تم استيراد {{count}} من جلسات المحادثات بنجاح.",
+    "importError": "تعذّر استيراد جلسات المحادثات. يُرجى التحقق من تنسيق الملف.",
+    "internetSearch": {
+      "title": "البحث على الإنترنت",
+      "description": "اسمح لـ Pals بالبحث على الإنترنت باستخدام أدواتها الخاصة. استخدم مفتاح API الخاص بك — لا يحتفظ PocketPal بمفاتيحك ولا يمرّر استعلاماتك عبر خوادمه.",
+      "providerLabel": "موفّر البحث",
+      "providerGated": "قريبًا",
+      "keyLabel": "مفتاح API",
+      "keyIsSet": "تم تعيين المفتاح لـ {{provider}}.",
+      "keyNotSet": "لم يتم تعيين مفتاح لـ {{provider}}.",
+      "setKeyButton": "تعيين المفتاح",
+      "updateKeyButton": "تحديث المفتاح",
+      "clearKeyButton": "مسح المفتاح",
+      "keyInputPlaceholder": "ألصق مفتاح API الخاص بـ {{provider}}",
+      "keyUpdateError": "تعذّر تحديث المفتاح. يُرجى المحاولة مرة أخرى.",
+      "showKeyAccessibilityLabel": "إظهار مفتاح API",
+      "hideKeyAccessibilityLabel": "إخفاء مفتاح API",
+      "resultCountLabel": "عدد النتائج لكل بحث",
+      "resultCountDescription": "تقليل عدد النتائج يوفّر مساحة أكبر في سياق النموذج.",
+      "consentTitle": "تغادر عمليات البحث جهازك",
+      "consentDescription": "عندما يبحث أحد Pals على الإنترنت، يُرسل استعلام البحث إلى الموفّر المحدد عبر الإنترنت. وعند قراءة صفحة، قد يُرسل عنوان URL ومحتوى الصفحة إلى خدمة القراءة الافتراضية (r.jina.ai) إذا لم يكن لدى الموفّر المحدد قارئ خاص به. لا تُرسل مفاتيح API أو استعلامات البحث إلى PocketPal.",
+      "consentAccept": "أفهم ذلك",
+      "consentRequired": "وافق على الإفصاح أعلاه لتعيين مفتاح API وتفعيل البحث.",
+      "consentGivenTitle": "تم تفعيل البحث على الإنترنت",
+      "consentGivenDescription": "قد تغادر استعلامات البحث وعمليات قراءة الصفحات جهازك كما هو موضح أعلاه.",
+      "consentRevoke": "إلغاء"
+    },
+    "apiSettingsTitle": "إعدادات API",
+    "huggingFaceTokenLabel": "رمز Hugging Face",
+    "tokenIsSetDescription": "تم تعيين الرمز. يلزم للوصول إلى النماذج المقيّدة.",
+    "setTokenDescription": "عيّن رمز وصول لاستخدام النماذج المقيّدة على Hugging Face.",
+    "setTokenButton": "تعيين الرمز",
+    "useHfTokenLabel": "استخدام رمز Hugging Face",
+    "useHfTokenDescription": "‎فعّل هذا الخيار لاستخدام الرمز في طلبات API. عطّله إذا تسبب الرمز في مشكلات بالمصادقة.",
+    "cacheStorageTitle": "التخزين المؤقت والتخزين",
+    "clearPalCaches": "مسح ذاكرة التخزين المؤقت للاختصارات",
+    "clearPalCachesDescription": "يمسح البيانات المخزّنة مؤقتًا لتسريع الاختصارات. لن يؤثر ذلك على Pals أو سجل المحادثات.",
+    "clearCachesButton": "مسح ذاكرة التخزين المؤقت",
+    "clearCachesConfirmTitle": "هل تريد مسح ذاكرة التخزين المؤقت للاختصارات؟",
+    "clearCachesConfirmMessage": "‎سيؤدي هذا إلى مسح جميع بيانات الجلسات المخزّنة مؤقتًا ({{fileCount}} ملف، {{size}}). قد تكون الاختصارات أبطأ عند استخدامها لأول مرة بعد المسح. لن يؤثر ذلك على Pals أو سجل المحادثات.",
+    "clearCachesSuccess": "تم مسح {{count}} من ملفات ذاكرة التخزين المؤقت بنجاح.",
+    "clearCachesError": "تعذّر مسح ذاكرة التخزين المؤقت. يُرجى المحاولة مرة أخرى.",
+    "noCachesToClear": "لا توجد ذاكرة تخزين مؤقت لمسحها.",
+    "serverName": "اسم الخادم",
+    "serverUrl": "عنوان URL للخادم",
+    "serverUrlPlaceholder": "مثل: http://192.168.1.100:1234",
+    "requestTimeout": "مهلة انتظار الطلب (بالثواني)",
+    "requestTimeoutPlaceholder": "اختياري — اتركه فارغًا لاستخدام الإعداد الافتراضي",
+    "requestTimeoutHelp": "أقصى مدة انتظار لاستجابة الخادم البطيء. اتركه فارغًا لاستخدام الإعداد الافتراضي.",
+    "serverType": "نوع الخادم",
+    "serverTypeHelp": "تم اكتشافه تلقائيًا؛ غيّره إذا كان غير صحيح.",
+    "apiKey": "مفتاح API",
+    "apiKeyPlaceholder": "اختياري — مطلوب لـ OpenAI/Groq",
+    "apiKeyDescription": "يُخزَّن بأمان على الجهاز.",
+    "remoteModel": "الخادم البعيد",
+    "remotePrivacyNotice": "‎تغادر الرسائل المُرسلة إلى الخوادم البعيدة جهازك. اتصل فقط بالخوادم التي تثق بها.",
+    "remoteIndicator": "الخادم البعيد",
+    "serverUrlRequired": "عنوان URL للخادم مطلوب",
+    "serverUrlInvalid": "تنسيق عنوان URL غير صالح",
+    "serverUrlHttpWarning": "يتطلب iOS استخدام HTTPS للخوادم غير المحلية. استخدم https:// أو عنوانًا على شبكة محلية.",
+    "addRemoteModel": "إضافة نموذج بعيد",
+    "yourServers": "خوادمك",
+    "orConnectNewServer": "أو الاتصال بخادم جديد",
+    "selectModel": "اختيار النموذج",
+    "addModel": "إضافة نموذج",
+    "connected": "متصل",
+    "connectionFailed": "فشل الاتصال: {{error}}",
+    "connecting": "جارٍ الاتصال...",
+    "noModelsAvailable": "لا توجد نماذج متاحة على هذا الخادم.",
+    "alreadyAdded": "تمت إضافتها بالفعل",
+    "connectedServers": "الخوادم المتصلة",
+    "modelsCount": "{{count}} نموذج",
+    "serverDetails": "تفاصيل الخادم",
+    "modelsUsingServer": "النماذج التي تستخدم هذا الخادم:",
+    "saveChanges": "حفظ التغييرات",
+    "removeServer": "إزالة الخادم",
+    "removeServerMessage": "إزالة {{serverName}} ونماذجه البالغ عددها {{count}}؟",
+    "removeRemoteModel": "إزالة {{modelName}} ({{serverName}})؟",
+    "retryConnection": "إعادة المحاولة",
+    "enterUrlManually": "إدخال عنوان URL يدويًا",
+    "manageServers": "إدارة الخوادم",
+    "purchases": {
+      "title": "المشتريات",
+      "statusOwned": "تم الشراء",
+      "statusUnlocking": "جارٍ الفتح",
+      "link": "سجّل الدخول لاستخدامه على أجهزة أخرى"
+    }
+  },
+  "memory": {
+    "shortWarning": "تحذير بشأن الذاكرة",
+    "multimodalWarning": "قد لا تتوفر في هذا الجهاز موارد كافية للنماذج متعددة الوسائط.",
+    "memoryTight": "الذاكرة ممتلئة",
+    "lowMemory": "ذاكرة منخفضة",
+    "memoryDetailMessage": "‏هذا النموذج يحتاج إلى نحو {{needed}}، لكن يُقدَّر أن المتاح للاستخدام هو نحو {{available}} فقط. تتحسن التقديرات كلما استخدمت التطبيق.",
+    "estimatedMemory": "الذاكرة المقدّرة: ~{{size}}",
+    "alerts": {
+      "memoryWarningTitle": "تحذير الذاكرة",
+      "memoryWarningMessage": "قد يتجاوز هذا النموذج الذاكرة المتاحة، مما قد يسبب عدم استقرار التطبيق. هل تريد متابعة التحميل؟",
+      "multimodalWarningTitle": "تحذير بشأن أداء الجهاز",
+      "multimodalWarningMessage": "قد لا تتوفر في هذا الجهاز موارد كافية للنماذج متعددة الوسائط. قد يؤدي التحميل إلى عدم استقرار التطبيق. هل تريد المتابعة رغم ذلك؟",
+      "combinedWarningTitle": "تحذير بشأن الأداء",
+      "combinedWarningMessage": "قد يتجاوز هذا النموذج الذاكرة المتاحة، وقد لا تتوفر في هذا الجهاز موارد كافية للنماذج متعددة الوسائط. قد يؤدي التحميل إلى عدم استقرار التطبيق. هل تريد المتابعة رغم ذلك؟",
+      "cancel": "إلغاء",
+      "continue": "متابعة"
+    }
+  },
+  "storage": {
+    "checkFailed": "تعذّر التحقق من مساحة التخزين",
+    "lowStorage": "مساحة التخزين منخفضة! حجم النموذج {{modelSize}} > المساحة الحرة {{freeSpace}}"
+  },
+  "generation": {
+    "modelNotInitialized": "لم تتم تهيئة سياق النموذج",
+    "failedToGenerate": "فشل في توليد الناتج"
+  },
+  "models": {
+    "fileManagement": {
+      "fileAlreadyExists": "الملف موجود بالفعل",
+      "fileAlreadyExistsMessage": "يوجد ملف بهذا الاسم بالفعل. ماذا تريد أن تفعل؟",
+      "replace": "استبدال",
+      "keepBoth": "الاحتفاظ بكليهما",
+      "copyingModel": "جارٍ نسخ ملف النموذج...",
+      "copyFailed": "فشل نسخ ملف النموذج"
+    },
+    "labels": {
+      "localModel": "محلي",
+      "hfModel": "HF",
+      "unknownGroup": "غير معروف",
+      "availableToUse": "جاهز للاستخدام",
+      "availableToDownload": "متاح للتنزيل",
+      "useAddButtonForMore": "استخدم زر + للعثور على مزيد من النماذج"
+    },
+    "vision": "الرؤية",
+    "mmproj": "جهاز عرض",
+    "multimodal": {
+      "settings": "إعدادات النماذج متعددة الوسائط",
+      "selected": "محدَّد",
+      "select": "‎تحديد",
+      "download": "تنزيل",
+      "reloadModelTitle": "إعادة تحميل النموذج",
+      "reloadModelMessage": "يجب إعادة تحميل النموذج لتطبيق نموذج الإسقاط الجديد. هل تريد إعادة التحميل الآن؟",
+      "reload": "إعادة التحميل",
+      "cannotDeleteTitle": "تعذّر الحذف",
+      "visionControls": {
+        "enableVision": "تفعيل إمكانات الرؤية",
+        "disableVision": "تعطيل إمكانات الرؤية",
+        "visionEnabled": "الرؤية مفعّلة",
+        "visionDisabled": "الرؤية معطّلة",
+        "textOnlyMode": "نص فقط",
+        "visionMode": "الرؤية مفعّلة",
+        "downloadWithVision": "التنزيل مع دعم الرؤية",
+        "downloadTextOnly": "تنزيل نص فقط",
+        "visionToggleDescription": "تفعيل إمكانات معالجة الصور",
+        "visionModeDescription": "معالجة الصور والنصوص",
+        "textOnlyModeDescription": "معالجة النصوص فقط",
+        "includesVisionCapability": "يتضمن إمكانات الرؤية",
+        "projectionModelSize": "+{{size}} نموذج عرض",
+        "requiresProjectionModel": "‎نزّل أولًا نموذج عرض متوافق"
+      },
+      "dependentModels": "النماذج التابعة:",
+      "visionWillBeDisabled": "سيتم تعطيل إمكانات الرؤية لهذه النماذج.",
+      "projectionModels": "نماذج العرض",
+      "noCompatibleModels": "لم يتم العثور على نماذج عرض متوافقة",
+      "noProjectionModels": "لا توجد نماذج عرض متاحة",
+      "projectionNeededTitle": "يلزم نموذج عرض",
+      "projectionNeededMessage": "يتطلب هذا النموذج نموذج عرض لدعم القدرات متعددة الوسائط.",
+      "projectionMissingWarning": "‎نموذج العرض غير موجود",
+      "projectionMissingShort": "نموذج العرض غير موجود",
+      "deleteProjectionTitle": "حذف نموذج العرض",
+      "deleteProjectionMessage": "هل أنت متأكد من حذف نموذج العرض هذا؟",
+      "cannotDeleteActive": "نموذج العرض هذا قيد الاستخدام حاليًا.",
+      "cannotDeleteInUse": "يُستخدم نموذج العرض هذا مع نماذج LLM التي تم تنزيلها:"
+    },
+    "buttons": {
+      "addFromHuggingFace": "إضافة من Hugging Face",
+      "addLocalModel": "إضافة نموذج محلي",
+      "reset": "إعادة ضبط"
+    },
+    "modelsHeaderRight": {
+      "menuTitleHf": "نماذج Hugging Face",
+      "menuTitleDownloaded": "النماذج التي تم تنزيلها",
+      "menuTitleGrouped": "‎تجميع حسب نوع النموذج",
+      "menuTitleReset": "إعادة ضبط قائمة النماذج"
+    },
+    "modelsResetDialog": {
+      "proceedWithReset": "متابعة إعادة الضبط",
+      "confirmReset": "تأكيد إعادة الضبط"
+    },
+    "chatTemplate": {
+      "label": "قالب الدردشة الأساسي:"
+    },
+    "details": {
+      "title": "ملفات GGUF المتاحة"
+    },
+    "modelFile": {
+      "alerts": {
+        "cannotRemoveTitle": "تعذّر الإزالة",
+        "modelPreset": "هذا النموذج مُعد مسبقًا.",
+        "downloadedFirst": "تم تنزيل النموذج. يُرجى حذف الملف أولًا.",
+        "removeTitle": "إزالة النموذج",
+        "removeMessage": "هل أنت متأكد من أنك تريد إزالة هذا النموذج من القائمة؟",
+        "removeError": "فشل في إزالة النموذج.",
+        "alreadyDownloadedTitle": "النموذج مُنزَّل بالفعل",
+        "alreadyDownloadedMessage": "النموذج مُنزّل بالفعل.",
+        "deleteTitle": "حذف النموذج",
+        "deleteMessage": "هل أنت متأكد من حذف هذا النموذج؟"
+      },
+      "buttons": {
+        "remove": "إزالة"
+      },
+      "warnings": {
+        "storage": {
+          "message": "لا توجد مساحة تخزين كافية.",
+          "shortMessage": "مساحة التخزين منخفضة"
+        },
+        "memory": {
+          "message": "حجم النموذج قريب من سعة ذاكرة جهازك أو يتجاوزها، وقد يتسبب ذلك في سلوك غير متوقع."
+        },
+        "legacy": {
+          "message": "‎صيغة تكميم قديمة، وقد لا يعمل النموذج.",
+          "shortMessage": "تكميم قديم"
+        },
+        "multiple": "{{count}} تحذيرات"
+      },
+      "labels": {
+        "downloadSpeed": "{{speed}}"
+      }
+    },
+    "modelDescription": {
+      "size": "الحجم: ",
+      "parameters": "المعلمات: ",
+      "separator": " | ",
+      "notAvailable": "N/A"
+    },
+    "modelCapabilities": {
+      "questionAnswering": "الإجابة عن الأسئلة",
+      "summarization": "التلخيص",
+      "reasoning": "الاستدلال",
+      "roleplay": "لعب الأدوار",
+      "instructions": "اتباع التعليمات",
+      "code": "توليد التعليمات البرمجية",
+      "math": "حل المسائل الرياضية",
+      "multilingual": "متعدد اللغات",
+      "rewriting": "إعادة الصياغة",
+      "creativity": "الكتابة الإبداعية",
+      "vision": "الرؤية",
+      "mtp": "التنبؤات (MTP)",
+      "mtpDraft": "المسودة التخمينية"
+    },
+    "search": {
+      "noResults": "لم يتم العثور على نماذج",
+      "loadingMore": "جارٍ تحميل المزيد...",
+      "searchPlaceholder": "البحث عن نماذج Hugging Face",
+      "modelUpdatedLong": "تم التحديث قبل {{time}}",
+      "modelUpdatedShort": "منذ {{time}}",
+      "modelUpdatedJustNowLong": "تم التحديث الآن",
+      "modelUpdatedJustNowShort": "الآن",
+      "errorOccurred": "تعذر تحميل النماذج. يُرجى المحاولة مرة أخرى.",
+      "filters": {
+        "author": "المؤلف",
+        "authorPlaceholder": "تصفية حسب المؤلف...",
+        "sortBy": "ترتيب حسب",
+        "clearFilters": "مسح الفلاتر",
+        "showFilters": "عرض الفلاتر",
+        "hideFilters": "إخفاء الفلاتر",
+        "sortRelevance": "الأكثر صلة",
+        "sortDownloads": "التنزيلات",
+        "sortRecent": "محدث حديثاً",
+        "sortLikes": "الأكثر إعجابًا"
+      }
+    },
+    "hubRun": {
+      "title": "تنزيل النموذج",
+      "resolving": "جارٍ تحميل تفاصيل النموذج…",
+      "cancel": "إلغاء",
+      "retry": "‍إعادة المحاولة",
+      "invalidLinkTitle": "الرابط غير صالح",
+      "invalidLinkMessage": "رابط Hugging Face هذا مفقود أو يحتوي على نموذج أو ملف غير صالح.",
+      "resolveError": "تعذر تحميل تفاصيل النموذج. تحقق من اتصالك بالإنترنت وحاول مرة أخرى."
+    },
+    "modelCard": {
+      "alerts": {
+        "deleteTitle": "حذف النموذج",
+        "deleteMessage": "هل أنت متأكد من حذف هذا النموذج؟",
+        "removeTitle": "إزالة النموذج",
+        "removeMessage": "هل أنت متأكد من إزالة هذا النموذج من القائمة؟"
+      },
+      "buttons": {
+        "settings": "الإعدادات",
+        "download": "تنزيل",
+        "remove": "إزالة",
+        "load": "تحميل",
+        "offload": "إلغاء التحميل"
+      },
+      "labels": {
+        "skills": "المهارات: ",
+        "vision": "الرؤية",
+        "visionSupported": "مدعوم",
+        "visionNotSupported": "غير مدعوم",
+        "visionUnknown": "غير معروف",
+        "capabilities": "القدرات.",
+        "modelName": "اسم النموذج",
+        "contextLength": "طول السياق",
+        "architecture": "البنية",
+        "author": "المؤلف",
+        "requiresProjectionModel": "يتطلب نموذج عرض",
+        "downloadProjectionModel": "‎تنزيل نموذج العرض",
+        "viewModelCardOnHuggingFace": "عرض بطاقة النموذج على Hugging Face",
+        "draftOnlyReason": "نموذج مسودة فقط. اختره من الإعدادات ← فك الترميز التخميني."
+      },
+      "accessibility": {
+        "expandDetails": "‎توسيع التفاصيل",
+        "collapseDetails": "طي التفاصيل",
+        "memoryWarning": "تحذير الذاكرة",
+        "integrityWarning": "تحذير السلامة",
+        "downloadProgress": "تقدم التنزيل",
+        "loadingIndicator": "جارٍ التحميل",
+        "loadButton": "تحميل النموذج",
+        "offloadButton": "إلغاء تحميل النموذج",
+        "downloadButton": "تنزيل النموذج",
+        "settingsButton": "إعدادات النموذج",
+        "deleteButton": "حذف النموذج",
+        "removeButton": "‎إزالة النموذج",
+        "expandDetailsButton": "توسيع تفاصيل النموذج",
+        "memoryWarningButton": "عرض تفاصيل تحذير الذاكرة",
+        "integrityWarningButton": "عرض تفاصيل تحذير السلامة",
+        "memoryWarningSnackbar": "إشعار تحذير الذاكرة"
+      }
+    },
+    "modelSettings": {
+      "template": {
+        "label": "القالب:",
+        "editButton": "تعديل",
+        "dialogTitle": "تعديل قالب الدردشة",
+        "note1": "ملاحظة: قد يؤدي تغيير القالب إلى تغيير BOS وEOS وموجه النظام.",
+        "note2": "يستخدم Nunjucks. اتركه فارغًا لاستخدام قالب النموذج.",
+        "placeholder": "أدخل قالب الدردشة هنا...",
+        "closeButton": "إغلاق"
+      },
+      "stopWords": {
+        "placeholder": "إضافة كلمة توقف جديدة",
+        "label": "كلمات التوقف"
+      },
+      "tokenSettings": {
+        "bos": "BOS",
+        "eos": "EOS",
+        "bosTokenPlaceholder": "رمز BOS",
+        "eosTokenPlaceholder": "رمز EOS",
+        "addGenerationPrompt": "إضافة تعليمات التوليد",
+        "systemPrompt": "تعليمات النظام"
+      }
+    }
+  },
+  "completionParams": {
+    "include_thinking_in_context": "تضمين أجزاء تفكير واستدلال الذكاء الاصطناعي في السياق المُرسل إلى النموذج. قد يؤدي تعطيل هذا الخيار إلى توفير مساحة في السياق، لكنه قد يؤثر في الأداء.",
+    "jinja": "تفعيل قوالب Jinja لتنسيق المحادثة. عند تفعيل هذا الخيار، يُستخدم نظام قوالب المحادثة المستند إلى Jinja لتحسين التوافق مع النماذج الحديثة.",
+    "grammar": "فرض قواعد محددة لضمان التزام النص المُنشأ ببنية أو تنسيق معيّن",
+    "stop": "تحديد عبارات معيّنة لإيقاف إنشاء النص",
+    "n_predict": "الحد الأقصى لعدد الرموز التي يمكن إنشاؤها. اختر «غير محدود» لإزالة الحد، أو «مخصص» لتحديد قيمة معينة.",
+    "n_probs": "إظهار احتمالات الكلمات البديلة.",
+    "top_k": "التحكم في الإبداع من خلال حصر اختيار الكلمات في أكثر K خيارات احتمالًا. القيم الأقل تجعل الردود أكثر تركيزًا",
+    "top_p": "الموازنة بين الإبداع والترابط. تسمح القيم الأعلى (القريبة من 1.0) بردود أكثر إبداعًا، لكنها قد تكون أقل تركيزًا",
+    "min_p": "الحد الأدنى لاحتمال قبول الرمز. استبعاد الكلمات غير المحتملة لتقليل الردود غير المنطقية أو الخارجة عن السياق",
+    "temperature": "التحكم في مستوى الإبداع والتوقّع. القيم الأعلى تجعل الردود أكثر إبداعًا، لكنها أقل تركيزًا",
+    "penalty_last_n": "تحديد مدى الرجوع إلى النص السابق لاكتشاف التكرار. تساعد القيم الأكبر على منع التكرار على المدى الطويل",
+    "penalty_repeat": "تقليل تكرار الكلمات. القيم الأعلى تجعل الردود أكثر تنوعًا في استخدام الكلمات",
+    "penalty_freq": "تقليل استخدام الكلمات المتكررة. القيم الأعلى تشجّع على تنويع المفردات",
+    "penalty_present": "تقليل تكرار الأفكار والمواضيع. القيم الأعلى تشجّع على تنويع المحتوى",
+    "mirostat": "تحكم متقدم في إبداع الردود. اضبطه على 1 أو 2 (سلاسة أكبر) لضبط العشوائية والترابط تلقائيًا وفي الوقت الفعلي.",
+    "mirostat_tau": "تحديد مستوى الإبداع في Mirostat. القيم الأعلى تعطي ردودًا أكثر تنوعًا وإبداعًا، بينما القيم الأقل تجعل الردود أكثر تركيزًا.",
+    "mirostat_eta": "سرعة ضبط الإبداع في Mirostat. القيم الأعلى تعني ضبطًا أسرع",
+    "dry_multiplier": "قوة ميزة DRY (عدم تكرار الكلام). القيم الأعلى تقلّل التكرار بشكل أكبر",
+    "dry_base": "مقدار تقليل التكرار الأساسي في وضع DRY. القيم الأعلى تمنع التكرار بشكل أكبر",
+    "dry_allowed_length": "‎عدد الكلمات التي يمكن تكرارها قبل تطبيق تقليل التكرار في DRY",
+    "dry_penalty_last_n": "‏مدى الرجوع لاكتشاف التكرار في وضع DRY",
+    "dry_sequence_breakers": "الرموز التي تعيد ضبط فحص التكرار في وضع DRY",
+    "ignore_eos": "متابعة إنشاء النص حتى إذا أراد النموذج التوقف. مفيد لإجبار النموذج على إنشاء ردود أطول",
+    "logit_bias": "التحكم في مدى احتمال ظهور كلمات معيّنة في الرد",
+    "seed": "تحديد قيمة البداية لمولّد الأرقام العشوائية. مفيد للحصول على نتائج متطابقة عند تكرار العملية",
+    "xtc_probability": "تحديد احتمال حذف الرموز باستخدام XTC. القيمة 0 تعني تعطيل الميزة",
+    "xtc_threshold": "تحديد الحد الأدنى لاحتمال حذف الرموز باستخدام XTC. القيم الأكبر من 0.5 تعطل XTC",
+    "typical_p": "تفعيل أخذ العينات المحلية المعتادة باستخدام المعامل p. القيمة 1.0 تعني تعطيل الميزة"
+  },
+  "about": {
+    "screenTitle": "معلومات التطبيق",
+    "description": "تطبيق يتيح لك تشغيل نماذج اللغة مباشرة على هاتفك. يعتمد على llama.cpp وllama.rn.",
+    "supportProject": "دعم المشروع",
+    "supportProjectDescription": "إذا أعجبك استخدام PocketPal AI، يُرجى دعم المشروع من خلال:",
+    "githubButton": "وضع نجمة على GitHub",
+    "orBy": "أو من خلال",
+    "versionCopiedTitle": "تم نسخ الإصدار",
+    "versionCopiedDescription": "تم نسخ معلومات الإصدار إلى الحافظة",
+    "tour": "جولة",
+    "tourDescription": "إعادة عرض شاشات الترحيب للتعرّف على ما يقدمه PocketPal AI.",
+    "showIntroButton": "عرض المقدمة مرة أخرى",
+    "privacyPolicy": "سياسة الخصوصية",
+    "termsOfService": "شروط الخدمة"
+  },
+  "feedback": {
+    "title": "إرسال ملاحظات",
+    "description": "رأيك يهمنا! أخبرنا كيف يساعدك PocketPal AI وما الذي يمكننا تحسينه ليصبح أكثر فائدة لك.",
+    "shareThoughtsButton": "مشاركة أفكارك",
+    "useCase": {
+      "label": "فيما تستخدم PocketPal AI؟",
+      "placeholder": "مثل التلخيص، وتمثيل الأدوار، وغيرها."
+    },
+    "featureRequests": {
+      "label": "طلب ميزة",
+      "placeholder": "ما الميزات التي تود رؤيتها؟"
+    },
+    "generalFeedback": {
+      "label": "ملاحظات عامة",
+      "placeholder": "شاركنا أي أفكار أخرى لديك."
+    },
+    "usageFrequency": {
+      "label": "كم مرة تستخدم PocketPal AI؟ (اختياري)",
+      "options": {
+        "daily": "يومياً",
+        "weekly": "أسبوعياً",
+        "monthly": "شهرياً",
+        "rarely": "نادرًا"
+      }
+    },
+    "email": {
+      "label": "البريد الإلكتروني للتواصل (اختياري)",
+      "placeholder": "عنوان بريدك الإلكتروني"
+    },
+    "submit": "إرسال الملاحظات",
+    "validation": {
+      "required": "يرجى تقديم بعض الملاحظات على الأقل"
+    },
+    "success": "شكرًا لك على ملاحظاتك!",
+    "error": {
+      "general": "خطأ في إرسال الملاحظات. يرجى المحاولة مرة أخرى."
+    }
+  },
+  "components": {
+    "attachmentButton": {
+      "attachmentButtonAccessibilityLabel": "إرسال الوسائط"
+    },
+    "bubble": {
+      "msPerToken": "{{value}} ms/رمز",
+      "tokensPerSec": "{{value}} رمز/ثانية",
+      "promptTokensPerSec": "{{value}} رمز الإدخال/ثانية",
+      "cachedTokens": "{{value}} مخزّن مؤقتًا",
+      "ttft": "{{value}} مللي ثانية لزمن الوصول لأول رمز",
+      "draftAccepted": "المسودة: {{accepted}}/{{total}} ({{pct}}%)",
+      "interrupted": "مقاطَع",
+      "truncated": "تم القطع — على الأرجح السياق ممتلئ"
+    },
+    "exportUtils": {
+      "fileSaved": "تم حفظ الملف",
+      "fileSavedMessage": "تم حفظ الملف في مجلد التنزيلات باسم {{filename}}",
+      "share": "مشاركة",
+      "ok": "حسنًا",
+      "shareError": "خطأ في المشاركة",
+      "shareErrorMessage": "تعذر مشاركة الملف. يرجى المحاولة مرة أخرى.",
+      "saveError": "خطأ في الحفظ في مجلد التنزيلات",
+      "saveOptions": "خيارات الحفظ",
+      "saveOptionsMessage": "تعذّر الحفظ مباشرةً في مجلد التنزيلات. هل تريد مشاركة الملف بدلاً من ذلك؟",
+      "cancel": "إلغاء",
+      "shareContentErrorMessage": "تعذّرت مشاركة المحتوى. يرجى المحاولة مرة أخرى.",
+      "exportError": "خطأ في التصدير",
+      "exportErrorMessage": "حدث خطأ أثناء تصدير الملف. يرجى المحاولة مرة أخرى.",
+      "permissionRequired": "إذن التخزين مطلوب",
+      "permissionMessage": "نحتاج إلى إذن لحفظ التصدير في مجلد التنزيلات.",
+      "permissionDenied": "تم رفض الإذن",
+      "permissionDeniedMessage": "بدون إذن التخزين، سيتم تعطيل ميزة التصدير.",
+      "continue": "‏متابعة"
+    },
+    "thinkingBubble": {
+      "reasoning": "الاستدلال"
+    },
+    "pendingIndicator": {
+      "preparingTool": "جارٍ تحضير الأداة",
+      "buildingPage": "جارٍ إنشاء الصفحة",
+      "calculating": "‏جارٍ الحساب",
+      "lookingUpTime": "جارٍ البحث عن الوقت",
+      "stopping": "جارٍ الإيقاف…"
+    },
+    "toolMetrics": {
+      "tokens": "{{count}} رمز",
+      "elapsed": "{{seconds}} ثانية"
+    },
+    "chatEmptyPlaceholder": {
+      "noModelsTitle": "لا توجد نماذج متاحة",
+      "noModelsDescription": "نزّل نموذجًا لبدء الدردشة مع PocketPal",
+      "noModelsButton": "تنزيل النموذج",
+      "activateModelTitle": "فعّل النموذج للبدء",
+      "activateModelDescription": "اختر النموذج ونزّله. بعد التنزيل، اضغط على \"تحميل\" بجانب النموذج وابدأ الدردشة.",
+      "activateModelButton": "اختر النموذج",
+      "loading": "جارٍ التحميل...",
+      "gettingReadyTitle": "{{name}} يستعد",
+      "gettingReadyDescription": "سنُعلمك في اللحظة التي يصبح فيها رفيقك جاهزًا للدردشة. اضغط على الشريط في الأعلى لمتابعة سير العمل."
+    },
+    "chatInput": {
+      "inputPlaceholder": "رسالة",
+      "thinkingToggle": {
+        "enableThinking": "تفعيل وضع التفكير",
+        "disableThinking": "تعطيل وضع التفكير",
+        "thinkingEnabled": "تم تفعيل وضع التفكير",
+        "thinkingDisabled": "تم تعطيل وضع التفكير",
+        "thinkText": "تفكير",
+        "cycleEffort": "‎مستوى جهد الاستدلال: {{level}}. اضغط مرتين لتبديل مستوى الجهد"
+      }
+    },
+    "contentReportSheet": {
+      "title": "الإبلاغ عن المحتوى",
+      "privacyNote": "نحن لا نرسل أي محتوى من الرسائل أو تفاصيل المحادثة. يرجى وصف المشكلة المحددة التي واجهتها.",
+      "categoryLabel": "فئة الإبلاغ",
+      "selectCategory": "اختر فئة",
+      "categories": {
+        "hate": "خطاب كراهية",
+        "sexual": "محتوى جنسي",
+        "selfHarm": "إيذاء النفس",
+        "violence": "العنف",
+        "other": "أخرى"
+      },
+      "descriptionLabel": "الوصف",
+      "descriptionPlaceholder": "يرجى وصف المشكلة المتعلقة بهذا المحتوى...",
+      "includeModelInfo": "تضمين معلومات النموذج",
+      "includeModelInfoDescription": "ضمّن اسم النموذج ومعرّفه لمساعدتنا في التحقيق",
+      "noActiveModelNote": "لا يوجد نموذج نشط حاليًا",
+      "submit": "إرسال الإبلاغ",
+      "validation": {
+        "title": "‎معلومات ناقصة",
+        "message": "يرجى اختيار فئة وتقديم وصف."
+      },
+      "success": {
+        "title": "تم إرسال الإبلاغ",
+        "message": "شكرًا لك على إبلاغك. سنراجعه ونتخذ الإجراء المناسب."
+      },
+      "error": {
+        "title": "فشل الإبلاغ",
+        "message": "تعذّر إرسال الإبلاغ. يرجى المحاولة مرة أخرى."
+      }
+    },
+    "modelErrorReportSheet": {
+      "title": "الإبلاغ عن مشكلة في تحميل النموذج",
+      "privacyNote": "ساعدنا في تحسين PocketPal من خلال مشاركة تفاصيل حول هذا الخطأ. راجع أدناه ما سيتم مشاركته - يمكنك إلغاء تحديد أي عناصر لا تفضّل تضمينها.",
+      "errorMessage": "رسالة الخطأ",
+      "modelInfo": "‎معلومات النموذج",
+      "modelName": "الاسم",
+      "modelSource": "المصدر",
+      "modelSize": "الحجم",
+      "contextParams": "معاملات السياق",
+      "deviceInfo": "معلومات الجهاز",
+      "deviceModel": "الجهاز",
+      "osVersion": "نظام التشغيل",
+      "memoryInfo": "الذاكرة",
+      "cpuArchitecture": "CPU",
+      "isEmulator": "محاكي",
+      "additionalInfoLabel": "سياق إضافي (اختياري)",
+      "additionalInfoPlaceholder": "أي تفاصيل إضافية قد تساعدنا في فهم المشكلة...",
+      "submit": "إرسال الإبلاغ",
+      "success": {
+        "title": "تم إرسال الإبلاغ",
+        "message": "شكرًا لمساعدتك في تحسين PocketPal. سيساعدنا إبلاغك في إصلاح هذه المشكلة."
+      },
+      "error": {
+        "title": "فشل الإبلاغ",
+        "message": "تعذّر إرسال الإبلاغ. يرجى المحاولة لاحقًا."
+      }
+    },
+    "completionSettings": {
+      "serverDefault": "افتراضي الخادم",
+      "usingServerDefault": "استخدام افتراضي الخادم: {{value}}",
+      "usingServerDefaultUnreported": "استخدام افتراضي الخادم (غير مُبلَّغ عنه)",
+      "resetToServerDefault": "افتراضي الخادم: {{value}} · إعادة تعيين",
+      "resetToServerDefaultAccessibilityLabel": "إعادة تعيين {{name}} إلى افتراضي الخادم، {{value}}"
+    },
+    "chatGenerationSettingsSheet": {
+      "invalidValues": "قيم غير صالحة",
+      "invalidNumericValuesMessage": "يجب أن يكون رقمًا صالحًا",
+      "pleaseCorrect": "يرجى تصحيح ما يلي:",
+      "ok": "حسنًا",
+      "saveChanges": "حفظ التغييرات",
+      "saveAsPreset": "حفظ كإعداد مسبق",
+      "title_session": "إعدادات توليد الدردشة (الجلسة)",
+      "title_preset": "إعدادات توليد الدردشة (الإعداد المسبق)",
+      "resetToSystemDefaults": "إعادة التعيين إلى إعدادات النظام الافتراضية",
+      "resetToPreset": "إعادة التعيين إلى الإعداد المسبق",
+      "applytoPresetAlert": {
+        "title": "نجاح",
+        "message": "سيتم تطبيق هذه الإعدادات على جميع الجلسات المستقبلية"
+      },
+      "palSettings": "إعدادات الرفيق",
+      "settingsSource": "مصدر الإعدادات"
+    },
+    "palGenerationSettingsSheet": {
+      "title": "إعدادات التوليد - {{palName}}",
+      "invalidValues": "قيم غير صالحة",
+      "invalidNumericValuesMessage": "يجب أن يكون رقمًا صالحًا",
+      "pleaseCorrect": "‏يرجى تصحيح ما يلي:",
+      "ok": "حسنًا",
+      "error": "خطأ",
+      "failedToSave": "تعذّر حفظ إعدادات الرفيق",
+      "resetToGlobal": "إعادة التعيين إلى الإعدادات الافتراضية العامة",
+      "resetToSystem": "إعادة التعيين إلى إعدادات النظام الافتراضية",
+      "clearPalSettings": "‎مسح إعدادات الرفيق",
+      "customSettingsFor": "إعدادات مخصصة لـ {{palName}}",
+      "inheritedSettingsFor": "إعدادات موروثة لـ {{palName}}"
+    },
+    "chatHeaderTitle": {
+      "defaultTitle": "دردشة"
+    },
+    "fileMessage": {
+      "fileButtonAccessibilityLabel": "ملف"
+    },
+    "chatPalModelPickerSheet": {
+      "modelsTab": "النماذج",
+      "palsTab": "الرفاق",
+      "noPal": "لا يوجد رفيق",
+      "disablePal": "تعطيل الرفيق النشط",
+      "noDescription": "لا يوجد وصف",
+      "assistantType": "‏المساعد",
+      "roleplayType": "لعب الأدوار",
+      "videoType": "فيديو",
+      "confirmationTitle": "تأكيد",
+      "modelSwitchMessage": "هذا الرفيق له نموذج افتراضي مختلف ({{modelName}}). هل تريد التبديل إلى النموذج الافتراضي للرفيق؟",
+      "keepButton": "‎إبقاء",
+      "switchButton": "تبديل"
+    },
+    "downloadErrorDialog": {
+      "downloadFailedTitle": "فشل التنزيل",
+      "downloadFailedMessage": "تعذّر تنزيل النموذج: {{message}}",
+      "unauthorizedTitle": "فشل المصادقة",
+      "unauthorizedMessage": "يبدو أن رمز Hugging Face الخاص بك غير صالح أو منتهي الصلاحية. يرجى تحديث الرمز في الإعدادات.",
+      "forbiddenTitle": "‎تم رفض الوصول",
+      "forbiddenMessage": "ليس لديك إذن للوصول إلى هذا النموذج. يرجى التأكد من:",
+      "forbiddenSteps": [
+        "رمزك لديه إذن \"قراءة\"",
+        "لقد طلبت الوصول إلى هذا النموذج وتم منحك إياه",
+        "وافق مالك النموذج على طلب وصولك"
+      ],
+      "getTokenTitle": "احصل على رمز Hugging Face",
+      "getTokenMessage": "يتطلب هذا النموذج رمز Hugging Face لتنزيله.",
+      "getTokenSteps": [
+        "انتقل إلى huggingface.co وسجّل الدخول",
+        "انتقل إلى الإعدادات > رموز الوصول",
+        "أنشئ رمزًا جديدًا بصلاحية \"قراءة\"",
+        "انسخ الرمز والصقه في حقل الرمز"
+      ],
+      "tokenDisabledTitle": "الرمز معطّل",
+      "tokenDisabledMessage": "لديك رمز Hugging Face مُعيَّن، لكنه معطّل حاليًا. يتطلب هذا النموذج رمزًا لتنزيله. فعّل رمزك للمتابعة.",
+      "enableAndRetry": "تفعيل وإعادة المحاولة",
+      "goToSettings": "الانتقال إلى الإعدادات",
+      "tryAgain": "‎إعادة المحاولة",
+      "viewOnHuggingFace": "عرض النموذج على HF ↗"
+    },
+    "headerRight": {
+      "deleteChatTitle": "حذف الدردشة",
+      "deleteChatMessage": "هل أنت متأكد أنك تريد حذف هذه الدردشة؟",
+      "generationSettings": "إعدادات التوليد",
+      "model": "النموذج",
+      "duplicateChatHistory": "تكرار سجل الدردشة",
+      "makeChatTemporary": "‎جعل الدردشة مؤقتة",
+      "export": "تصدير/استيراد",
+      "exportCurrentSession": "تصدير الجلسة الحالية",
+      "exportCurrentSessionMarkdown": "تصدير بصيغة Markdown",
+      "exportAllSessions": "تصدير جميع الجلسات",
+      "exportChatSession": "تصدير جلسة الدردشة",
+      "importSessions": "استيراد الجلسات"
+    },
+    "hfTokenSheet": {
+      "title": "رمز Hugging Face",
+      "description": "مطلوب للوصول إلى النماذج المقيّدة",
+      "inputLabel": "رمز الوصول الشخصي",
+      "inputPlaceholder": "‏الصق رمزك هنا",
+      "save": "حفظ الرمز",
+      "saved": "تم حفظ الرمز بنجاح",
+      "reset": "إعادة تعيين الرمز",
+      "resetSuccess": "تمت إزالة الرمز بنجاح",
+      "instructions": "كيفية الحصول على رمز:",
+      "instructionsSteps": [
+        "انتقل إلى huggingface.co وسجّل الدخول",
+        "انتقل إلى الإعدادات > رموز الوصول",
+        "أنشئ رمزًا جديدًا بصلاحية \"قراءة\"",
+        "انسخ الرمز والصقه أدناه"
+      ],
+      "getTokenLink": "احصل على رمز من huggingface.co ↗",
+      "error": {
+        "saving": "خطأ في حفظ الرمز",
+        "missing": "رمز Hugging Face مطلوب",
+        "invalid": "رمز غير صالح أو منتهي الصلاحية",
+        "gatedModelAccess": "تم رفض الوصول إلى هذا النموذج المقيّد"
+      },
+      "gatedModelIndicator": "يتطلب رمزًا",
+      "tokenRequired": "يتطلب هذا النموذج رمز وصول من Hugging Face",
+      "searchErrorHint": "رمز Hugging Face API الخاص بك غير صالح أو منتهي الصلاحية. لمتابعة البحث، يرجى إما إزالة الرمز أو تعطيل مصادقة الرمز في الإعدادات.",
+      "disableAndRetry": "تعطيل الرمز وإعادة المحاولة"
+    },
+    "modelSettingsSheet": {
+      "modelSettings": "إعدادات النموذج",
+      "saveChanges": "حفظ التغييرات",
+      "reasoningSection": "الاستدلال",
+      "isReasoningModel": "نموذج الاستدلال",
+      "isReasoningModelHelp": "إظهار عنصر التحكم في التفكير لهذا النموذج، حتى إذا لم يتم اكتشافه تلقائيًا.",
+      "supportsEffort": "يدعم الجهد المتدرج",
+      "effortValues": "مستويات الجهد التي يدعمها هذا النموذج",
+      "effortLevels": {
+        "minimal": "‎أدنى",
+        "low": "منخفض",
+        "medium": "متوسط",
+        "high": "عالي",
+        "xhigh": "عالي جدًا",
+        "max": "أقصى"
+      }
+    },
+    "modelsHeaderRight": {
+      "menuTitleHf": "نماذج Hugging Face",
+      "menuTitleDownloaded": "النماذج المُنزَّلة",
+      "menuTitleGrouped": "تجميع حسب نوع النموذج",
+      "menuTitleReset": "إعادة تعيين قائمة النماذج"
+    },
+    "modelsResetDialog": {
+      "proceedWithReset": "المتابعة بإعادة التعيين",
+      "confirmReset": "تأكيد إعادة التعيين"
+    },
+    "palSheet": {
+      "title": {
+        "edit": "تحرير الرفيق",
+        "newPal": "رفيق جديد",
+        "newVideoPal": "رفيق فيديو جديد"
+      },
+      "description": "الوصف",
+      "descriptionPlaceholder": "أدخل وصفًا موجزًا لرفيقك",
+      "parameters": "المعاملات",
+      "generationSettings": "إعدادات التوليد",
+      "configureGenerationSettings": "تكوين إعدادات التوليد",
+      "validation": {
+        "nameRequired": "الاسم مطلوب",
+        "generatingPromptRequired": "إنشاء prompt مطلوب عند استخدام prompt الذكاء الاصطناعي",
+        "promptModelRequired": "نموذج توليد الـ prompt مطلوب عند استخدام prompt الذكاء الاصطناعي"
+      },
+      "talents": "المهارات",
+      "talentNames": {
+        "render_html": "‏معاينة HTML",
+        "calculate": "‎التعبيرات الرياضية",
+        "datetime": "التاريخ والوقت",
+        "web_search": "البحث في الويب",
+        "read_url": "قراءة صفحة ويب"
+      },
+      "talentDescriptions": {
+        "render_html": "عرض مستندات HTML مباشرةً في الدردشة",
+        "calculate": "تقييم التعبيرات الرياضية",
+        "datetime": "الحصول على التاريخ والوقت الحاليين",
+        "web_search": "البحث في الإنترنت عن معلومات حديثة (يتطلب مفتاح API في الإعدادات)",
+        "read_url": "قراءة المحتوى الكامل لصفحة ويب (يتطلب مفتاح API في الإعدادات)"
+      },
+      "greeting": {
+        "sectionLabel": "التحية",
+        "textLabel": "رسالة التحية",
+        "textPlaceholder": "ماذا يجب أن يقول هذا الرفيق في دردشة فارغة؟",
+        "suggestedPromptsLabel": "الـ prompts المقترحة",
+        "addPromptButton": "إضافة prompt",
+        "promptPlaceholder": "prompt قصير للشريحة",
+        "removePromptLabel": "إزالة الـ prompt"
+      }
+    },
+    "assistantPalSheet": {
+      "title": {
+        "create": "إنشاء رفيق مساعد",
+        "edit": "تحرير الرفيق المساعد"
+      },
+      "palName": "اسم الرفيق",
+      "palNamePlaceholder": "الاسم",
+      "defaultModel": "‎النموذج الافتراضي",
+      "defaultModelPlaceholder": "اختر النموذج",
+      "create": "‎إنشاء",
+      "validation": {
+        "generatingPromptRequired": "إنشاء prompt مطلوب",
+        "promptModelRequired": "نموذج توليد الـ prompt مطلوب"
+      }
+    },
+    "modelNotAvailable": {
+      "noModelsDownloaded": "‎ليس لديك أي نماذج مُنزَّلة بعد. يرجى تنزيل نموذج أولاً.",
+      "downloadAModel": "تنزيل نموذج",
+      "defaultModelNotDownloaded": "يوصي هذا الرفيق بنموذج معيّن يحتاج إلى تنزيل، أو يمكنك اختيار نموذج مختلف.",
+      "modelNotDownloadedShort": "النموذج غير مُنزَّل",
+      "recommendedModel": "النموذج الموصى به",
+      "cancelDownload": "إلغاء التنزيل",
+      "download": "تنزيل"
+    },
+    "roleplayPalSheet": {
+      "title": {
+        "create": "إنشاء رفيق لعب الأدوار",
+        "edit": "تحرير رفيق لعب الأدوار"
+      },
+      "palName": "اسم الرفيق",
+      "palNamePlaceholder": "الاسم",
+      "defaultModel": "النموذج الافتراضي",
+      "defaultModelPlaceholder": "اختر النموذج",
+      "descriptionSection": "الوصف",
+      "world": "العالم",
+      "worldPlaceholder": "فانتازيا",
+      "location": "الموقع",
+      "locationPlaceholder": "الغابة المسحورة",
+      "locationSublabel": "أين تدور القصة؟",
+      "aiRole": "دور الذكاء الاصطناعي",
+      "aiRolePlaceholder": "إلدارا، روح غابة مؤذية",
+      "aiRoleSublabel": "‎حدّد الدور للشخصية",
+      "userRole": "دور المستخدم",
+      "userRolePlaceholder": "السير إلاندور، فارس شجاع",
+      "userRoleSublabel": "من أنت؟",
+      "situation": "الموقف",
+      "situationPlaceholder": "مهمة إنقاذ، حلّ لغز",
+      "toneStyle": "النبرة/الأسلوب",
+      "toneStylePlaceholder": "جدّي",
+      "create": "إنشاء",
+      "validation": {
+        "promptModelRequired": "نموذج توليد Prompt مطلوب"
+      }
+    },
+    "lookiePalSheet": {
+      "title": {
+        "create": "إنشاء الرفيق Lookie",
+        "edit": "تحرير الرفيق Lookie"
+      },
+      "palName": "اسم الرفيق",
+      "palNamePlaceholder": "أدخل اسمًا لرفيق Lookie الخاص بك",
+      "visionModel": "نموذج الرؤية",
+      "visionModelPlaceholder": "اختر نموذج رؤية",
+      "requiredModelsSection": "النماذج المطلوبة",
+      "captureInterval": "فترة الالتقاط",
+      "captureIntervalHelper": "الوقت بين عمليات الالتقاط التلقائي بالمللي ثانية",
+      "create": "إنشاء"
+    },
+    "sendButton": {
+      "accessibilityLabel": "إرسال"
+    },
+    "systemPromptSection": {
+      "modelSelector": {
+        "label": "اختر نموذجًا للتوليد*",
+        "sublabel": "موصى به: Llama 3.2 3B أو Qwen3 4B Instruct 2507.",
+        "placeholder": "اختر النموذج"
+      },
+      "generatingPrompt": {
+        "label": "الغرض والسياق",
+        "placeholder": "صف الدور أو الغرض أو السيناريو لهذا الرفيق..."
+      },
+      "buttons": {
+        "loadingModel": "‏جارٍ تحميل النموذج...",
+        "stopGenerating": "إيقاف التوليد",
+        "resetParameters": "إعادة تعيين المعاملات",
+        "resetTemplate": "إعادة تعيين القالب",
+        "generatePrompt": "‏إنشاء Prompt النظام"
+      },
+      "systemPrompt": {
+        "placeholder": "‎أنت مساعد مفيد",
+        "label": "Prompt النظام",
+        "sublabel": "لا تتردد في التحرير والتجربة للعثور على الـ prompt الأمثل لسيناريوك"
+      },
+      "sectionTitle": "‎Prompt النظام",
+      "useAIPrompt": "استخدم الذكاء الاصطناعي لإنشاء prompt النظام",
+      "warnings": {
+        "promptChanged": "تم تغيير prompt النظام يدويًا"
+      }
+    },
+    "sidebarContent": {
+      "menuItems": {
+        "chat": "دردشة",
+        "models": "النماذج",
+        "pals": "الرفاق",
+        "benchmark": "اختبار الأداء",
+        "settings": "الإعدادات",
+        "appInfo": "‎معلومات التطبيق",
+        "testCompletion": "‎إكمال الاختبار"
+      },
+      "deleteChatTitle": "حذف الدردشة",
+      "deleteChatMessage": "هل أنت متأكد أنك تريد حذف هذه الدردشة؟",
+      "select": "تحديد",
+      "nSelected": "تم تحديد {{count}}",
+      "selectAll": "تحديد الكل",
+      "deselectAll": "إلغاء تحديد الكل",
+      "exportCount": "تصدير ({{count}})",
+      "deleteCount": "حذف ({{count}})",
+      "bulkDeleteTitle": "حذف جلسات الدردشة",
+      "bulkDeleteMessage": "حذف {{count}} جلسة دردشة؟ لا يمكن التراجع عن هذا الإجراء.",
+      "bulkDeleteError": "تعذّر حذف جلسات الدردشة. يرجى المحاولة مرة أخرى.",
+      "exportError": "تعذّر تصدير جلسة الدردشة. يرجى المحاولة مرة أخرى.",
+      "bulkExportError": "تعذّر تصدير جلسات الدردشة. يرجى المحاولة مرة أخرى.",
+      "pin": "تثبيت",
+      "unpin": "‎إلغاء التثبيت",
+      "dateGroups": {
+        "pinned": "مثبّت",
+        "today": "اليوم",
+        "yesterday": "أمس",
+        "thisWeek": "هذا الأسبوع",
+        "lastWeek": "‎الأسبوع الماضي",
+        "twoWeeksAgo": "منذ أسبوعين",
+        "threeWeeksAgo": "منذ 3 أسابيع",
+        "fourWeeksAgo": "منذ 4 أسابيع",
+        "lastMonth": "الشهر الماضي",
+        "older": "الأقدم"
+      }
+    },
+    "usageStats": {
+      "tooltip": {
+        "title": "استخدام الذاكرة",
+        "used": "المستخدم: ",
+        "total": "الإجمالي: ",
+        "usage": "الاستخدام: "
+      },
+      "byteSizes": [
+        "بايت",
+        "كيلوبايت",
+        "ميغابايت",
+        "غيغابايت"
+      ]
+    },
+    "chatView": {
+      "menuItems": {
+        "copy": "نسخ",
+        "regenerate": "إعادة التوليد",
+        "regenerateWith": "إعادة التوليد باستخدام",
+        "edit": "تعديل",
+        "reportContent": "الإبلاغ عن المحتوى"
+      }
+    },
+    "palHeaderRight": {
+      "exportAllPals": "تصدير جميع الرفاق",
+      "importPals": "‏استيراد الرفاق",
+      "importSuccess": "تم استيراد {{count}} رفيق بنجاح.",
+      "importError": "تعذّر استيراد الرفاق. يرجى التحقق من تنسيق الملف."
+    }
+  },
+  "palsScreen": {
+    "sectionTitles": {
+      "myPalsLocal": "رفاقي (محلي)",
+      "myLibrary": "مكتبتي (palshub.ai)",
+      "discoverPals": "استكشف الرفاق (palshub.ai)"
+    },
+    "videoAnalysis": "تحليل الفيديو",
+    "videoAnalysisDescription": "هذا مساعد ذكاء اصطناعي قائم على الفيديو يقدم تعليقًا فوريًا على تدفقات الفيديو من كاميرا جهازك.",
+    "captureInterval": "فترة الالتقاط",
+    "captureIntervalUnit": "مللي ثانية",
+    "world": "العالم",
+    "toneStyle": "النبرة/الأسلوب",
+    "aiRole": "دور الذكاء الاصطناعي",
+    "userRole": "دوري",
+    "assistant": "المساعد",
+    "roleplay": "لعب الأدوار",
+    "video": "فيديو",
+    "deletePal": "حذف الرفيق",
+    "deletePalMessage": "هل أنت متأكد أنك تريد حذف هذا الرفيق؟",
+    "missingModel": "نموذج مفقود",
+    "missingModelMessage": "النموذج الافتراضي \"{{modelName}}\" لهذا الرفيق غير متاح. يرجى تنزيله في نافذة التعديل أو اختيار نموذج مختلف.",
+    "search": "بحث",
+    "profile": "الملف الشخصي",
+    "signIn": "تسجيل الدخول",
+    "addPal": "إضافة رفيق",
+    "signInToAccessLibrary": "سجّل الدخول للوصول إلى مكتبتك من palshub.ai",
+    "signOut": "تسجيل الخروج",
+    "signOutConfirmation": "هل أنت متأكد أنك تريد تسجيل الخروج؟",
+    "signOutError": "تعذّر تسجيل الخروج. يرجى المحاولة مرة أخرى.",
+    "account": "الحساب",
+    "signInToPalsHub": "تسجيل الدخول إلى PalsHub",
+    "signInDescription": "يمكنك الوصول إلى مكتبتك، وإنشاء رفاق خاصين، والمزامنة عبر الأجهزة",
+    "searchAllPals": "ابحث في جميع الرفاق...",
+    "deletePalConfirmation": "هل أنت متأكد أنك تريد حذف \"{{palName}}\"؟",
+    "filters": {
+      "all": "الكل",
+      "myPals": "‬رفاقي",
+      "local": "محلي",
+      "video": "فيديو",
+      "free": "مجاني",
+      "premium": "مدفوع"
+    },
+    "labels": {
+      "free": "مجاني",
+      "premium": "مدفوع",
+      "private": "خاص",
+      "download": "تنزيل",
+      "getFree": "احصل عليه مجانًا"
+    },
+    "sortOptions": {
+      "newest": "الأحدث",
+      "oldest": "الأقدم",
+      "rating": "الأعلى تقييمًا",
+      "popular": "الأكثر شعبية"
+    },
+    "palDetailSheet": {
+      "by": "بواسطة",
+      "unknown": "غير معروف",
+      "rating": "التقييم",
+      "reviews": "المراجعات",
+      "created": "تم الإنشاء",
+      "description": "الوصف",
+      "noDescriptionAvailable": "‎لا يوجد وصف متاح.",
+      "categories": "الفئات",
+      "tags": "‎الوسوم",
+      "downloaded": "تم التنزيل",
+      "success": "نجاح",
+      "palAddedToCollection": "تمت إضافة الرفيق إلى مجموعتك!",
+      "error": "خطأ",
+      "failedToLoadDetails": "تعذّر تحميل تفاصيل الرفيق",
+      "failedToDownload": "تعذّر تنزيل الرفيق",
+      "notAvailable": "غير متاح",
+      "systemPrompt": "Prompt النظام"
+    },
+    "systemPrompt": "Prompt النظام",
+    "prompt": "Prompt",
+    "purchase": {
+      "buy": "{{price}}",
+      "open": "مفتوح",
+      "install": "تثبيت",
+      "pending": "قيد الانتظار",
+      "unlocking": "جارٍ الفتح",
+      "retry": "‏إعادة المحاولة",
+      "supportCode": "رمز الدعم: {{code}}",
+      "noLongerAvailable": "‪لم يعد هذا الرفيق متاحًا. يمكنك {{refundLink}}.",
+      "refundLink": "اسأل Apple حول عملية استرداد",
+      "notCompleted": "تعذّر إتمام عملية الشراء هذه. ستقوم Google برد المبلغ إليك.",
+      "withdrawnRefunding": "تم سحب هذا الرفيق. تواصل مع الدعم لاسترداد المبلغ.",
+      "invalid": "تعذّر التحقق من عملية الشراء هذه.",
+      "heldInvalid": "تعذّر فتح عملية الشراء هذه. تواصل مع الدعم مع هذا الرمز.",
+      "recommendedModel": "النموذج الموصى به",
+      "sampleExchange": "محادثة نموذجية",
+      "signInLine": "هل تملكه بالفعل؟ سجّل الدخول",
+      "licenseNotice": "أنت تشتري ترخيصًا لاستخدام هذا الرفيق.",
+      "termsOfSale": "شروط البيع",
+      "appleMediaTerms": "شروط خدمات وسائط Apple",
+      "linkPrompt": "سجّل الدخول لاستخدامه على أجهزتك الأخرى أيضًا",
+      "linkSignIn": "تسجيل الدخول",
+      "dismiss": "‎ليس الآن",
+      "linkConflict": "عمليات الشراء هذه مرتبطة بحساب آخر.",
+      "restorePurchases": "استعادة المشتريات",
+      "badgePending": "قيد الانتظار",
+      "badgeUnlocking": "جارٍ الفتح",
+      "badgeUpdate": "يتوفر تحديث",
+      "updatePrompt": "يتوفر إصدار جديد من المنشئ.",
+      "updatePromptWithNote": "يتوفر إصدار جديد من المنشئ: {{note}}.",
+      "updateButton": "تحديث",
+      "updateConfirmText": "‎سيؤدي هذا إلى استبدال تعديلاتك للأجزاء التي غيّرها المنشئ.",
+      "updateConfirm": "تحديث",
+      "updateCancel": "إلغاء",
+      "modelStep": {
+        "download": "تنزيل · {{size}}",
+        "startChat": "ابدء الدردشة",
+        "needsMemory": "يحتاج هذا الرفيق إلى جهاز بذاكرة لا تقل عن {{size}} لأصغر نموذج لديه.",
+        "noModelFits": "لا يمتلك هذا الجهاز ذاكرة كافية لهذا الرفيق."
+      }
+    }
+  },
+  "validation": {
+    "nameRequired": "الاسم مطلوب",
+    "worldRequired": "العالم مطلوب",
+    "locationRequired": "الموقع مطلوب",
+    "aiRoleRequired": "دور الذكاء الاصطناعي مطلوب",
+    "userRoleRequired": "دور المستخدم مطلوب",
+    "situationRequired": "الموقف مطلوب",
+    "toneStyleRequired": "النبرة/الأسلوب مطلوب",
+    "systemPromptRequired": "prompt النظام مطلوب"
+  },
+  "camera": {
+    "permissionTitle": "إذن الكاميرا مطلوب",
+    "permissionMessage": "يحتاج PocketPal إلى الوصول إلى الكاميرا لتحليل الصور",
+    "requestingPermission": "جارٍ طلب إذن الكاميرا...",
+    "noDevice": "لم يتم العثور على كاميرا",
+    "errorTitle": "خطأ في الكاميرا",
+    "errorMessage": "حدث خطأ أثناء التقاط الصورة",
+    "flip": "قلب",
+    "analyzing": "جارٍ تحليل الصورة...",
+    "startCamera": "تشغيل الكاميرا",
+    "stopCamera": "إيقاف الكاميرا",
+    "promptPlaceholder": "ماذا تريد أن تعرفه حول هذه الصورة؟",
+    "takePhoto": "الكاميرا"
+  },
+  "video": {
+    "permissionTitle": "إذن الكاميرا مطلوب",
+    "permissionMessage": "يحتاج PocketPal إلى الوصول إلى الكاميرا لتحليل الفيديو",
+    "requestingPermission": "جارٍ طلب إذن الكاميرا...",
+    "noDevice": "لم يتم العثور على كاميرا",
+    "errorTitle": "خطأ في الكاميرا",
+    "errorMessage": "حدث خطأ في الكاميرا",
+    "flip": "قلب",
+    "analyzing": "جارٍ تحليل الفيديو...",
+    "startCamera": "تشغيل الكاميرا",
+    "stopCamera": "إيقاف الكاميرا",
+    "promptPlaceholder": "ماذا تريد أن تعرف عن هذا الفيديو؟",
+    "captureInterval": "فترة الالتقاط",
+    "captureIntervalUnit": "مللي ثانية",
+    "liveCommentary": "تعليق مباشر",
+    "emptyPlaceholder": {
+      "title": "مرحبًا بك في Lookie",
+      "subtitle": "تحليل فيديو فوري خاص على الجهاز",
+      "experimentalNotice": "هذه ميزة تجريبية. تعتمد الدقة على النموذج المحدد، وتعتمد السرعة على مواصفات جهازك، وقد يفشل بعض النماذج.",
+      "howToUse": "‎كيفية الاستخدام:",
+      "step2": "• اضغط على زر الكاميرا لبدء تحليل الفيديو المباشر",
+      "step3": "• اضبط تكرار اللقطات أثناء تشغيل الكاميرا",
+      "step4": "‏• انتقل إلى رفيق آخر للدردشة النصية العادية",
+      "step1": "• حرّر الـ prompt (اختياري) لتوجيه التحليل"
+    }
+  },
+  "screenTitles": {
+    "chat": "‎الدردشة",
+    "models": "النماذج",
+    "pals": "الرفاق (تجريبي)",
+    "benchmark": "اختبار الأداء",
+    "settings": "الإعدادات",
+    "appInfo": "معلومات التطبيق",
+    "testCompletion": "اختبار الإكمال"
+  },
+  "chat": {
+    "conversationReset": "تمت إعادة تعيين المحادثة!",
+    "modelNotLoaded": "النموذج غير محمّل. يرجى تهيئة النموذج.",
+    "completionFailed": "فشل الإكمال: ",
+    "toolCallTruncated": "‌تم قطع استدعاء الأداة — على الأرجح نفدت المساحة المتاحة للنموذج. جرّب سياقًا أكبر أو طلبًا أصغر.",
+    "speculativeInitFailed": "‏تعذّر على هذا الجهاز بدء فك التشفير التخميني لهذا النموذج — على الأرجح لا توجد ذاكرة كافية لسياق المسودة. أوقف فك التشفير التخميني من الإعدادات ← الإعدادات المتقدمة وحاول مرة أخرى.",
+    "loadingModel": "جارٍ تحميل النموذج...",
+    "typeYourMessage": "‏اكتب رسالتك هنا",
+    "load": "تحميل",
+    "goToModels": "الانتقال إلى النماذج",
+    "readyToChat": "‏هل أنت مستعد للدردشة؟ حمّل آخر نموذج مستخدم.",
+    "pleaseLoadModel": "حمّل نموذجًا لبدء الدردشة.",
+    "multimodalNotEnabled": "الوضع متعدد الوسائط غير مفعّل لهذا النموذج. سيتم عرض الصور لكن لن يعالجها الذكاء الاصطناعي.",
+    "cannotSendWithoutModel": "حمّل نموذجًا أولاً",
+    "toolCompatWarning": "‎قد لا يدعم هذا النموذج استدعاء الأدوات. قد تكون النتائج غير موثوقة.",
+    "softCapWarning": "ابدأ دردشة جديدة للحصول على أفضل أداء.",
+    "contextWarning": "هذه المحادثة تطول وقد تنفد المساحة قريبًا.",
+    "contextRemoteHedged": "ربما تم قطع هذا الرد. جرّب الإرسال مرة أخرى أو اختصر الطلب.",
+    "contextFull": "نفدت المساحة المتاحة في المحادثة. ابدأ دردشة جديدة أو زد حجم السياق.",
+    "contextFullRemote": "نفدت المساحة المتاحة في المحادثة. ابدأ دردشة جديدة.",
+    "contextFullEscalated": "لا تزال المساحة غير كافية. ابدأ دردشة جديدة، أو زد حجم السياق للمتابعة.",
+    "contextFullHeavyTalent": "‎نفدت المساحة المتاحة في المحادثة — {{talent}} يميل إلى الحاجة إلى مساحة أكبر. ابدأ دردشة جديدة أو زد حجم السياق.",
+    "contextBannerDismiss": "تجاهل",
+    "contextNewChat": "دردشة جديدة",
+    "contextIncrease": "زيادة السياق",
+    "contextMoreRoom": "مساحة أكبر",
+    "increaseContextTitle": "امنح هذه الدردشة مساحة أكبر",
+    "increaseContextBody": "المساحة هي الذاكرة العاملة للنموذج — مقدار ما يمكنه تذكّره من هذه الدردشة في وقت واحد. مساحة أكبر تعني محادثات أطول قبل أن تُقطع الردود.",
+    "increaseContextTokensUnit": "الرموز",
+    "increaseContextWordsRam": "~{{words}} كلمة · ≈{{ram}} ذاكرة RAM",
+    "increaseContextFitsChip": "يتناسب",
+    "increaseContextTightChip": "ضيّق",
+    "increaseContextWontFitChip": "لن يتناسب",
+    "increaseContextFitsStatus": "‏مريح لهذا الجهاز.",
+    "increaseContextFitsUnconstrainedStatus": "‎ذاكرة RAM وفيرة — محدود فقط بالنموذج.",
+    "increaseContextTightStatus": "بعد ~{{tokens}}، قد تنخفض ذاكرة هذا الجهاز ويتباطأ. لا يزال بإمكانه المحاولة.",
+    "increaseContextWontFitStatus": "من المحتمل ألا يتناسب ~{{tokens}} مع ذاكرة هذا الجهاز. اختر حجمًا أصغر.",
+    "increaseContextModelMax": "{{tokens}} · الحد الأقصى للنموذج",
+    "increaseContextHedge": "تستغرق إعادة التحميل بضع ثوانٍ. لن يُفقد أي شيء في دردشتك.",
+    "increaseContextAdvanced": "متقدم",
+    "increaseContextAdvancedBody": "حجم السياق لهذه الدردشة: {{from}} ← {{to}} رمز (الحد الأقصى للنموذج {{max}}). حد الجهاز تقديري ويرتفع عند تحميل سياقات أكبر بنجاح.",
+    "increaseContextSliderA11yLabel": "حجم السياق",
+    "increaseContextSliderA11yValue": "{{tokens}} رمز",
+    "increaseContextConfirmSize": "تعيين إلى {{size}}",
+    "increaseContextReloadingShort": "جارٍ إعادة التحميل…",
+    "increaseContextNoFitBody": "لا يستطيع هذا الجهاز استيعاب سياق أكبر لهذا النموذج. ابدأ دردشة جديدة للمتابعة.",
+    "increaseContextCancel": "ليس الآن",
+    "increaseContextReloading": "جارٍ إعادة تحميل النموذج بسياق أكبر…",
+    "increaseContextSuccess": "تمت زيادة السياق إلى {{target}} رمز.",
+    "increaseContextFailure": "تعذّرت زيادة حجم السياق. تمت استعادة إعدادك السابق.",
+    "palLoadHint": "‏يميل هذا الرفيق إلى الحاجة إلى مساحة أكبر مما يسمح به حجم السياق الحالي.",
+    "generatingPreview": "جارٍ إنشاء المعاينة… ({{tokens}} رمز)",
+    "generatingPreviewPending": "جارٍ إنشاء المعاينة…",
+    "toolUsedChip": "استُخدم {{name}}",
+    "toolErrorBlock": "فشل {{name}}",
+    "webSearch": {
+      "searched": "تم البحث: {{query}}",
+      "noResults": "لا توجد نتائج",
+      "noResultsFor": "لا توجد نتائج لـ {{query}}",
+      "resultsCount": "{{count}} نتيجة",
+      "resultsCountOne": "نتيجة واحدة",
+      "searchResultsTitle": "نتائج البحث",
+      "showResultsAccessibilityLabel": "عرض نتائج البحث في الويب عن {{query}}",
+      "openLinkError": "تعذّر فتح هذا الرابط."
+    }
+  },
+  "htmlPreview": {
+    "defaultTitle": "معاينة",
+    "showPreview": "عرض المعاينة المعروضة",
+    "showCode": "عرض كود HTML",
+    "copyHtml": "نسخ HTML",
+    "closePreview": "إغلاق المعاينة",
+    "openFullscreen": "فتح بملء الشاشة: {{title}}"
+  },
+  "benchmark": {
+    "title": "اختبار الأداء",
+    "modelSelector": {
+      "prompt": "اختر النموذج",
+      "noModels": "لا توجد نماذج مُنزَّلة"
+    },
+    "buttons": {
+      "advancedSettings": "الإعدادات المتقدمة",
+      "startTest": "ابدء الاختبار",
+      "runningTest": "جارٍ تشغيل الاختبار...",
+      "clearAll": "مسح الكل",
+      "done": "تم",
+      "cancel": "إلغاء",
+      "delete": "حذف",
+      "share": "مشاركة",
+      "sharing": "جارٍ المشاركة...",
+      "viewRawData": "عرض البيانات الخام",
+      "hideRawData": "إخفاء البيانات الخام"
+    },
+    "messages": {
+      "pleaseSelectModel": "يرجى اختيار نموذج وتهيئته أولاً",
+      "testWarning": "ملاحظة: قد يستغرق الاختبار ما بين 2 و5 دقائق للنماذج الأكبر، ولا يمكن مقاطعته بمجرد بدئه.",
+      "keepScreenOpen": "يرجى إبقاء هذه الشاشة مفتوحة.",
+      "initializingModel": "جارٍ تهيئة النموذج...",
+      "modelMaxValue": "(الحد الأقصى: {{maxValue}})"
+    },
+    "dialogs": {
+      "advancedSettings": {
+        "title": "الإعدادات المتقدمة",
+        "testProfile": "ملف تعريف الاختبار",
+        "customParameters": "معاملات مخصصة",
+        "description": "اضبط معاملات اختبار الأداء بدقة لسيناريوهات اختبار محددة."
+      },
+      "deleteResult": {
+        "title": "‎حذف النتيجة",
+        "message": "هل أنت متأكد أنك تريد حذف نتيجة اختبار الأداء هذه؟"
+      },
+      "clearAllResults": {
+        "title": "مسح جميع النتائج",
+        "message": "هل أنت متأكد أنك تريد حذف جميع نتائج اختبار الأداء؟"
+      },
+      "shareResults": {
+        "title": "مشاركة نتائج اختبار الأداء",
+        "sharedDataTitle": "‎تشمل البيانات المشارَكة:",
+        "deviceAndModelInfo": "• مواصفات الجهاز ومعلومات النموذج",
+        "performanceMetrics": "• مقاييس الأداء",
+        "dontShowAgain": "لا تُظهر هذه الرسالة مرة أخرى"
+      }
+    },
+    "sections": {
+      "testResults": "نتائج الاختبار"
+    },
+    "benchmarkResultCard": {
+      "modelMeta": {
+        "params": "المعاملات"
+      },
+      "config": {
+        "title": "إعدادات اختبار الأداء",
+        "format": "PP: {{pp}} • TG: {{tg}} • PL: {{pl}} • Rep: {{nr}}"
+      },
+      "modelSettings": {
+        "title": "‏إعدادات النموذج",
+        "context": "‎السياق: {{context}}",
+        "batch": "الدفعة: {{batch}}",
+        "ubatch": "الدفعة الموحّدة: {{ubatch}}",
+        "cpuThreads": "خيوط المعالج: {{threads}}",
+        "gpuLayers": "طبقات معالج الرسوميات: {{layers}}",
+        "device": "الجهاز: {{device}}",
+        "flashAttentionEnabled": "الانتباه السريع مفعّل",
+        "flashAttentionDisabled": "الانتباه السريع معطّل",
+        "cacheTypes": "أنواع الذاكرة المؤقتة: {{cacheK}}/{{cacheV}}"
+      },
+      "results": {
+        "tokenGeneration": "توليد الرموز",
+        "totalTime": "الوقت الإجمالي",
+        "peakMemory": "ذروة الذاكرة",
+        "tokensPerSecond": "رمز/ثانية",
+        "promptProcessing": "معالجة الـ prompt"
+      },
+      "actions": {
+        "deleteButton": " ",
+        "submittedText": "✓ تمت المشاركة إلى",
+        "leaderboardLink": "لوحة صدارة هواتف الذكاء الاصطناعي ↗",
+        "cannotShare": "تعذّرت المشاركة",
+        "cannotShareTooltip": "لا يمكن مشاركة نتائج النموذج المحلي",
+        "submitButton": "إرسال إلى لوحة الصدارة",
+        "viewLeaderboard": "‎عرض لوحة الصدارة ↗"
+      },
+      "errors": {
+        "networkRetry": "تحقق من الاتصال وأعد المحاولة",
+        "appCheckRetry": "إعادة محاولة الإرسال",
+        "serverRetry": "حاول مرة أخرى لاحقًا",
+        "genericRetry": "‏إعادة المحاولة",
+        "failedToSubmit": "تعذّر إرسال نتائج اختبار الأداء"
+      }
+    },
+    "deviceInfoCard": {
+      "title": "معلومات الجهاز",
+      "deviceSummary": "{{brand}} {{model}} • {{systemName}} {{systemVersion}}",
+      "coreSummary": "{{cores}} نواة • {{memory}}",
+      "sections": {
+        "basicInfo": "معلومات أساسية",
+        "cpuDetails": "تفاصيل المعالج",
+        "gpuDetails": "تفاصيل معالج الرسوميات",
+        "hexagonDetails": "Hexagon DSP",
+        "appInfo": "‏معلومات التطبيق"
+      },
+      "fields": {
+        "architecture": "البنية",
+        "totalMemory": "إجمالي الذاكرة",
+        "deviceId": "معرّف الجهاز",
+        "cpuCores": "أنوية المعالج",
+        "cpuModel": "طراز المعالج",
+        "chipset": "الشريحة",
+        "instructions": "التعليمات",
+        "version": "الإصدار",
+        "gpuType": "نوع معالج الرسوميات",
+        "gpuVendor": "المورّد",
+        "metalSupport": "دعم Metal",
+        "openclSupport": "دعم OpenCL",
+        "openclRequirement": "يتطلب i8mm وdotprod",
+        "gpuRenderer": "المُصيّر"
+      },
+      "instructions": {
+        "format": "FP16: {{fp16}}, DotProd: {{dotProd}}, SVE: {{sve}}, I8MM: {{i8mm}}",
+        "yes": "✓",
+        "no": "✗"
+      },
+      "versionFormat": "{{version}} ({{buildNumber}})"
+    }
+  },
+  "errors": {
+    "unexpectedError": "حدث خطأ غير متوقع",
+    "hfAuthenticationError": "خطأ في مصادقة Hugging Face: الرمز مفقود أو غير صالح",
+    "hfAuthenticationErrorSearch": "خطأ في مصادقة Hugging Face: رمز غير صالح",
+    "authenticationError": "خطأ في المصادقة: الرمز مفقود أو غير صالح",
+    "hfAuthorizationError": "خطأ في تفويض Hugging Face: لا يوجد إذن للوصول إلى هذا المورد",
+    "authorizationError": "خطأ في التفويض: لا يوجد إذن للوصول إلى هذا المورد",
+    "hfServerError": "خطأ في خادم Hugging Face: مشكلة في خادم API",
+    "serverError": "خطأ في الخادم: مشكلة في خادم API",
+    "hfNetworkTimeout": "انتهت مهلة الشبكة: استغرق الطلب إلى Hugging Face وقتًا طويلاً لإكماله",
+    "networkTimeout": "انتهت مهلة الشبكة: استغرق الطلب وقتًا طويلاً لإكماله",
+    "hfNetworkError": "خطأ في الشبكة: تعذّر الاتصال بواجهة Hugging Face API",
+    "networkError": "خطأ في الشبكة: تعذّر الاتصال بواجهة API",
+    "downloadSetupFailedTitle": "‏فشل إعداد التنزيل",
+    "downloadSetupFailedMessage": "تعذّر تجهيز النموذج للتنزيل: {{message}}",
+    "cameraErrorTitle": "خطأ في الكاميرا",
+    "cameraErrorMessage": "تعذّر التقاط الصورة",
+    "galleryErrorTitle": "خطأ في المعرض",
+    "galleryErrorMessage": "تعذّر تحديد الصور"
+  },
+  "simulator": {
+    "cameraNotAvailable": "‪الكاميرا غير متاحة في المحاكي. يرجى استخدام جهاز فعلي."
+  },
+  "voiceAndSpeech": {
+    "sectionTitle": "الصوت والكلام",
+    "voiceRowTitle": "الصوت",
+    "notSet": "غير مُعيَّن",
+    "previewButton": "معاينة",
+    "stopPreviewButton": "إيقاف المعاينة",
+    "voicesTitle": "الأصوات",
+    "voicesEmptyHint": "اضغط على أي صوت لتثبيته واستخدامه. أو اختر صوتًا من النظام — فهي متاحة دائمًا.",
+    "supertonicStepsLabel": "الجودة (خطوات الانتشار)",
+    "supertonicLanguageLabel": "اللغة",
+    "supertonicLanguageAuto": "تلقائي",
+    "supertonicLanguageSheetTitle": "اللغة",
+    "supertonicLanguageSearchPlaceholder": "البحث في اللغات",
+    "supertonicLanguageNames": {
+      "ar": "العربية",
+      "bg": "البلغارية",
+      "hr": "‏الكرواتية",
+      "cs": "‎التشيكية",
+      "da": "الدانماركية",
+      "nl": "الهولندية",
+      "en": "الإنجليزية",
+      "et": "الإستونية",
+      "fi": "الفنلندية",
+      "fr": "الفرنسية",
+      "de": "الألمانية",
+      "el": "اليونانية",
+      "hi": "الهندية",
+      "hu": "الهنغارية",
+      "id": "الإندونيسية",
+      "it": "الإيطالية",
+      "ja": "اليابانية",
+      "ko": "‎الكورية",
+      "lv": "اللاتفية",
+      "lt": "الليتوانية",
+      "pl": "البولندية",
+      "pt": "البرتغالية",
+      "ro": "الرومانية",
+      "ru": "الروسية",
+      "sk": "السلوفاكية",
+      "sl": "السلوفينية",
+      "es": "الإسبانية",
+      "sv": "السويدية",
+      "tr": "التركية",
+      "uk": "الأوكرانية",
+      "vi": "‎الفيتنامية"
+    },
+    "toggleAutoSpeakLabel": "تبديل القراءة التلقائية بصوت عالٍ",
+    "openSettingsLabel": "إعدادات تحويل النص إلى كلام",
+    "playMessageLabel": "تشغيل الرسالة",
+    "stopMessageLabel": "إيقاف الرسالة",
+    "autoSpeakLabel": "قراءة الردود تلقائيًا بصوت عالٍ",
+    "autoSpeakDescription": "اقرأ الردود الجديدة بصوت عالٍ فور وصولها.",
+    "engineChipKitten": "قطة",
+    "engineChipKokoro": "Kokoro",
+    "engineChipSupertonic": "Supertonic",
+    "engineChipSystem": "النظام",
+    "stepsCount": "{{steps}} خطوة",
+    "engineKittenTagline": "أصغر حجمًا. موثوق. الأفضل على الأجهزة القديمة.",
+    "engineKokoroTagline": "أعلى جودة. أبطأ في البدء. قد لا تعمل بعض الأصوات على جميع الأجهزة.",
+    "engineSupertonicTagline": "الأسرع في البدء. يستهلك ذاكرة RAM أكبر. قد يُسقط كلمات أحيانًا.",
+    "engineSystemTagline": "أصوات نظام التشغيل المدمجة. متاحة دائمًا، دون تثبيت.",
+    "engineSystemTitleIos": "أصوات iOS",
+    "engineSystemTitleAndroid": "أصوات Android",
+    "engineSystemTier": "متاح دائمًا",
+    "engineTierLightest": "الأخف",
+    "engineTierBestQuality": "أفضل جودة",
+    "engineTierFastestStart": "أسرع بدء",
+    "engineSpecsLine": "{{voices}} صوتًا  ·  {{sizeMb}} ميغابايت  ·  ~{{ramMb}} ميغابايت RAM",
+    "engineSystemSpecsLine": "{{voices}} صوتًا",
+    "engineRemoveTitle": "هل تريد إزالة {{engineTitle}}؟",
+    "engineRemoveBody": "يوفّر ~{{sizeMb}} ميغابايت على هذا الجهاز.",
+    "engineRemoveCancel": "إلغاء",
+    "engineRemoveConfirm": "‎حذف",
+    "engineInstallCta": "تثبيت · {{sizeMb}} ميغابايت",
+    "engineDownloadingLabel": "‎جارٍ التنزيل…  {{pct}}%  ·  {{mbDone}} / {{sizeMb}} ميغابايت",
+    "engineRetryCta": "حاول مرة أخرى",
+    "voicesEmptyState": "لم يتم العثور على أصوات.",
+    "kokoroDeviceNote": "قد لا تعمل بعض الأصوات على جميع الأجهزة.",
+    "insufficientStorage": "لا توجد مساحة كافية — وفّر {{requiredMb}} ميغابايت لتثبيت هذا المحرك ({{freeMb}} ميغابايت متاحة)."
+  },
+  "onboarding": {
+    "back": "رجوع",
+    "skip": "تخطى",
+    "skipForNow": "تخطٍى الآن",
+    "splash": {
+      "brand": "PocketPal"
+    },
+    "screen1": {
+      "title": "تعرّف على رفاقك.",
+      "titleAccent": "الرفاق.",
+      "body": "أصدقاء أذكياء صغار يعيشون داخل هاتفك.\nلنُجهّزك — سيستغرق الأمر دقيقة.",
+      "cta": "أرِني الجولة",
+      "eyebrow": "مرحبًا بك في PocketPal"
+    },
+    "screen2": {
+      "title": "في أي وقت،\nوفي أي مكان.",
+      "body": "رفاقك يعيشون داخل هاتفك.\nبلا إنترنت، بلا إشارة — يعملون في الطائرات، وخارج الشبكة، وفي القرى النائية.",
+      "highlight": "بلا إنترنت، بلا إشارة",
+      "cta": "التالي",
+      "eyebrow": "الفكرة",
+      "titleAccent": "في أي وقت،"
+    },
+    "screen3": {
+      "title": "أصغر،\nلكنهم ملكك.",
+      "titleAccent": "أصغر،",
+      "body": "‏الرفاق على هاتفك سريعون وخاصون — لكنهم أخف من الذكاء الاصطناعي السحابي. فكّر فيهم كرفيق جيب، لا كعرّاف يعرف كل شيء.",
+      "highlight": "سريع وخاص",
+      "cta": "فهمت",
+      "eyebrow": "‎تنبيه"
+    },
+    "screen4": {
+      "title": "لا شيء يغادر هاتفك.",
+      "titleAccent": "‎يغادر",
+      "body": "لا حسابات. لا سحابة. لا تتبّع. محادثاتك تبقى ملكك.",
+      "highlight": "لا حسابات. لا سحابة. لا تتبّع.",
+      "cta": "‎ابدأ الآن",
+      "eyebrow": "الخصوصية مضمونة"
+    },
+    "screen5": {
+      "title": "ما الغرض من رفيقك؟",
+      "body": "اختر ما تودّ مناقشته — سنطابق رفيقًا يناسب هاتفك.",
+      "topic": {
+        "smartchat": "دردشة ذكية",
+        "coding": "البرمجة",
+        "education": "التعليم",
+        "roleplay": "لعب الأدوار",
+        "creative_writing": "الكتابة الإبداعية",
+        "else": "هل تبحث عن شيء آخر؟"
+      },
+      "topicDescription": {
+        "smartchat": "رفيق يومي ودود",
+        "coding": "اكتب الكود، صحّح الأخطاء، اشرح",
+        "education": "تعلّم، اشرح، اختبر",
+        "roleplay": "شخصيات، سيناريوهات",
+        "creative_writing": "قصص، أفكار، مسودات",
+        "else": "تصفّح جميع الرفاق لاحقًا في التطبيق"
+      }
+    },
+    "screen6": {
+      "cta": "تنزيل {{name}}",
+      "ctaTemplate": "تنزيل {{name}} ({{size}})",
+      "useTemplate": "استخدام {{name}}",
+      "deviceRamSuffix": "غيغابايت RAM",
+      "deviceFreeSuffix": "غيغابايت متاحة",
+      "recommended": "موصى به",
+      "downloaded": "تم التنزيل",
+      "modelTier": {
+        "quick": "سريع",
+        "balanced": "متوازن",
+        "best": "الأفضل"
+      },
+      "subtitleTemplate": "يستخدم {{name}} نموذج ذكاء اصطناعي صغير على هاتفك — اختر واحدًا يناسبك.",
+      "pal": {
+        "pip": {
+          "body": "وجدنا لك رفيقًا مثاليًا — رفيق يومي ودود. ذكي بما يكفي لمعظم الأمور، وخفيف بما يكفي لأي هاتف."
+        },
+        "codie": {
+          "body": "تعرّف على Codie — مبرمجك المحلي المرافق. يقرأ الكود، ويكتب الكود، ويشرح الأجزاء الصعبة دون مغادرة هاتفك أبدًا."
+        },
+        "sage": {
+          "body": "Sage صبور وفضولي، ويرشدك عبر الأفكار خطوة بخطوة. رفيق دراسة تحمله في جيبك."
+        },
+        "echo": {
+          "body": "Echo رفيق متعدد الاستخدامات للعب الأدوار — يبقى في الشخصية، ويرسم المشاهد، ويتبع قصتك حيثما تأخذك."
+        },
+        "muse": {
+          "body": "‎Muse يساعدك على الكتابة. يقترح الصياغة، ويجد الإيقاع، ويحافظ على نبرتك كما هي."
+        }
+      }
+    }
+  },
+  "downloadBanner": {
+    "titleByPal": "{{name}} قيد التنزيل",
+    "titleByModel": "{{name}} قيد التنزيل",
+    "extraInProgress": "+{{count}} أخرى قيد التقدم",
+    "failedTitle": "لم يكتمل التنزيل",
+    "retry": "إعادة المحاولة"
+  }
+}

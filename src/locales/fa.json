@@ -205,7 +205,13 @@
     "speculativeDraftValueCacheType": "نوع کش Value پیش‌نویس",
     "speculativeDraftNGpuLayers": "لایه‌های GPU پیش‌نویس",
     "speculativeDraftNGpuLayersDescription": "تعداد لایه‌های مدل پیش‌نویس که روی GPU بارگذاری می‌شوند.",
-    "speculativeDraftCacheTypeInactiveDescription": "به‌محض اجرای رمزگشایی گمانه‌زنانه اعمال می‌شود."
+    "speculativeDraftCacheTypeInactiveDescription": "به‌محض اجرای رمزگشایی گمانه‌زنانه اعمال می‌شود.",
+    "purchases": {
+      "title": "خریدها",
+      "statusOwned": "خریداری‌شده",
+      "statusUnlocking": "در حال فعال‌سازی",
+      "link": "برای استفاده در دستگاه‌های دیگر وارد شوید"
+    }
   },
   "memory": {
     "shortWarning": "هشدار حافظه",
@@ -1022,7 +1028,9 @@
       "ttft": "{{value}}ms TTFT",
       "interrupted": "متوقف شد",
       "truncated": "قطع شد — احتمالاً context پر شده",
-      "draftAccepted": "پیش‌نویس: {{accepted}}/{{total}} ({{pct}}%)"
+      "draftAccepted": "پیش‌نویس: {{accepted}}/{{total}} ({{pct}}%)",
+      "promptTokensPerSec": "{{value}} توکن پرامپت/ثانیه",
+      "cachedTokens": "{{value}} کش‌شده"
     },
     "pendingIndicator": {
       "preparingTool": "در حال آماده‌سازی ابزار",
@@ -1034,6 +1042,13 @@
     "toolMetrics": {
       "tokens": "{{count}} توکن",
       "elapsed": "{{seconds}} ثانیه"
+    },
+    "completionSettings": {
+      "serverDefault": "پیش‌فرض سرور",
+      "usingServerDefault": "استفاده از پیش‌فرض سرور: {{value}}",
+      "usingServerDefaultUnreported": "استفاده از پیش‌فرض سرور (گزارش نشده)",
+      "resetToServerDefault": "پیش‌فرض سرور: {{value}} · بازنشانی",
+      "resetToServerDefaultAccessibilityLabel": "بازنشانی {{name}} به پیش‌فرض سرور، {{value}}"
     }
   },
   "palsScreen": {
@@ -1087,8 +1102,6 @@
       "download": "دانلود",
       "getFree": "دریافت رایگان"
     },
-    "premiumPalDescription": "پَل ویژه از جامعه palshub.ai",
-    "premiumInfoText": "برای کشف پَل‌های بیشتر به palshub.ai سر بزنید",
     "sortOptions": {
       "newest": "جدیدترین",
       "oldest": "قدیمی‌ترین",
@@ -1112,15 +1125,48 @@
       "error": "خطا",
       "failedToLoadDetails": "بارگذاری جزئیات پَل با مشکل مواجه شد",
       "failedToDownload": "دانلود پَل با مشکل مواجه شد",
-      "premiumPalMessage": "این یک پَل ویژه است.\n• اگر قبلاً با حساب Palshub خود آن را فعال کرده‌اید، کافی است وارد شوید تا به جزئیات کامل دسترسی پیدا کنید.\n• هنوز فعال نکرده‌اید؟ برای اطلاعات بیشتر به برنامه palshub.ai مراجعه کنید.",
-      "notAvailable": "ندارد",
-      "buyOnPalshub": "خرید در Palshub",
-      "finalizingPurchase": "در حال نهایی‌سازی خرید شما…",
-      "processingPurchase": "در حال پردازش — به‌زودی فعال می‌شود.",
-      "checkoutSessionExpired": "نشست شما منقضی شد. برای ادامه دوباره وارد شوید.",
-      "signInAgain": "ورود مجدد",
-      "palNotAvailable": "این پَل در حال حاضر برای خرید در دسترس نیست.",
-      "checkoutFailed": "مشکلی پیش آمد. لطفاً دوباره تلاش کنید."
+      "notAvailable": "ندارد"
+    },
+    "purchase": {
+      "buy": "{{price}}",
+      "open": "باز کردن",
+      "install": "نصب",
+      "pending": "در انتظار",
+      "unlocking": "در حال فعال‌سازی",
+      "retry": "تلاش مجدد",
+      "supportCode": "کد پشتیبانی: {{code}}",
+      "noLongerAvailable": "این پَل دیگر در دسترس نیست. می‌توانید {{refundLink}}.",
+      "refundLink": "از Apple بازپرداخت بخواهید",
+      "notCompleted": "این خرید کامل نشد. Google مبلغ را به شما بازمی‌گرداند.",
+      "withdrawnRefunding": "این پَل از عرضه خارج شد. برای بازپرداخت با پشتیبانی تماس بگیرید.",
+      "invalid": "تأیید این خرید ممکن نشد.",
+      "heldInvalid": "فعال‌سازی این خرید ممکن نشد. با همین کد با پشتیبانی تماس بگیرید.",
+      "recommendedModel": "مدل پیشنهادی",
+      "sampleExchange": "نمونه گفتگو",
+      "signInLine": "قبلاً خریده‌اید؟ وارد شوید",
+      "licenseNotice": "در حال خرید مجوز استفاده از این پَل هستید.",
+      "termsOfSale": "شرایط فروش",
+      "appleMediaTerms": "شرایط خدمات رسانه‌ای Apple",
+      "linkPrompt": "وارد شوید تا در دستگاه‌های دیگرتان هم از آن استفاده کنید",
+      "linkSignIn": "ورود",
+      "dismiss": "الان نه",
+      "linkConflict": "این خریدها به حساب کاربری دیگری متصل‌اند.",
+      "restorePurchases": "بازیابی خریدها",
+      "badgePending": "در انتظار",
+      "badgeUnlocking": "در حال فعال‌سازی",
+      "badgeUpdate": "به‌روزرسانی در دسترس",
+      "updatePrompt": "نسخه جدیدی از سازنده در دسترس است.",
+      "updatePromptWithNote": "نسخه جدیدی از سازنده در دسترس است: {{note}}.",
+      "updateButton": "به‌روزرسانی",
+      "updateConfirmText": "این کار ویرایش‌های شما را در بخش‌هایی که سازنده تغییر داده جایگزین می‌کند.",
+      "updateConfirm": "به‌روزرسانی",
+      "updateCancel": "لغو",
+      "modelStep": {
+        "download": "دانلود · {{size}}",
+        "startChat": "شروع چت",
+        "needsMemory": "این پَل برای کوچک‌ترین مدلش به دستگاهی با حداقل {{size}} حافظه نیاز دارد.",
+        "noModelFits": "این دستگاه حافظه کافی برای این پَل ندارد."
+      }
     }
   },
   "validation": {
@@ -1584,6 +1630,8 @@
   "downloadBanner": {
     "titleByPal": "{{name}} در حال دانلود است",
     "titleByModel": "{{name}} در حال دانلود است",
-    "extraInProgress": "+{{count}} مورد دیگر در حال انجام"
+    "extraInProgress": "+{{count}} مورد دیگر در حال انجام",
+    "failedTitle": "دانلود کامل نشد",
+    "retry": "تلاش مجدد"
   }
 }

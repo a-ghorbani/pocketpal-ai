@@ -205,7 +205,13 @@
     "speculativeDraftValueCacheType": "Тип кешу значень чернетки",
     "speculativeDraftNGpuLayers": "Шари GPU для чернетки",
     "speculativeDraftNGpuLayersDescription": "Кількість шарів моделі-чернетки, які буде вивантажено на GPU.",
-    "speculativeDraftCacheTypeInactiveDescription": "Застосовується, щойно запрацює спекулятивне декодування."
+    "speculativeDraftCacheTypeInactiveDescription": "Застосовується, щойно запрацює спекулятивне декодування.",
+    "purchases": {
+      "title": "Покупки",
+      "statusOwned": "Придбано",
+      "statusUnlocking": "Розблокування",
+      "link": "Увійдіть, щоб користуватися на інших пристроях"
+    }
   },
   "memory": {
     "shortWarning": "Попередження про пам'ять",
@@ -564,7 +570,9 @@
       "ttft": "{{value}} мс TTFT",
       "interrupted": "Перервано",
       "truncated": "Перервано — ймовірно, контекст вичерпано",
-      "draftAccepted": "чернетка: {{accepted}}/{{total}} ({{pct}}%)"
+      "draftAccepted": "чернетка: {{accepted}}/{{total}} ({{pct}}%)",
+      "promptTokensPerSec": "{{value}} токенів запиту/сек",
+      "cachedTokens": "{{value}} з кешу"
     },
     "exportUtils": {
       "fileSaved": "Файл збережено",
@@ -1034,6 +1042,13 @@
     "toolMetrics": {
       "tokens": "{{count}} токен",
       "elapsed": "{{seconds}} сек"
+    },
+    "completionSettings": {
+      "serverDefault": "значення сервера за замовчуванням",
+      "usingServerDefault": "Використовується значення сервера за замовчуванням: {{value}}",
+      "usingServerDefaultUnreported": "Використовується значення сервера за замовчуванням (не вказано)",
+      "resetToServerDefault": "Значення сервера за замовчуванням: {{value}} · Скинути",
+      "resetToServerDefaultAccessibilityLabel": "Скинути {{name}} до значення сервера за замовчуванням, {{value}}"
     }
   },
   "palsScreen": {
@@ -1087,8 +1102,6 @@
       "download": "Завантажити",
       "getFree": "Отримати Безкоштовно"
     },
-    "premiumPalDescription": "Преміум-користувач із спільноти palshub.ai",
-    "premiumInfoText": "Завітайте на сайт palshub.ai, щоб знайти нових друзів",
     "sortOptions": {
       "newest": "Новійша",
       "oldest": "Старіша",
@@ -1112,15 +1125,48 @@
       "error": "Помилка",
       "failedToLoadDetails": "Не вдалося завантажити інформацію про Pal",
       "failedToDownload": "Не вдалося завантажити pal",
-      "premiumPalMessage": "Це Преміум-Pal.\n• Якщо ви вже розблокували його за допомогою свого облікового запису Palshub, просто увійдіть, щоб переглянути повну інформацію.\n• Ще не розблокували? Зайдіть у додаток palshub.ai, щоб дізнатися більше.",
-      "notAvailable": "Н/Д",
-      "buyOnPalshub": "Купити на Palshub",
-      "finalizingPurchase": "Завершується оформлення вашої покупки…",
-      "processingPurchase": "Обробка — доступ буде відкрито незабаром.",
-      "checkoutSessionExpired": "Термін дії вашої сесії закінчився. Увійдіть знову, щоб продовжити.",
-      "signInAgain": "Увійти знову",
-      "palNotAvailable": "Цей pal наразі недоступний для покупки.",
-      "checkoutFailed": "Щось пішло не так. Спробуйте ще раз."
+      "notAvailable": "Н/Д"
+    },
+    "purchase": {
+      "buy": "{{price}}",
+      "open": "Відкрити",
+      "install": "Встановити",
+      "pending": "Очікується",
+      "unlocking": "Розблокування",
+      "retry": "Повторити",
+      "supportCode": "Код підтримки: {{code}}",
+      "noLongerAvailable": "Цей Pal більше недоступний. Ви можете {{refundLink}}.",
+      "refundLink": "попросити в Apple повернення коштів",
+      "notCompleted": "Не вдалося завершити цю покупку. Google поверне вам кошти.",
+      "withdrawnRefunding": "Цей Pal знято з продажу. Зверніться до підтримки щодо повернення коштів.",
+      "invalid": "Не вдалося підтвердити цю покупку.",
+      "heldInvalid": "Не вдалося розблокувати цю покупку. Зверніться до підтримки й назвіть цей код.",
+      "recommendedModel": "Рекомендована модель",
+      "sampleExchange": "Приклад розмови",
+      "signInLine": "Вже придбали? Увійдіть",
+      "licenseNotice": "Ви купуєте ліцензію на використання цього Pal.",
+      "termsOfSale": "Умови продажу",
+      "appleMediaTerms": "Умови медійних сервісів Apple",
+      "linkPrompt": "Увійдіть, щоб користуватися ним і на інших своїх пристроях",
+      "linkSignIn": "Увійти",
+      "dismiss": "Не зараз",
+      "linkConflict": "Ці покупки прив'язані до іншого облікового запису.",
+      "restorePurchases": "Відновити покупки",
+      "badgePending": "Очікується",
+      "badgeUnlocking": "Розблокування",
+      "badgeUpdate": "Доступне оновлення",
+      "updatePrompt": "Доступна нова версія від автора.",
+      "updatePromptWithNote": "Доступна нова версія від автора: {{note}}.",
+      "updateButton": "Оновити",
+      "updateConfirmText": "Ваші зміни в частинах, які змінив автор, буде замінено.",
+      "updateConfirm": "Оновити",
+      "updateCancel": "Скасувати",
+      "modelStep": {
+        "download": "Завантажити · {{size}}",
+        "startChat": "Почати чат",
+        "needsMemory": "Для найменшої моделі цього Pal потрібен пристрій з обсягом пам'яті не менше {{size}}.",
+        "noModelFits": "Цьому пристрою не вистачає пам'яті для цього Pal."
+      }
     }
   },
   "validation": {
@@ -1584,6 +1630,8 @@
   "downloadBanner": {
     "titleByPal": "{{name}} завантажується",
     "titleByModel": "{{name}} завантажується",
-    "extraInProgress": "+{{count}} ще триває"
+    "extraInProgress": "+{{count}} ще триває",
+    "failedTitle": "Завантаження не завершилося",
+    "retry": "Повторити"
   }
 }
