@@ -328,6 +328,7 @@ export interface SemanticColors {
   // Status bar specific
   bgStatusActive: string;
   bgStatusIdle: string;
+  statusLoaded: string;
 
   // Button specific
   btnPrimaryBg: string;
