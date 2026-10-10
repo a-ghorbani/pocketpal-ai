@@ -321,6 +321,19 @@ describe('chatSessionStore', () => {
       expect(chatSessionStore.sessions[0].messages).toEqual([]);
     });
 
+    it('shows nothing when the session was deleted during the write', async () => {
+      chatSessionStore.sessions = [makeSession('other')];
+      (
+        chatSessionRepository.addMessageToSession as jest.Mock
+      ).mockResolvedValueOnce(undefined);
+      const message = {...mockMessage, id: ''};
+
+      await chatSessionStore.addMessageToSession('other', message);
+
+      expect(message.id).toBe('');
+      expect(chatSessionStore.sessions[0].messages).toEqual([]);
+    });
+
     it('writes nothing for a session that no longer exists', async () => {
       chatSessionStore.sessions = [makeSession('active')];
 

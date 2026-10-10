@@ -523,6 +523,9 @@ class ChatSessionStore {
       sessionId,
       message,
     );
+    if (!newMessage) {
+      return;
+    }
     message.id = newMessage.id;
     runInAction(() => {
       session.messages.unshift(message);
