@@ -119,11 +119,15 @@ describe('AuthService.signInWithApple', () => {
     signInResult = {data: {user: {id: 'u1'}}, error: null},
     profileUpdateResult = {error: null},
     updateUserResult = {data: {}, error: null},
+    storedProfile = {id: 'u1', full_name: 'Reloaded'},
+    signInEmitsSignedIn = false,
   }: {
     env?: Record<string, string>;
     signInResult?: {data: any; error: any};
     profileUpdateResult?: {error: any};
     updateUserResult?: {data: any; error: any};
+    storedProfile?: {id: string; full_name: string | null};
+    signInEmitsSignedIn?: boolean;
   } = {}) => {
     jest.resetModules();
     jest.spyOn(console, 'error').mockImplementation(() => {});
@@ -132,14 +136,22 @@ describe('AuthService.signInWithApple', () => {
       jest.doMock('@env', () => env);
     }
 
-    const signInWithIdToken = jest.fn().mockResolvedValue(signInResult);
+    let authStateListener: (event: string, session: any) => Promise<void>;
+    const onAuthStateChange = jest.fn(listener => {
+      authStateListener = listener;
+    });
+    const signInWithIdToken = jest.fn(async () => {
+      if (signInEmitsSignedIn) {
+        await authStateListener('SIGNED_IN', {user: {id: 'u1'}});
+      }
+      return signInResult;
+    });
     const updateUser = jest.fn().mockResolvedValue(updateUserResult);
     const updateEq = jest.fn().mockResolvedValue(profileUpdateResult);
     const update = jest.fn(() => ({eq: updateEq}));
-    const single = jest.fn().mockResolvedValue({
-      data: {id: 'u1', full_name: 'Reloaded'},
-      error: null,
-    });
+    const single = jest
+      .fn()
+      .mockResolvedValue({data: storedProfile, error: null});
     const select = jest.fn(() => ({eq: jest.fn(() => ({single}))}));
     const upsert = jest.fn();
     const insert = jest.fn();
@@ -148,7 +160,7 @@ describe('AuthService.signInWithApple', () => {
       supabase: {
         from,
         auth: {
-          onAuthStateChange: jest.fn(),
+          onAuthStateChange,
           getSession: jest
             .fn()
             .mockResolvedValue({data: {session: null}, error: null}),
@@ -351,6 +363,26 @@ describe('AuthService.signInWithApple', () => {
       expect(ctx.upsert).not.toHaveBeenCalled();
       expect(ctx.insert).not.toHaveBeenCalled();
       expect(ctx.authService.error).toBeNull();
+    });
+
+    it('stores the name over the nameless profile row loaded on SIGNED_IN', async () => {
+      const ctx = setup({
+        storedProfile: {id: 'u1', full_name: null},
+        signInEmitsSignedIn: true,
+      });
+      ctx.appleAuth.performRequest.mockResolvedValue(named('Ada', 'Lovelace'));
+
+      await ctx.authService.signInWithApple();
+
+      expect(ctx.updateUser).toHaveBeenCalledWith({
+        data: {full_name: 'Ada Lovelace'},
+      });
+      expect(ctx.update).toHaveBeenCalledWith({
+        full_name: 'Ada Lovelace',
+        updated_at: expect.any(String),
+      });
+      expect(ctx.updateEq).toHaveBeenCalledWith('id', 'u1');
+      expect(ctx.select).toHaveBeenCalledTimes(2);
     });
 
     it('trims the parts and uses the only non-empty one', async () => {
