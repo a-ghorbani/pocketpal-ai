@@ -1,5 +1,7 @@
 import React from 'react';
 
+import {act, within} from '@testing-library/react-native';
+
 import {render} from '../../../../jest/test-utils';
 import {RouterLoadStatus} from '../RouterLoadStatus';
 import {modelStore, routerStore} from '../../../store';
@@ -95,8 +97,40 @@ describe('RouterLoadStatus', () => {
     const {getByTestId, queryAllByRole} = render(<RouterLoadStatus />);
 
     expect(
-      getByTestId('chat-router-loading').props.accessibilityLiveRegion,
+      getByTestId('chat-router-loading-status').props.accessibilityLiveRegion,
     ).toBe('polite');
     expect(queryAllByRole('button')).toEqual([]);
+  });
+
+  it('announces the same words while the percent moves', () => {
+    seedLoad({value: 0.4});
+    const {getByTestId} = render(<RouterLoadStatus />);
+    const status = getByTestId('chat-router-loading-status');
+    const announced = status.props.accessibilityLabel;
+
+    act(() => seedLoad({value: 0.6}));
+
+    expect(getByTestId('chat-router-loading-label')).toHaveTextContent(
+      'Loading model · 60%',
+    );
+    expect(announced).toBe('Loading model…');
+    expect(
+      getByTestId('chat-router-loading-status').props.accessibilityLabel,
+    ).toBe(announced);
+    expect(
+      getByTestId('chat-router-loading-bar').props.accessibilityValue.now,
+    ).toBe(60);
+  });
+
+  it('keeps the bar outside the announced region', () => {
+    seedLoad({value: 0.4});
+
+    const {getByTestId} = render(<RouterLoadStatus />);
+
+    expect(
+      within(getByTestId('chat-router-loading-status')).queryByTestId(
+        'chat-router-loading-bar',
+      ),
+    ).toBeNull();
   });
 });

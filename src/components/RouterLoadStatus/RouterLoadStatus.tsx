@@ -37,11 +37,13 @@ export const RouterLoadStatus: React.FC = observer(() => {
   const {fraction} = load;
 
   return (
-    <View
-      style={styles.container}
-      testID="chat-router-loading"
-      accessibilityLiveRegion="polite">
-      <View style={styles.row}>
+    <View style={styles.container} testID="chat-router-loading">
+      <View
+        style={styles.row}
+        testID="chat-router-loading-status"
+        accessible
+        accessibilityLabel={l10n.chat.routerLoading}
+        accessibilityLiveRegion="polite">
         <ActivityIndicator size={14} color={theme.colors.onSurfaceVariant} />
         <Text
           variant="bodyMedium"
