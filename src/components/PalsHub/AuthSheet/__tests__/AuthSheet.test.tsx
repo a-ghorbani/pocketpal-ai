@@ -1,5 +1,6 @@
 import React from 'react';
-import {Alert} from 'react-native';
+import {Alert, Platform} from 'react-native';
+import {appleAuth} from '@invertase/react-native-apple-authentication';
 import {render, fireEvent, waitFor} from '../../../../../jest/test-utils';
 
 import {AuthSheet} from '../AuthSheet';
@@ -356,6 +357,98 @@ describe('AuthSheet', () => {
         expect(PalsHubErrorHandler.handle).toHaveBeenCalled();
         expect(Alert.alert).toHaveBeenCalledWith(
           'Google Sign-In Error',
+          'An error occurred',
+        );
+      });
+    });
+  });
+
+  describe('Apple Sign In', () => {
+    const originalOS = Platform.OS;
+
+    afterEach(() => {
+      Platform.OS = originalOS;
+      appleAuth.isSupported = true;
+    });
+
+    it('renders the Apple button directly above the Google button on iOS', () => {
+      Platform.OS = 'ios';
+      const {getByTestId, toJSON} = render(<AuthSheet {...defaultProps} />);
+
+      expect(getByTestId('auth-apple-button')).toBeTruthy();
+      const tree = JSON.stringify(toJSON());
+      expect(tree.indexOf('auth-apple-button')).toBeLessThan(
+        tree.indexOf('Continue with Google'),
+      );
+    });
+
+    it('renders no Apple button on Android', () => {
+      Platform.OS = 'android';
+      const {queryByTestId, getByText} = render(
+        <AuthSheet {...defaultProps} />,
+      );
+
+      expect(queryByTestId('auth-apple-button')).toBeNull();
+      expect(getByText('Continue with Google')).toBeTruthy();
+    });
+
+    it('renders no Apple button when Apple sign-in is unsupported', () => {
+      Platform.OS = 'ios';
+      appleAuth.isSupported = false;
+      const {queryByTestId} = render(<AuthSheet {...defaultProps} />);
+
+      expect(queryByTestId('auth-apple-button')).toBeNull();
+    });
+
+    it('signs in with Apple once per press', async () => {
+      Platform.OS = 'ios';
+      const {getByTestId} = render(<AuthSheet {...defaultProps} />);
+
+      fireEvent.press(getByTestId('auth-apple-button'));
+
+      await waitFor(() => {
+        expect(authService.clearError).toHaveBeenCalled();
+        expect(authService.signInWithApple).toHaveBeenCalledTimes(1);
+      });
+    });
+
+    it('ignores a press while a sign-in is in progress', async () => {
+      Platform.OS = 'ios';
+      authService.isLoading = true;
+      const {getByTestId} = render(<AuthSheet {...defaultProps} />);
+
+      fireEvent.press(getByTestId('auth-apple-button'));
+
+      await waitFor(() => {
+        expect(authService.signInWithApple).not.toHaveBeenCalled();
+      });
+    });
+
+    it('does not show the Google button as loading during Apple sign-in', () => {
+      Platform.OS = 'ios';
+      (authService.signInWithApple as jest.Mock).mockReturnValueOnce(
+        new Promise(() => {}),
+      );
+      const {getByTestId} = render(<AuthSheet {...defaultProps} />);
+
+      fireEvent.press(getByTestId('auth-apple-button'));
+
+      expect(authService.signInWithApple).toHaveBeenCalled();
+      expect(getByTestId('button-icon-container')).toBeTruthy();
+    });
+
+    it('alerts when Apple sign-in throws', async () => {
+      Platform.OS = 'ios';
+      (authService.signInWithApple as jest.Mock).mockRejectedValueOnce(
+        new Error('Apple sign in failed'),
+      );
+      const {getByTestId} = render(<AuthSheet {...defaultProps} />);
+
+      fireEvent.press(getByTestId('auth-apple-button'));
+
+      await waitFor(() => {
+        expect(Alert.alert).toHaveBeenCalledWith(
+          'Apple Sign-In Error',
           'An error occurred',
         );
       });

@@ -9,11 +9,20 @@ import {
   GOOGLE_IOS_CLIENT_ID,
   GOOGLE_WEB_CLIENT_ID,
 } from '@env';
-import type {User, Session} from '@supabase/supabase-js';
+import {
+  isAuthApiError,
+  isAuthRetryableFetchError,
+  type User,
+  type Session,
+} from '@supabase/supabase-js';
 import {
   GoogleSignin,
   statusCodes,
 } from '@react-native-google-signin/google-signin';
+import {
+  appleAuth,
+  type AppleRequestResponseFullName,
+} from '@invertase/react-native-apple-authentication';
 
 export interface Profile {
   id: string;
@@ -36,6 +45,30 @@ export interface AuthState {
   isAuthenticated: boolean;
   error: string | null;
 }
+
+const APPLE_SIGN_IN_MESSAGES = {
+  cancelled: 'Sign-in was cancelled',
+  unreachable:
+    "Couldn't reach the server. Check your connection and try again.",
+  unavailable:
+    "Sign in with Apple isn't available right now. Please try again later or use another sign-in method.",
+  noAppleAccount:
+    'Sign in to your Apple Account in Settings to use Sign in with Apple.',
+  failed: 'Sign in with Apple failed. Please try again.',
+};
+
+const appleSignInErrorMessage = (error: any): string => {
+  if (isAuthRetryableFetchError(error) || error?.status >= 500) {
+    return APPLE_SIGN_IN_MESSAGES.unreachable;
+  }
+  if (isAuthApiError(error) && error.status >= 400) {
+    return APPLE_SIGN_IN_MESSAGES.unavailable;
+  }
+  if (error?.code === appleAuth.Error.UNKNOWN) {
+    return APPLE_SIGN_IN_MESSAGES.noAppleAccount;
+  }
+  return APPLE_SIGN_IN_MESSAGES.failed;
+};
 
 class AuthService {
   user: User | null = null;
@@ -288,6 +321,99 @@ class AuthService {
     }
   }
 
+  async signInWithApple() {
+    if (!this.isSupabaseConfigured()) {
+      runInAction(() => {
+        this.error = 'Authentication not configured';
+      });
+      return;
+    }
+
+    try {
+      runInAction(() => {
+        this.isLoading = true;
+        this.error = null;
+      });
+
+      const response = await appleAuth.performRequest({
+        requestedOperation: appleAuth.Operation.LOGIN,
+        requestedScopes: [appleAuth.Scope.EMAIL, appleAuth.Scope.FULL_NAME],
+      });
+
+      if (!response.identityToken) {
+        runInAction(() => {
+          this.error = APPLE_SIGN_IN_MESSAGES.failed;
+        });
+        console.error('No ID token present in Apple sign-in response');
+        return;
+      }
+
+      const {data, error} = await supabase!.auth.signInWithIdToken({
+        provider: 'apple',
+        token: response.identityToken,
+        nonce: response.nonce,
+      });
+
+      if (error) {
+        runInAction(() => {
+          this.error = appleSignInErrorMessage(error);
+        });
+        console.error('Supabase Apple sign-in error:', error);
+        return;
+      }
+
+      await this.storeFirstAppleName(data.user.id, response.fullName);
+    } catch (error: any) {
+      if (error?.code === appleAuth.Error.CANCELED) {
+        runInAction(() => {
+          this.error = APPLE_SIGN_IN_MESSAGES.cancelled;
+        });
+        console.warn('Apple sign-in cancelled');
+        return;
+      }
+      runInAction(() => {
+        this.error = appleSignInErrorMessage(error);
+      });
+      console.error('Apple sign-in error:', error);
+    } finally {
+      runInAction(() => {
+        this.isLoading = false;
+      });
+    }
+  }
+
+  private async storeFirstAppleName(
+    userId: string,
+    appleName: AppleRequestResponseFullName | null,
+  ) {
+    const fullName = [appleName?.givenName, appleName?.familyName]
+      .map(part => part?.trim())
+      .filter(Boolean)
+      .join(' ');
+    const hasStoredName =
+      this.profile?.id === userId && !!this.profile.full_name;
+    if (!fullName || hasStoredName) {
+      return;
+    }
+
+    const results = await Promise.allSettled([
+      supabase!.auth.updateUser({data: {full_name: fullName}}),
+      supabase!
+        .from('profiles')
+        .update({full_name: fullName, updated_at: new Date().toISOString()})
+        .eq('id', userId),
+    ]);
+    results.forEach(result => {
+      const failure =
+        result.status === 'rejected' ? result.reason : result.value.error;
+      if (failure) {
+        console.error('Error storing Apple name:', failure);
+      }
+    });
+
+    await this.loadUserProfile(userId);
+  }
+
   async signInWithEmail(email: string, password: string): Promise<boolean> {
     if (!this.isSupabaseConfigured()) {
       runInAction(() => {
@@ -443,54 +569,6 @@ class AuthService {
       });
       console.error('Password reset error:', error);
       return false;
-    } finally {
-      runInAction(() => {
-        this.isLoading = false;
-      });
-    }
-  }
-
-  async updateProfile(updates: Partial<Profile>) {
-    if (!this.user) {
-      runInAction(() => {
-        this.error = 'User not authenticated';
-      });
-      return;
-    }
-
-    if (!this.isSupabaseConfigured()) {
-      runInAction(() => {
-        this.error = 'Authentication not configured';
-      });
-      return;
-    }
-
-    try {
-      runInAction(() => {
-        this.isLoading = true;
-        this.error = null;
-      });
-
-      const {error} = await supabase!.from('profiles').upsert({
-        id: this.user.id,
-        ...updates,
-        updated_at: new Date().toISOString(),
-      });
-
-      if (error) {
-        runInAction(() => {
-          this.error = error.message;
-        });
-        console.error('Profile update error:', error);
-      } else {
-        // Reload profile
-        await this.loadUserProfile(this.user.id);
-      }
-    } catch (error) {
-      runInAction(() => {
-        this.error = 'Failed to update profile';
-      });
-      console.error('Profile update error:', error);
     } finally {
       runInAction(() => {
         this.isLoading = false;
