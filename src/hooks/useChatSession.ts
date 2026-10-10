@@ -595,7 +595,10 @@ export const useChatSession = (
         multimodal: hasImages,
       },
     };
-    const createdSession = !chatSessionStore.activeSessionId;
+    const wasUntitled =
+      (chatSessionStore.sessions.find(
+        s => s.id === chatSessionStore.activeSessionId,
+      )?.title ?? NEW_SESSION_TITLE) === NEW_SESSION_TITLE;
     await addMessage(textMessage);
     modelStore.setInferencing(true);
     modelStore.setIsStreaming(false);
@@ -915,7 +918,7 @@ export const useChatSession = (
       } else if (error instanceof RemoteModelRequestWithdrawnError) {
         if (!hasPartialContent) {
           await undoUserRow(textMessage.id, session);
-          if (createdSession) {
+          if (wasUntitled) {
             await chatSessionStore.updateSessionTitleBySessionId(
               messageInfo.sessionId,
               NEW_SESSION_TITLE,

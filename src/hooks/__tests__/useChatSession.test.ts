@@ -167,6 +167,8 @@ describe('useChatSession', () => {
     const announce = jest.spyOn(AccessibilityInfo, 'announceForAccessibility');
     const addToCurrent =
       chatSessionStore.addMessageToCurrentSession as jest.Mock;
+    const setTitle =
+      chatSessionStore.updateSessionTitleBySessionId as jest.Mock;
 
     const activeSession = () =>
       sessions.find(s => s.id === chatSessionStore.activeSessionId);
@@ -217,13 +219,23 @@ describe('useChatSession', () => {
           sessions.push({id: 'N', title: 'New Session', messages: []});
           chatSessionStore.activeSessionId = 'N';
         }
-        activeSession()!.messages.unshift(message);
+        const session = activeSession()!;
+        const oldest = session.messages.at(-1);
+        if (oldest && session.title === 'New Session') {
+          session.title = oldest.text as string;
+        }
+        session.messages.unshift(message);
+      });
+      setTitle.mockImplementation(async (id: string, title: string) => {
+        sessions.find(s => s.id === id)!.title = title;
       });
       deleteMessage.mockResolvedValue(undefined);
     });
 
     afterEach(() => {
       addToCurrent.mockResolvedValue(undefined);
+      setTitle.mockReset();
+      setTitle.mockResolvedValue(undefined);
       deleteMessage.mockReset();
       Object.defineProperty(chatSessionStore, 'currentSessionMessages', {
         get: jest.fn(() => []),
@@ -262,6 +274,27 @@ describe('useChatSession', () => {
       ).toHaveBeenCalledWith('N', 'New Session');
       expect(sessions[0].messages).toEqual([]);
       expect(undone).toEqual({message: textMessage, sessionId: 'N'});
+    });
+
+    it('leaves a new chat untitled after two undone sends', async () => {
+      sessions = [];
+      chatSessionStore.sessions = sessions as any;
+      chatSessionStore.activeSessionId = null as any;
+      const result = renderSession();
+      const second = {...textMessage, text: 'second'};
+      failWith(new RemoteModelRequestWithdrawnError());
+      await send(result);
+
+      failWith(new RemoteModelRequestWithdrawnError());
+      let undone: unknown;
+      await act(async () => {
+        undone = await result.current.handleSendPress(second);
+      });
+
+      expect(sessions).toHaveLength(1);
+      expect(sessions[0].messages).toEqual([]);
+      expect(sessions[0].title).toBe('New Session');
+      expect(undone).toEqual({message: second, sessionId: 'N'});
     });
 
     it('keeps the title of a chat that already existed', async () => {
