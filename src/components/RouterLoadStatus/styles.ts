@@ -21,10 +21,6 @@ export const createStyles = (theme: Theme) =>
       flexShrink: 1,
       color: theme.colors.onSurfaceVariant,
     },
-    percent: {
-      flexShrink: 0,
-      color: theme.colors.onSurfaceVariant,
-    },
     barTrack: {
       width: 180,
       marginLeft: 22,

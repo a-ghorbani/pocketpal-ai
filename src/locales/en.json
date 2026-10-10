@@ -1306,9 +1306,8 @@
       "showResultsAccessibilityLabel": "Show web search results for {{query}}",
       "openLinkError": "Couldn't open this link."
     },
-    "routerLoading": "Loading {{model}} on the server…",
-    "routerLoadingModel": "Loading {{model}} on the server",
-    "routerLoadingPercent": "· {{percent}}%"
+    "routerLoading": "Loading model…",
+    "routerLoadingPercent": "Loading model · {{percent}}%"
   },
   "htmlPreview": {
     "defaultTitle": "Preview",

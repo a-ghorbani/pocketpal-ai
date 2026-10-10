@@ -13,7 +13,7 @@ import {createStyles} from './styles';
 
 /** This app's own load of the model the chat is bound to, while it runs. */
 export const boundRouterLoad = ():
-  | {remoteModelId: string; fraction: number | undefined}
+  | {fraction: number | undefined}
   | undefined => {
   const binding = modelStore.activeRemoteBinding;
   const record = binding
@@ -22,10 +22,7 @@ export const boundRouterLoad = ():
   if (!binding || record?.kind !== 'load' || !routerStore.owns(record)) {
     return undefined;
   }
-  return {
-    remoteModelId: binding.remoteModelId,
-    fraction: loadFraction(record.detail?.progress),
-  };
+  return {fraction: loadFraction(record.detail?.progress)};
 };
 
 export const RouterLoadStatus: React.FC = observer(() => {
@@ -37,7 +34,7 @@ export const RouterLoadStatus: React.FC = observer(() => {
   if (!load) {
     return null;
   }
-  const {remoteModelId: model, fraction} = load;
+  const {fraction} = load;
 
   return (
     <View
@@ -50,22 +47,13 @@ export const RouterLoadStatus: React.FC = observer(() => {
           variant="bodyMedium"
           style={styles.label}
           numberOfLines={1}
-          ellipsizeMode="middle"
           testID="chat-router-loading-label">
           {fraction === undefined
-            ? t(l10n.chat.routerLoading, {model})
-            : t(l10n.chat.routerLoadingModel, {model})}
+            ? l10n.chat.routerLoading
+            : t(l10n.chat.routerLoadingPercent, {
+                percent: Math.round(fraction * 100),
+              })}
         </Text>
-        {fraction !== undefined && (
-          <Text
-            variant="bodyMedium"
-            style={styles.percent}
-            testID="chat-router-loading-percent">
-            {t(l10n.chat.routerLoadingPercent, {
-              percent: Math.round(fraction * 100),
-            })}
-          </Text>
-        )}
       </View>
       <View style={styles.barTrack}>
         <ProgressBar
