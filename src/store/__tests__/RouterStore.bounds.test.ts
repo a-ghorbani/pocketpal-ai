@@ -28,6 +28,7 @@ import {
   RouterStore,
 } from '../RouterStore';
 import {routerWireJson} from '../../../jest/fixtures/routerWire';
+import {RemoteModelNotReadyError} from '../../utils/errors';
 import type {RouterEventsHandlers} from '../../api/llamaServer/router';
 
 const mockedFetch = openaiModule.fetchModelsWithHeaders as jest.Mock;
@@ -221,6 +222,40 @@ describe('bounds', () => {
     expect(store.recordFor(serverId, ALPHA)!.failure).toEqual({
       cause: 'wait-stopped',
     });
+  });
+
+  it('quotes no server words when it stops waiting after a refused request', async () => {
+    mockedFetch.mockImplementation(async () =>
+      list(rows({[ALPHA]: 'loading'})),
+    );
+    await read(rows({[ALPHA]: 'loading'}));
+    mockedLoad.mockResolvedValueOnce({
+      status: 500,
+      body: {error: {message: 'out of memory'}},
+    });
+    const ready = store
+      .ensureReady(
+        {
+          modelId: `${serverId}/${ALPHA}`,
+          serverId,
+          remoteModelId: ALPHA,
+          url: 'http://desk:8080',
+          serverType: 'llama.cpp',
+        },
+        new AbortController().signal,
+      )
+      .catch(error => error);
+    await flush();
+    expect(store.recordFor(serverId, ALPHA)!.reason).toBe('out of memory');
+    streams[0].closed = true;
+    streams[0].handlers.onEnd();
+
+    await elapse(ROUTER_LOAD_MAX_MS);
+
+    const error = await ready;
+    expect(error).toBeInstanceOf(RemoteModelNotReadyError);
+    expect(error.cause).toBe('wait-stopped');
+    expect(error.serverMessage).toBeUndefined();
   });
 
   it('reports the row at the load bound when a later read shows the model down', async () => {

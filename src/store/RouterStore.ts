@@ -322,7 +322,7 @@ export class RouterStore {
     if (outcome === 'failed') {
       throw new RemoteModelNotReadyError(
         record?.failure?.cause ?? 'load-failed',
-        record?.reason,
+        record?.failure?.cause === 'load-failed' ? record.reason : undefined,
       );
     }
     return outcome === 'ready';
