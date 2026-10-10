@@ -9,7 +9,12 @@ import {
   GOOGLE_IOS_CLIENT_ID,
   GOOGLE_WEB_CLIENT_ID,
 } from '@env';
-import type {User, Session} from '@supabase/supabase-js';
+import {
+  isAuthApiError,
+  isAuthRetryableFetchError,
+  type User,
+  type Session,
+} from '@supabase/supabase-js';
 import {
   GoogleSignin,
   statusCodes,
@@ -40,6 +45,30 @@ export interface AuthState {
   isAuthenticated: boolean;
   error: string | null;
 }
+
+const APPLE_SIGN_IN_MESSAGES = {
+  cancelled: 'Sign-in was cancelled',
+  unreachable:
+    "Couldn't reach the server. Check your connection and try again.",
+  unavailable:
+    "Sign in with Apple isn't available right now. Please try again later or use another sign-in method.",
+  noAppleAccount:
+    'Sign in to your Apple Account in Settings to use Sign in with Apple.',
+  failed: 'Sign in with Apple failed. Please try again.',
+};
+
+const appleSignInErrorMessage = (error: any): string => {
+  if (isAuthRetryableFetchError(error) || error?.status >= 500) {
+    return APPLE_SIGN_IN_MESSAGES.unreachable;
+  }
+  if (isAuthApiError(error) && error.status >= 400) {
+    return APPLE_SIGN_IN_MESSAGES.unavailable;
+  }
+  if (error?.code === appleAuth.Error.UNKNOWN) {
+    return APPLE_SIGN_IN_MESSAGES.noAppleAccount;
+  }
+  return APPLE_SIGN_IN_MESSAGES.failed;
+};
 
 class AuthService {
   user: User | null = null;
@@ -313,7 +342,7 @@ class AuthService {
 
       if (!response.identityToken) {
         runInAction(() => {
-          this.error = 'No ID token received from Apple';
+          this.error = APPLE_SIGN_IN_MESSAGES.failed;
         });
         console.error('No ID token present in Apple sign-in response');
         return;
@@ -327,7 +356,7 @@ class AuthService {
 
       if (error) {
         runInAction(() => {
-          this.error = 'Failed to sign in with Apple';
+          this.error = appleSignInErrorMessage(error);
         });
         console.error('Supabase Apple sign-in error:', error);
         return;
@@ -335,12 +364,15 @@ class AuthService {
 
       await this.storeFirstAppleName(data.user.id, response.fullName);
     } catch (error: any) {
-      const errorMessage =
-        error?.code === appleAuth.Error.CANCELED
-          ? 'Sign-in was cancelled'
-          : 'Failed to sign in with Apple';
+      if (error?.code === appleAuth.Error.CANCELED) {
+        runInAction(() => {
+          this.error = APPLE_SIGN_IN_MESSAGES.cancelled;
+        });
+        console.warn('Apple sign-in cancelled');
+        return;
+      }
       runInAction(() => {
-        this.error = errorMessage;
+        this.error = appleSignInErrorMessage(error);
       });
       console.error('Apple sign-in error:', error);
     } finally {

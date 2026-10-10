@@ -197,73 +197,119 @@ describe('AuthService.signInWithApple', () => {
     expect(authService.isLoading).toBe(false);
   });
 
-  it('reports a cancelled Apple sheet without calling Supabase', async () => {
-    const {authService, appleAuth, signInWithIdToken} = setup();
-    appleAuth.performRequest.mockRejectedValue({code: '1001'});
+  describe('error messages', () => {
+    const {AuthApiError, AuthRetryableFetchError} = jest.requireActual(
+      '@supabase/supabase-js',
+    );
 
-    await authService.signInWithApple();
-
-    expect(signInWithIdToken).not.toHaveBeenCalled();
-    expect(authService.error).toBe('Sign-in was cancelled');
-    expect(authService.isAuthenticated).toBe(false);
-    expect(authService.isLoading).toBe(false);
-  });
-
-  it('reports other Apple failures generically', async () => {
-    const {authService, appleAuth, signInWithIdToken} = setup();
-    appleAuth.performRequest.mockRejectedValue({code: '1000'});
-
-    await authService.signInWithApple();
-
-    expect(signInWithIdToken).not.toHaveBeenCalled();
-    expect(authService.error).toBe('Failed to sign in with Apple');
-    expect(authService.isLoading).toBe(false);
-  });
-
-  it('reports a missing identity token without calling Supabase', async () => {
-    const {authService, appleAuth, signInWithIdToken} = setup();
-    appleAuth.performRequest.mockResolvedValue({
-      ...appleResponse,
-      identityToken: null,
-    });
-
-    await authService.signInWithApple();
-
-    expect(signInWithIdToken).not.toHaveBeenCalled();
-    expect(authService.error).toBe('No ID token received from Apple');
-    expect(authService.isLoading).toBe(false);
-  });
-
-  it.each([
-    ['a rejected token', {message: 'Nonces mismatch'}],
-    [
-      'an unreachable auth server',
-      {
-        name: 'AuthRetryableFetchError',
-        status: 502,
-        message:
-          '{"headers":{"map":{"server":"kong"}},"url":"http://10.0.0.1:54321/auth/v1/token"}',
-      },
-    ],
-  ])(
-    'shows the generic Apple failure, not the Supabase message, for %s',
-    async (_, supabaseError) => {
-      const {authService, appleAuth} = setup({
+    const failSupabase = async (supabaseError: unknown) => {
+      const ctx = setup({
         signInResult: {data: {user: null}, error: supabaseError},
       });
-      appleAuth.performRequest.mockResolvedValue(appleResponse);
+      ctx.appleAuth.performRequest.mockResolvedValue(appleResponse);
+      await ctx.authService.signInWithApple();
+      return ctx;
+    };
 
-      await authService.signInWithApple();
+    const failApple = async (code: string) => {
+      const ctx = setup();
+      ctx.appleAuth.performRequest.mockRejectedValue({code});
+      await ctx.authService.signInWithApple();
+      return ctx;
+    };
 
-      expect(authService.error).toBe('Failed to sign in with Apple');
+    it('asks to check the connection when the auth server is unreachable', async () => {
+      const fetchError = new AuthRetryableFetchError(
+        '{"headers":{"map":{"server":"kong"}},"url":"http://10.0.0.1:54321/auth/v1/token"}',
+        0,
+      );
+      const {authService} = await failSupabase(fetchError);
+
+      expect(authService.error).toBe(
+        "Couldn't reach the server. Check your connection and try again.",
+      );
       expect(console.error).toHaveBeenCalledWith(
         'Supabase Apple sign-in error:',
-        supabaseError,
+        fetchError,
       );
       expect(authService.isAuthenticated).toBe(false);
       expect(authService.isLoading).toBe(false);
-    },
-  );
+    });
+
+    it('asks to check the connection on a 5xx response', async () => {
+      const {authService} = await failSupabase(
+        new AuthApiError(
+          'Database error saving new user',
+          500,
+          'unexpected_failure',
+        ),
+      );
+
+      expect(authService.error).toBe(
+        "Couldn't reach the server. Check your connection and try again.",
+      );
+    });
+
+    it('reports Apple sign-in as unavailable on a 4xx auth API error', async () => {
+      const {authService} = await failSupabase(
+        new AuthApiError(
+          'Provider (issuer "https://appleid.apple.com") is not enabled',
+          400,
+          'provider_disabled',
+        ),
+      );
+
+      expect(authService.error).toBe(
+        "Sign in with Apple isn't available right now. Please try again later or use another sign-in method.",
+      );
+    });
+
+    it('reports a cancelled Apple sheet as a warning without calling Supabase', async () => {
+      const warnSpy = jest.spyOn(console, 'warn').mockImplementation(() => {});
+      const {authService, signInWithIdToken} = await failApple('1001');
+
+      expect(signInWithIdToken).not.toHaveBeenCalled();
+      expect(authService.error).toBe('Sign-in was cancelled');
+      expect(warnSpy).toHaveBeenCalled();
+      expect(console.error).not.toHaveBeenCalled();
+      expect(authService.isLoading).toBe(false);
+    });
+
+    it('asks to sign in to an Apple Account on an unknown Apple error', async () => {
+      const {authService, signInWithIdToken} = await failApple('1000');
+
+      expect(signInWithIdToken).not.toHaveBeenCalled();
+      expect(authService.error).toBe(
+        'Sign in to your Apple Account in Settings to use Sign in with Apple.',
+      );
+    });
+
+    it('reports any other Apple failure generically', async () => {
+      const {authService} = await failApple('1004');
+
+      expect(authService.error).toBe(
+        'Sign in with Apple failed. Please try again.',
+      );
+      expect(console.error).toHaveBeenCalledWith('Apple sign-in error:', {
+        code: '1004',
+      });
+    });
+
+    it('reports a missing identity token generically without calling Supabase', async () => {
+      const ctx = setup();
+      ctx.appleAuth.performRequest.mockResolvedValue({
+        ...appleResponse,
+        identityToken: null,
+      });
+
+      await ctx.authService.signInWithApple();
+
+      expect(ctx.signInWithIdToken).not.toHaveBeenCalled();
+      expect(ctx.authService.error).toBe(
+        'Sign in with Apple failed. Please try again.',
+      );
+    });
+  });
 
   it('does nothing but report when Supabase is not configured', async () => {
     const {authService, appleAuth, signInWithIdToken} = setup({
