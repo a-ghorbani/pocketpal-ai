@@ -234,21 +234,36 @@ describe('AuthService.signInWithApple', () => {
     expect(authService.isLoading).toBe(false);
   });
 
-  it('surfaces the Supabase error when the token is rejected', async () => {
-    const {authService, appleAuth} = setup({
-      signInResult: {
-        data: {user: null},
-        error: {message: 'Nonces mismatch'},
+  it.each([
+    ['a rejected token', {message: 'Nonces mismatch'}],
+    [
+      'an unreachable auth server',
+      {
+        name: 'AuthRetryableFetchError',
+        status: 502,
+        message:
+          '{"headers":{"map":{"server":"kong"}},"url":"http://10.0.0.1:54321/auth/v1/token"}',
       },
-    });
-    appleAuth.performRequest.mockResolvedValue(appleResponse);
+    ],
+  ])(
+    'shows the generic Apple failure, not the Supabase message, for %s',
+    async (_, supabaseError) => {
+      const {authService, appleAuth} = setup({
+        signInResult: {data: {user: null}, error: supabaseError},
+      });
+      appleAuth.performRequest.mockResolvedValue(appleResponse);
 
-    await authService.signInWithApple();
+      await authService.signInWithApple();
 
-    expect(authService.error).toBe('Nonces mismatch');
-    expect(authService.isAuthenticated).toBe(false);
-    expect(authService.isLoading).toBe(false);
-  });
+      expect(authService.error).toBe('Failed to sign in with Apple');
+      expect(console.error).toHaveBeenCalledWith(
+        'Supabase Apple sign-in error:',
+        supabaseError,
+      );
+      expect(authService.isAuthenticated).toBe(false);
+      expect(authService.isLoading).toBe(false);
+    },
+  );
 
   it('does nothing but report when Supabase is not configured', async () => {
     const {authService, appleAuth, signInWithIdToken} = setup({

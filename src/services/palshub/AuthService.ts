@@ -327,7 +327,7 @@ class AuthService {
 
       if (error) {
         runInAction(() => {
-          this.error = error.message;
+          this.error = 'Failed to sign in with Apple';
         });
         console.error('Supabase Apple sign-in error:', error);
         return;
