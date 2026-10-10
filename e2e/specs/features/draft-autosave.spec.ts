@@ -132,6 +132,7 @@ describe('Draft Autosave', () => {
     const aiMessage = browser.$(Selectors.chat.aiMessage);
     await aiMessage.waitForExist({timeout: TIMEOUTS.inference});
     await waitForInferenceComplete();
+    expect(await browser.$(Selectors.chat.stopButton).isExisting()).toBe(false);
 
     // Switch away and back — draft should be gone (cleared on send)
     await chatPage.openDrawer();
