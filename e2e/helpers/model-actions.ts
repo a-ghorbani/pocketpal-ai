@@ -299,55 +299,114 @@ export async function downloadAndLoadModelVariant(
   );
 }
 
+const RUN_START_WINDOW_MS = 10_000;
+const STOP_POLL_MS = 250;
+
+type StopButtonState = 'present' | 'absent' | 'unknown';
+
+async function probeStopButton(): Promise<StopButtonState> {
+  try {
+    return (await browser.$(Selectors.chat.stopButton).isExisting())
+      ? 'present'
+      : 'absent';
+  } catch {
+    return 'unknown';
+  }
+}
+
+async function readNewestTimingText(): Promise<string | undefined> {
+  const labels = browser.$$(Selectors.chat.inferenceComplete);
+  const count = await labels.length;
+  let newestIndex = -1;
+  let newestY = -Infinity;
+  for (let i = 0; i < count; i++) {
+    const y = await labels[i].getLocation('y').catch(() => -Infinity);
+    if (y > newestY) {
+      newestY = y;
+      newestIndex = i;
+    }
+  }
+  if (newestIndex < 0) {
+    return undefined;
+  }
+
+  const attrName = (browser as any).isAndroid ? 'content-desc' : 'label';
+  const labelText = await labels[newestIndex]
+    .getAttribute(attrName)
+    .catch(() => '');
+  const timingMatch = labelText.match(/(\d+(?:\.\d+)?ms\/token.*TTFT)/);
+  return timingMatch ? timingMatch[1] : labelText.slice(-100);
+}
+
+async function swipeChatDown(): Promise<void> {
+  try {
+    const {width, height} = await (browser as any).getWindowSize();
+    await (browser as any)
+      .action('pointer', {parameters: {pointerType: 'touch'}})
+      .move({x: Math.floor(width / 2), y: Math.floor(height * 0.7)})
+      .down()
+      .move({
+        x: Math.floor(width / 2),
+        y: Math.floor(height * 0.3),
+        duration: 300,
+      })
+      .up()
+      .perform();
+  } catch {
+    // Swipe failed, continue waiting
+  }
+}
+
 /**
- * Wait for inference to complete by polling for timing info.
- * Returns the timing text when complete.
+ * Wait for the run started by the caller's send to finish: the Stop button
+ * appears, then stays gone. Returns the timing text of the newest reply.
+ *
+ * Every finished reply carries a timing label, so on a later turn in a chat a
+ * label alone does not mean the new reply is done.
  *
  * @param maxWaitMs - Maximum time to wait for completion
- * @param pollIntervalMs - How often to check
+ * @param pollIntervalMs - How often to check once the run has started
  */
 export async function waitForInferenceComplete(
   maxWaitMs = 60000,
   pollIntervalMs = 2000,
 ): Promise<string> {
   const startTime = Date.now();
+  let stopSeen = false;
 
   while (Date.now() - startTime < maxWaitMs) {
     // A "Give this chat more room" sheet can overlay the chat and stall
     // generation; clear it before polling so inference can proceed.
     await dismissContextRoomSheetIfPresent();
 
-    const timingElement = browser.$(Selectors.chat.inferenceComplete);
-    const exists = await timingElement.isExisting().catch(() => false);
-
-    if (exists) {
-      const attrName = (browser as any).isAndroid ? 'content-desc' : 'label';
-      const labelText = await timingElement
-        .getAttribute(attrName)
-        .catch(() => '');
-      const timingMatch = labelText.match(/(\d+(?:\.\d+)?ms\/token.*TTFT)/);
-      return timingMatch ? timingMatch[1] : labelText.slice(-100);
+    const stop = await probeStopButton();
+    if (stop === 'present' && !stopSeen) {
+      stopSeen = true;
+      console.log(
+        `[waitForInferenceComplete] run started after ${Date.now() - startTime}ms`,
+      );
     }
 
-    // Swipe up to scroll down while waiting (in case content is long)
-    try {
-      const {width, height} = await (browser as any).getWindowSize();
-      await (browser as any)
-        .action('pointer', {parameters: {pointerType: 'touch'}})
-        .move({x: Math.floor(width / 2), y: Math.floor(height * 0.7)})
-        .down()
-        .move({
-          x: Math.floor(width / 2),
-          y: Math.floor(height * 0.3),
-          duration: 300,
-        })
-        .up()
-        .perform();
-    } catch {
-      // Swipe failed, continue waiting
+    const startWindowOver = Date.now() - startTime > RUN_START_WINDOW_MS;
+    if (stop === 'absent' && (stopSeen || startWindowOver)) {
+      await browser.pause(STOP_POLL_MS);
+      if ((await probeStopButton()) === 'absent') {
+        const timingText = await readNewestTimingText();
+        if (timingText !== undefined) {
+          if (!stopSeen) {
+            console.warn('[waitForInferenceComplete] run start not observed');
+          }
+          return timingText;
+        }
+      }
     }
 
-    await browser.pause(pollIntervalMs);
+    if (stopSeen) {
+      await swipeChatDown();
+      await browser.pause(pollIntervalMs);
+    } else {
+      await browser.pause(STOP_POLL_MS);
+    }
   }
 
   throw new Error('Inference timed out - timing info not found');
