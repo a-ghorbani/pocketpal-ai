@@ -299,7 +299,7 @@ export async function downloadAndLoadModelVariant(
   );
 }
 
-const RUN_START_WINDOW_MS = 10_000;
+const RUN_START_WINDOW_MS = 3_000;
 const STOP_POLL_MS = 250;
 
 type StopButtonState = 'present' | 'absent' | 'unknown';
@@ -394,7 +394,7 @@ export async function waitForInferenceComplete(
         const timingText = await readNewestTimingText();
         if (timingText !== undefined) {
           if (!stopSeen) {
-            console.warn('[waitForInferenceComplete] run start not observed');
+            console.log('[waitForInferenceComplete] run start not observed');
           }
           return timingText;
         }
