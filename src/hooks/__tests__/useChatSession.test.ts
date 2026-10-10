@@ -13,7 +13,6 @@ import {
 } from '../../../jest/fixtures/models';
 
 import {useChatSession} from '../useChatSession';
-import {chatSessionRepository} from '../../repositories/ChatSessionRepository';
 import {isReadUrlAllowed} from '../../services/talents';
 
 import {
@@ -163,7 +162,8 @@ describe('useChatSession', () => {
     type Session = {id: string; title: string; messages: Row[]};
     let sessions: Session[];
     let nextId: number;
-    const deleteMessage = jest.spyOn(chatSessionRepository, 'deleteMessage');
+    const deleteMessage =
+      chatSessionStore.deleteMessageFromSession as jest.Mock;
     const announce = jest.spyOn(AccessibilityInfo, 'announceForAccessibility');
     const addToCurrent =
       chatSessionStore.addMessageToCurrentSession as jest.Mock;
@@ -229,7 +229,14 @@ describe('useChatSession', () => {
       setTitle.mockImplementation(async (id: string, title: string) => {
         sessions.find(s => s.id === id)!.title = title;
       });
-      deleteMessage.mockResolvedValue(undefined);
+      deleteMessage.mockImplementation(
+        async (sessionId: string, id: string) => {
+          const owner = sessions.find(s => s.id === sessionId);
+          if (owner) {
+            owner.messages = owner.messages.filter(m => m.id !== id);
+          }
+        },
+      );
     });
 
     afterEach(() => {
@@ -237,6 +244,7 @@ describe('useChatSession', () => {
       setTitle.mockReset();
       setTitle.mockResolvedValue(undefined);
       deleteMessage.mockReset();
+      deleteMessage.mockResolvedValue(undefined);
       Object.defineProperty(chatSessionStore, 'currentSessionMessages', {
         get: jest.fn(() => []),
         configurable: true,
@@ -248,7 +256,7 @@ describe('useChatSession', () => {
 
       const undone = await send();
 
-      expect(deleteMessage.mock.calls.map(([id]) => id).sort()).toEqual([
+      expect(deleteMessage.mock.calls.map(([, id]) => id).sort()).toEqual([
         'row-1',
         'row-2',
       ]);
@@ -392,7 +400,7 @@ describe('useChatSession', () => {
         await sending;
       });
 
-      expect(deleteMessage.mock.calls.map(([id]) => id).sort()).toEqual([
+      expect(deleteMessage.mock.calls.map(([, id]) => id).sort()).toEqual([
         'row-1',
         'row-2',
       ]);

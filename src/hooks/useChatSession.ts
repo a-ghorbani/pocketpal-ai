@@ -1,10 +1,8 @@
 import React, {useRef} from 'react';
 import {AccessibilityInfo} from 'react-native';
 
-import {toJS, runInAction} from 'mobx';
+import {toJS} from 'mobx';
 import type {JinjaFormattedChatResult} from 'llama.rn';
-
-import {chatSessionRepository} from '../repositories/ChatSessionRepository';
 
 import {randId} from '../utils';
 import {L10nContext} from '../utils';
@@ -17,7 +15,6 @@ import {
   ttsStore,
   uiStore,
 } from '../store';
-import type {SessionMetaData} from '../store';
 import type {PersistedTurnTimings} from '../utils/completionTypes';
 import {resolveReasoningCapability} from '../utils/reasoningCapability';
 
@@ -540,25 +537,6 @@ export const useChatSession = (
     await addMessage(systemRow(text, metadata));
   };
 
-  const undoUserRow = async (
-    id: string,
-    session: SessionMetaData | undefined,
-  ) => {
-    if (!id) {
-      return;
-    }
-    try {
-      await chatSessionRepository.deleteMessage(id);
-      if (session) {
-        runInAction(() => {
-          session.messages = session.messages.filter(msg => msg.id !== id);
-        });
-      }
-    } catch (cleanupError) {
-      console.error('Failed to undo an unsent message:', cleanupError);
-    }
-  };
-
   const handleSendPress = async (
     message: MessageType.PartialText,
   ): Promise<UndoneSend | undefined> => {
@@ -895,21 +873,10 @@ export const useChatSession = (
           });
           turnAbsorbedError = true;
         }
-        try {
-          await chatSessionRepository.deleteMessage(messageInfo.id);
-          if (session) {
-            runInAction(() => {
-              session.messages = session.messages.filter(
-                msg => msg.id !== messageInfo.id,
-              );
-            });
-          }
-        } catch (cleanupError) {
-          console.error(
-            'Failed to clean up empty message after error:',
-            cleanupError,
-          );
-        }
+        await chatSessionStore.deleteMessageFromSession(
+          messageInfo.sessionId,
+          messageInfo.id,
+        );
       }
 
       if (turnAbsorbedError) {
@@ -917,7 +884,10 @@ export const useChatSession = (
         // more to add to chat.
       } else if (error instanceof RemoteModelRequestWithdrawnError) {
         if (!hasPartialContent) {
-          await undoUserRow(textMessage.id, session);
+          await chatSessionStore.deleteMessageFromSession(
+            messageInfo.sessionId,
+            textMessage.id,
+          );
           if (wasUntitled) {
             await chatSessionStore.updateSessionTitleBySessionId(
               messageInfo.sessionId,

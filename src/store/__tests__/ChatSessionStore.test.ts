@@ -300,6 +300,47 @@ describe('chatSessionStore', () => {
     });
   });
 
+  describe('deleteMessageFromSession', () => {
+    const sessionWith = (...ids: string[]) => ({
+      id: 'S',
+      title: 'S',
+      date: new Date().toISOString(),
+      messages: ids.map(id => ({...mockMessage, id})) as MessageType.Any[],
+      completionSettings: defaultCompletionSettings,
+      settingsSource: 'pal' as 'pal' | 'custom',
+    });
+    const deleteMessage = jest.spyOn(chatSessionRepository, 'deleteMessage');
+
+    afterEach(() => deleteMessage.mockReset());
+
+    it('deletes the row and drops it from the session', async () => {
+      chatSessionStore.sessions = [sessionWith('a', 'b')];
+      deleteMessage.mockResolvedValueOnce(undefined);
+
+      await chatSessionStore.deleteMessageFromSession('S', 'a');
+
+      expect(deleteMessage).toHaveBeenCalledWith('a');
+      expect(chatSessionStore.sessions[0].messages.map(m => m.id)).toEqual([
+        'b',
+      ]);
+    });
+
+    it('resolves and keeps the row shown when the delete fails', async () => {
+      const logged = jest.spyOn(console, 'error').mockImplementation(() => {});
+      chatSessionStore.sessions = [sessionWith('a')];
+      deleteMessage.mockRejectedValueOnce(new Error('db locked'));
+
+      await expect(
+        chatSessionStore.deleteMessageFromSession('S', 'a'),
+      ).resolves.toBeUndefined();
+
+      expect(chatSessionStore.sessions[0].messages.map(m => m.id)).toEqual([
+        'a',
+      ]);
+      logged.mockRestore();
+    });
+  });
+
   describe('updateMessage', () => {
     it('updates a message in the active session', async () => {
       const mockSession = {
@@ -864,6 +905,18 @@ describe('chatSessionStore', () => {
         'New Title',
       );
       expect(chatSessionStore.sessions[0].title).toBe('Original Title');
+    });
+
+    it('resolves when the title write fails', async () => {
+      const logged = jest.spyOn(console, 'error').mockImplementation(() => {});
+      (
+        chatSessionRepository.updateSessionTitle as jest.Mock
+      ).mockRejectedValueOnce(new Error('db locked'));
+
+      await expect(
+        chatSessionStore.updateSessionTitleBySessionId('S', 'New Session'),
+      ).resolves.toBeUndefined();
+      logged.mockRestore();
     });
   });
 

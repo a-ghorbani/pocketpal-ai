@@ -539,6 +539,25 @@ class ChatSessionStore {
     });
   }
 
+  async deleteMessageFromSession(
+    sessionId: string,
+    messageId: string,
+  ): Promise<void> {
+    try {
+      await chatSessionRepository.deleteMessage(messageId);
+      const session = this.sessions.find(s => s.id === sessionId);
+      if (session) {
+        runInAction(() => {
+          session.messages = session.messages.filter(
+            msg => msg.id !== messageId,
+          );
+        });
+      }
+    } catch (error) {
+      console.error('Failed to delete message:', error);
+    }
+  }
+
   get currentSessionMessages(): MessageType.Any[] {
     if (this.activeSessionId) {
       const session = this.sessions.find(s => s.id === this.activeSessionId);
