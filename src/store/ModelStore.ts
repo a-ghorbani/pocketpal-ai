@@ -5,7 +5,7 @@ import {v4 as uuidv4} from 'uuid';
 import 'react-native-get-random-values';
 import {makePersistable} from 'mobx-persist-store';
 import * as RNFS from '@dr.pogodin/react-native-fs';
-import {computed, makeAutoObservable, runInAction, toJS} from 'mobx';
+import {comparer, computed, makeAutoObservable, runInAction, toJS} from 'mobx';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import {ContextParams, LlamaContext, initLlama} from 'llama.rn';
 import {
@@ -23,6 +23,7 @@ import {
 
 import {uiStore, hfStore} from '.';
 import {serverStore} from './ServerStore';
+import {routerStore} from './RouterStore';
 import {chatSessionStore} from './ChatSessionStore';
 import {
   draftCacheDefaults,
@@ -260,7 +261,7 @@ class ModelStore {
     makeAutoObservable<ModelStore, 'postCompletionProbeFor'>(this, {
       postCompletionProbeFor: false,
       activeModel: computed,
-      activeModelCaps: computed,
+      activeModelCaps: computed({equals: comparer.structural}),
       activeSamplerDefaults: computed,
       contextId: computed,
       remoteModels: computed,
@@ -2702,22 +2703,30 @@ class ModelStore {
     }
 
     const serverType = toServerType(server.serverType);
+    const hasRouter = profileFor(serverType).hasRouter;
+    const binding = {
+      modelId: model.id,
+      serverId: model.serverId,
+      remoteModelId: model.remoteModelId,
+      url: server.url,
+      serverType,
+    };
+    const endpoint = {
+      url: server.url,
+      remoteModelId: model.remoteModelId,
+      apiKey,
+      timeoutMs: server.requestTimeoutMs,
+      serverType,
+    };
 
     runInAction(() => {
-      this.engine = new OpenAICompletionEngine({
-        url: server.url,
-        remoteModelId: model.remoteModelId!,
-        apiKey,
-        timeoutMs: server.requestTimeoutMs,
-        serverType,
-      });
-      this.activeRemoteBinding = {
-        modelId: model.id,
-        serverId: model.serverId!,
-        remoteModelId: model.remoteModelId!,
-        url: server.url,
-        serverType,
-      };
+      this.engine = hasRouter
+        ? new OpenAICompletionEngine(endpoint, {
+            ensureReady: (signal, options) =>
+              routerStore.ensureReady(binding, signal, options),
+          })
+        : new OpenAICompletionEngine(endpoint);
+      this.activeRemoteBinding = binding;
       this.setActiveModel(model.id);
       // Do NOT set lastUsedModelId for remote models -- server may be offline on next launch
     });
@@ -2725,6 +2734,11 @@ class ModelStore {
     serverStore
       .fetchRemoteModelCaps(model.serverId, model.remoteModelId, apiKey)
       .catch(() => {});
+    if (hasRouter) {
+      routerStore
+        .ensureLoaded(model.serverId, model.remoteModelId)
+        .catch(() => {});
+    }
   };
 
   /**

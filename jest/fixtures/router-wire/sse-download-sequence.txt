@@ -1,0 +1,24 @@
+data: {"model":"definitely-not-a-real-org/nope-GGUF:Q4_K_M","event":"model_status","data":{"status":"downloading"}}
+
+data: {"model":"definitely-not-a-real-org/nope-GGUF:Q4_K_M","event":"download_finished"}
+
+data: {"model":"*","event":"models_reload"}
+
+data: {"model":"ggml-org/gemma-3-270m-it-GGUF:Q8_0","event":"model_status","data":{"status":"downloading"}}
+
+data: {"model":"ggml-org/gemma-3-270m-it-GGUF:Q8_0","event":"download_progress","data":{"progress":{"https://huggingface.co/ggml-org/gemma-3-270m-it-GGUF/resolve/e7647be17ae1108f2f605ed061ca0608b171afff/gemma-3-270m-it-Q8_0.gguf":{"done":0,"total":291545600}}}}
+
+data: {"model":"ggml-org/gemma-3-270m-it-GGUF:Q8_0","event":"download_progress","data":{"progress":{"https://huggingface.co/ggml-org/gemma-3-270m-it-GGUF/resolve/e7647be17ae1108f2f605ed061ca0608b171afff/gemma-3-270m-it-Q8_0.gguf":{"done":174053371,"total":291545600}}}}
+
+data: {"model":"ggml-org/gemma-3-270m-it-GGUF:Q8_0","event":"download_progress","data":{"progress":{"https://huggingface.co/ggml-org/gemma-3-270m-it-GGUF/resolve/e7647be17ae1108f2f605ed061ca0608b171afff/gemma-3-270m-it-Q8_0.gguf":{"done":291545600,"total":291545600}}}}
+
+data: {"model":"ggml-org/gemma-3-270m-it-GGUF:Q8_0","event":"download_finished"}
+
+data: {"model":"*","event":"models_reload"}
+
+data: {"model":"*","event":"models_reload"}
+
+data: {"model":"ggml-org/gemma-3-1b-it-GGUF:Q8_0","event":"model_status","data":{"status":"downloading"}}
+
+data: {"model":"ggml-org/gemma-3-1b-it-GGUF:Q8_0","event":"download_failed"}
+

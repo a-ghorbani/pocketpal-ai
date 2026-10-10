@@ -1,5 +1,5 @@
 jest.unmock('../../store');
-import {runInAction} from 'mobx';
+import {reaction, runInAction} from 'mobx';
 import {
   LlamaContext,
   getBackendDevicesInfo,
@@ -3357,6 +3357,49 @@ describe('ModelStore', () => {
           modelStore.capsFor(other).effectiveContextLength,
         ).toBeUndefined();
         expect(modelStore.activeModelCaps.effectiveContextLength).toBe(4096);
+      });
+
+      it('notifies no observer when a list read brings the same rows', () => {
+        const listed = (nCtx: number) => [
+          {id: 'remote-model', object: 'model', meta: {n_ctx: nCtx}} as any,
+        ];
+        runInAction(() => {
+          modelStore.models = [
+            {
+              id: 'srv-1/remote-model',
+              origin: ModelOrigin.REMOTE,
+              serverId: 'srv-1',
+              remoteModelId: 'remote-model',
+            } as any,
+          ];
+          modelStore.activeModelId = 'srv-1/remote-model';
+          serverStore.servers = [
+            {
+              id: 'srv-1',
+              name: 'Server',
+              url: 'http://localhost:8080',
+              serverType: 'llama.cpp',
+            },
+          ];
+          serverStore.serverModels.set('srv-1', listed(4096));
+        });
+        const seen: unknown[] = [];
+        const dispose = reaction(
+          () => modelStore.activeModelCaps,
+          caps => seen.push(caps),
+        );
+
+        runInAction(() => serverStore.serverModels.set('srv-1', listed(4096)));
+        const afterSameRows = seen.length;
+        runInAction(() => serverStore.serverModels.set('srv-1', listed(8192)));
+        dispose();
+        runInAction(() => {
+          serverStore.serverModels.delete('srv-1');
+          serverStore.servers = [];
+        });
+
+        expect(afterSameRows).toBe(0);
+        expect(seen).toHaveLength(1);
       });
     });
 

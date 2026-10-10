@@ -6,7 +6,7 @@ import React, {
   useMemo,
   useRef,
 } from 'react';
-import {View, TouchableOpacity} from 'react-native';
+import {TouchableOpacity, View} from 'react-native';
 import {
   Text,
   Button,
@@ -18,12 +18,11 @@ import {
 } from 'react-native-paper';
 import {Dropdown} from '../ui';
 import {observer} from 'mobx-react';
-import {runInAction} from 'mobx';
 import debounce from 'lodash/debounce';
 
 import {Sheet, TextInput} from '..';
 import {useTheme} from '../../hooks';
-import {serverStore} from '../../store';
+import {routerStore, serverStore} from '../../store';
 import {L10nContext} from '../../utils';
 import {isLocalHost} from '../../utils/network';
 import {parseTimeoutMs} from '../../utils/timeout';
@@ -34,13 +33,14 @@ import {
   toServerType,
 } from '../../utils/serverTypes';
 import {RemoteModelInfo, ServerConfig} from '../../utils/types';
-import {fetchModels, fetchModelsWithHeaders} from '../../api/openai';
+import {fetchModelsWithHeaders} from '../../api/openai';
 import {detectServerType} from '../../api/servers/detect';
 import {deriveListCaps} from '../../api/servers';
 import {profileFor} from '../../api/servers';
 import {t} from '../../locales';
 
 import {createStyles} from './styles';
+import {RouterModelRows} from './RouterModelRows';
 import {ChatIcon, EyeIcon, EyeOffIcon} from '../../assets/icons';
 
 interface RemoteModelSheetProps {
@@ -227,14 +227,12 @@ export const RemoteModelSheet: React.FC<RemoteModelSheetProps> = observer(
         const key = await serverStore.getApiKey(server.id);
         apiKeyRef.current = key || '';
         setApiKey(key || '');
-        const models = await fetchModels(
-          server.url,
-          key || undefined,
-          server.requestTimeoutMs,
-        );
-        runInAction(() => {
-          serverStore.serverModels.set(server.id, models);
-        });
+        const result = await serverStore.fetchModelsForServer(server.id);
+        if (!result.ok) {
+          setProbeResult({ok: false, error: result.error});
+          return;
+        }
+        const models = serverStore.serverModels.get(server.id) ?? [];
         const notYetAdded = serverStore.getModelsNotYetAdded(server.id);
         setAvailableModels(models);
         if (notYetAdded.length === 1) {
@@ -315,6 +313,53 @@ export const RemoteModelSheet: React.FC<RemoteModelSheetProps> = observer(
     // This lets users enter an API key after a 401, then retry
     const showServerFields =
       probeResult !== null && !isProbing && !selectedServerId;
+
+    const isRouter =
+      !!selectedServerId && routerStore.isRouter(selectedServerId);
+
+    useEffect(() => {
+      if (!isVisible || !isRouter || !selectedServerId) {
+        return undefined;
+      }
+      routerStore.setPickerServer(selectedServerId);
+      return () => routerStore.setPickerServer(null);
+    }, [isVisible, isRouter, selectedServerId]);
+
+    const renderVisionSlot = (model: RemoteModelInfo) => {
+      if (profileFor(serverTypeInEffect).readListRow === undefined) {
+        return null;
+      }
+      const listCaps = deriveListCaps(model, serverTypeInEffect);
+      return (
+        <View
+          style={styles.modelVisionSlot}
+          testID={`remote-model-row-vision-${model.id}`}
+          accessible={true}
+          accessibilityLabel={`${l10n.models.modelCard.labels.vision}: ${
+            listCaps.supportsVision === true
+              ? l10n.models.modelCard.labels.visionSupported
+              : listCaps.supportsVision === false
+                ? l10n.models.modelCard.labels.visionNotSupported
+                : l10n.models.modelCard.labels.visionUnknown
+          }`}>
+          {listCaps.supportsVision === true ? (
+            <EyeIcon
+              width={16}
+              height={16}
+              stroke={theme.colors.iconModelTypeVision}
+            />
+          ) : listCaps.supportsVision === false ? (
+            <ChatIcon
+              width={16}
+              height={16}
+              stroke={theme.colors.iconModelTypeText}
+            />
+          ) : (
+            <Text style={styles.modelVisionUnknown}>—</Text>
+          )}
+        </View>
+      );
+    };
 
     return (
       <Sheet
@@ -569,8 +614,23 @@ export const RemoteModelSheet: React.FC<RemoteModelSheetProps> = observer(
             </>
           )}
 
+          {showPostConnection && isRouter && selectedServerId && (
+            <RouterModelRows
+              serverId={selectedServerId}
+              selectedModelId={selectedModelId}
+              onSelect={setSelectedModelId}
+              isAlreadyAdded={modelId =>
+                isModelAlreadyAdded(selectedServerId, modelId)
+              }
+              supportsVision={model =>
+                deriveListCaps(model, serverTypeInEffect).supportsVision ===
+                true
+              }
+            />
+          )}
+
           {/* Model Selection */}
-          {showPostConnection && availableModels.length >= 1 && (
+          {showPostConnection && !isRouter && availableModels.length >= 1 && (
             <View style={styles.modelListSection}>
               <Text style={styles.modelListLabel}>
                 {l10n.settings.selectModel}
@@ -579,7 +639,6 @@ export const RemoteModelSheet: React.FC<RemoteModelSheetProps> = observer(
                 const servId = selectedServerId || '';
                 const alreadyAdded =
                   !!selectedServerId && isModelAlreadyAdded(servId, model.id);
-                const listCaps = deriveListCaps(model, serverTypeInEffect);
                 return (
                   <TouchableOpacity
                     key={model.id}
@@ -610,42 +669,18 @@ export const RemoteModelSheet: React.FC<RemoteModelSheetProps> = observer(
                       disabled={alreadyAdded}
                       uncheckedColor={theme.colors.onSurfaceVariant}
                     />
-                    <Text style={styles.modelName}>{model.id}</Text>
+                    <Text
+                      style={styles.modelName}
+                      numberOfLines={1}
+                      ellipsizeMode="middle">
+                      {model.id}
+                    </Text>
                     {alreadyAdded && (
                       <Text style={styles.alreadyAddedText}>
                         {l10n.settings.alreadyAdded}
                       </Text>
                     )}
-                    {profileFor(serverTypeInEffect).readListRow !==
-                      undefined && (
-                      <View
-                        style={styles.modelVisionSlot}
-                        testID={`remote-model-row-vision-${model.id}`}
-                        accessible={true}
-                        accessibilityLabel={`${l10n.models.modelCard.labels.vision}: ${
-                          listCaps.supportsVision === true
-                            ? l10n.models.modelCard.labels.visionSupported
-                            : listCaps.supportsVision === false
-                              ? l10n.models.modelCard.labels.visionNotSupported
-                              : l10n.models.modelCard.labels.visionUnknown
-                        }`}>
-                        {listCaps.supportsVision === true ? (
-                          <EyeIcon
-                            width={16}
-                            height={16}
-                            stroke={theme.colors.iconModelTypeVision}
-                          />
-                        ) : listCaps.supportsVision === false ? (
-                          <ChatIcon
-                            width={16}
-                            height={16}
-                            stroke={theme.colors.iconModelTypeText}
-                          />
-                        ) : (
-                          <Text style={styles.modelVisionUnknown}>—</Text>
-                        )}
-                      </View>
-                    )}
+                    {renderVisionSlot(model)}
                   </TouchableOpacity>
                 );
               })}
@@ -653,7 +688,7 @@ export const RemoteModelSheet: React.FC<RemoteModelSheetProps> = observer(
           )}
 
           {/* No models available */}
-          {showPostConnection && availableModels.length === 0 && (
+          {showPostConnection && !isRouter && availableModels.length === 0 && (
             <Text style={styles.noModelsText}>
               {l10n.settings.noModelsAvailable}
             </Text>

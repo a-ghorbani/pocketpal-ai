@@ -4,6 +4,7 @@
 
 import axios from 'axios';
 import {uiStore} from '../store/UIStore';
+import type {RouterFailure} from '../store/routerVerdicts';
 /**
  * NetworkError - Used for connectivity-related errors
  * Examples: No internet connection, timeout, etc.
@@ -23,6 +24,48 @@ export class AppCheckError extends Error {
   constructor(message: string) {
     super(message);
     this.name = 'AppCheckError';
+  }
+}
+
+/**
+ * The router load a remote model needed was withdrawn by the user's own
+ * action: a cancel, or an edit or removal of its server. A type of its own so
+ * a surface can stay silent: the user knows why it ended.
+ */
+export class RemoteModelRequestWithdrawnError extends Error {
+  constructor() {
+    super('Remote model request withdrawn');
+    this.name = 'RemoteModelRequestWithdrawnError';
+  }
+}
+
+/**
+ * The remote model never became ready. `serverMessage` holds only the
+ * server's own bounded words, so a surface can set them apart from the app's
+ * sentence for the cause.
+ */
+export class RemoteModelNotReadyError extends Error {
+  readonly cause: RouterFailure['cause'];
+  readonly serverMessage?: string;
+
+  constructor(cause: RouterFailure['cause'], serverMessage?: string) {
+    super(`Remote model not ready: ${cause}`);
+    this.name = 'RemoteModelNotReadyError';
+    this.cause = cause;
+    this.serverMessage = serverMessage;
+  }
+}
+
+/** A non-2xx answer to a remote request, with the server's own message. */
+export class RemoteHttpError extends Error {
+  readonly status: number;
+  readonly serverMessage?: string;
+
+  constructor(message: string, status: number, serverMessage?: string) {
+    super(message);
+    this.name = 'RemoteHttpError';
+    this.status = status;
+    this.serverMessage = serverMessage;
   }
 }
 
