@@ -226,6 +226,38 @@ describe('chatSessionStore', () => {
       expect(chatSessionStore.sessions[0].messages[0]).toEqual(mockMessage);
     });
 
+    it('titles an untitled session from its first message once a second arrives', async () => {
+      chatSessionStore.sessions = [
+        {
+          id: 'session1',
+          title: 'New Session',
+          date: new Date().toISOString(),
+          messages: [],
+          completionSettings: defaultCompletionSettings,
+          settingsSource: 'pal' as 'pal' | 'custom',
+        },
+      ];
+      chatSessionStore.activeSessionId = 'session1';
+      (
+        chatSessionRepository.addMessageToSession as jest.Mock
+      ).mockResolvedValue({id: 'row'});
+      (chatSessionRepository.updateSessionTitle as jest.Mock).mockResolvedValue(
+        undefined,
+      );
+
+      await chatSessionStore.addMessageToCurrentSession({
+        ...mockMessage,
+        text: 'first',
+      });
+      expect(chatSessionStore.sessions[0].title).toBe('New Session');
+
+      await chatSessionStore.addMessageToCurrentSession({
+        ...mockMessage,
+        text: 'second',
+      });
+      expect(chatSessionStore.sessions[0].title).toBe('first');
+    });
+
     it('gives the first message of a new session the persisted row id', async () => {
       const sent = {...mockMessage, id: ''};
       (chatSessionRepository.createSession as jest.Mock).mockResolvedValue({

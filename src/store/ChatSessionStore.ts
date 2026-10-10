@@ -491,18 +491,8 @@ class ChatSessionStore {
     if (this.activeSessionId) {
       const session = this.sessions.find(s => s.id === this.activeSessionId);
       if (session) {
-        // Add to database
-        const newMessage = await chatSessionRepository.addMessageToSession(
-          this.activeSessionId,
-          message,
-        );
-        message.id = newMessage.id;
-
-        // Update local state
         await this.updateSessionTitle(session);
-        runInAction(() => {
-          session.messages.unshift(message);
-        });
+        await this.addMessageToSession(session.id, message);
       }
     } else {
       // Resolve settings using the selected settings source so the
