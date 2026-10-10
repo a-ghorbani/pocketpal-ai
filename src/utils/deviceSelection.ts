@@ -50,6 +50,15 @@ export async function resolveDeviceSelection(selection: {
   n_gpu_layers?: number;
 }): Promise<{devices?: string[]; n_gpu_layers?: number}> {
   const snapshot = {...selection, devices: selection.devices?.slice()};
+  // Android has no Auto option: absent/empty devices are displayed as CPU.
+  // Resolve persisted defaults and old CPU selections that retained GPU layers.
+  if (
+    Platform.OS === 'android' &&
+    (!snapshot.devices?.length ||
+      (snapshot.devices.length === 1 && snapshot.devices[0] === 'CPU'))
+  ) {
+    return {devices: ['CPU'], n_gpu_layers: 0};
+  }
   if (
     Platform.OS !== 'android' ||
     !snapshot.devices?.some(name => name.startsWith('HTP'))

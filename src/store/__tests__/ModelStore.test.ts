@@ -264,10 +264,23 @@ describe('ModelStore', () => {
       },
     );
 
+    it.each([{devices: undefined}, {devices: []}, {devices: ['CPU']}])(
+      'loads Android CPU selection $devices without accelerator offloading',
+      async ({devices}) => {
+        modelStore.setDevices(devices);
+        const saved = {...modelStore.contextInitParams};
+        await modelStore.initContext(basicModel);
+        expect(nativeInit).toHaveBeenCalledTimes(1);
+        expect(nativeInit.mock.calls[0][0]).toMatchObject({
+          devices: ['CPU'],
+          n_gpu_layers: 0,
+        });
+        expect(modelStore.contextInitParams).toEqual(saved);
+        expect(discover).not.toHaveBeenCalled();
+      },
+    );
+
     it.each([
-      {os: 'android', devices: undefined},
-      {os: 'android', devices: []},
-      {os: 'android', devices: ['CPU']},
       {os: 'android', devices: ['Adreno']},
       {os: 'ios', devices: undefined},
       {os: 'ios', devices: ['Metal']},
