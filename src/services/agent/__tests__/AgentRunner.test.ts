@@ -1,3 +1,5 @@
+import {abortableFetch} from '../../../../jest/abortableFetch';
+
 import {runAgent} from '../AgentRunner';
 import type {AgentEvent} from '../AgentRunner.types';
 import type {
@@ -7,6 +9,10 @@ import type {
   CompletionStreamData,
 } from '../../../utils/completionTypes';
 import type {TalentEngine, TalentResult} from '../../talents/types';
+import type {SearchAccess} from '../../talents/searchAccess';
+import {WebSearchEngine} from '../../talents/WebSearchEngine';
+import {TavilyProvider} from '../../search/providers/tavily';
+import {resetSearchCache} from '../../search/searchBudget';
 
 /**
  * Helper: build a CompletionEngine whose `completion()` invokes the
@@ -1418,5 +1424,188 @@ describe('runAgent', () => {
     );
     expect(stepFinished).toBeDefined();
     expect(stepFinished!.toolCalls).toBeUndefined();
+  });
+  describe('run signal reaches the talent', () => {
+    const oneCall = (name: string) =>
+      makeScriptedEngine({
+        scripts: [
+          {
+            tokens: [],
+            result: {
+              text: '',
+              content: '',
+              tool_calls: [
+                {id: 'c0', type: 'function', function: {name, arguments: '{}'}},
+              ],
+            },
+          },
+        ],
+      });
+    const spyTalent = () => {
+      const execute = jest.fn<
+        Promise<TalentResult>,
+        Parameters<TalentEngine['execute']>
+      >(async () => ({type: 'text', summary: 'ok'}));
+      const talent: TalentEngine = {
+        name: 'probe',
+        execute,
+        toToolDefinition: () => ({
+          type: 'function',
+          function: {name: 'probe', description: '', parameters: {}},
+        }),
+      };
+      return {talent, execute};
+    };
+
+    it('passes the run signal itself as ctx.signal', async () => {
+      const controller = new AbortController();
+      const {talent, execute} = spyTalent();
+      await collect(
+        runAgent({
+          engine: oneCall('probe'),
+          initialParams: baseParams,
+          allowedTalentNames: ['probe'],
+          talentLookup: () => talent,
+          messageId: 'msg',
+          triggerMarkers: [],
+          signal: controller.signal,
+        }),
+      );
+      expect(execute.mock.calls[0]).toEqual([{}, {signal: controller.signal}]);
+      expect(execute.mock.calls[0][1]?.signal).toBe(controller.signal);
+    });
+
+    it('calls execute with args only when the run has no signal', async () => {
+      const {talent, execute} = spyTalent();
+      await collect(
+        runAgent({
+          engine: oneCall('probe'),
+          initialParams: baseParams,
+          allowedTalentNames: ['probe'],
+          talentLookup: () => talent,
+          messageId: 'msg',
+          triggerMarkers: [],
+        }),
+      );
+      expect(execute.mock.calls[0]).toHaveLength(1);
+    });
+
+    it('continues to the follow-up turn when a search times out without Stop', async () => {
+      jest.useFakeTimers();
+      try {
+        resetSearchCache();
+        const controller = new AbortController();
+        global.fetch = abortableFetch();
+        const access: SearchAccess = {
+          getActiveProvider: () => new TavilyProvider(() => 'key'),
+          canSearch: () => true,
+          getResultCount: () => 3,
+          readWithDefaultReader: jest.fn(),
+        };
+        const engine = makeScriptedEngine({
+          scripts: [
+            {
+              tokens: [],
+              result: {
+                text: '',
+                content: '',
+                tool_calls: [
+                  {
+                    id: 'c0',
+                    type: 'function',
+                    function: {
+                      name: 'web_search',
+                      arguments: JSON.stringify({query: 'mars'}),
+                    },
+                  },
+                ],
+              },
+            },
+            {tokens: [], result: {text: 'done', content: 'done'}},
+          ],
+        });
+
+        const done = collect(
+          runAgent({
+            engine,
+            initialParams: baseParams,
+            allowedTalentNames: ['web_search'],
+            talentLookup: () => new WebSearchEngine(access),
+            messageId: 'msg',
+            triggerMarkers: [],
+            signal: controller.signal,
+          }),
+        );
+        await jest.advanceTimersByTimeAsync(12000);
+        const events = await done;
+
+        const finished = events.find(e => e.type === 'tool_call_finished');
+        expect((finished as any).outcome.result.errorMessage).toBe('timed out');
+        expect(engine.completion).toHaveBeenCalledTimes(2);
+        expect(controller.signal.aborted).toBe(false);
+      } finally {
+        jest.useRealTimers();
+      }
+    });
+
+    it('cancels both searches of a batch when Stop lands during the first', async () => {
+      resetSearchCache();
+      const controller = new AbortController();
+      global.fetch = abortableFetch({onCall: () => controller.abort()});
+      const access: SearchAccess = {
+        getActiveProvider: () => new TavilyProvider(() => 'key'),
+        canSearch: () => true,
+        getResultCount: () => 3,
+        readWithDefaultReader: jest.fn(),
+      };
+      const webSearch = new WebSearchEngine(access);
+      const search = (id: string, query: string) => ({
+        id,
+        type: 'function' as const,
+        function: {name: 'web_search', arguments: JSON.stringify({query})},
+      });
+      const engine = makeScriptedEngine({
+        scripts: [
+          {
+            tokens: [],
+            result: {
+              text: '',
+              content: '',
+              tool_calls: [search('c0', 'mars'), search('c1', 'venus')],
+            },
+          },
+        ],
+      });
+
+      const events = await collect(
+        runAgent({
+          engine,
+          initialParams: baseParams,
+          allowedTalentNames: ['web_search'],
+          talentLookup: () => webSearch,
+          messageId: 'msg',
+          triggerMarkers: [],
+          signal: controller.signal,
+        }),
+      );
+
+      const finished = events.filter(e => e.type === 'tool_call_finished');
+      expect(finished.map(e => (e as any).outcome.result.errorMessage)).toEqual(
+        ['cancelled', 'cancelled'],
+      );
+      expect(global.fetch).toHaveBeenCalledTimes(1);
+      expect(
+        events
+          .map(e => e.type)
+          .filter(t => t === 'tool_call_started' || t === 'tool_call_finished'),
+      ).toEqual([
+        'tool_call_started',
+        'tool_call_finished',
+        'tool_call_started',
+        'tool_call_finished',
+      ]);
+      expect(events[events.length - 1].type).toBe('run_finished');
+      expect(engine.completion).toHaveBeenCalledTimes(1);
+    });
   });
 });

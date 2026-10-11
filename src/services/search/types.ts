@@ -29,9 +29,13 @@ export interface SearchOptions {
  */
 export interface SearchProvider {
   readonly id: SearchProviderId;
-  search(query: string, opts: SearchOptions): Promise<SearchHit[]>;
+  search(
+    query: string,
+    opts: SearchOptions,
+    signal?: AbortSignal,
+  ): Promise<SearchHit[]>;
   /** Optional native deep-read; absent → read_url uses the default reader. */
-  read?(url: string): Promise<PageContent>;
+  read?(url: string, signal?: AbortSignal): Promise<PageContent>;
 }
 
 export interface SearchBudget {
