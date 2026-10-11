@@ -1,7 +1,7 @@
 import {Platform} from 'react-native';
 import {runInAction} from 'mobx';
 
-import {LEDGER_KEY, PurchaseStore} from '../PurchaseStore';
+import {LEDGER_KEY, PurchaseStore, RETRY_DELAYS_MS} from '../PurchaseStore';
 import * as RNIap from 'react-native-iap';
 
 import {NativeStore} from '../../services/iap/NativeStore';
@@ -260,7 +260,7 @@ describe('PurchaseStore pipeline', () => {
       'does not verify %s without settledVerify',
       async status => {
         const h = createHarness({records: [record(status)]});
-        await h.purchases.processTransaction(tx(), {});
+        await h.purchases.processTransaction(tx({transactionId: 'tx-0'}), {});
         expect(h.api.verify).not.toHaveBeenCalled();
         expect(h.store.finish).toHaveBeenCalledTimes(1);
       },
@@ -340,11 +340,12 @@ describe('PurchaseStore pipeline', () => {
 
     it('revives a tombstone only on an explicit active verify', async () => {
       const h = createHarness({records: [record('removed')]});
+      const replay = tx({transactionId: 'tx-0'});
       h.api.verify.mockResolvedValueOnce([result('revoked')]);
-      await h.purchases.processTransaction(tx(), {settledVerify: true});
+      await h.purchases.processTransaction(replay, {settledVerify: true});
       expect(h.purchases.recordFor(PAL_ID)?.status).toBe('removed');
 
-      await h.purchases.processTransaction(tx(), {settledVerify: true});
+      await h.purchases.processTransaction(replay, {settledVerify: true});
       await settle(h);
       expect(h.purchases.recordFor(PAL_ID)?.status).toBe('active');
     });
@@ -441,17 +442,19 @@ describe('PurchaseStore pipeline', () => {
       'never acknowledges a replay on a %s record',
       async status => {
         const h = createHarness({records: [record(status)]});
-        await h.purchases.processTransaction(tx(), {});
+        await h.purchases.processTransaction(tx({transactionId: 'tx-0'}), {});
         expect(h.store.finish).not.toHaveBeenCalled();
       },
     );
 
     it('acknowledges a revived tombstone after the grant is written', async () => {
       const h = createHarness({records: [record('removed')]});
-      await h.purchases.processTransaction(tx(), {settledVerify: true});
+      await h.purchases.processTransaction(tx({transactionId: 'tx-0'}), {
+        settledVerify: true,
+      });
       await settle(h);
 
-      expect(h.log.slice(0, 2)).toEqual(['write:granted', 'finish:tx-1']);
+      expect(h.log.slice(0, 2)).toEqual(['write:granted', 'finish:tx-0']);
       expect(h.store.finish).toHaveBeenCalledTimes(1);
     });
   });
@@ -497,7 +500,9 @@ describe('PurchaseStore pipeline', () => {
         result('active', {supportCode: 'B'}),
       ]);
 
-      await h.purchases.processTransaction(tx(), {settledVerify: true});
+      await h.purchases.processTransaction(tx({transactionId: 'tx-0'}), {
+        settledVerify: true,
+      });
 
       expect(h.purchases.recordFor(PAL_ID)?.supportCode).toBe('B');
     });
@@ -516,7 +521,9 @@ describe('PurchaseStore pipeline', () => {
           result('active', {supportCode: undefined}),
         ]);
 
-        await h.purchases.processTransaction(tx(), {settledVerify: true});
+        await h.purchases.processTransaction(tx({transactionId: 'tx-0'}), {
+          settledVerify: true,
+        });
 
         expect(h.purchases.recordFor(PAL_ID)?.supportCode).toBeUndefined();
       },
@@ -739,7 +746,9 @@ describe('PurchaseStore pipeline', () => {
         const h = createHarness({records: [record(status)]});
         h.api.verify.mockResolvedValue([invalidNoCode()]);
 
-        await h.purchases.processTransaction(tx(), {settledVerify: true});
+        await h.purchases.processTransaction(tx({transactionId: 'tx-0'}), {
+          settledVerify: true,
+        });
 
         expect(h.purchases.recordFor(PAL_ID)?.status).toBe(status);
         expect(h.purchases.flowFor(PAL_ID)).not.toBe('invalid');
@@ -1040,7 +1049,7 @@ describe('PurchaseStore pipeline', () => {
       'granted',
       'active',
       'unfulfillable',
-      'removed',
+      'held_invalid',
     ] as const)('hides Buy for a %s record', async status => {
       const h = createHarness({records: [record(status)]});
       await h.purchases.load();
@@ -1214,6 +1223,72 @@ describe('PurchaseStore pipeline', () => {
       expect(h.purchases.flowFor(PAL_ID)).toBe('restore_needed');
     });
 
+    describe('already owned on a refunded record', () => {
+      const refunded = async () => {
+        const h = createHarness({records: [record('removed')]});
+        await h.purchases.load();
+        runInAction(() => {
+          h.purchases.availability = 'ready';
+          h.purchases.products.set(PRODUCT, {
+            productId: PRODUCT,
+            displayPrice: '4,99 €',
+          });
+        });
+        h.store.purchase.mockResolvedValueOnce({kind: 'already_owned'});
+        return h;
+      };
+
+      it.each(['revoked', 'unavailable'] as const)(
+        'closes with a purchase error when the listed purchase verifies %s',
+        async verdict => {
+          const h = await refunded();
+          h.store.currentEntitlements.mockResolvedValueOnce({
+            ok: true,
+            transactions: [tx({transactionId: 'tx-0'})],
+          });
+          h.api.verify.mockResolvedValueOnce([result(verdict)]);
+
+          await expect(h.purchases.buy(hubPal())).resolves.toBe('close');
+
+          expect(h.events.send).toHaveBeenLastCalledWith(
+            PAL_ID,
+            'purchase_error',
+          );
+          expect(h.purchases.recordFor(PAL_ID)?.status).toBe('removed');
+        },
+      );
+
+      it('installs and stays when the listed purchase verifies active', async () => {
+        const h = await refunded();
+        h.store.currentEntitlements.mockResolvedValueOnce({
+          ok: true,
+          transactions: [tx({transactionId: 'tx-0'})],
+        });
+        h.api.verify.mockResolvedValueOnce([result('active')]);
+
+        await expect(h.purchases.buy(hubPal())).resolves.toBe('stay');
+        await settle(h);
+
+        expect(h.purchases.recordFor(PAL_ID)?.status).toBe('active');
+        expect(h.events.send).not.toHaveBeenCalledWith(
+          PAL_ID,
+          'purchase_error',
+        );
+      });
+
+      it('offers restore when the store lists no purchase', async () => {
+        const h = await refunded();
+
+        await expect(h.purchases.buy(hubPal())).resolves.toBe('stay');
+
+        expect(h.purchases.flowFor(PAL_ID)).toBe('restore_needed');
+        expect(h.events.send).not.toHaveBeenCalledWith(
+          PAL_ID,
+          'purchase_error',
+        );
+      });
+    });
+
     it('keeps Buy available after a declined payment', async () => {
       const h = readyHarness();
       const declined = hubPal({id: 'pal-2', store_product_id: 'pal.2'});
@@ -1241,6 +1316,163 @@ describe('PurchaseStore pipeline', () => {
       const h = createHarness();
       await expect(h.purchases.buy(hubPal())).resolves.toBe('stay');
       expect(h.store.purchase).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('refunded tombstone', () => {
+    const tombstone = (overrides = {}) =>
+      createHarness({records: [record('removed', overrides)]});
+    const ready = (h: ReturnType<typeof createHarness>) => {
+      runInAction(() => {
+        h.purchases.availability = 'ready';
+        h.purchases.products.set(PRODUCT, {
+          productId: PRODUCT,
+          displayPrice: '4,99 €',
+        });
+      });
+    };
+
+    it('allows Buy for a removed record found by pal id', async () => {
+      const h = tombstone();
+      await h.purchases.load();
+      ready(h);
+      expect(h.purchases.canBuy(hubPal())).toBe(true);
+    });
+
+    it('allows Buy for a removed record found only by its product', async () => {
+      const h = tombstone({palId: 'pal-old'});
+      await h.purchases.load();
+      ready(h);
+      expect(h.purchases.canBuy(hubPal())).toBe(true);
+    });
+
+    it.each([
+      ['an open', 'unlocking', {}],
+      ['a delivered', 'active', {}],
+      ['a held', 'held_invalid', {install: true}],
+    ] as const)(
+      'can be bought again after %s record is revoked by verify',
+      async (_label, status, opts) => {
+        const h = createHarness({records: [record(status)]});
+        h.api.verify.mockResolvedValueOnce([result('revoked')]);
+        await h.purchases.processTransaction(tx({transactionId: 'tx-0'}), {
+          settledVerify: true,
+          ...opts,
+        });
+        expect(h.purchases.recordFor(PAL_ID)?.status).toBe('removed');
+        ready(h);
+        expect(h.purchases.canBuy(hubPal())).toBe(true);
+
+        await h.purchases.buy(hubPal());
+        await settle(h);
+
+        expect(h.purchases.recordFor(PAL_ID)?.status).toBe('active');
+        expect(h.purchases.flowFor(PAL_ID)).toBe('ready');
+      },
+    );
+
+    it('retries a re-purchase whose verify is unavailable without acknowledging it', async () => {
+      jest.useFakeTimers();
+      try {
+        setOS('android');
+        const h = tombstone();
+        await h.purchases.load();
+        ready(h);
+        h.api.verify.mockResolvedValueOnce([result('unavailable')]);
+
+        await h.purchases.buy(hubPal());
+
+        expect(h.purchases.recordFor(PAL_ID)?.status).toBe('unlocking');
+        expect(h.store.finish).not.toHaveBeenCalled();
+
+        await jest.advanceTimersByTimeAsync(RETRY_DELAYS_MS[0]);
+        await h.purchases.drainQueue();
+
+        expect(h.api.verify).toHaveBeenCalledTimes(2);
+        expect(h.purchases.recordFor(PAL_ID)?.status).toBe('active');
+        expect(h.store.finish).toHaveBeenCalledTimes(1);
+      } finally {
+        jest.useRealTimers();
+      }
+    });
+
+    it('iOS: verifies a new transaction on recovery before finishing it', async () => {
+      const h = tombstone();
+      h.api.verify.mockResolvedValueOnce([result('revoked')]);
+
+      await h.purchases.processTransaction(tx(), {});
+
+      expect(h.api.verify).toHaveBeenCalledTimes(1);
+      expect(h.log).toEqual([
+        'write:unlocking',
+        'write:removed',
+        'finish:tx-1',
+      ]);
+      ready(h);
+      expect(h.purchases.canBuy(hubPal())).toBe(true);
+    });
+
+    it.each(['ios', 'android'] as const)(
+      '%s: a replay of the refunded transaction stays inert',
+      async os => {
+        setOS(os);
+        const h = tombstone();
+
+        await h.purchases.processTransaction(tx({transactionId: 'tx-0'}), {});
+
+        expect(h.api.verify).not.toHaveBeenCalled();
+        expect(h.log).not.toContain('write:unlocking');
+        expect(h.store.finish).toHaveBeenCalledTimes(os === 'ios' ? 1 : 0);
+        expect(h.purchases.recordFor(PAL_ID)?.status).toBe('removed');
+      },
+    );
+
+    it('records a pending re-purchase from Buy, then unlocks it when paid', async () => {
+      const h = tombstone({pendingSince: 1});
+      await h.purchases.load();
+      ready(h);
+      h.advance(500);
+      h.store.purchase.mockResolvedValueOnce({kind: 'pending'});
+
+      await expect(h.purchases.buy(hubPal())).resolves.toBe('stay');
+
+      expect(h.purchases.recordFor(PAL_ID)).toMatchObject({
+        status: 'pending_payment',
+        pendingSince: 1_500,
+      });
+      expect(h.purchases.flowFor(PAL_ID)).toBe('pending_payment');
+
+      await h.purchases.processTransaction(tx(), {});
+      await settle(h);
+      expect(h.purchases.recordFor(PAL_ID)?.status).toBe('active');
+    });
+
+    it('records a pending transaction it does not hold', async () => {
+      const h = tombstone();
+      h.advance(500);
+
+      await h.purchases.processTransaction(tx({state: 'pending'}), {});
+
+      expect(h.api.verify).not.toHaveBeenCalled();
+      expect(h.storage.ledger()[PAL_ID]).toMatchObject({
+        status: 'pending_payment',
+        pendingSince: 1_500,
+      });
+    });
+
+    it('Android: verifies a transaction without an id and never acknowledges a revoke', async () => {
+      setOS('android');
+      const h = tombstone();
+      h.api.verify.mockResolvedValueOnce([result('revoked')]);
+
+      await h.purchases.processTransaction(tx({transactionId: undefined}), {});
+
+      expect(h.log).toEqual(['write:unlocking', 'write:removed']);
+      expect(h.store.finish).not.toHaveBeenCalled();
+      expect(h.purchases.recordFor(PAL_ID)).toMatchObject({
+        status: 'removed',
+        transactionIds: ['tx-0'],
+      });
     });
   });
 
