@@ -39,6 +39,86 @@ export function derivedText(message: MessageType.Any): string {
   return 'text' in message && message.text ? message.text : '';
 }
 
+const FENCED_BLOCK = /^```[^\n`]*\n([\s\S]*)```$/;
+
+function isPlainObject(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null && !Array.isArray(value);
+}
+
+function jsonEqual(a: unknown, b: unknown): boolean {
+  if (Array.isArray(a) || Array.isArray(b)) {
+    return (
+      Array.isArray(a) &&
+      Array.isArray(b) &&
+      a.length === b.length &&
+      a.every((item, i) => jsonEqual(item, b[i]))
+    );
+  }
+  if (isPlainObject(a) && isPlainObject(b)) {
+    const keys = Object.keys(a);
+    return (
+      keys.length === Object.keys(b).length &&
+      keys.every(key => key in b && jsonEqual(a[key], b[key]))
+    );
+  }
+  return a === b;
+}
+
+function parseJson(text: string): unknown {
+  try {
+    return JSON.parse(text);
+  } catch {
+    return undefined;
+  }
+}
+
+function parseToolCallObject(
+  text: string,
+): {name: string; arguments: Record<string, unknown>} | undefined {
+  const fenced = FENCED_BLOCK.exec(text);
+  const parsed = parseJson(fenced ? fenced[1].trim() : text);
+  if (
+    isPlainObject(parsed) &&
+    Object.keys(parsed).length === 2 &&
+    typeof parsed.name === 'string' &&
+    isPlainObject(parsed.arguments)
+  ) {
+    return {name: parsed.name, arguments: parsed.arguments};
+  }
+  return undefined;
+}
+
+function callArguments(call: AgentToolCall): unknown {
+  const args: unknown = call.function?.arguments;
+  return typeof args === 'string' ? parseJson(args) : args;
+}
+
+/**
+ * A step's text as shown to the user. Small models may write a call as
+ * bare JSON before emitting it in tags; that echo is hidden here only,
+ * because replay must send the stored content unchanged.
+ */
+export function visibleStepContent(step: AgentStep): string {
+  const content = step.content ?? '';
+  if (!step.toolCalls || step.toolCalls.length === 0) {
+    return content;
+  }
+  const trimmed = content.trim();
+  if (trimmed[0] !== '{' && trimmed[0] !== '`') {
+    return content;
+  }
+  const echo = parseToolCallObject(trimmed);
+  if (!echo) {
+    return content;
+  }
+  const isEcho = step.toolCalls.some(
+    call =>
+      call.function?.name === echo.name &&
+      jsonEqual(callArguments(call), echo.arguments),
+  );
+  return isEcho ? '' : content;
+}
+
 /**
  * Serialize an in-memory `AgentToolCall` into the wire shape llama.rn /
  * OpenAI accept. `function.arguments` is stored as a JSON-encoded

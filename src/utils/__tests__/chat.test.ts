@@ -5,6 +5,7 @@ import {
   derivedText,
   user,
   assistant,
+  visibleStepContent,
 } from '../chat';
 import {
   AgentStep,
@@ -13,6 +14,7 @@ import {
   MessageType,
 } from '../types';
 import {createModel} from '../../../jest/fixtures/models';
+import toolCallEchoSteps from '../../../jest/fixtures/toolCallEchoSteps.json';
 
 const conversationWSystem: ChatMessage[] = [
   {role: 'system', content: 'System prompt. '},
@@ -652,5 +654,135 @@ describe('Test Danube2 Chat Templates', () => {
     expect(result).toBe(
       'System prompt. </s><|prompt|>Hi there!</s><|answer|>Nice to meet you!</s><|prompt|>Can I ask a question?</s><|answer|>',
     );
+  });
+});
+
+describe('visibleStepContent', () => {
+  const deviceSteps = toolCallEchoSteps as unknown as Record<
+    string,
+    AgentStep[]
+  >;
+  const searchCall = (args: unknown) => ({
+    id: 'c0',
+    function: {name: 'web_search', arguments: args as string},
+  });
+  const echo = '{"name":"web_search","arguments":{"query":"Firecrawl"}}';
+  const sleepCall = {
+    id: 'c0',
+    function: {name: 'e2e_sleep', arguments: '{}'},
+  };
+
+  it.each(['0PKzyV5rTwEfMoWW', 'zYQIvE42f5VTRxww', 'h6NgzLwcSoKHidpC'])(
+    'hides a bare echo of an executed call in device row %s',
+    id => {
+      const step = deviceSteps[id][0];
+      expect(step.content).toBe(
+        '{"name": "web_search", "arguments": {"query": "Firecrawl"}}\n',
+      );
+      expect(visibleStepContent(step)).toBe('');
+    },
+  );
+
+  it('keeps JSON whose name matches no executed call', () => {
+    const step = deviceSteps.mmr7mn3dEeAFgyVN[0];
+    expect(step.toolCalls?.map(c => c.function.name)).toEqual(['read_url']);
+    expect(visibleStepContent(step)).toBe(step.content);
+  });
+
+  it('keeps JSON whose arguments differ from the executed call', () => {
+    const step = {
+      content: echo,
+      toolCalls: [searchCall('{"query":"Firecrawl API"}')],
+    };
+    expect(visibleStepContent(step)).toBe(echo);
+  });
+
+  it('keeps JSON that comes with prose', () => {
+    const content = `Let me search.\n${echo}`;
+    const step = {content, toolCalls: [searchCall('{"query":"Firecrawl"}')]};
+    expect(visibleStepContent(step)).toBe(content);
+  });
+
+  it('hides a fenced echo', () => {
+    const step = {
+      content: '```json\n' + echo + '\n```',
+      toolCalls: [searchCall('{"query":"Firecrawl"}')],
+    };
+    expect(visibleStepContent(step)).toBe('');
+  });
+
+  it('keeps the content when the step has no tool calls', () => {
+    expect(visibleStepContent({content: echo})).toBe(echo);
+    expect(visibleStepContent({content: echo, toolCalls: []})).toBe(echo);
+  });
+
+  it('ignores key order and accepts object arguments on the call', () => {
+    const step = {
+      content: '{"arguments":{"b":1,"a":2},"name":"t"}',
+      toolCalls: [
+        {id: 'c0', function: {name: 't', arguments: {a: 2, b: 1} as any}},
+      ],
+    };
+    expect(visibleStepContent(step)).toBe('');
+  });
+
+  it('treats 1 and 1.0 as equal arguments', () => {
+    const step = {
+      content: '{"name":"t","arguments":{"n":1.0}}',
+      toolCalls: [{id: 'c0', function: {name: 't', arguments: '{"n":1}'}}],
+    };
+    expect(visibleStepContent(step)).toBe('');
+  });
+
+  it('matches nothing when the call arguments do not parse', () => {
+    const step = {
+      content: echo,
+      toolCalls: [searchCall('{"query":')],
+    };
+    expect(visibleStepContent(step)).toBe(echo);
+  });
+
+  it.each(['R3BYmCO9yl0w5iFt', '1rz2QiLZimPTBOQ2', 'bU7MthpFhgstcG1q'])(
+    'keeps call-less device row %s as stored',
+    id => {
+      const step = deviceSteps[id][0];
+      expect(step.toolCalls ?? []).toEqual([]);
+      expect(visibleStepContent(step)).toBe(step.content);
+    },
+  );
+
+  it('hides the fenced device row once a matching call is attached', () => {
+    const step = {
+      ...deviceSteps.R3BYmCO9yl0w5iFt[0],
+      toolCalls: [sleepCall],
+    };
+    expect(visibleStepContent(step)).toBe('');
+  });
+
+  it.each(['1rz2QiLZimPTBOQ2', 'bU7MthpFhgstcG1q'])(
+    'keeps invalid JSON device row %s even with a matching call attached',
+    id => {
+      const step = {...deviceSteps[id][0], toolCalls: [sleepCall]};
+      expect(visibleStepContent(step)).toBe(step.content);
+    },
+  );
+
+  it('keeps two call objects', () => {
+    const content = `${echo}\n${echo}`;
+    const step = {content, toolCalls: [searchCall('{"query":"Firecrawl"}')]};
+    expect(visibleStepContent(step)).toBe(content);
+  });
+
+  it('keeps an array of call objects', () => {
+    const content = `[${echo}]`;
+    const step = {content, toolCalls: [searchCall('{"query":"Firecrawl"}')]};
+    expect(visibleStepContent(step)).toBe(content);
+  });
+
+  it('keeps an object with keys beyond name and arguments', () => {
+    const content =
+      '{"name":"web_search","arguments":{"query":"Firecrawl"},"id":"x"}';
+    const step = {content, toolCalls: [searchCall('{"query":"Firecrawl"}')]};
+    expect(visibleStepContent(step)).toBe(content);
   });
 });
