@@ -32,7 +32,11 @@ export class ExaProvider implements SearchProvider {
 
   constructor(private getKey: () => string) {}
 
-  async search(query: string, opts: SearchOptions): Promise<SearchHit[]> {
+  async search(
+    query: string,
+    opts: SearchOptions,
+    signal?: AbortSignal,
+  ): Promise<SearchHit[]> {
     const key = requireKey(this.getKey(), 'Exa');
     const data = await fetchJson<ExaResponse>('https://api.exa.ai/search', {
       method: 'POST',
@@ -42,6 +46,7 @@ export class ExaProvider implements SearchProvider {
         numResults: opts.maxResults,
         contents: {highlights: true, summary: true},
       }),
+      signal,
     });
     return (data.results ?? []).map(r => ({
       title: r.title ?? '',
@@ -51,12 +56,13 @@ export class ExaProvider implements SearchProvider {
     }));
   }
 
-  async read(url: string): Promise<PageContent> {
+  async read(url: string, signal?: AbortSignal): Promise<PageContent> {
     const key = requireKey(this.getKey(), 'Exa');
     const data = await fetchJson<ExaResponse>('https://api.exa.ai/contents', {
       method: 'POST',
       headers: {'Content-Type': 'application/json', 'x-api-key': key},
       body: JSON.stringify({urls: [url], text: true}),
+      signal,
     });
     const first = data.results?.[0];
     return {
