@@ -12,6 +12,7 @@ import {
   matchReadUrl,
   resetReadUrlAllowlist,
   seedReadUrlAllowlist,
+  suggestReadUrls,
 } from '../readUrlAllowlist';
 
 describe('readUrlAllowlist', () => {
@@ -105,10 +106,14 @@ describe('readUrlAllowlist', () => {
         'https://docs.foo.com/a',
         'https://www.www.foo.com/a',
         'https://wwwfoo.com/a',
-      ])('refuses other subdomains and lookalikes (%s)', request => {
-        allowReadUrls(['https://foo.com/a']);
-        expect(matchReadUrl(request)).toBeNull();
-      });
+      ])(
+        'refuses other subdomains and lookalikes without suggestions (%s)',
+        request => {
+          allowReadUrls(['https://foo.com/a']);
+          expect(matchReadUrl(request)).toBeNull();
+          expect(suggestReadUrls(request)).toEqual([]);
+        },
+      );
 
       it('keeps the port exact across www, with the default port elided', () => {
         allowReadUrls(['https://www.foo.com:8443/x', 'https://www.foo.com/d']);
@@ -153,6 +158,35 @@ describe('readUrlAllowlist', () => {
     allowReadUrls(['https://foo.com/', 'https://www.foo.com/']);
     expect(matchReadUrl('https://foo.com/')).toBe('https://foo.com/');
     expect(matchReadUrl('https://www.foo.com/')).toBe('https://www.foo.com/');
+  });
+
+  describe('suggestReadUrls', () => {
+    it('suggests up to three credential-free same-site entries in insertion order', () => {
+      allowReadUrls([
+        'https://u:p@foo.com/0',
+        'https://:p@foo.com/z',
+        'https://www.foo.com/1',
+        'https://other.com/',
+        'https://foo.com/2',
+        'http://foo.com:81/3',
+        'https://www.foo.com/4',
+      ]);
+      expect(suggestReadUrls('https://foo.com/secret?d=xyz')).toEqual([
+        'https://www.foo.com/1',
+        'https://foo.com/2',
+        'http://foo.com:81/3',
+      ]);
+    });
+
+    it('suggests nothing when no stored entry is on the same site', () => {
+      allowReadUrls(['https://other.com/']);
+      expect(suggestReadUrls('https://foo.com/')).toEqual([]);
+    });
+
+    it('suggests nothing for an unparseable request', () => {
+      allowReadUrls(['https://foo.com/']);
+      expect(suggestReadUrls('not a url')).toEqual([]);
+    });
   });
 
   describe('under the react-native-url-polyfill URL', () => {

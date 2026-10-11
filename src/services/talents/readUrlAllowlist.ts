@@ -49,6 +49,10 @@ const isWwwEligible = (host: string): boolean => {
 const siteKey = (host: string): string =>
   host.startsWith(WWW) ? host.slice(WWW.length) : host;
 
+const isWwwEquivalent = (a: string, b: string): boolean =>
+  a === b ||
+  (isWwwEligible(a) && isWwwEligible(b) && siteKey(a) === siteKey(b));
+
 const wwwPartner = (canonical: URL): string | null => {
   const host = canonical.hostname;
   if (!isWwwEligible(host)) {
@@ -79,6 +83,29 @@ export function matchReadUrl(url: string): string | null {
 
 export function isReadUrlAllowed(url: string): boolean {
   return matchReadUrl(url) !== null;
+}
+
+const MAX_SUGGESTIONS = 3;
+
+export function suggestReadUrls(url: string): string[] {
+  const host = canonicalize(url)?.hostname;
+  if (host === undefined) {
+    return [];
+  }
+  const suggestions: string[] = [];
+  for (const entry of allowed) {
+    const stored = new URL(entry);
+    if (stored.username !== '' || stored.password !== '') {
+      continue;
+    }
+    if (isWwwEquivalent(stored.hostname, host)) {
+      suggestions.push(entry);
+      if (suggestions.length === MAX_SUGGESTIONS) {
+        break;
+      }
+    }
+  }
+  return suggestions;
 }
 
 const URL_PATTERN = /https?:\/\/[^\s"'<>)\]}]+/gi;

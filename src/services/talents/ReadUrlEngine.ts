@@ -8,7 +8,7 @@ import type {SearchAccess} from './searchAccess';
 import type {PageContent} from '../search/types';
 import {budgetPage} from '../search/searchBudget';
 import {wrapUntrusted} from './untrustedContent';
-import {matchReadUrl} from './readUrlAllowlist';
+import {matchReadUrl, suggestReadUrls} from './readUrlAllowlist';
 
 /**
  * Reject non-http(s) schemes and embedded credentials so a malicious page
@@ -28,6 +28,21 @@ const isAllowedReadUrl = (raw: string): boolean => {
     return false;
   }
   return parsed.hostname.length > 0;
+};
+
+const NOT_ALLOWLISTED =
+  'read_url: this URL is not from a web_search result or a user message in this conversation. Copy the URL exactly as the user wrote it or as shown in web_search results, or run web_search first.';
+
+const SUGGESTIONS_LEAD_IN =
+  'Allowed URLs on the same site (retry read_url with one of these exactly as written):';
+
+const notAllowlistedSummary = (url: string): string => {
+  const suggestions = suggestReadUrls(url);
+  return suggestions.length
+    ? `${NOT_ALLOWLISTED}\n${SUGGESTIONS_LEAD_IN}\n${wrapUntrusted(
+        suggestions.join('\n'),
+      )}`
+    : NOT_ALLOWLISTED;
 };
 
 export class ReadUrlEngine implements TalentEngine {
@@ -68,9 +83,11 @@ export class ReadUrlEngine implements TalentEngine {
     // fetched, so no fragment or host-case bits of the argument reach a provider.
     const targetUrl = matchReadUrl(url);
     if (targetUrl === null) {
-      const summary =
-        'read_url: this URL is not from a web_search result or a user message in this conversation. Copy the URL exactly as the user wrote it or as shown in web_search results, or run web_search first.';
-      return {type: 'error', summary, errorMessage: summary};
+      return {
+        type: 'error',
+        summary: notAllowlistedSummary(url),
+        errorMessage: NOT_ALLOWLISTED,
+      };
     }
 
     const provider = this.access.getActiveProvider();
