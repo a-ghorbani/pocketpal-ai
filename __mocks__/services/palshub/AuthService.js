@@ -32,9 +32,9 @@ const mockAuthService = {
 
   resetPassword: jest.fn().mockResolvedValue(true),
 
-  signOut: jest.fn().mockResolvedValue({
-    success: true,
-  }),
+  signOut: jest.fn().mockResolvedValue(true),
+
+  resetLocalSession: jest.fn(),
 
   refreshSession: jest.fn().mockResolvedValue({
     success: true,

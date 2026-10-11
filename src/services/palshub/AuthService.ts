@@ -547,7 +547,8 @@ class AuthService {
     }
   }
 
-  async signOut({scope}: {scope?: 'global' | 'local'} = {}) {
+  async signOut({scope}: {scope?: 'global' | 'local'} = {}): Promise<boolean> {
+    let signedOut = true;
     try {
       runInAction(() => {
         this.isLoading = true;
@@ -561,6 +562,7 @@ class AuthService {
         );
         if (error) {
           console.error('Supabase sign-out error:', error);
+          signedOut = false;
         }
       }
 
@@ -572,6 +574,7 @@ class AuthService {
         // Don't fail the entire sign-out process if Google sign-out fails
       }
     } catch (error) {
+      signedOut = false;
       runInAction(() => {
         this.error = 'Failed to sign out';
       });
@@ -581,6 +584,16 @@ class AuthService {
         this.isLoading = false;
       });
     }
+    return signedOut;
+  }
+
+  resetLocalSession() {
+    runInAction(() => {
+      this.session = null;
+      this.user = null;
+      this.isAuthenticated = false;
+      this.profile = null;
+    });
   }
 
   async resetPassword(email: string): Promise<boolean> {

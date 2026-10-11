@@ -500,6 +500,56 @@ describe('AuthService.signOut scope', () => {
 
     expect(signOut).toHaveBeenCalledWith({scope: 'local'});
   });
+
+  it('reports success when Supabase signs out', async () => {
+    const {authService} = setup();
+
+    await expect(authService.signOut({scope: 'local'})).resolves.toBe(true);
+  });
+
+  it('reports failure when Supabase returns an error', async () => {
+    const {authService, signOut} = setup();
+    signOut.mockResolvedValue({error: new Error('x')});
+    jest.spyOn(console, 'error').mockImplementation(() => {});
+
+    await expect(authService.signOut({scope: 'local'})).resolves.toBe(false);
+  });
+
+  it('reports failure when Supabase throws', async () => {
+    const {authService, signOut} = setup();
+    signOut.mockRejectedValue(new Error('x'));
+    jest.spyOn(console, 'error').mockImplementation(() => {});
+
+    await expect(authService.signOut({scope: 'local'})).resolves.toBe(false);
+  });
+});
+
+describe('AuthService.resetLocalSession', () => {
+  it('clears the session, user, signed-in flag and profile', () => {
+    jest.resetModules();
+    jest.doMock('../supabase', () => ({
+      supabase: {
+        auth: {
+          onAuthStateChange: jest.fn(),
+          getSession: jest
+            .fn()
+            .mockResolvedValue({data: {session: null}, error: null}),
+        },
+      },
+    }));
+    const {authService} = require('../AuthService');
+    authService.session = {access_token: 't'};
+    authService.user = {id: 'u1'};
+    authService.isAuthenticated = true;
+    authService.profile = {id: 'u1'};
+
+    authService.resetLocalSession();
+
+    expect(authService.session).toBeNull();
+    expect(authService.user).toBeNull();
+    expect(authService.isAuthenticated).toBe(false);
+    expect(authService.profile).toBeNull();
+  });
 });
 
 describe('AuthService Apple re-authorization', () => {

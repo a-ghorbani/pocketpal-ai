@@ -45,9 +45,18 @@ const refreshAfterUnauthorized = async (): Promise<
     : {authorization: `Bearer ${data.session.access_token}`};
 };
 
+const signOutLocally = () =>
+  authService.signOut({scope: 'local'}).catch(() => false);
+
+const endLocalSession = async () => {
+  if (!(await signOutLocally()) && !(await signOutLocally())) {
+    authService.resetLocalSession();
+  }
+};
+
 const clearAccountData = async () => {
   const steps = [
-    () => authService.signOut({scope: 'local'}),
+    endLocalSession,
     () => palStore.clearAccountPals(),
     () => syncService.clearCache(),
   ];

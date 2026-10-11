@@ -51,6 +51,9 @@ const mockAuth: Record<string, any> = Object.defineProperties(
     appleSubject: jest.fn(),
     reauthorizeWithApple: jest.fn(),
     signOut: jest.fn(),
+    resetLocalSession: jest.fn(() => {
+      calls.push('resetLocalSession');
+    }),
   },
   {
     error: observedField('error', null),
@@ -110,6 +113,7 @@ describe('deleteAccount', () => {
     mockAuth.appleSubject.mockReturnValue(null);
     mockAuth.signOut.mockImplementation(async (options: unknown) => {
       calls.push(`signOut:${JSON.stringify(options)}`);
+      return true;
     });
     clearAccountPals.mockImplementation(() => {
       calls.push('clearAccountPals');
@@ -386,16 +390,62 @@ describe('deleteAccount', () => {
   });
 
   it.each([
-    ['signOut', () => mockAuth.signOut.mockRejectedValue(new Error('x'))],
-    ['clearCache', () => mockSync.clearCache.mockRejectedValue(new Error('x'))],
-  ])('stays deleted and finishes clean-up when %s rejects', async (_, fail) => {
-    fail();
-    respondWith([200, verbatim.deleted]);
+    ['signOut', () => mockAuth.signOut.mockRejectedValue(new Error('x')), 2, 1],
+    [
+      'clearCache',
+      () => mockSync.clearCache.mockRejectedValue(new Error('x')),
+      1,
+      0,
+    ],
+  ])(
+    'stays deleted and finishes clean-up when %s rejects',
+    async (_, fail, signOuts, resets) => {
+      fail();
+      respondWith([200, verbatim.deleted]);
 
-    await expect(deleteAccount()).resolves.toEqual({kind: 'deleted'});
+      await expect(deleteAccount()).resolves.toEqual({kind: 'deleted'});
 
-    expect(clearAccountPals).toHaveBeenCalledTimes(1);
-    expect(mockSync.clearCache).toHaveBeenCalledTimes(1);
+      expect(mockAuth.signOut).toHaveBeenCalledTimes(signOuts);
+      expect(mockAuth.resetLocalSession).toHaveBeenCalledTimes(resets);
+      expect(clearAccountPals).toHaveBeenCalledTimes(1);
+      expect(mockSync.clearCache).toHaveBeenCalledTimes(1);
+    },
+  );
+
+  describe('when the local sign-out fails after a deletion', () => {
+    const signOutResults = (...results: boolean[]) =>
+      results.forEach(result =>
+        mockAuth.signOut.mockImplementationOnce(async () => {
+          calls.push('signOut');
+          return result;
+        }),
+      );
+
+    it('signs out locally once more and keeps the session state when that works', async () => {
+      signOutResults(false, true);
+      respondWith([200, verbatim.deleted]);
+
+      await expect(deleteAccount()).resolves.toEqual({kind: 'deleted'});
+
+      expect(mockAuth.signOut).toHaveBeenCalledTimes(2);
+      expect(mockAuth.signOut).toHaveBeenNthCalledWith(2, {scope: 'local'});
+      expect(mockAuth.resetLocalSession).not.toHaveBeenCalled();
+    });
+
+    it('resets the local session after two failures, then finishes clean-up', async () => {
+      signOutResults(false, false);
+      respondWith([200, verbatim.deleted]);
+
+      await expect(deleteAccount()).resolves.toEqual({kind: 'deleted'});
+
+      expect(cleanupCalls()).toEqual([
+        'signOut',
+        'signOut',
+        'resetLocalSession',
+        'clearAccountPals',
+        'clearCache',
+      ]);
+    });
   });
 
   it('fails without a request when Supabase is not configured', async () => {
