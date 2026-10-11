@@ -109,7 +109,7 @@ describe('readUrlAllowlist', () => {
       ])(
         'refuses other subdomains and lookalikes without suggestions (%s)',
         request => {
-          allowReadUrls(['https://foo.com/a']);
+          allowReadUrls(['https://foo.com/a', 'https://www.foo.com/a']);
           expect(matchReadUrl(request)).toBeNull();
           expect(suggestReadUrls(request)).toEqual([]);
         },
@@ -143,6 +143,15 @@ describe('readUrlAllowlist', () => {
           'http://[::1]/v',
         ]);
         expect(matchReadUrl(request)).toBe(expected);
+      });
+
+      it.each([
+        ['http://1.2.3.4/y', ['http://1.2.3.4/x']],
+        ['http://www.1.2.3.4/y', []],
+        ['http://[::1]/q', ['http://[::1]/v']],
+      ])('suggests same-host entries on IP hosts (%s)', (request, expected) => {
+        allowReadUrls(['http://1.2.3.4/x', 'http://[::1]/v']);
+        expect(suggestReadUrls(request)).toEqual(expected);
       });
 
       it('toggles only the host, never www text in the path or query', () => {
