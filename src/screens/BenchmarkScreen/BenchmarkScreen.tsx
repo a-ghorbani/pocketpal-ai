@@ -66,6 +66,7 @@ const BENCHMARK_PARAMS_METADATA = {
 
 export const BenchmarkScreen: React.FC = observer(() => {
   const [isRunning, setIsRunning] = useState(false);
+  const [runError, setRunError] = useState(false);
   const [selectedConfig, setSelectedConfig] = useState<BenchmarkConfig>(
     DEFAULT_CONFIGS[0],
   );
@@ -144,6 +145,7 @@ export const BenchmarkScreen: React.FC = observer(() => {
     }
 
     setIsRunning(true);
+    setRunError(false);
     let peakMemoryUsage: NonNullable<
       BenchmarkResult['peakMemoryUsage']
     > | null = null;
@@ -198,6 +200,7 @@ export const BenchmarkScreen: React.FC = observer(() => {
 
       benchmarkStore.addResult(result);
     } catch (error) {
+      setRunError(true);
       if (error instanceof Error) {
         console.error('Benchmark error:', error);
       }
@@ -580,6 +583,16 @@ export const BenchmarkScreen: React.FC = observer(() => {
                         ? l10n.benchmark.buttons.runningTest
                         : l10n.benchmark.buttons.startTest}
                     </Button>
+
+                    {runError && !isRunning && (
+                      <Text
+                        testID="benchmark-run-error"
+                        style={styles.errorText}
+                        accessibilityRole="alert"
+                        accessibilityLiveRegion="polite">
+                        {l10n.benchmark.messages.testFailed}
+                      </Text>
+                    )}
 
                     {isRunning && (
                       <View style={styles.loadingContainer}>

@@ -20,6 +20,7 @@ import {
 import {BenchmarkScreen} from '../BenchmarkScreen';
 
 import {benchmarkStore, modelStore, uiStore} from '../../../store';
+import {l10n} from '../../../locales';
 import {mockLlamaContextParams} from '../../../../jest/fixtures/models';
 
 jest.mock('../../../api/benchmark', () => ({
@@ -193,29 +194,64 @@ describe('BenchmarkScreen', () => {
       });
     });
 
-    it('records nothing and re-enables start when bench fails busy', async () => {
-      const consoleError = jest
-        .spyOn(console, 'error')
-        .mockImplementation(() => {});
-      modelStore.activeModelId = modelStore.models[0].id;
-      const context = new LlamaContext(mockLlamaContextParams);
-      const busy = new Error('Context is busy');
-      (context.bench as jest.Mock).mockRejectedValue(busy);
-      modelStore.context = context;
-      const {getByTestId} = render(<BenchmarkScreen />);
-      const startButton = getByTestId('start-test-button');
+    describe('when bench rejects', () => {
+      let consoleError: jest.SpyInstance;
 
-      fireEvent.press(startButton);
-
-      await waitFor(() => {
-        expect(consoleError).toHaveBeenCalledWith('Benchmark error:', busy);
+      beforeEach(() => {
+        consoleError = jest
+          .spyOn(console, 'error')
+          .mockImplementation(() => {});
+        modelStore.activeModelId = modelStore.models[0].id;
       });
-      await waitFor(() => {
+
+      afterEach(() => {
+        consoleError.mockRestore();
+      });
+
+      it('shows an error, records nothing and re-enables start when bench rejects', async () => {
+        const context = new LlamaContext(mockLlamaContextParams);
+        const busy = new Error('Context is busy');
+        (context.bench as jest.Mock).mockRejectedValue(busy);
+        modelStore.context = context;
+        const {getByTestId} = render(<BenchmarkScreen />);
+        const startButton = getByTestId('start-test-button');
+
+        fireEvent.press(startButton);
+
+        await waitFor(() => {
+          expect(getByTestId('benchmark-run-error')).toHaveTextContent(
+            l10n.en.benchmark.messages.testFailed,
+          );
+        });
         expect(startButton.props.accessibilityState.disabled).toBe(false);
+        expect(consoleError).toHaveBeenCalledWith('Benchmark error:', busy);
+        expect(benchmarkStore.addResult).not.toHaveBeenCalled();
       });
-      expect(benchmarkStore.addResult).not.toHaveBeenCalled();
-      expect(context.stopCompletion).not.toHaveBeenCalled();
-      consoleError.mockRestore();
+
+      it('clears the error when the next run succeeds', async () => {
+        const context = new LlamaContext(mockLlamaContextParams);
+        (context.bench as jest.Mock).mockRejectedValue(
+          new Error('Context is busy'),
+        );
+        modelStore.context = context;
+        const {getByTestId, queryByTestId} = render(<BenchmarkScreen />);
+
+        fireEvent.press(getByTestId('start-test-button'));
+        await waitFor(() => {
+          expect(getByTestId('benchmark-run-error')).toBeTruthy();
+        });
+
+        (context.bench as jest.Mock).mockResolvedValue({
+          speedPp: 100,
+          speedTg: 10,
+        });
+        fireEvent.press(getByTestId('start-test-button'));
+
+        await waitFor(() => {
+          expect(benchmarkStore.addResult).toHaveBeenCalled();
+        });
+        expect(queryByTestId('benchmark-run-error')).toBeNull();
+      });
     });
   });
 
