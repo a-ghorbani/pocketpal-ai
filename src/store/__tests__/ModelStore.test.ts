@@ -23,6 +23,7 @@ import {
   ServerConfig,
 } from '../../utils/types';
 import {getDisplayNameFromFilename} from '../../utils/formatters';
+import {getModelMemoryRequirement} from '../../utils/memoryEstimator';
 import {
   basicModel,
   createModel,
@@ -4480,6 +4481,46 @@ describe('ModelStore', () => {
 
       // initLlama should only be called once (first call only)
       expect(initLlamaMock).toHaveBeenCalledTimes(1);
+    });
+
+    it('records a calibration estimate without the checkpoint budget', async () => {
+      const model = {
+        ...basicModel,
+        ggufMetadata: {
+          architecture: 'gemma3',
+          n_layers: 26,
+          n_embd: 1152,
+          n_head: 4,
+          n_head_kv: 1,
+          n_vocab: 262144,
+          n_embd_head_k: 256,
+          n_embd_head_v: 256,
+          sliding_window: 512,
+        },
+      };
+      initLlamaMock.mockReset();
+      initLlamaMock.mockResolvedValue({
+        release: jest.fn(),
+      } as unknown as LlamaContext);
+      runInAction(() => {
+        modelStore.deviceTier = 'low';
+        modelStore.largestSuccessfulLoad = undefined;
+      });
+
+      await modelStore.initContext(model);
+
+      const settings = modelStore.activeContextSettings!;
+      expect(settings).not.toHaveProperty('state_cache_budget_mb');
+      expect(modelStore.largestSuccessfulLoad).toBe(
+        getModelMemoryRequirement(model, undefined, {
+          ...settings,
+          state_cache_budget_mb: 0,
+        }),
+      );
+      expect(initLlamaMock.mock.calls[0][0].state_cache_budget_mb).toBe(64);
+      runInAction(() => {
+        modelStore.deviceTier = null;
+      });
     });
 
     it('should clear isContextLoading after successful init', async () => {

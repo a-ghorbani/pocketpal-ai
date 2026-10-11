@@ -13,6 +13,7 @@ import {IncreaseContextSheet} from '../IncreaseContextSheet';
 jest.mock('../../../store', () => ({
   modelStore: {
     contextInitParams: {n_ctx: 4096},
+    memoryEstimateSettings: {n_ctx: 4096, state_cache_budget_mb: 160},
     largestSuccessfulLoad: 8 * 1e9,
     availableMemoryCeiling: 8 * 1e9,
     setNContext: jest.fn(),

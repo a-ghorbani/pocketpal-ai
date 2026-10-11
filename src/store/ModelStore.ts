@@ -110,6 +110,7 @@ import {
 import NativeHardwareInfo from '../specs/NativeHardwareInfo';
 import {
   getModelMemoryRequirement,
+  MemoryEstimateSettings,
   stateCacheBudgetMb,
 } from '../utils/memoryEstimator';
 import {loadLlamaModelInfo} from 'llama.rn';
@@ -266,6 +267,7 @@ class ModelStore {
       activeModelCaps: computed,
       activeSamplerDefaults: computed,
       contextId: computed,
+      memoryEstimateSettings: computed,
       remoteModels: computed,
       activeDownloads: computed,
     });
@@ -2397,7 +2399,7 @@ class ModelStore {
         const estimated = getModelMemoryRequirement(
           model,
           projectionModel,
-          contextInitParams,
+          {...contextInitParams, state_cache_budget_mb: 0},
           pairedDraftModel(draftConfig),
         );
         runInAction(() => {
@@ -2646,6 +2648,13 @@ class ModelStore {
    * For local models: the numeric native context ID as a string.
    * For remote models: "remote-{serverId}" string.
    */
+  get memoryEstimateSettings(): MemoryEstimateSettings {
+    return {
+      ...this.contextInitParams,
+      state_cache_budget_mb: stateCacheBudgetMb(this.deviceTier),
+    };
+  }
+
   get contextId(): string | undefined {
     if (this.context) {
       return String(this.context.id);

@@ -106,7 +106,7 @@ export const IncreaseContextSheet: React.FC<IncreaseContextSheetProps> =
       const memBytes = useMemo(
         () => (nCtx: number) =>
           getModelMemoryRequirement(model, projectionModel, {
-            ...modelStore.contextInitParams,
+            ...modelStore.memoryEstimateSettings,
             n_ctx: nCtx,
           }),
         [model, projectionModel],
