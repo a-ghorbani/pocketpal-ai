@@ -31,11 +31,16 @@ export class FirecrawlProvider implements SearchProvider {
 
   constructor(private getKey: () => string) {}
 
-  async search(query: string, opts: SearchOptions): Promise<SearchHit[]> {
-    const data = await this.post<FirecrawlSearchResponse>('/search', {
-      query,
-      limit: opts.maxResults,
-    });
+  async search(
+    query: string,
+    opts: SearchOptions,
+    signal?: AbortSignal,
+  ): Promise<SearchHit[]> {
+    const data = await this.post<FirecrawlSearchResponse>(
+      '/search',
+      {query, limit: opts.maxResults},
+      signal,
+    );
     return (data.data?.web ?? []).map(r => ({
       title: r.title ?? '',
       url: r.url ?? '',
@@ -43,13 +48,17 @@ export class FirecrawlProvider implements SearchProvider {
     }));
   }
 
-  async read(url: string): Promise<PageContent> {
-    const res = await this.post<FirecrawlScrapeResponse>('/scrape', {
-      url,
-      formats: ['markdown'],
-      onlyMainContent: true,
-      timeout: SCRAPE_SERVER_TIMEOUT_MS,
-    });
+  async read(url: string, signal?: AbortSignal): Promise<PageContent> {
+    const res = await this.post<FirecrawlScrapeResponse>(
+      '/scrape',
+      {
+        url,
+        formats: ['markdown'],
+        onlyMainContent: true,
+        timeout: SCRAPE_SERVER_TIMEOUT_MS,
+      },
+      signal,
+    );
     if (res.success !== true || !res.data) {
       throw new Error('scrape failed');
     }
@@ -64,7 +73,11 @@ export class FirecrawlProvider implements SearchProvider {
     };
   }
 
-  private post<T>(path: string, body: Record<string, unknown>): Promise<T> {
+  private post<T>(
+    path: string,
+    body: Record<string, unknown>,
+    signal?: AbortSignal,
+  ): Promise<T> {
     const key = requireKey(this.getKey(), 'Firecrawl');
     return fetchJson<T>(`https://api.firecrawl.dev/v2${path}`, {
       method: 'POST',
@@ -73,6 +86,7 @@ export class FirecrawlProvider implements SearchProvider {
         Authorization: `Bearer ${key}`,
       },
       body: JSON.stringify({...body, origin: 'pocketpal'}),
+      signal,
     });
   }
 }
