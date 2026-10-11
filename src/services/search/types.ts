@@ -1,6 +1,11 @@
 /** Provider-agnostic search types — no provider-specific field crosses this boundary. */
 
-export type SearchProviderId = 'tavily' | 'brave' | 'exa' | 'parallel';
+export type SearchProviderId =
+  | 'tavily'
+  | 'brave'
+  | 'exa'
+  | 'firecrawl'
+  | 'parallel';
 
 export interface SearchHit {
   title: string;

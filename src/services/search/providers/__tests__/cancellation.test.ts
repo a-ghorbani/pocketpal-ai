@@ -3,6 +3,7 @@ import {abortableFetch} from '../../../../../jest/abortableFetch';
 import {readWithDefaultReader} from '../..';
 import {BraveProvider} from '../brave';
 import {ExaProvider} from '../exa';
+import {FirecrawlProvider} from '../firecrawl';
 import {ParallelProvider} from '../parallel';
 import {TavilyProvider} from '../tavily';
 
@@ -16,6 +17,11 @@ const calls: Array<[string, NetworkCall]> = [
   ['Brave search', s => new BraveProvider(key).search('q', opts, s)],
   ['Exa search', s => new ExaProvider(key).search('q', opts, s)],
   ['Exa read', s => new ExaProvider(key).read('https://example.com', s)],
+  ['Firecrawl search', s => new FirecrawlProvider(key).search('q', opts, s)],
+  [
+    'Firecrawl read',
+    s => new FirecrawlProvider(key).read('https://example.com', s),
+  ],
   ['Parallel search', s => new ParallelProvider(key).search('q', opts, s)],
   ['default reader', s => readWithDefaultReader('https://example.com', s)],
 ];
@@ -48,7 +54,9 @@ describe('search network calls honour the caller signal', () => {
   );
 
   it.each(calls)('%s resolves as before without a signal', async (_l, run) => {
-    global.fetch = abortableFetch({body: '{"results":[]}'});
+    global.fetch = abortableFetch({
+      body: '{"results":[],"success":true,"data":{}}',
+    });
 
     await expect(run()).resolves.toBeDefined();
     expect(global.fetch).toHaveBeenCalledTimes(1);
