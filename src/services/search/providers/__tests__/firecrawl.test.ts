@@ -41,7 +41,10 @@ describe('FirecrawlProvider', () => {
 
     it('keeps url and title when description is empty', async () => {
       (global.fetch as jest.Mock).mockReturnValue(
-        okJson({data: {web: [{title: 'T', url: 'https://e.com/x'}]}}),
+        okJson({
+          success: true,
+          data: {web: [{title: 'T', url: 'https://e.com/x'}]},
+        }),
       );
       const provider = new FirecrawlProvider(() => 'key');
       const [hit] = await provider.search('q', {maxResults: 3});
@@ -50,9 +53,29 @@ describe('FirecrawlProvider', () => {
       expect(hit.snippet).toBe('');
     });
 
-    it('returns [] for an empty or missing-field body without throwing', async () => {
+    it('throws a fixed message when the body is not a successful search envelope', async () => {
       const provider = new FirecrawlProvider(() => 'key');
-      for (const body of [{}, {data: null}, {data: {web: []}}]) {
+      for (const body of [
+        null,
+        {},
+        {data: {web: []}},
+        {success: false, error: 'upstream detail', data: {web: []}},
+        {success: true},
+        {success: true, data: null},
+      ]) {
+        (global.fetch as jest.Mock).mockReturnValue(okJson(body));
+        await expect(provider.search('q', {maxResults: 3})).rejects.toThrow(
+          /^unexpected response$/,
+        );
+      }
+    });
+
+    it('returns [] for a successful envelope with no web hits', async () => {
+      const provider = new FirecrawlProvider(() => 'key');
+      for (const body of [
+        {success: true, data: {}},
+        {success: true, data: {web: []}},
+      ]) {
         (global.fetch as jest.Mock).mockReturnValue(okJson(body));
         await expect(provider.search('q', {maxResults: 3})).resolves.toEqual(
           [],
@@ -81,7 +104,9 @@ describe('FirecrawlProvider', () => {
     });
 
     it('sends the key as a bearer token, the limit, origin, and no scrapeOptions', async () => {
-      (global.fetch as jest.Mock).mockReturnValue(okJson({data: {web: []}}));
+      (global.fetch as jest.Mock).mockReturnValue(
+        okJson({success: true, data: {web: []}}),
+      );
       const provider = new FirecrawlProvider(() => ' fc-key ');
       await provider.search('mars rover', {maxResults: 4});
       const [url, init] = (global.fetch as jest.Mock).mock.calls[0];

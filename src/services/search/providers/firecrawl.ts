@@ -13,6 +13,7 @@ interface FirecrawlWebResult {
 }
 
 interface FirecrawlSearchResponse {
+  success?: boolean;
   data?: {web?: FirecrawlWebResult[]} | null;
 }
 
@@ -36,12 +37,15 @@ export class FirecrawlProvider implements SearchProvider {
     opts: SearchOptions,
     signal?: AbortSignal,
   ): Promise<SearchHit[]> {
-    const data = await this.post<FirecrawlSearchResponse>(
+    const res = await this.post<FirecrawlSearchResponse | null>(
       '/search',
       {query, limit: opts.maxResults},
       signal,
     );
-    return (data.data?.web ?? []).map(r => ({
+    if (res?.success !== true || !res.data) {
+      throw new Error('unexpected response');
+    }
+    return (res.data.web ?? []).map(r => ({
       title: r.title ?? '',
       url: r.url ?? '',
       snippet: r.description ?? '',
