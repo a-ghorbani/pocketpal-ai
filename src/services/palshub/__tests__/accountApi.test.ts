@@ -99,6 +99,21 @@ describe('accountApi', () => {
       });
     });
 
+    it('maps the payment-in-progress 409 to its own outcome', async () => {
+      expect(await respond(409, verbatim.paymentInProgress)).toEqual({
+        kind: 'payment_in_progress',
+      });
+    });
+
+    it('ignores unknown fields on the payment-in-progress 409', async () => {
+      const body = JSON.stringify({
+        ...JSON.parse(verbatim.paymentInProgress),
+        retry_after: 30,
+      });
+
+      expect(await respond(409, body)).toEqual({kind: 'payment_in_progress'});
+    });
+
     it.each([
       ['missing', '{"error":"creator_contact_support"}'],
       ['empty', '{"error":"creator_contact_support","contact":""}'],

@@ -6,6 +6,7 @@ export const verbatim = {
   unauthenticated: '{"error":"unauthenticated"}',
   creatorContactSupport:
     '{"error":"creator_contact_support","contact":"info@palshub.ai"}',
+  paymentInProgress: '{"error":"payment_in_progress"}',
 };
 
 export const statusOnly = {

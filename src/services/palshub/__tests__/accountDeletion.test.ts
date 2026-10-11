@@ -298,6 +298,17 @@ describe('deleteAccount', () => {
     expect(cleanupCalls()).toEqual([]);
   });
 
+  it('reports a payment still in progress and deletes nothing locally', async () => {
+    respondWith([409, verbatim.paymentInProgress]);
+
+    await expect(deleteAccount()).resolves.toEqual({
+      kind: 'payment_in_progress',
+    });
+
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    expect(cleanupCalls()).toEqual([]);
+  });
+
   it('fails a creator 409 without a contact', async () => {
     respondWith([409, '{"error":"creator_contact_support"}']);
 

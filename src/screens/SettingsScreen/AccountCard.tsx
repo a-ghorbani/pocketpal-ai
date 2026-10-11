@@ -40,6 +40,8 @@ export const AccountCard: React.FC = observer(() => {
         return copy.signInAgain;
       case 'creator':
         return t(copy.creatorSupport, {contact: outcome.contact});
+      case 'payment_in_progress':
+        return copy.paymentInProgress;
       case 'failed':
         return copy.failed;
       case 'cancelled':

@@ -7,6 +7,7 @@ export type DeleteAccountOutcome =
   | {kind: 'cancelled'}
   | {kind: 'sign_in_again'}
   | {kind: 'creator'; contact: string}
+  | {kind: 'payment_in_progress'}
   | {kind: 'failed'};
 
 export type DeleteAttempt =
@@ -15,13 +16,16 @@ export type DeleteAttempt =
 
 export type DeleteRequestBody = {apple_authorization_code?: string};
 
-const creatorContact = (body: unknown): string | null => {
+const mapConflict = (body: unknown): DeleteAttempt => {
   const {error, contact} = (body ?? {}) as {error?: unknown; contact?: unknown};
+  if (error === 'payment_in_progress') {
+    return {kind: 'payment_in_progress'};
+  }
   return error === 'creator_contact_support' &&
     typeof contact === 'string' &&
     contact.trim() !== ''
-    ? contact
-    : null;
+    ? {kind: 'creator', contact}
+    : {kind: 'failed'};
 };
 
 export const mapDeleteResponse = (
@@ -34,8 +38,7 @@ export const mapDeleteResponse = (
   if (status === 401) {
     return {kind: 'unauthorized'};
   }
-  const contact = status === 409 ? creatorContact(body) : null;
-  return contact ? {kind: 'creator', contact} : {kind: 'failed'};
+  return status === 409 ? mapConflict(body) : {kind: 'failed'};
 };
 
 export const postAccountDelete = async (
