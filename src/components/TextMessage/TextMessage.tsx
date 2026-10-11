@@ -71,7 +71,7 @@ export const TextMessage = ({
   usePreviewData,
   step,
 }: TextMessageProps) => {
-  // For AssistantTurn rendering, the per-step `content` is the
+  // For AssistantTurn rendering, `visibleStepContent(step)` is the
   // authoritative source. For legacy `Text` messages, fall back to
   // `message.text`. Reasoning is rendered separately via
   // ReasoningBlock — TextMessage only owns the content side.
