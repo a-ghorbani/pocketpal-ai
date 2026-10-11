@@ -65,13 +65,20 @@ export class ExaProvider implements SearchProvider {
 
   async read(url: string, signal?: AbortSignal): Promise<PageContent> {
     const key = requireKey(this.getKey(), 'Exa');
-    const data = await fetchJson<ExaResponse>('https://api.exa.ai/contents', {
-      method: 'POST',
-      headers: {'Content-Type': 'application/json', 'x-api-key': key},
-      body: JSON.stringify({urls: [url], text: true}),
-      signal,
-    });
-    const first = data.results?.[0];
+    const data = await fetchJson<ExaResponse | null>(
+      'https://api.exa.ai/contents',
+      {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json', 'x-api-key': key},
+        body: JSON.stringify({urls: [url], text: true}),
+        signal,
+      },
+    );
+    const results = data?.results;
+    if (!Array.isArray(results)) {
+      throw new Error('unexpected response');
+    }
+    const first = results[0];
     return {
       url,
       ...(first?.title ? {title: first.title} : {}),
