@@ -1,4 +1,5 @@
 import {Platform} from 'react-native';
+import {AuthRetryableFetchError} from '@supabase/supabase-js';
 
 import {deleteAccount} from '../accountDeletion';
 import {palStore} from '../../../store';
@@ -237,6 +238,19 @@ describe('deleteAccount', () => {
     expect(sentBearer(1)).toBe('Bearer new-token');
     expect(mockSupabase.auth.refreshSession).toHaveBeenCalledTimes(1);
     expect(mockAuth.reauthorizeWithApple).toHaveBeenCalledTimes(1);
+  });
+
+  it('fails when the refresh after a 401 cannot reach the server', async () => {
+    respondWith([401, verbatim.unauthenticated]);
+    mockSupabase.auth.refreshSession.mockResolvedValue({
+      data: {session: null},
+      error: new AuthRetryableFetchError('Failed to fetch', 0),
+    });
+
+    await expect(deleteAccount()).resolves.toEqual({kind: 'failed'});
+
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    expect(cleanupCalls()).toEqual([]);
   });
 
   describe('asks to sign in again', () => {

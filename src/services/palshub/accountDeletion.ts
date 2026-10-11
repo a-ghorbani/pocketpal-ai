@@ -1,5 +1,6 @@
 import {Platform} from 'react-native';
 import {appleAuth} from '@invertase/react-native-apple-authentication';
+import {isAuthRetryableFetchError} from '@supabase/supabase-js';
 
 import {palStore} from '../../store';
 import {authService} from './AuthService';
@@ -32,9 +33,16 @@ const requestBody = async (): Promise<DeleteRequestBody | null> => {
   return {};
 };
 
-const refreshedAuthorization = async (): Promise<string | null> => {
+const refreshAfterUnauthorized = async (): Promise<
+  {authorization: string} | {outcome: DeleteAccountOutcome}
+> => {
   const {data, error} = await supabase!.auth.refreshSession();
-  return error || !data.session ? null : `Bearer ${data.session.access_token}`;
+  if (isAuthRetryableFetchError(error)) {
+    return {outcome: {kind: 'failed'}};
+  }
+  return error || !data.session
+    ? {outcome: {kind: 'sign_in_again'}}
+    : {authorization: `Bearer ${data.session.access_token}`};
 };
 
 const clearAccountData = async () => {
@@ -66,11 +74,11 @@ const requestDeletion = async (): Promise<DeleteAccountOutcome> => {
   }
   let attempt = await postAccountDelete(body, Authorization);
   if (attempt.kind === 'unauthorized') {
-    const refreshed = await refreshedAuthorization();
-    if (!refreshed) {
-      return {kind: 'sign_in_again'};
+    const refreshed = await refreshAfterUnauthorized();
+    if ('outcome' in refreshed) {
+      return refreshed.outcome;
     }
-    attempt = await postAccountDelete(body, refreshed);
+    attempt = await postAccountDelete(body, refreshed.authorization);
   }
   return attempt.kind === 'unauthorized' ? {kind: 'sign_in_again'} : attempt;
 };
