@@ -14,6 +14,7 @@ import {
   isAuthRetryableFetchError,
   type User,
   type Session,
+  type UserIdentity,
 } from '@supabase/supabase-js';
 import {
   GoogleSignin,
@@ -36,6 +37,11 @@ export interface Profile {
   created_at?: string;
   updated_at?: string;
 }
+
+export type AppleReauthResult =
+  | {kind: 'code'; code: string; appleUser: string}
+  | {kind: 'cancelled'}
+  | {kind: 'unavailable'};
 
 export interface AuthState {
   user: User | null;
@@ -503,7 +509,45 @@ class AuthService {
     }
   }
 
-  async signOut() {
+  private get appleIdentity(): UserIdentity | undefined {
+    return this.user?.identities?.find(
+      identity => identity.provider === 'apple',
+    );
+  }
+
+  hasAppleIdentity(): boolean {
+    return (
+      !!this.appleIdentity ||
+      !!this.user?.app_metadata?.providers?.includes('apple')
+    );
+  }
+
+  appleSubject(): string | null {
+    const identity = this.appleIdentity;
+    return identity ? (identity.identity_data?.sub ?? identity.id) : null;
+  }
+
+  async reauthorizeWithApple(): Promise<AppleReauthResult> {
+    try {
+      const response = await appleAuth.performRequest({
+        requestedOperation: appleAuth.Operation.LOGIN,
+        requestedScopes: [],
+      });
+      return response.authorizationCode
+        ? {
+            kind: 'code',
+            code: response.authorizationCode,
+            appleUser: response.user,
+          }
+        : {kind: 'unavailable'};
+    } catch (error: any) {
+      return error?.code === appleAuth.Error.CANCELED
+        ? {kind: 'cancelled'}
+        : {kind: 'unavailable'};
+    }
+  }
+
+  async signOut({scope}: {scope?: 'global' | 'local'} = {}) {
     try {
       runInAction(() => {
         this.isLoading = true;
@@ -512,7 +556,9 @@ class AuthService {
 
       // Sign out from Supabase if configured
       if (supabase) {
-        const {error} = await supabase.auth.signOut();
+        const {error} = await supabase.auth.signOut(
+          scope ? {scope} : undefined,
+        );
         if (error) {
           console.error('Supabase sign-out error:', error);
         }
