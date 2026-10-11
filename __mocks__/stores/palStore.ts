@@ -73,6 +73,7 @@ class MockPalStore {
   searchPalsHubPals = jest.fn(async () => {});
   loadUserLibrary = jest.fn(async () => {});
   loadUserCreatedPals = jest.fn(async () => {});
+  clearAccountPals = jest.fn();
 
   getPalById = jest.fn((id: string) => this.pals.find(p => p.id === id));
 
