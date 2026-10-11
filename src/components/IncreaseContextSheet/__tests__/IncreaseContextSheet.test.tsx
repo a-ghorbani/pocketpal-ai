@@ -170,6 +170,17 @@ describe('IncreaseContextSheet', () => {
     });
   });
 
+  describe('memory estimate', () => {
+    it('sizes each stop with the state checkpoint budget', () => {
+      renderSheet();
+      expect(memSpy).toHaveBeenCalledWith(
+        model,
+        undefined,
+        expect.objectContaining({n_ctx: 6144, state_cache_budget_mb: 160}),
+      );
+    });
+  });
+
   describe('three-zone fit', () => {
     it("disables confirm on a won't-fit stop while the sheet stays open", async () => {
       // Ceiling fits the smaller stops (default pick is enabled), total is low

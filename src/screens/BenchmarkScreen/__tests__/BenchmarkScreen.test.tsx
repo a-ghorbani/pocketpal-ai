@@ -252,6 +252,59 @@ describe('BenchmarkScreen', () => {
         });
         expect(queryByTestId('benchmark-run-error')).toBeNull();
       });
+
+      it('hides the error as soon as the next run starts', async () => {
+        const context = new LlamaContext(mockLlamaContextParams);
+        (context.bench as jest.Mock).mockRejectedValue(
+          new Error('Context is busy'),
+        );
+        modelStore.context = context;
+        const {getByTestId, queryByTestId} = render(<BenchmarkScreen />);
+
+        fireEvent.press(getByTestId('start-test-button'));
+        await waitFor(() => {
+          expect(getByTestId('benchmark-run-error')).toBeTruthy();
+        });
+
+        let rejectNext: (reason: unknown) => void = () => {};
+        (context.bench as jest.Mock).mockReturnValue(
+          new Promise((_resolve, reject) => {
+            rejectNext = reject;
+          }),
+        );
+        fireEvent.press(getByTestId('start-test-button'));
+
+        await waitFor(() => {
+          expect(
+            getByTestId('start-test-button').props.accessibilityState.disabled,
+          ).toBe(true);
+        });
+        expect(queryByTestId('benchmark-run-error')).toBeNull();
+
+        await act(async () => {
+          rejectNext(new Error('Context is busy'));
+        });
+        await waitFor(() => {
+          expect(getByTestId('benchmark-run-error')).toBeTruthy();
+        });
+      });
+
+      it('shows the error when bench rejects with a non-Error value', async () => {
+        const context = new LlamaContext(mockLlamaContextParams);
+        (context.bench as jest.Mock).mockRejectedValue('busy');
+        modelStore.context = context;
+        const {getByTestId} = render(<BenchmarkScreen />);
+
+        fireEvent.press(getByTestId('start-test-button'));
+
+        await waitFor(() => {
+          expect(getByTestId('benchmark-run-error')).toHaveTextContent(
+            l10n.en.benchmark.messages.testFailed,
+          );
+        });
+        expect(benchmarkStore.addResult).not.toHaveBeenCalled();
+        expect(consoleError).not.toHaveBeenCalled();
+      });
     });
   });
 
