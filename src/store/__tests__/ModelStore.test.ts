@@ -3055,6 +3055,31 @@ describe('ModelStore', () => {
         expect(params.spec_draft_n_max).toBeUndefined();
       });
     });
+
+    describe('state checkpoint budget', () => {
+      afterEach(() => {
+        runInAction(() => {
+          modelStore.deviceTier = null;
+        });
+      });
+
+      it.each([
+        ['low', 64],
+        [null, 64],
+        ['mid', 160],
+        ['high', 160],
+        ['flagship', 160],
+      ] as const)(
+        'sends state_cache_budget_mb for tier %s as %i',
+        async (tier, budget) => {
+          runInAction(() => {
+            modelStore.deviceTier = tier;
+          });
+          const params = await modelStore.getEffectiveContextInitParams();
+          expect(params.state_cache_budget_mb).toBe(budget);
+        },
+      );
+    });
   });
 
   // Add tests for auto-release functionality

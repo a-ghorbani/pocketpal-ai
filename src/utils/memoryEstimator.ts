@@ -1,4 +1,5 @@
 import {Model, GGUFMetadata, ContextInitParams, CacheType} from './types';
+import type {Tier} from '../services/deviceRules/types';
 
 // Guards against corrupted metadata persisted by older app versions.
 function isValidGGUFMetadata(metadata: GGUFMetadata): boolean {
@@ -72,6 +73,10 @@ function calculateComputeBuffer(
   const {n_ubatch} = contextSettings;
 
   return (n_vocab + n_embd) * n_ubatch * 4;
+}
+
+export function stateCacheBudgetMb(tier: Tier | null): number {
+  return tier === null || tier === 'low' ? 64 : 160;
 }
 
 const RUNTIME_OVERHEAD = 1.1;

@@ -1,9 +1,24 @@
-import {getModelMemoryRequirement} from '../memoryEstimator';
+import {
+  getModelMemoryRequirement,
+  stateCacheBudgetMb,
+} from '../memoryEstimator';
 import {Model} from '../types';
 import {createDefaultContextInitParams} from '../contextInitParamsVersions';
 
 describe('memoryEstimator', () => {
   const contextSettings = createDefaultContextInitParams();
+
+  describe('stateCacheBudgetMb', () => {
+    it.each([
+      ['low', 64],
+      [null, 64],
+      ['mid', 160],
+      ['high', 160],
+      ['flagship', 160],
+    ] as const)('maps tier %s to %i MiB', (tier, budget) => {
+      expect(stateCacheBudgetMb(tier)).toBe(budget);
+    });
+  });
 
   const baseModel: Partial<Model> = {
     id: 'test-model',
