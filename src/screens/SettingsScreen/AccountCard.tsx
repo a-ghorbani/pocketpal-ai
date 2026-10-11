@@ -49,9 +49,25 @@ export const AccountCard: React.FC = observer(() => {
     }
   };
 
+  const confirmWithoutApple = () =>
+    new Promise<boolean>(resolve =>
+      Alert.alert(copy.deleteAccount, copy.confirmWithoutApple, [
+        {
+          text: l10n.common.cancel,
+          style: 'cancel',
+          onPress: () => resolve(false),
+        },
+        {
+          text: l10n.common.delete,
+          style: 'destructive',
+          onPress: () => resolve(true),
+        },
+      ]),
+    );
+
   const confirmDelete = async () => {
     setDeleting(true);
-    const outcome = await deleteAccount();
+    const outcome = await deleteAccount({confirmWithoutApple});
     if (mounted.current) {
       setDeleting(false);
     }

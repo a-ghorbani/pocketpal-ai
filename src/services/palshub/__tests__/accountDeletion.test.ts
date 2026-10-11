@@ -98,7 +98,12 @@ const sentBody = (call = 0) => fetchMock.mock.calls[call][1].body;
 const sentBearer = (call = 0) =>
   fetchMock.mock.calls[call][1].headers.Authorization;
 const cleanupCalls = () =>
-  calls.filter(call => !['fetch', 'apple'].includes(call));
+  calls.filter(call => !['fetch', 'apple', 'confirm'].includes(call));
+const confirmWith = (answer: () => Promise<boolean>) =>
+  jest.fn(() => {
+    calls.push('confirm');
+    return answer();
+  });
 
 describe('deleteAccount', () => {
   beforeEach(() => {
@@ -181,13 +186,68 @@ describe('deleteAccount', () => {
     expect(cleanupCalls()).toEqual([]);
   });
 
-  it('deletes without a code when Apple is unavailable', async () => {
-    appleUser({reauth: {kind: 'unavailable'}});
+  describe('when Apple is unavailable', () => {
+    beforeEach(() => {
+      appleUser({reauth: {kind: 'unavailable'}});
+    });
+
+    it('asks once more and deletes without a code on confirm', async () => {
+      const confirmWithoutApple = confirmWith(async () => true);
+      respondWith([200, verbatim.deleted]);
+
+      await expect(deleteAccount({confirmWithoutApple})).resolves.toEqual({
+        kind: 'deleted',
+      });
+
+      expect(sentBody()).toBe('{}');
+      expect(confirmWithoutApple).toHaveBeenCalledTimes(1);
+      expect(calls.slice(0, 3)).toEqual(['apple', 'confirm', 'fetch']);
+    });
+
+    it.each([
+      ['declines', confirmWith(async () => false)],
+      ['rejects', confirmWith(async () => Promise.reject(new Error('x')))],
+      ['is missing', undefined],
+    ])('sends nothing when the prompt %s', async (_, confirmWithoutApple) => {
+      await expect(deleteAccount({confirmWithoutApple})).resolves.toEqual({
+        kind: 'cancelled',
+      });
+
+      expect(fetchMock).not.toHaveBeenCalled();
+      expect(mockGetAuthHeaders).not.toHaveBeenCalled();
+      expect(cleanupCalls()).toEqual([]);
+    });
+
+    it('asks only the first of two concurrent callers', async () => {
+      const first = confirmWith(async () => true);
+      const second = confirmWith(async () => true);
+      respondWith([200, verbatim.deleted]);
+
+      const outcomes = await Promise.all([
+        deleteAccount({confirmWithoutApple: first}),
+        deleteAccount({confirmWithoutApple: second}),
+      ]);
+
+      expect(outcomes).toEqual([{kind: 'deleted'}, {kind: 'deleted'}]);
+      expect(first).toHaveBeenCalledTimes(1);
+      expect(second).not.toHaveBeenCalled();
+      expect(fetchMock).toHaveBeenCalledTimes(1);
+    });
+  });
+
+  it.each([
+    ['the matching user', {kind: 'code', code: 'c1', appleUser: 'S'}],
+    ['a different user', {kind: 'code', code: 'c2', appleUser: 'T'}],
+  ])('never asks again when Apple returns a code for %s', async (_, reauth) => {
+    appleUser({reauth});
+    const confirmWithoutApple = confirmWith(async () => false);
     respondWith([200, verbatim.deleted]);
 
-    await expect(deleteAccount()).resolves.toEqual({kind: 'deleted'});
+    await expect(deleteAccount({confirmWithoutApple})).resolves.toEqual({
+      kind: 'deleted',
+    });
 
-    expect(sentBody()).toBe('{}');
+    expect(confirmWithoutApple).not.toHaveBeenCalled();
   });
 
   it('drops a code from a different Apple user', async () => {
@@ -214,11 +274,15 @@ describe('deleteAccount', () => {
 
   it('never prompts Apple on Android, even for an Apple identity', async () => {
     mockAuth.hasAppleIdentity.mockReturnValue(true);
+    const confirmWithoutApple = confirmWith(async () => false);
     respondWith([200, verbatim.deleted]);
 
-    await expect(deleteAccount()).resolves.toEqual({kind: 'deleted'});
+    await expect(deleteAccount({confirmWithoutApple})).resolves.toEqual({
+      kind: 'deleted',
+    });
 
     expect(mockAuth.reauthorizeWithApple).not.toHaveBeenCalled();
+    expect(confirmWithoutApple).not.toHaveBeenCalled();
     expect(sentBody()).toBe('{}');
   });
 

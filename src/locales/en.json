@@ -217,6 +217,7 @@
       "deleteAccount": "Delete account",
       "confirmTitle": "Delete account?",
       "confirmMessage": "This permanently deletes your PalsHub account and its library. Pals bought through the App Store or Google Play stay restorable on this device with your store account. Purchase records are kept anonymised for legal reasons.",
+      "confirmWithoutApple": "Couldn't confirm with Apple. Delete your account anyway?",
       "deleted": "Your account has been deleted.",
       "signInAgain": "Please sign in again",
       "creatorSupport": "Creator accounts are deleted by our support team: {{contact}}",

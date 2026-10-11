@@ -16,7 +16,22 @@ const isApplePath = () =>
   appleAuth.isSupported &&
   authService.hasAppleIdentity();
 
-const requestBody = async (): Promise<DeleteRequestBody | null> => {
+type DeleteAccountOptions = {confirmWithoutApple?: () => Promise<boolean>};
+
+const confirmedWithoutApple = async (
+  confirm: DeleteAccountOptions['confirmWithoutApple'],
+): Promise<boolean> => {
+  try {
+    return (await confirm?.()) === true;
+  } catch (error) {
+    console.warn('Account deletion prompt failed:', errorName(error));
+    return false;
+  }
+};
+
+const requestBody = async ({
+  confirmWithoutApple,
+}: DeleteAccountOptions): Promise<DeleteRequestBody | null> => {
   if (!isApplePath()) {
     return {};
   }
@@ -24,13 +39,13 @@ const requestBody = async (): Promise<DeleteRequestBody | null> => {
   if (apple.kind === 'cancelled') {
     return null;
   }
-  if (apple.kind === 'code') {
-    const subject = authService.appleSubject();
-    if (subject === null || subject === apple.appleUser) {
-      return {apple_authorization_code: apple.code};
-    }
+  if (apple.kind === 'unavailable') {
+    return (await confirmedWithoutApple(confirmWithoutApple)) ? {} : null;
   }
-  return {};
+  const subject = authService.appleSubject();
+  return subject === null || subject === apple.appleUser
+    ? {apple_authorization_code: apple.code}
+    : {};
 };
 
 const refreshAfterUnauthorized = async (): Promise<
@@ -69,11 +84,13 @@ const clearAccountData = async () => {
   }
 };
 
-const requestDeletion = async (): Promise<DeleteAccountOutcome> => {
+const requestDeletion = async (
+  options: DeleteAccountOptions,
+): Promise<DeleteAccountOutcome> => {
   if (!supabase) {
     return {kind: 'failed'};
   }
-  const body = await requestBody();
+  const body = await requestBody(options);
   if (!body) {
     return {kind: 'cancelled'};
   }
@@ -92,10 +109,12 @@ const requestDeletion = async (): Promise<DeleteAccountOutcome> => {
   return attempt.kind === 'unauthorized' ? {kind: 'sign_in_again'} : attempt;
 };
 
-const runDeletion = async (): Promise<DeleteAccountOutcome> => {
+const runDeletion = async (
+  options: DeleteAccountOptions,
+): Promise<DeleteAccountOutcome> => {
   let outcome: DeleteAccountOutcome;
   try {
-    outcome = await requestDeletion();
+    outcome = await requestDeletion(options);
   } catch (error) {
     console.warn('Account deletion failed:', errorName(error));
     return {kind: 'failed'};
@@ -108,9 +127,11 @@ const runDeletion = async (): Promise<DeleteAccountOutcome> => {
 
 let pending: Promise<DeleteAccountOutcome> | null = null;
 
-export const deleteAccount = (): Promise<DeleteAccountOutcome> => {
+export const deleteAccount = (
+  options: DeleteAccountOptions = {},
+): Promise<DeleteAccountOutcome> => {
   if (!pending) {
-    pending = runDeletion().finally(() => {
+    pending = runDeletion(options).finally(() => {
       pending = null;
     });
   }

@@ -148,6 +148,41 @@ describe('AccountCard', () => {
     expect(alertMock()).toHaveBeenCalledTimes(1);
   });
 
+  describe('the prompt when Apple cannot confirm', () => {
+    const openPrompt = async () => {
+      deleteAccountMock.mockResolvedValue({kind: 'cancelled'});
+      const {getByTestId} = render(<AccountCard />);
+      await pressDeleteAndConfirm(getByTestId);
+      const answer = deleteAccountMock.mock.calls[0][0].confirmWithoutApple();
+      const [title, message, buttons] = alertMock().mock.calls[1];
+      return {answer, title, message, buttons};
+    };
+
+    it('asks with a cancel and a destructive Delete', async () => {
+      const {title, message, buttons} = await openPrompt();
+
+      expect(title).toBe('Delete account');
+      expect(message).toBe(
+        "Couldn't confirm with Apple. Delete your account anyway?",
+      );
+      expect(buttons).toEqual([
+        {text: 'Cancel', style: 'cancel', onPress: expect.any(Function)},
+        {text: 'Delete', style: 'destructive', onPress: expect.any(Function)},
+      ]);
+    });
+
+    it.each([
+      ['Delete', true, 1],
+      ['Cancel', false, 0],
+    ])('%s answers %s', async (_, expected, index) => {
+      const {answer, buttons} = await openPrompt();
+
+      buttons[index].onPress();
+
+      await expect(answer).resolves.toBe(expected);
+    });
+  });
+
   it('still reports the outcome after unmounting mid-flight', async () => {
     const errorSpy = jest.spyOn(console, 'error');
     let resolve: (value: unknown) => void = () => {};
