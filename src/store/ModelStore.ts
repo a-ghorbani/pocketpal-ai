@@ -2643,11 +2643,6 @@ class ModelStore {
       : undefined;
   }
 
-  /**
-   * Returns a string context identifier for the active model.
-   * For local models: the numeric native context ID as a string.
-   * For remote models: "remote-{serverId}" string.
-   */
   get memoryEstimateSettings(): MemoryEstimateSettings {
     return {
       ...this.contextInitParams,
@@ -2655,6 +2650,11 @@ class ModelStore {
     };
   }
 
+  /**
+   * Returns a string context identifier for the active model.
+   * For local models: the numeric native context ID as a string.
+   * For remote models: "remote-{serverId}" string.
+   */
   get contextId(): string | undefined {
     if (this.context) {
       return String(this.context.id);
