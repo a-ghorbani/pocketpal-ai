@@ -1,5 +1,6 @@
 import React from 'react';
 
+import {AccessibilityInfo} from 'react-native';
 import {act, within} from '@testing-library/react-native';
 
 import {render} from '../../../../jest/test-utils';
@@ -23,7 +24,10 @@ const seedLoad = (progress?: Record<string, unknown>) => {
 };
 
 describe('RouterLoadStatus', () => {
+  const announce = jest.spyOn(AccessibilityInfo, 'announceForAccessibility');
+
   beforeEach(() => {
+    announce.mockClear();
     routerStore.records.clear();
     modelStore.activeRemoteBinding = BINDING;
   });
@@ -91,18 +95,48 @@ describe('RouterLoadStatus', () => {
     );
   });
 
-  it('announces politely and offers no control', () => {
+  it('is no live region and offers no control', () => {
     seedLoad({value: 0.4});
 
-    const {getByTestId, queryAllByRole} = render(<RouterLoadStatus />);
+    const {UNSAFE_root, queryAllByRole} = render(<RouterLoadStatus />);
 
     expect(
-      getByTestId('chat-router-loading-status').props.accessibilityLiveRegion,
-    ).toBe('polite');
+      UNSAFE_root.findAll(
+        node => node.props.accessibilityLiveRegion !== undefined,
+      ),
+    ).toEqual([]);
     expect(queryAllByRole('button')).toEqual([]);
   });
 
-  it('announces the same words while the percent moves', () => {
+  it('announces the line once while the load moves', () => {
+    seedLoad();
+    render(<RouterLoadStatus />);
+
+    act(() => seedLoad({value: 0.4}));
+    act(() => seedLoad({value: 0.6}));
+    act(() => seedLoad({value: 0.8}));
+
+    expect(announce).toHaveBeenCalledTimes(1);
+    expect(announce).toHaveBeenCalledWith('Loading model…');
+  });
+
+  it('announces again when the line appears again', () => {
+    seedLoad({value: 0.4});
+    const first = render(<RouterLoadStatus />);
+    first.unmount();
+
+    render(<RouterLoadStatus />);
+
+    expect(announce).toHaveBeenCalledTimes(2);
+  });
+
+  it('announces nothing while no load runs', () => {
+    render(<RouterLoadStatus />);
+
+    expect(announce).not.toHaveBeenCalled();
+  });
+
+  it('keeps the same label while the percent moves', () => {
     seedLoad({value: 0.4});
     const {getByTestId} = render(<RouterLoadStatus />);
     const status = getByTestId('chat-router-loading-status');
@@ -122,7 +156,7 @@ describe('RouterLoadStatus', () => {
     ).toBe(60);
   });
 
-  it('keeps the bar outside the announced region', () => {
+  it('keeps the bar outside the status row', () => {
     seedLoad({value: 0.4});
 
     const {getByTestId} = render(<RouterLoadStatus />);

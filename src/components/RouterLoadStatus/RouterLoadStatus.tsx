@@ -1,5 +1,5 @@
-import React, {useContext} from 'react';
-import {View} from 'react-native';
+import React, {useContext, useEffect} from 'react';
+import {AccessibilityInfo, View} from 'react-native';
 import {ActivityIndicator, ProgressBar, Text} from 'react-native-paper';
 import {observer} from 'mobx-react';
 
@@ -25,16 +25,15 @@ export const boundRouterLoad = ():
   return {fraction: loadFraction(record.detail?.progress)};
 };
 
-export const RouterLoadStatus: React.FC = observer(() => {
+const LoadLine: React.FC<{fraction: number | undefined}> = ({fraction}) => {
   const theme = useTheme();
   const l10n = useContext(L10nContext);
   const styles = createStyles(theme);
 
-  const load = boundRouterLoad();
-  if (!load) {
-    return null;
-  }
-  const {fraction} = load;
+  useEffect(() => {
+    AccessibilityInfo.announceForAccessibility(l10n.chat.routerLoading);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- once per appearance
+  }, []);
 
   return (
     <View style={styles.container} testID="chat-router-loading">
@@ -42,8 +41,7 @@ export const RouterLoadStatus: React.FC = observer(() => {
         style={styles.row}
         testID="chat-router-loading-status"
         accessible
-        accessibilityLabel={l10n.chat.routerLoading}
-        accessibilityLiveRegion="polite">
+        accessibilityLabel={l10n.chat.routerLoading}>
         <ActivityIndicator size={14} color={theme.colors.onSurfaceVariant} />
         <Text
           variant="bodyMedium"
@@ -68,4 +66,9 @@ export const RouterLoadStatus: React.FC = observer(() => {
       </View>
     </View>
   );
+};
+
+export const RouterLoadStatus: React.FC = observer(() => {
+  const load = boundRouterLoad();
+  return load ? <LoadLine fraction={load.fraction} /> : null;
 });
