@@ -160,6 +160,19 @@ describe('readUrlAllowlist', () => {
     expect(matchReadUrl('https://www.foo.com/')).toBe('https://www.foo.com/');
   });
 
+  it('never adds the www partner, the request or a suggestion to the allowlist', () => {
+    allowReadUrls(['https://www.foo.com/1']);
+    expect(matchReadUrl('https://foo.com/1')).toBe('https://www.foo.com/1');
+    expect(matchReadUrl('https://foo.com/2')).toBeNull();
+    expect(isReadUrlAllowed('https://foo.com/3')).toBe(false);
+    suggestReadUrls('https://foo.com/4');
+
+    expect(suggestReadUrls('https://foo.com/')).toEqual([
+      'https://www.foo.com/1',
+    ]);
+    expect(matchReadUrl('https://foo.com/2')).toBeNull();
+  });
+
   describe('suggestReadUrls', () => {
     it('suggests up to three credential-free same-site entries in insertion order', () => {
       allowReadUrls([
