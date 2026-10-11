@@ -173,6 +173,50 @@ describe('BenchmarkScreen', () => {
         expect(startButton.props.accessibilityState.disabled).toBe(true);
       });
     });
+
+    it('records the result when bench resolves', async () => {
+      modelStore.activeModelId = modelStore.models[0].id;
+      const context = new LlamaContext(mockLlamaContextParams);
+      (context.bench as jest.Mock).mockResolvedValue({
+        speedPp: 100,
+        speedTg: 10,
+      });
+      modelStore.context = context;
+      const {getByTestId} = render(<BenchmarkScreen />);
+
+      fireEvent.press(getByTestId('start-test-button'));
+
+      await waitFor(() => {
+        expect(benchmarkStore.addResult).toHaveBeenCalledWith(
+          expect.objectContaining({ppAvg: 100, tgAvg: 10}),
+        );
+      });
+    });
+
+    it('records nothing and re-enables start when bench fails busy', async () => {
+      const consoleError = jest
+        .spyOn(console, 'error')
+        .mockImplementation(() => {});
+      modelStore.activeModelId = modelStore.models[0].id;
+      const context = new LlamaContext(mockLlamaContextParams);
+      const busy = new Error('Context is busy');
+      (context.bench as jest.Mock).mockRejectedValue(busy);
+      modelStore.context = context;
+      const {getByTestId} = render(<BenchmarkScreen />);
+      const startButton = getByTestId('start-test-button');
+
+      fireEvent.press(startButton);
+
+      await waitFor(() => {
+        expect(consoleError).toHaveBeenCalledWith('Benchmark error:', busy);
+      });
+      await waitFor(() => {
+        expect(startButton.props.accessibilityState.disabled).toBe(false);
+      });
+      expect(benchmarkStore.addResult).not.toHaveBeenCalled();
+      expect(context.stopCompletion).not.toHaveBeenCalled();
+      consoleError.mockRestore();
+    });
   });
 
   describe('Memory Usage Tracking', () => {
