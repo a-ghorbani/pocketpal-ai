@@ -785,6 +785,79 @@ describe('visibleStepContent', () => {
     const step = {content, toolCalls: [searchCall('{"query":"Firecrawl"}')]};
     expect(visibleStepContent(step)).toBe(content);
   });
+
+  it('keeps an object whose arguments are a JSON string', () => {
+    const content =
+      '{"name":"web_search","arguments":"{\\"query\\":\\"Firecrawl\\"}"}';
+    const step = {content, toolCalls: [searchCall('{"query":"Firecrawl"}')]};
+    expect(visibleStepContent(step)).toBe(content);
+  });
+
+  it('keeps JSON whose arguments are a subset of the executed call', () => {
+    const step = {
+      content: echo,
+      toolCalls: [searchCall('{"query":"Firecrawl","count":3}')],
+    };
+    expect(visibleStepContent(step)).toBe(echo);
+  });
+
+  it('keeps JSON whose arguments are a superset of the executed call', () => {
+    const content =
+      '{"name":"web_search","arguments":{"query":"Firecrawl","count":3}}';
+    const step = {content, toolCalls: [searchCall('{"query":"Firecrawl"}')]};
+    expect(visibleStepContent(step)).toBe(content);
+  });
+
+  it('keeps JSON whose arguments match a call with another name', () => {
+    const step = {
+      content: echo,
+      toolCalls: [
+        {
+          id: 'c0',
+          function: {name: 'news_search', arguments: '{"query":"Firecrawl"}'},
+        },
+      ],
+    };
+    expect(visibleStepContent(step)).toBe(echo);
+  });
+
+  it('hides an echo when only a later call in the step matches', () => {
+    const step = {
+      content: echo,
+      toolCalls: [sleepCall, searchCall('{"query":"Firecrawl"}')],
+    };
+    expect(visibleStepContent(step)).toBe('');
+  });
+
+  it('compares array arguments in order', () => {
+    const content = '{"name":"t","arguments":{"ids":[1,2]}}';
+    const call = (args: string) => [
+      {id: 'c0', function: {name: 't', arguments: args}},
+    ];
+    expect(
+      visibleStepContent({content, toolCalls: call('{"ids":[1,2]}')}),
+    ).toBe('');
+    expect(
+      visibleStepContent({content, toolCalls: call('{"ids":[2,1]}')}),
+    ).toBe(content);
+    expect(
+      visibleStepContent({content, toolCalls: call('{"ids":{"0":1,"1":2}}')}),
+    ).toBe(content);
+  });
+
+  it('keeps text that is not JSON-led even with calls', () => {
+    const step = {
+      content: 'Searching now.',
+      toolCalls: [searchCall('{"query":"Firecrawl"}')],
+    };
+    expect(visibleStepContent(step)).toBe('Searching now.');
+  });
+
+  it('returns an empty string for a calls-only step', () => {
+    expect(
+      visibleStepContent({toolCalls: [searchCall('{"query":"Firecrawl"}')]}),
+    ).toBe('');
+  });
 });
 
 describe('tool-call echo in a device turn', () => {

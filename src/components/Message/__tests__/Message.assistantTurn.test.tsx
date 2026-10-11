@@ -854,4 +854,40 @@ describe('Message — AssistantTurn renderer', () => {
     expect(mockTalentSurfaceCalls[0].step).toBe(steps[0]);
     expect(queryByText(/"name": "web_search"/)).toBeNull();
   });
+
+  it('shows a streaming echo until its tool calls land, then hides it', () => {
+    const [stored] = (
+      toolCallEchoSteps as unknown as Record<string, AgentStep[]>
+    )['0PKzyV5rTwEfMoWW'];
+    const {toolCalls, ...streaming} = stored;
+    const observableTurn = observable.object<MessageType.DerivedAssistantTurn>(
+      makeDerivedTurn([streaming]),
+      {},
+      {deep: true},
+    );
+    render(
+      <Message
+        message={observableTurn}
+        messageWidth={440}
+        onMessagePress={jest.fn()}
+        roundBorder
+        showAvatar
+        showName
+        showStatus
+      />,
+    );
+    expect(mockTextMessageCalls).toHaveLength(1);
+    expect(mockTextMessageCalls[0].step?.content).toBe(stored.content);
+
+    mockTextMessageCalls = [];
+    act(() => {
+      runInAction(() => {
+        observableTurn.steps[0] = {...observableTurn.steps[0], toolCalls};
+      });
+    });
+    expect(mockTextMessageCalls).toHaveLength(0);
+    expect(
+      mockTalentSurfaceCalls[mockTalentSurfaceCalls.length - 1].step?.toolCalls,
+    ).toEqual(toolCalls);
+  });
 });
