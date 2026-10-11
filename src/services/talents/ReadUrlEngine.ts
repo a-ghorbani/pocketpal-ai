@@ -7,7 +7,7 @@ import {
 import type {SearchAccess} from './searchAccess';
 import type {PageContent} from '../search/types';
 import {budgetPage} from '../search/searchBudget';
-import {wrapUntrusted} from './untrustedContent';
+import {wrapUntrusted, wrapUntrustedUrls} from './untrustedContent';
 import {matchReadUrl, suggestReadUrls} from './readUrlAllowlist';
 
 /**
@@ -39,8 +39,8 @@ const SUGGESTIONS_LEAD_IN =
 const notAllowlistedSummary = (url: string): string => {
   const suggestions = suggestReadUrls(url);
   return suggestions.length
-    ? `${NOT_ALLOWLISTED}\n${SUGGESTIONS_LEAD_IN}\n${wrapUntrusted(
-        suggestions.join('\n'),
+    ? `${NOT_ALLOWLISTED}\n${SUGGESTIONS_LEAD_IN}\n${wrapUntrustedUrls(
+        suggestions,
       )}`
     : NOT_ALLOWLISTED;
 };

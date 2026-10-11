@@ -6,8 +6,7 @@
 
 const allowed = new Set<string>();
 
-// Canonical form: fragment dropped, ASCII host letters lowercased (the RN URL
-// polyfill folds neither), so transcription noise matches but data does not.
+// The RN URL polyfill does not lowercase hosts, so ASCII case is folded here.
 const canonicalize = (raw: string): URL | null => {
   let parsed: URL;
   try {
