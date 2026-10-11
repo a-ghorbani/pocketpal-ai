@@ -38,9 +38,43 @@ export function allowReadUrls(urls: Iterable<string>): void {
   }
 }
 
+const WWW = 'www.';
+
+// IP-like hosts never toggle `www.`: the RN polyfill parses `www.1.2.3.4` as a domain.
+const isWwwEligible = (host: string): boolean => {
+  const lastLabel = host.split('.').filter(Boolean).pop() ?? '';
+  return !host.startsWith('[') && /[^0-9]/.test(lastLabel);
+};
+
+const siteKey = (host: string): string =>
+  host.startsWith(WWW) ? host.slice(WWW.length) : host;
+
+const wwwPartner = (canonical: URL): string | null => {
+  const host = canonical.hostname;
+  if (!isWwwEligible(host)) {
+    return null;
+  }
+  const key = siteKey(host);
+  if (key !== host && key.startsWith(WWW)) {
+    return null;
+  }
+  const target = key === host ? WWW + host : key;
+  const partner = new URL(canonical.toString());
+  partner.hostname = target;
+  return partner.hostname === target ? partner.toString() : null;
+};
+
 export function matchReadUrl(url: string): string | null {
-  const canonical = canonicalize(url)?.toString();
-  return canonical !== undefined && allowed.has(canonical) ? canonical : null;
+  const canonical = canonicalize(url);
+  if (!canonical) {
+    return null;
+  }
+  const exact = canonical.toString();
+  if (allowed.has(exact)) {
+    return exact;
+  }
+  const partner = wwwPartner(canonical);
+  return partner !== null && allowed.has(partner) ? partner : null;
 }
 
 export function isReadUrlAllowed(url: string): boolean {

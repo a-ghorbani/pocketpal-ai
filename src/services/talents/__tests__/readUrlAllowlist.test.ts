@@ -74,9 +74,86 @@ describe('readUrlAllowlist', () => {
           'https://www.foo.com/A',
         );
         expect(matchReadUrl('https://www.foo.com/a')).toBeNull();
+        expect(matchReadUrl('https://Foo.com/A')).toBe('https://www.foo.com/A');
+      });
+
+      it('matches a stored www entry from the bare host', () => {
+        allowReadUrls(['https://www.firecrawl.dev/']);
+        expect(matchReadUrl('https://firecrawl.dev/')).toBe(
+          'https://www.firecrawl.dev/',
+        );
+      });
+
+      it('matches a stored bare entry from the www host', () => {
+        allowReadUrls(['https://firecrawl.dev/pricing']);
+        expect(matchReadUrl('https://www.firecrawl.dev/pricing')).toBe(
+          'https://firecrawl.dev/pricing',
+        );
+      });
+
+      it.each([
+        'https://foo.com/a?q=2',
+        'https://foo.com/b?q=1',
+        'http://foo.com/a?q=1',
+        'https://foo.com:8443/a?q=1',
+      ])('still refuses a component mismatch across www (%s)', request => {
+        allowReadUrls(['https://www.foo.com/a?q=1']);
+        expect(matchReadUrl(request)).toBeNull();
+      });
+
+      it.each([
+        'https://docs.foo.com/a',
+        'https://www.www.foo.com/a',
+        'https://wwwfoo.com/a',
+      ])('refuses other subdomains and lookalikes (%s)', request => {
+        allowReadUrls(['https://foo.com/a']);
+        expect(matchReadUrl(request)).toBeNull();
+      });
+
+      it('keeps the port exact across www, with the default port elided', () => {
+        allowReadUrls(['https://www.foo.com:8443/x', 'https://www.foo.com/d']);
+        expect(matchReadUrl('https://foo.com:8443/x')).toBe(
+          'https://www.foo.com:8443/x',
+        );
+        expect(matchReadUrl('https://foo.com/x')).toBeNull();
+        expect(matchReadUrl('https://foo.com:443/x')).toBeNull();
+        expect(matchReadUrl('https://foo.com:443/d')).toBe(
+          'https://www.foo.com/d',
+        );
+      });
+
+      it.each([
+        ['http://www.1.2.3.4/x', null],
+        ['https://foo.com/y', null],
+        ['https://www.foo.com./y', 'https://foo.com./y'],
+        ['http://www.0x7f.1/z', null],
+        ['http://www.0x7f/w', null],
+        ['http://[::1]/v', 'http://[::1]/v'],
+      ])('handles IP, trailing-dot and odd hosts (%s)', (request, expected) => {
+        allowReadUrls([
+          'http://1.2.3.4/x',
+          'https://foo.com./y',
+          'http://127.0.0.1/z',
+          'http://0.0.0.127/w',
+          'http://[::1]/v',
+        ]);
+        expect(matchReadUrl(request)).toBe(expected);
+      });
+
+      it('toggles only the host, never www text in the path or query', () => {
+        allowReadUrls(['https://foo.com/www.x?www.y']);
+        expect(matchReadUrl('https://www.foo.com/www.x?www.y')).toBe(
+          'https://foo.com/www.x?www.y',
+        );
       });
     },
   );
+
+  it('prefers the exact entry when both www and bare are stored', () => {
+    allowReadUrls(['https://foo.com/', 'https://www.foo.com/']);
+    expect(matchReadUrl('https://foo.com/')).toBe('https://foo.com/');
+    expect(matchReadUrl('https://www.foo.com/')).toBe('https://www.foo.com/');
+  });
 
   describe('under the react-native-url-polyfill URL', () => {
     useUrlImplementation(POLYFILL_URL);

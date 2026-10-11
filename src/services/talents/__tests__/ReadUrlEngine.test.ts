@@ -279,6 +279,52 @@ describe('ReadUrlEngine', () => {
         expect(result.type).toBe('text');
         expect(read).toHaveBeenCalledWith('https://www.foo.com/A', undefined);
       });
+
+      it('sends the stored www entry for a bare-host request with other host case', async () => {
+        const {read, engine} = readerFor('https://www.foo.com/A');
+        const result = await engine.execute({url: 'https://Foo.com/A'});
+        expect(result.type).toBe('text');
+        expect(read).toHaveBeenCalledWith('https://www.foo.com/A', undefined);
+      });
+
+      it('reads the www search hit when the model drops the www', async () => {
+        const {read, engine} = readerFor('https://www.firecrawl.dev/');
+        const result = await engine.execute({url: 'https://firecrawl.dev/'});
+        expect(result.type).toBe('text');
+        expect(read).toHaveBeenCalledWith(
+          'https://www.firecrawl.dev/',
+          undefined,
+        );
+      });
+
+      it('sends the stored www entry without the fragment to the native reader', async () => {
+        const {read, engine} = readerFor('https://www.foo.com/');
+        const result = await engine.execute({url: 'https://foo.com/#leak'});
+        expect(result.type).toBe('text');
+        expect(read).toHaveBeenCalledWith('https://www.foo.com/', undefined);
+        expect(read.mock.calls[0][0]).not.toContain('leak');
+      });
+
+      it('sends the stored www entry without the fragment to the default reader', async () => {
+        resetReadUrlAllowlist();
+        allowReadUrls(['https://www.foo.com/']);
+        const readWithDefaultReader = jest
+          .fn()
+          .mockResolvedValue({url: 'https://www.foo.com/', text: 'body'});
+        const engine = new ReadUrlEngine(
+          makeAccess({
+            getActiveProvider: () => ({id: 'brave', search: jest.fn()}),
+            readWithDefaultReader,
+          }),
+        );
+        const result = await engine.execute({url: 'https://foo.com/#leak'});
+        expect(result.type).toBe('text');
+        expect(readWithDefaultReader).toHaveBeenCalledWith(
+          'https://www.foo.com/',
+          undefined,
+        );
+        expect(readWithDefaultReader.mock.calls[0][0]).not.toContain('leak');
+      });
     },
   );
 
