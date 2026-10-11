@@ -102,6 +102,8 @@ export interface ProcessOptions {
   install?: boolean;
 }
 
+type RecordSnapshot = Pick<LedgerRecord, 'palId' | 'status'>;
+
 type TransientPhase = 'paying' | 'ready' | 'invalid' | 'restore_needed';
 
 type PalStoreDep = Pick<
@@ -138,6 +140,13 @@ const SETTLED: ReadonlySet<LedgerStatus> = new Set([
 
 export const isSettled = (status: LedgerStatus | undefined): boolean =>
   status !== undefined && SETTLED.has(status);
+
+const isLive = (rec: LedgerRecord | undefined): boolean =>
+  rec !== undefined && rec.status !== 'removed';
+
+const reopensTombstone = (rec: LedgerRecord, tx: StoreTransaction): boolean =>
+  rec.status === 'removed' &&
+  !(tx.transactionId && rec.transactionIds.includes(tx.transactionId));
 
 const RETRYABLE_RESULTS: ReadonlySet<VerifyResult['status']> = new Set([
   'failed',
@@ -356,8 +365,11 @@ export class PurchaseStore {
       this.productFor(pal.store_product_id) !== undefined &&
       !this.isOwned(pal.id) &&
       !pal.is_owned &&
-      !this.records[pal.id] &&
-      !(pal.store_product_id && this.recordForProduct(pal.store_product_id))
+      !isLive(this.records[pal.id]) &&
+      !(
+        pal.store_product_id &&
+        isLive(this.recordForProduct(pal.store_product_id))
+      )
     );
   }
 
@@ -623,7 +635,7 @@ export class PurchaseStore {
     await this.load();
     const rec = this.recordForProduct(tx.productId);
 
-    if (rec && isSettled(rec.status)) {
+    if (rec && isSettled(rec.status) && !reopensTombstone(rec, tx)) {
       this.clearRetry(tx.productId);
       await this.runSettled(rec, tx, opts);
       return;
@@ -636,7 +648,7 @@ export class PurchaseStore {
     }
 
     if (tx.state === 'pending') {
-      if (!rec) {
+      if (!isLive(rec)) {
         await this.putRecord(palId, {
           productId: tx.productId,
           status: 'pending_payment',
@@ -1084,9 +1096,15 @@ export class PurchaseStore {
         case 'pending':
           await this.recordPending(pal.id, productId);
           return 'stay';
-        case 'already_owned':
-          await this.installOwned(pal);
+        case 'already_owned': {
+          const listed = await this.installOwned(pal);
+          const rec = this.records[pal.id] ?? this.recordForProduct(productId);
+          if (listed && rec?.status === 'removed') {
+            this.deps.events.send(pal.id, 'purchase_error');
+            return 'close';
+          }
           return 'stay';
+        }
         case 'cancelled':
           this.deps.events.send(pal.id, 'purchase_cancelled');
           return 'close';
@@ -1105,13 +1123,14 @@ export class PurchaseStore {
     return this.serialize(productId, async () => {
       await this.load();
       const rec = this.recordForProduct(productId);
-      if (rec && rec.status !== 'pending_payment') {
+      const open = isLive(rec) ? rec : undefined;
+      if (open && open.status !== 'pending_payment') {
         return;
       }
       await this.putRecord(rec?.palId ?? palId, {
         productId,
         status: 'pending_payment',
-        pendingSince: rec?.pendingSince ?? this.deps.now(),
+        pendingSince: open?.pendingSince ?? this.deps.now(),
       });
     });
   }
@@ -1176,7 +1195,7 @@ export class PurchaseStore {
     if (!available) {
       return;
     }
-    const held = this.androidHeldPalIds();
+    const unconfirmed = this.androidUnconfirmedRecords();
     this.resetAndroidAckMemo();
     const {ok, transactions: txs} = await this.storeTransactions();
     for (const tx of txs) {
@@ -1188,7 +1207,7 @@ export class PurchaseStore {
         await this.processTransaction(tx, {});
       }
     }
-    await this.dropStalePending(txs, false, ok, held);
+    await this.dropStalePending(txs, false, ok, unconfirmed);
     if (!ok) {
       return;
     }
@@ -1215,11 +1234,13 @@ export class PurchaseStore {
     return {ok, transactions: [...merged.values()]};
   }
 
-  private androidHeldPalIds(): string[] {
+  private androidUnconfirmedRecords(): RecordSnapshot[] {
     return Platform.OS === 'android'
       ? Object.values(this.records)
-          .filter(rec => rec.status === 'held_invalid')
-          .map(rec => rec.palId)
+          .filter(
+            rec => rec.status === 'held_invalid' || rec.status === 'unlocking',
+          )
+          .map(({palId, status}) => ({palId, status}))
       : [];
   }
 
@@ -1227,7 +1248,7 @@ export class PurchaseStore {
     txs: StoreTransaction[],
     force: boolean,
     queryOk: boolean,
-    heldPalIds: string[],
+    unconfirmed: RecordSnapshot[],
   ): Promise<void> {
     const stale = Object.values(this.records).filter(rec => {
       if (rec.status !== 'pending_payment') {
@@ -1255,16 +1276,15 @@ export class PurchaseStore {
     if (!queryOk) {
       return;
     }
-    const unlisted = heldPalIds
-      .map(palId => this.records[palId])
-      .filter(
-        (rec): rec is LedgerRecord =>
-          rec !== undefined && !txs.some(tx => tx.productId === rec.productId),
-      );
-    for (const rec of unlisted) {
+    for (const {palId, status} of unconfirmed) {
+      const rec = this.records[palId];
+      if (!rec || txs.some(tx => tx.productId === rec.productId)) {
+        continue;
+      }
       await this.serialize(rec.productId, async () => {
-        if (this.records[rec.palId]?.status === 'held_invalid') {
-          await this.deleteRecord(rec.palId);
+        if (this.records[palId]?.status === status) {
+          this.clearRetry(rec.productId);
+          await this.deleteRecord(palId);
         }
       });
     }
@@ -1461,14 +1481,14 @@ export class PurchaseStore {
         console.warn('Store sync failed:', error);
       }
       await this.drainQueue();
-      const held = this.androidHeldPalIds();
+      const unconfirmed = this.androidUnconfirmedRecords();
       this.resetAndroidAckMemo();
       const {ok, transactions: txs} =
         await this.storePort.currentEntitlements();
       for (const tx of txs) {
         await this.processTransaction(tx, {settledVerify: true, install: true});
       }
-      await this.dropStalePending(txs, true, ok, held);
+      await this.dropStalePending(txs, true, ok, unconfirmed);
     } finally {
       runInAction(() => {
         this.isRestoring = false;

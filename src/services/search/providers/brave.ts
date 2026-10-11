@@ -18,7 +18,11 @@ export class BraveProvider implements SearchProvider {
 
   constructor(private getKey: () => string) {}
 
-  async search(query: string, opts: SearchOptions): Promise<SearchHit[]> {
+  async search(
+    query: string,
+    opts: SearchOptions,
+    signal?: AbortSignal,
+  ): Promise<SearchHit[]> {
     const key = requireKey(this.getKey(), 'Brave');
     const url = `https://api.search.brave.com/res/v1/web/search?q=${encodeURIComponent(
       query,
@@ -29,6 +33,7 @@ export class BraveProvider implements SearchProvider {
         Accept: 'application/json',
         'X-Subscription-Token': key,
       },
+      signal,
     });
     if (data?.type !== 'search') {
       throw new Error('unexpected response');
