@@ -786,3 +786,31 @@ describe('visibleStepContent', () => {
     expect(visibleStepContent(step)).toBe(content);
   });
 });
+
+describe('tool-call echo in a device turn', () => {
+  const steps = (toolCallEchoSteps as unknown as Record<string, AgentStep[]>)[
+    '0PKzyV5rTwEfMoWW'
+  ];
+  const turn: MessageType.AssistantTurn = {
+    id: 't',
+    type: 'assistant_turn',
+    author: assistant,
+    steps,
+  };
+
+  it('derivedText leaves out the echo and keeps the answer', () => {
+    expect(derivedText(turn)).toBe(steps[1].content);
+  });
+
+  it('replays the echo byte for byte with both tool calls', () => {
+    const [stepMessage] = convertToChatMessages([turn]);
+    expect(stepMessage.role).toBe('assistant');
+    expect(stepMessage.content).toBe(
+      '{"name": "web_search", "arguments": {"query": "Firecrawl"}}\n',
+    );
+    expect(stepMessage.tool_calls?.map(c => c.function.name)).toEqual([
+      'web_search',
+      'read_url',
+    ]);
+  });
+});

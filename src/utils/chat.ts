@@ -25,15 +25,15 @@ export const assistant = {id: assistantId};
  * titles — so the type bifurcation between `Text` and `AssistantTurn`
  * is contained to one helper.
  *
- * For `AssistantTurn`, joins each step's `content` with a blank line
- * (matching the visible block-per-step rendering). Steps with no content
- * (e.g. tool-call-only steps) are skipped.
+ * For `AssistantTurn`, joins each step's `visibleStepContent` with a blank
+ * line (matching the visible block-per-step rendering). Steps with no
+ * visible content (e.g. tool-call-only steps) are skipped.
  */
 export function derivedText(message: MessageType.Any): string {
   if (message.type === 'assistant_turn') {
     return ((message as MessageType.AssistantTurn).steps ?? [])
-      .map(s => s.content)
-      .filter((c): c is string => !!c && c.length > 0)
+      .map(visibleStepContent)
+      .filter(c => c.length > 0)
       .join('\n\n');
   }
   return 'text' in message && message.text ? message.text : '';

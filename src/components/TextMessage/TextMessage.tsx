@@ -27,6 +27,7 @@ import {
   getUserName,
   UserContext,
 } from '../../utils';
+import {visibleStepContent} from '../../utils/chat';
 
 export interface TextMessageTopLevelProps {
   /** @see {@link LinkPreviewProps.onPreviewDataFetched} */
@@ -75,7 +76,7 @@ export const TextMessage = ({
   // `message.text`. Reasoning is rendered separately via
   // ReasoningBlock — TextMessage only owns the content side.
   const visibleText: string = step
-    ? (step.content ?? '')
+    ? visibleStepContent(step)
     : 'text' in message
       ? message.text
       : '';
