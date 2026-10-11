@@ -1,7 +1,15 @@
 import {
+  POLYFILL_URL,
+  URL_IMPLEMENTATIONS,
+  expectUrlImplementationActive,
+  useUrlImplementation,
+} from '../../../../jest/urlImplementations';
+
+import {
   allowReadUrls,
   extractUrls,
   isReadUrlAllowed,
+  matchReadUrl,
   resetReadUrlAllowlist,
   seedReadUrlAllowlist,
 } from '../readUrlAllowlist';
@@ -49,6 +57,35 @@ describe('readUrlAllowlist', () => {
   it('ignores unparseable and non-http(s) seeds', () => {
     allowReadUrls(['not a url', 'file:///etc/passwd', '']);
     expect(isReadUrlAllowed('file:///etc/passwd')).toBe(false);
+  });
+
+  describe.each(URL_IMPLEMENTATIONS)(
+    'host matching under %s',
+    (_label, impl) => {
+      useUrlImplementation(impl);
+
+      it('runs against the swapped URL implementation', () => {
+        expectUrlImplementationActive(impl);
+      });
+
+      it('matches ASCII host case to the stored entry, but never path case', () => {
+        allowReadUrls(['https://www.foo.com/A']);
+        expect(matchReadUrl('https://WWW.FOO.com/A')).toBe(
+          'https://www.foo.com/A',
+        );
+        expect(matchReadUrl('https://www.foo.com/a')).toBeNull();
+      });
+    },
+  );
+
+  describe('under the react-native-url-polyfill URL', () => {
+    useUrlImplementation(POLYFILL_URL);
+
+    it('does not fold non-ASCII host case (Kelvin sign is not k)', () => {
+      expectUrlImplementationActive(POLYFILL_URL);
+      allowReadUrls(['https://k.com/']);
+      expect(matchReadUrl('https://\u212A.com/')).toBeNull();
+    });
   });
 
   describe('seedReadUrlAllowlist', () => {

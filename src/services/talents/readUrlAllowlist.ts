@@ -6,10 +6,9 @@
 
 const allowed = new Set<string>();
 
-// Canonicalize via URL (drops the fragment; normalizes host case and the
-// bare-origin trailing slash) so trivial model transcription noise still
-// matches, while any query/path mutation does not.
-const normalize = (raw: string): string | null => {
+// Canonical form: fragment dropped, ASCII host letters lowercased (the RN URL
+// polyfill folds neither), so transcription noise matches but data does not.
+const canonicalize = (raw: string): URL | null => {
   let parsed: URL;
   try {
     parsed = new URL(raw.trim());
@@ -20,7 +19,10 @@ const normalize = (raw: string): string | null => {
     return null;
   }
   parsed.hash = '';
-  return parsed.toString();
+  if (/[A-Z]/.test(parsed.hostname)) {
+    parsed.hostname = parsed.hostname.replace(/[A-Z]/g, c => c.toLowerCase());
+  }
+  return parsed;
 };
 
 export function resetReadUrlAllowlist(): void {
@@ -29,16 +31,20 @@ export function resetReadUrlAllowlist(): void {
 
 export function allowReadUrls(urls: Iterable<string>): void {
   for (const url of urls) {
-    const normalized = normalize(url);
-    if (normalized) {
-      allowed.add(normalized);
+    const canonical = canonicalize(url);
+    if (canonical) {
+      allowed.add(canonical.toString());
     }
   }
 }
 
+export function matchReadUrl(url: string): string | null {
+  const canonical = canonicalize(url)?.toString();
+  return canonical !== undefined && allowed.has(canonical) ? canonical : null;
+}
+
 export function isReadUrlAllowed(url: string): boolean {
-  const normalized = normalize(url);
-  return normalized !== null && allowed.has(normalized);
+  return matchReadUrl(url) !== null;
 }
 
 const URL_PATTERN = /https?:\/\/[^\s"'<>)\]}]+/gi;

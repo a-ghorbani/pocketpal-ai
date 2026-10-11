@@ -8,7 +8,7 @@ import type {SearchAccess} from './searchAccess';
 import type {PageContent} from '../search/types';
 import {budgetPage} from '../search/searchBudget';
 import {wrapUntrusted} from './untrustedContent';
-import {isReadUrlAllowed} from './readUrlAllowlist';
+import {matchReadUrl} from './readUrlAllowlist';
 
 /**
  * Reject non-http(s) schemes and embedded credentials so a malicious page
@@ -64,19 +64,14 @@ export class ReadUrlEngine implements TalentEngine {
     }
 
     // Exfiltration guard: only URLs from this conversation's web_search
-    // results or the user's own messages may be fetched.
-    if (!isReadUrlAllowed(url)) {
+    // results or the user's own messages may be fetched. The stored entry is
+    // fetched, so no fragment or host-case bits of the argument reach a provider.
+    const targetUrl = matchReadUrl(url);
+    if (targetUrl === null) {
       const summary =
         'read_url: this URL is not from a web_search result or a user message in this conversation. Copy the URL exactly as the user wrote it or as shown in web_search results, or run web_search first.';
       return {type: 'error', summary, errorMessage: summary};
     }
-
-    // Fetch the canonical URL, not the raw argument: allowlist matching
-    // ignores fragments, so a smuggled `#data` must never reach a provider
-    // that transmits the URL verbatim (Exa sends it in a JSON body).
-    const canonical = new URL(url);
-    canonical.hash = '';
-    const targetUrl = canonical.toString();
 
     const provider = this.access.getActiveProvider();
 

@@ -1,4 +1,9 @@
 import {abortableFetch} from '../../../../jest/abortableFetch';
+import {
+  URL_IMPLEMENTATIONS,
+  expectUrlImplementationActive,
+  useUrlImplementation,
+} from '../../../../jest/urlImplementations';
 
 import {ReadUrlEngine} from '../ReadUrlEngine';
 import type {SearchAccess} from '../searchAccess';
@@ -242,6 +247,40 @@ describe('ReadUrlEngine', () => {
       expect(after.type).toBe('text');
     });
   });
+
+  describe.each(URL_IMPLEMENTATIONS)(
+    'fetches the stored entry under %s',
+    (_label, impl) => {
+      useUrlImplementation(impl);
+
+      const readerFor = (allowedUrl: string) => {
+        resetReadUrlAllowlist();
+        allowReadUrls([allowedUrl]);
+        const read = jest.fn().mockResolvedValue({
+          url: allowedUrl,
+          text: 'body',
+        } as PageContent);
+        const provider: SearchProvider = {id: 'exa', search: jest.fn(), read};
+        return {
+          read,
+          engine: new ReadUrlEngine(
+            makeAccess({getActiveProvider: () => provider}),
+          ),
+        };
+      };
+
+      it('runs against the swapped URL implementation', () => {
+        expectUrlImplementationActive(impl);
+      });
+
+      it('sends the stored host case, not the argument host case', async () => {
+        const {read, engine} = readerFor('https://www.foo.com/A');
+        const result = await engine.execute({url: 'https://WWW.FOO.com/A'});
+        expect(result.type).toBe('text');
+        expect(read).toHaveBeenCalledWith('https://www.foo.com/A', undefined);
+      });
+    },
+  );
 
   describe('cancellation', () => {
     const defaultReaderAccess = () =>
