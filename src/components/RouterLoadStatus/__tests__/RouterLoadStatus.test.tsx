@@ -24,7 +24,10 @@ const seedLoad = (progress?: Record<string, unknown>) => {
 };
 
 describe('RouterLoadStatus', () => {
-  const announce = jest.spyOn(AccessibilityInfo, 'announceForAccessibility');
+  const announce = jest.spyOn(
+    AccessibilityInfo,
+    'announceForAccessibilityWithOptions',
+  );
 
   beforeEach(() => {
     announce.mockClear();
@@ -117,7 +120,7 @@ describe('RouterLoadStatus', () => {
     act(() => seedLoad({value: 0.8}));
 
     expect(announce).toHaveBeenCalledTimes(1);
-    expect(announce).toHaveBeenCalledWith('Loading model…');
+    expect(announce).toHaveBeenCalledWith('Loading model…', {queue: true});
   });
 
   it('announces again when the line appears again', () => {
@@ -140,17 +143,17 @@ describe('RouterLoadStatus', () => {
     seedLoad({value: 0.4});
     const {getByTestId} = render(<RouterLoadStatus />);
     const status = getByTestId('chat-router-loading-status');
-    const announced = status.props.accessibilityLabel;
+    const label = status.props.accessibilityLabel;
 
     act(() => seedLoad({value: 0.6}));
 
     expect(getByTestId('chat-router-loading-label')).toHaveTextContent(
       'Loading model · 60%',
     );
-    expect(announced).toBe('Loading model…');
+    expect(label).toBe('Loading model…');
     expect(
       getByTestId('chat-router-loading-status').props.accessibilityLabel,
-    ).toBe(announced);
+    ).toBe(label);
     expect(
       getByTestId('chat-router-loading-bar').props.accessibilityValue.now,
     ).toBe(60);

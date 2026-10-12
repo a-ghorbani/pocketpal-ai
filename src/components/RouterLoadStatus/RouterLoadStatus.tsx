@@ -31,7 +31,12 @@ const LoadLine: React.FC<{fraction: number | undefined}> = ({fraction}) => {
   const styles = createStyles(theme);
 
   useEffect(() => {
-    AccessibilityInfo.announceForAccessibility(l10n.chat.routerLoading);
+    AccessibilityInfo.announceForAccessibilityWithOptions(
+      l10n.chat.routerLoading,
+      {
+        queue: true,
+      },
+    );
     // eslint-disable-next-line react-hooks/exhaustive-deps -- once per appearance
   }, []);
 
