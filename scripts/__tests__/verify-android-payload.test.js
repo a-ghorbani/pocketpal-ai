@@ -97,8 +97,8 @@ const REQUIRED_HEXAGON_SYMBOLS = [
   'ggml_backend_is_hexagon',
 ];
 
-const CORE_PATCH_MARKER = 'rnllama_patch_abort_v2';
-const JSI_PATCH_MARKER = 'rnllama_jsi_patch_ownership_v2';
+const CORE_PATCH_MARKER = 'rnllama_patch_abort_v3';
+const JSI_PATCH_MARKER = 'rnllama_jsi_patch_ownership_v3';
 
 const isJniWrapper = lib => lib.startsWith('librnllama_jni');
 
@@ -461,10 +461,10 @@ describe('the llama.rn patch markers', () => {
     expect(output).not.toContain(`does not export ${JSI_PATCH_MARKER}`);
   });
 
-  it('fails an artifact built from the previous patch, carrying only the _v1 markers', () => {
+  it('fails an artifact built from the previous patch, carrying only the _v2 markers', () => {
     const previous = {
-      [CORE_PATCH_MARKER]: 'rnllama_patch_abort_v1',
-      [JSI_PATCH_MARKER]: 'rnllama_jsi_patch_ownership_v1',
+      [CORE_PATCH_MARKER]: 'rnllama_patch_abort_v2',
+      [JSI_PATCH_MARKER]: 'rnllama_jsi_patch_ownership_v2',
     };
     const entries = conformingEntries();
     for (const [name, elf] of Object.entries(entries)) {
