@@ -112,6 +112,19 @@ describe('text message', () => {
     expect(queryByText(/web_search/)).toBeNull();
   });
 
+  it('renders call-shaped JSON in a message without a step', () => {
+    const echo = '{"name": "web_search", "arguments": {"query": "Firecrawl"}}';
+    const {queryByText} = renderWithProviders(
+      <TextMessage
+        message={{...derivedTextMessage, text: echo}}
+        messageWidth={440}
+        showName={false}
+        usePreviewData={false}
+      />,
+    );
+    expect(queryByText(/web_search/)).not.toBeNull();
+  });
+
   it('renders and handles email press', async () => {
     expect.assertions(1);
     const email = 'john@flyer.chat';

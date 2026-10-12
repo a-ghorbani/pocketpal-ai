@@ -853,6 +853,20 @@ describe('visibleStepContent', () => {
     expect(visibleStepContent(step)).toBe('Searching now.');
   });
 
+  it.each([
+    ['a python block', '```python\ndef add(a, b):\n    return a + b\n```'],
+    ['a js object literal', '```js\n{name: "web_search", arguments: {}}\n```'],
+    ['a JSON block of another shape', '```json\n{"query":"Firecrawl"}\n```'],
+    ['a bare JSON object of another shape', '{"query":"Firecrawl"}'],
+    ['prose before a fenced echo', 'Calling:\n```json\n' + echo + '\n```'],
+    ['prose after a fenced echo', '```json\n' + echo + '\n```\nDone.'],
+    ['a fence with backticks inside', '```\n' + echo + '\n```\n```\n```'],
+    ['a fence with no newline after the tag', '```' + echo + '```'],
+  ])('keeps %s in a step that ran a call', (_, content) => {
+    const step = {content, toolCalls: [searchCall('{"query":"Firecrawl"}')]};
+    expect(visibleStepContent(step)).toBe(content);
+  });
+
   it('returns an empty string for a calls-only step', () => {
     expect(
       visibleStepContent({toolCalls: [searchCall('{"query":"Firecrawl"}')]}),
