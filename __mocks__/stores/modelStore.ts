@@ -16,6 +16,11 @@ import {LlamaContext} from 'llama.rn';
 import {CompletionEngine} from '../../src/utils/completionTypes';
 import {createDefaultContextInitParams} from '../../src/utils/contextInitParamsVersions';
 import {
+  MemoryEstimateSettings,
+  stateCacheBudgetMb,
+} from '../../src/utils/memoryEstimator';
+import type {Tier} from '../../src/services/deviceRules/types';
+import {
   draftCacheDefaults,
   effectiveDraftModeOf,
 } from '../../src/store/draftResolution';
@@ -29,6 +34,7 @@ import type {
 class MockModelStore {
   models = modelsList;
   contextInitParams: ContextInitParams = createDefaultContextInitParams();
+  deviceTier: Tier | null = null;
   max_threads = 4;
   MIN_CONTEXT_SIZE = 200;
   useAutoRelease = true;
@@ -157,6 +163,7 @@ class MockModelStore {
       recordReasoningObserved: false,
       setReasoningOverride: false,
       contextId: computed,
+      memoryEstimateSettings: computed,
       lastUsedModel: computed,
       activeModel: computed,
       activeModelCaps: computed,
@@ -266,6 +273,13 @@ class MockModelStore {
   // Safe context release methods
   registerCompletionPromise = jest.fn();
   clearCompletionPromise = jest.fn();
+
+  get memoryEstimateSettings(): MemoryEstimateSettings {
+    return {
+      ...this.contextInitParams,
+      state_cache_budget_mb: stateCacheBudgetMb(this.deviceTier),
+    };
+  }
 
   get contextId(): string | undefined {
     if (this.context) {

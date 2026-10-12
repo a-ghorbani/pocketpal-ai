@@ -59,7 +59,7 @@ PODS:
   - hermes-engine (0.82.1):
     - hermes-engine/Pre-built (= 0.82.1)
   - hermes-engine/Pre-built (0.82.1)
-  - llama-rn (0.13.0-rc.5):
+  - llama-rn (0.13.0-rc.7):
     - boost
     - DoubleConversion
     - fast_float
@@ -3824,7 +3824,7 @@ SPEC CHECKSUMS:
   GTMAppAuth: 217a876b249c3c585a54fd6f73e6b58c4f5c4238
   GTMSessionFetcher: 5aea5ba6bd522a239e236100971f10cb71b96ab6
   hermes-engine: 273e30e7fb618279934b0b95ffab60ecedb7acf5
-  llama-rn: 88e475fe662a5b55716cf512a954bb6d546342d7
+  llama-rn: f5520c50e221869964c7c9bd56912cc9f7f3ccee
   NitroIap: c27eba10317f553e583e5d81563f7673d3ce0db9
   NitroModules: d14c4c8343c6a160a06c01ec1d64519ef82b222a
   onnxruntime-c: 4a1a1a81da2087869dc9b6357f182952db2df29c

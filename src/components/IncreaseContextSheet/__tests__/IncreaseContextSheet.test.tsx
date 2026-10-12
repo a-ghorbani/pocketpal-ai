@@ -13,6 +13,7 @@ import {IncreaseContextSheet} from '../IncreaseContextSheet';
 jest.mock('../../../store', () => ({
   modelStore: {
     contextInitParams: {n_ctx: 4096},
+    memoryEstimateSettings: {n_ctx: 4096, state_cache_budget_mb: 160},
     largestSuccessfulLoad: 8 * 1e9,
     availableMemoryCeiling: 8 * 1e9,
     setNContext: jest.fn(),
@@ -166,6 +167,17 @@ describe('IncreaseContextSheet', () => {
       );
       // Default pick is 6144 → "6K tokens", not the raw ladder index.
       expect(slider.props.accessibilityValue.text).toBe('6K tokens');
+    });
+  });
+
+  describe('memory estimate', () => {
+    it('sizes each stop with the state checkpoint budget', () => {
+      renderSheet();
+      expect(memSpy).toHaveBeenCalledWith(
+        model,
+        undefined,
+        expect.objectContaining({n_ctx: 6144, state_cache_budget_mb: 160}),
+      );
     });
   });
 

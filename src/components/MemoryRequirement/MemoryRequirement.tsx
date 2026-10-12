@@ -33,7 +33,7 @@ export const MemoryRequirement: React.FC<MemoryRequirementProps> = observer(
     const memoryRequirement = getModelMemoryRequirement(
       model,
       projectionModel,
-      modelStore.contextInitParams,
+      modelStore.memoryEstimateSettings,
     );
 
     const sizeText = formatBytes(memoryRequirement, 1); // "2.5 GB"
