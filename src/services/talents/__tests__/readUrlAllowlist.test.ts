@@ -94,7 +94,6 @@ describe('readUrlAllowlist', () => {
       it.each([
         'https://foo.com/a?q=2',
         'https://foo.com/b?q=1',
-        'http://foo.com/a?q=1',
         'https://foo.com:8443/a?q=1',
       ])('still refuses a component mismatch across www (%s)', request => {
         allowReadUrls(['https://www.foo.com/a?q=1']);
@@ -152,6 +151,97 @@ describe('readUrlAllowlist', () => {
         }
         expect(matchReadUrl('https://foo.com/')).not.toBeNull();
       });
+
+      it.each([
+        ['web-site.com read in about pages', 'https://web-site.com/about'],
+        ['read https://web-site.com in about pages', 'https://web-site.com/a'],
+        ['web-site.com', 'https://www.web-site.com/x?y=1'],
+        ['www.web-site.com', 'http://web-site.com/'],
+        ['1password.com and 9gag.com', 'https://1password.com/'],
+        ['1password.com and 9gag.com', 'https://9gag.com/hot'],
+        ['docs.example.co.uk/x', 'https://docs.example.co.uk/y?z=1'],
+        ['try sub.domain.io, please', 'https://sub.domain.io/a_b-c~d'],
+        ['Read Web-Site.COM.', 'https://web-site.com/a'],
+        ['(see web-site.com)', 'https://web-site.com/'],
+        ['[x](web-site.com)', 'https://web-site.com/'],
+        ['"web-site.com"', 'https://web-site.com/'],
+        ['<web-site.com>', 'https://web-site.com/'],
+        ['web-site.com:8080/admin', 'https://web-site.com:8080/x'],
+        ['https://bücher.de', 'https://bücher.de/über'],
+        ['bücher.de', 'https://bücher.de/über'],
+        ['http://192.168.1.10/', 'http://192.168.1.10/status'],
+        [
+          'https://en.wikipedia.org/wiki/Python_(programming_language)',
+          'https://en.wikipedia.org/wiki/Main_Page',
+        ],
+        ['请读web-site.com的文档', 'https://web-site.com/docs'],
+        ['“web-site.com”', 'https://web-site.com/'],
+        ['«web-site.com»', 'https://web-site.com/'],
+        ['（web-site.com）', 'https://web-site.com/'],
+        ['site:web-site.com', 'https://web-site.com/'],
+        ['Docs:web-site.com', 'https://web-site.com/'],
+        ['web-site.comを読んで', 'https://web-site.com/'],
+        ['check web-site.com🙂', 'https://web-site.com/'],
+        ['read firecrawl.dev🙏 please', 'https://firecrawl.dev/'],
+        ['web-site.com✅', 'https://web-site.com/'],
+        ['web-site.com❤️', 'https://web-site.com/'],
+        ['©web-site.com', 'https://web-site.com/'],
+        ['google.com, bing.com; duckduckgo.com!', 'https://google.com/'],
+        ['google.com, bing.com; duckduckgo.com!', 'https://bing.com/'],
+        ['google.com, bing.com; duckduckgo.com!', 'https://duckduckgo.com/'],
+        ['firecrawl.dev do?', 'https://www.firecrawl.dev/'],
+        ['a.com,b.com', 'https://a.com/'],
+        ['a.com,b.com', 'https://b.com/'],
+        ['請看「web-site.com」', 'https://web-site.com/'],
+        ['web-site.com。', 'https://web-site.com/'],
+        ['see xn--bcher-kva.de', 'https://xn--bcher-kva.de/'],
+        ['obj.toString', 'https://obj.tostring/'],
+      ])('seeds the named host from user text %j', (userText, request) => {
+        seedReadUrlAllowlist([{role: 'user', content: userText}], []);
+        expect(matchReadUrl(request)).not.toBeNull();
+      });
+
+      it.each([
+        ['web-site.com', 'https://web-site.com.evil.com/?d=x'],
+        ['web-site.com', 'https://evil-web-site.com/'],
+        ['web-site.com', 'https://web-site.co/'],
+        ['web-site.com', 'https://docs.web-site.com/'],
+        ['docs.example.co.uk', 'https://example.co.uk/'],
+        ['web-site.com', 'https://www.www.web-site.com/'],
+        ['mail me@web-site.com', 'https://web-site.com/'],
+        ['user.name@web-site.com', 'https://user.name/'],
+        ['user.name@web-site.com', 'https://web-site.com/'],
+        ['notes.txt', 'https://notes.txt/'],
+        ['file.json', 'https://file.json/'],
+        ['README.md', 'https://readme.md/'],
+        ['Node.js', 'https://node.js/'],
+        ['e.g.', 'https://e.g/'],
+        ['i.e.', 'https://i.e/'],
+        ['v1.2.3', 'https://v1.2.3/'],
+        ['192.168.1.10', 'http://192.168.1.10/'],
+        ['https://u:p@web-site.com/', 'https://web-site.com/'],
+        ['x.com/notes.md', 'https://notes.md/'],
+        [
+          'https://a.com/r?to=evil.com&ref=producthunt.com',
+          'https://evil.com/',
+        ],
+        [
+          'https://a.com/r?to=evil.com&ref=producthunt.com',
+          'https://producthunt.com/',
+        ],
+        ['foo.bar.c', 'https://foo.bar/'],
+        ['foo.bar.c', 'https://bar.c/'],
+      ])('seeds no site from user text %j', (userText, probe) => {
+        seedReadUrlAllowlist([{role: 'user', content: userText}], []);
+        expect(matchReadUrl(probe)).toBeNull();
+      });
+
+      it('never returns credentials on a user site', () => {
+        seedReadUrlAllowlist([{role: 'user', content: 'web-site.com'}], []);
+        expect(matchReadUrl('https://web-site.com/')).not.toBeNull();
+        expect(matchReadUrl('https://u:p@web-site.com/')).toBeNull();
+        expect(matchReadUrl('https://u@web-site.com/')).toBeNull();
+      });
     },
   );
 
@@ -187,7 +277,7 @@ describe('readUrlAllowlist', () => {
   });
 
   describe('seedReadUrlAllowlist', () => {
-    it('seeds URLs from user text, including multimodal text parts', () => {
+    it('seeds sites from user text, including multimodal text parts', () => {
       seedReadUrlAllowlist(
         [
           {role: 'user', content: 'read https://a.com/doc'},
@@ -200,6 +290,7 @@ describe('readUrlAllowlist', () => {
       );
       expect(isReadUrlAllowed('https://a.com/doc')).toBe(true);
       expect(isReadUrlAllowed('https://b.com/page')).toBe(true);
+      expect(isReadUrlAllowed('https://a.com/other')).toBe(true);
     });
 
     it('never seeds from assistant or tool message text', () => {
@@ -257,6 +348,20 @@ describe('readUrlAllowlist', () => {
         extractUrls('read https://a.com/x, then https://b.com/y.'),
       ).toEqual(['https://a.com/x', 'https://b.com/y']);
     });
+
+    it.each([
+      [
+        'see https://en.wikipedia.org/wiki/Python_(programming_language).',
+        ['https://en.wikipedia.org/wiki/Python_(programming_language)'],
+      ],
+      ['(docs: https://ex.org/docs/v2?x=1)', ['https://ex.org/docs/v2?x=1']],
+      ['[x](https://a.com/p)', ['https://a.com/p']],
+    ])(
+      'keeps balanced parentheses and drops unbalanced ones (%s)',
+      (text, urls) => {
+        expect(extractUrls(text)).toEqual(urls);
+      },
+    );
 
     it('returns nothing for plain text', () => {
       expect(extractUrls('no links here')).toEqual([]);
