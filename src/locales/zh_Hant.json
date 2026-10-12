@@ -38,7 +38,8 @@
       "testWarning": "注意：測試對於較大的模型可能需要 2–5 分鐘，且一旦啟動後無法中斷。",
       "keepScreenOpen": "請保持此畫面開啟。",
       "initializingModel": "正在初始化模型…",
-      "modelMaxValue": "(最大值：{{maxValue}})"
+      "modelMaxValue": "(最大值：{{maxValue}})",
+      "testFailed": "無法執行測試。請等待任何回覆完成後，再試一次。"
     },
     "dialogs": {
       "advancedSettings": {
