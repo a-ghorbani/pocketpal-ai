@@ -86,9 +86,10 @@ export function extractUrls(text: string): string[] {
 }
 
 // Hermes has no \p{} escapes, so scripts and symbols are explicit ranges.
-const BOUNDARY = /[©«®» -⁯←-⯿　-ヿ㐀-䶿一-鿿가-힯\uD800-\uDFFF️＀-￯]/g;
+const BOUNDARY =
+  /[\u00A9\u00AB\u00AE\u00BB\u2000-\u206F\u2190-\u2BFF\u3000-\u30FF\u3400-\u4DBF\u4E00-\u9FFF\uAC00-\uD7AF\uD800-\uDFFF\uFE0F\uFF00-\uFFEF]/g;
 const BARE_HOST =
-  /(^|[^a-z0-9@./_%\u0080-￿-])([a-z0-9\u0080-￿-]+(?:\.[a-z0-9\u0080-￿-]+)+)(?![a-z0-9@_\u0080-￿-]|\.[a-z0-9_\u0080-￿-])/gi;
+  /(^|[^a-z0-9@./_%\u0080-\uFFFF-])([a-z0-9\u0080-\uFFFF-]+(?:\.[a-z0-9\u0080-\uFFFF-]+)+)(?![a-z0-9@_\u0080-\uFFFF-]|\.[a-z0-9_\u0080-\uFFFF-])/gi;
 const FILE_EXTENSIONS = new Set([
   'txt',
   'json',
