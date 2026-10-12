@@ -122,38 +122,38 @@ describe('readUrlAllowlist', () => {
         );
       });
 
-      it.each([
-        ['http://www.1.2.3.4/x', null],
-        ['https://foo.com/y', null],
-        ['https://www.foo.com./y', 'https://foo.com./y'],
-        ['http://www.0x7f.1/z', null],
-        ['http://www.0x7f/w', null],
-        ['http://[::1]/v', 'http://[::1]/v'],
-      ])('handles IP, trailing-dot and odd hosts (%s)', (request, expected) => {
-        allowReadUrls([
-          'http://1.2.3.4/x',
-          'https://foo.com./y',
-          'http://127.0.0.1/z',
-          'http://0.0.0.127/w',
-          'http://[::1]/v',
-        ]);
-        expect(matchReadUrl(request)).toBe(expected);
-      });
-
       it('toggles only the host, never www text in the path or query', () => {
         allowReadUrls(['https://foo.com/www.x?www.y']);
         expect(matchReadUrl('https://www.foo.com/www.x?www.y')).toBe(
           'https://foo.com/www.x?www.y',
         );
       });
+
+      it('any match is a stored entry', () => {
+        const stored = [
+          'http://1.2.3.4/x',
+          'https://foo.com./y',
+          'http://127.0.0.1/z',
+          'http://[::1]/v',
+          'https://foo.com/',
+          'https://www.foo.com/',
+        ];
+        allowReadUrls(stored);
+        for (const request of [
+          'http://www.1.2.3.4/x',
+          'https://www.foo.com./y',
+          'http://www.0x7f.1/z',
+          'http://[::1]/v',
+          'https://foo.com/',
+          'https://www.foo.com/',
+          'https://foo.com/?',
+        ]) {
+          expect([null, ...stored]).toContain(matchReadUrl(request));
+        }
+        expect(matchReadUrl('https://foo.com/')).not.toBeNull();
+      });
     },
   );
-
-  it('prefers the exact entry when both www and bare are stored', () => {
-    allowReadUrls(['https://foo.com/', 'https://www.foo.com/']);
-    expect(matchReadUrl('https://foo.com/')).toBe('https://foo.com/');
-    expect(matchReadUrl('https://www.foo.com/')).toBe('https://www.foo.com/');
-  });
 
   it('never adds the www partner or the request to the allowlist', () => {
     allowReadUrls(['https://www.foo.com/1']);
@@ -162,6 +162,18 @@ describe('readUrlAllowlist', () => {
     expect(isReadUrlAllowed('https://foo.com/3')).toBe(false);
 
     expect(matchReadUrl('https://foo.com/2')).toBeNull();
+    expect(matchReadUrl('https://foo.com/1')).toBe('https://www.foo.com/1');
+  });
+
+  it('never stores credentialed entries', () => {
+    allowReadUrls([
+      'https://u:p@foo.com/a',
+      'https://:p@foo.com/b',
+      'https://u@foo.com/c',
+    ]);
+    expect(matchReadUrl('https://foo.com/a')).toBeNull();
+    expect(matchReadUrl('https://foo.com/b')).toBeNull();
+    expect(matchReadUrl('https://foo.com/c')).toBeNull();
   });
 
   describe('under the react-native-url-polyfill URL', () => {

@@ -326,6 +326,13 @@ describe('ReadUrlEngine', () => {
         );
         expect(readWithDefaultReader.mock.calls[0][0]).not.toContain('leak');
       });
+
+      it('never fetches a credentialed entry', async () => {
+        const {read, engine} = readerFor('https://u:p@foo.com/a');
+        const result = await engine.execute({url: 'https://foo.com/a'});
+        expect(result.type).toBe('error');
+        expect(read).not.toHaveBeenCalled();
+      });
     },
   );
 

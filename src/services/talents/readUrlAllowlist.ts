@@ -4,7 +4,9 @@
 // enters this set, and appending data to an allowed URL fails exact match.
 // Assumes one agent run at a time; reset and reseeded at each run start.
 
-const allowed = new Set<string>();
+// Match key → stored canonical URL. A lookup only ever returns a stored
+// entry, so a key collision can never fetch a string the run did not allow.
+const allowed = new Map<string, string>();
 
 // The RN URL polyfill does not lowercase hosts, so ASCII case is folded here.
 const canonicalize = (raw: string): URL | null => {
@@ -24,6 +26,14 @@ const canonicalize = (raw: string): URL | null => {
   return parsed;
 };
 
+const matchKey = (url: URL): string =>
+  url.protocol +
+  '//' +
+  url.hostname.replace(/^www\./, '') +
+  (url.port ? ':' + url.port : '') +
+  url.pathname +
+  url.search;
+
 export function resetReadUrlAllowlist(): void {
   allowed.clear();
 }
@@ -31,49 +41,15 @@ export function resetReadUrlAllowlist(): void {
 export function allowReadUrls(urls: Iterable<string>): void {
   for (const url of urls) {
     const canonical = canonicalize(url);
-    if (canonical) {
-      allowed.add(canonical.toString());
+    if (canonical && !canonical.username && !canonical.password) {
+      allowed.set(matchKey(canonical), canonical.toString());
     }
   }
 }
 
-const WWW = 'www.';
-
-// IP-like hosts never toggle `www.`: the RN polyfill parses `www.1.2.3.4` as a domain.
-const isWwwEligible = (host: string): boolean => {
-  const lastLabel = host.split('.').filter(Boolean).pop() ?? '';
-  return !host.startsWith('[') && /[^0-9]/.test(lastLabel);
-};
-
-const siteKey = (host: string): string =>
-  host.startsWith(WWW) ? host.slice(WWW.length) : host;
-
-const wwwPartner = (canonical: URL): string | null => {
-  const host = canonical.hostname;
-  if (!isWwwEligible(host)) {
-    return null;
-  }
-  const key = siteKey(host);
-  if (key !== host && key.startsWith(WWW)) {
-    return null;
-  }
-  const target = key === host ? WWW + host : key;
-  const partner = new URL(canonical.toString());
-  partner.hostname = target;
-  return partner.hostname === target ? partner.toString() : null;
-};
-
 export function matchReadUrl(url: string): string | null {
   const canonical = canonicalize(url);
-  if (!canonical) {
-    return null;
-  }
-  const exact = canonical.toString();
-  if (allowed.has(exact)) {
-    return exact;
-  }
-  const partner = wwwPartner(canonical);
-  return partner !== null && allowed.has(partner) ? partner : null;
+  return canonical ? (allowed.get(matchKey(canonical)) ?? null) : null;
 }
 
 export function isReadUrlAllowed(url: string): boolean {
