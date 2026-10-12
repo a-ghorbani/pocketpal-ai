@@ -99,62 +99,23 @@ export function extractUrls(text: string): string[] {
   return (text.match(URL_PATTERN) ?? []).map(trimUrl);
 }
 
-// Hermes has no \p{} escapes, so scripts and symbols are explicit ranges.
-const BOUNDARY =
-  /[\u00A9\u00AB\u00AE\u00BB\u2000-\u206F\u2190-\u2BFF\u3000-\u30FF\u3400-\u4DBF\u4E00-\u9FFF\uAC00-\uD7AF\uD800-\uDFFF\uFE0F\uFF00-\uFFEF]/g;
-// Punctuation and symbols only: CJK letters are valid in a URL host.
-const PUNCTUATION_BOUNDARY =
-  /[\u00A9\u00AB\u00AE\u00BB\u2000-\u206F\u2190-\u2BFF\u3000-\u303F\uD800-\uDFFF\uFE0F\uFF00-\uFF0F\uFF1A-\uFF20\uFF3B-\uFF40\uFF5B-\uFF65]/g;
-const BARE_HOST =
-  /(^|[^a-z0-9@./_%\u0080-\uFFFF-])([a-z0-9\u0080-\uFFFF-]+(?:\.[a-z0-9\u0080-\uFFFF-]+)+)(?![a-z0-9@_\u0080-\uFFFF-]|\.[a-z0-9_\u0080-\uFFFF-])/gi;
-const FILE_EXTENSIONS = new Set([
-  'txt',
-  'json',
-  'md',
-  'js',
-  'ts',
-  'py',
-  'sh',
-  'pdf',
-  'png',
-  'jpg',
-  'csv',
-  'html',
-  'xml',
-  'yml',
-  'yaml',
-  'log',
-  'zip',
-]);
-
-const isBareHost = (host: string): boolean => {
-  const labels = host.split('.');
-  const tld = labels[labels.length - 1].toLowerCase();
-  return (
-    labels.every(
-      label =>
-        label.length <= 63 && !label.startsWith('-') && !label.endsWith('-'),
-    ) &&
-    /^(?:[a-z]{2,63}|xn--[a-z0-9-]+)$/.test(tld) &&
-    !FILE_EXTENSIONS.has(tld)
-  );
-};
-
-const bareHosts = (text: string): string[] =>
-  [...text.replace(URL_PATTERN, ' ').replace(BOUNDARY, ' ').matchAll(BARE_HOST)]
-    .map(match => match[2])
-    .filter(isBareHost);
+// Non-ASCII breaks words, except Latin, Greek and Cyrillic letters.
+const USER_WORD = /[^\s"'`<>()[\]{}\u0080-\u00BF\u0250-\u036F\u0500-\uFFFF]+/g;
+const USER_HOST = /^(?:[a-z0-9-]+\.)+[a-z]{2,63}$/i;
+const USER_IP = /^\d{1,3}(?:\.\d{1,3}){3}$/;
 
 function addUserSites(text: string): void {
-  const urls = [
-    ...[PUNCTUATION_BOUNDARY, BOUNDARY]
-      .flatMap(boundary => extractUrls(text.replace(boundary, ' ')))
-      .map(url => canonicalize(url)),
-    ...bareHosts(text).map(host => canonicalize('https://' + host)),
-  ];
-  for (const url of urls) {
-    if (url && !url.username && !url.password) {
-      userSites.add(siteKey(url.hostname));
+  for (const word of text.match(USER_WORD) ?? []) {
+    const bare = word.replace(/^https?:\/\//i, '');
+    const head = bare.split(/[/?#]/)[0];
+    if (head.includes('@')) {
+      continue;
+    }
+    for (const part of head.split(/[!$&*+,;=:|]/)) {
+      const host = part.replace(/\.+$/, '').toLowerCase();
+      if (USER_HOST.test(host) || (bare !== word && USER_IP.test(host))) {
+        userSites.add(siteKey(host));
+      }
     }
   }
 }

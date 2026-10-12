@@ -167,8 +167,6 @@ describe('readUrlAllowlist', () => {
         ['"web-site.com"', 'https://web-site.com/'],
         ['<web-site.com>', 'https://web-site.com/'],
         ['web-site.com:8080/admin', 'https://web-site.com:8080/x'],
-        ['https://bücher.de', 'https://bücher.de/über'],
-        ['bücher.de', 'https://bücher.de/über'],
         ['http://192.168.1.10/', 'http://192.168.1.10/status'],
         [
           'https://en.wikipedia.org/wiki/Python_(programming_language)',
@@ -201,13 +199,35 @@ describe('readUrlAllowlist', () => {
         ['看https://web-site.com，谢谢', 'https://web-site.com/x'],
         ['请帮我看看https://web-site.com的内容', 'https://web-site.com/x'],
         ['https://web-site.com的文档', 'https://web-site.com/x'],
-        ['https://例子.中国 看看', 'https://例子.中国/x'],
-        ['https://한국.kr', 'https://한국.kr/x'],
-        ['https://ドメイン.jp', 'https://ドメイン.jp/x'],
+        ['https://web-site.com:8080', 'https://web-site.com:8080/x'],
+        ['**web-site.com**', 'https://web-site.com/'],
+        ['HTTPS://WEB-SITE.COM/A', 'https://web-site.com/b'],
+        ['https://medium.com/@user', 'https://medium.com/x'],
       ])('seeds the named host from user text %j', (userText, request) => {
         seedReadUrlAllowlist([{role: 'user', content: userText}], []);
         expect(matchReadUrl(request)).not.toBeNull();
       });
+
+      it.each([
+        ['notes.txt', 'https://notes.txt/'],
+        ['file.json', 'https://file.json/'],
+        ['README.md', 'https://readme.md/'],
+        ['Node.js', 'https://node.js/'],
+      ])(
+        'seeds a file name the user typed as a host %j',
+        (userText, request) => {
+          seedReadUrlAllowlist([{role: 'user', content: userText}], []);
+          expect(matchReadUrl(request)).not.toBeNull();
+        },
+      );
+
+      it.each(['https://a.com/x(evil.com)', 'https://a.com/?q=日本evil.com'])(
+        'accepts the residual that a host after a bracket or non-ASCII text in a user URL seeds %j',
+        userText => {
+          seedReadUrlAllowlist([{role: 'user', content: userText}], []);
+          expect(matchReadUrl('https://evil.com/')).not.toBeNull();
+        },
+      );
 
       it.each([
         ['web-site.com', 'https://web-site.com.evil.com/?d=x'],
@@ -219,10 +239,6 @@ describe('readUrlAllowlist', () => {
         ['mail me@web-site.com', 'https://web-site.com/'],
         ['user.name@web-site.com', 'https://user.name/'],
         ['user.name@web-site.com', 'https://web-site.com/'],
-        ['notes.txt', 'https://notes.txt/'],
-        ['file.json', 'https://file.json/'],
-        ['README.md', 'https://readme.md/'],
-        ['Node.js', 'https://node.js/'],
         ['e.g.', 'https://e.g/'],
         ['i.e.', 'https://i.e/'],
         ['v1.2.3', 'https://v1.2.3/'],
@@ -239,6 +255,20 @@ describe('readUrlAllowlist', () => {
         ],
         ['foo.bar.c', 'https://foo.bar/'],
         ['foo.bar.c', 'https://bar.c/'],
+        ['https://bücher.de', 'https://bücher.de/über'],
+        ['bücher.de', 'https://bücher.de/über'],
+        ['https://例子.中国 看看', 'https://例子.中国/x'],
+        ['https://한국.kr', 'https://한국.kr/x'],
+        ['https://ドメイン.jp', 'https://ドメイン.jp/x'],
+        ['https://user.name:pw@web-site.com/', 'https://user.name/'],
+        ['https://user.name:pw@web-site.com/', 'https://web-site.com/'],
+        ['u:p@web-site.com', 'https://web-site.com/'],
+        ['bücher.de', 'https://cher.de/'],
+        ['https://bücher.de', 'https://cher.de/'],
+        ['https://a.com/r?x=1,evil.com:8/y', 'https://evil.com/'],
+        ['my_host.example.com', 'https://host.example.com/'],
+        ['ftp://web-site.com', 'https://web-site.com/'],
+        ['пример2.com', 'https://2.com/'],
       ])('seeds no site from user text %j', (userText, probe) => {
         seedReadUrlAllowlist([{role: 'user', content: userText}], []);
         expect(matchReadUrl(probe)).toBeNull();

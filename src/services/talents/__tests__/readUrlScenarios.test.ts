@@ -258,18 +258,6 @@ const ALLOW: Array<[string, Row]> = [
     },
   ],
   [
-    'a non-ASCII host the user wrote as a URL',
-    {
-      user: 'https://bücher.de',
-      request: 'https://bücher.de/über',
-      fetched: CANONICAL,
-    },
-  ],
-  [
-    'a non-ASCII bare host the user wrote',
-    {user: 'bücher.de', request: 'https://bücher.de/über', fetched: CANONICAL},
-  ],
-  [
     'another page on an IP the user wrote as a URL',
     {
       user: 'http://192.168.1.10/',
@@ -700,10 +688,6 @@ const BLOCK: Array<[string, Row]> = [
   ],
   ...(
     [
-      ['notes.txt', 'https://notes.txt/'],
-      ['file.json', 'https://file.json/'],
-      ['README.md', 'https://readme.md/'],
-      ['Node.js', 'https://node.js/'],
       ['e.g.', 'https://e.g/'],
       ['i.e.', 'https://i.e/'],
       ['v1.2.3', 'https://v1.2.3/'],
@@ -777,7 +761,117 @@ const BLOCK: Array<[string, Row]> = [
     'a prefix of a run whose last label is one letter',
     {user: 'foo.bar.c', request: 'https://foo.bar/', fetched: null},
   ],
+  [
+    'a non-ASCII host the user wrote as a URL',
+    {
+      user: 'https://bücher.de',
+      request: 'https://bücher.de/über',
+      fetched: null,
+    },
+  ],
+  [
+    'a non-ASCII bare host the user wrote',
+    {user: 'bücher.de', request: 'https://bücher.de/über', fetched: null},
+  ],
+  [
+    'the ASCII tail of a non-ASCII host the user wrote',
+    {user: 'bücher.de', request: 'https://cher.de/', fetched: null},
+  ],
+  [
+    'the ASCII tail of a Cyrillic host the user wrote',
+    {user: 'пример2.com', request: 'https://2.com/', fetched: null},
+  ],
+  [
+    'the userinfo name of a user URL with a password',
+    {
+      user: 'https://user.name:pw@web-site.com/',
+      request: 'https://user.name/',
+      fetched: null,
+    },
+  ],
+  [
+    'the host of a user URL with a password',
+    {
+      user: 'https://user.name:pw@web-site.com/',
+      request: 'https://web-site.com/',
+      fetched: null,
+    },
+  ],
+  [
+    'a host after bare userinfo',
+    {user: 'u:p@web-site.com', request: 'https://web-site.com/', fetched: null},
+  ],
+  [
+    'a host after a comma in a user URL query',
+    {
+      user: 'https://a.com/r?x=1,evil.com:8/y',
+      request: 'https://evil.com/',
+      fetched: null,
+    },
+  ],
+  [
+    'the tail of a word with an underscore',
+    {
+      user: 'my_host.example.com',
+      request: 'https://host.example.com/',
+      fetched: null,
+    },
+  ],
+  [
+    'a host behind a non-http scheme',
+    {
+      user: 'ftp://web-site.com',
+      request: 'https://web-site.com/',
+      fetched: null,
+    },
+  ],
 ];
+
+ALLOW.push(
+  ...(
+    [
+      ['notes.txt', 'https://notes.txt/'],
+      ['file.json', 'https://file.json/'],
+      ['README.md', 'https://readme.md/'],
+      ['Node.js', 'https://node.js/'],
+    ] as const
+  ).map(([word, request]): [string, Row] => [
+    `the file name ${word} typed by the user, read as a host`,
+    {user: word, request, fetched: CANONICAL},
+  ]),
+  [
+    'a port the user wrote after a scheme URL',
+    {
+      user: 'https://web-site.com:8080',
+      request: 'https://web-site.com:8080/x',
+      fetched: CANONICAL,
+    },
+  ],
+  [
+    'a host the user wrote in bold',
+    {
+      user: '**web-site.com**',
+      request: 'https://web-site.com/',
+      fetched: CANONICAL,
+    },
+  ],
+  [
+    'an upper-case URL the user wrote',
+    {
+      user: 'HTTPS://WEB-SITE.COM/A',
+      request: 'https://web-site.com/b',
+      fetched: CANONICAL,
+    },
+  ],
+  [
+    'a user URL with an @ in its path',
+    {
+      user: 'https://medium.com/@user',
+      request: 'https://medium.com/x',
+      fetched: CANONICAL,
+    },
+  ],
+);
 
 describe.each(URL_IMPLEMENTATIONS)(
   'read_url scenarios under %s',
