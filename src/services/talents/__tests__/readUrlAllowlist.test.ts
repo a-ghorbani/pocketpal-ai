@@ -12,7 +12,6 @@ import {
   matchReadUrl,
   resetReadUrlAllowlist,
   seedReadUrlAllowlist,
-  suggestReadUrls,
 } from '../readUrlAllowlist';
 
 describe('readUrlAllowlist', () => {
@@ -106,14 +105,10 @@ describe('readUrlAllowlist', () => {
         'https://docs.foo.com/a',
         'https://www.www.foo.com/a',
         'https://wwwfoo.com/a',
-      ])(
-        'refuses other subdomains and lookalikes without suggestions (%s)',
-        request => {
-          allowReadUrls(['https://foo.com/a', 'https://www.foo.com/a']);
-          expect(matchReadUrl(request)).toBeNull();
-          expect(suggestReadUrls(request)).toEqual([]);
-        },
-      );
+      ])('refuses other subdomains and lookalikes (%s)', request => {
+        allowReadUrls(['https://foo.com/a', 'https://www.foo.com/a']);
+        expect(matchReadUrl(request)).toBeNull();
+      });
 
       it('keeps the port exact across www, with the default port elided', () => {
         allowReadUrls(['https://www.foo.com:8443/x', 'https://www.foo.com/d']);
@@ -145,15 +140,6 @@ describe('readUrlAllowlist', () => {
         expect(matchReadUrl(request)).toBe(expected);
       });
 
-      it.each([
-        ['http://1.2.3.4/y', ['http://1.2.3.4/x']],
-        ['http://www.1.2.3.4/y', []],
-        ['http://[::1]/q', ['http://[::1]/v']],
-      ])('suggests same-host entries on IP hosts (%s)', (request, expected) => {
-        allowReadUrls(['http://1.2.3.4/x', 'http://[::1]/v']);
-        expect(suggestReadUrls(request)).toEqual(expected);
-      });
-
       it('toggles only the host, never www text in the path or query', () => {
         allowReadUrls(['https://foo.com/www.x?www.y']);
         expect(matchReadUrl('https://www.foo.com/www.x?www.y')).toBe(
@@ -169,46 +155,13 @@ describe('readUrlAllowlist', () => {
     expect(matchReadUrl('https://www.foo.com/')).toBe('https://www.foo.com/');
   });
 
-  it('never adds the www partner, the request or a suggestion to the allowlist', () => {
+  it('never adds the www partner or the request to the allowlist', () => {
     allowReadUrls(['https://www.foo.com/1']);
     expect(matchReadUrl('https://foo.com/1')).toBe('https://www.foo.com/1');
     expect(matchReadUrl('https://foo.com/2')).toBeNull();
     expect(isReadUrlAllowed('https://foo.com/3')).toBe(false);
-    suggestReadUrls('https://foo.com/4');
 
-    expect(suggestReadUrls('https://foo.com/')).toEqual([
-      'https://www.foo.com/1',
-    ]);
     expect(matchReadUrl('https://foo.com/2')).toBeNull();
-  });
-
-  describe('suggestReadUrls', () => {
-    it('suggests up to three credential-free same-site entries in insertion order', () => {
-      allowReadUrls([
-        'https://u:p@foo.com/0',
-        'https://:p@foo.com/z',
-        'https://www.foo.com/1',
-        'https://other.com/',
-        'https://foo.com/2',
-        'http://foo.com:81/3',
-        'https://www.foo.com/4',
-      ]);
-      expect(suggestReadUrls('https://foo.com/secret?d=xyz')).toEqual([
-        'https://www.foo.com/1',
-        'https://foo.com/2',
-        'http://foo.com:81/3',
-      ]);
-    });
-
-    it('suggests nothing when no stored entry is on the same site', () => {
-      allowReadUrls(['https://other.com/']);
-      expect(suggestReadUrls('https://foo.com/')).toEqual([]);
-    });
-
-    it('suggests nothing for an unparseable request', () => {
-      allowReadUrls(['https://foo.com/']);
-      expect(suggestReadUrls('not a url')).toEqual([]);
-    });
   });
 
   describe('under the react-native-url-polyfill URL', () => {
