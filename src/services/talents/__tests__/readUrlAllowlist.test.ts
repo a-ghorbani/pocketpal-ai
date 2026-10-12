@@ -363,6 +363,12 @@ describe('readUrlAllowlist', () => {
       },
     );
 
+    it('trims a long run of unbalanced closing parentheses', () => {
+      expect(extractUrls('https://a.com/' + ')'.repeat(20000))).toEqual([
+        'https://a.com/',
+      ]);
+    });
+
     it('returns nothing for plain text', () => {
       expect(extractUrls('no links here')).toEqual([]);
     });

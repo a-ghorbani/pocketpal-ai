@@ -66,18 +66,31 @@ export function isReadUrlAllowed(url: string): boolean {
   return matchReadUrl(url) !== null;
 }
 
-const countOf = (text: string, char: string): number =>
-  text.split(char).length - 1;
+const TRAILING_PUNCTUATION = '.,;:!?';
 
 const trimUrl = (url: string): string => {
-  let trimmed = url.replace(/[.,;:!?]+$/, '');
-  while (
-    trimmed.endsWith(')') &&
-    countOf(trimmed, '(') < countOf(trimmed, ')')
-  ) {
-    trimmed = trimmed.slice(0, -1).replace(/[.,;:!?]+$/, '');
+  let opens = 0;
+  let closes = 0;
+  for (const char of url) {
+    if (char === '(') {
+      opens++;
+    } else if (char === ')') {
+      closes++;
+    }
   }
-  return trimmed;
+  let end = url.length;
+  const skipPunctuation = () => {
+    while (end > 0 && TRAILING_PUNCTUATION.includes(url[end - 1])) {
+      end--;
+    }
+  };
+  skipPunctuation();
+  while (url[end - 1] === ')' && opens < closes) {
+    end--;
+    closes--;
+    skipPunctuation();
+  }
+  return url.slice(0, end);
 };
 
 /** Extract http(s) URLs from user or page text. */
