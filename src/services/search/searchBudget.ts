@@ -14,14 +14,16 @@ export const estimateTokens = (text: string): number =>
   Math.ceil(text.length / CHARS_PER_TOKEN);
 
 export const URL_PATTERN = /https?:\/\/[^\s"'<>\]}]+/gi;
+const URL_OR_MARKUP = new RegExp(`(${URL_PATTERN.source})|[*_\`#>~]+`, 'gi');
+const TRAILING_EMPHASIS = /[*_`~]+(?=[.,;:!?)]*$)/;
 
 const toPlainText = (raw: string): string =>
   raw
     .replace(/<[^>]*>/g, ' ') // HTML tags
     .replace(/!\[[^\]]*]\([^)]*\)/g, ' ') // markdown images
     .replace(/\[([^\]]*)]\([^)]*\)/g, '$1') // markdown links → label
-    .replace(new RegExp(`${URL_PATTERN.source}|[*_\`#>~]+`, 'gi'), m =>
-      /^https?:/i.test(m) ? m.replace(/[*_`~]+(?=[.,;:!?)]*$)/, ' ') : ' ',
+    .replace(URL_OR_MARKUP, (_match, url?: string) =>
+      url ? url.replace(TRAILING_EMPHASIS, ' ') : ' ',
     ) // markdown emphasis / heading markers, URL spans kept
     .replace(/\s+/g, ' ')
     .trim();
