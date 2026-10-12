@@ -147,9 +147,9 @@ const bareHosts = (text: string): string[] =>
 
 function addUserSites(text: string): void {
   const urls = [
-    ...extractUrls(text.replace(PUNCTUATION_BOUNDARY, ' ')).map(url =>
-      canonicalize(url),
-    ),
+    ...[PUNCTUATION_BOUNDARY, BOUNDARY]
+      .flatMap(boundary => extractUrls(text.replace(boundary, ' ')))
+      .map(url => canonicalize(url)),
     ...bareHosts(text).map(host => canonicalize('https://' + host)),
   ];
   for (const url of urls) {

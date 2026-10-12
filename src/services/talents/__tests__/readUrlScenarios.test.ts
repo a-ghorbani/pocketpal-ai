@@ -515,6 +515,22 @@ ALLOW.push(
     },
   ],
   [
+    'a URL the user wrote before CJK letters',
+    {
+      user: '请帮我看看https://web-site.com的内容',
+      request: 'https://web-site.com/x',
+      fetched: CANONICAL,
+    },
+  ],
+  [
+    'a URL the user wrote at the start before CJK letters',
+    {
+      user: 'https://web-site.com的文档',
+      request: 'https://web-site.com/x',
+      fetched: CANONICAL,
+    },
+  ],
+  [
     'a page URL in corner brackets',
     {
       page: '见「https://a.com/docs」',

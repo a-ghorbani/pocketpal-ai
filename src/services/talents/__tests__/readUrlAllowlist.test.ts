@@ -199,6 +199,8 @@ describe('readUrlAllowlist', () => {
         ['请读https://web-site.com。', 'https://web-site.com/x'],
         ['（https://web-site.com）', 'https://web-site.com/x'],
         ['看https://web-site.com，谢谢', 'https://web-site.com/x'],
+        ['请帮我看看https://web-site.com的内容', 'https://web-site.com/x'],
+        ['https://web-site.com的文档', 'https://web-site.com/x'],
         ['https://例子.中国 看看', 'https://例子.中国/x'],
         ['https://한국.kr', 'https://한국.kr/x'],
         ['https://ドメイン.jp', 'https://ドメイン.jp/x'],
