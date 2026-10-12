@@ -234,6 +234,18 @@ describe('budgetPage', () => {
     },
   );
 
+  it('handles a long emphasis run inside a URL', () => {
+    const run = '*'.repeat(20000);
+    const inner = `https://a.com/${run}x`;
+    const closing = `https://a.com/x${run}.`;
+    expect(budgetPage({url: 'https://p.com/', text: inner}, 10000).text).toBe(
+      inner,
+    );
+    expect(budgetPage({url: 'https://p.com/', text: closing}, 10000).text).toBe(
+      'https://a.com/x .',
+    );
+  });
+
   it('keeps a URL inside a search snippet intact', () => {
     const out = budgetHits(
       [hit({snippet: 'see **https://a.com/x_y**'})],

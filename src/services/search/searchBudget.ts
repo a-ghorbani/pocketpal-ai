@@ -15,7 +15,18 @@ export const estimateTokens = (text: string): number =>
 
 export const URL_PATTERN = /https?:\/\/[^\s"'<>\]}]+/gi;
 const URL_OR_MARKUP = new RegExp(`(${URL_PATTERN.source})|[*_\`#>~]+`, 'gi');
-const TRAILING_EMPHASIS = /[*_`~]+(?=[.,;:!?)]*$)/;
+
+const stripTrailingEmphasis = (url: string): string => {
+  let end = url.length;
+  while (end > 0 && '.,;:!?)'.includes(url[end - 1])) {
+    end--;
+  }
+  let start = end;
+  while (start > 0 && '*_`~'.includes(url[start - 1])) {
+    start--;
+  }
+  return start < end ? url.slice(0, start) + ' ' + url.slice(end) : url;
+};
 
 const toPlainText = (raw: string): string =>
   raw
@@ -23,7 +34,7 @@ const toPlainText = (raw: string): string =>
     .replace(/!\[[^\]]*]\([^)]*\)/g, ' ') // markdown images
     .replace(/\[([^\]]*)]\([^)]*\)/g, '$1') // markdown links → label
     .replace(URL_OR_MARKUP, (_match, url?: string) =>
-      url ? url.replace(TRAILING_EMPHASIS, ' ') : ' ',
+      url ? stripTrailingEmphasis(url) : ' ',
     ) // markdown emphasis / heading markers, URL spans kept
     .replace(/\s+/g, ' ')
     .trim();
