@@ -354,6 +354,22 @@ describe('load percent', () => {
     expect(record.detail?.exitCode).toBe(1);
   });
 
+  it('starts again after a bare unload when another load is adopted', async () => {
+    const unload = loadStream.find(event => event.data.exit_code === 1);
+    const bareUnload = {...unload, model: ALPHA, data: {...unload.data}};
+    delete bareUnload.data.exit_code;
+    const record = await startLoad();
+    repeatedStage.slice(0, 7).forEach(send);
+    expect(shown(record)).toBeGreaterThan(0.8);
+
+    send(bareUnload);
+    send(firstTick);
+
+    expect(store.owns(record)).toBe(true);
+    expect(shown(record)).toBe(0);
+    expect(record.detail?.exitCode).toBeUndefined();
+  });
+
   it('starts a retry after a failure from nothing', async () => {
     const failed = await startLoad();
     send(fullTextModel);
