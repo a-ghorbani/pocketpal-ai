@@ -13,12 +13,16 @@ const CHARS_PER_TOKEN = 4;
 export const estimateTokens = (text: string): number =>
   Math.ceil(text.length / CHARS_PER_TOKEN);
 
+export const URL_PATTERN = /https?:\/\/[^\s"'<>\]}]+/gi;
+
 const toPlainText = (raw: string): string =>
   raw
     .replace(/<[^>]*>/g, ' ') // HTML tags
     .replace(/!\[[^\]]*]\([^)]*\)/g, ' ') // markdown images
     .replace(/\[([^\]]*)]\([^)]*\)/g, '$1') // markdown links → label
-    .replace(/[*_`#>~]+/g, ' ') // markdown emphasis / heading markers
+    .replace(new RegExp(`${URL_PATTERN.source}|[*_\`#>~]+`, 'gi'), m =>
+      /^https?:/i.test(m) ? m.replace(/[*_`~]+(?=[.,;:!?)]*$)/, ' ') : ' ',
+    ) // markdown emphasis / heading markers, URL spans kept
     .replace(/\s+/g, ' ')
     .trim();
 

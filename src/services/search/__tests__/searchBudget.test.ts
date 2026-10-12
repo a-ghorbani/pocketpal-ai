@@ -193,6 +193,55 @@ describe('budgetPage', () => {
     expect(out.title!.length).toBeLessThanOrEqual(201); // cap + ellipsis
     expect(out.title!.endsWith('…')).toBe(true);
   });
+
+  it.each([
+    'https://en.wikipedia.org/wiki/Python_(programming_language)',
+    'https://a.com/x#frag',
+    'https://a.com/~u/p*q',
+    'https://a.com/x_.html',
+  ])('keeps a written-out URL intact (%s)', url => {
+    const out = budgetPage(
+      {url: 'https://p.com/', text: `see ${url} now`},
+      1000,
+    );
+    expect(out.text).toBe(`see ${url} now`);
+  });
+
+  it.each([
+    ['**https://ex.org/a_b~c**', 'https://ex.org/a_b~c'],
+    ['_https://a.com/x_', 'https://a.com/x'],
+    ['`https://a.com/y`', 'https://a.com/y'],
+    ['~~https://a.com/z~~', 'https://a.com/z'],
+    ['See `https://a.com/x_y`.', 'See https://a.com/x_y .'],
+    ['**https://a.com/a**, then', 'https://a.com/a , then'],
+    ['(_https://a.com/b_)', '( https://a.com/b )'],
+  ])('strips emphasis closers around a URL (%s)', (text, expected) => {
+    const out = budgetPage({url: 'https://p.com/', text}, 1000);
+    expect(out.text).toBe(expected);
+  });
+
+  it.each([
+    [
+      '# Heading **bold** and _it_ ~~gone~~ `code`',
+      'Heading bold and it gone code',
+    ],
+    ['# h *e* _u_ > q', 'h e u q'],
+  ])(
+    'strips heading and emphasis markers outside URLs (%s)',
+    (text, expected) => {
+      const out = budgetPage({url: 'https://p.com/', text}, 1000);
+      expect(out.text).toBe(expected);
+    },
+  );
+
+  it('keeps a URL inside a search snippet intact', () => {
+    const out = budgetHits(
+      [hit({snippet: 'see **https://a.com/x_y**'})],
+      budget(),
+      renderHit,
+    );
+    expect(out[0].snippet).toBe('see https://a.com/x_y');
+  });
 });
 
 describe('in-session cache', () => {
