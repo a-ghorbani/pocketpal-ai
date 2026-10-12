@@ -228,7 +228,7 @@ describe('stream tier', () => {
     await flush();
 
     expect(store.owns(record)).toBe(true);
-    expect(record.detail?.progress?.value).toBe(1);
+    expect(record.detail).toEqual({exitCode: 0});
   });
 
   it('asks for reads through the scheduler', async () => {
@@ -335,6 +335,23 @@ describe('load percent', () => {
     });
 
     expect(shown(record)).toBe(1);
+  });
+
+  it('starts again when a load ends and another load is adopted', async () => {
+    const failedExit = {
+      ...loadStream.find(event => event.data.exit_code === 1),
+      model: ALPHA,
+    };
+    const record = await startLoad();
+    repeatedStage.slice(0, 7).forEach(send);
+    expect(shown(record)).toBeGreaterThan(0.8);
+
+    send(failedExit);
+    send(firstTick);
+
+    expect(store.owns(record)).toBe(true);
+    expect(shown(record)).toBe(0);
+    expect(record.detail?.exitCode).toBe(1);
   });
 
   it('starts a retry after a failure from nothing', async () => {

@@ -788,14 +788,15 @@ export class RouterStore {
       if (effect.status === 'loading') {
         this.corroborate(record);
       }
-      const progress =
-        effect.progress &&
-        heldProgress(record.detail?.progress, effect.progress);
-      if (progress || effect.exitCode !== undefined) {
+      const loadEnded =
+        effect.status === 'unloaded' || effect.exitCode !== undefined;
+      const held = loadEnded ? undefined : record.detail?.progress;
+      const progress = effect.progress && heldProgress(held, effect.progress);
+      const exitCode = effect.exitCode ?? record.detail?.exitCode;
+      if (progress || loadEnded) {
         record.detail = {
-          ...record.detail,
           ...(progress && {progress}),
-          ...(effect.exitCode !== undefined && {exitCode: effect.exitCode}),
+          ...(exitCode !== undefined && {exitCode}),
         };
       }
     }

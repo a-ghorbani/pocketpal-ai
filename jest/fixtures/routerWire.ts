@@ -41,12 +41,12 @@ export function routerWireJson<T = any>(name: RouterWireFixture): T {
 
 /**
  * The `data:` payloads of a captured stream, in arrival order, parsed but
- * otherwise untouched. A capture that timestamped each line keeps the stamp.
+ * otherwise untouched. An arrival-time prefix on a line is skipped.
  */
 export function routerWireEvents(name: RouterWireFixture): any[] {
   return routerWireText(name)
     .split('\n')
-    .map(line => /^(?:[\d:.]+ )?data: (.*)$/.exec(line)?.[1])
+    .map(line => /^(?:[\d:.]+ )?data: (.*?)\r?$/.exec(line)?.[1])
     .filter((data): data is string => data !== undefined)
     .map(data => JSON.parse(data));
 }
