@@ -32,10 +32,15 @@ import {
   routerWireResponse,
 } from '../../../jest/fixtures/routerWire';
 import type {RouterEventsHandlers} from '../../api/llamaServer/router';
+import {
+  loadFraction,
+  reduceRouterEvent,
+} from '../../api/llamaServer/routerWire';
 
 const mockedFetch = openaiModule.fetchModelsWithHeaders as jest.Mock;
 const mockedProps = propsModule.fetchServerProps as jest.Mock;
 const mockedLoad = routerApi.postLoad as jest.Mock;
+const mockedUnload = routerApi.postUnload as jest.Mock;
 const mockedEvents = routerApi.openRouterEvents as jest.Mock;
 
 const ALPHA = 'alpha';
@@ -268,6 +273,118 @@ describe('stream tier', () => {
     await flush();
 
     expect(mockedFetch).not.toHaveBeenCalled();
+  });
+});
+
+describe('load percent', () => {
+  let serverId: string;
+  const repeatedStage = routerWireEvents('sse-repeated-stage.txt')
+    .filter(event => event.data.status === 'loading')
+    .map(event => ({...event, model: ALPHA}));
+  const fullTextModel = loadStream.find(
+    event => event.data.progress?.value === 1,
+  );
+  const firstTick = loadStream[1];
+
+  const startLoad = async () => {
+    store.ensureLoaded(serverId, ALPHA);
+    await flush();
+    live()[0].handlers.onOpen();
+    return store.recordFor(serverId, ALPHA)!;
+  };
+  const send = (event: object) => live()[0].handlers.onEvent(event);
+  const placed = (fraction?: number): fraction is number =>
+    fraction !== undefined;
+  const shown = (record: {detail?: {progress?: any}}) =>
+    loadFraction(record.detail?.progress);
+
+  beforeEach(async () => {
+    serverId = addServer();
+    await read(serverId, rows());
+    mockedFetch.mockReturnValue(deferred<ReturnType<typeof list>>().promise);
+  });
+
+  it('never goes back when the server reports a stage again', async () => {
+    const wire = repeatedStage
+      .map(event => reduceRouterEvent(event))
+      .map(effect =>
+        loadFraction('progress' in effect ? effect.progress : undefined),
+      )
+      .filter(placed);
+    expect(wire).not.toEqual([...wire].sort((a, b) => a - b));
+    const record = await startLoad();
+
+    const seen = repeatedStage.map(event => {
+      send(event);
+      return shown(record);
+    });
+
+    const defined = seen.filter(placed);
+    expect(defined).toEqual([...defined].sort((a, b) => a - b));
+    expect(seen[seen.length - 1]).toBe(1);
+  });
+
+  it('keeps a known percent through a reading it cannot place', async () => {
+    const record = await startLoad();
+    send(fullTextModel);
+    const {stages, current} = fullTextModel.data.progress;
+
+    send({
+      ...fullTextModel,
+      data: {status: 'loading', progress: {stages, current}},
+    });
+
+    expect(shown(record)).toBe(1);
+  });
+
+  it('starts a retry after a failure from nothing', async () => {
+    const failed = await startLoad();
+    send(fullTextModel);
+    mockedFetch.mockReset();
+    await read(serverId, rows({[ALPHA]: 'loading'}));
+    await read(
+      serverId,
+      rows().map(row =>
+        row.id === ALPHA
+          ? {...row, status: {value: 'unloaded', failed: true, exit_code: 1}}
+          : row,
+      ),
+    );
+    expect(failed.failure).toBeDefined();
+    mockedFetch.mockReturnValue(deferred<ReturnType<typeof list>>().promise);
+
+    store.ensureLoaded(serverId, ALPHA);
+    await flush();
+    const retry = store.recordFor(serverId, ALPHA)!;
+
+    expect(retry).not.toBe(failed);
+    expect(shown(retry)).toBeUndefined();
+    send(firstTick);
+    expect(shown(retry)).toBe(0);
+  });
+
+  it('starts a load after an unload from nothing', async () => {
+    const first = await startLoad();
+    send(fullTextModel);
+    mockedFetch.mockReset();
+    await read(serverId, rows({[ALPHA]: 'loaded'}));
+    expect(store.owns(first)).toBe(false);
+    mockedUnload.mockResolvedValue({status: 200, body: {success: true}});
+    mockedFetch.mockResolvedValue(list(rows()));
+    store.unload(serverId, ALPHA);
+    await flush();
+    expect(mockedUnload).toHaveBeenCalledTimes(1);
+    expect(store.recordFor(serverId, ALPHA)).toBeUndefined();
+    mockedFetch.mockReturnValue(deferred<ReturnType<typeof list>>().promise);
+
+    store.ensureLoaded(serverId, ALPHA);
+    await flush();
+    const next = store.recordFor(serverId, ALPHA)!;
+
+    expect(next).not.toBe(first);
+    expect(shown(next)).toBeUndefined();
+    send(firstTick);
+    expect(shown(next)).toBe(0);
   });
 });
 

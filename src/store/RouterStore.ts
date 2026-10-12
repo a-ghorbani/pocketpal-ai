@@ -18,6 +18,7 @@ import {
 import type {RouterEventsHandle, RouterTarget} from '../api/llamaServer/router';
 import {
   hasRouterStatus,
+  loadFraction,
   reduceRouterEvent,
   rowExitCode,
   rowStateFromList,
@@ -90,6 +91,21 @@ function untilAborted<T>(
       resolve(value);
     });
   });
+}
+
+/** A load's shown fraction never falls: the server can report a stage twice. */
+function heldProgress(
+  held: LoadProgress | undefined,
+  next: LoadProgress,
+): LoadProgress {
+  const heldFraction = loadFraction(held);
+  if (!held || heldFraction === undefined) {
+    return next;
+  }
+  const nextFraction = loadFraction(next);
+  return nextFraction === undefined || nextFraction < heldFraction
+    ? held
+    : next;
 }
 
 /**
@@ -772,10 +788,13 @@ export class RouterStore {
       if (effect.status === 'loading') {
         this.corroborate(record);
       }
-      if (effect.progress || effect.exitCode !== undefined) {
+      const progress =
+        effect.progress &&
+        heldProgress(record.detail?.progress, effect.progress);
+      if (progress || effect.exitCode !== undefined) {
         record.detail = {
           ...record.detail,
-          ...(effect.progress && {progress: effect.progress}),
+          ...(progress && {progress}),
           ...(effect.exitCode !== undefined && {exitCode: effect.exitCode}),
         };
       }

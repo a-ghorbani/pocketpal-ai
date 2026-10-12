@@ -34,9 +34,8 @@ export interface LoadProgress {
 }
 
 /**
- * Overall fraction across the load's stages. The server fixes `stages` before
- * the load starts and reports each stage 0 to 1 in order, so this never falls.
- * Undefined when the reading is not one this rule can place.
+ * Overall fraction across the load's stages for one reading; a repeated stage
+ * makes it fall, so `RouterStore` holds the highest. Undefined when unplaceable.
  */
 export function loadFraction(progress?: LoadProgress): number | undefined {
   const value = progress?.value;

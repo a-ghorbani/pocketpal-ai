@@ -25,6 +25,7 @@ export type RouterWireFixture =
   | 'completion-not-loaded-400.json'
   | 'sse-load-sequence.txt'
   | 'sse-download-sequence.txt'
+  | 'sse-repeated-stage.txt'
   | 'sse-unregistered-404.txt'
   | 'sse-shifted-control-200.txt'
   | 'sse-unauthorized-401.txt'
@@ -40,13 +41,14 @@ export function routerWireJson<T = any>(name: RouterWireFixture): T {
 
 /**
  * The `data:` payloads of a captured stream, in arrival order, parsed but
- * otherwise untouched.
+ * otherwise untouched. A capture that timestamped each line keeps the stamp.
  */
 export function routerWireEvents(name: RouterWireFixture): any[] {
   return routerWireText(name)
     .split('\n')
-    .filter(line => line.startsWith('data: '))
-    .map(line => JSON.parse(line.slice(6)));
+    .map(line => /^(?:[\d:.]+ )?data: (.*)$/.exec(line)?.[1])
+    .filter((data): data is string => data !== undefined)
+    .map(data => JSON.parse(data));
 }
 
 /**

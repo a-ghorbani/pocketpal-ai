@@ -1,0 +1,12 @@
+17:08:58.170 data: {"model":"gemma-4-E4B-it-Q4_K_M","event":"model_status","data":{"status":"loading"}}
+17:08:58.422 data: {"model":"gemma-4-E4B-it-Q4_K_M","event":"status_change","data":{"status":"loading","progress":{"stages":["text_model","mmproj_model"],"current":"text_model","value":0.0}}}
+17:09:01.965 data: {"model":"gemma-4-E4B-it-Q4_K_M","event":"status_change","data":{"status":"loading","progress":{"stages":["text_model","mmproj_model"],"current":"text_model","value":0.0}}}
+17:09:02.030 data: {"model":"gemma-4-E4B-it-Q4_K_M","event":"status_change","data":{"status":"loading","progress":{"stages":["text_model","mmproj_model"],"current":"text_model","value":1.0}}}
+17:09:02.247 data: {"model":"gemma-4-E4B-it-Q4_K_M","event":"status_change","data":{"status":"loading","progress":{"stage":"mmproj_model"}}}
+17:09:02.253 data: {"model":"gemma-4-E4B-it-Q4_K_M","event":"status_change","data":{"status":"loading","progress":{"stages":["text_model","mmproj_model"],"current":"mmproj_model","value":0.0}}}
+17:09:02.453 data: {"model":"gemma-4-E4B-it-Q4_K_M","event":"status_change","data":{"status":"loading","progress":{"stages":["text_model","mmproj_model"],"current":"mmproj_model","value":0.6207305788993835}}}
+17:09:02.572 data: {"model":"gemma-4-E4B-it-Q4_K_M","event":"status_change","data":{"status":"loading","progress":{"stages":["text_model","mmproj_model"],"current":"mmproj_model","value":1.0}}}
+17:09:02.778 data: {"model":"gemma-4-E4B-it-Q4_K_M","event":"status_change","data":{"status":"loading","progress":{"stages":["text_model","mmproj_model"],"current":"mmproj_model","value":0.32741856575012207}}}
+17:09:02.979 data: {"model":"gemma-4-E4B-it-Q4_K_M","event":"status_change","data":{"status":"loading","progress":{"stages":["text_model","mmproj_model"],"current":"mmproj_model","value":0.7265802621841431}}}
+17:09:03.124 data: {"model":"gemma-4-E4B-it-Q4_K_M","event":"status_change","data":{"status":"loading","progress":{"stages":["text_model","mmproj_model"],"current":"mmproj_model","value":1.0}}}
+17:09:03.183 data: {"model":"gemma-4-E4B-it-Q4_K_M","event":"status_change","data":{"status":"loaded","info":{"id":"gemma-4-E4B-it-Q4_K_M","aliases":["gemma-4-E4B-it-Q4_K_M"],"tags":[],"object":"model","created":1791817743,"owned_by":"llamacpp","meta":{"vocab_type":2,"n_vocab":262144,"n_ctx":131072,"n_ctx_train":131072,"n_embd":2560,"n_params":7518069290,"size":5319465128,"ftype":"Q4_K - Medium"}}}}
