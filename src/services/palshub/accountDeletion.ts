@@ -1,10 +1,9 @@
 import {Platform} from 'react-native';
 import {appleAuth} from '@invertase/react-native-apple-authentication';
-import {isAuthRetryableFetchError} from '@supabase/supabase-js';
 
 import {palStore} from '../../store';
 import {authService} from './AuthService';
-import {getAuthHeaders, supabase} from './supabase';
+import {getAuthHeaders} from './supabase';
 import {syncService} from './SyncService';
 import {postAccountDelete} from './accountApi';
 import type {DeleteAccountOutcome, DeleteRequestBody} from './accountApi';
@@ -48,23 +47,8 @@ const requestBody = async ({
     : {};
 };
 
-const refreshAfterUnauthorized = async (): Promise<
-  {authorization: string} | {outcome: DeleteAccountOutcome}
-> => {
-  const {data, error} = await supabase!.auth.refreshSession();
-  if (isAuthRetryableFetchError(error)) {
-    return {outcome: {kind: 'failed'}};
-  }
-  return error || !data.session
-    ? {outcome: {kind: 'sign_in_again'}}
-    : {authorization: `Bearer ${data.session.access_token}`};
-};
-
-const signOutLocally = () =>
-  authService.signOut({scope: 'local'}).catch(() => false);
-
 const endLocalSession = async () => {
-  if (!(await signOutLocally()) && !(await signOutLocally())) {
+  if (!(await authService.signOut({scope: 'local'}).catch(() => false))) {
     authService.resetLocalSession();
   }
 };
@@ -87,9 +71,6 @@ const clearAccountData = async () => {
 const requestDeletion = async (
   options: DeleteAccountOptions,
 ): Promise<DeleteAccountOutcome> => {
-  if (!supabase) {
-    return {kind: 'failed'};
-  }
   const body = await requestBody(options);
   if (!body) {
     return {kind: 'cancelled'};
@@ -98,19 +79,11 @@ const requestDeletion = async (
   if (!Authorization) {
     return {kind: 'sign_in_again'};
   }
-  let attempt = await postAccountDelete(body, Authorization);
-  if (attempt.kind === 'unauthorized') {
-    const refreshed = await refreshAfterUnauthorized();
-    if ('outcome' in refreshed) {
-      return refreshed.outcome;
-    }
-    attempt = await postAccountDelete(body, refreshed.authorization);
-  }
-  return attempt.kind === 'unauthorized' ? {kind: 'sign_in_again'} : attempt;
+  return postAccountDelete(body, Authorization);
 };
 
-const runDeletion = async (
-  options: DeleteAccountOptions,
+export const deleteAccount = async (
+  options: DeleteAccountOptions = {},
 ): Promise<DeleteAccountOutcome> => {
   let outcome: DeleteAccountOutcome;
   try {
@@ -123,17 +96,4 @@ const runDeletion = async (
     await clearAccountData();
   }
   return outcome;
-};
-
-let pending: Promise<DeleteAccountOutcome> | null = null;
-
-export const deleteAccount = (
-  options: DeleteAccountOptions = {},
-): Promise<DeleteAccountOutcome> => {
-  if (!pending) {
-    pending = runDeletion(options).finally(() => {
-      pending = null;
-    });
-  }
-  return pending;
 };

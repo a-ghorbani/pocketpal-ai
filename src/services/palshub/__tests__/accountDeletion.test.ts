@@ -1,5 +1,4 @@
 import {Platform} from 'react-native';
-import {AuthRetryableFetchError} from '@supabase/supabase-js';
 
 import {deleteAccount} from '../accountDeletion';
 import {palStore} from '../../../store';
@@ -18,9 +17,6 @@ jest.mock('../AuthService', () => ({
   },
 }));
 jest.mock('../supabase', () => ({
-  get supabase() {
-    return mockSupabaseConfigured ? mockSupabase : null;
-  },
   get getAuthHeaders() {
     return mockGetAuthHeaders;
   },
@@ -60,8 +56,6 @@ const mockAuth: Record<string, any> = Object.defineProperties(
     isLoading: observedField('isLoading', false),
   },
 );
-let mockSupabaseConfigured = true;
-const mockSupabase = {auth: {refreshSession: jest.fn()}};
 const mockGetAuthHeaders = jest.fn();
 const mockSync = {clearCache: jest.fn()};
 const fetchMock = jest.fn();
@@ -95,8 +89,6 @@ const appleUser = ({
 };
 
 const sentBody = (call = 0) => fetchMock.mock.calls[call][1].body;
-const sentBearer = (call = 0) =>
-  fetchMock.mock.calls[call][1].headers.Authorization;
 const cleanupCalls = () =>
   calls.filter(call => !['fetch', 'apple', 'confirm'].includes(call));
 const confirmWith = (answer: () => Promise<boolean>) =>
@@ -110,7 +102,6 @@ describe('deleteAccount', () => {
     jest.clearAllMocks();
     calls.length = 0;
     writes.length = 0;
-    mockSupabaseConfigured = true;
     setOS('android');
     (global as any).fetch = fetchMock;
     fetchMock.mockReset();
@@ -127,10 +118,6 @@ describe('deleteAccount', () => {
       calls.push('clearCache');
     });
     mockGetAuthHeaders.mockResolvedValue({Authorization: 'Bearer old-token'});
-    mockSupabase.auth.refreshSession.mockResolvedValue({
-      data: {session: {access_token: 'new-token'}},
-      error: null,
-    });
     jest.spyOn(console, 'warn').mockImplementation(() => {});
     jest.spyOn(console, 'log').mockImplementation(() => {});
     jest.spyOn(console, 'error').mockImplementation(() => {});
@@ -217,22 +204,6 @@ describe('deleteAccount', () => {
       expect(mockGetAuthHeaders).not.toHaveBeenCalled();
       expect(cleanupCalls()).toEqual([]);
     });
-
-    it('asks only the first of two concurrent callers', async () => {
-      const first = confirmWith(async () => true);
-      const second = confirmWith(async () => true);
-      respondWith([200, verbatim.deleted]);
-
-      const outcomes = await Promise.all([
-        deleteAccount({confirmWithoutApple: first}),
-        deleteAccount({confirmWithoutApple: second}),
-      ]);
-
-      expect(outcomes).toEqual([{kind: 'deleted'}, {kind: 'deleted'}]);
-      expect(first).toHaveBeenCalledTimes(1);
-      expect(second).not.toHaveBeenCalled();
-      expect(fetchMock).toHaveBeenCalledTimes(1);
-    });
   });
 
   it.each([
@@ -294,69 +265,14 @@ describe('deleteAccount', () => {
     expect(cleanupCalls()).toEqual(fullCleanup);
   });
 
-  it('refreshes once after a 401 and retries with the same body and a fresh bearer', async () => {
-    appleUser();
-    respondWith([401, verbatim.unauthenticated], [200, verbatim.deleted]);
-
-    await expect(deleteAccount()).resolves.toEqual({kind: 'deleted'});
-
-    expect(fetchMock).toHaveBeenCalledTimes(2);
-    expect(sentBody(1)).toBe(sentBody(0));
-    expect(sentBearer(0)).toBe('Bearer old-token');
-    expect(sentBearer(1)).toBe('Bearer new-token');
-    expect(mockSupabase.auth.refreshSession).toHaveBeenCalledTimes(1);
-    expect(mockAuth.reauthorizeWithApple).toHaveBeenCalledTimes(1);
-  });
-
-  it('fails when the refresh after a 401 cannot reach the server', async () => {
-    respondWith([401, verbatim.unauthenticated]);
-    mockSupabase.auth.refreshSession.mockResolvedValue({
-      data: {session: null},
-      error: new AuthRetryableFetchError('Failed to fetch', 0),
-    });
-
-    await expect(deleteAccount()).resolves.toEqual({kind: 'failed'});
-
-    expect(fetchMock).toHaveBeenCalledTimes(1);
-    expect(cleanupCalls()).toEqual([]);
-  });
-
   describe('asks to sign in again', () => {
-    it('after a second 401', async () => {
-      respondWith(
-        [401, verbatim.unauthenticated],
-        [401, verbatim.unauthenticated],
-      );
-
-      await expect(deleteAccount()).resolves.toEqual({kind: 'sign_in_again'});
-
-      expect(fetchMock).toHaveBeenCalledTimes(2);
-      expect(cleanupCalls()).toEqual([]);
-    });
-
-    it('when the refresh fails', async () => {
+    it('on a 401, with one request and no clean-up', async () => {
       respondWith([401, verbatim.unauthenticated]);
-      mockSupabase.auth.refreshSession.mockResolvedValue({
-        data: {session: null},
-        error: {message: 'Invalid Refresh Token'},
-      });
 
       await expect(deleteAccount()).resolves.toEqual({kind: 'sign_in_again'});
 
       expect(fetchMock).toHaveBeenCalledTimes(1);
       expect(cleanupCalls()).toEqual([]);
-    });
-
-    it('when the refresh returns no session', async () => {
-      respondWith([401, verbatim.unauthenticated]);
-      mockSupabase.auth.refreshSession.mockResolvedValue({
-        data: {session: null},
-        error: null,
-      });
-
-      await expect(deleteAccount()).resolves.toEqual({kind: 'sign_in_again'});
-
-      expect(fetchMock).toHaveBeenCalledTimes(1);
     });
 
     it('without an access token, sending nothing', async () => {
@@ -380,12 +296,10 @@ describe('deleteAccount', () => {
     expect(cleanupCalls()).toEqual([]);
   });
 
-  it('reports a payment still in progress and deletes nothing locally', async () => {
+  it('fails a payment still in progress and deletes nothing locally', async () => {
     respondWith([409, verbatim.paymentInProgress]);
 
-    await expect(deleteAccount()).resolves.toEqual({
-      kind: 'payment_in_progress',
-    });
+    await expect(deleteAccount()).resolves.toEqual({kind: 'failed'});
 
     expect(fetchMock).toHaveBeenCalledTimes(1);
     expect(cleanupCalls()).toEqual([]);
@@ -432,29 +346,8 @@ describe('deleteAccount', () => {
     expect(cleanupCalls()).toEqual([]);
   });
 
-  it('shares one request between concurrent calls', async () => {
-    respondWith([200, verbatim.deleted]);
-
-    const first = deleteAccount();
-    const second = deleteAccount();
-
-    expect(second).toBe(first);
-    await expect(first).resolves.toEqual({kind: 'deleted'});
-    await expect(second).resolves.toEqual({kind: 'deleted'});
-    expect(fetchMock).toHaveBeenCalledTimes(1);
-  });
-
-  it('starts a new request once the previous one has settled', async () => {
-    respondWith([500, null], [200, verbatim.deleted]);
-
-    await expect(deleteAccount()).resolves.toEqual({kind: 'failed'});
-    await expect(deleteAccount()).resolves.toEqual({kind: 'deleted'});
-
-    expect(fetchMock).toHaveBeenCalledTimes(2);
-  });
-
   it.each([
-    ['signOut', () => mockAuth.signOut.mockRejectedValue(new Error('x')), 2, 1],
+    ['signOut', () => mockAuth.signOut.mockRejectedValue(new Error('x')), 1, 1],
     [
       'clearCache',
       () => mockSync.clearCache.mockRejectedValue(new Error('x')),
@@ -476,48 +369,21 @@ describe('deleteAccount', () => {
     },
   );
 
-  describe('when the local sign-out fails after a deletion', () => {
-    const signOutResults = (...results: boolean[]) =>
-      results.forEach(result =>
-        mockAuth.signOut.mockImplementationOnce(async () => {
-          calls.push('signOut');
-          return result;
-        }),
-      );
-
-    it('signs out locally once more and keeps the session state when that works', async () => {
-      signOutResults(false, true);
-      respondWith([200, verbatim.deleted]);
-
-      await expect(deleteAccount()).resolves.toEqual({kind: 'deleted'});
-
-      expect(mockAuth.signOut).toHaveBeenCalledTimes(2);
-      expect(mockAuth.signOut).toHaveBeenNthCalledWith(2, {scope: 'local'});
-      expect(mockAuth.resetLocalSession).not.toHaveBeenCalled();
+  it('resets the local session when the local sign-out fails, then finishes clean-up', async () => {
+    mockAuth.signOut.mockImplementationOnce(async () => {
+      calls.push('signOut');
+      return false;
     });
+    respondWith([200, verbatim.deleted]);
 
-    it('resets the local session after two failures, then finishes clean-up', async () => {
-      signOutResults(false, false);
-      respondWith([200, verbatim.deleted]);
+    await expect(deleteAccount()).resolves.toEqual({kind: 'deleted'});
 
-      await expect(deleteAccount()).resolves.toEqual({kind: 'deleted'});
-
-      expect(cleanupCalls()).toEqual([
-        'signOut',
-        'signOut',
-        'resetLocalSession',
-        'clearAccountPals',
-        'clearCache',
-      ]);
-    });
-  });
-
-  it('fails without a request when Supabase is not configured', async () => {
-    mockSupabaseConfigured = false;
-
-    await expect(deleteAccount()).resolves.toEqual({kind: 'failed'});
-
-    expect(fetchMock).not.toHaveBeenCalled();
+    expect(cleanupCalls()).toEqual([
+      'signOut',
+      'resetLocalSession',
+      'clearAccountPals',
+      'clearCache',
+    ]);
   });
 
   describe('never throws', () => {
@@ -545,7 +411,6 @@ describe('deleteAccount', () => {
       [401, verbatim.unauthenticated],
       [200, verbatim.deleted],
       [409, verbatim.creatorContactSupport],
-      [500, null],
     );
 
     await deleteAccount();
@@ -564,6 +429,7 @@ describe('deleteAccount', () => {
       [409, verbatim.creatorContactSupport],
     );
     await deleteAccount();
+    await deleteAccount();
     fetchMock.mockRejectedValue(new TypeError('Network request failed'));
     await deleteAccount();
 
@@ -574,7 +440,6 @@ describe('deleteAccount', () => {
     ]);
     expect(logged).not.toContain('c1');
     expect(logged).not.toContain('old-token');
-    expect(logged).not.toContain('new-token');
     expect(logged).not.toContain('info@palshub.ai');
   });
 });

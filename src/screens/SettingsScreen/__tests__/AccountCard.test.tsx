@@ -120,11 +120,6 @@ describe('AccountCard', () => {
     ['sign_in_again', {kind: 'sign_in_again'}, 'Please sign in again'],
     ['failed', {kind: 'failed'}, 'Could not delete, try again'],
     [
-      'payment_in_progress',
-      {kind: 'payment_in_progress'},
-      'A payment is still being processed. Please try again later.',
-    ],
-    [
       'creator',
       {kind: 'creator', contact: 'x@example.test'},
       'Creator accounts are deleted by our support team: x@example.test',

@@ -221,7 +221,6 @@
       "deleted": "Your account has been deleted.",
       "signInAgain": "Please sign in again",
       "creatorSupport": "Creator accounts are deleted by our support team: {{contact}}",
-      "paymentInProgress": "A payment is still being processed. Please try again later.",
       "failed": "Could not delete, try again"
     }
   },

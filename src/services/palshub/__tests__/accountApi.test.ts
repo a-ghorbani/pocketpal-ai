@@ -86,9 +86,9 @@ describe('accountApi', () => {
       });
     });
 
-    it('maps 401 to unauthorized', async () => {
+    it('maps 401 to sign in again', async () => {
       expect(await respond(401, verbatim.unauthenticated)).toEqual({
-        kind: 'unauthorized',
+        kind: 'sign_in_again',
       });
     });
 
@@ -99,19 +99,10 @@ describe('accountApi', () => {
       });
     });
 
-    it('maps the payment-in-progress 409 to its own outcome', async () => {
+    it('maps the payment-in-progress 409 to failed', async () => {
       expect(await respond(409, verbatim.paymentInProgress)).toEqual({
-        kind: 'payment_in_progress',
+        kind: 'failed',
       });
-    });
-
-    it('ignores unknown fields on the payment-in-progress 409', async () => {
-      const body = JSON.stringify({
-        ...JSON.parse(verbatim.paymentInProgress),
-        retry_after: 30,
-      });
-
-      expect(await respond(409, body)).toEqual({kind: 'payment_in_progress'});
     });
 
     it.each([
