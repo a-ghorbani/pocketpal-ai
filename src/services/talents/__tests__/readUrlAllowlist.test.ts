@@ -196,6 +196,12 @@ describe('readUrlAllowlist', () => {
         ['web-site.com。', 'https://web-site.com/'],
         ['see xn--bcher-kva.de', 'https://xn--bcher-kva.de/'],
         ['obj.toString', 'https://obj.tostring/'],
+        ['请读https://web-site.com。', 'https://web-site.com/x'],
+        ['（https://web-site.com）', 'https://web-site.com/x'],
+        ['看https://web-site.com，谢谢', 'https://web-site.com/x'],
+        ['https://例子.中国 看看', 'https://例子.中国/x'],
+        ['https://한국.kr', 'https://한국.kr/x'],
+        ['https://ドメイン.jp', 'https://ドメイン.jp/x'],
       ])('seeds the named host from user text %j', (userText, request) => {
         seedReadUrlAllowlist([{role: 'user', content: userText}], []);
         expect(matchReadUrl(request)).not.toBeNull();
@@ -356,8 +362,9 @@ describe('readUrlAllowlist', () => {
       ],
       ['(docs: https://ex.org/docs/v2?x=1)', ['https://ex.org/docs/v2?x=1']],
       ['[x](https://a.com/p)', ['https://a.com/p']],
+      ['见「https://a.com/docs」', ['https://a.com/docs']],
     ])(
-      'keeps balanced parentheses and drops unbalanced ones (%s)',
+      'drops trailing punctuation and unbalanced parentheses (%s)',
       (text, urls) => {
         expect(extractUrls(text)).toEqual(urls);
       },

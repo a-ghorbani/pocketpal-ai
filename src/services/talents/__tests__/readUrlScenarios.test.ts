@@ -489,6 +489,41 @@ const ALLOW: Array<[string, Row]> = [
   ],
 ];
 
+ALLOW.push(
+  [
+    'a URL the user wrote before a CJK full stop',
+    {
+      user: '请读https://web-site.com。',
+      request: 'https://web-site.com/x',
+      fetched: CANONICAL,
+    },
+  ],
+  [
+    'a URL the user wrote in fullwidth parentheses',
+    {
+      user: '（https://web-site.com）',
+      request: 'https://web-site.com/x',
+      fetched: CANONICAL,
+    },
+  ],
+  [
+    'a URL the user wrote before a fullwidth comma and more text',
+    {
+      user: '看https://web-site.com，谢谢',
+      request: 'https://web-site.com/x',
+      fetched: CANONICAL,
+    },
+  ],
+  [
+    'a page URL in corner brackets',
+    {
+      page: '见「https://a.com/docs」',
+      request: 'https://a.com/docs',
+      fetched: 'https://a.com/docs',
+    },
+  ],
+);
+
 const BLOCK: Array<[string, Row]> = [
   [
     'a search hit with extra query data',

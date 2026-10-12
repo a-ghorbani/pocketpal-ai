@@ -66,7 +66,8 @@ export function isReadUrlAllowed(url: string): boolean {
   return matchReadUrl(url) !== null;
 }
 
-const TRAILING_PUNCTUATION = '.,;:!?';
+const TRAILING_PUNCTUATION =
+  '.,;:!?\u3001\u3002\uFF0C\uFF0E\uFF1A\uFF1B\uFF01\uFF1F\uFF09\u300D\u300F\u3011';
 
 const trimUrl = (url: string): string => {
   let opens = 0;
@@ -101,6 +102,9 @@ export function extractUrls(text: string): string[] {
 // Hermes has no \p{} escapes, so scripts and symbols are explicit ranges.
 const BOUNDARY =
   /[\u00A9\u00AB\u00AE\u00BB\u2000-\u206F\u2190-\u2BFF\u3000-\u30FF\u3400-\u4DBF\u4E00-\u9FFF\uAC00-\uD7AF\uD800-\uDFFF\uFE0F\uFF00-\uFFEF]/g;
+// Punctuation and symbols only: CJK letters are valid in a URL host.
+const PUNCTUATION_BOUNDARY =
+  /[\u00A9\u00AB\u00AE\u00BB\u2000-\u206F\u2190-\u2BFF\u3000-\u303F\uD800-\uDFFF\uFE0F\uFF00-\uFF0F\uFF1A-\uFF20\uFF3B-\uFF40\uFF5B-\uFF65]/g;
 const BARE_HOST =
   /(^|[^a-z0-9@./_%\u0080-\uFFFF-])([a-z0-9\u0080-\uFFFF-]+(?:\.[a-z0-9\u0080-\uFFFF-]+)+)(?![a-z0-9@_\u0080-\uFFFF-]|\.[a-z0-9_\u0080-\uFFFF-])/gi;
 const FILE_EXTENSIONS = new Set([
@@ -143,7 +147,9 @@ const bareHosts = (text: string): string[] =>
 
 function addUserSites(text: string): void {
   const urls = [
-    ...extractUrls(text).map(url => canonicalize(url)),
+    ...extractUrls(text.replace(PUNCTUATION_BOUNDARY, ' ')).map(url =>
+      canonicalize(url),
+    ),
     ...bareHosts(text).map(host => canonicalize('https://' + host)),
   ];
   for (const url of urls) {
