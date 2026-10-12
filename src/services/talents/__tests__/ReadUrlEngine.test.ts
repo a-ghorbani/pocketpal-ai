@@ -283,6 +283,20 @@ describe('ReadUrlEngine', () => {
       expect(isReadUrlAllowed(urls[100])).toBe(false);
     });
 
+    it('registers a URL that is the last word before the budget cut', async () => {
+      const text = 'w '.repeat(2300) + 'https://a.com/next ' + 'x'.repeat(500);
+      const result = await engineReading(text).execute({
+        url: 'https://e.com/p',
+      });
+      expect(result.type === 'text' && result.summary).toContain(
+        'https://a.com/next…',
+      );
+      expect(result.type === 'text' && result.links).toEqual([
+        'https://a.com/next',
+      ]);
+      expect(isReadUrlAllowed('https://a.com/next')).toBe(true);
+    });
+
     it('registers no links on an empty page or a reader error', async () => {
       const empty = await engineReading(
         '<a href="https://tag.test/a"></a>',

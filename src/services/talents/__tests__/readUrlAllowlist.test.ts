@@ -363,6 +363,7 @@ describe('readUrlAllowlist', () => {
       ['(docs: https://ex.org/docs/v2?x=1)', ['https://ex.org/docs/v2?x=1']],
       ['[x](https://a.com/p)', ['https://a.com/p']],
       ['见「https://a.com/docs」', ['https://a.com/docs']],
+      ['see https://x.com/a…', ['https://x.com/a']],
     ])(
       'drops trailing punctuation and unbalanced parentheses (%s)',
       (text, urls) => {

@@ -67,7 +67,7 @@ export function isReadUrlAllowed(url: string): boolean {
 }
 
 const TRAILING_PUNCTUATION =
-  '.,;:!?\u3001\u3002\uFF0C\uFF0E\uFF1A\uFF1B\uFF01\uFF1F\uFF09\u300D\u300F\u3011';
+  '.,;:!?\u2026\u3001\u3002\uFF0C\uFF0E\uFF1A\uFF1B\uFF01\uFF1F\uFF09\u300D\u300F\u3011';
 
 const trimUrl = (url: string): string => {
   let opens = 0;
