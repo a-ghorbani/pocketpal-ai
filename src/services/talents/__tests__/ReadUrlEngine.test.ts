@@ -11,7 +11,11 @@ import type {SearchProvider, PageContent} from '../../search/types';
 import * as budget from '../../search/searchBudget';
 import * as search from '../../search';
 import {ExaProvider} from '../../search/providers/exa';
-import {allowReadUrls, resetReadUrlAllowlist} from '../readUrlAllowlist';
+import {
+  allowReadUrls,
+  isReadUrlAllowed,
+  resetReadUrlAllowlist,
+} from '../readUrlAllowlist';
 
 const makeAccess = (overrides: Partial<SearchAccess> = {}): SearchAccess => {
   const provider: SearchProvider = {
@@ -196,7 +200,7 @@ describe('ReadUrlEngine', () => {
       });
       expect(result.type).toBe('error');
       if (result.type === 'error') {
-        expect(result.summary).toMatch(/web_search result or a user message/i);
+        expect(result.summary).toMatch(/site the user named/i);
         expect(result.errorMessage).toBe(result.summary);
       }
       expect(read).not.toHaveBeenCalled();
@@ -246,6 +250,55 @@ describe('ReadUrlEngine', () => {
       allowReadUrls(['https://fresh.example.org/a']);
       const after = await engine.execute({url: 'https://fresh.example.org/a'});
       expect(after.type).toBe('text');
+    });
+
+    const engineReading = (text: string) => {
+      const read = jest.fn().mockResolvedValue({url: 'https://e.com/p', text});
+      const provider: SearchProvider = {id: 'exa', search: jest.fn(), read};
+      return new ReadUrlEngine(makeAccess({getActiveProvider: () => provider}));
+    };
+
+    it('returns and allowlists the URLs written in the page', async () => {
+      const result = await engineReading(
+        'See https://one.test/a and https://two.test/b, or [docs](https://hidden.test/c).',
+      ).execute({url: 'https://e.com/p'});
+      expect(result).toMatchObject({
+        type: 'text',
+        links: ['https://one.test/a', 'https://two.test/b'],
+      });
+      expect(isReadUrlAllowed('https://one.test/a')).toBe(true);
+      expect(isReadUrlAllowed('https://two.test/b')).toBe(true);
+      expect(isReadUrlAllowed('https://hidden.test/c')).toBe(false);
+    });
+
+    it('keeps the first 100 page links', async () => {
+      const urls = Array.from({length: 101}, (_, i) => `https://l.test/${i}`);
+      const result = await engineReading(urls.join(' ')).execute({
+        url: 'https://e.com/p',
+      });
+      expect(result.type === 'text' && result.links).toEqual(
+        urls.slice(0, 100),
+      );
+      expect(isReadUrlAllowed(urls[99])).toBe(true);
+      expect(isReadUrlAllowed(urls[100])).toBe(false);
+    });
+
+    it('registers no links on an empty page or a reader error', async () => {
+      const empty = await engineReading(
+        '<a href="https://tag.test/a"></a>',
+      ).execute({url: 'https://e.com/p'});
+      expect(empty.type).toBe('error');
+      expect(empty).not.toHaveProperty('links');
+      expect(isReadUrlAllowed('https://tag.test/a')).toBe(false);
+
+      const read = jest.fn().mockRejectedValue(new Error('https://err.test/x'));
+      const provider: SearchProvider = {id: 'exa', search: jest.fn(), read};
+      const failed = await new ReadUrlEngine(
+        makeAccess({getActiveProvider: () => provider}),
+      ).execute({url: 'https://e.com/p'});
+      expect(failed.type).toBe('error');
+      expect(failed).not.toHaveProperty('links');
+      expect(isReadUrlAllowed('https://err.test/x')).toBe(false);
     });
   });
 

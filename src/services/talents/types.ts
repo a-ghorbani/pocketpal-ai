@@ -17,7 +17,7 @@ export interface WebSearchResultItem {
  */
 export type TalentResult =
   | {type: 'html'; html: string; title?: string; summary: string}
-  | {type: 'text'; summary: string}
+  | {type: 'text'; summary: string; links?: string[]}
   | {
       type: 'search';
       query: string;
