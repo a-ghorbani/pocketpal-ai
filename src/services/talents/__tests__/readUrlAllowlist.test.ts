@@ -281,6 +281,7 @@ describe('readUrlAllowlist', () => {
         ['https://việt.com', 'https://t.com/'],
         ['ʃevil.com', 'https://evil.com/'],
         ['bob＠web-site.com', 'https://web-site.com/'],
+        ['bob﹫web-site.com', 'https://web-site.com/'],
         ['https://a.com?to=evil.com', 'https://evil.com/'],
         ['a.com#x=evil.com', 'https://evil.com/'],
       ])('seeds no site from user text %j', (userText, probe) => {
@@ -386,13 +387,15 @@ describe('readUrlAllowlist', () => {
       expect(isReadUrlAllowed('https://hit.com/a')).toBe(true);
     });
 
-    it('seeds nothing from a long run of dots', () => {
+    it('seeds nothing from a long run of dots', async () => {
       seedReadUrlAllowlist(
         [{role: 'user', content: '.'.repeat(50000) + 'x'}],
         [],
       );
+      // A synchronous overrun only trips the timeout once a timer can fire.
+      await new Promise(resolve => setTimeout(resolve, 0));
       expect(matchReadUrl('https://x/')).toBeNull();
-    });
+    }, 1000);
 
     it('replaces the previous run entirely (reset semantics)', () => {
       allowReadUrls(['https://stale.com/old']);

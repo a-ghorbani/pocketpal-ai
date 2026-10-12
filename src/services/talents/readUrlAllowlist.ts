@@ -106,7 +106,8 @@ const USER_HOST = /^((?:[a-z0-9-]+\.)+[a-z]{2,63})\.*$/;
 const USER_IP = /^(\d{1,3}(?:\.\d{1,3}){3})\.*$/;
 
 function addUserSites(text: string): void {
-  for (const word of text.replace(/\uFF20/g, '@').match(USER_WORD) ?? []) {
+  for (const word of text.replace(/[\uFE6B\uFF20]/g, '@').match(USER_WORD) ??
+    []) {
     const bare = word.replace(/^https?:\/\//i, '');
     const head = bare.split(/[/?#]/)[0];
     if (head.includes('@')) {

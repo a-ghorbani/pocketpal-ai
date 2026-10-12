@@ -842,6 +842,14 @@ const BLOCK: Array<[string, Row]> = [
     },
   ],
   [
+    'the domain of an email address with a small at sign',
+    {
+      user: 'bob﹫web-site.com',
+      request: 'https://web-site.com/',
+      fetched: null,
+    },
+  ],
+  [
     'a host in a query right after a user host',
     {
       user: 'https://a.com?to=evil.com',
