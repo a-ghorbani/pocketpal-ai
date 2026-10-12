@@ -58,10 +58,21 @@ describe('In-app purchase recovery', () => {
     browser.$(withinTestIdPrefix('local-pal-card-', title));
 
   const waitForLocalTitle = async (title: string, timeout = 30000) => {
-    await Gestures.scrollToElement(
-      withinTestIdPrefix('local-pal-card-', title),
-      8,
-    );
+    const card = withinTestIdPrefix('local-pal-card-', title);
+    // On a short screen a swipe can fling the card past the top of the list.
+    if (!(await Gestures.scrollToElement(card, 8))) {
+      for (
+        let i = 0;
+        i < 8 &&
+        !(await localCardTitled(title)
+          .isDisplayed()
+          .catch(() => false));
+        i++
+      ) {
+        await Gestures.swipeDown();
+        await driver.pause(300);
+      }
+    }
     await localCardTitled(title).waitForDisplayed({timeout});
   };
 
@@ -166,7 +177,7 @@ describe('In-app purchase recovery', () => {
       await buyPage.waitFor('owned-button', 90000);
     }));
 
-  it('removes a refunded Pal on the next online launch and never re-verifies it', async () => {
+  it('returns a refunded Pal to Buy, never re-verifies the refund, and sells it again', async () => {
     const {pal, products} = listPal('iap-refund');
     await openPalsWith(openPals, {products});
     await buyToOwned(pal.id);
@@ -178,13 +189,16 @@ describe('In-app purchase recovery', () => {
     await buyPage.openPal(pal.id);
 
     expect(await buyPage.isShown('owned-button', 5000)).toBe(false);
-    expect(await buyPage.isShown('buy-button', 1000)).toBe(false);
+    expect(await buyPage.isShown('buy-button', 5000)).toBe(true);
 
     const before = verifyCount();
     await relaunchApp();
     await openPals();
     await browser.pause(3000);
     expect(verifyCount()).toBe(before);
+
+    await buyToOwned(pal.id);
+    expect(verifyCount()).toBeGreaterThan(before);
   });
 
   it('applies a creator update only after the user confirms it', async () => {
@@ -238,14 +252,15 @@ describe('In-app purchase recovery', () => {
     await chatPage.openDrawer();
     await drawerPage.navigateToSettings();
     await settingsPage.waitForReady();
-    await buyPage.scrollToCard(`purchase-row-${pal.id}`);
-    const note = await browser.$(
-      textContaining(
-        driver.isAndroid
-          ? 'This Pal was withdrawn.'
-          : 'This Pal is no longer available.',
-      ),
+    const noteSelector = textContaining(
+      driver.isAndroid
+        ? 'This Pal was withdrawn.'
+        : 'This Pal is no longer available.',
     );
+    // Scroll to the text leaf: iOS never reports the purchase-row container
+    // as displayed, so scrolling to the row overshoots the note.
+    await Gestures.scrollToElement(noteSelector, 8);
+    const note = await browser.$(noteSelector);
     await note.waitForDisplayed({timeout: 20000});
     const text = await note.getText();
     expect(text).toContain(

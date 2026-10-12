@@ -29,6 +29,7 @@ export type PurchaseOutcome =
 export interface StorePort {
   init(): Promise<boolean>;
   fetchProducts(productIds: string[]): Promise<StoreProduct[]>;
+  storefront(): Promise<string | undefined>;
   purchase(
     productId: string,
     binding: Binding | null,

@@ -1,5 +1,6 @@
 import React from 'react';
-import {Alert} from 'react-native';
+import {Alert, StyleSheet} from 'react-native';
+import LinearGradient from 'react-native-linear-gradient';
 
 import {
   render as baseRender,
@@ -126,6 +127,29 @@ describe('ModelFileCard', () => {
     });
 
     expect(modelStore.cancelDownload).toHaveBeenCalledWith(hfModel1.id);
+  });
+
+  describe('progress fill', () => {
+    const fillWidth = (ui: ReturnType<typeof render>) =>
+      StyleSheet.flatten(ui.UNSAFE_getByType(LinearGradient).props.style).width;
+    const renderWithProgress = (downloading: boolean) => {
+      modelStore.models = [{...hfModel1, isDownloaded: false, progress: 40}];
+      (downloadManager.isDownloading as jest.Mock).mockReturnValue(downloading);
+      return render(
+        <ModelFileCard
+          modelFile={hfModel1.hfModelFile!}
+          hfModel={hfModel1.hfModel!}
+        />,
+      );
+    };
+
+    it('follows progress while downloading', () => {
+      expect(fillWidth(renderWithProgress(true))).toBe('40%');
+    });
+
+    it('stays empty for progress left from a failed download', () => {
+      expect(fillWidth(renderWithProgress(false))).toBe('0%');
+    });
   });
 
   it('disables download button when storage is insufficient', () => {

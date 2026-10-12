@@ -17,7 +17,11 @@ export class TavilyProvider implements SearchProvider {
 
   constructor(private getKey: () => string) {}
 
-  async search(query: string, opts: SearchOptions): Promise<SearchHit[]> {
+  async search(
+    query: string,
+    opts: SearchOptions,
+    signal?: AbortSignal,
+  ): Promise<SearchHit[]> {
     const key = requireKey(this.getKey(), 'Tavily');
     const data = await fetchJson<TavilyResponse>(
       'https://api.tavily.com/search',
@@ -30,6 +34,7 @@ export class TavilyProvider implements SearchProvider {
           max_results: opts.maxResults,
           search_depth: 'basic',
         }),
+        signal,
       },
     );
     return (data.results ?? []).map(r => ({

@@ -52,17 +52,16 @@ const SYSTEM_PROMPT =
 
 const HTML_PROMPT = 'Create a simple hello world webpage with a blue heading';
 
-describe('Talent Tool-Use Pipeline', () => {
+describe('Talent Tool-Use Pipeline', function () {
+  // Qwen3-1.7B (~1 GB) is re-downloaded every run on Android (fullReset) and
+  // its download + load can exceed the default 10-min hook timeout.
+  this.timeout(Math.max(Number(process.env.E2E_MOCHA_TIMEOUT) || 0, 900000));
+
   let chatPage: ChatPage;
   let drawerPage: DrawerPage;
   let palSheetPage: PalSheetPage;
 
-  before(async function (this: Mocha.Context) {
-    // Qwen3-1.7B (~1 GB) is re-downloaded every run on Android (fullReset) and
-    // its download + load can exceed the default 10-min hook timeout on the
-    // emulator late in a long suite. Give the setup hook extra headroom.
-    this.timeout(900000);
-
+  before(async () => {
     chatPage = new ChatPage();
     drawerPage = new DrawerPage();
     palSheetPage = new PalSheetPage();

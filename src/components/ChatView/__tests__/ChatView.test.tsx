@@ -16,6 +16,7 @@ import {ChatEmptyPlaceholder} from '../../ChatEmptyPlaceholder';
 import {NEW_CHAT_DRAFT_KEY, chatSessionStore, modelStore} from '../../../store';
 import {registerDefaultTalents} from '../../../services/talents';
 import DeviceInfo from 'react-native-device-info';
+import * as memoryEstimator from '../../../utils/memoryEstimator';
 
 // talentRegistry (src/services/talents) is the real singleton in Jest; register
 // the built-in engines so render_html (recommendedContextTokens=4096) drives the
@@ -558,5 +559,42 @@ describe('chat', () => {
         expect(isDisabled(menuLabels.copy, getByText)).toBe(false);
       },
     );
+  });
+
+  describe('increase-context CTA memory estimate', () => {
+    afterEach(() => {
+      jest.restoreAllMocks();
+      runInAction(() => {
+        (modelStore as any).activeContextSettings = undefined;
+        modelStore.activeModelId = undefined;
+        modelStore.models = [];
+        modelStore.deviceTier = null;
+      });
+    });
+
+    it('sizes larger context stops with the state checkpoint budget', () => {
+      const memSpy = jest.spyOn(memoryEstimator, 'getModelMemoryRequirement');
+      runInAction(() => {
+        modelStore.activeModelId = 'swa-model';
+        modelStore.models = [
+          {id: 'swa-model', name: 'swa', isDownloaded: true} as any,
+        ];
+        (modelStore as any).activeContextSettings = {n_ctx: 2048};
+        modelStore.deviceTier = 'flagship';
+      });
+
+      render(<ChatView messages={[]} onSendPress={jest.fn()} user={user} />, {
+        withNavigation: true,
+        withBottomSheetProvider: true,
+      });
+
+      expect(memSpy).toHaveBeenCalledWith(
+        expect.objectContaining({id: 'swa-model'}),
+        undefined,
+        expect.objectContaining({state_cache_budget_mb: 160}),
+      );
+      const nCtxs = memSpy.mock.calls.map(call => call[2]?.n_ctx);
+      expect(nCtxs.some(n => (n ?? 0) > 2048)).toBe(true);
+    });
   });
 });

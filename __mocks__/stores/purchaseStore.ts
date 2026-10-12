@@ -17,6 +17,7 @@ class MockPurchaseStore {
   linkConflict = false;
   isRestoring = false;
   needsLink = false;
+  showsLicenseNotice = false;
 
   buy: jest.Mock;
   retry: jest.Mock;
@@ -65,7 +66,7 @@ class MockPurchaseStore {
       (pal: PalsHubPal) =>
         this.availability === 'ready' &&
         !!this.productFor(pal.store_product_id) &&
-        !this.records[pal.id] &&
+        (!this.records[pal.id] || this.records[pal.id].status === 'removed') &&
         !pal.is_owned,
     );
   }
@@ -116,6 +117,7 @@ class MockPurchaseStore {
     this.linkConflict = false;
     this.isRestoring = false;
     this.needsLink = false;
+    this.showsLicenseNotice = false;
   }
 }
 

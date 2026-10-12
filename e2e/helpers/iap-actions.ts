@@ -10,6 +10,7 @@
 
 import {adb as runAdb} from './bench-runner';
 import {byTestId} from './selectors';
+import {withBridgeElements} from './automation-bridge';
 import {IAP_MOCK_PORT} from './iapMockServer';
 
 declare const driver: WebdriverIO.Browser;
@@ -36,13 +37,15 @@ export const reverseMockPort = (): void => {
 
 export async function iapCommand(command: string): Promise<string> {
   if (driver.isAndroid) {
-    const input = await driver.$(byTestId('iap-command-input'));
-    await input.waitForExist({timeout: 15000});
-    await input.setValue(command);
-    await driver.pause(400);
-    const result = await driver.$(byTestId('iap-command-result'));
-    const label = await result.getAttribute('content-desc');
-    return label || (await result.getText());
+    return withBridgeElements(async () => {
+      const input = await driver.$(byTestId('iap-command-input'));
+      await input.waitForExist({timeout: 15000});
+      await input.setValue(command);
+      await driver.pause(400);
+      const result = await driver.$(byTestId('iap-command-result'));
+      const label = await result.getAttribute('content-desc');
+      return label || (await result.getText());
+    });
   }
   await driver.execute('mobile: deepLink', {
     url: `pocketpal://iap?cmd=${encodeURIComponent(command)}`,

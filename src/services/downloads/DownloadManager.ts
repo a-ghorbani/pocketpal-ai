@@ -11,6 +11,7 @@ import {
 
 import {Model} from '../../utils/types';
 import {formatBytes, hasEnoughSpace, hfUserAgent} from '../../utils';
+import {ensureNotificationPermission} from '../../utils/androidPermission';
 import {uiStore} from '../../store';
 import NativeDownloadModule from '../../specs/NativeDownloadModule';
 import type {
@@ -181,7 +182,11 @@ export class DownloadManager {
             job.state.isDownloading = false;
           });
           // Ensure callback is called before removing the job
-          this.callbacks.onError?.(job.model.id, new Error(event.error));
+          this.callbacks.onError?.(
+            job.model.id,
+            new Error(event.error),
+            event.progress ?? 0,
+          );
           runInAction(() => {
             this.downloadJobs.delete(job.model.id);
           });
@@ -495,6 +500,7 @@ export class DownloadManager {
         progressInterval: 1000,
         ...(authToken ? {authToken} : {}),
       };
+      await ensureNotificationPermission();
       const response: DownloadResponse =
         await NativeDownloadModule.startDownload(model.downloadUrl!, config);
 

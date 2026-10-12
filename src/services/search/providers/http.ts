@@ -19,17 +19,32 @@ const withTimeout = async (
   init: RequestInit,
   timeoutMs: number,
 ): Promise<Response> => {
+  const callerSignal = init.signal;
+  if (callerSignal?.aborted) {
+    throw new Error('cancelled');
+  }
   const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), timeoutMs);
+  let firedBy: 'caller' | 'timer' | undefined;
+  const fire = (source: 'caller' | 'timer') => {
+    firedBy ??= source;
+    controller.abort();
+  };
+  const onCallerAbort = () => fire('caller');
+  const timer = setTimeout(() => fire('timer'), timeoutMs);
+  callerSignal?.addEventListener('abort', onCallerAbort);
   try {
     return await fetch(input, {...init, signal: controller.signal});
   } catch (e) {
-    if (e instanceof Error && e.name === 'AbortError') {
+    if (firedBy === 'caller') {
+      throw new Error('cancelled');
+    }
+    if (firedBy === 'timer') {
       throw new Error('timed out');
     }
     throw e;
   } finally {
     clearTimeout(timer);
+    callerSignal?.removeEventListener('abort', onCallerAbort);
   }
 };
 

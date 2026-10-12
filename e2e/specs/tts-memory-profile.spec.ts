@@ -126,7 +126,13 @@ function buildReport(snapshots: MemorySnapshot[]): Record<string, any> {
   };
 }
 
-describe('TTS Memory Profile', () => {
+describe('TTS Memory Profile', function () {
+  // Three model downloads (~770 MB total) plus synthesis far exceed the
+  // shared 10-minute default.
+  this.timeout(
+    Math.max(Number(process.env.E2E_MOCHA_TIMEOUT) || 0, 45 * 60 * 1000),
+  );
+
   let chatPage: ChatPage;
 
   beforeEach(async () => {
@@ -151,10 +157,7 @@ describe('TTS Memory Profile', () => {
     }
   });
 
-  it('should profile TTS engine memory', async function (this: Mocha.Context) {
-    // Three model downloads (~770 MB total) plus synthesis far exceed the
-    // shared 10-minute default — give the whole sweep a generous budget.
-    this.timeout(45 * 60 * 1000);
+  it('should profile TTS engine memory', async () => {
     await clearSnapshots();
 
     for (const engine of ENGINES) {

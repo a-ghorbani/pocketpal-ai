@@ -1,9 +1,13 @@
 import React, {useState, useEffect} from 'react';
-import {View, Alert} from 'react-native';
+import {View, Alert, Platform} from 'react-native';
 
 import {observer} from 'mobx-react-lite';
 import {useSafeAreaInsets} from 'react-native-safe-area-context';
 import {Text, Button, TextInput, ActivityIndicator} from 'react-native-paper';
+import {
+  AppleButton,
+  appleAuth,
+} from '@invertase/react-native-apple-authentication';
 
 import {GoogleIcon} from '../../../assets/icons';
 
@@ -26,6 +30,9 @@ export const AuthSheet: React.FC<AuthSheetProps> = observer(
     const theme = useTheme();
     const insets = useSafeAreaInsets();
     const styles = createStyles(theme);
+    const paperButtonRadius = 5 * theme.roundness;
+    const isAppleSignInAvailable =
+      Platform.OS === 'ios' && appleAuth.isSupported;
 
     const [isSignUp, setIsSignUp] = useState(false);
     const [email, setEmail] = useState('');
@@ -98,6 +105,19 @@ export const AuthSheet: React.FC<AuthSheetProps> = observer(
         Alert.alert('Google Sign-In Error', errorInfo.userMessage);
       } finally {
         setIsLoading(false);
+      }
+    };
+
+    const handleAppleAuth = async () => {
+      if (authService.isLoading) {
+        return;
+      }
+      try {
+        authService.clearError();
+        await authService.signInWithApple();
+      } catch (error) {
+        const errorInfo = PalsHubErrorHandler.handle(error);
+        Alert.alert('Apple Sign-In Error', errorInfo.userMessage);
       }
     };
 
@@ -228,6 +248,19 @@ export const AuthSheet: React.FC<AuthSheetProps> = observer(
             <Text style={styles.authDividerText}>or</Text>
             <View style={styles.authDividerLine} />
           </View>
+
+          {isAppleSignInAvailable && (
+            <AppleButton
+              testID="auth-apple-button"
+              buttonType={AppleButton.Type.SIGN_IN}
+              buttonStyle={
+                theme.dark ? AppleButton.Style.WHITE : AppleButton.Style.BLACK
+              }
+              cornerRadius={paperButtonRadius}
+              style={styles.authAppleButton}
+              onPress={handleAppleAuth}
+            />
+          )}
 
           {/* Google Sign-In */}
           <Button

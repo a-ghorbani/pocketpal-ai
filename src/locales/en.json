@@ -1140,6 +1140,9 @@
       "recommendedModel": "Recommended model",
       "sampleExchange": "Sample conversation",
       "signInLine": "Already own it? Sign in",
+      "licenseNotice": "You're buying a license to use this Pal.",
+      "termsOfSale": "Terms of Sale",
+      "appleMediaTerms": "Apple Media Services Terms",
       "linkPrompt": "Sign in to use it on your other devices too",
       "linkSignIn": "Sign in",
       "dismiss": "Not now",
@@ -1319,7 +1322,8 @@
       "testWarning": "Note: Test could run for up to 2-5 minutes for larger models and cannot be interrupted once started.",
       "keepScreenOpen": "Please keep this screen open.",
       "initializingModel": "Initializing model...",
-      "modelMaxValue": "(max: {{maxValue}})"
+      "modelMaxValue": "(max: {{maxValue}})",
+      "testFailed": "Couldn't run the test. Wait for any reply to finish, then try again."
     },
     "dialogs": {
       "advancedSettings": {
@@ -1623,6 +1627,8 @@
   "downloadBanner": {
     "titleByPal": "{{name}} is downloading",
     "titleByModel": "{{name}} is downloading",
-    "extraInProgress": "+{{count}} more in progress"
+    "extraInProgress": "+{{count}} more in progress",
+    "failedTitle": "Download didn't finish",
+    "retry": "Retry"
   }
 }

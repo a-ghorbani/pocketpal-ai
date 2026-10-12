@@ -33,6 +33,15 @@ describe('contextInitParamsVersions', () => {
       expect(contextInitParams.n_batch).toBe(512);
       expect(contextInitParams.flash_attn).toBe(false);
     });
+
+    it('does not keep the derived state_cache_budget_mb', () => {
+      const contextInitParams = createContextInitParams({
+        n_ctx: 1024,
+        state_cache_budget_mb: 64,
+      });
+
+      expect(contextInitParams).not.toHaveProperty('state_cache_budget_mb');
+    });
   });
 
   describe('migrateContextInitParams', () => {

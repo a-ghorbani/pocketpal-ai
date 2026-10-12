@@ -114,6 +114,10 @@ class FakeStore implements StorePort {
       .map(id => ({productId: id, displayPrice: this.state.products[id]}));
   }
 
+  async storefront(): Promise<string | undefined> {
+    return undefined;
+  }
+
   async purchase(
     productId: string,
     binding: Binding | null,

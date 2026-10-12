@@ -3,6 +3,8 @@
  * Provides reusable gesture actions using W3C WebDriver Actions API
  */
 
+import {byTestId} from './selectors';
+
 // WebdriverIO globals - available during test execution
 declare const browser: WebdriverIO.Browser;
 declare const driver: WebdriverIO.Browser;
@@ -13,6 +15,8 @@ interface SwipeOptions {
   startYPercent?: number;
   endXPercent?: number;
   endYPercent?: number;
+  /** Rest before lifting the finger, so the list stops instead of flinging. */
+  holdMs?: number;
 }
 
 interface ScreenSize {
@@ -44,6 +48,7 @@ async function swipe(options: SwipeOptions = {}): Promise<void> {
     startYPercent = 0.5,
     endXPercent = 0.5,
     endYPercent = 0.5,
+    holdMs = 0,
   } = options;
 
   const {width, height} = await getScreenSize();
@@ -63,6 +68,7 @@ async function swipe(options: SwipeOptions = {}): Promise<void> {
         {type: 'pointerDown', button: 0},
         {type: 'pause', duration: 100},
         {type: 'pointerMove', duration, x: endX, y: endY},
+        ...(holdMs ? [{type: 'pause', duration: holdMs}] : []),
         {type: 'pointerUp', button: 0},
       ],
     },
@@ -207,6 +213,19 @@ async function nativeScrollIntoView(selector: string): Promise<boolean> {
 }
 
 /**
+ * Scroll a sheet up by a fixed distance without a fling, which on a short
+ * screen can carry a target past the viewport between two checks.
+ */
+async function dragUpInSheet(): Promise<void> {
+  await swipe({
+    startYPercent: 0.6,
+    endYPercent: 0.4,
+    duration: 300,
+    holdMs: 300,
+  });
+}
+
+/**
  * Swipe up within a bottom sheet (uses safer coordinates)
  * Avoids the bottom navigation gesture area on Android
  */
@@ -279,7 +298,28 @@ async function swipeUpInSheetBelowInputs(): Promise<void> {
     startYPercent: 0.78,
     endYPercent: 0.42,
     duration: 300,
+    holdMs: 300,
   });
+}
+
+async function dragDownInSheet(): Promise<void> {
+  await swipe({
+    startYPercent: 0.4,
+    endYPercent: 0.6,
+    duration: 300,
+    holdMs: 300,
+  });
+}
+
+/** Bottom edge of the topmost sheet's header (its close button), or 0. */
+async function sheetHeaderBottom(): Promise<number> {
+  const buttons = browser.$$(byTestId('sheet-close-button'));
+  const count = await buttons.length;
+  const top = count > 0 ? buttons[count - 1] : undefined;
+  if (!top || !(await top.isExisting().catch(() => false))) {
+    return 0;
+  }
+  return (await top.getLocation('y')) + (await top.getSize('height'));
 }
 
 /**
@@ -298,7 +338,7 @@ async function scrollInSheetClearOfOverlay(
   selector: string,
   overlay: string,
   maxScrolls = 8,
-  scroll: () => Promise<void> = swipeUpInSheet,
+  scroll: () => Promise<void> = dragUpInSheet,
 ): Promise<boolean> {
   for (let i = 0; i < maxScrolls; i++) {
     const element = browser.$(selector);
@@ -309,8 +349,15 @@ async function scrollInSheetClearOfOverlay(
       const overlayTop = (await overlayEl.isExisting().catch(() => false))
         ? (await overlayEl.getLocation()).y
         : (await getScreenSize()).height;
-      if (loc.y >= 0 && loc.y + size.height <= overlayTop) {
+      const headerBottom = await sheetHeaderBottom();
+      if (loc.y >= headerBottom && loc.y + size.height <= overlayTop) {
         return true;
+      }
+      if (loc.y < headerBottom) {
+        // Scrolled under the sheet header, where a tap hits the header.
+        await dragDownInSheet();
+        await driver.pause(300);
+        continue;
       }
     }
     await scroll();
@@ -338,7 +385,7 @@ async function scrollInSheetToElementExists(
     } catch {
       // Element not found yet
     }
-    await swipeUpInSheet();
+    await dragUpInSheet();
     await driver.pause(300);
   }
   return false;
@@ -355,6 +402,7 @@ export const Gestures = {
   swipeToOpenDrawer,
   scrollToElement,
   swipeUpInSheet,
+  dragUpInSheet,
   swipeUpInSheetBelowInputs,
   scrollInSheetToElement,
   scrollInSheetClearOfOverlay,

@@ -23,6 +23,7 @@ import {
   ServerConfig,
 } from '../../utils/types';
 import {getDisplayNameFromFilename} from '../../utils/formatters';
+import {getModelMemoryRequirement} from '../../utils/memoryEstimator';
 import {
   basicModel,
   createModel,
@@ -117,6 +118,9 @@ const presetModelFixture: Model = createModel({
   origin: ModelOrigin.PRESET,
   params: 2614341888,
 }) as Model;
+
+const registeredDownloadCallbacks = (downloadManager.setCallbacks as jest.Mock)
+  .mock.calls[0][0];
 
 describe('ModelStore', () => {
   let showErrorSpy: jest.SpyInstance;
@@ -261,10 +265,23 @@ describe('ModelStore', () => {
       },
     );
 
+    it.each([{devices: undefined}, {devices: []}, {devices: ['CPU']}])(
+      'loads Android CPU selection $devices without accelerator offloading',
+      async ({devices}) => {
+        modelStore.setDevices(devices);
+        const saved = {...modelStore.contextInitParams};
+        await modelStore.initContext(basicModel);
+        expect(nativeInit).toHaveBeenCalledTimes(1);
+        expect(nativeInit.mock.calls[0][0]).toMatchObject({
+          devices: ['CPU'],
+          n_gpu_layers: 0,
+        });
+        expect(modelStore.contextInitParams).toEqual(saved);
+        expect(discover).not.toHaveBeenCalled();
+      },
+    );
+
     it.each([
-      {os: 'android', devices: undefined},
-      {os: 'android', devices: []},
-      {os: 'android', devices: ['CPU']},
       {os: 'android', devices: ['Adreno']},
       {os: 'ios', devices: undefined},
       {os: 'ios', devices: ['Metal']},
@@ -2148,28 +2165,25 @@ describe('ModelStore', () => {
       expect(model.progress).toBe(0);
     });
 
-    it('should update model state on download error', () => {
-      const model = presetModelFixture;
+    it('keeps the progress the native side kept when a download fails', () => {
+      const model = {...presetModelFixture, progress: 42, isDownloaded: false};
       modelStore.models = [model];
 
-      // Set up callbacks directly
-      const callbacks = {
-        onError: (modelId: string) => {
-          const _model = modelStore.models.find(m => m.id === modelId);
-          if (_model) {
-            runInAction(() => {
-              _model.progress = 0;
-              model.isDownloaded = false;
-            });
-          }
-        },
-      };
+      registeredDownloadCallbacks.onError(model.id, new Error('stalled'), 40);
 
-      // Trigger error callback
-      callbacks.onError(model.id);
+      expect(modelStore.models[0].progress).toBe(40);
+      expect(modelStore.models[0].isDownloaded).toBe(false);
+      expect(modelStore.downloadError?.metadata?.modelId).toBe(model.id);
+    });
 
-      expect(model.progress).toBe(0);
-      expect(model.isDownloaded).toBe(false);
+    it('resets progress when a failed download kept no bytes', () => {
+      const model = {...presetModelFixture, progress: 42, isDownloaded: false};
+      modelStore.models = [model];
+
+      registeredDownloadCallbacks.onError(model.id, new Error('Network'));
+
+      expect(modelStore.models[0].progress).toBe(0);
+      expect(modelStore.downloadError?.metadata?.modelId).toBe(model.id);
     });
 
     it('should not set downloadError when a download is cancelled', async () => {
@@ -3054,6 +3068,31 @@ describe('ModelStore', () => {
         );
         expect(params.spec_draft_n_max).toBeUndefined();
       });
+    });
+
+    describe('state checkpoint budget', () => {
+      afterEach(() => {
+        runInAction(() => {
+          modelStore.deviceTier = null;
+        });
+      });
+
+      it.each([
+        ['low', 64],
+        [null, 64],
+        ['mid', 160],
+        ['high', 160],
+        ['flagship', 160],
+      ] as const)(
+        'sends state_cache_budget_mb for tier %s as %i',
+        async (tier, budget) => {
+          runInAction(() => {
+            modelStore.deviceTier = tier;
+          });
+          const params = await modelStore.getEffectiveContextInitParams();
+          expect(params.state_cache_budget_mb).toBe(budget);
+        },
+      );
     });
   });
 
@@ -4483,6 +4522,46 @@ describe('ModelStore', () => {
 
       // initLlama should only be called once (first call only)
       expect(initLlamaMock).toHaveBeenCalledTimes(1);
+    });
+
+    it('records a calibration estimate without the checkpoint budget', async () => {
+      const model = {
+        ...basicModel,
+        ggufMetadata: {
+          architecture: 'gemma3',
+          n_layers: 26,
+          n_embd: 1152,
+          n_head: 4,
+          n_head_kv: 1,
+          n_vocab: 262144,
+          n_embd_head_k: 256,
+          n_embd_head_v: 256,
+          sliding_window: 512,
+        },
+      };
+      initLlamaMock.mockReset();
+      initLlamaMock.mockResolvedValue({
+        release: jest.fn(),
+      } as unknown as LlamaContext);
+      runInAction(() => {
+        modelStore.deviceTier = 'low';
+        modelStore.largestSuccessfulLoad = undefined;
+      });
+
+      await modelStore.initContext(model);
+
+      const settings = modelStore.activeContextSettings!;
+      expect(settings).not.toHaveProperty('state_cache_budget_mb');
+      expect(modelStore.largestSuccessfulLoad).toBe(
+        getModelMemoryRequirement(model, undefined, {
+          ...settings,
+          state_cache_budget_mb: 0,
+        }),
+      );
+      expect(initLlamaMock.mock.calls[0][0].state_cache_budget_mb).toBe(64);
+      runInAction(() => {
+        modelStore.deviceTier = null;
+      });
     });
 
     it('should clear isContextLoading after successful init', async () => {

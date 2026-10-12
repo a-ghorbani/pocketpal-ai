@@ -11,10 +11,16 @@ import {
   RemoteSessionBinding,
 } from '../../src/utils/types';
 import type {Samplers} from '../../src/utils/samplerParams';
+import type {ErrorState} from '../../src/utils/errors';
 import {LlamaContext} from 'llama.rn';
 import {CompletionEngine} from '../../src/utils/completionTypes';
 import {GenerationSlot} from '../../src/store/generationLease';
 import {createDefaultContextInitParams} from '../../src/utils/contextInitParamsVersions';
+import {
+  MemoryEstimateSettings,
+  stateCacheBudgetMb,
+} from '../../src/utils/memoryEstimator';
+import type {Tier} from '../../src/services/deviceRules/types';
 import {
   draftCacheDefaults,
   effectiveDraftModeOf,
@@ -29,6 +35,7 @@ import type {
 class MockModelStore {
   models = modelsList;
   contextInitParams: ContextInitParams = createDefaultContextInitParams();
+  deviceTier: Tier | null = null;
   max_threads = 4;
   MIN_CONTEXT_SIZE = 200;
   useAutoRelease = true;
@@ -46,6 +53,9 @@ class MockModelStore {
   largestSuccessfulLoad: number | undefined = 4 * 1e9; // 4GB largest successful load
 
   refreshDownloadStatuses: jest.Mock;
+  retryDownload: jest.Mock;
+  clearDownloadError: jest.Mock;
+  downloadError: ErrorState | null = null;
   addLocalModel: jest.Mock;
   removeModelByFullPath: jest.Mock;
   setNContext: jest.Mock;
@@ -109,6 +119,8 @@ class MockModelStore {
     makeAutoObservable(this, {
       engine: observable.ref,
       refreshDownloadStatuses: false,
+      retryDownload: false,
+      clearDownloadError: false,
       addLocalModel: false,
       removeModelByFullPath: false,
       setNContext: false,
@@ -162,6 +174,7 @@ class MockModelStore {
       generationSlot: false,
       isGenerationBusy: false,
       contextId: computed,
+      memoryEstimateSettings: computed,
       lastUsedModel: computed,
       activeModel: computed,
       activeModelCaps: computed,
@@ -170,9 +183,11 @@ class MockModelStore {
       effectiveDraftMode: computed,
       effectiveDraftCacheDefaults: computed,
       isDownloading: computed,
-      activeDownloads: computed,
+      activeDownloads: false,
     });
     this.refreshDownloadStatuses = jest.fn();
+    this.retryDownload = jest.fn();
+    this.clearDownloadError = jest.fn();
     this.addLocalModel = jest.fn();
     this.removeModelByFullPath = jest.fn();
     this.setNContext = jest.fn();
@@ -286,6 +301,13 @@ class MockModelStore {
   resetGenerationSlot = () => {
     this.generationSlot = new GenerationSlot();
   };
+
+  get memoryEstimateSettings(): MemoryEstimateSettings {
+    return {
+      ...this.contextInitParams,
+      state_cache_budget_mb: stateCacheBudgetMb(this.deviceTier),
+    };
+  }
 
   get contextId(): string | undefined {
     if (this.context) {

@@ -21,6 +21,15 @@ const formatSize = (bytes: number): string => {
   return `${Math.round(bytes / (1024 * 1024))} MB`;
 };
 
+// Users think "Pip is downloading", not the filename.
+const ownerOf = (modelId: string, modelName: string) => {
+  const pal = palStore.pals.find(
+    p =>
+      p.source === 'local' && p.defaultModel && p.defaultModel.id === modelId,
+  );
+  return {pal, subject: pal ? pal.name : modelName};
+};
+
 /**
  * Sticky single-row banner showing the first non-dismissed active download.
  *
@@ -31,12 +40,101 @@ const formatSize = (bytes: number): string => {
  *     model so the user can resume from the Models screen.
  *   - × icon  → dismisses the banner for this download only. Download
  *     continues. Dismissal clears when the download disappears.
+ *   - Failed → Retry replaces Stop; × clears the error.
  */
 export const DownloadBanner: React.FC = observer(() => {
   const theme = useTheme();
   const styles = createStyles(theme);
   const navigation = useNavigation<NavigationProp<any>>();
   const l10n = useContext(L10nContext);
+
+  const failedId = modelStore.downloadError?.metadata?.modelId;
+  const failedModel =
+    failedId && !modelStore.isDownloading(failedId)
+      ? modelStore.models.find(m => m.id === failedId)
+      : undefined;
+  if (failedModel) {
+    const failedTitle = l10n.downloadBanner.failedTitle;
+    const {pal: failedPal, subject: failedSubject} = ownerOf(
+      failedModel.id,
+      failedModel.name,
+    );
+    const activeCount = modelStore.activeDownloads.length;
+    const failedLabel = [
+      failedTitle,
+      failedSubject,
+      ...(activeCount > 0
+        ? [
+            l10n.downloadBanner.extraInProgress.replace(
+              '{{count}}',
+              String(activeCount),
+            ),
+          ]
+        : []),
+    ].join(', ');
+    return (
+      <View testID="download-banner-failed" style={styles.root}>
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel={failedLabel}
+          onPress={() => navigation.navigate(ROUTES.MODELS as never)}
+          style={styles.body}>
+          <View
+            accessibilityElementsHidden
+            importantForAccessibility="no-hide-descendants"
+            style={[
+              styles.avatar,
+              failedPal?.color?.[0]
+                ? {backgroundColor: failedPal.color[0]}
+                : null,
+            ]}
+          />
+          <View style={styles.content}>
+            <Text style={[styles.title, styles.failedTitle]} numberOfLines={1}>
+              {failedTitle}
+            </Text>
+            <View
+              testID="download-banner-failed-detail"
+              style={styles.titleRow}>
+              <Text
+                style={[styles.eta, styles.failedSubject]}
+                numberOfLines={1}
+                ellipsizeMode="tail">
+                {failedSubject}
+              </Text>
+              {activeCount > 0 ? (
+                <View testID="download-banner-extra-badge" style={styles.badge}>
+                  <Text style={styles.badgeText}>{`+${activeCount}`}</Text>
+                </View>
+              ) : null}
+            </View>
+          </View>
+        </Pressable>
+        <Pressable
+          testID="download-banner-retry"
+          accessibilityRole="button"
+          accessibilityLabel={l10n.downloadBanner.retry}
+          onPress={() => modelStore.retryDownload()}
+          style={styles.stop}
+          hitSlop={8}>
+          <Text style={styles.stopText}>{l10n.downloadBanner.retry}</Text>
+        </Pressable>
+        <Pressable
+          testID="download-banner-dismiss"
+          accessibilityRole="button"
+          accessibilityLabel={l10n.common.dismiss}
+          onPress={() => modelStore.clearDownloadError()}
+          style={styles.dismiss}
+          hitSlop={8}>
+          <XIcon
+            width={14}
+            height={14}
+            stroke={theme.colors.onSurfaceVariant}
+          />
+        </Pressable>
+      </View>
+    );
+  }
 
   const visible = modelStore.activeDownloads.find(
     d => !uiStore.isDownloadBannerDismissed(d.modelId),
@@ -45,17 +143,7 @@ export const DownloadBanner: React.FC = observer(() => {
     return null;
   }
 
-  // Match the download's model id to a local pal so we can show the pal
-  // name (the user's mental model is "Pip is downloading", not the
-  // filename). Falls back to the model name when no pal owns it (manual
-  // download from Models screen).
-  const pal = palStore.pals.find(
-    p =>
-      p.source === 'local' &&
-      p.defaultModel &&
-      p.defaultModel.id === visible.modelId,
-  );
-  const subject = pal ? pal.name : visible.model.name;
+  const {pal, subject} = ownerOf(visible.modelId, visible.model.name);
   const title = (
     pal ? l10n.downloadBanner.titleByPal : l10n.downloadBanner.titleByModel
   ).replace('{{name}}', subject);
