@@ -818,6 +818,42 @@ const BLOCK: Array<[string, Row]> = [
     },
   ],
   [
+    'the ASCII tail of a decomposed accented host',
+    {user: 'bu\u0308cher.de', request: 'https://cher.de/', fetched: null},
+  ],
+  [
+    'the ASCII tail of a Vietnamese host',
+    {user: 'điệnthoại.vn', request: 'https://i.vn/', fetched: null},
+  ],
+  [
+    'the ASCII tail of a Vietnamese host in a URL',
+    {user: 'https://việt.com', request: 'https://t.com/', fetched: null},
+  ],
+  [
+    'the ASCII tail after an IPA letter',
+    {user: 'ʃevil.com', request: 'https://evil.com/', fetched: null},
+  ],
+  [
+    'the domain of an email address with a fullwidth at sign',
+    {
+      user: 'bob＠web-site.com',
+      request: 'https://web-site.com/',
+      fetched: null,
+    },
+  ],
+  [
+    'a host in a query right after a user host',
+    {
+      user: 'https://a.com?to=evil.com',
+      request: 'https://evil.com/',
+      fetched: null,
+    },
+  ],
+  [
+    'a host in a fragment right after a user host',
+    {user: 'a.com#x=evil.com', request: 'https://evil.com/', fetched: null},
+  ],
+  [
     'a host behind a non-http scheme',
     {
       user: 'ftp://web-site.com',
@@ -860,6 +896,54 @@ ALLOW.push(
     {
       user: 'HTTPS://WEB-SITE.COM/A',
       request: 'https://web-site.com/b',
+      fetched: CANONICAL,
+    },
+  ],
+  [
+    'a host the user wrote in single quotes',
+    {
+      user: "'web-site.com'",
+      request: 'https://web-site.com/',
+      fetched: CANONICAL,
+    },
+  ],
+  [
+    'a host the user wrote in backticks',
+    {
+      user: '`web-site.com`',
+      request: 'https://web-site.com/',
+      fetched: CANONICAL,
+    },
+  ],
+  [
+    'a host the user wrote in square brackets',
+    {
+      user: '[web-site.com]',
+      request: 'https://web-site.com/',
+      fetched: CANONICAL,
+    },
+  ],
+  [
+    'a host the user wrote in braces',
+    {
+      user: '{web-site.com}',
+      request: 'https://web-site.com/',
+      fetched: CANONICAL,
+    },
+  ],
+  [
+    'the first of two hosts the user joined with a bar',
+    {user: 'a.com|b.com', request: 'https://a.com/', fetched: CANONICAL},
+  ],
+  [
+    'the second of two hosts the user joined with a bar',
+    {user: 'a.com|b.com', request: 'https://b.com/', fetched: CANONICAL},
+  ],
+  [
+    'an IP URL the user wrote before a period',
+    {
+      user: 'see http://192.168.1.10.',
+      request: 'http://192.168.1.10/status',
       fetched: CANONICAL,
     },
   ],

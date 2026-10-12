@@ -203,6 +203,13 @@ describe('readUrlAllowlist', () => {
         ['**web-site.com**', 'https://web-site.com/'],
         ['HTTPS://WEB-SITE.COM/A', 'https://web-site.com/b'],
         ['https://medium.com/@user', 'https://medium.com/x'],
+        ["'web-site.com'", 'https://web-site.com/'],
+        ['`web-site.com`', 'https://web-site.com/'],
+        ['[web-site.com]', 'https://web-site.com/'],
+        ['{web-site.com}', 'https://web-site.com/'],
+        ['a.com|b.com', 'https://a.com/'],
+        ['a.com|b.com', 'https://b.com/'],
+        ['see http://192.168.1.10.', 'http://192.168.1.10/status'],
       ])('seeds the named host from user text %j', (userText, request) => {
         seedReadUrlAllowlist([{role: 'user', content: userText}], []);
         expect(matchReadUrl(request)).not.toBeNull();
@@ -269,6 +276,13 @@ describe('readUrlAllowlist', () => {
         ['my_host.example.com', 'https://host.example.com/'],
         ['ftp://web-site.com', 'https://web-site.com/'],
         ['пример2.com', 'https://2.com/'],
+        ['bu\u0308cher.de', 'https://cher.de/'],
+        ['điệnthoại.vn', 'https://i.vn/'],
+        ['https://việt.com', 'https://t.com/'],
+        ['ʃevil.com', 'https://evil.com/'],
+        ['bob＠web-site.com', 'https://web-site.com/'],
+        ['https://a.com?to=evil.com', 'https://evil.com/'],
+        ['a.com#x=evil.com', 'https://evil.com/'],
       ])('seeds no site from user text %j', (userText, probe) => {
         seedReadUrlAllowlist([{role: 'user', content: userText}], []);
         expect(matchReadUrl(probe)).toBeNull();
@@ -370,6 +384,14 @@ describe('readUrlAllowlist', () => {
         ],
       );
       expect(isReadUrlAllowed('https://hit.com/a')).toBe(true);
+    });
+
+    it('seeds nothing from a long run of dots', () => {
+      seedReadUrlAllowlist(
+        [{role: 'user', content: '.'.repeat(50000) + 'x'}],
+        [],
+      );
+      expect(matchReadUrl('https://x/')).toBeNull();
     });
 
     it('replaces the previous run entirely (reset semantics)', () => {

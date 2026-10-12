@@ -99,21 +99,25 @@ export function extractUrls(text: string): string[] {
   return (text.match(URL_PATTERN) ?? []).map(trimUrl);
 }
 
-// Non-ASCII breaks words, except Latin, Greek and Cyrillic letters.
-const USER_WORD = /[^\s"'`<>()[\]{}\u0080-\u00BF\u0250-\u036F\u0500-\uFFFF]+/g;
-const USER_HOST = /^(?:[a-z0-9-]+\.)+[a-z]{2,63}$/i;
-const USER_IP = /^\d{1,3}(?:\.\d{1,3}){3}$/;
+// Breaks at Latin-1 symbols and at Hebrew-onward scripts, punctuation and
+// emoji; Latin (with combining marks and Vietnamese), Greek, Cyrillic stay.
+const USER_WORD = /[^\s"'`<>()[\]{}\u0080-\u00BF\u0590-\u1DBF\u2000-\uFFFF]+/g;
+const USER_HOST = /^((?:[a-z0-9-]+\.)+[a-z]{2,63})\.*$/;
+const USER_IP = /^(\d{1,3}(?:\.\d{1,3}){3})\.*$/;
 
 function addUserSites(text: string): void {
-  for (const word of text.match(USER_WORD) ?? []) {
+  for (const word of text.replace(/\uFF20/g, '@').match(USER_WORD) ?? []) {
     const bare = word.replace(/^https?:\/\//i, '');
     const head = bare.split(/[/?#]/)[0];
     if (head.includes('@')) {
       continue;
     }
     for (const part of head.split(/[!$&*+,;=:|]/)) {
-      const host = part.replace(/\.+$/, '').toLowerCase();
-      if (USER_HOST.test(host) || (bare !== word && USER_IP.test(host))) {
+      const lower = part.toLowerCase();
+      const host =
+        USER_HOST.exec(lower)?.[1] ??
+        (bare !== word ? USER_IP.exec(lower)?.[1] : undefined);
+      if (host) {
         userSites.add(siteKey(host));
       }
     }
