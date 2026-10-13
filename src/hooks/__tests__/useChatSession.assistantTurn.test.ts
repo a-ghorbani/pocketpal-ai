@@ -13,7 +13,6 @@ import {chatSessionStore, modelStore, palStore, serverStore} from '../../store';
 import {resolveBannerVariant} from '../../utils/bannerVariantResolver';
 import {ModelOrigin} from '../../utils/types';
 import {assistant} from '../../utils/chat';
-import {chatSessionRepository} from '../../repositories/ChatSessionRepository';
 import {talentRegistry} from '../../services/talents';
 import type {MessageType} from '../../utils/types';
 import type {TalentEngine, TalentResult} from '../../services/talents/types';
@@ -1020,16 +1019,21 @@ describe('useChatSession — AssistantTurn integration', () => {
     (talentRegistry as any).engines.delete('calculate');
   });
 
-  it('#hookTest6 abort with no partial content: empty turn deleted via repository, no interrupted-metadata write', async () => {
+  it('#hookTest6 abort with no partial content: empty turn deleted via the store, no interrupted-metadata write', async () => {
     // The runner throws BEFORE any token / step_finished. The hook's
     // catch path sees `hasPartialContent === false` → calls
-    // chatSessionRepository.deleteMessage(turnId) and skips the
+    // chatSessionStore.deleteMessageFromSession(sessionId, turnId) and skips the
     // updateMessage({metadata: {interrupted, copyable}}) write. A
     // system message about the failure is added below.
     const errSpy = jest.spyOn(console, 'error').mockImplementation(() => {});
-    const deleteMessageSpy = jest
-      .spyOn(chatSessionRepository, 'deleteMessage')
-      .mockResolvedValue(undefined);
+    const deleteMessageSpy = (
+      chatSessionStore.deleteMessageFromSession as jest.Mock
+    ).mockImplementation(async (sessionId: string, id: string) => {
+      const owner = chatSessionStore.sessions.find(s => s.id === sessionId);
+      if (owner) {
+        owner.messages = owner.messages.filter(m => m.id !== id);
+      }
+    });
 
     if (modelStore.context) {
       modelStore.context.completion = jest
@@ -1089,8 +1093,8 @@ describe('useChatSession — AssistantTurn integration', () => {
       await result.current.handleSendPress(textMessage);
     });
 
-    // PATH B: the empty turn is deleted from the repository.
-    expect(deleteMessageSpy).toHaveBeenCalledWith(turnId);
+    // PATH B: the empty turn is deleted from its session.
+    expect(deleteMessageSpy).toHaveBeenCalledWith('session-1', turnId);
 
     // No `interrupted` metadata write — that branch only fires when
     // partial content exists. Filter all updateMessage calls to
@@ -1100,8 +1104,7 @@ describe('useChatSession — AssistantTurn integration', () => {
     );
     expect(interruptedCalls).toHaveLength(0);
 
-    // The empty turn is removed from the in-memory session by the
-    // catch path's runInAction filter.
+    // The empty turn is removed from the in-memory session.
     const session = chatSessionStore.sessions.find(s => s.id === 'session-1');
     expect(session?.messages.find((m: any) => m.id === turnId)).toBeUndefined();
 
@@ -1112,7 +1115,8 @@ describe('useChatSession — AssistantTurn integration', () => {
     ).mock.calls.find(c => c[0]?.metadata?.system === true);
     expect(sysCall).toBeDefined();
 
-    deleteMessageSpy.mockRestore();
+    deleteMessageSpy.mockReset();
+    deleteMessageSpy.mockResolvedValue(undefined);
     errSpy.mockRestore();
   });
 

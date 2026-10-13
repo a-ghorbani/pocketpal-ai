@@ -1,4 +1,5 @@
 import {profileFor, readFinish, SERVER_PROFILES} from '../index';
+import {SERVER_TYPE_OPTIONS} from '../../../utils/serverTypes';
 import type {ServerType} from '../../../utils/serverTypes';
 import {streamFinishChunk} from '../../../../jest/fixtures/llamaServerWire';
 
@@ -20,6 +21,32 @@ describe('profileFor', () => {
 
   it('resolves a known type to its own profile', () => {
     expect(profileFor('llama.cpp')).toBe(SERVER_PROFILES['llama.cpp']);
+  });
+});
+
+describe('hasRouter', () => {
+  const rows: Array<[unknown, boolean]> = [
+    ['llama.cpp', true],
+    ['LM Studio', false],
+    ['Ollama', false],
+    ['OpenAI', false],
+    ['vLLM', false],
+    ['unknown', false],
+    ['', false],
+    [undefined, false],
+    ['LLAMA.CPP', false],
+    ['my server', false],
+    [42, false],
+  ];
+
+  it('covers every selectable server type', () => {
+    expect(
+      SERVER_TYPE_OPTIONS.every(type => rows.some(([v]) => v === type)),
+    ).toBe(true);
+  });
+
+  it.each(rows)('reads %p as %p', (raw, expected) => {
+    expect(profileFor(raw as ServerType).hasRouter).toBe(expected);
   });
 });
 

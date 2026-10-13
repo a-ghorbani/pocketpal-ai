@@ -22,6 +22,7 @@ import {
 
 import {MessageType} from '../../utils/types';
 import {excludeDerivedMessageProps, UserContext} from '../../utils';
+import {visibleStepContent} from '../../utils/chat';
 
 const hapticOptions = {
   enableVibrateFallback: true,
@@ -345,8 +346,7 @@ export const Message = observer(
         const hasReasoning =
           step.reasoningContent !== undefined &&
           step.reasoningContent.length > 0;
-        const hasContent =
-          step.content !== undefined && step.content.length > 0;
+        const hasContent = visibleStepContent(step).length > 0;
 
         if (hasReasoning) {
           // Auto-collapse the reasoning bubble once content has begun

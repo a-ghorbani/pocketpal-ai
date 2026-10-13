@@ -4,7 +4,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import {makePersistable} from 'mobx-persist-store';
 import * as Keychain from 'react-native-keychain';
 
-import {fetchModels, testConnection} from '../api/openai';
+import {fetchModelsWithHeaders, testConnection} from '../api/openai';
 import {fetchServerProps, PROPS_TIMEOUT_MS} from '../api/llamaServer/props';
 import {
   ListDerivedCaps,
@@ -65,6 +65,19 @@ function dropServerEntries<T>(
   );
 }
 
+/**
+ * What the latest list read of one server established. Live-only: it describes
+ * a backend the app may not reach next launch.
+ */
+export interface ListRead {
+  /** `readSeq` after this read's start, so later-started reads compare higher. */
+  seq: number;
+  /** The body carried a top-level `models` key (a single-model server does). */
+  hasModelsKey: boolean;
+  /** The latest read failed and none has succeeded since. */
+  stale: boolean;
+}
+
 class ServerStore {
   servers: ServerConfig[] = [];
   // Remote reasoning capability keyed by full model id (`${serverId}/${remoteModelId}`).
@@ -79,7 +92,10 @@ class ServerStore {
   isLoading = false;
   error: string | null = null;
   privacyNoticeAcknowledged = false;
+  listReads: Record<string, ListRead> = {};
+  appActive = true;
 
+  private readCounter = 0;
   private lastFetchTime = 0;
   private appStateSubscription: any = null;
 
@@ -117,6 +133,11 @@ class ServerStore {
       }
     }
     await this.fetchAllRemoteModels();
+  }
+
+  /** Counts every list read at its start, store-wide. */
+  get readSeq(): number {
+    return this.readCounter;
   }
 
   // Actions
@@ -161,14 +182,14 @@ class ServerStore {
 
     if (invalidatesDiscovery) {
       this.remoteCaps = dropServerEntries(this.remoteCaps, id);
-      this.serverModels.delete(id);
+      this.dropList(id);
     }
     return invalidatesDiscovery;
   }
 
   removeServer(id: string): void {
     this.servers = this.servers.filter(s => s.id !== id);
-    this.serverModels.delete(id);
+    this.dropList(id);
     // Remove all user-selected models for this server
     this.userSelectedModels = this.userSelectedModels.filter(
       m => m.serverId !== id,
@@ -177,6 +198,12 @@ class ServerStore {
     this.remoteCaps = dropServerEntries(this.remoteCaps, id);
     // Clean up API key from keychain
     this.removeApiKey(id);
+  }
+
+  /** The list and the record of the read that produced it go together. */
+  private dropList(id: string): void {
+    this.serverModels.delete(id);
+    delete this.listReads[id];
   }
 
   addUserSelectedModel(serverId: string, remoteModelId: string): void {
@@ -289,40 +316,67 @@ class ServerStore {
     }
   }
 
-  // Remote model fetching
-  async fetchModelsForServer(serverId: string): Promise<void> {
+  /**
+   * The only writer of `serverModels` and `listReads`. A response from a url
+   * the server has since left, or one overtaken by a later-started read,
+   * writes nothing: a late older answer must not settle against newer state.
+   */
+  async fetchModelsForServer(
+    serverId: string,
+  ): Promise<{ok: boolean; error?: string}> {
     const server = this.servers.find(s => s.id === serverId);
     if (!server) {
-      return;
+      return {ok: false};
     }
 
-    runInAction(() => {
-      this.isLoading = true;
-      this.error = null;
-    });
+    const seq = ++this.readCounter;
+    this.isLoading = true;
+    this.error = null;
 
     const {url} = server;
     try {
       const apiKey = await this.getApiKey(serverId);
-      const models = await fetchModels(url, apiKey, server.requestTimeoutMs);
+      const {models, hasModelsKey} = await fetchModelsWithHeaders(
+        url,
+        apiKey,
+        server.requestTimeoutMs,
+      );
 
       runInAction(() => {
-        const current = this.servers.find(s => s.id === serverId);
-        if (current?.url === url) {
-          this.serverModels.set(serverId, models);
-          current.lastConnected = Date.now();
-        }
         this.isLoading = false;
+        const current = this.servers.find(s => s.id === serverId);
+        if (current?.url !== url || this.isOvertaken(serverId, seq)) {
+          return;
+        }
+        this.serverModels.set(serverId, models);
+        this.listReads[serverId] = {
+          seq,
+          hasModelsKey: hasModelsKey === true,
+          stale: false,
+        };
+        current.lastConnected = Date.now();
       });
+      return {ok: true};
     } catch (error: any) {
+      const message: string = error.message || 'Failed to fetch models';
       runInAction(() => {
-        const current = this.servers.find(s => s.id === serverId);
-        if (current?.url === url) {
-          this.error = error.message || 'Failed to fetch models';
-        }
         this.isLoading = false;
+        const current = this.servers.find(s => s.id === serverId);
+        if (current?.url !== url) {
+          return;
+        }
+        this.error = message;
+        const read = this.listReads[serverId];
+        if (read && !this.isOvertaken(serverId, seq)) {
+          read.stale = true;
+        }
       });
+      return {ok: false, error: message};
     }
+  }
+
+  private isOvertaken(serverId: string, seq: number): boolean {
+    return (this.listReads[serverId]?.seq ?? 0) > seq;
   }
 
   /**
@@ -477,6 +531,9 @@ class ServerStore {
     this.appStateSubscription = AppState.addEventListener(
       'change',
       (nextAppState: AppStateStatus) => {
+        runInAction(() => {
+          this.appActive = nextAppState === 'active';
+        });
         if (nextAppState !== 'active') {
           return;
         }

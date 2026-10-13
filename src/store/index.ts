@@ -7,6 +7,7 @@ export * from './PalStore';
 export * from './FeedbackStore';
 export * from './DeepLinkStore';
 export * from './ServerStore';
+export * from './RouterStore';
 export * from './TTSStore';
 export * from './SearchProviderStore';
 export * from './PurchaseStore';

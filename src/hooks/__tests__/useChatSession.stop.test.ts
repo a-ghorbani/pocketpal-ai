@@ -76,7 +76,7 @@ describe('useChatSession Stop and the generation lease', () => {
     const {engine, completions} = installEngine();
     const session = renderSession();
 
-    let first!: Promise<void>;
+    let first!: Promise<unknown>;
     await act(async () => {
       first = session.current.handleSendPress(textMessage);
     });
@@ -92,7 +92,7 @@ describe('useChatSession Stop and the generation lease', () => {
     expect(lastCallArg(chatSessionStore.setAgentUiState).status).toBe('idle');
     expect(chatSessionStore.setIsStopping).not.toHaveBeenCalledWith(true);
 
-    let second!: Promise<void>;
+    let second!: Promise<unknown>;
     await act(async () => {
       second = session.current.handleSendPress({
         ...textMessage,
@@ -125,7 +125,7 @@ describe('useChatSession Stop and the generation lease', () => {
     const {engine, completions} = installEngine();
     const session = renderSession();
 
-    let sending!: Promise<void>;
+    let sending!: Promise<unknown>;
     await act(async () => {
       sending = session.current.handleSendPress(textMessage);
     });
@@ -193,7 +193,7 @@ describe('useChatSession Stop and the generation lease', () => {
     );
     const session = renderSession();
 
-    let sending!: Promise<void>;
+    let sending!: Promise<unknown>;
     await act(async () => {
       sending = session.current.handleSendPress(textMessage);
     });
@@ -214,15 +214,15 @@ describe('useChatSession Stop and the generation lease', () => {
     const {engine, completions} = installEngine();
     const session = renderSession();
 
-    let first!: Promise<void>;
+    let first!: Promise<unknown>;
     await act(async () => {
       first = session.current.handleSendPress(textMessage);
     });
     await waitFor(() => expect(engine.completion).toHaveBeenCalledTimes(1));
     await session.current.handleStopPress();
 
-    let second!: Promise<void>;
-    let third!: Promise<void>;
+    let second!: Promise<unknown>;
+    let third!: Promise<unknown>;
     await act(async () => {
       second = session.current.handleSendPress({...textMessage, text: 'two'});
       third = session.current.handleSendPress({...textMessage, text: 'three'});
@@ -260,7 +260,7 @@ describe('useChatSession Stop and the generation lease', () => {
     const {engine, completions} = installEngine();
     const session = renderSession();
 
-    let sending!: Promise<void>;
+    let sending!: Promise<unknown>;
     await act(async () => {
       sending = session.current.handleSendPress(textMessage);
     });
@@ -340,7 +340,7 @@ describe('useChatSession Stop and the generation lease', () => {
     const session = renderSession();
 
     let settled = false;
-    let sending!: Promise<void>;
+    let sending!: Promise<unknown>;
     await act(async () => {
       sending = session.current.handleSendPress(textMessage).then(() => {
         settled = true;
@@ -369,7 +369,7 @@ describe('useChatSession: a send whose chat changed while it waited', () => {
     const session = renderSession();
     const held = (await modelStore.acquireGeneration())!;
 
-    let sending!: Promise<void>;
+    let sending!: Promise<unknown>;
     await act(async () => {
       sending = session.current.handleSendPress({...textMessage, text});
     });
@@ -535,7 +535,7 @@ describe('useChatSession: the turn a Stop leaves in the chat', () => {
   async function stopInPrefill() {
     const {engine, completions} = installEngine();
     const session = renderSession();
-    let sending!: Promise<void>;
+    let sending!: Promise<unknown>;
     await act(async () => {
       sending = session.current.handleSendPress(textMessage);
     });
@@ -560,7 +560,7 @@ describe('useChatSession: the turn a Stop leaves in the chat', () => {
         }),
     );
     const session = renderSession();
-    let sending!: Promise<void>;
+    let sending!: Promise<unknown>;
     await act(async () => {
       sending = session.current.handleSendPress(textMessage);
     });

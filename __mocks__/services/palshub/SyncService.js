@@ -30,6 +30,7 @@ const mockSyncService = {
   syncUserCreatedPals: jest.fn().mockResolvedValue(undefined),
   clearSyncError: jest.fn(),
   forceSyncAll: jest.fn().mockResolvedValue(undefined),
+  clearCache: jest.fn().mockResolvedValue(undefined),
 
   // Private methods (mocked for completeness)
   updateSyncStatus: jest.fn().mockResolvedValue(undefined),

@@ -1,15 +1,15 @@
 import React, {useRef} from 'react';
+import {AccessibilityInfo} from 'react-native';
 
-import {toJS, runInAction} from 'mobx';
+import {toJS} from 'mobx';
 import type {JinjaFormattedChatResult} from 'llama.rn';
-
-import {chatSessionRepository} from '../repositories/ChatSessionRepository';
 
 import {randId} from '../utils';
 import {L10nContext} from '../utils';
 import {
   chatSessionStore,
   modelStore,
+  NEW_SESSION_TITLE,
   palStore,
   serverStore,
   ttsStore,
@@ -20,7 +20,12 @@ import type {PersistedTurnTimings} from '../utils/completionTypes';
 import {resolveReasoningCapability} from '../utils/reasoningCapability';
 
 import {MessageType, ModelOrigin, User} from '../utils/types';
-import {createMultimodalWarning} from '../utils/errors';
+import {
+  RemoteModelNotReadyError,
+  RemoteModelRequestWithdrawnError,
+  createMultimodalWarning,
+} from '../utils/errors';
+import {routerFailureMessage} from '../utils/routerCopy';
 import {
   assembleMessages,
   resolveSystemMessages,
@@ -504,6 +509,11 @@ function yieldToTouches(signal: AbortSignal): Promise<void> {
   });
 }
 
+export type UndoneSend = {
+  message: MessageType.PartialText;
+  sessionId: string;
+};
+
 export const useChatSession = (
   currentMessageInfo: React.MutableRefObject<{
     createdAt: number;
@@ -527,19 +537,22 @@ export const useChatSession = (
     await chatSessionStore.addMessageToCurrentSession(message);
   };
 
+  const systemRow = (text: string, metadata = {}): MessageType.Text => ({
+    author: assistant,
+    createdAt: Date.now(),
+    id: randId(),
+    text,
+    type: 'text',
+    metadata: {system: true, ...metadata},
+  });
+
   const addSystemMessage = async (text: string, metadata = {}) => {
-    const textMessage: MessageType.Text = {
-      author: assistant,
-      createdAt: Date.now(),
-      id: randId(),
-      text,
-      type: 'text',
-      metadata: {system: true, ...metadata},
-    };
-    await addMessage(textMessage);
+    await addMessage(systemRow(text, metadata));
   };
 
-  const handleSendPress = async (message: MessageType.PartialText) => {
+  const handleSendPress = async (
+    message: MessageType.PartialText,
+  ): Promise<UndoneSend | undefined> => {
     const sentFrom = chatSessionStore.activeSessionId;
     if (modelStore.isGenerationBusy) {
       chatSessionStore.setIsStopping(true);
@@ -582,7 +595,7 @@ export const useChatSession = (
     }
 
     try {
-      await sendUnderLease(message, lease, {
+      return await sendUnderLease(message, lease, {
         stop: uiStop,
         isStopped: () => uiStopped,
       });
@@ -600,7 +613,7 @@ export const useChatSession = (
     message: MessageType.PartialText,
     lease: GenerationLease,
     runUi: {stop: () => void; isStopped: () => boolean},
-  ) => {
+  ): Promise<UndoneSend | undefined> => {
     const engine = lease.engine;
     const contextId = modelStore.contextId;
     if (!contextId) {
@@ -629,6 +642,10 @@ export const useChatSession = (
         multimodal: hasImages,
       },
     };
+    const wasUntitled =
+      (chatSessionStore.sessions.find(
+        s => s.id === chatSessionStore.activeSessionId,
+      )?.title ?? NEW_SESSION_TITLE) === NEW_SESSION_TITLE;
     await addMessage(textMessage);
     if (!lease.signal.aborted) {
       modelStore.setInferencing(true);
@@ -717,6 +734,7 @@ export const useChatSession = (
       }
     }
 
+    let undone: UndoneSend | undefined;
     try {
       const events = runAgent({
         engine,
@@ -810,7 +828,10 @@ export const useChatSession = (
       }
     } catch (error) {
       console.error('Completion error:', error);
-      runUi.stop();
+      // Send stays blocked until an undone turn's rows are gone.
+      if (!(error instanceof RemoteModelRequestWithdrawnError)) {
+        runUi.stop();
+      }
 
       // Stop any in-flight TTS — the completion errored, so buffered
       // audio should not keep playing.
@@ -852,98 +873,105 @@ export const useChatSession = (
       // this metadata write does not silently no-op on assistant_turn
       // rows and does not clobber metadata.steps.
       let turnAbsorbedError = false;
-      if (currentMessageInfo.current) {
-        const session = chatSessionStore.sessions.find(
-          s => s.id === currentMessageInfo.current!.sessionId,
-        );
-        const currentMsg = session?.messages.find(
-          msg => msg.id === currentMessageInfo.current!.id,
-        );
+      const session = chatSessionStore.sessions.find(
+        s => s.id === messageInfo.sessionId,
+      );
+      const currentMsg = session?.messages.find(
+        msg => msg.id === messageInfo.id,
+      );
 
-        const hasAnyStepContent =
-          currentMsg?.type === 'assistant_turn' &&
-          ((currentMsg as MessageType.AssistantTurn).steps ?? []).some(
-            s => (s.content?.length ?? 0) > 0 || (s.toolCalls?.length ?? 0) > 0,
-          );
-        const hasLegacyText =
-          currentMsg?.type === 'text' &&
-          !!(currentMsg as MessageType.Text).text;
-        const hasPartialContent = hasAnyStepContent || hasLegacyText;
+      const hasAnyStepContent =
+        currentMsg?.type === 'assistant_turn' &&
+        ((currentMsg as MessageType.AssistantTurn).steps ?? []).some(
+          s => (s.content?.length ?? 0) > 0 || (s.toolCalls?.length ?? 0) > 0,
+        );
+      const hasLegacyText =
+        currentMsg?.type === 'text' && !!(currentMsg as MessageType.Text).text;
+      const hasPartialContent = hasAnyStepContent || hasLegacyText;
 
-        if (hasPartialContent) {
-          // No finalResult on the abort path, so no turn reported a count.
-          // truncationLikely is the n_ctx-exhaustion signal: when set, treat
-          // the turn as full and pin `used` to the context window so the
-          // sticky banner's freshness gate holds. Otherwise the count is
-          // unknown, which is not zero.
+      if (hasPartialContent) {
+        // No finalResult on the abort path, so no turn reported a count.
+        // truncationLikely is the n_ctx-exhaustion signal: when set, treat
+        // the turn as full and pin `used` to the context window so the
+        // sticky banner's freshness gate holds. Otherwise the count is
+        // unknown, which is not zero.
+        const isRemote = modelStore.activeModel?.origin === ModelOrigin.REMOTE;
+        const effectiveNCtx = modelStore.activeModelCaps.effectiveContextLength;
+        const abortSnapshot: CompletionResultSnapshot = {
+          used: treatAsContextFull ? effectiveNCtx : undefined,
+          contextFull: treatAsContextFull,
+          isRemote,
+        };
+        await chatSessionStore.updateMessage(
+          messageInfo.id,
+          messageInfo.sessionId,
+          {
+            metadata: {
+              interrupted: true,
+              copyable: true,
+              completionResult: abortSnapshot,
+              ...(isToolArgsParseError ? {truncationLikely: true} : {}),
+            },
+          },
+        );
+        chatSessionStore.recordCompletionSnapshot(abortSnapshot);
+        // The turn now carries the failure context; suppress the
+        // duplicate `Completion failed: …` system message dump.
+        turnAbsorbedError = true;
+      } else {
+        // A prompt that overflows n_ctx throws before any token, so there
+        // is no content to keep — but still record the snapshot so the
+        // banner surfaces the full state. The empty turn is cleaned up
+        // below; the store snapshot drives the banner independently.
+        // Per-process for this draft: with no message persisted, the banner
+        // does not rehydrate after a session switch / restart (it re-fires
+        // on the next overflowing send).
+        if (isContextFullError) {
           const isRemote =
             modelStore.activeModel?.origin === ModelOrigin.REMOTE;
           const effectiveNCtx =
             modelStore.activeModelCaps.effectiveContextLength;
-          const abortSnapshot: CompletionResultSnapshot = {
-            used: treatAsContextFull ? effectiveNCtx : undefined,
-            contextFull: treatAsContextFull,
+          chatSessionStore.recordCompletionSnapshot({
+            used: effectiveNCtx,
+            contextFull: true,
             isRemote,
-          };
-          await chatSessionStore.updateMessage(
-            currentMessageInfo.current.id,
-            currentMessageInfo.current.sessionId,
-            {
-              metadata: {
-                interrupted: true,
-                copyable: true,
-                completionResult: abortSnapshot,
-                ...(isToolArgsParseError ? {truncationLikely: true} : {}),
-              },
-            },
-          );
-          chatSessionStore.recordCompletionSnapshot(abortSnapshot);
-          // The turn now carries the failure context; suppress the
-          // duplicate `Completion failed: …` system message dump.
+          });
           turnAbsorbedError = true;
-        } else {
-          // A prompt that overflows n_ctx throws before any token, so there
-          // is no content to keep — but still record the snapshot so the
-          // banner surfaces the full state. The empty turn is cleaned up
-          // below; the store snapshot drives the banner independently.
-          // Per-process for this draft: with no message persisted, the banner
-          // does not rehydrate after a session switch / restart (it re-fires
-          // on the next overflowing send).
-          if (isContextFullError) {
-            const isRemote =
-              modelStore.activeModel?.origin === ModelOrigin.REMOTE;
-            const effectiveNCtx =
-              modelStore.activeModelCaps.effectiveContextLength;
-            chatSessionStore.recordCompletionSnapshot({
-              used: effectiveNCtx,
-              contextFull: true,
-              isRemote,
-            });
-            turnAbsorbedError = true;
-          }
-          try {
-            await chatSessionRepository.deleteMessage(
-              currentMessageInfo.current.id,
-            );
-            if (session) {
-              runInAction(() => {
-                session.messages = session.messages.filter(
-                  msg => msg.id !== currentMessageInfo.current!.id,
-                );
-              });
-            }
-          } catch (cleanupError) {
-            console.error(
-              'Failed to clean up empty message after error:',
-              cleanupError,
-            );
-          }
         }
+        await chatSessionStore.deleteMessageFromSession(
+          messageInfo.sessionId,
+          messageInfo.id,
+        );
       }
 
       if (turnAbsorbedError) {
         // Footer already surfaces interrupted / truncationLikely; nothing
         // more to add to chat.
+      } else if (error instanceof RemoteModelRequestWithdrawnError) {
+        if (!hasPartialContent) {
+          await chatSessionStore.deleteMessageFromSession(
+            messageInfo.sessionId,
+            textMessage.id,
+          );
+          if (wasUntitled) {
+            await chatSessionStore.updateSessionTitleBySessionId(
+              messageInfo.sessionId,
+              NEW_SESSION_TITLE,
+            );
+          }
+          undone = {message, sessionId: messageInfo.sessionId};
+        }
+      } else if (error instanceof RemoteModelNotReadyError) {
+        const text = routerFailureMessage(
+          error.cause,
+          error.serverMessage,
+          l10n,
+        );
+        await chatSessionStore.addMessageToSession(
+          messageInfo.sessionId,
+          systemRow(text),
+        );
+        AccessibilityInfo.announceForAccessibility(text);
       } else if (errorMessage.includes('network')) {
         await addSystemMessage(l10n.common.networkError);
       } else if (isToolArgsParseError) {
@@ -964,6 +992,7 @@ export const useChatSession = (
         await addSystemMessage(`${l10n.chat.completionFailed}${errorMessage}`);
       }
     }
+    return undone;
   };
 
   const handleResetConversation = async () => {

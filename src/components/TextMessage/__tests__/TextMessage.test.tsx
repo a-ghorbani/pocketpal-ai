@@ -4,6 +4,7 @@ import * as React from 'react';
 import {Linking} from 'react-native';
 
 import {derivedTextMessage} from '../../../../jest/fixtures';
+import {render as renderWithProviders} from '../../../../jest/test-utils';
 import {TextMessage} from '../TextMessage';
 
 describe('text message', () => {
@@ -80,6 +81,48 @@ describe('text message', () => {
     expect(openUrlMock).toHaveBeenCalledWith('https://' + link);
     getPreviewDataMock.mockRestore();
     openUrlMock.mockRestore();
+  });
+
+  it('renders a step through its visible content, not raw content', () => {
+    const echo = '{"name": "web_search", "arguments": {"query": "Firecrawl"}}';
+    const call = {
+      id: 'c0',
+      function: {name: 'web_search', arguments: '{"query": "Firecrawl"}'},
+    };
+    const {queryByText, rerender} = renderWithProviders(
+      <TextMessage
+        message={derivedTextMessage}
+        messageWidth={440}
+        showName={false}
+        usePreviewData={false}
+        step={{content: echo}}
+      />,
+    );
+    expect(queryByText(/web_search/)).not.toBeNull();
+
+    rerender(
+      <TextMessage
+        message={derivedTextMessage}
+        messageWidth={440}
+        showName={false}
+        usePreviewData={false}
+        step={{content: echo, toolCalls: [call]}}
+      />,
+    );
+    expect(queryByText(/web_search/)).toBeNull();
+  });
+
+  it('renders call-shaped JSON in a message without a step', () => {
+    const echo = '{"name": "web_search", "arguments": {"query": "Firecrawl"}}';
+    const {queryByText} = renderWithProviders(
+      <TextMessage
+        message={{...derivedTextMessage, text: echo}}
+        messageWidth={440}
+        showName={false}
+        usePreviewData={false}
+      />,
+    );
+    expect(queryByText(/web_search/)).not.toBeNull();
   });
 
   it('renders and handles email press', async () => {
