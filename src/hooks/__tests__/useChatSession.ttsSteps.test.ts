@@ -324,6 +324,7 @@ describe('useChatSession — auto-speak across agent steps', () => {
     expect(callOrders(ttsStore.onAssistantMessageChunk)[0]).toBeGreaterThan(
       lastOrder(chatSessionStore.updateActiveStepStreaming),
     );
+    expect(spokenText().trim()).toBe(persistedDerivedText().trim());
   });
 
   it('separates a released held step from the step spoken before it', async () => {
@@ -365,6 +366,7 @@ describe('useChatSession — auto-speak across agent steps', () => {
     await runTurn();
 
     expect(contentChunks()).toEqual(['Done.']);
+    expect(spokenText().trim()).toBe(persistedDerivedText().trim());
   });
 
   it('streams a whitespace-led prose step per visible token', async () => {
@@ -394,5 +396,98 @@ describe('useChatSession — auto-speak across agent steps', () => {
 
     expect(contentChunks()).toEqual(['The answer', ' is 42.']);
     expect(spokenText().trim()).toBe(persistedDerivedText().trim());
+  });
+
+  it('adds no separator when the step before the answer was a dropped echo', async () => {
+    await offerSearchTool();
+    scriptCompletion([
+      {tokens: ['Let me', 'Let me search.'], toolCalls: [searchCall('x')]},
+      {tokens: ['{', echo('y')], toolCalls: [searchCall('y')]},
+      {tokens: ['The', 'The answer is 42.']},
+    ]);
+
+    await runTurn();
+
+    expect(contentChunks()).toEqual([
+      'Let me',
+      ' search.',
+      '\n\nThe',
+      ' answer is 42.',
+    ]);
+    expect(spokenText().trim()).toBe(persistedDerivedText().trim());
+  });
+
+  it('forwards the reasoning of every step from its first character', async () => {
+    await offerSearchTool();
+    scriptCompletion([
+      {
+        tokens: [{reasoning: 'Need a web search first'}],
+        toolCalls: [searchCall('x')],
+      },
+      {
+        tokens: [
+          {reasoning: 'Got it'},
+          {reasoning: 'Got it', content: 'The answer is 42.'},
+        ],
+      },
+    ]);
+
+    await runTurn();
+
+    expect(reasoningChunks()).toEqual(['Need a web search first', 'Got it']);
+    expect(contentChunks()).toEqual(['The answer is 42.']);
+  });
+
+  it('adds no separator after a step that only reasoned', async () => {
+    await offerSearchTool();
+    scriptCompletion([
+      {tokens: [{reasoning: 'Searching'}], toolCalls: [searchCall('x')]},
+      {tokens: ['Done.']},
+    ]);
+
+    await runTurn();
+
+    expect(contentChunks()).toEqual(['Done.']);
+  });
+
+  it('never speaks a held step when the engine fails before it ends', async () => {
+    await offerSearchTool();
+    modelStore.context!.completion = jest
+      .fn()
+      .mockImplementation(async (_params, onData) => {
+        onData?.({token: 'tok', content: '{'});
+        onData?.({token: 'tok', content: echo('x')});
+        throw new Error('engine failed');
+      });
+
+    await runTurn();
+
+    expect(ttsStore.onAssistantMessageStart).toHaveBeenCalled();
+    expect(contentChunks()).toEqual([]);
+    expect(ttsStore.stop).toHaveBeenCalled();
+  });
+
+  it('keeps the run going when releasing a held step to speech throws', async () => {
+    await offerSearchTool();
+    const warn = jest.spyOn(console, 'warn').mockImplementation(() => {});
+    (ttsStore.onAssistantMessageChunk as jest.Mock).mockImplementationOnce(
+      () => {
+        throw new Error('tts failed');
+      },
+    );
+    scriptCompletion([
+      {tokens: ['{"name"', echo('y')], toolCalls: [searchCall('x')]},
+      {tokens: ['Done.']},
+    ]);
+
+    await runTurn();
+
+    expect(warn).toHaveBeenCalledWith(
+      '[useChatSession] TTS stream hook failed:',
+      expect.any(Error),
+    );
+    expect(chatSessionStore.appendToolCall).toHaveBeenCalled();
+    expect(spokenText()).toMatch(/Done\.$/);
+    warn.mockRestore();
   });
 });
