@@ -419,10 +419,18 @@ class ChatSessionRepository {
   async addMessageToSession(
     sessionId: string,
     message: MessageType.Any,
-  ): Promise<Message> {
+  ): Promise<Message | undefined> {
     let newMessage: any;
 
     await database.write(async () => {
+      const session = await database.collections
+        .get('chat_sessions')
+        .find(sessionId)
+        .catch(() => null);
+      if (!session) {
+        return;
+      }
+
       // Get the highest position
       const messages = await database.collections
         .get('messages')
@@ -483,7 +491,7 @@ class ChatSessionRepository {
         });
     });
 
-    return newMessage as unknown as Message;
+    return newMessage as unknown as Message | undefined;
   }
 
   // Update a message. Accepts either a Text-shaped partial (legacy) or

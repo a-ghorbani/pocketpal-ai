@@ -30,7 +30,7 @@ type MessageUpdate =
   | Partial<MessageType.Text>
   | Partial<Omit<MessageType.AssistantTurn, 'type' | 'id' | 'author'>>;
 
-const NEW_SESSION_TITLE = 'New Session';
+export const NEW_SESSION_TITLE = 'New Session';
 const TITLE_LIMIT = 40;
 
 // Coalesce per-token writes into batched UI flushes (~33 Hz).
@@ -491,18 +491,8 @@ class ChatSessionStore {
     if (this.activeSessionId) {
       const session = this.sessions.find(s => s.id === this.activeSessionId);
       if (session) {
-        // Add to database
-        const newMessage = await chatSessionRepository.addMessageToSession(
-          this.activeSessionId,
-          message,
-        );
-        message.id = newMessage.id;
-
-        // Update local state
         await this.updateSessionTitle(session);
-        runInAction(() => {
-          session.messages.unshift(message);
-        });
+        await this.addMessageToSession(session.id, message);
       }
     } else {
       // Resolve settings using the selected settings source so the
@@ -514,6 +504,50 @@ class ChatSessionStore {
         palIdForSettings,
       );
       await this.createNewSession(NEW_SESSION_TITLE, [message], settings);
+      const created = this.sessions.find(s => s.id === this.activeSessionId);
+      if (created?.messages[0]) {
+        message.id = created.messages[0].id;
+      }
+    }
+  }
+
+  async addMessageToSession(
+    sessionId: string,
+    message: MessageType.Any,
+  ): Promise<void> {
+    const session = this.sessions.find(s => s.id === sessionId);
+    if (!session) {
+      return;
+    }
+    const newMessage = await chatSessionRepository.addMessageToSession(
+      sessionId,
+      message,
+    );
+    if (!newMessage) {
+      return;
+    }
+    message.id = newMessage.id;
+    runInAction(() => {
+      session.messages.unshift(message);
+    });
+  }
+
+  async deleteMessageFromSession(
+    sessionId: string,
+    messageId: string,
+  ): Promise<void> {
+    try {
+      await chatSessionRepository.deleteMessage(messageId);
+      const session = this.sessions.find(s => s.id === sessionId);
+      if (session) {
+        runInAction(() => {
+          session.messages = session.messages.filter(
+            msg => msg.id !== messageId,
+          );
+        });
+      }
+    } catch (error) {
+      console.error('Failed to delete message:', error);
     }
   }
 
