@@ -16,8 +16,10 @@ import type {TalentEngine, TalentResult} from '../../services/talents/types';
 
 const mockAssistant = {id: 'h3o3lc5xj'};
 
+type ScriptedToken = string | {content?: string; reasoning: string};
+
 type ScriptedStep = {
-  tokens: string[];
+  tokens: ScriptedToken[];
   toolCalls?: {name: string; arguments: string}[];
 };
 
@@ -44,8 +46,20 @@ function scriptCompletion(steps: ScriptedStep[]) {
     .mockImplementation(async (params, onData) => {
       completionParams.push(params);
       const step = steps[turn++];
-      step.tokens.forEach(content => onData?.({token: 'tok', content}));
-      const content = step.tokens[step.tokens.length - 1] ?? '';
+      let content = '';
+      step.tokens.forEach(token => {
+        if (typeof token === 'string') {
+          content = token;
+          onData?.({token: 'tok', content});
+        } else {
+          content = token.content ?? content;
+          onData?.({
+            token: 'tok',
+            content: token.content,
+            reasoning_content: token.reasoning,
+          });
+        }
+      });
       return {
         text: content,
         content,
@@ -62,8 +76,15 @@ function scriptCompletion(steps: ScriptedStep[]) {
     });
 }
 
-function useSearchPal() {
+async function offerSearchTool() {
   talentRegistry.register(searchTalent);
+  const settings = await chatSessionStore.getCurrentCompletionSettings();
+  (
+    chatSessionStore.getCurrentCompletionSettings as jest.Mock
+  ).mockResolvedValueOnce({
+    ...settings,
+    tools: [searchTalent.toToolDefinition()],
+  });
   palStore.pals = [
     {
       id: 'pal-1',
@@ -109,6 +130,16 @@ const contentChunks = (): string[] =>
     .filter(content => content.length > 0);
 
 const spokenText = () => contentChunks().join('');
+
+const reasoningChunks = (): string[] =>
+  chunkCalls()
+    .map(call => call[2] as string | undefined)
+    .filter((reasoning): reasoning is string => !!reasoning);
+
+const echo = (query: string) =>
+  JSON.stringify({name: 'web_search', arguments: {query}});
+
+const lastOrder = (fn: unknown) => Math.max(...callOrders(fn));
 
 function callOrders(fn: unknown): number[] {
   return (fn as jest.Mock).mock.invocationCallOrder;
@@ -189,7 +220,7 @@ jest
 
 describe('useChatSession — auto-speak across agent steps', () => {
   it('speaks every step from its first character, a preamble step before its tools run', async () => {
-    useSearchPal();
+    await offerSearchTool();
     scriptCompletion([
       {
         tokens: ['Let me', 'Let me search.'],
@@ -212,7 +243,7 @@ describe('useChatSession — auto-speak across agent steps', () => {
   });
 
   it('adds no separator before the first spoken step when an earlier step had only a call', async () => {
-    useSearchPal();
+    await offerSearchTool();
     scriptCompletion([
       {tokens: [], toolCalls: [searchCall('x')]},
       {tokens: ['The answer', 'The answer is 42.']},
@@ -221,5 +252,147 @@ describe('useChatSession — auto-speak across agent steps', () => {
     await runTurn();
 
     expect(contentChunks()).toEqual(['The answer', ' is 42.']);
+  });
+
+  it('never speaks a tool-call echo, and speaks reasoning in a held step once', async () => {
+    await offerSearchTool();
+    const echoText = echo('x');
+    scriptCompletion([
+      {
+        tokens: [
+          {reasoning: 'Need'},
+          {reasoning: 'Need a search', content: '{"name"'},
+          {reasoning: 'Need a search', content: echoText},
+        ],
+        toolCalls: [searchCall('x')],
+      },
+      {tokens: ['The', 'The answer is 42.']},
+    ]);
+
+    await runTurn();
+
+    expect(contentChunks()).toEqual(['The', ' answer is 42.']);
+    expect(spokenText()).not.toContain('{"name"');
+    expect(spokenText().trim()).toBe(persistedDerivedText().trim());
+    expect(reasoningChunks()).toEqual(['Need', ' a search']);
+    expect(callOrders(ttsStore.onAssistantMessageStart)[0]).toBeLessThan(
+      callOrders(chatSessionStore.appendToolCall)[0],
+    );
+  });
+
+  it('streams a prose step one chunk per token in a run that offers tools', async () => {
+    await offerSearchTool();
+    scriptCompletion([{tokens: ['Hi', 'Hi there', 'Hi there.']}]);
+
+    await runTurn();
+
+    expect(chunkCalls().map(call => call[1])).toEqual(['Hi', ' there', '.']);
+  });
+
+  it('speaks a JSON-shaped step that is not an echo in full when the step ends', async () => {
+    await offerSearchTool();
+    const notEcho = echo('y');
+    scriptCompletion([
+      {
+        tokens: ['{"name"', notEcho],
+        toolCalls: [searchCall('x')],
+      },
+      {tokens: ['Done.']},
+    ]);
+
+    await runTurn();
+
+    expect(contentChunks()).toEqual([notEcho, '\n\nDone.']);
+    const releaseOrder = callOrders(ttsStore.onAssistantMessageChunk)[0];
+    expect(releaseOrder).toBeGreaterThan(
+      callOrders(chatSessionStore.updateActiveStepStreaming)[1],
+    );
+    expect(releaseOrder).toBeLessThan(
+      callOrders(chatSessionStore.appendToolCall)[0],
+    );
+    expect(spokenText().trim()).toBe(persistedDerivedText().trim());
+  });
+
+  it('holds a fence-first final step until it ends when the run offers tools', async () => {
+    await offerSearchTool();
+    const code = '```py\nprint(1)\n```';
+    scriptCompletion([{tokens: ['```', '```py\nprint(1)', code]}]);
+
+    await runTurn();
+
+    expect(contentChunks()).toEqual([code]);
+    expect(callOrders(ttsStore.onAssistantMessageChunk)[0]).toBeGreaterThan(
+      lastOrder(chatSessionStore.updateActiveStepStreaming),
+    );
+  });
+
+  it('separates a released held step from the step spoken before it', async () => {
+    await offerSearchTool();
+    const code = '```py\nprint(1)\n```';
+    scriptCompletion([
+      {tokens: ['Let me', 'Let me check.'], toolCalls: [searchCall('x')]},
+      {tokens: ['```', code]},
+    ]);
+
+    await runTurn();
+
+    expect(contentChunks()).toEqual(['Let me', ' check.', `\n\n${code}`]);
+    expect(spokenText().trim()).toBe(persistedDerivedText().trim());
+  });
+
+  it('streams a fence-first reply per token when the run offers no tools', async () => {
+    scriptCompletion([
+      {tokens: ['```', '```py\nprint(1)', '```py\nprint(1)\n```']},
+    ]);
+
+    await runTurn();
+
+    expect(completionParams[0].tools ?? []).toEqual([]);
+    expect(chunkCalls().map(call => call[1])).toEqual([
+      '```',
+      'py\nprint(1)',
+      '\n```',
+    ]);
+  });
+
+  it('decides on the first visible character when a step starts with whitespace', async () => {
+    await offerSearchTool();
+    scriptCompletion([
+      {tokens: ['  \n', `  \n${echo('x')}`], toolCalls: [searchCall('x')]},
+      {tokens: ['Done.']},
+    ]);
+
+    await runTurn();
+
+    expect(contentChunks()).toEqual(['Done.']);
+  });
+
+  it('streams a whitespace-led prose step per visible token', async () => {
+    await offerSearchTool();
+    scriptCompletion([
+      {
+        tokens: ['  \n', '  \nLet me', '  \nLet me check.'],
+        toolCalls: [searchCall('x')],
+      },
+      {tokens: ['Done.']},
+    ]);
+
+    await runTurn();
+
+    expect(contentChunks()).toEqual(['  \nLet me', ' check.', '\n\nDone.']);
+    expect(spokenText().trim()).toBe(persistedDerivedText().trim());
+  });
+
+  it('forwards nothing for a whitespace-only step that had a call', async () => {
+    await offerSearchTool();
+    scriptCompletion([
+      {tokens: ['  \n'], toolCalls: [searchCall('x')]},
+      {tokens: ['The answer', 'The answer is 42.']},
+    ]);
+
+    await runTurn();
+
+    expect(contentChunks()).toEqual(['The answer', ' is 42.']);
+    expect(spokenText().trim()).toBe(persistedDerivedText().trim());
   });
 });
