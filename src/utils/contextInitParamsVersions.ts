@@ -10,8 +10,11 @@ import {Platform} from 'react-native';
 export const CURRENT_CONTEXT_INIT_PARAMS_VERSION = '2.3';
 
 export const createContextInitParams = (
-  params: Omit<ContextParams, 'model'>,
+  initParams: Omit<ContextParams, 'model'>,
 ): ContextInitParams => {
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  const {state_cache_budget_mb, ...params} = initParams;
+
   // Convert boolean use_mmap to string format
   const use_mmap =
     params.use_mmap === true

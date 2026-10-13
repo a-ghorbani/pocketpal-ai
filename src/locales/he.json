@@ -185,7 +185,7 @@
       "consentTitle": "החיפושים יוצאים מהמכשיר שלך",
       "consentDescription": "כאשר Pal מחפש ברשת, השאילתה שלך נשלחת לספק שנבחר דרך האינטרנט. כאשר Pal קורא דף, ייתכן שכתובת ה-URL ותוכן הדף יישלחו במקום זאת לשירות קריאה כברירת מחדל (r.jina.ai) אם לספק שנבחר אין קורא מובנה. מפתחות ושאילתות לעולם אינם נשלחים ל-PocketPal.",
       "consentAccept": "הבנתי",
-      "consentRequired": "אשר את הגילוי שלמעלה כדי להגדיר מפתח ולהפעיל חיפוש.",
+      "consentRequired": "אשר את הגילוי הנאות שלמעלה כדי להגדיר מפתח ולהפעיל חיפוש.",
       "consentGivenTitle": "חיפוש ברשת מופעל",
       "consentGivenDescription": "שאילתות וקריאות של דפים עשויות לצאת מהמכשיר שלך כמתואר למעלה.",
       "consentRevoke": "בטל הסכמה"
@@ -193,19 +193,25 @@
     "languageSheetTitle": "שפה",
     "languageSearchPlaceholder": "חפש שפות",
     "speculativeDecoding": "פענוח ספקולטיבי",
-    "speculativeDecodingDescription": "השתמש במודל טיוטה קטן (או במודל MTP מוטמע) כדי לנחש טוקנים ולהאיץ את היצירה. ניסיוני.",
-    "speculativeNotMTPCapable": "המודל הפעיל לא תומך בפענוח ספקולטיבי ולא משויך אליו מודל טיוטה תואם, אז ההגדרה נשארת כבויה עבורו וללא השפעה. היא חלה אוטומטית על מודלים שתומכים בכך.",
+    "speculativeDecodingDescription": "השתמש במודל טיוטה קטן (או במודל MTP מוטמע) כדי לחזות טוקנים ולהאיץ את היצירה. ניסיוני.",
+    "speculativeNotMTPCapable": "המודל הפעיל אינו תומך בפענוח ספקולטיבי ולא משויך אליו מודל טיוטה תואם, ולכן ההגדרה נשארת כבויה עבורו וללא השפעה. היא חלה אוטומטית על מודלים שתומכים בכך.",
     "speculativeDraftModel": "מודל טיוטה",
     "speculativeDraftModelDescription": "מכין טיוטת טוקנים עבור המודל הפעיל.",
     "speculativeDraftModelNone": "ללא (MTP מוטמע)",
-    "speculativeDraftModelIgnoredOverridden": "למודל הפעיל יש כבר מודל טיוטה משלו, אז הבחירה הזו לא נלקחת בחשבון.",
-    "speculativeDraftModelIgnoredIncompatible": "מודל הטיוטה הזה לא תואם למודל הפעיל, אז הוא לא נלקח בחשבון.",
-    "speculativeDraftModelIgnoredNotCapable": "למודל הזה אין שכבות טיוטה, אז אי אפשר להשתמש בו כמודל טיוטה.",
+    "speculativeDraftModelIgnoredOverridden": "למודל הפעיל יש מודל טיוטה משלו, ולכן הבחירה הזו לא נלקחת בחשבון.",
+    "speculativeDraftModelIgnoredIncompatible": "מודל הטיוטה הזה אינו תואם למודל הפעיל, ולכן הוא אינו נלקח בחשבון.",
+    "speculativeDraftModelIgnoredNotCapable": "למודל הזה אין שכבות טיוטה, ולכן אי אפשר להשתמש בו כמודל טיוטה.",
     "speculativeDraftKeyCacheType": "סוג מטמון מפתח לטיוטה",
     "speculativeDraftValueCacheType": "סוג מטמון ערך לטיוטה",
     "speculativeDraftNGpuLayers": "שכבות GPU לטיוטה",
-    "speculativeDraftNGpuLayersDescription": "כמות השכבות של מודל הטיוטה שיועברו ל-GPU.",
-    "speculativeDraftCacheTypeInactiveDescription": "ייכנס לתוקף ברגע שפענוח ספקולטיבי יפעל."
+    "speculativeDraftNGpuLayersDescription": "מספר השכבות של מודל הטיוטה שיועברו ל-GPU.",
+    "speculativeDraftCacheTypeInactiveDescription": "ההגדרה תיכנס לתוקף כאשר פענוח ספקולטיבי יפעל.",
+    "purchases": {
+      "title": "רכישות",
+      "statusOwned": "נרכש",
+      "statusUnlocking": "פותח נעילה",
+      "link": "התחבר כדי להשתמש במכשירים אחרים"
+    }
   },
   "memory": {
     "shortWarning": "אזהרת זיכרון",
@@ -396,7 +402,7 @@
         "visionSupported": "נתמך",
         "visionNotSupported": "לא נתמך",
         "visionUnknown": "לא ידוע",
-        "draftOnlyReason": "מודל לטיוטה בלבד. בחר אותו תחת הגדרות → פענוח ספקולטיבי."
+        "draftOnlyReason": "מודל לטיוטה בלבד. בחר אותו בהגדרות ← פענוח ספקולטיבי."
       },
       "accessibility": {
         "expandDetails": "הרחב פרטים",
@@ -788,15 +794,15 @@
       "reasoningSection": "חשיבה",
       "isReasoningModel": "מודל חשיבה",
       "isReasoningModelHelp": "הצג את פקד החשיבה עבור מודל זה, גם אם הוא לא זוהה אוטומטית.",
-      "supportsEffort": "תומך במאמץ מדורג",
-      "effortValues": "רמות המאמץ שמודל זה תומך בהן",
+      "supportsEffort": "תומך ברמות חשיבה",
+      "effortValues": "רמות החשיבה שמודל זה תומך בהן",
       "effortLevels": {
         "minimal": "מינימלי",
         "low": "נמוך",
         "medium": "בינוני",
         "high": "גבוה",
         "xhigh": "גבוה מאוד",
-        "max": "מרבי"
+        "max": "מקסימלי"
       }
     },
     "modelsHeaderRight": {
@@ -1022,7 +1028,9 @@
       "ttft": "{{value}}מ.ש. TTFT",
       "interrupted": "הופסק",
       "truncated": "נקטע — ככל הנראה ההקשר מלא",
-      "draftAccepted": "טיוטה: {{accepted}}/{{total}} ({{pct}}%)"
+      "draftAccepted": "טיוטה: {{accepted}}/{{total}} ({{pct}}%)",
+      "promptTokensPerSec": "{{value}} טוקני הנחיה/שנ'",
+      "cachedTokens": "{{value}} מהמטמון"
     },
     "pendingIndicator": {
       "preparingTool": "מכין כלי",
@@ -1034,6 +1042,13 @@
     "toolMetrics": {
       "tokens": "{{count}} טוקנים",
       "elapsed": "{{seconds}} ש'"
+    },
+    "completionSettings": {
+      "serverDefault": "ברירת המחדל של השרת",
+      "usingServerDefault": "שימוש בברירת המחדל של השרת: {{value}}",
+      "usingServerDefaultUnreported": "שימוש בברירת המחדל של השרת (לא מדווח)",
+      "resetToServerDefault": "ברירת המחדל של השרת: {{value}} · איפוס",
+      "resetToServerDefaultAccessibilityLabel": "אפס את {{name}} לברירת המחדל של השרת, {{value}}"
     }
   },
   "palsScreen": {
@@ -1087,8 +1102,6 @@
       "download": "הורדה",
       "getFree": "קבל בחינם"
     },
-    "premiumPalDescription": "Pal פרימיום מקהילת palshub.ai",
-    "premiumInfoText": "בקרו באתר palshub.ai כדי לגלות עוד Pals",
     "sortOptions": {
       "newest": "החדש ביותר",
       "oldest": "הישן ביותר",
@@ -1112,15 +1125,48 @@
       "error": "שגיאה",
       "failedToLoadDetails": "טעינת פרטי ה-Pal נכשלה",
       "failedToDownload": "הורדת Pal נכשלה",
-      "premiumPalMessage": "זהו Pal פרימיום. \n• אם כבר פתחת את הנעילה שלו באמצעות חשבון Palshub שלך, פשוט היכנס כדי לגשת לפרטים המלאים. \n• עדיין לא פתחת את הנעילה? בקר באפליקציית palshub.ai למידע נוסף.",
-      "notAvailable": "N/A",
-      "buyOnPalshub": "קנה ב-Palshub",
-      "finalizingPurchase": "משלים את הרכישה שלך…",
-      "processingPurchase": "מעבד — ייפתח בקרוב.",
-      "checkoutSessionExpired": "הסשן שלך פג. התחבר שוב כדי להמשיך.",
-      "signInAgain": "התחבר שוב",
-      "palNotAvailable": "ה-Pal הזה אינו זמין לרכישה כעת.",
-      "checkoutFailed": "משהו השתבש. אנא נסה שוב."
+      "notAvailable": "N/A"
+    },
+    "purchase": {
+      "buy": "{{price}}",
+      "open": "פתח",
+      "install": "התקן",
+      "pending": "בהמתנה",
+      "unlocking": "פותח נעילה",
+      "retry": "נסה שוב",
+      "supportCode": "קוד תמיכה: {{code}}",
+      "noLongerAvailable": "Pal זה אינו זמין יותר. אפשר {{refundLink}}.",
+      "refundLink": "בקש החזר כספי מ-Apple",
+      "notCompleted": "לא ניתן היה להשלים את הרכישה הזו. Google תשיב לך את הכסף.",
+      "withdrawnRefunding": "Pal זה הוסר מהמכירה. פנה לתמיכה לקבלת החזר כספי.",
+      "invalid": "לא הצלחנו לאמת את הרכישה הזו.",
+      "heldInvalid": "לא הצלחנו לשחרר את הרכישה הזו. פנה לתמיכה עם הקוד הזה.",
+      "recommendedModel": "מודל מומלץ",
+      "sampleExchange": "שיחה לדוגמה",
+      "signInLine": "כבר יש לך? התחבר",
+      "licenseNotice": "אתה רוכש רישיון שימוש ב-Pal הזה.",
+      "termsOfSale": "תנאי המכירה",
+      "appleMediaTerms": "תנאי השימוש של Apple Media Services",
+      "linkPrompt": "התחבר כדי להשתמש בו גם במכשירים האחרים שלך",
+      "linkSignIn": "התחברות",
+      "dismiss": "לא עכשיו",
+      "linkConflict": "הרכישות האלה מקושרות לחשבון אחר.",
+      "restorePurchases": "שחזור רכישות",
+      "badgePending": "בהמתנה",
+      "badgeUnlocking": "פותח נעילה",
+      "badgeUpdate": "עדכון זמין",
+      "updatePrompt": "גרסה חדשה מהיוצר זמינה.",
+      "updatePromptWithNote": "גרסה חדשה מהיוצר זמינה: {{note}}.",
+      "updateButton": "עדכן",
+      "updateConfirmText": "הפעולה תחליף את העריכות שלך בחלקים שהיוצר שינה.",
+      "updateConfirm": "עדכן",
+      "updateCancel": "ביטול",
+      "modelStep": {
+        "download": "הורדה · {{size}}",
+        "startChat": "פתח צ'אט",
+        "needsMemory": "Pal זה דורש מכשיר עם {{size}} זיכרון לפחות עבור המודל הקטן ביותר שלו.",
+        "noModelFits": "למכשיר הזה אין מספיק זיכרון עבור Pal זה."
+      }
     }
   },
   "validation": {
@@ -1194,7 +1240,7 @@
     "pleaseLoadModel": "טען מודל כדי לשוחח.",
     "multimodalNotEnabled": "רב-מודאליות אינה מופעלת עבור מודל זה. תמונות יוצגו אך לא יעובדו על ידי ה-AI.",
     "cannotSendWithoutModel": "טען מודל תחילה",
-    "toolCallTruncated": "קריאת הכלי נקטעה — ככל הנראה הקשר המודל התמלא. נסה להשתמש בהקשר גדול יותר או שלח בקשה קטנה יותר.",
+    "toolCallTruncated": "קריאת הכלי נקטעה — ככל הנראה הקשר המודל התמלא. נסה להשתמש בהקשר גדול יותר או לשלוח בקשה קטנה יותר.",
     "toolCompatWarning": "מודל זה עשוי שלא לתמוך בקריאה לכלי. התוצאות עלולות להיות לא אמינות.",
     "softCapWarning": "פתח צ'אט חדש לביצועים מיטביים.",
     "generatingPreview": "מייצר תצוגה מקדימה... ({{tokens}} טוקנים)",
@@ -1246,7 +1292,7 @@
       "openLinkError": "לא ניתן היה לפתוח את הקישור הזה."
     },
     "contextFullRemote": "נגמר המקום בשיחה. פתח צ'אט חדש.",
-    "speculativeInitFailed": "המכשיר הזה לא הצליח להפעיל פענוח ספקולטיבי עבור המודל הזה — כנראה שאין מספיק זיכרון עבור הקשר מודל הטיוטה. כבה את הפענוח הספקולטיבי תחת הגדרות → הגדרות מתקדמות ונסה שוב."
+    "speculativeInitFailed": "המכשיר הזה לא הצליח להפעיל פענוח ספקולטיבי עבור המודל הזה — כנראה שאין מספיק זיכרון עבור ההקשר של מודל הטיוטה. כבה את הפענוח הספקולטיבי בהגדרות ← הגדרות מתקדמות ונסה שוב."
   },
   "benchmark": {
     "title": "מבחן ביצועים",
@@ -1430,7 +1476,7 @@
     "engineChipSupertonic": "Supertonic",
     "engineChipSystem": "מערכת",
     "stepsCount": "{{steps}} צעדים",
-    "engineKittenTagline": "תפיסת הזיכרון הקטנה ביותר. אמין. הכי טוב במכשירים ישנים.",
+    "engineKittenTagline": "צריכת הזיכרון הקטנה ביותר. אמין. הכי טוב במכשירים ישנים.",
     "engineKokoroTagline": "האיכות הגבוהה ביותר. איטי יותר להפעלה. ייתכן שחלק מהקולות לא יעבדו בכל המכשירים.",
     "engineSupertonicTagline": "המהיר ביותר להפעלה. צורך יותר זיכרון RAM. עלול להשמיט מילים מדי פעם.",
     "engineSystemTagline": "קולות מובנים של מערכת ההפעלה. זמינים תמיד, ללא צורך בהתקנה.",
@@ -1469,7 +1515,7 @@
       "fr": "צרפתית",
       "de": "גרמנית",
       "el": "יוונית",
-      "hi": "הינדי",
+      "hi": "הינדית",
       "hu": "הונגרית",
       "id": "אינדונזית",
       "it": "איטלקית",
@@ -1540,7 +1586,7 @@
         "else": "מחפשים משהו אחר?"
       },
       "topicDescription": {
-        "smartchat": "חבר ידידותי לכל יום",
+        "smartchat": "חבר ידידותי ליום-יום",
         "coding": "כתיבת קוד, ניפוי באגים, הסברים",
         "education": "ללמוד, להסביר, להיבחן",
         "roleplay": "דמויות ותרחישים",
@@ -1584,6 +1630,8 @@
   "downloadBanner": {
     "titleByPal": "{{name}} בהורדה",
     "titleByModel": "{{name}} בהורדה",
-    "extraInProgress": "+{{count}} נוספים בתהליך"
+    "extraInProgress": "+{{count}} נוספים בתהליך",
+    "failedTitle": "ההורדה לא הושלמה",
+    "retry": "נסה שוב"
   }
 }

@@ -182,7 +182,7 @@ export const Selectors = {
       return byTestId('menu-button');
     },
     get stopButton(): string {
-      return byTestId('stop-button');
+      return byExactTestId('stop-button');
     },
     get attachmentButton(): string {
       return byTestId('attachment-button');

@@ -109,7 +109,11 @@ import {
   createDefaultContextInitParams,
 } from '../utils/contextInitParamsVersions';
 import NativeHardwareInfo from '../specs/NativeHardwareInfo';
-import {getModelMemoryRequirement} from '../utils/memoryEstimator';
+import {
+  getModelMemoryRequirement,
+  MemoryEstimateSettings,
+  stateCacheBudgetMb,
+} from '../utils/memoryEstimator';
 import {loadLlamaModelInfo} from 'llama.rn';
 
 /**
@@ -264,6 +268,7 @@ class ModelStore {
       activeModelCaps: computed({equals: comparer.structural}),
       activeSamplerDefaults: computed,
       contextId: computed,
+      memoryEstimateSettings: computed,
       remoteModels: computed,
       activeDownloads: computed,
     });
@@ -596,6 +601,7 @@ class ModelStore {
       use_mlock: this.contextInitParams.use_mlock,
       use_mmap: effectiveUseMmap,
       no_extra_bufts: this.contextInitParams.no_extra_bufts,
+      state_cache_budget_mb: stateCacheBudgetMb(this.deviceTier),
     };
 
     if (speculative) {
@@ -2394,7 +2400,7 @@ class ModelStore {
         const estimated = getModelMemoryRequirement(
           model,
           projectionModel,
-          contextInitParams,
+          {...contextInitParams, state_cache_budget_mb: 0},
           pairedDraftModel(draftConfig),
         );
         runInAction(() => {
@@ -2636,6 +2642,13 @@ class ModelStore {
     return this.lastUsedModelId
       ? this.models.find(m => m.id === this.lastUsedModelId && m.isDownloaded)
       : undefined;
+  }
+
+  get memoryEstimateSettings(): MemoryEstimateSettings {
+    return {
+      ...this.contextInitParams,
+      state_cache_budget_mb: stateCacheBudgetMb(this.deviceTier),
+    };
   }
 
   /**

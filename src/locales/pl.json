@@ -205,7 +205,13 @@
     "speculativeDraftValueCacheType": "Typ pamięci podręcznej wartości modelu roboczego",
     "speculativeDraftNGpuLayers": "Warstwy GPU modelu roboczego",
     "speculativeDraftNGpuLayersDescription": "Liczba warstw modelu roboczego przenoszonych do GPU.",
-    "speculativeDraftCacheTypeInactiveDescription": "Zacznie obowiązywać po uruchomieniu dekodowania spekulatywnego."
+    "speculativeDraftCacheTypeInactiveDescription": "Zacznie obowiązywać po uruchomieniu dekodowania spekulatywnego.",
+    "purchases": {
+      "title": "Zakupy",
+      "statusOwned": "Kupione",
+      "statusUnlocking": "Odblokowywanie",
+      "link": "Zaloguj się, aby korzystać z zakupów na innych urządzeniach"
+    }
   },
   "models": {
     "labels": {
@@ -538,7 +544,9 @@
       "ttft": "{{value}}ms TTFT",
       "interrupted": "Przerwane",
       "truncated": "Przerwano - prawdopodobnie wyczerpano limit kontekstu",
-      "draftAccepted": "roboczy: {{accepted}}/{{total}} ({{pct}}%)"
+      "draftAccepted": "roboczy: {{accepted}}/{{total}} ({{pct}}%)",
+      "promptTokensPerSec": "{{value}} tokenów promptu/sek",
+      "cachedTokens": "{{value}} z pamięci podręcznej"
     },
     "exportUtils": {
       "fileSaved": "Plik zapisany",
@@ -1008,6 +1016,13 @@
     "toolMetrics": {
       "elapsed": "{{seconds}} sek.",
       "tokens": "{{count}} tokenów"
+    },
+    "completionSettings": {
+      "serverDefault": "domyślna wartość serwera",
+      "usingServerDefault": "Używana jest domyślna wartość serwera: {{value}}",
+      "usingServerDefaultUnreported": "Używana jest domyślna wartość serwera (nie podano jej)",
+      "resetToServerDefault": "Domyślna wartość serwera: {{value}} · Zresetuj",
+      "resetToServerDefaultAccessibilityLabel": "Zresetuj {{name}} do domyślnej wartości serwera, {{value}}"
     }
   },
   "palsScreen": {
@@ -1052,8 +1067,6 @@
       "download": "Pobierz",
       "getFree": "Pobierz za darmo"
     },
-    "premiumPalDescription": "Kumpel premium ze społeczności palshub.ai",
-    "premiumInfoText": "Odwiedź stronę palshub.ai, aby poznać więcej Kumpli",
     "sortOptions": {
       "newest": "Najnowsze",
       "oldest": "Najstarsze",
@@ -1077,15 +1090,7 @@
       "error": "Błąd",
       "failedToLoadDetails": "Nie udało się załadować szczegółów Kumpla",
       "failedToDownload": "Nie udało się pobrać Kumpla",
-      "premiumPalMessage": "To jest Kumpel Premium.\n• Jeśli odblokowałeś go już za pomocą swojego konta Palshub, po prostu zaloguj się, aby uzyskać dostęp do wszystkich szczegółów.\n• Jeszcze go nie odblokowałeś? Odwiedź stronę palshub.ai, aby dowiedzieć się więcej.",
-      "notAvailable": "nie dot.",
-      "buyOnPalshub": "Kup na Palshub",
-      "finalizingPurchase": "Finalizujemy Twój zakup…",
-      "processingPurchase": "Przetwarzanie — dostęp zostanie wkrótce odblokowany.",
-      "checkoutSessionExpired": "Twoja sesja wygasła. Zaloguj się ponownie, aby kontynuować.",
-      "signInAgain": "Zaloguj się ponownie",
-      "palNotAvailable": "Ten Kumpel nie jest obecnie dostępny w sprzedaży.",
-      "checkoutFailed": "Coś poszło nie tak. Spróbuj ponownie."
+      "notAvailable": "nie dot."
     },
     "sectionTitles": {
       "myPalsLocal": "Moi Kumple (lokalni)",
@@ -1095,7 +1100,48 @@
     "systemPrompt": "Prompt Systemowy",
     "videoAnalysis": "Analiza Wideo",
     "videoAnalysisDescription": "Jest to asystent oparty na sztucznej inteligencji, który na bieżąco komentuje strumienie wideo z kamery Twojego urządzenia.",
-    "world": "Świat"
+    "world": "Świat",
+    "purchase": {
+      "buy": "{{price}}",
+      "open": "Otwórz",
+      "install": "Zainstaluj",
+      "pending": "Oczekuje",
+      "unlocking": "Odblokowywanie",
+      "retry": "Ponów",
+      "supportCode": "Kod pomocy technicznej: {{code}}",
+      "noLongerAvailable": "Ten Kumpel nie jest już dostępny. Możesz {{refundLink}}.",
+      "refundLink": "poprosić Apple o zwrot pieniędzy",
+      "notCompleted": "Nie udało się zrealizować tego zakupu. Google zwróci Ci pieniądze.",
+      "withdrawnRefunding": "Ten Kumpel został wycofany. Skontaktuj się z pomocą techniczną, aby otrzymać zwrot pieniędzy.",
+      "invalid": "Nie udało się zweryfikować tego zakupu.",
+      "heldInvalid": "Nie udało się odblokować tego zakupu. Skontaktuj się z pomocą techniczną, podając ten kod.",
+      "recommendedModel": "Zalecany model",
+      "sampleExchange": "Przykładowa rozmowa",
+      "signInLine": "Masz go już? Zaloguj się",
+      "licenseNotice": "Kupujesz licencję na korzystanie z tego Kumpla.",
+      "termsOfSale": "Warunki sprzedaży",
+      "appleMediaTerms": "Warunki dotyczące usług multimedialnych Apple",
+      "linkPrompt": "Zaloguj się, aby korzystać z niego także na innych urządzeniach",
+      "linkSignIn": "Zaloguj się",
+      "dismiss": "Nie teraz",
+      "linkConflict": "Te zakupy są powiązane z innym kontem.",
+      "restorePurchases": "Przywróć zakupy",
+      "badgePending": "Oczekuje",
+      "badgeUnlocking": "Odblokowywanie",
+      "badgeUpdate": "Dostępna aktualizacja",
+      "updatePrompt": "Dostępna jest nowa wersja od twórcy.",
+      "updatePromptWithNote": "Dostępna jest nowa wersja od twórcy: {{note}}.",
+      "updateButton": "Zaktualizuj",
+      "updateConfirmText": "Zastąpi to Twoje zmiany w częściach, które zmienił twórca.",
+      "updateConfirm": "Zaktualizuj",
+      "updateCancel": "Anuluj",
+      "modelStep": {
+        "download": "Pobierz · {{size}}",
+        "startChat": "Rozpocznij czat",
+        "needsMemory": "Najmniejszy model tego Kumpla wymaga urządzenia z co najmniej {{size}} pamięci.",
+        "noModelFits": "To urządzenie nie ma wystarczającej ilości pamięci dla tego Kumpla."
+      }
+    }
   },
   "validation": {
     "nameRequired": "Nazwa jest wymagana",
@@ -1584,6 +1630,8 @@
   "downloadBanner": {
     "titleByPal": "{{name}} jest w trakcie pobierania",
     "titleByModel": "{{name}} jest w trakcie pobierania",
-    "extraInProgress": "+{{count}} kolejnych w trakcie realizacji"
+    "extraInProgress": "+{{count}} kolejnych w trakcie realizacji",
+    "failedTitle": "Pobieranie nie zostało zakończone",
+    "retry": "Ponów"
   }
 }

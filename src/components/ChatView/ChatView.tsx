@@ -321,7 +321,7 @@ export const ChatView = observer(
         memBytesFor: nCtx => {
           try {
             return getModelMemoryRequirement(activeModel, projectionModel, {
-              ...modelStore.contextInitParams,
+              ...modelStore.memoryEstimateSettings,
               n_ctx: nCtx,
             });
           } catch {

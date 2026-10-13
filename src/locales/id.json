@@ -205,7 +205,13 @@
     "speculativeDraftValueCacheType": "Tipe Cache Nilai Draf",
     "speculativeDraftNGpuLayers": "Lapisan GPU Draf",
     "speculativeDraftNGpuLayersDescription": "Jumlah lapisan model draf yang dialihkan ke GPU.",
-    "speculativeDraftCacheTypeInactiveDescription": "Berlaku setelah decoding spekulatif berjalan."
+    "speculativeDraftCacheTypeInactiveDescription": "Berlaku setelah decoding spekulatif berjalan.",
+    "purchases": {
+      "title": "Pembelian",
+      "statusOwned": "Sudah Dibeli",
+      "statusUnlocking": "Membuka Kunci",
+      "link": "Masuk untuk menggunakannya di perangkat lain"
+    }
   },
   "memory": {
     "shortWarning": "Peringatan Memori",
@@ -1022,7 +1028,9 @@
       "ttft": "{{value}}md TTFT",
       "interrupted": "Terputus",
       "truncated": "Terpotong — kemungkinan konteks penuh",
-      "draftAccepted": "draf: {{accepted}}/{{total}} ({{pct}}%)"
+      "draftAccepted": "draf: {{accepted}}/{{total}} ({{pct}}%)",
+      "promptTokensPerSec": "{{value}} token prompt/detik",
+      "cachedTokens": "{{value}} dari cache"
     },
     "pendingIndicator": {
       "preparingTool": "Menyiapkan alat",
@@ -1034,6 +1042,13 @@
     "toolMetrics": {
       "tokens": "{{count}} token",
       "elapsed": "{{seconds}} dtk"
+    },
+    "completionSettings": {
+      "serverDefault": "bawaan server",
+      "usingServerDefault": "Menggunakan bawaan server: {{value}}",
+      "usingServerDefaultUnreported": "Menggunakan bawaan server (tidak dilaporkan)",
+      "resetToServerDefault": "Bawaan server: {{value}} · Atur Ulang",
+      "resetToServerDefaultAccessibilityLabel": "Atur ulang {{name}} ke bawaan server, {{value}}"
     }
   },
   "palsScreen": {
@@ -1087,8 +1102,6 @@
       "download": "Unduh",
       "getFree": "Dapatkan Gratis"
     },
-    "premiumPalDescription": "Pal premium dari komunitas palshub.ai",
-    "premiumInfoText": "Kunjungi palshub.ai untuk menjelajahi lebih banyak pal",
     "sortOptions": {
       "newest": "Terbaru",
       "oldest": "Terlama",
@@ -1112,15 +1125,48 @@
       "error": "Kesalahan",
       "failedToLoadDetails": "Gagal memuat detail pal",
       "failedToDownload": "Gagal mengunduh pal",
-      "premiumPalMessage": "Ini adalah Pal Premium.\n• Jika Anda sudah membukanya dengan akun Palshub, cukup masuk untuk mengakses detail lengkapnya.\n• Belum membukanya? Kunjungi aplikasi palshub.ai untuk informasi lebih lanjut.",
-      "notAvailable": "T/A",
-      "buyOnPalshub": "Beli di Palshub",
-      "finalizingPurchase": "Menyelesaikan pembelian Anda…",
-      "processingPurchase": "Memproses — akan segera terbuka.",
-      "checkoutSessionExpired": "Sesi Anda telah berakhir. Masuk lagi untuk melanjutkan.",
-      "signInAgain": "Masuk Lagi",
-      "palNotAvailable": "Pal ini sedang tidak tersedia untuk dibeli saat ini.",
-      "checkoutFailed": "Terjadi kesalahan. Silakan coba lagi."
+      "notAvailable": "T/A"
+    },
+    "purchase": {
+      "buy": "{{price}}",
+      "open": "Buka",
+      "install": "Pasang",
+      "pending": "Tertunda",
+      "unlocking": "Membuka Kunci",
+      "retry": "Coba Lagi",
+      "supportCode": "Kode dukungan: {{code}}",
+      "noLongerAvailable": "Pal ini tidak lagi tersedia. Anda dapat {{refundLink}}.",
+      "refundLink": "meminta pengembalian dana ke Apple",
+      "notCompleted": "Pembelian ini tidak dapat diselesaikan. Google akan mengembalikan dana Anda.",
+      "withdrawnRefunding": "Pal ini telah ditarik. Hubungi dukungan untuk pengembalian dana.",
+      "invalid": "Kami tidak dapat memverifikasi pembelian ini.",
+      "heldInvalid": "Kami tidak dapat membuka kunci pembelian ini. Hubungi dukungan dengan kode ini.",
+      "recommendedModel": "Model yang Direkomendasikan",
+      "sampleExchange": "Contoh Percakapan",
+      "signInLine": "Sudah punya? Masuk",
+      "licenseNotice": "Anda membeli lisensi untuk menggunakan Pal ini.",
+      "termsOfSale": "Ketentuan Penjualan",
+      "appleMediaTerms": "Ketentuan Layanan Media Apple",
+      "linkPrompt": "Masuk untuk menggunakannya di perangkat Anda yang lain juga",
+      "linkSignIn": "Masuk",
+      "dismiss": "Nanti Saja",
+      "linkConflict": "Pembelian ini tertaut ke akun lain.",
+      "restorePurchases": "Pulihkan Pembelian",
+      "badgePending": "Tertunda",
+      "badgeUnlocking": "Membuka Kunci",
+      "badgeUpdate": "Pembaruan Tersedia",
+      "updatePrompt": "Versi baru dari pembuatnya sudah tersedia.",
+      "updatePromptWithNote": "Versi baru dari pembuatnya sudah tersedia: {{note}}.",
+      "updateButton": "Perbarui",
+      "updateConfirmText": "Ini akan menggantikan perubahan Anda pada bagian yang diubah oleh pembuatnya.",
+      "updateConfirm": "Perbarui",
+      "updateCancel": "Batal",
+      "modelStep": {
+        "download": "Unduh · {{size}}",
+        "startChat": "Mulai Obrolan",
+        "needsMemory": "Pal ini memerlukan perangkat dengan memori minimal {{size}} untuk model terkecilnya.",
+        "noModelFits": "Perangkat ini tidak memiliki cukup memori untuk Pal ini."
+      }
     }
   },
   "validation": {
@@ -1584,6 +1630,8 @@
   "downloadBanner": {
     "titleByPal": "{{name}} sedang mengunduh",
     "titleByModel": "{{name}} sedang mengunduh",
-    "extraInProgress": "+{{count}} lainnya sedang berlangsung"
+    "extraInProgress": "+{{count}} lainnya sedang berlangsung",
+    "failedTitle": "Unduhan tidak selesai",
+    "retry": "Coba Lagi"
   }
 }

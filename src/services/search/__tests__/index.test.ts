@@ -3,7 +3,13 @@ import type {SearchProviderId} from '../types';
 
 describe('createSearchProvider', () => {
   it('builds the adapter matching each provider id', () => {
-    const ids: SearchProviderId[] = ['tavily', 'brave', 'exa', 'parallel'];
+    const ids: SearchProviderId[] = [
+      'tavily',
+      'brave',
+      'exa',
+      'firecrawl',
+      'parallel',
+    ];
     for (const id of ids) {
       expect(createSearchProvider(id, () => 'k').id).toBe(id);
     }

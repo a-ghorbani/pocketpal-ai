@@ -205,7 +205,13 @@
     "speculativeDraftValueCacheType": "Tipo de Cache de Valor do Rascunho",
     "speculativeDraftNGpuLayers": "Camadas de GPU do Rascunho",
     "speculativeDraftNGpuLayersDescription": "Número de camadas do modelo de rascunho a descarregar para a GPU.",
-    "speculativeDraftCacheTypeInactiveDescription": "Aplica-se assim que a descodificação especulativa estiver a funcionar."
+    "speculativeDraftCacheTypeInactiveDescription": "Aplica-se assim que a descodificação especulativa estiver a funcionar.",
+    "purchases": {
+      "title": "Compras",
+      "statusOwned": "Comprado",
+      "statusUnlocking": "A desbloquear",
+      "link": "Entrar para usar noutros dispositivos"
+    }
   },
   "memory": {
     "shortWarning": "Aviso de Memória",
@@ -564,7 +570,9 @@
       "interrupted": "Interrompido",
       "truncated": "Cortado — provavelmente o contexto está cheio",
       "ttft": "{{value}}ms TTFT",
-      "draftAccepted": "rascunho: {{accepted}}/{{total}} ({{pct}}%)"
+      "draftAccepted": "rascunho: {{accepted}}/{{total}} ({{pct}}%)",
+      "promptTokensPerSec": "{{value}} tokens de prompt/seg",
+      "cachedTokens": "{{value}} em cache"
     },
     "exportUtils": {
       "fileSaved": "Ficheiro Gravado",
@@ -1034,6 +1042,13 @@
       "importPals": "Importar pals",
       "importSuccess": "{{count}} pal(s) importado(s) com sucesso.",
       "importError": "Falha ao importar pals. Verifique o formato do ficheiro."
+    },
+    "completionSettings": {
+      "serverDefault": "padrão do servidor",
+      "usingServerDefault": "A usar o padrão do servidor: {{value}}",
+      "usingServerDefaultUnreported": "A usar o padrão do servidor (não indicado)",
+      "resetToServerDefault": "Padrão do servidor: {{value}} · Redefinir",
+      "resetToServerDefaultAccessibilityLabel": "Redefinir {{name}} para o padrão do servidor, {{value}}"
     }
   },
   "palsScreen": {
@@ -1086,8 +1101,6 @@
       "download": "Descarregar",
       "getFree": "Obter Grátis"
     },
-    "premiumPalDescription": "Pal premium da comunidade palshub.ai",
-    "premiumInfoText": "Visite palshub.ai para explorar mais pals",
     "sortOptions": {
       "newest": "Mais Recentes",
       "oldest": "Mais Antigos",
@@ -1111,17 +1124,50 @@
       "error": "Erro",
       "failedToLoadDetails": "Falha ao carregar os pormenores do pal",
       "failedToDownload": "Falha ao descarregar o pal",
-      "premiumPalMessage": "Este é um Pal Premium.\n• Se já o desbloqueou com a sua conta Palshub, basta entrar para aceder todos os pormenores.\n• Ainda não desbloqueou? Visite a app palshub.ai para saber mais.",
-      "notAvailable": "N/D",
-      "buyOnPalshub": "Comprar no Palshub",
-      "finalizingPurchase": "A finalizar a sua compra…",
-      "processingPurchase": "A processar — será desbloqueado em breve.",
-      "checkoutSessionExpired": "A sua sessão expirou. Entre novamente para continuar.",
-      "signInAgain": "Entrar novamente",
-      "palNotAvailable": "Este pal não está disponível para compra no momento.",
-      "checkoutFailed": "Algo deu errado. Tente novamente."
+      "notAvailable": "N/D"
     },
-    "prompt": "Prompt"
+    "prompt": "Prompt",
+    "purchase": {
+      "buy": "{{price}}",
+      "open": "Abrir",
+      "install": "Instalar",
+      "pending": "Pendente",
+      "unlocking": "A desbloquear",
+      "retry": "Tentar Novamente",
+      "supportCode": "Código de suporte: {{code}}",
+      "noLongerAvailable": "Este Pal já não está disponível. Pode {{refundLink}}.",
+      "refundLink": "pedir um reembolso à Apple",
+      "notCompleted": "Não foi possível concluir esta compra. A Google vai reembolsá-lo.",
+      "withdrawnRefunding": "Este Pal foi retirado. Contacte o suporte para obter um reembolso.",
+      "invalid": "Não foi possível verificar esta compra.",
+      "heldInvalid": "Não foi possível desbloquear esta compra. Contacte o suporte com este código.",
+      "recommendedModel": "Modelo recomendado",
+      "sampleExchange": "Conversa de exemplo",
+      "signInLine": "Já o tem? Entrar",
+      "licenseNotice": "Está a comprar uma licença para usar este Pal.",
+      "termsOfSale": "Termos de Venda",
+      "appleMediaTerms": "Termos dos Serviços Multimédia da Apple",
+      "linkPrompt": "Entre para o usar também nos seus outros dispositivos",
+      "linkSignIn": "Entrar",
+      "dismiss": "Agora não",
+      "linkConflict": "Estas compras estão associadas a outra conta.",
+      "restorePurchases": "Restaurar compras",
+      "badgePending": "Pendente",
+      "badgeUnlocking": "A desbloquear",
+      "badgeUpdate": "Atualização disponível",
+      "updatePrompt": "Está disponível uma nova versão do criador.",
+      "updatePromptWithNote": "Está disponível uma nova versão do criador: {{note}}.",
+      "updateButton": "Atualizar",
+      "updateConfirmText": "Isto substitui as suas edições nas partes que o criador alterou.",
+      "updateConfirm": "Atualizar",
+      "updateCancel": "Cancelar",
+      "modelStep": {
+        "download": "Descarregar · {{size}}",
+        "startChat": "Iniciar chat",
+        "needsMemory": "Este Pal precisa de um dispositivo com, no mínimo, {{size}} de memória para o seu modelo mais pequeno.",
+        "noModelFits": "Este dispositivo não tem memória suficiente para este Pal."
+      }
+    }
   },
   "validation": {
     "nameRequired": "O nome é obrigatório",
@@ -1584,6 +1630,8 @@
   "downloadBanner": {
     "titleByPal": "{{name}} está a ser descarregado",
     "titleByModel": "{{name}} está a ser descarregado",
-    "extraInProgress": "+{{count}} mais em andamento"
+    "extraInProgress": "+{{count}} mais em andamento",
+    "failedTitle": "A descarga não terminou",
+    "retry": "Tentar Novamente"
   }
 }
