@@ -91,4 +91,5 @@ module.exports = {
   createBottomSheetScrollableComponent,
   useBottomSheetModal: () => ({}),
   useBottomSheet: () => ({}),
+  useBottomSheetInternal: jest.fn(() => null),
 };
