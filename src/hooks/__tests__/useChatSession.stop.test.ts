@@ -15,6 +15,7 @@ import type {
   CompletionStreamData,
 } from '../../utils/completionTypes';
 import {convertToChatMessages} from '../../utils/chat';
+import {RemoteModelRequestWithdrawnError} from '../../utils/errors';
 import type {AgentStep, MessageType} from '../../utils/types';
 
 const mockAssistant = {id: 'assistant'};
@@ -584,5 +585,74 @@ describe('useChatSession: the turn a Stop leaves in the chat', () => {
     expect(beforeStart.metadata?.copyable).toBe(true);
     expect(nextPromptRoles(inPrefill)).toEqual(['user', 'assistant', 'user']);
     expect(nextPromptRoles(beforeStart)).toEqual(['user', 'assistant', 'user']);
+  });
+});
+
+describe('useChatSession Stop while a router model loads', () => {
+  it('undoes the send before a send queued behind Stop adds its row', async () => {
+    const withdraws: Array<() => void> = [];
+    const engine = {
+      completion: jest.fn(
+        () =>
+          new Promise<CompletionResult>((_resolve, reject) => {
+            withdraws.push(() =>
+              reject(new RemoteModelRequestWithdrawnError()),
+            );
+          }),
+      ),
+      stopCompletion: jest.fn(async () => {}),
+    };
+    modelStore.engine = engine;
+    let nextId = 0;
+    (
+      chatSessionStore.addMessageToCurrentSession as jest.Mock
+    ).mockImplementation(async (message: MessageType.Any) => {
+      message.id = `row-${++nextId}`;
+    });
+    const session = renderSession();
+
+    let first!: Promise<unknown>;
+    await act(async () => {
+      first = session.current.handleSendPress(textMessage);
+    });
+    await waitFor(() => expect(engine.completion).toHaveBeenCalledTimes(1));
+    const firstUserId = userBubbles()[0].id;
+
+    await session.current.handleStopPress();
+    let second!: Promise<unknown>;
+    await act(async () => {
+      second = session.current.handleSendPress({...textMessage, text: 'again'});
+    });
+    expect(userBubbles()).toHaveLength(1);
+
+    await act(async () => {
+      withdraws[0]();
+      await first;
+    });
+    await waitFor(() => expect(engine.completion).toHaveBeenCalledTimes(2));
+
+    const deleteFirst = (
+      chatSessionStore.deleteMessageFromSession as jest.Mock
+    ).mock.calls.findIndex(([, id]) => id === firstUserId);
+    expect(deleteFirst).toBeGreaterThanOrEqual(0);
+    const deletedAt = (chatSessionStore.deleteMessageFromSession as jest.Mock)
+      .mock.invocationCallOrder[deleteFirst];
+    const addCalls = chatSessionStore.addMessageToCurrentSession as jest.Mock;
+    const secondAddedAt =
+      addCalls.mock.invocationCallOrder[
+        addCalls.mock.calls.findIndex(
+          ([message]) => message.author === user && message.text === 'again',
+        )
+      ];
+    expect(deletedAt).toBeLessThan(secondAddedAt);
+    await expect(first).resolves.toEqual({
+      message: textMessage,
+      sessionId: 'session-1',
+    });
+
+    await act(async () => {
+      withdraws[1]();
+      await second;
+    });
   });
 });
