@@ -1318,7 +1318,8 @@
       "testWarning": "הערה: הבדיקה יכולה להימשך עד 2-5 דקות עבור מודלים גדולים ולא ניתן להפסיק אותה לאחר תחילתה.",
       "keepScreenOpen": "אנא השאר את המסך הזה פתוח.",
       "initializingModel": "אתחול מודל...",
-      "modelMaxValue": "(מקסימום: {{maxValue}})"
+      "modelMaxValue": "(מקסימום: {{maxValue}})",
+      "testFailed": "לא ניתן להריץ את הבדיקה. המתן לסיום התשובה ואז נסה שוב."
     },
     "dialogs": {
       "advancedSettings": {

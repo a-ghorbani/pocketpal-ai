@@ -569,7 +569,7 @@
       "tokensPerSec": "{{value}} رمز/ثانية",
       "promptTokensPerSec": "{{value}} رمز الإدخال/ثانية",
       "cachedTokens": "{{value}} مخزّن مؤقتًا",
-      "ttft": "{{value}} مللي ثانية لزمن الوصول لأول رمز",
+      "ttft": "{{value}}ms TTFT",
       "draftAccepted": "المسودة: {{accepted}}/{{total}} ({{pct}}%)",
       "interrupted": "مقاطَع",
       "truncated": "تم القطع — على الأرجح السياق ممتلئ"
@@ -1326,7 +1326,8 @@
       "testWarning": "ملاحظة: قد يستغرق الاختبار ما بين 2 و5 دقائق للنماذج الأكبر، ولا يمكن مقاطعته بمجرد بدئه.",
       "keepScreenOpen": "يرجى إبقاء هذه الشاشة مفتوحة.",
       "initializingModel": "جارٍ تهيئة النموذج...",
-      "modelMaxValue": "(الحد الأقصى: {{maxValue}})"
+      "modelMaxValue": "(الحد الأقصى: {{maxValue}})",
+      "testFailed": "تعذّر تشغيل الاختبار. انتظر حتى ينتهي أي رد، ثم حاول مرة أخرى."
     },
     "dialogs": {
       "advancedSettings": {
