@@ -224,7 +224,7 @@ export const EnhancedSearchBar = ({
           keyboardShouldPersistTaps="handled"
           contentContainerStyle={styles.sheetScrollContent}>
           <View style={styles.authorInputContainer}>
-            <TextInput
+            <Sheet.TextInput
               defaultValue={filters.author}
               // value={filters.author}
               onChangeText={author => onFiltersChange({author})}

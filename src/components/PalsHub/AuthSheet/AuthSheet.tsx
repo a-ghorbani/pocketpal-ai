@@ -14,6 +14,7 @@ import {GoogleIcon} from '../../../assets/icons';
 import {useTheme} from '../../../hooks';
 
 import {Sheet} from '../../Sheet';
+import {renderSheetAwareInput} from '../../TextInput';
 import {createStyles} from './styles';
 
 import {authService, PalsHubErrorHandler} from '../../../services';
@@ -189,6 +190,7 @@ export const AuthSheet: React.FC<AuthSheetProps> = observer(
             {isSignUp && (
               <TextInput
                 testID="full-name-input"
+                render={renderSheetAwareInput}
                 label="Full Name"
                 value={fullName}
                 onChangeText={setFullName}
@@ -200,6 +202,7 @@ export const AuthSheet: React.FC<AuthSheetProps> = observer(
 
             <TextInput
               testID="email-input"
+              render={renderSheetAwareInput}
               label="Email"
               value={email}
               onChangeText={setEmail}
@@ -212,6 +215,7 @@ export const AuthSheet: React.FC<AuthSheetProps> = observer(
 
             <TextInput
               testID="password-input"
+              render={renderSheetAwareInput}
               label="Password"
               value={password}
               onChangeText={setPassword}
