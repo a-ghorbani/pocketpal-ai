@@ -528,6 +528,7 @@ export const RemoteModelSheet: React.FC<RemoteModelSheetProps> = observer(
                       testID="remote-url-scan"
                       icon="qrcode-scan"
                       accessibilityLabel={l10n.settings.scanServerQr}
+                      forceTextInputFocus={false}
                       onPress={handleScanPress}
                     />
                   }

@@ -978,6 +978,18 @@ describe('RemoteModelSheet', () => {
       },
     );
 
+    it('does not focus the url field when scan is pressed', async () => {
+      const {focus} = require('react-native/jest/MockNativeMethods').default;
+      const view = render(
+        <RemoteModelSheet isVisible={true} onDismiss={jest.fn()} />,
+      );
+
+      focus.mockClear();
+      await openScanner(view);
+
+      expect(focus).not.toHaveBeenCalled();
+    });
+
     it('offers no scan while a known-server chip is selected', async () => {
       serverStore.servers = [
         {id: 'srv-1', name: 'LM Studio', url: 'http://localhost:1234'},
