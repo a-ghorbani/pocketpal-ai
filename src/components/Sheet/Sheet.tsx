@@ -11,11 +11,11 @@ import {Text} from 'react-native-paper';
 import {CloseIcon} from '../../assets/icons';
 import {useTheme} from '../../hooks';
 import {styles} from './styles';
-import BottomSheetKeyboardAwareScrollView from './BottomSheetAwareScrollview';
 import {Dimensions, TouchableOpacity, View} from 'react-native';
 import {CustomBackdrop} from './CustomBackdrop';
 import {Actions} from './Actions';
 import {SheetHandle} from './SheetHandle';
+import {SheetScrollView} from './SheetScrollView';
 import {fullHeightSnapPoint, resolveSnapPoints} from './snapPoints';
 
 export interface SheetProps extends Partial<BottomSheetModalProps> {
@@ -31,7 +31,7 @@ interface SheetComponent
   extends React.ForwardRefExoticComponent<
     SheetProps & React.RefAttributes<BottomSheetModalMethods>
   > {
-  ScrollView: typeof BottomSheetKeyboardAwareScrollView;
+  ScrollView: typeof SheetScrollView;
   View: typeof BottomSheetView;
   Actions: typeof Actions;
   TextInput: typeof BottomSheetTextInput;
@@ -126,7 +126,7 @@ export const Sheet = forwardRef(
 ) as SheetComponent;
 
 Sheet.displayName = 'Sheet';
-Sheet.ScrollView = BottomSheetKeyboardAwareScrollView;
+Sheet.ScrollView = SheetScrollView;
 Sheet.View = BottomSheetView;
 Sheet.Actions = Actions;
 Sheet.TextInput = BottomSheetTextInput;

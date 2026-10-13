@@ -202,9 +202,7 @@ export const SearchView = observer(
           keyExtractor={(item: HuggingFaceModel) => item.id}
           renderItem={renderItem}
           contentContainerStyle={styles.list}
-          renderScrollComponent={props => (
-            <Sheet.ScrollView bottomOffset={100} {...props} />
-          )}
+          renderScrollComponent={props => <Sheet.ScrollView {...props} />}
           onEndReached={handleEndReached}
           onEndReachedThreshold={0.3}
           ListEmptyComponent={renderEmptyState}

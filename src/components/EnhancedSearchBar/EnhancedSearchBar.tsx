@@ -220,7 +220,6 @@ export const EnhancedSearchBar = ({
         onClose={closeFilterSheet}
         title={l10n.models.search.filters.author}>
         <Sheet.ScrollView
-          bottomOffset={16}
           keyboardShouldPersistTaps="handled"
           contentContainerStyle={styles.sheetScrollContent}>
           <View style={styles.authorInputContainer}>

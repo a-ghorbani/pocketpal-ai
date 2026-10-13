@@ -346,7 +346,6 @@ export const PalSheet: React.FC<PalSheetProps> = observer(
           onClose={handleClose}>
           <FormProvider {...methods}>
             <Sheet.ScrollView
-              bottomOffset={16}
               contentContainerStyle={styles.scrollviewContainer}>
               <View style={styles.form}>
                 <FormField
