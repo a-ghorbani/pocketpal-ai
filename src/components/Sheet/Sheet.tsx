@@ -16,6 +16,7 @@ import {Dimensions, TouchableOpacity, View} from 'react-native';
 import {CustomBackdrop} from './CustomBackdrop';
 import {Actions} from './Actions';
 import {SheetHandle} from './SheetHandle';
+import {fullHeightSnapPoint, resolveSnapPoints} from './snapPoints';
 
 export interface SheetProps extends Partial<BottomSheetModalProps> {
   children?: React.ReactNode;
@@ -45,6 +46,7 @@ export const Sheet = forwardRef(
       displayFullHeight,
       onClose,
       showCloseButton = true,
+      snapPoints: requestedSnapPoints,
       ...props
     }: SheetProps,
     ref: React.Ref<BottomSheetModalMethods>,
@@ -74,19 +76,19 @@ export const Sheet = forwardRef(
       onClose?.();
     };
 
+    const screenHeight = Dimensions.get('screen').height;
     const snapPoints = useMemo(() => {
       if (displayFullHeight) {
-        return [Dimensions.get('screen').height - insets.top - 16];
+        return [fullHeightSnapPoint(screenHeight, insets.top)];
       }
-      return props.snapPoints;
-    }, [displayFullHeight, insets, props.snapPoints]);
+      return resolveSnapPoints(requestedSnapPoints, screenHeight, insets.top);
+    }, [displayFullHeight, screenHeight, insets.top, requestedSnapPoints]);
 
     return (
       <BottomSheetModal
         ref={activeRef}
-        maxDynamicContentSize={
-          Dimensions.get('screen').height - insets.top - 16
-        }
+        maxDynamicContentSize={fullHeightSnapPoint(screenHeight, insets.top)}
+        topInset={insets.top}
         enableDynamicSizing={!snapPoints}
         stackBehavior="push"
         backdropComponent={CustomBackdrop}
