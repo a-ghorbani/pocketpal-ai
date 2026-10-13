@@ -1326,7 +1326,8 @@
       "testWarning": "Nota: O teste pode levar de 2 a 5 minutos para modelos maiores e não pode ser interrompido depois de iniciado.",
       "keepScreenOpen": "Mantenha esta tela aberta.",
       "initializingModel": "Inicializando modelo...",
-      "modelMaxValue": "(máx.: {{maxValue}})"
+      "modelMaxValue": "(máx.: {{maxValue}})",
+      "testFailed": "Não foi possível executar o teste. Aguarde a resposta em andamento terminar e tente novamente."
     },
     "dialogs": {
       "advancedSettings": {
