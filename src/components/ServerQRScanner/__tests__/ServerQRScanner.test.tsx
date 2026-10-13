@@ -86,21 +86,81 @@ describe('ServerQRScanner', () => {
     expect(onClose).toHaveBeenCalled();
   });
 
-  it('replaces the preview with a message when the camera fails', () => {
+  const fireCameraError = (view: ReturnType<typeof render>, code: string) =>
+    act(() => view.getByTestId('server-qr-camera').props.onError({code}));
+
+  it.each([
+    'code-scanner/not-compatible-with-outputs',
+    'permission/camera-permission-denied',
+    'device/no-device',
+    'system/camera-module-not-found',
+  ])('replaces the preview with a message on %s', code => {
     const onClose = jest.fn();
-    const {getByText, getByTestId, queryByTestId} = render(
+    const view = render(
       <ServerQRScanner onScanned={jest.fn()} onClose={onClose} />,
     );
 
-    act(() =>
-      getByTestId('server-qr-camera').props.onError({
-        code: 'code-scanner/cannot-load-model',
-      }),
+    fireCameraError(view, code);
+
+    expect(view.getByText(l10n.en.settings.scanQrUnavailable)).toBeTruthy();
+    expect(view.queryByTestId('server-qr-camera')).toBeNull();
+    fireEvent.press(view.getByTestId('server-qr-close'));
+    expect(onClose).toHaveBeenCalledTimes(1);
+  });
+
+  it('keeps the preview on unknown errors and clears the hint on the next scan', () => {
+    const view = render(
+      <ServerQRScanner onScanned={jest.fn()} onClose={jest.fn()} />,
     );
 
-    expect(getByText(l10n.en.settings.scanQrUnavailable)).toBeTruthy();
-    expect(queryByTestId('server-qr-camera')).toBeNull();
-    fireEvent.press(getByTestId('server-qr-close'));
+    fireCameraError(view, 'unknown/unknown');
+    fireCameraError(view, 'unknown/unknown');
+    fireCameraError(view, 'unknown/unknown');
+
+    expect(view.getByTestId('server-qr-camera')).toBeTruthy();
+    expect(view.getByText(l10n.en.settings.scanQrUnavailable)).toBeTruthy();
+
+    scan('hello');
+
+    expect(view.queryByText(l10n.en.settings.scanQrUnavailable)).toBeNull();
+    expect(view.getByText(l10n.en.settings.scanQrNotServer)).toBeTruthy();
+    expect(view.getByTestId('server-qr-camera')).toBeTruthy();
+  });
+
+  it('shows the unavailable hint over the not-a-server hint', () => {
+    const view = render(
+      <ServerQRScanner onScanned={jest.fn()} onClose={jest.fn()} />,
+    );
+
+    scan('hello');
+    fireCameraError(view, 'unknown/unknown');
+
+    expect(view.getByText(l10n.en.settings.scanQrUnavailable)).toBeTruthy();
+    expect(view.queryByText(l10n.en.settings.scanQrNotServer)).toBeNull();
+  });
+
+  it('still accepts a server url after an unknown error', () => {
+    const onScanned = jest.fn();
+    const view = render(
+      <ServerQRScanner onScanned={onScanned} onClose={jest.fn()} />,
+    );
+
+    fireCameraError(view, 'unknown/unknown');
+    scan('http://h:1/');
+
+    expect(onScanned).toHaveBeenCalledTimes(1);
+    expect(onScanned).toHaveBeenCalledWith('http://h:1/');
+  });
+
+  it('still closes after an unknown error', () => {
+    const onClose = jest.fn();
+    const view = render(
+      <ServerQRScanner onScanned={jest.fn()} onClose={onClose} />,
+    );
+
+    fireCameraError(view, 'unknown/unknown');
+    fireEvent.press(view.getByTestId('server-qr-close'));
+
     expect(onClose).toHaveBeenCalledTimes(1);
   });
 

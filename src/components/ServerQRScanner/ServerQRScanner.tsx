@@ -3,6 +3,7 @@ import {View} from 'react-native';
 import {IconButton, Text} from 'react-native-paper';
 import {
   Camera,
+  CameraRuntimeError,
   Code,
   useCameraDevice,
   useCodeScanner,
@@ -41,11 +42,13 @@ export const ServerQRScanner: React.FC<ServerQRScannerProps> = ({
   const acceptedRef = useRef(false);
   const [rejectedPayload, setRejectedPayload] = useState(false);
   const [cameraFailed, setCameraFailed] = useState(false);
+  const [frameError, setFrameError] = useState(false);
   const showCamera = !!device && !cameraFailed;
 
   const codeScanner = useCodeScanner({
     codeTypes: ['qr'],
     onCodeScanned: (codes: Code[]) => {
+      setFrameError(false);
       if (acceptedRef.current) {
         return;
       }
@@ -59,6 +62,20 @@ export const ServerQRScanner: React.FC<ServerQRScannerProps> = ({
     },
   });
 
+  const handleCameraError = (error: CameraRuntimeError) => {
+    if (error.code.startsWith('unknown/')) {
+      setFrameError(true);
+    } else {
+      setCameraFailed(true);
+    }
+  };
+
+  const hint = frameError
+    ? l10n.settings.scanQrUnavailable
+    : rejectedPayload
+      ? l10n.settings.scanQrNotServer
+      : undefined;
+
   return (
     <View style={styles.container}>
       {showCamera ? (
@@ -68,7 +85,7 @@ export const ServerQRScanner: React.FC<ServerQRScannerProps> = ({
           device={device}
           isActive
           codeScanner={codeScanner}
-          onError={() => setCameraFailed(true)}
+          onError={handleCameraError}
         />
       ) : (
         <Text style={styles.message}>
@@ -77,9 +94,7 @@ export const ServerQRScanner: React.FC<ServerQRScannerProps> = ({
             : l10n.camera.noDevice}
         </Text>
       )}
-      {showCamera && rejectedPayload && (
-        <Text style={styles.hint}>{l10n.settings.scanQrNotServer}</Text>
-      )}
+      {showCamera && hint && <Text style={styles.hint}>{hint}</Text>}
       <IconButton
         testID="server-qr-close"
         icon="close"
