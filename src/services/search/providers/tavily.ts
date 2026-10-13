@@ -23,7 +23,7 @@ export class TavilyProvider implements SearchProvider {
     signal?: AbortSignal,
   ): Promise<SearchHit[]> {
     const key = requireKey(this.getKey(), 'Tavily');
-    const data = await fetchJson<TavilyResponse>(
+    const data = await fetchJson<TavilyResponse | null>(
       'https://api.tavily.com/search',
       {
         method: 'POST',
@@ -37,7 +37,11 @@ export class TavilyProvider implements SearchProvider {
         signal,
       },
     );
-    return (data.results ?? []).map(r => ({
+    const results = data?.results;
+    if (!Array.isArray(results)) {
+      throw new Error('unexpected response');
+    }
+    return results.map(r => ({
       title: r.title ?? '',
       url: r.url ?? '',
       snippet: r.content ?? '',
