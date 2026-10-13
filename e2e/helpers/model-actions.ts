@@ -314,7 +314,7 @@ async function probeStopButton(): Promise<StopButtonState> {
   }
 }
 
-async function readNewestTimingText(): Promise<string | undefined> {
+export async function readNewestTimingText(): Promise<string | undefined> {
   const labels = browser.$$(Selectors.chat.inferenceComplete);
   const count = await labels.length;
   let newestIndex = -1;

@@ -54,7 +54,7 @@ import {t} from '../../locales';
 import {getModelMemoryRequirement} from '../../utils/memoryEstimator';
 import {CONTEXT_LADDER} from '../../utils/bannerVariantResolver';
 
-import {chatSessionStore, modelStore} from '../../store';
+import {NEW_CHAT_DRAFT_KEY, chatSessionStore, modelStore} from '../../store';
 import type {UndoneSend} from '../../hooks/useChatSession';
 
 import {MessageType, User} from '../../utils/types';
@@ -381,18 +381,25 @@ export const ChatView = observer(
     // ============ DRAFT AUTOSAVE ============
     // Save draft on session switch, restore draft for new session
     const prevSessionId = usePrevious(chatSessionStore.activeSessionId);
+    const syncedDraftRef = React.useRef('');
     React.useEffect(() => {
-      const NEW_CHAT_DRAFT_KEY = '__new_chat__';
       const prevKey = prevSessionId ?? NEW_CHAT_DRAFT_KEY;
       const newKey = chatSessionStore.activeSessionId ?? NEW_CHAT_DRAFT_KEY;
 
-      // Save draft for the session we're leaving
-      if (prevKey !== newKey) {
-        chatSessionStore.saveDraft(prevKey, inputTextRef.current);
+      // This runs after the switch, so a cancelled send may already have put
+      // its text into the draft being left: keep it rather than overwrite it.
+      const typed = inputTextRef.current;
+      if (prevKey !== newKey && typed !== syncedDraftRef.current) {
+        const stored = chatSessionStore.getDraft(prevKey);
+        chatSessionStore.saveDraft(
+          prevKey,
+          stored === syncedDraftRef.current ? typed : `${stored}\n${typed}`,
+        );
       }
 
       // Restore draft for the session we're entering
       const draft = chatSessionStore.getDraft(newKey);
+      syncedDraftRef.current = draft;
       setInputText(draft);
       // eslint-disable-next-line react-hooks/exhaustive-deps -- MobX observer makes activeSessionId reactive
     }, [chatSessionStore.activeSessionId]);
@@ -542,14 +549,17 @@ export const ChatView = observer(
 
     const wrappedOnSendPress = React.useCallback(
       async (message: MessageType.PartialText) => {
+        if (chatSessionStore.isStopping) {
+          return;
+        }
+        const draftKey = chatSessionStore.activeSessionId ?? NEW_CHAT_DRAFT_KEY;
         if (chatSessionStore.isEditMode) {
           await chatSessionStore.commitEdit();
         }
         const sent = onSendPress(message);
         setInputText('');
-        if (chatSessionStore.activeSessionId) {
-          chatSessionStore.clearDraft(chatSessionStore.activeSessionId);
-        }
+        syncedDraftRef.current = '';
+        chatSessionStore.clearDraft(draftKey);
         Keyboard.dismiss();
         const undone = await sent;
         if (undone) {
@@ -704,6 +714,7 @@ export const ChatView = observer(
       reportContent: reportContentLabel,
     } = l10n.components.chatView.menuItems;
 
+    const isStopping = chatSessionStore.isStopping;
     const menuItems = React.useMemo((): MenuItem[] => {
       if (
         !selectedMessage ||
@@ -737,13 +748,13 @@ export const ChatView = observer(
             handleMenuDismiss();
           },
           icon: () => <RefreshIcon stroke={theme.colors.primary} />,
-          disabled: !hasActiveModel,
+          disabled: !hasActiveModel || isStopping,
         });
 
         baseItems.push({
           label: regenerateWithLabel,
           icon: () => <GridIcon stroke={theme.colors.primary} />,
-          disabled: false,
+          disabled: isStopping,
           submenu: models.map(model => ({
             label: model.name,
             width: Math.min(300, size.width),
@@ -763,7 +774,7 @@ export const ChatView = observer(
             handleMenuDismiss();
           },
           icon: () => <PencilLineIcon stroke={theme.colors.primary} />,
-          disabled: !hasActiveModel,
+          disabled: !hasActiveModel || isStopping,
         });
       }
 
@@ -780,6 +791,7 @@ export const ChatView = observer(
       return baseItems;
     }, [
       selectedMessage,
+      isStopping,
       user.id,
       handleCopy,
       handleTryAgain,
@@ -857,10 +869,6 @@ export const ChatView = observer(
       agentStatus === 'prefill' ||
       agentStatus === 'generating_tool_call' ||
       agentStatus === 'executing_tool' ||
-      // Keep the indicator visible during the user-initiated stop
-      // window so they see the "Stopping…" feedback even if status
-      // had been `streaming_text` (no indicator) at the moment of the
-      // tap. Cleared together with `isStopping` once the runner exits.
       chatSessionStore.isStopping;
     const activeRunPendingTalentNames =
       chatSessionStore.agentUiState.pendingTalentNames;
