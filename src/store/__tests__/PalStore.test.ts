@@ -601,6 +601,27 @@ describe('PalStore', () => {
       });
     });
 
+    describe('clearAccountPals', () => {
+      it('empties the library and created lists and nothing else', () => {
+        runInAction(() => {
+          palStore.pals = [mockPal];
+          palStore.cachedPalsHubPals = [mockPalsHubPal];
+          palStore.userLibrary = [mockPalsHubPal];
+          palStore.userCreatedPals = [mockPalsHubPal];
+        });
+
+        palStore.clearAccountPals();
+
+        expect(palStore.userLibrary).toEqual([]);
+        expect(palStore.userCreatedPals).toEqual([]);
+        expect(palStore.pals).toEqual([mockPal]);
+        expect(palStore.cachedPalsHubPals).toEqual([mockPalsHubPal]);
+        Object.values(palRepository).forEach(method =>
+          expect(method).not.toHaveBeenCalled(),
+        );
+      });
+    });
+
     describe('helper methods', () => {
       it('should get categories', async () => {
         const mockCategories = {

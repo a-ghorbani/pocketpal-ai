@@ -723,6 +723,13 @@ class PalStore {
     }
   };
 
+  clearAccountPals = () => {
+    runInAction(() => {
+      this.userLibrary = [];
+      this.userCreatedPals = [];
+    });
+  };
+
   getLocalPals = () => {
     return this.pals.filter(pal => pal.source === 'local' || !pal.source);
   };
