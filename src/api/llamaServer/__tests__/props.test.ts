@@ -110,6 +110,20 @@ describe('fetchServerProps', () => {
     );
   });
 
+  it('requests /props at the server root for a base url ending in /v1/', async () => {
+    global.fetch = jest.fn().mockResolvedValueOnce({
+      ok: true,
+      json: () => Promise.resolve({}),
+    });
+
+    await fetchServerProps('http://h:8080/v1/');
+
+    expect(global.fetch).toHaveBeenCalledWith(
+      'http://h:8080/props',
+      expect.objectContaining({method: 'GET'}),
+    );
+  });
+
   it('scopes the request to a model id when one is supplied', async () => {
     global.fetch = jest.fn().mockResolvedValueOnce({
       ok: true,

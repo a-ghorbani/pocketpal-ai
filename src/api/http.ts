@@ -77,8 +77,8 @@ export function buildHeaders(apiKey?: string): Record<string, string> {
 }
 
 /**
- * Normalize server URL: remove trailing slash.
+ * Normalize server URL: remove trailing slashes and one trailing `/v1`.
  */
 export function normalizeUrl(serverUrl: string): string {
-  return serverUrl.replace(/\/+$/, '');
+  return serverUrl.replace(/\/+$/, '').replace(/\/v1$/, '').replace(/\/+$/, '');
 }
