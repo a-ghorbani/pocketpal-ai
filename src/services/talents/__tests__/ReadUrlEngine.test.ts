@@ -1,4 +1,9 @@
 import {abortableFetch} from '../../../../jest/abortableFetch';
+import {
+  URL_IMPLEMENTATIONS,
+  expectUrlImplementationActive,
+  useUrlImplementation,
+} from '../../../../jest/urlImplementations';
 
 import {ReadUrlEngine} from '../ReadUrlEngine';
 import type {SearchAccess} from '../searchAccess';
@@ -6,7 +11,11 @@ import type {SearchProvider, PageContent} from '../../search/types';
 import * as budget from '../../search/searchBudget';
 import * as search from '../../search';
 import {ExaProvider} from '../../search/providers/exa';
-import {allowReadUrls, resetReadUrlAllowlist} from '../readUrlAllowlist';
+import {
+  allowReadUrls,
+  isReadUrlAllowed,
+  resetReadUrlAllowlist,
+} from '../readUrlAllowlist';
 
 const makeAccess = (overrides: Partial<SearchAccess> = {}): SearchAccess => {
   const provider: SearchProvider = {
@@ -191,7 +200,8 @@ describe('ReadUrlEngine', () => {
       });
       expect(result.type).toBe('error');
       if (result.type === 'error') {
-        expect(result.summary).toMatch(/web_search result or a user message/i);
+        expect(result.summary).toMatch(/site the user named/i);
+        expect(result.errorMessage).toBe(result.summary);
       }
       expect(read).not.toHaveBeenCalled();
     });
@@ -241,7 +251,157 @@ describe('ReadUrlEngine', () => {
       const after = await engine.execute({url: 'https://fresh.example.org/a'});
       expect(after.type).toBe('text');
     });
+
+    const engineReading = (text: string) => {
+      const read = jest.fn().mockResolvedValue({url: 'https://e.com/p', text});
+      const provider: SearchProvider = {id: 'exa', search: jest.fn(), read};
+      return new ReadUrlEngine(makeAccess({getActiveProvider: () => provider}));
+    };
+
+    it('returns and allowlists the URLs written in the page', async () => {
+      const result = await engineReading(
+        'See https://one.test/a and https://two.test/b, or [docs](https://hidden.test/c).',
+      ).execute({url: 'https://e.com/p'});
+      expect(result).toMatchObject({
+        type: 'text',
+        links: ['https://one.test/a', 'https://two.test/b'],
+      });
+      expect(isReadUrlAllowed('https://one.test/a')).toBe(true);
+      expect(isReadUrlAllowed('https://two.test/b')).toBe(true);
+      expect(isReadUrlAllowed('https://hidden.test/c')).toBe(false);
+    });
+
+    it('keeps the first 100 page links', async () => {
+      const urls = Array.from({length: 101}, (_, i) => `https://l.test/${i}`);
+      const result = await engineReading(urls.join(' ')).execute({
+        url: 'https://e.com/p',
+      });
+      expect(result.type === 'text' && result.links).toEqual(
+        urls.slice(0, 100),
+      );
+      expect(isReadUrlAllowed(urls[99])).toBe(true);
+      expect(isReadUrlAllowed(urls[100])).toBe(false);
+    });
+
+    it('registers a URL that is the last word before the budget cut', async () => {
+      const text = 'w '.repeat(2300) + 'https://a.com/next ' + 'x'.repeat(500);
+      const result = await engineReading(text).execute({
+        url: 'https://e.com/p',
+      });
+      expect(result.type === 'text' && result.summary).toContain(
+        'https://a.com/next…',
+      );
+      expect(result.type === 'text' && result.links).toEqual([
+        'https://a.com/next',
+      ]);
+      expect(isReadUrlAllowed('https://a.com/next')).toBe(true);
+    });
+
+    it('registers no links on an empty page or a reader error', async () => {
+      const empty = await engineReading(
+        '<a href="https://tag.test/a"></a>',
+      ).execute({url: 'https://e.com/p'});
+      expect(empty.type).toBe('error');
+      expect(empty).not.toHaveProperty('links');
+      expect(isReadUrlAllowed('https://tag.test/a')).toBe(false);
+
+      const read = jest.fn().mockRejectedValue(new Error('https://err.test/x'));
+      const provider: SearchProvider = {id: 'exa', search: jest.fn(), read};
+      const failed = await new ReadUrlEngine(
+        makeAccess({getActiveProvider: () => provider}),
+      ).execute({url: 'https://e.com/p'});
+      expect(failed.type).toBe('error');
+      expect(failed).not.toHaveProperty('links');
+      expect(isReadUrlAllowed('https://err.test/x')).toBe(false);
+    });
   });
+
+  describe.each(URL_IMPLEMENTATIONS)(
+    'fetches the stored entry under %s',
+    (_label, impl) => {
+      useUrlImplementation(impl);
+
+      const readerFor = (allowedUrl: string) => {
+        resetReadUrlAllowlist();
+        allowReadUrls([allowedUrl]);
+        const read = jest.fn().mockResolvedValue({
+          url: allowedUrl,
+          text: 'body',
+        } as PageContent);
+        const provider: SearchProvider = {id: 'exa', search: jest.fn(), read};
+        return {
+          read,
+          engine: new ReadUrlEngine(
+            makeAccess({getActiveProvider: () => provider}),
+          ),
+        };
+      };
+
+      it('runs against the swapped URL implementation', () => {
+        expectUrlImplementationActive(impl);
+      });
+
+      it('sends the stored host case, not the argument host case', async () => {
+        const {read, engine} = readerFor('https://www.foo.com/A');
+        const result = await engine.execute({url: 'https://WWW.FOO.com/A'});
+        expect(result.type).toBe('text');
+        expect(read).toHaveBeenCalledWith('https://www.foo.com/A', undefined);
+      });
+
+      it('sends the stored www entry for a bare-host request with other host case', async () => {
+        const {read, engine} = readerFor('https://www.foo.com/A');
+        const result = await engine.execute({url: 'https://Foo.com/A'});
+        expect(result.type).toBe('text');
+        expect(read).toHaveBeenCalledWith('https://www.foo.com/A', undefined);
+      });
+
+      it('reads the www search hit when the model drops the www', async () => {
+        const {read, engine} = readerFor('https://www.firecrawl.dev/');
+        const result = await engine.execute({url: 'https://firecrawl.dev/'});
+        expect(result.type).toBe('text');
+        expect(read).toHaveBeenCalledWith(
+          'https://www.firecrawl.dev/',
+          undefined,
+        );
+      });
+
+      it('sends the stored www entry without the fragment to the native reader', async () => {
+        const {read, engine} = readerFor('https://www.foo.com/');
+        const result = await engine.execute({url: 'https://foo.com/#leak'});
+        expect(result.type).toBe('text');
+        expect(read).toHaveBeenCalledWith('https://www.foo.com/', undefined);
+        expect(read.mock.calls[0][0]).not.toContain('leak');
+      });
+
+      it('sends the stored www entry without the fragment to the default reader', async () => {
+        resetReadUrlAllowlist();
+        allowReadUrls(['https://www.foo.com/']);
+        const readWithDefaultReader = jest
+          .fn()
+          .mockResolvedValue({url: 'https://www.foo.com/', text: 'body'});
+        const engine = new ReadUrlEngine(
+          makeAccess({
+            getActiveProvider: () => ({id: 'brave', search: jest.fn()}),
+            readWithDefaultReader,
+          }),
+        );
+        const result = await engine.execute({url: 'https://foo.com/#leak'});
+        expect(result.type).toBe('text');
+        expect(readWithDefaultReader).toHaveBeenCalledWith(
+          'https://www.foo.com/',
+          undefined,
+        );
+        expect(readWithDefaultReader.mock.calls[0][0]).not.toContain('leak');
+      });
+
+      it('never fetches a credentialed entry', async () => {
+        const {read, engine} = readerFor('https://u:p@foo.com/a');
+        const result = await engine.execute({url: 'https://foo.com/a'});
+        expect(result.type).toBe('error');
+        expect(read).not.toHaveBeenCalled();
+      });
+    },
+  );
 
   describe('cancellation', () => {
     const defaultReaderAccess = () =>
