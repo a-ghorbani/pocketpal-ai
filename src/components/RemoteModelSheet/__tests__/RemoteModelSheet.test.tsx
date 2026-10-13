@@ -1029,5 +1029,116 @@ describe('RemoteModelSheet', () => {
       });
       expect(view.getByTestId('remote-url-scan')).toBeTruthy();
     });
+
+    it('opens without asking when the camera is already allowed', async () => {
+      const requestPermission = jest.fn();
+      (useCameraPermission as jest.Mock).mockReturnValue({
+        hasPermission: true,
+        requestPermission,
+      });
+      const view = render(
+        <RemoteModelSheet isVisible={true} onDismiss={jest.fn()} />,
+      );
+
+      await openScanner(view);
+
+      expect(requestPermission).not.toHaveBeenCalled();
+    });
+
+    it('opens the scanner once the permission request is granted', async () => {
+      const alert = jest.spyOn(Alert, 'alert').mockImplementation(() => {});
+      const requestPermission = jest.fn().mockResolvedValue(true);
+      denyCamera(requestPermission);
+      const view = render(
+        <RemoteModelSheet isVisible={true} onDismiss={jest.fn()} />,
+      );
+
+      await openScanner(view);
+
+      expect(requestPermission).toHaveBeenCalledTimes(1);
+      expect(alert).not.toHaveBeenCalled();
+      alert.mockRestore();
+    });
+
+    it('closes the scanner and leaves the typed url editable', async () => {
+      const view = render(
+        <RemoteModelSheet isVisible={true} onDismiss={jest.fn()} />,
+      );
+      fireEvent.changeText(view.getByTestId('remote-url-input'), 'http://a');
+      await openScanner(view);
+      expect(view.getByTestId('remote-url-input')).toBeTruthy();
+
+      act(() => lastScannerProps().onClose());
+
+      expect(view.queryByTestId('server-qr-scanner')).toBeNull();
+      expect(view.getByTestId('remote-url-input').props.value).toBe('http://a');
+      fireEvent.changeText(view.getByTestId('remote-url-input'), 'http://b');
+      expect(view.getByTestId('remote-url-input').props.value).toBe('http://b');
+    });
+
+    it('replaces typed text, clears its error and probes the scanned url last', async () => {
+      const view = render(
+        <RemoteModelSheet isVisible={true} onDismiss={jest.fn()} />,
+      );
+      fireEvent.changeText(view.getByTestId('remote-url-input'), 'not a url');
+      await waitFor(() => {
+        expect(view.getByText(l10n.en.settings.serverUrlInvalid)).toBeTruthy();
+      });
+      await openScanner(view);
+
+      act(() => lastScannerProps().onScanned('http://192.168.1.5:9931/'));
+
+      expect(view.getByTestId('remote-url-input').props.value).toBe(
+        'http://192.168.1.5:9931/',
+      );
+      expect(view.queryByText(l10n.en.settings.serverUrlInvalid)).toBeNull();
+      await waitFor(() => {
+        expect(mockedFetchModelsWithHeaders.mock.calls.at(-1)?.[0]).toBe(
+          'http://192.168.1.5:9931/',
+        );
+      });
+    });
+
+    it('adds a scanned server through the typed-url path, writing no store on scan', async () => {
+      mockedFetchModelsWithHeaders.mockResolvedValue({
+        models: [{id: 'llama-7b', object: 'model', owned_by: 'system'}],
+        headers: {},
+      });
+      const view = render(
+        <RemoteModelSheet isVisible={true} onDismiss={jest.fn()} />,
+      );
+      await openScanner(view);
+
+      act(() => lastScannerProps().onScanned('http://192.168.1.5:9931/'));
+      await waitFor(() => {
+        expect(view.getByText('llama-7b')).toBeTruthy();
+      });
+      expect(serverStore.addServer).not.toHaveBeenCalled();
+      expect(serverStore.updateServer).not.toHaveBeenCalled();
+
+      fireEvent.press(view.getByTestId('add-model-button'));
+
+      await waitFor(() => {
+        expect(serverStore.addServer).toHaveBeenCalledWith(
+          expect.objectContaining({url: 'http://192.168.1.5:9931/'}),
+        );
+      });
+    });
+
+    it('warns about plain http for a scanned non-local host', async () => {
+      const view = render(
+        <RemoteModelSheet isVisible={true} onDismiss={jest.fn()} />,
+      );
+      await openScanner(view);
+      expect(
+        view.queryByText(l10n.en.settings.serverUrlHttpWarning),
+      ).toBeNull();
+
+      act(() => lastScannerProps().onScanned('http://example.com:8080/'));
+
+      expect(
+        view.getByText(l10n.en.settings.serverUrlHttpWarning),
+      ).toBeTruthy();
+    });
   });
 });

@@ -3,6 +3,11 @@ import {act} from '@testing-library/react-native';
 import {useCameraDevice, useCodeScanner} from 'react-native-vision-camera';
 
 import {render, fireEvent} from '../../../../jest/test-utils';
+import {
+  URL_IMPLEMENTATIONS,
+  expectUrlImplementationActive,
+  useUrlImplementation,
+} from '../../../../jest/urlImplementations';
 import {l10n} from '../../../locales';
 import {ServerQRScanner} from '../ServerQRScanner';
 
@@ -79,5 +84,82 @@ describe('ServerQRScanner', () => {
     expect(queryByTestId('server-qr-camera')).toBeNull();
     fireEvent.press(getByTestId('server-qr-close'));
     expect(onClose).toHaveBeenCalled();
+  });
+
+  it('closes from the camera view', () => {
+    const onClose = jest.fn();
+    const {getByTestId} = render(
+      <ServerQRScanner onScanned={jest.fn()} onClose={onClose} />,
+    );
+
+    fireEvent.press(getByTestId('server-qr-close'));
+
+    expect(onClose).toHaveBeenCalledTimes(1);
+  });
+
+  it('accepts a server url after rejecting an earlier payload', () => {
+    const onScanned = jest.fn();
+    render(<ServerQRScanner onScanned={onScanned} onClose={jest.fn()} />);
+
+    scan('WIFI:S:home;T:WPA;P:x;;');
+    scan('http://h:9931/');
+
+    expect(onScanned).toHaveBeenCalledTimes(1);
+    expect(onScanned).toHaveBeenCalledWith('http://h:9931/');
+  });
+
+  it('accepts again after a remount', () => {
+    const onScanned = jest.fn();
+    const first = render(
+      <ServerQRScanner onScanned={onScanned} onClose={jest.fn()} />,
+    );
+    scan('http://h:1/');
+    first.unmount();
+
+    render(<ServerQRScanner onScanned={onScanned} onClose={jest.fn()} />);
+    scan('http://h:2/');
+
+    expect(onScanned.mock.calls).toEqual([['http://h:1/'], ['http://h:2/']]);
+  });
+
+  describe.each(URL_IMPLEMENTATIONS)('payloads under the %s', (_name, impl) => {
+    useUrlImplementation(impl);
+
+    it.each([
+      'http://192.168.1.5:9931/',
+      'http://h:8080',
+      'https://my-server.local/v1',
+      'http://[::1]:8080/',
+    ])('accepts %s', payload => {
+      expectUrlImplementationActive(impl);
+      const onScanned = jest.fn();
+      render(<ServerQRScanner onScanned={onScanned} onClose={jest.fn()} />);
+
+      scan(payload);
+
+      expect(onScanned).toHaveBeenCalledWith(payload);
+    });
+
+    it.each([
+      'hello',
+      'ftp://h/',
+      'WIFI:S:home;T:WPA;P:x;;',
+      'mailto:a@b.c',
+      'file:///etc/hosts',
+      'http://',
+      '192.168.1.5:9931',
+      '',
+    ])('rejects %p', payload => {
+      expectUrlImplementationActive(impl);
+      const onScanned = jest.fn();
+      const {getByText} = render(
+        <ServerQRScanner onScanned={onScanned} onClose={jest.fn()} />,
+      );
+
+      scan(payload);
+
+      expect(onScanned).not.toHaveBeenCalled();
+      expect(getByText(l10n.en.settings.scanQrNotServer)).toBeTruthy();
+    });
   });
 });
