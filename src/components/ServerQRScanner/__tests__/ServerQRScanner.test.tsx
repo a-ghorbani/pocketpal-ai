@@ -86,6 +86,24 @@ describe('ServerQRScanner', () => {
     expect(onClose).toHaveBeenCalled();
   });
 
+  it('replaces the preview with a message when the camera fails', () => {
+    const onClose = jest.fn();
+    const {getByText, getByTestId, queryByTestId} = render(
+      <ServerQRScanner onScanned={jest.fn()} onClose={onClose} />,
+    );
+
+    act(() =>
+      getByTestId('server-qr-camera').props.onError({
+        code: 'code-scanner/cannot-load-model',
+      }),
+    );
+
+    expect(getByText(l10n.en.settings.scanQrUnavailable)).toBeTruthy();
+    expect(queryByTestId('server-qr-camera')).toBeNull();
+    fireEvent.press(getByTestId('server-qr-close'));
+    expect(onClose).toHaveBeenCalledTimes(1);
+  });
+
   it('closes from the camera view', () => {
     const onClose = jest.fn();
     const {getByTestId} = render(

@@ -40,6 +40,8 @@ export const ServerQRScanner: React.FC<ServerQRScannerProps> = ({
   const device = useCameraDevice('back');
   const acceptedRef = useRef(false);
   const [rejectedPayload, setRejectedPayload] = useState(false);
+  const [cameraFailed, setCameraFailed] = useState(false);
+  const showCamera = !!device && !cameraFailed;
 
   const codeScanner = useCodeScanner({
     codeTypes: ['qr'],
@@ -59,18 +61,23 @@ export const ServerQRScanner: React.FC<ServerQRScannerProps> = ({
 
   return (
     <View style={styles.container}>
-      {device ? (
+      {showCamera ? (
         <Camera
           testID="server-qr-camera"
           style={styles.preview}
           device={device}
           isActive
           codeScanner={codeScanner}
+          onError={() => setCameraFailed(true)}
         />
       ) : (
-        <Text style={styles.message}>{l10n.camera.noDevice}</Text>
+        <Text style={styles.message}>
+          {cameraFailed
+            ? l10n.settings.scanQrUnavailable
+            : l10n.camera.noDevice}
+        </Text>
       )}
-      {device && rejectedPayload && (
+      {showCamera && rejectedPayload && (
         <Text style={styles.hint}>{l10n.settings.scanQrNotServer}</Text>
       )}
       <IconButton
