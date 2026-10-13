@@ -38,7 +38,8 @@
       "testWarning": "주의: 테스트는 대형 모델의 경우 최대 2~5분까지 걸릴 수 있으며, 실행 중에 중단할 수 없습니다.",
       "keepScreenOpen": "이 화면을 그대로 유지해 주세요.",
       "initializingModel": "모델 초기화 중...",
-      "modelMaxValue": "(최대: {{maxValue}})"
+      "modelMaxValue": "(최대: {{maxValue}})",
+      "testFailed": "테스트를 실행할 수 없습니다. 답변 생성이 끝난 뒤 다시 시도해 주세요."
     },
     "dialogs": {
       "advancedSettings": {
