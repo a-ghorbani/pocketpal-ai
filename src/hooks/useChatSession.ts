@@ -225,10 +225,11 @@ const prepareCompletion = async ({
   return {cleanCompletionParams, messageInfo};
 };
 
-// Per-run TTS streaming state. The runner emits CUMULATIVE content/
-// reasoning on each `token` event (mirroring llama.rn's callback
-// semantics); the TTS streaming hooks expect per-call deltas, so we
-// diff cumulative against `prev*` and forward only the new substring.
+// Per-run TTS streaming state. The runner emits content/reasoning
+// CUMULATIVE PER STEP on each `token` event (mirroring llama.rn's
+// callback semantics); the TTS streaming hooks expect per-call deltas,
+// so we diff cumulative against `prev*` (reset at each step) and
+// forward only the new substring.
 // Carried in ctx so a single run keeps a coherent audio stream.
 type TtsRunState = {
   // Snapshot of autoSpeakEnabled at run start; gates the per-chunk
@@ -237,7 +238,10 @@ type TtsRunState = {
   started: boolean;
   prevContent: string;
   prevReasoning: string;
+  spokeAny: boolean;
 };
+
+const TTS_STEP_SEPARATOR = '\n\n';
 
 // Normalise a finished turn's result into the snapshot the banner reads.
 // `contextFull` is frozen here as the OR of the native full/truncated flags
@@ -298,6 +302,10 @@ async function applyEventToStore(
       // persist here — the message was added before the run started.
       return;
     case 'step_started':
+      if (ctx.tts.enabled) {
+        ctx.tts.prevContent = '';
+        ctx.tts.prevReasoning = '';
+      }
       await chatSessionStore.pushAgentStep(ctx.messageId, ctx.sessionId, {
         partial: true,
       });
@@ -356,11 +364,18 @@ async function applyEventToStore(
               ? cumulativeReasoning.slice(ctx.tts.prevReasoning.length)
               : '';
           if (contentDelta || reasoningDelta) {
+            const separator =
+              contentDelta && ctx.tts.prevContent === '' && ctx.tts.spokeAny
+                ? TTS_STEP_SEPARATOR
+                : '';
             ctx.tts.prevContent = cumulativeContent;
             ctx.tts.prevReasoning = cumulativeReasoning;
+            if (contentDelta) {
+              ctx.tts.spokeAny = true;
+            }
             ttsStore.onAssistantMessageChunk(
               ctx.messageId,
-              contentDelta,
+              separator + contentDelta,
               reasoningDelta || undefined,
             );
           }
@@ -602,6 +617,7 @@ export const useChatSession = (
       started: false,
       prevContent: '',
       prevReasoning: '',
+      spokeAny: false,
     };
     let uiState: AgentUiState = initialAgentUiState;
 
