@@ -1,8 +1,10 @@
 import React from 'react';
+import {StyleSheet} from 'react-native';
 import {act} from '@testing-library/react-native';
 import {useCameraDevice, useCodeScanner} from 'react-native-vision-camera';
 
 import {render, fireEvent} from '../../../../jest/test-utils';
+import {themeFixtures} from '../../../../jest/fixtures/theme';
 import {
   URL_IMPLEMENTATIONS,
   expectUrlImplementationActive,
@@ -118,16 +120,22 @@ describe('ServerQRScanner', () => {
     fireCameraError(view, 'unknown/unknown');
 
     expect(view.getByTestId('server-qr-camera')).toBeTruthy();
-    expect(view.getByText(l10n.en.settings.scanQrUnavailable)).toBeTruthy();
+    const {colors} = themeFixtures.lightTheme;
+    expect(colors.onSurfaceVariant).not.toBe(colors.error);
+    expect(
+      StyleSheet.flatten(
+        view.getByText(l10n.en.settings.scanQrNotReady).props.style,
+      ).color,
+    ).toBe(colors.onSurfaceVariant);
 
     scan('hello');
 
-    expect(view.queryByText(l10n.en.settings.scanQrUnavailable)).toBeNull();
+    expect(view.queryByText(l10n.en.settings.scanQrNotReady)).toBeNull();
     expect(view.getByText(l10n.en.settings.scanQrNotServer)).toBeTruthy();
     expect(view.getByTestId('server-qr-camera')).toBeTruthy();
   });
 
-  it('shows the unavailable hint over the not-a-server hint', () => {
+  it('shows the not-ready hint over the not-a-server hint', () => {
     const view = render(
       <ServerQRScanner onScanned={jest.fn()} onClose={jest.fn()} />,
     );
@@ -135,7 +143,7 @@ describe('ServerQRScanner', () => {
     scan('hello');
     fireCameraError(view, 'unknown/unknown');
 
-    expect(view.getByText(l10n.en.settings.scanQrUnavailable)).toBeTruthy();
+    expect(view.getByText(l10n.en.settings.scanQrNotReady)).toBeTruthy();
     expect(view.queryByText(l10n.en.settings.scanQrNotServer)).toBeNull();
   });
 

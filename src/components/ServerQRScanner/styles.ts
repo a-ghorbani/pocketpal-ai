@@ -27,4 +27,9 @@ export const createStyles = (theme: Theme) =>
       paddingVertical: 8,
       color: theme.colors.error,
     },
+    notReadyHint: {
+      paddingHorizontal: 16,
+      paddingVertical: 8,
+      color: theme.colors.onSurfaceVariant,
+    },
   });

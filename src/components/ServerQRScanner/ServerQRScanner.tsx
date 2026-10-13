@@ -70,12 +70,6 @@ export const ServerQRScanner: React.FC<ServerQRScannerProps> = ({
     }
   };
 
-  const hint = frameError
-    ? l10n.settings.scanQrUnavailable
-    : rejectedPayload
-      ? l10n.settings.scanQrNotServer
-      : undefined;
-
   return (
     <View style={styles.container}>
       {showCamera ? (
@@ -94,7 +88,12 @@ export const ServerQRScanner: React.FC<ServerQRScannerProps> = ({
             : l10n.camera.noDevice}
         </Text>
       )}
-      {showCamera && hint && <Text style={styles.hint}>{hint}</Text>}
+      {showCamera && frameError && (
+        <Text style={styles.notReadyHint}>{l10n.settings.scanQrNotReady}</Text>
+      )}
+      {showCamera && !frameError && rejectedPayload && (
+        <Text style={styles.hint}>{l10n.settings.scanQrNotServer}</Text>
+      )}
       <IconButton
         testID="server-qr-close"
         icon="close"

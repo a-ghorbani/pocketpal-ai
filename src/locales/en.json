@@ -175,6 +175,7 @@
     "scanQrPermissionMessage": "Allow camera access to scan a server's QR code. You can also type the address.",
     "scanQrNotServer": "Not a server address",
     "scanQrUnavailable": "Can't scan here. Type the server address instead.",
+    "scanQrNotReady": "Scanner is getting ready. You can also type the address.",
     "requestTimeout": "Request Timeout (seconds)",
     "requestTimeoutPlaceholder": "Optional - leave empty for default",
     "requestTimeoutHelp": "Max wait for a slow server to respond. Leave empty for default.",
