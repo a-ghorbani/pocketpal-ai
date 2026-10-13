@@ -1,6 +1,10 @@
 import React from 'react';
 import {Alert, Platform} from 'react-native';
 import {appleAuth} from '@invertase/react-native-apple-authentication';
+import {
+  BottomSheetTextInput,
+  useBottomSheetInternal,
+} from '@gorhom/bottom-sheet';
 import {render, fireEvent, waitFor} from '../../../../../jest/test-utils';
 
 import {AuthSheet} from '../AuthSheet';
@@ -96,6 +100,27 @@ describe('AuthSheet', () => {
       const {getByText} = render(<AuthSheet {...defaultProps} />);
 
       expect(getByText('Invalid credentials')).toBeTruthy();
+    });
+  });
+
+  describe('Keyboard registration', () => {
+    afterEach(() => {
+      (useBottomSheetInternal as jest.Mock).mockImplementation(() => null);
+    });
+
+    it('registers every form input with the enclosing bottom sheet', () => {
+      (useBottomSheetInternal as jest.Mock).mockImplementation(() => ({}));
+      const {getByText, UNSAFE_getAllByType} = render(
+        <AuthSheet {...defaultProps} />,
+      );
+
+      fireEvent.press(getByText('Sign Up'));
+
+      expect(
+        UNSAFE_getAllByType(BottomSheetTextInput).map(
+          input => input.props.testID,
+        ),
+      ).toEqual(['full-name-input', 'email-input', 'password-input']);
     });
   });
 

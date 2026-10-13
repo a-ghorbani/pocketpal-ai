@@ -1,4 +1,5 @@
 import React from 'react';
+import {BottomSheetTextInput} from '@gorhom/bottom-sheet';
 import {EnhancedSearchBar} from '../EnhancedSearchBar';
 import {SearchFilters} from '../../../store/HFStore';
 import {fireEvent, render} from '../../../../jest/test-utils';
@@ -107,6 +108,21 @@ describe('EnhancedSearchBar', () => {
     const sortButton = getByTestId('filter-button-sort');
     expect(sortButton).toBeTruthy();
     fireEvent.press(sortButton);
+  });
+
+  it('registers the author filter input with the filter sheet', () => {
+    const {getByTestId, UNSAFE_getByType} = render(
+      <EnhancedSearchBar {...defaultProps} />,
+      {
+        withBottomSheetProvider: true,
+      },
+    );
+
+    fireEvent.press(getByTestId('filter-button-author'));
+
+    expect(UNSAFE_getByType(BottomSheetTextInput).props.testID).toBe(
+      'author-filter-input',
+    );
   });
 
   it('shows active filter indicator when filters are applied', () => {

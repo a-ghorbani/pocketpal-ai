@@ -127,6 +127,90 @@ describe('SheetScrollView', () => {
     expect(ref.current?.scrollTo).not.toHaveBeenCalled();
   });
 
+  it('does not scroll when the focused input is already inside the viewport', () => {
+    focusInput((_relativeTo, onSuccess) => onSuccess(0, 100, 280, 50));
+    const {ref, scroll} = renderScrollView();
+
+    shrinkViewport(scroll);
+
+    expect(ref.current?.scrollTo).not.toHaveBeenCalled();
+  });
+
+  it('does not scroll when the viewport grows', () => {
+    const focused = jest
+      .spyOn(TextInput.State, 'currentlyFocusedInput')
+      .mockReturnValue(null as never);
+    const {ref, scroll} = renderScrollView();
+    act(() => {
+      jest.runOnlyPendingTimers();
+    });
+    focused.mockReturnValue({
+      measureLayout: (
+        _relativeTo: unknown,
+        onSuccess: (x: number, y: number, w: number, h: number) => void,
+      ) => onSuccess(0, 700, 280, 50),
+    } as never);
+
+    act(() => {
+      scroll.props.onLayout(layoutEvent(600));
+      jest.runOnlyPendingTimers();
+    });
+
+    expect(ref.current?.scrollTo).not.toHaveBeenCalled();
+  });
+
+  it('keeps a growing input bottom edge in view while the keyboard is up', () => {
+    let inputHeight = 50;
+    focusInput((_relativeTo, onSuccess) => onSuccess(0, 100, 280, inputHeight));
+    const {ref, scroll} = renderScrollView();
+    shrinkViewport(scroll);
+    expect(ref.current?.scrollTo).not.toHaveBeenCalled();
+
+    inputHeight = 180;
+    act(() => {
+      scroll.props.onContentSizeChange(300, 1130);
+      jest.runOnlyPendingTimers();
+    });
+
+    expect(ref.current?.scrollTo).toHaveBeenCalledTimes(1);
+    expect(ref.current?.scrollTo).toHaveBeenCalledWith({
+      y: 80,
+      animated: false,
+    });
+  });
+
+  it('coalesces triggers within a frame into one reveal on the latest geometry', () => {
+    focusInput((_relativeTo, onSuccess) => onSuccess(0, 300, 280, 50));
+    const {ref, scroll} = renderScrollView();
+
+    act(() => {
+      scroll.props.onLayout(layoutEvent(300));
+      scroll.props.onLayout(layoutEvent(250));
+      scroll.props.onLayout(layoutEvent(200));
+      jest.runOnlyPendingTimers();
+    });
+
+    expect(ref.current?.scrollTo).toHaveBeenCalledTimes(1);
+    expect(ref.current?.scrollTo).toHaveBeenCalledWith({
+      y: 150,
+      animated: false,
+    });
+  });
+
+  it('measures the focused input against the scroll content view', () => {
+    const measureLayout = jest.fn();
+    focusInput(measureLayout);
+    const {ref, scroll} = renderScrollView();
+
+    shrinkViewport(scroll);
+
+    expect(measureLayout).toHaveBeenCalledWith(
+      ref.current?.getInnerViewRef.mock.results[0].value,
+      expect.any(Function),
+      expect.any(Function),
+    );
+  });
+
   it('does not scroll without a focused input', () => {
     jest
       .spyOn(TextInput.State, 'currentlyFocusedInput')
