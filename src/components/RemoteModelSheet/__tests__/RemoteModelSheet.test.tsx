@@ -996,6 +996,13 @@ describe('RemoteModelSheet', () => {
       });
       expect(view.queryByTestId('remote-url-scan')).toBeNull();
       expect(view.queryByTestId('server-qr-scanner')).toBeNull();
+
+      fireEvent.press(view.getByTestId('server-chip-srv-1'));
+
+      await waitFor(() => {
+        expect(view.getByTestId('remote-url-scan')).toBeTruthy();
+      });
+      expect(view.queryByTestId('server-qr-scanner')).toBeNull();
     });
 
     it('unmounts the scanner when the sheet is closed', async () => {

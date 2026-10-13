@@ -259,6 +259,7 @@ export const RemoteModelSheet: React.FC<RemoteModelSheetProps> = observer(
       setAvailableModels([]);
       setSelectedModelId(null);
       setUrlError('');
+      setIsScannerOpen(false);
       try {
         const key = await serverStore.getApiKey(server.id);
         apiKeyRef.current = key || '';
