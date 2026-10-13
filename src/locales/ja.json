@@ -1318,7 +1318,8 @@
       "testWarning": "注意：大きなモデルでは最大2～5分かかる場合があり、開始後は中断できません",
       "keepScreenOpen": "画面を開いたままにしておいてください",
       "initializingModel": "モデルを初期化中...",
-      "modelMaxValue": "(最大: {{maxValue}})"
+      "modelMaxValue": "(最大: {{maxValue}})",
+      "testFailed": "テストを実行できませんでした。返信が完了するまで待ってから、もう一度お試しください。"
     },
     "dialogs": {
       "advancedSettings": {
