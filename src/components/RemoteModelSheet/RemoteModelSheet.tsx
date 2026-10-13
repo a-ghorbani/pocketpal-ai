@@ -6,7 +6,7 @@ import React, {
   useMemo,
   useRef,
 } from 'react';
-import {TouchableOpacity, View} from 'react-native';
+import {Alert, Keyboard, TouchableOpacity, View} from 'react-native';
 import {
   Text,
   Button,
@@ -19,8 +19,9 @@ import {
 import {Dropdown} from '../ui';
 import {observer} from 'mobx-react';
 import debounce from 'lodash/debounce';
+import {useCameraPermission} from 'react-native-vision-camera';
 
-import {Sheet, TextInput} from '..';
+import {ServerQRScanner, Sheet, TextInput} from '..';
 import {useTheme} from '../../hooks';
 import {routerStore, serverStore} from '../../store';
 import {L10nContext} from '../../utils';
@@ -87,6 +88,9 @@ export const RemoteModelSheet: React.FC<RemoteModelSheetProps> = observer(
     // Errors
     const [urlError, setUrlError] = useState('');
 
+    const [isScannerOpen, setIsScannerOpen] = useState(false);
+    const {hasPermission, requestPermission} = useCameraPermission();
+
     // Keep apiKey in a ref so debounced function reads current value
     const apiKeyRef = useRef(apiKey);
     useEffect(() => {
@@ -115,6 +119,7 @@ export const RemoteModelSheet: React.FC<RemoteModelSheetProps> = observer(
         setSelectedServerId(null);
         setIsSaving(false);
         setUrlError('');
+        setIsScannerOpen(false);
       }
     }, [isVisible]);
 
@@ -188,6 +193,37 @@ export const RemoteModelSheet: React.FC<RemoteModelSheetProps> = observer(
         debouncedProbe.cancel();
       };
     }, [url, debouncedProbe, selectedServerId]);
+
+    const handleDismiss = useCallback(() => {
+      setIsScannerOpen(false);
+      onDismiss();
+    }, [onDismiss]);
+
+    const handleScanPress = useCallback(async () => {
+      let granted = hasPermission;
+      if (!granted) {
+        try {
+          granted = await requestPermission();
+        } catch {
+          granted = false;
+        }
+      }
+      if (!granted) {
+        Alert.alert(
+          l10n.camera.permissionTitle,
+          l10n.settings.scanQrPermissionMessage,
+        );
+        return;
+      }
+      Keyboard.dismiss();
+      setIsScannerOpen(true);
+    }, [hasPermission, requestPermission, l10n]);
+
+    const handleScanned = useCallback((value: string) => {
+      setUrl(value);
+      setUrlError('');
+      setIsScannerOpen(false);
+    }, []);
 
     // Re-probe on apiKey blur
     const handleApiKeyBlur = useCallback(() => {
@@ -283,7 +319,7 @@ export const RemoteModelSheet: React.FC<RemoteModelSheetProps> = observer(
         // Fetch models for this server so serverModels is populated
         await serverStore.fetchModelsForServer(serverId);
         onModelAdded?.();
-        onDismiss();
+        handleDismiss();
       } finally {
         setIsSaving(false);
       }
@@ -296,7 +332,7 @@ export const RemoteModelSheet: React.FC<RemoteModelSheetProps> = observer(
       timeoutSeconds,
       serverType,
       onModelAdded,
-      onDismiss,
+      handleDismiss,
     ]);
 
     const selectedServer = selectedServerId
@@ -364,7 +400,7 @@ export const RemoteModelSheet: React.FC<RemoteModelSheetProps> = observer(
     return (
       <Sheet
         isVisible={isVisible}
-        onClose={onDismiss}
+        onClose={handleDismiss}
         title={l10n.settings.addRemoteModel}
         snapPoints={['80%']}>
         <Sheet.ScrollView contentContainerStyle={styles.container}>
@@ -464,11 +500,17 @@ export const RemoteModelSheet: React.FC<RemoteModelSheetProps> = observer(
           {/* URL Input - only show when not using a known server chip */}
           {!selectedServerId && (
             <>
+              {isScannerOpen && (
+                <ServerQRScanner
+                  onScanned={handleScanned}
+                  onClose={() => setIsScannerOpen(false)}
+                />
+              )}
               <View style={styles.inputSpacing}>
                 <TextInput
                   testID="remote-url-input"
                   label={l10n.settings.serverUrl}
-                  defaultValue={url}
+                  value={url}
                   onChangeText={text => {
                     setUrl(text);
                     if (urlError) {
@@ -480,6 +522,14 @@ export const RemoteModelSheet: React.FC<RemoteModelSheetProps> = observer(
                   autoCorrect={false}
                   keyboardType="url"
                   error={!!urlError}
+                  right={
+                    <PaperTextInput.Icon
+                      testID="remote-url-scan"
+                      icon="qrcode-scan"
+                      accessibilityLabel={l10n.settings.scanServerQr}
+                      onPress={handleScanPress}
+                    />
+                  }
                 />
                 {urlError ? (
                   <Text style={styles.errorText}>{urlError}</Text>

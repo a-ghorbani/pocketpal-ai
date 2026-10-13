@@ -1,6 +1,8 @@
 import React from 'react';
-import {Alert, StyleSheet} from 'react-native';
+import {Alert, Keyboard, StyleSheet} from 'react-native';
 import {runInAction} from 'mobx';
+import {act} from '@testing-library/react-native';
+import {useCameraPermission} from 'react-native-vision-camera';
 import {render, fireEvent, waitFor, within} from '../../../../jest/test-utils';
 import {RemoteModelSheet} from '../RemoteModelSheet';
 import {l10n} from '../../../locales';
@@ -74,6 +76,18 @@ jest.mock('../../Sheet', () => {
   );
   return {Sheet: MockSheet};
 });
+
+const mockServerQRScanner = jest.fn();
+jest.mock('../../ServerQRScanner', () => {
+  const {View} = require('react-native');
+  return {
+    ServerQRScanner: (props: any) => {
+      mockServerQRScanner(props);
+      return <View testID="server-qr-scanner" />;
+    },
+  };
+});
+const lastScannerProps = () => mockServerQRScanner.mock.calls.at(-1)[0];
 
 // Mock the openai API module
 jest.mock('../../../api/openai', () => ({
@@ -887,6 +901,133 @@ describe('RemoteModelSheet', () => {
       const name = view.getByText('m');
       expect(name.props.numberOfLines).toBe(1);
       expect(name.props.ellipsizeMode).toBe('middle');
+    });
+  });
+
+  describe('scan to fill the url', () => {
+    const denyCamera = (requestPermission: jest.Mock) =>
+      (useCameraPermission as jest.Mock).mockReturnValue({
+        hasPermission: false,
+        requestPermission,
+      });
+
+    afterEach(() => {
+      (useCameraPermission as jest.Mock).mockReturnValue({
+        hasPermission: true,
+        requestPermission: jest.fn(),
+      });
+    });
+
+    const openScanner = async (view: ReturnType<typeof render>) => {
+      fireEvent.press(view.getByTestId('remote-url-scan'));
+      await waitFor(() => {
+        expect(view.getByTestId('server-qr-scanner')).toBeTruthy();
+      });
+    };
+
+    it('fills the url field from a scan and probes it', async () => {
+      const dismissKeyboard = jest.spyOn(Keyboard, 'dismiss');
+      const view = render(
+        <RemoteModelSheet isVisible={true} onDismiss={jest.fn()} />,
+      );
+      await openScanner(view);
+      expect(dismissKeyboard).toHaveBeenCalled();
+      mockedFetchModelsWithHeaders.mockClear();
+
+      act(() => lastScannerProps().onScanned('http://192.168.1.5:9931/'));
+
+      expect(view.getByTestId('remote-url-input').props.value).toBe(
+        'http://192.168.1.5:9931/',
+      );
+      expect(view.queryByTestId('server-qr-scanner')).toBeNull();
+      await waitFor(() => {
+        expect(mockedFetchModelsWithHeaders).toHaveBeenCalledWith(
+          'http://192.168.1.5:9931/',
+          undefined,
+          undefined,
+        );
+      });
+    });
+
+    it.each([
+      ['resolves false', jest.fn().mockResolvedValue(false)],
+      ['throws', jest.fn().mockRejectedValue(new Error('denied'))],
+    ])(
+      'explains and keeps the field when the permission request %s',
+      async (_label, requestPermission) => {
+        const alert = jest.spyOn(Alert, 'alert').mockImplementation(() => {});
+        denyCamera(requestPermission);
+        const view = render(
+          <RemoteModelSheet isVisible={true} onDismiss={jest.fn()} />,
+        );
+
+        fireEvent.press(view.getByTestId('remote-url-scan'));
+
+        await waitFor(() => {
+          expect(alert).toHaveBeenCalledWith(
+            l10n.en.camera.permissionTitle,
+            l10n.en.settings.scanQrPermissionMessage,
+          );
+        });
+        expect(view.queryByTestId('server-qr-scanner')).toBeNull();
+        fireEvent.changeText(view.getByTestId('remote-url-input'), 'http://h');
+        expect(view.getByTestId('remote-url-input').props.value).toBe(
+          'http://h',
+        );
+        alert.mockRestore();
+      },
+    );
+
+    it('offers no scan while a known-server chip is selected', async () => {
+      serverStore.servers = [
+        {id: 'srv-1', name: 'LM Studio', url: 'http://localhost:1234'},
+      ];
+      (serverStore.getApiKey as jest.Mock).mockResolvedValue(undefined);
+      seedChipList([]);
+      const view = render(
+        <RemoteModelSheet isVisible={true} onDismiss={jest.fn()} />,
+      );
+      await openScanner(view);
+
+      fireEvent.press(view.getByTestId('server-chip-srv-1'));
+
+      await waitFor(() => {
+        expect(view.queryByTestId('remote-url-input')).toBeNull();
+      });
+      expect(view.queryByTestId('remote-url-scan')).toBeNull();
+      expect(view.queryByTestId('server-qr-scanner')).toBeNull();
+    });
+
+    it('unmounts the scanner when the sheet is closed', async () => {
+      const onDismiss = jest.fn();
+      const view = render(
+        <RemoteModelSheet isVisible={true} onDismiss={onDismiss} />,
+      );
+      await openScanner(view);
+
+      fireEvent.press(view.getByTestId('sheet-close-button'));
+
+      expect(onDismiss).toHaveBeenCalled();
+      expect(view.queryByTestId('server-qr-scanner')).toBeNull();
+    });
+
+    it('reopens without the scanner when the sheet was hidden with it open', async () => {
+      const view = render(
+        <RemoteModelSheet isVisible={true} onDismiss={jest.fn()} />,
+      );
+      await openScanner(view);
+
+      view.rerender(
+        <RemoteModelSheet isVisible={false} onDismiss={jest.fn()} />,
+      );
+      view.rerender(
+        <RemoteModelSheet isVisible={true} onDismiss={jest.fn()} />,
+      );
+
+      await waitFor(() => {
+        expect(view.queryByTestId('server-qr-scanner')).toBeNull();
+      });
+      expect(view.getByTestId('remote-url-scan')).toBeTruthy();
     });
   });
 });
