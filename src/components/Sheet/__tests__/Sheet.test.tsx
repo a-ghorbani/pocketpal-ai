@@ -1,13 +1,21 @@
 import React from 'react';
 import {Dimensions, Keyboard} from 'react-native';
 import {BottomSheetModal, useBottomSheetInternal} from '@gorhom/bottom-sheet';
-import {useSafeAreaInsets} from 'react-native-safe-area-context';
+import {
+  useSafeAreaFrame,
+  useSafeAreaInsets,
+} from 'react-native-safe-area-context';
 
 import {act, render} from '../../../../jest/test-utils';
 
 import {Sheet} from '../Sheet';
 
-const screenHeight = Dimensions.get('screen').height;
+const fullScreenFrame = {x: 0, y: 0, width: 390, height: 844};
+const PERCENT_SNAP_POINTS = ['50%'];
+
+const setFrameHeight = (height: number) => {
+  (useSafeAreaFrame as jest.Mock).mockReturnValue({...fullScreenFrame, height});
+};
 
 describe('Sheet', () => {
   beforeEach(() => {
@@ -26,6 +34,7 @@ describe('Sheet', () => {
       bottom: 0,
       left: 0,
     });
+    (useSafeAreaFrame as jest.Mock).mockReturnValue(fullScreenFrame);
   });
 
   it('passes the top safe-area inset and resolved percentage snap points', () => {
@@ -33,14 +42,36 @@ describe('Sheet', () => {
 
     const modal = UNSAFE_getByType(BottomSheetModal);
     expect(modal.props.topInset).toBe(24);
-    expect(modal.props.snapPoints).toEqual([screenHeight / 2]);
+    expect(modal.props.snapPoints).toEqual([fullScreenFrame.height / 2]);
+  });
+
+  it('resolves percentages against an app window shorter than the screen', () => {
+    setFrameHeight(400);
+    const {UNSAFE_getByType} = render(<Sheet snapPoints={['50%']} />);
+
+    const modal = UNSAFE_getByType(BottomSheetModal);
+    expect(modal.props.snapPoints).toEqual([200]);
+    expect(modal.props.maxDynamicContentSize).toBe(360);
+  });
+
+  it('re-resolves percentages and the full-height cap when only the window resizes', () => {
+    const {UNSAFE_getByType, rerender} = render(
+      <Sheet snapPoints={PERCENT_SNAP_POINTS} />,
+    );
+
+    setFrameHeight(600);
+    rerender(<Sheet snapPoints={PERCENT_SNAP_POINTS} />);
+
+    const modal = UNSAFE_getByType(BottomSheetModal);
+    expect(modal.props.snapPoints).toEqual([300]);
+    expect(modal.props.maxDynamicContentSize).toBe(560);
   });
 
   it('keeps the full-height snap point', () => {
     const {UNSAFE_getByType} = render(<Sheet displayFullHeight />);
 
     expect(UNSAFE_getByType(BottomSheetModal).props.snapPoints).toEqual([
-      screenHeight - 24 - 16,
+      fullScreenFrame.height - 24 - 16,
     ]);
   });
 
@@ -59,20 +90,6 @@ describe('Sheet', () => {
       act(() => {
         Dimensions.set(portrait);
       });
-    });
-
-    it('re-resolves percentage snap points and the full-height cap', () => {
-      const {UNSAFE_getByType} = render(<Sheet snapPoints={['50%']} />);
-
-      act(() => {
-        Dimensions.set({screen: landscape, window: landscape});
-      });
-
-      const modal = UNSAFE_getByType(BottomSheetModal);
-      expect(modal.props.snapPoints).toEqual([landscape.height / 2]);
-      expect(modal.props.maxDynamicContentSize).toBe(
-        landscape.height - 24 - 16,
-      );
     });
 
     describe('with the keyboard up', () => {
@@ -124,6 +141,16 @@ describe('Sheet', () => {
             window: {...portrait.window, height: portrait.window.height / 2},
           });
         });
+
+        expect(Keyboard.dismiss).not.toHaveBeenCalled();
+      });
+
+      it('leaves the keyboard alone when only the app frame changes', () => {
+        focusSheetInput(42);
+        const {rerender} = render(<Sheet snapPoints={PERCENT_SNAP_POINTS} />);
+
+        setFrameHeight(400);
+        rerender(<Sheet snapPoints={PERCENT_SNAP_POINTS} />);
 
         expect(Keyboard.dismiss).not.toHaveBeenCalled();
       });

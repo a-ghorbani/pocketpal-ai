@@ -4,7 +4,7 @@ import {resolveSnapPoints} from '../snapPoints';
 
 describe('resolveSnapPoints', () => {
   it.each([0, 50])(
-    'resolves a percentage against the screen height (inset %i)',
+    'resolves a percentage against the container height (inset %i)',
     insetsTop => {
       expect(resolveSnapPoints(['50%'], 2424, insetsTop)).toEqual([1212]);
     },

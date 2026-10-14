@@ -5,7 +5,10 @@ import {
   BottomSheetView,
 } from '@gorhom/bottom-sheet';
 import React, {forwardRef, useEffect, useMemo, useRef} from 'react';
-import {useSafeAreaInsets} from 'react-native-safe-area-context';
+import {
+  useSafeAreaFrame,
+  useSafeAreaInsets,
+} from 'react-native-safe-area-context';
 import {BottomSheetModalMethods} from '@gorhom/bottom-sheet/lib/typescript/types';
 import {Text} from 'react-native-paper';
 import {CloseIcon} from '../../assets/icons';
@@ -17,11 +20,7 @@ import {Actions} from './Actions';
 import {SheetHandle} from './SheetHandle';
 import {SheetScrollView} from './SheetScrollView';
 import {DismissKeyboardOnRotation} from './DismissKeyboardOnRotation';
-import {
-  fullHeightSnapPoint,
-  resolveSnapPoints,
-  useScreenHeight,
-} from './snapPoints';
+import {fullHeightSnapPoint, resolveSnapPoints} from './snapPoints';
 import {useClampedLiftRestore} from './useClampedLiftRestore';
 
 export interface SheetProps extends Partial<BottomSheetModalProps> {
@@ -84,13 +83,17 @@ export const Sheet = forwardRef(
       onClose?.();
     };
 
-    const screenHeight = useScreenHeight();
+    const {height: containerHeight} = useSafeAreaFrame();
     const snapPoints = useMemo(() => {
       if (displayFullHeight) {
-        return [fullHeightSnapPoint(screenHeight, insets.top)];
+        return [fullHeightSnapPoint(containerHeight, insets.top)];
       }
-      return resolveSnapPoints(requestedSnapPoints, screenHeight, insets.top);
-    }, [displayFullHeight, screenHeight, insets.top, requestedSnapPoints]);
+      return resolveSnapPoints(
+        requestedSnapPoints,
+        containerHeight,
+        insets.top,
+      );
+    }, [displayFullHeight, containerHeight, insets.top, requestedSnapPoints]);
 
     const liftRestore = useClampedLiftRestore(
       activeRef,
@@ -102,7 +105,7 @@ export const Sheet = forwardRef(
     return (
       <BottomSheetModal
         ref={activeRef}
-        maxDynamicContentSize={fullHeightSnapPoint(screenHeight, insets.top)}
+        maxDynamicContentSize={fullHeightSnapPoint(containerHeight, insets.top)}
         topInset={insets.top}
         enableDynamicSizing={!snapPoints}
         stackBehavior="push"
