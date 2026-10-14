@@ -1,7 +1,6 @@
 import {
   BottomSheetModal,
   BottomSheetModalProps,
-  BottomSheetTextInput,
   BottomSheetView,
 } from '@gorhom/bottom-sheet';
 import React, {forwardRef, useEffect, useMemo, useRef} from 'react';
@@ -19,6 +18,7 @@ import {CustomBackdrop} from './CustomBackdrop';
 import {Actions} from './Actions';
 import {SheetHandle} from './SheetHandle';
 import {SheetScrollView} from './SheetScrollView';
+import {SheetAwareNativeInput} from '../TextInput/SheetAwareNativeInput';
 import {DismissKeyboardOnRotation} from './DismissKeyboardOnRotation';
 import {fullHeightSnapPoint, resolveSnapPoints} from './snapPoints';
 import {useClampedLiftRestore} from './useClampedLiftRestore';
@@ -39,7 +39,7 @@ interface SheetComponent
   ScrollView: typeof SheetScrollView;
   View: typeof BottomSheetView;
   Actions: typeof Actions;
-  TextInput: typeof BottomSheetTextInput;
+  TextInput: typeof SheetAwareNativeInput;
 }
 
 export const Sheet = forwardRef(
@@ -150,4 +150,4 @@ Sheet.displayName = 'Sheet';
 Sheet.ScrollView = SheetScrollView;
 Sheet.View = BottomSheetView;
 Sheet.Actions = Actions;
-Sheet.TextInput = BottomSheetTextInput;
+Sheet.TextInput = SheetAwareNativeInput;

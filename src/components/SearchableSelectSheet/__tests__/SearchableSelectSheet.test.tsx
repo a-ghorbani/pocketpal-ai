@@ -1,5 +1,11 @@
 import React from 'react';
+import {Dimensions} from 'react-native';
 import {fireEvent} from '@testing-library/react-native';
+import {
+  BottomSheetTextInput,
+  useBottomSheetInternal,
+} from '@gorhom/bottom-sheet';
+import {useSafeAreaFrame} from 'react-native-safe-area-context';
 
 import {render} from '../../../../jest/test-utils';
 
@@ -120,5 +126,58 @@ describe('SearchableSelectSheet', () => {
     expect(getByTestId('tts-language-sheet')).toBeTruthy();
     expect(getByTestId('tts-language-search')).toBeTruthy();
     expect(getByTestId('tts-language-option-ja')).toBeTruthy();
+  });
+
+  describe('search input in the sheet', () => {
+    const FIELD_TAG = 42;
+    const screen = Dimensions.get('screen');
+    const jestSetupFrame = (
+      useSafeAreaFrame as jest.Mock
+    ).getMockImplementation();
+    let keyboardState: {target?: number};
+
+    beforeEach(() => {
+      keyboardState = {};
+      (useBottomSheetInternal as jest.Mock).mockReturnValue({
+        animatedKeyboardState: {
+          get: () => keyboardState,
+          set: (next: typeof keyboardState) => {
+            keyboardState = next;
+          },
+        },
+      });
+    });
+
+    afterEach(() => {
+      (useBottomSheetInternal as jest.Mock).mockReturnValue(null);
+      (useSafeAreaFrame as jest.Mock).mockReset();
+      (useSafeAreaFrame as jest.Mock).mockImplementation(jestSetupFrame);
+    });
+
+    it.each([
+      ['keeps', 'fills the screen', screen.height, FIELD_TAG],
+      ['drops', 'is a split pane', screen.height - 100, undefined],
+    ])(
+      '%s its keyboard target when the app window %s',
+      (_, __, frameHeight, expectedTarget) => {
+        (useSafeAreaFrame as jest.Mock).mockReturnValue({
+          x: 0,
+          y: 0,
+          width: screen.width,
+          height: frameHeight,
+        });
+        const {getByTestId, UNSAFE_getByType} = renderSheet();
+        keyboardState = {target: FIELD_TAG};
+
+        fireEvent(getByTestId('searchable-select-search'), 'focus', {
+          nativeEvent: {target: FIELD_TAG},
+        });
+
+        expect(UNSAFE_getByType(BottomSheetTextInput).props.testID).toBe(
+          'searchable-select-search',
+        );
+        expect(keyboardState.target).toBe(expectedTarget);
+      },
+    );
   });
 });
