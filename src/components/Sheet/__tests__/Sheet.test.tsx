@@ -214,6 +214,42 @@ describe('Sheet', () => {
       expect(onAnimate).toHaveBeenCalledWith(0, -1, 10, 20);
     });
 
+    it('still sees a close when the caller also listens to animations', () => {
+      const ref = {current: {} as {snapToIndex: jest.Mock}};
+      const onAnimate = jest.fn();
+      const {UNSAFE_getByType} = render(
+        <Sheet ref={ref as never} snapPoints={['60%']} onAnimate={onAnimate} />,
+      );
+      const modal = UNSAFE_getByType(BottomSheetModal);
+      act(() => {
+        modal.props.onChange(1043, 0, 0);
+      });
+      act(() => {
+        hideKeyboard();
+        modal.props.onAnimate(1043, -1, 0, 0);
+        jest.runOnlyPendingTimers();
+      });
+      expect(onAnimate).toHaveBeenCalledWith(1043, -1, 0, 0);
+      expect(ref.current.snapToIndex).not.toHaveBeenCalled();
+    });
+
+    it('snaps back after a lift that announced its off-detent target', () => {
+      const ref = {current: {} as {snapToIndex: jest.Mock}};
+      const {UNSAFE_getByType} = render(
+        <Sheet ref={ref as never} snapPoints={['60%']} />,
+      );
+      const modal = UNSAFE_getByType(BottomSheetModal);
+      act(() => {
+        modal.props.onAnimate(0, 1043, 1304, 144);
+        modal.props.onChange(1043, 144, 0);
+      });
+      act(() => {
+        hideKeyboard();
+        jest.runOnlyPendingTimers();
+      });
+      expect(ref.current.snapToIndex).toHaveBeenCalledWith(0);
+    });
+
     it('keeps a pending snap when the parent re-renders after the hide', () => {
       const ref = {current: {} as {snapToIndex: jest.Mock}};
       const {UNSAFE_getByType, rerender} = render(
