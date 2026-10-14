@@ -170,7 +170,6 @@ export const ModelSettingsSheet: React.FC<ModelSettingsSheetProps> = memo(
         title={l10n.components.modelSettingsSheet.modelSettings}
         displayFullHeight>
         <Sheet.ScrollView
-          bottomOffset={16}
           contentContainerStyle={styles.sheetScrollViewContainer}>
           {/* Chat template, stop words and token settings are local-only and
               don't apply to remote models. */}

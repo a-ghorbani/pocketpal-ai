@@ -143,9 +143,7 @@ export const DetailsView = ({hfModel}: DetailsViewProps) => {
         data={llmFiles}
         keyExtractor={(item: ModelFile) => item.rfilename}
         renderItem={renderItem}
-        renderScrollComponent={props => (
-          <Sheet.ScrollView bottomOffset={100} {...props} />
-        )}
+        renderScrollComponent={props => <Sheet.ScrollView {...props} />}
         contentContainerStyle={styles.list}
       />
       {/* TODO: Currently projection models are hidden from UI,

@@ -233,9 +233,7 @@ export const PalGenerationSettingsSheet = ({
       title={t(l10n.components.palGenerationSettingsSheet.title, {palName})}
       isVisible={isVisible}
       onClose={onCloseSheet}>
-      <Sheet.ScrollView
-        bottomOffset={16}
-        contentContainerStyle={styles.scrollviewContainer}>
+      <Sheet.ScrollView contentContainerStyle={styles.scrollviewContainer}>
         <SettingsLevelIndicator
           palName={palName}
           hasCustomSettings={hasCustomSettings}

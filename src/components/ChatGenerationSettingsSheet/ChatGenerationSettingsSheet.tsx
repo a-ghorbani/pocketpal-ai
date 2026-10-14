@@ -296,9 +296,7 @@ const ChatGenerationSettingsSheetImpl = ({
       }
       isVisible={isVisible}
       onClose={onCloseSheet}>
-      <Sheet.ScrollView
-        bottomOffset={16}
-        contentContainerStyle={styles.scrollviewContainer}>
+      <Sheet.ScrollView contentContainerStyle={styles.scrollviewContainer}>
         {/* Settings Source Toggle */}
         {showSettingsToggle && (
           <View style={styles.settingsSourceContainer}>

@@ -68,6 +68,10 @@ jest.mock('@react-native-clipboard/clipboard', () => mockClipboard);
 
 jest.mock('react-native/Libraries/EventEmitter/NativeEventEmitter');
 
+// The automocked emitter hands back no subscription, so a component that
+// removes its Keyboard listener on unmount would throw.
+require('react-native').Keyboard.addListener = () => ({remove: () => {}});
+
 // Mock NativeHardwareInfo TurboModule
 jest.mock('../src/specs/NativeHardwareInfo', () => ({
   __esModule: true,

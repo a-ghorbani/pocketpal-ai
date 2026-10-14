@@ -117,9 +117,7 @@ export const ContentReportSheet: React.FC<ContentReportSheetProps> = ({
       isVisible={isVisible}
       onClose={handleClose}
       snapPoints={['70%']}>
-      <Sheet.ScrollView
-        // bottomOffset={80}
-        contentContainerStyle={styles.container}>
+      <Sheet.ScrollView contentContainerStyle={styles.container}>
         <View style={styles.section}>
           <Text variant="bodyMedium" style={styles.infoNote}>
             {l10n.components.contentReportSheet.privacyNote}

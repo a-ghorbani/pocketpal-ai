@@ -270,9 +270,7 @@ export const ModelSettings: React.FC<ModelSettingsProps> = ({
         title={l10n.models.modelSettings.template.dialogTitle}
         enableContentPanningGesture={false}
         displayFullHeight>
-        <Sheet.ScrollView
-          bottomOffset={16}
-          contentContainerStyle={styles.sheetContainer}>
+        <Sheet.ScrollView contentContainerStyle={styles.sheetContainer}>
           <View>
             <ChatTemplatePicker
               selectedTemplateName={selectedTemplateName}
