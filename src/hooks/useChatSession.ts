@@ -439,12 +439,7 @@ async function applyEventToStore(
           modelStore.recordReasoningObserved(activeModel.id);
         }
       }
-      // TTS streaming hooks. Open a StreamingHandle on the first token
-      // that carries content OR reasoning, then forward each new
-      // substring via onAssistantMessageChunk. Wrapped defensively so a
-      // UI-path failure cannot kill the completion stream. Skipped
-      // when auto-speak is off — ttsStore calls would early-return
-      // anyway, but the slice math is the residual per-token cost.
+      // Wrapped so a TTS failure cannot kill the completion stream.
       if (ctx.tts.enabled) {
         try {
           forwardTokenToTts(ctx.messageId, event.delta, ctx.tts);
