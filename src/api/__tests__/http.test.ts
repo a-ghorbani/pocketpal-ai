@@ -1,4 +1,4 @@
-import {fetchWithTimeout} from '../http';
+import {fetchWithTimeout, normalizeUrl} from '../http';
 
 function pendingFetch() {
   return jest.fn().mockImplementation(
@@ -86,6 +86,33 @@ describe('fetchWithTimeout', () => {
       method: 'POST',
       body: '{}',
       signal: expect.any(Object),
+    });
+  });
+});
+
+describe('normalizeUrl', () => {
+  const table: Array<[string, string]> = [
+    ['http://h:9931', 'http://h:9931'],
+    ['http://h:9931/', 'http://h:9931'],
+    ['http://h:9931/v1', 'http://h:9931'],
+    ['http://h:9931/v1/', 'http://h:9931'],
+    ['https://host/api/v1', 'https://host/api'],
+    ['http://h/v1/v1', 'http://h/v1'],
+    ['http://h/apiv1', 'http://h/apiv1'],
+    ['http://h/v10', 'http://h/v10'],
+  ];
+
+  it.each(table)('normalizes %s to %s', (input, expected) => {
+    expect(normalizeUrl(input)).toBe(expected);
+  });
+
+  it('ignores one appended /v1 for a url that does not end in /v1', () => {
+    const inputs = [...table.map(([input]) => input), 'http://h/v1/'].filter(
+      u => !u.replace(/\/+$/, '').endsWith('/v1'),
+    );
+    expect(inputs.length).toBeGreaterThan(0);
+    inputs.forEach(u => {
+      expect(normalizeUrl(u + '/v1')).toBe(normalizeUrl(u));
     });
   });
 });

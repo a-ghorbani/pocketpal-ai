@@ -39,3 +39,16 @@ describe('fetchModelsWithHeaders models key', () => {
     ).toBeUndefined();
   });
 });
+
+describe('fetchModelsWithHeaders url', () => {
+  it('requests /v1/models once for a base url ending in /v1/', async () => {
+    respondWith(directTextModelsBody);
+
+    await fetchModelsWithHeaders('http://h:8080/v1/');
+
+    expect(global.fetch).toHaveBeenCalledWith(
+      'http://h:8080/v1/models',
+      expect.anything(),
+    );
+  });
+});
