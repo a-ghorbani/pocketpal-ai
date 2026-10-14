@@ -1,6 +1,6 @@
 import React from 'react';
 import {Dimensions, Keyboard} from 'react-native';
-import {BottomSheetModal} from '@gorhom/bottom-sheet';
+import {BottomSheetModal, useBottomSheetInternal} from '@gorhom/bottom-sheet';
 import {useSafeAreaInsets} from 'react-native-safe-area-context';
 
 import {act, render} from '../../../../jest/test-utils';
@@ -73,6 +73,60 @@ describe('Sheet', () => {
       expect(modal.props.maxDynamicContentSize).toBe(
         landscape.height - 24 - 16,
       );
+    });
+
+    describe('with the keyboard up', () => {
+      const focusSheetInput = (target?: number) => {
+        (useBottomSheetInternal as jest.Mock).mockReturnValue({
+          animatedKeyboardState: {get: () => ({target})},
+        });
+      };
+
+      beforeEach(() => {
+        jest.spyOn(Keyboard, 'dismiss');
+      });
+
+      afterEach(() => {
+        (useBottomSheetInternal as jest.Mock).mockReturnValue(null);
+        jest.restoreAllMocks();
+      });
+
+      it('dismisses the keyboard of a focused sheet input', () => {
+        focusSheetInput(42);
+        render(<Sheet snapPoints={['60%']} />);
+        expect(Keyboard.dismiss).not.toHaveBeenCalled();
+
+        act(() => {
+          Dimensions.set({screen: landscape, window: landscape});
+        });
+
+        expect(Keyboard.dismiss).toHaveBeenCalledTimes(1);
+      });
+
+      it('leaves the keyboard alone when no sheet input is focused', () => {
+        focusSheetInput(undefined);
+        render(<Sheet snapPoints={['60%']} />);
+
+        act(() => {
+          Dimensions.set({screen: landscape, window: landscape});
+        });
+
+        expect(Keyboard.dismiss).not.toHaveBeenCalled();
+      });
+
+      it('leaves the keyboard alone when only the window changes', () => {
+        focusSheetInput(42);
+        render(<Sheet snapPoints={['60%']} />);
+
+        act(() => {
+          Dimensions.set({
+            screen: portrait.screen,
+            window: {...portrait.window, height: portrait.window.height / 2},
+          });
+        });
+
+        expect(Keyboard.dismiss).not.toHaveBeenCalled();
+      });
     });
   });
 
