@@ -95,17 +95,28 @@ describe('TextInput sheet registration', () => {
 
 describe('SheetAwareNativeInput keyboard registration', () => {
   let onFocus: jest.Mock;
+  let onBlur: jest.Mock;
   let ref: jest.Mock;
 
   const renderInput = () => {
     const utils = render(
-      <SheetAwareNativeInput ref={ref} testID="x" onFocus={onFocus} />,
+      <SheetAwareNativeInput
+        ref={ref}
+        testID="x"
+        onFocus={onFocus}
+        onBlur={onBlur}
+      />,
     );
     return {
       ...utils,
       rerenderInput: () =>
         utils.rerender(
-          <SheetAwareNativeInput ref={ref} testID="x" onFocus={onFocus} />,
+          <SheetAwareNativeInput
+            ref={ref}
+            testID="x"
+            onFocus={onFocus}
+            onBlur={onBlur}
+          />,
         ),
     };
   };
@@ -121,6 +132,7 @@ describe('SheetAwareNativeInput keyboard registration', () => {
 
   beforeEach(() => {
     onFocus = jest.fn();
+    onBlur = jest.fn();
     ref = jest.fn();
     keyboardStateSet.mockReset();
     enterSheet();
@@ -153,6 +165,17 @@ describe('SheetAwareNativeInput keyboard registration', () => {
         expect(onFocus).toHaveBeenCalledWith(focusEvent());
       },
     );
+
+    it('passes blur to the caller once', () => {
+      fullScreen();
+      const {getByTestId} = renderInput();
+      focus(getByTestId);
+
+      fireEvent(getByTestId('x'), 'blur', focusEvent());
+
+      expect(onBlur).toHaveBeenCalledTimes(1);
+      expect(onBlur).toHaveBeenCalledWith(focusEvent());
+    });
   });
 
   describe('when the app window is smaller than the screen', () => {
@@ -251,6 +274,18 @@ describe('SheetAwareNativeInput keyboard registration', () => {
   });
 
   describe('when the window changes while not focused', () => {
+    it('does not dismiss once the field has blurred', () => {
+      fullScreen();
+      const {getByTestId, rerenderInput} = renderInput();
+      focus(getByTestId);
+      fireEvent(getByTestId('x'), 'blur', focusEvent());
+
+      setFrame(screen.width - 100, screen.height);
+      rerenderInput();
+
+      expect(Keyboard.dismiss).not.toHaveBeenCalled();
+    });
+
     it.each([
       [
         'full screen to windowed',
