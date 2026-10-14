@@ -1,3 +1,5 @@
+import {useSyncExternalStore} from 'react';
+import {Dimensions} from 'react-native';
 import type {BottomSheetModalProps} from '@gorhom/bottom-sheet';
 
 const FULL_HEIGHT_TOP_GAP = 16;
@@ -20,3 +22,13 @@ export const resolveSnapPoints = (
       : point,
   );
 };
+
+const subscribeToScreen = (onChange: () => void) => {
+  const subscription = Dimensions.addEventListener('change', onChange);
+  return () => subscription.remove();
+};
+
+const getScreenHeight = () => Dimensions.get('screen').height;
+
+export const useScreenHeight = () =>
+  useSyncExternalStore(subscribeToScreen, getScreenHeight);

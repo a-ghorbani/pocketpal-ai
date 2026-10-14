@@ -44,6 +44,38 @@ describe('Sheet', () => {
     ]);
   });
 
+  describe('when the screen rotates', () => {
+    const portrait = {
+      screen: Dimensions.get('screen'),
+      window: Dimensions.get('window'),
+    };
+    const landscape = {
+      ...portrait.screen,
+      width: portrait.screen.height,
+      height: portrait.screen.width,
+    };
+
+    afterEach(() => {
+      act(() => {
+        Dimensions.set(portrait);
+      });
+    });
+
+    it('re-resolves percentage snap points and the full-height cap', () => {
+      const {UNSAFE_getByType} = render(<Sheet snapPoints={['50%']} />);
+
+      act(() => {
+        Dimensions.set({screen: landscape, window: landscape});
+      });
+
+      const modal = UNSAFE_getByType(BottomSheetModal);
+      expect(modal.props.snapPoints).toEqual([landscape.height / 2]);
+      expect(modal.props.maxDynamicContentSize).toBe(
+        landscape.height - 24 - 16,
+      );
+    });
+  });
+
   it('enables dynamic sizing without snap points', () => {
     const {UNSAFE_getByType} = render(<Sheet />);
 

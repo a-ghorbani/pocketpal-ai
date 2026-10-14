@@ -11,12 +11,16 @@ import {Text} from 'react-native-paper';
 import {CloseIcon} from '../../assets/icons';
 import {useTheme} from '../../hooks';
 import {styles} from './styles';
-import {Dimensions, TouchableOpacity, View} from 'react-native';
+import {TouchableOpacity, View} from 'react-native';
 import {CustomBackdrop} from './CustomBackdrop';
 import {Actions} from './Actions';
 import {SheetHandle} from './SheetHandle';
 import {SheetScrollView} from './SheetScrollView';
-import {fullHeightSnapPoint, resolveSnapPoints} from './snapPoints';
+import {
+  fullHeightSnapPoint,
+  resolveSnapPoints,
+  useScreenHeight,
+} from './snapPoints';
 import {useClampedLiftRestore} from './useClampedLiftRestore';
 
 export interface SheetProps extends Partial<BottomSheetModalProps> {
@@ -79,7 +83,7 @@ export const Sheet = forwardRef(
       onClose?.();
     };
 
-    const screenHeight = Dimensions.get('screen').height;
+    const screenHeight = useScreenHeight();
     const snapPoints = useMemo(() => {
       if (displayFullHeight) {
         return [fullHeightSnapPoint(screenHeight, insets.top)];
