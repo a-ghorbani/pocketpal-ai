@@ -137,6 +137,51 @@ describe('Sheet', () => {
       expect(ref.current.snapToIndex).toHaveBeenCalledTimes(1);
     });
 
+    it('leaves a sheet closed when the close started before the hide', () => {
+      const ref = {current: {} as {snapToIndex: jest.Mock}};
+      const {UNSAFE_getByType} = render(
+        <Sheet ref={ref as never} snapPoints={['60%']} />,
+      );
+      const modal = UNSAFE_getByType(BottomSheetModal);
+      act(() => {
+        modal.props.onChange(1043, 0, 0);
+        modal.props.onAnimate(1043, -1, 0, 0);
+      });
+      act(() => {
+        hideKeyboard();
+        jest.runOnlyPendingTimers();
+      });
+      expect(ref.current.snapToIndex).not.toHaveBeenCalled();
+    });
+
+    it('leaves a sheet closed when the close started during the wait', () => {
+      const ref = {current: {} as {snapToIndex: jest.Mock}};
+      const {UNSAFE_getByType} = render(
+        <Sheet ref={ref as never} snapPoints={['60%']} />,
+      );
+      const modal = UNSAFE_getByType(BottomSheetModal);
+      act(() => {
+        modal.props.onChange(1043, 0, 0);
+      });
+      act(() => {
+        hideKeyboard();
+        modal.props.onAnimate(1043, -1, 0, 0);
+        jest.runOnlyPendingTimers();
+      });
+      expect(ref.current.snapToIndex).not.toHaveBeenCalled();
+    });
+
+    it('forwards the animation start to the caller', () => {
+      const onAnimate = jest.fn();
+      const {UNSAFE_getByType} = render(
+        <Sheet snapPoints={['60%']} onAnimate={onAnimate} />,
+      );
+      act(() => {
+        UNSAFE_getByType(BottomSheetModal).props.onAnimate(0, -1, 10, 20);
+      });
+      expect(onAnimate).toHaveBeenCalledWith(0, -1, 10, 20);
+    });
+
     it('keeps a pending snap when the parent re-renders after the hide', () => {
       const ref = {current: {} as {snapToIndex: jest.Mock}};
       const {UNSAFE_getByType, rerender} = render(

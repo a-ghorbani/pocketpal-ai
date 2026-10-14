@@ -5,6 +5,7 @@ import type {BottomSheetModalMethods} from '@gorhom/bottom-sheet/lib/typescript/
 
 type SnapPoints = BottomSheetModalProps['snapPoints'];
 type OnChange = NonNullable<BottomSheetModalProps['onChange']>;
+type OnAnimate = NonNullable<BottomSheetModalProps['onAnimate']>;
 
 const detentCount = (snapPoints: SnapPoints) => {
   if (snapPoints === undefined) {
@@ -17,25 +18,26 @@ const detentCount = (snapPoints: SnapPoints) => {
 
 // gorhom 5.2.8 records a keyboard lift clamped at topInset with the highest
 // detent's position as its index, so keyboardBlurBehavior="restore" finds no
-// detent and leaves the sheet lifted. Snap back once gorhom has seen the hide.
+// detent and leaves the sheet lifted. Snap back unless a close or snap started.
 export const useClampedLiftRestore = (
   sheetRef: RefObject<BottomSheetModalMethods | null>,
   snapPoints: SnapPoints,
   onChange?: OnChange,
-): OnChange => {
-  const currentIndex = useRef(-1);
+  onAnimate?: OnAnimate,
+): {onChange: OnChange; onAnimate: OnAnimate} => {
+  const targetIndex = useRef(-1);
   const snapPointsRef = useRef(snapPoints);
   snapPointsRef.current = snapPoints;
 
   useEffect(() => {
     let frame: number | null = null;
     const subscription = Keyboard.addListener('keyboardDidHide', () => {
-      const highestIndex = detentCount(snapPointsRef.current) - 1;
-      if (currentIndex.current > highestIndex) {
-        frame = requestAnimationFrame(() =>
-          sheetRef.current?.snapToIndex(highestIndex),
-        );
-      }
+      frame = requestAnimationFrame(() => {
+        const highestIndex = detentCount(snapPointsRef.current) - 1;
+        if (targetIndex.current > highestIndex) {
+          sheetRef.current?.snapToIndex(highestIndex);
+        }
+      });
     });
     return () => {
       subscription.remove();
@@ -45,11 +47,21 @@ export const useClampedLiftRestore = (
     };
   }, [sheetRef]);
 
-  return useCallback<OnChange>(
+  const handleChange = useCallback<OnChange>(
     (index, position, type) => {
-      currentIndex.current = index;
+      targetIndex.current = index;
       onChange?.(index, position, type);
     },
     [onChange],
   );
+
+  const handleAnimate = useCallback<OnAnimate>(
+    (fromIndex, toIndex, fromPosition, toPosition) => {
+      targetIndex.current = toIndex;
+      onAnimate?.(fromIndex, toIndex, fromPosition, toPosition);
+    },
+    [onAnimate],
+  );
+
+  return {onChange: handleChange, onAnimate: handleAnimate};
 };
