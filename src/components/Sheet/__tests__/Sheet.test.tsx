@@ -101,5 +101,69 @@ describe('Sheet', () => {
       renderAt(0, onChange);
       expect(onChange).toHaveBeenCalledWith(0, 0, 0);
     });
+
+    it('leaves a dismissed sheet closed', () => {
+      expect(renderAt(-1).snapToIndex).not.toHaveBeenCalled();
+    });
+
+    it('snaps a dynamically sized sheet back to its only detent', () => {
+      const ref = {current: {} as {snapToIndex: jest.Mock}};
+      const {UNSAFE_getByType} = render(<Sheet ref={ref as never} />);
+      act(() => {
+        UNSAFE_getByType(BottomSheetModal).props.onChange(1304, 0, 0);
+      });
+      act(() => {
+        hideKeyboard();
+        jest.runOnlyPendingTimers();
+      });
+      expect(ref.current.snapToIndex).toHaveBeenCalledWith(0);
+    });
+
+    it('waits a frame after the hide before snapping', () => {
+      const ref = {current: {} as {snapToIndex: jest.Mock}};
+      const {UNSAFE_getByType} = render(
+        <Sheet ref={ref as never} snapPoints={['60%']} />,
+      );
+      act(() => {
+        UNSAFE_getByType(BottomSheetModal).props.onChange(1043, 0, 0);
+      });
+      act(() => {
+        hideKeyboard();
+      });
+      expect(ref.current.snapToIndex).not.toHaveBeenCalled();
+      act(() => {
+        jest.runOnlyPendingTimers();
+      });
+      expect(ref.current.snapToIndex).toHaveBeenCalledTimes(1);
+    });
+
+    it('drops the listener and a pending snap on unmount', () => {
+      let methods = {} as {snapToIndex: jest.Mock};
+      const ref = {
+        get current() {
+          return methods;
+        },
+        set current(next) {
+          if (next) {
+            methods = next;
+          }
+        },
+      };
+      const {UNSAFE_getByType, unmount} = render(
+        <Sheet ref={ref as never} snapPoints={['60%']} />,
+      );
+      const subscription = (Keyboard.addListener as jest.Mock).mock.results[0]
+        .value;
+      act(() => {
+        UNSAFE_getByType(BottomSheetModal).props.onChange(1043, 0, 0);
+      });
+      act(() => {
+        hideKeyboard();
+      });
+      unmount();
+      jest.runOnlyPendingTimers();
+      expect(subscription.remove).toHaveBeenCalled();
+      expect(methods.snapToIndex).not.toHaveBeenCalled();
+    });
   });
 });
