@@ -137,6 +137,24 @@ describe('Sheet', () => {
       expect(ref.current.snapToIndex).toHaveBeenCalledTimes(1);
     });
 
+    it('keeps a pending snap when the parent re-renders after the hide', () => {
+      const ref = {current: {} as {snapToIndex: jest.Mock}};
+      const {UNSAFE_getByType, rerender} = render(
+        <Sheet ref={ref as never} snapPoints={['60%']} />,
+      );
+      act(() => {
+        UNSAFE_getByType(BottomSheetModal).props.onChange(1043, 0, 0);
+      });
+      act(() => {
+        hideKeyboard();
+      });
+      rerender(<Sheet ref={ref as never} snapPoints={['60%']} />);
+      act(() => {
+        jest.runOnlyPendingTimers();
+      });
+      expect(ref.current.snapToIndex).toHaveBeenCalledWith(0);
+    });
+
     it('drops the listener and a pending snap on unmount', () => {
       let methods = {} as {snapToIndex: jest.Mock};
       const ref = {

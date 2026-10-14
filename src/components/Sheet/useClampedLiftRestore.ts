@@ -24,11 +24,13 @@ export const useClampedLiftRestore = (
   onChange?: OnChange,
 ): OnChange => {
   const currentIndex = useRef(-1);
+  const snapPointsRef = useRef(snapPoints);
+  snapPointsRef.current = snapPoints;
 
   useEffect(() => {
     let frame: number | null = null;
     const subscription = Keyboard.addListener('keyboardDidHide', () => {
-      const highestIndex = detentCount(snapPoints) - 1;
+      const highestIndex = detentCount(snapPointsRef.current) - 1;
       if (currentIndex.current > highestIndex) {
         frame = requestAnimationFrame(() =>
           sheetRef.current?.snapToIndex(highestIndex),
@@ -41,7 +43,7 @@ export const useClampedLiftRestore = (
         cancelAnimationFrame(frame);
       }
     };
-  }, [sheetRef, snapPoints]);
+  }, [sheetRef]);
 
   return useCallback<OnChange>(
     (index, position, type) => {
