@@ -27,7 +27,7 @@ export class ParallelProvider implements SearchProvider {
     signal?: AbortSignal,
   ): Promise<SearchHit[]> {
     const key = requireKey(this.getKey(), 'Parallel');
-    const data = await fetchJson<ParallelResponse>(
+    const data = await fetchJson<ParallelResponse | null>(
       'https://api.parallel.ai/v1/search',
       {
         method: 'POST',
@@ -39,7 +39,11 @@ export class ParallelProvider implements SearchProvider {
         signal,
       },
     );
-    return (data.results ?? []).map(r => ({
+    const results = data?.results;
+    if (!Array.isArray(results)) {
+      throw new Error('unexpected response');
+    }
+    return results.map(r => ({
       title: r.title ?? '',
       url: r.url ?? '',
       snippet: (r.excerpts ?? []).join(' '),

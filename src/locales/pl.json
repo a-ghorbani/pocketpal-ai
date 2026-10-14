@@ -1321,7 +1321,8 @@
       "testWarning": "Uwaga: W przypadku większych modeli test może trwać od 2 do 5 minut i nie można go przerwać po rozpoczęciu.",
       "keepScreenOpen": "Proszę pozostawić ten ekran otwarty.",
       "initializingModel": "Inicjalizacja modelu...",
-      "modelMaxValue": "(maks.: {{maxValue}})"
+      "modelMaxValue": "(maks.: {{maxValue}})",
+      "testFailed": "Nie udało się uruchomić testu. Poczekaj na zakończenie generowania odpowiedzi i spróbuj ponownie."
     }
   },
   "errors": {

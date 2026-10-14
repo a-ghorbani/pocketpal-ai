@@ -206,11 +206,40 @@
     "retryConnection": "Retry",
     "enterUrlManually": "Enter URL manually",
     "manageServers": "Manage Servers",
+    "routerModels": {
+      "cancel": "Cancel",
+      "unloading": "Unloading…",
+      "stateLoading": "Loading",
+      "stateLoaded": "Loaded",
+      "loadingPercent": "Loading, {{percent}} percent",
+      "unloadModel": "Unload {{model}}",
+      "cancelLoadingModel": "Cancel loading {{model}}",
+      "loadFailed": "This model did not load.",
+      "unloadNotReleased": "The server did not release this model.",
+      "serverUnreachable": "Could not reach this server.",
+      "waitStopped": "Stopped waiting for this model.",
+      "failureWithServerWords": "{{label}}\n\n“{{message}}”",
+      "dismiss": "Dismiss",
+      "unloadBoundTitle": "Unload this model?",
+      "unloadBoundBody": "This chat uses it. It loads again when you send your next message.",
+      "unloadBoundConfirm": "Unload"
+    },
     "purchases": {
       "title": "Purchases",
       "statusOwned": "Purchased",
       "statusUnlocking": "Unlocking",
       "link": "Sign in to use on other devices"
+    },
+    "account": {
+      "title": "Account",
+      "deleteAccount": "Delete account",
+      "confirmTitle": "Delete account?",
+      "confirmMessage": "This permanently deletes your PalsHub account and its library. Pals bought through the App Store or Google Play stay restorable on this device with your store account. Purchase records are kept anonymised for legal reasons.",
+      "confirmWithoutApple": "Couldn't confirm with Apple. Delete your account anyway?",
+      "deleted": "Your account has been deleted.",
+      "signInAgain": "Please sign in again",
+      "creatorSupport": "Creator accounts are deleted by our support team: {{contact}}",
+      "failed": "Could not delete, try again"
     }
   },
   "memory": {
@@ -981,7 +1010,8 @@
       },
       "warnings": {
         "promptChanged": "System prompt has been manually changed"
-      }
+      },
+      "generationBusy": "A reply is still running. Try again when it's done."
     },
     "sidebarContent": {
       "menuItems": {
@@ -1287,7 +1317,9 @@
       "searchResultsTitle": "Search results",
       "showResultsAccessibilityLabel": "Show web search results for {{query}}",
       "openLinkError": "Couldn't open this link."
-    }
+    },
+    "routerLoading": "Loading model…",
+    "routerLoadingPercent": "Loading model · {{percent}}%"
   },
   "htmlPreview": {
     "defaultTitle": "Preview",

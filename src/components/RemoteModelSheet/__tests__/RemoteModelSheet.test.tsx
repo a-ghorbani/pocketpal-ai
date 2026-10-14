@@ -1,15 +1,55 @@
 import React from 'react';
-import {render, fireEvent, waitFor} from '../../../../jest/test-utils';
+import {Alert, StyleSheet} from 'react-native';
+import {runInAction} from 'mobx';
+import {render, fireEvent, waitFor, within} from '../../../../jest/test-utils';
 import {RemoteModelSheet} from '../RemoteModelSheet';
-import {serverStore} from '../../../store';
+import {l10n} from '../../../locales';
+import {modelStore, routerStore, serverStore} from '../../../store';
 import {fetchModels, fetchModelsWithHeaders} from '../../../api/openai';
 import {detectServerType} from '../../../api/servers/detect';
 import {routerModelsBody} from '../../../../jest/fixtures/remoteModelList';
 import type {ServerType} from '../../../utils/serverTypes';
+import {useTheme} from '../../../hooks/useTheme';
+import {themeFixtures} from '../../../../jest/fixtures/theme';
 
 const mockedFetchModels = fetchModels as jest.Mock;
+
+const rgb = (hex: string) =>
+  [1, 3, 5].map(i => parseInt(hex.slice(i, i + 2), 16));
+const blend = (fg: string, bg: string, alpha: number) => {
+  const [f, b] = [rgb(fg), rgb(bg)];
+  return (
+    '#' +
+    f
+      .map((v, i) =>
+        Math.round(v * alpha + b[i] * (1 - alpha))
+          .toString(16)
+          .padStart(2, '0'),
+      )
+      .join('')
+  );
+};
+const luminance = (hex: string) => {
+  const [r, g, b] = rgb(hex).map(v => {
+    const c = v / 255;
+    return c <= 0.03928 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4;
+  });
+  return 0.2126 * r + 0.7152 * g + 0.0722 * b;
+};
+const contrast = (a: string, b: string) => {
+  const [hi, lo] = [luminance(a), luminance(b)].sort((x, y) => y - x);
+  return (hi + 0.05) / (lo + 0.05);
+};
 const mockedFetchModelsWithHeaders = fetchModelsWithHeaders as jest.Mock;
 const mockedDetectServerType = detectServerType as jest.Mock;
+
+const seedChipList = (rows: any[]) =>
+  (serverStore.fetchModelsForServer as jest.Mock).mockImplementationOnce(
+    async (serverId: string) => {
+      serverStore.serverModels.set(serverId, rows);
+      return {ok: true};
+    },
+  );
 
 // Mock the Sheet component following HFTokenSheet test pattern
 jest.mock('../../Sheet', () => {
@@ -315,11 +355,10 @@ describe('RemoteModelSheet', () => {
     });
   });
 
-  // Tapping a saved server's chip probes via fetchModels using THAT server's
-  // stored requestTimeoutMs (raw), so a saved slow server does not red-X at
-  // the 30s default.
+  // A saved server's chip reads its list through the store's own fetch, the
+  // one writer of the list; the slow-server timeout is that fetch's to honour.
   describe('chip-press probe feed', () => {
-    it('passes the saved server requestTimeoutMs to fetchModels on chip press', async () => {
+    it('reads the list through the store and renders its rows', async () => {
       serverStore.servers = [
         {
           id: 'srv-1',
@@ -329,57 +368,53 @@ describe('RemoteModelSheet', () => {
         },
       ];
       (serverStore.getApiKey as jest.Mock).mockResolvedValue(undefined);
-      mockedFetchModels.mockResolvedValueOnce([
-        {id: 'llama-7b', object: 'model', owned_by: 'system'},
-      ]);
+      seedChipList([{id: 'llama-7b', object: 'model', owned_by: 'system'}]);
 
-      const {getByTestId} = render(
+      const {getByTestId, getByText} = render(
         <RemoteModelSheet isVisible={true} onDismiss={jest.fn()} />,
       );
 
       fireEvent.press(getByTestId('server-chip-srv-1'));
 
       await waitFor(() => {
-        expect(mockedFetchModels).toHaveBeenCalledWith(
-          'http://localhost:1234',
-          undefined,
-          600000,
-        );
+        expect(getByText('llama-7b')).toBeTruthy();
       });
-      // The add-path probe must NOT be involved in the chip flow.
+      expect(serverStore.fetchModelsForServer).toHaveBeenCalledWith('srv-1');
+      expect(mockedFetchModels).not.toHaveBeenCalled();
       expect(mockedFetchModelsWithHeaders).not.toHaveBeenCalled();
     });
 
-    it('forwards undefined for a saved server without requestTimeoutMs', async () => {
+    it('shows the failure text of the read unchanged', async () => {
       serverStore.servers = [
         {id: 'srv-1', name: 'Default Server', url: 'http://localhost:1234'},
       ];
       (serverStore.getApiKey as jest.Mock).mockResolvedValue(undefined);
-      mockedFetchModels.mockResolvedValueOnce([]);
+      (serverStore.fetchModelsForServer as jest.Mock).mockResolvedValueOnce({
+        ok: false,
+        error: 'Connection timed out',
+      });
 
-      const {getByTestId} = render(
+      const {getByTestId, getByText} = render(
         <RemoteModelSheet isVisible={true} onDismiss={jest.fn()} />,
       );
 
       fireEvent.press(getByTestId('server-chip-srv-1'));
 
       await waitFor(() => {
-        expect(mockedFetchModels).toHaveBeenCalledWith(
-          'http://localhost:1234',
-          undefined,
-          undefined,
-        );
+        expect(getByText(/Connection timed out/)).toBeTruthy();
       });
     });
   });
-  describe('the row vision slot', () => {
-    const ROUTER_ROWS = routerModelsBody.data as any[];
+  describe('the plain row vision slot', () => {
+    const ROWS = (routerModelsBody.data as any[]).map(
+      ({status: _status, ...rest}) => rest,
+    );
     const VISION = 'gemma-4-e2b';
     const TEXT = 'gemma-3-4b';
 
     const openViaChip = async (
       serverType: string | undefined,
-      rows: any[] = ROUTER_ROWS,
+      rows: any[] = ROWS,
     ) => {
       serverStore.servers = [
         {
@@ -391,7 +426,7 @@ describe('RemoteModelSheet', () => {
         },
       ];
       (serverStore.getApiKey as jest.Mock).mockResolvedValue(undefined);
-      mockedFetchModels.mockResolvedValueOnce(rows);
+      seedChipList(rows);
 
       const view = render(
         <RemoteModelSheet isVisible={true} onDismiss={jest.fn()} />,
@@ -408,10 +443,10 @@ describe('RemoteModelSheet', () => {
     it('tells the three states apart in one list', async () => {
       // The row the router build cannot describe has to read differently from
       // the row it describes as text-only, or 42 rows collapse into one state.
-      const unknownRow = {...ROUTER_ROWS[0], id: 'mystery-model'};
+      const unknownRow = {...ROWS[0], id: 'mystery-model'};
       delete unknownRow.architecture;
       const {getByTestId} = await openViaChip('llama.cpp', [
-        ...ROUTER_ROWS,
+        ...ROWS,
         unknownRow,
       ]);
 
@@ -468,8 +503,390 @@ describe('RemoteModelSheet', () => {
     it('issues no request of its own to answer', async () => {
       await openViaChip('llama.cpp');
 
-      expect(mockedFetchModels).toHaveBeenCalledTimes(1);
+      expect(serverStore.fetchModelsForServer).toHaveBeenCalledTimes(1);
       expect(mockedFetchModelsWithHeaders).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('router rows', () => {
+    const ROUTER = 'srv-r';
+    const KEY = (id: string) => `${ROUTER}/${id}`;
+    const row = (id: string, value: string, extra = {}) => ({
+      id,
+      object: 'model',
+      status: {value, ...extra},
+    });
+
+    const openRouter = async (
+      rows: any[],
+      serverType: ServerType = 'llama.cpp',
+    ) => {
+      serverStore.servers = [
+        {id: ROUTER, name: 'desk', url: 'http://desk:8080', serverType},
+      ];
+      (serverStore.getApiKey as jest.Mock).mockResolvedValue(undefined);
+      (serverStore.fetchModelsForServer as jest.Mock).mockImplementationOnce(
+        async (serverId: string) => {
+          runInAction(() => {
+            serverStore.serverModels.set(serverId, rows);
+            serverStore.listReads = {
+              [serverId]: {seq: 1, hasModelsKey: false, stale: false},
+            };
+          });
+          return {ok: true};
+        },
+      );
+      const view = render(
+        <RemoteModelSheet isVisible={true} onDismiss={jest.fn()} />,
+      );
+      fireEvent.press(view.getByTestId(`server-chip-${ROUTER}`));
+      await waitFor(() => {
+        expect(view.queryByText(rows[0].id)).toBeTruthy();
+      });
+      return view;
+    };
+
+    const seedRecord = (id: string, record: Record<string, unknown>) => {
+      const seeded = {key: KEY(id), ...record};
+      routerStore.records.set(KEY(id), seeded as any);
+      return seeded;
+    };
+
+    beforeEach(() => {
+      routerStore.records.clear();
+      serverStore.serverModels.clear();
+      serverStore.listReads = {};
+      serverStore.userSelectedModels = [];
+      modelStore.activeRemoteBinding = undefined;
+    });
+
+    const STATUS_IDS = ['dot', 'ring', 'percent', 'power'];
+    const shown = (view: any, id: string) =>
+      STATUS_IDS.filter(name => view.queryByTestId(`router-${name}-${id}`));
+
+    it.each([
+      [
+        'an own load with progress',
+        'unloaded',
+        {kind: 'load', detail: {progress: {value: 0.4}}},
+        ['ring', 'percent', 'power'],
+        'Loading, 40 percent',
+        'Cancel loading m',
+      ],
+      [
+        'an own load before any progress',
+        'unloaded',
+        {kind: 'load'},
+        ['ring', 'power'],
+        'Loading',
+        'Cancel loading m',
+      ],
+      [
+        'an own unload',
+        'loaded',
+        {kind: 'unload'},
+        ['ring'],
+        'Unloading…',
+        null,
+      ],
+      ['a loaded row', 'loaded', null, ['dot', 'power'], 'Loaded', 'Unload m'],
+      [
+        'a sleeping row',
+        'sleeping',
+        null,
+        ['dot', 'power'],
+        'Loaded',
+        'Unload m',
+      ],
+      [
+        'a row another client loads',
+        'loading',
+        null,
+        ['ring'],
+        'Loading',
+        null,
+      ],
+      ['a downloading row', 'downloading', null, [], null, null],
+      ['an unloaded row', 'unloaded', null, [], null, null],
+      ['an unreadable row', 'hibernating', null, [], null, null],
+    ])(
+      'presents %s',
+      async (_label, value, record, expected, statusLabel, powerLabel) => {
+        if (record) {
+          seedRecord('m', record);
+        }
+        const view = await openRouter([row('m', value)]);
+
+        expect(shown(view, 'm')).toEqual(expected);
+        const status =
+          view.queryByTestId('router-dot-m') ??
+          view.queryByTestId('router-ring-m');
+        expect(status?.props.accessibilityLabel ?? null).toBe(statusLabel);
+        expect(
+          view.queryByTestId('router-power-m')?.props.accessibilityLabel ??
+            null,
+        ).toBe(powerLabel);
+      },
+    );
+
+    it('shows the overall percent across the stages of a load', async () => {
+      seedRecord('m', {
+        kind: 'load',
+        detail: {
+          progress: {
+            stages: ['text_model', 'mmproj_model'],
+            current: 'mmproj_model',
+            value: 0.5,
+          },
+        },
+      });
+      const view = await openRouter([row('m', 'unloaded')]);
+
+      expect(view.getByTestId('router-percent-m')).toHaveTextContent('75%');
+    });
+
+    it('shows nothing for a row whose load failed on the server', async () => {
+      const view = await openRouter([
+        row('m', 'unloaded', {failed: true, exit_code: 1}),
+      ]);
+
+      expect(shown(view, 'm')).toEqual([]);
+    });
+
+    it('claims nothing about a row from a stale list', async () => {
+      const view = await openRouter([row('m', 'loaded')]);
+      runInAction(() => {
+        serverStore.listReads[ROUTER].stale = true;
+      });
+
+      await waitFor(() => {
+        expect(shown(view, 'm')).toEqual([]);
+      });
+    });
+
+    it('never says sleeping', async () => {
+      const view = await openRouter([row('m', 'sleeping')]);
+
+      expect(view.queryByText(/sleeping/i)).toBeNull();
+    });
+
+    it('wires the power button to cancel an own load', async () => {
+      seedRecord('m', {kind: 'load'});
+      const view = await openRouter([row('m', 'unloaded')]);
+
+      fireEvent.press(view.getByTestId('router-power-m'));
+
+      expect(routerStore.cancel).toHaveBeenCalledWith(ROUTER, 'm');
+      expect(routerStore.unload).not.toHaveBeenCalled();
+    });
+
+    it('confirms before unloading the model this chat uses', async () => {
+      const alert = jest.spyOn(Alert, 'alert');
+      modelStore.activeRemoteBinding = {
+        modelId: KEY('bound'),
+        serverId: ROUTER,
+        remoteModelId: 'bound',
+        url: 'http://desk:8080',
+        serverType: 'llama.cpp',
+      };
+      const view = await openRouter([row('bound', 'loaded')]);
+
+      fireEvent.press(view.getByTestId('router-power-bound'));
+
+      expect(alert).toHaveBeenCalledTimes(1);
+      expect(routerStore.unload).not.toHaveBeenCalled();
+      const buttons = alert.mock.calls[0][2] as any[];
+      buttons.find(button => button.style === 'destructive').onPress();
+      expect(routerStore.unload).toHaveBeenCalledWith(ROUTER, 'bound');
+    });
+
+    it('unloads any other model without asking', async () => {
+      const alert = jest.spyOn(Alert, 'alert');
+      const view = await openRouter([row('other', 'loaded')]);
+
+      fireEvent.press(view.getByTestId('router-power-other'));
+
+      expect(alert).not.toHaveBeenCalled();
+      expect(routerStore.unload).toHaveBeenCalledWith(ROUTER, 'other');
+    });
+
+    const opacityOf = (node: any) =>
+      StyleSheet.flatten(node.props.style)?.opacity;
+    const dimmedBetween = (node: any, until: any) => {
+      for (
+        let current = node;
+        current && current !== until;
+        current = current.parent
+      ) {
+        if (opacityOf(current) !== undefined && opacityOf(current) < 1) {
+          return true;
+        }
+      }
+      return false;
+    };
+
+    it('shows an already-added row checked and dimmed, with no label, and keeps its power button', async () => {
+      serverStore.userSelectedModels = [
+        {serverId: ROUTER, remoteModelId: 'added'},
+      ];
+      const view = await openRouter([row('added', 'loaded')]);
+      const select = view.getByTestId('router-select-added');
+
+      expect(opacityOf(select)).toBeLessThan(1);
+      expect(view.queryByText(l10n.en.settings.alreadyAdded)).toBeNull();
+      expect(
+        within(select).UNSAFE_getByProps({value: 'added'}).props.status,
+      ).toBe('checked');
+      expect(
+        dimmedBetween(
+          view.getByTestId('router-power-added'),
+          view.getByTestId('router-row-added'),
+        ),
+      ).toBe(false);
+    });
+
+    it.each([
+      ['light', themeFixtures.lightTheme],
+      ['dark', themeFixtures.darkTheme],
+    ])(
+      'keeps a dimmed radio and name at 3:1 or more in the %s theme',
+      async (_mode, theme) => {
+        (useTheme as jest.Mock).mockReturnValue(theme);
+        serverStore.userSelectedModels = [
+          {serverId: ROUTER, remoteModelId: 'added'},
+        ];
+        const view = await openRouter([
+          row('added', 'loaded'),
+          row('m', 'downloading'),
+        ]);
+
+        for (const id of ['added', 'm']) {
+          const select = view.getByTestId(`router-select-${id}`);
+          const radio = within(select).UNSAFE_getByProps({value: id});
+          const name = within(select).getByText(id);
+          const radioColor =
+            radio.props.status === 'checked'
+              ? theme.colors.primary
+              : radio.props.uncheckedColor;
+          const ratios = [
+            radioColor,
+            StyleSheet.flatten(name.props.style).color,
+          ].map(fg =>
+            contrast(
+              blend(fg, theme.colors.background, opacityOf(select)),
+              theme.colors.background,
+            ),
+          );
+
+          expect(radio.props.disabled).toBeFalsy();
+          expect(Math.min(...ratios)).toBeGreaterThanOrEqual(3);
+          expect(select.props.accessibilityState).toEqual({
+            checked: id === 'added',
+            disabled: true,
+          });
+        }
+        (useTheme as jest.Mock).mockReturnValue(themeFixtures.lightTheme);
+      },
+    );
+
+    it('dims a row another client is downloading and does not select it', async () => {
+      const view = await openRouter([row('m', 'downloading')]);
+      const select = view.getByTestId('router-select-m');
+
+      fireEvent.press(select);
+
+      expect(opacityOf(select)).toBeLessThan(1);
+      expect(within(select).UNSAFE_getByProps({value: 'm'}).props.status).toBe(
+        'unchecked',
+      );
+    });
+
+    it('shows the eye only on a vision row, and no other capability icon', async () => {
+      const [vision, text] = ['gemma-4-e2b', 'gemma-3-4b'].map(id =>
+        (routerModelsBody.data as any[]).find(model => model.id === id),
+      );
+      const view = await openRouter([vision, text]);
+
+      expect(
+        view.getByTestId(`router-vision-${vision.id}`).props.accessibilityLabel,
+      ).toBe(l10n.en.models.modelCard.labels.vision);
+      expect(view.queryByTestId(`router-vision-${text.id}`)).toBeNull();
+      expect(view.queryByText('—')).toBeNull();
+      expect(view.queryByTestId(/^remote-model-row-vision-/)).toBeNull();
+    });
+
+    it('keeps a long name on one line, cut in the middle', async () => {
+      const id = `org/${'x'.repeat(100)}-GGUF:Q4_K_M`;
+      const view = await openRouter([row(id, 'loaded')]);
+
+      const name = within(view.getByTestId(`router-select-${id}`)).getByText(
+        id,
+      );
+      expect(name.props.numberOfLines).toBe(1);
+      expect(name.props.ellipsizeMode).toBe('middle');
+    });
+
+    it('shows no headings, count, note or load button', async () => {
+      const view = await openRouter([row('a', 'loaded'), row('b', 'unloaded')]);
+
+      expect(
+        view.queryAllByTestId(
+          /^router-(group|load|added|state|detail|progress)-|^router-resident-count$|^router-eviction-note$/,
+        ),
+      ).toEqual([]);
+      expect(view.queryByText('Not loaded')).toBeNull();
+    });
+
+    it('shows a failure with the server words as plain text, and dismisses it', async () => {
+      seedRecord('m', {
+        kind: 'load',
+        failure: {cause: 'load-failed', message: '**bold** [x](http://e)'},
+      });
+      const view = await openRouter([row('m', 'unloaded')]);
+
+      const reason = view.getByTestId('router-reason-m');
+      expect(reason.type).toBe('Text');
+      expect(reason).toHaveTextContent(
+        'This model did not load. **bold** [x](http://e)',
+      );
+      fireEvent.press(view.getByTestId('router-dismiss-m'));
+      expect(routerStore.dismiss).toHaveBeenCalledWith(ROUTER, 'm');
+    });
+
+    it('tells the store which server the picker shows', async () => {
+      const view = await openRouter([row('m', 'loaded')]);
+
+      expect(routerStore.setPickerServer).toHaveBeenLastCalledWith(ROUTER);
+      view.unmount();
+      expect(routerStore.setPickerServer).toHaveBeenLastCalledWith(null);
+    });
+
+    it('asks the server for nothing beyond the list', async () => {
+      await openRouter([row('m', 'loaded'), row('n', 'unloaded')]);
+
+      expect(serverStore.fetchRemoteModelCaps).not.toHaveBeenCalled();
+      expect(routerStore.ensureLoaded).not.toHaveBeenCalled();
+    });
+
+    it.each([
+      [
+        'a non-router llama.cpp server',
+        'llama.cpp',
+        [{id: 'm', object: 'model'}],
+      ],
+      [
+        'a router-shaped list on another server type',
+        'Ollama',
+        [row('m', 'loaded')],
+      ],
+    ])('renders the plain picker for %s', async (_label, serverType, rows) => {
+      const view = await openRouter(rows, serverType as ServerType);
+
+      expect(view.queryByTestId('router-row-m')).toBeNull();
+      expect(routerStore.setPickerServer).not.toHaveBeenCalled();
+      const name = view.getByText('m');
+      expect(name.props.numberOfLines).toBe(1);
+      expect(name.props.ellipsizeMode).toBe('middle');
     });
   });
 });

@@ -32,17 +32,19 @@ const mockAuthService = {
 
   resetPassword: jest.fn().mockResolvedValue(true),
 
-  signOut: jest.fn().mockResolvedValue({
-    success: true,
-  }),
+  signOut: jest.fn().mockResolvedValue(true),
+
+  resetLocalSession: jest.fn(),
 
   refreshSession: jest.fn().mockResolvedValue({
     success: true,
   }),
 
-  deleteAccount: jest.fn().mockResolvedValue({
-    success: true,
-  }),
+  hasAppleIdentity: jest.fn().mockReturnValue(false),
+
+  appleSubject: jest.fn().mockReturnValue(null),
+
+  reauthorizeWithApple: jest.fn().mockResolvedValue({kind: 'unavailable'}),
 
   clearError: jest.fn(),
 

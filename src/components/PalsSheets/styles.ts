@@ -132,6 +132,10 @@ export const createStyles = (theme: Theme) =>
     resetButton: {
       marginLeft: 8,
     },
+    generateBusyText: {
+      color: theme.colors.onSurfaceVariant,
+      marginTop: 8,
+    },
     // New styles for LookieSheet
     modelDownloadSection: {
       gap: 16,

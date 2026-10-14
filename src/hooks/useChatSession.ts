@@ -1,20 +1,21 @@
 import React, {useRef} from 'react';
+import {AccessibilityInfo} from 'react-native';
 
-import {toJS, runInAction} from 'mobx';
+import {toJS} from 'mobx';
 import type {JinjaFormattedChatResult} from 'llama.rn';
-
-import {chatSessionRepository} from '../repositories/ChatSessionRepository';
 
 import {randId} from '../utils';
 import {L10nContext} from '../utils';
 import {
   chatSessionStore,
   modelStore,
+  NEW_SESSION_TITLE,
   palStore,
   serverStore,
   ttsStore,
   uiStore,
 } from '../store';
+import type {GenerationLease} from '../store/generationLease';
 import type {PersistedTurnTimings} from '../utils/completionTypes';
 import {resolveReasoningCapability} from '../utils/reasoningCapability';
 
@@ -24,7 +25,12 @@ import {
   User,
   type AgentToolCall,
 } from '../utils/types';
-import {createMultimodalWarning} from '../utils/errors';
+import {
+  RemoteModelNotReadyError,
+  RemoteModelRequestWithdrawnError,
+  createMultimodalWarning,
+} from '../utils/errors';
+import {routerFailureMessage} from '../utils/routerCopy';
 import {
   assembleMessages,
   resolveSystemMessages,
@@ -567,6 +573,32 @@ async function applyEventToStore(
   }
 }
 
+/**
+ * Lets queued touches dispatch. Ends at once when `signal` aborts: JS timers
+ * do not fire while the app is backgrounded, and a release there waits for
+ * this run to drain.
+ */
+function yieldToTouches(signal: AbortSignal): Promise<void> {
+  return new Promise(resolve => {
+    if (signal.aborted) {
+      resolve();
+      return;
+    }
+    const done = () => {
+      clearTimeout(timer);
+      signal.removeEventListener('abort', done);
+      resolve();
+    };
+    const timer = setTimeout(done, 0);
+    signal.addEventListener('abort', done);
+  });
+}
+
+export type UndoneSend = {
+  message: MessageType.PartialText;
+  sessionId: string;
+};
+
 export const useChatSession = (
   currentMessageInfo: React.MutableRefObject<{
     createdAt: number;
@@ -584,33 +616,90 @@ export const useChatSession = (
   // passed into AgentRunOptions.triggerMarkers so the runner has no
   // direct dependency on the cache, modelStore, or getFormattedChat.
   const triggerCacheRef = useRef(createTriggerMarkerCache());
-  // AbortController for the active run. Replaced per run; signal is
-  // forwarded to runAgent for stop-mid-tool semantics.
-  const abortRef = useRef<AbortController | null>(null);
+  const leaseRef = useRef<GenerationLease | null>(null);
 
   const addMessage = async (message: MessageType.Any) => {
     await chatSessionStore.addMessageToCurrentSession(message);
   };
 
+  const systemRow = (text: string, metadata = {}): MessageType.Text => ({
+    author: assistant,
+    createdAt: Date.now(),
+    id: randId(),
+    text,
+    type: 'text',
+    metadata: {system: true, ...metadata},
+  });
+
   const addSystemMessage = async (text: string, metadata = {}) => {
-    const textMessage: MessageType.Text = {
-      author: assistant,
-      createdAt: Date.now(),
-      id: randId(),
-      text,
-      type: 'text',
-      metadata: {system: true, ...metadata},
-    };
-    await addMessage(textMessage);
+    await addMessage(systemRow(text, metadata));
   };
 
-  const handleSendPress = async (message: MessageType.PartialText) => {
-    const engine = modelStore.engine;
-    if (!engine) {
+  const handleSendPress = async (
+    message: MessageType.PartialText,
+  ): Promise<UndoneSend | undefined> => {
+    const sentFrom = chatSessionStore.activeSessionId;
+    if (modelStore.isGenerationBusy) {
+      chatSessionStore.setIsStopping(true);
+    }
+    const lease = await modelStore.acquireGeneration();
+    chatSessionStore.setIsStopping(false);
+    if (chatSessionStore.activeSessionId !== sentFrom) {
+      lease?.end();
+      chatSessionStore.restoreUnsentText(sentFrom, message.text);
+      return;
+    }
+    if (!lease) {
       await addSystemMessage(l10n.chat.modelNotLoaded);
       return;
     }
+    leaseRef.current = lease;
 
+    // Run UI clears on abort, not on drain.
+    let uiStopped = false;
+    const uiStop = () => {
+      if (uiStopped) {
+        return;
+      }
+      uiStopped = true;
+      modelStore.setInferencing(false);
+      modelStore.setIsStreaming(false);
+      chatSessionStore.setIsGenerating(false);
+      chatSessionStore.setAgentUiState(initialAgentUiState);
+      chatSessionStore.setToolCallTokenCount(0);
+      try {
+        deactivateKeepAwake();
+      } catch (error) {
+        console.error('Failed to deactivate keep awake after chat:', error);
+      }
+    };
+    if (lease.signal.aborted) {
+      uiStop();
+    } else {
+      lease.signal.addEventListener('abort', uiStop);
+    }
+
+    try {
+      return await sendUnderLease(message, lease, {
+        stop: uiStop,
+        isStopped: () => uiStopped,
+      });
+    } finally {
+      lease.signal.removeEventListener('abort', uiStop);
+      uiStop();
+      if (leaseRef.current === lease) {
+        leaseRef.current = null;
+      }
+      lease.end();
+    }
+  };
+
+  const sendUnderLease = async (
+    message: MessageType.PartialText,
+    lease: GenerationLease,
+    runUi: {stop: () => void; isStopped: () => boolean},
+  ): Promise<UndoneSend | undefined> => {
+    const engine = lease.engine;
     const contextId = modelStore.contextId;
     if (!contextId) {
       await addSystemMessage(l10n.chat.modelNotLoaded);
@@ -638,15 +727,20 @@ export const useChatSession = (
         multimodal: hasImages,
       },
     };
+    const wasUntitled =
+      (chatSessionStore.sessions.find(
+        s => s.id === chatSessionStore.activeSessionId,
+      )?.title ?? NEW_SESSION_TITLE) === NEW_SESSION_TITLE;
     await addMessage(textMessage);
-    modelStore.setInferencing(true);
-    modelStore.setIsStreaming(false);
-    chatSessionStore.setIsGenerating(true);
-
-    try {
-      activateKeepAwake();
-    } catch (error) {
-      console.error('Failed to activate keep awake during chat:', error);
+    if (!lease.signal.aborted) {
+      modelStore.setInferencing(true);
+      modelStore.setIsStreaming(false);
+      chatSessionStore.setIsGenerating(true);
+      try {
+        activateKeepAwake();
+      } catch (error) {
+        console.error('Failed to activate keep awake during chat:', error);
+      }
     }
 
     const activeSession = chatSessionStore.sessions.find(
@@ -679,7 +773,6 @@ export const useChatSession = (
     // tool call whose function.name isn't in this list.
     const palTalents = (pal?.pact?.talents ?? []).map(t => t.name);
 
-    abortRef.current = new AbortController();
     const completionStartTime = Date.now();
     const timeToFirstTokenMs: {value: number | null} = {value: null};
     let uiState: AgentUiState = initialAgentUiState;
@@ -729,6 +822,7 @@ export const useChatSession = (
       }
     }
 
+    let undone: UndoneSend | undefined;
     try {
       const events = runAgent({
         engine,
@@ -737,7 +831,7 @@ export const useChatSession = (
         talentLookup: name => talentRegistry.get(name),
         triggerMarkers,
         messageId: messageInfo.id,
-        signal: abortRef.current.signal,
+        signal: lease.signal,
       });
 
       // The chunk-cycle would otherwise run entirely via microtask
@@ -759,7 +853,7 @@ export const useChatSession = (
       const TOOL_TOKEN_BUCKET = 10;
 
       for await (const event of events) {
-        if (abortRef.current?.signal.aborted && event.type === 'token') {
+        if (lease.signal.aborted && event.type === 'token') {
           continue;
         }
 
@@ -770,7 +864,9 @@ export const useChatSession = (
         const nextUiState = agentStateReducer(uiState, event);
         if (nextUiState !== uiState) {
           uiState = nextUiState;
-          chatSessionStore.setAgentUiState(nextUiState);
+          if (!runUi.isStopped()) {
+            chatSessionStore.setAgentUiState(nextUiState);
+          }
         }
 
         switch (event.type) {
@@ -780,7 +876,9 @@ export const useChatSession = (
           case 'run_finished':
           case 'run_failed':
             toolCallTokensRaw = 0;
-            chatSessionStore.setToolCallTokenCount(0);
+            if (!runUi.isStopped()) {
+              chatSessionStore.setToolCallTokenCount(0);
+            }
             break;
           case 'token':
             if (event.delta.toolCalls && event.delta.toolCalls.length > 0) {
@@ -808,7 +906,7 @@ export const useChatSession = (
         });
 
         if (performance.now() - lastYieldTs >= YIELD_INTERVAL_MS) {
-          await new Promise(resolve => setTimeout(resolve, 0));
+          await yieldToTouches(lease.signal);
           lastYieldTs = performance.now();
         }
 
@@ -816,21 +914,12 @@ export const useChatSession = (
           throw event.error;
         }
       }
-
-      modelStore.setInferencing(false);
-      modelStore.setIsStreaming(false);
-      chatSessionStore.setIsGenerating(false);
-      chatSessionStore.setIsStopping(false);
     } catch (error) {
       console.error('Completion error:', error);
-      modelStore.setInferencing(false);
-      modelStore.setIsStreaming(false);
-      chatSessionStore.setIsGenerating(false);
-      chatSessionStore.setIsStopping(false);
-      // Reset agentUiState back to idle so renderers don't get
-      // stuck in a failed state across the next user message.
-      chatSessionStore.setAgentUiState(initialAgentUiState);
-      chatSessionStore.setToolCallTokenCount(0);
+      // Send stays blocked until an undone turn's rows are gone.
+      if (!(error instanceof RemoteModelRequestWithdrawnError)) {
+        runUi.stop();
+      }
 
       // Stop any in-flight TTS — the completion errored, so buffered
       // audio should not keep playing.
@@ -872,98 +961,105 @@ export const useChatSession = (
       // this metadata write does not silently no-op on assistant_turn
       // rows and does not clobber metadata.steps.
       let turnAbsorbedError = false;
-      if (currentMessageInfo.current) {
-        const session = chatSessionStore.sessions.find(
-          s => s.id === currentMessageInfo.current!.sessionId,
-        );
-        const currentMsg = session?.messages.find(
-          msg => msg.id === currentMessageInfo.current!.id,
-        );
+      const session = chatSessionStore.sessions.find(
+        s => s.id === messageInfo.sessionId,
+      );
+      const currentMsg = session?.messages.find(
+        msg => msg.id === messageInfo.id,
+      );
 
-        const hasAnyStepContent =
-          currentMsg?.type === 'assistant_turn' &&
-          ((currentMsg as MessageType.AssistantTurn).steps ?? []).some(
-            s => (s.content?.length ?? 0) > 0 || (s.toolCalls?.length ?? 0) > 0,
-          );
-        const hasLegacyText =
-          currentMsg?.type === 'text' &&
-          !!(currentMsg as MessageType.Text).text;
-        const hasPartialContent = hasAnyStepContent || hasLegacyText;
+      const hasAnyStepContent =
+        currentMsg?.type === 'assistant_turn' &&
+        ((currentMsg as MessageType.AssistantTurn).steps ?? []).some(
+          s => (s.content?.length ?? 0) > 0 || (s.toolCalls?.length ?? 0) > 0,
+        );
+      const hasLegacyText =
+        currentMsg?.type === 'text' && !!(currentMsg as MessageType.Text).text;
+      const hasPartialContent = hasAnyStepContent || hasLegacyText;
 
-        if (hasPartialContent) {
-          // No finalResult on the abort path, so no turn reported a count.
-          // truncationLikely is the n_ctx-exhaustion signal: when set, treat
-          // the turn as full and pin `used` to the context window so the
-          // sticky banner's freshness gate holds. Otherwise the count is
-          // unknown, which is not zero.
+      if (hasPartialContent) {
+        // No finalResult on the abort path, so no turn reported a count.
+        // truncationLikely is the n_ctx-exhaustion signal: when set, treat
+        // the turn as full and pin `used` to the context window so the
+        // sticky banner's freshness gate holds. Otherwise the count is
+        // unknown, which is not zero.
+        const isRemote = modelStore.activeModel?.origin === ModelOrigin.REMOTE;
+        const effectiveNCtx = modelStore.activeModelCaps.effectiveContextLength;
+        const abortSnapshot: CompletionResultSnapshot = {
+          used: treatAsContextFull ? effectiveNCtx : undefined,
+          contextFull: treatAsContextFull,
+          isRemote,
+        };
+        await chatSessionStore.updateMessage(
+          messageInfo.id,
+          messageInfo.sessionId,
+          {
+            metadata: {
+              interrupted: true,
+              copyable: true,
+              completionResult: abortSnapshot,
+              ...(isToolArgsParseError ? {truncationLikely: true} : {}),
+            },
+          },
+        );
+        chatSessionStore.recordCompletionSnapshot(abortSnapshot);
+        // The turn now carries the failure context; suppress the
+        // duplicate `Completion failed: …` system message dump.
+        turnAbsorbedError = true;
+      } else {
+        // A prompt that overflows n_ctx throws before any token, so there
+        // is no content to keep — but still record the snapshot so the
+        // banner surfaces the full state. The empty turn is cleaned up
+        // below; the store snapshot drives the banner independently.
+        // Per-process for this draft: with no message persisted, the banner
+        // does not rehydrate after a session switch / restart (it re-fires
+        // on the next overflowing send).
+        if (isContextFullError) {
           const isRemote =
             modelStore.activeModel?.origin === ModelOrigin.REMOTE;
           const effectiveNCtx =
             modelStore.activeModelCaps.effectiveContextLength;
-          const abortSnapshot: CompletionResultSnapshot = {
-            used: treatAsContextFull ? effectiveNCtx : undefined,
-            contextFull: treatAsContextFull,
+          chatSessionStore.recordCompletionSnapshot({
+            used: effectiveNCtx,
+            contextFull: true,
             isRemote,
-          };
-          await chatSessionStore.updateMessage(
-            currentMessageInfo.current.id,
-            currentMessageInfo.current.sessionId,
-            {
-              metadata: {
-                interrupted: true,
-                copyable: true,
-                completionResult: abortSnapshot,
-                ...(isToolArgsParseError ? {truncationLikely: true} : {}),
-              },
-            },
-          );
-          chatSessionStore.recordCompletionSnapshot(abortSnapshot);
-          // The turn now carries the failure context; suppress the
-          // duplicate `Completion failed: …` system message dump.
+          });
           turnAbsorbedError = true;
-        } else {
-          // A prompt that overflows n_ctx throws before any token, so there
-          // is no content to keep — but still record the snapshot so the
-          // banner surfaces the full state. The empty turn is cleaned up
-          // below; the store snapshot drives the banner independently.
-          // Per-process for this draft: with no message persisted, the banner
-          // does not rehydrate after a session switch / restart (it re-fires
-          // on the next overflowing send).
-          if (isContextFullError) {
-            const isRemote =
-              modelStore.activeModel?.origin === ModelOrigin.REMOTE;
-            const effectiveNCtx =
-              modelStore.activeModelCaps.effectiveContextLength;
-            chatSessionStore.recordCompletionSnapshot({
-              used: effectiveNCtx,
-              contextFull: true,
-              isRemote,
-            });
-            turnAbsorbedError = true;
-          }
-          try {
-            await chatSessionRepository.deleteMessage(
-              currentMessageInfo.current.id,
-            );
-            if (session) {
-              runInAction(() => {
-                session.messages = session.messages.filter(
-                  msg => msg.id !== currentMessageInfo.current!.id,
-                );
-              });
-            }
-          } catch (cleanupError) {
-            console.error(
-              'Failed to clean up empty message after error:',
-              cleanupError,
-            );
-          }
         }
+        await chatSessionStore.deleteMessageFromSession(
+          messageInfo.sessionId,
+          messageInfo.id,
+        );
       }
 
       if (turnAbsorbedError) {
         // Footer already surfaces interrupted / truncationLikely; nothing
         // more to add to chat.
+      } else if (error instanceof RemoteModelRequestWithdrawnError) {
+        if (!hasPartialContent) {
+          await chatSessionStore.deleteMessageFromSession(
+            messageInfo.sessionId,
+            textMessage.id,
+          );
+          if (wasUntitled) {
+            await chatSessionStore.updateSessionTitleBySessionId(
+              messageInfo.sessionId,
+              NEW_SESSION_TITLE,
+            );
+          }
+          undone = {message, sessionId: messageInfo.sessionId};
+        }
+      } else if (error instanceof RemoteModelNotReadyError) {
+        const text = routerFailureMessage(
+          error.cause,
+          error.serverMessage,
+          l10n,
+        );
+        await chatSessionStore.addMessageToSession(
+          messageInfo.sessionId,
+          systemRow(text),
+        );
+        AccessibilityInfo.announceForAccessibility(text);
       } else if (errorMessage.includes('network')) {
         await addSystemMessage(l10n.common.networkError);
       } else if (isToolArgsParseError) {
@@ -983,13 +1079,8 @@ export const useChatSession = (
       } else {
         await addSystemMessage(`${l10n.chat.completionFailed}${errorMessage}`);
       }
-    } finally {
-      try {
-        deactivateKeepAwake();
-      } catch (error) {
-        console.error('Failed to deactivate keep awake after chat:', error);
-      }
     }
+    return undone;
   };
 
   const handleResetConversation = async () => {
@@ -998,37 +1089,12 @@ export const useChatSession = (
   };
 
   const handleStopPress = async () => {
-    // Enter the `stopping` state IMMEDIATELY: the user gets visible
-    // feedback ("Stopping…") and the send button is gated off so a
-    // new completion can't try to use the still-busy native context.
-    // We do NOT touch `inferencing` / `isGenerating` here — those get
-    // cleared by the for-await cleanup in handleSendPress once the
-    // runner has actually exited (native llama.rn has returned from
-    // its current llama_decode chunk; see ChatSessionStore.isStopping
-    // for the rationale).
-    chatSessionStore.setIsStopping(true);
-    // The runner's abort listener owns engine.stopCompletion — this
-    // signal is the single source of stop intent.
-    abortRef.current?.abort();
+    leaseRef.current?.abort();
     // Stop any in-flight TTS so buffered audio doesn't keep playing
-    // after the user tapped Stop. Inferencing/isStreaming/isGenerating
-    // flags are NOT cleared here — those get cleared by the for-await
-    // cleanup in handleSendPress once the runner has actually exited.
+    // after the user tapped Stop.
     ttsStore.stop().catch(err => {
       console.warn('[useChatSession] TTS stop on user-stop failed:', err);
     });
-
-    // Note: deactivateKeepAwake intentionally stays here so the device
-    // can sleep as soon as the user signals stop, even if native is
-    // still finishing the current chunk.
-    try {
-      deactivateKeepAwake();
-    } catch (error) {
-      console.error(
-        'Failed to deactivate keep awake after stopping chat:',
-        error,
-      );
-    }
   };
 
   return {

@@ -465,3 +465,232 @@ describe('AuthService.signInWithApple', () => {
     });
   });
 });
+
+describe('AuthService.signOut scope', () => {
+  const setup = () => {
+    jest.resetModules();
+    const signOut = jest.fn().mockResolvedValue({error: null});
+    jest.doMock('../supabase', () => ({
+      supabase: {
+        auth: {
+          onAuthStateChange: jest.fn(),
+          getSession: jest
+            .fn()
+            .mockResolvedValue({data: {session: null}, error: null}),
+          signOut,
+        },
+      },
+    }));
+    const {authService} = require('../AuthService');
+    return {authService, signOut};
+  };
+
+  it('signs out globally by default', async () => {
+    const {authService, signOut} = setup();
+
+    await authService.signOut();
+
+    expect(signOut).toHaveBeenCalledWith(undefined);
+  });
+
+  it('passes a local scope through to Supabase', async () => {
+    const {authService, signOut} = setup();
+
+    await authService.signOut({scope: 'local'});
+
+    expect(signOut).toHaveBeenCalledWith({scope: 'local'});
+  });
+
+  it('reports success when Supabase signs out', async () => {
+    const {authService} = setup();
+
+    await expect(authService.signOut({scope: 'local'})).resolves.toBe(true);
+  });
+
+  it('reports failure when Supabase returns an error', async () => {
+    const {authService, signOut} = setup();
+    signOut.mockResolvedValue({error: new Error('x')});
+    jest.spyOn(console, 'error').mockImplementation(() => {});
+
+    await expect(authService.signOut({scope: 'local'})).resolves.toBe(false);
+  });
+
+  it('reports failure when Supabase throws', async () => {
+    const {authService, signOut} = setup();
+    signOut.mockRejectedValue(new Error('x'));
+    jest.spyOn(console, 'error').mockImplementation(() => {});
+
+    await expect(authService.signOut({scope: 'local'})).resolves.toBe(false);
+  });
+});
+
+describe('AuthService.resetLocalSession', () => {
+  it('clears the session, user, signed-in flag and profile', () => {
+    jest.resetModules();
+    jest.doMock('../supabase', () => ({
+      supabase: {
+        auth: {
+          onAuthStateChange: jest.fn(),
+          getSession: jest
+            .fn()
+            .mockResolvedValue({data: {session: null}, error: null}),
+        },
+      },
+    }));
+    const {authService} = require('../AuthService');
+    authService.session = {access_token: 't'};
+    authService.user = {id: 'u1'};
+    authService.isAuthenticated = true;
+    authService.profile = {id: 'u1'};
+
+    authService.resetLocalSession();
+
+    expect(authService.session).toBeNull();
+    expect(authService.user).toBeNull();
+    expect(authService.isAuthenticated).toBe(false);
+    expect(authService.profile).toBeNull();
+  });
+});
+
+describe('AuthService Apple re-authorization', () => {
+  const setup = (user: any = null) => {
+    jest.resetModules();
+    jest.doMock('../supabase', () => ({
+      supabase: {
+        auth: {
+          onAuthStateChange: jest.fn(),
+          getSession: jest
+            .fn()
+            .mockResolvedValue({data: {session: null}, error: null}),
+        },
+      },
+    }));
+    const {appleAuth} = require('@invertase/react-native-apple-authentication');
+    const {authService} = require('../AuthService');
+    const {runInAction} = require('mobx');
+    runInAction(() => {
+      authService.user = user;
+    });
+    return {authService, appleAuth};
+  };
+
+  const appleIdentity = (overrides: Record<string, unknown> = {}) => ({
+    id: 'apple-id',
+    provider: 'apple',
+    identity_data: {sub: 'S'},
+    ...overrides,
+  });
+
+  describe('hasAppleIdentity', () => {
+    it('is true for an Apple entry in identities', () => {
+      const {authService} = setup({identities: [appleIdentity()]});
+      expect(authService.hasAppleIdentity()).toBe(true);
+    });
+
+    it('falls back to app_metadata providers', () => {
+      const {authService} = setup({
+        identities: [{id: 'e', provider: 'email'}],
+        app_metadata: {providers: ['email', 'apple']},
+      });
+      expect(authService.hasAppleIdentity()).toBe(true);
+    });
+
+    it('is false for any other user and when signed out', () => {
+      expect(
+        setup({
+          identities: [{id: 'e', provider: 'email'}],
+          app_metadata: {providers: ['email']},
+        }).authService.hasAppleIdentity(),
+      ).toBe(false);
+      expect(setup(null).authService.hasAppleIdentity()).toBe(false);
+    });
+  });
+
+  describe('appleSubject', () => {
+    it('reads the sub of the Apple identity', () => {
+      const {authService} = setup({identities: [appleIdentity()]});
+      expect(authService.appleSubject()).toBe('S');
+    });
+
+    it('falls back to the identity id', () => {
+      const {authService} = setup({
+        identities: [appleIdentity({identity_data: {}})],
+      });
+      expect(authService.appleSubject()).toBe('apple-id');
+    });
+
+    it('is null without an Apple identity', () => {
+      const {authService} = setup({
+        identities: [{id: 'e', provider: 'email'}],
+        app_metadata: {providers: ['apple']},
+      });
+      expect(authService.appleSubject()).toBeNull();
+    });
+  });
+
+  describe('reauthorizeWithApple', () => {
+    it('asks for no scopes and returns the code and Apple user', async () => {
+      const {authService, appleAuth} = setup();
+      appleAuth.performRequest.mockResolvedValue({
+        authorizationCode: 'c1',
+        user: 'S',
+        identityToken: 'id-token',
+      });
+
+      await expect(authService.reauthorizeWithApple()).resolves.toEqual({
+        kind: 'code',
+        code: 'c1',
+        appleUser: 'S',
+      });
+      expect(appleAuth.performRequest).toHaveBeenCalledWith({
+        requestedOperation: appleAuth.Operation.LOGIN,
+        requestedScopes: [],
+      });
+    });
+
+    it('maps a cancelled sheet to cancelled', async () => {
+      const {authService, appleAuth} = setup();
+      appleAuth.performRequest.mockRejectedValue({code: '1001'});
+
+      await expect(authService.reauthorizeWithApple()).resolves.toEqual({
+        kind: 'cancelled',
+      });
+    });
+
+    it.each([
+      ['an unknown Apple error', {code: '1000'}],
+      ['a failed request', {code: '1004'}],
+      ['a non-Apple throw', new Error('boom')],
+    ])('maps %s to unavailable', async (_, thrown) => {
+      const {authService, appleAuth} = setup();
+      appleAuth.performRequest.mockRejectedValue(thrown);
+
+      await expect(authService.reauthorizeWithApple()).resolves.toEqual({
+        kind: 'unavailable',
+      });
+    });
+
+    it('maps a null authorization code to unavailable', async () => {
+      const {authService, appleAuth} = setup();
+      appleAuth.performRequest.mockResolvedValue({
+        authorizationCode: null,
+        user: 'S',
+      });
+
+      await expect(authService.reauthorizeWithApple()).resolves.toEqual({
+        kind: 'unavailable',
+      });
+    });
+
+    it('leaves error and isLoading untouched', async () => {
+      const {authService, appleAuth} = setup();
+      appleAuth.performRequest.mockRejectedValueOnce({code: '1001'});
+      await authService.reauthorizeWithApple();
+      appleAuth.performRequest.mockRejectedValueOnce({code: '1004'});
+      await authService.reauthorizeWithApple();
+
+      expect(authService.error).toBeNull();
+      expect(authService.isLoading).toBe(false);
+    });
+  });
+});

@@ -1,6 +1,6 @@
 import React from 'react';
 import {fireEvent, render, waitFor} from '../../../../jest/test-utils';
-import {FormProvider, useForm} from 'react-hook-form';
+import {FormProvider, useForm, useFormContext} from 'react-hook-form';
 import {SystemPromptSection} from '../SystemPromptSection';
 import {modelStore} from '../../../store';
 import {useStructuredOutput} from '../../../hooks/useStructuredOutput';
@@ -85,13 +85,20 @@ describe('SystemPromptSection', () => {
     (useStructuredOutput as jest.Mock).mockReturnValue({
       generate: mockGenerate,
       isGenerating: false,
+      isBusy: false,
+      stop: jest.fn(),
+      cancel: jest.fn(),
     });
   });
 
   it('renders basic fields correctly for non-templated pal', () => {
     const {getByText, getByPlaceholderText} = render(
       <TestWrapper>
-        <SystemPromptSection closeSheet={() => {}} parameterSchema={[]} />
+        <SystemPromptSection
+          isVisible
+          closeSheet={() => {}}
+          parameterSchema={[]}
+        />
       </TestWrapper>,
       {
         withNavigation: true,
@@ -106,7 +113,11 @@ describe('SystemPromptSection', () => {
   it('toggles AI prompt generation fields visibility', () => {
     const {getByText, queryByText} = render(
       <TestWrapper defaultValues={{useAIPrompt: false}}>
-        <SystemPromptSection closeSheet={() => {}} parameterSchema={[]} />
+        <SystemPromptSection
+          isVisible
+          closeSheet={() => {}}
+          parameterSchema={[]}
+        />
       </TestWrapper>,
       {
         withNavigation: true,
@@ -134,7 +145,11 @@ describe('SystemPromptSection', () => {
           promptGenerationModel: modelsList[0],
           generatingPrompt: 'Test generating prompt',
         }}>
-        <SystemPromptSection closeSheet={() => {}} parameterSchema={[]} />
+        <SystemPromptSection
+          isVisible
+          closeSheet={() => {}}
+          parameterSchema={[]}
+        />
       </TestWrapper>,
       {
         withNavigation: true,
@@ -178,6 +193,7 @@ describe('SystemPromptSection', () => {
           toneStyle: 'Medieval',
         }}>
         <SystemPromptSection
+          isVisible
           closeSheet={() => {}}
           parameterSchema={roleplaySchema}
         />
@@ -208,6 +224,7 @@ describe('SystemPromptSection', () => {
           promptGenerationModel: 'model1',
         }}>
         <SystemPromptSection
+          isVisible
           validateFields={validateFields}
           closeSheet={() => {}}
         />
@@ -236,7 +253,11 @@ describe('SystemPromptSection', () => {
           promptGenerationModel: modelsList[1], // Different from activeModelId
           generatingPrompt: 'Test prompt',
         }}>
-        <SystemPromptSection closeSheet={() => {}} parameterSchema={[]} />
+        <SystemPromptSection
+          isVisible
+          closeSheet={() => {}}
+          parameterSchema={[]}
+        />
       </TestWrapper>,
       {
         withNavigation: true,
@@ -269,6 +290,7 @@ describe('SystemPromptSection', () => {
           aiRole: 'Wise wizard advisor',
         }}>
         <SystemPromptSection
+          isVisible
           closeSheet={() => {}}
           parameterSchema={roleplaySchema}
         />
@@ -312,6 +334,7 @@ describe('SystemPromptSection', () => {
           generatingPrompt: 'Helpful coding assistant',
         }}>
         <SystemPromptSection
+          isVisible
           closeSheet={() => {}}
           parameterSchema={assistantSchema}
         />
@@ -361,6 +384,7 @@ describe('SystemPromptSection', () => {
           captureInterval: '2000',
         }}>
         <SystemPromptSection
+          isVisible
           closeSheet={() => {}}
           parameterSchema={videoSchema}
         />
@@ -402,7 +426,7 @@ describe('SystemPromptSection', () => {
           originalSystemPrompt: 'Original prompt',
           isSystemPromptChanged: true,
         }}>
-        <SystemPromptSection closeSheet={() => {}} />
+        <SystemPromptSection isVisible closeSheet={() => {}} />
       </TestWrapper>,
       {
         withNavigation: true,
@@ -429,7 +453,11 @@ describe('SystemPromptSection', () => {
           isSystemPromptChanged: true,
           promptGenerationModel: modelsList[0],
         }}>
-        <SystemPromptSection closeSheet={() => {}} parameterSchema={[]} />
+        <SystemPromptSection
+          isVisible
+          closeSheet={() => {}}
+          parameterSchema={[]}
+        />
       </TestWrapper>,
       {
         withNavigation: true,
@@ -456,6 +484,7 @@ describe('SystemPromptSection', () => {
             setting: 'fantasy world',
           }}>
           <SystemPromptSection
+            isVisible
             closeSheet={() => {}}
             parameterSchema={templateSchema}
           />
@@ -476,6 +505,7 @@ describe('SystemPromptSection', () => {
             setting: 'fantasy world',
           }}>
           <SystemPromptSection
+            isVisible
             closeSheet={() => {}}
             parameterSchema={templateSchema}
           />
@@ -496,6 +526,7 @@ describe('SystemPromptSection', () => {
             setting: 'fantasy world',
           }}>
           <SystemPromptSection
+            isVisible
             closeSheet={() => {}}
             parameterSchema={templateSchema}
           />
@@ -519,7 +550,11 @@ describe('SystemPromptSection', () => {
             originalSystemPrompt: 'Original template {{role}}',
             generatingPrompt: 'Test prompt',
           }}>
-          <SystemPromptSection closeSheet={() => {}} parameterSchema={[]} />
+          <SystemPromptSection
+            isVisible
+            closeSheet={() => {}}
+            parameterSchema={[]}
+          />
         </TestWrapper>,
         {withNavigation: true},
       );
@@ -531,6 +566,151 @@ describe('SystemPromptSection', () => {
         expect(mockGenerate).toHaveBeenCalled();
         // originalSystemPrompt should be preserved (not overwritten)
       });
+    });
+  });
+
+  describe('generation under the lease', () => {
+    const cancel = jest.fn();
+    let formValues: () => TestFormData;
+
+    const ValuesProbe = () => {
+      const {getValues} = useFormContext<TestFormData>();
+      formValues = getValues;
+      return null;
+    };
+
+    const mockHook = (overrides: Record<string, unknown> = {}) =>
+      (useStructuredOutput as jest.Mock).mockReturnValue({
+        generate: mockGenerate,
+        isGenerating: false,
+        isBusy: false,
+        stop: jest.fn(),
+        cancel,
+        ...overrides,
+      });
+
+    const section = (
+      isVisible: boolean,
+      extra: {
+        promptGenerationModel?: any;
+        validateFields?: () => Promise<boolean>;
+      } = {},
+    ) => (
+      <TestWrapper
+        defaultValues={{
+          useAIPrompt: true,
+          promptGenerationModel: extra.promptGenerationModel ?? modelsList[0],
+          generatingPrompt: 'Test prompt',
+          systemPrompt: 'Before',
+          originalSystemPrompt: '',
+        }}>
+        <SystemPromptSection
+          isVisible={isVisible}
+          validateFields={extra.validateFields}
+          closeSheet={() => {}}
+          parameterSchema={[]}
+        />
+        <ValuesProbe />
+      </TestWrapper>
+    );
+
+    function deferred<T>() {
+      let resolve!: (value: T) => void;
+      const promise = new Promise<T>(res => {
+        resolve = res;
+      });
+      return {promise, resolve};
+    }
+
+    const flush = async () => {
+      for (let i = 0; i < 5; i += 1) {
+        await Promise.resolve();
+      }
+    };
+
+    beforeEach(() => {
+      mockGenerate.mockReset();
+      mockHook();
+    });
+
+    afterEach(() => {
+      (modelStore as any).engine = undefined;
+    });
+
+    it('writes nothing to the form when generation ends without a result', async () => {
+      mockGenerate.mockResolvedValueOnce(undefined);
+      const {getByText} = render(section(true), {withNavigation: true});
+
+      fireEvent.press(getByText('Generate System Prompt'));
+      await waitFor(() => expect(mockGenerate).toHaveBeenCalled());
+      await flush();
+
+      expect(formValues().systemPrompt).toBe('Before');
+      expect(formValues().originalSystemPrompt).toBe('');
+      expect(formValues().isSystemPromptChanged).toBe(false);
+    });
+
+    it('shows the busy line while another generation holds the model', () => {
+      mockHook({isBusy: true});
+      const {getByTestId} = render(section(true), {withNavigation: true});
+
+      expect(getByTestId('generate-busy-text')).toHaveTextContent(
+        "A reply is still running. Try again when it's done.",
+      );
+    });
+
+    it('cancels the generation when the sheet closes', () => {
+      const {rerender} = render(section(true), {withNavigation: true});
+      expect(cancel).not.toHaveBeenCalled();
+
+      rerender(section(false));
+
+      expect(cancel).toHaveBeenCalledTimes(1);
+    });
+
+    it.each([
+      ['closed', [false]],
+      ['closed and reopened', [false, true]],
+    ])(
+      'never generates when the sheet is %s while the model loads',
+      async (_label, visibility) => {
+        const loading = deferred<void>();
+        (modelStore.selectModel as jest.Mock).mockReturnValueOnce(
+          loading.promise,
+        );
+        (modelStore as any).engine = {};
+        const {getByText, rerender} = render(
+          section(true, {promptGenerationModel: modelsList[1]}),
+          {withNavigation: true},
+        );
+
+        fireEvent.press(getByText('Generate System Prompt'));
+        await waitFor(() => expect(modelStore.selectModel).toHaveBeenCalled());
+        for (const isVisible of visibility) {
+          rerender(section(isVisible, {promptGenerationModel: modelsList[1]}));
+        }
+        loading.resolve();
+        await flush();
+
+        expect(mockGenerate).not.toHaveBeenCalled();
+        expect(formValues().systemPrompt).toBe('Before');
+      },
+    );
+
+    it('never generates when the sheet closes while fields validate', async () => {
+      const validating = deferred<boolean>();
+      const validateFields = () => validating.promise;
+      const {getByText, rerender} = render(section(true, {validateFields}), {
+        withNavigation: true,
+      });
+
+      fireEvent.press(getByText('Generate System Prompt'));
+      rerender(section(false, {validateFields}));
+      validating.resolve(true);
+      await flush();
+
+      expect(mockGenerate).not.toHaveBeenCalled();
+      expect(formValues().systemPrompt).toBe('Before');
     });
   });
 });

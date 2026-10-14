@@ -416,6 +416,7 @@ export const PalSheet: React.FC<PalSheetProps> = observer(
                 )}
 
                 <SystemPromptSection
+                  isVisible={isVisible}
                   validateFields={validateDynamicFields}
                   closeSheet={handleClose}
                   parameterSchema={activeSchema}

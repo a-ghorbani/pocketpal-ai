@@ -1318,7 +1318,8 @@
       "testWarning": "Catatan: Uji dapat berjalan hingga 2-5 menit untuk model besar dan tidak dapat dihentikan setelah dimulai.",
       "keepScreenOpen": "Harap biarkan layar ini tetap terbuka.",
       "initializingModel": "Menginisialisasi model...",
-      "modelMaxValue": "(maks: {{maxValue}})"
+      "modelMaxValue": "(maks: {{maxValue}})",
+      "testFailed": "Tidak dapat menjalankan uji. Tunggu hingga balasan selesai, lalu coba lagi."
     },
     "dialogs": {
       "advancedSettings": {

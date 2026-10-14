@@ -55,7 +55,7 @@ describe('search network calls honour the caller signal', () => {
 
   it.each(calls)('%s resolves as before without a signal', async (_l, run) => {
     global.fetch = abortableFetch({
-      body: '{"results":[],"success":true,"data":{}}',
+      body: '{"type":"search","results":[],"success":true,"data":{}}',
     });
 
     await expect(run()).resolves.toBeDefined();
