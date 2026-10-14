@@ -17,6 +17,7 @@ import {Actions} from './Actions';
 import {SheetHandle} from './SheetHandle';
 import {SheetScrollView} from './SheetScrollView';
 import {fullHeightSnapPoint, resolveSnapPoints} from './snapPoints';
+import {useClampedLiftRestore} from './useClampedLiftRestore';
 
 export interface SheetProps extends Partial<BottomSheetModalProps> {
   children?: React.ReactNode;
@@ -47,6 +48,7 @@ export const Sheet = forwardRef(
       onClose,
       showCloseButton = true,
       snapPoints: requestedSnapPoints,
+      onChange,
       ...props
     }: SheetProps,
     ref: React.Ref<BottomSheetModalMethods>,
@@ -84,6 +86,8 @@ export const Sheet = forwardRef(
       return resolveSnapPoints(requestedSnapPoints, screenHeight, insets.top);
     }, [displayFullHeight, screenHeight, insets.top, requestedSnapPoints]);
 
+    const handleChange = useClampedLiftRestore(activeRef, snapPoints, onChange);
+
     return (
       <BottomSheetModal
         ref={activeRef}
@@ -100,6 +104,7 @@ export const Sheet = forwardRef(
           backgroundColor: theme.colors.background,
         }}
         snapPoints={snapPoints}
+        onChange={handleChange}
         onDismiss={onDismiss}
         // Disable accessible to allow Appium/e2e tests to access child elements on iOS
         // See: https://github.com/gorhom/react-native-bottom-sheet/issues/1141

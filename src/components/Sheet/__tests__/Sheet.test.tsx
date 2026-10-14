@@ -1,9 +1,9 @@
 import React from 'react';
-import {Dimensions} from 'react-native';
+import {Dimensions, Keyboard} from 'react-native';
 import {BottomSheetModal} from '@gorhom/bottom-sheet';
 import {useSafeAreaInsets} from 'react-native-safe-area-context';
 
-import {render} from '../../../../jest/test-utils';
+import {act, render} from '../../../../jest/test-utils';
 
 import {Sheet} from '../Sheet';
 
@@ -50,5 +50,56 @@ describe('Sheet', () => {
     const modal = UNSAFE_getByType(BottomSheetModal);
     expect(modal.props.snapPoints).toBeUndefined();
     expect(modal.props.enableDynamicSizing).toBe(true);
+  });
+
+  describe('keyboard hide after a clamped lift', () => {
+    let hideKeyboard: () => void;
+
+    beforeEach(() => {
+      jest.useFakeTimers();
+      jest.spyOn(Keyboard, 'addListener').mockImplementation(((
+        event: string,
+        listener: () => void,
+      ) => {
+        if (event === 'keyboardDidHide') {
+          hideKeyboard = listener;
+        }
+        return {remove: jest.fn()};
+      }) as never);
+    });
+
+    afterEach(() => {
+      jest.useRealTimers();
+      jest.restoreAllMocks();
+    });
+
+    const renderAt = (index: number, onChange = jest.fn()) => {
+      const ref = {current: {} as {snapToIndex: jest.Mock}};
+      const {UNSAFE_getByType} = render(
+        <Sheet ref={ref as never} snapPoints={['60%']} onChange={onChange} />,
+      );
+      act(() => {
+        UNSAFE_getByType(BottomSheetModal).props.onChange(index, 0, 0);
+      });
+      act(() => {
+        hideKeyboard();
+        jest.runOnlyPendingTimers();
+      });
+      return ref.current;
+    };
+
+    it('snaps back to the highest detent when the lift was recorded off-detent', () => {
+      expect(renderAt(1043).snapToIndex).toHaveBeenCalledWith(0);
+    });
+
+    it('leaves a sheet resting on a detent alone', () => {
+      expect(renderAt(0).snapToIndex).not.toHaveBeenCalled();
+    });
+
+    it('forwards the change to the caller', () => {
+      const onChange = jest.fn();
+      renderAt(0, onChange);
+      expect(onChange).toHaveBeenCalledWith(0, 0, 0);
+    });
   });
 });
