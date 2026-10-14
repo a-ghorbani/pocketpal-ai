@@ -1,5 +1,5 @@
 import React from 'react';
-import {Alert, Keyboard, StyleSheet} from 'react-native';
+import {Alert, Keyboard, StyleSheet, TextInput} from 'react-native';
 import {runInAction} from 'mobx';
 import {act} from '@testing-library/react-native';
 import {useCameraPermission} from 'react-native-vision-camera';
@@ -979,7 +979,7 @@ describe('RemoteModelSheet', () => {
     );
 
     it('does not focus the url field when scan is pressed', async () => {
-      const {focus} = require('react-native/jest/MockNativeMethods').default;
+      const focus = jest.spyOn(TextInput.prototype, 'focus');
       const view = render(
         <RemoteModelSheet isVisible={true} onDismiss={jest.fn()} />,
       );
@@ -988,6 +988,7 @@ describe('RemoteModelSheet', () => {
       await openScanner(view);
 
       expect(focus).not.toHaveBeenCalled();
+      focus.mockRestore();
     });
 
     it('offers no scan while a known-server chip is selected', async () => {
