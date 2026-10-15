@@ -84,6 +84,12 @@ const SCROLLABLE_TYPE = {
   VIEW: 'VIEW',
 };
 
+const KEYBOARD_STATUS = {
+  UNDETERMINED: 0,
+  SHOWN: 1,
+  HIDDEN: 2,
+};
+
 const createBottomSheetScrollableComponent = () => BottomSheetBase;
 
 module.exports = {
@@ -100,6 +106,7 @@ module.exports = {
   BottomSheetTextInput,
   TextInput: BottomSheetTextInput,
   SCROLLABLE_TYPE,
+  KEYBOARD_STATUS,
   createBottomSheetScrollableComponent,
   useBottomSheetModal: () => ({}),
   useBottomSheet: () => ({}),

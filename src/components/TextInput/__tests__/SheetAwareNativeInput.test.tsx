@@ -7,6 +7,10 @@ import {
 import {useSafeAreaFrame} from 'react-native-safe-area-context';
 
 import {fireEvent, render} from '../../../../jest/test-utils';
+import {
+  mockSheetContext,
+  type MockSheetContext,
+} from '../../../../jest/sheetContext';
 
 import {
   renderSheetAwareInput,
@@ -20,27 +24,36 @@ const jestSetupFrame = mockUseSafeAreaFrame.getMockImplementation();
 
 const OWN_TAG = 42;
 const OTHER_TAG = 7;
+const otherField = {};
 const screen = Dimensions.get('screen');
 
 const setFrame = (width: number, height: number) => {
   mockUseSafeAreaFrame.mockReturnValue({x: 0, y: 0, width, height});
 };
 const fullScreen = () => setFrame(screen.width, screen.height);
+const windowed = () => setFrame(screen.width, screen.height - 100);
 
-let keyboardState: {target?: number};
-const keyboardStateSet = jest.fn();
+let sheet: MockSheetContext;
 
-const enterSheet = () => {
-  keyboardState = {};
-  mockUseBottomSheetInternal.mockImplementation(() => ({
-    animatedKeyboardState: {
-      get: () => keyboardState,
-      set: keyboardStateSet.mockImplementation(next => {
-        keyboardState = next;
-      }),
-    },
-  }));
+const enterSheet = (state = {}) => {
+  sheet = mockSheetContext(state);
+  mockUseBottomSheetInternal.mockImplementation(() => sheet);
 };
+
+const mockNodeHandles = (mountTag: number | null = OWN_TAG) =>
+  jest
+    .spyOn(require('react-native'), 'findNodeHandle')
+    .mockImplementation(instance => {
+      if (instance === otherField) {
+        return OTHER_TAG;
+      }
+      return instance ? mountTag : null;
+    });
+
+const focusMovesTo = (field: object | null) =>
+  jest
+    .spyOn(NativeTextInput.State, 'currentlyFocusedInput')
+    .mockReturnValue(field as never);
 
 const focusEvent = (target = OWN_TAG) => ({nativeEvent: {target}});
 
@@ -49,12 +62,16 @@ describe('TextInput sheet registration', () => {
     mockUseBottomSheetInternal.mockImplementation(() => null);
   });
 
-  it('renders a BottomSheetTextInput inside a sheet context', () => {
-    mockUseBottomSheetInternal.mockImplementation(() => ({}));
+  it('renders RN TextInput, not BottomSheetTextInput, inside a sheet context', () => {
+    enterSheet();
 
-    const {UNSAFE_getByType} = render(<TextInput testID="x" />);
+    const {UNSAFE_getByType, UNSAFE_queryByType, getByTestId} = render(
+      <TextInput testID="x" />,
+    );
 
-    expect(UNSAFE_getByType(BottomSheetTextInput).props.testID).toBe('x');
+    expect(UNSAFE_queryByType(BottomSheetTextInput)).toBeNull();
+    expect(UNSAFE_getByType(NativeTextInput).props.testID).toBe('x');
+    expect(getByTestId('x').type).toBe('TextInput');
   });
 
   it('renders a plain native input outside a sheet context', () => {
@@ -65,10 +82,13 @@ describe('TextInput sheet registration', () => {
   });
 
   it.each([
-    ['inside', () => ({})],
-    ['outside', () => null],
+    ['inside', () => enterSheet()],
+    [
+      'outside',
+      () => mockUseBottomSheetInternal.mockImplementation(() => null),
+    ],
   ])('forwards the ref to the native field %s a sheet', (_, context) => {
-    mockUseBottomSheetInternal.mockImplementation(context);
+    context();
     const ref = jest.fn();
 
     render(<>{renderSheetAwareInput({ref, style: {}, testID: 'x'})}</>);
@@ -79,7 +99,7 @@ describe('TextInput sheet registration', () => {
   });
 
   it('lets a caller-supplied render win', () => {
-    mockUseBottomSheetInternal.mockImplementation(() => ({}));
+    enterSheet();
 
     const {UNSAFE_queryByType, getByTestId} = render(
       <TextInput
@@ -121,21 +141,21 @@ describe('SheetAwareNativeInput keyboard registration', () => {
     };
   };
 
-  const focus = (
-    getByTestId: (id: string) => unknown,
-    target = OWN_TAG,
-    heldTarget = target,
-  ) => {
-    keyboardState = {...keyboardState, target: heldTarget};
+  const focus = (getByTestId: (id: string) => unknown, target = OWN_TAG) => {
     fireEvent(getByTestId('x') as never, 'focus', focusEvent(target));
+  };
+
+  const blur = (getByTestId: (id: string) => unknown, target = OWN_TAG) => {
+    fireEvent(getByTestId('x') as never, 'blur', focusEvent(target));
   };
 
   beforeEach(() => {
     onFocus = jest.fn();
     onBlur = jest.fn();
     ref = jest.fn();
-    keyboardStateSet.mockReset();
     enterSheet();
+    mockNodeHandles();
+    focusMovesTo(null);
     jest.spyOn(Keyboard, 'dismiss');
   });
 
@@ -146,23 +166,87 @@ describe('SheetAwareNativeInput keyboard registration', () => {
     jest.restoreAllMocks();
   });
 
+  describe('lifecycle', () => {
+    it('registers its tag at mount and removes it at unmount', () => {
+      const {unmount} = renderInput();
+
+      expect([...sheet.textInputNodesRef.current]).toEqual([OWN_TAG]);
+
+      unmount();
+
+      expect(sheet.textInputNodesRef.current.size).toBe(0);
+    });
+
+    it.each([
+      ['clears its own target', OWN_TAG, undefined],
+      ["leaves another input's target", OTHER_TAG, OTHER_TAG],
+    ])('%s at unmount', (_, heldTarget, expectedTarget) => {
+      const {unmount} = renderInput();
+      sheet.keyboardState = {target: heldTarget};
+
+      unmount();
+
+      expect(sheet.keyboardState.target).toBe(expectedTarget);
+    });
+
+    it('registers nothing and writes nothing when the field has no tag', () => {
+      mockNodeHandles(null);
+      const {unmount} = renderInput();
+
+      expect(sheet.textInputNodesRef.current.size).toBe(0);
+
+      unmount();
+
+      expect(sheet.animatedKeyboardState.set).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('ref', () => {
+    it('passes the native field to a callback ref, then null at unmount', () => {
+      const {unmount} = renderInput();
+
+      expect(ref).toHaveBeenLastCalledWith(
+        expect.objectContaining({focus: expect.any(Function)}),
+      );
+
+      unmount();
+
+      expect(ref).toHaveBeenLastCalledWith(null);
+    });
+
+    it('fills an object ref, then clears it at unmount', () => {
+      const objectRef = React.createRef<NativeTextInput>();
+      const {unmount} = render(<SheetAwareNativeInput ref={objectRef} />);
+
+      expect(objectRef.current).toEqual(
+        expect.objectContaining({focus: expect.any(Function)}),
+      );
+
+      unmount();
+
+      expect(objectRef.current).toBeNull();
+    });
+  });
+
   describe('when the app window fills the screen', () => {
     it.each([
       ['equals', 0],
       ['is within 1 dp of', 0.4],
     ])(
-      'keeps the focus registered when the frame %s the screen',
+      'sets its own target, then calls onFocus, when the frame %s the screen',
       (_, shortBy) => {
         setFrame(screen.width - shortBy, screen.height - shortBy);
-        const {getByTestId, UNSAFE_getByType} = renderInput();
+        const {getByTestId} = renderInput();
 
         focus(getByTestId);
 
-        expect(UNSAFE_getByType(BottomSheetTextInput)).toBeTruthy();
-        expect(keyboardState.target).toBe(OWN_TAG);
-        expect(keyboardStateSet).not.toHaveBeenCalled();
+        expect(sheet.keyboardState.target).toBe(OWN_TAG);
+        expect(sheet.animatedKeyboardState.set).toHaveBeenCalledTimes(1);
         expect(onFocus).toHaveBeenCalledTimes(1);
         expect(onFocus).toHaveBeenCalledWith(focusEvent());
+        expect(
+          sheet.animatedKeyboardState.set.mock.invocationCallOrder[0],
+        ).toBeLessThan(onFocus.mock.invocationCallOrder[0]);
       },
     );
 
@@ -171,10 +255,36 @@ describe('SheetAwareNativeInput keyboard registration', () => {
       const {getByTestId} = renderInput();
       focus(getByTestId);
 
-      fireEvent(getByTestId('x'), 'blur', focusEvent());
+      blur(getByTestId);
 
       expect(onBlur).toHaveBeenCalledTimes(1);
       expect(onBlur).toHaveBeenCalledWith(focusEvent());
+    });
+
+    it('keeps its target when focus moves to another sheet input', () => {
+      fullScreen();
+      const {getByTestId} = renderInput();
+      focus(getByTestId);
+      sheet.textInputNodesRef.current.add(OTHER_TAG);
+      focusMovesTo(otherField);
+
+      blur(getByTestId);
+
+      expect(sheet.keyboardState.target).toBe(OWN_TAG);
+    });
+
+    it.each([
+      ['nothing', null],
+      ['an input outside the sheet', otherField],
+    ])('clears its target when focus moves to %s', (_, next) => {
+      fullScreen();
+      const {getByTestId} = renderInput();
+      focus(getByTestId);
+      focusMovesTo(next);
+
+      blur(getByTestId);
+
+      expect(sheet.keyboardState.target).toBeUndefined();
     });
   });
 
@@ -182,25 +292,54 @@ describe('SheetAwareNativeInput keyboard registration', () => {
     it.each([
       ['shorter', screen.width, screen.height - 100],
       ['only narrower', screen.width - 100, screen.height],
-    ])('clears its own target when the window is %s', (_, width, height) => {
+    ])('never writes a target when the window is %s', (_, width, height) => {
       setFrame(width, height);
       const {getByTestId} = renderInput();
 
       focus(getByTestId);
 
-      expect(keyboardState.target).toBeUndefined();
+      expect(sheet.keyboardState.target).toBeUndefined();
+      expect(sheet.animatedKeyboardState.set).not.toHaveBeenCalled();
       expect(onFocus).toHaveBeenCalledTimes(1);
       expect(onFocus).toHaveBeenCalledWith(focusEvent());
     });
 
-    it('leaves a target held by another input alone', () => {
-      setFrame(screen.width, screen.height - 100);
+    it('leaves a target held by another input alone on focus', () => {
+      enterSheet({target: OTHER_TAG});
+      windowed();
       const {getByTestId} = renderInput();
 
-      focus(getByTestId, OWN_TAG, OTHER_TAG);
+      focus(getByTestId);
 
-      expect(keyboardState.target).toBe(OTHER_TAG);
+      expect(sheet.keyboardState.target).toBe(OTHER_TAG);
+      expect(sheet.animatedKeyboardState.set).not.toHaveBeenCalled();
     });
+
+    it('clears its own target on blur even when focus stays in the sheet', () => {
+      enterSheet({target: OWN_TAG});
+      windowed();
+      const {getByTestId} = renderInput();
+      sheet.textInputNodesRef.current.add(OTHER_TAG);
+      focusMovesTo(otherField);
+
+      blur(getByTestId);
+
+      expect(sheet.keyboardState.target).toBeUndefined();
+    });
+  });
+
+  it.each([
+    ['full screen', fullScreen],
+    ['windowed', windowed],
+  ])("never clears another input's target on blur, %s", (_, frame) => {
+    enterSheet({target: OTHER_TAG});
+    frame();
+    const {getByTestId} = renderInput();
+
+    blur(getByTestId);
+
+    expect(sheet.keyboardState.target).toBe(OTHER_TAG);
+    expect(sheet.animatedKeyboardState.set).not.toHaveBeenCalled();
   });
 
   describe('when the window changes while focused', () => {
@@ -220,14 +359,14 @@ describe('SheetAwareNativeInput keyboard registration', () => {
       fullScreen();
       const {getByTestId, rerenderInput} = renderInput();
       focus(getByTestId);
-      keyboardStateSet.mockClear();
+      sheet.animatedKeyboardState.set.mockClear();
 
       setFrame(screen.width - 100, screen.height);
       rerenderInput();
 
       expect(Keyboard.dismiss).toHaveBeenCalledTimes(1);
       expect(ref).toHaveBeenCalledTimes(1);
-      expect(keyboardStateSet).not.toHaveBeenCalled();
+      expect(sheet.animatedKeyboardState.set).not.toHaveBeenCalled();
     });
 
     it('dismisses the keyboard when a narrow window goes full screen', () => {
@@ -266,10 +405,10 @@ describe('SheetAwareNativeInput keyboard registration', () => {
 
       expect(Keyboard.dismiss).not.toHaveBeenCalled();
 
-      fireEvent(getByTestId('x'), 'blur', focusEvent());
+      blur(getByTestId);
       focus(getByTestId);
 
-      expect(keyboardState.target).toBeUndefined();
+      expect(sheet.keyboardState.target).toBeUndefined();
     });
   });
 
@@ -278,7 +417,7 @@ describe('SheetAwareNativeInput keyboard registration', () => {
       fullScreen();
       const {getByTestId, rerenderInput} = renderInput();
       focus(getByTestId);
-      fireEvent(getByTestId('x'), 'blur', focusEvent());
+      blur(getByTestId);
 
       setFrame(screen.width - 100, screen.height);
       rerenderInput();
@@ -312,7 +451,7 @@ describe('SheetAwareNativeInput keyboard registration', () => {
 
         focus(getByTestId);
 
-        expect(keyboardState.target).toBe(expectedTarget);
+        expect(sheet.keyboardState.target).toBe(expectedTarget);
       },
     );
   });
@@ -330,7 +469,8 @@ describe('SheetAwareNativeInput keyboard registration', () => {
       rerenderInput();
 
       expect(UNSAFE_queryByType(BottomSheetTextInput)).toBeNull();
-      expect(keyboardState.target).toBe(OWN_TAG);
+      expect(sheet.textInputNodesRef.current.size).toBe(0);
+      expect(sheet.animatedKeyboardState.set).not.toHaveBeenCalled();
       expect(Keyboard.dismiss).not.toHaveBeenCalled();
       expect(addEventListener).not.toHaveBeenCalled();
       expect(mockUseSafeAreaFrame).not.toHaveBeenCalled();
