@@ -90,6 +90,11 @@ const KEYBOARD_STATUS = {
   HIDDEN: 2,
 };
 
+const ANIMATION_CONFIGS = {
+  duration: 250,
+  easing: t => t,
+};
+
 const createBottomSheetScrollableComponent = () => BottomSheetBase;
 
 module.exports = {
@@ -107,6 +112,7 @@ module.exports = {
   TextInput: BottomSheetTextInput,
   SCROLLABLE_TYPE,
   KEYBOARD_STATUS,
+  ANIMATION_CONFIGS,
   createBottomSheetScrollableComponent,
   useBottomSheetModal: () => ({}),
   useBottomSheet: () => ({}),
