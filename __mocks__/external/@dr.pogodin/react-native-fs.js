@@ -18,6 +18,7 @@ export const exists = jest.fn().mockImplementation(path => {
   return Promise.resolve(fileExists);
 });
 export const stopDownload = jest.fn();
+export const read = jest.fn(() => Promise.resolve('GGUF'));
 export const readFile = jest.fn(path => {
   if (path.includes('session-metadata.json')) {
     // Return valid session metadata JSON
@@ -70,6 +71,7 @@ const RNFS = {
   unlink,
   exists,
   stopDownload,
+  read,
   readFile,
   writeFile,
   downloadFile,
