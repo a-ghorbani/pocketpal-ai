@@ -1,11 +1,12 @@
 import React from 'react';
-import {BottomSheetModal} from '@gorhom/bottom-sheet';
+import {Dimensions, Keyboard} from 'react-native';
+import {BottomSheetModal, useBottomSheetInternal} from '@gorhom/bottom-sheet';
 import {
   useSafeAreaFrame,
   useSafeAreaInsets,
 } from 'react-native-safe-area-context';
 
-import {render} from '../../../../jest/test-utils';
+import {act, render} from '../../../../jest/test-utils';
 
 import {Sheet} from '../Sheet';
 
@@ -72,6 +73,88 @@ describe('Sheet', () => {
     expect(UNSAFE_getByType(BottomSheetModal).props.snapPoints).toEqual([
       fullScreenFrame.height - 24 - 16,
     ]);
+  });
+
+  describe('when the screen rotates', () => {
+    const portrait = {
+      screen: Dimensions.get('screen'),
+      window: Dimensions.get('window'),
+    };
+    const landscape = {
+      ...portrait.screen,
+      width: portrait.screen.height,
+      height: portrait.screen.width,
+    };
+
+    afterEach(() => {
+      act(() => {
+        Dimensions.set(portrait);
+      });
+    });
+
+    describe('with the keyboard up', () => {
+      const focusSheetInput = (target?: number) => {
+        (useBottomSheetInternal as jest.Mock).mockReturnValue({
+          animatedKeyboardState: {get: () => ({target})},
+        });
+      };
+
+      beforeEach(() => {
+        jest.spyOn(Keyboard, 'dismiss');
+      });
+
+      afterEach(() => {
+        (useBottomSheetInternal as jest.Mock).mockReturnValue(null);
+        jest.restoreAllMocks();
+      });
+
+      it('dismisses the keyboard of a focused sheet input', () => {
+        focusSheetInput(42);
+        render(<Sheet snapPoints={['60%']} />);
+        expect(Keyboard.dismiss).not.toHaveBeenCalled();
+
+        act(() => {
+          Dimensions.set({screen: landscape, window: landscape});
+        });
+
+        expect(Keyboard.dismiss).toHaveBeenCalledTimes(1);
+      });
+
+      it('leaves the keyboard alone when no sheet input is focused', () => {
+        focusSheetInput(undefined);
+        render(<Sheet snapPoints={['60%']} />);
+
+        act(() => {
+          Dimensions.set({screen: landscape, window: landscape});
+        });
+
+        expect(Keyboard.dismiss).not.toHaveBeenCalled();
+      });
+
+      it('leaves the keyboard alone when only the window changes', () => {
+        focusSheetInput(42);
+        render(<Sheet snapPoints={['60%']} />);
+
+        act(() => {
+          Dimensions.set({
+            screen: portrait.screen,
+            window: {...portrait.window, height: portrait.window.height / 2},
+          });
+        });
+
+        expect(Keyboard.dismiss).not.toHaveBeenCalled();
+      });
+
+      it('leaves the keyboard alone when only the app frame changes', () => {
+        focusSheetInput(42);
+        const {rerender} = render(<Sheet snapPoints={PERCENT_SNAP_POINTS} />);
+
+        setFrameHeight(400);
+        rerender(<Sheet snapPoints={PERCENT_SNAP_POINTS} />);
+
+        expect(Keyboard.dismiss).not.toHaveBeenCalled();
+      });
+    });
   });
 
   it('enables dynamic sizing without snap points', () => {
