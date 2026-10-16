@@ -228,10 +228,10 @@ describe('SheetAwareNativeInput keyboard registration', () => {
     });
   });
 
-  describe('on focus and blur', () => {
+  describe('when the app window fills the screen', () => {
     it.each([
       ['equals', 0],
-      ['is just short of', 0.4],
+      ['is within 1 dp of', 0.4],
     ])(
       'sets its own target, then calls onFocus, when the frame %s the screen',
       (_, shortBy) => {
@@ -274,33 +274,6 @@ describe('SheetAwareNativeInput keyboard registration', () => {
     });
 
     it.each([
-      ['shorter', screen.width, screen.height - 100],
-      ['narrower', screen.width - 100, screen.height],
-    ])(
-      'sets its own target when the window is %s than the screen',
-      (_, width, height) => {
-        setFrame(width, height);
-        const {getByTestId} = renderInput();
-
-        focus(getByTestId);
-
-        expect(sheet.keyboardState.target).toBe(OWN_TAG);
-      },
-    );
-
-    it('keeps its target when focus moves to another sheet input in a window smaller than the screen', () => {
-      windowed();
-      const {getByTestId} = renderInput();
-      focus(getByTestId);
-      sheet.textInputNodesRef.current.add(OTHER_TAG);
-      focusMovesTo(otherField);
-
-      blur(getByTestId);
-
-      expect(sheet.keyboardState.target).toBe(OWN_TAG);
-    });
-
-    it.each([
       ['nothing', null],
       ['an input outside the sheet', otherField],
     ])('clears its target when focus moves to %s', (_, next) => {
@@ -308,6 +281,46 @@ describe('SheetAwareNativeInput keyboard registration', () => {
       const {getByTestId} = renderInput();
       focus(getByTestId);
       focusMovesTo(next);
+
+      blur(getByTestId);
+
+      expect(sheet.keyboardState.target).toBeUndefined();
+    });
+  });
+
+  describe('when the app window is smaller than the screen', () => {
+    it.each([
+      ['shorter', screen.width, screen.height - 100],
+      ['only narrower', screen.width - 100, screen.height],
+    ])('never writes a target when the window is %s', (_, width, height) => {
+      setFrame(width, height);
+      const {getByTestId} = renderInput();
+
+      focus(getByTestId);
+
+      expect(sheet.keyboardState.target).toBeUndefined();
+      expect(sheet.animatedKeyboardState.set).not.toHaveBeenCalled();
+      expect(onFocus).toHaveBeenCalledTimes(1);
+      expect(onFocus).toHaveBeenCalledWith(focusEvent());
+    });
+
+    it('leaves a target held by another input alone on focus', () => {
+      enterSheet({target: OTHER_TAG});
+      windowed();
+      const {getByTestId} = renderInput();
+
+      focus(getByTestId);
+
+      expect(sheet.keyboardState.target).toBe(OTHER_TAG);
+      expect(sheet.animatedKeyboardState.set).not.toHaveBeenCalled();
+    });
+
+    it('clears its own target on blur even when focus stays in the sheet', () => {
+      enterSheet({target: OWN_TAG});
+      windowed();
+      const {getByTestId} = renderInput();
+      sheet.textInputNodesRef.current.add(OTHER_TAG);
+      focusMovesTo(otherField);
 
       blur(getByTestId);
 
@@ -327,6 +340,120 @@ describe('SheetAwareNativeInput keyboard registration', () => {
 
     expect(sheet.keyboardState.target).toBe(OTHER_TAG);
     expect(sheet.animatedKeyboardState.set).not.toHaveBeenCalled();
+  });
+
+  describe('when the window changes while focused', () => {
+    it('ignores a rotation that transposes the frame before the screen', () => {
+      fullScreen();
+      const {getByTestId, rerenderInput} = renderInput();
+      focus(getByTestId);
+
+      setFrame(screen.height, screen.width);
+      rerenderInput();
+
+      expect(Keyboard.dismiss).not.toHaveBeenCalled();
+      expect(ref).toHaveBeenCalledTimes(1);
+    });
+
+    it('dismisses the keyboard when the window narrows into a split', () => {
+      fullScreen();
+      const {getByTestId, rerenderInput} = renderInput();
+      focus(getByTestId);
+      sheet.animatedKeyboardState.set.mockClear();
+
+      setFrame(screen.width - 100, screen.height);
+      rerenderInput();
+
+      expect(Keyboard.dismiss).toHaveBeenCalledTimes(1);
+      expect(ref).toHaveBeenCalledTimes(1);
+      expect(sheet.animatedKeyboardState.set).not.toHaveBeenCalled();
+    });
+
+    it('dismisses the keyboard when a narrow window goes full screen', () => {
+      setFrame(screen.width - 100, screen.height);
+      const {getByTestId, rerenderInput} = renderInput();
+      focus(getByTestId);
+
+      fullScreen();
+      rerenderInput();
+
+      expect(Keyboard.dismiss).toHaveBeenCalledTimes(1);
+    });
+
+    it('never dismisses when the keyboard alone shrinks the frame', () => {
+      fullScreen();
+      const {getByTestId, rerenderInput} = renderInput();
+      focus(getByTestId);
+
+      setFrame(screen.width, screen.height - 300);
+      rerenderInput();
+      fullScreen();
+      rerenderInput();
+
+      expect(Keyboard.dismiss).not.toHaveBeenCalled();
+    });
+
+    it('keeps a height-only window change focused and gates the next focus', () => {
+      fullScreen();
+      const {getByTestId, rerenderInput} = renderInput();
+      focus(getByTestId);
+
+      setFrame(screen.width, screen.height - 100);
+      rerenderInput();
+      setFrame(screen.width - 100, screen.height - 100);
+      rerenderInput();
+
+      expect(Keyboard.dismiss).not.toHaveBeenCalled();
+
+      blur(getByTestId);
+      focus(getByTestId);
+
+      expect(sheet.keyboardState.target).toBeUndefined();
+    });
+  });
+
+  describe('when the window changes while not focused', () => {
+    it('does not dismiss once the field has blurred', () => {
+      fullScreen();
+      const {getByTestId, rerenderInput} = renderInput();
+      focus(getByTestId);
+      blur(getByTestId);
+
+      setFrame(screen.width - 100, screen.height);
+      rerenderInput();
+
+      expect(Keyboard.dismiss).not.toHaveBeenCalled();
+    });
+
+    it.each([
+      [
+        'full screen to windowed',
+        fullScreen,
+        () => setFrame(screen.width - 100, screen.height),
+        undefined,
+      ],
+      [
+        'windowed to full screen',
+        () => setFrame(screen.width - 100, screen.height),
+        fullScreen,
+        OWN_TAG,
+      ],
+    ])(
+      'does not dismiss on %s, and the next focus follows the new window',
+      (_, before, after, expectedTarget) => {
+        before();
+        const {getByTestId, rerenderInput} = renderInput();
+
+        after();
+        rerenderInput();
+
+        expect(Keyboard.dismiss).not.toHaveBeenCalled();
+
+        focus(getByTestId);
+
+        expect(sheet.keyboardState.target).toBe(expectedTarget);
+      },
+    );
   });
 
   describe('outside a sheet', () => {

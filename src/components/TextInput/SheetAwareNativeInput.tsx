@@ -1,6 +1,11 @@
 import React, {useCallback, useEffect, useRef} from 'react';
-import {findNodeHandle, TextInput as NativeTextInput} from 'react-native';
+import {
+  findNodeHandle,
+  Keyboard,
+  TextInput as NativeTextInput,
+} from 'react-native';
 import {useBottomSheetInternal} from '@gorhom/bottom-sheet';
+import {useSafeAreaFrame} from 'react-native-safe-area-context';
 import type {TextInputProps as PaperTextInputProps} from 'react-native-paper';
 
 import type {SheetContext} from '../Sheet/gorhomInternal';
@@ -9,6 +14,7 @@ import {
   setKeyboardTarget,
   updateKeyboardTarget,
 } from '../Sheet/keyboardTarget';
+import {useAppWindowFillsScreen} from '../Sheet/screenSize';
 
 type RenderProps = Parameters<NonNullable<PaperTextInputProps['render']>>[0];
 type SheetAwareNativeInputProps = Omit<
@@ -26,7 +32,11 @@ const InSheetInput = ({
   onBlur,
   ...props
 }: SheetAwareNativeInputProps & {sheet: SheetContext}) => {
+  const fillsScreen = useAppWindowFillsScreen();
+  const {width: frameWidth} = useSafeAreaFrame();
   const input = useRef<NativeTextInput | null>(null);
+  const focused = useRef(false);
+  const previousWindow = useRef({fillsScreen, frameWidth});
 
   const setInput = useCallback(
     (instance: NativeTextInput | null) => {
@@ -53,6 +63,18 @@ const InSheetInput = ({
     };
   }, [animatedKeyboardState, textInputNodesRef]);
 
+  useEffect(() => {
+    const previous = previousWindow.current;
+    previousWindow.current = {fillsScreen, frameWidth};
+    if (
+      focused.current &&
+      fillsScreen !== previous.fillsScreen &&
+      frameWidth !== previous.frameWidth
+    ) {
+      Keyboard.dismiss();
+    }
+  }, [fillsScreen, frameWidth]);
+
   const focusStaysInSheet = () => {
     const next = findNodeHandle(
       NativeTextInput.State.currentlyFocusedInput() as unknown as NativeTextInput | null,
@@ -61,16 +83,20 @@ const InSheetInput = ({
   };
 
   const handleFocus = (event: FocusEvent) => {
-    updateKeyboardTarget(
-      animatedKeyboardState,
-      setKeyboardTarget,
-      event.nativeEvent.target,
-    );
+    focused.current = true;
+    if (fillsScreen) {
+      updateKeyboardTarget(
+        animatedKeyboardState,
+        setKeyboardTarget,
+        event.nativeEvent.target,
+      );
+    }
     onFocus?.(event);
   };
 
   const handleBlur = (event: FocusEvent) => {
-    if (!focusStaysInSheet()) {
+    focused.current = false;
+    if (!fillsScreen || !focusStaysInSheet()) {
       updateKeyboardTarget(
         animatedKeyboardState,
         clearOwnKeyboardTarget,

@@ -1,9 +1,11 @@
 import React from 'react';
+import {Dimensions} from 'react-native';
 import {fireEvent} from '@testing-library/react-native';
 import {
   BottomSheetTextInput,
   useBottomSheetInternal,
 } from '@gorhom/bottom-sheet';
+import {useSafeAreaFrame} from 'react-native-safe-area-context';
 
 import {render} from '../../../../jest/test-utils';
 import {
@@ -132,6 +134,10 @@ describe('SearchableSelectSheet', () => {
 
   describe('search input in the sheet', () => {
     const FIELD_TAG = 42;
+    const screen = Dimensions.get('screen');
+    const jestSetupFrame = (
+      useSafeAreaFrame as jest.Mock
+    ).getMockImplementation();
     let sheet: MockSheetContext;
 
     beforeEach(() => {
@@ -141,9 +147,17 @@ describe('SearchableSelectSheet', () => {
 
     afterEach(() => {
       (useBottomSheetInternal as jest.Mock).mockReturnValue(null);
+      (useSafeAreaFrame as jest.Mock).mockReset();
+      (useSafeAreaFrame as jest.Mock).mockImplementation(jestSetupFrame);
     });
 
-    const focusSearch = () => {
+    const focusSearchIn = (frameHeight: number) => {
+      (useSafeAreaFrame as jest.Mock).mockReturnValue({
+        x: 0,
+        y: 0,
+        width: screen.width,
+        height: frameHeight,
+      });
       const utils = renderSheet();
       fireEvent(utils.getByTestId('searchable-select-search'), 'focus', {
         nativeEvent: {target: FIELD_TAG},
@@ -152,16 +166,23 @@ describe('SearchableSelectSheet', () => {
     };
 
     it('renders the search input as an RN TextInput', () => {
-      const {UNSAFE_queryByType, getByTestId} = focusSearch();
+      const {UNSAFE_queryByType, getByTestId} = focusSearchIn(screen.height);
 
       expect(UNSAFE_queryByType(BottomSheetTextInput)).toBeNull();
       expect(getByTestId('searchable-select-search').type).toBe('TextInput');
     });
 
-    it('sets its keyboard target on focus', () => {
-      focusSearch();
+    it('sets its keyboard target on focus when the app window fills the screen', () => {
+      focusSearchIn(screen.height);
 
       expect(sheet.keyboardState.target).toBe(FIELD_TAG);
+    });
+
+    it('writes no keyboard target on focus when the app window is a split pane', () => {
+      focusSearchIn(screen.height - 100);
+
+      expect(sheet.keyboardState.target).toBeUndefined();
+      expect(sheet.animatedKeyboardState.set).not.toHaveBeenCalled();
     });
   });
 });
