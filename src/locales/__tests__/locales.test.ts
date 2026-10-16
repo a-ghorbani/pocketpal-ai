@@ -1,4 +1,5 @@
 import _ from 'lodash';
+import dayjs from 'dayjs';
 
 import {
   l10n,
@@ -6,6 +7,7 @@ import {
   supportedLanguages,
   languageDisplayNames,
   _testGetCacheKeys,
+  initLocale,
 } from '../index';
 import enData from '../en.json';
 
@@ -392,4 +394,19 @@ describe('sidebar date-group labels stay usable as map keys', () => {
       expect(new Set(values).size).toBe(values.length);
     },
   );
+});
+
+describe('initLocale', () => {
+  afterEach(() => {
+    dayjs.locale('en');
+  });
+
+  it('formats dates in Arabic when the app language is ar', () => {
+    initLocale('ar');
+
+    expect(dayjs.locale()).toBe('ar');
+    expect(dayjs('2026-01-15').format('MMMM')).toBe(
+      '\u064A\u0646\u0627\u064A\u0631',
+    );
+  });
 });
