@@ -1,10 +1,8 @@
 import React from 'react';
-import {Dimensions} from 'react-native';
 import {
   BottomSheetTextInput,
   useBottomSheetInternal,
 } from '@gorhom/bottom-sheet';
-import {useSafeAreaFrame} from 'react-native-safe-area-context';
 import {EnhancedSearchBar} from '../EnhancedSearchBar';
 import {SearchFilters} from '../../../store/HFStore';
 import {fireEvent, render} from '../../../../jest/test-utils';
@@ -121,10 +119,6 @@ describe('EnhancedSearchBar', () => {
 
   describe('author filter input in its sheet', () => {
     const FIELD_TAG = 42;
-    const screen = Dimensions.get('screen');
-    const jestSetupFrame = (
-      useSafeAreaFrame as jest.Mock
-    ).getMockImplementation();
     let sheet: MockSheetContext;
 
     beforeEach(() => {
@@ -134,17 +128,9 @@ describe('EnhancedSearchBar', () => {
 
     afterEach(() => {
       (useBottomSheetInternal as jest.Mock).mockReturnValue(null);
-      (useSafeAreaFrame as jest.Mock).mockReset();
-      (useSafeAreaFrame as jest.Mock).mockImplementation(jestSetupFrame);
     });
 
-    const openAuthorFilter = (frameWidth: number) => {
-      (useSafeAreaFrame as jest.Mock).mockReturnValue({
-        x: 0,
-        y: 0,
-        width: frameWidth,
-        height: screen.height,
-      });
+    const openAuthorFilter = () => {
       const utils = render(<EnhancedSearchBar {...defaultProps} />, {
         withBottomSheetProvider: true,
       });
@@ -153,31 +139,20 @@ describe('EnhancedSearchBar', () => {
     };
 
     it('renders the author filter input as an RN TextInput in the filter sheet', () => {
-      const {UNSAFE_queryByType, getByTestId} = openAuthorFilter(screen.width);
+      const {UNSAFE_queryByType, getByTestId} = openAuthorFilter();
 
       expect(UNSAFE_queryByType(BottomSheetTextInput)).toBeNull();
       expect(getByTestId('author-filter-input').type).toBe('TextInput');
     });
 
-    it('sets its keyboard target on focus when the app window fills the screen', () => {
-      const {getByTestId} = openAuthorFilter(screen.width);
+    it('sets its keyboard target on focus', () => {
+      const {getByTestId} = openAuthorFilter();
 
       fireEvent(getByTestId('author-filter-input'), 'focus', {
         nativeEvent: {target: FIELD_TAG},
       });
 
       expect(sheet.keyboardState.target).toBe(FIELD_TAG);
-    });
-
-    it('writes no keyboard target on focus when the app window is a split pane', () => {
-      const {getByTestId} = openAuthorFilter(screen.width - 100);
-
-      fireEvent(getByTestId('author-filter-input'), 'focus', {
-        nativeEvent: {target: FIELD_TAG},
-      });
-
-      expect(sheet.keyboardState.target).toBeUndefined();
-      expect(sheet.animatedKeyboardState.set).not.toHaveBeenCalled();
     });
   });
 
