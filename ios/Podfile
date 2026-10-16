@@ -21,8 +21,6 @@ use_frameworks! :linkage => :static
 $RNFirebaseAsStaticFramework = true
 
 ENV['RCT_NEW_ARCH_ENABLED'] = '1'
-# Prebuilt core leaves @react-native-firebase non-modular under static frameworks on RN 0.86.
-ENV['RCT_USE_PREBUILT_RNCORE'] = '0'
 
 target 'PocketPal' do
   config = use_native_modules!
