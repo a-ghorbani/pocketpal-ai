@@ -5,47 +5,45 @@ PODS:
   - AppAuth/Core (2.0.0)
   - AppAuth/ExternalUserAgent (2.0.0):
     - AppAuth/Core
-  - AppCheckCore (11.3.2):
+  - AppCheckCore (11.2.0):
     - GoogleUtilities/Environment (~> 8.0)
     - GoogleUtilities/UserDefaults (~> 8.0)
     - PromisesObjC (~> 2.4)
-    - PromisesSwift (~> 2.4)
-    - RecaptchaInterop (~> 101.0)
   - BVLinearGradient (2.8.3):
     - React-Core
   - FBLazyVector (0.86.3)
-  - Firebase/AppCheck (12.10.0):
+  - Firebase/AppCheck (12.4.0):
     - Firebase/CoreOnly
-    - FirebaseAppCheck (~> 12.10.0)
-  - Firebase/CoreOnly (12.10.0):
-    - FirebaseCore (~> 12.10.0)
-  - FirebaseAppCheck (12.10.0):
+    - FirebaseAppCheck (~> 12.4.0)
+  - Firebase/CoreOnly (12.4.0):
+    - FirebaseCore (~> 12.4.0)
+  - FirebaseAppCheck (12.4.0):
     - AppCheckCore (~> 11.0)
-    - FirebaseAppCheckInterop (~> 12.10.0)
-    - FirebaseCore (~> 12.10.0)
+    - FirebaseAppCheckInterop (~> 12.4.0)
+    - FirebaseCore (~> 12.4.0)
     - GoogleUtilities/Environment (~> 8.1)
     - GoogleUtilities/UserDefaults (~> 8.1)
-  - FirebaseAppCheckInterop (12.10.0)
-  - FirebaseCore (12.10.0):
-    - FirebaseCoreInternal (~> 12.10.0)
+  - FirebaseAppCheckInterop (12.4.0)
+  - FirebaseCore (12.4.0):
+    - FirebaseCoreInternal (~> 12.4.0)
     - GoogleUtilities/Environment (~> 8.1)
     - GoogleUtilities/Logger (~> 8.1)
-  - FirebaseCoreInternal (12.10.0):
+  - FirebaseCoreInternal (12.4.0):
     - "GoogleUtilities/NSData+zlib (~> 8.1)"
   - GoogleSignIn (9.0.0):
     - AppAuth (~> 2.0)
     - AppCheckCore (~> 11.0)
     - GTMAppAuth (~> 5.0)
     - GTMSessionFetcher/Core (~> 3.3)
-  - GoogleUtilities/Environment (8.1.5):
+  - GoogleUtilities/Environment (8.1.0):
     - GoogleUtilities/Privacy
-  - GoogleUtilities/Logger (8.1.5):
+  - GoogleUtilities/Logger (8.1.0):
     - GoogleUtilities/Environment
     - GoogleUtilities/Privacy
-  - "GoogleUtilities/NSData+zlib (8.1.5)":
+  - "GoogleUtilities/NSData+zlib (8.1.0)":
     - GoogleUtilities/Privacy
-  - GoogleUtilities/Privacy (8.1.5)
-  - GoogleUtilities/UserDefaults (8.1.5):
+  - GoogleUtilities/Privacy (8.1.0)
+  - GoogleUtilities/UserDefaults (8.1.0):
     - GoogleUtilities/Logger
     - GoogleUtilities/Privacy
   - GRMustache.swift (6.0.0)
@@ -153,9 +151,7 @@ PODS:
     - ReactNativeDependencies
     - Yoga
   - openiap (3.4.0)
-  - PromisesObjC (2.4.1)
-  - PromisesSwift (2.4.1):
-    - PromisesObjC (= 2.4.1)
+  - PromisesObjC (2.4.0)
   - RCTDeprecation (0.86.3)
   - RCTRequired (0.86.3)
   - RCTSwiftUI (0.86.3)
@@ -2231,7 +2227,6 @@ PODS:
     - ReactCommon/turbomodule/core
     - ReactNativeDependencies
     - Yoga
-  - RecaptchaInterop (101.0.0)
   - RNAppleAuthentication (2.5.1):
     - React-Core
   - RNCAsyncStorage (2.2.0):
@@ -2324,53 +2319,13 @@ PODS:
     - Yoga
   - RNDeviceInfo (14.1.1):
     - React-Core
-  - RNFBApp (23.8.8):
-    - Firebase/CoreOnly (= 12.10.0)
-    - hermes-engine
-    - RCTRequired
-    - RCTTypeSafety
+  - RNFBApp (23.5.0):
+    - Firebase/CoreOnly (= 12.4.0)
     - React-Core
-    - React-Core-prebuilt
-    - React-debug
-    - React-Fabric
-    - React-featureflags
-    - React-graphics
-    - React-ImageManager
-    - React-jsi
-    - React-NativeModulesApple
-    - React-RCTFabric
-    - React-renderercss
-    - React-rendererdebug
-    - React-utils
-    - ReactCodegen
-    - ReactCommon/turbomodule/bridging
-    - ReactCommon/turbomodule/core
-    - ReactNativeDependencies
-    - Yoga
-  - RNFBAppCheck (23.8.8):
-    - Firebase/AppCheck (= 12.10.0)
-    - hermes-engine
-    - RCTRequired
-    - RCTTypeSafety
+  - RNFBAppCheck (23.5.0):
+    - Firebase/AppCheck (= 12.4.0)
     - React-Core
-    - React-Core-prebuilt
-    - React-debug
-    - React-Fabric
-    - React-featureflags
-    - React-graphics
-    - React-ImageManager
-    - React-jsi
-    - React-NativeModulesApple
-    - React-RCTFabric
-    - React-renderercss
-    - React-rendererdebug
-    - React-utils
-    - ReactCodegen
-    - ReactCommon/turbomodule/bridging
-    - ReactCommon/turbomodule/core
-    - ReactNativeDependencies
     - RNFBApp
-    - Yoga
   - RNGestureHandler (2.33.1):
     - hermes-engine
     - RCTRequired
@@ -2934,8 +2889,6 @@ SPEC REPOS:
     - onnxruntime-c
     - openiap
     - PromisesObjC
-    - PromisesSwift
-    - RecaptchaInterop
 
 EXTERNAL SOURCES:
   BVLinearGradient:
@@ -3166,16 +3119,16 @@ EXTERNAL SOURCES:
 
 SPEC CHECKSUMS:
   AppAuth: 1c1a8afa7e12f2ec3a294d9882dfa5ab7d3cb063
-  AppCheckCore: be8fce5469f68d7f6a29aa94b25f097409ff7fdc
+  AppCheckCore: cc8fd0a3a230ddd401f326489c99990b013f0c4f
   BVLinearGradient: cb006ba232a1f3e4f341bb62c42d1098c284da70
   FBLazyVector: 2138c6c2ab66c31bf5754dc18097fbc498a49c7f
-  Firebase: 99f203d3a114c6ba591f3b32263a9626e450af65
-  FirebaseAppCheck: 3cd5112c60c3b04e6207e41a864b6c3cb06f73ad
-  FirebaseAppCheckInterop: 2480ab50a070a6bc02e26e62733874361f017a11
-  FirebaseCore: f4428e22415ea3b3eca652c2098413dabf2a23a9
-  FirebaseCoreInternal: e7bbaeb00ab73011298f35ed223aa7371e212948
+  Firebase: f07b15ae5a6ec0f93713e30b923d9970d144af3e
+  FirebaseAppCheck: 73721d98fa29cf199da6004e57715cbaddd49651
+  FirebaseAppCheckInterop: f734c802f21fe1da0837708f0f9a27218c8a4ed0
+  FirebaseCore: bb595f3114953664e3c1dc032f008a244147cfd3
+  FirebaseCoreInternal: d7f5a043c2cd01a08103ab586587c1468047bca6
   GoogleSignIn: c7f09cfbc85a1abf69187be091997c317cc33b77
-  GoogleUtilities: 7dc09b3fa9ecb5c2298b952313d14628b61b9da3
+  GoogleUtilities: 00c88b9a86066ef77f0da2fab05f65d7768ed8e1
   GRMustache.swift: aef1158266c11227988f78e314491121475a2da9
   GTMAppAuth: 217a876b249c3c585a54fd6f73e6b58c4f5c4238
   GTMSessionFetcher: 5aea5ba6bd522a239e236100971f10cb71b96ab6
@@ -3186,8 +3139,7 @@ SPEC CHECKSUMS:
   onnxruntime-c: 4a1a1a81da2087869dc9b6357f182952db2df29c
   onnxruntime-react-native: 887b263347b85d36c4432859495d9944b7da79ef
   openiap: 253070b2afe71078a2cae63a2b8e282bdd44a059
-  PromisesObjC: 752c3227f599e3467650e47ea36f433eeb10c273
-  PromisesSwift: 217dea0fd5d2ad65222a109c48698add13cc1c5b
+  PromisesObjC: f5707f49cb48b9636751c5b2e7d227e43fba9f47
   RCTDeprecation: 96f68ebf33f8762466b01d57d6e873c4f30efb07
   RCTRequired: 166eed8ad6d8440e73e56d09a9090366609823d2
   RCTSwiftUI: e818198d11928a78c2b2afe281d072171dab617f
@@ -3270,15 +3222,14 @@ SPEC CHECKSUMS:
   ReactCommon: 02f6a489d5eb4ab79d7deba5cd4434e0ba351a07
   ReactNativeDependencies: 6738e602b46fd24aa453cd58267ec3bb8bf29d27
   ReactNativeFs: 5188530218db96836da7704cee7d5cd72edb17d2
-  RecaptchaInterop: 11e0b637842dfb48308d242afc3f448062325aba
   RNAppleAuthentication: a89c9804592b38ed4ab11f0aee68d05ba12ad432
   RNCAsyncStorage: d90e523830fa7705f8c61632479abde871bc792f
   RNCClipboard: 7a7d4557bfd3370b35c99dfecd92ae7b9fc4948a
   RNCMaskedView: 8069b4d4e23b3d28b4fcac70bf266be43ffc3d2e
   RNCPicker: a3921be99ae291e420e3e8940e5b2b53e572c543
   RNDeviceInfo: bcce8752b5043a623fe3c26789679b473f705d3c
-  RNFBApp: 7b9f35bc79fcd15ba62d56d80587aa8822d584f1
-  RNFBAppCheck: 66e939a7aab68daa5cd88e4009263f463991340b
+  RNFBApp: 78d866e12b98c79b7cb141fcdcdf9813eae09b15
+  RNFBAppCheck: 6474ee3310e125f6a76ffb657d76f22854ab74a0
   RNGestureHandler: f7b8774ea00fdb6a537473714e371e512c470303
   RNGoogleSignin: c41dfec31c6744ead33e21c86c7f78582e866126
   RNKeychain: d57edf101a72acf3ae85fe4d796eed1d951d2a90
