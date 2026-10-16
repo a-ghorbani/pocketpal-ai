@@ -245,6 +245,28 @@
       "signInAgain": "Please sign in again",
       "creatorSupport": "Creator accounts are deleted by our support team: {{contact}}",
       "failed": "Could not delete, try again"
+    },
+    "localApiServer": {
+      "title": "Local API server",
+      "enable": "Serve the loaded model",
+      "enableDescription": "Lets other apps use the loaded model through an OpenAI-compatible API. Requests wait their turn with your chats.",
+      "starting": "Starting…",
+      "url": "Server URL",
+      "copyUrl": "Copy URL",
+      "servedModel": "Serving {{model}}",
+      "noModel": "No model loaded. Requests fail until you load one.",
+      "port": "Port",
+      "portInvalid": "Use a port from 1024 to 65535",
+      "lan": "Allow other devices on the network",
+      "lanWarning": "Any device on this network can use your model. Set an API key to limit who can.",
+      "notOnWifi": "Not on Wi-Fi: only apps on this phone can reach the server.",
+      "apiKey": "API key",
+      "apiKeySet": "Requests must send this key",
+      "apiKeyNotSet": "No key: any app that can reach the server can use it",
+      "setApiKey": "Set key",
+      "clearApiKey": "Clear key",
+      "apiKeyPlaceholder": "Enter an API key",
+      "stopToEdit": "Turn the server off to change these settings."
     }
   },
   "memory": {
