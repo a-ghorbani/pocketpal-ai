@@ -2387,7 +2387,7 @@ PODS:
     - ReactCommon/turbomodule/core
     - ReactNativeDependencies
     - Yoga
-  - RNSVG (15.14.0):
+  - RNSVG (15.16.0):
     - hermes-engine
     - RCTRequired
     - RCTTypeSafety
@@ -2408,9 +2408,9 @@ PODS:
     - ReactCodegen
     - ReactCommon/turbomodule/core
     - ReactNativeDependencies
-    - RNSVG/common (= 15.14.0)
+    - RNSVG/common (= 15.16.0)
     - Yoga
-  - RNSVG/common (15.14.0):
+  - RNSVG/common (15.16.0):
     - hermes-engine
     - RCTRequired
     - RCTTypeSafety
@@ -3061,7 +3061,7 @@ SPEC CHECKSUMS:
   RNScreens: 4bac14b997bcf160be0a967bfdae27956847f289
   RNShare: 765191a3c96beb2955ed961643db333b1ddf257a
   RNSpeech: 6137d93bfdd2ae92d33c5f7ab676bc1af42385a0
-  RNSVG: 95844f23284e6e06651fb680f1cd7d6941e7ad5f
+  RNSVG: ea960a71afc1707bd14dead3ec578763321f7096
   RNVectorIcons: c7cd45980aad8bbd77a47b906f62957c9494dcb6
   RNWorklets: 941265f848d4f2a906a0ed4ba64e6671cf54d34e
   simdjson: 7bb9e33d87737cec966e7b427773c67baa4458fe
