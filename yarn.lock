@@ -8191,10 +8191,10 @@ react-native-nitro-modules@0.37.1:
   resolved "https://registry.yarnpkg.com/react-native-nitro-modules/-/react-native-nitro-modules-0.37.1.tgz#368bda3038ebe796b219d98e0a364f9166e2cc7c"
   integrity sha512-KpW6EQVQ/bfegpCGxN9Be+ndvsfj56t4IESEvCASu9gWpJa/NDfHpIeIwCOvZQ3eXmLEj6YD4wCLqcC1FJPr2w==
 
-react-native-paper@5.14.5:
-  version "5.14.5"
-  resolved "https://registry.yarnpkg.com/react-native-paper/-/react-native-paper-5.14.5.tgz#7995a2f8171c8355c1cb55c81a6d2074a7dd5abb"
-  integrity sha512-eaIH5bUQjJ/mYm4AkI6caaiyc7BcHDwX6CqNDi6RIxfxfWxROsHpll1oBuwn/cFvknvA8uEAkqLk/vzVihI3AQ==
+react-native-paper@5.15.3:
+  version "5.15.3"
+  resolved "https://registry.yarnpkg.com/react-native-paper/-/react-native-paper-5.15.3.tgz#7eda85b920b60c2157b42d9dd4d7d291229fb277"
+  integrity sha512-GEyNTmWElIZgnYw09AjjCNupRYzCmP79uAAyGSyCEUZz7KBz1wtJcC0wVUkozR1Rn3PK/td/9LlR6+F1hzmYvA==
   dependencies:
     "@callstack/react-theme-provider" "^3.0.9"
     color "^3.1.2"
