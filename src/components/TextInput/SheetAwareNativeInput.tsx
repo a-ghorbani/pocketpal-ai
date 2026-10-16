@@ -8,6 +8,7 @@ import {useBottomSheetInternal} from '@gorhom/bottom-sheet';
 import {useSafeAreaFrame} from 'react-native-safe-area-context';
 import type {TextInputProps as PaperTextInputProps} from 'react-native-paper';
 
+import type {SheetContext} from '../Sheet/gorhomInternal';
 import {
   clearOwnKeyboardTarget,
   setKeyboardTarget,
@@ -20,7 +21,6 @@ type SheetAwareNativeInputProps = Omit<
   React.ComponentProps<typeof NativeTextInput>,
   'ref'
 > & {ref?: React.Ref<NativeTextInput>};
-type SheetContext = NonNullable<ReturnType<typeof useBottomSheetInternal>>;
 type FocusEvent = Parameters<
   NonNullable<SheetAwareNativeInputProps['onFocus']>
 >[0];
