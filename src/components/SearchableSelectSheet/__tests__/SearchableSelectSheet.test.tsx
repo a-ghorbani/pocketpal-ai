@@ -8,6 +8,10 @@ import {
 import {useSafeAreaFrame} from 'react-native-safe-area-context';
 
 import {render} from '../../../../jest/test-utils';
+import {
+  mockSheetContext,
+  type MockSheetContext,
+} from '../../../../jest/sheetContext';
 
 import {SearchableSelectSheet} from '../SearchableSelectSheet';
 
@@ -134,18 +138,11 @@ describe('SearchableSelectSheet', () => {
     const jestSetupFrame = (
       useSafeAreaFrame as jest.Mock
     ).getMockImplementation();
-    let keyboardState: {target?: number};
+    let sheet: MockSheetContext;
 
     beforeEach(() => {
-      keyboardState = {};
-      (useBottomSheetInternal as jest.Mock).mockReturnValue({
-        animatedKeyboardState: {
-          get: () => keyboardState,
-          set: (next: typeof keyboardState) => {
-            keyboardState = next;
-          },
-        },
-      });
+      sheet = mockSheetContext();
+      (useBottomSheetInternal as jest.Mock).mockReturnValue(sheet);
     });
 
     afterEach(() => {
@@ -154,30 +151,38 @@ describe('SearchableSelectSheet', () => {
       (useSafeAreaFrame as jest.Mock).mockImplementation(jestSetupFrame);
     });
 
-    it.each([
-      ['keeps', 'fills the screen', screen.height, FIELD_TAG],
-      ['drops', 'is a split pane', screen.height - 100, undefined],
-    ])(
-      '%s its keyboard target when the app window %s',
-      (_, __, frameHeight, expectedTarget) => {
-        (useSafeAreaFrame as jest.Mock).mockReturnValue({
-          x: 0,
-          y: 0,
-          width: screen.width,
-          height: frameHeight,
-        });
-        const {getByTestId, UNSAFE_getByType} = renderSheet();
-        keyboardState = {target: FIELD_TAG};
+    const focusSearchIn = (frameHeight: number) => {
+      (useSafeAreaFrame as jest.Mock).mockReturnValue({
+        x: 0,
+        y: 0,
+        width: screen.width,
+        height: frameHeight,
+      });
+      const utils = renderSheet();
+      fireEvent(utils.getByTestId('searchable-select-search'), 'focus', {
+        nativeEvent: {target: FIELD_TAG},
+      });
+      return utils;
+    };
 
-        fireEvent(getByTestId('searchable-select-search'), 'focus', {
-          nativeEvent: {target: FIELD_TAG},
-        });
+    it('renders the search input as an RN TextInput', () => {
+      const {UNSAFE_queryByType, getByTestId} = focusSearchIn(screen.height);
 
-        expect(UNSAFE_getByType(BottomSheetTextInput).props.testID).toBe(
-          'searchable-select-search',
-        );
-        expect(keyboardState.target).toBe(expectedTarget);
-      },
-    );
+      expect(UNSAFE_queryByType(BottomSheetTextInput)).toBeNull();
+      expect(getByTestId('searchable-select-search').type).toBe('TextInput');
+    });
+
+    it('sets its keyboard target on focus when the app window fills the screen', () => {
+      focusSearchIn(screen.height);
+
+      expect(sheet.keyboardState.target).toBe(FIELD_TAG);
+    });
+
+    it('writes no keyboard target on focus when the app window is a split pane', () => {
+      focusSearchIn(screen.height - 100);
+
+      expect(sheet.keyboardState.target).toBeUndefined();
+      expect(sheet.animatedKeyboardState.set).not.toHaveBeenCalled();
+    });
   });
 });

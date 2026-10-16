@@ -1,47 +1,67 @@
-import React, {useEffect, useRef} from 'react';
-import {Keyboard, TextInput as NativeTextInput} from 'react-native';
+import React, {useCallback, useEffect, useRef} from 'react';
 import {
-  BottomSheetTextInput,
-  useBottomSheetInternal,
-} from '@gorhom/bottom-sheet';
-import {runOnUI} from 'react-native-reanimated';
+  findNodeHandle,
+  Keyboard,
+  TextInput as NativeTextInput,
+} from 'react-native';
+import {useBottomSheetInternal} from '@gorhom/bottom-sheet';
 import {useSafeAreaFrame} from 'react-native-safe-area-context';
 import type {TextInputProps as PaperTextInputProps} from 'react-native-paper';
 
+import {
+  clearOwnKeyboardTarget,
+  setKeyboardTarget,
+  updateKeyboardTarget,
+} from '../Sheet/keyboardTarget';
 import {useAppWindowFillsScreen} from '../Sheet/screenSize';
 
 type RenderProps = Parameters<NonNullable<PaperTextInputProps['render']>>[0];
-type SheetAwareNativeInputProps = React.ComponentProps<typeof NativeTextInput> &
-  Partial<Pick<RenderProps, 'ref'>>;
+type SheetAwareNativeInputProps = Omit<
+  React.ComponentProps<typeof NativeTextInput>,
+  'ref'
+> & {ref?: React.Ref<NativeTextInput>};
 type SheetContext = NonNullable<ReturnType<typeof useBottomSheetInternal>>;
-type KeyboardStateValue = SheetContext['animatedKeyboardState'];
 type FocusEvent = Parameters<
   NonNullable<SheetAwareNativeInputProps['onFocus']>
 >[0];
 
-// Queued on the UI runtime behind gorhom's own target write from the same
-// focus handler; a JS-side get() would read the target before that write lands.
-const clearKeyboardTargetIfOwn = (
-  keyboardState: KeyboardStateValue,
-  tag: number,
-) => {
-  'worklet';
-  const state = keyboardState.get();
-  if (state.target === tag) {
-    keyboardState.set({...state, target: undefined});
-  }
-};
-
 const InSheetInput = ({
-  sheet,
+  sheet: {animatedKeyboardState, textInputNodesRef},
+  ref,
   onFocus,
   onBlur,
   ...props
 }: SheetAwareNativeInputProps & {sheet: SheetContext}) => {
   const fillsScreen = useAppWindowFillsScreen();
   const {width: frameWidth} = useSafeAreaFrame();
+  const input = useRef<NativeTextInput | null>(null);
   const focused = useRef(false);
   const previousWindow = useRef({fillsScreen, frameWidth});
+
+  const setInput = useCallback(
+    (instance: NativeTextInput | null) => {
+      input.current = instance;
+      if (typeof ref === 'function') {
+        ref(instance);
+      } else if (ref) {
+        ref.current = instance;
+      }
+    },
+    [ref],
+  );
+
+  useEffect(() => {
+    const tag = findNodeHandle(input.current);
+    if (!tag) {
+      return;
+    }
+    const nodes = textInputNodesRef.current;
+    nodes.add(tag);
+    return () => {
+      nodes.delete(tag);
+      updateKeyboardTarget(animatedKeyboardState, clearOwnKeyboardTarget, tag);
+    };
+  }, [animatedKeyboardState, textInputNodesRef]);
 
   useEffect(() => {
     const previous = previousWindow.current;
@@ -55,11 +75,19 @@ const InSheetInput = ({
     }
   }, [fillsScreen, frameWidth]);
 
+  const focusStaysInSheet = () => {
+    const next = findNodeHandle(
+      NativeTextInput.State.currentlyFocusedInput() as unknown as NativeTextInput | null,
+    );
+    return !!next && textInputNodesRef.current.has(next);
+  };
+
   const handleFocus = (event: FocusEvent) => {
     focused.current = true;
-    if (!fillsScreen) {
-      runOnUI(clearKeyboardTargetIfOwn)(
-        sheet.animatedKeyboardState,
+    if (fillsScreen) {
+      updateKeyboardTarget(
+        animatedKeyboardState,
+        setKeyboardTarget,
         event.nativeEvent.target,
       );
     }
@@ -68,12 +96,20 @@ const InSheetInput = ({
 
   const handleBlur = (event: FocusEvent) => {
     focused.current = false;
+    if (!fillsScreen || !focusStaysInSheet()) {
+      updateKeyboardTarget(
+        animatedKeyboardState,
+        clearOwnKeyboardTarget,
+        event.nativeEvent.target,
+      );
+    }
     onBlur?.(event);
   };
 
   return (
-    <BottomSheetTextInput
+    <NativeTextInput
       {...props}
+      ref={setInput}
       onFocus={handleFocus}
       onBlur={handleBlur}
     />

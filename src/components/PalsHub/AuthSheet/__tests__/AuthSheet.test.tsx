@@ -1,11 +1,12 @@
 import React from 'react';
-import {Alert, Platform} from 'react-native';
+import {Alert, Platform, TextInput as NativeTextInput} from 'react-native';
 import {appleAuth} from '@invertase/react-native-apple-authentication';
 import {
   BottomSheetTextInput,
   useBottomSheetInternal,
 } from '@gorhom/bottom-sheet';
 import {render, fireEvent, waitFor} from '../../../../../jest/test-utils';
+import {mockSheetContext} from '../../../../../jest/sheetContext';
 
 import {AuthSheet} from '../AuthSheet';
 import {authService, PalsHubErrorHandler} from '../../../../services';
@@ -108,18 +109,18 @@ describe('AuthSheet', () => {
       (useBottomSheetInternal as jest.Mock).mockImplementation(() => null);
     });
 
-    it('registers every form input with the enclosing bottom sheet', () => {
-      (useBottomSheetInternal as jest.Mock).mockImplementation(() => ({}));
-      const {getByText, UNSAFE_getAllByType} = render(
+    it('renders every form input as an RN TextInput in the enclosing bottom sheet', () => {
+      const sheet = mockSheetContext();
+      (useBottomSheetInternal as jest.Mock).mockImplementation(() => sheet);
+      const {getByText, UNSAFE_getAllByType, UNSAFE_queryByType} = render(
         <AuthSheet {...defaultProps} />,
       );
 
       fireEvent.press(getByText('Sign Up'));
 
+      expect(UNSAFE_queryByType(BottomSheetTextInput)).toBeNull();
       expect(
-        UNSAFE_getAllByType(BottomSheetTextInput).map(
-          input => input.props.testID,
-        ),
+        UNSAFE_getAllByType(NativeTextInput).map(input => input.props.testID),
       ).toEqual(['full-name-input', 'email-input', 'password-input']);
     });
   });
