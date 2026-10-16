@@ -1,3 +1,18 @@
+diff --git a/node_modules/@nozbe/watermelondb/native/android/build.gradle b/node_modules/@nozbe/watermelondb/native/android/build.gradle
+index a45cfe0..0b7e936 100644
+--- a/node_modules/@nozbe/watermelondb/native/android/build.gradle
++++ b/node_modules/@nozbe/watermelondb/native/android/build.gradle
+@@ -26,6 +26,10 @@ android {
+ 
+     namespace "com.nozbe.watermelondb"
+ 
++    buildFeatures {
++        buildConfig true
++    }
++
+     defaultConfig {
+         minSdkVersion getExtOrIntegerDefault('minSdkVersion')
+         targetSdkVersion getExtOrIntegerDefault('targetSdkVersion')
 diff --git a/node_modules/@nozbe/watermelondb/native/ios/WatermelonDB/JSIInstaller.h b/node_modules/@nozbe/watermelondb/native/ios/WatermelonDB/JSIInstaller.h
 index c1b7efb..4957e13 100644
 --- a/node_modules/@nozbe/watermelondb/native/ios/WatermelonDB/JSIInstaller.h
