@@ -196,6 +196,22 @@ describe('SearchProviderStore', () => {
       await store.setKey('brave', 'k'); // the active provider
       expect(store.isProviderConfigured).toBe(true);
     });
+
+    it('counts a keyless provider (You.com) as configured without a key', async () => {
+      const store = await newStore();
+      store.setActiveProvider('you');
+      expect(store.hasKey('you')).toBe(false);
+      expect(store.isKeyOptional('you')).toBe(true);
+      expect(store.isProviderConfigured).toBe(true);
+    });
+
+    it('keeps keyed providers requiring a key', () => {
+      for (const {id, requiresKey} of SEARCH_PROVIDERS) {
+        if (id !== 'you') {
+          expect(requiresKey).not.toBe(false);
+        }
+      }
+    });
   });
 
   describe('canSearch (consent + key, load-bearing at execution)', () => {
@@ -211,6 +227,14 @@ describe('SearchProviderStore', () => {
 
       store.setConsent(false);
       expect(store.canSearch).toBe(false);
+    });
+
+    it('still requires consent for a keyless provider', async () => {
+      const store = await newStore();
+      store.setActiveProvider('you');
+      expect(store.canSearch).toBe(false);
+      store.setConsent(true);
+      expect(store.canSearch).toBe(true);
     });
   });
 
