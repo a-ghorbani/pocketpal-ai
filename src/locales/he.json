@@ -211,6 +211,40 @@
       "statusOwned": "נרכש",
       "statusUnlocking": "פותח נעילה",
       "link": "התחבר כדי להשתמש במכשירים אחרים"
+    },
+    "scanServerQr": "סרוק קוד QR של השרת",
+    "scanQrPermissionMessage": "תן גישה למצלמה כדי לסרוק קוד QR של שרת. אפשר גם להזין את הכתובת.",
+    "scanQrNotServer": "זו לא כתובת של שרת",
+    "scanQrUnavailable": "אי אפשר לסרוק כאן. הזן את כתובת השרת ידנית.",
+    "scanQrNotReady": "הסורק מתכונן. אפשר גם להזין את הכתובת.",
+    "routerModels": {
+      "cancel": "ביטול",
+      "unloading": "פורק…",
+      "stateLoading": "טוען",
+      "stateLoaded": "טעון",
+      "loadingPercent": "טוען, {{percent}} אחוז",
+      "unloadModel": "פרוק את {{model}}",
+      "cancelLoadingModel": "בטל את טעינת {{model}}",
+      "loadFailed": "המודל הזה לא נטען.",
+      "unloadNotReleased": "השרת לא שחרר את המודל הזה.",
+      "serverUnreachable": "לא הצלחנו להגיע לשרת הזה.",
+      "waitStopped": "הפסקנו לחכות למודל הזה.",
+      "failureWithServerWords": "{{label}}\n\n“{{message}}”",
+      "dismiss": "הסתר",
+      "unloadBoundTitle": "לפרוק את המודל הזה?",
+      "unloadBoundBody": "הצ'אט הזה משתמש בו. הוא ייטען מחדש כשתשלח את ההודעה הבאה.",
+      "unloadBoundConfirm": "פרוק"
+    },
+    "account": {
+      "title": "חשבון",
+      "deleteAccount": "מחק חשבון",
+      "confirmTitle": "למחוק את החשבון?",
+      "confirmMessage": "הפעולה הזו מוחקת לצמיתות את חשבון ה-PalsHub שלך ואת הספרייה שלו. Pals שקנית דרך App Store או Google Play יישארו זמינים לשחזור במכשיר הזה עם חשבון החנות שלך. רשומות הרכישה נשמרות באופן אנונימי מטעמים משפטיים.",
+      "confirmWithoutApple": "לא הצלחנו לאמת מול Apple. למחוק את החשבון בכל זאת?",
+      "deleted": "החשבון שלך נמחק.",
+      "signInAgain": "אנא התחבר שוב",
+      "creatorSupport": "חשבונות יוצרים נמחקים על ידי צוות התמיכה שלנו: {{contact}}",
+      "failed": "המחיקה נכשלה, נסה שוב"
     }
   },
   "memory": {
@@ -953,7 +987,8 @@
       },
       "warnings": {
         "promptChanged": "הנחיית המערכת שונתה באופן ידני"
-      }
+      },
+      "generationBusy": "תשובה עדיין נכתבת. נסה שוב כשהיא תסתיים."
     },
     "sidebarContent": {
       "menuItems": {
@@ -1292,7 +1327,9 @@
       "openLinkError": "לא ניתן היה לפתוח את הקישור הזה."
     },
     "contextFullRemote": "נגמר המקום בשיחה. פתח צ'אט חדש.",
-    "speculativeInitFailed": "המכשיר הזה לא הצליח להפעיל פענוח ספקולטיבי עבור המודל הזה — כנראה שאין מספיק זיכרון עבור ההקשר של מודל הטיוטה. כבה את הפענוח הספקולטיבי בהגדרות ← הגדרות מתקדמות ונסה שוב."
+    "speculativeInitFailed": "המכשיר הזה לא הצליח להפעיל פענוח ספקולטיבי עבור המודל הזה — כנראה שאין מספיק זיכרון עבור ההקשר של מודל הטיוטה. כבה את הפענוח הספקולטיבי בהגדרות ← הגדרות מתקדמות ונסה שוב.",
+    "routerLoading": "טוען מודל…",
+    "routerLoadingPercent": "טוען מודל · {{percent}}%"
   },
   "benchmark": {
     "title": "מבחן ביצועים",

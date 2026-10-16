@@ -210,7 +210,9 @@
       "openLinkError": "이 링크를 열 수 없습니다."
     },
     "contextFullRemote": "대화 공간이 가득 찼습니다. 새 채팅을 시작하세요.",
-    "speculativeInitFailed": "이 기기에서 이 모델의 추측 디코딩을 시작할 수 없어요 — 드래프트 컨텍스트에 필요한 메모리가 부족한 것 같아요. 설정 → 고급 설정에서 추측 디코딩을 끄고 다시 시도해 주세요."
+    "speculativeInitFailed": "이 기기에서 이 모델의 추측 디코딩을 시작할 수 없어요 — 드래프트 컨텍스트에 필요한 메모리가 부족한 것 같아요. 설정 → 고급 설정에서 추측 디코딩을 끄고 다시 시도해 주세요.",
+    "routerLoading": "모델 로딩 중…",
+    "routerLoadingPercent": "모델 로딩 중 · {{percent}}%"
   },
   "common": {
     "cancel": "취소",
@@ -465,7 +467,8 @@
       },
       "warnings": {
         "promptChanged": "시스템 프롬프트가 수동으로 설정되었습니다."
-      }
+      },
+      "generationBusy": "응답이 아직 생성 중입니다. 완료된 후에 다시 시도해 주세요."
     },
     "sidebarContent": {
       "menuItems": {
@@ -1252,6 +1255,40 @@
       "statusOwned": "구매 완료",
       "statusUnlocking": "잠금 해제 중",
       "link": "다른 기기에서 사용하려면 로그인"
+    },
+    "scanServerQr": "서버 QR 코드 스캔",
+    "scanQrPermissionMessage": "서버 QR 코드를 스캔하려면 카메라 접근 권한을 허용해 주세요. 주소를 직접 입력할 수도 있습니다.",
+    "scanQrNotServer": "서버 주소가 아닙니다",
+    "scanQrUnavailable": "여기서는 스캔할 수 없습니다. 서버 주소를 직접 입력해 주세요.",
+    "scanQrNotReady": "스캐너를 준비하는 중입니다. 주소를 직접 입력할 수도 있습니다.",
+    "routerModels": {
+      "cancel": "취소",
+      "unloading": "언로드 중…",
+      "stateLoading": "로딩 중",
+      "stateLoaded": "로드됨",
+      "loadingPercent": "로딩 중, {{percent}}퍼센트",
+      "unloadModel": "{{model}} 언로드",
+      "cancelLoadingModel": "{{model}} 로딩 취소",
+      "loadFailed": "이 모델을 로드하지 못했습니다.",
+      "unloadNotReleased": "서버에서 이 모델을 언로드하지 못했습니다.",
+      "serverUnreachable": "이 서버에 연결할 수 없습니다.",
+      "waitStopped": "이 모델 대기를 중단했습니다.",
+      "failureWithServerWords": "{{label}}\n\n“{{message}}”",
+      "dismiss": "닫기",
+      "unloadBoundTitle": "이 모델을 언로드하시겠습니까?",
+      "unloadBoundBody": "이 채팅에서 사용 중인 모델입니다. 다음 메시지를 보내면 다시 로드됩니다.",
+      "unloadBoundConfirm": "언로드"
+    },
+    "account": {
+      "title": "계정",
+      "deleteAccount": "계정 삭제",
+      "confirmTitle": "계정을 삭제하시겠습니까?",
+      "confirmMessage": "PalsHub 계정과 라이브러리가 영구적으로 삭제됩니다. App Store 또는 Google Play에서 구매한 Pals는 스토어 계정으로 이 기기에서 계속 복원할 수 있습니다. 구매 기록은 법적 의무에 따라 익명 처리되어 보관됩니다.",
+      "confirmWithoutApple": "Apple 계정으로 확인하지 못했습니다. 그래도 계정을 삭제하시겠습니까?",
+      "deleted": "계정이 삭제되었습니다.",
+      "signInAgain": "다시 로그인해 주세요",
+      "creatorSupport": "크리에이터 계정은 고객지원팀에서 삭제해 드립니다: {{contact}}",
+      "failed": "삭제하지 못했습니다. 다시 시도해 주세요"
     }
   },
   "storage": {
