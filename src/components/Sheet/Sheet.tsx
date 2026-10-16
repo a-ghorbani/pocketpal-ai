@@ -19,7 +19,6 @@ import {Actions} from './Actions';
 import {SheetHandle} from './SheetHandle';
 import {SheetScrollView} from './SheetScrollView';
 import {SheetAwareNativeInput} from '../TextInput/SheetAwareNativeInput';
-import {DismissKeyboardOnRotation} from './DismissKeyboardOnRotation';
 import {fullHeightSnapPoint, resolveSnapPoints} from './snapPoints';
 
 export interface SheetProps extends Partial<BottomSheetModalProps> {
@@ -113,7 +112,6 @@ export const Sheet = forwardRef(
         // See: https://github.com/gorhom/react-native-bottom-sheet/issues/1141
         accessible={false}
         {...props}>
-        <DismissKeyboardOnRotation />
         <View style={styles.header}>
           {title && <Text variant="titleMedium">{title}</Text>}
           {showCloseButton && (
