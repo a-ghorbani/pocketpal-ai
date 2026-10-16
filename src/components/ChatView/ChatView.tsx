@@ -2,8 +2,6 @@ import * as React from 'react';
 import {
   FlatList,
   FlatListProps,
-  InteractionManager,
-  LayoutAnimation,
   Platform,
   StatusBar,
   StatusBarProps,
@@ -105,12 +103,6 @@ type SubMenuItem = {
   onPress: () => void;
   disabled?: boolean;
   width?: number;
-};
-
-// Untestable
-/* istanbul ignore next */
-const animate = () => {
-  LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
 };
 
 const prependText = (first: string, rest: string) =>
@@ -258,7 +250,6 @@ export const ChatView = observer(
     const isFocused = useIsFocused();
 
     // ============ REFS ============
-    const animationRef = React.useRef(false);
     const list = React.useRef<FlatList<MessageType.DerivedAny>>(null);
 
     // ============ COMPONENT STATE ============
@@ -599,23 +590,6 @@ export const ChatView = observer(
       }
       // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [chatMessages]);
-
-    // ============ LAYOUT ANIMATION SETUP ============
-    // Untestable
-    /* istanbul ignore next */
-    if (animationRef.current && enableAnimation) {
-      InteractionManager.runAfterInteractions(animate);
-    }
-
-    React.useEffect(() => {
-      // Untestable
-      /* istanbul ignore next */
-      if (animationRef.current && enableAnimation) {
-        InteractionManager.runAfterInteractions(animate);
-      } else {
-        animationRef.current = true;
-      }
-    }, [enableAnimation, messages]);
 
     // ============ PAGINATION HANDLER ============
     const handleEndReached = React.useCallback(
