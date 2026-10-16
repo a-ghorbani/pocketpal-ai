@@ -1,5 +1,6 @@
 module.exports = {
   preset: '@react-native/jest-preset',
+  resolver: '<rootDir>/jest/resolver.js',
   collectCoverage: true,
   collectCoverageFrom: [
     'src/**/*.{ts,tsx}',
