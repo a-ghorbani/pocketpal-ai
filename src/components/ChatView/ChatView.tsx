@@ -4,7 +4,6 @@ import {
   FlatListProps,
   Platform,
   StatusBar,
-  StatusBarProps,
   View,
   TouchableOpacity,
   Keyboard,
@@ -267,7 +266,9 @@ export const ChatView = observer(
     // Image viewer state
     const [isImageViewVisible, setIsImageViewVisible] = React.useState(false);
     const [imageViewIndex, setImageViewIndex] = React.useState(0);
-    const [stackEntry, setStackEntry] = React.useState<StatusBarProps>({});
+    const [stackEntry, setStackEntry] = React.useState(
+      {} as ReturnType<typeof StatusBar.pushStackEntry>,
+    );
 
     // Context menu state
     const [menuVisible, setMenuVisible] = React.useState(false);

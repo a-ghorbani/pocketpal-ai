@@ -5,7 +5,8 @@ import {
   TouchableWithoutFeedback,
   Keyboard,
   ScrollView,
-  TextInput as RNTextInput,
+  type HostInstance,
+  type TextInputInstance,
   Alert,
   Linking,
   TouchableOpacity,
@@ -95,7 +96,7 @@ export const SettingsScreen: React.FC = observer(() => {
   );
   const [isValidInput, setIsValidInput] = useState(true);
   const [showAdvancedSettings, setShowAdvancedSettings] = useState(false);
-  const inputRef = useRef<RNTextInput>(null);
+  const inputRef = useRef<TextInputInstance>(null);
   const keyCacheMenu = useMenuAnchor();
   const valueCacheMenu = useMenuAnchor();
   const draftKeyCacheMenu = useMenuAnchor();
@@ -109,7 +110,7 @@ export const SettingsScreen: React.FC = observer(() => {
     y: number;
   }>({x: 0, y: 0});
   const [showSearchKeySheet, setShowSearchKeySheet] = useState(false);
-  const searchProviderButtonRef = useRef<View>(null);
+  const searchProviderButtonRef = useRef<HostInstance>(null);
   const [gpuSupported, setGpuSupported] = useState(false);
   const [draftModelAnchor, setDraftModelAnchor] = useState<{
     x: number;
@@ -119,7 +120,7 @@ export const SettingsScreen: React.FC = observer(() => {
   const [currentBackend, setCurrentBackend] = useState<
     'metal' | 'opencl' | 'hexagon' | 'cpu' | 'blas'
   >(Platform.OS === 'ios' ? 'metal' : 'cpu');
-  const draftModelButtonRef = useRef<View>(null);
+  const draftModelButtonRef = useRef<HostInstance>(null);
   const debouncedUpdateStore = useRef(
     debounce((value: number) => {
       modelStore.setNContext(value);
@@ -773,7 +774,9 @@ export const SettingsScreen: React.FC = observer(() => {
                         <View style={styles.fullRowControl}>
                           <View>
                             <Button
-                              ref={draftModelButtonRef}
+                              ref={
+                                draftModelButtonRef as unknown as React.Ref<View>
+                              }
                               mode="outlined"
                               onPress={handleDraftModelPress}
                               style={styles.menuButton}
@@ -1228,7 +1231,9 @@ export const SettingsScreen: React.FC = observer(() => {
                   </View>
                   <View style={styles.menuContainer}>
                     <Button
-                      ref={searchProviderButtonRef}
+                      ref={
+                        searchProviderButtonRef as unknown as React.Ref<View>
+                      }
                       testID="search-provider-selector-button"
                       mode="outlined"
                       onPress={handleSearchProviderPress}

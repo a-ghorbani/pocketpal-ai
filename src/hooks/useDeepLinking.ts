@@ -131,7 +131,7 @@ export const useDeepLinking = () => {
     if (!__E2E__) {
       return;
     }
-    const routeIfBench = (url: string | null) => {
+    const routeIfBench = (url: string | null | undefined) => {
       if (isBenchmarkRunnerUrl(url)) {
         // Resolve autostart from the same raw URL the gate matched, via the
         // shared helper, so cold-launch (getInitialURL) and warm-launch

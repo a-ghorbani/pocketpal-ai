@@ -1,6 +1,7 @@
 import * as React from 'react';
 import {
   TextInput,
+  type TextInputInstance,
   TextInputProps,
   View,
   Animated,
@@ -147,7 +148,7 @@ export const ChatInput = observer(
     const l10n = React.useContext(L10nContext);
     const theme = useTheme();
     const user = React.useContext(UserContext);
-    const inputRef = React.useRef<TextInput>(null);
+    const inputRef = React.useRef<TextInputInstance>(null);
     const editBarHeight = React.useRef(new Animated.Value(0)).current;
     const iconRotation = React.useRef(new Animated.Value(0)).current;
     const activePalId = chatSessionStore.activePalId;

@@ -112,7 +112,7 @@ describe('WebSearchResultsSheet', () => {
   });
 
   it('opens an http(s) url in the system browser when a row is tapped', () => {
-    const openURL = jest.spyOn(Linking, 'openURL').mockResolvedValue(true);
+    const openURL = jest.spyOn(Linking, 'openURL').mockResolvedValue(undefined);
 
     const {getAllByTestId} = render(
       <WebSearchResultsSheet
@@ -130,7 +130,7 @@ describe('WebSearchResultsSheet', () => {
   });
 
   it('does not open a non-http(s) url', () => {
-    const openURL = jest.spyOn(Linking, 'openURL').mockResolvedValue(true);
+    const openURL = jest.spyOn(Linking, 'openURL').mockResolvedValue(undefined);
 
     const {getByTestId} = render(
       <WebSearchResultsSheet
