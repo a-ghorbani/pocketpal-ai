@@ -12,6 +12,7 @@ import {useTheme} from '../../hooks';
 import {createStyles} from './styles';
 import {modelStore, palStore, chatSessionStore} from '../../store';
 import {CustomBackdrop} from '../Sheet/CustomBackdrop';
+import {SheetBackground} from '../Sheet/SheetBackground';
 import {getModelSkills, L10nContext, Model} from '../../utils';
 import {t} from '../../locales';
 import type {Pal} from '../../types/pal';
@@ -365,6 +366,7 @@ export const ChatPalModelPickerSheet = observer(
         snapPoints={snapPoints} // Dynamic sizing is not working properly in all situations, like keyboard open/close android/ios ...
         enableDynamicSizing={false}
         backdropComponent={isVisible ? CustomBackdrop : undefined} // on android we need this check to ensure it doenst' block interaction
+        backgroundComponent={SheetBackground}
         backgroundStyle={{
           backgroundColor: theme.colors.background,
         }}

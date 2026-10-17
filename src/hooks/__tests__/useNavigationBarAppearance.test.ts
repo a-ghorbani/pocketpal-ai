@@ -1,3 +1,6 @@
+import * as fs from 'fs';
+import * as path from 'path';
+
 import {renderHook} from '@testing-library/react-native';
 
 import * as specModule from '../../specs/NativeNavigationBar';
@@ -57,5 +60,67 @@ describe('useNavigationBarAppearance', () => {
 
     expect(() => renderHook(() => useNavigationBarAppearance())).not.toThrow();
     expect(setNavigationBarDark).not.toHaveBeenCalled();
+  });
+});
+
+describe('navigation bar appearance writer', () => {
+  const ROOT = path.join(__dirname, '..', '..', '..');
+
+  const sourceFiles = (dir: string, out: string[] = []): string[] => {
+    for (const entry of fs.readdirSync(dir, {withFileTypes: true})) {
+      if (entry.name === '__tests__' || entry.name === '__mocks__') {
+        continue;
+      }
+      const full = path.join(dir, entry.name);
+      if (entry.isDirectory()) {
+        sourceFiles(full, out);
+      } else if (/\.(ts|tsx)$/.test(entry.name)) {
+        out.push(full);
+      }
+    }
+    return out;
+  };
+
+  const filesMatching = (re: RegExp) =>
+    [...sourceFiles(path.join(ROOT, 'src')), path.join(ROOT, 'App.tsx')]
+      .filter(file => re.test(fs.readFileSync(file, 'utf8')))
+      .map(file => path.relative(ROOT, file))
+      .sort();
+
+  it('only the hook calls the native module', () => {
+    expect(filesMatching(/specs\/NativeNavigationBar['"]/)).toEqual([
+      'src/hooks/useNavigationBarAppearance.ts',
+    ]);
+    expect(filesMatching(/setNavigationBarDark/)).toEqual([
+      'src/hooks/useNavigationBarAppearance.ts',
+      'src/specs/NativeNavigationBar.ts',
+    ]);
+  });
+
+  it('only App calls the hook, imported outside the hooks barrel', () => {
+    expect(filesMatching(/useNavigationBarAppearance\(\)/)).toEqual([
+      'App.tsx',
+    ]);
+    expect(
+      fs.readFileSync(path.join(ROOT, 'src/hooks/index.ts'), 'utf8'),
+    ).not.toContain('useNavigationBarAppearance');
+  });
+
+  it('the native module writes only the activity nav-bar appearance', () => {
+    const kotlin = fs.readFileSync(
+      path.join(
+        ROOT,
+        'android/app/src/main/java/com/pocketpalai/NavigationBarModule.kt',
+      ),
+      'utf8',
+    );
+
+    expect(kotlin.match(/\.isAppearanceLight\w+\s*=/g)).toEqual([
+      '.isAppearanceLightNavigationBars =',
+    ]);
+    expect(kotlin).toContain('currentActivity?.window');
+    expect(kotlin).not.toMatch(
+      /navigationBarColor|statusBarColor|ContrastEnforced|setDecorFitsSystemWindows|systemUiVisibility/,
+    );
   });
 });
