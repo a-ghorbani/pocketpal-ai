@@ -17,13 +17,19 @@ export interface WireError {
   code: string;
 }
 
-export type MappedChatRequest =
-  | {
-      ok: true;
-      params: ApiCompletionParams;
-      stream: boolean;
-      includeUsage: boolean;
-    }
+export interface ValidatedChat {
+  messages: RNLlamaOAICompatibleMessage[];
+  nPredict: number;
+  stop: string[] | undefined;
+  sampling: Partial<CompletionParams>;
+  responseFormat: CompletionParams['response_format'] | undefined;
+  enableThinking: boolean | undefined;
+  stream: boolean;
+  includeUsage: boolean;
+}
+
+export type ValidatedChatRequest =
+  | {ok: true; request: ValidatedChat}
   | {ok: false; error: WireError};
 
 type Json = Record<string, unknown>;
@@ -136,9 +142,9 @@ function maxTokens(body: Json): number {
   return Math.min(MAX_TOKENS_LIMIT, Math.max(1, Math.floor(requested)));
 }
 
-function stopSequences(stop: unknown, stopWords: string[]): string[] {
+function clientStop(stop: unknown): string[] | undefined {
   if (!isPresent(stop)) {
-    return stopWords;
+    return undefined;
   }
   const requested = typeof stop === 'string' ? [stop] : stop;
   if (
@@ -147,7 +153,18 @@ function stopSequences(stop: unknown, stopWords: string[]): string[] {
   ) {
     invalid('stop must be a string or an array of strings');
   }
-  return [...new Set([...stopWords, ...(requested as string[])])];
+  return requested as string[];
+}
+
+function sampling(body: Json): Partial<CompletionParams> {
+  const fields: Json = {};
+  for (const [name, key] of SAMPLING_FIELDS) {
+    const value = finiteOrAbsent(body, name);
+    if (value !== undefined) {
+      fields[key] = value;
+    }
+  }
+  return fields as Partial<CompletionParams>;
 }
 
 function requestedThinking(body: Json): boolean | undefined {
@@ -159,54 +176,32 @@ function requestedThinking(body: Json): boolean | undefined {
 }
 
 /**
- * Maps an OpenAI chat-completion body onto llama.rn params over `base`. Fields
+ * Checks an OpenAI chat-completion body without reading any app state. Fields
  * the server cannot honour are rejected, not dropped, so a client never
  * mistakes an ignored tool or image for a model that declined it.
  */
-export function mapChatRequest(
-  body: unknown,
-  base: CompletionParams,
-  stopWords: string[] = [],
-): MappedChatRequest {
+export function validateChatRequest(body: unknown): ValidatedChatRequest {
   try {
     if (!isObject(body)) {
       invalid('request body must be a JSON object');
     }
     rejectUnsupported(body);
-    const params: CompletionParams = {
-      ...base,
-      messages: toMessages(body.messages),
-      n_predict: maxTokens(body),
-      stop: stopSequences(body.stop, stopWords),
-    };
-    for (const [name, key] of SAMPLING_FIELDS) {
-      const value = finiteOrAbsent(body, name);
-      if (value !== undefined) {
-        (params as Json)[key] = value;
-      }
-    }
-    if (isObject(body.response_format)) {
-      params.response_format =
-        body.response_format as CompletionParams['response_format'];
-    }
-    const enableThinking = requestedThinking(body) ?? base.enable_thinking;
-
-    const apiParams = toApiCompletionParams(params);
-    apiParams.reasoning_format = 'auto';
-    if (enableThinking !== undefined) {
-      apiParams.enable_thinking = enableThinking;
-      apiParams.chat_template_kwargs = {
-        ...apiParams.chat_template_kwargs,
-        enable_thinking: enableThinking,
-      };
-    }
     const streamOptions = body.stream_options;
     return {
       ok: true,
-      params: apiParams,
-      stream: body.stream === true,
-      includeUsage:
-        isObject(streamOptions) && streamOptions.include_usage === true,
+      request: {
+        messages: toMessages(body.messages),
+        nPredict: maxTokens(body),
+        stop: clientStop(body.stop),
+        sampling: sampling(body),
+        responseFormat: isObject(body.response_format)
+          ? (body.response_format as CompletionParams['response_format'])
+          : undefined,
+        enableThinking: requestedThinking(body),
+        stream: body.stream === true,
+        includeUsage:
+          isObject(streamOptions) && streamOptions.include_usage === true,
+      },
     };
   } catch (error) {
     if (error instanceof RequestError) {
@@ -222,6 +217,35 @@ export function mapChatRequest(
     }
     throw error;
   }
+}
+
+export function buildChatParams(
+  chat: ValidatedChat,
+  base: CompletionParams,
+  stopWords: string[] = [],
+): ApiCompletionParams {
+  const params: CompletionParams = {
+    ...base,
+    messages: chat.messages,
+    n_predict: chat.nPredict,
+    stop: chat.stop ? [...new Set([...stopWords, ...chat.stop])] : stopWords,
+    ...chat.sampling,
+  };
+  if (chat.responseFormat) {
+    params.response_format = chat.responseFormat;
+  }
+  const enableThinking = chat.enableThinking ?? base.enable_thinking;
+
+  const apiParams = toApiCompletionParams(params);
+  apiParams.reasoning_format = 'auto';
+  if (enableThinking !== undefined) {
+    apiParams.enable_thinking = enableThinking;
+    apiParams.chat_template_kwargs = {
+      ...apiParams.chat_template_kwargs,
+      enable_thinking: enableThinking,
+    };
+  }
+  return apiParams;
 }
 
 export interface CompletionIds {

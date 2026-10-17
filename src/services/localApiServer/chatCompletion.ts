@@ -21,14 +21,15 @@ import {
   writeSseHead,
 } from './http';
 import {
+  buildChatParams,
   ChunkDelta,
   CompletionIds,
   errorBody,
-  mapChatRequest,
   newCompletionIds,
   toChunk,
   toCompletion,
   toFinalChunk,
+  validateChatRequest,
   WireError,
 } from './wire';
 
@@ -163,15 +164,12 @@ export async function serveChatCompletion(
   channel: ResponseChannel,
 ): Promise<void> {
   const startedAt = Date.now();
-  const request = mapChatRequest(
-    body,
-    serverBaseParams(),
-    toJS(modelStore.activeModel?.stopWords) ?? [],
-  );
-  if (!request.ok) {
-    writeError(channel, request.error);
+  const validated = validateChatRequest(body);
+  if (!validated.ok) {
+    writeError(channel, validated.error);
     return;
   }
+  const request = validated.request;
 
   const lease = await modelStore.acquireGeneration();
   if (!lease) {
@@ -182,6 +180,11 @@ export async function serveChatCompletion(
     lease.end();
     return;
   }
+  if (lease.signal.aborted) {
+    lease.end();
+    writeError(channel, ABORTED);
+    return;
+  }
   if (!(lease.engine instanceof LocalCompletionEngine)) {
     lease.end();
     writeError(channel, NO_MODEL);
@@ -190,7 +193,11 @@ export async function serveChatCompletion(
 
   const run: Run = {
     lease,
-    params: request.params,
+    params: buildChatParams(
+      request,
+      serverBaseParams(),
+      toJS(modelStore.activeModel?.stopWords) ?? [],
+    ),
     ids: newCompletionIds(modelStore.activeModelId ?? 'local', startedAt),
     channel,
   };

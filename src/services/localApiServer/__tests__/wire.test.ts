@@ -3,14 +3,15 @@ import type {
   CompletionResult,
 } from '../../../utils/completionTypes';
 import {
+  buildChatParams,
   DEFAULT_MAX_TOKENS,
   errorBody,
-  mapChatRequest,
   MAX_TOKENS_LIMIT,
   newCompletionIds,
   toChunk,
   toCompletion,
   toFinalChunk,
+  validateChatRequest,
 } from '../wire';
 
 const base: CompletionParams = {
@@ -25,22 +26,25 @@ const base: CompletionParams = {
 const user = {messages: [{role: 'user', content: 'hi'}]};
 
 const mapped = (body: object, stopWords?: string[]) => {
-  const result = mapChatRequest(body, base, stopWords);
+  const result = validateChatRequest(body);
   if (!result.ok) {
     throw new Error(`expected ok, got ${JSON.stringify(result.error)}`);
   }
-  return result;
+  return {
+    ...result.request,
+    params: buildChatParams(result.request, base, stopWords),
+  };
 };
 
 const rejected = (body: unknown) => {
-  const result = mapChatRequest(body, base);
+  const result = validateChatRequest(body);
   if (result.ok) {
     throw new Error('expected a rejection');
   }
   return result.error;
 };
 
-describe('mapChatRequest', () => {
+describe('validateChatRequest and buildChatParams', () => {
   it('maps a minimal request over the base settings', () => {
     const {params, stream, includeUsage} = mapped(user);
     expect(params).toEqual({
@@ -158,7 +162,7 @@ describe('mapChatRequest', () => {
 
   it('accepts an empty tools list and tool_choice none', () => {
     expect(
-      mapChatRequest({...user, tools: [], tool_choice: 'none'}, base).ok,
+      validateChatRequest({...user, tools: [], tool_choice: 'none'}).ok,
     ).toBe(true);
   });
 

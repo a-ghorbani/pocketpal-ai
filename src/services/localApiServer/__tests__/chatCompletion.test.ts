@@ -301,6 +301,62 @@ describe('serveChatCompletion', () => {
     expect(statusOf(text())).toBe(200);
   });
 
+  it('builds params from the model and settings current at the grant', async () => {
+    const fake = withLocalModel();
+    const [modelA, modelB] = mockStore.models;
+    const saved = {
+      a: modelA.stopWords,
+      b: modelB.stopWords,
+      settings: chatSessionStore.newChatCompletionSettings,
+    };
+    modelA.stopWords = ['<a>'];
+    modelB.stopWords = ['<b>'];
+    mockStore.activeModelId = modelA.id;
+    try {
+      const chatLease = (await realAcquire())!;
+      const served = serveChatCompletion(body(), makeChannel().channel);
+      await flush();
+      mockStore.activeModelId = modelB.id;
+      chatSessionStore.newChatCompletionSettings = {
+        ...saved.settings,
+        temperature: 0.123,
+      };
+      chatLease.end();
+      await flush();
+      fake.settle({});
+      await served;
+
+      const params = fake.context.completion.mock.calls[0][0] as {
+        stop: string[];
+        temperature: number;
+      };
+      expect(params.stop).toEqual(['<b>']);
+      expect(params.temperature).toBe(0.123);
+    } finally {
+      modelA.stopWords = saved.a;
+      modelB.stopWords = saved.b;
+      chatSessionStore.newChatCompletionSettings = saved.settings;
+    }
+  });
+
+  it('answers 503 without a completion when the lease is aborted at the grant', async () => {
+    const fake = withLocalModel();
+    mockStore.acquireGeneration.mockImplementationOnce(async () => {
+      const lease = (await realAcquire())!;
+      jest.spyOn(lease, 'end');
+      leases.push(lease);
+      lease.abort();
+      return lease;
+    });
+    const {channel, text} = makeChannel();
+    await serveChatCompletion(body(), channel);
+
+    expect(statusOf(text())).toBe(503);
+    expect(jsonOf(text()).error.code).toBe('generation_aborted');
+    expect(leases[0].end).toHaveBeenCalledTimes(1);
+    expect(fake.context.completion).not.toHaveBeenCalled();
+  });
+
   it('ends a lease granted after the client left, without a completion', async () => {
     const fake = withLocalModel();
     const chatLease = (await realAcquire())!;
