@@ -1,5 +1,7 @@
 import {CompletionParams as LlamaRNCompletionParams} from 'llama.rn';
 
+import {finiteNumber} from './finite';
+
 export type {ToolCall} from 'llama.rn';
 import type {ToolCall} from 'llama.rn';
 
@@ -48,6 +50,65 @@ export interface CompletionStreamData {
   accumulated_text?: string;
 }
 
+/**
+ * What an engine reports about the work behind one completion. The names are
+ * the wire's and llama.rn's alike, and they are persisted into message
+ * metadata, so a rename would blank the footer of every stored message.
+ */
+export interface CompletionTimings {
+  prompt_n?: number;
+  prompt_ms?: number;
+  prompt_per_token_ms?: number;
+  prompt_per_second?: number;
+  predicted_n?: number;
+  predicted_ms?: number;
+  predicted_per_token_ms?: number;
+  predicted_per_second?: number;
+  cache_n?: number;
+}
+
+/**
+ * What `metadata.timings` holds on a stored message: the engine's timings plus
+ * the three facts the chat hook measures itself. Persisted under one key with
+ * one consequence, so both ends name the same type — a rename that reached only
+ * one of them would blank that part of every stored footer. TTFT is stored as
+ * null when the turn produced no first token, so reads go through finiteNumber
+ * like every other field here.
+ */
+export interface PersistedTurnTimings extends CompletionTimings {
+  time_to_first_token_ms?: number | null;
+  draft_tokens?: number;
+  draft_tokens_accepted?: number;
+}
+
+const TIMING_FIELDS = [
+  'prompt_n',
+  'prompt_ms',
+  'prompt_per_token_ms',
+  'prompt_per_second',
+  'predicted_n',
+  'predicted_ms',
+  'predicted_per_token_ms',
+  'predicted_per_second',
+  'cache_n',
+] as const satisfies readonly (keyof CompletionTimings)[];
+
+/** Nothing but finite numbers is written; a value nobody can use is dropped. */
+export function normaliseTimings(raw: unknown): CompletionTimings | undefined {
+  if (typeof raw !== 'object' || raw === null) {
+    return undefined;
+  }
+  const source = raw as Record<string, unknown>;
+  const timings: CompletionTimings = {};
+  for (const field of TIMING_FIELDS) {
+    const value = finiteNumber(source[field]);
+    if (value !== undefined) {
+      timings[field] = value;
+    }
+  }
+  return Object.keys(timings).length > 0 ? timings : undefined;
+}
+
 // Mirrors llama.rn's NativeCompletionResult minus the local-only fields
 // (chat_format, tokens_cached, completion_probabilities).
 export interface CompletionResult {
@@ -55,16 +116,7 @@ export interface CompletionResult {
   content: string;
   reasoning_content?: string;
   tool_calls?: ToolCall[];
-  timings?: {
-    predicted_per_second?: number;
-    predicted_ms?: number;
-    prompt_per_second?: number;
-    prompt_ms?: number;
-    prompt_n?: number;
-    cache_n?: number;
-    predicted_n?: number;
-    [key: string]: number | undefined;
-  };
+  timings?: CompletionTimings;
   tokens_predicted?: number;
   tokens_evaluated?: number;
   draft_tokens?: number;

@@ -5,6 +5,7 @@ import type {
 } from '../../utils/completionTypes';
 import type {ChatMessage} from '../../utils/types';
 import type {AgentToolCall, AgentToolOutcome} from '../../utils/types';
+import {stopQuietly} from '../../utils/stopQuietly';
 
 import type {
   AgentEvent,
@@ -128,6 +129,7 @@ async function executeOne(
   call: AgentToolCall,
   allowedTalentNames: string[],
   talentLookup: (name: string) => ReturnType<AgentRunOptions['talentLookup']>,
+  signal?: AbortSignal,
 ): Promise<AgentToolOutcome> {
   const fnName = call.function?.name ?? '';
   const callId = call.id;
@@ -169,7 +171,9 @@ async function executeOne(
   }
 
   try {
-    const toolResult = await handler.execute(parsedArgs);
+    const toolResult = await (signal
+      ? handler.execute(parsedArgs, {signal})
+      : handler.execute(parsedArgs));
     return {
       callId,
       toolName: fnName,
@@ -256,26 +260,17 @@ export async function* runAgent(
 
   yield {type: 'run_started', messageId};
 
-  // When the consumer aborts mid-stream (e.g. user taps the stop
-  // button while the engine is generating tokens), the runner is the
-  // only layer that has BOTH the abort signal AND the engine handle —
-  // so it owns the abort→engine.stopCompletion translation. Without
-  // this, the signal would only be observed between turns and the
-  // in-flight engine.completion call could keep running native
-  // generation while the JS layer believed the run had stopped. The
-  // async IIFE handles all return shapes (Promise that resolves /
-  // rejects, sync function returning undefined, sync throw) without
-  // ever propagating an error out of the abort handler.
+  // The runner is the only layer holding both the abort signal and the
+  // engine, so it owns the abort -> engine.stopCompletion translation, for
+  // as long as a completion it started is unsettled.
+  const stopEngine = () => stopQuietly(() => engine.stopCompletion?.());
+  let unsettledCompletion: Promise<void> | null = null;
   const onAbort = () => {
-    (async () => {
-      try {
-        await engine.stopCompletion?.();
-      } catch (err) {
-        console.warn('[agent] engine.stopCompletion failed:', err);
-      }
-    })();
+    if (unsettledCompletion) {
+      stopEngine();
+    }
   };
-  signal?.addEventListener('abort', onAbort);
+  signal?.addEventListener('abort', onAbort, {once: true});
 
   let messages = initialParams.messages;
   let turn = 0;
@@ -291,12 +286,14 @@ export async function* runAgent(
 
   try {
     while (turn < maxTurns || forceFinal) {
-      if (signal?.aborted) {
-        break;
-      }
       const isForcedFinal = forceFinal;
 
       yield {type: 'step_started', turn, isFollowUp: turn > 0};
+
+      if (signal?.aborted) {
+        yield {type: 'step_finished', turn, toolCalls: undefined};
+        break;
+      }
 
       // Per-iteration locals for marker detection. Declared INSIDE the
       // while body so each turn gets a fresh value automatically — no
@@ -378,6 +375,7 @@ export async function* runAgent(
           engineError = err instanceof Error ? err : new Error(String(err));
           queue.finish();
         });
+      unsettledCompletion = completionPromise;
 
       // Drain the queue until the engine completes. The queue closes
       // when `completionPromise` resolves (success or failure both
@@ -393,6 +391,7 @@ export async function* runAgent(
       // Wait for the promise to settle (it can only fulfill at this
       // point; the .catch above swallows rejection into engineError).
       await completionPromise;
+      unsettledCompletion = null;
 
       if (engineError) {
         yield {type: 'run_failed', error: engineError};
@@ -451,16 +450,13 @@ export async function* runAgent(
           call,
           allowedTalentNames,
           talentLookup,
+          signal,
         );
         outcomes.push(outcome);
         yield {type: 'tool_call_finished', outcome};
       }
 
-      // Stop-mid-tool: if the abort fired during execution, the
-      // outcomes for in-flight calls have been emitted (we don't
-      // cancel synchronous-ish talents). Bail out at this turn
-      // boundary; the next turn would just be a follow-up the user
-      // doesn't want.
+      // Tools cancel themselves via ctx.signal; the runner only stops at the turn boundary.
       if (signal?.aborted) {
         break;
       }
@@ -519,5 +515,11 @@ export async function* runAgent(
     yield {type: 'run_failed', error: error as Error};
   } finally {
     signal?.removeEventListener('abort', onAbort);
+    if (unsettledCompletion) {
+      if (!signal?.aborted) {
+        stopEngine();
+      }
+      await unsettledCompletion;
+    }
   }
 }

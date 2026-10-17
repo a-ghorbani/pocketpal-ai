@@ -1,21 +1,27 @@
 import {
   BottomSheetModal,
   BottomSheetModalProps,
-  BottomSheetTextInput,
   BottomSheetView,
 } from '@gorhom/bottom-sheet';
 import React, {forwardRef, useEffect, useMemo, useRef} from 'react';
-import {useSafeAreaInsets} from 'react-native-safe-area-context';
+import {
+  useSafeAreaFrame,
+  useSafeAreaInsets,
+} from 'react-native-safe-area-context';
 import {BottomSheetModalMethods} from '@gorhom/bottom-sheet/lib/typescript/types';
 import {Text} from 'react-native-paper';
 import {CloseIcon} from '../../assets/icons';
 import {useTheme} from '../../hooks';
 import {styles} from './styles';
-import BottomSheetKeyboardAwareScrollView from './BottomSheetAwareScrollview';
-import {Dimensions, TouchableOpacity, View} from 'react-native';
+import {TouchableOpacity, View} from 'react-native';
 import {CustomBackdrop} from './CustomBackdrop';
 import {Actions} from './Actions';
 import {SheetHandle} from './SheetHandle';
+import {SheetScrollView} from './SheetScrollView';
+import {SheetAwareNativeInput} from '../TextInput/SheetAwareNativeInput';
+import {DismissKeyboardOnRotation} from './DismissKeyboardOnRotation';
+import {fullHeightSnapPoint, resolveSnapPoints} from './snapPoints';
+import {useClampedLiftRestore} from './useClampedLiftRestore';
 
 export interface SheetProps extends Partial<BottomSheetModalProps> {
   children?: React.ReactNode;
@@ -30,10 +36,10 @@ interface SheetComponent
   extends React.ForwardRefExoticComponent<
     SheetProps & React.RefAttributes<BottomSheetModalMethods>
   > {
-  ScrollView: typeof BottomSheetKeyboardAwareScrollView;
+  ScrollView: typeof SheetScrollView;
   View: typeof BottomSheetView;
   Actions: typeof Actions;
-  TextInput: typeof BottomSheetTextInput;
+  TextInput: typeof SheetAwareNativeInput;
 }
 
 export const Sheet = forwardRef(
@@ -45,6 +51,9 @@ export const Sheet = forwardRef(
       displayFullHeight,
       onClose,
       showCloseButton = true,
+      snapPoints: requestedSnapPoints,
+      onChange,
+      onAnimate,
       ...props
     }: SheetProps,
     ref: React.Ref<BottomSheetModalMethods>,
@@ -74,19 +83,30 @@ export const Sheet = forwardRef(
       onClose?.();
     };
 
+    const {height: containerHeight} = useSafeAreaFrame();
     const snapPoints = useMemo(() => {
       if (displayFullHeight) {
-        return [Dimensions.get('screen').height - insets.top - 16];
+        return [fullHeightSnapPoint(containerHeight, insets.top)];
       }
-      return props.snapPoints;
-    }, [displayFullHeight, insets, props.snapPoints]);
+      return resolveSnapPoints(
+        requestedSnapPoints,
+        containerHeight,
+        insets.top,
+      );
+    }, [displayFullHeight, containerHeight, insets.top, requestedSnapPoints]);
+
+    const liftRestore = useClampedLiftRestore(
+      activeRef,
+      snapPoints,
+      onChange,
+      onAnimate,
+    );
 
     return (
       <BottomSheetModal
         ref={activeRef}
-        maxDynamicContentSize={
-          Dimensions.get('screen').height - insets.top - 16
-        }
+        maxDynamicContentSize={fullHeightSnapPoint(containerHeight, insets.top)}
+        topInset={insets.top}
         enableDynamicSizing={!snapPoints}
         stackBehavior="push"
         backdropComponent={CustomBackdrop}
@@ -98,11 +118,14 @@ export const Sheet = forwardRef(
           backgroundColor: theme.colors.background,
         }}
         snapPoints={snapPoints}
+        onChange={liftRestore.onChange}
+        onAnimate={liftRestore.onAnimate}
         onDismiss={onDismiss}
         // Disable accessible to allow Appium/e2e tests to access child elements on iOS
         // See: https://github.com/gorhom/react-native-bottom-sheet/issues/1141
         accessible={false}
         {...props}>
+        <DismissKeyboardOnRotation />
         <View style={styles.header}>
           {title && <Text variant="titleMedium">{title}</Text>}
           {showCloseButton && (
@@ -124,7 +147,7 @@ export const Sheet = forwardRef(
 ) as SheetComponent;
 
 Sheet.displayName = 'Sheet';
-Sheet.ScrollView = BottomSheetKeyboardAwareScrollView;
+Sheet.ScrollView = SheetScrollView;
 Sheet.View = BottomSheetView;
 Sheet.Actions = Actions;
-Sheet.TextInput = BottomSheetTextInput;
+Sheet.TextInput = SheetAwareNativeInput;

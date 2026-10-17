@@ -10,14 +10,23 @@ import {
   ContextInitParams,
   RemoteSessionBinding,
 } from '../../src/utils/types';
+import type {Samplers} from '../../src/utils/samplerParams';
+import type {ErrorState} from '../../src/utils/errors';
 import {LlamaContext} from 'llama.rn';
 import {CompletionEngine} from '../../src/utils/completionTypes';
+import {GenerationSlot} from '../../src/store/generationLease';
 import {createDefaultContextInitParams} from '../../src/utils/contextInitParamsVersions';
+import {
+  MemoryEstimateSettings,
+  stateCacheBudgetMb,
+} from '../../src/utils/memoryEstimator';
+import type {Tier} from '../../src/services/deviceRules/types';
 import {
   draftCacheDefaults,
   effectiveDraftModeOf,
 } from '../../src/store/draftResolution';
 import {resolveModelCaps} from '../../src/utils/modelCaps';
+import {samplerDefaultsFor} from '../../src/utils/remoteCaps';
 import type {
   CapabilityEnv,
   ModelCapabilityView,
@@ -26,6 +35,7 @@ import type {
 class MockModelStore {
   models = modelsList;
   contextInitParams: ContextInitParams = createDefaultContextInitParams();
+  deviceTier: Tier | null = null;
   max_threads = 4;
   MIN_CONTEXT_SIZE = 200;
   useAutoRelease = true;
@@ -43,6 +53,9 @@ class MockModelStore {
   largestSuccessfulLoad: number | undefined = 4 * 1e9; // 4GB largest successful load
 
   refreshDownloadStatuses: jest.Mock;
+  retryDownload: jest.Mock;
+  clearDownloadError: jest.Mock;
+  downloadError: ErrorState | null = null;
   addLocalModel: jest.Mock;
   removeModelByFullPath: jest.Mock;
   setNContext: jest.Mock;
@@ -91,7 +104,13 @@ class MockModelStore {
   enterBenchmarkMode: jest.Mock;
   exitBenchmarkMode: jest.Mock;
   recordReasoningObserved: jest.Mock;
+  reprobeRemoteCapsAfterCompletion: jest.Mock;
   setReasoningOverride: jest.Mock;
+  acquireGeneration: jest.Mock;
+  tryAcquireGeneration: jest.Mock;
+  abortActiveGeneration: jest.Mock;
+  // A real slot, so lease ordering behaves as in the store.
+  generationSlot = new GenerationSlot();
   benchmarkActive: boolean = false;
   isContextLoading: boolean = false;
   loadingModel: Model | undefined;
@@ -100,6 +119,8 @@ class MockModelStore {
     makeAutoObservable(this, {
       engine: observable.ref,
       refreshDownloadStatuses: false,
+      retryDownload: false,
+      clearDownloadError: false,
       addLocalModel: false,
       removeModelByFullPath: false,
       setNContext: false,
@@ -110,6 +131,7 @@ class MockModelStore {
       initContext: false,
       selectModel: false,
       setRemoteModel: false,
+      reprobeRemoteCapsAfterCompletion: false,
       checkSpaceAndDownload: false,
       getDownloadProgress: false,
       manualReleaseContext: false,
@@ -146,7 +168,13 @@ class MockModelStore {
       exitBenchmarkMode: false,
       recordReasoningObserved: false,
       setReasoningOverride: false,
+      acquireGeneration: false,
+      tryAcquireGeneration: false,
+      abortActiveGeneration: false,
+      generationSlot: false,
+      isGenerationBusy: false,
       contextId: computed,
+      memoryEstimateSettings: computed,
       lastUsedModel: computed,
       activeModel: computed,
       activeModelCaps: computed,
@@ -155,9 +183,11 @@ class MockModelStore {
       effectiveDraftMode: computed,
       effectiveDraftCacheDefaults: computed,
       isDownloading: computed,
-      activeDownloads: computed,
+      activeDownloads: false,
     });
     this.refreshDownloadStatuses = jest.fn();
+    this.retryDownload = jest.fn();
+    this.clearDownloadError = jest.fn();
     this.addLocalModel = jest.fn();
     this.removeModelByFullPath = jest.fn();
     this.setNContext = jest.fn();
@@ -170,6 +200,7 @@ class MockModelStore {
     this.initContext = jest.fn().mockResolvedValue(Promise.resolve());
     this.selectModel = jest.fn().mockResolvedValue(Promise.resolve());
     this.setRemoteModel = jest.fn().mockResolvedValue(Promise.resolve());
+    this.reprobeRemoteCapsAfterCompletion = jest.fn();
     this.checkSpaceAndDownload = jest.fn().mockResolvedValue(undefined);
     this.getDownloadProgress = jest.fn();
     this.manualReleaseContext = jest.fn();
@@ -223,6 +254,18 @@ class MockModelStore {
     this.setSpecDraftCacheTypeK = jest.fn();
     this.setSpecDraftCacheTypeV = jest.fn();
     this.enterBenchmarkMode = jest.fn().mockResolvedValue(undefined);
+    this.acquireGeneration = jest.fn(() =>
+      this.generationSlot.acquire(
+        () => Promise.resolve(),
+        () => this.engine ?? null,
+      ),
+    );
+    this.tryAcquireGeneration = jest.fn(() =>
+      this.generationSlot.tryAcquire(() => this.engine ?? null),
+    );
+    this.abortActiveGeneration = jest.fn(() => {
+      this.generationSlot.abortActive();
+    });
     this.exitBenchmarkMode = jest.fn();
     this.recordReasoningObserved = jest.fn();
     // Mirror the real writer so tests exercise the live override → resolver →
@@ -250,9 +293,21 @@ class MockModelStore {
     this.isStreaming = value;
   };
 
-  // Safe context release methods
-  registerCompletionPromise = jest.fn();
-  clearCompletionPromise = jest.fn();
+  get isGenerationBusy(): boolean {
+    return this.generationSlot.isBusy;
+  }
+
+  /** A lease a test left held must not make a later test's send wait. */
+  resetGenerationSlot = () => {
+    this.generationSlot = new GenerationSlot();
+  };
+
+  get memoryEstimateSettings(): MemoryEstimateSettings {
+    return {
+      ...this.contextInitParams,
+      state_cache_budget_mb: stateCacheBudgetMb(this.deviceTier),
+    };
+  }
 
   get contextId(): string | undefined {
     if (this.context) {
@@ -296,6 +351,14 @@ class MockModelStore {
 
   get activeModelCaps(): ModelCapabilityView {
     return this.capsFor(this.activeModel);
+  }
+
+  get activeSamplerDefaults(): Samplers | undefined {
+    return samplerDefaultsFor(
+      this.activeModel,
+      mockServerStore.remoteCaps,
+      this.activeRemoteBinding,
+    );
   }
 
   get displayModels(): Model[] {

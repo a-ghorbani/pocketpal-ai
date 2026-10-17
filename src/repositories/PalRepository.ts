@@ -3,7 +3,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import {Q} from '@nozbe/watermelondb';
 import {database} from '../database';
 import LocalPal from '../database/models/LocalPal';
-import type {Pal} from '../types/pal';
+import type {Pal, PalUpdate} from '../types/pal';
 import {
   migrateLegacyPalToNew,
   type LegacyPalData,
@@ -126,6 +126,14 @@ class PalRepository {
     }
   }
 
+  async getPalByPalshubId(palshubId: string): Promise<Pal | null> {
+    const [localPal] = await database.collections
+      .get<LocalPal>('local_pals')
+      .query(Q.where('palshub_id', palshubId))
+      .fetch();
+    return localPal ? localPal.toPal() : null;
+  }
+
   async getPalById(id: string): Promise<Pal | null> {
     try {
       const localPal = await database.collections
@@ -195,7 +203,7 @@ class PalRepository {
     }
   }
 
-  async updatePal(id: string, updates: Partial<Pal>): Promise<Pal | null> {
+  async updatePal(id: string, updates: PalUpdate): Promise<Pal | null> {
     try {
       const updatedPal = await database.write(async () => {
         const localPal = await database.collections

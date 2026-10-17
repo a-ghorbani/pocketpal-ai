@@ -135,6 +135,7 @@ export const lightColors: TokenColors = {
   // Status bar
   bgStatusActive: '#22c55e',
   bgStatusIdle: '#d1d5db',
+  statusLoaded: '#1e9e4f',
 
   // Buttons
   btnPrimaryBg: '#eff6ff',
@@ -273,6 +274,7 @@ export const darkColors: TokenColors = {
   // Status bar
   bgStatusActive: '#22c55e',
   bgStatusIdle: '#4b5563',
+  statusLoaded: '#34c768',
 
   // Buttons
   btnPrimaryBg: '#0f1629',

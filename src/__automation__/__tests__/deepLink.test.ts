@@ -7,6 +7,10 @@ import {
   clearMemorySnapshots,
 } from '../../utils/memoryProfile';
 
+jest.mock('../fakeStore', () => ({
+  fakeStore: {run: jest.fn().mockResolvedValue('{}')},
+}));
+
 jest.mock('../../utils/memoryProfile', () => ({
   takeMemorySnapshot: jest.fn().mockResolvedValue(undefined),
   clearMemorySnapshots: jest.fn().mockResolvedValue(undefined),
@@ -25,6 +29,16 @@ const makeParams = (overrides: Partial<DeepLinkParams>): DeepLinkParams => ({
 describe('dispatchAutomationDeepLink', () => {
   beforeEach(() => {
     jest.clearAllMocks();
+  });
+
+  it('runs a FakeStore command for host=iap', async () => {
+    const {fakeStore} = require('../fakeStore');
+    const handled = await dispatchAutomationDeepLink(
+      makeParams({host: 'iap', queryParams: {cmd: 'next::pending'}}),
+    );
+
+    expect(handled).toBe(true);
+    expect(fakeStore.run).toHaveBeenCalledWith('next::pending');
   });
 
   it('takes a memory snapshot for host=memory + cmd=snap::<label>', async () => {

@@ -28,24 +28,23 @@ const mockAuthService = {
     user: mockProfile,
   }),
 
+  signInWithApple: jest.fn().mockResolvedValue(undefined),
+
   resetPassword: jest.fn().mockResolvedValue(true),
 
-  signOut: jest.fn().mockResolvedValue({
-    success: true,
-  }),
+  signOut: jest.fn().mockResolvedValue(true),
+
+  resetLocalSession: jest.fn(),
 
   refreshSession: jest.fn().mockResolvedValue({
     success: true,
   }),
 
-  updateProfile: jest.fn().mockResolvedValue({
-    success: true,
-    profile: mockProfile,
-  }),
+  hasAppleIdentity: jest.fn().mockReturnValue(false),
 
-  deleteAccount: jest.fn().mockResolvedValue({
-    success: true,
-  }),
+  appleSubject: jest.fn().mockReturnValue(null),
+
+  reauthorizeWithApple: jest.fn().mockResolvedValue({kind: 'unavailable'}),
 
   clearError: jest.fn(),
 

@@ -27,7 +27,8 @@ Two independent guardrails enforce the contract:
    job extracts `assets/index.android.bundle` from the prod APK and fails
    the build if any of the automation marker strings
    (`AUTOMATION_BRIDGE`, `memory-snapshot-label`, `memory-snapshot-result`,
-   `BENCH_RUN_MATRIX`, `bench-runner-screen-status`) appear. The ground
+   `BENCH_RUN_MATRIX`, `bench-runner-screen-status`, `IAP_FAKE_STORE`,
+   `IAP_API_BASE_OVERRIDE`) appear. The ground
    truth for DCE.
 
 > **Note on the static-import question.** Some readers worry that `App.tsx`
@@ -42,7 +43,8 @@ Two independent guardrails enforce the contract:
 > That step extracts `assets/index.android.bundle` from the prod APK and
 > fails the build if any of the registered marker strings
 > (`AUTOMATION_BRIDGE`, `memory-snapshot-label`, `memory-snapshot-result`,
-> `BENCH_RUN_MATRIX`, `bench-runner-screen-status`) appear. Hermes'
+> `BENCH_RUN_MATRIX`, `bench-runner-screen-status`, `IAP_FAKE_STORE`,
+> `IAP_API_BASE_OVERRIDE`) appear. Hermes'
 > constant-folding + tree-shaking on `__E2E__ === false` is what actually
 > removes the code; the grep is the empirical contract that proves it for
 > every prod build.
@@ -81,6 +83,7 @@ by deep link only. See `BenchmarkRunnerScreen.tsx` as reference.
 | Adapter | Purpose | Commands |
 |---------|---------|----------|
 | `MemoryAdapter` | Memory profile snapshots for the `memory-profile` spec | `snap::<label>`, `clear::snapshots`, `read::snapshots` |
+| `IapAdapter` | Scripts the in-app purchase `FakeStore` on Android for the `iap-*` specs | `api::<base>`, `products::<id>=<price>\|...`, `next::<outcome>`, `approve_pending`, `decline_pending`, `refund::<id>`, `entitle::<id>`, `unfinished::<id>`, `unavailable`, `reset`, `read` |
 
 ## Screens
 
@@ -95,6 +98,9 @@ used by `src/hooks/useDeepLinking.ts` inside a `__E2E__` gate. Today it
 handles two hosts:
 
 - `memory` — `pocketpal://memory?cmd=snap::<label>` etc. (memory-profile spec)
+- `iap` — `pocketpal://iap?cmd=<verb>::<arg>` scripts the `FakeStore` on iOS
+  (the Android specs use `IapAdapter`, since the Android Linking listener
+  only routes the benchmark URL).
 - `e2e/benchmark` — navigates to `BenchmarkRunnerScreen` (benchmark-matrix spec).
   On Android, the cold-launch path also lives in `useDeepLinking.ts`
   itself (a `__E2E__`-gated `Linking.getInitialURL()` effect) since RN's

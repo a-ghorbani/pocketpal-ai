@@ -17,7 +17,7 @@ export interface WebSearchResultItem {
  */
 export type TalentResult =
   | {type: 'html'; html: string; title?: string; summary: string}
-  | {type: 'text'; summary: string}
+  | {type: 'text'; summary: string; links?: string[]}
   | {
       type: 'search';
       query: string;
@@ -49,6 +49,11 @@ export interface SystemPromptContext {
   activeTalents: ReadonlySet<string>;
 }
 
+/** Aborts when the run is stopped. */
+export interface TalentExecuteContext {
+  signal: AbortSignal;
+}
+
 export interface TalentEngine {
   readonly name: string;
   /**
@@ -57,7 +62,10 @@ export interface TalentEngine {
    * banner trigger threshold.
    */
   readonly recommendedContextTokens?: number;
-  execute(args: Record<string, any>): Promise<TalentResult>;
+  execute(
+    args: Record<string, any>,
+    ctx?: TalentExecuteContext,
+  ): Promise<TalentResult>;
   toToolDefinition(): ToolDefinition;
   /**
    * Optional system-prompt fragment; folded into the single leading system

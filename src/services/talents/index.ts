@@ -20,7 +20,7 @@ export {ReadUrlEngine} from './ReadUrlEngine';
 export type {SearchAccess} from './searchAccess';
 // Deliberately narrow: the raw allowlist writers stay module-internal so all
 // writes happen inside services/talents (seed at run start, WebSearchEngine
-// per search).
+// per search, ReadUrlEngine per page read).
 export {seedReadUrlAllowlist, isReadUrlAllowed} from './readUrlAllowlist';
 export type {
   TalentEngine,

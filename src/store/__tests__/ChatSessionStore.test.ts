@@ -1,6 +1,10 @@
 jest.unmock('../ChatSessionStore'); // this is not really needed, as only importing from store is mocked.
 
-import {chatSessionStore, defaultCompletionSettings} from '../ChatSessionStore';
+import {
+  NEW_CHAT_DRAFT_KEY,
+  chatSessionStore,
+  defaultCompletionSettings,
+} from '../ChatSessionStore';
 import {chatSessionRepository} from '../../repositories/ChatSessionRepository';
 
 import {MessageType} from '../../utils/types';
@@ -224,6 +228,165 @@ describe('chatSessionStore', () => {
       );
       expect(chatSessionStore.sessions[0].messages.length).toBe(1);
       expect(chatSessionStore.sessions[0].messages[0]).toEqual(mockMessage);
+    });
+
+    it('titles an untitled session from its first message once a second arrives', async () => {
+      chatSessionStore.sessions = [
+        {
+          id: 'session1',
+          title: 'New Session',
+          date: new Date().toISOString(),
+          messages: [],
+          completionSettings: defaultCompletionSettings,
+          settingsSource: 'pal' as 'pal' | 'custom',
+        },
+      ];
+      chatSessionStore.activeSessionId = 'session1';
+      (
+        chatSessionRepository.addMessageToSession as jest.Mock
+      ).mockResolvedValue({id: 'row'});
+      (chatSessionRepository.updateSessionTitle as jest.Mock).mockResolvedValue(
+        undefined,
+      );
+
+      await chatSessionStore.addMessageToCurrentSession({
+        ...mockMessage,
+        text: 'first',
+      });
+      expect(chatSessionStore.sessions[0].title).toBe('New Session');
+
+      await chatSessionStore.addMessageToCurrentSession({
+        ...mockMessage,
+        text: 'second',
+      });
+      expect(chatSessionStore.sessions[0].title).toBe('first');
+    });
+
+    it('gives the first message of a new session the persisted row id', async () => {
+      const sent = {...mockMessage, id: ''};
+      (chatSessionRepository.createSession as jest.Mock).mockResolvedValue({
+        id: 'new-session',
+        title: 'New Session',
+        date: new Date().toISOString(),
+      });
+      (chatSessionRepository.getSessionById as jest.Mock).mockResolvedValue({
+        messages: [{toMessageObject: () => ({...sent, id: 'row-1'})}],
+        completionSettings: {getSettings: () => defaultCompletionSettings},
+      });
+
+      await chatSessionStore.addMessageToCurrentSession(sent);
+
+      expect(sent.id).toBe('row-1');
+    });
+
+    it('leaves the id empty when the new session cannot be created', async () => {
+      const sent = {...mockMessage, id: ''};
+      (chatSessionRepository.createSession as jest.Mock).mockRejectedValueOnce(
+        new Error('db down'),
+      );
+
+      await expect(
+        chatSessionStore.addMessageToCurrentSession(sent),
+      ).resolves.toBeUndefined();
+
+      expect(sent.id).toBe('');
+      expect(chatSessionStore.activeSessionId).toBeNull();
+    });
+  });
+
+  describe('addMessageToSession', () => {
+    const makeSession = (id: string) => ({
+      id,
+      title: id,
+      date: new Date().toISOString(),
+      messages: [] as MessageType.Any[],
+      completionSettings: defaultCompletionSettings,
+      settingsSource: 'pal' as 'pal' | 'custom',
+    });
+
+    it('adds to the named session and leaves the active one unchanged', async () => {
+      const active = makeSession('active');
+      const other = makeSession('other');
+      chatSessionStore.sessions = [active, other];
+      chatSessionStore.activeSessionId = 'active';
+      (
+        chatSessionRepository.addMessageToSession as jest.Mock
+      ).mockResolvedValueOnce({id: 'row-9'});
+      const message = {...mockMessage, id: ''};
+
+      await chatSessionStore.addMessageToSession('other', message);
+
+      expect(chatSessionRepository.addMessageToSession).toHaveBeenCalledWith(
+        'other',
+        message,
+      );
+      expect(message.id).toBe('row-9');
+      expect(chatSessionStore.sessions[1].messages).toEqual([message]);
+      expect(chatSessionStore.sessions[0].messages).toEqual([]);
+    });
+
+    it('shows nothing when the session was deleted during the write', async () => {
+      chatSessionStore.sessions = [makeSession('other')];
+      (
+        chatSessionRepository.addMessageToSession as jest.Mock
+      ).mockResolvedValueOnce(undefined);
+      const message = {...mockMessage, id: ''};
+
+      await chatSessionStore.addMessageToSession('other', message);
+
+      expect(message.id).toBe('');
+      expect(chatSessionStore.sessions[0].messages).toEqual([]);
+    });
+
+    it('writes nothing for a session that no longer exists', async () => {
+      chatSessionStore.sessions = [makeSession('active')];
+
+      await expect(
+        chatSessionStore.addMessageToSession('gone', {...mockMessage}),
+      ).resolves.toBeUndefined();
+
+      expect(chatSessionRepository.addMessageToSession).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('deleteMessageFromSession', () => {
+    const sessionWith = (...ids: string[]) => ({
+      id: 'S',
+      title: 'S',
+      date: new Date().toISOString(),
+      messages: ids.map(id => ({...mockMessage, id})) as MessageType.Any[],
+      completionSettings: defaultCompletionSettings,
+      settingsSource: 'pal' as 'pal' | 'custom',
+    });
+    const deleteMessage = jest.spyOn(chatSessionRepository, 'deleteMessage');
+
+    afterEach(() => deleteMessage.mockReset());
+
+    it('deletes the row and drops it from the session', async () => {
+      chatSessionStore.sessions = [sessionWith('a', 'b')];
+      deleteMessage.mockResolvedValueOnce(undefined);
+
+      await chatSessionStore.deleteMessageFromSession('S', 'a');
+
+      expect(deleteMessage).toHaveBeenCalledWith('a');
+      expect(chatSessionStore.sessions[0].messages.map(m => m.id)).toEqual([
+        'b',
+      ]);
+    });
+
+    it('resolves and keeps the row shown when the delete fails', async () => {
+      const logged = jest.spyOn(console, 'error').mockImplementation(() => {});
+      chatSessionStore.sessions = [sessionWith('a')];
+      deleteMessage.mockRejectedValueOnce(new Error('db locked'));
+
+      await expect(
+        chatSessionStore.deleteMessageFromSession('S', 'a'),
+      ).resolves.toBeUndefined();
+
+      expect(chatSessionStore.sessions[0].messages.map(m => m.id)).toEqual([
+        'a',
+      ]);
+      logged.mockRestore();
     });
   });
 
@@ -791,6 +954,18 @@ describe('chatSessionStore', () => {
         'New Title',
       );
       expect(chatSessionStore.sessions[0].title).toBe('Original Title');
+    });
+
+    it('resolves when the title write fails', async () => {
+      const logged = jest.spyOn(console, 'error').mockImplementation(() => {});
+      (
+        chatSessionRepository.updateSessionTitle as jest.Mock
+      ).mockRejectedValueOnce(new Error('db locked'));
+
+      await expect(
+        chatSessionStore.updateSessionTitleBySessionId('S', 'New Session'),
+      ).resolves.toBeUndefined();
+      logged.mockRestore();
     });
   });
 
@@ -2224,6 +2399,42 @@ describe('chatSessionStore', () => {
       chatSessionStore.clearDraft('session1');
       expect(chatSessionStore.getDraft('session1')).toBe('');
       expect(chatSessionStore.getDraft('session2')).toBe('draft B');
+    });
+
+    describe('restoreUnsentText', () => {
+      beforeEach(() => {
+        chatSessionStore.sessionDrafts.clear();
+        chatSessionStore.sessions = [
+          {id: 'session-a', title: 'A', date: '', messages: []} as any,
+        ];
+      });
+
+      it('puts the text into the session draft when there is none', () => {
+        chatSessionStore.restoreUnsentText('session-a', 'hi');
+        expect(chatSessionStore.getDraft('session-a')).toBe('hi');
+      });
+
+      it('joins with an existing draft, restored text first', () => {
+        chatSessionStore.saveDraft('session-a', 'bar');
+        chatSessionStore.restoreUnsentText('session-a', 'hi');
+        expect(chatSessionStore.getDraft('session-a')).toBe('hi\nbar');
+      });
+
+      it('keeps the existing draft when the text is empty', () => {
+        chatSessionStore.saveDraft('session-a', 'bar');
+        chatSessionStore.restoreUnsentText('session-a', '');
+        expect(chatSessionStore.getDraft('session-a')).toBe('bar');
+      });
+
+      it('writes nothing for a session that no longer exists', () => {
+        chatSessionStore.restoreUnsentText('deleted-session', 'hi');
+        expect(chatSessionStore.sessionDrafts.size).toBe(0);
+      });
+
+      it('uses the new-chat key when the send came from the new-chat screen', () => {
+        chatSessionStore.restoreUnsentText(null, 'hi');
+        expect(chatSessionStore.getDraft(NEW_CHAT_DRAFT_KEY)).toBe('hi');
+      });
     });
   });
 

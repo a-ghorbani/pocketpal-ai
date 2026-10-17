@@ -1,3 +1,5 @@
+import {abortableFetch} from '../../../../../jest/abortableFetch';
+
 import {fetchText, fetchJson, requireKey} from '../http';
 
 const headers = (entries: Record<string, string>) => ({
@@ -93,5 +95,112 @@ describe('response body cap', () => {
         method: 'GET',
       }),
     ).toEqual({a: 1});
+  });
+});
+
+describe('caller signal', () => {
+  beforeEach(() => {
+    jest.useFakeTimers();
+  });
+
+  afterEach(() => {
+    jest.useRealTimers();
+  });
+
+  it('rejects "cancelled" without fetching when the caller signal is already aborted', async () => {
+    global.fetch = abortableFetch();
+    const caller = new AbortController();
+    caller.abort();
+
+    await expect(
+      fetchText('https://r.jina.ai/x', {method: 'GET', signal: caller.signal}),
+    ).rejects.toThrow('cancelled');
+    expect(global.fetch).not.toHaveBeenCalled();
+  });
+
+  it('rejects "cancelled" once when the caller aborts mid-request, and clears the timer', async () => {
+    const caller = new AbortController();
+    global.fetch = abortableFetch({onCall: () => caller.abort()});
+
+    const settled = jest.fn();
+    const call = fetchJson('https://api.example.com/s', {
+      method: 'POST',
+      signal: caller.signal,
+    });
+    call.catch(settled);
+    await expect(call).rejects.toThrow('cancelled');
+
+    jest.advanceTimersByTime(13000);
+    await Promise.resolve();
+    expect(settled).toHaveBeenCalledTimes(1);
+    expect(jest.getTimerCount()).toBe(0);
+  });
+
+  it('rejects "timed out" when the timer fires first, and a later abort changes nothing', async () => {
+    global.fetch = abortableFetch();
+    const caller = new AbortController();
+
+    const settled = jest.fn();
+    const call = fetchText('https://r.jina.ai/x', {
+      method: 'GET',
+      signal: caller.signal,
+    });
+    call.catch(settled);
+    jest.advanceTimersByTime(12000);
+    await expect(call).rejects.toThrow('timed out');
+
+    caller.abort();
+    await Promise.resolve();
+    expect(settled).toHaveBeenCalledTimes(1);
+    expect(settled.mock.calls[0][0].message).toBe('timed out');
+  });
+
+  it('keeps the first source when the timer and an abort land in the same tick', async () => {
+    global.fetch = abortableFetch();
+    const caller = new AbortController();
+
+    const call = fetchText('https://r.jina.ai/x', {
+      method: 'GET',
+      signal: caller.signal,
+    });
+    jest.advanceTimersByTime(12000);
+    caller.abort();
+
+    await expect(call).rejects.toThrow('timed out');
+  });
+
+  it('leaves no listener on the caller signal and no timer after successful calls', async () => {
+    global.fetch = abortableFetch({body: '{"a":1}'});
+    const caller = new AbortController();
+    const add = jest.spyOn(caller.signal, 'addEventListener');
+    const remove = jest.spyOn(caller.signal, 'removeEventListener');
+
+    for (let i = 0; i < 3; i++) {
+      await fetchJson('https://api.example.com/s', {
+        method: 'GET',
+        signal: caller.signal,
+      });
+    }
+
+    expect(add).toHaveBeenCalledTimes(3);
+    expect(remove).toHaveBeenCalledTimes(3);
+    add.mock.calls.forEach(([type, handler], i) => {
+      expect(remove.mock.calls[i]).toEqual([type, handler]);
+    });
+    expect(jest.getTimerCount()).toBe(0);
+  });
+
+  it('hands fetch its own signal and never aborts the caller signal', async () => {
+    global.fetch = abortableFetch({body: 'ok'});
+    const caller = new AbortController();
+
+    await fetchText('https://r.jina.ai/x', {
+      method: 'GET',
+      signal: caller.signal,
+    });
+
+    const passed = (global.fetch as jest.Mock).mock.calls[0][1].signal;
+    expect(passed).not.toBe(caller.signal);
+    expect(caller.signal.aborted).toBe(false);
   });
 });

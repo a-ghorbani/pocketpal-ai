@@ -83,6 +83,37 @@ export const byAccessibilityLabelContains = (label: string): string => {
 };
 
 /**
+ * Create selector for an element whose testID starts with `prefix` and that
+ * shows `text` itself or in a descendant
+ */
+export const withinTestIdPrefix = (prefix: string, text: string): string => {
+  if (isAndroid()) {
+    return `//*[starts-with(@resource-id, "${prefix}")][descendant-or-self::*[@text="${text}" or @content-desc="${text}"]]`;
+  }
+  return `-ios class chain:**/*[\`name BEGINSWITH "${prefix}"\`]/**/*[\`label == "${text}"\`]`;
+};
+
+/**
+ * Exact testID match; byTestId matches any id that contains the given one.
+ */
+export const byExactTestId = (testId: string): string => {
+  if (isAndroid()) {
+    return `//*[@resource-id="${testId}"]`;
+  }
+  return `~${testId}`;
+};
+
+/**
+ * An element by exact testID inside any element whose testID starts with prefix.
+ */
+export const testIdWithinPrefix = (prefix: string, testId: string): string => {
+  if (isAndroid()) {
+    return `//*[starts-with(@resource-id, "${prefix}")]//*[@resource-id="${testId}"]`;
+  }
+  return `-ios class chain:**/*[\`name BEGINSWITH "${prefix}"\`]/**/*[\`name == "${testId}"\`]`;
+};
+
+/**
  * Create selector for native text elements (TextView on Android, StaticText on iOS)
  * Useful for extracting rendered text from React Native components
  */
@@ -104,19 +135,25 @@ export const nativeTextInput = (): string => {
   return '-ios class chain:**/XCUIElementTypeTextField';
 };
 
+const drawerItem = (id: string, label: string): string =>
+  isAndroid() ? byTestId(`drawer-item-${id}`) : byText(label);
+
 /**
  * Predefined selectors organized by screen/feature
  * All use getters for lazy evaluation at runtime
  */
 export const Selectors = {
-  // Navigation drawer - use text labels for reliable tapping
-  // react-native-paper Drawer.Item doesn't always respond to testID taps
+  // Navigation drawer. iOS taps the text label: a react-native-paper
+  // Drawer.Item doesn't always respond to a testID tap there. Android uses the
+  // item's testID, because a bare label also matches controls on the screen
+  // behind the drawer (a model card's "Settings" gear), whose tap lands on
+  // whichever drawer row covers it.
   drawer: {
     get chatTab(): string {
-      return byText('Chat');
+      return drawerItem('chat', 'Chat');
     },
     get modelsTab(): string {
-      return byText('Models');
+      return drawerItem('models', 'Models');
     },
     // Pals tab doubles as the drawer-open indicator (DrawerPage.isOpen /
     // waitForOpen / waitForClose), so it must survive a language switch.
@@ -126,10 +163,10 @@ export const Selectors = {
       return byTestId('drawer-item-pals');
     },
     get benchmarkTab(): string {
-      return byText('Benchmark');
+      return drawerItem('benchmark', 'Benchmark');
     },
     get settingsTab(): string {
-      return byText('Settings');
+      return drawerItem('settings', 'Settings');
     },
   },
 
@@ -145,7 +182,7 @@ export const Selectors = {
       return byTestId('menu-button');
     },
     get stopButton(): string {
-      return byTestId('stop-button');
+      return byExactTestId('stop-button');
     },
     get attachmentButton(): string {
       return byTestId('attachment-button');

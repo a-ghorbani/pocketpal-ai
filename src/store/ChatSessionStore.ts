@@ -30,7 +30,7 @@ type MessageUpdate =
   | Partial<MessageType.Text>
   | Partial<Omit<MessageType.AssistantTurn, 'type' | 'id' | 'author'>>;
 
-const NEW_SESSION_TITLE = 'New Session';
+export const NEW_SESSION_TITLE = 'New Session';
 const TITLE_LIMIT = 40;
 
 // Coalesce per-token writes into batched UI flushes (~33 Hz).
@@ -66,6 +66,8 @@ const DEFAULT_GROUP_NAMES = {
   older: 'Older',
 };
 
+export const NEW_CHAT_DRAFT_KEY = '__new_chat__';
+
 export const defaultCompletionSettings = {...defaultCompletionParams};
 delete defaultCompletionSettings.prompt;
 delete defaultCompletionSettings.stop;
@@ -76,19 +78,7 @@ class ChatSessionStore {
   isEditMode: boolean = false;
   editingMessageId: string | null = null;
   isGenerating: boolean = false;
-  /**
-   * True between the moment the user taps Stop and the moment the
-   * runner's loop has actually finished (i.e. native llama.rn has
-   * returned from its in-flight `llama_decode` chunk and the for-await
-   * loop in `useChatSession` exits). During this window the JS layer
-   * cannot start a new completion (the native context is still busy)
-   * — the send button must be disabled and the user needs visible
-   * "Stopping…" feedback so they don't mistake the silent gap for the
-   * stop having succeeded already.
-   *
-   * Cleared in the same place that clears `isGenerating` (after the
-   * for-await loop ends, success or failure).
-   */
+  /** A send is waiting for a stopped run to drain. */
   isStopping: boolean = false;
   newChatCompletionSettings: CompletionParams = defaultCompletionSettings;
   newChatPalId: string | undefined = undefined;
@@ -491,18 +481,8 @@ class ChatSessionStore {
     if (this.activeSessionId) {
       const session = this.sessions.find(s => s.id === this.activeSessionId);
       if (session) {
-        // Add to database
-        const newMessage = await chatSessionRepository.addMessageToSession(
-          this.activeSessionId,
-          message,
-        );
-        message.id = newMessage.id;
-
-        // Update local state
         await this.updateSessionTitle(session);
-        runInAction(() => {
-          session.messages.unshift(message);
-        });
+        await this.addMessageToSession(session.id, message);
       }
     } else {
       // Resolve settings using the selected settings source so the
@@ -514,6 +494,50 @@ class ChatSessionStore {
         palIdForSettings,
       );
       await this.createNewSession(NEW_SESSION_TITLE, [message], settings);
+      const created = this.sessions.find(s => s.id === this.activeSessionId);
+      if (created?.messages[0]) {
+        message.id = created.messages[0].id;
+      }
+    }
+  }
+
+  async addMessageToSession(
+    sessionId: string,
+    message: MessageType.Any,
+  ): Promise<void> {
+    const session = this.sessions.find(s => s.id === sessionId);
+    if (!session) {
+      return;
+    }
+    const newMessage = await chatSessionRepository.addMessageToSession(
+      sessionId,
+      message,
+    );
+    if (!newMessage) {
+      return;
+    }
+    message.id = newMessage.id;
+    runInAction(() => {
+      session.messages.unshift(message);
+    });
+  }
+
+  async deleteMessageFromSession(
+    sessionId: string,
+    messageId: string,
+  ): Promise<void> {
+    try {
+      await chatSessionRepository.deleteMessage(messageId);
+      const session = this.sessions.find(s => s.id === sessionId);
+      if (session) {
+        runInAction(() => {
+          session.messages = session.messages.filter(
+            msg => msg.id !== messageId,
+          );
+        });
+      }
+    } catch (error) {
+      console.error('Failed to delete message:', error);
     }
   }
 
@@ -1430,6 +1454,14 @@ class ChatSessionStore {
 
   clearDraft(sessionId: string) {
     this.sessionDrafts.delete(sessionId);
+  }
+
+  restoreUnsentText(sessionId: string | null, text: string) {
+    if (sessionId !== null && !this.sessions.some(s => s.id === sessionId)) {
+      return;
+    }
+    const key = sessionId ?? NEW_CHAT_DRAFT_KEY;
+    this.saveDraft(key, [text, this.getDraft(key)].filter(Boolean).join('\n'));
   }
 
   async setActivePal(palId: string | undefined): Promise<void> {

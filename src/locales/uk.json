@@ -205,7 +205,47 @@
     "speculativeDraftValueCacheType": "Тип кешу значень чернетки",
     "speculativeDraftNGpuLayers": "Шари GPU для чернетки",
     "speculativeDraftNGpuLayersDescription": "Кількість шарів моделі-чернетки, які буде вивантажено на GPU.",
-    "speculativeDraftCacheTypeInactiveDescription": "Застосовується, щойно запрацює спекулятивне декодування."
+    "speculativeDraftCacheTypeInactiveDescription": "Застосовується, щойно запрацює спекулятивне декодування.",
+    "purchases": {
+      "title": "Покупки",
+      "statusOwned": "Придбано",
+      "statusUnlocking": "Розблокування",
+      "link": "Увійдіть, щоб користуватися на інших пристроях"
+    },
+    "scanServerQr": "Сканувати QR-код сервера",
+    "scanQrPermissionMessage": "Дозвольте доступ до камери, щоб сканувати QR-код сервера. Адресу також можна ввести вручну.",
+    "scanQrNotServer": "Це не адреса сервера",
+    "scanQrUnavailable": "Тут сканувати не вийде. Введіть адресу сервера вручну.",
+    "scanQrNotReady": "Сканер готується. Адресу також можна ввести вручну.",
+    "routerModels": {
+      "cancel": "Скасувати",
+      "unloading": "Вивантаження…",
+      "stateLoading": "Завантаження",
+      "stateLoaded": "Завантажено",
+      "loadingPercent": "Завантаження, {{percent}} відсотків",
+      "unloadModel": "Вивантажити {{model}}",
+      "cancelLoadingModel": "Скасувати завантаження {{model}}",
+      "loadFailed": "Ця модель не завантажилася.",
+      "unloadNotReleased": "Сервер не звільнив цю модель.",
+      "serverUnreachable": "Не вдалося зв'язатися з цим сервером.",
+      "waitStopped": "Очікування цієї моделі припинено.",
+      "failureWithServerWords": "{{label}}\n\n“{{message}}”",
+      "dismiss": "Відхилити",
+      "unloadBoundTitle": "Вивантажити цю модель?",
+      "unloadBoundBody": "Цей чат її використовує. Вона завантажиться знову, коли ви надішлете наступне повідомлення.",
+      "unloadBoundConfirm": "Вивантажити"
+    },
+    "account": {
+      "title": "Обліковий запис",
+      "deleteAccount": "Видалити обліковий запис",
+      "confirmTitle": "Видалити обліковий запис?",
+      "confirmMessage": "Ваш обліковий запис PalsHub і його бібліотеку буде видалено назавжди. Pals, придбані через App Store або Google Play, можна буде відновити на цьому пристрої за допомогою вашого облікового запису в магазині. Записи про покупки зберігаються в анонімізованому вигляді з юридичних причин.",
+      "confirmWithoutApple": "Не вдалося отримати підтвердження від Apple. Все одно видалити обліковий запис?",
+      "deleted": "Ваш обліковий запис видалено.",
+      "signInAgain": "Будь ласка, увійдіть знову",
+      "creatorSupport": "Облікові записи авторів видаляє наша команда підтримки: {{contact}}",
+      "failed": "Не вдалося видалити, спробуйте ще раз"
+    }
   },
   "memory": {
     "shortWarning": "Попередження про пам'ять",
@@ -564,7 +604,9 @@
       "ttft": "{{value}} мс TTFT",
       "interrupted": "Перервано",
       "truncated": "Перервано — ймовірно, контекст вичерпано",
-      "draftAccepted": "чернетка: {{accepted}}/{{total}} ({{pct}}%)"
+      "draftAccepted": "чернетка: {{accepted}}/{{total}} ({{pct}}%)",
+      "promptTokensPerSec": "{{value}} токенів запиту/сек",
+      "cachedTokens": "{{value}} з кешу"
     },
     "exportUtils": {
       "fileSaved": "Файл збережено",
@@ -955,7 +997,8 @@
       },
       "warnings": {
         "promptChanged": "Системний запит було змінено вручну"
-      }
+      },
+      "generationBusy": "Відповідь ще генерується. Спробуйте ще раз, коли вона завершиться."
     },
     "sidebarContent": {
       "menuItems": {
@@ -1034,6 +1077,13 @@
     "toolMetrics": {
       "tokens": "{{count}} токен",
       "elapsed": "{{seconds}} сек"
+    },
+    "completionSettings": {
+      "serverDefault": "значення сервера за замовчуванням",
+      "usingServerDefault": "Використовується значення сервера за замовчуванням: {{value}}",
+      "usingServerDefaultUnreported": "Використовується значення сервера за замовчуванням (не вказано)",
+      "resetToServerDefault": "Значення сервера за замовчуванням: {{value}} · Скинути",
+      "resetToServerDefaultAccessibilityLabel": "Скинути {{name}} до значення сервера за замовчуванням, {{value}}"
     }
   },
   "palsScreen": {
@@ -1087,8 +1137,6 @@
       "download": "Завантажити",
       "getFree": "Отримати Безкоштовно"
     },
-    "premiumPalDescription": "Преміум-користувач із спільноти palshub.ai",
-    "premiumInfoText": "Завітайте на сайт palshub.ai, щоб знайти нових друзів",
     "sortOptions": {
       "newest": "Новійша",
       "oldest": "Старіша",
@@ -1112,15 +1160,48 @@
       "error": "Помилка",
       "failedToLoadDetails": "Не вдалося завантажити інформацію про Pal",
       "failedToDownload": "Не вдалося завантажити pal",
-      "premiumPalMessage": "Це Преміум-Pal.\n• Якщо ви вже розблокували його за допомогою свого облікового запису Palshub, просто увійдіть, щоб переглянути повну інформацію.\n• Ще не розблокували? Зайдіть у додаток palshub.ai, щоб дізнатися більше.",
-      "notAvailable": "Н/Д",
-      "buyOnPalshub": "Купити на Palshub",
-      "finalizingPurchase": "Завершується оформлення вашої покупки…",
-      "processingPurchase": "Обробка — доступ буде відкрито незабаром.",
-      "checkoutSessionExpired": "Термін дії вашої сесії закінчився. Увійдіть знову, щоб продовжити.",
-      "signInAgain": "Увійти знову",
-      "palNotAvailable": "Цей pal наразі недоступний для покупки.",
-      "checkoutFailed": "Щось пішло не так. Спробуйте ще раз."
+      "notAvailable": "Н/Д"
+    },
+    "purchase": {
+      "buy": "{{price}}",
+      "open": "Відкрити",
+      "install": "Встановити",
+      "pending": "В очікуванні",
+      "unlocking": "Розблокування",
+      "retry": "Повторити",
+      "supportCode": "Код підтримки: {{code}}",
+      "noLongerAvailable": "Цей Pal більше недоступний. Ви можете {{refundLink}}.",
+      "refundLink": "попросити в Apple повернення коштів",
+      "notCompleted": "Не вдалося завершити цю покупку. Google поверне вам кошти.",
+      "withdrawnRefunding": "Цей Pal знято з продажу. Зверніться до підтримки щодо повернення коштів.",
+      "invalid": "Не вдалося підтвердити цю покупку.",
+      "heldInvalid": "Не вдалося розблокувати цю покупку. Зверніться до підтримки й назвіть цей код.",
+      "recommendedModel": "Рекомендована модель",
+      "sampleExchange": "Приклад розмови",
+      "signInLine": "Вже придбали? Увійдіть",
+      "licenseNotice": "Ви купуєте ліцензію на використання цього Pal.",
+      "termsOfSale": "Умови продажу",
+      "appleMediaTerms": "Умови медійних сервісів Apple",
+      "linkPrompt": "Увійдіть, щоб користуватися ним і на інших своїх пристроях",
+      "linkSignIn": "Увійти",
+      "dismiss": "Не зараз",
+      "linkConflict": "Ці покупки прив'язані до іншого облікового запису.",
+      "restorePurchases": "Відновити покупки",
+      "badgePending": "В очікуванні",
+      "badgeUnlocking": "Розблокування",
+      "badgeUpdate": "Доступне оновлення",
+      "updatePrompt": "Доступна нова версія від автора.",
+      "updatePromptWithNote": "Доступна нова версія від автора: {{note}}.",
+      "updateButton": "Оновити",
+      "updateConfirmText": "Ваші зміни в частинах, які змінив автор, буде замінено.",
+      "updateConfirm": "Оновити",
+      "updateCancel": "Скасувати",
+      "modelStep": {
+        "download": "Завантажити · {{size}}",
+        "startChat": "Почати чат",
+        "needsMemory": "Для найменшої моделі цього Pal потрібен пристрій з обсягом пам'яті не менше {{size}}.",
+        "noModelFits": "Цьому пристрою не вистачає пам'яті для цього Pal."
+      }
     }
   },
   "validation": {
@@ -1246,7 +1327,9 @@
       "openLinkError": "Не вдалося відкрити це посилання."
     },
     "contextFullRemote": "У розмові закінчилося місце. Почніть новий чат.",
-    "speculativeInitFailed": "Цьому пристрою не вдалося запустити спекулятивне декодування для цієї моделі — найімовірніше, бракує пам'яті для контексту чернетки. Вимкніть спекулятивне декодування в розділі «Налаштування» → «Розширені налаштування» та спробуйте ще раз."
+    "speculativeInitFailed": "Цьому пристрою не вдалося запустити спекулятивне декодування для цієї моделі — найімовірніше, бракує пам'яті для контексту чернетки. Вимкніть спекулятивне декодування в розділі «Налаштування» → «Розширені налаштування» та спробуйте ще раз.",
+    "routerLoading": "Завантаження моделі…",
+    "routerLoadingPercent": "Завантаження моделі · {{percent}}%"
   },
   "benchmark": {
     "title": "Бенчмарк",
@@ -1272,7 +1355,8 @@
       "testWarning": "Примітка: Тест для більших моделей може тривати до 2–5 хвилин, і його неможливо перервати після запуску.",
       "keepScreenOpen": "Будь ласка, не закривайте це вікно.",
       "initializingModel": "Ініціалізація моделі...",
-      "modelMaxValue": "(макс: {{maxValue}})"
+      "modelMaxValue": "(макс: {{maxValue}})",
+      "testFailed": "Не вдалося запустити тест. Дочекайтеся завершення відповіді та спробуйте ще раз."
     },
     "dialogs": {
       "advancedSettings": {
@@ -1584,6 +1668,8 @@
   "downloadBanner": {
     "titleByPal": "{{name}} завантажується",
     "titleByModel": "{{name}} завантажується",
-    "extraInProgress": "+{{count}} ще триває"
+    "extraInProgress": "+{{count}} ще триває",
+    "failedTitle": "Завантаження не завершилося",
+    "retry": "Повторити"
   }
 }

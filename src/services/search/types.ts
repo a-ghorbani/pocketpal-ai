@@ -1,6 +1,11 @@
 /** Provider-agnostic search types — no provider-specific field crosses this boundary. */
 
-export type SearchProviderId = 'tavily' | 'brave' | 'exa' | 'parallel';
+export type SearchProviderId =
+  | 'tavily'
+  | 'brave'
+  | 'exa'
+  | 'firecrawl'
+  | 'parallel';
 
 export interface SearchHit {
   title: string;
@@ -29,9 +34,13 @@ export interface SearchOptions {
  */
 export interface SearchProvider {
   readonly id: SearchProviderId;
-  search(query: string, opts: SearchOptions): Promise<SearchHit[]>;
+  search(
+    query: string,
+    opts: SearchOptions,
+    signal?: AbortSignal,
+  ): Promise<SearchHit[]>;
   /** Optional native deep-read; absent → read_url uses the default reader. */
-  read?(url: string): Promise<PageContent>;
+  read?(url: string, signal?: AbortSignal): Promise<PageContent>;
 }
 
 export interface SearchBudget {

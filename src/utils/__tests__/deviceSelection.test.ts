@@ -69,14 +69,24 @@ describe('Hexagon device selection', () => {
     warning.mockRestore();
   });
 
-  it.each([undefined, [], ['CPU'], ['Adreno (TM) 840']])(
-    'preserves non-HTP selection %j without discovery',
-    async devices => {
-      const selection = {devices, n_gpu_layers: 23};
-      expect(await resolveDeviceSelection(selection)).toEqual(selection);
+  it.each([{devices: undefined}, {devices: []}, {devices: ['CPU']}])(
+    'resolves Android CPU selection $devices without inherited GPU offloading',
+    async ({devices}) => {
+      const selection = {devices, n_gpu_layers: 99};
+      expect(await resolveDeviceSelection(selection)).toEqual({
+        devices: ['CPU'],
+        n_gpu_layers: 0,
+      });
+      expect(selection).toEqual({devices, n_gpu_layers: 99});
       expect(discover).not.toHaveBeenCalled();
     },
   );
+
+  it('preserves an OpenCL selection without discovery', async () => {
+    const selection = {devices: ['Adreno (TM) 840'], n_gpu_layers: 23};
+    expect(await resolveDeviceSelection(selection)).toEqual(selection);
+    expect(discover).not.toHaveBeenCalled();
+  });
 
   it('preserves iOS options and skips HTP resolution', async () => {
     Platform.OS = 'ios';
@@ -89,6 +99,16 @@ describe('Hexagon device selection', () => {
     ]);
     expect(discover).not.toHaveBeenCalled();
   });
+
+  it.each([{devices: undefined}, {devices: []}, {devices: ['CPU']}])(
+    'preserves iOS selection $devices',
+    async ({devices}) => {
+      Platform.OS = 'ios';
+      const selection = {devices, n_gpu_layers: 99};
+      expect(await resolveDeviceSelection(selection)).toEqual(selection);
+      expect(discover).not.toHaveBeenCalled();
+    },
+  );
 
   it('preserves the discovered OpenCL option', async () => {
     discover.mockResolvedValue([

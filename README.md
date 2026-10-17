@@ -57,7 +57,7 @@ Most AI apps are a thin window onto someone else's server — every message you 
 - **🧠 On-device chat** — run GGUF language models (Gemma, Qwen, Phi, Llama, and more) fully offline.
 - **🗣️ Text-to-speech** — give your assistant a voice with on-device neural TTS (Kokoro and other engines), no cloud calls.
 - **🎭 Pals** — create personalized assistants with their own model, system prompt, and personality (Assistant and Roleplay types).
-- **🛍️ [PalsHub](https://palshub.ai/)** — discover and install community Pals, including premium ones via in-app checkout.
+- **🛍️ [PalsHub](https://palshub.ai/)** — discover and install community Pals, including premium ones via in-app purchase.
 - **🛠️ Talents & tools** — let capable Pals call built-in tools (calculator, date/time, rich HTML rendering) inside a tool-use loop.
 - **📥 Hugging Face integration** — search and download GGUF models, including gated ones, directly from the HF Hub with your access token.
 - **📊 Benchmarking** — measure tokens/sec and memory, and optionally compare on the [AI Phone Leaderboard](https://pocketpal.dev/leaderboard).
@@ -132,7 +132,7 @@ Create personalized assistants:
 - **Assistant Pal** — pick a default model, set a system prompt (write it yourself or have the app generate one), and customize the chat input color.
 - **Roleplay Pal** — everything above, plus location, the AI's role, and other contextual parameters.
 
-Switch personas with the Pal picker on the chat page. Browse **[PalsHub](https://palshub.ai/)** in-app to discover community Pals, including premium ones via in-app checkout (US iOS & Android).
+Switch personas with the Pal picker on the chat page. Browse **[PalsHub](https://palshub.ai/)** in-app to discover community Pals, including premium ones via in-app purchase.
 
 <img src="assets/images and logos/Pals.png" alt="Assistant Pal" width="100%">
 <p><em>Creating a cocktail-recipe assistant</em></p>
@@ -252,7 +252,7 @@ Versions are pinned in [`package.json`](package.json); the highlights:
 | UI | React Native Paper `5.14.5`, React Navigation |
 | State | MobX `6` (`mobx`, `mobx-react`, `mobx-persist-store`) |
 | Persistence | WatermelonDB (chat history), AsyncStorage (settings), Keychain (secrets) |
-| LLM | `llama.rn` `0.13.0-rc.5` → llama.cpp b11118 · GGUF |
+| LLM | `llama.rn` `0.13.0-rc.7` → llama.cpp b11385 · GGUF |
 | TTS | `react-native-speech` `2.3.1` + `onnxruntime-react-native` `1.23.2` · ONNX |
 | Tooling | Yarn 1 (Classic), ESLint, Prettier, Jest, Husky + Commitlint |
 

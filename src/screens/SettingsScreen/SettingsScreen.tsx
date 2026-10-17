@@ -45,6 +45,9 @@ import {
   SearchProviderKeySheet,
   InputSlider,
 } from '../../components';
+import {AuthSheet} from '../../components/PalsHub';
+import {AccountCard} from './AccountCard';
+import {PurchasesCard} from './PurchasesCard';
 
 import {useTheme} from '../../hooks';
 
@@ -58,7 +61,9 @@ import {
   ttsStore,
   asrStore,
   searchProviderStore,
+  purchaseStore,
 } from '../../store';
+import {authService} from '../../services';
 import type {SearchProviderId} from '../../services/search/types';
 import {
   ASR_DISK_HEADROOM_FACTOR,
@@ -106,6 +111,7 @@ export const SettingsScreen: React.FC = observer(() => {
   const draftValueCacheMenu = useMenuAnchor();
   const [showDraftModelMenu, setShowDraftModelMenu] = useState(false);
   const [showHfTokenDialog, setShowHfTokenDialog] = useState(false);
+  const [showAuthSheet, setShowAuthSheet] = useState(false);
   const [showSearchProviderMenu, setShowSearchProviderMenu] = useState(false);
   const [searchProviderAnchor, setSearchProviderAnchor] = useState<{
     x: number;
@@ -1594,6 +1600,10 @@ export const SettingsScreen: React.FC = observer(() => {
             </Card>
           )}
 
+          <PurchasesCard onSignInPress={() => setShowAuthSheet(true)} />
+
+          <AccountCard />
+
           {/* Export Options */}
           <Card elevation={0} style={styles.card}>
             <Card.Title title={l10n.settings.exportOptions} />
@@ -1649,6 +1659,17 @@ export const SettingsScreen: React.FC = observer(() => {
         providerLabel={activeSearchProvider?.label ?? activeSearchProviderId}
         onDismiss={() => setShowSearchKeySheet(false)}
       />
+      {showAuthSheet && (
+        <AuthSheet
+          isVisible={showAuthSheet}
+          onClose={() => {
+            setShowAuthSheet(false);
+            if (!authService.isAuthenticated) {
+              purchaseStore.cancelLinkRequest();
+            }
+          }}
+        />
+      )}
     </SafeAreaView>
   );
 });

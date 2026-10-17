@@ -2,9 +2,12 @@ import React, {useEffect, useState} from 'react';
 import DeviceInfo from 'react-native-device-info';
 import {L10nContext, formatBytes} from '../utils';
 import {t} from '../locales';
-import {Model, ContextInitParams} from '../utils/types';
+import {Model} from '../utils/types';
 import {isHighEndDevice} from '../utils/deviceCapabilities';
-import {getModelMemoryRequirement} from '../utils/memoryEstimator';
+import {
+  getModelMemoryRequirement,
+  MemoryEstimateSettings,
+} from '../utils/memoryEstimator';
 // Note: This creates a circular dependency with ModelStore (which imports hasEnoughMemory).
 // This is intentional and runtime-safe because:
 // 1. modelStore is instantiated after class definition
@@ -67,7 +70,7 @@ export const hasEnoughMemory = async (
   const memoryRequirement = getModelMemoryRequirement(
     modelForCalc,
     projectionModel,
-    modelStore.contextInitParams,
+    modelStore.memoryEstimateSettings,
     draftModel,
   );
 
@@ -80,7 +83,7 @@ export const hasEnoughMemory = async (
 async function getMemoryFitDetails(
   model: Model,
   projectionModel: Model | undefined,
-  contextInitParams: ContextInitParams,
+  memoryEstimateSettings: MemoryEstimateSettings,
   draftModel?: Model,
 ): Promise<{
   status: MemoryFitStatus;
@@ -91,7 +94,7 @@ async function getMemoryFitDetails(
   const requiredBytes = getModelMemoryRequirement(
     model,
     projectionModel,
-    contextInitParams,
+    memoryEstimateSettings,
     draftModel,
   );
 
@@ -145,6 +148,7 @@ export const useMemoryCheck = (
   // Read context settings that affect memory estimation
   // This ensures the hook re-runs when user changes context size, cache types, etc.
   const contextInitParams = modelStore.contextInitParams;
+  const deviceTier = modelStore.deviceTier;
 
   useEffect(() => {
     const checkMemory = async () => {
@@ -159,7 +163,7 @@ export const useMemoryCheck = (
           await getMemoryFitDetails(
             model as Model,
             projectionModel,
-            contextInitParams,
+            modelStore.memoryEstimateSettings,
             draftModel,
           );
 
@@ -218,6 +222,7 @@ export const useMemoryCheck = (
     l10n,
     calibrationCeiling,
     contextInitParams,
+    deviceTier,
   ]);
 
   return {memoryWarning, shortMemoryWarning, multimodalWarning, fitStatus};

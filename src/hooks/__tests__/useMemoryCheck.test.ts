@@ -2,13 +2,19 @@ import DeviceInfo from 'react-native-device-info';
 import {renderHook} from '@testing-library/react-hooks';
 import {runInAction} from 'mobx';
 
-import {largeMemoryModel, localModel} from '../../../jest/fixtures/models';
+import {
+  basicModel,
+  largeMemoryModel,
+  localModel,
+} from '../../../jest/fixtures/models';
 import {modelStore} from '../../store';
+import {getModelMemoryRequirement} from '../../utils/memoryEstimator';
+import {Model} from '../../utils/types';
 
 // Unmock the hook for actual testing
 jest.unmock('../useMemoryCheck');
 
-import {useMemoryCheck} from '../useMemoryCheck';
+import {hasEnoughMemory, useMemoryCheck} from '../useMemoryCheck';
 
 import {l10n} from '../../locales';
 
@@ -309,5 +315,82 @@ describe('useMemoryCheck', () => {
     // 2.4GB > 2GB total → wont_fit
     expect(result.current.fitStatus).toBe('wont_fit');
     expect(result.current.shortMemoryWarning).toBe(l10n.en.memory.lowMemory);
+  });
+  describe('state checkpoint budget', () => {
+    const MiB = 1024 * 1024;
+    const swaModel: Model = {
+      ...basicModel,
+      size: 806 * 1e6,
+      ggufMetadata: {
+        architecture: 'gemma3',
+        n_layers: 26,
+        n_embd: 1152,
+        n_head: 4,
+        n_head_kv: 1,
+        n_vocab: 262144,
+        n_embd_head_k: 256,
+        n_embd_head_v: 256,
+        sliding_window: 512,
+      },
+    };
+    const baseBytes = () =>
+      getModelMemoryRequirement(swaModel, undefined, {
+        ...modelStore.contextInitParams,
+        state_cache_budget_mb: 0,
+      });
+
+    afterEach(() => {
+      runInAction(() => {
+        modelStore.deviceTier = null;
+      });
+      (DeviceInfo.getTotalMemory as jest.Mock).mockResolvedValue(4 * 1e9);
+    });
+
+    it('re-checks the fit when the device tier changes the budget', async () => {
+      // Ceiling sits between base + 64 MiB (low) and base + 160 MiB (mid).
+      const ceiling = baseBytes() + 100 * MiB;
+      runInAction(() => {
+        modelStore.deviceTier = 'low';
+        modelStore.availableMemoryCeiling = ceiling;
+        modelStore.largestSuccessfulLoad = ceiling;
+      });
+      (DeviceInfo.getTotalMemory as jest.Mock).mockResolvedValue(8 * 1e9);
+
+      const {result, rerender, waitForNextUpdate} = renderHook(() =>
+        useMemoryCheck(swaModel),
+      );
+      try {
+        await waitForNextUpdate();
+      } catch {
+        // Ignoring timeout
+      }
+      expect(result.current.fitStatus).toBe('fits');
+
+      runInAction(() => {
+        modelStore.deviceTier = 'mid';
+      });
+      rerender();
+      try {
+        await waitForNextUpdate();
+      } catch {
+        // Ignoring timeout
+      }
+      expect(result.current.fitStatus).toBe('tight');
+    });
+
+    it('counts the budget in hasEnoughMemory', async () => {
+      const ceiling = baseBytes() + 100 * MiB;
+      runInAction(() => {
+        modelStore.availableMemoryCeiling = ceiling;
+        modelStore.largestSuccessfulLoad = ceiling;
+        modelStore.deviceTier = 'low';
+      });
+      expect(await hasEnoughMemory(swaModel)).toBe(true);
+
+      runInAction(() => {
+        modelStore.deviceTier = 'flagship';
+      });
+      expect(await hasEnoughMemory(swaModel)).toBe(false);
+    });
   });
 });

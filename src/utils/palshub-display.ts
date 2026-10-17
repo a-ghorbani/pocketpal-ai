@@ -60,13 +60,6 @@ export function isPalFree(pal: PalsHubPal): boolean {
 }
 
 /**
- * Check if a pal is premium (requires external purchase)
- */
-export function isPalPremium(pal: PalsHubPal): boolean {
-  return pal.price_cents > 0;
-}
-
-/**
  * Filter labels for the UI
  */
 export const PAL_FILTER_LABELS = {
@@ -99,20 +92,6 @@ export function getPalActionText(
 }
 
 /**
- * Get description for premium pals
- */
-export function getPalDescription(pal: PalsHubPal): string {
-  if (isPalFree(pal)) {
-    return pal.description || '';
-  }
-
-  // For premium pals, we can show description but not pricing details
-  return (
-    pal.description || l10n[uiStore.language].palsScreen.premiumPalDescription
-  );
-}
-
-/**
  * Check if we should show full pal content based on ownership and protection level
  */
 export function shouldShowPalContent(pal: PalsHubPal): boolean {
@@ -123,32 +102,6 @@ export function shouldShowPalContent(pal: PalsHubPal): boolean {
 
   // Show premium content only if owned
   return !!pal.is_owned;
-}
-
-/**
- * Get informational text for premium pals
- * This is purely informational, not a call-to-action
- */
-export function getPremiumInfoText(): string {
-  return l10n[uiStore.language].palsScreen.premiumInfoText;
-}
-
-/**
- * Separate pals into categories for display
- */
-export function categorizePalsForDisplay(pals: PalsHubPal[]): {
-  free: PalsHubPal[];
-  premium: PalsHubPal[];
-  all: PalsHubPal[];
-} {
-  const free = pals.filter(isPalFree);
-  const premium = pals.filter(isPalPremium);
-
-  return {
-    free,
-    premium,
-    all: pals,
-  };
 }
 
 /**

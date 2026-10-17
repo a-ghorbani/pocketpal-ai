@@ -32,18 +32,30 @@ export class ExaProvider implements SearchProvider {
 
   constructor(private getKey: () => string) {}
 
-  async search(query: string, opts: SearchOptions): Promise<SearchHit[]> {
+  async search(
+    query: string,
+    opts: SearchOptions,
+    signal?: AbortSignal,
+  ): Promise<SearchHit[]> {
     const key = requireKey(this.getKey(), 'Exa');
-    const data = await fetchJson<ExaResponse>('https://api.exa.ai/search', {
-      method: 'POST',
-      headers: {'Content-Type': 'application/json', 'x-api-key': key},
-      body: JSON.stringify({
-        query,
-        numResults: opts.maxResults,
-        contents: {highlights: true, summary: true},
-      }),
-    });
-    return (data.results ?? []).map(r => ({
+    const data = await fetchJson<ExaResponse | null>(
+      'https://api.exa.ai/search',
+      {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json', 'x-api-key': key},
+        body: JSON.stringify({
+          query,
+          numResults: opts.maxResults,
+          contents: {highlights: true, summary: true},
+        }),
+        signal,
+      },
+    );
+    const results = data?.results;
+    if (!Array.isArray(results)) {
+      throw new Error('unexpected response');
+    }
+    return results.map(r => ({
       title: r.title ?? '',
       url: r.url ?? '',
       snippet: exaSnippet(r),
@@ -51,14 +63,22 @@ export class ExaProvider implements SearchProvider {
     }));
   }
 
-  async read(url: string): Promise<PageContent> {
+  async read(url: string, signal?: AbortSignal): Promise<PageContent> {
     const key = requireKey(this.getKey(), 'Exa');
-    const data = await fetchJson<ExaResponse>('https://api.exa.ai/contents', {
-      method: 'POST',
-      headers: {'Content-Type': 'application/json', 'x-api-key': key},
-      body: JSON.stringify({urls: [url], text: true}),
-    });
-    const first = data.results?.[0];
+    const data = await fetchJson<ExaResponse | null>(
+      'https://api.exa.ai/contents',
+      {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json', 'x-api-key': key},
+        body: JSON.stringify({urls: [url], text: true}),
+        signal,
+      },
+    );
+    const results = data?.results;
+    if (!Array.isArray(results)) {
+      throw new Error('unexpected response');
+    }
+    const first = results[0];
     return {
       url,
       ...(first?.title ? {title: first.title} : {}),

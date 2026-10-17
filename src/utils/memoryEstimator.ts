@@ -1,4 +1,5 @@
 import {Model, GGUFMetadata, ContextInitParams, CacheType} from './types';
+import type {Tier} from '../services/deviceRules/types';
 
 // Guards against corrupted metadata persisted by older app versions.
 function isValidGGUFMetadata(metadata: GGUFMetadata): boolean {
@@ -74,13 +75,21 @@ function calculateComputeBuffer(
   return (n_vocab + n_embd) * n_ubatch * 4;
 }
 
+export function stateCacheBudgetMb(tier: Tier | null): number {
+  return tier === null || tier === 'low' ? 64 : 160;
+}
+
+export type MemoryEstimateSettings = ContextInitParams & {
+  state_cache_budget_mb: number;
+};
+
 const RUNTIME_OVERHEAD = 1.1;
 const RUNTIME_OVERHEAD_WITHOUT_METADATA = 1.2;
 
 export function getModelMemoryRequirement(
   model: Model,
   projectionModel?: Model,
-  contextSettings?: ContextInitParams,
+  contextSettings?: MemoryEstimateSettings,
   draftModel?: Model,
 ): number {
   const mmProjSize = projectionModel?.size || 0;
@@ -114,10 +123,15 @@ export function getModelMemoryRequirement(
     const computeBuffer = calculateComputeBuffer(metadata, contextSettings);
 
     const baseMemory = weightsSize + kvCacheSize + computeBuffer;
+    const checkpointBytes =
+      Number(metadata.sliding_window) > 0
+        ? contextSettings.state_cache_budget_mb * 1024 * 1024
+        : 0;
     const totalMemory =
       baseMemory * RUNTIME_OVERHEAD +
       mmProjSize * RUNTIME_OVERHEAD +
-      (draftSize + draftKvCacheSize) * RUNTIME_OVERHEAD;
+      (draftSize + draftKvCacheSize) * RUNTIME_OVERHEAD +
+      checkpointBytes;
 
     return totalMemory;
   }

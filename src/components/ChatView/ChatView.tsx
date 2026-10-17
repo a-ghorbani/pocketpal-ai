@@ -42,6 +42,7 @@ import {
 
 import ImageView from './ImageView';
 import {BannerRow} from './BannerRow';
+import {RouterLoadStatus, boundRouterLoad} from '../RouterLoadStatus';
 import {createStyles} from './styles';
 
 import {IncreaseContextSheet} from '../IncreaseContextSheet';
@@ -53,7 +54,13 @@ import {t} from '../../locales';
 import {getModelMemoryRequirement} from '../../utils/memoryEstimator';
 import {CONTEXT_LADDER} from '../../utils/bannerVariantResolver';
 
-import {asrStore, chatSessionStore, modelStore} from '../../store';
+import {
+  NEW_CHAT_DRAFT_KEY,
+  asrStore,
+  chatSessionStore,
+  modelStore,
+} from '../../store';
+import type {UndoneSend} from '../../hooks/useChatSession';
 
 import {openMicSettings} from '../../utils/asrMicPermission';
 import type {AsrErrorKind} from '../../services/asr';
@@ -113,11 +120,17 @@ const animate = () => {
   LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
 };
 
+const prependText = (first: string, rest: string) =>
+  rest ? `${first}\n${rest}` : first;
+
 dayjs.extend(calendar);
 
 export type ChatTopLevelProps = ChatInputTopLevelProps & MessageTopLevelProps;
 
-export interface ChatProps extends ChatTopLevelProps {
+export interface ChatProps extends Omit<ChatTopLevelProps, 'onSendPress'> {
+  onSendPress: (
+    message: MessageType.PartialText,
+  ) => Promise<UndoneSend | undefined> | void;
   /** If {@link ChatProps.dateFormat} and/or {@link ChatProps.timeFormat} is not enough to
    * customize date headers in your case, use this to return an arbitrary
    * string based on a `dateTime` of a particular message. Can be helpful to
@@ -192,13 +205,17 @@ export interface ChatProps extends ChatTopLevelProps {
  * its deps), and FlatList would unmount + remount the header every
  * ~50ms — killing both Animated.loop and setInterval.
  */
-const PendingIndicatorView: React.FC = observer(() => (
-  <PendingIndicator
-    pendingTalentNames={chatSessionStore.agentUiState.pendingTalentNames}
-    toolCallTokenCount={chatSessionStore.toolCallTokenCount}
-    isStopping={chatSessionStore.isStopping}
-  />
-));
+const PendingIndicatorView: React.FC = observer(() =>
+  !chatSessionStore.isStopping && boundRouterLoad() ? (
+    <RouterLoadStatus />
+  ) : (
+    <PendingIndicator
+      pendingTalentNames={chatSessionStore.agentUiState.pendingTalentNames}
+      toolCallTokenCount={chatSessionStore.toolCallTokenCount}
+      isStopping={chatSessionStore.isStopping}
+    />
+  ),
+);
 
 type L10n = React.ContextType<typeof L10nContext>;
 
@@ -327,7 +344,7 @@ export const ChatView = observer(
         memBytesFor: nCtx => {
           try {
             return getModelMemoryRequirement(activeModel, projectionModel, {
-              ...modelStore.contextInitParams,
+              ...modelStore.memoryEstimateSettings,
               n_ctx: nCtx,
             });
           } catch {
@@ -387,18 +404,25 @@ export const ChatView = observer(
     // ============ DRAFT AUTOSAVE ============
     // Save draft on session switch, restore draft for new session
     const prevSessionId = usePrevious(chatSessionStore.activeSessionId);
+    const syncedDraftRef = React.useRef('');
     React.useEffect(() => {
-      const NEW_CHAT_DRAFT_KEY = '__new_chat__';
       const prevKey = prevSessionId ?? NEW_CHAT_DRAFT_KEY;
       const newKey = chatSessionStore.activeSessionId ?? NEW_CHAT_DRAFT_KEY;
 
-      // Save draft for the session we're leaving
-      if (prevKey !== newKey) {
-        chatSessionStore.saveDraft(prevKey, inputTextRef.current);
+      // This runs after the switch, so a cancelled send may already have put
+      // its text into the draft being left: keep it rather than overwrite it.
+      const typed = inputTextRef.current;
+      if (prevKey !== newKey && typed !== syncedDraftRef.current) {
+        const stored = chatSessionStore.getDraft(prevKey);
+        chatSessionStore.saveDraft(
+          prevKey,
+          stored === syncedDraftRef.current ? typed : `${stored}\n${typed}`,
+        );
       }
 
       // Restore draft for the session we're entering
       const draft = chatSessionStore.getDraft(newKey);
+      syncedDraftRef.current = draft;
       setInputText(draft);
       // eslint-disable-next-line react-hooks/exhaustive-deps -- MobX observer makes activeSessionId reactive
     }, [chatSessionStore.activeSessionId]);
@@ -528,19 +552,44 @@ export const ChatView = observer(
     const previousChatMessages = usePrevious(chatMessages);
 
     // ============ MESSAGE INPUT HANDLERS ============
+    const restoreUndone = React.useCallback(
+      ({message, sessionId}: UndoneSend) => {
+        if (!chatSessionStore.sessions.some(s => s.id === sessionId)) {
+          return;
+        }
+        if (sessionId === chatSessionStore.activeSessionId) {
+          setInputText(prev => prependText(message.text, prev));
+          setInputImages(prev => [...(message.imageUris ?? []), ...prev]);
+        } else {
+          chatSessionStore.saveDraft(
+            sessionId,
+            prependText(message.text, chatSessionStore.getDraft(sessionId)),
+          );
+        }
+      },
+      [],
+    );
+
     const wrappedOnSendPress = React.useCallback(
       async (message: MessageType.PartialText) => {
+        if (chatSessionStore.isStopping) {
+          return;
+        }
+        const draftKey = chatSessionStore.activeSessionId ?? NEW_CHAT_DRAFT_KEY;
         if (chatSessionStore.isEditMode) {
           await chatSessionStore.commitEdit();
         }
-        onSendPress(message);
+        const sent = onSendPress(message);
         setInputText('');
-        if (chatSessionStore.activeSessionId) {
-          chatSessionStore.clearDraft(chatSessionStore.activeSessionId);
-        }
+        syncedDraftRef.current = '';
+        chatSessionStore.clearDraft(draftKey);
         Keyboard.dismiss();
+        const undone = await sent;
+        if (undone) {
+          restoreUndone(undone);
+        }
       },
-      [onSendPress],
+      [onSendPress, restoreUndone],
     );
 
     const handleCancelEdit = React.useCallback(() => {
@@ -697,6 +746,7 @@ export const ChatView = observer(
       reportContent: reportContentLabel,
     } = l10n.components.chatView.menuItems;
 
+    const isStopping = chatSessionStore.isStopping;
     const menuItems = React.useMemo((): MenuItem[] => {
       if (
         !selectedMessage ||
@@ -730,13 +780,13 @@ export const ChatView = observer(
             handleMenuDismiss();
           },
           icon: () => <RefreshIcon stroke={theme.colors.primary} />,
-          disabled: !hasActiveModel,
+          disabled: !hasActiveModel || isStopping,
         });
 
         baseItems.push({
           label: regenerateWithLabel,
           icon: () => <GridIcon stroke={theme.colors.primary} />,
-          disabled: false,
+          disabled: isStopping,
           submenu: models.map(model => ({
             label: model.name,
             width: Math.min(300, size.width),
@@ -756,7 +806,7 @@ export const ChatView = observer(
             handleMenuDismiss();
           },
           icon: () => <PencilLineIcon stroke={theme.colors.primary} />,
-          disabled: !hasActiveModel,
+          disabled: !hasActiveModel || isStopping,
         });
       }
 
@@ -773,6 +823,7 @@ export const ChatView = observer(
       return baseItems;
     }, [
       selectedMessage,
+      isStopping,
       user.id,
       handleCopy,
       handleTryAgain,
@@ -850,10 +901,6 @@ export const ChatView = observer(
       agentStatus === 'prefill' ||
       agentStatus === 'generating_tool_call' ||
       agentStatus === 'executing_tool' ||
-      // Keep the indicator visible during the user-initiated stop
-      // window so they see the "Stopping…" feedback even if status
-      // had been `streaming_text` (no indicator) at the moment of the
-      // tap. Cleared together with `isStopping` once the runner exits.
       chatSessionStore.isStopping;
     const activeRunPendingTalentNames =
       chatSessionStore.agentUiState.pendingTalentNames;

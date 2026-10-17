@@ -171,6 +171,11 @@
     "serverName": "Server Name",
     "serverUrl": "Server URL",
     "serverUrlPlaceholder": "e.g., http://192.168.1.100:1234",
+    "scanServerQr": "Scan server QR code",
+    "scanQrPermissionMessage": "Allow camera access to scan a server's QR code. You can also type the address.",
+    "scanQrNotServer": "Not a server address",
+    "scanQrUnavailable": "Can't scan here. Type the server address instead.",
+    "scanQrNotReady": "Scanner is getting ready. You can also type the address.",
     "requestTimeout": "Request Timeout (seconds)",
     "requestTimeoutPlaceholder": "Optional - leave empty for default",
     "requestTimeoutHelp": "Max wait for a slow server to respond. Leave empty for default.",
@@ -205,7 +210,42 @@
     "removeRemoteModel": "Remove {{modelName}} ({{serverName}})?",
     "retryConnection": "Retry",
     "enterUrlManually": "Enter URL manually",
-    "manageServers": "Manage Servers"
+    "manageServers": "Manage Servers",
+    "routerModels": {
+      "cancel": "Cancel",
+      "unloading": "Unloading…",
+      "stateLoading": "Loading",
+      "stateLoaded": "Loaded",
+      "loadingPercent": "Loading, {{percent}} percent",
+      "unloadModel": "Unload {{model}}",
+      "cancelLoadingModel": "Cancel loading {{model}}",
+      "loadFailed": "This model did not load.",
+      "unloadNotReleased": "The server did not release this model.",
+      "serverUnreachable": "Could not reach this server.",
+      "waitStopped": "Stopped waiting for this model.",
+      "failureWithServerWords": "{{label}}\n\n“{{message}}”",
+      "dismiss": "Dismiss",
+      "unloadBoundTitle": "Unload this model?",
+      "unloadBoundBody": "This chat uses it. It loads again when you send your next message.",
+      "unloadBoundConfirm": "Unload"
+    },
+    "purchases": {
+      "title": "Purchases",
+      "statusOwned": "Purchased",
+      "statusUnlocking": "Unlocking",
+      "link": "Sign in to use on other devices"
+    },
+    "account": {
+      "title": "Account",
+      "deleteAccount": "Delete account",
+      "confirmTitle": "Delete account?",
+      "confirmMessage": "This permanently deletes your PalsHub account and its library. Pals bought through the App Store or Google Play stay restorable on this device with your store account. Purchase records are kept anonymised for legal reasons.",
+      "confirmWithoutApple": "Couldn't confirm with Apple. Delete your account anyway?",
+      "deleted": "Your account has been deleted.",
+      "signInAgain": "Please sign in again",
+      "creatorSupport": "Creator accounts are deleted by our support team: {{contact}}",
+      "failed": "Could not delete, try again"
+    }
   },
   "memory": {
     "shortWarning": "Memory Warning",
@@ -561,6 +601,8 @@
     "bubble": {
       "msPerToken": "{{value}}ms/token",
       "tokensPerSec": "{{value}} tokens/sec",
+      "promptTokensPerSec": "{{value}} prompt tokens/sec",
+      "cachedTokens": "{{value}} cached",
       "ttft": "{{value}}ms TTFT",
       "draftAccepted": "draft: {{accepted}}/{{total}} ({{pct}}%)",
       "interrupted": "Interrupted",
@@ -679,6 +721,13 @@
         "title": "Report Failed",
         "message": "Failed to submit report. Please try again later."
       }
+    },
+    "completionSettings": {
+      "serverDefault": "server default",
+      "usingServerDefault": "Using server default: {{value}}",
+      "usingServerDefaultUnreported": "Using server default (not reported)",
+      "resetToServerDefault": "Server default: {{value}} · Reset",
+      "resetToServerDefaultAccessibilityLabel": "Reset {{name}} to the server default, {{value}}"
     },
     "chatGenerationSettingsSheet": {
       "invalidValues": "Invalid Values",
@@ -966,7 +1015,8 @@
       },
       "warnings": {
         "promptChanged": "System prompt has been manually changed"
-      }
+      },
+      "generationBusy": "A reply is still running. Try again when it's done."
     },
     "sidebarContent": {
       "menuItems": {
@@ -1082,8 +1132,6 @@
       "download": "Download",
       "getFree": "Get Free"
     },
-    "premiumPalDescription": "Premium pal from the palshub.ai community",
-    "premiumInfoText": "Visit palshub.ai to explore more pals",
     "sortOptions": {
       "newest": "Newest",
       "oldest": "Oldest",
@@ -1107,15 +1155,48 @@
       "error": "Error",
       "failedToLoadDetails": "Failed to load pal details",
       "failedToDownload": "Failed to download pal",
-      "premiumPalMessage": "This is a Premium Pal.\n• If you've already unlocked it with your Palshub account, simply sign in to access the full details.\n• Haven't unlocked it yet? Visit palshub.ai app to learn more.",
-      "notAvailable": "N/A",
-      "buyOnPalshub": "Buy on Palshub",
-      "finalizingPurchase": "Finalizing your purchase…",
-      "processingPurchase": "Processing — will unlock shortly.",
-      "checkoutSessionExpired": "Your session expired. Sign in again to continue.",
-      "signInAgain": "Sign in again",
-      "palNotAvailable": "This pal is not available for purchase right now.",
-      "checkoutFailed": "Something went wrong. Please try again."
+      "notAvailable": "N/A"
+    },
+    "purchase": {
+      "buy": "{{price}}",
+      "open": "Open",
+      "install": "Install",
+      "pending": "Pending",
+      "unlocking": "Unlocking",
+      "retry": "Retry",
+      "supportCode": "Support code: {{code}}",
+      "noLongerAvailable": "This Pal is no longer available. You can {{refundLink}}.",
+      "refundLink": "ask Apple for a refund",
+      "notCompleted": "This purchase couldn't be completed. Google will refund you.",
+      "withdrawnRefunding": "This Pal was withdrawn. Contact support for a refund.",
+      "invalid": "We couldn't verify this purchase.",
+      "heldInvalid": "We couldn't unlock this purchase. Contact support with this code.",
+      "recommendedModel": "Recommended model",
+      "sampleExchange": "Sample conversation",
+      "signInLine": "Already own it? Sign in",
+      "licenseNotice": "You're buying a license to use this Pal.",
+      "termsOfSale": "Terms of Sale",
+      "appleMediaTerms": "Apple Media Services Terms",
+      "linkPrompt": "Sign in to use it on your other devices too",
+      "linkSignIn": "Sign in",
+      "dismiss": "Not now",
+      "linkConflict": "These purchases are linked to another account.",
+      "restorePurchases": "Restore purchases",
+      "badgePending": "Pending",
+      "badgeUnlocking": "Unlocking",
+      "badgeUpdate": "Update available",
+      "updatePrompt": "A new version from the creator is available.",
+      "updatePromptWithNote": "A new version from the creator is available: {{note}}.",
+      "updateButton": "Update",
+      "updateConfirmText": "This replaces your edits to the parts the creator changed.",
+      "updateConfirm": "Update",
+      "updateCancel": "Cancel",
+      "modelStep": {
+        "download": "Download · {{size}}",
+        "startChat": "Start chat",
+        "needsMemory": "This Pal needs a device with at least {{size}} of memory for its smallest model.",
+        "noModelFits": "This device doesn't have enough memory for this Pal."
+      }
     }
   },
   "validation": {
@@ -1241,7 +1322,9 @@
       "searchResultsTitle": "Search results",
       "showResultsAccessibilityLabel": "Show web search results for {{query}}",
       "openLinkError": "Couldn't open this link."
-    }
+    },
+    "routerLoading": "Loading model…",
+    "routerLoadingPercent": "Loading model · {{percent}}%"
   },
   "htmlPreview": {
     "defaultTitle": "Preview",
@@ -1275,7 +1358,8 @@
       "testWarning": "Note: Test could run for up to 2-5 minutes for larger models and cannot be interrupted once started.",
       "keepScreenOpen": "Please keep this screen open.",
       "initializingModel": "Initializing model...",
-      "modelMaxValue": "(max: {{maxValue}})"
+      "modelMaxValue": "(max: {{maxValue}})",
+      "testFailed": "Couldn't run the test. Wait for any reply to finish, then try again."
     },
     "dialogs": {
       "advancedSettings": {
@@ -1604,6 +1688,8 @@
   "downloadBanner": {
     "titleByPal": "{{name}} is downloading",
     "titleByModel": "{{name}} is downloading",
-    "extraInProgress": "+{{count}} more in progress"
+    "extraInProgress": "+{{count}} more in progress",
+    "failedTitle": "Download didn't finish",
+    "retry": "Retry"
   }
 }

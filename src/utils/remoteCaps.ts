@@ -1,3 +1,5 @@
+import {profileFor} from '../api/servers';
+import type {Samplers} from './samplerParams';
 import {
   Model,
   ModelOrigin,
@@ -57,5 +59,24 @@ export function resolveRemoteCaps(
   if (perModel.supportsVision !== undefined) {
     resolved.supportsVision = perModel.supportsVision;
   }
+  if (perModel.samplerDefaults !== undefined) {
+    resolved.samplerDefaults = perModel.samplerDefaults;
+  }
   return resolved;
+}
+
+/**
+ * The server's own generation defaults for the live session: undefined
+ * outside a session on a server type that reports them, and a missing key
+ * for a default that was not reported.
+ */
+export function samplerDefaultsFor(
+  model: Model | undefined,
+  remoteCaps: Record<string, RemoteModelCaps>,
+  binding: RemoteSessionBinding | undefined,
+): Samplers | undefined {
+  if (!binding || !profileFor(binding.serverType).hasProps) {
+    return undefined;
+  }
+  return resolveRemoteCaps(model, remoteCaps, binding).samplerDefaults ?? {};
 }

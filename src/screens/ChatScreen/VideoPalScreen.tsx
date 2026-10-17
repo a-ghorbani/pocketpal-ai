@@ -144,17 +144,10 @@ export const VideoPalScreen = observer(({activePal}: VideoPalScreenProps) => {
   }, [l10n]);
 
   // Handle stopping the camera
-  const handleStopCamera = useCallback(async () => {
+  const handleStopCamera = useCallback(() => {
     setIsStoppingCamera(true);
 
-    // Stop any ongoing completion first
-    if (modelStore.inferencing || modelStore.isStreaming) {
-      try {
-        await modelStore.context?.stopCompletion();
-      } catch (error) {
-        console.error('Error stopping completion:', error);
-      }
-    }
+    modelStore.abortActiveGeneration();
 
     // Clear response text and stop camera
     setResponseText('');
@@ -201,6 +194,10 @@ export const VideoPalScreen = observer(({activePal}: VideoPalScreenProps) => {
       // Throttle analysis to avoid overwhelming the model
       const now = Date.now();
       if (now - lastAnalysisTime < captureInterval) {
+        return;
+      }
+
+      if (modelStore.isGenerationBusy) {
         return;
       }
 
@@ -265,7 +262,7 @@ export const VideoPalScreen = observer(({activePal}: VideoPalScreenProps) => {
           <ChatView
             messages={[]}
             onSendPress={() => {}}
-            onStopPress={() => modelStore.context?.stopCompletion()}
+            onStopPress={() => modelStore.abortActiveGeneration()}
             onPalSettingsSelect={handleOpenPalSheet}
             user={user}
             isStopVisible={modelStore.inferencing}

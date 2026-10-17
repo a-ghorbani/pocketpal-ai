@@ -9,6 +9,7 @@ import {
 
 import {useTheme} from '../../hooks';
 
+import {renderSheetAwareInput} from './SheetAwareNativeInput';
 import {createStyles} from './styles';
 
 export type TextInputProps = PaperTextInputProps & {
@@ -34,6 +35,7 @@ export const TextInput = forwardRef<RNTextInput, TextInputProps>(
         <PaperTextInput
           ref={ref}
           {...rest}
+          render={rest.render ?? renderSheetAwareInput}
           dense
           underlineColor={theme.colors.border}
           style={[styles.container, style]}

@@ -24,7 +24,7 @@ module.exports = {
   setupFiles: ['./jest/setup.ts'],
   setupFilesAfterEnv: ['./jest/setupFilesAfterEnv.ts'],
   transformIgnorePatterns: [
-    'node_modules/(?!(@supabase|isows|@react-native-google-signin|@flyerhq|@react-native|react-native|uuid|react-native-reanimated|react-native-gesture-handler|react-native-vector-icons|react-native-image-viewing|react-native-parsed-text|@react-navigation/.*|@react-native-masked-view/masked-view|react-native-linear-gradient|react-native-picker-select|react-native-paper|react-native-keyboard-controller|react-native-drawer-layout|marked|react-native-code-highlighter|react-syntax-highlighter|trim-newlines|react-native-worklets)/)',
+    'node_modules/(?!(@supabase|isows|@react-native-google-signin|@flyerhq|@react-native|react-native|react-native-url-polyfill|uuid|react-native-reanimated|react-native-gesture-handler|react-native-vector-icons|react-native-image-viewing|react-native-parsed-text|@react-navigation/.*|@react-native-masked-view/masked-view|react-native-linear-gradient|react-native-picker-select|react-native-paper|react-native-keyboard-controller|react-native-drawer-layout|marked|react-native-code-highlighter|react-syntax-highlighter|trim-newlines|react-native-worklets)/)',
   ],
   testMatch: [
     '**/__tests__/**/*.test.[jt]s?(x)',
@@ -81,6 +81,8 @@ module.exports = {
       '<rootDir>/__mocks__/external/react-native-vision-camera.ts',
     '@react-native-google-signin/google-signin':
       '<rootDir>/__mocks__/external/@react-native-google-signin/google-signin.ts',
+    '@invertase/react-native-apple-authentication':
+      '<rootDir>/__mocks__/external/@invertase/react-native-apple-authentication.ts',
     'react-native-code-highlighter':
       '<rootDir>/__mocks__/external/react-native-code-highlighter.js',
     '@env': '<rootDir>/__mocks__/external/@env.js',
@@ -88,5 +90,6 @@ module.exports = {
       '<rootDir>/__mocks__/external/@gorhom/bottom-sheet.js',
     '@pocketpalai/react-native-speech':
       '<rootDir>/__mocks__/external/@pocketpalai/react-native-speech.ts',
+    '^react-native-iap$': '<rootDir>/__mocks__/external/react-native-iap.ts',
   },
 };

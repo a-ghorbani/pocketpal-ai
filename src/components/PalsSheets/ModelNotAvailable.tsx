@@ -8,6 +8,7 @@ import {createStyles} from './styles';
 import {useNavigation} from '@react-navigation/native';
 import {observer} from 'mobx-react';
 import {formatBytes, L10nContext} from '../../utils';
+import {downloadModel} from '../../utils/downloadModel';
 
 export const ModelNotAvailable = observer(
   ({
@@ -39,19 +40,6 @@ export const ModelNotAvailable = observer(
     const downloadSpeed = defaultModel?.downloadSpeed;
 
     const hasAnyDownloadedModel = modelStore.availableModels.length > 0;
-
-    const handleDownloadModel = async (modelToDownload: Model) => {
-      if (modelToDownload.hfModel) {
-        // For HF models, use default vision preference (enabled) for backward compatibility
-        await modelStore.downloadHFModel(
-          modelToDownload.hfModel!,
-          modelToDownload.hfModelFile!,
-          {enableVision: true},
-        );
-      } else {
-        await modelStore.checkSpaceAndDownload(modelToDownload.id);
-      }
-    };
 
     const handleNavigateToModels = () => {
       closeSheet();
@@ -117,7 +105,7 @@ export const ModelNotAvailable = observer(
             onPress={() =>
               isDownloading
                 ? modelStore.cancelDownload(model.id)
-                : handleDownloadModel(model)
+                : downloadModel(model)
             }
             mode="contained-tonal">
             {isDownloading

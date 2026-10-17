@@ -55,9 +55,21 @@ const BottomSheetModal = BottomSheetBase;
 const BottomSheetModalProvider = ({children}) =>
   React.createElement(View, null, children);
 const BottomSheetBackdrop = BottomSheetBase;
-const BottomSheetScrollView = BottomSheetBase;
 const BottomSheetSectionList = BottomSheetBase;
 const BottomSheetView = BottomSheetBase;
+
+const BottomSheetScrollView = React.forwardRef((props, ref) => {
+  React.useImperativeHandle(
+    ref,
+    () => ({
+      ...createMockRef(),
+      scrollTo: jest.fn(),
+      getInnerViewRef: jest.fn(() => ({})),
+    }),
+    [],
+  );
+  return React.createElement(View, {...props}, props.children);
+});
 
 // Add TextInput component for BottomSheet
 const BottomSheetTextInput = React.forwardRef((props, ref) => {
@@ -70,6 +82,17 @@ const SCROLLABLE_TYPE = {
   FLATLIST: 'FLATLIST',
   SECTIONLIST: 'SECTIONLIST',
   VIEW: 'VIEW',
+};
+
+const KEYBOARD_STATUS = {
+  UNDETERMINED: 0,
+  SHOWN: 1,
+  HIDDEN: 2,
+};
+
+const ANIMATION_CONFIGS = {
+  duration: 250,
+  easing: t => t,
 };
 
 const createBottomSheetScrollableComponent = () => BottomSheetBase;
@@ -88,7 +111,10 @@ module.exports = {
   BottomSheetTextInput,
   TextInput: BottomSheetTextInput,
   SCROLLABLE_TYPE,
+  KEYBOARD_STATUS,
+  ANIMATION_CONFIGS,
   createBottomSheetScrollableComponent,
   useBottomSheetModal: () => ({}),
   useBottomSheet: () => ({}),
+  useBottomSheetInternal: jest.fn(() => null),
 };

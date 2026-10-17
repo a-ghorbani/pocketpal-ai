@@ -397,6 +397,166 @@ describe('ServerDetailsSheet', () => {
     });
   });
 
+  const renderLoaded = async () => {
+    const onDismiss = jest.fn();
+    const {getByTestId} = render(
+      <ServerDetailsSheet
+        isVisible={true}
+        onDismiss={onDismiss}
+        serverId="srv-1"
+      />,
+    );
+    await waitFor(() => {
+      expect(
+        getByTestId('server-details-apikey-input').props.defaultValue,
+      ).toBe('sk-test-key');
+    });
+    return {getByTestId, onDismiss};
+  };
+
+  describe('after a save that invalidates discovery', () => {
+    const renderAndSave = async (edit: (getByTestId: any) => void) => {
+      const {getByTestId, onDismiss} = await renderLoaded();
+      edit(getByTestId);
+      fireEvent.press(getByTestId('save-server-button'));
+      return onDismiss;
+    };
+    const editUrl = (getByTestId: any) =>
+      fireEvent.changeText(
+        getByTestId('server-details-url-input'),
+        'http://localhost:5678',
+      );
+    const editTimeout = (getByTestId: any) =>
+      fireEvent.changeText(getByTestId('server-details-timeout-input'), '600');
+
+    it('closes without waiting on an unreachable url', async () => {
+      (serverStore.updateServer as jest.Mock).mockReturnValueOnce(true);
+      (serverStore.fetchModelsForServer as jest.Mock).mockReturnValueOnce(
+        new Promise(() => {}),
+      );
+
+      const onDismiss = await renderAndSave(editUrl);
+
+      await waitFor(() => {
+        expect(onDismiss).toHaveBeenCalled();
+      });
+      expect(serverStore.fetchModelsForServer).toHaveBeenCalledWith('srv-1');
+    });
+
+    it("refetches on the store's word, whatever the sheet edited", async () => {
+      (serverStore.updateServer as jest.Mock).mockReturnValueOnce(true);
+
+      const onDismiss = await renderAndSave(editTimeout);
+
+      await waitFor(() => {
+        expect(onDismiss).toHaveBeenCalled();
+      });
+      expect(serverStore.fetchModelsForServer).toHaveBeenCalledWith('srv-1');
+    });
+
+    it('leaves the model list alone when the store kept it', async () => {
+      const onDismiss = await renderAndSave(editUrl);
+
+      await waitFor(() => {
+        expect(onDismiss).toHaveBeenCalled();
+      });
+      expect(serverStore.fetchModelsForServer).not.toHaveBeenCalled();
+    });
+
+    it('refetches only once the new key is stored', async () => {
+      (serverStore.updateServer as jest.Mock).mockReturnValueOnce(true);
+      let keyStored!: () => void;
+      (serverStore.setApiKey as jest.Mock).mockReturnValueOnce(
+        new Promise<void>(resolve => {
+          keyStored = resolve;
+        }),
+      );
+
+      await renderAndSave(getByTestId => {
+        editUrl(getByTestId);
+        fireEvent.changeText(
+          getByTestId('server-details-apikey-input'),
+          'sk-new-key',
+        );
+      });
+      await waitFor(() => {
+        expect(serverStore.setApiKey).toHaveBeenCalled();
+      });
+      expect(serverStore.fetchModelsForServer).not.toHaveBeenCalled();
+
+      keyStored();
+
+      await waitFor(() => {
+        expect(serverStore.fetchModelsForServer).toHaveBeenCalledWith('srv-1');
+      });
+    });
+  });
+
+  describe('after a save that changes only the key', () => {
+    it('refetches once the new key is stored', async () => {
+      let keyStored!: () => void;
+      (serverStore.setApiKey as jest.Mock).mockReturnValueOnce(
+        new Promise<void>(resolve => {
+          keyStored = resolve;
+        }),
+      );
+      const {getByTestId} = await renderLoaded();
+
+      fireEvent.changeText(
+        getByTestId('server-details-apikey-input'),
+        'sk-new-key',
+      );
+      fireEvent.press(getByTestId('save-server-button'));
+      await waitFor(() => {
+        expect(serverStore.setApiKey).toHaveBeenCalledWith(
+          'srv-1',
+          'sk-new-key',
+        );
+      });
+      expect(serverStore.fetchModelsForServer).not.toHaveBeenCalled();
+
+      keyStored();
+
+      await waitFor(() => {
+        expect(serverStore.fetchModelsForServer).toHaveBeenCalledWith('srv-1');
+      });
+    });
+
+    it('leaves the model list alone when the key is unchanged', async () => {
+      const {getByTestId, onDismiss} = await renderLoaded();
+
+      fireEvent.press(getByTestId('save-server-button'));
+
+      await waitFor(() => {
+        expect(onDismiss).toHaveBeenCalled();
+      });
+      expect(serverStore.setApiKey).toHaveBeenCalledWith(
+        'srv-1',
+        'sk-test-key',
+      );
+      expect(serverStore.fetchModelsForServer).not.toHaveBeenCalled();
+    });
+
+    it('treats a key that differs only by surrounding spaces as unchanged', async () => {
+      const {getByTestId, onDismiss} = await renderLoaded();
+
+      fireEvent.changeText(
+        getByTestId('server-details-apikey-input'),
+        ' sk-test-key ',
+      );
+      fireEvent.press(getByTestId('save-server-button'));
+
+      await waitFor(() => {
+        expect(onDismiss).toHaveBeenCalled();
+      });
+      expect(serverStore.setApiKey).toHaveBeenCalledWith(
+        'srv-1',
+        'sk-test-key',
+      );
+      expect(serverStore.fetchModelsForServer).not.toHaveBeenCalled();
+    });
+  });
+
   it('persists a user-selected serverType on save', async () => {
     const {getByTestId} = render(
       <ServerDetailsSheet

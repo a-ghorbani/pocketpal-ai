@@ -8,6 +8,7 @@ import {defaultDerivedMessageProps} from '../../../../jest/fixtures';
 
 import {Message} from '../Message';
 import {MessageType, AgentStep} from '../../../utils/types';
+import toolCallEchoSteps from '../../../../jest/fixtures/toolCallEchoSteps.json';
 
 // Replace the icon component used by AssistantTurnFooter so tests
 // can render it without pulling in native icon assets.
@@ -830,5 +831,63 @@ describe('Message — AssistantTurn renderer', () => {
       );
       expect(getAllByTestId('assistant-turn-footer')).toHaveLength(1);
     });
+  });
+
+  it('hides a step whose content only echoes its executed tool call', () => {
+    const steps = (toolCallEchoSteps as unknown as Record<string, AgentStep[]>)[
+      '0PKzyV5rTwEfMoWW'
+    ];
+    const {queryByText, queryAllByTestId} = render(
+      <Message
+        message={makeDerivedTurn(steps)}
+        messageWidth={440}
+        onMessagePress={jest.fn()}
+        roundBorder
+        showAvatar
+        showName
+        showStatus
+      />,
+    );
+    expect(mockTextMessageCalls).toHaveLength(1);
+    expect(mockTextMessageCalls[0].step).toBe(steps[1]);
+    expect(queryAllByTestId('talent-surface')).toHaveLength(1);
+    expect(mockTalentSurfaceCalls[0].step).toBe(steps[0]);
+    expect(queryByText(/"name": "web_search"/)).toBeNull();
+  });
+
+  it('shows a streaming echo until its tool calls land, then hides it', () => {
+    const [stored] = (
+      toolCallEchoSteps as unknown as Record<string, AgentStep[]>
+    )['0PKzyV5rTwEfMoWW'];
+    const {toolCalls, ...streaming} = stored;
+    const observableTurn = observable.object<MessageType.DerivedAssistantTurn>(
+      makeDerivedTurn([streaming]),
+      {},
+      {deep: true},
+    );
+    render(
+      <Message
+        message={observableTurn}
+        messageWidth={440}
+        onMessagePress={jest.fn()}
+        roundBorder
+        showAvatar
+        showName
+        showStatus
+      />,
+    );
+    expect(mockTextMessageCalls).toHaveLength(1);
+    expect(mockTextMessageCalls[0].step?.content).toBe(stored.content);
+
+    mockTextMessageCalls = [];
+    act(() => {
+      runInAction(() => {
+        observableTurn.steps[0] = {...observableTurn.steps[0], toolCalls};
+      });
+    });
+    expect(mockTextMessageCalls).toHaveLength(0);
+    expect(
+      mockTalentSurfaceCalls[mockTalentSurfaceCalls.length - 1].step?.toolCalls,
+    ).toEqual(toolCalls);
   });
 });

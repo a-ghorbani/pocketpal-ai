@@ -12,6 +12,8 @@
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.CAMERA" />
     <uses-permission android:name="android.permission.RECORD_AUDIO" />
+    <uses-permission android:name="android.permission.RUN_USER_INITIATED_JOBS" />
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
     <uses-feature android:name="android.hardware.camera" android:required="false" />
     <uses-feature android:name="android.hardware.camera.any" android:required="false" />
 
@@ -54,16 +56,12 @@
             <category android:name="android.intent.category.BROWSABLE" />
             <data android:scheme="pocketpal" android:host="hub" />
         </intent-filter>
-        <!-- Checkout callback for the in-app PalsHub purchase flow. Scoped to
-             host=checkout so it is routed to AuthSessionModule, not the
-             hub deep-link path. -->
-        <intent-filter>
-            <action android:name="android.intent.action.VIEW" />
-            <category android:name="android.intent.category.DEFAULT" />
-            <category android:name="android.intent.category.BROWSABLE" />
-            <data android:scheme="pocketpal" android:host="checkout" />
-        </intent-filter>
       </activity>
+
+        <service
+            android:name="com.pocketpal.download.DownloadJobService"
+            android:permission="android.permission.BIND_JOB_SERVICE"
+            android:exported="false" />
 
         <!-- Optional native library for OpenCL (GPU acceleration) -->
         <uses-native-library

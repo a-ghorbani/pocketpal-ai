@@ -59,14 +59,19 @@ import {benchmarkStore as mockBenchmarkStore} from '../__mocks__/stores/benchmar
 import {mockPalStore} from '../__mocks__/stores/palStore';
 import {deepLinkStore as mockDeepLinkStore} from '../__mocks__/stores/deepLinkStore';
 import {mockServerStore} from '../__mocks__/stores/serverStore';
+import {mockRouterStore} from '../__mocks__/stores/routerStore';
 import {mockTTSStore} from '../__mocks__/stores/ttsStore';
 import {mockASRStore} from '../__mocks__/stores/asrStore';
-import {checkoutFlowStore as mockCheckoutFlowStore} from '../__mocks__/stores/checkoutFlowStore';
 import {mockSearchProviderStore} from '../__mocks__/stores/searchProviderStore';
+import {mockPurchaseStore} from '../__mocks__/stores/purchaseStore';
 
 jest.mock('@react-native-clipboard/clipboard', () => mockClipboard);
 
 jest.mock('react-native/Libraries/EventEmitter/NativeEventEmitter');
+
+// The automocked emitter hands back no subscription, so a component that
+// removes its Keyboard listener on unmount would throw.
+require('react-native').Keyboard.addListener = () => ({remove: () => {}});
 
 // Mock NativeHardwareInfo TurboModule
 jest.mock('../src/specs/NativeHardwareInfo', () => ({
@@ -114,16 +119,19 @@ jest.mock('../src/store', () => {
     UIStore,
     uiStore: mockUiStore,
     chatSessionStore: mockChatSessionStore,
+    NEW_CHAT_DRAFT_KEY: '__new_chat__',
     hfStore: mockHFStore,
     benchmarkStore: mockBenchmarkStore,
     palStore: mockPalStore,
     deepLinkStore: mockDeepLinkStore,
     serverStore: mockServerStore,
+    routerStore: mockRouterStore,
     ttsStore: mockTTSStore,
     asrStore: mockASRStore,
-    checkoutFlowStore: mockCheckoutFlowStore,
     searchProviderStore: mockSearchProviderStore,
+    purchaseStore: mockPurchaseStore,
     defaultCompletionSettings: mockDefaultCompletionSettings,
+    NEW_SESSION_TITLE: 'New Session',
   };
 });
 
@@ -179,3 +187,7 @@ jest.mock('../src/database', () => {
 jest.mock('../src/services', () => {
   return require('../__mocks__/services');
 });
+
+jest.mock('../src/services/palshub/accountDeletion', () =>
+  require('../__mocks__/services/palshub/accountDeletion'),
+);

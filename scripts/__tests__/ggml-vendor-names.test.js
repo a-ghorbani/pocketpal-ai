@@ -68,7 +68,7 @@ const setenvNames = [
 
 const hexagonMustExport = MANIFEST.abis.flatMap(abi =>
   abi.requiredSymbols
-    .filter(rule => rule.lib.includes('hexagon'))
+    .filter(rule => rule.kind === 'backend')
     .flatMap(rule => rule.mustExport),
 );
 

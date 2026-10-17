@@ -145,24 +145,33 @@ export abstract class BasePage {
         await browser.pause(300);
       }
     } else {
-      // Android: ESC hides the keyboard without emitting a back event.
-      // hideKeyboard() falls back to a back-press, which React Navigation
-      // consumes and pops the screen behind an open sheet.
-      try {
-        const isShown = await (
-          browser as unknown as {isKeyboardShown: () => Promise<boolean>}
-        ).isKeyboardShown();
-        if (isShown) {
-          await (
-            browser as unknown as {
-              pressKeyCode: (code: number) => Promise<void>;
-            }
-          ).pressKeyCode(111);
-          await browser.pause(300);
+      // Android: ESC hides the keyboard without emitting a back event, but
+      // some Gboard builds (Android 11/14 phones) ignore it. Back is the
+      // fallback only while the keyboard is verifiably up: the IME consumes
+      // it then, whereas a back with no keyboard pops the screen behind a sheet.
+      const driver = browser as unknown as {
+        isKeyboardShown: () => Promise<boolean>;
+        pressKeyCode: (code: number) => Promise<void>;
+      };
+      const isShown = () => driver.isKeyboardShown().catch(() => false);
+      const hidden = () =>
+        browser
+          .waitUntil(async () => !(await isShown()), {
+            timeout: 1500,
+            interval: 250,
+          })
+          .then(() => true)
+          .catch(() => false);
+      for (const keyCode of [111, 4]) {
+        if (!(await isShown())) {
+          return;
         }
-      } catch {
-        // Keyboard might not be visible
+        await driver.pressKeyCode(keyCode).catch(() => undefined);
+        if (await hidden()) {
+          return;
+        }
       }
+      throw new Error('Android soft keyboard still shown after ESC and Back');
     }
   }
 

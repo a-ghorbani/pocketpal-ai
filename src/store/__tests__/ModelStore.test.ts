@@ -1,5 +1,5 @@
 jest.unmock('../../store');
-import {runInAction} from 'mobx';
+import {reaction, runInAction} from 'mobx';
 import {
   LlamaContext,
   getBackendDevicesInfo,
@@ -19,8 +19,11 @@ import {
   Model,
   ModelOrigin,
   ModelType,
+  RemoteSessionBinding,
+  ServerConfig,
 } from '../../utils/types';
 import {getDisplayNameFromFilename} from '../../utils/formatters';
+import {getModelMemoryRequirement} from '../../utils/memoryEstimator';
 import {
   basicModel,
   createModel,
@@ -115,6 +118,9 @@ const presetModelFixture: Model = createModel({
   origin: ModelOrigin.PRESET,
   params: 2614341888,
 }) as Model;
+
+const registeredDownloadCallbacks = (downloadManager.setCallbacks as jest.Mock)
+  .mock.calls[0][0];
 
 describe('ModelStore', () => {
   let showErrorSpy: jest.SpyInstance;
@@ -259,10 +265,23 @@ describe('ModelStore', () => {
       },
     );
 
+    it.each([{devices: undefined}, {devices: []}, {devices: ['CPU']}])(
+      'loads Android CPU selection $devices without accelerator offloading',
+      async ({devices}) => {
+        modelStore.setDevices(devices);
+        const saved = {...modelStore.contextInitParams};
+        await modelStore.initContext(basicModel);
+        expect(nativeInit).toHaveBeenCalledTimes(1);
+        expect(nativeInit.mock.calls[0][0]).toMatchObject({
+          devices: ['CPU'],
+          n_gpu_layers: 0,
+        });
+        expect(modelStore.contextInitParams).toEqual(saved);
+        expect(discover).not.toHaveBeenCalled();
+      },
+    );
+
     it.each([
-      {os: 'android', devices: undefined},
-      {os: 'android', devices: []},
-      {os: 'android', devices: ['CPU']},
       {os: 'android', devices: ['Adreno']},
       {os: 'ios', devices: undefined},
       {os: 'ios', devices: ['Metal']},
@@ -2146,28 +2165,25 @@ describe('ModelStore', () => {
       expect(model.progress).toBe(0);
     });
 
-    it('should update model state on download error', () => {
-      const model = presetModelFixture;
+    it('keeps the progress the native side kept when a download fails', () => {
+      const model = {...presetModelFixture, progress: 42, isDownloaded: false};
       modelStore.models = [model];
 
-      // Set up callbacks directly
-      const callbacks = {
-        onError: (modelId: string) => {
-          const _model = modelStore.models.find(m => m.id === modelId);
-          if (_model) {
-            runInAction(() => {
-              _model.progress = 0;
-              model.isDownloaded = false;
-            });
-          }
-        },
-      };
+      registeredDownloadCallbacks.onError(model.id, new Error('stalled'), 40);
 
-      // Trigger error callback
-      callbacks.onError(model.id);
+      expect(modelStore.models[0].progress).toBe(40);
+      expect(modelStore.models[0].isDownloaded).toBe(false);
+      expect(modelStore.downloadError?.metadata?.modelId).toBe(model.id);
+    });
 
-      expect(model.progress).toBe(0);
-      expect(model.isDownloaded).toBe(false);
+    it('resets progress when a failed download kept no bytes', () => {
+      const model = {...presetModelFixture, progress: 42, isDownloaded: false};
+      modelStore.models = [model];
+
+      registeredDownloadCallbacks.onError(model.id, new Error('Network'));
+
+      expect(modelStore.models[0].progress).toBe(0);
+      expect(modelStore.downloadError?.metadata?.modelId).toBe(model.id);
     });
 
     it('should not set downloadError when a download is cancelled', async () => {
@@ -3053,6 +3069,31 @@ describe('ModelStore', () => {
         expect(params.spec_draft_n_max).toBeUndefined();
       });
     });
+
+    describe('state checkpoint budget', () => {
+      afterEach(() => {
+        runInAction(() => {
+          modelStore.deviceTier = null;
+        });
+      });
+
+      it.each([
+        ['low', 64],
+        [null, 64],
+        ['mid', 160],
+        ['high', 160],
+        ['flagship', 160],
+      ] as const)(
+        'sends state_cache_budget_mb for tier %s as %i',
+        async (tier, budget) => {
+          runInAction(() => {
+            modelStore.deviceTier = tier;
+          });
+          const params = await modelStore.getEffectiveContextInitParams();
+          expect(params.state_cache_budget_mb).toBe(budget);
+        },
+      );
+    });
   });
 
   // Add tests for auto-release functionality
@@ -3196,6 +3237,120 @@ describe('ModelStore', () => {
         });
       });
 
+      describe('server sampler defaults', () => {
+        const bindingOf = (
+          serverType: RemoteSessionBinding['serverType'],
+          url = 'http://localhost:8080',
+        ): RemoteSessionBinding => ({
+          modelId: 'srv-1/remote-model',
+          serverId: 'srv-1',
+          remoteModelId: 'remote-model',
+          url,
+          serverType,
+        });
+
+        const activateRemoteModel = (
+          binding: RemoteSessionBinding = bindingOf('llama.cpp'),
+        ) => {
+          runInAction(() => {
+            modelStore.models = [
+              {
+                id: 'srv-1/remote-model',
+                origin: ModelOrigin.REMOTE,
+                serverId: 'srv-1',
+              } as any,
+            ];
+            modelStore.activeModelId = 'srv-1/remote-model';
+            modelStore.activeRemoteBinding = binding;
+          });
+        };
+
+        const reportDefaults = () => {
+          runInAction(() => {
+            serverStore.remoteCaps = {
+              'srv-1/remote-model': {
+                samplerDefaults: {top_k: 40, temperature: 0.8},
+                probedUrl: 'http://localhost:8080',
+              },
+            };
+          });
+        };
+
+        it('exposes what the active model backend reported', () => {
+          activateRemoteModel();
+          reportDefaults();
+
+          expect(modelStore.activeSamplerDefaults).toEqual({
+            top_k: 40,
+            temperature: 0.8,
+          });
+        });
+
+        it('is empty on a llama.cpp session that reported nothing yet', () => {
+          activateRemoteModel();
+
+          expect(modelStore.activeSamplerDefaults).toEqual({});
+        });
+
+        it('is undefined when no model is active', () => {
+          runInAction(() => {
+            serverStore.remoteCaps = {
+              'srv-1/remote-model': {samplerDefaults: {top_k: 40}},
+            };
+          });
+
+          expect(modelStore.activeSamplerDefaults).toBeUndefined();
+        });
+
+        it('is undefined for a local model', () => {
+          runInAction(() => {
+            modelStore.models = [
+              {id: 'local-model', origin: ModelOrigin.PRESET} as any,
+            ];
+            modelStore.activeModelId = 'local-model';
+          });
+
+          expect(modelStore.activeSamplerDefaults).toBeUndefined();
+        });
+
+        it.each(['OpenAI', 'Ollama', 'LM Studio', 'vLLM', 'unknown'] as const)(
+          'is undefined on a %s session, even with a matching entry',
+          serverType => {
+            activateRemoteModel(bindingOf(serverType));
+            reportDefaults();
+
+            expect(modelStore.activeSamplerDefaults).toBeUndefined();
+          },
+        );
+
+        it('follows the type the session was built with, not a later edit', () => {
+          activateRemoteModel();
+          reportDefaults();
+          runInAction(() => {
+            serverStore.servers = [
+              {
+                id: 'srv-1',
+                name: 'Server',
+                url: 'http://localhost:8080',
+                serverType: 'OpenAI',
+              },
+            ];
+          });
+
+          expect(modelStore.activeSamplerDefaults).toEqual({
+            top_k: 40,
+            temperature: 0.8,
+          });
+        });
+
+        it('is empty when the entry describes another backend', () => {
+          activateRemoteModel(bindingOf('llama.cpp', 'http://localhost:9090'));
+          reportDefaults();
+
+          expect(modelStore.activeSamplerDefaults).toEqual({});
+        });
+      });
+
       it('resolves an active remote model against the stored capabilities', () => {
         runInAction(() => {
           modelStore.models = [
@@ -3241,6 +3396,49 @@ describe('ModelStore', () => {
           modelStore.capsFor(other).effectiveContextLength,
         ).toBeUndefined();
         expect(modelStore.activeModelCaps.effectiveContextLength).toBe(4096);
+      });
+
+      it('notifies no observer when a list read brings the same rows', () => {
+        const listed = (nCtx: number) => [
+          {id: 'remote-model', object: 'model', meta: {n_ctx: nCtx}} as any,
+        ];
+        runInAction(() => {
+          modelStore.models = [
+            {
+              id: 'srv-1/remote-model',
+              origin: ModelOrigin.REMOTE,
+              serverId: 'srv-1',
+              remoteModelId: 'remote-model',
+            } as any,
+          ];
+          modelStore.activeModelId = 'srv-1/remote-model';
+          serverStore.servers = [
+            {
+              id: 'srv-1',
+              name: 'Server',
+              url: 'http://localhost:8080',
+              serverType: 'llama.cpp',
+            },
+          ];
+          serverStore.serverModels.set('srv-1', listed(4096));
+        });
+        const seen: unknown[] = [];
+        const dispose = reaction(
+          () => modelStore.activeModelCaps,
+          caps => seen.push(caps),
+        );
+
+        runInAction(() => serverStore.serverModels.set('srv-1', listed(4096)));
+        const afterSameRows = seen.length;
+        runInAction(() => serverStore.serverModels.set('srv-1', listed(8192)));
+        dispose();
+        runInAction(() => {
+          serverStore.serverModels.delete('srv-1');
+          serverStore.servers = [];
+        });
+
+        expect(afterSameRows).toBe(0);
+        expect(seen).toHaveLength(1);
       });
     });
 
@@ -3917,13 +4115,41 @@ describe('ModelStore', () => {
       modelStore.isStreaming = false;
       runInAction(() => {
         modelStore.isMultimodalActive = true;
+        modelStore.engine = {
+          completion: jest.fn(),
+          stopCompletion: jest.fn(),
+        } as any;
       });
     });
 
     afterEach(() => {
       runInAction(() => {
         modelStore.isMultimodalActive = false;
+        modelStore.engine = undefined;
       });
+    });
+
+    it('skips the frame while another generation holds the lease', async () => {
+      const mockContext = {
+        completion: jest.fn().mockResolvedValue({text: 'Response text'}),
+      };
+      modelStore.context = mockContext as any;
+      const held = await modelStore.acquireGeneration();
+      const onComplete = jest.fn();
+      const onError = jest.fn();
+
+      await modelStore.startImageCompletion({
+        prompt: 'Test prompt',
+        image_path: '/path/to/image.jpg',
+        onComplete,
+        onError,
+      });
+
+      expect(mockContext.completion).not.toHaveBeenCalled();
+      expect(onComplete).not.toHaveBeenCalled();
+      expect(onError).not.toHaveBeenCalled();
+      expect(modelStore.inferencing).toBe(false);
+      held!.end();
     });
 
     it('should throw error when no context available', async () => {
@@ -4339,6 +4565,46 @@ describe('ModelStore', () => {
 
       // initLlama should only be called once (first call only)
       expect(initLlamaMock).toHaveBeenCalledTimes(1);
+    });
+
+    it('records a calibration estimate without the checkpoint budget', async () => {
+      const model = {
+        ...basicModel,
+        ggufMetadata: {
+          architecture: 'gemma3',
+          n_layers: 26,
+          n_embd: 1152,
+          n_head: 4,
+          n_head_kv: 1,
+          n_vocab: 262144,
+          n_embd_head_k: 256,
+          n_embd_head_v: 256,
+          sliding_window: 512,
+        },
+      };
+      initLlamaMock.mockReset();
+      initLlamaMock.mockResolvedValue({
+        release: jest.fn(),
+      } as unknown as LlamaContext);
+      runInAction(() => {
+        modelStore.deviceTier = 'low';
+        modelStore.largestSuccessfulLoad = undefined;
+      });
+
+      await modelStore.initContext(model);
+
+      const settings = modelStore.activeContextSettings!;
+      expect(settings).not.toHaveProperty('state_cache_budget_mb');
+      expect(modelStore.largestSuccessfulLoad).toBe(
+        getModelMemoryRequirement(model, undefined, {
+          ...settings,
+          state_cache_budget_mb: 0,
+        }),
+      );
+      expect(initLlamaMock.mock.calls[0][0].state_cache_budget_mb).toBe(64);
+      runInAction(() => {
+        modelStore.deviceTier = null;
+      });
     });
 
     it('should clear isContextLoading after successful init', async () => {
@@ -5025,7 +5291,7 @@ describe('ModelStore', () => {
 
       await modelStore.setRemoteModel(remoteModel);
 
-      expect((modelStore.engine as any).timeoutMs).toBe(600000);
+      expect((modelStore.engine as any).endpoint.timeoutMs).toBe(600000);
     });
 
     it('builds the engine with undefined timeout for a server without the field', async () => {
@@ -5037,7 +5303,7 @@ describe('ModelStore', () => {
 
       await modelStore.setRemoteModel(remoteModel);
 
-      expect((modelStore.engine as any).timeoutMs).toBeUndefined();
+      expect((modelStore.engine as any).endpoint.timeoutMs).toBeUndefined();
     });
 
     it('rebuilds the engine with an updated timeout on re-selection', async () => {
@@ -5052,7 +5318,7 @@ describe('ModelStore', () => {
         ];
       });
       await modelStore.setRemoteModel(remoteModel);
-      expect((modelStore.engine as any).timeoutMs).toBe(30000);
+      expect((modelStore.engine as any).endpoint.timeoutMs).toBe(30000);
 
       // User edits the timeout, then re-selects the model.
       runInAction(() => {
@@ -5060,7 +5326,7 @@ describe('ModelStore', () => {
       });
       await modelStore.setRemoteModel(remoteModel);
 
-      expect((modelStore.engine as any).timeoutMs).toBe(600000);
+      expect((modelStore.engine as any).endpoint.timeoutMs).toBe(600000);
     });
 
     it('builds the engine carrying the saved serverType', async () => {
@@ -5077,7 +5343,7 @@ describe('ModelStore', () => {
 
       await modelStore.setRemoteModel(remoteModel);
 
-      expect((modelStore.engine as any).serverType).toBe('Ollama');
+      expect((modelStore.engine as any).endpoint.serverType).toBe('Ollama');
     });
   });
 
@@ -5165,6 +5431,181 @@ describe('ModelStore', () => {
     });
   });
 
+  describe('post-completion capability re-probe', () => {
+    let probe: jest.SpyInstance;
+    const URL = 'http://localhost:8080';
+    const bindingFor = (remoteModelId: string) => ({
+      modelId: `srv-1/${remoteModelId}`,
+      serverId: 'srv-1',
+      remoteModelId,
+      url: URL,
+      serverType: 'llama.cpp' as const,
+    });
+    const record = (fields: Partial<ServerConfig> = {}): ServerConfig => ({
+      id: 'srv-1',
+      name: 'llama',
+      url: URL,
+      serverType: 'llama.cpp',
+      ...fields,
+    });
+    const select = (remoteModelId: string) => {
+      runInAction(() => {
+        modelStore.activeModelId = `srv-1/${remoteModelId}`;
+        modelStore.activeRemoteBinding = bindingFor(remoteModelId);
+      });
+    };
+    const answered = {samplerDefaults: {top_k: 40}, probedUrl: URL};
+    const mainEra = {contextLength: 8192, probedUrl: URL};
+
+    beforeEach(() => {
+      runInAction(() => {
+        modelStore.context = undefined;
+        modelStore.engine = undefined;
+        modelStore.models = [];
+        (modelStore as any).postCompletionProbeFor = undefined;
+        serverStore.servers = [record()];
+        serverStore.serverModels.set('srv-1', [
+          {id: 'llama-7b', object: 'model', owned_by: 'system'},
+          {id: 'other', object: 'model', owned_by: 'system'},
+        ]);
+        serverStore.userSelectedModels = [
+          {serverId: 'srv-1', remoteModelId: 'llama-7b'},
+        ];
+        serverStore.remoteCaps = {};
+      });
+      select('llama-7b');
+      probe = jest
+        .spyOn(serverStore, 'fetchRemoteModelCaps')
+        .mockResolvedValue(undefined);
+    });
+
+    afterEach(() => {
+      probe.mockRestore();
+      runInAction(() => {
+        modelStore.activeModelId = undefined;
+        modelStore.activeRemoteBinding = undefined;
+        (modelStore as any).postCompletionProbeFor = undefined;
+        serverStore.servers = [];
+        serverStore.serverModels.clear();
+        serverStore.userSelectedModels = [];
+        serverStore.remoteCaps = {};
+      });
+    });
+
+    // A router only proxies /props to a resident model, so the probe fired at
+    // selection time answers nothing until the model has actually run.
+    it('probes once for a binding whose capabilities never landed', () => {
+      modelStore.reprobeRemoteCapsAfterCompletion();
+      modelStore.reprobeRemoteCapsAfterCompletion();
+
+      expect(probe).toHaveBeenCalledTimes(1);
+      expect(probe).toHaveBeenCalledWith('srv-1', 'llama-7b');
+    });
+
+    it('issues no probe when an entry already answers the session', () => {
+      runInAction(() => {
+        serverStore.remoteCaps['srv-1/llama-7b'] = answered;
+      });
+
+      modelStore.reprobeRemoteCapsAfterCompletion();
+
+      expect(probe).not.toHaveBeenCalled();
+    });
+
+    it('probes for an entry that carries no sampler defaults', () => {
+      runInAction(() => {
+        serverStore.remoteCaps['srv-1/llama-7b'] = mainEra;
+      });
+
+      modelStore.reprobeRemoteCapsAfterCompletion();
+
+      expect(probe).toHaveBeenCalledTimes(1);
+    });
+
+    it('keeps its retry while the server points elsewhere', () => {
+      runInAction(() => {
+        serverStore.servers = [record({url: 'http://localhost:9090'})];
+      });
+      modelStore.reprobeRemoteCapsAfterCompletion();
+      expect(probe).not.toHaveBeenCalled();
+
+      runInAction(() => {
+        serverStore.servers = [record()];
+      });
+      modelStore.reprobeRemoteCapsAfterCompletion();
+
+      expect(probe).toHaveBeenCalledTimes(1);
+    });
+
+    it('probes again for the next binding on the same server', () => {
+      modelStore.reprobeRemoteCapsAfterCompletion();
+      select('other');
+
+      modelStore.reprobeRemoteCapsAfterCompletion();
+
+      expect(probe).toHaveBeenCalledTimes(2);
+      expect(probe).toHaveBeenLastCalledWith('srv-1', 'other');
+    });
+
+    it('probes again when the user comes back to a model still unanswered', () => {
+      runInAction(() => {
+        serverStore.remoteCaps['srv-1/llama-7b'] = mainEra;
+        serverStore.remoteCaps['srv-1/other'] = answered;
+      });
+      modelStore.reprobeRemoteCapsAfterCompletion();
+      select('other');
+      modelStore.reprobeRemoteCapsAfterCompletion();
+      expect(probe).toHaveBeenCalledTimes(1);
+
+      select('llama-7b');
+      modelStore.reprobeRemoteCapsAfterCompletion();
+
+      expect(probe).toHaveBeenCalledTimes(2);
+      expect(probe).toHaveBeenLastCalledWith('srv-1', 'llama-7b');
+    });
+
+    it('issues no probe without a remote session', () => {
+      runInAction(() => {
+        modelStore.activeRemoteBinding = undefined;
+      });
+
+      modelStore.reprobeRemoteCapsAfterCompletion();
+
+      expect(probe).not.toHaveBeenCalled();
+    });
+
+    it('issues no probe once the server is removed', () => {
+      runInAction(() => {
+        serverStore.servers = [];
+      });
+
+      modelStore.reprobeRemoteCapsAfterCompletion();
+
+      expect(probe).not.toHaveBeenCalled();
+    });
+
+    it.each([
+      ['a server type without /props', {serverType: 'OpenAI' as const}],
+      ['a record stored before the type existed', {serverType: undefined}],
+    ])(
+      'keeps its retry on %s, which would issue no request',
+      (_label, fields) => {
+        runInAction(() => {
+          serverStore.servers = [record(fields)];
+        });
+        modelStore.reprobeRemoteCapsAfterCompletion();
+        expect(probe).not.toHaveBeenCalled();
+
+        runInAction(() => {
+          serverStore.servers = [record()];
+        });
+        modelStore.reprobeRemoteCapsAfterCompletion();
+
+        expect(probe).toHaveBeenCalledTimes(1);
+      },
+    );
+  });
+
   describe('foreground capability re-probe', () => {
     let probe: jest.SpyInstance;
 
@@ -5172,12 +5613,23 @@ describe('ModelStore', () => {
       runInAction(() => {
         modelStore.context = undefined;
         modelStore.engine = undefined;
-        modelStore.activeRemoteBinding = undefined;
+        modelStore.activeRemoteBinding = {
+          modelId: 'srv-1/llama-7b',
+          serverId: 'srv-1',
+          remoteModelId: 'llama-7b',
+          url: 'http://localhost:8080',
+          serverType: 'llama.cpp',
+        };
         modelStore.appState = 'background';
         modelStore.activeModelId = 'srv-1/llama-7b';
         modelStore.models = [];
         serverStore.servers = [
-          {id: 'srv-1', name: 'llama', url: 'http://localhost:8080'},
+          {
+            id: 'srv-1',
+            name: 'llama',
+            url: 'http://localhost:8080',
+            serverType: 'llama.cpp',
+          },
         ];
         serverStore.serverModels.set('srv-1', [
           {id: 'llama-7b', object: 'model', owned_by: 'system'},
@@ -5222,9 +5674,34 @@ describe('ModelStore', () => {
       expect(probe).toHaveBeenCalledTimes(2);
     });
 
-    it('issues no probe when capabilities are already known', async () => {
+    it('probes for an entry that carries no sampler defaults', async () => {
       runInAction(() => {
         serverStore.remoteCaps['srv-1/llama-7b'] = {contextLength: 8192};
+      });
+
+      await modelStore.handleAppStateChange('active');
+
+      expect(probe).toHaveBeenCalledTimes(1);
+    });
+
+    it('issues no probe when an entry already answers the session', async () => {
+      runInAction(() => {
+        serverStore.remoteCaps['srv-1/llama-7b'] = {
+          contextLength: 8192,
+          samplerDefaults: {top_k: 40},
+        };
+      });
+
+      await modelStore.handleAppStateChange('active');
+
+      expect(probe).not.toHaveBeenCalled();
+    });
+
+    it('issues no probe on a record stored before the type existed', async () => {
+      runInAction(() => {
+        serverStore.servers = [
+          {id: 'srv-1', name: 'llama', url: 'http://localhost:8080'},
+        ];
       });
 
       await modelStore.handleAppStateChange('active');
@@ -5236,13 +5713,8 @@ describe('ModelStore', () => {
       runInAction(() => {
         serverStore.remoteCaps['srv-1/llama-7b'] = {
           contextLength: 8192,
+          samplerDefaults: {top_k: 40},
           probedUrl: 'http://localhost:9090',
-        };
-        modelStore.activeRemoteBinding = {
-          modelId: 'srv-1/llama-7b',
-          serverId: 'srv-1',
-          remoteModelId: 'llama-7b',
-          url: 'http://localhost:8080',
         };
       });
 
@@ -5258,6 +5730,7 @@ describe('ModelStore', () => {
       runInAction(() => {
         modelStore.models = [model];
         modelStore.activeModelId = model.id;
+        modelStore.activeRemoteBinding = undefined;
       });
 
       await modelStore.handleAppStateChange('active');

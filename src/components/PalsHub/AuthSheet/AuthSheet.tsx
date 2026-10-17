@@ -1,15 +1,20 @@
 import React, {useState, useEffect} from 'react';
-import {View, Alert} from 'react-native';
+import {View, Alert, Platform} from 'react-native';
 
 import {observer} from 'mobx-react-lite';
 import {useSafeAreaInsets} from 'react-native-safe-area-context';
 import {Text, Button, TextInput, ActivityIndicator} from 'react-native-paper';
+import {
+  AppleButton,
+  appleAuth,
+} from '@invertase/react-native-apple-authentication';
 
 import {GoogleIcon} from '../../../assets/icons';
 
 import {useTheme} from '../../../hooks';
 
 import {Sheet} from '../../Sheet';
+import {renderSheetAwareInput} from '../../TextInput';
 import {createStyles} from './styles';
 
 import {authService, PalsHubErrorHandler} from '../../../services';
@@ -26,6 +31,9 @@ export const AuthSheet: React.FC<AuthSheetProps> = observer(
     const theme = useTheme();
     const insets = useSafeAreaInsets();
     const styles = createStyles(theme);
+    const paperButtonRadius = 5 * theme.roundness;
+    const isAppleSignInAvailable =
+      Platform.OS === 'ios' && appleAuth.isSupported;
 
     const [isSignUp, setIsSignUp] = useState(false);
     const [email, setEmail] = useState('');
@@ -101,6 +109,19 @@ export const AuthSheet: React.FC<AuthSheetProps> = observer(
       }
     };
 
+    const handleAppleAuth = async () => {
+      if (authService.isLoading) {
+        return;
+      }
+      try {
+        authService.clearError();
+        await authService.signInWithApple();
+      } catch (error) {
+        const errorInfo = PalsHubErrorHandler.handle(error);
+        Alert.alert('Apple Sign-In Error', errorInfo.userMessage);
+      }
+    };
+
     const handleForgotPassword = async () => {
       if (!email.trim()) {
         Alert.alert('Error', 'Please enter your email address first.');
@@ -169,6 +190,7 @@ export const AuthSheet: React.FC<AuthSheetProps> = observer(
             {isSignUp && (
               <TextInput
                 testID="full-name-input"
+                render={renderSheetAwareInput}
                 label="Full Name"
                 value={fullName}
                 onChangeText={setFullName}
@@ -180,6 +202,7 @@ export const AuthSheet: React.FC<AuthSheetProps> = observer(
 
             <TextInput
               testID="email-input"
+              render={renderSheetAwareInput}
               label="Email"
               value={email}
               onChangeText={setEmail}
@@ -192,6 +215,7 @@ export const AuthSheet: React.FC<AuthSheetProps> = observer(
 
             <TextInput
               testID="password-input"
+              render={renderSheetAwareInput}
               label="Password"
               value={password}
               onChangeText={setPassword}
@@ -228,6 +252,19 @@ export const AuthSheet: React.FC<AuthSheetProps> = observer(
             <Text style={styles.authDividerText}>or</Text>
             <View style={styles.authDividerLine} />
           </View>
+
+          {isAppleSignInAvailable && (
+            <AppleButton
+              testID="auth-apple-button"
+              buttonType={AppleButton.Type.SIGN_IN}
+              buttonStyle={
+                theme.dark ? AppleButton.Style.WHITE : AppleButton.Style.BLACK
+              }
+              cornerRadius={paperButtonRadius}
+              style={styles.authAppleButton}
+              onPress={handleAppleAuth}
+            />
+          )}
 
           {/* Google Sign-In */}
           <Button

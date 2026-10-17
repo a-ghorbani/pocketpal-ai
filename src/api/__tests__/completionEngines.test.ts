@@ -5,6 +5,12 @@ import {
   OpenAICompletionEngine,
 } from '../completionEngines';
 import * as openaiModule from '../openai';
+import type {RemoteEndpoint} from '../servers';
+import {
+  RemoteHttpError,
+  RemoteModelRequestWithdrawnError,
+} from '../../utils/errors';
+import {routerWireJson} from '../../../jest/fixtures/routerWire';
 
 jest.mock('../openai', () => ({
   streamChatCompletion: jest.fn(),
@@ -54,6 +60,25 @@ describe('LocalCompletionEngine', () => {
     expect(result.stopped_eos).toBe(true);
     expect(result.tokens_predicted).toBe(2);
     expect(result.timings).toEqual({predicted_per_second: 50});
+  });
+
+  it('drops native timings fields that are not finite numbers', async () => {
+    (mockContext.completion as jest.Mock).mockResolvedValueOnce({
+      text: 'hi',
+      content: 'hi',
+      timings: {
+        prompt_n: 1,
+        predicted_per_second: NaN,
+        predicted_ms: 35.222,
+        cache_n: '15',
+      },
+      tokens_predicted: 2,
+      tokens_evaluated: 5,
+    });
+
+    const result = await engine.completion({messages: []} as any);
+
+    expect(result.timings).toEqual({prompt_n: 1, predicted_ms: 35.222});
   });
 
   it('carries speculative draft_tokens counters from the native result', async () => {
@@ -137,15 +162,17 @@ describe('LocalCompletionEngine', () => {
 });
 
 describe('OpenAICompletionEngine', () => {
+  const ENDPOINT: RemoteEndpoint = {
+    url: 'http://localhost:1234',
+    remoteModelId: 'test-model',
+    apiKey: 'sk-key',
+    serverType: 'unknown',
+  };
   let engine: OpenAICompletionEngine;
 
   beforeEach(() => {
     jest.clearAllMocks();
-    engine = new OpenAICompletionEngine(
-      'http://localhost:1234',
-      'test-model',
-      'sk-key',
-    );
+    engine = new OpenAICompletionEngine(ENDPOINT);
   });
 
   it('calls streamChatCompletion with correct parameters', async () => {
@@ -171,19 +198,14 @@ describe('OpenAICompletionEngine', () => {
       {
         messages: [{role: 'user', content: 'Hi'}],
         model: 'test-model',
-        temperature: 0.8,
-        top_p: 0.95,
-        max_tokens: 200,
+        samplers: {temperature: 0.8, top_p: 0.95, n_predict: 200},
         stop: ['</s>'],
         stream: true,
         reasoning: undefined,
       },
-      'http://localhost:1234',
-      'sk-key',
+      ENDPOINT,
       expect.any(Object), // AbortSignal
       onToken,
-      undefined, // timeoutMs
-      undefined, // serverType
     );
 
     expect(result).toEqual(mockResult);
@@ -221,11 +243,8 @@ describe('OpenAICompletionEngine', () => {
         tools: [calculateTool],
         tool_choice: 'auto',
       }),
-      'http://localhost:1234',
-      'sk-key',
+      ENDPOINT,
       expect.any(Object),
-      undefined,
-      undefined,
       undefined,
     );
   });
@@ -252,11 +271,40 @@ describe('OpenAICompletionEngine', () => {
 
     expect(mockedStreamChat).toHaveBeenCalledWith(
       expect.objectContaining({response_format: responseFormat}),
-      'http://localhost:1234',
-      'sk-key',
+      ENDPOINT,
       expect.any(Object),
       undefined,
-      undefined,
+    );
+  });
+
+  it('forwards every sampler to streamChatCompletion unaltered', async () => {
+    mockedStreamChat.mockResolvedValueOnce({text: '', content: ''});
+
+    const samplers = {
+      top_k: 11,
+      min_p: 0.11,
+      typical_p: 0.91,
+      xtc_threshold: 0.31,
+      xtc_probability: 0.21,
+      penalty_last_n: 41,
+      penalty_repeat: 1.11,
+      penalty_freq: 0.41,
+      penalty_present: 0.51,
+      mirostat: 2,
+      mirostat_tau: 4.1,
+      mirostat_eta: 0.21,
+      seed: 12345,
+    };
+
+    await engine.completion({
+      messages: [{role: 'user', content: 'Hi'}],
+      ...samplers,
+    } as any);
+
+    expect(mockedStreamChat).toHaveBeenCalledWith(
+      expect.objectContaining({samplers}),
+      ENDPOINT,
+      expect.any(Object),
       undefined,
     );
   });
@@ -277,17 +325,12 @@ describe('OpenAICompletionEngine', () => {
       expect.objectContaining({
         messages: [{role: 'user', content: 'Hi'}],
         model: 'test-model',
-        temperature: undefined,
-        top_p: undefined,
-        max_tokens: undefined,
+        samplers: {},
         stop: undefined,
         stream: true,
       }),
-      'http://localhost:1234',
-      'sk-key',
+      ENDPOINT,
       expect.any(Object),
-      undefined,
-      undefined,
       undefined,
     );
   });
@@ -296,7 +339,7 @@ describe('OpenAICompletionEngine', () => {
     // Start a completion that will be aborted
     let capturedSignal: AbortSignal | undefined;
     mockedStreamChat.mockImplementation(
-      async (_p: any, _u: any, _k: any, signal: AbortSignal) => {
+      async (_p: any, _endpoint: any, signal: AbortSignal) => {
         capturedSignal = signal;
         return {text: '', content: ''};
       },
@@ -321,12 +364,8 @@ describe('OpenAICompletionEngine', () => {
   // raw (no normalization here) to streamChatCompletion. A rebuilt engine (on
   // the next setRemoteModel) therefore applies an edited value.
   it('forwards the constructed timeoutMs to streamChatCompletion', async () => {
-    const timedEngine = new OpenAICompletionEngine(
-      'http://localhost:1234',
-      'test-model',
-      'sk-key',
-      600000,
-    );
+    const timedEndpoint = {...ENDPOINT, timeoutMs: 600000};
+    const timedEngine = new OpenAICompletionEngine(timedEndpoint);
     mockedStreamChat.mockResolvedValueOnce({text: '', content: ''});
 
     await timedEngine.completion({
@@ -335,20 +374,19 @@ describe('OpenAICompletionEngine', () => {
 
     expect(mockedStreamChat).toHaveBeenCalledWith(
       expect.any(Object),
-      'http://localhost:1234',
-      'sk-key',
+      timedEndpoint, // raw timeoutMs forwarded, not normalized
       expect.any(Object), // AbortSignal
       undefined, // callback
-      600000, // raw timeoutMs forwarded, not normalized
-      undefined, // serverType
     );
   });
 
   it('creates engine without api key', () => {
-    const noKeyEngine = new OpenAICompletionEngine(
-      'http://localhost:1234',
-      'model-id',
-    );
+    const noKeyEndpoint: RemoteEndpoint = {
+      url: 'http://localhost:1234',
+      remoteModelId: 'model-id',
+      serverType: 'unknown',
+    };
+    const noKeyEngine = new OpenAICompletionEngine(noKeyEndpoint);
 
     mockedStreamChat.mockResolvedValueOnce({text: '', content: ''});
 
@@ -356,23 +394,15 @@ describe('OpenAICompletionEngine', () => {
 
     expect(mockedStreamChat).toHaveBeenCalledWith(
       expect.any(Object),
-      'http://localhost:1234',
-      undefined,
+      noKeyEndpoint,
       expect.any(Object),
-      undefined,
-      undefined,
       undefined,
     );
   });
 
   it('forwards params.reasoning and the constructed serverType', async () => {
-    const typedEngine = new OpenAICompletionEngine(
-      'http://localhost:1234',
-      'test-model',
-      'sk-key',
-      undefined,
-      'Ollama',
-    );
+    const typedEndpoint: RemoteEndpoint = {...ENDPOINT, serverType: 'Ollama'};
+    const typedEngine = new OpenAICompletionEngine(typedEndpoint);
     mockedStreamChat.mockResolvedValueOnce({text: '', content: ''});
 
     await typedEngine.completion({
@@ -382,12 +412,225 @@ describe('OpenAICompletionEngine', () => {
 
     expect(mockedStreamChat).toHaveBeenCalledWith(
       expect.objectContaining({reasoning: {enabled: false}}),
-      'http://localhost:1234',
-      'sk-key',
+      typedEndpoint,
       expect.any(Object),
       undefined,
-      undefined,
-      'Ollama',
     );
+  });
+});
+
+describe('OpenAICompletionEngine readiness', () => {
+  const ENDPOINT: RemoteEndpoint = {
+    url: 'http://localhost:8080',
+    remoteModelId: 'router-model',
+    serverType: 'llama.cpp',
+  };
+  const params = {messages: [{role: 'user', content: 'Hi'}]} as any;
+
+  beforeEach(() => {
+    jest.clearAllMocks();
+    jest.useRealTimers();
+    mockedStreamChat.mockResolvedValue({text: 'ok', content: 'ok'});
+  });
+
+  it('waits for readiness before the request, then sends it', async () => {
+    const order: string[] = [];
+    const ensureReady = jest.fn(async (_signal: AbortSignal) => {
+      order.push('ready');
+    });
+    mockedStreamChat.mockImplementationOnce(async () => {
+      order.push('request');
+      return {text: 'ok', content: 'ok'};
+    });
+    const engine = new OpenAICompletionEngine(ENDPOINT, {ensureReady});
+
+    await engine.completion(params);
+
+    expect(order).toEqual(['ready', 'request']);
+    expect(ensureReady.mock.calls[0][0]).toBe(
+      mockedStreamChat.mock.calls[0][2],
+    );
+  });
+
+  it('rejects as withdrawn with no request when stopped while waiting', async () => {
+    let signal!: AbortSignal;
+    const engine = new OpenAICompletionEngine(ENDPOINT, {
+      ensureReady: s =>
+        new Promise(resolve => {
+          signal = s;
+          s.addEventListener('abort', () => resolve());
+        }),
+    });
+
+    const pending = engine.completion(params);
+    await Promise.resolve();
+    await engine.stopCompletion();
+
+    await expect(pending).rejects.toBeInstanceOf(
+      RemoteModelRequestWithdrawnError,
+    );
+    expect(signal.aborted).toBe(true);
+    expect(mockedStreamChat).not.toHaveBeenCalled();
+  });
+
+  it('passes a readiness failure through', async () => {
+    const failure = new Error('not ready');
+    const engine = new OpenAICompletionEngine(ENDPOINT, {
+      ensureReady: () => Promise.reject(failure),
+    });
+
+    await expect(engine.completion(params)).rejects.toBe(failure);
+    expect(mockedStreamChat).not.toHaveBeenCalled();
+  });
+
+  it('puts no timeout of its own on readiness', async () => {
+    jest.useFakeTimers();
+    const engine = new OpenAICompletionEngine(ENDPOINT, {
+      ensureReady: () => new Promise(() => {}),
+    });
+    let settled = false;
+    engine.completion(params).then(
+      () => (settled = true),
+      () => (settled = true),
+    );
+
+    jest.advanceTimersByTime(60 * 60 * 1000);
+    await Promise.resolve();
+
+    expect(settled).toBe(false);
+    expect(jest.getTimerCount()).toBe(0);
+    jest.useRealTimers();
+  });
+
+  it('sends exactly as before when no readiness is given', async () => {
+    const engine = new OpenAICompletionEngine(ENDPOINT);
+
+    await engine.completion(params);
+
+    expect(mockedStreamChat).toHaveBeenCalledTimes(1);
+    expect(mockedStreamChat.mock.calls[0][1]).toBe(ENDPOINT);
+  });
+});
+
+describe('OpenAICompletionEngine when the router has unloaded the model', () => {
+  const ENDPOINT: RemoteEndpoint = {
+    url: 'http://localhost:8080',
+    remoteModelId: 'router-model',
+    serverType: 'llama.cpp',
+  };
+  const params = {messages: [{role: 'user', content: 'Hi'}]} as any;
+  const body = routerWireJson('completion-not-loaded-400.json');
+  const notLoaded = () =>
+    new RemoteHttpError(
+      `Server error: 400 — ${body.error.message}`,
+      body.error.code,
+      body.error.message,
+    );
+
+  beforeEach(() => {
+    jest.clearAllMocks();
+    mockedStreamChat.mockResolvedValue({text: 'ok', content: 'ok'});
+  });
+
+  it('waits for the model again and sends once more', async () => {
+    const ensureReady = jest
+      .fn()
+      .mockResolvedValueOnce(true)
+      .mockResolvedValueOnce(true);
+    mockedStreamChat.mockRejectedValueOnce(notLoaded());
+    const engine = new OpenAICompletionEngine(ENDPOINT, {ensureReady});
+
+    await expect(engine.completion(params)).resolves.toEqual({
+      text: 'ok',
+      content: 'ok',
+    });
+    expect(mockedStreamChat).toHaveBeenCalledTimes(2);
+    expect(ensureReady).toHaveBeenCalledTimes(2);
+    expect(ensureReady.mock.calls[1][1]).toEqual({reread: true});
+  });
+
+  it('surfaces a second refusal without a third request', async () => {
+    const ensureReady = jest.fn().mockResolvedValue(true);
+    const second = notLoaded();
+    mockedStreamChat
+      .mockRejectedValueOnce(notLoaded())
+      .mockRejectedValueOnce(second);
+    const engine = new OpenAICompletionEngine(ENDPOINT, {ensureReady});
+
+    await expect(engine.completion(params)).rejects.toBe(second);
+    expect(mockedStreamChat).toHaveBeenCalledTimes(2);
+  });
+
+  it('does not retry on a plain server', async () => {
+    const refusal = notLoaded();
+    mockedStreamChat.mockRejectedValueOnce(refusal);
+    const engine = new OpenAICompletionEngine(ENDPOINT);
+
+    await expect(engine.completion(params)).rejects.toBe(refusal);
+    expect(mockedStreamChat).toHaveBeenCalledTimes(1);
+  });
+
+  it('does not retry when no router made the model ready', async () => {
+    const ensureReady = jest
+      .fn()
+      .mockResolvedValueOnce(false)
+      .mockResolvedValueOnce(false);
+    const refusal = notLoaded();
+    mockedStreamChat.mockRejectedValueOnce(refusal);
+    const engine = new OpenAICompletionEngine(ENDPOINT, {ensureReady});
+
+    await expect(engine.completion(params)).rejects.toBe(refusal);
+    expect(mockedStreamChat).toHaveBeenCalledTimes(1);
+  });
+
+  it('does not retry once a token has streamed', async () => {
+    const ensureReady = jest.fn().mockResolvedValue(true);
+    const refusal = notLoaded();
+    mockedStreamChat.mockImplementationOnce(async (_p, _e, _s, onData) => {
+      onData({content: 'partial'});
+      throw refusal;
+    });
+    const engine = new OpenAICompletionEngine(ENDPOINT, {ensureReady});
+
+    await expect(engine.completion(params, jest.fn())).rejects.toBe(refusal);
+    expect(ensureReady).toHaveBeenCalledTimes(1);
+  });
+
+  it('does not retry another refusal', async () => {
+    const ensureReady = jest.fn().mockResolvedValue(true);
+    const other = new RemoteHttpError(
+      'Server error: 400 — bad request',
+      400,
+      'bad request',
+    );
+    mockedStreamChat.mockRejectedValueOnce(other);
+    const engine = new OpenAICompletionEngine(ENDPOINT, {ensureReady});
+
+    await expect(engine.completion(params)).rejects.toBe(other);
+    expect(ensureReady).toHaveBeenCalledTimes(1);
+  });
+
+  it('withdraws the turn when stopped during the second wait', async () => {
+    const ensureReady = jest
+      .fn()
+      .mockResolvedValueOnce(true)
+      .mockImplementationOnce(
+        (signal: AbortSignal) =>
+          new Promise(resolve =>
+            signal.addEventListener('abort', () => resolve(false)),
+          ),
+      );
+    mockedStreamChat.mockRejectedValueOnce(notLoaded());
+    const engine = new OpenAICompletionEngine(ENDPOINT, {ensureReady});
+
+    const pending = engine.completion(params);
+    await new Promise(resolve => setImmediate(resolve));
+    expect(ensureReady).toHaveBeenCalledTimes(2);
+    await engine.stopCompletion();
+
+    await expect(pending).rejects.toBeInstanceOf(
+      RemoteModelRequestWithdrawnError,
+    );
+    expect(mockedStreamChat).toHaveBeenCalledTimes(1);
   });
 });

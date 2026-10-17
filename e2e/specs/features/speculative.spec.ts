@@ -295,6 +295,11 @@ describe('Speculative Decoding / MTP draft model', () => {
     // engagement signal. Runs last (loading the MTP model reorders the model list).
     await downloadAndLoadModel(MTP_MODEL);
     await chatPage.resetChat();
+    // The reasoning model can loop in its think-phase past the wait; a token
+    // cap guarantees the turn completes and the footer renders.
+    await chatPage.openGenerationSettings();
+    await chatPage.setNPredict('256');
+    await chatPage.saveGenerationSettings();
     await chatPage.sendMessage('Hi');
 
     const draftEl = browser.$(DRAFT_TOKENS_EL);

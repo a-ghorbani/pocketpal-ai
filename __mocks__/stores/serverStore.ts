@@ -1,9 +1,13 @@
 import {makeAutoObservable, observable} from 'mobx';
 
-import {RemoteModelCaps, ServerConfig} from '../../src/utils/types';
+import {
+  RemoteModelCaps,
+  RemoteModelInfo,
+  ServerConfig,
+} from '../../src/utils/types';
 import {ReasoningCapability} from '../../src/utils/reasoningCapability';
-import {RemoteModelInfo} from '../../src/api/openai';
-import {deriveListCapsMap} from '../../src/utils/listCaps';
+import {deriveListCapsMap} from '../../src/api/servers';
+import type {ListRead} from '../../src/store/ServerStore';
 
 class MockServerStore {
   servers: ServerConfig[] = [];
@@ -23,6 +27,9 @@ class MockServerStore {
   isLoading = false;
   error: string | null = null;
   privacyNoticeAcknowledged = false;
+  listReads: Record<string, ListRead> = {};
+  appActive = true;
+  readSeq = 0;
 
   addServer: jest.Mock;
   updateServer: jest.Mock;
@@ -65,12 +72,12 @@ class MockServerStore {
       setRemoteReasoningOverride: false,
     });
     this.addServer = jest.fn().mockReturnValue('mock-server-id');
-    this.updateServer = jest.fn();
+    this.updateServer = jest.fn().mockReturnValue(false);
     this.removeServer = jest.fn();
     this.setApiKey = jest.fn().mockResolvedValue(undefined);
     this.getApiKey = jest.fn().mockResolvedValue(undefined);
     this.removeApiKey = jest.fn().mockResolvedValue(undefined);
-    this.fetchModelsForServer = jest.fn().mockResolvedValue(undefined);
+    this.fetchModelsForServer = jest.fn().mockResolvedValue({ok: true});
     this.fetchRemoteModelCaps = jest.fn().mockResolvedValue(undefined);
     this.fetchAllRemoteModels = jest.fn().mockResolvedValue(undefined);
     this.testServerConnection = jest

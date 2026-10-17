@@ -377,5 +377,53 @@ describe('ProjectionModelSelector', () => {
         'proj-model-3',
       );
     });
+
+    it('offers download, not a spinner, for retained progress with no running download', () => {
+      const {downloadManager} = require('../../../services/downloads');
+      downloadManager.isDownloading.mockReturnValue(false);
+      const failedModel = createModel({
+        id: 'proj-model-4',
+        name: 'Failed Model',
+        isDownloaded: false,
+        progress: 40,
+      });
+
+      const {getByTestId, queryByText} = render(
+        <ProjectionModelSelector
+          model={mockModel}
+          context="search"
+          availableProjectionModels={[failedModel]}
+          showDownloadActions={true}
+          initialExpanded={true}
+        />,
+      );
+
+      expect(getByTestId('download-projection-model-button')).toBeTruthy();
+      expect(queryByText('40%')).toBeNull();
+    });
+
+    it('shows progress while the projection model is downloading', () => {
+      const {downloadManager} = require('../../../services/downloads');
+      downloadManager.isDownloading.mockReturnValue(true);
+      const downloadingModel = createModel({
+        id: 'proj-model-5',
+        name: 'Downloading Model',
+        isDownloaded: false,
+        progress: 40,
+      });
+
+      const {getByText, queryByTestId} = render(
+        <ProjectionModelSelector
+          model={mockModel}
+          context="search"
+          availableProjectionModels={[downloadingModel]}
+          showDownloadActions={true}
+          initialExpanded={true}
+        />,
+      );
+
+      expect(getByText('40%')).toBeTruthy();
+      expect(queryByTestId('download-projection-model-button')).toBeNull();
+    });
   });
 });

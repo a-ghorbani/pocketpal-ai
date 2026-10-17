@@ -1,9 +1,14 @@
-import {TalentEngine, TalentResult, ToolDefinition} from './types';
+import {
+  TalentEngine,
+  TalentExecuteContext,
+  TalentResult,
+  ToolDefinition,
+} from './types';
 import type {SearchAccess} from './searchAccess';
 import type {PageContent} from '../search/types';
 import {budgetPage} from '../search/searchBudget';
 import {wrapUntrusted} from './untrustedContent';
-import {isReadUrlAllowed} from './readUrlAllowlist';
+import {allowReadUrls, extractUrls, matchReadUrl} from './readUrlAllowlist';
 
 /**
  * Reject non-http(s) schemes and embedded credentials so a malicious page
@@ -25,13 +30,18 @@ const isAllowedReadUrl = (raw: string): boolean => {
   return parsed.hostname.length > 0;
 };
 
+const MAX_PAGE_LINKS = 100;
+
 export class ReadUrlEngine implements TalentEngine {
   readonly name = 'read_url';
   readonly recommendedContextTokens = 1200;
 
   constructor(private access: SearchAccess) {}
 
-  async execute(args: Record<string, any>): Promise<TalentResult> {
+  async execute(
+    args: Record<string, any>,
+    ctx?: TalentExecuteContext,
+  ): Promise<TalentResult> {
     const url = typeof args.url === 'string' ? args.url.trim() : '';
     if (!url) {
       return {
@@ -55,28 +65,21 @@ export class ReadUrlEngine implements TalentEngine {
       };
     }
 
-    // Exfiltration guard: only URLs from this conversation's web_search
-    // results or the user's own messages may be fetched.
-    if (!isReadUrlAllowed(url)) {
+    // Exfiltration guard: fetch the stored entry, or the canonical request on a site the user named.
+    const targetUrl = matchReadUrl(url);
+    if (targetUrl === null) {
       const summary =
-        'read_url: this URL is not from a web_search result or a user message in this conversation. Copy the URL exactly as the user wrote it or as shown in web_search results, or run web_search first.';
+        'read_url: this URL is not allowed. Use a page on a site the user named, or copy a URL exactly from a web_search result or a page you read with read_url; or run web_search first.';
       return {type: 'error', summary, errorMessage: summary};
     }
-
-    // Fetch the canonical URL, not the raw argument: allowlist matching
-    // ignores fragments, so a smuggled `#data` must never reach a provider
-    // that transmits the URL verbatim (Exa sends it in a JSON body).
-    const canonical = new URL(url);
-    canonical.hash = '';
-    const targetUrl = canonical.toString();
 
     const provider = this.access.getActiveProvider();
 
     let page: PageContent;
     try {
       page = provider.read
-        ? await provider.read(targetUrl)
-        : await this.access.readWithDefaultReader(targetUrl);
+        ? await provider.read(targetUrl, ctx?.signal)
+        : await this.access.readWithDefaultReader(targetUrl, ctx?.signal);
     } catch (e) {
       const errMsg = e instanceof Error ? e.message : String(e);
       return {
@@ -99,10 +102,14 @@ export class ReadUrlEngine implements TalentEngine {
       return {type: 'error', summary, errorMessage: summary};
     }
 
+    const links = extractUrls(bounded.text).slice(0, MAX_PAGE_LINKS);
+    allowReadUrls(links);
+
     const header = bounded.title ? `${bounded.title}\n${targetUrl}` : targetUrl;
     return {
       type: 'text',
       summary: wrapUntrusted(`${header}\n\n${bounded.text}`),
+      links,
     };
   }
 
@@ -112,14 +119,14 @@ export class ReadUrlEngine implements TalentEngine {
       function: {
         name: 'read_url',
         description:
-          'Fetch the full text of one web page. Use this directly when the user gives you a URL to read — no search needed first. Also use it after web_search when a snippet mentions the answer but does not fully contain it. Pass the exact URL as the user wrote it or as shown in a web_search result. Do not invent URLs.',
+          'Fetch the full text of one web page. Use it directly when the user names a site or gives a URL; any page on a site the user named can be read. Also use it after web_search when a snippet does not fully answer, or to follow a URL written in a page you read. On other sites, copy the URL exactly from a web_search result or a page you read; do not invent URLs.',
         parameters: {
           type: 'object',
           properties: {
             url: {
               type: 'string',
               description:
-                "Exact URL from the user's message or a web_search result.",
+                'A page on a site the user named, or a URL copied exactly from a web_search result or a page you read.',
             },
           },
           required: ['url'],

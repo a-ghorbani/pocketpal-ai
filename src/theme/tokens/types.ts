@@ -109,6 +109,7 @@ export interface TokenColors {
   // Status bar
   bgStatusActive: string;
   bgStatusIdle: string;
+  statusLoaded: string;
 
   // Buttons
   btnPrimaryBg: string;

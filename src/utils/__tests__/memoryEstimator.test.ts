@@ -1,9 +1,27 @@
-import {getModelMemoryRequirement} from '../memoryEstimator';
+import {
+  getModelMemoryRequirement,
+  stateCacheBudgetMb,
+} from '../memoryEstimator';
 import {Model} from '../types';
 import {createDefaultContextInitParams} from '../contextInitParamsVersions';
 
 describe('memoryEstimator', () => {
-  const contextSettings = createDefaultContextInitParams();
+  const contextSettings = {
+    ...createDefaultContextInitParams(),
+    state_cache_budget_mb: 0,
+  };
+
+  describe('stateCacheBudgetMb', () => {
+    it.each([
+      ['low', 64],
+      [null, 64],
+      ['mid', 160],
+      ['high', 160],
+      ['flagship', 160],
+    ] as const)('maps tier %s to %i MiB', (tier, budget) => {
+      expect(stateCacheBudgetMb(tier)).toBe(budget);
+    });
+  });
 
   const baseModel: Partial<Model> = {
     id: 'test-model',
@@ -297,6 +315,90 @@ describe('memoryEstimator', () => {
         undefined,
       );
       expect(a).toBe(b);
+    });
+  });
+
+  describe('state checkpoint budget', () => {
+    const MiB = 1024 * 1024;
+    const swaModel = (sliding_window?: number) =>
+      ({
+        ...baseModel,
+        ggufMetadata: {
+          architecture: 'gemma3',
+          n_layers: 26,
+          n_embd: 1152,
+          n_head: 4,
+          n_head_kv: 1,
+          n_vocab: 262144,
+          n_embd_head_k: 256,
+          n_embd_head_v: 256,
+          sliding_window,
+        },
+      }) as Model;
+    const withBudget = (state_cache_budget_mb: number) => ({
+      ...contextSettings,
+      state_cache_budget_mb,
+    });
+
+    it('adds the full budget, outside the runtime overhead, for an SWA model', () => {
+      const model = swaModel(512);
+      const base = getModelMemoryRequirement(model, undefined, withBudget(0));
+
+      expect(getModelMemoryRequirement(model, undefined, withBudget(64))).toBe(
+        base + 64 * MiB,
+      );
+    });
+
+    it('adds the full budget for a model that will self-disable natively', () => {
+      const model = swaModel(4096);
+      const base = getModelMemoryRequirement(model, undefined, withBudget(0));
+
+      expect(getModelMemoryRequirement(model, undefined, withBudget(160))).toBe(
+        base + 160 * MiB,
+      );
+    });
+
+    it.each([undefined, 0])(
+      'adds nothing when sliding_window is %s',
+      sliding_window => {
+        const model = swaModel(sliding_window);
+
+        expect(
+          getModelMemoryRequirement(model, undefined, withBudget(64)),
+        ).toBe(getModelMemoryRequirement(model, undefined, withBudget(0)));
+      },
+    );
+
+    it('adds nothing without metadata', () => {
+      const model = {...baseModel} as Model;
+
+      expect(getModelMemoryRequirement(model, undefined, withBudget(64))).toBe(
+        2 * 1e9 * 1.2,
+      );
+    });
+
+    it('counts only the target, not the draft or projector', () => {
+      const model = swaModel(512);
+      const projectionModel = {size: 300 * 1e6} as Model;
+      const draftModel = {
+        size: 400 * 1e6,
+        ggufMetadata: swaModel(512).ggufMetadata,
+      } as Model;
+      const base = getModelMemoryRequirement(
+        model,
+        projectionModel,
+        withBudget(0),
+        draftModel,
+      );
+
+      expect(
+        getModelMemoryRequirement(
+          model,
+          projectionModel,
+          withBudget(64),
+          draftModel,
+        ),
+      ).toBe(base + 64 * MiB);
     });
   });
 });

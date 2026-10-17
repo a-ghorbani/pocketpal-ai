@@ -16,7 +16,10 @@ data class DownloadEntity(
     val networkType: NetworkType,
     val createdAt: Long,
     val error: String? = null,
-    val authToken: String? = null
+    val authToken: String? = null,
+    val etag: String? = null,
+    val stalledRuns: Int = 0,
+    val failureUnreported: Boolean = false
 )
 
 enum class DownloadStatus {

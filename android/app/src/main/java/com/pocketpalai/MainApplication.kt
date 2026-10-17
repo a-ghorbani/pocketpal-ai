@@ -14,9 +14,6 @@ import com.facebook.react.soloader.OpenSourceMergedSoMapping
 import com.facebook.soloader.SoLoader
 import com.pocketpal.KeepAwakePackage
 import com.pocketpal.HardwareInfoPackage
-import com.pocketpal.StorefrontPackage
-import com.pocketpal.AuthSessionPackage
-import com.pocketpal.ExternalContentLinkPackage
 import com.pocketpal.download.DownloadPackage
 
 class MainApplication : Application(), ReactApplication {
@@ -29,9 +26,6 @@ class MainApplication : Application(), ReactApplication {
               // add(MyReactNativePackage())
               add(KeepAwakePackage())
               add(HardwareInfoPackage())
-              add(StorefrontPackage())
-              add(AuthSessionPackage())
-              add(ExternalContentLinkPackage())
               add(DownloadPackage())
             }
 
