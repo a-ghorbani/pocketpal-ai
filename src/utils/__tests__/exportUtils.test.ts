@@ -879,6 +879,37 @@ describe('exportUtils', () => {
       expect(content).not.toContain('file:///b.png');
     });
 
+    it('names attached documents without their text', async () => {
+      const withDocuments = makeTextMessage('m1', userId, 'Summarise');
+      withDocuments.metadata = JSON.stringify({
+        documents: [
+          {id: 'd1', name: 'report.pdf', kind: 'pdf', tokenEstimate: 10},
+          {id: 'd2', name: 'notes.md', kind: 'text', tokenEstimate: 5},
+        ],
+      });
+      (chatSessionRepository.getSessionById as jest.Mock).mockResolvedValueOnce(
+        {
+          session: {
+            id: 'session-6',
+            title: 'With Documents',
+            date: '2024-01-01T00:00:00Z',
+            activePalId: null,
+          },
+          messages: [withDocuments],
+          completionSettings: {settings: '{}'},
+        } as any,
+      );
+
+      await exportChatSessionAsMarkdown('session-6');
+
+      const {content} = writtenMarkdown();
+      expect(content).toContain('_[document: report.pdf]_');
+      expect(content).toContain('_[document: notes.md]_');
+      expect(content.indexOf('Summarise')).toBeLessThan(
+        content.indexOf('_[document: report.pdf]_'),
+      );
+    });
+
     it('throws when the session does not exist', async () => {
       (chatSessionRepository.getSessionById as jest.Mock).mockResolvedValueOnce(
         null,

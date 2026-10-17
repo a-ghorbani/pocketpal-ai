@@ -153,3 +153,50 @@ describe('text message', () => {
     openUrlMock.mockRestore();
   });
 });
+
+describe('document chips', () => {
+  const report = {
+    id: 'd1',
+    name: 'report.pdf',
+    kind: 'pdf' as const,
+    byteSize: 1,
+    pageCount: 12,
+    charCount: 12400,
+    tokenEstimate: 3100,
+  };
+
+  it('shows each attached document as a static chip above the typed text', () => {
+    const {getByText, queryByTestId} = renderWithProviders(
+      <TextMessage
+        message={{
+          ...derivedTextMessage,
+          text: 'Summarise',
+          documents: [report],
+        }}
+        messageWidth={440}
+        showName={false}
+        usePreviewData={false}
+      />,
+    );
+    expect(getByText('report.pdf')).toBeTruthy();
+    expect(getByText('12 pages · ~3.1k tokens')).toBeTruthy();
+    expect(getByText('Summarise')).toBeTruthy();
+    expect(queryByTestId('message-document-chip-remove')).toBeNull();
+  });
+
+  it('renders a document whose files are gone exactly as stored', () => {
+    const {getByText} = renderWithProviders(
+      <TextMessage
+        message={{
+          ...derivedTextMessage,
+          text: 'old',
+          documents: [{...report, id: 'missing'}],
+        }}
+        messageWidth={440}
+        showName={false}
+        usePreviewData={false}
+      />,
+    );
+    expect(getByText('12 pages · ~3.1k tokens')).toBeTruthy();
+  });
+});
