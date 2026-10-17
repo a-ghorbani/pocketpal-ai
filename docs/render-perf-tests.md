@@ -68,7 +68,7 @@ it('expands the advanced settings', async () => {
 
 - **Drive the app's own path.** Change the state the app changes (an owner component's state, a store observable, or an event) without remounting.
 - **One `act` per driven write.** Use `await act(() => runInAction(...))` for each store write; `fireEvent` already wraps one. Several writes inside one `act` batch into a single commit.
-- **Advance timers explicitly.** `measureScenario` runs on fake timers (with the real `performance` clock, so durations stay real). Call `await flushTimers()` after the mount and after each step, so a timer-driven commit, such as Paper's deferred `TextInput` placeholder or a list's batched cell update, always lands at the same point.
+- **Advance timers explicitly.** `measureScenario` runs on fake timers (with the real `performance` clock, so durations stay real). Call `await flushTimers()` after the mount and after each step: it advances the clock 100 ms, 1 ms per `act`, so a timer-driven commit, such as Paper's deferred `TextInput` placeholder or a list's batched cell update, always lands at the same point and as its own commit. The mount-only measurement does the same flush, so a scenario that only waits does not count as an interaction.
 - **Every run starts from the same state.** Each scenario runs several times, re-mounting the same element. Reset anything it changes outside the tree in `beforeEach`, in place: `messages.replace(fresh)`, or setting `filters` back to `[]` on the same observable. A new object assigned in `beforeEach` never reaches the re-mounted element.
 - **Assert the start and the end** of the interaction in every run, for example "collapsed" before and "expanded content present" after.
 - `measureScenario` uses at least 3 runs, so an unstable count shows up, and it fails a scenario that adds no commits over the mount alone.
@@ -76,6 +76,7 @@ it('expands the advanced settings', async () => {
 
 ## Limits
 
+- Each step is followed by a 100 ms pause (`flushTimers`), as if the user paused between key presses or tokens arrived slowly. Timers due within that pause commit inside the scenario; faster input in the app can batch some of them, and timers due later than 100 ms never fire.
 - Passing a new object to a memoised child on every render adds no commit, only work inside the existing one. The render count does not change; at most the duration does.
 - Under the `@gorhom/bottom-sheet` mock, `present` and `close` do nothing and sheet content always renders. The sheet scenarios therefore count only the owner's visibility handling, not content mount, animation or gestures.
 
@@ -84,8 +85,8 @@ it('expands the advanced settings', async () => {
 | File | Interaction |
 | --- | --- |
 | `src/components/Sheet/__tests__/Sheet.perf-test.tsx` | open and close a `Sheet` from its owner's state |
-| `src/components/ChatPalModelPickerSheet/__tests__/ChatPalModelPickerSheet.perf-test.tsx` | open and close the pal/model picker as the chat view does |
+| `src/components/ChatPalModelPickerSheet/__tests__/ChatPalModelPickerSheet.perf-test.tsx` | open and close the pal/model picker as the chat view does: it mounts and unmounts the picker, so this measures mount and unmount, not the picker's `isVisible` effects |
 | `src/components/ChatView/__tests__/ChatView.typing.perf-test.tsx` | type ten characters into the chat input |
-| `src/components/ChatView/__tests__/ChatView.streaming.perf-test.tsx` | stream twenty tokens into the newest assistant turn |
+| `src/components/ChatView/__tests__/ChatView.streaming.perf-test.tsx` | stream twenty tokens into the newest assistant turn, written the way `ChatSessionStore` writes them; the store's 30 ms streaming throttle is upstream of the view and not exercised |
 | `src/screens/ModelsScreen/__tests__/ModelsScreen.perf-test.tsx` | filter the model list to downloaded models |
 | `src/screens/SettingsScreen/__tests__/SettingsScreen.perf-test.tsx` | expand the advanced settings |
