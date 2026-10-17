@@ -5,7 +5,7 @@ import {BottomSheetModal} from '@gorhom/bottom-sheet';
 import type {BottomSheetModalMethods} from '@gorhom/bottom-sheet/lib/typescript/types';
 
 import {fireEvent} from '../../../../jest/test-utils';
-import {measureScenario} from '../../../../jest/perf';
+import {flushTimers, measureScenario} from '../../../../jest/perf';
 
 import {Sheet} from '../Sheet';
 
@@ -38,13 +38,16 @@ describe('Sheet render performance', () => {
     await measureScenario(<SheetOwner />, {
       wrapperOptions: {withBottomSheetProvider: true},
       scenario: async screen => {
+        await flushTimers();
         const sheet = sheetMethods(screen);
         expect(sheet.present).not.toHaveBeenCalled();
 
         fireEvent.press(screen.getByTestId('perf-toggle'));
+        await flushTimers();
         expect(sheet.present).toHaveBeenCalledTimes(1);
 
         fireEvent.press(screen.getByTestId('perf-toggle'));
+        await flushTimers();
         expect(sheet.close).toHaveBeenCalledTimes(2);
       },
     });
