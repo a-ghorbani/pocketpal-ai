@@ -311,6 +311,15 @@ describe('LocalApiServerStore lifecycle', () => {
       expect(store.status).toBe('running');
     });
 
+    it('does not start on iOS after a background while disabled', async () => {
+      Platform.OS = 'ios';
+      appStateListener('background');
+      appStateListener('active');
+      await flush();
+      expect(createdServers).toHaveLength(0);
+      expect(store.status).toBe('stopped');
+    });
+
     it('does not restart on iOS after only an inactive blip', async () => {
       Platform.OS = 'ios';
       await startRunning();
