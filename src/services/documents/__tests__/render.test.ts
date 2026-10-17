@@ -1,8 +1,14 @@
 import {
   DOCUMENT_LEAD,
+  EXCERPT_LEAD,
+  NO_MATCH_LINE,
+  documentContentFor,
   documentKey,
+  excerptCitation,
   renderDocumentBlock,
   renderDocumentContent,
+  renderDocumentStub,
+  renderExcerptBlock,
 } from '../render';
 import type {DocumentRef} from '../types';
 
@@ -109,6 +115,68 @@ describe('documentKey', () => {
     expect(documentKey(pdf())).toBe(`${pdf().id}:all`);
     expect(documentKey(pdf({pageRange: {from: 3, to: 5}}))).toBe(
       `${pdf().id}:3-5`,
+    );
+  });
+});
+
+describe('searched documents and excerpts', () => {
+  const searched = pdf({mode: 'searched', pageCount: 120});
+  const passage = (page: number | undefined, part: number, parts: number) => ({
+    docId: searched.id,
+    rangeKey: documentKey(searched),
+    ordinal: 0,
+    page,
+    part,
+    parts,
+    text: `text ${page}-${part}`,
+  });
+
+  it('renders a stub for searched refs and the missing line when gone', () => {
+    const texts = new Map<string, string[] | 'missing'>([
+      [documentKey(searched), ['p1']],
+    ]);
+    expect(documentContentFor([searched], texts)).toBe(
+      `${DOCUMENT_LEAD}\n\n[Attached document "report.pdf", 120 pages — searched; relevant excerpts are given with the latest message]`,
+    );
+    expect(documentContentFor([searched], new Map())).toContain(
+      'is no longer available',
+    );
+  });
+
+  it('renders the stub for a range and a text file', () => {
+    expect(
+      renderDocumentStub({...searched, pageRange: {from: 3, to: 5}}),
+    ).toContain('pages 3–5 of 120 — searched');
+    expect(renderDocumentStub(text({mode: 'searched'}))).toBe(
+      '[Attached document "notes.md" — searched; relevant excerpts are given with the latest message]',
+    );
+  });
+
+  it('cites pages and parts in every form', () => {
+    expect(excerptCitation([passage(12, 1, 1)])).toBe('p.12');
+    expect(excerptCitation([passage(12, 2, 3)])).toBe('p.12 part 2 of 3');
+    expect(excerptCitation([passage(12, 2, 7), passage(12, 3, 7)])).toBe(
+      'p.12 parts 2–3 of 7',
+    );
+    expect(excerptCitation([passage(undefined, 3, 9)])).toBe('part 3 of 9');
+  });
+
+  it('renders the excerpt block after the message own content', () => {
+    const block = renderExcerptBlock({
+      kind: 'excerpts',
+      excerpts: [{ref: searched, passages: [passage(12, 1, 1)]}],
+    });
+    expect(block).toBe(
+      `${EXCERPT_LEAD}\n\n<<<BEGIN EXCERPT abcdef12 "report.pdf" p.12>>>\ntext 12-1\n<<<END EXCERPT abcdef12>>>`,
+    );
+    expect(documentContentFor(undefined, new Map(), block)).toBe(
+      `${DOCUMENT_LEAD}\n\n${block}`,
+    );
+  });
+
+  it('renders the no-match line', () => {
+    expect(renderExcerptBlock({kind: 'noMatch'})).toBe(
+      `${EXCERPT_LEAD}\n${NO_MATCH_LINE}`,
     );
   });
 });

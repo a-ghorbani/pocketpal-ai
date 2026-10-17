@@ -6,6 +6,7 @@ import {
   documentKey,
   excerptClose,
   excerptOpen,
+  modeOf,
   renderDocumentStub,
 } from './render';
 import {
@@ -71,8 +72,6 @@ const floorFor = (searched: DocumentRef[]): number =>
   PASSAGE_MAX_TOKENS +
   EXCERPT_LEAD_TOKENS +
   Math.max(0, ...searched.map(excerptOverhead));
-
-export const modeOf = (ref: DocumentRef): DocumentMode => ref.mode ?? 'full';
 
 export const documentPlan = ({
   rows,
