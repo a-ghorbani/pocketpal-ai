@@ -24,7 +24,6 @@ export const MessageMenuButton: React.FC<MessageMenuButtonProps> = ({
       testID="message-menu-button"
       accessibilityRole="button"
       accessibilityLabel={l10n.components.messageMenuButton.accessibilityLabel}
-      hitSlop={14}
       style={styles.button}>
       <DotsHorizontalIcon
         width={16}

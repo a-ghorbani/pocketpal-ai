@@ -6,8 +6,9 @@ import {l10n} from '../../../locales';
 
 import {MessageMenuButton} from '../MessageMenuButton';
 
-const ICON_SIZE = 16;
 const MIN_TARGET = 44;
+const FOOTPRINT_WIDTH = 25;
+const FOOTPRINT_HEIGHT = 16;
 
 describe('MessageMenuButton', () => {
   it('is an accessible button with a localized label', () => {
@@ -20,25 +21,22 @@ describe('MessageMenuButton', () => {
     );
   });
 
-  it('reaches a 44 dp hit area through hitSlop, not layout', () => {
+  it('is a 44 dp layout box that keeps the 25 x 16 dp footprint', () => {
     const {getByTestId} = render(<MessageMenuButton />);
     const button = getByTestId('message-menu-button');
-    const slop = button.props.hitSlop;
-    const edges =
-      typeof slop === 'number'
-        ? {top: slop, bottom: slop, left: slop, right: slop}
-        : slop;
-
-    expect(ICON_SIZE + edges.left + edges.right).toBeGreaterThanOrEqual(
-      MIN_TARGET,
-    );
-    expect(ICON_SIZE + edges.top + edges.bottom).toBeGreaterThanOrEqual(
-      MIN_TARGET,
-    );
     const style = StyleSheet.flatten(button.props.style) ?? {};
-    for (const key of ['height', 'minHeight'] as const) {
-      expect(Number(style[key] ?? 0)).toBeLessThan(MIN_TARGET);
-    }
+
+    expect(style.minWidth).toBe(MIN_TARGET);
+    expect(style.minHeight).toBe(MIN_TARGET);
+    expect(style.flexShrink).toBe(0);
+    expect(
+      MIN_TARGET + Number(style.marginLeft) + Number(style.marginRight),
+    ).toBe(FOOTPRINT_WIDTH);
+    expect(
+      MIN_TARGET + Number(style.marginTop) + Number(style.marginBottom),
+    ).toBe(FOOTPRINT_HEIGHT);
+    expect(style.marginLeft).toBe(-5);
+    expect(button.props.hitSlop).toBeUndefined();
   });
 
   it('calls onPress with the press event', () => {
