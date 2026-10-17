@@ -72,6 +72,20 @@ describe('LocalApiServerStore', () => {
   it('learns whether a key exists from the Keychain at launch', () => {
     expect(store.hasApiKey).toBe(true);
   });
+
+  it('assumes no key at launch when the Keychain read fails', async () => {
+    const warn = jest.spyOn(console, 'warn').mockImplementation(() => {});
+    let isolated!: typeof store;
+    jest.isolateModules(() => {
+      require('react-native-keychain').getGenericPassword.mockRejectedValueOnce(
+        new Error('locked'),
+      );
+      isolated = require('../LocalApiServerStore').localApiServerStore;
+    });
+    await flush();
+    expect(isolated.hasApiKey).toBe(false);
+    warn.mockRestore();
+  });
 });
 
 describe('LocalApiServerStore lifecycle', () => {
@@ -567,10 +581,33 @@ describe('LocalApiServerStore races and requests', () => {
     expect(store.hasApiKey).toBe(false);
   });
 
-  it('starts without a key when the Keychain read fails', async () => {
+  it('fails without listening when the Keychain read fails', async () => {
+    const warn = jest.spyOn(console, 'warn').mockImplementation(() => {});
+    runInAction(() => {
+      store.hasApiKey = true;
+    });
+    getPassword.mockRejectedValueOnce(new Error('locked'));
+    store.setEnabled(true);
+    await flush();
+
+    expect(store.status).toBe('failed');
+    expect(store.lastError).toBe('key_unavailable');
+    expect(createdServers).toHaveLength(0);
+    expect(getIpAddress).not.toHaveBeenCalled();
+    expect(store.hasApiKey).toBe(true);
+    warn.mockRestore();
+  });
+
+  it('starts open after a failed read once the key is cleared', async () => {
     const warn = jest.spyOn(console, 'warn').mockImplementation(() => {});
     getPassword.mockRejectedValueOnce(new Error('locked'));
-    await startRunning();
+    store.setEnabled(true);
+    await flush();
+    expect(store.status).toBe('failed');
+
+    store.setEnabled(false);
+    await expect(store.clearApiKey()).resolves.toBe(true);
+    await startWithoutKey();
     expect(store.status).toBe('running');
     expect(store.hasApiKey).toBe(false);
     warn.mockRestore();

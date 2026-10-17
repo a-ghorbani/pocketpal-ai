@@ -33,6 +33,8 @@ export type LocalApiServerStatus =
 
 type Listener = ReturnType<typeof TcpSocket.createServer>;
 
+type KeyRead = {kind: 'found'; key: string} | {kind: 'none'} | {kind: 'error'};
+
 export const isValidLocalApiPort = (port: number) =>
   Number.isInteger(port) &&
   port >= MIN_LOCAL_API_PORT &&
@@ -79,11 +81,13 @@ class LocalApiServerStore {
       properties: ['port', 'lanEnabled'],
       storage: AsyncStorage,
     });
-    this.readApiKey().then(key =>
-      runInAction(() => {
-        this.hasApiKey = key !== undefined;
-      }),
-    );
+    this.readApiKey().then(read => {
+      if (read.kind !== 'error') {
+        runInAction(() => {
+          this.hasApiKey = read.kind === 'found';
+        });
+      }
+    });
     AppState.addEventListener('change', this.handleAppStateChange);
   }
 
@@ -170,10 +174,15 @@ class LocalApiServerStore {
     this.status = 'starting';
     this.lastError = undefined;
 
-    const apiKey = await this.readApiKey();
+    const keyRead = await this.readApiKey();
     if (epoch !== this.epoch) {
       return;
     }
+    if (keyRead.kind === 'error') {
+      this.fail(epoch, 'key_unavailable');
+      return;
+    }
+    const apiKey = keyRead.kind === 'found' ? keyRead.key : undefined;
     const lanAddress = this.lanEnabled
       ? await this.readLanAddress()
       : undefined;
@@ -285,15 +294,17 @@ class LocalApiServerStore {
     this.activeRequests -= 1;
   };
 
-  private async readApiKey(): Promise<string | undefined> {
+  private async readApiKey(): Promise<KeyRead> {
     try {
       const credentials = await Keychain.getGenericPassword({
         service: KEYCHAIN_SERVICE,
       });
-      return credentials ? credentials.password : undefined;
+      return credentials
+        ? {kind: 'found', key: credentials.password}
+        : {kind: 'none'};
     } catch {
       console.warn('[LocalApiServerStore] could not read the API key');
-      return undefined;
+      return {kind: 'error'};
     }
   }
 
