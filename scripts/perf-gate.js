@@ -3,6 +3,10 @@ const fs = require('fs');
 const path = require('path');
 
 const REASSURE_DIR = path.join(process.cwd(), '.reassure');
+const DOCS_PATH = 'docs/render-perf-tests.md';
+const HEADING = '## Render-perf gate';
+const TEST_INPUTS_NOTE =
+  'Note: this PR changes perf tests or their Jest setup; count changes may come from the tests themselves.';
 
 const FAILING_STATES = [
   'unrecognised-output',
@@ -21,6 +25,27 @@ const parsePerf = text =>
 
 const formatMs = ms => `${ms.toFixed(1)} ms`;
 
+const formatPercent = ratio =>
+  `${ratio > 0 ? '+' : ''}${(ratio * 100).toFixed(1)}%`;
+
+const docsLinkFor = (env, head) =>
+  env.GITHUB_SERVER_URL && env.GITHUB_REPOSITORY && head
+    ? `${env.GITHUB_SERVER_URL}/${env.GITHUB_REPOSITORY}/blob/${head}/${DOCS_PATH}#reading-the-result`
+    : DOCS_PATH;
+
+const readingLine = docsLink =>
+  `How to read this: [Reading the result](${docsLink})`;
+
+const reassureFold = report =>
+  [
+    '<details>',
+    '<summary>Reassure report (durations are informational)</summary>',
+    '',
+    report.trim(),
+    '',
+    '</details>',
+  ].join('\n');
+
 const bulletList = items => items.map(item => `- ${item}`).join('\n');
 
 const durationTable = entries =>
@@ -31,7 +56,7 @@ const durationTable = entries =>
       e =>
         `| ${e.name} | ${formatMs(e.baseline.meanDuration)} | ${formatMs(
           e.current.meanDuration,
-        )} | ${(e.relativeDurationDiff * 100).toFixed(1)}% |`,
+        )} | ${formatPercent(e.relativeDurationDiff)} |`,
     ),
   ].join('\n');
 
@@ -99,18 +124,50 @@ const validate = ({currentEntries, output, bootstrap}) => {
   return issues;
 };
 
-const finish = (states, sections) => {
+const finish = (
+  states,
+  sections,
+  {docsLink, testInputsChanged, reassureReport},
+) => {
   const failing = FAILING_STATES.filter(state => states.has(state));
   const failed = failing.length > 0;
-  const verdict = failed
-    ? `**Render-perf gate: FAIL** (${failing.join(', ')})`
-    : '**Render-perf gate: PASS**';
-  const markdown = ['## Render-perf gate', ...sections, verdict].join('\n\n');
+  const parts = [
+    HEADING,
+    failed
+      ? `**Render-perf gate: FAIL** (${failing.join(', ')})`
+      : '**Render-perf gate: PASS**',
+  ];
+  if (failed) {
+    parts.push(readingLine(docsLink));
+  }
+  if (testInputsChanged) {
+    parts.push(TEST_INPUTS_NOTE);
+  }
+  parts.push(...sections);
+  if (reassureReport) {
+    parts.push(reassureFold(reassureReport));
+  }
 
-  return {failed, states: [...states], markdown};
+  return {failed, states: [...states], markdown: parts.join('\n\n')};
 };
 
-const evaluate = ({currentEntries, output, bootstrap}) => {
+const renderRunFailed = ({cause, docsLink}) =>
+  [
+    HEADING,
+    '**Render-perf gate: FAIL** (run-failed)',
+    `Run failed on ${cause}. See the job log.`,
+    readingLine(docsLink),
+  ].join('\n\n');
+
+const evaluate = ({
+  currentEntries,
+  output,
+  bootstrap,
+  testInputsChanged = false,
+  docsLink = DOCS_PATH,
+  reassureReport = null,
+}) => {
+  const layout = {docsLink, testInputsChanged, reassureReport};
   const states = new Set();
   const sections = [];
   const section = (title, body) => sections.push(`**${title}**\n\n${body}`);
@@ -122,7 +179,7 @@ const evaluate = ({currentEntries, output, bootstrap}) => {
       "Reassure's output format is not the one this gate reads (fails)",
       bulletList(issues),
     );
-    return finish(states, sections);
+    return finish(states, sections, layout);
   }
 
   const unstable = currentEntries.filter(e => e.stdevCount > 0);
@@ -210,21 +267,48 @@ const evaluate = ({currentEntries, output, bootstrap}) => {
     }
   }
 
-  return finish(states, sections);
+  return finish(states, sections, layout);
 };
 
-const main = () => {
-  const bootstrap = process.argv.includes('--bootstrap');
-  const currentEntries = parsePerf(
-    fs.readFileSync(path.join(REASSURE_DIR, 'current.perf'), 'utf8'),
-  );
-  const outputPath = path.join(REASSURE_DIR, 'output.json');
-  const output =
-    !bootstrap && fs.existsSync(outputPath)
-      ? JSON.parse(fs.readFileSync(outputPath, 'utf8'))
-      : null;
+const argValue = (args, flag) => {
+  const index = args.indexOf(flag);
+  return index === -1 ? undefined : args[index + 1];
+};
 
-  const result = evaluate({currentEntries, output, bootstrap});
+const readIfPresent = file =>
+  fs.existsSync(file) ? fs.readFileSync(file, 'utf8') : null;
+
+const main = () => {
+  const args = process.argv.slice(2);
+  const docsLink = docsLinkFor(process.env, argValue(args, '--head'));
+  const runFailed = argValue(args, '--run-failed');
+
+  let result;
+  if (runFailed !== undefined) {
+    result = {
+      failed: true,
+      markdown: renderRunFailed({cause: runFailed, docsLink}),
+    };
+  } else {
+    const bootstrap = args.includes('--bootstrap');
+    const currentEntries = parsePerf(
+      fs.readFileSync(path.join(REASSURE_DIR, 'current.perf'), 'utf8'),
+    );
+    const outputJson = bootstrap
+      ? null
+      : readIfPresent(path.join(REASSURE_DIR, 'output.json'));
+    result = evaluate({
+      currentEntries,
+      output: outputJson === null ? null : JSON.parse(outputJson),
+      bootstrap,
+      testInputsChanged: args.includes('--test-inputs-changed'),
+      docsLink,
+      reassureReport: readIfPresent(path.join(REASSURE_DIR, 'output.md')),
+    });
+  }
+
+  fs.mkdirSync(REASSURE_DIR, {recursive: true});
+  fs.writeFileSync(path.join(REASSURE_DIR, 'gate.md'), `${result.markdown}\n`);
   console.log(result.markdown);
   process.exitCode = result.failed ? 1 : 0;
 };
@@ -233,4 +317,4 @@ if (require.main === module) {
   main();
 }
 
-module.exports = {evaluate, parsePerf};
+module.exports = {evaluate, parsePerf, renderRunFailed};

@@ -3,7 +3,7 @@ const fs = require('fs');
 const os = require('os');
 const path = require('path');
 
-const {evaluate, parsePerf} = require('../perf-gate');
+const {evaluate, parsePerf, renderRunFailed} = require('../perf-gate');
 
 const FIXTURES = path.join(__dirname, 'fixtures', 'perf');
 const SCRIPT = path.join(__dirname, '..', 'perf-gate.js');
@@ -32,7 +32,10 @@ const removeCompared = (output, name) => {
   return entry;
 };
 
-const lastLine = markdown => markdown.trim().split('\n').pop();
+const verdictLine = markdown => markdown.split('\n')[2];
+
+const READING_LOCAL =
+  'How to read this: [Reading the result](docs/render-perf-tests.md)';
 
 describe('perf-gate', () => {
   it('passes the verbatim comparison of identical code', () => {
@@ -48,7 +51,7 @@ describe('perf-gate', () => {
     );
     expect(result.markdown).toContain(`${SETTINGS}: 4`);
     expect(result.markdown).toContain('(informational)');
-    expect(lastLine(result.markdown)).toBe('**Render-perf gate: PASS**');
+    expect(verdictLine(result.markdown)).toBe('**Render-perf gate: PASS**');
   });
 
   it('fails on any render count increase and names the scenario', () => {
@@ -64,7 +67,7 @@ describe('perf-gate', () => {
     expect(result.failed).toBe(true);
     expect(result.states).toContain('count-up');
     expect(result.markdown).toContain(`${SETTINGS}: 4 → 5`);
-    expect(lastLine(result.markdown)).toBe(
+    expect(verdictLine(result.markdown)).toBe(
       '**Render-perf gate: FAIL** (count-up)',
     );
   });
@@ -159,7 +162,7 @@ describe('perf-gate', () => {
     expect(result.failed).toBe(false);
     expect(result.states).toEqual(expect.arrayContaining(['added', 'removed']));
     expect(result.markdown).toContain(`- ${renamed}`);
-    expect(result.markdown).toContain(`- ${SETTINGS}\n`);
+    expect(result.markdown.split('\n')).toContain(`- ${SETTINGS}`);
   });
 
   it('fails a count increase reported alongside an added scenario', () => {
@@ -219,6 +222,101 @@ describe('perf-gate', () => {
     expect(result.failed).toBe(true);
     expect(result.states).toContain('duplicate-name');
     expect(result.markdown).toContain(`- ${currentEntries[0].name}`);
+  });
+
+  describe('summary layout', () => {
+    it('folds the verbatim Reassure report below the gate sections', () => {
+      const report = readFixture('output.md');
+
+      const {markdown} = evaluate({
+        currentEntries: loadCurrent(),
+        output: loadOutput(),
+        bootstrap: false,
+        reassureReport: report,
+      });
+
+      const fold = markdown.indexOf('<details>');
+      expect(
+        markdown.startsWith(
+          '## Render-perf gate\n\n**Render-perf gate: PASS**',
+        ),
+      ).toBe(true);
+      expect(fold).toBeGreaterThan(
+        markdown.indexOf('**Render count unchanged**'),
+      );
+      expect(markdown.indexOf(report.trim())).toBeGreaterThan(fold);
+      expect(markdown.trim().endsWith('</details>')).toBe(true);
+    });
+
+    it('links the docs on failure only', () => {
+      const output = loadOutput();
+      const passed = evaluate({
+        currentEntries: loadCurrent(),
+        output,
+        bootstrap: false,
+      });
+      withCount(findCompared(output, SHEET).current, [4, 4, 4]);
+
+      const failed = evaluate({
+        currentEntries: loadCurrent(),
+        output,
+        bootstrap: false,
+      });
+
+      expect(passed.markdown).not.toContain('How to read this');
+      expect(failed.markdown.split('\n')[4]).toBe(READING_LOCAL);
+    });
+
+    it('notes changed test inputs without changing the verdict', () => {
+      const {markdown, failed} = evaluate({
+        currentEntries: loadCurrent(),
+        output: loadOutput(),
+        bootstrap: false,
+        testInputsChanged: true,
+      });
+
+      expect(failed).toBe(false);
+      expect(markdown).toContain(
+        'Note: this PR changes perf tests or their Jest setup',
+      );
+    });
+
+    it('signs duration changes', () => {
+      const output = loadOutput();
+      const sheet = findCompared(output, SHEET);
+      const settings = findCompared(output, SETTINGS);
+      sheet.isDurationDiffSignificant = true;
+      sheet.relativeDurationDiff = 0.123;
+      settings.isDurationDiffSignificant = true;
+      settings.relativeDurationDiff = -0.04;
+
+      const {markdown} = evaluate({
+        currentEntries: loadCurrent(),
+        output,
+        bootstrap: false,
+      });
+
+      expect(markdown).toMatch(
+        new RegExp(`\\| ${SHEET} \\|.*\\| \\+12\\.3% \\|`),
+      );
+      expect(markdown).toMatch(
+        new RegExp(`\\| ${SETTINGS} \\|.*\\| -4\\.0% \\|`),
+      );
+    });
+
+    it('renders a failed run under the same heading and verdict line', () => {
+      const markdown = renderRunFailed({
+        cause: 'head: Jest or Reassure failure',
+        docsLink: 'docs/render-perf-tests.md',
+      });
+
+      expect(markdown.split('\n\n')).toEqual([
+        '## Render-perf gate',
+        '**Render-perf gate: FAIL** (run-failed)',
+        'Run failed on head: Jest or Reassure failure. See the job log.',
+        READING_LOCAL,
+      ]);
+    });
   });
 
   describe('unrecognised Reassure output', () => {
@@ -340,21 +438,28 @@ describe('perf-gate', () => {
       fs.rmSync(dir, {recursive: true, force: true});
     });
 
-    const run = args =>
-      spawnSync('node', [SCRIPT, ...args], {cwd: dir, encoding: 'utf8'});
+    const {GITHUB_SERVER_URL, GITHUB_REPOSITORY, ...baseEnv} = process.env;
+    const run = (args, env = {}) =>
+      spawnSync('node', [SCRIPT, ...args], {
+        cwd: dir,
+        encoding: 'utf8',
+        env: {...baseEnv, ...env},
+      });
+    const gateFile = () =>
+      fs.readFileSync(path.join(dir, '.reassure', 'gate.md'), 'utf8');
 
     it('exits 0 on a bootstrap run', () => {
       const result = run(['--bootstrap']);
 
       expect(result.status).toBe(0);
-      expect(lastLine(result.stdout)).toBe('**Render-perf gate: PASS**');
+      expect(verdictLine(result.stdout)).toBe('**Render-perf gate: PASS**');
     });
 
     it('exits 1 when the comparison is missing', () => {
       const result = run([]);
 
       expect(result.status).toBe(1);
-      expect(lastLine(result.stdout)).toBe(
+      expect(verdictLine(result.stdout)).toBe(
         '**Render-perf gate: FAIL** (baseline-lost)',
       );
     });
@@ -371,6 +476,31 @@ describe('perf-gate', () => {
 
       expect(result.status).toBe(1);
       expect(result.stdout).toContain(`${SHEET}: 3 → 4`);
+      expect(gateFile()).toBe(result.stdout);
+    });
+
+    it('renders a failed run, writes gate.md and exits 1', () => {
+      fs.rmSync(path.join(dir, '.reassure'), {recursive: true, force: true});
+
+      const result = run(['--run-failed', 'head: Jest or Reassure failure']);
+
+      expect(result.status).toBe(1);
+      expect(verdictLine(gateFile())).toBe(
+        '**Render-perf gate: FAIL** (run-failed)',
+      );
+      expect(gateFile()).toContain(READING_LOCAL);
+    });
+
+    it('links the docs at the measured head commit in CI', () => {
+      const result = run(['--head', 'abc123'], {
+        GITHUB_SERVER_URL: 'https://github.com',
+        GITHUB_REPOSITORY: 'owner/repo',
+      });
+
+      expect(result.status).toBe(1);
+      expect(result.stdout).toContain(
+        'How to read this: [Reading the result](https://github.com/owner/repo/blob/abc123/docs/render-perf-tests.md#reading-the-result)',
+      );
     });
   });
 });
