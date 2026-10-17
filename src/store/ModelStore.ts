@@ -260,6 +260,8 @@ class ModelStore {
   availableMemoryCeiling: number | undefined = undefined;
   // Updated after successful model load using GGUF estimator
   largestSuccessfulLoad: number | undefined = undefined;
+  // Estimated memory of the loaded local context; undefined when none.
+  loadedModelBytes: number | undefined = undefined;
   // Projection models orphaned by the vision heal, awaiting deletion; drained
   // every launch (see drainPendingProjectionCleanup).
   pendingProjectionCleanupIds: string[] = [];
@@ -2404,6 +2406,20 @@ class ModelStore {
         this.pendingModelId = null;
       });
 
+      try {
+        const loadedBytes = getModelMemoryRequirement(
+          model,
+          projectionModel,
+          this.memoryEstimateSettings,
+          pairedDraftModel(draftConfig),
+        );
+        runInAction(() => {
+          this.loadedModelBytes = loadedBytes;
+        });
+      } catch (error) {
+        console.warn('[ModelStore] Failed to estimate loaded model:', error);
+      }
+
       // Update largestSuccessfulLoad using GGUF estimator
       try {
         const estimated = getModelMemoryRequirement(
@@ -2529,6 +2545,7 @@ class ModelStore {
         this.engine = undefined;
         this.activeRemoteBinding = undefined;
         this.activeContextSettings = undefined;
+        this.loadedModelBytes = undefined;
         // Ensure multimodal state is cleared even if something went wrong above
         this.isMultimodalActive = false;
         this.activeProjectionModelId = undefined;

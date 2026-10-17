@@ -230,6 +230,8 @@ function asrErrorMessage(kind: AsrErrorKind, l10n: L10n): string {
       return l10n.voiceInput.errorTranscribeFailed;
     case 'not_installed':
       return l10n.voiceInput.errorNotInstalled;
+    case 'insufficient_memory':
+      return l10n.voiceInput.errorInsufficientMemory;
   }
 }
 

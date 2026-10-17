@@ -134,6 +134,20 @@ describe('ChatView voice-input append seam', () => {
     expect(getByText("Couldn't transcribe — please try again.")).toBeTruthy();
   });
 
+  it('explains a refusal for lack of memory', () => {
+    const {getByText} = renderChat();
+
+    act(() => {
+      asrStore.setError('insufficient_memory');
+    });
+
+    expect(
+      getByText(
+        'Not enough memory for voice input with this chat model. Try a smaller model.',
+      ),
+    ).toBeTruthy();
+  });
+
   it('offers an open-Settings action when permission is blocked', () => {
     const {getByText} = renderChat();
 

@@ -33,7 +33,8 @@ export type AsrErrorKind =
   | 'permission_denied'
   | 'permission_blocked'
   | 'transcribe_failed'
-  | 'not_installed';
+  | 'not_installed'
+  | 'insufficient_memory';
 
 /** Static per-tier model manifest (URL + filename + size). */
 export interface AsrTierManifest {
@@ -44,6 +45,8 @@ export interface AsrTierManifest {
   modelUrl: string;
   /** Exact summed byte size of the downloaded file(s); feeds disk preflight. */
   estimatedBytes: number;
+  /** Peak memory while transcribing: weights plus whisper's buffers. */
+  runtimeBytes: number;
 }
 
 /** Text of one transcription and the language it was decoded in. */

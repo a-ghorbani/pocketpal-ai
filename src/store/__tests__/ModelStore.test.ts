@@ -4607,6 +4607,50 @@ describe('ModelStore', () => {
       });
     });
 
+    it('keeps the loaded model estimate, with checkpoints, until release', async () => {
+      const model = {
+        ...basicModel,
+        ggufMetadata: {
+          architecture: 'gemma3',
+          n_layers: 26,
+          n_embd: 1152,
+          n_head: 4,
+          n_head_kv: 1,
+          n_vocab: 262144,
+          n_embd_head_k: 256,
+          n_embd_head_v: 256,
+          sliding_window: 512,
+        },
+      };
+      initLlamaMock.mockReset();
+      initLlamaMock.mockResolvedValue({
+        release: jest.fn().mockResolvedValue(undefined),
+      } as unknown as LlamaContext);
+      runInAction(() => {
+        modelStore.deviceTier = 'low';
+      });
+
+      await modelStore.initContext(model);
+
+      expect(modelStore.loadedModelBytes).toBe(
+        getModelMemoryRequirement(
+          model,
+          undefined,
+          modelStore.memoryEstimateSettings,
+        ),
+      );
+      expect(modelStore.loadedModelBytes).toBeGreaterThan(
+        modelStore.largestSuccessfulLoad!,
+      );
+
+      await modelStore.releaseContext();
+
+      expect(modelStore.loadedModelBytes).toBeUndefined();
+      runInAction(() => {
+        modelStore.deviceTier = null;
+      });
+    });
+
     it('should clear isContextLoading after successful init', async () => {
       const model = basicModel;
       const mockContext = {release: jest.fn()} as unknown as LlamaContext;

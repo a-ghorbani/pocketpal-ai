@@ -1,5 +1,6 @@
 import {
   AppState,
+  Platform,
   type AppStateStatus,
   type NativeEventSubscription,
 } from 'react-native';
@@ -10,12 +11,13 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import DeviceInfo from 'react-native-device-info';
 
 import {
+  ASR_ANDROID_RAM_SHARE,
   ASR_DEFAULT_TIER,
   ASR_DEVICE_TIERS,
   ASR_DISK_HEADROOM_FACTOR,
   ASR_INSUFFICIENT_STORAGE,
+  ASR_IOS_MEMORY_HEADROOM_FACTOR,
   ASR_LEVEL_HISTORY,
-  ASR_LIVE_SEGMENT_DEVICE_TIERS,
   ASR_TIERS,
   ASR_TIER_ORDER,
   whisperAsrEngine,
@@ -26,6 +28,8 @@ import type {
   AsrTier,
   CaptureState,
 } from '../services/asr';
+
+import NativeHardwareInfo from '../specs/NativeHardwareInfo';
 
 import {modelStore} from './ModelStore';
 
@@ -102,12 +106,24 @@ export class ASRStore {
   }
 
   /**
-   * True when segments are transcribed while the user keeps speaking. Other
-   * devices transcribe once after stop, which costs less CPU in total.
+   * Whether whisper fits next to the loaded chat model. Android's free-memory
+   * figure can be far off (#982), so Android budgets against total RAM; iOS
+   * reports the app's own remaining limit, which is reliable.
    */
-  get liveSegments(): boolean {
-    const tier = modelStore.deviceTier;
-    return tier !== null && ASR_LIVE_SEGMENT_DEVICE_TIERS.includes(tier);
+  async hasMemoryForCapture(): Promise<boolean> {
+    const whisperBytes = ASR_TIERS[this.selectedTier].runtimeBytes;
+    try {
+      if (Platform.OS === 'ios') {
+        const available = await NativeHardwareInfo.getAvailableMemory();
+        return available >= whisperBytes * ASR_IOS_MEMORY_HEADROOM_FACTOR;
+      }
+      const total = await DeviceInfo.getTotalMemory();
+      const chatBytes = modelStore.loadedModelBytes ?? 0;
+      return chatBytes + whisperBytes <= total * ASR_ANDROID_RAM_SHARE;
+    } catch (err) {
+      console.warn('[ASRStore] memory check failed:', err);
+      return true;
+    }
   }
 
   /**

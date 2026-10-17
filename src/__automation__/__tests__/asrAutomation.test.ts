@@ -78,6 +78,12 @@ describe('runAsrCommand', () => {
     expect(asrStore.lastError).toBe('permission_blocked');
   });
 
+  it('state::error-memory → insufficient-memory error', async () => {
+    await runAsrCommand('state::error-memory');
+
+    expect(asrStore.lastError).toBe('insufficient_memory');
+  });
+
   it('state::error-disk → selected tier in disk-blocked download error', async () => {
     await runAsrCommand('state::error-disk');
 

@@ -8,8 +8,15 @@ import type {AsrTier, AsrTierManifest} from './types';
  */
 export const ASR_DEVICE_TIERS: Tier[] = ['high', 'flagship'];
 
-/** Device tiers that transcribe segments while the user keeps speaking. */
-export const ASR_LIVE_SEGMENT_DEVICE_TIERS: Tier[] = ['flagship'];
+/**
+ * Android starts a recording only when the loaded chat model plus whisper fit
+ * this share of total RAM. The system's free-memory figure is not reliable
+ * enough to gate on.
+ */
+export const ASR_ANDROID_RAM_SHARE = 0.45;
+
+/** iOS starts a recording only when this much of whisper's peak is free. */
+export const ASR_IOS_MEMORY_HEADROOM_FACTOR = 1.2;
 
 /**
  * Maximum recording length (ms). Reaching it ends capture as if the user
@@ -123,18 +130,21 @@ export const ASR_TIERS: Record<AsrTier, AsrTierManifest> = {
     modelFilename: 'ggml-base-q5_1.bin',
     modelUrl: `${WHISPER_CPP_BASE_URL}/ggml-base-q5_1.bin`,
     estimatedBytes: 59_707_625,
+    runtimeBytes: 330_000_000,
   },
   small: {
     tier: 'small',
     modelFilename: 'ggml-small-q8_0.bin',
     modelUrl: `${WHISPER_CPP_BASE_URL}/ggml-small-q8_0.bin`,
     estimatedBytes: 264_464_607,
+    runtimeBytes: 650_000_000,
   },
   'large-turbo': {
     tier: 'large-turbo',
     modelFilename: 'ggml-large-v3-turbo-q5_0.bin',
     modelUrl: `${WHISPER_CPP_BASE_URL}/ggml-large-v3-turbo-q5_0.bin`,
     estimatedBytes: 574_041_195,
+    runtimeBytes: 1_200_000_000,
   },
 };
 

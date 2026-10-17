@@ -44,6 +44,7 @@ class MockASRStore {
   waitingForChat = false;
 
   init: jest.Mock;
+  hasMemoryForCapture: jest.Mock;
   setUserASROverride: jest.Mock;
   setSelectedTier: jest.Mock;
   setSpokenLanguage: jest.Mock;
@@ -60,6 +61,7 @@ class MockASRStore {
   constructor() {
     makeAutoObservable(this, {
       init: false,
+      hasMemoryForCapture: false,
       setUserASROverride: false,
       setSelectedTier: false,
       setSpokenLanguage: false,
@@ -74,6 +76,7 @@ class MockASRStore {
       pushInputLevel: false,
     });
     this.init = jest.fn().mockResolvedValue(undefined);
+    this.hasMemoryForCapture = jest.fn().mockResolvedValue(true);
     this.setUserASROverride = jest.fn((v: boolean) => {
       runInAction(() => {
         this.userASROverride = v;
@@ -127,10 +130,6 @@ class MockASRStore {
   get deviceSupported(): boolean {
     const tier = mockModelStore.deviceTier;
     return tier === 'high' || tier === 'flagship';
-  }
-
-  get liveSegments(): boolean {
-    return mockModelStore.deviceTier === 'flagship';
   }
 
   get chatBusyOnCpu(): boolean {

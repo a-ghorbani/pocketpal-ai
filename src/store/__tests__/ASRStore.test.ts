@@ -1,4 +1,4 @@
-import {AppState} from 'react-native';
+import {AppState, Platform} from 'react-native';
 import DeviceInfo from 'react-native-device-info';
 
 // Mock persistence BEFORE importing the store.
@@ -26,6 +26,7 @@ import {
   ASR_TIER_ORDER,
   whisperAsrEngine,
 } from '../../services/asr';
+import NativeHardwareInfo from '../../specs/NativeHardwareInfo';
 import {ASRStore} from '../ASRStore';
 import {modelStore} from '../ModelStore';
 
@@ -53,6 +54,7 @@ describe('ASRStore', () => {
     modelStore.deviceTier = 'high';
     modelStore.inferencing = false;
     modelStore.context = undefined;
+    modelStore.loadedModelBytes = undefined;
     (DeviceInfo.getFreeDiskStorage as jest.Mock).mockResolvedValue(10 * GIB);
     store = new ASRStore();
   });
@@ -82,14 +84,57 @@ describe('ASRStore', () => {
       store.setUserASROverride(false);
       expect(store.asrAvailable).toBe(false);
     });
+  });
 
-    it('transcribes while speaking only on flagship devices', () => {
-      modelStore.deviceTier = 'flagship';
-      expect(store.liveSegments).toBe(true);
-      modelStore.deviceTier = 'high';
-      expect(store.liveSegments).toBe(false);
-      modelStore.deviceTier = null;
-      expect(store.liveSegments).toBe(false);
+  describe('memory check before recording', () => {
+    const platform = Platform.OS;
+
+    afterEach(() => {
+      Platform.OS = platform;
+    });
+
+    it.each([
+      [undefined, true],
+      [2.5e9, true],
+      [3.5e9, false],
+    ])(
+      'Android, 8 GB, chat model %s bytes → fits %s',
+      async (chatBytes, fits) => {
+        Platform.OS = 'android';
+        (DeviceInfo.getTotalMemory as jest.Mock).mockResolvedValue(8e9);
+        modelStore.loadedModelBytes = chatBytes;
+        await expect(store.hasMemoryForCapture()).resolves.toBe(fits);
+      },
+    );
+
+    it('Android budgets the selected whisper model', async () => {
+      Platform.OS = 'android';
+      (DeviceInfo.getTotalMemory as jest.Mock).mockResolvedValue(8e9);
+      modelStore.loadedModelBytes = 3e9;
+      store.setSelectedTier('base');
+      await expect(store.hasMemoryForCapture()).resolves.toBe(true);
+      store.setSelectedTier('large-turbo');
+      await expect(store.hasMemoryForCapture()).resolves.toBe(false);
+    });
+
+    it.each([
+      [3e9, true],
+      [0.5e9, false],
+    ])('iOS, %s bytes left to the app → fits %s', async (available, fits) => {
+      Platform.OS = 'ios';
+      (NativeHardwareInfo.getAvailableMemory as jest.Mock).mockResolvedValue(
+        available,
+      );
+      modelStore.loadedModelBytes = 3.5e9;
+      await expect(store.hasMemoryForCapture()).resolves.toBe(fits);
+    });
+
+    it('does not block recording when memory cannot be read', async () => {
+      Platform.OS = 'android';
+      (DeviceInfo.getTotalMemory as jest.Mock).mockRejectedValue(
+        new Error('unavailable'),
+      );
+      await expect(store.hasMemoryForCapture()).resolves.toBe(true);
     });
   });
 

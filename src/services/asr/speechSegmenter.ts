@@ -36,21 +36,12 @@ function concat(chunks: Uint8Array[]): Uint8Array {
   return out;
 }
 
-export interface SpeechSegmenterOptions {
-  /** A pause only ends a segment this long (ms). */
-  minSegmentMs: number;
-  /** A segment is cut here even without a pause (ms). */
-  maxSegmentMs: number;
-}
-
 /**
  * Splits a live 16-bit PCM stream into segments at pauses, so each can be
  * transcribed while the user keeps speaking. A segment of at least
- * `minSegmentMs` ends after `ASR_SEGMENT_PAUSE_MS` of silence that follows
- * speech; any segment ends at `maxSegmentMs`. With both `Infinity` nothing
- * is cut and `flush` returns the whole recording. Silence before any speech
- * is trimmed to a short lead-in, so long pauses are never buffered or
- * decoded.
+ * `ASR_MIN_SEGMENT_MS` ends after `ASR_SEGMENT_PAUSE_MS` of silence that
+ * follows speech; any segment ends at `ASR_MAX_SEGMENT_MS`. Silence before any speech is trimmed to a short
+ * lead-in, so long pauses are never buffered or decoded.
  */
 export class SpeechSegmenter {
   private chunks: Uint8Array[] = [];
@@ -58,13 +49,7 @@ export class SpeechSegmenter {
   private heardSpeech = false;
   private silentBytes = 0;
 
-  constructor(
-    private readonly onSegment: (pcm: Uint8Array) => void,
-    private readonly options: SpeechSegmenterOptions = {
-      minSegmentMs: ASR_MIN_SEGMENT_MS,
-      maxSegmentMs: ASR_MAX_SEGMENT_MS,
-    },
-  ) {}
+  constructor(private readonly onSegment: (pcm: Uint8Array) => void) {}
 
   push(chunk: Uint8Array): void {
     this.chunks.push(chunk);
@@ -81,11 +66,10 @@ export class SpeechSegmenter {
       this.trimLeadIn();
       return;
     }
-    const {minSegmentMs, maxSegmentMs} = this.options;
     const atPause =
       this.silentBytes >= ASR_SEGMENT_PAUSE_MS * BYTES_PER_MS &&
-      this.bytes >= minSegmentMs * BYTES_PER_MS;
-    if (atPause || this.bytes >= maxSegmentMs * BYTES_PER_MS) {
+      this.bytes >= ASR_MIN_SEGMENT_MS * BYTES_PER_MS;
+    if (atPause || this.bytes >= ASR_MAX_SEGMENT_MS * BYTES_PER_MS) {
       this.onSegment(this.take());
     }
   }

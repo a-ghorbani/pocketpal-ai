@@ -12,8 +12,6 @@ import {
   ASR_CHUNK_BYTES,
   ASR_LEVEL_CHUNKS,
   ASR_MAX_RECORD_MS,
-  ASR_MAX_SEGMENT_MS,
-  ASR_MIN_SEGMENT_MS,
   ASR_PROMPT_CHARS,
   ASR_SAMPLE_RATE,
   SpeechSegmenter,
@@ -39,11 +37,11 @@ interface UseVoiceCaptureReturn {
  * Tap-to-start, tap-to-stop capture lifecycle for the composer mic.
  *
  * start  → ensure mic permission → start 16 kHz mono PCM capture, publishing
- *          loudness to `asrStore.inputLevels` for the waveform. When
- *          `asrStore.liveSegments`, `SpeechSegmenter` cuts the stream at
- *          pauses and each segment is transcribed while the user keeps
- *          speaking, so stop only waits for the last one; otherwise the
- *          whole recording is transcribed once after stop.
+ *          loudness to `asrStore.inputLevels` for the waveform.
+ *          `SpeechSegmenter` cuts the stream at pauses and each segment is
+ *          transcribed while the user keeps speaking, so stop only waits for
+ *          the last one. Refused when whisper would not fit next to the
+ *          loaded chat model (`asrStore.hasMemoryForCapture`).
  * stop   → transcribe the remaining audio → join the segment texts →
  *          onTranscript append. Silent segments are never decoded. While a
  *          local chat model generates on the CPU, transcription waits for
@@ -202,6 +200,14 @@ export function useVoiceCapture(
     const session = ++sessionRef.current;
     asrStore.setCaptureState('requesting_perm');
     (async () => {
+      const fits = await asrStore.hasMemoryForCapture();
+      if (session !== sessionRef.current) {
+        return;
+      }
+      if (!fits) {
+        asrStore.setError('insufficient_memory');
+        return;
+      }
       let result;
       try {
         result = await ensureMicPermission();
@@ -240,11 +246,8 @@ export function useVoiceCapture(
       }
       textsRef.current = [];
       failedRef.current = false;
-      segmenterRef.current = new SpeechSegmenter(
-        pcm => transcribeSegment(pcm, session),
-        asrStore.liveSegments
-          ? {minSegmentMs: ASR_MIN_SEGMENT_MS, maxSegmentMs: ASR_MAX_SEGMENT_MS}
-          : {minSegmentMs: Infinity, maxSegmentMs: Infinity},
+      segmenterRef.current = new SpeechSegmenter(pcm =>
+        transcribeSegment(pcm, session),
       );
       recordingRef.current = true;
       let chunkCount = 0;

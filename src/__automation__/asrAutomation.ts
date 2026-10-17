@@ -22,6 +22,7 @@ import {modelStore} from '../store/ModelStore';
  *   state::waiting-chat   transcribing, waiting for a CPU chat reply
  *   state::error-capture  transcribe failure → composer error snackbar
  *   state::error-blocked  blocked permission → snackbar + open-Settings action
+ *   state::error-memory   whisper won't fit next to the chat model → snackbar
  *   state::error-disk     selected tier disk-blocked → Settings storage line
  */
 const ASR_AUTOMATION_STATE = 'ASR_AUTOMATION_STATE';
@@ -71,6 +72,11 @@ export async function runAsrCommand(cmd: string): Promise<void> {
   if (cmd === 'state::error-blocked') {
     forceState({override: true, selectedTierReady: true});
     asrStore.setError('permission_blocked');
+    return;
+  }
+  if (cmd === 'state::error-memory') {
+    forceState({override: true, selectedTierReady: true});
+    asrStore.setError('insufficient_memory');
     return;
   }
   if (cmd === 'state::error-disk') {

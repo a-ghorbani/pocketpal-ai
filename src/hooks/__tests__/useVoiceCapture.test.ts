@@ -56,6 +56,7 @@ describe('useVoiceCapture', () => {
     modelStore.deviceTier = 'flagship';
     modelStore.inferencing = false;
     modelStore.context = undefined;
+    (asrStore.hasMemoryForCapture as jest.Mock).mockResolvedValue(true);
     mockEnsureMicPermission.mockResolvedValue('granted');
     mockTranscribe.mockResolvedValue(said('hello world'));
     mockCancelTranscription.mockResolvedValue(undefined);
@@ -106,28 +107,21 @@ describe('useVoiceCapture', () => {
     await waitFor(() => expect(mockRelease).toHaveBeenCalled());
   });
 
-  it('transcribes once after stop on a device below flagship', async () => {
-    modelStore.deviceTier = 'high';
-    const {result, onTranscript} = await startRecording();
-
-    act(() => {
-      dataCallback?.(longSpeechPcmBase64());
-      dataCallback?.(silentPcmChunkBase64());
-      dataCallback?.(loudPcmChunkBase64());
-    });
-    await act(async () => {
-      await Promise.resolve();
-    });
-    expect(mockTranscribe).not.toHaveBeenCalled();
+  it('refuses to record when whisper would not fit in memory', async () => {
+    (asrStore.hasMemoryForCapture as jest.Mock).mockResolvedValue(false);
+    const {result} = renderHook(() =>
+      useVoiceCapture({onTranscript: jest.fn()}),
+    );
 
     await act(async () => {
-      result.current.stop();
+      result.current.start();
     });
 
     await waitFor(() =>
-      expect(onTranscript).toHaveBeenCalledWith('hello world'),
+      expect(asrStore.setError).toHaveBeenCalledWith('insufficient_memory'),
     );
-    expect(mockTranscribe).toHaveBeenCalledTimes(1);
+    expect(mockEnsureMicPermission).not.toHaveBeenCalled();
+    expect(mockAudioStart).not.toHaveBeenCalled();
   });
 
   it('detects the spoken language once and reuses it', async () => {
