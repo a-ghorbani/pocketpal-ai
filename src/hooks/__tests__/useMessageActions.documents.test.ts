@@ -41,14 +41,14 @@ const over = {
   kind: 'over' as const,
   needed: 9100,
   available: 3072,
-  newDocs: [{ref: doc, tokens: 9000}],
+  newDocs: [{ref: doc, tokens: 9000, mode: 'searched' as const}],
   historyDocTokens: 0,
-  historyOverflow: false,
+  reason: 'new' as const,
 };
 
 const setup = (verdict: any) => {
   const handleSendPress = jest.fn().mockResolvedValue(undefined);
-  const evaluateSendBudget = jest.fn().mockResolvedValue(verdict);
+  const evaluateSendBudget = jest.fn().mockResolvedValue({verdict});
   const onBudgetOver = jest.fn();
   const setInputText = jest.fn();
   const setInputDocuments = jest.fn((refs: DocumentRef[]) =>

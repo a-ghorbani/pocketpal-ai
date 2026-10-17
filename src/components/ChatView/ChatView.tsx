@@ -69,10 +69,8 @@ import {
   setComposerHeld,
   setDocumentPageRange,
 } from '../../services/documents/store';
-import {
-  hasDocuments,
-  type BudgetVerdict,
-} from '../../services/documents/budget';
+import {hasDocuments} from '../../services/documents/budget';
+import type {BudgetVerdict} from '../../services/documents/plan';
 import {documentCountingOptions} from '../../utils/documentCounting';
 import {createDocumentWarning} from '../../utils/errors';
 import type {
@@ -690,9 +688,9 @@ export const ChatView = observer(
           budgetCheckRef.current = true;
           let verdict: BudgetVerdict;
           try {
-            verdict = await evaluateSendBudget(message, {
+            ({verdict} = await evaluateSendBudget(message, {
               excludeFromId: chatSessionStore.editingMessageId ?? undefined,
-            });
+            }));
           } finally {
             budgetCheckRef.current = false;
           }

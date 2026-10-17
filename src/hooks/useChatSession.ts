@@ -63,11 +63,12 @@ import {
   loadDocumentTexts,
   releaseSendHold,
 } from '../services/documents/store';
+import {hasDocuments} from '../services/documents/budget';
 import {
-  evaluateDocumentBudget,
-  hasDocuments,
-  type BudgetVerdict,
-} from '../services/documents/budget';
+  documentPlan,
+  type Plan,
+  type PlanInput,
+} from '../services/documents/plan';
 import {
   agentStateReducer,
   createTriggerMarkerCache,
@@ -639,7 +640,15 @@ export type UndoneSend = {
 export type EvaluateSendBudget = (
   message: MessageType.PartialText,
   options?: {excludeFromId?: string},
-) => Promise<BudgetVerdict>;
+) => Promise<Plan>;
+
+const NO_DOCUMENTS_PLAN: Plan = {
+  newModes: [],
+  fullLoad: 0,
+  room: undefined,
+  excerptBudget: 0,
+  verdict: {kind: 'fits'},
+};
 
 const plainText = (message: {content?: unknown; tool_calls?: unknown}) => {
   const {content} = message;
@@ -655,6 +664,51 @@ const plainText = (message: {content?: unknown; tool_calls?: unknown}) => {
   return message.tool_calls
     ? `${text}${JSON.stringify(message.tool_calls)}`
     : text;
+};
+
+/** Everything `documentPlan` needs besides the rows, resolved the way a send resolves it. */
+const planInputs = async (
+  rows: MessageType.Any[],
+  message: MessageType.PartialText,
+): Promise<PlanInput> => {
+  const activeSession = chatSessionStore.sessions.find(
+    s => s.id === chatSessionStore.activeSessionId,
+  );
+  const pal = activeSession?.activePalId
+    ? palStore.pals.find(p => p.id === activeSession.activePalId)
+    : null;
+  const settings = await chatSessionStore.getCurrentCompletionSettings();
+  const tools = (settings?.tools as ToolDefinition[] | undefined) ?? [];
+  const fragments = collectSystemPromptFragments(
+    tools.map(tool => tool.function?.name ?? ''),
+    {now: new Date(), maxToolTurns: DEFAULT_MAX_TURNS},
+  );
+  const promptMessages = assembleMessages(
+    resolveSystemMessages({pal, model: modelStore.activeModel}),
+    fragments,
+    [
+      ...convertToChatMessages(
+        rows.filter(msg => msg.type !== 'image'),
+        modelStore.activeModelCaps.visionActive,
+      ),
+      {role: 'user', content: message.text},
+    ],
+  );
+  const refs = [
+    ...rows.flatMap(row => (row.type === 'text' ? (row.documents ?? []) : [])),
+    ...(message.documents ?? []),
+  ];
+  return {
+    rows,
+    message,
+    windowTokens: modelStore.activeModelCaps.effectiveContextLength,
+    activeModelId: modelStore.activeModelId,
+    nonDocText: [
+      ...promptMessages.map(plainText),
+      tools.length > 0 ? JSON.stringify(tools) : '',
+    ].join('\n'),
+    missingKeys: await findMissingDocuments(refs),
+  };
 };
 
 const rowsBefore = (rows: MessageType.Any[], messageId?: string) => {
@@ -1157,46 +1211,9 @@ export const useChatSession = (
       excludeFromId,
     );
     if (!hasDocuments(rows, message)) {
-      return {kind: 'fits'};
+      return NO_DOCUMENTS_PLAN;
     }
-    const activeSession = chatSessionStore.sessions.find(
-      s => s.id === chatSessionStore.activeSessionId,
-    );
-    const pal = activeSession?.activePalId
-      ? palStore.pals.find(p => p.id === activeSession.activePalId)
-      : null;
-    const settings = await chatSessionStore.getCurrentCompletionSettings();
-    const tools = (settings?.tools as ToolDefinition[] | undefined) ?? [];
-    const fragments = collectSystemPromptFragments(
-      tools.map(tool => tool.function?.name ?? ''),
-      {now: new Date(), maxToolTurns: DEFAULT_MAX_TURNS},
-    );
-    const promptMessages = assembleMessages(
-      resolveSystemMessages({pal, model: modelStore.activeModel}),
-      fragments,
-      [
-        ...convertToChatMessages(
-          rows.filter(msg => msg.type !== 'image'),
-          modelStore.activeModelCaps.visionActive,
-        ),
-        {role: 'user', content: message.text},
-      ],
-    );
-    const history = rows
-      .filter((row): row is MessageType.Text => row.type === 'text')
-      .map(row => row.documents ?? []);
-    const newRefs = message.documents ?? [];
-    return evaluateDocumentBudget({
-      windowTokens: modelStore.activeModelCaps.effectiveContextLength,
-      activeModelId: modelStore.activeModelId,
-      nonDocText: [
-        ...promptMessages.map(plainText),
-        tools.length > 0 ? JSON.stringify(tools) : '',
-      ].join('\n'),
-      history,
-      newRefs,
-      missingKeys: await findMissingDocuments([...history.flat(), ...newRefs]),
-    });
+    return documentPlan(await planInputs(rows, message));
   };
 
   const handleResetConversation = async () => {

@@ -48,9 +48,9 @@ describe('DocumentBudgetSheet', () => {
           kind: 'over',
           needed: 9100,
           available: 3072,
-          newDocs: [{ref: pdf, tokens: 9000}],
+          newDocs: [{ref: pdf, tokens: 9000, mode: 'searched'}],
           historyDocTokens: 0,
-          historyOverflow: false,
+          reason: 'new',
         }}
         onIncreaseContext={onIncreaseContext}
         {...h}
@@ -76,9 +76,9 @@ describe('DocumentBudgetSheet', () => {
           kind: 'over',
           needed: 9200,
           available: 7168,
-          newDocs: [{ref: text, tokens: 3000}],
+          newDocs: [{ref: text, tokens: 3000, mode: 'searched'}],
           historyDocTokens: 6000,
-          historyOverflow: false,
+          reason: 'new',
         }}
         {...handlers()}
       />,
@@ -101,7 +101,7 @@ describe('DocumentBudgetSheet', () => {
           available: 3072,
           newDocs: [],
           historyDocTokens: 6000,
-          historyOverflow: true,
+          reason: 'history',
         }}
         onEditMessage={onEditMessage}
         {...h}

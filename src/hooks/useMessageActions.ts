@@ -6,7 +6,8 @@ import {chatSessionStore, modelStore} from '../store';
 
 import {derivedText} from '../utils/chat';
 import {MessageType, User} from '../utils/types';
-import {hasDocuments, type BudgetVerdict} from '../services/documents/budget';
+import {hasDocuments} from '../services/documents/budget';
+import type {BudgetVerdict} from '../services/documents/plan';
 import {holdForSend, releaseSendHold} from '../services/documents/store';
 import type {DocumentRef} from '../services/documents/types';
 import type {EvaluateSendBudget} from './useChatSession';
@@ -82,7 +83,7 @@ export const useMessageActions = ({
       holdForSend(documentIds);
       try {
         if (gated) {
-          const verdict = await evaluateSendBudget(message, {
+          const {verdict} = await evaluateSendBudget(message, {
             excludeFromId: row.id,
           });
           if (verdict.kind === 'over') {

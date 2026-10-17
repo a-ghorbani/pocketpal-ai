@@ -298,70 +298,66 @@ describe('evaluateSendBudget', () => {
   it('fits without reading anything when no document is involved', async () => {
     withWindow(16);
     history = [userRow('u1', 'x'.repeat(10000))];
-    expect(await evaluate({type: 'text', text: 'hi'})).toEqual({kind: 'fits'});
+    const plan = await evaluate({type: 'text', text: 'hi'});
+    expect(plan.verdict).toEqual({kind: 'fits'});
     expect(fs.exists).not.toHaveBeenCalled();
   });
 
-  it('is over for a document larger than a 4096 window', async () => {
+  it('searches a document over the cap and fits a 4096 window', async () => {
     withWindow(4096);
     const big = pdf('big', {tokenEstimate: 9000});
     writeText(big.id, ['x']);
 
-    const verdict = await evaluate({
+    const plan = await evaluate({
       type: 'text',
       text: 'Summarise',
       documents: [big],
     });
 
-    expect(verdict).toMatchObject({
-      kind: 'over',
-      available: 4096 - 1024,
-      historyOverflow: false,
-      newDocs: [{ref: big, tokens: 9000}],
-    });
+    expect(plan.newModes).toEqual(['searched']);
+    expect(plan.verdict).toEqual({kind: 'fits'});
+    expect(plan.excerptBudget).toBe(2048);
   });
 
-  it('counts earlier documents as already in the chat', async () => {
+  it('keeps an earlier full document full and searches the new one', async () => {
     withWindow(8192);
-    const earlier = pdf('earlier', {tokenEstimate: 6000});
+    const earlier = pdf('earlier', {tokenEstimate: 1500});
     const added = {
-      ...pdf('added', {tokenEstimate: 3000}),
+      ...pdf('added', {tokenEstimate: 1000}),
       kind: 'text' as const,
     };
     writeText(earlier.id, ['x']);
     writeText(added.id, ['y']);
     history = [assistantRow('a1', 'ok'), userRow('u1', 'read', [earlier])];
 
-    const verdict = await evaluate({
+    const plan = await evaluate({
       type: 'text',
       text: 'and this',
       documents: [added],
     });
 
-    expect(verdict.kind).toBe('over');
-    if (verdict.kind === 'over') {
-      expect(verdict.historyDocTokens).toBeGreaterThanOrEqual(6000);
-      expect(verdict.historyOverflow).toBe(false);
-    }
+    expect(plan.newModes).toEqual(['searched']);
+    expect(plan.verdict.kind).toBe('fits');
   });
 
   it('is unknown without a window', async () => {
     withWindow(undefined);
-    expect(
-      await evaluate({type: 'text', text: 'x', documents: [pdf('a')]}),
-    ).toEqual({kind: 'unknown'});
+    const plan = await evaluate({
+      type: 'text',
+      text: 'x',
+      documents: [pdf('a')],
+    });
+    expect(plan.verdict).toEqual({kind: 'unknown'});
   });
 
-  it('flags history overflow when earlier documents alone no longer fit', async () => {
+  it('is over for history when earlier full documents alone no longer fit', async () => {
     withWindow(4096);
     const earlier = pdf('earlier', {tokenEstimate: 6000});
     writeText(earlier.id, ['x']);
     history = [assistantRow('a1', 'ok'), userRow('u1', 'read', [earlier])];
 
-    expect(await evaluate({type: 'text', text: 'thanks'})).toMatchObject({
-      kind: 'over',
-      historyOverflow: true,
-    });
+    const plan = await evaluate({type: 'text', text: 'thanks'});
+    expect(plan.verdict).toMatchObject({kind: 'over', reason: 'history'});
   });
 
   it('ignores the edited row and everything after it', async () => {
@@ -370,9 +366,11 @@ describe('evaluateSendBudget', () => {
     writeText(earlier.id, ['x']);
     history = [assistantRow('a1', 'ok'), userRow('u1', 'read', [earlier])];
 
-    expect(
-      await evaluate({type: 'text', text: 'rewritten'}, {excludeFromId: 'u1'}),
-    ).toEqual({kind: 'fits'});
+    const plan = await evaluate(
+      {type: 'text', text: 'rewritten'},
+      {excludeFromId: 'u1'},
+    );
+    expect(plan.verdict).toEqual({kind: 'fits'});
   });
 
   it('counts a missing document as zero', async () => {
@@ -381,6 +379,7 @@ describe('evaluateSendBudget', () => {
       assistantRow('a1', 'ok'),
       userRow('u1', 'old', [pdf('gone', {tokenEstimate: 50000})]),
     ];
-    expect((await evaluate({type: 'text', text: 'hi'})).kind).toBe('fits');
+    const plan = await evaluate({type: 'text', text: 'hi'});
+    expect(plan.verdict.kind).toBe('fits');
   });
 });

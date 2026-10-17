@@ -208,9 +208,9 @@ describe('ChatView send gate', () => {
     kind: 'over' as const,
     needed: 9100,
     available: 3072,
-    newDocs: [{ref: big, tokens: 9000}],
+    newDocs: [{ref: big, tokens: 9000, mode: 'searched' as const}],
     historyDocTokens: 0,
-    historyOverflow: false,
+    reason: 'new' as const,
     ...extra,
   });
   const store = chatSessionStore as any;
@@ -222,7 +222,7 @@ describe('ChatView send gate', () => {
   });
 
   it('writes nothing and keeps the composer when the documents do not fit', async () => {
-    const evaluateSendBudget = jest.fn().mockResolvedValue(over());
+    const evaluateSendBudget = jest.fn().mockResolvedValue({verdict: over()});
     const chat = renderChat({evaluateSendBudget});
     await chat.attach(big);
     chat.type('Summarise');
@@ -248,7 +248,7 @@ describe('ChatView send gate', () => {
     store.isEditMode = true;
     store.editingMessageId = 'edited';
     store.commitEdit = jest.fn();
-    const evaluateSendBudget = jest.fn().mockResolvedValue(over());
+    const evaluateSendBudget = jest.fn().mockResolvedValue({verdict: over()});
     const chat = renderChat({evaluateSendBudget});
     await chat.attach(big);
     chat.type('rewritten');
@@ -265,7 +265,9 @@ describe('ChatView send gate', () => {
   });
 
   it('sends when the window is unknown', async () => {
-    const evaluateSendBudget = jest.fn().mockResolvedValue({kind: 'unknown'});
+    const evaluateSendBudget = jest
+      .fn()
+      .mockResolvedValue({verdict: {kind: 'unknown'}});
     const chat = renderChat({evaluateSendBudget});
     await chat.attach(big);
     chat.type('Summarise');
@@ -294,7 +296,9 @@ describe('ChatView send gate', () => {
   });
 
   it('checks the budget when only an earlier message carries a document', async () => {
-    const evaluateSendBudget = jest.fn().mockResolvedValue({kind: 'fits'});
+    const evaluateSendBudget = jest
+      .fn()
+      .mockResolvedValue({verdict: {kind: 'fits'}});
     const chat = renderChat({
       evaluateSendBudget,
       messages: [{...textMessage, documents: [big]}],
@@ -316,7 +320,9 @@ describe('ChatView send gate', () => {
       documentStore.setComposerHeld([]);
     });
     let heldAtSend: boolean | undefined;
-    const evaluateSendBudget = jest.fn().mockResolvedValue({kind: 'fits'});
+    const evaluateSendBudget = jest
+      .fn()
+      .mockResolvedValue({verdict: {kind: 'fits'}});
     const chat = renderChat({evaluateSendBudget});
     chat.onSendPress.mockImplementation(async () => {
       heldAtSend = documentStore.isHeld('big');
@@ -335,7 +341,7 @@ describe('ChatView send gate', () => {
   });
 
   it('removes a document from the sheet and the composer', async () => {
-    const evaluateSendBudget = jest.fn().mockResolvedValue(over());
+    const evaluateSendBudget = jest.fn().mockResolvedValue({verdict: over()});
     const chat = renderChat({evaluateSendBudget});
     await chat.attach(big);
     chat.type('Summarise');
@@ -366,11 +372,11 @@ describe('ChatView history overflow', () => {
     available: 3072,
     newDocs: [],
     historyDocTokens: 6000,
-    historyOverflow: true,
+    reason: 'history' as const,
   };
 
   it('offers New chat and Edit message instead of per-document actions', async () => {
-    const evaluateSendBudget = jest.fn().mockResolvedValue(overflow);
+    const evaluateSendBudget = jest.fn().mockResolvedValue({verdict: overflow});
     const chat = renderChat({evaluateSendBudget, messages: [earlierRow]});
     chat.type('thanks');
 
@@ -389,7 +395,7 @@ describe('ChatView history overflow', () => {
 
   it('edits the earlier row and keeps what was pending in the composer', async () => {
     const pending = ref('pending');
-    const evaluateSendBudget = jest.fn().mockResolvedValue(overflow);
+    const evaluateSendBudget = jest.fn().mockResolvedValue({verdict: overflow});
     const chat = renderChat({evaluateSendBudget, messages: [earlierRow]});
     await chat.attach(pending);
     chat.type('thanks');

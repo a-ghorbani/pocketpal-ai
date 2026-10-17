@@ -8,7 +8,7 @@ import {formatTokenCount} from '../DocumentChip';
 import {useTheme} from '../../hooks';
 import {t} from '../../locales';
 import {L10nContext} from '../../utils';
-import type {BudgetVerdict} from '../../services/documents/budget';
+import type {BudgetVerdict} from '../../services/documents/plan';
 import type {DocumentRef} from '../../services/documents/types';
 
 type OverVerdict = Extract<BudgetVerdict, {kind: 'over'}>;
@@ -39,6 +39,7 @@ export const DocumentBudgetSheet: React.FC<DocumentBudgetSheetProps> = ({
   const theme = useTheme();
   const l10n = useContext(L10nContext);
   const strings = l10n.chat.documents.budgetSheet;
+  const historyOverflow = verdict.reason === 'history';
   const amounts = {
     needed: formatTokenCount(verdict.needed),
     available: formatTokenCount(Math.max(0, verdict.available)),
@@ -63,17 +64,14 @@ export const DocumentBudgetSheet: React.FC<DocumentBudgetSheetProps> = ({
     <Sheet
       isVisible={isVisible}
       onClose={onClose}
-      title={verdict.historyOverflow ? strings.historyTitle : strings.title}
+      title={historyOverflow ? strings.historyTitle : strings.title}
       snapPoints={['70%']}>
       <Sheet.ScrollView contentContainerStyle={styles.container}>
         <Text variant="bodyMedium" style={styles.body} testID="budget-body">
-          {t(
-            verdict.historyOverflow ? strings.historyBody : strings.body,
-            amounts,
-          )}
+          {t(historyOverflow ? strings.historyBody : strings.body, amounts)}
         </Text>
 
-        {verdict.historyOverflow
+        {historyOverflow
           ? null
           : verdict.newDocs.map(({ref, tokens}) => (
               <View key={ref.id} style={styles.doc} testID="budget-new-doc">
@@ -117,7 +115,7 @@ export const DocumentBudgetSheet: React.FC<DocumentBudgetSheetProps> = ({
           </Text>
         ) : null}
 
-        {verdict.historyOverflow ? (
+        {historyOverflow ? (
           <>
             <Button
               mode="contained"
