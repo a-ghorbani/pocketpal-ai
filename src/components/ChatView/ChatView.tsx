@@ -135,7 +135,7 @@ export interface ChatProps extends Omit<ChatTopLevelProps, 'onSendPress'> {
    * `emptyChatPlaceholder` and `emptyChatPlaceholderTextStyle` are ignored
    * in this case. */
   emptyState?: () => React.ReactNode;
-  /** Use this to enable `LayoutAnimation`. Experimental on Android (same as React Native). */
+  /** Forwarded to each `Message`. */
   enableAnimation?: boolean;
   flatListProps?: Partial<FlatListProps<MessageType.DerivedAny[]>>;
   inputProps?: ChatInputAdditionalProps;
