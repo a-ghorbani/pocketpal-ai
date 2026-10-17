@@ -17,7 +17,8 @@ import {DrawerPage} from '../pages/DrawerPage';
 import {ModelsPage} from '../pages/ModelsPage';
 import {HFSearchSheet} from '../pages/HFSearchSheet';
 import {ModelDetailsSheet} from '../pages/ModelDetailsSheet';
-import {Selectors, nativeTextElement} from '../helpers/selectors';
+import {Selectors} from '../helpers/selectors';
+import {readReplyText} from '../helpers/element-text';
 import {
   QUICK_TEST_MODEL,
   TIMEOUTS,
@@ -221,8 +222,7 @@ describe('Quick Smoke Test', () => {
 
     // Get response text from AI message
     const aiMessage = browser.$(Selectors.chat.aiMessage);
-    const textView = aiMessage.$(nativeTextElement());
-    const responseText = await textView.getText().catch(() => 'Unable to extract response text');
+    const responseText = await readReplyText(aiMessage).catch(() => 'Unable to extract response text');
 
     console.log(`\nSmoke Test Results:`);
     console.log(`  Model: ${model.id}`);

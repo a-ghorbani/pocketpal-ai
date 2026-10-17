@@ -2,7 +2,9 @@
  * Cross-platform element text reads.
  */
 
-import {isAndroid} from './selectors';
+import {byTestId, isAndroid} from './selectors';
+
+type ChainableElement = ReturnType<WebdriverIO.Browser['$']>;
 
 declare const browser: WebdriverIO.Browser;
 
@@ -48,6 +50,34 @@ export async function readAccessibilityLabel(
     // Element gone or subtree unreadable; an empty label is the honest answer.
   }
   return '';
+}
+
+/**
+ * The rendered text of a chat reply, joined with newlines.
+ *
+ * The markdown renderer splits a reply into one native text view per run of
+ * paragraphs, so a single text-element read returns only the first run. On iOS
+ * the text views are hidden from accessibility and each run is exposed as its
+ * own labelled element instead, which a static-text query does not match.
+ */
+export async function readReplyText(reply: ChainableElement): Promise<string> {
+  const markdown = reply.$(byTestId('markdown-content'));
+  const parts: string[] = [];
+  if (isAndroid()) {
+    for (const view of await markdown.$$('.//android.widget.TextView')) {
+      parts.push(await view.getText());
+    }
+  } else {
+    for (const node of await markdown.$$('-ios class chain:**/*')) {
+      const label = normalise(
+        await node.getAttribute('label').catch(() => null),
+      );
+      if (label && label !== parts[parts.length - 1]) {
+        parts.push(label);
+      }
+    }
+  }
+  return parts.join('\n');
 }
 
 /** UiAutomator2 reports an absent attribute as the string "null". */

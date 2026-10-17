@@ -179,7 +179,7 @@ export const Selectors = {
       return byTestId('send-button');
     },
     get menuButton(): string {
-      return byTestId('menu-button');
+      return byExactTestId('menu-button');
     },
     get stopButton(): string {
       return byExactTestId('stop-button');
@@ -261,7 +261,7 @@ export const Selectors = {
       return byTestId('flat-list');
     },
     get menuButton(): string {
-      return byTestId('menu-button');
+      return byExactTestId('menu-button');
     },
     // Dynamic: model accordion by type
     modelAccordion: (type: string): string =>

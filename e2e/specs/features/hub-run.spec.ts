@@ -20,7 +20,8 @@ import {ChatPage} from '../../pages/ChatPage';
 import {DrawerPage} from '../../pages/DrawerPage';
 import {ModelsPage} from '../../pages/ModelsPage';
 import {ModelDetailsSheet} from '../../pages/ModelDetailsSheet';
-import {Selectors, byTestId, nativeTextElement} from '../../helpers/selectors';
+import {Selectors, byTestId} from '../../helpers/selectors';
+import {readReplyText} from '../../helpers/element-text';
 import {saveFailureScreenshot} from '../../helpers/screenshots';
 import {QUICK_TEST_MODEL, TIMEOUTS} from '../../fixtures/models';
 
@@ -178,10 +179,7 @@ describe('Hub Run Deep Link', () => {
     }
 
     const aiMessage = browser.$(Selectors.chat.aiMessage);
-    const textView = aiMessage.$(nativeTextElement());
-    const responseText = await textView
-      .getText()
-      .catch(() => '');
+    const responseText = await readReplyText(aiMessage).catch(() => '');
     console.log(`\nHub Run Results:\n  Model: ${model.id}\n  Prompt: ${prompt}\n  Response: ${responseText}`);
     expect(responseText.length).toBeGreaterThan(0);
 
