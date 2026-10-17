@@ -4,8 +4,8 @@ import {v4 as uuidv4} from 'uuid';
 import 'react-native-get-random-values';
 
 import NativePdfText from '../../specs/NativePdfText';
-import {estimateTokens} from '../search/searchBudget';
 
+import {estimateDocTokens} from './estimate';
 import {docDir, documentsRoot, sourceFile, textFile} from './paths';
 import {documentKey, renderDocumentBlock} from './render';
 import {
@@ -183,7 +183,7 @@ const countedRef = async (
   const counted: DocumentRef = {
     ...ref,
     charCount: block.length,
-    tokenEstimate: estimateTokens(block),
+    tokenEstimate: estimateDocTokens(block),
     tokenCount: undefined,
   };
   if (counting) {
@@ -324,7 +324,7 @@ export const setDocumentPageRange = async (
   counting?: DocumentCounting,
 ): Promise<DocumentResult> => {
   const pageRange: PageRange = {from, to};
-  const ranged: DocumentRef = {...ref, pageRange};
+  const ranged: DocumentRef = {...ref, pageRange, mode: undefined};
   if (to - from + 1 > MAX_RANGE_PAGES) {
     return {status: 'needs_range', ref: ranged, rangeLimit: 'too_many_pages'};
   }

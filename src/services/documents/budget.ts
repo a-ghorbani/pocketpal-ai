@@ -1,4 +1,4 @@
-import {estimateTokens} from '../search/searchBudget';
+import {estimateDocTokens} from './estimate';
 
 import {DOCUMENT_LEAD, documentKey} from './render';
 import {REPLY_RESERVE, type DocumentRef} from './types';
@@ -30,7 +30,7 @@ export interface DocumentBudgetInput {
   missingKeys: ReadonlySet<string>;
 }
 
-const LEAD_TOKENS = estimateTokens(`${DOCUMENT_LEAD}\n\n`);
+const LEAD_TOKENS = estimateDocTokens(`${DOCUMENT_LEAD}\n\n`);
 
 export const documentTokens = (
   ref: DocumentRef,
@@ -80,7 +80,8 @@ export const evaluateDocumentBudget = ({
     newDocs.length > 0
       ? LEAD_TOKENS + newDocs.reduce((sum, doc) => sum + doc.tokens, 0)
       : 0;
-  const needed = estimateTokens(nonDocText) + historyDocTokens + newDocTokens;
+  const needed =
+    estimateDocTokens(nonDocText) + historyDocTokens + newDocTokens;
   const available = windowTokens - REPLY_RESERVE;
   if (needed <= available) {
     return {kind: 'fits'};

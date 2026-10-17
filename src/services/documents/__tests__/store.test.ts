@@ -342,6 +342,22 @@ describe('setDocumentPageRange', () => {
     expect(ref.pageRange).toBeUndefined();
   });
 
+  it('keeps searchPinned and clears a stale mode on a range change', async () => {
+    pdfPages = fortyPages();
+    const ref = ready(await importDocument(picked('x.pdf', '%PDF')));
+
+    const ranged = ready(
+      await setDocumentPageRange(
+        {...ref, searchPinned: true, mode: 'searched'},
+        3,
+        5,
+      ),
+    );
+
+    expect(ranged.searchPinned).toBe(true);
+    expect(ranged.mode).toBeUndefined();
+  });
+
   it('reuses an existing range file and never rewrites it', async () => {
     pdfPages = fortyPages();
     const ref = ready(await importDocument(picked('x.pdf', '%PDF')));
