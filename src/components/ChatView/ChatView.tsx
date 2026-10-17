@@ -648,11 +648,19 @@ export const ChatView = observer(
 
     // ============ MESSAGE INPUT HANDLERS ============
     const restoreUndone = React.useCallback(
-      ({message, sessionId}: UndoneSend) => {
-        if (!chatSessionStore.sessions.some(s => s.id === sessionId)) {
+      ({message, sessionId, verdict}: UndoneSend) => {
+        const isOpenChat =
+          sessionId === (chatSessionStore.activeSessionId ?? '');
+        if (
+          !isOpenChat &&
+          !chatSessionStore.sessions.some(s => s.id === sessionId)
+        ) {
           return;
         }
-        if (sessionId === chatSessionStore.activeSessionId) {
+        if (isOpenChat) {
+          if (verdict) {
+            setBudgetVerdict(verdict);
+          }
           setInputText(prev => prependText(message.text, prev));
           setInputImages(prev => [...(message.imageUris ?? []), ...prev]);
           updateComposerDocuments(prev => [

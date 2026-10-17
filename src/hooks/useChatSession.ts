@@ -56,8 +56,12 @@ import {
 import type {ToolDefinition} from '../services/talents/types';
 import {
   documentContentFor,
+  modeOf,
+  renderExcerptBlock,
   withDocumentContent,
 } from '../services/documents/render';
+import {retrieveExcerpts} from '../services/documents/retrieve';
+import {documentCountingOptions} from '../utils/documentCounting';
 import {
   findMissingDocuments,
   loadDocumentTexts,
@@ -66,9 +70,11 @@ import {
 import {hasDocuments} from '../services/documents/budget';
 import {
   documentPlan,
+  type BudgetVerdict,
   type Plan,
   type PlanInput,
 } from '../services/documents/plan';
+import type {DocumentRef} from '../services/documents/types';
 import {
   agentStateReducer,
   createTriggerMarkerCache,
@@ -79,6 +85,40 @@ import {
   type AgentUiState,
   type TokenDelta,
 } from '../services/agent';
+const excerptBlockFor = async (
+  textRows: MessageType.Text[],
+  message: MessageType.PartialText,
+  texts: Map<string, string[] | 'missing'>,
+  plan: Plan,
+  assistantId: string,
+): Promise<string> => {
+  const searched = (refs: DocumentRef[] = []) =>
+    refs.filter(ref => modeOf(ref) === 'searched');
+  const counting = documentCountingOptions();
+  const result = await retrieveExcerpts({
+    query: message.text,
+    previousQuery: textRows.find(row => row.author.id !== assistantId)?.text,
+    searchedRefs: [
+      ...[...textRows].reverse().flatMap(row => searched(row.documents)),
+      ...searched(message.documents),
+    ],
+    texts,
+    excerptBudget: plan.excerptBudget,
+    measure: counting
+      ? async excerpts => {
+          try {
+            return await counting.tokenize(
+              renderExcerptBlock({kind: 'excerpts', excerpts}),
+            );
+          } catch {
+            return undefined;
+          }
+        }
+      : undefined,
+  });
+  return renderExcerptBlock(result);
+};
+
 // Helper function to prepare completion parameters using OpenAI-compatible
 // messages API. Creates the empty `assistant_turn` row up-front so the
 // active-vs-persisted predicate sees the right "last message" before the
@@ -93,6 +133,7 @@ const prepareCompletion = async ({
   isMultimodalEnabled,
   l10n,
   currentMessages,
+  plan,
 }: {
   imageUris: string[];
   message: MessageType.PartialText;
@@ -103,6 +144,7 @@ const prepareCompletion = async ({
   isMultimodalEnabled: boolean;
   l10n: any;
   currentMessages: MessageType.Any[];
+  plan?: Plan;
 }) => {
   const sessionCompletionSettings =
     await chatSessionStore.getCurrentCompletionSettings();
@@ -122,9 +164,20 @@ const prepareCompletion = async ({
     documentRefs.length > 0
       ? await loadDocumentTexts(documentRefs)
       : new Map<string, string[] | 'missing'>();
+  const excerptBlock =
+    plan && plan.excerptBudget > 0
+      ? await excerptBlockFor(
+          textRows,
+          message,
+          documentTexts,
+          plan,
+          assistant.id,
+        )
+      : undefined;
   const newDocumentContent = documentContentFor(
     message.documents,
     documentTexts,
+    excerptBlock,
   );
   const userText = newDocumentContent
     ? withDocumentContent(newDocumentContent, message.text)
@@ -635,6 +688,8 @@ function yieldToTouches(signal: AbortSignal): Promise<void> {
 export type UndoneSend = {
   message: MessageType.PartialText;
   sessionId: string;
+  /** Set when the documents no longer fit at send time; nothing was written. */
+  verdict?: Extract<BudgetVerdict, {kind: 'over'}>;
 };
 
 export type EvaluateSendBudget = (
@@ -830,6 +885,21 @@ export const useChatSession = (
 
     const currentMessages = toJS(chatSessionStore.currentSessionMessages);
 
+    const plan = hasDocuments(currentMessages, message)
+      ? documentPlan(await planInputs(currentMessages, message))
+      : undefined;
+    if (plan?.verdict.kind === 'over') {
+      return {
+        message,
+        sessionId: chatSessionStore.activeSessionId ?? '',
+        verdict: plan.verdict,
+      };
+    }
+    const documents = message.documents?.map((ref, i) => ({
+      ...ref,
+      mode: plan?.newModes[i],
+    }));
+
     const textMessage: MessageType.Text = {
       author: user,
       createdAt: Date.now(),
@@ -837,7 +907,7 @@ export const useChatSession = (
       text: message.text,
       type: 'text',
       imageUris: hasImages ? imageUris : undefined,
-      documents: message.documents?.length ? message.documents : undefined,
+      documents: documents?.length ? documents : undefined,
       metadata: {
         contextId,
         conversationId: conversationIdRef.current,
@@ -876,7 +946,7 @@ export const useChatSession = (
 
     const {cleanCompletionParams, messageInfo} = await prepareCompletion({
       imageUris: imageUris || [],
-      message,
+      message: {...message, documents},
       systemMessages,
       contextId,
       assistant,
@@ -884,6 +954,7 @@ export const useChatSession = (
       isMultimodalEnabled,
       l10n,
       currentMessages,
+      plan,
     });
 
     currentMessageInfo.current = messageInfo;

@@ -139,3 +139,20 @@ describe('ChatSessionRepository documents', () => {
     expect(release).not.toHaveBeenCalled();
   });
 });
+
+describe('searched documents', () => {
+  it('keeps a searched document referenced by a duplicate after the original goes', async () => {
+    const searched = {
+      ...userText,
+      documents: [{...ref, mode: 'searched' as const}],
+    };
+    const x = await chatSessionRepository.createSession('X', [searched]);
+    await chatSessionRepository.createSession('Y', [searched]);
+
+    await chatSessionRepository.deleteSession(x.id);
+
+    const referenced = await release.mock.calls[0][1]();
+    expect(referenced.has('doc-1')).toBe(true);
+    expect(JSON.parse(mockRows[0].metadata).documents[0].mode).toBe('searched');
+  });
+});

@@ -415,3 +415,69 @@ describe('ChatView history overflow', () => {
     expect(documentStore.isHeld('earlier')).toBe(true);
   });
 });
+
+describe('ChatView plan over under the lease', () => {
+  const big = ref('late-over', {pageCount: 40, tokenEstimate: 9000});
+  const verdict = {
+    kind: 'over' as const,
+    reason: 'new' as const,
+    needed: 3000,
+    available: 1024,
+    newDocs: [{ref: big, tokens: 9000, mode: 'searched' as const}],
+    historyDocTokens: 0,
+  };
+  const store = chatSessionStore as any;
+
+  afterEach(() => {
+    store.isEditMode = false;
+    store.editingMessageId = null;
+    delete store.commitEdit;
+  });
+
+  const sendAndComeBackOver = async (chat: ReturnType<typeof renderChat>) => {
+    (chat.onSendPress as jest.Mock).mockImplementationOnce(
+      async (message: any) => ({
+        message,
+        sessionId: 'session-1',
+        verdict,
+      }),
+    );
+    await chat.attach(big);
+    chat.type('Summarise');
+    await act(async () => {
+      chat.pressSend();
+    });
+  };
+
+  it('restores the composer once and opens the sheet', async () => {
+    const evaluateSendBudget = jest
+      .fn()
+      .mockResolvedValue({verdict: {kind: 'fits'}});
+    const chat = renderChat({evaluateSendBudget});
+
+    await sendAndComeBackOver(chat);
+
+    expect(chat.input().props.value).toBe('Summarise');
+    expect(chat.screen.getAllByText('late-over.pdf')).toHaveLength(1);
+    expect(chat.screen.getByTestId('budget-remove')).toBeTruthy();
+  });
+
+  it('restores once through the edit path too', async () => {
+    store.isEditMode = true;
+    store.editingMessageId = 'edited';
+    store.commitEdit = jest.fn(async () => {
+      store.isEditMode = false;
+    });
+    const evaluateSendBudget = jest
+      .fn()
+      .mockResolvedValue({verdict: {kind: 'fits'}});
+    const chat = renderChat({evaluateSendBudget});
+
+    await sendAndComeBackOver(chat);
+
+    expect(store.commitEdit).toHaveBeenCalled();
+    expect(chat.input().props.value).toBe('Summarise');
+    expect(chat.screen.getAllByText('late-over.pdf')).toHaveLength(1);
+    expect(chat.screen.getByTestId('budget-cancel')).toBeTruthy();
+  });
+});

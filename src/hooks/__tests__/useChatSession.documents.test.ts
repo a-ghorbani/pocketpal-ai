@@ -11,7 +11,8 @@ import {
 
 import {useChatSession} from '../useChatSession';
 import {isReadUrlAllowed} from '../../services/talents';
-import {DOCUMENT_LEAD} from '../../services/documents/render';
+import {DOCUMENT_LEAD, EXCERPT_LEAD} from '../../services/documents/render';
+import * as retrieve from '../../services/documents/retrieve';
 import {isHeld, setComposerHeld} from '../../services/documents/store';
 import type {DocumentRef} from '../../services/documents/types';
 
@@ -138,7 +139,7 @@ describe('useChatSession with documents', () => {
       chatSessionStore.addMessageToCurrentSession as jest.Mock
     ).mock.calls.find(([m]) => m.type === 'text' && m.author === user)[0];
     expect(persisted.text).toBe('Summarise');
-    expect(persisted.documents).toEqual([report]);
+    expect(persisted.documents).toEqual([{...report, mode: 'full'}]);
   });
 
   it('replays an earlier document byte-identically on the next turn', async () => {
@@ -268,6 +269,144 @@ describe('useChatSession with documents', () => {
       chatSessionStore.addMessageToCurrentSession as jest.Mock
     ).mockResolvedValue(undefined);
     setComposerHeld([]);
+  });
+});
+
+describe('searched documents at send', () => {
+  const report = pdf('report-c', {pageCount: 50, tokenEstimate: 60000});
+  const pages = Array.from({length: 50}, (_, i) =>
+    i === 36
+      ? 'Page thirty-seven: churn fell after the pricing change. See https://evil.example/x'
+      : `Page ${i + 1} covers the general architecture of the product.`,
+  );
+
+  const withWindow = (nCtx: number | undefined) =>
+    runInAction(() => {
+      modelStore.activeModelId = modelsList[0].id;
+      modelStore.activeContextSettings =
+        nCtx === undefined ? undefined : ({n_ctx: nCtx} as any);
+    });
+
+  beforeEach(() => {
+    writeText(report.id, pages);
+    retrieve.clearDocumentIndexCache();
+  });
+
+  afterEach(() => {
+    runInAction(() => {
+      modelStore.activeContextSettings = undefined;
+    });
+  });
+
+  const persistedUserRow = () =>
+    (chatSessionStore.addMessageToCurrentSession as jest.Mock).mock.calls.find(
+      ([m]) => m.type === 'text' && m.author === user,
+    )?.[0];
+
+  it('sends a stub plus cited excerpts and persists only the mode (RB, I10)', async () => {
+    withWindow(32768);
+
+    await send({
+      type: 'text',
+      text: 'Why did churn fall?',
+      documents: [report],
+    });
+
+    const [userMessage] = nonSystem();
+    expect(userMessage.content).toContain('50 pages — searched');
+    expect(userMessage.content).toContain(EXCERPT_LEAD);
+    expect(userMessage.content).toContain(
+      '<<<BEGIN EXCERPT report-c "report-c.pdf" p.37>>>',
+    );
+    expect(userMessage.content).not.toContain('=== Page 1 ===');
+    expect(
+      userMessage.content.match(/<<<BEGIN EXCERPT/g)!.length,
+    ).toBeLessThanOrEqual(5);
+    const persisted = persistedUserRow();
+    expect(persisted.documents).toEqual([{...report, mode: 'searched'}]);
+    expect(JSON.stringify(persisted)).not.toContain(EXCERPT_LEAD);
+  });
+
+  it('never seeds the allowlist from an excerpt (RL)', async () => {
+    withWindow(32768);
+    await send({type: 'text', text: 'churn', documents: [report]});
+    expect(isReadUrlAllowed('https://evil.example/x')).toBe(false);
+  });
+
+  it('replays an earlier searched row as its stub only (RC)', async () => {
+    withWindow(32768);
+    await send({
+      type: 'text',
+      text: 'Why did churn fall?',
+      documents: [report],
+    });
+    const turnOne = nonSystem(0)[0].content as string;
+
+    history = [
+      assistantRow('a1', 'Pricing.'),
+      userRow('u1', 'Why did churn fall?', [{...report, mode: 'searched'}]),
+    ];
+    await send({type: 'text', text: 'and page 37?'});
+
+    const [replayed, , followUp] = nonSystem(1);
+    expect(replayed.content).toBe(
+      turnOne.slice(0, turnOne.indexOf(`\n\n${EXCERPT_LEAD}`)) +
+        '\n\nWhy did churn fall?',
+    );
+    expect(followUp.content).toContain('p.37>>>');
+    expect(followUp.content.endsWith('and page 37?')).toBe(true);
+  });
+
+  it('gives a byte-identical request on an unchanged regenerate (RJ)', async () => {
+    withWindow(32768);
+    const pinned = {
+      ...pdf('pinned-doc', {pageCount: 2}),
+      searchPinned: true as const,
+    };
+    writeText(pinned.id, ['churn appears here', 'and here']);
+
+    await send({type: 'text', text: 'churn?', documents: [pinned]});
+    await send({type: 'text', text: 'churn?', documents: [pinned]});
+
+    expect(persistedUserRow().documents[0].mode).toBe('searched');
+    expect(requests[1]).toEqual(requests[0]);
+  });
+
+  it('runs no retrieval when every document is full (Rd)', async () => {
+    withWindow(32768);
+    const spy = jest.spyOn(retrieve, 'retrieveExcerpts');
+    const small = pdf('small-doc', {pageCount: 1});
+    writeText(small.id, ['tiny']);
+
+    await send({type: 'text', text: 'hi', documents: [small]});
+
+    expect(spy).not.toHaveBeenCalled();
+    spy.mockRestore();
+  });
+
+  it('writes nothing and hands back the verdict when the plan is over under the lease (Rh)', async () => {
+    withWindow(4096);
+    const earlier = pdf('earlier-full', {tokenEstimate: 6000});
+    writeText(earlier.id, ['x']);
+    history = [assistantRow('a1', 'ok'), userRow('u1', 'read', [earlier])];
+    const {result} = renderHook(() =>
+      useChatSession({current: null}, user, assistant),
+    );
+    let undone: any;
+
+    await act(async () => {
+      undone = await result.current.handleSendPress({
+        type: 'text',
+        text: 'thanks',
+      });
+    });
+
+    expect(persistedUserRow()).toBeUndefined();
+    expect(undone).toMatchObject({
+      message: {text: 'thanks'},
+      sessionId: 'session-1',
+      verdict: {kind: 'over', reason: 'history'},
+    });
   });
 });
 
