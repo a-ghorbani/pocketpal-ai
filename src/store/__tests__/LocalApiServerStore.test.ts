@@ -1,4 +1,4 @@
-import {AppState} from 'react-native';
+import {AppState, Platform} from 'react-native';
 import {runInAction} from 'mobx';
 import * as Keychain from 'react-native-keychain';
 import DeviceInfo from 'react-native-device-info';
@@ -89,6 +89,7 @@ describe('LocalApiServerStore', () => {
 });
 
 describe('LocalApiServerStore lifecycle', () => {
+  const originalOS = Platform.OS;
   let warn: jest.SpyInstance;
 
   beforeAll(() => {
@@ -112,6 +113,10 @@ describe('LocalApiServerStore lifecycle', () => {
     getIpAddress.mockClear();
     mockModelStore.resetGenerationSlot();
     mockModelStore.engine = undefined;
+  });
+
+  afterEach(() => {
+    Platform.OS = originalOS;
   });
 
   it('binds loopback by default and shows the loopback URL', async () => {
@@ -290,7 +295,76 @@ describe('LocalApiServerStore lifecycle', () => {
     expect(store.baseUrl).toBe('http://10.0.0.7:8080/v1');
   });
 
+  describe('returning to the foreground', () => {
+    it('restarts a running listener on iOS after a background', async () => {
+      Platform.OS = 'ios';
+      const first = await startRunning();
+      appStateListener('background');
+      expect(store.status).toBe('running');
+
+      appStateListener('active');
+      expect(first.close).toHaveBeenCalled();
+      expect(store.status).toBe('starting');
+      await flush();
+      expect(createdServers).toHaveLength(2);
+      lastServer().emitListening();
+      expect(store.status).toBe('running');
+    });
+
+    it('does not restart on iOS after only an inactive blip', async () => {
+      Platform.OS = 'ios';
+      await startRunning();
+      appStateListener('inactive');
+      appStateListener('active');
+      await flush();
+      expect(createdServers).toHaveLength(1);
+      expect(store.status).toBe('running');
+    });
+
+    it('does not restart a running listener on Android', async () => {
+      Platform.OS = 'android';
+      await startRunning();
+      appStateListener('background');
+      appStateListener('active');
+      await flush();
+      expect(createdServers).toHaveLength(1);
+      expect(store.status).toBe('running');
+    });
+
+    it('starts once on iOS when it returns while starting', async () => {
+      Platform.OS = 'ios';
+      let resolveKey!: (value: false) => void;
+      getPassword.mockImplementationOnce(
+        () => new Promise(resolve => (resolveKey = resolve)),
+      );
+      store.setEnabled(true);
+      appStateListener('background');
+      appStateListener('active');
+      await flush();
+      resolveKey(false);
+      await flush();
+
+      expect(createdServers).toHaveLength(1);
+      lastServer().emitListening();
+      expect(store.status).toBe('running');
+    });
+
+    it('fails closed on iOS when the restart cannot read the key', async () => {
+      Platform.OS = 'ios';
+      await startRunning();
+      appStateListener('background');
+      getPassword.mockRejectedValueOnce(new Error('locked'));
+      appStateListener('active');
+      await flush();
+
+      expect(createdServers).toHaveLength(1);
+      expect(store.status).toBe('failed');
+      expect(store.lastError).toBe('key_unavailable');
+    });
+  });
+
   it('keeps serving in the background', async () => {
+    Platform.OS = 'android';
     await startRunning();
     appStateListener('background');
     expect(store.status).toBe('running');

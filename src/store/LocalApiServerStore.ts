@@ -1,4 +1,4 @@
-import {AppState, AppStateStatus} from 'react-native';
+import {AppState, AppStateStatus, Platform} from 'react-native';
 import {makeAutoObservable, runInAction} from 'mobx';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import {makePersistable} from 'mobx-persist-store';
@@ -77,16 +77,18 @@ class LocalApiServerStore {
 
   private apiKey: string | undefined = undefined;
   private epoch = 0;
+  private wentToBackground = false;
   private listener: Listener | undefined = undefined;
   private readonly openConnections = new Set<OpenConnection>();
 
   constructor() {
     makeAutoObservable<
       LocalApiServerStore,
-      'apiKey' | 'epoch' | 'listener' | 'openConnections'
+      'apiKey' | 'epoch' | 'wentToBackground' | 'listener' | 'openConnections'
     >(this, {
       apiKey: false,
       epoch: false,
+      wentToBackground: false,
       listener: false,
       openConnections: false,
     });
@@ -327,8 +329,20 @@ class LocalApiServerStore {
   }
 
   private handleAppStateChange = async (state: AppStateStatus) => {
+    if (Platform.OS === 'ios' && state === 'background') {
+      this.wentToBackground = true;
+      return;
+    }
     if (state !== 'active') {
       return;
+    }
+    if (Platform.OS === 'ios' && this.wentToBackground) {
+      this.wentToBackground = false;
+      if (this.enabled) {
+        this.stop();
+        this.start();
+        return;
+      }
     }
     if (
       this.enabled &&
