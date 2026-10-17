@@ -68,7 +68,7 @@ it('expands the advanced settings', async () => {
 
 - **Drive the app's own path.** Change the state the app changes (an owner component's state, a store observable, or an event) without remounting.
 - **One `act` per driven write.** Use `await act(() => runInAction(...))` for each store write; `fireEvent` already wraps one. Several writes inside one `act` batch into a single commit.
-- **Advance timers explicitly.** `measureScenario` runs on fake timers (with the real `performance` clock, so durations stay real). Call `await flushTimers()` after the mount and after each step: it advances the clock 100 ms, 1 ms per `act`, so a timer-driven commit, such as Paper's deferred `TextInput` placeholder or a list's batched cell update, always lands at the same point and as its own commit. The mount-only measurement does the same flush, so a scenario that only waits does not count as an interaction.
+- **Advance timers explicitly.** `measureScenario` runs on fake timers (with the real `performance` clock, so durations stay real). Call `await flushTimers()` after the mount and after each step: it advances the clock 100 ms, 1 ms per `act`, so a timer-driven commit, such as Paper's deferred `TextInput` placeholder or a list's batched cell update, always lands at the same point and as its own commit (two timers due in the same millisecond still share one commit). The mount-only measurement does the same flush, so a scenario that only waits does not count as an interaction.
 - **Every run starts from the same state.** Each scenario runs several times, re-mounting the same element. Reset anything it changes outside the tree in `beforeEach`, in place: `messages.replace(fresh)`, or setting `filters` back to `[]` on the same observable. A new object assigned in `beforeEach` never reaches the re-mounted element.
 - **Assert the start and the end** of the interaction in every run, for example "collapsed" before and "expanded content present" after.
 - `measureScenario` uses at least 3 runs, so an unstable count shows up, and it fails a scenario that adds no commits over the mount alone.
@@ -76,7 +76,7 @@ it('expands the advanced settings', async () => {
 
 ## Limits
 
-- Each step is followed by a 100 ms pause (`flushTimers`), as if the user paused between key presses or tokens arrived slowly. Timers due within that pause commit inside the scenario; faster input in the app can batch some of them, and timers due later than 100 ms never fire.
+- Each step is followed by a 100 ms pause (`flushTimers`), as if the user paused between key presses or tokens arrived slowly. Timers due within that pause commit inside the scenario; faster input in the app can batch some of them. The fake clock keeps running across flushes, so a timer due more than 100 ms after a step fires during a later step's flush, or not at all if no step follows.
 - Passing a new object to a memoised child on every render adds no commit, only work inside the existing one. The render count does not change; at most the duration does.
 - Under the `@gorhom/bottom-sheet` mock, `present` and `close` do nothing and sheet content always renders. The sheet scenarios therefore count only the owner's visibility handling, not content mount, animation or gestures.
 

@@ -34,7 +34,9 @@ run_side() {
 
 run_failed_line() {
   local cause='Jest or Reassure failure'
-  if grep -q 'duplicated names' ".reassure/$FAILED_SIDE-run.log" 2>/dev/null; then
+  if [ ! -f ".reassure/$FAILED_SIDE-run.log" ]; then
+    cause='checkout or install failure'
+  elif grep -q 'duplicated names' ".reassure/$FAILED_SIDE-run.log" 2>/dev/null; then
     cause='Reassure: records with duplicated names'
   fi
   echo "run-failed on $FAILED_SIDE ($cause), see job log"
@@ -96,19 +98,20 @@ main() {
   fi
 
   if [ -n "${PERF_HEAD_INSTALL:-}" ] && [ "$REINSTALL" = 0 ]; then
+    FAILED_SIDE=head
     install_deps
   fi
 
   if [ "$bootstrap" = 0 ]; then
+    FAILED_SIDE=base
     git checkout -q --detach "$BASE"
     if [ "$REINSTALL" = 1 ]; then
       HEAD_INSTALL_PENDING=1
       install_deps
     fi
-    FAILED_SIDE=base
     run_side base --baseline
-    FAILED_SIDE=''
 
+    FAILED_SIDE=head
     git checkout -q "$START_REF"
     if [ "$REINSTALL" = 1 ]; then
       install_deps
