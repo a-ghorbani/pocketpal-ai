@@ -9,6 +9,7 @@ describe('createSearchProvider', () => {
       'exa',
       'firecrawl',
       'parallel',
+      'serply',
     ];
     for (const id of ids) {
       expect(createSearchProvider(id, () => 'k').id).toBe(id);
