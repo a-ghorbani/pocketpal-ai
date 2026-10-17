@@ -133,6 +133,16 @@ describe('MarkdownView', () => {
     expect(lastProps().markdown).toBe('one two');
   });
 
+  it('spaces out break tags in a cell and a paragraph, never in code', () => {
+    const reply =
+      '| h | v |\n| --- | --- |\n| a | x<br>y |\n\none<br/>two\n\n`<br>`\n\n```\n<br>\n```';
+    render(<MarkdownView markdownText={reply} maxMessageWidth={300} />);
+
+    expect(lastProps().markdown).toBe(
+      '| h | v |\n| --- | --- |\n| a | x y |\n\none two\n\n`<br>`\n\n```\n<br>\n```',
+    );
+  });
+
   it.each(['', '   ', '\n\n'])(
     'renders only the container for empty text %j',
     markdownText => {
@@ -239,6 +249,36 @@ describe('MarkdownView', () => {
       );
 
       expect(lastProps().streamingAnimation).toBe(false);
+    });
+
+    it('re-renders when only selectable changes', () => {
+      const {rerender} = render(
+        <MarkdownView markdownText="a" maxMessageWidth={300} selectable />,
+      );
+      rerender(
+        <MarkdownView
+          markdownText="a"
+          maxMessageWidth={300}
+          selectable={false}
+        />,
+      );
+
+      expect(lastProps().selectable).toBe(false);
+    });
+
+    it('re-renders when only the variant changes', () => {
+      const {rerender} = render(
+        <MarkdownView markdownText="a" maxMessageWidth={300} />,
+      );
+      rerender(
+        <MarkdownView
+          markdownText="a"
+          maxMessageWidth={300}
+          variant="reasoning"
+        />,
+      );
+
+      expect(lastProps().markdownStyle.paragraph.fontSize).toBe(14);
     });
 
     it('skips a re-render with unchanged props', () => {

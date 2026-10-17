@@ -631,11 +631,12 @@ describe('chat', () => {
       expect(node.props.accessibilityState.disabled).toBe(true);
     });
 
-    it('opens the report sheet from Report', () => {
-      const {items, UNSAFE_getByType} = openMenuFor({
+    it('opens the report sheet from Report and closes the menu', () => {
+      const utils = openMenuFor({
         ...textMessage,
         author: assistant,
       });
+      const {items, UNSAFE_getByType} = utils;
       expect(UNSAFE_getByType(ContentReportSheet).props.isVisible).toBe(false);
 
       const report = items.find(
@@ -644,7 +645,184 @@ describe('chat', () => {
       fireEvent.press(report!);
 
       expect(UNSAFE_getByType(ContentReportSheet).props.isVisible).toBe(true);
+      expect(messageMenu(utils).props.visible).toBe(false);
     });
+
+    const messageMenu = (utils: {UNSAFE_getAllByType: any}) => {
+      const menus = utils
+        .UNSAFE_getAllByType(Menu)
+        .filter(
+          (m: any) => m.props.onDismiss && m.props.anchor?.x !== undefined,
+        );
+      expect(menus).toHaveLength(1);
+      return menus[0];
+    };
+
+    const isItemDisabled = (items: any[], label: string) => {
+      let node = items.find((n: any) => n.props.children === label);
+      while (!node.props.accessibilityState) {
+        node = node.parent!;
+      }
+      return node.props.accessibilityState.disabled === true;
+    };
+
+    it('enables every assistant item with a model loaded and no stop pending', () => {
+      runInAction(() => {
+        modelStore.activeModelId = 'test-model-id';
+      });
+      const {items} = openMenuFor({
+        ...textMessage,
+        author: assistant,
+        metadata: {copyable: true},
+      });
+
+      for (const label of [
+        labels.regenerate,
+        labels.regenerateWith,
+        labels.reportContent,
+      ]) {
+        expect(isItemDisabled(items, label)).toBe(false);
+      }
+    });
+
+    it('enables Edit on a user row with a model loaded', () => {
+      runInAction(() => {
+        modelStore.activeModelId = 'test-model-id';
+      });
+      const {items} = openMenuFor(textMessage);
+
+      expect(isItemDisabled(items, labels.edit)).toBe(false);
+    });
+
+    it('copies a user row from the menu and closes it', () => {
+      const Clipboard = require('@react-native-clipboard/clipboard');
+      (Clipboard.setString as jest.Mock).mockClear();
+      const utils = openMenuFor({
+        ...textMessage,
+        text: 'my question',
+        metadata: {copyable: true},
+      });
+      expect(messageMenu(utils).props.visible).toBe(true);
+
+      fireEvent.press(
+        utils.items.find((n: any) => n.props.children === labels.copy)!,
+      );
+
+      expect(Clipboard.setString).toHaveBeenCalledWith('my question');
+      expect(messageMenu(utils).props.visible).toBe(false);
+    });
+
+    it('anchors the menu at the press point and closes it on dismiss', () => {
+      const utils = openMenuFor({...textMessage, author: assistant});
+      const menu = messageMenu(utils);
+      expect(menu.props.visible).toBe(true);
+      expect(menu.props.anchor).toEqual({x: 10, y: 20});
+
+      act(() => {
+        menu.props.onDismiss();
+      });
+
+      expect(messageMenu(utils).props.visible).toBe(false);
+    });
+
+    it.each([
+      ['a user row', textMessage],
+      ['an assistant row', {...textMessage, author: assistant}],
+    ])('opens nothing on a long-press of %s', (_row, message) => {
+      const utils = render(
+        <ChatView messages={[message]} onSendPress={jest.fn()} user={user} />,
+        options,
+      );
+
+      fireEvent(utils.getByTestId('markdown-content'), 'longPress', {
+        nativeEvent: {pageX: 10, pageY: 20},
+      });
+
+      expect(messageMenu(utils).props.visible).toBe(false);
+    });
+  });
+
+  describe('"…" on the active row', () => {
+    const options = {withNavigation: true, withBottomSheetProvider: true};
+    const assistant = {id: 'assistant'};
+    const turn = (
+      id: string,
+      createdAt: number,
+    ): MessageType.AssistantTurn => ({
+      id,
+      type: 'assistant_turn',
+      author: assistant,
+      createdAt,
+      steps: [{content: `reply ${id}`}],
+      metadata: {copyable: true},
+    });
+    const messages = [
+      turn('newest', 3),
+      {...textMessage, id: 'question', text: 'reply question', createdAt: 2},
+      turn('older', 1),
+    ];
+    const setStatus = (status: any) =>
+      runInAction(() => {
+        chatSessionStore.agentUiState = {
+          status,
+          pendingTalentNames: [],
+          hitMaxTurns: false,
+        };
+      });
+
+    const footerOwner = (button: any) => {
+      for (let n = button.parent; n; n = n.parent) {
+        const rendered = n.findAll(
+          (c: any) => typeof c.props?.markdown === 'string',
+        );
+        if (rendered.length > 0) {
+          return rendered[0].props.markdown.replace('reply ', '');
+        }
+      }
+      return undefined;
+    };
+    const rowsWithButton = (getAllByTestId: (id: string) => any[]) =>
+      getAllByTestId('message-menu-button').map(footerOwner).sort();
+
+    afterEach(() => setStatus('idle'));
+
+    it.each([
+      'prefill',
+      'streaming_text',
+      'generating_tool_call',
+      'executing_tool',
+    ])('hides the "…" only on the newest row while the run is %s', status => {
+      setStatus(status);
+      const {getAllByTestId} = render(
+        <ChatView messages={messages} onSendPress={jest.fn()} user={user} />,
+        options,
+      );
+
+      expect(rowsWithButton(getAllByTestId)).toEqual(['older', 'question']);
+    });
+
+    it.each(['done', 'idle'])(
+      'shows the "…" on the newest row once the run is %s',
+      endStatus => {
+        const chat = () => (
+          <ChatView messages={messages} onSendPress={jest.fn()} user={user} />
+        );
+        setStatus('streaming_text');
+        const {getAllByTestId, rerender} = render(chat(), options);
+        expect(rowsWithButton(getAllByTestId)).toEqual(['older', 'question']);
+
+        // The mock store is not observable; the re-render stands in for the
+        // observer reaction the real store triggers.
+        setStatus(endStatus);
+        rerender(chat());
+
+        expect(rowsWithButton(getAllByTestId)).toEqual([
+          'newest',
+          'older',
+          'question',
+        ]);
+      },
+    );
   });
 
   describe('increase-context CTA memory estimate', () => {
