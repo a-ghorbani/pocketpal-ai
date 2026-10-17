@@ -11,7 +11,7 @@ export const createStyles = (theme: Theme) =>
 
     // Engine logo (used by EngineLogo)
     engineLogoCenter: {
-      ...StyleSheet.absoluteFillObject,
+      ...StyleSheet.absoluteFill,
       alignItems: 'center',
       justifyContent: 'center',
     },

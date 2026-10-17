@@ -189,7 +189,7 @@ describe('PalPurchaseFooter', () => {
 
   it('shows the iOS no-longer-available copy with a refund link and the support code', () => {
     (Platform as any).OS = 'ios';
-    const openURL = jest.spyOn(Linking, 'openURL').mockResolvedValue(true);
+    const openURL = jest.spyOn(Linking, 'openURL').mockResolvedValue(undefined);
     runInAction(() => {
       purchaseStore.records['pal-1'] = record('unfulfillable');
     });

@@ -17,6 +17,7 @@ import {
 import {purchaseStore, ttsStore, uiStore} from './src/store';
 import {useTheme} from './src/hooks';
 import {useDeepLinking} from './src/hooks/useDeepLinking';
+import {useNavigationBarAppearance} from './src/hooks/useNavigationBarAppearance';
 import {Theme} from './src/utils/types';
 
 import {l10n, initLocale} from './src/locales';
@@ -90,6 +91,7 @@ const SwitchPoint: React.FC<SwitchPointProps> = observer(({drawer}) => {
 
 const App = observer(() => {
   const theme = useTheme();
+  useNavigationBarAppearance();
   const styles = createStyles(theme);
   const currentL10n = l10n[uiStore.language];
 

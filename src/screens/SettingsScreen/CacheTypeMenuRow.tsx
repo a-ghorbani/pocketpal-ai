@@ -1,5 +1,5 @@
 import React, {useRef, useState} from 'react';
-import {View} from 'react-native';
+import {View, type HostInstance} from 'react-native';
 
 import {Button, Icon, Text} from 'react-native-paper';
 
@@ -10,7 +10,7 @@ import type {createStyles} from './styles';
 import {CacheType} from '../../utils/types';
 
 export const useMenuAnchor = () => {
-  const ref = useRef<View>(null);
+  const ref = useRef<HostInstance>(null);
   const [anchor, setAnchor] = useState<{x: number; y: number}>({x: 0, y: 0});
   const [visible, setVisible] = useState(false);
 
@@ -20,7 +20,13 @@ export const useMenuAnchor = () => {
       setVisible(true);
     });
 
-  return {ref, anchor, visible, open, close: () => setVisible(false)};
+  return {
+    buttonRef: ref as unknown as React.Ref<View>,
+    anchor,
+    visible,
+    open,
+    close: () => setVisible(false),
+  };
 };
 
 export type MenuAnchor = ReturnType<typeof useMenuAnchor>;
@@ -68,7 +74,7 @@ export const CacheTypeMenuRow: React.FC<CacheTypeMenuRowProps> = ({
       </View>
       <View style={styles.menuContainer}>
         <Button
-          ref={menu.ref}
+          ref={menu.buttonRef}
           mode="outlined"
           onPress={menu.open}
           style={styles.menuButton}

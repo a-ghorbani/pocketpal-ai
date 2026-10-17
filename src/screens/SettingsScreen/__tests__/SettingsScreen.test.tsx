@@ -12,7 +12,13 @@ import {
 
 import {SettingsScreen} from '../SettingsScreen';
 
-import {modelStore, uiStore, ttsStore} from '../../../store';
+import {
+  modelStore,
+  searchProviderStore,
+  uiStore,
+  ttsStore,
+} from '../../../store';
+import {Menu} from '../../../components';
 import {l10n} from '../../../locales';
 
 jest.useFakeTimers();
@@ -359,7 +365,7 @@ describe('SettingsScreen', () => {
     // Menus open from a ref.measure() callback. The test renderer's shared
     // measure mock is a no-op; make it invoke the callback so the menu opens.
     const mockNativeMethods =
-      require('react-native/jest/MockNativeMethods').default;
+      require('@react-native/jest-preset/jest/MockNativeMethods').default;
     beforeEach(() => {
       mockNativeMethods.measure.mockImplementation((cb: any) =>
         cb(0, 0, 10, 10, 0, 0),
@@ -1319,6 +1325,73 @@ describe('SettingsScreen', () => {
     await waitFor(() => {
       // Should show effective value clamped to n_ctx (2048)
       expect(getByText(/effective: 2048/)).toBeTruthy();
+    });
+  });
+
+  describe('search provider picker', () => {
+    const mockNativeMethods =
+      require('@react-native/jest-preset/jest/MockNativeMethods').default;
+
+    beforeEach(() => {
+      mockNativeMethods.measure.mockImplementation((cb: any) =>
+        cb(0, 0, 120, 40, 30, 200),
+      );
+    });
+
+    afterEach(() => {
+      mockNativeMethods.measure.mockReset();
+      runInAction(() => {
+        searchProviderStore.activeProviderId = 'brave';
+      });
+    });
+
+    const visibleMenus = (UNSAFE_getAllByType: any) =>
+      UNSAFE_getAllByType(Menu).filter((menu: any) => menu.props.visible);
+
+    it('opens anchored under its button', () => {
+      const {getByTestId, UNSAFE_getAllByType} = render(<SettingsScreen />, {
+        withSafeArea: true,
+        withNavigation: true,
+      });
+      expect(visibleMenus(UNSAFE_getAllByType)).toHaveLength(0);
+
+      fireEvent.press(getByTestId('search-provider-selector-button'));
+
+      const open = visibleMenus(UNSAFE_getAllByType);
+      expect(open).toHaveLength(1);
+      expect(open[0].props.anchor).toEqual({x: 30, y: 240});
+      expect(getByTestId('search-provider-option-exa')).toBeTruthy();
+    });
+
+    it('selecting a provider sets it and closes the menu', () => {
+      const {getByTestId, UNSAFE_getAllByType} = render(<SettingsScreen />, {
+        withSafeArea: true,
+        withNavigation: true,
+      });
+
+      fireEvent.press(getByTestId('search-provider-selector-button'));
+      fireEvent.press(getByTestId('search-provider-option-exa'));
+
+      expect(searchProviderStore.setActiveProvider).toHaveBeenCalledWith('exa');
+      expect(visibleMenus(UNSAFE_getAllByType)).toHaveLength(0);
+      expect(getByTestId('search-provider-selector-button')).toHaveTextContent(
+        /Exa$/,
+      );
+    });
+
+    it('dismissing closes the menu without changing the provider', () => {
+      const {getByTestId, UNSAFE_getAllByType} = render(<SettingsScreen />, {
+        withSafeArea: true,
+        withNavigation: true,
+      });
+
+      fireEvent.press(getByTestId('search-provider-selector-button'));
+      act(() => {
+        visibleMenus(UNSAFE_getAllByType)[0].props.onDismiss();
+      });
+
+      expect(visibleMenus(UNSAFE_getAllByType)).toHaveLength(0);
+      expect(searchProviderStore.setActiveProvider).not.toHaveBeenCalled();
     });
   });
 });
