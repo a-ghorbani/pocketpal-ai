@@ -14,6 +14,7 @@ import com.facebook.react.soloader.OpenSourceMergedSoMapping
 import com.facebook.soloader.SoLoader
 import com.pocketpal.KeepAwakePackage
 import com.pocketpal.HardwareInfoPackage
+import com.pocketpal.NavigationBarPackage
 import com.pocketpal.download.DownloadPackage
 
 class MainApplication : Application(), ReactApplication {
@@ -27,6 +28,7 @@ class MainApplication : Application(), ReactApplication {
               add(KeepAwakePackage())
               add(HardwareInfoPackage())
               add(DownloadPackage())
+              add(NavigationBarPackage())
             }
 
         override fun getJSMainModuleName(): String = "index"
