@@ -1,7 +1,12 @@
 import React from 'react';
 import {useSafeAreaInsets} from 'react-native-safe-area-context';
 import {act, fireEvent, render} from '../../../../jest/test-utils';
+import {measuresIncludeStatusBar} from '../../../utils/edgeToEdge';
 import {Menu} from '../Menu';
+
+jest.mock('../../../utils/edgeToEdge', () => ({
+  measuresIncludeStatusBar: jest.fn(() => false),
+}));
 
 describe('Menu', () => {
   beforeEach(() => {
@@ -39,20 +44,10 @@ describe('Menu', () => {
   });
 
   describe('statusBarHeight passed to PaperMenu', () => {
-    const {Platform, TurboModuleRegistry} = require('react-native');
-    const originalOS = Platform.OS;
-
-    const renderedStatusBarHeight = ({
-      os,
-      isEdgeToEdge,
-    }: {
-      os: 'ios' | 'android';
-      isEdgeToEdge?: boolean;
-    }) => {
-      Platform.OS = os;
-      jest
-        .spyOn(TurboModuleRegistry, 'get')
-        .mockReturnValue({getConstants: () => ({isEdgeToEdge})});
+    const renderedStatusBarHeight = (includesStatusBar: boolean) => {
+      (measuresIncludeStatusBar as jest.Mock).mockReturnValue(
+        includesStatusBar,
+      );
       (useSafeAreaInsets as jest.Mock).mockReturnValue({
         top: 59,
         right: 0,
@@ -70,24 +65,15 @@ describe('Menu', () => {
     };
 
     afterEach(() => {
-      Platform.OS = originalOS;
-      jest.restoreAllMocks();
+      (measuresIncludeStatusBar as jest.Mock).mockReturnValue(false);
     });
 
-    it('is 0 on Android when RN measures in edge-to-edge window coordinates', () => {
-      expect(renderedStatusBarHeight({os: 'android', isEdgeToEdge: true})).toBe(
-        0,
-      );
+    it('is 0 when RN measures in edge-to-edge window coordinates', () => {
+      expect(renderedStatusBarHeight(true)).toBe(0);
     });
 
-    it('is the top inset on Android without edge-to-edge', () => {
-      expect(
-        renderedStatusBarHeight({os: 'android', isEdgeToEdge: false}),
-      ).toBe(59);
-    });
-
-    it('is the top inset on iOS, where Paper ignores it', () => {
-      expect(renderedStatusBarHeight({os: 'ios', isEdgeToEdge: true})).toBe(59);
+    it('is the top inset when the measure excludes the status bar (no edge-to-edge, or iOS)', () => {
+      expect(renderedStatusBarHeight(false)).toBe(59);
     });
   });
 
