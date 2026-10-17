@@ -1,6 +1,6 @@
 module.exports = {
   preset: 'react-native',
-  collectCoverage: true,
+  collectCoverage: !process.env.REASSURE_OUTPUT_FILE,
   collectCoverageFrom: [
     'src/**/*.{ts,tsx}',
     '!**/index.{ts,tsx}',
@@ -10,6 +10,7 @@ module.exports = {
     '!**/ImageView.android.ts',
     '!**/ImageView.ios.ts',
     '!**/ImageView.tsx',
+    '!**/*.perf-test.{ts,tsx}',
   ],
   coveragePathIgnorePatterns: ['/src/screens/DevToolsScreen/'],
   coverageThreshold: {
