@@ -18,6 +18,8 @@ const flush = async () => {
   }
 };
 
+const contexts: ConnectionContext[] = [];
+
 const makeContext = (
   handleChat: ConnectionContext['handleChat'] = async (_body, channel) => {
     channel.write('served');
@@ -44,6 +46,7 @@ const makeContext = (
     handleChat: jest.fn(handleChat),
     admitted: () => admitted,
   };
+  contexts.push(ctx);
   return ctx;
 };
 
@@ -66,6 +69,8 @@ const heldChat = () => {
 };
 
 afterEach(() => {
+  contexts.forEach(ctx => ctx.openConnections.forEach(c => c.destroy()));
+  contexts.length = 0;
   jest.useRealTimers();
 });
 
