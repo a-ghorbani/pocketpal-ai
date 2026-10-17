@@ -492,7 +492,7 @@ describe('ChatView predicted document modes', () => {
     verdict: {kind: 'fits' as const},
   });
 
-  it('shows the predicted mode on the composer chip (RA, RD)', async () => {
+  it('shows the predicted mode on the composer chip', async () => {
     const evaluateSendBudget = jest
       .fn()
       .mockResolvedValue(planWith(['searched']));
@@ -542,7 +542,7 @@ describe('ChatView predicted document modes', () => {
     });
   });
 
-  it('pins a full chip with Search instead (RJ)', async () => {
+  it('pins a full chip with Search instead', async () => {
     const evaluateSendBudget = jest.fn(async (message: any) =>
       planWith(
         message.documents.map((d: DocumentRef) =>

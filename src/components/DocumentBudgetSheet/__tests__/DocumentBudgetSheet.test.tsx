@@ -117,7 +117,7 @@ describe('DocumentBudgetSheet', () => {
     expect(onEditMessage).toHaveBeenCalled();
   });
 
-  it('offers Search instead on a new full document next to the history actions (RK)', () => {
+  it('offers Search instead on a new full document next to the history actions', () => {
     const h = handlers();
     const small = {...text, id: 'small', name: 'small.md', tokenEstimate: 300};
     const {getByTestId, queryByTestId} = render(

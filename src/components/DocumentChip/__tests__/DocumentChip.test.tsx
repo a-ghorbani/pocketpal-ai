@@ -84,7 +84,7 @@ describe('DocumentChip', () => {
     expect(formatTokenCount(20480)).toBe('20.5k');
   });
 
-  it('says in full with the token count (RA)', () => {
+  it('says in full with the token count', () => {
     const {getByText, getByTestId} = render(
       <DocumentChip name="report.pdf" documentRef={pdf} mode="full" />,
     );

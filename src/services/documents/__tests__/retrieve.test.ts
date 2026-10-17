@@ -55,7 +55,7 @@ describe('terms', () => {
 describe('retrieveExcerpts', () => {
   const report = doc('report');
 
-  it('returns at most five excerpts within the budget (RB)', async () => {
+  it('returns at most five excerpts within the budget', async () => {
     const pages = pagesWith(
       Object.fromEntries(
         Array.from({length: 20}, (_, i) => [
@@ -77,7 +77,7 @@ describe('retrieveExcerpts', () => {
     expect(used).toBeLessThanOrEqual(2048);
   });
 
-  it('ranks an explicitly mentioned page first (RC)', async () => {
+  it('ranks an explicitly mentioned page first', async () => {
     const result = await run(
       [[report, pagesWith({37: 'Totally unrelated.'})]],
       {
@@ -90,14 +90,14 @@ describe('retrieveExcerpts', () => {
     }
   });
 
-  it('does not treat "Seite 12" as a page mention (Rf)', async () => {
+  it('does not treat "Seite 12" as a page mention', async () => {
     const result = await run([[report, pagesWith({12: 'Zwölf.'})]], {
       query: 'Seite 12',
     });
     expect(result).toEqual({kind: 'noMatch'});
   });
 
-  it('reports no match when nothing scores (RI)', async () => {
+  it('reports no match when nothing scores', async () => {
     expect(await run([[report, pagesWith({})]], {query: 'zebra'})).toEqual({
       kind: 'noMatch',
     });
@@ -133,7 +133,7 @@ describe('retrieveExcerpts', () => {
     }
   });
 
-  it('cites a shared page under each range key (Rb)', async () => {
+  it('cites a shared page under each range key', async () => {
     const all = doc('shared');
     const narrowed = doc('shared', {pageRange: {from: 3, to: 5}});
     const pages = pagesWith({3: 'Churn detail on page three.'}, 5);
@@ -150,7 +150,7 @@ describe('retrieveExcerpts', () => {
     }
   });
 
-  it('excludes missing documents (Ri)', async () => {
+  it('excludes missing documents', async () => {
     const gone = doc('gone');
     const result = await retrieveExcerpts({
       query: 'churn',
@@ -161,7 +161,7 @@ describe('retrieveExcerpts', () => {
     expect(result).toEqual({kind: 'noMatch'});
   });
 
-  it('drops tail excerpts when the exact count is larger, keeping one (Rg)', async () => {
+  it('drops tail excerpts when the exact count is larger, keeping one', async () => {
     const pages = pagesWith(
       Object.fromEntries(
         Array.from({length: 10}, (_, i) => [i + 1, `Churn note ${i}.`]),

@@ -303,7 +303,7 @@ describe('searched documents at send', () => {
       ([m]) => m.type === 'text' && m.author === user,
     )?.[0];
 
-  it('sends a stub plus cited excerpts and persists only the mode (RB, I10)', async () => {
+  it('sends a stub plus cited excerpts and persists only the mode', async () => {
     withWindow(32768);
 
     await send({
@@ -327,13 +327,13 @@ describe('searched documents at send', () => {
     expect(JSON.stringify(persisted)).not.toContain(EXCERPT_LEAD);
   });
 
-  it('never seeds the allowlist from an excerpt (RL)', async () => {
+  it('never seeds the allowlist from an excerpt', async () => {
     withWindow(32768);
     await send({type: 'text', text: 'churn', documents: [report]});
     expect(isReadUrlAllowed('https://evil.example/x')).toBe(false);
   });
 
-  it('replays an earlier searched row as its stub only (RC)', async () => {
+  it('replays an earlier searched row as its stub only', async () => {
     withWindow(32768);
     await send({
       type: 'text',
@@ -357,7 +357,7 @@ describe('searched documents at send', () => {
     expect(followUp.content.endsWith('and page 37?')).toBe(true);
   });
 
-  it('gives a byte-identical request on an unchanged regenerate (RJ)', async () => {
+  it('gives a byte-identical request on an unchanged regenerate', async () => {
     withWindow(32768);
     const pinned = {
       ...pdf('pinned-doc', {pageCount: 2}),
@@ -372,7 +372,7 @@ describe('searched documents at send', () => {
     expect(requests[1]).toEqual(requests[0]);
   });
 
-  it('runs no retrieval when every document is full (Rd)', async () => {
+  it('runs no retrieval when every document is full', async () => {
     withWindow(32768);
     const spy = jest.spyOn(retrieve, 'retrieveExcerpts');
     const small = pdf('small-doc', {pageCount: 1});
@@ -384,7 +384,7 @@ describe('searched documents at send', () => {
     spy.mockRestore();
   });
 
-  it('writes nothing and hands back the verdict when the plan is over under the lease (Rh)', async () => {
+  it('writes nothing and hands back the verdict when the plan is over under the lease', async () => {
     withWindow(4096);
     const earlier = pdf('earlier-full', {tokenEstimate: 6000});
     writeText(earlier.id, ['x']);

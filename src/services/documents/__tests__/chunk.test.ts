@@ -32,7 +32,7 @@ describe('splitPage', () => {
     expect(splitPage('  short page  ')).toEqual(['short page']);
   });
 
-  it('splits a 5,000-char page at paragraph or sentence breaks within the limit (RN)', () => {
+  it('splits a 5,000-char page at paragraph or sentence breaks within the limit', () => {
     const pieces = splitPage(englishPage());
     expect(pieces.length).toBeGreaterThan(5);
     for (const piece of pieces) {
@@ -41,7 +41,7 @@ describe('splitPage', () => {
     }
   });
 
-  it('splits a CJK page by estimate (RO)', () => {
+  it('splits a CJK page by estimate', () => {
     const pieces = splitPage('文'.repeat(1000));
     expect(pieces).toHaveLength(5);
     pieces.forEach(piece => expect(estimateDocTokens(piece)).toBe(200));
