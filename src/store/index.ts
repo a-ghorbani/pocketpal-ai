@@ -11,3 +11,4 @@ export * from './RouterStore';
 export * from './TTSStore';
 export * from './SearchProviderStore';
 export * from './PurchaseStore';
+export * from './LocalApiServerStore';

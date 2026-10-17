@@ -15,6 +15,7 @@ export default {
   getDevice: jest.fn(() => 'iPhone 12'),
   getDeviceId: jest.fn(() => 'test-device-id'),
   supportedAbis: jest.fn(() => ['arm64', 'arm64-v8a']),
+  getIpAddress: jest.fn(() => Promise.resolve('192.168.1.23')),
 
   // Not all methods are mocked, add any other methods from react-native-device-info that you use in your code
 };
