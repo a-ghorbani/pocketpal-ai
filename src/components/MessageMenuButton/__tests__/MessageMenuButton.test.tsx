@@ -35,7 +35,12 @@ describe('MessageMenuButton', () => {
     expect(
       MIN_TARGET + Number(style.marginTop) + Number(style.marginBottom),
     ).toBe(FOOTPRINT_HEIGHT);
-    expect(style.marginLeft).toBe(-5);
+    expect(style).toMatchObject({
+      marginLeft: -5,
+      marginTop: -14,
+      marginRight: -14,
+      marginBottom: -14,
+    });
     expect(button.props.hitSlop).toBeUndefined();
   });
 

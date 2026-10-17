@@ -1,4 +1,5 @@
 import * as React from 'react';
+import {StyleSheet} from 'react-native';
 import {runInAction} from 'mobx';
 
 import {textMessage, user} from '../../../../jest/fixtures';
@@ -230,6 +231,53 @@ describe('ChatView — AssistantTurn integration', () => {
     expect(
       getByText(l10n.en.components.chatView.menuItems.regenerate),
     ).toBeTruthy();
+  });
+});
+
+describe('ChatView — footer controls are not clipped by the row', () => {
+  const nodeName = (n: any) =>
+    typeof n.type === 'string' ? n.type : (n.type?.displayName ?? n.type?.name);
+
+  const clippingAncestors = (control: any) => {
+    const clipping: string[] = [];
+    for (let n = control.parent; n; n = n.parent) {
+      if (nodeName(n) === 'CellRenderer') {
+        return clipping;
+      }
+      const overflow = StyleSheet.flatten(n.props?.style)?.overflow;
+      if (overflow === 'hidden' || overflow === 'scroll') {
+        clipping.push(`${nodeName(n)}:${overflow}`);
+      }
+    }
+    throw new Error('control is not inside a list cell');
+  };
+
+  it('keeps every ancestor up to the list cell overflow-visible', () => {
+    const turn = makeAssistantTurn([{content: 'hi assistant'}], 't1', 1);
+    const userMsg: MessageType.Text = {
+      ...textMessage,
+      id: 'u1',
+      text: 'user prompt',
+      author: user,
+      createdAt: 0,
+    };
+    const {getByTestId, getAllByTestId} = render(
+      <ChatView
+        messages={[turn, userMsg]}
+        onSendPress={jest.fn()}
+        user={user}
+      />,
+      {withNavigation: true, withBottomSheetProvider: true},
+    );
+
+    const controls = [
+      getByTestId('footer-copy'),
+      ...getAllByTestId('message-menu-button'),
+    ];
+    expect(controls).toHaveLength(3);
+    for (const control of controls) {
+      expect(clippingAncestors(control)).toEqual([]);
+    }
   });
 });
 

@@ -1085,3 +1085,50 @@ describe('Message — streaming animation on reasoning', () => {
     expect(flags[flags.length - 1]).toBe(false);
   });
 });
+
+describe('Message — reasoning flag and collapse trigger agree', () => {
+  const {ReasoningBlock} = require('../../ReasoningBlock/ReasoningBlock');
+  const reasoningBlock = ReasoningBlock as jest.Mock;
+
+  beforeEach(() => {
+    reasoningBlock.mockClear();
+  });
+
+  const cases: Array<[boolean, boolean | undefined, string]> = [];
+  for (const isActiveRun of [true, false]) {
+    for (const partial of [true, false, undefined]) {
+      for (const content of ['', 'Answer']) {
+        cases.push([isActiveRun, partial, content]);
+      }
+    }
+  }
+
+  it.each(cases)(
+    'never animates a collapsing card (active %s, partial %s, content %j)',
+    (isActiveRun, partial, content) => {
+      render(
+        <Message
+          message={makeDerivedTurn([
+            {content, reasoningContent: 'Plan\n```py\nx=1', partial},
+          ])}
+          messageWidth={440}
+          isActiveRun={isActiveRun}
+          roundBorder
+          showAvatar
+          showName
+          showStatus
+        />,
+      );
+
+      expect(reasoningBlock).toHaveBeenCalled();
+      for (const [props] of reasoningBlock.mock.calls) {
+        if (props.streamingAnimation) {
+          expect(props.autoCollapse).toBe(false);
+        }
+        if (isActiveRun && partial !== undefined) {
+          expect(props.streamingAnimation).toBe(!props.autoCollapse);
+        }
+      }
+    },
+  );
+});

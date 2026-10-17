@@ -154,6 +154,8 @@ describe('AssistantTurnFooter', () => {
         marginVertical: -14,
         flexShrink: 0,
       });
+      expect(style.marginTop ?? style.marginVertical).toBe(-14);
+      expect(style.marginBottom ?? style.marginVertical).toBe(-14);
       for (const key of [
         'margin',
         'marginHorizontal',
