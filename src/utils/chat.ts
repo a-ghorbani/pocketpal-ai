@@ -2,6 +2,7 @@ import {applyTemplate, Templates} from 'chat-formatter';
 import {JinjaFormattedChatResult, LlamaContext} from 'llama.rn';
 import {CompletionParams} from './completionTypes';
 import {defaultCompletionParams} from './completionSettingsVersions';
+import {withDocumentContent} from '../services/documents/render';
 
 import {
   AgentStep,
@@ -193,6 +194,7 @@ function stepToApiMessages(step: AgentStep): ChatMessage[] {
 export function convertToChatMessages(
   messages: MessageType.Any[],
   isMultimodalEnabled: boolean = true,
+  documentContent?: (row: MessageType.Text) => string | undefined,
 ): ChatMessage[] {
   const groups: ChatMessage[][] = messages
     .filter(message => {
@@ -222,7 +224,12 @@ export function convertToChatMessages(
       const textMessage = message as MessageType.Text;
       const role: 'assistant' | 'user' =
         message.author.id === assistant.id ? 'assistant' : 'user';
-      const messageText = textMessage.text || '';
+      const typedText = textMessage.text || '';
+      const documents =
+        role === 'user' ? documentContent?.(textMessage) : undefined;
+      const messageText = documents
+        ? withDocumentContent(documents, typedText)
+        : typedText;
 
       // Multimodal user messages keep their existing shape.
       if (

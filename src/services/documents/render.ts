@@ -61,3 +61,20 @@ export const renderDocumentContent = (entries: DocumentEntry[]): string =>
 
 export const withDocumentContent = (content: string, typed: string): string =>
   `${content}\n\n${typed}`;
+
+export const documentContentFor = (
+  refs: DocumentRef[] | undefined,
+  texts: ReadonlyMap<string, string[] | 'missing'>,
+): string | undefined => {
+  if (!refs?.length) {
+    return undefined;
+  }
+  return renderDocumentContent(
+    refs.map(ref => {
+      const pages = texts.get(documentKey(ref));
+      return pages && pages !== 'missing'
+        ? {ref, pages}
+        : {ref, missing: true as const};
+    }),
+  );
+};

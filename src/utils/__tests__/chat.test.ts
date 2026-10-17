@@ -901,3 +901,52 @@ describe('tool-call echo in a device turn', () => {
     ]);
   });
 });
+
+describe('convertToChatMessages — document content', () => {
+  const userRow = (
+    id: string,
+    text: string,
+    imageUris?: string[],
+  ): MessageType.Text => ({
+    id,
+    author: {id: 'user'},
+    type: 'text',
+    text,
+    imageUris,
+  });
+  const assistantRow: MessageType.Text = {
+    id: 'a1',
+    author: assistant,
+    type: 'text',
+    text: 'answer',
+  };
+
+  it('prefixes only user rows the resolver returns content for', () => {
+    const resolver = jest.fn((row: MessageType.Text) =>
+      row.id === 'u1' ? 'DOCS' : undefined,
+    );
+    const result = convertToChatMessages(
+      [userRow('u2', 'second'), assistantRow, userRow('u1', 'first')],
+      true,
+      resolver,
+    );
+    expect(result).toEqual([
+      {role: 'user', content: 'DOCS\n\nfirst'},
+      {role: 'assistant', content: 'answer'},
+      {role: 'user', content: 'second'},
+    ]);
+    expect(resolver).not.toHaveBeenCalledWith(assistantRow);
+  });
+
+  it('prefixes the leading text part of a multimodal row', () => {
+    const [message] = convertToChatMessages(
+      [userRow('u1', 'look', ['file:///a.jpg'])],
+      true,
+      () => 'DOCS',
+    );
+    expect(message.content).toEqual([
+      {type: 'text', text: 'DOCS\n\nlook'},
+      {type: 'image_url', image_url: {url: 'file:///a.jpg'}},
+    ]);
+  });
+});

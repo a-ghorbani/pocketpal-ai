@@ -55,6 +55,11 @@ import {
 } from '../services/talents';
 import type {ToolDefinition} from '../services/talents/types';
 import {
+  documentContentFor,
+  withDocumentContent,
+} from '../services/documents/render';
+import {loadDocumentTexts, releaseSendHold} from '../services/documents/store';
+import {
   agentStateReducer,
   createTriggerMarkerCache,
   DEFAULT_MAX_TURNS,
@@ -96,6 +101,25 @@ const prepareCompletion = async ({
   // Check if we have images and if multimodal is enabled
   const hasImages = imageUris && imageUris.length > 0;
 
+  const textRows = currentMessages.filter(
+    (msg): msg is MessageType.Text => msg.type === 'text',
+  );
+  const documentRefs = [
+    ...textRows.flatMap(row => row.documents ?? []),
+    ...(message.documents ?? []),
+  ];
+  const documentTexts =
+    documentRefs.length > 0
+      ? await loadDocumentTexts(documentRefs)
+      : new Map<string, string[] | 'missing'>();
+  const newDocumentContent = documentContentFor(
+    message.documents,
+    documentTexts,
+  );
+  const userText = newDocumentContent
+    ? withDocumentContent(newDocumentContent, message.text)
+    : message.text;
+
   // Create user message content - use array format only for multimodal,
   // string for text-only.
   let userMessageContent: any;
@@ -104,7 +128,7 @@ const prepareCompletion = async ({
     userMessageContent = [
       {
         type: 'text',
-        text: message.text,
+        text: userText,
       },
       ...imageUris.map(path => ({
         type: 'image_url',
@@ -112,7 +136,7 @@ const prepareCompletion = async ({
       })),
     ];
   } else {
-    userMessageContent = message.text;
+    userMessageContent = userText;
 
     if (hasImages && !isMultimodalEnabled) {
       uiStore.setChatWarning(
@@ -129,6 +153,7 @@ const prepareCompletion = async ({
   let chatMessages = convertToChatMessages(
     currentMessages.filter(msg => msg.type !== 'image'),
     isMultimodalEnabled,
+    row => documentContentFor(row.documents, documentTexts),
   );
 
   // Strip thinking parts from assistant context if the user opted out.
@@ -164,7 +189,15 @@ const prepareCompletion = async ({
 
   // Reseed the read_url exfiltration allowlist for this run; the trust policy
   // (which sources count) lives in the talents module.
-  seedReadUrlAllowlist(messages, currentMessages);
+  seedReadUrlAllowlist(
+    [
+      ...textRows
+        .filter(row => row.author.id !== assistant.id)
+        .map(row => row.text),
+      message.text,
+    ],
+    currentMessages,
+  );
 
   const completionParamsWithAppProps = {
     ...sessionCompletionSettings,
@@ -715,6 +748,7 @@ export const useChatSession = (
       text: message.text,
       type: 'text',
       imageUris: hasImages ? imageUris : undefined,
+      documents: message.documents?.length ? message.documents : undefined,
       metadata: {
         contextId,
         conversationId: conversationIdRef.current,
@@ -727,6 +761,7 @@ export const useChatSession = (
         s => s.id === chatSessionStore.activeSessionId,
       )?.title ?? NEW_SESSION_TITLE) === NEW_SESSION_TITLE;
     await addMessage(textMessage);
+    releaseSendHold((message.documents ?? []).map(ref => ref.id));
     if (!lease.signal.aborted) {
       modelStore.setInferencing(true);
       modelStore.setIsStreaming(false);

@@ -27,13 +27,6 @@ type Row = {
   fetched: string | typeof CANONICAL | null;
 };
 
-type SeedMessage = {
-  role: string;
-  content?: unknown;
-  tool_calls?: unknown;
-  tool_call_id?: string;
-};
-
 type SeedOutcome = {
   toolName: string;
   result: {
@@ -46,35 +39,7 @@ type SeedOutcome = {
 
 type SeedRow = {type: string; steps: {toolOutcomes: SeedOutcome[]}[]};
 
-const seedMessages = (row: Row): SeedMessage[] => {
-  const messages: SeedMessage[] = [];
-  if (row.user) {
-    messages.push({role: 'user', content: row.user});
-  }
-  if (row.assistant) {
-    messages.push({role: 'assistant', content: row.assistant});
-  }
-  if (row.toolArg) {
-    messages.push(
-      {
-        role: 'assistant',
-        content: '',
-        tool_calls: [
-          {
-            id: 'call-1',
-            type: 'function',
-            function: {
-              name: 'read_url',
-              arguments: JSON.stringify({url: row.toolArg}),
-            },
-          },
-        ],
-      },
-      {role: 'tool', tool_call_id: 'call-1', content: 'done'},
-    );
-  }
-  return messages;
-};
+const seedUserTexts = (row: Row): string[] => (row.user ? [row.user] : []);
 
 const seedRows = (row: Row): SeedRow[] => {
   const outcomes: SeedOutcome[] = [];
@@ -119,7 +84,7 @@ const runRow = async (row: Row) => {
   };
   const engine = new ReadUrlEngine(access);
 
-  seedReadUrlAllowlist(seedMessages(row), seedRows(row));
+  seedReadUrlAllowlist(seedUserTexts(row), seedRows(row));
   if (row.reset) {
     resetReadUrlAllowlist();
   }
