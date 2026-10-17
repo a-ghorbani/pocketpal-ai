@@ -200,7 +200,7 @@ class LocalApiServerStore {
 
   private listen(epoch: number): void {
     const context = this.connectionContext();
-    const listener = TcpSocket.createServer(socket =>
+    const listener = TcpSocket.createServer({allowHalfOpen: true}, socket =>
       this.acceptConnection(socket, epoch, context),
     );
     this.listener = listener;

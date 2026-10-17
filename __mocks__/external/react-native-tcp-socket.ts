@@ -66,6 +66,10 @@ export class FakeServer extends EventEmitter {
   listenOptions: {port: number; host?: string} | undefined;
   closed = false;
 
+  constructor(readonly options: {allowHalfOpen?: boolean} = {}) {
+    super();
+  }
+
   listen = jest.fn((options: {port: number; host?: string}) => {
     this.listenOptions = options;
     return this;
@@ -93,8 +97,11 @@ export class FakeServer extends EventEmitter {
 export const createdServers: FakeServer[] = [];
 
 export const createServer = jest.fn(
-  (connectionListener?: (socket: FakeSocket) => void) => {
-    const server = new FakeServer();
+  (
+    options: {allowHalfOpen?: boolean},
+    connectionListener?: (socket: FakeSocket) => void,
+  ) => {
+    const server = new FakeServer(options);
     if (connectionListener) {
       server.on('connection', connectionListener);
     }

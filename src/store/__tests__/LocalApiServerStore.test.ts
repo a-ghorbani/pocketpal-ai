@@ -103,6 +103,7 @@ describe('LocalApiServerStore lifecycle', () => {
     server.emitListening();
     expect(store.status).toBe('running');
     expect(store.baseUrl).toBe('http://127.0.0.1:8080/v1');
+    expect(server.options.allowHalfOpen).toBe(true);
   });
 
   it('binds all interfaces with LAN on and shows the Wi-Fi address', async () => {
