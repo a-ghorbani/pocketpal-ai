@@ -1,0 +1,43 @@
+import type React from 'react';
+import {measureRenders} from 'reassure';
+import type {MeasureRendersOptions} from 'reassure';
+
+import {createWrapper} from './test-utils';
+import type {CustomRenderOptions} from './test-utils';
+
+const MIN_RUNS = 3;
+
+type ScenarioOptions = {
+  scenario: NonNullable<MeasureRendersOptions['scenario']>;
+  beforeEach?: MeasureRendersOptions['beforeEach'];
+  runs?: number;
+  wrapperOptions?: CustomRenderOptions;
+};
+
+export const measureScenario = async (
+  ui: React.ReactElement,
+  {scenario, beforeEach, runs = MIN_RUNS, wrapperOptions}: ScenarioOptions,
+) => {
+  if (runs < MIN_RUNS) {
+    throw new Error(
+      `measureScenario needs runs >= ${MIN_RUNS} to detect unstable render counts`,
+    );
+  }
+  const wrapper = createWrapper(wrapperOptions);
+
+  const mountOnly = await measureRenders(ui, {
+    wrapper,
+    runs,
+    beforeEach,
+    writeFile: false,
+  });
+  const measured = await measureRenders(ui, {
+    wrapper,
+    runs,
+    beforeEach,
+    scenario,
+  });
+
+  expect(measured.meanCount).toBeGreaterThan(mountOnly.meanCount);
+  return measured;
+};
