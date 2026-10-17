@@ -217,7 +217,7 @@ describe('Message — AssistantTurn renderer', () => {
     );
   });
 
-  it('#11 AssistantTurn occupies ONE FlatList row (renderer returns a single Pressable wrapping all blocks)', () => {
+  it('#11 AssistantTurn has no touch handler above its content (selection would fight it)', () => {
     const message = makeDerivedTurn([
       {content: 'A'},
       {
@@ -227,28 +227,34 @@ describe('Message — AssistantTurn renderer', () => {
       },
       {content: 'C'},
     ]);
-    const {UNSAFE_root} = render(
+    const {UNSAFE_root, getAllByTestId} = render(
       <Message
         message={message}
         messageWidth={440}
         onMessagePress={jest.fn()}
+        onMessageMenuPress={jest.fn()}
         roundBorder
         showAvatar
         showName
         showStatus
       />,
     );
-    // Exactly ONE node carries an `onLongPress` prop (the Pressable wrapping
-    // the row). This proves long-press routing is turn-level — not split
-    // across N step-level rows.
-    const longPressables = UNSAFE_root.findAll(
-      (n: any) => n.props && typeof n.props.onLongPress === 'function',
-    );
-    expect(longPressables).toHaveLength(1);
+    for (const block of getAllByTestId('ContentContainer')) {
+      for (let n = block.parent; n; n = n.parent) {
+        for (const handler of ['onPress', 'onLongPress', 'onPressIn']) {
+          expect(typeof n.props?.[handler]).not.toBe('function');
+        }
+      }
+    }
+    expect(
+      UNSAFE_root.findAll(
+        (n: any) => n.props && typeof n.props.onLongPress === 'function',
+      ),
+    ).toHaveLength(0);
   });
 
-  it('#12 long-press on the row yields the SAME message id regardless of which inner block is targeted', () => {
-    const onLongPress = jest.fn();
+  it('#12 the footer "…" yields the turn regardless of step count', () => {
+    const onMessageMenuPress = jest.fn();
     const message = makeDerivedTurn([
       {content: 'A'},
       {
@@ -258,27 +264,39 @@ describe('Message — AssistantTurn renderer', () => {
       },
       {content: 'C'},
     ]);
-    const {UNSAFE_root} = render(
+    const {getAllByTestId} = render(
       <Message
         message={message}
         messageWidth={440}
-        onMessageLongPress={onLongPress}
-        onMessagePress={jest.fn()}
+        onMessageMenuPress={onMessageMenuPress}
         roundBorder
         showAvatar
         showName
         showStatus
       />,
     );
-    const longPressables = UNSAFE_root.findAll(
-      (n: any) => n.props && typeof n.props.onLongPress === 'function',
+    const buttons = getAllByTestId('message-menu-button');
+    expect(buttons).toHaveLength(1);
+    const event = {nativeEvent: {pageX: 7, pageY: 8}};
+    fireEvent.press(buttons[0], event);
+    expect(onMessageMenuPress).toHaveBeenCalledTimes(1);
+    expect(onMessageMenuPress.mock.calls[0][0].id).toBe('turn-1');
+    expect(onMessageMenuPress.mock.calls[0][1]).toBe(event);
+  });
+
+  it('#12b the active row shows no "…"', () => {
+    const {queryByTestId} = render(
+      <Message
+        message={makeDerivedTurn([{content: 'A', partial: true}])}
+        messageWidth={440}
+        isActiveRun
+        roundBorder
+        showAvatar
+        showName
+        showStatus
+      />,
     );
-    expect(longPressables).toHaveLength(1);
-    fireEvent(longPressables[0], 'longPress', {
-      nativeEvent: {pageX: 0, pageY: 0},
-    });
-    expect(onLongPress).toHaveBeenCalledTimes(1);
-    expect(onLongPress.mock.calls[0][0].id).toBe('turn-1');
+    expect(queryByTestId('message-menu-button')).toBeNull();
   });
 
   it('#13 avatar renders once per AssistantTurn (showAvatar=true, showUserAvatars=true)', () => {
@@ -890,4 +908,227 @@ describe('Message — AssistantTurn renderer', () => {
       mockTalentSurfaceCalls[mockTalentSurfaceCalls.length - 1].step?.toolCalls,
     ).toEqual(toolCalls);
   });
+});
+
+describe('Message — streaming animation on step content', () => {
+  const {EnrichedMarkdownText} = require('react-native-enriched-markdown');
+  const {TextMessage} = require('../../TextMessage/TextMessage');
+  const markdownSpy = EnrichedMarkdownText as jest.Mock;
+  const recordingTextMessage = (
+    TextMessage as jest.Mock
+  ).getMockImplementation();
+
+  beforeEach(() => {
+    (TextMessage as jest.Mock).mockImplementation(
+      jest.requireActual('../../TextMessage/TextMessage').TextMessage,
+    );
+    markdownSpy.mockClear();
+  });
+
+  afterEach(() => {
+    (TextMessage as jest.Mock).mockImplementation(recordingTextMessage);
+  });
+
+  const step = (partial: boolean): AgentStep => ({content: 'Hi', partial});
+
+  const renderRow = (steps: AgentStep[], isActiveRun: boolean) => (
+    <Message
+      message={makeDerivedTurn(steps)}
+      messageWidth={440}
+      isActiveRun={isActiveRun}
+      roundBorder
+      showAvatar
+      showName
+      showStatus
+    />
+  );
+
+  const animationFlags = () =>
+    markdownSpy.mock.calls.map(([props]) => props.streamingAnimation);
+
+  it('animates the live step of the active row', () => {
+    render(renderRow([step(true)], true));
+
+    expect(animationFlags()).toEqual([true]);
+  });
+
+  it('animates only the partial step of a multi-step active row', () => {
+    render(renderRow([step(false), step(true)], true));
+
+    expect(animationFlags()).toEqual([false, true]);
+  });
+
+  it('does not animate a finished step on the active row', () => {
+    render(renderRow([step(false)], true));
+
+    expect(animationFlags()).toEqual([false]);
+  });
+
+  it('does not animate a stale partial step once the row is no longer active', () => {
+    render(renderRow([step(true)], false));
+
+    expect(animationFlags()).toEqual([false]);
+  });
+
+  it('drops the flag in place when the run ends with unchanged text', () => {
+    const {rerender} = render(renderRow([step(true)], true));
+    rerender(renderRow([step(true)], false));
+
+    expect(animationFlags()[animationFlags().length - 1]).toBe(false);
+  });
+
+  it('marks step content selectable', () => {
+    render(renderRow([step(false)], false));
+
+    expect(markdownSpy.mock.calls[0][0].selectable).toBe(true);
+  });
+});
+
+describe('Message — streaming animation on reasoning', () => {
+  const {EnrichedMarkdownText} = require('react-native-enriched-markdown');
+  const {ReasoningBlock} = require('../../ReasoningBlock/ReasoningBlock');
+  const markdownSpy = EnrichedMarkdownText as jest.Mock;
+  const recordingReasoningBlock = (
+    ReasoningBlock as jest.Mock
+  ).getMockImplementation();
+
+  beforeEach(() => {
+    (ReasoningBlock as jest.Mock).mockImplementation(props =>
+      React.createElement(
+        jest.requireActual('../../ReasoningBlock/ReasoningBlock')
+          .ReasoningBlock,
+        props,
+      ),
+    );
+    markdownSpy.mockClear();
+  });
+
+  afterEach(() => {
+    (ReasoningBlock as jest.Mock).mockImplementation(recordingReasoningBlock);
+  });
+
+  const openFence = 'Plan\n```py\nx=1';
+  const reasoningStep = (overrides: Partial<AgentStep> = {}): AgentStep => ({
+    content: '',
+    reasoningContent: openFence,
+    partial: true,
+    ...overrides,
+  });
+
+  const renderRow = (
+    turn: MessageType.DerivedAssistantTurn,
+    isActiveRun: boolean,
+  ) => (
+    <Message
+      message={turn}
+      messageWidth={440}
+      isActiveRun={isActiveRun}
+      roundBorder
+      showAvatar
+      showName
+      showStatus
+    />
+  );
+
+  const animationFlags = () =>
+    markdownSpy.mock.calls.map(([props]) => props.streamingAnimation);
+
+  it('animates reasoning that streams before any content on the active row', () => {
+    render(renderRow(makeDerivedTurn([reasoningStep()]), true));
+
+    expect(animationFlags()).toEqual([true]);
+  });
+
+  it('stops animating once content starts on the same partial step, as the card collapses', () => {
+    const {getByTestId} = render(
+      renderRow(makeDerivedTurn([reasoningStep({content: 'Answer'})]), true),
+    );
+
+    expect(animationFlags().length).toBeGreaterThan(0);
+    expect(animationFlags()).not.toContain(true);
+    expect(getByTestId('thinking-bubble-collapsed')).toBeTruthy();
+  });
+
+  it('does not animate a stale partial step once the row is no longer active', () => {
+    render(renderRow(makeDerivedTurn([reasoningStep()]), false));
+
+    expect(animationFlags()).toEqual([false]);
+  });
+
+  it('does not animate the reasoning of a finished earlier step', () => {
+    render(
+      renderRow(
+        makeDerivedTurn([
+          reasoningStep({partial: false}),
+          reasoningStep({reasoningContent: 'Next'}),
+        ]),
+        true,
+      ),
+    );
+
+    expect(markdownSpy.mock.calls[0][0]).toEqual(
+      expect.objectContaining({markdown: openFence, streamingAnimation: false}),
+    );
+    expect(
+      markdownSpy.mock.calls.find(([props]) => props.markdown === 'Next')?.[0]
+        .streamingAnimation,
+    ).toBe(true);
+  });
+
+  it('drops the flag in place when the run stops mid-reasoning', () => {
+    const turn = makeDerivedTurn([reasoningStep()]);
+    const {rerender} = render(renderRow(turn, true));
+    rerender(renderRow(turn, false));
+
+    const flags = animationFlags();
+    expect(flags[0]).toBe(true);
+    expect(flags[flags.length - 1]).toBe(false);
+  });
+});
+
+describe('Message — reasoning flag and collapse trigger agree', () => {
+  const {ReasoningBlock} = require('../../ReasoningBlock/ReasoningBlock');
+  const reasoningBlock = ReasoningBlock as jest.Mock;
+
+  beforeEach(() => {
+    reasoningBlock.mockClear();
+  });
+
+  const cases: Array<[boolean, boolean | undefined, string]> = [];
+  for (const isActiveRun of [true, false]) {
+    for (const partial of [true, false, undefined]) {
+      for (const content of ['', 'Answer']) {
+        cases.push([isActiveRun, partial, content]);
+      }
+    }
+  }
+
+  it.each(cases)(
+    'never animates a collapsing card (active %s, partial %s, content %j)',
+    (isActiveRun, partial, content) => {
+      render(
+        <Message
+          message={makeDerivedTurn([
+            {content, reasoningContent: 'Plan\n```py\nx=1', partial},
+          ])}
+          messageWidth={440}
+          isActiveRun={isActiveRun}
+          roundBorder
+          showAvatar
+          showName
+          showStatus
+        />,
+      );
+
+      expect(reasoningBlock).toHaveBeenCalled();
+      for (const [props] of reasoningBlock.mock.calls) {
+        if (props.streamingAnimation) {
+          expect(props.autoCollapse).toBe(false);
+        }
+        if (isActiveRun && partial !== undefined) {
+          expect(props.streamingAnimation).toBe(!props.autoCollapse);
+        }
+      }
+    },
+  );
 });

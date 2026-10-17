@@ -1,9 +1,8 @@
 import * as React from 'react';
-import {Pressable, Text, View, Animated} from 'react-native';
+import {GestureResponderEvent, Pressable, Text, View} from 'react-native';
 
 import {oneOf} from '@flyerhq/react-native-link-preview';
 import {observer} from 'mobx-react';
-import ReactNativeHapticFeedback from 'react-native-haptic-feedback';
 
 import {useTheme} from '../../hooks';
 
@@ -18,24 +17,14 @@ import {
   TalentSurface,
   TextMessage,
   TextMessageTopLevelProps,
+  UserMessageFooter,
 } from '..';
 
 import {MessageType} from '../../utils/types';
 import {excludeDerivedMessageProps, UserContext} from '../../utils';
 import {visibleStepContent} from '../../utils/chat';
 
-const hapticOptions = {
-  enableVibrateFallback: true,
-  ignoreAndroidSystemSettings: false,
-};
-
 export interface MessageTopLevelProps extends TextMessageTopLevelProps {
-  /**
-   * True if THIS row is the active agent run. Computed once at the
-   * ChatView level (last message AND `agentUiState.status` is in the
-   * active set) and threaded through. Used by the AssistantTurn
-   * renderer to drive per-talent pending UI.
-   */
   isActiveRun?: boolean;
   /**
    * Active-run pending talent names (from `agentUiState.pendingTalentNames`).
@@ -48,8 +37,11 @@ export interface MessageTopLevelProps extends TextMessageTopLevelProps {
    * "preparing tool" copy.
    */
   isGeneratingToolCall?: boolean;
-  /** Called when user makes a long press on any message */
-  onMessageLongPress?: (message: MessageType.Any, event?: any) => void;
+  /** Called when the user presses a row's "…" button */
+  onMessageMenuPress?: (
+    message: MessageType.Any,
+    event: GestureResponderEvent,
+  ) => void;
   /** Called when user taps on any message */
   onMessagePress?: (message: MessageType.Any, event?: any) => void;
   /** Customize the default bubble using this function. `child` is a content
@@ -61,7 +53,6 @@ export interface MessageTopLevelProps extends TextMessageTopLevelProps {
     child: React.ReactNode;
     message: MessageType.Any;
     nextMessageInGroup: boolean;
-    scale?: Animated.Value;
   }) => React.ReactNode;
   /** Render a custom message inside predefined bubble */
   renderCustomMessage?: (
@@ -108,14 +99,11 @@ export interface MessageProps extends MessageTopLevelProps {
 export const Message = observer(
   ({
     enableAnimation,
-    // isActiveRun / activeRunPendingTalentNames / isGeneratingToolCall
-    // are kept on MessageTopLevelProps for ChatView's prop API but not
-    // consumed here — pending UX is owned by ChatView's PendingIndicator
-    // and TalentSurface dispatches off persisted step data alone.
+    isActiveRun,
     message,
     messageWidth,
+    onMessageMenuPress,
     onMessagePress,
-    onMessageLongPress,
     onPreviewDataFetched,
     renderBubble,
     renderCustomMessage,
@@ -131,7 +119,6 @@ export const Message = observer(
   }: MessageProps) => {
     const user = React.useContext(UserContext);
     const theme = useTheme();
-    const scaleAnim = React.useRef(new Animated.Value(1)).current;
 
     const currentUserIsAuthor =
       message.type !== 'dateHeader' && user?.id === message.author.id;
@@ -143,24 +130,6 @@ export const Message = observer(
       roundBorder,
       theme,
     });
-
-    const handlePressIn = () => {
-      Animated.spring(scaleAnim, {
-        toValue: 1.01,
-        friction: 8,
-        tension: 100,
-        useNativeDriver: true,
-      }).start();
-    };
-
-    const handlePressOut = () => {
-      Animated.spring(scaleAnim, {
-        toValue: 1,
-        friction: 8,
-        tension: 100,
-        useNativeDriver: true,
-      }).start();
-    };
 
     if (message.type === 'dateHeader') {
       return (
@@ -188,7 +157,6 @@ export const Message = observer(
         child,
         message: excludeDerivedMessageProps(message),
         nextMessageInGroup: roundBorder,
-        scale: scaleAnim,
       });
     };
 
@@ -251,9 +219,7 @@ export const Message = observer(
      * AssistantTurn renderer (Option B): emit N visual blocks within
      * ONE FlatList row. For each step, render a text bubble fragment
      * (only when content is present) followed by a TalentSurface
-     * fragment (only when toolCalls are present). The row remains a
-     * single Pressable so long-press routing stays turn-level
-     * regardless of which inner block was pressed.
+     * fragment (only when toolCalls are present).
      */
     const renderAssistantTurn = () => {
       const turn = message as MessageType.DerivedAssistantTurn;
@@ -285,6 +251,7 @@ export const Message = observer(
             showName={showNameForBlock}
             usePreviewData={usePreviewData}
             step={stepFragment}
+            isActiveRun={isActiveRun}
           />
         );
         const wrapped = oneOf(
@@ -301,7 +268,6 @@ export const Message = observer(
           child,
           message: excludeDerivedMessageProps(message),
           nextMessageInGroup: roundBorder,
-          scale: scaleAnim,
         });
         if (showNameForBlock) {
           nameShown = true;
@@ -325,6 +291,7 @@ export const Message = observer(
         keySuffix: string,
         text: string,
         autoCollapse: boolean,
+        streamingAnimation: boolean,
       ) => (
         <View
           key={keySuffix}
@@ -334,6 +301,7 @@ export const Message = observer(
             text={text}
             maxWidth={messageWidth}
             autoCollapse={autoCollapse}
+            streamingAnimation={streamingAnimation}
           />
         </View>
       );
@@ -354,11 +322,14 @@ export const Message = observer(
           // is streaming, the bubble stays expanded so the user sees
           // thoughts live.
           const autoCollapseReasoning = hasContent || step.partial === false;
+          const liveReasoning =
+            isActiveRun === true && step.partial === true && !hasContent;
           blocks.push(
             wrapReasoningBlock(
               `step-${stepIdx}-reasoning`,
               step.reasoningContent as string,
               autoCollapseReasoning,
+              liveReasoning,
             ),
           );
           isFirstBlock = false;
@@ -389,15 +360,22 @@ export const Message = observer(
       return blocks;
     };
 
-    // AssistantTurn renders N visual blocks within one FlatList row.
-    // The single Pressable + Avatar + StatusIcon wrapping is preserved
-    // so long-press stays turn-level and the avatar shows once per turn.
     // AssistantTurnFooter is attached in the outer JSX (not inside
     // renderMessage) so each assistant row gets exactly one footer
-    // regardless of step count; user-authored rows render none.
+    // regardless of step count.
     const showAssistantFooter =
       !currentUserIsAuthor &&
       (message.type === 'assistant_turn' || message.type === 'text');
+    const showUserFooter = currentUserIsAuthor && message.type === 'text';
+    const openMenu = (event: GestureResponderEvent) =>
+      onMessageMenuPress?.(excludeDerivedMessageProps(message), event);
+    const assistantFooter = showAssistantFooter && (
+      <AssistantTurnFooter
+        message={message}
+        isActiveRun={isActiveRun}
+        onMenuPress={openMenu}
+      />
+    );
     // HtmlPreviewBubble's WebView has no intrinsic width. Force the
     // wrapper to `messageWidth` so it has a budget to stretch into;
     // text-only siblings still wrap to their natural width via
@@ -406,14 +384,17 @@ export const Message = observer(
       message.type === 'assistant_turn' ? (
         <View style={{width: messageWidth}}>
           {renderAssistantTurn()}
-          {showAssistantFooter && <AssistantTurnFooter message={message} />}
+          {assistantFooter}
         </View>
       ) : (
         <>
           {renderBubbleContainer()}
-          {showAssistantFooter && <AssistantTurnFooter message={message} />}
+          {assistantFooter}
+          {showUserFooter && <UserMessageFooter onMenuPress={openMenu} />}
         </>
       );
+    const isTextRow =
+      message.type === 'text' || message.type === 'assistant_turn';
 
     return (
       <View style={container}>
@@ -426,19 +407,17 @@ export const Message = observer(
             theme,
           }}
         />
-        <Pressable
-          onLongPress={event => {
-            ReactNativeHapticFeedback.trigger('impactLight', hapticOptions);
-            onMessageLongPress?.(excludeDerivedMessageProps(message), event);
-          }}
-          onPress={event => {
-            onMessagePress?.(excludeDerivedMessageProps(message), event);
-          }}
-          onPressIn={handlePressIn}
-          onPressOut={handlePressOut}
-          style={pressable}>
-          {innerContent}
-        </Pressable>
+        {isTextRow ? (
+          <View style={pressable}>{innerContent}</View>
+        ) : (
+          <Pressable
+            onPress={event => {
+              onMessagePress?.(excludeDerivedMessageProps(message), event);
+            }}
+            style={pressable}>
+            {innerContent}
+          </Pressable>
+        )}
         <StatusIcon
           {...{
             currentUserIsAuthor,

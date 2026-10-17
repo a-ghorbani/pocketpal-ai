@@ -44,7 +44,8 @@ import * as path from 'path';
 import {expect} from '@wdio/globals';
 import {ChatPage} from '../../pages/ChatPage';
 import {SettingsPage} from '../../pages/SettingsPage';
-import {Selectors, byTestId, nativeTextElement} from '../../helpers/selectors';
+import {Selectors, byTestId} from '../../helpers/selectors';
+import {readReplyText} from '../../helpers/element-text';
 import {Gestures} from '../../helpers/gestures';
 import {ensureRevealed} from '../../helpers/disclosure';
 import {
@@ -207,8 +208,7 @@ async function runPromptAndReadResponse(
   await aiMessageEl.waitForExist({timeout: SPEC_INFERENCE_TIMEOUT});
   await waitForInferenceComplete(SPEC_INFERENCE_TIMEOUT);
 
-  const textView = aiMessageEl.$(nativeTextElement());
-  return textView.getText().catch(() => 'Unable to extract');
+  return readReplyText(aiMessageEl).catch(() => 'Unable to extract');
 }
 
 describe('Speculative Decoding / MTP draft model', () => {

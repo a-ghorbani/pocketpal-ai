@@ -1,5 +1,5 @@
 import React, {useContext} from 'react';
-import {TouchableOpacity, View} from 'react-native';
+import {GestureResponderEvent, TouchableOpacity, View} from 'react-native';
 
 import {observer} from 'mobx-react';
 import {Text} from 'react-native-paper';
@@ -9,6 +9,7 @@ import ReactNativeHapticFeedback from 'react-native-haptic-feedback';
 import {CopyIcon} from '../../assets/icons';
 import {useTheme} from '../../hooks';
 import {PlayButton} from '../TextMessage/PlayButton';
+import {MessageMenuButton} from '../MessageMenuButton';
 
 import {styles} from './styles';
 
@@ -27,17 +28,19 @@ const hapticOptions = {
 
 interface AssistantTurnFooterProps {
   message: MessageType.Any;
+  isActiveRun?: boolean;
+  onMenuPress?: (event: GestureResponderEvent) => void;
 }
 
 export const AssistantTurnFooter: React.FC<AssistantTurnFooterProps> = observer(
-  ({message}) => {
+  ({message, isActiveRun, onMenuPress}) => {
     const theme = useTheme();
     const l10n = useContext(L10nContext);
     const {copyable, interrupted, truncationLikely, completionResult} =
       message.metadata || {};
     const timings: PersistedTurnTimings | undefined = message.metadata?.timings;
 
-    if (!timings && !copyable && !interrupted) {
+    if (isActiveRun && !timings && !copyable && !interrupted) {
       return null;
     }
 
@@ -97,6 +100,7 @@ export const AssistantTurnFooter: React.FC<AssistantTurnFooterProps> = observer(
       timingParts.push(t(l10n.components.bubble.ttft, {value: ttft}));
     }
     const fullTimingsString = timingParts.join(', ');
+    const showTimings = Boolean(timings && fullTimingsString);
 
     const draftTokens = finiteNumber(timings?.draft_tokens);
     const draftAccepted = finiteNumber(timings?.draft_tokens_accepted) ?? 0;
@@ -124,7 +128,12 @@ export const AssistantTurnFooter: React.FC<AssistantTurnFooterProps> = observer(
       <View style={componentStyles.container} testID="assistant-turn-footer">
         <PlayButton message={message} />
         {copyable && (
-          <TouchableOpacity onPress={copyToClipboard} testID="footer-copy">
+          <TouchableOpacity
+            onPress={copyToClipboard}
+            testID="footer-copy"
+            accessibilityRole="button"
+            accessibilityLabel={l10n.components.chatView.menuItems.copy}
+            style={componentStyles.copyButton}>
             <CopyIcon
               stroke={theme.colors.textSecondary}
               width={16}
@@ -132,25 +141,32 @@ export const AssistantTurnFooter: React.FC<AssistantTurnFooterProps> = observer(
             />
           </TouchableOpacity>
         )}
-        {timings && fullTimingsString ? (
-          <Text style={componentStyles.timing} testID="footer-timing">
-            {fullTimingsString}
-          </Text>
+        {showTimings || showDraft || interrupted ? (
+          <View style={componentStyles.textGroup} testID="footer-text-group">
+            {showTimings ? (
+              <Text style={componentStyles.timing} testID="footer-timing">
+                {fullTimingsString}
+              </Text>
+            ) : null}
+            {showDraft ? (
+              <Text
+                style={componentStyles.timing}
+                testID="message-draft-tokens">
+                {draftString}
+              </Text>
+            ) : null}
+            {interrupted ? (
+              <Text
+                style={componentStyles.interruptedStatus}
+                testID="footer-interrupted-status">
+                {truncationLikely && !suppressTruncated
+                  ? l10n.components.bubble.truncated
+                  : l10n.components.bubble.interrupted}
+              </Text>
+            ) : null}
+          </View>
         ) : null}
-        {showDraft ? (
-          <Text style={componentStyles.timing} testID="message-draft-tokens">
-            {draftString}
-          </Text>
-        ) : null}
-        {interrupted ? (
-          <Text
-            style={componentStyles.interruptedStatus}
-            testID="footer-interrupted-status">
-            {truncationLikely && !suppressTruncated
-              ? l10n.components.bubble.truncated
-              : l10n.components.bubble.interrupted}
-          </Text>
-        ) : null}
+        {!isActiveRun && <MessageMenuButton onPress={onMenuPress} />}
       </View>
     );
   },

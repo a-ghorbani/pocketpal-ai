@@ -60,10 +60,12 @@ export interface TextMessageProps extends TextMessageTopLevelProps {
    * Reasoning is rendered separately via ReasoningBlock.
    */
   step?: AgentStep;
+  isActiveRun?: boolean;
 }
 
 export const TextMessage = ({
   enableAnimation,
+  isActiveRun,
   message,
   messageWidth,
   onPreviewDataFetched,
@@ -277,7 +279,8 @@ export const TextMessage = ({
           <MarkdownView
             markdownText={visibleText.trim()}
             maxMessageWidth={messageWidth}
-            selectable={false}
+            selectable
+            streamingAnimation={isActiveRun === true && step?.partial === true}
           />
         </View>
       )}

@@ -2,6 +2,7 @@ import * as React from 'react';
 import {
   FlatList,
   FlatListProps,
+  GestureResponderEvent,
   Platform,
   StatusBar,
   View,
@@ -216,7 +217,6 @@ export const ChatView = observer(
     isStreaming = false,
     messages,
     onEndReached,
-    onMessageLongPress: externalOnMessageLongPress,
     onMessagePress,
     activePal,
     onPalSettingsSelect,
@@ -654,10 +654,9 @@ export const ChatView = observer(
       [disableImageGallery, handleImagePress, onMessagePress],
     );
 
-    const handleMessageLongPress = React.useCallback(
-      (message: MessageType.Any, event: any) => {
+    const openMessageMenu = React.useCallback(
+      (message: MessageType.Any, event: GestureResponderEvent) => {
         if (message.type !== 'text' && message.type !== 'assistant_turn') {
-          externalOnMessageLongPress?.(message);
           return;
         }
 
@@ -665,9 +664,8 @@ export const ChatView = observer(
         setMenuPosition({x: pageX, y: pageY});
         setSelectedMessage(message);
         setMenuVisible(true);
-        externalOnMessageLongPress?.(message);
       },
-      [externalOnMessageLongPress],
+      [],
     );
 
     const handleMenuDismiss = React.useCallback(() => {
@@ -703,8 +701,10 @@ export const ChatView = observer(
       const hasActiveModel = modelStore.activeModelId !== undefined;
       const models = modelStore.availableModels || [];
 
-      const baseItems: MenuItem[] = [
-        {
+      const baseItems: MenuItem[] = [];
+
+      if (isAuthor || !selectedMessage.metadata?.copyable) {
+        baseItems.push({
           label: copyLabel,
           onPress: () => {
             handleCopy(selectedMessage);
@@ -712,8 +712,8 @@ export const ChatView = observer(
           },
           icon: () => <CopyIcon stroke={theme.colors.primary} />,
           disabled: false,
-        },
-      ];
+        });
+      }
 
       if (!isAuthor) {
         baseItems.push({
@@ -885,7 +885,7 @@ export const ChatView = observer(
                   : false,
                 message,
                 messageWidth,
-                onMessageLongPress: handleMessageLongPress,
+                onMessageMenuPress: openMessageMenu,
                 onMessagePress: handleMessagePress,
                 onPreviewDataFetched,
                 renderBubble,
@@ -906,7 +906,7 @@ export const ChatView = observer(
       },
       [
         enableAnimation,
-        handleMessageLongPress,
+        openMessageMenu,
         handleMessagePress,
         onPreviewDataFetched,
         renderBubble,

@@ -1,8 +1,11 @@
 import React from 'react';
+import {StyleSheet} from 'react-native';
 import {runInAction} from 'mobx';
+import {Text} from 'react-native-paper';
 
-import {render, fireEvent} from '../../../../jest/test-utils';
+import {render, fireEvent, within} from '../../../../jest/test-utils';
 
+import {l10n} from '../../../locales';
 import {chatSessionStore} from '../../../store';
 
 import {AssistantTurnFooter} from '../AssistantTurnFooter';
@@ -22,15 +25,191 @@ const baseTurn = (overrides: Partial<any> = {}): any => ({
   ...overrides,
 });
 
+const footerChildIds = (footer: any): string[] =>
+  React.Children.toArray(footer.props.children)
+    .map((child: any) => child.props?.testID ?? child.type?.name)
+    .filter(Boolean);
+
 describe('AssistantTurnFooter', () => {
   beforeEach(() => {
     jest.clearAllMocks();
   });
 
-  it('renders nothing when neither timings nor copyable are set', () => {
+  it('renders nothing on the active row when neither timings nor copyable are set', () => {
     const message = baseTurn({metadata: {}});
-    const {queryByTestId} = render(<AssistantTurnFooter message={message} />);
+    const {queryByTestId} = render(
+      <AssistantTurnFooter message={message} isActiveRun />,
+    );
     expect(queryByTestId('assistant-turn-footer')).toBeNull();
+  });
+
+  describe('message menu button', () => {
+    it('renders a footer holding only the button on a finished row with no other part', () => {
+      const {getByTestId, queryByTestId} = render(
+        <AssistantTurnFooter message={baseTurn({metadata: {}})} />,
+      );
+      expect(getByTestId('assistant-turn-footer')).toBeTruthy();
+      expect(getByTestId('message-menu-button')).toBeTruthy();
+      expect(queryByTestId('footer-copy')).toBeNull();
+    });
+
+    it('renders on a system row without copyable', () => {
+      const system = baseTurn({
+        type: 'text',
+        text: 'Context is full',
+        metadata: {system: true},
+      });
+      const {getByTestId} = render(<AssistantTurnFooter message={system} />);
+      expect(getByTestId('message-menu-button')).toBeTruthy();
+    });
+
+    it('places the button after Copy', () => {
+      const {getByTestId} = render(
+        <AssistantTurnFooter
+          message={baseTurn({metadata: {copyable: true}})}
+        />,
+      );
+      const ids = footerChildIds(getByTestId('assistant-turn-footer'));
+      expect(ids.indexOf('footer-copy')).toBeLessThan(
+        ids.indexOf('MessageMenuButton'),
+      );
+      expect(ids[ids.length - 1]).toBe('MessageMenuButton');
+    });
+
+    it('keeps the button after a text group that shrinks and wraps', () => {
+      const message = baseTurn({
+        metadata: {
+          copyable: true,
+          interrupted: true,
+          timings: {
+            ...streamFinishChunk.timings,
+            time_to_first_token_ms: 150,
+            draft_tokens: 12,
+            draft_tokens_accepted: 9,
+          },
+          completionResult: {used: 0, contextFull: false, isRemote: true},
+        },
+      });
+      const {getByTestId, UNSAFE_getAllByType} = render(
+        <AssistantTurnFooter message={message} />,
+      );
+
+      const group = getByTestId('footer-text-group');
+      for (const id of [
+        'footer-timing',
+        'message-draft-tokens',
+        'footer-interrupted-status',
+      ]) {
+        expect(within(group).getByTestId(id)).toBeTruthy();
+      }
+      const groupStyle = StyleSheet.flatten(group.props.style);
+      expect(groupStyle).toMatchObject({
+        flexShrink: 1,
+        flexDirection: 'row',
+        flexWrap: 'wrap',
+      });
+      expect(groupStyle.flexGrow).toBeUndefined();
+      expect(groupStyle.flex).toBeUndefined();
+      for (const text of UNSAFE_getAllByType(Text)) {
+        expect(text.props.numberOfLines).toBeUndefined();
+      }
+
+      const ids = footerChildIds(getByTestId('assistant-turn-footer'));
+      expect(ids.slice(-3)).toEqual([
+        'footer-copy',
+        'footer-text-group',
+        'MessageMenuButton',
+      ]);
+      const buttonStyle = StyleSheet.flatten(
+        getByTestId('message-menu-button').props.style,
+      );
+      expect(buttonStyle.flexShrink).toBe(0);
+    });
+
+    it('renders no text group when the footer has no text', () => {
+      const {queryByTestId} = render(
+        <AssistantTurnFooter
+          message={baseTurn({metadata: {copyable: true}})}
+        />,
+      );
+      expect(queryByTestId('footer-text-group')).toBeNull();
+    });
+
+    it('gives Copy a labelled 44 dp box that keeps the line height', () => {
+      const {getByTestId} = render(
+        <AssistantTurnFooter
+          message={baseTurn({metadata: {copyable: true}})}
+        />,
+      );
+      const copy = getByTestId('footer-copy');
+      const style = StyleSheet.flatten(copy.props.style);
+
+      expect(copy.props.accessibilityRole).toBe('button');
+      expect(copy.props.accessibilityLabel).toBe(
+        l10n.en.components.chatView.menuItems.copy,
+      );
+      expect(style).toMatchObject({
+        minWidth: 44,
+        minHeight: 44,
+        marginVertical: -14,
+        flexShrink: 0,
+      });
+      expect(style.marginTop ?? style.marginVertical).toBe(-14);
+      expect(style.marginBottom ?? style.marginVertical).toBe(-14);
+      for (const key of [
+        'margin',
+        'marginHorizontal',
+        'marginLeft',
+        'marginRight',
+        'marginStart',
+        'marginEnd',
+      ] as const) {
+        expect(style[key] ?? 0).toBe(0);
+      }
+    });
+
+    it('starts the button box at the right edge of the Copy box', () => {
+      const {getByTestId} = render(
+        <AssistantTurnFooter
+          message={baseTurn({metadata: {copyable: true}})}
+        />,
+      );
+      const footerGap = StyleSheet.flatten(
+        getByTestId('assistant-turn-footer').props.style,
+      ).gap;
+      const buttonMarginLeft = StyleSheet.flatten(
+        getByTestId('message-menu-button').props.style,
+      ).marginLeft;
+
+      expect(
+        footerChildIds(getByTestId('assistant-turn-footer')).slice(-2),
+      ).toEqual(['footer-copy', 'MessageMenuButton']);
+      expect(Number(footerGap) + Number(buttonMarginLeft)).toBe(0);
+    });
+
+    it('is hidden on the active row while other parts still show', () => {
+      const {getByTestId, queryByTestId} = render(
+        <AssistantTurnFooter
+          message={baseTurn({metadata: {copyable: true}})}
+          isActiveRun
+        />,
+      );
+      expect(getByTestId('footer-copy')).toBeTruthy();
+      expect(queryByTestId('message-menu-button')).toBeNull();
+    });
+
+    it('forwards the press event', () => {
+      const onMenuPress = jest.fn();
+      const {getByTestId} = render(
+        <AssistantTurnFooter
+          message={baseTurn({metadata: {}})}
+          onMenuPress={onMenuPress}
+        />,
+      );
+      const event = {nativeEvent: {pageX: 3, pageY: 4}};
+      fireEvent.press(getByTestId('message-menu-button'), event);
+      expect(onMenuPress).toHaveBeenCalledWith(event);
+    });
   });
 
   it('renders timing line when timings present (no copy button if not copyable)', () => {

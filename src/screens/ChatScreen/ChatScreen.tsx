@@ -36,18 +36,15 @@ const renderBubble = ({
   child,
   message,
   nextMessageInGroup,
-  scale,
 }: {
   child: ReactNode;
   message: MessageType.Any;
   nextMessageInGroup: boolean;
-  scale?: any;
 }) => (
   <Bubble
     child={child}
     message={message}
     nextMessageInGroup={nextMessageInGroup}
-    scale={scale}
   />
 );
 

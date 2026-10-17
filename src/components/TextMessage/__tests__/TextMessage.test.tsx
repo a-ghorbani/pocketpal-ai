@@ -112,6 +112,24 @@ describe('text message', () => {
     expect(queryByText(/web_search/)).toBeNull();
   });
 
+  it('renders a message without a step selectable and never animated', () => {
+    const {EnrichedMarkdownText} = require('react-native-enriched-markdown');
+    (EnrichedMarkdownText as jest.Mock).mockClear();
+    renderWithProviders(
+      <TextMessage
+        message={{...derivedTextMessage, text: 'Hi'}}
+        messageWidth={440}
+        showName={false}
+        usePreviewData={false}
+        isActiveRun
+      />,
+    );
+
+    expect((EnrichedMarkdownText as jest.Mock).mock.calls[0][0]).toEqual(
+      expect.objectContaining({selectable: true, streamingAnimation: false}),
+    );
+  });
+
   it('renders call-shaped JSON in a message without a step', () => {
     const echo = '{"name": "web_search", "arguments": {"query": "Firecrawl"}}';
     const {queryByText} = renderWithProviders(
