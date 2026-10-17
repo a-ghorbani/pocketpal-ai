@@ -24,17 +24,13 @@ export type CustomRenderOptions = {
   withBottomSheetProvider?: boolean;
 };
 
-const customRender = (
-  ui: React.ReactElement,
-  {
-    theme = themeFixtures.lightTheme,
-    user = userFixture,
-    withNavigation = false,
-    withSafeArea = false,
-    withBottomSheetProvider = false,
-    ...renderOptions
-  }: CustomRenderOptions = {},
-) => {
+export const createWrapper = ({
+  theme = themeFixtures.lightTheme,
+  user = userFixture,
+  withNavigation = false,
+  withSafeArea = false,
+  withBottomSheetProvider = false,
+}: CustomRenderOptions = {}) => {
   const Wrapper = ({children}: {children: React.ReactNode}) => {
     const withBottomSheetProviderWrapper = withBottomSheetProvider ? (
       <BottomSheetModalProvider>{children}</BottomSheetModalProvider>
@@ -80,8 +76,30 @@ const customRender = (
     );
   };
 
-  return render(ui, {wrapper: Wrapper, ...renderOptions});
+  return Wrapper;
 };
+
+const customRender = (
+  ui: React.ReactElement,
+  {
+    theme,
+    user,
+    withNavigation,
+    withSafeArea,
+    withBottomSheetProvider,
+    ...renderOptions
+  }: CustomRenderOptions = {},
+) =>
+  render(ui, {
+    wrapper: createWrapper({
+      theme,
+      user,
+      withNavigation,
+      withSafeArea,
+      withBottomSheetProvider,
+    }),
+    ...renderOptions,
+  });
 
 const styles = StyleSheet.create({
   root: {

@@ -1,0 +1,781 @@
+{
+  "metadata": {
+    "current": {
+      "branch": "head",
+      "commitHash": "222e88140c54035b7f244490b4f303c50227c01f",
+      "creationDate": "2026-10-17T16:20:56.351Z"
+    },
+    "baseline": {
+      "branch": "main",
+      "commitHash": "222e88140c54035b7f244490b4f303c50227c01f",
+      "creationDate": "2026-10-17T16:19:54.696Z"
+    }
+  },
+  "errors": [],
+  "warnings": [],
+  "significant": [
+    {
+      "name": "ModelsScreen render performance filters the list to downloaded models",
+      "type": "render",
+      "baseline": {
+        "name": "ModelsScreen render performance filters the list to downloaded models",
+        "type": "render",
+        "runs": 3,
+        "meanDuration": 185.10866049975448,
+        "stdevDuration": 2.188425483946632,
+        "durations": [
+          186.6561109995746,
+          183.56120999993436
+        ],
+        "warmupDurations": [
+          305.31341100014106
+        ],
+        "outlierDurations": [
+          78.43628600000375
+        ],
+        "meanCount": 6,
+        "stdevCount": 0,
+        "counts": [
+          6,
+          6,
+          6
+        ],
+        "issues": {
+          "initialUpdateCount": 0,
+          "redundantUpdates": [
+            4,
+            5
+          ]
+        }
+      },
+      "current": {
+        "name": "ModelsScreen render performance filters the list to downloaded models",
+        "type": "render",
+        "runs": 3,
+        "meanDuration": 210.6530283334129,
+        "stdevDuration": 11.40909288328449,
+        "durations": [
+          210.9323050000712,
+          199.10686100012026,
+          221.91991900004723
+        ],
+        "warmupDurations": [
+          79.4839549999524
+        ],
+        "outlierDurations": [],
+        "meanCount": 6,
+        "stdevCount": 0,
+        "counts": [
+          6,
+          6,
+          6
+        ],
+        "issues": {
+          "initialUpdateCount": 0,
+          "redundantUpdates": [
+            4,
+            5
+          ]
+        }
+      },
+      "stability": {
+        "current": 0.05416059276976854,
+        "baseline": 0.4119442760575552
+      },
+      "durationDiff": 25.544367833658413,
+      "relativeDurationDiff": 0.1379966110969308,
+      "isDurationDiffSignificant": true,
+      "countDiff": 0,
+      "relativeCountDiff": 0
+    },
+    {
+      "name": "Sheet render performance opens and closes from the owner state",
+      "type": "render",
+      "baseline": {
+        "name": "Sheet render performance opens and closes from the owner state",
+        "type": "render",
+        "runs": 3,
+        "meanDuration": 4.457478333376154,
+        "stdevDuration": 0.14354311365243574,
+        "durations": [
+          4.365628000050492,
+          4.622891000130039,
+          4.383915999947931
+        ],
+        "warmupDurations": [
+          4.48256999997102
+        ],
+        "outlierDurations": [],
+        "meanCount": 3,
+        "stdevCount": 0,
+        "counts": [
+          3,
+          3,
+          3
+        ],
+        "issues": {
+          "initialUpdateCount": 0,
+          "redundantUpdates": [
+            1,
+            2
+          ]
+        }
+      },
+      "current": {
+        "name": "Sheet render performance opens and closes from the owner state",
+        "type": "render",
+        "runs": 3,
+        "meanDuration": 12.78621100001692,
+        "stdevDuration": 0.05882138467652007,
+        "durations": [
+          12.82780400000047,
+          12.74461800003337
+        ],
+        "warmupDurations": [
+          19.175137000005634
+        ],
+        "outlierDurations": [
+          5.541464999994787
+        ],
+        "meanCount": 3,
+        "stdevCount": 0,
+        "counts": [
+          3,
+          3,
+          3
+        ],
+        "issues": {
+          "initialUpdateCount": 0,
+          "redundantUpdates": [
+            1,
+            2
+          ]
+        }
+      },
+      "stability": {
+        "current": 0.40332114534402375,
+        "baseline": 0.032202761946733736
+      },
+      "durationDiff": 8.328732666640764,
+      "relativeDurationDiff": 1.868485283322167,
+      "isDurationDiffSignificant": true,
+      "countDiff": 0,
+      "relativeCountDiff": 0
+    },
+    {
+      "name": "ChatPalModelPickerSheet render performance opens and closes from the owner state",
+      "type": "render",
+      "baseline": {
+        "name": "ChatPalModelPickerSheet render performance opens and closes from the owner state",
+        "type": "render",
+        "runs": 3,
+        "meanDuration": 4.818993499993667,
+        "stdevDuration": 0.11013824514706627,
+        "durations": [
+          4.896873000005144,
+          4.74111399998219
+        ],
+        "warmupDurations": [
+          5.333637999952771
+        ],
+        "outlierDurations": [
+          8.03031399998872
+        ],
+        "meanCount": 3,
+        "stdevCount": 0,
+        "counts": [
+          3,
+          3,
+          3
+        ],
+        "issues": {
+          "initialUpdateCount": 0,
+          "redundantUpdates": []
+        }
+      },
+      "current": {
+        "name": "ChatPalModelPickerSheet render performance opens and closes from the owner state",
+        "type": "render",
+        "runs": 3,
+        "meanDuration": 1.4495379999571014,
+        "stdevDuration": 0.10448209806518055,
+        "durations": [
+          1.5234180000115884,
+          1.3756579999026144
+        ],
+        "warmupDurations": [
+          2.102647000021534
+        ],
+        "outlierDurations": [
+          4.494302000013704
+        ],
+        "meanCount": 3,
+        "stdevCount": 0,
+        "counts": [
+          3,
+          3,
+          3
+        ],
+        "issues": {
+          "initialUpdateCount": 0,
+          "redundantUpdates": []
+        }
+      },
+      "stability": {
+        "current": 0.7139282451641455,
+        "baseline": 0.3150883090401475
+      },
+      "durationDiff": -3.3694555000365654,
+      "relativeDurationDiff": -0.6992031634906737,
+      "isDurationDiffSignificant": true,
+      "countDiff": 0,
+      "relativeCountDiff": 0
+    },
+    {
+      "name": "ChatView render performance streams tokens into the newest assistant turn",
+      "type": "render",
+      "baseline": {
+        "name": "ChatView render performance streams tokens into the newest assistant turn",
+        "type": "render",
+        "runs": 3,
+        "meanDuration": 295.05562966673705,
+        "stdevDuration": 90.4123093334138,
+        "durations": [
+          191.3666110002123,
+          357.4275430000707,
+          336.37273499992807
+        ],
+        "warmupDurations": [
+          552.7696069998456
+        ],
+        "outlierDurations": [],
+        "meanCount": 23,
+        "stdevCount": 0,
+        "counts": [
+          23,
+          23,
+          23
+        ],
+        "issues": {
+          "initialUpdateCount": 1,
+          "redundantUpdates": []
+        }
+      },
+      "current": {
+        "name": "ChatView render performance streams tokens into the newest assistant turn",
+        "type": "render",
+        "runs": 3,
+        "meanDuration": 85.32617099999788,
+        "stdevDuration": 2.6020341608013937,
+        "durations": [
+          83.48625500001617,
+          87.1660869999796
+        ],
+        "warmupDurations": [
+          290.26571799997873
+        ],
+        "outlierDurations": [
+          437.83608600004845
+        ],
+        "meanCount": 23,
+        "stdevCount": 0,
+        "counts": [
+          23,
+          23,
+          23
+        ],
+        "issues": {
+          "initialUpdateCount": 1,
+          "redundantUpdates": []
+        }
+      },
+      "stability": {
+        "current": 1.0034538122494674,
+        "baseline": 0.3064246204538913
+      },
+      "durationDiff": -209.72945866673916,
+      "relativeDurationDiff": -0.710813275800319,
+      "isDurationDiffSignificant": true,
+      "countDiff": 0,
+      "relativeCountDiff": 0
+    },
+    {
+      "name": "ChatView render performance types into the chat input",
+      "type": "render",
+      "baseline": {
+        "name": "ChatView render performance types into the chat input",
+        "type": "render",
+        "runs": 3,
+        "meanDuration": 717.43164066681,
+        "stdevDuration": 59.235247826727324,
+        "durations": [
+          766.1092780000909,
+          734.7062849999129,
+          651.4793590004265
+        ],
+        "warmupDurations": [
+          1072.4218529999052
+        ],
+        "outlierDurations": [],
+        "meanCount": 23,
+        "stdevCount": 0,
+        "counts": [
+          23,
+          23,
+          23
+        ],
+        "issues": {
+          "initialUpdateCount": 1,
+          "redundantUpdates": [
+            4,
+            6,
+            8,
+            10,
+            12,
+            14,
+            16,
+            18,
+            20,
+            22
+          ]
+        }
+      },
+      "current": {
+        "name": "ChatView render performance types into the chat input",
+        "type": "render",
+        "runs": 3,
+        "meanDuration": 134.91702800005078,
+        "stdevDuration": 4.651897121524236,
+        "durations": [
+          131.6276400000388,
+          138.20641600006275
+        ],
+        "warmupDurations": [
+          470.48863300001904
+        ],
+        "outlierDurations": [
+          424.53069599995433
+        ],
+        "meanCount": 23,
+        "stdevCount": 0,
+        "counts": [
+          23,
+          23,
+          23
+        ],
+        "issues": {
+          "initialUpdateCount": 1,
+          "redundantUpdates": [
+            4,
+            6,
+            8,
+            10,
+            12,
+            14,
+            16,
+            18,
+            20,
+            22
+          ]
+        }
+      },
+      "stability": {
+        "current": 0.7225635255719901,
+        "baseline": 0.08256570308450807
+      },
+      "durationDiff": -582.5146126667593,
+      "relativeDurationDiff": -0.8119444134431353,
+      "isDurationDiffSignificant": true,
+      "countDiff": 0,
+      "relativeCountDiff": 0
+    }
+  ],
+  "meaningless": [
+    {
+      "name": "SettingsScreen render performance expands the advanced settings",
+      "type": "render",
+      "baseline": {
+        "name": "SettingsScreen render performance expands the advanced settings",
+        "type": "render",
+        "runs": 3,
+        "meanDuration": 426.29097100013314,
+        "stdevDuration": 213.76323941165947,
+        "durations": [
+          417.25048400025116,
+          217.19140099985088,
+          644.4310280002974
+        ],
+        "warmupDurations": [
+          432.9779009999147
+        ],
+        "outlierDurations": [],
+        "meanCount": 4,
+        "stdevCount": 0,
+        "counts": [
+          4,
+          4,
+          4
+        ],
+        "issues": {
+          "initialUpdateCount": 0,
+          "redundantUpdates": []
+        }
+      },
+      "current": {
+        "name": "SettingsScreen render performance expands the advanced settings",
+        "type": "render",
+        "runs": 3,
+        "meanDuration": 179.3939173332874,
+        "stdevDuration": 81.22458427561519,
+        "durations": [
+          198.00905500007866,
+          90.47767699997712,
+          249.6950199998064
+        ],
+        "warmupDurations": [
+          218.50437200010492
+        ],
+        "outlierDurations": [],
+        "meanCount": 4,
+        "stdevCount": 0,
+        "counts": [
+          4,
+          4,
+          4
+        ],
+        "issues": {
+          "initialUpdateCount": 0,
+          "redundantUpdates": []
+        }
+      },
+      "stability": {
+        "current": 0.4527722315395561,
+        "baseline": 0.5014491367484128
+      },
+      "durationDiff": -246.89705366684575,
+      "relativeDurationDiff": -0.5791749543453705,
+      "isDurationDiffSignificant": false,
+      "countDiff": 0,
+      "relativeCountDiff": 0
+    }
+  ],
+  "countChanged": [],
+  "renderIssues": [
+    {
+      "name": "ChatView render performance streams tokens into the newest assistant turn",
+      "type": "render",
+      "baseline": {
+        "name": "ChatView render performance streams tokens into the newest assistant turn",
+        "type": "render",
+        "runs": 3,
+        "meanDuration": 295.05562966673705,
+        "stdevDuration": 90.4123093334138,
+        "durations": [
+          191.3666110002123,
+          357.4275430000707,
+          336.37273499992807
+        ],
+        "warmupDurations": [
+          552.7696069998456
+        ],
+        "outlierDurations": [],
+        "meanCount": 23,
+        "stdevCount": 0,
+        "counts": [
+          23,
+          23,
+          23
+        ],
+        "issues": {
+          "initialUpdateCount": 1,
+          "redundantUpdates": []
+        }
+      },
+      "current": {
+        "name": "ChatView render performance streams tokens into the newest assistant turn",
+        "type": "render",
+        "runs": 3,
+        "meanDuration": 85.32617099999788,
+        "stdevDuration": 2.6020341608013937,
+        "durations": [
+          83.48625500001617,
+          87.1660869999796
+        ],
+        "warmupDurations": [
+          290.26571799997873
+        ],
+        "outlierDurations": [
+          437.83608600004845
+        ],
+        "meanCount": 23,
+        "stdevCount": 0,
+        "counts": [
+          23,
+          23,
+          23
+        ],
+        "issues": {
+          "initialUpdateCount": 1,
+          "redundantUpdates": []
+        }
+      },
+      "stability": {
+        "current": 1.0034538122494674,
+        "baseline": 0.3064246204538913
+      },
+      "durationDiff": -209.72945866673916,
+      "relativeDurationDiff": -0.710813275800319,
+      "isDurationDiffSignificant": true,
+      "countDiff": 0,
+      "relativeCountDiff": 0
+    },
+    {
+      "name": "ChatView render performance types into the chat input",
+      "type": "render",
+      "baseline": {
+        "name": "ChatView render performance types into the chat input",
+        "type": "render",
+        "runs": 3,
+        "meanDuration": 717.43164066681,
+        "stdevDuration": 59.235247826727324,
+        "durations": [
+          766.1092780000909,
+          734.7062849999129,
+          651.4793590004265
+        ],
+        "warmupDurations": [
+          1072.4218529999052
+        ],
+        "outlierDurations": [],
+        "meanCount": 23,
+        "stdevCount": 0,
+        "counts": [
+          23,
+          23,
+          23
+        ],
+        "issues": {
+          "initialUpdateCount": 1,
+          "redundantUpdates": [
+            4,
+            6,
+            8,
+            10,
+            12,
+            14,
+            16,
+            18,
+            20,
+            22
+          ]
+        }
+      },
+      "current": {
+        "name": "ChatView render performance types into the chat input",
+        "type": "render",
+        "runs": 3,
+        "meanDuration": 134.91702800005078,
+        "stdevDuration": 4.651897121524236,
+        "durations": [
+          131.6276400000388,
+          138.20641600006275
+        ],
+        "warmupDurations": [
+          470.48863300001904
+        ],
+        "outlierDurations": [
+          424.53069599995433
+        ],
+        "meanCount": 23,
+        "stdevCount": 0,
+        "counts": [
+          23,
+          23,
+          23
+        ],
+        "issues": {
+          "initialUpdateCount": 1,
+          "redundantUpdates": [
+            4,
+            6,
+            8,
+            10,
+            12,
+            14,
+            16,
+            18,
+            20,
+            22
+          ]
+        }
+      },
+      "stability": {
+        "current": 0.7225635255719901,
+        "baseline": 0.08256570308450807
+      },
+      "durationDiff": -582.5146126667593,
+      "relativeDurationDiff": -0.8119444134431353,
+      "isDurationDiffSignificant": true,
+      "countDiff": 0,
+      "relativeCountDiff": 0
+    },
+    {
+      "name": "ModelsScreen render performance filters the list to downloaded models",
+      "type": "render",
+      "baseline": {
+        "name": "ModelsScreen render performance filters the list to downloaded models",
+        "type": "render",
+        "runs": 3,
+        "meanDuration": 185.10866049975448,
+        "stdevDuration": 2.188425483946632,
+        "durations": [
+          186.6561109995746,
+          183.56120999993436
+        ],
+        "warmupDurations": [
+          305.31341100014106
+        ],
+        "outlierDurations": [
+          78.43628600000375
+        ],
+        "meanCount": 6,
+        "stdevCount": 0,
+        "counts": [
+          6,
+          6,
+          6
+        ],
+        "issues": {
+          "initialUpdateCount": 0,
+          "redundantUpdates": [
+            4,
+            5
+          ]
+        }
+      },
+      "current": {
+        "name": "ModelsScreen render performance filters the list to downloaded models",
+        "type": "render",
+        "runs": 3,
+        "meanDuration": 210.6530283334129,
+        "stdevDuration": 11.40909288328449,
+        "durations": [
+          210.9323050000712,
+          199.10686100012026,
+          221.91991900004723
+        ],
+        "warmupDurations": [
+          79.4839549999524
+        ],
+        "outlierDurations": [],
+        "meanCount": 6,
+        "stdevCount": 0,
+        "counts": [
+          6,
+          6,
+          6
+        ],
+        "issues": {
+          "initialUpdateCount": 0,
+          "redundantUpdates": [
+            4,
+            5
+          ]
+        }
+      },
+      "stability": {
+        "current": 0.05416059276976854,
+        "baseline": 0.4119442760575552
+      },
+      "durationDiff": 25.544367833658413,
+      "relativeDurationDiff": 0.1379966110969308,
+      "isDurationDiffSignificant": true,
+      "countDiff": 0,
+      "relativeCountDiff": 0
+    },
+    {
+      "name": "Sheet render performance opens and closes from the owner state",
+      "type": "render",
+      "baseline": {
+        "name": "Sheet render performance opens and closes from the owner state",
+        "type": "render",
+        "runs": 3,
+        "meanDuration": 4.457478333376154,
+        "stdevDuration": 0.14354311365243574,
+        "durations": [
+          4.365628000050492,
+          4.622891000130039,
+          4.383915999947931
+        ],
+        "warmupDurations": [
+          4.48256999997102
+        ],
+        "outlierDurations": [],
+        "meanCount": 3,
+        "stdevCount": 0,
+        "counts": [
+          3,
+          3,
+          3
+        ],
+        "issues": {
+          "initialUpdateCount": 0,
+          "redundantUpdates": [
+            1,
+            2
+          ]
+        }
+      },
+      "current": {
+        "name": "Sheet render performance opens and closes from the owner state",
+        "type": "render",
+        "runs": 3,
+        "meanDuration": 12.78621100001692,
+        "stdevDuration": 0.05882138467652007,
+        "durations": [
+          12.82780400000047,
+          12.74461800003337
+        ],
+        "warmupDurations": [
+          19.175137000005634
+        ],
+        "outlierDurations": [
+          5.541464999994787
+        ],
+        "meanCount": 3,
+        "stdevCount": 0,
+        "counts": [
+          3,
+          3,
+          3
+        ],
+        "issues": {
+          "initialUpdateCount": 0,
+          "redundantUpdates": [
+            1,
+            2
+          ]
+        }
+      },
+      "stability": {
+        "current": 0.40332114534402375,
+        "baseline": 0.032202761946733736
+      },
+      "durationDiff": 8.328732666640764,
+      "relativeDurationDiff": 1.868485283322167,
+      "isDurationDiffSignificant": true,
+      "countDiff": 0,
+      "relativeCountDiff": 0
+    }
+  ],
+  "added": [],
+  "removed": [],
+  "stability": {
+    "current": {
+      "weightedAverage": 0.5606371565544362
+    },
+    "baseline": {
+      "weightedAverage": 0.2671064669504229
+    }
+  }
+}
