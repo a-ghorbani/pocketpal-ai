@@ -135,6 +135,7 @@
       "keyLabel": "API key",
       "keyIsSet": "Key is set for {{provider}}.",
       "keyNotSet": "No key set for {{provider}}.",
+      "keyOptional": "No key needed for {{provider}}. Add one for higher limits.",
       "setKeyButton": "Set Key",
       "updateKeyButton": "Update Key",
       "clearKeyButton": "Clear Key",

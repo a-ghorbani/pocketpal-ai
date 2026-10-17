@@ -5,6 +5,7 @@ import {BraveProvider} from './providers/brave';
 import {ExaProvider} from './providers/exa';
 import {FirecrawlProvider} from './providers/firecrawl';
 import {ParallelProvider} from './providers/parallel';
+import {YouProvider} from './providers/you';
 
 export type {
   SearchProvider,
@@ -38,6 +39,8 @@ export const createSearchProvider = (
       return new FirecrawlProvider(getKey);
     case 'parallel':
       return new ParallelProvider(getKey);
+    case 'you':
+      return new YouProvider(getKey);
   }
 };
 

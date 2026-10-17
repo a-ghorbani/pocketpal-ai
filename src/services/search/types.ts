@@ -5,7 +5,8 @@ export type SearchProviderId =
   | 'brave'
   | 'exa'
   | 'firecrawl'
-  | 'parallel';
+  | 'parallel'
+  | 'you';
 
 export interface SearchHit {
   title: string;
