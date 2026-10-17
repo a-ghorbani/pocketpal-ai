@@ -38,23 +38,57 @@ describe('Menu', () => {
     expect(groupSeparators).toHaveLength(1);
   });
 
-  it('passes statusBarHeight to PaperMenu', () => {
-    (useSafeAreaInsets as jest.Mock).mockReturnValue({
-      top: 59,
-      right: 0,
-      bottom: 34,
-      left: 0,
+  describe('statusBarHeight passed to PaperMenu', () => {
+    const {Platform, TurboModuleRegistry} = require('react-native');
+    const originalOS = Platform.OS;
+
+    const renderedStatusBarHeight = ({
+      os,
+      isEdgeToEdge,
+    }: {
+      os: 'ios' | 'android';
+      isEdgeToEdge?: boolean;
+    }) => {
+      Platform.OS = os;
+      jest
+        .spyOn(TurboModuleRegistry, 'get')
+        .mockReturnValue({getConstants: () => ({isEdgeToEdge})});
+      (useSafeAreaInsets as jest.Mock).mockReturnValue({
+        top: 59,
+        right: 0,
+        bottom: 34,
+        left: 0,
+      });
+
+      const PaperMenu = require('react-native-paper').Menu;
+      const {UNSAFE_getByType} = render(
+        <Menu visible={true} onDismiss={() => {}} anchor={undefined}>
+          <Menu.Item label="Item 1" onPress={() => {}} />
+        </Menu>,
+      );
+      return UNSAFE_getByType(PaperMenu).props.statusBarHeight;
+    };
+
+    afterEach(() => {
+      Platform.OS = originalOS;
+      jest.restoreAllMocks();
     });
 
-    const PaperMenu = require('react-native-paper').Menu;
-    const {UNSAFE_getByType} = render(
-      <Menu visible={true} onDismiss={() => {}} anchor={undefined}>
-        <Menu.Item label="Item 1" onPress={() => {}} />
-      </Menu>,
-    );
+    it('is 0 on Android when RN measures in edge-to-edge window coordinates', () => {
+      expect(renderedStatusBarHeight({os: 'android', isEdgeToEdge: true})).toBe(
+        0,
+      );
+    });
 
-    const paperMenuInstance = UNSAFE_getByType(PaperMenu);
-    expect(paperMenuInstance.props.statusBarHeight).toBe(59);
+    it('is the top inset on Android without edge-to-edge', () => {
+      expect(
+        renderedStatusBarHeight({os: 'android', isEdgeToEdge: false}),
+      ).toBe(59);
+    });
+
+    it('is the top inset on iOS, where Paper ignores it', () => {
+      expect(renderedStatusBarHeight({os: 'ios', isEdgeToEdge: true})).toBe(59);
+    });
   });
 
   it('does not render when visible is true but has no children', () => {
