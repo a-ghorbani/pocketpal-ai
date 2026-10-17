@@ -47,6 +47,40 @@ it('renders hydration splash while UIStore is not hydrated', () => {
   expect(result.queryByText('PocketPal')).toBeNull();
 });
 
+describe('navigation bar appearance', () => {
+  const NativeNavigationBar =
+    require('../src/specs/NativeNavigationBar').default;
+  const {uiStore} = require('../src/store');
+
+  beforeEach(() => {
+    NativeNavigationBar.setNavigationBarDark.mockClear();
+  });
+
+  afterEach(() => {
+    uiStore.colorScheme = 'light';
+  });
+
+  it('does not set the navigation bar before hydration', () => {
+    __setHydrated(false);
+    render(<App />);
+
+    expect(NativeNavigationBar.setNavigationBarDark).not.toHaveBeenCalled();
+  });
+
+  it('sets the navigation bar from the hydrated app scheme', () => {
+    uiStore.colorScheme = 'dark';
+    __setHydrated(false);
+    render(<App />);
+
+    act(() => {
+      __setHydrated(true);
+    });
+
+    expect(NativeNavigationBar.setNavigationBarDark).toHaveBeenCalledTimes(1);
+    expect(NativeNavigationBar.setNavigationBarDark).toHaveBeenCalledWith(true);
+  });
+});
+
 it('mounts the app once UIStore hydration completes', () => {
   // Pending hydration: splash mounts, nothing below.
   __setHydrated(false);
