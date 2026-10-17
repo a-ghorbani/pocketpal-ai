@@ -12,12 +12,13 @@ interface ReasoningBlockProps {
    * lifetime — see ThinkingBubble's `userToggledRef`.
    */
   autoCollapse?: boolean;
+  streamingAnimation?: boolean;
 }
 
 const isEmpty = (s: string) => !s || s.trim() === '';
 
 export const ReasoningBlock: React.FC<ReasoningBlockProps> = React.memo(
-  ({text, maxWidth, autoCollapse}) => {
+  ({text, maxWidth, autoCollapse, streamingAnimation}) => {
     if (isEmpty(text)) {
       return null;
     }
@@ -28,6 +29,7 @@ export const ReasoningBlock: React.FC<ReasoningBlockProps> = React.memo(
           markdownText={text}
           maxMessageWidth={maxWidth}
           selectable={false}
+          streamingAnimation={streamingAnimation}
           variant="reasoning"
         />
       </ThinkingBubble>
@@ -36,5 +38,6 @@ export const ReasoningBlock: React.FC<ReasoningBlockProps> = React.memo(
   (prev, next) =>
     prev.text === next.text &&
     prev.maxWidth === next.maxWidth &&
-    prev.autoCollapse === next.autoCollapse,
+    prev.autoCollapse === next.autoCollapse &&
+    prev.streamingAnimation === next.streamingAnimation,
 );

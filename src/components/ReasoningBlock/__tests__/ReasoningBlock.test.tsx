@@ -44,6 +44,28 @@ describe('ReasoningBlock', () => {
     expect(spy.mock.calls.length).toBeGreaterThan(calls);
   });
 
+  it('forwards streamingAnimation to the markdown view', () => {
+    render(<ReasoningBlock text="a" maxWidth={300} streamingAnimation />);
+
+    expect(spy.mock.calls[0][0].streamingAnimation).toBe(true);
+  });
+
+  it('re-renders when only streamingAnimation changes', () => {
+    const {rerender} = render(
+      <ReasoningBlock text="a" maxWidth={300} streamingAnimation />,
+    );
+    const calls = spy.mock.calls.length;
+
+    rerender(
+      <ReasoningBlock text="a" maxWidth={300} streamingAnimation={false} />,
+    );
+
+    expect(spy.mock.calls.length).toBeGreaterThan(calls);
+    expect(
+      spy.mock.calls[spy.mock.calls.length - 1][0].streamingAnimation,
+    ).toBe(false);
+  });
+
   it.each(['', '  \n'])('renders nothing for empty reasoning %j', text => {
     const {queryByTestId} = render(
       <ReasoningBlock text={text} maxWidth={300} />,

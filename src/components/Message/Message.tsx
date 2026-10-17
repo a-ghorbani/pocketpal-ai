@@ -25,12 +25,6 @@ import {excludeDerivedMessageProps, UserContext} from '../../utils';
 import {visibleStepContent} from '../../utils/chat';
 
 export interface MessageTopLevelProps extends TextMessageTopLevelProps {
-  /**
-   * True if THIS row is the active agent run. Computed once at the
-   * ChatView level (last message AND `agentUiState.status` is in the
-   * active set) and threaded through. Used by the AssistantTurn
-   * renderer to drive per-talent pending UI.
-   */
   isActiveRun?: boolean;
   /**
    * Active-run pending talent names (from `agentUiState.pendingTalentNames`).
@@ -297,6 +291,7 @@ export const Message = observer(
         keySuffix: string,
         text: string,
         autoCollapse: boolean,
+        streamingAnimation: boolean,
       ) => (
         <View
           key={keySuffix}
@@ -306,6 +301,7 @@ export const Message = observer(
             text={text}
             maxWidth={messageWidth}
             autoCollapse={autoCollapse}
+            streamingAnimation={streamingAnimation}
           />
         </View>
       );
@@ -326,11 +322,14 @@ export const Message = observer(
           // is streaming, the bubble stays expanded so the user sees
           // thoughts live.
           const autoCollapseReasoning = hasContent || step.partial === false;
+          const liveReasoning =
+            isActiveRun === true && step.partial === true && !hasContent;
           blocks.push(
             wrapReasoningBlock(
               `step-${stepIdx}-reasoning`,
               step.reasoningContent as string,
               autoCollapseReasoning,
+              liveReasoning,
             ),
           );
           isFirstBlock = false;
