@@ -2881,3 +2881,23 @@ describe('chatSessionStore', () => {
     });
   });
 });
+
+describe('chatSessionStore launch sweep', () => {
+  it('sweeps orphan documents against the referenced ids after loading', async () => {
+    const store = require('../../services/documents/store');
+    const sweep = jest
+      .spyOn(store, 'sweepOrphanDocuments')
+      .mockResolvedValue(undefined);
+    const referenced = jest
+      .spyOn(chatSessionRepository, 'getReferencedDocumentIds')
+      .mockResolvedValue(new Set(['kept']));
+
+    await chatSessionStore.initialize();
+
+    expect(sweep).toHaveBeenCalledTimes(1);
+    const getReferenced = sweep.mock.calls[0][0] as () => Promise<Set<string>>;
+    expect(await getReferenced()).toEqual(new Set(['kept']));
+    expect(referenced).toHaveBeenCalled();
+    sweep.mockRestore();
+  });
+});

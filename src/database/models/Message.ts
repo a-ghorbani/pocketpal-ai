@@ -35,6 +35,7 @@ export default class Message extends Model {
         metadata: rawMetadata,
         // Extract imageUris from metadata if present
         imageUris: rawMetadata.imageUris,
+        documents: rawMetadata.documents,
       } as MessageType.Text;
     }
 

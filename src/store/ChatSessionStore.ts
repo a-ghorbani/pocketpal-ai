@@ -19,6 +19,7 @@ import {derivedText} from '../utils/chat';
 import {palStore} from './PalStore';
 import {deriveToolSchemas} from '../services/talents';
 import {AgentUiState, initialAgentUiState} from '../services/agent';
+import {sweepOrphanDocuments} from '../services/documents/store';
 
 /**
  * Update payload accepted by `updateMessage` / `updateMessageStreaming`.
@@ -159,6 +160,11 @@ class ChatSessionStore {
       // Load data from database (whether migration happened or not)
       await this.loadSessionList();
       await this.loadGlobalSettings();
+      sweepOrphanDocuments(() =>
+        chatSessionRepository.getReferencedDocumentIds(),
+      ).catch(error =>
+        console.warn('Failed to sweep orphan documents:', error),
+      );
     } catch (error) {
       console.error('Failed to initialize ChatSessionStore:', error);
       runInAction(() => {

@@ -12,6 +12,7 @@ import {
 import {SessionMetaData} from '../store/ChatSessionStore';
 
 import {MessageType} from '../utils/types';
+import {releaseDocuments} from '../services/documents/store';
 import {CompletionParams} from '../utils/completionTypes';
 import {
   defaultCompletionParams,
@@ -22,6 +23,17 @@ import {
 const defaultCompletionSettings = {...defaultCompletionParams};
 delete defaultCompletionSettings.prompt;
 delete defaultCompletionSettings.stop;
+
+const documentIdsOf = (message: unknown): string[] => {
+  try {
+    const metadata = JSON.parse((message as Message).metadata || '{}');
+    return Array.isArray(metadata.documents)
+      ? metadata.documents.map((ref: {id: string}) => ref.id)
+      : [];
+  } catch {
+    return [];
+  }
+};
 
 class ChatSessionRepository {
   // Check if we need to migrate from JSON files
@@ -299,6 +311,9 @@ class ChatSessionRepository {
         if (msg.type === 'text' && msg.imageUris) {
           metadata.imageUris = msg.imageUris;
         }
+        if (msg.type === 'text' && msg.documents) {
+          metadata.documents = msg.documents;
+        }
         if (msg.type === 'assistant_turn') {
           metadata.steps = (msg as MessageType.AssistantTurn).steps ?? [];
         }
@@ -332,6 +347,7 @@ class ChatSessionRepository {
       return;
     }
 
+    const documentIds: string[] = [];
     await database.write(async () => {
       // Delete associated messages
       const messages = await database.collections
@@ -340,6 +356,7 @@ class ChatSessionRepository {
         .fetch();
 
       for (const message of messages) {
+        documentIds.push(...documentIdsOf(message));
         await message.destroyPermanently();
       }
 
@@ -356,6 +373,7 @@ class ChatSessionRepository {
       // Delete the session itself
       await session.destroyPermanently();
     });
+    this.releaseDocumentsOf(documentIds);
   }
 
   // Delete multiple sessions in a single transaction
@@ -364,6 +382,7 @@ class ChatSessionRepository {
       return;
     }
 
+    const documentIds: string[] = [];
     await database.write(async () => {
       for (const id of ids) {
         const session = await database.collections
@@ -383,6 +402,7 @@ class ChatSessionRepository {
           .fetch();
 
         for (const message of messages) {
+          documentIds.push(...documentIdsOf(message));
           await message.destroyPermanently();
         }
 
@@ -400,6 +420,24 @@ class ChatSessionRepository {
         await session.destroyPermanently();
       }
     });
+    this.releaseDocumentsOf(documentIds);
+  }
+
+  async getReferencedDocumentIds(): Promise<Set<string>> {
+    const messages = await database.collections
+      .get('messages')
+      .query(Q.where('metadata', Q.like('%"documents"%')))
+      .fetch();
+    return new Set(messages.flatMap(documentIdsOf));
+  }
+
+  private releaseDocumentsOf(documentIds: string[]): void {
+    if (documentIds.length === 0) {
+      return;
+    }
+    releaseDocuments(documentIds, () => this.getReferencedDocumentIds()).catch(
+      error => console.warn('Failed to release session documents:', error),
+    );
   }
 
   // Export multiple sessions
@@ -463,6 +501,9 @@ class ChatSessionRepository {
       // Store imageUris in metadata for text messages
       if (message.type === 'text' && (message as MessageType.Text).imageUris) {
         metadata.imageUris = (message as MessageType.Text).imageUris;
+      }
+      if (message.type === 'text' && (message as MessageType.Text).documents) {
+        metadata.documents = (message as MessageType.Text).documents;
       }
 
       // Persist top-level `steps` for assistant_turn rows by writing it
