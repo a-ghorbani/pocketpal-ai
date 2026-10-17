@@ -30,7 +30,7 @@
   "dependencies": {
     "@dr.pogodin/react-native-fs": "^2.36.0",
     "@flyerhq/react-native-link-preview": "^1.6.0",
-    "@gorhom/bottom-sheet": "5.2.8",
+    "@gorhom/bottom-sheet": "5.2.14",
     "@hookform/resolvers": "^5.2.2",
     "@invertase/react-native-apple-authentication": "2.5.1",
     "@nozbe/watermelondb": "^0.28.0",

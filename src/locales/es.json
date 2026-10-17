@@ -211,6 +211,40 @@
       "statusOwned": "Comprado",
       "statusUnlocking": "Desbloqueando",
       "link": "Inicia sesión para usarlo en otros dispositivos"
+    },
+    "scanServerQr": "Escanear el código QR del servidor",
+    "scanQrPermissionMessage": "Permite el acceso a la cámara para escanear el código QR de un servidor. También puedes escribir la dirección.",
+    "scanQrNotServer": "No es una dirección de servidor",
+    "scanQrUnavailable": "Aquí no se puede escanear. Escribe la dirección del servidor.",
+    "scanQrNotReady": "El escáner se está preparando. También puedes escribir la dirección.",
+    "routerModels": {
+      "cancel": "Cancelar",
+      "unloading": "Liberando…",
+      "stateLoading": "Cargando",
+      "stateLoaded": "Cargado",
+      "loadingPercent": "Cargando, {{percent}} por ciento",
+      "unloadModel": "Liberar {{model}}",
+      "cancelLoadingModel": "Cancelar la carga de {{model}}",
+      "loadFailed": "No se pudo cargar este modelo.",
+      "unloadNotReleased": "El servidor no liberó este modelo.",
+      "serverUnreachable": "No se pudo conectar con este servidor.",
+      "waitStopped": "Dejamos de esperar este modelo.",
+      "failureWithServerWords": "{{label}}\n\n“{{message}}”",
+      "dismiss": "Descartar",
+      "unloadBoundTitle": "¿Liberar este modelo?",
+      "unloadBoundBody": "Este chat lo usa. Se volverá a cargar cuando envíes tu próximo mensaje.",
+      "unloadBoundConfirm": "Liberar"
+    },
+    "account": {
+      "title": "Cuenta",
+      "deleteAccount": "Eliminar cuenta",
+      "confirmTitle": "¿Eliminar la cuenta?",
+      "confirmMessage": "Esto elimina para siempre tu cuenta de PalsHub y su biblioteca. Los Pals comprados en la App Store o en Google Play se podrán restaurar en este dispositivo con tu cuenta de la tienda. Los registros de compra se conservan de forma anónima por motivos legales.",
+      "confirmWithoutApple": "No se pudo confirmar con Apple. ¿Quieres eliminar tu cuenta de todos modos?",
+      "deleted": "Tu cuenta se ha eliminado.",
+      "signInAgain": "Vuelve a iniciar sesión",
+      "creatorSupport": "Las cuentas de creador las elimina nuestro equipo de soporte: {{contact}}",
+      "failed": "No se pudo eliminar, inténtalo de nuevo"
     }
   },
   "memory": {
@@ -732,7 +766,8 @@
       },
       "warnings": {
         "promptChanged": "El prompt del sistema ha sido modificado manualmente"
-      }
+      },
+      "generationBusy": "Todavía se está generando una respuesta. Inténtalo de nuevo cuando termine."
     },
     "palGenerationSettingsSheet": {
       "title": "Ajustes de generación - {{palName}}",
@@ -1292,7 +1327,9 @@
       "searchResultsTitle": "Resultados de búsqueda",
       "showResultsAccessibilityLabel": "Mostrar resultados de búsqueda de {{query}}",
       "openLinkError": "No se pudo abrir este enlace."
-    }
+    },
+    "routerLoading": "Cargando modelo…",
+    "routerLoadingPercent": "Cargando modelo · {{percent}}%"
   },
   "htmlPreview": {
     "defaultTitle": "Vista previa",
