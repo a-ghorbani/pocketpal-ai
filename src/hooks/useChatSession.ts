@@ -58,7 +58,16 @@ import {
   documentContentFor,
   withDocumentContent,
 } from '../services/documents/render';
-import {loadDocumentTexts, releaseSendHold} from '../services/documents/store';
+import {
+  findMissingDocuments,
+  loadDocumentTexts,
+  releaseSendHold,
+} from '../services/documents/store';
+import {
+  evaluateDocumentBudget,
+  hasDocuments,
+  type BudgetVerdict,
+} from '../services/documents/budget';
 import {
   agentStateReducer,
   createTriggerMarkerCache,
@@ -627,6 +636,32 @@ export type UndoneSend = {
   sessionId: string;
 };
 
+export type EvaluateSendBudget = (
+  message: MessageType.PartialText,
+  options?: {excludeFromId?: string},
+) => Promise<BudgetVerdict>;
+
+const plainText = (message: {content?: unknown; tool_calls?: unknown}) => {
+  const {content} = message;
+  const text =
+    typeof content === 'string'
+      ? content
+      : Array.isArray(content)
+        ? content
+            .filter(part => part?.type === 'text' && part.text)
+            .map(part => part.text)
+            .join('\n')
+        : '';
+  return message.tool_calls
+    ? `${text}${JSON.stringify(message.tool_calls)}`
+    : text;
+};
+
+const rowsBefore = (rows: MessageType.Any[], messageId?: string) => {
+  const index = messageId ? rows.findIndex(row => row.id === messageId) : -1;
+  return index >= 0 ? rows.slice(index + 1) : rows;
+};
+
 export const useChatSession = (
   currentMessageInfo: React.MutableRefObject<{
     createdAt: number;
@@ -1113,6 +1148,57 @@ export const useChatSession = (
     return undone;
   };
 
+  const evaluateSendBudget: EvaluateSendBudget = async (
+    message,
+    {excludeFromId} = {},
+  ) => {
+    const rows = rowsBefore(
+      toJS(chatSessionStore.currentSessionMessages),
+      excludeFromId,
+    );
+    if (!hasDocuments(rows, message)) {
+      return {kind: 'fits'};
+    }
+    const activeSession = chatSessionStore.sessions.find(
+      s => s.id === chatSessionStore.activeSessionId,
+    );
+    const pal = activeSession?.activePalId
+      ? palStore.pals.find(p => p.id === activeSession.activePalId)
+      : null;
+    const settings = await chatSessionStore.getCurrentCompletionSettings();
+    const tools = (settings?.tools as ToolDefinition[] | undefined) ?? [];
+    const fragments = collectSystemPromptFragments(
+      tools.map(tool => tool.function?.name ?? ''),
+      {now: new Date(), maxToolTurns: DEFAULT_MAX_TURNS},
+    );
+    const promptMessages = assembleMessages(
+      resolveSystemMessages({pal, model: modelStore.activeModel}),
+      fragments,
+      [
+        ...convertToChatMessages(
+          rows.filter(msg => msg.type !== 'image'),
+          modelStore.activeModelCaps.visionActive,
+        ),
+        {role: 'user', content: message.text},
+      ],
+    );
+    const history = rows
+      .filter((row): row is MessageType.Text => row.type === 'text')
+      .map(row => row.documents ?? []);
+    const newRefs = message.documents ?? [];
+    return evaluateDocumentBudget({
+      windowTokens: modelStore.activeModelCaps.effectiveContextLength,
+      activeModelId: modelStore.activeModelId,
+      nonDocText: [
+        ...promptMessages.map(plainText),
+        tools.length > 0 ? JSON.stringify(tools) : '',
+      ].join('\n'),
+      history,
+      newRefs,
+      missingKeys: await findMissingDocuments([...history.flat(), ...newRefs]),
+    });
+  };
+
   const handleResetConversation = async () => {
     conversationIdRef.current = randId();
     await addSystemMessage(l10n.chat.conversationReset);
@@ -1129,6 +1215,7 @@ export const useChatSession = (
 
   return {
     handleSendPress,
+    evaluateSendBudget,
     handleResetConversation,
     handleStopPress,
   };

@@ -270,3 +270,117 @@ describe('useChatSession with documents', () => {
     setComposerHeld([]);
   });
 });
+
+describe('evaluateSendBudget', () => {
+  const evaluate = async (
+    message: MessageType.PartialText,
+    options?: {excludeFromId?: string},
+  ) => {
+    const {result} = renderHook(() =>
+      useChatSession({current: null}, user, assistant),
+    );
+    return result.current.evaluateSendBudget(message, options);
+  };
+
+  const withWindow = (nCtx: number | undefined) =>
+    runInAction(() => {
+      modelStore.activeModelId = modelsList[0].id;
+      modelStore.activeContextSettings =
+        nCtx === undefined ? undefined : ({n_ctx: nCtx} as any);
+    });
+
+  afterEach(() => {
+    runInAction(() => {
+      modelStore.activeContextSettings = undefined;
+    });
+  });
+
+  it('fits without reading anything when no document is involved', async () => {
+    withWindow(16);
+    history = [userRow('u1', 'x'.repeat(10000))];
+    expect(await evaluate({type: 'text', text: 'hi'})).toEqual({kind: 'fits'});
+    expect(fs.exists).not.toHaveBeenCalled();
+  });
+
+  it('is over for a document larger than a 4096 window', async () => {
+    withWindow(4096);
+    const big = pdf('big', {tokenEstimate: 9000});
+    writeText(big.id, ['x']);
+
+    const verdict = await evaluate({
+      type: 'text',
+      text: 'Summarise',
+      documents: [big],
+    });
+
+    expect(verdict).toMatchObject({
+      kind: 'over',
+      available: 4096 - 1024,
+      historyOverflow: false,
+      newDocs: [{ref: big, tokens: 9000}],
+    });
+  });
+
+  it('counts earlier documents as already in the chat', async () => {
+    withWindow(8192);
+    const earlier = pdf('earlier', {tokenEstimate: 6000});
+    const added = {
+      ...pdf('added', {tokenEstimate: 3000}),
+      kind: 'text' as const,
+    };
+    writeText(earlier.id, ['x']);
+    writeText(added.id, ['y']);
+    history = [assistantRow('a1', 'ok'), userRow('u1', 'read', [earlier])];
+
+    const verdict = await evaluate({
+      type: 'text',
+      text: 'and this',
+      documents: [added],
+    });
+
+    expect(verdict.kind).toBe('over');
+    if (verdict.kind === 'over') {
+      expect(verdict.historyDocTokens).toBeGreaterThanOrEqual(6000);
+      expect(verdict.historyOverflow).toBe(false);
+    }
+  });
+
+  it('is unknown without a window', async () => {
+    withWindow(undefined);
+    expect(
+      await evaluate({type: 'text', text: 'x', documents: [pdf('a')]}),
+    ).toEqual({kind: 'unknown'});
+  });
+
+  it('flags history overflow when earlier documents alone no longer fit', async () => {
+    withWindow(4096);
+    const earlier = pdf('earlier', {tokenEstimate: 6000});
+    writeText(earlier.id, ['x']);
+    history = [assistantRow('a1', 'ok'), userRow('u1', 'read', [earlier])];
+
+    expect(await evaluate({type: 'text', text: 'thanks'})).toMatchObject({
+      kind: 'over',
+      historyOverflow: true,
+    });
+  });
+
+  it('ignores the edited row and everything after it', async () => {
+    withWindow(4096);
+    const earlier = pdf('earlier', {tokenEstimate: 6000});
+    writeText(earlier.id, ['x']);
+    history = [assistantRow('a1', 'ok'), userRow('u1', 'read', [earlier])];
+
+    expect(
+      await evaluate({type: 'text', text: 'rewritten'}, {excludeFromId: 'u1'}),
+    ).toEqual({kind: 'fits'});
+  });
+
+  it('counts a missing document as zero', async () => {
+    withWindow(4096);
+    history = [
+      assistantRow('a1', 'ok'),
+      userRow('u1', 'old', [pdf('gone', {tokenEstimate: 50000})]),
+    ];
+    expect((await evaluate({type: 'text', text: 'hi'})).kind).toBe('fits');
+  });
+});

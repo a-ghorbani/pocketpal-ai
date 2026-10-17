@@ -57,7 +57,7 @@ import {
   chatSessionStore,
   modelStore,
 } from '../../store';
-import type {UndoneSend} from '../../hooks/useChatSession';
+import type {EvaluateSendBudget, UndoneSend} from '../../hooks/useChatSession';
 
 import {openMicSettings} from '../../utils/asrMicPermission';
 import type {AsrErrorKind} from '../../services/asr';
@@ -122,6 +122,9 @@ export interface ChatProps extends Omit<ChatTopLevelProps, 'onSendPress'> {
   onSendPress: (
     message: MessageType.PartialText,
   ) => Promise<UndoneSend | undefined> | void;
+  /** Checks attached documents against the context window before a send.
+   * Without it every send fits. */
+  evaluateSendBudget?: EvaluateSendBudget;
   /** If {@link ChatProps.dateFormat} and/or {@link ChatProps.timeFormat} is not enough to
    * customize date headers in your case, use this to return an arbitrary
    * string based on a `dateTime` of a particular message. Can be helpful to
