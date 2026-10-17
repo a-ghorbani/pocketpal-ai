@@ -134,6 +134,18 @@ describe('LocalApiServerStore lifecycle', () => {
     expect(store.status).toBe('stopped');
   });
 
+  it('shows a native error delivered as a string', async () => {
+    store.setEnabled(true);
+    await flush();
+    lastServer().emit(
+      'error',
+      'bind failed: EADDRINUSE (Address already in use)',
+    );
+    expect(store.lastError).toBe(
+      'bind failed: EADDRINUSE (Address already in use)',
+    );
+  });
+
   it('fails when a running listener closes', async () => {
     await startRunning();
     lastServer().emit('close');

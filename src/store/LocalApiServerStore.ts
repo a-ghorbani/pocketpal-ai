@@ -214,8 +214,12 @@ class LocalApiServerStore {
         this.status = 'running';
       });
     });
-    listener.on('error', (error: Error) =>
-      this.fail(epoch, error?.message ?? 'The server could not listen'),
+    listener.on('error', (error: Error | string) =>
+      this.fail(
+        epoch,
+        (typeof error === 'string' ? error : error?.message) ||
+          'The server could not listen',
+      ),
     );
     listener.on('close', () => {
       if (this.status === 'running') {
