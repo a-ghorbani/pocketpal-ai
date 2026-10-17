@@ -14,10 +14,25 @@ import {
 import {Dialog, Divider, TextInput} from '../../components';
 import {useTheme} from '../../hooks';
 import {t} from '../../locales';
-import {localApiServerStore, modelStore} from '../../store';
+import type {Translations} from '../../locales/types';
+import {
+  LocalApiServerError,
+  localApiServerStore,
+  modelStore,
+} from '../../store';
 import {L10nContext} from '../../utils';
 
 import {createStyles} from './styles';
+
+const ERROR_COPY: Record<
+  LocalApiServerError,
+  keyof Translations['settings']['localApiServer']['errors']
+> = {
+  port_in_use: 'portInUse',
+  listen_failed: 'listenFailed',
+  stopped_listening: 'stoppedListening',
+  key_unavailable: 'keyUnavailable',
+};
 
 export const LocalApiServerCard: React.FC = observer(() => {
   const theme = useTheme();
@@ -118,7 +133,7 @@ export const LocalApiServerCard: React.FC = observer(() => {
               variant="bodyMedium"
               style={styles.errorText}
               testID="local-api-server-error">
-              {store.lastError}
+              {t(copy.errors[ERROR_COPY[store.lastError]], {port: store.port})}
             </Text>
           )}
 

@@ -101,20 +101,42 @@ describe('LocalApiServerCard', () => {
     const {getByText} = render(<LocalApiServerCard />);
     expect(
       getByText(
-        'Any device on this network can use your model. Set an API key to limit who can.',
+        'The server is reachable on every network this phone is on: Wi-Fi, mobile data, hotspot and VPN. Set an API key to limit who can use it.',
       ),
     ).toBeTruthy();
+    expect(getByText('Not on Wi-Fi, so no network URL is shown.')).toBeTruthy();
+  });
+
+  it('says browser pages are refused without a key', () => {
+    const {getByText} = render(<LocalApiServerCard />);
     expect(
-      getByText('Not on Wi-Fi: only apps on this phone can reach the server.'),
+      getByText(
+        'No key: any app that can reach the server can use it. Browser pages are refused until you set a key.',
+      ),
     ).toBeTruthy();
   });
 
-  it('shows the failure reason', () => {
-    setState({enabled: true, status: 'failed', lastError: 'port_in_use'});
-    const {getByTestId, queryByTestId} = render(<LocalApiServerCard />);
-    expect(getByTestId('local-api-server-error').props.children).toBe(
+  it.each([
+    [
       'port_in_use',
-    );
+      'Port 8080 is already in use. Turn the server off and choose another port.',
+    ],
+    [
+      'listen_failed',
+      'The server could not start. Turn it off and on again, or choose another port.',
+    ],
+    [
+      'stopped_listening',
+      'The server stopped unexpectedly. Turn it off and on again.',
+    ],
+    [
+      'key_unavailable',
+      'Could not read the API key. Unlock your phone, then turn the server off and on again.',
+    ],
+  ] as const)('explains the %s failure', (lastError, message) => {
+    setState({enabled: true, status: 'failed', lastError});
+    const {getByTestId, queryByTestId} = render(<LocalApiServerCard />);
+    expect(getByTestId('local-api-server-error').props.children).toBe(message);
     expect(queryByTestId('local-api-server-url')).toBeNull();
   });
 

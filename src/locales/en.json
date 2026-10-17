@@ -258,15 +258,21 @@
       "port": "Port",
       "portInvalid": "Use a port from 1024 to 65535",
       "lan": "Allow other devices on the network",
-      "lanWarning": "Any device on this network can use your model. Set an API key to limit who can.",
-      "notOnWifi": "Not on Wi-Fi: only apps on this phone can reach the server.",
+      "lanWarning": "The server is reachable on every network this phone is on: Wi-Fi, mobile data, hotspot and VPN. Set an API key to limit who can use it.",
+      "notOnWifi": "Not on Wi-Fi, so no network URL is shown.",
       "apiKey": "API key",
       "apiKeySet": "Requests must send this key",
-      "apiKeyNotSet": "No key: any app that can reach the server can use it",
+      "apiKeyNotSet": "No key: any app that can reach the server can use it. Browser pages are refused until you set a key.",
       "setApiKey": "Set key",
       "clearApiKey": "Clear key",
       "apiKeyPlaceholder": "Enter an API key",
-      "stopToEdit": "Turn the server off to change these settings."
+      "stopToEdit": "Turn the server off to change these settings.",
+      "errors": {
+        "portInUse": "Port {{port}} is already in use. Turn the server off and choose another port.",
+        "listenFailed": "The server could not start. Turn it off and on again, or choose another port.",
+        "stoppedListening": "The server stopped unexpectedly. Turn it off and on again.",
+        "keyUnavailable": "Could not read the API key. Unlock your phone, then turn the server off and on again."
+      }
     }
   },
   "memory": {
