@@ -8,9 +8,10 @@ const ROOT = path.resolve(__dirname, '..', '..', '..', '..');
 const RECHECK = `${PACKAGE} differs from ${DIFFED_VERSION}, the version the sheet code was checked against. Before changing DIFFED_VERSION, re-check in the new version:
 - keyboardAnimationConfig (Sheet/actionsPadding.ts) against src/utilities/getKeyboardAnimationConfigs.ts and src/utilities/animate.ts
 - SheetAwareNativeInput's registration against src/components/bottomSheetTextInput/BottomSheetTextInput.tsx
-- the context fields Sheet/gorhomInternal.ts reads: animatedKeyboardState, animatedPosition, animatedDetentsState, textInputNodesRef
+- the context fields read by Sheet/Actions.tsx, SheetAwareNativeInput and Sheet/DismissKeyboardOnRotation.tsx: animatedKeyboardState, animatedPosition, animatedDetentsState, textInputNodesRef
 - animateToPosition records a clamped lift as a detent index, which the keyboard-hide restore relies on
-- the size reads: screen height in useAnimatedKeyboard, window height in BottomSheetHostingContainer, layoutState.window in useAnimatedLayout`;
+- the size reads: screen height in useAnimatedKeyboard, window height in BottomSheetHostingContainer, layoutState.window in useAnimatedLayout
+- before dropping Sheet/DismissKeyboardOnRotation.tsx or the windowed gate in SheetAwareNativeInput (useAppWindowFillsScreen), re-run the rotation-while-focused and iPad Stage Manager full/windowed checks`;
 
 const readJson = (...segments: string[]) =>
   JSON.parse(fs.readFileSync(path.join(ROOT, ...segments), 'utf8'));
