@@ -5,6 +5,7 @@ import {Text} from 'react-native-paper';
 
 import {render, fireEvent, within} from '../../../../jest/test-utils';
 
+import {l10n} from '../../../locales';
 import {chatSessionStore} from '../../../store';
 
 import {AssistantTurnFooter} from '../AssistantTurnFooter';
@@ -132,6 +133,56 @@ describe('AssistantTurnFooter', () => {
         />,
       );
       expect(queryByTestId('footer-text-group')).toBeNull();
+    });
+
+    it('gives Copy a labelled 44 dp box that keeps the line height', () => {
+      const {getByTestId} = render(
+        <AssistantTurnFooter
+          message={baseTurn({metadata: {copyable: true}})}
+        />,
+      );
+      const copy = getByTestId('footer-copy');
+      const style = StyleSheet.flatten(copy.props.style);
+
+      expect(copy.props.accessibilityRole).toBe('button');
+      expect(copy.props.accessibilityLabel).toBe(
+        l10n.en.components.chatView.menuItems.copy,
+      );
+      expect(style).toMatchObject({
+        minWidth: 44,
+        minHeight: 44,
+        marginVertical: -14,
+        flexShrink: 0,
+      });
+      for (const key of [
+        'margin',
+        'marginHorizontal',
+        'marginLeft',
+        'marginRight',
+        'marginStart',
+        'marginEnd',
+      ] as const) {
+        expect(style[key] ?? 0).toBe(0);
+      }
+    });
+
+    it('starts the button box at the right edge of the Copy box', () => {
+      const {getByTestId} = render(
+        <AssistantTurnFooter
+          message={baseTurn({metadata: {copyable: true}})}
+        />,
+      );
+      const footerGap = StyleSheet.flatten(
+        getByTestId('assistant-turn-footer').props.style,
+      ).gap;
+      const buttonMarginLeft = StyleSheet.flatten(
+        getByTestId('message-menu-button').props.style,
+      ).marginLeft;
+
+      expect(
+        footerChildIds(getByTestId('assistant-turn-footer')).slice(-2),
+      ).toEqual(['footer-copy', 'MessageMenuButton']);
+      expect(Number(footerGap) + Number(buttonMarginLeft)).toBe(0);
     });
 
     it('is hidden on the active row while other parts still show', () => {
