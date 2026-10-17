@@ -1,4 +1,5 @@
-const DENSE_SCRIPT = /[぀-ヿ㐀-䶿一-鿿豈-﫿가-힯ᄀ-ᇿ㄰-㆏]|[\u{20000}-\u{2fa1f}]/u;
+export const DENSE_SCRIPT =
+  /[぀-ヿ㐀-䶿一-鿿豈-﫿가-힯ᄀ-ᇿ㄰-㆏]|[\u{20000}-\u{2fa1f}]/u;
 
 /**
  * Model-independent document token estimate: one per CJK ideograph, kana or
