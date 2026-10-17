@@ -8,6 +8,7 @@ import type {CustomRenderOptions} from './test-utils';
 
 const MIN_RUNS = 3;
 const PERF_TEST_TIMEOUT_MS = 60_000;
+const TIMER_WINDOW_MS = 100;
 
 jest.setTimeout(PERF_TEST_TIMEOUT_MS);
 
@@ -19,7 +20,9 @@ type ScenarioOptions = {
 };
 
 export const flushTimers = async () => {
-  await act(() => jest.runOnlyPendingTimers());
+  for (let elapsed = 0; elapsed < TIMER_WINDOW_MS; elapsed++) {
+    await act(() => jest.advanceTimersByTime(1));
+  }
 };
 
 export const measureScenario = async (
