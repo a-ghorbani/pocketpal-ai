@@ -72,6 +72,11 @@ jest.mock('react-native/Libraries/EventEmitter/NativeEventEmitter');
 // removes its Keyboard listener on unmount would throw.
 require('react-native').Keyboard.addListener = () => ({remove: () => {}});
 
+jest.mock('../src/specs/NativeNavigationBar', () => ({
+  __esModule: true,
+  default: {setNavigationBarDark: jest.fn()},
+}));
+
 // Mock NativeHardwareInfo TurboModule
 jest.mock('../src/specs/NativeHardwareInfo', () => ({
   __esModule: true,
