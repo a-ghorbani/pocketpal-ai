@@ -1356,6 +1356,19 @@
         "tooManyChars": "These pages hold too much text. Choose fewer pages.",
         "apply": "Apply",
         "cancel": "Cancel"
+      },
+      "budgetSheet": {
+        "title": "Documents don't fit",
+        "body": "This message needs about {{needed}} tokens, but the model has room for {{available}}. Nothing was sent.",
+        "historyTitle": "Earlier documents don't fit",
+        "historyBody": "The documents already in this chat no longer fit this model's context: about {{needed}} tokens needed, {{available}} available. Nothing was sent.",
+        "earlierDocuments": "Already in this chat: ~{{tokens}} tokens",
+        "choosePages": "Choose pages",
+        "remove": "Remove",
+        "increaseContext": "Increase context",
+        "newChat": "New chat",
+        "editMessage": "Edit message",
+        "cancel": "Cancel"
       }
     }
   },

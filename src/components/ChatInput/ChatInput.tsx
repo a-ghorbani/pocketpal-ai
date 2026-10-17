@@ -307,8 +307,11 @@ export const ChatInput = observer(
           documents: readyDocuments.length > 0 ? readyDocuments : undefined,
         });
         setText('');
-        // Clear selected images after sending
-        setSelectedImages([]);
+        // A parent that owns the images clears them once the send is
+        // accepted; a send it holds back keeps the composer as it was.
+        if (!defaultImages) {
+          setInternalSelectedImages([]);
+        }
       }
     };
 

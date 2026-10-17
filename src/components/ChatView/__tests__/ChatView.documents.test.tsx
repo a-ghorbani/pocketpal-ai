@@ -201,3 +201,152 @@ describe('ChatView page ranges', () => {
     expect(chat.screen.getByText('p. 1–40 of 40 · choose pages')).toBeTruthy();
   });
 });
+
+describe('ChatView send gate', () => {
+  const big = ref('big', {pageCount: 40, tokenEstimate: 9000});
+  const over = (extra = {}) => ({
+    kind: 'over' as const,
+    needed: 9100,
+    available: 3072,
+    newDocs: [{ref: big, tokens: 9000}],
+    historyDocTokens: 0,
+    historyOverflow: false,
+    ...extra,
+  });
+  const store = chatSessionStore as any;
+
+  afterEach(() => {
+    store.isEditMode = false;
+    store.editingMessageId = null;
+    delete store.commitEdit;
+  });
+
+  it('writes nothing and keeps the composer when the documents do not fit', async () => {
+    const evaluateSendBudget = jest.fn().mockResolvedValue(over());
+    const chat = renderChat({evaluateSendBudget});
+    await chat.attach(big);
+    chat.type('Summarise');
+
+    await act(async () => {
+      chat.pressSend();
+    });
+
+    expect(evaluateSendBudget).toHaveBeenCalledWith(
+      expect.objectContaining({text: 'Summarise', documents: [big]}),
+      {excludeFromId: undefined},
+    );
+    expect(chat.onSendPress).not.toHaveBeenCalled();
+    expect(chat.input().props.value).toBe('Summarise');
+    expect(chat.screen.getByText('big.pdf')).toBeTruthy();
+    expect(chat.screen.getByTestId('budget-choose-pages')).toBeTruthy();
+    expect(chat.screen.getByTestId('budget-remove')).toBeTruthy();
+    expect(chat.screen.getByTestId('budget-cancel')).toBeTruthy();
+    expect(chat.screen.queryByTestId('budget-new-chat')).toBeNull();
+  });
+
+  it('keeps edit mode when an edited send does not fit', async () => {
+    store.isEditMode = true;
+    store.editingMessageId = 'edited';
+    store.commitEdit = jest.fn();
+    const evaluateSendBudget = jest.fn().mockResolvedValue(over());
+    const chat = renderChat({evaluateSendBudget});
+    await chat.attach(big);
+    chat.type('rewritten');
+
+    await act(async () => {
+      chat.pressSend();
+    });
+
+    expect(evaluateSendBudget).toHaveBeenCalledWith(expect.anything(), {
+      excludeFromId: 'edited',
+    });
+    expect(store.commitEdit).not.toHaveBeenCalled();
+    expect(chat.onSendPress).not.toHaveBeenCalled();
+  });
+
+  it('sends when the window is unknown', async () => {
+    const evaluateSendBudget = jest.fn().mockResolvedValue({kind: 'unknown'});
+    const chat = renderChat({evaluateSendBudget});
+    await chat.attach(big);
+    chat.type('Summarise');
+
+    await act(async () => {
+      chat.pressSend();
+    });
+
+    expect(chat.onSendPress).toHaveBeenCalledWith(
+      expect.objectContaining({documents: [big]}),
+    );
+    expect(chat.screen.queryByText('big.pdf')).toBeNull();
+  });
+
+  it('sends a message without documents in the same tick, without a check', () => {
+    const evaluateSendBudget = jest.fn();
+    const chat = renderChat({evaluateSendBudget});
+    chat.type('hello');
+
+    chat.pressSend();
+
+    expect(chat.onSendPress).toHaveBeenCalledWith(
+      expect.objectContaining({text: 'hello'}),
+    );
+    expect(evaluateSendBudget).not.toHaveBeenCalled();
+  });
+
+  it('checks the budget when only an earlier message carries a document', async () => {
+    const evaluateSendBudget = jest.fn().mockResolvedValue({kind: 'fits'});
+    const chat = renderChat({
+      evaluateSendBudget,
+      messages: [{...textMessage, documents: [big]}],
+    });
+    chat.type('And page two?');
+
+    await act(async () => {
+      chat.pressSend();
+    });
+
+    expect(evaluateSendBudget).toHaveBeenCalledTimes(1);
+    expect(chat.onSendPress).toHaveBeenCalled();
+  });
+
+  it('keeps an edited send held across commitEdit until the send settles', async () => {
+    store.isEditMode = true;
+    store.editingMessageId = 'edited';
+    store.commitEdit = jest.fn(async () => {
+      documentStore.setComposerHeld([]);
+    });
+    let heldAtSend: boolean | undefined;
+    const evaluateSendBudget = jest.fn().mockResolvedValue({kind: 'fits'});
+    const chat = renderChat({evaluateSendBudget});
+    chat.onSendPress.mockImplementation(async () => {
+      heldAtSend = documentStore.isHeld('big');
+      return undefined;
+    });
+    await chat.attach(big);
+    chat.type('rewritten');
+
+    await act(async () => {
+      chat.pressSend();
+    });
+
+    expect(store.commitEdit).toHaveBeenCalled();
+    expect(heldAtSend).toBe(true);
+    expect(documentStore.isHeld('big')).toBe(false);
+  });
+
+  it('removes a document from the sheet and the composer', async () => {
+    const evaluateSendBudget = jest.fn().mockResolvedValue(over());
+    const chat = renderChat({evaluateSendBudget});
+    await chat.attach(big);
+    chat.type('Summarise');
+    await act(async () => {
+      chat.pressSend();
+    });
+
+    fireEvent.press(chat.screen.getByTestId('budget-remove'));
+
+    expect(chat.screen.queryByText('big.pdf')).toBeNull();
+    expect(chat.screen.queryByTestId('budget-remove')).toBeNull();
+    expect(documentStore.isHeld('big')).toBe(false);
+  });
+});

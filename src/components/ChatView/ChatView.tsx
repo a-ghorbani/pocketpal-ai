@@ -62,11 +62,17 @@ import type {EvaluateSendBudget, UndoneSend} from '../../hooks/useChatSession';
 
 import {openMicSettings} from '../../utils/asrMicPermission';
 import type {AsrErrorKind} from '../../services/asr';
-import {MessageType, User} from '../../utils/types';
+import {MessageType, ModelOrigin, User} from '../../utils/types';
 import {
+  holdForSend,
+  releaseSendHold,
   setComposerHeld,
   setDocumentPageRange,
 } from '../../services/documents/store';
+import {
+  hasDocuments,
+  type BudgetVerdict,
+} from '../../services/documents/budget';
 import {documentCountingOptions} from '../../utils/documentCounting';
 import {createDocumentWarning} from '../../utils/errors';
 import type {
@@ -97,6 +103,7 @@ import {
   ChatEmptyPlaceholder,
   VideoPalEmptyPlaceholder,
   ContentReportSheet,
+  DocumentBudgetSheet,
   DocumentRangeSheet,
   GreetingBubble,
   SuggestedPromptsRow,
@@ -126,6 +133,8 @@ type SubMenuItem = {
 
 const prependText = (first: string, rest: string) =>
   rest ? `${first}\n${rest}` : first;
+
+type OverVerdict = Extract<BudgetVerdict, {kind: 'over'}>;
 
 const readyChips = (refs: DocumentRef[] = []): ComposerDocument[] =>
   refs.map(ref => ({key: randId(), status: 'ready', name: ref.name, ref}));
@@ -270,6 +279,7 @@ export const ChatView = observer(
     onPalSettingsSelect,
     onPreviewDataFetched,
     onSendPress,
+    evaluateSendBudget,
     onStopPress,
     renderBubble,
     renderCustomMessage,
@@ -320,6 +330,9 @@ export const ChatView = observer(
     );
     React.useEffect(() => () => setComposerHeld([]), []);
     const [rangeKey, setRangeKey] = React.useState<string | null>(null);
+    const [budgetVerdict, setBudgetVerdict] =
+      React.useState<OverVerdict | null>(null);
+    const budgetCheckRef = React.useRef(false);
     const rangeDocument = inputDocuments.find(doc => doc.key === rangeKey);
 
     const applyDocumentRange = React.useCallback(
@@ -655,25 +668,65 @@ export const ChatView = observer(
     );
 
     const wrappedOnSendPress = React.useCallback(
-      async (message: MessageType.PartialText) => {
+      async (
+        message: MessageType.PartialText,
+        {preChecked = false}: {preChecked?: boolean} = {},
+      ) => {
         if (chatSessionStore.isStopping) {
           return;
         }
-        const draftKey = chatSessionStore.activeSessionId ?? NEW_CHAT_DRAFT_KEY;
-        if (chatSessionStore.isEditMode) {
-          await chatSessionStore.commitEdit();
+        if (
+          !preChecked &&
+          evaluateSendBudget &&
+          hasDocuments(messages, message)
+        ) {
+          if (budgetCheckRef.current) {
+            return;
+          }
+          budgetCheckRef.current = true;
+          let verdict: BudgetVerdict;
+          try {
+            verdict = await evaluateSendBudget(message, {
+              excludeFromId: chatSessionStore.editingMessageId ?? undefined,
+            });
+          } finally {
+            budgetCheckRef.current = false;
+          }
+          if (verdict.kind === 'over') {
+            setBudgetVerdict(verdict);
+            return;
+          }
         }
-        const sent = onSendPress(message);
-        setInputText('');
-        syncedDraftRef.current = '';
-        chatSessionStore.clearDraft(draftKey);
-        Keyboard.dismiss();
-        const undone = await sent;
-        if (undone) {
-          restoreUndone(undone);
+        const documentIds = (message.documents ?? []).map(ref => ref.id);
+        holdForSend(documentIds);
+        try {
+          const draftKey =
+            chatSessionStore.activeSessionId ?? NEW_CHAT_DRAFT_KEY;
+          if (chatSessionStore.isEditMode) {
+            await chatSessionStore.commitEdit();
+          }
+          const sent = onSendPress(message);
+          setInputText('');
+          setInputImages([]);
+          updateComposerDocuments(() => []);
+          syncedDraftRef.current = '';
+          chatSessionStore.clearDraft(draftKey);
+          Keyboard.dismiss();
+          const undone = await sent;
+          if (undone) {
+            restoreUndone(undone);
+          }
+        } finally {
+          releaseSendHold(documentIds);
         }
       },
-      [onSendPress, restoreUndone],
+      [
+        onSendPress,
+        restoreUndone,
+        evaluateSendBudget,
+        messages,
+        updateComposerDocuments,
+      ],
     );
 
     const handleCancelEdit = React.useCallback(() => {
@@ -1392,6 +1445,45 @@ export const ChatView = observer(
               isApplying={rangeDocument.status === 'importing'}
               onApply={applyDocumentRange}
               onClose={() => setRangeKey(null)}
+            />
+          ) : null}
+
+          {budgetVerdict ? (
+            <DocumentBudgetSheet
+              isVisible
+              verdict={budgetVerdict}
+              onChoosePages={documentRef => {
+                setBudgetVerdict(null);
+                setRangeKey(
+                  inputDocumentsRef.current.find(
+                    doc => doc.ref?.id === documentRef.id,
+                  )?.key ?? null,
+                );
+              }}
+              onRemove={documentRef => {
+                updateComposerDocuments(prev =>
+                  prev.filter(doc => doc.ref?.id !== documentRef.id),
+                );
+                const newDocs = budgetVerdict.newDocs.filter(
+                  doc => doc.ref.id !== documentRef.id,
+                );
+                setBudgetVerdict(
+                  newDocs.length > 0 ? {...budgetVerdict, newDocs} : null,
+                );
+              }}
+              onIncreaseContext={
+                canIncreaseContext && activeModel?.origin !== ModelOrigin.REMOTE
+                  ? () => {
+                      setBudgetVerdict(null);
+                      setIncreaseSheetOpen(true);
+                    }
+                  : undefined
+              }
+              onNewChat={() => {
+                setBudgetVerdict(null);
+                chatSessionStore.resetActiveSession();
+              }}
+              onClose={() => setBudgetVerdict(null)}
             />
           ) : null}
 

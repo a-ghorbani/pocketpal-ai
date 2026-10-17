@@ -29,6 +29,7 @@ export * from './SearchProviderKeySheet';
 export * from './IncreaseContextSheet';
 export * from './DocumentChip';
 export * from './DocumentRangeSheet';
+export * from './DocumentBudgetSheet';
 export * from './GreetingBubble';
 export * from './HtmlPreviewBubble';
 export * from './HubRunSheetHost';
