@@ -6,7 +6,8 @@ export type SearchProviderId =
   | 'exa'
   | 'firecrawl'
   | 'parallel'
-  | 'you';
+  | 'you'
+  | 'serply';
 
 export interface SearchHit {
   title: string;
