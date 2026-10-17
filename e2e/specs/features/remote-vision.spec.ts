@@ -9,11 +9,11 @@
  *
  * Capabilities are discovered per model, on model activation, so the assertion
  * is valid against a multi-model router too: selecting a vision model enables
- * attach, selecting a text-only sibling on the same server disables it again.
+ * image attach, selecting a text-only sibling on the same server disables it.
  *
- * The attach button is always rendered (ChatScreen showImageUpload={true}); only
- * its enabled state flips with the discovered capability, so isEnabled() on the
- * "Add image" button is the assertion. (Sending an actual image needs the native
+ * The attach menu is always available (documents need no vision); only the
+ * Camera item's enabled state flips with the discovered capability, so its
+ * isEnabled() is the assertion. (Sending an actual image needs the native
  * gallery picker, which is not automatable here; that path is covered by the
  * committed visual capture.)
  *
@@ -41,7 +41,7 @@ import {expect} from '@wdio/globals';
 import {ChatPage} from '../../pages/ChatPage';
 import {DrawerPage} from '../../pages/DrawerPage';
 import {ModelsPage} from '../../pages/ModelsPage';
-import {Selectors, byPartialText} from '../../helpers/selectors';
+import {Selectors, byPartialText, byTestId} from '../../helpers/selectors';
 import {Gestures} from '../../helpers/gestures';
 import {TIMEOUTS} from '../../fixtures/models';
 import {SCREENSHOT_DIR} from '../../wdio.shared.conf';
@@ -54,7 +54,18 @@ const VISION_HINT = process.env.REMOTE_VISION_MODEL_HINT || 'SmolVLM';
 const NONVISION_URL = process.env.REMOTE_NONVISION_URL || '';
 const NONVISION_HINT = process.env.REMOTE_NONVISION_MODEL_HINT || '';
 
-const ADD_IMAGE_BUTTON = '~Add image';
+const ADD_ATTACHMENT_BUTTON = '~Add attachment';
+
+async function cameraItemEnabled(): Promise<boolean> {
+  const plus = browser.$(ADD_ATTACHMENT_BUTTON);
+  await plus.waitForExist({timeout: 10000});
+  await plus.click();
+  const camera = browser.$(byTestId('attach-camera'));
+  await camera.waitForExist({timeout: 5000});
+  const enabled = await camera.isEnabled();
+  await driver.back();
+  return enabled;
+}
 
 describe('Remote Vision Capability', () => {
   let chatPage: ChatPage;
@@ -127,7 +138,8 @@ describe('Remote Vision Capability', () => {
       const addBtn = browser.$(Selectors.remoteModel.addModelButton);
       const alreadyEnabled = await addBtn.isEnabled().catch(() => false);
       if (!alreadyEnabled) {
-        const radio = '-ios predicate string:value == "radio button, unchecked"';
+        const radio =
+          '-ios predicate string:value == "radio button, unchecked"';
         await Gestures.scrollInSheetToElementExists(radio, 12);
         const firstRadio = browser.$(radio);
         const radioExists = await firstRadio
@@ -184,7 +196,11 @@ describe('Remote Vision Capability', () => {
       .action('pointer', {parameters: {pointerType: 'touch'}})
       .move({x: Math.round(width * 0.8), y: Math.round(height * 0.65)})
       .down()
-      .move({x: Math.round(width * 0.2), y: Math.round(height * 0.65), duration: 300})
+      .move({
+        x: Math.round(width * 0.2),
+        y: Math.round(height * 0.65),
+        duration: 300,
+      })
       .up()
       .perform();
     await browser.pause(1000);
@@ -204,18 +220,16 @@ describe('Remote Vision Capability', () => {
     await browser.$(Selectors.chat.input).waitForDisplayed({timeout: 10000});
   }
 
-  it('enables the image-attach button for a vision-capable remote server', async () => {
+  it('enables the camera attach item for a vision-capable remote server', async () => {
     await addRemoteModel(VISION_URL, VISION_HINT);
     await activateInChat(VISION_HINT);
 
-    const addImage = browser.$(ADD_IMAGE_BUTTON);
-    await addImage.waitForExist({timeout: 10000});
-    const enabled = await addImage.isEnabled();
-    console.log(`vision server -> Add image button enabled=${enabled}`);
+    const enabled = await cameraItemEnabled();
+    console.log(`vision server -> Camera item enabled=${enabled}`);
     expect(enabled).toBe(true);
   });
 
-  it('keeps the image-attach button disabled for a non-vision remote server', async function (this: Mocha.Context) {
+  it('keeps the camera attach item disabled for a non-vision remote server', async function (this: Mocha.Context) {
     if (!NONVISION_URL) {
       console.log('REMOTE_NONVISION_URL unset — skipping non-vision case');
       this.skip();
@@ -224,10 +238,8 @@ describe('Remote Vision Capability', () => {
     await addRemoteModel(NONVISION_URL, NONVISION_HINT);
     await activateInChat(NONVISION_HINT);
 
-    const addImage = browser.$(ADD_IMAGE_BUTTON);
-    await addImage.waitForExist({timeout: 10000});
-    const enabled = await addImage.isEnabled();
-    console.log(`non-vision server -> Add image button enabled=${enabled}`);
+    const enabled = await cameraItemEnabled();
+    console.log(`non-vision server -> Camera item enabled=${enabled}`);
     expect(enabled).toBe(false);
   });
 });

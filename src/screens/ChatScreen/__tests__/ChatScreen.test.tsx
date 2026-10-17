@@ -23,6 +23,16 @@ const render = (ui: React.ReactElement, options: any = {}) =>
 
 // The pill renders the localized effort tier (e.g. 'Low'), not the raw carrier
 // token ('low'); map the token through the same table the component uses.
+// Vision gates the Camera item in the attach menu; the menu itself stays open
+// to documents.
+const cameraDisabled = (
+  getByLabelText: (label: string) => any,
+  getByTestId: (id: string) => any,
+): boolean => {
+  fireEvent.press(getByLabelText('Add attachment'));
+  return !!getByTestId('attach-camera').props.accessibilityState?.disabled;
+};
+
 const effortLabels = l10n.en.components.modelSettingsSheet.effortLevels;
 const effortLabel = (token: keyof typeof effortLabels) => effortLabels[token];
 
@@ -917,11 +927,11 @@ describe('ChatScreen remote vision reactivity', () => {
   });
 
   it('enables attach when capabilities land, with no further user action', () => {
-    const {getByLabelText} = render(<ChatScreen />, {withNavigation: true});
+    const {getByLabelText, getByTestId} = render(<ChatScreen />, {
+      withNavigation: true,
+    });
 
-    expect(getByLabelText('Add image').props.accessibilityState.disabled).toBe(
-      true,
-    );
+    expect(cameraDisabled(getByLabelText, getByTestId)).toBe(true);
 
     act(() => {
       runInAction(() => {
@@ -929,9 +939,7 @@ describe('ChatScreen remote vision reactivity', () => {
       });
     });
 
-    expect(getByLabelText('Add image').props.accessibilityState.disabled).toBe(
-      false,
-    );
+    expect(cameraDisabled(getByLabelText, getByTestId)).toBe(false);
   });
 
   it('enables attach when a local model finishes loading its projection', () => {
@@ -950,11 +958,11 @@ describe('ChatScreen remote vision reactivity', () => {
       modelStore.isMultimodalActive = false;
     });
 
-    const {getByLabelText} = render(<ChatScreen />, {withNavigation: true});
+    const {getByLabelText, getByTestId} = render(<ChatScreen />, {
+      withNavigation: true,
+    });
 
-    expect(getByLabelText('Add image').props.accessibilityState.disabled).toBe(
-      true,
-    );
+    expect(cameraDisabled(getByLabelText, getByTestId)).toBe(true);
 
     // What `proceedWithInitialization` writes once the native init verifies.
     act(() => {
@@ -963,9 +971,7 @@ describe('ChatScreen remote vision reactivity', () => {
       });
     });
 
-    expect(getByLabelText('Add image').props.accessibilityState.disabled).toBe(
-      false,
-    );
+    expect(cameraDisabled(getByLabelText, getByTestId)).toBe(false);
 
     runInAction(() => {
       modelStore.isMultimodalActive = false;
@@ -979,10 +985,10 @@ describe('ChatScreen remote vision reactivity', () => {
       });
     });
 
-    const {getByLabelText} = render(<ChatScreen />, {withNavigation: true});
+    const {getByLabelText, getByTestId} = render(<ChatScreen />, {
+      withNavigation: true,
+    });
 
-    expect(getByLabelText('Add image').props.accessibilityState.disabled).toBe(
-      true,
-    );
+    expect(cameraDisabled(getByLabelText, getByTestId)).toBe(true);
   });
 });

@@ -27,6 +27,7 @@ export * from './HeaderLeft';
 export * from './HFTokenSheet';
 export * from './SearchProviderKeySheet';
 export * from './IncreaseContextSheet';
+export * from './DocumentChip';
 export * from './GreetingBubble';
 export * from './HtmlPreviewBubble';
 export * from './HubRunSheetHost';

@@ -11,6 +11,12 @@ import {
   Image,
 } from 'react-native';
 import {launchCamera, launchImageLibrary} from 'react-native-image-picker';
+import {
+  errorCodes,
+  isErrorWithCode,
+  pick,
+  types,
+} from '@react-native-documents/picker';
 import {useCameraPermission} from 'react-native-vision-camera';
 import ReactNativeHapticFeedback from 'react-native-haptic-feedback';
 
@@ -39,8 +45,18 @@ import {
 } from '../../store';
 
 import {MessageType} from '../../utils/types';
-import {L10nContext, UserContext} from '../../utils';
+import {L10nContext, UserContext, randId} from '../../utils';
+import {documentCountingOptions} from '../../utils/documentCounting';
 import {t} from '../../locales';
+import {
+  importDocument,
+  releaseImportHold,
+} from '../../services/documents/store';
+import {
+  MAX_DOCUMENTS_PER_MESSAGE,
+  type ComposerDocument,
+  type DocumentRefusalReason,
+} from '../../services/documents/types';
 
 import {
   SendButton,
@@ -49,7 +65,12 @@ import {
   VoiceChip,
   MicButton,
   VoiceRecordingBar,
+  DocumentChip,
 } from '..';
+
+export type ComposerDocumentsUpdate = (
+  update: (documents: ComposerDocument[]) => ComposerDocument[],
+) => void;
 
 export interface ChatInputTopLevelProps {
   /** Whether the AI is currently streaming tokens */
@@ -70,6 +91,11 @@ export interface ChatInputTopLevelProps {
   /** External control for selected images (for edit mode) */
   defaultImages?: string[];
   onDefaultImagesChange?: (images: string[]) => void;
+  /** Composer documents; owned by the parent, changed only through
+   * `onDocumentsChange`. */
+  documents?: ComposerDocument[];
+  onDocumentsChange?: ComposerDocumentsUpdate;
+  onOpenDocumentRange?: (key: string) => void;
 
   /** Camera-specific props */
   isCameraActive?: boolean;
@@ -152,6 +178,9 @@ export const ChatInput = observer(
     isVisionEnabled = false,
     defaultImages,
     onDefaultImagesChange,
+    documents = [],
+    onDocumentsChange,
+    onOpenDocumentRange,
     showThinkingToggle = false,
     isThinkingEnabled = false,
     onThinkingToggle,
@@ -184,6 +213,7 @@ export const ChatInput = observer(
 
     // Use `defaultValue` if provided
     const [text, setText] = React.useState(textInputProps?.defaultValue ?? '');
+    const documentsPending = documents.some(doc => doc.status !== 'ready');
     // State for selected images - use external control when provided
     const [internalSelectedImages, setInternalSelectedImages] = React.useState<
       string[]
@@ -262,11 +292,18 @@ export const ChatInput = observer(
           return;
         }
 
-        // Include imageUris in the message object
+        if (documentsPending) {
+          return;
+        }
+
+        const readyDocuments = documents.flatMap(doc =>
+          doc.ref ? [doc.ref] : [],
+        );
         onSendPress({
           text: trimmedValue,
           type: 'text',
           imageUris: selectedImages.length > 0 ? selectedImages : undefined,
+          documents: readyDocuments.length > 0 ? readyDocuments : undefined,
         });
         setText('');
         // Clear selected images after sending
@@ -369,6 +406,91 @@ export const ChatInput = observer(
       }
     };
 
+    const warnRefused = (name: string, reason: DocumentRefusalReason) =>
+      uiStore.setChatWarning({
+        code: 'storage',
+        message: t(l10n.chat.documents.refusal, {
+          name,
+          reason: l10n.chat.documents.refusals[reason],
+        }),
+        context: 'chat',
+        recoverable: false,
+        severity: 'warning',
+      });
+
+    const importPicked = async (
+      file: Parameters<typeof importDocument>[0],
+      update: ComposerDocumentsUpdate,
+    ) => {
+      const key = randId();
+      const name = file.name ?? 'document';
+      update(prev => [...prev, {key, status: 'importing', name}]);
+      const result = await importDocument(file, documentCountingOptions());
+      if (result.status === 'refused') {
+        update(prev => prev.filter(doc => doc.key !== key));
+        warnRefused(name, result.reason);
+        return;
+      }
+      let kept = false;
+      update(prev => {
+        kept = prev.some(doc => doc.key === key);
+        return prev.map(doc =>
+          doc.key === key
+            ? {
+                ...doc,
+                status: result.status,
+                ref: result.ref,
+                rangeLimit:
+                  result.status === 'needs_range'
+                    ? result.rangeLimit
+                    : undefined,
+              }
+            : doc,
+        );
+      });
+      releaseImportHold(result.ref.id);
+      if (kept && result.status === 'needs_range') {
+        onOpenDocumentRange?.(key);
+      }
+    };
+
+    const handlePickDocuments = async () => {
+      setShowImageUploadMenu(false);
+      if (!onDocumentsChange) {
+        return;
+      }
+      modelStore.disableAutoRelease('document-pick');
+      try {
+        const picked = await pick({
+          allowMultiSelection: true,
+          type: [types.allFiles],
+        });
+        const room = Math.max(0, MAX_DOCUMENTS_PER_MESSAGE - documents.length);
+        picked
+          .slice(room)
+          .forEach(file => warnRefused(file.name ?? '', 'too_many_files'));
+        await Promise.all(
+          picked
+            .slice(0, room)
+            .map(file => importPicked(file, onDocumentsChange)),
+        );
+      } catch (error) {
+        if (
+          !(
+            isErrorWithCode(error) &&
+            error.code === errorCodes.OPERATION_CANCELED
+          )
+        ) {
+          console.error('Error picking documents:', error);
+        }
+      } finally {
+        modelStore.enableAutoRelease('document-pick');
+      }
+    };
+
+    const handleRemoveDocument = (key: string) =>
+      onDocumentsChange?.(prev => prev.filter(doc => doc.key !== key));
+
     // Remove an image from the selection
     const handleRemoveImage = (index: number) => {
       const newImages = [...selectedImages];
@@ -388,7 +510,10 @@ export const ChatInput = observer(
       !isVideoCapable && // Hide send button for video-capable pals
       (sendButtonVisibilityMode === 'always' || value.trim());
     const isSendButtonEnabled =
-      value.trim().length > 0 && hasActiveModel && !isStopping;
+      value.trim().length > 0 &&
+      hasActiveModel &&
+      !isStopping &&
+      !documentsPending;
     const sendButtonOpacity = isSendButtonEnabled ? 1 : 0.4;
 
     const rotateInterpolate = iconRotation.interpolate({
@@ -399,7 +524,7 @@ export const ChatInput = observer(
     const onSurfaceColor = currentActivePal?.color?.[0] || theme.colors.text;
     const onSurfaceColorVariant = onSurfaceColor + '55'; // for disabled state or placeholder text
     // // Plus button state
-    const isPlusButtonEnabled = !isStreaming && isVisionEnabled;
+    const isPlusButtonEnabled = !isStreaming;
     const plusColor = isPlusButtonEnabled
       ? onSurfaceColor
       : onSurfaceColorVariant;
@@ -471,16 +596,45 @@ export const ChatInput = observer(
             </View>
           )}
 
+          {documents.length > 0 && (
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              style={[
+                styles.documentRow,
+                isEditMode &&
+                  selectedImages.length === 0 &&
+                  styles.documentRowEditMode,
+              ]}
+              contentContainerStyle={styles.documentRowContent}>
+              {documents.map(doc => (
+                <DocumentChip
+                  key={doc.key}
+                  name={doc.name}
+                  documentRef={doc.ref}
+                  status={doc.status}
+                  onRemove={() => handleRemoveDocument(doc.key)}
+                  onPress={
+                    doc.ref?.kind === 'pdf' && doc.status !== 'importing'
+                      ? () => onOpenDocumentRange?.(doc.key)
+                      : undefined
+                  }
+                  testID={`composer-document-${doc.key}`}
+                />
+              ))}
+            </ScrollView>
+          )}
+
           {/* Text Input Area (Top Row) */}
           <View
             style={[
               styles.textInputArea,
               {
                 paddingTop: isEditMode
-                  ? selectedImages.length > 0
+                  ? selectedImages.length > 0 || documents.length > 0
                     ? 8 // Reduced padding when images present in edit mode
                     : 48 // Edit bar height (28px) + normal padding (20px)
-                  : selectedImages.length > 0
+                  : selectedImages.length > 0 || documents.length > 0
                     ? 0
                     : 20,
               },
@@ -547,7 +701,10 @@ export const ChatInput = observer(
                         onPress={
                           isPlusButtonEnabled ? handlePlusButtonPress : () => {}
                         }
-                        accessibilityLabel="Add image"
+                        accessibilityLabel={
+                          l10n.components.chatInput.addAttachment
+                        }
+                        accessibilityState={{disabled: !isPlusButtonEnabled}}
                         accessibilityRole="button">
                         <PlusIcon width={20} height={20} stroke={plusColor} />
                       </TouchableOpacity>
@@ -556,12 +713,24 @@ export const ChatInput = observer(
                       label={l10n.camera?.takePhoto || 'Camera'}
                       icon="camera"
                       onPress={handleTakePhoto}
+                      disabled={!isVisionEnabled}
+                      testID="attach-camera"
                     />
                     <Menu.Item
                       label={l10n.common?.gallery || 'Gallery'}
                       icon="image"
                       onPress={handleSelectImages}
+                      disabled={!isVisionEnabled}
+                      testID="attach-gallery"
                     />
+                    {onDocumentsChange ? (
+                      <Menu.Item
+                        label={l10n.chat.documents.attach}
+                        icon="file-document-outline"
+                        onPress={handlePickDocuments}
+                        testID="attach-document"
+                      />
+                    ) : null}
                   </Menu>
                 )}
 

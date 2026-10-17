@@ -62,9 +62,15 @@ import type {EvaluateSendBudget, UndoneSend} from '../../hooks/useChatSession';
 import {openMicSettings} from '../../utils/asrMicPermission';
 import type {AsrErrorKind} from '../../services/asr';
 import {MessageType, User} from '../../utils/types';
+import {setComposerHeld} from '../../services/documents/store';
+import type {
+  ComposerDocument,
+  DocumentRef,
+} from '../../services/documents/types';
 import {Pal} from '../../types/pal';
 import {
   calculateChatMessages,
+  randId,
   unwrap,
   UserContext,
   L10nContext,
@@ -113,6 +119,9 @@ type SubMenuItem = {
 
 const prependText = (first: string, rest: string) =>
   rest ? `${first}\n${rest}` : first;
+
+const readyChips = (refs: DocumentRef[] = []): ComposerDocument[] =>
+  refs.map(ref => ({key: randId(), status: 'ready', name: ref.name, ref}));
 
 dayjs.extend(calendar);
 
@@ -289,6 +298,20 @@ export const ChatView = observer(
     const inputTextRef = React.useRef(inputText);
     inputTextRef.current = inputText;
     const [inputImages, setInputImages] = React.useState<string[]>([]);
+    const [inputDocuments, setInputDocuments] = React.useState<
+      ComposerDocument[]
+    >([]);
+    const inputDocumentsRef = React.useRef<ComposerDocument[]>([]);
+    const updateComposerDocuments = React.useCallback(
+      (update: (documents: ComposerDocument[]) => ComposerDocument[]) => {
+        const next = update(inputDocumentsRef.current);
+        inputDocumentsRef.current = next;
+        setComposerHeld(next.flatMap(doc => (doc.ref ? [doc.ref.id] : [])));
+        setInputDocuments(next);
+      },
+      [],
+    );
+    React.useEffect(() => () => setComposerHeld([]), []);
     const [isPickerVisible, setIsPickerVisible] = React.useState(false);
     const [_selectedModel, setSelectedModel] = React.useState<string | null>(
       null,
@@ -561,6 +584,10 @@ export const ChatView = observer(
         if (sessionId === chatSessionStore.activeSessionId) {
           setInputText(prev => prependText(message.text, prev));
           setInputImages(prev => [...(message.imageUris ?? []), ...prev]);
+          updateComposerDocuments(prev => [
+            ...readyChips(message.documents),
+            ...prev,
+          ]);
         } else {
           chatSessionStore.saveDraft(
             sessionId,
@@ -568,7 +595,7 @@ export const ChatView = observer(
           );
         }
       },
-      [],
+      [updateComposerDocuments],
     );
 
     const wrappedOnSendPress = React.useCallback(
@@ -596,8 +623,9 @@ export const ChatView = observer(
     const handleCancelEdit = React.useCallback(() => {
       setInputText('');
       setInputImages([]);
+      updateComposerDocuments(() => []);
       chatSessionStore.exitEditMode();
-    }, []);
+    }, [updateComposerDocuments]);
 
     // Voice-input seam: append a transcript to the current composer text.
     // Reuses the prop-driven external-write mechanism of `initialInputText`
@@ -1230,6 +1258,8 @@ export const ChatView = observer(
                   appendTranscript: composerShowsPromptText
                     ? undefined
                     : appendTranscript,
+                  documents: inputDocuments,
+                  onDocumentsChange: updateComposerDocuments,
                   textInputProps: {
                     ...textInputProps,
                     ...(!composerShowsPromptText && {

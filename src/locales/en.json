@@ -663,7 +663,8 @@
         "thinkingDisabled": "Thinking mode disabled",
         "thinkText": "Think",
         "cycleEffort": "Reasoning effort: {{level}}. Double tap to cycle effort level"
-      }
+      },
+      "addAttachment": "Add attachment"
     },
     "contentReportSheet": {
       "title": "Report Content",
@@ -1325,7 +1326,27 @@
       "openLinkError": "Couldn't open this link."
     },
     "routerLoading": "Loading model…",
-    "routerLoadingPercent": "Loading model · {{percent}}%"
+    "routerLoadingPercent": "Loading model · {{percent}}%",
+    "documents": {
+      "attach": "Document",
+      "pages": "{{count}} pages",
+      "pageRange": "p. {{from}}–{{to}} of {{total}}",
+      "tokens": "~{{tokens}} tokens",
+      "choosePages": "choose pages",
+      "remove": "Remove {{name}}",
+      "refusal": "Couldn't attach {{name}}: {{reason}}",
+      "refusals": {
+        "unsupported_type": "this file type is not supported",
+        "copy_failed": "the file could not be copied",
+        "too_large": "the file is larger than 25 MB",
+        "pdf_unreadable": "the PDF could not be read",
+        "pdf_encrypted": "the PDF is password protected",
+        "no_text": "no extractable text (scanned PDFs are not supported)",
+        "binary": "the file is not plain text",
+        "text_too_long": "the text is longer than 1,000,000 characters",
+        "too_many_files": "a message can carry at most 5 documents"
+      }
+    }
   },
   "htmlPreview": {
     "defaultTitle": "Preview",
