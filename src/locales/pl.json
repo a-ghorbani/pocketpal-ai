@@ -211,6 +211,40 @@
       "statusOwned": "Kupione",
       "statusUnlocking": "Odblokowywanie",
       "link": "Zaloguj się, aby korzystać z zakupów na innych urządzeniach"
+    },
+    "scanServerQr": "Skanuj kod QR serwera",
+    "scanQrPermissionMessage": "Zezwól na dostęp do aparatu, aby zeskanować kod QR serwera. Możesz też wpisać adres ręcznie.",
+    "scanQrNotServer": "To nie jest adres serwera",
+    "scanQrUnavailable": "Nie można tu skanować. Wpisz adres serwera ręcznie.",
+    "scanQrNotReady": "Skaner się przygotowuje. Możesz też wpisać adres ręcznie.",
+    "routerModels": {
+      "cancel": "Anuluj",
+      "unloading": "Wyładowywanie…",
+      "stateLoading": "Ładowanie",
+      "stateLoaded": "Załadowany",
+      "loadingPercent": "Ładowanie, {{percent}} procent",
+      "unloadModel": "Wyładuj model {{model}}",
+      "cancelLoadingModel": "Anuluj ładowanie modelu {{model}}",
+      "loadFailed": "Nie udało się załadować tego modelu.",
+      "unloadNotReleased": "Serwer nie zwolnił tego modelu.",
+      "serverUnreachable": "Nie udało się połączyć z tym serwerem.",
+      "waitStopped": "Przerwano oczekiwanie na ten model.",
+      "failureWithServerWords": "{{label}}\n\n“{{message}}”",
+      "dismiss": "Odrzuć",
+      "unloadBoundTitle": "Wyładować ten model?",
+      "unloadBoundBody": "Ten czat go używa. Załaduje się ponownie, gdy wyślesz następną wiadomość.",
+      "unloadBoundConfirm": "Wyładuj"
+    },
+    "account": {
+      "title": "Konto",
+      "deleteAccount": "Usuń konto",
+      "confirmTitle": "Usunąć konto?",
+      "confirmMessage": "To trwale usuwa Twoje konto PalsHub wraz z jego biblioteką. Kumpli kupionych przez App Store lub Google Play nadal można przywrócić na tym urządzeniu przy użyciu konta sklepu. Dane o zakupach pozostają zapisane w formie anonimowej z przyczyn prawnych.",
+      "confirmWithoutApple": "Nie udało się potwierdzić w Apple. Usunąć konto mimo to?",
+      "deleted": "Twoje konto zostało usunięte.",
+      "signInAgain": "Zaloguj się ponownie",
+      "creatorSupport": "Konta twórców usuwa nasz zespół pomocy: {{contact}}",
+      "failed": "Nie udało się usunąć, spróbuj ponownie"
     }
   },
   "models": {
@@ -929,7 +963,8 @@
       },
       "warnings": {
         "promptChanged": "Prompt systemowy został zmieniony ręcznie"
-      }
+      },
+      "generationBusy": "Odpowiedź jest jeszcze generowana. Spróbuj ponownie, gdy się skończy."
     },
     "sidebarContent": {
       "menuItems": {
@@ -1618,7 +1653,9 @@
       "showResultsAccessibilityLabel": "Pokaż wyniki wyszukiwania w internecie dla {{query}}",
       "openLinkError": "Nie udało się otworzyć tego linku."
     },
-    "speculativeInitFailed": "To urządzenie nie mogło uruchomić dekodowania spekulatywnego dla tego modelu — najprawdopodobniej brakuje pamięci na kontekst modelu roboczego. Wyłącz Dekodowanie spekulatywne w Ustawienia → Ustawienia Zaawansowane i spróbuj ponownie."
+    "speculativeInitFailed": "To urządzenie nie mogło uruchomić dekodowania spekulatywnego dla tego modelu — najprawdopodobniej brakuje pamięci na kontekst modelu roboczego. Wyłącz Dekodowanie spekulatywne w Ustawienia → Ustawienia Zaawansowane i spróbuj ponownie.",
+    "routerLoading": "Ładowanie modelu…",
+    "routerLoadingPercent": "Ładowanie modelu · {{percent}}%"
   },
   "htmlPreview": {
     "defaultTitle": "Podgląd",

@@ -211,6 +211,40 @@
       "statusOwned": "Dibeli",
       "statusUnlocking": "Membuka kunci",
       "link": "Log masuk untuk menggunakannya pada peranti lain"
+    },
+    "scanServerQr": "Imbas kod QR pelayan",
+    "scanQrPermissionMessage": "Benarkan capaian kamera untuk mengimbas kod QR pelayan. Anda juga boleh taip alamatnya.",
+    "scanQrNotServer": "Bukan alamat pelayan",
+    "scanQrUnavailable": "Tidak dapat mengimbas di sini. Taip alamat pelayan.",
+    "scanQrNotReady": "Pengimbas sedang bersedia. Anda juga boleh taip alamatnya.",
+    "routerModels": {
+      "cancel": "Batal",
+      "unloading": "Menyahmuat…",
+      "stateLoading": "Memuat",
+      "stateLoaded": "Dimuat",
+      "loadingPercent": "Memuat, {{percent}} peratus",
+      "unloadModel": "Nyahmuat {{model}}",
+      "cancelLoadingModel": "Batalkan pemuatan {{model}}",
+      "loadFailed": "Model ini tidak berjaya dimuat.",
+      "unloadNotReleased": "Pelayan tidak melepaskan model ini.",
+      "serverUnreachable": "Tidak dapat menghubungi pelayan ini.",
+      "waitStopped": "Berhenti menunggu model ini.",
+      "failureWithServerWords": "{{label}}\n\n“{{message}}”",
+      "dismiss": "Tutup",
+      "unloadBoundTitle": "Nyahmuat model ini?",
+      "unloadBoundBody": "Sembang ini menggunakannya. Ia akan dimuat semula apabila anda menghantar mesej seterusnya.",
+      "unloadBoundConfirm": "Nyahmuat"
+    },
+    "account": {
+      "title": "Akaun",
+      "deleteAccount": "Padam akaun",
+      "confirmTitle": "Padam akaun?",
+      "confirmMessage": "Ini akan memadam akaun PalsHub anda dan pustakanya secara kekal. Pal yang dibeli melalui App Store atau Google Play masih boleh dipulihkan pada peranti ini dengan akaun gedung anda. Rekod pembelian disimpan secara anonim atas sebab perundangan.",
+      "confirmWithoutApple": "Tidak dapat mengesahkan dengan Apple. Tetap padam akaun anda?",
+      "deleted": "Akaun anda telah dipadam.",
+      "signInAgain": "Sila log masuk semula",
+      "creatorSupport": "Akaun pencipta dipadam oleh pasukan sokongan kami: {{contact}}",
+      "failed": "Tidak dapat memadam, cuba lagi"
     }
   },
   "memory": {
@@ -953,7 +987,8 @@
       },
       "warnings": {
         "promptChanged": "Prompt sistem telah diubah secara manual"
-      }
+      },
+      "generationBusy": "Balasan masih sedang dijana. Cuba lagi apabila ia selesai."
     },
     "sidebarContent": {
       "menuItems": {
@@ -1292,7 +1327,9 @@
       "openLinkError": "Tidak dapat membuka pautan ini."
     },
     "contextFullRemote": "Perbualan ini sudah kehabisan ruang. Mulakan sembang baharu.",
-    "speculativeInitFailed": "Peranti ini tidak dapat memulakan penyahkodan spekulatif untuk model ini — kemungkinan besar memori tidak mencukupi untuk konteks draf. Matikan Penyahkodan Spekulatif di bawah Tetapan → Tetapan Lanjutan dan cuba lagi."
+    "speculativeInitFailed": "Peranti ini tidak dapat memulakan penyahkodan spekulatif untuk model ini — kemungkinan besar memori tidak mencukupi untuk konteks draf. Matikan Penyahkodan Spekulatif di bawah Tetapan → Tetapan Lanjutan dan cuba lagi.",
+    "routerLoading": "Memuatkan model…",
+    "routerLoadingPercent": "Memuatkan model · {{percent}}%"
   },
   "benchmark": {
     "title": "Tolok Ukur",

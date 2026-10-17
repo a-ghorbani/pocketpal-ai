@@ -3,6 +3,7 @@ import {
   LayoutChangeEvent,
   NativeScrollEvent,
   NativeSyntheticEvent,
+  ScrollViewProps,
   TextInput,
   type HostInstance,
 } from 'react-native';
@@ -18,7 +19,13 @@ type ScrollViewInstance = BottomSheetScrollViewMethods & {
   getInnerViewRef(): HostInstance | null;
 };
 
-export type SheetScrollViewProps = Omit<BottomSheetScrollViewProps, 'ref'>;
+type ChainedCallbacks = 'onScroll' | 'onLayout' | 'onContentSizeChange';
+
+export type SheetScrollViewProps = Omit<
+  BottomSheetScrollViewProps,
+  'ref' | 'children' | ChainedCallbacks
+> &
+  Pick<ScrollViewProps, 'children' | ChainedCallbacks>;
 
 const SheetScrollViewComponent = forwardRef<
   BottomSheetScrollViewMethods,

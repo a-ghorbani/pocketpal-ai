@@ -211,6 +211,40 @@
       "statusOwned": "تم الشراء",
       "statusUnlocking": "جارٍ الفتح",
       "link": "سجّل الدخول لاستخدامه على أجهزة أخرى"
+    },
+    "scanServerQr": "امسح رمز QR للخادم",
+    "scanQrPermissionMessage": "اسمح للتطبيق باستخدام الكاميرا لمسح رمز QR الخاص بالخادم، أو أدخل عنوان الخادم يدويًا.",
+    "scanQrNotServer": "عنوان غير صالح للخادم",
+    "scanQrUnavailable": "لا يمكن المسح هنا. أدخل عنوان الخادم يدويًا.",
+    "scanQrNotReady": "يجري تجهيز الماسح الضوئي. يمكنك أيضًا إدخال العنوان يدويًا.",
+    "routerModels": {
+      "cancel": "إلغاء",
+      "unloading": "جارٍ الإيقاف…",
+      "stateLoading": "جارٍ التحميل",
+      "stateLoaded": "تم التحميل",
+      "loadingPercent": "‎جارٍ التحميل، {{percent}}٪",
+      "unloadModel": "إلغاء تحميل {{model}}",
+      "cancelLoadingModel": "إلغاء تحميل {{model}}",
+      "loadFailed": "تعذّر تحميل هذا النموذج.",
+      "unloadNotReleased": "لم يُفرغ الخادم هذا النموذج من الذاكرة.",
+      "serverUnreachable": "تعذّر الاتصال بهذا الخادم.",
+      "waitStopped": "توقف انتظار هذا النموذج.",
+      "failureWithServerWords": "{{label}}\n\n“{{message}}”",
+      "dismiss": "إغلاق",
+      "unloadBoundTitle": "هل تريد إلغاء تحميل هذا النموذج؟",
+      "unloadBoundBody": "تستخدم هذه المحادثة هذا النموذج. وسيُحمَّل مجددًا عند إرسال رسالتك التالية.",
+      "unloadBoundConfirm": "إلغاء التحميل"
+    },
+    "account": {
+      "title": "الحساب",
+      "deleteAccount": "حذف الحساب",
+      "confirmTitle": "هل تريد حذف الحساب؟",
+      "confirmMessage": "سيؤدي هذا إلى حذف حسابك في PalsHub ومكتبته نهائيًا. ستظل مشترياتك عبر App Store أو Google Play قابلة للاستعادة على هذا الجهاز باستخدام حساب المتجر. و سيُحتفظ بسجلات المشتريات بعد إخفاء هويتك لأسباب قانونية.",
+      "confirmWithoutApple": "تعذّر التأكيد من Apple. هل تريد حذف حسابك على أي حال؟",
+      "deleted": "تم حذف حسابك بنجاح.",
+      "signInAgain": "يُرجى تسجيل الدخول مجددًا",
+      "creatorSupport": "‎لحذف حسابات صنّاع المحتوى، يُرجى التواصل مع فريق الدعم: {{contact}}",
+      "failed": "تعذّر الحذف، حاول مجددًا"
     }
   },
   "memory": {
@@ -981,7 +1015,8 @@
       "useAIPrompt": "استخدم الذكاء الاصطناعي لإنشاء prompt النظام",
       "warnings": {
         "promptChanged": "تم تغيير prompt النظام يدويًا"
-      }
+      },
+      "generationBusy": "لا يزال الرد قيد الإنشاء. حاول مجددًا بعد اكتماله."
     },
     "sidebarContent": {
       "menuItems": {
@@ -1292,7 +1327,9 @@
       "searchResultsTitle": "نتائج البحث",
       "showResultsAccessibilityLabel": "عرض نتائج البحث في الويب عن {{query}}",
       "openLinkError": "تعذّر فتح هذا الرابط."
-    }
+    },
+    "routerLoading": "جارٍ تحميل النموذج…",
+    "routerLoadingPercent": "جارٍ تحميل النموذج · {{percent}}٪"
   },
   "htmlPreview": {
     "defaultTitle": "معاينة",
@@ -1509,7 +1546,7 @@
     "stopMessageLabel": "إيقاف الرسالة",
     "autoSpeakLabel": "قراءة الردود تلقائيًا بصوت عالٍ",
     "autoSpeakDescription": "اقرأ الردود الجديدة بصوت عالٍ فور وصولها.",
-    "engineChipKitten": "قطة",
+    "engineChipKitten": "Kitten",
     "engineChipKokoro": "Kokoro",
     "engineChipSupertonic": "Supertonic",
     "engineChipSystem": "النظام",

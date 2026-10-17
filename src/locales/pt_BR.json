@@ -211,6 +211,40 @@
       "statusOwned": "Comprado",
       "statusUnlocking": "Desbloqueando",
       "link": "Entre para usar em outros dispositivos"
+    },
+    "scanServerQr": "Escanear QR code do servidor",
+    "scanQrPermissionMessage": "Permita o acesso à câmera para escanear o QR code de um servidor. Você também pode digitar o endereço.",
+    "scanQrNotServer": "Não é um endereço de servidor",
+    "scanQrUnavailable": "Não é possível escanear aqui. Digite o endereço do servidor.",
+    "scanQrNotReady": "O leitor está quase pronto. Você também pode digitar o endereço.",
+    "routerModels": {
+      "cancel": "Cancelar",
+      "unloading": "Descarregando…",
+      "stateLoading": "Carregando",
+      "stateLoaded": "Carregado",
+      "loadingPercent": "Carregando, {{percent}} por cento",
+      "unloadModel": "Descarregar {{model}}",
+      "cancelLoadingModel": "Cancelar o carregamento de {{model}}",
+      "loadFailed": "Este modelo não carregou.",
+      "unloadNotReleased": "O servidor não liberou este modelo.",
+      "serverUnreachable": "Não foi possível acessar este servidor.",
+      "waitStopped": "Paramos de esperar por este modelo.",
+      "failureWithServerWords": "{{label}}\n\n“{{message}}”",
+      "dismiss": "Dispensar",
+      "unloadBoundTitle": "Descarregar este modelo?",
+      "unloadBoundBody": "Este chat está usando o modelo. Ele carrega de novo quando você enviar a próxima mensagem.",
+      "unloadBoundConfirm": "Descarregar"
+    },
+    "account": {
+      "title": "Conta",
+      "deleteAccount": "Excluir conta",
+      "confirmTitle": "Excluir conta?",
+      "confirmMessage": "Isso exclui permanentemente sua conta do PalsHub e a biblioteca dela. Você ainda pode restaurar os Pals comprados na App Store ou no Google Play neste dispositivo com a conta da sua loja. Os registros de compra são mantidos de forma anônima por motivos legais.",
+      "confirmWithoutApple": "Não foi possível confirmar com a Apple. Excluir sua conta mesmo assim?",
+      "deleted": "Sua conta foi excluída.",
+      "signInAgain": "Entre novamente",
+      "creatorSupport": "Contas de criador são excluídas pela nossa equipe de suporte: {{contact}}",
+      "failed": "Não foi possível excluir, tente novamente"
     }
   },
   "memory": {
@@ -974,7 +1008,8 @@
       },
       "warnings": {
         "promptChanged": "O prompt de sistema foi alterado manualmente"
-      }
+      },
+      "generationBusy": "Uma resposta ainda está em andamento. Tente novamente quando terminar."
     },
     "sidebarContent": {
       "menuItems": {
@@ -1292,7 +1327,9 @@
       "openLinkError": "Não foi possível abrir este link."
     },
     "contextFullRemote": "A conversa ficou sem espaço. Comece um novo chat.",
-    "speculativeInitFailed": "Este dispositivo não conseguiu iniciar a decodificação especulativa para este modelo — provavelmente não há memória suficiente para o contexto de rascunho. Desative a Decodificação especulativa em Configurações → Configurações Avançadas e tente novamente."
+    "speculativeInitFailed": "Este dispositivo não conseguiu iniciar a decodificação especulativa para este modelo — provavelmente não há memória suficiente para o contexto de rascunho. Desative a Decodificação especulativa em Configurações → Configurações Avançadas e tente novamente.",
+    "routerLoading": "Carregando modelo…",
+    "routerLoadingPercent": "Carregando modelo · {{percent}}%"
   },
   "htmlPreview": {
     "defaultTitle": "Pré-visualização",

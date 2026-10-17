@@ -211,6 +211,40 @@
       "statusOwned": "已购买",
       "statusUnlocking": "解锁中",
       "link": "登录后可在其他设备使用"
+    },
+    "scanServerQr": "扫描服务器二维码",
+    "scanQrPermissionMessage": "允许访问摄像头来扫描服务器的二维码，也可以直接输入地址。",
+    "scanQrNotServer": "这不是服务器地址",
+    "scanQrUnavailable": "这里无法扫码，请手动输入服务器地址。",
+    "scanQrNotReady": "正在准备扫码，也可以直接输入地址。",
+    "routerModels": {
+      "cancel": "取消",
+      "unloading": "正在卸载…",
+      "stateLoading": "加载中",
+      "stateLoaded": "已加载",
+      "loadingPercent": "加载中，{{percent}}%",
+      "unloadModel": "卸载 {{model}}",
+      "cancelLoadingModel": "取消加载 {{model}}",
+      "loadFailed": "此模型未能加载。",
+      "unloadNotReleased": "服务器未释放此模型。",
+      "serverUnreachable": "无法连接到此服务器。",
+      "waitStopped": "已停止等待此模型。",
+      "failureWithServerWords": "{{label}}\n\n“{{message}}”",
+      "dismiss": "关闭",
+      "unloadBoundTitle": "卸载此模型？",
+      "unloadBoundBody": "当前聊天正在使用它，发送下一条消息时会重新加载。",
+      "unloadBoundConfirm": "卸载"
+    },
+    "account": {
+      "title": "账户",
+      "deleteAccount": "删除账户",
+      "confirmTitle": "删除账户？",
+      "confirmMessage": "此操作将永久删除您的 PalsHub 账户及其资料库。通过 App Store 或 Google Play 购买的 Pal 仍可用您的商店账户在本设备上恢复。出于法律原因，购买记录将匿名保留。",
+      "confirmWithoutApple": "无法通过 Apple 验证身份，仍要删除您的账户吗？",
+      "deleted": "您的账户已删除。",
+      "signInAgain": "请重新登录",
+      "creatorSupport": "创作者账户需由我们的客服团队删除：{{contact}}",
+      "failed": "删除失败，请重试"
     }
   },
   "memory": {
@@ -953,7 +987,8 @@
       },
       "warnings": {
         "promptChanged": "系统提示词已手动更改"
-      }
+      },
+      "generationBusy": "回复还在生成中，完成后再试。"
     },
     "sidebarContent": {
       "menuItems": {
@@ -1292,7 +1327,9 @@
       "openLinkError": "无法打开此链接。"
     },
     "contextFullRemote": "对话空间已满，请新建聊天。",
-    "speculativeInitFailed": "此设备无法为该模型启动推测解码 — 很可能是草稿上下文的内存不足。请在“设置 → 高级设置”中关闭推测解码后重试。"
+    "speculativeInitFailed": "此设备无法为该模型启动推测解码 — 很可能是草稿上下文的内存不足。请在“设置 → 高级设置”中关闭推测解码后重试。",
+    "routerLoading": "正在加载模型…",
+    "routerLoadingPercent": "正在加载模型 · {{percent}}%"
   },
   "benchmark": {
     "title": "基准测试",
