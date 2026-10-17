@@ -189,10 +189,16 @@ describe('serveChatCompletion', () => {
     );
     await flush();
     fake.emit({reasoning_content: 'think'});
-    fake.emit({token: 'x'});
-    fake.emit({content: 'He'});
-    fake.emit({content: 'llo'});
-    fake.settle({tokens_evaluated: 3, tokens_predicted: 2, stopped_limit: 1});
+    fake.emit({token: 'x', reasoning_content: 'think'});
+    fake.emit({content: 'He', reasoning_content: 'think'});
+    fake.emit({content: 'Hello', reasoning_content: 'think'});
+    fake.settle({
+      content: 'Hello!',
+      reasoning_content: 'think',
+      tokens_evaluated: 3,
+      tokens_predicted: 2,
+      stopped_limit: 1,
+    });
     await served;
 
     expect(text()).toContain('Content-Type: text/event-stream');
@@ -205,15 +211,33 @@ describe('serveChatCompletion', () => {
       },
       {index: 0, delta: {content: 'He'}, finish_reason: null},
       {index: 0, delta: {content: 'llo'}, finish_reason: null},
+      {index: 0, delta: {content: '!'}, finish_reason: null},
       {index: 0, delta: {}, finish_reason: 'length'},
       '[DONE]',
     ]);
-    expect(frames[3].usage).toEqual({
+    expect(frames[4].usage).toEqual({
       prompt_tokens: 3,
       completion_tokens: 2,
       total_tokens: 5,
     });
     expect(leases[0].end).toHaveBeenCalledTimes(1);
+  });
+
+  it('skips a snapshot that rewrote text already sent', async () => {
+    const fake = withLocalModel();
+    const {channel, text} = makeChannel();
+    const served = serveChatCompletion(body({stream: true}), channel);
+    await flush();
+    fake.emit({content: 'ab'});
+    fake.emit({content: 'xb'});
+    fake.emit({content: 'abc'});
+    fake.settle({content: 'abc'});
+    await served;
+
+    const contents = framesOf(text())
+      .filter(f => f !== '[DONE]' && f.choices[0].delta.content)
+      .map(f => f.choices[0].delta.content);
+    expect(contents).toEqual(['ab', 'c']);
   });
 
   it('answers 400 before taking a lease for an invalid body', async () => {

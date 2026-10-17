@@ -107,25 +107,38 @@ async function completeStreaming(
     }
     writeSseData(channel, data);
   };
-  const onChunk = ({content, reasoning_content}: CompletionStreamData) => {
-    if (lease.signal.aborted || (!content && !reasoning_content)) {
+  const sent = {content: '', reasoning_content: ''};
+  const unsent = (field: keyof typeof sent, text: string | undefined) =>
+    text?.startsWith(sent[field]) ? text.slice(sent[field].length) : '';
+  const sendDeltas = (snapshot: Partial<typeof sent>) => {
+    const content = unsent('content', snapshot.content);
+    const reasoning = unsent('reasoning_content', snapshot.reasoning_content);
+    if (!content && !reasoning) {
       return;
     }
     const delta: ChunkDelta = roleSent ? {} : {role: 'assistant'};
     if (content) {
       delta.content = content;
+      sent.content += content;
     }
-    if (reasoning_content) {
-      delta.reasoning_content = reasoning_content;
+    if (reasoning) {
+      delta.reasoning_content = reasoning;
+      sent.reasoning_content += reasoning;
     }
     roleSent = true;
     send(toChunk(delta, ids));
+  };
+  const onChunk = (data: CompletionStreamData) => {
+    if (!lease.signal.aborted) {
+      sendDeltas(data);
+    }
   };
 
   let failure: WireError;
   try {
     const result = await lease.engine.completion(params, onChunk);
     if (!lease.signal.aborted) {
+      sendDeltas(result);
       send(toFinalChunk(result, ids, includeUsage));
       writeSseData(channel, SSE_DONE);
       return;
