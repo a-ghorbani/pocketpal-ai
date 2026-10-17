@@ -18,7 +18,7 @@ import {ModelsPage} from '../pages/ModelsPage';
 import {HFSearchSheet} from '../pages/HFSearchSheet';
 import {ModelDetailsSheet} from '../pages/ModelDetailsSheet';
 import {Selectors} from '../helpers/selectors';
-import {readReplyText} from '../helpers/element-text';
+import {readReplyText, readTimingText} from '../helpers/element-text';
 import {
   QUICK_TEST_MODEL,
   TIMEOUTS,
@@ -187,8 +187,7 @@ describe('Quick Smoke Test', () => {
       if (exists) {
         console.log('[Timing] Inference complete - timing found');
         // Extract timing from accessibility label (content-desc on Android, label on iOS)
-        const attrName = driver.isAndroid ? 'content-desc' : 'label';
-        const labelText = await timingElement.getAttribute(attrName).catch(() => '');
+        const labelText = await readTimingText(timingElement);
         const timingMatch = labelText.match(/(\d+(?:\.\d+)?ms\/token.*TTFT)/);
         timingText = timingMatch ? timingMatch[1] : labelText.slice(-100);
         inferenceComplete = true;

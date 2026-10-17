@@ -2,7 +2,7 @@
  * Cross-platform element text reads.
  */
 
-import {byTestId, isAndroid} from './selectors';
+import {isAndroid} from './selectors';
 
 type ChainableElement = ReturnType<WebdriverIO.Browser['$']>;
 
@@ -55,33 +55,23 @@ export async function readAccessibilityLabel(
 /**
  * The rendered text of a chat reply, joined with newlines.
  *
- * The markdown renderer splits a reply into one native text view per run of
- * paragraphs, so a single text-element read returns only the first run.
- * Android mounts those views beside the `markdown-content` container rather
- * than inside it, and exposes each block's text on virtual child nodes while
- * the view's own text is empty. On iOS the text views are hidden from
- * accessibility and each run is a labelled element that a static-text query
- * does not match.
+ * The markdown renderer draws one native text view per run of paragraphs and
+ * may mount them beside `markdown-content` rather than inside it, so the
+ * search covers the whole reply. Android exposes each block's text on virtual
+ * nodes that only a descendant query reaches; iOS hides the text views and
+ * labels each run instead, which a static-text query does not match.
  */
 export async function readReplyText(reply: ChainableElement): Promise<string> {
   const parts: string[] = [];
   if (isAndroid()) {
-    for (const view of await reply.$$('.//android.widget.TextView')) {
-      const own = await view.getText();
-      if (own) {
-        parts.push(own);
-        continue;
-      }
-      for (const node of await view.$$('./*')) {
-        const text = await node.getText();
-        if (text) {
-          parts.push(text);
-        }
+    for (const node of await reply.$$('.//*')) {
+      const text = await node.getText().catch(() => '');
+      if (text && text !== parts[parts.length - 1]) {
+        parts.push(text);
       }
     }
   } else {
-    const markdown = reply.$(byTestId('markdown-content'));
-    for (const node of await markdown.$$('-ios class chain:**/*')) {
+    for (const node of await reply.$$('-ios class chain:**/*')) {
       const label = normalise(
         await node.getAttribute('label').catch(() => null),
       );
@@ -91,6 +81,22 @@ export async function readReplyText(reply: ChainableElement): Promise<string> {
     }
   }
   return parts.join('\n');
+}
+
+/**
+ * The text of a footer timing element. On iOS it is the label; on Android the
+ * footer's Text carries it as `text` (no wrapper merges it into `content-desc`).
+ */
+export async function readTimingText(
+  element: ChainableElement,
+): Promise<string> {
+  if (!isAndroid()) {
+    return (await element.getAttribute('label').catch(() => '')) || '';
+  }
+  const label = normalise(
+    await element.getAttribute('content-desc').catch(() => null),
+  );
+  return label || (await element.getText().catch(() => ''));
 }
 
 /** UiAutomator2 reports an absent attribute as the string "null". */

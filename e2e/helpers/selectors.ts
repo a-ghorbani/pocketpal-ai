@@ -226,6 +226,9 @@ export const Selectors = {
      * The timing info appears in the message bubble's accessibility label when inference completes.
      */
     get inferenceComplete(): string {
+      if (isAndroid()) {
+        return '//*[contains(@content-desc, "tokens/sec") or contains(@text, "tokens/sec")]';
+      }
       return byAccessibilityLabelContains('tokens/sec');
     },
   },
