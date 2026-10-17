@@ -217,7 +217,7 @@ describe('Message — AssistantTurn renderer', () => {
     );
   });
 
-  it('#11 AssistantTurn occupies ONE FlatList row (renderer returns a single Pressable wrapping all blocks)', () => {
+  it('#11 AssistantTurn has no touch handler above its content (selection would fight it)', () => {
     const message = makeDerivedTurn([
       {content: 'A'},
       {
@@ -227,28 +227,34 @@ describe('Message — AssistantTurn renderer', () => {
       },
       {content: 'C'},
     ]);
-    const {UNSAFE_root} = render(
+    const {UNSAFE_root, getAllByTestId} = render(
       <Message
         message={message}
         messageWidth={440}
         onMessagePress={jest.fn()}
+        onMessageMenuPress={jest.fn()}
         roundBorder
         showAvatar
         showName
         showStatus
       />,
     );
-    // Exactly ONE node carries an `onLongPress` prop (the Pressable wrapping
-    // the row). This proves long-press routing is turn-level — not split
-    // across N step-level rows.
-    const longPressables = UNSAFE_root.findAll(
-      (n: any) => n.props && typeof n.props.onLongPress === 'function',
-    );
-    expect(longPressables).toHaveLength(1);
+    for (const block of getAllByTestId('ContentContainer')) {
+      for (let n = block.parent; n; n = n.parent) {
+        for (const handler of ['onPress', 'onLongPress', 'onPressIn']) {
+          expect(typeof n.props?.[handler]).not.toBe('function');
+        }
+      }
+    }
+    expect(
+      UNSAFE_root.findAll(
+        (n: any) => n.props && typeof n.props.onLongPress === 'function',
+      ),
+    ).toHaveLength(0);
   });
 
-  it('#12 long-press on the row yields the SAME message id regardless of which inner block is targeted', () => {
-    const onLongPress = jest.fn();
+  it('#12 the footer "…" yields the turn regardless of step count', () => {
+    const onMessageMenuPress = jest.fn();
     const message = makeDerivedTurn([
       {content: 'A'},
       {
@@ -258,27 +264,39 @@ describe('Message — AssistantTurn renderer', () => {
       },
       {content: 'C'},
     ]);
-    const {UNSAFE_root} = render(
+    const {getAllByTestId} = render(
       <Message
         message={message}
         messageWidth={440}
-        onMessageLongPress={onLongPress}
-        onMessagePress={jest.fn()}
+        onMessageMenuPress={onMessageMenuPress}
         roundBorder
         showAvatar
         showName
         showStatus
       />,
     );
-    const longPressables = UNSAFE_root.findAll(
-      (n: any) => n.props && typeof n.props.onLongPress === 'function',
+    const buttons = getAllByTestId('message-menu-button');
+    expect(buttons).toHaveLength(1);
+    const event = {nativeEvent: {pageX: 7, pageY: 8}};
+    fireEvent.press(buttons[0], event);
+    expect(onMessageMenuPress).toHaveBeenCalledTimes(1);
+    expect(onMessageMenuPress.mock.calls[0][0].id).toBe('turn-1');
+    expect(onMessageMenuPress.mock.calls[0][1]).toBe(event);
+  });
+
+  it('#12b the active row shows no "…"', () => {
+    const {queryByTestId} = render(
+      <Message
+        message={makeDerivedTurn([{content: 'A', partial: true}])}
+        messageWidth={440}
+        isActiveRun
+        roundBorder
+        showAvatar
+        showName
+        showStatus
+      />,
     );
-    expect(longPressables).toHaveLength(1);
-    fireEvent(longPressables[0], 'longPress', {
-      nativeEvent: {pageX: 0, pageY: 0},
-    });
-    expect(onLongPress).toHaveBeenCalledTimes(1);
-    expect(onLongPress.mock.calls[0][0].id).toBe('turn-1');
+    expect(queryByTestId('message-menu-button')).toBeNull();
   });
 
   it('#13 avatar renders once per AssistantTurn (showAvatar=true, showUserAvatars=true)', () => {

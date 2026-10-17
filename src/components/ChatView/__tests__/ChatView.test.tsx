@@ -13,6 +13,8 @@ import {MessageType} from '../../../utils/types';
 import {ChatView} from '../ChatView';
 import {act, fireEvent, render} from '../../../../jest/test-utils';
 import {ChatEmptyPlaceholder} from '../../ChatEmptyPlaceholder';
+import {ContentReportSheet} from '../../ContentReportSheet';
+import {Menu} from '../../Menu';
 import {NEW_CHAT_DRAFT_KEY, chatSessionStore, modelStore} from '../../../store';
 import {registerDefaultTalents} from '../../../services/talents';
 import DeviceInfo from 'react-native-device-info';
@@ -140,12 +142,9 @@ describe('chat', () => {
       }
     };
 
-    const onMessageLongPress = jest.fn();
-
     const {getByTestId} = render(
       <ChatView
         onMessagePress={onMessagePress}
-        onMessageLongPress={onMessageLongPress}
         messages={messages}
         onSendPress={onSendPress}
         showUserAvatars
@@ -157,36 +156,6 @@ describe('chat', () => {
     const button = getByTestId('ContentContainer');
     fireEvent.press(button);
     expect(onImagePress).toHaveBeenCalledWith(imageMessage);
-  });
-
-  it('fires image on image message long press', () => {
-    expect.assertions(1);
-    const messages = [imageMessage];
-    const onSendPress = jest.fn();
-    const onImagePress = jest.fn();
-    const onMessagePress = (message: MessageType.Any) => {
-      if (message.type === 'image') {
-        onImagePress(message);
-      }
-    };
-
-    const onMessageLongPress = jest.fn();
-
-    const {getByTestId} = render(
-      <ChatView
-        onMessagePress={onMessagePress}
-        onMessageLongPress={onMessageLongPress}
-        messages={messages}
-        onSendPress={onSendPress}
-        showUserAvatars
-        user={user}
-      />,
-      {withNavigation: true, withBottomSheetProvider: true},
-    );
-
-    const button = getByTestId('ContentContainer');
-    fireEvent(button, 'onLongPress');
-    expect(onMessageLongPress).toHaveBeenCalledWith(imageMessage);
   });
 
   it('renders ChatEmptyPlaceholder when no messages', () => {
@@ -549,7 +518,7 @@ describe('chat', () => {
           <ChatView messages={[message]} onSendPress={jest.fn()} user={user} />,
           options,
         );
-        fireEvent(getAllByTestId('ContentContainer')[0], 'onLongPress', {
+        fireEvent.press(getAllByTestId('message-menu-button')[0], {
           nativeEvent: {pageX: 0, pageY: 0},
         });
 
@@ -559,6 +528,123 @@ describe('chat', () => {
         expect(isDisabled(menuLabels.copy, getByText)).toBe(false);
       },
     );
+  });
+
+  describe('message menu from the "…" button', () => {
+    const labels = l10n.en.components.chatView.menuItems;
+    const allLabels = [
+      labels.copy,
+      labels.regenerate,
+      labels.regenerateWith,
+      labels.edit,
+      labels.reportContent,
+    ];
+    const options = {withNavigation: true, withBottomSheetProvider: true};
+    const assistant = {id: 'assistant'};
+
+    afterEach(() => {
+      runInAction(() => {
+        modelStore.activeModelId = undefined;
+      });
+    });
+
+    const isMenuItemText = (node: any) => {
+      if (node.type !== 'Text' || !allLabels.includes(node.props.children)) {
+        return false;
+      }
+      for (let n = node.parent; n; n = n.parent) {
+        if (n.type === Menu.Item) {
+          return true;
+        }
+      }
+      return false;
+    };
+
+    const openMenuFor = (message: MessageType.Any) => {
+      const utils = render(
+        <ChatView messages={[message]} onSendPress={jest.fn()} user={user} />,
+        options,
+      );
+      fireEvent.press(utils.getByTestId('message-menu-button'), {
+        nativeEvent: {pageX: 10, pageY: 20},
+      });
+      const items = utils.UNSAFE_root.findAll(isMenuItemText);
+      return {...utils, items, shown: items.map((n: any) => n.props.children)};
+    };
+
+    it.each([
+      [
+        'a copyable assistant row (Copy is in its footer)',
+        {...textMessage, author: assistant, metadata: {copyable: true}},
+        [labels.regenerate, labels.regenerateWith, labels.reportContent],
+      ],
+      [
+        'an assistant row without copyable',
+        {...textMessage, author: assistant},
+        [
+          labels.copy,
+          labels.regenerate,
+          labels.regenerateWith,
+          labels.reportContent,
+        ],
+      ],
+      [
+        'a system row',
+        {...textMessage, author: assistant, metadata: {system: true}},
+        [
+          labels.copy,
+          labels.regenerate,
+          labels.regenerateWith,
+          labels.reportContent,
+        ],
+      ],
+      [
+        'a copyable user row (it has no footer Copy)',
+        {...textMessage, metadata: {copyable: true}},
+        [labels.copy, labels.edit, labels.reportContent],
+      ],
+      [
+        'a copyable assistant turn',
+        {
+          author: assistant,
+          createdAt: 0,
+          id: 'turn',
+          type: 'assistant_turn',
+          steps: [{content: 'answer'}],
+          metadata: {copyable: true},
+        },
+        [labels.regenerate, labels.regenerateWith, labels.reportContent],
+      ],
+    ])('lists the items for %s', (_row, message, expected) => {
+      const {shown} = openMenuFor(message as MessageType.Any);
+
+      expect(shown).toEqual(expected);
+    });
+
+    it('disables Edit on a user row while no model is active', () => {
+      const {getByText} = openMenuFor(textMessage);
+
+      let node = getByText(labels.edit);
+      while (!node.props.accessibilityState) {
+        node = node.parent!;
+      }
+      expect(node.props.accessibilityState.disabled).toBe(true);
+    });
+
+    it('opens the report sheet from Report', () => {
+      const {items, UNSAFE_getByType} = openMenuFor({
+        ...textMessage,
+        author: assistant,
+      });
+      expect(UNSAFE_getByType(ContentReportSheet).props.isVisible).toBe(false);
+
+      const report = items.find(
+        (n: any) => n.props.children === labels.reportContent,
+      );
+      fireEvent.press(report!);
+
+      expect(UNSAFE_getByType(ContentReportSheet).props.isVisible).toBe(true);
+    });
   });
 
   describe('increase-context CTA memory estimate', () => {
