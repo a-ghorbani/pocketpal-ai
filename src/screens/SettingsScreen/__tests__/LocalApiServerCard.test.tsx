@@ -110,10 +110,10 @@ describe('LocalApiServerCard', () => {
   });
 
   it('shows the failure reason', () => {
-    setState({enabled: true, status: 'failed', lastError: 'EADDRINUSE'});
+    setState({enabled: true, status: 'failed', lastError: 'port_in_use'});
     const {getByTestId, queryByTestId} = render(<LocalApiServerCard />);
     expect(getByTestId('local-api-server-error').props.children).toBe(
-      'EADDRINUSE',
+      'port_in_use',
     );
     expect(queryByTestId('local-api-server-url')).toBeNull();
   });
@@ -169,7 +169,7 @@ describe('LocalApiServerCard', () => {
   });
 
   it('keeps the toggle on and config locked while failed', () => {
-    setState({enabled: true, status: 'failed', lastError: 'EADDRINUSE'});
+    setState({enabled: true, status: 'failed', lastError: 'port_in_use'});
     const {getByTestId} = render(<LocalApiServerCard />);
     expect(getByTestId('local-api-server-switch').props.value).toBe(true);
     expect(getByTestId('local-api-server-port-input').props.editable).toBe(

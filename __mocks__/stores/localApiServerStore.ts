@@ -1,11 +1,14 @@
 import {makeAutoObservable, runInAction} from 'mobx';
 
-import type {LocalApiServerStatus} from '../../src/store/LocalApiServerStore';
+import type {
+  LocalApiServerError,
+  LocalApiServerStatus,
+} from '../../src/store/LocalApiServerStore';
 
 class MockLocalApiServerStore {
   enabled = false;
   status: LocalApiServerStatus = 'stopped';
-  lastError: string | undefined = undefined;
+  lastError: LocalApiServerError | undefined = undefined;
   port = 8080;
   lanEnabled = false;
   hasApiKey = false;

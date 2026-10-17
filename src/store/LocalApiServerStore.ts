@@ -31,6 +31,12 @@ export type LocalApiServerStatus =
   | 'running'
   | 'failed';
 
+export type LocalApiServerError =
+  | 'port_in_use'
+  | 'listen_failed'
+  | 'stopped_listening'
+  | 'key_unavailable';
+
 type Listener = ReturnType<typeof TcpSocket.createServer>;
 
 type KeyRead = {kind: 'found'; key: string} | {kind: 'none'} | {kind: 'error'};
@@ -39,6 +45,14 @@ export const isValidLocalApiPort = (port: number) =>
   Number.isInteger(port) &&
   port >= MIN_LOCAL_API_PORT &&
   port <= MAX_LOCAL_API_PORT;
+
+const toListenError = (error: unknown): LocalApiServerError => {
+  const message = error instanceof Error ? error.message : String(error ?? '');
+  console.warn('[LocalApiServerStore] listen failed:', message);
+  return /EADDRINUSE|address already in use/i.test(message)
+    ? 'port_in_use'
+    : 'listen_failed';
+};
 
 const usableAddress = (address: string) =>
   /^\d{1,3}(\.\d{1,3}){3}$/.test(address) && address !== ALL_INTERFACES_HOST
@@ -54,7 +68,7 @@ const usableAddress = (address: string) =>
 class LocalApiServerStore {
   enabled = false;
   status: LocalApiServerStatus = 'stopped';
-  lastError: string | undefined = undefined;
+  lastError: LocalApiServerError | undefined = undefined;
   port = DEFAULT_LOCAL_API_PORT;
   lanEnabled = false;
   hasApiKey = false;
@@ -224,15 +238,11 @@ class LocalApiServerStore {
       });
     });
     listener.on('error', (error: Error | string) =>
-      this.fail(
-        epoch,
-        (typeof error === 'string' ? error : error?.message) ||
-          'The server could not listen',
-      ),
+      this.fail(epoch, toListenError(error)),
     );
     listener.on('close', () => {
       if (this.status === 'running') {
-        this.fail(epoch, 'The server stopped listening');
+        this.fail(epoch, 'stopped_listening');
       }
     });
     try {
@@ -241,17 +251,17 @@ class LocalApiServerStore {
         host: this.lanEnabled ? ALL_INTERFACES_HOST : LOOPBACK_HOST,
       });
     } catch (error) {
-      this.fail(epoch, error instanceof Error ? error.message : String(error));
+      this.fail(epoch, toListenError(error));
     }
   }
 
-  private fail(epoch: number, message: string): void {
+  private fail(epoch: number, error: LocalApiServerError): void {
     if (epoch !== this.epoch) {
       return;
     }
     runInAction(() => {
       this.status = 'failed';
-      this.lastError = message;
+      this.lastError = error;
       this.listener = undefined;
     });
   }

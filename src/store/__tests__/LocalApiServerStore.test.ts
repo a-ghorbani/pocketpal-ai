@@ -89,6 +89,16 @@ describe('LocalApiServerStore', () => {
 });
 
 describe('LocalApiServerStore lifecycle', () => {
+  let warn: jest.SpyInstance;
+
+  beforeAll(() => {
+    warn = jest.spyOn(console, 'warn').mockImplementation(() => {});
+  });
+
+  afterAll(() => {
+    warn.mockRestore();
+  });
+
   beforeEach(() => {
     store.setEnabled(false);
     runInAction(() => {
@@ -137,35 +147,36 @@ describe('LocalApiServerStore lifecycle', () => {
     expect(store.baseUrl).toBe('http://127.0.0.1:8080/v1');
   });
 
-  it('fails with the reason when the port is in use, and stops on toggle off', async () => {
+  it('fails with port_in_use when the port is taken, and stops on toggle off', async () => {
     store.setEnabled(true);
     await flush();
     lastServer().emitError(new Error('EADDRINUSE: address already in use'));
     expect(store.status).toBe('failed');
-    expect(store.lastError).toBe('EADDRINUSE: address already in use');
+    expect(store.lastError).toBe('port_in_use');
     expect(store.baseUrl).toBeUndefined();
 
     store.setEnabled(false);
     expect(store.status).toBe('stopped');
   });
 
-  it('shows a native error delivered as a string', async () => {
+  it.each([
+    ['bind failed: EADDRINUSE (Address already in use)', 'port_in_use'],
+    [new Error('Address already in use'), 'port_in_use'],
+    ['permission denied', 'listen_failed'],
+    [new Error('permission denied'), 'listen_failed'],
+    ['', 'listen_failed'],
+  ])('maps the native error %p to %s', async (error, kind) => {
     store.setEnabled(true);
     await flush();
-    lastServer().emit(
-      'error',
-      'bind failed: EADDRINUSE (Address already in use)',
-    );
-    expect(store.lastError).toBe(
-      'bind failed: EADDRINUSE (Address already in use)',
-    );
+    lastServer().emit('error', error);
+    expect(store.lastError).toBe(kind);
   });
 
-  it('fails when a running listener closes', async () => {
+  it('fails with stopped_listening when a running listener closes', async () => {
     await startRunning();
     lastServer().emit('close');
     expect(store.status).toBe('failed');
-    expect(store.lastError).toBeDefined();
+    expect(store.lastError).toBe('stopped_listening');
   });
 
   it('never listens when toggled off before the Keychain read resolves', async () => {
@@ -356,6 +367,16 @@ describe('LocalApiServerStore lifecycle', () => {
 });
 
 describe('LocalApiServerStore races and requests', () => {
+  let warn: jest.SpyInstance;
+
+  beforeAll(() => {
+    warn = jest.spyOn(console, 'warn').mockImplementation(() => {});
+  });
+
+  afterAll(() => {
+    warn.mockRestore();
+  });
+
   const MODELS = 'GET /v1/models HTTP/1.1\r\nHost: 127.0.0.1:8080\r\n\r\n';
 
   /** A llama context whose completions the test settles one at a time. */
@@ -464,12 +485,10 @@ describe('LocalApiServerStore races and requests', () => {
     }
 
     expect(store.status).toBe('failed');
-    expect(store.lastError).toBe(
-      'bind failed: EADDRINUSE (Address already in use)',
-    );
+    expect(store.lastError).toBe('port_in_use');
   });
 
-  it('fails with the reason when listen throws', async () => {
+  it('fails with listen_failed when listen throws', async () => {
     createServer.mockImplementationOnce((options: object) => {
       const server = new FakeServer(options);
       server.listen.mockImplementation(() => {
@@ -482,7 +501,7 @@ describe('LocalApiServerStore races and requests', () => {
     await flush();
 
     expect(store.status).toBe('failed');
-    expect(store.lastError).toBe('permission denied');
+    expect(store.lastError).toBe('listen_failed');
   });
 
   it('answers 503 server_busy to a third concurrent chat request', async () => {
@@ -582,7 +601,6 @@ describe('LocalApiServerStore races and requests', () => {
   });
 
   it('fails without listening when the Keychain read fails', async () => {
-    const warn = jest.spyOn(console, 'warn').mockImplementation(() => {});
     runInAction(() => {
       store.hasApiKey = true;
     });
@@ -595,11 +613,9 @@ describe('LocalApiServerStore races and requests', () => {
     expect(createdServers).toHaveLength(0);
     expect(getIpAddress).not.toHaveBeenCalled();
     expect(store.hasApiKey).toBe(true);
-    warn.mockRestore();
   });
 
   it('starts open after a failed read once the key is cleared', async () => {
-    const warn = jest.spyOn(console, 'warn').mockImplementation(() => {});
     getPassword.mockRejectedValueOnce(new Error('locked'));
     store.setEnabled(true);
     await flush();
@@ -610,11 +626,9 @@ describe('LocalApiServerStore races and requests', () => {
     await startWithoutKey();
     expect(store.status).toBe('running');
     expect(store.hasApiKey).toBe(false);
-    warn.mockRestore();
   });
 
   it('reports a failed Keychain write or removal and keeps hasApiKey', async () => {
-    const warn = jest.spyOn(console, 'warn').mockImplementation(() => {});
     runInAction(() => {
       store.hasApiKey = false;
     });
@@ -633,7 +647,6 @@ describe('LocalApiServerStore races and requests', () => {
     await expect(store.clearApiKey()).resolves.toBe(false);
     expect(store.hasApiKey).toBe(true);
     expect(JSON.stringify(warn.mock.calls)).not.toContain('secret');
-    warn.mockRestore();
   });
 
   it('refuses an empty key', async () => {
