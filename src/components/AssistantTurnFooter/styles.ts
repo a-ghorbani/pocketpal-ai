@@ -10,6 +10,12 @@ export const styles = ({theme}: {theme: Theme}) =>
       paddingBottom: 12,
       gap: 5,
     },
+    textGroup: {
+      flexShrink: 1,
+      flexDirection: 'row',
+      flexWrap: 'wrap',
+      columnGap: 5,
+    },
     timing: {
       color: theme.colors.textSecondary,
       fontSize: 10,

@@ -1,7 +1,9 @@
 import React from 'react';
+import {StyleSheet} from 'react-native';
 import {runInAction} from 'mobx';
+import {Text} from 'react-native-paper';
 
-import {render, fireEvent} from '../../../../jest/test-utils';
+import {render, fireEvent, within} from '../../../../jest/test-utils';
 
 import {chatSessionStore} from '../../../store';
 
@@ -21,6 +23,11 @@ const baseTurn = (overrides: Partial<any> = {}): any => ({
   metadata: {},
   ...overrides,
 });
+
+const footerChildIds = (footer: any): string[] =>
+  React.Children.toArray(footer.props.children)
+    .map((child: any) => child.props?.testID ?? child.type?.name)
+    .filter(Boolean);
 
 describe('AssistantTurnFooter', () => {
   beforeEach(() => {
@@ -61,14 +68,70 @@ describe('AssistantTurnFooter', () => {
           message={baseTurn({metadata: {copyable: true}})}
         />,
       );
-      const children = getByTestId('assistant-turn-footer').props.children;
-      const ids = React.Children.toArray(children)
-        .map((child: any) => child.props?.testID ?? child.type?.name)
-        .filter(Boolean);
+      const ids = footerChildIds(getByTestId('assistant-turn-footer'));
       expect(ids.indexOf('footer-copy')).toBeLessThan(
         ids.indexOf('MessageMenuButton'),
       );
       expect(ids[ids.length - 1]).toBe('MessageMenuButton');
+    });
+
+    it('keeps the button after a text group that shrinks and wraps', () => {
+      const message = baseTurn({
+        metadata: {
+          copyable: true,
+          interrupted: true,
+          timings: {
+            ...streamFinishChunk.timings,
+            time_to_first_token_ms: 150,
+            draft_tokens: 12,
+            draft_tokens_accepted: 9,
+          },
+          completionResult: {used: 0, contextFull: false, isRemote: true},
+        },
+      });
+      const {getByTestId, UNSAFE_getAllByType} = render(
+        <AssistantTurnFooter message={message} />,
+      );
+
+      const group = getByTestId('footer-text-group');
+      for (const id of [
+        'footer-timing',
+        'message-draft-tokens',
+        'footer-interrupted-status',
+      ]) {
+        expect(within(group).getByTestId(id)).toBeTruthy();
+      }
+      const groupStyle = StyleSheet.flatten(group.props.style);
+      expect(groupStyle).toMatchObject({
+        flexShrink: 1,
+        flexDirection: 'row',
+        flexWrap: 'wrap',
+      });
+      expect(groupStyle.flexGrow).toBeUndefined();
+      expect(groupStyle.flex).toBeUndefined();
+      for (const text of UNSAFE_getAllByType(Text)) {
+        expect(text.props.numberOfLines).toBeUndefined();
+      }
+
+      const ids = footerChildIds(getByTestId('assistant-turn-footer'));
+      expect(ids.slice(-3)).toEqual([
+        'footer-copy',
+        'footer-text-group',
+        'MessageMenuButton',
+      ]);
+      const buttonStyle = StyleSheet.flatten(
+        getByTestId('message-menu-button').props.style,
+      );
+      expect(buttonStyle.flexShrink).toBe(0);
+    });
+
+    it('renders no text group when the footer has no text', () => {
+      const {queryByTestId} = render(
+        <AssistantTurnFooter
+          message={baseTurn({metadata: {copyable: true}})}
+        />,
+      );
+      expect(queryByTestId('footer-text-group')).toBeNull();
     });
 
     it('is hidden on the active row while other parts still show', () => {

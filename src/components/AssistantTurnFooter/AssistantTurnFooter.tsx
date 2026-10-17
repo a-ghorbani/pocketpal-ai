@@ -100,6 +100,7 @@ export const AssistantTurnFooter: React.FC<AssistantTurnFooterProps> = observer(
       timingParts.push(t(l10n.components.bubble.ttft, {value: ttft}));
     }
     const fullTimingsString = timingParts.join(', ');
+    const showTimings = Boolean(timings && fullTimingsString);
 
     const draftTokens = finiteNumber(timings?.draft_tokens);
     const draftAccepted = finiteNumber(timings?.draft_tokens_accepted) ?? 0;
@@ -135,24 +136,30 @@ export const AssistantTurnFooter: React.FC<AssistantTurnFooterProps> = observer(
             />
           </TouchableOpacity>
         )}
-        {timings && fullTimingsString ? (
-          <Text style={componentStyles.timing} testID="footer-timing">
-            {fullTimingsString}
-          </Text>
-        ) : null}
-        {showDraft ? (
-          <Text style={componentStyles.timing} testID="message-draft-tokens">
-            {draftString}
-          </Text>
-        ) : null}
-        {interrupted ? (
-          <Text
-            style={componentStyles.interruptedStatus}
-            testID="footer-interrupted-status">
-            {truncationLikely && !suppressTruncated
-              ? l10n.components.bubble.truncated
-              : l10n.components.bubble.interrupted}
-          </Text>
+        {showTimings || showDraft || interrupted ? (
+          <View style={componentStyles.textGroup} testID="footer-text-group">
+            {showTimings ? (
+              <Text style={componentStyles.timing} testID="footer-timing">
+                {fullTimingsString}
+              </Text>
+            ) : null}
+            {showDraft ? (
+              <Text
+                style={componentStyles.timing}
+                testID="message-draft-tokens">
+                {draftString}
+              </Text>
+            ) : null}
+            {interrupted ? (
+              <Text
+                style={componentStyles.interruptedStatus}
+                testID="footer-interrupted-status">
+                {truncationLikely && !suppressTruncated
+                  ? l10n.components.bubble.truncated
+                  : l10n.components.bubble.interrupted}
+              </Text>
+            ) : null}
+          </View>
         ) : null}
         {!isActiveRun && <MessageMenuButton onPress={onMenuPress} />}
       </View>
