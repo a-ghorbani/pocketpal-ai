@@ -1330,11 +1330,12 @@ describe('SettingsScreen', () => {
   describe('voice input (ASR)', () => {
     afterEach(() => {
       runInAction(() => {
-        asrStore.deviceMeetsMemory = false;
+        modelStore.deviceTier = 'low';
         asrStore.userASROverride = null;
         asrStore.downloadStates.small = 'not_installed';
         asrStore.downloadError.small = null;
         asrStore.freeDiskBytes = null;
+        asrStore.spokenLanguage = null;
       });
     });
 
@@ -1343,7 +1344,7 @@ describe('SettingsScreen', () => {
 
     it('toggle reflects the device default when no override is set', () => {
       runInAction(() => {
-        asrStore.deviceMeetsMemory = true;
+        modelStore.deviceTier = 'high';
         asrStore.userASROverride = null;
       });
       const {getByTestId} = renderSettings();
@@ -1352,34 +1353,71 @@ describe('SettingsScreen', () => {
 
     it('toggle reflects an explicit user override over the device default', () => {
       runInAction(() => {
-        asrStore.deviceMeetsMemory = true;
+        modelStore.deviceTier = 'high';
         asrStore.userASROverride = false;
       });
       const {getByTestId} = renderSettings();
       expect(getByTestId('asr-availability-switch').props.value).toBe(false);
     });
 
-    it('shows the low-memory helper line only when the device gate fails', () => {
+    it('shows the unsupported-device helper only when the device gate fails', () => {
       runInAction(() => {
-        asrStore.deviceMeetsMemory = false;
+        modelStore.deviceTier = 'low';
         asrStore.userASROverride = null;
       });
       const {getByText} = renderSettings();
-      expect(getByText(l10n.en.voiceInput.lowMemoryHelper)).toBeTruthy();
+      expect(
+        getByText(l10n.en.voiceInput.unsupportedDeviceHelper),
+      ).toBeTruthy();
     });
 
-    it('hides the low-memory helper when the device meets memory', () => {
+    it('hides the unsupported-device helper on a supported device', () => {
       runInAction(() => {
-        asrStore.deviceMeetsMemory = true;
+        modelStore.deviceTier = 'high';
         asrStore.userASROverride = null;
       });
       const {queryByText} = renderSettings();
-      expect(queryByText(l10n.en.voiceInput.lowMemoryHelper)).toBeNull();
+      expect(
+        queryByText(l10n.en.voiceInput.unsupportedDeviceHelper),
+      ).toBeNull();
+    });
+
+    it('shows the detected spoken language and clears it on Detect again', () => {
+      runInAction(() => {
+        modelStore.deviceTier = 'high';
+        asrStore.userASROverride = null;
+        asrStore.spokenLanguage = 'en';
+      });
+      const {getByTestId} = renderSettings();
+      expect(getByTestId('asr-spoken-language').props.children).toBe(
+        'English (EN)',
+      );
+      act(() => {
+        fireEvent.press(getByTestId('asr-detect-language'));
+      });
+      expect(asrStore.setSpokenLanguage).toHaveBeenCalledWith(null);
+    });
+
+    it('names a spoken language the app has no UI translation for by its code', () => {
+      runInAction(() => {
+        modelStore.deviceTier = 'high';
+        asrStore.spokenLanguage = 'nl';
+      });
+      const {getByTestId} = renderSettings();
+      expect(getByTestId('asr-spoken-language').props.children).toBe('NL');
+    });
+
+    it('hides the spoken language row before a language is detected', () => {
+      runInAction(() => {
+        modelStore.deviceTier = 'high';
+      });
+      const {queryByTestId} = renderSettings();
+      expect(queryByTestId('asr-detect-language')).toBeNull();
     });
 
     it('writes the override through setUserASROverride when toggled', () => {
       runInAction(() => {
-        asrStore.deviceMeetsMemory = false;
+        modelStore.deviceTier = 'low';
         asrStore.userASROverride = null;
       });
       const {getByTestId} = renderSettings();
@@ -1391,7 +1429,7 @@ describe('SettingsScreen', () => {
 
     it('offers install controls only when the gate is open', () => {
       runInAction(() => {
-        asrStore.deviceMeetsMemory = false;
+        modelStore.deviceTier = 'low';
         asrStore.userASROverride = false;
       });
       const {queryByTestId} = renderSettings();
@@ -1400,7 +1438,7 @@ describe('SettingsScreen', () => {
 
     it('shows an install control for a not-installed tier when enabled', () => {
       runInAction(() => {
-        asrStore.deviceMeetsMemory = true;
+        modelStore.deviceTier = 'high';
         asrStore.userASROverride = true;
         asrStore.downloadStates.small = 'not_installed';
       });
@@ -1414,7 +1452,7 @@ describe('SettingsScreen', () => {
 
     it('shows a remove control for an installed tier and deletes on press', () => {
       runInAction(() => {
-        asrStore.deviceMeetsMemory = true;
+        modelStore.deviceTier = 'high';
         asrStore.userASROverride = true;
         asrStore.downloadStates.small = 'ready';
       });
@@ -1429,7 +1467,7 @@ describe('SettingsScreen', () => {
     it('renders the insufficient-storage line for a disk-blocked tier', () => {
       const freeMb = 50;
       runInAction(() => {
-        asrStore.deviceMeetsMemory = true;
+        modelStore.deviceTier = 'high';
         asrStore.userASROverride = true;
         asrStore.downloadStates.small = 'error';
         asrStore.downloadError.small = ASR_INSUFFICIENT_STORAGE;

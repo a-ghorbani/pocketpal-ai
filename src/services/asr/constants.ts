@@ -1,11 +1,15 @@
+import type {Tier} from '../deviceRules/types';
 import type {AsrTier, AsrTierManifest} from './types';
 
 /**
- * Minimum total RAM to enable on-device voice input by default (4 GiB).
- * Mirrors the TTS memory gate. Below this the feature is hidden unless the
- * user explicitly opts in via Settings (see ASRStore availability gate).
+ * Device tiers (the model picker's classification) that get voice input by
+ * default. Below these the feature is hidden unless the user opts in via
+ * Settings (see ASRStore availability gate).
  */
-export const ASR_MIN_RAM_BYTES = 4 * 1024 * 1024 * 1024;
+export const ASR_DEVICE_TIERS: Tier[] = ['high', 'flagship'];
+
+/** Device tiers that transcribe segments while the user keeps speaking. */
+export const ASR_LIVE_SEGMENT_DEVICE_TIERS: Tier[] = ['flagship'];
 
 /**
  * Maximum recording length (ms). Reaching it ends capture as if the user
@@ -40,7 +44,10 @@ export const ASR_PROMPT_CHARS = 200;
 /** Bytes per captured PCM chunk: 50 ms of 16 kHz mono 16-bit audio. */
 export const ASR_CHUNK_BYTES = 1600;
 
-/** Number of recent chunk levels kept for the recording waveform. */
+/** Captured chunks per waveform level: one level every 100 ms. */
+export const ASR_LEVEL_CHUNKS = 2;
+
+/** Number of recent levels kept for the recording waveform. */
 export const ASR_LEVEL_HISTORY = 40;
 
 /** Capture sample rate (Hz). Whisper operates on 16 kHz mono PCM. */

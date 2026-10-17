@@ -1,5 +1,7 @@
 import {makeAutoObservable, runInAction} from 'mobx';
 
+import {mockModelStore} from './modelStore';
+
 type DownloadState = 'not_installed' | 'downloading' | 'ready' | 'error';
 type AsrTier = 'base' | 'small' | 'large-turbo';
 type CaptureState =
@@ -15,9 +17,9 @@ type AsrErrorKind =
   | 'not_installed';
 
 class MockASRStore {
-  deviceMeetsMemory = false;
   userASROverride: boolean | null = null;
   selectedTier: AsrTier = 'small';
+  spokenLanguage: string | null = null;
 
   downloadStates: Record<AsrTier, DownloadState> = {
     base: 'not_installed',
@@ -39,10 +41,13 @@ class MockASRStore {
   lastError: AsrErrorKind | null = null;
   inputLevels: number[] = [];
   recordingStartedAt: number | null = null;
+  waitingForChat = false;
 
   init: jest.Mock;
   setUserASROverride: jest.Mock;
   setSelectedTier: jest.Mock;
+  setSpokenLanguage: jest.Mock;
+  setWaitingForChat: jest.Mock;
   refreshFreeDisk: jest.Mock;
   downloadModel: jest.Mock;
   deleteModel: jest.Mock;
@@ -57,6 +62,8 @@ class MockASRStore {
       init: false,
       setUserASROverride: false,
       setSelectedTier: false,
+      setSpokenLanguage: false,
+      setWaitingForChat: false,
       refreshFreeDisk: false,
       downloadModel: false,
       deleteModel: false,
@@ -75,6 +82,16 @@ class MockASRStore {
     this.setSelectedTier = jest.fn((t: AsrTier) => {
       runInAction(() => {
         this.selectedTier = t;
+      });
+    });
+    this.setSpokenLanguage = jest.fn((language: string | null) => {
+      runInAction(() => {
+        this.spokenLanguage = language;
+      });
+    });
+    this.setWaitingForChat = jest.fn((value: boolean) => {
+      runInAction(() => {
+        this.waitingForChat = value;
       });
     });
     this.refreshFreeDisk = jest.fn().mockResolvedValue(undefined);
@@ -102,8 +119,22 @@ class MockASRStore {
       runInAction(() => {
         this.captureState = 'idle';
         this.lastError = null;
+        this.waitingForChat = false;
       });
     });
+  }
+
+  get deviceSupported(): boolean {
+    const tier = mockModelStore.deviceTier;
+    return tier === 'high' || tier === 'flagship';
+  }
+
+  get liveSegments(): boolean {
+    return mockModelStore.deviceTier === 'flagship';
+  }
+
+  get chatBusyOnCpu(): boolean {
+    return mockModelStore.inferencing && mockModelStore.context?.gpu === false;
   }
 
   get asrAvailable(): boolean {
@@ -113,7 +144,7 @@ class MockASRStore {
     if (this.userASROverride === false) {
       return false;
     }
-    return this.deviceMeetsMemory;
+    return this.deviceSupported;
   }
 
   get selectedTierState(): DownloadState {

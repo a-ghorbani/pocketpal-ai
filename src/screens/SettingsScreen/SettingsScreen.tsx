@@ -80,7 +80,7 @@ import {
   clearAllSessionCaches,
   getSessionCacheInfo,
 } from '../../utils';
-import {t} from '../../locales';
+import {type AvailableLanguage, languageDisplayNames, t} from '../../locales';
 import {checkGpuSupport} from '../../utils/deviceCapabilities';
 import {exportLegacyChatSessions} from '../../utils/exportUtils';
 import {getDeviceOptions, DeviceOption} from '../../utils/deviceSelection';
@@ -93,6 +93,11 @@ import {
 // OpenCL documentation URL (not localized)
 const OPENCL_DOCS_URL =
   'https://github.com/ggml-org/llama.cpp/blob/master/docs/backend/OPENCL.md#model-preparation';
+
+const languageName = (code: string): string =>
+  code in languageDisplayNames
+    ? languageDisplayNames[code as AvailableLanguage]
+    : code.toUpperCase();
 
 export const SettingsScreen: React.FC = observer(() => {
   const l10n = useContext(L10nContext);
@@ -1161,20 +1166,41 @@ export const SettingsScreen: React.FC = observer(() => {
                     <Text variant="labelSmall" style={styles.textDescription}>
                       {l10n.voiceInput.settingDescription}
                     </Text>
-                    {!asrStore.deviceMeetsMemory && (
+                    {!asrStore.deviceSupported && (
                       <Text variant="labelSmall" style={styles.textDescription}>
-                        {l10n.voiceInput.lowMemoryHelper}
+                        {l10n.voiceInput.unsupportedDeviceHelper}
                       </Text>
                     )}
                   </View>
                   <Switch
                     testID="asr-availability-switch"
-                    value={
-                      asrStore.userASROverride ?? asrStore.deviceMeetsMemory
-                    }
+                    value={asrStore.userASROverride ?? asrStore.deviceSupported}
                     onValueChange={value => asrStore.setUserASROverride(value)}
                   />
                 </View>
+
+                {asrStore.asrAvailable && asrStore.spokenLanguage && (
+                  <View style={styles.switchContainer}>
+                    <View style={styles.textContainer}>
+                      <Text variant="bodyMedium" style={styles.textLabel}>
+                        {l10n.voiceInput.spokenLanguageLabel}
+                      </Text>
+                      <Text
+                        variant="labelSmall"
+                        style={styles.textDescription}
+                        testID="asr-spoken-language">
+                        {languageName(asrStore.spokenLanguage)}
+                      </Text>
+                    </View>
+                    <Button
+                      mode="outlined"
+                      testID="asr-detect-language"
+                      onPress={() => asrStore.setSpokenLanguage(null)}
+                      style={styles.menuButton}>
+                      {l10n.voiceInput.detectLanguageCta}
+                    </Button>
+                  </View>
+                )}
 
                 {/* Per-tier voice-model install/delete (only when enabled) */}
                 {asrStore.asrAvailable &&

@@ -5,7 +5,7 @@ import {fireEvent, render} from '../../../../jest/test-utils';
 
 import {L10nContext} from '../../../utils';
 import {l10n} from '../../../locales';
-import {asrStore} from '../../../store';
+import {asrStore, modelStore} from '../../../store';
 import {lightTheme} from '../../../utils/theme';
 
 const mockNavigate = jest.fn();
@@ -28,7 +28,7 @@ describe('MicButton', () => {
   beforeEach(() => {
     jest.clearAllMocks();
     runInAction(() => {
-      asrStore.deviceMeetsMemory = true;
+      modelStore.deviceTier = 'high';
       asrStore.userASROverride = null;
       asrStore.selectedTier = 'small';
       asrStore.downloadStates.small = 'ready';
@@ -38,7 +38,7 @@ describe('MicButton', () => {
 
   it('renders nothing when voice input is unavailable', () => {
     runInAction(() => {
-      asrStore.deviceMeetsMemory = false;
+      modelStore.deviceTier = 'low';
       asrStore.userASROverride = false;
     });
     const {queryByTestId} = renderMic();

@@ -3,7 +3,7 @@ import {runInAction} from 'mobx';
 
 import {user} from '../../../../jest/fixtures';
 import {act, fireEvent, render} from '../../../../jest/test-utils';
-import {asrStore} from '../../../store';
+import {asrStore, modelStore} from '../../../store';
 import * as micPerm from '../../../utils/asrMicPermission';
 import {ChatView} from '../ChatView';
 
@@ -37,7 +37,7 @@ describe('ChatView voice-input append seam', () => {
     capturedOnTranscript = null;
     // Gate open + selected tier ready so the mic is actionable.
     runInAction(() => {
-      asrStore.deviceMeetsMemory = true;
+      modelStore.deviceTier = 'high';
       asrStore.userASROverride = true;
       asrStore.selectedTier = 'small';
       asrStore.downloadStates.small = 'ready';

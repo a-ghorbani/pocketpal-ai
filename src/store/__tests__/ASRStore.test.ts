@@ -5,6 +5,9 @@ import DeviceInfo from 'react-native-device-info';
 jest.mock('mobx-persist-store', () => ({
   makePersistable: jest.fn().mockReturnValue(Promise.resolve()),
 }));
+jest.mock('../ModelStore', () => ({
+  modelStore: require('../../../__mocks__/stores/modelStore').mockModelStore,
+}));
 
 // Capture AppState handlers so a background/inactive transition can be invoked.
 const appStateHandlers: Array<(s: string) => void> = [];
@@ -20,10 +23,11 @@ jest
 import {
   ASR_INSUFFICIENT_STORAGE,
   ASR_LEVEL_HISTORY,
-  ASR_MIN_RAM_BYTES,
+  ASR_TIER_ORDER,
   whisperAsrEngine,
 } from '../../services/asr';
 import {ASRStore} from '../ASRStore';
+import {modelStore} from '../ModelStore';
 
 // Spy on the real engine singleton's methods (same identity the store holds)
 // so the store can be exercised without touching whisper.rn or the disk.
@@ -46,54 +50,74 @@ describe('ASRStore', () => {
     mockDeleteModel.mockResolvedValue(undefined);
     mockReclaim.mockResolvedValue(undefined);
     mockRelease.mockResolvedValue(undefined);
-    (DeviceInfo.getTotalMemory as jest.Mock).mockResolvedValue(6 * GIB);
+    modelStore.deviceTier = 'high';
+    modelStore.inferencing = false;
+    modelStore.context = undefined;
     (DeviceInfo.getFreeDiskStorage as jest.Mock).mockResolvedValue(10 * GIB);
     store = new ASRStore();
   });
 
   describe('availability gate', () => {
-    it('high-memory device, first run → available', async () => {
-      (DeviceInfo.getTotalMemory as jest.Mock).mockResolvedValue(6 * GIB);
-      await store.init();
-      expect(store.deviceMeetsMemory).toBe(true);
+    it.each([
+      ['flagship', true],
+      ['high', true],
+      ['mid', false],
+      ['low', false],
+      [null, false],
+    ] as const)('device tier %s, first run → available %s', (tier, avail) => {
+      modelStore.deviceTier = tier;
+      expect(store.deviceSupported).toBe(avail);
       expect(store.userASROverride).toBeNull();
-      expect(store.asrAvailable).toBe(true);
+      expect(store.asrAvailable).toBe(avail);
     });
 
-    it('low-memory device, first run → not available', async () => {
-      (DeviceInfo.getTotalMemory as jest.Mock).mockResolvedValue(3 * GIB);
-      await store.init();
-      expect(store.deviceMeetsMemory).toBe(false);
-      expect(store.asrAvailable).toBe(false);
-    });
-
-    it('low-memory device, user opts in → available', async () => {
-      (DeviceInfo.getTotalMemory as jest.Mock).mockResolvedValue(3 * GIB);
-      await store.init();
+    it('unsupported device, user opts in → available', () => {
+      modelStore.deviceTier = 'low';
       store.setUserASROverride(true);
       expect(store.asrAvailable).toBe(true);
     });
 
-    it('high-memory device, user opts out → not available', async () => {
-      await store.init();
+    it('supported device, user opts out → not available', () => {
+      modelStore.deviceTier = 'high';
       store.setUserASROverride(false);
       expect(store.asrAvailable).toBe(false);
     });
 
-    it('uses the configured RAM threshold', async () => {
-      (DeviceInfo.getTotalMemory as jest.Mock).mockResolvedValue(
-        ASR_MIN_RAM_BYTES,
-      );
-      await store.init();
-      expect(store.deviceMeetsMemory).toBe(true);
+    it('transcribes while speaking only on flagship devices', () => {
+      modelStore.deviceTier = 'flagship';
+      expect(store.liveSegments).toBe(true);
+      modelStore.deviceTier = 'high';
+      expect(store.liveSegments).toBe(false);
+      modelStore.deviceTier = null;
+      expect(store.liveSegments).toBe(false);
+    });
+  });
+
+  describe('chatBusyOnCpu', () => {
+    it.each([
+      [true, false, true],
+      [true, true, false],
+      [false, false, false],
+    ])('inferencing %s on gpu %s → %s', (inferencing, gpu, busy) => {
+      modelStore.inferencing = inferencing;
+      modelStore.context = {gpu} as any;
+      expect(store.chatBusyOnCpu).toBe(busy);
     });
 
-    it('treats a getTotalMemory failure as not meeting memory', async () => {
-      (DeviceInfo.getTotalMemory as jest.Mock).mockRejectedValue(
-        new Error('boom'),
-      );
-      await store.init();
-      expect(store.deviceMeetsMemory).toBe(false);
+    it('is false without a local model', () => {
+      modelStore.inferencing = true;
+      modelStore.context = undefined;
+      expect(store.chatBusyOnCpu).toBe(false);
+    });
+  });
+
+  describe('spoken language', () => {
+    it('starts undetected and keeps what it is set to', () => {
+      expect(store.spokenLanguage).toBeNull();
+      store.setSpokenLanguage('de');
+      expect(store.spokenLanguage).toBe('de');
+      store.setSpokenLanguage(null);
+      expect(store.spokenLanguage).toBeNull();
     });
   });
 
@@ -111,7 +135,7 @@ describe('ASRStore', () => {
     it('is idempotent', async () => {
       await store.init();
       await store.init();
-      expect(DeviceInfo.getTotalMemory).toHaveBeenCalledTimes(1);
+      expect(mockIsInstalled).toHaveBeenCalledTimes(ASR_TIER_ORDER.length);
     });
   });
 

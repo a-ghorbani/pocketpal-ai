@@ -11,10 +11,11 @@ import DeviceInfo from 'react-native-device-info';
 
 import {
   ASR_DEFAULT_TIER,
+  ASR_DEVICE_TIERS,
   ASR_DISK_HEADROOM_FACTOR,
   ASR_INSUFFICIENT_STORAGE,
   ASR_LEVEL_HISTORY,
-  ASR_MIN_RAM_BYTES,
+  ASR_LIVE_SEGMENT_DEVICE_TIERS,
   ASR_TIERS,
   ASR_TIER_ORDER,
   whisperAsrEngine,
@@ -26,13 +27,15 @@ import type {
   CaptureState,
 } from '../services/asr';
 
+import {modelStore} from './ModelStore';
+
 /**
  * Store coordinating on-device voice input (ASR).
  *
  * Availability gate: `asrAvailable` is the single boolean the mic button and
- * the Settings surface read. It is derived from `deviceMeetsMemory` (set once
- * in `init()` from `DeviceInfo.getTotalMemory()`) and `userASROverride` (a
- * persisted user choice) — the same shape as the TTS gate. The whisper model
+ * the Settings surface read. It is derived from `deviceSupported` (the
+ * model picker's device tier) and `userASROverride` (a persisted user
+ * choice) — the same shape as the TTS gate. The whisper model
  * is downloaded per tier on demand and is never routed through the LLM
  * `ModelStore`; this store is the sole owner of ASR install/download state.
  *
@@ -42,16 +45,16 @@ import type {
  * auto-sent).
  */
 export class ASRStore {
-  // Set once in init() from getTotalMemory() >= ASR_MIN_RAM_BYTES; never
-  // re-checked. RAM doesn't change at runtime.
-  deviceMeetsMemory: boolean = false;
-  // Tristate persisted user choice. null = not set (mirrors deviceMeetsMemory).
+  // Tristate persisted user choice. null = not set (mirrors deviceSupported).
   userASROverride: boolean | null = null;
   private initialized: boolean = false;
   private appStateSubscription: NativeEventSubscription | null = null;
 
   // Persisted: which tier the user installed / uses.
   selectedTier: AsrTier = ASR_DEFAULT_TIER;
+  // Persisted: the language whisper detected on the first transcription,
+  // passed on every later one. null = detect on the next transcription.
+  spokenLanguage: string | null = null;
 
   // Per-tier model lifecycle — derived from disk on init(), NOT persisted.
   downloadStates: Record<AsrTier, AsrDownloadState> = {
@@ -80,19 +83,44 @@ export class ASRStore {
   inputLevels: number[] = [];
   // Date.now() when the current recording started; null when not recording.
   recordingStartedAt: number | null = null;
+  // True while transcription waits for a CPU-bound chat reply to finish.
+  waitingForChat: boolean = false;
 
   constructor() {
     makeAutoObservable(this, {inputLevels: observable.ref}, {autoBind: true});
     makePersistable(this, {
       name: 'ASRStore',
-      properties: ['userASROverride', 'selectedTier'],
+      properties: ['userASROverride', 'selectedTier', 'spokenLanguage'],
       storage: AsyncStorage,
     });
   }
 
+  /** True when the device tier is high enough for voice input by default. */
+  get deviceSupported(): boolean {
+    const tier = modelStore.deviceTier;
+    return tier !== null && ASR_DEVICE_TIERS.includes(tier);
+  }
+
+  /**
+   * True when segments are transcribed while the user keeps speaking. Other
+   * devices transcribe once after stop, which costs less CPU in total.
+   */
+  get liveSegments(): boolean {
+    const tier = modelStore.deviceTier;
+    return tier !== null && ASR_LIVE_SEGMENT_DEVICE_TIERS.includes(tier);
+  }
+
+  /**
+   * True while a local chat model generates on the CPU. Whisper competes
+   * with it for the same cores, so transcription waits for the reply.
+   */
+  get chatBusyOnCpu(): boolean {
+    return modelStore.inferencing && modelStore.context?.gpu === false;
+  }
+
   /**
    * The ASR availability gate. Single boolean every ASR-aware surface reads.
-   * An explicit user override wins; otherwise the device-memory default
+   * An explicit user override wins; otherwise the device-tier default
    * applies (first run / null).
    */
   get asrAvailable(): boolean {
@@ -102,7 +130,7 @@ export class ASRStore {
     if (this.userASROverride === false) {
       return false;
     }
-    return this.deviceMeetsMemory;
+    return this.deviceSupported;
   }
 
   /** Download state of the currently selected tier. */
@@ -116,26 +144,14 @@ export class ASRStore {
   }
 
   /**
-   * Initialize the store. Idempotent — only the first call does work. Sets
-   * the memory gate once and derives each tier's install state from disk.
+   * Initialize the store. Idempotent — only the first call does work.
+   * Derives each tier's install state from disk.
    */
   async init(): Promise<void> {
     if (this.initialized) {
       return;
     }
     this.initialized = true;
-
-    let totalMemory = 0;
-    try {
-      totalMemory = await DeviceInfo.getTotalMemory();
-    } catch (err) {
-      console.warn('[ASRStore] getTotalMemory failed:', err);
-      totalMemory = 0;
-    }
-
-    runInAction(() => {
-      this.deviceMeetsMemory = totalMemory >= ASR_MIN_RAM_BYTES;
-    });
 
     const results = await Promise.all(
       ASR_TIER_ORDER.map(async tier => {
@@ -173,8 +189,8 @@ export class ASRStore {
 
   /**
    * Persist the user's explicit choice for the availability gate. `true`
-   * forces the gate open even on low-memory devices; `false` forces it closed
-   * even on high-memory devices.
+   * forces the gate open on unsupported devices; `false` forces it closed
+   * on supported ones.
    */
   setUserASROverride(value: boolean): void {
     this.userASROverride = value;
@@ -182,6 +198,14 @@ export class ASRStore {
 
   setSelectedTier(tier: AsrTier): void {
     this.selectedTier = tier;
+  }
+
+  setSpokenLanguage(language: string | null): void {
+    this.spokenLanguage = language;
+  }
+
+  setWaitingForChat(value: boolean): void {
+    this.waitingForChat = value;
   }
 
   async refreshFreeDisk(): Promise<void> {
@@ -312,12 +336,14 @@ export class ASRStore {
     this.captureState = 'error';
     this.lastError = kind;
     this.recordingStartedAt = null;
+    this.waitingForChat = false;
   }
 
   resetCapture(): void {
     this.captureState = 'idle';
     this.lastError = null;
     this.recordingStartedAt = null;
+    this.waitingForChat = false;
   }
 }
 

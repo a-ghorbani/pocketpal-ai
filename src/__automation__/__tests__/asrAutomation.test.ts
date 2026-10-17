@@ -1,14 +1,18 @@
 jest.mock('mobx-persist-store', () => ({
   makePersistable: jest.fn().mockReturnValue(Promise.resolve()),
 }));
+jest.mock('../../store/ModelStore', () => ({
+  modelStore: require('../../../__mocks__/stores/modelStore').mockModelStore,
+}));
 
 import {ASR_INSUFFICIENT_STORAGE} from '../../services/asr';
 import {asrStore} from '../../store/ASRStore';
+import {modelStore} from '../../store/ModelStore';
 import {runAsrCommand} from '../asrAutomation';
 
 describe('runAsrCommand', () => {
   beforeEach(() => {
-    asrStore.deviceMeetsMemory = false;
+    modelStore.deviceTier = 'high';
     asrStore.userASROverride = null;
     asrStore.downloadStates[asrStore.selectedTier] = 'not_installed';
     asrStore.downloadError[asrStore.selectedTier] = null;
@@ -31,10 +35,10 @@ describe('runAsrCommand', () => {
     expect(asrStore.isSelectedTierReady).toBe(false);
   });
 
-  it('state::low-memory → gate closed by device memory, override unset', async () => {
-    await runAsrCommand('state::low-memory');
+  it('state::unsupported → gate closed by device tier, override unset', async () => {
+    await runAsrCommand('state::unsupported');
 
-    expect(asrStore.deviceMeetsMemory).toBe(false);
+    expect(asrStore.deviceSupported).toBe(false);
     expect(asrStore.userASROverride).toBeNull();
     expect(asrStore.asrAvailable).toBe(false);
   });
@@ -51,6 +55,14 @@ describe('runAsrCommand', () => {
     await runAsrCommand('state::transcribing');
 
     expect(asrStore.captureState).toBe('transcribing');
+    expect(asrStore.waitingForChat).toBe(false);
+  });
+
+  it('state::waiting-chat → transcribing, waiting for the chat reply', async () => {
+    await runAsrCommand('state::waiting-chat');
+
+    expect(asrStore.captureState).toBe('transcribing');
+    expect(asrStore.waitingForChat).toBe(true);
   });
 
   it('state::error-capture → composer transcribe-failed error', async () => {
