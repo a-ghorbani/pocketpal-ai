@@ -891,3 +891,77 @@ describe('Message — AssistantTurn renderer', () => {
     ).toEqual(toolCalls);
   });
 });
+
+describe('Message — streaming animation on step content', () => {
+  const {EnrichedMarkdownText} = require('react-native-enriched-markdown');
+  const {TextMessage} = require('../../TextMessage/TextMessage');
+  const markdownSpy = EnrichedMarkdownText as jest.Mock;
+  const recordingTextMessage = (
+    TextMessage as jest.Mock
+  ).getMockImplementation();
+
+  beforeEach(() => {
+    (TextMessage as jest.Mock).mockImplementation(
+      jest.requireActual('../../TextMessage/TextMessage').TextMessage,
+    );
+    markdownSpy.mockClear();
+  });
+
+  afterEach(() => {
+    (TextMessage as jest.Mock).mockImplementation(recordingTextMessage);
+  });
+
+  const step = (partial: boolean): AgentStep => ({content: 'Hi', partial});
+
+  const renderRow = (steps: AgentStep[], isActiveRun: boolean) => (
+    <Message
+      message={makeDerivedTurn(steps)}
+      messageWidth={440}
+      isActiveRun={isActiveRun}
+      roundBorder
+      showAvatar
+      showName
+      showStatus
+    />
+  );
+
+  const animationFlags = () =>
+    markdownSpy.mock.calls.map(([props]) => props.streamingAnimation);
+
+  it('animates the live step of the active row', () => {
+    render(renderRow([step(true)], true));
+
+    expect(animationFlags()).toEqual([true]);
+  });
+
+  it('animates only the partial step of a multi-step active row', () => {
+    render(renderRow([step(false), step(true)], true));
+
+    expect(animationFlags()).toEqual([false, true]);
+  });
+
+  it('does not animate a finished step on the active row', () => {
+    render(renderRow([step(false)], true));
+
+    expect(animationFlags()).toEqual([false]);
+  });
+
+  it('does not animate a stale partial step once the row is no longer active', () => {
+    render(renderRow([step(true)], false));
+
+    expect(animationFlags()).toEqual([false]);
+  });
+
+  it('drops the flag in place when the run ends with unchanged text', () => {
+    const {rerender} = render(renderRow([step(true)], true));
+    rerender(renderRow([step(true)], false));
+
+    expect(animationFlags()[animationFlags().length - 1]).toBe(false);
+  });
+
+  it('marks step content selectable', () => {
+    render(renderRow([step(false)], false));
+
+    expect(markdownSpy.mock.calls[0][0].selectable).toBe(true);
+  });
+});

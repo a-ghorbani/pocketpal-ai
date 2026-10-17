@@ -108,10 +108,7 @@ export interface MessageProps extends MessageTopLevelProps {
 export const Message = observer(
   ({
     enableAnimation,
-    // isActiveRun / activeRunPendingTalentNames / isGeneratingToolCall
-    // are kept on MessageTopLevelProps for ChatView's prop API but not
-    // consumed here — pending UX is owned by ChatView's PendingIndicator
-    // and TalentSurface dispatches off persisted step data alone.
+    isActiveRun,
     message,
     messageWidth,
     onMessagePress,
@@ -285,6 +282,7 @@ export const Message = observer(
             showName={showNameForBlock}
             usePreviewData={usePreviewData}
             step={stepFragment}
+            isActiveRun={isActiveRun}
           />
         );
         const wrapped = oneOf(
