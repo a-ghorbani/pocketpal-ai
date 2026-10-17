@@ -81,25 +81,8 @@ export const createWrapper = ({
 
 const customRender = (
   ui: React.ReactElement,
-  {
-    theme,
-    user,
-    withNavigation,
-    withSafeArea,
-    withBottomSheetProvider,
-    ...renderOptions
-  }: CustomRenderOptions = {},
-) =>
-  render(ui, {
-    wrapper: createWrapper({
-      theme,
-      user,
-      withNavigation,
-      withSafeArea,
-      withBottomSheetProvider,
-    }),
-    ...renderOptions,
-  });
+  options: CustomRenderOptions = {},
+) => render(ui, {wrapper: createWrapper(options)});
 
 const styles = StyleSheet.create({
   root: {
