@@ -157,6 +157,62 @@ describe('LocalApiServerCard', () => {
     expect(queryByText('Use a port from 1024 to 65535')).toBeNull();
   });
 
+  describe('a typed port that was never blurred', () => {
+    const HINT = 'Use a port from 1024 to 65535';
+
+    it('is committed before the server starts', () => {
+      const {getByTestId, queryByText} = render(<LocalApiServerCard />);
+      fireEvent.changeText(getByTestId('local-api-server-port-input'), '9090');
+      fireEvent(getByTestId('local-api-server-switch'), 'onValueChange', true);
+
+      expect(store.setPort).toHaveBeenCalledWith(9090);
+      expect(store.port).toBe(9090);
+      expect(store.setEnabled).toHaveBeenCalledWith(true);
+      expect(store.setPort.mock.invocationCallOrder[0]).toBeLessThan(
+        store.setEnabled.mock.invocationCallOrder[0],
+      );
+      expect(queryByText(HINT)).toBeNull();
+    });
+
+    it('blocks the start when out of range', () => {
+      const {getByTestId, getByText} = render(<LocalApiServerCard />);
+      const input = getByTestId('local-api-server-port-input');
+      fireEvent.changeText(input, '80');
+      fireEvent(getByTestId('local-api-server-switch'), 'onValueChange', true);
+
+      expect(store.setEnabled).not.toHaveBeenCalled();
+      expect(getByTestId('local-api-server-switch').props.value).toBe(false);
+      expect(input.props.value).toBe('8080');
+      expect(getByText(HINT)).toBeTruthy();
+    });
+
+    it('is dropped without a hint when the server starts elsewhere', () => {
+      const {getByTestId, queryByText} = render(<LocalApiServerCard />);
+      const input = getByTestId('local-api-server-port-input');
+      fireEvent.changeText(input, '9091');
+      act(() => setState({enabled: true, status: 'starting'}));
+      fireEvent(input, 'blur');
+
+      expect(store.port).toBe(8080);
+      expect(store.setPort).not.toHaveBeenCalled();
+      expect(getByTestId('local-api-server-port-input').props.value).toBe(
+        '8080',
+      );
+      expect(queryByText(HINT)).toBeNull();
+    });
+
+    it('clears the hint on the next edit', () => {
+      const {getByTestId, queryByText} = render(<LocalApiServerCard />);
+      const input = getByTestId('local-api-server-port-input');
+      fireEvent.changeText(input, '80');
+      fireEvent(input, 'blur');
+      expect(queryByText(HINT)).toBeTruthy();
+
+      fireEvent.changeText(input, '9');
+      expect(queryByText(HINT)).toBeNull();
+    });
+  });
+
   it('sets the LAN switch through the store', () => {
     const {getByTestId} = render(<LocalApiServerCard />);
     fireEvent(

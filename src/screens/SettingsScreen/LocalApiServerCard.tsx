@@ -16,6 +16,7 @@ import {useTheme} from '../../hooks';
 import {t} from '../../locales';
 import type {Translations} from '../../locales/types';
 import {
+  isValidLocalApiPort,
   LocalApiServerError,
   localApiServerStore,
   modelStore,
@@ -50,10 +51,44 @@ export const LocalApiServerCard: React.FC = observer(() => {
     setPortDraft(String(store.port));
   }, [store.port]);
 
+  useEffect(() => {
+    if (store.status !== 'stopped') {
+      setPortDraft(String(store.port));
+      setPortInvalid(false);
+    }
+  }, [store.status, store.port]);
+
   const editable = store.status === 'stopped';
   const servedModel = store.servedModelId ? modelStore.activeModel : undefined;
 
-  const commitPort = () => setPortInvalid(!store.setPort(Number(portDraft)));
+  const commitPort = (): boolean => {
+    const port = Number(portDraft);
+    if (!isValidLocalApiPort(port)) {
+      setPortDraft(String(store.port));
+      setPortInvalid(true);
+      return false;
+    }
+    store.setPort(port);
+    return true;
+  };
+
+  const onPortBlur = () => {
+    if (store.status === 'stopped') {
+      commitPort();
+    }
+  };
+
+  const onPortChange = (text: string) => {
+    setPortDraft(text);
+    setPortInvalid(false);
+  };
+
+  const onSwitchChange = (enabled: boolean) => {
+    if (enabled && portDraft !== String(store.port) && !commitPort()) {
+      return;
+    }
+    store.setEnabled(enabled);
+  };
 
   const saveKey = async () => {
     if (await store.setApiKey(keyDraft)) {
@@ -84,7 +119,7 @@ export const LocalApiServerCard: React.FC = observer(() => {
             <Switch
               testID="local-api-server-switch"
               value={store.enabled}
-              onValueChange={value => store.setEnabled(value)}
+              onValueChange={onSwitchChange}
             />
           </View>
 
@@ -149,8 +184,8 @@ export const LocalApiServerCard: React.FC = observer(() => {
             testID="local-api-server-port-input"
             label={copy.port}
             value={portDraft}
-            onChangeText={setPortDraft}
-            onBlur={commitPort}
+            onChangeText={onPortChange}
+            onBlur={onPortBlur}
             keyboardType="number-pad"
             editable={editable}
             disabled={!editable}

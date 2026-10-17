@@ -114,6 +114,9 @@ jest.mock('react-native-safe-area-context', () => {
 
 jest.mock('../src/store', () => {
   const {UIStore} = require('../__mocks__/stores/uiStore');
+  const {
+    isValidLocalApiPort,
+  } = require('../__mocks__/stores/localApiServerStore');
   return {
     modelStore: mockModelStore,
     UIStore,
@@ -130,6 +133,7 @@ jest.mock('../src/store', () => {
     searchProviderStore: mockSearchProviderStore,
     purchaseStore: mockPurchaseStore,
     localApiServerStore: mockLocalApiServerStore,
+    isValidLocalApiPort,
     defaultCompletionSettings: mockDefaultCompletionSettings,
     NEW_SESSION_TITLE: 'New Session',
   };

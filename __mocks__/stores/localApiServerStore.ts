@@ -5,6 +5,9 @@ import type {
   LocalApiServerStatus,
 } from '../../src/store/LocalApiServerStore';
 
+export const isValidLocalApiPort = (port: number) =>
+  Number.isInteger(port) && port >= 1024 && port <= 65535;
+
 class MockLocalApiServerStore {
   enabled = false;
   status: LocalApiServerStatus = 'stopped';
@@ -23,7 +26,7 @@ class MockLocalApiServerStore {
     });
   });
   setPort = jest.fn((port: number) => {
-    if (this.status !== 'stopped' || port < 1024 || port > 65535) {
+    if (this.status !== 'stopped' || !isValidLocalApiPort(port)) {
       return false;
     }
     runInAction(() => {
