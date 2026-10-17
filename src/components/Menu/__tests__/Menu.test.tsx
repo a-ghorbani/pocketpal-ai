@@ -1,6 +1,6 @@
 import React from 'react';
 import {useSafeAreaInsets} from 'react-native-safe-area-context';
-import {render} from '../../../../jest/test-utils';
+import {act, fireEvent, render} from '../../../../jest/test-utils';
 import {Menu} from '../Menu';
 
 describe('Menu', () => {
@@ -65,5 +65,79 @@ describe('Menu', () => {
 
     const paperMenuInstance = UNSAFE_getByType(PaperMenu);
     expect(paperMenuInstance.props.visible).toBe(false);
+  });
+
+  describe('open and close animation', () => {
+    const elapse = (ms: number) =>
+      act(() => new Promise<void>(resolve => setTimeout(resolve, ms)));
+
+    const renderOpenMenu = async (onDismiss = jest.fn()) => {
+      const ui = (isVisible: boolean) => (
+        <Menu visible={isVisible} onDismiss={onDismiss} anchor={undefined}>
+          <Menu.Item label="Item 1" onPress={() => {}} />
+        </Menu>
+      );
+      const utils = render(ui(true));
+      await elapse(600);
+      return {...utils, setVisible: (v: boolean) => utils.rerender(ui(v))};
+    };
+
+    it('unmounts the items once the hide animation finishes', async () => {
+      const {queryByText, setVisible} = await renderOpenMenu();
+      expect(queryByText('Item 1')).toBeTruthy();
+
+      setVisible(false);
+      await elapse(600);
+
+      expect(queryByText('Item 1')).toBeNull();
+    });
+
+    it('stays open when reopened while the hide animation is running', async () => {
+      const {queryByText, setVisible} = await renderOpenMenu();
+
+      setVisible(false);
+      await elapse(0);
+      setVisible(true);
+      await elapse(600);
+
+      expect(queryByText('Item 1')).toBeTruthy();
+    });
+
+    it('reopens after a completed hide', async () => {
+      const {queryByText, setVisible} = await renderOpenMenu();
+
+      setVisible(false);
+      await elapse(600);
+      expect(queryByText('Item 1')).toBeNull();
+
+      setVisible(true);
+      await elapse(600);
+
+      expect(queryByText('Item 1')).toBeTruthy();
+    });
+
+    it('calls onDismiss from an overlay press only after the menu animates out', async () => {
+      const onDismiss = jest.fn();
+      const {getByLabelText} = await renderOpenMenu(onDismiss);
+
+      fireEvent.press(
+        getByLabelText('Close menu', {includeHiddenElements: true}),
+      );
+      expect(onDismiss).not.toHaveBeenCalled();
+
+      await elapse(600);
+      expect(onDismiss).toHaveBeenCalledTimes(1);
+    });
+
+    it('calls onDismiss from an accessibility escape only after the menu animates out', async () => {
+      const onDismiss = jest.fn();
+      const {getByTestId} = await renderOpenMenu(onDismiss);
+
+      act(() => getByTestId('menu-view').props.onAccessibilityEscape());
+      expect(onDismiss).not.toHaveBeenCalled();
+
+      await elapse(600);
+      expect(onDismiss).toHaveBeenCalledTimes(1);
+    });
   });
 });
