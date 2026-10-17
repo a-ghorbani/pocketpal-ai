@@ -20,7 +20,13 @@ export const useMenuAnchor = () => {
       setVisible(true);
     });
 
-  return {ref, anchor, visible, open, close: () => setVisible(false)};
+  return {
+    buttonRef: ref as unknown as React.Ref<View>,
+    anchor,
+    visible,
+    open,
+    close: () => setVisible(false),
+  };
 };
 
 export type MenuAnchor = ReturnType<typeof useMenuAnchor>;
@@ -68,7 +74,7 @@ export const CacheTypeMenuRow: React.FC<CacheTypeMenuRowProps> = ({
       </View>
       <View style={styles.menuContainer}>
         <Button
-          ref={menu.ref as unknown as React.Ref<View>}
+          ref={menu.buttonRef}
           mode="outlined"
           onPress={menu.open}
           style={styles.menuButton}
