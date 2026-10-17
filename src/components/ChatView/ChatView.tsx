@@ -71,10 +71,12 @@ import {
 } from '../../services/documents/store';
 import {hasDocuments} from '../../services/documents/budget';
 import type {BudgetVerdict} from '../../services/documents/plan';
+import {documentKey} from '../../services/documents/render';
 import {documentCountingOptions} from '../../utils/documentCounting';
 import {createDocumentWarning} from '../../utils/errors';
 import type {
   ComposerDocument,
+  DocumentMode,
   DocumentRef,
 } from '../../services/documents/types';
 import {Pal} from '../../types/pal';
@@ -335,6 +337,57 @@ export const ChatView = observer(
     const [budgetVerdict, setBudgetVerdict] =
       React.useState<OverVerdict | null>(null);
     const budgetCheckRef = React.useRef(false);
+
+    const [documentModes, setDocumentModes] = React.useState<
+      Record<string, DocumentMode>
+    >({});
+    const predictionRef = React.useRef(0);
+    const readyDocuments = inputDocuments.filter(
+      doc => doc.status === 'ready' && doc.ref,
+    );
+    const readySignature = readyDocuments
+      .map(
+        doc =>
+          `${doc.key}:${documentKey(doc.ref!)}:${doc.ref!.searchPinned ? 1 : 0}`,
+      )
+      .join('|');
+    const windowTokens = modelStore.activeModelCaps.effectiveContextLength;
+    const editingMessageId = chatSessionStore.editingMessageId;
+    React.useEffect(() => {
+      const prediction = ++predictionRef.current;
+      if (!evaluateSendBudget || readyDocuments.length === 0) {
+        setDocumentModes({});
+        return;
+      }
+      evaluateSendBudget(
+        {
+          type: 'text',
+          text: inputTextRef.current,
+          documents: readyDocuments.map(doc => doc.ref!),
+        },
+        {excludeFromId: editingMessageId ?? undefined},
+      )
+        .then(plan => {
+          if (prediction === predictionRef.current) {
+            setDocumentModes(
+              Object.fromEntries(
+                readyDocuments.map((doc, i) => [doc.key, plan.newModes[i]]),
+              ),
+            );
+          }
+        })
+        .catch(error =>
+          console.warn('Failed to predict document modes:', error),
+        );
+      // eslint-disable-next-line react-hooks/exhaustive-deps -- recomputed on the inputs a plan depends on, not per keystroke
+    }, [
+      readySignature,
+      messages.length,
+      modelStore.activeModelId,
+      windowTokens,
+      editingMessageId,
+      evaluateSendBudget,
+    ]);
     const rangeDocument = inputDocuments.find(doc => doc.key === rangeKey);
 
     const applyDocumentRange = React.useCallback(
@@ -1414,6 +1467,7 @@ export const ChatView = observer(
                   documents: inputDocuments,
                   onDocumentsChange: updateComposerDocuments,
                   onOpenDocumentRange: setRangeKey,
+                  documentModes,
                   textInputProps: {
                     ...textInputProps,
                     ...(!composerShowsPromptText && {
@@ -1502,6 +1556,16 @@ export const ChatView = observer(
                   inputDocumentsRef.current.find(
                     doc => doc.ref?.id === documentRef.id,
                   )?.key ?? null,
+                );
+              }}
+              onSearchInstead={documentRef => {
+                setBudgetVerdict(null);
+                updateComposerDocuments(prev =>
+                  prev.map(doc =>
+                    doc.ref?.id === documentRef.id
+                      ? {...doc, ref: {...doc.ref, searchPinned: true}}
+                      : doc,
+                  ),
                 );
               }}
               onRemove={documentRef => {

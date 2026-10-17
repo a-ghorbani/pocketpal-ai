@@ -481,3 +481,108 @@ describe('ChatView plan over under the lease', () => {
     expect(chat.screen.getByTestId('budget-cancel')).toBeTruthy();
   });
 });
+
+describe('ChatView predicted document modes', () => {
+  const small = ref('small-note', {pageCount: 1, tokenEstimate: 800});
+  const planWith = (newModes: Array<'full' | 'searched'>) => ({
+    newModes,
+    fullLoad: 0,
+    room: undefined,
+    excerptBudget: 0,
+    verdict: {kind: 'fits' as const},
+  });
+
+  it('shows the predicted mode on the composer chip (RA, RD)', async () => {
+    const evaluateSendBudget = jest
+      .fn()
+      .mockResolvedValue(planWith(['searched']));
+    const chat = renderChat({evaluateSendBudget});
+
+    await chat.attach(small);
+
+    await waitFor(() =>
+      expect(chat.screen.getByText('1 pages · searched')).toBeTruthy(),
+    );
+    expect(chat.screen.queryByTestId(/search-instead$/)).toBeNull();
+  });
+
+  it('re-predicts when the window changes and ignores a stale result', async () => {
+    let resolveFirst: (value: any) => void = () => {};
+    const evaluateSendBudget = jest
+      .fn()
+      .mockImplementationOnce(
+        () => new Promise(resolve => (resolveFirst = resolve)),
+      )
+      .mockResolvedValue(planWith(['full']));
+    const chat = renderChat({evaluateSendBudget});
+    await chat.attach(small);
+
+    act(() => {
+      runInAction(() => {
+        modelStore.activeModelId = modelStore.models[0].id;
+        modelStore.activeContextSettings = {n_ctx: 8192} as any;
+      });
+    });
+    chat.screen.rerender(chat.element());
+    await waitFor(() =>
+      expect(
+        chat.screen.getByText('1 pages · in full · ~800 tokens'),
+      ).toBeTruthy(),
+    );
+    await act(async () => {
+      resolveFirst(planWith(['searched']));
+    });
+
+    expect(
+      chat.screen.getByText('1 pages · in full · ~800 tokens'),
+    ).toBeTruthy();
+    expect(evaluateSendBudget).toHaveBeenCalledTimes(2);
+    runInAction(() => {
+      modelStore.activeContextSettings = undefined;
+    });
+  });
+
+  it('pins a full chip with Search instead (RJ)', async () => {
+    const evaluateSendBudget = jest.fn(async (message: any) =>
+      planWith(
+        message.documents.map((d: DocumentRef) =>
+          d.searchPinned ? 'searched' : 'full',
+        ),
+      ),
+    );
+    const chat = renderChat({evaluateSendBudget});
+    await chat.attach(small);
+    await waitFor(() => chat.screen.getByText('Search instead'));
+
+    fireEvent.press(chat.screen.getByText('Search instead'));
+
+    await waitFor(() =>
+      expect(chat.screen.getByText('1 pages · searched')).toBeTruthy(),
+    );
+    chat.type('go');
+    await act(async () => {
+      chat.pressSend();
+    });
+    expect(chat.onSendPress).toHaveBeenCalledWith(
+      expect.objectContaining({
+        documents: [expect.objectContaining({searchPinned: true})],
+      }),
+    );
+  });
+
+  it('excludes the edited row from the prediction', async () => {
+    const store = chatSessionStore as any;
+    store.editingMessageId = 'edited';
+    const evaluateSendBudget = jest.fn().mockResolvedValue(planWith(['full']));
+    const chat = renderChat({evaluateSendBudget});
+
+    await chat.attach(small);
+
+    await waitFor(() =>
+      expect(evaluateSendBudget).toHaveBeenCalledWith(expect.anything(), {
+        excludeFromId: 'edited',
+      }),
+    );
+    store.editingMessageId = null;
+  });
+});

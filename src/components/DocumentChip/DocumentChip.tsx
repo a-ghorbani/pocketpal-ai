@@ -10,6 +10,7 @@ import {L10nContext} from '../../utils';
 import {displayTokens} from '../../services/documents/budget';
 import type {
   ComposerDocumentStatus,
+  DocumentMode,
   DocumentRef,
 } from '../../services/documents/types';
 
@@ -17,6 +18,9 @@ interface DocumentChipProps {
   name: string;
   documentRef?: DocumentRef;
   status?: ComposerDocumentStatus;
+  /** How the document reaches the model; unknown until planned. */
+  mode?: DocumentMode;
+  onSearchInstead?: () => void;
   onPress?: () => void;
   onRemove?: () => void;
   testID?: string;
@@ -29,6 +33,8 @@ export const DocumentChip: React.FC<DocumentChipProps> = ({
   name,
   documentRef,
   status = 'ready',
+  mode,
+  onSearchInstead,
   onPress,
   onRemove,
   testID = 'document-chip',
@@ -52,7 +58,12 @@ export const DocumentChip: React.FC<DocumentChipProps> = ({
   }
   if (status === 'needs_range') {
     details.push(strings.choosePages);
+  } else if (status === 'ready' && mode === 'searched') {
+    details.push(strings.searched);
   } else if (status === 'ready' && documentRef) {
+    if (mode === 'full') {
+      details.push(strings.inFull);
+    }
     details.push(
       t(strings.tokens, {tokens: formatTokenCount(displayTokens(documentRef))}),
     );
@@ -75,6 +86,10 @@ export const DocumentChip: React.FC<DocumentChipProps> = ({
     name: {color: theme.colors.onSurface},
     details: {color: theme.colors.onSurfaceVariant},
     remove: {margin: 0},
+    searchInstead: {
+      marginLeft: 8,
+      color: theme.colors.primary,
+    },
   });
 
   return (
@@ -112,6 +127,16 @@ export const DocumentChip: React.FC<DocumentChipProps> = ({
           </Text>
         ) : null}
       </View>
+      {onSearchInstead ? (
+        <Text
+          variant="labelSmall"
+          style={styles.searchInstead}
+          onPress={onSearchInstead}
+          accessibilityRole="button"
+          testID={`${testID}-search-instead`}>
+          {strings.searchInstead}
+        </Text>
+      ) : null}
       {onRemove ? (
         <IconButton
           icon="close"

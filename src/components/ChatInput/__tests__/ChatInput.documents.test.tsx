@@ -50,7 +50,11 @@ const Harness = ({
   onOpenDocumentRange = jest.fn(),
   isVisionEnabled = false,
   text = '',
+  onChange,
+  documentModes,
 }: {
+  onChange?: jest.Mock;
+  documentModes?: Record<string, 'full' | 'searched'>;
   initial?: ComposerDocument[];
   onSendPress?: jest.Mock;
   onOpenDocumentRange?: jest.Mock;
@@ -68,8 +72,10 @@ const Harness = ({
         sendButtonVisibilityMode="always"
         textInputProps={{value: text}}
         documents={documents}
+        documentModes={documentModes}
         onDocumentsChange={update => {
           docsRef.current = update(docsRef.current);
+          onChange?.(docsRef.current);
           setDocuments(docsRef.current);
         }}
         onOpenDocumentRange={onOpenDocumentRange}
@@ -279,5 +285,25 @@ describe('ChatInput documents', () => {
     expect(onSendPress).toHaveBeenCalledWith(
       expect.objectContaining({text: 'Summarise', documents: [report]}),
     );
+  });
+
+  it('pins a full chip through Search instead', () => {
+    const onChange = jest.fn();
+    const utils = render(
+      <Harness
+        onChange={onChange}
+        documentModes={{k: 'full'}}
+        initial={[{key: 'k', status: 'ready', name: 'r1.pdf', ref: ref('r1')}]}
+      />,
+    );
+    expect(utils.getByText('12 pages · in full · ~3.1k tokens')).toBeTruthy();
+
+    fireEvent.press(utils.getByText('Search instead'));
+
+    expect(onChange).toHaveBeenCalledWith([
+      expect.objectContaining({
+        ref: expect.objectContaining({searchPinned: true}),
+      }),
+    ]);
   });
 });

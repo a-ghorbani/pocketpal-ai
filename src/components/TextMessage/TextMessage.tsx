@@ -21,6 +21,7 @@ import {useTheme} from '../../hooks';
 import {styles} from './styles';
 import {MarkdownView} from '../MarkdownView';
 import {DocumentChip} from '../DocumentChip';
+import {modeOf} from '../../services/documents/render';
 
 import {AgentStep, MessageType} from '../../utils/types';
 import {
@@ -210,6 +211,7 @@ export const TextMessage = ({
             key={documentRef.id}
             name={documentRef.name}
             documentRef={documentRef}
+            mode={modeOf(documentRef)}
             testID="message-document-chip"
           />
         ))}

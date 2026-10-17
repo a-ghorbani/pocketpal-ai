@@ -179,7 +179,7 @@ describe('document chips', () => {
       />,
     );
     expect(getByText('report.pdf')).toBeTruthy();
-    expect(getByText('12 pages · ~3.1k tokens')).toBeTruthy();
+    expect(getByText('12 pages · in full · ~3.1k tokens')).toBeTruthy();
     expect(getByText('Summarise')).toBeTruthy();
     expect(queryByTestId('message-document-chip-remove')).toBeNull();
   });
@@ -190,13 +190,13 @@ describe('document chips', () => {
         message={{
           ...derivedTextMessage,
           text: 'old',
-          documents: [{...report, id: 'missing'}],
+          documents: [{...report, id: 'missing', mode: 'searched' as const}],
         }}
         messageWidth={440}
         showName={false}
         usePreviewData={false}
       />,
     );
-    expect(getByText('12 pages · ~3.1k tokens')).toBeTruthy();
+    expect(getByText('12 pages · searched')).toBeTruthy();
   });
 });

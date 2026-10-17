@@ -33,6 +33,7 @@ const text: DocumentRef = {
 const handlers = () => ({
   onChoosePages: jest.fn(),
   onRemove: jest.fn(),
+  onSearchInstead: jest.fn(),
   onNewChat: jest.fn(),
   onClose: jest.fn(),
 });
@@ -66,6 +67,7 @@ describe('DocumentBudgetSheet', () => {
     expect(h.onClose).toHaveBeenCalled();
     expect(queryByTestId('budget-new-chat')).toBeNull();
     expect(queryByTestId('budget-history')).toBeNull();
+    expect(queryByTestId('budget-search-instead')).toBeNull();
   });
 
   it('offers only remove and cancel for a remote text file, with the earlier total', () => {
@@ -87,6 +89,7 @@ describe('DocumentBudgetSheet', () => {
     expect(queryByTestId('budget-choose-pages')).toBeNull();
     expect(queryByTestId('budget-increase-context')).toBeNull();
     expect(getByText('Already in this chat: ~6.0k tokens')).toBeTruthy();
+    expect(getByText('notes.txt · searched')).toBeTruthy();
   });
 
   it('switches to the history-overflow actions', () => {
@@ -112,5 +115,28 @@ describe('DocumentBudgetSheet', () => {
     expect(h.onNewChat).toHaveBeenCalled();
     fireEvent.press(getByTestId('budget-edit-message'));
     expect(onEditMessage).toHaveBeenCalled();
+  });
+
+  it('offers Search instead on a new full document next to the history actions (RK)', () => {
+    const h = handlers();
+    const small = {...text, id: 'small', name: 'small.md', tokenEstimate: 300};
+    const {getByTestId, queryByTestId} = render(
+      <DocumentBudgetSheet
+        isVisible
+        verdict={{
+          kind: 'over',
+          needed: 6100,
+          available: 3072,
+          newDocs: [{ref: small, tokens: 300, mode: 'full'}],
+          historyDocTokens: 6000,
+          reason: 'history',
+        }}
+        {...h}
+      />,
+    );
+    fireEvent.press(getByTestId('budget-search-instead'));
+    expect(h.onSearchInstead).toHaveBeenCalledWith(small);
+    expect(queryByTestId('budget-remove')).toBeNull();
+    expect(getByTestId('budget-new-chat')).toBeTruthy();
   });
 });

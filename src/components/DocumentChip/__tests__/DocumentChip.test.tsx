@@ -83,4 +83,38 @@ describe('DocumentChip', () => {
     expect(formatTokenCount(950)).toBe('950');
     expect(formatTokenCount(20480)).toBe('20.5k');
   });
+
+  it('says in full with the token count (RA)', () => {
+    const {getByText, getByTestId} = render(
+      <DocumentChip name="report.pdf" documentRef={pdf} mode="full" />,
+    );
+    expect(getByText('12 pages · in full · ~3.1k tokens')).toBeTruthy();
+    expect(getByTestId('document-chip').props.accessibilityLabel).toContain(
+      'in full',
+    );
+  });
+
+  it('says searched without a token count', () => {
+    const {getByText, getByTestId} = render(
+      <DocumentChip name="report.pdf" documentRef={pdf} mode="searched" />,
+    );
+    expect(getByText('12 pages · searched')).toBeTruthy();
+    expect(getByTestId('document-chip').props.accessibilityLabel).toContain(
+      'searched',
+    );
+  });
+
+  it('offers Search instead when given', () => {
+    const onSearchInstead = jest.fn();
+    const {getByTestId} = render(
+      <DocumentChip
+        name="report.pdf"
+        documentRef={pdf}
+        mode="full"
+        onSearchInstead={onSearchInstead}
+      />,
+    );
+    fireEvent.press(getByTestId('document-chip-search-instead'));
+    expect(onSearchInstead).toHaveBeenCalled();
+  });
 });

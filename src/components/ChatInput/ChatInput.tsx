@@ -56,6 +56,7 @@ import {
 import {
   MAX_DOCUMENTS_PER_MESSAGE,
   type ComposerDocument,
+  type DocumentMode,
   type DocumentRefusalReason,
 } from '../../services/documents/types';
 
@@ -97,6 +98,8 @@ export interface ChatInputTopLevelProps {
   documents?: ComposerDocument[];
   onDocumentsChange?: ComposerDocumentsUpdate;
   onOpenDocumentRange?: (key: string) => void;
+  /** Predicted mode per composer document key. */
+  documentModes?: Record<string, DocumentMode>;
 
   /** Camera-specific props */
   isCameraActive?: boolean;
@@ -182,6 +185,7 @@ export const ChatInput = observer(
     documents = [],
     onDocumentsChange,
     onOpenDocumentRange,
+    documentModes = {},
     showThinkingToggle = false,
     isThinkingEnabled = false,
     onThinkingToggle,
@@ -493,6 +497,15 @@ export const ChatInput = observer(
     const handleRemoveDocument = (key: string) =>
       onDocumentsChange?.(prev => prev.filter(doc => doc.key !== key));
 
+    const handleSearchInstead = (key: string) =>
+      onDocumentsChange?.(prev =>
+        prev.map(doc =>
+          doc.key === key && doc.ref
+            ? {...doc, ref: {...doc.ref, searchPinned: true}}
+            : doc,
+        ),
+      );
+
     // Remove an image from the selection
     const handleRemoveImage = (index: number) => {
       const newImages = [...selectedImages];
@@ -615,6 +628,12 @@ export const ChatInput = observer(
                   name={doc.name}
                   documentRef={doc.ref}
                   status={doc.status}
+                  mode={documentModes[doc.key]}
+                  onSearchInstead={
+                    documentModes[doc.key] === 'full'
+                      ? () => handleSearchInstead(doc.key)
+                      : undefined
+                  }
                   onRemove={() => handleRemoveDocument(doc.key)}
                   onPress={
                     doc.ref?.kind === 'pdf' && doc.status !== 'importing'
