@@ -5,7 +5,7 @@ import {fromByteArray} from 'base64-js';
 import AudioRecord from '@fugood/react-native-audio-pcm-stream';
 
 import {useVoiceCapture} from '../useVoiceCapture';
-import {asrStore} from '../../store';
+import {asrStore, modelStore} from '../../store';
 import {ASR_MIN_SEGMENT_MS, whisperAsrEngine} from '../../services/asr';
 import * as micPerm from '../../utils/asrMicPermission';
 
@@ -16,7 +16,6 @@ const mockCancelTranscription = jest.spyOn(
   'cancelTranscription',
 );
 const mockRelease = jest.spyOn(whisperAsrEngine, 'release');
-const mockPrepare = jest.spyOn(whisperAsrEngine, 'prepare');
 const mockAudioInit = AudioRecord.init as jest.Mock;
 const mockAudioStart = AudioRecord.start as jest.Mock;
 const mockAudioStop = AudioRecord.stop as jest.Mock;
@@ -38,6 +37,7 @@ function pcmChunkBase64(ms: number, amplitude: number): string {
 const loudPcmChunkBase64 = () => pcmChunkBase64(1000, 0.3);
 const silentPcmChunkBase64 = () => pcmChunkBase64(1000, 0);
 const longSpeechPcmBase64 = () => pcmChunkBase64(ASR_MIN_SEGMENT_MS, 0.3);
+const said = (text: string, language = 'en') => ({text, language});
 
 describe('useVoiceCapture', () => {
   let dataCallback: ((chunk: string) => void) | null = null;
@@ -51,11 +51,15 @@ describe('useVoiceCapture', () => {
     asrStore.captureState = 'idle';
     asrStore.lastError = null;
     asrStore.inputLevels = [];
+    asrStore.spokenLanguage = 'en';
+    asrStore.waitingForChat = false;
+    modelStore.deviceTier = 'flagship';
+    modelStore.inferencing = false;
+    modelStore.context = undefined;
     mockEnsureMicPermission.mockResolvedValue('granted');
-    mockTranscribe.mockResolvedValue('hello world');
+    mockTranscribe.mockResolvedValue(said('hello world'));
     mockCancelTranscription.mockResolvedValue(undefined);
     mockRelease.mockResolvedValue(undefined);
-    mockPrepare.mockResolvedValue(undefined);
     // Native init() returns void on the JS bridge (the .d.ts is wrong).
     mockAudioInit.mockReturnValue(undefined);
     // Native stop() returns undefined (void), not a Promise — the real contract.
@@ -93,23 +97,160 @@ describe('useVoiceCapture', () => {
     );
     // whisper.rn's transcribeData decodes signed 16-bit PCM, so the captured
     // bytes go through unchanged.
-    expect(mockTranscribe).toHaveBeenCalledWith(chunk, {tier: 'small'});
+    expect(mockTranscribe).toHaveBeenCalledWith(chunk, {
+      tier: 'small',
+      language: 'en',
+    });
     expect(asrStore.captureState).toBe('idle');
     // The whisper context is freed once transcription settles.
     await waitFor(() => expect(mockRelease).toHaveBeenCalled());
   });
 
-  it('loads the model as soon as recording starts', async () => {
-    await startRecording();
+  it('transcribes once after stop on a device below flagship', async () => {
+    modelStore.deviceTier = 'high';
+    const {result, onTranscript} = await startRecording();
 
-    await waitFor(() => expect(mockPrepare).toHaveBeenCalledWith('small'));
+    act(() => {
+      dataCallback?.(longSpeechPcmBase64());
+      dataCallback?.(silentPcmChunkBase64());
+      dataCallback?.(loudPcmChunkBase64());
+    });
+    await act(async () => {
+      await Promise.resolve();
+    });
     expect(mockTranscribe).not.toHaveBeenCalled();
+
+    await act(async () => {
+      result.current.stop();
+    });
+
+    await waitFor(() =>
+      expect(onTranscript).toHaveBeenCalledWith('hello world'),
+    );
+    expect(mockTranscribe).toHaveBeenCalledTimes(1);
+  });
+
+  it('detects the spoken language once and reuses it', async () => {
+    asrStore.spokenLanguage = null;
+    mockTranscribe.mockResolvedValue(said('hallo', 'de'));
+    const first = await startRecording();
+
+    act(() => {
+      dataCallback?.(loudPcmChunkBase64());
+    });
+    await act(async () => {
+      first.result.current.stop();
+    });
+    await waitFor(() => expect(first.onTranscript).toHaveBeenCalled());
+    expect(mockTranscribe.mock.calls[0][1]).toEqual({tier: 'small'});
+    expect(asrStore.setSpokenLanguage).toHaveBeenCalledWith('de');
+    first.unmount();
+
+    const second = await startRecording();
+    act(() => {
+      dataCallback?.(loudPcmChunkBase64());
+    });
+    await act(async () => {
+      second.result.current.stop();
+    });
+    await waitFor(() => expect(mockTranscribe).toHaveBeenCalledTimes(2));
+    expect(mockTranscribe.mock.calls[1][1]).toEqual({
+      tier: 'small',
+      language: 'de',
+    });
+  });
+
+  it('keeps detecting while transcripts come back empty', async () => {
+    asrStore.spokenLanguage = null;
+    mockTranscribe.mockResolvedValue(said('', 'ja'));
+    const {result} = await startRecording();
+
+    act(() => {
+      dataCallback?.(loudPcmChunkBase64());
+    });
+    await act(async () => {
+      result.current.stop();
+    });
+
+    await waitFor(() => expect(mockRelease).toHaveBeenCalled());
+    expect(asrStore.setSpokenLanguage).not.toHaveBeenCalled();
+  });
+
+  it('waits for a chat reply on the CPU before transcribing', async () => {
+    modelStore.inferencing = true;
+    modelStore.context = {gpu: false} as any;
+    const {result, onTranscript} = await startRecording();
+
+    act(() => {
+      dataCallback?.(loudPcmChunkBase64());
+    });
+    await act(async () => {
+      result.current.stop();
+    });
+
+    await waitFor(() => expect(asrStore.waitingForChat).toBe(true));
+    expect(asrStore.captureState).toBe('transcribing');
+    expect(mockTranscribe).not.toHaveBeenCalled();
+
+    act(() => {
+      modelStore.inferencing = false;
+    });
+
+    await waitFor(() =>
+      expect(onTranscript).toHaveBeenCalledWith('hello world'),
+    );
+    expect(asrStore.waitingForChat).toBe(false);
+  });
+
+  it('transcribes right away while a chat reply runs on the GPU', async () => {
+    modelStore.inferencing = true;
+    modelStore.context = {gpu: true} as any;
+    const {result, onTranscript} = await startRecording();
+
+    act(() => {
+      dataCallback?.(loudPcmChunkBase64());
+    });
+    await act(async () => {
+      result.current.stop();
+    });
+
+    await waitFor(() =>
+      expect(onTranscript).toHaveBeenCalledWith('hello world'),
+    );
+    expect(asrStore.setWaitingForChat).not.toHaveBeenCalled();
+  });
+
+  it('drops the capture on cancel while waiting for the chat reply', async () => {
+    modelStore.inferencing = true;
+    modelStore.context = {gpu: false} as any;
+    const {result, onTranscript} = await startRecording();
+
+    act(() => {
+      dataCallback?.(loudPcmChunkBase64());
+    });
+    await act(async () => {
+      result.current.stop();
+    });
+    await waitFor(() => expect(asrStore.waitingForChat).toBe(true));
+
+    act(() => {
+      result.current.cancel();
+    });
+    act(() => {
+      modelStore.inferencing = false;
+    });
+
+    await waitFor(() => expect(mockRelease).toHaveBeenCalled());
+    expect(asrStore.captureState).toBe('idle');
+    expect(asrStore.waitingForChat).toBe(false);
+    expect(mockTranscribe).not.toHaveBeenCalled();
+    expect(onTranscript).not.toHaveBeenCalled();
   });
 
   it('transcribes at a pause while still recording, with earlier text as context', async () => {
     mockTranscribe
-      .mockResolvedValueOnce('first part')
-      .mockResolvedValueOnce('second part');
+      .mockResolvedValueOnce(said('first part'))
+      .mockResolvedValueOnce(said('second part'));
     const {result, onTranscript} = await startRecording();
 
     act(() => {
@@ -120,6 +261,7 @@ describe('useVoiceCapture', () => {
     expect(asrStore.captureState).toBe('recording');
     expect(mockTranscribe.mock.calls[0][1]).toEqual({
       tier: 'small',
+      language: 'en',
       prompt: undefined,
     });
 
@@ -136,6 +278,7 @@ describe('useVoiceCapture', () => {
     expect(mockTranscribe).toHaveBeenCalledTimes(2);
     expect(mockTranscribe.mock.calls[1][1]).toEqual({
       tier: 'small',
+      language: 'en',
       prompt: 'first part',
     });
     await waitFor(() => expect(mockRelease).toHaveBeenCalled());
@@ -166,9 +309,8 @@ describe('useVoiceCapture', () => {
     expect(onTranscript).not.toHaveBeenCalled();
   });
 
-  it('releases the preloaded model on cancel', async () => {
+  it('releases the model on cancel', async () => {
     const {result} = await startRecording();
-    await waitFor(() => expect(mockPrepare).toHaveBeenCalled());
 
     act(() => {
       result.current.cancel();
@@ -177,11 +319,15 @@ describe('useVoiceCapture', () => {
     await waitFor(() => expect(mockRelease).toHaveBeenCalled());
   });
 
-  it('publishes a loudness level for each captured chunk', async () => {
+  it('publishes the peak loudness of every two captured chunks', async () => {
     await startRecording();
 
     act(() => {
       dataCallback?.(loudPcmChunkBase64());
+    });
+    expect(asrStore.pushInputLevel).not.toHaveBeenCalled();
+    act(() => {
+      dataCallback?.(silentPcmChunkBase64());
     });
 
     expect(asrStore.pushInputLevel).toHaveBeenCalledTimes(1);
@@ -205,7 +351,7 @@ describe('useVoiceCapture', () => {
   });
 
   it('returns to idle without an error on an empty transcript', async () => {
-    mockTranscribe.mockResolvedValue('');
+    mockTranscribe.mockResolvedValue(said(''));
     const {result, onTranscript} = await startRecording();
 
     act(() => {
@@ -243,10 +389,12 @@ describe('useVoiceCapture', () => {
   });
 
   it('stops whisper and drops the transcript on cancel while transcribing', async () => {
-    let resolveTranscribe: ((text: string) => void) | null = null;
+    let resolveTranscribe:
+      | ((transcript: ReturnType<typeof said>) => void)
+      | null = null;
     mockTranscribe.mockImplementation(
       () =>
-        new Promise<string>(resolve => {
+        new Promise(resolve => {
           resolveTranscribe = resolve;
         }),
     );
@@ -267,7 +415,7 @@ describe('useVoiceCapture', () => {
     expect(asrStore.captureState).toBe('idle');
 
     await act(async () => {
-      resolveTranscribe?.('too late');
+      resolveTranscribe?.(said('too late'));
     });
     expect(onTranscript).not.toHaveBeenCalled();
     expect(asrStore.captureState).toBe('idle');

@@ -31,6 +31,7 @@ describe('VoiceRecordingBar', () => {
       asrStore.captureState = 'recording';
       asrStore.inputLevels = [];
       asrStore.recordingStartedAt = Date.now();
+      asrStore.waitingForChat = false;
     });
   });
 
@@ -101,5 +102,16 @@ describe('VoiceRecordingBar', () => {
     expect(queryByTestId('voice-level-bars')).toBeNull();
     fireEvent.press(getByTestId('voice-cancel-button'));
     expect(onCancel).toHaveBeenCalledTimes(1);
+  });
+
+  it('says when transcription waits for the chat reply', () => {
+    runInAction(() => {
+      asrStore.captureState = 'transcribing';
+      asrStore.waitingForChat = true;
+    });
+    const {getByText, queryByText} = renderBar();
+
+    expect(getByText(l10n.en.voiceInput.waitingForChatLabel)).toBeTruthy();
+    expect(queryByText(l10n.en.voiceInput.transcribingLabel)).toBeNull();
   });
 });

@@ -77,7 +77,8 @@ const ElapsedTimer: React.FC<{styles: ReturnType<typeof createStyles>}> =
 /**
  * Replaces the composer's control row while a voice capture is recording or
  * being transcribed: cancel, a live input-level waveform with the elapsed time
- * (or a transcribing label), and stop.
+ * (or a transcribing label, which says when it waits for the chat reply), and
+ * stop.
  */
 export const VoiceRecordingBar: React.FC<VoiceRecordingBarProps> = observer(
   ({onCancel, onStop}) => {
@@ -103,7 +104,9 @@ export const VoiceRecordingBar: React.FC<VoiceRecordingBarProps> = observer(
             style={styles.transcribingText}
             accessibilityLiveRegion="polite"
             testID="voice-transcribing">
-            {l10n.voiceInput.transcribingLabel}
+            {asrStore.waitingForChat
+              ? l10n.voiceInput.waitingForChatLabel
+              : l10n.voiceInput.transcribingLabel}
           </Text>
         ) : (
           <>

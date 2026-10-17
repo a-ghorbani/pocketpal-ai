@@ -2,6 +2,7 @@ import {useCallback, useEffect, useRef} from 'react';
 import {AppState, type AppStateStatus} from 'react-native';
 
 import {fromByteArray, toByteArray} from 'base64-js';
+import {when} from 'mobx';
 import AudioRecord from '@fugood/react-native-audio-pcm-stream';
 
 import {asrStore} from '../store';
@@ -9,7 +10,10 @@ import {
   ASR_BITS_PER_SAMPLE,
   ASR_CHANNELS,
   ASR_CHUNK_BYTES,
+  ASR_LEVEL_CHUNKS,
   ASR_MAX_RECORD_MS,
+  ASR_MAX_SEGMENT_MS,
+  ASR_MIN_SEGMENT_MS,
   ASR_PROMPT_CHARS,
   ASR_SAMPLE_RATE,
   SpeechSegmenter,
@@ -34,13 +38,17 @@ interface UseVoiceCaptureReturn {
 /**
  * Tap-to-start, tap-to-stop capture lifecycle for the composer mic.
  *
- * start  → ensure mic permission → load the whisper model and start 16 kHz
- *          mono PCM capture, publishing each chunk's loudness to
- *          `asrStore.inputLevels` for the waveform. `SpeechSegmenter` cuts the
- *          stream at pauses and each segment is transcribed while the user
- *          keeps speaking, so stop only waits for the last one.
+ * start  → ensure mic permission → start 16 kHz mono PCM capture, publishing
+ *          loudness to `asrStore.inputLevels` for the waveform. When
+ *          `asrStore.liveSegments`, `SpeechSegmenter` cuts the stream at
+ *          pauses and each segment is transcribed while the user keeps
+ *          speaking, so stop only waits for the last one; otherwise the
+ *          whole recording is transcribed once after stop.
  * stop   → transcribe the remaining audio → join the segment texts →
- *          onTranscript append. Silent segments are never decoded.
+ *          onTranscript append. Silent segments are never decoded. While a
+ *          local chat model generates on the CPU, transcription waits for
+ *          it (`asrStore.waitingForChat`). The first transcription detects
+ *          the spoken language and later ones reuse it.
  * cancel → discard the capture and any transcription in progress.
  *
  * All engine work runs through one serial queue, so a release never cuts
@@ -62,6 +70,7 @@ export function useVoiceCapture(
   const textsRef = useRef<string[]>([]);
   const failedRef = useRef(false);
   const listenerRef = useRef<{remove: () => void} | null>(null);
+  const chatWaitRef = useRef<(Promise<void> & {cancel(): void}) | null>(null);
   const maxTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const onTranscriptRef = useRef(onTranscript);
   onTranscriptRef.current = onTranscript;
@@ -86,14 +95,39 @@ export function useVoiceCapture(
         if (!energyVad(int16PcmToFloat32(pcm)).passed) {
           return;
         }
+        if (asrStore.chatBusyOnCpu) {
+          asrStore.setWaitingForChat(true);
+          const wait = when(() => !asrStore.chatBusyOnCpu);
+          chatWaitRef.current = wait;
+          try {
+            await wait;
+          } catch {
+            return;
+          } finally {
+            chatWaitRef.current = null;
+            if (session === sessionRef.current) {
+              asrStore.setWaitingForChat(false);
+            }
+          }
+          if (session !== sessionRef.current || failedRef.current) {
+            return;
+          }
+        }
         const prompt = textsRef.current.join(' ').slice(-ASR_PROMPT_CHARS);
         try {
-          const text = await whisperAsrEngine.transcribe(fromByteArray(pcm), {
-            tier: asrStore.selectedTier,
-            prompt: prompt || undefined,
-          });
+          const {text, language} = await whisperAsrEngine.transcribe(
+            fromByteArray(pcm),
+            {
+              tier: asrStore.selectedTier,
+              language: asrStore.spokenLanguage ?? undefined,
+              prompt: prompt || undefined,
+            },
+          );
           if (session === sessionRef.current && text.length > 0) {
             textsRef.current.push(text);
+            if (!asrStore.spokenLanguage && language) {
+              asrStore.setSpokenLanguage(language);
+            }
           }
         } catch (err) {
           if (session === sessionRef.current) {
@@ -186,8 +220,6 @@ export function useVoiceCapture(
         asrStore.setError('permission_denied');
         return;
       }
-      const tier = asrStore.selectedTier;
-      enqueueEngine(() => whisperAsrEngine.prepare(tier));
       try {
         await AudioRecord.init({
           sampleRate: ASR_SAMPLE_RATE,
@@ -199,7 +231,6 @@ export function useVoiceCapture(
       } catch (err) {
         console.warn('[useVoiceCapture] audio init failed:', err);
         if (session === sessionRef.current) {
-          releaseEngine();
           asrStore.setError('transcribe_failed');
         }
         return;
@@ -209,15 +240,24 @@ export function useVoiceCapture(
       }
       textsRef.current = [];
       failedRef.current = false;
-      segmenterRef.current = new SpeechSegmenter(pcm =>
-        transcribeSegment(pcm, session),
+      segmenterRef.current = new SpeechSegmenter(
+        pcm => transcribeSegment(pcm, session),
+        asrStore.liveSegments
+          ? {minSegmentMs: ASR_MIN_SEGMENT_MS, maxSegmentMs: ASR_MAX_SEGMENT_MS}
+          : {minSegmentMs: Infinity, maxSegmentMs: Infinity},
       );
       recordingRef.current = true;
+      let chunkCount = 0;
+      let peakLevel = 0;
       listenerRef.current = AudioRecord.on('data', (chunk: string) => {
         if (recordingRef.current) {
           const bytes = toByteArray(chunk);
           segmenterRef.current?.push(bytes);
-          asrStore.pushInputLevel(inputLevel(int16PcmToFloat32(bytes)));
+          peakLevel = Math.max(peakLevel, inputLevel(int16PcmToFloat32(bytes)));
+          if (++chunkCount % ASR_LEVEL_CHUNKS === 0) {
+            asrStore.pushInputLevel(peakLevel);
+            peakLevel = 0;
+          }
         }
       });
       AudioRecord.start();
@@ -227,7 +267,7 @@ export function useVoiceCapture(
         finish(session).catch(() => {});
       }, ASR_MAX_RECORD_MS);
     })();
-  }, [enqueueEngine, finish, releaseEngine, transcribeSegment]);
+  }, [finish, transcribeSegment]);
 
   const stop = useCallback(() => {
     finish(sessionRef.current).catch(() => {});
@@ -239,6 +279,7 @@ export function useVoiceCapture(
       teardownCapture();
     }
     segmenterRef.current = null;
+    chatWaitRef.current?.cancel();
     whisperAsrEngine.cancelTranscription().catch(err => {
       console.warn('[useVoiceCapture] cancel transcription failed:', err);
     });

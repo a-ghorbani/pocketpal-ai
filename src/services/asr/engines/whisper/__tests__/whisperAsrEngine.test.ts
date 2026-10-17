@@ -110,8 +110,8 @@ describe('WhisperAsrEngine', () => {
         release: jest.fn().mockResolvedValue(undefined),
       });
 
-      const text = await engine.transcribe('base64pcm', {tier: 'small'});
-      expect(text).toBe('hello world');
+      const result = await engine.transcribe('base64pcm', {tier: 'small'});
+      expect(result).toEqual({text: 'hello world', language: 'en'});
       expect(transcribeData).toHaveBeenCalledWith(
         'base64pcm',
         expect.objectContaining({language: 'auto'}),
@@ -144,7 +144,7 @@ describe('WhisperAsrEngine', () => {
       await engine.cancelTranscription();
 
       expect(stop).toHaveBeenCalledTimes(1);
-      await expect(pending).resolves.toBe('');
+      await expect(pending).resolves.toEqual({text: '', language: ''});
     });
 
     it('strips non-speech tags from the transcript', async () => {
@@ -166,7 +166,9 @@ describe('WhisperAsrEngine', () => {
 
       await expect(
         engine.transcribe('base64pcm', {tier: 'small'}),
-      ).resolves.toBe('And so my fellow Americans ask not');
+      ).resolves.toMatchObject({
+        text: 'And so my fellow Americans ask not',
+      });
     });
 
     it('returns no text when the transcript is only non-speech tags', async () => {
@@ -188,10 +190,10 @@ describe('WhisperAsrEngine', () => {
 
       await expect(
         engine.transcribe('base64pcm', {tier: 'small'}),
-      ).resolves.toBe('');
+      ).resolves.toMatchObject({text: ''});
     });
 
-    it('loads the model once when prepare and transcribe overlap', async () => {
+    it('loads the model once when two transcriptions overlap', async () => {
       mockExists.mockResolvedValue(true);
       mockReadFile.mockResolvedValue(
         JSON.stringify({version: ASR_MODEL_VERSION}),
@@ -209,7 +211,7 @@ describe('WhisperAsrEngine', () => {
       });
 
       await Promise.all([
-        engine.prepare('small'),
+        engine.transcribe('base64pcm', {tier: 'small'}),
         engine.transcribe('base64pcm', {tier: 'small'}),
       ]);
 
@@ -232,21 +234,13 @@ describe('WhisperAsrEngine', () => {
         }),
       );
 
-      const preparing = engine.prepare('small');
+      const transcribing = engine.transcribe('base64pcm', {tier: 'small'});
       await new Promise(resolve => setImmediate(resolve));
       await engine.release();
       finishLoad(lateContext);
 
-      await expect(preparing).rejects.toThrow();
+      await expect(transcribing).rejects.toThrow();
       expect(lateContext.release).toHaveBeenCalledTimes(1);
-    });
-
-    it('does not load a tier that is not installed', async () => {
-      mockExists.mockResolvedValue(false);
-
-      await engine.prepare('small');
-
-      expect(mockInitWhisper).not.toHaveBeenCalled();
     });
 
     it('passes earlier text to whisper as the prompt', async () => {

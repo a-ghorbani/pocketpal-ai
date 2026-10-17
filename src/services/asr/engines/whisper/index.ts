@@ -9,7 +9,12 @@ import {
   ASR_TIERS,
   ASR_VERSION_SENTINEL_FILENAME,
 } from '../../constants';
-import type {AsrEngine, AsrProgressCallback, AsrTier} from '../../types';
+import type {
+  AsrEngine,
+  AsrProgressCallback,
+  AsrTier,
+  AsrTranscript,
+} from '../../types';
 
 // Whisper writes non-speech as bracketed tags such as "[Music]",
 // "[BLANK_AUDIO]" or "(music)", and whisper.rn has no option to suppress them.
@@ -213,16 +218,10 @@ export class WhisperAsrEngine implements AsrEngine {
     return promise;
   }
 
-  async prepare(tier: AsrTier): Promise<void> {
-    if (await this.isInstalled(tier)) {
-      await this.ensureContext(tier);
-    }
-  }
-
   async transcribe(
     pcmBase64Int16: string,
     opts?: {tier: AsrTier; language?: string; prompt?: string},
-  ): Promise<string> {
+  ): Promise<AsrTranscript> {
     const tier = opts?.tier ?? 'small';
     if (!(await this.isInstalled(tier))) {
       throw new Error(`ASR model not installed for tier ${tier}`);
@@ -237,7 +236,12 @@ export class WhisperAsrEngine implements AsrEngine {
     this.stopTranscription = stop;
     try {
       const result = await promise;
-      return result.isAborted ? '' : stripNonSpeechTags(result.result);
+      return result.isAborted
+        ? {text: '', language: ''}
+        : {
+            text: stripNonSpeechTags(result.result),
+            language: result.language ?? '',
+          };
     } finally {
       this.stopTranscription = null;
     }

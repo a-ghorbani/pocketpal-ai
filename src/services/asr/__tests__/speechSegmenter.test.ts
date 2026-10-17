@@ -75,6 +75,23 @@ describe('SpeechSegmenter', () => {
     expect(segmenter.flush()?.length).toBe(8000 * BYTES_PER_MS);
   });
 
+  it('never cuts when both segment lengths are unbounded', () => {
+    const segments: Uint8Array[] = [];
+    const segmenter = new SpeechSegmenter(s => segments.push(s), {
+      minSegmentMs: Infinity,
+      maxSegmentMs: Infinity,
+    });
+
+    push(segmenter, speech, ASR_MAX_SEGMENT_MS + 1000);
+    push(segmenter, silence, 2000);
+    push(segmenter, speech, 500);
+
+    expect(segments).toHaveLength(0);
+    expect(segmenter.flush()?.length).toBe(
+      (ASR_MAX_SEGMENT_MS + 3500) * BYTES_PER_MS,
+    );
+  });
+
   it('keeps only a short lead-in of silence before speech', () => {
     const segments: Uint8Array[] = [];
     const segmenter = new SpeechSegmenter(s => segments.push(s));
