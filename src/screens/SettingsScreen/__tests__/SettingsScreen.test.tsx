@@ -12,8 +12,13 @@ import {
 
 import {SettingsScreen} from '../SettingsScreen';
 
-import {modelStore, uiStore, ttsStore} from '../../../store';
-import {l10n} from '../../../locales';
+import {modelStore, uiStore, ttsStore, asrStore} from '../../../store';
+import {l10n, t} from '../../../locales';
+import {
+  ASR_DISK_HEADROOM_FACTOR,
+  ASR_INSUFFICIENT_STORAGE,
+  ASR_TIERS,
+} from '../../../services/asr';
 
 jest.useFakeTimers();
 
@@ -1319,6 +1324,171 @@ describe('SettingsScreen', () => {
     await waitFor(() => {
       // Should show effective value clamped to n_ctx (2048)
       expect(getByText(/effective: 2048/)).toBeTruthy();
+    });
+  });
+
+  describe('voice input (ASR)', () => {
+    afterEach(() => {
+      runInAction(() => {
+        modelStore.deviceTier = 'low';
+        asrStore.userASROverride = null;
+        asrStore.downloadStates.small = 'not_installed';
+        asrStore.downloadError.small = null;
+        asrStore.freeDiskBytes = null;
+        asrStore.spokenLanguage = null;
+      });
+    });
+
+    const renderSettings = () =>
+      render(<SettingsScreen />, {withSafeArea: true, withNavigation: true});
+
+    it('toggle reflects the device default when no override is set', () => {
+      runInAction(() => {
+        modelStore.deviceTier = 'high';
+        asrStore.userASROverride = null;
+      });
+      const {getByTestId} = renderSettings();
+      expect(getByTestId('asr-availability-switch').props.value).toBe(true);
+    });
+
+    it('toggle reflects an explicit user override over the device default', () => {
+      runInAction(() => {
+        modelStore.deviceTier = 'high';
+        asrStore.userASROverride = false;
+      });
+      const {getByTestId} = renderSettings();
+      expect(getByTestId('asr-availability-switch').props.value).toBe(false);
+    });
+
+    it('shows the unsupported-device helper only when the device gate fails', () => {
+      runInAction(() => {
+        modelStore.deviceTier = 'low';
+        asrStore.userASROverride = null;
+      });
+      const {getByText} = renderSettings();
+      expect(
+        getByText(l10n.en.voiceInput.unsupportedDeviceHelper),
+      ).toBeTruthy();
+    });
+
+    it('hides the unsupported-device helper on a supported device', () => {
+      runInAction(() => {
+        modelStore.deviceTier = 'high';
+        asrStore.userASROverride = null;
+      });
+      const {queryByText} = renderSettings();
+      expect(
+        queryByText(l10n.en.voiceInput.unsupportedDeviceHelper),
+      ).toBeNull();
+    });
+
+    it('shows the detected spoken language and clears it on Detect again', () => {
+      runInAction(() => {
+        modelStore.deviceTier = 'high';
+        asrStore.userASROverride = null;
+        asrStore.spokenLanguage = 'en';
+      });
+      const {getByTestId} = renderSettings();
+      expect(getByTestId('asr-spoken-language').props.children).toBe(
+        'English (EN)',
+      );
+      act(() => {
+        fireEvent.press(getByTestId('asr-detect-language'));
+      });
+      expect(asrStore.setSpokenLanguage).toHaveBeenCalledWith(null);
+    });
+
+    it('names a spoken language the app has no UI translation for by its code', () => {
+      runInAction(() => {
+        modelStore.deviceTier = 'high';
+        asrStore.spokenLanguage = 'nl';
+      });
+      const {getByTestId} = renderSettings();
+      expect(getByTestId('asr-spoken-language').props.children).toBe('NL');
+    });
+
+    it('hides the spoken language row before a language is detected', () => {
+      runInAction(() => {
+        modelStore.deviceTier = 'high';
+      });
+      const {queryByTestId} = renderSettings();
+      expect(queryByTestId('asr-detect-language')).toBeNull();
+    });
+
+    it('writes the override through setUserASROverride when toggled', () => {
+      runInAction(() => {
+        modelStore.deviceTier = 'low';
+        asrStore.userASROverride = null;
+      });
+      const {getByTestId} = renderSettings();
+      act(() => {
+        fireEvent(getByTestId('asr-availability-switch'), 'valueChange', true);
+      });
+      expect(asrStore.setUserASROverride).toHaveBeenCalledWith(true);
+    });
+
+    it('offers install controls only when the gate is open', () => {
+      runInAction(() => {
+        modelStore.deviceTier = 'low';
+        asrStore.userASROverride = false;
+      });
+      const {queryByTestId} = renderSettings();
+      expect(queryByTestId('asr-install-small')).toBeNull();
+    });
+
+    it('shows an install control for a not-installed tier when enabled', () => {
+      runInAction(() => {
+        modelStore.deviceTier = 'high';
+        asrStore.userASROverride = true;
+        asrStore.downloadStates.small = 'not_installed';
+      });
+      const {getByTestId} = renderSettings();
+      const install = getByTestId('asr-install-small');
+      act(() => {
+        fireEvent.press(install);
+      });
+      expect(asrStore.downloadModel).toHaveBeenCalledWith('small');
+    });
+
+    it('shows a remove control for an installed tier and deletes on press', () => {
+      runInAction(() => {
+        modelStore.deviceTier = 'high';
+        asrStore.userASROverride = true;
+        asrStore.downloadStates.small = 'ready';
+      });
+      const {getByTestId} = renderSettings();
+      const remove = getByTestId('asr-remove-small');
+      act(() => {
+        fireEvent.press(remove);
+      });
+      expect(asrStore.deleteModel).toHaveBeenCalledWith('small');
+    });
+
+    it('renders the insufficient-storage line for a disk-blocked tier', () => {
+      const freeMb = 50;
+      runInAction(() => {
+        modelStore.deviceTier = 'high';
+        asrStore.userASROverride = true;
+        asrStore.downloadStates.small = 'error';
+        asrStore.downloadError.small = ASR_INSUFFICIENT_STORAGE;
+        asrStore.freeDiskBytes = freeMb * 1024 * 1024;
+      });
+      // The line shows the headroom-inclusive required figure (matching the
+      // preflight threshold), not the raw model size.
+      const requiredMb = Math.ceil(
+        (ASR_TIERS.small.estimatedBytes * ASR_DISK_HEADROOM_FACTOR) /
+          (1024 * 1024),
+      );
+      const {getByTestId, getByText} = renderSettings();
+      expect(getByTestId('asr-insufficient-storage-small')).toBeTruthy();
+      expect(
+        getByText(
+          t(l10n.en.voiceInput.insufficientStorage, {
+            requiredMb,
+            freeMb,
+          }),
+        ),
+      ).toBeTruthy();
     });
   });
 });

@@ -8,6 +8,9 @@
  *   pocketpal://tts?cmd=download::<engine>
  *   pocketpal://tts?cmd=synthesize::<engine>
  *   pocketpal://tts?cmd=release
+ *   pocketpal://asr?cmd=state::<ready|not-installed|unsupported|recording|
+ *                              transcribing|waiting-chat|error-capture|
+ *                              error-blocked|error-disk>
  *   pocketpal://iap?cmd=<verb>::<arg>   (FakeStore script, see fakeStore.ts)
  *   pocketpal://e2e/benchmark   (Android: cold-launch path lives in
  *                                useDeepLinking.ts since RN's Android side
@@ -43,6 +46,11 @@ export async function dispatchAutomationDeepLink(
   if (params.host === 'tts' && params.queryParams?.cmd) {
     const {runTtsCommand} = require('./ttsAutomation');
     await runTtsCommand(params.queryParams.cmd);
+    return true;
+  }
+  if (params.host === 'asr' && params.queryParams?.cmd) {
+    const {runAsrCommand} = require('./asrAutomation');
+    await runAsrCommand(params.queryParams.cmd);
     return true;
   }
   if (params.host === 'iap' && params.queryParams?.cmd) {

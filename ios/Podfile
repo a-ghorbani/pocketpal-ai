@@ -5,12 +5,22 @@ require Pod::Executable.execute_command('node', ['-p',
     {paths: [process.argv[1]]},
   )', __dir__]).strip
 
+# react-native-permissions setup helper (resolved via node for hoisting).
+require Pod::Executable.execute_command('node', ['-p',
+  'require.resolve(
+    "react-native-permissions/scripts/setup.rb",
+    {paths: [process.argv[1]]},
+  )', __dir__]).strip
+
 # Log the minimum iOS version
 ios_version = min_ios_version_supported
 Pod::UI.puts "📱 Minimum iOS version supported: #{ios_version}".green
 
 platform :ios, ios_version
 prepare_react_native_project!
+
+# Compile only the Microphone permission handler (on-device voice input).
+setup_permissions(['Microphone'])
 
 # linkage = ENV['USE_FRAMEWORKS']
 # if linkage != nil
@@ -58,11 +68,18 @@ target 'PocketPal' do
   # Mustache template rendering for iOS Shortcuts
   pod 'GRMustache.swift'
 
-  # Force llama-rn to build as static library to avoid duplicate headers
+  # Force llama-rn and whisper-rn to build as static libraries. Both vendor a
+  # ggml fork whose headers share filenames (ggml.h, ggml-cpu.h, ...); under
+  # use_frameworks! the framework header-copy phases otherwise collide
+  # ("Multiple commands produce .../Headers/ggml-*.h"). Static linkage skips
+  # the framework Headers dir. The two ggml forks use disjoint symbol
+  # namespaces (lm_ggml_* vs wsp_ggml_*), so there is no link-time collision.
   pre_install do |installer|
     installer.pod_targets.each do |pod|
-      # Fix "Multiple commands produce" for llama-rn
-      if pod.name == 'llama-rn' || pod.name.start_with?('llama')
+      if pod.name == 'llama-rn' ||
+         pod.name.start_with?('llama') ||
+         pod.name == 'whisper-rn' ||
+         pod.name.start_with?('whisper')
         puts "Forcing #{pod.name} to static_library build type"
         def pod.build_type
           Pod::BuildType.static_library
