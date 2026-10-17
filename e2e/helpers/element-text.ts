@@ -56,18 +56,31 @@ export async function readAccessibilityLabel(
  * The rendered text of a chat reply, joined with newlines.
  *
  * The markdown renderer splits a reply into one native text view per run of
- * paragraphs, so a single text-element read returns only the first run. On iOS
- * the text views are hidden from accessibility and each run is exposed as its
- * own labelled element instead, which a static-text query does not match.
+ * paragraphs, so a single text-element read returns only the first run.
+ * Android mounts those views beside the `markdown-content` container rather
+ * than inside it, and exposes each block's text on virtual child nodes while
+ * the view's own text is empty. On iOS the text views are hidden from
+ * accessibility and each run is a labelled element that a static-text query
+ * does not match.
  */
 export async function readReplyText(reply: ChainableElement): Promise<string> {
-  const markdown = reply.$(byTestId('markdown-content'));
   const parts: string[] = [];
   if (isAndroid()) {
-    for (const view of await markdown.$$('.//android.widget.TextView')) {
-      parts.push(await view.getText());
+    for (const view of await reply.$$('.//android.widget.TextView')) {
+      const own = await view.getText();
+      if (own) {
+        parts.push(own);
+        continue;
+      }
+      for (const node of await view.$$('./*')) {
+        const text = await node.getText();
+        if (text) {
+          parts.push(text);
+        }
+      }
     }
   } else {
+    const markdown = reply.$(byTestId('markdown-content'));
     for (const node of await markdown.$$('-ios class chain:**/*')) {
       const label = normalise(
         await node.getAttribute('label').catch(() => null),
