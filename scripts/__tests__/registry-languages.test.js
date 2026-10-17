@@ -16,6 +16,7 @@ describe('extractRegistryLanguages', () => {
   it('extracts every wired non-en locale from the real index.ts', () => {
     const source = fs.readFileSync(INDEX_PATH, 'utf-8');
     expect(extractRegistryLanguages(source)).toEqual([
+      'ar',
       'es',
       'fa',
       'he',
