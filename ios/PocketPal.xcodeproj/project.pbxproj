@@ -26,6 +26,8 @@
 		9AE3DCE490A24E01AA31653A /* Inter-Light.ttf in Resources */ = {isa = PBXBuildFile; fileRef = AE37F4EB27084262BAE95F85 /* Inter-Light.ttf */; };
 		9BD11C540B6D45308B7727A2 /* Fraunces-MediumItalic.ttf in Resources */ = {isa = PBXBuildFile; fileRef = EE113D56B0AD433688D66860 /* Fraunces-MediumItalic.ttf */; };
 		A81001102E92E09600935976 /* KeepAwakeModule.mm in Sources */ = {isa = PBXBuildFile; fileRef = A810010E2E92E09600935976 /* KeepAwakeModule.mm */; };
+		A8F0D0012F00000100000001 /* PdfTextModule.mm in Sources */ = {isa = PBXBuildFile; fileRef = A8F0D0022F00000100000001 /* PdfTextModule.mm */; };
+		A8F0D0032F00000100000001 /* PDFKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = A8F0D0042F00000100000001 /* PDFKit.framework */; };
 		A81001162E92FFC900935976 /* HardwareInfoModule.mm in Sources */ = {isa = PBXBuildFile; fileRef = A81001152E92FFC900935976 /* HardwareInfoModule.mm */; };
 		A862F7232EE04CE50062E673 /* GoogleService-Info.plist in Resources */ = {isa = PBXBuildFile; fileRef = A862F7222EE04CE50062E673 /* GoogleService-Info.plist */; };
 		A86CF0D42EA57BE100BFFCEE /* LlamaContextWrapper.mm in Sources */ = {isa = PBXBuildFile; fileRef = A86CF0D32EA57BE100BFFCEE /* LlamaContextWrapper.mm */; };
@@ -77,6 +79,8 @@
 		94722BA2FE16147631D7CA68 /* Pods-PocketPal.release.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-PocketPal.release.xcconfig"; path = "Target Support Files/Pods-PocketPal/Pods-PocketPal.release.xcconfig"; sourceTree = "<group>"; };
 		9FFFE5CF13C04970AB5BF8BF /* JetBrainsMono-Medium.ttf */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = undefined; includeInIndex = 0; lastKnownFileType = unknown; name = "JetBrainsMono-Medium.ttf"; path = "../src/assets/fonts/JetBrainsMono-Medium.ttf"; sourceTree = "<group>"; };
 		A810010E2E92E09600935976 /* KeepAwakeModule.mm */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.objcpp; name = KeepAwakeModule.mm; path = PocketPal/KeepAwakeModule.mm; sourceTree = "<group>"; };
+		A8F0D0022F00000100000001 /* PdfTextModule.mm */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.objcpp; name = PdfTextModule.mm; path = PocketPal/PdfTextModule.mm; sourceTree = "<group>"; };
+		A8F0D0042F00000100000001 /* PDFKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = PDFKit.framework; path = System/Library/Frameworks/PDFKit.framework; sourceTree = SDKROOT; };
 		A81001122E92E09800935976 /* PocketPal-Bridging-Header.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = "PocketPal-Bridging-Header.h"; sourceTree = "<group>"; };
 		A81001152E92FFC900935976 /* HardwareInfoModule.mm */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.objcpp; name = HardwareInfoModule.mm; path = PocketPal/HardwareInfoModule.mm; sourceTree = "<group>"; };
 		A826FC242E9ECA10003F1572 /* Env.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; name = Env.xcconfig; path = Config/Env.xcconfig; sourceTree = "<group>"; };
@@ -111,6 +115,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				D2383657A264CC8550057BF7 /* Pods_PocketPal.framework in Frameworks */,
+				A8F0D0032F00000100000001 /* PDFKit.framework in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -161,6 +166,7 @@
 				A8B4FFD22EA5731700CD3B4C /* PocketPalShortcuts.swift */,
 				A81001152E92FFC900935976 /* HardwareInfoModule.mm */,
 				A810010E2E92E09600935976 /* KeepAwakeModule.mm */,
+				A8F0D0022F00000100000001 /* PdfTextModule.mm */,
 				13B07FB51A68108700A75B9A /* Images.xcassets */,
 				761780EC2CA45674006654EE /* AppDelegate.swift */,
 				13B07FB61A68108700A75B9A /* Info.plist */,
@@ -175,6 +181,7 @@
 			isa = PBXGroup;
 			children = (
 				ED297162215061F000B7C4FE /* JavaScriptCore.framework */,
+				A8F0D0042F00000100000001 /* PDFKit.framework */,
 				4DFBC07983ED2DF7BDC06A78 /* Pods_PocketPal.framework */,
 				2976BD78FB093478AA202FEA /* Pods_PocketPal_PocketPalTests.framework */,
 			);
@@ -500,6 +507,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				A81001102E92E09600935976 /* KeepAwakeModule.mm in Sources */,
+				A8F0D0012F00000100000001 /* PdfTextModule.mm in Sources */,
 				A81001162E92FFC900935976 /* HardwareInfoModule.mm in Sources */,
 				A86CF0D62EA9567800BFFCEE /* MustacheRenderer.swift in Sources */,
 				A8B4FFD32EA5731700CD3B4C /* LlamaInferenceEngine.swift in Sources */,

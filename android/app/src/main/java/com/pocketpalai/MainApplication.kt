@@ -29,6 +29,7 @@ class MainApplication : Application(), ReactApplication {
               add(HardwareInfoPackage())
               add(DownloadPackage())
               add(NavigationBarPackage())
+              add(PdfTextPackage())
             }
 
         override fun getJSMainModuleName(): String = "index"

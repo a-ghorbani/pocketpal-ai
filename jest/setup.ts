@@ -106,6 +106,13 @@ jest.mock('../src/specs/NativeHardwareInfo', () => ({
   },
 }));
 
+jest.mock('../src/specs/NativePdfText', () => ({
+  __esModule: true,
+  default: {
+    extractPages: jest.fn(() => Promise.resolve({pageCount: 0, pages: []})),
+  },
+}));
+
 jest.mock('react-native-safe-area-context', () => {
   const inset = {top: 0, right: 0, bottom: 0, left: 0};
   return {
