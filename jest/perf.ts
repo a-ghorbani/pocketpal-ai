@@ -18,7 +18,9 @@ type ScenarioOptions = {
   wrapperOptions?: CustomRenderOptions;
 };
 
-export const flushTimers = () => act(() => jest.runOnlyPendingTimers());
+export const flushTimers = async () => {
+  await act(() => jest.runOnlyPendingTimers());
+};
 
 export const measureScenario = async (
   ui: React.ReactElement,
@@ -36,6 +38,7 @@ export const measureScenario = async (
     wrapper,
     runs,
     beforeEach,
+    scenario: () => flushTimers(),
     writeFile: false,
   });
   const measured = await measureRenders(ui, {
