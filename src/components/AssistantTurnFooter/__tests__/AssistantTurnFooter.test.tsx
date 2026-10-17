@@ -27,10 +27,73 @@ describe('AssistantTurnFooter', () => {
     jest.clearAllMocks();
   });
 
-  it('renders nothing when neither timings nor copyable are set', () => {
+  it('renders nothing on the active row when neither timings nor copyable are set', () => {
     const message = baseTurn({metadata: {}});
-    const {queryByTestId} = render(<AssistantTurnFooter message={message} />);
+    const {queryByTestId} = render(
+      <AssistantTurnFooter message={message} isActiveRun />,
+    );
     expect(queryByTestId('assistant-turn-footer')).toBeNull();
+  });
+
+  describe('message menu button', () => {
+    it('renders a footer holding only the button on a finished row with no other part', () => {
+      const {getByTestId, queryByTestId} = render(
+        <AssistantTurnFooter message={baseTurn({metadata: {}})} />,
+      );
+      expect(getByTestId('assistant-turn-footer')).toBeTruthy();
+      expect(getByTestId('message-menu-button')).toBeTruthy();
+      expect(queryByTestId('footer-copy')).toBeNull();
+    });
+
+    it('renders on a system row without copyable', () => {
+      const system = baseTurn({
+        type: 'text',
+        text: 'Context is full',
+        metadata: {system: true},
+      });
+      const {getByTestId} = render(<AssistantTurnFooter message={system} />);
+      expect(getByTestId('message-menu-button')).toBeTruthy();
+    });
+
+    it('places the button after Copy', () => {
+      const {getByTestId} = render(
+        <AssistantTurnFooter
+          message={baseTurn({metadata: {copyable: true}})}
+        />,
+      );
+      const children = getByTestId('assistant-turn-footer').props.children;
+      const ids = React.Children.toArray(children)
+        .map((child: any) => child.props?.testID ?? child.type?.name)
+        .filter(Boolean);
+      expect(ids.indexOf('footer-copy')).toBeLessThan(
+        ids.indexOf('MessageMenuButton'),
+      );
+      expect(ids[ids.length - 1]).toBe('MessageMenuButton');
+    });
+
+    it('is hidden on the active row while other parts still show', () => {
+      const {getByTestId, queryByTestId} = render(
+        <AssistantTurnFooter
+          message={baseTurn({metadata: {copyable: true}})}
+          isActiveRun
+        />,
+      );
+      expect(getByTestId('footer-copy')).toBeTruthy();
+      expect(queryByTestId('message-menu-button')).toBeNull();
+    });
+
+    it('forwards the press event', () => {
+      const onMenuPress = jest.fn();
+      const {getByTestId} = render(
+        <AssistantTurnFooter
+          message={baseTurn({metadata: {}})}
+          onMenuPress={onMenuPress}
+        />,
+      );
+      const event = {nativeEvent: {pageX: 3, pageY: 4}};
+      fireEvent.press(getByTestId('message-menu-button'), event);
+      expect(onMenuPress).toHaveBeenCalledWith(event);
+    });
   });
 
   it('renders timing line when timings present (no copy button if not copyable)', () => {

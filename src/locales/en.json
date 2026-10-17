@@ -631,6 +631,9 @@
     "thinkingBubble": {
       "reasoning": "Reasoning"
     },
+    "messageMenuButton": {
+      "accessibilityLabel": "More actions"
+    },
     "markdownView": {
       "selectionMenu": {
         "copy": "Copy",

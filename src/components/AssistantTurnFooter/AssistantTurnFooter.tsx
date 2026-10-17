@@ -1,5 +1,5 @@
 import React, {useContext} from 'react';
-import {TouchableOpacity, View} from 'react-native';
+import {GestureResponderEvent, TouchableOpacity, View} from 'react-native';
 
 import {observer} from 'mobx-react';
 import {Text} from 'react-native-paper';
@@ -9,6 +9,7 @@ import ReactNativeHapticFeedback from 'react-native-haptic-feedback';
 import {CopyIcon} from '../../assets/icons';
 import {useTheme} from '../../hooks';
 import {PlayButton} from '../TextMessage/PlayButton';
+import {MessageMenuButton} from '../MessageMenuButton';
 
 import {styles} from './styles';
 
@@ -27,17 +28,19 @@ const hapticOptions = {
 
 interface AssistantTurnFooterProps {
   message: MessageType.Any;
+  isActiveRun?: boolean;
+  onMenuPress?: (event: GestureResponderEvent) => void;
 }
 
 export const AssistantTurnFooter: React.FC<AssistantTurnFooterProps> = observer(
-  ({message}) => {
+  ({message, isActiveRun, onMenuPress}) => {
     const theme = useTheme();
     const l10n = useContext(L10nContext);
     const {copyable, interrupted, truncationLikely, completionResult} =
       message.metadata || {};
     const timings: PersistedTurnTimings | undefined = message.metadata?.timings;
 
-    if (!timings && !copyable && !interrupted) {
+    if (isActiveRun && !timings && !copyable && !interrupted) {
       return null;
     }
 
@@ -151,6 +154,7 @@ export const AssistantTurnFooter: React.FC<AssistantTurnFooterProps> = observer(
               : l10n.components.bubble.interrupted}
           </Text>
         ) : null}
+        {!isActiveRun && <MessageMenuButton onPress={onMenuPress} />}
       </View>
     );
   },
