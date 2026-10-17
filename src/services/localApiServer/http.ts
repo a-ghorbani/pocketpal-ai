@@ -9,9 +9,12 @@ export interface HttpRequest {
   body: string;
 }
 
+export type RequestHead = Omit<HttpRequest, 'body'>;
+
 export type ReadResult =
   | {kind: 'pending'}
   | {kind: 'request'; request: HttpRequest}
+  | {kind: 'answered'; drained: boolean}
   | {kind: 'error'; status: 400 | 411 | 413};
 
 export interface RequestReader {
@@ -19,6 +22,7 @@ export interface RequestReader {
 }
 
 const PENDING: ReadResult = {kind: 'pending'};
+const DRAINING: ReadResult = {kind: 'answered', drained: false};
 const HEAD_TERMINATOR = [13, 10, 13, 10];
 const METHODS_WITH_BODY = new Set(['POST', 'PUT', 'PATCH']);
 
@@ -62,11 +66,7 @@ function concat(chunks: Uint8Array[], length: number): Uint8Array {
   return joined;
 }
 
-type ParsedHead =
-  | {method: string; path: string; headers: Record<string, string>}
-  | undefined;
-
-function parseHead(bytes: Uint8Array): ParsedHead {
+function parseHead(bytes: Uint8Array): RequestHead | undefined {
   const text = decodeUtf8(bytes);
   if (text === undefined) {
     return undefined;
@@ -92,14 +92,19 @@ function parseHead(bytes: Uint8Array): ParsedHead {
 
 /**
  * Reads one request from a connection's bytes, holding at most one head and
- * one body within the size limits. Everything after the first answer is
- * ignored: a connection carries one request.
+ * one body within the size limits. `onHead` sees each framed head before any
+ * body byte is kept; when it answers the request (returns true), the body is
+ * only counted until `Content-Length`, never stored or decoded. Everything
+ * after the first answer is ignored: a connection carries one request.
  */
-export function createRequestReader(): RequestReader {
+export function createRequestReader(
+  onHead: (head: RequestHead) => boolean,
+): RequestReader {
   let headChunks: Uint8Array[] = [];
   let headLength = 0;
   let terminatorMatched = 0;
-  let head: NonNullable<ParsedHead> | undefined;
+  let head: RequestHead | undefined;
+  let headAnswered = false;
   let bodyLength = 0;
   const bodyChunks: Uint8Array[] = [];
   let bodyReceived = 0;
@@ -108,6 +113,13 @@ export function createRequestReader(): RequestReader {
   const settle = (result: ReadResult): ReadResult => {
     settled = result;
     return result;
+  };
+
+  const drain = (chunk: Uint8Array): ReadResult => {
+    bodyReceived += chunk.length;
+    return bodyReceived < bodyLength
+      ? DRAINING
+      : settle({kind: 'answered', drained: true});
   };
 
   const pushBody = (chunk: Uint8Array): ReadResult => {
@@ -176,6 +188,10 @@ export function createRequestReader(): RequestReader {
     if (bodyLength > MAX_BODY_BYTES) {
       return settle({kind: 'error', status: 413});
     }
+    if (onHead(head)) {
+      headAnswered = true;
+      return drain(chunk.subarray(end));
+    }
     return pushBody(chunk.subarray(end));
   };
 
@@ -184,7 +200,10 @@ export function createRequestReader(): RequestReader {
       if (settled) {
         return settled;
       }
-      return head ? pushBody(chunk) : pushHead(chunk);
+      if (!head) {
+        return pushHead(chunk);
+      }
+      return headAnswered ? drain(chunk) : pushBody(chunk);
     },
   };
 }

@@ -1,8 +1,9 @@
 import type {HttpRequest, ResponseSink} from '../http';
 import {
+  answerHead,
   constantTimeEquals,
   isAllowedHost,
-  routeRequest,
+  routeBody,
   RouterDeps,
 } from '../router';
 
@@ -31,7 +32,9 @@ const route = async (
     write: d => writes.push(d),
     end: jest.fn(),
   };
-  await routeRequest(req, sink, deps);
+  if (!answerHead(req, sink, deps)) {
+    await routeBody(req, sink, deps);
+  }
   const text = writes.join('');
   const status = Number(text.split(' ')[1]);
   const json = text.includes('\r\n\r\n{')
@@ -40,7 +43,7 @@ const route = async (
   return {deps, text, status, json};
 };
 
-describe('routeRequest', () => {
+describe('answerHead and routeBody', () => {
   it('dispatches a valid chat request with its parsed body', async () => {
     const {deps, text} = await route(request());
     expect(deps.handleChat).toHaveBeenCalledWith(
@@ -203,6 +206,64 @@ describe('routeRequest', () => {
     expect(status).toBe(400);
     expect(json.error.code).toBe('invalid_json');
     expect(deps.handleChat).not.toHaveBeenCalled();
+  });
+
+  it.each([
+    [
+      'Origin without a key, before preflight and Host',
+      request({method: 'OPTIONS', headers: {origin: 'https://x.example'}}),
+      undefined,
+      'forbidden_origin',
+    ],
+    [
+      'preflight with a key, before Host and auth',
+      request({method: 'OPTIONS', headers: {host: 'evil.example'}}),
+      'secret',
+      204,
+    ],
+    [
+      'Host before auth and route',
+      request({path: '/nope', headers: {host: 'evil.example'}}),
+      'secret',
+      'forbidden_host',
+    ],
+    [
+      'auth before route',
+      request({path: '/nope', headers: {host: 'localhost'}}),
+      'secret',
+      'invalid_api_key',
+    ],
+    [
+      'route before method',
+      request({method: 'PUT', path: '/nope'}),
+      undefined,
+      'not_found',
+    ],
+    [
+      'method before the body',
+      request({method: 'GET', body: '{oops'}),
+      undefined,
+      'method_not_allowed',
+    ],
+  ])('checks %s', async (_name, req, key, expected) => {
+    const {status, json} = await route(req, {getApiKey: () => key});
+    if (typeof expected === 'number') {
+      expect(status).toBe(expected);
+    } else {
+      expect(json.error.code).toBe(expected);
+    }
+  });
+
+  it('leaves a valid chat head to the body stage', () => {
+    const sink: ResponseSink = {cors: false, write: jest.fn(), end: jest.fn()};
+    expect(
+      answerHead(request(), sink, {
+        getApiKey: () => undefined,
+        getServedModelId: () => undefined,
+        listenerStartedAt: 0,
+      }),
+    ).toBe(false);
+    expect(sink.write).not.toHaveBeenCalled();
   });
 
   it('lists the served model', async () => {

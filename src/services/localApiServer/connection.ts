@@ -1,6 +1,6 @@
 import type {ResponseChannel} from './chatCompletion';
 import {createRequestReader, writeJson} from './http';
-import {routeRequest, RouterDeps} from './router';
+import {answerHead, HeadDeps, routeBody} from './router';
 import {errorBody} from './wire';
 
 export const MAX_OPEN_CONNECTIONS = 8;
@@ -29,7 +29,7 @@ export interface ConnectionContext {
   /** False when the chat requests in flight are at their cap. */
   admit(): boolean;
   release(): void;
-  routerDeps: Omit<RouterDeps, 'handleChat'>;
+  routerDeps: HeadDeps;
   handleChat(body: unknown, channel: ResponseChannel): Promise<void>;
 }
 
@@ -50,10 +50,10 @@ export function handleConnection(
     return;
   }
 
-  const reader = createRequestReader();
   const closeListeners = new Set<() => void>();
   let closed = false;
-  let answered = false;
+  let headAnswered = false;
+  let settled = false;
   let endRequested = false;
   let pendingWrites = 0;
 
@@ -111,8 +111,18 @@ export function handleConnection(
     },
   };
 
+  const reader = createRequestReader(head =>
+    answerHead(head, channel, ctx.routerDeps),
+  );
+
+  const finishDrain = () => {
+    settled = true;
+    clearTimeout(deadline);
+    channel.end();
+  };
+
   const answerReadError = (status: number) => {
-    answered = true;
+    settled = true;
     clearTimeout(deadline);
     writeJson(
       channel,
@@ -146,26 +156,36 @@ export function handleConnection(
     }
   };
 
-  const deadline = setTimeout(() => answerReadError(408), READ_DEADLINE_MS);
+  const deadline = setTimeout(
+    () => (headAnswered ? finishDrain() : answerReadError(408)),
+    READ_DEADLINE_MS,
+  );
   ctx.openConnections.add(connection);
 
   socket.on('close', onClosed);
   socket.on('error', onClosed);
   socket.on('data', data => {
-    if (answered || closed) {
+    if (settled || closed) {
       return;
     }
     const result = reader.push(data);
     if (result.kind === 'pending') {
       return;
     }
+    if (result.kind === 'answered') {
+      headAnswered = true;
+      if (result.drained) {
+        finishDrain();
+      }
+      return;
+    }
     if (result.kind === 'error') {
       answerReadError(result.status);
       return;
     }
-    answered = true;
+    settled = true;
     clearTimeout(deadline);
-    routeRequest(result.request, channel, {
+    routeBody(result.request, channel, {
       ...ctx.routerDeps,
       handleChat: serveAdmitted,
     })

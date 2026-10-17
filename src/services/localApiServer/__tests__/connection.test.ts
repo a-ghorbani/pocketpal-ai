@@ -275,6 +275,67 @@ describe('handleConnection', () => {
     expect(ctx.admitted()).toBe(0);
   });
 
+  describe('a request answered from its head', () => {
+    const rejectedUpload = (length: number) =>
+      'POST /v1/chat/completions HTTP/1.1\r\nHost: localhost\r\n' +
+      `Authorization: Bearer wrong\r\nContent-Length: ${length}\r\n\r\n`;
+    const statusLines = (output: string) =>
+      output.match(/HTTP\/1\.1 \d{3}/g) ?? [];
+
+    it('answers at once and ends after the whole body is drained', async () => {
+      jest.useFakeTimers();
+      const ctx = makeContext(undefined, 'secret');
+      const socket = connect(ctx);
+      socket.receive(rejectedUpload(900000));
+      await flush();
+
+      expect(socket.output).toMatch(/^HTTP\/1\.1 401 /);
+      const chunk = new Uint8Array(100000).fill(0xff);
+      for (let i = 0; i < 8; i++) {
+        socket.receive(chunk);
+      }
+      socket.receive(chunk.subarray(0, 99999));
+      await flush();
+      expect(socket.ended).toBe(false);
+
+      socket.receive(new Uint8Array([0xff]));
+      await flush();
+      expect(socket.ended).toBe(true);
+      expect(statusLines(socket.output)).toEqual(['HTTP/1.1 401']);
+      expect(ctx.handleChat).not.toHaveBeenCalled();
+    });
+
+    it('ends without a second answer when the drain stalls', async () => {
+      jest.useFakeTimers();
+      const ctx = makeContext(undefined, 'secret');
+      const socket = connect(ctx);
+      socket.receive(rejectedUpload(900000));
+      socket.receive(new Uint8Array(1000));
+      await flush();
+      jest.advanceTimersByTime(READ_DEADLINE_MS - 1);
+      await flush();
+      expect(socket.ended).toBe(false);
+
+      jest.advanceTimersByTime(1);
+      await flush();
+      expect(socket.ended).toBe(true);
+      expect(statusLines(socket.output)).toEqual(['HTTP/1.1 401']);
+    });
+
+    it('ends at once when there is no body', async () => {
+      const ctx = makeContext();
+      const socket = connect(ctx);
+      socket.receive(
+        'GET /v1/models HTTP/1.1\r\nHost: localhost\r\nOrigin: https://x.example\r\n\r\n',
+      );
+      await flush();
+
+      expect(socket.output).toMatch(/^HTTP\/1\.1 403 /);
+      expect(socket.output).toContain('"code":"forbidden_origin"');
+      expect(socket.ended).toBe(true);
+    });
+  });
+
   describe('CORS', () => {
     it('sends none on reader or busy errors without a key', async () => {
       const held = heldChat();
