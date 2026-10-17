@@ -48,11 +48,12 @@ const fakeContext = () => {
   };
 };
 
-const makeChannel = () => {
+const makeChannel = (cors = true) => {
   const writes: string[] = [];
   const listeners = new Set<() => void>();
   let closed = false;
   const channel: ResponseChannel & {close(): void} = {
+    cors,
     write: data => {
       if (!closed) {
         writes.push(data);
@@ -221,6 +222,21 @@ describe('serveChatCompletion', () => {
       total_tokens: 5,
     });
     expect(leases[0].end).toHaveBeenCalledTimes(1);
+  });
+
+  it('sends CORS on the stream head only when the channel allows it', async () => {
+    for (const cors of [true, false]) {
+      const fake = withLocalModel();
+      const {channel, text} = makeChannel(cors);
+      const served = serveChatCompletion(body({stream: true}), channel);
+      await flush();
+      fake.emit({content: 'a'});
+      fake.settle({content: 'a'});
+      await served;
+
+      expect(text()).toContain('Content-Type: text/event-stream');
+      expect(text().includes('Access-Control-Allow-Origin: *')).toBe(cors);
+    }
   });
 
   it('skips a snapshot that rewrote text already sent', async () => {

@@ -190,6 +190,7 @@ export function createRequestReader(): RequestReader {
 }
 
 export interface ResponseSink {
+  readonly cors: boolean;
   write(data: string): void;
   end(): void;
 }
@@ -209,10 +210,14 @@ const STATUS_TEXT: Record<number, string> = {
   503: 'Service Unavailable',
 };
 
-function responseHead(status: number, headers: Record<string, string>) {
+function responseHead(
+  status: number,
+  headers: Record<string, string>,
+  cors: boolean,
+) {
   const lines = Object.entries({
     Connection: 'close',
-    'Access-Control-Allow-Origin': '*',
+    ...(cors ? {'Access-Control-Allow-Origin': '*'} : {}),
     ...headers,
   }).map(([name, value]) => `${name}: ${value}`);
   return `HTTP/1.1 ${status} ${STATUS_TEXT[status] ?? ''}\r\n${lines.join('\r\n')}\r\n\r\n`;
@@ -226,29 +231,33 @@ export function writeJson(
 ): void {
   const text = JSON.stringify(body);
   sink.write(
-    responseHead(status, {
-      'Content-Type': 'application/json',
-      'Content-Length': String(utf8ByteLength(text)),
-      ...headers,
-    }) + text,
+    responseHead(
+      status,
+      {
+        'Content-Type': 'application/json',
+        'Content-Length': String(utf8ByteLength(text)),
+        ...headers,
+      },
+      sink.cors,
+    ) + text,
   );
 }
 
 export function writePreflight(sink: ResponseSink): void {
-  sink.write(
-    responseHead(204, {
-      'Access-Control-Allow-Headers': 'Authorization, Content-Type',
-      'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
-    }),
-  );
+  const allow = {
+    'Access-Control-Allow-Headers': 'Authorization, Content-Type',
+    'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
+  };
+  sink.write(responseHead(204, sink.cors ? allow : {}, sink.cors));
 }
 
 export function writeSseHead(sink: ResponseSink): void {
   sink.write(
-    responseHead(200, {
-      'Content-Type': 'text/event-stream',
-      'Cache-Control': 'no-cache',
-    }),
+    responseHead(
+      200,
+      {'Content-Type': 'text/event-stream', 'Cache-Control': 'no-cache'},
+      sink.cors,
+    ),
   );
 }
 

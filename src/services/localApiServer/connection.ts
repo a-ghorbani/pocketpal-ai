@@ -83,6 +83,7 @@ export function handleConnection(
   };
 
   const channel: ResponseChannel = {
+    cors: ctx.routerDeps.getApiKey() !== undefined,
     get closed() {
       return closed;
     },

@@ -27,9 +27,13 @@ const feed = (...chunks: (string | Uint8Array)[]): ReadResult => {
 const post = (body: string, extra = '') =>
   `POST /v1/chat/completions HTTP/1.1\r\nHost: 127.0.0.1:8080\r\nContent-Length: ${Buffer.byteLength(body)}\r\n${extra}\r\n${body}`;
 
-const recordingSink = () => {
+const recordingSink = (cors = true) => {
   const writes: string[] = [];
-  const sink: ResponseSink = {write: d => writes.push(d), end: jest.fn()};
+  const sink: ResponseSink = {
+    cors,
+    write: d => writes.push(d),
+    end: jest.fn(),
+  };
   return {sink, writes, text: () => writes.join('')};
 };
 
@@ -232,6 +236,16 @@ describe('writers', () => {
       'HTTP/1.1 404 Not Found\r\nConnection: close\r\nAccess-Control-Allow-Origin: *\r\n' +
         'Content-Type: application/json\r\nContent-Length: 14\r\n\r\n{"error":"é"}',
     );
+  });
+
+  it('sends no CORS headers on a sink without CORS', () => {
+    const {sink, text} = recordingSink(false);
+    writeJson(sink, 404, {error: 'é'});
+    writePreflight(sink);
+    writeSseHead(sink);
+    expect(text()).toContain('HTTP/1.1 404 Not Found\r\nConnection: close\r\n');
+    expect(text()).toContain('HTTP/1.1 204 No Content\r\n');
+    expect(text()).not.toContain('Access-Control-');
   });
 
   it('writes the preflight answer', () => {

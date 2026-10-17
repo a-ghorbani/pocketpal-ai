@@ -75,6 +75,17 @@ export async function routeRequest(
   sink: ResponseSink,
   deps: RouterDeps,
 ): Promise<void> {
+  const apiKey = deps.getApiKey();
+  if (apiKey === undefined && request.headers.origin !== undefined) {
+    writeError(
+      sink,
+      403,
+      'Browser requests need an API key',
+      'invalid_request_error',
+      'forbidden_origin',
+    );
+    return;
+  }
   if (request.method === 'OPTIONS') {
     writePreflight(sink);
     return;
@@ -89,7 +100,6 @@ export async function routeRequest(
     );
     return;
   }
-  const apiKey = deps.getApiKey();
   if (apiKey && !isAuthorized(request.headers.authorization, apiKey)) {
     writeError(
       sink,

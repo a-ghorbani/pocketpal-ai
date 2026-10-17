@@ -24,6 +24,7 @@ const makeContext = (
   handleChat: ConnectionContext['handleChat'] = async (_body, channel) => {
     channel.write('served');
   },
+  apiKey?: string,
 ) => {
   let admitted = 0;
   const ctx: ConnectionContext & {admitted(): number} = {
@@ -39,7 +40,7 @@ const makeContext = (
       admitted -= 1;
     }),
     routerDeps: {
-      getApiKey: () => undefined,
+      getApiKey: () => apiKey,
       getServedModelId: () => 'm',
       listenerStartedAt: 0,
     },
@@ -272,6 +273,40 @@ describe('handleConnection', () => {
     held.finish(0);
     await flush();
     expect(ctx.admitted()).toBe(0);
+  });
+
+  describe('CORS', () => {
+    it('sends none on reader or busy errors without a key', async () => {
+      const held = heldChat();
+      const ctx = makeContext(held.handleChat);
+      const tooLarge = connect(ctx);
+      tooLarge.receive(
+        'POST /v1/chat/completions HTTP/1.1\r\nHost: localhost\r\nContent-Length: 2000000\r\n\r\n',
+      );
+      connect(ctx).receive(CHAT);
+      connect(ctx).receive(CHAT);
+      const busy = connect(ctx);
+      busy.receive(CHAT);
+      await flush();
+
+      expect(tooLarge.output).toMatch(/^HTTP\/1\.1 413 /);
+      expect(busy.output).toMatch(/^HTTP\/1\.1 503 /);
+      expect(tooLarge.output).not.toContain('Access-Control-');
+      expect(busy.output).not.toContain('Access-Control-');
+      held.finish(0);
+      held.finish(1);
+    });
+
+    it('sends it on a reader error with a key', async () => {
+      jest.useFakeTimers();
+      const ctx = makeContext(undefined, 'secret');
+      const socket = connect(ctx);
+      jest.advanceTimersByTime(READ_DEADLINE_MS);
+      await flush();
+
+      expect(socket.output).toMatch(/^HTTP\/1\.1 408 /);
+      expect(socket.output).toContain('Access-Control-Allow-Origin: *\r\n');
+    });
   });
 
   it('ends the socket even when the handler throws', async () => {
