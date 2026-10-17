@@ -5,6 +5,7 @@ const path = require('path');
 const REASSURE_DIR = path.join(process.cwd(), '.reassure');
 
 const FAILING_STATES = [
+  'unrecognised-output',
   'count-up',
   'count-unstable',
   'duplicate-name',
@@ -43,10 +44,86 @@ const headTable = entries =>
     ),
   ].join('\n');
 
+const OUTPUT_ARRAYS = ['significant', 'meaningless', 'added', 'removed'];
+
+const isFiniteNumber = value =>
+  typeof value === 'number' && Number.isFinite(value);
+
+const countFieldIssues = (entry, where) => {
+  const issues = [];
+  for (const field of ['meanCount', 'stdevCount']) {
+    if (!isFiniteNumber(entry?.[field])) {
+      issues.push(`${where}.${field}`);
+    }
+  }
+  if (!Array.isArray(entry?.counts) || !entry.counts.every(isFiniteNumber)) {
+    issues.push(`${where}.counts`);
+  }
+  return issues;
+};
+
+const validate = ({currentEntries, output, bootstrap}) => {
+  const issues = [];
+  const add = (name, fields) =>
+    fields.forEach(field => issues.push(`${name}: ${field}`));
+
+  currentEntries.forEach(e => add(e.name, countFieldIssues(e, 'current.perf')));
+
+  if (bootstrap || !output) {
+    return issues;
+  }
+
+  const missing = OUTPUT_ARRAYS.filter(key => !Array.isArray(output[key]));
+  if (missing.length) {
+    add('output.json', missing);
+    return issues;
+  }
+
+  [...output.significant, ...output.meaningless].forEach(e => {
+    add(e.name, countFieldIssues(e.current, 'output.json current'));
+    add(e.name, countFieldIssues(e.baseline, 'output.json baseline'));
+  });
+
+  const reported = [
+    ...output.significant,
+    ...output.meaningless,
+    ...output.added,
+  ].map(e => e.name);
+  currentEntries.forEach(({name}) => {
+    const times = reported.filter(r => r === name).length;
+    if (times !== 1) {
+      add(name, [`reported ${times} times in output.json`]);
+    }
+  });
+
+  return issues;
+};
+
+const finish = (states, sections) => {
+  const failing = FAILING_STATES.filter(state => states.has(state));
+  const failed = failing.length > 0;
+  const verdict = failed
+    ? `**Render-perf gate: FAIL** (${failing.join(', ')})`
+    : '**Render-perf gate: PASS**';
+  const markdown = ['## Render-perf gate', ...sections, verdict].join('\n\n');
+
+  return {failed, states: [...states], markdown};
+};
+
 const evaluate = ({currentEntries, output, bootstrap}) => {
   const states = new Set();
   const sections = [];
   const section = (title, body) => sections.push(`**${title}**\n\n${body}`);
+
+  const issues = validate({currentEntries, output, bootstrap});
+  if (issues.length) {
+    states.add('unrecognised-output');
+    section(
+      "Reassure's output format is not the one this gate reads (fails)",
+      bulletList(issues),
+    );
+    return finish(states, sections);
+  }
 
   const unstable = currentEntries.filter(e => e.stdevCount > 0);
   if (unstable.length) {
@@ -133,14 +210,7 @@ const evaluate = ({currentEntries, output, bootstrap}) => {
     }
   }
 
-  const failing = FAILING_STATES.filter(state => states.has(state));
-  const failed = failing.length > 0;
-  const verdict = failed
-    ? `**Render-perf gate: FAIL** (${failing.join(', ')})`
-    : '**Render-perf gate: PASS**';
-  const markdown = ['## Render-perf gate', ...sections, verdict].join('\n\n');
-
-  return {failed, states: [...states], markdown};
+  return finish(states, sections);
 };
 
 const main = () => {

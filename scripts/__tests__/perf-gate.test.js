@@ -147,9 +147,11 @@ describe('perf-gate', () => {
       type: 'render',
       current: {...settings.current, name: renamed},
     });
+    const currentEntries = loadCurrent();
+    currentEntries.find(e => e.name === SETTINGS).name = renamed;
 
     const result = evaluate({
-      currentEntries: loadCurrent(),
+      currentEntries,
       output,
       bootstrap: false,
     });
@@ -164,7 +166,11 @@ describe('perf-gate', () => {
     const output = loadOutput();
     withCount(findCompared(output, SHEET).current, [4, 4, 4]);
     const settings = removeCompared(output, SETTINGS);
-    output.added.push({name: SETTINGS, type: 'render', current: settings});
+    output.added.push({
+      name: SETTINGS,
+      type: 'render',
+      current: settings.current,
+    });
 
     const result = evaluate({
       currentEntries: loadCurrent(),
@@ -213,6 +219,109 @@ describe('perf-gate', () => {
     expect(result.failed).toBe(true);
     expect(result.states).toContain('duplicate-name');
     expect(result.markdown).toContain(`- ${currentEntries[0].name}`);
+  });
+
+  describe('unrecognised Reassure output', () => {
+    const expectUnrecognised = (result, field) => {
+      expect(result.failed).toBe(true);
+      expect(result.states).toEqual(['unrecognised-output']);
+      expect(result.markdown).toContain(field);
+    };
+
+    it('fails when a current.perf count field is renamed', () => {
+      const currentEntries = parsePerf(
+        readFixture('current.perf').replace(/"meanCount"/g, '"meanCnt"'),
+      );
+
+      const result = evaluate({
+        currentEntries,
+        output: loadOutput(),
+        bootstrap: false,
+      });
+
+      expectUnrecognised(result, `${SETTINGS}: current.perf.meanCount`);
+    });
+
+    it('fails on a renamed field in a bootstrap run too', () => {
+      const currentEntries = loadCurrent();
+      delete currentEntries[0].stdevCount;
+
+      const result = evaluate({currentEntries, output: null, bootstrap: true});
+
+      expectUnrecognised(result, 'current.perf.stdevCount');
+    });
+
+    it('fails when a baseline stdevCount is not a number', () => {
+      const output = loadOutput();
+      findCompared(output, SHEET).baseline.stdevCount = '0';
+
+      const result = evaluate({
+        currentEntries: loadCurrent(),
+        output,
+        bootstrap: false,
+      });
+
+      expectUnrecognised(result, `${SHEET}: output.json baseline.stdevCount`);
+    });
+
+    it('fails when counts is not an array of numbers', () => {
+      const output = loadOutput();
+      findCompared(output, SHEET).current.counts = '3,3,3';
+
+      const result = evaluate({
+        currentEntries: loadCurrent(),
+        output,
+        bootstrap: false,
+      });
+
+      expectUnrecognised(result, `${SHEET}: output.json current.counts`);
+    });
+
+    it('fails when a result category is missing', () => {
+      const output = loadOutput();
+      delete output.added;
+
+      const result = evaluate({
+        currentEntries: loadCurrent(),
+        output,
+        bootstrap: false,
+      });
+
+      expectUnrecognised(result, 'output.json: added');
+    });
+
+    it('fails when a measured scenario drops out of every category', () => {
+      const output = loadOutput();
+      removeCompared(output, SETTINGS);
+
+      const result = evaluate({
+        currentEntries: loadCurrent(),
+        output,
+        bootstrap: false,
+      });
+
+      expectUnrecognised(
+        result,
+        `${SETTINGS}: reported 0 times in output.json`,
+      );
+    });
+
+    it('fails when a measured scenario is reported in two categories', () => {
+      const output = loadOutput();
+      output.added.push({
+        name: SHEET,
+        type: 'render',
+        current: findCompared(output, SHEET).current,
+      });
+
+      const result = evaluate({
+        currentEntries: loadCurrent(),
+        output,
+        bootstrap: false,
+      });
+
+      expectUnrecognised(result, `${SHEET}: reported 2 times in output.json`);
+    });
   });
 
   describe('command line', () => {
