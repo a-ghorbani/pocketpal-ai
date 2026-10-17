@@ -223,6 +223,8 @@ describe('ChatView — AssistantTurn integration', () => {
     const target = longPressables.find((node: any) => {
       const findText = (n: any): boolean => {
         if (!n) return false;
+        if (typeof n.props?.markdown === 'string')
+          return n.props.markdown.includes('hi assistant');
         if (typeof n.children === 'string')
           return n.children.includes('hi assistant');
         if (typeof n.props?.children === 'string')

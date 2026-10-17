@@ -1,43 +1,109 @@
-import {View} from 'react-native';
-import React, {useMemo} from 'react';
+import React, {useContext, useMemo} from 'react';
+import {Linking, View} from 'react-native';
 
-import {marked} from 'marked';
-import {RenderHTMLSource} from 'react-native-render-html';
+import {
+  EnrichedMarkdownText,
+  type AccessibilityLabels,
+  type LinkPressEvent,
+  type Md4cFlags,
+  type TextSelectionMenuConfig,
+} from 'react-native-enriched-markdown';
 
-marked.use({});
+import {useTheme} from '../../hooks';
+
+import {normalizeBreakTags} from './normalizeBreakTags';
+import {createMarkdownStyle, MarkdownVariant} from './styles';
+
+import {L10nContext} from '../../utils';
+import {t} from '../../locales';
 
 interface MarkdownViewProps {
   markdownText: string;
   maxMessageWidth: number;
   selectable?: boolean;
+  streamingAnimation?: boolean;
+  variant?: MarkdownVariant;
 }
+
+const MD4C_FLAGS: Md4cFlags = {latexMath: false, admonitions: false};
+
+const openLink = ({url}: LinkPressEvent) => {
+  Linking.openURL(url);
+};
 
 const isEmptyContent = (content: string): boolean => {
   return !content || content.trim() === '';
 };
 
-/**
- * Renders a markdown string inside the app-level RenderHTML provider tree.
- * The engine (parser + tagsStyles + renderers) lives on `MarkdownProvider`
- * at the app root; only `source` and `contentWidth` change here, so per-
- * token streaming updates stay cheap.
- *
- * NOTE: `selectable` is accepted for API compatibility but is currently
- * fixed at the provider level. If a caller ever needs a selectable variant
- * a separate provider scope would have to host it.
- */
 export const MarkdownView: React.FC<MarkdownViewProps> = React.memo(
-  ({markdownText, maxMessageWidth}) => {
-    const htmlContent = useMemo(
-      () => marked(markdownText) as string,
+  ({
+    markdownText,
+    maxMessageWidth,
+    selectable,
+    streamingAnimation,
+    variant = 'body',
+  }) => {
+    const theme = useTheme();
+    const l10n = useContext(L10nContext);
+
+    const markdown = useMemo(
+      () => normalizeBreakTags(markdownText),
       [markdownText],
     );
-    const source = useMemo(() => ({html: htmlContent}), [htmlContent]);
+    const markdownStyle = useMemo(
+      () => createMarkdownStyle(theme, variant),
+      [theme, variant],
+    );
+    const selectionMenuConfig = useMemo((): TextSelectionMenuConfig => {
+      const labels = l10n.components.markdownView.selectionMenu;
+      return {
+        copy: {label: labels.copy},
+        copyAsMarkdown: {label: labels.copyAsMarkdown},
+        copyImageUrl: {
+          label: labels.copyImageUrl,
+          pluralLabels: {
+            other: t(labels.copyImageUrls, {count: '{count}'}),
+          },
+        },
+      };
+    }, [l10n]);
+    const accessibilityLabels = useMemo((): AccessibilityLabels => {
+      const labels = l10n.components.markdownView.accessibility;
+      return {
+        list: {
+          bulletPoint: labels.bulletPoint,
+          nestedBulletPoint: labels.nestedBulletPoint,
+          orderedItem: t(labels.orderedItem, {n: '{n}'}),
+          nestedOrderedItem: t(labels.nestedOrderedItem, {n: '{n}'}),
+        },
+        blockquote: {quote: labels.quote, nestedQuote: labels.nestedQuote},
+        table: {
+          row: t(labels.tableRow, {n: '{n}', content: '{content}'}),
+        },
+        rotor: {
+          headings: labels.rotorHeadings,
+          links: labels.rotorLinks,
+          images: labels.rotorImages,
+        },
+      };
+    }, [l10n]);
 
     return (
       <View testID="markdown-content" style={{maxWidth: maxMessageWidth}}>
         {!isEmptyContent(markdownText) && (
-          <RenderHTMLSource source={source} contentWidth={maxMessageWidth} />
+          <EnrichedMarkdownText
+            markdown={markdown}
+            flavor="github"
+            markdownStyle={markdownStyle}
+            md4cFlags={MD4C_FLAGS}
+            selectable={selectable}
+            streamingAnimation={streamingAnimation}
+            enableTaskListItemToggle={false}
+            enableLinkPreview={false}
+            onLinkPress={openLink}
+            selectionMenuConfig={selectionMenuConfig}
+            accessibilityLabels={accessibilityLabels}
+          />
         )}
       </View>
     );
@@ -45,5 +111,7 @@ export const MarkdownView: React.FC<MarkdownViewProps> = React.memo(
   (prevProps, nextProps) =>
     prevProps.markdownText === nextProps.markdownText &&
     prevProps.maxMessageWidth === nextProps.maxMessageWidth &&
-    prevProps.selectable === nextProps.selectable,
+    prevProps.selectable === nextProps.selectable &&
+    prevProps.streamingAnimation === nextProps.streamingAnimation &&
+    prevProps.variant === nextProps.variant,
 );
