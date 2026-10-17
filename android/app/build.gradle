@@ -256,6 +256,11 @@ configurations.matching {
     exclude group: 'androidx.compose.runtime'
 }
 
+// react-native-tcp-socket needs BouncyCastle only for TLS servers; the local API server is plain TCP.
+configurations.matching { it.name.endsWith('RuntimeClasspath') }.configureEach {
+    exclude group: 'org.bouncycastle'
+}
+
 project.ext.vectoricons = [
     iconFontNames: [ 'MaterialIcons.ttf', 'MaterialCommunityIcons.ttf'  ] // Specify font files
 ]
