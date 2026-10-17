@@ -24,6 +24,7 @@ import {observer} from 'mobx-react';
 import {IconButton, Text} from 'react-native-paper';
 
 import {hasVideoCapability} from '../../utils/pal-capabilities';
+import {createDocumentWarning} from '../../utils/errors';
 
 import {
   ChevronUpIcon,
@@ -407,16 +408,14 @@ export const ChatInput = observer(
     };
 
     const warnRefused = (name: string, reason: DocumentRefusalReason) =>
-      uiStore.setChatWarning({
-        code: 'storage',
-        message: t(l10n.chat.documents.refusal, {
-          name,
-          reason: l10n.chat.documents.refusals[reason],
-        }),
-        context: 'chat',
-        recoverable: false,
-        severity: 'warning',
-      });
+      uiStore.setChatWarning(
+        createDocumentWarning(
+          t(l10n.chat.documents.refusal, {
+            name,
+            reason: l10n.chat.documents.refusals[reason],
+          }),
+        ),
+      );
 
     const importPicked = async (
       file: Parameters<typeof importDocument>[0],

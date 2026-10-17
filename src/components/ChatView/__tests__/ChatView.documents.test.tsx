@@ -17,6 +17,7 @@ jest.mock('../../ChatEmptyPlaceholder', () => ({
 }));
 
 const importDocument = jest.spyOn(documentStore, 'importDocument');
+const setDocumentPageRange = jest.spyOn(documentStore, 'setDocumentPageRange');
 const releaseImportHold = jest.spyOn(documentStore, 'releaseImportHold');
 
 const ref = (id: string, extra: Partial<DocumentRef> = {}): DocumentRef => ({
@@ -133,5 +134,70 @@ describe('ChatView composer documents', () => {
 
     expect(documentStore.isHeld('gone')).toBe(false);
     expect(chat.screen.queryByText('gone.pdf')).toBeNull();
+  });
+});
+
+describe('ChatView page ranges', () => {
+  const fortyPages = ref('x', {pageCount: 40, tokenEstimate: 20000});
+
+  const chooseRange = async (
+    chat: ReturnType<typeof renderChat>,
+    from: string,
+    to: string,
+  ) => {
+    fireEvent.press(chat.screen.getByText('x.pdf'));
+    await waitFor(() => chat.screen.getByTestId('document-range-from'));
+    fireEvent.changeText(chat.screen.getByTestId('document-range-from'), from);
+    fireEvent.changeText(chat.screen.getByTestId('document-range-to'), to);
+    await act(async () => {
+      fireEvent.press(chat.screen.getByTestId('document-range-apply'));
+    });
+  };
+
+  it('applies a chosen range to the composer chip', async () => {
+    const ranged = {
+      ...fortyPages,
+      pageRange: {from: 3, to: 5},
+      tokenEstimate: 1400,
+    };
+    setDocumentPageRange.mockResolvedValueOnce({status: 'ready', ref: ranged});
+    const chat = renderChat();
+    await chat.attach(fortyPages);
+
+    await chooseRange(chat, '3', '5');
+
+    expect(setDocumentPageRange).toHaveBeenCalledWith(
+      fortyPages,
+      3,
+      5,
+      undefined,
+    );
+    await waitFor(() =>
+      expect(chat.screen.getByText('p. 3–5 of 40 · ~1.4k tokens')).toBeTruthy(),
+    );
+    expect(chat.screen.queryByTestId('document-range-apply')).toBeNull();
+
+    chat.type('Summarise');
+    await act(async () => {
+      chat.pressSend();
+    });
+    expect(chat.onSendPress).toHaveBeenCalledWith(
+      expect.objectContaining({documents: [ranged]}),
+    );
+  });
+
+  it('keeps the chip asking for pages when the range is over a limit', async () => {
+    setDocumentPageRange.mockResolvedValueOnce({
+      status: 'needs_range',
+      ref: {...fortyPages, pageRange: {from: 1, to: 40}},
+      rangeLimit: 'too_many_chars',
+    });
+    const chat = renderChat();
+    await chat.attach(fortyPages);
+
+    await chooseRange(chat, '1', '40');
+
+    await waitFor(() => chat.screen.getByTestId('document-range-limit'));
+    expect(chat.screen.getByText('p. 1–40 of 40 · choose pages')).toBeTruthy();
   });
 });

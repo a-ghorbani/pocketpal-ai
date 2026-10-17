@@ -1345,6 +1345,17 @@
         "binary": "the file is not plain text",
         "text_too_long": "the text is longer than 1,000,000 characters",
         "too_many_files": "a message can carry at most 5 documents"
+      },
+      "rangeSheet": {
+        "title": "Choose pages",
+        "body": "{{total}} pages. Pick up to {{maxPages}} pages with at most {{maxChars}} characters of text.",
+        "from": "From page",
+        "to": "To page",
+        "invalid": "Enter pages between 1 and {{total}}, first page before last.",
+        "tooManyPages": "Choose at most {{max}} pages.",
+        "tooManyChars": "These pages hold too much text. Choose fewer pages.",
+        "apply": "Apply",
+        "cancel": "Cancel"
       }
     }
   },

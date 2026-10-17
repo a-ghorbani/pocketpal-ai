@@ -56,13 +56,19 @@ import {
   asrStore,
   chatSessionStore,
   modelStore,
+  uiStore,
 } from '../../store';
 import type {EvaluateSendBudget, UndoneSend} from '../../hooks/useChatSession';
 
 import {openMicSettings} from '../../utils/asrMicPermission';
 import type {AsrErrorKind} from '../../services/asr';
 import {MessageType, User} from '../../utils/types';
-import {setComposerHeld} from '../../services/documents/store';
+import {
+  setComposerHeld,
+  setDocumentPageRange,
+} from '../../services/documents/store';
+import {documentCountingOptions} from '../../utils/documentCounting';
+import {createDocumentWarning} from '../../utils/errors';
 import type {
   ComposerDocument,
   DocumentRef,
@@ -91,6 +97,7 @@ import {
   ChatEmptyPlaceholder,
   VideoPalEmptyPlaceholder,
   ContentReportSheet,
+  DocumentRangeSheet,
   GreetingBubble,
   SuggestedPromptsRow,
 } from '..';
@@ -312,6 +319,55 @@ export const ChatView = observer(
       [],
     );
     React.useEffect(() => () => setComposerHeld([]), []);
+    const [rangeKey, setRangeKey] = React.useState<string | null>(null);
+    const rangeDocument = inputDocuments.find(doc => doc.key === rangeKey);
+
+    const applyDocumentRange = React.useCallback(
+      async (from: number, to: number) => {
+        const target = inputDocumentsRef.current.find(
+          doc => doc.key === rangeKey,
+        );
+        if (!target?.ref) {
+          return;
+        }
+        const withTarget = (
+          change: (doc: ComposerDocument) => ComposerDocument,
+        ) =>
+          updateComposerDocuments(prev =>
+            prev.map(doc => (doc.key === target.key ? change(doc) : doc)),
+          );
+        withTarget(doc => ({...doc, status: 'importing'}));
+        const result = await setDocumentPageRange(
+          target.ref,
+          from,
+          to,
+          documentCountingOptions(),
+        );
+        if (result.status === 'refused') {
+          withTarget(() => target);
+          uiStore.setChatWarning(
+            createDocumentWarning(
+              t(l10n.chat.documents.refusal, {
+                name: target.name,
+                reason: l10n.chat.documents.refusals[result.reason],
+              }),
+            ),
+          );
+          return;
+        }
+        withTarget(doc => ({
+          ...doc,
+          status: result.status,
+          ref: result.ref,
+          rangeLimit:
+            result.status === 'needs_range' ? result.rangeLimit : undefined,
+        }));
+        if (result.status === 'ready') {
+          setRangeKey(null);
+        }
+      },
+      [rangeKey, updateComposerDocuments, l10n],
+    );
     const [isPickerVisible, setIsPickerVisible] = React.useState(false);
     const [_selectedModel, setSelectedModel] = React.useState<string | null>(
       null,
@@ -1260,6 +1316,7 @@ export const ChatView = observer(
                     : appendTranscript,
                   documents: inputDocuments,
                   onDocumentsChange: updateComposerDocuments,
+                  onOpenDocumentRange: setRangeKey,
                   textInputProps: {
                     ...textInputProps,
                     ...(!composerShowsPromptText && {
@@ -1326,6 +1383,17 @@ export const ChatView = observer(
             anchor={menuPosition}>
             {menuItems.map(renderMenuItem)}
           </Menu>
+
+          {rangeDocument?.ref ? (
+            <DocumentRangeSheet
+              isVisible
+              documentRef={rangeDocument.ref}
+              rangeLimit={rangeDocument.rangeLimit}
+              isApplying={rangeDocument.status === 'importing'}
+              onApply={applyDocumentRange}
+              onClose={() => setRangeKey(null)}
+            />
+          ) : null}
 
           {/* Content report sheet */}
           <ContentReportSheet
