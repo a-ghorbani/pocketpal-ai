@@ -1,5 +1,5 @@
 export const MAX_HEAD_BYTES = 16 * 1024;
-export const MAX_BODY_BYTES = 4 * 1024 * 1024;
+export const MAX_BODY_BYTES = 1024 * 1024;
 
 export interface HttpRequest {
   method: string;
@@ -62,15 +62,6 @@ function concat(chunks: Uint8Array[], length: number): Uint8Array {
   return joined;
 }
 
-function indexOfHeadEnd(bytes: Uint8Array): number {
-  for (let i = 0; i + HEAD_TERMINATOR.length <= bytes.length; i++) {
-    if (HEAD_TERMINATOR.every((byte, j) => bytes[i + j] === byte)) {
-      return i;
-    }
-  }
-  return -1;
-}
-
 type ParsedHead =
   | {method: string; path: string; headers: Record<string, string>}
   | undefined;
@@ -107,6 +98,7 @@ function parseHead(bytes: Uint8Array): ParsedHead {
 export function createRequestReader(): RequestReader {
   let headChunks: Uint8Array[] = [];
   let headLength = 0;
+  let terminatorMatched = 0;
   let head: NonNullable<ParsedHead> | undefined;
   let bodyLength = 0;
   const bodyChunks: Uint8Array[] = [];
@@ -133,21 +125,38 @@ export function createRequestReader(): RequestReader {
     return settle({kind: 'request', request: {...head!, body}});
   };
 
-  const pushHead = (chunk: Uint8Array): ReadResult => {
-    headChunks.push(chunk);
-    headLength += chunk.length;
-    const buffered = concat(headChunks, headLength);
-    headChunks = [buffered];
-    const headEnd = indexOfHeadEnd(buffered);
-    if (headEnd < 0) {
-      return headLength > MAX_HEAD_BYTES
-        ? settle({kind: 'error', status: 413})
-        : PENDING;
+  const offsetAfterHeadEnd = (chunk: Uint8Array): number => {
+    for (let i = 0; i < chunk.length; i++) {
+      const byte = chunk[i];
+      if (byte === HEAD_TERMINATOR[terminatorMatched]) {
+        terminatorMatched += 1;
+      } else {
+        terminatorMatched = byte === HEAD_TERMINATOR[0] ? 1 : 0;
+      }
+      if (terminatorMatched === HEAD_TERMINATOR.length) {
+        return i + 1;
+      }
     }
-    if (headEnd + HEAD_TERMINATOR.length > MAX_HEAD_BYTES) {
+    return -1;
+  };
+
+  const pushHead = (chunk: Uint8Array): ReadResult => {
+    const end = offsetAfterHeadEnd(chunk);
+    const headPart = end < 0 ? chunk : chunk.subarray(0, end);
+    headLength += headPart.length;
+    if (headLength > MAX_HEAD_BYTES) {
+      headChunks = [];
       return settle({kind: 'error', status: 413});
     }
-    head = parseHead(buffered.subarray(0, headEnd));
+    headChunks.push(headPart);
+    if (end < 0) {
+      return PENDING;
+    }
+    const headBytes = concat(headChunks, headLength);
+    headChunks = [];
+    head = parseHead(
+      headBytes.subarray(0, headLength - HEAD_TERMINATOR.length),
+    );
     if (!head) {
       return settle({kind: 'error', status: 400});
     }
@@ -167,8 +176,7 @@ export function createRequestReader(): RequestReader {
     if (bodyLength > MAX_BODY_BYTES) {
       return settle({kind: 'error', status: 413});
     }
-    headChunks = [];
-    return pushBody(buffered.subarray(headEnd + HEAD_TERMINATOR.length));
+    return pushBody(chunk.subarray(end));
   };
 
   return {

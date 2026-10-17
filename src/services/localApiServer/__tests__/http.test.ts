@@ -139,6 +139,40 @@ describe('createRequestReader', () => {
       });
     });
 
+    it('parses a head sent one byte per chunk in linear time', () => {
+      const raw = bytes(headOf(MAX_HEAD_BYTES));
+      const chunks = Array.from(raw, byte => new Uint8Array([byte]));
+      const reader = createRequestReader();
+      const originalSet = Uint8Array.prototype.set;
+      let copied = 0;
+      const set = jest
+        .spyOn(Uint8Array.prototype, 'set')
+        .mockImplementation(function (this: Uint8Array, source, offset) {
+          copied += (source as ArrayLike<number>).length;
+          originalSet.call(this, source as ArrayLike<number>, offset);
+        });
+      let result: ReadResult = {kind: 'pending'};
+      try {
+        for (const chunk of chunks) {
+          result = reader.push(chunk);
+        }
+      } finally {
+        set.mockRestore();
+      }
+
+      expect(result.kind).toBe('request');
+      expect(copied).toBeLessThanOrEqual(4 * raw.length);
+    });
+
+    it.each([1, 2, 3])(
+      'finds a head end split %i bytes into the terminator',
+      split => {
+        const raw = 'GET / HTTP/1.1\r\nHost: localhost\r\n\r\n';
+        const cut = raw.length - 4 + split;
+        expect(feed(raw.slice(0, cut), raw.slice(cut)).kind).toBe('request');
+      },
+    );
+
     it('answers 413 when no head end arrives within the limit', () => {
       expect(feed('GET / HTTP/1.1\r\n', 'a'.repeat(MAX_HEAD_BYTES))).toEqual({
         kind: 'error',
@@ -157,6 +191,13 @@ describe('createRequestReader', () => {
         new Uint8Array(MAX_BODY_BYTES).fill(0x61),
       );
       expect(result.kind).toBe('request');
+    });
+
+    it('caps the body at 1 MiB', () => {
+      expect(
+        feed(declared(1048576), new Uint8Array(1048576).fill(0x61)).kind,
+      ).toBe('request');
+      expect(feed(declared(1048577))).toEqual({kind: 'error', status: 413});
     });
 
     it('answers 413 for a declared body over the limit', () => {
