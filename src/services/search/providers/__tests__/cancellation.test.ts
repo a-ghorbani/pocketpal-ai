@@ -5,6 +5,7 @@ import {BraveProvider} from '../brave';
 import {ExaProvider} from '../exa';
 import {FirecrawlProvider} from '../firecrawl';
 import {ParallelProvider} from '../parallel';
+import {SerplyProvider} from '../serply';
 import {TavilyProvider} from '../tavily';
 
 type NetworkCall = (signal?: AbortSignal) => Promise<unknown>;
@@ -23,6 +24,7 @@ const calls: Array<[string, NetworkCall]> = [
     s => new FirecrawlProvider(key).read('https://example.com', s),
   ],
   ['Parallel search', s => new ParallelProvider(key).search('q', opts, s)],
+  ['Serply search', s => new SerplyProvider(key).search('q', opts, s)],
   ['default reader', s => readWithDefaultReader('https://example.com', s)],
 ];
 
