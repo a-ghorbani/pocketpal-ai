@@ -327,7 +327,7 @@ describe('serveChatCompletion', () => {
     await flush();
     fake.emit({content: 'a'});
     mockStore.abortActiveGeneration();
-    fake.emit({content: 'late'});
+    fake.emit({content: 'a late'});
     await served;
 
     const frames = framesOf(text());
@@ -441,5 +441,184 @@ describe('serverBaseParams', () => {
     } finally {
       chatSessionStore.newChatCompletionSettings = settings;
     }
+  });
+});
+
+describe('serveChatCompletion exit paths', () => {
+  const contentOf = (frames: ReturnType<typeof framesOf>) =>
+    frames
+      .filter(f => f !== '[DONE]' && f.choices?.[0].delta.content)
+      .map(f => f.choices[0].delta.content)
+      .join('');
+
+  it('keeps the lease until the completion settles after a disconnect', async () => {
+    const fake = withLocalModel();
+    fake.context.stopCompletion.mockImplementation(async () => undefined);
+    const {channel} = makeChannel();
+    const served = serveChatCompletion(body({stream: true}), channel);
+    await flush();
+    fake.emit({content: 'a'});
+    channel.close();
+    await flush();
+
+    expect(fake.context.stopCompletion).toHaveBeenCalledTimes(1);
+    expect(leases[0].end).not.toHaveBeenCalled();
+    expect(mockStore.isGenerationBusy).toBe(true);
+
+    fake.settle({interrupted: true});
+    await served;
+    expect(leases[0].end).toHaveBeenCalledTimes(1);
+    expect(mockStore.isGenerationBusy).toBe(false);
+  });
+
+  it('answers 500 when a non-stream completion throws', async () => {
+    const fake = withLocalModel();
+    const {channel, text} = makeChannel();
+    const served = serveChatCompletion(body(), channel);
+    await flush();
+    fake.fail(new Error('decode failed'));
+    await served;
+
+    expect(statusOf(text())).toBe(500);
+    expect(jsonOf(text()).error).toMatchObject({
+      message: 'decode failed',
+      code: 'internal_error',
+    });
+    expect(leases[0].end).toHaveBeenCalledTimes(1);
+  });
+
+  it('streams the whole reply from the final result when no chunk arrived', async () => {
+    const fake = withLocalModel();
+    const {channel, text} = makeChannel();
+    const served = serveChatCompletion(body({stream: true}), channel);
+    await flush();
+    fake.settle({content: 'all at once'});
+    await served;
+
+    const frames = framesOf(text());
+    expect(frames[0].choices[0].delta).toEqual({
+      role: 'assistant',
+      content: 'all at once',
+    });
+    expect(frames.slice(-2)[0].choices[0].finish_reason).toBe('stop');
+    expect(frames[frames.length - 1]).toBe('[DONE]');
+  });
+
+  it('diffs cumulative reasoning and content separately', async () => {
+    const fake = withLocalModel();
+    const {channel, text} = makeChannel();
+    const served = serveChatCompletion(body({stream: true}), channel);
+    await flush();
+    fake.emit({reasoning_content: 'a'});
+    fake.emit({reasoning_content: 'ab'});
+    fake.emit({reasoning_content: 'ab', content: 'X'});
+    fake.emit({reasoning_content: 'ab', content: 'XY'});
+    fake.emit({reasoning_content: 'ab', content: 'XY'});
+    fake.settle({reasoning_content: 'ab', content: 'XYZ'});
+    await served;
+
+    const deltas = framesOf(text())
+      .filter(f => f !== '[DONE]' && f.choices[0].finish_reason === null)
+      .map(f => f.choices[0].delta);
+    expect(deltas).toEqual([
+      {role: 'assistant', reasoning_content: 'a'},
+      {reasoning_content: 'b'},
+      {content: 'X'},
+      {content: 'Y'},
+      {content: 'Z'},
+    ]);
+  });
+
+  it('sends each character once even when chunks repeat the whole text', async () => {
+    const fake = withLocalModel();
+    const {channel, text} = makeChannel();
+    const served = serveChatCompletion(body({stream: true}), channel);
+    await flush();
+    const reply = 'The quick brown fox';
+    for (let i = 1; i <= reply.length; i++) {
+      fake.emit({content: reply.slice(0, i)});
+      fake.emit({content: reply.slice(0, i)});
+    }
+    fake.settle({content: reply});
+    await served;
+
+    expect(contentOf(framesOf(text()))).toBe(reply);
+  });
+
+  it('does not resend text when the final result rewrote it', async () => {
+    const fake = withLocalModel();
+    const {channel, text} = makeChannel();
+    const served = serveChatCompletion(body({stream: true}), channel);
+    await flush();
+    fake.emit({content: 'Hello'});
+    fake.settle({content: 'Hullo there'});
+    await served;
+
+    const frames = framesOf(text());
+    expect(contentOf(frames)).toBe('Hello');
+    expect(frames[frames.length - 1]).toBe('[DONE]');
+  });
+
+  it('answers a JSON 503 when a stream is aborted before its first byte', async () => {
+    const fake = withLocalModel();
+    const {channel, text} = makeChannel();
+    const served = serveChatCompletion(body({stream: true}), channel);
+    await flush();
+    mockStore.abortActiveGeneration();
+    await served;
+
+    expect(text()).not.toContain('text/event-stream');
+    expect(statusOf(text())).toBe(503);
+    expect(jsonOf(text()).error.code).toBe('generation_aborted');
+    expect(fake.context.stopCompletion).toHaveBeenCalledTimes(1);
+    expect(leases[0].end).toHaveBeenCalledTimes(1);
+  });
+
+  it('still ends the lease once when stopping the engine throws', async () => {
+    const fake = withLocalModel();
+    const warn = jest.spyOn(console, 'warn').mockImplementation(() => {});
+    fake.context.stopCompletion.mockImplementation(async () => {
+      fake.settle({interrupted: true});
+      throw new Error('native stop failed');
+    });
+    const {channel} = makeChannel();
+    const served = serveChatCompletion(body({stream: true}), channel);
+    await flush();
+    channel.close();
+    await served;
+    await flush();
+
+    expect(leases[0].end).toHaveBeenCalledTimes(1);
+    expect(mockStore.isGenerationBusy).toBe(false);
+    warn.mockRestore();
+  });
+
+  it('ignores a client close that comes after the lease ended', async () => {
+    const fake = withLocalModel();
+    const {channel} = makeChannel();
+    const served = serveChatCompletion(body(), channel);
+    await flush();
+    fake.settle({content: 'done'});
+    await served;
+    channel.close();
+
+    expect(leases[0].abort).not.toHaveBeenCalled();
+    expect(fake.context.stopCompletion).not.toHaveBeenCalled();
+    expect(leases[0].end).toHaveBeenCalledTimes(1);
+  });
+
+  it('answers 503 when the model goes away while waiting for the lease', async () => {
+    withLocalModel();
+    const chatLease = (await realAcquire())!;
+    const {channel, text} = makeChannel();
+    const served = serveChatCompletion(body(), channel);
+    await flush();
+    mockStore.engine = undefined;
+    chatLease.end();
+    await served;
+
+    expect(statusOf(text())).toBe(503);
+    expect(jsonOf(text()).error.code).toBe('no_model');
+    expect(mockStore.isGenerationBusy).toBe(false);
   });
 });

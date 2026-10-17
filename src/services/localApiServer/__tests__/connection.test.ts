@@ -230,4 +230,57 @@ describe('handleConnection', () => {
     await flush();
     expect(ctx.handleChat).toHaveBeenCalledTimes(1);
   });
+
+  it('still answers a client that half-closes after sending', async () => {
+    const held = heldChat();
+    const ctx = makeContext(held.handleChat);
+    const socket = connect(ctx);
+    socket.receive(CHAT);
+    socket.emit('end');
+    await flush();
+
+    expect(held.channels[0].closed).toBe(false);
+    held.channels[0].write('late reply');
+    held.finish(0);
+    await flush();
+    expect(socket.output).toBe('late reply');
+    expect(socket.ended).toBe(true);
+    expect(socket.destroyed).toBe(false);
+  });
+
+  it('closes the connection when a write hits a closed socket', async () => {
+    const held = heldChat();
+    const ctx = makeContext(held.handleChat);
+    const socket = connect(ctx);
+    socket.receive(CHAT);
+    await flush();
+    const onClose = jest.fn();
+    held.channels[0].onClose(onClose);
+    socket.write = jest.fn(() => {
+      throw new Error('Socket is closed.');
+    });
+    held.channels[0].write('x');
+
+    expect(onClose).toHaveBeenCalledTimes(1);
+    expect(held.channels[0].closed).toBe(true);
+    expect(ctx.openConnections.size).toBe(0);
+    held.finish(0);
+    await flush();
+    expect(ctx.admitted()).toBe(0);
+  });
+
+  it('ends the socket even when the handler throws', async () => {
+    const warn = jest.spyOn(console, 'warn').mockImplementation(() => {});
+    const ctx = makeContext(async () => {
+      throw new Error('boom');
+    });
+    const socket = connect(ctx);
+    socket.receive(CHAT);
+    await flush();
+    await flush();
+
+    expect(socket.ended).toBe(true);
+    expect(ctx.admitted()).toBe(0);
+    warn.mockRestore();
+  });
 });

@@ -1,4 +1,4 @@
-import {makeAutoObservable} from 'mobx';
+import {makeAutoObservable, runInAction} from 'mobx';
 
 import type {LocalApiServerStatus} from '../../src/store/LocalApiServerStore';
 
@@ -15,25 +15,35 @@ class MockLocalApiServerStore {
   servedModelId: string | undefined = undefined;
 
   setEnabled = jest.fn((enabled: boolean) => {
-    this.enabled = enabled;
+    runInAction(() => {
+      this.enabled = enabled;
+    });
   });
   setPort = jest.fn((port: number) => {
     if (this.status !== 'stopped' || port < 1024 || port > 65535) {
       return false;
     }
-    this.port = port;
+    runInAction(() => {
+      this.port = port;
+    });
     return true;
   });
   setLanEnabled = jest.fn((lanEnabled: boolean) => {
-    this.lanEnabled = lanEnabled;
+    runInAction(() => {
+      this.lanEnabled = lanEnabled;
+    });
     return true;
   });
   setApiKey = jest.fn(async () => {
-    this.hasApiKey = true;
+    runInAction(() => {
+      this.hasApiKey = true;
+    });
     return true;
   });
   clearApiKey = jest.fn(async () => {
-    this.hasApiKey = false;
+    runInAction(() => {
+      this.hasApiKey = false;
+    });
     return true;
   });
   start = jest.fn();

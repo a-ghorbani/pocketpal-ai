@@ -167,4 +167,31 @@ describe('LocalApiServerCard', () => {
     fireEvent.press(getByTestId('local-api-server-key-button'));
     expect(store.clearApiKey).toHaveBeenCalled();
   });
+
+  it('keeps the toggle on and config locked while failed', () => {
+    setState({enabled: true, status: 'failed', lastError: 'EADDRINUSE'});
+    const {getByTestId} = render(<LocalApiServerCard />);
+    expect(getByTestId('local-api-server-switch').props.value).toBe(true);
+    expect(getByTestId('local-api-server-port-input').props.editable).toBe(
+      false,
+    );
+    expect(
+      getByTestId('local-api-server-lan-switch').props.disabled ??
+        getByTestId('local-api-server-lan-switch').props.accessibilityState
+          ?.disabled,
+    ).toBe(true);
+  });
+
+  it('drops the key draft when the dialog is cancelled', () => {
+    const {getByTestId, getByText, queryByDisplayValue} = render(
+      <LocalApiServerCard />,
+    );
+    fireEvent.press(getByTestId('local-api-server-key-button'));
+    fireEvent.changeText(getByTestId('local-api-server-key-input'), 'draft');
+    fireEvent.press(getByText('Cancel'));
+    fireEvent.press(getByTestId('local-api-server-key-button'));
+
+    expect(store.setApiKey).not.toHaveBeenCalled();
+    expect(queryByDisplayValue('draft')).toBeNull();
+  });
 });

@@ -7,6 +7,7 @@ import {LlamaContext} from 'llama.rn';
 
 import {
   createdServers,
+  createServer,
   FakeServer,
   FakeSocket,
 } from '../../../__mocks__/external/react-native-tcp-socket';
@@ -337,5 +338,276 @@ describe('LocalApiServerStore lifecycle', () => {
       expect(JSON.stringify(spy.mock.calls)).not.toContain('k1');
       spy.mockRestore();
     }
+  });
+});
+
+describe('LocalApiServerStore races and requests', () => {
+  const MODELS = 'GET /v1/models HTTP/1.1\r\nHost: 127.0.0.1:8080\r\n\r\n';
+
+  /** A llama context whose completions the test settles one at a time. */
+  const heldContext = () => {
+    const settlers: ((value: unknown) => void)[] = [];
+    const context = {
+      completion: jest.fn(() => new Promise(resolve => settlers.push(resolve))),
+      stopCompletion: jest.fn(async () => undefined),
+    };
+    mockModelStore.engine = new LocalCompletionEngine(
+      context as unknown as LlamaContext,
+    );
+    return {
+      context,
+      settle: (i: number) => settlers[i]({text: 'ok', content: 'ok'}),
+    };
+  };
+
+  const startWithoutKey = async () => {
+    getPassword.mockResolvedValueOnce(false);
+    return startRunning();
+  };
+
+  beforeEach(() => {
+    store.setEnabled(false);
+    runInAction(() => {
+      store.port = 8080;
+      store.lanEnabled = false;
+      store.lastError = undefined;
+      store.lanAddress = undefined;
+    });
+    createdServers.length = 0;
+    getPassword.mockClear();
+    getIpAddress.mockClear();
+    mockModelStore.resetGenerationSlot();
+    mockModelStore.engine = undefined;
+    runInAction(() => {
+      mockModelStore.activeModelId = 'model-1';
+    });
+  });
+
+  afterEach(() => {
+    runInAction(() => {
+      mockModelStore.activeModelId = undefined;
+    });
+  });
+
+  it('never listens when toggled off while reading the Wi-Fi address', async () => {
+    store.setLanEnabled(true);
+    let resolveIp!: (value: string) => void;
+    getIpAddress.mockImplementationOnce(
+      () => new Promise(resolve => (resolveIp = resolve)),
+    );
+    store.setEnabled(true);
+    await flush();
+    expect(getIpAddress).toHaveBeenCalled();
+    store.setEnabled(false);
+    resolveIp('192.168.1.23');
+    await flush();
+
+    expect(createdServers).toHaveLength(0);
+    expect(store.status).toBe('stopped');
+    expect(store.lanAddress).toBeUndefined();
+  });
+
+  it('stays running when the old listener closes late after a restart', async () => {
+    const old = await startRunning();
+    store.setEnabled(false);
+    const current = await startRunning();
+    expect(current).not.toBe(old);
+    old.emit('close');
+    old.emitError(new Error('late'));
+
+    expect(store.status).toBe('running');
+    expect(store.lastError).toBeUndefined();
+  });
+
+  it('ignores a late listening from a listener that already failed', async () => {
+    store.setEnabled(true);
+    await flush();
+    const first = lastServer();
+    first.emitError(new Error('EADDRINUSE'));
+    store.setEnabled(false);
+    first.emitListening();
+
+    expect(store.status).toBe('stopped');
+    expect(first.close).toHaveBeenCalled();
+  });
+
+  it.each([
+    ['error then close', ['error', 'close']],
+    ['close then error', ['close', 'error']],
+  ])('keeps the bind error when the listener reports %s', async (_, order) => {
+    store.setEnabled(true);
+    await flush();
+    const server = lastServer();
+    for (const event of order) {
+      if (event === 'error') {
+        server.emit(
+          'error',
+          'bind failed: EADDRINUSE (Address already in use)',
+        );
+      } else {
+        server.emit('close');
+      }
+    }
+
+    expect(store.status).toBe('failed');
+    expect(store.lastError).toBe(
+      'bind failed: EADDRINUSE (Address already in use)',
+    );
+  });
+
+  it('fails with the reason when listen throws', async () => {
+    createServer.mockImplementationOnce((options: object) => {
+      const server = new FakeServer(options);
+      server.listen.mockImplementation(() => {
+        throw new Error('permission denied');
+      });
+      createdServers.push(server);
+      return server;
+    });
+    store.setEnabled(true);
+    await flush();
+
+    expect(store.status).toBe('failed');
+    expect(store.lastError).toBe('permission denied');
+  });
+
+  it('answers 503 server_busy to a third concurrent chat request', async () => {
+    const held = heldContext();
+    const server = await startWithoutKey();
+    const body = '{"messages":[{"role":"user","content":"hi"}]}';
+    const post = `POST /v1/chat/completions HTTP/1.1\r\nHost: 127.0.0.1:8080\r\nContent-Length: ${body.length}\r\n\r\n${body}`;
+    const sockets = [server.connect(), server.connect(), server.connect()];
+    sockets.forEach(socket => socket.receive(post));
+    await flush();
+
+    expect(store.activeRequests).toBe(2);
+    expect(sockets[2].output).toMatch(/^HTTP\/1\.1 503 /);
+    expect(sockets[2].output).toContain('"code":"server_busy"');
+    expect(held.context.completion).toHaveBeenCalledTimes(1);
+
+    held.settle(0);
+    await flush();
+    held.settle(1);
+    await flush();
+    expect(store.activeRequests).toBe(0);
+    expect(mockModelStore.isGenerationBusy).toBe(false);
+  });
+
+  it('ends at once the lease of a client that left while waiting', async () => {
+    const held = heldContext();
+    const server = await startWithoutKey();
+    const chatLease = (await mockModelStore.acquireGeneration())!;
+    const socket = server.connect();
+    socket.receive(CHAT());
+    await flush();
+    expect(store.activeRequests).toBe(1);
+
+    socket.peerClose();
+    await flush();
+    expect(store.activeRequests).toBe(1);
+
+    chatLease.end();
+    await flush();
+    expect(held.context.completion).not.toHaveBeenCalled();
+    expect(store.activeRequests).toBe(0);
+    expect(mockModelStore.isGenerationBusy).toBe(false);
+  });
+
+  it('drops a waiting request when stopped, without a completion', async () => {
+    const held = heldContext();
+    const server = await startWithoutKey();
+    const chatLease = (await mockModelStore.acquireGeneration())!;
+    const socket = server.connect();
+    socket.receive(CHAT());
+    await flush();
+
+    store.setEnabled(false);
+    expect(socket.destroyed).toBe(true);
+    chatLease.end();
+    await flush();
+
+    expect(held.context.completion).not.toHaveBeenCalled();
+    expect(store.activeRequests).toBe(0);
+    expect(mockModelStore.isGenerationBusy).toBe(false);
+  });
+
+  it('lists the local model, and none while a remote model is active', async () => {
+    heldContext();
+    const server = await startWithoutKey();
+    const local = server.connect();
+    local.receive(MODELS);
+    await flush();
+    expect(local.output).toContain('"id":"model-1"');
+
+    mockModelStore.engine = {
+      completion: jest.fn(),
+      stopCompletion: jest.fn(),
+    } as never;
+    const remote = server.connect();
+    remote.receive(MODELS);
+    await flush();
+    expect(remote.output).toContain('"data":[]');
+    expect(store.servedModelId).toBeUndefined();
+  });
+
+  it('reads the key again on every start', async () => {
+    getPassword.mockResolvedValueOnce({username: 'apiKey', password: 'k1'});
+    const first = await startRunning();
+    const guarded = first.connect();
+    guarded.receive(MODELS);
+    await flush();
+    expect(guarded.output).toMatch(/^HTTP\/1\.1 401 /);
+
+    store.setEnabled(false);
+    const second = await startWithoutKey();
+    const open = second.connect();
+    open.receive(MODELS);
+    await flush();
+    expect(open.output).toMatch(/^HTTP\/1\.1 200 /);
+    expect(store.hasApiKey).toBe(false);
+  });
+
+  it('starts without a key when the Keychain read fails', async () => {
+    const warn = jest.spyOn(console, 'warn').mockImplementation(() => {});
+    getPassword.mockRejectedValueOnce(new Error('locked'));
+    await startRunning();
+    expect(store.status).toBe('running');
+    expect(store.hasApiKey).toBe(false);
+    warn.mockRestore();
+  });
+
+  it('reports a failed Keychain write or removal and keeps hasApiKey', async () => {
+    const warn = jest.spyOn(console, 'warn').mockImplementation(() => {});
+    runInAction(() => {
+      store.hasApiKey = false;
+    });
+    (Keychain.setGenericPassword as jest.Mock).mockRejectedValueOnce(
+      new Error('no'),
+    );
+    await expect(store.setApiKey('secret')).resolves.toBe(false);
+    expect(store.hasApiKey).toBe(false);
+
+    runInAction(() => {
+      store.hasApiKey = true;
+    });
+    (Keychain.resetGenericPassword as jest.Mock).mockRejectedValueOnce(
+      new Error('no'),
+    );
+    await expect(store.clearApiKey()).resolves.toBe(false);
+    expect(store.hasApiKey).toBe(true);
+    expect(JSON.stringify(warn.mock.calls)).not.toContain('secret');
+    warn.mockRestore();
+  });
+
+  it('refuses an empty key', async () => {
+    await expect(store.setApiKey('')).resolves.toBe(false);
+  });
+
+  it('shows the loopback URL when the Wi-Fi address cannot be read', async () => {
+    store.setLanEnabled(true);
+    getIpAddress.mockRejectedValueOnce(new Error('no wifi'));
+    await startRunning();
+    expect(store.lanAddress).toBeUndefined();
+    expect(store.baseUrl).toBe('http://127.0.0.1:8080/v1');
   });
 });
