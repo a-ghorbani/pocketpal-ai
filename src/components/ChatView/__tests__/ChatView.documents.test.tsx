@@ -350,3 +350,62 @@ describe('ChatView send gate', () => {
     expect(documentStore.isHeld('big')).toBe(false);
   });
 });
+
+describe('ChatView history overflow', () => {
+  const earlier = ref('earlier', {tokenEstimate: 6000});
+  const earlierRow = {
+    ...textMessage,
+    id: 'u1',
+    author: user,
+    text: 'Read this',
+    documents: [earlier],
+  };
+  const overflow = {
+    kind: 'over' as const,
+    needed: 6100,
+    available: 3072,
+    newDocs: [],
+    historyDocTokens: 6000,
+    historyOverflow: true,
+  };
+
+  it('offers New chat and Edit message instead of per-document actions', async () => {
+    const evaluateSendBudget = jest.fn().mockResolvedValue(overflow);
+    const chat = renderChat({evaluateSendBudget, messages: [earlierRow]});
+    chat.type('thanks');
+
+    await act(async () => {
+      chat.pressSend();
+    });
+
+    expect(chat.onSendPress).not.toHaveBeenCalled();
+    expect(chat.screen.getByTestId('budget-new-chat')).toBeTruthy();
+    expect(chat.screen.getByTestId('budget-edit-message')).toBeTruthy();
+    expect(chat.screen.queryByTestId('budget-remove')).toBeNull();
+
+    fireEvent.press(chat.screen.getByTestId('budget-new-chat'));
+    expect(chatSessionStore.resetActiveSession).toHaveBeenCalled();
+  });
+
+  it('edits the earlier row and keeps what was pending in the composer', async () => {
+    const pending = ref('pending');
+    const evaluateSendBudget = jest.fn().mockResolvedValue(overflow);
+    const chat = renderChat({evaluateSendBudget, messages: [earlierRow]});
+    await chat.attach(pending);
+    chat.type('thanks');
+    await act(async () => {
+      chat.pressSend();
+    });
+
+    await act(async () => {
+      fireEvent.press(chat.screen.getByTestId('budget-edit-message'));
+    });
+
+    expect(chatSessionStore.enterEditMode).toHaveBeenCalledWith('u1');
+    expect(chat.input().props.value).toBe('thanks\nRead this');
+    expect(chat.screen.getByText('pending.pdf')).toBeTruthy();
+    expect(chat.screen.getAllByText('earlier.pdf').length).toBeGreaterThan(0);
+    expect(documentStore.isHeld('pending')).toBe(true);
+    expect(documentStore.isHeld('earlier')).toBe(true);
+  });
+});

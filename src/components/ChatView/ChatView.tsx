@@ -329,6 +329,10 @@ export const ChatView = observer(
       [],
     );
     React.useEffect(() => () => setComposerHeld([]), []);
+    const setComposerRefs = React.useCallback(
+      (refs: DocumentRef[]) => updateComposerDocuments(() => readyChips(refs)),
+      [updateComposerDocuments],
+    );
     const [rangeKey, setRangeKey] = React.useState<string | null>(null);
     const [budgetVerdict, setBudgetVerdict] =
       React.useState<OverVerdict | null>(null);
@@ -755,7 +759,41 @@ export const ChatView = observer(
         handleSendPress: wrappedOnSendPress,
         setInputText,
         setInputImages,
+        setInputDocuments: setComposerRefs,
+        evaluateSendBudget,
+        onBudgetOver: setBudgetVerdict,
       });
+
+    const editTargetForBudget = messages.find(
+      (row): row is MessageType.Text =>
+        row.type === 'text' &&
+        row.author.id === user.id &&
+        !!row.documents?.length,
+    );
+
+    const editMessageWithDocuments = React.useCallback(() => {
+      if (!editTargetForBudget) {
+        return;
+      }
+      const pendingText = inputTextRef.current;
+      const pendingImages = inputImages;
+      const pendingDocuments = inputDocumentsRef.current;
+      setBudgetVerdict(null);
+      handleEdit(editTargetForBudget);
+      setInputText(
+        pendingText
+          ? prependText(pendingText, editTargetForBudget.text)
+          : editTargetForBudget.text,
+      );
+      setInputImages([
+        ...pendingImages,
+        ...(editTargetForBudget.imageUris ?? []),
+      ]);
+      updateComposerDocuments(() => [
+        ...pendingDocuments,
+        ...readyChips(editTargetForBudget.documents),
+      ]);
+    }, [editTargetForBudget, inputImages, handleEdit, updateComposerDocuments]);
 
     // ============ AUTO-SCROLL ON NEW USER MESSAGE ============
     // Scroll to bottom when user sends a new message
@@ -1483,6 +1521,9 @@ export const ChatView = observer(
                 setBudgetVerdict(null);
                 chatSessionStore.resetActiveSession();
               }}
+              onEditMessage={
+                editTargetForBudget ? editMessageWithDocuments : undefined
+              }
               onClose={() => setBudgetVerdict(null)}
             />
           ) : null}

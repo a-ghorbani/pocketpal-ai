@@ -6,6 +6,10 @@ import {chatSessionStore, modelStore} from '../store';
 
 import {derivedText} from '../utils/chat';
 import {MessageType, User} from '../utils/types';
+import {hasDocuments, type BudgetVerdict} from '../services/documents/budget';
+import {holdForSend, releaseSendHold} from '../services/documents/store';
+import type {DocumentRef} from '../services/documents/types';
+import type {EvaluateSendBudget} from './useChatSession';
 
 /**
  * Either a legacy `Text` message or an `AssistantTurn` row. Used by
@@ -18,9 +22,15 @@ type CopyableMessage = MessageType.Text | MessageType.AssistantTurn;
 interface UseMessageActionsProps {
   user: User;
   messages: MessageType.Any[];
-  handleSendPress: (message: MessageType.PartialText) => Promise<void>;
+  handleSendPress: (
+    message: MessageType.PartialText,
+    options?: {preChecked?: boolean},
+  ) => Promise<void>;
   setInputText?: (text: string) => void;
   setInputImages?: (images: string[]) => void;
+  setInputDocuments?: (documents: DocumentRef[]) => void;
+  evaluateSendBudget?: EvaluateSendBudget;
+  onBudgetOver?: (verdict: Extract<BudgetVerdict, {kind: 'over'}>) => void;
 }
 
 export const useMessageActions = ({
@@ -29,6 +39,9 @@ export const useMessageActions = ({
   handleSendPress,
   setInputText,
   setInputImages,
+  setInputDocuments,
+  evaluateSendBudget,
+  onBudgetOver,
 }: UseMessageActionsProps) => {
   const handleCopy = useCallback((message: CopyableMessage) => {
     if (message.type !== 'text' && message.type !== 'assistant_turn') {
@@ -49,8 +62,44 @@ export const useMessageActions = ({
       chatSessionStore.enterEditMode(message.id);
       setInputText?.(message.text);
       setInputImages?.(message.imageUris || []);
+      setInputDocuments?.(message.documents ?? []);
     },
-    [setInputText, setInputImages, user.id],
+    [setInputText, setInputImages, setInputDocuments, user.id],
+  );
+
+  /** Resends a user row. A row whose documents no longer fit is never
+   * removed; it opens in edit mode instead. */
+  const resend = useCallback(
+    async (row: MessageType.Text) => {
+      const message: MessageType.PartialText = {
+        text: row.text,
+        type: 'text',
+        imageUris: row.imageUris?.length ? row.imageUris : undefined,
+        documents: row.documents?.length ? row.documents : undefined,
+      };
+      const gated = !!evaluateSendBudget && hasDocuments(messages, message);
+      const documentIds = (row.documents ?? []).map(ref => ref.id);
+      holdForSend(documentIds);
+      try {
+        if (gated) {
+          const verdict = await evaluateSendBudget(message, {
+            excludeFromId: row.id,
+          });
+          if (verdict.kind === 'over') {
+            await handleEdit(row);
+            onBudgetOver?.(verdict);
+            return;
+          }
+        }
+        await chatSessionStore.removeMessagesFromId(row.id, true);
+        await (gated
+          ? handleSendPress(message, {preChecked: true})
+          : handleSendPress(message));
+      } finally {
+        releaseSendHold(documentIds);
+      }
+    },
+    [messages, evaluateSendBudget, handleEdit, onBudgetOver, handleSendPress],
   );
 
   const handleTryAgain = useCallback(
@@ -62,18 +111,7 @@ export const useMessageActions = ({
       // If it's the user's message (only Text rows can be authored by
       // the user), resubmit it.
       if (message.type === 'text' && message.author.id === user.id) {
-        const messageText = message.text;
-        const relatedImages = message.imageUris;
-
-        await chatSessionStore.removeMessagesFromId(message.id, true);
-        await handleSendPress({
-          text: messageText,
-          type: 'text',
-          imageUris:
-            relatedImages && relatedImages.length > 0
-              ? relatedImages
-              : undefined,
-        });
+        await resend(message);
         return;
       }
 
@@ -89,20 +127,10 @@ export const useMessageActions = ({
         | undefined;
 
       if (previousMessage && previousMessage.text) {
-        const messageText = previousMessage.text;
-        const relatedImages = previousMessage.imageUris;
-        await chatSessionStore.removeMessagesFromId(previousMessage.id, true);
-        await handleSendPress({
-          text: messageText,
-          type: 'text',
-          imageUris:
-            relatedImages && relatedImages.length > 0
-              ? relatedImages
-              : undefined,
-        });
+        await resend(previousMessage);
       }
     },
-    [messages, handleSendPress, user.id],
+    [messages, resend, user.id],
   );
 
   const handleTryAgainWith = useCallback(
