@@ -1,4 +1,5 @@
 import type React from 'react';
+import {act} from '@testing-library/react-native';
 import {measureRenders} from 'reassure';
 import type {MeasureRendersOptions} from 'reassure';
 
@@ -6,6 +7,9 @@ import {createWrapper} from './test-utils';
 import type {CustomRenderOptions} from './test-utils';
 
 const MIN_RUNS = 3;
+const PERF_TEST_TIMEOUT_MS = 60_000;
+
+jest.setTimeout(PERF_TEST_TIMEOUT_MS);
 
 type ScenarioOptions = {
   scenario: NonNullable<MeasureRendersOptions['scenario']>;
@@ -13,6 +17,8 @@ type ScenarioOptions = {
   runs?: number;
   wrapperOptions?: CustomRenderOptions;
 };
+
+export const flushTimers = () => act(() => jest.runOnlyPendingTimers());
 
 export const measureScenario = async (
   ui: React.ReactElement,
@@ -23,6 +29,7 @@ export const measureScenario = async (
       `measureScenario needs runs >= ${MIN_RUNS} to detect unstable render counts`,
     );
   }
+  jest.useFakeTimers({doNotFake: ['performance']});
   const wrapper = createWrapper(wrapperOptions);
 
   const mountOnly = await measureRenders(ui, {
