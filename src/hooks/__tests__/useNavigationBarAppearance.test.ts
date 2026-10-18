@@ -66,6 +66,12 @@ describe('useNavigationBarAppearance', () => {
 describe('navigation bar appearance writer', () => {
   const ROOT = path.join(__dirname, '..', '..', '..');
 
+  const readCode = (file: string) =>
+    fs
+      .readFileSync(file, 'utf8')
+      .replace(/\/\*[\s\S]*?\*\//g, '')
+      .replace(/(^|[^:\\/])\/\/.*$/gm, '$1');
+
   const sourceFiles = (dir: string, out: string[] = []): string[] => {
     for (const entry of fs.readdirSync(dir, {withFileTypes: true})) {
       if (entry.name === '__tests__' || entry.name === '__mocks__') {
@@ -83,7 +89,7 @@ describe('navigation bar appearance writer', () => {
 
   const filesMatching = (re: RegExp) =>
     [...sourceFiles(path.join(ROOT, 'src')), path.join(ROOT, 'App.tsx')]
-      .filter(file => re.test(fs.readFileSync(file, 'utf8')))
+      .filter(file => re.test(readCode(file)))
       .map(file => path.relative(ROOT, file))
       .sort();
 
@@ -107,12 +113,11 @@ describe('navigation bar appearance writer', () => {
   });
 
   it('the native module writes only the activity nav-bar appearance', () => {
-    const kotlin = fs.readFileSync(
+    const kotlin = readCode(
       path.join(
         ROOT,
         'android/app/src/main/java/com/pocketpalai/NavigationBarModule.kt',
       ),
-      'utf8',
     );
 
     expect(kotlin.match(/\.isAppearanceLight\w+\s*=/g)).toEqual([
