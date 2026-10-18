@@ -343,6 +343,11 @@ describe('429 retry', () => {
       {'x-ratelimit-reset': '1, 1419704'},
       1000,
     ],
+    [
+      'a reset list whose smaller value comes second',
+      {'x-ratelimit-reset': '5, 1'},
+      1000,
+    ],
   ])(
     'retries after the hinted wait for %s',
     async (_label, entries, waitMs) => {
