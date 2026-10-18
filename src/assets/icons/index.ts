@@ -68,6 +68,7 @@ export {default as VolumeMinIcon} from './volume-min.svg';
 export {default as VolumeOffIcon} from './volume-off.svg';
 export {default as VolumeOnIcon} from './volume-on.svg';
 export {default as WavesIcon} from './waves.svg';
+export {default as VoiceWaveformIcon} from './voice-waveform.svg';
 export {default as WifiOffIcon} from './wifi-off.svg';
 export {default as XIcon} from './x.svg';
 

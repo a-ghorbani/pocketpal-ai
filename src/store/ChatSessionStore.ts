@@ -1028,6 +1028,39 @@ class ChatSessionStore {
   }
 
   /**
+   * Keep only what was spoken aloud of an interrupted voice reply: every
+   * step's content is cleared and the last step carries `text`. Tool calls,
+   * outcomes and reasoning stay. Called only after the run has settled.
+   */
+  async rewriteTurnToSpoken(
+    id: string,
+    sessionId: string,
+    text: string,
+  ): Promise<void> {
+    this.flushStreamingUpdate();
+    const session = this.sessions.find(s => s.id === sessionId);
+    const turn = session?.messages.find(msg => msg.id === id);
+    if (turn?.type !== 'assistant_turn') {
+      return;
+    }
+    let nextSteps: AgentStep[] = [];
+    runInAction(() => {
+      const steps = turn.steps?.length ? turn.steps : [{}];
+      const lastIdx = steps.length - 1;
+      nextSteps = steps.map((step, i) => ({
+        ...step,
+        content: i === lastIdx ? text : '',
+      }));
+      turn.steps = nextSteps;
+    });
+    try {
+      await chatSessionRepository.updateMessage(id, {steps: nextSteps});
+    } catch (error) {
+      console.error('Failed to persist rewriteTurnToSpoken:', error);
+    }
+  }
+
+  /**
    * Mark the active (last) step as no longer streaming. Writes the
    * whole `steps` array wholesale.
    */

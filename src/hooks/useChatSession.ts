@@ -78,6 +78,7 @@ const prepareCompletion = async ({
   isMultimodalEnabled,
   l10n,
   currentMessages,
+  spoken,
 }: {
   imageUris: string[];
   message: MessageType.PartialText;
@@ -88,6 +89,7 @@ const prepareCompletion = async ({
   isMultimodalEnabled: boolean;
   l10n: any;
   currentMessages: MessageType.Any[];
+  spoken: boolean;
 }) => {
   const sessionCompletionSettings =
     await chatSessionStore.getCurrentCompletionSettings();
@@ -227,6 +229,7 @@ const prepareCompletion = async ({
       // run_finished (success/maxTurns) or at the abort catch path with
       // partial content.
       multimodal: hasImages,
+      ...(spoken ? {spoken: true} : {}),
     },
   };
 
@@ -594,6 +597,13 @@ export type UndoneSend = {
   sessionId: string;
 };
 
+export type SendOptions = {
+  /** The message was spoken in voice mode; both rows carry the marker. */
+  spoken?: boolean;
+  /** Receives the assistant turn's id as soon as its row exists. */
+  onTurnCreated?: (turnId: string) => void;
+};
+
 export const useChatSession = (
   currentMessageInfo: React.MutableRefObject<{
     createdAt: number;
@@ -632,6 +642,7 @@ export const useChatSession = (
 
   const handleSendPress = async (
     message: MessageType.PartialText,
+    opts: SendOptions = {},
   ): Promise<UndoneSend | undefined> => {
     const sentFrom = chatSessionStore.activeSessionId;
     if (modelStore.isGenerationBusy) {
@@ -672,7 +683,7 @@ export const useChatSession = (
     }
 
     try {
-      return await sendUnderLease(message, lease, {
+      return await sendUnderLease(message, lease, opts, {
         stop: uiStop,
         isStopped: () => uiStopped,
         holdAwake: () => {
@@ -694,6 +705,7 @@ export const useChatSession = (
   const sendUnderLease = async (
     message: MessageType.PartialText,
     lease: GenerationLease,
+    opts: SendOptions,
     runUi: {
       stop: () => void;
       isStopped: () => boolean;
@@ -726,6 +738,7 @@ export const useChatSession = (
         conversationId: conversationIdRef.current,
         copyable: true,
         multimodal: hasImages,
+        ...(opts.spoken ? {spoken: true} : {}),
       },
     };
     const wasUntitled =
@@ -762,9 +775,11 @@ export const useChatSession = (
       isMultimodalEnabled,
       l10n,
       currentMessages,
+      spoken: !!opts.spoken,
     });
 
     currentMessageInfo.current = messageInfo;
+    opts.onTurnCreated?.(messageInfo.id);
 
     // Allowed talent names for this Pal. The runner rejects any
     // tool call whose function.name isn't in this list.

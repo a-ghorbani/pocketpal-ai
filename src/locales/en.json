@@ -1598,6 +1598,9 @@
     "openSettingsLabel": "Open Settings",
     "insufficientStorage": "Not enough space — free up {{requiredMb}} MB to install this model ({{freeMb}} MB available)."
   },
+  "voiceMode": {
+    "spokenMarker": "Spoken"
+  },
   "onboarding": {
     "back": "Back",
     "skip": "Skip",

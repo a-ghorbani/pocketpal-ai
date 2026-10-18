@@ -15,6 +15,7 @@ import {
   FileMessage,
   ImageMessage,
   ReasoningBlock,
+  SpokenMarker,
   TalentSurface,
   TextMessage,
   TextMessageTopLevelProps,
@@ -398,6 +399,11 @@ export const Message = observer(
     const showAssistantFooter =
       !currentUserIsAuthor &&
       (message.type === 'assistant_turn' || message.type === 'text');
+    const spokenMarker = (message.type === 'assistant_turn' ||
+      message.type === 'text') &&
+      message.metadata?.spoken === true && (
+        <SpokenMarker alignEnd={currentUserIsAuthor} />
+      );
     // HtmlPreviewBubble's WebView has no intrinsic width. Force the
     // wrapper to `messageWidth` so it has a budget to stretch into;
     // text-only siblings still wrap to their natural width via
@@ -406,11 +412,13 @@ export const Message = observer(
       message.type === 'assistant_turn' ? (
         <View style={{width: messageWidth}}>
           {renderAssistantTurn()}
+          {spokenMarker}
           {showAssistantFooter && <AssistantTurnFooter message={message} />}
         </View>
       ) : (
         <>
           {renderBubbleContainer()}
+          {spokenMarker}
           {showAssistantFooter && <AssistantTurnFooter message={message} />}
         </>
       );

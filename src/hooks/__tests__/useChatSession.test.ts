@@ -86,6 +86,67 @@ describe('useChatSession', () => {
     expect(modelStore.context?.completion).toHaveBeenCalled();
   });
 
+  describe('a spoken send', () => {
+    const addedRows = () =>
+      (chatSessionStore.addMessageToCurrentSession as jest.Mock).mock.calls.map(
+        ([row]) => row,
+      );
+
+    it('marks the user row and the assistant turn as spoken', async () => {
+      const {result} = renderHook(() =>
+        useChatSession({current: null}, textMessage.author, mockAssistant),
+      );
+
+      await act(async () => {
+        await result.current.handleSendPress(textMessage, {spoken: true});
+      });
+
+      const user = addedRows().find(row => row.type === 'text');
+      const turn = addedRows().find(row => row.type === 'assistant_turn');
+      expect(user.metadata.spoken).toBe(true);
+      expect(turn.metadata.spoken).toBe(true);
+    });
+
+    it("hands back the assistant turn's id once its row exists", async () => {
+      (
+        chatSessionStore.addMessageToCurrentSession as jest.Mock
+      ).mockImplementation(async row => {
+        row.id = `${row.type}-id`;
+      });
+      const onTurnCreated = jest.fn();
+      const {result} = renderHook(() =>
+        useChatSession({current: null}, textMessage.author, mockAssistant),
+      );
+
+      await act(async () => {
+        await result.current.handleSendPress(textMessage, {
+          spoken: true,
+          onTurnCreated,
+        });
+      });
+
+      expect(onTurnCreated).toHaveBeenCalledTimes(1);
+      expect(onTurnCreated).toHaveBeenCalledWith('assistant_turn-id');
+      (
+        chatSessionStore.addMessageToCurrentSession as jest.Mock
+      ).mockResolvedValue(undefined);
+    });
+
+    it('a typed send carries no spoken flag', async () => {
+      const {result} = renderHook(() =>
+        useChatSession({current: null}, textMessage.author, mockAssistant),
+      );
+
+      await act(async () => {
+        await result.current.handleSendPress(textMessage);
+      });
+
+      for (const row of addedRows()) {
+        expect(row.metadata).not.toHaveProperty('spoken');
+      }
+    });
+  });
+
   it('should handle model not loaded scenario', async () => {
     modelStore.context = undefined;
     modelStore.engine = undefined;
