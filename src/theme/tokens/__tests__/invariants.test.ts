@@ -121,6 +121,7 @@ describe('design-token grep invariants', () => {
       'components/DownloadOverlay',
       'components/DownloadProgressCard',
       'screens/PlusScreen',
+      'components/SidebarContent/PlusDrawerItem',
     ];
     const files = listFiles(SRC).filter(f => {
       const rel = path.relative(SRC, f).replace(/\\/g, '/');

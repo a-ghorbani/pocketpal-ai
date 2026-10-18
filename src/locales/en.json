@@ -1700,6 +1700,11 @@
     "terms": "Terms",
     "appleMediaTerms": "Apple Media Services Terms",
     "noPurchaseFound": "No Plus purchase found.",
-    "restoreFailed": "Couldn't reach the store. Try again."
+    "restoreFailed": "Couldn't reach the store. Try again.",
+    "sidebar": {
+      "title": "PocketPal Plus",
+      "unlocked": "Unlocked",
+      "more": "{{names}} & more"
+    }
   }
 }

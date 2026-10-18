@@ -1,0 +1,124 @@
+import React from 'react';
+import {runInAction} from 'mobx';
+
+import {act, fireEvent, render} from '../../../../../jest/test-utils';
+import {mockPurchaseStore as purchaseStore} from '../../../../../__mocks__/stores/purchaseStore';
+import type {PlusFeature} from '../../../../services/plus/catalog';
+import {setShipOverride} from '../../../../services/plus/shipOverride';
+
+import {PlusDrawerItem} from '../PlusDrawerItem';
+
+let mockFeatures: PlusFeature[] | undefined;
+
+jest.mock('../../../../services/plus/catalog', () => {
+  const actual = jest.requireActual('../../../../services/plus/catalog');
+  const mocked = {...actual};
+  Object.defineProperty(mocked, 'PLUS_FEATURES', {
+    get: () => mockFeatures ?? actual.PLUS_FEATURES,
+  });
+  return mocked;
+});
+
+const setUnlocked = (unlocked: boolean) =>
+  runInAction(() => {
+    purchaseStore.plusUnlocked = unlocked;
+  });
+
+describe('PlusDrawerItem', () => {
+  beforeEach(() => {
+    mockFeatures = undefined;
+    setShipOverride([]);
+    setUnlocked(false);
+  });
+
+  afterEach(() => {
+    setShipOverride([]);
+  });
+
+  it('is absent while no Plus feature has shipped, even for an owner', () => {
+    const {queryByTestId} = render(<PlusDrawerItem onPress={jest.fn()} />);
+    expect(queryByTestId('drawer-item-plus')).toBeNull();
+
+    act(() => setUnlocked(true));
+    expect(queryByTestId('drawer-item-plus')).toBeNull();
+  });
+
+  it('shows once a feature ships and names it', () => {
+    setShipOverride(['handsFreeVoice']);
+    const {getByTestId, getByText} = render(
+      <PlusDrawerItem onPress={jest.fn()} />,
+    );
+
+    expect(getByText('PocketPal Plus')).toBeTruthy();
+    expect(getByTestId('drawer-item-plus-subtitle')).toHaveTextContent(
+      'Hands-free voice',
+    );
+  });
+
+  it('appears when a feature ships while mounted', () => {
+    const {queryByTestId} = render(<PlusDrawerItem onPress={jest.fn()} />);
+    expect(queryByTestId('drawer-item-plus')).toBeNull();
+
+    act(() => setShipOverride(['localApiServer']));
+
+    expect(queryByTestId('drawer-item-plus')).not.toBeNull();
+  });
+
+  it.each([
+    [[{id: 'handsFreeVoice', shipped: true}], 'Hands-free voice'],
+    [
+      [
+        {id: 'handsFreeVoice', shipped: true},
+        {id: 'localApiServer', shipped: true},
+      ],
+      'Hands-free voice, Local API server',
+    ],
+    [
+      [
+        {id: 'handsFreeVoice', shipped: true},
+        {id: 'later', shipped: false},
+        {id: 'localApiServer', shipped: true},
+        {id: 'third', shipped: true},
+      ],
+      'Hands-free voice, Local API server & more',
+    ],
+  ])('names up to two shipped features: %#', (features, expected) => {
+    mockFeatures = features;
+    const {getByTestId} = render(<PlusDrawerItem onPress={jest.fn()} />);
+
+    expect(getByTestId('drawer-item-plus-subtitle')).toHaveTextContent(
+      expected,
+    );
+  });
+
+  it('shows Unlocked for an owner and follows the unlock', () => {
+    setShipOverride(['handsFreeVoice']);
+    const {getByTestId} = render(<PlusDrawerItem onPress={jest.fn()} />);
+
+    act(() => setUnlocked(true));
+    expect(getByTestId('drawer-item-plus-subtitle')).toHaveTextContent(
+      'Unlocked',
+    );
+    expect(getByTestId('drawer-item-plus').props.accessibilityLabel).toBe(
+      'PocketPal Plus',
+    );
+    expect(getByTestId('drawer-item-plus').props.accessibilityValue).toEqual({
+      text: 'Unlocked',
+    });
+
+    act(() => setUnlocked(false));
+    expect(getByTestId('drawer-item-plus-subtitle')).toHaveTextContent(
+      'Hands-free voice',
+    );
+  });
+
+  it('calls onPress', () => {
+    setShipOverride(['handsFreeVoice']);
+    const onPress = jest.fn();
+    const {getByTestId} = render(<PlusDrawerItem onPress={onPress} />);
+
+    fireEvent.press(getByTestId('drawer-item-plus'));
+
+    expect(onPress).toHaveBeenCalledTimes(1);
+  });
+});
