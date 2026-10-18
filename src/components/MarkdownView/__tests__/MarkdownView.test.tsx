@@ -179,6 +179,24 @@ describe('MarkdownView', () => {
     expect(lastProps().selectable).toBe(false);
   });
 
+  it('turns the block popup on by default', () => {
+    render(<MarkdownView markdownText="a" maxMessageWidth={300} />);
+
+    expect(lastProps().enableBlockContextMenu).toBe(true);
+  });
+
+  it('forwards blockContextMenu as enableBlockContextMenu', () => {
+    render(
+      <MarkdownView
+        markdownText="a"
+        maxMessageWidth={300}
+        blockContextMenu={false}
+      />,
+    );
+
+    expect(lastProps().enableBlockContextMenu).toBe(false);
+  });
+
   describe('markdownStyle', () => {
     const {colors} = themeFixtures.lightTheme;
 
@@ -264,6 +282,21 @@ describe('MarkdownView', () => {
       );
 
       expect(lastProps().selectable).toBe(false);
+    });
+
+    it('re-renders when only blockContextMenu changes', () => {
+      const {rerender} = render(
+        <MarkdownView markdownText="a" maxMessageWidth={300} />,
+      );
+      rerender(
+        <MarkdownView
+          markdownText="a"
+          maxMessageWidth={300}
+          blockContextMenu={false}
+        />,
+      );
+
+      expect(lastProps().enableBlockContextMenu).toBe(false);
     });
 
     it('re-renders when only the variant changes', () => {

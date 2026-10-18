@@ -84,6 +84,7 @@ export const TextMessage = ({
       : '';
   const theme = useTheme();
   const user = React.useContext(UserContext);
+  const isUserRow = message.author?.id === user?.id;
   const [previewData, setPreviewData] = React.useState(
     'previewData' in message ? message.previewData : undefined,
   );
@@ -279,7 +280,8 @@ export const TextMessage = ({
           <MarkdownView
             markdownText={visibleText.trim()}
             maxMessageWidth={messageWidth}
-            selectable
+            selectable={!isUserRow}
+            blockContextMenu={!isUserRow}
             streamingAnimation={isActiveRun === true && step?.partial === true}
           />
         </View>
