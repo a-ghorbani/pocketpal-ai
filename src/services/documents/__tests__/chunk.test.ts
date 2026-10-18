@@ -143,3 +143,44 @@ describe('chunkDocument', () => {
     jest.useRealTimers();
   });
 });
+
+describe('chunking speed', () => {
+  const textFile = {...pdf, kind: 'text' as const, pageCount: undefined};
+  const bigText = (chars: number) => {
+    const parts: string[] = [];
+    let length = 0;
+    for (let i = 0; length < chars; i++) {
+      const piece = i % 7 === 6 ? `${sentence(i)}\n\n` : `${sentence(i)} `;
+      parts.push(piece);
+      length += piece.length;
+    }
+    return parts.join('');
+  };
+
+  it('splits a 1,000,000-character text file in linear time', async () => {
+    const text = bigText(1_000_000);
+    const started = Date.now();
+    const passages = await chunkDocument(textFile, [text]);
+    expect(Date.now() - started).toBeLessThan(5000);
+    expect(passages.length).toBeGreaterThan(1000);
+    passages.forEach(p =>
+      expect(estimateDocTokens(p.text)).toBeLessThanOrEqual(PASSAGE_MAX_TOKENS),
+    );
+  }, 30000);
+
+  it('yields to the event loop within one long page', async () => {
+    jest.useFakeTimers();
+    let done = false;
+    const pending = chunkDocument(textFile, [bigText(200_000)]).then(() => {
+      done = true;
+    });
+    for (let i = 0; i < 20; i++) {
+      await Promise.resolve();
+    }
+    expect(done).toBe(false);
+    await jest.runAllTimersAsync();
+    await pending;
+    expect(done).toBe(true);
+    jest.useRealTimers();
+  });
+});
