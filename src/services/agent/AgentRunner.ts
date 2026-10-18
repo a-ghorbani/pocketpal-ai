@@ -265,6 +265,7 @@ export async function* runAgent(
   // as long as a completion it started is unsettled.
   const stopEngine = () => stopQuietly(() => engine.stopCompletion?.());
   let unsettledCompletion: Promise<void> | null = null;
+  let dispatchedTools: Promise<unknown> | null = null;
   const onAbort = () => {
     if (unsettledCompletion) {
       stopEngine();
@@ -443,15 +444,16 @@ export async function* runAgent(
         break;
       }
 
-      const outcomes: AgentToolOutcome[] = [];
       for (const call of calls) {
         yield {type: 'tool_call_started', call};
-        const outcome = await executeOne(
-          call,
-          allowedTalentNames,
-          talentLookup,
-          signal,
-        );
+      }
+      const pendingOutcomes = calls.map(call =>
+        executeOne(call, allowedTalentNames, talentLookup, signal),
+      );
+      dispatchedTools = Promise.allSettled(pendingOutcomes);
+      const outcomes: AgentToolOutcome[] = [];
+      for (const pendingOutcome of pendingOutcomes) {
+        const outcome = await pendingOutcome;
         outcomes.push(outcome);
         yield {type: 'tool_call_finished', outcome};
       }
@@ -521,5 +523,6 @@ export async function* runAgent(
       }
       await unsettledCompletion;
     }
+    await dispatchedTools;
   }
 }

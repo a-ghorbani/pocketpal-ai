@@ -11,8 +11,15 @@ import type {
 import type {TalentEngine, TalentResult} from '../../talents/types';
 import type {SearchAccess} from '../../talents/searchAccess';
 import {WebSearchEngine} from '../../talents/WebSearchEngine';
+import {ReadUrlEngine} from '../../talents/ReadUrlEngine';
+import {
+  allowReadUrls,
+  matchReadUrl,
+  resetReadUrlAllowlist,
+} from '../../talents/readUrlAllowlist';
 import {TavilyProvider} from '../../search/providers/tavily';
-import {resetSearchCache} from '../../search/searchBudget';
+import {resetSearchCache, setCachedHits} from '../../search/searchBudget';
+import type {SearchProvider} from '../../search/types';
 
 /**
  * Helper: build a CompletionEngine whose `completion()` invokes the
@@ -64,6 +71,16 @@ function makeTalent(
 }
 
 const baseParams: ApiCompletionParams = {messages: []} as any;
+
+function eventLabel(e: AgentEvent): string {
+  if (e.type === 'tool_call_started') {
+    return `${e.type} ${e.call.id}`;
+  }
+  if (e.type === 'tool_call_finished') {
+    return `${e.type} ${e.outcome.callId}`;
+  }
+  return e.type;
+}
 
 async function collect(iter: AsyncIterable<AgentEvent>): Promise<AgentEvent[]> {
   const out: AgentEvent[] = [];
@@ -1115,7 +1132,7 @@ describe('runAgent', () => {
     expect((tokens[1] as any).delta.content).toBe('final');
   });
 
-  it('tool_call_started fires before tool_call_finished for each call', async () => {
+  it('yields every tool_call_started of a batch, then every tool_call_finished, in call order', async () => {
     const engine = makeScriptedEngine({
       scripts: [
         {
@@ -1157,18 +1174,18 @@ describe('runAgent', () => {
         triggerMarkers: [],
       }),
     );
-    const startedIdx = events
-      .map((e, i) => ({e, i}))
-      .filter(({e}) => e.type === 'tool_call_started')
-      .map(({i}) => i);
-    const finishedIdx = events
-      .map((e, i) => ({e, i}))
-      .filter(({e}) => e.type === 'tool_call_finished')
-      .map(({i}) => i);
-    expect(startedIdx).toHaveLength(2);
-    expect(finishedIdx).toHaveLength(2);
-    expect(startedIdx[0]).toBeLessThan(finishedIdx[0]);
-    expect(startedIdx[1]).toBeLessThan(finishedIdx[1]);
+    expect(events.map(eventLabel)).toEqual([
+      'run_started',
+      'step_started',
+      'step_finished',
+      'tool_call_started c0',
+      'tool_call_started c1',
+      'tool_call_finished c0',
+      'tool_call_finished c1',
+      'step_started',
+      'step_finished',
+      'run_finished',
+    ]);
   });
 
   // ---------- Tool-call-progress signal source ----------
@@ -1808,12 +1825,364 @@ describe('runAgent', () => {
           .filter(t => t === 'tool_call_started' || t === 'tool_call_finished'),
       ).toEqual([
         'tool_call_started',
-        'tool_call_finished',
         'tool_call_started',
+        'tool_call_finished',
         'tool_call_finished',
       ]);
       expect(events[events.length - 1].type).toBe('run_finished');
       expect(engine.completion).toHaveBeenCalledTimes(1);
+    });
+  });
+
+  describe('concurrent dispatch', () => {
+    const toolCall = (
+      id: string,
+      name: string,
+      args: Record<string, unknown> = {},
+    ) => ({
+      id,
+      type: 'function' as const,
+      function: {name, arguments: JSON.stringify(args)},
+    });
+    const batchEngine = (calls: ReturnType<typeof toolCall>[]) =>
+      makeScriptedEngine({
+        scripts: [
+          {tokens: [], result: {text: '', content: '', tool_calls: calls}},
+          {tokens: [], result: {text: 'done', content: 'done'}},
+        ],
+      });
+    const talentWith = (
+      name: string,
+      execute: TalentEngine['execute'],
+    ): TalentEngine => ({
+      name,
+      execute,
+      toToolDefinition: () => ({
+        type: 'function',
+        function: {name, description: name, parameters: {}},
+      }),
+    });
+    const timedTalent = (name: string, ms: number, onSettle?: () => void) => {
+      const execute = jest.fn(
+        () =>
+          new Promise<TalentResult>(resolve => {
+            setTimeout(() => {
+              onSettle?.();
+              resolve({type: 'text', summary: name});
+            }, ms);
+          }),
+      );
+      return {talent: talentWith(name, execute), execute};
+    };
+    const deferredTalent = (name: string) => {
+      let release!: () => void;
+      const execute = jest.fn(
+        () =>
+          new Promise<TalentResult>(resolve => {
+            release = () => resolve({type: 'text', summary: name});
+          }),
+      );
+      return {
+        talent: talentWith(name, execute),
+        execute,
+        release: () => release(),
+      };
+    };
+    const run = (
+      engine: CompletionEngine,
+      talents: Record<string, TalentEngine>,
+      signal?: AbortSignal,
+    ) =>
+      runAgent({
+        engine,
+        initialParams: baseParams,
+        allowedTalentNames: Object.keys(talents),
+        talentLookup: name => talents[name],
+        messageId: 'msg',
+        triggerMarkers: [],
+        signal,
+      });
+    const searchAccess = (provider: SearchProvider): SearchAccess => ({
+      getActiveProvider: () => provider,
+      canSearch: () => true,
+      getResultCount: () => 3,
+      readWithDefaultReader: jest.fn(async (url: string) => ({
+        url,
+        title: 'Mars',
+        text: 'The red planet.',
+      })),
+    });
+    const flush = async () => {
+      for (let i = 0; i < 50; i += 1) {
+        await Promise.resolve();
+      }
+    };
+    const pageUrl = 'https://example.com/mars';
+    const hit = {title: 'Mars', url: pageUrl, snippet: 'The red planet.'};
+
+    beforeEach(() => {
+      resetSearchCache();
+      resetReadUrlAllowlist();
+    });
+
+    afterEach(() => {
+      jest.useRealTimers();
+    });
+
+    it('runs every call of a batch at once, so the tool phase lasts as long as the slowest', async () => {
+      jest.useFakeTimers();
+      const fast = timedTalent('fast', 300);
+      const slow = timedTalent('slow', 500);
+      const engine = batchEngine([
+        toolCall('c0', 'fast'),
+        toolCall('c1', 'slow'),
+      ]);
+      const done = collect(run(engine, {fast: fast.talent, slow: slow.talent}));
+
+      await flush();
+      expect(fast.execute).toHaveBeenCalledTimes(1);
+      expect(slow.execute).toHaveBeenCalledTimes(1);
+
+      await jest.advanceTimersByTimeAsync(499);
+      await flush();
+      expect(engine.completion).toHaveBeenCalledTimes(1);
+
+      await jest.advanceTimersByTimeAsync(1);
+      await flush();
+      expect(engine.completion).toHaveBeenCalledTimes(2);
+      await done;
+    });
+
+    it('holds an early settler until the calls before it finish, and replays in call order', async () => {
+      jest.useFakeTimers();
+      const first = timedTalent('first', 500);
+      const second = timedTalent('second', 100);
+      const engine = batchEngine([
+        toolCall('c0', 'first'),
+        toolCall('c1', 'second'),
+      ]);
+      const done = collect(
+        run(engine, {first: first.talent, second: second.talent}),
+      );
+      await jest.advanceTimersByTimeAsync(500);
+      const events = await done;
+
+      expect(events.map(eventLabel)).toEqual([
+        'run_started',
+        'step_started',
+        'step_finished',
+        'tool_call_started c0',
+        'tool_call_started c1',
+        'tool_call_finished c0',
+        'tool_call_finished c1',
+        'step_started',
+        'step_finished',
+        'run_finished',
+      ]);
+      const followUp = (engine.completion as jest.Mock).mock.calls[1][0];
+      expect(followUp.messages.slice(-3)).toEqual([
+        expect.objectContaining({
+          role: 'assistant',
+          tool_calls: [
+            expect.objectContaining({id: 'c0'}),
+            expect.objectContaining({id: 'c1'}),
+          ],
+        }),
+        {role: 'tool', tool_call_id: 'c0', content: 'first'},
+        {role: 'tool', tool_call_id: 'c1', content: 'second'},
+      ]);
+    });
+
+    it('cancels every call of a batch together on Stop', async () => {
+      const controller = new AbortController();
+      let fetches = 0;
+      global.fetch = abortableFetch({
+        onCall: () => {
+          fetches += 1;
+          if (fetches === 2) {
+            controller.abort();
+          }
+        },
+      });
+      const webSearch = new WebSearchEngine(
+        searchAccess(new TavilyProvider(() => 'key')),
+      );
+      const engine = batchEngine([
+        toolCall('c0', 'web_search', {query: 'mars'}),
+        toolCall('c1', 'web_search', {query: 'venus'}),
+      ]);
+
+      const events = await collect(
+        run(engine, {web_search: webSearch}, controller.signal),
+      );
+
+      expect(global.fetch).toHaveBeenCalledTimes(2);
+      const finished = events.filter(e => e.type === 'tool_call_finished');
+      expect(finished.map(e => (e as any).outcome.result.errorMessage)).toEqual(
+        ['cancelled', 'cancelled'],
+      );
+      expect(events.map(eventLabel)).toEqual([
+        'run_started',
+        'step_started',
+        'step_finished',
+        'tool_call_started c0',
+        'tool_call_started c1',
+        'tool_call_finished c0',
+        'tool_call_finished c1',
+        'run_finished',
+      ]);
+    });
+
+    it('refuses a read_url of a URL only a sibling network search returns', async () => {
+      const provider: SearchProvider = {
+        id: 'tavily',
+        search: jest.fn(async () => [hit]),
+      };
+      const access = searchAccess(provider);
+      const engine = batchEngine([
+        toolCall('c0', 'web_search', {query: 'mars'}),
+        toolCall('c1', 'read_url', {url: pageUrl}),
+      ]);
+
+      const events = await collect(
+        run(engine, {
+          web_search: new WebSearchEngine(access),
+          read_url: new ReadUrlEngine(access),
+        }),
+      );
+
+      const [search, read] = events
+        .filter(e => e.type === 'tool_call_finished')
+        .map(e => (e as any).outcome.result);
+      expect(search.type).toBe('search');
+      expect(read.summary).toContain('this URL is not allowed');
+      expect(access.readWithDefaultReader).not.toHaveBeenCalled();
+    });
+
+    it('allows a read_url of a URL a sibling search returns from the cache', async () => {
+      const provider: SearchProvider = {
+        id: 'tavily',
+        search: jest.fn(async () => []),
+      };
+      const access = searchAccess(provider);
+      setCachedHits('tavily', 'mars', 3, [hit]);
+      const engine = batchEngine([
+        toolCall('c0', 'web_search', {query: 'mars'}),
+        toolCall('c1', 'read_url', {url: pageUrl}),
+      ]);
+
+      const events = await collect(
+        run(engine, {
+          web_search: new WebSearchEngine(access),
+          read_url: new ReadUrlEngine(access),
+        }),
+      );
+
+      const read = events.filter(e => e.type === 'tool_call_finished')[1];
+      expect((read as any).outcome.result.type).toBe('text');
+      expect(provider.search).not.toHaveBeenCalled();
+      expect(access.readWithDefaultReader).toHaveBeenCalledWith(
+        pageUrl,
+        undefined,
+      );
+    });
+
+    it('a consumer that stops at a finish waits for the rest of the batch and its side effects', async () => {
+      jest.useFakeTimers();
+      const calculate = makeTalent('calculate', () => ({
+        type: 'text',
+        summary: '4',
+      }));
+      const search = timedTalent('search', 300, () => allowReadUrls([pageUrl]));
+      const iterator = run(
+        batchEngine([toolCall('c0', 'calculate'), toolCall('c1', 'search')]),
+        {calculate, search: search.talent},
+      );
+      let event = await iterator.next();
+      while (!event.done && event.value.type !== 'tool_call_finished') {
+        event = await iterator.next();
+      }
+
+      let allowedWhenReturned: string | null | undefined;
+      const returning = iterator.return(undefined).then(() => {
+        allowedWhenReturned = matchReadUrl(pageUrl);
+      });
+      await flush();
+      expect(allowedWhenReturned).toBeUndefined();
+
+      await jest.advanceTimersByTimeAsync(300);
+      await returning;
+      expect(allowedWhenReturned).toBe(pageUrl);
+    });
+
+    it('a consumer that stops at a start dispatches no call', async () => {
+      const first = deferredTalent('first');
+      const second = deferredTalent('second');
+      const iterator = run(
+        batchEngine([toolCall('c0', 'first'), toolCall('c1', 'second')]),
+        {first: first.talent, second: second.talent},
+      );
+      let event = await iterator.next();
+      while (!event.done && event.value.type !== 'tool_call_started') {
+        event = await iterator.next();
+      }
+
+      await iterator.return(undefined);
+
+      expect(first.execute).not.toHaveBeenCalled();
+      expect(second.execute).not.toHaveBeenCalled();
+    });
+
+    describe('when dispatching one call throws', () => {
+      const unhandled = jest.fn();
+
+      beforeEach(() => {
+        unhandled.mockClear();
+        process.on('unhandledRejection', unhandled);
+      });
+
+      afterEach(() => {
+        process.off('unhandledRejection', unhandled);
+      });
+
+      it.each([0, 1])(
+        'at index %i, the run fails only after its sibling settles',
+        async throwingIndex => {
+          const sibling = deferredTalent('slow');
+          const names =
+            throwingIndex === 0 ? ['boom', 'slow'] : ['slow', 'boom'];
+          let settled = false;
+          const done = collect(
+            runAgent({
+              engine: batchEngine(names.map((n, i) => toolCall(`c${i}`, n))),
+              initialParams: baseParams,
+              allowedTalentNames: names,
+              talentLookup: name => {
+                if (name === 'boom') {
+                  throw new Error('lookup failed');
+                }
+                return sibling.talent;
+              },
+              messageId: 'msg',
+              triggerMarkers: [],
+            }),
+          ).then(events => {
+            settled = true;
+            return events;
+          });
+
+          await flush();
+          expect(sibling.execute).toHaveBeenCalledTimes(1);
+          expect(settled).toBe(false);
+
+          sibling.release();
+          const events = await done;
+          await new Promise(resolve => setImmediate(resolve));
+
+          expect(events[events.length - 1].type).toBe('run_failed');
+          expect(unhandled).not.toHaveBeenCalled();
+        },
+      );
     });
   });
 });
