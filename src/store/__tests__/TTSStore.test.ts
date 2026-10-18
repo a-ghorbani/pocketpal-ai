@@ -828,6 +828,72 @@ describe('TTSStore', () => {
       expect(store.voiceSpoken).toBeNull();
     });
 
+    describe('first-chunk hold for a local model', () => {
+      const makeHeldStore = async () => {
+        const store = await makeStore();
+        store.setCurrentVoice(SUPERTONIC_VOICE);
+        store.setVoiceOutputActive(true, {holdFirstChunk: true});
+        jest.useFakeTimers();
+        return store;
+      };
+
+      afterEach(() => {
+        jest.useRealTimers();
+      });
+
+      it('releases the held text when the reply settles first', async () => {
+        const store = await makeHeldStore();
+        store.onAssistantMessageStart('msg-1');
+        store.onAssistantMessageChunk('msg-1', '<think>hmm</think>Paris, ');
+        store.onAssistantMessageChunk('msg-1', 'the capital. ');
+
+        jest.advanceTimersByTime(900);
+        const handle = voiceHandles[0]!;
+        expect(handle.appendText).not.toHaveBeenCalled();
+
+        store.onAssistantMessageComplete('msg-1', 'Paris, the capital.');
+        expect(handle.finalize).toHaveBeenCalled();
+        expect(appended(handle)).toMatch(/Paris, the capital\.\s*$/);
+
+        progressTo(handle, appended(handle).length);
+        expect(store.voiceSpoken?.text).toBe('Paris, the capital.');
+      });
+
+      it('releases the held text after the hold while the reply still decodes', async () => {
+        const store = await makeHeldStore();
+        store.onAssistantMessageStart('msg-1');
+        store.onAssistantMessageChunk('msg-1', 'Paris is the capital. ');
+        const handle = voiceHandles[0]!;
+
+        jest.advanceTimersByTime(1499);
+        expect(handle.appendText).not.toHaveBeenCalled();
+        jest.advanceTimersByTime(1);
+        expect(appended(handle)).toBe('Paris is the capital. ');
+
+        store.onAssistantMessageChunk('msg-1', 'It is old. ');
+        expect(appended(handle)).toBe('Paris is the capital. It is old. ');
+      });
+
+      it('drops the hold on stop', async () => {
+        const store = await makeHeldStore();
+        store.onAssistantMessageStart('msg-1');
+        store.onAssistantMessageChunk('msg-1', 'Paris is the capital. ');
+
+        await store.stop();
+        jest.advanceTimersByTime(1500);
+
+        expect(voiceHandles[0]!.appendText).not.toHaveBeenCalled();
+      });
+
+      it('holds nothing for a remote model', async () => {
+        const store = await makeVoiceStore();
+        store.onAssistantMessageStart('msg-1');
+        store.onAssistantMessageChunk('msg-1', 'Paris is the capital. ');
+
+        expect(appended(voiceHandles[0]!)).toBe('Paris is the capital. ');
+      });
+    });
+
     it('starts the next voice stream only after the previous one is cancelled', async () => {
       const store = await makeVoiceStore();
       store.onAssistantMessageStart('msg-1');

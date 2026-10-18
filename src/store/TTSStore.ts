@@ -33,6 +33,7 @@ import {
   ThinkingStripper,
   pickThinkingPlaceholder,
 } from '../services/tts/thinkingStripper';
+import {VOICE_FIRST_CHUNK_HOLD_MS} from '../services/voice/constants';
 import {chatSessionStore} from './ChatSessionStore';
 
 /**
@@ -83,6 +84,8 @@ type VoiceStream = {
   markdown: MarkdownStreamBuffer;
   text: string;
   placeholderRanges: Array<[number, number]>;
+  held: Array<{text: string; placeholder: boolean}> | null;
+  holdTimer: ReturnType<typeof setTimeout> | null;
 };
 
 const withoutRanges = (
@@ -463,6 +466,7 @@ export class TTSStore {
     });
     this.streamStripper = null;
     this.streamPlaceholderEmitted = false;
+    this.clearVoiceHold();
     if (state.mode === 'streaming') {
       try {
         await state.handle.cancel();
@@ -642,12 +646,21 @@ export class TTSStore {
     }
     this.voiceSpoken = null;
     this.voiceStreamFailed = null;
-    this.voiceStream = {
+    const stream: VoiceStream = {
       messageId,
       markdown: createMarkdownStreamBuffer({firstChunk: 'clause'}),
       text: '',
       placeholderRanges: [],
+      held: this.holdFirstChunk ? [] : null,
+      holdTimer: null,
     };
+    if (stream.held) {
+      stream.holdTimer = setTimeout(
+        () => this.releaseHeldVoiceText(messageId),
+        VOICE_FIRST_CHUNK_HOLD_MS,
+      );
+    }
+    this.voiceStream = stream;
     return {
       firstChunk: 'clause',
       stripMarkdown: false,
@@ -678,8 +691,7 @@ export class TTSStore {
     }
     const emit = stream.markdown.push(text);
     if (emit) {
-      handle.appendText(emit);
-      stream.text += emit;
+      this.appendVoiceText(handle, stream, emit, false);
     }
   }
 
@@ -693,21 +705,63 @@ export class TTSStore {
     }
     const pending = stream.markdown.flush();
     if (pending) {
-      handle.appendText(pending);
-      stream.text += pending;
+      this.appendVoiceText(handle, stream, pending, false);
     }
-    const start = stream.text.length;
-    handle.appendText(placeholder);
-    stream.text += placeholder;
-    stream.placeholderRanges.push([start, stream.text.length]);
+    this.appendVoiceText(handle, stream, placeholder, true);
   }
 
   private flushReplyText(handle: StreamingHandle) {
     const stream = this.voiceStream;
-    const tail = stream?.markdown.flush();
-    if (stream && tail) {
-      handle.appendText(tail);
-      stream.text += tail;
+    if (!stream) {
+      return;
+    }
+    this.releaseHeldVoiceText(stream.messageId);
+    const tail = stream.markdown.flush();
+    if (tail) {
+      this.appendVoiceText(handle, stream, tail, false);
+    }
+  }
+
+  private appendVoiceText(
+    handle: StreamingHandle,
+    stream: VoiceStream,
+    text: string,
+    placeholder: boolean,
+  ) {
+    if (stream.held) {
+      stream.held.push({text, placeholder});
+      return;
+    }
+    const start = stream.text.length;
+    handle.appendText(text);
+    stream.text += text;
+    if (placeholder) {
+      stream.placeholderRanges.push([start, stream.text.length]);
+    }
+  }
+
+  private releaseHeldVoiceText(messageId: string) {
+    const stream = this.voiceStream;
+    const state = this.playbackState;
+    if (stream?.messageId !== messageId || !stream.held) {
+      return;
+    }
+    this.clearVoiceHold();
+    const held = stream.held;
+    stream.held = null;
+    if (state.mode !== 'streaming' || state.messageId !== messageId) {
+      return;
+    }
+    for (const {text, placeholder} of held) {
+      this.appendVoiceText(state.handle, stream, text, placeholder);
+    }
+  }
+
+  private clearVoiceHold() {
+    const stream = this.voiceStream;
+    if (stream?.holdTimer) {
+      clearTimeout(stream.holdTimer);
+      stream.holdTimer = null;
     }
   }
 
