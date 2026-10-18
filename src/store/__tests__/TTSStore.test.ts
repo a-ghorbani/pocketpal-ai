@@ -677,6 +677,181 @@ describe('TTSStore', () => {
     });
   });
 
+  describe('voice reply stream', () => {
+    type VoiceHandle = MockHandle & {
+      waitFor: Promise<void> | undefined;
+      opts: any;
+    };
+    const voiceHandles: VoiceHandle[] = [];
+
+    const captureHandles = () => {
+      mockSupertonicPlayStreaming.mockImplementation(((
+        _voice: Voice,
+        waitFor?: Promise<void>,
+        opts?: any,
+      ) => {
+        const handle: VoiceHandle = {
+          appendText: jest.fn(),
+          finalize: jest.fn().mockResolvedValue(undefined),
+          cancel: jest.fn().mockResolvedValue(undefined),
+          waitFor,
+          opts,
+        };
+        voiceHandles.push(handle);
+        return handle;
+      }) as any);
+    };
+
+    const appended = (handle: MockHandle) =>
+      handle.appendText.mock.calls.map(c => c[0]).join('');
+
+    const progressTo = (handle: VoiceHandle, end: number) =>
+      handle.opts.onProgress({
+        chunkText: '',
+        streamRange: {start: 0, end},
+        chunkIndex: 0,
+        batchIndex: 0,
+      });
+
+    const makeVoiceStore = async () => {
+      const store = await makeStore();
+      store.setCurrentVoice(SUPERTONIC_VOICE);
+      store.setVoiceOutputActive(true);
+      return store;
+    };
+
+    const defaultPlayStreaming =
+      mockSupertonicPlayStreaming.getMockImplementation()!;
+
+    beforeEach(() => {
+      voiceHandles.length = 0;
+      captureHandles();
+    });
+
+    afterEach(() => {
+      mockSupertonicPlayStreaming.mockImplementation(defaultPlayStreaming);
+    });
+
+    it('opens a voice reply with a clause first chunk, store-side markdown and progress', async () => {
+      const store = await makeVoiceStore();
+
+      store.onAssistantMessageStart('msg-1');
+      store.onAssistantMessageChunk('msg-1', '**Paris** is the capital. More');
+
+      const [handle] = voiceHandles;
+      expect(handle!.opts).toEqual(
+        expect.objectContaining({
+          firstChunk: 'clause',
+          stripMarkdown: false,
+          language: 'na',
+          onProgress: expect.any(Function),
+        }),
+      );
+      expect(appended(handle!)).toBe('Paris is the capital. ');
+    });
+
+    it('opens a chat reply with no voice options', async () => {
+      const store = await makeStore();
+      store.setCurrentVoice(SUPERTONIC_VOICE);
+      store.setAutoSpeak(true);
+
+      store.onAssistantMessageStart('msg-1');
+
+      expect(voiceHandles[0]!.opts).not.toHaveProperty('firstChunk');
+      expect(voiceHandles[0]!.opts).not.toHaveProperty('onProgress');
+    });
+
+    it('records the text up to the end of the chunk that began playing', async () => {
+      const store = await makeVoiceStore();
+      store.onAssistantMessageStart('msg-1');
+      store.onAssistantMessageChunk(
+        'msg-1',
+        'Paris is the capital. It is famous for art. ',
+      );
+
+      progressTo(voiceHandles[0]!, 'Paris is the capital. '.length);
+
+      expect(store.voiceSpoken).toEqual({
+        messageId: 'msg-1',
+        text: 'Paris is the capital.',
+      });
+    });
+
+    it('leaves a thinking placeholder out of the spoken text, even inside a chunk', async () => {
+      const store = await makeVoiceStore();
+      store.onAssistantMessageStart('msg-1');
+      store.onAssistantMessageChunk(
+        'msg-1',
+        '<think>hmm</think>Paris is big. ',
+      );
+
+      const handle = voiceHandles[0]!;
+      progressTo(handle, appended(handle).length);
+
+      expect(appended(handle)).not.toBe('Paris is big. ');
+      expect(store.voiceSpoken?.text).toBe('Paris is big.');
+    });
+
+    it('keeps the spoken text after stop', async () => {
+      const store = await makeVoiceStore();
+      store.onAssistantMessageStart('msg-1');
+      store.onAssistantMessageChunk('msg-1', 'Paris is the capital. ');
+      progressTo(voiceHandles[0]!, 22);
+
+      await store.stop();
+
+      expect(store.voiceSpoken?.text).toBe('Paris is the capital.');
+    });
+
+    it('marks a voice reply whose speech failed, until the next voice reply', async () => {
+      const store = await makeVoiceStore();
+      store.onAssistantMessageStart('msg-1');
+      voiceHandles[0]!.finalize.mockRejectedValueOnce(new Error('synth'));
+
+      store.onAssistantMessageComplete('msg-1', 'Paris.');
+      await flush();
+      expect(store.voiceStreamFailed).toBe('msg-1');
+
+      store.onAssistantMessageStart('msg-2');
+      expect(store.voiceStreamFailed).toBeNull();
+      expect(store.voiceSpoken).toBeNull();
+    });
+
+    it('ignores progress from an earlier voice reply', async () => {
+      const store = await makeVoiceStore();
+      store.onAssistantMessageStart('msg-1');
+      store.onAssistantMessageChunk('msg-1', 'Old reply. ');
+      store.onAssistantMessageStart('msg-2');
+
+      progressTo(voiceHandles[0]!, 11);
+
+      expect(store.voiceSpoken).toBeNull();
+    });
+
+    it('starts the next voice stream only after the previous one is cancelled', async () => {
+      const store = await makeVoiceStore();
+      store.onAssistantMessageStart('msg-1');
+      let cancelled!: () => void;
+      voiceHandles[0]!.cancel.mockReturnValueOnce(
+        new Promise<void>(resolve => {
+          cancelled = resolve;
+        }),
+      );
+
+      store.onAssistantMessageStart('msg-2');
+      let started = false;
+      voiceHandles[1]!.waitFor!.then(() => {
+        started = true;
+      });
+      await flush();
+      expect(started).toBe(false);
+
+      cancelled();
+      await flush();
+      expect(started).toBe(true);
+    });
+  });
+
   describe('thinking-tag stripping', () => {
     const setupEligible = async () => {
       const store = await makeStore();

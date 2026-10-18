@@ -4,7 +4,12 @@ import {makeAutoObservable, reaction, runInAction} from 'mobx';
 import {makePersistable} from 'mobx-persist-store';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import DeviceInfo from 'react-native-device-info';
-import type {SupertonicLanguage} from '@pocketpalai/react-native-speech';
+import {
+  createMarkdownStreamBuffer,
+  type MarkdownStreamBuffer,
+  type StreamProgressEvent,
+  type SupertonicLanguage,
+} from '@pocketpalai/react-native-speech';
 
 import {
   getEngine,
@@ -18,7 +23,12 @@ import {
   KITTEN_MODEL_ESTIMATED_BYTES,
   ttsRuntime,
 } from '../services/tts';
-import type {StreamingHandle, SupertonicSteps, Voice} from '../services/tts';
+import type {
+  StreamOptions,
+  StreamingHandle,
+  SupertonicSteps,
+  Voice,
+} from '../services/tts';
 import {
   ThinkingStripper,
   pickThinkingPlaceholder,
@@ -66,6 +76,34 @@ const DEFAULT_SUPERTONIC_LANGUAGE: SupertonicLanguage = 'na';
 
 const previewMessageId = (voice: Voice): string =>
   `preview:${voice.engine}:${voice.id}`;
+
+/** What a voice reply's stream was fed, for mapping progress back to text. */
+type VoiceStream = {
+  messageId: string;
+  markdown: MarkdownStreamBuffer;
+  text: string;
+  placeholderRanges: Array<[number, number]>;
+};
+
+const withoutRanges = (
+  text: string,
+  end: number,
+  ranges: Array<[number, number]>,
+): string => {
+  let out = '';
+  let from = 0;
+  for (const [start, stop] of ranges) {
+    if (start >= end) {
+      break;
+    }
+    out += text.slice(from, start);
+    from = Math.max(from, stop);
+  }
+  if (from < end) {
+    out += text.slice(from, end);
+  }
+  return out.trim();
+};
 
 /**
  * Store that coordinates text-to-speech playback.
@@ -116,6 +154,11 @@ export class TTSStore {
   /** True while a voice-mode session is open; it speaks every reply. */
   voiceOutputActive: boolean = false;
   private holdFirstChunk: boolean = false;
+  /** Text of every chunk of the current voice reply that began playing. */
+  voiceSpoken: {messageId: string; text: string} | null = null;
+  /** Message id of the last voice reply whose speech failed. */
+  voiceStreamFailed: string | null = null;
+  private voiceStream: VoiceStream | null = null;
 
   // Persisted user preferences
   autoSpeakEnabled: boolean = false;
@@ -171,9 +214,9 @@ export class TTSStore {
   private streamPlaceholderEmitted: boolean = false;
 
   constructor() {
-    makeAutoObservable<TTSStore, 'holdFirstChunk'>(
+    makeAutoObservable<TTSStore, 'holdFirstChunk' | 'voiceStream'>(
       this,
-      {holdFirstChunk: false},
+      {holdFirstChunk: false, voiceStream: false},
       {autoBind: true},
     );
     makePersistable(this, {
@@ -569,17 +612,103 @@ export class TTSStore {
     this.lastSpokenMessageId = messageId;
     this.streamStripper = new ThinkingStripper();
     this.streamPlaceholderEmitted = false;
+    const voiceOpts = this.openVoiceStream(messageId);
     const engine = getEngine(voice.engine);
-    const handle =
-      voice.engine === 'supertonic'
-        ? (engine as SupertonicEngine).playStreaming(voice, stopDone, {
-            language: this.supertonicLanguage,
-            inferenceSteps: this.supertonicSteps,
-          })
-        : engine.playStreaming(voice, stopDone);
+    let handle: StreamingHandle;
+    if (voice.engine === 'supertonic') {
+      handle = (engine as SupertonicEngine).playStreaming(voice, stopDone, {
+        ...voiceOpts,
+        language: this.supertonicLanguage,
+        inferenceSteps: this.supertonicSteps,
+      });
+    } else if (voiceOpts) {
+      handle = engine.playStreaming(voice, stopDone, voiceOpts);
+    } else {
+      handle = engine.playStreaming(voice, stopDone);
+    }
     runInAction(() => {
       this.playbackState = {mode: 'streaming', messageId, handle};
     });
+  }
+
+  /**
+   * A voice reply strips markdown here rather than in the engine, so the
+   * stream's progress offsets index the text this store appended.
+   */
+  private openVoiceStream(messageId: string): StreamOptions | undefined {
+    if (!this.voiceOutputActive) {
+      this.voiceStream = null;
+      return undefined;
+    }
+    this.voiceSpoken = null;
+    this.voiceStreamFailed = null;
+    this.voiceStream = {
+      messageId,
+      markdown: createMarkdownStreamBuffer({firstChunk: 'clause'}),
+      text: '',
+      placeholderRanges: [],
+    };
+    return {
+      firstChunk: 'clause',
+      stripMarkdown: false,
+      onProgress: event => this.onVoiceProgress(messageId, event),
+    };
+  }
+
+  private onVoiceProgress(messageId: string, event: StreamProgressEvent) {
+    const stream = this.voiceStream;
+    if (stream?.messageId !== messageId) {
+      return;
+    }
+    this.voiceSpoken = {
+      messageId,
+      text: withoutRanges(
+        stream.text,
+        event.streamRange.end,
+        stream.placeholderRanges,
+      ),
+    };
+  }
+
+  private appendReplyText(handle: StreamingHandle, text: string) {
+    const stream = this.voiceStream;
+    if (!stream) {
+      handle.appendText(text);
+      return;
+    }
+    const emit = stream.markdown.push(text);
+    if (emit) {
+      handle.appendText(emit);
+      stream.text += emit;
+    }
+  }
+
+  private appendPlaceholder(handle: StreamingHandle) {
+    const placeholder = `${pickThinkingPlaceholder()} `;
+    this.streamPlaceholderEmitted = true;
+    const stream = this.voiceStream;
+    if (!stream) {
+      handle.appendText(placeholder);
+      return;
+    }
+    const pending = stream.markdown.flush();
+    if (pending) {
+      handle.appendText(pending);
+      stream.text += pending;
+    }
+    const start = stream.text.length;
+    handle.appendText(placeholder);
+    stream.text += placeholder;
+    stream.placeholderRanges.push([start, stream.text.length]);
+  }
+
+  private flushReplyText(handle: StreamingHandle) {
+    const stream = this.voiceStream;
+    const tail = stream?.markdown.flush();
+    if (stream && tail) {
+      handle.appendText(tail);
+      stream.text += tail;
+    }
   }
 
   /** Delta chunk from the LLM stream. */
@@ -594,7 +723,7 @@ export class TTSStore {
     }
     const stripper = this.streamStripper;
     if (stripper == null) {
-      state.handle.appendText(chunkText);
+      this.appendReplyText(state.handle, chunkText);
       return;
     }
     if (reasoningDelta) {
@@ -606,16 +735,14 @@ export class TTSStore {
       !this.streamPlaceholderEmitted &&
       cleaned.length === 0
     ) {
-      state.handle.appendText(`${pickThinkingPlaceholder()} `);
-      this.streamPlaceholderEmitted = true;
+      this.appendPlaceholder(state.handle);
       return;
     }
     if (cleaned.length > 0) {
       if (stripper.hadNonEmptyThink() && !this.streamPlaceholderEmitted) {
-        state.handle.appendText(`${pickThinkingPlaceholder()} `);
-        this.streamPlaceholderEmitted = true;
+        this.appendPlaceholder(state.handle);
       }
-      state.handle.appendText(cleaned);
+      this.appendReplyText(state.handle, cleaned);
     }
   }
 
@@ -632,16 +759,22 @@ export class TTSStore {
         const leftover = stripper.flush();
         if (leftover.length > 0) {
           if (stripper.hadNonEmptyThink() && !this.streamPlaceholderEmitted) {
-            state.handle.appendText(`${pickThinkingPlaceholder()} `);
-            this.streamPlaceholderEmitted = true;
+            this.appendPlaceholder(state.handle);
           }
-          state.handle.appendText(leftover);
+          this.appendReplyText(state.handle, leftover);
         }
       }
+      this.flushReplyText(state.handle);
+      const isVoiceReply = this.voiceStream?.messageId === messageId;
       state.handle
         .finalize()
         .catch(err => {
           console.warn('[TTSStore] finalize failed:', err);
+          if (isVoiceReply) {
+            runInAction(() => {
+              this.voiceStreamFailed = messageId;
+            });
+          }
         })
         .finally(() => {
           runInAction(() => {
