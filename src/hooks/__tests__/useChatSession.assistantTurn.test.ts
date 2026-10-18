@@ -1131,6 +1131,85 @@ describe('useChatSession — AssistantTurn integration', () => {
     (talentRegistry as any).engines.delete('calculate');
   });
 
+  it('a Stop before the tool phase of a six-call reply cancels every call and ends the lease', async () => {
+    const execute = jest.fn(
+      async (): Promise<TalentResult> => ({type: 'text', summary: '4'}),
+    );
+    talentRegistry.register({
+      name: 'calculate',
+      execute,
+      toToolDefinition: () => ({
+        type: 'function',
+        function: {name: 'calculate', description: '', parameters: {}},
+      }),
+    });
+    palStore.pals = [
+      {
+        id: 'pal-1',
+        type: 'local',
+        name: 'Calc Pal',
+        systemPrompt: '',
+        parameters: {},
+        parameterSchema: [],
+        isSystemPromptChanged: false,
+        useAIPrompt: false,
+        source: 'local',
+        pact: {talents: [{name: 'calculate', necessity: 'optional'}]},
+      } as any,
+    ];
+    chatSessionStore.sessions = [
+      {
+        id: 'session-1',
+        title: '',
+        date: '',
+        messages: [],
+        completionSettings: {},
+        settingsSource: 'pal',
+        activePalId: 'pal-1',
+      } as any,
+    ];
+    chatSessionStore.activeSessionId = 'session-1';
+    modelStore.context!.completion = jest.fn().mockResolvedValue({
+      text: '',
+      content: '',
+      tool_calls: [0, 1, 2, 3, 4, 5].map(i => ({
+        id: `c${i}`,
+        type: 'function',
+        function: {name: 'calculate', arguments: '{"e":"2+2"}'},
+      })),
+    });
+
+    try {
+      const {result} = renderHook(() =>
+        useChatSession({current: null}, textMessage.author, mockAssistant),
+      );
+      (chatSessionStore.appendToolCall as jest.Mock).mockImplementationOnce(
+        async () => {
+          result.current.handleStopPress();
+        },
+      );
+      let settled = false;
+      result.current.handleSendPress(textMessage).then(() => {
+        settled = true;
+      });
+      await act(async () => {
+        for (let i = 0; i < 1000 && !settled; i++) {
+          await Promise.resolve();
+        }
+      });
+
+      expect(settled).toBe(true);
+      expect(modelStore.isGenerationBusy).toBe(false);
+      const outcomes = (
+        chatSessionStore.appendToolOutcome as jest.Mock
+      ).mock.calls.map(call => call[2].result.errorMessage);
+      expect(outcomes).toEqual(Array(6).fill('cancelled'));
+      expect(execute).not.toHaveBeenCalled();
+    } finally {
+      (talentRegistry as any).engines.delete('calculate');
+    }
+  });
+
   it('#hookTest6 abort with no partial content: empty turn deleted via the store, no interrupted-metadata write', async () => {
     // The runner throws BEFORE any token / step_finished. The hook's
     // catch path sees `hasPartialContent === false` → calls

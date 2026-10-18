@@ -17,6 +17,8 @@ import type {TalentResult} from '../talents/types';
 
 export const DEFAULT_MAX_TURNS = 5;
 
+const MAX_IN_FLIGHT_TOOL_CALLS = 4;
+
 const BUDGET_EXHAUSTED_NUDGE =
   '(Tool budget exhausted. Answer now using only the information gathered above; if it is insufficient, say what is missing.)';
 
@@ -118,6 +120,17 @@ function normalizeToolCallIds(
       arguments: tc.function?.arguments ?? '',
     },
   }));
+}
+
+function cancelledOutcome(call: AgentToolCall): AgentToolOutcome {
+  const toolName = call.function?.name ?? '';
+  const summary = `${toolName}: cancelled`;
+  return {
+    callId: call.id,
+    toolName,
+    result: {type: 'error', summary, errorMessage: 'cancelled'},
+    responseContent: summary,
+  };
 }
 
 async function executeOne(
@@ -260,7 +273,7 @@ export async function* runAgent(
   // as long as a completion it started is unsettled.
   const stopEngine = () => stopQuietly(() => engine.stopCompletion?.());
   let unsettledCompletion: Promise<void> | null = null;
-  let dispatchedTools: Promise<unknown> | null = null;
+  const started: Promise<AgentToolOutcome>[] = [];
   const toolController = new AbortController();
   const onAbort = () => {
     toolController.abort();
@@ -448,13 +461,49 @@ export async function* runAgent(
       for (const call of calls) {
         yield {type: 'tool_call_started', call};
       }
-      const pendingOutcomes = calls.map(call =>
-        executeOne(call, allowedTalentNames, talentLookup, toolSignal),
-      );
-      dispatchedTools = Promise.allSettled(pendingOutcomes);
+      const slots = calls.map(() => {
+        let resolve!: (outcome: AgentToolOutcome) => void;
+        let reject!: (error: unknown) => void;
+        const promise = new Promise<AgentToolOutcome>((res, rej) => {
+          resolve = res;
+          reject = rej;
+        });
+        promise.catch(() => {});
+        return {promise, resolve, reject};
+      });
+      let next = 0;
+      let running = 0;
+      const pump = () => {
+        while (next < calls.length) {
+          if (toolController.signal.aborted) {
+            for (; next < calls.length; next += 1) {
+              slots[next].resolve(cancelledOutcome(calls[next]));
+            }
+            return;
+          }
+          if (running >= MAX_IN_FLIGHT_TOOL_CALLS) {
+            return;
+          }
+          const slot = slots[next];
+          const pending = executeOne(
+            calls[next],
+            allowedTalentNames,
+            talentLookup,
+            toolSignal,
+          );
+          next += 1;
+          running += 1;
+          started.push(pending);
+          pending.then(slot.resolve, slot.reject).then(() => {
+            running -= 1;
+            pump();
+          });
+        }
+      };
+      pump();
       const outcomes: AgentToolOutcome[] = [];
-      for (const pendingOutcome of pendingOutcomes) {
-        const outcome = await pendingOutcome;
+      for (const slot of slots) {
+        const outcome = await slot.promise;
         outcomes.push(outcome);
         yield {type: 'tool_call_finished', outcome};
       }
@@ -526,6 +575,6 @@ export async function* runAgent(
       }
       await unsettledCompletion;
     }
-    await dispatchedTools;
+    await Promise.allSettled(started);
   }
 }

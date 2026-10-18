@@ -8,7 +8,11 @@ import type {
   CompletionResult,
   CompletionStreamData,
 } from '../../../utils/completionTypes';
-import type {TalentEngine, TalentResult} from '../../talents/types';
+import type {
+  TalentEngine,
+  TalentExecuteContext,
+  TalentResult,
+} from '../../talents/types';
 import type {SearchAccess} from '../../talents/searchAccess';
 import {WebSearchEngine} from '../../talents/WebSearchEngine';
 import {ReadUrlEngine} from '../../talents/ReadUrlEngine';
@@ -1923,7 +1927,7 @@ describe('runAgent', () => {
     const deferredTalent = (name: string) => {
       let release!: () => void;
       const execute = jest.fn(
-        () =>
+        (_args: Record<string, unknown>, _ctx?: TalentExecuteContext) =>
           new Promise<TalentResult>(resolve => {
             release = () => resolve({type: 'text', summary: name});
           }),
@@ -1932,6 +1936,7 @@ describe('runAgent', () => {
         talent: talentWith(name, execute),
         execute,
         release: () => release(),
+        signal: () => execute.mock.calls[0]?.[1]?.signal,
       };
     };
     const run = (
@@ -1963,6 +1968,25 @@ describe('runAgent', () => {
         await Promise.resolve();
       }
     };
+    const track = <T>(promise: Promise<T>) => {
+      const state: {done: boolean; value?: T} = {done: false};
+      promise.then(value => {
+        state.done = true;
+        state.value = value;
+      });
+      return state;
+    };
+    const drain = async (state: {done: boolean}) => {
+      for (let i = 0; i < 1000 && !state.done; i += 1) {
+        await Promise.resolve();
+      }
+    };
+    const finishLabels = (events: AgentEvent[]) =>
+      events.filter(e => e.type === 'tool_call_finished').map(eventLabel);
+    const outcomeSummaries = (events: AgentEvent[]) =>
+      events
+        .filter(e => e.type === 'tool_call_finished')
+        .map(e => (e as any).outcome.result);
     const pageUrl = 'https://example.com/mars';
     const hit = {title: 'Mars', url: pageUrl, snippet: 'The red planet.'};
 
@@ -1975,7 +1999,7 @@ describe('runAgent', () => {
       jest.useRealTimers();
     });
 
-    it('runs every call of a batch at once, so the tool phase lasts as long as the slowest', async () => {
+    it('runs up to four calls of a batch at once, so the tool phase lasts as long as the slowest', async () => {
       jest.useFakeTimers();
       const fast = timedTalent('fast', 300);
       const slow = timedTalent('slow', 500);
@@ -2257,6 +2281,190 @@ describe('runAgent', () => {
         'tool_call_finished c0',
       );
       await iterator.return(undefined);
+    });
+
+    it('keeps at most four calls in flight and starts the next queued call as each settles', async () => {
+      let inFlight = 0;
+      let peak = 0;
+      const deferred = [0, 1, 2, 3, 4, 5].map(i => deferredTalent(`t${i}`));
+      const talents = Object.fromEntries(
+        deferred.map(d => [
+          d.talent.name,
+          talentWith(d.talent.name, (args, ctx) => {
+            inFlight += 1;
+            peak = Math.max(peak, inFlight);
+            return d.talent.execute(args, ctx).finally(() => {
+              inFlight -= 1;
+            });
+          }),
+        ]),
+      );
+      const called = () => deferred.map(d => d.execute.mock.calls.length > 0);
+      const done = track(
+        collect(
+          run(
+            batchEngine(
+              deferred.map((d, i) => toolCall(`c${i}`, d.talent.name)),
+            ),
+            talents,
+          ),
+        ),
+      );
+
+      await flush();
+      expect(called()).toEqual([true, true, true, true, false, false]);
+
+      deferred[2].release();
+      await flush();
+      expect(called()).toEqual([true, true, true, true, true, false]);
+
+      deferred[0].release();
+      await flush();
+      expect(called()).toEqual([true, true, true, true, true, true]);
+
+      [1, 3, 4, 5].forEach(i => deferred[i].release());
+      await drain(done);
+
+      expect(done.done).toBe(true);
+      expect(peak).toBeLessThanOrEqual(4);
+      expect(finishLabels(done.value!)).toEqual(
+        [0, 1, 2, 3, 4, 5].map(i => `tool_call_finished c${i}`),
+      );
+    });
+
+    it('a Stop with calls still queued never dispatches them and cancels them in call order', async () => {
+      const controller = new AbortController();
+      global.fetch = abortableFetch();
+      const webSearch = new WebSearchEngine(
+        searchAccess(new TavilyProvider(() => 'key')),
+      );
+      const searchExecute = jest.spyOn(webSearch, 'execute');
+      const calculate = jest.fn(
+        async (): Promise<TalentResult> => ({type: 'text', summary: '4'}),
+      );
+      const calls = [
+        ...[0, 1, 2, 3, 4].map(i =>
+          toolCall(`c${i}`, 'web_search', {query: `q${i}`}),
+        ),
+        ...[5, 6, 7, 8].map(i => toolCall(`c${i}`, 'calculate')),
+      ];
+      const done = track(
+        collect(
+          run(
+            batchEngine(calls),
+            {
+              web_search: webSearch,
+              calculate: talentWith('calculate', calculate),
+            },
+            controller.signal,
+          ),
+        ),
+      );
+
+      await flush();
+      expect(global.fetch).toHaveBeenCalledTimes(4);
+      expect(calculate).not.toHaveBeenCalled();
+
+      controller.abort();
+      await drain(done);
+
+      expect(done.done).toBe(true);
+      expect(searchExecute).toHaveBeenCalledTimes(4);
+      expect(calculate).not.toHaveBeenCalled();
+      expect(global.fetch).toHaveBeenCalledTimes(4);
+      const results = outcomeSummaries(done.value!);
+      expect(results.map(r => r.errorMessage)).toEqual(
+        Array(9).fill('cancelled'),
+      );
+      expect(results.slice(4).map(r => r.summary)).toEqual([
+        'web_search: cancelled',
+        ...Array(4).fill('calculate: cancelled'),
+      ]);
+      expect(done.value!.map(eventLabel).slice(-10)).toEqual([
+        ...[0, 1, 2, 3, 4, 5, 6, 7, 8].map(i => `tool_call_finished c${i}`),
+        'run_finished',
+      ]);
+    });
+
+    it('a consumer that returns with calls still queued starts none of them', async () => {
+      const controller = new AbortController();
+      const first = makeTalent('t0', () => ({type: 'text', summary: 't0'}));
+      const deferred = [1, 2, 3, 4, 5].map(i => deferredTalent(`t${i}`));
+      const iterator = run(
+        batchEngine([0, 1, 2, 3, 4, 5].map(i => toolCall(`c${i}`, `t${i}`))),
+        {
+          t0: first,
+          ...Object.fromEntries(deferred.map(d => [d.talent.name, d.talent])),
+        },
+        controller.signal,
+      );
+      let event = await iterator.next();
+      while (
+        !event.done &&
+        eventLabel(event.value) !== 'tool_call_finished c0'
+      ) {
+        event = await iterator.next();
+      }
+
+      const returned = track(iterator.return(undefined));
+      await flush();
+
+      const [t1, t2, t3, t4, t5] = deferred;
+      expect(t5.execute).not.toHaveBeenCalled();
+      expect([t1, t2, t3, t4].map(d => d.signal()?.aborted)).toEqual([
+        true,
+        true,
+        true,
+        true,
+      ]);
+      expect(returned.done).toBe(false);
+
+      [t1, t2, t3, t4].forEach(d => d.release());
+      await drain(returned);
+
+      expect(returned.done).toBe(true);
+      expect(t5.execute).not.toHaveBeenCalled();
+      expect(controller.signal.aborted).toBe(false);
+    });
+
+    it('a Stop during the start events runs no local talent and cancels every call in call order', async () => {
+      const controller = new AbortController();
+      const calculate = jest.fn(
+        async (): Promise<TalentResult> => ({type: 'text', summary: '4'}),
+      );
+      const iterator = run(
+        batchEngine(
+          [0, 1, 2, 3, 4, 5].map(i => toolCall(`c${i}`, 'calculate')),
+        ),
+        {calculate: talentWith('calculate', calculate)},
+        controller.signal,
+      );
+      const consume = async () => {
+        const events: AgentEvent[] = [];
+        for await (const event of iterator) {
+          events.push(event);
+          if (eventLabel(event) === 'tool_call_started c0') {
+            controller.abort();
+          }
+        }
+        return events;
+      };
+      const done = track(consume());
+      await drain(done);
+
+      expect(done.done).toBe(true);
+      expect(calculate).not.toHaveBeenCalled();
+      const results = outcomeSummaries(done.value!);
+      expect(results.map(r => r.summary)).toEqual(
+        Array(6).fill('calculate: cancelled'),
+      );
+      expect(results.map(r => r.errorMessage)).toEqual(
+        Array(6).fill('cancelled'),
+      );
+      expect(done.value!.map(eventLabel).slice(-7)).toEqual([
+        ...[0, 1, 2, 3, 4, 5].map(i => `tool_call_finished c${i}`),
+        'run_finished',
+      ]);
     });
 
     it('a Stop between the start events cancels every search without a fetch, finishing in call order', async () => {
