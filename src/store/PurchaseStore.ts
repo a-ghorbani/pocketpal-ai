@@ -22,7 +22,7 @@ import type {StorePlatform, VerifyResult} from '../services/iap/iapWire';
 import type {LinkOutcome} from '../services/iap/iapApi';
 import {changedCreatorFields} from '../services/iap/creatorContent';
 import type {CreatorContent} from '../services/iap/creatorContent';
-import {isPlusProduct} from '../services/plus/catalog';
+import {PLUS_PRODUCT_IDS, isPlusProduct} from '../services/plus/catalog';
 import {palStore as defaultPalStore} from './PalStore';
 
 import type {PalsHubPal} from '../types/palshub';
@@ -114,6 +114,10 @@ export type FlowPhase =
 
 export type BuyResult = 'close' | 'stay';
 
+export type PlusFlow = 'idle' | 'paying';
+
+export type PlusBuyResult = 'purchased' | 'pending' | 'cancelled' | 'error';
+
 export interface StartOptions {
   store?: StorePort;
   beforeInit?: () => Promise<void>;
@@ -197,6 +201,8 @@ export class PurchaseStore {
   plusUnlocked = false;
   plusPending = false;
   plusChecked = false;
+  plusFlow: PlusFlow = 'idle';
+  plusProductsLoading = false;
 
   private store: StorePort | null = null;
   private unsubscribeStore: (() => void) | null = null;
@@ -204,6 +210,7 @@ export class PurchaseStore {
   private loaded: Promise<void> | null = null;
   private plusLoaded: Promise<void> | null = null;
   private plusRevision = 0;
+  private plusProductsFetch: Promise<void> | null = null;
   private ledgerWritable = true;
   private writeChain: Promise<void> = Promise.resolve();
   private productChains = new Map<string, Promise<unknown>>();
@@ -238,6 +245,7 @@ export class PurchaseStore {
       | 'loaded'
       | 'plusLoaded'
       | 'plusRevision'
+      | 'plusProductsFetch'
       | 'ledgerWritable'
       | 'writeChain'
       | 'productChains'
@@ -260,6 +268,7 @@ export class PurchaseStore {
       loaded: false,
       plusLoaded: false,
       plusRevision: false,
+      plusProductsFetch: false,
       ledgerWritable: false,
       writeChain: false,
       productChains: false,
@@ -318,6 +327,13 @@ export class PurchaseStore {
       Platform.OS === 'ios' &&
       (this.storefront === undefined || this.storefront === 'USA')
     );
+  }
+
+  get plusProducts(): StoreProduct[] {
+    return PLUS_PRODUCT_IDS.flatMap(id => {
+      const product = this.products.get(id);
+      return product ? [product] : [];
+    });
   }
 
   productFor(productId: string | undefined): StoreProduct | undefined {
@@ -466,6 +482,42 @@ export class PurchaseStore {
     if (this.availability !== 'ready') {
       return;
     }
+    await Promise.all([this.fetchPlusProducts(), this.fetchPalProducts()]);
+  }
+
+  private fetchPlusProducts(): Promise<void> {
+    if (this.plusProductsFetch) {
+      return this.plusProductsFetch;
+    }
+    const missing = PLUS_PRODUCT_IDS.filter(id => !this.products.has(id));
+    if (missing.length === 0) {
+      return Promise.resolve();
+    }
+    const run = this.storePort
+      .fetchProducts(missing)
+      .then(
+        products =>
+          runInAction(() => {
+            products.forEach(product =>
+              this.products.set(product.productId, product),
+            );
+          }),
+        () => undefined,
+      )
+      .finally(() =>
+        runInAction(() => {
+          this.plusProductsFetch = null;
+          this.plusProductsLoading = false;
+        }),
+      );
+    runInAction(() => {
+      this.plusProductsFetch = run;
+      this.plusProductsLoading = true;
+    });
+    return run;
+  }
+
+  private async fetchPalProducts(): Promise<void> {
     const wanted = this.deps.palStore.cachedPalsHubPals
       .filter(pal => pal.store_product_id && pal.iap_enabled?.[platform()])
       .map(pal => pal.store_product_id!)
@@ -1271,6 +1323,62 @@ export class PurchaseStore {
         this.setTransient(pal.id, undefined);
       }
     }
+  }
+
+  async buyPlus(productId: string): Promise<PlusBuyResult> {
+    await this.loadPlus();
+    if (!this.canBuyPlus(productId)) {
+      return 'error';
+    }
+    runInAction(() => {
+      this.plusFlow = 'paying';
+    });
+    try {
+      const outcome = await this.storePort.purchase(productId, null);
+      switch (outcome.kind) {
+        case 'purchased':
+          await this.processTransaction(outcome.tx);
+          return 'purchased';
+        case 'pending':
+          await this.serialize(PLUS_CHAIN, async () => this.markPlusPending());
+          return 'pending';
+        case 'already_owned':
+          return (await this.deliverOwnedPlus()) ? 'purchased' : 'error';
+        case 'cancelled':
+          return 'cancelled';
+        default:
+          return 'error';
+      }
+    } catch (error) {
+      console.warn('Buying Plus failed:', error);
+      return 'error';
+    } finally {
+      runInAction(() => {
+        this.plusFlow = 'idle';
+      });
+    }
+  }
+
+  private canBuyPlus(productId: string): boolean {
+    return (
+      isPlusProduct(productId) &&
+      this.availability === 'ready' &&
+      this.plusChecked &&
+      this.products.has(productId) &&
+      !this.plusUnlocked &&
+      !this.plusPending &&
+      this.plusFlow === 'idle'
+    );
+  }
+
+  private async deliverOwnedPlus(): Promise<boolean> {
+    const {transactions} = await this.storePort.currentEntitlements();
+    for (const tx of transactions.filter(candidate =>
+      isPlusProduct(candidate.productId),
+    )) {
+      await this.processTransaction(tx);
+    }
+    return this.plusUnlocked;
   }
 
   private recordPending(palId: string, productId: string): Promise<void> {

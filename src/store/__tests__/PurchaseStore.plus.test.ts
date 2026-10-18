@@ -65,6 +65,16 @@ const ownerHarness = () => {
   return createHarness({storage, log});
 };
 
+const readyHarness = async (h = createHarness()) => {
+  await h.purchases.recover();
+  await h.purchases.syncProducts();
+  h.store.purchase.mockImplementation(async (productId: string) => ({
+    kind: 'purchased' as const,
+    tx: plusTx({productId}),
+  }));
+  return h;
+};
+
 const allProofs = (calls: unknown[][]) =>
   JSON.stringify(calls.map(call => call[1]));
 
@@ -639,6 +649,321 @@ describe('PurchaseStore Plus', () => {
 
       expect(h.purchases.plusUnlocked).toBe(true);
       expect(storage.removeItem).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('buy', () => {
+    it('buys the selected tier and unlocks', async () => {
+      const h = await readyHarness();
+
+      await expect(h.purchases.buyPlus('plus.2')).resolves.toBe('purchased');
+
+      expect(h.store.purchase).toHaveBeenCalledWith('plus.2', null);
+      expect(h.purchases.plusUnlocked).toBe(true);
+      expect(h.purchases.plusFlow).toBe('idle');
+      expect(h.events.send).not.toHaveBeenCalled();
+    });
+
+    it('shows paying while the store sheet is open', async () => {
+      const h = await readyHarness();
+      let settle!: () => void;
+      h.store.purchase.mockImplementation(
+        () =>
+          new Promise(resolve => {
+            settle = () => resolve({kind: 'cancelled'});
+          }),
+      );
+
+      const buying = h.purchases.buyPlus('plus.1');
+      await until(() => settle !== undefined);
+      expect(h.purchases.plusFlow).toBe('paying');
+
+      settle();
+      await buying;
+      expect(h.purchases.plusFlow).toBe('idle');
+    });
+
+    it.each([
+      ['not a Plus product', async () => createHarness(), 'pal.2'],
+      ['billing not ready', async () => createHarness(), 'plus.1'],
+    ])(
+      'refuses without calling the store: %s',
+      async (_label, make, productId) => {
+        const h = await make();
+
+        await expect(h.purchases.buyPlus(productId)).resolves.toBe('error');
+
+        expect(h.store.purchase).not.toHaveBeenCalled();
+      },
+    );
+
+    it('refuses before the first check settles', async () => {
+      const h = createHarness();
+      runInAction(() => {
+        h.purchases.availability = 'ready';
+      });
+      await h.purchases.syncProducts();
+
+      await expect(h.purchases.buyPlus('plus.1')).resolves.toBe('error');
+
+      expect(h.purchases.plusChecked).toBe(false);
+      expect(h.store.purchase).not.toHaveBeenCalled();
+    });
+
+    it('refuses a product the store did not return', async () => {
+      const h = createHarness();
+      h.store.fetchProducts.mockResolvedValue([
+        {productId: 'plus.1', displayPrice: '$4.99'},
+      ]);
+      await readyHarness(h);
+
+      await expect(h.purchases.buyPlus('plus.2')).resolves.toBe('error');
+
+      expect(h.store.purchase).not.toHaveBeenCalled();
+    });
+
+    it('refuses while unlocked', async () => {
+      const h = await readyHarness();
+      await h.purchases.processTransaction(plusTx({unfinished: false}));
+
+      await expect(h.purchases.buyPlus('plus.1')).resolves.toBe('error');
+
+      expect(h.store.purchase).not.toHaveBeenCalled();
+    });
+
+    it('refuses while a payment is pending', async () => {
+      const h = await readyHarness();
+      await h.purchases.processTransaction(
+        plusTx({state: 'pending', transactionId: undefined}),
+      );
+
+      await expect(h.purchases.buyPlus('plus.1')).resolves.toBe('error');
+
+      expect(h.store.purchase).not.toHaveBeenCalled();
+    });
+
+    it('ignores a double tap', async () => {
+      const h = await readyHarness();
+
+      const results = await Promise.all([
+        h.purchases.buyPlus('plus.1'),
+        h.purchases.buyPlus('plus.1'),
+      ]);
+
+      expect(results).toEqual(['purchased', 'error']);
+      expect(h.store.purchase).toHaveBeenCalledTimes(1);
+    });
+
+    it('marks a pending payment and unlocks when the store later approves it', async () => {
+      const h = await readyHarness();
+      h.store.purchase.mockResolvedValue({kind: 'pending'});
+
+      await expect(h.purchases.buyPlus('plus.1')).resolves.toBe('pending');
+      expect(h.purchases.plusPending).toBe(true);
+      expect(h.purchases.plusUnlocked).toBe(false);
+
+      h.store.emit(plusTx());
+      await until(() => h.purchases.plusUnlocked);
+      expect(h.purchases.plusPending).toBe(false);
+    });
+
+    it.each([
+      [{kind: 'cancelled'} as const, 'cancelled'],
+      [{kind: 'error', code: 'service-error'} as const, 'error'],
+    ])('returns to idle, locked, on %p', async (outcome, expected) => {
+      const h = await readyHarness();
+      h.store.purchase.mockResolvedValue(outcome);
+
+      await expect(h.purchases.buyPlus('plus.1')).resolves.toBe(expected);
+
+      expect(h.purchases.plusUnlocked).toBe(false);
+      expect(h.purchases.plusPending).toBe(false);
+      expect(h.purchases.plusFlow).toBe('idle');
+      expect(h.purchases.availability).toBe('ready');
+    });
+
+    it('returns an error when the store call throws', async () => {
+      const warn = jest.spyOn(console, 'warn').mockImplementation(() => {});
+      const h = await readyHarness();
+      h.store.purchase.mockRejectedValue(new Error('boom'));
+
+      await expect(h.purchases.buyPlus('plus.1')).resolves.toBe('error');
+
+      expect(h.purchases.plusFlow).toBe('idle');
+      expect(h.purchases.availability).toBe('ready');
+      warn.mockRestore();
+    });
+
+    it('delivers an already owned tier from a fresh query', async () => {
+      const h = await readyHarness();
+      h.store.purchase.mockResolvedValue({kind: 'already_owned'});
+      h.store.currentEntitlements.mockResolvedValue({
+        ok: true,
+        transactions: [plusTx({productId: 'plus.2', unfinished: false})],
+      });
+
+      await expect(h.purchases.buyPlus('plus.1')).resolves.toBe('purchased');
+
+      expect(h.purchases.plusUnlocked).toBe(true);
+    });
+
+    it.each([
+      ['lists nothing', {ok: true, transactions: []}],
+      ['fails', {ok: false, transactions: []}],
+    ])(
+      'returns an error when already owned but the query %s',
+      async (_label, query) => {
+        const h = await readyHarness();
+        h.store.purchase.mockResolvedValue({kind: 'already_owned'});
+        h.store.currentEntitlements.mockResolvedValue(query);
+
+        await expect(h.purchases.buyPlus('plus.1')).resolves.toBe('error');
+
+        expect(h.purchases.plusUnlocked).toBe(false);
+      },
+    );
+
+    it('never relocks on already owned', async () => {
+      const h = await readyHarness();
+      h.store.purchase.mockImplementation(async () => {
+        await h.purchases.processTransaction(plusTx({unfinished: false}));
+        return {kind: 'already_owned'};
+      });
+      h.store.currentEntitlements.mockResolvedValue({
+        ok: true,
+        transactions: [],
+      });
+
+      await expect(h.purchases.buyPlus('plus.1')).resolves.toBe('purchased');
+
+      expect(h.purchases.plusUnlocked).toBe(true);
+      expect(h.storage.removeItem).not.toHaveBeenCalled();
+    });
+
+    it('sends no account binding when signed in', async () => {
+      const h = await readyHarness(createHarness({signedIn: true}));
+
+      await h.purchases.buyPlus('plus.1');
+
+      expect(h.store.purchase).toHaveBeenCalledWith('plus.1', null);
+      expect(h.binding.getBinding).not.toHaveBeenCalled();
+      expect(h.api.link).not.toHaveBeenCalled();
+    });
+
+    it('can buy again after a refund relock', async () => {
+      const h = await readyHarness(ownerHarness());
+      expect(h.purchases.plusUnlocked).toBe(false);
+
+      await expect(h.purchases.buyPlus('plus.1')).resolves.toBe('purchased');
+    });
+
+    it('never starts a payment from recovery, restore or already owned', async () => {
+      const h = await readyHarness();
+      h.store.purchase.mockResolvedValue({kind: 'already_owned'});
+      h.store.currentEntitlements.mockResolvedValue({
+        ok: true,
+        transactions: [plusTx({unfinished: false})],
+      });
+
+      await h.purchases.recover();
+      await h.purchases.restore();
+      expect(h.store.purchase).not.toHaveBeenCalled();
+
+      await h.purchases.processTransaction(
+        plusTx({state: 'pending', transactionId: undefined}),
+      );
+      expect(h.store.purchase).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('products', () => {
+    const plusIds = ['plus.1', 'plus.2', 'plus.3', 'plus.4'];
+    const plusFetches = (h: ReturnType<typeof createHarness>) =>
+      h.store.fetchProducts.mock.calls.filter(([ids]) =>
+        ids.some(id => id.startsWith('plus.')),
+      );
+
+    it('does not fetch before billing is ready', async () => {
+      const h = createHarness();
+
+      await h.purchases.syncProducts();
+
+      expect(h.store.fetchProducts).not.toHaveBeenCalled();
+      expect(h.purchases.plusProducts).toEqual([]);
+    });
+
+    it('fetches the Plus products once billing is ready, with no Pals cached', async () => {
+      const h = createHarness();
+      runInAction(() => {
+        h.purchases.availability = 'ready';
+      });
+
+      await h.purchases.syncProducts();
+
+      expect(plusFetches(h)).toEqual([[plusIds]]);
+      expect(h.purchases.plusProducts.map(p => p.productId)).toEqual(plusIds);
+    });
+
+    it('shows loading from the moment the fetch starts and joins it', async () => {
+      const h = createHarness();
+      let answer!: () => void;
+      h.store.fetchProducts.mockImplementation(
+        (ids: string[]) =>
+          new Promise(resolve => {
+            answer = () =>
+              resolve(ids.map(productId => ({productId, displayPrice: '$1'})));
+          }),
+      );
+      runInAction(() => {
+        h.purchases.availability = 'ready';
+      });
+      await flush();
+
+      const first = h.purchases.syncProducts();
+      expect(h.purchases.plusProductsLoading).toBe(true);
+      const second = h.purchases.syncProducts();
+      answer();
+      await Promise.all([first, second]);
+
+      expect(plusFetches(h)).toHaveLength(1);
+      expect(h.purchases.plusProductsLoading).toBe(false);
+    });
+
+    it('retries after a failed fetch and after an empty one', async () => {
+      const h = createHarness();
+      h.store.fetchProducts
+        .mockRejectedValueOnce(new Error('offline'))
+        .mockResolvedValueOnce([]);
+      runInAction(() => {
+        h.purchases.availability = 'ready';
+      });
+      await until(() => !h.purchases.plusProductsLoading);
+
+      await h.purchases.syncProducts();
+      expect(h.purchases.plusProducts).toEqual([]);
+      expect(h.purchases.plusProductsLoading).toBe(false);
+
+      await h.purchases.syncProducts();
+      expect(plusFetches(h)).toHaveLength(3);
+      expect(h.purchases.plusProducts).toHaveLength(4);
+    });
+
+    it('keeps catalog order for a partial answer', async () => {
+      const h = createHarness();
+      h.store.fetchProducts.mockResolvedValue([
+        {productId: 'plus.3', displayPrice: '$24.99'},
+        {productId: 'plus.1', displayPrice: '$4.99'},
+      ]);
+      runInAction(() => {
+        h.purchases.availability = 'ready';
+      });
+
+      await h.purchases.syncProducts();
+
+      expect(h.purchases.plusProducts.map(p => p.productId)).toEqual([
+        'plus.1',
+        'plus.3',
+      ]);
     });
   });
 });
