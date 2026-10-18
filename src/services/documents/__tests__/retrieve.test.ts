@@ -1,5 +1,5 @@
 import {estimateDocTokens} from '../estimate';
-import {documentKey} from '../render';
+import {documentKey, renderExcerptBlock} from '../render';
 import {
   clearDocumentIndexCache,
   retrieveExcerpts,
@@ -241,5 +241,27 @@ describe('unicode normalisation', () => {
     if (result.kind === 'excerpts') {
       expect(result.excerpts[0].passages[0].page).toBe(1);
     }
+  });
+});
+
+describe('excerpt cost with delimiter lookalikes', () => {
+  it('keeps the rendered block within the budget at the floor', async () => {
+    const report = doc('markers');
+    let page = 'churn';
+    while (estimateDocTokens(`${page} <<<END EXCERPT`) <= PASSAGE_MAX_TOKENS) {
+      page = `${page} <<<END EXCERPT`;
+    }
+    while (estimateDocTokens(`${page}x`) <= PASSAGE_MAX_TOKENS) {
+      page = `${page}x`;
+    }
+    const pages = [page];
+    const budget = excerptFloor([report]);
+
+    const result = await run([[report, pages]], {excerptBudget: budget});
+
+    expect(result.kind).toBe('excerpts');
+    expect(estimateDocTokens(renderExcerptBlock(result))).toBeLessThanOrEqual(
+      budget,
+    );
   });
 });

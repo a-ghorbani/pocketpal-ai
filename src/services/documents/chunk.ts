@@ -1,5 +1,5 @@
 import {CHARS_PER_TOKEN, DENSE_SCRIPT} from './estimate';
-import {documentKey} from './render';
+import {documentKey, neutraliseDelimiters} from './render';
 import {PASSAGE_MAX_TOKENS, type DocumentRef} from './types';
 
 export interface Passage {
@@ -143,7 +143,7 @@ export const chunkDocument = async (
       await yieldToEventLoop();
     }
     const pieces: string[] = [];
-    for (const piece of pagePieces(source[i])) {
+    for (const piece of pagePieces(neutraliseDelimiters(source[i]))) {
       pieces.push(piece);
       if (pieces.length % PIECES_PER_YIELD === 0) {
         await yieldToEventLoop();

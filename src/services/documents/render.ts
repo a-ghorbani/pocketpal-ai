@@ -42,10 +42,13 @@ const header = (ref: DocumentRef): string => `[${describe(ref)}]`;
 const delimiterOf = (ref: DocumentRef) => ref.id.slice(0, 8);
 
 const DELIMITER_LOOKALIKE =
-  /<<<(?=\s*(?:BEGIN|END)\s+(?:DOCUMENT|EXCERPT)\b)/gi;
+  /<\p{Cf}*<\p{Cf}*<(?=[\s\p{Cf}]*(?:BEGIN|END)[\s\p{Cf}]+(?:DOCUMENT|EXCERPT)\b)/giu;
 
-/** Document text can never open or close a block: `<<<` before a marker word becomes `<<\<`. */
-const neutraliseDelimiters = (text: string): string =>
+/**
+ * Document text can never open or close a block: a `<<<` (format characters
+ * allowed between and after) before a marker word becomes `<<\<`. Idempotent.
+ */
+export const neutraliseDelimiters = (text: string): string =>
   text.replace(DELIMITER_LOOKALIKE, '<<\\<');
 
 export const EXCERPT_LEAD =
