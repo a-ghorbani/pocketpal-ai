@@ -8,7 +8,7 @@ const ref = (id: string, tokenEstimate: number, extra = {}): DocumentRef => ({
   kind: 'pdf',
   byteSize: 1,
   pageCount: 1,
-  charCount: tokenEstimate * 4,
+  charCount: tokenEstimate * 3,
   tokenEstimate,
   ...extra,
 });

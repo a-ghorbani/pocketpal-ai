@@ -1,4 +1,4 @@
-import {DENSE_SCRIPT, estimateDocTokens} from './estimate';
+import {CHARS_PER_TOKEN, DENSE_SCRIPT, estimateDocTokens} from './estimate';
 import {documentKey} from './render';
 import {PASSAGE_MAX_TOKENS, type DocumentRef} from './types';
 
@@ -24,7 +24,7 @@ const fittingPrefix = (text: string, limit: number): number => {
     } else {
       other += 1;
     }
-    if (dense + Math.ceil(other / 4) > limit) {
+    if (dense + Math.ceil(other / CHARS_PER_TOKEN) > limit) {
       break;
     }
     end += char.length;

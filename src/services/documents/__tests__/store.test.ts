@@ -131,7 +131,7 @@ describe('importDocument', () => {
 
     expect(ref).toMatchObject({name: 'report.pdf', kind: 'pdf', pageCount: 2});
     expect(ref.pageRange).toBeUndefined();
-    expect(ref.tokenEstimate).toBe(Math.ceil(ref.charCount / 4));
+    expect(ref.tokenEstimate).toBe(Math.ceil(ref.charCount / 3));
     expect(files.get(`${ROOT}/${ref.id}/source.pdf`)).toBe('%PDF');
     expect(JSON.parse(files.get(`${ROOT}/${ref.id}/text.all.json`)!)).toEqual({
       version: 1,

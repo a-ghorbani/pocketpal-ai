@@ -17,7 +17,7 @@ const ref = (
   kind: 'pdf',
   byteSize: 1,
   pageCount: 10,
-  charCount: tokenEstimate * 4,
+  charCount: tokenEstimate * 3,
   tokenEstimate,
   ...extra,
 });
@@ -92,7 +92,7 @@ describe('documentPlan', () => {
   it('is over for the new message when even one passage does not fit', () => {
     const p = plan({
       windowTokens: 2048,
-      nonDocText: 'x'.repeat(920 * 4),
+      nonDocText: 'x'.repeat(920 * 3),
       documents: [{...ref('file', 900), kind: 'text', pageCount: undefined}],
     });
     expect(p.newModes).toEqual(['searched']);
