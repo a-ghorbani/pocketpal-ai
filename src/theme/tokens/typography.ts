@@ -58,6 +58,7 @@ export const FONT_FAMILIES = {
  * Portuguese needs only Latin-1 (ã õ ç á é í ó ú â ê ô à) and is covered.
  */
 export const NON_LATIN_LOCALES: ReadonlyArray<AvailableLanguage> = [
+  'ar',
   'fa',
   'he',
   'ja',

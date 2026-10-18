@@ -211,9 +211,11 @@ yarn lint           # ESLint
 yarn typecheck      # tsc --noEmit
 yarn test           # Jest
 yarn l10n:validate  # validate locale JSON (placeholders, integrity)
+yarn test:perf      # render-performance tests (Reassure)
+yarn test:perf:compare [base]  # render counts of HEAD vs. base (default: merge-base with origin/main)
 ```
 
-Run `yarn lint && yarn typecheck && yarn test` before opening a PR. Commits are validated by Commitlint ([Conventional Commits](https://www.conventionalcommits.org/)) via a Husky hook.
+Run `yarn lint && yarn typecheck && yarn test` before opening a PR. Pull requests also run the render-count comparison; see [render-performance tests](docs/render-perf-tests.md). Commits are validated by Commitlint ([Conventional Commits](https://www.conventionalcommits.org/)) via a Husky hook.
 
 <details>
 <summary><strong>Repository layout</strong></summary>

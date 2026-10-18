@@ -25,7 +25,9 @@
     "format": "prettier --write \"**/*.{js,ts,tsx,json,md}\"",
     "start": "react-native start",
     "start:reset": "react-native start --reset-cache",
-    "test": "jest"
+    "test": "jest",
+    "test:perf": "reassure",
+    "test:perf:compare": "bash scripts/perf-compare.sh"
   },
   "dependencies": {
     "@dr.pogodin/react-native-fs": "^2.36.0",
@@ -133,6 +135,7 @@
     "react-native-dotenv": "^3.4.11",
     "react-native-svg-transformer": "^1.5.1",
     "react-test-renderer": "19.2.3",
+    "reassure": "1.6.0",
     "typescript": "5.9.3"
   },
   "engines": {
