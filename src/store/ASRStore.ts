@@ -11,22 +11,22 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import DeviceInfo from 'react-native-device-info';
 
 import {
-  ASR_ANDROID_RAM_SHARE,
   ASR_DEFAULT_TIER,
   ASR_DEVICE_TIERS,
   ASR_DISK_HEADROOM_FACTOR,
   ASR_INSUFFICIENT_STORAGE,
-  ASR_IOS_MEMORY_HEADROOM_FACTOR,
   ASR_LEVEL_HISTORY,
   ASR_TIERS,
   ASR_TIER_ORDER,
   whisperAsrEngine,
+  whisperFits,
 } from '../services/asr';
 import type {
   AsrDownloadState,
   AsrErrorKind,
   AsrTier,
   CaptureState,
+  DeviceMemory,
 } from '../services/asr';
 
 import NativeHardwareInfo from '../specs/NativeHardwareInfo';
@@ -105,21 +105,23 @@ export class ASRStore {
     return tier !== null && ASR_DEVICE_TIERS.includes(tier);
   }
 
-  /**
-   * Whether whisper fits next to the loaded chat model. Android's free-memory
-   * figure can be far off (#982), so Android budgets against total RAM; iOS
-   * reports the app's own remaining limit, which is reliable.
-   */
-  async hasMemoryForCapture(): Promise<boolean> {
-    const whisperBytes = ASR_TIERS[this.selectedTier].runtimeBytes;
+  /** Whether the `tier` whisper model fits next to the loaded chat model. */
+  async hasMemoryForCapture(
+    tier: AsrTier = this.selectedTier,
+  ): Promise<boolean> {
     try {
-      if (Platform.OS === 'ios') {
-        const available = await NativeHardwareInfo.getAvailableMemory();
-        return available >= whisperBytes * ASR_IOS_MEMORY_HEADROOM_FACTOR;
-      }
-      const total = await DeviceInfo.getTotalMemory();
-      const chatBytes = modelStore.loadedModelBytes ?? 0;
-      return chatBytes + whisperBytes <= total * ASR_ANDROID_RAM_SHARE;
+      const memory: DeviceMemory =
+        Platform.OS === 'ios'
+          ? {
+              os: 'ios',
+              availableBytes: await NativeHardwareInfo.getAvailableMemory(),
+            }
+          : {os: 'android', totalBytes: await DeviceInfo.getTotalMemory()};
+      return whisperFits(
+        memory,
+        modelStore.loadedModelBytes ?? 0,
+        ASR_TIERS[tier].runtimeBytes,
+      );
     } catch (err) {
       console.warn('[ASRStore] memory check failed:', err);
       return true;
@@ -237,7 +239,10 @@ export class ASRStore {
 
   // --- Model download -----------------------------------------------------
 
-  async downloadModel(tier: AsrTier): Promise<void> {
+  async downloadModel(
+    tier: AsrTier,
+    {select = true}: {select?: boolean} = {},
+  ): Promise<void> {
     if (this.downloadStates[tier] === 'downloading') {
       return;
     }
@@ -286,7 +291,9 @@ export class ASRStore {
       });
       // Installing any tier makes it the active one so the mic becomes
       // actionable without a separate selection step.
-      this.setSelectedTier(tier);
+      if (select) {
+        this.setSelectedTier(tier);
+      }
     } catch (err) {
       console.warn(`[ASRStore] ${tier} download failed:`, err);
       const message = err instanceof Error ? err.message : String(err);

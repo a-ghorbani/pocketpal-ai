@@ -129,6 +129,17 @@ describe('ASRStore', () => {
       await expect(store.hasMemoryForCapture()).resolves.toBe(fits);
     });
 
+    it('budgets a named tier without changing the selected one', async () => {
+      Platform.OS = 'android';
+      (DeviceInfo.getTotalMemory as jest.Mock).mockResolvedValue(7.4e9);
+      modelStore.loadedModelBytes = 3.23e9;
+      store.setSelectedTier('small');
+      await expect(store.hasMemoryForCapture('base')).resolves.toBe(false);
+      modelStore.loadedModelBytes = 1.4e9;
+      await expect(store.hasMemoryForCapture('base')).resolves.toBe(true);
+      expect(store.selectedTier).toBe('small');
+    });
+
     it('does not block recording when memory cannot be read', async () => {
       Platform.OS = 'android';
       (DeviceInfo.getTotalMemory as jest.Mock).mockRejectedValue(
@@ -210,6 +221,14 @@ describe('ASRStore', () => {
       await store.downloadModel('base');
       expect(store.downloadStates.base).toBe('ready');
       expect(store.selectedTier).toBe('base');
+    });
+
+    it('keeps the selected tier when asked not to select', async () => {
+      await store.init();
+      store.setSelectedTier('small');
+      await store.downloadModel('base', {select: false});
+      expect(store.downloadStates.base).toBe('ready');
+      expect(store.selectedTier).toBe('small');
     });
 
     it('records an error when the download throws', async () => {
