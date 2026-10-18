@@ -1,6 +1,6 @@
 import {observable} from 'mobx';
 
-import {PurchaseStore, LEDGER_KEY} from '../PurchaseStore';
+import {PurchaseStore, LEDGER_KEY, PLUS_KEY} from '../PurchaseStore';
 import type {LedgerRecord, PurchaseStoreDeps} from '../PurchaseStore';
 import type {
   PurchaseOutcome,
@@ -66,6 +66,22 @@ export const tx = (
   handle: 'tx-1',
   ...overrides,
 });
+
+export const plusTx = (
+  overrides: Partial<StoreTransaction> = {},
+): StoreTransaction => {
+  const productId = overrides.productId ?? 'plus.1';
+  const transactionId = overrides.transactionId ?? `${productId}-tx`;
+  return {
+    productId,
+    transactionId,
+    state: 'purchased',
+    unfinished: true,
+    proof: {platform: 'ios', jws: `jws-${transactionId}`},
+    handle: transactionId,
+    ...overrides,
+  };
+};
 
 export const result = (
   status: VerifyResult['status'],
@@ -166,11 +182,21 @@ export class MemoryStorage {
   values = new Map<string, string>();
   writes: string[] = [];
   failOnWrite?: number;
+  failPlusWrite = false;
+  failPlusDelete = false;
   private count = 0;
   constructor(private log: string[]) {}
 
   getItem = jest.fn(async (key: string) => this.values.get(key) ?? null);
   setItem = jest.fn(async (key: string, value: string) => {
+    if (key === PLUS_KEY) {
+      if (this.failPlusWrite) {
+        throw new Error('crash');
+      }
+      this.values.set(key, value);
+      this.log.push('write:plus');
+      return;
+    }
     this.count += 1;
     if (this.failOnWrite === this.count) {
       throw new Error('crash');
@@ -184,6 +210,26 @@ export class MemoryStorage {
       .join(',');
     this.log.push(`write:${status}`);
   });
+
+  removeItem = jest.fn(async (key: string) => {
+    if (key === PLUS_KEY && this.failPlusDelete) {
+      throw new Error('crash');
+    }
+    this.values.delete(key);
+    this.log.push(key === PLUS_KEY ? 'delete:plus' : `delete-key:${key}`);
+  });
+
+  plusDoc(): {version: number; productId: string} | null {
+    const raw = this.values.get(PLUS_KEY);
+    return raw ? JSON.parse(raw) : null;
+  }
+
+  seedPlus(productId = 'plus.1') {
+    this.values.set(
+      PLUS_KEY,
+      JSON.stringify({version: 1, productId, unlockedAt: 1}),
+    );
+  }
 
   ledger(): Record<string, LedgerRecord> {
     const raw = this.values.get(LEDGER_KEY);

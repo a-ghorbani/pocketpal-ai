@@ -22,11 +22,13 @@ import type {StorePlatform, VerifyResult} from '../services/iap/iapWire';
 import type {LinkOutcome} from '../services/iap/iapApi';
 import {changedCreatorFields} from '../services/iap/creatorContent';
 import type {CreatorContent} from '../services/iap/creatorContent';
+import {isPlusProduct} from '../services/plus/catalog';
 import {palStore as defaultPalStore} from './PalStore';
 
 import type {PalsHubPal} from '../types/palshub';
 
 export const LEDGER_KEY = 'purchase-ledger';
+export const PLUS_KEY = 'plus-entitlement';
 export const RETRY_DELAYS_MS = [2_000, 4_000, 8_000, 16_000, 32_000];
 export const RETRY_STEADY_MS = 60_000;
 export const STALE_PENDING_MS = 72 * 60 * 60 * 1000;
@@ -74,6 +76,26 @@ interface Ledger {
   version: 1;
   records: Record<string, LedgerRecord>;
 }
+
+interface PlusEntitlementDoc {
+  version: 1;
+  productId: string;
+  unlockedAt: number;
+}
+
+const PLUS_CHAIN = 'plus';
+
+const isPlusDoc = (raw: string | null): boolean => {
+  if (raw === null) {
+    return false;
+  }
+  try {
+    const doc = JSON.parse(raw) as Partial<PlusEntitlementDoc> | null;
+    return doc?.version === 1 && typeof doc.productId === 'string';
+  } catch {
+    return false;
+  }
+};
 
 export type Availability = 'initializing' | 'ready' | 'unavailable';
 
@@ -125,6 +147,7 @@ export interface PurchaseStoreDeps {
   storage: {
     getItem(key: string): Promise<string | null>;
     setItem(key: string, value: string): Promise<void>;
+    removeItem(key: string): Promise<void>;
   };
   now: () => number;
   events: PalEvents;
@@ -168,11 +191,15 @@ export class PurchaseStore {
   linkConflict = false;
   isRestoring = false;
   storefront: string | undefined = undefined;
+  plusUnlocked = false;
+  plusPending = false;
 
   private store: StorePort | null = null;
   private unsubscribeStore: (() => void) | null = null;
   private deps: PurchaseStoreDeps;
   private loaded: Promise<void> | null = null;
+  private plusLoaded: Promise<void> | null = null;
+  private plusRevision = 0;
   private ledgerWritable = true;
   private writeChain: Promise<void> = Promise.resolve();
   private productChains = new Map<string, Promise<unknown>>();
@@ -205,6 +232,8 @@ export class PurchaseStore {
       | 'unsubscribeStore'
       | 'deps'
       | 'loaded'
+      | 'plusLoaded'
+      | 'plusRevision'
       | 'ledgerWritable'
       | 'writeChain'
       | 'productChains'
@@ -225,6 +254,8 @@ export class PurchaseStore {
       unsubscribeStore: false,
       deps: false,
       loaded: false,
+      plusLoaded: false,
+      plusRevision: false,
       ledgerWritable: false,
       writeChain: false,
       productChains: false,
@@ -481,6 +512,26 @@ export class PurchaseStore {
     }
   }
 
+  loadPlus(): Promise<void> {
+    if (!this.plusLoaded) {
+      this.plusLoaded = this.readPlus();
+    }
+    return this.plusLoaded;
+  }
+
+  private async readPlus(): Promise<void> {
+    let raw: string | null = null;
+    try {
+      raw = await this.deps.storage.getItem(PLUS_KEY);
+    } catch {
+      raw = null;
+    }
+    const unlocked = isPlusDoc(raw);
+    runInAction(() => {
+      this.plusUnlocked = unlocked;
+    });
+  }
+
   markLedgerWritable(): void {
     this.ledgerWritable = true;
   }
@@ -582,7 +633,47 @@ export class PurchaseStore {
     tx: StoreTransaction,
     opts: ProcessOptions = {},
   ): Promise<void> {
+    if (isPlusProduct(tx.productId)) {
+      return this.serialize(PLUS_CHAIN, () => this.runPlus(tx));
+    }
     return this.serialize(tx.productId, () => this.runTransaction(tx, opts));
+  }
+
+  private async runPlus(tx: StoreTransaction): Promise<void> {
+    await this.loadPlus();
+    if (tx.state === 'pending') {
+      this.markPlusPending();
+      return;
+    }
+    runInAction(() => {
+      this.plusUnlocked = true;
+      this.plusPending = false;
+    });
+    this.plusRevision += 1;
+    const doc: PlusEntitlementDoc = {
+      version: 1,
+      productId: tx.productId,
+      unlockedAt: this.deps.now(),
+    };
+    try {
+      await this.deps.storage.setItem(PLUS_KEY, JSON.stringify(doc));
+    } catch (error) {
+      console.warn('Saving the Plus unlock failed:', error);
+      return;
+    }
+    if (tx.unfinished) {
+      await this.finish(tx);
+    }
+  }
+
+  private markPlusPending(): void {
+    if (this.plusUnlocked) {
+      return;
+    }
+    runInAction(() => {
+      this.plusPending = true;
+    });
+    this.plusRevision += 1;
   }
 
   private async finish(tx: StoreTransaction): Promise<void> {
@@ -1140,6 +1231,7 @@ export class PurchaseStore {
       return;
     }
     this.started = true;
+    this.loadPlus().catch(() => {});
     await beforeInit?.();
     if (store) {
       this.setStore(store);
@@ -1292,7 +1384,7 @@ export class PurchaseStore {
 
   private async refresh(txs: StoreTransaction[]): Promise<boolean> {
     const proofs = txs
-      .filter(tx => tx.state === 'purchased')
+      .filter(tx => tx.state === 'purchased' && !isPlusProduct(tx.productId))
       .map(tx => tx.proof);
     const known = Object.fromEntries(
       Object.values(this.records)
