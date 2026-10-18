@@ -1,3 +1,8 @@
+import type {
+  StreamProgressEvent,
+  SynthesisOptions,
+} from '@pocketpalai/react-native-speech';
+
 /**
  * TTS service types.
  *
@@ -51,6 +56,16 @@ export interface StreamingHandle {
   cancel(): Promise<void>;
 }
 
+/** Per-stream options for `Engine.playStreaming`. */
+export interface StreamOptions {
+  /** `'clause'` starts speaking at the first clause instead of sentence. */
+  firstChunk?: SynthesisOptions['firstChunk'];
+  /** `false` when the caller has already stripped markdown itself. */
+  stripMarkdown?: boolean;
+  /** Called as each chunk starts playing, with its range in the stream. */
+  onProgress?: (event: StreamProgressEvent) => void;
+}
+
 export interface Engine {
   readonly id: EngineId;
   /** Returns whether the engine is ready to play (models installed, etc). */
@@ -79,7 +94,11 @@ export interface Engine {
    * `waitFor` delays the first synthesis until the promise resolves,
    * preventing a prior `Speech.stop()` from killing the new stream.
    */
-  playStreaming(voice: Voice, waitFor?: Promise<void>): StreamingHandle;
+  playStreaming(
+    voice: Voice,
+    waitFor?: Promise<void>,
+    streamOpts?: StreamOptions,
+  ): StreamingHandle;
   /** Stop any in-flight playback. Safe to call when idle. */
   stop(): Promise<void>;
 }

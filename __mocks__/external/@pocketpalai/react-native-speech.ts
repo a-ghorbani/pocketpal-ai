@@ -47,6 +47,7 @@ export interface MockSpeechStream {
   append: jest.Mock;
   finalize: jest.Mock;
   cancel: jest.Mock;
+  onProgress: jest.Mock;
 }
 
 const createdStreams: MockSpeechStream[] = [];
@@ -59,6 +60,7 @@ const createSpeechStream = jest.fn(
       append: jest.fn(),
       finalize: jest.fn().mockResolvedValue(undefined),
       cancel: jest.fn().mockResolvedValue(undefined),
+      onProgress: jest.fn(() => jest.fn()),
     };
     createdStreams.push(stream);
     return stream;
