@@ -1,0 +1,49 @@
+/** How one voice turn ended. Failures name the stage that failed. */
+export type VoiceTurnOutcome =
+  | 'empty'
+  | 'answered'
+  | 'interrupted'
+  | 'transcribe_failed'
+  | 'reply_failed'
+  | 'speech_failed';
+
+/** The chat the voice session talks to, backed by `useChatSession`. */
+export interface VoiceTurnPort {
+  /**
+   * Sends `text` as a spoken chat turn. `onTurnCreated` receives the
+   * assistant turn's id once its row exists; the promise resolves when the
+   * run settles.
+   */
+  send(text: string, onTurnCreated: (turnId: string) => void): Promise<void>;
+  /** Stops the running reply, as the Stop button does. */
+  stop(): void;
+}
+
+export interface VoiceTurnEvents {
+  transcribed(text: string): void;
+  speechStarted(): void;
+}
+
+export interface VoiceTurn {
+  done: Promise<VoiceTurnOutcome>;
+  /** Stops the turn; resolves once the chat holds only what was spoken. */
+  interrupt(): Promise<void>;
+}
+
+/**
+ * Turns one utterance into a spoken reply. The cascade (whisper, chat
+ * model, TTS) is the only engine; a native speech-to-speech engine would
+ * implement the same turn from audio.
+ */
+export interface VoiceEngine {
+  readonly id: 'cascade';
+  /** Makes the speech models resident for the session. */
+  prepare(): Promise<void>;
+  /** Frees them; resolves once any in-flight decode has stopped. */
+  release(): Promise<void>;
+  runTurn(
+    utterance: Uint8Array,
+    port: VoiceTurnPort,
+    on: VoiceTurnEvents,
+  ): VoiceTurn;
+}
