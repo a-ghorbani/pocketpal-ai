@@ -120,6 +120,7 @@ describe('design-token grep invariants', () => {
       // onboarding; lives at app-level above the navigator.
       'components/DownloadOverlay',
       'components/DownloadProgressCard',
+      'screens/PlusScreen',
     ];
     const files = listFiles(SRC).filter(f => {
       const rel = path.relative(SRC, f).replace(/\\/g, '/');

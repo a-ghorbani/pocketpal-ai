@@ -38,6 +38,7 @@ const EXPECTED_SECTIONS = [
   'htmlPreview',
   'onboarding',
   'downloadBanner',
+  'plus',
 ];
 
 const ALL_LANGUAGES: AvailableLanguage[] = [

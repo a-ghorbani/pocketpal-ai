@@ -1,0 +1,390 @@
+import React, {useContext, useState} from 'react';
+import {
+  ActivityIndicator,
+  Linking,
+  Pressable,
+  ScrollView,
+  Text,
+  useWindowDimensions,
+  View,
+} from 'react-native';
+import {observer} from 'mobx-react';
+import {useSafeAreaInsets} from 'react-native-safe-area-context';
+
+import {AlertIcon, ClockFastForwardIcon, XIcon} from '../../assets/icons';
+import {useTheme} from '../../hooks';
+import {t} from '../../locales';
+import {purchaseStore} from '../../store';
+import {L10nContext} from '../../utils';
+import {PLUS_FEATURES} from '../../services/plus/catalog';
+import {anyRunnable, featureRows} from '../../services/plus/features';
+import type {PlusFeatureRow} from '../../services/plus/features';
+import {deviceRam} from '../../services/plus/deviceRam';
+import {shipOverride} from '../../services/plus/shipOverride';
+
+import {CheckGlyph, InfoGlyph, SparkleIcon} from './SparkleIcon';
+import {plusScreenState} from './plusScreenState';
+import {createStyles} from './styles';
+
+export const REPO_URL = 'https://github.com/a-ghorbani/pocketpal-ai';
+export const APPLE_EULA_URL =
+  'https://www.apple.com/legal/internet-services/itunes/dev/stdeula/';
+export const APPLE_MEDIA_TERMS_URL =
+  'https://www.apple.com/legal/internet-services/itunes/us/terms.html';
+
+const COMPACT_HEIGHT = 760;
+const INFO_HIT_SLOP = {top: 15, bottom: 15, left: 15, right: 15};
+
+type RestoreNote = 'none' | 'failed' | null;
+
+interface PlusScreenProps {
+  onClose: () => void;
+}
+
+export const PlusScreen: React.FC<PlusScreenProps> = observer(({onClose}) => {
+  const {height} = useWindowDimensions();
+  const theme = useTheme();
+  const styles = createStyles(theme, height < COMPACT_HEIGHT);
+  const insets = useSafeAreaInsets();
+  const l10n = useContext(L10nContext);
+  const copy = l10n.plus;
+  const featureNames: Record<string, string> = copy.features;
+
+  const [selectedId, setSelectedId] = useState<string>();
+  const [lastBuyFailed, setLastBuyFailed] = useState(false);
+  const [restoreNote, setRestoreNote] = useState<RestoreNote>(null);
+  const [infoShown, setInfoShown] = useState(false);
+
+  const products = purchaseStore.plusProducts;
+  const selected =
+    products.find(product => product.productId === selectedId) ?? products[0];
+  const rows = featureRows(
+    PLUS_FEATURES,
+    deviceRam.ramBytes,
+    shipOverride.get(),
+  );
+  const state = plusScreenState({
+    plusUnlocked: purchaseStore.plusUnlocked,
+    plusFlow: purchaseStore.plusFlow,
+    plusPending: purchaseStore.plusPending,
+    availability: purchaseStore.availability,
+    plusChecked: purchaseStore.plusChecked,
+    plusProductsLoading: purchaseStore.plusProductsLoading,
+    ramBytes: deviceRam.ramBytes,
+    productCount: products.length,
+    lastBuyFailed,
+    showsLicenseNotice: purchaseStore.showsLicenseNotice,
+    anyFeatureRunnable: anyRunnable(rows),
+  });
+  const {phase} = state;
+  const purchased = phase === 'purchased';
+  const paying = phase === 'paying';
+  const showsGrid = phase === 'idle' || paying;
+
+  const handleBuy = async () => {
+    if (!selected) {
+      return;
+    }
+    setRestoreNote(null);
+    const result = await purchaseStore.buyPlus(selected.productId);
+    setLastBuyFailed(result === 'error');
+  };
+
+  const handleRestore = async () => {
+    setRestoreNote(null);
+    try {
+      const {queryOk} = await purchaseStore.restore();
+      if (!purchaseStore.plusUnlocked) {
+        setRestoreNote(queryOk ? 'none' : 'failed');
+      }
+    } catch {
+      setRestoreNote('failed');
+    }
+  };
+
+  const statusView = (row: PlusFeatureRow) => {
+    if (row.status === 'ready') {
+      return (
+        <View style={styles.status}>
+          <CheckGlyph color={theme.colors.btnReadyText} />
+          <Text style={[styles.statusText, styles.statusReady]}>
+            {copy.ready}
+          </Text>
+        </View>
+      );
+    }
+    if (row.status === 'soon') {
+      return (
+        <View style={styles.status}>
+          <Text style={styles.statusText}>{copy.comingSoon}</Text>
+          <Pressable
+            testID={`plus-info-${row.id}`}
+            accessibilityRole="button"
+            accessibilityLabel={copy.inDevelopment}
+            accessibilityState={{expanded: infoShown}}
+            hitSlop={INFO_HIT_SLOP}
+            onPress={() => setInfoShown(shown => !shown)}>
+            <InfoGlyph color={theme.colors.onSurfaceVariant} />
+          </Pressable>
+        </View>
+      );
+    }
+    return (
+      <View style={styles.status}>
+        <Text style={styles.statusText}>
+          {t(copy.needsRam, {gb: String(row.status.needsGb)})}
+        </Text>
+      </View>
+    );
+  };
+
+  const subline = purchased
+    ? copy.thanksSubline
+    : state.unsupported
+      ? copy.unsupportedSubline
+      : copy.subline;
+
+  const notice = (
+    testID: string,
+    title: string,
+    body: string,
+    icon: React.ReactNode,
+  ) => (
+    <View style={styles.notice} accessibilityLiveRegion="polite">
+      {icon}
+      <View style={styles.noticeBody}>
+        <Text testID={testID} style={styles.noticeText}>
+          {title}
+        </Text>
+        <Text style={styles.noticeSub}>{body}</Text>
+      </View>
+    </View>
+  );
+
+  const ctaLabel = () => {
+    const price = selected?.displayPrice ?? '';
+    return state.unsupported
+      ? t(copy.getPlusAnyway, {price})
+      : t(copy.getPlus, {price});
+  };
+
+  const cta = () => {
+    if (purchased) {
+      return (
+        <Pressable
+          testID="plus-done"
+          accessibilityRole="button"
+          onPress={onClose}
+          style={styles.primaryBtn}>
+          <Text style={styles.primaryLabel}>{copy.done}</Text>
+        </Pressable>
+      );
+    }
+    if (phase === 'pending') {
+      return (
+        <Pressable
+          testID="plus-cta"
+          accessibilityRole="button"
+          accessibilityState={{disabled: true}}
+          disabled
+          style={[styles.primaryBtn, styles.primaryBtnBusy]}>
+          <Text style={[styles.primaryLabel, styles.primaryLabelBusy]}>
+            {copy.pending}
+          </Text>
+        </Pressable>
+      );
+    }
+    if (!showsGrid) {
+      return null;
+    }
+    return (
+      <Pressable
+        testID="plus-cta"
+        accessibilityRole="button"
+        accessibilityState={{busy: paying, disabled: paying}}
+        disabled={paying}
+        onPress={handleBuy}
+        style={[styles.primaryBtn, paying && styles.primaryBtnBusy]}>
+        {paying ? (
+          <ActivityIndicator color={theme.colors.onBackground} />
+        ) : (
+          <Text style={styles.primaryLabel}>{ctaLabel()}</Text>
+        )}
+      </Pressable>
+    );
+  };
+
+  return (
+    <View testID="plus-screen" style={[styles.root, {paddingTop: insets.top}]}>
+      <ScrollView
+        contentContainerStyle={[
+          styles.content,
+          {paddingBottom: insets.bottom + theme.spacing.s},
+        ]}
+        bounces={false}>
+        <View style={styles.topBar}>
+          <View style={styles.eyebrow}>
+            <SparkleIcon size={14} color={theme.colors.secondary} filled />
+            <Text style={styles.eyebrowText}>{copy.eyebrow}</Text>
+          </View>
+          <Pressable
+            testID="plus-close"
+            accessibilityRole="button"
+            accessibilityLabel={l10n.common.close}
+            onPress={onClose}
+            style={styles.closeBtn}>
+            <XIcon width={22} height={22} stroke={theme.colors.onBackground} />
+          </Pressable>
+        </View>
+
+        <View style={styles.header}>
+          {purchased && (
+            <View style={styles.thanksBadge}>
+              <SparkleIcon size={24} color={theme.colors.secondary} filled />
+            </View>
+          )}
+          <Text accessibilityRole="header" style={styles.headline}>
+            {purchased ? copy.thanksHeadline : copy.headline}
+          </Text>
+          <Text style={styles.subline}>{subline}</Text>
+        </View>
+
+        <View style={styles.features}>
+          {rows.map((row, index) => (
+            <View key={row.id} testID={`plus-feature-${row.id}`}>
+              {index > 0 && <View style={styles.featureDivider} />}
+              <View style={styles.featureRow}>
+                <Text
+                  style={[
+                    styles.featureName,
+                    row.status !== 'ready' && styles.featureNameMuted,
+                  ]}>
+                  {featureNames[row.id] ?? row.id}
+                </Text>
+                {statusView(row)}
+              </View>
+            </View>
+          ))}
+        </View>
+        <Text style={styles.speedLine} accessibilityLiveRegion="polite">
+          {infoShown ? copy.inDevelopment : copy.speedLine}
+        </Text>
+
+        <View testID="plus-spacer" style={styles.spacer} />
+
+        {phase === 'pending' &&
+          notice(
+            'plus-pending-notice',
+            copy.pendingTitle,
+            copy.pendingBody,
+            <ClockFastForwardIcon
+              width={18}
+              height={18}
+              stroke={theme.colors.onSurfaceVariant}
+            />,
+          )}
+        {phase === 'unavailable' &&
+          notice(
+            'plus-unavailable-notice',
+            copy.unavailableTitle,
+            copy.unavailableBody,
+            <AlertIcon
+              width={18}
+              height={18}
+              stroke={theme.colors.onSurfaceVariant}
+            />,
+          )}
+
+        {showsGrid && (
+          <>
+            {state.error ? (
+              <View style={styles.inlineError} accessibilityLiveRegion="polite">
+                <AlertIcon width={16} height={16} stroke={theme.colors.error} />
+                <Text testID="plus-error-line" style={styles.inlineErrorText}>
+                  {copy.buyError}
+                </Text>
+              </View>
+            ) : (
+              <Text style={styles.priceCaption}>{copy.priceCaption}</Text>
+            )}
+            <View accessibilityRole="radiogroup" style={styles.grid}>
+              {products.map(product => {
+                const checked = product.productId === selected?.productId;
+                return (
+                  <Pressable
+                    key={product.productId}
+                    testID={`plus-tile-${product.productId}`}
+                    accessibilityRole="radio"
+                    accessibilityState={{checked, disabled: paying}}
+                    disabled={paying}
+                    onPress={() => setSelectedId(product.productId)}
+                    style={[styles.tile, checked && styles.tileSelected]}>
+                    <Text style={styles.tileText}>{product.displayPrice}</Text>
+                  </Pressable>
+                );
+              })}
+            </View>
+          </>
+        )}
+
+        {state.licence && (
+          <Text testID="plus-licence" style={styles.licence}>
+            {copy.licence}{' '}
+            <Text
+              accessibilityRole="link"
+              style={styles.footerLink}
+              onPress={() => Linking.openURL(APPLE_EULA_URL)}>
+              {copy.terms}
+            </Text>
+            {' · '}
+            <Text
+              accessibilityRole="link"
+              style={styles.footerLink}
+              onPress={() => Linking.openURL(APPLE_MEDIA_TERMS_URL)}>
+              {copy.appleMediaTerms}
+            </Text>
+          </Text>
+        )}
+
+        {cta()}
+
+        {!purchased && restoreNote && (
+          <Text
+            testID="plus-restore-note"
+            style={styles.restoreNote}
+            accessibilityLiveRegion="polite">
+            {restoreNote === 'none' ? copy.noPurchaseFound : copy.restoreFailed}
+          </Text>
+        )}
+
+        {!purchased && (
+          <View style={styles.footer}>
+            {!state.licence && (
+              <>
+                <Text style={styles.footerText}>{copy.oneTimePurchase}</Text>
+                <Text style={styles.footerDot}>·</Text>
+              </>
+            )}
+            <Pressable
+              testID="plus-restore"
+              accessibilityRole="button"
+              accessibilityState={{disabled: purchaseStore.isRestoring}}
+              disabled={purchaseStore.isRestoring}
+              onPress={handleRestore}
+              style={styles.footerHit}>
+              <Text style={styles.footerLink}>{copy.restore}</Text>
+            </Pressable>
+            <Text style={styles.footerDot}>·</Text>
+            <Pressable
+              testID="plus-open-source"
+              accessibilityRole="link"
+              onPress={() => Linking.openURL(REPO_URL)}
+              style={styles.footerHit}>
+              <Text style={styles.footerLink}>{copy.openSource}</Text>
+            </Pressable>
+          </View>
+        )}
+      </ScrollView>
+    </View>
+  );
+});
