@@ -55,6 +55,37 @@ describe('splitPage', () => {
     );
   });
 
+  it('keeps a short heading with the text that follows it', () => {
+    const body = Array.from({length: 30}, (_, i) => sentence(i)).join(' ');
+    const pieces = splitPage(`Results\n\n${body}`);
+    expect(pieces.length).toBeGreaterThan(1);
+    expect(pieces[0].startsWith('Results\n\nSentence number 0')).toBe(true);
+    pieces.forEach(piece => {
+      expect(estimateDocTokens(piece)).toBeLessThanOrEqual(PASSAGE_MAX_TOKENS);
+      expect(estimateDocTokens(piece)).toBeGreaterThanOrEqual(
+        PASSAGE_MAX_TOKENS / 4,
+      );
+    });
+  });
+
+  it('never leaves a lone short piece at the end of a page', () => {
+    let body = sentence(0);
+    for (let i = 1; estimateDocTokens(`${body} ${sentence(i)}`) <= 199; i++) {
+      body = `${body} ${sentence(i)}`;
+    }
+    const page = `${body}\n\nThe end.`;
+    expect(estimateDocTokens(page)).toBeGreaterThan(PASSAGE_MAX_TOKENS);
+    const pieces = splitPage(page);
+    expect(pieces.length).toBeGreaterThan(1);
+    expect(pieces[pieces.length - 1].endsWith('The end.')).toBe(true);
+    pieces.forEach(piece => {
+      expect(estimateDocTokens(piece)).toBeLessThanOrEqual(PASSAGE_MAX_TOKENS);
+      expect(estimateDocTokens(piece)).toBeGreaterThanOrEqual(
+        PASSAGE_MAX_TOKENS / 4,
+      );
+    });
+  });
+
   it('yields nothing for an empty page', () => {
     expect(splitPage('   \n ')).toEqual([]);
   });

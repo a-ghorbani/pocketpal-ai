@@ -32,23 +32,36 @@ const fittingPrefix = (text: string, limit: number): number => {
   return end;
 };
 
-const lastMatchEnd = (text: string, pattern: RegExp): number => {
-  let end = -1;
-  for (const match of text.matchAll(pattern)) {
-    end = (match.index ?? 0) + match[0].length;
-  }
-  return end;
-};
+const matchEnds = (text: string, pattern: RegExp): number[] =>
+  [...text.matchAll(pattern)].map(
+    match => (match.index ?? 0) + match[0].length,
+  );
+
+/** Pieces shorter than this are headings or stray tails; they ride with a neighbour. */
+const MIN_PASSAGE_TOKENS = PASSAGE_MAX_TOKENS / 4;
+
+const BREAKS = [/\n\s*\n/g, /[.!?。！？](?=\s)|[。！？]/g, /\s+/g];
 
 const cutPoint = (text: string): number => {
   const prefix = text.slice(0, fittingPrefix(text, PASSAGE_MAX_TOKENS));
-  const candidates = [
-    lastMatchEnd(prefix, /\n\s*\n/g),
-    lastMatchEnd(prefix, /[.!?。！？](?=\s)|[。！？]/g),
-    lastMatchEnd(prefix, /\s+/g),
-  ];
-  const cut = candidates.find(end => end > 0);
-  return cut ?? Math.max(1, prefix.length);
+  const substantial = (part: string) =>
+    estimateDocTokens(part.trim()) >= MIN_PASSAGE_TOKENS;
+  for (const pattern of BREAKS) {
+    const ends = matchEnds(prefix, pattern).filter(end => end > 0);
+    const balanced = ends.filter(
+      end => substantial(text.slice(0, end)) && substantial(text.slice(end)),
+    );
+    if (balanced.length > 0) {
+      return balanced[balanced.length - 1];
+    }
+  }
+  for (const pattern of BREAKS) {
+    const ends = matchEnds(prefix, pattern).filter(end => end > 0);
+    if (ends.length > 0) {
+      return ends[ends.length - 1];
+    }
+  }
+  return Math.max(1, prefix.length);
 };
 
 /** Splits one page into passages of at most PASSAGE_MAX_TOKENS estimated tokens. */
