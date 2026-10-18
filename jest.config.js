@@ -1,7 +1,7 @@
 module.exports = {
   preset: '@react-native/jest-preset',
   resolver: '<rootDir>/jest/resolver.js',
-  collectCoverage: true,
+  collectCoverage: !process.env.REASSURE_OUTPUT_FILE,
   collectCoverageFrom: [
     'src/**/*.{ts,tsx}',
     '!**/index.{ts,tsx}',
@@ -11,6 +11,7 @@ module.exports = {
     '!**/ImageView.android.ts',
     '!**/ImageView.ios.ts',
     '!**/ImageView.tsx',
+    '!**/*.perf-test.{ts,tsx}',
   ],
   coveragePathIgnorePatterns: ['/src/screens/DevToolsScreen/'],
   coverageThreshold: {

@@ -68,6 +68,7 @@ package-lock.json
 
 # testing
 /coverage
+.reassure/
 .env
 
 # Firebase config files (prod + all flavor-specific overrides)
