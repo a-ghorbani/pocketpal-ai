@@ -1,5 +1,11 @@
 import * as React from 'react';
-import {Appearance, Dimensions, StyleSheet, View} from 'react-native';
+import {
+  Appearance,
+  Dimensions,
+  StatusBar,
+  StyleSheet,
+  View,
+} from 'react-native';
 
 import {observer} from 'mobx-react';
 import {isHydrated} from 'mobx-persist-store';
@@ -114,6 +120,11 @@ const App = observer(() => {
 
   return (
     <GestureHandlerRootView style={styles.root}>
+      <StatusBar
+        barStyle={theme.dark ? 'light-content' : 'dark-content'}
+        translucent
+        backgroundColor="transparent"
+      />
       {__E2E__ ? <AutomationBridge /> : null}
       <SafeAreaProvider>
         <KeyboardProvider statusBarTranslucent navigationBarTranslucent>

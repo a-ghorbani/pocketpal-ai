@@ -2,9 +2,11 @@
  * @format
  */
 
-import 'react-native';
+import {StatusBar} from 'react-native';
 import React from 'react';
 import App from '../App';
+import {useTheme} from '../src/hooks/useTheme';
+import {themeFixtures} from '../jest/fixtures/theme';
 jest.useFakeTimers(); // Mock all timers
 
 // Note: import explicitly to use the types shipped with jest.
@@ -63,4 +65,32 @@ it('mounts the app once UIStore hydration completes', () => {
   // Splash gone, post-hydration tree mounted (drawer titles present).
   expect(result.queryByTestId('hydration-splash')).toBeNull();
   expect(result.queryByText('Models')).not.toBeNull();
+});
+
+describe('status bar', () => {
+  afterEach(() => {
+    (useTheme as jest.Mock).mockReturnValue(themeFixtures.lightTheme);
+  });
+
+  it('shows dark icons over the light theme without an opaque bar', () => {
+    const result = render(<App />);
+
+    expect(result.UNSAFE_getByType(StatusBar).props).toMatchObject({
+      barStyle: 'dark-content',
+      translucent: true,
+      backgroundColor: 'transparent',
+    });
+  });
+
+  it('shows light icons over the dark theme', () => {
+    (useTheme as jest.Mock).mockReturnValue(themeFixtures.darkTheme);
+
+    const result = render(<App />);
+
+    expect(result.UNSAFE_getByType(StatusBar).props).toMatchObject({
+      barStyle: 'light-content',
+      translucent: true,
+      backgroundColor: 'transparent',
+    });
+  });
 });
