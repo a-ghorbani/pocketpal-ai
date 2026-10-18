@@ -1,6 +1,6 @@
 import {chunkDocument, type Passage} from './chunk';
 import {estimateDocTokens} from './estimate';
-import {EXCERPT_LEAD_TOKENS, excerptOverhead} from './plan';
+import {EXCERPT_LEAD_TOKENS, excerptCost} from './plan';
 import {documentKey} from './render';
 import type {DocumentTexts} from './store';
 import {
@@ -218,7 +218,7 @@ const discriminativeHits = (query: string, corpus: CorpusEntry[]): number => {
   return hits;
 };
 
-const passageCost = (passage: Passage) => estimateDocTokens(passage.text) + 1;
+const tokensOf = (passage: Passage) => estimateDocTokens(passage.text);
 
 export interface RetrieveInput {
   query: string;
@@ -300,15 +300,23 @@ export const retrieveExcerpts = async ({
       : free(position - 1)
         ? position - 1
         : undefined;
-    const single = excerptOverhead(entry.index.ref) + passageCost(passage);
+    const single = excerptCost(entry.index.ref, [tokensOf(passage)]);
+    const pair =
+      neighbour === undefined
+        ? undefined
+        : excerptCost(entry.index.ref, [
+            tokensOf(passage),
+            tokensOf(passages[neighbour]),
+          ]);
     let positions: number[] | undefined;
     if (
       EXCERPT_MAX_PASSAGES > 1 &&
       neighbour !== undefined &&
-      single + passageCost(passages[neighbour]) <= remaining
+      pair !== undefined &&
+      pair <= remaining
     ) {
       positions = [position, neighbour].sort((a, b) => a - b);
-      remaining -= single + passageCost(passages[neighbour]);
+      remaining -= pair;
     } else if (single <= remaining) {
       positions = [position];
       remaining -= single;

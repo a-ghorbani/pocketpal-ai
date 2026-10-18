@@ -7,7 +7,8 @@ import {
   type RetrieveInput,
 } from '../retrieve';
 import type {DocumentTexts} from '../store';
-import {EXCERPT_K, type DocumentRef} from '../types';
+import {excerptFloor} from '../plan';
+import {EXCERPT_K, PASSAGE_MAX_TOKENS, type DocumentRef} from '../types';
 
 const doc = (id: string, extra: Partial<DocumentRef> = {}): DocumentRef => ({
   id: `${id}-00000000`,
@@ -193,5 +194,23 @@ describe('retrieveExcerpts', () => {
     if (result.kind === 'excerpts') {
       expect(result.excerpts.map(e => e.ref.name)).toEqual(['a.pdf', 'b.pdf']);
     }
+  });
+});
+
+describe('budget at the plan floor', () => {
+  it('selects one full-size passage when the budget equals the floor', async () => {
+    const report = doc('floor');
+    let page = '';
+    while (estimateDocTokens(`${page} churn`) <= PASSAGE_MAX_TOKENS) {
+      page = `${page} churn`.trim();
+    }
+    expect(estimateDocTokens(page)).toBe(PASSAGE_MAX_TOKENS);
+
+    const result = await run([[report, [page]]], {
+      excerptBudget: excerptFloor([report]),
+    });
+
+    expect(result.kind).toBe('excerpts');
+    expect(result.kind === 'excerpts' && result.excerpts).toHaveLength(1);
   });
 });

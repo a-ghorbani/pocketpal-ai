@@ -60,7 +60,7 @@ export interface Plan {
 const LEAD_TOKENS = estimateDocTokens(`${DOCUMENT_LEAD}\n\n`);
 const WIDEST_CITATION = 'p.99999 parts 999–999 of 999';
 
-/** One excerpt's delimiters, its separator and the excerpt lead's share. */
+/** One excerpt's delimiters and separator, at the widest citation. */
 export const excerptOverhead = (ref: DocumentRef): number =>
   estimateDocTokens(
     `${excerptOpen(ref, WIDEST_CITATION)}\n\n${excerptClose(ref)}\n\n`,
@@ -68,10 +68,18 @@ export const excerptOverhead = (ref: DocumentRef): number =>
 
 export const EXCERPT_LEAD_TOKENS = estimateDocTokens(`${EXCERPT_LEAD}\n\n`);
 
-const floorFor = (searched: DocumentRef[]): number =>
-  PASSAGE_MAX_TOKENS +
+/** The single accounting for an excerpt: overhead plus each passage and its newline. */
+export const excerptCost = (
+  ref: DocumentRef,
+  passageTokens: number[],
+): number =>
+  excerptOverhead(ref) +
+  passageTokens.reduce((sum, tokens) => sum + tokens + 1, 0);
+
+/** The smallest excerpt block: the lead plus one full-size passage. */
+export const excerptFloor = (searched: DocumentRef[]): number =>
   EXCERPT_LEAD_TOKENS +
-  Math.max(0, ...searched.map(excerptOverhead));
+  Math.max(0, ...searched.map(ref => excerptCost(ref, [PASSAGE_MAX_TOKENS])));
 
 export const documentPlan = ({
   rows,
@@ -143,7 +151,7 @@ export const documentPlan = ({
         nonDoc +
           historyLoad +
           newLoad() +
-          (anySearched ? floorFor(searchedNow()) : 0) >
+          (anySearched ? excerptFloor(searchedNow()) : 0) >
         available
       );
     };
@@ -157,7 +165,7 @@ export const documentPlan = ({
   const fullLoad = historyLoad + newLoad();
   const searchedRefs = searchedNow();
   const anySearched = searchedRefs.length > 0;
-  const floor = anySearched ? floorFor(searchedRefs) : 0;
+  const floor = anySearched ? excerptFloor(searchedRefs) : 0;
   const room =
     available === undefined ? undefined : available - nonDoc - fullLoad;
   const excerptBudget = anySearched
