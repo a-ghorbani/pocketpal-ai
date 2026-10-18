@@ -54,6 +54,8 @@ module.exports = {
     '\\.svg': '<rootDir>/__mocks__/external/react-native-svg.js',
     'react-native-keychain':
       '<rootDir>/__mocks__/external/react-native-keychain.js',
+    'react-native-tcp-socket':
+      '<rootDir>/__mocks__/external/react-native-tcp-socket.ts',
     '@nozbe/watermelondb':
       '<rootDir>/__mocks__/external/@nozbe/watermelondb.js',
     '@nozbe/watermelondb/adapters/sqlite':

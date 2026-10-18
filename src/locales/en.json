@@ -245,6 +245,34 @@
       "signInAgain": "Please sign in again",
       "creatorSupport": "Creator accounts are deleted by our support team: {{contact}}",
       "failed": "Could not delete, try again"
+    },
+    "localApiServer": {
+      "title": "Local API server",
+      "enable": "Serve the loaded model",
+      "enableDescription": "Lets other apps use the loaded model through an OpenAI-compatible API. Requests wait their turn with your chats.",
+      "starting": "Starting…",
+      "url": "Server URL",
+      "copyUrl": "Copy URL",
+      "servedModel": "Serving {{model}}",
+      "noModel": "No model loaded. Requests fail until you load one.",
+      "port": "Port",
+      "portInvalid": "Use a port from 1024 to 65535",
+      "lan": "Allow other devices on the network",
+      "lanWarning": "The server is reachable on every network this phone is on: Wi-Fi, mobile data, hotspot and VPN. Set an API key to limit who can use it.",
+      "notOnWifi": "Not on Wi-Fi, so no network URL is shown.",
+      "apiKey": "API key",
+      "apiKeySet": "Requests must send this key",
+      "apiKeyNotSet": "No key: any app that can reach the server can use it. Browser pages are refused until you set a key.",
+      "setApiKey": "Set key",
+      "clearApiKey": "Clear key",
+      "apiKeyPlaceholder": "Enter an API key",
+      "stopToEdit": "Turn the server off to change these settings.",
+      "errors": {
+        "portInUse": "Port {{port}} is already in use. Turn the server off and choose another port.",
+        "listenFailed": "The server could not start. Turn it off and on again, or choose another port.",
+        "stoppedListening": "The server stopped unexpectedly. Turn it off and on again.",
+        "keyUnavailable": "Could not read the API key. Unlock your phone, then turn the server off and on again."
+      }
     }
   },
   "memory": {

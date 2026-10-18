@@ -59,7 +59,7 @@
 	<key>NSCameraUsageDescription</key>
 	<string>PocketPal uses your camera to capture images and video for local AI analysis only. All processing happens on your device and no images are transmitted to external servers.</string>
 	<key>NSLocalNetworkUsageDescription</key>
-	<string>PocketPal connects to AI servers you run on your own network (like Ollama or llama.cpp) when you add them as remote endpoints.</string>
+	<string>PocketPal connects to AI servers you run on your own network (like Ollama or llama.cpp) when you add them as remote endpoints, and, when you turn on its local API server, serves the loaded model to apps you point at it on your network.</string>
 	<key>NSLocationWhenInUseUsageDescription</key>
 	<string>PocketPal never requests or collects your location. A bundled camera library references the system location API to offer optional photo geotagging, which PocketPal leaves turned off.</string>
 	<key>NSPhotoLibraryUsageDescription</key>

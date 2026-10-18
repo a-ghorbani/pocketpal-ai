@@ -88,6 +88,7 @@
     "react-native-screens": "^4.19.0",
     "react-native-share": "^12.2.0",
     "react-native-svg": "^15.13.0",
+    "react-native-tcp-socket": "6.4.3",
     "react-native-url-polyfill": "^3.0.0",
     "react-native-vector-icons": "^10.3.0",
     "react-native-vision-camera": "^4.7.2",
