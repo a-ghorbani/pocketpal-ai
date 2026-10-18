@@ -167,8 +167,7 @@ jest.mock('../src/repositories/ChatSessionRepository', () => ({
 }));
 
 jest.mock('../src/utils/keepAwake', () => ({
-  activateKeepAwake: jest.fn(),
-  deactivateKeepAwake: jest.fn(),
+  acquireKeepAwake: jest.fn(() => jest.fn()),
 }));
 
 jest.mock('react-native-share', () => ({

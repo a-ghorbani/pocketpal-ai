@@ -40,7 +40,7 @@ import {
   removeThinkingParts,
   visibleStepContent,
 } from '../utils/chat';
-import {activateKeepAwake, deactivateKeepAwake} from '../utils/keepAwake';
+import {acquireKeepAwake} from '../utils/keepAwake';
 import {
   toApiCompletionParams,
   ApiCompletionParams,
@@ -652,6 +652,7 @@ export const useChatSession = (
 
     // Run UI clears on abort, not on drain.
     let uiStopped = false;
+    let releaseAwake: (() => void) | undefined;
     const uiStop = () => {
       if (uiStopped) {
         return;
@@ -662,11 +663,7 @@ export const useChatSession = (
       chatSessionStore.setIsGenerating(false);
       chatSessionStore.setAgentUiState(initialAgentUiState);
       chatSessionStore.setToolCallTokenCount(0);
-      try {
-        deactivateKeepAwake();
-      } catch (error) {
-        console.error('Failed to deactivate keep awake after chat:', error);
-      }
+      releaseAwake?.();
     };
     if (lease.signal.aborted) {
       uiStop();
@@ -678,6 +675,11 @@ export const useChatSession = (
       return await sendUnderLease(message, lease, {
         stop: uiStop,
         isStopped: () => uiStopped,
+        holdAwake: () => {
+          if (!uiStopped) {
+            releaseAwake ??= acquireKeepAwake();
+          }
+        },
       });
     } finally {
       lease.signal.removeEventListener('abort', uiStop);
@@ -692,7 +694,11 @@ export const useChatSession = (
   const sendUnderLease = async (
     message: MessageType.PartialText,
     lease: GenerationLease,
-    runUi: {stop: () => void; isStopped: () => boolean},
+    runUi: {
+      stop: () => void;
+      isStopped: () => boolean;
+      holdAwake: () => void;
+    },
   ): Promise<UndoneSend | undefined> => {
     const engine = lease.engine;
     const contextId = modelStore.contextId;
@@ -731,11 +737,7 @@ export const useChatSession = (
       modelStore.setInferencing(true);
       modelStore.setIsStreaming(false);
       chatSessionStore.setIsGenerating(true);
-      try {
-        activateKeepAwake();
-      } catch (error) {
-        console.error('Failed to activate keep awake during chat:', error);
-      }
+      runUi.holdAwake();
     }
 
     const activeSession = chatSessionStore.sessions.find(

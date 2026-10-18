@@ -9,6 +9,7 @@ import {
 } from '../../../jest/fixtures/models';
 
 import {useChatSession} from '../useChatSession';
+import {acquireKeepAwake} from '../../utils/keepAwake';
 import {chatSessionStore, modelStore, palStore} from '../../store';
 import type {
   CompletionResult,
@@ -179,6 +180,31 @@ describe('useChatSession Stop and the generation lease', () => {
     expect(chatSessionStore.setIsGenerating).not.toHaveBeenCalledWith(true);
     expect(engine.completion).not.toHaveBeenCalled();
     expect(modelStore.isGenerationBusy).toBe(false);
+    expect(acquireKeepAwake).not.toHaveBeenCalled();
+  });
+
+  it('a run takes one keep-awake hold and releases it once, at Stop', async () => {
+    const release = jest.fn();
+    (acquireKeepAwake as jest.Mock).mockReturnValueOnce(release);
+    const {engine, completions} = installEngine();
+    const session = renderSession();
+
+    let sending!: Promise<unknown>;
+    await act(async () => {
+      sending = session.current.handleSendPress(textMessage);
+    });
+    await waitFor(() => expect(engine.completion).toHaveBeenCalledTimes(1));
+    expect(acquireKeepAwake).toHaveBeenCalledTimes(1);
+    expect(release).not.toHaveBeenCalled();
+
+    await session.current.handleStopPress();
+    expect(release).toHaveBeenCalledTimes(1);
+
+    await act(async () => {
+      completions[0].finish({interrupted: true});
+      await sending;
+    });
+    expect(release).toHaveBeenCalledTimes(1);
   });
 
   it('a lease aborted while the prompt is prepared starts no completion and leaves no Stop button', async () => {
