@@ -122,9 +122,11 @@ function normalizeToolCallIds(
   }));
 }
 
+const NO_FUNCTION_NAME = 'Unknown talent (no function name)';
+
 function cancelledOutcome(call: AgentToolCall): AgentToolOutcome {
   const toolName = call.function?.name ?? '';
-  const summary = `${toolName}: cancelled`;
+  const summary = `${toolName || NO_FUNCTION_NAME}: cancelled`;
   return {
     callId: call.id,
     toolName,
@@ -145,7 +147,7 @@ async function executeOne(
   if (!fnName || !allowedTalentNames.includes(fnName)) {
     const summary = fnName
       ? `Talent "${fnName}" is not enabled for this Pal`
-      : 'Unknown talent (no function name)';
+      : NO_FUNCTION_NAME;
     const result: TalentResult = {
       type: 'error',
       summary,
@@ -508,7 +510,6 @@ export async function* runAgent(
         yield {type: 'tool_call_finished', outcome};
       }
 
-      // Tools cancel themselves via ctx.signal; the runner only stops at the turn boundary.
       if (signal?.aborted) {
         break;
       }

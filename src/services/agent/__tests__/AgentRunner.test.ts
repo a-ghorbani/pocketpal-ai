@@ -1983,7 +1983,7 @@ describe('runAgent', () => {
     };
     const finishLabels = (events: AgentEvent[]) =>
       events.filter(e => e.type === 'tool_call_finished').map(eventLabel);
-    const outcomeSummaries = (events: AgentEvent[]) =>
+    const outcomeResults = (events: AgentEvent[]) =>
       events
         .filter(e => e.type === 'tool_call_finished')
         .map(e => (e as any).outcome.result);
@@ -1999,7 +1999,7 @@ describe('runAgent', () => {
       jest.useRealTimers();
     });
 
-    it('runs up to four calls of a batch at once, so the tool phase lasts as long as the slowest', async () => {
+    it('runs the calls of a batch at once, so the tool phase lasts as long as the slowest', async () => {
       jest.useFakeTimers();
       const fast = timedTalent('fast', 300);
       const slow = timedTalent('slow', 500);
@@ -2346,7 +2346,8 @@ describe('runAgent', () => {
         ...[0, 1, 2, 3, 4].map(i =>
           toolCall(`c${i}`, 'web_search', {query: `q${i}`}),
         ),
-        ...[5, 6, 7, 8].map(i => toolCall(`c${i}`, 'calculate')),
+        ...[5, 6, 7].map(i => toolCall(`c${i}`, 'calculate')),
+        toolCall('c8', ''),
       ];
       const done = track(
         collect(
@@ -2372,13 +2373,14 @@ describe('runAgent', () => {
       expect(searchExecute).toHaveBeenCalledTimes(4);
       expect(calculate).not.toHaveBeenCalled();
       expect(global.fetch).toHaveBeenCalledTimes(4);
-      const results = outcomeSummaries(done.value!);
+      const results = outcomeResults(done.value!);
       expect(results.map(r => r.errorMessage)).toEqual(
         Array(9).fill('cancelled'),
       );
       expect(results.slice(4).map(r => r.summary)).toEqual([
         'web_search: cancelled',
-        ...Array(4).fill('calculate: cancelled'),
+        ...Array(3).fill('calculate: cancelled'),
+        'Unknown talent (no function name): cancelled',
       ]);
       expect(done.value!.map(eventLabel).slice(-10)).toEqual([
         ...[0, 1, 2, 3, 4, 5, 6, 7, 8].map(i => `tool_call_finished c${i}`),
@@ -2486,7 +2488,7 @@ describe('runAgent', () => {
 
       expect(done.done).toBe(true);
       expect(calculate).not.toHaveBeenCalled();
-      const results = outcomeSummaries(done.value!);
+      const results = outcomeResults(done.value!);
       expect(results.map(r => r.summary)).toEqual(
         Array(6).fill('calculate: cancelled'),
       );

@@ -554,7 +554,7 @@ describe('WebSearchEngine', () => {
       process.off('unhandledRejection', unhandled);
     });
 
-    it('share one request, and each call writes the cache and allowlist', async () => {
+    it('share one request and its results, which are cached and allowlisted', async () => {
       const search = jest.fn(async (query: string) => [
         hit({title: query, url: `https://example.com/${query}`}),
       ]);
