@@ -2224,7 +2224,7 @@ describe('runAgent', () => {
       });
 
       it.each([0, 1])(
-        'at index %i, the run fails only after its sibling settles',
+        'at index %i, the run ends only after its sibling settles',
         async throwingIndex => {
           const sibling = deferredTalent('slow');
           const names =

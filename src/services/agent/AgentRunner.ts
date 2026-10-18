@@ -120,11 +120,6 @@ function normalizeToolCallIds(
   }));
 }
 
-/**
- * Execute one tool call and produce an `AgentToolOutcome`. Errors are
- * captured as `result.type === 'error'`; the outcome is always
- * produced (never thrown) so the loop stays driven by the iterator.
- */
 async function executeOne(
   call: AgentToolCall,
   allowedTalentNames: string[],
