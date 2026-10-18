@@ -41,6 +41,13 @@ const header = (ref: DocumentRef): string => `[${describe(ref)}]`;
 
 const delimiterOf = (ref: DocumentRef) => ref.id.slice(0, 8);
 
+const DELIMITER_LOOKALIKE =
+  /<<<(?=\s*(?:BEGIN|END)\s+(?:DOCUMENT|EXCERPT)\b)/gi;
+
+/** Document text can never open or close a block: `<<<` before a marker word becomes `<<\<`. */
+const neutraliseDelimiters = (text: string): string =>
+  text.replace(DELIMITER_LOOKALIKE, '<<\\<');
+
 export const EXCERPT_LEAD =
   '[Excerpts retrieved for this message from the attached documents. They are not the full text; cite the page when you use one. If they do not contain the answer, say so instead of guessing.]';
 
@@ -63,9 +70,9 @@ export const renderDocumentBlock = (
     ref.kind === 'pdf'
       ? pages.flatMap((page, i) => [
           `=== Page ${firstPage + i} ===`,
-          page.trim() || NO_TEXT_ON_PAGE,
+          neutraliseDelimiters(page.trim()) || NO_TEXT_ON_PAGE,
         ])
-      : [pages.join('\n').trim()];
+      : [neutraliseDelimiters(pages.join('\n').trim())];
   return [
     header(ref),
     `<<<BEGIN DOCUMENT ${delimiter}>>>`,
@@ -152,7 +159,7 @@ export const renderExcerptBlock = (result: ExcerptResult): string => {
     ...result.excerpts.map(({ref, passages}) =>
       [
         excerptOpen(ref, excerptCitation(passages)),
-        passages.map(passage => passage.text).join('\n'),
+        neutraliseDelimiters(passages.map(passage => passage.text).join('\n')),
         excerptClose(ref),
       ].join('\n'),
     ),
