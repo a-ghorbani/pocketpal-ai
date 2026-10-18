@@ -52,6 +52,11 @@ describe('terms', () => {
     expect(terms('顧客離反')).toEqual(['顧客', '客離', '離反']);
   });
 
+  it('normalises terms so composed and decomposed forms match', () => {
+    expect(terms('cafe\u0301')).toEqual(terms('caf\u00e9'));
+    expect(terms('\u0958')).toEqual(terms('\u0915\u093c'));
+  });
+
   it('keeps combining marks inside a Devanagari word', () => {
     expect(terms('हिन्दी भाषा')).toEqual(['हिन्दी', 'भाषा']);
   });
@@ -220,5 +225,21 @@ describe('budget at the plan floor', () => {
 
     expect(result.kind).toBe('excerpts');
     expect(result.kind === 'excerpts' && result.excerpts).toHaveLength(1);
+  });
+});
+
+describe('unicode normalisation', () => {
+  it('matches a composed query against decomposed document text', async () => {
+    const report = doc('nfd');
+    const result = await run(
+      [[report, ['The cafe\u0301 opened late.', 'Nothing here.']]],
+      {
+        query: 'caf\u00e9',
+      },
+    );
+    expect(result.kind).toBe('excerpts');
+    if (result.kind === 'excerpts') {
+      expect(result.excerpts[0].passages[0].page).toBe(1);
+    }
   });
 });
