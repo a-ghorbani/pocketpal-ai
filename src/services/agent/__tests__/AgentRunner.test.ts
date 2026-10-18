@@ -2133,6 +2133,84 @@ describe('runAgent', () => {
       expect(second.execute).not.toHaveBeenCalled();
     });
 
+    it('runs no call until every start of its batch has been consumed, then starts them in call order', async () => {
+      const first = deferredTalent('first');
+      const second = deferredTalent('second');
+      const iterator = run(
+        batchEngine([toolCall('c0', 'first'), toolCall('c1', 'second')]),
+        {first: first.talent, second: second.talent},
+      );
+      let event = await iterator.next();
+      while (
+        !event.done &&
+        eventLabel(event.value) !== 'tool_call_started c1'
+      ) {
+        event = await iterator.next();
+      }
+      await flush();
+      expect(first.execute).not.toHaveBeenCalled();
+      expect(second.execute).not.toHaveBeenCalled();
+
+      const next = iterator.next();
+      await flush();
+      expect(first.execute).toHaveBeenCalledTimes(1);
+      expect(second.execute).toHaveBeenCalledTimes(1);
+      expect(first.execute.mock.invocationCallOrder[0]).toBeLessThan(
+        second.execute.mock.invocationCallOrder[0],
+      );
+
+      first.release();
+      second.release();
+      expect(eventLabel((await next).value as AgentEvent)).toBe(
+        'tool_call_finished c0',
+      );
+      await iterator.return(undefined);
+    });
+
+    it('a Stop between the start events cancels every search without a fetch, finishing in call order', async () => {
+      const controller = new AbortController();
+      global.fetch = abortableFetch();
+      const webSearch = new WebSearchEngine(
+        searchAccess(new TavilyProvider(() => 'key')),
+      );
+      const iterator = run(
+        batchEngine([
+          toolCall('c0', 'web_search', {query: 'mars'}),
+          toolCall('c1', 'web_search', {query: 'venus'}),
+        ]),
+        {web_search: webSearch},
+        controller.signal,
+      );
+      const events: AgentEvent[] = [];
+      for (
+        let event = await iterator.next();
+        !event.done;
+        event = await iterator.next()
+      ) {
+        events.push(event.value);
+        if (eventLabel(event.value) === 'tool_call_started c0') {
+          controller.abort();
+        }
+      }
+
+      expect(global.fetch).not.toHaveBeenCalled();
+      expect(events.map(eventLabel)).toEqual([
+        'run_started',
+        'step_started',
+        'step_finished',
+        'tool_call_started c0',
+        'tool_call_started c1',
+        'tool_call_finished c0',
+        'tool_call_finished c1',
+        'run_finished',
+      ]);
+      expect(
+        events
+          .filter(e => e.type === 'tool_call_finished')
+          .map(e => (e as any).outcome.result.errorMessage),
+      ).toEqual(['cancelled', 'cancelled']);
+    });
+
     describe('when dispatching one call throws', () => {
       const unhandled = jest.fn();
 

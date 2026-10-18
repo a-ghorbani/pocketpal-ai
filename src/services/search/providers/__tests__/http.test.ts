@@ -365,6 +365,49 @@ describe('429 retry', () => {
     expect(mock).toHaveBeenCalledTimes(1);
   });
 
+  it('sends no retry when Stop lands as the 429 arrives', async () => {
+    const caller = new AbortController();
+    const mock = jest.fn<Promise<Response>, Parameters<typeof fetch>>();
+    mock
+      .mockImplementationOnce(async () => {
+        caller.abort();
+        return response(429, {'retry-after': '1'});
+      })
+      .mockResolvedValueOnce(response(200));
+    global.fetch = mock;
+
+    expect(await outcome(searchRequest(caller.signal))).toBe('cancelled');
+    expect(jest.getTimerCount()).toBe(0);
+    await jest.advanceTimersByTimeAsync(5000);
+    expect(mock).toHaveBeenCalledTimes(1);
+  });
+
+  it('does not retry a network error', async () => {
+    const mock = jest
+      .fn<Promise<Response>, Parameters<typeof fetch>>()
+      .mockRejectedValueOnce(new TypeError('Network request failed'))
+      .mockResolvedValueOnce(response(200));
+    global.fetch = mock;
+
+    const result = outcome(searchRequest());
+    await jest.advanceTimersByTimeAsync(5000);
+
+    expect(await result).toBe('Network request failed');
+    expect(mock).toHaveBeenCalledTimes(1);
+  });
+
+  it('does not retry a timeout', async () => {
+    global.fetch = abortableFetch();
+
+    const result = outcome(
+      fetchJson(url, {method: 'GET'}, {timeoutMs: 100, retryOn429: true}),
+    );
+    await jest.advanceTimersByTimeAsync(5000);
+
+    expect(await result).toBe('timed out');
+    expect(global.fetch).toHaveBeenCalledTimes(1);
+  });
+
   it('returns the retry error when the retry fails another way', async () => {
     const mock = fetchReturning(response(429), response(500));
 
