@@ -19,8 +19,15 @@ export const documentKey = (ref: DocumentRef): string =>
     ? `${ref.id}:${ref.pageRange.from}-${ref.pageRange.to}`
     : `${ref.id}:all`;
 
+/** A file name as a quoted string that cannot close its quotes or break a line. */
+const quoted = (name: string): string =>
+  `"${name
+    .replace(/\\/g, '\\\\')
+    .replace(/"/g, '\\"')
+    .replace(/[\r\n]+/g, ' ')}"`;
+
 const describe = (ref: DocumentRef): string => {
-  const name = `Attached document "${ref.name}"`;
+  const name = `Attached document ${quoted(ref.name)}`;
   if (ref.kind !== 'pdf' || ref.pageCount === undefined) {
     return name;
   }
@@ -38,7 +45,7 @@ export const EXCERPT_LEAD =
   '[Excerpts retrieved for this message from the attached documents. They are not the full text; cite the page when you use one.]';
 
 export const excerptOpen = (ref: DocumentRef, citation: string): string =>
-  `<<<BEGIN EXCERPT ${delimiterOf(ref)} "${ref.name}" ${citation}>>>`;
+  `<<<BEGIN EXCERPT ${delimiterOf(ref)} ${quoted(ref.name)} ${citation}>>>`;
 
 export const excerptClose = (ref: DocumentRef): string =>
   `<<<END EXCERPT ${delimiterOf(ref)}>>>`;
@@ -68,7 +75,7 @@ export const renderDocumentBlock = (
 };
 
 export const renderMissingDocument = (ref: DocumentRef): string =>
-  `[Attached document "${ref.name}" is no longer available]`;
+  `[Attached document ${quoted(ref.name)} is no longer available]`;
 
 const renderEntry = (entry: DocumentEntry): string => {
   if ('missing' in entry) {

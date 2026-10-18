@@ -180,3 +180,51 @@ describe('searched documents and excerpts', () => {
     );
   });
 });
+
+describe('document names inside quotes', () => {
+  const tricky = pdf({
+    name: 'q"uote\\back\nline.pdf',
+    pageCount: 1,
+    mode: 'searched',
+  });
+  const escaped = '"q\\"uote\\\\back line.pdf"';
+
+  it('escapes quotes, backslashes and line breaks in the block header', () => {
+    const block = renderDocumentBlock(tricky, ['x']);
+    expect(block.split('\n')[0]).toBe(
+      `[Attached document ${escaped}, 1 pages]`,
+    );
+  });
+
+  it('escapes them in stubs, missing lines and excerpt delimiters', () => {
+    expect(renderDocumentStub(tricky)).toContain(
+      `Attached document ${escaped}`,
+    );
+    expect(
+      documentContentFor([tricky], new Map([[documentKey(tricky), 'missing']])),
+    ).toContain(`[Attached document ${escaped} is no longer available]`);
+    const block = renderExcerptBlock({
+      kind: 'excerpts',
+      excerpts: [
+        {
+          ref: tricky,
+          passages: [
+            {
+              docId: tricky.id,
+              rangeKey: documentKey(tricky),
+              ordinal: 0,
+              page: 1,
+              part: 1,
+              parts: 1,
+              text: 'body',
+            },
+          ],
+        },
+      ],
+    });
+    expect(block).toContain(`<<<BEGIN EXCERPT abcdef12 ${escaped} p.1>>>`);
+    expect(
+      block.split('\n').filter(line => line.startsWith('<<<')),
+    ).toHaveLength(2);
+  });
+});
