@@ -1,0 +1,365 @@
+diff --git a/node_modules/@pocketpalai/react-native-speech/lib/module/engines/EngineStreamSession.js b/node_modules/@pocketpalai/react-native-speech/lib/module/engines/EngineStreamSession.js
+index f8e5cc1..40ed622 100644
+--- a/node_modules/@pocketpalai/react-native-speech/lib/module/engines/EngineStreamSession.js
++++ b/node_modules/@pocketpalai/react-native-speech/lib/module/engines/EngineStreamSession.js
+@@ -31,7 +31,7 @@ export class EngineStreamSession {
+   lastChunkEndTs = null;
+   constructor(config) {
+     this.config = config;
+-    this.chunker = new StreamingChunker(config.maxChunkSize);
++    this.chunker = new StreamingChunker(config.maxChunkSize, config.firstChunk);
+     this.loopPromise = this.runLoop();
+   }
+   append(text) {
+diff --git a/node_modules/@pocketpalai/react-native-speech/lib/module/engines/StreamingChunker.js b/node_modules/@pocketpalai/react-native-speech/lib/module/engines/StreamingChunker.js
+index bc7c611..666bb94 100644
+--- a/node_modules/@pocketpalai/react-native-speech/lib/module/engines/StreamingChunker.js
++++ b/node_modules/@pocketpalai/react-native-speech/lib/module/engines/StreamingChunker.js
+@@ -20,14 +20,64 @@
+  * SpeechStream's `SENTENCE_END_RE`.
+  */
+ const SENTENCE_END_RE = /(?:[.!?]+\s+|[。！？]+\s*)/g;
++const CLAUSE_END_RE = /[,;:—]\s+/g;
++const WORD_RE = /\S+\s+/g;
++const CLAUSE_MIN_WORDS = 3;
++const CLAUSE_MAX_WORDS = 12;
++function countWords(text) {
++  const trimmed = text.trim();
++  return trimmed ? trimmed.split(/\s+/).length : 0;
++}
++
++/**
++ * End offset of the first clause in `text`: the earliest of a sentence
++ * end, a `[,;:—]` + whitespace after at least 3 words, or 12 complete
++ * words. Returns -1 when none is present yet.
++ */
++export function findFirstClauseEnd(text) {
++  let end = -1;
++  const sentence = new RegExp(SENTENCE_END_RE.source).exec(text);
++  if (sentence) {
++    end = sentence.index + sentence[0].length;
++  }
++  const clauseRe = new RegExp(CLAUSE_END_RE.source, 'g');
++  let m;
++  while ((m = clauseRe.exec(text)) !== null) {
++    if (end !== -1 && m.index >= end) {
++      break;
++    }
++    if (countWords(text.slice(0, m.index + 1)) >= CLAUSE_MIN_WORDS) {
++      end = m.index + m[0].length;
++      break;
++    }
++  }
++  const wordRe = new RegExp(WORD_RE.source, 'g');
++  let words = 0;
++  while ((m = wordRe.exec(text)) !== null) {
++    words++;
++    if (words === CLAUSE_MAX_WORDS) {
++      const wordEnd = m.index + m[0].length;
++      if (end === -1 || wordEnd < end) {
++        end = wordEnd;
++      }
++      break;
++    }
++  }
++  if (end > 0 && text.slice(0, end).trim().length === 0) {
++    return -1;
++  }
++  return end;
++}
+ export class StreamingChunker {
+   buffer = '';
+   absoluteOffset = 0;
+   finalized = false;
+   cancelled = false;
+   waiter = null;
+-  constructor(maxChunkSize = 400) {
++  firstTaken = false;
++  constructor(maxChunkSize = 400, firstChunk = 'sentence') {
+     this.maxChunkSize = maxChunkSize;
++    this.firstChunk = firstChunk;
+   }
+   append(text) {
+     if (this.finalized || this.cancelled) {
+@@ -123,6 +173,27 @@ export class StreamingChunker {
+    * `maxChunkSize`. Returns null if no sentence boundary is found.
+    */
+   extractReadyChunk() {
++    const chunk = this.firstChunk === 'clause' && !this.firstTaken ? this.extractFirstClause() : this.extractSentences();
++    if (chunk) {
++      this.firstTaken = true;
++    }
++    return chunk;
++  }
++  extractFirstClause() {
++    const end = findFirstClauseEnd(this.buffer);
++    if (end <= 0) {
++      return null;
++    }
++    const chunk = {
++      text: this.buffer.slice(0, end),
++      startIndex: this.absoluteOffset,
++      endIndex: this.absoluteOffset + end
++    };
++    this.buffer = this.buffer.slice(end);
++    this.absoluteOffset += end;
++    return chunk;
++  }
++  extractSentences() {
+     const re = new RegExp(SENTENCE_END_RE.source, 'g');
+     let m;
+     let lastGoodEnd = -1;
+@@ -161,6 +232,7 @@ export class StreamingChunker {
+       this.buffer = '';
+       return null;
+     }
++    this.firstTaken = true;
+     const chunk = {
+       text: this.buffer,
+       startIndex: this.absoluteOffset,
+diff --git a/node_modules/@pocketpalai/react-native-speech/lib/module/engines/kitten/KittenEngine.js b/node_modules/@pocketpalai/react-native-speech/lib/module/engines/kitten/KittenEngine.js
+index 5c6e26f..2a757de 100644
+--- a/node_modules/@pocketpalai/react-native-speech/lib/module/engines/kitten/KittenEngine.js
++++ b/node_modules/@pocketpalai/react-native-speech/lib/module/engines/kitten/KittenEngine.js
+@@ -221,7 +221,9 @@ export class KittenEngine {
+     // See KokoroEngine.synthesizeStream for the rationale: strip markdown
+     // BEFORE StreamingChunker (via the line-buffered md stream buffer) so
+     // structural markers become chunk boundaries.
+-    const mdBuffer = stripMd ? createMarkdownStreamBuffer() : null;
++    const mdBuffer = stripMd ? createMarkdownStreamBuffer({
++      firstChunk: options?.firstChunk
++    }) : null;
+     const session = new EngineStreamSession({
+       synthesizeChunk: text => {
+         const processed = this.preprocessor.process(text);
+@@ -230,12 +232,13 @@ export class KittenEngine {
+       playAudio: (buffer, playOpts) => neuralAudioPlayer.play(buffer, playOpts),
+       stopPlayback: () => neuralAudioPlayer.stop(),
+       maxChunkSize,
++      firstChunk: options?.firstChunk,
+       playbackOptions: {
+         ducking: options?.ducking,
+         silentMode: options?.silentMode
+       },
+       postProcess: volumeAdjust,
+-      onChunkProgress: this.chunkProgressCallback ? event => this.emitChunkProgress(event) : undefined
++      onChunkProgress: event => this.emitChunkProgress(event)
+     });
+     this.activeStreamSession = session;
+     const wrapFinalize = async () => {
+diff --git a/node_modules/@pocketpalai/react-native-speech/lib/module/engines/kokoro/KokoroEngine.js b/node_modules/@pocketpalai/react-native-speech/lib/module/engines/kokoro/KokoroEngine.js
+index a38adee..885ee49 100644
+--- a/node_modules/@pocketpalai/react-native-speech/lib/module/engines/kokoro/KokoroEngine.js
++++ b/node_modules/@pocketpalai/react-native-speech/lib/module/engines/kokoro/KokoroEngine.js
+@@ -236,17 +236,20 @@ export class KokoroEngine {
+     // rows get converted into sentence boundaries the chunker recognizes.
+     // Stripping inside synthesizeChunk (post-chunker) would only catch
+     // inline markers; structural breaks would be lost.
+-    const mdBuffer = stripMd ? createMarkdownStreamBuffer() : null;
++    const mdBuffer = stripMd ? createMarkdownStreamBuffer({
++      firstChunk: options?.firstChunk
++    }) : null;
+     const session = new EngineStreamSession({
+       synthesizeChunk: text => this.synthesizeTextChunk(text, voiceId, language, options),
+       playAudio: (buffer, playOpts) => neuralAudioPlayer.play(buffer, playOpts),
+       stopPlayback: () => neuralAudioPlayer.stop(),
+       maxChunkSize,
++      firstChunk: options?.firstChunk,
+       playbackOptions: {
+         ducking: options?.ducking,
+         silentMode: options?.silentMode
+       },
+-      onChunkProgress: this.chunkProgressCallback ? event => this.emitChunkProgress(event) : undefined
++      onChunkProgress: event => this.emitChunkProgress(event)
+     });
+     this.activeStreamSession = session;
+     const wrapFinalize = async () => {
+diff --git a/node_modules/@pocketpalai/react-native-speech/lib/module/engines/supertonic/SupertonicEngine.js b/node_modules/@pocketpalai/react-native-speech/lib/module/engines/supertonic/SupertonicEngine.js
+index e8ac91f..c1c5d74 100644
+--- a/node_modules/@pocketpalai/react-native-speech/lib/module/engines/supertonic/SupertonicEngine.js
++++ b/node_modules/@pocketpalai/react-native-speech/lib/module/engines/supertonic/SupertonicEngine.js
+@@ -186,7 +186,9 @@ export class SupertonicEngine {
+     // When stripping is enabled, buffer incoming text and strip BEFORE
+     // StreamingChunker sees it so structural markdown becomes sentence
+     // boundaries the chunker recognizes (mirrors Kokoro/Kitten).
+-    const mdBuffer = stripMd ? createMarkdownStreamBuffer() : null;
++    const mdBuffer = stripMd ? createMarkdownStreamBuffer({
++      firstChunk: options?.firstChunk
++    }) : null;
+ 
+     // Compose volume adjust + onAudioChunk into a single postProcess hook.
+     // Order matters: volume first (so the captured buffer reflects what
+@@ -214,12 +216,13 @@ export class SupertonicEngine {
+       playAudio: (buffer, playOpts) => neuralAudioPlayer.play(buffer, playOpts),
+       stopPlayback: () => neuralAudioPlayer.stop(),
+       maxChunkSize,
++      firstChunk: options?.firstChunk,
+       playbackOptions: {
+         ducking: options?.ducking,
+         silentMode: options?.silentMode
+       },
+       postProcess,
+-      onChunkProgress: this.chunkProgressCallback ? event => this.emitChunkProgress(event) : undefined
++      onChunkProgress: event => this.emitChunkProgress(event)
+     });
+     this.activeStreamSession = session;
+     const wrapFinalize = async () => {
+diff --git a/node_modules/@pocketpalai/react-native-speech/lib/module/index.js b/node_modules/@pocketpalai/react-native-speech/lib/module/index.js
+index 1257e90..ca42678 100644
+--- a/node_modules/@pocketpalai/react-native-speech/lib/module/index.js
++++ b/node_modules/@pocketpalai/react-native-speech/lib/module/index.js
+@@ -79,4 +79,6 @@ export { KokoroEngine } from "./engines/kokoro/index.js";
+ export { SupertonicEngine } from "./engines/supertonic/index.js";
+ /** @internal Advanced: Kitten neural engine class. */
+ export { KittenEngine } from "./engines/kitten/index.js";
++/** @internal Advanced: line-buffered markdown stripper for streamed text. */
++export { createMarkdownStreamBuffer } from "./utils/stripMarkdown.js";
+ //# sourceMappingURL=index.js.map
+\ No newline at end of file
+diff --git a/node_modules/@pocketpalai/react-native-speech/lib/module/utils/stripMarkdown.js b/node_modules/@pocketpalai/react-native-speech/lib/module/utils/stripMarkdown.js
+index 69cbe82..0db751c 100644
+--- a/node_modules/@pocketpalai/react-native-speech/lib/module/utils/stripMarkdown.js
++++ b/node_modules/@pocketpalai/react-native-speech/lib/module/utils/stripMarkdown.js
+@@ -1,5 +1,7 @@
+ "use strict";
+ 
++import { findFirstClauseEnd } from "../engines/StreamingChunker.js";
++
+ /**
+  * Strip markdown formatting so the output reads cleanly through a TTS
+  * phonemizer that only knows prose.
+@@ -252,6 +254,7 @@ export function createMarkdownStreamBuffer(options = {}) {
+   };
+   let buffer = '';
+   let inFence = false;
++  let emitted = false;
+ 
+   // Walk `text` line-by-line; drop everything inside fenced code blocks
+   // when `dropCodeBlocks` is true. Mutates `inFence` so fence state
+@@ -306,22 +309,28 @@ export function createMarkdownStreamBuffer(options = {}) {
+       // Loop so a single push containing multiple sentences emits them
+       // all rather than just the first.
+       while (!inFence && buffer && !BLOCK_START_RE.test(buffer)) {
+-        const sentMatch = buffer.match(/^([\s\S]*?[.!?]+)([ \t]+)/);
+-        if (!sentMatch) break;
+-        const sentence = sentMatch[1] + sentMatch[2];
+-        buffer = buffer.slice(sentence.length);
++        let cut = opts.firstChunk === 'clause' && !emitted && !emit ? findFirstClauseEnd(buffer) : -1;
++        if (cut <= 0) {
++          const sentMatch = buffer.match(/^([\s\S]*?[.!?]+)([ \t]+)/);
++          if (!sentMatch) break;
++          cut = sentMatch[1].length + sentMatch[2].length;
++        }
++        const sentence = buffer.slice(0, cut);
++        buffer = buffer.slice(cut);
+         const stripped = stripMarkdown(sentence, opts);
+         // Append a single space so `StreamingChunker`'s SENTENCE_END_RE
+         // (which requires whitespace after `.!?`) finds a boundary even
+         // though `stripMarkdown` trims its output.
+         if (stripped) emit += stripped + ' ';
+       }
++      if (emit) emitted = true;
+       return emit;
+     },
+     flush() {
+       // Stream ended inside a fenced code block — discard partial code,
+       // consistent with `dropCodeBlocks`. Reset state so the buffer can
+       // be reused for a fresh stream.
++      emitted = false;
+       if (inFence) {
+         buffer = '';
+         inFence = false;
+diff --git a/node_modules/@pocketpalai/react-native-speech/lib/typescript/src/engines/EngineStreamSession.d.ts b/node_modules/@pocketpalai/react-native-speech/lib/typescript/src/engines/EngineStreamSession.d.ts
+index 85bf2d8..c9ceee3 100644
+--- a/node_modules/@pocketpalai/react-native-speech/lib/typescript/src/engines/EngineStreamSession.d.ts
++++ b/node_modules/@pocketpalai/react-native-speech/lib/typescript/src/engines/EngineStreamSession.d.ts
+@@ -17,12 +17,14 @@
+  * adaptive batcher there.
+  */
+ import type { AudioBuffer, ChunkProgressEvent } from '../types';
++import type { FirstChunkMode } from '../types/Engine';
+ import type { PlaybackOptions } from './NeuralAudioPlayer';
+ export interface EngineStreamSessionConfig {
+     synthesizeChunk: (text: string) => Promise<AudioBuffer>;
+     playAudio: (buffer: AudioBuffer, options?: PlaybackOptions) => Promise<void>;
+     stopPlayback: () => Promise<void>;
+     maxChunkSize: number;
++    firstChunk?: FirstChunkMode;
+     playbackOptions?: PlaybackOptions;
+     postProcess?: (buffer: AudioBuffer) => void;
+     onChunkProgress?: (event: ChunkProgressEvent) => void;
+diff --git a/node_modules/@pocketpalai/react-native-speech/lib/typescript/src/engines/StreamingChunker.d.ts b/node_modules/@pocketpalai/react-native-speech/lib/typescript/src/engines/StreamingChunker.d.ts
+index d5983dd..d8da727 100644
+--- a/node_modules/@pocketpalai/react-native-speech/lib/typescript/src/engines/StreamingChunker.d.ts
++++ b/node_modules/@pocketpalai/react-native-speech/lib/typescript/src/engines/StreamingChunker.d.ts
+@@ -12,6 +12,8 @@
+  * accumulated buffer.
+  */
+ import type { TextChunk } from '../utils/TextChunker';
++import type { FirstChunkMode } from '../types/Engine';
++export declare function findFirstClauseEnd(text: string): number;
+ export declare class StreamingChunker {
+     private buffer;
+     private absoluteOffset;
+@@ -19,7 +21,9 @@ export declare class StreamingChunker {
+     private cancelled;
+     private maxChunkSize;
+     private waiter;
+-    constructor(maxChunkSize?: number);
++    private firstChunk;
++    private firstTaken;
++    constructor(maxChunkSize?: number, firstChunk?: FirstChunkMode);
+     append(text: string): void;
+     finalize(): void;
+     cancel(): void;
+diff --git a/node_modules/@pocketpalai/react-native-speech/lib/typescript/src/index.d.ts b/node_modules/@pocketpalai/react-native-speech/lib/typescript/src/index.d.ts
+index c62e238..17d6913 100644
+--- a/node_modules/@pocketpalai/react-native-speech/lib/typescript/src/index.d.ts
++++ b/node_modules/@pocketpalai/react-native-speech/lib/typescript/src/index.d.ts
+@@ -55,4 +55,7 @@ export { KokoroEngine } from './engines/kokoro';
+ export { SupertonicEngine } from './engines/supertonic';
+ /** @internal Advanced: Kitten neural engine class. */
+ export { KittenEngine } from './engines/kitten';
++/** @internal Advanced: line-buffered markdown stripper for streamed text. */
++export { createMarkdownStreamBuffer } from './utils/stripMarkdown';
++export type { MarkdownStreamBuffer } from './utils/stripMarkdown';
+ //# sourceMappingURL=index.d.ts.map
+\ No newline at end of file
+diff --git a/node_modules/@pocketpalai/react-native-speech/lib/typescript/src/types/Engine.d.ts b/node_modules/@pocketpalai/react-native-speech/lib/typescript/src/types/Engine.d.ts
+index 84c3f5a..1ba8c0c 100644
+--- a/node_modules/@pocketpalai/react-native-speech/lib/typescript/src/types/Engine.d.ts
++++ b/node_modules/@pocketpalai/react-native-speech/lib/typescript/src/types/Engine.d.ts
+@@ -51,6 +51,7 @@ export interface AudioBuffer {
+     /** Duration in seconds */
+     duration: number;
+ }
++export type FirstChunkMode = 'sentence' | 'clause';
+ export interface SynthesisOptions {
+     /** Voice identifier (engine-specific) */
+     voiceId?: string;
+@@ -95,6 +96,12 @@ export interface SynthesisOptions {
+      * @default true
+      */
+     stripMarkdown?: boolean;
++    /**
++     * Streaming only. `'clause'` flushes the first chunk at the earliest of a
++     * sentence end, a `[,;:—]` after 3 words, or 12 words.
++     * @default 'sentence'
++     */
++    firstChunk?: FirstChunkMode;
+     /**
+      * Called for each synthesized audio chunk after any volume adjustment
+      * and before playback. Useful for capturing audio offline — e.g. saving
+diff --git a/node_modules/@pocketpalai/react-native-speech/lib/typescript/src/utils/stripMarkdown.d.ts b/node_modules/@pocketpalai/react-native-speech/lib/typescript/src/utils/stripMarkdown.d.ts
+index dd276a7..01cd1dc 100644
+--- a/node_modules/@pocketpalai/react-native-speech/lib/typescript/src/utils/stripMarkdown.d.ts
++++ b/node_modules/@pocketpalai/react-native-speech/lib/typescript/src/utils/stripMarkdown.d.ts
+@@ -30,6 +30,8 @@ export interface StripMarkdownOptions {
+      * code is unreadable out loud, so dropping is usually better.
+      */
+     dropCodeBlocks?: boolean;
++    /** `'clause'` emits the first clause of a stream from the partial tail. */
++    firstChunk?: import('../types/Engine').FirstChunkMode;
+ }
+ /**
+  * Strip markdown syntax from text, producing TTS-friendly prose.
