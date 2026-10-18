@@ -45,6 +45,7 @@ export class WhisperAsrEngine implements AsrEngine {
   // context instead of keeping it.
   private generation = 0;
   private stopTranscription: (() => Promise<void>) | null = null;
+  private inFlight: Promise<unknown> | null = null;
 
   private getRoot(): string {
     return Platform.OS === 'ios'
@@ -218,6 +219,11 @@ export class WhisperAsrEngine implements AsrEngine {
     return promise;
   }
 
+  /** Loads the `tier` context ahead of the first transcription. */
+  async preload(tier: AsrTier): Promise<void> {
+    await this.ensureContext(tier);
+  }
+
   async transcribe(
     pcmBase64Int16: string,
     opts?: {tier: AsrTier; language?: string; prompt?: string},
@@ -234,6 +240,7 @@ export class WhisperAsrEngine implements AsrEngine {
       prompt: opts?.prompt,
     });
     this.stopTranscription = stop;
+    this.inFlight = promise;
     try {
       const result = await promise;
       return result.isAborted
@@ -244,6 +251,9 @@ export class WhisperAsrEngine implements AsrEngine {
           };
     } finally {
       this.stopTranscription = null;
+      if (this.inFlight === promise) {
+        this.inFlight = null;
+      }
     }
   }
 
@@ -251,9 +261,12 @@ export class WhisperAsrEngine implements AsrEngine {
     await this.stopTranscription?.();
   }
 
+  /** Stops an in-flight decode and waits for it before freeing the context. */
   async release(): Promise<void> {
     this.generation++;
     this.loading = null;
+    await this.stopTranscription?.().catch(() => {});
+    await this.inFlight?.catch(() => {});
     await this.releaseContext();
   }
 
