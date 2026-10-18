@@ -1,5 +1,8 @@
 import type {SearchProvider, PageContent} from '../search/types';
 
+export const SEARCH_NOT_SET_UP_MESSAGE =
+  "Internet search isn't set up yet. Finish setup in Settings → Internet Search.";
+
 /**
  * Injected at `registerDefaultTalents()` so the search engines never import
  * `SearchProviderStore` — keeps `execute()` free of MobX/store coupling.
