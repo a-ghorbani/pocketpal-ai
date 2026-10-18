@@ -1,4 +1,4 @@
-import {abortableFetch} from '../../../../../jest/abortableFetch';
+import {abortableFetch, okResponse} from '../../../../../jest/abortableFetch';
 
 import {readWithDefaultReader} from '../..';
 import {BraveProvider} from '../brave';
@@ -59,6 +59,58 @@ describe('search network calls honour the caller signal', () => {
     });
 
     await expect(run()).resolves.toBeDefined();
+    expect(global.fetch).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe('search network calls on a 429', () => {
+  const rateLimited = {
+    ok: false,
+    status: 429,
+    headers: {get: () => null},
+    text: () => Promise.resolve(''),
+  } as unknown as Response;
+  const searches = calls.filter(([label]) => label.endsWith('search'));
+  const reads = calls.filter(([label]) => !label.endsWith('search'));
+
+  beforeEach(() => {
+    jest.useFakeTimers();
+  });
+
+  afterEach(() => {
+    jest.useRealTimers();
+  });
+
+  it('covers every search and every read', () => {
+    expect(searches).toHaveLength(5);
+    expect(reads).toHaveLength(3);
+  });
+
+  it.each(searches)('%s retries once', async (_label, run) => {
+    global.fetch = jest
+      .fn()
+      .mockResolvedValueOnce(rateLimited)
+      .mockResolvedValueOnce(
+        okResponse('{"type":"search","results":[],"success":true,"data":{}}'),
+      );
+
+    const result = run();
+    await jest.advanceTimersByTimeAsync(1000);
+
+    await expect(result).resolves.toBeDefined();
+    expect(global.fetch).toHaveBeenCalledTimes(2);
+  });
+
+  it.each(reads)('%s is not retried', async (_label, run) => {
+    global.fetch = jest.fn().mockResolvedValue(rateLimited);
+
+    const result = run().then(
+      () => 'resolved',
+      (e: Error) => e.message,
+    );
+    await jest.advanceTimersByTimeAsync(5000);
+
+    expect(await result).toBe('request failed (429)');
     expect(global.fetch).toHaveBeenCalledTimes(1);
   });
 });
