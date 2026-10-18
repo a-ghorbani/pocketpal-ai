@@ -1,0 +1,555 @@
+import {AppState, Platform} from 'react-native';
+import {act, renderHook} from '@testing-library/react-native';
+import {fromByteArray} from 'base64-js';
+import {observable, runInAction} from 'mobx';
+import AudioRecord from '@fugood/react-native-audio-pcm-stream';
+import {check} from 'react-native-permissions';
+
+import {modelsList} from '../../../jest/fixtures/models';
+import {ASR_CHUNK_BYTES} from '../../services/asr/constants';
+import NativeHardwareInfo from '../../specs/NativeHardwareInfo';
+import {
+  asrStore,
+  chatSessionStore,
+  modelStore,
+  ttsStore,
+  voiceEntitlement,
+  voiceModeStore,
+} from '../../store';
+import {acquireKeepAwake} from '../../utils/keepAwake';
+import {ModelOrigin} from '../../utils/types';
+import type {VoiceTurnEvents, VoiceTurnOutcome} from '../../services/voice';
+
+import {useVoiceMode} from '../useVoiceMode';
+
+let mockBlur: (() => void) | undefined;
+jest.mock('@react-navigation/native', () => ({
+  ...jest.requireActual('@react-navigation/native'),
+  useFocusEffect: (effect: () => (() => void) | undefined) => {
+    const {useEffect} = require('react');
+    useEffect(() => {
+      const cleanup = effect();
+      mockBlur = cleanup;
+      return cleanup;
+    }, [effect]);
+  },
+}));
+
+const appStateHandlers: Array<(state: string) => void> = [];
+jest.spyOn(AppState, 'addEventListener').mockImplementation(((
+  _event: string,
+  handler: (state: string) => void,
+) => {
+  appStateHandlers.push(handler);
+  return {
+    remove: () => {
+      appStateHandlers.splice(appStateHandlers.indexOf(handler), 1);
+    },
+  };
+}) as any);
+const setAppState = (state: string) =>
+  act(() => {
+    [...appStateHandlers].forEach(handler => handler(state));
+  });
+
+type FakeTurn = {
+  utterance: Uint8Array;
+  on: VoiceTurnEvents;
+  done: Promise<VoiceTurnOutcome>;
+  finish: (outcome: VoiceTurnOutcome) => void;
+  interrupt: jest.Mock;
+};
+
+function makeEngine() {
+  const turns: FakeTurn[] = [];
+  const engine = {
+    id: 'cascade' as const,
+    prepare: jest.fn().mockResolvedValue(undefined),
+    release: jest.fn().mockResolvedValue(undefined),
+    runTurn: jest.fn((utterance: Uint8Array, _port, on: VoiceTurnEvents) => {
+      let finish!: (outcome: VoiceTurnOutcome) => void;
+      const done = new Promise<VoiceTurnOutcome>(resolve => {
+        finish = resolve;
+      });
+      const turn: FakeTurn = {
+        utterance,
+        on,
+        done,
+        finish,
+        interrupt: jest.fn(async () => finish('interrupted')),
+      };
+      turns.push(turn);
+      return turn;
+    }),
+  };
+  return {engine, turns};
+}
+
+const pcm = (amplitude: number) => {
+  const bytes = new Uint8Array(ASR_CHUNK_BYTES);
+  const view = new DataView(bytes.buffer);
+  for (let i = 0; i < ASR_CHUNK_BYTES / 2; i++) {
+    view.setInt16(i * 2, (i % 2 ? 1 : -1) * amplitude * 0x7fff, true);
+  }
+  return fromByteArray(bytes);
+};
+const VOICED = pcm(0.1);
+const SILENT = pcm(0);
+
+const micListener = () => {
+  const calls = (AudioRecord.on as jest.Mock).mock.calls;
+  return calls[calls.length - 1][1] as (chunk: string) => void;
+};
+const speak = (ms: number, chunk = VOICED) => {
+  const listener = micListener();
+  act(() => {
+    for (let i = 0; i < ms / 50; i++) {
+      listener(chunk);
+    }
+  });
+};
+const flush = () => act(async () => {});
+
+const localModel = modelsList[0];
+const port = {send: jest.fn(), stop: jest.fn()};
+const openModelPicker = jest.fn();
+
+function renderVoiceMode() {
+  const {engine, turns} = makeEngine();
+  const hook = renderHook(() => useVoiceMode({port, engine: engine as any}));
+  const enter = async () => {
+    await act(async () => {
+      await hook.result.current.requestEntry({openModelPicker});
+    });
+  };
+  return {hook, engine, turns, enter};
+}
+
+const tts = ttsStore as any;
+const model = modelStore as any;
+
+describe('useVoiceMode', () => {
+  const backWithBox = (target: object, key: string) => {
+    const box = observable.box<unknown>(undefined);
+    Object.defineProperty(target, key, {
+      configurable: true,
+      get: () => box.get(),
+      set: value => runInAction(() => box.set(value)),
+    });
+  };
+
+  beforeAll(() => {
+    backWithBox(chatSessionStore, 'activeSessionId');
+    backWithBox(modelStore, 'activeModelId');
+  });
+
+  beforeEach(() => {
+    jest.clearAllMocks();
+    (voiceModeStore as any).reset();
+    voiceEntitlement.register((voiceEntitlement as any).defaultSource);
+    voiceModeStore.setUnlockOverride(true);
+    (AudioRecord.on as jest.Mock).mockReturnValue({remove: jest.fn()});
+    (AudioRecord.init as jest.Mock).mockResolvedValue(undefined);
+    (check as jest.Mock).mockResolvedValue('granted');
+    Platform.OS = 'ios';
+    (NativeHardwareInfo.getAvailableMemory as jest.Mock).mockResolvedValue(3e9);
+    runInAction(() => {
+      chatSessionStore.activeSessionId = 'session-1';
+      model.models = modelsList;
+      model.activeModelId = localModel.id;
+      model.isContextLoading = false;
+      model.loadedModelBytes = 1e9;
+      asrStore.downloadStates.base = 'ready';
+      tts.currentVoice = {id: 'F1', name: 'F1', engine: 'supertonic'};
+    });
+  });
+
+  describe('entry', () => {
+    it('opens the paywall, once, when voice mode is locked', async () => {
+      voiceModeStore.setUnlockOverride(false);
+      const {enter, engine} = renderVoiceMode();
+
+      await enter();
+
+      expect(
+        (voiceEntitlement as any).defaultSource.openPaywall,
+      ).toHaveBeenCalledTimes(1);
+      expect(engine.prepare).not.toHaveBeenCalled();
+      expect(voiceModeStore.phase).toBe('closed');
+    });
+
+    it('opens only the model picker when no model is loaded', async () => {
+      runInAction(() => {
+        model.activeModelId = undefined;
+      });
+      const {enter, hook, engine} = renderVoiceMode();
+
+      await enter();
+
+      expect(openModelPicker).toHaveBeenCalledTimes(1);
+      expect(hook.result.current.sheet).toBeNull();
+      expect(engine.prepare).not.toHaveBeenCalled();
+      expect(voiceModeStore.phase).toBe('closed');
+    });
+
+    it('does nothing while the model loads', async () => {
+      runInAction(() => {
+        model.isContextLoading = true;
+      });
+      const {enter, hook, engine} = renderVoiceMode();
+
+      await enter();
+
+      expect(hook.result.current.sheet).toBeNull();
+      expect(engine.prepare).not.toHaveBeenCalled();
+    });
+
+    it.each([
+      [
+        'whisper base is not installed',
+        () => {
+          asrStore.downloadStates.base = 'not_installed';
+        },
+      ],
+      [
+        'the voice is the system voice',
+        () => {
+          tts.currentVoice = {id: 's', name: 's', engine: 'system'};
+        },
+      ],
+      ['there is no voice', () => (tts.currentVoice = null)],
+      [
+        'the microphone is not granted',
+        () => (check as jest.Mock).mockResolvedValue('denied'),
+      ],
+    ])('opens the setup sheet when %s', async (_case, arrange) => {
+      runInAction(arrange);
+      const {enter, hook, engine} = renderVoiceMode();
+
+      await enter();
+
+      expect(hook.result.current.sheet).toEqual({kind: 'setup'});
+      expect(engine.prepare).not.toHaveBeenCalled();
+    });
+
+    it('enters after setup completes and memory fits', async () => {
+      runInAction(() => {
+        asrStore.downloadStates.base = 'not_installed';
+      });
+      const {enter, hook, engine} = renderVoiceMode();
+      await enter();
+
+      runInAction(() => {
+        asrStore.downloadStates.base = 'ready';
+      });
+      await act(async () => {
+        await hook.result.current.setupDone();
+      });
+
+      expect(hook.result.current.sheet).toBeNull();
+      expect(engine.prepare).toHaveBeenCalledTimes(1);
+      expect(voiceModeStore.phase).toBe('listening');
+    });
+
+    it('enters a local model with a held first chunk, a keep-awake hold and an open mic', async () => {
+      const {enter, engine} = renderVoiceMode();
+
+      await enter();
+
+      expect(ttsStore.setVoiceOutputActive).toHaveBeenCalledWith(true, {
+        holdFirstChunk: true,
+      });
+      expect(ttsStore.stop).toHaveBeenCalled();
+      expect(acquireKeepAwake).toHaveBeenCalledTimes(1);
+      expect(engine.prepare).toHaveBeenCalledTimes(1);
+      expect(voiceModeStore.phase).toBe('listening');
+      expect(voiceModeStore.presentation).toBe('full');
+      expect(AudioRecord.start).toHaveBeenCalledTimes(1);
+    });
+
+    it('holds nothing back for a remote model', async () => {
+      const remote = {...localModel, id: 'remote', origin: ModelOrigin.REMOTE};
+      runInAction(() => {
+        model.models = [...modelsList, remote];
+        model.activeModelId = 'remote';
+      });
+      const {enter} = renderVoiceMode();
+
+      await enter();
+
+      expect(ttsStore.setVoiceOutputActive).toHaveBeenCalledWith(true, {
+        holdFirstChunk: false,
+      });
+    });
+
+    it('shows the memory sheet when memory is tight; Continue anyway enters', async () => {
+      (NativeHardwareInfo.getAvailableMemory as jest.Mock).mockResolvedValue(
+        0.5e9,
+      );
+      const {enter, hook, engine} = renderVoiceMode();
+
+      await enter();
+      expect(hook.result.current.sheet).toMatchObject({
+        kind: 'memory',
+        fit: {status: 'tight'},
+      });
+      expect(engine.prepare).not.toHaveBeenCalled();
+
+      await act(async () => {
+        await hook.result.current.continueAnyway();
+      });
+      expect(voiceModeStore.phase).toBe('listening');
+      expect(hook.result.current.sheet).toBeNull();
+    });
+
+    it("won't enter on Continue anyway when whisper won't fit", async () => {
+      (NativeHardwareInfo.getAvailableMemory as jest.Mock).mockResolvedValue(
+        0.3e9,
+      );
+      const {enter, hook, engine} = renderVoiceMode();
+
+      await enter();
+      expect(hook.result.current.sheet).toMatchObject({
+        fit: {status: 'wont_fit'},
+      });
+      await act(async () => {
+        await hook.result.current.continueAnyway();
+      });
+
+      expect(engine.prepare).not.toHaveBeenCalled();
+    });
+
+    it('Choose a smaller model opens the picker and stays closed', async () => {
+      (NativeHardwareInfo.getAvailableMemory as jest.Mock).mockResolvedValue(
+        0.5e9,
+      );
+      const {enter, hook} = renderVoiceMode();
+      await enter();
+
+      act(() => hook.result.current.chooseSmallerModel());
+
+      expect(openModelPicker).toHaveBeenCalledTimes(1);
+      expect(hook.result.current.sheet).toBeNull();
+      expect(voiceModeStore.phase).toBe('closed');
+    });
+  });
+
+  describe('a turn', () => {
+    it('endpoints after speech and a pause, with the mic stopped until the turn ends', async () => {
+      const {enter, engine, turns} = renderVoiceMode();
+      await enter();
+
+      speak(500);
+      speak(600, SILENT);
+
+      expect(voiceModeStore.phase).toBe('transcribing');
+      expect(AudioRecord.stop).toHaveBeenCalledTimes(1);
+      expect(engine.runTurn).toHaveBeenCalledTimes(1);
+      expect(turns[0].utterance.length).toBeGreaterThan(0);
+
+      act(() => turns[0].on.transcribed('hi'));
+      expect(voiceModeStore.phase).toBe('thinking');
+      act(() => turns[0].on.speechStarted());
+      expect(voiceModeStore.phase).toBe('speaking');
+      expect(AudioRecord.start).toHaveBeenCalledTimes(1);
+
+      turns[0].finish('answered');
+      await flush();
+
+      expect(voiceModeStore.phase).toBe('listening');
+      expect(voiceModeStore.lastError).toBeNull();
+      expect(AudioRecord.start).toHaveBeenCalledTimes(2);
+    });
+
+    it('shows the failure and listens again', async () => {
+      const {enter, turns} = renderVoiceMode();
+      await enter();
+      speak(500);
+      speak(600, SILENT);
+
+      turns[0].finish('reply_failed');
+      await flush();
+
+      expect(voiceModeStore.phase).toBe('listening');
+      expect(voiceModeStore.lastError).toBe('reply_failed');
+    });
+
+    it('a tap while listening ends the utterance only after speech', async () => {
+      const {enter, hook, engine} = renderVoiceMode();
+      await enter();
+
+      speak(200, SILENT);
+      act(() => hook.result.current.tapCloud());
+      expect(engine.runTurn).not.toHaveBeenCalled();
+
+      speak(400);
+      act(() => hook.result.current.tapCloud());
+      expect(engine.runTurn).toHaveBeenCalledTimes(1);
+    });
+
+    it('a tap while speaking interrupts; a tap while thinking does nothing', async () => {
+      const {enter, hook, turns} = renderVoiceMode();
+      await enter();
+      speak(500);
+      speak(600, SILENT);
+
+      act(() => turns[0].on.transcribed('hi'));
+      act(() => hook.result.current.tapCloud());
+      expect(turns[0].interrupt).not.toHaveBeenCalled();
+
+      act(() => turns[0].on.speechStarted());
+      act(() => hook.result.current.tapCloud());
+      expect(turns[0].interrupt).toHaveBeenCalledTimes(1);
+      await flush();
+      expect(voiceModeStore.phase).toBe('listening');
+    });
+
+    it('a phase forced from outside starts no capture', async () => {
+      renderVoiceMode();
+
+      act(() => {
+        runInAction(() => {
+          voiceModeStore.phase = 'listening';
+        });
+      });
+
+      expect(AudioRecord.init).not.toHaveBeenCalled();
+      expect(AudioRecord.start).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('mute', () => {
+    it('stops the mic while listening and resumes on unmute', async () => {
+      const {enter, hook, engine} = renderVoiceMode();
+      await enter();
+
+      act(() => hook.result.current.toggleMute());
+      expect(voiceModeStore.micMuted).toBe(true);
+      expect(AudioRecord.stop).toHaveBeenCalledTimes(1);
+
+      act(() => hook.result.current.tapCloud());
+      expect(engine.runTurn).not.toHaveBeenCalled();
+
+      await act(async () => hook.result.current.toggleMute());
+      expect(AudioRecord.start).toHaveBeenCalledTimes(2);
+    });
+
+    it('while speaking leaves the mic off after the turn', async () => {
+      const {enter, hook, turns} = renderVoiceMode();
+      await enter();
+      speak(500);
+      speak(600, SILENT);
+      act(() => turns[0].on.speechStarted());
+
+      act(() => hook.result.current.toggleMute());
+      turns[0].finish('answered');
+      await flush();
+
+      expect(voiceModeStore.phase).toBe('listening');
+      expect(voiceModeStore.micMuted).toBe(true);
+      expect(AudioRecord.start).toHaveBeenCalledTimes(1);
+    });
+  });
+
+  describe('exits', () => {
+    const expectClosedAndReleased = (engine: {release: jest.Mock}) => {
+      expect(voiceModeStore.phase).toBe('closed');
+      expect(engine.release).toHaveBeenCalledTimes(1);
+      const release = (acquireKeepAwake as jest.Mock).mock.results[0].value;
+      expect(release).toHaveBeenCalledTimes(1);
+      expect(ttsStore.setVoiceOutputActive).toHaveBeenLastCalledWith(false);
+    };
+
+    it.each([
+      [
+        'End',
+        (h: any) =>
+          act(() => {
+            h.result.current.end();
+          }),
+      ],
+      ['the app going to the background', () => setAppState('background')],
+      ['leaving the screen', () => act(() => mockBlur?.())],
+      [
+        'a chat switch',
+        () =>
+          act(() => {
+            chatSessionStore.activeSessionId = 'session-2';
+          }),
+      ],
+      [
+        'a model change',
+        () =>
+          act(() => {
+            runInAction(() => {
+              model.activeModelId = modelsList[1].id;
+            });
+          }),
+      ],
+      ['unmount', (h: any) => h.unmount()],
+    ])(
+      '%s while speaking interrupts the turn and releases everything',
+      async (_case, trigger) => {
+        const {enter, hook, engine, turns} = renderVoiceMode();
+        await enter();
+        speak(500);
+        speak(600, SILENT);
+        act(() => turns[0].on.speechStarted());
+
+        trigger(hook);
+        await flush();
+
+        expect(turns[0].interrupt).toHaveBeenCalledTimes(1);
+        expectClosedAndReleased(engine);
+      },
+    );
+
+    it('End while listening stops the mic', async () => {
+      const {enter, hook, engine} = renderVoiceMode();
+      await enter();
+
+      await act(async () => {
+        await hook.result.current.end();
+      });
+
+      expect(AudioRecord.stop).toHaveBeenCalledTimes(1);
+      expectClosedAndReleased(engine);
+    });
+
+    it('a microphone that fails ends the session', async () => {
+      (AudioRecord.init as jest.Mock).mockRejectedValueOnce(new Error('mic'));
+      jest.spyOn(console, 'warn').mockImplementationOnce(() => {});
+      const {enter, engine} = renderVoiceMode();
+
+      await enter();
+      await flush();
+
+      expectClosedAndReleased(engine);
+    });
+
+    it('keeps the voice hold through a turn', async () => {
+      const {enter, turns} = renderVoiceMode();
+      await enter();
+      speak(500);
+      speak(600, SILENT);
+      turns[0].finish('answered');
+      await flush();
+
+      const release = (acquireKeepAwake as jest.Mock).mock.results[0].value;
+      expect(release).not.toHaveBeenCalled();
+    });
+  });
+
+  it('restarts capture on return from inactive while listening', async () => {
+    const {enter} = renderVoiceMode();
+    await enter();
+
+    setAppState('inactive');
+    setAppState('active');
+    await flush();
+
+    expect(voiceModeStore.phase).toBe('listening');
+    expect(AudioRecord.stop).toHaveBeenCalledTimes(1);
+    expect(AudioRecord.start).toHaveBeenCalledTimes(2);
+  });
+});
