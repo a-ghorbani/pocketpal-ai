@@ -12,6 +12,7 @@ const readFixture = name => fs.readFileSync(path.join(FIXTURES, name), 'utf8');
 
 const loadCurrent = () => parsePerf(readFixture('current.perf'));
 const loadOutput = () => JSON.parse(readFixture('output.json'));
+const loadBaseline = () => parsePerf(readFixture('baseline.perf'));
 
 const SETTINGS =
   'SettingsScreen render performance expands the advanced settings';
@@ -43,6 +44,7 @@ describe('perf-gate', () => {
       currentEntries: loadCurrent(),
       output: loadOutput(),
       bootstrap: false,
+      baselineEntries: loadBaseline(),
     });
 
     expect(result.failed).toBe(false);
@@ -62,6 +64,7 @@ describe('perf-gate', () => {
       currentEntries: loadCurrent(),
       output,
       bootstrap: false,
+      baselineEntries: loadBaseline(),
     });
 
     expect(result.failed).toBe(true);
@@ -80,6 +83,7 @@ describe('perf-gate', () => {
       currentEntries: loadCurrent(),
       output,
       bootstrap: false,
+      baselineEntries: loadBaseline(),
     });
 
     expect(result.failed).toBe(true);
@@ -94,6 +98,7 @@ describe('perf-gate', () => {
       currentEntries: loadCurrent(),
       output,
       bootstrap: false,
+      baselineEntries: loadBaseline(),
     });
 
     expect(result.failed).toBe(false);
@@ -111,6 +116,7 @@ describe('perf-gate', () => {
       currentEntries,
       output: loadOutput(),
       bootstrap: false,
+      baselineEntries: loadBaseline(),
     });
 
     expect(result.failed).toBe(true);
@@ -128,6 +134,7 @@ describe('perf-gate', () => {
       currentEntries: loadCurrent(),
       output,
       bootstrap: false,
+      baselineEntries: loadBaseline(),
     });
 
     expect(result.failed).toBe(false);
@@ -157,6 +164,7 @@ describe('perf-gate', () => {
       currentEntries,
       output,
       bootstrap: false,
+      baselineEntries: loadBaseline(),
     });
 
     expect(result.failed).toBe(false);
@@ -179,6 +187,7 @@ describe('perf-gate', () => {
       currentEntries: loadCurrent(),
       output,
       bootstrap: false,
+      baselineEntries: loadBaseline().filter(e => e.name !== SETTINGS),
     });
 
     expect(result.failed).toBe(true);
@@ -192,6 +201,7 @@ describe('perf-gate', () => {
       currentEntries: loadCurrent(),
       output: null,
       bootstrap: false,
+      baselineEntries: loadBaseline(),
     });
 
     expect(result.failed).toBe(true);
@@ -232,6 +242,7 @@ describe('perf-gate', () => {
         currentEntries: loadCurrent(),
         output: loadOutput(),
         bootstrap: false,
+        baselineEntries: loadBaseline(),
         reassureReport: report,
       });
 
@@ -254,6 +265,7 @@ describe('perf-gate', () => {
         currentEntries: loadCurrent(),
         output,
         bootstrap: false,
+        baselineEntries: loadBaseline(),
       });
       withCount(findCompared(output, SHEET).current, [4, 4, 4]);
 
@@ -261,6 +273,7 @@ describe('perf-gate', () => {
         currentEntries: loadCurrent(),
         output,
         bootstrap: false,
+        baselineEntries: loadBaseline(),
       });
 
       expect(passed.markdown).not.toContain('How to read this');
@@ -272,6 +285,7 @@ describe('perf-gate', () => {
         currentEntries: loadCurrent(),
         output: loadOutput(),
         bootstrap: false,
+        baselineEntries: loadBaseline(),
         testInputsChanged: true,
       });
 
@@ -294,6 +308,7 @@ describe('perf-gate', () => {
         currentEntries: loadCurrent(),
         output,
         bootstrap: false,
+        baselineEntries: loadBaseline(),
       });
 
       expect(markdown).toMatch(
@@ -335,6 +350,7 @@ describe('perf-gate', () => {
         currentEntries,
         output: loadOutput(),
         bootstrap: false,
+        baselineEntries: loadBaseline(),
       });
 
       expectUnrecognised(result, `${SETTINGS}: current.perf.meanCount`);
@@ -357,6 +373,7 @@ describe('perf-gate', () => {
         currentEntries: loadCurrent(),
         output,
         bootstrap: false,
+        baselineEntries: loadBaseline(),
       });
 
       expectUnrecognised(result, `${SHEET}: output.json baseline.stdevCount`);
@@ -370,6 +387,7 @@ describe('perf-gate', () => {
         currentEntries: loadCurrent(),
         output,
         bootstrap: false,
+        baselineEntries: loadBaseline(),
       });
 
       expectUnrecognised(result, `${SHEET}: output.json current.counts`);
@@ -383,6 +401,7 @@ describe('perf-gate', () => {
         currentEntries: loadCurrent(),
         output,
         bootstrap: false,
+        baselineEntries: loadBaseline(),
       });
 
       expectUnrecognised(result, 'output.json: added');
@@ -396,12 +415,75 @@ describe('perf-gate', () => {
         currentEntries: loadCurrent(),
         output,
         bootstrap: false,
+        baselineEntries: loadBaseline(),
       });
 
       expectUnrecognised(
         result,
         `${SETTINGS}: reported 0 times in output.json`,
       );
+    });
+
+    it('fails when a scenario measured on base is reported as added', () => {
+      const output = loadOutput();
+      const settings = removeCompared(output, SETTINGS);
+      withCount(settings.current, [5, 5, 5]);
+      output.added.push({
+        name: SETTINGS,
+        type: 'render',
+        current: settings.current,
+      });
+
+      const result = evaluate({
+        currentEntries: loadCurrent(),
+        output,
+        bootstrap: false,
+        baselineEntries: loadBaseline(),
+      });
+
+      expectUnrecognised(
+        result,
+        `${SETTINGS}: reported as added but measured on base`,
+      );
+    });
+
+    it('fails when every scenario is reported as added and removed', () => {
+      const output = loadOutput();
+      const compared = [...output.significant, ...output.meaningless];
+      output.significant = [];
+      output.meaningless = [];
+      output.added = compared.map(e => ({
+        name: e.name,
+        type: 'render',
+        current: e.current,
+      }));
+      output.removed = compared.map(e => ({
+        name: e.name,
+        type: 'render',
+        baseline: e.baseline,
+      }));
+
+      const result = evaluate({
+        currentEntries: loadCurrent(),
+        output,
+        bootstrap: false,
+        baselineEntries: loadBaseline(),
+      });
+
+      expectUnrecognised(
+        result,
+        `${SHEET}: reported as removed but measured on head`,
+      );
+    });
+
+    it('fails when baseline.perf is missing after a compared run', () => {
+      const result = evaluate({
+        currentEntries: loadCurrent(),
+        output: loadOutput(),
+        bootstrap: false,
+      });
+
+      expectUnrecognised(result, 'baseline.perf: missing after a compared run');
     });
 
     it('fails when a measured scenario is reported in two categories', () => {
@@ -416,6 +498,7 @@ describe('perf-gate', () => {
         currentEntries: loadCurrent(),
         output,
         bootstrap: false,
+        baselineEntries: loadBaseline(),
       });
 
       expectUnrecognised(result, `${SHEET}: reported 2 times in output.json`);
@@ -428,10 +511,12 @@ describe('perf-gate', () => {
     beforeEach(() => {
       dir = fs.mkdtempSync(path.join(os.tmpdir(), 'perf-gate-'));
       fs.mkdirSync(path.join(dir, '.reassure'));
-      fs.copyFileSync(
-        path.join(FIXTURES, 'current.perf'),
-        path.join(dir, '.reassure', 'current.perf'),
-      );
+      for (const file of ['current.perf', 'baseline.perf']) {
+        fs.copyFileSync(
+          path.join(FIXTURES, file),
+          path.join(dir, '.reassure', file),
+        );
+      }
     });
 
     afterEach(() => {

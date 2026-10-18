@@ -29,7 +29,7 @@ yarn test:perf:compare [base]  # measure base, then HEAD, then apply the render-
 | Two scenarios share a name (when the base has no perf tests) | fails |
 | The base was measured but no comparison was produced | fails |
 | A perf test failed on the base or on your branch | fails (`run-failed`), see the job log |
-| Reassure's output format changed (`unrecognised-output`) | fails: the gate fails closed rather than read an unknown format |
+| Reassure's output format changed, or a scenario measured on both sides is reported as added or removed (`unrecognised-output`) | fails: the gate fails closed rather than read an unknown format or skip a comparison |
 | Render count went down, or stayed the same | passes |
 | Duration changed with an equal render count | passes (informational) |
 | Scenario added, removed or renamed | passes (not compared) |

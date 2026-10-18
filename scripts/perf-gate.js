@@ -87,7 +87,7 @@ const countFieldIssues = (entry, where) => {
   return issues;
 };
 
-const validate = ({currentEntries, output, bootstrap}) => {
+const validate = ({currentEntries, baselineEntries, output, bootstrap}) => {
   const issues = [];
   const add = (name, fields) =>
     fields.forEach(field => issues.push(`${name}: ${field}`));
@@ -108,6 +108,19 @@ const validate = ({currentEntries, output, bootstrap}) => {
     add(e.name, countFieldIssues(e.current, 'output.json current'));
     add(e.name, countFieldIssues(e.baseline, 'output.json baseline'));
   });
+
+  if (!baselineEntries) {
+    add('baseline.perf', ['missing after a compared run']);
+    return issues;
+  }
+  const baseNames = new Set(baselineEntries.map(e => e.name));
+  const headNames = new Set(currentEntries.map(e => e.name));
+  output.added
+    .filter(e => baseNames.has(e.name))
+    .forEach(e => add(e.name, ['reported as added but measured on base']));
+  output.removed
+    .filter(e => headNames.has(e.name))
+    .forEach(e => add(e.name, ['reported as removed but measured on head']));
 
   const reported = [
     ...output.significant,
@@ -161,6 +174,7 @@ const renderRunFailed = ({cause, docsLink}) =>
 
 const evaluate = ({
   currentEntries,
+  baselineEntries = null,
   output,
   bootstrap,
   testInputsChanged = false,
@@ -172,7 +186,12 @@ const evaluate = ({
   const sections = [];
   const section = (title, body) => sections.push(`**${title}**\n\n${body}`);
 
-  const issues = validate({currentEntries, output, bootstrap});
+  const issues = validate({
+    currentEntries,
+    baselineEntries,
+    output,
+    bootstrap,
+  });
   if (issues.length) {
     states.add('unrecognised-output');
     section(
@@ -297,8 +316,12 @@ const main = () => {
     const outputJson = bootstrap
       ? null
       : readIfPresent(path.join(REASSURE_DIR, 'output.json'));
+    const baselinePerf = bootstrap
+      ? null
+      : readIfPresent(path.join(REASSURE_DIR, 'baseline.perf'));
     result = evaluate({
       currentEntries,
+      baselineEntries: baselinePerf === null ? null : parsePerf(baselinePerf),
       output: outputJson === null ? null : JSON.parse(outputJson),
       bootstrap,
       testInputsChanged: args.includes('--test-inputs-changed'),
