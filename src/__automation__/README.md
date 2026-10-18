@@ -28,7 +28,7 @@ Two independent guardrails enforce the contract:
    the build if any of the automation marker strings
    (`AUTOMATION_BRIDGE`, `memory-snapshot-label`, `memory-snapshot-result`,
    `BENCH_RUN_MATRIX`, `bench-runner-screen-status`, `IAP_FAKE_STORE`,
-   `IAP_API_BASE_OVERRIDE`, `PLUS_SHIP_OVERRIDE`) appear. The ground
+   `IAP_API_BASE_OVERRIDE`, `PLUS_SHIP_OVERRIDE`, `PLUS_GATE_PROBE`) appear. The ground
    truth for DCE.
 
 > **Note on the static-import question.** Some readers worry that `App.tsx`
@@ -44,7 +44,7 @@ Two independent guardrails enforce the contract:
 > fails the build if any of the registered marker strings
 > (`AUTOMATION_BRIDGE`, `memory-snapshot-label`, `memory-snapshot-result`,
 > `BENCH_RUN_MATRIX`, `bench-runner-screen-status`, `IAP_FAKE_STORE`,
-> `IAP_API_BASE_OVERRIDE`, `PLUS_SHIP_OVERRIDE`) appear. Hermes'
+> `IAP_API_BASE_OVERRIDE`, `PLUS_SHIP_OVERRIDE`, `PLUS_GATE_PROBE`) appear. Hermes'
 > constant-folding + tree-shaking on `__E2E__ === false` is what actually
 > removes the code; the grep is the empirical contract that proves it for
 > every prod build.
@@ -90,6 +90,7 @@ by deep link only. See `BenchmarkRunnerScreen.tsx` as reference.
 | Screen | Purpose | Activation |
 |--------|---------|------------|
 | `BenchmarkRunnerScreen` | Drives the benchmark matrix in-app for the `benchmark-matrix` spec | Deep link `pocketpal://e2e/benchmark` (registered in `android/app/src/e2e/AndroidManifest.xml`); manual button tap to start |
+| `PlusTestFeatureScreen` | A locked feature behind Plus for the `iap-plus` spec: checks `isPlusUnlocked()`, else calls `openPlus({onUnlocked})` | Deep link `pocketpal://e2e/plus-feature` |
 
 ## Deep-link dispatcher
 
@@ -101,6 +102,8 @@ handles two hosts:
 - `iap` — `pocketpal://iap?cmd=<verb>::<arg>` scripts the `FakeStore` on iOS
   (the Android specs use `IapAdapter`, since the Android Linking listener
   only routes the benchmark URL).
+- `e2e/plus-feature` — navigates to `PlusTestFeatureScreen` (iap-plus spec);
+  Android routes it from the same `useDeepLinking.ts` Linking effect.
 - `e2e/benchmark` — navigates to `BenchmarkRunnerScreen` (benchmark-matrix spec).
   On Android, the cold-launch path also lives in `useDeepLinking.ts`
   itself (a `__E2E__`-gated `Linking.getInitialURL()` effect) since RN's

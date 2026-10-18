@@ -45,6 +45,7 @@ import {MarkdownProvider} from './src/components/MarkdownView';
 import {
   AutomationBridge,
   BenchmarkRunnerScreen,
+  PlusTestFeatureScreen,
   fakeStore,
   plusShipOverride,
 } from './src/__automation__';
@@ -238,6 +239,19 @@ const App = observer(() => {
                                 options={{
                                   headerStyle: styles.headerWithoutDivider,
                                   title: 'Benchmark Runner',
+                                  drawerItemStyle: {display: 'none'},
+                                }}
+                              />
+                            )}
+                            {__E2E__ && (
+                              <Drawer.Screen
+                                name={ROUTES.PLUS_TEST_FEATURE}
+                                component={gestureHandlerRootHOC(
+                                  PlusTestFeatureScreen,
+                                )}
+                                options={{
+                                  headerStyle: styles.headerWithoutDivider,
+                                  title: 'Plus Test Feature',
                                   drawerItemStyle: {display: 'none'},
                                 }}
                               />

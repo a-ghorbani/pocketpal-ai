@@ -16,6 +16,7 @@ import {
   isBenchmarkRunnerUrl,
   parseBenchmarkAutostart,
 } from '../__automation__/benchmarkRoute';
+import {isPlusFeatureUrl} from '../__automation__/plusFeatureRoute';
 
 /**
  * Hook for handling deep link navigation
@@ -141,6 +142,8 @@ export const useDeepLinking = () => {
         (navigation as any).navigate(ROUTES.BENCHMARK_RUNNER, {
           autostart: parseBenchmarkAutostart(url),
         });
+      } else if (isPlusFeatureUrl(url)) {
+        (navigation as any).navigate(ROUTES.PLUS_TEST_FEATURE);
       }
     };
     Linking.getInitialURL()

@@ -356,6 +356,7 @@ jobs:
             'IAP_API_BASE_OVERRIDE'
             'IAP_FAKE_STORE'
             'PLUS_SHIP_OVERRIDE'
+            'PLUS_GATE_PROBE'
           )
           FAIL=0
           for m in "${MARKERS[@]}"; do
