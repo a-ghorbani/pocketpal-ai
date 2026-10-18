@@ -95,6 +95,10 @@ export const SettingsScreen: React.FC = observer(() => {
   );
   const [isValidInput, setIsValidInput] = useState(true);
   const [showAdvancedSettings, setShowAdvancedSettings] = useState(false);
+  const [, setAdvancedRenderTick] = useState(0);
+  useEffect(() => {
+    setAdvancedRenderTick(tick => tick + 1);
+  }, [showAdvancedSettings]);
   const inputRef = useRef<RNTextInput>(null);
   const keyCacheMenu = useMenuAnchor();
   const valueCacheMenu = useMenuAnchor();
