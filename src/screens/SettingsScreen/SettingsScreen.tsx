@@ -51,7 +51,8 @@ import {PurchasesCard} from './PurchasesCard';
 import {useTheme} from '../../hooks';
 
 import {createStyles} from './styles';
-import {CacheTypeMenuRow, useMenuAnchor} from './CacheTypeMenuRow';
+import {CacheTypeMenuRow} from './CacheTypeMenuRow';
+import {useMenuAnchor} from './useMenuAnchor';
 
 import {
   modelStore,
