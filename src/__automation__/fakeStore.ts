@@ -2,6 +2,7 @@ import {Platform} from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 import {setApiBaseOverride} from '../services/palshub/apiBase';
+import {plusShipOverride} from './plusShipOverride';
 import {outcomeForErrorCode} from '../services/iap/storeOutcomes';
 import type {Binding} from '../services/iap/iapWire';
 import type {
@@ -252,7 +253,10 @@ class FakeStore implements StorePort {
         setApiBaseOverride(undefined);
         this.finished = [];
         this.syncCount = 0;
+        await plusShipOverride.set('none');
         break;
+      case 'plus_ship':
+        return plusShipOverride.set(arg);
       case 'read':
         return this.summary();
       default:

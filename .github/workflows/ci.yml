@@ -355,6 +355,7 @@ jobs:
             'bench-runner-screen-status'
             'IAP_API_BASE_OVERRIDE'
             'IAP_FAKE_STORE'
+            'PLUS_SHIP_OVERRIDE'
           )
           FAIL=0
           for m in "${MARKERS[@]}"; do

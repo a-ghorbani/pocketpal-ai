@@ -46,6 +46,7 @@ import {
   AutomationBridge,
   BenchmarkRunnerScreen,
   fakeStore,
+  plusShipOverride,
 } from './src/__automation__';
 import {
   ChatScreen,
@@ -65,6 +66,7 @@ const isDebugMode = __DEV__;
 
 if (__E2E__) {
   fakeStore.restore();
+  plusShipOverride.restore();
 }
 
 const Drawer = createDrawerNavigator();

@@ -28,7 +28,7 @@ Two independent guardrails enforce the contract:
    the build if any of the automation marker strings
    (`AUTOMATION_BRIDGE`, `memory-snapshot-label`, `memory-snapshot-result`,
    `BENCH_RUN_MATRIX`, `bench-runner-screen-status`, `IAP_FAKE_STORE`,
-   `IAP_API_BASE_OVERRIDE`) appear. The ground
+   `IAP_API_BASE_OVERRIDE`, `PLUS_SHIP_OVERRIDE`) appear. The ground
    truth for DCE.
 
 > **Note on the static-import question.** Some readers worry that `App.tsx`
@@ -44,7 +44,7 @@ Two independent guardrails enforce the contract:
 > fails the build if any of the registered marker strings
 > (`AUTOMATION_BRIDGE`, `memory-snapshot-label`, `memory-snapshot-result`,
 > `BENCH_RUN_MATRIX`, `bench-runner-screen-status`, `IAP_FAKE_STORE`,
-> `IAP_API_BASE_OVERRIDE`) appear. Hermes'
+> `IAP_API_BASE_OVERRIDE`, `PLUS_SHIP_OVERRIDE`) appear. Hermes'
 > constant-folding + tree-shaking on `__E2E__ === false` is what actually
 > removes the code; the grep is the empirical contract that proves it for
 > every prod build.
@@ -83,7 +83,7 @@ by deep link only. See `BenchmarkRunnerScreen.tsx` as reference.
 | Adapter | Purpose | Commands |
 |---------|---------|----------|
 | `MemoryAdapter` | Memory profile snapshots for the `memory-profile` spec | `snap::<label>`, `clear::snapshots`, `read::snapshots` |
-| `IapAdapter` | Scripts the in-app purchase `FakeStore` on Android for the `iap-*` specs | `api::<base>`, `products::<id>=<price>\|...`, `next::<outcome>`, `approve_pending`, `decline_pending`, `refund::<id>`, `entitle::<id>`, `unfinished::<id>`, `unavailable`, `reset`, `read` |
+| `IapAdapter` | Scripts the in-app purchase `FakeStore` on Android for the `iap-*` specs | `api::<base>`, `products::<id>=<price>\|...`, `next::<outcome>`, `approve_pending`, `decline_pending`, `refund::<id>`, `entitle::<id>`, `unfinished::<id>`, `unavailable`, `plus_ship::<featureId>[,<featureId>]\|none` (marks Plus features shipped; `reset` clears it), `reset`, `read` |
 
 ## Screens
 
