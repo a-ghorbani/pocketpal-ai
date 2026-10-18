@@ -15,6 +15,7 @@ import type {Translations} from './types';
 // script but still needs the fallback.
 const languageRegistry = {
   en: {displayName: 'English (EN)'},
+  ar: {displayName: 'العربية (AR)'},
   es: {displayName: 'Español (ES)'},
   fa: {displayName: 'فارسی (FA)'},
   he: {displayName: 'עברית (HE)'},
@@ -38,6 +39,7 @@ export const supportedLanguages = Object.keys(
 
 export const languageDisplayNames: Record<AvailableLanguage, string> = {
   en: languageRegistry.en.displayName,
+  ar: languageRegistry.ar.displayName,
   es: languageRegistry.es.displayName,
   fa: languageRegistry.fa.displayName,
   he: languageRegistry.he.displayName,
@@ -62,6 +64,8 @@ const cache: Partial<Record<AvailableLanguage, Translations>> = {
 // Metro bundles these at build time, but JS doesn't parse them until require() is called
 function requireLanguageData(lang: AvailableLanguage): object | null {
   switch (lang) {
+    case 'ar':
+      return require('./ar.json');
     case 'es':
       return require('./es.json');
     case 'fa':
@@ -118,6 +122,9 @@ export function _testGetCacheKeys(): string[] {
 export const l10n = {
   get en(): Translations {
     return enData;
+  },
+  get ar(): Translations {
+    return getTranslations('ar');
   },
   get es(): Translations {
     return getTranslations('es');
@@ -185,6 +192,7 @@ export function t(
 export const initLocale = (locale?: AvailableLanguage) => {
   const locales: Record<AvailableLanguage, unknown> = {
     en: require('dayjs/locale/en'),
+    ar: require('dayjs/locale/ar'),
     es: require('dayjs/locale/es'),
     fa: require('dayjs/locale/fa'),
     he: require('dayjs/locale/he'),
