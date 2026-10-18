@@ -3,6 +3,7 @@ import {GestureResponderEvent, Pressable, Text, View} from 'react-native';
 
 import {oneOf} from '@flyerhq/react-native-link-preview';
 import {observer} from 'mobx-react';
+import ReactNativeHapticFeedback from 'react-native-haptic-feedback';
 
 import {useTheme} from '../../hooks';
 
@@ -17,12 +18,16 @@ import {
   TalentSurface,
   TextMessage,
   TextMessageTopLevelProps,
-  UserMessageFooter,
 } from '..';
 
 import {MessageType} from '../../utils/types';
 import {excludeDerivedMessageProps, UserContext} from '../../utils';
 import {visibleStepContent} from '../../utils/chat';
+
+const hapticOptions = {
+  enableVibrateFallback: true,
+  ignoreAndroidSystemSettings: false,
+};
 
 export interface MessageTopLevelProps extends TextMessageTopLevelProps {
   isActiveRun?: boolean;
@@ -37,7 +42,7 @@ export interface MessageTopLevelProps extends TextMessageTopLevelProps {
    * "preparing tool" copy.
    */
   isGeneratingToolCall?: boolean;
-  /** Called when the user presses a row's "…" button */
+  /** Opens the row's message menu */
   onMessageMenuPress?: (
     message: MessageType.Any,
     event: GestureResponderEvent,
@@ -366,7 +371,6 @@ export const Message = observer(
     const showAssistantFooter =
       !currentUserIsAuthor &&
       (message.type === 'assistant_turn' || message.type === 'text');
-    const showUserFooter = currentUserIsAuthor && message.type === 'text';
     const openMenu = (event: GestureResponderEvent) =>
       onMessageMenuPress?.(excludeDerivedMessageProps(message), event);
     const assistantFooter = showAssistantFooter && (
@@ -390,11 +394,11 @@ export const Message = observer(
         <>
           {renderBubbleContainer()}
           {assistantFooter}
-          {showUserFooter && <UserMessageFooter onMenuPress={openMenu} />}
         </>
       );
     const isTextRow =
       message.type === 'text' || message.type === 'assistant_turn';
+    const isUserTextRow = currentUserIsAuthor && message.type === 'text';
 
     return (
       <View style={container}>
@@ -407,10 +411,22 @@ export const Message = observer(
             theme,
           }}
         />
-        {isTextRow ? (
+        {isTextRow && !isUserTextRow ? (
           <View style={pressable}>{innerContent}</View>
         ) : (
           <Pressable
+            accessible={!isUserTextRow}
+            onLongPress={
+              isUserTextRow
+                ? event => {
+                    ReactNativeHapticFeedback.trigger(
+                      'impactLight',
+                      hapticOptions,
+                    );
+                    openMenu(event);
+                  }
+                : undefined
+            }
             onPress={event => {
               onMessagePress?.(excludeDerivedMessageProps(message), event);
             }}

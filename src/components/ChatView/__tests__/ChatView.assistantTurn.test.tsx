@@ -211,11 +211,15 @@ describe('ChatView — AssistantTurn integration', () => {
       {withNavigation: true, withBottomSheetProvider: true},
     );
 
+    const longPressNodes = UNSAFE_root.findAll(
+      (n: any) => n.props && typeof n.props.onLongPress === 'function',
+    );
+    expect(longPressNodes).toHaveLength(1);
     expect(
-      UNSAFE_root.findAll(
-        (n: any) => n.props && typeof n.props.onLongPress === 'function',
+      longPressNodes[0].findAll(
+        (n: any) => n.props?.markdown === 'user prompt',
       ),
-    ).toHaveLength(0);
+    ).not.toHaveLength(0);
     const assistantButton = getAllByTestId('message-menu-button').find(
       (button: any) => {
         for (let n = button.parent; n; n = n.parent) {
@@ -274,7 +278,7 @@ describe('ChatView — footer controls are not clipped by the row', () => {
       getByTestId('footer-copy'),
       ...getAllByTestId('message-menu-button'),
     ];
-    expect(controls).toHaveLength(3);
+    expect(controls).toHaveLength(2);
     for (const control of controls) {
       expect(clippingAncestors(control)).toEqual([]);
     }

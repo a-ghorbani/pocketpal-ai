@@ -27,6 +27,18 @@ registerDefaultTalents();
 
 jest.useFakeTimers();
 
+const openRowMenu = (
+  utils: {getByTestId: (id: string) => any},
+  message: MessageType.Any,
+) => {
+  const event = {nativeEvent: {pageX: 10, pageY: 20}};
+  if (message.author.id === user.id) {
+    fireEvent(utils.getByTestId('markdown-content'), 'longPress', event);
+  } else {
+    fireEvent.press(utils.getByTestId('message-menu-button'), event);
+  }
+};
+
 // Mock ChatEmptyPlaceholder component
 jest.mock('../../ChatEmptyPlaceholder', () => ({
   ChatEmptyPlaceholder: jest.fn(() => null),
@@ -514,13 +526,12 @@ describe('chat', () => {
     ])(
       'disables the row-deleting menu items on %s, but not Copy',
       (_row, message, deleting) => {
-        const {getAllByTestId, getByText} = render(
+        const utils = render(
           <ChatView messages={[message]} onSendPress={jest.fn()} user={user} />,
           options,
         );
-        fireEvent.press(getAllByTestId('message-menu-button')[0], {
-          nativeEvent: {pageX: 0, pageY: 0},
-        });
+        openRowMenu(utils, message);
+        const {getByText} = utils;
 
         for (const label of deleting) {
           expect(isDisabled(label, getByText)).toBe(true);
@@ -530,7 +541,7 @@ describe('chat', () => {
     );
   });
 
-  describe('message menu from the "…" button', () => {
+  describe('message menu from the "…" or a user long-press', () => {
     const labels = l10n.en.components.chatView.menuItems;
     const allLabels = [
       labels.copy,
@@ -565,9 +576,7 @@ describe('chat', () => {
         <ChatView messages={[message]} onSendPress={jest.fn()} user={user} />,
         options,
       );
-      fireEvent.press(utils.getByTestId('message-menu-button'), {
-        nativeEvent: {pageX: 10, pageY: 20},
-      });
+      openRowMenu(utils, message);
       const items = utils.UNSAFE_root.findAll(isMenuItemText);
       return {...utils, items, shown: items.map((n: any) => n.props.children)};
     };
@@ -725,12 +734,26 @@ describe('chat', () => {
       expect(messageMenu(utils).props.visible).toBe(false);
     });
 
-    it.each([
-      ['a user row', textMessage],
-      ['an assistant row', {...textMessage, author: assistant}],
-    ])('opens nothing on a long-press of %s', (_row, message) => {
+    it('opens the menu at {10, 20} with Copy, Edit, Report on a long-press of a user row', () => {
+      const utils = openMenuFor(textMessage);
+
+      const menu = messageMenu(utils);
+      expect(menu.props.visible).toBe(true);
+      expect(menu.props.anchor).toEqual({x: 10, y: 20});
+      expect(utils.shown).toEqual([
+        labels.copy,
+        labels.edit,
+        labels.reportContent,
+      ]);
+    });
+
+    it('opens nothing on a long-press of an assistant row', () => {
       const utils = render(
-        <ChatView messages={[message]} onSendPress={jest.fn()} user={user} />,
+        <ChatView
+          messages={[{...textMessage, author: assistant}]}
+          onSendPress={jest.fn()}
+          user={user}
+        />,
         options,
       );
 
@@ -739,6 +762,68 @@ describe('chat', () => {
       });
 
       expect(messageMenu(utils).props.visible).toBe(false);
+    });
+
+    describe('while a run streams', () => {
+      afterEach(() => {
+        runInAction(() => {
+          chatSessionStore.agentUiState = {
+            status: 'idle',
+            pendingTalentNames: [],
+            hitMaxTurns: false,
+          };
+        });
+      });
+
+      it('enables Edit on a user row with an active model', () => {
+        runInAction(() => {
+          modelStore.activeModelId = 'test-model-id';
+          chatSessionStore.agentUiState = {
+            status: 'streaming_text',
+            pendingTalentNames: [],
+            hitMaxTurns: false,
+          };
+        });
+        const question = {
+          ...textMessage,
+          id: 'question',
+          text: 'my question',
+          createdAt: 1,
+        };
+        const utils = render(
+          <ChatView
+            messages={[
+              {
+                id: 'newest',
+                type: 'assistant_turn',
+                author: assistant,
+                createdAt: 2,
+                steps: [{content: 'reply', partial: true}],
+                metadata: {},
+              },
+              question,
+            ]}
+            onSendPress={jest.fn()}
+            user={user}
+          />,
+          options,
+        );
+        const questionMarkdown = utils
+          .getAllByTestId('markdown-content')
+          .find(
+            (n: any) =>
+              n.findAll((c: any) => c.props?.markdown === 'my question')
+                .length > 0,
+          );
+
+        fireEvent(questionMarkdown!, 'longPress', {
+          nativeEvent: {pageX: 10, pageY: 20},
+        });
+
+        expect(messageMenu(utils).props.visible).toBe(true);
+        const items = utils.UNSAFE_root.findAll(isMenuItemText);
+        expect(isItemDisabled(items, labels.edit)).toBe(false);
+      });
     });
   });
 
@@ -798,7 +883,7 @@ describe('chat', () => {
         options,
       );
 
-      expect(rowsWithButton(getAllByTestId)).toEqual(['older', 'question']);
+      expect(rowsWithButton(getAllByTestId)).toEqual(['older']);
     });
 
     it.each(['done', 'idle'])(
@@ -809,18 +894,14 @@ describe('chat', () => {
         );
         setStatus('streaming_text');
         const {getAllByTestId, rerender} = render(chat(), options);
-        expect(rowsWithButton(getAllByTestId)).toEqual(['older', 'question']);
+        expect(rowsWithButton(getAllByTestId)).toEqual(['older']);
 
         // The mock store is not observable; the re-render stands in for the
         // observer reaction the real store triggers.
         setStatus(endStatus);
         rerender(chat());
 
-        expect(rowsWithButton(getAllByTestId)).toEqual([
-          'newest',
-          'older',
-          'question',
-        ]);
+        expect(rowsWithButton(getAllByTestId)).toEqual(['newest', 'older']);
       },
     );
   });

@@ -68,7 +68,6 @@ export * from './ToolErrorBlock';
 export * from './ToolMetricsFooter';
 export * from './ToolUsedChip';
 export * from './UsageStats';
-export * from './UserMessageFooter';
 export * from './VideoPalEmptyPlaceholder';
 export * from './VoiceChip';
 export * from './VisionDownloadSheet';
