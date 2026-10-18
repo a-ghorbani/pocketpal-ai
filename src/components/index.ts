@@ -71,6 +71,8 @@ export * from './SpokenMarker';
 export * from './VoiceCloud';
 export * from './VoiceModeView';
 export * from './VoiceBar';
+export * from './VoiceSetupSheet';
+export * from './VoiceMemorySheet';
 export * from './VoiceRecordingBar';
 export * from './UsageStats';
 export * from './VideoPalEmptyPlaceholder';
