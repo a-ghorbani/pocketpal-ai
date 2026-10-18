@@ -83,6 +83,7 @@ by deep link only. See `BenchmarkRunnerScreen.tsx` as reference.
 | Adapter | Purpose | Commands |
 |---------|---------|----------|
 | `MemoryAdapter` | Memory profile snapshots for the `memory-profile` spec | `snap::<label>`, `clear::snapshots`, `read::snapshots` |
+| `VoiceAdapter` | Forces voice-mode states on Android for visual captures | `unlock::on\|off`, `gate::on\|off`, `state::listening\|muted\|thinking\|speaking\|error\|bar\|closed`, `setup::incomplete\|complete`, `memory::tight\|wont-fit`, `seed::spoken` |
 | `IapAdapter` | Scripts the in-app purchase `FakeStore` on Android for the `iap-*` specs | `api::<base>`, `products::<id>=<price>\|...`, `next::<outcome>`, `approve_pending`, `decline_pending`, `refund::<id>`, `entitle::<id>`, `unfinished::<id>`, `unavailable`, `reset`, `read` |
 
 ## Screens
@@ -98,6 +99,8 @@ used by `src/hooks/useDeepLinking.ts` inside a `__E2E__` gate. Today it
 handles two hosts:
 
 - `memory` — `pocketpal://memory?cmd=snap::<label>` etc. (memory-profile spec)
+- `voice` — `pocketpal://voice?cmd=<verb>::<arg>` forces voice-mode states on
+  iOS (Android uses `VoiceAdapter`).
 - `iap` — `pocketpal://iap?cmd=<verb>::<arg>` scripts the `FakeStore` on iOS
   (the Android specs use `IapAdapter`, since the Android Linking listener
   only routes the benchmark URL).

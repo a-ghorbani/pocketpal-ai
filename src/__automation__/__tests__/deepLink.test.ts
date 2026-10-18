@@ -211,4 +211,29 @@ describe('dispatchAutomationDeepLink', () => {
       expect(handled).toBe(false);
     });
   });
+
+  describe('voice host', () => {
+    it('runs the voice command for host=voice + cmd', async () => {
+      const runVoiceCommand = jest.fn().mockResolvedValue(undefined);
+      jest.doMock('../voiceAutomation', () => ({runVoiceCommand}));
+      jest.resetModules();
+      const {dispatchAutomationDeepLink: dispatch} = require('../deepLink');
+
+      const handled = await dispatch(
+        makeParams({host: 'voice', queryParams: {cmd: 'state::listening'}}),
+      );
+
+      expect(handled).toBe(true);
+      expect(runVoiceCommand).toHaveBeenCalledWith('state::listening');
+      jest.dontMock('../voiceAutomation');
+    });
+
+    it('returns false when host=voice but no cmd is provided', async () => {
+      const handled = await dispatchAutomationDeepLink(
+        makeParams({host: 'voice', queryParams: {}}),
+      );
+
+      expect(handled).toBe(false);
+    });
+  });
 });
