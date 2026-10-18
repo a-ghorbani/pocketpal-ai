@@ -65,14 +65,16 @@ describe('VoiceModeStore', () => {
   it('persists the unlock override only in dev and E2E builds', () => {
     (global as any).__DEV__ = false;
     (global as any).__E2E__ = false;
-    (makePersistable as jest.Mock).mockClear();
-    new VoiceModeStore();
-    expect(makePersistable).not.toHaveBeenCalled();
+    const release = new VoiceModeStore();
+    expect(makePersistable).not.toHaveBeenCalledWith(
+      release,
+      expect.anything(),
+    );
 
     (global as any).__E2E__ = true;
-    new VoiceModeStore();
+    const e2e = new VoiceModeStore();
     expect(makePersistable).toHaveBeenCalledWith(
-      expect.anything(),
+      e2e,
       expect.objectContaining({properties: ['unlockOverride']}),
     );
   });
