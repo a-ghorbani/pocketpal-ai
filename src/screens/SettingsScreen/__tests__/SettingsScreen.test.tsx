@@ -12,7 +12,12 @@ import {
 
 import {SettingsScreen} from '../SettingsScreen';
 
-import {modelStore, uiStore, ttsStore} from '../../../store';
+import {
+  modelStore,
+  uiStore,
+  ttsStore,
+  searchProviderStore,
+} from '../../../store';
 import {l10n} from '../../../locales';
 
 jest.useFakeTimers();
@@ -1293,6 +1298,55 @@ describe('SettingsScreen', () => {
       expect(
         getByText(l10n.en.settings.ttsAvailabilityLowMemoryWarning),
       ).toBeTruthy();
+    });
+  });
+
+  describe('Internet Search key row', () => {
+    const keyOptional = 'No key needed for You.com. Add one for higher limits.';
+    const youKeySet = 'Key is set for You.com.';
+    const braveKeyNotSet = 'No key set for Brave.';
+
+    afterEach(async () => {
+      await searchProviderStore.clearKey('you');
+      searchProviderStore.setActiveProvider('brave');
+    });
+
+    it('says no key is needed for You.com when it has none', () => {
+      searchProviderStore.setActiveProvider('you');
+      const {getByText, queryByText} = render(<SettingsScreen />, {
+        withSafeArea: true,
+        withNavigation: true,
+      });
+
+      expect(getByText(keyOptional)).toBeTruthy();
+      expect(queryByText(youKeySet)).toBeNull();
+      expect(queryByText('No key set for You.com.')).toBeNull();
+    });
+
+    it('says the key is set for You.com when it has one', async () => {
+      searchProviderStore.setActiveProvider('you');
+      await searchProviderStore.setKey('you', 'test-key');
+      const {getByText, queryByText} = render(<SettingsScreen />, {
+        withSafeArea: true,
+        withNavigation: true,
+      });
+
+      expect(getByText(youKeySet)).toBeTruthy();
+      expect(queryByText(keyOptional)).toBeNull();
+      expect(queryByText('No key set for You.com.')).toBeNull();
+    });
+
+    it('says no key is set for Brave when it has none', () => {
+      const {getByText, queryByText} = render(<SettingsScreen />, {
+        withSafeArea: true,
+        withNavigation: true,
+      });
+
+      expect(getByText(braveKeyNotSet)).toBeTruthy();
+      expect(queryByText('Key is set for Brave.')).toBeNull();
+      expect(
+        queryByText('No key needed for Brave. Add one for higher limits.'),
+      ).toBeNull();
     });
   });
 
