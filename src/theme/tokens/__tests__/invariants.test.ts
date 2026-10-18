@@ -120,6 +120,9 @@ describe('design-token grep invariants', () => {
       // onboarding; lives at app-level above the navigator.
       'components/DownloadOverlay',
       'components/DownloadProgressCard',
+      // Voice mode: the voice view and its bar.
+      'components/VoiceModeView',
+      'components/VoiceBar',
     ];
     const files = listFiles(SRC).filter(f => {
       const rel = path.relative(SRC, f).replace(/\\/g, '/');

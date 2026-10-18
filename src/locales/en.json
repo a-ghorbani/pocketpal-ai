@@ -1599,7 +1599,25 @@
     "insufficientStorage": "Not enough space — free up {{requiredMb}} MB to install this model ({{freeMb}} MB available)."
   },
   "voiceMode": {
-    "spokenMarker": "Spoken"
+    "spokenMarker": "Spoken",
+    "listeningTitle": "Listening",
+    "listeningHint": "Tap the cloud when you are done",
+    "thinkingTitle": "Thinking",
+    "thinkingHint": "Working on an answer",
+    "speakingTitle": "Speaking",
+    "speakingHint": "Tap the cloud to interrupt",
+    "mutedTitle": "Microphone off",
+    "mutedHint": "Tap the microphone to talk again",
+    "errorTranscribe": "Couldn't catch that. Try again.",
+    "errorReply": "Couldn't get an answer. Try again.",
+    "errorSpeech": "Couldn't play the answer aloud.",
+    "pullDownHint": "Pull down to see the chat",
+    "swipeUpHint": "Swipe up for voice view",
+    "cloudLabel": "Voice mode cloud",
+    "openViewLabel": "Open voice view",
+    "muteLabel": "Turn microphone off",
+    "unmuteLabel": "Turn microphone on",
+    "endLabel": "End voice mode"
   },
   "onboarding": {
     "back": "Back",
