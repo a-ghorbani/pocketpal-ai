@@ -51,6 +51,14 @@ describe('terms', () => {
     expect(terms('Churn-rate 2024!')).toEqual(['churn', 'rate', '2024']);
     expect(terms('顧客離反')).toEqual(['顧客', '客離', '離反']);
   });
+
+  it('keeps combining marks inside a Devanagari word', () => {
+    expect(terms('हिन्दी भाषा')).toEqual(['हिन्दी', 'भाषा']);
+  });
+
+  it('bigrams Thai including its vowel and tone marks', () => {
+    expect(terms('ที่นี่')).toEqual(['ที', 'ี่', '่น', 'นี', 'ี่']);
+  });
 });
 
 describe('retrieveExcerpts', () => {

@@ -49,7 +49,7 @@ const DENSE_RUN = /[฀-๿぀-ヿ㐀-䶿一-鿿豈-﫿가-힯ᄀ-ᇿ㄰-㆏\u{2
 
 export const terms = (text: string): string[] => {
   const result: string[] = [];
-  for (const [run] of text.toLowerCase().matchAll(/[\p{L}\p{N}]+/gu)) {
+  for (const [run] of text.toLowerCase().matchAll(/[\p{L}\p{M}\p{N}]+/gu)) {
     for (const segment of run.split(new RegExp(`(${DENSE_RUN.source})`, 'u'))) {
       if (!segment) {
         continue;
