@@ -206,11 +206,14 @@ beforeEach(() => {
       await modelStore.context?.stopCompletion();
     }),
   };
+  (ttsStore as any).userTTSOverride = true;
   (ttsStore as any).autoSpeakEnabled = true;
 });
 
 afterEach(() => {
+  (ttsStore as any).userTTSOverride = null;
   (ttsStore as any).autoSpeakEnabled = false;
+  (ttsStore as any).voiceOutputActive = false;
   (talentRegistry as any).engines.delete('web_search');
 });
 
@@ -219,6 +222,25 @@ jest
   .mockImplementation(async () => 'mocked prompt');
 
 describe('useChatSession — auto-speak across agent steps', () => {
+  it('forwards a voice reply while auto-speak is off', async () => {
+    (ttsStore as any).autoSpeakEnabled = false;
+    (ttsStore as any).voiceOutputActive = true;
+    scriptCompletion([{tokens: ['Paris', 'Paris is the capital.']}]);
+
+    await runTurn();
+
+    expect(spokenText()).toBe('Paris is the capital.');
+  });
+
+  it('forwards nothing while auto-speak and voice output are both off', async () => {
+    (ttsStore as any).autoSpeakEnabled = false;
+    scriptCompletion([{tokens: ['Paris', 'Paris is the capital.']}]);
+
+    await runTurn();
+
+    expect(ttsStore.onAssistantMessageChunk).not.toHaveBeenCalled();
+  });
+
   it('speaks every step from its first character, a preamble step before its tools run', async () => {
     await offerSearchTool();
     scriptCompletion([

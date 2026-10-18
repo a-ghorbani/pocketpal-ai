@@ -995,12 +995,14 @@ describe('useChatSession', () => {
 
   describe('TTS streaming wiring', () => {
     beforeEach(() => {
-      // Hook is gated on autoSpeakEnabled (default false in the mock);
-      // opt in for tests that assert it fires.
+      // Hook is gated on ttsStore.streamsReplies (false in the mock by
+      // default); open the gate and opt in for tests that assert it fires.
+      (ttsStore as any).userTTSOverride = true;
       (ttsStore as any).autoSpeakEnabled = true;
     });
 
     afterEach(() => {
+      (ttsStore as any).userTTSOverride = null;
       (ttsStore as any).autoSpeakEnabled = false;
     });
 

@@ -8,6 +8,16 @@ export const TTS_PREVIEW_SAMPLE =
 /** Minimum total RAM required to enable the TTS feature (4 GiB). */
 export const TTS_MIN_RAM_BYTES = 4 * 1024 * 1024 * 1024;
 
+/** Peak runtime memory of each neural engine once loaded. */
+export const TTS_ENGINE_RUNTIME_BYTES: Record<
+  'supertonic' | 'kokoro' | 'kitten',
+  number
+> = {
+  supertonic: 500_000_000,
+  kokoro: 500_000_000,
+  kitten: 200_000_000,
+};
+
 /** Subdirectory (relative to app documents dir) used for Supertonic model files. */
 export const SUPERTONIC_MODEL_SUBDIR = 'tts/supertonic';
 

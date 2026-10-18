@@ -248,7 +248,7 @@ const prepareCompletion = async ({
 // forward only the new substring.
 // Carried in ctx so a single run keeps a coherent audio stream.
 type TtsRunState = {
-  // Snapshot of autoSpeakEnabled at run start; gates the per-chunk
+  // Snapshot of ttsStore.streamsReplies at run start; gates the per-chunk
   // TTS hook. Per-run so mid-stream toggles don't flicker audio.
   enabled: boolean;
   started: boolean;
@@ -785,7 +785,7 @@ export const useChatSession = (
     const tools =
       (cleanCompletionParams.tools as ToolDefinition[] | undefined) ?? [];
     const tts: TtsRunState = {
-      enabled: ttsStore.autoSpeakEnabled,
+      enabled: ttsStore.streamsReplies,
       started: false,
       mayEcho: tools.length > 0,
       prevContent: '',

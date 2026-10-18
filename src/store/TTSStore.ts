@@ -113,6 +113,10 @@ export class TTSStore {
   // Runtime playback state (discriminated union)
   playbackState: TTSPlaybackState = {mode: 'idle'};
 
+  /** True while a voice-mode session is open; it speaks every reply. */
+  voiceOutputActive: boolean = false;
+  private holdFirstChunk: boolean = false;
+
   // Persisted user preferences
   autoSpeakEnabled: boolean = false;
   currentVoice: Voice | null = null;
@@ -167,7 +171,11 @@ export class TTSStore {
   private streamPlaceholderEmitted: boolean = false;
 
   constructor() {
-    makeAutoObservable(this, {}, {autoBind: true});
+    makeAutoObservable<TTSStore, 'holdFirstChunk'>(
+      this,
+      {holdFirstChunk: false},
+      {autoBind: true},
+    );
     makePersistable(this, {
       name: 'TTSStore',
       properties: [
@@ -272,6 +280,21 @@ export class TTSStore {
         });
     }
   };
+
+  /** Whether the next assistant reply opens a speech stream. */
+  get streamsReplies(): boolean {
+    return (
+      this.voiceOutputActive || (this.isTTSAvailable && this.autoSpeakEnabled)
+    );
+  }
+
+  setVoiceOutputActive(
+    active: boolean,
+    {holdFirstChunk = false}: {holdFirstChunk?: boolean} = {},
+  ) {
+    this.voiceOutputActive = active;
+    this.holdFirstChunk = active && holdFirstChunk;
+  }
 
   setAutoSpeak(on: boolean) {
     this.autoSpeakEnabled = on;
@@ -528,8 +551,7 @@ export class TTSStore {
   /** First token / message creation. Opens a streaming session. */
   onAssistantMessageStart(messageId: string): void {
     if (
-      !this.isTTSAvailable ||
-      !this.autoSpeakEnabled ||
+      !this.streamsReplies ||
       this.currentVoice == null ||
       messageId === this.lastSpokenMessageId
     ) {
@@ -639,8 +661,7 @@ export class TTSStore {
     }
 
     if (
-      !this.isTTSAvailable ||
-      !this.autoSpeakEnabled ||
+      !this.streamsReplies ||
       this.currentVoice == null ||
       messageId === this.lastSpokenMessageId
     ) {

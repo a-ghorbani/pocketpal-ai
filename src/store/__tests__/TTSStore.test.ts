@@ -623,6 +623,60 @@ describe('TTSStore', () => {
     });
   });
 
+  describe('voice output gate', () => {
+    const makeLowMemoryStore = async () => {
+      (DeviceInfo.getTotalMemory as jest.Mock).mockResolvedValueOnce(2 * GIB);
+      const store = new TTSStore();
+      await store.init();
+      return store;
+    };
+
+    it.each([
+      [false, false, false, false],
+      [false, true, false, false],
+      [false, false, true, false],
+      [false, true, true, true],
+      [true, false, false, true],
+      [true, true, true, true],
+    ])(
+      'voice %s, gate %s, auto-speak %s → streamsReplies %s',
+      async (voice, gate, autoSpeak, expected) => {
+        const store = await makeLowMemoryStore();
+        store.setUserTTSOverride(gate);
+        store.setAutoSpeak(autoSpeak);
+        store.setVoiceOutputActive(voice);
+        expect(store.streamsReplies).toBe(expected);
+      },
+    );
+
+    it('opens a stream for a voice reply with the gate closed and auto-speak off', async () => {
+      const store = await makeLowMemoryStore();
+      store.setUserTTSOverride(false);
+      store.setCurrentVoice(SUPERTONIC_VOICE);
+      store.setVoiceOutputActive(true);
+
+      store.onAssistantMessageStart('msg-1');
+
+      expect(mockSupertonicPlayStreaming).toHaveBeenCalledTimes(1);
+      expect(store.autoSpeakEnabled).toBe(false);
+      expect(store.userTTSOverride).toBe(false);
+    });
+
+    it('stops opening streams once voice output ends', async () => {
+      const store = await makeLowMemoryStore();
+      store.setCurrentVoice(SUPERTONIC_VOICE);
+      store.setVoiceOutputActive(true);
+      store.setVoiceOutputActive(false);
+
+      store.onAssistantMessageStart('msg-1');
+      store.onAssistantMessageComplete('msg-2', 'hello');
+      await flush();
+
+      expect(mockSupertonicPlayStreaming).not.toHaveBeenCalled();
+      expect(mockSupertonicPlay).not.toHaveBeenCalled();
+    });
+  });
+
   describe('thinking-tag stripping', () => {
     const setupEligible = async () => {
       const store = await makeStore();
