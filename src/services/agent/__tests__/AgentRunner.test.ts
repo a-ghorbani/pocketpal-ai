@@ -18,7 +18,11 @@ import {
   resetReadUrlAllowlist,
 } from '../../talents/readUrlAllowlist';
 import {TavilyProvider} from '../../search/providers/tavily';
-import {resetSearchCache, setCachedHits} from '../../search/searchBudget';
+import {
+  getCachedHits,
+  resetSearchCache,
+  setCachedHits,
+} from '../../search/searchBudget';
 import type {SearchProvider} from '../../search/types';
 
 /**
@@ -1682,12 +1686,41 @@ describe('runAgent', () => {
       return {talent, execute};
     };
 
-    it('passes the run signal itself as ctx.signal', async () => {
+    it('passes every call one tool signal that aborts with the run signal', async () => {
       const controller = new AbortController();
-      const {talent, execute} = spyTalent();
-      await collect(
+      const signals: AbortSignal[] = [];
+      const releases: Array<() => void> = [];
+      const talent: TalentEngine = {
+        name: 'probe',
+        execute: (_args, ctx) =>
+          new Promise<TalentResult>(resolve => {
+            signals.push(ctx!.signal);
+            releases.push(() => resolve({type: 'text', summary: 'ok'}));
+          }),
+        toToolDefinition: () => ({
+          type: 'function',
+          function: {name: 'probe', description: '', parameters: {}},
+        }),
+      };
+      const probe = (id: string) => ({
+        id,
+        type: 'function' as const,
+        function: {name: 'probe', arguments: '{}'},
+      });
+      const done = collect(
         runAgent({
-          engine: oneCall('probe'),
+          engine: makeScriptedEngine({
+            scripts: [
+              {
+                tokens: [],
+                result: {
+                  text: '',
+                  content: '',
+                  tool_calls: [probe('c0'), probe('c1')],
+                },
+              },
+            ],
+          }),
           initialParams: baseParams,
           allowedTalentNames: ['probe'],
           talentLookup: () => talent,
@@ -1696,8 +1729,21 @@ describe('runAgent', () => {
           signal: controller.signal,
         }),
       );
-      expect(execute.mock.calls[0]).toEqual([{}, {signal: controller.signal}]);
-      expect(execute.mock.calls[0][1]?.signal).toBe(controller.signal);
+      for (let i = 0; i < 50 && signals.length < 2; i += 1) {
+        await Promise.resolve();
+      }
+
+      expect(signals).toHaveLength(2);
+      const [toolSignal, sibling] = signals;
+      expect(sibling).toBe(toolSignal);
+      expect(toolSignal).not.toBe(controller.signal);
+      expect(toolSignal.aborted).toBe(false);
+
+      controller.abort();
+      expect(toolSignal.aborted).toBe(true);
+
+      releases.forEach(release => release());
+      await done;
     });
 
     it('calls execute with args only when the run has no signal', async () => {
@@ -2115,6 +2161,52 @@ describe('runAgent', () => {
       expect(allowedWhenReturned).toBe(pageUrl);
     });
 
+    it.each(['break', 'throw'])(
+      'a consumer that leaves at a finish by %s cancels a running search at once',
+      async how => {
+        const controller = new AbortController();
+        global.fetch = abortableFetch();
+        const calculate = makeTalent('calculate', () => ({
+          type: 'text',
+          summary: '4',
+        }));
+        const webSearch = new WebSearchEngine(
+          searchAccess(new TavilyProvider(() => 'key')),
+        );
+        const iterator = run(
+          batchEngine([
+            toolCall('c0', 'calculate'),
+            toolCall('c1', 'web_search', {query: 'venus'}),
+          ]),
+          {calculate, web_search: webSearch},
+          controller.signal,
+        );
+        const leave = async () => {
+          for await (const event of iterator) {
+            if (eventLabel(event) === 'tool_call_finished c0') {
+              if (how === 'break') {
+                break;
+              }
+              throw new Error('store write failed');
+            }
+          }
+        };
+        let settled = false;
+        leave()
+          .catch(() => {})
+          .then(() => {
+            settled = true;
+          });
+        await flush();
+
+        expect(settled).toBe(true);
+        expect(global.fetch).toHaveBeenCalledTimes(1);
+        expect(getCachedHits('tavily', 'venus', 3)).toBeUndefined();
+        expect(matchReadUrl(pageUrl)).toBeNull();
+        expect(controller.signal.aborted).toBe(false);
+      },
+    );
+
     it('a consumer that stops at a start dispatches no call', async () => {
       const first = deferredTalent('first');
       const second = deferredTalent('second');
@@ -2261,6 +2353,48 @@ describe('runAgent', () => {
           expect(unhandled).not.toHaveBeenCalled();
         },
       );
+
+      it('aborts a running sibling before the run fails', async () => {
+        const controller = new AbortController();
+        let siblingSignal: AbortSignal | undefined;
+        let release!: () => void;
+        const sibling = talentWith(
+          'slow',
+          (_args, ctx) =>
+            new Promise<TalentResult>(resolve => {
+              siblingSignal = ctx?.signal;
+              release = () => resolve({type: 'text', summary: 'slow'});
+            }),
+        );
+        const iterator = runAgent({
+          engine: batchEngine([toolCall('c0', 'boom'), toolCall('c1', 'slow')]),
+          initialParams: baseParams,
+          allowedTalentNames: ['boom', 'slow'],
+          talentLookup: name => {
+            if (name === 'boom') {
+              throw new Error('lookup failed');
+            }
+            return sibling;
+          },
+          messageId: 'msg',
+          triggerMarkers: [],
+          signal: controller.signal,
+        });
+
+        let event = await iterator.next();
+        while (!event.done && event.value.type !== 'run_failed') {
+          event = await iterator.next();
+        }
+
+        expect(event.done).toBe(false);
+        expect(siblingSignal?.aborted).toBe(true);
+        expect(controller.signal.aborted).toBe(false);
+
+        release();
+        expect((await iterator.next()).done).toBe(true);
+        await new Promise(resolve => setImmediate(resolve));
+        expect(unhandled).not.toHaveBeenCalled();
+      });
     });
   });
 });

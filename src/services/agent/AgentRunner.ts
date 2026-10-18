@@ -261,12 +261,18 @@ export async function* runAgent(
   const stopEngine = () => stopQuietly(() => engine.stopCompletion?.());
   let unsettledCompletion: Promise<void> | null = null;
   let dispatchedTools: Promise<unknown> | null = null;
+  const toolController = new AbortController();
   const onAbort = () => {
+    toolController.abort();
     if (unsettledCompletion) {
       stopEngine();
     }
   };
   signal?.addEventListener('abort', onAbort, {once: true});
+  if (signal?.aborted) {
+    toolController.abort();
+  }
+  const toolSignal = signal ? toolController.signal : undefined;
 
   let messages = initialParams.messages;
   let turn = 0;
@@ -443,7 +449,7 @@ export async function* runAgent(
         yield {type: 'tool_call_started', call};
       }
       const pendingOutcomes = calls.map(call =>
-        executeOne(call, allowedTalentNames, talentLookup, signal),
+        executeOne(call, allowedTalentNames, talentLookup, toolSignal),
       );
       dispatchedTools = Promise.allSettled(pendingOutcomes);
       const outcomes: AgentToolOutcome[] = [];
@@ -509,8 +515,10 @@ export async function* runAgent(
     };
     yield {type: 'run_finished', result};
   } catch (error) {
+    toolController.abort();
     yield {type: 'run_failed', error: error as Error};
   } finally {
+    toolController.abort();
     signal?.removeEventListener('abort', onAbort);
     if (unsettledCompletion) {
       if (!signal?.aborted) {
