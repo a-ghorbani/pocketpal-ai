@@ -79,6 +79,19 @@ describe('navigation bar appearance', () => {
     expect(NativeNavigationBar.setNavigationBarDark).toHaveBeenCalledTimes(1);
     expect(NativeNavigationBar.setNavigationBarDark).toHaveBeenCalledWith(true);
   });
+
+  it('follows a scheme change made after hydration', () => {
+    uiStore.colorScheme = 'dark';
+    render(<App />);
+
+    act(() => {
+      uiStore.setColorScheme('light');
+    });
+
+    expect(NativeNavigationBar.setNavigationBarDark).toHaveBeenLastCalledWith(
+      false,
+    );
+  });
 });
 
 it('mounts the app once UIStore hydration completes', () => {
