@@ -4,7 +4,9 @@ import type {
   Availability,
   FlowPhase,
   LedgerRecord,
+  PlusFlow,
 } from '../../src/store/PurchaseStore';
+import {PLUS_PRODUCT_IDS} from '../../src/services/plus/catalog';
 import type {StoreProduct} from '../../src/services/iap/StorePort';
 import type {PalsHubPal} from '../../src/types/palshub';
 
@@ -18,8 +20,16 @@ class MockPurchaseStore {
   isRestoring = false;
   needsLink = false;
   showsLicenseNotice = false;
+  plusUnlocked = false;
+  plusPending = false;
+  plusChecked = false;
+  plusFlow: PlusFlow = 'idle';
+  plusProductsLoading = false;
 
   buy: jest.Mock;
+  buyPlus: jest.Mock;
+  loadPlus: jest.Mock;
+  syncProducts: jest.Mock;
   retry: jest.Mock;
   restore: jest.Mock;
   installOwned: jest.Mock;
@@ -35,6 +45,9 @@ class MockPurchaseStore {
   constructor() {
     makeAutoObservable(this, {
       buy: false,
+      buyPlus: false,
+      loadPlus: false,
+      syncProducts: false,
       retry: false,
       restore: false,
       installOwned: false,
@@ -48,6 +61,9 @@ class MockPurchaseStore {
       applyUpdate: false,
     });
     this.buy = jest.fn().mockResolvedValue('stay');
+    this.buyPlus = jest.fn().mockResolvedValue('purchased');
+    this.loadPlus = jest.fn().mockResolvedValue(undefined);
+    this.syncProducts = jest.fn().mockResolvedValue(undefined);
     this.retry = jest.fn().mockResolvedValue(undefined);
     this.restore = jest.fn().mockResolvedValue({queryOk: true});
     this.installOwned = jest.fn().mockResolvedValue(true);
@@ -69,6 +85,13 @@ class MockPurchaseStore {
         (!this.records[pal.id] || this.records[pal.id].status === 'removed') &&
         !pal.is_owned,
     );
+  }
+
+  get plusProducts(): StoreProduct[] {
+    return PLUS_PRODUCT_IDS.flatMap(id => {
+      const product = this.products.get(id);
+      return product ? [product] : [];
+    });
   }
 
   productFor(productId: string | undefined): StoreProduct | undefined {
@@ -118,6 +141,11 @@ class MockPurchaseStore {
     this.isRestoring = false;
     this.needsLink = false;
     this.showsLicenseNotice = false;
+    this.plusUnlocked = false;
+    this.plusPending = false;
+    this.plusChecked = false;
+    this.plusFlow = 'idle';
+    this.plusProductsLoading = false;
   }
 }
 
