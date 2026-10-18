@@ -1642,7 +1642,9 @@
     "memoryNeeded": "Needed",
     "memoryNeededValue": "{{needed}} of {{available}} available",
     "continueAnywayCta": "Continue anyway",
-    "chooseSmallerModelCta": "Choose a smaller model"
+    "chooseSmallerModelCta": "Choose a smaller model",
+    "startLabel": "Start voice mode",
+    "startLockedLabel": "Start voice mode (locked)"
   },
   "onboarding": {
     "back": "Back",

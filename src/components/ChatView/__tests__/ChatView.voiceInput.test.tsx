@@ -3,7 +3,7 @@ import {runInAction} from 'mobx';
 
 import {user} from '../../../../jest/fixtures';
 import {act, fireEvent, render} from '../../../../jest/test-utils';
-import {asrStore, modelStore} from '../../../store';
+import {asrStore, modelStore, voiceModeStore} from '../../../store';
 import * as micPerm from '../../../utils/asrMicPermission';
 import {ChatView} from '../ChatView';
 
@@ -161,5 +161,48 @@ describe('ChatView voice-input append seam', () => {
       fireEvent.press(action);
     });
     expect(mockOpenMicSettings).toHaveBeenCalled();
+  });
+});
+
+describe('ChatView voice mode', () => {
+  const renderChat = (onVoiceModePress = jest.fn()) =>
+    render(
+      <ChatView
+        messages={[]}
+        onSendPress={jest.fn()}
+        onVoiceModePress={onVoiceModePress}
+        user={user}
+      />,
+      {withSafeArea: true, withNavigation: true, withBottomSheetProvider: true},
+    );
+
+  beforeEach(() => {
+    (voiceModeStore as any).reset();
+    voiceModeStore.setUnlockOverride(true);
+    runInAction(() => {
+      modelStore.deviceTier = 'high';
+      asrStore.captureState = 'idle';
+    });
+  });
+
+  it('hands the voice button a way to open the model picker', () => {
+    const onVoiceModePress = jest.fn();
+    const {getByTestId} = renderChat(onVoiceModePress);
+
+    fireEvent.press(getByTestId('voice-mode-button'));
+
+    expect(onVoiceModePress).toHaveBeenCalledWith(expect.any(Function));
+  });
+
+  it('puts the voice bar in the composer slot while voice mode is open', () => {
+    runInAction(() => {
+      voiceModeStore.phase = 'listening';
+      voiceModeStore.presentation = 'bar';
+    });
+    const {getByTestId, queryByTestId} = renderChat();
+
+    expect(getByTestId('voice-bar')).toBeTruthy();
+    expect(queryByTestId('chat-input')).toBeNull();
+    expect(queryByTestId('mic-button')).toBeNull();
   });
 });

@@ -35,6 +35,7 @@ import {
   modelStore,
   palStore,
   uiStore,
+  voiceModeStore,
 } from '../../store';
 
 import {MessageType} from '../../utils/types';
@@ -48,6 +49,7 @@ import {
   VoiceChip,
   MicButton,
   VoiceRecordingBar,
+  VoiceModeButton,
 } from '..';
 
 export interface ChatInputTopLevelProps {
@@ -87,6 +89,8 @@ export interface ChatInputTopLevelProps {
   onThinkingToggle?: (enabled: boolean) => void;
   /** Append a voice transcript to the composer (never auto-sent). */
   appendTranscript?: (text: string) => void;
+  /** Opens voice mode; the empty composer then shows the voice button. */
+  onVoicePress?: () => void;
   /** Whether the model supports graded reasoning effort (axis 2) */
   supportsEffort?: boolean;
   /** The graded effort value set, e.g. ['low','medium','high'] */
@@ -155,6 +159,7 @@ export const ChatInput = observer(
     isThinkingEnabled = false,
     onThinkingToggle,
     appendTranscript,
+    onVoicePress,
     supportsEffort = false,
     effortValues = [],
     reasoningEffort,
@@ -388,6 +393,15 @@ export const ChatInput = observer(
       (sendButtonVisibilityMode === 'always' || value.trim());
     const isSendButtonEnabled =
       value.trim().length > 0 && hasActiveModel && !isStopping;
+    const isVoiceModeButtonVisible =
+      !!onVoicePress &&
+      voiceModeStore.supported &&
+      !value.trim() &&
+      selectedImages.length === 0 &&
+      !isEditMode &&
+      !isVideoCapable &&
+      !isStopVisible &&
+      !isVoiceCaptureActive;
     const sendButtonOpacity = isSendButtonEnabled ? 1 : 0.4;
 
     const rotateInterpolate = iconRotation.interpolate({
@@ -715,6 +729,8 @@ export const ChatInput = observer(
                       {l10n.video.startCamera}
                     </Text>
                   </TouchableOpacity>
+                ) : isVoiceModeButtonVisible ? (
+                  <VoiceModeButton onPress={onVoicePress} />
                 ) : (
                   isSendButtonVisible && (
                     <View style={{opacity: sendButtonOpacity}}>

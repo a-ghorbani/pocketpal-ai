@@ -1,4 +1,4 @@
-import React, {useRef, ReactNode, useState} from 'react';
+import React, {useMemo, useRef, ReactNode, useState} from 'react';
 
 import {observer} from 'mobx-react';
 import {runInAction} from 'mobx';
@@ -8,10 +8,14 @@ import {
   ChatView,
   ErrorSnackbar,
   ModelErrorReportSheet,
+  VoiceMemorySheet,
+  VoiceModeControlsContext,
+  VoiceModeView,
+  VoiceSetupSheet,
 } from '../../components';
 import {PalSheet} from '../../components/PalsSheets';
 
-import {useChatSession} from '../../hooks';
+import {useChatSession, useVoiceMode} from '../../hooks';
 import {usePendingMessage} from '../../hooks/useDeepLinking';
 import {Pal} from '../../types/pal';
 
@@ -20,7 +24,9 @@ import {
   chatSessionStore,
   palStore,
   serverStore,
+  ttsStore,
   uiStore,
+  voiceModeStore,
 } from '../../store';
 import {hasVideoCapability} from '../../utils/pal-capabilities';
 
@@ -76,6 +82,23 @@ export const ChatScreen: React.FC = observer(() => {
     currentMessageInfo,
     user,
     assistant,
+  );
+
+  const voiceMode = useVoiceMode({
+    port: {
+      send: async (text, onTurnCreated) => {
+        await handleSendPress(
+          {text, type: 'text'},
+          {spoken: true, onTurnCreated},
+        );
+      },
+      stop: () => handleStopPress(),
+    },
+  });
+  const {tapCloud, toggleMute, end} = voiceMode;
+  const voiceControls = useMemo(
+    () => ({tapCloud, toggleMute, end}),
+    [tapCloud, toggleMute, end],
   );
 
   // Handle deep linking for message prefill
@@ -255,7 +278,7 @@ export const ChatScreen: React.FC = observer(() => {
 
   // Otherwise, show the regular chat view
   return (
-    <>
+    <VoiceModeControlsContext.Provider value={voiceControls}>
       <ChatView
         renderBubble={renderBubble}
         messages={chatSessionStore.currentSessionMessages}
@@ -271,6 +294,9 @@ export const ChatScreen: React.FC = observer(() => {
         isVisionEnabled={visionEnabled}
         initialInputText={pendingMessage || undefined}
         onInitialTextConsumed={clearPendingMessage}
+        onVoiceModePress={openModelPicker =>
+          voiceMode.requestEntry({openModelPicker})
+        }
         inputProps={{
           showThinkingToggle: thinkingSupported,
           isThinkingEnabled: thinkingEnabled,
@@ -287,6 +313,21 @@ export const ChatScreen: React.FC = observer(() => {
               : l10n.chat.modelNotLoaded
             : l10n.chat.typeYourMessage,
         }}
+      />
+      {voiceModeStore.phase !== 'closed' &&
+        voiceModeStore.presentation === 'full' && <VoiceModeView />}
+      <VoiceSetupSheet
+        isVisible={voiceMode.sheet?.kind === 'setup'}
+        onClose={voiceMode.dismissSheet}
+        onDone={voiceMode.setupDone}
+      />
+      <VoiceMemorySheet
+        fit={voiceMode.sheet?.kind === 'memory' ? voiceMode.sheet.fit : null}
+        chatModelName={modelStore.activeModel?.name ?? ''}
+        voiceName={ttsStore.currentVoice?.name ?? ''}
+        onClose={voiceMode.dismissSheet}
+        onContinue={voiceMode.continueAnyway}
+        onChooseSmallerModel={voiceMode.chooseSmallerModel}
       />
       {uiStore.chatWarning && (
         <ErrorSnackbar
@@ -313,6 +354,6 @@ export const ChatScreen: React.FC = observer(() => {
           pal={activePal}
         />
       )}
-    </>
+    </VoiceModeControlsContext.Provider>
   );
 });

@@ -59,6 +59,7 @@ import {
   asrStore,
   chatSessionStore,
   modelStore,
+  voiceModeStore,
 } from '../../store';
 import type {UndoneSend} from '../../hooks/useChatSession';
 
@@ -90,6 +91,7 @@ import {
   ContentReportSheet,
   GreetingBubble,
   SuggestedPromptsRow,
+  VoiceBar,
 } from '..';
 import {
   AlertIcon,
@@ -186,6 +188,8 @@ export interface ChatProps extends Omit<ChatTopLevelProps, 'onSendPress'> {
   initialInputText?: string;
   /** Callback when initial text is consumed */
   onInitialTextConsumed?: () => void;
+  /** Opens voice mode; `openModelPicker` opens this chat's model picker. */
+  onVoiceModePress?: (openModelPicker: () => void) => void;
   /**
    * Allows you to customize the time format. IMPORTANT: only for the time,
    * do not return date here. @see {@link ChatProps.dateFormat} to customize the date format.
@@ -269,6 +273,7 @@ export const ChatView = observer(
     showImageUpload = false,
     isVisionEnabled = false,
     initialInputText,
+    onVoiceModePress,
     onInitialTextConsumed,
     textInputProps,
     timeFormat,
@@ -1225,34 +1230,41 @@ export const ChatView = observer(
                 onNewChat={() => chatSessionStore.resetActiveSession()}
                 onIncreaseContext={() => setIncreaseSheetOpen(true)}
               />
-              <ChatInput
-                {...{
-                  ...unwrap(inputProps),
-                  isStreaming,
-                  onSendPress: wrappedOnSendPress,
-                  onStopPress,
-                  chatInputHeight,
-                  inputBackgroundColor,
-                  onCancelEdit: handleCancelEdit,
-                  onPalBtnPress: () => setIsPickerVisible(!isPickerVisible),
-                  isStopVisible,
-                  isPickerVisible,
-                  sendButtonVisibilityMode,
-                  showImageUpload,
-                  isVisionEnabled,
-                  defaultImages: inputImages,
-                  onDefaultImagesChange: setInputImages,
-                  appendTranscript,
-                  textInputProps: {
-                    ...textInputProps,
-                    // Only override value and onChangeText if not using promptText
-                    ...(!(activePal && hasVideoCapability(activePal)) && {
-                      value: inputText,
-                      onChangeText: setInputText,
-                    }),
-                  },
-                }}
-              />
+              {voiceModeStore.phase !== 'closed' ? (
+                <VoiceBar />
+              ) : (
+                <ChatInput
+                  {...{
+                    ...unwrap(inputProps),
+                    isStreaming,
+                    onSendPress: wrappedOnSendPress,
+                    onStopPress,
+                    chatInputHeight,
+                    inputBackgroundColor,
+                    onCancelEdit: handleCancelEdit,
+                    onPalBtnPress: () => setIsPickerVisible(!isPickerVisible),
+                    isStopVisible,
+                    isPickerVisible,
+                    sendButtonVisibilityMode,
+                    showImageUpload,
+                    isVisionEnabled,
+                    defaultImages: inputImages,
+                    onDefaultImagesChange: setInputImages,
+                    appendTranscript,
+                    onVoicePress:
+                      onVoiceModePress &&
+                      (() => onVoiceModePress(() => setIsPickerVisible(true))),
+                    textInputProps: {
+                      ...textInputProps,
+                      // Only override value and onChangeText if not using promptText
+                      ...(!(activePal && hasVideoCapability(activePal)) && {
+                        value: inputText,
+                        onChangeText: setInputText,
+                      }),
+                    },
+                  }}
+                />
+              )}
             </Reanimated.View>
 
             {/* Suggested prompts — float above the input container, share
