@@ -17,35 +17,21 @@ const countWords = (text: string): number => {
   return trimmed.split(/\s+/).length;
 };
 
-interface PlayButtonProps {
-  message: MessageType.Any;
-}
-
-/**
- * Per-message replay button. Self-gates: returns null when TTS is
- * unavailable, message is not assistant text, still streaming, etc.
- *
- * Designed to sit in the Bubble footer row alongside copy/timings.
- */
-export const PlayButton: React.FC<PlayButtonProps> = observer(({message}) => {
-  const theme = useTheme();
-  const l10n = useContext(L10nContext);
-
+export const shouldShowPlayButton = (message: MessageType.Any): boolean => {
   if (!ttsStore.isTTSAvailable) {
-    return null;
+    return false;
   }
 
   if (message.type !== 'text' && message.type !== 'assistant_turn') {
-    return null;
+    return false;
   }
 
   if (message.author?.id !== assistant.id) {
-    return null;
+    return false;
   }
 
-  const speakableText = derivedText(message);
-  if (countWords(speakableText) <= 1) {
-    return null;
+  if (countWords(derivedText(message)) <= 1) {
+    return false;
   }
 
   // For legacy `text`: completionResult is set once streaming finishes.
@@ -55,10 +41,23 @@ export const PlayButton: React.FC<PlayButtonProps> = observer(({message}) => {
     message.type === 'text'
       ? !!message.metadata?.completionResult
       : !(message.steps ?? []).some(s => s.partial);
-  if (!hasFinalResult && modelStore.isStreaming) {
-    return null;
-  }
+  return hasFinalResult || !modelStore.isStreaming;
+};
 
+interface PlayButtonProps {
+  message: MessageType.Any;
+}
+
+/**
+ * Per-message replay button. The caller gates it with `shouldShowPlayButton`.
+ *
+ * Designed to sit in the Bubble footer row alongside copy/timings.
+ */
+export const PlayButton: React.FC<PlayButtonProps> = observer(({message}) => {
+  const theme = useTheme();
+  const l10n = useContext(L10nContext);
+
+  const speakableText = derivedText(message);
   const playbackState = ttsStore.playbackState;
   const isThisPlaying =
     (playbackState.mode === 'playing' || playbackState.mode === 'streaming') &&
@@ -74,9 +73,9 @@ export const PlayButton: React.FC<PlayButtonProps> = observer(({message}) => {
       return;
     }
     const hadReasoning =
-      message.type === 'text'
-        ? !!message.metadata?.completionResult?.reasoning_content?.trim()
-        : (message.steps ?? []).some(s => s.reasoningContent?.trim());
+      message.type === 'assistant_turn'
+        ? (message.steps ?? []).some(s => s.reasoningContent?.trim())
+        : !!message.metadata?.completionResult?.reasoning_content?.trim();
     ttsStore.play(message.id, speakableText, {hadReasoning}).catch(() => {});
   };
 

@@ -18,6 +18,9 @@ export const styles = ({theme}: {theme: Theme}) =>
       justifyContent: 'center',
       flexShrink: 0,
     },
+    copyLeading: {
+      marginStart: -14,
+    },
     textGroup: {
       flexShrink: 1,
       flexDirection: 'row',

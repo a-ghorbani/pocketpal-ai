@@ -3,10 +3,12 @@ import {StyleSheet} from 'react-native';
 import {runInAction} from 'mobx';
 import {Text} from 'react-native-paper';
 
-import {render, fireEvent, within} from '../../../../jest/test-utils';
+import {act, render, fireEvent, within} from '../../../../jest/test-utils';
 
 import {l10n} from '../../../locales';
-import {chatSessionStore} from '../../../store';
+import {chatSessionStore, ttsStore} from '../../../store';
+import {assistant} from '../../../utils/chat';
+import {PlayButton, shouldShowPlayButton} from '../../TextMessage/PlayButton';
 
 import {AssistantTurnFooter} from '../AssistantTurnFooter';
 import {streamFinishChunk} from '../../../../jest/fixtures/llamaServerWire';
@@ -156,12 +158,12 @@ describe('AssistantTurnFooter', () => {
       });
       expect(style.marginTop ?? style.marginVertical).toBe(-14);
       expect(style.marginBottom ?? style.marginVertical).toBe(-14);
+      expect(style.marginStart).toBe(-14);
       for (const key of [
         'margin',
         'marginHorizontal',
         'marginLeft',
         'marginRight',
-        'marginStart',
         'marginEnd',
       ] as const) {
         expect(style[key] ?? 0).toBe(0);
@@ -209,6 +211,65 @@ describe('AssistantTurnFooter', () => {
       const event = {nativeEvent: {pageX: 3, pageY: 4}};
       fireEvent.press(getByTestId('message-menu-button'), event);
       expect(onMenuPress).toHaveBeenCalledWith(event);
+    });
+  });
+
+  describe('Play and Copy', () => {
+    const speakableTurn = baseTurn({
+      author: {id: assistant.id},
+      steps: [{content: 'Here is a longer reply.'}],
+      metadata: {copyable: true},
+    });
+
+    const playButtonType = (PlayButton as unknown as {type: React.FC}).type;
+
+    const copyMarginStart = (getByTestId: (id: string) => any) =>
+      StyleSheet.flatten(getByTestId('footer-copy').props.style).marginStart ??
+      0;
+
+    afterEach(() => {
+      runInAction(() => {
+        ttsStore.deviceMeetsMemory = false;
+        ttsStore.userTTSOverride = null;
+      });
+    });
+
+    it('hides Play and pulls Copy to the leading edge when the predicate is false', () => {
+      const {getByTestId, UNSAFE_queryByType} = render(
+        <AssistantTurnFooter message={speakableTurn} />,
+      );
+      expect(shouldShowPlayButton(speakableTurn)).toBe(false);
+      expect(UNSAFE_queryByType(playButtonType)).toBeNull();
+      expect(copyMarginStart(getByTestId)).toBe(-14);
+    });
+
+    it('renders Play and leaves Copy unshifted when the predicate is true', () => {
+      runInAction(() => {
+        ttsStore.deviceMeetsMemory = true;
+      });
+      const {getByTestId, UNSAFE_queryByType} = render(
+        <AssistantTurnFooter message={speakableTurn} />,
+      );
+      expect(shouldShowPlayButton(speakableTurn)).toBe(true);
+      expect(UNSAFE_queryByType(playButtonType)).not.toBeNull();
+      expect(copyMarginStart(getByTestId)).toBe(0);
+    });
+
+    it('adds Play and clears the Copy offset in the same render when TTS turns on', () => {
+      const {getByTestId, UNSAFE_queryByType} = render(
+        <AssistantTurnFooter message={speakableTurn} />,
+      );
+      expect(UNSAFE_queryByType(playButtonType)).toBeNull();
+      expect(copyMarginStart(getByTestId)).toBe(-14);
+
+      act(() => {
+        runInAction(() => {
+          ttsStore.userTTSOverride = true;
+        });
+      });
+
+      expect(UNSAFE_queryByType(playButtonType)).not.toBeNull();
+      expect(copyMarginStart(getByTestId)).toBe(0);
     });
   });
 

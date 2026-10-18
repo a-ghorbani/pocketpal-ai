@@ -8,7 +8,7 @@ import ReactNativeHapticFeedback from 'react-native-haptic-feedback';
 
 import {CopyIcon} from '../../assets/icons';
 import {useTheme} from '../../hooks';
-import {PlayButton} from '../TextMessage/PlayButton';
+import {PlayButton, shouldShowPlayButton} from '../TextMessage/PlayButton';
 import {MessageMenuButton} from '../MessageMenuButton';
 
 import {styles} from './styles';
@@ -53,6 +53,7 @@ export const AssistantTurnFooter: React.FC<AssistantTurnFooterProps> = observer(
       chatSessionStore.lastCompletionResult?.contextFull === true;
 
     const componentStyles = styles({theme});
+    const showPlay = shouldShowPlayButton(message);
 
     // A stored row is whatever the server said when the message was written,
     // so every value is read as unknown: a part is rendered only for a finite
@@ -126,14 +127,17 @@ export const AssistantTurnFooter: React.FC<AssistantTurnFooterProps> = observer(
 
     return (
       <View style={componentStyles.container} testID="assistant-turn-footer">
-        <PlayButton message={message} />
+        {showPlay && <PlayButton message={message} />}
         {copyable && (
           <TouchableOpacity
             onPress={copyToClipboard}
             testID="footer-copy"
             accessibilityRole="button"
             accessibilityLabel={l10n.components.chatView.menuItems.copy}
-            style={componentStyles.copyButton}>
+            style={[
+              componentStyles.copyButton,
+              !showPlay && componentStyles.copyLeading,
+            ]}>
             <CopyIcon
               stroke={theme.colors.textSecondary}
               width={16}

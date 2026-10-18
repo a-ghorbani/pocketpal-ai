@@ -10,7 +10,7 @@ import {l10n} from '../../../locales';
 import {modelStore, ttsStore} from '../../../store';
 import type {MessageType} from '../../../utils/types';
 
-import {PlayButton} from '../PlayButton';
+import {PlayButton, shouldShowPlayButton} from '../PlayButton';
 
 const makeAssistantMsg = (overrides: Partial<MessageType.DerivedText> = {}) =>
   ({
@@ -29,50 +29,102 @@ const renderButton = (message: MessageType.DerivedText) =>
     </L10nContext.Provider>,
   );
 
-describe('PlayButton', () => {
-  beforeEach(() => {
-    jest.clearAllMocks();
-    runInAction(() => {
-      ttsStore.deviceMeetsMemory = true;
-      ttsStore.userTTSOverride = null;
-      ttsStore.currentVoice = null;
-      ttsStore.playbackState = {mode: 'idle'};
-      modelStore.isStreaming = false;
-    });
+const resetStores = () => {
+  runInAction(() => {
+    ttsStore.deviceMeetsMemory = true;
+    ttsStore.userTTSOverride = null;
+    ttsStore.currentVoice = null;
+    ttsStore.playbackState = {mode: 'idle'};
+    modelStore.isStreaming = false;
+  });
+};
+
+const makeTurn = (steps: Array<{content: string; partial?: boolean}>) =>
+  ({
+    id: 'turn-1',
+    type: 'assistant_turn',
+    author: {id: assistant.id},
+    createdAt: 0,
+    steps,
+    metadata: {},
+  }) as unknown as MessageType.Any;
+
+describe('shouldShowPlayButton', () => {
+  beforeEach(resetStores);
+
+  it('is true for a finished multi-word assistant reply with TTS available', () => {
+    expect(shouldShowPlayButton(makeAssistantMsg())).toBe(true);
   });
 
-  it('renders nothing when TTS is unavailable', () => {
+  it('is false when TTS is unavailable', () => {
     runInAction(() => {
       ttsStore.deviceMeetsMemory = false;
-      ttsStore.userTTSOverride = null;
     });
-    const {queryByTestId} = renderButton(makeAssistantMsg());
-    expect(queryByTestId('playbutton-msg-1')).toBeNull();
+    expect(shouldShowPlayButton(makeAssistantMsg())).toBe(false);
   });
 
-  it('renders nothing for user messages', () => {
-    const {queryByTestId} = renderButton(
-      makeAssistantMsg({author: {id: 'userId'}}),
-    );
-    expect(queryByTestId('playbutton-msg-1')).toBeNull();
+  it('is false for a message type that is not text or an assistant turn', () => {
+    const image = {
+      id: 'img-1',
+      type: 'image',
+      author: {id: assistant.id},
+      createdAt: 0,
+      uri: 'file://foo.png',
+      name: 'foo.png',
+      size: 1,
+      width: 1,
+      height: 1,
+    } as MessageType.Any;
+    expect(shouldShowPlayButton(image)).toBe(false);
   });
 
-  it('renders nothing for single-word messages', () => {
-    const {queryByTestId} = renderButton(makeAssistantMsg({text: 'Hi'}));
-    expect(queryByTestId('playbutton-msg-1')).toBeNull();
+  it('is false for user messages', () => {
+    expect(
+      shouldShowPlayButton(makeAssistantMsg({author: {id: 'userId'}})),
+    ).toBe(false);
   });
 
-  it('renders nothing for empty / whitespace messages', () => {
-    const {queryByTestId} = renderButton(makeAssistantMsg({text: '   '}));
-    expect(queryByTestId('playbutton-msg-1')).toBeNull();
+  it('is false for single-word messages', () => {
+    expect(shouldShowPlayButton(makeAssistantMsg({text: 'Hi'}))).toBe(false);
   });
 
-  it('renders nothing while streaming (no final completionResult)', () => {
+  it('is false for empty / whitespace messages', () => {
+    expect(shouldShowPlayButton(makeAssistantMsg({text: '   '}))).toBe(false);
+  });
+
+  it('is false for a text reply while streaming without a final completionResult', () => {
     runInAction(() => {
       modelStore.isStreaming = true;
     });
-    const {queryByTestId} = renderButton(makeAssistantMsg({metadata: {}}));
-    expect(queryByTestId('playbutton-msg-1')).toBeNull();
+    expect(shouldShowPlayButton(makeAssistantMsg({metadata: {}}))).toBe(false);
+  });
+
+  it('is false for an assistant turn with a partial step while streaming', () => {
+    runInAction(() => {
+      modelStore.isStreaming = true;
+    });
+    expect(
+      shouldShowPlayButton(
+        makeTurn([{content: 'Still going on', partial: true}]),
+      ),
+    ).toBe(false);
+  });
+
+  it('is true for an older finished reply while another run streams', () => {
+    runInAction(() => {
+      modelStore.isStreaming = true;
+    });
+    expect(shouldShowPlayButton(makeAssistantMsg())).toBe(true);
+    expect(shouldShowPlayButton(makeTurn([{content: 'All done here'}]))).toBe(
+      true,
+    );
+  });
+});
+
+describe('PlayButton', () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+    resetStores();
   });
 
   it('opens setup sheet on first tap when no voice chosen', () => {
