@@ -214,7 +214,7 @@ describe('SearchProviderStore', () => {
     });
   });
 
-  describe('canSearch (consent + key, load-bearing at execution)', () => {
+  describe('canSearch (consent + configured provider, load-bearing at execution)', () => {
     it('requires both consent and a key', async () => {
       const store = await newStore();
       expect(store.canSearch).toBe(false);

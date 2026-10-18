@@ -31,7 +31,8 @@ export interface SearchOptions {
 
 /**
  * Adapter contract: read the BYOK key lazily inside search()/read(), and throw
- * on transport/auth/no-key/timeout — never return a silent empty.
+ * on transport/auth/timeout, and on no-key when the provider requires one;
+ * never return a silent empty.
  */
 export interface SearchProvider {
   readonly id: SearchProviderId;

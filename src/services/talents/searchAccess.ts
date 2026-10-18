@@ -10,7 +10,8 @@ export const SEARCH_NOT_SET_UP_MESSAGE =
 export interface SearchAccess {
   getActiveProvider(): SearchProvider;
   /**
-   * True only when the user has consented AND the active provider has a key.
+   * True only when the user has consented and the active provider is configured
+   * (has a key, unless it needs none).
    * Consent is enforced here, not just in the Settings UI.
    */
   canSearch(): boolean;
