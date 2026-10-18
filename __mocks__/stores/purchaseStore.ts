@@ -49,7 +49,7 @@ class MockPurchaseStore {
     });
     this.buy = jest.fn().mockResolvedValue('stay');
     this.retry = jest.fn().mockResolvedValue(undefined);
-    this.restore = jest.fn().mockResolvedValue(undefined);
+    this.restore = jest.fn().mockResolvedValue({queryOk: true});
     this.installOwned = jest.fn().mockResolvedValue(true);
     this.link = jest.fn().mockResolvedValue('linked');
     this.requestLink = jest.fn();

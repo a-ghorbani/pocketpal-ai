@@ -1,12 +1,15 @@
 import {Platform} from 'react-native';
+import {runInAction} from 'mobx';
 
 import {refreshBody} from '../../services/iap/iapWire';
+import {PLUS_FEATURES} from '../../services/plus/catalog';
 import {PLUS_KEY} from '../PurchaseStore';
 import {
   MemoryStorage,
   PAL_ID,
   PRODUCT,
   createHarness,
+  flush,
   plusTx,
   record,
   stopAll,
@@ -46,6 +49,20 @@ const deferred = <T>() => {
     resolve = r;
   });
   return {promise, resolve};
+};
+
+const until = async (condition: () => boolean) => {
+  for (let i = 0; i < 100 && !condition(); i++) {
+    await flush();
+  }
+  expect(condition()).toBe(true);
+};
+
+const ownerHarness = () => {
+  const log: string[] = [];
+  const storage = new MemoryStorage(log);
+  storage.seedPlus();
+  return createHarness({storage, log});
 };
 
 const allProofs = (calls: unknown[][]) =>
@@ -275,6 +292,353 @@ describe('PurchaseStore Plus', () => {
       expect(Object.values(h.purchases.records).map(r => r.productId)).toEqual([
         PRODUCT,
       ]);
+    });
+  });
+
+  describe('recovery', () => {
+    it('Android: delivers a purchase approved while the app was closed', async () => {
+      setOS('android');
+      const h = createHarness();
+      h.store.currentEntitlements.mockResolvedValue({
+        ok: true,
+        transactions: [androidPlusTx()],
+      });
+
+      await h.purchases.recover();
+
+      expect(h.purchases.plusUnlocked).toBe(true);
+      expect(h.store.finish).toHaveBeenCalledTimes(1);
+      expect(h.log.indexOf('write:plus')).toBeLessThan(
+        h.log.indexOf('finish:plus.1-tx'),
+      );
+    });
+
+    it('Android: re-derives a pending payment from the store list', async () => {
+      setOS('android');
+      const h = createHarness();
+      const pending = androidPlusTx({
+        state: 'pending',
+        transactionId: undefined,
+        unfinished: false,
+      });
+      h.store.currentEntitlements.mockResolvedValueOnce({
+        ok: true,
+        transactions: [pending],
+      });
+
+      await h.purchases.recover();
+      expect(h.purchases.plusPending).toBe(true);
+
+      await h.purchases.recover();
+      expect(h.purchases.plusPending).toBe(false);
+      expect(h.purchases.plusUnlocked).toBe(false);
+    });
+
+    it('unlocks a fresh install when the store lists any tier', async () => {
+      const h = createHarness();
+      h.store.currentEntitlements.mockResolvedValue({
+        ok: true,
+        transactions: [plusTx({productId: 'plus.3', unfinished: false})],
+      });
+
+      await h.purchases.recover();
+
+      expect(h.purchases.plusUnlocked).toBe(true);
+      expect(h.storage.plusDoc()).toMatchObject({productId: 'plus.3'});
+      expect(h.purchases.plusChecked).toBe(true);
+    });
+
+    it('relocks after a refund when a successful query lists no purchase', async () => {
+      const h = ownerHarness();
+
+      await h.purchases.recover();
+
+      expect(h.purchases.plusUnlocked).toBe(false);
+      expect(h.storage.plusDoc()).toBeNull();
+      expect(h.log).toContain('delete:plus');
+    });
+
+    it('keeps the unlock and pending state when the query fails (offline)', async () => {
+      const h = ownerHarness();
+      h.store.currentEntitlements.mockResolvedValue({
+        ok: false,
+        transactions: [],
+      });
+
+      await h.purchases.recover();
+
+      expect(h.purchases.plusUnlocked).toBe(true);
+      expect(h.storage.plusDoc()).not.toBeNull();
+      expect(h.purchases.plusChecked).toBe(true);
+    });
+
+    it('Android: keeps pending when the query fails', async () => {
+      setOS('android');
+      const h = createHarness();
+      await h.purchases.processTransaction(
+        androidPlusTx({state: 'pending', transactionId: undefined}),
+      );
+      h.store.currentEntitlements.mockResolvedValue({
+        ok: false,
+        transactions: [],
+      });
+
+      await h.purchases.recover();
+
+      expect(h.purchases.plusPending).toBe(true);
+    });
+
+    it('does not relock when a delivery lands while the query is in flight', async () => {
+      const h = ownerHarness();
+      h.store.currentEntitlements.mockImplementation(async () => {
+        await h.purchases.processTransaction(plusTx({productId: 'plus.2'}));
+        return {ok: true, transactions: []};
+      });
+
+      await h.purchases.recover();
+
+      expect(h.purchases.plusUnlocked).toBe(true);
+      expect(h.storage.plusDoc()).toMatchObject({productId: 'plus.2'});
+    });
+
+    it('Android: does not clear a pending payment made while the query is in flight', async () => {
+      setOS('android');
+      const h = createHarness();
+      h.store.currentEntitlements.mockImplementation(async () => {
+        await h.purchases.processTransaction(
+          androidPlusTx({state: 'pending', transactionId: undefined}),
+        );
+        return {ok: true, transactions: []};
+      });
+
+      await h.purchases.recover();
+
+      expect(h.purchases.plusPending).toBe(true);
+    });
+
+    it('stays locked in this process when the relock delete fails', async () => {
+      const warn = jest.spyOn(console, 'warn').mockImplementation(() => {});
+      const h = ownerHarness();
+      h.storage.failPlusDelete = true;
+
+      await h.purchases.recover();
+
+      expect(h.purchases.plusUnlocked).toBe(false);
+      expect(h.storage.plusDoc()).not.toBeNull();
+      warn.mockRestore();
+    });
+
+    it('holds the first check until the query settles', async () => {
+      const h = createHarness();
+      let answer!: () => void;
+      h.store.currentEntitlements.mockImplementation(
+        () =>
+          new Promise(resolve => {
+            answer = () =>
+              resolve({ok: true, transactions: [plusTx({unfinished: false})]});
+          }),
+      );
+
+      const recovery = h.purchases.recover();
+      await until(() => answer !== undefined);
+      expect(h.purchases.plusChecked).toBe(false);
+
+      answer();
+      await recovery;
+
+      expect(h.purchases.plusChecked).toBe(true);
+      expect(h.purchases.plusUnlocked).toBe(true);
+    });
+
+    it('settles Plus before a slow Pal verify', async () => {
+      setOS('ios');
+      const h = createHarness({records: [record('unlocking')]});
+      h.api.verify.mockImplementation(() => {
+        h.log.push('verify');
+        return new Promise(() => {});
+      });
+      h.store.currentEntitlements.mockResolvedValue({
+        ok: true,
+        transactions: [tx({unfinished: false}), plusTx({unfinished: false})],
+      });
+
+      h.purchases.recover().catch(() => {});
+      await until(() => h.purchases.plusChecked);
+
+      expect(h.purchases.plusUnlocked).toBe(true);
+      await until(() => h.log.includes('verify'));
+      expect(h.log.indexOf('write:plus')).toBeLessThan(h.log.indexOf('verify'));
+    });
+
+    it('leaves the first check open when billing init fails', async () => {
+      const h = createHarness();
+      h.store.init.mockResolvedValue(false);
+
+      await h.purchases.recover();
+
+      expect(h.purchases.availability).toBe('unavailable');
+      expect(h.purchases.plusChecked).toBe(false);
+    });
+
+    it('releases the first check when recovery throws', async () => {
+      const h = createHarness();
+      h.store.init.mockRejectedValue(new Error('boom'));
+
+      await expect(h.purchases.recover()).rejects.toThrow('boom');
+
+      expect(h.purchases.plusChecked).toBe(true);
+    });
+
+    it('iOS: recovery never clears pending (deferred purchases are not listed)', async () => {
+      setOS('ios');
+      const h = createHarness();
+      await h.purchases.processTransaction(
+        plusTx({state: 'pending', transactionId: undefined}),
+      );
+
+      await h.purchases.recover();
+
+      expect(h.purchases.plusPending).toBe(true);
+    });
+
+    it('runs whether or not a Plus feature has shipped', async () => {
+      expect(PLUS_FEATURES.some(feature => feature.shipped)).toBe(false);
+      const h = createHarness();
+      h.store.currentEntitlements.mockResolvedValueOnce({
+        ok: true,
+        transactions: [plusTx({unfinished: false})],
+      });
+
+      await h.purchases.recover();
+      expect(h.purchases.plusUnlocked).toBe(true);
+
+      await h.purchases.recover();
+      expect(h.purchases.plusUnlocked).toBe(false);
+    });
+  });
+
+  describe('restore', () => {
+    it('restores any tier and reports a successful query', async () => {
+      const h = createHarness();
+      h.store.currentEntitlements.mockResolvedValue({
+        ok: true,
+        transactions: [plusTx({productId: 'plus.4', unfinished: false})],
+      });
+
+      await expect(h.purchases.restore()).resolves.toEqual({queryOk: true});
+
+      expect(h.purchases.plusUnlocked).toBe(true);
+    });
+
+    it('reports a successful query that found nothing and stays locked', async () => {
+      const h = createHarness();
+
+      await expect(h.purchases.restore()).resolves.toEqual({queryOk: true});
+
+      expect(h.purchases.plusUnlocked).toBe(false);
+    });
+
+    it('reports a failed query and relocks nothing', async () => {
+      const h = ownerHarness();
+      h.store.currentEntitlements.mockResolvedValue({
+        ok: false,
+        transactions: [],
+      });
+
+      await expect(h.purchases.restore()).resolves.toEqual({queryOk: false});
+
+      expect(h.purchases.plusUnlocked).toBe(true);
+    });
+
+    it('iOS: clears pending on a successful restore', async () => {
+      setOS('ios');
+      const h = createHarness();
+      runInAction(() => {
+        h.purchases.availability = 'ready';
+      });
+      await h.purchases.processTransaction(
+        plusTx({state: 'pending', transactionId: undefined}),
+      );
+
+      await h.purchases.restore();
+
+      expect(h.purchases.plusPending).toBe(false);
+    });
+
+    it('waits for an in-flight recovery instead of queueing another', async () => {
+      const h = createHarness();
+      let ready!: (value: boolean) => void;
+      h.store.init.mockImplementationOnce(
+        () =>
+          new Promise<boolean>(resolve => {
+            ready = resolve;
+          }),
+      );
+
+      const recovery = h.purchases.recover();
+      const restore = h.purchases.restore();
+      await until(() => ready !== undefined);
+      ready(true);
+      await Promise.all([recovery, restore]);
+      await flush();
+
+      expect(h.store.init).toHaveBeenCalledTimes(1);
+      expect(h.purchases.availability).toBe('ready');
+    });
+
+    it('starts billing through recovery when it is not ready yet', async () => {
+      const h = createHarness();
+
+      await h.purchases.restore();
+
+      expect(h.store.init).toHaveBeenCalledTimes(1);
+      expect(h.purchases.availability).toBe('ready');
+    });
+
+    it('still queries the store when the recovery before it fails', async () => {
+      const h = createHarness();
+      h.store.init.mockRejectedValueOnce(new Error('boom'));
+
+      await expect(h.purchases.restore()).resolves.toEqual({queryOk: true});
+
+      expect(h.store.currentEntitlements).toHaveBeenCalledTimes(1);
+    });
+
+    it('settles Plus before a slow Pal verify', async () => {
+      setOS('ios');
+      const h = createHarness();
+      runInAction(() => {
+        h.purchases.availability = 'ready';
+      });
+      h.api.verify.mockImplementation(() => new Promise(() => {}));
+      h.store.currentEntitlements.mockResolvedValue({
+        ok: true,
+        transactions: [tx({unfinished: false}), plusTx({unfinished: false})],
+      });
+
+      h.purchases.restore().catch(() => {});
+      await until(() => h.purchases.plusChecked);
+
+      expect(h.purchases.plusUnlocked).toBe(true);
+    });
+  });
+
+  describe('account changes', () => {
+    it('keeps the unlock across sign-out and account deletion', async () => {
+      const storage = new MemoryStorage([]);
+      storage.seedPlus();
+      const h = createHarness({storage, signedIn: true});
+      await h.purchases.loadPlus();
+
+      runInAction(() => {
+        h.auth.isAuthenticated = false;
+        h.auth.user = null;
+      });
+      h.palStore.userLibrary.splice(0);
+      await flush();
+
+      expect(h.purchases.plusUnlocked).toBe(true);
+      expect(storage.removeItem).not.toHaveBeenCalled();
     });
   });
 });

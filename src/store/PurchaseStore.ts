@@ -179,6 +179,9 @@ const RETRYABLE_RESULTS: ReadonlySet<VerifyResult['status']> = new Set([
 const platform = (): StorePlatform =>
   Platform.OS === 'ios' ? 'ios' : 'android';
 
+const isPalTransaction = (tx: StoreTransaction): boolean =>
+  !isPlusProduct(tx.productId);
+
 const txKey = (tx: StoreTransaction): string =>
   tx.transactionId ?? `${tx.productId}:${tx.state}`;
 
@@ -193,6 +196,7 @@ export class PurchaseStore {
   storefront: string | undefined = undefined;
   plusUnlocked = false;
   plusPending = false;
+  plusChecked = false;
 
   private store: StorePort | null = null;
   private unsubscribeStore: (() => void) | null = null;
@@ -664,6 +668,65 @@ export class PurchaseStore {
     if (tx.unfinished) {
       await this.finish(tx);
     }
+  }
+
+  private async settlePlus(
+    txs: StoreTransaction[],
+    ok: boolean,
+    snapshot: number,
+    fromRestore: boolean,
+  ): Promise<void> {
+    for (const tx of txs.filter(candidate =>
+      isPlusProduct(candidate.productId),
+    )) {
+      await this.processTransaction(tx);
+    }
+    await this.reconcilePlus(txs, ok, snapshot, fromRestore);
+  }
+
+  private reconcilePlus(
+    txs: StoreTransaction[],
+    ok: boolean,
+    snapshot: number,
+    fromRestore: boolean,
+  ): Promise<void> {
+    return this.serialize(PLUS_CHAIN, async () => {
+      await this.loadPlus();
+      if (ok && this.plusRevision === snapshot) {
+        const plus = txs.filter(tx => isPlusProduct(tx.productId));
+        if (this.plusUnlocked && !plus.some(tx => tx.state === 'purchased')) {
+          await this.relockPlus();
+        }
+        if (Platform.OS === 'android') {
+          const listedPending = plus.some(tx => tx.state === 'pending');
+          runInAction(() => {
+            this.plusPending = listedPending && !this.plusUnlocked;
+          });
+        } else if (fromRestore) {
+          runInAction(() => {
+            this.plusPending = false;
+          });
+        }
+      }
+      this.markPlusChecked();
+    });
+  }
+
+  private async relockPlus(): Promise<void> {
+    runInAction(() => {
+      this.plusUnlocked = false;
+    });
+    try {
+      await this.deps.storage.removeItem(PLUS_KEY);
+    } catch (error) {
+      console.warn('Removing the Plus unlock failed:', error);
+    }
+  }
+
+  private markPlusChecked(): void {
+    runInAction(() => {
+      this.plusChecked = true;
+    });
   }
 
   private markPlusPending(): void {
@@ -1274,6 +1337,16 @@ export class PurchaseStore {
   }
 
   private async recoverOnce(): Promise<void> {
+    try {
+      await this.recoverStore();
+    } catch (error) {
+      await this.loadPlus();
+      this.markPlusChecked();
+      throw error;
+    }
+  }
+
+  private async recoverStore(): Promise<void> {
     await this.deps.palStore.ready;
     await this.load();
     const available = await this.storePort.init();
@@ -1289,8 +1362,10 @@ export class PurchaseStore {
     }
     const unconfirmed = this.androidUnconfirmedRecords();
     this.resetAndroidAckMemo();
+    const snapshot = this.plusRevision;
     const {ok, transactions: txs} = await this.storeTransactions();
-    for (const tx of txs) {
+    await this.settlePlus(txs, ok, snapshot, false);
+    for (const tx of txs.filter(isPalTransaction)) {
       if (this.invalidTxIds.has(txKey(tx))) {
         continue;
       }
@@ -1560,13 +1635,16 @@ export class PurchaseStore {
     return outcome;
   }
 
-  async restore(): Promise<void> {
+  async restore(): Promise<{queryOk: boolean}> {
     runInAction(() => {
       this.isRestoring = true;
     });
     try {
       await this.deps.palStore.ready;
       await this.load();
+      if (this.availability !== 'ready') {
+        await (this.recovering ?? this.recover()).catch(() => {});
+      }
       try {
         await this.storePort.sync();
       } catch (error) {
@@ -1575,12 +1653,15 @@ export class PurchaseStore {
       await this.drainQueue();
       const unconfirmed = this.androidUnconfirmedRecords();
       this.resetAndroidAckMemo();
+      const snapshot = this.plusRevision;
       const {ok, transactions: txs} =
         await this.storePort.currentEntitlements();
-      for (const tx of txs) {
+      await this.settlePlus(txs, ok, snapshot, true);
+      for (const tx of txs.filter(isPalTransaction)) {
         await this.processTransaction(tx, {settledVerify: true, install: true});
       }
       await this.dropStalePending(txs, true, ok, unconfirmed);
+      return {queryOk: ok};
     } finally {
       runInAction(() => {
         this.isRestoring = false;
