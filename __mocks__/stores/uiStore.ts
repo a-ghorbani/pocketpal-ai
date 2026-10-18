@@ -1,3 +1,5 @@
+import {observable, runInAction} from 'mobx';
+
 import {l10n, supportedLanguages} from '../../src/locales';
 
 export class UIStore {
@@ -7,8 +9,17 @@ export class UIStore {
   } as const;
 }
 
+const colorScheme = observable.box<'light' | 'dark'>('light');
+const setColorScheme = (value: 'light' | 'dark') =>
+  runInAction(() => colorScheme.set(value));
+
 export const mockUiStore = {
-  colorScheme: 'light',
+  get colorScheme() {
+    return colorScheme.get();
+  },
+  set colorScheme(value: 'light' | 'dark') {
+    setColorScheme(value);
+  },
   autoNavigatetoChat: false,
   benchmarkShareDialog: {
     shouldShow: true,
@@ -27,7 +38,7 @@ export const mockUiStore = {
   setValue: jest.fn(),
   displayMemUsage: false,
   setAutoNavigateToChat: jest.fn(),
-  setColorScheme: jest.fn(),
+  setColorScheme: jest.fn(setColorScheme),
   setDisplayMemUsage: jest.fn(),
   setBenchmarkShareDialogPreference: jest.fn(),
   showError: jest.fn(),

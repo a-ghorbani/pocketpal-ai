@@ -1,35 +1,14 @@
-import React, {useRef, useState} from 'react';
-import {View, type HostInstance} from 'react-native';
+import React from 'react';
+import {View} from 'react-native';
 
 import {Button, Icon, Text} from 'react-native-paper';
 
 import {Menu} from '../../components';
 
 import type {createStyles} from './styles';
+import type {MenuAnchor} from './useMenuAnchor';
 
 import {CacheType} from '../../utils/types';
-
-export const useMenuAnchor = () => {
-  const ref = useRef<HostInstance>(null);
-  const [anchor, setAnchor] = useState<{x: number; y: number}>({x: 0, y: 0});
-  const [visible, setVisible] = useState(false);
-
-  const open = () =>
-    ref.current?.measure((x, y, width, height, pageX, pageY) => {
-      setAnchor({x: pageX, y: pageY + height});
-      setVisible(true);
-    });
-
-  return {
-    buttonRef: ref as unknown as React.Ref<View>,
-    anchor,
-    visible,
-    open,
-    close: () => setVisible(false),
-  };
-};
-
-export type MenuAnchor = ReturnType<typeof useMenuAnchor>;
 
 const chevronDown = ({size, color}: {size: number; color: string}) => (
   <Icon source="chevron-down" size={size} color={color} />
