@@ -228,3 +228,14 @@ describe('document names inside quotes', () => {
     ).toHaveLength(2);
   });
 });
+
+describe('excerpt lead', () => {
+  it('asks the model to say so when the excerpts lack the answer', () => {
+    expect(EXCERPT_LEAD).toBe(
+      '[Excerpts retrieved for this message from the attached documents. They are not the full text; cite the page when you use one. If they do not contain the answer, say so instead of guessing.]',
+    );
+    expect(renderExcerptBlock({kind: 'noMatch'}).startsWith(EXCERPT_LEAD)).toBe(
+      true,
+    );
+  });
+});

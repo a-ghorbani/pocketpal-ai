@@ -42,7 +42,7 @@ const header = (ref: DocumentRef): string => `[${describe(ref)}]`;
 const delimiterOf = (ref: DocumentRef) => ref.id.slice(0, 8);
 
 export const EXCERPT_LEAD =
-  '[Excerpts retrieved for this message from the attached documents. They are not the full text; cite the page when you use one.]';
+  '[Excerpts retrieved for this message from the attached documents. They are not the full text; cite the page when you use one. If they do not contain the answer, say so instead of guessing.]';
 
 export const excerptOpen = (ref: DocumentRef, citation: string): string =>
   `<<<BEGIN EXCERPT ${delimiterOf(ref)} ${quoted(ref.name)} ${citation}>>>`;
