@@ -2427,6 +2427,38 @@ describe('runAgent', () => {
       expect(controller.signal.aborted).toBe(false);
     });
 
+    it('a consumer that returns with calls still queued starts none of them when the run has no signal', async () => {
+      const first = makeTalent('t0', () => ({type: 'text', summary: 't0'}));
+      const deferred = [1, 2, 3, 4, 5].map(i => deferredTalent(`t${i}`));
+      const iterator = run(
+        batchEngine([0, 1, 2, 3, 4, 5].map(i => toolCall(`c${i}`, `t${i}`))),
+        {
+          t0: first,
+          ...Object.fromEntries(deferred.map(d => [d.talent.name, d.talent])),
+        },
+      );
+      let event = await iterator.next();
+      while (
+        !event.done &&
+        eventLabel(event.value) !== 'tool_call_finished c0'
+      ) {
+        event = await iterator.next();
+      }
+
+      const returned = track(iterator.return(undefined));
+      await flush();
+
+      const [t1, t2, t3, t4, t5] = deferred;
+      expect(t4.execute).toHaveBeenCalledWith({});
+      expect(returned.done).toBe(false);
+
+      [t1, t2, t3, t4].forEach(d => d.release());
+      await drain(returned);
+
+      expect(returned.done).toBe(true);
+      expect(t5.execute).not.toHaveBeenCalled();
+    });
+
     it('a Stop during the start events runs no local talent and cancels every call in call order', async () => {
       const controller = new AbortController();
       const calculate = jest.fn(
