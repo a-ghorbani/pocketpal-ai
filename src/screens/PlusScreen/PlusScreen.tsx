@@ -186,8 +186,10 @@ export const PlusScreen: React.FC<PlusScreenProps> = observer(props => {
     if (purchased) {
       return (
         <Pressable
+          key="done"
           testID="plus-done"
           accessibilityRole="button"
+          accessibilityLabel={copy.done}
           onPress={onClose}
           style={styles.primaryBtn}>
           <Text style={styles.primaryLabel}>{copy.done}</Text>
@@ -197,8 +199,10 @@ export const PlusScreen: React.FC<PlusScreenProps> = observer(props => {
     if (phase === 'pending') {
       return (
         <Pressable
+          key="pending"
           testID="plus-cta"
           accessibilityRole="button"
+          accessibilityLabel={copy.pending}
           accessibilityState={{disabled: true}}
           disabled
           style={[styles.primaryBtn, styles.primaryBtnBusy]}>
@@ -213,6 +217,7 @@ export const PlusScreen: React.FC<PlusScreenProps> = observer(props => {
     }
     return (
       <Pressable
+        key="buy"
         testID="plus-cta"
         accessibilityRole="button"
         accessibilityLabel={ctaLabel()}
@@ -233,6 +238,7 @@ export const PlusScreen: React.FC<PlusScreenProps> = observer(props => {
     <Pressable
       testID="plus-restore"
       accessibilityRole="button"
+      accessibilityLabel={copy.restore}
       accessibilityState={{disabled: isRestoring, busy: isRestoring}}
       disabled={isRestoring}
       onPress={handleRestore}

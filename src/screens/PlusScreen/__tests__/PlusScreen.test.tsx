@@ -185,6 +185,7 @@ describe('PlusScreen', () => {
       'Waiting for the store to confirm your payment.',
     );
     expect(getByTestId('plus-cta')).toHaveTextContent('Pending');
+    expect(getByTestId('plus-cta').props.accessibilityLabel).toBe('Pending');
     expect(getByTestId('plus-cta').props.accessibilityState).toMatchObject({
       disabled: true,
     });
@@ -241,9 +242,30 @@ describe('PlusScreen', () => {
     expect(queryByTestId('plus-tile-plus.1')).toBeNull();
     expect(queryByTestId('plus-restore')).toBeNull();
     expect(queryByTestId('plus-cta')).toBeNull();
+    expect(getByTestId('plus-done').props.accessibilityLabel).toBe('Done');
 
     fireEvent.press(getByTestId('plus-done'));
     expect(onClose).toHaveBeenCalledTimes(1);
+  });
+
+  it('keeps one button while paying and mounts a new one when pending', () => {
+    const {getByTestId} = renderScreen();
+    const buy = getByTestId('plus-cta');
+
+    act(() => set({plusFlow: 'paying'}));
+    expect(getByTestId('plus-cta')).toBe(buy);
+
+    act(() => set({plusFlow: 'idle', plusPending: true}));
+    expect(getByTestId('plus-cta')).not.toBe(buy);
+  });
+
+  it('mounts a new button when Plus unlocks', () => {
+    const {getByTestId} = renderScreen();
+    const buy = getByTestId('plus-cta');
+
+    act(() => set({plusUnlocked: true}));
+
+    expect(getByTestId('plus-done')).not.toBe(buy);
   });
 
   it('closes from any state', () => {
@@ -451,6 +473,9 @@ describe('PlusScreen', () => {
 
       fireEvent.press(getByTestId('plus-restore'));
 
+      expect(getByTestId('plus-restore').props.accessibilityLabel).toBe(
+        'Restore',
+      );
       expect(getByTestId('plus-restore').props.accessibilityState).toEqual({
         disabled: true,
         busy: true,
@@ -462,6 +487,9 @@ describe('PlusScreen', () => {
     it('shows no spinner on Restore while idle', () => {
       const {getByTestId, queryByTestId} = renderScreen();
 
+      expect(getByTestId('plus-restore').props.accessibilityLabel).toBe(
+        'Restore',
+      );
       expect(getByTestId('plus-restore').props.accessibilityState).toEqual({
         disabled: false,
         busy: false,
