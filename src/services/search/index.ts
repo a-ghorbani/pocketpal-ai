@@ -5,6 +5,7 @@ import {BraveProvider} from './providers/brave';
 import {ExaProvider} from './providers/exa';
 import {FirecrawlProvider} from './providers/firecrawl';
 import {ParallelProvider} from './providers/parallel';
+import {BingProvider} from './providers/bing';
 
 export type {
   SearchProvider,
@@ -28,6 +29,10 @@ export const createSearchProvider = (
   getKey: () => string,
 ): SearchProvider => {
   switch (id) {
+    // Keyless: no getKey wiring, so the adapter can't ask for a key it
+    // doesn't need.
+    case 'bing':
+      return new BingProvider();
     case 'tavily':
       return new TavilyProvider(getKey);
     case 'brave':

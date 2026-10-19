@@ -198,6 +198,38 @@ describe('SearchProviderStore', () => {
     });
   });
 
+  describe('keyless providers', () => {
+    it('lists Bing as keyless alongside the BYOK providers', () => {
+      const bing = SEARCH_PROVIDERS.find(p => p.id === 'bing');
+      expect(bing?.requiresKey).toBe(false);
+      expect(bing?.selectable).toBe(true);
+    });
+
+    it('reports a keyless provider as configured with no key stored', async () => {
+      const store = await newStore();
+      store.setActiveProvider('bing');
+      expect(store.activeProviderRequiresKey).toBe(false);
+      expect(store.hasKey('bing')).toBe(false);
+      expect(store.isProviderConfigured).toBe(true);
+    });
+
+    it('needs only consent to search on a keyless provider', async () => {
+      const store = await newStore();
+      store.setActiveProvider('bing');
+      expect(store.canSearch).toBe(false); // consent still missing
+
+      store.setConsent(true);
+      expect(store.canSearch).toBe(true); // no key, and none needed
+    });
+
+    it('still requires a key for a BYOK provider', async () => {
+      const store = await newStore(); // defaults to brave
+      expect(store.activeProviderRequiresKey).toBe(true);
+      store.setConsent(true);
+      expect(store.canSearch).toBe(false);
+    });
+  });
+
   describe('canSearch (consent + key, load-bearing at execution)', () => {
     it('requires both consent and a key', async () => {
       const store = await newStore();

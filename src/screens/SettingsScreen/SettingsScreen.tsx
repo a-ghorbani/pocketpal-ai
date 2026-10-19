@@ -1241,42 +1241,61 @@ export const SettingsScreen: React.FC = observer(() => {
                   </View>
                 </View>
 
-                {/* Per-provider BYOK key entry */}
+                {/* Per-provider BYOK key entry. Keyless providers (e.g. Bing)
+                    have nothing to paste, so they show a note instead. */}
                 <Divider style={styles.divider} />
                 <View style={styles.switchContainer}>
                   <View style={styles.textContainer}>
                     <Text variant="titleMedium" style={styles.textLabel}>
                       {l10n.settings.internetSearch.keyLabel}
                     </Text>
-                    <Text variant="labelSmall" style={styles.textDescription}>
-                      {searchProviderStore.hasKey(activeSearchProviderId)
-                        ? t(l10n.settings.internetSearch.keyIsSet, {
-                            provider:
-                              activeSearchProvider?.label ??
-                              activeSearchProviderId,
-                          })
-                        : t(l10n.settings.internetSearch.keyNotSet, {
-                            provider:
-                              activeSearchProvider?.label ??
-                              activeSearchProviderId,
-                          })}
-                    </Text>
-                    {!searchHasConsent && (
+                    {searchProviderStore.activeProviderRequiresKey ? (
+                      <>
+                        <Text
+                          variant="labelSmall"
+                          style={styles.textDescription}>
+                          {searchProviderStore.hasKey(activeSearchProviderId)
+                            ? t(l10n.settings.internetSearch.keyIsSet, {
+                                provider:
+                                  activeSearchProvider?.label ??
+                                  activeSearchProviderId,
+                              })
+                            : t(l10n.settings.internetSearch.keyNotSet, {
+                                provider:
+                                  activeSearchProvider?.label ??
+                                  activeSearchProviderId,
+                              })}
+                        </Text>
+                        {!searchHasConsent && (
+                          <Text
+                            variant="labelSmall"
+                            style={styles.textDescription}>
+                            {l10n.settings.internetSearch.consentRequired}
+                          </Text>
+                        )}
+                      </>
+                    ) : (
                       <Text variant="labelSmall" style={styles.textDescription}>
-                        {l10n.settings.internetSearch.consentRequired}
+                        {t(l10n.settings.internetSearch.noKeyRequired, {
+                          provider:
+                            activeSearchProvider?.label ??
+                            activeSearchProviderId,
+                        })}
                       </Text>
                     )}
                   </View>
-                  <Button
-                    testID="search-provider-key-button"
-                    mode="outlined"
-                    disabled={!searchHasConsent}
-                    onPress={() => setShowSearchKeySheet(true)}
-                    style={styles.menuButton}>
-                    {searchProviderStore.hasKey(activeSearchProviderId)
-                      ? l10n.settings.internetSearch.updateKeyButton
-                      : l10n.settings.internetSearch.setKeyButton}
-                  </Button>
+                  {searchProviderStore.activeProviderRequiresKey && (
+                    <Button
+                      testID="search-provider-key-button"
+                      mode="outlined"
+                      disabled={!searchHasConsent}
+                      onPress={() => setShowSearchKeySheet(true)}
+                      style={styles.menuButton}>
+                      {searchProviderStore.hasKey(activeSearchProviderId)
+                        ? l10n.settings.internetSearch.updateKeyButton
+                        : l10n.settings.internetSearch.setKeyButton}
+                    </Button>
+                  )}
                 </View>
 
                 {/* Result-count control */}

@@ -135,6 +135,7 @@
       "keyLabel": "API key",
       "keyIsSet": "Key is set for {{provider}}.",
       "keyNotSet": "No key set for {{provider}}.",
+      "noKeyRequired": "{{provider}} needs no API key — searches run over your own connection.",
       "setKeyButton": "Set Key",
       "updateKeyButton": "Update Key",
       "clearKeyButton": "Clear Key",

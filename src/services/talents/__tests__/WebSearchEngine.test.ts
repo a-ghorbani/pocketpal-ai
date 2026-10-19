@@ -24,6 +24,7 @@ const makeAccess = (overrides: Partial<SearchAccess> = {}): SearchAccess => {
   return {
     getActiveProvider: () => provider,
     canSearch: () => true,
+    requiresKey: () => true,
     getResultCount: () => 3,
     readWithDefaultReader: jest.fn(),
     ...overrides,
@@ -69,6 +70,20 @@ describe('WebSearchEngine', () => {
     expect(result.type).toBe('error');
     if (result.type === 'error') {
       expect(result.summary).toMatch(/not enabled/i);
+    }
+  });
+
+  it('points a keyless provider at the disclosure, not at a key', async () => {
+    const access = makeAccess({
+      canSearch: () => false,
+      requiresKey: () => false,
+    });
+    const result = await new WebSearchEngine(access).execute({query: 'mars'});
+    expect(result.type).toBe('error');
+    if (result.type === 'error') {
+      expect(result.errorMessage).toMatch(/accept the disclosure/i);
+      // A keyless provider (e.g. Bing) must not be told to go set a key.
+      expect(result.errorMessage).not.toMatch(/set an api key/i);
     }
   });
 
