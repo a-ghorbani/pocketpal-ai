@@ -13,7 +13,7 @@
     "networkError": "حدث خطأ في الشبكة. يُرجى المحاولة مرة أخرى.",
     "downloadETA": "ETA",
     "calculating": "جارٍ الحساب...",
-    "second": "ثانية",
+    "second": "sec",
     "seconds": "ثواني",
     "year": "سنة",
     "years": "سنوات",
@@ -600,8 +600,8 @@
     },
     "bubble": {
       "msPerToken": "{{value}} ms/رمز",
-      "tokensPerSec": "{{value}} رمز/ثانية",
-      "promptTokensPerSec": "{{value}} رمز الإدخال/ثانية",
+      "tokensPerSec": "{{value}} tokens/sec",
+      "promptTokensPerSec": "{{value}} prompt tokens/sec",
       "cachedTokens": "{{value}} مخزّن مؤقتًا",
       "ttft": "{{value}}ms TTFT",
       "draftAccepted": "المسودة: {{accepted}}/{{total}} ({{pct}}%)",
@@ -640,7 +640,7 @@
     },
     "toolMetrics": {
       "tokens": "{{count}} رمز",
-      "elapsed": "{{seconds}} ثانية"
+      "elapsed": "{{seconds}}s"
     },
     "chatEmptyPlaceholder": {
       "noModelsTitle": "لا توجد نماذج متاحة",
@@ -1095,7 +1095,7 @@
     "videoAnalysis": "تحليل الفيديو",
     "videoAnalysisDescription": "هذا مساعد ذكاء اصطناعي قائم على الفيديو يقدم تعليقًا فوريًا على تدفقات الفيديو من كاميرا جهازك.",
     "captureInterval": "فترة الالتقاط",
-    "captureIntervalUnit": "مللي ثانية",
+    "captureIntervalUnit": "ms",
     "world": "العالم",
     "toneStyle": "النبرة/الأسلوب",
     "aiRole": "دور الذكاء الاصطناعي",
@@ -1241,7 +1241,7 @@
     "stopCamera": "إيقاف الكاميرا",
     "promptPlaceholder": "ماذا تريد أن تعرف عن هذا الفيديو؟",
     "captureInterval": "فترة الالتقاط",
-    "captureIntervalUnit": "مللي ثانية",
+    "captureIntervalUnit": "ms",
     "liveCommentary": "تعليق مباشر",
     "emptyPlaceholder": {
       "title": "مرحبًا بك في Lookie",
@@ -1416,7 +1416,7 @@
         "tokenGeneration": "توليد الرموز",
         "totalTime": "الوقت الإجمالي",
         "peakMemory": "ذروة الذاكرة",
-        "tokensPerSecond": "رمز/ثانية",
+        "tokensPerSecond": "t/s",
         "promptProcessing": "معالجة الـ prompt"
       },
       "actions": {
