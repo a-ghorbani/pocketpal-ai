@@ -145,7 +145,7 @@ android {
                 println "Warning: Release signing credentials not found, using debug keystore"
             }
             minifyEnabled enableProguardInReleaseBuilds
-            proguardFiles getDefaultProguardFile("proguard-android.txt"), "proguard-rules.pro"
+            proguardFiles getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro"
             buildConfigField "boolean", "USE_DEV_SUPPORT", "false"
         }
         releaseE2e {

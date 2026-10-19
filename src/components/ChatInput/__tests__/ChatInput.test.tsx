@@ -774,9 +774,12 @@ describe('input', () => {
       expect(modelStore.disableAutoRelease).toHaveBeenCalledWith(
         'camera-photo',
       );
-      await waitFor(() => {
-        expect(screen.queryByText(l10n.en.camera.takePhoto)).toBeNull();
-      });
+      await waitFor(
+        () => {
+          expect(screen.queryByText(l10n.en.camera.takePhoto)).toBeNull();
+        },
+        {timeout: 3000},
+      );
     });
 
     it('handles image library selection successfully', async () => {

@@ -45,7 +45,7 @@ jest.mock('../../../Sheet/Sheet', () => {
 jest.spyOn(Alert, 'alert');
 
 // Mock Linking.openURL to return a resolved Promise
-jest.spyOn(Linking, 'openURL').mockResolvedValue(true);
+jest.spyOn(Linking, 'openURL').mockResolvedValue(undefined);
 
 // Mock icons
 jest.mock('../../../../assets/icons', () => ({

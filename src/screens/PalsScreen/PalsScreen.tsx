@@ -334,7 +334,7 @@ export const PalsScreen: React.FC = observer(() => {
         style={styles.restoreRow}>
         {l10n.palsScreen.purchase.restorePurchases}
       </Button>
-    ) : null;
+    ) : undefined;
 
   const {columns, cardWidth} = computePalGridLayout(windowWidth);
   const filteredData = getFilteredData();

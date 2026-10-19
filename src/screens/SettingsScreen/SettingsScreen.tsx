@@ -5,7 +5,7 @@ import {
   TouchableWithoutFeedback,
   Keyboard,
   ScrollView,
-  TextInput as RNTextInput,
+  type TextInputInstance,
   Alert,
   Linking,
   TouchableOpacity,
@@ -51,7 +51,8 @@ import {PurchasesCard} from './PurchasesCard';
 import {useTheme} from '../../hooks';
 
 import {createStyles} from './styles';
-import {CacheTypeMenuRow, useMenuAnchor} from './CacheTypeMenuRow';
+import {CacheTypeMenuRow} from './CacheTypeMenuRow';
+import {useMenuAnchor} from './useMenuAnchor';
 
 import {
   modelStore,
@@ -95,31 +96,21 @@ export const SettingsScreen: React.FC = observer(() => {
   );
   const [isValidInput, setIsValidInput] = useState(true);
   const [showAdvancedSettings, setShowAdvancedSettings] = useState(false);
-  const inputRef = useRef<RNTextInput>(null);
+  const inputRef = useRef<TextInputInstance>(null);
   const keyCacheMenu = useMenuAnchor();
   const valueCacheMenu = useMenuAnchor();
   const draftKeyCacheMenu = useMenuAnchor();
   const draftValueCacheMenu = useMenuAnchor();
-  const [showDraftModelMenu, setShowDraftModelMenu] = useState(false);
+  const draftModelMenu = useMenuAnchor();
+  const searchProviderMenu = useMenuAnchor();
   const [showHfTokenDialog, setShowHfTokenDialog] = useState(false);
   const [showAuthSheet, setShowAuthSheet] = useState(false);
-  const [showSearchProviderMenu, setShowSearchProviderMenu] = useState(false);
-  const [searchProviderAnchor, setSearchProviderAnchor] = useState<{
-    x: number;
-    y: number;
-  }>({x: 0, y: 0});
   const [showSearchKeySheet, setShowSearchKeySheet] = useState(false);
-  const searchProviderButtonRef = useRef<View>(null);
   const [gpuSupported, setGpuSupported] = useState(false);
-  const [draftModelAnchor, setDraftModelAnchor] = useState<{
-    x: number;
-    y: number;
-  }>({x: 0, y: 0});
   const [deviceOptions, setDeviceOptions] = useState<DeviceOption[]>([]);
   const [currentBackend, setCurrentBackend] = useState<
     'metal' | 'opencl' | 'hexagon' | 'cpu' | 'blas'
   >(Platform.OS === 'ios' ? 'metal' : 'cpu');
-  const draftModelButtonRef = useRef<View>(null);
   const debouncedUpdateStore = useRef(
     debounce((value: number) => {
       modelStore.setNContext(value);
@@ -190,7 +181,7 @@ export const SettingsScreen: React.FC = observer(() => {
     valueCacheMenu.close();
     draftKeyCacheMenu.close();
     draftValueCacheMenu.close();
-    setShowDraftModelMenu(false);
+    draftModelMenu.close();
   };
 
   const handleContextSizeChange = (text: string) => {
@@ -334,24 +325,6 @@ export const SettingsScreen: React.FC = observer(() => {
       modelStore.setFlashAttnType(option.default_flash_attn_type);
     }
     // Otherwise, keep the user's current flash attention preference
-  };
-
-  const handleDraftModelPress = () => {
-    draftModelButtonRef.current?.measure(
-      (x, y, width, height, pageX, pageY) => {
-        setDraftModelAnchor({x: pageX, y: pageY + height});
-        setShowDraftModelMenu(true);
-      },
-    );
-  };
-
-  const handleSearchProviderPress = () => {
-    searchProviderButtonRef.current?.measure(
-      (x, y, width, height, pageX, pageY) => {
-        setSearchProviderAnchor({x: pageX, y: pageY + height});
-        setShowSearchProviderMenu(true);
-      },
-    );
   };
 
   const activeSearchProvider = searchProviderStore.providers.find(
@@ -773,9 +746,9 @@ export const SettingsScreen: React.FC = observer(() => {
                         <View style={styles.fullRowControl}>
                           <View>
                             <Button
-                              ref={draftModelButtonRef}
+                              ref={draftModelMenu.buttonRef}
                               mode="outlined"
-                              onPress={handleDraftModelPress}
+                              onPress={draftModelMenu.open}
                               style={styles.menuButton}
                               contentStyle={styles.buttonContent}
                               testID="speculative-draft-model-picker"
@@ -799,9 +772,9 @@ export const SettingsScreen: React.FC = observer(() => {
                                 l10n.settings.speculativeDraftModelNone}
                             </Button>
                             <Menu
-                              visible={showDraftModelMenu}
-                              onDismiss={() => setShowDraftModelMenu(false)}
-                              anchor={draftModelAnchor}
+                              visible={draftModelMenu.visible}
+                              onDismiss={draftModelMenu.close}
+                              anchor={draftModelMenu.anchor}
                               selectable>
                               <Menu.Item
                                 style={styles.menu}
@@ -809,7 +782,7 @@ export const SettingsScreen: React.FC = observer(() => {
                                 selected={!selectedDraftModel}
                                 onPress={() => {
                                   modelStore.setSelectedDraftModel(undefined);
-                                  setShowDraftModelMenu(false);
+                                  draftModelMenu.close();
                                 }}
                               />
                               {eligibleDraftModels.map(model => (
@@ -820,7 +793,7 @@ export const SettingsScreen: React.FC = observer(() => {
                                   selected={model.id === selectedDraftModel?.id}
                                   onPress={() => {
                                     modelStore.setSelectedDraftModel(model.id);
-                                    setShowDraftModelMenu(false);
+                                    draftModelMenu.close();
                                   }}
                                 />
                               ))}
@@ -1228,10 +1201,10 @@ export const SettingsScreen: React.FC = observer(() => {
                   </View>
                   <View style={styles.menuContainer}>
                     <Button
-                      ref={searchProviderButtonRef}
+                      ref={searchProviderMenu.buttonRef}
                       testID="search-provider-selector-button"
                       mode="outlined"
-                      onPress={handleSearchProviderPress}
+                      onPress={searchProviderMenu.open}
                       style={styles.menuButton}
                       contentStyle={styles.buttonContent}
                       icon={({size, color}) => (
@@ -1240,9 +1213,9 @@ export const SettingsScreen: React.FC = observer(() => {
                       {activeSearchProvider?.label ?? activeSearchProviderId}
                     </Button>
                     <Menu
-                      visible={showSearchProviderMenu}
-                      onDismiss={() => setShowSearchProviderMenu(false)}
-                      anchor={searchProviderAnchor}
+                      visible={searchProviderMenu.visible}
+                      onDismiss={searchProviderMenu.close}
+                      anchor={searchProviderMenu.anchor}
                       selectable>
                       {searchProviderStore.providers.map(provider => (
                         <Menu.Item
@@ -1260,7 +1233,7 @@ export const SettingsScreen: React.FC = observer(() => {
                             searchProviderStore.setActiveProvider(
                               provider.id as SearchProviderId,
                             );
-                            setShowSearchProviderMenu(false);
+                            searchProviderMenu.close();
                           }}
                         />
                       ))}

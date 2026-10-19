@@ -1,5 +1,5 @@
 import React, {forwardRef} from 'react';
-import {View, TextInput as RNTextInput} from 'react-native';
+import {View, type TextInputInstance} from 'react-native';
 import {Text} from 'react-native-paper';
 import {Controller, useFormContext} from 'react-hook-form';
 
@@ -18,7 +18,7 @@ interface FormFieldProps {
   onSubmitEditing?: () => void;
 }
 
-const FormField = forwardRef<RNTextInput, FormFieldProps>(
+const FormField = forwardRef<TextInputInstance, FormFieldProps>(
   (
     {
       name,
