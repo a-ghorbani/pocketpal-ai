@@ -188,8 +188,9 @@ describe('PlusScreen', () => {
     purchaseStore.buyPlus.mockResolvedValueOnce('error');
     const {getByTestId, queryByTestId, queryByText} = renderScreen();
 
-    fireEvent.press(getByTestId('plus-cta'));
-    await waitFor(() => expect(getByTestId('plus-error-line')).toBeTruthy());
+    await act(async () => {
+      fireEvent.press(getByTestId('plus-cta'));
+    });
 
     expect(getByTestId('plus-error-line')).toHaveTextContent(
       "The purchase didn't go through. Try again.",
@@ -203,8 +204,10 @@ describe('PlusScreen', () => {
     });
 
     purchaseStore.buyPlus.mockResolvedValueOnce('cancelled');
-    fireEvent.press(getByTestId('plus-cta'));
-    await waitFor(() => expect(queryByTestId('plus-error-line')).toBeNull());
+    await act(async () => {
+      fireEvent.press(getByTestId('plus-cta'));
+    });
+    expect(queryByTestId('plus-error-line')).toBeNull();
     expect(purchaseStore.buyPlus).toHaveBeenCalledTimes(2);
   });
 
