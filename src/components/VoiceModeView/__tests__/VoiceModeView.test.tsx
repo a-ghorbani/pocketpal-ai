@@ -141,7 +141,7 @@ describe('VoiceModeView', () => {
     renderView();
 
     const handler = addListener.mock.calls[0][1];
-    expect(handler()).toBe(true);
+    expect(handler({} as any)).toBe(true);
     expect(voiceModeStore.setPresentation).toHaveBeenCalledWith('bar');
     addListener.mockRestore();
   });

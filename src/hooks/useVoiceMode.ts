@@ -237,7 +237,10 @@ class VoiceModeController {
     }
   }
 
-  onAppStateChange(previous: AppStateStatus, next: AppStateStatus): void {
+  onAppStateChange(
+    previous: string | null | undefined,
+    next: AppStateStatus,
+  ): void {
     if (!this.open) {
       return;
     }
