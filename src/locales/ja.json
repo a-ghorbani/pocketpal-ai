@@ -211,6 +211,40 @@
       "statusOwned": "購入済み",
       "statusUnlocking": "ロック解除中",
       "link": "他のデバイスで使うにはサインイン"
+    },
+    "scanServerQr": "サーバーのQRコードをスキャン",
+    "scanQrPermissionMessage": "サーバーのQRコードをスキャンするには、カメラへのアクセスを許可してください。アドレスを入力することもできます。",
+    "scanQrNotServer": "サーバーのアドレスではありません",
+    "scanQrUnavailable": "ここではスキャンできません。サーバーのアドレスを入力してください。",
+    "scanQrNotReady": "スキャナーの準備中です。アドレスを入力することもできます。",
+    "routerModels": {
+      "cancel": "キャンセル",
+      "unloading": "アンロード中…",
+      "stateLoading": "読み込み中",
+      "stateLoaded": "読み込み済み",
+      "loadingPercent": "読み込み中、{{percent}}パーセント",
+      "unloadModel": "{{model}}をアンロード",
+      "cancelLoadingModel": "{{model}}の読み込みをキャンセル",
+      "loadFailed": "このモデルは読み込めませんでした。",
+      "unloadNotReleased": "サーバーがこのモデルを解放しませんでした。",
+      "serverUnreachable": "このサーバーに接続できませんでした。",
+      "waitStopped": "このモデルの待機を中止しました。",
+      "failureWithServerWords": "{{label}}\n\n“{{message}}”",
+      "dismiss": "閉じる",
+      "unloadBoundTitle": "このモデルをアンロードしますか？",
+      "unloadBoundBody": "このチャットで使用中です。次のメッセージを送ると、もう一度読み込まれます。",
+      "unloadBoundConfirm": "アンロード"
+    },
+    "account": {
+      "title": "アカウント",
+      "deleteAccount": "アカウントを削除",
+      "confirmTitle": "アカウントを削除しますか？",
+      "confirmMessage": "PalsHubのアカウントとそのライブラリを完全に削除します。App StoreまたはGoogle Playで購入したPalは、ストアのアカウントを使ってこのデバイスで復元できます。購入記録は法的な理由により匿名化して保存されます。",
+      "confirmWithoutApple": "Appleでの確認ができませんでした。それでもアカウントを削除しますか？",
+      "deleted": "アカウントを削除しました。",
+      "signInAgain": "もう一度サインインしてください",
+      "creatorSupport": "クリエイターアカウントの削除はサポートチームが対応します：{{contact}}",
+      "failed": "削除できませんでした。もう一度お試しください"
     }
   },
   "memory": {
@@ -953,7 +987,8 @@
       },
       "warnings": {
         "promptChanged": "システムプロンプトが変更されました"
-      }
+      },
+      "generationBusy": "まだ返信中です。完了してからもう一度お試しください。"
     },
     "sidebarContent": {
       "menuItems": {
@@ -1292,7 +1327,9 @@
       "openLinkError": "このリンクを開けませんでした。"
     },
     "contextFullRemote": "会話の余裕がなくなりました。新しいチャットを始めてください。",
-    "speculativeInitFailed": "このデバイスではこのモデルの投機的デコードを開始できませんでした。ドラフトコンテキスト用のメモリが不足している可能性が高いです。設定 → 詳細設定で投機的デコードをオフにして、もう一度お試しください。"
+    "speculativeInitFailed": "このデバイスではこのモデルの投機的デコードを開始できませんでした。ドラフトコンテキスト用のメモリが不足している可能性が高いです。設定 → 詳細設定で投機的デコードをオフにして、もう一度お試しください。",
+    "routerLoading": "モデルを読み込み中…",
+    "routerLoadingPercent": "モデルを読み込み中 · {{percent}}%"
   },
   "benchmark": {
     "title": "ベンチマーク",

@@ -1,4 +1,5 @@
 import _ from 'lodash';
+import dayjs from 'dayjs';
 
 import {
   l10n,
@@ -6,6 +7,7 @@ import {
   supportedLanguages,
   languageDisplayNames,
   _testGetCacheKeys,
+  initLocale,
 } from '../index';
 import enData from '../en.json';
 
@@ -40,6 +42,7 @@ const EXPECTED_SECTIONS = [
 
 const ALL_LANGUAGES: AvailableLanguage[] = [
   'en',
+  'ar',
   'es',
   'fa',
   'he',
@@ -194,6 +197,9 @@ describe('exports', () => {
 
   it('languageDisplayNames contains expected values', () => {
     expect(languageDisplayNames.en).toBe('English (EN)');
+    expect(languageDisplayNames.ar).toBe(
+      '\u0627\u0644\u0639\u0631\u0628\u064A\u0629 (AR)',
+    );
     expect(languageDisplayNames.es).toBe('Español (ES)');
     expect(languageDisplayNames.fa).toBe('\u0641\u0627\u0631\u0633\u06CC (FA)');
     expect(languageDisplayNames.he).toBe('\u05E2\u05D1\u05E8\u05D9\u05EA (HE)');
@@ -388,4 +394,19 @@ describe('sidebar date-group labels stay usable as map keys', () => {
       expect(new Set(values).size).toBe(values.length);
     },
   );
+});
+
+describe('initLocale', () => {
+  afterEach(() => {
+    dayjs.locale('en');
+  });
+
+  it('formats dates in Arabic when the app language is ar', () => {
+    initLocale('ar');
+
+    expect(dayjs.locale()).toBe('ar');
+    expect(dayjs('2026-01-15').format('MMMM')).toBe(
+      '\u064A\u0646\u0627\u064A\u0631',
+    );
+  });
 });

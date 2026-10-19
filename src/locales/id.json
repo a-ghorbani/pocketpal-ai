@@ -211,6 +211,40 @@
       "statusOwned": "Sudah Dibeli",
       "statusUnlocking": "Membuka Kunci",
       "link": "Masuk untuk menggunakannya di perangkat lain"
+    },
+    "scanServerQr": "Pindai kode QR server",
+    "scanQrPermissionMessage": "Izinkan akses kamera untuk memindai kode QR server. Anda juga bisa mengetik alamatnya.",
+    "scanQrNotServer": "Bukan alamat server",
+    "scanQrUnavailable": "Tidak bisa memindai di sini. Ketik saja alamat servernya.",
+    "scanQrNotReady": "Pemindai sedang disiapkan. Anda juga bisa mengetik alamatnya.",
+    "routerModels": {
+      "cancel": "Batal",
+      "unloading": "Melepas…",
+      "stateLoading": "Memuat",
+      "stateLoaded": "Dimuat",
+      "loadingPercent": "Memuat, {{percent}} persen",
+      "unloadModel": "Lepas {{model}}",
+      "cancelLoadingModel": "Batalkan pemuatan {{model}}",
+      "loadFailed": "Model ini gagal dimuat.",
+      "unloadNotReleased": "Server tidak melepas model ini.",
+      "serverUnreachable": "Server ini tidak dapat dijangkau.",
+      "waitStopped": "Berhenti menunggu model ini.",
+      "failureWithServerWords": "{{label}}\n\n“{{message}}”",
+      "dismiss": "Tutup",
+      "unloadBoundTitle": "Lepas model ini?",
+      "unloadBoundBody": "Obrolan ini sedang menggunakannya. Model akan dimuat lagi saat Anda mengirim pesan berikutnya.",
+      "unloadBoundConfirm": "Lepas"
+    },
+    "account": {
+      "title": "Akun",
+      "deleteAccount": "Hapus akun",
+      "confirmTitle": "Hapus akun?",
+      "confirmMessage": "Ini akan menghapus akun PalsHub Anda beserta pustakanya secara permanen. Pal yang dibeli melalui App Store atau Google Play tetap bisa dipulihkan di perangkat ini dengan akun toko Anda. Catatan pembelian disimpan secara anonim karena alasan hukum.",
+      "confirmWithoutApple": "Tidak dapat mengonfirmasi dengan Apple. Tetap hapus akun Anda?",
+      "deleted": "Akun Anda telah dihapus.",
+      "signInAgain": "Silakan masuk kembali",
+      "creatorSupport": "Akun pembuat Pal dihapus oleh tim dukungan kami: {{contact}}",
+      "failed": "Gagal menghapus, coba lagi"
     }
   },
   "memory": {
@@ -953,7 +987,8 @@
       },
       "warnings": {
         "promptChanged": "Prompt sistem telah diubah secara manual"
-      }
+      },
+      "generationBusy": "Balasan masih berjalan. Coba lagi setelah selesai."
     },
     "sidebarContent": {
       "menuItems": {
@@ -1292,7 +1327,9 @@
       "openLinkError": "Tidak dapat membuka tautan ini."
     },
     "contextFullRemote": "Percakapan kehabisan ruang. Mulai obrolan baru.",
-    "speculativeInitFailed": "Perangkat ini tidak dapat memulai decoding spekulatif untuk model ini — kemungkinan besar tidak ada cukup memori untuk konteks draf. Matikan Decoding spekulatif di Pengaturan → Pengaturan Lanjutan dan coba lagi."
+    "speculativeInitFailed": "Perangkat ini tidak dapat memulai decoding spekulatif untuk model ini — kemungkinan besar tidak ada cukup memori untuk konteks draf. Matikan Decoding spekulatif di Pengaturan → Pengaturan Lanjutan dan coba lagi.",
+    "routerLoading": "Memuat model…",
+    "routerLoadingPercent": "Memuat model · {{percent}}%"
   },
   "benchmark": {
     "title": "Benchmark",

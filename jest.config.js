@@ -1,6 +1,7 @@
 module.exports = {
-  preset: 'react-native',
-  collectCoverage: true,
+  preset: '@react-native/jest-preset',
+  resolver: '<rootDir>/jest/resolver.js',
+  collectCoverage: !process.env.REASSURE_OUTPUT_FILE,
   collectCoverageFrom: [
     'src/**/*.{ts,tsx}',
     '!**/index.{ts,tsx}',
@@ -10,6 +11,7 @@ module.exports = {
     '!**/ImageView.android.ts',
     '!**/ImageView.ios.ts',
     '!**/ImageView.tsx',
+    '!**/*.perf-test.{ts,tsx}',
   ],
   coveragePathIgnorePatterns: ['/src/screens/DevToolsScreen/'],
   coverageThreshold: {
@@ -32,6 +34,7 @@ module.exports = {
   ],
   testPathIgnorePatterns: ['/node_modules/', '/e2e/'],
   moduleNameMapper: {
+    '^react-native-paper$': '<rootDir>/node_modules/react-native-paper/src',
     '@react-native-async-storage/async-storage':
       '<rootDir>/__mocks__/external/@react-native-async-storage/async-storage.js',
     'llama.rn': '<rootDir>/__mocks__/external/llama.rn.ts',

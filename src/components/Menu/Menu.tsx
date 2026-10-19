@@ -6,11 +6,10 @@ import {
   MenuProps as PaperMenuProps,
 } from 'react-native-paper';
 
-import {useTheme} from '../../hooks';
+import {useMenuStatusBarHeight, useTheme} from '../../hooks';
 
 import {createStyles} from './styles';
 import {MenuItem, MenuItemProps} from './MenuItem';
-import {useSafeAreaInsets} from 'react-native-safe-area-context';
 
 const Separator = () => {
   const theme = useTheme();
@@ -46,7 +45,7 @@ export const Menu: React.FC<MenuProps> & {
   const theme = useTheme();
   const styles = createStyles(theme);
   const [hasActiveSubmenu, setHasActiveSubmenu] = useState(false);
-  const statusBarHeight = useSafeAreaInsets().top;
+  const statusBarHeight = useMenuStatusBarHeight();
 
   const handleSubmenuOpen = () => setHasActiveSubmenu(true);
   const handleSubmenuClose = () => setHasActiveSubmenu(false);

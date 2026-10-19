@@ -210,7 +210,9 @@
       "openLinkError": "無法開啟此連結。"
     },
     "contextFullRemote": "對話空間不足。請開始新對話。",
-    "speculativeInitFailed": "此裝置無法為此模型啟動投機解碼（Speculative Decoding）——最可能的原因是記憶體不足以容納草稿內容。請在「設定」→「進階設定」中關閉「投機解碼」，然後再試一次。"
+    "speculativeInitFailed": "此裝置無法為此模型啟動投機解碼（Speculative Decoding）——最可能的原因是記憶體不足以容納草稿內容。請在「設定」→「進階設定」中關閉「投機解碼」，然後再試一次。",
+    "routerLoading": "載入模型中…",
+    "routerLoadingPercent": "載入模型中 · {{percent}}%"
   },
   "common": {
     "cancel": "取消",
@@ -415,7 +417,8 @@
       "generatingPrompt": {
         "label": "目的與情境",
         "placeholder": "請描述這個 Pal 的角色、目的或情境…"
-      }
+      },
+      "generationBusy": "回覆仍在執行中。請在完成後再試一次。"
     },
     "chatPalModelPickerSheet": {
       "palsTab": "Pal",
@@ -1252,6 +1255,40 @@
       "statusOwned": "已購買",
       "statusUnlocking": "解鎖中",
       "link": "登入以在其他裝置上使用"
+    },
+    "scanServerQr": "掃描伺服器 QR Code",
+    "scanQrPermissionMessage": "允許使用攝影機權限來掃描伺服器的 QR Code。您也可以直接輸入位址。",
+    "scanQrNotServer": "這不是一個伺服器位址",
+    "scanQrUnavailable": "無法在此掃描。請改用文字輸入伺服器位址。",
+    "scanQrNotReady": "掃描器正在準備中。您也可以直接輸入位址。",
+    "routerModels": {
+      "cancel": "取消",
+      "unloading": "卸載中…",
+      "stateLoading": "載入中",
+      "stateLoaded": "已載入",
+      "loadingPercent": "載入中，{{percent}}%",
+      "unloadModel": "卸載 {{model}}",
+      "cancelLoadingModel": "取消載入 {{model}}",
+      "loadFailed": "此模型未成功載入。",
+      "unloadNotReleased": "伺服器尚未釋放此模型。",
+      "serverUnreachable": "無法連線至此伺服器。",
+      "waitStopped": "停止等待此模型。",
+      "dismiss": "關閉",
+      "unloadBoundTitle": "卸載此模型？",
+      "unloadBoundBody": "此對話正在使用該模型。當您發送下一則訊息時，系統將會重新載入。",
+      "unloadBoundConfirm": "卸載",
+      "failureWithServerWords": "{{label}}\n\n“{{message}}”"
+    },
+    "account": {
+      "title": "帳戶",
+      "deleteAccount": "刪除帳戶",
+      "confirmTitle": "刪除帳戶？",
+      "confirmMessage": "這將永久刪除您的 PalsHub 帳戶及其庫。透過 App Store 或 Google Play 購買的 Pal，仍可透過您的商店帳號在此裝置上恢復。出於法律考量，購買記錄將以匿名方式保留。",
+      "confirmWithoutApple": "無法與 Apple 確認。仍要刪除您的帳戶嗎？",
+      "deleted": "您的帳戶已刪除。",
+      "signInAgain": "請重新登入",
+      "creatorSupport": "創作者帳號將由我們的支援團隊刪除：{{contact}}",
+      "failed": "無法刪除，請再試一次"
     }
   },
   "storage": {

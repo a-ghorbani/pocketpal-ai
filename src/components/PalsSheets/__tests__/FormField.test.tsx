@@ -1,5 +1,5 @@
 import React from 'react';
-import type {TextInput as RNTextInput} from 'react-native';
+import type {TextInputInstance} from 'react-native';
 import {fireEvent} from '@testing-library/react-native';
 import {FormProvider, useForm} from 'react-hook-form';
 
@@ -182,7 +182,7 @@ describe('FormField', () => {
   });
 
   it('forwards ref to TextInput', () => {
-    const ref = React.createRef<RNTextInput>();
+    const ref = React.createRef<TextInputInstance>();
     render(
       <TestWrapper>
         <FormField

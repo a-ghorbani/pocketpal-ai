@@ -2,11 +2,8 @@ import * as React from 'react';
 import {
   FlatList,
   FlatListProps,
-  InteractionManager,
-  LayoutAnimation,
   Platform,
   StatusBar,
-  StatusBarProps,
   View,
   TouchableOpacity,
   Keyboard,
@@ -107,12 +104,6 @@ type SubMenuItem = {
   width?: number;
 };
 
-// Untestable
-/* istanbul ignore next */
-const animate = () => {
-  LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
-};
-
 const prependText = (first: string, rest: string) =>
   rest ? `${first}\n${rest}` : first;
 
@@ -144,7 +135,7 @@ export interface ChatProps extends Omit<ChatTopLevelProps, 'onSendPress'> {
    * `emptyChatPlaceholder` and `emptyChatPlaceholderTextStyle` are ignored
    * in this case. */
   emptyState?: () => React.ReactNode;
-  /** Use this to enable `LayoutAnimation`. Experimental on Android (same as React Native). */
+  /** Forwarded to each `Message`. */
   enableAnimation?: boolean;
   flatListProps?: Partial<FlatListProps<MessageType.DerivedAny[]>>;
   inputProps?: ChatInputAdditionalProps;
@@ -258,7 +249,6 @@ export const ChatView = observer(
     const isFocused = useIsFocused();
 
     // ============ REFS ============
-    const animationRef = React.useRef(false);
     const list = React.useRef<FlatList<MessageType.DerivedAny>>(null);
 
     // ============ COMPONENT STATE ============
@@ -276,7 +266,9 @@ export const ChatView = observer(
     // Image viewer state
     const [isImageViewVisible, setIsImageViewVisible] = React.useState(false);
     const [imageViewIndex, setImageViewIndex] = React.useState(0);
-    const [stackEntry, setStackEntry] = React.useState<StatusBarProps>({});
+    const [stackEntry, setStackEntry] = React.useState(
+      {} as ReturnType<typeof StatusBar.pushStackEntry>,
+    );
 
     // Context menu state
     const [menuVisible, setMenuVisible] = React.useState(false);
@@ -599,23 +591,6 @@ export const ChatView = observer(
       }
       // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [chatMessages]);
-
-    // ============ LAYOUT ANIMATION SETUP ============
-    // Untestable
-    /* istanbul ignore next */
-    if (animationRef.current && enableAnimation) {
-      InteractionManager.runAfterInteractions(animate);
-    }
-
-    React.useEffect(() => {
-      // Untestable
-      /* istanbul ignore next */
-      if (animationRef.current && enableAnimation) {
-        InteractionManager.runAfterInteractions(animate);
-      } else {
-        animationRef.current = true;
-      }
-    }, [enableAnimation, messages]);
 
     // ============ PAGINATION HANDLER ============
     const handleEndReached = React.useCallback(

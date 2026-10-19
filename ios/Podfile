@@ -87,16 +87,18 @@ target 'PocketPal' do
     # namespace google, which is illegal as a module import once a Swift C++
     # interop target (NitroModules) imports the React headers. Keep those two
     # headers textual in glog's module map.
-    glog_modulemap = File.join(installer.sandbox.root, 'Target Support Files', 'glog', 'glog-textual.modulemap')
-    File.write(glog_modulemap, <<~MODULEMAP)
-      framework module glog {
-        umbrella header "glog-umbrella.h"
-        textual header "log_severity.h"
-        textual header "vlog_is_on.h"
-        export *
-        module * { export * }
-      }
-    MODULEMAP
+    if installer.pods_project.targets.any? { |t| t.name == 'glog' }
+      glog_modulemap = File.join(installer.sandbox.root, 'Target Support Files', 'glog', 'glog-textual.modulemap')
+      File.write(glog_modulemap, <<~MODULEMAP)
+        framework module glog {
+          umbrella header "glog-umbrella.h"
+          textual header "log_severity.h"
+          textual header "vlog_is_on.h"
+          export *
+          module * { export * }
+        }
+      MODULEMAP
+    end
 
     installer.pods_project.targets.each do |target|
       if target.name == 'fmt'
