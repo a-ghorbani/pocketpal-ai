@@ -22,12 +22,14 @@ import {
   useReanimatedKeyboardAnimation,
 } from 'react-native-keyboard-controller';
 import Reanimated, {
+  useAnimatedReaction,
   useAnimatedStyle,
   useSharedValue,
   withTiming,
   useAnimatedScrollHandler,
   useDerivedValue,
 } from 'react-native-reanimated';
+import {scheduleOnRN} from 'react-native-worklets';
 
 import {useComponentSize} from '../KeyboardAccessoryView/hooks';
 
@@ -493,6 +495,16 @@ export const ChatView = observer(
     const hasHiddenContent = useDerivedValue(() => {
       return !underflow.value && !atLatest.value ? 1 : 0;
     });
+
+    const [isScrolledAway, setIsScrolledAway] = React.useState(false);
+    useAnimatedReaction(
+      () => hasHiddenContent.value === 1,
+      (away, wasAway) => {
+        if (away !== wasAway) {
+          scheduleOnRN(setIsScrolledAway, away);
+        }
+      },
+    );
 
     // Animated style for scroll-to-bottom button visibility
     const scrollToBottomAnimatedStyle = useAnimatedStyle(() => ({
@@ -1037,11 +1049,8 @@ export const ChatView = observer(
               ref={list}
               renderItem={renderMessage}
               maintainVisibleContentPosition={
-                isStreaming // || hasHiddenContentState
-                  ? {
-                      autoscrollToTopThreshold: 20,
-                      minIndexForVisible: 1, //isStreaming ? 1 : 0,
-                    }
+                isStreaming && isScrolledAway
+                  ? {minIndexForVisible: 1}
                   : undefined
               }
             />
@@ -1088,6 +1097,7 @@ export const ChatView = observer(
         handleEndReached,
         renderMessage,
         isStreaming,
+        isScrolledAway,
         scrollToBottomAnimatedStyle,
         insets.bottom,
         scrollToBottom,
