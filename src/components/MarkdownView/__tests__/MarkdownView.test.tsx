@@ -276,7 +276,7 @@ describe('MarkdownView', () => {
       render(<MarkdownView markdownText="a" maxMessageWidth={300} />);
 
       const style = lastProps().markdownStyle;
-      expect(style.paragraph).toEqual({color: colors.text, fontSize: 16});
+      expect(style.paragraph.color).toBe(colors.text);
       expect(style.h1.color).toBe(colors.text);
       expect(style.link).toEqual({color: colors.secondary, underline: true});
       expect(style.code.color).toBe(colors.onSurface);
@@ -286,7 +286,69 @@ describe('MarkdownView', () => {
       );
       expect(style.table.borderColor).toBe(colors.outline);
       expect(style.table.rowEvenBackgroundColor).toBe('transparent');
-      expect(style.codeBlock).toBeUndefined();
+      expect(Object.keys(style.codeBlock).sort()).toEqual([
+        'marginBottom',
+        'marginTop',
+      ]);
+    });
+
+    it('sets chat-density typography and spacing', () => {
+      render(<MarkdownView markdownText="a" maxMessageWidth={300} />);
+
+      const style = lastProps().markdownStyle;
+      const gap = {marginTop: 0, marginBottom: 8};
+      expect(style.paragraph).toEqual(
+        expect.objectContaining({fontSize: 16, lineHeight: 22, ...gap}),
+      );
+      expect(
+        ['h1', 'h2', 'h3', 'h4', 'h5', 'h6'].map(h => [
+          style[h].fontSize,
+          style[h].lineHeight,
+        ]),
+      ).toEqual([
+        [22, 28],
+        [20, 26],
+        [18, 24],
+        [17, 22],
+        [16, 22],
+        [16, 22],
+      ]);
+      for (const h of ['h1', 'h2', 'h3', 'h4', 'h5', 'h6']) {
+        expect(style[h]).toEqual(
+          expect.objectContaining({
+            fontWeight: 'bold',
+            marginTop: 4,
+            marginBottom: 4,
+          }),
+        );
+      }
+      expect(style.list).toEqual(
+        expect.objectContaining({
+          ...gap,
+          marginLeft: 16,
+          gapWidth: 6,
+          itemSpacing: 0,
+        }),
+      );
+      expect(style.blockquote).toEqual(
+        expect.objectContaining({
+          ...gap,
+          borderWidth: 2,
+          gapWidth: 8,
+          padding: 4,
+        }),
+      );
+      expect(style.thematicBreak).toEqual(
+        expect.objectContaining({height: 1, marginTop: 12, marginBottom: 12}),
+      );
+      expect(style.table).toEqual(
+        expect.objectContaining({
+          ...gap,
+          cellPaddingHorizontal: 8,
+          cellPaddingVertical: 6,
+        }),
+      );
+      expect(style.codeBlock).toEqual(gap);
     });
 
     it('draws quotes, list markers, strikethrough and task items in the body colour', () => {
@@ -337,7 +399,10 @@ describe('MarkdownView', () => {
         color: colors.thinkingBubbleText,
         fontSize: 14,
         lineHeight: 20,
+        marginTop: 0,
+        marginBottom: 8,
       });
+      expect(style.h1.fontSize).toBe(22);
       expect(style.table.color).toBe(colors.thinkingBubbleText);
     });
 
