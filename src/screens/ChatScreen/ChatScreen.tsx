@@ -25,7 +25,10 @@ import {
 import {hasVideoCapability} from '../../utils/pal-capabilities';
 
 import {L10nContext} from '../../utils';
-import {resolveReasoningCapability} from '../../utils/reasoningCapability';
+import {
+  clampEffort,
+  resolveReasoningCapability,
+} from '../../utils/reasoningCapability';
 import {MessageType} from '../../utils/types';
 import {ErrorState} from '../../utils/errors';
 import {user, assistant} from '../../utils/chat';
@@ -128,7 +131,15 @@ export const ChatScreen: React.FC = observer(() => {
     chatSessionStore.getCurrentCompletionSettings().then(settings => {
       if (!cancelled) {
         setThinkingEnabled(settings.enable_thinking ?? true);
-        setReasoningEffort(settings.reasoning?.effort);
+        // A stored/new-chat effort can outlive the model that produced it.
+        // Clamp it to the active model's effort set so an unsupported grade
+        // (e.g. xhigh on a low/medium/high model) is never selected.
+        setReasoningEffort(
+          clampEffort(
+            settings.reasoning?.effort,
+            reasoningCapability.effortValues,
+          ),
+        );
       }
     });
     return () => {

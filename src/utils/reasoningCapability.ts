@@ -49,6 +49,21 @@ export function orderEffortValues(values: string[]): string[] {
   return EFFORT_LEVELS.filter(level => values.includes(level));
 }
 
+/**
+ * Clamp a stored/new-chat effort to the model's supported set. Returns the
+ * effort only when the model grades to it, otherwise `undefined` so the pill
+ * never selects an unsupported grade.
+ */
+export function clampEffort(
+  effort: string | undefined,
+  effortValues: string[],
+): string | undefined {
+  if (!effort) {
+    return undefined;
+  }
+  return effortValues.includes(effort) ? effort : undefined;
+}
+
 const UNKNOWN: ReasoningCapability = {
   isReasoning: 'unknown',
   source: 'unknown',

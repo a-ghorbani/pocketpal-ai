@@ -758,6 +758,24 @@ describe('ChatScreen graded effort pill cycle', () => {
       reasoning: {enabled: false, effort: undefined},
     });
   });
+
+  it('never surfaces a stored effort the model does not support', async () => {
+    // Regression for #994: a stored/new-chat effort (xhigh) persisted while a
+    // different model was active must be clamped to this model's effortValues.
+    // Before the fix the pill rendered the unsupported grade verbatim.
+    persisted = {
+      enable_thinking: true,
+      reasoning: {effort: 'xhigh'},
+    };
+    useGradedModel();
+    const {getByTestId} = render(<ChatScreen />, {withNavigation: true});
+    const pill = () => within(getByTestId('thinking-toggle'));
+    const thinkText = l10n.en.components.chatInput.thinkingToggle.thinkText;
+
+    // xhigh is absent from ['low','medium','high'] → never selected.
+    await waitFor(() => expect(pill().getByText(thinkText)).toBeTruthy());
+    expect(pill().queryByText(effortLabel('xhigh'))).toBeNull();
+  });
 });
 
 describe('ChatScreen on/off toggle → reasoning carrier (remote)', () => {

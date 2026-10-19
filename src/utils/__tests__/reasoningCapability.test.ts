@@ -3,6 +3,7 @@ import {
   ReasoningCapability,
   resolveReasoningCapability,
   orderEffortValues,
+  clampEffort,
   EFFORT_LEVELS,
 } from '../reasoningCapability';
 import en from '../../locales/en.json';
@@ -167,6 +168,24 @@ describe('orderEffortValues', () => {
       'xhigh',
       'max',
     ]);
+  });
+});
+
+describe('clampEffort', () => {
+  it('keeps an effort the model supports', () => {
+    expect(clampEffort('high', ['low', 'medium', 'high'])).toBe('high');
+  });
+
+  it('drops an effort the model does not support', () => {
+    expect(clampEffort('xhigh', ['low', 'medium', 'high'])).toBeUndefined();
+  });
+
+  it('drops an effort when the model grades to nothing', () => {
+    expect(clampEffort('high', [])).toBeUndefined();
+  });
+
+  it('passes undefined through', () => {
+    expect(clampEffort(undefined, ['low', 'high'])).toBeUndefined();
   });
 });
 
