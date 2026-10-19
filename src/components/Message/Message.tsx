@@ -128,6 +128,22 @@ export const Message = observer(
     const currentUserIsAuthor =
       message.type !== 'dateHeader' && user?.id === message.author.id;
 
+    const latestMessage = React.useRef(message);
+    React.useEffect(() => {
+      latestMessage.current = message;
+    }, [message]);
+    const openUserMenu = React.useCallback(
+      (event: GestureResponderEvent) => {
+        const current = latestMessage.current;
+        if (current.type === 'dateHeader') {
+          return;
+        }
+        ReactNativeHapticFeedback.trigger('impactLight', hapticOptions);
+        onMessageMenuPress?.(excludeDerivedMessageProps(current), event);
+      },
+      [onMessageMenuPress],
+    );
+
     const {container, contentContainer, dateHeader, pressable} = styles({
       currentUserIsAuthor,
       message,
@@ -149,6 +165,8 @@ export const Message = observer(
         </View>
       );
     }
+
+    const isUserTextRow = currentUserIsAuthor && message.type === 'text';
 
     const renderBubbleContainer = () => {
       const child = renderMessage();
@@ -204,6 +222,7 @@ export const Message = observer(
                 enableAnimation,
                 message,
                 messageWidth,
+                onLinkLongPress: isUserTextRow ? openUserMenu : undefined,
                 onPreviewDataFetched,
                 showName,
                 usePreviewData,
@@ -398,7 +417,6 @@ export const Message = observer(
       );
     const isTextRow =
       message.type === 'text' || message.type === 'assistant_turn';
-    const isUserTextRow = currentUserIsAuthor && message.type === 'text';
 
     return (
       <View style={container}>
@@ -416,17 +434,7 @@ export const Message = observer(
         ) : (
           <Pressable
             accessible={!isUserTextRow}
-            onLongPress={
-              isUserTextRow
-                ? event => {
-                    ReactNativeHapticFeedback.trigger(
-                      'impactLight',
-                      hapticOptions,
-                    );
-                    openMenu(event);
-                  }
-                : undefined
-            }
+            onLongPress={isUserTextRow ? openUserMenu : undefined}
             onPress={event => {
               onMessagePress?.(excludeDerivedMessageProps(message), event);
             }}

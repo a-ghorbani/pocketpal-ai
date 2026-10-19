@@ -1,5 +1,6 @@
 import {render} from '@testing-library/react-native';
 import * as React from 'react';
+import {EnrichedMarkdownText} from 'react-native-enriched-markdown';
 import ReactNativeHapticFeedback from 'react-native-haptic-feedback';
 
 import {
@@ -7,6 +8,7 @@ import {
   derivedTextMessage,
 } from '../../../../jest/fixtures';
 import {
+  act,
   fireEvent,
   render as renderWithProviders,
 } from '../../../../jest/test-utils';
@@ -31,6 +33,10 @@ const touchHandlersAbove = (node: any) => {
   }
   return found;
 };
+
+const markdownSpy = EnrichedMarkdownText as unknown as jest.Mock;
+const lastMarkdownProps = () =>
+  markdownSpy.mock.calls[markdownSpy.mock.calls.length - 1][0];
 
 const longPressHandlers = (root: any) =>
   root.findAll(
@@ -107,6 +113,59 @@ describe('message', () => {
       expect(queryByTestId('user-row-footer')).toBeNull();
       expect(queryByTestId('message-menu-button')).toBeNull();
       expect(queryByTestId('assistant-turn-footer')).toBeNull();
+    });
+
+    it('opens the menu from a long-press on a link in a user text row', () => {
+      const onMessageMenuPress = jest.fn();
+      const {getByTestId} = renderWithProviders(
+        <Message
+          {...rowProps}
+          message={{...derivedTextMessage, text: '[a](https://x.y)'}}
+          onMessageMenuPress={onMessageMenuPress}
+        />,
+      );
+      const touch = {nativeEvent: {pageX: 3, pageY: 4}};
+      (ReactNativeHapticFeedback.trigger as jest.Mock).mockClear();
+
+      fireEvent(getByTestId('markdown-content'), 'touchStart', touch);
+      act(() => lastMarkdownProps().onLinkLongPress({url: 'https://x.y'}));
+
+      expect(onMessageMenuPress).toHaveBeenCalledWith(
+        expect.objectContaining({id: derivedTextMessage.id, type: 'text'}),
+        touch,
+      );
+      expect(ReactNativeHapticFeedback.trigger).toHaveBeenCalledWith(
+        'impactLight',
+        expect.any(Object),
+      );
+    });
+
+    it('keeps a user text row from re-rendering its markdown for a new row object', () => {
+      const props = {...rowProps, onMessageMenuPress: jest.fn()};
+      const {rerender} = renderWithProviders(
+        <Message {...props} message={{...derivedTextMessage}} />,
+      );
+      const renders = markdownSpy.mock.calls.length;
+
+      rerender(<Message {...props} message={{...derivedTextMessage}} />);
+
+      expect(markdownSpy.mock.calls.length).toBe(renders);
+    });
+
+    it('leaves link long-press to the renderer on an assistant text row', () => {
+      renderWithProviders(
+        <Message
+          {...rowProps}
+          message={{
+            ...derivedTextMessage,
+            author: {id: 'assistant'},
+            text: '[a](https://x.y)',
+          }}
+          onMessageMenuPress={jest.fn()}
+        />,
+      );
+
+      expect(lastMarkdownProps().onLinkLongPress).toBeUndefined();
     });
 
     it('gives an assistant text row the assistant footer', () => {

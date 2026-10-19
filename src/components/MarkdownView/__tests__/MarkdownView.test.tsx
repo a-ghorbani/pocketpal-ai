@@ -3,7 +3,7 @@ import {Linking, StyleSheet} from 'react-native';
 
 import {EnrichedMarkdownText} from 'react-native-enriched-markdown';
 
-import {render} from '../../../../jest/test-utils';
+import {act, fireEvent, render} from '../../../../jest/test-utils';
 import {themeFixtures} from '../../../../jest/fixtures/theme';
 import {useTheme} from '../../../hooks';
 import {l10n} from '../../../locales';
@@ -125,6 +125,47 @@ describe('MarkdownView', () => {
 
     expect(openURL).toHaveBeenCalledWith('https://example.com');
     openURL.mockRestore();
+  });
+
+  describe('link long-press', () => {
+    it('passes no link long-press handler by default', () => {
+      render(<MarkdownView markdownText="a" maxMessageWidth={300} />);
+
+      expect(lastProps().onLinkLongPress).toBeUndefined();
+    });
+
+    it('hands the touch that started the hold to onLinkLongPress', () => {
+      const onLinkLongPress = jest.fn();
+      const {getByTestId} = render(
+        <MarkdownView
+          markdownText="[a](https://x.y)"
+          maxMessageWidth={300}
+          onLinkLongPress={onLinkLongPress}
+        />,
+      );
+      const touch = {nativeEvent: {pageX: 10, pageY: 20}};
+
+      fireEvent(getByTestId('markdown-content'), 'touchStart', touch);
+      act(() => lastProps().onLinkLongPress({url: 'https://x.y'}));
+
+      expect(onLinkLongPress).toHaveBeenCalledTimes(1);
+      expect(onLinkLongPress).toHaveBeenCalledWith(touch);
+    });
+
+    it('re-renders when only onLinkLongPress changes', () => {
+      const {rerender} = render(
+        <MarkdownView markdownText="a" maxMessageWidth={300} />,
+      );
+      rerender(
+        <MarkdownView
+          markdownText="a"
+          maxMessageWidth={300}
+          onLinkLongPress={jest.fn()}
+        />,
+      );
+
+      expect(lastProps().onLinkLongPress).toEqual(expect.any(Function));
+    });
   });
 
   it('turns break tags into spaces before rendering', () => {

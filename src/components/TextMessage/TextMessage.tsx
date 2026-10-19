@@ -1,5 +1,6 @@
 import * as React from 'react';
 import {
+  GestureResponderEvent,
   Linking,
   Text,
   View,
@@ -52,6 +53,7 @@ export interface TextMessageProps extends TextMessageTopLevelProps {
    */
   message: MessageType.DerivedText | MessageType.DerivedAssistantTurn;
   messageWidth: number;
+  onLinkLongPress?: (event: GestureResponderEvent) => void;
   showName: boolean;
   /**
    * When provided, the component renders this step's `content` in
@@ -68,6 +70,7 @@ export const TextMessage = ({
   isActiveRun,
   message,
   messageWidth,
+  onLinkLongPress,
   onPreviewDataFetched,
   showName,
   usePreviewData,
@@ -282,6 +285,7 @@ export const TextMessage = ({
             maxMessageWidth={messageWidth}
             selectable={!isUserRow}
             blockContextMenu={!isUserRow}
+            onLinkLongPress={onLinkLongPress}
             streamingAnimation={isActiveRun === true && step?.partial === true}
           />
         </View>
