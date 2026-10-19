@@ -15,6 +15,37 @@ const spy = EnrichedMarkdownText as unknown as jest.Mock;
 const lastProps = () => spy.mock.calls[spy.mock.calls.length - 1][0];
 const en = l10n.en.components.markdownView;
 
+type RGBA = [number, number, number, number];
+
+const rgba = (color: string): RGBA => {
+  if (color.startsWith('#')) {
+    const [r, g, b] = [1, 3, 5].map(i => parseInt(color.slice(i, i + 2), 16));
+    return [r, g, b, 1];
+  }
+  const [r, g, b, a = 1] = color.match(/[\d.]+/g)!.map(Number);
+  return [r, g, b, a];
+};
+
+const over = ([r, g, b, a]: RGBA, [br, bg, bb]: RGBA): RGBA => [
+  r * a + br * (1 - a),
+  g * a + bg * (1 - a),
+  b * a + bb * (1 - a),
+  1,
+];
+
+const luminance = ([r, g, b]: RGBA) => {
+  const [lr, lg, lb] = [r, g, b].map(v => {
+    const c = v / 255;
+    return c <= 0.03928 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4;
+  });
+  return 0.2126 * lr + 0.7152 * lg + 0.0722 * lb;
+};
+
+const contrast = (a: RGBA, b: RGBA) => {
+  const [hi, lo] = [luminance(a), luminance(b)].sort((x, y) => y - x);
+  return (hi + 0.05) / (lo + 0.05);
+};
+
 describe('MarkdownView', () => {
   beforeEach(() => {
     spy.mockClear();
@@ -256,6 +287,40 @@ describe('MarkdownView', () => {
       expect(style.table.borderColor).toBe(colors.outline);
       expect(style.table.rowEvenBackgroundColor).toBe('transparent');
       expect(style.codeBlock).toBeUndefined();
+    });
+
+    it('draws quotes, list markers, strikethrough and task items in the body colour', () => {
+      render(<MarkdownView markdownText="a" maxMessageWidth={300} />);
+
+      const style = lastProps().markdownStyle;
+      expect(style.blockquote.color).toBe(colors.text);
+      expect(style.list.bulletColor).toBe(colors.text);
+      expect(style.list.markerColor).toBe(colors.text);
+      expect(style.strikethrough.color).toBe(colors.text);
+      expect(style.taskList.borderColor).toBe(colors.text);
+      expect(style.taskList.checkedTextColor).toBe(colors.text);
+    });
+
+    it.each([
+      ['light', themeFixtures.lightTheme],
+      ['dark', themeFixtures.darkTheme],
+    ])('keeps quote text at 4.5:1 or more in the %s theme', (_mode, theme) => {
+      (useTheme as jest.Mock).mockReturnValue(theme);
+      try {
+        render(<MarkdownView markdownText="a" maxMessageWidth={300} />);
+
+        const {blockquote} = lastProps().markdownStyle;
+        const quoteBackground = over(
+          rgba(blockquote.backgroundColor),
+          rgba(theme.colors.background),
+        );
+        const quoteText = over(rgba(blockquote.color), quoteBackground);
+        expect(contrast(quoteText, quoteBackground)).toBeGreaterThanOrEqual(
+          4.5,
+        );
+      } finally {
+        (useTheme as jest.Mock).mockReturnValue(themeFixtures.lightTheme);
+      }
     });
 
     it('uses the thinking colour and size for reasoning', () => {

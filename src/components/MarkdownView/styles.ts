@@ -26,12 +26,11 @@ export const createMarkdownStyle = (
     h6: heading,
     list: {
       ...textBlock,
-      bulletColor: colors.textSecondary,
-      markerColor: colors.textSecondary,
+      bulletColor: text,
+      markerColor: text,
     },
     blockquote: {
       ...textBlock,
-      color: colors.textSecondary,
       borderColor: colors.outline,
       backgroundColor: colors.surfaceContainerHigh,
     },
@@ -41,7 +40,7 @@ export const createMarkdownStyle = (
       backgroundColor: colors.surface,
       borderColor: colors.outline,
     },
-    strikethrough: {color: colors.textSecondary},
+    strikethrough: {color: text},
     underline: {color: text},
     thematicBreak: {color: colors.outline},
     table: {
@@ -53,8 +52,8 @@ export const createMarkdownStyle = (
       borderColor: colors.outline,
     },
     taskList: {
-      borderColor: colors.textSecondary,
-      checkedTextColor: colors.textSecondary,
+      borderColor: text,
+      checkedTextColor: text,
     },
     spoiler: {color: colors.surfaceContainerHigh},
   };
