@@ -10,6 +10,7 @@ import {
   PRODUCT,
   createHarness,
   flush,
+  hubPal,
   plusTx,
   record,
   stopAll,
@@ -67,7 +68,7 @@ const ownerHarness = () => {
 
 const readyHarness = async (h = createHarness()) => {
   await h.purchases.recover();
-  await h.purchases.syncProducts();
+  await until(() => !h.purchases.plusProductsLoading);
   h.store.purchase.mockImplementation(async (productId: string) => ({
     kind: 'purchased' as const,
     tx: plusTx({productId}),
@@ -702,7 +703,7 @@ describe('PurchaseStore Plus', () => {
       runInAction(() => {
         h.purchases.availability = 'ready';
       });
-      await h.purchases.syncProducts();
+      await until(() => !h.purchases.plusProductsLoading);
 
       await expect(h.purchases.buyPlus('plus.1')).resolves.toBe('error');
 
@@ -882,48 +883,105 @@ describe('PurchaseStore Plus', () => {
       h.store.fetchProducts.mock.calls.filter(([ids]) =>
         ids.some(id => id.startsWith('plus.')),
       );
-
-    it('does not fetch before billing is ready', async () => {
-      const h = createHarness();
-
-      await h.purchases.syncProducts();
-
-      expect(h.store.fetchProducts).not.toHaveBeenCalled();
-      expect(h.purchases.plusProducts).toEqual([]);
-    });
-
-    it('fetches the Plus products once billing is ready, with no Pals cached', async () => {
-      const h = createHarness();
+    const setReady = (h: ReturnType<typeof createHarness>) =>
       runInAction(() => {
         h.purchases.availability = 'ready';
       });
+    const settled = (h: ReturnType<typeof createHarness>) =>
+      until(() => !h.purchases.plusProductsLoading);
 
+    it('does not fetch before billing is ready, then fetches once when it is', async () => {
+      const h = createHarness();
+
+      h.purchases.retryPlusProducts();
       await h.purchases.syncProducts();
+      await flush();
+      expect(h.store.fetchProducts).not.toHaveBeenCalled();
+      expect(h.purchases.plusProductsLoading).toBe(false);
+      expect(h.purchases.plusProducts).toEqual([]);
+
+      setReady(h);
+      await settled(h);
 
       expect(plusFetches(h)).toEqual([[plusIds]]);
       expect(h.purchases.plusProducts.map(p => p.productId)).toEqual(plusIds);
     });
 
-    it('shows loading from the moment the fetch starts and joins it', async () => {
+    it('shows loading from the moment billing is ready and joins a retry', async () => {
       const h = createHarness();
       let answer!: () => void;
-      h.store.fetchProducts.mockImplementation(
-        (ids: string[]) =>
-          new Promise(resolve => {
-            answer = () =>
-              resolve(ids.map(productId => ({productId, displayPrice: '$1'})));
-          }),
-      );
-      runInAction(() => {
-        h.purchases.availability = 'ready';
+      const loadingAtCall: boolean[] = [];
+      h.store.fetchProducts.mockImplementation((ids: string[]) => {
+        loadingAtCall.push(h.purchases.plusProductsLoading);
+        return new Promise(resolve => {
+          answer = () =>
+            resolve(ids.map(productId => ({productId, displayPrice: '$1'})));
+        });
       });
-      await flush();
 
-      const first = h.purchases.syncProducts();
+      setReady(h);
       expect(h.purchases.plusProductsLoading).toBe(true);
-      const second = h.purchases.syncProducts();
+      h.purchases.retryPlusProducts();
+      await flush();
       answer();
-      await Promise.all([first, second]);
+      await settled(h);
+
+      expect(plusFetches(h)).toHaveLength(1);
+      expect(loadingAtCall).toEqual([true]);
+      expect(h.purchases.plusProducts).toHaveLength(4);
+    });
+
+    it.each([
+      ['empty', () => Promise.resolve([])],
+      ['rejected', () => Promise.reject(new Error('offline'))],
+    ])(
+      'does not ask for Plus again when the Pals list changes after an %s fetch',
+      async (_label, firstAnswer) => {
+        const h = createHarness({observablePals: true});
+        h.store.fetchProducts.mockImplementationOnce(firstAnswer);
+        setReady(h);
+        await settled(h);
+        expect(plusFetches(h)).toHaveLength(1);
+
+        runInAction(() => {
+          h.palStore.cachedPalsHubPals.push(hubPal());
+        });
+        await until(() =>
+          h.store.fetchProducts.mock.calls.some(([ids]) =>
+            ids.includes(PRODUCT),
+          ),
+        );
+        await flush();
+
+        expect(plusFetches(h)).toHaveLength(1);
+        expect(h.purchases.plusProducts).toEqual([]);
+      },
+    );
+
+    it('retries only the missing products when asked after a partial answer', async () => {
+      const h = createHarness();
+      h.store.fetchProducts.mockResolvedValueOnce([
+        {productId: 'plus.3', displayPrice: '$24.99'},
+        {productId: 'plus.1', displayPrice: '$4.99'},
+      ]);
+      setReady(h);
+      await settled(h);
+
+      h.purchases.retryPlusProducts();
+      expect(h.purchases.plusProductsLoading).toBe(true);
+      await settled(h);
+
+      expect(plusFetches(h)).toEqual([[plusIds], [['plus.2', 'plus.4']]]);
+      expect(h.purchases.plusProducts.map(p => p.productId)).toEqual(plusIds);
+    });
+
+    it('does not ask again once every product is known', async () => {
+      const h = createHarness();
+      setReady(h);
+      await settled(h);
+
+      h.purchases.retryPlusProducts();
+      await flush();
 
       expect(plusFetches(h)).toHaveLength(1);
       expect(h.purchases.plusProductsLoading).toBe(false);
@@ -934,16 +992,16 @@ describe('PurchaseStore Plus', () => {
       h.store.fetchProducts
         .mockRejectedValueOnce(new Error('offline'))
         .mockResolvedValueOnce([]);
-      runInAction(() => {
-        h.purchases.availability = 'ready';
-      });
-      await until(() => !h.purchases.plusProductsLoading);
-
-      await h.purchases.syncProducts();
+      setReady(h);
+      await settled(h);
       expect(h.purchases.plusProducts).toEqual([]);
-      expect(h.purchases.plusProductsLoading).toBe(false);
 
-      await h.purchases.syncProducts();
+      h.purchases.retryPlusProducts();
+      await settled(h);
+      expect(h.purchases.plusProducts).toEqual([]);
+
+      h.purchases.retryPlusProducts();
+      await settled(h);
       expect(plusFetches(h)).toHaveLength(3);
       expect(h.purchases.plusProducts).toHaveLength(4);
     });
@@ -954,11 +1012,9 @@ describe('PurchaseStore Plus', () => {
         {productId: 'plus.3', displayPrice: '$24.99'},
         {productId: 'plus.1', displayPrice: '$4.99'},
       ]);
-      runInAction(() => {
-        h.purchases.availability = 'ready';
-      });
 
-      await h.purchases.syncProducts();
+      setReady(h);
+      await settled(h);
 
       expect(h.purchases.plusProducts.map(p => p.productId)).toEqual([
         'plus.1',

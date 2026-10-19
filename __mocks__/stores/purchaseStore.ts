@@ -30,6 +30,7 @@ class MockPurchaseStore {
   buyPlus: jest.Mock;
   loadPlus: jest.Mock;
   syncProducts: jest.Mock;
+  retryPlusProducts: jest.Mock;
   retry: jest.Mock;
   restore: jest.Mock;
   installOwned: jest.Mock;
@@ -48,6 +49,7 @@ class MockPurchaseStore {
       buyPlus: false,
       loadPlus: false,
       syncProducts: false,
+      retryPlusProducts: false,
       retry: false,
       restore: false,
       installOwned: false,
@@ -64,6 +66,7 @@ class MockPurchaseStore {
     this.buyPlus = jest.fn().mockResolvedValue('purchased');
     this.loadPlus = jest.fn().mockResolvedValue(undefined);
     this.syncProducts = jest.fn().mockResolvedValue(undefined);
+    this.retryPlusProducts = jest.fn();
     this.retry = jest.fn().mockResolvedValue(undefined);
     this.restore = jest.fn().mockResolvedValue({queryOk: true});
     this.installOwned = jest.fn().mockResolvedValue(true);
@@ -146,6 +149,7 @@ class MockPurchaseStore {
     this.plusChecked = false;
     this.plusFlow = 'idle';
     this.plusProductsLoading = false;
+    this.retryPlusProducts.mockReset();
   }
 }
 

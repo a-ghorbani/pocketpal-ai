@@ -3,7 +3,6 @@ import {BackHandler, View} from 'react-native';
 import {observer} from 'mobx-react';
 
 import {useTheme} from '../../hooks';
-import {purchaseStore} from '../../store';
 import {PlusScreen} from '../../screens/PlusScreen/PlusScreen';
 import {ensureRamRead} from '../../services/plus/deviceRam';
 import {dismissPlus, plusGate} from '../../services/plus/gate';
@@ -18,7 +17,6 @@ export const PlusHost: React.FC = observer(() => {
     if (!shown) {
       return;
     }
-    purchaseStore.syncProducts().catch(() => {});
     ensureRamRead().catch(() => {});
     const subscription = BackHandler.addEventListener(
       'hardwareBackPress',

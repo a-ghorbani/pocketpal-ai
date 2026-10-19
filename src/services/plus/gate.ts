@@ -30,6 +30,9 @@ export const openPlus = (opts: PlusRequest = {}): void => {
     return;
   }
   runInAction(() => {
+    if (plusGate.request === null) {
+      purchaseStore.retryPlusProducts();
+    }
     plusGate.request = {onUnlocked: opts.onUnlocked};
   });
 };

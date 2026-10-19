@@ -77,7 +77,7 @@ describe('PlusHost', () => {
     act(() => openPlus());
 
     expect(getByTestId('plus-screen')).toBeTruthy();
-    expect(purchaseStore.syncProducts).toHaveBeenCalledTimes(1);
+    expect(purchaseStore.syncProducts).not.toHaveBeenCalled();
     expect(ensureRamRead).toHaveBeenCalledTimes(1);
   });
 

@@ -300,6 +300,14 @@ export class PurchaseStore {
       },
     );
     reaction(
+      () => this.availability === 'ready',
+      ready => {
+        if (ready) {
+          this.fetchPlusProducts();
+        }
+      },
+    );
+    reaction(
       () => this.deps.auth.isAuthenticated,
       signedIn => {
         if (signedIn && this.linkPending) {
@@ -485,10 +493,17 @@ export class PurchaseStore {
     if (this.availability !== 'ready') {
       return;
     }
-    await Promise.all([this.fetchPlusProducts(), this.fetchPalProducts()]);
+    await this.fetchPalProducts();
+  }
+
+  retryPlusProducts(): void {
+    this.fetchPlusProducts();
   }
 
   private fetchPlusProducts(): Promise<void> {
+    if (this.availability !== 'ready') {
+      return Promise.resolve();
+    }
     if (this.plusProductsFetch) {
       return this.plusProductsFetch;
     }
@@ -496,8 +511,8 @@ export class PurchaseStore {
     if (missing.length === 0) {
       return Promise.resolve();
     }
-    const run = this.storePort
-      .fetchProducts(missing)
+    const run = Promise.resolve()
+      .then(() => this.storePort.fetchProducts(missing))
       .then(
         products =>
           runInAction(() => {

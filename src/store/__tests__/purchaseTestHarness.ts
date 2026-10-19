@@ -262,6 +262,7 @@ export const createHarness = (
     storage?: MemoryStorage;
     log?: string[];
     signedIn?: boolean;
+    observablePals?: boolean;
   } = {},
 ) => {
   const log = options.log ?? [];
@@ -274,7 +275,9 @@ export const createHarness = (
     ready: Promise.resolve(),
     pals,
     userLibrary: [] as PalsHubPal[],
-    cachedPalsHubPals: [] as PalsHubPal[],
+    cachedPalsHubPals: (options.observablePals
+      ? observable.array<PalsHubPal>([])
+      : []) as PalsHubPal[],
     installOwnedPal: jest.fn(
       async (pal: PalsHubPal): Promise<{localPal: Pal; created: boolean}> => {
         log.push(`install:${pal.id}`);
