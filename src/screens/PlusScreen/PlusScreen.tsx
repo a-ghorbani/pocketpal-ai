@@ -340,9 +340,12 @@ export const PlusScreen: React.FC<PlusScreenProps> = observer(props => {
         {showsGrid && (
           <>
             {state.error ? (
-              <View style={styles.inlineError} accessibilityLiveRegion="polite">
+              <View style={styles.inlineError}>
                 <AlertIcon width={16} height={16} stroke={theme.colors.error} />
-                <Text testID="plus-error-line" style={styles.inlineErrorText}>
+                <Text
+                  testID="plus-error-line"
+                  style={styles.inlineErrorText}
+                  accessibilityLiveRegion="polite">
                   {copy.buyError}
                 </Text>
               </View>

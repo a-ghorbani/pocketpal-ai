@@ -557,11 +557,7 @@ describe('PlusScreen', () => {
         });
 
         expect(announceSpy).not.toHaveBeenCalled();
-        const shown = getByText(text);
-        const region =
-          shown.props.accessibilityLiveRegion ??
-          shown.parent?.parent?.props.accessibilityLiveRegion;
-        expect(region).toBe('polite');
+        expect(getByText(text).props.accessibilityLiveRegion).toBe('polite');
       },
     );
   });
