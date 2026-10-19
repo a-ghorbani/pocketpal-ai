@@ -1,6 +1,5 @@
 import * as React from 'react';
 import {
-  GestureResponderEvent,
   Linking,
   Text,
   View,
@@ -22,7 +21,7 @@ import {useTheme} from '../../hooks';
 import {styles} from './styles';
 import {MarkdownView} from '../MarkdownView';
 
-import {AgentStep, MessageType} from '../../utils/types';
+import {AgentStep, MessageType, PressPointEvent} from '../../utils/types';
 import {
   excludeDerivedMessageProps,
   getUserName,
@@ -53,7 +52,7 @@ export interface TextMessageProps extends TextMessageTopLevelProps {
    */
   message: MessageType.DerivedText | MessageType.DerivedAssistantTurn;
   messageWidth: number;
-  onLinkLongPress?: (event: GestureResponderEvent) => void;
+  onLinkLongPress?: (event: PressPointEvent) => void;
   showName: boolean;
   /**
    * When provided, the component renders this step's `content` in

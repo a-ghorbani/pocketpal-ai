@@ -183,6 +183,34 @@ describe('MarkdownView', () => {
       expect(onLinkLongPress).toHaveBeenCalledWith(touch);
     });
 
+    it.each([
+      ['releases', null],
+      ['reuses', {target: 7}],
+    ])(
+      'keeps the touch-start point once RN %s the event',
+      (_case, laterNativeEvent) => {
+        const onLinkLongPress = jest.fn();
+        const {getByTestId} = render(
+          <MarkdownView
+            markdownText="[a](https://x.y)"
+            maxMessageWidth={300}
+            onLinkLongPress={onLinkLongPress}
+          />,
+        );
+        const touch: {nativeEvent: unknown} = {
+          nativeEvent: {pageX: 10, pageY: 20},
+        };
+
+        fireEvent(getByTestId('markdown-content'), 'touchStart', touch);
+        touch.nativeEvent = laterNativeEvent;
+        act(() => lastProps().onLinkLongPress({url: 'https://x.y'}));
+
+        expect(onLinkLongPress).toHaveBeenCalledWith({
+          nativeEvent: {pageX: 10, pageY: 20},
+        });
+      },
+    );
+
     it('re-renders when only onLinkLongPress changes', () => {
       const {rerender} = render(
         <MarkdownView markdownText="a" maxMessageWidth={300} />,

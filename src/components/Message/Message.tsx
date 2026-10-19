@@ -20,7 +20,7 @@ import {
   TextMessageTopLevelProps,
 } from '..';
 
-import {MessageType} from '../../utils/types';
+import {MessageType, PressPointEvent} from '../../utils/types';
 import {excludeDerivedMessageProps, UserContext} from '../../utils';
 import {visibleStepContent} from '../../utils/chat';
 
@@ -45,7 +45,7 @@ export interface MessageTopLevelProps extends TextMessageTopLevelProps {
   /** Opens the row's message menu */
   onMessageMenuPress?: (
     message: MessageType.Any,
-    event: GestureResponderEvent,
+    event: PressPointEvent,
   ) => void;
   /** Called when user taps on any message */
   onMessagePress?: (message: MessageType.Any, event?: any) => void;
@@ -133,7 +133,7 @@ export const Message = observer(
       latestMessage.current = message;
     }, [message]);
     const openUserMenu = React.useCallback(
-      (event: GestureResponderEvent) => {
+      (event: PressPointEvent) => {
         const current = latestMessage.current;
         if (current.type === 'dateHeader') {
           return;

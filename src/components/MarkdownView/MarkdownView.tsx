@@ -15,6 +15,7 @@ import {normalizeBreakTags} from './normalizeBreakTags';
 import {createMarkdownStyle, MarkdownVariant} from './styles';
 
 import {L10nContext} from '../../utils';
+import type {PressPointEvent} from '../../utils/types';
 import {t} from '../../locales';
 
 interface MarkdownViewProps {
@@ -23,7 +24,7 @@ interface MarkdownViewProps {
   selectable?: boolean;
   blockContextMenu?: boolean;
   /** Called with the touch that started a long-press on a link */
-  onLinkLongPress?: (event: GestureResponderEvent) => void;
+  onLinkLongPress?: (event: PressPointEvent) => void;
   streamingAnimation?: boolean;
   variant?: MarkdownVariant;
 }
@@ -50,7 +51,7 @@ export const MarkdownView: React.FC<MarkdownViewProps> = React.memo(
   }) => {
     const theme = useTheme();
     const l10n = useContext(L10nContext);
-    const lastTouch = useRef<GestureResponderEvent | undefined>(undefined);
+    const touchStart = useRef<PressPointEvent | undefined>(undefined);
 
     const markdown = useMemo(
       () => normalizeBreakTags(markdownText),
@@ -93,12 +94,15 @@ export const MarkdownView: React.FC<MarkdownViewProps> = React.memo(
         },
       };
     }, [l10n]);
-    const recordTouch = useCallback((event: GestureResponderEvent) => {
-      lastTouch.current = event;
-    }, []);
+    const recordTouch = useCallback(
+      ({nativeEvent: {pageX, pageY}}: GestureResponderEvent) => {
+        touchStart.current = {nativeEvent: {pageX, pageY}};
+      },
+      [],
+    );
     const handleLinkLongPress = useCallback(() => {
-      if (lastTouch.current) {
-        onLinkLongPress?.(lastTouch.current);
+      if (touchStart.current) {
+        onLinkLongPress?.(touchStart.current);
       }
     }, [onLinkLongPress]);
 

@@ -747,6 +747,29 @@ describe('chat', () => {
       ]);
     });
 
+    it.each([
+      ['without a press point', {nativeEvent: {}}],
+      ['with a released event', {nativeEvent: null}],
+    ])('keeps the menu closed on a user long-press %s', (_case, event) => {
+      const utils = render(
+        <ChatView
+          messages={[textMessage]}
+          onSendPress={jest.fn()}
+          user={user}
+        />,
+        options,
+      );
+
+      fireEvent(utils.getByTestId('markdown-content'), 'longPress', event);
+
+      const menu = messageMenu(utils);
+      expect(menu.props.visible).toBe(false);
+      expect(menu.props.anchor).toEqual({
+        x: expect.any(Number),
+        y: expect.any(Number),
+      });
+    });
+
     it('opens nothing on a long-press of an assistant row', () => {
       const utils = render(
         <ChatView

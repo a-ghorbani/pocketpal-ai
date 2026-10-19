@@ -2,7 +2,6 @@ import * as React from 'react';
 import {
   FlatList,
   FlatListProps,
-  GestureResponderEvent,
   Platform,
   StatusBar,
   View,
@@ -57,7 +56,8 @@ import {CONTEXT_LADDER} from '../../utils/bannerVariantResolver';
 import {NEW_CHAT_DRAFT_KEY, chatSessionStore, modelStore} from '../../store';
 import type {UndoneSend} from '../../hooks/useChatSession';
 
-import {MessageType, User} from '../../utils/types';
+import {finiteNumber} from '../../utils/finite';
+import {MessageType, PressPointEvent, User} from '../../utils/types';
 import {Pal} from '../../types/pal';
 import {
   calculateChatMessages,
@@ -667,13 +667,17 @@ export const ChatView = observer(
     );
 
     const openMessageMenu = React.useCallback(
-      (message: MessageType.Any, event: GestureResponderEvent) => {
+      (message: MessageType.Any, event: PressPointEvent) => {
         if (message.type !== 'text' && message.type !== 'assistant_turn') {
           return;
         }
 
-        const {pageX, pageY} = event.nativeEvent;
-        setMenuPosition({x: pageX, y: pageY});
+        const x = finiteNumber(event.nativeEvent?.pageX);
+        const y = finiteNumber(event.nativeEvent?.pageY);
+        if (x === undefined || y === undefined) {
+          return;
+        }
+        setMenuPosition({x, y});
         setSelectedMessage(message);
         setMenuVisible(true);
       },
