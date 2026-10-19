@@ -211,6 +211,28 @@ describe('PurchaseStore Plus', () => {
       );
     });
 
+    it.each([
+      ['corrupt', 'not json'],
+      ['wrong-version', JSON.stringify({version: 2, productId: 'plus.1'})],
+    ])(
+      'writes before finishing when the stored unlock is %s',
+      async (_label, raw) => {
+        const h = createHarness();
+        h.storage.values.set(PLUS_KEY, raw);
+
+        await h.purchases.processTransaction(plusTx());
+
+        expect(h.log.indexOf('write:plus')).toBeGreaterThanOrEqual(0);
+        expect(h.log.indexOf('write:plus')).toBeLessThan(
+          h.log.indexOf('finish:plus.1-tx'),
+        );
+        expect(h.storage.plusDoc()).toMatchObject({
+          version: 1,
+          productId: 'plus.1',
+        });
+      },
+    );
+
     it('stays unlocked in memory and does not finish when the write fails', async () => {
       const warn = jest.spyOn(console, 'warn').mockImplementation(() => {});
       const h = createHarness();
