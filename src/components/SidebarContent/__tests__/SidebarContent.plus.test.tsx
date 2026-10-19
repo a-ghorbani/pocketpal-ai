@@ -6,12 +6,20 @@ import {
   createDrawerNavigator,
   DrawerContentComponentProps,
 } from '@react-navigation/drawer';
-import {fireEvent, render} from '@testing-library/react-native';
+import {act, fireEvent, render} from '@testing-library/react-native';
+import {runInAction} from 'mobx';
 
 import {SidebarContent} from '../SidebarContent';
+import {createStyles} from '../styles';
+import {purchaseStore} from '../../../store';
 import {plusGate} from '../../../services/plus/gate';
 import * as gate from '../../../services/plus/gate';
 import {setShipOverride} from '../../../services/plus/shipOverride';
+
+jest.mock('../styles', () => {
+  const actual = jest.requireActual('../styles');
+  return {...actual, createStyles: jest.fn(actual.createStyles)};
+});
 
 const Screen = () => <Text>Screen</Text>;
 const Drawer = createDrawerNavigator();
@@ -34,6 +42,9 @@ const TestNavigator = () => (
 describe('SidebarContent Plus entry', () => {
   afterEach(() => {
     setShipOverride([]);
+    runInAction(() => {
+      purchaseStore.plusUnlocked = false;
+    });
     jest.restoreAllMocks();
   });
 
@@ -70,5 +81,22 @@ describe('SidebarContent Plus entry', () => {
     expect(calls).toEqual(['closeDrawer']);
     expect(plusGate.request).toEqual({onUnlocked: undefined});
     expect(open).toHaveBeenCalledWith();
+  });
+
+  it('shows the owned look without re-rendering the session list', () => {
+    setShipOverride(['handsFreeVoice']);
+    const {getByTestId} = render(<TestNavigator />);
+    const sidebarRenders = (createStyles as jest.Mock).mock.calls.length;
+
+    act(() => {
+      runInAction(() => {
+        purchaseStore.plusUnlocked = true;
+      });
+    });
+
+    expect(getByTestId('drawer-item-plus-subtitle')).toHaveTextContent(
+      'Unlocked',
+    );
+    expect((createStyles as jest.Mock).mock.calls.length).toBe(sidebarRenders);
   });
 });
