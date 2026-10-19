@@ -14,9 +14,10 @@ import {setShipOverride} from '../../../services/plus/shipOverride';
 import {
   APPLE_EULA_URL,
   APPLE_MEDIA_TERMS_URL,
-  PlusScreen,
   REPO_URL,
-} from '../PlusScreen';
+} from '../../../config/urls';
+
+import {PlusScreen} from '../PlusScreen';
 
 const mockWindow = {width: 411, height: 923, scale: 2, fontScale: 1};
 

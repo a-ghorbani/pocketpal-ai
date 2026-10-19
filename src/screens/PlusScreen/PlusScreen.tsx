@@ -12,6 +12,8 @@ import {observer} from 'mobx-react';
 import {useSafeAreaInsets} from 'react-native-safe-area-context';
 
 import {AlertIcon, ClockFastForwardIcon, XIcon} from '../../assets/icons';
+import {LicenseNotice} from '../../components/LicenseNotice';
+import {APPLE_EULA_URL, REPO_URL} from '../../config/urls';
 import {useTheme} from '../../hooks';
 import {t} from '../../locales';
 import {purchaseStore} from '../../store';
@@ -24,12 +26,6 @@ import {plusFeatureRows} from '../../services/plus/shipped';
 import {CheckGlyph, InfoGlyph, SparkleIcon} from './SparkleIcon';
 import {plusScreenState} from './plusScreenState';
 import {createStyles} from './styles';
-
-export const REPO_URL = 'https://github.com/a-ghorbani/pocketpal-ai';
-export const APPLE_EULA_URL =
-  'https://www.apple.com/legal/internet-services/itunes/dev/stdeula/';
-export const APPLE_MEDIA_TERMS_URL =
-  'https://www.apple.com/legal/internet-services/itunes/us/terms.html';
 
 const COMPACT_HEIGHT = 760;
 const INFO_HIT_SLOP = {top: 15, bottom: 15, left: 15, right: 15};
@@ -320,22 +316,15 @@ export const PlusScreen: React.FC<PlusScreenProps> = observer(({onClose}) => {
         )}
 
         {state.licence && (
-          <Text testID="plus-licence" style={styles.licence}>
-            {copy.licence}{' '}
-            <Text
-              accessibilityRole="link"
-              style={styles.footerLink}
-              onPress={() => Linking.openURL(APPLE_EULA_URL)}>
-              {copy.terms}
-            </Text>
-            {' · '}
-            <Text
-              accessibilityRole="link"
-              style={styles.footerLink}
-              onPress={() => Linking.openURL(APPLE_MEDIA_TERMS_URL)}>
-              {copy.appleMediaTerms}
-            </Text>
-          </Text>
+          <LicenseNotice
+            TextComponent={Text}
+            testID="plus-licence"
+            style={styles.licence}
+            linkStyle={styles.footerLink}
+            notice={copy.licence}
+            firstLink={{label: copy.terms, url: APPLE_EULA_URL}}
+            appleTermsLabel={copy.appleMediaTerms}
+          />
         )}
 
         {cta()}
