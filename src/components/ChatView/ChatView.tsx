@@ -1052,6 +1052,8 @@ export const ChatView = observer(
               onEndReached={handleEndReached}
               ref={list}
               renderItem={renderMessage}
+              // Android anchors on attached rows only; clipping detaches the row above the stream.
+              removeClippedSubviews={false}
               maintainVisibleContentPosition={
                 isStreaming && isScrolledAway
                   ? {minIndexForVisible: 1}

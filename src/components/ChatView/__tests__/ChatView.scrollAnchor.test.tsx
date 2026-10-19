@@ -90,6 +90,14 @@ describe('ChatView scroll anchoring', () => {
     ).toBeUndefined();
   });
 
+  it('keeps off-screen rows attached so a scrolled-away anchor can find the row above the stream', () => {
+    const {UNSAFE_root} = renderChat(true);
+
+    reportScrolledAway(true);
+
+    expect(chatList(UNSAFE_root).props.removeClippedSubviews).toBe(false);
+  });
+
   it('leaves the list unanchored when nothing streams', () => {
     const {UNSAFE_root} = renderChat(false);
 
