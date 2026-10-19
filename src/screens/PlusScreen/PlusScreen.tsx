@@ -270,8 +270,6 @@ export const PlusScreen: React.FC<PlusScreenProps> = observer(({onClose}) => {
           {infoShown ? copy.inDevelopment : copy.speedLine}
         </Text>
 
-        <View testID="plus-spacer" style={styles.spacer} />
-
         {phase === 'pending' &&
           notice(
             'plus-pending-notice',

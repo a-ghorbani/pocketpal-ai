@@ -1,6 +1,7 @@
 import React from 'react';
 import {Linking, StyleSheet} from 'react-native';
 import {runInAction} from 'mobx';
+import type {ReactTestRendererJSON} from 'react-test-renderer';
 
 import {act, fireEvent, render, waitFor} from '../../../../jest/test-utils';
 import {mockPurchaseStore as purchaseStore} from '../../../../__mocks__/stores/purchaseStore';
@@ -444,22 +445,53 @@ describe('PlusScreen', () => {
   });
 
   describe('layout', () => {
-    it('pushes the prices down on a small phone', () => {
-      mockWindow.height = 667;
-      const {getByTestId} = renderScreen();
+    const speedLineStyle = (height: number) => {
+      mockWindow.height = height;
+      const {getByText} = renderScreen();
+      return StyleSheet.flatten(
+        getByText('Speed depends on your phone and model.').props.style,
+      );
+    };
 
-      expect(
-        StyleSheet.flatten(getByTestId('plus-spacer').props.style),
-      ).toEqual(expect.objectContaining({flex: 1}));
-    });
+    type Node = ReactTestRendererJSON | string;
+    const textOf = (node: Node): string =>
+      typeof node === 'string'
+        ? node
+        : (node.children ?? []).map(textOf).join('');
+    const nodeAfter = (node: Node, text: string): Node | undefined => {
+      if (typeof node === 'string' || !node.children) {
+        return undefined;
+      }
+      const index = node.children.findIndex(child => textOf(child) === text);
+      if (index >= 0) {
+        return node.children[index + 1];
+      }
+      for (const child of node.children) {
+        const found = nodeAfter(child, text);
+        if (found) {
+          return found;
+        }
+      }
+      return undefined;
+    };
 
-    it('keeps content together with a fixed gap on a tall phone', () => {
-      mockWindow.height = 923;
-      const {getByTestId} = renderScreen();
-      const style = StyleSheet.flatten(getByTestId('plus-spacer').props.style);
+    it.each([667, 923])(
+      'puts the prices right after the speed line at %i dp',
+      height => {
+        mockWindow.height = height;
+        const tree = renderScreen().toJSON() as ReactTestRendererJSON;
+        const next = nodeAfter(tree, 'Speed depends on your phone and model.');
 
-      expect(style.flex).toBeUndefined();
-      expect(style.height).toBeGreaterThan(0);
+        expect(textOf(next!)).toBe(
+          'Pay what you like. Same features at every price.',
+        );
+      },
+    );
+
+    it('uses a tighter gap above the prices on a small phone', () => {
+      expect(speedLineStyle(667).marginBottom).toBeLessThan(
+        speedLineStyle(923).marginBottom as number,
+      );
     });
   });
 });

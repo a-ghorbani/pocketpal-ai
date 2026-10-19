@@ -10,7 +10,6 @@ export const createStyles = (theme: Theme, compact: boolean) =>
       backgroundColor: theme.colors.background,
     },
     content: {
-      flexGrow: 1,
       paddingHorizontal: theme.spacing.ml,
       paddingBottom: theme.spacing.m,
     },
@@ -101,10 +100,8 @@ export const createStyles = (theme: Theme, compact: boolean) =>
       color: theme.colors.onSurfaceVariant,
       marginTop: theme.spacing.s,
       marginLeft: theme.spacing.xs,
+      marginBottom: compact ? theme.spacing.m : theme.spacing.l,
     },
-    spacer: compact
-      ? {flex: 1, minHeight: theme.spacing.s}
-      : {height: theme.spacing.l},
     priceCaption: {
       ...theme.typography.captionM,
       fontSize: 13,
