@@ -10,8 +10,6 @@ import {isPlusAvailable, isPlusUnlocked} from '../../../services/plus/gate';
 import {shippedPlusFeatures} from '../../../services/plus/shipped';
 import {SparkleIcon} from '../../../screens/PlusScreen/SparkleIcon';
 
-const NAMED_FEATURES = 2;
-
 interface PlusDrawerItemProps {
   onPress: () => void;
 }
@@ -29,12 +27,17 @@ export const PlusDrawerItem: React.FC<PlusDrawerItemProps> = observer(
     const names = shippedPlusFeatures().map(
       feature => copy.features[feature.id],
     );
-    const named = names.slice(0, NAMED_FEATURES).join(', ');
+    const [first, second = ''] = names;
     const subtitle = unlocked
       ? copy.sidebar.unlocked
-      : names.length > NAMED_FEATURES
-        ? t(copy.sidebar.more, {names: named})
-        : named;
+      : t(
+          names.length === 1
+            ? copy.sidebar.subtitleOne
+            : names.length === 2
+              ? copy.sidebar.subtitleTwo
+              : copy.sidebar.subtitleMore,
+          {first, second},
+        );
     return (
       <Pressable
         testID="drawer-item-plus"

@@ -101,6 +101,32 @@ describe('PlusDrawerItem', () => {
     );
   });
 
+  it('builds the subtitle from the translated template', () => {
+    mockFeatures = fakePlusFeatures([
+      {id: 'handsFreeVoice', shipped: true},
+      {id: 'localApiServer', shipped: true},
+    ]);
+    const l10n = {
+      ...fakePlusL10n,
+      plus: {
+        ...fakePlusL10n.plus,
+        sidebar: {
+          ...fakePlusL10n.plus.sidebar,
+          subtitleTwo: '{{first}} / {{second}}',
+        },
+      },
+    };
+    const {getByTestId} = render(
+      <L10nContext.Provider value={l10n}>
+        <PlusDrawerItem onPress={jest.fn()} />
+      </L10nContext.Provider>,
+    );
+
+    expect(getByTestId('drawer-item-plus-subtitle')).toHaveTextContent(
+      'Hands-free voice / Local API server',
+    );
+  });
+
   it('shows Unlocked for an owner and follows the unlock', () => {
     setShipOverride(['handsFreeVoice']);
     const {getByTestId} = renderItem();

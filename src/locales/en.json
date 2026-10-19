@@ -1704,7 +1704,9 @@
     "sidebar": {
       "title": "PocketPal Plus",
       "unlocked": "Unlocked",
-      "more": "{{names}} & more"
+      "subtitleOne": "{{first}}",
+      "subtitleTwo": "{{first}}, {{second}}",
+      "subtitleMore": "{{first}}, {{second}} & more"
     }
   }
 }
