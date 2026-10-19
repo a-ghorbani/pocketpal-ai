@@ -1,7 +1,9 @@
 import React, {useContext, useState} from 'react';
 import {
+  AccessibilityInfo,
   ActivityIndicator,
   Linking,
+  Platform,
   Pressable,
   ScrollView,
   Text,
@@ -31,6 +33,12 @@ const COMPACT_HEIGHT = 760;
 const INFO_HIT_SLOP = {top: 15, bottom: 15, left: 15, right: 15};
 
 type RestoreNote = 'none' | 'failed' | null;
+
+const announce = (text: string) => {
+  if (Platform.OS === 'ios') {
+    AccessibilityInfo.announceForAccessibility(text);
+  }
+};
 
 interface PlusScreenProps {
   onClose: () => void;
@@ -79,6 +87,14 @@ export const PlusScreen: React.FC<PlusScreenProps> = observer(({onClose}) => {
     setRestoreNote(null);
     const result = await purchaseStore.buyPlus(selected.productId);
     setLastBuyFailed(result === 'error');
+    if (result === 'error') {
+      announce(copy.buyError);
+    }
+  };
+
+  const showRestoreNote = (note: 'none' | 'failed') => {
+    setRestoreNote(note);
+    announce(note === 'none' ? copy.noPurchaseFound : copy.restoreFailed);
   };
 
   const handleRestore = async () => {
@@ -89,12 +105,12 @@ export const PlusScreen: React.FC<PlusScreenProps> = observer(({onClose}) => {
         return;
       }
       if (!queryOk) {
-        setRestoreNote('failed');
+        showRestoreNote('failed');
       } else if (!purchaseStore.plusPending) {
-        setRestoreNote('none');
+        showRestoreNote('none');
       }
     } catch {
-      setRestoreNote('failed');
+      showRestoreNote('failed');
     }
   };
 
@@ -197,6 +213,7 @@ export const PlusScreen: React.FC<PlusScreenProps> = observer(({onClose}) => {
       <Pressable
         testID="plus-cta"
         accessibilityRole="button"
+        accessibilityLabel={ctaLabel()}
         accessibilityState={{busy: paying, disabled: paying}}
         disabled={paying}
         onPress={handleBuy}

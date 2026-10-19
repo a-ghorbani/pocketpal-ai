@@ -1,5 +1,5 @@
 import React from 'react';
-import {Linking, StyleSheet} from 'react-native';
+import {AccessibilityInfo, Linking, Platform, StyleSheet} from 'react-native';
 import {runInAction} from 'mobx';
 import type {ReactTestRendererJSON} from 'react-test-renderer';
 
@@ -156,6 +156,9 @@ describe('PlusScreen', () => {
     const {getByTestId} = renderScreen();
 
     expect(getByTestId('plus-cta')).not.toHaveTextContent('Get Plus');
+    expect(getByTestId('plus-cta').props.accessibilityLabel).toBe(
+      'Get Plus · $4.99',
+    );
     expect(getByTestId('plus-cta').props.accessibilityState).toMatchObject({
       busy: true,
       disabled: true,
@@ -481,6 +484,78 @@ describe('PlusScreen', () => {
         'No Plus purchase found.',
       );
     });
+  });
+
+  describe('announcements', () => {
+    const originalOS = Platform.OS;
+    let announceSpy: jest.SpyInstance;
+
+    beforeEach(() => {
+      announceSpy = jest
+        .spyOn(AccessibilityInfo, 'announceForAccessibility')
+        .mockImplementation(() => {});
+    });
+
+    afterEach(() => {
+      (Platform as any).OS = originalOS;
+      announceSpy.mockRestore();
+    });
+
+    const outcomes: [string, () => void, string, string][] = [
+      [
+        'no purchase found',
+        () => {},
+        'plus-restore',
+        'No Plus purchase found.',
+      ],
+      [
+        'store unreachable',
+        () => purchaseStore.restore.mockResolvedValueOnce({queryOk: false}),
+        'plus-restore',
+        "Couldn't reach the store. Try again.",
+      ],
+      [
+        'buy error',
+        () => purchaseStore.buyPlus.mockResolvedValueOnce('error'),
+        'plus-cta',
+        "The purchase didn't go through. Try again.",
+      ],
+    ];
+
+    it.each(outcomes)(
+      'iOS: announces %s once',
+      async (_label, arrange, testID, text) => {
+        (Platform as any).OS = 'ios';
+        arrange();
+        const {getByTestId} = renderScreen();
+
+        await act(async () => {
+          fireEvent.press(getByTestId(testID));
+        });
+
+        expect(announceSpy.mock.calls).toEqual([[text]]);
+      },
+    );
+
+    it.each(outcomes)(
+      'Android: leaves %s to the live region',
+      async (_label, arrange, testID, text) => {
+        (Platform as any).OS = 'android';
+        arrange();
+        const {getByTestId, getByText} = renderScreen();
+
+        await act(async () => {
+          fireEvent.press(getByTestId(testID));
+        });
+
+        expect(announceSpy).not.toHaveBeenCalled();
+        const shown = getByText(text);
+        const region =
+          shown.props.accessibilityLiveRegion ??
+          shown.parent?.parent?.props.accessibilityLiveRegion;
+        expect(region).toBe('polite');
+      },
+    );
   });
 
   it('returns to idle when Plus is relocked while open', () => {
