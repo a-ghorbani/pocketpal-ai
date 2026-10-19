@@ -3,7 +3,13 @@ import {AccessibilityInfo, Linking, Platform, StyleSheet} from 'react-native';
 import {runInAction} from 'mobx';
 import type {ReactTestRendererJSON} from 'react-test-renderer';
 
-import {act, fireEvent, render, waitFor} from '../../../../jest/test-utils';
+import {
+  act,
+  cleanup,
+  fireEvent,
+  render,
+  waitFor,
+} from '../../../../jest/test-utils';
 import {mockPurchaseStore as purchaseStore} from '../../../../__mocks__/stores/purchaseStore';
 import {fakePlusFeatures, fakePlusL10n} from '../../../../jest/fixtures/plus';
 import {L10nContext} from '../../../utils';
@@ -60,14 +66,15 @@ const set = (changes: Partial<typeof purchaseStore>) =>
     Object.assign(purchaseStore, changes);
   });
 
+const screenElement = (onClose: () => void) => (
+  <L10nContext.Provider value={fakePlusL10n}>
+    <PlusScreen onClose={onClose} />
+  </L10nContext.Provider>
+);
+
 const renderScreen = () => {
   const onClose = jest.fn();
-  const screen = render(
-    <L10nContext.Provider value={fakePlusL10n}>
-      <PlusScreen onClose={onClose} />
-    </L10nContext.Provider>,
-    {withSafeArea: true},
-  );
+  const screen = render(screenElement(onClose), {withSafeArea: true});
   return {...screen, onClose};
 };
 
@@ -89,11 +96,12 @@ describe('PlusScreen', () => {
   });
 
   afterEach(() => {
+    cleanup();
     setShipOverride([]);
   });
 
   describe('idle', () => {
-    it('shows the features, the cheapest price selected and Get Plus', () => {
+    it('shows the features, the first tile selected and Get Plus', () => {
       const {getByTestId, getByText, queryByTestId} = renderScreen();
 
       expect(getByText('Push local AI further.')).toBeTruthy();
@@ -131,7 +139,7 @@ describe('PlusScreen', () => {
       ]);
     });
 
-    it('preselects the cheapest returned tile', () => {
+    it('preselects the first returned tile', () => {
       setProducts(['plus.3', 'plus.4']);
       const {getByTestId} = renderScreen();
 
@@ -569,14 +577,6 @@ describe('PlusScreen', () => {
   });
 
   describe('layout', () => {
-    const speedLineStyle = (height: number) => {
-      mockWindow.height = height;
-      const {getByText} = renderScreen();
-      return StyleSheet.flatten(
-        getByText('Speed depends on your phone and model.').props.style,
-      );
-    };
-
     type Node = ReactTestRendererJSON | string;
     const textOf = (node: Node): string =>
       typeof node === 'string'
@@ -715,9 +715,17 @@ describe('PlusScreen', () => {
     });
 
     it('uses a tighter gap above the prices on a small phone', () => {
-      expect(speedLineStyle(667).marginBottom).toBeLessThan(
-        speedLineStyle(923).marginBottom as number,
-      );
+      const {getByText, rerender} = renderScreen();
+      const gapBelowSpeedLine = () =>
+        StyleSheet.flatten(
+          getByText('Speed depends on your phone and model.').props.style,
+        ).marginBottom as number;
+      const tall = gapBelowSpeedLine();
+
+      mockWindow.height = 667;
+      rerender(screenElement(jest.fn()));
+
+      expect(gapBelowSpeedLine()).toBeLessThan(tall);
     });
   });
 });

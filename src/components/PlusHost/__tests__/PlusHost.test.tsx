@@ -2,7 +2,7 @@ import React from 'react';
 import {AccessibilityInfo, BackHandler, StyleSheet, View} from 'react-native';
 import {runInAction} from 'mobx';
 
-import {act, fireEvent, render} from '../../../../jest/test-utils';
+import {act, cleanup, fireEvent, render} from '../../../../jest/test-utils';
 import {themeFixtures} from '../../../../jest/fixtures/theme';
 import {mockPurchaseStore as purchaseStore} from '../../../../__mocks__/stores/purchaseStore';
 import {deviceRam, ensureRamRead} from '../../../services/plus/deviceRam';
@@ -66,6 +66,7 @@ describe('PlusHost', () => {
   });
 
   afterEach(() => {
+    cleanup();
     setShipOverride([]);
   });
 
@@ -240,6 +241,7 @@ describe('PlusHost screen-reader focus', () => {
   });
 
   afterEach(() => {
+    cleanup();
     releasePlusReturnFocus(plusReturnFocusTarget());
     setShipOverride([]);
   });
@@ -315,15 +317,26 @@ describe('PlusHost screen-reader focus', () => {
   });
 
   it('makes no call on a first mount while hidden', () => {
-    const earlier = React.createRef<View>();
-    render(<View ref={earlier} />);
-    claimPlusReturnFocus(earlier.current);
-    openPlus();
-    dismissPlus();
+    const slot = (
+      <PlusA11yScope>
+        <View ref={slotView} />
+      </PlusA11yScope>
+    );
+    screen = render(slot, {withSafeArea: true});
+    claimPlusReturnFocus(slotView.current);
+    act(() => {
+      openPlus();
+      dismissPlus();
+    });
 
-    renderApp();
+    screen.rerender(
+      <>
+        {slot}
+        <PlusHost />
+      </>,
+    );
 
-    expect(plusReturnFocusTarget() === earlier.current).toBe(true);
+    expect(plusReturnFocusTarget() === slotView.current).toBe(true);
     expect(calls).toEqual([]);
   });
 });

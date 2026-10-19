@@ -1,7 +1,7 @@
 import {PLUS_FEATURES, PLUS_PRODUCT_IDS, isPlusProduct} from '../catalog';
 
 describe('Plus catalog', () => {
-  it('lists the four products in ascending price order', () => {
+  it('lists the four products in catalog order', () => {
     expect(PLUS_PRODUCT_IDS).toEqual(['plus.1', 'plus.2', 'plus.3', 'plus.4']);
   });
 

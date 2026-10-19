@@ -1,7 +1,7 @@
 import React from 'react';
 import {runInAction} from 'mobx';
 
-import {act, fireEvent, render} from '../../../../../jest/test-utils';
+import {act, cleanup, fireEvent, render} from '../../../../../jest/test-utils';
 import {mockPurchaseStore as purchaseStore} from '../../../../../__mocks__/stores/purchaseStore';
 import {
   fakePlusFeatures,
@@ -44,6 +44,7 @@ describe('PlusDrawerItem', () => {
   });
 
   afterEach(() => {
+    cleanup();
     setShipOverride([]);
   });
 
