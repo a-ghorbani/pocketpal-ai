@@ -100,6 +100,51 @@ jobs:
       - name: Run unit tests
         run: yarn test --coverage
 
+  # Render-count comparison of the PR merge commit against its base (main).
+  # Restores the shared node_modules cache but never saves it: this job installs
+  # other commits' dependencies and skips llama.rn's native postinstall.
+  perf:
+    runs-on: ubuntu-latest
+    needs: detect-changes
+    if: github.event_name == 'pull_request' && needs.detect-changes.outputs.translation_only != 'true'
+    timeout-minutes: 30
+    env:
+      RNLLAMA_SKIP_POSTINSTALL: '1'
+    steps:
+      - name: Check out code
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 2
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '22.21.0'
+          cache: 'yarn'
+
+      - name: Install Yarn
+        run: npm install -g yarn
+
+      - name: Restore node_modules
+        id: nm
+        uses: actions/cache/restore@v3
+        with:
+          path: node_modules
+          key: ${{ runner.os }}-node-${{ hashFiles('yarn.lock', 'patches/**') }}
+
+      - name: Compare render performance with the base
+        env:
+          PERF_HEAD_INSTALL: ${{ steps.nm.outputs.cache-hit != 'true' && '1' || '' }}
+        run: yarn test:perf:compare HEAD^1
+
+      - name: Upload perf results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: render-perf
+          path: .reassure/
+          include-hidden-files: true
+
   # Job for Android build
   build-android:
     runs-on: ubuntu-latest

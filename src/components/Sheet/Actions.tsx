@@ -12,8 +12,7 @@ import Animated, {
 } from 'react-native-reanimated';
 
 import {actionsBottomPadding, isLifted, paddingUpdate} from './actionsPadding';
-
-type SheetContext = NonNullable<ReturnType<typeof useBottomSheetInternal>>;
+import type {SheetContext} from './gorhomInternal';
 
 interface ActionsProps {
   children: React.ReactNode;

@@ -9,6 +9,7 @@ import {
 import {act, render} from '../../../../jest/test-utils';
 
 import {Sheet} from '../Sheet';
+import {SheetBackground} from '../SheetBackground';
 
 const fullScreenFrame = {x: 0, y: 0, width: 390, height: 844};
 const PERCENT_SNAP_POINTS = ['50%'];
@@ -43,6 +44,14 @@ describe('Sheet', () => {
     const modal = UNSAFE_getByType(BottomSheetModal);
     expect(modal.props.topInset).toBe(24);
     expect(modal.props.snapPoints).toEqual([fullScreenFrame.height / 2]);
+  });
+
+  it('renders the touch-taking SheetBackground', () => {
+    const {UNSAFE_getByType} = render(<Sheet />);
+
+    expect(UNSAFE_getByType(BottomSheetModal).props.backgroundComponent).toBe(
+      SheetBackground,
+    );
   });
 
   it('resolves percentages against an app window shorter than the screen', () => {
@@ -165,217 +174,15 @@ describe('Sheet', () => {
     expect(modal.props.enableDynamicSizing).toBe(true);
   });
 
-  describe('keyboard hide after a clamped lift', () => {
-    let hideKeyboard: () => void;
+  it('passes change and animate handlers through unchanged', () => {
+    const onChange = jest.fn();
+    const onAnimate = jest.fn();
+    const {UNSAFE_getByType} = render(
+      <Sheet onChange={onChange} onAnimate={onAnimate} />,
+    );
 
-    beforeEach(() => {
-      jest.useFakeTimers();
-      jest.spyOn(Keyboard, 'addListener').mockImplementation(((
-        event: string,
-        listener: () => void,
-      ) => {
-        if (event === 'keyboardDidHide') {
-          hideKeyboard = listener;
-        }
-        return {remove: jest.fn()};
-      }) as never);
-    });
-
-    afterEach(() => {
-      jest.useRealTimers();
-      jest.restoreAllMocks();
-    });
-
-    const renderAt = (index: number, onChange = jest.fn()) => {
-      const ref = {current: {} as {snapToIndex: jest.Mock}};
-      const {UNSAFE_getByType} = render(
-        <Sheet ref={ref as never} snapPoints={['60%']} onChange={onChange} />,
-      );
-      act(() => {
-        UNSAFE_getByType(BottomSheetModal).props.onChange(index, 0, 0);
-      });
-      act(() => {
-        hideKeyboard();
-        jest.runOnlyPendingTimers();
-      });
-      return ref.current;
-    };
-
-    it('snaps back to the highest detent when the lift was recorded off-detent', () => {
-      expect(renderAt(1043).snapToIndex).toHaveBeenCalledWith(0);
-    });
-
-    it('leaves a sheet resting on a detent alone', () => {
-      expect(renderAt(0).snapToIndex).not.toHaveBeenCalled();
-    });
-
-    it('forwards the change to the caller', () => {
-      const onChange = jest.fn();
-      renderAt(0, onChange);
-      expect(onChange).toHaveBeenCalledWith(0, 0, 0);
-    });
-
-    it('leaves a dismissed sheet closed', () => {
-      expect(renderAt(-1).snapToIndex).not.toHaveBeenCalled();
-    });
-
-    it('snaps a dynamically sized sheet back to its only detent', () => {
-      const ref = {current: {} as {snapToIndex: jest.Mock}};
-      const {UNSAFE_getByType} = render(<Sheet ref={ref as never} />);
-      act(() => {
-        UNSAFE_getByType(BottomSheetModal).props.onChange(1304, 0, 0);
-      });
-      act(() => {
-        hideKeyboard();
-        jest.runOnlyPendingTimers();
-      });
-      expect(ref.current.snapToIndex).toHaveBeenCalledWith(0);
-    });
-
-    it('waits a frame after the hide before snapping', () => {
-      const ref = {current: {} as {snapToIndex: jest.Mock}};
-      const {UNSAFE_getByType} = render(
-        <Sheet ref={ref as never} snapPoints={['60%']} />,
-      );
-      act(() => {
-        UNSAFE_getByType(BottomSheetModal).props.onChange(1043, 0, 0);
-      });
-      act(() => {
-        hideKeyboard();
-      });
-      expect(ref.current.snapToIndex).not.toHaveBeenCalled();
-      act(() => {
-        jest.runOnlyPendingTimers();
-      });
-      expect(ref.current.snapToIndex).toHaveBeenCalledTimes(1);
-    });
-
-    it('leaves a sheet closed when the close started before the hide', () => {
-      const ref = {current: {} as {snapToIndex: jest.Mock}};
-      const {UNSAFE_getByType} = render(
-        <Sheet ref={ref as never} snapPoints={['60%']} />,
-      );
-      const modal = UNSAFE_getByType(BottomSheetModal);
-      act(() => {
-        modal.props.onChange(1043, 0, 0);
-        modal.props.onAnimate(1043, -1, 0, 0);
-      });
-      act(() => {
-        hideKeyboard();
-        jest.runOnlyPendingTimers();
-      });
-      expect(ref.current.snapToIndex).not.toHaveBeenCalled();
-    });
-
-    it('leaves a sheet closed when the close started during the wait', () => {
-      const ref = {current: {} as {snapToIndex: jest.Mock}};
-      const {UNSAFE_getByType} = render(
-        <Sheet ref={ref as never} snapPoints={['60%']} />,
-      );
-      const modal = UNSAFE_getByType(BottomSheetModal);
-      act(() => {
-        modal.props.onChange(1043, 0, 0);
-      });
-      act(() => {
-        hideKeyboard();
-        modal.props.onAnimate(1043, -1, 0, 0);
-        jest.runOnlyPendingTimers();
-      });
-      expect(ref.current.snapToIndex).not.toHaveBeenCalled();
-    });
-
-    it('forwards the animation start to the caller', () => {
-      const onAnimate = jest.fn();
-      const {UNSAFE_getByType} = render(
-        <Sheet snapPoints={['60%']} onAnimate={onAnimate} />,
-      );
-      act(() => {
-        UNSAFE_getByType(BottomSheetModal).props.onAnimate(0, -1, 10, 20);
-      });
-      expect(onAnimate).toHaveBeenCalledWith(0, -1, 10, 20);
-    });
-
-    it('still sees a close when the caller also listens to animations', () => {
-      const ref = {current: {} as {snapToIndex: jest.Mock}};
-      const onAnimate = jest.fn();
-      const {UNSAFE_getByType} = render(
-        <Sheet ref={ref as never} snapPoints={['60%']} onAnimate={onAnimate} />,
-      );
-      const modal = UNSAFE_getByType(BottomSheetModal);
-      act(() => {
-        modal.props.onChange(1043, 0, 0);
-      });
-      act(() => {
-        hideKeyboard();
-        modal.props.onAnimate(1043, -1, 0, 0);
-        jest.runOnlyPendingTimers();
-      });
-      expect(onAnimate).toHaveBeenCalledWith(1043, -1, 0, 0);
-      expect(ref.current.snapToIndex).not.toHaveBeenCalled();
-    });
-
-    it('snaps back after a lift that announced its off-detent target', () => {
-      const ref = {current: {} as {snapToIndex: jest.Mock}};
-      const {UNSAFE_getByType} = render(
-        <Sheet ref={ref as never} snapPoints={['60%']} />,
-      );
-      const modal = UNSAFE_getByType(BottomSheetModal);
-      act(() => {
-        modal.props.onAnimate(0, 1043, 1304, 144);
-        modal.props.onChange(1043, 144, 0);
-      });
-      act(() => {
-        hideKeyboard();
-        jest.runOnlyPendingTimers();
-      });
-      expect(ref.current.snapToIndex).toHaveBeenCalledWith(0);
-    });
-
-    it('keeps a pending snap when the parent re-renders after the hide', () => {
-      const ref = {current: {} as {snapToIndex: jest.Mock}};
-      const {UNSAFE_getByType, rerender} = render(
-        <Sheet ref={ref as never} snapPoints={['60%']} />,
-      );
-      act(() => {
-        UNSAFE_getByType(BottomSheetModal).props.onChange(1043, 0, 0);
-      });
-      act(() => {
-        hideKeyboard();
-      });
-      rerender(<Sheet ref={ref as never} snapPoints={['60%']} />);
-      act(() => {
-        jest.runOnlyPendingTimers();
-      });
-      expect(ref.current.snapToIndex).toHaveBeenCalledWith(0);
-    });
-
-    it('drops the listener and a pending snap on unmount', () => {
-      let methods = {} as {snapToIndex: jest.Mock};
-      const ref = {
-        get current() {
-          return methods;
-        },
-        set current(next) {
-          if (next) {
-            methods = next;
-          }
-        },
-      };
-      const {UNSAFE_getByType, unmount} = render(
-        <Sheet ref={ref as never} snapPoints={['60%']} />,
-      );
-      const subscription = (Keyboard.addListener as jest.Mock).mock.results[0]
-        .value;
-      act(() => {
-        UNSAFE_getByType(BottomSheetModal).props.onChange(1043, 0, 0);
-      });
-      act(() => {
-        hideKeyboard();
-      });
-      unmount();
-      jest.runOnlyPendingTimers();
-      expect(subscription.remove).toHaveBeenCalled();
-      expect(methods.snapToIndex).not.toHaveBeenCalled();
-    });
+    const modal = UNSAFE_getByType(BottomSheetModal);
+    expect(modal.props.onChange).toBe(onChange);
+    expect(modal.props.onAnimate).toBe(onAnimate);
   });
 });

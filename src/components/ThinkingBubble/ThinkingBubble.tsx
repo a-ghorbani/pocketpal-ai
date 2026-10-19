@@ -5,6 +5,7 @@ import {
   Animated,
   Easing,
   ScrollView,
+  type ScrollViewInstance,
   LayoutAnimation,
   Platform,
   UIManager,
@@ -12,7 +13,7 @@ import {
 
 import {Text} from 'react-native-paper';
 import LinearGradient from 'react-native-linear-gradient';
-import MaskedView from '@react-native-masked-view/masked-view';
+import {MaskedView} from '../libraryViews';
 import {ChevronRightIcon, ChevronDownIcon} from '../../assets/icons';
 
 import {useTheme} from '../../hooks';
@@ -82,7 +83,7 @@ export const ThinkingBubble: React.FC<ThinkingBubbleProps> = ({
   const chevronRotation = useRef(new Animated.Value(0)).current;
 
   // Reference to the ScrollView for auto-scrolling
-  const scrollViewRef = useRef<ScrollView>(null);
+  const scrollViewRef = useRef<ScrollViewInstance>(null);
 
   const toggleState = () => {
     const isCollapsingTransition =

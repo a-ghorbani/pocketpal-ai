@@ -1,10 +1,7 @@
 import {KEYBOARD_STATUS} from '@gorhom/bottom-sheet';
 
-import {
-  clearOwnKeyboardTarget,
-  type KeyboardState,
-  setKeyboardTarget,
-} from '../keyboardTarget';
+import type {KeyboardState} from '../gorhomInternal';
+import {clearOwnKeyboardTarget, setKeyboardTarget} from '../keyboardTarget';
 
 const OWN_TAG = 42;
 const OTHER_TAG = 7;

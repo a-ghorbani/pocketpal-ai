@@ -50,7 +50,18 @@ const isHuggingFaceUrl = (url: string | undefined): boolean => {
 export class DownloadManager {
   private downloadJobs: DownloadMap;
   private callbacks: DownloadEventCallbacks = {};
-  private eventEmitter: NativeEventEmitter | null = null;
+  private eventEmitter: NativeEventEmitter<{
+    onDownloadProgress: [
+      {
+        downloadId: string;
+        bytesWritten: number;
+        totalBytes: number;
+        progress: number;
+      },
+    ];
+    onDownloadComplete: [{downloadId: string; filePath: string}];
+    onDownloadFailed: [{downloadId: string; error: string; progress?: number}];
+  }> | null = null;
   private cancelledModelIds = new Set<string>();
 
   constructor() {

@@ -2,7 +2,7 @@ import React, {useState, useEffect, useCallback, useRef} from 'react';
 import {View} from 'react-native';
 import {Text} from 'react-native-paper';
 import {useTheme} from '../../hooks';
-import Slider from '@react-native-community/slider';
+import {Slider} from '../libraryViews';
 import {createStyles} from './styles';
 import {TextInput} from '../TextInput';
 import {VariantProp} from 'react-native-paper/lib/typescript/components/Typography/types';

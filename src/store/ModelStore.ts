@@ -185,7 +185,7 @@ class ModelStore {
     return [...filterProjectionModels(this.models), ...this.remoteModels];
   }
 
-  appState: AppStateStatus = AppState.currentState;
+  appState: AppStateStatus = AppState.currentState as AppStateStatus;
   useAutoRelease: boolean = true;
   // UI loading state - true during model load/release transitions
   isContextLoading: boolean = false;

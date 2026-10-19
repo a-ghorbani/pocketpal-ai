@@ -22,3 +22,46 @@ index 41b4359..85c92d9 100644
  
  buildscript {
    repositories {
+diff --git a/node_modules/onnxruntime-react-native/ios/OnnxruntimeModule.mm b/node_modules/onnxruntime-react-native/ios/OnnxruntimeModule.mm
+index 8155f92..1228c8a 100644
+--- a/node_modules/onnxruntime-react-native/ios/OnnxruntimeModule.mm
++++ b/node_modules/onnxruntime-react-native/ios/OnnxruntimeModule.mm
+@@ -5,11 +5,15 @@
+ #include "JsiMain.h"
+ 
+ #import <Foundation/Foundation.h>
+-#import <React/RCTBridge+Private.h>
+ #import <React/RCTUtils.h>
+ #import <ReactCommon/RCTTurboModule.h>
+ #import <jsi/jsi.h>
+ 
++@protocol OnnxruntimeBridgeRuntimeAccess <NSObject>
++@property (nonatomic, readonly) void *runtime;
++@property (nonatomic, readonly) std::shared_ptr<facebook::react::CallInvoker> jsCallInvoker;
++@end
++
+ @implementation OnnxruntimeModule
+ 
+ @synthesize bridge = _bridge;
+@@ -27,17 +31,17 @@ RCT_EXPORT_MODULE(Onnxruntime)
+  */
+ RCT_EXPORT_BLOCKING_SYNCHRONOUS_METHOD(install) {
+   @try {
+-    RCTCxxBridge* cxxBridge = (RCTCxxBridge*)_bridge;
+-    if (cxxBridge == nil) {
++    id<OnnxruntimeBridgeRuntimeAccess> runtimeBridge = (id<OnnxruntimeBridgeRuntimeAccess>)_bridge;
++    if (runtimeBridge == nil) {
+       return @false;
+     }
+ 
+-    auto jsiRuntime = (facebook::jsi::Runtime*)cxxBridge.runtime;
++    auto jsiRuntime = (facebook::jsi::Runtime*)runtimeBridge.runtime;
+     if (jsiRuntime == nil) {
+       return @false;
+     }
+     auto& runtime = *jsiRuntime;
+-    auto jsiInvoker = _bridge.jsCallInvoker;
++    auto jsiInvoker = runtimeBridge.jsCallInvoker;
+ 
+     env = onnxruntimejsi::install(runtime, jsiInvoker);
+ 
