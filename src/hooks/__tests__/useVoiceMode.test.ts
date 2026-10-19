@@ -504,6 +504,32 @@ describe('useVoiceMode', () => {
       },
     );
 
+    it.each([
+      ['transcribing', 'transcribing', () => {}],
+      [
+        'thinking',
+        'thinking',
+        (turn: FakeTurn) => act(() => turn.on.transcribed('hello')),
+      ],
+    ])(
+      'End while %s interrupts the turn and releases everything',
+      async (_case, phase, arrange) => {
+        const {enter, hook, engine, turns} = renderVoiceMode();
+        await enter();
+        speak(500);
+        speak(600, SILENT);
+        arrange(turns[0]);
+        expect(voiceModeStore.phase).toBe(phase);
+
+        await act(async () => {
+          await hook.result.current.end();
+        });
+
+        expect(turns[0].interrupt).toHaveBeenCalledTimes(1);
+        expectClosedAndReleased(engine);
+      },
+    );
+
     it('End while listening stops the mic', async () => {
       const {enter, hook, engine} = renderVoiceMode();
       await enter();
@@ -537,6 +563,36 @@ describe('useVoiceMode', () => {
 
       const release = (acquireKeepAwake as jest.Mock).mock.results[0].value;
       expect(release).not.toHaveBeenCalled();
+    });
+  });
+
+  it('leaves auto-speak and the speech overrides untouched across a session', async () => {
+    runInAction(() => {
+      tts.autoSpeakEnabled = false;
+      tts.userTTSOverride = false;
+      (asrStore as any).userASROverride = false;
+    });
+    const {enter, hook, turns} = renderVoiceMode();
+    await enter();
+    speak(500);
+    speak(600, SILENT);
+    act(() => turns[0].on.transcribed('hello'));
+    act(() => turns[0].on.speechStarted());
+    turns[0].finish('answered');
+    await flush();
+    await act(async () => {
+      await hook.result.current.end();
+    });
+
+    expect(tts.autoSpeakEnabled).toBe(false);
+    expect(tts.userTTSOverride).toBe(false);
+    expect((asrStore as any).userASROverride).toBe(false);
+    expect(ttsStore.setAutoSpeak).not.toHaveBeenCalled();
+    expect(ttsStore.setUserTTSOverride).not.toHaveBeenCalled();
+    expect(asrStore.setUserASROverride).not.toHaveBeenCalled();
+    runInAction(() => {
+      tts.userTTSOverride = null;
+      (asrStore as any).userASROverride = null;
     });
   });
 
