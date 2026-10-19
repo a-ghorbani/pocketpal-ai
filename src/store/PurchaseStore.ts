@@ -183,8 +183,11 @@ const RETRYABLE_RESULTS: ReadonlySet<VerifyResult['status']> = new Set([
 const platform = (): StorePlatform =>
   Platform.OS === 'ios' ? 'ios' : 'android';
 
+const isPlusTransaction = (tx: StoreTransaction): boolean =>
+  isPlusProduct(tx.productId);
+
 const isPalTransaction = (tx: StoreTransaction): boolean =>
-  !isPlusProduct(tx.productId);
+  !isPlusTransaction(tx);
 
 const txKey = (tx: StoreTransaction): string =>
   tx.transactionId ?? `${tx.productId}:${tx.state}`;
@@ -689,7 +692,7 @@ export class PurchaseStore {
     tx: StoreTransaction,
     opts: ProcessOptions = {},
   ): Promise<void> {
-    if (isPlusProduct(tx.productId)) {
+    if (isPlusTransaction(tx)) {
       return this.serialize(PLUS_CHAIN, () => this.runPlus(tx));
     }
     return this.serialize(tx.productId, () => this.runTransaction(tx, opts));
@@ -728,12 +731,16 @@ export class PurchaseStore {
     snapshot: number,
     fromRestore: boolean,
   ): Promise<void> {
-    for (const tx of txs.filter(candidate =>
-      isPlusProduct(candidate.productId),
-    )) {
+    await this.processPlusTransactions(txs);
+    await this.reconcilePlus(txs, ok, snapshot, fromRestore);
+  }
+
+  private async processPlusTransactions(
+    txs: StoreTransaction[],
+  ): Promise<void> {
+    for (const tx of txs.filter(isPlusTransaction)) {
       await this.processTransaction(tx);
     }
-    await this.reconcilePlus(txs, ok, snapshot, fromRestore);
   }
 
   private reconcilePlus(
@@ -745,7 +752,7 @@ export class PurchaseStore {
     return this.serialize(PLUS_CHAIN, async () => {
       await this.loadPlus();
       if (ok && this.plusRevision === snapshot) {
-        const plus = txs.filter(tx => isPlusProduct(tx.productId));
+        const plus = txs.filter(isPlusTransaction);
         if (this.plusUnlocked && !plus.some(tx => tx.state === 'purchased')) {
           await this.relockPlus();
         }
@@ -1373,11 +1380,7 @@ export class PurchaseStore {
 
   private async deliverOwnedPlus(): Promise<boolean> {
     const {transactions} = await this.storePort.currentEntitlements();
-    for (const tx of transactions.filter(candidate =>
-      isPlusProduct(candidate.productId),
-    )) {
-      await this.processTransaction(tx);
-    }
+    await this.processPlusTransactions(transactions);
     return this.plusUnlocked;
   }
 
@@ -1567,7 +1570,7 @@ export class PurchaseStore {
 
   private async refresh(txs: StoreTransaction[]): Promise<boolean> {
     const proofs = txs
-      .filter(tx => tx.state === 'purchased' && !isPlusProduct(tx.productId))
+      .filter(tx => tx.state === 'purchased' && isPalTransaction(tx))
       .map(tx => tx.proof);
     const known = Object.fromEntries(
       Object.values(this.records)
