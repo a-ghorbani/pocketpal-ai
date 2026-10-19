@@ -1,5 +1,12 @@
 import React, {useEffect, useRef} from 'react';
-import {AccessibilityInfo, BackHandler, Text, View} from 'react-native';
+import {
+  AccessibilityInfo,
+  BackHandler,
+  type HostInstance,
+  Platform,
+  Text,
+  View,
+} from 'react-native';
 import {observer} from 'mobx-react';
 
 import {useTheme} from '../../hooks';
@@ -13,6 +20,12 @@ import {
 import {plusReturnFocusTarget} from '../HeaderLeft/plusReturnFocus';
 
 import {createStyles} from './styles';
+
+const moveScreenReaderFocus = (target: HostInstance) =>
+  AccessibilityInfo.sendAccessibilityEvent(
+    target,
+    Platform.OS === 'android' ? 'viewHoverEnter' : 'focus',
+  );
 
 export const PlusHost: React.FC = observer(() => {
   const theme = useTheme();
@@ -45,9 +58,11 @@ export const PlusHost: React.FC = observer(() => {
       : shouldReturnFocusOnClose()
         ? plusReturnFocusTarget()
         : null;
-    if (target) {
-      AccessibilityInfo.sendAccessibilityEvent(target, 'focus');
+    if (!target) {
+      return;
     }
+    const frame = requestAnimationFrame(() => moveScreenReaderFocus(target));
+    return () => cancelAnimationFrame(frame);
   }, [shown]);
 
   if (!shown) {
