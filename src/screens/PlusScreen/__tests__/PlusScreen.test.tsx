@@ -634,6 +634,73 @@ describe('PlusScreen', () => {
       },
     );
 
+    const findByTestID = (node: Node, testID: string): Node | undefined => {
+      if (typeof node === 'string') {
+        return undefined;
+      }
+      if (node.props.testID === testID) {
+        return node;
+      }
+      for (const child of node.children ?? []) {
+        const found = findByTestID(child, testID);
+        if (found) {
+          return found;
+        }
+      }
+      return undefined;
+    };
+
+    it.each([
+      [false, ['plus-restore', 'plus-open-source']],
+      [true, ['plus-open-source']],
+    ])(
+      'keeps each footer dot with the item after it (licence line %s)',
+      (showsLicenseNotice, afterDots) => {
+        set({showsLicenseNotice});
+        const tree = renderScreen().toJSON() as ReactTestRendererJSON;
+        const footer = findByTestID(
+          tree,
+          'plus-footer',
+        ) as ReactTestRendererJSON;
+        const items = footer.children as ReactTestRendererJSON[];
+
+        expect(items.some(item => textOf(item) === '·')).toBe(false);
+        const groups = items.filter(
+          item => item.children && textOf(item.children[0]) === '·',
+        );
+        expect(
+          groups.map(group => {
+            expect(group.children).toHaveLength(2);
+            return (group.children![1] as ReactTestRendererJSON).props.testID;
+          }),
+        ).toEqual(afterDots);
+      },
+    );
+
+    it('spaces every footer item and dot evenly', () => {
+      const {getByTestId, getByText, getAllByText} = renderScreen();
+      const padding = (style: unknown) =>
+        StyleSheet.flatten(style as any).paddingHorizontal;
+      const gap = padding(getByTestId('plus-restore').props.style);
+
+      expect(gap).toBeGreaterThan(0);
+      expect(padding(getByText('One-time purchase').props.style)).toBe(gap);
+      getAllByText('·').forEach(dot => {
+        expect(padding(dot.props.style)).toBe(gap);
+      });
+      expect(padding(getByTestId('plus-open-source').props.style)).toBe(gap);
+    });
+
+    it('lets the price tiles and the main button grow with the text', () => {
+      const {getByTestId} = renderScreen();
+
+      ['plus-tile-plus.1', 'plus-cta'].forEach(testID => {
+        const style = StyleSheet.flatten(getByTestId(testID).props.style);
+        expect(style.minHeight).toBeGreaterThanOrEqual(46);
+        expect(style.height).toBeUndefined();
+      });
+    });
+
     it('lets the inline error wrap beside its icon', async () => {
       purchaseStore.buyPlus.mockResolvedValueOnce('error');
       const {getByTestId} = renderScreen();

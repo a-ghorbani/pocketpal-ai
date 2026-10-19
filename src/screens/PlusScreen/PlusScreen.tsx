@@ -229,6 +229,32 @@ export const PlusScreen: React.FC<PlusScreenProps> = observer(props => {
     );
   };
 
+  const restoreLink = (
+    <Pressable
+      testID="plus-restore"
+      accessibilityRole="button"
+      accessibilityState={{disabled: isRestoring, busy: isRestoring}}
+      disabled={isRestoring}
+      onPress={handleRestore}
+      style={styles.footerHit}>
+      {isRestoring && (
+        <ActivityIndicator
+          testID="plus-restore-busy"
+          size="small"
+          color={theme.colors.secondary}
+        />
+      )}
+      <Text style={styles.footerLink}>{copy.restore}</Text>
+    </Pressable>
+  );
+
+  const afterDot = (item: React.ReactNode) => (
+    <View style={styles.footerGroup}>
+      <Text style={styles.footerDot}>·</Text>
+      {item}
+    </View>
+  );
+
   return (
     <View testID="plus-screen" style={[styles.root, {paddingTop: insets.top}]}>
       <ScrollView
@@ -369,35 +395,18 @@ export const PlusScreen: React.FC<PlusScreenProps> = observer(props => {
         {!purchased && (
           <View testID="plus-footer" style={styles.footer}>
             {!state.licence && (
-              <>
-                <Text style={styles.footerText}>{copy.oneTimePurchase}</Text>
-                <Text style={styles.footerDot}>·</Text>
-              </>
+              <Text style={styles.footerText}>{copy.oneTimePurchase}</Text>
             )}
-            <Pressable
-              testID="plus-restore"
-              accessibilityRole="button"
-              accessibilityState={{disabled: isRestoring, busy: isRestoring}}
-              disabled={isRestoring}
-              onPress={handleRestore}
-              style={styles.footerHit}>
-              {isRestoring && (
-                <ActivityIndicator
-                  testID="plus-restore-busy"
-                  size="small"
-                  color={theme.colors.secondary}
-                />
-              )}
-              <Text style={styles.footerLink}>{copy.restore}</Text>
-            </Pressable>
-            <Text style={styles.footerDot}>·</Text>
-            <Pressable
-              testID="plus-open-source"
-              accessibilityRole="link"
-              onPress={() => Linking.openURL(REPO_URL)}
-              style={styles.footerHit}>
-              <Text style={styles.footerLink}>{copy.openSource}</Text>
-            </Pressable>
+            {state.licence ? restoreLink : afterDot(restoreLink)}
+            {afterDot(
+              <Pressable
+                testID="plus-open-source"
+                accessibilityRole="link"
+                onPress={() => Linking.openURL(REPO_URL)}
+                style={styles.footerHit}>
+                <Text style={styles.footerLink}>{copy.openSource}</Text>
+              </Pressable>,
+            )}
           </View>
         )}
       </ScrollView>

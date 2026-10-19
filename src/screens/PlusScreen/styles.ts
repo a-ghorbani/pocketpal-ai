@@ -117,7 +117,8 @@ export const createStyles = (theme: Theme, compact: boolean) =>
     tile: {
       flexBasis: '47%',
       flexGrow: 1,
-      height: compact ? 46 : 56,
+      minHeight: compact ? 46 : 56,
+      paddingVertical: theme.spacing.s,
       borderRadius: theme.radius.m,
       borderWidth: theme.stroke.sm,
       borderColor: theme.dark
@@ -137,7 +138,9 @@ export const createStyles = (theme: Theme, compact: boolean) =>
       color: theme.colors.onBackground,
     },
     primaryBtn: {
-      height: 52,
+      minHeight: 52,
+      paddingVertical: theme.spacing.sm,
+      paddingHorizontal: theme.spacing.m,
       flexDirection: 'row',
       alignItems: 'center',
       justifyContent: 'center',
@@ -151,6 +154,8 @@ export const createStyles = (theme: Theme, compact: boolean) =>
     primaryLabel: {
       ...theme.typography.titleS,
       color: theme.colors.background,
+      textAlign: 'center',
+      flexShrink: 1,
     },
     primaryLabelBusy: {
       color: theme.colors.onBackground,
@@ -205,6 +210,11 @@ export const createStyles = (theme: Theme, compact: boolean) =>
       ...theme.typography.captionM,
       fontSize: 13,
       color: theme.colors.onSurfaceVariant,
+      paddingHorizontal: theme.spacing.xxs,
+    },
+    footerGroup: {
+      flexDirection: 'row',
+      alignItems: 'center',
     },
     footerDot: {
       ...theme.typography.captionM,
