@@ -3,8 +3,10 @@ import {Text} from 'react-native';
 import {fireEvent} from '@testing-library/react-native';
 
 import {render} from '../../../../../../jest/test-utils';
+import {themeFixtures} from '../../../../../../jest/fixtures/theme';
 
 import {Pressable} from '../Pressable';
+import {createStateLayerStyle} from '../styles';
 
 describe('Pressable primitive', () => {
   it('renders children', () => {
@@ -61,5 +63,19 @@ describe('Pressable primitive', () => {
       </Pressable>,
     );
     expect(queryByTestId('ui-pressable-state-layer')).toBeNull();
+  });
+
+  it('fills the pressable with the pressed state layer', () => {
+    const style = createStateLayerStyle(themeFixtures.lightTheme, {
+      state: {pressed: true},
+      stateLayerColor: '#000',
+    });
+    expect(style).toMatchObject({
+      position: 'absolute',
+      top: 0,
+      left: 0,
+      right: 0,
+      bottom: 0,
+    });
   });
 });

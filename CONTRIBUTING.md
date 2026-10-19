@@ -95,3 +95,13 @@ Before opening a pull request, make sure:
 - Your changes are focused and kept to a **single logical change**.
 - Your code is linted and passes type checks.
 - Tests are added or updated if applicable.
+- CI passes. Pull requests with failing checks are not reviewed until they pass.
+- You have run the change on at least one platform and described how you verified it. For visible UI changes, attach screenshots or a recording. Pull requests without this may be closed without review.
+
+Using an AI agent? Point it at [`AGENTS.md`](./AGENTS.md).
+
+## License
+
+By contributing to PocketPal AI (this repository), you agree to license your contributions under the MIT license.
+
+You also confirm that you have the right to submit the contribution, and that it does not include code or content you are not permitted to license under MIT.

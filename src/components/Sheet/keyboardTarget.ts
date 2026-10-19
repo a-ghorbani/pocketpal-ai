@@ -1,9 +1,7 @@
-import type {useBottomSheetInternal} from '@gorhom/bottom-sheet';
 import {runOnUI} from 'react-native-reanimated';
 
-type SheetContext = NonNullable<ReturnType<typeof useBottomSheetInternal>>;
-export type KeyboardStateValue = SheetContext['animatedKeyboardState'];
-export type KeyboardState = ReturnType<KeyboardStateValue['get']>;
+import type {KeyboardState, KeyboardStateValue} from './gorhomInternal';
+
 type KeyboardTargetUpdate = (
   state: KeyboardState,
   tag: number,
