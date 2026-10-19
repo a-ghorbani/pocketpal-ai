@@ -351,6 +351,79 @@ describe.each([
     ]);
   });
 
+  const setUnlocked = (plusUnlocked: boolean) =>
+    act(() =>
+      runInAction(() => {
+        purchaseStore.plusUnlocked = plusUnlocked;
+      }),
+    );
+  const targets = () => calls.map(call => call.target);
+
+  it('moves focus to the thank-you headline on the frame after Plus unlocks', () => {
+    renderApp();
+    act(() => openPlus());
+    nextFrame();
+
+    setUnlocked(true);
+    expect(calls).toHaveLength(1);
+
+    nextFrame();
+    expect(calls.map(({target, event: sent}) => [target, sent])).toEqual([
+      ['header:Push local AI further.', event],
+      ['header:Thanks for pushing local AI forward with us.', event],
+    ]);
+  });
+
+  it('drops the unlock focus when Plus closes before the next frame', () => {
+    openWithSlot();
+
+    setUnlocked(true);
+    fireEvent.press(screen.getByTestId('plus-done'));
+    nextFrame();
+
+    expect(targets()).toEqual(['header:Push local AI further.', 'slot']);
+  });
+
+  it('focuses the thank-you headline once when opened already unlocked', () => {
+    renderApp();
+    setUnlocked(true);
+
+    act(() => openPlus());
+    nextFrame();
+
+    expect(targets()).toEqual([
+      'header:Thanks for pushing local AI forward with us.',
+    ]);
+  });
+
+  it('makes no call when Plus is relocked while shown', () => {
+    renderApp();
+    setUnlocked(true);
+    act(() => openPlus());
+    nextFrame();
+
+    setUnlocked(false);
+    nextFrame();
+
+    expect(calls).toHaveLength(1);
+  });
+
+  it('makes one call when Plus opens and unlocks in the same commit', () => {
+    renderApp();
+
+    act(() =>
+      runInAction(() => {
+        openPlus();
+        purchaseStore.plusUnlocked = true;
+      }),
+    );
+    nextFrame();
+
+    expect(targets()).toEqual([
+      'header:Thanks for pushing local AI forward with us.',
+    ]);
+  });
+
   it('makes no close call when no hamburger holds the slot', () => {
     renderApp();
     act(() => openPlus());

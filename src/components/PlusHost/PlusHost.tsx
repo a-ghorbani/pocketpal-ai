@@ -14,6 +14,7 @@ import {PlusScreen} from '../../screens/PlusScreen/PlusScreen';
 import {ensureRamRead} from '../../services/plus/deviceRam';
 import {
   dismissPlus,
+  isPlusUnlocked,
   plusGate,
   shouldReturnFocusOnClose,
 } from '../../services/plus/gate';
@@ -32,6 +33,8 @@ export const PlusHost: React.FC = observer(() => {
   const shown = plusGate.request !== null;
   const headlineRef = useRef<Text>(null);
   const wasShown = useRef(false);
+  const unlocked = isPlusUnlocked();
+  const wasUnlocked = useRef(unlocked);
 
   useEffect(() => {
     if (!shown) {
@@ -47,6 +50,18 @@ export const PlusHost: React.FC = observer(() => {
     );
     return () => subscription.remove();
   }, [shown]);
+
+  useEffect(() => {
+    const unlockedWhileShown =
+      shown && wasShown.current && unlocked && !wasUnlocked.current;
+    wasUnlocked.current = unlocked;
+    const target = headlineRef.current;
+    if (!unlockedWhileShown || !target) {
+      return;
+    }
+    const frame = requestAnimationFrame(() => moveScreenReaderFocus(target));
+    return () => cancelAnimationFrame(frame);
+  }, [shown, unlocked]);
 
   useEffect(() => {
     if (shown === wasShown.current) {
