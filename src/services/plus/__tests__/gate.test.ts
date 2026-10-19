@@ -7,6 +7,7 @@ import {
   isPlusUnlocked,
   openPlus,
   plusGate,
+  shouldReturnFocusOnClose,
   whenPlusReady,
 } from '../gate';
 import {setShipOverride, shipOverride} from '../shipOverride';
@@ -127,6 +128,23 @@ describe('Plus gate', () => {
       expect(reopen).toHaveBeenCalledTimes(1);
       expect(plusGate.request).not.toBeNull();
     });
+
+    it.each([
+      [false, false, true],
+      [false, true, true],
+      [true, false, true],
+      [true, true, false],
+    ])(
+      'returns focus on close unless the callback runs (unlocked %s, callback %s)',
+      (unlocked, withCallback, expected) => {
+        setUnlocked(unlocked);
+        openPlus({onUnlocked: withCallback ? jest.fn() : undefined});
+
+        dismissPlus();
+
+        expect(shouldReturnFocusOnClose()).toBe(expected);
+      },
+    );
 
     it('runs the callback only when unlocked', () => {
       const onUnlocked = jest.fn();

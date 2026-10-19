@@ -15,6 +15,10 @@ export const plusGate = observable(
 
 const available = computed(() => shippedPlusFeatures().length > 0);
 
+let returnFocusOnClose = false;
+
+export const shouldReturnFocusOnClose = (): boolean => returnFocusOnClose;
+
 export const isPlusAvailable = (): boolean => available.get();
 
 export const isPlusUnlocked = (): boolean => purchaseStore.plusUnlocked;
@@ -37,6 +41,7 @@ export const dismissPlus = (): void => {
   const onUnlocked = plusGate.request?.onUnlocked;
   const unlocked = purchaseStore.plusUnlocked;
   runInAction(() => {
+    returnFocusOnClose = !(unlocked && onUnlocked);
     plusGate.request = null;
   });
   if (unlocked) {

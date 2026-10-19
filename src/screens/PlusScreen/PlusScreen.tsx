@@ -42,9 +42,11 @@ const announce = (text: string) => {
 
 interface PlusScreenProps {
   onClose: () => void;
+  headlineRef?: React.Ref<Text>;
 }
 
-export const PlusScreen: React.FC<PlusScreenProps> = observer(({onClose}) => {
+export const PlusScreen: React.FC<PlusScreenProps> = observer(props => {
+  const {onClose, headlineRef} = props;
   const {height} = useWindowDimensions();
   const theme = useTheme();
   const styles = createStyles(theme, height < COMPACT_HEIGHT);
@@ -256,7 +258,10 @@ export const PlusScreen: React.FC<PlusScreenProps> = observer(({onClose}) => {
               <SparkleIcon size={24} color={theme.colors.secondary} filled />
             </View>
           )}
-          <Text accessibilityRole="header" style={styles.headline}>
+          <Text
+            ref={headlineRef}
+            accessibilityRole="header"
+            style={styles.headline}>
             {purchased ? copy.thanksHeadline : copy.headline}
           </Text>
           <Text style={styles.subline}>{subline}</Text>

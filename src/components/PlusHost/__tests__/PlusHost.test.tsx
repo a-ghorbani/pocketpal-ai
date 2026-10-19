@@ -1,14 +1,19 @@
 import React from 'react';
-import {BackHandler, StyleSheet} from 'react-native';
+import {AccessibilityInfo, BackHandler, StyleSheet, View} from 'react-native';
 import {runInAction} from 'mobx';
 
 import {act, fireEvent, render} from '../../../../jest/test-utils';
 import {themeFixtures} from '../../../../jest/fixtures/theme';
 import {mockPurchaseStore as purchaseStore} from '../../../../__mocks__/stores/purchaseStore';
 import {deviceRam, ensureRamRead} from '../../../services/plus/deviceRam';
-import {openPlus, plusGate} from '../../../services/plus/gate';
+import {dismissPlus, openPlus, plusGate} from '../../../services/plus/gate';
 import {setShipOverride} from '../../../services/plus/shipOverride';
 import {bannerStyles, overlayStyles} from '../../DownloadOverlay/styles';
+import {
+  claimPlusReturnFocus,
+  plusReturnFocusTarget,
+  releasePlusReturnFocus,
+} from '../../HeaderLeft/plusReturnFocus';
 
 import {PlusA11yScope} from '../PlusA11yScope';
 import {PlusHost} from '../PlusHost';
@@ -164,6 +169,162 @@ describe('PlusHost', () => {
 
     expect(purchaseStore.buyPlus).toHaveBeenCalledWith('plus.1');
     expect(queryByTestId('plus-host')).toBeNull();
+  });
+});
+
+describe('PlusHost screen-reader focus', () => {
+  interface FocusCall {
+    target: string;
+    hostGone: boolean;
+    scope: string;
+  }
+  let calls: FocusCall[];
+  let screen: ReturnType<typeof render>;
+  const slotView = React.createRef<View>();
+
+  const renderApp = () => {
+    screen = render(
+      <>
+        <PlusA11yScope>
+          <View ref={slotView} />
+        </PlusA11yScope>
+        <PlusHost />
+      </>,
+      {withSafeArea: true},
+    );
+    return screen;
+  };
+
+  beforeEach(() => {
+    jest.clearAllMocks();
+    purchaseStore.reset();
+    runInAction(() => {
+      purchaseStore.availability = 'ready';
+      purchaseStore.plusChecked = true;
+      purchaseStore.products.set('plus.1', {
+        productId: 'plus.1',
+        displayPrice: '$4.99',
+      });
+      plusGate.request = null;
+      deviceRam.ramBytes = 8e9;
+    });
+    setShipOverride(['handsFreeVoice']);
+    backHandlers = [];
+    jest
+      .spyOn(BackHandler, 'addEventListener')
+      .mockImplementation((_event, handler) => {
+        backHandlers.push(handler);
+        return {
+          remove: () => {
+            backHandlers = backHandlers.filter(h => h !== handler);
+          },
+        };
+      });
+    calls = [];
+    jest
+      .spyOn(AccessibilityInfo, 'sendAccessibilityEvent')
+      .mockImplementation(node => {
+        calls.push({
+          target:
+            node === slotView.current
+              ? 'slot'
+              : (node as any).props?.accessibilityRole === 'header'
+                ? `header:${(node as any).props.children}`
+                : 'other',
+          hostGone: screen.queryByTestId('plus-host') === null,
+          scope: screen.getByTestId('plus-a11y-scope', {
+            includeHiddenElements: true,
+          }).props.importantForAccessibility,
+        });
+      });
+  });
+
+  afterEach(() => {
+    releasePlusReturnFocus(plusReturnFocusTarget());
+    setShipOverride([]);
+  });
+
+  const openWithSlot = () => {
+    renderApp();
+    claimPlusReturnFocus(slotView.current);
+    act(() => openPlus());
+  };
+
+  it('moves focus to the headline when Plus opens', () => {
+    openWithSlot();
+
+    expect(calls.map(call => call.target)).toEqual([
+      'header:Push local AI further.',
+    ]);
+  });
+
+  it.each([
+    ['Close', () => fireEvent.press(screen.getByTestId('plus-close'))],
+    [
+      'back',
+      () =>
+        act(() => {
+          pressBack();
+        }),
+    ],
+    [
+      'the escape gesture',
+      () => fireEvent(screen.getByTestId('plus-host'), 'accessibilityEscape'),
+    ],
+  ])(
+    'returns focus to the hamburger after %s, once the host is gone',
+    (_label, close) => {
+      openWithSlot();
+
+      close();
+
+      expect(plusGate.request).toBeNull();
+      expect(calls).toHaveLength(2);
+      expect(calls[1]).toEqual({target: 'slot', hostGone: true, scope: 'auto'});
+    },
+  );
+
+  it('leaves focus to the feature after onUnlocked runs', () => {
+    renderApp();
+    claimPlusReturnFocus(slotView.current);
+    const onUnlocked = jest.fn();
+    act(() => openPlus({onUnlocked}));
+    act(() =>
+      runInAction(() => {
+        purchaseStore.plusUnlocked = true;
+      }),
+    );
+
+    fireEvent.press(screen.getByTestId('plus-done'));
+
+    expect(onUnlocked).toHaveBeenCalledTimes(1);
+    expect(calls.map(call => call.target)).toEqual([
+      'header:Push local AI further.',
+    ]);
+  });
+
+  it('makes no close call when no hamburger holds the slot', () => {
+    renderApp();
+    act(() => openPlus());
+
+    fireEvent.press(screen.getByTestId('plus-close'));
+
+    expect(calls.map(call => call.target)).toEqual([
+      'header:Push local AI further.',
+    ]);
+  });
+
+  it('makes no call on a first mount while hidden', () => {
+    const earlier = React.createRef<View>();
+    render(<View ref={earlier} />);
+    claimPlusReturnFocus(earlier.current);
+    openPlus();
+    dismissPlus();
+
+    renderApp();
+
+    expect(plusReturnFocusTarget() === earlier.current).toBe(true);
+    expect(calls).toEqual([]);
   });
 });
 

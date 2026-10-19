@@ -1,17 +1,24 @@
-import React, {useEffect} from 'react';
-import {BackHandler, View} from 'react-native';
+import React, {useEffect, useRef} from 'react';
+import {AccessibilityInfo, BackHandler, Text, View} from 'react-native';
 import {observer} from 'mobx-react';
 
 import {useTheme} from '../../hooks';
 import {PlusScreen} from '../../screens/PlusScreen/PlusScreen';
 import {ensureRamRead} from '../../services/plus/deviceRam';
-import {dismissPlus, plusGate} from '../../services/plus/gate';
+import {
+  dismissPlus,
+  plusGate,
+  shouldReturnFocusOnClose,
+} from '../../services/plus/gate';
+import {plusReturnFocusTarget} from '../HeaderLeft/plusReturnFocus';
 
 import {createStyles} from './styles';
 
 export const PlusHost: React.FC = observer(() => {
   const theme = useTheme();
   const shown = plusGate.request !== null;
+  const headlineRef = useRef<Text>(null);
+  const wasShown = useRef(false);
 
   useEffect(() => {
     if (!shown) {
@@ -28,6 +35,21 @@ export const PlusHost: React.FC = observer(() => {
     return () => subscription.remove();
   }, [shown]);
 
+  useEffect(() => {
+    if (shown === wasShown.current) {
+      return;
+    }
+    wasShown.current = shown;
+    const target = shown
+      ? headlineRef.current
+      : shouldReturnFocusOnClose()
+        ? plusReturnFocusTarget()
+        : null;
+    if (target) {
+      AccessibilityInfo.sendAccessibilityEvent(target, 'focus');
+    }
+  }, [shown]);
+
   if (!shown) {
     return null;
   }
@@ -35,8 +57,9 @@ export const PlusHost: React.FC = observer(() => {
     <View
       testID="plus-host"
       style={createStyles(theme).root}
-      accessibilityViewIsModal>
-      <PlusScreen onClose={dismissPlus} />
+      accessibilityViewIsModal
+      onAccessibilityEscape={dismissPlus}>
+      <PlusScreen onClose={dismissPlus} headlineRef={headlineRef} />
     </View>
   );
 });
