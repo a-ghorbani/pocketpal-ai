@@ -96,12 +96,13 @@ by deep link only. See `BenchmarkRunnerScreen.tsx` as reference.
 
 `src/__automation__/deepLink.ts` exports `dispatchAutomationDeepLink`,
 used by `src/hooks/useDeepLinking.ts` inside a `__E2E__` gate. Today it
-handles two hosts:
+handles these URLs:
 
 - `memory` — `pocketpal://memory?cmd=snap::<label>` etc. (memory-profile spec)
+- `tts` — `pocketpal://tts?cmd=download::<engine>` etc. (`e2e/helpers/tts-actions.ts`)
 - `iap` — `pocketpal://iap?cmd=<verb>::<arg>` scripts the `FakeStore` on iOS
   (the Android specs use `IapAdapter`, since the Android Linking listener
-  only routes the benchmark URL).
+  only routes the benchmark and Plus test-feature URLs).
 - `e2e/plus-feature` — navigates to `PlusTestFeatureScreen` (iap-plus spec);
   Android routes it from the same `useDeepLinking.ts` Linking effect.
 - `e2e/benchmark` — navigates to `BenchmarkRunnerScreen` (benchmark-matrix spec).

@@ -117,7 +117,8 @@ export const useDeepLinking = () => {
     [handleChatDeepLink, handleHubRunLink, navigation],
   );
 
-  // E2E-only routing for the BenchmarkRunnerScreen. Two paths:
+  // E2E-only routing for the benchmark runner and the Plus test feature.
+  // Two paths:
   //   1. Cold launch — Linking.getInitialURL() reads the launching intent's
   //      data URI; no MainActivity onNewIntent override needed.
   //   2. Warm launch — WDIO's `mobile: deepLink` driver command delivers the
@@ -132,7 +133,7 @@ export const useDeepLinking = () => {
     if (!__E2E__) {
       return;
     }
-    const routeIfBench = (url: string | null) => {
+    const routeE2eScreen = (url: string | null) => {
       if (isBenchmarkRunnerUrl(url)) {
         // Resolve autostart from the same raw URL the gate matched, via the
         // shared helper, so cold-launch (getInitialURL) and warm-launch
@@ -147,7 +148,7 @@ export const useDeepLinking = () => {
       }
     };
     Linking.getInitialURL()
-      .then(routeIfBench)
+      .then(routeE2eScreen)
       .catch(() => {
         // getInitialURL rejects on some surfaces; warm-state listener still
         // covers WDIO's deepLink command.
@@ -158,7 +159,7 @@ export const useDeepLinking = () => {
     // down the rest of the hook's lifecycle.
     let sub: {remove: () => void} | null = null;
     try {
-      sub = Linking.addEventListener('url', ({url}) => routeIfBench(url));
+      sub = Linking.addEventListener('url', ({url}) => routeE2eScreen(url));
     } catch {
       sub = null;
     }
