@@ -92,6 +92,9 @@ export const PlusScreen: React.FC<PlusScreenProps> = observer(props => {
     if (result === 'error') {
       announce(copy.buyError);
     }
+    if (result === 'pending') {
+      announce(copy.pendingTitle);
+    }
   };
 
   const showRestoreNote = (note: 'none' | 'failed') => {
@@ -164,10 +167,13 @@ export const PlusScreen: React.FC<PlusScreenProps> = observer(props => {
     body: string,
     icon: React.ReactNode,
   ) => (
-    <View style={styles.notice} accessibilityLiveRegion="polite">
+    <View style={styles.notice}>
       {icon}
       <View style={styles.noticeBody}>
-        <Text testID={testID} style={styles.noticeText}>
+        <Text
+          testID={testID}
+          style={styles.noticeText}
+          accessibilityLiveRegion="polite">
           {title}
         </Text>
         <Text style={styles.noticeSub}>{body}</Text>

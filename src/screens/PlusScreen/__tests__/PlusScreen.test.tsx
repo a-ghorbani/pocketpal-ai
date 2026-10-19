@@ -1,7 +1,10 @@
 import React from 'react';
 import {AccessibilityInfo, Linking, Platform, StyleSheet} from 'react-native';
 import {runInAction} from 'mobx';
-import type {ReactTestRendererJSON} from 'react-test-renderer';
+import type {
+  ReactTestInstance,
+  ReactTestRendererJSON,
+} from 'react-test-renderer';
 
 import {
   act,
@@ -71,6 +74,15 @@ const screenElement = (onClose: () => void) => (
     <PlusScreen onClose={onClose} />
   </L10nContext.Provider>
 );
+
+const expectLiveRegionOnlyOn = (title: ReactTestInstance) => {
+  expect(title.props.accessibilityLiveRegion).toBe('polite');
+  for (let node = title.parent; node; node = node.parent) {
+    if (typeof node.type === 'string') {
+      expect(node.props.accessibilityLiveRegion).toBeUndefined();
+    }
+  }
+};
 
 const renderScreen = () => {
   const onClose = jest.fn();
@@ -190,6 +202,7 @@ describe('PlusScreen', () => {
       disabled: true,
     });
     expect(queryByTestId('plus-tile-plus.1')).toBeNull();
+    expectLiveRegionOnlyOn(getByTestId('plus-pending-notice'));
   });
 
   it('returns quietly to the same price on cancel', async () => {
@@ -367,6 +380,7 @@ describe('PlusScreen', () => {
       expect(queryByTestId('plus-cta')).toBeNull();
       expect(queryByTestId('plus-tile-plus.1')).toBeNull();
       expect(getByTestId('plus-restore')).toBeTruthy();
+      expectLiveRegionOnlyOn(getByTestId('plus-unavailable-notice'));
     });
 
     it('shows unavailable when the store returned no Plus product', () => {
@@ -555,6 +569,16 @@ describe('PlusScreen', () => {
         () => purchaseStore.buyPlus.mockResolvedValueOnce('error'),
         'plus-cta',
         "The purchase didn't go through. Try again.",
+      ],
+      [
+        'pending buy',
+        () =>
+          purchaseStore.buyPlus.mockImplementationOnce(async () => {
+            set({plusPending: true});
+            return 'pending';
+          }),
+        'plus-cta',
+        'Waiting for the store to confirm your payment.',
       ],
     ];
 
