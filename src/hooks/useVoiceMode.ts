@@ -147,6 +147,11 @@ class VoiceModeController {
     }
   }
 
+  /** A turn runs from the endpoint until its reply is spoken. */
+  get hasTurn(): boolean {
+    return this.turn !== null;
+  }
+
   chooseSmallerModel(): void {
     this.showSheet(null);
     this.openModelPicker();
@@ -364,8 +369,19 @@ export function useVoiceMode({
         modelStore.activeModelId,
         modelStore.contextId,
       ],
-      () => {
-        controller.exit();
+      (
+        [sessionId, modelId, contextId],
+        [prevSessionId, prevModelId, prevContextId],
+      ) => {
+        const sessionCreatedBySend =
+          prevSessionId == null &&
+          sessionId != null &&
+          modelId === prevModelId &&
+          contextId === prevContextId &&
+          controller.hasTurn;
+        if (!sessionCreatedBySend) {
+          controller.exit();
+        }
       },
       {equals: comparer.structural},
     );

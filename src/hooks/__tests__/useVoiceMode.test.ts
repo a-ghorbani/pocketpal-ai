@@ -566,6 +566,42 @@ describe('useVoiceMode', () => {
     });
   });
 
+  it('stays open when the first spoken turn of a new chat creates its session', async () => {
+    runInAction(() => {
+      chatSessionStore.activeSessionId = undefined as any;
+    });
+    const {enter, engine, turns} = renderVoiceMode();
+    await enter();
+    speak(500);
+    speak(600, SILENT);
+    expect(turns).toHaveLength(1);
+
+    act(() => {
+      chatSessionStore.activeSessionId = 'session-created-by-send';
+    });
+    await flush();
+
+    expect(turns[0].interrupt).not.toHaveBeenCalled();
+    expect(engine.release).not.toHaveBeenCalled();
+    expect(voiceModeStore.phase).not.toBe('closed');
+  });
+
+  it('closes when a new chat switches to another chat with no turn running', async () => {
+    runInAction(() => {
+      chatSessionStore.activeSessionId = undefined as any;
+    });
+    const {enter, engine} = renderVoiceMode();
+    await enter();
+
+    act(() => {
+      chatSessionStore.activeSessionId = 'session-2';
+    });
+    await flush();
+
+    expect(voiceModeStore.phase).toBe('closed');
+    expect(engine.release).toHaveBeenCalledTimes(1);
+  });
+
   it('leaves auto-speak and the speech overrides untouched across a session', async () => {
     runInAction(() => {
       tts.autoSpeakEnabled = false;
