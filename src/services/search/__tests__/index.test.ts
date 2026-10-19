@@ -4,6 +4,7 @@ import type {SearchProviderId} from '../types';
 describe('createSearchProvider', () => {
   it('builds the adapter matching each provider id', () => {
     const ids: SearchProviderId[] = [
+      'bing',
       'tavily',
       'brave',
       'exa',
@@ -13,6 +14,24 @@ describe('createSearchProvider', () => {
     for (const id of ids) {
       expect(createSearchProvider(id, () => 'k').id).toBe(id);
     }
+  });
+
+  it('builds the keyless adapter without a key accessor being consulted', async () => {
+    global.fetch = jest.fn().mockResolvedValue({
+      ok: true,
+      status: 200,
+      text: () =>
+        Promise.resolve(
+          '<li class="b_algo"><a href="https://a.example/"><h2>A</h2></a><p>b</p></li>',
+        ),
+    });
+    // A getter that throws proves the adapter never reaches for a key.
+    const provider = createSearchProvider('bing', () => {
+      throw new Error('key must not be read');
+    });
+    await expect(provider.search('q', {maxResults: 3})).resolves.toHaveLength(
+      1,
+    );
   });
 
   it('wires the key accessor lazily into the adapter', async () => {

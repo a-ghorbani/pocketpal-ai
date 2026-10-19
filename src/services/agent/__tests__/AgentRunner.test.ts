@@ -1707,6 +1707,7 @@ describe('runAgent', () => {
         const access: SearchAccess = {
           getActiveProvider: () => new TavilyProvider(() => 'key'),
           canSearch: () => true,
+          requiresKey: () => true,
           getResultCount: () => 3,
           readWithDefaultReader: jest.fn(),
         };
@@ -1763,6 +1764,7 @@ describe('runAgent', () => {
       const access: SearchAccess = {
         getActiveProvider: () => new TavilyProvider(() => 'key'),
         canSearch: () => true,
+        requiresKey: () => true,
         getResultCount: () => 3,
         readWithDefaultReader: jest.fn(),
       };

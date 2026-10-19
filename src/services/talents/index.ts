@@ -40,6 +40,7 @@ function createSearchAccess(): SearchAccess {
       return createSearchProvider(id, () => searchProviderStore.getKey(id));
     },
     canSearch: () => searchProviderStore.canSearch,
+    requiresKey: () => searchProviderStore.activeProviderRequiresKey,
     getResultCount: () => searchProviderStore.resultCount,
     readWithDefaultReader,
   };

@@ -15,15 +15,21 @@ export interface SearchProviderMeta {
   label: string;
   /** Gated providers appear in the picker but cannot be the active provider. */
   selectable: boolean;
+  /**
+   * False for keyless providers (no signup, no BYOK entry). `isProviderConfigured`
+   * reports true for those without a Keychain lookup.
+   */
+  requiresKey: boolean;
 }
 
 /** Parallel ships gated (not selectable) until its free-tier/PAYG terms are confirmed. */
 export const SEARCH_PROVIDERS: SearchProviderMeta[] = [
-  {id: 'tavily', label: 'Tavily', selectable: true},
-  {id: 'brave', label: 'Brave', selectable: true},
-  {id: 'exa', label: 'Exa', selectable: true},
-  {id: 'firecrawl', label: 'Firecrawl', selectable: true},
-  {id: 'parallel', label: 'Parallel', selectable: false},
+  {id: 'bing', label: 'Bing', selectable: true, requiresKey: false},
+  {id: 'tavily', label: 'Tavily', selectable: true, requiresKey: true},
+  {id: 'brave', label: 'Brave', selectable: true, requiresKey: true},
+  {id: 'exa', label: 'Exa', selectable: true, requiresKey: true},
+  {id: 'firecrawl', label: 'Firecrawl', selectable: true, requiresKey: true},
+  {id: 'parallel', label: 'Parallel', selectable: false, requiresKey: true},
 ];
 
 const DEFAULT_PROVIDER: SearchProviderId = 'brave';
@@ -103,8 +109,19 @@ class SearchProviderStore {
     return (this.keys[id] ?? '').trim().length > 0;
   }
 
+  /** Keyless providers are configured the moment they're selected. */
   get isProviderConfigured(): boolean {
+    const meta = SEARCH_PROVIDERS.find(p => p.id === this.activeProviderId);
+    if (meta && !meta.requiresKey) {
+      return true;
+    }
     return this.hasKey(this.activeProviderId);
+  }
+
+  /** True when the active provider needs a BYOK key before it can search. */
+  get activeProviderRequiresKey(): boolean {
+    const meta = SEARCH_PROVIDERS.find(p => p.id === this.activeProviderId);
+    return meta ? meta.requiresKey : true;
   }
 
   get canSearch(): boolean {
