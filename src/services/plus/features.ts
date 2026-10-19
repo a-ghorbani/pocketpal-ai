@@ -1,11 +1,11 @@
-import type {PlusFeature} from './catalog';
+import type {PlusFeature, PlusFeatureId} from './catalog';
 
 export const RAM_MARKETING_FACTOR = 0.85;
 
 export type PlusFeatureStatus = 'ready' | 'soon' | {needsGb: number};
 
 export interface PlusFeatureRow {
-  id: string;
+  id: PlusFeatureId;
   status: PlusFeatureStatus;
 }
 

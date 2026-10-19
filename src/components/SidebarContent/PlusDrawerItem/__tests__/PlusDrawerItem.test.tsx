@@ -3,6 +3,11 @@ import {runInAction} from 'mobx';
 
 import {act, fireEvent, render} from '../../../../../jest/test-utils';
 import {mockPurchaseStore as purchaseStore} from '../../../../../__mocks__/stores/purchaseStore';
+import {
+  fakePlusFeatures,
+  fakePlusL10n,
+} from '../../../../../jest/fixtures/plus';
+import {L10nContext} from '../../../../utils';
 import type {PlusFeature} from '../../../../services/plus/catalog';
 import {setShipOverride} from '../../../../services/plus/shipOverride';
 
@@ -18,6 +23,13 @@ jest.mock('../../../../services/plus/catalog', () => {
   });
   return mocked;
 });
+
+const renderItem = (onPress: () => void = jest.fn()) =>
+  render(
+    <L10nContext.Provider value={fakePlusL10n}>
+      <PlusDrawerItem onPress={onPress} />
+    </L10nContext.Provider>,
+  );
 
 const setUnlocked = (unlocked: boolean) =>
   runInAction(() => {
@@ -36,7 +48,7 @@ describe('PlusDrawerItem', () => {
   });
 
   it('is absent while no Plus feature has shipped, even for an owner', () => {
-    const {queryByTestId} = render(<PlusDrawerItem onPress={jest.fn()} />);
+    const {queryByTestId} = renderItem();
     expect(queryByTestId('drawer-item-plus')).toBeNull();
 
     act(() => setUnlocked(true));
@@ -45,9 +57,7 @@ describe('PlusDrawerItem', () => {
 
   it('shows once a feature ships and names it', () => {
     setShipOverride(['handsFreeVoice']);
-    const {getByTestId, getByText} = render(
-      <PlusDrawerItem onPress={jest.fn()} />,
-    );
+    const {getByTestId, getByText} = renderItem();
 
     expect(getByText('PocketPal Plus')).toBeTruthy();
     expect(getByTestId('drawer-item-plus-subtitle')).toHaveTextContent(
@@ -56,7 +66,7 @@ describe('PlusDrawerItem', () => {
   });
 
   it('appears when a feature ships while mounted', () => {
-    const {queryByTestId} = render(<PlusDrawerItem onPress={jest.fn()} />);
+    const {queryByTestId} = renderItem();
     expect(queryByTestId('drawer-item-plus')).toBeNull();
 
     act(() => setShipOverride(['localApiServer']));
@@ -83,8 +93,8 @@ describe('PlusDrawerItem', () => {
       'Hands-free voice, Local API server & more',
     ],
   ])('names up to two shipped features: %#', (features, expected) => {
-    mockFeatures = features;
-    const {getByTestId} = render(<PlusDrawerItem onPress={jest.fn()} />);
+    mockFeatures = fakePlusFeatures(features);
+    const {getByTestId} = renderItem();
 
     expect(getByTestId('drawer-item-plus-subtitle')).toHaveTextContent(
       expected,
@@ -93,7 +103,7 @@ describe('PlusDrawerItem', () => {
 
   it('shows Unlocked for an owner and follows the unlock', () => {
     setShipOverride(['handsFreeVoice']);
-    const {getByTestId} = render(<PlusDrawerItem onPress={jest.fn()} />);
+    const {getByTestId} = renderItem();
 
     act(() => setUnlocked(true));
     expect(getByTestId('drawer-item-plus-subtitle')).toHaveTextContent(
@@ -115,7 +125,7 @@ describe('PlusDrawerItem', () => {
   it('calls onPress', () => {
     setShipOverride(['handsFreeVoice']);
     const onPress = jest.fn();
-    const {getByTestId} = render(<PlusDrawerItem onPress={onPress} />);
+    const {getByTestId} = renderItem(onPress);
 
     fireEvent.press(getByTestId('drawer-item-plus'));
 

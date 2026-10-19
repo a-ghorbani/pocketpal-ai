@@ -1,5 +1,5 @@
+import {fakePlusFeatures, fakePlusRows} from '../../../../jest/fixtures/plus';
 import {PLUS_FEATURES} from '../catalog';
-import type {PlusFeature} from '../catalog';
 import {
   RAM_MARKETING_FACTOR,
   anyRunnable,
@@ -36,7 +36,7 @@ describe('Plus feature status', () => {
 
   it('uses 0.85 of the marketed size in decimal bytes', () => {
     expect(RAM_MARKETING_FACTOR).toBe(0.85);
-    const table: PlusFeature[] = [{id: 'big', shipped: true, minRamGb: 8}];
+    const table = fakePlusFeatures([{id: 'big', shipped: true, minRamGb: 8}]);
     expect(featureRows(table, 6.8e9, NONE)).toEqual([
       {id: 'big', status: 'ready'},
     ]);
@@ -46,7 +46,7 @@ describe('Plus feature status', () => {
   });
 
   it('never lets the next marketed size down pass', () => {
-    const table: PlusFeature[] = [{id: 'big', shipped: true, minRamGb: 8}];
+    const table = fakePlusFeatures([{id: 'big', shipped: true, minRamGb: 8}]);
     const sixGbPhone = 6 * 1024 ** 3;
     expect(featureRows(table, sixGbPhone, NONE)[0].status).toEqual({
       needsGb: 8,
@@ -54,7 +54,7 @@ describe('Plus feature status', () => {
   });
 
   it('treats a feature without a RAM gate as ready on any device', () => {
-    const table: PlusFeature[] = [{id: 'any', shipped: true}];
+    const table = fakePlusFeatures([{id: 'any', shipped: true}]);
     expect(featureRows(table, 1, NONE)).toEqual([{id: 'any', status: 'ready'}]);
     expect(featureRows(table, null, NONE)).toEqual([
       {id: 'any', status: 'ready'},
@@ -62,7 +62,9 @@ describe('Plus feature status', () => {
   });
 
   it('shows an unshipped feature as coming soon whatever the RAM', () => {
-    const table: PlusFeature[] = [{id: 'later', shipped: false, minRamGb: 4}];
+    const table = fakePlusFeatures([
+      {id: 'later', shipped: false, minRamGb: 4},
+    ]);
     expect(featureRows(table, 1, NONE)).toEqual([
       {id: 'later', status: 'soon'},
     ]);
@@ -72,11 +74,11 @@ describe('Plus feature status', () => {
   });
 
   it('withholds RAM-gated rows until the RAM read resolves', () => {
-    const table: PlusFeature[] = [
+    const table = fakePlusFeatures([
       {id: 'gated', shipped: true, minRamGb: 8},
       {id: 'open', shipped: true},
       {id: 'later', shipped: false, minRamGb: 8},
-    ];
+    ]);
     expect(featureRows(table, null, NONE)).toEqual([
       {id: 'open', status: 'ready'},
       {id: 'later', status: 'soon'},
@@ -84,12 +86,16 @@ describe('Plus feature status', () => {
   });
 
   it('is runnable only when a row is ready', () => {
-    expect(anyRunnable([{id: 'a', status: {needsGb: 8}}])).toBe(false);
+    expect(anyRunnable(fakePlusRows([{id: 'a', status: {needsGb: 8}}]))).toBe(
+      false,
+    );
     expect(
-      anyRunnable([
-        {id: 'a', status: {needsGb: 8}},
-        {id: 'b', status: 'ready'},
-      ]),
+      anyRunnable(
+        fakePlusRows([
+          {id: 'a', status: {needsGb: 8}},
+          {id: 'b', status: 'ready'},
+        ]),
+      ),
     ).toBe(true);
   });
 
@@ -100,11 +106,11 @@ describe('Plus feature status', () => {
   });
 
   it('keeps table order', () => {
-    const table: PlusFeature[] = [
+    const table = fakePlusFeatures([
       {id: 'c', shipped: true},
       {id: 'a', shipped: false},
       {id: 'b', shipped: true},
-    ];
+    ]);
     expect(featureRows(table, GB8, NONE).map(row => row.id)).toEqual([
       'c',
       'a',

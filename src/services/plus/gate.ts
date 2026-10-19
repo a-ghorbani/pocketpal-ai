@@ -2,9 +2,7 @@ import {computed, observable, runInAction} from 'mobx';
 
 import {purchaseStore} from '../../store';
 
-import {PLUS_FEATURES} from './catalog';
-import {shippedFeatures} from './features';
-import {shipOverride} from './shipOverride';
+import {shippedPlusFeatures} from './shipped';
 
 export interface PlusRequest {
   onUnlocked?: () => void;
@@ -15,9 +13,7 @@ export const plusGate = observable(
   {request: observable.ref},
 );
 
-const available = computed(
-  () => shippedFeatures(PLUS_FEATURES, shipOverride.get()).length > 0,
-);
+const available = computed(() => shippedPlusFeatures().length > 0);
 
 export const isPlusAvailable = (): boolean => available.get();
 

@@ -1,3 +1,5 @@
+import type {Translations} from '../../locales/types';
+
 export const PLUS_PRODUCT_IDS = [
   'plus.1',
   'plus.2',
@@ -8,8 +10,10 @@ export const PLUS_PRODUCT_IDS = [
 export const isPlusProduct = (productId: string): boolean =>
   (PLUS_PRODUCT_IDS as readonly string[]).includes(productId);
 
+export type PlusFeatureId = keyof Translations['plus']['features'];
+
 export interface PlusFeature {
-  id: string;
+  id: PlusFeatureId;
   shipped: boolean;
   minRamGb?: number;
 }

@@ -6,10 +6,8 @@ import {useTheme} from '../../../hooks';
 import {t} from '../../../locales';
 import {L10nContext} from '../../../utils';
 import type {Theme} from '../../../utils/types';
-import {PLUS_FEATURES} from '../../../services/plus/catalog';
-import {shippedFeatures} from '../../../services/plus/features';
 import {isPlusAvailable, isPlusUnlocked} from '../../../services/plus/gate';
-import {shipOverride} from '../../../services/plus/shipOverride';
+import {shippedPlusFeatures} from '../../../services/plus/shipped';
 import {SparkleIcon} from '../../../screens/PlusScreen/SparkleIcon';
 
 const NAMED_FEATURES = 2;
@@ -27,10 +25,9 @@ export const PlusDrawerItem: React.FC<PlusDrawerItemProps> = observer(
     }
     const styles = createStyles(theme);
     const copy = l10n.plus;
-    const featureNames: Record<string, string> = copy.features;
     const unlocked = isPlusUnlocked();
-    const names = shippedFeatures(PLUS_FEATURES, shipOverride.get()).map(
-      feature => featureNames[feature.id] ?? feature.id,
+    const names = shippedPlusFeatures().map(
+      feature => copy.features[feature.id],
     );
     const named = names.slice(0, NAMED_FEATURES).join(', ');
     const subtitle = unlocked

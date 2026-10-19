@@ -5,6 +5,8 @@ import type {ReactTestRendererJSON} from 'react-test-renderer';
 
 import {act, fireEvent, render, waitFor} from '../../../../jest/test-utils';
 import {mockPurchaseStore as purchaseStore} from '../../../../__mocks__/stores/purchaseStore';
+import {fakePlusFeatures, fakePlusL10n} from '../../../../jest/fixtures/plus';
+import {L10nContext} from '../../../utils';
 import type {PlusFeature} from '../../../services/plus/catalog';
 import {deviceRam} from '../../../services/plus/deviceRam';
 import {setShipOverride} from '../../../services/plus/shipOverride';
@@ -59,7 +61,12 @@ const set = (changes: Partial<typeof purchaseStore>) =>
 
 const renderScreen = () => {
   const onClose = jest.fn();
-  const screen = render(<PlusScreen onClose={onClose} />, {withSafeArea: true});
+  const screen = render(
+    <L10nContext.Provider value={fakePlusL10n}>
+      <PlusScreen onClose={onClose} />
+    </L10nContext.Provider>,
+    {withSafeArea: true},
+  );
   return {...screen, onClose};
 };
 
@@ -238,37 +245,39 @@ describe('PlusScreen', () => {
 
   describe('feature rows', () => {
     it('shows Ready, Needs N GB and Coming soon', () => {
-      mockFeatures = [
+      mockFeatures = fakePlusFeatures([
         {id: 'open', shipped: true},
         {id: 'big', shipped: true, minRamGb: 16},
         {id: 'later', shipped: false},
-      ];
+      ]);
       const {getByTestId} = renderScreen();
 
-      expect(getByTestId('plus-feature-open')).toHaveTextContent('openReady');
+      expect(getByTestId('plus-feature-open')).toHaveTextContent(
+        'Open featureReady',
+      );
       expect(getByTestId('plus-feature-big')).toHaveTextContent(
-        'bigNeeds 16 GB RAM',
+        'Big featureNeeds 16 GB RAM',
       );
       expect(getByTestId('plus-feature-later')).toHaveTextContent(
-        'laterComing soon',
+        'Later featureComing soon',
       );
     });
 
     it('offers Get Plus when one shipped feature runs here', () => {
-      mockFeatures = [
+      mockFeatures = fakePlusFeatures([
         {id: 'open', shipped: true},
         {id: 'later', shipped: false},
-      ];
+      ]);
       const {getByTestId} = renderScreen();
 
       expect(getByTestId('plus-cta')).toHaveTextContent('Get Plus · $4.99');
     });
 
     it('offers Get Plus anyway when no shipped feature runs here', () => {
-      mockFeatures = [
+      mockFeatures = fakePlusFeatures([
         {id: 'big', shipped: true, minRamGb: 16},
         {id: 'bigger', shipped: true, minRamGb: 24},
-      ];
+      ]);
       const {getByTestId, getByText} = renderScreen();
 
       expect(getByTestId('plus-cta')).toHaveTextContent(
@@ -280,10 +289,10 @@ describe('PlusScreen', () => {
     });
 
     it('withholds RAM-gated rows for an owner until RAM is known', () => {
-      mockFeatures = [
+      mockFeatures = fakePlusFeatures([
         {id: 'big', shipped: true, minRamGb: 16},
         {id: 'open', shipped: true},
-      ];
+      ]);
       set({plusUnlocked: true});
       runInAction(() => {
         deviceRam.ramBytes = null;

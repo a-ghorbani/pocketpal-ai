@@ -16,11 +16,10 @@ import {useTheme} from '../../hooks';
 import {t} from '../../locales';
 import {purchaseStore} from '../../store';
 import {L10nContext} from '../../utils';
-import {PLUS_FEATURES} from '../../services/plus/catalog';
-import {anyRunnable, featureRows} from '../../services/plus/features';
+import {anyRunnable} from '../../services/plus/features';
 import type {PlusFeatureRow} from '../../services/plus/features';
 import {deviceRam} from '../../services/plus/deviceRam';
-import {shipOverride} from '../../services/plus/shipOverride';
+import {plusFeatureRows} from '../../services/plus/shipped';
 
 import {CheckGlyph, InfoGlyph, SparkleIcon} from './SparkleIcon';
 import {plusScreenState} from './plusScreenState';
@@ -48,7 +47,6 @@ export const PlusScreen: React.FC<PlusScreenProps> = observer(({onClose}) => {
   const insets = useSafeAreaInsets();
   const l10n = useContext(L10nContext);
   const copy = l10n.plus;
-  const featureNames: Record<string, string> = copy.features;
 
   const [selectedId, setSelectedId] = useState<string>();
   const [lastBuyFailed, setLastBuyFailed] = useState(false);
@@ -58,11 +56,7 @@ export const PlusScreen: React.FC<PlusScreenProps> = observer(({onClose}) => {
   const products = purchaseStore.plusProducts;
   const selected =
     products.find(product => product.productId === selectedId) ?? products[0];
-  const rows = featureRows(
-    PLUS_FEATURES,
-    deviceRam.ramBytes,
-    shipOverride.get(),
-  );
+  const rows = plusFeatureRows();
   const state = plusScreenState({
     plusUnlocked: purchaseStore.plusUnlocked,
     plusFlow: purchaseStore.plusFlow,
@@ -259,7 +253,7 @@ export const PlusScreen: React.FC<PlusScreenProps> = observer(({onClose}) => {
                     styles.featureName,
                     row.status !== 'ready' && styles.featureNameMuted,
                   ]}>
-                  {featureNames[row.id] ?? row.id}
+                  {copy.features[row.id]}
                 </Text>
                 {statusView(row)}
               </View>
