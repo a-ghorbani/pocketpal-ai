@@ -119,6 +119,13 @@ export const PlusScreen: React.FC<PlusScreenProps> = observer(props => {
     }
   };
 
+  const toggleInfo = () => {
+    if (!infoShown) {
+      announce(copy.inDevelopment);
+    }
+    setInfoShown(!infoShown);
+  };
+
   const statusView = (row: PlusFeatureRow) => {
     if (row.status === 'ready') {
       return (
@@ -140,7 +147,7 @@ export const PlusScreen: React.FC<PlusScreenProps> = observer(props => {
             accessibilityLabel={copy.inDevelopment}
             accessibilityState={{expanded: infoShown}}
             hitSlop={INFO_HIT_SLOP}
-            onPress={() => setInfoShown(shown => !shown)}>
+            onPress={toggleInfo}>
             <InfoGlyph color={theme.colors.onSurfaceVariant} />
           </Pressable>
         </View>
@@ -322,9 +329,18 @@ export const PlusScreen: React.FC<PlusScreenProps> = observer(props => {
             </View>
           ))}
         </View>
-        <Text style={styles.speedLine} accessibilityLiveRegion="polite">
-          {infoShown ? copy.inDevelopment : copy.speedLine}
-        </Text>
+        {infoShown ? (
+          <Text
+            key="in-development"
+            style={styles.speedLine}
+            accessibilityLiveRegion="polite">
+            {copy.inDevelopment}
+          </Text>
+        ) : (
+          <Text key="speed" style={styles.speedLine}>
+            {copy.speedLine}
+          </Text>
+        )}
 
         {phase === 'pending' &&
           notice(

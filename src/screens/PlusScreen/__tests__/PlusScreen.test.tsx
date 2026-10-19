@@ -357,15 +357,23 @@ describe('PlusScreen', () => {
       expect(info.props.accessibilityLabel).toBe(
         'Features in development may change or not ship.',
       );
+      expect(
+        getByText('Speed depends on your phone and model.').props
+          .accessibilityLiveRegion,
+      ).toBeUndefined();
       fireEvent.press(info);
 
       expect(
-        getByText('Features in development may change or not ship.'),
-      ).toBeTruthy();
+        getByText('Features in development may change or not ship.').props
+          .accessibilityLiveRegion,
+      ).toBe('polite');
       expect(queryByText('Speed depends on your phone and model.')).toBeNull();
 
       fireEvent.press(info);
-      expect(getByText('Speed depends on your phone and model.')).toBeTruthy();
+      expect(
+        getByText('Speed depends on your phone and model.').props
+          .accessibilityLiveRegion,
+      ).toBeUndefined();
     });
   });
 
@@ -596,6 +604,30 @@ describe('PlusScreen', () => {
         expect(announceSpy.mock.calls).toEqual([[text]]);
       },
     );
+
+    it('iOS: announces the in-development note only when shown', () => {
+      (Platform as any).OS = 'ios';
+      const {getByTestId} = renderScreen();
+      const info = getByTestId('plus-info-localApiServer');
+
+      fireEvent.press(info);
+      expect(announceSpy.mock.calls).toEqual([
+        ['Features in development may change or not ship.'],
+      ]);
+
+      fireEvent.press(info);
+      expect(announceSpy).toHaveBeenCalledTimes(1);
+    });
+
+    it('Android: leaves the in-development note to the live region', () => {
+      (Platform as any).OS = 'android';
+      const {getByTestId} = renderScreen();
+
+      fireEvent.press(getByTestId('plus-info-localApiServer'));
+      fireEvent.press(getByTestId('plus-info-localApiServer'));
+
+      expect(announceSpy).not.toHaveBeenCalled();
+    });
 
     it.each(outcomes)(
       'Android: leaves %s to the live region',
