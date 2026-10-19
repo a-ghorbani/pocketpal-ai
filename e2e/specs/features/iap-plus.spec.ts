@@ -306,8 +306,9 @@ describe('PocketPal Plus', () => {
     }
     await openPlusWith(openPlus);
 
+    // XCUITest's page source keeps the siblings of a modal view, so assert the chat is covered.
     const source = await plus.pageSource();
     expect(source).toContain('plus-close');
-    expect(source).not.toContain('chat-input');
+    expect(source).not.toMatch(/name="chat-input"[^>]*visible="true"/);
   });
 });
