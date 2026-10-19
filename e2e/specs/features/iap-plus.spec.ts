@@ -300,7 +300,7 @@ describe('PocketPal Plus', () => {
     expect(await plus.isShown('plus-test-feature-unlocked', 500)).toBe(false);
   });
 
-  it('iOS: keeps screen readers on the Plus screen', async function (this: Mocha.Context) {
+  it('iOS: covers the chat with the Plus screen', async function (this: Mocha.Context) {
     if (driver.isAndroid) {
       this.skip();
     }
