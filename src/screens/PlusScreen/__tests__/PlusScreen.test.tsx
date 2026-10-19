@@ -434,7 +434,7 @@ describe('PlusScreen', () => {
       expect(queryByTestId('plus-restore-note')).toBeNull();
     });
 
-    it('disables Restore while a restore runs', () => {
+    it('shows Restore busy and disabled while a restore runs', () => {
       set({isRestoring: true});
       const {getByTestId} = renderScreen();
 
@@ -442,8 +442,44 @@ describe('PlusScreen', () => {
 
       expect(getByTestId('plus-restore').props.accessibilityState).toEqual({
         disabled: true,
+        busy: true,
       });
+      expect(getByTestId('plus-restore-busy')).toBeTruthy();
       expect(purchaseStore.restore).not.toHaveBeenCalled();
+    });
+
+    it('shows no spinner on Restore while idle', () => {
+      const {getByTestId, queryByTestId} = renderScreen();
+
+      expect(getByTestId('plus-restore').props.accessibilityState).toEqual({
+        disabled: false,
+        busy: false,
+      });
+      expect(queryByTestId('plus-restore-busy')).toBeNull();
+    });
+
+    it('says nothing found only once no payment is pending', async () => {
+      purchaseStore.restore.mockImplementationOnce(async () => {
+        set({plusPending: true});
+        return {queryOk: true};
+      });
+      const {getByTestId, queryByTestId} = renderScreen();
+
+      await act(async () => {
+        fireEvent.press(getByTestId('plus-restore'));
+      });
+      expect(queryByTestId('plus-restore-note')).toBeNull();
+
+      purchaseStore.restore.mockImplementationOnce(async () => {
+        set({plusPending: false});
+        return {queryOk: true};
+      });
+      await act(async () => {
+        fireEvent.press(getByTestId('plus-restore'));
+      });
+      expect(getByTestId('plus-restore-note')).toHaveTextContent(
+        'No Plus purchase found.',
+      );
     });
   });
 

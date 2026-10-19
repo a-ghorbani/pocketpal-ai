@@ -230,6 +230,9 @@ export const createStyles = (theme: Theme, compact: boolean) =>
     },
     footerHit: {
       minHeight: 44,
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: theme.spacing.xs,
       justifyContent: 'center',
       paddingHorizontal: theme.spacing.xxs,
     },

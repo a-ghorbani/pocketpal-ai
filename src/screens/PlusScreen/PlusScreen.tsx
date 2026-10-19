@@ -67,6 +67,7 @@ export const PlusScreen: React.FC<PlusScreenProps> = observer(({onClose}) => {
     anyFeatureRunnable: anyRunnable(rows),
   });
   const {phase} = state;
+  const {isRestoring} = purchaseStore;
   const purchased = phase === 'purchased';
   const paying = phase === 'paying';
   const showsGrid = phase === 'idle' || paying;
@@ -84,8 +85,13 @@ export const PlusScreen: React.FC<PlusScreenProps> = observer(({onClose}) => {
     setRestoreNote(null);
     try {
       const {queryOk} = await purchaseStore.restore();
-      if (!purchaseStore.plusUnlocked) {
-        setRestoreNote(queryOk ? 'none' : 'failed');
+      if (purchaseStore.plusUnlocked) {
+        return;
+      }
+      if (!queryOk) {
+        setRestoreNote('failed');
+      } else if (!purchaseStore.plusPending) {
+        setRestoreNote('none');
       }
     } catch {
       setRestoreNote('failed');
@@ -349,10 +355,17 @@ export const PlusScreen: React.FC<PlusScreenProps> = observer(({onClose}) => {
             <Pressable
               testID="plus-restore"
               accessibilityRole="button"
-              accessibilityState={{disabled: purchaseStore.isRestoring}}
-              disabled={purchaseStore.isRestoring}
+              accessibilityState={{disabled: isRestoring, busy: isRestoring}}
+              disabled={isRestoring}
               onPress={handleRestore}
               style={styles.footerHit}>
+              {isRestoring && (
+                <ActivityIndicator
+                  testID="plus-restore-busy"
+                  size="small"
+                  color={theme.colors.secondary}
+                />
+              )}
               <Text style={styles.footerLink}>{copy.restore}</Text>
             </Pressable>
             <Text style={styles.footerDot}>·</Text>
