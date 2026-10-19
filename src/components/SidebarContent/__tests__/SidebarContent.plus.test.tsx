@@ -6,7 +6,7 @@ import {
   createDrawerNavigator,
   DrawerContentComponentProps,
 } from '@react-navigation/drawer';
-import {act, fireEvent, render} from '@testing-library/react-native';
+import {act, cleanup, fireEvent, render} from '@testing-library/react-native';
 import {runInAction} from 'mobx';
 
 import {SidebarContent} from '../SidebarContent';
@@ -41,6 +41,7 @@ const TestNavigator = () => (
 
 describe('SidebarContent Plus entry', () => {
   afterEach(() => {
+    cleanup();
     setShipOverride([]);
     runInAction(() => {
       purchaseStore.plusUnlocked = false;
