@@ -196,6 +196,7 @@ export const createStyles = (theme: Theme, compact: boolean) =>
     },
     footer: {
       flexDirection: 'row',
+      flexWrap: 'wrap',
       justifyContent: 'center',
       alignItems: 'center',
       marginTop: theme.spacing.xs,
@@ -219,6 +220,7 @@ export const createStyles = (theme: Theme, compact: boolean) =>
     },
     inlineErrorText: {
       ...theme.typography.bodyS,
+      flexShrink: 1,
       color: theme.colors.onBackground,
     },
     footerLink: {

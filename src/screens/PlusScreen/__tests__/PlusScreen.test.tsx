@@ -488,6 +488,41 @@ describe('PlusScreen', () => {
       },
     );
 
+    it.each([false, true])(
+      'wraps the centred footer at large text sizes (licence line %s)',
+      showsLicenseNotice => {
+        set({showsLicenseNotice});
+        const {getByTestId} = renderScreen();
+        const footer = StyleSheet.flatten(
+          getByTestId('plus-footer').props.style,
+        );
+
+        expect(footer).toMatchObject({
+          flexDirection: 'row',
+          flexWrap: 'wrap',
+          justifyContent: 'center',
+        });
+        ['plus-restore', 'plus-open-source'].forEach(testID => {
+          expect(
+            StyleSheet.flatten(getByTestId(testID).props.style).minHeight,
+          ).toBeGreaterThanOrEqual(44);
+        });
+      },
+    );
+
+    it('lets the inline error wrap beside its icon', async () => {
+      purchaseStore.buyPlus.mockResolvedValueOnce('error');
+      const {getByTestId} = renderScreen();
+
+      fireEvent.press(getByTestId('plus-cta'));
+      await waitFor(() => expect(getByTestId('plus-error-line')).toBeTruthy());
+
+      expect(
+        StyleSheet.flatten(getByTestId('plus-error-line').props.style)
+          .flexShrink,
+      ).toBe(1);
+    });
+
     it('uses a tighter gap above the prices on a small phone', () => {
       expect(speedLineStyle(667).marginBottom).toBeLessThan(
         speedLineStyle(923).marginBottom as number,

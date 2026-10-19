@@ -356,7 +356,7 @@ export const PlusScreen: React.FC<PlusScreenProps> = observer(({onClose}) => {
         )}
 
         {!purchased && (
-          <View style={styles.footer}>
+          <View testID="plus-footer" style={styles.footer}>
             {!state.licence && (
               <>
                 <Text style={styles.footerText}>{copy.oneTimePurchase}</Text>
