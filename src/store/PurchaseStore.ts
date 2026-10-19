@@ -724,19 +724,29 @@ export class PurchaseStore {
       this.plusPending = false;
     });
     this.plusRevision += 1;
-    const doc: PlusEntitlementDoc = {
-      version: 1,
-      productId: tx.productId,
-      unlockedAt: this.deps.now(),
-    };
-    try {
-      await this.deps.storage.setItem(PLUS_KEY, JSON.stringify(doc));
-    } catch (error) {
-      console.warn('Saving the Plus unlock failed:', error);
-      return;
+    if (!(await this.plusDocOnDisk())) {
+      const doc: PlusEntitlementDoc = {
+        version: 1,
+        productId: tx.productId,
+        unlockedAt: this.deps.now(),
+      };
+      try {
+        await this.deps.storage.setItem(PLUS_KEY, JSON.stringify(doc));
+      } catch (error) {
+        console.warn('Saving the Plus unlock failed:', error);
+        return;
+      }
     }
     if (tx.unfinished) {
       await this.finish(tx);
+    }
+  }
+
+  private async plusDocOnDisk(): Promise<boolean> {
+    try {
+      return isPlusDoc(await this.deps.storage.getItem(PLUS_KEY));
+    } catch {
+      return false;
     }
   }
 

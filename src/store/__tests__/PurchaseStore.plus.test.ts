@@ -146,6 +146,69 @@ describe('PurchaseStore Plus', () => {
 
       expect(h.store.finish).toHaveBeenCalledTimes(2);
       expect(h.purchases.plusUnlocked).toBe(true);
+      expect(h.log.filter(entry => entry === 'write:plus')).toHaveLength(1);
+      expect(h.storage.plusDoc()).toMatchObject({productId: 'plus.1'});
+    });
+
+    it('keeps the first unlock record and still finishes a redelivered tier', async () => {
+      const h = ownerHarness();
+      h.store.currentEntitlements.mockResolvedValue({
+        ok: true,
+        transactions: [
+          plusTx({unfinished: false}),
+          plusTx({productId: 'plus.3'}),
+        ],
+      });
+
+      await h.purchases.recover();
+
+      expect(
+        h.storage.setItem.mock.calls.filter(([key]) => key === PLUS_KEY),
+      ).toEqual([]);
+      expect(h.log).toContain('finish:plus.3-tx');
+      expect(h.store.finish).toHaveBeenCalledTimes(1);
+      expect(h.storage.plusDoc()).toEqual({
+        version: 1,
+        productId: 'plus.1',
+        unlockedAt: 1,
+      });
+      expect(h.purchases.plusUnlocked).toBe(true);
+    });
+
+    it('writes and then finishes a redelivery after a failed first write', async () => {
+      const warn = jest.spyOn(console, 'warn').mockImplementation(() => {});
+      const h = createHarness();
+      h.storage.failPlusWrite = true;
+      await h.purchases.processTransaction(plusTx());
+      expect(h.store.finish).not.toHaveBeenCalled();
+
+      h.storage.failPlusWrite = false;
+      await h.purchases.processTransaction(plusTx());
+
+      expect(h.log.indexOf('write:plus')).toBeGreaterThanOrEqual(0);
+      expect(h.log.indexOf('write:plus')).toBeLessThan(
+        h.log.indexOf('finish:plus.1-tx'),
+      );
+      expect(h.storage.plusDoc()).toMatchObject({productId: 'plus.1'});
+      warn.mockRestore();
+    });
+
+    it('writes before finishing when the stored unlock cannot be read', async () => {
+      const h = ownerHarness();
+      h.store.currentEntitlements.mockResolvedValue({
+        ok: false,
+        transactions: [],
+      });
+      await h.purchases.recover();
+      h.storage.failPlusRead = true;
+
+      await h.purchases.processTransaction(plusTx({productId: 'plus.2'}));
+
+      expect(h.storage.plusDoc()).toMatchObject({productId: 'plus.2'});
+      expect(h.log.indexOf('write:plus')).toBeGreaterThanOrEqual(0);
+      expect(h.log.indexOf('write:plus')).toBeLessThan(
+        h.log.indexOf('finish:plus.2-tx'),
+      );
     });
 
     it('stays unlocked in memory and does not finish when the write fails', async () => {
@@ -409,7 +472,9 @@ describe('PurchaseStore Plus', () => {
       await h.purchases.recover();
 
       expect(h.purchases.plusUnlocked).toBe(true);
-      expect(h.storage.plusDoc()).toMatchObject({productId: 'plus.2'});
+      expect(h.storage.plusDoc()).toMatchObject({productId: 'plus.1'});
+      expect(h.log).not.toContain('write:plus');
+      expect(h.log).toContain('finish:plus.2-tx');
     });
 
     it('Android: does not clear a pending payment made while the query is in flight', async () => {

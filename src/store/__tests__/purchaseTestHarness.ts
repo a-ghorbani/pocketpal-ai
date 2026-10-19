@@ -186,11 +186,17 @@ export class MemoryStorage {
   writes: string[] = [];
   failOnWrite?: number;
   failPlusWrite = false;
+  failPlusRead = false;
   failPlusDelete = false;
   private count = 0;
   constructor(private log: string[]) {}
 
-  getItem = jest.fn(async (key: string) => this.values.get(key) ?? null);
+  getItem = jest.fn(async (key: string) => {
+    if (key === PLUS_KEY && this.failPlusRead) {
+      throw new Error('crash');
+    }
+    return this.values.get(key) ?? null;
+  });
   setItem = jest.fn(async (key: string, value: string) => {
     if (key === PLUS_KEY) {
       if (this.failPlusWrite) {
