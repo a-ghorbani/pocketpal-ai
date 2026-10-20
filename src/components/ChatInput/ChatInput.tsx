@@ -703,7 +703,15 @@ export const ChatInput = observer(
 
                 {/* Voice input (ASR) mic. Self-gates: returns null when voice
                   input is unavailable. */}
-                {appendTranscript && <MicButton onStart={voiceCapture.start} />}
+                {appendTranscript && (
+                  <MicButton
+                    onStart={voiceCapture.start}
+                    style={
+                      (isStopVisible || !isVideoCapable || isCameraActive) &&
+                      styles.micBeforeSend
+                    }
+                  />
+                )}
 
                 {/* Send/Stop Button */}
                 {isStopVisible ? (
@@ -734,7 +742,9 @@ export const ChatInput = observer(
                   <VoiceModeButton onPress={onVoicePress} />
                 ) : (
                   isSendButtonVisible && (
-                    <View style={{opacity: sendButtonOpacity}}>
+                    <View
+                      style={{opacity: sendButtonOpacity}}
+                      pointerEvents="box-none">
                       <SendButton
                         color={onSurfaceColor}
                         onPress={handleSend}

@@ -54,6 +54,11 @@ export const createStyles = (theme: Theme) =>
     timerWarning: {
       color: theme.colors.error,
     },
+    language: {
+      textAlign: 'center',
+      paddingBottom: 6,
+      color: theme.colors.onSurfaceVariant,
+    },
     transcribingText: {
       flex: 1,
       textAlign: 'center',

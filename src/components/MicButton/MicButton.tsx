@@ -1,5 +1,5 @@
 import React, {useContext} from 'react';
-import {Pressable} from 'react-native';
+import {Pressable, type StyleProp, type ViewStyle} from 'react-native';
 
 import {observer} from 'mobx-react';
 import {useNavigation} from '@react-navigation/native';
@@ -17,6 +17,7 @@ import {styles} from './styles';
 interface MicButtonProps {
   /** Start a voice capture. */
   onStart: () => void;
+  style?: StyleProp<ViewStyle>;
 }
 
 /**
@@ -27,24 +28,43 @@ interface MicButtonProps {
  * the Settings voice-input surface instead of recording. When ready, a tap
  * starts a capture; the composer then shows `VoiceRecordingBar`.
  */
-export const MicButton: React.FC<MicButtonProps> = observer(({onStart}) => {
-  const theme = useTheme();
-  const l10n = useContext(L10nContext);
-  const navigation = useNavigation<DrawerNavigationProp<RootDrawerParamList>>();
+export const MicButton: React.FC<MicButtonProps> = observer(
+  ({onStart, style}) => {
+    const theme = useTheme();
+    const l10n = useContext(L10nContext);
+    const navigation =
+      useNavigation<DrawerNavigationProp<RootDrawerParamList>>();
 
-  if (!asrStore.asrAvailable) {
-    return null;
-  }
+    if (!asrStore.asrAvailable) {
+      return null;
+    }
 
-  // Gate-open but not installed → route to setup, do not record.
-  if (!asrStore.isSelectedTierReady) {
+    // Gate-open but not installed → route to setup, do not record.
+    if (!asrStore.isSelectedTierReady) {
+      return (
+        <Pressable
+          style={[styles.button, style]}
+          onPress={() => navigation.navigate(ROUTES.SETTINGS)}
+          accessibilityRole="button"
+          accessibilityLabel={l10n.voiceInput.setupLabel}
+          testID="mic-button-setup">
+          <MicrophoneIcon
+            width={18}
+            height={18}
+            color={theme.colors.onSurfaceVariant}
+          />
+        </Pressable>
+      );
+    }
+
     return (
       <Pressable
-        style={styles.button}
-        onPress={() => navigation.navigate(ROUTES.SETTINGS)}
+        style={[styles.button, style]}
+        onPress={onStart}
+        disabled={asrStore.captureState === 'requesting_perm'}
         accessibilityRole="button"
-        accessibilityLabel={l10n.voiceInput.setupLabel}
-        testID="mic-button-setup">
+        accessibilityLabel={l10n.voiceInput.micLabel}
+        testID="mic-button">
         <MicrophoneIcon
           width={18}
           height={18}
@@ -52,21 +72,5 @@ export const MicButton: React.FC<MicButtonProps> = observer(({onStart}) => {
         />
       </Pressable>
     );
-  }
-
-  return (
-    <Pressable
-      style={styles.button}
-      onPress={onStart}
-      disabled={asrStore.captureState === 'requesting_perm'}
-      accessibilityRole="button"
-      accessibilityLabel={l10n.voiceInput.micLabel}
-      testID="mic-button">
-      <MicrophoneIcon
-        width={18}
-        height={18}
-        color={theme.colors.onSurfaceVariant}
-      />
-    </Pressable>
-  );
-});
+  },
+);
