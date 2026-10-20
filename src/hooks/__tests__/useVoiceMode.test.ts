@@ -54,6 +54,9 @@ const setAppState = (state: string) =>
 
 type FakeTurn = {
   utterance: Uint8Array;
+  port: {
+    send: (text: string, onTurnCreated: (id: string) => void) => Promise<void>;
+  };
   on: VoiceTurnEvents;
   done: Promise<VoiceTurnOutcome>;
   finish: (outcome: VoiceTurnOutcome) => void;
@@ -66,13 +69,14 @@ function makeEngine() {
     id: 'cascade' as const,
     prepare: jest.fn().mockResolvedValue(undefined),
     release: jest.fn().mockResolvedValue(undefined),
-    runTurn: jest.fn((utterance: Uint8Array, _port, on: VoiceTurnEvents) => {
+    runTurn: jest.fn((utterance: Uint8Array, turnPort, on: VoiceTurnEvents) => {
       let finish!: (outcome: VoiceTurnOutcome) => void;
       const done = new Promise<VoiceTurnOutcome>(resolve => {
         finish = resolve;
       });
       const turn: FakeTurn = {
         utterance,
+        port: turnPort,
         on,
         done,
         finish,
@@ -575,15 +579,72 @@ describe('useVoiceMode', () => {
     speak(500);
     speak(600, SILENT);
     expect(turns).toHaveLength(1);
+    port.send.mockImplementationOnce(
+      (_text: string, onTurnCreated: (id: string) => void) =>
+        new Promise<void>(() => {
+          chatSessionStore.activeSessionId = 'session-created-by-send';
+          onTurnCreated('turn-1');
+        }),
+    );
 
     act(() => {
-      chatSessionStore.activeSessionId = 'session-created-by-send';
+      turns[0].port.send('hello', jest.fn());
     });
     await flush();
 
     expect(turns[0].interrupt).not.toHaveBeenCalled();
     expect(engine.release).not.toHaveBeenCalled();
     expect(voiceModeStore.phase).not.toBe('closed');
+  });
+
+  it('closes when a new chat switches to an existing chat while transcribing', async () => {
+    runInAction(() => {
+      chatSessionStore.activeSessionId = undefined as any;
+    });
+    const {enter, engine, turns} = renderVoiceMode();
+    await enter();
+    speak(500);
+    speak(600, SILENT);
+    expect(voiceModeStore.phase).toBe('transcribing');
+
+    act(() => {
+      chatSessionStore.activeSessionId = 'session-1';
+    });
+    await flush();
+
+    expect(voiceModeStore.phase).toBe('closed');
+    expect(turns[0].interrupt).toHaveBeenCalledTimes(1);
+    expect(engine.release).toHaveBeenCalledTimes(1);
+    expect(port.send).not.toHaveBeenCalled();
+  });
+
+  it("closes on a chat switch once the new chat's turn row exists", async () => {
+    runInAction(() => {
+      chatSessionStore.activeSessionId = undefined as any;
+    });
+    const {enter, turns} = renderVoiceMode();
+    await enter();
+    speak(500);
+    speak(600, SILENT);
+    port.send.mockImplementationOnce(
+      (_text: string, onTurnCreated: (id: string) => void) =>
+        new Promise<void>(() => {
+          chatSessionStore.activeSessionId = 'session-created-by-send';
+          onTurnCreated('turn-1');
+        }),
+    );
+    act(() => {
+      turns[0].port.send('hello', jest.fn());
+    });
+    await flush();
+
+    act(() => {
+      chatSessionStore.activeSessionId = 'session-1';
+    });
+    await flush();
+
+    expect(voiceModeStore.phase).toBe('closed');
+    expect(turns[0].interrupt).toHaveBeenCalledTimes(1);
   });
 
   it('closes when a new chat switches to another chat with no turn running', async () => {

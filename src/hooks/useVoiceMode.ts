@@ -91,8 +91,19 @@ class VoiceModeController {
   private readonly endpointer = new Endpointer();
   private listener: {remove(): void} | null = null;
   private openModelPicker: () => void = () => {};
+  private sendingToNewChat = false;
   private readonly turnPort: VoiceTurnPort = {
-    send: (text, onTurnCreated) => this.port.send(text, onTurnCreated),
+    send: (text, onTurnCreated) => {
+      this.sendingToNewChat = chatSessionStore.activeSessionId == null;
+      return this.port
+        .send(text, turnId => {
+          this.sendingToNewChat = false;
+          onTurnCreated(turnId);
+        })
+        .finally(() => {
+          this.sendingToNewChat = false;
+        });
+    },
     stop: () => this.port.stop(),
   };
 
@@ -147,9 +158,12 @@ class VoiceModeController {
     }
   }
 
-  /** A turn runs from the endpoint until its reply is spoken. */
-  get hasTurn(): boolean {
-    return this.turn !== null;
+  /**
+   * True from a send in a chat that has no session yet until its turn row
+   * exists: the session that appears meanwhile is the one this send created.
+   */
+  get isCreatingChat(): boolean {
+    return this.sendingToNewChat;
   }
 
   chooseSmallerModel(): void {
@@ -381,7 +395,7 @@ export function useVoiceMode({
           sessionId != null &&
           modelId === prevModelId &&
           contextId === prevContextId &&
-          controller.hasTurn;
+          controller.isCreatingChat;
         if (!sessionCreatedBySend) {
           controller.exit();
         }
