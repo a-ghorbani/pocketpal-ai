@@ -1,4 +1,4 @@
 export {VoiceModeView} from './VoiceModeView';
 export {VoiceModeControlsContext, useVoiceModeControls} from './controls';
 export type {VoiceModeControls} from './controls';
-export {voiceStatus} from './status';
+export {useAnnounceVoiceStatus, voiceStatus} from './status';

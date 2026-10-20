@@ -1,3 +1,6 @@
+import {useEffect} from 'react';
+import {AccessibilityInfo} from 'react-native';
+
 import type {VoiceError} from '../../store';
 import type {VoiceVisual} from '../VoiceCloud';
 
@@ -20,16 +23,33 @@ export const voiceStatus = (
   visual: VoiceVisual,
   error: VoiceError | null,
   strings: VoiceModeStrings,
-): {title: string; hint: string} => {
+): {title: string; hint: string; isError: boolean} => {
   const title = strings[`${visual}Title`];
   if (error === 'transcribe_failed') {
-    return {title, hint: strings.errorTranscribe};
+    return {title, hint: strings.errorTranscribe, isError: true};
   }
   if (error === 'reply_failed') {
-    return {title, hint: strings.errorReply};
+    return {title, hint: strings.errorReply, isError: true};
   }
   if (error === 'speech_failed') {
-    return {title, hint: strings.errorSpeech};
+    return {title, hint: strings.errorSpeech, isError: true};
   }
-  return {title, hint: strings[`${visual}Hint`]};
+  return {title, hint: strings[`${visual}Hint`], isError: false};
+};
+
+/** Speaks each new status, and any error, to a screen reader. */
+export const useAnnounceVoiceStatus = (
+  status: {title: string; hint: string; isError: boolean},
+  active: boolean,
+) => {
+  const message = status.isError
+    ? `${status.title}. ${status.hint}`
+    : status.title;
+  useEffect(() => {
+    if (active) {
+      AccessibilityInfo.announceForAccessibilityWithOptions(message, {
+        queue: true,
+      });
+    }
+  }, [active, message]);
 };

@@ -9,7 +9,11 @@ import {voiceModeStore} from '../../store';
 import {L10nContext} from '../../utils';
 import {CloseIcon, MicrophoneIcon, MicrophoneOffIcon} from '../../assets/icons';
 import {VoiceCloud, voiceVisual} from '../VoiceCloud';
-import {useVoiceModeControls, voiceStatus} from '../VoiceModeView';
+import {
+  useAnnounceVoiceStatus,
+  useVoiceModeControls,
+  voiceStatus,
+} from '../VoiceModeView';
 
 const CLOUD_SIZE = 56;
 const CONTROL_SIZE = 48;
@@ -26,6 +30,7 @@ export const VoiceBar: React.FC = observer(() => {
   const {phase, micMuted, lastError, presentation} = voiceModeStore;
   const visual = voiceVisual(phase, micMuted);
   const status = voiceStatus(visual, lastError, l10n.voiceMode);
+  useAnnounceVoiceStatus(status, presentation === 'bar');
 
   const expand = useCallback(() => voiceModeStore.setPresentation('full'), []);
   const swipeUp = useMemo(
@@ -77,9 +82,13 @@ export const VoiceBar: React.FC = observer(() => {
               numberOfLines={1}
               style={[
                 theme.typography.captionM,
-                {color: theme.colors.onSurfaceVariant},
+                {
+                  color: status.isError
+                    ? theme.colors.error
+                    : theme.colors.onSurfaceVariant,
+                },
               ]}>
-              {lastError ? status.hint : l10n.voiceMode.swipeUpHint}
+              {status.isError ? status.hint : l10n.voiceMode.swipeUpHint}
             </Text>
           </View>
         </Pressable>

@@ -12,7 +12,7 @@ import {CloseIcon, MicrophoneIcon, MicrophoneOffIcon} from '../../assets/icons';
 import {VoiceCloud, voiceVisual} from '../VoiceCloud';
 
 import {useVoiceModeControls} from './controls';
-import {voiceStatus} from './status';
+import {useAnnounceVoiceStatus, voiceStatus} from './status';
 
 const CLOUD_SIZE = 280;
 const CONTROL_SIZE = 64;
@@ -29,7 +29,9 @@ export const VoiceModeView: React.FC = observer(() => {
   const {tapCloud, toggleMute, end} = useVoiceModeControls();
   const {phase, micMuted, lastError} = voiceModeStore;
   const visual = voiceVisual(phase, micMuted);
-  const {title, hint} = voiceStatus(visual, lastError, l10n.voiceMode);
+  const status = voiceStatus(visual, lastError, l10n.voiceMode);
+  const {title, hint} = status;
+  useAnnounceVoiceStatus(status, true);
 
   const collapse = useCallback(() => voiceModeStore.setPresentation('bar'), []);
 
@@ -114,16 +116,18 @@ export const VoiceModeView: React.FC = observer(() => {
             <VoiceCloud visual={visual} size={CLOUD_SIZE} />
           </Pressable>
           <View style={[styles.status, {gap: theme.spacing.xs}]}>
-            <Text
-              accessibilityLiveRegion="polite"
-              style={[theme.typography.titleL, {color: theme.colors.text}]}>
+            <Text style={[theme.typography.titleL, {color: theme.colors.text}]}>
               {title}
             </Text>
             <Text
               testID="voice-status-hint"
               style={[
                 theme.typography.bodyS,
-                {color: theme.colors.onSurfaceVariant},
+                {
+                  color: status.isError
+                    ? theme.colors.error
+                    : theme.colors.onSurfaceVariant,
+                },
               ]}>
               {hint}
             </Text>

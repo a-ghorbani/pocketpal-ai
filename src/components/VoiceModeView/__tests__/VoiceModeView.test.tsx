@@ -1,5 +1,5 @@
 import React from 'react';
-import {BackHandler} from 'react-native';
+import {AccessibilityInfo, BackHandler} from 'react-native';
 
 import {runInAction} from 'mobx';
 import {State} from 'react-native-gesture-handler';
@@ -8,7 +8,8 @@ import {
   getByGestureTestId,
 } from 'react-native-gesture-handler/jest-utils';
 
-import {fireEvent, render} from '../../../../jest/test-utils';
+import {act, fireEvent, render} from '../../../../jest/test-utils';
+import {themeFixtures} from '../../../../jest/fixtures/theme';
 import {l10n} from '../../../locales';
 import {voiceModeStore} from '../../../store';
 
@@ -88,6 +89,33 @@ describe('VoiceModeView', () => {
     setSession('listening', false, error);
     const {getByTestId} = renderView();
     expect(getByTestId('voice-status-hint')).toHaveTextContent(text);
+  });
+
+  it('announces each new status, and an error with it', () => {
+    const announce = jest.spyOn(
+      AccessibilityInfo,
+      'announceForAccessibilityWithOptions',
+    );
+    setSession('listening');
+    renderView();
+    expect(announce).toHaveBeenLastCalledWith(strings.listeningTitle, {
+      queue: true,
+    });
+
+    act(() => setSession('listening', false, 'reply_failed'));
+    expect(announce).toHaveBeenLastCalledWith(
+      `${strings.listeningTitle}. ${strings.errorReply}`,
+      {queue: true},
+    );
+    announce.mockRestore();
+  });
+
+  it('colours an error hint as an error', () => {
+    setSession('listening', false, 'speech_failed');
+    const {getByTestId} = renderView();
+    expect(getByTestId('voice-status-hint')).toHaveStyle({
+      color: themeFixtures.lightTheme.colors.error,
+    });
   });
 
   it('routes the cloud, mute and End to the session', () => {
