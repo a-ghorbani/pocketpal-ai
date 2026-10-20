@@ -48,6 +48,7 @@ export const createStyles = ({
       paddingVertical: 4,
       marginLeft: 8,
       flexShrink: 1,
+      minWidth: 32,
     },
     thinkingToggleLeftDisabled: {
       backgroundColor: 'transparent',

@@ -418,6 +418,9 @@ describe('input', () => {
       expect(shrinkOf('active-pal-name')).toBe(1);
       expect(shrinkOf('thinking-toggle')).toBe(1);
       expect(shrinkOf('thinking-toggle-label')).toBe(1);
+      expect(
+        StyleSheet.flatten(getByTestId('thinking-toggle').props.style).minWidth,
+      ).toBe(32);
     } finally {
       runInAction(() => {
         modelStore.activeModelId = originalActiveModelId;
