@@ -8,8 +8,6 @@
  * can assert on the calls forwarded into it.
  */
 
-export {createMarkdownStreamBuffer} from '@pocketpalai/react-native-speech/lib/module/utils/stripMarkdown.js';
-
 type FinishListener = (event: {utteranceId?: string}) => void;
 const finishListeners = new Set<FinishListener>();
 

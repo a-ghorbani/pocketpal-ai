@@ -67,34 +67,6 @@ export class CascadeVoiceEngine implements VoiceEngine {
     let interrupting: Promise<void> | null = null;
     let finished = false;
 
-    const heardText = () => {
-      const spoken = ttsStore.voiceSpoken;
-      return spoken?.messageId === turnId ? spoken.text : '';
-    };
-
-    const markUnheard = async () => {
-      const turn = turnId ? findTurn(turnId) : null;
-      if (turn && !heardText()) {
-        await chatSessionStore.updateMessage(turn.message.id, turn.sessionId, {
-          metadata: {spoken: false},
-        });
-      }
-    };
-
-    const keepOnlySpoken = async () => {
-      const turn = turnId ? findTurn(turnId) : null;
-      const text = heardText();
-      if (turn && text) {
-        await chatSessionStore.rewriteTurnToSpoken(
-          turn.message.id,
-          turn.sessionId,
-          text,
-        );
-      } else {
-        await markUnheard();
-      }
-    };
-
     const interrupt = (): Promise<void> => {
       if (finished) {
         return Promise.resolve();
@@ -111,7 +83,6 @@ export class CascadeVoiceEngine implements VoiceEngine {
         port.stop();
         await sending.catch(() => {});
         await stopping;
-        await keepOnlySpoken();
       })();
       return interrupting;
     };
@@ -147,8 +118,8 @@ export class CascadeVoiceEngine implements VoiceEngine {
       on.transcribed(text);
       const stopWatching = when(
         () => {
-          const spokenId = ttsStore.voiceSpoken?.messageId;
-          return spokenId !== undefined && spokenId === turnId;
+          const startedId = ttsStore.voiceSpeechStarted;
+          return startedId !== null && startedId === turnId;
         },
         () => on.speechStarted(),
       );
@@ -169,7 +140,6 @@ export class CascadeVoiceEngine implements VoiceEngine {
         await interrupting;
         return 'interrupted';
       }
-      await markUnheard();
       const turn = turnId ? findTurn(turnId) : null;
       if (sendFailed || !turn || turn.message.metadata?.interrupted) {
         return 'reply_failed';

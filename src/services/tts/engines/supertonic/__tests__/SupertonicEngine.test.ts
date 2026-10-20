@@ -374,7 +374,6 @@ describe('SupertonicEngine', () => {
       new SupertonicEngine().playStreaming(anyVoice, undefined, {
         language: 'en',
         firstChunk: 'clause',
-        stripMarkdown: false,
         onProgress,
       });
       await flush();
@@ -386,7 +385,6 @@ describe('SupertonicEngine', () => {
         expect.objectContaining({
           language: 'en',
           firstChunk: 'clause',
-          stripMarkdown: false,
         }),
       );
       expect(options).not.toHaveProperty('onProgress');

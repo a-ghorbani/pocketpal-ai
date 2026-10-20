@@ -128,7 +128,6 @@ export const mockChatSessionStore = {
   appendToolCall: jest.fn().mockResolvedValue(undefined),
   appendToolOutcome: jest.fn().mockResolvedValue(undefined),
   finalizeActiveStep: jest.fn().mockResolvedValue(undefined),
-  rewriteTurnToSpoken: jest.fn().mockResolvedValue(undefined),
   // Context-limit banner state
   lastCompletionResult: undefined as CompletionResultSnapshot | undefined,
   dismissedBannerVariants: new Set<BannerVariant>(),

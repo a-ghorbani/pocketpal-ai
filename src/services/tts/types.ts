@@ -60,8 +60,6 @@ export interface StreamingHandle {
 export interface StreamOptions {
   /** `'clause'` starts speaking at the first clause instead of sentence. */
   firstChunk?: FirstChunkMode;
-  /** `false` when the caller has already stripped markdown itself. */
-  stripMarkdown?: boolean;
   /** Called as each chunk starts playing, with its range in the stream. */
   onProgress?: (event: StreamProgressEvent) => void;
 }

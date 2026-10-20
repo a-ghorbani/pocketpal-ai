@@ -4,12 +4,7 @@ import {makeAutoObservable, reaction, runInAction} from 'mobx';
 import {makePersistable} from 'mobx-persist-store';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import DeviceInfo from 'react-native-device-info';
-import {
-  createMarkdownStreamBuffer,
-  type MarkdownStreamBuffer,
-  type StreamProgressEvent,
-  type SupertonicLanguage,
-} from '@pocketpalai/react-native-speech';
+import type {SupertonicLanguage} from '@pocketpalai/react-native-speech';
 
 import {
   getEngine,
@@ -33,10 +28,7 @@ import {
   ThinkingStripper,
   pickThinkingPlaceholder,
 } from '../services/tts/thinkingStripper';
-import {
-  VOICE_FIRST_CHUNK_HOLD_MS,
-  VOICE_SPEECH_CHARS_PER_SECOND,
-} from '../services/voice/constants';
+import {VOICE_FIRST_CHUNK_HOLD_MS} from '../services/voice/constants';
 import {chatSessionStore} from './ChatSessionStore';
 
 /**
@@ -81,58 +73,11 @@ const DEFAULT_SUPERTONIC_LANGUAGE: SupertonicLanguage = 'na';
 const previewMessageId = (voice: Voice): string =>
   `preview:${voice.engine}:${voice.id}`;
 
-/** What a voice reply's stream was fed, for mapping progress back to text. */
+/** A voice reply's stream and its first-chunk hold. */
 type VoiceStream = {
   messageId: string;
-  markdown: MarkdownStreamBuffer;
-  text: string;
-  placeholderRanges: Array<[number, number]>;
-  held: Array<{text: string; placeholder: boolean}> | null;
+  held: string[] | null;
   holdTimer: ReturnType<typeof setTimeout> | null;
-  /** The chunk now playing: its stream range and when it started. */
-  playing: {start: number; end: number; startedAt: number} | null;
-};
-
-const withoutRanges = (
-  text: string,
-  end: number,
-  ranges: Array<[number, number]>,
-): string => {
-  let out = '';
-  let from = 0;
-  const append = (part: string) => {
-    out = /^[.,!?;:]/.test(part) ? out.replace(/\s+$/, '') + part : out + part;
-  };
-  for (const [start, stop] of ranges) {
-    if (start >= end) {
-      break;
-    }
-    append(text.slice(from, start));
-    from = Math.max(from, stop);
-  }
-  if (from < end) {
-    append(text.slice(from, end));
-  }
-  return out.trim();
-};
-
-/**
- * Where the heard part of a chunk ends, when playback stopped `elapsedMs`
- * into it: the played fraction of its estimated length, back to a word end.
- */
-const heardEnd = (
-  text: string,
-  start: number,
-  end: number,
-  elapsedMs: number,
-): number => {
-  const estimatedMs = ((end - start) / VOICE_SPEECH_CHARS_PER_SECOND) * 1000;
-  if (elapsedMs >= estimatedMs) {
-    return end;
-  }
-  const cut = start + Math.floor(((end - start) * elapsedMs) / estimatedMs);
-  const wordEnd = text.slice(start, cut + 1).search(/\s\S*$/);
-  return wordEnd < 0 ? start : start + wordEnd;
 };
 
 /**
@@ -184,8 +129,8 @@ export class TTSStore {
   /** True while a voice-mode session is open; it speaks every reply. */
   voiceOutputActive: boolean = false;
   private holdFirstChunk: boolean = false;
-  /** Text of every chunk of the current voice reply that began playing. */
-  voiceSpoken: {messageId: string; text: string} | null = null;
+  /** Message id of the voice reply whose speech has begun playing. */
+  voiceSpeechStarted: string | null = null;
   /** Message id of the last voice reply whose speech failed. */
   voiceStreamFailed: string | null = null;
   private voiceStream: VoiceStream | null = null;
@@ -495,7 +440,6 @@ export class TTSStore {
     this.streamPlaceholderEmitted = false;
     this.clearVoiceHold();
     if (state.mode === 'streaming') {
-      this.trimVoiceSpokenToHeard();
       try {
         await state.handle.cancel();
       } catch (err) {
@@ -663,25 +607,17 @@ export class TTSStore {
     });
   }
 
-  /**
-   * A voice reply strips markdown here rather than in the engine, so the
-   * stream's progress offsets index the text this store appended.
-   */
   private openVoiceStream(messageId: string): StreamOptions | undefined {
     if (!this.voiceOutputActive) {
       this.voiceStream = null;
       return undefined;
     }
-    this.voiceSpoken = null;
+    this.voiceSpeechStarted = null;
     this.voiceStreamFailed = null;
     const stream: VoiceStream = {
       messageId,
-      markdown: createMarkdownStreamBuffer({firstChunk: 'clause'}),
-      text: '',
-      placeholderRanges: [],
       held: this.holdFirstChunk ? [] : null,
       holdTimer: null,
-      playing: null,
     };
     if (stream.held) {
       stream.holdTimer = setTimeout(
@@ -692,110 +628,28 @@ export class TTSStore {
     this.voiceStream = stream;
     return {
       firstChunk: 'clause',
-      stripMarkdown: false,
-      onProgress: event => this.onVoiceProgress(messageId, event),
+      onProgress: () => this.onVoiceProgress(messageId),
     };
   }
 
-  private onVoiceProgress(messageId: string, event: StreamProgressEvent) {
-    const stream = this.voiceStream;
-    if (stream?.messageId !== messageId) {
-      return;
+  private onVoiceProgress(messageId: string) {
+    if (this.voiceStream?.messageId === messageId) {
+      this.voiceSpeechStarted = messageId;
     }
-    stream.playing = {
-      start: event.streamRange.start,
-      end: event.streamRange.end,
-      startedAt: Date.now(),
-    };
-    this.voiceSpoken = {
-      messageId,
-      text: withoutRanges(
-        stream.text,
-        event.streamRange.end,
-        stream.placeholderRanges,
-      ),
-    };
-  }
-
-  /** A stopped voice reply keeps only the part of its last chunk that played. */
-  private trimVoiceSpokenToHeard() {
-    const stream = this.voiceStream;
-    const playing = stream?.playing;
-    if (
-      !stream ||
-      !playing ||
-      this.voiceSpoken?.messageId !== stream.messageId
-    ) {
-      return;
-    }
-    const end = heardEnd(
-      stream.text,
-      playing.start,
-      playing.end,
-      Date.now() - playing.startedAt,
-    );
-    this.voiceSpoken = {
-      messageId: stream.messageId,
-      text: withoutRanges(stream.text, end, stream.placeholderRanges),
-    };
-    stream.playing = null;
   }
 
   private appendReplyText(handle: StreamingHandle, text: string) {
-    const stream = this.voiceStream;
-    if (!stream) {
+    const held = this.voiceStream?.held;
+    if (held) {
+      held.push(text);
+    } else {
       handle.appendText(text);
-      return;
-    }
-    const emit = stream.markdown.push(text);
-    if (emit) {
-      this.appendVoiceText(handle, stream, emit, false);
     }
   }
 
   private appendPlaceholder(handle: StreamingHandle) {
-    const placeholder = `${pickThinkingPlaceholder()} `;
     this.streamPlaceholderEmitted = true;
-    const stream = this.voiceStream;
-    if (!stream) {
-      handle.appendText(placeholder);
-      return;
-    }
-    const pending = stream.markdown.flush();
-    if (pending) {
-      this.appendVoiceText(handle, stream, pending, false);
-    }
-    this.appendVoiceText(handle, stream, placeholder, true);
-  }
-
-  private flushReplyText(handle: StreamingHandle) {
-    const stream = this.voiceStream;
-    if (!stream) {
-      return;
-    }
-    this.releaseHeldVoiceText(stream.messageId);
-    const tail = stream.markdown.flush();
-    if (tail) {
-      this.appendVoiceText(handle, stream, tail, false);
-    }
-  }
-
-  private appendVoiceText(
-    handle: StreamingHandle,
-    stream: VoiceStream,
-    text: string,
-    placeholder: boolean,
-  ) {
-    if (stream.held) {
-      stream.held.push({text, placeholder});
-      return;
-    }
-    const start = stream.text.length;
-    handle.appendText(text);
-    stream.text += text;
-    if (placeholder) {
-      stream.placeholderRanges.push([start, stream.text.length]);
-    }
+    this.appendReplyText(handle, `${pickThinkingPlaceholder()} `);
   }
 
   private releaseHeldVoiceText(messageId: string) {
@@ -810,8 +664,8 @@ export class TTSStore {
     if (state.mode !== 'streaming' || state.messageId !== messageId) {
       return;
     }
-    for (const {text, placeholder} of held) {
-      this.appendVoiceText(state.handle, stream, text, placeholder);
+    for (const text of held) {
+      state.handle.appendText(text);
     }
   }
 
@@ -876,7 +730,9 @@ export class TTSStore {
           this.appendReplyText(state.handle, leftover);
         }
       }
-      this.flushReplyText(state.handle);
+      if (this.voiceStream) {
+        this.releaseHeldVoiceText(this.voiceStream.messageId);
+      }
       const isVoiceReply = this.voiceStream?.messageId === messageId;
       state.handle
         .finalize()

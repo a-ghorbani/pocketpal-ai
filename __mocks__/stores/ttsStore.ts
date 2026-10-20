@@ -22,7 +22,7 @@ class MockTTSStore {
     | {mode: 'playing'; messageId: string} = {mode: 'idle'};
   autoSpeakEnabled = false;
   voiceOutputActive = false;
-  voiceSpoken: {messageId: string; text: string} | null = null;
+  voiceSpeechStarted: string | null = null;
   voiceStreamFailed: string | null = null;
   get streamsReplies(): boolean {
     return (

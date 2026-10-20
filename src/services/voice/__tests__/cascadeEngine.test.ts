@@ -65,9 +65,9 @@ const createTurn = (port: ReturnType<typeof makePort>, id = 'turn-1') => {
   port.onTurn!(id);
 };
 
-const setSpoken = (messageId: string, text: string) =>
+const startSpeech = (messageId: string) =>
   runInAction(() => {
-    tts.voiceSpoken = {messageId, text};
+    tts.voiceSpeechStarted = messageId;
   });
 
 const setPlayback = (mode: 'idle' | 'streaming') =>
@@ -93,7 +93,7 @@ describe('CascadeVoiceEngine', () => {
     ttsRelease.mockResolvedValue(undefined);
     setPlayback('idle');
     runInAction(() => {
-      tts.voiceSpoken = null;
+      tts.voiceSpeechStarted = null;
       tts.voiceStreamFailed = null;
       tts.autoSpeakEnabled = false;
       tts.currentVoice = {id: 'F1', name: 'F1', engine: 'supertonic'};
@@ -146,7 +146,7 @@ describe('CascadeVoiceEngine', () => {
       createTurn(port);
       setPlayback('streaming');
       expect(on.speechStarted).not.toHaveBeenCalled();
-      setSpoken('turn-1', 'Paris.');
+      startSpeech('turn-1');
       expect(on.speechStarted).toHaveBeenCalledTimes(1);
 
       port.settle();
@@ -217,29 +217,24 @@ describe('CascadeVoiceEngine', () => {
   });
 
   describe('interrupt', () => {
-    it('after the first chunk keeps only the spoken text', async () => {
+    it('stops the speech and the run and leaves the reply as generated', async () => {
       const port = makePort();
       const turn = engine.runTurn(speech(500), port, events());
       await flush();
       createTurn(port);
       setPlayback('streaming');
-      setSpoken('turn-1', 'Paris is the capital.');
+      startSpeech('turn-1');
 
       const interrupting = turn.interrupt();
       expect(ttsStore.stop).toHaveBeenCalled();
       expect(port.stop).toHaveBeenCalled();
-      expect(chatSessionStore.rewriteTurnToSpoken).not.toHaveBeenCalled();
 
       setPlayback('idle');
       port.settle();
       await interrupting;
 
-      expect(chatSessionStore.rewriteTurnToSpoken).toHaveBeenCalledWith(
-        'turn-1',
-        'session-1',
-        'Paris is the capital.',
-      );
       await expect(turn.done).resolves.toBe('interrupted');
+      expect(chatSessionStore.updateMessage).not.toHaveBeenCalled();
     });
 
     it('resolves only once the speech stream is cancelled', async () => {
@@ -269,7 +264,7 @@ describe('CascadeVoiceEngine', () => {
       expect(resolved).toBe(true);
     });
 
-    it('while transcribing cancels the decode and writes nothing', async () => {
+    it('while transcribing cancels the decode and sends nothing', async () => {
       let finish!: (t: {text: string; language: string}) => void;
       transcribe.mockReturnValueOnce(
         new Promise(resolve => {
@@ -287,10 +282,9 @@ describe('CascadeVoiceEngine', () => {
 
       await expect(turn.done).resolves.toBe('interrupted');
       expect(port.send).not.toHaveBeenCalled();
-      expect(chatSessionStore.rewriteTurnToSpoken).not.toHaveBeenCalled();
     });
 
-    it('rewrites when it lands right after the first chunk starts, before speech is handled', async () => {
+    it('ends the turn when it lands right as speech starts', async () => {
       const port = makePort();
       const on = events();
       on.speechStarted.mockImplementation(() => {
@@ -300,16 +294,12 @@ describe('CascadeVoiceEngine', () => {
       await flush();
       createTurn(port);
 
-      setSpoken('turn-1', 'Paris is the capital.');
+      startSpeech('turn-1');
       port.settle();
       setPlayback('idle');
 
       await expect(turn.done).resolves.toBe('interrupted');
-      expect(chatSessionStore.rewriteTurnToSpoken).toHaveBeenCalledWith(
-        'turn-1',
-        'session-1',
-        'Paris is the capital.',
-      );
+      expect(port.stop).toHaveBeenCalled();
     });
 
     it('after the turn finished does nothing', async () => {
@@ -317,76 +307,17 @@ describe('CascadeVoiceEngine', () => {
       const turn = engine.runTurn(speech(500), port, events());
       await flush();
       createTurn(port);
-      setSpoken('turn-1', 'Paris.');
+      startSpeech('turn-1');
       port.settle();
       await turn.done;
 
       await turn.interrupt();
 
       expect(port.stop).not.toHaveBeenCalled();
-      expect(chatSessionStore.rewriteTurnToSpoken).not.toHaveBeenCalled();
+      expect(ttsStore.stop).not.toHaveBeenCalled();
     });
 
-    it('keeps the partial text when only the thinking placeholder has played', async () => {
-      const port = makePort();
-      const turn = engine.runTurn(speech(500), port, events());
-      await flush();
-      createTurn(port);
-      setPlayback('streaming');
-      setSpoken('turn-1', '');
-
-      const interrupting = turn.interrupt();
-      setPlayback('idle');
-      port.settle();
-      await interrupting;
-
-      expect(chatSessionStore.rewriteTurnToSpoken).not.toHaveBeenCalled();
-      await expect(turn.done).resolves.toBe('interrupted');
-    });
-
-    it('does not rewrite from an earlier turn', async () => {
-      setSpoken('turn-0', 'Old reply.');
-      const port = makePort();
-      const turn = engine.runTurn(speech(500), port, events());
-      await flush();
-      createTurn(port);
-
-      const interrupting = turn.interrupt();
-      port.settle();
-      await interrupting;
-
-      expect(chatSessionStore.rewriteTurnToSpoken).not.toHaveBeenCalled();
-      await expect(turn.done).resolves.toBe('interrupted');
-    });
-
-    it('drops the Spoken marker from a reply nobody heard', async () => {
-      const port = makePort();
-      const turn = engine.runTurn(speech(500), port, events());
-      await flush();
-      createTurn(port);
-      port.settle();
-
-      await expect(turn.done).resolves.toBe('answered');
-      expect(chatSessionStore.updateMessage).toHaveBeenCalledWith(
-        'turn-1',
-        'session-1',
-        {metadata: {spoken: false}},
-      );
-    });
-
-    it('keeps the Spoken marker on a reply that was heard', async () => {
-      const port = makePort();
-      const turn = engine.runTurn(speech(500), port, events());
-      await flush();
-      createTurn(port);
-      setSpoken('turn-1', 'Paris.');
-      port.settle();
-
-      await expect(turn.done).resolves.toBe('answered');
-      expect(chatSessionStore.updateMessage).not.toHaveBeenCalled();
-    });
-
-    it('in thinking, before anything was spoken, stops the run and rewrites nothing', async () => {
+    it('in thinking, before anything was spoken, stops the run', async () => {
       const port = makePort();
       const turn = engine.runTurn(speech(500), port, events());
       await flush();
@@ -397,12 +328,8 @@ describe('CascadeVoiceEngine', () => {
       await interrupting;
 
       expect(port.stop).toHaveBeenCalled();
-      expect(chatSessionStore.rewriteTurnToSpoken).not.toHaveBeenCalled();
-      expect(chatSessionStore.updateMessage).toHaveBeenCalledWith(
-        'turn-1',
-        'session-1',
-        {metadata: {spoken: false}},
-      );
+      await expect(turn.done).resolves.toBe('interrupted');
+      expect(chatSessionStore.updateMessage).not.toHaveBeenCalled();
     });
   });
 

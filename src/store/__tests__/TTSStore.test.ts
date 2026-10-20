@@ -144,7 +144,6 @@ jest.mock('../../services/tts', () => {
 
 // Import after mocks
 import {TTSStore} from '../TTSStore';
-import {VOICE_SPEECH_CHARS_PER_SECOND} from '../../services/voice/constants';
 import type {Voice} from '../../services/tts';
 import {ttsRuntime} from '../../services/tts';
 import {chatSessionStore} from '../ChatSessionStore';
@@ -706,10 +705,10 @@ describe('TTSStore', () => {
     const appended = (handle: MockHandle) =>
       handle.appendText.mock.calls.map(c => c[0]).join('');
 
-    const progressTo = (handle: VoiceHandle, end: number, start = 0) =>
+    const progress = (handle: VoiceHandle) =>
       handle.opts.onProgress({
         chunkText: '',
-        streamRange: {start, end},
+        streamRange: {start: 0, end: 1},
         chunkIndex: 0,
         batchIndex: 0,
       });
@@ -733,7 +732,7 @@ describe('TTSStore', () => {
       mockSupertonicPlayStreaming.mockImplementation(defaultPlayStreaming);
     });
 
-    it('opens a voice reply with a clause first chunk, store-side markdown and progress', async () => {
+    it('opens a voice reply with a clause first chunk and progress', async () => {
       const store = await makeVoiceStore();
 
       store.onAssistantMessageStart('msg-1');
@@ -743,12 +742,11 @@ describe('TTSStore', () => {
       expect(handle!.opts).toEqual(
         expect.objectContaining({
           firstChunk: 'clause',
-          stripMarkdown: false,
           language: 'na',
           onProgress: expect.any(Function),
         }),
       );
-      expect(appended(handle!)).toBe('Paris is the capital. ');
+      expect(appended(handle!)).toBe('**Paris** is the capital. More');
     });
 
     it('opens a chat reply with no voice options', async () => {
@@ -762,128 +760,15 @@ describe('TTSStore', () => {
       expect(voiceHandles[0]!.opts).not.toHaveProperty('onProgress');
     });
 
-    it('records the text up to the end of the chunk that began playing', async () => {
+    it('marks the reply whose speech began playing', async () => {
       const store = await makeVoiceStore();
       store.onAssistantMessageStart('msg-1');
-      store.onAssistantMessageChunk(
-        'msg-1',
-        'Paris is the capital. It is famous for art. ',
-      );
+      store.onAssistantMessageChunk('msg-1', 'Paris is the capital. ');
+      expect(store.voiceSpeechStarted).toBeNull();
 
-      progressTo(voiceHandles[0]!, 'Paris is the capital. '.length);
+      progress(voiceHandles[0]!);
 
-      expect(store.voiceSpoken).toEqual({
-        messageId: 'msg-1',
-        text: 'Paris is the capital.',
-      });
-    });
-
-    it('leaves a thinking placeholder out of the spoken text, even inside a chunk', async () => {
-      const store = await makeVoiceStore();
-      store.onAssistantMessageStart('msg-1');
-      store.onAssistantMessageChunk(
-        'msg-1',
-        '<think>hmm</think>Paris is big. ',
-      );
-
-      const handle = voiceHandles[0]!;
-      progressTo(handle, appended(handle).length);
-
-      expect(appended(handle)).not.toBe('Paris is big. ');
-      expect(store.voiceSpoken?.text).toBe('Paris is big.');
-    });
-
-    describe('a stopped voice reply', () => {
-      let now = 0;
-      beforeEach(() => {
-        now = 1_000_000;
-        jest.spyOn(Date, 'now').mockImplementation(() => now);
-      });
-      afterEach(() => {
-        (Date.now as jest.Mock).mockRestore();
-      });
-
-      const chunk =
-        'Rain forms through a process known as condensation and precipitation, ';
-      const msPerChar = 1000 / VOICE_SPEECH_CHARS_PER_SECOND;
-
-      it('keeps a chunk that finished playing', async () => {
-        const store = await makeVoiceStore();
-        store.onAssistantMessageStart('msg-1');
-        store.onAssistantMessageChunk('msg-1', 'Paris is the capital. ');
-        progressTo(voiceHandles[0]!, 22);
-
-        now += 22 * msPerChar;
-        await store.stop();
-
-        expect(store.voiceSpoken?.text).toBe('Paris is the capital.');
-      });
-
-      it('keeps only the words of the playing chunk that were heard', async () => {
-        const store = await makeVoiceStore();
-        store.onAssistantMessageStart('msg-1');
-        store.onAssistantMessageChunk('msg-1', chunk);
-        progressTo(voiceHandles[0]!, chunk.length);
-
-        now += 6 * msPerChar;
-        await store.stop();
-
-        expect(store.voiceSpoken?.text).toBe('Rain');
-      });
-
-      it('keeps nothing of a chunk stopped before its first word ended', async () => {
-        const store = await makeVoiceStore();
-        store.onAssistantMessageStart('msg-1');
-        store.onAssistantMessageChunk('msg-1', chunk);
-        progressTo(voiceHandles[0]!, chunk.length);
-
-        now += 2 * msPerChar;
-        await store.stop();
-
-        expect(store.voiceSpoken?.text).toBe('');
-      });
-
-      it('keeps earlier chunks whole and trims the playing one', async () => {
-        const store = await makeVoiceStore();
-        store.onAssistantMessageStart('msg-1');
-        store.onAssistantMessageChunk(
-          'msg-1',
-          'Rain is natural. ' + chunk + 'It falls. ',
-        );
-        progressTo(voiceHandles[0]!, 17);
-        now += 17 * msPerChar;
-        progressTo(voiceHandles[0]!, 17 + chunk.length, 17);
-
-        now += 21 * msPerChar;
-        await store.stop();
-
-        expect(store.voiceSpoken?.text).toBe(
-          'Rain is natural. Rain forms through a',
-        );
-      });
-    });
-
-    it('leaves no space before punctuation where a placeholder was taken out', async () => {
-      const store = await makeVoiceStore();
-      store.onAssistantMessageStart('msg-1');
-      const words =
-        'one two three four five six seven eight nine ten eleven twelve ';
-      store.onAssistantMessageChunk('msg-1', words);
-      store.onAssistantMessageChunk('msg-1', '<think>hmm</think>. Done. ');
-      const handle = voiceHandles[0]!;
-      progressTo(handle, appended(handle).length);
-
-      expect(store.voiceSpoken?.text).toBe(`${words.trim()}. Done.`);
-    });
-
-    it('keeps the spacing of the reply itself, as in French', async () => {
-      const store = await makeVoiceStore();
-      store.onAssistantMessageStart('msg-1');
-      store.onAssistantMessageChunk('msg-1', 'Bonjour ! Ça va ? ');
-      const handle = voiceHandles[0]!;
-      progressTo(handle, appended(handle).length);
-
-      expect(store.voiceSpoken?.text).toBe('Bonjour ! Ça va ?');
+      expect(store.voiceSpeechStarted).toBe('msg-1');
     });
 
     it('marks a voice reply whose speech failed, until the next voice reply', async () => {
@@ -897,7 +782,7 @@ describe('TTSStore', () => {
 
       store.onAssistantMessageStart('msg-2');
       expect(store.voiceStreamFailed).toBeNull();
-      expect(store.voiceSpoken).toBeNull();
+      expect(store.voiceSpeechStarted).toBeNull();
     });
 
     it('ignores progress from an earlier voice reply', async () => {
@@ -906,9 +791,9 @@ describe('TTSStore', () => {
       store.onAssistantMessageChunk('msg-1', 'Old reply. ');
       store.onAssistantMessageStart('msg-2');
 
-      progressTo(voiceHandles[0]!, 11);
+      progress(voiceHandles[0]!);
 
-      expect(store.voiceSpoken).toBeNull();
+      expect(store.voiceSpeechStarted).toBeNull();
     });
 
     describe('first-chunk hold for a local model', () => {
@@ -937,9 +822,6 @@ describe('TTSStore', () => {
         store.onAssistantMessageComplete('msg-1', 'Paris, the capital.');
         expect(handle.finalize).toHaveBeenCalled();
         expect(appended(handle)).toMatch(/Paris, the capital\.\s*$/);
-
-        progressTo(handle, appended(handle).length);
-        expect(store.voiceSpoken?.text).toBe('Paris, the capital.');
       });
 
       it('releases the held text after the hold while the reply still decodes', async () => {

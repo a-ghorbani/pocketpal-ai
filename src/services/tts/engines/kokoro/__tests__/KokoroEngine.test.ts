@@ -291,13 +291,12 @@ describe('KokoroEngine', () => {
 
       new KokoroEngine().playStreaming(anyVoice, undefined, {
         firstChunk: 'clause',
-        stripMarkdown: false,
         onProgress,
       });
       await waitFor(() =>
         expect(Speech.createSpeechStream).toHaveBeenCalledWith(
           anyVoice.id,
-          expect.objectContaining({firstChunk: 'clause', stripMarkdown: false}),
+          expect.objectContaining({firstChunk: 'clause'}),
         ),
       );
     });

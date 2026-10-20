@@ -26,7 +26,7 @@ export interface VoiceTurnEvents {
 
 export interface VoiceTurn {
   done: Promise<VoiceTurnOutcome>;
-  /** Stops the turn; resolves once the chat holds only what was spoken. */
+  /** Stops the speech and the run; the reply keeps what was generated. */
   interrupt(): Promise<void>;
 }
 
