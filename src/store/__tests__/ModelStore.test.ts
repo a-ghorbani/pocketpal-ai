@@ -5,7 +5,7 @@ import {
   getBackendDevicesInfo,
   initLlama as initializeLlama,
 } from 'llama.rn';
-import {Alert, Platform} from 'react-native';
+import {Alert, AppStateStatus, Platform} from 'react-native';
 
 import {
   downloadManager,
@@ -2052,6 +2052,206 @@ describe('ModelStore', () => {
       await modelStore.handleAppStateChange('active');
 
       expect(mockInitContext).toHaveBeenCalledWith(model);
+    });
+  });
+
+  describe('auto-release across a quick app switch', () => {
+    const originalInitContext = modelStore.initContext;
+    const initLlama = initializeLlama as jest.Mock;
+    const localModel = (name: string) =>
+      ({
+        ...basicModel,
+        id: `author/repo-${name}/${name}.gguf`,
+        name,
+        isDownloaded: true,
+        isLocal: true,
+        origin: ModelOrigin.LOCAL,
+        fullPath: `/path/to/${name}.gguf`,
+      }) as Model;
+    const modelA = localModel('a');
+    const modelB = localModel('b');
+
+    let events: string[];
+    let loaded: Array<{path: string; release: jest.Mock}>;
+    let releaseHeld: () => void;
+    let logSpy: jest.SpyInstance | undefined;
+
+    const mutex = (): Promise<void> =>
+      (modelStore as any).contextOperationMutex;
+
+    const drainMutex = async () => {
+      for (let i = 0; i < 20; i++) {
+        const tail = mutex();
+        await tail;
+        if (tail === mutex()) {
+          return;
+        }
+      }
+      throw new Error('context mutex did not drain');
+    };
+
+    const settle = async (...handlers: Promise<unknown>[]) => {
+      await Promise.all(handlers);
+      await drainMutex();
+    };
+
+    const holdReleaseOfA = () => {
+      const held = new Promise<void>(resolve => {
+        releaseHeld = resolve;
+      });
+      runInAction(() => {
+        modelStore.context = {
+          release: jest.fn(() =>
+            held.then(() => {
+              events.push('release:a');
+            }),
+          ),
+          isMultimodalEnabled: jest.fn().mockResolvedValue(false),
+        } as any;
+        modelStore.activeModelId = modelA.id;
+      });
+    };
+
+    const startQuickSwitch = async (leave: AppStateStatus[]) => {
+      const handlers = leave.map(state =>
+        modelStore.handleAppStateChange(state),
+      );
+      const releaseTail = mutex();
+      handlers.push(modelStore.handleAppStateChange('active'));
+      for (let i = 0; i < 50 && mutex() === releaseTail; i++) {
+        await new Promise(setImmediate);
+      }
+      expect(mutex()).not.toBe(releaseTail);
+      return handlers;
+    };
+
+    beforeEach(() => {
+      modelStore.initContext = originalInitContext;
+      events = [];
+      loaded = [];
+      releaseHeld = () => {};
+      runInAction(() => {
+        modelStore.useAutoRelease = true;
+        modelStore.benchmarkActive = false;
+        modelStore.appState = 'active';
+        modelStore.wasAutoReleased = false;
+        modelStore.lastAutoReleasedModelId = undefined;
+        modelStore.modelLoadError = null;
+        modelStore.isContextLoading = false;
+        modelStore.models = [modelA, modelB];
+      });
+      expect(modelStore.isAutoReleaseEnabled).toBe(true);
+      initLlama.mockReset();
+      initLlama.mockImplementation(async ({model}: {model: string}) => {
+        events.push(`init:${model}`);
+        const ctx = {
+          release: jest.fn().mockResolvedValue(undefined),
+          isMultimodalEnabled: jest.fn().mockResolvedValue(false),
+        };
+        loaded.push({path: model, release: ctx.release});
+        return ctx;
+      });
+    });
+
+    afterEach(async () => {
+      logSpy?.mockRestore();
+      logSpy = undefined;
+      releaseHeld();
+      await drainMutex();
+      (modelStore as any).contextOperationMutex = Promise.resolve();
+      (modelStore as any).pendingModelId = null;
+      runInAction(() => {
+        modelStore.isContextLoading = false;
+        modelStore.context = undefined;
+        modelStore.engine = undefined;
+        modelStore.activeModelId = undefined;
+        modelStore.wasAutoReleased = false;
+        modelStore.lastAutoReleasedModelId = undefined;
+        modelStore.appState = 'active';
+      });
+      initLlama.mockReset();
+    });
+
+    it.each([
+      ['android', ['background']],
+      ['ios', ['inactive', 'background']],
+    ] as Array<[string, AppStateStatus[]]>)(
+      '%s sequence reloads the model only after the in-flight release finishes',
+      async (_platform, leave) => {
+        holdReleaseOfA();
+
+        const handlers = await startQuickSwitch(leave);
+        expect(initLlama).not.toHaveBeenCalled();
+
+        releaseHeld();
+        await settle(...handlers);
+
+        expect(events).toEqual(['release:a', `init:${modelA.fullPath}`]);
+        expect(initLlama).toHaveBeenCalledTimes(1);
+        expect(modelStore.appState).toBe('active');
+        expect(modelStore.wasAutoReleased).toBe(false);
+        expect(modelStore.lastAutoReleasedModelId).toBeUndefined();
+      },
+    );
+
+    it('slow return reloads the model after the finished release', async () => {
+      holdReleaseOfA();
+      releaseHeld();
+
+      await modelStore.handleAppStateChange('background');
+      await settle(modelStore.handleAppStateChange('active'));
+
+      expect(events).toEqual(['release:a', `init:${modelA.fullPath}`]);
+      expect(initLlama).toHaveBeenCalledTimes(1);
+      expect(modelStore.appState).toBe('active');
+    });
+
+    it('late release keeps the last app state received', async () => {
+      holdReleaseOfA();
+
+      const handlers = [
+        modelStore.handleAppStateChange('background'),
+        modelStore.handleAppStateChange('active'),
+      ];
+      releaseHeld();
+      await settle(...handlers);
+
+      expect(modelStore.appState).toBe('active');
+    });
+
+    it('model loaded by hand after a quick switch is released and reloaded on the next trip', async () => {
+      holdReleaseOfA();
+      const trip = [
+        modelStore.handleAppStateChange('background'),
+        modelStore.handleAppStateChange('active'),
+      ];
+      releaseHeld();
+      await settle(...trip);
+
+      const initCallsBeforeSelect = initLlama.mock.calls.length;
+      await modelStore.selectModel(modelB);
+
+      logSpy = jest.spyOn(console, 'log');
+      await modelStore.handleAppStateChange('background');
+
+      expect(logSpy).toHaveBeenCalledWith(
+        'App state change: active → background',
+      );
+      expect(
+        loaded.find(ctx => ctx.path === modelB.fullPath)?.release,
+      ).toHaveBeenCalled();
+      expect(modelStore.wasAutoReleased).toBe(true);
+      expect(modelStore.lastAutoReleasedModelId).toBe(modelB.id);
+
+      await settle(modelStore.handleAppStateChange('active'));
+
+      const pathsSinceSelect = initLlama.mock.calls
+        .slice(initCallsBeforeSelect)
+        .map(([params]) => params.model);
+      expect(pathsSinceSelect).toEqual([modelB.fullPath, modelB.fullPath]);
+      expect(modelStore.appState).toBe('active');
+      expect(modelStore.wasAutoReleased).toBe(false);
+      expect(modelStore.lastAutoReleasedModelId).toBeUndefined();
     });
   });
 
@@ -5736,6 +5936,37 @@ describe('ModelStore', () => {
       await modelStore.handleAppStateChange('active');
 
       expect(probe).not.toHaveBeenCalled();
+    });
+
+    it('keeps a remote model across a quick switch and probes on return', async () => {
+      runInAction(() => {
+        modelStore.useAutoRelease = true;
+        modelStore.appState = 'active';
+        modelStore.engine = {stopCompletion: jest.fn()} as any;
+        modelStore.wasAutoReleased = false;
+        modelStore.lastAutoReleasedModelId = undefined;
+      });
+      const engine = modelStore.engine;
+      expect(modelStore.isAutoReleaseEnabled).toBe(true);
+      expect(modelStore.activeModel?.origin).toBe(ModelOrigin.REMOTE);
+      const originalReleaseContext = modelStore.releaseContext;
+      const originalInitContext = modelStore.initContext;
+      const releaseContext = jest.fn(originalReleaseContext);
+      const initContext = jest.fn(originalInitContext);
+      modelStore.releaseContext = releaseContext;
+      modelStore.initContext = initContext;
+
+      const leaving = modelStore.handleAppStateChange('background');
+      await modelStore.handleAppStateChange('active');
+      await leaving;
+      modelStore.releaseContext = originalReleaseContext;
+      modelStore.initContext = originalInitContext;
+
+      expect(releaseContext).not.toHaveBeenCalled();
+      expect(initContext).not.toHaveBeenCalled();
+      expect(modelStore.wasAutoReleased).toBe(false);
+      expect(modelStore.engine).toBe(engine);
+      expect(probe).toHaveBeenCalledTimes(1);
     });
 
     it('survives a re-probe that rejects', async () => {
