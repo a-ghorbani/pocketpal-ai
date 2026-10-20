@@ -16,7 +16,6 @@ import {
   ASR_DEVICE_TIERS,
   ASR_DISK_HEADROOM_FACTOR,
   ASR_INSUFFICIENT_STORAGE,
-  ASR_IOS_MEMORY_HEADROOM_FACTOR,
   ASR_LEVEL_HISTORY,
   ASR_TIERS,
   ASR_TIER_ORDER,
@@ -28,8 +27,6 @@ import type {
   AsrTier,
   CaptureState,
 } from '../services/asr';
-
-import NativeHardwareInfo from '../specs/NativeHardwareInfo';
 
 import {modelStore} from './ModelStore';
 
@@ -106,19 +103,23 @@ export class ASRStore {
   }
 
   /**
-   * Whether whisper fits next to the loaded chat model. Android's free-memory
-   * figure can be far off (#982), so Android budgets against total RAM; iOS
-   * reports the app's own remaining limit, which is reliable.
+   * Whether whisper fits next to the loaded chat model, by the app's estimate
+   * of both. Android's free-memory figure can be far off (#982), so Android
+   * budgets against total RAM. iOS does not count mmap'd chat weights against
+   * the app, so iOS uses the chat model's own load ceiling instead.
    */
   async hasMemoryForCapture(): Promise<boolean> {
     const whisperBytes = ASR_TIERS[this.selectedTier].runtimeBytes;
+    const chatBytes = modelStore.loadedModelBytes ?? 0;
     try {
       if (Platform.OS === 'ios') {
-        const available = await NativeHardwareInfo.getAvailableMemory();
-        return available >= whisperBytes * ASR_IOS_MEMORY_HEADROOM_FACTOR;
+        const ceiling = Math.max(
+          modelStore.largestSuccessfulLoad ?? 0,
+          modelStore.availableMemoryCeiling ?? 0,
+        );
+        return ceiling === 0 || chatBytes + whisperBytes <= ceiling;
       }
       const total = await DeviceInfo.getTotalMemory();
-      const chatBytes = modelStore.loadedModelBytes ?? 0;
       return chatBytes + whisperBytes <= total * ASR_ANDROID_RAM_SHARE;
     } catch (err) {
       console.warn('[ASRStore] memory check failed:', err);

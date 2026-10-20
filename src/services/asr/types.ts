@@ -34,7 +34,8 @@ export type AsrErrorKind =
   | 'permission_blocked'
   | 'transcribe_failed'
   | 'not_installed'
-  | 'insufficient_memory';
+  | 'insufficient_memory'
+  | 'mic_unavailable';
 
 /** Static per-tier model manifest (URL + filename + size). */
 export interface AsrTierManifest {

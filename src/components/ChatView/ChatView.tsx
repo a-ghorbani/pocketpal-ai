@@ -223,6 +223,8 @@ function asrErrorMessage(kind: AsrErrorKind, l10n: L10n): string {
       return l10n.voiceInput.errorNotInstalled;
     case 'insufficient_memory':
       return l10n.voiceInput.errorInsufficientMemory;
+    case 'mic_unavailable':
+      return l10n.voiceInput.errorMicUnavailable;
   }
 }
 

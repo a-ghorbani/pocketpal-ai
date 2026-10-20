@@ -1599,6 +1599,7 @@
     "errorTranscribeFailed": "Couldn't transcribe — please try again.",
     "errorNotInstalled": "Download a voice model to use voice input.",
     "errorInsufficientMemory": "Not enough memory for voice input with this chat model. Try a smaller model.",
+    "errorMicUnavailable": "The microphone isn't responding. Try again, or switch to a smaller chat model.",
     "openSettingsLabel": "Open Settings",
     "insufficientStorage": "Not enough space — free up {{requiredMb}} MB to install this model ({{freeMb}} MB available)."
   },
