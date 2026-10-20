@@ -1599,7 +1599,6 @@
     "insufficientStorage": "Not enough space — free up {{requiredMb}} MB to install this model ({{freeMb}} MB available)."
   },
   "voiceMode": {
-    "spokenMarker": "Spoken",
     "startingTitle": "Starting",
     "startingHint": "Loading speech recognition and the voice. The first time can take a little longer.",
     "startFailed": "Couldn't start voice mode. Try again.",

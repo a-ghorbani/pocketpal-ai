@@ -1,1 +1,0 @@
-export {SpokenMarker} from './SpokenMarker';
