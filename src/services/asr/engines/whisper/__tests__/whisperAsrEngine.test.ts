@@ -366,7 +366,7 @@ describe('WhisperAsrEngine', () => {
   });
 
   describe('residency and release', () => {
-    const installed = () => {
+    const markTierInstalled = () => {
       mockExists.mockResolvedValue(true);
       mockReadFile.mockResolvedValue(
         JSON.stringify({version: ASR_MODEL_VERSION}),
@@ -374,7 +374,7 @@ describe('WhisperAsrEngine', () => {
     };
 
     it('preload loads the context that a later transcription reuses', async () => {
-      installed();
+      markTierInstalled();
       mockInitWhisper.mockResolvedValue({
         transcribeData: jest.fn().mockReturnValue({
           stop: jest.fn(),
@@ -391,7 +391,7 @@ describe('WhisperAsrEngine', () => {
     });
 
     it('release stops an in-flight decode and frees the context only after it settles', async () => {
-      installed();
+      markTierInstalled();
       const events: string[] = [];
       let finish: (r: object) => void = () => {};
       const stop = jest.fn(async () => {
@@ -423,7 +423,7 @@ describe('WhisperAsrEngine', () => {
     });
 
     it('release after a finished transcription frees the context without a stop', async () => {
-      installed();
+      markTierInstalled();
       const stop = jest.fn();
       const release = jest.fn().mockResolvedValue(undefined);
       mockInitWhisper.mockResolvedValue({
