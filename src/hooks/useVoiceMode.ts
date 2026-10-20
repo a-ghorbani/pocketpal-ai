@@ -18,6 +18,7 @@ import {TTS_ENGINE_RUNTIME_BYTES, ttsRuntime} from '../services/tts';
 import {
   Endpointer,
   VOICE_CAPTURE_SETTLE_MS,
+  VOICE_MIC_WATCHDOG_MS,
   isMicGranted,
   isVoiceModeVoice,
   voiceMemoryFit,
@@ -29,6 +30,10 @@ import type {
   VoiceTurnOutcome,
   VoiceTurnPort,
 } from '../services/voice';
+import {
+  onAudioInterruption,
+  type AudioInterruption,
+} from '../services/voice/audioInterruptions';
 import {CascadeVoiceEngine} from '../services/voice/cascadeEngine';
 import {
   asrStore,
@@ -87,6 +92,9 @@ class VoiceModeController {
   private readonly endpointer = new Endpointer();
   private listener: {remove(): void} | null = null;
   private captureSettled: Promise<void> = Promise.resolve();
+  private micWatchdog: ReturnType<typeof setTimeout> | null = null;
+  private micRetried = false;
+  private audioInterrupted = false;
   private openModelPicker: () => void = () => {};
   private sendingToNewChat = false;
   private readonly turnPort: VoiceTurnPort = {
@@ -219,6 +227,8 @@ class VoiceModeController {
     }
     this.open = false;
     this.session++;
+    this.audioInterrupted = false;
+    this.micRetried = false;
     voiceModeStore.setPhase('closed');
     this.stopCapture();
     const turn = this.turn;
@@ -282,12 +292,55 @@ class VoiceModeController {
     }
   }
 
+  /** A call, alarm or Siri took the audio session: stop, then resume after. */
+  onAudioInterruption({type}: AudioInterruption): void {
+    if (!this.open) {
+      return;
+    }
+    if (type === 'began') {
+      this.audioInterrupted = true;
+      this.stopCapture();
+      if (
+        voiceModeStore.phase === 'speaking' ||
+        voiceModeStore.phase === 'thinking'
+      ) {
+        this.turn?.interrupt();
+      }
+      return;
+    }
+    this.audioInterrupted = false;
+    if (voiceModeStore.phase === 'listening') {
+      this.stopCapture();
+      this.startCapture(this.session);
+    }
+  }
+
   private isListening(session: number): boolean {
     return (
       session === this.session &&
       voiceModeStore.phase === 'listening' &&
-      !voiceModeStore.micMuted
+      !voiceModeStore.micMuted &&
+      !this.audioInterrupted
     );
+  }
+
+  /** No audio since the mic started: restart it once, then give up. */
+  private watchMic(session: number): void {
+    this.micWatchdog = setTimeout(() => {
+      this.micWatchdog = null;
+      if (session !== this.session) {
+        return;
+      }
+      if (this.micRetried) {
+        console.warn('[voiceMode] microphone delivered no audio');
+        warn(uiStore.l10n.voiceMode.micFailed);
+        this.exit();
+        return;
+      }
+      this.micRetried = true;
+      this.stopCapture();
+      this.startCapture(session);
+    }, VOICE_MIC_WATCHDOG_MS);
   }
 
   private async startCapture(session: number): Promise<void> {
@@ -311,14 +364,17 @@ class VoiceModeController {
       }
       this.endpointer.reset();
       this.listener = AudioRecord.on('data', (chunk: string) => {
-        if (
-          this.listener &&
-          this.endpointer.push(toByteArray(chunk)) === 'endpoint'
-        ) {
+        if (!this.listener) {
+          return;
+        }
+        this.clearMicWatchdog();
+        this.micRetried = false;
+        if (this.endpointer.push(toByteArray(chunk)) === 'endpoint') {
           this.endUtterance(session);
         }
       });
       AudioRecord.start();
+      this.watchMic(session);
     } catch (err) {
       console.warn('[voiceMode] microphone failed:', err);
       if (session === this.session) {
@@ -328,7 +384,15 @@ class VoiceModeController {
     }
   }
 
+  private clearMicWatchdog(): void {
+    if (this.micWatchdog) {
+      clearTimeout(this.micWatchdog);
+      this.micWatchdog = null;
+    }
+  }
+
   private stopCapture(): void {
+    this.clearMicWatchdog();
     this.endpointer.reset();
     if (!this.listener) {
       return;
@@ -392,6 +456,9 @@ export function useVoiceMode({
 
   useEffect(() => {
     controller.attach();
+    const interruptions = onAudioInterruption(event =>
+      controller.onAudioInterruption(event),
+    );
     let appState = AppState.currentState;
     const subscription = AppState.addEventListener(
       'change',
@@ -424,6 +491,7 @@ export function useVoiceMode({
       {equals: comparer.structural},
     );
     return () => {
+      interruptions.remove();
       subscription.remove();
       disposeChatWatch();
       controller.dispose();

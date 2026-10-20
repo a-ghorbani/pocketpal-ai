@@ -177,6 +177,10 @@ jest.mock('../src/repositories/ChatSessionRepository', () => ({
       .chatSessionRepository,
 }));
 
+jest.mock('../src/services/voice/audioInterruptions', () => ({
+  onAudioInterruption: jest.fn(() => ({remove: jest.fn()})),
+}));
+
 jest.mock('../src/utils/keepAwake', () => ({
   acquireKeepAwake: jest.fn(() => jest.fn()),
 }));

@@ -17,3 +17,10 @@ export const VOICE_MODE_UNLOCKED_DEFAULT = false;
  * recorder when it ends, so a restart sooner can lose the new recorder.
  */
 export const VOICE_CAPTURE_SETTLE_MS = 150;
+
+/**
+ * A started mic that delivers no audio within this long (ms) is restarted
+ * once, then voice mode ends. iOS reports a failed recorder start only in
+ * its log.
+ */
+export const VOICE_MIC_WATCHDOG_MS = 1000;

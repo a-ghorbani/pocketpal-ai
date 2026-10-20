@@ -19,9 +19,13 @@ import {
 } from '../../store';
 import {acquireKeepAwake} from '../../utils/keepAwake';
 import {ModelOrigin} from '../../utils/types';
-import {VOICE_CAPTURE_SETTLE_MS} from '../../services/voice';
+import {
+  VOICE_CAPTURE_SETTLE_MS,
+  VOICE_MIC_WATCHDOG_MS,
+} from '../../services/voice';
 import type {VoiceTurnEvents, VoiceTurnOutcome} from '../../services/voice';
 
+import {onAudioInterruption} from '../../services/voice/audioInterruptions';
 import {useVoiceMode} from '../useVoiceMode';
 
 let mockBlur: (() => void) | undefined;
@@ -833,6 +837,94 @@ describe('useVoiceMode', () => {
     runInAction(() => {
       tts.userTTSOverride = null;
       (asrStore as any).userASROverride = null;
+    });
+  });
+
+  describe('a mic that delivers no audio', () => {
+    afterEach(() => {
+      jest.useRealTimers();
+    });
+
+    const advance = (ms: number) =>
+      act(async () => {
+        jest.advanceTimersByTime(ms);
+      });
+
+    it('is restarted once, then voice mode ends with a warning', async () => {
+      jest.useFakeTimers();
+      const {enter, engine} = renderVoiceMode();
+      await enter();
+
+      await advance(VOICE_MIC_WATCHDOG_MS);
+      await advance(VOICE_CAPTURE_SETTLE_MS);
+      expect(AudioRecord.init).toHaveBeenCalledTimes(2);
+      expect(voiceModeStore.phase).toBe('listening');
+
+      await advance(VOICE_MIC_WATCHDOG_MS);
+      expect(voiceModeStore.phase).toBe('closed');
+      expect(engine.release).toHaveBeenCalledTimes(1);
+      expect(uiStore.setChatWarning).toHaveBeenCalledWith(
+        expect.objectContaining({message: uiStore.l10n.voiceMode.micFailed}),
+      );
+    });
+
+    it('is left alone once audio arrives', async () => {
+      jest.useFakeTimers();
+      const {enter} = renderVoiceMode();
+      await enter();
+
+      speak(100, SILENT);
+      await advance(VOICE_MIC_WATCHDOG_MS * 3);
+
+      expect(AudioRecord.init).toHaveBeenCalledTimes(1);
+      expect(voiceModeStore.phase).toBe('listening');
+    });
+  });
+
+  describe('audio interruptions', () => {
+    const interruption = (type: 'began' | 'ended') => {
+      const calls = (onAudioInterruption as jest.Mock).mock.calls;
+      act(() => calls[calls.length - 1][0]({type}));
+    };
+
+    it('stop the mic while listening and restart it when they end', async () => {
+      const {enter} = renderVoiceMode();
+      await enter();
+
+      interruption('began');
+      expect(AudioRecord.stop).toHaveBeenCalledTimes(1);
+
+      interruption('ended');
+      await settleMic();
+      expect(AudioRecord.start).toHaveBeenCalledTimes(2);
+      expect(voiceModeStore.phase).toBe('listening');
+    });
+
+    it('interrupt a spoken reply and keep the mic off until they end', async () => {
+      const {enter, turns} = renderVoiceMode();
+      await enter();
+      speak(500);
+      speak(600, SILENT);
+      act(() => turns[0].on.speechStarted());
+
+      interruption('began');
+      expect(turns[0].interrupt).toHaveBeenCalledTimes(1);
+      await flush();
+      await settleMic();
+      expect(voiceModeStore.phase).toBe('listening');
+      expect(AudioRecord.start).toHaveBeenCalledTimes(1);
+
+      interruption('ended');
+      await settleMic();
+      expect(AudioRecord.start).toHaveBeenCalledTimes(2);
+    });
+
+    it('are not followed once the chat screen is gone', async () => {
+      const {hook} = renderVoiceMode();
+      const subscription = (onAudioInterruption as jest.Mock).mock.results[0]
+        .value;
+      hook.unmount();
+      expect(subscription.remove).toHaveBeenCalledTimes(1);
     });
   });
 
