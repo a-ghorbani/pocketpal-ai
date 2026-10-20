@@ -40,4 +40,15 @@ describe('VoiceAdapter', () => {
       );
     });
   });
+
+  it('ignores a cleared input', () => {
+    const {getByTestId} = render(<VoiceAdapter />);
+
+    fireEvent.changeText(getByTestId('voice-command-input'), '');
+
+    expect(runVoiceCommand).not.toHaveBeenCalled();
+    expect(getByTestId('voice-command-result').props.accessibilityLabel).toBe(
+      '',
+    );
+  });
 });
