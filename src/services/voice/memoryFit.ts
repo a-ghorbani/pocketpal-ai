@@ -15,12 +15,17 @@ export interface VoiceMemoryInputs {
   ttsLoaded: boolean;
 }
 
+/** One model's share of `neededBytes`, as the platform's rule counts it. */
+export interface VoiceMemoryRow {
+  kind: 'chat' | 'stt' | 'tts';
+  bytes: number;
+}
+
 export interface VoiceMemoryFit {
   status: MemoryFitStatus;
   breakdown: {
-    chatBytes: number;
-    sttBytes: number;
-    ttsBytes: number;
+    /** Sums to `neededBytes`; iOS has no chat row (its figure already holds it). */
+    rows: VoiceMemoryRow[];
     neededBytes: number;
     availableBytes: number;
   };
@@ -38,28 +43,35 @@ export const voiceMemoryFit = ({
   ttsBytes,
   ttsLoaded,
 }: VoiceMemoryInputs): VoiceMemoryFit => {
-  const breakdown = {chatBytes, sttBytes, ttsBytes};
   if (!memory) {
     return {
       status: 'fits',
-      breakdown: {...breakdown, neededBytes: 0, availableBytes: 0},
+      breakdown: {rows: [], neededBytes: 0, availableBytes: 0},
     };
   }
-  let neededBytes: number;
+  let rows: VoiceMemoryRow[];
   let availableBytes: number;
   if (memory.os === 'ios') {
-    neededBytes =
-      (sttBytes + (ttsLoaded ? 0 : ttsBytes)) * ASR_IOS_MEMORY_HEADROOM_FACTOR;
+    const factor = ASR_IOS_MEMORY_HEADROOM_FACTOR;
+    rows = [
+      {kind: 'stt', bytes: sttBytes * factor},
+      {kind: 'tts', bytes: ttsLoaded ? 0 : ttsBytes * factor},
+    ];
     availableBytes = memory.availableBytes;
   } else {
-    neededBytes = chatBytes + sttBytes + ttsBytes;
+    rows = [
+      {kind: 'chat', bytes: chatBytes},
+      {kind: 'stt', bytes: sttBytes},
+      {kind: 'tts', bytes: ttsBytes},
+    ];
     availableBytes = memory.totalBytes * ASR_ANDROID_RAM_SHARE;
   }
+  const neededBytes = rows.reduce((sum, row) => sum + row.bytes, 0);
   let status: MemoryFitStatus = 'fits';
   if (!whisperFits(memory, chatBytes, sttBytes)) {
     status = 'wont_fit';
   } else if (neededBytes > availableBytes) {
     status = 'tight';
   }
-  return {status, breakdown: {...breakdown, neededBytes, availableBytes}};
+  return {status, breakdown: {rows, neededBytes, availableBytes}};
 };

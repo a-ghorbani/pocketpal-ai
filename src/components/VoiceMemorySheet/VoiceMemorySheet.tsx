@@ -42,28 +42,22 @@ export const VoiceMemorySheet: React.FC<VoiceMemorySheetProps> = ({
     1,
   );
 
-  const rows = breakdown
-    ? [
-        {
-          key: 'chat',
-          label: t(strings.memoryChatRow, {name: chatModelName}),
-          bytes: breakdown.chatBytes,
-          color: theme.colors.primary,
-        },
-        {
-          key: 'stt',
-          label: strings.memorySttRow,
-          bytes: breakdown.sttBytes,
-          color: theme.colors.tertiary,
-        },
-        {
-          key: 'voice',
-          label: t(strings.memoryVoiceRow, {name: voiceName}),
-          bytes: breakdown.ttsBytes,
-          color: theme.colors.iconModelTypeAudio,
-        },
-      ]
-    : [];
+  const rowStyle = {
+    chat: {
+      label: t(strings.memoryChatRow, {name: chatModelName}),
+      color: theme.colors.primary,
+    },
+    stt: {label: strings.memorySttRow, color: theme.colors.tertiary},
+    tts: {
+      label: t(strings.memoryVoiceRow, {name: voiceName}),
+      color: theme.colors.iconModelTypeAudio,
+    },
+  };
+  const rows = (breakdown?.rows ?? []).map(row => ({
+    key: row.kind,
+    bytes: row.bytes,
+    ...rowStyle[row.kind],
+  }));
 
   return (
     <Sheet

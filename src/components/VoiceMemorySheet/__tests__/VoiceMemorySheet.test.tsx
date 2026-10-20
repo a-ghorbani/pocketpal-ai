@@ -23,9 +23,11 @@ jest.mock('../../Sheet', () => {
 
 const strings = l10n.en.voiceMode;
 const breakdown = {
-  chatBytes: 2.9e9,
-  sttBytes: 0.33e9,
-  ttsBytes: 0.5e9,
+  rows: [
+    {kind: 'chat' as const, bytes: 2.9e9},
+    {kind: 'stt' as const, bytes: 0.33e9},
+    {kind: 'tts' as const, bytes: 0.5e9},
+  ],
   neededBytes: 3.73e9,
   availableBytes: 3.33e9,
 };
@@ -71,6 +73,27 @@ describe('VoiceMemorySheet', () => {
     expect(getByText(strings.memoryWontFitTitle)).toBeTruthy();
     expect(queryByTestId('voice-memory-continue')).toBeNull();
     expect(getByTestId('voice-memory-smaller-model')).toBeTruthy();
+  });
+
+  it('on iOS shows only the rows it counts, so a larger chat model never appears', () => {
+    const {queryByText, getByTestId, getByText} = renderSheet({
+      status: 'tight',
+      breakdown: {
+        rows: [
+          {kind: 'stt', bytes: 0.4e9},
+          {kind: 'tts', bytes: 0.6e9},
+        ],
+        neededBytes: 1e9,
+        availableBytes: 0.8e9,
+      },
+    });
+
+    expect(queryByText('Chat model · Gemma')).toBeNull();
+    expect(getByText(strings.memorySttRow)).toBeTruthy();
+    expect(getByTestId('voice-memory-tts')).toHaveTextContent(/600 MB/);
+    expect(getByTestId('voice-memory-needed')).toHaveTextContent(
+      /1 GB of 800 MB available/,
+    );
   });
 
   it('is hidden without a fit to show', () => {

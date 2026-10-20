@@ -30,9 +30,11 @@ describe('voiceMemoryFit', () => {
     });
     expect(fit.status).toBe('fits');
     expect(fit.breakdown).toEqual({
-      chatBytes: 1.4e9,
-      sttBytes,
-      ttsBytes,
+      rows: [
+        {kind: 'chat', bytes: 1.4e9},
+        {kind: 'stt', bytes: sttBytes},
+        {kind: 'tts', bytes: ttsBytes},
+      ],
       neededBytes: 1.4e9 + sttBytes + ttsBytes,
       availableBytes: 7.4e9 * 0.45,
     });
@@ -60,6 +62,21 @@ describe('voiceMemoryFit', () => {
     };
     expect(voiceMemoryFit({...inputs, ttsLoaded: false}).status).toBe('tight');
     expect(voiceMemoryFit({...inputs, ttsLoaded: true}).status).toBe('fits');
+  });
+
+  it('on iOS counts only whisper and an unloaded voice, with headroom', () => {
+    const inputs = {memory: ios(3e9), chatBytes: 2e9, sttBytes, ttsBytes};
+    expect(voiceMemoryFit({...inputs, ttsLoaded: false}).breakdown).toEqual({
+      rows: [
+        {kind: 'stt', bytes: sttBytes * 1.2},
+        {kind: 'tts', bytes: ttsBytes * 1.2},
+      ],
+      neededBytes: (sttBytes + ttsBytes) * 1.2,
+      availableBytes: 3e9,
+    });
+    expect(
+      voiceMemoryFit({...inputs, ttsLoaded: true}).breakdown.rows[1],
+    ).toEqual({kind: 'tts', bytes: 0});
   });
 
   it("on iOS won't fit when whisper alone lacks headroom", () => {
