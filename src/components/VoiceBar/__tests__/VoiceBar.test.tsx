@@ -47,6 +47,26 @@ describe('VoiceBar', () => {
     expect(voiceModeStore.phase).toBe('speaking');
   });
 
+  it('a quick upward flick opens the voice view, however short', () => {
+    renderBar();
+    fireGestureHandler(getByGestureTestId('voice-bar-swipe'), [
+      {state: State.BEGAN, translationY: 0, velocityY: 0},
+      {state: State.ACTIVE, translationY: -10, velocityY: -1200},
+      {state: State.END, translationY: -20, velocityY: -1200},
+    ]);
+    expect(voiceModeStore.setPresentation).toHaveBeenCalledWith('full');
+  });
+
+  it('a short, slow drag up settles back without opening', () => {
+    renderBar();
+    fireGestureHandler(getByGestureTestId('voice-bar-swipe'), [
+      {state: State.BEGAN, translationY: 0, velocityY: 0},
+      {state: State.ACTIVE, translationY: -10, velocityY: -100},
+      {state: State.END, translationY: -20, velocityY: -100},
+    ]);
+    expect(voiceModeStore.setPresentation).not.toHaveBeenCalled();
+  });
+
   it('a swipe up opens the voice view', () => {
     renderBar();
     fireGestureHandler(getByGestureTestId('voice-bar-swipe'), [

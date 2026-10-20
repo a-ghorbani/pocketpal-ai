@@ -3,6 +3,12 @@ import {Pressable, StyleSheet, Text, View} from 'react-native';
 
 import {observer} from 'mobx-react';
 import {Gesture, GestureDetector} from 'react-native-gesture-handler';
+import Animated, {
+  useAnimatedStyle,
+  useReducedMotion,
+  useSharedValue,
+  withSpring,
+} from 'react-native-reanimated';
 
 import {useTheme} from '../../hooks';
 import {voiceModeStore} from '../../store';
@@ -18,6 +24,10 @@ import {
 const CLOUD_SIZE = 56;
 const CONTROL_SIZE = 48;
 const SWIPE_DISTANCE = 40;
+/** An upward flick this fast (pt/s) opens the view whatever the distance. */
+const FLICK_VELOCITY = 800;
+/** How far the bar follows the finger up before the view takes over. */
+const MAX_LIFT = 120;
 
 /**
  * The collapsed voice session in the composer's place: the chat stays
@@ -33,25 +43,42 @@ export const VoiceBar: React.FC = observer(() => {
   useAnnounceVoiceStatus(status, presentation === 'bar');
 
   const expand = useCallback(() => voiceModeStore.setPresentation('full'), []);
+  const reduceMotion = useReducedMotion();
+  const lift = useSharedValue(0);
+  const liftStyle = useAnimatedStyle(() => ({
+    transform: [{translateY: lift.value}, {scale: 1 + lift.value / 4000}],
+  }));
   const swipeUp = useMemo(
     () =>
       Gesture.Pan()
         .runOnJS(true)
         .activeOffsetY(-15)
         .withTestId('voice-bar-swipe')
+        .onUpdate(event => {
+          if (!reduceMotion) {
+            lift.value = Math.max(-MAX_LIFT, Math.min(0, event.translationY));
+          }
+        })
         .onEnd(event => {
-          if (event.translationY < -SWIPE_DISTANCE) {
+          const expands =
+            event.translationY < -SWIPE_DISTANCE ||
+            event.velocityY < -FLICK_VELOCITY;
+          if (!reduceMotion) {
+            lift.value = withSpring(0);
+          }
+          if (expands) {
             expand();
           }
         }),
-    [expand],
+    [expand, lift, reduceMotion],
   );
 
   return (
     <GestureDetector gesture={swipeUp}>
-      <View
+      <Animated.View
         testID="voice-bar"
         style={[
+          liftStyle,
           styles.bar,
           {
             backgroundColor: theme.colors.secondaryDefault,
@@ -128,7 +155,7 @@ export const VoiceBar: React.FC = observer(() => {
           style={[styles.control, {backgroundColor: theme.colors.primary}]}>
           <CloseIcon width={20} height={20} fill={theme.colors.onPrimary} />
         </Pressable>
-      </View>
+      </Animated.View>
     </GestureDetector>
   );
 });

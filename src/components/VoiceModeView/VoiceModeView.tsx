@@ -1,8 +1,30 @@
-import React, {useCallback, useContext, useEffect, useMemo} from 'react';
-import {BackHandler, Pressable, StyleSheet, Text, View} from 'react-native';
+import React, {
+  useCallback,
+  useContext,
+  useEffect,
+  useMemo,
+  useRef,
+} from 'react';
+import {
+  BackHandler,
+  Pressable,
+  StyleSheet,
+  Text,
+  View,
+  useWindowDimensions,
+} from 'react-native';
 
 import {observer} from 'mobx-react';
 import {Gesture, GestureDetector} from 'react-native-gesture-handler';
+import Animated, {
+  Extrapolation,
+  interpolate,
+  useAnimatedStyle,
+  useReducedMotion,
+  useSharedValue,
+  withSpring,
+  withTiming,
+} from 'react-native-reanimated';
 import {useSafeAreaInsets} from 'react-native-safe-area-context';
 
 import {useTheme} from '../../hooks';
@@ -17,6 +39,9 @@ import {useAnnounceVoiceStatus, voiceStatus} from './status';
 const CLOUD_SIZE = 280;
 const CONTROL_SIZE = 64;
 const PULL_DISTANCE = 80;
+/** A downward flick this fast (pt/s) collapses the view whatever the distance. */
+const FLICK_VELOCITY = 800;
+const SLIDE_MS = 220;
 
 /**
  * Full-screen voice view over the chat. Pulling down or Android back
@@ -35,6 +60,42 @@ export const VoiceModeView: React.FC = observer(() => {
 
   const collapse = useCallback(() => voiceModeStore.setPresentation('bar'), []);
 
+  const {height} = useWindowDimensions();
+  const reduceMotion = useReducedMotion();
+  const offset = useSharedValue(reduceMotion ? 0 : height);
+  const collapseTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => {
+    if (!reduceMotion) {
+      offset.value = withTiming(0, {duration: SLIDE_MS});
+    }
+    return () => {
+      if (collapseTimer.current) {
+        clearTimeout(collapseTimer.current);
+      }
+    };
+  }, [offset, reduceMotion]);
+
+  const dragStyle = useAnimatedStyle(() => ({
+    opacity: interpolate(
+      offset.value,
+      [0, height],
+      [1, 0.4],
+      Extrapolation.CLAMP,
+    ),
+    transform: [
+      {translateY: offset.value},
+      {
+        scale: interpolate(
+          offset.value,
+          [0, height],
+          [1, 0.94],
+          Extrapolation.CLAMP,
+        ),
+      },
+    ],
+  }));
+
   useEffect(() => {
     const subscription = BackHandler.addEventListener(
       'hardwareBackPress',
@@ -52,12 +113,29 @@ export const VoiceModeView: React.FC = observer(() => {
         .runOnJS(true)
         .activeOffsetY(15)
         .withTestId('voice-view-pull')
-        .onEnd(event => {
-          if (event.translationY > PULL_DISTANCE) {
-            collapse();
+        .onUpdate(event => {
+          if (!reduceMotion) {
+            offset.value = Math.max(0, event.translationY);
           }
+        })
+        .onEnd(event => {
+          const collapses =
+            event.translationY > PULL_DISTANCE ||
+            event.velocityY > FLICK_VELOCITY;
+          if (!collapses) {
+            if (!reduceMotion) {
+              offset.value = withSpring(0);
+            }
+            return;
+          }
+          if (reduceMotion) {
+            collapse();
+            return;
+          }
+          offset.value = withTiming(height, {duration: SLIDE_MS});
+          collapseTimer.current = setTimeout(collapse, SLIDE_MS);
         }),
-    [collapse],
+    [collapse, height, offset, reduceMotion],
   );
 
   const muteColors = micMuted
@@ -72,8 +150,9 @@ export const VoiceModeView: React.FC = observer(() => {
 
   return (
     <GestureDetector gesture={pullDown}>
-      <View
+      <Animated.View
         style={[
+          dragStyle,
           styles.root,
           {
             backgroundColor: theme.colors.background,
@@ -164,7 +243,7 @@ export const VoiceModeView: React.FC = observer(() => {
             <CloseIcon width={24} height={24} fill={theme.colors.onPrimary} />
           </Pressable>
         </View>
-      </View>
+      </Animated.View>
     </GestureDetector>
   );
 });

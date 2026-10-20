@@ -2,6 +2,7 @@ import React from 'react';
 import {AccessibilityInfo, BackHandler} from 'react-native';
 
 import {runInAction} from 'mobx';
+import * as Reanimated from 'react-native-reanimated';
 import {State} from 'react-native-gesture-handler';
 import {
   fireGestureHandler,
@@ -146,18 +147,72 @@ describe('VoiceModeView', () => {
     expect(mic.props.accessibilityState).toEqual({checked: false});
   });
 
-  it('pulling down collapses to the bar without changing the phase', () => {
-    setSession('speaking');
-    renderView();
+  describe('pulling down', () => {
+    beforeEach(() => {
+      jest.useFakeTimers();
+    });
+    afterEach(() => {
+      jest.useRealTimers();
+    });
 
-    fireGestureHandler(getByGestureTestId('voice-view-pull'), [
-      {state: State.BEGAN, translationY: 0},
-      {state: State.ACTIVE, translationY: 60},
-      {state: State.END, translationY: 120},
-    ]);
+    const pull = (translationY: number, velocityY = 0) =>
+      fireGestureHandler(getByGestureTestId('voice-view-pull'), [
+        {state: State.BEGAN, translationY: 0, velocityY: 0},
+        {state: State.ACTIVE, translationY: translationY / 2, velocityY},
+        {state: State.END, translationY, velocityY},
+      ]);
 
-    expect(voiceModeStore.setPresentation).toHaveBeenCalledWith('bar');
-    expect(voiceModeStore.phase).toBe('speaking');
+    it('slides the view away, then shows the bar with the phase unchanged', () => {
+      setSession('speaking');
+      renderView();
+
+      pull(120);
+      expect(voiceModeStore.setPresentation).not.toHaveBeenCalled();
+      expect(Reanimated.withTiming).toHaveBeenCalled();
+
+      act(() => {
+        jest.runOnlyPendingTimers();
+      });
+      expect(voiceModeStore.setPresentation).toHaveBeenCalledWith('bar');
+      expect(voiceModeStore.phase).toBe('speaking');
+    });
+
+    it('collapses on a quick flick, however short', () => {
+      setSession('listening');
+      renderView();
+
+      pull(30, 1200);
+      act(() => {
+        jest.runOnlyPendingTimers();
+      });
+
+      expect(voiceModeStore.setPresentation).toHaveBeenCalledWith('bar');
+    });
+
+    it('springs back after a short, slow pull', () => {
+      setSession('listening');
+      renderView();
+
+      pull(30, 100);
+      act(() => {
+        jest.runOnlyPendingTimers();
+      });
+
+      expect(voiceModeStore.setPresentation).not.toHaveBeenCalled();
+      expect(Reanimated.withSpring).toHaveBeenCalledWith(0);
+    });
+
+    it('with reduced motion, snaps straight to the bar', () => {
+      (Reanimated.useReducedMotion as jest.Mock).mockReturnValue(true);
+      setSession('listening');
+      renderView();
+
+      pull(120);
+
+      expect(voiceModeStore.setPresentation).toHaveBeenCalledWith('bar');
+      expect(Reanimated.withTiming).not.toHaveBeenCalled();
+      (Reanimated.useReducedMotion as jest.Mock).mockReturnValue(false);
+    });
   });
 
   it('a screen reader can show the chat: a button, the escape gesture, a modal view', () => {
@@ -170,18 +225,6 @@ describe('VoiceModeView', () => {
 
     fireEvent(getByTestId('voice-view'), 'accessibilityEscape');
     expect(voiceModeStore.setPresentation).toHaveBeenCalledTimes(2);
-  });
-
-  it('a short pull does not collapse', () => {
-    setSession('listening');
-    renderView();
-
-    fireGestureHandler(getByGestureTestId('voice-view-pull'), [
-      {state: State.BEGAN, translationY: 0},
-      {state: State.END, translationY: 30},
-    ]);
-
-    expect(voiceModeStore.setPresentation).not.toHaveBeenCalled();
   });
 
   it('Android back collapses to the bar', () => {
