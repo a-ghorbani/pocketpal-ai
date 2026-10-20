@@ -2253,6 +2253,42 @@ describe('ModelStore', () => {
       expect(modelStore.wasAutoReleased).toBe(false);
       expect(modelStore.lastAutoReleasedModelId).toBeUndefined();
     });
+
+    it('leaving again after the reload is queued keeps the reload owed', async () => {
+      holdReleaseOfA();
+
+      const handlers = await startQuickSwitch(['background']);
+      handlers.push(modelStore.handleAppStateChange('background'));
+      releaseHeld();
+      await settle(...handlers);
+
+      expect(initLlama).toHaveBeenCalledTimes(1);
+      expect(loaded[0].release).toHaveBeenCalled();
+      expect(modelStore.wasAutoReleased).toBe(true);
+      expect(modelStore.lastAutoReleasedModelId).toBe(modelA.id);
+      expect(modelStore.appState).toBe('background');
+    });
+
+    it('failed reload is not retried on a return with nothing new released', async () => {
+      runInAction(() => {
+        modelStore.wasAutoReleased = true;
+        modelStore.lastAutoReleasedModelId = modelA.id;
+        modelStore.appState = 'background';
+      });
+      const initContext = jest.fn().mockRejectedValue(new Error('load failed'));
+      modelStore.initContext = initContext;
+
+      await expect(modelStore.handleAppStateChange('active')).rejects.toThrow(
+        'load failed',
+      );
+      expect(modelStore.wasAutoReleased).toBe(false);
+      expect(modelStore.lastAutoReleasedModelId).toBeUndefined();
+
+      await modelStore.handleAppStateChange('background');
+      await modelStore.handleAppStateChange('active');
+
+      expect(initContext).toHaveBeenCalledTimes(1);
+    });
   });
 
   describe('benchmark mode', () => {

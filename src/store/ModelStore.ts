@@ -1160,11 +1160,11 @@ class ModelStore {
       const model = this.models.find(
         m => m.id === this.lastAutoReleasedModelId && m.isDownloaded,
       );
+      this.clearAutoReleaseFlags();
       if (model) {
         console.log('Reloading auto-released model:', model.id);
         await this.initContext(model);
       }
-      this.clearAutoReleaseFlags();
     }
   };
 
