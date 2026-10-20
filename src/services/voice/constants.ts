@@ -21,9 +21,9 @@ export const VOICE_CAPTURE_SETTLE_MS = 150;
 /**
  * A started mic that delivers no audio within this long (ms) is restarted
  * once, then voice mode ends. iOS reports a failed recorder start only in
- * its log.
+ * its log. Bringing up a Bluetooth headset's mic route takes 1–3 s.
  */
-export const VOICE_MIC_WATCHDOG_MS = 1000;
+export const VOICE_MIC_WATCHDOG_MS = 3000;
 
 /**
  * Loading Whisper and the voice longer than this (ms) ends the start with a

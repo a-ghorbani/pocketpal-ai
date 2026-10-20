@@ -923,7 +923,10 @@ describe('useVoiceMode', () => {
       const {enter, engine} = renderVoiceMode();
       await enter();
 
-      await advance(VOICE_MIC_WATCHDOG_MS);
+      await advance(2500);
+      expect(AudioRecord.init).toHaveBeenCalledTimes(1);
+
+      await advance(VOICE_MIC_WATCHDOG_MS - 2500);
       await advance(VOICE_CAPTURE_SETTLE_MS);
       expect(AudioRecord.init).toHaveBeenCalledTimes(2);
       expect(voiceModeStore.phase).toBe('listening');
