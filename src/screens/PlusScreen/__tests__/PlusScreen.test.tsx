@@ -104,7 +104,7 @@ describe('PlusScreen', () => {
     runInAction(() => {
       deviceRam.ramBytes = 8e9;
     });
-    openURL = jest.spyOn(Linking, 'openURL').mockResolvedValue(true);
+    openURL = jest.spyOn(Linking, 'openURL').mockResolvedValue(undefined);
   });
 
   afterEach(() => {

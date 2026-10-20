@@ -2,6 +2,7 @@ import React from 'react';
 import {
   AccessibilityInfo,
   BackHandler,
+  type HostInstance,
   Platform,
   StyleSheet,
   View,
@@ -29,12 +30,12 @@ jest.mock('../../../services/plus/deviceRam', () => ({
   ensureRamRead: jest.fn(() => Promise.resolve()),
 }));
 
-type Handler = () => boolean | null | undefined;
+type Handler = Parameters<typeof BackHandler.addEventListener>[1];
 let backHandlers: Handler[] = [];
 
 const pressBack = (): boolean => {
   for (const handler of [...backHandlers].reverse()) {
-    if (handler()) {
+    if (handler({type: 'hardwareBackPress', timeStamp: 0})) {
       return true;
     }
   }
@@ -191,7 +192,7 @@ describe.each([
   }
   let calls: FocusCall[];
   let screen: ReturnType<typeof render>;
-  const slotView = React.createRef<View>();
+  const slotView = React.createRef<HostInstance>();
 
   const renderApp = () => {
     screen = render(

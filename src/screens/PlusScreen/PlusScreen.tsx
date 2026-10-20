@@ -2,6 +2,7 @@ import React, {useContext, useState} from 'react';
 import {
   AccessibilityInfo,
   ActivityIndicator,
+  type HostInstance,
   Linking,
   Platform,
   Pressable,
@@ -42,7 +43,7 @@ const announce = (text: string) => {
 
 interface PlusScreenProps {
   onClose: () => void;
-  headlineRef?: React.Ref<Text>;
+  headlineRef?: React.Ref<HostInstance>;
 }
 
 export const PlusScreen: React.FC<PlusScreenProps> = observer(props => {

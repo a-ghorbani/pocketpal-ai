@@ -4,7 +4,6 @@ import {
   BackHandler,
   type HostInstance,
   Platform,
-  Text,
   View,
 } from 'react-native';
 import {observer} from 'mobx-react';
@@ -31,7 +30,7 @@ const moveScreenReaderFocus = (target: HostInstance) =>
 export const PlusHost: React.FC = observer(() => {
   const theme = useTheme();
   const shown = plusGate.request !== null;
-  const headlineRef = useRef<Text>(null);
+  const headlineRef = useRef<HostInstance>(null);
   const wasShown = useRef(false);
   const unlocked = isPlusUnlocked();
   const wasUnlocked = useRef(unlocked);

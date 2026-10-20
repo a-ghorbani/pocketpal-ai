@@ -1,5 +1,5 @@
 import React from 'react';
-import {View} from 'react-native';
+import {type HostInstance, View} from 'react-native';
 
 import {fireEvent, render} from '../../../../jest/test-utils';
 
@@ -51,7 +51,7 @@ describe('HeaderLeft', () => {
 
   it('keeps a newer claim when an older screen blurs', () => {
     render(<HeaderLeft />);
-    const other = React.createRef<View>();
+    const other = React.createRef<HostInstance>();
     render(<View ref={other} />);
     const blur = focus();
 

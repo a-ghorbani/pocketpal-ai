@@ -1,5 +1,5 @@
 import React, {useCallback, useRef} from 'react';
-import {TouchableOpacity, View} from 'react-native';
+import {TouchableOpacity, type HostInstance} from 'react-native';
 import {DrawerNavigationProp} from '@react-navigation/drawer';
 import {useFocusEffect, useNavigation} from '@react-navigation/native';
 
@@ -11,7 +11,7 @@ import {useTheme} from '../../hooks';
 export const HeaderLeft: React.FC = () => {
   const theme = useTheme();
   const navigation = useNavigation<DrawerNavigationProp<any>>();
-  const buttonRef = useRef<View>(null);
+  const buttonRef = useRef<HostInstance>(null);
 
   useFocusEffect(
     useCallback(() => {

@@ -127,11 +127,7 @@ const App = observer(() => {
 
   return (
     <GestureHandlerRootView style={styles.root}>
-      <StatusBar
-        barStyle={theme.dark ? 'light-content' : 'dark-content'}
-        translucent
-        backgroundColor="transparent"
-      />
+      <StatusBar barStyle={theme.dark ? 'light-content' : 'dark-content'} />
       {__E2E__ ? <AutomationBridge /> : null}
       <SafeAreaProvider>
         <KeyboardProvider statusBarTranslucent navigationBarTranslucent>

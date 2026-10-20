@@ -122,13 +122,11 @@ describe('status bar', () => {
     (useTheme as jest.Mock).mockReturnValue(themeFixtures.lightTheme);
   });
 
-  it('shows dark icons over the light theme without an opaque bar', () => {
+  it('shows dark icons over the light theme', () => {
     const result = render(<App />);
 
     expect(result.UNSAFE_getByType(StatusBar).props).toMatchObject({
       barStyle: 'dark-content',
-      translucent: true,
-      backgroundColor: 'transparent',
     });
   });
 
@@ -139,8 +137,6 @@ describe('status bar', () => {
 
     expect(result.UNSAFE_getByType(StatusBar).props).toMatchObject({
       barStyle: 'light-content',
-      translucent: true,
-      backgroundColor: 'transparent',
     });
   });
 });
