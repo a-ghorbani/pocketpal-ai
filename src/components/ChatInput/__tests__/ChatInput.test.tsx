@@ -1,6 +1,6 @@
 import {fireEvent, waitFor} from '@testing-library/react-native';
 import * as React from 'react';
-import {ScrollView, Alert} from 'react-native';
+import {ScrollView, Alert, StyleSheet} from 'react-native';
 import {launchCamera, launchImageLibrary} from 'react-native-image-picker';
 import {runInAction} from 'mobx';
 
@@ -370,6 +370,52 @@ describe('input', () => {
     const palButton = getByLabelText('Select Pal');
     fireEvent.press(palButton);
     expect(onPalBtnPress).toHaveBeenCalledTimes(1);
+  });
+
+  it('truncates a long pal name to one line so the controls fit', async () => {
+    const pal = await palStore.createPal({
+      type: 'local',
+      name: 'A Pal With A Name Too Long For The Composer Row',
+      systemPrompt: 'Test pal',
+      originalSystemPrompt: 'Test pal',
+      isSystemPromptChanged: false,
+      useAIPrompt: false,
+      parameters: {},
+      parameterSchema: [],
+      source: 'local',
+    });
+    const originalActivePalId = Object.getOwnPropertyDescriptor(
+      chatSessionStore,
+      'activePalId',
+    );
+    Object.defineProperty(chatSessionStore, 'activePalId', {
+      get: jest.fn(() => pal.id),
+      configurable: true,
+    });
+    const originalActiveModelId = modelStore.activeModelId;
+    modelStore.activeModelId = 'model-1';
+
+    const {getByTestId, unmount} = render(
+      <UserContext.Provider value={user}>
+        <ChatInput
+          {...{onSendPress: jest.fn(), sendButtonVisibilityMode: 'editing'}}
+        />
+      </UserContext.Provider>,
+    );
+
+    const palName = getByTestId('active-pal-name');
+    expect(palName.props.numberOfLines).toBe(1);
+    expect(StyleSheet.flatten(palName.props.style).flexShrink).toBe(1);
+
+    unmount();
+    modelStore.activeModelId = originalActiveModelId;
+    if (originalActivePalId) {
+      Object.defineProperty(
+        chatSessionStore,
+        'activePalId',
+        originalActivePalId,
+      );
+    }
   });
 
   it('shows video button for video pal type', async () => {

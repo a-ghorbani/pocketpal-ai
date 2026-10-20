@@ -594,6 +594,8 @@ export const ChatInput = observer(
                   {/* Pal Name Display */}
                   {currentActivePal?.name && hasActiveModel && (
                     <Text
+                      testID="active-pal-name"
+                      numberOfLines={1}
                       style={[
                         styles.palNameCompact,
                         {

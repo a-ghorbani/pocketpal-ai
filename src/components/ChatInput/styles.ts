@@ -63,6 +63,7 @@ export const createStyles = ({
       flexDirection: 'row',
       alignItems: 'center',
       gap: 4,
+      flexShrink: 1,
     },
     inputWrapper: {
       flexDirection: 'row',
@@ -153,6 +154,7 @@ export const createStyles = ({
     },
     // New compact pal name styles for control bar
     palNameCompact: {
+      flexShrink: 1,
       fontSize: 10,
       ...fontStyles.regular,
       color: theme.colors.inverseOnSurface,
