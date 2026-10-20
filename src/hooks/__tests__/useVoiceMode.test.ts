@@ -603,6 +603,50 @@ describe('useVoiceMode', () => {
       expect(AudioRecord.start).toHaveBeenCalledTimes(2);
     });
 
+    const enterSlowly = async () => {
+      const voice = renderVoiceMode();
+      let loaded!: () => void;
+      voice.engine.prepare.mockReturnValueOnce(
+        new Promise<void>(resolve => {
+          loaded = resolve;
+        }),
+      );
+      let entering!: Promise<void>;
+      act(() => {
+        entering = voice.hook.result.current.requestEntry({openModelPicker});
+      });
+      await flush();
+      expect(voiceModeStore.phase).toBe('starting');
+      const finishLoading = () =>
+        act(async () => {
+          loaded();
+          await entering;
+        });
+      return {...voice, finishLoading};
+    };
+
+    it('muted while starting, listens with the mic off once loaded', async () => {
+      const {hook, finishLoading} = await enterSlowly();
+
+      act(() => hook.result.current.toggleMute());
+      await finishLoading();
+
+      expect(voiceModeStore.phase).toBe('listening');
+      expect(voiceModeStore.micMuted).toBe(true);
+      expect(AudioRecord.init).not.toHaveBeenCalled();
+    });
+
+    it('muted then unmuted while starting, opens the mic once loaded', async () => {
+      const {hook, finishLoading} = await enterSlowly();
+
+      act(() => hook.result.current.toggleMute());
+      act(() => hook.result.current.toggleMute());
+      await finishLoading();
+
+      expect(voiceModeStore.micMuted).toBe(false);
+      expect(AudioRecord.start).toHaveBeenCalledTimes(1);
+    });
+
     it('while speaking leaves the mic off after the turn', async () => {
       const {enter, hook, turns} = renderVoiceMode();
       await enter();
