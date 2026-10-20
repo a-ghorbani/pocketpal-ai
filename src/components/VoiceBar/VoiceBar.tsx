@@ -9,6 +9,7 @@ import Animated, {
   useSharedValue,
   withSpring,
 } from 'react-native-reanimated';
+import {scheduleOnRN} from 'react-native-worklets';
 
 import {useTheme} from '../../hooks';
 import {voiceModeStore} from '../../store';
@@ -51,7 +52,6 @@ export const VoiceBar: React.FC = observer(() => {
   const swipeUp = useMemo(
     () =>
       Gesture.Pan()
-        .runOnJS(true)
         .activeOffsetY(-15)
         .withTestId('voice-bar-swipe')
         .onUpdate(event => {
@@ -67,7 +67,7 @@ export const VoiceBar: React.FC = observer(() => {
             lift.value = withSpring(0);
           }
           if (expands) {
-            expand();
+            scheduleOnRN(expand);
           }
         }),
     [expand, lift, reduceMotion],

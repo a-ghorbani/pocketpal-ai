@@ -7,7 +7,7 @@ import {
   getByGestureTestId,
 } from 'react-native-gesture-handler/jest-utils';
 
-import {fireEvent, render} from '../../../../jest/test-utils';
+import {act, fireEvent, render} from '../../../../jest/test-utils';
 import {l10n} from '../../../locales';
 import {voiceModeStore} from '../../../store';
 
@@ -47,13 +47,14 @@ describe('VoiceBar', () => {
     expect(voiceModeStore.phase).toBe('speaking');
   });
 
-  it('a quick upward flick opens the voice view, however short', () => {
+  it('a quick upward flick opens the voice view, however short', async () => {
     renderBar();
     fireGestureHandler(getByGestureTestId('voice-bar-swipe'), [
       {state: State.BEGAN, translationY: 0, velocityY: 0},
       {state: State.ACTIVE, translationY: -10, velocityY: -1200},
       {state: State.END, translationY: -20, velocityY: -1200},
     ]);
+    await act(async () => {});
     expect(voiceModeStore.setPresentation).toHaveBeenCalledWith('full');
   });
 
@@ -67,13 +68,14 @@ describe('VoiceBar', () => {
     expect(voiceModeStore.setPresentation).not.toHaveBeenCalled();
   });
 
-  it('a swipe up opens the voice view', () => {
+  it('a swipe up opens the voice view', async () => {
     renderBar();
     fireGestureHandler(getByGestureTestId('voice-bar-swipe'), [
       {state: State.BEGAN, translationY: 0},
       {state: State.ACTIVE, translationY: -30},
       {state: State.END, translationY: -60},
     ]);
+    await act(async () => {});
     expect(voiceModeStore.setPresentation).toHaveBeenCalledWith('full');
   });
 

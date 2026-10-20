@@ -1,10 +1,4 @@
-import React, {
-  useCallback,
-  useContext,
-  useEffect,
-  useMemo,
-  useRef,
-} from 'react';
+import React, {useCallback, useContext, useEffect, useMemo} from 'react';
 import {
   BackHandler,
   Pressable,
@@ -25,6 +19,7 @@ import Animated, {
   withSpring,
   withTiming,
 } from 'react-native-reanimated';
+import {scheduleOnRN} from 'react-native-worklets';
 import {useSafeAreaInsets} from 'react-native-safe-area-context';
 
 import {useTheme} from '../../hooks';
@@ -63,17 +58,11 @@ export const VoiceModeView: React.FC = observer(() => {
   const {height} = useWindowDimensions();
   const reduceMotion = useReducedMotion();
   const offset = useSharedValue(reduceMotion ? 0 : height);
-  const collapseTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
     if (!reduceMotion) {
       offset.value = withTiming(0, {duration: SLIDE_MS});
     }
-    return () => {
-      if (collapseTimer.current) {
-        clearTimeout(collapseTimer.current);
-      }
-    };
   }, [offset, reduceMotion]);
 
   const dragStyle = useAnimatedStyle(() => ({
@@ -110,7 +99,6 @@ export const VoiceModeView: React.FC = observer(() => {
   const pullDown = useMemo(
     () =>
       Gesture.Pan()
-        .runOnJS(true)
         .activeOffsetY(15)
         .withTestId('voice-view-pull')
         .onUpdate(event => {
@@ -129,11 +117,14 @@ export const VoiceModeView: React.FC = observer(() => {
             return;
           }
           if (reduceMotion) {
-            collapse();
+            scheduleOnRN(collapse);
             return;
           }
-          offset.value = withTiming(height, {duration: SLIDE_MS});
-          collapseTimer.current = setTimeout(collapse, SLIDE_MS);
+          offset.value = withTiming(height, {duration: SLIDE_MS}, finished => {
+            if (finished) {
+              scheduleOnRN(collapse);
+            }
+          });
         }),
     [collapse, height, offset, reduceMotion],
   );

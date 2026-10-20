@@ -177,6 +177,10 @@ jest.mock('../src/repositories/ChatSessionRepository', () => ({
       .chatSessionRepository,
 }));
 
+jest.mock('react-native-worklets', () =>
+  require('react-native-worklets/lib/module/mock'),
+);
+
 // React Native provides requestIdleCallback; Jest's environment doesn't.
 (global as any).requestIdleCallback = (callback: () => void) => callback();
 

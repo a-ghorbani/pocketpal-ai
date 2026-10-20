@@ -148,66 +148,69 @@ describe('VoiceModeView', () => {
   });
 
   describe('pulling down', () => {
-    beforeEach(() => {
-      jest.useFakeTimers();
-    });
-    afterEach(() => {
-      jest.useRealTimers();
-    });
-
     const pull = (translationY: number, velocityY = 0) =>
       fireGestureHandler(getByGestureTestId('voice-view-pull'), [
         {state: State.BEGAN, translationY: 0, velocityY: 0},
         {state: State.ACTIVE, translationY: translationY / 2, velocityY},
         {state: State.END, translationY, velocityY},
       ]);
+    const finishSlide = (finished: boolean) =>
+      act(async () => {
+        const calls = (Reanimated.withTiming as jest.Mock).mock.calls;
+        calls[calls.length - 1][2](finished);
+      });
 
-    it('slides the view away, then shows the bar with the phase unchanged', () => {
+    it('slides the view away, then shows the bar with the phase unchanged', async () => {
       setSession('speaking');
       renderView();
 
       pull(120);
+      await act(async () => {});
       expect(voiceModeStore.setPresentation).not.toHaveBeenCalled();
-      expect(Reanimated.withTiming).toHaveBeenCalled();
 
-      act(() => {
-        jest.runOnlyPendingTimers();
-      });
+      await finishSlide(true);
       expect(voiceModeStore.setPresentation).toHaveBeenCalledWith('bar');
       expect(voiceModeStore.phase).toBe('speaking');
     });
 
-    it('collapses on a quick flick, however short', () => {
+    it('stays open when the slide is cut short', async () => {
+      setSession('listening');
+      renderView();
+
+      pull(120);
+      await finishSlide(false);
+
+      expect(voiceModeStore.setPresentation).not.toHaveBeenCalled();
+    });
+
+    it('collapses on a quick flick, however short', async () => {
       setSession('listening');
       renderView();
 
       pull(30, 1200);
-      act(() => {
-        jest.runOnlyPendingTimers();
-      });
+      await finishSlide(true);
 
       expect(voiceModeStore.setPresentation).toHaveBeenCalledWith('bar');
     });
 
-    it('springs back after a short, slow pull', () => {
+    it('springs back after a short, slow pull', async () => {
       setSession('listening');
       renderView();
 
       pull(30, 100);
-      act(() => {
-        jest.runOnlyPendingTimers();
-      });
+      await act(async () => {});
 
       expect(voiceModeStore.setPresentation).not.toHaveBeenCalled();
       expect(Reanimated.withSpring).toHaveBeenCalledWith(0);
     });
 
-    it('with reduced motion, snaps straight to the bar', () => {
+    it('with reduced motion, snaps straight to the bar', async () => {
       (Reanimated.useReducedMotion as jest.Mock).mockReturnValue(true);
       setSession('listening');
       renderView();
 
       pull(120);
+      await act(async () => {});
 
       expect(voiceModeStore.setPresentation).toHaveBeenCalledWith('bar');
       expect(Reanimated.withTiming).not.toHaveBeenCalled();
