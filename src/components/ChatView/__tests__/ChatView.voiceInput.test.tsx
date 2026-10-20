@@ -178,6 +178,18 @@ describe('ChatView voice-input append seam', () => {
     ).toBeTruthy();
   });
 
+  it('tells the user when part of a dictation was dropped', () => {
+    const {getByText} = renderChat();
+
+    act(() => {
+      asrStore.setError('transcript_partial');
+    });
+
+    expect(
+      getByText("Part of your dictation couldn't be transcribed."),
+    ).toBeTruthy();
+  });
+
   it('offers an open-Settings action when permission is blocked', () => {
     const {getByText} = renderChat();
 

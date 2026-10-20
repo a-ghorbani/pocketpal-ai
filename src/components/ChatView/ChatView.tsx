@@ -225,6 +225,8 @@ function asrErrorMessage(kind: AsrErrorKind, l10n: L10n): string {
       return l10n.voiceInput.errorInsufficientMemory;
     case 'mic_unavailable':
       return l10n.voiceInput.errorMicUnavailable;
+    case 'transcript_partial':
+      return l10n.voiceInput.errorTranscriptPartial;
   }
 }
 
@@ -599,6 +601,9 @@ export const ChatView = observer(
     // but APPENDS (`prev => prev + text`) instead of overwriting, so a spoken
     // phrase joins what the user has already typed. ChatView stays the single
     // writer of `inputText`; the transcript is never auto-sent.
+    const composerShowsPromptText =
+      !!activePal && hasVideoCapability(activePal);
+
     const appendTranscript = React.useCallback((text: string) => {
       setInputText(prev => (prev ? `${prev} ${text}` : text));
     }, []);
@@ -1219,15 +1224,12 @@ export const ChatView = observer(
                   isVisionEnabled,
                   defaultImages: inputImages,
                   onDefaultImagesChange: setInputImages,
-                  // Video pals' composer shows promptText, which dictation doesn't write.
-                  appendTranscript:
-                    activePal && hasVideoCapability(activePal)
-                      ? undefined
-                      : appendTranscript,
+                  appendTranscript: composerShowsPromptText
+                    ? undefined
+                    : appendTranscript,
                   textInputProps: {
                     ...textInputProps,
-                    // Only override value and onChangeText if not using promptText
-                    ...(!(activePal && hasVideoCapability(activePal)) && {
+                    ...(!composerShowsPromptText && {
                       value: inputText,
                       onChangeText: setInputText,
                     }),

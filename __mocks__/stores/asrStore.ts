@@ -14,7 +14,10 @@ type AsrErrorKind =
   | 'permission_denied'
   | 'permission_blocked'
   | 'transcribe_failed'
-  | 'not_installed';
+  | 'not_installed'
+  | 'insufficient_memory'
+  | 'mic_unavailable'
+  | 'transcript_partial';
 
 class MockASRStore {
   userASROverride: boolean | null = null;
@@ -104,6 +107,9 @@ class MockASRStore {
     this.setCaptureState = jest.fn((s: CaptureState) => {
       runInAction(() => {
         this.captureState = s;
+        if (s !== 'error') {
+          this.lastError = null;
+        }
         this.recordingStartedAt = s === 'recording' ? Date.now() : null;
       });
     });
@@ -111,6 +117,8 @@ class MockASRStore {
       runInAction(() => {
         this.captureState = 'error';
         this.lastError = k;
+        this.recordingStartedAt = null;
+        this.waitingForChat = false;
       });
     });
     this.pushInputLevel = jest.fn((level: number) => {
@@ -122,6 +130,7 @@ class MockASRStore {
       runInAction(() => {
         this.captureState = 'idle';
         this.lastError = null;
+        this.recordingStartedAt = null;
         this.waitingForChat = false;
       });
     });

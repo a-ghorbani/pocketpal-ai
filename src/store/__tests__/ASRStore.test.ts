@@ -123,16 +123,27 @@ describe('ASRStore', () => {
       ['4B Q4', 3.2e9, true],
       ['4B Q8', 4.3e9, false],
     ])(
-      'iOS, chat model %s next to the load ceiling → fits %s',
+      'iOS, chat model %s next to the memory free before any load → fits %s',
       async (_name, chatBytes, fits) => {
         Platform.OS = 'ios';
         modelStore.availableMemoryCeiling = 4.2e9;
-        modelStore.largestSuccessfulLoad = 4.3e9;
+        // A past oversized load must not raise the budget.
+        modelStore.largestSuccessfulLoad = 5.3e9;
         modelStore.loadedModelBytes = chatBytes;
         store.setSelectedTier('base');
         await expect(store.hasMemoryForCapture()).resolves.toBe(fits);
       },
     );
+
+    it('iOS budgets the selected whisper model', async () => {
+      Platform.OS = 'ios';
+      modelStore.availableMemoryCeiling = 4.2e9;
+      modelStore.loadedModelBytes = 3.2e9;
+      store.setSelectedTier('small');
+      await expect(store.hasMemoryForCapture()).resolves.toBe(true);
+      store.setSelectedTier('large-turbo');
+      await expect(store.hasMemoryForCapture()).resolves.toBe(false);
+    });
 
     it('iOS does not block recording before any ceiling is known', async () => {
       Platform.OS = 'ios';

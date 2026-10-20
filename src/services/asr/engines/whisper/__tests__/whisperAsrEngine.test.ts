@@ -342,7 +342,9 @@ describe('WhisperAsrEngine', () => {
 
       await engine.deleteModel('small');
 
-      expect(context.release).toHaveBeenCalled();
+      expect(context.release.mock.invocationCallOrder[0]).toBeLessThan(
+        mockUnlink.mock.invocationCallOrder[0],
+      );
       expect(mockUnlink).toHaveBeenCalledWith(expect.stringMatching(/small$/));
     });
 

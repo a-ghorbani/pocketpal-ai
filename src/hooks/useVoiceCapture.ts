@@ -167,6 +167,9 @@ export function useVoiceCapture(
       if (text.length > 0) {
         onTranscriptRef.current(text);
       }
+      if (failedRef.current) {
+        asrStore.setError('transcript_partial');
+      }
     },
     [releaseEngine, teardownCapture, transcribeSegment],
   );

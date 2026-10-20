@@ -304,7 +304,7 @@ describe('useVoiceCapture', () => {
     await waitFor(() => expect(mockRelease).toHaveBeenCalled());
   });
 
-  it('keeps the segments that transcribed when one fails', async () => {
+  it('keeps the segments that transcribed when one fails, with a notice', async () => {
     mockTranscribe.mockRejectedValueOnce(new Error('decode failed'));
     const {result, onTranscript} = await startRecording();
 
@@ -326,7 +326,7 @@ describe('useVoiceCapture', () => {
       expect(onTranscript).toHaveBeenCalledWith('hello world'),
     );
     expect(mockTranscribe).toHaveBeenCalledTimes(2);
-    expect(asrStore.setError).not.toHaveBeenCalled();
+    expect(asrStore.setError).toHaveBeenCalledWith('transcript_partial');
   });
 
   it('releases the model on cancel', async () => {
