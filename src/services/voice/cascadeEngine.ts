@@ -5,7 +5,6 @@ import {energyVad, int16PcmToFloat32, whisperAsrEngine} from '../asr';
 import type {AsrTranscript} from '../asr';
 import {getEngine, ttsRuntime} from '../tts';
 import {asrStore, chatSessionStore, ttsStore} from '../../store';
-import {derivedText} from '../../utils/chat';
 
 import type {
   VoiceEngine,
@@ -73,8 +72,6 @@ export class CascadeVoiceEngine implements VoiceEngine {
       return spoken?.messageId === turnId ? spoken.text : '';
     };
 
-    const speechStarted = () => ttsStore.voiceSpoken?.messageId === turnId;
-
     const markUnheard = async () => {
       const turn = turnId ? findTurn(turnId) : null;
       if (turn && !heardText()) {
@@ -84,18 +81,9 @@ export class CascadeVoiceEngine implements VoiceEngine {
       }
     };
 
-    /**
-     * Keeps what was heard. Stopped before a full word was heard (or after
-     * only the thinking placeholder), it keeps the reply's first word: the
-     * rest was never heard, and an empty reply would mislead the next prompt.
-     */
     const keepOnlySpoken = async () => {
       const turn = turnId ? findTurn(turnId) : null;
-      const text =
-        heardText() ||
-        (speechStarted() && turn
-          ? derivedText(turn.message).trim().split(/\s+/)[0]
-          : '');
+      const text = heardText();
       if (turn && text) {
         await chatSessionStore.rewriteTurnToSpoken(
           turn.message.id,
