@@ -1,4 +1,5 @@
 import React, {useMemo, useRef, ReactNode, useState} from 'react';
+import {StyleSheet, View} from 'react-native';
 
 import {observer} from 'mobx-react';
 import {runInAction} from 'mobx';
@@ -276,46 +277,55 @@ export const ChatScreen: React.FC = observer(() => {
     return <VideoPalScreen activePal={activePal} />;
   }
 
+  const voiceViewOpen =
+    voiceModeStore.phase !== 'closed' && voiceModeStore.presentation === 'full';
+
   // Otherwise, show the regular chat view
   return (
     <VoiceModeControlsContext.Provider value={voiceControls}>
-      <ChatView
-        renderBubble={renderBubble}
-        messages={chatSessionStore.currentSessionMessages}
-        activePal={activePal}
-        onSendPress={handleSendPress}
-        onStopPress={handleStopPress}
-        onPalSettingsSelect={handleOpenPalSheet}
-        user={user}
-        isStopVisible={modelStore.inferencing}
-        isStreaming={modelStore.isStreaming}
-        sendButtonVisibilityMode="always"
-        showImageUpload={true}
-        isVisionEnabled={visionEnabled}
-        initialInputText={pendingMessage || undefined}
-        onInitialTextConsumed={clearPendingMessage}
-        onVoiceModePress={openModelPicker =>
-          voiceMode.requestEntry({openModelPicker})
+      <View
+        style={styles.chat}
+        importantForAccessibility={
+          voiceViewOpen ? 'no-hide-descendants' : 'auto'
         }
-        inputProps={{
-          showThinkingToggle: thinkingSupported,
-          isThinkingEnabled: thinkingEnabled,
-          onThinkingToggle: handleThinkingToggle,
-          supportsEffort: reasoningCapability.supportsEffort,
-          effortValues: reasoningCapability.effortValues,
-          reasoningEffort,
-          onEffortCycle: handleEffortCycle,
-        }}
-        textInputProps={{
-          placeholder: !modelStore.engine
-            ? modelStore.isContextLoading
-              ? l10n.chat.loadingModel
-              : l10n.chat.modelNotLoaded
-            : l10n.chat.typeYourMessage,
-        }}
-      />
-      {voiceModeStore.phase !== 'closed' &&
-        voiceModeStore.presentation === 'full' && <VoiceModeView />}
+        accessibilityElementsHidden={voiceViewOpen}>
+        <ChatView
+          renderBubble={renderBubble}
+          messages={chatSessionStore.currentSessionMessages}
+          activePal={activePal}
+          onSendPress={handleSendPress}
+          onStopPress={handleStopPress}
+          onPalSettingsSelect={handleOpenPalSheet}
+          user={user}
+          isStopVisible={modelStore.inferencing}
+          isStreaming={modelStore.isStreaming}
+          sendButtonVisibilityMode="always"
+          showImageUpload={true}
+          isVisionEnabled={visionEnabled}
+          initialInputText={pendingMessage || undefined}
+          onInitialTextConsumed={clearPendingMessage}
+          onVoiceModePress={openModelPicker =>
+            voiceMode.requestEntry({openModelPicker})
+          }
+          inputProps={{
+            showThinkingToggle: thinkingSupported,
+            isThinkingEnabled: thinkingEnabled,
+            onThinkingToggle: handleThinkingToggle,
+            supportsEffort: reasoningCapability.supportsEffort,
+            effortValues: reasoningCapability.effortValues,
+            reasoningEffort,
+            onEffortCycle: handleEffortCycle,
+          }}
+          textInputProps={{
+            placeholder: !modelStore.engine
+              ? modelStore.isContextLoading
+                ? l10n.chat.loadingModel
+                : l10n.chat.modelNotLoaded
+              : l10n.chat.typeYourMessage,
+          }}
+        />
+      </View>
+      {voiceViewOpen && <VoiceModeView />}
       <VoiceSetupSheet
         isVisible={voiceMode.sheet?.kind === 'setup'}
         onClose={voiceMode.dismissSheet}
@@ -356,4 +366,10 @@ export const ChatScreen: React.FC = observer(() => {
       )}
     </VoiceModeControlsContext.Provider>
   );
+});
+
+const styles = StyleSheet.create({
+  chat: {
+    flex: 1,
+  },
 });

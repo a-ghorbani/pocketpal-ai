@@ -100,8 +100,11 @@ describe('ChatScreen voice mode entry', () => {
     runInAction(() => {
       voiceModeStore.phase = 'listening';
     });
-    const {getByTestId} = renderScreen();
+    const {getByTestId, queryByTestId} = renderScreen();
     expect(getByTestId('voice-view')).toBeTruthy();
-    expect(getByTestId('voice-bar')).toBeTruthy();
+    expect(queryByTestId('voice-bar')).toBeNull();
+    expect(
+      getByTestId('voice-bar', {includeHiddenElements: true}),
+    ).toBeTruthy();
   });
 });

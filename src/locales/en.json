@@ -1612,6 +1612,7 @@
     "errorReply": "Couldn't get an answer. Try again.",
     "errorSpeech": "Couldn't play the answer aloud.",
     "pullDownHint": "Pull down to see the chat",
+    "showChatLabel": "Show chat",
     "swipeUpHint": "Swipe up for voice view",
     "cloudLabel": "Voice mode cloud",
     "openViewLabel": "Open voice view",

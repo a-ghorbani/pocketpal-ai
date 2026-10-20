@@ -79,8 +79,16 @@ export const VoiceModeView: React.FC = observer(() => {
             paddingBottom: insets.bottom + theme.spacing.xl,
           },
         ]}
+        accessibilityViewIsModal
+        onAccessibilityEscape={collapse}
         testID="voice-view">
-        <View style={[styles.top, {gap: theme.spacing.xs}]}>
+        <Pressable
+          onPress={collapse}
+          accessibilityRole="button"
+          accessibilityLabel={l10n.voiceMode.showChatLabel}
+          accessibilityHint={l10n.voiceMode.pullDownHint}
+          testID="voice-view-collapse"
+          style={[styles.top, {gap: theme.spacing.xs}]}>
           <View
             style={[
               styles.handle,
@@ -94,7 +102,7 @@ export const VoiceModeView: React.FC = observer(() => {
             ]}>
             {l10n.voiceMode.pullDownHint}
           </Text>
-        </View>
+        </Pressable>
 
         <View style={[styles.center, {gap: theme.spacing.xl}]}>
           <Pressable

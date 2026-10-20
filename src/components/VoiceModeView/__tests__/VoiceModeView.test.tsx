@@ -123,6 +123,18 @@ describe('VoiceModeView', () => {
     expect(voiceModeStore.phase).toBe('speaking');
   });
 
+  it('a screen reader can show the chat: a button, the escape gesture, a modal view', () => {
+    setSession('listening');
+    const {getByLabelText, getByTestId} = renderView();
+
+    expect(getByTestId('voice-view').props.accessibilityViewIsModal).toBe(true);
+    fireEvent.press(getByLabelText(strings.showChatLabel));
+    expect(voiceModeStore.setPresentation).toHaveBeenCalledWith('bar');
+
+    fireEvent(getByTestId('voice-view'), 'accessibilityEscape');
+    expect(voiceModeStore.setPresentation).toHaveBeenCalledTimes(2);
+  });
+
   it('a short pull does not collapse', () => {
     setSession('listening');
     renderView();
