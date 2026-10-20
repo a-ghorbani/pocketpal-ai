@@ -19,6 +19,7 @@ import {
   Endpointer,
   VOICE_CAPTURE_SETTLE_MS,
   VOICE_MIC_WATCHDOG_MS,
+  VOICE_START_TIMEOUT_MS,
   isMicGranted,
   isVoiceModeVoice,
   voiceMemoryFit,
@@ -67,6 +68,17 @@ const warn = (message: string) =>
     recoverable: true,
     severity: 'error',
   });
+
+const withStartTimeout = (loading: Promise<void>): Promise<void> => {
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  const timeout = new Promise<never>((_, reject) => {
+    timer = setTimeout(
+      () => reject(new Error('voice mode took too long to start')),
+      VOICE_START_TIMEOUT_MS,
+    );
+  });
+  return Promise.race([loading, timeout]).finally(() => clearTimeout(timer));
+};
 
 async function isSetupComplete(): Promise<boolean> {
   return (
@@ -194,7 +206,7 @@ class VoiceModeController {
     voiceModeStore.setPhase('starting');
     voiceModeStore.setPresentation('full');
     try {
-      await this.engine.prepare();
+      await withStartTimeout(this.engine.prepare());
     } catch (err) {
       console.warn('[voiceMode] prepare failed:', err);
       if (session === this.session) {

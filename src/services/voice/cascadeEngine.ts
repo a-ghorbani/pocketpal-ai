@@ -33,10 +33,19 @@ export class CascadeVoiceEngine implements VoiceEngine {
   readonly id = 'cascade';
 
   async prepare(): Promise<void> {
+    const started = Date.now();
     await whisperAsrEngine.preload('base');
+    const whisperLoaded = Date.now();
     const voice = ttsStore.currentVoice;
     if (voice) {
       await ttsRuntime.acquire(getEngine(voice.engine), async () => {});
+    }
+    if (__DEV__) {
+      console.log(
+        `[voiceMode] prepare: whisper ${whisperLoaded - started} ms, voice ${
+          Date.now() - whisperLoaded
+        } ms`,
+      );
     }
   }
 

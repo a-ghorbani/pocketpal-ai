@@ -389,6 +389,23 @@ describe('CascadeVoiceEngine', () => {
       );
     });
 
+    it('logs how long each load took in dev builds, with no content', async () => {
+      const log = jest.spyOn(console, 'log').mockImplementation(() => {});
+      await engine.prepare();
+      expect(log).toHaveBeenCalledWith(
+        expect.stringMatching(
+          /^\[voiceMode\] prepare: whisper \d+ ms, voice \d+ ms$/,
+        ),
+      );
+
+      log.mockClear();
+      (global as any).__DEV__ = false;
+      await engine.prepare();
+      (global as any).__DEV__ = true;
+      expect(log).not.toHaveBeenCalled();
+      log.mockRestore();
+    });
+
     it('release frees whisper, and the voice engine only when auto-speak is off', async () => {
       await engine.release();
       expect(whisperRelease).toHaveBeenCalledTimes(1);

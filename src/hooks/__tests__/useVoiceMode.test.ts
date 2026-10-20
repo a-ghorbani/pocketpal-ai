@@ -22,6 +22,7 @@ import {ModelOrigin} from '../../utils/types';
 import {
   VOICE_CAPTURE_SETTLE_MS,
   VOICE_MIC_WATCHDOG_MS,
+  VOICE_START_TIMEOUT_MS,
 } from '../../services/voice';
 import type {VoiceTurnEvents, VoiceTurnOutcome} from '../../services/voice';
 
@@ -386,6 +387,29 @@ describe('useVoiceMode', () => {
       expect(voiceModeStore.phase).toBe('closed');
       expect(AudioRecord.init).not.toHaveBeenCalled();
       expect(AudioRecord.start).not.toHaveBeenCalled();
+    });
+
+    it('gives up with a warning when loading takes too long', async () => {
+      jest.useFakeTimers();
+      const {engine, hook} = renderVoiceMode();
+      engine.prepare.mockReturnValueOnce(new Promise<void>(() => {}));
+      jest.spyOn(console, 'warn').mockImplementationOnce(() => {});
+
+      act(() => {
+        hook.result.current.requestEntry({openModelPicker});
+      });
+      await act(async () => {});
+      expect(voiceModeStore.phase).toBe('starting');
+
+      await act(async () => {
+        jest.advanceTimersByTime(VOICE_START_TIMEOUT_MS);
+      });
+      jest.useRealTimers();
+
+      expect(voiceModeStore.phase).toBe('closed');
+      expect(uiStore.setChatWarning).toHaveBeenCalledWith(
+        expect.objectContaining({message: uiStore.l10n.voiceMode.startFailed}),
+      );
     });
 
     it('holds nothing back for a remote model', async () => {

@@ -24,3 +24,9 @@ export const VOICE_CAPTURE_SETTLE_MS = 150;
  * its log.
  */
 export const VOICE_MIC_WATCHDOG_MS = 1000;
+
+/**
+ * Loading Whisper and the voice longer than this (ms) ends the start with a
+ * warning. A first load on a mid-range phone took about 21 s.
+ */
+export const VOICE_START_TIMEOUT_MS = 45_000;

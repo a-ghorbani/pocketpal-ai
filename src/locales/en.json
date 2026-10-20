@@ -1601,7 +1601,7 @@
   "voiceMode": {
     "spokenMarker": "Spoken",
     "startingTitle": "Starting",
-    "startingHint": "Loading speech recognition",
+    "startingHint": "Loading speech recognition and the voice. The first time can take a little longer.",
     "startFailed": "Couldn't start voice mode. Try again.",
     "micFailed": "Couldn't use the microphone, so voice mode ended.",
     "listeningTitle": "Listening",
