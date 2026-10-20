@@ -108,21 +108,51 @@ describe('YouProvider', () => {
     }
   });
 
-  it('maps a 429 with no key to the fixed free-limit message', async () => {
-    (global.fetch as jest.Mock).mockReturnValue(status(429));
-    const provider = new YouProvider(() => '');
-    await expect(provider.search('q', {maxResults: 3})).rejects.toThrow(
-      YOU_FREE_LIMIT_MESSAGE,
-    );
-    expect(YOU_FREE_LIMIT_MESSAGE).toMatch(/Settings → Internet Search/);
-  });
+  describe('429', () => {
+    beforeEach(() => {
+      jest.useFakeTimers();
+    });
 
-  it('maps a 429 with a key to the keyed rate-limit message', async () => {
-    (global.fetch as jest.Mock).mockReturnValue(status(429));
-    const provider = new YouProvider(() => 'k');
-    await expect(provider.search('q', {maxResults: 3})).rejects.toThrow(
-      YOU_KEYED_LIMIT_MESSAGE,
-    );
+    afterEach(() => {
+      jest.useRealTimers();
+    });
+
+    const rejectionAfterRetry = async (key: string) => {
+      const search = new YouProvider(() => key)
+        .search('q', {maxResults: 3})
+        .catch((e: Error) => e);
+      await jest.advanceTimersByTimeAsync(1000);
+      expect(global.fetch).toHaveBeenCalledTimes(2);
+      return search;
+    };
+
+    it('retries once, then returns the hits', async () => {
+      (global.fetch as jest.Mock)
+        .mockReturnValueOnce(status(429))
+        .mockReturnValueOnce(
+          okJson({results: {web: [{title: 'T', url: 'https://example.com'}]}}),
+        );
+      const search = new YouProvider(() => '').search('q', {maxResults: 3});
+      await jest.advanceTimersByTimeAsync(999);
+      expect(global.fetch).toHaveBeenCalledTimes(1);
+      await jest.advanceTimersByTimeAsync(1);
+
+      expect(global.fetch).toHaveBeenCalledTimes(2);
+      await expect(search).resolves.toHaveLength(1);
+    });
+
+    it('maps a repeated 429 with no key to the fixed free-limit message', async () => {
+      (global.fetch as jest.Mock).mockReturnValue(status(429));
+      const error = await rejectionAfterRetry('');
+      expect(error).toEqual(new Error(YOU_FREE_LIMIT_MESSAGE));
+      expect(YOU_FREE_LIMIT_MESSAGE).toMatch(/Settings → Internet Search/);
+    });
+
+    it('maps a repeated 429 with a key to the keyed rate-limit message', async () => {
+      (global.fetch as jest.Mock).mockReturnValue(status(429));
+      const error = await rejectionAfterRetry('k');
+      expect(error).toEqual(new Error(YOU_KEYED_LIMIT_MESSAGE));
+    });
   });
 
   it('passes other HTTP errors through unchanged', async () => {
