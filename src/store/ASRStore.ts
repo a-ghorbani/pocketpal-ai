@@ -195,8 +195,12 @@ export class ASRStore {
     // Free the ~400 MB whisper context when backgrounded so it doesn't sit
     // resident alongside the LLM and OOM low-RAM devices. Re-init is lazy on
     // the next capture. Only react to 'background' — 'inactive' fires for
-    // transient interruptions that must not tear down a large context.
-    if (nextAppState === 'background') {
+    // transient interruptions that must not tear down a large context. A
+    // capture in progress finishes first and frees the context itself.
+    if (
+      nextAppState === 'background' &&
+      (this.captureState === 'idle' || this.captureState === 'error')
+    ) {
       whisperAsrEngine.release().catch(err => {
         console.warn('[ASRStore] background release failed:', err);
       });

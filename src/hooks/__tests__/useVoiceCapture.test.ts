@@ -550,7 +550,7 @@ describe('useVoiceCapture', () => {
     expect(onTranscript).not.toHaveBeenCalled();
   });
 
-  it('discards the capture when the app goes to the background', async () => {
+  it('finishes the capture when the app goes to the background', async () => {
     let appStateHandler: ((s: string) => void) | null = null;
     jest
       .spyOn(AppState, 'addEventListener')
@@ -569,9 +569,10 @@ describe('useVoiceCapture', () => {
     });
 
     expect(mockAudioStop).toHaveBeenCalled();
+    await waitFor(() =>
+      expect(onTranscript).toHaveBeenCalledWith('hello world'),
+    );
     expect(asrStore.captureState).toBe('idle');
-    expect(mockTranscribe).not.toHaveBeenCalled();
-    expect(onTranscript).not.toHaveBeenCalled();
   });
 
   it('releases native capture on unmount', async () => {

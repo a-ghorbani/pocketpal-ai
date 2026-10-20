@@ -266,6 +266,16 @@ describe('ASRStore', () => {
       expect(mockRelease).toHaveBeenCalled();
     });
 
+    it.each(['requesting_perm', 'recording', 'transcribing'] as const)(
+      'keeps the whisper context while a capture is %s',
+      async state => {
+        await store.init();
+        store.setCaptureState(state);
+        appStateHandlers.forEach(h => h('background'));
+        expect(mockRelease).not.toHaveBeenCalled();
+      },
+    );
+
     it('does not release on a transient inactive transition', async () => {
       await store.init();
       appStateHandlers.forEach(h => h('inactive'));

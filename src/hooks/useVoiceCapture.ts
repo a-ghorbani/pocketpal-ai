@@ -51,8 +51,8 @@ interface UseVoiceCaptureReturn {
  *
  * All engine work runs through one serial queue, so a release never cuts
  * across a load or a transcription. Native capture is released on stop,
- * cancel, error, max-ms, AppState background, and unmount. All work is
- * on-device: the only network in the ASR subsystem is the model download.
+ * cancel, error, max-ms, AppState background (which finishes the capture like
+ * stop), and unmount. All work is on-device: the only network in the ASR subsystem is the model download.
  */
 export function useVoiceCapture(
   options: UseVoiceCaptureOptions,
@@ -294,7 +294,7 @@ export function useVoiceCapture(
   useEffect(() => {
     const sub = AppState.addEventListener('change', (next: AppStateStatus) => {
       if (next === 'background' && recordingRef.current) {
-        cancel();
+        stop();
       }
     });
     return () => {
@@ -303,7 +303,7 @@ export function useVoiceCapture(
         cancel();
       }
     };
-  }, [cancel]);
+  }, [cancel, stop]);
 
   return {start, stop, cancel};
 }

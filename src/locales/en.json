@@ -1578,7 +1578,7 @@
     "setupLabel": "Set up voice input",
     "settingTitle": "Voice input",
     "settingDescription": "Tap the mic in chat to dictate; speech is transcribed on your device.",
-    "unsupportedDeviceHelper": "Voice input may not work reliably on this device.",
+    "unsupportedDeviceHelper": "This device is below the recommended spec. Voice input will likely be slow or may fail.",
     "spokenLanguageLabel": "Spoken language",
     "spokenLanguageAuto": "Auto-detect",
     "spokenLanguageDetected": "Auto-detected: {{language}}",
