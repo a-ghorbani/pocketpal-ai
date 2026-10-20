@@ -1606,7 +1606,7 @@
     "listeningTitle": "Listening",
     "listeningHint": "Tap the cloud when you are done",
     "thinkingTitle": "Thinking",
-    "thinkingHint": "Working on an answer",
+    "thinkingHint": "Tap the cloud to cancel",
     "speakingTitle": "Speaking",
     "speakingHint": "Tap the cloud to interrupt",
     "mutedTitle": "Microphone off",

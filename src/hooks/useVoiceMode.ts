@@ -268,7 +268,11 @@ class VoiceModeController {
     const phase = voiceModeStore.phase;
     if (phase === 'listening' && this.endpointer.tap()) {
       this.endUtterance(this.session);
-    } else if (phase === 'speaking') {
+    } else if (
+      phase === 'transcribing' ||
+      phase === 'thinking' ||
+      phase === 'speaking'
+    ) {
       this.turn?.interrupt();
     }
   }

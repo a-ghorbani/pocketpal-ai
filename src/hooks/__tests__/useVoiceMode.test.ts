@@ -555,22 +555,40 @@ describe('useVoiceMode', () => {
       expect(engine.runTurn).toHaveBeenCalledTimes(1);
     });
 
-    it('a tap while speaking interrupts; a tap while thinking does nothing', async () => {
+    it('a tap while speaking interrupts the reply and listens again', async () => {
       const {enter, hook, turns} = renderVoiceMode();
       await enter();
       speak(500);
       speak(600, SILENT);
-
       act(() => turns[0].on.transcribed('hi'));
-      act(() => hook.result.current.tapCloud());
-      expect(turns[0].interrupt).not.toHaveBeenCalled();
-
       act(() => turns[0].on.speechStarted());
+
       act(() => hook.result.current.tapCloud());
+
       expect(turns[0].interrupt).toHaveBeenCalledTimes(1);
       await flush();
       expect(voiceModeStore.phase).toBe('listening');
     });
+
+    it.each(['transcribing', 'thinking'] as const)(
+      'a tap while %s cancels the turn and listens again',
+      async phase => {
+        const {enter, hook, turns} = renderVoiceMode();
+        await enter();
+        speak(500);
+        speak(600, SILENT);
+        if (phase === 'thinking') {
+          act(() => turns[0].on.transcribed('hi'));
+        }
+        expect(voiceModeStore.phase).toBe(phase);
+
+        act(() => hook.result.current.tapCloud());
+
+        expect(turns[0].interrupt).toHaveBeenCalledTimes(1);
+        await flush();
+        expect(voiceModeStore.phase).toBe('listening');
+      },
+    );
 
     it('a phase forced from outside starts no capture', async () => {
       renderVoiceMode();
