@@ -14,6 +14,7 @@ import {
 
 import {useChatSession} from '../useChatSession';
 import {isReadUrlAllowed} from '../../services/talents';
+import {bodyExtras} from '../../api/servers';
 
 import {
   chatSessionStore,
@@ -157,6 +158,18 @@ describe('useChatSession', () => {
         expect.objectContaining({enable_thinking: false}),
       );
       expect(params.chat_template_kwargs?.reasoning_effort).toBeUndefined();
+      expect(params.reasoning).toEqual({enabled: false});
+    });
+
+    it('asks a remote server for no thinking too', async () => {
+      const params = await sendWithThinkingOn({spoken: true});
+      const request = {samplers: {}, reasoning: params.reasoning};
+
+      expect(bodyExtras('llama.cpp', request)).toEqual({
+        reasoning_format: 'auto',
+        chat_template_kwargs: {enable_thinking: false},
+      });
+      expect(bodyExtras('Ollama', request)).toEqual({reasoning_effort: 'none'});
     });
 
     it('leaves thinking to the chat setting for a typed send', async () => {
