@@ -107,9 +107,10 @@ export class CascadeVoiceEngine implements VoiceEngine {
           });
           return;
         }
-        ttsStore.stop().catch(() => {});
+        const stopping = ttsStore.stop().catch(() => {});
         port.stop();
         await sending.catch(() => {});
+        await stopping;
         await keepOnlySpoken();
       })();
       return interrupting;

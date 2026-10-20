@@ -242,6 +242,33 @@ describe('CascadeVoiceEngine', () => {
       await expect(turn.done).resolves.toBe('interrupted');
     });
 
+    it('resolves only once the speech stream is cancelled', async () => {
+      let cancelled!: () => void;
+      (ttsStore.stop as jest.Mock).mockReturnValueOnce(
+        new Promise<void>(resolve => {
+          cancelled = resolve;
+        }),
+      );
+      const port = makePort();
+      const turn = engine.runTurn(speech(500), port, events());
+      await flush();
+      createTurn(port);
+      setPlayback('streaming');
+
+      let resolved = false;
+      turn.interrupt().then(() => {
+        resolved = true;
+      });
+      setPlayback('idle');
+      port.settle();
+      await flush();
+      expect(resolved).toBe(false);
+
+      cancelled();
+      await flush();
+      expect(resolved).toBe(true);
+    });
+
     it('while transcribing cancels the decode and writes nothing', async () => {
       let finish!: (t: {text: string; language: string}) => void;
       transcribe.mockReturnValueOnce(
