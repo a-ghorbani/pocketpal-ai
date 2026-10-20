@@ -36,21 +36,28 @@ export class VoiceModeStore {
   lastError: VoiceError | null = null;
   /** E2E builds only: forces the default entitlement either way. */
   unlockOverride: boolean | null = null;
+  /** The Settings switch; null follows the device gate. */
+  userVoiceModeOverride: boolean | null = null;
 
   constructor() {
     makeAutoObservable(this, {}, {autoBind: true});
-    if (__E2E__) {
-      makePersistable(this, {
-        name: 'VoiceModeStore',
-        properties: ['unlockOverride'],
-        storage: AsyncStorage,
-      });
-    }
+    makePersistable(this, {
+      name: 'VoiceModeStore',
+      properties: __E2E__
+        ? ['userVoiceModeOverride', 'unlockOverride']
+        : ['userVoiceModeOverride'],
+      storage: AsyncStorage,
+    });
   }
 
-  /** The device can run voice mode (its own gate, wider than dictation's). */
-  get supported(): boolean {
+  /** The device meets voice mode's own gate (wider than dictation's). */
+  get deviceSupported(): boolean {
     return voiceModeDeviceSupported(modelStore.deviceTier, Platform.OS);
+  }
+
+  /** Voice mode is offered: the user's choice, else the device gate. */
+  get supported(): boolean {
+    return this.userVoiceModeOverride ?? this.deviceSupported;
   }
 
   /** A session is open; changes only when one starts or ends. */
@@ -91,6 +98,10 @@ export class VoiceModeStore {
 
   setPresentation(presentation: VoicePresentation): void {
     this.presentation = presentation;
+  }
+
+  setUserVoiceModeOverride(enabled: boolean): void {
+    this.userVoiceModeOverride = enabled;
   }
 
   /** E2E drivers only. */

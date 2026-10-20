@@ -1604,6 +1604,9 @@
     "insufficientStorage": "Not enough space — free up {{requiredMb}} MB to install this model ({{freeMb}} MB available)."
   },
   "voiceMode": {
+    "settingTitle": "Hands-free voice",
+    "settingDescription": "Talk with the model in chat and hear its replies.",
+    "unsupportedDeviceHelper": "May be slow on this phone.",
     "startingTitle": "Starting",
     "startingHint": "Loading speech recognition and the voice. The first time can take a little longer.",
     "startFailed": "Couldn't start voice mode. Try again.",

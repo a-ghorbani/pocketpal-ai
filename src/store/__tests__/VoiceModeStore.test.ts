@@ -21,6 +21,9 @@ describe('VoiceModeStore', () => {
   afterEach(() => {
     voiceEntitlement.register(defaultSource);
     voiceModeStore.setUnlockOverride(null);
+    runInAction(() => {
+      voiceModeStore.userVoiceModeOverride = null;
+    });
     (global as any).__DEV__ = true;
     (global as any).__E2E__ = true;
   });
@@ -44,6 +47,28 @@ describe('VoiceModeStore', () => {
     expect(voiceModeStore.supported).toBe(supported);
     Platform.OS = platform;
   });
+
+  it.each([
+    ['low', true, true],
+    ['high', false, false],
+    ['low', null, false],
+    ['high', null, true],
+  ] as const)(
+    'Android tier %s with the Settings override %s → supported %s',
+    (tier, override, supported) => {
+      const platform = Platform.OS;
+      Platform.OS = 'android';
+      runInAction(() => {
+        mockModelStore.deviceTier = tier;
+      });
+      if (override !== null) {
+        voiceModeStore.setUserVoiceModeOverride(override);
+      }
+      expect(voiceModeStore.supported).toBe(supported);
+      expect(voiceModeStore.deviceSupported).toBe(tier === 'high');
+      Platform.OS = platform;
+    },
+  );
 
   it("keeps dictation's own, narrower gate", () => {
     const platform = Platform.OS;
@@ -82,17 +107,22 @@ describe('VoiceModeStore', () => {
     warn.mockRestore();
   });
 
-  it('persists the unlock override only in E2E builds', () => {
+  it('persists the Settings override, and the unlock override only in E2E builds', () => {
     (global as any).__DEV__ = true;
     (global as any).__E2E__ = false;
     const dev = new VoiceModeStore();
-    expect(makePersistable).not.toHaveBeenCalledWith(dev, expect.anything());
+    expect(makePersistable).toHaveBeenCalledWith(
+      dev,
+      expect.objectContaining({properties: ['userVoiceModeOverride']}),
+    );
 
     (global as any).__E2E__ = true;
     const e2e = new VoiceModeStore();
     expect(makePersistable).toHaveBeenCalledWith(
       e2e,
-      expect.objectContaining({properties: ['unlockOverride']}),
+      expect.objectContaining({
+        properties: ['userVoiceModeOverride', 'unlockOverride'],
+      }),
     );
   });
 

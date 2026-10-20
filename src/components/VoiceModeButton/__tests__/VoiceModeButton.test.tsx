@@ -25,6 +25,21 @@ describe('VoiceModeButton', () => {
     expect(queryByTestId('voice-mode-button')).toBeNull();
   });
 
+  it('shows on a weaker device once turned on in Settings', () => {
+    runInAction(() => {
+      modelStore.deviceTier = 'low';
+    });
+    voiceModeStore.setUserVoiceModeOverride(true);
+    const {getByTestId} = render(<VoiceModeButton onPress={jest.fn()} />);
+    expect(getByTestId('voice-mode-button')).toBeTruthy();
+  });
+
+  it('hides on a capable device once turned off in Settings', () => {
+    voiceModeStore.setUserVoiceModeOverride(false);
+    const {queryByTestId} = render(<VoiceModeButton onPress={jest.fn()} />);
+    expect(queryByTestId('voice-mode-button')).toBeNull();
+  });
+
   it('starts voice mode on press, without a lock when unlocked', () => {
     const onPress = jest.fn();
     const {getByTestId, queryByTestId} = render(

@@ -34,6 +34,7 @@ import {
   LinkExternalIcon,
   VolumeOnIcon,
   MicrophoneIcon,
+  VoiceWaveformIcon,
 } from '../../assets/icons';
 
 import {
@@ -63,6 +64,7 @@ import {
   asrStore,
   searchProviderStore,
   purchaseStore,
+  voiceModeStore,
 } from '../../store';
 import {authService} from '../../services';
 import type {SearchProviderId} from '../../services/search/types';
@@ -1260,6 +1262,39 @@ export const SettingsScreen: React.FC = observer(() => {
                       </View>
                     );
                   })}
+
+                <Divider />
+
+                <View style={styles.switchContainer}>
+                  <View style={styles.textContainer}>
+                    <View style={styles.labelWithIconContainer}>
+                      <VoiceWaveformIcon
+                        width={20}
+                        height={20}
+                        style={styles.settingIcon}
+                        color={theme.colors.onSurface}
+                      />
+                      <Text variant="titleMedium" style={styles.textLabel}>
+                        {l10n.voiceMode.settingTitle}
+                      </Text>
+                    </View>
+                    <Text variant="labelSmall" style={styles.textDescription}>
+                      {l10n.voiceMode.settingDescription}
+                    </Text>
+                    {!voiceModeStore.deviceSupported && (
+                      <Text variant="labelSmall" style={styles.textDescription}>
+                        {l10n.voiceMode.unsupportedDeviceHelper}
+                      </Text>
+                    )}
+                  </View>
+                  <Switch
+                    testID="voice-mode-availability-switch"
+                    value={voiceModeStore.supported}
+                    onValueChange={value =>
+                      voiceModeStore.setUserVoiceModeOverride(value)
+                    }
+                  />
+                </View>
 
                 {/* Display Memory Usage (iOS only) */}
                 {Platform.OS === 'ios' && (

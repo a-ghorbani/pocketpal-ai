@@ -18,6 +18,7 @@ import {
   uiStore,
   ttsStore,
   asrStore,
+  voiceModeStore,
 } from '../../../store';
 import {Menu} from '../../../components';
 import {l10n, t} from '../../../locales';
@@ -1501,6 +1502,49 @@ describe('SettingsScreen', () => {
           }),
         ),
       ).toBeTruthy();
+    });
+  });
+
+  describe('hands-free voice', () => {
+    const renderSettings = () =>
+      render(<SettingsScreen />, {withSafeArea: true, withNavigation: true});
+
+    afterEach(() => {
+      (voiceModeStore as any).reset();
+      runInAction(() => {
+        modelStore.deviceTier = 'low';
+      });
+    });
+
+    it('shows the device gate, with no helper, on a capable phone', () => {
+      runInAction(() => {
+        modelStore.deviceTier = 'high';
+      });
+      const {getByTestId, queryByText} = renderSettings();
+      expect(getByTestId('voice-mode-availability-switch').props.value).toBe(
+        true,
+      );
+      expect(queryByText(l10n.en.voiceMode.unsupportedDeviceHelper)).toBeNull();
+    });
+
+    it('is off with a heads-up on a weaker phone, and turns on from the switch', () => {
+      runInAction(() => {
+        modelStore.deviceTier = 'low';
+      });
+      const {getByTestId, getByText} = renderSettings();
+      const toggle = getByTestId('voice-mode-availability-switch');
+      expect(toggle.props.value).toBe(false);
+      expect(getByText(l10n.en.voiceMode.unsupportedDeviceHelper)).toBeTruthy();
+
+      act(() => {
+        fireEvent(toggle, 'valueChange', true);
+      });
+      expect(voiceModeStore.setUserVoiceModeOverride).toHaveBeenCalledWith(
+        true,
+      );
+      expect(getByTestId('voice-mode-availability-switch').props.value).toBe(
+        true,
+      );
     });
   });
 

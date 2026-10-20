@@ -25,12 +25,14 @@ class MockVoiceModeStore {
   presentation: 'full' | 'bar' = 'full';
   lastError: VoiceError | null = null;
   unlockOverride: boolean | null = null;
+  userVoiceModeOverride: boolean | null = null;
 
   setPhase: jest.Mock;
   setMicMuted: jest.Mock;
   setLastError: jest.Mock;
   setPresentation: jest.Mock;
   setUnlockOverride: jest.Mock;
+  setUserVoiceModeOverride: jest.Mock;
 
   constructor() {
     makeAutoObservable(this, {
@@ -39,6 +41,12 @@ class MockVoiceModeStore {
       setLastError: false,
       setPresentation: false,
       setUnlockOverride: false,
+      setUserVoiceModeOverride: false,
+    });
+    this.setUserVoiceModeOverride = jest.fn((enabled: boolean) => {
+      runInAction(() => {
+        this.userVoiceModeOverride = enabled;
+      });
     });
     this.setPhase = jest.fn((phase: VoicePhase) => {
       runInAction(() => {
@@ -74,8 +82,12 @@ class MockVoiceModeStore {
     });
   }
 
-  get supported(): boolean {
+  get deviceSupported(): boolean {
     return voiceModeDeviceSupported(mockModelStore.deviceTier, Platform.OS);
+  }
+
+  get supported(): boolean {
+    return this.userVoiceModeOverride ?? this.deviceSupported;
   }
 
   get isOpen(): boolean {
@@ -97,6 +109,7 @@ class MockVoiceModeStore {
       this.presentation = 'full';
       this.lastError = null;
       this.unlockOverride = null;
+      this.userVoiceModeOverride = null;
     });
   }
 }
