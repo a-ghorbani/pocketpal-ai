@@ -61,7 +61,7 @@ export class CascadeVoiceEngine implements VoiceEngine {
     const keepOnlySpoken = async () => {
       const spoken = ttsStore.voiceSpoken;
       const turn = turnId ? findTurn(turnId) : null;
-      if (turn && spoken?.messageId === turnId) {
+      if (turn && spoken?.messageId === turnId && spoken.text) {
         await chatSessionStore.rewriteTurnToSpoken(
           turnId,
           turn.sessionId,

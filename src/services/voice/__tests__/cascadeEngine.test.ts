@@ -300,6 +300,23 @@ describe('CascadeVoiceEngine', () => {
       expect(chatSessionStore.rewriteTurnToSpoken).not.toHaveBeenCalled();
     });
 
+    it('keeps the partial text when only the thinking placeholder has played', async () => {
+      const port = makePort();
+      const turn = engine.runTurn(speech(500), port, events());
+      await flush();
+      createTurn(port);
+      setPlayback('streaming');
+      setSpoken('turn-1', '');
+
+      const interrupting = turn.interrupt();
+      setPlayback('idle');
+      port.settle();
+      await interrupting;
+
+      expect(chatSessionStore.rewriteTurnToSpoken).not.toHaveBeenCalled();
+      await expect(turn.done).resolves.toBe('interrupted');
+    });
+
     it('does not rewrite from an earlier turn', async () => {
       setSpoken('turn-0', 'Old reply.');
       const port = makePort();
