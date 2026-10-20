@@ -6,6 +6,7 @@ import {
   SystemPromptContext,
 } from './types';
 import type {SearchAccess} from './searchAccess';
+import {SEARCH_NOT_SET_UP_MESSAGE} from './searchAccess';
 import type {SearchHit} from '../search/types';
 import {
   budgetHits,
@@ -63,11 +64,10 @@ export class WebSearchEngine implements TalentEngine {
     }
 
     if (!this.access.canSearch()) {
-      const provider = this.access.getActiveProvider();
       return {
         type: 'error',
-        summary: `web_search: ${provider.id} not enabled`,
-        errorMessage: `Internet search is not enabled. Accept the disclosure and set an API key for ${provider.id} in Settings → Internet Search.`,
+        summary: `web_search: ${SEARCH_NOT_SET_UP_MESSAGE}`,
+        errorMessage: SEARCH_NOT_SET_UP_MESSAGE,
       };
     }
 

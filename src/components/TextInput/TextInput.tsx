@@ -1,5 +1,5 @@
 import React, {forwardRef} from 'react';
-import {View, TextInput as RNTextInput} from 'react-native';
+import {View, type TextInputInstance} from 'react-native';
 
 import {
   HelperText,
@@ -18,7 +18,7 @@ export type TextInputProps = PaperTextInputProps & {
   showDivider?: boolean;
 };
 
-export const TextInput = forwardRef<RNTextInput, TextInputProps>(
+export const TextInput = forwardRef<TextInputInstance, TextInputProps>(
   ({style, showDivider = false, error, helperText, ...rest}, ref) => {
     const theme = useTheme();
     const styles = createStyles(theme);

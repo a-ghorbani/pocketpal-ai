@@ -12,7 +12,13 @@ import {
 
 import {SettingsScreen} from '../SettingsScreen';
 
-import {modelStore, uiStore, ttsStore} from '../../../store';
+import {
+  modelStore,
+  searchProviderStore,
+  uiStore,
+  ttsStore,
+} from '../../../store';
+import {Menu} from '../../../components';
 import {l10n} from '../../../locales';
 
 jest.useFakeTimers();
@@ -359,7 +365,7 @@ describe('SettingsScreen', () => {
     // Menus open from a ref.measure() callback. The test renderer's shared
     // measure mock is a no-op; make it invoke the callback so the menu opens.
     const mockNativeMethods =
-      require('react-native/jest/MockNativeMethods').default;
+      require('@react-native/jest-preset/jest/MockNativeMethods').default;
     beforeEach(() => {
       mockNativeMethods.measure.mockImplementation((cb: any) =>
         cb(0, 0, 10, 10, 0, 0),
@@ -1296,6 +1302,55 @@ describe('SettingsScreen', () => {
     });
   });
 
+  describe('Internet Search key row', () => {
+    const keyOptional = 'No key needed for You.com. Add one for higher limits.';
+    const youKeySet = 'Key is set for You.com.';
+    const braveKeyNotSet = 'No key set for Brave.';
+
+    afterEach(async () => {
+      await searchProviderStore.clearKey('you');
+      searchProviderStore.setActiveProvider('brave');
+    });
+
+    it('says no key is needed for You.com when it has none', () => {
+      searchProviderStore.setActiveProvider('you');
+      const {getByText, queryByText} = render(<SettingsScreen />, {
+        withSafeArea: true,
+        withNavigation: true,
+      });
+
+      expect(getByText(keyOptional)).toBeTruthy();
+      expect(queryByText(youKeySet)).toBeNull();
+      expect(queryByText('No key set for You.com.')).toBeNull();
+    });
+
+    it('says the key is set for You.com when it has one', async () => {
+      searchProviderStore.setActiveProvider('you');
+      await searchProviderStore.setKey('you', 'test-key');
+      const {getByText, queryByText} = render(<SettingsScreen />, {
+        withSafeArea: true,
+        withNavigation: true,
+      });
+
+      expect(getByText(youKeySet)).toBeTruthy();
+      expect(queryByText(keyOptional)).toBeNull();
+      expect(queryByText('No key set for You.com.')).toBeNull();
+    });
+
+    it('says no key is set for Brave when it has none', () => {
+      const {getByText, queryByText} = render(<SettingsScreen />, {
+        withSafeArea: true,
+        withNavigation: true,
+      });
+
+      expect(getByText(braveKeyNotSet)).toBeTruthy();
+      expect(queryByText('Key is set for Brave.')).toBeNull();
+      expect(
+        queryByText('No key needed for Brave. Add one for higher limits.'),
+      ).toBeNull();
+    });
+  });
+
   it('shows effective value when image_max_tokens exceeds n_ctx', async () => {
     jest.useFakeTimers();
     const {getByText, queryByText} = render(<SettingsScreen />, {
@@ -1319,6 +1374,73 @@ describe('SettingsScreen', () => {
     await waitFor(() => {
       // Should show effective value clamped to n_ctx (2048)
       expect(getByText(/effective: 2048/)).toBeTruthy();
+    });
+  });
+
+  describe('search provider picker', () => {
+    const mockNativeMethods =
+      require('@react-native/jest-preset/jest/MockNativeMethods').default;
+
+    beforeEach(() => {
+      mockNativeMethods.measure.mockImplementation((cb: any) =>
+        cb(0, 0, 120, 40, 30, 200),
+      );
+    });
+
+    afterEach(() => {
+      mockNativeMethods.measure.mockReset();
+      runInAction(() => {
+        searchProviderStore.activeProviderId = 'brave';
+      });
+    });
+
+    const visibleMenus = (UNSAFE_getAllByType: any) =>
+      UNSAFE_getAllByType(Menu).filter((menu: any) => menu.props.visible);
+
+    it('opens anchored under its button', () => {
+      const {getByTestId, UNSAFE_getAllByType} = render(<SettingsScreen />, {
+        withSafeArea: true,
+        withNavigation: true,
+      });
+      expect(visibleMenus(UNSAFE_getAllByType)).toHaveLength(0);
+
+      fireEvent.press(getByTestId('search-provider-selector-button'));
+
+      const open = visibleMenus(UNSAFE_getAllByType);
+      expect(open).toHaveLength(1);
+      expect(open[0].props.anchor).toEqual({x: 30, y: 240});
+      expect(getByTestId('search-provider-option-exa')).toBeTruthy();
+    });
+
+    it('selecting a provider sets it and closes the menu', () => {
+      const {getByTestId, UNSAFE_getAllByType} = render(<SettingsScreen />, {
+        withSafeArea: true,
+        withNavigation: true,
+      });
+
+      fireEvent.press(getByTestId('search-provider-selector-button'));
+      fireEvent.press(getByTestId('search-provider-option-exa'));
+
+      expect(searchProviderStore.setActiveProvider).toHaveBeenCalledWith('exa');
+      expect(visibleMenus(UNSAFE_getAllByType)).toHaveLength(0);
+      expect(getByTestId('search-provider-selector-button')).toHaveTextContent(
+        /Exa$/,
+      );
+    });
+
+    it('dismissing closes the menu without changing the provider', () => {
+      const {getByTestId, UNSAFE_getAllByType} = render(<SettingsScreen />, {
+        withSafeArea: true,
+        withNavigation: true,
+      });
+
+      fireEvent.press(getByTestId('search-provider-selector-button'));
+      act(() => {
+        visibleMenus(UNSAFE_getAllByType)[0].props.onDismiss();
+      });
+
+      expect(visibleMenus(UNSAFE_getAllByType)).toHaveLength(0);
+      expect(searchProviderStore.setActiveProvider).not.toHaveBeenCalled();
     });
   });
 });

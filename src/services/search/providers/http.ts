@@ -33,7 +33,11 @@ const withTimeout = async (
   const timer = setTimeout(() => fire('timer'), timeoutMs);
   callerSignal?.addEventListener('abort', onCallerAbort);
   try {
-    return await fetch(input, {...init, signal: controller.signal});
+    return await fetch(input, {
+      ...init,
+      credentials: 'omit',
+      signal: controller.signal,
+    });
   } catch (e) {
     if (firedBy === 'caller') {
       throw new Error('cancelled');

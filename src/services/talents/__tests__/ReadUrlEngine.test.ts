@@ -109,15 +109,43 @@ describe('ReadUrlEngine', () => {
     spy.mockRestore();
   });
 
-  it('returns an error result when search is not enabled', async () => {
+  it('returns an error result when search is not set up', async () => {
     const access = makeAccess({canSearch: () => false});
     const result = await new ReadUrlEngine(access).execute({
       url: 'https://e.com',
     });
-    expect(result.type).toBe('error');
+    expect(result).toEqual({
+      type: 'error',
+      summary:
+        "read_url: Internet search isn't set up yet. Finish setup in Settings → Internet Search.",
+      errorMessage:
+        "Internet search isn't set up yet. Finish setup in Settings → Internet Search.",
+    });
+  });
+
+  it('names no key and no provider id when a keyless provider lacks consent, before any fetch', async () => {
+    const readWithDefaultReader = jest.fn();
+    const provider: SearchProvider = {id: 'you', search: jest.fn()};
+    const access = makeAccess({
+      getActiveProvider: () => provider,
+      canSearch: () => false,
+      readWithDefaultReader,
+    });
+    const result = await new ReadUrlEngine(access).execute({
+      url: 'https://e.com/p',
+    });
+    expect(result).toEqual({
+      type: 'error',
+      summary:
+        "read_url: Internet search isn't set up yet. Finish setup in Settings → Internet Search.",
+      errorMessage:
+        "Internet search isn't set up yet. Finish setup in Settings → Internet Search.",
+    });
     if (result.type === 'error') {
-      expect(result.summary).toMatch(/not enabled/i);
+      expect(result.summary).not.toMatch(/API key|you not enabled/);
+      expect(result.errorMessage).not.toMatch(/API key|you not enabled/);
     }
+    expect(readWithDefaultReader).not.toHaveBeenCalled();
   });
 
   it('errors when consent is absent even with a key (canSearch=false), before any fetch', async () => {
