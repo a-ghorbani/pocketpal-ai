@@ -226,6 +226,11 @@ export const createStyles = ({
     },
 
     // Compact Video Button (for right side)
+    // Cancels the send/stop button's 16 px left margin so the mic sits
+    // evenly between the voice chip and send.
+    micBeforeSend: {
+      marginRight: -16,
+    },
     compactVideoButton: {
       flexDirection: 'row',
       alignItems: 'center',

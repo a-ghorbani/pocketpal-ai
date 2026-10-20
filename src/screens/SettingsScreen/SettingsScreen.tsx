@@ -1152,7 +1152,7 @@ export const SettingsScreen: React.FC = observer(() => {
                   />
                 </View>
 
-                {asrStore.asrAvailable && asrStore.spokenLanguage && (
+                {asrStore.asrAvailable && (
                   <View style={styles.switchContainer}>
                     <View style={styles.textContainer}>
                       <Text variant="bodyMedium" style={styles.textLabel}>
@@ -1162,16 +1162,22 @@ export const SettingsScreen: React.FC = observer(() => {
                         variant="labelSmall"
                         style={styles.textDescription}
                         testID="asr-spoken-language">
-                        {languageName(asrStore.spokenLanguage)}
+                        {asrStore.spokenLanguage
+                          ? t(l10n.voiceInput.spokenLanguageDetected, {
+                              language: languageName(asrStore.spokenLanguage),
+                            })
+                          : l10n.voiceInput.spokenLanguageAuto}
                       </Text>
                     </View>
-                    <Button
-                      mode="outlined"
-                      testID="asr-detect-language"
-                      onPress={() => asrStore.setSpokenLanguage(null)}
-                      style={styles.menuButton}>
-                      {l10n.voiceInput.detectLanguageCta}
-                    </Button>
+                    {asrStore.spokenLanguage && (
+                      <Button
+                        mode="outlined"
+                        testID="asr-reset-language"
+                        onPress={() => asrStore.setSpokenLanguage(null)}
+                        style={styles.menuButton}>
+                        {l10n.voiceInput.resetLanguageCta}
+                      </Button>
+                    )}
                   </View>
                 )}
 

@@ -7,6 +7,7 @@ import {Text} from 'react-native-paper';
 import {useTheme} from '../../hooks';
 import {asrStore} from '../../store';
 import {L10nContext} from '../../utils';
+import {t} from '../../locales';
 import {
   ASR_LEVEL_HISTORY,
   ASR_MAX_RECORD_MS,
@@ -74,11 +75,42 @@ const ElapsedTimer: React.FC<{styles: ReturnType<typeof createStyles>}> =
     );
   });
 
+const LanguageLabel: React.FC<{
+  styles: ReturnType<typeof createStyles>;
+}> = observer(({styles}) => {
+  const l10n = useContext(L10nContext);
+  const code = asrStore.spokenLanguage;
+  if (!code) {
+    return (
+      <Text
+        variant="labelSmall"
+        style={styles.language}
+        testID="voice-language">
+        {l10n.voiceInput.recordingLanguageAuto}
+      </Text>
+    );
+  }
+  return (
+    <Pressable
+      onPress={() => asrStore.setSpokenLanguage(null)}
+      accessibilityRole="button"
+      hitSlop={8}
+      testID="voice-language-reset">
+      <Text
+        variant="labelSmall"
+        style={styles.language}
+        testID="voice-language">
+        {t(l10n.voiceInput.recordingLanguage, {code: code.toUpperCase()})}
+      </Text>
+    </Pressable>
+  );
+});
+
 /**
  * Replaces the composer's control row while a voice capture is recording or
  * being transcribed: cancel, a live input-level waveform with the elapsed time
  * (or a transcribing label, which says when it waits for the chat reply), and
- * stop.
+ * stop. Below them, the spoken language; tapping it resets to auto-detect.
  */
 export const VoiceRecordingBar: React.FC<VoiceRecordingBarProps> = observer(
   ({onCancel, onStop}) => {
@@ -88,47 +120,53 @@ export const VoiceRecordingBar: React.FC<VoiceRecordingBarProps> = observer(
     const isTranscribing = asrStore.captureState === 'transcribing';
 
     return (
-      <View style={styles.container} testID="voice-recording-bar">
-        <Pressable
-          style={styles.circleButton}
-          onPress={onCancel}
-          accessibilityRole="button"
-          accessibilityLabel={l10n.voiceInput.cancelLabel}
-          testID="voice-cancel-button">
-          <XIcon width={18} height={18} stroke={theme.colors.onSurface} />
-        </Pressable>
-
-        {isTranscribing ? (
-          <Text
-            variant="bodyMedium"
-            style={styles.transcribingText}
-            accessibilityLiveRegion="polite"
-            testID="voice-transcribing">
-            {asrStore.waitingForChat
-              ? l10n.voiceInput.waitingForChatLabel
-              : l10n.voiceInput.transcribingLabel}
-          </Text>
-        ) : (
-          <>
-            <LevelBars styles={styles} label={l10n.voiceInput.recordingLabel} />
-            <ElapsedTimer styles={styles} />
-          </>
-        )}
-
-        {isTranscribing ? (
-          <View style={styles.circleButton}>
-            <ActivityIndicator size="small" color={theme.colors.onSurface} />
-          </View>
-        ) : (
+      <View testID="voice-recording-bar">
+        <View style={styles.container}>
           <Pressable
             style={styles.circleButton}
-            onPress={onStop}
+            onPress={onCancel}
             accessibilityRole="button"
-            accessibilityLabel={l10n.voiceInput.stopLabel}
-            testID="voice-stop-button">
-            <View style={styles.stopSquare} />
+            accessibilityLabel={l10n.voiceInput.cancelLabel}
+            testID="voice-cancel-button">
+            <XIcon width={18} height={18} stroke={theme.colors.onSurface} />
           </Pressable>
-        )}
+
+          {isTranscribing ? (
+            <Text
+              variant="bodyMedium"
+              style={styles.transcribingText}
+              accessibilityLiveRegion="polite"
+              testID="voice-transcribing">
+              {asrStore.waitingForChat
+                ? l10n.voiceInput.waitingForChatLabel
+                : l10n.voiceInput.transcribingLabel}
+            </Text>
+          ) : (
+            <>
+              <LevelBars
+                styles={styles}
+                label={l10n.voiceInput.recordingLabel}
+              />
+              <ElapsedTimer styles={styles} />
+            </>
+          )}
+
+          {isTranscribing ? (
+            <View style={styles.circleButton}>
+              <ActivityIndicator size="small" color={theme.colors.onSurface} />
+            </View>
+          ) : (
+            <Pressable
+              style={styles.circleButton}
+              onPress={onStop}
+              accessibilityRole="button"
+              accessibilityLabel={l10n.voiceInput.stopLabel}
+              testID="voice-stop-button">
+              <View style={styles.stopSquare} />
+            </Pressable>
+          )}
+        </View>
+        <LanguageLabel styles={styles} />
       </View>
     );
   },

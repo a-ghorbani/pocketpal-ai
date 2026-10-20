@@ -1389,7 +1389,7 @@ describe('SettingsScreen', () => {
       ).toBeNull();
     });
 
-    it('shows the detected spoken language and clears it on Detect again', () => {
+    it('shows the detected spoken language and clears it on Reset', () => {
       runInAction(() => {
         modelStore.deviceTier = 'high';
         asrStore.userASROverride = null;
@@ -1397,10 +1397,10 @@ describe('SettingsScreen', () => {
       });
       const {getByTestId} = renderSettings();
       expect(getByTestId('asr-spoken-language').props.children).toBe(
-        'English (EN)',
+        'Auto-detected: English (EN)',
       );
       act(() => {
-        fireEvent.press(getByTestId('asr-detect-language'));
+        fireEvent.press(getByTestId('asr-reset-language'));
       });
       expect(asrStore.setSpokenLanguage).toHaveBeenCalledWith(null);
     });
@@ -1411,15 +1411,20 @@ describe('SettingsScreen', () => {
         asrStore.spokenLanguage = 'nl';
       });
       const {getByTestId} = renderSettings();
-      expect(getByTestId('asr-spoken-language').props.children).toBe('NL');
+      expect(getByTestId('asr-spoken-language').props.children).toBe(
+        'Auto-detected: NL',
+      );
     });
 
-    it('hides the spoken language row before a language is detected', () => {
+    it('shows auto-detect without Reset before a language is detected', () => {
       runInAction(() => {
         modelStore.deviceTier = 'high';
       });
-      const {queryByTestId} = renderSettings();
-      expect(queryByTestId('asr-detect-language')).toBeNull();
+      const {getByTestId, queryByTestId} = renderSettings();
+      expect(getByTestId('asr-spoken-language').props.children).toBe(
+        l10n.en.voiceInput.spokenLanguageAuto,
+      );
+      expect(queryByTestId('asr-reset-language')).toBeNull();
     });
 
     it('writes the override through setUserASROverride when toggled', () => {

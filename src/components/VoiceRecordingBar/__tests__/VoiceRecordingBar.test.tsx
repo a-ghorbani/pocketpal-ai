@@ -32,6 +32,7 @@ describe('VoiceRecordingBar', () => {
       asrStore.inputLevels = [];
       asrStore.recordingStartedAt = Date.now();
       asrStore.waitingForChat = false;
+      asrStore.spokenLanguage = null;
     });
   });
 
@@ -113,5 +114,30 @@ describe('VoiceRecordingBar', () => {
 
     expect(getByText(l10n.en.voiceInput.waitingForChatLabel)).toBeTruthy();
     expect(queryByText(l10n.en.voiceInput.transcribingLabel)).toBeNull();
+  });
+
+  it('shows auto language until one is detected, with nothing to reset', () => {
+    const {getByTestId, queryByTestId} = renderBar();
+
+    expect(getByTestId('voice-language').props.children).toBe(
+      l10n.en.voiceInput.recordingLanguageAuto,
+    );
+    expect(queryByTestId('voice-language-reset')).toBeNull();
+  });
+
+  it('shows the detected language and resets it to auto-detect on tap', () => {
+    runInAction(() => {
+      asrStore.spokenLanguage = 'ja';
+    });
+    const {getByTestId} = renderBar();
+
+    expect(getByTestId('voice-language').props.children).toBe(
+      'Language: JA (tap to reset)',
+    );
+    fireEvent.press(getByTestId('voice-language-reset'));
+    expect(asrStore.setSpokenLanguage).toHaveBeenCalledWith(null);
+    expect(getByTestId('voice-language').props.children).toBe(
+      l10n.en.voiceInput.recordingLanguageAuto,
+    );
   });
 });
