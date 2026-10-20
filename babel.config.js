@@ -30,5 +30,12 @@ module.exports = function (api) {
       // 'react-native-reanimated/plugin', // this is not needed in 4.x
       'react-native-worklets/plugin', // must stay last
     ],
+    overrides: [
+      {
+        // Legacy decorators need the class-fields transform, which the Hermes V1 preset skips.
+        test: /[/\\]src[/\\]database[/\\]models[/\\]/,
+        plugins: [['@babel/plugin-transform-class-properties', {loose: true}]],
+      },
+    ],
   };
 };

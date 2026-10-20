@@ -16,6 +16,7 @@ import {styles} from './styles';
 import {TouchableOpacity, View} from 'react-native';
 import {CustomBackdrop} from './CustomBackdrop';
 import {Actions} from './Actions';
+import {SheetBackground} from './SheetBackground';
 import {SheetHandle} from './SheetHandle';
 import {SheetScrollView} from './SheetScrollView';
 import {SheetAwareNativeInput} from '../TextInput/SheetAwareNativeInput';
@@ -100,6 +101,7 @@ export const Sheet = forwardRef(
         enableDynamicSizing={!snapPoints}
         stackBehavior="push"
         backdropComponent={CustomBackdrop}
+        backgroundComponent={SheetBackground}
         handleComponent={SheetHandle}
         keyboardBlurBehavior="restore"
         activeOffsetY={[-1, 1]}

@@ -63,14 +63,14 @@ class MainActivity : ReactActivity() {
    * (e.g. 420dpi). PixelUtil uses screenDisplayMetrics for all dp-to-px conversions,
    * causing everything to render ~4x too large on a lower-density external monitor.
    *
-   * windowDisplayMetrics (from Application context) has the correct density, so we
-   * copy it over. This runs in onCreate and onConfigurationChanged because RN
+   * The Application context's display metrics have the correct density, so we
+   * copy them over. This runs in onCreate and onConfigurationChanged because RN
    * re-initializes metrics on orientation/resize changes.
    */
   private fun fixExternalDisplayDensity() {
       try {
           val screenMetrics = DisplayMetricsHolder.getScreenDisplayMetrics()
-          val windowMetrics = DisplayMetricsHolder.getWindowDisplayMetrics()
+          val windowMetrics = applicationContext.resources.displayMetrics
           if (screenMetrics.densityDpi != windowMetrics.densityDpi) {
               screenMetrics.densityDpi = windowMetrics.densityDpi
               screenMetrics.density = windowMetrics.density

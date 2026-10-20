@@ -63,13 +63,38 @@ describe('WebSearchEngine', () => {
     }
   });
 
-  it('returns an error result when search is not enabled (never silent)', async () => {
+  it('returns an error result when search is not set up (never silent)', async () => {
     const access = makeAccess({canSearch: () => false});
     const result = await new WebSearchEngine(access).execute({query: 'mars'});
-    expect(result.type).toBe('error');
+    expect(result).toEqual({
+      type: 'error',
+      summary:
+        "web_search: Internet search isn't set up yet. Finish setup in Settings → Internet Search.",
+      errorMessage:
+        "Internet search isn't set up yet. Finish setup in Settings → Internet Search.",
+    });
+  });
+
+  it('names no key and no provider id when a keyless provider lacks consent', async () => {
+    const search = jest.fn().mockResolvedValue([hit()]);
+    const provider: SearchProvider = {id: 'you', search};
+    const access = makeAccess({
+      getActiveProvider: () => provider,
+      canSearch: () => false,
+    });
+    const result = await new WebSearchEngine(access).execute({query: 'mars'});
+    expect(result).toEqual({
+      type: 'error',
+      summary:
+        "web_search: Internet search isn't set up yet. Finish setup in Settings → Internet Search.",
+      errorMessage:
+        "Internet search isn't set up yet. Finish setup in Settings → Internet Search.",
+    });
     if (result.type === 'error') {
-      expect(result.summary).toMatch(/not enabled/i);
+      expect(result.summary).not.toMatch(/API key|you not enabled/);
+      expect(result.errorMessage).not.toMatch(/API key|you not enabled/);
     }
+    expect(search).not.toHaveBeenCalled();
   });
 
   it('errors when consent is absent even though a key is present (canSearch=false)', async () => {
