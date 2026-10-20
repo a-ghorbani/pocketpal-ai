@@ -204,3 +204,38 @@ describe('caller signal', () => {
     expect(caller.signal.aborted).toBe(false);
   });
 });
+
+describe('cookies', () => {
+  it('omits credentials on fetchJson requests', async () => {
+    global.fetch = abortableFetch({body: '{"a":1}'});
+
+    await fetchJson('https://api.you.com/v1/search', {method: 'GET'});
+
+    expect((global.fetch as jest.Mock).mock.calls[0][1].credentials).toBe(
+      'omit',
+    );
+  });
+
+  it('omits credentials on fetchText requests', async () => {
+    global.fetch = abortableFetch({body: 'ok'});
+
+    await fetchText('https://r.jina.ai/x', {method: 'GET'});
+
+    expect((global.fetch as jest.Mock).mock.calls[0][1].credentials).toBe(
+      'omit',
+    );
+  });
+
+  it('omits credentials even when the caller asks to include them', async () => {
+    global.fetch = abortableFetch({body: '{"a":1}'});
+
+    await fetchJson('https://api.you.com/v1/search', {
+      method: 'GET',
+      credentials: 'include',
+    });
+
+    expect((global.fetch as jest.Mock).mock.calls[0][1].credentials).toBe(
+      'omit',
+    );
+  });
+});
