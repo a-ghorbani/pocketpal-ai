@@ -29,7 +29,7 @@ export const VoiceBar: React.FC = observer(() => {
   const {toggleMute, end} = useVoiceModeControls();
   const {phase, micMuted, lastError, presentation} = voiceModeStore;
   const visual = voiceVisual(phase, micMuted);
-  const status = voiceStatus(visual, lastError, l10n.voiceMode);
+  const status = voiceStatus(phase, micMuted, lastError, l10n.voiceMode);
   useAnnounceVoiceStatus(status, presentation === 'bar');
 
   const expand = useCallback(() => voiceModeStore.setPresentation('full'), []);

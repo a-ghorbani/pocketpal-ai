@@ -4,6 +4,7 @@ import {mockASRStore} from './asrStore';
 
 type VoicePhase =
   | 'closed'
+  | 'starting'
   | 'listening'
   | 'transcribing'
   | 'thinking'

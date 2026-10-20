@@ -13,6 +13,7 @@ import {
   chatSessionStore,
   modelStore,
   ttsStore,
+  uiStore,
   voiceEntitlement,
   voiceModeStore,
 } from '../../store';
@@ -277,6 +278,31 @@ describe('useVoiceMode', () => {
       expect(voiceModeStore.phase).toBe('listening');
       expect(voiceModeStore.presentation).toBe('full');
       expect(AudioRecord.start).toHaveBeenCalledTimes(1);
+    });
+
+    it('shows the starting state at once, while speech recognition loads', async () => {
+      const {engine, hook} = renderVoiceMode();
+      let loaded!: () => void;
+      engine.prepare.mockReturnValueOnce(
+        new Promise<void>(resolve => {
+          loaded = resolve;
+        }),
+      );
+
+      let entering!: Promise<void>;
+      act(() => {
+        entering = hook.result.current.requestEntry({openModelPicker});
+      });
+      await flush();
+      expect(voiceModeStore.phase).toBe('starting');
+      expect(voiceModeStore.presentation).toBe('full');
+      expect(AudioRecord.init).not.toHaveBeenCalled();
+
+      await act(async () => {
+        loaded();
+        await entering;
+      });
+      expect(voiceModeStore.phase).toBe('listening');
     });
 
     it('holds nothing back for a remote model', async () => {
@@ -587,6 +613,12 @@ describe('useVoiceMode', () => {
       await flush();
 
       expectClosedAndReleased(engine);
+      expect(uiStore.setChatWarning).toHaveBeenCalledWith(
+        expect.objectContaining({
+          message: uiStore.l10n.voiceMode.micFailed,
+          context: 'chat',
+        }),
+      );
     });
 
     it('keeps the voice hold through a turn', async () => {

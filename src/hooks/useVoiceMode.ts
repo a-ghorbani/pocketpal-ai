@@ -36,6 +36,7 @@ import {
   chatSessionStore,
   modelStore,
   ttsStore,
+  uiStore,
   voiceEntitlement,
   voiceModeStore,
 } from '../store';
@@ -68,6 +69,15 @@ async function readDeviceMemory(): Promise<DeviceMemory | null> {
     return null;
   }
 }
+
+const warn = (message: string) =>
+  uiStore.setChatWarning({
+    code: 'unknown',
+    message,
+    context: 'chat',
+    recoverable: true,
+    severity: 'error',
+  });
 
 async function isSetupComplete(): Promise<boolean> {
   return (
@@ -186,11 +196,14 @@ class VoiceModeController {
     });
     ttsStore.stop().catch(() => {});
     this.releaseAwake = acquireKeepAwake();
+    voiceModeStore.setPhase('starting');
+    voiceModeStore.setPresentation('full');
     try {
       await this.engine.prepare();
     } catch (err) {
       console.warn('[voiceMode] prepare failed:', err);
       if (session === this.session) {
+        warn(uiStore.l10n.voiceMode.startFailed);
         this.exit();
       }
       return;
@@ -199,7 +212,6 @@ class VoiceModeController {
       return;
     }
     voiceModeStore.setPhase('listening');
-    voiceModeStore.setPresentation('full');
     this.startCapture(session);
   }
 
@@ -312,6 +324,7 @@ class VoiceModeController {
     } catch (err) {
       console.warn('[voiceMode] microphone failed:', err);
       if (session === this.session) {
+        warn(uiStore.l10n.voiceMode.micFailed);
         this.exit();
       }
     }

@@ -29,7 +29,7 @@ export const VoiceModeView: React.FC = observer(() => {
   const {tapCloud, toggleMute, end} = useVoiceModeControls();
   const {phase, micMuted, lastError} = voiceModeStore;
   const visual = voiceVisual(phase, micMuted);
-  const status = voiceStatus(visual, lastError, l10n.voiceMode);
+  const status = voiceStatus(phase, micMuted, lastError, l10n.voiceMode);
   const {title, hint} = status;
   useAnnounceVoiceStatus(status, true);
 

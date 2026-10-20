@@ -10,7 +10,11 @@ export const voiceVisual = (
   if (phase === 'speaking') {
     return 'speaking';
   }
-  if (phase === 'transcribing' || phase === 'thinking') {
+  if (
+    phase === 'starting' ||
+    phase === 'transcribing' ||
+    phase === 'thinking'
+  ) {
     return 'thinking';
   }
   return micMuted ? 'muted' : 'listening';

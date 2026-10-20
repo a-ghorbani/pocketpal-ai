@@ -1600,6 +1600,10 @@
   },
   "voiceMode": {
     "spokenMarker": "Spoken",
+    "startingTitle": "Starting",
+    "startingHint": "Loading speech recognition",
+    "startFailed": "Couldn't start voice mode. Try again.",
+    "micFailed": "Couldn't use the microphone, so voice mode ended.",
     "listeningTitle": "Listening",
     "listeningHint": "Tap the cloud when you are done",
     "thinkingTitle": "Thinking",

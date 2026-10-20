@@ -8,6 +8,7 @@ import {asrStore} from './ASRStore';
 
 export type VoicePhase =
   | 'closed'
+  | 'starting'
   | 'listening'
   | 'transcribing'
   | 'thinking'

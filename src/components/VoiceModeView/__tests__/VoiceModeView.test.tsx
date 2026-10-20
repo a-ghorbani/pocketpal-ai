@@ -42,6 +42,13 @@ describe('VoiceModeView', () => {
 
   it.each([
     [
+      'starting',
+      false,
+      strings.startingTitle,
+      strings.startingHint,
+      'thinking',
+    ],
+    [
       'listening',
       false,
       strings.listeningTitle,
