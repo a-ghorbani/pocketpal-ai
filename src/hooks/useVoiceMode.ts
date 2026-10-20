@@ -1,11 +1,10 @@
 import {useCallback, useEffect, useState} from 'react';
-import {AppState, Platform, type AppStateStatus} from 'react-native';
+import {AppState, type AppStateStatus} from 'react-native';
 
 import {toByteArray} from 'base64-js';
 import {comparer, reaction} from 'mobx';
 import {useFocusEffect} from '@react-navigation/native';
 import AudioRecord from '@fugood/react-native-audio-pcm-stream';
-import DeviceInfo from 'react-native-device-info';
 
 import {
   ASR_BITS_PER_SAMPLE,
@@ -13,8 +12,8 @@ import {
   ASR_CHUNK_BYTES,
   ASR_SAMPLE_RATE,
   ASR_TIERS,
+  readDeviceMemory,
 } from '../services/asr';
-import type {DeviceMemory} from '../services/asr';
 import {TTS_ENGINE_RUNTIME_BYTES, ttsRuntime} from '../services/tts';
 import {
   Endpointer,
@@ -41,7 +40,6 @@ import {
   voiceModeStore,
 } from '../store';
 import type {VoiceError} from '../store';
-import NativeHardwareInfo from '../specs/NativeHardwareInfo';
 import {acquireKeepAwake} from '../utils/keepAwake';
 import {ModelOrigin} from '../utils/types';
 
@@ -55,20 +53,6 @@ const FAILURES: Partial<Record<VoiceTurnOutcome, VoiceError>> = {
   reply_failed: 'reply_failed',
   speech_failed: 'speech_failed',
 };
-
-async function readDeviceMemory(): Promise<DeviceMemory | null> {
-  try {
-    return Platform.OS === 'ios'
-      ? {
-          os: 'ios',
-          availableBytes: await NativeHardwareInfo.getAvailableMemory(),
-        }
-      : {os: 'android', totalBytes: await DeviceInfo.getTotalMemory()};
-  } catch (err) {
-    console.warn('[voiceMode] memory check failed:', err);
-    return null;
-  }
-}
 
 const warn = (message: string) =>
   uiStore.setChatWarning({

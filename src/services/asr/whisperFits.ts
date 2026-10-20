@@ -12,6 +12,10 @@ export type DeviceMemory =
   | {os: 'ios'; availableBytes: number}
   | {os: 'android'; totalBytes: number};
 
+/** What Android lets the chat model and the speech models use together. */
+export const androidMemoryBudget = (totalBytes: number): number =>
+  totalBytes * ASR_ANDROID_RAM_SHARE;
+
 /** Whether whisper fits next to the loaded chat model. */
 export const whisperFits = (
   memory: DeviceMemory,
@@ -20,4 +24,4 @@ export const whisperFits = (
 ): boolean =>
   memory.os === 'ios'
     ? memory.availableBytes >= whisperBytes * ASR_IOS_MEMORY_HEADROOM_FACTOR
-    : chatBytes + whisperBytes <= memory.totalBytes * ASR_ANDROID_RAM_SHARE;
+    : chatBytes + whisperBytes <= androidMemoryBudget(memory.totalBytes);

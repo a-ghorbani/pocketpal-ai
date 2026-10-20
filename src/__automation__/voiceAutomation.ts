@@ -1,7 +1,7 @@
 import {runInAction} from 'mobx';
 import DeviceInfo from 'react-native-device-info';
 
-import {ASR_ANDROID_RAM_SHARE, ASR_TIERS} from '../services/asr';
+import {ASR_TIERS, androidMemoryBudget} from '../services/asr';
 import {TTS_ENGINE_RUNTIME_BYTES} from '../services/tts';
 import {
   asrStore,
@@ -82,7 +82,7 @@ export async function runVoiceCommand(cmd: string): Promise<void> {
 }
 
 async function forceMemoryBand(wontFit: boolean): Promise<void> {
-  const budget = (await DeviceInfo.getTotalMemory()) * ASR_ANDROID_RAM_SHARE;
+  const budget = androidMemoryBudget(await DeviceInfo.getTotalMemory());
   const stt = ASR_TIERS.base.runtimeBytes;
   const engine = ttsStore.currentVoice?.engine;
   const tts =

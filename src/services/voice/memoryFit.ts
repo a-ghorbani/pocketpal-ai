@@ -1,8 +1,9 @@
+import {ASR_IOS_MEMORY_HEADROOM_FACTOR} from '../asr/constants';
 import {
-  ASR_ANDROID_RAM_SHARE,
-  ASR_IOS_MEMORY_HEADROOM_FACTOR,
-} from '../asr/constants';
-import {whisperFits, type DeviceMemory} from '../asr/whisperFits';
+  androidMemoryBudget,
+  whisperFits,
+  type DeviceMemory,
+} from '../asr/whisperFits';
 import type {MemoryFitStatus} from '../../utils/memoryDisplay';
 
 export interface VoiceMemoryInputs {
@@ -64,7 +65,7 @@ export const voiceMemoryFit = ({
       {kind: 'stt', bytes: sttBytes},
       {kind: 'tts', bytes: ttsBytes},
     ];
-    availableBytes = memory.totalBytes * ASR_ANDROID_RAM_SHARE;
+    availableBytes = androidMemoryBudget(memory.totalBytes);
   }
   const neededBytes = rows.reduce((sum, row) => sum + row.bytes, 0);
   let status: MemoryFitStatus = 'fits';

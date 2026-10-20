@@ -1,6 +1,5 @@
 import {
   AppState,
-  Platform,
   type AppStateStatus,
   type NativeEventSubscription,
 } from 'react-native';
@@ -19,6 +18,7 @@ import {
   ASR_TIERS,
   ASR_TIER_ORDER,
   whisperAsrEngine,
+  readDeviceMemory,
   whisperFits,
 } from '../services/asr';
 import type {
@@ -26,10 +26,7 @@ import type {
   AsrErrorKind,
   AsrTier,
   CaptureState,
-  DeviceMemory,
 } from '../services/asr';
-
-import NativeHardwareInfo from '../specs/NativeHardwareInfo';
 
 import {modelStore} from './ModelStore';
 
@@ -106,26 +103,16 @@ export class ASRStore {
   }
 
   /** Whether the `tier` whisper model fits next to the loaded chat model. */
-  async hasMemoryForCapture(
-    tier: AsrTier = this.selectedTier,
-  ): Promise<boolean> {
-    try {
-      const memory: DeviceMemory =
-        Platform.OS === 'ios'
-          ? {
-              os: 'ios',
-              availableBytes: await NativeHardwareInfo.getAvailableMemory(),
-            }
-          : {os: 'android', totalBytes: await DeviceInfo.getTotalMemory()};
-      return whisperFits(
+  async hasMemoryForCapture(): Promise<boolean> {
+    const memory = await readDeviceMemory();
+    return (
+      memory == null ||
+      whisperFits(
         memory,
         modelStore.loadedModelBytes ?? 0,
-        ASR_TIERS[tier].runtimeBytes,
-      );
-    } catch (err) {
-      console.warn('[ASRStore] memory check failed:', err);
-      return true;
-    }
+        ASR_TIERS[this.selectedTier].runtimeBytes,
+      )
+    );
   }
 
   /**
