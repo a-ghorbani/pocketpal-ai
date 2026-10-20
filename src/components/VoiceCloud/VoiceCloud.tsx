@@ -55,6 +55,7 @@ const Blob: React.FC<BlobProps> = ({index, color, scale, animate}) => {
       -1,
       true,
     );
+    return () => cancelAnimation(progress);
   }, [animate, period, progress]);
 
   const driftStyle = useAnimatedStyle(() => ({
@@ -116,6 +117,7 @@ export const VoiceCloud: React.FC<VoiceCloudProps> = ({visual, size}) => {
     }
     const {duration, reverse, easing} = MOTION[visual];
     progress.value = withRepeat(withTiming(1, {duration, easing}), -1, reverse);
+    return () => cancelAnimation(progress);
   }, [progress, reduceMotion, visual]);
 
   const motionStyle = useAnimatedStyle(() => {

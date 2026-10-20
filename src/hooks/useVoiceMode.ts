@@ -253,6 +253,10 @@ class VoiceModeController {
         console.warn('[voiceMode] interrupt on exit failed:', err);
       }
       try {
+        // Freeing the models blocks the JS thread; let a scroll start first.
+        await new Promise<void>(resolve =>
+          requestIdleCallback(() => resolve()),
+        );
         await this.engine.release();
       } catch (err) {
         console.warn('[voiceMode] release failed:', err);

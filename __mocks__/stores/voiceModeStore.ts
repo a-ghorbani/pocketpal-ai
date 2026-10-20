@@ -78,6 +78,14 @@ class MockVoiceModeStore {
     return voiceModeDeviceSupported(mockModelStore.deviceTier, Platform.OS);
   }
 
+  get isOpen(): boolean {
+    return this.phase !== 'closed';
+  }
+
+  get isFullViewOpen(): boolean {
+    return this.phase !== 'closed' && this.presentation === 'full';
+  }
+
   get isUnlocked(): boolean {
     return mockVoiceEntitlement.source.isUnlocked();
   }

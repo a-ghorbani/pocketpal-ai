@@ -282,8 +282,7 @@ export const ChatScreen: React.FC = observer(() => {
     return <VideoPalScreen activePal={activePal} />;
   }
 
-  const voiceViewOpen =
-    voiceModeStore.phase !== 'closed' && voiceModeStore.presentation === 'full';
+  const voiceViewOpen = voiceModeStore.isFullViewOpen;
 
   // Otherwise, show the regular chat view
   return (

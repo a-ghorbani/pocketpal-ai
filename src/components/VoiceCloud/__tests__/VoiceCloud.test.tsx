@@ -43,6 +43,15 @@ describe('VoiceCloud', () => {
     expect(withRepeat).toHaveBeenCalled();
   });
 
+  it('stops its loops when it goes away', () => {
+    const {unmount} = render(<VoiceCloud visual="listening" size={280} />);
+    (Reanimated.cancelAnimation as jest.Mock).mockClear();
+
+    unmount();
+
+    expect(Reanimated.cancelAnimation).toHaveBeenCalledTimes(5);
+  });
+
   it('stays still when muted', () => {
     render(<VoiceCloud visual="muted" size={280} />);
     expect(withRepeat).not.toHaveBeenCalled();

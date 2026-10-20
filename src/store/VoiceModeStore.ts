@@ -53,6 +53,16 @@ export class VoiceModeStore {
     return voiceModeDeviceSupported(modelStore.deviceTier, Platform.OS);
   }
 
+  /** A session is open; changes only when one starts or ends. */
+  get isOpen(): boolean {
+    return this.phase !== 'closed';
+  }
+
+  /** The full voice view covers the chat. */
+  get isFullViewOpen(): boolean {
+    return this.phase !== 'closed' && this.presentation === 'full';
+  }
+
   get isUnlocked(): boolean {
     return voiceEntitlement.source.isUnlocked();
   }

@@ -96,6 +96,15 @@ describe('VoiceModeStore', () => {
     );
   });
 
+  it('reports open and full-view states that change only when a session opens, closes or collapses', () => {
+    const store = new VoiceModeStore();
+    expect([store.isOpen, store.isFullViewOpen]).toEqual([false, false]);
+    store.setPhase('listening');
+    expect([store.isOpen, store.isFullViewOpen]).toEqual([true, true]);
+    store.setPresentation('bar');
+    expect([store.isOpen, store.isFullViewOpen]).toEqual([true, false]);
+  });
+
   it('closing resets mute, presentation and the error', () => {
     const store = new VoiceModeStore();
     store.setPhase('listening');

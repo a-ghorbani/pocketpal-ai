@@ -761,6 +761,28 @@ describe('useVoiceMode', () => {
       },
     );
 
+    it('frees the models only once the JS thread is idle', async () => {
+      const idle: Array<() => void> = [];
+      const original = (global as any).requestIdleCallback;
+      (global as any).requestIdleCallback = (callback: () => void) =>
+        idle.push(callback);
+      const {enter, hook, engine} = renderVoiceMode();
+      await enter();
+
+      act(() => {
+        hook.result.current.end();
+      });
+      await flush();
+      expect(voiceModeStore.phase).toBe('closed');
+      expect(engine.release).not.toHaveBeenCalled();
+
+      await act(async () => {
+        idle.forEach(callback => callback());
+      });
+      expect(engine.release).toHaveBeenCalledTimes(1);
+      (global as any).requestIdleCallback = original;
+    });
+
     it('End while listening stops the mic', async () => {
       const {enter, hook, engine} = renderVoiceMode();
       await enter();
