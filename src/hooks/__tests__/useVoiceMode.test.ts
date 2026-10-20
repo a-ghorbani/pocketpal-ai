@@ -191,6 +191,22 @@ describe('useVoiceMode', () => {
       expect(voiceModeStore.phase).toBe('closed');
     });
 
+    it('resumes entry when the paywall reports an unlock', async () => {
+      voiceModeStore.setUnlockOverride(false);
+      const {enter, engine} = renderVoiceMode();
+      await enter();
+      const [{onUnlocked}] = (voiceEntitlement as any).defaultSource.openPaywall
+        .mock.calls[0];
+
+      voiceModeStore.setUnlockOverride(true);
+      await act(async () => {
+        await onUnlocked();
+      });
+
+      expect(engine.prepare).toHaveBeenCalledTimes(1);
+      expect(voiceModeStore.phase).toBe('listening');
+    });
+
     it('opens only the model picker when no model is loaded', async () => {
       runInAction(() => {
         model.activeModelId = undefined;

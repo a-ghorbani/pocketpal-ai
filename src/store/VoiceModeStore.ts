@@ -28,12 +28,12 @@ export class VoiceModeStore {
   micMuted = false;
   presentation: VoicePresentation = 'full';
   lastError: VoiceError | null = null;
-  /** Dev and E2E builds only: forces the default entitlement either way. */
+  /** E2E builds only: forces the default entitlement either way. */
   unlockOverride: boolean | null = null;
 
   constructor() {
     makeAutoObservable(this, {}, {autoBind: true});
-    if (__DEV__ || __E2E__) {
+    if (__E2E__) {
       makePersistable(this, {
         name: 'VoiceModeStore',
         properties: ['unlockOverride'],
@@ -77,7 +77,7 @@ export class VoiceModeStore {
     this.presentation = presentation;
   }
 
-  /** Dev and E2E drivers only. */
+  /** E2E drivers only. */
   setUnlockOverride(unlocked: boolean | null): void {
     this.unlockOverride = unlocked;
   }

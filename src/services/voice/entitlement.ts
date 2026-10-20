@@ -4,7 +4,8 @@ import {makeAutoObservable, observable} from 'mobx';
 export interface VoiceEntitlementSource {
   /** Read inside a MobX reaction, so an observable source re-renders. */
   isUnlocked(): boolean;
-  openPaywall(): void;
+  /** Shows the paywall; `onUnlocked` runs once a purchase unlocks voice mode. */
+  openPaywall(opts: {onUnlocked: () => void}): void;
 }
 
 /**

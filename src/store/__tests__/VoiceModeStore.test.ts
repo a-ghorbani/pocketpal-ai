@@ -51,25 +51,23 @@ describe('VoiceModeStore', () => {
     voiceEntitlement.register(source);
 
     expect(voiceModeStore.isUnlocked).toBe(true);
-    voiceEntitlement.source.openPaywall();
-    expect(source.openPaywall).toHaveBeenCalledTimes(1);
+    const onUnlocked = jest.fn();
+    voiceEntitlement.source.openPaywall({onUnlocked});
+    expect(source.openPaywall).toHaveBeenCalledWith({onUnlocked});
   });
 
   it('the default paywall only warns', () => {
     const warn = jest.spyOn(console, 'warn').mockImplementation(() => {});
-    voiceEntitlement.source.openPaywall();
+    voiceEntitlement.source.openPaywall({onUnlocked: jest.fn()});
     expect(warn).toHaveBeenCalled();
     warn.mockRestore();
   });
 
-  it('persists the unlock override only in dev and E2E builds', () => {
-    (global as any).__DEV__ = false;
+  it('persists the unlock override only in E2E builds', () => {
+    (global as any).__DEV__ = true;
     (global as any).__E2E__ = false;
-    const release = new VoiceModeStore();
-    expect(makePersistable).not.toHaveBeenCalledWith(
-      release,
-      expect.anything(),
-    );
+    const dev = new VoiceModeStore();
+    expect(makePersistable).not.toHaveBeenCalledWith(dev, expect.anything());
 
     (global as any).__E2E__ = true;
     const e2e = new VoiceModeStore();

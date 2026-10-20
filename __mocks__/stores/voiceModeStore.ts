@@ -9,6 +9,10 @@ type VoicePhase =
   | 'transcribing'
   | 'thinking'
   | 'speaking';
+type VoiceEntitlementSource = {
+  isUnlocked(): boolean;
+  openPaywall(opts: {onUnlocked: () => void}): void;
+};
 type VoiceError = 'transcribe_failed' | 'reply_failed' | 'speech_failed';
 
 class MockVoiceModeStore {
@@ -93,8 +97,8 @@ const defaultSource = {
 };
 
 export const mockVoiceEntitlement = {
-  source: defaultSource as {isUnlocked(): boolean; openPaywall(): void},
-  register: jest.fn((source: {isUnlocked(): boolean; openPaywall(): void}) => {
+  source: defaultSource as VoiceEntitlementSource,
+  register: jest.fn((source: VoiceEntitlementSource) => {
     mockVoiceEntitlement.source = source;
   }),
   defaultSource,

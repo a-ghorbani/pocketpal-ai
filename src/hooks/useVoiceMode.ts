@@ -133,7 +133,9 @@ class VoiceModeController {
     }
     this.openModelPicker = openModelPicker;
     if (!voiceModeStore.isUnlocked) {
-      voiceEntitlement.source.openPaywall();
+      voiceEntitlement.source.openPaywall({
+        onUnlocked: () => this.requestEntry(openModelPicker),
+      });
       return;
     }
     if (!modelStore.activeModelId) {
