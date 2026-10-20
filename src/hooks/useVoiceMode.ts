@@ -90,8 +90,9 @@ async function isSetupComplete(): Promise<boolean> {
 
 /**
  * One voice session at a time: entry checks, the listening loop, turns, and
- * every way the session ends. `session` changes on each entry and exit, so a
- * continuation from an earlier session does nothing.
+ * the exits it can detect itself. ChatScreen also ends the session through
+ * `exit` when a video Pal takes over. `session` changes on each entry and
+ * exit, so a continuation from an earlier session does nothing.
  */
 class VoiceModeController {
   port: VoiceTurnPort;
