@@ -132,6 +132,40 @@ describe('useChatSession', () => {
       ).mockResolvedValue(undefined);
     });
 
+    const sendWithThinkingOn = async (opts?: {spoken: boolean}) => {
+      const settings = await chatSessionStore.getCurrentCompletionSettings();
+      (
+        chatSessionStore.getCurrentCompletionSettings as jest.Mock
+      ).mockResolvedValueOnce({
+        ...settings,
+        enable_thinking: true,
+        reasoning: {enabled: true, effort: 'high'},
+      });
+      const {result} = renderHook(() =>
+        useChatSession({current: null}, textMessage.author, mockAssistant),
+      );
+      await act(async () => {
+        await result.current.handleSendPress(textMessage, opts);
+      });
+      return (modelStore.engine!.completion as jest.Mock).mock.calls[0][0];
+    };
+
+    it('runs the reply with thinking off, whatever the chat setting', async () => {
+      const params = await sendWithThinkingOn({spoken: true});
+
+      expect(params.chat_template_kwargs).toEqual(
+        expect.objectContaining({enable_thinking: false}),
+      );
+      expect(params.chat_template_kwargs?.reasoning_effort).toBeUndefined();
+    });
+
+    it('leaves thinking to the chat setting for a typed send', async () => {
+      const params = await sendWithThinkingOn();
+
+      expect(params.chat_template_kwargs?.enable_thinking).not.toBe(false);
+      expect(params.chat_template_kwargs?.reasoning_effort).toBe('high');
+    });
+
     it('a typed send carries no spoken flag', async () => {
       const {result} = renderHook(() =>
         useChatSession({current: null}, textMessage.author, mockAssistant),

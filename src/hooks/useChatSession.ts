@@ -170,6 +170,8 @@ const prepareCompletion = async ({
 
   const completionParamsWithAppProps = {
     ...sessionCompletionSettings,
+    // A spoken reply must start talking at once, not after a reasoning pass.
+    ...(spoken ? {enable_thinking: false, reasoning: {enabled: false}} : {}),
     messages,
     stop: stopWords,
   };
@@ -598,7 +600,8 @@ export type UndoneSend = {
 };
 
 export type SendOptions = {
-  /** The message was spoken in voice mode; both rows carry the marker. */
+  /** The message was spoken in voice mode: both rows are marked, and the
+   * reply runs with thinking off. */
   spoken?: boolean;
   /** Receives the assistant turn's id as soon as its row exists. */
   onTurnCreated?: (turnId: string) => void;
