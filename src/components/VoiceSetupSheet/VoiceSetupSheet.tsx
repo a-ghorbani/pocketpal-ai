@@ -1,4 +1,4 @@
-import React, {useContext, useState} from 'react';
+import React, {useContext, useRef, useState} from 'react';
 import {StyleSheet, View} from 'react-native';
 
 import {observer} from 'mobx-react';
@@ -44,6 +44,8 @@ export const VoiceSetupSheet: React.FC<VoiceSetupSheetProps> = observer(
     const strings = l10n.voiceMode;
     const [mic, setMic] = useState<MicPermissionResult | null>(null);
     const [busy, setBusy] = useState(false);
+    const visible = useRef(isVisible);
+    visible.current = isVisible;
 
     const sttState = asrStore.downloadStates.base;
     const voice = ttsStore.currentVoice;
@@ -57,13 +59,13 @@ export const VoiceSetupSheet: React.FC<VoiceSetupSheetProps> = observer(
       try {
         if (!baseReady()) {
           await asrStore.downloadModel('base', {select: false});
-          if (!baseReady()) {
+          if (!baseReady() || !visible.current) {
             return;
           }
         }
         const result = await ensureMicPermission();
         setMic(result);
-        if (result === 'granted') {
+        if (result === 'granted' && visible.current) {
           onDone();
         }
       } finally {

@@ -2,7 +2,7 @@ import React from 'react';
 
 import {runInAction} from 'mobx';
 
-import {fireEvent, render, waitFor} from '../../../../jest/test-utils';
+import {act, fireEvent, render, waitFor} from '../../../../jest/test-utils';
 import {l10n} from '../../../locales';
 import {ASR_INSUFFICIENT_STORAGE} from '../../../services/asr';
 import {asrStore, ttsStore} from '../../../store';
@@ -71,6 +71,33 @@ describe('VoiceSetupSheet', () => {
       select: false,
     });
     expect(ensureMicPermission).toHaveBeenCalledTimes(1);
+  });
+
+  it('stops setup when the sheet is closed during the download', async () => {
+    let finish!: () => void;
+    asr.downloadModel.mockImplementationOnce(
+      () =>
+        new Promise<void>(resolve => {
+          finish = () => {
+            runInAction(() => {
+              asr.downloadStates.base = 'ready';
+            });
+            resolve();
+          };
+        }),
+    );
+    const {getByTestId, rerender} = renderSheet();
+    fireEvent.press(getByTestId('voice-setup-continue'));
+
+    rerender(
+      <VoiceSetupSheet isVisible={false} onClose={onClose} onDone={onDone} />,
+    );
+    await act(async () => {
+      finish();
+    });
+
+    expect(ensureMicPermission).not.toHaveBeenCalled();
+    expect(onDone).not.toHaveBeenCalled();
   });
 
   it('shows download progress and blocks Continue while downloading', () => {
