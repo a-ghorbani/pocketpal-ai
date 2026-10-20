@@ -32,8 +32,8 @@ export interface VoiceTurn {
 
 /**
  * Turns one utterance into a spoken reply. The cascade (whisper, chat
- * model, TTS) is the only engine; a native speech-to-speech engine would
- * implement the same turn from audio.
+ * model, TTS) is the only engine. Its readiness and memory checks live in
+ * the session controller, so another engine would need those moved here.
  */
 export interface VoiceEngine {
   readonly id: 'cascade';
