@@ -30,7 +30,9 @@
     "ok": "OK",
     "close": "Schließen",
     "clear": "Alles löschen",
-    "gallery": "Galerie"
+    "gallery": "Galerie",
+    "stop": "Halt",
+    "noResults": "keine Ergebnisse"
   },
   "settings": {
     "modelInitializationSettings": "Einstellungen Modellinitialisierung",
@@ -154,7 +156,8 @@
     "removeRemoteModel": "Entferne {{modelName}} {{serverName}}?",
     "retryConnection": "Wiederholen",
     "enterUrlManually": "URL manuell eingeben",
-    "manageServers": "Server verwalten"
+    "manageServers": "Server verwalten",
+    "speculativeDecoding": "spekulative Entschlüsselung"
   },
   "memory": {
     "shortWarning": "Speicherwarnung",
