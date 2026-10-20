@@ -158,6 +158,7 @@ class VoiceModeController {
   }
 
   async checkMemoryAndEnter(): Promise<void> {
+    await this.exiting;
     const voice = ttsStore.currentVoice;
     if (!isVoiceModeVoice(voice)) {
       this.showSheet({kind: 'setup'});

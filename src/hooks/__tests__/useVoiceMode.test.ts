@@ -783,6 +783,35 @@ describe('useVoiceMode', () => {
       (global as any).requestIdleCallback = original;
     });
 
+    it('a quick re-entry checks memory only once the last session freed its models', async () => {
+      const idle: Array<() => void> = [];
+      const original = (global as any).requestIdleCallback;
+      (global as any).requestIdleCallback = (callback: () => void) =>
+        idle.push(callback);
+      const {enter, hook, engine} = renderVoiceMode();
+      await enter();
+      act(() => {
+        hook.result.current.end();
+      });
+      await flush();
+      (NativeHardwareInfo.getAvailableMemory as jest.Mock).mockClear();
+
+      let reentering!: Promise<void>;
+      act(() => {
+        reentering = hook.result.current.requestEntry({openModelPicker});
+      });
+      await flush();
+      expect(NativeHardwareInfo.getAvailableMemory).not.toHaveBeenCalled();
+
+      await act(async () => {
+        idle.forEach(callback => callback());
+        await reentering;
+      });
+      expect(engine.release).toHaveBeenCalledTimes(1);
+      expect(NativeHardwareInfo.getAvailableMemory).toHaveBeenCalledTimes(1);
+      (global as any).requestIdleCallback = original;
+    });
+
     it('End while listening stops the mic', async () => {
       const {enter, hook, engine} = renderVoiceMode();
       await enter();
