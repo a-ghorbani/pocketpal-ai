@@ -138,10 +138,12 @@ describe('VoiceModeView', () => {
     expect(controls.end).toHaveBeenCalledTimes(1);
   });
 
-  it('labels the mic button by what it will do', () => {
+  it('presents the mic as one switch that is off while muted', () => {
     setSession('listening', true);
     const {getByLabelText} = renderView();
-    expect(getByLabelText(strings.unmuteLabel)).toBeTruthy();
+    const mic = getByLabelText(strings.micSwitchLabel);
+    expect(mic.props.accessibilityRole).toBe('switch');
+    expect(mic.props.accessibilityState).toEqual({checked: false});
   });
 
   it('pulling down collapses to the bar without changing the phase', () => {

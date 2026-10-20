@@ -137,11 +137,9 @@ export const VoiceModeView: React.FC = observer(() => {
         <View style={[styles.controls, {gap: theme.spacing.xxl}]}>
           <Pressable
             onPress={toggleMute}
-            accessibilityRole="button"
-            accessibilityLabel={
-              micMuted ? l10n.voiceMode.unmuteLabel : l10n.voiceMode.muteLabel
-            }
-            accessibilityState={{selected: micMuted}}
+            accessibilityRole="switch"
+            accessibilityLabel={l10n.voiceMode.micSwitchLabel}
+            accessibilityState={{checked: !micMuted}}
             testID="voice-mute"
             style={[
               styles.control,

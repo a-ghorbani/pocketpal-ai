@@ -94,11 +94,9 @@ export const VoiceBar: React.FC = observer(() => {
         </Pressable>
         <Pressable
           onPress={toggleMute}
-          accessibilityRole="button"
-          accessibilityLabel={
-            micMuted ? l10n.voiceMode.unmuteLabel : l10n.voiceMode.muteLabel
-          }
-          accessibilityState={{selected: micMuted}}
+          accessibilityRole="switch"
+          accessibilityLabel={l10n.voiceMode.micSwitchLabel}
+          accessibilityState={{checked: !micMuted}}
           testID="voice-bar-mute"
           style={[
             styles.control,
