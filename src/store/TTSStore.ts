@@ -33,7 +33,10 @@ import {
   ThinkingStripper,
   pickThinkingPlaceholder,
 } from '../services/tts/thinkingStripper';
-import {VOICE_FIRST_CHUNK_HOLD_MS} from '../services/voice/constants';
+import {
+  VOICE_FIRST_CHUNK_HOLD_MS,
+  VOICE_SPEECH_CHARS_PER_SECOND,
+} from '../services/voice/constants';
 import {chatSessionStore} from './ChatSessionStore';
 
 /**
@@ -86,6 +89,8 @@ type VoiceStream = {
   placeholderRanges: Array<[number, number]>;
   held: Array<{text: string; placeholder: boolean}> | null;
   holdTimer: ReturnType<typeof setTimeout> | null;
+  /** The chunk now playing: its stream range and when it started. */
+  playing: {start: number; end: number; startedAt: number} | null;
 };
 
 const withoutRanges = (
@@ -105,7 +110,26 @@ const withoutRanges = (
   if (from < end) {
     out += text.slice(from, end);
   }
-  return out.trim();
+  return out.replace(/\s+([.,!?;:])/g, '$1').trim();
+};
+
+/**
+ * Where the heard part of a chunk ends, when playback stopped `elapsedMs`
+ * into it: the played fraction of its estimated length, back to a word end.
+ */
+const heardEnd = (
+  text: string,
+  start: number,
+  end: number,
+  elapsedMs: number,
+): number => {
+  const estimatedMs = ((end - start) / VOICE_SPEECH_CHARS_PER_SECOND) * 1000;
+  if (elapsedMs >= estimatedMs) {
+    return end;
+  }
+  const cut = start + Math.floor(((end - start) * elapsedMs) / estimatedMs);
+  const wordEnd = text.slice(start, cut + 1).search(/\s\S*$/);
+  return wordEnd < 0 ? start : start + wordEnd;
 };
 
 /**
@@ -468,6 +492,7 @@ export class TTSStore {
     this.streamPlaceholderEmitted = false;
     this.clearVoiceHold();
     if (state.mode === 'streaming') {
+      this.trimVoiceSpokenToHeard();
       try {
         await state.handle.cancel();
       } catch (err) {
@@ -653,6 +678,7 @@ export class TTSStore {
       placeholderRanges: [],
       held: this.holdFirstChunk ? [] : null,
       holdTimer: null,
+      playing: null,
     };
     if (stream.held) {
       stream.holdTimer = setTimeout(
@@ -673,6 +699,11 @@ export class TTSStore {
     if (stream?.messageId !== messageId) {
       return;
     }
+    stream.playing = {
+      start: event.streamRange.start,
+      end: event.streamRange.end,
+      startedAt: Date.now(),
+    };
     this.voiceSpoken = {
       messageId,
       text: withoutRanges(
@@ -681,6 +712,30 @@ export class TTSStore {
         stream.placeholderRanges,
       ),
     };
+  }
+
+  /** A stopped voice reply keeps only the part of its last chunk that played. */
+  private trimVoiceSpokenToHeard() {
+    const stream = this.voiceStream;
+    const playing = stream?.playing;
+    if (
+      !stream ||
+      !playing ||
+      this.voiceSpoken?.messageId !== stream.messageId
+    ) {
+      return;
+    }
+    const end = heardEnd(
+      stream.text,
+      playing.start,
+      playing.end,
+      Date.now() - playing.startedAt,
+    );
+    this.voiceSpoken = {
+      messageId: stream.messageId,
+      text: withoutRanges(stream.text, end, stream.placeholderRanges),
+    };
+    stream.playing = null;
   }
 
   private appendReplyText(handle: StreamingHandle, text: string) {

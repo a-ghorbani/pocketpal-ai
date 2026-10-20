@@ -30,3 +30,10 @@ export const VOICE_MIC_WATCHDOG_MS = 3000;
  * warning. A first load on a mid-range phone took about 21 s.
  */
 export const VOICE_START_TIMEOUT_MS = 45_000;
+
+/**
+ * Typical neural-TTS speaking rate at speed 1 (characters per second), used
+ * to estimate how much of an interrupted chunk was heard. The speech library
+ * reports when a chunk starts, not how long it lasts.
+ */
+export const VOICE_SPEECH_CHARS_PER_SECOND = 14;

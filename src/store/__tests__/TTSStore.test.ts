@@ -144,6 +144,7 @@ jest.mock('../../services/tts', () => {
 
 // Import after mocks
 import {TTSStore} from '../TTSStore';
+import {VOICE_SPEECH_CHARS_PER_SECOND} from '../../services/voice/constants';
 import type {Voice} from '../../services/tts';
 import {ttsRuntime} from '../../services/tts';
 import {chatSessionStore} from '../ChatSessionStore';
@@ -705,10 +706,10 @@ describe('TTSStore', () => {
     const appended = (handle: MockHandle) =>
       handle.appendText.mock.calls.map(c => c[0]).join('');
 
-    const progressTo = (handle: VoiceHandle, end: number) =>
+    const progressTo = (handle: VoiceHandle, end: number, start = 0) =>
       handle.opts.onProgress({
         chunkText: '',
-        streamRange: {start: 0, end},
+        streamRange: {start, end},
         chunkIndex: 0,
         batchIndex: 0,
       });
@@ -792,15 +793,83 @@ describe('TTSStore', () => {
       expect(store.voiceSpoken?.text).toBe('Paris is big.');
     });
 
-    it('keeps the spoken text after stop', async () => {
+    describe('a stopped voice reply', () => {
+      let now = 0;
+      beforeEach(() => {
+        now = 1_000_000;
+        jest.spyOn(Date, 'now').mockImplementation(() => now);
+      });
+      afterEach(() => {
+        (Date.now as jest.Mock).mockRestore();
+      });
+
+      const chunk =
+        'Rain forms through a process known as condensation and precipitation, ';
+      const msPerChar = 1000 / VOICE_SPEECH_CHARS_PER_SECOND;
+
+      it('keeps a chunk that finished playing', async () => {
+        const store = await makeVoiceStore();
+        store.onAssistantMessageStart('msg-1');
+        store.onAssistantMessageChunk('msg-1', 'Paris is the capital. ');
+        progressTo(voiceHandles[0]!, 22);
+
+        now += 22 * msPerChar;
+        await store.stop();
+
+        expect(store.voiceSpoken?.text).toBe('Paris is the capital.');
+      });
+
+      it('keeps only the words of the playing chunk that were heard', async () => {
+        const store = await makeVoiceStore();
+        store.onAssistantMessageStart('msg-1');
+        store.onAssistantMessageChunk('msg-1', chunk);
+        progressTo(voiceHandles[0]!, chunk.length);
+
+        now += 6 * msPerChar;
+        await store.stop();
+
+        expect(store.voiceSpoken?.text).toBe('Rain');
+      });
+
+      it('keeps nothing of a chunk stopped before its first word ended', async () => {
+        const store = await makeVoiceStore();
+        store.onAssistantMessageStart('msg-1');
+        store.onAssistantMessageChunk('msg-1', chunk);
+        progressTo(voiceHandles[0]!, chunk.length);
+
+        now += 2 * msPerChar;
+        await store.stop();
+
+        expect(store.voiceSpoken?.text).toBe('');
+      });
+
+      it('keeps earlier chunks whole and trims the playing one', async () => {
+        const store = await makeVoiceStore();
+        store.onAssistantMessageStart('msg-1');
+        store.onAssistantMessageChunk(
+          'msg-1',
+          'Rain is natural. ' + chunk + 'It falls. ',
+        );
+        progressTo(voiceHandles[0]!, 17);
+        now += 17 * msPerChar;
+        progressTo(voiceHandles[0]!, 17 + chunk.length, 17);
+
+        now += 21 * msPerChar;
+        await store.stop();
+
+        expect(store.voiceSpoken?.text).toBe(
+          'Rain is natural. Rain forms through a',
+        );
+      });
+    });
+
+    it('leaves no space before punctuation in the spoken text', async () => {
       const store = await makeVoiceStore();
       store.onAssistantMessageStart('msg-1');
-      store.onAssistantMessageChunk('msg-1', 'Paris is the capital. ');
-      progressTo(voiceHandles[0]!, 22);
+      store.onAssistantMessageChunk('msg-1', 'It condenses . ');
+      progressTo(voiceHandles[0]!, 15);
 
-      await store.stop();
-
-      expect(store.voiceSpoken?.text).toBe('Paris is the capital.');
+      expect(store.voiceSpoken?.text).toBe('It condenses.');
     });
 
     it('marks a voice reply whose speech failed, until the next voice reply', async () => {
