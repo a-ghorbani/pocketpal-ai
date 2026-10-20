@@ -102,7 +102,7 @@ export class ASRStore {
     return tier !== null && ASR_DEVICE_TIERS.includes(tier);
   }
 
-  /** Whether the `tier` whisper model fits next to the loaded chat model. */
+  /** Whether the selected tier's whisper model fits next to the loaded chat model. */
   async hasMemoryForCapture(): Promise<boolean> {
     const memory = await readDeviceMemory();
     return (
@@ -276,8 +276,8 @@ export class ASRStore {
         this.downloadStates[tier] = 'ready';
         this.downloadProgress[tier] = 1;
       });
-      // Installing any tier makes it the active one so the mic becomes
-      // actionable without a separate selection step.
+      // Dictation's installs make the tier the active one, so the mic works
+      // without a separate selection step; voice mode's base download doesn't.
       if (select) {
         this.setSelectedTier(tier);
       }
