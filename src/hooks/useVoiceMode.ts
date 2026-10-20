@@ -107,7 +107,6 @@ class VoiceModeController {
   private captureSettled: Promise<void> = Promise.resolve();
   private micWatchdog: ReturnType<typeof setTimeout> | null = null;
   private micRetried = false;
-  private audioInterrupted = false;
   private openModelPicker: () => void = () => {};
   private sendingToNewChat = false;
   private readonly turnPort: VoiceTurnPort = {
@@ -240,7 +239,6 @@ class VoiceModeController {
     }
     this.open = false;
     this.session++;
-    this.audioInterrupted = false;
     this.micRetried = false;
     voiceModeStore.setPhase('closed');
     this.stopCapture();
@@ -313,23 +311,21 @@ class VoiceModeController {
     }
   }
 
-  /** A call, alarm or Siri took the audio session: stop, then resume after. */
+  /**
+   * A call, alarm or Siri took the audio session: stop the mic and any turn.
+   * `ended` may never come (Android only holds focus while a chunk plays),
+   * so the next move into listening opens the mic again, and the watchdog
+   * ends the session if the mic is still taken.
+   */
   onAudioInterruption({type}: AudioInterruption): void {
     if (!this.open) {
       return;
     }
     if (type === 'began') {
-      this.audioInterrupted = true;
       this.stopCapture();
-      if (
-        voiceModeStore.phase === 'speaking' ||
-        voiceModeStore.phase === 'thinking'
-      ) {
-        this.turn?.interrupt();
-      }
+      this.turn?.interrupt();
       return;
     }
-    this.audioInterrupted = false;
     if (voiceModeStore.phase === 'listening') {
       this.stopCapture();
       this.startCapture(this.session);
@@ -340,8 +336,7 @@ class VoiceModeController {
     return (
       session === this.session &&
       voiceModeStore.phase === 'listening' &&
-      !voiceModeStore.micMuted &&
-      !this.audioInterrupted
+      !voiceModeStore.micMuted
     );
   }
 

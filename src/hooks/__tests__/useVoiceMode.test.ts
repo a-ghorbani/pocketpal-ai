@@ -1011,7 +1011,7 @@ describe('useVoiceMode', () => {
       expect(voiceModeStore.phase).toBe('listening');
     });
 
-    it('interrupt a spoken reply and keep the mic off until they end', async () => {
+    it('interrupt a spoken reply, and the mic opens again with no ended event', async () => {
       const {enter, turns} = renderVoiceMode();
       await enter();
       speak(500);
@@ -1022,12 +1022,73 @@ describe('useVoiceMode', () => {
       expect(turns[0].interrupt).toHaveBeenCalledTimes(1);
       await flush();
       await settleMic();
+
+      expect(voiceModeStore.phase).toBe('listening');
+      expect(AudioRecord.start).toHaveBeenCalledTimes(2);
+    });
+
+    it('interrupt a turn still being transcribed', async () => {
+      const {enter, turns} = renderVoiceMode();
+      await enter();
+      speak(500);
+      speak(600, SILENT);
+      expect(voiceModeStore.phase).toBe('transcribing');
+
+      interruption('began');
+
+      expect(turns[0].interrupt).toHaveBeenCalledTimes(1);
+      await flush();
+      await settleMic();
+      expect(voiceModeStore.phase).toBe('listening');
+      expect(AudioRecord.start).toHaveBeenCalledTimes(2);
+    });
+
+    it('while listening with no ended event, unmuting opens the mic again', async () => {
+      const {enter, hook} = renderVoiceMode();
+      await enter();
+      interruption('began');
+
+      act(() => hook.result.current.toggleMute());
+      await act(async () => hook.result.current.toggleMute());
+      await settleMic();
+
+      expect(AudioRecord.start).toHaveBeenCalledTimes(2);
+    });
+
+    it('while listening with no ended event, returning to the app opens the mic again', async () => {
+      const {enter} = renderVoiceMode();
+      await enter();
+      interruption('began');
+
+      setAppState('inactive');
+      setAppState('active');
+      await settleMic();
+
+      expect(AudioRecord.start).toHaveBeenCalledTimes(2);
+    });
+
+    it('during starting, the mic still opens once loaded', async () => {
+      const {engine, hook} = renderVoiceMode();
+      let loaded!: () => void;
+      engine.prepare.mockReturnValueOnce(
+        new Promise<void>(resolve => {
+          loaded = resolve;
+        }),
+      );
+      let entering!: Promise<void>;
+      act(() => {
+        entering = hook.result.current.requestEntry({openModelPicker});
+      });
+      await flush();
+
+      interruption('began');
+      await act(async () => {
+        loaded();
+        await entering;
+      });
+
       expect(voiceModeStore.phase).toBe('listening');
       expect(AudioRecord.start).toHaveBeenCalledTimes(1);
-
-      interruption('ended');
-      await settleMic();
-      expect(AudioRecord.start).toHaveBeenCalledTimes(2);
     });
 
     it('are not followed once the chat screen is gone', async () => {
