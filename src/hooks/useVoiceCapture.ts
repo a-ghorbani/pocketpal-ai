@@ -34,29 +34,7 @@ interface UseVoiceCaptureReturn {
   cancel: () => void;
 }
 
-/**
- * Tap-to-start, tap-to-stop capture lifecycle for the composer mic.
- *
- * start  → ensure mic permission → start 16 kHz mono PCM capture, publishing
- *          loudness to `asrStore.inputLevels` for the waveform.
- *          `SpeechSegmenter` cuts the stream at pauses and each segment is
- *          transcribed while the user keeps speaking, so stop only waits for
- *          the last one. Refused when whisper would not fit next to the
- *          loaded chat model (`asrStore.hasMemoryForCapture`).
- *          No audio within ASR_NO_AUDIO_MS ends the capture as
- *          'mic_unavailable'.
- * stop   → transcribe the remaining audio → join the segment texts →
- *          onTranscript append. Silent segments are never decoded. While a
- *          local chat model generates on the CPU, transcription waits for
- *          it (`asrStore.waitingForChat`). The first transcription detects
- *          the spoken language and later ones reuse it.
- * cancel → discard the capture and any transcription in progress.
- *
- * All engine work runs through one serial queue, so a release never cuts
- * across a load or a transcription. Native capture is released on stop,
- * cancel, error, max-ms, AppState background (which finishes the capture like
- * stop), and unmount. All work is on-device: the only network in the ASR subsystem is the model download.
- */
+/** Tap-to-start, tap-to-stop capture for the composer mic (see context/architecture/asr.md). */
 export function useVoiceCapture(
   options: UseVoiceCaptureOptions,
 ): UseVoiceCaptureReturn {
@@ -90,7 +68,7 @@ export function useVoiceCapture(
   const transcribeSegment = useCallback(
     (pcm: Uint8Array, session: number) => {
       enqueueEngine(async () => {
-        if (session !== sessionRef.current || failedRef.current) {
+        if (session !== sessionRef.current) {
           return;
         }
         // Whisper hallucinates on silence — never decode a silent segment.
@@ -111,23 +89,25 @@ export function useVoiceCapture(
               asrStore.setWaitingForChat(false);
             }
           }
-          if (session !== sessionRef.current || failedRef.current) {
+          if (session !== sessionRef.current) {
             return;
           }
         }
         const prompt = textsRef.current.join(' ').slice(-ASR_PROMPT_CHARS);
+        const fixedLanguage = asrStore.spokenLanguage;
         try {
           const {text, language} = await whisperAsrEngine.transcribe(
             fromByteArray(pcm),
             {
               tier: asrStore.selectedTier,
-              language: asrStore.spokenLanguage ?? undefined,
+              language: fixedLanguage ?? undefined,
               prompt: prompt || undefined,
             },
           );
           if (session === sessionRef.current && text.length > 0) {
             textsRef.current.push(text);
-            if (!asrStore.spokenLanguage && language) {
+            // Save only a detected language, so a reset during the decode holds.
+            if (!fixedLanguage && !asrStore.spokenLanguage && language) {
               asrStore.setSpokenLanguage(language);
             }
           }
@@ -177,16 +157,18 @@ export function useVoiceCapture(
       if (session !== sessionRef.current) {
         return;
       }
-      // Free the ~400 MB whisper context once idle; the next capture reloads it.
       releaseEngine();
-      if (failedRef.current) {
+      const text = textsRef.current.join(' ');
+      if (failedRef.current && text.length === 0) {
         asrStore.setError('transcribe_failed');
         return;
       }
       asrStore.resetCapture();
-      const text = textsRef.current.join(' ');
       if (text.length > 0) {
         onTranscriptRef.current(text);
+      }
+      if (failedRef.current) {
+        asrStore.setError('transcript_partial');
       }
     },
     [releaseEngine, teardownCapture, transcribeSegment],

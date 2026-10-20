@@ -35,7 +35,8 @@ export type AsrErrorKind =
   | 'transcribe_failed'
   | 'not_installed'
   | 'insufficient_memory'
-  | 'mic_unavailable';
+  | 'mic_unavailable'
+  | 'transcript_partial';
 
 /** Static per-tier model manifest (URL + filename + size). */
 export interface AsrTierManifest {

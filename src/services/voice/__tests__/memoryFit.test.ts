@@ -49,7 +49,7 @@ describe('voiceMemoryFit', () => {
     expect(fit.status).toBe('tight');
   });
 
-  it('on iOS counts the chat model, whisper and the voice against the ceiling', () => {
+  it('on iOS counts the chat model, whisper and the voice against pre-load free memory', () => {
     const fit = voiceMemoryFit({
       memory: ios(4e9),
       chatBytes: 2e9,
@@ -68,7 +68,7 @@ describe('voiceMemoryFit', () => {
     });
   });
 
-  it('is tight on iOS when whisper fits under the ceiling but the voice does not', () => {
+  it('is tight on iOS when whisper fits under pre-load free memory but the voice does not', () => {
     const fit = voiceMemoryFit({
       memory: ios(4e9),
       chatBytes: 4e9 - sttBytes - ttsBytes / 2,
@@ -78,7 +78,7 @@ describe('voiceMemoryFit', () => {
     expect(fit.status).toBe('tight');
   });
 
-  it("on iOS won't fit when whisper alone passes the ceiling", () => {
+  it("on iOS won't fit when whisper alone passes pre-load free memory", () => {
     const fit = voiceMemoryFit({
       memory: ios(4e9),
       chatBytes: 4e9 - sttBytes + 1,
@@ -88,7 +88,7 @@ describe('voiceMemoryFit', () => {
     expect(fit.status).toBe('wont_fit');
   });
 
-  it('fits on iOS while the load ceiling is unknown', () => {
+  it('fits on iOS while pre-load free memory is unknown', () => {
     const fit = voiceMemoryFit({
       memory: ios(0),
       chatBytes: 9e9,

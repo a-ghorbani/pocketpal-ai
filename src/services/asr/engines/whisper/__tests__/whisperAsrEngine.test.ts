@@ -272,6 +272,97 @@ describe('WhisperAsrEngine', () => {
     it('treats cancel with no decode in flight as a no-op', async () => {
       await expect(engine.cancelTranscription()).resolves.toBeUndefined();
     });
+
+    it('reuses the loaded model across transcriptions', async () => {
+      installed();
+      mockInitWhisper.mockResolvedValue(whisperContext());
+
+      await engine.transcribe('base64pcm', {tier: 'small'});
+      await engine.transcribe('base64pcm', {tier: 'small'});
+
+      expect(mockInitWhisper).toHaveBeenCalledTimes(1);
+    });
+
+    it('reloads when the tier changes', async () => {
+      installed();
+      const first = whisperContext();
+      mockInitWhisper
+        .mockResolvedValueOnce(first)
+        .mockResolvedValueOnce(whisperContext());
+
+      await engine.transcribe('base64pcm', {tier: 'small'});
+      await engine.transcribe('base64pcm', {tier: 'base'});
+
+      expect(mockInitWhisper).toHaveBeenCalledTimes(2);
+      expect(first.release).toHaveBeenCalled();
+    });
+  });
+
+  describe('downloadModel progress', () => {
+    it('reports progress against the content length, capped at 1', async () => {
+      mockExists.mockResolvedValue(false);
+      const onProgress = jest.fn();
+      mockDownloadFile.mockImplementation(({progress}) => {
+        progress({bytesWritten: 50, contentLength: 100});
+        progress({bytesWritten: 150, contentLength: 100});
+        return {promise: Promise.resolve({statusCode: 200})};
+      });
+
+      await engine.downloadModel('small', onProgress);
+
+      expect(onProgress.mock.calls.map(c => c[0])).toEqual([0.5, 1, 1]);
+    });
+  });
+
+  describe('reclaimLegacySpace', () => {
+    it('keeps a tier at the current version', async () => {
+      installed();
+      await engine.reclaimLegacySpace('small');
+      expect(mockUnlink).not.toHaveBeenCalled();
+    });
+
+    it('removes a tier left by an older version', async () => {
+      mockExists.mockResolvedValue(true);
+      mockReadFile.mockResolvedValue(
+        JSON.stringify({version: ASR_MODEL_VERSION - 1}),
+      );
+      mockUnlink.mockResolvedValue(undefined);
+      await engine.reclaimLegacySpace('small');
+      expect(mockUnlink).toHaveBeenCalledWith(expect.stringMatching(/small$/));
+    });
+  });
+
+  describe('deleteModel', () => {
+    it('releases a loaded tier before removing its files', async () => {
+      installed();
+      const context = whisperContext();
+      mockInitWhisper.mockResolvedValue(context);
+      mockUnlink.mockResolvedValue(undefined);
+      await engine.transcribe('base64pcm', {tier: 'small'});
+
+      await engine.deleteModel('small');
+
+      expect(context.release.mock.invocationCallOrder[0]).toBeLessThan(
+        mockUnlink.mock.invocationCallOrder[0],
+      );
+      expect(mockUnlink).toHaveBeenCalledWith(expect.stringMatching(/small$/));
+    });
+
+    it('does not throw when removal fails', async () => {
+      mockExists.mockResolvedValue(true);
+      mockUnlink.mockRejectedValue(new Error('busy'));
+      await expect(engine.deleteModel('small')).resolves.toBeUndefined();
+    });
+  });
+
+  it('release survives a native release failure', async () => {
+    installed();
+    const context = whisperContext();
+    context.release.mockRejectedValue(new Error('native'));
+    mockInitWhisper.mockResolvedValue(context);
+    await engine.transcribe('base64pcm', {tier: 'small'});
+
+    await expect(engine.release()).resolves.toBeUndefined();
   });
 
   describe('residency and release', () => {
@@ -351,3 +442,22 @@ describe('WhisperAsrEngine', () => {
     });
   });
 });
+
+function installed() {
+  mockExists.mockResolvedValue(true);
+  mockReadFile.mockResolvedValue(JSON.stringify({version: ASR_MODEL_VERSION}));
+}
+
+function whisperContext() {
+  return {
+    transcribeData: jest.fn().mockReturnValue({
+      stop: jest.fn(),
+      promise: Promise.resolve({
+        result: 'hi',
+        language: 'en',
+        isAborted: false,
+      }),
+    }),
+    release: jest.fn().mockResolvedValue(undefined),
+  };
+}

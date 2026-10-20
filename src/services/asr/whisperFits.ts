@@ -4,7 +4,7 @@ import {ASR_ANDROID_RAM_SHARE} from './constants';
  * The memory figure each platform budgets against. Android's free-memory
  * figure can be far off (#982), so Android budgets against total RAM. iOS
  * doesn't count mmap'd chat weights against the app, so iOS budgets against
- * the chat model's load ceiling (0 when not yet known).
+ * what it reported free before any chat model loaded (0 when not yet known).
  */
 export type DeviceMemory =
   | {os: 'ios'; ceilingBytes: number}

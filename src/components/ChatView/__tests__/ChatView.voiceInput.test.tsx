@@ -65,6 +65,22 @@ describe('ChatView voice-input append seam', () => {
     expect(getByTestId('chat-input').props.value).toBe('note: buy milk');
   });
 
+  it('hides the mic for a video pal, whose composer shows promptText', () => {
+    const videoPal = {id: 'video-pal', capabilities: {video: true}} as any;
+    const {queryByTestId} = render(
+      <ChatView
+        messages={[]}
+        onSendPress={jest.fn()}
+        user={user}
+        activePal={videoPal}
+      />,
+      {withSafeArea: true, withNavigation: true, withBottomSheetProvider: true},
+    );
+
+    expect(queryByTestId('mic-button')).toBeNull();
+    expect(queryByTestId('mic-button-setup')).toBeNull();
+  });
+
   it('uses the transcript verbatim when the composer is empty', () => {
     const {getByTestId} = renderChat();
 
@@ -160,6 +176,18 @@ describe('ChatView voice-input append seam', () => {
       getByText(
         "The microphone isn't responding. Try again, or switch to a smaller chat model.",
       ),
+    ).toBeTruthy();
+  });
+
+  it('tells the user when part of a dictation was dropped', () => {
+    const {getByText} = renderChat();
+
+    act(() => {
+      asrStore.setError('transcript_partial');
+    });
+
+    expect(
+      getByText("Part of your dictation couldn't be transcribed."),
     ).toBeTruthy();
   });
 

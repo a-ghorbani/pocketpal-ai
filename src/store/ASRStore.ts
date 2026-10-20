@@ -106,7 +106,8 @@ export class ASRStore {
    * Whether whisper fits next to the loaded chat model, by the app's estimate
    * of both (`whisperFits`). Android's free-memory figure can be far off
    * (#982), so Android budgets against total RAM. iOS does not count mmap'd
-   * chat weights against the app, so iOS uses the chat model's load ceiling.
+   * chat weights against the app, so iOS budgets against what it reported
+   * free before any load.
    */
   async hasMemoryForCapture(): Promise<boolean> {
     const memory = await readDeviceMemory(modelStore);
@@ -186,7 +187,7 @@ export class ASRStore {
   }
 
   private handleAppStateChange = (nextAppState: AppStateStatus) => {
-    // Free the ~400 MB whisper context when backgrounded so it doesn't sit
+    // Free the whisper context when backgrounded so it doesn't sit
     // resident alongside the LLM and OOM low-RAM devices. Re-init is lazy on
     // the next capture. Only react to 'background' — 'inactive' fires for
     // transient interruptions that must not tear down a large context. A

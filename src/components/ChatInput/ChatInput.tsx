@@ -706,10 +706,7 @@ export const ChatInput = observer(
                 {appendTranscript && (
                   <MicButton
                     onStart={voiceCapture.start}
-                    style={
-                      (isStopVisible || !isVideoCapable || isCameraActive) &&
-                      styles.micBeforeSend
-                    }
+                    style={styles.micBeforeSend}
                   />
                 )}
 

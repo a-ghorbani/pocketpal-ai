@@ -4,9 +4,8 @@ import DeviceInfo from 'react-native-device-info';
 
 import type {DeviceMemory} from './whisperFits';
 
-/** The chat model's load history, which sets the iOS ceiling. */
+/** What iOS reported free before any chat model loaded (0 or unset: unknown). */
 export interface ChatLoadHistory {
-  largestSuccessfulLoad?: number;
   availableMemoryCeiling?: number;
 }
 
@@ -17,10 +16,7 @@ export async function readDeviceMemory(
   if (Platform.OS === 'ios') {
     return {
       os: 'ios',
-      ceilingBytes: Math.max(
-        chat.largestSuccessfulLoad ?? 0,
-        chat.availableMemoryCeiling ?? 0,
-      ),
+      ceilingBytes: chat.availableMemoryCeiling ?? 0,
     };
   }
   try {
