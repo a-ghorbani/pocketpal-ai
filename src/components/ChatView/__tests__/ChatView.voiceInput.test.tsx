@@ -194,6 +194,20 @@ describe('ChatView voice mode', () => {
     expect(onVoiceModePress).toHaveBeenCalledWith(expect.any(Function));
   });
 
+  it('keeps the composer where no voice controls are wired', () => {
+    runInAction(() => {
+      voiceModeStore.phase = 'listening';
+      voiceModeStore.presentation = 'bar';
+    });
+    const {getByTestId, queryByTestId} = render(
+      <ChatView messages={[]} onSendPress={jest.fn()} user={user} />,
+      {withSafeArea: true, withNavigation: true, withBottomSheetProvider: true},
+    );
+
+    expect(getByTestId('chat-input')).toBeTruthy();
+    expect(queryByTestId('voice-bar')).toBeNull();
+  });
+
   it('puts the voice bar in the composer slot while voice mode is open', () => {
     runInAction(() => {
       voiceModeStore.phase = 'listening';

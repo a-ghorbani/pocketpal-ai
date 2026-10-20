@@ -1205,7 +1205,7 @@ export const ChatView = observer(
                 onNewChat={() => chatSessionStore.resetActiveSession()}
                 onIncreaseContext={() => setIncreaseSheetOpen(true)}
               />
-              {voiceModeStore.phase !== 'closed' ? (
+              {onVoiceModePress && voiceModeStore.phase !== 'closed' ? (
                 <VoiceBar />
               ) : (
                 <ChatInput

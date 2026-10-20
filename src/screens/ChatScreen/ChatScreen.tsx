@@ -97,6 +97,11 @@ export const ChatScreen: React.FC = observer(() => {
     },
   });
   const {tapCloud, toggleMute, end} = voiceMode;
+  React.useEffect(() => {
+    if (isVideoPal) {
+      end();
+    }
+  }, [isVideoPal, end]);
   const voiceControls = useMemo(
     () => ({tapCloud, toggleMute, end}),
     [tapCloud, toggleMute, end],
