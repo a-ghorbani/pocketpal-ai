@@ -191,6 +191,24 @@ describe('useVoiceMode', () => {
       expect(voiceModeStore.phase).toBe('closed');
     });
 
+    it('an unlock that arrives after the chat screen is gone starts nothing', async () => {
+      voiceModeStore.setUnlockOverride(false);
+      const {enter, engine, hook} = renderVoiceMode();
+      await enter();
+      const [{onUnlocked}] = (voiceEntitlement as any).defaultSource.openPaywall
+        .mock.calls[0];
+      hook.unmount();
+
+      voiceModeStore.setUnlockOverride(true);
+      await act(async () => {
+        await onUnlocked();
+      });
+
+      expect(engine.prepare).not.toHaveBeenCalled();
+      expect(AudioRecord.init).not.toHaveBeenCalled();
+      expect(voiceModeStore.phase).toBe('closed');
+    });
+
     it('resumes entry when the paywall reports an unlock', async () => {
       voiceModeStore.setUnlockOverride(false);
       const {enter, engine} = renderVoiceMode();

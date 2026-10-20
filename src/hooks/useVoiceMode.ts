@@ -79,6 +79,7 @@ async function isSetupComplete(): Promise<boolean> {
 class VoiceModeController {
   port: VoiceTurnPort;
   private open = false;
+  private disposed = false;
   private session = 0;
   private exiting: Promise<void> | null = null;
   private releaseAwake: (() => void) | null = null;
@@ -112,7 +113,7 @@ class VoiceModeController {
   }
 
   async requestEntry(openModelPicker: () => void): Promise<void> {
-    if (this.open) {
+    if (this.open || this.disposed) {
       return;
     }
     this.openModelPicker = openModelPicker;
@@ -171,7 +172,7 @@ class VoiceModeController {
 
   async enter(): Promise<void> {
     await this.exiting;
-    if (this.open) {
+    if (this.open || this.disposed) {
       return;
     }
     this.showSheet(null);
@@ -199,6 +200,17 @@ class VoiceModeController {
     }
     voiceModeStore.setPhase('listening');
     this.startCapture(session);
+  }
+
+  /** The chat screen is mounted: sessions may start. */
+  attach(): void {
+    this.disposed = false;
+  }
+
+  /** The chat screen is gone: end any session and start no other until attached. */
+  dispose(): void {
+    this.disposed = true;
+    this.exit();
   }
 
   exit(): Promise<void> {
@@ -379,6 +391,7 @@ export function useVoiceMode({
   controller.port = port;
 
   useEffect(() => {
+    controller.attach();
     let appState = AppState.currentState;
     const subscription = AppState.addEventListener(
       'change',
@@ -413,7 +426,7 @@ export function useVoiceMode({
     return () => {
       subscription.remove();
       disposeChatWatch();
-      controller.exit();
+      controller.dispose();
     };
   }, [controller]);
 
