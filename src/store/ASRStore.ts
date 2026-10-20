@@ -193,7 +193,7 @@ export class ASRStore {
   }
 
   private handleAppStateChange = (nextAppState: AppStateStatus) => {
-    // Free the ~400 MB whisper context when backgrounded so it doesn't sit
+    // Free the whisper context when backgrounded so it doesn't sit
     // resident alongside the LLM and OOM low-RAM devices. Re-init is lazy on
     // the next capture. Only react to 'background' — 'inactive' fires for
     // transient interruptions that must not tear down a large context. A

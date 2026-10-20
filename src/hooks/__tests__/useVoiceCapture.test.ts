@@ -158,6 +158,28 @@ describe('useVoiceCapture', () => {
     });
   });
 
+  it('keeps a language reset made while a segment decodes', async () => {
+    mockTranscribe.mockImplementation(async () => {
+      asrStore.spokenLanguage = null;
+      return said('hello world', 'en');
+    });
+    const {result, onTranscript} = await startRecording();
+
+    act(() => {
+      dataCallback?.(loudPcmChunkBase64());
+    });
+    await act(async () => {
+      result.current.stop();
+    });
+
+    await waitFor(() => expect(onTranscript).toHaveBeenCalled());
+    expect(mockTranscribe.mock.calls[0][1]).toEqual({
+      tier: 'small',
+      language: 'en',
+    });
+    expect(asrStore.setSpokenLanguage).not.toHaveBeenCalled();
+  });
+
   it('keeps detecting while transcripts come back empty', async () => {
     asrStore.spokenLanguage = null;
     mockTranscribe.mockResolvedValue(said('', 'ja'));
@@ -282,7 +304,7 @@ describe('useVoiceCapture', () => {
     await waitFor(() => expect(mockRelease).toHaveBeenCalled());
   });
 
-  it('reports a failed segment once recording stops', async () => {
+  it('keeps the segments that transcribed when one fails', async () => {
     mockTranscribe.mockRejectedValueOnce(new Error('decode failed'));
     const {result, onTranscript} = await startRecording();
 
@@ -301,10 +323,10 @@ describe('useVoiceCapture', () => {
     });
 
     await waitFor(() =>
-      expect(asrStore.setError).toHaveBeenCalledWith('transcribe_failed'),
+      expect(onTranscript).toHaveBeenCalledWith('hello world'),
     );
-    expect(mockTranscribe).toHaveBeenCalledTimes(1);
-    expect(onTranscript).not.toHaveBeenCalled();
+    expect(mockTranscribe).toHaveBeenCalledTimes(2);
+    expect(asrStore.setError).not.toHaveBeenCalled();
   });
 
   it('releases the model on cancel', async () => {

@@ -64,6 +64,22 @@ describe('ChatView voice-input append seam', () => {
     expect(getByTestId('chat-input').props.value).toBe('note: buy milk');
   });
 
+  it('hides the mic for a video pal, whose composer shows promptText', () => {
+    const videoPal = {id: 'video-pal', capabilities: {video: true}} as any;
+    const {queryByTestId} = render(
+      <ChatView
+        messages={[]}
+        onSendPress={jest.fn()}
+        user={user}
+        activePal={videoPal}
+      />,
+      {withSafeArea: true, withNavigation: true, withBottomSheetProvider: true},
+    );
+
+    expect(queryByTestId('mic-button')).toBeNull();
+    expect(queryByTestId('mic-button-setup')).toBeNull();
+  });
+
   it('uses the transcript verbatim when the composer is empty', () => {
     const {getByTestId} = renderChat();
 

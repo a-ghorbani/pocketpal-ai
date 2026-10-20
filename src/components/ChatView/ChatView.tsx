@@ -1219,7 +1219,11 @@ export const ChatView = observer(
                   isVisionEnabled,
                   defaultImages: inputImages,
                   onDefaultImagesChange: setInputImages,
-                  appendTranscript,
+                  // Video pals' composer shows promptText, which dictation doesn't write.
+                  appendTranscript:
+                    activePal && hasVideoCapability(activePal)
+                      ? undefined
+                      : appendTranscript,
                   textInputProps: {
                     ...textInputProps,
                     // Only override value and onChangeText if not using promptText
