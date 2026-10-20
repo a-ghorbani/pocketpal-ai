@@ -321,6 +321,51 @@ describe('useVoiceMode', () => {
       expect(voiceModeStore.phase).toBe('listening');
     });
 
+    it('a failed load closes the session and releases everything, without the mic', async () => {
+      const {engine, enter} = renderVoiceMode();
+      engine.prepare.mockRejectedValueOnce(new Error('load'));
+      jest.spyOn(console, 'warn').mockImplementationOnce(() => {});
+
+      await enter();
+      await flush();
+
+      expect(voiceModeStore.phase).toBe('closed');
+      const release = (acquireKeepAwake as jest.Mock).mock.results[0].value;
+      expect(release).toHaveBeenCalledTimes(1);
+      expect(ttsStore.setVoiceOutputActive).toHaveBeenLastCalledWith(false);
+      expect(AudioRecord.init).not.toHaveBeenCalled();
+      expect(uiStore.setChatWarning).toHaveBeenCalledWith(
+        expect.objectContaining({message: uiStore.l10n.voiceMode.startFailed}),
+      );
+    });
+
+    it('End while loading keeps the session closed and the mic off once the load finishes', async () => {
+      const {engine, hook} = renderVoiceMode();
+      let loaded!: () => void;
+      engine.prepare.mockReturnValueOnce(
+        new Promise<void>(resolve => {
+          loaded = resolve;
+        }),
+      );
+      let entering!: Promise<void>;
+      act(() => {
+        entering = hook.result.current.requestEntry({openModelPicker});
+      });
+      await flush();
+
+      await act(async () => {
+        await hook.result.current.end();
+      });
+      await act(async () => {
+        loaded();
+        await entering;
+      });
+
+      expect(voiceModeStore.phase).toBe('closed');
+      expect(AudioRecord.init).not.toHaveBeenCalled();
+      expect(AudioRecord.start).not.toHaveBeenCalled();
+    });
+
     it('holds nothing back for a remote model', async () => {
       const remote = {...localModel, id: 'remote', origin: ModelOrigin.REMOTE};
       runInAction(() => {
