@@ -94,6 +94,8 @@ const Speech = {
 
 export default Speech;
 
+export const onAudioInterruption = jest.fn(() => ({remove: jest.fn()}));
+
 /** Mirror of the fork's `TTSEngine` enum — minimum surface used by tests. */
 export enum TTSEngine {
   OS_NATIVE = 'os-native',

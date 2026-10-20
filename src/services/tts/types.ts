@@ -1,6 +1,6 @@
 import type {
+  FirstChunkMode,
   StreamProgressEvent,
-  SynthesisOptions,
 } from '@pocketpalai/react-native-speech';
 
 /**
@@ -59,7 +59,7 @@ export interface StreamingHandle {
 /** Per-stream options for `Engine.playStreaming`. */
 export interface StreamOptions {
   /** `'clause'` starts speaking at the first clause instead of sentence. */
-  firstChunk?: SynthesisOptions['firstChunk'];
+  firstChunk?: FirstChunkMode;
   /** `false` when the caller has already stripped markdown itself. */
   stripMarkdown?: boolean;
   /** Called as each chunk starts playing, with its range in the stream. */

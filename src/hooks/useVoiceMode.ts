@@ -5,6 +5,10 @@ import {toByteArray} from 'base64-js';
 import {comparer, reaction} from 'mobx';
 import {useFocusEffect} from '@react-navigation/native';
 import AudioRecord from '@fugood/react-native-audio-pcm-stream';
+import {
+  onAudioInterruption,
+  type AudioInterruptionProps,
+} from '@pocketpalai/react-native-speech';
 
 import {
   ASR_BITS_PER_SAMPLE,
@@ -31,10 +35,6 @@ import type {
   VoiceTurnOutcome,
   VoiceTurnPort,
 } from '../services/voice';
-import {
-  onAudioInterruption,
-  type AudioInterruption,
-} from '../services/voice/audioInterruptions';
 import {CascadeVoiceEngine} from '../services/voice/cascadeEngine';
 import {
   asrStore,
@@ -317,7 +317,7 @@ class VoiceModeController {
    * so the next move into listening opens the mic again, and the watchdog
    * ends the session if the mic is still taken.
    */
-  onAudioInterruption({type}: AudioInterruption): void {
+  onAudioInterruption({type}: AudioInterruptionProps): void {
     if (!this.open) {
       return;
     }

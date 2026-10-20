@@ -4,6 +4,7 @@ import {fromByteArray} from 'base64-js';
 import {observable, runInAction} from 'mobx';
 import AudioRecord from '@fugood/react-native-audio-pcm-stream';
 import DeviceInfo from 'react-native-device-info';
+import {onAudioInterruption} from '@pocketpalai/react-native-speech';
 import {check} from 'react-native-permissions';
 
 import {modelsList} from '../../../jest/fixtures/models';
@@ -27,7 +28,6 @@ import {
 } from '../../services/voice';
 import type {VoiceTurnEvents, VoiceTurnOutcome} from '../../services/voice';
 
-import {onAudioInterruption} from '../../services/voice/audioInterruptions';
 import {useVoiceMode} from '../useVoiceMode';
 
 let mockBlur: (() => void) | undefined;

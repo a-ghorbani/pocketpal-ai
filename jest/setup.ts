@@ -184,10 +184,6 @@ jest.mock('react-native-worklets', () =>
 // React Native provides requestIdleCallback; Jest's environment doesn't.
 (global as any).requestIdleCallback = (callback: () => void) => callback();
 
-jest.mock('../src/services/voice/audioInterruptions', () => ({
-  onAudioInterruption: jest.fn(() => ({remove: jest.fn()})),
-}));
-
 jest.mock('../src/utils/keepAwake', () => ({
   acquireKeepAwake: jest.fn(() => jest.fn()),
 }));
