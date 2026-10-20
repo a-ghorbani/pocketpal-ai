@@ -863,13 +863,27 @@ describe('TTSStore', () => {
       });
     });
 
-    it('leaves no space before punctuation in the spoken text', async () => {
+    it('leaves no space before punctuation where a placeholder was taken out', async () => {
       const store = await makeVoiceStore();
       store.onAssistantMessageStart('msg-1');
-      store.onAssistantMessageChunk('msg-1', 'It condenses . ');
-      progressTo(voiceHandles[0]!, 15);
+      const words =
+        'one two three four five six seven eight nine ten eleven twelve ';
+      store.onAssistantMessageChunk('msg-1', words);
+      store.onAssistantMessageChunk('msg-1', '<think>hmm</think>. Done. ');
+      const handle = voiceHandles[0]!;
+      progressTo(handle, appended(handle).length);
 
-      expect(store.voiceSpoken?.text).toBe('It condenses.');
+      expect(store.voiceSpoken?.text).toBe(`${words.trim()}. Done.`);
+    });
+
+    it('keeps the spacing of the reply itself, as in French', async () => {
+      const store = await makeVoiceStore();
+      store.onAssistantMessageStart('msg-1');
+      store.onAssistantMessageChunk('msg-1', 'Bonjour ! Ça va ? ');
+      const handle = voiceHandles[0]!;
+      progressTo(handle, appended(handle).length);
+
+      expect(store.voiceSpoken?.text).toBe('Bonjour ! Ça va ?');
     });
 
     it('marks a voice reply whose speech failed, until the next voice reply', async () => {

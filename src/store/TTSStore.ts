@@ -100,17 +100,20 @@ const withoutRanges = (
 ): string => {
   let out = '';
   let from = 0;
+  const append = (part: string) => {
+    out = /^[.,!?;:]/.test(part) ? out.replace(/\s+$/, '') + part : out + part;
+  };
   for (const [start, stop] of ranges) {
     if (start >= end) {
       break;
     }
-    out += text.slice(from, start);
+    append(text.slice(from, start));
     from = Math.max(from, stop);
   }
   if (from < end) {
-    out += text.slice(from, end);
+    append(text.slice(from, end));
   }
-  return out.replace(/\s+([.,!?;:])/g, '$1').trim();
+  return out.trim();
 };
 
 /**
