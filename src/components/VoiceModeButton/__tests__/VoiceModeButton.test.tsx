@@ -19,7 +19,7 @@ describe('VoiceModeButton', () => {
 
   it('renders nothing on a device that cannot run voice mode', () => {
     runInAction(() => {
-      modelStore.deviceTier = 'mid';
+      modelStore.deviceTier = 'low';
     });
     const {queryByTestId} = render(<VoiceModeButton onPress={jest.fn()} />);
     expect(queryByTestId('voice-mode-button')).toBeNull();

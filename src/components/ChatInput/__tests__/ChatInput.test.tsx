@@ -1063,7 +1063,7 @@ describe('voice mode button', () => {
     [
       'the device tier is below the gate',
       () => {
-        modelStore.deviceTier = 'mid';
+        modelStore.deviceTier = 'low';
       },
     ],
     [

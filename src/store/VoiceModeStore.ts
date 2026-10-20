@@ -1,10 +1,16 @@
+import {Platform} from 'react-native';
+
 import {makeAutoObservable} from 'mobx';
 import {makePersistable} from 'mobx-persist-store';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
-import {VOICE_MODE_UNLOCKED_DEFAULT, VoiceEntitlement} from '../services/voice';
+import {
+  VOICE_MODE_UNLOCKED_DEFAULT,
+  VoiceEntitlement,
+  voiceModeDeviceSupported,
+} from '../services/voice';
 
-import {asrStore} from './ASRStore';
+import {modelStore} from './ModelStore';
 
 export type VoicePhase =
   | 'closed'
@@ -42,9 +48,9 @@ export class VoiceModeStore {
     }
   }
 
-  /** The device can run voice mode: the same tiers as voice input. */
+  /** The device can run voice mode (its own gate, wider than dictation's). */
   get supported(): boolean {
-    return asrStore.deviceSupported;
+    return voiceModeDeviceSupported(modelStore.deviceTier, Platform.OS);
   }
 
   get isUnlocked(): boolean {

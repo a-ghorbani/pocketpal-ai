@@ -1,6 +1,10 @@
 import {makeAutoObservable, runInAction} from 'mobx';
 
-import {mockASRStore} from './asrStore';
+import {Platform} from 'react-native';
+
+import {voiceModeDeviceSupported} from '../../src/services/voice/deviceGate';
+
+import {mockModelStore} from './modelStore';
 
 type VoicePhase =
   | 'closed'
@@ -71,7 +75,7 @@ class MockVoiceModeStore {
   }
 
   get supported(): boolean {
-    return mockASRStore.deviceSupported;
+    return voiceModeDeviceSupported(mockModelStore.deviceTier, Platform.OS);
   }
 
   get isUnlocked(): boolean {

@@ -1,11 +1,12 @@
+import {Platform} from 'react-native';
 import {runInAction} from 'mobx';
 import {makePersistable} from 'mobx-persist-store';
 
 import {mockASRStore} from '../../../__mocks__/stores/asrStore';
 import {mockModelStore} from '../../../__mocks__/stores/modelStore';
 
-jest.mock('../ASRStore', () => ({
-  asrStore: require('../../../__mocks__/stores/asrStore').mockASRStore,
+jest.mock('../ModelStore', () => ({
+  modelStore: require('../../../__mocks__/stores/modelStore').mockModelStore,
 }));
 
 import {
@@ -25,16 +26,34 @@ describe('VoiceModeStore', () => {
   });
 
   it.each([
-    ['flagship', true],
-    ['high', true],
-    ['mid', false],
-    ['low', false],
-  ] as const)('device tier %s → supported %s', (tier, supported) => {
+    ['android', 'flagship', true],
+    ['android', 'high', true],
+    ['android', 'mid', false],
+    ['android', 'low', false],
+    ['ios', 'flagship', true],
+    ['ios', 'high', true],
+    ['ios', 'mid', true],
+    ['ios', 'low', false],
+    ['ios', null, false],
+  ] as const)('%s, device tier %s → supported %s', (os, tier, supported) => {
+    const platform = Platform.OS;
+    Platform.OS = os;
     runInAction(() => {
       mockModelStore.deviceTier = tier;
     });
-    expect(mockASRStore.deviceSupported).toBe(supported);
     expect(voiceModeStore.supported).toBe(supported);
+    Platform.OS = platform;
+  });
+
+  it("keeps dictation's own, narrower gate", () => {
+    const platform = Platform.OS;
+    Platform.OS = 'ios';
+    runInAction(() => {
+      mockModelStore.deviceTier = 'mid';
+    });
+    expect(voiceModeStore.supported).toBe(true);
+    expect(mockASRStore.deviceSupported).toBe(false);
+    Platform.OS = platform;
   });
 
   it('is locked by default', () => {

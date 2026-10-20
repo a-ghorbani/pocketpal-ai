@@ -59,7 +59,7 @@ export async function runVoiceCommand(cmd: string): Promise<void> {
     voiceModeStore.setUnlockOverride(arg === 'on');
   } else if (verb === 'gate') {
     runInAction(() => {
-      modelStore.deviceTier = arg === 'on' ? 'high' : 'mid';
+      modelStore.deviceTier = arg === 'on' ? 'high' : 'low';
     });
   } else if (verb === 'state' && STATES[arg]) {
     const state = STATES[arg];
