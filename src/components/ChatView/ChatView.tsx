@@ -1228,7 +1228,10 @@ export const ChatView = observer(
                     appendTranscript,
                     onVoicePress:
                       onVoiceModePress &&
-                      (() => onVoiceModePress(() => setIsPickerVisible(true))),
+                      (() => {
+                        Keyboard.dismiss();
+                        onVoiceModePress(() => setIsPickerVisible(true));
+                      }),
                     textInputProps: {
                       ...textInputProps,
                       // Only override value and onChangeText if not using promptText

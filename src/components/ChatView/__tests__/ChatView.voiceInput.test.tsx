@@ -1,4 +1,5 @@
 import * as React from 'react';
+import {Keyboard} from 'react-native';
 import {runInAction} from 'mobx';
 
 import {user} from '../../../../jest/fixtures';
@@ -192,6 +193,20 @@ describe('ChatView voice mode', () => {
     fireEvent.press(getByTestId('voice-mode-button'));
 
     expect(onVoiceModePress).toHaveBeenCalledWith(expect.any(Function));
+  });
+
+  it('closes the keyboard before voice mode opens a sheet over the chat', () => {
+    const dismiss = jest.spyOn(Keyboard, 'dismiss');
+    const onVoiceModePress = jest.fn();
+    const {getByTestId} = renderChat(onVoiceModePress);
+
+    fireEvent.press(getByTestId('voice-mode-button'));
+
+    expect(dismiss).toHaveBeenCalled();
+    expect(dismiss.mock.invocationCallOrder[0]).toBeLessThan(
+      onVoiceModePress.mock.invocationCallOrder[0],
+    );
+    dismiss.mockRestore();
   });
 
   it('keeps the composer where no voice controls are wired', () => {
