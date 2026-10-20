@@ -55,11 +55,15 @@ const events = (): jest.Mocked<VoiceTurnEvents> => ({
   speechStarted: jest.fn(),
 });
 
-const createTurn = (port: ReturnType<typeof makePort>, id = 'turn-1') => {
+const createTurn = (
+  port: ReturnType<typeof makePort>,
+  id = 'turn-1',
+  steps: Array<{content: string}> = [],
+) => {
   chat.sessions = [
     {
       id: 'session-1',
-      messages: [{id, type: 'assistant_turn', steps: [], metadata: {}}],
+      messages: [{id, type: 'assistant_turn', steps, metadata: {}}],
     },
   ];
   port.onTurn!(id);
@@ -300,21 +304,46 @@ describe('CascadeVoiceEngine', () => {
       expect(chatSessionStore.rewriteTurnToSpoken).not.toHaveBeenCalled();
     });
 
-    it('keeps the partial text when only the thinking placeholder has played', async () => {
+    it.each([
+      ['within the first word', ''],
+      ['when only the thinking placeholder had played', ''],
+    ])(
+      'keeps only the first word of a reply interrupted %s',
+      async (_case, heard) => {
+        const port = makePort();
+        const turn = engine.runTurn(speech(500), port, events());
+        await flush();
+        createTurn(port, 'turn-1', [
+          {content: 'Rain forms through condensation. It falls.'},
+        ]);
+        setPlayback('streaming');
+        setSpoken('turn-1', heard);
+
+        const interrupting = turn.interrupt();
+        setPlayback('idle');
+        port.settle();
+        await interrupting;
+
+        expect(chatSessionStore.rewriteTurnToSpoken).toHaveBeenCalledWith(
+          'turn-1',
+          'session-1',
+          'Rain',
+        );
+        await expect(turn.done).resolves.toBe('interrupted');
+      },
+    );
+
+    it('rewrites nothing for an interrupted reply whose speech never started', async () => {
       const port = makePort();
       const turn = engine.runTurn(speech(500), port, events());
       await flush();
-      createTurn(port);
-      setPlayback('streaming');
-      setSpoken('turn-1', '');
+      createTurn(port, 'turn-1', [{content: 'Rain forms.'}]);
 
       const interrupting = turn.interrupt();
-      setPlayback('idle');
       port.settle();
       await interrupting;
 
       expect(chatSessionStore.rewriteTurnToSpoken).not.toHaveBeenCalled();
-      await expect(turn.done).resolves.toBe('interrupted');
     });
 
     it('does not rewrite from an earlier turn', async () => {
