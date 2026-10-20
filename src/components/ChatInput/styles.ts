@@ -47,11 +47,13 @@ export const createStyles = ({
       paddingHorizontal: 8,
       paddingVertical: 4,
       marginLeft: 8,
+      flexShrink: 1,
     },
     thinkingToggleLeftDisabled: {
       backgroundColor: 'transparent',
     },
     thinkingToggleText: {
+      flexShrink: 1,
       fontSize: 12,
       fontWeight: '500',
       marginLeft: 4,

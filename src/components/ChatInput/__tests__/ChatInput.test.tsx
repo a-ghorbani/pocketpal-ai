@@ -372,7 +372,7 @@ describe('input', () => {
     expect(onPalBtnPress).toHaveBeenCalledTimes(1);
   });
 
-  it('truncates a long pal name to one line so the controls fit', async () => {
+  it('lets the pal name and Think label shrink to fit beside the mic', async () => {
     const pal = await palStore.createPal({
       type: 'local',
       name: 'A Pal With A Name Too Long For The Composer Row',
@@ -388,33 +388,47 @@ describe('input', () => {
       chatSessionStore,
       'activePalId',
     );
+    const originalActiveModelId = modelStore.activeModelId;
     Object.defineProperty(chatSessionStore, 'activePalId', {
       get: jest.fn(() => pal.id),
       configurable: true,
     });
-    const originalActiveModelId = modelStore.activeModelId;
-    modelStore.activeModelId = 'model-1';
+    runInAction(() => {
+      modelStore.activeModelId = 'model-1';
+    });
 
-    const {getByTestId, unmount} = render(
-      <UserContext.Provider value={user}>
-        <ChatInput
-          {...{onSendPress: jest.fn(), sendButtonVisibilityMode: 'editing'}}
-        />
-      </UserContext.Provider>,
-    );
-
-    const palName = getByTestId('active-pal-name');
-    expect(palName.props.numberOfLines).toBe(1);
-    expect(StyleSheet.flatten(palName.props.style).flexShrink).toBe(1);
-
-    unmount();
-    modelStore.activeModelId = originalActiveModelId;
-    if (originalActivePalId) {
-      Object.defineProperty(
-        chatSessionStore,
-        'activePalId',
-        originalActivePalId,
+    try {
+      const {getByTestId} = render(
+        <UserContext.Provider value={user}>
+          <ChatInput
+            {...{
+              onSendPress: jest.fn(),
+              sendButtonVisibilityMode: 'editing',
+              showThinkingToggle: true,
+            }}
+          />
+        </UserContext.Provider>,
       );
+
+      const shrinkOf = (testID: string) =>
+        StyleSheet.flatten(getByTestId(testID).props.style).flexShrink;
+      expect(getByTestId('active-pal-name').props.numberOfLines).toBe(1);
+      expect(getByTestId('thinking-toggle-label').props.numberOfLines).toBe(1);
+      expect(shrinkOf('pal-selector')).toBe(1);
+      expect(shrinkOf('active-pal-name')).toBe(1);
+      expect(shrinkOf('thinking-toggle')).toBe(1);
+      expect(shrinkOf('thinking-toggle-label')).toBe(1);
+    } finally {
+      runInAction(() => {
+        modelStore.activeModelId = originalActiveModelId;
+      });
+      if (originalActivePalId) {
+        Object.defineProperty(
+          chatSessionStore,
+          'activePalId',
+          originalActivePalId,
+        );
+      }
     }
   });
 
