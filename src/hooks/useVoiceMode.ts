@@ -14,7 +14,7 @@ import {
   ASR_TIERS,
   readDeviceMemory,
 } from '../services/asr';
-import {TTS_ENGINE_RUNTIME_BYTES, ttsRuntime} from '../services/tts';
+import {TTS_ENGINE_RUNTIME_BYTES} from '../services/tts';
 import {
   Endpointer,
   VOICE_CAPTURE_SETTLE_MS,
@@ -165,11 +165,10 @@ class VoiceModeController {
       return;
     }
     const fit = voiceMemoryFit({
-      memory: await readDeviceMemory(),
+      memory: await readDeviceMemory(modelStore),
       chatBytes: modelStore.loadedModelBytes ?? 0,
       sttBytes: ASR_TIERS.base.runtimeBytes,
       ttsBytes: TTS_ENGINE_RUNTIME_BYTES[voice.engine],
-      ttsLoaded: ttsRuntime.getActiveEngineId() === voice.engine,
     });
     if (fit.status === 'fits') {
       await this.enter();

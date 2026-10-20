@@ -6,7 +6,7 @@ import {voiceMemoryFit} from '../memoryFit';
 const sttBytes = ASR_TIERS.base.runtimeBytes;
 const ttsBytes = TTS_ENGINE_RUNTIME_BYTES.supertonic;
 const android = (totalBytes: number) => ({os: 'android' as const, totalBytes});
-const ios = (availableBytes: number) => ({os: 'ios' as const, availableBytes});
+const ios = (ceilingBytes: number) => ({os: 'ios' as const, ceilingBytes});
 
 describe('voiceMemoryFit', () => {
   it("won't fit a 3.23 GB chat model on a 7.4 GB Android phone", () => {
@@ -15,7 +15,6 @@ describe('voiceMemoryFit', () => {
       chatBytes: 3.23e9,
       sttBytes,
       ttsBytes,
-      ttsLoaded: false,
     });
     expect(fit.status).toBe('wont_fit');
   });
@@ -26,7 +25,6 @@ describe('voiceMemoryFit', () => {
       chatBytes: 1.4e9,
       sttBytes,
       ttsBytes,
-      ttsLoaded: false,
     });
     expect(fit.status).toBe('fits');
     expect(fit.breakdown).toEqual({
@@ -47,47 +45,57 @@ describe('voiceMemoryFit', () => {
       chatBytes: budget - sttBytes - ttsBytes / 2,
       sttBytes,
       ttsBytes,
-      ttsLoaded: false,
     });
     expect(fit.status).toBe('tight');
   });
 
-  it('on iOS counts the voice only when its engine is not loaded', () => {
-    const available = (sttBytes + ttsBytes / 2) * 1.2;
-    const inputs = {
-      memory: ios(available),
+  it('on iOS counts the chat model, whisper and the voice against the ceiling', () => {
+    const fit = voiceMemoryFit({
+      memory: ios(4e9),
       chatBytes: 2e9,
       sttBytes,
       ttsBytes,
-    };
-    expect(voiceMemoryFit({...inputs, ttsLoaded: false}).status).toBe('tight');
-    expect(voiceMemoryFit({...inputs, ttsLoaded: true}).status).toBe('fits');
-  });
-
-  it('on iOS counts only whisper and an unloaded voice, with headroom', () => {
-    const inputs = {memory: ios(3e9), chatBytes: 2e9, sttBytes, ttsBytes};
-    expect(voiceMemoryFit({...inputs, ttsLoaded: false}).breakdown).toEqual({
-      rows: [
-        {kind: 'stt', bytes: sttBytes * 1.2},
-        {kind: 'tts', bytes: ttsBytes * 1.2},
-      ],
-      neededBytes: (sttBytes + ttsBytes) * 1.2,
-      availableBytes: 3e9,
     });
-    expect(
-      voiceMemoryFit({...inputs, ttsLoaded: true}).breakdown.rows[1],
-    ).toEqual({kind: 'tts', bytes: 0});
+    expect(fit.status).toBe('fits');
+    expect(fit.breakdown).toEqual({
+      rows: [
+        {kind: 'chat', bytes: 2e9},
+        {kind: 'stt', bytes: sttBytes},
+        {kind: 'tts', bytes: ttsBytes},
+      ],
+      neededBytes: 2e9 + sttBytes + ttsBytes,
+      availableBytes: 4e9,
+    });
   });
 
-  it("on iOS won't fit when whisper alone lacks headroom", () => {
+  it('is tight on iOS when whisper fits under the ceiling but the voice does not', () => {
     const fit = voiceMemoryFit({
-      memory: ios(sttBytes),
-      chatBytes: 0,
+      memory: ios(4e9),
+      chatBytes: 4e9 - sttBytes - ttsBytes / 2,
       sttBytes,
       ttsBytes,
-      ttsLoaded: true,
+    });
+    expect(fit.status).toBe('tight');
+  });
+
+  it("on iOS won't fit when whisper alone passes the ceiling", () => {
+    const fit = voiceMemoryFit({
+      memory: ios(4e9),
+      chatBytes: 4e9 - sttBytes + 1,
+      sttBytes,
+      ttsBytes,
     });
     expect(fit.status).toBe('wont_fit');
+  });
+
+  it('fits on iOS while the load ceiling is unknown', () => {
+    const fit = voiceMemoryFit({
+      memory: ios(0),
+      chatBytes: 9e9,
+      sttBytes,
+      ttsBytes,
+    });
+    expect(fit.status).toBe('fits');
   });
 
   it('fits when memory could not be read', () => {
@@ -96,7 +104,6 @@ describe('voiceMemoryFit', () => {
       chatBytes: 9e9,
       sttBytes,
       ttsBytes,
-      ttsLoaded: false,
     });
     expect(fit.status).toBe('fits');
   });
@@ -105,8 +112,9 @@ describe('voiceMemoryFit', () => {
     [android(7.4e9), 3.23e9],
     [android(7.4e9), 1.4e9],
     [android(4e9), 1.5e9],
-    [ios(0.3e9), 0],
-    [ios(2e9), 0],
+    [ios(4e9), 3.9e9],
+    [ios(4e9), 2e9],
+    [ios(0), 9e9],
   ])(
     "won't fit exactly where dictation refuses whisper (%o, %d)",
     (memory, chatBytes) => {
@@ -115,7 +123,6 @@ describe('voiceMemoryFit', () => {
         chatBytes,
         sttBytes,
         ttsBytes,
-        ttsLoaded: false,
       });
       expect(fit.status === 'wont_fit').toBe(
         !whisperFits(memory, chatBytes, sttBytes),

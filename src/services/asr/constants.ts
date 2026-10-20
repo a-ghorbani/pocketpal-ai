@@ -15,14 +15,17 @@ export const ASR_DEVICE_TIERS: Tier[] = ['high', 'flagship'];
  */
 export const ASR_ANDROID_RAM_SHARE = 0.45;
 
-/** iOS starts a recording only when this much of whisper's peak is free. */
-export const ASR_IOS_MEMORY_HEADROOM_FACTOR = 1.2;
-
 /**
  * Maximum recording length (ms). Reaching it ends capture as if the user
  * tapped stop.
  */
 export const ASR_MAX_RECORD_MS = 180_000;
+
+/**
+ * A recording that has delivered no audio by then is reported as a microphone
+ * failure. Silence still delivers audio; a Bluetooth mic can take ~2 s to start.
+ */
+export const ASR_NO_AUDIO_MS = 3_000;
 
 /** The recording timer is highlighted for this long before the cap (ms). */
 export const ASR_RECORD_WARNING_MS = 10_000;

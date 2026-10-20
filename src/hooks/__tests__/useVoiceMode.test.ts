@@ -3,11 +3,12 @@ import {act, renderHook} from '@testing-library/react-native';
 import {fromByteArray} from 'base64-js';
 import {observable, runInAction} from 'mobx';
 import AudioRecord from '@fugood/react-native-audio-pcm-stream';
+import DeviceInfo from 'react-native-device-info';
 import {check} from 'react-native-permissions';
 
 import {modelsList} from '../../../jest/fixtures/models';
-import {ASR_CHUNK_BYTES} from '../../services/asr/constants';
-import NativeHardwareInfo from '../../specs/NativeHardwareInfo';
+import {ASR_CHUNK_BYTES, ASR_TIERS} from '../../services/asr/constants';
+import {TTS_ENGINE_RUNTIME_BYTES} from '../../services/tts/constants';
 import {
   asrStore,
   chatSessionStore,
@@ -170,13 +171,14 @@ describe('useVoiceMode', () => {
     (AudioRecord.init as jest.Mock).mockResolvedValue(undefined);
     (check as jest.Mock).mockResolvedValue('granted');
     Platform.OS = 'ios';
-    (NativeHardwareInfo.getAvailableMemory as jest.Mock).mockResolvedValue(3e9);
     runInAction(() => {
       chatSessionStore.activeSessionId = 'session-1';
       model.models = modelsList;
       model.activeModelId = localModel.id;
       model.isContextLoading = false;
       model.loadedModelBytes = 1e9;
+      model.availableMemoryCeiling = 5e9;
+      model.largestSuccessfulLoad = 4e9;
       asrStore.downloadStates.base = 'ready';
       tts.currentVoice = {id: 'F1', name: 'F1', engine: 'supertonic'};
     });
@@ -428,9 +430,12 @@ describe('useVoiceMode', () => {
     });
 
     it('shows the memory sheet when memory is tight; Continue anyway enters', async () => {
-      (NativeHardwareInfo.getAvailableMemory as jest.Mock).mockResolvedValue(
-        0.5e9,
-      );
+      runInAction(() => {
+        model.loadedModelBytes =
+          5e9 -
+          ASR_TIERS.base.runtimeBytes -
+          TTS_ENGINE_RUNTIME_BYTES.supertonic / 2;
+      });
       const {enter, hook, engine} = renderVoiceMode();
 
       await enter();
@@ -448,9 +453,9 @@ describe('useVoiceMode', () => {
     });
 
     it("won't enter on Continue anyway when whisper won't fit", async () => {
-      (NativeHardwareInfo.getAvailableMemory as jest.Mock).mockResolvedValue(
-        0.3e9,
-      );
+      runInAction(() => {
+        model.loadedModelBytes = 5e9;
+      });
       const {enter, hook, engine} = renderVoiceMode();
 
       await enter();
@@ -465,9 +470,12 @@ describe('useVoiceMode', () => {
     });
 
     it('Choose a smaller model opens the picker and stays closed', async () => {
-      (NativeHardwareInfo.getAvailableMemory as jest.Mock).mockResolvedValue(
-        0.5e9,
-      );
+      runInAction(() => {
+        model.loadedModelBytes =
+          5e9 -
+          ASR_TIERS.base.runtimeBytes -
+          TTS_ENGINE_RUNTIME_BYTES.supertonic / 2;
+      });
       const {enter, hook} = renderVoiceMode();
       await enter();
 
@@ -788,27 +796,29 @@ describe('useVoiceMode', () => {
       const original = (global as any).requestIdleCallback;
       (global as any).requestIdleCallback = (callback: () => void) =>
         idle.push(callback);
+      Platform.OS = 'android';
+      (DeviceInfo.getTotalMemory as jest.Mock).mockResolvedValue(16e9);
       const {enter, hook, engine} = renderVoiceMode();
       await enter();
       act(() => {
         hook.result.current.end();
       });
       await flush();
-      (NativeHardwareInfo.getAvailableMemory as jest.Mock).mockClear();
+      (DeviceInfo.getTotalMemory as jest.Mock).mockClear();
 
       let reentering!: Promise<void>;
       act(() => {
         reentering = hook.result.current.requestEntry({openModelPicker});
       });
       await flush();
-      expect(NativeHardwareInfo.getAvailableMemory).not.toHaveBeenCalled();
+      expect(DeviceInfo.getTotalMemory).not.toHaveBeenCalled();
 
       await act(async () => {
         idle.forEach(callback => callback());
         await reentering;
       });
       expect(engine.release).toHaveBeenCalledTimes(1);
-      expect(NativeHardwareInfo.getAvailableMemory).toHaveBeenCalledTimes(1);
+      expect(DeviceInfo.getTotalMemory).toHaveBeenCalledTimes(1);
       (global as any).requestIdleCallback = original;
     });
 

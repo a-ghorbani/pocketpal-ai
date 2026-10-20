@@ -75,7 +75,7 @@ describe('VoiceMemorySheet', () => {
     expect(getByTestId('voice-memory-smaller-model')).toBeTruthy();
   });
 
-  it('on iOS shows only the rows it counts, so a larger chat model never appears', () => {
+  it('shows only the rows the fit counts', () => {
     const {queryByText, getByTestId, getByText} = renderSheet({
       status: 'tight',
       breakdown: {

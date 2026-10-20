@@ -149,6 +149,20 @@ describe('ChatView voice-input append seam', () => {
     ).toBeTruthy();
   });
 
+  it('explains a microphone that delivers no audio', () => {
+    const {getByText} = renderChat();
+
+    act(() => {
+      asrStore.setError('mic_unavailable');
+    });
+
+    expect(
+      getByText(
+        "The microphone isn't responding. Try again, or switch to a smaller chat model.",
+      ),
+    ).toBeTruthy();
+  });
+
   it('offers an open-Settings action when permission is blocked', () => {
     const {getByText} = renderChat();
 

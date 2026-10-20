@@ -12,6 +12,7 @@ import {
   ASR_CHUNK_BYTES,
   ASR_LEVEL_CHUNKS,
   ASR_MAX_RECORD_MS,
+  ASR_NO_AUDIO_MS,
   ASR_PROMPT_CHARS,
   ASR_SAMPLE_RATE,
   SpeechSegmenter,
@@ -42,6 +43,8 @@ interface UseVoiceCaptureReturn {
  *          transcribed while the user keeps speaking, so stop only waits for
  *          the last one. Refused when whisper would not fit next to the
  *          loaded chat model (`asrStore.hasMemoryForCapture`).
+ *          No audio within ASR_NO_AUDIO_MS ends the capture as
+ *          'mic_unavailable'.
  * stop   → transcribe the remaining audio → join the segment texts →
  *          onTranscript append. Silent segments are never decoded. While a
  *          local chat model generates on the CPU, transcription waits for
@@ -51,8 +54,8 @@ interface UseVoiceCaptureReturn {
  *
  * All engine work runs through one serial queue, so a release never cuts
  * across a load or a transcription. Native capture is released on stop,
- * cancel, error, max-ms, AppState background, and unmount. All work is
- * on-device: the only network in the ASR subsystem is the model download.
+ * cancel, error, max-ms, AppState background (which finishes the capture like
+ * stop), and unmount. All work is on-device: the only network in the ASR subsystem is the model download.
  */
 export function useVoiceCapture(
   options: UseVoiceCaptureOptions,
@@ -70,6 +73,7 @@ export function useVoiceCapture(
   const listenerRef = useRef<{remove: () => void} | null>(null);
   const chatWaitRef = useRef<(Promise<void> & {cancel(): void}) | null>(null);
   const maxTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const noAudioTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const onTranscriptRef = useRef(onTranscript);
   onTranscriptRef.current = onTranscript;
 
@@ -143,6 +147,10 @@ export function useVoiceCapture(
     if (maxTimerRef.current) {
       clearTimeout(maxTimerRef.current);
       maxTimerRef.current = null;
+    }
+    if (noAudioTimerRef.current) {
+      clearTimeout(noAudioTimerRef.current);
+      noAudioTimerRef.current = null;
     }
     listenerRef.current?.remove();
     listenerRef.current = null;
@@ -269,8 +277,16 @@ export function useVoiceCapture(
         // Reaching the cap ends capture as if the user tapped stop.
         finish(session).catch(() => {});
       }, ASR_MAX_RECORD_MS);
+      noAudioTimerRef.current = setTimeout(() => {
+        noAudioTimerRef.current = null;
+        if (chunkCount === 0 && session === sessionRef.current) {
+          teardownCapture();
+          segmenterRef.current = null;
+          asrStore.setError('mic_unavailable');
+        }
+      }, ASR_NO_AUDIO_MS);
     })();
-  }, [finish, transcribeSegment]);
+  }, [finish, teardownCapture, transcribeSegment]);
 
   const stop = useCallback(() => {
     finish(sessionRef.current).catch(() => {});
@@ -294,7 +310,7 @@ export function useVoiceCapture(
   useEffect(() => {
     const sub = AppState.addEventListener('change', (next: AppStateStatus) => {
       if (next === 'background' && recordingRef.current) {
-        cancel();
+        stop();
       }
     });
     return () => {
@@ -303,7 +319,7 @@ export function useVoiceCapture(
         cancel();
       }
     };
-  }, [cancel]);
+  }, [cancel, stop]);
 
   return {start, stop, cancel};
 }

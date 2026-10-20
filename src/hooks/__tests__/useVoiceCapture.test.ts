@@ -6,7 +6,11 @@ import AudioRecord from '@fugood/react-native-audio-pcm-stream';
 
 import {useVoiceCapture} from '../useVoiceCapture';
 import {asrStore, modelStore} from '../../store';
-import {ASR_MIN_SEGMENT_MS, whisperAsrEngine} from '../../services/asr';
+import {
+  ASR_MIN_SEGMENT_MS,
+  ASR_NO_AUDIO_MS,
+  whisperAsrEngine,
+} from '../../services/asr';
 import * as micPerm from '../../utils/asrMicPermission';
 
 const mockEnsureMicPermission = jest.spyOn(micPerm, 'ensureMicPermission');
@@ -344,6 +348,39 @@ describe('useVoiceCapture', () => {
     expect(onTranscript).not.toHaveBeenCalled();
   });
 
+  describe('when the microphone delivers nothing', () => {
+    beforeEach(() => {
+      jest.useFakeTimers();
+    });
+
+    afterEach(() => {
+      jest.useRealTimers();
+    });
+
+    it('reports mic_unavailable and releases capture', async () => {
+      await startRecording();
+
+      act(() => {
+        jest.advanceTimersByTime(ASR_NO_AUDIO_MS);
+      });
+
+      expect(asrStore.setError).toHaveBeenCalledWith('mic_unavailable');
+      expect(mockAudioStop).toHaveBeenCalled();
+    });
+
+    it('stays quiet once silent audio arrives', async () => {
+      await startRecording();
+
+      act(() => {
+        dataCallback?.(silentPcmChunkBase64());
+        jest.advanceTimersByTime(ASR_NO_AUDIO_MS);
+      });
+
+      expect(asrStore.setError).not.toHaveBeenCalled();
+      expect(asrStore.captureState).toBe('recording');
+    });
+  });
+
   it('returns to idle without an error on an empty transcript', async () => {
     mockTranscribe.mockResolvedValue(said(''));
     const {result, onTranscript} = await startRecording();
@@ -550,7 +587,7 @@ describe('useVoiceCapture', () => {
     expect(onTranscript).not.toHaveBeenCalled();
   });
 
-  it('discards the capture when the app goes to the background', async () => {
+  it('finishes the capture when the app goes to the background', async () => {
     let appStateHandler: ((s: string) => void) | null = null;
     jest
       .spyOn(AppState, 'addEventListener')
@@ -569,9 +606,10 @@ describe('useVoiceCapture', () => {
     });
 
     expect(mockAudioStop).toHaveBeenCalled();
+    await waitFor(() =>
+      expect(onTranscript).toHaveBeenCalledWith('hello world'),
+    );
     expect(asrStore.captureState).toBe('idle');
-    expect(mockTranscribe).not.toHaveBeenCalled();
-    expect(onTranscript).not.toHaveBeenCalled();
   });
 
   it('releases native capture on unmount', async () => {

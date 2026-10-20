@@ -102,9 +102,14 @@ export class ASRStore {
     return tier !== null && ASR_DEVICE_TIERS.includes(tier);
   }
 
-  /** Whether the selected tier's whisper model fits next to the loaded chat model. */
+  /**
+   * Whether whisper fits next to the loaded chat model, by the app's estimate
+   * of both (`whisperFits`). Android's free-memory figure can be far off
+   * (#982), so Android budgets against total RAM. iOS does not count mmap'd
+   * chat weights against the app, so iOS uses the chat model's load ceiling.
+   */
   async hasMemoryForCapture(): Promise<boolean> {
-    const memory = await readDeviceMemory();
+    const memory = await readDeviceMemory(modelStore);
     return (
       memory == null ||
       whisperFits(
@@ -184,8 +189,12 @@ export class ASRStore {
     // Free the ~400 MB whisper context when backgrounded so it doesn't sit
     // resident alongside the LLM and OOM low-RAM devices. Re-init is lazy on
     // the next capture. Only react to 'background' — 'inactive' fires for
-    // transient interruptions that must not tear down a large context.
-    if (nextAppState === 'background') {
+    // transient interruptions that must not tear down a large context. A
+    // capture in progress finishes first and frees the context itself.
+    if (
+      nextAppState === 'background' &&
+      (this.captureState === 'idle' || this.captureState === 'error')
+    ) {
       whisperAsrEngine.release().catch(err => {
         console.warn('[ASRStore] background release failed:', err);
       });

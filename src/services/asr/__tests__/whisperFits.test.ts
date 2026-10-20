@@ -24,12 +24,13 @@ describe('whisperFits', () => {
     ).toBe(false);
   });
 
-  it('iOS needs whisper plus headroom free, whatever the chat model', () => {
-    expect(
-      whisperFits({os: 'ios', availableBytes: base * 1.2}, 9e9, base),
-    ).toBe(true);
-    expect(
-      whisperFits({os: 'ios', availableBytes: base * 1.2 - 1}, 0, base),
-    ).toBe(false);
+  it('iOS counts the chat model and whisper against the load ceiling', () => {
+    const ios = {os: 'ios' as const, ceilingBytes: 4e9};
+    expect(whisperFits(ios, 4e9 - base, base)).toBe(true);
+    expect(whisperFits(ios, 4e9 - base + 1, base)).toBe(false);
+  });
+
+  it('iOS fits while the load ceiling is unknown', () => {
+    expect(whisperFits({os: 'ios', ceilingBytes: 0}, 9e9, base)).toBe(true);
   });
 });

@@ -1,7 +1,8 @@
+import {Platform} from 'react-native';
 import {runInAction} from 'mobx';
 import DeviceInfo from 'react-native-device-info';
 
-import {ASR_TIERS} from '../../services/asr';
+import {ASR_TIERS, readDeviceMemory} from '../../services/asr';
 import {TTS_ENGINE_RUNTIME_BYTES} from '../../services/tts';
 import {voiceMemoryFit} from '../../services/voice';
 import {
@@ -65,20 +66,22 @@ describe('runVoiceCommand', () => {
   });
 
   it.each([
-    ['memory::tight', 'tight'],
-    ['memory::wont-fit', 'wont_fit'],
-  ])(
-    '%s sizes the chat model for that band on Android',
-    async (cmd, status) => {
+    ['android', 'memory::tight', 'tight'],
+    ['android', 'memory::wont-fit', 'wont_fit'],
+    ['ios', 'memory::tight', 'tight'],
+    ['ios', 'memory::wont-fit', 'wont_fit'],
+  ] as const)(
+    'on %s, %s sizes the chat model for that band',
+    async (os, cmd, status) => {
+      Platform.OS = os;
       (DeviceInfo.getTotalMemory as jest.Mock).mockResolvedValue(8e9);
       await runVoiceCommand(cmd);
 
       const fit = voiceMemoryFit({
-        memory: {os: 'android', totalBytes: 8e9},
+        memory: await readDeviceMemory(modelStore),
         chatBytes: modelStore.loadedModelBytes ?? 0,
         sttBytes: ASR_TIERS.base.runtimeBytes,
         ttsBytes: TTS_ENGINE_RUNTIME_BYTES.supertonic,
-        ttsLoaded: false,
       });
       expect(fit.status).toBe(status);
     },

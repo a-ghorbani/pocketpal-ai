@@ -1,7 +1,6 @@
 import {runInAction} from 'mobx';
-import DeviceInfo from 'react-native-device-info';
 
-import {ASR_TIERS, androidMemoryBudget} from '../services/asr';
+import {ASR_TIERS, memoryBudget, readDeviceMemory} from '../services/asr';
 import {TTS_ENGINE_RUNTIME_BYTES} from '../services/tts';
 import {
   asrStore,
@@ -29,7 +28,7 @@ import type {MessageType} from '../utils/types';
  *   gate::on|off        device tier inside or below the voice-mode gate
  *   state::listening|muted|thinking|speaking|error|bar|closed
  *   setup::incomplete|complete   whisper base not installed / installed
- *   memory::tight|wont-fit       the chat model's size for that band (Android)
+ *   memory::tight|wont-fit       the chat model's size for that band
  *   seed::spoken        a spoken question and answer in the current chat
  */
 const VOICE_AUTOMATION_STATE = 'VOICE_AUTOMATION_STATE';
@@ -82,7 +81,11 @@ export async function runVoiceCommand(cmd: string): Promise<void> {
 }
 
 async function forceMemoryBand(wontFit: boolean): Promise<void> {
-  const budget = androidMemoryBudget(await DeviceInfo.getTotalMemory());
+  const memory = await readDeviceMemory(modelStore);
+  if (!memory) {
+    return;
+  }
+  const budget = memoryBudget(memory);
   const stt = ASR_TIERS.base.runtimeBytes;
   const engine = ttsStore.currentVoice?.engine;
   const tts =

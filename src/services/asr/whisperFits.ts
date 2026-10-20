@@ -1,27 +1,30 @@
-import {
-  ASR_ANDROID_RAM_SHARE,
-  ASR_IOS_MEMORY_HEADROOM_FACTOR,
-} from './constants';
+import {ASR_ANDROID_RAM_SHARE} from './constants';
 
 /**
  * The memory figure each platform budgets against. Android's free-memory
- * figure can be far off (#982), so Android budgets against total RAM; iOS
- * reports the app's own remaining limit, which is reliable.
+ * figure can be far off (#982), so Android budgets against total RAM. iOS
+ * doesn't count mmap'd chat weights against the app, so iOS budgets against
+ * the chat model's load ceiling (0 when not yet known).
  */
 export type DeviceMemory =
-  | {os: 'ios'; availableBytes: number}
+  | {os: 'ios'; ceilingBytes: number}
   | {os: 'android'; totalBytes: number};
 
 /** What Android lets the chat model and the speech models use together. */
 export const androidMemoryBudget = (totalBytes: number): number =>
   totalBytes * ASR_ANDROID_RAM_SHARE;
 
-/** Whether whisper fits next to the loaded chat model. */
+/** The bytes the chat model and the speech models may use together. */
+export const memoryBudget = (memory: DeviceMemory): number =>
+  memory.os === 'ios'
+    ? memory.ceilingBytes
+    : androidMemoryBudget(memory.totalBytes);
+
+/** Whether whisper fits next to the loaded chat model; an unknown iOS ceiling fits. */
 export const whisperFits = (
   memory: DeviceMemory,
   chatBytes: number,
   whisperBytes: number,
 ): boolean =>
-  memory.os === 'ios'
-    ? memory.availableBytes >= whisperBytes * ASR_IOS_MEMORY_HEADROOM_FACTOR
-    : chatBytes + whisperBytes <= androidMemoryBudget(memory.totalBytes);
+  (memory.os === 'ios' && memory.ceilingBytes === 0) ||
+  chatBytes + whisperBytes <= memoryBudget(memory);

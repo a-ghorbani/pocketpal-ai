@@ -26,7 +26,6 @@ import {
   ASR_TIER_ORDER,
   whisperAsrEngine,
 } from '../../services/asr';
-import NativeHardwareInfo from '../../specs/NativeHardwareInfo';
 import {ASRStore} from '../ASRStore';
 import {modelStore} from '../ModelStore';
 
@@ -88,9 +87,12 @@ describe('ASRStore', () => {
 
   describe('memory check before recording', () => {
     const platform = Platform.OS;
+    const {availableMemoryCeiling, largestSuccessfulLoad} = modelStore;
 
     afterEach(() => {
       Platform.OS = platform;
+      modelStore.availableMemoryCeiling = availableMemoryCeiling;
+      modelStore.largestSuccessfulLoad = largestSuccessfulLoad;
     });
 
     it.each([
@@ -118,15 +120,26 @@ describe('ASRStore', () => {
     });
 
     it.each([
-      [3e9, true],
-      [0.5e9, false],
-    ])('iOS, %s bytes left to the app → fits %s', async (available, fits) => {
+      ['4B Q4', 3.2e9, true],
+      ['4B Q8', 4.3e9, false],
+    ])(
+      'iOS, chat model %s next to the load ceiling → fits %s',
+      async (_name, chatBytes, fits) => {
+        Platform.OS = 'ios';
+        modelStore.availableMemoryCeiling = 4.2e9;
+        modelStore.largestSuccessfulLoad = 4.3e9;
+        modelStore.loadedModelBytes = chatBytes;
+        store.setSelectedTier('base');
+        await expect(store.hasMemoryForCapture()).resolves.toBe(fits);
+      },
+    );
+
+    it('iOS does not block recording before any ceiling is known', async () => {
       Platform.OS = 'ios';
-      (NativeHardwareInfo.getAvailableMemory as jest.Mock).mockResolvedValue(
-        available,
-      );
-      modelStore.loadedModelBytes = 3.5e9;
-      await expect(store.hasMemoryForCapture()).resolves.toBe(fits);
+      modelStore.availableMemoryCeiling = undefined;
+      modelStore.largestSuccessfulLoad = undefined;
+      modelStore.loadedModelBytes = 4.3e9;
+      await expect(store.hasMemoryForCapture()).resolves.toBe(true);
     });
 
     it('does not block recording when memory cannot be read', async () => {
@@ -273,6 +286,16 @@ describe('ASRStore', () => {
       appStateHandlers.forEach(h => h('background'));
       expect(mockRelease).toHaveBeenCalled();
     });
+
+    it.each(['requesting_perm', 'recording', 'transcribing'] as const)(
+      'keeps the whisper context while a capture is %s',
+      async state => {
+        await store.init();
+        store.setCaptureState(state);
+        appStateHandlers.forEach(h => h('background'));
+        expect(mockRelease).not.toHaveBeenCalled();
+      },
+    );
 
     it('does not release on a transient inactive transition', async () => {
       await store.init();
