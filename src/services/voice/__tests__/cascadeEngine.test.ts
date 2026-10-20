@@ -332,6 +332,33 @@ describe('CascadeVoiceEngine', () => {
       await expect(turn.done).resolves.toBe('interrupted');
     });
 
+    it('drops the Spoken marker from a reply nobody heard', async () => {
+      const port = makePort();
+      const turn = engine.runTurn(speech(500), port, events());
+      await flush();
+      createTurn(port);
+      port.settle();
+
+      await expect(turn.done).resolves.toBe('answered');
+      expect(chatSessionStore.updateMessage).toHaveBeenCalledWith(
+        'turn-1',
+        'session-1',
+        {metadata: {spoken: false}},
+      );
+    });
+
+    it('keeps the Spoken marker on a reply that was heard', async () => {
+      const port = makePort();
+      const turn = engine.runTurn(speech(500), port, events());
+      await flush();
+      createTurn(port);
+      setSpoken('turn-1', 'Paris.');
+      port.settle();
+
+      await expect(turn.done).resolves.toBe('answered');
+      expect(chatSessionStore.updateMessage).not.toHaveBeenCalled();
+    });
+
     it('in thinking, before anything was spoken, stops the run and rewrites nothing', async () => {
       const port = makePort();
       const turn = engine.runTurn(speech(500), port, events());
@@ -344,6 +371,11 @@ describe('CascadeVoiceEngine', () => {
 
       expect(port.stop).toHaveBeenCalled();
       expect(chatSessionStore.rewriteTurnToSpoken).not.toHaveBeenCalled();
+      expect(chatSessionStore.updateMessage).toHaveBeenCalledWith(
+        'turn-1',
+        'session-1',
+        {metadata: {spoken: false}},
+      );
     });
   });
 
