@@ -10,3 +10,10 @@ export const VOICE_ENDPOINT_HANG_MS = 600;
 
 /** Voice mode is locked until an entitlement source says otherwise. */
 export const VOICE_MODE_UNLOCKED_DEFAULT = false;
+
+/**
+ * Wait after stopping the mic before starting it again (ms): three 50 ms
+ * chunks. On Android the recorder's read thread releases the shared
+ * recorder when it ends, so a restart sooner can lose the new recorder.
+ */
+export const VOICE_CAPTURE_SETTLE_MS = 150;

@@ -18,6 +18,7 @@ import type {DeviceMemory} from '../services/asr';
 import {TTS_ENGINE_RUNTIME_BYTES, ttsRuntime} from '../services/tts';
 import {
   Endpointer,
+  VOICE_CAPTURE_SETTLE_MS,
   isMicGranted,
   isVoiceModeVoice,
   voiceMemoryFit,
@@ -90,6 +91,7 @@ class VoiceModeController {
   private turn: VoiceTurn | null = null;
   private readonly endpointer = new Endpointer();
   private listener: {remove(): void} | null = null;
+  private captureSettled: Promise<void> = Promise.resolve();
   private openModelPicker: () => void = () => {};
   private sendingToNewChat = false;
   private readonly turnPort: VoiceTurnPort = {
@@ -282,6 +284,10 @@ class VoiceModeController {
     if (!this.isListening(session) || this.listener) {
       return;
     }
+    await this.captureSettled;
+    if (!this.isListening(session) || this.listener) {
+      return;
+    }
     try {
       await AudioRecord.init({
         sampleRate: ASR_SAMPLE_RATE,
@@ -319,6 +325,9 @@ class VoiceModeController {
     this.listener.remove();
     this.listener = null;
     Promise.resolve(AudioRecord.stop()).catch(() => {});
+    this.captureSettled = new Promise(resolve =>
+      setTimeout(resolve, VOICE_CAPTURE_SETTLE_MS),
+    );
   }
 
   private endUtterance(session: number): void {

@@ -18,6 +18,7 @@ import {
 } from '../../store';
 import {acquireKeepAwake} from '../../utils/keepAwake';
 import {ModelOrigin} from '../../utils/types';
+import {VOICE_CAPTURE_SETTLE_MS} from '../../services/voice';
 import type {VoiceTurnEvents, VoiceTurnOutcome} from '../../services/voice';
 
 import {useVoiceMode} from '../useVoiceMode';
@@ -113,6 +114,13 @@ const speak = (ms: number, chunk = VOICED) => {
   });
 };
 const flush = () => act(async () => {});
+const settleMic = () =>
+  act(
+    () =>
+      new Promise<void>(resolve =>
+        setTimeout(resolve, VOICE_CAPTURE_SETTLE_MS + 20),
+      ),
+  );
 
 const localModel = modelsList[0];
 const port = {send: jest.fn(), stop: jest.fn()};
@@ -359,10 +367,33 @@ describe('useVoiceMode', () => {
 
       turns[0].finish('answered');
       await flush();
+      await settleMic();
 
       expect(voiceModeStore.phase).toBe('listening');
       expect(voiceModeStore.lastError).toBeNull();
       expect(AudioRecord.start).toHaveBeenCalledTimes(2);
+    });
+
+    it('after an empty turn, starts the mic again only once the old one has settled', async () => {
+      const {enter, turns} = renderVoiceMode();
+      await enter();
+      speak(500);
+      speak(600, SILENT);
+      expect(AudioRecord.init).toHaveBeenCalledTimes(1);
+
+      turns[0].finish('empty');
+      await flush();
+      expect(voiceModeStore.phase).toBe('listening');
+      expect(AudioRecord.init).toHaveBeenCalledTimes(1);
+
+      await settleMic();
+      expect(AudioRecord.init).toHaveBeenCalledTimes(2);
+      expect(AudioRecord.start).toHaveBeenCalledTimes(2);
+      const stopOrder = (AudioRecord.stop as jest.Mock).mock
+        .invocationCallOrder[0];
+      const initOrder = (AudioRecord.init as jest.Mock).mock
+        .invocationCallOrder[1];
+      expect(stopOrder).toBeLessThan(initOrder);
     });
 
     it('shows the failure and listens again', async () => {
@@ -435,6 +466,7 @@ describe('useVoiceMode', () => {
       expect(engine.runTurn).not.toHaveBeenCalled();
 
       await act(async () => hook.result.current.toggleMute());
+      await settleMic();
       expect(AudioRecord.start).toHaveBeenCalledTimes(2);
     });
 
@@ -699,7 +731,7 @@ describe('useVoiceMode', () => {
 
     setAppState('inactive');
     setAppState('active');
-    await flush();
+    await settleMic();
 
     expect(voiceModeStore.phase).toBe('listening');
     expect(AudioRecord.stop).toHaveBeenCalledTimes(1);
