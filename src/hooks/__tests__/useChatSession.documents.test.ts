@@ -522,3 +522,123 @@ describe('evaluateSendBudget', () => {
     expect(plan.verdict.kind).toBe('fits');
   });
 });
+
+describe('document grounding instruction', () => {
+  const GROUNDING =
+    "You answer questions about the user's attached documents. Use only the document text you are given. If the answer is not in it, say that you could not find it in the document; never guess or fill in from general knowledge. Cite the page when you use a passage.";
+  const report = pdf('grounded', {pageCount: 1});
+
+  const usePalWithSearch = async () => {
+    palStore.pals = [
+      {
+        id: 'pal-1',
+        type: 'local',
+        name: 'Pal',
+        systemPrompt: 'You are a careful reader.',
+        parameters: {},
+        parameterSchema: [],
+        isSystemPromptChanged: false,
+        useAIPrompt: false,
+        source: 'local',
+      },
+    ] as any;
+    chatSessionStore.sessions = [
+      {
+        id: 'session-1',
+        activePalId: 'pal-1',
+        title: 'S',
+        date: '2026-01-01',
+        messages: [],
+        completionSettings: {},
+        settingsSource: 'pal',
+      },
+    ] as any;
+    const base = await chatSessionStore.getCurrentCompletionSettings();
+    (
+      chatSessionStore.getCurrentCompletionSettings as jest.Mock
+    ).mockResolvedValue({
+      ...base,
+      tools: [
+        {
+          type: 'function',
+          function: {name: 'web_search', description: '', parameters: {}},
+        },
+      ],
+    });
+  };
+
+  beforeEach(() => writeText(report.id, ['page text']));
+
+  afterEach(() => {
+    (chatSessionStore.getCurrentCompletionSettings as jest.Mock).mockReset();
+    (
+      chatSessionStore.getCurrentCompletionSettings as jest.Mock
+    ).mockResolvedValue({});
+  });
+
+  const systemOf = (index = 0) =>
+    requests[index].filter(m => m.role === 'system');
+
+  it('is absent when no document is involved', async () => {
+    await send({type: 'text', text: 'hello'});
+    expect(JSON.stringify(requests[0])).not.toContain(GROUNDING);
+  });
+
+  it('is folded last into the one system message, after the pal prompt and talents', async () => {
+    await usePalWithSearch();
+
+    await send({type: 'text', text: 'Summarise', documents: [report]});
+
+    const system = systemOf();
+    expect(system).toHaveLength(1);
+    expect(requests[0][0].role).toBe('system');
+    const content = system[0].content as string;
+    expect(content.startsWith('You are a careful reader.')).toBe(true);
+    expect(content).toContain('web_search');
+    expect(content.endsWith(`\n\n${GROUNDING}`)).toBe(true);
+  });
+
+  it('is present when only an earlier message carries a document, byte-identical across turns', async () => {
+    history = [assistantRow('a1', 'ok'), userRow('u1', 'read', [report])];
+    await send({type: 'text', text: 'first'});
+    await send({type: 'text', text: 'second'});
+
+    expect(systemOf(0)).toEqual([{role: 'system', content: GROUNDING}]);
+    expect(systemOf(1)).toEqual(systemOf(0));
+  });
+
+  it('is present for a remote model too', async () => {
+    runInAction(() => {
+      modelStore.models = [
+        ...modelsList,
+        {...modelsList[0], id: 'srv/remote', origin: 'remote'},
+      ] as any;
+      modelStore.activeModelId = 'srv/remote';
+    });
+
+    await send({type: 'text', text: 'Summarise', documents: [report]});
+
+    const system = systemOf();
+    expect(system).toHaveLength(1);
+    expect((system[0].content as string).endsWith(GROUNDING)).toBe(true);
+  });
+
+  it('is counted as non-document text when planning', async () => {
+    const plan = jest.requireActual('../../services/documents/plan');
+    const spy = jest.spyOn(plan, 'documentPlan');
+    const {result} = renderHook(() =>
+      useChatSession({current: null}, user, assistant),
+    );
+
+    await result.current.evaluateSendBudget({
+      type: 'text',
+      text: 'q',
+      documents: [report],
+    });
+
+    expect((spy.mock.calls[0][0] as {nonDocText: string}).nonDocText).toContain(
+      GROUNDING,
+    );
+    spy.mockRestore();
+  });
+});

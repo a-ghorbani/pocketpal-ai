@@ -55,6 +55,7 @@ import {
 } from '../services/talents';
 import type {ToolDefinition} from '../services/talents/types';
 import {
+  DOCUMENT_GROUNDING,
   documentContentFor,
   modeOf,
   renderExcerptBlock,
@@ -85,6 +86,9 @@ import {
   type AgentUiState,
   type TokenDelta,
 } from '../services/agent';
+const documentGroundingFragment = (refs: DocumentRef[]): string[] =>
+  refs.length > 0 ? [DOCUMENT_GROUNDING] : [];
+
 const excerptBlockFor = async (
   textRows: MessageType.Text[],
   message: MessageType.PartialText,
@@ -240,10 +244,13 @@ const prepareCompletion = async ({
   const sessionToolNames = (
     (sessionCompletionSettings?.tools as ToolDefinition[] | undefined) ?? []
   ).map(tool => tool.function?.name ?? '');
-  const systemPromptFragments = collectSystemPromptFragments(sessionToolNames, {
-    now: new Date(),
-    maxToolTurns: DEFAULT_MAX_TURNS,
-  });
+  const systemPromptFragments = [
+    ...collectSystemPromptFragments(sessionToolNames, {
+      now: new Date(),
+      maxToolTurns: DEFAULT_MAX_TURNS,
+    }),
+    ...documentGroundingFragment(documentRefs),
+  ];
 
   const messages = assembleMessages(systemMessages, systemPromptFragments, [
     ...chatMessages,
@@ -734,10 +741,17 @@ const planInputs = async (
     : null;
   const settings = await chatSessionStore.getCurrentCompletionSettings();
   const tools = (settings?.tools as ToolDefinition[] | undefined) ?? [];
-  const fragments = collectSystemPromptFragments(
-    tools.map(tool => tool.function?.name ?? ''),
-    {now: new Date(), maxToolTurns: DEFAULT_MAX_TURNS},
-  );
+  const refs = [
+    ...rows.flatMap(row => (row.type === 'text' ? (row.documents ?? []) : [])),
+    ...(message.documents ?? []),
+  ];
+  const fragments = [
+    ...collectSystemPromptFragments(
+      tools.map(tool => tool.function?.name ?? ''),
+      {now: new Date(), maxToolTurns: DEFAULT_MAX_TURNS},
+    ),
+    ...documentGroundingFragment(refs),
+  ];
   const promptMessages = assembleMessages(
     resolveSystemMessages({pal, model: modelStore.activeModel}),
     fragments,
@@ -749,10 +763,6 @@ const planInputs = async (
       {role: 'user', content: message.text},
     ],
   );
-  const refs = [
-    ...rows.flatMap(row => (row.type === 'text' ? (row.documents ?? []) : [])),
-    ...(message.documents ?? []),
-  ];
   return {
     rows,
     message,
