@@ -42,8 +42,10 @@ class MockTTSStore {
   phononDownloadState: DownloadState = 'not_installed';
   phononDownloadProgress = 0;
   phononDownloadError: string | null = null;
+  phononSupported = false;
 
   init: jest.Mock;
+  refreshPhononSupport: jest.Mock;
   play: jest.Mock;
   preview: jest.Mock;
   isPreviewingVoice: jest.Mock;
@@ -71,9 +73,14 @@ class MockTTSStore {
   retryPhononDownload: jest.Mock;
   deletePhonon: jest.Mock;
 
+  isEngineOffered(id: string): boolean {
+    return id !== 'phonon' || this.phononSupported;
+  }
+
   constructor() {
     makeAutoObservable(this, {
       init: false,
+      refreshPhononSupport: false,
       play: false,
       preview: false,
       isPreviewingVoice: false,
@@ -102,6 +109,7 @@ class MockTTSStore {
       deletePhonon: false,
     });
     this.init = jest.fn().mockResolvedValue(undefined);
+    this.refreshPhononSupport = jest.fn().mockResolvedValue(undefined);
     this.play = jest.fn().mockResolvedValue(undefined);
     this.preview = jest.fn().mockResolvedValue(undefined);
     this.isPreviewingVoice = jest.fn().mockReturnValue(false);

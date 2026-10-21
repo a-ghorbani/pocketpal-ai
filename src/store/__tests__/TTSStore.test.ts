@@ -1,4 +1,4 @@
-import {AppState} from 'react-native';
+import {Alert, AppState} from 'react-native';
 import DeviceInfo from 'react-native-device-info';
 
 // Mock persistence BEFORE importing the store
@@ -50,6 +50,14 @@ const mockPhononDeleteModel = jest.fn().mockResolvedValue(undefined);
 const mockPhononReclaimLegacySpace = jest.fn().mockResolvedValue(undefined);
 const mockPhononPlay = jest.fn().mockResolvedValue(undefined);
 const mockPhononStop = jest.fn().mockResolvedValue(undefined);
+const mockPhononPlayStreaming = jest.fn(() => ({
+  appendText: jest.fn(),
+  finalize: jest.fn().mockResolvedValue(undefined),
+  cancel: jest.fn().mockResolvedValue(undefined),
+}));
+const mockGetPhononSupport = jest
+  .fn()
+  .mockResolvedValue({supported: false, reason: 'not-compiled'});
 const mockPhononGetVoices = jest.fn().mockResolvedValue([
   {id: 'Zoey', name: 'Zoey', engine: 'phonon', language: 'en-us'},
   {id: 'Alfie', name: 'Alfie', engine: 'phonon', language: 'en-gb'},
@@ -127,11 +135,7 @@ jest.mock('../../services/tts', () => {
         isInstalled: mockPhononIsInstalled,
         getVoices: mockPhononGetVoices,
         play: mockPhononPlay,
-        playStreaming: jest.fn(() => ({
-          appendText: jest.fn(),
-          finalize: jest.fn().mockResolvedValue(undefined),
-          cancel: jest.fn().mockResolvedValue(undefined),
-        })),
+        playStreaming: mockPhononPlayStreaming,
         stop: mockPhononStop,
         downloadModel: mockPhononDownloadModel,
         deleteModel: mockPhononDeleteModel,
@@ -170,6 +174,7 @@ jest.mock('../../services/tts', () => {
     ...actual,
     getEngine,
     getNeuralEngine: getEngine,
+    getPhononSupport: () => mockGetPhononSupport(),
   };
 });
 
@@ -1306,6 +1311,282 @@ describe('TTSStore', () => {
       expect(store.phononDownloadState).toBe('not_installed');
       expect(store.kittenDownloadState).toBe('ready');
       expect(store.currentVoice).toBeNull();
+    });
+  });
+
+  describe('Phonon offer and hide', () => {
+    const ZOEY: Voice = {
+      id: 'Zoey',
+      name: 'Zoey',
+      engine: 'phonon',
+      language: 'en-us',
+      gender: 'f',
+    };
+    const ALFIE: Voice = {
+      id: 'Alfie',
+      name: 'Alfie',
+      engine: 'phonon',
+      language: 'en-gb',
+      gender: 'm',
+    };
+    const KITTEN_VOICE: Voice = {
+      id: 'expr-voice-2-f',
+      name: 'F2',
+      engine: 'kitten',
+      language: 'en',
+    };
+    const SUPPORTED = {supported: true, reason: 'ok'};
+    const LOAD_FAILED = {supported: false, reason: 'load-failed'};
+
+    const storeWithVoice = async (voice: Voice | null) => {
+      (DeviceInfo.getTotalMemory as jest.Mock).mockResolvedValueOnce(8 * GIB);
+      const store = new TTSStore();
+      store.setCurrentVoice(voice);
+      await store.init();
+      return store;
+    };
+
+    const spies: jest.SpyInstance[] = [];
+    const track = <S extends jest.SpyInstance>(instance: S): S => {
+      spies.push(instance);
+      return instance;
+    };
+
+    afterEach(() => {
+      mockGetPhononSupport.mockResolvedValue({
+        supported: false,
+        reason: 'not-compiled',
+      });
+      mockPhononIsInstalled.mockResolvedValue(false);
+      mockKittenIsInstalled.mockResolvedValue(false);
+      spies.splice(0).forEach(instance => instance.mockRestore());
+      ttsRuntime._resetForTests();
+    });
+
+    it('is not offered before the probe resolves, then offered when it says supported', async () => {
+      let resolveProbe: (v: typeof SUPPORTED) => void = () => {};
+      mockGetPhononSupport.mockReturnValueOnce(
+        new Promise(resolve => {
+          resolveProbe = resolve;
+        }),
+      );
+      (DeviceInfo.getTotalMemory as jest.Mock).mockResolvedValueOnce(8 * GIB);
+      const store = new TTSStore();
+
+      const init = store.init();
+      await flush();
+      expect(store.phononSupported).toBe(false);
+      expect(store.isEngineOffered('phonon')).toBe(false);
+
+      resolveProbe(SUPPORTED);
+      await init;
+      expect(store.phononSupported).toBe(true);
+      expect(store.isEngineOffered('phonon')).toBe(true);
+    });
+
+    it('hides Phonon silently when unsupported and keeps the other engines offered', async () => {
+      const alertSpy = track(jest.spyOn(Alert, 'alert'));
+      const logSpy = track(jest.spyOn(console, 'log')).mockImplementation(
+        () => {},
+      );
+      mockGetPhononSupport.mockResolvedValueOnce({
+        supported: false,
+        reason: 'missing-cpu-features',
+      });
+
+      const store = await storeWithVoice(null);
+
+      expect(store.isEngineOffered('phonon')).toBe(false);
+      for (const id of ['kitten', 'kokoro', 'supertonic', 'system'] as const) {
+        expect(store.isEngineOffered(id)).toBe(true);
+      }
+      expect(alertSpy).not.toHaveBeenCalled();
+      expect(store.phononDownloadError).toBeNull();
+      expect(logSpy).toHaveBeenCalledWith(
+        '[tts] phonon hidden: missing-cpu-features',
+      );
+    });
+
+    it('clears a persisted Phonon voice on a recorded load failure without deleting or stashing it', async () => {
+      mockPhononIsInstalled.mockResolvedValue(true);
+      mockGetPhononSupport.mockResolvedValueOnce(LOAD_FAILED);
+
+      const store = await storeWithVoice(ALFIE);
+
+      expect(store.currentVoice).toBeNull();
+      expect(store.phononDownloadState).toBe('ready');
+      expect(mockPhononDeleteModel).not.toHaveBeenCalled();
+
+      mockPhononIsInstalled.mockResolvedValue(false);
+      await store.downloadPhonon();
+      expect(store.currentVoice?.id).toBe('Zoey');
+    });
+
+    it('stays hidden after a relaunch with the same probe result and downloads nothing', async () => {
+      mockPhononIsInstalled.mockResolvedValue(true);
+      mockGetPhononSupport.mockResolvedValue(LOAD_FAILED);
+
+      await storeWithVoice(ZOEY);
+      const relaunched = await storeWithVoice(null);
+
+      expect(relaunched.isEngineOffered('phonon')).toBe(false);
+      expect(relaunched.phononDownloadState).toBe('ready');
+      expect(mockPhononDownloadModel).not.toHaveBeenCalled();
+      expect(mockPhononDeleteModel).not.toHaveBeenCalled();
+    });
+
+    it('re-probes after a failed Phonon play and hides it when the probe now says unsupported', async () => {
+      mockPhononIsInstalled.mockResolvedValue(true);
+      mockGetPhononSupport
+        .mockResolvedValueOnce(SUPPORTED)
+        .mockResolvedValueOnce(LOAD_FAILED);
+      mockPhononPlay.mockRejectedValueOnce(new Error('ERR_PHONON_LOAD'));
+      const store = await storeWithVoice(ZOEY);
+      expect(store.isEngineOffered('phonon')).toBe(true);
+
+      await store.play('msg-1', 'hello');
+      await flush();
+
+      expect(mockGetPhononSupport).toHaveBeenCalledTimes(2);
+      expect(store.isEngineOffered('phonon')).toBe(false);
+      expect(store.currentVoice).toBeNull();
+      expect(mockPhononDeleteModel).not.toHaveBeenCalled();
+    });
+
+    it('re-probes after a failed Phonon preview', async () => {
+      mockGetPhononSupport
+        .mockResolvedValueOnce(SUPPORTED)
+        .mockResolvedValueOnce(LOAD_FAILED);
+      mockPhononPlay.mockRejectedValueOnce(new Error('ERR_PHONON_LOAD'));
+      const store = await storeWithVoice(null);
+
+      await store.preview(ZOEY);
+      await flush();
+
+      expect(mockGetPhononSupport).toHaveBeenCalledTimes(2);
+      expect(store.isEngineOffered('phonon')).toBe(false);
+    });
+
+    it('re-probes after a Phonon stream fails to finalize and still reports the failure', async () => {
+      mockPhononIsInstalled.mockResolvedValue(true);
+      mockGetPhononSupport
+        .mockResolvedValueOnce(SUPPORTED)
+        .mockResolvedValueOnce(LOAD_FAILED);
+      const warnSpy = track(jest.spyOn(console, 'warn')).mockImplementation(
+        () => {},
+      );
+      const store = await storeWithVoice(ZOEY);
+      store.setAutoSpeak(true);
+      const failingHandle = {
+        appendText: jest.fn(),
+        finalize: jest.fn().mockRejectedValue(new Error('ERR_PHONON_LOAD')),
+        cancel: jest.fn().mockResolvedValue(undefined),
+      };
+      mockPhononPlayStreaming.mockReturnValueOnce(failingHandle);
+
+      store.onAssistantMessageStart('msg-1');
+      store.onAssistantMessageChunk('msg-1', 'Hello there.');
+      store.onAssistantMessageComplete('msg-1', 'Hello there.');
+      await flush();
+      await flush();
+
+      expect(failingHandle.appendText).toHaveBeenCalledWith('Hello there.');
+      expect(warnSpy).toHaveBeenCalledWith(
+        '[TTSStore] finalize failed:',
+        expect.any(Error),
+      );
+      expect(mockGetPhononSupport).toHaveBeenCalledTimes(2);
+      expect(store.currentVoice).toBeNull();
+    });
+
+    it('hides Phonon on a probe error and keeps its files', async () => {
+      mockPhononIsInstalled.mockResolvedValue(true);
+      mockGetPhononSupport.mockResolvedValueOnce({
+        supported: false,
+        reason: 'error',
+      });
+
+      const store = await storeWithVoice(ZOEY);
+
+      expect(store.isEngineOffered('phonon')).toBe(false);
+      expect(store.currentVoice).toBeNull();
+      expect(store.phononDownloadState).toBe('ready');
+      expect(mockPhononDeleteModel).not.toHaveBeenCalled();
+    });
+
+    it('treats a rejected probe as unsupported', async () => {
+      mockGetPhononSupport.mockRejectedValueOnce(new Error('bridge'));
+
+      const store = await storeWithVoice(null);
+
+      expect(store.isEngineOffered('phonon')).toBe(false);
+    });
+
+    it('stops and releases an active Phonon engine before clearing its voice', async () => {
+      mockPhononIsInstalled.mockResolvedValue(true);
+      mockGetPhononSupport
+        .mockResolvedValueOnce(SUPPORTED)
+        .mockResolvedValueOnce(LOAD_FAILED);
+      const store = await storeWithVoice(ZOEY);
+      track(jest.spyOn(ttsRuntime, 'getActiveEngineId')).mockReturnValue(
+        'phonon',
+      );
+      const voiceAtRelease: Array<Voice | null> = [];
+      const releaseSpy = track(
+        jest.spyOn(ttsRuntime, 'release'),
+      ).mockImplementation(async () => {
+        voiceAtRelease.push(store.currentVoice);
+      });
+
+      await store.refreshPhononSupport();
+
+      expect(mockPhononStop).toHaveBeenCalledTimes(1);
+      expect(releaseSpy).toHaveBeenCalledTimes(1);
+      expect(mockPhononStop.mock.invocationCallOrder[0]).toBeLessThan(
+        releaseSpy.mock.invocationCallOrder[0]!,
+      );
+      expect(voiceAtRelease).toEqual([ZOEY]);
+      expect(store.currentVoice).toBeNull();
+    });
+
+    it('deletes an active Phonon engine in order: stop, release, unlink, clear', async () => {
+      mockPhononIsInstalled.mockResolvedValue(true);
+      mockGetPhononSupport.mockResolvedValueOnce(SUPPORTED);
+      const store = await storeWithVoice(ZOEY);
+      track(jest.spyOn(ttsRuntime, 'getActiveEngineId')).mockReturnValue(
+        'phonon',
+      );
+      const releaseSpy = track(
+        jest.spyOn(ttsRuntime, 'release'),
+      ).mockResolvedValue(undefined);
+
+      await store.deletePhonon();
+
+      const stopAt = mockPhononStop.mock.invocationCallOrder[0]!;
+      const releaseAt = releaseSpy.mock.invocationCallOrder[0]!;
+      const deleteAt = mockPhononDeleteModel.mock.invocationCallOrder[0]!;
+      expect(stopAt).toBeLessThan(releaseAt);
+      expect(releaseAt).toBeLessThan(deleteAt);
+      expect(store.currentVoice).toBeNull();
+      expect(store.phononDownloadState).toBe('not_installed');
+    });
+
+    it('keeps a selected Kitten voice when Phonon is unsupported', async () => {
+      mockKittenIsInstalled.mockResolvedValue(true);
+      mockGetPhononSupport.mockResolvedValue(LOAD_FAILED);
+      mockPhononPlay.mockRejectedValueOnce(new Error('ERR_PHONON_LOAD'));
+      const releaseSpy = track(jest.spyOn(ttsRuntime, 'release'));
+
+      const store = await storeWithVoice(KITTEN_VOICE);
+      expect(store.currentVoice).toEqual(KITTEN_VOICE);
+
+      await store.preview(ZOEY);
+      await flush();
+
+      expect(mockGetPhononSupport).toHaveBeenCalledTimes(2);
+      expect(store.currentVoice).toEqual(KITTEN_VOICE);
+      expect(releaseSpy).not.toHaveBeenCalled();
+      expect(mockKittenStop).toHaveBeenCalledTimes(1);
     });
   });
 

@@ -9,6 +9,7 @@ import type {SupertonicLanguage} from '@pocketpalai/react-native-speech';
 import {
   getEngine,
   getNeuralEngine,
+  getPhononSupport,
   SupertonicEngine,
   TTS_MIN_RAM_BYTES,
   TTS_PREVIEW_SAMPLE,
@@ -19,6 +20,7 @@ import {
   ttsRuntime,
 } from '../services/tts';
 import type {
+  EngineId,
   NeuralEngineId,
   StreamingHandle,
   SupertonicSteps,
@@ -155,6 +157,9 @@ export class TTSStore {
   phononDownloadProgress: number = 0;
   phononDownloadError: string | null = null;
 
+  /** Whether the add-on's probe said Phonon runs here, this session. */
+  phononSupported: boolean = false;
+
   // Idempotency guard for the auto-speak path.
   lastSpokenMessageId: string | null = null;
 
@@ -210,6 +215,8 @@ export class TTSStore {
     runInAction(() => {
       this.deviceMeetsMemory = totalMemory >= TTS_MIN_RAM_BYTES;
     });
+
+    await this.refreshPhononSupport();
 
     // Lifecycle hooks below run UNCONDITIONALLY — see architecture/tts.md §4e
     // and I8. A user on a low-memory device may flip `userTTSOverride = true`
@@ -282,6 +289,64 @@ export class TTSStore {
         });
     }
   };
+
+  isEngineOffered(id: EngineId): boolean {
+    return id !== 'phonon' || this.phononSupported;
+  }
+
+  /**
+   * Re-read the Phonon probe. When it says unsupported, a selected Phonon
+   * voice is released and cleared; its model files stay on disk, because
+   * deleting them would void the add-on's recorded load failure.
+   */
+  async refreshPhononSupport(): Promise<void> {
+    let support: {supported: boolean; reason: string};
+    try {
+      support = await getPhononSupport();
+    } catch {
+      support = {supported: false, reason: 'error'};
+    }
+    runInAction(() => {
+      this.phononSupported = support.supported;
+    });
+    if (support.supported) {
+      return;
+    }
+    console.log(`[tts] phonon hidden: ${support.reason}`);
+    if (this.currentVoice?.engine !== 'phonon') {
+      return;
+    }
+    if (ttsRuntime.getActiveEngineId() === 'phonon') {
+      await this.stop();
+      await ttsRuntime.release();
+    }
+    runInAction(() => {
+      if (this.currentVoice?.engine === 'phonon') {
+        this.currentVoice = null;
+      }
+    });
+  }
+
+  private refreshAfterPhononFailure(): void {
+    this.refreshPhononSupport().catch(err => {
+      console.warn('[TTSStore] phonon support refresh failed:', err);
+    });
+  }
+
+  private withPhononFailureHook(handle: StreamingHandle): StreamingHandle {
+    return {
+      appendText: chunk => handle.appendText(chunk),
+      finalize: async () => {
+        try {
+          await handle.finalize();
+        } catch (err) {
+          this.refreshAfterPhononFailure();
+          throw err;
+        }
+      },
+      cancel: () => handle.cancel(),
+    };
+  }
 
   setAutoSpeak(on: boolean) {
     this.autoSpeakEnabled = on;
@@ -506,6 +571,9 @@ export class TTSStore {
       }
     } catch (err) {
       console.warn('[TTSStore] play failed:', err);
+      if (voice.engine === 'phonon') {
+        this.refreshAfterPhononFailure();
+      }
     } finally {
       runInAction(() => {
         if (
@@ -550,6 +618,9 @@ export class TTSStore {
       }
     } catch (err) {
       console.warn('[TTSStore] preview failed:', err);
+      if (voice.engine === 'phonon') {
+        this.refreshAfterPhononFailure();
+      }
     } finally {
       runInAction(() => {
         if (
@@ -598,13 +669,17 @@ export class TTSStore {
     this.streamStripper = new ThinkingStripper();
     this.streamPlaceholderEmitted = false;
     const engine = getEngine(voice.engine);
-    const handle =
+    const engineHandle =
       voice.engine === 'supertonic'
         ? (engine as SupertonicEngine).playStreaming(voice, stopDone, {
             language: this.supertonicLanguage,
             inferenceSteps: this.supertonicSteps,
           })
         : engine.playStreaming(voice, stopDone);
+    const handle =
+      voice.engine === 'phonon'
+        ? this.withPhononFailureHook(engineHandle)
+        : engineHandle;
     runInAction(() => {
       this.playbackState = {mode: 'streaming', messageId, handle};
     });
