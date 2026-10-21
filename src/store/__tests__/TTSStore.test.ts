@@ -81,64 +81,66 @@ const mockSupertonicPlayStreaming = jest.fn(() => {
 
 jest.mock('../../services/tts', () => {
   const actual = jest.requireActual('../../services/tts');
+  const getEngine = (id: 'system' | 'supertonic' | 'kokoro' | 'kitten') => {
+    if (id === 'system') {
+      return {
+        id: 'system',
+        isInstalled: jest.fn().mockResolvedValue(true),
+        getVoices: jest.fn().mockResolvedValue([]),
+        play: mockSystemPlay,
+        playStreaming: mockSystemPlayStreaming,
+        stop: mockSystemStop,
+      };
+    }
+    if (id === 'kokoro') {
+      return {
+        id: 'kokoro',
+        isInstalled: mockKokoroIsInstalled,
+        getVoices: mockKokoroGetVoices,
+        play: mockKokoroPlay,
+        playStreaming: jest.fn(() => ({
+          appendText: jest.fn(),
+          finalize: jest.fn().mockResolvedValue(undefined),
+          cancel: jest.fn().mockResolvedValue(undefined),
+        })),
+        stop: mockKokoroStop,
+        downloadModel: mockKokoroDownloadModel,
+        deleteModel: mockKokoroDeleteModel,
+        reclaimLegacySpace: mockKokoroReclaimLegacySpace,
+      };
+    }
+    if (id === 'kitten') {
+      return {
+        id: 'kitten',
+        isInstalled: mockKittenIsInstalled,
+        getVoices: jest.fn().mockResolvedValue([]),
+        play: mockKittenPlay,
+        playStreaming: jest.fn(() => ({
+          appendText: jest.fn(),
+          finalize: jest.fn().mockResolvedValue(undefined),
+          cancel: jest.fn().mockResolvedValue(undefined),
+        })),
+        stop: mockKittenStop,
+        downloadModel: mockKittenDownloadModel,
+        deleteModel: mockKittenDeleteModel,
+      };
+    }
+    return {
+      id: 'supertonic',
+      isInstalled: mockSupertonicIsInstalled,
+      getVoices: mockSupertonicGetVoices,
+      play: mockSupertonicPlay,
+      playStreaming: mockSupertonicPlayStreaming,
+      stop: mockSupertonicStop,
+      downloadModel: mockSupertonicDownloadModel,
+      deleteModel: mockSupertonicDeleteModel,
+      reclaimLegacySpace: mockSupertonicReclaimLegacySpace,
+    };
+  };
   return {
     ...actual,
-    getEngine: (id: 'system' | 'supertonic' | 'kokoro' | 'kitten') => {
-      if (id === 'system') {
-        return {
-          id: 'system',
-          isInstalled: jest.fn().mockResolvedValue(true),
-          getVoices: jest.fn().mockResolvedValue([]),
-          play: mockSystemPlay,
-          playStreaming: mockSystemPlayStreaming,
-          stop: mockSystemStop,
-        };
-      }
-      if (id === 'kokoro') {
-        return {
-          id: 'kokoro',
-          isInstalled: mockKokoroIsInstalled,
-          getVoices: mockKokoroGetVoices,
-          play: mockKokoroPlay,
-          playStreaming: jest.fn(() => ({
-            appendText: jest.fn(),
-            finalize: jest.fn().mockResolvedValue(undefined),
-            cancel: jest.fn().mockResolvedValue(undefined),
-          })),
-          stop: mockKokoroStop,
-          downloadModel: mockKokoroDownloadModel,
-          deleteModel: mockKokoroDeleteModel,
-          reclaimLegacySpace: mockKokoroReclaimLegacySpace,
-        };
-      }
-      if (id === 'kitten') {
-        return {
-          id: 'kitten',
-          isInstalled: mockKittenIsInstalled,
-          getVoices: jest.fn().mockResolvedValue([]),
-          play: mockKittenPlay,
-          playStreaming: jest.fn(() => ({
-            appendText: jest.fn(),
-            finalize: jest.fn().mockResolvedValue(undefined),
-            cancel: jest.fn().mockResolvedValue(undefined),
-          })),
-          stop: mockKittenStop,
-          downloadModel: mockKittenDownloadModel,
-          deleteModel: mockKittenDeleteModel,
-        };
-      }
-      return {
-        id: 'supertonic',
-        isInstalled: mockSupertonicIsInstalled,
-        getVoices: mockSupertonicGetVoices,
-        play: mockSupertonicPlay,
-        playStreaming: mockSupertonicPlayStreaming,
-        stop: mockSupertonicStop,
-        downloadModel: mockSupertonicDownloadModel,
-        deleteModel: mockSupertonicDeleteModel,
-        reclaimLegacySpace: mockSupertonicReclaimLegacySpace,
-      };
-    },
+    getEngine,
+    getNeuralEngine: getEngine,
   };
 });
 

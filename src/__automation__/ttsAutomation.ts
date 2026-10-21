@@ -1,7 +1,7 @@
 import {Platform} from 'react-native';
 
 import {getEngine, ttsRuntime} from '../services/tts';
-import type {EngineId} from '../services/tts';
+import type {NeuralEngineId} from '../services/tts';
 import {ttsStore} from '../store/TTSStore';
 
 /**
@@ -14,8 +14,6 @@ import {ttsStore} from '../store/TTSStore';
  * only awaitable signal because downloads (Supertonic ~380 MB) outlive any
  * single deep-link / TextInput round-trip.
  */
-
-type NeuralEngineId = Exclude<EngineId, 'system'>;
 
 const STATUS_FILENAME = 'tts-command-status.json';
 
@@ -53,23 +51,33 @@ export async function readTtsStatus(): Promise<string> {
 }
 
 const downloadFor = (id: NeuralEngineId): (() => Promise<void>) => {
-  if (id === 'kokoro') {
-    return ttsStore.downloadKokoro;
+  switch (id) {
+    case 'kokoro':
+      return ttsStore.downloadKokoro;
+    case 'supertonic':
+      return ttsStore.downloadSupertonic;
+    case 'kitten':
+      return ttsStore.downloadKitten;
+    default: {
+      const unhandled: never = id;
+      throw new Error(`unknown tts engine: ${String(unhandled)}`);
+    }
   }
-  if (id === 'supertonic') {
-    return ttsStore.downloadSupertonic;
-  }
-  return ttsStore.downloadKitten;
 };
 
 const installedStateFor = (id: NeuralEngineId): boolean => {
-  if (id === 'kokoro') {
-    return ttsStore.kokoroDownloadState === 'ready';
+  switch (id) {
+    case 'kokoro':
+      return ttsStore.kokoroDownloadState === 'ready';
+    case 'supertonic':
+      return ttsStore.supertonicDownloadState === 'ready';
+    case 'kitten':
+      return ttsStore.kittenDownloadState === 'ready';
+    default: {
+      const unhandled: never = id;
+      throw new Error(`unknown tts engine: ${String(unhandled)}`);
+    }
   }
-  if (id === 'supertonic') {
-    return ttsStore.supertonicDownloadState === 'ready';
-  }
-  return ttsStore.kittenDownloadState === 'ready';
 };
 
 /** Download `engineId` (if not already installed) and leave it ready. */

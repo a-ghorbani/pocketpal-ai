@@ -8,8 +8,7 @@ import type {SupertonicLanguage} from '@pocketpalai/react-native-speech';
 
 import {
   getEngine,
-  KittenEngine,
-  KokoroEngine,
+  getNeuralEngine,
   SupertonicEngine,
   TTS_MIN_RAM_BYTES,
   TTS_PREVIEW_SAMPLE,
@@ -18,7 +17,12 @@ import {
   KITTEN_MODEL_ESTIMATED_BYTES,
   ttsRuntime,
 } from '../services/tts';
-import type {StreamingHandle, SupertonicSteps, Voice} from '../services/tts';
+import type {
+  NeuralEngineId,
+  StreamingHandle,
+  SupertonicSteps,
+  Voice,
+} from '../services/tts';
 import {
   ThinkingStripper,
   pickThinkingPlaceholder,
@@ -52,8 +56,7 @@ export type NeuralDownloadState =
 /** Alias preserved for external consumers that imported the v1.2 name. */
 export type SupertonicDownloadState = NeuralDownloadState;
 
-/** Neural engine ids managed by the store's download state machines. */
-export type NeuralEngineId = 'supertonic' | 'kokoro' | 'kitten';
+export type {NeuralEngineId};
 
 const DEFAULT_SUPERTONIC_STEPS: SupertonicSteps = 5;
 
@@ -211,7 +214,9 @@ export class TTSStore {
     // (plus component-level guards) remain the gate on user-visible work.
 
     // Derive each neural engine's install state from disk in parallel.
-    const neuralIds: NeuralEngineId[] = ['supertonic', 'kokoro', 'kitten'];
+    const neuralIds = Object.keys(
+      TTSStore.ENGINE_ESTIMATED_BYTES,
+    ) as NeuralEngineId[];
     const results = await Promise.all(
       neuralIds.map(async id => {
         try {
@@ -347,43 +352,72 @@ export class TTSStore {
   // --- Per-engine state helpers ----------------------------------------
 
   private setDownloadState(id: NeuralEngineId, state: NeuralDownloadState) {
-    if (id === 'supertonic') {
-      this.supertonicDownloadState = state;
-    } else if (id === 'kokoro') {
-      this.kokoroDownloadState = state;
-    } else {
-      this.kittenDownloadState = state;
+    switch (id) {
+      case 'supertonic':
+        this.supertonicDownloadState = state;
+        break;
+      case 'kokoro':
+        this.kokoroDownloadState = state;
+        break;
+      case 'kitten':
+        this.kittenDownloadState = state;
+        break;
+      default: {
+        const unhandled: never = id;
+        throw new Error(`[TTSStore] unknown engine ${String(unhandled)}`);
+      }
     }
   }
 
   private setDownloadProgress(id: NeuralEngineId, progress: number) {
-    if (id === 'supertonic') {
-      this.supertonicDownloadProgress = progress;
-    } else if (id === 'kokoro') {
-      this.kokoroDownloadProgress = progress;
-    } else {
-      this.kittenDownloadProgress = progress;
+    switch (id) {
+      case 'supertonic':
+        this.supertonicDownloadProgress = progress;
+        break;
+      case 'kokoro':
+        this.kokoroDownloadProgress = progress;
+        break;
+      case 'kitten':
+        this.kittenDownloadProgress = progress;
+        break;
+      default: {
+        const unhandled: never = id;
+        throw new Error(`[TTSStore] unknown engine ${String(unhandled)}`);
+      }
     }
   }
 
   private setDownloadError(id: NeuralEngineId, error: string | null) {
-    if (id === 'supertonic') {
-      this.supertonicDownloadError = error;
-    } else if (id === 'kokoro') {
-      this.kokoroDownloadError = error;
-    } else {
-      this.kittenDownloadError = error;
+    switch (id) {
+      case 'supertonic':
+        this.supertonicDownloadError = error;
+        break;
+      case 'kokoro':
+        this.kokoroDownloadError = error;
+        break;
+      case 'kitten':
+        this.kittenDownloadError = error;
+        break;
+      default: {
+        const unhandled: never = id;
+        throw new Error(`[TTSStore] unknown engine ${String(unhandled)}`);
+      }
     }
   }
 
   private getDownloadState(id: NeuralEngineId): NeuralDownloadState {
-    if (id === 'supertonic') {
-      return this.supertonicDownloadState;
+    switch (id) {
+      case 'supertonic':
+        return this.supertonicDownloadState;
+      case 'kokoro':
+        return this.kokoroDownloadState;
+      case 'kitten':
+        return this.kittenDownloadState;
+      default: {
+        const unhandled: never = id;
+        throw new Error(`[TTSStore] unknown engine ${String(unhandled)}`);
+      }
     }
-    if (id === 'kokoro') {
-      return this.kokoroDownloadState;
-    }
-    return this.kittenDownloadState;
   }
 
   /**
@@ -674,24 +708,16 @@ export class TTSStore {
       this.setDownloadError(id, null);
     });
 
-    const engine = getEngine(id) as
-      | SupertonicEngine
-      | KokoroEngine
-      | KittenEngine;
+    const engine = getNeuralEngine(id);
 
     // Reclaim engine-specific legacy files BEFORE the disk-space preflight,
     // so a borderline device upgrading from an older engine layout (e.g.
     // Kokoro FP16 → FP32) is not blocked by space the migration is about to
     // free. Idempotent; safe when there is nothing to reclaim.
-    if (
-      'reclaimLegacySpace' in engine &&
-      typeof engine.reclaimLegacySpace === 'function'
-    ) {
-      try {
-        await engine.reclaimLegacySpace();
-      } catch (err) {
-        console.warn(`[TTSStore] ${id} legacy reclaim failed:`, err);
-      }
+    try {
+      await engine.reclaimLegacySpace?.();
+    } catch (err) {
+      console.warn(`[TTSStore] ${id} legacy reclaim failed:`, err);
     }
 
     // Safety-net disk-space check. The UI already disables the Install
@@ -752,10 +778,7 @@ export class TTSStore {
     if (this.getDownloadState(id) === 'downloading') {
       return;
     }
-    const engine = getEngine(id) as
-      | SupertonicEngine
-      | KokoroEngine
-      | KittenEngine;
+    const engine = getNeuralEngine(id);
     // If this engine is currently active, stop in-flight audio AND
     // release the native resources BEFORE unlinking files. Skipping
     // either step risks a native crash from the engine touching files

@@ -10,5 +10,5 @@ export {KOKORO_VOICES} from './engines/kokoro/voices';
 export {KittenEngine} from './engines/kitten';
 export type {KittenProgressCallback} from './engines/kitten';
 export {KITTEN_VOICES} from './engines/kitten/voices';
-export {getEngine, getAllEngines} from './engineRegistry';
+export {getEngine, getNeuralEngine, getAllEngines} from './engineRegistry';
 export {ttsRuntime} from './runtime';

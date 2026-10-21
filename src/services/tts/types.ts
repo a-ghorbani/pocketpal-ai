@@ -7,6 +7,9 @@
 
 export type EngineId = 'kitten' | 'kokoro' | 'supertonic' | 'system';
 
+/** Engines whose model files the app downloads and manages. */
+export type NeuralEngineId = Exclude<EngineId, 'system'>;
+
 /**
  * Discrete set of diffusion-step counts exposed in the Supertonic UI.
  * The fork supports `1|2|3|4|5|10|20|50`; PocketPal exposes
@@ -82,4 +85,12 @@ export interface Engine {
   playStreaming(voice: Voice, waitFor?: Promise<void>): StreamingHandle;
   /** Stop any in-flight playback. Safe to call when idle. */
   stop(): Promise<void>;
+}
+
+export interface NeuralEngine extends Engine {
+  readonly id: NeuralEngineId;
+  downloadModel(onProgress?: (progress: number) => void): Promise<void>;
+  deleteModel(): Promise<void>;
+  /** Frees an outdated install before the disk-space preflight. */
+  reclaimLegacySpace?(): Promise<void>;
 }

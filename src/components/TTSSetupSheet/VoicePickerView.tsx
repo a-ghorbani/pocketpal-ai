@@ -38,7 +38,7 @@ import {
   SystemEngine,
   getEngine,
 } from '../../services/tts';
-import type {EngineId, Voice} from '../../services/tts';
+import type {EngineId, NeuralEngineId, Voice} from '../../services/tts';
 import {ttsStore} from '../../store';
 import {L10nContext} from '../../utils';
 
@@ -56,8 +56,6 @@ type DownloadState = 'not_installed' | 'downloading' | 'ready' | 'error';
 // System TTS hidden until language/accent/search filtering is built —
 // 180+ iOS / 470+ Android unfiltered voices is hostile UX.
 const ENGINE_ORDER: EngineId[] = ['kitten', 'kokoro', 'supertonic'];
-
-type NeuralEngineId = Exclude<EngineId, 'system'>;
 
 const engineTitle = (engineId: EngineId, l: L10n): string => {
   switch (engineId) {
