@@ -9,6 +9,16 @@ import {ttsStore} from '../../../store';
 
 import {VoicePickerView} from '../VoicePickerView';
 
+jest.mock('../engineMeta', () => {
+  let androidMeta: unknown;
+  jest.isolateModules(() => {
+    const {Platform} = require('react-native');
+    Platform.OS = 'android';
+    androidMeta = jest.requireActual('../engineMeta');
+  });
+  return androidMeta;
+});
+
 const renderView = () =>
   render(
     <L10nContext.Provider value={l10n.en}>
@@ -16,6 +26,11 @@ const renderView = () =>
     </L10nContext.Provider>,
     {withBottomSheetProvider: true, withSafeArea: true},
   );
+
+const getEngineGroupCount = (query: (id: string) => unknown): number =>
+  ['kitten', 'kokoro', 'supertonic', 'phonon'].filter(
+    id => query(`tts-engine-group-${id}`) != null,
+  ).length;
 
 describe('VoicePickerView', () => {
   beforeEach(() => {
@@ -25,6 +40,8 @@ describe('VoicePickerView', () => {
       ttsStore.kittenDownloadState = 'not_installed';
       ttsStore.kokoroDownloadState = 'not_installed';
       ttsStore.supertonicDownloadState = 'not_installed';
+      ttsStore.phononDownloadState = 'not_installed';
+      ttsStore.phononSupported = false;
     });
   });
 
@@ -73,6 +90,53 @@ describe('VoicePickerView', () => {
       expect.objectContaining({id: 'expr-voice-2-f', engine: 'kitten'}),
     );
     expect(ttsStore.closeSetupSheet).toHaveBeenCalled();
+  });
+
+  describe('Phonon', () => {
+    it('is listed last with its credit and install size when the device supports it', () => {
+      runInAction(() => {
+        ttsStore.phononSupported = true;
+      });
+      const {getByTestId, getAllByTestId, getByText} = renderView();
+
+      const groups = getAllByTestId(/^tts-engine-group-(?!toggle)/).map(
+        g => g.props.testID,
+      );
+      expect(groups).toEqual([
+        'tts-engine-group-kitten',
+        'tts-engine-group-kokoro',
+        'tts-engine-group-supertonic',
+        'tts-engine-group-phonon',
+      ]);
+      fireEvent.press(getByTestId('tts-engine-group-toggle-phonon'));
+      expect(getByTestId('tts-phonon-credit')).toBeTruthy();
+      expect(getByText('Install · 64 MB')).toBeTruthy();
+      fireEvent.press(getByTestId('tts-phonon-install-button'));
+      expect(ttsStore.downloadPhonon).toHaveBeenCalled();
+    });
+
+    it('is not rendered, with no error text, when the device does not support it', () => {
+      const {queryByTestId, queryByText} = renderView();
+
+      expect(queryByTestId('tts-engine-group-phonon')).toBeNull();
+      expect(queryByTestId('tts-phonon-credit')).toBeNull();
+      expect(queryByText(/phonon/i)).toBeNull();
+      expect(getEngineGroupCount(queryByTestId)).toBe(3);
+    });
+
+    it('shows the eight voices and the credit once installed', () => {
+      runInAction(() => {
+        ttsStore.phononSupported = true;
+        ttsStore.phononDownloadState = 'ready';
+      });
+      const {getByTestId, getAllByTestId} = renderView();
+
+      fireEvent.press(getByTestId('tts-engine-group-toggle-phonon'));
+
+      expect(getAllByTestId(/^tts-voice-row-phonon-/)).toHaveLength(8);
+      expect(getByTestId('tts-voice-row-phonon-Zoey')).toBeTruthy();
+      expect(getByTestId('tts-phonon-credit')).toBeTruthy();
+    });
   });
 
   it('default-expands the active engine group on first render', () => {

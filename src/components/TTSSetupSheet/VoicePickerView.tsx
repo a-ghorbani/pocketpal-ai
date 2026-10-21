@@ -57,7 +57,7 @@ type DownloadState = 'not_installed' | 'downloading' | 'ready' | 'error';
 
 // System TTS hidden until language/accent/search filtering is built —
 // 180+ iOS / 470+ Android unfiltered voices is hostile UX.
-const ENGINE_ORDER: EngineId[] = ['kitten', 'kokoro', 'supertonic'];
+const ENGINE_ORDER: EngineId[] = ['kitten', 'kokoro', 'supertonic', 'phonon'];
 
 const engineTitle = (engineId: EngineId, l: L10n): string => {
   switch (engineId) {
@@ -364,6 +364,12 @@ export const VoicePickerView: React.FC = observer(() => {
     );
   };
 
+  const renderPhononCredit = () => (
+    <Text style={styles.engineGroupCreditText} testID="tts-phonon-credit">
+      {l10n.voiceAndSpeech.enginePhononCredit}
+    </Text>
+  );
+
   const renderInstallCard = (engineId: NeuralEngineId) => {
     const meta = ENGINE_META[engineId];
     const state = neuralStateFor(engineId);
@@ -427,6 +433,7 @@ export const VoicePickerView: React.FC = observer(() => {
         <Text style={styles.engineGroupTagline}>
           {engineTagline(engineId, l10n)}
         </Text>
+        {engineId === 'phonon' ? renderPhononCredit() : null}
         {lowDisk && freeMb != null ? (
           <Text style={styles.engineGroupErrorText}>
             {t(l10n.voiceAndSpeech.insufficientStorage, {
@@ -551,6 +558,11 @@ export const VoicePickerView: React.FC = observer(() => {
                     </Text>
                   </View>
                 ) : null}
+                {engineId === 'phonon' ? (
+                  <View style={styles.engineGroupBody}>
+                    {renderPhononCredit()}
+                  </View>
+                ) : null}
                 {voices.map(renderVoiceRow)}
               </>
             ) : (
@@ -584,7 +596,9 @@ export const VoicePickerView: React.FC = observer(() => {
           {l10n.voiceAndSpeech.voicesEmptyHint}
         </Text>
       )}
-      {ENGINE_ORDER.map(renderEngineGroup)}
+      {ENGINE_ORDER.filter(id => ttsStore.isEngineOffered(id)).map(
+        renderEngineGroup,
+      )}
     </Sheet.ScrollView>
   );
 });

@@ -1552,6 +1552,7 @@
     "engineKokoroTagline": "Highest quality. Slower to start. Some voices may not work on all devices.",
     "engineSupertonicTagline": "Fastest to start. Uses more RAM. May occasionally drop words.",
     "enginePhononTagline": "Natural English voices. Quick to start on newer phones.",
+    "enginePhononCredit": "Model and voices by Gradium (Apache-2.0), built on Kyutai's Mimi.",
     "engineSystemTagline": "Built-in OS voices. Always available, zero install.",
     "engineSystemTitleIos": "iOS Voices",
     "engineSystemTitleAndroid": "Android Voices",
