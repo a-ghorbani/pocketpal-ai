@@ -4,6 +4,7 @@ import {
   LlamaContext,
   getBackendDevicesInfo,
   initLlama as initializeLlama,
+  loadLlamaModelInfo,
 } from 'llama.rn';
 import {Alert, AppStateStatus, Platform} from 'react-native';
 
@@ -24,6 +25,8 @@ import {
 } from '../../utils/types';
 import {getDisplayNameFromFilename} from '../../utils/formatters';
 import {getModelMemoryRequirement} from '../../utils/memoryEstimator';
+import {hasEnoughMemory} from '../../hooks/useMemoryCheck';
+import NativeHardwareInfo from '../../specs/NativeHardwareInfo';
 import {
   basicModel,
   createModel,
@@ -2070,11 +2073,24 @@ describe('ModelStore', () => {
       }) as Model;
     const modelA = localModel('a');
     const modelB = localModel('b');
+    const hasEnoughMemoryMock = hasEnoughMemory as jest.Mock;
+    const getAvailableMemory =
+      NativeHardwareInfo.getAvailableMemory as jest.Mock;
 
     let events: string[];
     let loaded: Array<{path: string; release: jest.Mock}>;
     let releaseHeld: () => void;
     let logSpy: jest.SpyInstance | undefined;
+    let alertSpy: jest.SpyInstance | undefined;
+    let initGate: Promise<void> | undefined;
+    let openInitGate: () => void;
+    let availableMemoryImpl: ReturnType<
+      typeof getAvailableMemory.getMockImplementation
+    >;
+    let calibration: {
+      largestSuccessfulLoad: number | undefined;
+      availableMemoryCeiling: number | undefined;
+    };
 
     const mutex = (): Promise<void> =>
       (modelStore as any).contextOperationMutex;
@@ -2112,16 +2128,33 @@ describe('ModelStore', () => {
       });
     };
 
-    const startQuickSwitch = async (leave: AppStateStatus[]) => {
-      const handlers = leave.map(state =>
-        modelStore.handleAppStateChange(state),
-      );
-      const releaseTail = mutex();
-      handlers.push(modelStore.handleAppStateChange('active'));
-      for (let i = 0; i < 50 && mutex() === releaseTail; i++) {
+    const flushTicks = async () => {
+      for (let i = 0; i < 50; i++) {
         await new Promise(setImmediate);
       }
-      expect(mutex()).not.toBe(releaseTail);
+    };
+
+    const waitUntil = async (cond: () => boolean) => {
+      for (let i = 0; i < 100 && !cond(); i++) {
+        await new Promise(resolve => setTimeout(resolve, 10));
+      }
+      expect(cond()).toBe(true);
+    };
+
+    const holdNextInit = () => {
+      initGate = new Promise<void>(resolve => {
+        openInitGate = resolve;
+      });
+    };
+
+    const startQuickSwitch = async (leave: AppStateStatus[]) => {
+      const handlers = [...leave, 'active' as const].map(state =>
+        modelStore.handleAppStateChange(state),
+      );
+      await flushTicks();
+      expect(modelStore.wasAutoReleased).toBe(false);
+      expect(hasEnoughMemoryMock).not.toHaveBeenCalled();
+      expect(initLlama).not.toHaveBeenCalled();
       return handlers;
     };
 
@@ -2130,6 +2163,14 @@ describe('ModelStore', () => {
       events = [];
       loaded = [];
       releaseHeld = () => {};
+      initGate = undefined;
+      openInitGate = () => {};
+      availableMemoryImpl = getAvailableMemory.getMockImplementation();
+      calibration = {
+        largestSuccessfulLoad: modelStore.largestSuccessfulLoad,
+        availableMemoryCeiling: modelStore.availableMemoryCeiling,
+      };
+      hasEnoughMemoryMock.mockClear();
       runInAction(() => {
         modelStore.useAutoRelease = true;
         modelStore.benchmarkActive = false;
@@ -2144,6 +2185,7 @@ describe('ModelStore', () => {
       expect(modelStore.isAutoReleaseEnabled).toBe(true);
       initLlama.mockReset();
       initLlama.mockImplementation(async ({model}: {model: string}) => {
+        await initGate;
         events.push(`init:${model}`);
         const ctx = {
           release: jest.fn().mockResolvedValue(undefined),
@@ -2158,11 +2200,20 @@ describe('ModelStore', () => {
       modelStore.initContext = originalInitContext;
       logSpy?.mockRestore();
       logSpy = undefined;
+      alertSpy?.mockRestore();
+      alertSpy = undefined;
+      openInitGate();
       releaseHeld();
       await drainMutex();
+      hasEnoughMemoryMock.mockReset();
+      hasEnoughMemoryMock.mockResolvedValue(true);
+      getAvailableMemory.mockReset();
+      getAvailableMemory.mockImplementation(availableMemoryImpl);
       (modelStore as any).contextOperationMutex = Promise.resolve();
       (modelStore as any).pendingModelId = null;
       runInAction(() => {
+        modelStore.largestSuccessfulLoad = calibration.largestSuccessfulLoad;
+        modelStore.availableMemoryCeiling = calibration.availableMemoryCeiling;
         modelStore.isContextLoading = false;
         modelStore.context = undefined;
         modelStore.engine = undefined;
@@ -2183,7 +2234,6 @@ describe('ModelStore', () => {
         holdReleaseOfA();
 
         const handlers = await startQuickSwitch(leave);
-        expect(initLlama).not.toHaveBeenCalled();
 
         releaseHeld();
         await settle(...handlers);
@@ -2258,10 +2308,16 @@ describe('ModelStore', () => {
 
     it('leaving again after the reload is queued keeps the reload owed', async () => {
       holdReleaseOfA();
+      holdNextInit();
 
-      const handlers = await startQuickSwitch(['background']);
-      handlers.push(modelStore.handleAppStateChange('background'));
+      const handlers = [
+        modelStore.handleAppStateChange('background'),
+        modelStore.handleAppStateChange('active'),
+      ];
       releaseHeld();
+      await waitUntil(() => initLlama.mock.calls.length === 1);
+      handlers.push(modelStore.handleAppStateChange('background'));
+      openInitGate();
       await settle(...handlers);
 
       expect(initLlama).toHaveBeenCalledTimes(1);
@@ -2290,6 +2346,87 @@ describe('ModelStore', () => {
       await modelStore.handleAppStateChange('active');
 
       expect(initContext).toHaveBeenCalledTimes(1);
+    });
+
+    it('quick return checks memory after the release raises the ceiling', async () => {
+      (loadLlamaModelInfo as jest.Mock).mockReset();
+      const req = getModelMemoryRequirement(
+        modelA,
+        undefined,
+        modelStore.memoryEstimateSettings,
+      );
+      runInAction(() => {
+        modelStore.largestSuccessfulLoad = req / 2;
+        modelStore.availableMemoryCeiling = req / 2;
+      });
+      getAvailableMemory.mockResolvedValueOnce(req * 2);
+      hasEnoughMemoryMock.mockImplementation(
+        jest.requireActual('../../hooks/useMemoryCheck').hasEnoughMemory,
+      );
+      alertSpy = jest
+        .spyOn(Alert, 'alert')
+        .mockImplementation((_title, _message, buttons) =>
+          buttons?.[1]?.onPress?.(),
+        );
+      holdReleaseOfA();
+
+      const handlers = [
+        modelStore.handleAppStateChange('background'),
+        modelStore.handleAppStateChange('active'),
+      ];
+      await flushTicks();
+      releaseHeld();
+      await settle(...handlers);
+
+      expect(alertSpy).not.toHaveBeenCalled();
+      expect(hasEnoughMemoryMock).toHaveBeenCalledTimes(1);
+      expect(events).toEqual(['release:a', `init:${modelA.fullPath}`]);
+      expect(initLlama).toHaveBeenCalledTimes(1);
+      expect(modelStore.wasAutoReleased).toBe(false);
+      expect(modelStore.lastAutoReleasedModelId).toBeUndefined();
+    });
+
+    it('leaving again during the release leaves the reload to the next return', async () => {
+      holdReleaseOfA();
+
+      const handlers = (['background', 'active', 'background'] as const).map(
+        state => modelStore.handleAppStateChange(state),
+      );
+      releaseHeld();
+      await settle(...handlers);
+
+      expect(initLlama).not.toHaveBeenCalled();
+      expect(modelStore.wasAutoReleased).toBe(true);
+      expect(modelStore.lastAutoReleasedModelId).toBe(modelA.id);
+      expect(modelStore.appState).toBe('background');
+
+      await settle(modelStore.handleAppStateChange('active'));
+
+      expect(initLlama.mock.calls.map(([params]) => params.model)).toEqual([
+        modelA.fullPath,
+      ]);
+      expect(modelStore.wasAutoReleased).toBe(false);
+      expect(modelStore.lastAutoReleasedModelId).toBeUndefined();
+      expect(modelStore.appState).toBe('active');
+    });
+
+    it('model picked during the release wins over the reload', async () => {
+      holdReleaseOfA();
+
+      const handlers = [
+        modelStore.handleAppStateChange('background'),
+        modelStore.handleAppStateChange('active'),
+      ];
+      const pick = modelStore.selectModel(modelB);
+      releaseHeld();
+      await settle(...handlers, pick);
+
+      expect(initLlama.mock.calls.map(([params]) => params.model)).toEqual([
+        modelB.fullPath,
+      ]);
+      expect(modelStore.wasAutoReleased).toBe(false);
+      expect(modelStore.lastAutoReleasedModelId).toBeUndefined();
+      expect(modelStore.activeModelId).toBe(modelB.id);
     });
   });
 

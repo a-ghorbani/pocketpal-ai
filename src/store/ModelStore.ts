@@ -1162,6 +1162,11 @@ class ModelStore {
       );
       this.clearAutoReleaseFlags();
       if (model) {
+        this.pendingModelId = model.id;
+        await this.contextOperationMutex;
+        if (this.pendingModelId !== model.id || this.wasAutoReleased) {
+          return;
+        }
         console.log('Reloading auto-released model:', model.id);
         await this.initContext(model);
       }
