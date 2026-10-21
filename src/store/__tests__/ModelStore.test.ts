@@ -2139,6 +2139,7 @@ describe('ModelStore', () => {
         modelStore.modelLoadError = null;
         modelStore.isContextLoading = false;
         modelStore.models = [modelA, modelB];
+        (modelStore as any).autoReleaseDisabledReasons.clear();
       });
       expect(modelStore.isAutoReleaseEnabled).toBe(true);
       initLlama.mockReset();
@@ -2154,6 +2155,7 @@ describe('ModelStore', () => {
     });
 
     afterEach(async () => {
+      modelStore.initContext = originalInitContext;
       logSpy?.mockRestore();
       logSpy = undefined;
       releaseHeld();
@@ -5981,6 +5983,7 @@ describe('ModelStore', () => {
         modelStore.engine = {stopCompletion: jest.fn()} as any;
         modelStore.wasAutoReleased = false;
         modelStore.lastAutoReleasedModelId = undefined;
+        (modelStore as any).autoReleaseDisabledReasons.clear();
       });
       const engine = modelStore.engine;
       expect(modelStore.isAutoReleaseEnabled).toBe(true);
@@ -5992,11 +5995,14 @@ describe('ModelStore', () => {
       modelStore.releaseContext = releaseContext;
       modelStore.initContext = initContext;
 
-      const leaving = modelStore.handleAppStateChange('background');
-      await modelStore.handleAppStateChange('active');
-      await leaving;
-      modelStore.releaseContext = originalReleaseContext;
-      modelStore.initContext = originalInitContext;
+      try {
+        const leaving = modelStore.handleAppStateChange('background');
+        await modelStore.handleAppStateChange('active');
+        await leaving;
+      } finally {
+        modelStore.releaseContext = originalReleaseContext;
+        modelStore.initContext = originalInitContext;
+      }
 
       expect(releaseContext).not.toHaveBeenCalled();
       expect(initContext).not.toHaveBeenCalled();
