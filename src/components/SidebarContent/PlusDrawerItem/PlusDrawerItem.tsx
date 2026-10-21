@@ -2,13 +2,13 @@ import React, {useContext} from 'react';
 import {Pressable, StyleSheet, Text, View} from 'react-native';
 import {observer} from 'mobx-react';
 
+import {SparkleFilledIcon, SparkleIcon} from '../../../assets/icons';
 import {useTheme} from '../../../hooks';
 import {t} from '../../../locales';
 import {L10nContext} from '../../../utils';
 import type {Theme} from '../../../utils/types';
 import {isPlusAvailable, isPlusUnlocked} from '../../../services/plus/gate';
 import {shippedPlusFeatures} from '../../../services/plus/shipped';
-import {SparkleIcon} from '../../../screens/PlusScreen/SparkleIcon';
 
 interface PlusDrawerItemProps {
   onPress: () => void;
@@ -24,6 +24,7 @@ export const PlusDrawerItem: React.FC<PlusDrawerItemProps> = observer(
     const styles = createStyles(theme);
     const copy = l10n.plus;
     const unlocked = isPlusUnlocked();
+    const Sparkle = unlocked ? SparkleFilledIcon : SparkleIcon;
     const names = shippedPlusFeatures().map(
       feature => copy.features[feature.id],
     );
@@ -46,11 +47,7 @@ export const PlusDrawerItem: React.FC<PlusDrawerItemProps> = observer(
         accessibilityValue={{text: subtitle}}
         onPress={onPress}
         style={({pressed}) => [styles.row, pressed && styles.pressed]}>
-        <SparkleIcon
-          size={24}
-          color={theme.colors.secondary}
-          filled={unlocked}
-        />
+        <Sparkle width={24} height={24} fill={theme.colors.secondary} />
         <View style={styles.body}>
           <Text style={styles.label}>{copy.sidebar.title}</Text>
           <Text

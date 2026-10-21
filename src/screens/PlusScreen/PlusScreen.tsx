@@ -14,7 +14,14 @@ import {
 import {observer} from 'mobx-react';
 import {useSafeAreaInsets} from 'react-native-safe-area-context';
 
-import {AlertIcon, ClockFastForwardIcon, XIcon} from '../../assets/icons';
+import {
+  AlertIcon,
+  CheckBoldIcon,
+  ClockFastForwardIcon,
+  InfoCircleIcon,
+  SparkleFilledIcon,
+  XIcon,
+} from '../../assets/icons';
 import {LicenseNotice} from '../../components/LicenseNotice';
 import {APPLE_EULA_URL, REPO_URL} from '../../config/urls';
 import {useTheme} from '../../hooks';
@@ -26,7 +33,6 @@ import type {PlusFeatureRow} from '../../services/plus/features';
 import {deviceRam} from '../../services/plus/deviceRam';
 import {plusFeatureRows} from '../../services/plus/shipped';
 
-import {CheckGlyph, InfoGlyph, SparkleIcon} from './SparkleIcon';
 import {plusScreenState} from './plusScreenState';
 import {createStyles} from './styles';
 
@@ -131,7 +137,11 @@ export const PlusScreen: React.FC<PlusScreenProps> = observer(props => {
     if (row.status === 'ready') {
       return (
         <View style={styles.status}>
-          <CheckGlyph color={theme.colors.btnReadyText} />
+          <CheckBoldIcon
+            width={14}
+            height={14}
+            stroke={theme.colors.btnReadyText}
+          />
           <Text style={[styles.statusText, styles.statusReady]}>
             {copy.ready}
           </Text>
@@ -149,7 +159,11 @@ export const PlusScreen: React.FC<PlusScreenProps> = observer(props => {
             accessibilityState={{expanded: infoShown}}
             hitSlop={INFO_HIT_SLOP}
             onPress={toggleInfo}>
-            <InfoGlyph color={theme.colors.onSurfaceVariant} />
+            <InfoCircleIcon
+              width={15}
+              height={15}
+              stroke={theme.colors.onSurfaceVariant}
+            />
           </Pressable>
         </View>
       );
@@ -297,7 +311,11 @@ export const PlusScreen: React.FC<PlusScreenProps> = observer(props => {
         bounces={false}>
         <View style={styles.topBar}>
           <View style={styles.eyebrow}>
-            <SparkleIcon size={14} color={theme.colors.secondary} filled />
+            <SparkleFilledIcon
+              width={14}
+              height={14}
+              fill={theme.colors.secondary}
+            />
             <Text style={styles.eyebrowText}>{copy.eyebrow}</Text>
           </View>
           <Pressable
@@ -313,7 +331,11 @@ export const PlusScreen: React.FC<PlusScreenProps> = observer(props => {
         <View style={styles.header}>
           {purchased && (
             <View style={styles.thanksBadge}>
-              <SparkleIcon size={24} color={theme.colors.secondary} filled />
+              <SparkleFilledIcon
+                width={24}
+                height={24}
+                fill={theme.colors.secondary}
+              />
             </View>
           )}
           <Text
