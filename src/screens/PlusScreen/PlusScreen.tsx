@@ -228,10 +228,12 @@ export const PlusScreen: React.FC<PlusScreenProps> = observer(props => {
     }
     if (phase === 'loading') {
       return (
-        <View testID="plus-loading" style={styles.primaryBtn}>
+        <View
+          testID="plus-loading"
+          style={[styles.primaryBtn, styles.primaryBtnBusy]}>
           <ActivityIndicator
             accessibilityLabel={copy.loading}
-            color={theme.colors.onSurfaceVariant}
+            color={theme.colors.onBackground}
           />
         </View>
       );

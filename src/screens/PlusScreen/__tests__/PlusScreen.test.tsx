@@ -1,5 +1,11 @@
 import React from 'react';
-import {AccessibilityInfo, Linking, Platform, StyleSheet} from 'react-native';
+import {
+  AccessibilityInfo,
+  ActivityIndicator,
+  Linking,
+  Platform,
+  StyleSheet,
+} from 'react-native';
 import {runInAction} from 'mobx';
 import type {
   ReactTestInstance,
@@ -408,6 +414,24 @@ describe('PlusScreen', () => {
       expect(queryByTestId('plus-cta')).toBeNull();
       expect(queryByTestId('plus-tile-plus.1')).toBeNull();
       expect(getByTestId('plus-restore')).toBeTruthy();
+    });
+
+    it('draws the loading slot like the paying button', () => {
+      set({plusChecked: false});
+      const {getByLabelText, getByTestId, UNSAFE_getByType} = renderScreen();
+      const loadingFill = StyleSheet.flatten(
+        getByTestId('plus-loading').props.style,
+      ).backgroundColor;
+      const loadingSpinner = getByLabelText('Loading').props.color;
+
+      act(() => set({plusChecked: true, plusFlow: 'paying'}));
+
+      expect(loadingFill).toBe(
+        StyleSheet.flatten(getByTestId('plus-cta').props.style).backgroundColor,
+      );
+      expect(loadingSpinner).toBe(
+        UNSAFE_getByType(ActivityIndicator).props.color,
+      );
     });
 
     it('keeps the loaded prices while a missing one reloads', () => {
