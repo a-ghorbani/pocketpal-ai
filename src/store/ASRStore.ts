@@ -107,7 +107,7 @@ export class ASRStore {
    * of both (`whisperFits`). Android's free-memory figure can be far off
    * (#982), so Android budgets against total RAM. iOS does not count mmap'd
    * chat weights against the app, so iOS budgets against what it reported
-   * free before any load.
+   * free before any load, keeping a reserve (ASR_IOS_CEILING_SHARE).
    */
   async hasMemoryForCapture(): Promise<boolean> {
     const memory = await readDeviceMemory(modelStore);

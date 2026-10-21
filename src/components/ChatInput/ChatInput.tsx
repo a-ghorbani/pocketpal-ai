@@ -580,7 +580,7 @@ export const ChatInput = observer(
                 )}
 
                 {/* Pal Selector */}
-                <View style={styles.palSelector}>
+                <View testID="pal-selector" style={styles.palSelector}>
                   <TouchableOpacity
                     style={[
                       styles.palBtn,
@@ -608,6 +608,8 @@ export const ChatInput = observer(
                   {/* Pal Name Display */}
                   {currentActivePal?.name && hasActiveModel && (
                     <Text
+                      testID="active-pal-name"
+                      numberOfLines={1}
                       style={[
                         styles.palNameCompact,
                         {
@@ -671,6 +673,8 @@ export const ChatInput = observer(
                       strokeWidth={2}
                     />
                     <Text
+                      testID="thinking-toggle-label"
+                      numberOfLines={1}
                       style={[
                         styles.thinkingToggleText,
                         isThinkingEnabled

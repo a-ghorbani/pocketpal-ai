@@ -8,7 +8,11 @@ import {onAudioInterruption} from '@pocketpalai/react-native-speech';
 import {check} from 'react-native-permissions';
 
 import {modelsList} from '../../../jest/fixtures/models';
-import {ASR_CHUNK_BYTES, ASR_TIERS} from '../../services/asr/constants';
+import {
+  ASR_CHUNK_BYTES,
+  ASR_IOS_CEILING_SHARE,
+  ASR_TIERS,
+} from '../../services/asr/constants';
 import {TTS_ENGINE_RUNTIME_BYTES} from '../../services/tts/constants';
 import {
   asrStore,
@@ -432,7 +436,7 @@ describe('useVoiceMode', () => {
     it('shows the memory sheet when memory is tight; Continue anyway enters', async () => {
       runInAction(() => {
         model.loadedModelBytes =
-          5e9 -
+          5e9 * ASR_IOS_CEILING_SHARE -
           ASR_TIERS.base.runtimeBytes -
           TTS_ENGINE_RUNTIME_BYTES.supertonic / 2;
       });
@@ -472,7 +476,7 @@ describe('useVoiceMode', () => {
     it('Choose a smaller model opens the picker and stays closed', async () => {
       runInAction(() => {
         model.loadedModelBytes =
-          5e9 -
+          5e9 * ASR_IOS_CEILING_SHARE -
           ASR_TIERS.base.runtimeBytes -
           TTS_ENGINE_RUNTIME_BYTES.supertonic / 2;
       });

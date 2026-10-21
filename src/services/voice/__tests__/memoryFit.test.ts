@@ -1,4 +1,4 @@
-import {ASR_TIERS} from '../../asr/constants';
+import {ASR_IOS_CEILING_SHARE, ASR_TIERS} from '../../asr/constants';
 import {whisperFits} from '../../asr/whisperFits';
 import {TTS_ENGINE_RUNTIME_BYTES} from '../../tts/constants';
 import {voiceMemoryFit} from '../memoryFit';
@@ -64,14 +64,14 @@ describe('voiceMemoryFit', () => {
         {kind: 'tts', bytes: ttsBytes},
       ],
       neededBytes: 2e9 + sttBytes + ttsBytes,
-      availableBytes: 4e9,
+      availableBytes: 4e9 * ASR_IOS_CEILING_SHARE,
     });
   });
 
   it('is tight on iOS when whisper fits under pre-load free memory but the voice does not', () => {
     const fit = voiceMemoryFit({
       memory: ios(4e9),
-      chatBytes: 4e9 - sttBytes - ttsBytes / 2,
+      chatBytes: 4e9 * ASR_IOS_CEILING_SHARE - sttBytes - ttsBytes / 2,
       sttBytes,
       ttsBytes,
     });
@@ -81,12 +81,28 @@ describe('voiceMemoryFit', () => {
   it("on iOS won't fit when whisper alone passes pre-load free memory", () => {
     const fit = voiceMemoryFit({
       memory: ios(4e9),
-      chatBytes: 4e9 - sttBytes + 1,
+      chatBytes: 4e9 * ASR_IOS_CEILING_SHARE - sttBytes + 1,
       sttBytes,
       ttsBytes,
     });
     expect(fit.status).toBe('wont_fit');
   });
+
+  it.each([
+    ['1.7B', 1.9e9, 'fits'],
+    ['4B Q4', 3.2e9, 'wont_fit'],
+  ] as const)(
+    'on iOS with 4.2 GB free before any load, chat model %s with Base → %s',
+    (_name, chatBytes, status) => {
+      const fit = voiceMemoryFit({
+        memory: ios(4.2e9),
+        chatBytes,
+        sttBytes,
+        ttsBytes,
+      });
+      expect(fit.status).toBe(status);
+    },
+  );
 
   it('fits on iOS while pre-load free memory is unknown', () => {
     const fit = voiceMemoryFit({

@@ -1,4 +1,4 @@
-import {ASR_TIERS} from '../constants';
+import {ASR_IOS_CEILING_SHARE, ASR_TIERS} from '../constants';
 import {whisperFits} from '../whisperFits';
 
 const base = ASR_TIERS.base.runtimeBytes;
@@ -24,11 +24,29 @@ describe('whisperFits', () => {
     ).toBe(false);
   });
 
-  it('iOS counts the chat model and whisper against pre-load free memory', () => {
+  it('iOS counts the chat model and whisper against a share of pre-load free memory', () => {
     const ios = {os: 'ios' as const, ceilingBytes: 4e9};
-    expect(whisperFits(ios, 4e9 - base, base)).toBe(true);
-    expect(whisperFits(ios, 4e9 - base + 1, base)).toBe(false);
+    const budget = 4e9 * ASR_IOS_CEILING_SHARE;
+    expect(whisperFits(ios, budget - base, base)).toBe(true);
+    expect(whisperFits(ios, budget - base + 1, base)).toBe(false);
   });
+
+  it.each([
+    ['1.7B', 1.9e9, 'small', true],
+    ['4B Q4', 3.2e9, 'base', false],
+    ['4B Q4', 3.2e9, 'small', false],
+  ] as const)(
+    'iOS, 4.2 GB free before any load, chat model %s + %s → fits %s',
+    (_name, chatBytes, tier, fits) => {
+      expect(
+        whisperFits(
+          {os: 'ios', ceilingBytes: 4.2e9},
+          chatBytes,
+          ASR_TIERS[tier].runtimeBytes,
+        ),
+      ).toBe(fits);
+    },
+  );
 
   it('iOS fits while pre-load free memory is unknown', () => {
     expect(whisperFits({os: 'ios', ceilingBytes: 0}, 9e9, base)).toBe(true);

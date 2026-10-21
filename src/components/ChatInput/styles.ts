@@ -47,11 +47,15 @@ export const createStyles = ({
       paddingHorizontal: 8,
       paddingVertical: 4,
       marginLeft: 8,
+      // Give up width only once the pal name has none left.
+      flexShrink: 0.001,
+      minWidth: 32,
     },
     thinkingToggleLeftDisabled: {
       backgroundColor: 'transparent',
     },
     thinkingToggleText: {
+      flexShrink: 1,
       fontSize: 12,
       fontWeight: '500',
       marginLeft: 4,
@@ -63,6 +67,8 @@ export const createStyles = ({
       flexDirection: 'row',
       alignItems: 'center',
       gap: 4,
+      flexShrink: 1,
+      minWidth: 32,
     },
     inputWrapper: {
       flexDirection: 'row',
@@ -153,6 +159,7 @@ export const createStyles = ({
     },
     // New compact pal name styles for control bar
     palNameCompact: {
+      flexShrink: 1,
       fontSize: 10,
       ...fontStyles.regular,
       color: theme.colors.inverseOnSurface,
