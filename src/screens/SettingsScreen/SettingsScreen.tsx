@@ -1445,11 +1445,19 @@ export const SettingsScreen: React.FC = observer(() => {
                               activeSearchProvider?.label ??
                               activeSearchProviderId,
                           })
-                        : t(l10n.settings.internetSearch.keyNotSet, {
-                            provider:
-                              activeSearchProvider?.label ??
+                        : searchProviderStore.isKeyOptional(
                               activeSearchProviderId,
-                          })}
+                            )
+                          ? t(l10n.settings.internetSearch.keyOptional, {
+                              provider:
+                                activeSearchProvider?.label ??
+                                activeSearchProviderId,
+                            })
+                          : t(l10n.settings.internetSearch.keyNotSet, {
+                              provider:
+                                activeSearchProvider?.label ??
+                                activeSearchProviderId,
+                            })}
                     </Text>
                     {!searchHasConsent && (
                       <Text variant="labelSmall" style={styles.textDescription}>
