@@ -2087,6 +2087,9 @@ describe('ModelStore', () => {
     let availableMemoryImpl: ReturnType<
       typeof getAvailableMemory.getMockImplementation
     >;
+    let hasEnoughMemoryImpl: ReturnType<
+      typeof hasEnoughMemoryMock.getMockImplementation
+    >;
     let calibration: {
       largestSuccessfulLoad: number | undefined;
       availableMemoryCeiling: number | undefined;
@@ -2166,6 +2169,7 @@ describe('ModelStore', () => {
       initGate = undefined;
       openInitGate = () => {};
       availableMemoryImpl = getAvailableMemory.getMockImplementation();
+      hasEnoughMemoryImpl = hasEnoughMemoryMock.getMockImplementation();
       calibration = {
         largestSuccessfulLoad: modelStore.largestSuccessfulLoad,
         availableMemoryCeiling: modelStore.availableMemoryCeiling,
@@ -2206,7 +2210,7 @@ describe('ModelStore', () => {
       releaseHeld();
       await drainMutex();
       hasEnoughMemoryMock.mockReset();
-      hasEnoughMemoryMock.mockResolvedValue(true);
+      hasEnoughMemoryMock.mockImplementation(hasEnoughMemoryImpl);
       getAvailableMemory.mockReset();
       getAvailableMemory.mockImplementation(availableMemoryImpl);
       (modelStore as any).contextOperationMutex = Promise.resolve();
@@ -2218,6 +2222,8 @@ describe('ModelStore', () => {
         modelStore.context = undefined;
         modelStore.engine = undefined;
         modelStore.activeModelId = undefined;
+        modelStore.activeRemoteBinding = undefined;
+        serverStore.servers = [];
         modelStore.wasAutoReleased = false;
         modelStore.lastAutoReleasedModelId = undefined;
         modelStore.appState = 'active';
@@ -2306,7 +2312,7 @@ describe('ModelStore', () => {
       expect(modelStore.lastAutoReleasedModelId).toBeUndefined();
     });
 
-    it('leaving again after the reload is queued keeps the reload owed', async () => {
+    it('leaving again while the reload is loading keeps the reload owed', async () => {
       holdReleaseOfA();
       holdNextInit();
 
@@ -2427,6 +2433,54 @@ describe('ModelStore', () => {
       expect(modelStore.wasAutoReleased).toBe(false);
       expect(modelStore.lastAutoReleasedModelId).toBeUndefined();
       expect(modelStore.activeModelId).toBe(modelB.id);
+    });
+
+    it('remote pick during the release wins over the reload', async () => {
+      const remote = {
+        id: 'srv-1/llama-7b',
+        name: 'llama-7b',
+        origin: ModelOrigin.REMOTE,
+        serverId: 'srv-1',
+        remoteModelId: 'llama-7b',
+      } as any;
+      runInAction(() => {
+        serverStore.servers = [
+          {id: 'srv-1', name: 'LM Studio', url: 'http://localhost:1234'},
+        ];
+      });
+      holdReleaseOfA();
+
+      const handlers = [
+        modelStore.handleAppStateChange('background'),
+        modelStore.handleAppStateChange('active'),
+      ];
+      const pick = modelStore.selectModel(remote);
+      releaseHeld();
+      await settle(...handlers, pick);
+
+      expect(initLlama).not.toHaveBeenCalled();
+      expect(modelStore.activeModelId).toBe(remote.id);
+      expect(modelStore.activeRemoteBinding?.modelId).toBe(remote.id);
+      expect(modelStore.wasAutoReleased).toBe(false);
+      expect(modelStore.lastAutoReleasedModelId).toBeUndefined();
+    });
+
+    it('eject during the release wins over the reload', async () => {
+      holdReleaseOfA();
+
+      const handlers = [
+        modelStore.handleAppStateChange('background'),
+        modelStore.handleAppStateChange('active'),
+      ];
+      const eject = modelStore.manualReleaseContext();
+      releaseHeld();
+      await settle(...handlers, eject);
+
+      expect(initLlama).not.toHaveBeenCalled();
+      expect(modelStore.context).toBeUndefined();
+      expect(modelStore.activeModelId).toBeUndefined();
+      expect(modelStore.wasAutoReleased).toBe(false);
+      expect(modelStore.lastAutoReleasedModelId).toBeUndefined();
     });
   });
 
@@ -6218,8 +6272,6 @@ describe('ModelStore', () => {
   });
 
   describe('fetchAndPersistGGUFMetadata error handling', () => {
-    const {loadLlamaModelInfo} = require('llama.rn');
-
     beforeEach(() => {
       (loadLlamaModelInfo as jest.Mock).mockReset();
     });

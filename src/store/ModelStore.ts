@@ -2579,6 +2579,7 @@ class ModelStore {
   };
 
   manualReleaseContext = async () => {
+    this.pendingModelId = null;
     await this.releaseContext(true); // Clear active model for manual release
   };
 
@@ -2690,6 +2691,8 @@ class ModelStore {
     if (!model.serverId || !model.remoteModelId) {
       throw new Error('Model is missing remote configuration');
     }
+
+    this.pendingModelId = model.id;
 
     // Release any existing context (local or remote)
     await this.releaseContext();
