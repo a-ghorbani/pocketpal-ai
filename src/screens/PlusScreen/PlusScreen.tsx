@@ -226,6 +226,16 @@ export const PlusScreen: React.FC<PlusScreenProps> = observer(props => {
         </Pressable>
       );
     }
+    if (phase === 'loading') {
+      return (
+        <View testID="plus-loading" style={styles.primaryBtn}>
+          <ActivityIndicator
+            accessibilityLabel={copy.loading}
+            color={theme.colors.onSurfaceVariant}
+          />
+        </View>
+      );
+    }
     if (!showsGrid) {
       return null;
     }
@@ -253,8 +263,8 @@ export const PlusScreen: React.FC<PlusScreenProps> = observer(props => {
       testID="plus-restore"
       accessibilityRole="button"
       accessibilityLabel={copy.restore}
-      accessibilityState={{disabled: isRestoring, busy: isRestoring}}
-      disabled={isRestoring}
+      accessibilityState={{disabled: isRestoring || paying, busy: isRestoring}}
+      disabled={isRestoring || paying}
       onPress={handleRestore}
       style={styles.footerHit}>
       {isRestoring && (

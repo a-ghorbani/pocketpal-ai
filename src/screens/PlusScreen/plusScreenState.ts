@@ -45,7 +45,7 @@ const phaseOf = (inputs: PlusScreenInputs): PlusScreenPhase => {
   if (
     inputs.availability === 'initializing' ||
     !inputs.plusChecked ||
-    inputs.plusProductsLoading ||
+    (inputs.plusProductsLoading && inputs.productCount === 0) ||
     inputs.ramBytes === null
   ) {
     return 'loading';

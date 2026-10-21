@@ -398,14 +398,26 @@ describe('PlusScreen', () => {
       expect(getByTestId('plus-unavailable-notice')).toBeTruthy();
     });
 
-    it('leaves the price area blank while loading', () => {
+    it('shows a spinner in place of the prices while loading', () => {
       set({plusChecked: false});
-      const {getByTestId, queryByTestId} = renderScreen();
+      const {getByLabelText, getByTestId, queryByTestId} = renderScreen();
 
+      expect(getByTestId('plus-loading')).toBeTruthy();
+      expect(getByLabelText('Loading')).toBeTruthy();
       expect(queryByTestId('plus-unavailable-notice')).toBeNull();
       expect(queryByTestId('plus-cta')).toBeNull();
       expect(queryByTestId('plus-tile-plus.1')).toBeNull();
       expect(getByTestId('plus-restore')).toBeTruthy();
+    });
+
+    it('keeps the loaded prices while a missing one reloads', () => {
+      setProducts(['plus.1', 'plus.2', 'plus.3']);
+      set({plusProductsLoading: true});
+      const {getByTestId, queryByTestId} = renderScreen();
+
+      expect(queryByTestId('plus-loading')).toBeNull();
+      expect(getByTestId('plus-tile-plus.3')).toBeTruthy();
+      expect(getByTestId('plus-cta')).toHaveTextContent('Get Plus · $4.99');
     });
   });
 
@@ -503,6 +515,20 @@ describe('PlusScreen', () => {
         busy: true,
       });
       expect(getByTestId('plus-restore-busy')).toBeTruthy();
+      expect(purchaseStore.restore).not.toHaveBeenCalled();
+    });
+
+    it('disables Restore while paying', () => {
+      set({plusFlow: 'paying'});
+      const {getByTestId, queryByTestId} = renderScreen();
+
+      fireEvent.press(getByTestId('plus-restore'));
+
+      expect(getByTestId('plus-restore').props.accessibilityState).toEqual({
+        disabled: true,
+        busy: false,
+      });
+      expect(queryByTestId('plus-restore-busy')).toBeNull();
       expect(purchaseStore.restore).not.toHaveBeenCalled();
     });
 

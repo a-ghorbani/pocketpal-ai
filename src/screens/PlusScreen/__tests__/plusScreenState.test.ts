@@ -61,6 +61,10 @@ describe('plusScreenState', () => {
     expect(phase(overrides)).toBe('loading');
   });
 
+  it('stays idle while a missing price reloads', () => {
+    expect(phase({plusProductsLoading: true, productCount: 3})).toBe('idle');
+  });
+
   it('is unavailable when the store returned no product after loading', () => {
     expect(phase({productCount: 0})).toBe('unavailable');
   });

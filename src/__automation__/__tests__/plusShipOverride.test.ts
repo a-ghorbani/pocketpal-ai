@@ -12,6 +12,9 @@ jest.mock('@react-native-async-storage/async-storage', () => {
     setItem: jest.fn(async (key: string, value: string) => {
       values.set(key, value);
     }),
+    removeItem: jest.fn(async (key: string) => {
+      values.delete(key);
+    }),
     clear: jest.fn(async () => values.clear()),
   };
 });

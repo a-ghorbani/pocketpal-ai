@@ -8,7 +8,6 @@ import {
   openPlus,
   plusGate,
   shouldReturnFocusOnClose,
-  whenPlusReady,
 } from '../gate';
 import {setShipOverride, shipOverride} from '../shipOverride';
 
@@ -190,11 +189,5 @@ describe('Plus gate', () => {
     stop();
 
     expect(seen).toEqual([false, true, false]);
-  });
-
-  it('waits for the stored unlock to load', async () => {
-    await whenPlusReady();
-
-    expect(purchaseStore.loadPlus).toHaveBeenCalledTimes(1);
   });
 });

@@ -1688,6 +1688,7 @@
     "buyError": "The purchase didn't go through. Try again.",
     "getPlus": "Get Plus · {{price}}",
     "getPlusAnyway": "Get Plus anyway · {{price}}",
+    "loading": "Loading",
     "pending": "Pending",
     "pendingTitle": "Waiting for the store to confirm your payment.",
     "pendingBody": "Plus unlocks on its own once it goes through. You can close this screen.",

@@ -23,8 +23,6 @@ export const isPlusAvailable = (): boolean => available.get();
 
 export const isPlusUnlocked = (): boolean => purchaseStore.plusUnlocked;
 
-export const whenPlusReady = (): Promise<void> => purchaseStore.loadPlus();
-
 export const openPlus = (opts: PlusRequest = {}): void => {
   if (!isPlusAvailable()) {
     return;
