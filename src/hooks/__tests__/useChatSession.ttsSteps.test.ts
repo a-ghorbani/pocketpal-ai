@@ -513,3 +513,95 @@ describe('useChatSession — auto-speak across agent steps', () => {
     warn.mockRestore();
   });
 });
+
+describe('useChatSession — a spoken turn with several tool calls', () => {
+  beforeEach(() => {
+    (ttsStore as any).autoSpeakEnabled = false;
+    (ttsStore as any).voiceOutputActive = true;
+  });
+
+  const sendSpoken = () => {
+    const {result} = renderHook(() =>
+      useChatSession({current: null}, textMessage.author, mockAssistant),
+    );
+    let sending!: Promise<unknown>;
+    act(() => {
+      sending = result.current.handleSendPress(textMessage, {spoken: true});
+    });
+    return {result, sending: () => sending};
+  };
+
+  it.each([
+    ['no text', []],
+    ['an echo of its calls', [echo('a')]],
+  ])(
+    'speaks only the final answer, once, after a step of three concurrent calls with %s',
+    async (_name, callStepTokens) => {
+      await offerSearchTool();
+      scriptCompletion([
+        {
+          tokens: callStepTokens,
+          toolCalls: [searchCall('a'), searchCall('b'), searchCall('c')],
+        },
+        {tokens: ['The', 'The answer is 42.']},
+      ]);
+
+      const {sending} = sendSpoken();
+      await act(async () => {
+        await sending();
+      });
+
+      expect(chatSessionStore.appendToolCall).toHaveBeenCalled();
+      expect(spokenText()).toBe('The answer is 42.');
+      expect(ttsStore.onAssistantMessageStart).toHaveBeenCalledTimes(1);
+      expect(ttsStore.onAssistantMessageComplete).toHaveBeenCalledTimes(1);
+      const finalStepStarted = callOrders(modelStore.context!.completion)[1];
+      chunkCalls().forEach((call, i) => {
+        if (call[1]) {
+          expect(
+            callOrders(ttsStore.onAssistantMessageChunk)[i],
+          ).toBeGreaterThan(finalStepStarted);
+        }
+      });
+    },
+  );
+
+  it('a Stop while its tool calls run cancels them and speaks nothing more', async () => {
+    await offerSearchTool();
+    const aborted: string[] = [];
+    let started = 0;
+    talentRegistry.register({
+      ...searchTalent,
+      execute: (args, ctx) =>
+        new Promise<TalentResult>(resolve => {
+          started += 1;
+          ctx?.signal?.addEventListener('abort', () => {
+            aborted.push(args.query);
+            resolve({type: 'error', summary: 'cancelled'} as TalentResult);
+          });
+        }),
+    });
+    scriptCompletion([
+      {
+        tokens: [],
+        toolCalls: [searchCall('a'), searchCall('b'), searchCall('c')],
+      },
+      {tokens: ['Never spoken.']},
+    ]);
+
+    const {result, sending} = sendSpoken();
+    await act(async () => {
+      await new Promise(resolve => setImmediate(resolve));
+    });
+    expect(started).toBe(3);
+
+    await act(async () => {
+      await result.current.handleStopPress();
+      await sending();
+    });
+
+    expect(aborted.sort()).toEqual(['a', 'b', 'c']);
+    expect(modelStore.context!.completion).toHaveBeenCalledTimes(1);
+    expect(spokenText()).toBe('');
+  });
+});
