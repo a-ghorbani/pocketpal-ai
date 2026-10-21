@@ -120,25 +120,37 @@ describe('ASRStore', () => {
     });
 
     it.each([
-      ['4B Q4', 3.2e9, true],
-      ['4B Q8', 4.3e9, false],
-    ])(
-      'iOS, chat model %s next to the memory free before any load → fits %s',
-      async (_name, chatBytes, fits) => {
+      ['1.7B', 1.9e9, 'small', true],
+      ['4B Q4', 3.2e9, 'base', false],
+      ['4B Q4', 3.2e9, 'small', false],
+      ['4B Q8', 4.3e9, 'base', false],
+    ] as const)(
+      'iOS, 4.2 GB free before any load, chat model %s + %s → fits %s',
+      async (_name, chatBytes, tier, fits) => {
         Platform.OS = 'ios';
         modelStore.availableMemoryCeiling = 4.2e9;
         // A past oversized load must not raise the budget.
         modelStore.largestSuccessfulLoad = 5.3e9;
         modelStore.loadedModelBytes = chatBytes;
-        store.setSelectedTier('base');
+        store.setSelectedTier(tier);
         await expect(store.hasMemoryForCapture()).resolves.toBe(fits);
       },
     );
 
+    it('iOS keeps a fifth of the free memory in reserve', async () => {
+      Platform.OS = 'ios';
+      modelStore.availableMemoryCeiling = 4e9;
+      store.setSelectedTier('base');
+      modelStore.loadedModelBytes = 3.2e9 - 330_000_000;
+      await expect(store.hasMemoryForCapture()).resolves.toBe(true);
+      modelStore.loadedModelBytes += 1;
+      await expect(store.hasMemoryForCapture()).resolves.toBe(false);
+    });
+
     it('iOS budgets the selected whisper model', async () => {
       Platform.OS = 'ios';
       modelStore.availableMemoryCeiling = 4.2e9;
-      modelStore.loadedModelBytes = 3.2e9;
+      modelStore.loadedModelBytes = 2.5e9;
       store.setSelectedTier('small');
       await expect(store.hasMemoryForCapture()).resolves.toBe(true);
       store.setSelectedTier('large-turbo');

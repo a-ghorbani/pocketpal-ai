@@ -16,6 +16,13 @@ export const ASR_DEVICE_TIERS: Tier[] = ['high', 'flagship'];
 export const ASR_ANDROID_RAM_SHARE = 0.45;
 
 /**
+ * iOS starts a recording only when the loaded chat model plus whisper fit this
+ * share of the memory free before any load. That reading misses the chat
+ * model's GPU memory, so a pair that fits it exactly can still abort whisper.
+ */
+export const ASR_IOS_CEILING_SHARE = 0.8;
+
+/**
  * Maximum recording length (ms). Reaching it ends capture as if the user
  * tapped stop.
  */
