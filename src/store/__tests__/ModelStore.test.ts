@@ -2459,6 +2459,7 @@ describe('ModelStore', () => {
       await settle(...handlers, pick);
 
       expect(initLlama).not.toHaveBeenCalled();
+      expect(hasEnoughMemoryMock).not.toHaveBeenCalled();
       expect(modelStore.activeModelId).toBe(remote.id);
       expect(modelStore.activeRemoteBinding?.modelId).toBe(remote.id);
       expect(modelStore.wasAutoReleased).toBe(false);
@@ -2477,10 +2478,59 @@ describe('ModelStore', () => {
       await settle(...handlers, eject);
 
       expect(initLlama).not.toHaveBeenCalled();
+      expect(hasEnoughMemoryMock).not.toHaveBeenCalled();
       expect(modelStore.context).toBeUndefined();
       expect(modelStore.activeModelId).toBeUndefined();
       expect(modelStore.wasAutoReleased).toBe(false);
       expect(modelStore.lastAutoReleasedModelId).toBeUndefined();
+    });
+
+    it('eject while a manual load awaits its memory check cancels the load', async () => {
+      let answer: (enough: boolean) => void = () => {};
+      hasEnoughMemoryMock.mockImplementation(
+        () =>
+          new Promise<boolean>(resolve => {
+            answer = resolve;
+          }),
+      );
+      const load = modelStore.initContext(modelB);
+      await waitUntil(() => hasEnoughMemoryMock.mock.calls.length > 0);
+      const eject = modelStore.manualReleaseContext();
+      answer(true);
+      await settle(load, eject);
+
+      expect(initLlama).not.toHaveBeenCalled();
+      expect(modelStore.activeModelId).toBeUndefined();
+    });
+
+    it('remote pick while a manual load awaits its memory check cancels the load', async () => {
+      const remote = {
+        id: 'srv-1/llama-7b',
+        name: 'llama-7b',
+        origin: ModelOrigin.REMOTE,
+        serverId: 'srv-1',
+        remoteModelId: 'llama-7b',
+      } as any;
+      runInAction(() => {
+        serverStore.servers = [
+          {id: 'srv-1', name: 'LM Studio', url: 'http://localhost:1234'},
+        ];
+      });
+      let answer: (enough: boolean) => void = () => {};
+      hasEnoughMemoryMock.mockImplementation(
+        () =>
+          new Promise<boolean>(resolve => {
+            answer = resolve;
+          }),
+      );
+      const load = modelStore.initContext(modelB);
+      await waitUntil(() => hasEnoughMemoryMock.mock.calls.length > 0);
+      await modelStore.selectModel(remote);
+      answer(true);
+      await settle(load);
+
+      expect(initLlama).not.toHaveBeenCalled();
+      expect(modelStore.activeModelId).toBe(remote.id);
     });
   });
 
