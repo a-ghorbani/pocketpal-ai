@@ -32,6 +32,7 @@
   "dependencies": {
     "@dr.pogodin/react-native-fs": "^2.36.0",
     "@flyerhq/react-native-link-preview": "^1.6.0",
+    "@fugood/react-native-audio-pcm-stream": "1.1.4",
     "@gorhom/bottom-sheet": "5.2.14",
     "@hookform/resolvers": "^5.2.2",
     "@invertase/react-native-apple-authentication": "2.5.1",
@@ -81,6 +82,7 @@
     "react-native-nitro-modules": "0.37.1",
     "react-native-paper": "5.15.3",
     "react-native-parsed-text": "^0.0.22",
+    "react-native-permissions": "5.6.0",
     "react-native-picker-select": "^9.3.1",
     "react-native-reanimated": "4.7.1",
     "react-native-render-html": "^6.3.4",
@@ -95,6 +97,7 @@
     "react-native-worklets": "0.13.0",
     "react-syntax-highlighter": "^15.6.6",
     "uuid": "^13.0.0",
+    "whisper.rn": "0.7.4",
     "zod": "^4.1.12"
   },
   "devDependencies": {

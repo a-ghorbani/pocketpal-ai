@@ -456,6 +456,223 @@ describe('WebSearchEngine', () => {
     });
   });
 
+  describe('rate limits', () => {
+    const hitUrl = 'https://found.example.com/mars';
+    const tavilyAccess = () =>
+      makeAccess({getActiveProvider: () => new TavilyProvider(() => 'key')});
+    const rateLimited = (entries: Record<string, string> = {}) => ({
+      ok: false,
+      status: 429,
+      headers: {get: (name: string) => entries[name.toLowerCase()] ?? null},
+      text: () => Promise.resolve(''),
+    });
+    const found = {
+      ok: true,
+      status: 200,
+      headers: {get: () => null},
+      text: () =>
+        Promise.resolve(
+          JSON.stringify({
+            results: [{title: 'Mars', url: hitUrl, content: 'rover'}],
+          }),
+        ),
+    };
+    const rateLimitError = {
+      type: 'error',
+      summary: 'web_search: request failed (429)',
+      errorMessage: 'request failed (429)',
+    };
+
+    beforeEach(() => {
+      jest.useFakeTimers();
+      readUrlAllowlist.resetReadUrlAllowlist();
+    });
+
+    afterEach(() => {
+      jest.useRealTimers();
+      jest.restoreAllMocks();
+    });
+
+    it('succeeds after one retry, caching and allowlisting the hits once', async () => {
+      global.fetch = jest
+        .fn()
+        .mockResolvedValueOnce(rateLimited({'retry-after': '1'}))
+        .mockResolvedValueOnce(found);
+      const setCached = jest.spyOn(budget, 'setCachedHits');
+      const allow = jest.spyOn(readUrlAllowlist, 'allowReadUrls');
+
+      const pending = new WebSearchEngine(tavilyAccess()).execute({
+        query: 'mars',
+      });
+      await jest.advanceTimersByTimeAsync(1000);
+      const result = await pending;
+
+      expect(result.type).toBe('search');
+      expect(global.fetch).toHaveBeenCalledTimes(2);
+      expect(setCached).toHaveBeenCalledTimes(1);
+      expect(allow).toHaveBeenCalledTimes(1);
+      expect(budget.getCachedHits('tavily', 'mars', 3)).toHaveLength(1);
+      expect(readUrlAllowlist.matchReadUrl(hitUrl)).not.toBeNull();
+    });
+
+    it('reports the existing error when the retry is rate-limited too', async () => {
+      global.fetch = jest.fn().mockResolvedValue(rateLimited());
+
+      const pending = new WebSearchEngine(tavilyAccess()).execute({
+        query: 'mars',
+      });
+      await jest.advanceTimersByTimeAsync(1000);
+
+      expect(await pending).toEqual(rateLimitError);
+      expect(global.fetch).toHaveBeenCalledTimes(2);
+    });
+
+    it('reports the existing error at once when the server asks for more than 2 s', async () => {
+      global.fetch = jest
+        .fn()
+        .mockResolvedValue(rateLimited({'retry-after': '30'}));
+
+      const result = await new WebSearchEngine(tavilyAccess()).execute({
+        query: 'mars',
+      });
+
+      expect(result).toEqual(rateLimitError);
+      expect(global.fetch).toHaveBeenCalledTimes(1);
+    });
+
+    it('returns "cancelled" when the run aborts during the wait', async () => {
+      global.fetch = jest
+        .fn()
+        .mockResolvedValueOnce(rateLimited({'x-ratelimit-reset': '1'}))
+        .mockResolvedValueOnce(found);
+      const run = new AbortController();
+
+      const pending = new WebSearchEngine(tavilyAccess()).execute(
+        {query: 'mars'},
+        {signal: run.signal},
+      );
+      await jest.advanceTimersByTimeAsync(500);
+      run.abort();
+
+      expect(await pending).toEqual({
+        type: 'error',
+        summary: 'web_search: cancelled',
+        errorMessage: 'cancelled',
+      });
+      await jest.advanceTimersByTimeAsync(5000);
+      expect(global.fetch).toHaveBeenCalledTimes(1);
+    });
+  });
+
+  describe('identical searches in flight', () => {
+    const unhandled = jest.fn();
+    const marsUrl = 'https://example.com/mars';
+    const afterTick = () => new Promise(resolve => setImmediate(resolve));
+
+    beforeEach(() => {
+      unhandled.mockClear();
+      process.on('unhandledRejection', unhandled);
+      readUrlAllowlist.resetReadUrlAllowlist();
+    });
+
+    afterEach(() => {
+      process.off('unhandledRejection', unhandled);
+    });
+
+    it('share one request and its results, which are cached and allowlisted', async () => {
+      const search = jest.fn(async (query: string) => [
+        hit({title: query, url: `https://example.com/${query}`}),
+      ]);
+      const engine = new WebSearchEngine(
+        makeAccess({getActiveProvider: () => ({id: 'tavily', search})}),
+      );
+
+      const [o0, o1, o2] = await Promise.all(
+        ['mars', 'mars', 'venus'].map(query => engine.execute({query})),
+      );
+
+      expect(search).toHaveBeenCalledTimes(2);
+      expect(o0.type).toBe('search');
+      expect((o1 as any).results).toEqual((o0 as any).results);
+      expect((o2 as any).query).toBe('venus');
+      expect(budget.getCachedHits('tavily', 'mars', 3)).toBeDefined();
+      expect(readUrlAllowlist.matchReadUrl(marsUrl)).not.toBeNull();
+
+      resetSearchCache();
+      await engine.execute({query: 'mars'});
+      expect(search).toHaveBeenCalledTimes(3);
+    });
+
+    it('fail together on a shared failure, caching nothing, and a later search fetches again', async () => {
+      const search = jest
+        .fn()
+        .mockRejectedValueOnce(new Error('request failed (500)'))
+        .mockResolvedValue([hit()]);
+      const engine = new WebSearchEngine(
+        makeAccess({getActiveProvider: () => ({id: 'tavily', search})}),
+      );
+
+      const results = await Promise.all([
+        engine.execute({query: 'mars'}),
+        engine.execute({query: 'mars'}),
+      ]);
+
+      expect(results.map(r => r.summary)).toEqual([
+        'web_search: request failed (500)',
+        'web_search: request failed (500)',
+      ]);
+      expect(budget.getCachedHits('tavily', 'mars', 3)).toBeUndefined();
+
+      await engine.execute({query: 'mars'});
+      expect(search).toHaveBeenCalledTimes(2);
+      await afterTick();
+      expect(unhandled).not.toHaveBeenCalled();
+    });
+
+    it('cancel together on Stop, caching nothing, and a later search fetches again', async () => {
+      global.fetch = abortableFetch();
+      const engine = new WebSearchEngine(
+        makeAccess({getActiveProvider: () => new TavilyProvider(() => 'key')}),
+      );
+      const run = new AbortController();
+      const pending = Promise.all([
+        engine.execute({query: 'mars'}, {signal: run.signal}),
+        engine.execute({query: 'mars'}, {signal: run.signal}),
+      ]);
+      for (
+        let i = 0;
+        i < 50 && (global.fetch as jest.Mock).mock.calls.length === 0;
+        i += 1
+      ) {
+        await Promise.resolve();
+      }
+
+      run.abort();
+      const results = await pending;
+
+      expect(global.fetch).toHaveBeenCalledTimes(1);
+      expect(results.map(r => (r as any).errorMessage)).toEqual([
+        'cancelled',
+        'cancelled',
+      ]);
+      expect(budget.getCachedHits('tavily', 'mars', 3)).toBeUndefined();
+
+      global.fetch = abortableFetch({
+        body: JSON.stringify({
+          results: [{title: 'Mars', url: marsUrl, content: 'rover'}],
+        }),
+      });
+      const later = await engine.execute(
+        {query: 'mars'},
+        {signal: new AbortController().signal},
+      );
+      expect(later.type).toBe('search');
+      expect(global.fetch).toHaveBeenCalledTimes(1);
+      await afterTick();
+      expect(unhandled).not.toHaveBeenCalled();
+    });
+  });
+
   describe('systemPromptFragment', () => {
     const frag = (active: string[]) =>
       new WebSearchEngine(makeAccess()).systemPromptFragment({

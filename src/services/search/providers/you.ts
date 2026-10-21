@@ -52,6 +52,7 @@ export class YouProvider implements SearchProvider {
       data = await fetchJson<YouResponse | null>(
         `${key ? YOU_KEYED_URL : YOU_FREE_URL}?${params}`,
         {method: 'GET', headers, signal},
+        {retryOn429: true},
       );
     } catch (e) {
       if (e instanceof Error && e.message === 'request failed (429)') {

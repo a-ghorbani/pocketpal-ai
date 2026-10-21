@@ -1,30 +1,34 @@
-import {abortableFetch} from '../../../../../jest/abortableFetch';
+import {abortableFetch, okResponse} from '../../../../../jest/abortableFetch';
 
-import {readWithDefaultReader} from '../..';
-import {BraveProvider} from '../brave';
-import {ExaProvider} from '../exa';
-import {FirecrawlProvider} from '../firecrawl';
-import {ParallelProvider} from '../parallel';
-import {TavilyProvider} from '../tavily';
+import {createSearchProvider, readWithDefaultReader} from '../..';
+import {SEARCH_PROVIDERS} from '../../../../store/SearchProviderStore';
 
 type NetworkCall = (signal?: AbortSignal) => Promise<unknown>;
 
 const opts = {maxResults: 3};
 const key = () => 'key';
+const pageUrl = 'https://example.com';
 
-const calls: Array<[string, NetworkCall]> = [
-  ['Tavily search', s => new TavilyProvider(key).search('q', opts, s)],
-  ['Brave search', s => new BraveProvider(key).search('q', opts, s)],
-  ['Exa search', s => new ExaProvider(key).search('q', opts, s)],
-  ['Exa read', s => new ExaProvider(key).read('https://example.com', s)],
-  ['Firecrawl search', s => new FirecrawlProvider(key).search('q', opts, s)],
-  [
-    'Firecrawl read',
-    s => new FirecrawlProvider(key).read('https://example.com', s),
+const providers = SEARCH_PROVIDERS.map(
+  ({id, label}) => [label, createSearchProvider(id, key)] as const,
+);
+
+const searches: Array<[string, NetworkCall]> = providers.map(
+  ([label, provider]) => [
+    `${label} search`,
+    s => provider.search('q', opts, s),
   ],
-  ['Parallel search', s => new ParallelProvider(key).search('q', opts, s)],
-  ['default reader', s => readWithDefaultReader('https://example.com', s)],
+);
+
+const reads: Array<[string, NetworkCall]> = [
+  ...providers.flatMap(([label, provider]): Array<[string, NetworkCall]> => {
+    const read = provider.read?.bind(provider);
+    return read ? [[`${label} read`, s => read(pageUrl, s)]] : [];
+  }),
+  ['default reader', s => readWithDefaultReader(pageUrl, s)],
 ];
+
+const calls = [...searches, ...reads];
 
 describe('search network calls honour the caller signal', () => {
   beforeEach(() => {
@@ -59,6 +63,51 @@ describe('search network calls honour the caller signal', () => {
     });
 
     await expect(run()).resolves.toBeDefined();
+    expect(global.fetch).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe('search network calls on a 429', () => {
+  const rateLimited = {
+    ok: false,
+    status: 429,
+    headers: {get: () => null},
+    text: () => Promise.resolve(''),
+  } as unknown as Response;
+
+  beforeEach(() => {
+    jest.useFakeTimers();
+  });
+
+  afterEach(() => {
+    jest.useRealTimers();
+  });
+
+  it.each(searches)('%s retries once', async (_label, run) => {
+    global.fetch = jest
+      .fn()
+      .mockResolvedValueOnce(rateLimited)
+      .mockResolvedValueOnce(
+        okResponse('{"type":"search","results":[],"success":true,"data":{}}'),
+      );
+
+    const result = run();
+    await jest.advanceTimersByTimeAsync(1000);
+
+    await expect(result).resolves.toBeDefined();
+    expect(global.fetch).toHaveBeenCalledTimes(2);
+  });
+
+  it.each(reads)('%s is not retried', async (_label, run) => {
+    global.fetch = jest.fn().mockResolvedValue(rateLimited);
+
+    const result = run().then(
+      () => 'resolved',
+      (e: Error) => e.message,
+    );
+    await jest.advanceTimersByTimeAsync(5000);
+
+    expect(await result).toBe('request failed (429)');
     expect(global.fetch).toHaveBeenCalledTimes(1);
   });
 });
