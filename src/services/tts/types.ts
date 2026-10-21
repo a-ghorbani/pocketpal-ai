@@ -5,7 +5,7 @@
  * rest of the app doesn't touch that package directly.
  */
 
-export type EngineId = 'kitten' | 'kokoro' | 'supertonic' | 'system';
+export type EngineId = 'kitten' | 'kokoro' | 'supertonic' | 'phonon' | 'system';
 
 /** Engines whose model files the app downloads and manages. */
 export type NeuralEngineId = Exclude<EngineId, 'system'>;

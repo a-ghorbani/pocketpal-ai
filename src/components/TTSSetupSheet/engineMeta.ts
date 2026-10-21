@@ -1,3 +1,5 @@
+import {Platform} from 'react-native';
+
 import type {EngineId} from '../../services/tts';
 
 /**
@@ -50,6 +52,14 @@ export const ENGINE_META: Record<EngineId, EngineMeta> = {
     accent: '#1E4DF6',
     gradientFrom: 'rgba(30, 77, 246, 0.14)',
     gradientTo: 'rgba(30, 77, 246, 0.02)',
+  },
+  phonon: {
+    sizeMb: Platform.OS === 'ios' ? 0 : 64, // PLACEHOLDER (iOS)
+    ramMb: 300, // PLACEHOLDER
+    voices: 8,
+    accent: '#0E9F8E',
+    gradientFrom: 'rgba(14, 159, 142, 0.14)',
+    gradientTo: 'rgba(14, 159, 142, 0.02)',
   },
   system: {
     sizeMb: 0,

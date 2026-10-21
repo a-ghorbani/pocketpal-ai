@@ -35,6 +35,8 @@ import {
   SUPERTONIC_MODEL_ESTIMATED_BYTES,
   KOKORO_MODEL_ESTIMATED_BYTES,
   KITTEN_MODEL_ESTIMATED_BYTES,
+  PHONON_MODEL_ESTIMATED_BYTES,
+  PHONON_VOICES,
   SystemEngine,
   getEngine,
 } from '../../services/tts';
@@ -65,6 +67,8 @@ const engineTitle = (engineId: EngineId, l: L10n): string => {
       return l.voiceAndSpeech.engineChipKokoro;
     case 'supertonic':
       return l.voiceAndSpeech.engineChipSupertonic;
+    case 'phonon':
+      return l.voiceAndSpeech.engineChipPhonon;
     case 'system':
       return Platform.OS === 'ios'
         ? l.voiceAndSpeech.engineSystemTitleIos
@@ -80,6 +84,8 @@ const engineTagline = (engineId: EngineId, l: L10n): string => {
       return l.voiceAndSpeech.engineKokoroTagline;
     case 'supertonic':
       return l.voiceAndSpeech.engineSupertonicTagline;
+    case 'phonon':
+      return l.voiceAndSpeech.enginePhononTagline;
     case 'system':
       return l.voiceAndSpeech.engineSystemTagline;
   }
@@ -93,6 +99,8 @@ const engineTierLabel = (engineId: EngineId, l: L10n): string => {
       return l.voiceAndSpeech.engineTierBestQuality;
     case 'supertonic':
       return l.voiceAndSpeech.engineTierFastestStart;
+    case 'phonon':
+      return l.voiceAndSpeech.engineTierNatural;
     case 'system':
       return l.voiceAndSpeech.engineSystemTier;
   }
@@ -106,6 +114,8 @@ const neuralStateFor = (engineId: NeuralEngineId): DownloadState => {
       return ttsStore.kokoroDownloadState;
     case 'supertonic':
       return ttsStore.supertonicDownloadState;
+    case 'phonon':
+      return ttsStore.phononDownloadState;
   }
 };
 
@@ -117,6 +127,8 @@ const neuralProgressFor = (engineId: NeuralEngineId): number => {
       return ttsStore.kokoroDownloadProgress;
     case 'supertonic':
       return ttsStore.supertonicDownloadProgress;
+    case 'phonon':
+      return ttsStore.phononDownloadProgress;
   }
 };
 
@@ -128,6 +140,8 @@ const neuralErrorFor = (engineId: NeuralEngineId): string | null => {
       return ttsStore.kokoroDownloadError;
     case 'supertonic':
       return ttsStore.supertonicDownloadError;
+    case 'phonon':
+      return ttsStore.phononDownloadError;
   }
 };
 
@@ -139,6 +153,8 @@ const triggerDownload = (engineId: NeuralEngineId) => {
       return ttsStore.downloadKokoro();
     case 'supertonic':
       return ttsStore.downloadSupertonic();
+    case 'phonon':
+      return ttsStore.downloadPhonon();
   }
 };
 
@@ -150,6 +166,8 @@ const triggerRetry = (engineId: NeuralEngineId) => {
       return ttsStore.retryKokoroDownload();
     case 'supertonic':
       return ttsStore.retryDownload();
+    case 'phonon':
+      return ttsStore.retryPhononDownload();
   }
 };
 
@@ -161,6 +179,8 @@ const triggerDelete = (engineId: NeuralEngineId) => {
       return ttsStore.deleteKokoro();
     case 'supertonic':
       return ttsStore.deleteSupertonic();
+    case 'phonon':
+      return ttsStore.deletePhonon();
   }
 };
 
@@ -168,6 +188,7 @@ const NEURAL_ESTIMATED_BYTES: Record<NeuralEngineId, number> = {
   supertonic: SUPERTONIC_MODEL_ESTIMATED_BYTES,
   kokoro: KOKORO_MODEL_ESTIMATED_BYTES,
   kitten: KITTEN_MODEL_ESTIMATED_BYTES,
+  phonon: PHONON_MODEL_ESTIMATED_BYTES,
 };
 
 /** True when we know there isn't enough disk space (with 20% buffer). */
@@ -190,6 +211,7 @@ const VOICES_BY_ENGINE: Record<EngineId, Voice[]> = {
   kitten: KITTEN_VOICES,
   kokoro: KOKORO_VOICES,
   supertonic: SUPERTONIC_VOICES,
+  phonon: PHONON_VOICES,
   system: [], // populated async via SystemEngine
 };
 

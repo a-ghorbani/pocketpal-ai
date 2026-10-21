@@ -58,6 +58,8 @@ const downloadFor = (id: NeuralEngineId): (() => Promise<void>) => {
       return ttsStore.downloadSupertonic;
     case 'kitten':
       return ttsStore.downloadKitten;
+    case 'phonon':
+      return ttsStore.downloadPhonon;
     default: {
       const unhandled: never = id;
       throw new Error(`unknown tts engine: ${String(unhandled)}`);
@@ -73,6 +75,8 @@ const installedStateFor = (id: NeuralEngineId): boolean => {
       return ttsStore.supertonicDownloadState === 'ready';
     case 'kitten':
       return ttsStore.kittenDownloadState === 'ready';
+    case 'phonon':
+      return ttsStore.phononDownloadState === 'ready';
     default: {
       const unhandled: never = id;
       throw new Error(`unknown tts engine: ${String(unhandled)}`);

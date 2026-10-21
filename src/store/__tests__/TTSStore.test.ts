@@ -44,6 +44,16 @@ const mockKittenDownloadModel = jest.fn().mockResolvedValue(undefined);
 const mockKittenDeleteModel = jest.fn().mockResolvedValue(undefined);
 const mockKittenPlay = jest.fn().mockResolvedValue(undefined);
 const mockKittenStop = jest.fn().mockResolvedValue(undefined);
+const mockPhononIsInstalled = jest.fn().mockResolvedValue(false);
+const mockPhononDownloadModel = jest.fn().mockResolvedValue(undefined);
+const mockPhononDeleteModel = jest.fn().mockResolvedValue(undefined);
+const mockPhononReclaimLegacySpace = jest.fn().mockResolvedValue(undefined);
+const mockPhononPlay = jest.fn().mockResolvedValue(undefined);
+const mockPhononStop = jest.fn().mockResolvedValue(undefined);
+const mockPhononGetVoices = jest.fn().mockResolvedValue([
+  {id: 'Zoey', name: 'Zoey', engine: 'phonon', language: 'en-us'},
+  {id: 'Alfie', name: 'Alfie', engine: 'phonon', language: 'en-gb'},
+]);
 // Per-streaming-session handle factories — we build a fresh spy-backed
 // handle for each `playStreaming()` call and expose the most recent one
 // on `lastSystemHandle` / `lastSupertonicHandle` so tests can assert.
@@ -81,7 +91,9 @@ const mockSupertonicPlayStreaming = jest.fn(() => {
 
 jest.mock('../../services/tts', () => {
   const actual = jest.requireActual('../../services/tts');
-  const getEngine = (id: 'system' | 'supertonic' | 'kokoro' | 'kitten') => {
+  const getEngine = (
+    id: 'system' | 'supertonic' | 'kokoro' | 'kitten' | 'phonon',
+  ) => {
     if (id === 'system') {
       return {
         id: 'system',
@@ -107,6 +119,23 @@ jest.mock('../../services/tts', () => {
         downloadModel: mockKokoroDownloadModel,
         deleteModel: mockKokoroDeleteModel,
         reclaimLegacySpace: mockKokoroReclaimLegacySpace,
+      };
+    }
+    if (id === 'phonon') {
+      return {
+        id: 'phonon',
+        isInstalled: mockPhononIsInstalled,
+        getVoices: mockPhononGetVoices,
+        play: mockPhononPlay,
+        playStreaming: jest.fn(() => ({
+          appendText: jest.fn(),
+          finalize: jest.fn().mockResolvedValue(undefined),
+          cancel: jest.fn().mockResolvedValue(undefined),
+        })),
+        stop: mockPhononStop,
+        downloadModel: mockPhononDownloadModel,
+        deleteModel: mockPhononDeleteModel,
+        reclaimLegacySpace: mockPhononReclaimLegacySpace,
       };
     }
     if (id === 'kitten') {
@@ -1222,6 +1251,60 @@ describe('TTSStore', () => {
 
       expect(mockKittenDeleteModel).toHaveBeenCalledTimes(1);
       expect(store.kittenDownloadState).toBe('not_installed');
+      expect(store.currentVoice).toBeNull();
+    });
+  });
+
+  describe('Phonon download state machine', () => {
+    it('downloadPhonon: reaches ready, selects the first voice, and leaves Kitten untouched', async () => {
+      const store = await makeStore();
+      const kittenBefore = store.kittenDownloadState;
+
+      const promise = store.downloadPhonon();
+      expect(store.phononDownloadState).toBe('downloading');
+      expect(store.kittenDownloadState).toBe(kittenBefore);
+      await promise;
+
+      expect(mockPhononReclaimLegacySpace).toHaveBeenCalledTimes(1);
+      expect(mockPhononDownloadModel).toHaveBeenCalledTimes(1);
+      expect(mockKittenDownloadModel).not.toHaveBeenCalled();
+      expect(store.phononDownloadState).toBe('ready');
+      expect(store.kittenDownloadState).toBe(kittenBefore);
+      expect(store.currentVoice?.engine).toBe('phonon');
+      expect(store.currentVoice?.id).toBe('Zoey');
+    });
+
+    it('downloadPhonon: error path; retryPhononDownload recovers', async () => {
+      const store = await makeStore();
+      mockPhononDownloadModel
+        .mockRejectedValueOnce(new Error('sha256 mismatch'))
+        .mockResolvedValueOnce(undefined);
+
+      await store.downloadPhonon();
+      expect(store.phononDownloadState).toBe('error');
+      expect(store.phononDownloadError).toBe('sha256 mismatch');
+
+      await store.retryPhononDownload();
+      expect(store.phononDownloadState).toBe('ready');
+      expect(store.phononDownloadError).toBeNull();
+    });
+
+    it('deletePhonon: clears a Phonon voice and leaves Kitten untouched', async () => {
+      mockKittenIsInstalled.mockResolvedValueOnce(true);
+      const store = await makeStore();
+      store.setCurrentVoice({
+        id: 'Zoey',
+        name: 'Zoey',
+        engine: 'phonon',
+        language: 'en-us',
+      });
+
+      await store.deletePhonon();
+
+      expect(mockPhononDeleteModel).toHaveBeenCalledTimes(1);
+      expect(mockKittenDeleteModel).not.toHaveBeenCalled();
+      expect(store.phononDownloadState).toBe('not_installed');
+      expect(store.kittenDownloadState).toBe('ready');
       expect(store.currentVoice).toBeNull();
     });
   });

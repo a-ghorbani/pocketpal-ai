@@ -15,6 +15,7 @@ import {
   SUPERTONIC_MODEL_ESTIMATED_BYTES,
   KOKORO_MODEL_ESTIMATED_BYTES,
   KITTEN_MODEL_ESTIMATED_BYTES,
+  PHONON_MODEL_ESTIMATED_BYTES,
   ttsRuntime,
 } from '../services/tts';
 import type {
@@ -149,6 +150,10 @@ export class TTSStore {
   kittenDownloadState: NeuralDownloadState = 'not_installed';
   kittenDownloadProgress: number = 0;
   kittenDownloadError: string | null = null;
+
+  phononDownloadState: NeuralDownloadState = 'not_installed';
+  phononDownloadProgress: number = 0;
+  phononDownloadError: string | null = null;
 
   // Idempotency guard for the auto-speak path.
   lastSpokenMessageId: string | null = null;
@@ -362,6 +367,9 @@ export class TTSStore {
       case 'kitten':
         this.kittenDownloadState = state;
         break;
+      case 'phonon':
+        this.phononDownloadState = state;
+        break;
       default: {
         const unhandled: never = id;
         throw new Error(`[TTSStore] unknown engine ${String(unhandled)}`);
@@ -379,6 +387,9 @@ export class TTSStore {
         break;
       case 'kitten':
         this.kittenDownloadProgress = progress;
+        break;
+      case 'phonon':
+        this.phononDownloadProgress = progress;
         break;
       default: {
         const unhandled: never = id;
@@ -398,6 +409,9 @@ export class TTSStore {
       case 'kitten':
         this.kittenDownloadError = error;
         break;
+      case 'phonon':
+        this.phononDownloadError = error;
+        break;
       default: {
         const unhandled: never = id;
         throw new Error(`[TTSStore] unknown engine ${String(unhandled)}`);
@@ -413,6 +427,8 @@ export class TTSStore {
         return this.kokoroDownloadState;
       case 'kitten':
         return this.kittenDownloadState;
+      case 'phonon':
+        return this.phononDownloadState;
       default: {
         const unhandled: never = id;
         throw new Error(`[TTSStore] unknown engine ${String(unhandled)}`);
@@ -695,6 +711,7 @@ export class TTSStore {
     supertonic: SUPERTONIC_MODEL_ESTIMATED_BYTES,
     kokoro: KOKORO_MODEL_ESTIMATED_BYTES,
     kitten: KITTEN_MODEL_ESTIMATED_BYTES,
+    phonon: PHONON_MODEL_ESTIMATED_BYTES,
   };
 
   private async downloadNeuralEngine(id: NeuralEngineId): Promise<void> {
@@ -814,6 +831,10 @@ export class TTSStore {
     return this.downloadNeuralEngine('kitten');
   }
 
+  async downloadPhonon(): Promise<void> {
+    return this.downloadNeuralEngine('phonon');
+  }
+
   /** Retry a failed Supertonic download (preserved for API compat). */
   async retryDownload(): Promise<void> {
     return this.downloadNeuralEngine('supertonic');
@@ -827,6 +848,10 @@ export class TTSStore {
     return this.downloadNeuralEngine('kitten');
   }
 
+  async retryPhononDownload(): Promise<void> {
+    return this.downloadNeuralEngine('phonon');
+  }
+
   async deleteSupertonic(): Promise<void> {
     return this.deleteNeuralEngine('supertonic');
   }
@@ -837,6 +862,10 @@ export class TTSStore {
 
   async deleteKitten(): Promise<void> {
     return this.deleteNeuralEngine('kitten');
+  }
+
+  async deletePhonon(): Promise<void> {
+    return this.deleteNeuralEngine('phonon');
   }
 }
 

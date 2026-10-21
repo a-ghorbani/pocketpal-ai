@@ -39,6 +39,10 @@ class MockTTSStore {
   kittenDownloadProgress = 0;
   kittenDownloadError: string | null = null;
 
+  phononDownloadState: DownloadState = 'not_installed';
+  phononDownloadProgress = 0;
+  phononDownloadError: string | null = null;
+
   init: jest.Mock;
   play: jest.Mock;
   preview: jest.Mock;
@@ -63,6 +67,9 @@ class MockTTSStore {
   downloadKitten: jest.Mock;
   retryKittenDownload: jest.Mock;
   deleteKitten: jest.Mock;
+  downloadPhonon: jest.Mock;
+  retryPhononDownload: jest.Mock;
+  deletePhonon: jest.Mock;
 
   constructor() {
     makeAutoObservable(this, {
@@ -90,6 +97,9 @@ class MockTTSStore {
       downloadKitten: false,
       retryKittenDownload: false,
       deleteKitten: false,
+      downloadPhonon: false,
+      retryPhononDownload: false,
+      deletePhonon: false,
     });
     this.init = jest.fn().mockResolvedValue(undefined);
     this.play = jest.fn().mockResolvedValue(undefined);
@@ -115,6 +125,9 @@ class MockTTSStore {
     this.downloadKitten = jest.fn().mockResolvedValue(undefined);
     this.retryKittenDownload = jest.fn().mockResolvedValue(undefined);
     this.deleteKitten = jest.fn().mockResolvedValue(undefined);
+    this.downloadPhonon = jest.fn().mockResolvedValue(undefined);
+    this.retryPhononDownload = jest.fn().mockResolvedValue(undefined);
+    this.deletePhonon = jest.fn().mockResolvedValue(undefined);
   }
 }
 
