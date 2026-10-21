@@ -107,8 +107,8 @@ export class ASRStore {
    * Whether whisper fits next to the loaded chat model, by the app's estimate
    * of both. Android's free-memory figure can be far off (#982), so Android
    * budgets against total RAM. iOS does not count mmap'd chat weights against
-   * the app, so iOS budgets against a share of what it reported free before
-   * any load.
+   * the app, so iOS budgets against what it reported free before any load,
+   * keeping a reserve (ASR_IOS_CEILING_SHARE).
    */
   async hasMemoryForCapture(): Promise<boolean> {
     const whisperBytes = ASR_TIERS[this.selectedTier].runtimeBytes;

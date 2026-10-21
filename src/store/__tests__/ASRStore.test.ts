@@ -24,6 +24,7 @@ import {
   ASR_INSUFFICIENT_STORAGE,
   ASR_LEVEL_HISTORY,
   ASR_TIER_ORDER,
+  ASR_TIERS,
   whisperAsrEngine,
 } from '../../services/asr';
 import {ASRStore} from '../ASRStore';
@@ -141,7 +142,7 @@ describe('ASRStore', () => {
       Platform.OS = 'ios';
       modelStore.availableMemoryCeiling = 4e9;
       store.setSelectedTier('base');
-      modelStore.loadedModelBytes = 3.2e9 - 330_000_000;
+      modelStore.loadedModelBytes = 3.2e9 - ASR_TIERS.base.runtimeBytes;
       await expect(store.hasMemoryForCapture()).resolves.toBe(true);
       modelStore.loadedModelBytes += 1;
       await expect(store.hasMemoryForCapture()).resolves.toBe(false);

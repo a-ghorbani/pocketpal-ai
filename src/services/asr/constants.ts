@@ -17,8 +17,8 @@ export const ASR_ANDROID_RAM_SHARE = 0.45;
 
 /**
  * iOS starts a recording only when the loaded chat model plus whisper fit this
- * share of the memory free before any load. That reading misses the chat
- * model's GPU memory, so a pair that fits it exactly can still abort whisper.
+ * share of the memory free before any load. That reading likely misses the
+ * chat model's GPU memory: a pair that fit it once aborted whisper's init.
  */
 export const ASR_IOS_CEILING_SHARE = 0.8;
 
