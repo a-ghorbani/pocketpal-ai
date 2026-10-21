@@ -8,6 +8,7 @@ import {SafeAreaView, useSafeAreaInsets} from 'react-native-safe-area-context';
 import {BuildInfo} from 'llama.rn';
 
 import {submitFeedback} from '../../api/feedback';
+import phononNotices from '../../assets/licenses/phononThirdPartyNotices.json';
 
 import {CopyIcon, GithubIcon, ChevronRightIcon} from '../../assets/icons';
 
@@ -31,6 +32,7 @@ export const AboutScreen: React.FC = () => {
   const styles = createStyles(theme, insets);
   const l10n = useContext(L10nContext);
   const [showFeedback, setShowFeedback] = useState(false);
+  const [showNotices, setShowNotices] = useState(false);
 
   const [appInfo, setAppInfo] = React.useState({
     version: '',
@@ -177,6 +179,13 @@ export const AboutScreen: React.FC = () => {
               onPress={() => Linking.openURL('https://pocketpal.dev/terms')}>
               {l10n.about.termsOfService}
             </Text>
+            <Text style={styles.legalSeparator}>·</Text>
+            <Text
+              style={styles.legalLink}
+              onPress={() => setShowNotices(true)}
+              testID="about-open-source-notices">
+              {l10n.about.openSourceNotices}
+            </Text>
           </View>
         </View>
       </ScrollView>
@@ -267,6 +276,25 @@ export const AboutScreen: React.FC = () => {
             {l10n.feedback.submit}
           </Button>
         </Sheet.Actions>
+      </Sheet>
+
+      <Sheet
+        title={l10n.about.openSourceNotices}
+        isVisible={showNotices}
+        displayFullHeight
+        onClose={() => setShowNotices(false)}>
+        <Sheet.ScrollView
+          contentContainerStyle={styles.noticesContent}
+          testID="about-open-source-notices-sheet">
+          <Text style={styles.noticesCredit}>
+            {l10n.about.phononNoticesCredit}
+          </Text>
+          {phononNotices.map((section, i) => (
+            <Text key={i} selectable style={styles.noticesText}>
+              {section}
+            </Text>
+          ))}
+        </Sheet.ScrollView>
       </Sheet>
     </SafeAreaView>
   );

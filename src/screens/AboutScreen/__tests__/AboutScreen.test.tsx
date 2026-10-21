@@ -59,6 +59,17 @@ describe('AboutScreen', () => {
     );
   });
 
+  it('opens the bundled open-source notices in a sheet without a network link', () => {
+    const {getByTestId, getByText} = render(<AboutScreen />);
+
+    fireEvent.press(getByTestId('about-open-source-notices'));
+
+    expect(getByTestId('about-open-source-notices-sheet')).toBeTruthy();
+    expect(getByText(l10n.en.about.phononNoticesCredit)).toBeTruthy();
+    expect(getByText(/^## Licenses used/)).toBeTruthy();
+    expect(Linking.openURL).not.toHaveBeenCalled();
+  });
+
   it('opens GitHub URL when GitHub button is pressed', () => {
     const {getByText} = render(<AboutScreen />);
 

@@ -132,4 +132,17 @@ export const createStyles = (theme: Theme, insets: EdgeInsets) =>
       color: theme.colors.onSurfaceVariant,
       opacity: 0.5,
     },
+    noticesContent: {
+      padding: theme.spacing.default,
+      paddingBottom: insets.bottom + theme.spacing.default,
+    },
+    noticesCredit: {
+      ...theme.fonts.bodyMedium,
+      color: theme.colors.onSurface,
+      marginBottom: theme.spacing.default,
+    },
+    noticesText: {
+      ...theme.fonts.bodySmall,
+      color: theme.colors.onSurfaceVariant,
+    },
   });

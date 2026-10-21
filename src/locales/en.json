@@ -555,7 +555,9 @@
     "tourDescription": "Replay the welcome screens to see what PocketPal AI offers.",
     "showIntroButton": "Show intro again",
     "privacyPolicy": "Privacy Policy",
-    "termsOfService": "Terms of Service"
+    "termsOfService": "Terms of Service",
+    "openSourceNotices": "Open-source notices",
+    "phononNoticesCredit": "Phonon voice model and voices by Gradium, licensed under Apache-2.0. Built on Pocket TTS and the Mimi codec by Kyutai."
   },
   "feedback": {
     "title": "Send Feedback",
