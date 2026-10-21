@@ -47,7 +47,8 @@ export const createStyles = ({
       paddingHorizontal: 8,
       paddingVertical: 4,
       marginLeft: 8,
-      flexShrink: 1,
+      // Give up width only once the pal name has none left.
+      flexShrink: 0.001,
       minWidth: 32,
     },
     thinkingToggleLeftDisabled: {
@@ -67,6 +68,7 @@ export const createStyles = ({
       alignItems: 'center',
       gap: 4,
       flexShrink: 1,
+      minWidth: 32,
     },
     inputWrapper: {
       flexDirection: 'row',

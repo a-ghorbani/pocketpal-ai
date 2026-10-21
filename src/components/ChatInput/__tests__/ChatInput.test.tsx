@@ -415,8 +415,14 @@ describe('input', () => {
       expect(getByTestId('active-pal-name').props.numberOfLines).toBe(1);
       expect(getByTestId('thinking-toggle-label').props.numberOfLines).toBe(1);
       expect(shrinkOf('pal-selector')).toBe(1);
+      expect(
+        StyleSheet.flatten(getByTestId('pal-selector').props.style).minWidth,
+      ).toBe(32);
       expect(shrinkOf('active-pal-name')).toBe(1);
-      expect(shrinkOf('thinking-toggle')).toBe(1);
+      expect(shrinkOf('thinking-toggle')).toBeGreaterThan(0);
+      expect(shrinkOf('thinking-toggle')).toBeLessThan(
+        shrinkOf('pal-selector') / 100,
+      );
       expect(shrinkOf('thinking-toggle-label')).toBe(1);
       expect(
         StyleSheet.flatten(getByTestId('thinking-toggle').props.style).minWidth,
