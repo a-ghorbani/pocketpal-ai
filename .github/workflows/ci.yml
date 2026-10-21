@@ -353,6 +353,7 @@ jobs:
             'memory-snapshot-result'
             'BENCH_RUN_MATRIX'
             'bench-runner-screen-status'
+            'ASR_AUTOMATION_STATE'
             'IAP_API_BASE_OVERRIDE'
             'IAP_FAKE_STORE'
           )

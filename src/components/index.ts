@@ -66,6 +66,8 @@ export * from './DownloadProgressCard';
 export * from './ToolErrorBlock';
 export * from './ToolMetricsFooter';
 export * from './ToolUsedChip';
+export * from './MicButton';
+export * from './VoiceRecordingBar';
 export * from './UsageStats';
 export * from './VideoPalEmptyPlaceholder';
 export * from './VoiceChip';
