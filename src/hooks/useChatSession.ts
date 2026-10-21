@@ -399,6 +399,7 @@ async function applyEventToStore(
     hasImages: boolean;
     isMultimodalEnabled: boolean;
     tts: TtsRunState;
+    stopped: boolean;
   },
 ): Promise<void> {
   switch (event.type) {
@@ -551,7 +552,12 @@ async function applyEventToStore(
       }
       // Fire TTS auto-speak after the final text is observable. Store
       // enforces auto-speak / voice / idempotency gating internally.
+      // A stopped run ends on whatever step it reached, often a tool-call
+      // step, so it speaks nothing more.
       // Wrapped defensively — UI-path errors must not bubble.
+      if (ctx.stopped) {
+        return;
+      }
       try {
         ttsStore.onAssistantMessageComplete(
           ctx.messageId,
@@ -918,6 +924,7 @@ export const useChatSession = (
           hasImages,
           isMultimodalEnabled,
           tts,
+          stopped: lease.signal.aborted,
         });
 
         if (performance.now() - lastYieldTs >= YIELD_INTERVAL_MS) {

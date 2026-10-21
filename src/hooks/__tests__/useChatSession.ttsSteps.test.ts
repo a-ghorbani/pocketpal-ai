@@ -538,6 +538,18 @@ describe('useChatSession — a spoken turn with several tool calls', () => {
     'speaks only the final answer, once, after a step of three concurrent calls with %s',
     async (_name, callStepTokens) => {
       await offerSearchTool();
+      const delayMs: Record<string, number> = {a: 30, b: 10, c: 20};
+      const settled: string[] = [];
+      talentRegistry.register({
+        ...searchTalent,
+        execute: args =>
+          new Promise<TalentResult>(resolve =>
+            setTimeout(() => {
+              settled.push(args.query);
+              resolve({type: 'text', summary: args.query} as TalentResult);
+            }, delayMs[args.query]),
+          ),
+      });
       scriptCompletion([
         {
           tokens: callStepTokens,
@@ -551,7 +563,12 @@ describe('useChatSession — a spoken turn with several tool calls', () => {
         await sending();
       });
 
-      expect(chatSessionStore.appendToolCall).toHaveBeenCalled();
+      expect(settled).toEqual(['b', 'c', 'a']);
+      expect(
+        (chatSessionStore.appendToolOutcome as jest.Mock).mock.calls.map(
+          call => call[2].result.summary,
+        ),
+      ).toEqual(['a', 'b', 'c']);
       expect(spokenText()).toBe('The answer is 42.');
       expect(ttsStore.onAssistantMessageStart).toHaveBeenCalledTimes(1);
       expect(ttsStore.onAssistantMessageComplete).toHaveBeenCalledTimes(1);
@@ -583,7 +600,7 @@ describe('useChatSession — a spoken turn with several tool calls', () => {
     });
     scriptCompletion([
       {
-        tokens: [],
+        tokens: [echo('a')],
         toolCalls: [searchCall('a'), searchCall('b'), searchCall('c')],
       },
       {tokens: ['Never spoken.']},
@@ -603,5 +620,7 @@ describe('useChatSession — a spoken turn with several tool calls', () => {
     expect(aborted.sort()).toEqual(['a', 'b', 'c']);
     expect(modelStore.context!.completion).toHaveBeenCalledTimes(1);
     expect(spokenText()).toBe('');
+    expect(ttsStore.onAssistantMessageComplete).not.toHaveBeenCalled();
+    expect(ttsStore.play).not.toHaveBeenCalled();
   });
 });
