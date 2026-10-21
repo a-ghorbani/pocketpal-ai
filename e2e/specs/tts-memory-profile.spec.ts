@@ -37,7 +37,12 @@ import {SCREENSHOT_DIR, OUTPUT_DIR} from '../wdio.shared.conf';
 
 declare const driver: WebdriverIO.Browser;
 
-const ENGINES = ['kitten', 'supertonic', 'kokoro'];
+const ENGINES = [
+  'kitten',
+  'supertonic',
+  'kokoro',
+  ...(process.env.TTS_PROFILE_PHONON === '1' ? ['phonon'] : []),
+];
 
 const DOWNLOAD_TIMEOUT_MS = 15 * 60 * 1000;
 const SYNTH_TIMEOUT_MS = 5 * 60 * 1000;
