@@ -58,7 +58,7 @@ const setup = (verdict: any) => {
     useMessageActions({
       user,
       messages,
-      handleSendPress,
+      resendPress: handleSendPress,
       setInputText,
       setInputDocuments,
       evaluateSendBudget,
@@ -103,10 +103,12 @@ describe('useMessageActions with documents', () => {
       'u1',
       true,
     );
-    expect(t.handleSendPress).toHaveBeenCalledWith(
-      {text: 'Summarise', type: 'text', imageUris: undefined, documents: [doc]},
-      {preChecked: true},
-    );
+    expect(t.handleSendPress).toHaveBeenCalledWith({
+      text: 'Summarise',
+      type: 'text',
+      imageUris: undefined,
+      documents: [doc],
+    });
     expect(releaseDocuments).not.toHaveBeenCalled();
   });
 
@@ -152,7 +154,6 @@ describe('useMessageActions with documents', () => {
 
     expect(t.handleSendPress).toHaveBeenCalledWith(
       expect.objectContaining({documents: [doc]}),
-      {preChecked: true},
     );
   });
 

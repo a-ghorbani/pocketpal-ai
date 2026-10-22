@@ -773,19 +773,46 @@ export const ChatView = observer(
       [mergeIntoComposer],
     );
 
-    const wrappedOnSendPress = React.useCallback(
+    /** The send steps a composer send and a resend share. */
+    const dispatchSend = React.useCallback(
       async (
         message: MessageType.PartialText,
-        {preChecked = false}: {preChecked?: boolean} = {},
+        {clearComposer}: {clearComposer: boolean},
       ) => {
+        const documentIds = (message.documents ?? []).map(ref => ref.id);
+        holdForSend(documentIds);
+        try {
+          const draftKey =
+            chatSessionStore.activeSessionId ?? NEW_CHAT_DRAFT_KEY;
+          if (chatSessionStore.isEditMode) {
+            await chatSessionStore.commitEdit();
+          }
+          const sent = onSendPress(message);
+          if (clearComposer) {
+            setInputText('');
+            setInputImages([]);
+            updateComposerDocuments(() => []);
+            syncedDraftRef.current = '';
+            chatSessionStore.clearDraft(draftKey);
+            Keyboard.dismiss();
+          }
+          const undone = await sent;
+          if (undone) {
+            restoreUndone(undone);
+          }
+        } finally {
+          releaseSendHold(documentIds);
+        }
+      },
+      [onSendPress, restoreUndone, updateComposerDocuments],
+    );
+
+    const sendFromComposer = React.useCallback(
+      async (message: MessageType.PartialText) => {
         if (chatSessionStore.isStopping) {
           return;
         }
-        if (
-          !preChecked &&
-          evaluateSendBudget &&
-          hasDocuments(messages, message)
-        ) {
+        if (evaluateSendBudget && hasDocuments(messages, message)) {
           if (budgetCheckRef.current) {
             return;
           }
@@ -803,36 +830,25 @@ export const ChatView = observer(
             return;
           }
         }
-        const documentIds = (message.documents ?? []).map(ref => ref.id);
-        holdForSend(documentIds);
-        try {
-          const draftKey =
-            chatSessionStore.activeSessionId ?? NEW_CHAT_DRAFT_KEY;
-          if (chatSessionStore.isEditMode) {
-            await chatSessionStore.commitEdit();
-          }
-          const sent = onSendPress(message);
-          setInputText('');
-          setInputImages([]);
-          updateComposerDocuments(() => []);
-          syncedDraftRef.current = '';
-          chatSessionStore.clearDraft(draftKey);
-          Keyboard.dismiss();
-          const undone = await sent;
-          if (undone) {
-            restoreUndone(undone);
-          }
-        } finally {
-          releaseSendHold(documentIds);
-        }
+        await dispatchSend(message, {clearComposer: true});
       },
-      [
-        onSendPress,
-        restoreUndone,
-        evaluateSendBudget,
-        messages,
-        updateComposerDocuments,
-      ],
+      [dispatchSend, evaluateSendBudget, messages],
+    );
+
+    /**
+     * Resends an existing row; the resend gate has already checked the budget.
+     * Outside edit mode the composer is left as it is.
+     */
+    const resend = React.useCallback(
+      async (message: MessageType.PartialText) => {
+        if (chatSessionStore.isStopping) {
+          return;
+        }
+        await dispatchSend(message, {
+          clearComposer: chatSessionStore.isEditMode,
+        });
+      },
+      [dispatchSend],
     );
 
     const handleCancelEdit = React.useCallback(() => {
@@ -858,7 +874,7 @@ export const ChatView = observer(
       useMessageActions({
         user,
         messages,
-        handleSendPress: wrappedOnSendPress,
+        resendPress: resend,
         setInputText,
         setInputImages,
         setInputDocuments: setComposerRefs,
@@ -1349,7 +1365,7 @@ export const ChatView = observer(
               // only outcome, so the user can never scroll the list to reveal
               // content the keyboard is hiding; "none" lets the drag scroll
               // while the input stays focused. Tap-to-dismiss on send is
-              // preserved via Keyboard.dismiss() in wrappedOnSendPress.
+              // preserved via Keyboard.dismiss() in the composer send.
               keyboardDismissMode={
                 Platform.OS === 'ios' ? 'interactive' : 'none'
               }
@@ -1491,7 +1507,7 @@ export const ChatView = observer(
                 {...{
                   ...unwrap(inputProps),
                   isStreaming,
-                  onSendPress: wrappedOnSendPress,
+                  onSendPress: sendFromComposer,
                   onStopPress,
                   chatInputHeight,
                   inputBackgroundColor,
@@ -1540,7 +1556,7 @@ export const ChatView = observer(
                 <SuggestedPromptsRow
                   prompts={activePal.greeting.suggestedPrompts}
                   onSelect={prompt =>
-                    wrappedOnSendPress({type: 'text', text: prompt})
+                    sendFromComposer({type: 'text', text: prompt})
                   }
                 />
               </Reanimated.View>

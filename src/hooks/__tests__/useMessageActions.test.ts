@@ -39,7 +39,7 @@ describe('useMessageActions', () => {
       useMessageActions({
         user,
         messages,
-        handleSendPress: mockHandleSendPress,
+        resendPress: mockHandleSendPress,
         setInputText: mockSetInputText,
       }),
     );
@@ -60,7 +60,7 @@ describe('useMessageActions', () => {
       useMessageActions({
         user,
         messages,
-        handleSendPress: mockHandleSendPress,
+        resendPress: mockHandleSendPress,
         setInputText: mockSetInputText,
       }),
     );
@@ -86,7 +86,7 @@ describe('useMessageActions', () => {
       useMessageActions({
         user,
         messages,
-        handleSendPress: mockHandleSendPress,
+        resendPress: mockHandleSendPress,
         setInputText: mockSetInputText,
       }),
     );
@@ -111,7 +111,7 @@ describe('useMessageActions', () => {
         useMessageActions({
           user,
           messages,
-          handleSendPress: mockHandleSendPress,
+          resendPress: mockHandleSendPress,
           setInputText: mockSetInputText,
         }),
       );
@@ -160,7 +160,7 @@ describe('useMessageActions', () => {
         useMessageActions({
           user,
           messages: _messages,
-          handleSendPress: mockHandleSendPress,
+          resendPress: mockHandleSendPress,
           setInputText: mockSetInputText,
         }),
       );
@@ -186,7 +186,7 @@ describe('useMessageActions', () => {
         useMessageActions({
           user,
           messages,
-          handleSendPress: mockHandleSendPress,
+          resendPress: mockHandleSendPress,
           setInputText: mockSetInputText,
         }),
       );
@@ -207,7 +207,7 @@ describe('useMessageActions', () => {
         useMessageActions({
           user,
           messages,
-          handleSendPress: mockHandleSendPress,
+          resendPress: mockHandleSendPress,
           setInputText: mockSetInputText,
         }),
       );
@@ -258,7 +258,7 @@ describe('useMessageActions', () => {
         useMessageActions({
           user,
           messages: [userMsg, turnSingle],
-          handleSendPress: mockHandleSendPress,
+          resendPress: mockHandleSendPress,
           setInputText: mockSetInputText,
         }),
       );
@@ -277,7 +277,7 @@ describe('useMessageActions', () => {
         useMessageActions({
           user,
           messages: [userMsg, turnSingle],
-          handleSendPress: mockHandleSendPress,
+          resendPress: mockHandleSendPress,
           setInputText: mockSetInputText,
         }),
       );
@@ -292,7 +292,7 @@ describe('useMessageActions', () => {
         useMessageActions({
           user,
           messages: [userMsg, turnMulti],
-          handleSendPress: mockHandleSendPress,
+          resendPress: mockHandleSendPress,
           setInputText: mockSetInputText,
         }),
       );
@@ -309,7 +309,7 @@ describe('useMessageActions', () => {
         useMessageActions({
           user,
           messages: [turnSingle],
-          handleSendPress: mockHandleSendPress,
+          resendPress: mockHandleSendPress,
           setInputText: mockSetInputText,
         }),
       );
@@ -329,7 +329,7 @@ describe('useMessageActions', () => {
         useMessageActions({
           user,
           messages: messageList,
-          handleSendPress: mockHandleSendPress,
+          resendPress: mockHandleSendPress,
           setInputText: mockSetInputText,
         }),
       );
@@ -353,7 +353,7 @@ describe('useMessageActions', () => {
         useMessageActions({
           user,
           messages: messageList,
-          handleSendPress: mockHandleSendPress,
+          resendPress: mockHandleSendPress,
           setInputText: mockSetInputText,
         }),
       );

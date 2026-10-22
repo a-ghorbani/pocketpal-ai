@@ -12,6 +12,13 @@ import * as documentStore from '../../../services/documents/store';
 import type {DocumentRef} from '../../../services/documents/types';
 import type {UndoneSend} from '../../../hooks/useChatSession';
 
+jest.mock('react-native-image-picker', () => ({
+  launchCamera: jest.fn(),
+  launchImageLibrary: jest.fn(async () => ({
+    assets: [{uri: 'file:///staged.jpg'}],
+  })),
+}));
+
 jest.mock('../../ChatEmptyPlaceholder', () => ({
   ChatEmptyPlaceholder: jest.fn(() => null),
 }));
@@ -630,5 +637,101 @@ describe('ChatView composer merge', () => {
 
     expect(chat.screen.getAllByText('restored.pdf')).toHaveLength(1);
     expect(chat.input().props.value).toBe('Summarise');
+  });
+});
+
+describe('ChatView resend', () => {
+  const menuLabels = l10n.en.components.chatView.menuItems;
+  const question = {
+    ...textMessage,
+    id: 'question-row',
+    author: user,
+    text: 'Earlier question',
+  };
+  const answer = {
+    ...textMessage,
+    id: 'answer-row',
+    author: {id: 'assistant'},
+    text: 'Earlier answer',
+  };
+  const fits = {
+    newModes: [],
+    fullLoad: 0,
+    room: undefined,
+    excerptBudget: 0,
+    verdict: {kind: 'fits' as const},
+  };
+  const store = chatSessionStore as any;
+
+  afterEach(() => {
+    store.isEditMode = false;
+    store.editingMessageId = null;
+    delete store.commitEdit;
+  });
+
+  const regenerateAnswer = async (chat: ReturnType<typeof renderChat>) => {
+    fireEvent(chat.screen.getByText('Earlier answer'), 'onLongPress', {
+      nativeEvent: {pageX: 0, pageY: 0},
+    });
+    await act(async () => {
+      fireEvent.press(chat.screen.getByText(menuLabels.regenerate));
+    });
+  };
+
+  const stageImage = async (chat: ReturnType<typeof renderChat>) => {
+    fireEvent.press(chat.screen.getByLabelText('Add attachment'));
+    await waitFor(() => chat.screen.getByTestId('attach-gallery'));
+    await act(async () => {
+      fireEvent.press(chat.screen.getByTestId('attach-gallery'));
+    });
+  };
+
+  it('Try again keeps the composer text, image and chip, and the chip stays held', async () => {
+    const staged = ref('staged-chip');
+    let heldDuringSend: boolean | undefined;
+    const chat = renderChat({
+      messages: [answer, question],
+      isVisionEnabled: true,
+      evaluateSendBudget: jest.fn().mockResolvedValue(fits),
+    });
+    chat.onSendPress.mockImplementation(async () => {
+      heldDuringSend = documentStore.isHeld(staged.id);
+      return undefined;
+    });
+    await chat.attach(staged);
+    await stageImage(chat);
+    chat.type('draft');
+
+    await regenerateAnswer(chat);
+
+    expect(chat.onSendPress).toHaveBeenCalledWith(
+      expect.objectContaining({text: 'Earlier question'}),
+    );
+    expect(heldDuringSend).toBe(true);
+    expect(chat.input().props.value).toBe('draft');
+    expect(chat.screen.getByText('staged-chip.pdf')).toBeTruthy();
+    expect(chat.screen.getAllByLabelText(/^Image preview/)).toHaveLength(1);
+    expect(documentStore.isHeld(staged.id)).toBe(true);
+  });
+
+  it('Try again in edit mode commits the edit and clears the composer', async () => {
+    store.isEditMode = true;
+    store.editingMessageId = 'question-row';
+    store.commitEdit = jest.fn(async () => {
+      store.isEditMode = false;
+    });
+    const chat = renderChat({
+      messages: [answer, question],
+      evaluateSendBudget: jest.fn().mockResolvedValue(fits),
+    });
+    await chat.attach(ref('edit-chip'));
+    chat.type('edited');
+
+    await regenerateAnswer(chat);
+
+    expect(store.commitEdit).toHaveBeenCalled();
+    expect(chat.onSendPress).toHaveBeenCalled();
+    expect(chat.input().props.value).toBe('');
+    expect(chat.screen.queryByText('edit-chip.pdf')).toBeNull();
   });
 });
