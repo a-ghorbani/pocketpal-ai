@@ -1105,6 +1105,20 @@ describe('useVoiceMode', () => {
       }
     });
 
+    it('two restarts that overlap open the mic once', async () => {
+      const {enter} = renderVoiceMode();
+      await enter();
+      interruption('began');
+
+      interruption('ended');
+      interruption('ended');
+      await settleMic();
+      await flush();
+
+      expect(AudioRecord.init).toHaveBeenCalledTimes(2);
+      expect(AudioRecord.start).toHaveBeenCalledTimes(2);
+    });
+
     it('interrupt a spoken reply, and the mic opens again with no ended event', async () => {
       const {enter, turns} = renderVoiceMode();
       await enter();

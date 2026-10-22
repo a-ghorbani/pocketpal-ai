@@ -105,6 +105,7 @@ class VoiceModeController {
   private readonly endpointer = new Endpointer();
   private listener: {remove(): void} | null = null;
   private captureSettled: Promise<void> = Promise.resolve();
+  private micStarting: Promise<void> | null = null;
   private micWatchdog: ReturnType<typeof setTimeout> | null = null;
   private micRetried = false;
   private openModelPicker: () => void = () => {};
@@ -365,6 +366,21 @@ class VoiceModeController {
   }
 
   private async startCapture(session: number): Promise<void> {
+    while (this.micStarting) {
+      await this.micStarting;
+    }
+    const starting = this.openMic(session);
+    this.micStarting = starting;
+    try {
+      await starting;
+    } finally {
+      if (this.micStarting === starting) {
+        this.micStarting = null;
+      }
+    }
+  }
+
+  private async openMic(session: number): Promise<void> {
     if (!this.isListening(session) || this.listener) {
       return;
     }
