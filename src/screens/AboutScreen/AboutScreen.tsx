@@ -17,6 +17,9 @@ import {useTheme} from '../../hooks';
 import {createStyles} from './styles';
 import {L10nContext} from '../../utils';
 import {uiStore} from '../../store';
+import {reflowNotice} from './reflowNotice';
+
+const NOTICE_SECTIONS = phononNotices.map(reflowNotice);
 
 const GithubButtonIcon = ({color}: {color: string}) => (
   <GithubIcon stroke={color} />
@@ -321,7 +324,7 @@ export const AboutScreen: React.FC = () => {
           <Text style={styles.noticesCredit}>
             {l10n.about.phononNoticesCredit}
           </Text>
-          {phononNotices.map((section, i) => (
+          {NOTICE_SECTIONS.map((section, i) => (
             <Text key={i} selectable style={styles.noticesText}>
               {section}
             </Text>
