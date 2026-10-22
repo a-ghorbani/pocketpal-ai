@@ -5,8 +5,8 @@
  * against the e2e FakeStore. Plus is store-only, so PalsHub (the host mock)
  * must see no Plus traffic.
  *
- * Every setup marks one Plus feature shipped (plus_ship), because Plus UI
- * exists only while a Plus feature has shipped.
+ * Hands-free voice ships, so Plus UI is always present; the setups still
+ * pass plus_ship, which can only add shipped features.
  */
 
 import {expect} from '@wdio/globals';
@@ -284,19 +284,18 @@ describe('PocketPal Plus', () => {
     await plus.waitFor('plus-test-feature-unlocked');
   });
 
-  it('has no Plus entry or screen while no Plus feature has shipped', async () => {
+  it('shows the Plus entry and screen with no override, since hands-free voice ships', async () => {
     await openPlusWith(openDrawer, {ship: 'none'});
 
     await browser
       .$(Selectors.drawer.settingsTab)
       .waitForDisplayed({timeout: 20000});
-    expect(await plus.hasSidebarEntry(1000)).toBe(false);
+    expect(await plus.hasSidebarEntry(5000)).toBe(true);
 
     await openDeepLink(PLUS_FEATURE_URL);
     await plus.waitFor('plus-test-feature-open');
     await browser.$(byExactTestId('plus-test-feature-open')).click();
-    await browser.pause(3000);
-    expect(await plus.isShown('plus-close', 500)).toBe(false);
+    await plus.waitFor('plus-close');
     expect(await plus.isShown('plus-test-feature-unlocked', 500)).toBe(false);
   });
 
