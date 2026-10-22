@@ -5,6 +5,7 @@ import {Platform} from 'react-native';
 import {voiceModeDeviceSupported} from '../../src/services/voice/deviceGate';
 
 import {mockModelStore} from './modelStore';
+import {mockPurchaseStore} from './purchaseStore';
 
 type VoicePhase =
   | 'closed'
@@ -117,7 +118,8 @@ class MockVoiceModeStore {
 export const mockVoiceModeStore = new MockVoiceModeStore();
 
 const defaultSource = {
-  isUnlocked: () => mockVoiceModeStore.unlockOverride ?? false,
+  isUnlocked: () =>
+    mockVoiceModeStore.unlockOverride ?? mockPurchaseStore.plusUnlocked,
   openPaywall: jest.fn(),
 };
 

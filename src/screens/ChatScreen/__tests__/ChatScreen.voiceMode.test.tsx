@@ -6,6 +6,7 @@ import {modelsList} from '../../../../jest/fixtures/models';
 import {
   asrStore,
   modelStore,
+  purchaseStore,
   voiceEntitlement,
   voiceModeStore,
 } from '../../../store';
@@ -94,6 +95,30 @@ describe('ChatScreen voice mode entry', () => {
     ).toHaveBeenCalledTimes(1);
     expect(voiceModeStore.phase).toBe('closed');
     expect(pickerOpen()).toBe(false);
+  });
+
+  it('with Plus unlocked, shows no lock and goes past the paywall', async () => {
+    runInAction(() => {
+      purchaseStore.plusUnlocked = true;
+      modelStore.models = modelsList as any;
+      modelStore.activeModelId = modelsList[0].id;
+    });
+    const {getByTestId, queryByTestId} = renderScreen();
+    expect(queryByTestId('voice-mode-lock')).toBeNull();
+
+    await act(async () => {
+      fireEvent.press(getByTestId('voice-mode-button'));
+    });
+
+    expect(
+      (voiceEntitlement as any).defaultSource.openPaywall,
+    ).not.toHaveBeenCalled();
+    expect(
+      mockSheetsShown.length > 0 || voiceModeStore.phase !== 'closed',
+    ).toBe(true);
+    runInAction(() => {
+      purchaseStore.plusUnlocked = false;
+    });
   });
 
   it('shows the voice view over the chat while open in full view', () => {
