@@ -9,6 +9,7 @@ import {BuildInfo} from 'llama.rn';
 
 import {submitFeedback} from '../../api/feedback';
 import phononNotices from '../../assets/licenses/phononThirdPartyNotices.json';
+import {REPO_URL} from '../../config/urls';
 
 import {CopyIcon, GithubIcon, ChevronRightIcon} from '../../assets/icons';
 
@@ -157,9 +158,7 @@ export const AboutScreen: React.FC = () => {
             </Text>
             <Button
               mode="outlined"
-              onPress={() =>
-                Linking.openURL('https://github.com/a-ghorbani/pocketpal-ai')
-              }
+              onPress={() => Linking.openURL(REPO_URL)}
               style={styles.actionButton}
               icon={GithubButtonIcon}>
               {l10n.about.githubButton}
