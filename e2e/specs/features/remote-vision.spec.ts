@@ -56,14 +56,51 @@ const NONVISION_HINT = process.env.REMOTE_NONVISION_MODEL_HINT || '';
 
 const ADD_ATTACHMENT_BUTTON = '~Add attachment';
 
+/**
+ * Vertical centre of the chat header, read while it is still visible: once the
+ * attach menu opens, XCUITest hides the header's buttons.
+ */
+async function headerCentreY(height: number): Promise<number> {
+  const menuButton = browser.$(Selectors.chat.menuButton);
+  if (await menuButton.isExisting().catch(() => false)) {
+    const {y} = await menuButton.getLocation();
+    const size = await menuButton.getSize();
+    return Math.round(y + size.height / 2);
+  }
+  return Math.round(height * 0.12);
+}
+
+/** Closes the attach menu: its backdrop on Android, a tap on the header line on iOS. */
+async function closeAttachMenu(iosTapY: number, width: number): Promise<void> {
+  if (driver.isAndroid) {
+    await browser.$('~Close menu').click();
+  } else {
+    await browser
+      .action('pointer', {parameters: {pointerType: 'touch'}})
+      .move({x: Math.round(width / 2), y: iosTapY})
+      .down()
+      .up()
+      .perform();
+  }
+  await browser
+    .$(byTestId('attach-camera'))
+    .waitForExist({reverse: true, timeout: 5000});
+}
+
 async function cameraItemEnabled(): Promise<boolean> {
+  const {width, height} = await (
+    browser as unknown as {
+      getWindowSize: () => Promise<{width: number; height: number}>;
+    }
+  ).getWindowSize();
+  const iosTapY = await headerCentreY(height);
   const plus = browser.$(ADD_ATTACHMENT_BUTTON);
   await plus.waitForExist({timeout: 10000});
   await plus.click();
   const camera = browser.$(byTestId('attach-camera'));
   await camera.waitForExist({timeout: 5000});
   const enabled = await camera.isEnabled();
-  await browser.$('~Close menu').click();
+  await closeAttachMenu(iosTapY, width);
   return enabled;
 }
 
