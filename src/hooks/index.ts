@@ -6,4 +6,5 @@ export * from './useMessageActions';
 export * from './useStorageCheck';
 export * from './useDeepLinking';
 export * from './usePalLoadHint';
+export * from './useVoiceCapture';
 export * from './useMenuStatusBarHeight';

@@ -14,7 +14,7 @@ import {
   GestureHandlerRootView,
 } from 'react-native-gesture-handler';
 
-import {purchaseStore, ttsStore, uiStore} from './src/store';
+import {asrStore, purchaseStore, ttsStore, uiStore} from './src/store';
 import {useTheme} from './src/hooks';
 import {useDeepLinking} from './src/hooks/useDeepLinking';
 import {useNavigationBarAppearance} from './src/hooks/useNavigationBarAppearance';
@@ -103,6 +103,9 @@ const App = observer(() => {
   // Fire-and-forget: `init()` is idempotent and swallows its own errors.
   React.useEffect(() => {
     ttsStore.init().catch(() => {
+      // init() swallows its own errors; catch to satisfy no-floating-promises.
+    });
+    asrStore.init().catch(() => {
       // init() swallows its own errors; catch to satisfy no-floating-promises.
     });
   }, []);

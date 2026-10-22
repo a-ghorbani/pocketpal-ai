@@ -61,6 +61,7 @@ import {deepLinkStore as mockDeepLinkStore} from '../__mocks__/stores/deepLinkSt
 import {mockServerStore} from '../__mocks__/stores/serverStore';
 import {mockRouterStore} from '../__mocks__/stores/routerStore';
 import {mockTTSStore} from '../__mocks__/stores/ttsStore';
+import {mockASRStore} from '../__mocks__/stores/asrStore';
 import {mockSearchProviderStore} from '../__mocks__/stores/searchProviderStore';
 import {mockPurchaseStore} from '../__mocks__/stores/purchaseStore';
 
@@ -131,6 +132,7 @@ jest.mock('../src/store', () => {
     serverStore: mockServerStore,
     routerStore: mockRouterStore,
     ttsStore: mockTTSStore,
+    asrStore: mockASRStore,
     searchProviderStore: mockSearchProviderStore,
     purchaseStore: mockPurchaseStore,
     defaultCompletionSettings: mockDefaultCompletionSettings,
