@@ -19,6 +19,12 @@ import {vtrace} from '../../utils/voiceTrace';
 import {runVoiceCommand, voiceTraceDump} from '../voiceAutomation';
 
 describe('runVoiceCommand', () => {
+  const initialOS = Platform.OS;
+
+  afterEach(() => {
+    Platform.OS = initialOS;
+  });
+
   beforeEach(() => {
     jest.spyOn(console, 'log').mockImplementation(() => {});
     (voiceModeStore as any).reset();
@@ -126,6 +132,7 @@ describe('runVoiceCommand', () => {
   it('trace::clear empties the trace and the published dump', async () => {
     vtrace('tap', {phase: 'listening'});
     await runVoiceCommand('trace::dump');
+    expect(voiceTraceDump.get()).not.toBe('');
 
     await runVoiceCommand('trace::clear');
     await runVoiceCommand('trace::dump');

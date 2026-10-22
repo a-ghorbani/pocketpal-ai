@@ -30,7 +30,7 @@ export function vtrace(event: string, data?: Record<string, TraceValue>): void {
     lines[next] = line;
   }
   next = (next + 1) % CAPACITY;
-  if (__DEV__) {
+  if (__DEV__ && process.env.NODE_ENV !== 'test') {
     console.log(`[voiceTrace] ${line}`);
   }
 }
@@ -61,7 +61,12 @@ if (__E2E__ && !__DEV__) {
   console.log = (...args: unknown[]) => {
     const message = args[0];
     if (typeof message === 'string' && message.startsWith(LIBRARY_STREAM_LOG)) {
-      vtrace('lib', {m: message.slice(LIBRARY_STREAM_LOG.length, 100)});
+      vtrace('lib', {
+        m: message.slice(
+          LIBRARY_STREAM_LOG.length,
+          LIBRARY_STREAM_LOG.length + 100,
+        ),
+      });
     }
     log(...args);
   };

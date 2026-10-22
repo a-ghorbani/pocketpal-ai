@@ -26,6 +26,14 @@ describe('voiceTrace', () => {
     jest.restoreAllMocks();
   });
 
+  it('echoes nothing to the console under test', () => {
+    const trace = loadWithGate(true, true);
+
+    trace.vtrace('phase', {to: 'thinking'});
+
+    expect(console.log).not.toHaveBeenCalled();
+  });
+
   it('records nothing in a production build', () => {
     const trace = loadWithGate(false, false);
 
@@ -83,10 +91,14 @@ describe('voiceTrace', () => {
 
       console.log('[EngineStream][Engine] chunk#1 DONE: play=812ms, t+900ms');
       console.log('unrelated');
-
-      expect(trace.dumpVoiceTrace()).toMatch(
-        /^\d+ lib m=chunk#1 DONE: play=812ms, t\+900ms$/,
+      console.log(
+        '[EngineStream][Engine] chunk#12 START: text_len=143, gap_since_prev=1234ms, offset=1048576, t+1234567ms',
       );
+
+      expect(trace.dumpVoiceTrace().split('\n')).toEqual([
+        expect.stringMatching(/^\d+ lib m=chunk#1 DONE: play=812ms, t\+900ms$/),
+        expect.stringMatching(/ offset=1048576, t\+1234567ms$/),
+      ]);
     } finally {
       console.log = original;
     }
