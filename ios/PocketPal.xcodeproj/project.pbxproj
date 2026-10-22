@@ -26,8 +26,6 @@
 		9AE3DCE490A24E01AA31653A /* Inter-Light.ttf in Resources */ = {isa = PBXBuildFile; fileRef = AE37F4EB27084262BAE95F85 /* Inter-Light.ttf */; };
 		9BD11C540B6D45308B7727A2 /* Fraunces-MediumItalic.ttf in Resources */ = {isa = PBXBuildFile; fileRef = EE113D56B0AD433688D66860 /* Fraunces-MediumItalic.ttf */; };
 		A81001102E92E09600935976 /* KeepAwakeModule.mm in Sources */ = {isa = PBXBuildFile; fileRef = A810010E2E92E09600935976 /* KeepAwakeModule.mm */; };
-		A8F0D0012F00000100000001 /* PdfTextModule.mm in Sources */ = {isa = PBXBuildFile; fileRef = A8F0D0022F00000100000001 /* PdfTextModule.mm */; };
-		A8F0D0032F00000100000001 /* PDFKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = A8F0D0042F00000100000001 /* PDFKit.framework */; };
 		A81001162E92FFC900935976 /* HardwareInfoModule.mm in Sources */ = {isa = PBXBuildFile; fileRef = A81001152E92FFC900935976 /* HardwareInfoModule.mm */; };
 		A862F7232EE04CE50062E673 /* GoogleService-Info.plist in Resources */ = {isa = PBXBuildFile; fileRef = A862F7222EE04CE50062E673 /* GoogleService-Info.plist */; };
 		A86CF0D42EA57BE100BFFCEE /* LlamaContextWrapper.mm in Sources */ = {isa = PBXBuildFile; fileRef = A86CF0D32EA57BE100BFFCEE /* LlamaContextWrapper.mm */; };
@@ -40,6 +38,8 @@
 		A8B4FFD92EA5731700CD3B4C /* PalEntity.swift in Sources */ = {isa = PBXBuildFile; fileRef = A8B4FFD12EA5731700CD3B4C /* PalEntity.swift */; };
 		A8B4FFDC2EA5736100CD3B4C /* DeepLinkModule.swift in Sources */ = {isa = PBXBuildFile; fileRef = A8B4FFDB2EA5736100CD3B4C /* DeepLinkModule.swift */; };
 		A8B4FFDD2EA5736100CD3B4C /* DeepLinkModule.m in Sources */ = {isa = PBXBuildFile; fileRef = A8B4FFDA2EA5736100CD3B4C /* DeepLinkModule.m */; };
+		A8F0D0012F00000100000001 /* PdfTextModule.mm in Sources */ = {isa = PBXBuildFile; fileRef = A8F0D0022F00000100000001 /* PdfTextModule.mm */; };
+		A8F0D0032F00000100000001 /* PDFKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = A8F0D0042F00000100000001 /* PDFKit.framework */; };
 		B70FB28C50CE468DAF8D023A /* JetBrainsMono-Regular.ttf in Resources */ = {isa = PBXBuildFile; fileRef = FF9D2CC3DF0F4073AB223CC1 /* JetBrainsMono-Regular.ttf */; };
 		C0270FB5CD74463CA3FF5284 /* Inter-ExtraBold.ttf in Resources */ = {isa = PBXBuildFile; fileRef = B033E4AC2D8E41719BF5142F /* Inter-ExtraBold.ttf */; };
 		C12BD91DEBF24C6F8A87DF6E /* JetBrainsMono-Medium.ttf in Resources */ = {isa = PBXBuildFile; fileRef = 9FFFE5CF13C04970AB5BF8BF /* JetBrainsMono-Medium.ttf */; };
@@ -79,8 +79,6 @@
 		94722BA2FE16147631D7CA68 /* Pods-PocketPal.release.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-PocketPal.release.xcconfig"; path = "Target Support Files/Pods-PocketPal/Pods-PocketPal.release.xcconfig"; sourceTree = "<group>"; };
 		9FFFE5CF13C04970AB5BF8BF /* JetBrainsMono-Medium.ttf */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = undefined; includeInIndex = 0; lastKnownFileType = unknown; name = "JetBrainsMono-Medium.ttf"; path = "../src/assets/fonts/JetBrainsMono-Medium.ttf"; sourceTree = "<group>"; };
 		A810010E2E92E09600935976 /* KeepAwakeModule.mm */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.objcpp; name = KeepAwakeModule.mm; path = PocketPal/KeepAwakeModule.mm; sourceTree = "<group>"; };
-		A8F0D0022F00000100000001 /* PdfTextModule.mm */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.objcpp; name = PdfTextModule.mm; path = PocketPal/PdfTextModule.mm; sourceTree = "<group>"; };
-		A8F0D0042F00000100000001 /* PDFKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = PDFKit.framework; path = System/Library/Frameworks/PDFKit.framework; sourceTree = SDKROOT; };
 		A81001122E92E09800935976 /* PocketPal-Bridging-Header.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = "PocketPal-Bridging-Header.h"; sourceTree = "<group>"; };
 		A81001152E92FFC900935976 /* HardwareInfoModule.mm */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.objcpp; name = HardwareInfoModule.mm; path = PocketPal/HardwareInfoModule.mm; sourceTree = "<group>"; };
 		A826FC242E9ECA10003F1572 /* Env.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; name = Env.xcconfig; path = Config/Env.xcconfig; sourceTree = "<group>"; };
@@ -98,6 +96,8 @@
 		A8B4FFDA2EA5736100CD3B4C /* DeepLinkModule.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; name = DeepLinkModule.m; path = PocketPal/DeepLinkModule.m; sourceTree = "<group>"; };
 		A8B4FFDB2EA5736100CD3B4C /* DeepLinkModule.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = DeepLinkModule.swift; path = PocketPal/DeepLinkModule.swift; sourceTree = "<group>"; };
 		A8D9D0A86B69377BF32D2540 /* Pods-PocketPal.profiling.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-PocketPal.profiling.xcconfig"; path = "Target Support Files/Pods-PocketPal/Pods-PocketPal.profiling.xcconfig"; sourceTree = "<group>"; };
+		A8F0D0022F00000100000001 /* PdfTextModule.mm */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.objcpp; name = PdfTextModule.mm; path = PocketPal/PdfTextModule.mm; sourceTree = "<group>"; };
+		A8F0D0042F00000100000001 /* PDFKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = PDFKit.framework; path = System/Library/Frameworks/PDFKit.framework; sourceTree = SDKROOT; };
 		AE37F4EB27084262BAE95F85 /* Inter-Light.ttf */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = "Inter-Light.ttf"; path = "../src/assets/fonts/Inter-Light.ttf"; sourceTree = "<group>"; };
 		B033E4AC2D8E41719BF5142F /* Inter-ExtraBold.ttf */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = "Inter-ExtraBold.ttf"; path = "../src/assets/fonts/Inter-ExtraBold.ttf"; sourceTree = "<group>"; };
 		C5BB422A56184C889DB9EAFD /* Inter-SemiBold.ttf */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = "Inter-SemiBold.ttf"; path = "../src/assets/fonts/Inter-SemiBold.ttf"; sourceTree = "<group>"; };
