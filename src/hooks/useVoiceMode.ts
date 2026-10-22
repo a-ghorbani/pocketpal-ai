@@ -319,6 +319,7 @@ class VoiceModeController {
     if (muted) {
       this.stopCapture();
     } else {
+      this.micRetried = false;
       this.startCapture(this.session);
     }
   }

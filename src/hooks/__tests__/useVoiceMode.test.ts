@@ -1184,6 +1184,25 @@ describe('useVoiceMode', () => {
       );
     });
 
+    it('gets a fresh restart after the user mutes and unmutes', async () => {
+      jest.useFakeTimers();
+      const {enter, hook} = renderVoiceMode();
+      await enter();
+      await advance(VOICE_MIC_WATCHDOG_MS);
+      await advance(VOICE_CAPTURE_SETTLE_MS);
+      expect(AudioRecord.init).toHaveBeenCalledTimes(2);
+
+      act(() => hook.result.current.toggleMute());
+      await act(async () => hook.result.current.toggleMute());
+      await advance(VOICE_CAPTURE_SETTLE_MS);
+      expect(AudioRecord.init).toHaveBeenCalledTimes(3);
+
+      await advance(VOICE_MIC_WATCHDOG_MS);
+      await advance(VOICE_CAPTURE_SETTLE_MS);
+      expect(voiceModeStore.phase).toBe('listening');
+      expect(AudioRecord.init).toHaveBeenCalledTimes(4);
+    });
+
     it('is left alone once audio arrives', async () => {
       jest.useFakeTimers();
       const {enter} = renderVoiceMode();
