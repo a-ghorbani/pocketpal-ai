@@ -1657,7 +1657,8 @@
     "continueAnywayCta": "Continue anyway",
     "chooseSmallerModelCta": "Choose a smaller model",
     "startLabel": "Start voice mode",
-    "startLockedLabel": "Start voice mode (locked)"
+    "startLockedLabel": "Hands-free voice, PocketPal Plus",
+    "startLockedHint": "Opens a short preview. Typing and dictation stay free."
   },
   "onboarding": {
     "back": "Back",

@@ -41,7 +41,6 @@ export {default as GoogleIcon} from './google.svg';
 export {default as GridIcon} from './grid.svg';
 export {default as HeartIcon} from './heart.svg';
 export {default as LockIcon} from './lock.svg';
-export {default as LockBadgeIcon} from './lock-badge.svg';
 export {default as LinkExternalIcon} from './link-external.svg';
 export {default as MenuIcon} from './menu.svg';
 export {default as ModelIcon} from './model.svg';

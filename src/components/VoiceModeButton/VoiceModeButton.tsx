@@ -6,10 +6,11 @@ import {observer} from 'mobx-react';
 import {useTheme} from '../../hooks';
 import {modelStore, voiceModeStore} from '../../store';
 import {L10nContext} from '../../utils';
-import {LockBadgeIcon, VoiceWaveformIcon} from '../../assets/icons';
+import {SparkleFilledIcon, VoiceWaveformIcon} from '../../assets/icons';
 
 const SIZE = 40;
 const BADGE = 18;
+const HIT_SLOP = 2;
 
 interface VoiceModeButtonProps {
   onPress: () => void;
@@ -17,7 +18,7 @@ interface VoiceModeButtonProps {
 
 /**
  * The composer's voice-mode button, shown in Send's place while the input
- * is empty. Locked voice mode keeps the button, with a badge.
+ * is empty. Locked, it steps back to a soft look with a Plus badge.
  */
 export const VoiceModeButton: React.FC<VoiceModeButtonProps> = observer(
   ({onPress}) => {
@@ -29,27 +30,34 @@ export const VoiceModeButton: React.FC<VoiceModeButtonProps> = observer(
     }
     const locked = !voiceModeStore.isUnlocked;
     const loading = modelStore.isContextLoading;
+    const look = locked
+      ? {
+          button: {
+            backgroundColor: theme.colors.surfaceVariant,
+            borderColor: theme.colors.outline,
+            borderWidth: theme.stroke.sm,
+          },
+          icon: theme.colors.onSurface,
+        }
+      : {
+          button: {backgroundColor: theme.colors.primary},
+          icon: theme.colors.onPrimary,
+        };
 
     return (
       <Pressable
         onPress={onPress}
         disabled={loading}
+        hitSlop={HIT_SLOP}
         accessibilityRole="button"
         accessibilityLabel={
           locked ? l10n.voiceMode.startLockedLabel : l10n.voiceMode.startLabel
         }
+        accessibilityHint={locked ? l10n.voiceMode.startLockedHint : undefined}
         accessibilityState={{disabled: loading}}
         testID="voice-mode-button"
-        style={[
-          styles.button,
-          {backgroundColor: theme.colors.primary},
-          loading && styles.disabled,
-        ]}>
-        <VoiceWaveformIcon
-          width={22}
-          height={22}
-          color={theme.colors.onPrimary}
-        />
+        style={[styles.button, look.button, loading && styles.disabled]}>
+        <VoiceWaveformIcon width={22} height={22} color={look.icon} />
         {locked && (
           <View
             testID="voice-mode-lock"
@@ -60,10 +68,10 @@ export const VoiceModeButton: React.FC<VoiceModeButtonProps> = observer(
                 borderColor: theme.colors.surface,
               },
             ]}>
-            <LockBadgeIcon
+            <SparkleFilledIcon
               width={10}
               height={10}
-              color={theme.colors.onSurface}
+              fill={theme.colors.onSurface}
             />
           </View>
         )}
