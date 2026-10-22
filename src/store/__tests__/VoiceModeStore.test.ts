@@ -4,6 +4,8 @@ import {makePersistable} from 'mobx-persist-store';
 
 import {mockASRStore} from '../../../__mocks__/stores/asrStore';
 import {mockModelStore} from '../../../__mocks__/stores/modelStore';
+import {mockPurchaseStore} from '../../../__mocks__/stores/purchaseStore';
+import {plusGate} from '../../services/plus/gate';
 
 jest.mock('../ModelStore', () => ({
   modelStore: require('../../../__mocks__/stores/modelStore').mockModelStore,
@@ -100,11 +102,24 @@ describe('VoiceModeStore', () => {
     expect(source.openPaywall).toHaveBeenCalledWith({onUnlocked});
   });
 
-  it('the default paywall only warns', () => {
-    const warn = jest.spyOn(console, 'warn').mockImplementation(() => {});
-    voiceEntitlement.source.openPaywall({onUnlocked: jest.fn()});
-    expect(warn).toHaveBeenCalled();
-    warn.mockRestore();
+  it('unlocks with Plus', () => {
+    runInAction(() => {
+      mockPurchaseStore.plusUnlocked = true;
+    });
+    expect(voiceModeStore.isUnlocked).toBe(true);
+    runInAction(() => {
+      mockPurchaseStore.plusUnlocked = false;
+    });
+    expect(voiceModeStore.isUnlocked).toBe(false);
+  });
+
+  it('opens the Plus screen as its paywall', () => {
+    const onUnlocked = jest.fn();
+    voiceEntitlement.source.openPaywall({onUnlocked});
+    expect(plusGate.request).toEqual({onUnlocked});
+    runInAction(() => {
+      plusGate.request = null;
+    });
   });
 
   it('persists the Settings override, and the unlock override only in E2E builds', () => {

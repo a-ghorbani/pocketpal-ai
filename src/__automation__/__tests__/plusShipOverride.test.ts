@@ -5,6 +5,10 @@ import {PLUS_SHIP_KEY, plusShipOverride} from '../plusShipOverride';
 import {isPlusAvailable} from '../../services/plus/gate';
 import {shipOverride} from '../../services/plus/shipOverride';
 
+jest.mock('../../services/plus/catalog', () =>
+  require('../../../jest/fixtures/plus').mockUnshippedCatalog(),
+);
+
 jest.mock('@react-native-async-storage/async-storage', () => {
   const values = new Map<string, string>();
   return {

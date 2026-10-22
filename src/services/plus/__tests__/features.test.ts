@@ -11,26 +11,49 @@ const NONE: ReadonlySet<string> = new Set();
 const GB8 = 8e9;
 
 describe('Plus feature status', () => {
-  it('shows every launch feature as coming soon and none as shipped', () => {
+  it('shows hands-free voice ready and the API server coming soon', () => {
     const rows = featureRows(PLUS_FEATURES, GB8, NONE);
-    expect(rows).toEqual([
-      {id: 'handsFreeVoice', status: 'soon'},
-      {id: 'localApiServer', status: 'soon'},
-    ]);
-    expect(anyRunnable(rows)).toBe(false);
-    expect(shippedFeatures(PLUS_FEATURES, NONE)).toEqual([]);
-  });
-
-  it('marks only the overridden feature shipped', () => {
-    const override = new Set(['handsFreeVoice']);
-    const rows = featureRows(PLUS_FEATURES, GB8, override);
     expect(rows).toEqual([
       {id: 'handsFreeVoice', status: 'ready'},
       {id: 'localApiServer', status: 'soon'},
     ]);
     expect(anyRunnable(rows)).toBe(true);
-    expect(shippedFeatures(PLUS_FEATURES, override).map(f => f.id)).toEqual([
+    expect(shippedFeatures(PLUS_FEATURES, NONE).map(f => f.id)).toEqual([
       'handsFreeVoice',
+    ]);
+  });
+
+  it('marks the overridden feature shipped', () => {
+    const override = new Set(['localApiServer']);
+    const rows = featureRows(PLUS_FEATURES, GB8, override);
+    expect(rows).toEqual([
+      {id: 'handsFreeVoice', status: 'ready'},
+      {id: 'localApiServer', status: 'ready'},
+    ]);
+  });
+
+  it('marks a shipped feature below its device gate as opt-in, still runnable', () => {
+    const rows = featureRows(
+      PLUS_FEATURES,
+      GB8,
+      NONE,
+      new Set(['handsFreeVoice']),
+    );
+    expect(rows).toEqual([
+      {id: 'handsFreeVoice', status: 'optIn'},
+      {id: 'localApiServer', status: 'soon'},
+    ]);
+    expect(anyRunnable(rows)).toBe(true);
+  });
+
+  it('keeps an unshipped or RAM-short feature as it was below the gate', () => {
+    const table = fakePlusFeatures([
+      {id: 'later', shipped: false},
+      {id: 'big', shipped: true, minRamGb: 16},
+    ]);
+    expect(featureRows(table, GB8, NONE, new Set(['later', 'big']))).toEqual([
+      {id: 'later', status: 'soon'},
+      {id: 'big', status: {needsGb: 16}},
     ]);
   });
 

@@ -4,11 +4,8 @@ import {makeAutoObservable} from 'mobx';
 import {makePersistable} from 'mobx-persist-store';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
-import {
-  VOICE_MODE_UNLOCKED_DEFAULT,
-  VoiceEntitlement,
-  voiceModeDeviceSupported,
-} from '../services/voice';
+import {isPlusUnlocked, openPlus} from '../services/plus/gate';
+import {VoiceEntitlement, voiceModeDeviceSupported} from '../services/voice';
 
 import {modelStore} from './ModelStore';
 
@@ -113,9 +110,6 @@ export class VoiceModeStore {
 export const voiceModeStore = new VoiceModeStore();
 
 export const voiceEntitlement = new VoiceEntitlement({
-  isUnlocked: () =>
-    voiceModeStore.unlockOverride ?? VOICE_MODE_UNLOCKED_DEFAULT,
-  openPaywall: () => {
-    console.warn('[voiceMode] no paywall is registered yet');
-  },
+  isUnlocked: () => voiceModeStore.unlockOverride ?? isPlusUnlocked(),
+  openPaywall: ({onUnlocked}) => openPlus({onUnlocked}),
 });

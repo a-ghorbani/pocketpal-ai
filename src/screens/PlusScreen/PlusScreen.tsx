@@ -148,6 +148,13 @@ export const PlusScreen: React.FC<PlusScreenProps> = observer(props => {
         </View>
       );
     }
+    if (row.status === 'optIn') {
+      return (
+        <View style={styles.status}>
+          <Text style={styles.statusText}>{copy.optIn}</Text>
+        </View>
+      );
+    }
     if (row.status === 'soon') {
       return (
         <View style={styles.status}>

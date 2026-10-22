@@ -1771,6 +1771,7 @@
     "ready": "Ready",
     "needsRam": "Needs {{gb}} GB RAM",
     "comingSoon": "Coming soon",
+    "optIn": "Off on this phone. Turn it on in Settings if you're brave.",
     "speedLine": "Speed depends on your phone and model.",
     "inDevelopment": "Features in development may change or not ship.",
     "priceCaption": "Pay what you like. Same features at every price.",

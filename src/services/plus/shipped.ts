@@ -4,9 +4,18 @@ import {deviceRam} from './deviceRam';
 import {featureRows, shippedFeatures} from './features';
 import type {PlusFeatureRow} from './features';
 import {shipOverride} from './shipOverride';
+import {voiceModeStore} from '../../store';
 
 export const shippedPlusFeatures = (): PlusFeature[] =>
   shippedFeatures(PLUS_FEATURES, shipOverride.get());
 
+const belowDeviceGate = (): ReadonlySet<string> =>
+  new Set(voiceModeStore.deviceSupported ? [] : ['handsFreeVoice']);
+
 export const plusFeatureRows = (): PlusFeatureRow[] =>
-  featureRows(PLUS_FEATURES, deviceRam.ramBytes, shipOverride.get());
+  featureRows(
+    PLUS_FEATURES,
+    deviceRam.ramBytes,
+    shipOverride.get(),
+    belowDeviceGate(),
+  );

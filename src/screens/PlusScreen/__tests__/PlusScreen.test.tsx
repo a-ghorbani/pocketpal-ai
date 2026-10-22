@@ -24,6 +24,7 @@ import {fakePlusFeatures, fakePlusL10n} from '../../../../jest/fixtures/plus';
 import {L10nContext} from '../../../utils';
 import type {PlusFeature} from '../../../services/plus/catalog';
 import {deviceRam} from '../../../services/plus/deviceRam';
+import {modelStore} from '../../../store';
 import {setShipOverride} from '../../../services/plus/shipOverride';
 
 import {
@@ -109,6 +110,7 @@ describe('PlusScreen', () => {
     setShipOverride(['handsFreeVoice']);
     runInAction(() => {
       deviceRam.ramBytes = 8e9;
+      modelStore.deviceTier = 'high';
     });
     openURL = jest.spyOn(Linking, 'openURL').mockResolvedValue(undefined);
   });
@@ -297,6 +299,18 @@ describe('PlusScreen', () => {
   });
 
   describe('feature rows', () => {
+    it('gives hands-free voice a heads-up instead of Ready below its device gate', () => {
+      runInAction(() => {
+        modelStore.deviceTier = 'low';
+      });
+      const {getByTestId} = renderScreen();
+
+      expect(getByTestId('plus-feature-handsFreeVoice')).toHaveTextContent(
+        "Hands-free voiceOff on this phone. Turn it on in Settings if you're brave.",
+      );
+      expect(getByTestId('plus-cta')).toHaveTextContent('Get Plus · $4.99');
+    });
+
     it('shows Ready, Needs N GB and Coming soon', () => {
       mockFeatures = fakePlusFeatures([
         {id: 'open', shipped: true},
