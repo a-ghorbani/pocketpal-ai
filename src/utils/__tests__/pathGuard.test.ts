@@ -89,3 +89,52 @@ describe('isContainedPath', () => {
     expect(isContainedPath(input, `${root}/x`)).toBe(false);
   });
 });
+
+describe('control characters', () => {
+  const CONTROLS = ['\u0000', '\u001f', '\u007f'];
+  const codePoint = (c: string) =>
+    `U+${c.charCodeAt(0).toString(16).padStart(4, '0').toUpperCase()}`;
+  const placed = (build: (c: string) => string[]) =>
+    CONTROLS.flatMap(c => build(c).map(v => [codePoint(c), v] as const));
+
+  it.each(placed(c => [`${c}ab`, `a${c}b`, `ab${c}`]))(
+    'isSafePathSegment rejects %s at the start, middle or end',
+    (_code, value) => {
+      expect(isSafePathSegment(value)).toBe(false);
+    },
+  );
+
+  it.each(
+    placed(c => [
+      `${c}Q4/x.gguf`,
+      `Q4/a${c}b.gguf`,
+      `Q4${c}/x.gguf`,
+      `Q4/x.gguf${c}`,
+    ]),
+  )('isSafeRelativePath rejects %s in a segment', (_code, value) => {
+    expect(isSafeRelativePath(value)).toBe(false);
+  });
+
+  it.each(placed(c => [`/r/a${c}/x`, `/r/x${c}`, `/r/${c}`]))(
+    'isContainedPath rejects %s on the path side',
+    (_code, path) => {
+      expect(isContainedPath('/r', path)).toBe(false);
+    },
+  );
+
+  it.each(placed(c => [`/r${c}`]))(
+    'isContainedPath rejects %s on the root side',
+    (_code, root) => {
+      expect(isContainedPath(root, `${root}/x`)).toBe(false);
+    },
+  );
+
+  it.each(['My Model (1).gguf', '模型.gguf', 'a\u0080b', 'a b', 'a~b'])(
+    'accepts the plain name %p',
+    name => {
+      expect(isSafePathSegment(name)).toBe(true);
+      expect(isSafeRelativePath(`Q4/${name}`)).toBe(true);
+      expect(isContainedPath('/r', `/r/${name}`)).toBe(true);
+    },
+  );
+});

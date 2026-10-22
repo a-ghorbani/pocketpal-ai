@@ -1,3 +1,6 @@
+// eslint-disable-next-line no-control-regex
+const CONTROL_CHARACTER = /[\u0000-\u001f\u007f]/;
+
 // A wire-supplied path part (author, repo, filename) flows into both the derived
 // download URL and the local model path, so reject anything that is not a plain
 // segment (no path separators, no parent-dir traversal).
@@ -6,6 +9,7 @@ export const isSafePathSegment = (v: unknown): v is string =>
   v.length > 0 &&
   !v.includes('/') &&
   !v.includes('\\') &&
+  !CONTROL_CHARACTER.test(v) &&
   // With separators already disallowed, only an exact "."/".." segment can
   // traverse — reject those, but allow a literal ".." inside a longer name.
   v !== '.' &&
@@ -15,7 +19,11 @@ export const isSafeRelativePath = (v: unknown): v is string =>
   typeof v === 'string' && v.split('/').every(isSafePathSegment);
 
 const resolveAbsoluteSegments = (path: string): string[] | null => {
-  if (!path.startsWith('/') || path.includes('\\')) {
+  if (
+    !path.startsWith('/') ||
+    path.includes('\\') ||
+    CONTROL_CHARACTER.test(path)
+  ) {
     return null;
   }
   const resolved: string[] = [];
