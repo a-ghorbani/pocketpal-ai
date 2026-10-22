@@ -34,6 +34,22 @@ const touchHandlersAbove = (node: any) => {
   return found;
 };
 
+const RESPONDER_HANDLERS = [
+  'onStartShouldSetResponder',
+  'onMoveShouldSetResponder',
+  'onResponderGrant',
+];
+
+const responderHandlersAbove = (node: any) => {
+  const found: string[] = [];
+  for (let n = node.parent; n; n = n.parent) {
+    found.push(
+      ...RESPONDER_HANDLERS.filter(h => typeof n.props?.[h] === 'function'),
+    );
+  }
+  return found;
+};
+
 const markdownSpy = EnrichedMarkdownText as unknown as jest.Mock;
 const lastMarkdownProps = () =>
   markdownSpy.mock.calls[markdownSpy.mock.calls.length - 1][0];
@@ -81,7 +97,8 @@ describe('message', () => {
   });
 
   describe('menu and touch handling', () => {
-    it('opens the menu from a long-press on a user text row, with a haptic', () => {
+    it('opens the menu from a touch hold on a user text row, with a haptic, without claiming the JS responder', () => {
+      jest.useFakeTimers();
       const onMessageMenuPress = jest.fn();
       const {UNSAFE_root, getByTestId, queryByTestId} = renderWithProviders(
         <Message
@@ -92,19 +109,26 @@ describe('message', () => {
       );
 
       const markdown = getByTestId('markdown-content');
-      const handlersAbove = touchHandlersAbove(markdown);
-      expect(handlersAbove.filter(h => h === 'onLongPress')).toHaveLength(1);
-      expect(handlersAbove).not.toContain('onPressIn');
-      expect(handlersAbove).not.toContain('onPressOut');
-      const [longPressNode] = longPressHandlers(UNSAFE_root);
-      expect(longPressHandlers(UNSAFE_root)).toHaveLength(1);
-      expect(longPressNode.props.accessible).toBe(false);
+      expect(responderHandlersAbove(markdown)).toEqual([]);
+      expect(touchHandlersAbove(markdown)).toEqual([]);
+      expect(longPressHandlers(UNSAFE_root)).toHaveLength(0);
 
-      const event = {nativeEvent: {pageX: 1, pageY: 2}};
-      fireEvent(markdown, 'longPress', event);
+      const rows = UNSAFE_root.findAll(
+        (n: any) =>
+          typeof n.type === 'string' &&
+          typeof n.props.onTouchCancel === 'function',
+      );
+      expect(rows).toHaveLength(1);
+      const [row] = rows;
+      expect(row.findAll((n: any) => n === markdown)).toHaveLength(1);
+      fireEvent(row, 'touchStart', {nativeEvent: {pageX: 1, pageY: 2}});
+      act(() => {
+        jest.advanceTimersByTime(500);
+      });
+
       expect(onMessageMenuPress).toHaveBeenCalledWith(
         expect.objectContaining({id: derivedTextMessage.id, type: 'text'}),
-        event,
+        {nativeEvent: {pageX: 1, pageY: 2}},
       );
       expect(ReactNativeHapticFeedback.trigger).toHaveBeenCalledWith(
         'impactLight',
@@ -113,6 +137,7 @@ describe('message', () => {
       expect(queryByTestId('user-row-footer')).toBeNull();
       expect(queryByTestId('message-menu-button')).toBeNull();
       expect(queryByTestId('assistant-turn-footer')).toBeNull();
+      jest.useRealTimers();
     });
 
     it('opens the menu from a long-press on a link in a user text row', () => {

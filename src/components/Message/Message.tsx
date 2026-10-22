@@ -5,7 +5,7 @@ import {oneOf} from '@flyerhq/react-native-link-preview';
 import {observer} from 'mobx-react';
 import ReactNativeHapticFeedback from 'react-native-haptic-feedback';
 
-import {useTheme} from '../../hooks';
+import {useTheme, useTouchLongPress} from '../../hooks';
 
 import styles, {turnBlockStyles} from './styles';
 import {
@@ -143,6 +143,7 @@ export const Message = observer(
       },
       [onMessageMenuPress],
     );
+    const userLongPress = useTouchLongPress(openUserMenu);
 
     const {container, contentContainer, dateHeader, pressable} = styles({
       currentUserIsAuthor,
@@ -429,12 +430,12 @@ export const Message = observer(
             theme,
           }}
         />
-        {isTextRow && !isUserTextRow ? (
-          <View style={pressable}>{innerContent}</View>
+        {isTextRow ? (
+          <View style={pressable} {...(isUserTextRow ? userLongPress : {})}>
+            {innerContent}
+          </View>
         ) : (
           <Pressable
-            accessible={!isUserTextRow}
-            onLongPress={isUserTextRow ? openUserMenu : undefined}
             onPress={event => {
               onMessagePress?.(excludeDerivedMessageProps(message), event);
             }}

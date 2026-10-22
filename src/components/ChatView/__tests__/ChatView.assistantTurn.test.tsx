@@ -212,7 +212,9 @@ describe('ChatView — AssistantTurn integration', () => {
     );
 
     const longPressNodes = UNSAFE_root.findAll(
-      (n: any) => n.props && typeof n.props.onLongPress === 'function',
+      (n: any) =>
+        typeof n.type === 'string' &&
+        typeof n.props.onTouchCancel === 'function',
     );
     expect(longPressNodes).toHaveLength(1);
     expect(

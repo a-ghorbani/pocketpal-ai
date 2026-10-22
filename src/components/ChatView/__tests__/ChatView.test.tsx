@@ -27,13 +27,29 @@ registerDefaultTalents();
 
 jest.useFakeTimers();
 
+const holdTarget = (node: any) => {
+  for (let n = node; n; n = n.parent) {
+    if (typeof n.props?.onTouchCancel === 'function') {
+      return n;
+    }
+  }
+  return node;
+};
+
+const holdOn = (node: any, event: object) => {
+  fireEvent(holdTarget(node), 'touchStart', event);
+  act(() => {
+    jest.advanceTimersByTime(500);
+  });
+};
+
 const openRowMenu = (
   utils: {getByTestId: (id: string) => any},
   message: MessageType.Any,
 ) => {
   const event = {nativeEvent: {pageX: 10, pageY: 20}};
   if (message.author.id === user.id) {
-    fireEvent(utils.getByTestId('markdown-content'), 'longPress', event);
+    holdOn(utils.getByTestId('markdown-content'), event);
   } else {
     fireEvent.press(utils.getByTestId('message-menu-button'), event);
   }
@@ -750,17 +766,17 @@ describe('chat', () => {
     it.each([
       ['without a press point', {nativeEvent: {}}],
       ['with a released event', {nativeEvent: null}],
-    ])('keeps the menu closed on a user long-press %s', (_case, event) => {
+    ])('keeps the menu closed on a "…" press %s', (_case, event) => {
       const utils = render(
         <ChatView
-          messages={[textMessage]}
+          messages={[{...textMessage, author: assistant}]}
           onSendPress={jest.fn()}
           user={user}
         />,
         options,
       );
 
-      fireEvent(utils.getByTestId('markdown-content'), 'longPress', event);
+      fireEvent.press(utils.getByTestId('message-menu-button'), event);
 
       const menu = messageMenu(utils);
       expect(menu.props.visible).toBe(false);
@@ -780,7 +796,7 @@ describe('chat', () => {
         options,
       );
 
-      fireEvent(utils.getByTestId('markdown-content'), 'longPress', {
+      holdOn(utils.getByTestId('markdown-content'), {
         nativeEvent: {pageX: 10, pageY: 20},
       });
 
@@ -839,7 +855,7 @@ describe('chat', () => {
                 .length > 0,
           );
 
-        fireEvent(questionMarkdown!, 'longPress', {
+        holdOn(questionMarkdown!, {
           nativeEvent: {pageX: 10, pageY: 20},
         });
 
