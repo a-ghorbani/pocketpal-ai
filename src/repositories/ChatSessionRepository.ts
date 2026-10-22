@@ -13,6 +13,7 @@ import {SessionMetaData} from '../store/ChatSessionStore';
 
 import {MessageType} from '../utils/types';
 import {releaseDocuments} from '../services/documents/store';
+import {isDocumentId} from '../services/documents/paths';
 import {CompletionParams} from '../utils/completionTypes';
 import {
   defaultCompletionParams,
@@ -28,7 +29,9 @@ const documentIdsOf = (message: unknown): string[] => {
   try {
     const metadata = JSON.parse((message as Message).metadata || '{}');
     return Array.isArray(metadata.documents)
-      ? metadata.documents.map((ref: {id: string}) => ref.id)
+      ? metadata.documents
+          .map((ref: {id?: unknown}) => ref?.id)
+          .filter(isDocumentId)
       : [];
   } catch {
     return [];

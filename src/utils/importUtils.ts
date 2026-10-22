@@ -11,6 +11,7 @@ import 'react-native-get-random-values';
 
 import {chatSessionRepository} from '../repositories/ChatSessionRepository';
 import {MessageType} from './types';
+import {isDocumentId, isValidPageRange} from '../services/documents/paths';
 import {CompletionParams} from './completionTypes';
 import {migrateCompletionSettings} from './completionSettingsVersions';
 import {palStore} from '../store';
@@ -117,6 +118,11 @@ export const validateImportedData = (
 /**
  * Validate a single chat session
  */
+const isImportableDocument = (ref: any): boolean =>
+  !!ref &&
+  isDocumentId(ref.id) &&
+  (ref.pageRange === undefined || isValidPageRange(ref.pageRange));
+
 const validateSingleSession = (session: any): ImportedChatSession => {
   // Check required fields
   if (!session.title || typeof session.title !== 'string') {
@@ -148,6 +154,15 @@ const validateSingleSession = (session: any): ImportedChatSession => {
 
     if (!msg.createdAt) {
       msg.createdAt = Date.now();
+    }
+
+    if (msg.metadata && 'documents' in msg.metadata) {
+      const {documents} = msg.metadata;
+      if (Array.isArray(documents)) {
+        msg.metadata.documents = documents.filter(isImportableDocument);
+      } else {
+        delete msg.metadata.documents;
+      }
     }
 
     return msg;

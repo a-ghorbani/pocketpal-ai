@@ -2,6 +2,7 @@ import * as RNFS from '@dr.pogodin/react-native-fs';
 import {pick} from '@react-native-documents/picker';
 import {palStore} from '../../store';
 import {validate} from 'uuid';
+import {docId} from '../../../jest/fixtures/documentIds';
 import {
   readJsonFile,
   validateImportedData,
@@ -72,6 +73,54 @@ describe('importUtils', () => {
       expect(result.date).toBeDefined();
       expect(result.messages).toEqual([]);
       expect(result.completionSettings).toBeDefined();
+    });
+  });
+
+  describe('imported document refs', () => {
+    const goodId = docId('imported');
+    const ref = (id: unknown, extra = {}) => ({
+      id,
+      name: 'a.pdf',
+      kind: 'pdf',
+      byteSize: 1,
+      charCount: 1,
+      tokenEstimate: 1,
+      ...extra,
+    });
+
+    it('drops document refs with invalid ids or ranges and keeps the message', () => {
+      const result = validateImportedData({
+        title: 'With documents',
+        messages: [
+          {
+            id: 'm1',
+            author: 'user',
+            text: 'Summarise',
+            metadata: {
+              documents: [
+                ref('..'),
+                ref('../..'),
+                ref('/abs/path'),
+                ref(''),
+                ref('a/b'),
+                ref('a\\b'),
+                ref(goodId, {pageRange: {from: '../x', to: 1}}),
+                ref(goodId, {pageRange: {from: 1.5, to: 2}}),
+                ref(goodId),
+                ref(goodId, {pageRange: {from: 2, to: 3}}),
+              ],
+            },
+          },
+          {id: 'm2', author: 'user', metadata: {documents: 'nope'}},
+        ],
+      }) as ImportedChatSession;
+
+      expect(result.messages).toHaveLength(2);
+      expect(result.messages[0].metadata?.documents).toEqual([
+        ref(goodId),
+        ref(goodId, {pageRange: {from: 2, to: 3}}),
+      ]);
+      expect(result.messages[1].metadata).not.toHaveProperty('documents');
     });
   });
 

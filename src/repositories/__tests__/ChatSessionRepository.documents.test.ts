@@ -159,3 +159,19 @@ describe('searched documents', () => {
     expect(JSON.parse(mockRows[0].metadata).documents[0].mode).toBe('searched');
   });
 });
+
+describe('invalid document ids', () => {
+  it('deleting a session with invalid document ids releases nothing for them', async () => {
+    const bad = ['..', '../models', '/abs/path', '', 'a/b'].map(id => ({
+      ...ref,
+      id,
+    }));
+    const session = await chatSessionRepository.createSession('X', [
+      {...userText, documents: [...bad, ref]},
+    ]);
+
+    await chatSessionRepository.deleteSession(session.id);
+
+    expect(release).toHaveBeenCalledWith([DOC_ID], expect.any(Function));
+  });
+});
