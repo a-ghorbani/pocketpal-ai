@@ -1,5 +1,5 @@
-import React, {useContext} from 'react';
-import {StyleSheet, View} from 'react-native';
+import React, {useContext, useEffect} from 'react';
+import {Keyboard, StyleSheet, View} from 'react-native';
 
 import {Button, Text} from 'react-native-paper';
 
@@ -41,6 +41,12 @@ export const DocumentBudgetSheet: React.FC<DocumentBudgetSheetProps> = ({
   const theme = useTheme();
   const l10n = useContext(L10nContext);
   const strings = l10n.chat.documents.budgetSheet;
+  useEffect(() => {
+    if (isVisible) {
+      Keyboard.dismiss();
+    }
+  }, [isVisible]);
+
   const historyOverflow = verdict.reason === 'history';
   const amounts = {
     needed: formatTokenCount(verdict.needed),

@@ -1,5 +1,7 @@
 import React from 'react';
 
+import {Keyboard} from 'react-native';
+
 import {fireEvent, render} from '../../../../jest/test-utils';
 
 import {DocumentBudgetSheet} from '../DocumentBudgetSheet';
@@ -138,5 +140,25 @@ describe('DocumentBudgetSheet', () => {
     expect(h.onSearchInstead).toHaveBeenCalledWith(small);
     expect(queryByTestId('budget-remove')).toBeNull();
     expect(getByTestId('budget-new-chat')).toBeTruthy();
+  });
+
+  it('dismisses the keyboard when it opens so its actions stay visible', () => {
+    const dismiss = jest.spyOn(Keyboard, 'dismiss');
+    render(
+      <DocumentBudgetSheet
+        isVisible
+        verdict={{
+          kind: 'over',
+          needed: 9100,
+          available: 3072,
+          newDocs: [{ref: pdf, tokens: 9000, mode: 'searched'}],
+          historyDocTokens: 0,
+          reason: 'new',
+        }}
+        {...handlers()}
+      />,
+    );
+    expect(dismiss).toHaveBeenCalled();
+    dismiss.mockRestore();
   });
 });
