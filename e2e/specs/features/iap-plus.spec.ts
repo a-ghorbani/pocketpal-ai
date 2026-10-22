@@ -341,6 +341,7 @@ describe('PocketPal Plus', () => {
       .waitForDisplayed({timeout: 20000});
     expect(await plus.hasSidebarEntry(5000)).toBe(true);
 
+    await drawerPage.navigateToChat();
     await openDeepLink(PLUS_FEATURE_URL);
     await plus.waitFor('plus-test-feature-open');
     await browser.$(byExactTestId('plus-test-feature-open')).click();
