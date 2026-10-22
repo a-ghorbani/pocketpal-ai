@@ -1,8 +1,14 @@
 import React from 'react';
-import {Alert, Linking, Platform} from 'react-native';
+import {Alert, Linking, Platform, StyleSheet} from 'react-native';
 import {runInAction} from 'mobx';
 
-import {act, render, fireEvent, waitFor} from '../../../../../jest/test-utils';
+import {
+  act,
+  render,
+  fireEvent,
+  waitFor,
+  within,
+} from '../../../../../jest/test-utils';
 import {mockPremiumPalsHubPal} from '../../../../../jest/fixtures/pals';
 
 import {PalPurchaseFooter} from '../PalPurchaseFooter';
@@ -11,6 +17,8 @@ import {authService} from '../../../../services';
 import type {LedgerRecord} from '../../../../store/PurchaseStore';
 import type {Pal} from '../../../../types/pal';
 import {version} from '../../../../../jest/fixtures/iap';
+import {themeFixtures} from '../../../../../jest/fixtures/theme';
+import {createStyles} from '../styles';
 
 let mockAccountLinkEnabled = true;
 jest.mock('../../../../services/iap/accountLink', () => ({
@@ -606,9 +614,23 @@ describe('PalPurchaseFooter', () => {
         .spyOn(Linking, 'openURL')
         .mockResolvedValue(undefined);
       const {getByTestId} = setup();
+      const styles = createStyles(themeFixtures.lightTheme);
+      const notice = getByTestId('purchase-license-notice');
 
-      expect(getByTestId('purchase-license-notice')).toHaveTextContent(
+      expect(notice).toHaveTextContent(
         "You're buying a license to use this Pal. Terms of Sale · Apple Media Services Terms",
+      );
+      expect(StyleSheet.flatten(notice.props.style)).toMatchObject(
+        styles.status,
+      );
+      ['purchase-terms-of-sale-link', 'purchase-apple-terms-link'].forEach(
+        testID => {
+          const link = within(notice).getByTestId(testID);
+          expect(link.props.accessibilityRole).toBe('link');
+          expect(StyleSheet.flatten(link.props.style)).toMatchObject(
+            styles.link,
+          );
+        },
       );
       fireEvent.press(getByTestId('purchase-terms-of-sale-link'));
       fireEvent.press(getByTestId('purchase-apple-terms-link'));
