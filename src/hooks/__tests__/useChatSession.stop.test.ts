@@ -237,6 +237,43 @@ describe('useChatSession Stop and the generation lease', () => {
     expect(lastCallArg(chatSessionStore.setIsGenerating)).toBe(false);
   });
 
+  it('a Stop while the lease is still pending cancels that send, and only that one', async () => {
+    const {engine, completions} = installEngine();
+    const acquire = modelStore.acquireGeneration as jest.Mock;
+    const realAcquire = acquire.getMockImplementation()!;
+    let grant!: () => void;
+    acquire.mockImplementationOnce(
+      () =>
+        new Promise(resolve => {
+          grant = () => resolve(realAcquire());
+        }),
+    );
+    const session = renderSession();
+
+    let sending!: Promise<unknown>;
+    await act(async () => {
+      sending = session.current.handleSendPress(textMessage);
+    });
+    await act(async () => {
+      await session.current.handleStopPress();
+    });
+    await act(async () => {
+      grant();
+      await sending;
+    });
+    expect(engine.completion).not.toHaveBeenCalled();
+
+    let next!: Promise<unknown>;
+    await act(async () => {
+      next = session.current.handleSendPress(textMessage);
+    });
+    await waitFor(() => expect(engine.completion).toHaveBeenCalledTimes(1));
+    await act(async () => {
+      completions[0].finish({text: 'ok', content: 'ok'});
+      await next;
+    });
+  });
+
   it('two sends during one drain run in order, and isStopping clears when the first acquires', async () => {
     const {engine, completions} = installEngine();
     const session = renderSession();

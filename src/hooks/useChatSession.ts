@@ -641,6 +641,7 @@ export const useChatSession = (
   // direct dependency on the cache, modelStore, or getFormattedChat.
   const triggerCacheRef = useRef(createTriggerMarkerCache());
   const leaseRef = useRef<GenerationLease | null>(null);
+  const stopsBeforeLease = useRef(0);
 
   const addMessage = async (message: MessageType.Any) => {
     await chatSessionStore.addMessageToCurrentSession(message);
@@ -664,6 +665,7 @@ export const useChatSession = (
     opts: SendOptions = {},
   ): Promise<UndoneSend | undefined> => {
     const sentFrom = chatSessionStore.activeSessionId;
+    const stopsAtSend = stopsBeforeLease.current;
     if (modelStore.isGenerationBusy) {
       chatSessionStore.setIsStopping(true);
     }
@@ -679,6 +681,9 @@ export const useChatSession = (
       return;
     }
     leaseRef.current = lease;
+    if (stopsBeforeLease.current !== stopsAtSend) {
+      lease.abort();
+    }
 
     // Run UI clears on abort, not on drain.
     let uiStopped = false;
@@ -1121,7 +1126,11 @@ export const useChatSession = (
   };
 
   const handleStopPress = async () => {
-    leaseRef.current?.abort();
+    if (leaseRef.current) {
+      leaseRef.current.abort();
+    } else {
+      stopsBeforeLease.current += 1;
+    }
     // Stop any in-flight TTS so buffered audio doesn't keep playing
     // after the user tapped Stop.
     ttsStore.stop().catch(err => {
