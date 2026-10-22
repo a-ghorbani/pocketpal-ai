@@ -115,14 +115,14 @@ export const validateImportedData = (
   }
 };
 
-/**
- * Validate a single chat session
- */
 const isImportableDocument = (ref: any): boolean =>
   !!ref &&
   isDocumentId(ref.id) &&
   (ref.pageRange === undefined || isValidPageRange(ref.pageRange));
 
+/**
+ * Validate a single chat session
+ */
 const validateSingleSession = (session: any): ImportedChatSession => {
   // Check required fields
   if (!session.title || typeof session.title !== 'string') {
