@@ -1,4 +1,5 @@
 import * as RNFS from '@dr.pogodin/react-native-fs';
+import {Platform} from 'react-native';
 import {pick} from '@react-native-documents/picker';
 import {palStore} from '../../store';
 import {
@@ -9,6 +10,7 @@ import {
 } from '../importUtils';
 import {exportPal} from '../exportUtils';
 import {LOOKIE_DEFAULT_MODEL} from '../../store/builtinPalModels';
+import {withEachControl} from '../../../jest/fixtures/controlCharacters';
 
 jest.mock('react-native-share', () => ({
   open: jest.fn().mockResolvedValue({success: true}),
@@ -126,6 +128,45 @@ describe('importUtils', () => {
         imageUris: [pickerUri],
         partialCompletionResult: {foo: 1},
       });
+    });
+
+    it.each(
+      withEachControl(c => [
+        `file://${tmp}A1B2C3D4-E5F6-4789-ABCD-EF0123456789.j${c}pg`,
+        `file://${tmp}A1B2C3D4-E5F6-4789-ABCD-EF0123456789.jpg${c}`,
+      ]),
+    )('drops %s and keeps the message', (_shown, uri) => {
+      const message = importedMessage({imageUris: [uri, pickerUri]});
+      expect(message.metadata?.imageUris).toEqual([pickerUri]);
+      expect(message.text).toBe('look');
+    });
+
+    it.each(
+      withEachControl(c => [
+        `file://${RNFS.CachesDirectoryPath}/rn_image_picker_lib_temp_a${c}b.jpg`,
+        `file://${RNFS.CachesDirectoryPath}/rn_image_picker_lib_temp_ab.jpg${c}`,
+      ]),
+    )('android drops %s and keeps the message', (_shown, uri) => {
+      const savedOS = Platform.OS;
+      Platform.OS = 'android';
+      try {
+        const androidPick = `file://${RNFS.CachesDirectoryPath}/rn_image_picker_lib_temp_ab.jpg`;
+        const message = importedMessage({imageUris: [uri, androidPick]});
+        expect(message.metadata?.imageUris).toEqual([androidPick]);
+        expect(message.text).toBe('look');
+      } finally {
+        Platform.OS = savedOS;
+      }
+    });
+
+    it.each(
+      withEachControl(c => [
+        `file://${tmp}${c}A1B2C3D4-E5F6-4789-ABCD-EF0123456789.jpg`,
+        `${c}${pickerUri}`,
+      ]),
+    )('also drops %s, which other rules already reject', (_shown, uri) => {
+      const message = importedMessage({imageUris: [uri, pickerUri]});
+      expect(message.metadata?.imageUris).toEqual([pickerUri]);
     });
 
     it.each([null, 'file:///etc/hosts', {0: pickerUri}])(
@@ -365,6 +406,15 @@ describe('importUtils', () => {
           },
         );
 
+        it.each(withEachControl(c => [`${c}https://h/a.png`]))(
+          '%s is dropped as a non-remote value',
+          async (_shown, thumbnail_url) => {
+            const created = await importOne({...basePal, thumbnail_url});
+            expect(created.thumbnail_url).toBeUndefined();
+            expectRestKept(created);
+          },
+        );
+
         it('a non-string value is dropped', async () => {
           const created = await importOne({...basePal, thumbnail_url: 7});
           expect(created.thumbnail_url).toBeUndefined();
@@ -388,6 +438,17 @@ describe('importUtils', () => {
         ['author', (ref, v) => (ref.author = v), true],
         ['repo', (ref, v) => (ref.repo = v), true],
         ['id', (ref, v) => (ref.id = v), true],
+      ];
+
+      const CONTROL_CARRIERS: [string, Setter, (c: string) => string[]][] = [
+        ['filename', FIELDS[0][1], c => [`x${c}.gguf`, `${c}x.gguf`]],
+        ['hfModel.author', FIELDS[1][1], c => [`ggml${c}org`, `ggml-org${c}`]],
+        ['hfModel.id', FIELDS[2][1], c => [`ggml-org/Smol${c}VLM`]],
+        ['hfModelFile.rfilename', FIELDS[3][1], c => [`x${c}.gguf`]],
+        ['mmproj sibling rfilename', setMmproj, c => [`a${c}b`]],
+        ['author', FIELDS[5][1], c => [`ggml${c}org`]],
+        ['repo', FIELDS[6][1], c => [`Smol${c}VLM`]],
+        ['id', FIELDS[7][1], c => [`ggml-org/SmolVLM/x${c}.gguf`]],
       ];
 
       const withField = (set: Setter, v: unknown) => {
@@ -426,6 +487,23 @@ describe('importUtils', () => {
               expect(created[modelKey]).toEqual(emptyAllowed ? ref : undefined);
             });
           });
+
+          describe.each(CONTROL_CARRIERS)(
+            '%s with a control character',
+            (_field, set, carriers) => {
+              it.each(withEachControl(carriers))(
+                '%s drops the model, keeps the pal',
+                async (_shown, v) => {
+                  const created = await importOne({
+                    ...basePal,
+                    [modelKey]: withField(set, v),
+                  });
+                  expect(created[modelKey]).toBeUndefined();
+                  expectRestKept(created);
+                },
+              );
+            },
+          );
         },
       );
 

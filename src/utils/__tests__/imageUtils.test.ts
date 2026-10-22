@@ -19,6 +19,7 @@ import {
   getAbsoluteThumbnailPath,
 } from '../imageUtils';
 import {isSafePathSegment} from '../pathGuard';
+import {withEachControl} from '../../../jest/fixtures/controlCharacters';
 
 const mockRNFS = RNFS as jest.Mocked<typeof RNFS>;
 
@@ -244,6 +245,49 @@ describe('imageUtils', () => {
         expect(await localThumbnailExists(name)).toBe(false);
         expect(mockRNFS.exists).not.toHaveBeenCalled();
       });
+    });
+
+    describe('control characters', () => {
+      const names = withEachControl(c => [
+        `${mockPalId}_thumbnail.j${c}pg`,
+        `${c}${expectedFilename}`,
+        `${expectedFilename}${c}`,
+      ]);
+
+      it.each(names)('getAbsoluteThumbnailPath(%s) → null', (_shown, name) => {
+        expect(getAbsoluteThumbnailPath(name)).toBeNull();
+      });
+
+      it.each(names)(
+        'deletePalThumbnail(%s): no exists and no unlink',
+        async (_shown, name) => {
+          await deletePalThumbnail(name);
+          expect(mockRNFS.exists).not.toHaveBeenCalled();
+          expect(mockRNFS.unlink).not.toHaveBeenCalled();
+        },
+      );
+
+      it.each(names)(
+        'localThumbnailExists(%s) → false without touching disk',
+        async (_shown, name) => {
+          mockRNFS.exists.mockResolvedValue(true);
+          expect(await localThumbnailExists(name)).toBe(false);
+          expect(mockRNFS.exists).not.toHaveBeenCalled();
+        },
+      );
+
+      it.each(
+        withEachControl(c => [`https://h/a.p${c}ng`, `https://h/a.png${c}`]),
+      )(
+        'downloadPalThumbnail(%s) throws before touching disk',
+        async (_shown, url) => {
+          await expect(downloadPalThumbnail(mockPalId, url)).rejects.toThrow(
+            'Invalid thumbnail filename',
+          );
+          expect(mockRNFS.exists).not.toHaveBeenCalled();
+          expect(mockRNFS.downloadFile).not.toHaveBeenCalled();
+        },
+      );
     });
 
     describe('downloadPalThumbnail URL extension', () => {

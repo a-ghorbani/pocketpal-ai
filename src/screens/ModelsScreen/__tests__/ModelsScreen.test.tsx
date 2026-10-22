@@ -12,6 +12,7 @@ import {
 
 import {ModelsScreen} from '../ModelsScreen';
 import {isModelFilePath} from '../../../utils/modelPathGuard';
+import {withEachControl} from '../../../../jest/fixtures/controlCharacters';
 
 import {modelStore, uiStore} from '../../../store';
 import {
@@ -166,6 +167,14 @@ describe('ModelsScreen', () => {
       const target = await pickAndCopy({uri, name});
       expect(target).toMatch(new RegExp(`^${localDir}/file_[^/]+$`));
     });
+
+    it.each(withEachControl(c => [`a${c}b.gguf`, `${c}x.gguf`, `x.gguf${c}`]))(
+      'name %s falls back to file_<uuid>',
+      async (_shown, name) => {
+        const target = await pickAndCopy({uri: '/mock/file/path', name});
+        expect(target).toMatch(new RegExp(`^${localDir}/file_[^/]+$`));
+      },
+    );
 
     it('keeps a plain file name', async () => {
       expect(await pickAndCopy({uri: '/mock/file/path', name: 'x.gguf'})).toBe(

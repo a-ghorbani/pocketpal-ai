@@ -1,6 +1,7 @@
 import * as RNFS from '@dr.pogodin/react-native-fs';
 
 import {isModelFilePath, isValidImportedModelRef} from '../modelPathGuard';
+import {withEachControl} from '../../../jest/fixtures/controlCharacters';
 
 const DOCS = RNFS.DocumentDirectoryPath;
 const MODELS = `${DOCS}/models`;
@@ -303,6 +304,99 @@ describe('isValidImportedModelRef', () => {
           filename: 'x.gguf',
         }),
       ).toBe(true);
+    });
+  });
+});
+
+describe('control characters', () => {
+  type Setter = (ref: Ref, v: string) => void;
+  const REF_FIELDS: [string, Setter, (c: string) => string[]][] = [
+    [
+      'filename',
+      (ref, v) => (ref.filename = v),
+      c => [`x${c}.gguf`, `Q4/a${c}b.gguf`, `x.gguf${c}`],
+    ],
+    [
+      'hfModelFile.rfilename',
+      (ref, v) => (ref.hfModelFile.rfilename = v),
+      c => [`x${c}.gguf`, `Q4/a${c}b.gguf`],
+    ],
+    [
+      'hfModel.id',
+      (ref, v) => (ref.hfModel.id = v),
+      c => [`a/b${c}c`, `${c}a/b`, `a/b${c}`],
+    ],
+    [
+      'hfModel.author',
+      (ref, v) => (ref.hfModel.author = v),
+      c => [`a${c}b`, `${c}ab`, `ab${c}`],
+    ],
+    [
+      'mmproj sibling rfilename',
+      setMmprojSibling,
+      c => [`a${c}b`, `${c}ab`, `ab${c}`],
+    ],
+    [
+      'author (hf origin)',
+      (ref, v) => (ref.author = v),
+      c => [`a${c}b`, `${c}ab`, `ab${c}`],
+    ],
+    [
+      'repo (hf origin)',
+      (ref, v) => (ref.repo = v),
+      c => [`a${c}b`, `${c}ab`, `ab${c}`],
+    ],
+    [
+      'id (hf origin)',
+      (ref, v) => (ref.id = v),
+      c => [`a/r/x${c}.gguf`, `${c}a/r/x.gguf`],
+    ],
+  ];
+
+  describe.each(REF_FIELDS)('imported ref %s', (_field, set, carriers) => {
+    it.each(withEachControl(carriers))('rejects %s', (_shown, value) => {
+      expect(isValidImportedModelRef(withField(ref => set(ref, value)))).toBe(
+        false,
+      );
+    });
+  });
+
+  it.each(
+    withEachControl(c => [
+      `${MODELS}/hf/${c}/m.gguf`,
+      `${MODELS}/hf/a/r/x${c}.gguf`,
+      `${MODELS}/hf/a${c}b/r/x.gguf`,
+      `${DOCS}/x${c}.gguf`,
+    ]),
+  )('isModelFilePath rejects %s', (_shown, path) => {
+    expect(isModelFilePath(path, {local: false})).toBe(false);
+  });
+
+  it.each(
+    withEachControl(c => [`${MODELS}/local/a${c}b`, `${MODELS}/local/ab${c}`]),
+  )('isModelFilePath (local) rejects %s', (_shown, path) => {
+    expect(isModelFilePath(path, {local: true})).toBe(false);
+  });
+
+  describe('positions another rule already rejects', () => {
+    it.each(withEachControl(c => [`x.gguf${c}`]))(
+      'hfModelFile.rfilename rejects %s',
+      (_shown, value) => {
+        expect(
+          isValidImportedModelRef(
+            withField(ref => (ref.hfModelFile.rfilename = value)),
+          ),
+        ).toBe(false);
+      },
+    );
+
+    it.each(
+      withEachControl(c => [
+        `${c}${MODELS}/hf/a/r/x.gguf`,
+        `${MODELS}/hf/a/r/x.gguf${c}`,
+      ]),
+    )('isModelFilePath rejects %s', (_shown, path) => {
+      expect(isModelFilePath(path, {local: false})).toBe(false);
     });
   });
 });

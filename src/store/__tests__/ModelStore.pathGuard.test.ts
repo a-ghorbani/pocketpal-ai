@@ -29,6 +29,7 @@ import {ONBOARDING_PALS} from '../onboarding/onboardingPals';
 import androidBundledRules from '../bundledDeviceRules/rules.android.json';
 import iosBundledRules from '../bundledDeviceRules/rules.ios.json';
 import {defaultModels as legacyDefaultModels} from '../../../jest/fixtures/legacyDefaultModels';
+import {withEachControl} from '../../../jest/fixtures/controlCharacters';
 import smolVlmModelInfo from '../../../jest/fixtures/hfApi/ggml-org__SmolVLM-500M-Instruct-GGUF.model.json';
 import smolVlmTree from '../../../jest/fixtures/hfApi/ggml-org__SmolVLM-500M-Instruct-GGUF.tree.json';
 
@@ -528,6 +529,72 @@ describe('model sink guard', () => {
         } else {
           expect(RNFS.unlink).not.toHaveBeenCalled();
         }
+      },
+    );
+  });
+
+  describe('control characters in a path segment', () => {
+    const expectRefusedAndSkipped = async (model: Model, path: string) => {
+      expect(await modelStore.getModelFullPath(model)).toBe(path);
+      await expectDownloadRefused(model);
+      jest.clearAllMocks();
+      await expectDeleteSkipped(model);
+    };
+
+    it.each(
+      withEachControl(c => [`x${c}.gguf`, `${c}x.gguf`, `Q4/a${c}b.gguf`]),
+    )('filename %s: no download and no unlink', async (_shown, filename) => {
+      await expectRefusedAndSkipped(
+        hfModel({filename}),
+        hfPath('a', 'r', filename),
+      );
+    });
+
+    it.each(withEachControl(c => [`a${c}b`, `${c}ab`, `ab${c}`]))(
+      'author or repo %s: no download and no unlink',
+      async (_shown, segment) => {
+        await expectRefusedAndSkipped(
+          hfModel({author: segment}),
+          hfPath(segment, 'r', 'x.gguf'),
+        );
+        jest.clearAllMocks();
+        await expectRefusedAndSkipped(
+          hfModel({repo: segment}),
+          hfPath('a', segment, 'x.gguf'),
+        );
+      },
+    );
+
+    it.each(withEachControl(c => [`${DOCS}/models/local/a${c}b`]))(
+      'LOCAL %s leaves the list without an unlink',
+      async (_shown, fullPath) => {
+        existingFiles.add(fullPath);
+        const local = createModel({
+          id: 'local-1',
+          filename: fullPath.split('/').pop(),
+          fullPath,
+          isLocal: true,
+          origin: ModelOrigin.LOCAL,
+          isDownloaded: true,
+        }) as Model;
+        runInAction(() => {
+          modelStore.models = [local];
+        });
+
+        await modelStore.deleteModel(storeModel(local.id));
+
+        expect(modelStore.models).toHaveLength(0);
+        expect(RNFS.unlink).not.toHaveBeenCalled();
+      },
+    );
+
+    it.each(withEachControl(c => [`x.gguf${c}`]))(
+      'filename %s is also refused by the .gguf rule',
+      async (_shown, filename) => {
+        await expectRefusedAndSkipped(
+          hfModel({filename}),
+          hfPath('a', 'r', filename),
+        );
       },
     );
   });

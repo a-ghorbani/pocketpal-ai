@@ -2,6 +2,7 @@ import * as RNFS from '@dr.pogodin/react-native-fs';
 import {Platform} from 'react-native';
 
 import {isAllowedChatImageUri} from '../chatImageUri';
+import {withEachControl} from '../../../jest/fixtures/controlCharacters';
 
 const mockRNFS = RNFS as any;
 const savedCaches = RNFS.CachesDirectoryPath;
@@ -82,6 +83,24 @@ describe('isAllowedChatImageUri', () => {
       expect(isAllowedChatImageUri(uri)).toBe(false);
     });
 
+    it.each(
+      withEachControl(c => [
+        `file://${ANDROID_CACHE}/rn_image_picker_lib_temp_a${c}b.jpg`,
+        `file://${ANDROID_CACHE}/rn_image_picker_lib_temp_ab.jpg${c}`,
+      ]),
+    )('rejects %s', (_shown, uri) => {
+      expect(isAllowedChatImageUri(uri)).toBe(false);
+    });
+
+    it.each(
+      withEachControl(c => [
+        `file://${ANDROID_CACHE}/${c}rn_image_picker_lib_temp_ab.jpg`,
+        `file://${c}${ANDROID_CACHE}/rn_image_picker_lib_temp_ab.jpg`,
+      ]),
+    )('rejects %s, which other rules already reject', (_shown, uri) => {
+      expect(isAllowedChatImageUri(uri)).toBe(false);
+    });
+
     it('rejects everything when the cache root is unavailable', () => {
       mockRNFS.__setCachesDirectoryPath(undefined);
       expect(isAllowedChatImageUri(ANDROID_PICK)).toBe(false);
@@ -130,6 +149,25 @@ describe('isAllowedChatImageUri', () => {
       mockRNFS.__setTemporaryDirectoryPath(undefined);
       expect(isAllowedChatImageUri(iosPick(false))).toBe(false);
       expect(isAllowedChatImageUri(iosPick(true))).toBe(false);
+    });
+
+    it.each(
+      withEachControl(c => [
+        iosPick(false, `${IOS_UUID}.j${c}pg`),
+        iosPick(false, `${IOS_UUID}.jpg${c}`),
+        iosPick(true, `${IOS_UUID}.j${c}pg`),
+      ]),
+    )('rejects %s', (_shown, uri) => {
+      expect(isAllowedChatImageUri(uri)).toBe(false);
+    });
+
+    it.each(
+      withEachControl(c => [
+        iosPick(false, `${c}${IOS_UUID}.jpg`),
+        `file://${c}${IOS_CONTAINER}/tmp/${IOS_UUID}.jpg`,
+      ]),
+    )('rejects %s, which other rules already reject', (_shown, uri) => {
+      expect(isAllowedChatImageUri(uri)).toBe(false);
     });
 
     it('allows a root without the trailing slash', () => {
