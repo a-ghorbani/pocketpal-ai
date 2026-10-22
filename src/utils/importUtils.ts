@@ -14,7 +14,8 @@ import {MessageType} from './types';
 import {CompletionParams} from './completionTypes';
 import {migrateCompletionSettings} from './completionSettingsVersions';
 import {palStore} from '../store';
-import {getAbsoluteThumbnailPath} from './imageUtils';
+import {getAbsoluteThumbnailPath, isRemoteThumbnailUrl} from './imageUtils';
+import {isValidImportedModelRef} from './modelPathGuard';
 import type {Pal, ParameterDefinition} from '../types/pal';
 
 /**
@@ -407,6 +408,12 @@ const saveBase64Image = async (
   return fileName;
 };
 
+const keepRemoteThumbnailUrl = (url: unknown): string | undefined =>
+  typeof url === 'string' && isRemoteThumbnailUrl(url) ? url : undefined;
+
+const keepValidModelRef = <T>(ref: T): T | undefined =>
+  isValidImportedModelRef(ref) ? ref : undefined;
+
 /**
  * Transform imported pal to the format expected by palStore.createPal
  */
@@ -414,7 +421,7 @@ const transformImportPal = async (
   pal: ImportedPal,
 ): Promise<Omit<Pal, 'id' | 'created_at' | 'updated_at'>> => {
   // Handle thumbnail image - save base64 data as local file if present
-  let thumbnailUrl = pal.thumbnail_url;
+  let thumbnailUrl = keepRemoteThumbnailUrl(pal.thumbnail_url);
 
   if (pal.thumbnail_data) {
     try {
@@ -436,8 +443,8 @@ const transformImportPal = async (
     originalSystemPrompt: pal.originalSystemPrompt,
     isSystemPromptChanged: pal.isSystemPromptChanged,
     useAIPrompt: pal.useAIPrompt,
-    defaultModel: pal.defaultModel,
-    promptGenerationModel: pal.promptGenerationModel,
+    defaultModel: keepValidModelRef(pal.defaultModel),
+    promptGenerationModel: keepValidModelRef(pal.promptGenerationModel),
     generatingPrompt: pal.generatingPrompt,
     color: pal.color,
     capabilities: pal.capabilities || {},
