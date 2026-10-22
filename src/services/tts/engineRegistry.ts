@@ -41,12 +41,12 @@ export const getNeuralEngine = (id: NeuralEngineId): NeuralEngine => {
 
 /**
  * All engines in the order they're rendered in the setup sheet:
- * Kitten, Kokoro, Supertonic, Phonon, System.
+ * Phonon, Kitten, Kokoro, Supertonic, System.
  */
 export const getAllEngines = (): Engine[] => [
+  phononEngine,
   kittenEngine,
   kokoroEngine,
   supertonicEngine,
-  phononEngine,
   systemEngine,
 ];

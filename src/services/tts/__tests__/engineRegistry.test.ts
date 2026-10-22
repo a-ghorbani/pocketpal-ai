@@ -36,14 +36,14 @@ describe('engineRegistry', () => {
     expect(engine.id).toBe('phonon');
   });
 
-  it('getAllEngines returns the five engines in setup-sheet order: kitten, kokoro, supertonic, phonon, system', () => {
+  it('getAllEngines returns the five engines in setup-sheet order: phonon, kitten, kokoro, supertonic, system', () => {
     const all = getAllEngines();
     expect(all).toHaveLength(5);
     expect(all.map(e => e.id)).toEqual([
+      'phonon',
       'kitten',
       'kokoro',
       'supertonic',
-      'phonon',
       'system',
     ]);
   });

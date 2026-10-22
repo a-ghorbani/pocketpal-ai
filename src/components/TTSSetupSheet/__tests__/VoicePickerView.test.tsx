@@ -93,7 +93,7 @@ describe('VoicePickerView', () => {
   });
 
   describe('Phonon', () => {
-    it('is listed last with its credit and install size when the device supports it', () => {
+    it('is listed first with its credit and install size when the device supports it', () => {
       runInAction(() => {
         ttsStore.phononSupported = true;
       });
@@ -103,10 +103,10 @@ describe('VoicePickerView', () => {
         g => g.props.testID,
       );
       expect(groups).toEqual([
+        'tts-engine-group-phonon',
         'tts-engine-group-kitten',
         'tts-engine-group-kokoro',
         'tts-engine-group-supertonic',
-        'tts-engine-group-phonon',
       ]);
       fireEvent.press(getByTestId('tts-engine-group-toggle-phonon'));
       expect(getByTestId('tts-phonon-credit')).toBeTruthy();
@@ -116,7 +116,15 @@ describe('VoicePickerView', () => {
     });
 
     it('is not rendered, with no error text, when the device does not support it', () => {
-      const {queryByTestId, queryByText} = renderView();
+      const {queryByTestId, queryByText, getAllByTestId} = renderView();
+
+      expect(
+        getAllByTestId(/^tts-engine-group-(?!toggle)/).map(g => g.props.testID),
+      ).toEqual([
+        'tts-engine-group-kitten',
+        'tts-engine-group-kokoro',
+        'tts-engine-group-supertonic',
+      ]);
 
       expect(queryByTestId('tts-engine-group-phonon')).toBeNull();
       expect(queryByTestId('tts-phonon-credit')).toBeNull();

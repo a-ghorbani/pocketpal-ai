@@ -57,7 +57,7 @@ type DownloadState = 'not_installed' | 'downloading' | 'ready' | 'error';
 
 // System TTS hidden until language/accent/search filtering is built —
 // 180+ iOS / 470+ Android unfiltered voices is hostile UX.
-const ENGINE_ORDER: EngineId[] = ['kitten', 'kokoro', 'supertonic', 'phonon'];
+const ENGINE_ORDER: EngineId[] = ['phonon', 'kitten', 'kokoro', 'supertonic'];
 
 const engineTitle = (engineId: EngineId, l: L10n): string => {
   switch (engineId) {
