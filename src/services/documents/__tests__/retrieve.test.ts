@@ -2,6 +2,7 @@ import {estimateDocTokens} from '../estimate';
 import {documentKey, renderExcerptBlock} from '../render';
 import {
   clearDocumentIndexCache,
+  dropDocumentIndexes,
   retrieveExcerpts,
   terms,
   type RetrieveInput,
@@ -283,5 +284,65 @@ describe('index cache and loading', () => {
 
     expect(load).toHaveBeenCalledTimes(1);
     expect(second).toEqual(first);
+  });
+});
+
+describe('index cache lifetime', () => {
+  const bigPages = (word: string, chars: number) => {
+    const sentence = `The ${word} report covers churn and retention in detail. `;
+    return [sentence.repeat(Math.ceil(chars / sentence.length))];
+  };
+  const retrieveWith = (refs: DocumentRef[], load: jest.Mock) =>
+    retrieveExcerpts({
+      query: 'churn',
+      searchedRefs: refs,
+      load,
+      excerptBudget: 2048,
+    });
+
+  it('never evicts an index the current retrieval uses', async () => {
+    const refs = ['one', 'two', 'three'].map(label => doc(label));
+    const pages = new Map(
+      refs.map(ref => [ref.id, bigPages(ref.name, 1_500_000)]),
+    );
+    const load = jest.fn(async (ref: DocumentRef) => pages.get(ref.id)!);
+
+    await retrieveWith(refs, load);
+    load.mockClear();
+    await retrieveWith(refs, load);
+
+    expect(load).not.toHaveBeenCalled();
+  }, 30000);
+
+  it('a retrieval in flight across a clear does not refill the cache', async () => {
+    const report = doc('in-flight');
+    let release: () => void = () => {};
+    const gate = new Promise<void>(resolve => (release = resolve));
+    const load = jest.fn(async () => {
+      await gate;
+      return ['Churn rose in spring.'];
+    });
+
+    const pending = retrieveWith([report], load);
+    await Promise.resolve();
+    clearDocumentIndexCache();
+    release();
+    await pending;
+    await retrieveWith([report], load);
+
+    expect(load).toHaveBeenCalledTimes(2);
+  });
+
+  it('drops indexes for a released id', async () => {
+    const kept = doc('kept-index');
+    const released = doc('released-index');
+    const load = jest.fn(async (_ref: DocumentRef) => ['Churn notes.']);
+
+    await retrieveWith([kept, released], load);
+    load.mockClear();
+    dropDocumentIndexes(released.id);
+    await retrieveWith([kept, released], load);
+
+    expect(load.mock.calls.map(([ref]) => ref.id)).toEqual([released.id]);
   });
 });

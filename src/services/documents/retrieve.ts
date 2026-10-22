@@ -164,12 +164,21 @@ export type DocumentLoader = (
   ref: DocumentRef,
 ) => Promise<string[] | 'missing'>;
 
-/** The cached index for a ref, or a fresh one built from text loaded on a miss. */
+/** Bumped by every clear; an index built before it is not cached. */
+let indexGeneration = 0;
+
+/**
+ * The cached index for a ref, or a fresh one built from text loaded on a miss.
+ * Eviction skips every key the calling retrieval has used.
+ */
 const indexFor = async (
   ref: DocumentRef,
   load: DocumentLoader,
+  used: Set<string>,
+  generation: number,
 ): Promise<PassageIndex | undefined> => {
   const key = cacheKey(ref);
+  used.add(key);
   const cached = indexCache.get(key);
   if (cached) {
     indexCache.delete(key);
@@ -181,19 +190,36 @@ const indexFor = async (
     return undefined;
   }
   const index = await buildIndex(ref, pages);
+  if (generation !== indexGeneration) {
+    return index;
+  }
   indexCache.set(key, index);
   let chars = [...indexCache.values()].reduce((sum, i) => sum + i.chars, 0);
   for (const [oldKey, old] of indexCache) {
-    if (chars <= MAX_INDEXED_CHARS || oldKey === key) {
+    if (chars <= MAX_INDEXED_CHARS) {
       break;
     }
-    indexCache.delete(oldKey);
-    chars -= old.chars;
+    if (!used.has(oldKey)) {
+      indexCache.delete(oldKey);
+      chars -= old.chars;
+    }
   }
   return index;
 };
 
-export const clearDocumentIndexCache = (): void => indexCache.clear();
+export const clearDocumentIndexCache = (): void => {
+  indexCache.clear();
+  indexGeneration += 1;
+};
+
+/** Forgets every cached index of a document whose files were deleted. */
+export const dropDocumentIndexes = (id: string): void => {
+  for (const key of [...indexCache.keys()]) {
+    if (key.startsWith(`${id}:`)) {
+      indexCache.delete(key);
+    }
+  }
+};
 
 const PAGE_MENTION = /\b(?:pp?\.|pages?)\s*(\d+)(?:\s*[–-]\s*(\d+))?/gi;
 
@@ -255,13 +281,15 @@ export const retrieveExcerpts = async ({
 }: RetrieveInput): Promise<ExcerptResult> => {
   const corpus: CorpusEntry[] = [];
   const seen = new Set<string>();
+  const used = new Set<string>();
+  const generation = indexGeneration;
   for (const ref of searchedRefs) {
     const key = documentKey(ref);
     if (seen.has(key)) {
       continue;
     }
     seen.add(key);
-    const index = await indexFor(ref, load);
+    const index = await indexFor(ref, load, used, generation);
     if (index) {
       corpus.push({index, docOrder: corpus.length});
     }
