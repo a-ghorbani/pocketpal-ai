@@ -70,7 +70,7 @@ import {
   setDocumentPageRange,
 } from '../../services/documents/store';
 import {hasDocuments} from '../../services/documents/budget';
-import type {BudgetVerdict} from '../../services/documents/plan';
+import {rowsBefore, type BudgetVerdict} from '../../services/documents/plan';
 import {documentKey} from '../../services/documents/render';
 import {documentCountingOptions} from '../../utils/documentCounting';
 import {createDocumentWarning} from '../../utils/errors';
@@ -741,6 +741,21 @@ export const ChatView = observer(
       [updateComposerDocuments],
     );
 
+    /** Puts a row in edit mode while keeping what the composer already holds. */
+    const editRowKeepingComposer = React.useCallback(
+      (row: MessageType.Text) => {
+        if (row.id === chatSessionStore.editingMessageId) {
+          return;
+        }
+        chatSessionStore.enterEditMode(row.id);
+        mergeIntoComposer(
+          {text: row.text, images: row.imageUris, documents: row.documents},
+          'pendingFirst',
+        );
+      },
+      [mergeIntoComposer],
+    );
+
     const restoreUndone = React.useCallback(
       ({message, sessionId, verdict}: UndoneSend) => {
         const isOpenChat =
@@ -879,10 +894,16 @@ export const ChatView = observer(
         setInputImages,
         setInputDocuments: setComposerRefs,
         evaluateSendBudget,
-        onBudgetOver: setBudgetVerdict,
+        onBudgetOver: (verdict, row) => {
+          editRowKeepingComposer(row);
+          setBudgetVerdict(verdict);
+        },
       });
 
-    const editTargetForBudget = messages.find(
+    const editTargetForBudget = rowsBefore(
+      messages,
+      chatSessionStore.editingMessageId ?? undefined,
+    ).find(
       (row): row is MessageType.Text =>
         row.type === 'text' &&
         row.author.id === user.id &&
@@ -893,25 +914,9 @@ export const ChatView = observer(
       if (!editTargetForBudget) {
         return;
       }
-      const pendingText = inputTextRef.current;
-      const pendingImages = inputImages;
-      const pendingDocuments = inputDocumentsRef.current;
       setBudgetVerdict(null);
-      handleEdit(editTargetForBudget);
-      setInputText(
-        pendingText
-          ? prependText(pendingText, editTargetForBudget.text)
-          : editTargetForBudget.text,
-      );
-      setInputImages([
-        ...pendingImages,
-        ...(editTargetForBudget.imageUris ?? []),
-      ]);
-      updateComposerDocuments(() => [
-        ...pendingDocuments,
-        ...readyChips(editTargetForBudget.documents),
-      ]);
-    }, [editTargetForBudget, inputImages, handleEdit, updateComposerDocuments]);
+      editRowKeepingComposer(editTargetForBudget);
+    }, [editTargetForBudget, editRowKeepingComposer]);
 
     // ============ AUTO-SCROLL ON NEW USER MESSAGE ============
     // Scroll to bottom when user sends a new message

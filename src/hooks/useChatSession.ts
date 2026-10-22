@@ -72,6 +72,7 @@ import {
 import {hasDocuments} from '../services/documents/budget';
 import {
   documentPlan,
+  rowsBefore,
   type BudgetVerdict,
   type Plan,
   type PlanInput,
@@ -786,11 +787,6 @@ const planInputs = async (
     ].join('\n'),
     missingKeys: await findMissingDocuments(refs),
   };
-};
-
-const rowsBefore = (rows: MessageType.Any[], messageId?: string) => {
-  const index = messageId ? rows.findIndex(row => row.id === messageId) : -1;
-  return index >= 0 ? rows.slice(index + 1) : rows;
 };
 
 export const useChatSession = (

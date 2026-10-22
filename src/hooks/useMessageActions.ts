@@ -29,7 +29,11 @@ interface UseMessageActionsProps {
   setInputImages?: (images: string[]) => void;
   setInputDocuments?: (documents: DocumentRef[]) => void;
   evaluateSendBudget?: EvaluateSendBudget;
-  onBudgetOver?: (verdict: Extract<BudgetVerdict, {kind: 'over'}>) => void;
+  /** The resend no longer fits; the caller puts `row` in edit mode. */
+  onBudgetOver?: (
+    verdict: Extract<BudgetVerdict, {kind: 'over'}>,
+    row: MessageType.Text,
+  ) => void;
 }
 
 export const useMessageActions = ({
@@ -85,8 +89,7 @@ export const useMessageActions = ({
             excludeFromId: row.id,
           });
           if (verdict.kind === 'over') {
-            await handleEdit(row);
-            onBudgetOver?.(verdict);
+            onBudgetOver?.(verdict, row);
             return;
           }
         }
@@ -96,7 +99,7 @@ export const useMessageActions = ({
         releaseSendHold(documentIds);
       }
     },
-    [messages, evaluateSendBudget, handleEdit, onBudgetOver, resendPress],
+    [messages, evaluateSendBudget, onBudgetOver, resendPress],
   );
 
   const handleTryAgain = useCallback(

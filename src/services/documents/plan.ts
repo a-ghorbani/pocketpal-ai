@@ -202,3 +202,12 @@ export const documentPlan = ({
   }
   return {...plan, verdict: {kind: 'fits'}};
 };
+
+/** History as a plan sees it: the rows older than an edited or resent row. */
+export const rowsBefore = (
+  rows: MessageType.Any[],
+  messageId?: string,
+): MessageType.Any[] => {
+  const index = messageId ? rows.findIndex(row => row.id === messageId) : -1;
+  return index >= 0 ? rows.slice(index + 1) : rows;
+};

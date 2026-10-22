@@ -75,7 +75,7 @@ const renderChat = (props: ChatProps = {}) => {
     await act(async () => {
       fireEvent.press(screen.getByTestId('attach-document'));
     });
-    await waitFor(() => screen.getByText(documentRef.name));
+    await waitFor(() => screen.getAllByText(documentRef.name));
   };
   return {screen, element, onSendPress, input, type, pressSend, attach};
 };
@@ -733,5 +733,147 @@ describe('ChatView resend', () => {
     expect(chat.onSendPress).toHaveBeenCalled();
     expect(chat.input().props.value).toBe('');
     expect(chat.screen.queryByText('edit-chip.pdf')).toBeNull();
+  });
+});
+
+describe('ChatView edit targets for the budget sheet', () => {
+  const menuLabels = l10n.en.components.chatView.menuItems;
+  const store = chatSessionStore as any;
+  const older = ref('older-doc');
+  const edited = ref('edited-doc');
+  const rowWith = (id: string, text: string, documents: DocumentRef[]) => ({
+    ...textMessage,
+    id,
+    author: user,
+    text,
+    documents,
+  });
+  const reply = (id: string, text: string) => ({
+    ...textMessage,
+    id,
+    author: {id: 'assistant'},
+    text,
+  });
+  const historyOver = {
+    newModes: [],
+    fullLoad: 0,
+    room: 0,
+    excerptBudget: 0,
+    verdict: {
+      kind: 'over' as const,
+      reason: 'history' as const,
+      needed: 6100,
+      available: 3072,
+      newDocs: [],
+      historyDocTokens: 6000,
+    },
+  };
+  const newOver = {
+    ...historyOver,
+    verdict: {...historyOver.verdict, reason: 'new' as const},
+  };
+
+  afterEach(() => {
+    store.isEditMode = false;
+    store.editingMessageId = null;
+    delete store.commitEdit;
+  });
+
+  it('Edit message never targets the row in edit', async () => {
+    store.isEditMode = true;
+    store.editingMessageId = 'edited-row';
+    const chat = renderChat({
+      messages: [
+        rowWith('edited-row', 'Edited row', [edited]),
+        reply('r1', 'reply one'),
+        rowWith('older-row', 'Older row', [older]),
+      ],
+      evaluateSendBudget: jest.fn().mockResolvedValue(historyOver),
+    });
+    chat.type('rewritten');
+    await act(async () => {
+      chat.pressSend();
+    });
+
+    await act(async () => {
+      fireEvent.press(chat.screen.getByTestId('budget-edit-message'));
+    });
+
+    expect(chatSessionStore.enterEditMode).toHaveBeenCalledWith('older-row');
+    expect(chatSessionStore.enterEditMode).not.toHaveBeenCalledWith(
+      'edited-row',
+    );
+  });
+
+  it('Edit message is hidden when no earlier row has documents', async () => {
+    store.isEditMode = true;
+    store.editingMessageId = 'edited-row';
+    const chat = renderChat({
+      messages: [rowWith('edited-row', 'Edited row', [edited])],
+      evaluateSendBudget: jest.fn().mockResolvedValue(historyOver),
+    });
+    chat.type('rewritten');
+    await act(async () => {
+      chat.pressSend();
+    });
+
+    expect(chat.screen.getByTestId('budget-new-chat')).toBeTruthy();
+    expect(chat.screen.queryByTestId('budget-edit-message')).toBeNull();
+  });
+
+  const regenerate = async (
+    chat: ReturnType<typeof renderChat>,
+    replyText: string,
+  ) => {
+    fireEvent(chat.screen.getByText(replyText), 'onLongPress', {
+      nativeEvent: {pageX: 0, pageY: 0},
+    });
+    await act(async () => {
+      fireEvent.press(chat.screen.getByText(menuLabels.regenerate));
+    });
+  };
+
+  it('over-budget regenerate merges the draft ahead of the row', async () => {
+    const pending = ref('pending-doc');
+    const chat = renderChat({
+      messages: [
+        reply('r1', 'reply one'),
+        rowWith('older-row', 'Older row', [older]),
+      ],
+      evaluateSendBudget: jest.fn().mockResolvedValue(newOver),
+    });
+    await chat.attach(pending);
+    await chat.attach(older);
+    chat.type('draft');
+
+    await regenerate(chat, 'reply one');
+
+    expect(chatSessionStore.enterEditMode).toHaveBeenCalledWith('older-row');
+    expect(chat.input().props.value).toBe('draft\nOlder row');
+    const chips = chat.screen
+      .getAllByTestId(/^composer-document-[a-z0-9]+$/)
+      .map(node => node.props.accessibilityLabel.split(',')[0]);
+    expect(chips).toEqual(['pending-doc.pdf', 'older-doc.pdf']);
+    expect(chat.screen.getByTestId('budget-cancel')).toBeTruthy();
+    expect(chat.onSendPress).not.toHaveBeenCalled();
+  });
+
+  it('over-budget regenerate of the row in edit leaves the composer', async () => {
+    store.isEditMode = true;
+    store.editingMessageId = 'older-row';
+    const chat = renderChat({
+      messages: [
+        reply('r1', 'reply one'),
+        rowWith('older-row', 'Older row', [older]),
+      ],
+      evaluateSendBudget: jest.fn().mockResolvedValue(newOver),
+    });
+    chat.type('edited text');
+
+    await regenerate(chat, 'reply one');
+
+    expect(chat.input().props.value).toBe('edited text');
+    expect(chatSessionStore.enterEditMode).not.toHaveBeenCalled();
+    expect(chat.screen.getByTestId('budget-cancel')).toBeTruthy();
   });
 });

@@ -114,6 +114,10 @@ describe('useMessageActions with documents', () => {
 
   it('removes nothing and opens the row in edit mode when it no longer fits', async () => {
     const t = setup(over);
+    let heldWhenHandedOver: boolean | undefined;
+    t.onBudgetOver.mockImplementation(() => {
+      heldWhenHandedOver = documentStore.isHeld('a-pdf');
+    });
 
     await act(async () => {
       await t.result.current.handleTryAgain(userRow);
@@ -121,11 +125,10 @@ describe('useMessageActions with documents', () => {
 
     expect(chatSessionStore.removeMessagesFromId).not.toHaveBeenCalled();
     expect(t.handleSendPress).not.toHaveBeenCalled();
-    expect(chatSessionStore.enterEditMode).toHaveBeenCalledWith('u1');
-    expect(t.setInputText).toHaveBeenCalledWith('Summarise');
-    expect(t.setInputDocuments).toHaveBeenCalledWith([doc]);
-    expect(t.onBudgetOver).toHaveBeenCalledWith(over);
-    expect(documentStore.isHeld('a-pdf')).toBe(true);
+    expect(chatSessionStore.enterEditMode).not.toHaveBeenCalled();
+    expect(t.setInputText).not.toHaveBeenCalled();
+    expect(t.onBudgetOver).toHaveBeenCalledWith(over, userRow);
+    expect(heldWhenHandedOver).toBe(true);
   });
 
   it('holds the refs from before the check until the resend settles', async () => {
