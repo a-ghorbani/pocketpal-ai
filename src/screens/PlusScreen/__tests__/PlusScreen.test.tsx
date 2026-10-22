@@ -299,27 +299,36 @@ describe('PlusScreen', () => {
   });
 
   describe('feature rows', () => {
-    it.each([
-      [null, "Off on this phone. Turn it on in Settings if you're brave."],
-      [true, 'Ready'],
-    ] as const)(
-      'below its device gate, hands-free voice with the Settings override %s shows %s',
-      (override, status) => {
-        runInAction(() => {
-          modelStore.deviceTier = 'low';
-          voiceModeStore.userVoiceModeOverride = override;
-        });
-        const {getByTestId} = renderScreen();
+    it('below its device gate, shows hands-free voice as Off with the Settings note under its name', () => {
+      runInAction(() => {
+        modelStore.deviceTier = 'low';
+      });
+      const {getByTestId} = renderScreen();
 
-        expect(getByTestId('plus-feature-handsFreeVoice')).toHaveTextContent(
-          `Hands-free voice${status}`,
-        );
-        expect(getByTestId('plus-cta')).toHaveTextContent('Get Plus · $4.99');
-        runInAction(() => {
-          voiceModeStore.userVoiceModeOverride = null;
-        });
-      },
-    );
+      expect(getByTestId('plus-feature-handsFreeVoice')).toHaveTextContent(
+        "Hands-free voiceOff on this phone. Turn it on in Settings if you're brave.Off",
+      );
+      expect(getByTestId('plus-feature-note-handsFreeVoice')).toHaveTextContent(
+        "Off on this phone. Turn it on in Settings if you're brave.",
+      );
+      expect(getByTestId('plus-cta')).toHaveTextContent('Get Plus · $4.99');
+    });
+
+    it('below its device gate, shows hands-free voice as Ready once turned on in Settings', () => {
+      runInAction(() => {
+        modelStore.deviceTier = 'low';
+        voiceModeStore.userVoiceModeOverride = true;
+      });
+      const {getByTestId, queryByTestId} = renderScreen();
+
+      expect(getByTestId('plus-feature-handsFreeVoice')).toHaveTextContent(
+        'Hands-free voiceReady',
+      );
+      expect(queryByTestId('plus-feature-note-handsFreeVoice')).toBeNull();
+      runInAction(() => {
+        voiceModeStore.userVoiceModeOverride = null;
+      });
+    });
 
     it('shows Ready, Needs N GB and Coming soon', () => {
       mockFeatures = fakePlusFeatures([

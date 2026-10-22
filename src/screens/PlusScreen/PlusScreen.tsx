@@ -359,13 +359,22 @@ export const PlusScreen: React.FC<PlusScreenProps> = observer(props => {
             <View key={row.id} testID={`plus-feature-${row.id}`}>
               {index > 0 && <View style={styles.featureDivider} />}
               <View style={styles.featureRow}>
-                <Text
-                  style={[
-                    styles.featureName,
-                    row.status !== 'ready' && styles.featureNameMuted,
-                  ]}>
-                  {copy.features[row.id]}
-                </Text>
+                <View style={styles.featureText}>
+                  <Text
+                    style={[
+                      styles.featureName,
+                      row.status !== 'ready' && styles.featureNameMuted,
+                    ]}>
+                    {copy.features[row.id]}
+                  </Text>
+                  {row.status === 'optIn' && (
+                    <Text
+                      testID={`plus-feature-note-${row.id}`}
+                      style={styles.featureNote}>
+                      {copy.optInNote}
+                    </Text>
+                  )}
+                </View>
                 {statusView(row)}
               </View>
             </View>
