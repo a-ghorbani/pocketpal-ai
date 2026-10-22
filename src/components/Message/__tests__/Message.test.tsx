@@ -234,6 +234,22 @@ describe('message', () => {
       );
     });
 
+    it('labels the user bubble with the rendered text, not the markdown source', () => {
+      const {UNSAFE_root} = renderWithProviders(
+        <Message
+          {...rowProps}
+          message={{
+            ...derivedTextMessage,
+            text: '- first item\n- **second** item\n\nSee [the probe](http://x.y/probe).\n\n```py\nprint(1)\n```',
+          }}
+        />,
+      );
+
+      expect(userRowOf(UNSAFE_root).props.accessibilityLabel).toBe(
+        'first item second item See the probe. print(1)',
+      );
+    });
+
     it('springs the user bubble to 1.01 on touch start and back on release', () => {
       const spring = jest.spyOn(Animated, 'spring');
       const {UNSAFE_root} = renderWithProviders(

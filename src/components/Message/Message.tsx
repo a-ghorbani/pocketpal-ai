@@ -30,6 +30,7 @@ import {
 
 import {MessageType, PressPointEvent} from '../../utils/types';
 import {excludeDerivedMessageProps, UserContext} from '../../utils';
+import {markdownToPlainText} from '../../utils/markdownToPlainText';
 import {visibleStepContent} from '../../utils/chat';
 
 const hapticOptions = {
@@ -167,6 +168,14 @@ export const Message = observer(
       onPressIn: pressIn,
       onPressOut: pressOut,
     });
+
+    const userRowLabel = React.useMemo(
+      () =>
+        currentUserIsAuthor && message.type === 'text'
+          ? markdownToPlainText(message.text)
+          : undefined,
+      [currentUserIsAuthor, message],
+    );
 
     const userRow = React.useRef<HostInstance>(null);
     const handleUserRowAction = React.useCallback(
@@ -471,7 +480,7 @@ export const Message = observer(
           <Animated.View
             ref={userRow}
             accessible
-            accessibilityLabel={message.text}
+            accessibilityLabel={userRowLabel}
             accessibilityActions={USER_ROW_ACTIONS}
             onAccessibilityAction={handleUserRowAction}
             style={[pressable, {transform: [{scale}]}]}
