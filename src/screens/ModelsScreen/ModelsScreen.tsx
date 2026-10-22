@@ -29,6 +29,7 @@ import {uiStore, modelStore, hfStore, UIStore, serverStore} from '../../store';
 
 import {L10nContext} from '../../utils';
 import {Model, ModelOrigin} from '../../utils/types';
+import {isSafePathSegment} from '../../utils/pathGuard';
 import {ErrorState} from '../../utils/errors';
 
 export const ModelsScreen: React.FC = observer(() => {
@@ -192,10 +193,10 @@ export const ModelsScreen: React.FC = observer(() => {
       .then(async res => {
         let [file] = res;
         if (file) {
-          // Assign a default name if file.name is null or undefined
-          // Not sure if this can ever happen, though.
-          let fileName =
-            file.name || file.uri.split('/').pop() || `file_${uuidv4()}`;
+          const pickedName = file.name || file.uri.split('/').pop();
+          let fileName = isSafePathSegment(pickedName)
+            ? pickedName
+            : `file_${uuidv4()}`;
 
           const permanentDir = `${RNFS.DocumentDirectoryPath}/models/local`;
           let permanentPath = `${permanentDir}/${fileName}`;

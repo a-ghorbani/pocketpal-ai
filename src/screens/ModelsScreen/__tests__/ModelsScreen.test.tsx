@@ -11,6 +11,7 @@ import {
 } from '../../../../jest/test-utils';
 
 import {ModelsScreen} from '../ModelsScreen';
+import {isModelFilePath} from '../../../utils/modelPathGuard';
 
 import {modelStore, uiStore} from '../../../store';
 import {
@@ -123,6 +124,52 @@ describe('ModelsScreen', () => {
       );
       expect(modelStore.addLocalModel).toHaveBeenCalledWith(
         '/path/to/documents/models/local/mockModelFile.bin',
+      );
+    });
+  });
+
+  describe('picked file name', () => {
+    const localDir = `${RNFS.DocumentDirectoryPath}/models/local`;
+
+    const pickAndCopy = async (file: {uri: string; name: string}) => {
+      (pick as jest.Mock).mockResolvedValue([file]);
+      (RNFS.exists as jest.Mock).mockImplementation(
+        async (path: string) => !path.startsWith(`${localDir}/`),
+      );
+      const {getByTestId} = render(<ModelsScreen />);
+      fireEvent.press(getByTestId('fab-group'));
+      await waitFor(() =>
+        expect(
+          getByTestId('local-fab', {includeHiddenElements: true}),
+        ).toBeTruthy(),
+      );
+      await act(async () => {
+        fireEvent.press(
+          getByTestId('local-fab', {includeHiddenElements: true}),
+        );
+      });
+      await waitFor(() => expect(RNFS.copyFile).toHaveBeenCalled());
+      const [, target] = (RNFS.copyFile as jest.Mock).mock.calls[0];
+      expect(isModelFilePath(target, {local: true})).toBe(true);
+      return target as string;
+    };
+
+    it.each([
+      ['..', '/mock/file/path'],
+      ['../..', '/mock/file/path'],
+      ['/etc/hosts', '/mock/file/path'],
+      ['file:///data/local/tmp/x', '/mock/file/path'],
+      ['../x.gguf', '/mock/file/path'],
+      ['', 'file:///mock/dir/'],
+      ['', 'file:///mock/dir/..'],
+    ])('name %p (uri %s) falls back to file_<uuid>', async (name, uri) => {
+      const target = await pickAndCopy({uri, name});
+      expect(target).toMatch(new RegExp(`^${localDir}/file_[^/]+$`));
+    });
+
+    it('keeps a plain file name', async () => {
+      expect(await pickAndCopy({uri: '/mock/file/path', name: 'x.gguf'})).toBe(
+        `${localDir}/x.gguf`,
       );
     });
   });
