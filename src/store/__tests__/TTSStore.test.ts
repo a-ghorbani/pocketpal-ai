@@ -1613,6 +1613,33 @@ describe('TTSStore', () => {
       expect(store.currentVoice).toEqual(KITTEN_VOICE);
     });
 
+    it('re-probes when a Phonon stream is cancelled and hides it when the probe now says unsupported', async () => {
+      mockPhononIsInstalled.mockResolvedValue(true);
+      mockGetPhononSupport
+        .mockResolvedValueOnce(SUPPORTED)
+        .mockResolvedValueOnce(LOAD_FAILED);
+      const store = await storeWithVoice(ZOEY);
+      store.setAutoSpeak(true);
+      const handle = {
+        appendText: jest.fn(),
+        finalize: jest.fn().mockResolvedValue(undefined),
+        cancel: jest.fn().mockResolvedValue(undefined),
+      };
+      mockPhononPlayStreaming.mockReturnValueOnce(handle);
+
+      store.onAssistantMessageStart('msg-1');
+      store.onAssistantMessageChunk('msg-1', 'Hello there.');
+      await store.stop();
+      await flush();
+      await flush();
+
+      expect(handle.cancel).toHaveBeenCalledTimes(1);
+      expect(handle.finalize).not.toHaveBeenCalled();
+      expect(mockGetPhononSupport).toHaveBeenCalledTimes(2);
+      expect(store.phononSupported).toBe(false);
+      expect(store.currentVoice).toBeNull();
+    });
+
     it('does not re-probe after a Phonon stream finalizes cleanly', async () => {
       mockPhononIsInstalled.mockResolvedValue(true);
       mockGetPhononSupport.mockResolvedValue(SUPPORTED);

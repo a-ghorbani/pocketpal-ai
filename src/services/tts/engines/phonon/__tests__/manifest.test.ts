@@ -1,3 +1,11 @@
+import {createHash} from 'crypto';
+import fs from 'fs';
+import {join} from 'path';
+
+import {
+  PHONON_IOS_MANIFEST_SHA256,
+  PHONON_IOS_MODEL_BYTES,
+} from '../../../constants';
 import {parseManifest} from '../manifest';
 
 const SHA = 'c'.repeat(64);
@@ -40,5 +48,25 @@ describe('parseManifest', () => {
 
   it('requires bundle.json', () => {
     expect(() => parseManifest(line('model.bin'))).toThrow(/bundle\.json/);
+  });
+});
+
+describe('pinned iOS manifest', () => {
+  const pinned = fs.readFileSync(
+    join(__dirname, 'fixtures/phonon-31m-en-coreml.manifest.tsv'),
+  );
+
+  it('the fixture is the manifest at the pinned palshub/phonon-31m-en-coreml revision', () => {
+    expect(createHash('sha256').update(pinned).digest('hex')).toBe(
+      PHONON_IOS_MANIFEST_SHA256,
+    );
+  });
+
+  it('the manifest at the pinned palshub/phonon-31m-en-coreml revision sums to PHONON_IOS_MODEL_BYTES', () => {
+    const total = parseManifest(pinned.toString('utf8')).reduce(
+      (sum, f) => sum + f.size,
+      0,
+    );
+    expect(total).toBe(PHONON_IOS_MODEL_BYTES);
   });
 });

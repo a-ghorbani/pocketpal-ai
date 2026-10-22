@@ -391,6 +391,19 @@ describe('PhononEngine', () => {
       await expect(new PhononEngine().isInstalled()).resolves.toBe(false);
     });
 
+    it('is false on iOS without a saved manifest, without a warning', async () => {
+      setPlatform('ios');
+      const warnSpy = jest.spyOn(console, 'warn').mockImplementation(() => {});
+      (RNFS.exists as jest.Mock).mockResolvedValue(false);
+      (RNFS.readFile as jest.Mock).mockRejectedValue(
+        new Error('ENOENT: no such file or directory'),
+      );
+
+      await expect(new PhononEngine().isInstalled()).resolves.toBe(false);
+      expect(warnSpy).not.toHaveBeenCalled();
+      warnSpy.mockRestore();
+    });
+
     it('is true on iOS when the saved manifest and every listed file exist', async () => {
       setPlatform('ios');
       sentinel();

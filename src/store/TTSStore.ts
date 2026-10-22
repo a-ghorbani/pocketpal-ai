@@ -344,7 +344,11 @@ export class TTSStore {
           throw err;
         }
       },
-      cancel: () => handle.cancel(),
+      cancel: () => {
+        const cancelled = handle.cancel();
+        this.refreshAfterPhononFailure();
+        return cancelled;
+      },
     };
   }
 

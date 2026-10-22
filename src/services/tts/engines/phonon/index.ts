@@ -158,14 +158,15 @@ export class PhononEngine implements NeuralEngine {
 
   async isInstalled(): Promise<boolean> {
     try {
+      if (
+        Platform.OS === 'ios' &&
+        !(await RNFS.exists(this.getFilePath(PHONON_IOS_MANIFEST_FILENAME)))
+      ) {
+        return false;
+      }
       const required =
         Platform.OS === 'ios'
-          ? [
-              this.getFilePath(PHONON_IOS_MANIFEST_FILENAME),
-              ...this.iosBundleFiles(await this.readSavedManifest()).map(
-                f => f.dest,
-              ),
-            ]
+          ? this.iosBundleFiles(await this.readSavedManifest()).map(f => f.dest)
           : [
               ...this.androidPinnedFiles().map(f => f.dest),
               this.getFilePath(PHONON_VOICES_JSONL_FILENAME),
