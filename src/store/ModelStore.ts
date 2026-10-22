@@ -1924,8 +1924,11 @@ class ModelStore {
 
       // Extract optional fields with fallbacks (matches Python ModelInfo.__post_init__)
       const n_head_kv = getArchValue('attention.head_count_kv', n_head); // fallback to n_head
+      const reportedVocabSize = getArchValue('vocab_size');
+      const n_vocab_is_exact =
+        Number.isInteger(reportedVocabSize) && (reportedVocabSize ?? 0) > 0;
       const n_vocab =
-        getArchValue('vocab_size') ||
+        (n_vocab_is_exact ? reportedVocabSize : undefined) ||
         ARCH_DEFAULT_VOCAB[architecture] ||
         128000;
 
@@ -1951,6 +1954,7 @@ class ModelStore {
         n_head,
         n_head_kv: n_head_kv!,
         n_vocab,
+        n_vocab_is_exact,
         n_embd_head_k,
         n_embd_head_v,
         sliding_window,
@@ -1975,14 +1979,14 @@ class ModelStore {
   };
 
   /**
-   * Load GGUF metadata for downloaded models that don't have it yet.
-   * Runs in background, doesn't block startup.
+   * Load GGUF metadata for downloaded models that don't have it yet, or refresh
+   * legacy metadata without vocabulary provenance. Runs in the background.
    */
   private loadMissingGGUFMetadata = () => {
     const modelsNeedingMetadata = this.models.filter(
       m =>
         m.isDownloaded &&
-        !m.ggufMetadata &&
+        (!m.ggufMetadata || m.ggufMetadata.n_vocab_is_exact === undefined) &&
         m.modelType !== ModelType.PROJECTION,
     );
 
