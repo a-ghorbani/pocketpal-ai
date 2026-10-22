@@ -1,7 +1,9 @@
 /**
  * TTS Memory Profile E2E Spec
  *
- * Profiles peak RAM for each neural TTS engine across three checkpoints:
+ * Takes one app baseline, then profiles peak RAM for each neural TTS engine
+ * across three checkpoints:
+ *   tts_baseline          before any engine is loaded
  *   tts_<engine>_loaded   model downloaded + ready
  *   tts_<engine>_active   one synthesis run
  *   tts_<engine>_idle     engine released
@@ -164,6 +166,7 @@ describe('TTS Memory Profile', function () {
 
   it('should profile TTS engine memory', async () => {
     await clearSnapshots();
+    await triggerSnapshot('tts_baseline');
 
     for (const engine of ENGINES) {
       console.log(`[TTS Memory] ${engine}: download + load`);
@@ -181,7 +184,7 @@ describe('TTS Memory Profile', function () {
     }
 
     const snapshots = await readSnapshots();
-    const expectedLabels: string[] = [];
+    const expectedLabels: string[] = ['tts_baseline'];
     for (const engine of ENGINES) {
       expectedLabels.push(
         `tts_${engine}_loaded`,
