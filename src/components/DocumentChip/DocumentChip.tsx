@@ -113,7 +113,8 @@ export const DocumentChip: React.FC<DocumentChipProps> = ({
         handlers[event.nativeEvent.actionName]?.()
       }
       onPress={onPress}
-      disabled={!onPress}
+      disabled={accessibilityActions.length === 0}
+      accessibilityState={{busy: status === 'importing'}}
       accessibilityRole={onPress ? 'button' : undefined}
       accessibilityLabel={[name, ...details].join(', ')}
       testID={testID}>

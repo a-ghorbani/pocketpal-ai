@@ -165,4 +165,36 @@ describe('DocumentChip', () => {
       getByTestId('document-chip').props.accessibilityActions ?? [],
     ).toEqual([]);
   });
+
+  it('announces a remove-only chip as enabled without a button role', () => {
+    const textDoc = {...pdf, kind: 'text' as const, pageCount: undefined};
+    const {getByTestId} = render(
+      <DocumentChip
+        name="notes.md"
+        documentRef={textDoc}
+        onRemove={jest.fn()}
+      />,
+    );
+    const chip = getByTestId('document-chip');
+    expect(chip.props.accessibilityState?.disabled).toBeFalsy();
+    expect(chip.props.accessibilityRole).toBeUndefined();
+  });
+
+  it('announces an importing chip as busy', () => {
+    const {getByTestId} = render(
+      <DocumentChip name="a.pdf" status="importing" onRemove={jest.fn()} />,
+    );
+    expect(getByTestId('document-chip').props.accessibilityState?.busy).toBe(
+      true,
+    );
+  });
+
+  it('stays disabled when it has no actions', () => {
+    const {getByTestId} = render(
+      <DocumentChip name="report.pdf" documentRef={pdf} />,
+    );
+    expect(
+      getByTestId('document-chip').props.accessibilityState?.disabled,
+    ).toBe(true);
+  });
 });
