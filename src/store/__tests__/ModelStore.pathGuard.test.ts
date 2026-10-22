@@ -11,8 +11,17 @@ import {Tier} from '../../services/deviceRules/types';
 import {downloadModel} from '../../utils/downloadModel';
 import {processHFSearchResults} from '../../utils/hf';
 import {getLLMFiles} from '../../utils/multimodalHelpers';
-import {isValidImportedModelRef} from '../../utils/modelPathGuard';
-import {HuggingFaceModel, Model, ModelType} from '../../utils/types';
+import {
+  HuggingFaceModel,
+  Model,
+  ModelOrigin,
+  ModelType,
+} from '../../utils/types';
+import {createModel} from '../../../jest/fixtures/models';
+import {
+  isModelFilePath,
+  isValidImportedModelRef,
+} from '../../utils/modelPathGuard';
 import {hfStore, modelStore, palStore} from '..';
 import {LOOKIE_DEFAULT_MODEL} from '../builtinPalModels';
 import {ONBOARDING_PALS} from '../onboarding/onboardingPals';
@@ -324,5 +333,202 @@ describe('every model kind main persists still downloads and deletes', () => {
       expect(RNFS.unlink).toHaveBeenCalledWith(path);
       expect(modelStore.models).toHaveLength(0);
     });
+  });
+});
+
+describe('model sink guard', () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+    existingFiles = new Set();
+    (RNFS.exists as jest.Mock).mockImplementation(async (path: string) =>
+      existingFiles.has(path),
+    );
+    (RNFS.unlink as jest.Mock).mockImplementation(async (path: string) => {
+      existingFiles.delete(path);
+    });
+    (downloadManager.startDownload as jest.Mock).mockResolvedValue(undefined);
+    runInAction(() => {
+      modelStore.models = [];
+      modelStore.activeModelId = undefined;
+      modelStore.downloadError = null;
+    });
+  });
+
+  const hfModel = (overrides: Partial<Model>): Model =>
+    createModel({
+      id: 'a/r/x.gguf',
+      author: 'a',
+      repo: 'r',
+      filename: 'x.gguf',
+      origin: ModelOrigin.HF,
+      ...overrides,
+    }) as Model;
+
+  const expectDownloadRefused = async (model: Model) => {
+    setModels([model]);
+    await expect(modelStore.checkSpaceAndDownload(model.id)).rejects.toThrow();
+    expect(downloadManager.startDownload).not.toHaveBeenCalled();
+    expect(modelStore.downloadError).not.toBeNull();
+  };
+
+  const expectDeleteSkipped = async (model: Model) => {
+    runInAction(() => {
+      modelStore.models = [{...model, isDownloaded: true, progress: 100}];
+    });
+    await modelStore.deleteModel(storeModel(model.id));
+    expect(RNFS.unlink).not.toHaveBeenCalled();
+    expect(storeModel(model.id).isDownloaded).toBe(true);
+    expect(storeModel(model.id).progress).toBe(100);
+  };
+
+  const expectDownloadAndDeleteAt = async (model: Model, path: string) => {
+    setModels([model]);
+    await expectDownloadsAndDeletes(model.id, path);
+    expect(isModelFilePath(path, {local: false})).toBe(true);
+  };
+
+  describe.each([
+    [
+      'filename',
+      (v: string) => ({filename: v}),
+      'x.gguf',
+      hfPath('a', 'r', 'x.gguf'),
+    ],
+    ['author', (v: string) => ({author: v}), 'v', hfPath('v', 'r', 'x.gguf')],
+    ['repo', (v: string) => ({repo: v}), 'v', hfPath('a', 'v', 'x.gguf')],
+  ])('%s segment', (_field, overrides, validValue, validPath) => {
+    it.each(['..', '../..', '/etc/hosts', 'file:///data/local/tmp/x'])(
+      '%p: no download and no unlink',
+      async bad => {
+        const model = hfModel(overrides(bad));
+        await expectDownloadRefused(model);
+        jest.clearAllMocks();
+        await expectDeleteSkipped(model);
+      },
+    );
+
+    it('valid value downloads and deletes as today', async () => {
+      await expectDownloadAndDeleteAt(
+        hfModel(overrides(validValue)),
+        validPath,
+      );
+    });
+  });
+
+  describe('empty segment keeps the existing fallbacks', () => {
+    it('empty author resolves to unknown', async () => {
+      await expectDownloadAndDeleteAt(
+        hfModel({author: ''}),
+        hfPath('unknown', 'r', 'x.gguf'),
+      );
+    });
+
+    it('empty repo is inferred from the id', async () => {
+      await expectDownloadAndDeleteAt(
+        hfModel({repo: ''}),
+        hfPath('a', 'r', 'x.gguf'),
+      );
+    });
+
+    it('empty repo with no inferable id resolves to unknown', async () => {
+      await expectDownloadAndDeleteAt(
+        hfModel({repo: '', id: 'x.gguf'}),
+        hfPath('a', 'unknown', 'x.gguf'),
+      );
+    });
+
+    it('empty filename fails in getModelFullPath before any sink', async () => {
+      const model = hfModel({filename: ''});
+      await expectDownloadRefused(model);
+      runInAction(() => {
+        modelStore.models = [{...model, isDownloaded: true}];
+      });
+      await expect(
+        modelStore.deleteModel(storeModel(model.id)),
+      ).rejects.toThrow('Model filename is undefined');
+      expect(RNFS.unlink).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('paths that would mark a folder or escape the models root', () => {
+    it.each([
+      ['Q4/z/..', `${DOCS}/models/hf/a/r/Q4/z/..`],
+      ['../..', `${DOCS}/models/hf/a/r/../..`],
+      ['Q4', `${DOCS}/models/hf/a/r/Q4`],
+      ['../../../x.gguf', `${DOCS}/models/hf/a/r/../../../x.gguf`],
+    ])('filename %p resolving to %s', async (filename, path) => {
+      const model = hfModel({filename});
+      expect(await modelStore.getModelFullPath(model)).toBe(path);
+      await expectDownloadRefused(model);
+      jest.clearAllMocks();
+      await expectDeleteSkipped(model);
+    });
+
+    it('nested HF file under the models root downloads and deletes', async () => {
+      await expectDownloadAndDeleteAt(
+        hfModel({id: 'a/r/Q4/x.gguf', filename: 'Q4/x.gguf'}),
+        hfPath('a', 'r', 'Q4/x.gguf'),
+      );
+    });
+
+    it.each([
+      ['/tmp/x.gguf', false],
+      [`${DOCS}/models/local/x.bin`, true],
+    ])(
+      'LOCAL %s: removed from the list, unlinked only under the models root',
+      async (fullPath, unlinked) => {
+        existingFiles.add(fullPath);
+        const local = createModel({
+          id: 'local-1',
+          filename: fullPath.split('/').pop(),
+          fullPath,
+          isLocal: true,
+          origin: ModelOrigin.LOCAL,
+          isDownloaded: true,
+        }) as Model;
+        runInAction(() => {
+          modelStore.models = [local];
+        });
+
+        await modelStore.deleteModel(storeModel(local.id));
+
+        expect(modelStore.models).toHaveLength(0);
+        if (unlinked) {
+          expect(RNFS.unlink).toHaveBeenCalledWith(fullPath);
+        } else {
+          expect(RNFS.unlink).not.toHaveBeenCalled();
+        }
+      },
+    );
+  });
+
+  describe('legacy preset at the Documents root', () => {
+    const preset = (filename: string) =>
+      createModel({
+        id: `a/r/${filename}`,
+        author: 'a',
+        repo: 'r',
+        filename,
+        origin: ModelOrigin.PRESET,
+      }) as Model;
+
+    it('Documents/x.gguf is deleted', async () => {
+      existingFiles.add(`${DOCS}/x.gguf`);
+      await expectDownloadAndDeleteAt(preset('x.gguf'), `${DOCS}/x.gguf`);
+    });
+
+    it.each(['models', 'pal-images'])(
+      'Documents/%s is neither downloaded to nor deleted',
+      async folder => {
+        existingFiles.add(`${DOCS}/${folder}`);
+        const model = preset(folder);
+        expect(await modelStore.getModelFullPath(model)).toBe(
+          `${DOCS}/${folder}`,
+        );
+        await expectDownloadRefused(model);
+        jest.clearAllMocks();
+        await expectDeleteSkipped(model);
+      },
+    );
   });
 });
