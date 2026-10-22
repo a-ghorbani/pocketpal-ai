@@ -1,4 +1,4 @@
-import {getAllEngines, getEngine} from '../engineRegistry';
+import {getAllEngines, getEngine, getNeuralEngine} from '../engineRegistry';
 import {KittenEngine} from '../engines/kitten';
 import {KokoroEngine} from '../engines/kokoro';
 import {PhononEngine} from '../engines/phonon';
@@ -46,6 +46,21 @@ describe('engineRegistry', () => {
       'supertonic',
       'system',
     ]);
+  });
+
+  it('getNeuralEngine returns the Phonon engine for id "phonon"', () => {
+    const engine = getNeuralEngine('phonon');
+    expect(engine).toBeInstanceOf(PhononEngine);
+    expect(engine).toBe(getEngine('phonon'));
+  });
+
+  it('getNeuralEngine throws for an unknown or non-neural id', () => {
+    expect(() => getNeuralEngine('system' as any)).toThrow(
+      /Unknown neural engine id: system/,
+    );
+    expect(() => getNeuralEngine('nope' as any)).toThrow(
+      /Unknown neural engine id: nope/,
+    );
   });
 
   it('returns stable singleton instances across calls', () => {
