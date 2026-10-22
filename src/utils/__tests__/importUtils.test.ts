@@ -80,6 +80,67 @@ describe('importUtils', () => {
     });
   });
 
+  describe('imported chat image URIs', () => {
+    const tmp = RNFS.TemporaryDirectoryPath;
+    const pickerUri = `file://${tmp}A1B2C3D4-E5F6-4789-ABCD-EF0123456789.jpg`;
+    const sessionWith = (metadata: unknown) => ({
+      id: 's1',
+      title: 'Chat',
+      date: '2024-01-01T12:00:00.000Z',
+      messages: [
+        {id: 'm1', author: 'user', text: 'look', type: 'text', metadata},
+      ],
+    });
+    const importedMessage = (metadata: unknown) =>
+      (validateImportedData(sessionWith(metadata)) as ImportedChatSession)
+        .messages[0];
+
+    it.each([
+      `file://${tmp}..`,
+      `file://${tmp}../..`,
+      '/etc/hosts',
+      'file:///data/local/tmp/x',
+      '',
+    ])('drops %p and keeps the message', bad => {
+      const message = importedMessage({imageUris: [bad, pickerUri]});
+      expect(message.metadata?.imageUris).toEqual([pickerUri]);
+      expect(message.text).toBe('look');
+      expect(message.author).toBe('user');
+    });
+
+    it('keeps only the picker URI and the other metadata', () => {
+      const message = importedMessage({
+        imageUris: [
+          pickerUri,
+          `file://${tmp}../files/x`,
+          '/etc/hosts',
+          'file:///data/local/tmp/a.jpg',
+          '',
+          7,
+          `file://${tmp}other.jpg`,
+          `file://${RNFS.CachesDirectoryPath}/chat_x_2024-01-01_12-00-00.json`,
+        ],
+        partialCompletionResult: {foo: 1},
+      });
+      expect(message.metadata).toEqual({
+        imageUris: [pickerUri],
+        partialCompletionResult: {foo: 1},
+      });
+    });
+
+    it.each([null, 'file:///etc/hosts', {0: pickerUri}])(
+      'a non-array imageUris %p becomes empty',
+      imageUris => {
+        expect(importedMessage({imageUris}).metadata?.imageUris).toEqual([]);
+      },
+    );
+
+    it('leaves metadata without imageUris alone', () => {
+      expect(importedMessage({other: 1}).metadata).toEqual({other: 1});
+      expect(importedMessage(undefined).metadata).toBeUndefined();
+    });
+  });
+
   describe('Pal Import Functions', () => {
     const mockImportedPal = {
       version: '2.0',

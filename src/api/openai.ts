@@ -10,6 +10,7 @@ import {
 } from '../utils/completionTypes';
 import {RemoteModelInfo} from '../utils/types';
 import {RemoteHttpError} from '../utils/errors';
+import {isAllowedChatImageUri} from '../utils/chatImageUri';
 import {
   CONNECTION_TIMEOUT_MS,
   IDLE_TIMEOUT_MS,
@@ -358,7 +359,8 @@ export function __clearRemoteImageCache(): void {
 
 /**
  * Encode a single content part's local image path to a data URI. Returns the
- * part unchanged when it is not a local image, when a successful stat reports
+ * part unchanged when it is not a local image, when the path is not an image
+ * picker file (isAllowedChatImageUri), when a successful stat reports
  * an over-cap file, or when the read fails. A stat throw or a size-less result
  * FALLS THROUGH to encoding so a healthy image is never dropped on a stat
  * hiccup — only a successful over-cap stat skips.
@@ -369,7 +371,7 @@ async function encodeImagePart(part: {
   image_url?: {url?: string};
 }): Promise<typeof part> {
   const url = part.image_url?.url;
-  if (!isLocalImageUrl(url)) {
+  if (!isLocalImageUrl(url) || !isAllowedChatImageUri(url)) {
     return part;
   }
   const path = url.replace(/^file:\/\//, '');
@@ -403,8 +405,8 @@ async function encodeImagePart(part: {
 
 /**
  * Encode local image attachments to data: URIs for the remote wire. A remote
- * server cannot read the device filesystem, so any image_url pointing at a
- * local path is read and inlined as base64. Already-remote (http/https) or
+ * server cannot read the device filesystem, so an image_url pointing at an
+ * image picker file is read and inlined as base64. Already-remote (http/https) or
  * already-inlined (data:) urls pass through unchanged. Remote-only: the local
  * llama.rn engine reads the file path natively and never routes through here.
  *

@@ -16,6 +16,7 @@ import {migrateCompletionSettings} from './completionSettingsVersions';
 import {palStore} from '../store';
 import {getAbsoluteThumbnailPath, isRemoteThumbnailUrl} from './imageUtils';
 import {isValidImportedModelRef} from './modelPathGuard';
+import {isAllowedChatImageUri} from './chatImageUri';
 import type {Pal, ParameterDefinition} from '../types/pal';
 
 /**
@@ -150,6 +151,12 @@ const validateSingleSession = (session: any): ImportedChatSession => {
 
     if (!msg.createdAt) {
       msg.createdAt = Date.now();
+    }
+
+    if (msg.metadata?.imageUris !== undefined) {
+      msg.metadata.imageUris = Array.isArray(msg.metadata.imageUris)
+        ? msg.metadata.imageUris.filter(isAllowedChatImageUri)
+        : [];
     }
 
     return msg;
