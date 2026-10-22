@@ -124,6 +124,38 @@ describe('VoicePickerView', () => {
       expect(getEngineGroupCount(queryByTestId)).toBe(3);
     });
 
+    it('shows download progress against its 64 MB size', () => {
+      runInAction(() => {
+        ttsStore.phononSupported = true;
+        ttsStore.phononDownloadState = 'downloading';
+        ttsStore.phononDownloadProgress = 0.5;
+      });
+      const {getByTestId, getByText} = renderView();
+
+      fireEvent.press(getByTestId('tts-engine-group-toggle-phonon'));
+
+      expect(getByText('Downloading…  50%  ·  32 / 64 MB')).toBeTruthy();
+    });
+
+    it('shows its download error with a retry that retries Phonon', () => {
+      runInAction(() => {
+        ttsStore.phononSupported = true;
+        ttsStore.phononDownloadState = 'error';
+        ttsStore.phononDownloadError = 'sha256 mismatch';
+      });
+      const {getByTestId, getByText} = renderView();
+
+      fireEvent.press(getByTestId('tts-engine-group-toggle-phonon'));
+      expect(getByText('sha256 mismatch')).toBeTruthy();
+      fireEvent.press(getByTestId('tts-phonon-retry-button'));
+
+      expect(ttsStore.retryPhononDownload).toHaveBeenCalledTimes(1);
+      expect(ttsStore.retryKittenDownload).not.toHaveBeenCalled();
+      runInAction(() => {
+        ttsStore.phononDownloadError = null;
+      });
+    });
+
     it('shows the eight voices and the credit once installed', () => {
       runInAction(() => {
         ttsStore.phononSupported = true;

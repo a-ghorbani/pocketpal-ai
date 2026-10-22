@@ -1,7 +1,9 @@
+import {runInAction} from 'mobx';
 import * as RNFS from '@dr.pogodin/react-native-fs';
 import Speech from '@pocketpalai/react-native-speech';
 
 import {ttsRuntime} from '../../services/tts';
+import {ttsStore} from '../../store/TTSStore';
 import {runTtsCommand} from '../ttsAutomation';
 
 import {
@@ -17,7 +19,13 @@ const mockEngine = {
   id: 'phonon',
   getVoices: jest.fn().mockResolvedValue([{id: 'Zoey'}]),
   loadInto: jest.fn().mockResolvedValue(undefined),
+  isInstalled: jest.fn().mockResolvedValue(false),
+  play: jest.fn().mockResolvedValue(undefined),
 };
+
+jest.mock('../../store/TTSStore', () => ({
+  ttsStore: require('../../../__mocks__/stores/ttsStore').mockTTSStore,
+}));
 
 jest.mock('../../services/tts', () => ({
   ...jest.requireActual('../../services/tts'),
@@ -153,5 +161,111 @@ describe('ttsAutomation time::<engine>', () => {
 
     expect(status.state).toBe('error');
     expect(status.detail).toMatch(/no onStart/);
+  });
+});
+
+describe('ttsAutomation download and synthesize for Phonon', () => {
+  const downloadPhonon = ttsStore.downloadPhonon as jest.Mock;
+  const downloadKitten = ttsStore.downloadKitten as jest.Mock;
+
+  beforeEach(() => {
+    jest.clearAllMocks();
+    downloadPhonon.mockImplementation(async () => {
+      runInAction(() => {
+        ttsStore.phononDownloadState = 'ready';
+      });
+    });
+  });
+
+  afterEach(() => {
+    downloadPhonon.mockReset();
+    runInAction(() => {
+      ttsStore.phononDownloadState = 'not_installed';
+    });
+  });
+
+  it('download::phonon installs Phonon, not another engine', async () => {
+    await runTtsCommand('download::phonon');
+
+    expect(lastStatus()).toEqual({cmd: 'download::phonon', state: 'done'});
+    expect(downloadPhonon).toHaveBeenCalledTimes(1);
+    expect(downloadKitten).not.toHaveBeenCalled();
+  });
+
+  it('download::phonon skips the download when Phonon is already installed', async () => {
+    mockEngine.isInstalled
+      .mockResolvedValueOnce(true)
+      .mockResolvedValueOnce(true);
+
+    await runTtsCommand('download::phonon');
+
+    expect(lastStatus().state).toBe('done');
+    expect(downloadPhonon).not.toHaveBeenCalled();
+  });
+
+  it('download::phonon reports an error when the download leaves Phonon not ready', async () => {
+    downloadPhonon.mockResolvedValueOnce(undefined);
+
+    await runTtsCommand('download::phonon');
+
+    expect(lastStatus()).toEqual({
+      cmd: 'download::phonon',
+      state: 'error',
+      detail: 'download did not leave phonon ready',
+    });
+  });
+
+  it('synthesize::phonon speaks the sample with the first voice', async () => {
+    await runTtsCommand('synthesize::phonon');
+
+    expect(lastStatus().state).toBe('done');
+    expect(mockEngine.play).toHaveBeenCalledWith(expect.any(String), {
+      id: 'Zoey',
+    });
+  });
+});
+
+describe('ttsAutomation download::<engine>', () => {
+  const engines = [
+    ['kitten', 'downloadKitten', 'kittenDownloadState'],
+    ['kokoro', 'downloadKokoro', 'kokoroDownloadState'],
+    ['supertonic', 'downloadSupertonic', 'supertonicDownloadState'],
+    ['phonon', 'downloadPhonon', 'phononDownloadState'],
+  ] as const;
+
+  beforeEach(() => {
+    jest.clearAllMocks();
+  });
+
+  it.each(engines)(
+    'download::%s calls only its own download and reads its own state',
+    async (engine, download, state) => {
+      const store = ttsStore as unknown as Record<string, unknown>;
+      (store[download] as jest.Mock).mockImplementationOnce(async () => {
+        runInAction(() => {
+          store[state] = 'ready';
+        });
+      });
+
+      await runTtsCommand(`download::${engine}`);
+
+      expect(lastStatus()).toEqual({cmd: `download::${engine}`, state: 'done'});
+      for (const [, other] of engines) {
+        expect(store[other]).toHaveBeenCalledTimes(other === download ? 1 : 0);
+      }
+      runInAction(() => {
+        store[state] = 'not_installed';
+      });
+    },
+  );
+
+  it('reports an unknown command as an error', async () => {
+    await runTtsCommand('dance');
+
+    expect(lastStatus()).toEqual({
+      cmd: 'dance',
+      state: 'error',
+      detail: 'unknown tts cmd: dance',
+    });
   });
 });

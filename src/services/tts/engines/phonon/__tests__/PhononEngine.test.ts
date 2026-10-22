@@ -3,6 +3,7 @@ import * as RNFS from '@dr.pogodin/react-native-fs';
 import Speech from '@pocketpalai/react-native-speech';
 
 import {PhononEngine} from '..';
+import {ttsRuntime} from '../../../runtime';
 import {
   PHONON_ANDROID_FILES,
   PHONON_IOS_MANIFEST_SHA256,
@@ -380,5 +381,102 @@ describe('PhononEngine', () => {
     const voice = PHONON_VOICES[0]!;
     await new PhononEngine().play('hello', voice);
     expect(Speech.speak).toHaveBeenCalledWith('hello', 'Zoey');
+  });
+
+  it('refuses to play without an install and loads nothing', async () => {
+    (RNFS.exists as jest.Mock).mockResolvedValue(false);
+
+    await expect(
+      new PhononEngine().play('hello', PHONON_VOICES[0]!),
+    ).rejects.toThrow('Phonon model is not installed');
+    expect(Speech.initialize).not.toHaveBeenCalled();
+    expect(Speech.speak).not.toHaveBeenCalled();
+  });
+
+  it('streams through the speech stream with the voice id', async () => {
+    ttsRuntime._resetForTests();
+    const handle = new PhononEngine().playStreaming(PHONON_VOICES[0]!);
+    handle.appendText('Hello there.');
+    await handle.finalize();
+
+    expect(Speech.initialize).toHaveBeenCalledWith(
+      expect.objectContaining({engine: 'phonon'}),
+    );
+    expect(Speech.createSpeechStream).toHaveBeenCalledWith(
+      'Zoey',
+      expect.anything(),
+    );
+  });
+
+  it('stops through Speech', async () => {
+    await new PhononEngine().stop();
+    expect(Speech.stop).toHaveBeenCalledTimes(1);
+  });
+
+  describe('deleteModel()', () => {
+    it('removes the whole Phonon folder', async () => {
+      await new PhononEngine().deleteModel();
+      expect(RNFS.unlink).toHaveBeenCalledWith(ANDROID_DIR);
+    });
+
+    it('removes the whole Phonon folder on iOS, manifest included', async () => {
+      setPlatform('ios');
+      await new PhononEngine().deleteModel();
+      expect(RNFS.unlink).toHaveBeenCalledWith(IOS_DIR);
+    });
+
+    it('does nothing when the folder is already gone', async () => {
+      (RNFS.exists as jest.Mock).mockResolvedValue(false);
+      await new PhononEngine().deleteModel();
+      expect(RNFS.unlink).not.toHaveBeenCalled();
+    });
+
+    it('swallows an unlink failure', async () => {
+      const warn = jest.spyOn(console, 'warn').mockImplementation(() => {});
+      (RNFS.unlink as jest.Mock).mockRejectedValueOnce(new Error('EBUSY'));
+      await expect(new PhononEngine().deleteModel()).resolves.toBeUndefined();
+      warn.mockRestore();
+    });
+  });
+
+  it('deletes the folder when the iOS manifest download fails', async () => {
+    setPlatform('ios');
+    serveFiles(iosPins());
+    (RNFS.downloadFile as jest.Mock).mockImplementationOnce(() => ({
+      jobId: 1,
+      promise: Promise.resolve({statusCode: 503, bytesWritten: 0}),
+    }));
+
+    await expect(new PhononEngine().downloadModel()).rejects.toThrow(
+      /manifest: HTTP 503/,
+    );
+    expect(RNFS.downloadFile).toHaveBeenCalledTimes(1);
+    expect(RNFS.unlink).toHaveBeenCalledWith(IOS_DIR);
+    expect(RNFS.writeFile).not.toHaveBeenCalled();
+  });
+
+  it('reports byte progress within a file, rising and capped by its pinned size', async () => {
+    serveFiles(androidPins());
+    const first = PHONON_ANDROID_FILES[0]!;
+    (RNFS.downloadFile as jest.Mock).mockImplementationOnce(opts => {
+      opts.progress({bytesWritten: Math.floor(first.size / 2)});
+      opts.progress({bytesWritten: first.size * 10});
+      return {
+        jobId: 1,
+        promise: Promise.resolve({statusCode: 200, bytesWritten: first.size}),
+      };
+    });
+    const total =
+      PHONON_ANDROID_FILES.reduce((s, f) => s + f.size, 0) +
+      PHONON_VOICE_PINS.length * PHONON_VOICE_FILE_SIZE;
+    const progress: number[] = [];
+
+    await new PhononEngine().downloadModel(p => progress.push(p));
+
+    expect(progress[0]).toBeCloseTo(Math.floor(first.size / 2) / total, 9);
+    expect(progress[1]).toBeCloseTo(first.size / total, 9);
+    for (let i = 1; i < progress.length; i++) {
+      expect(progress[i]).toBeGreaterThanOrEqual(progress[i - 1]!);
+    }
   });
 });

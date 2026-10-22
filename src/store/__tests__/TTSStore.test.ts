@@ -1571,6 +1571,65 @@ describe('TTSStore', () => {
       expect(store.phononDownloadState).toBe('not_installed');
     });
 
+    it('clears a hidden Phonon voice before the install check, so a later install does not restore it', async () => {
+      mockPhononIsInstalled.mockResolvedValue(false);
+      mockGetPhononSupport.mockResolvedValueOnce(LOAD_FAILED);
+
+      const store = await storeWithVoice(ALFIE);
+      expect(store.currentVoice).toBeNull();
+
+      await store.downloadPhonon();
+
+      expect(store.currentVoice?.id).toBe('Zoey');
+    });
+
+    it('keeps Phonon offered and its voice selected when a failed play leaves the probe supported', async () => {
+      mockPhononIsInstalled.mockResolvedValue(true);
+      mockGetPhononSupport.mockResolvedValue(SUPPORTED);
+      mockPhononPlay.mockRejectedValueOnce(new Error('ERR_PHONON_TIMEOUT'));
+      track(jest.spyOn(console, 'warn')).mockImplementation(() => {});
+      const store = await storeWithVoice(ZOEY);
+
+      await store.play('msg-1', 'hello');
+      await flush();
+
+      expect(mockGetPhononSupport).toHaveBeenCalledTimes(2);
+      expect(store.isEngineOffered('phonon')).toBe(true);
+      expect(store.currentVoice).toEqual(ZOEY);
+    });
+
+    it('does not re-probe Phonon when another engine fails to play', async () => {
+      mockKittenIsInstalled.mockResolvedValue(true);
+      mockGetPhononSupport.mockResolvedValue(SUPPORTED);
+      mockKittenPlay.mockRejectedValueOnce(new Error('kitten failed'));
+      track(jest.spyOn(console, 'warn')).mockImplementation(() => {});
+      const store = await storeWithVoice(KITTEN_VOICE);
+
+      await store.play('msg-1', 'hello');
+      await flush();
+
+      expect(mockKittenPlay).toHaveBeenCalledTimes(1);
+      expect(mockGetPhononSupport).toHaveBeenCalledTimes(1);
+      expect(store.currentVoice).toEqual(KITTEN_VOICE);
+    });
+
+    it('does not re-probe after a Phonon stream finalizes cleanly', async () => {
+      mockPhononIsInstalled.mockResolvedValue(true);
+      mockGetPhononSupport.mockResolvedValue(SUPPORTED);
+      const store = await storeWithVoice(ZOEY);
+      store.setAutoSpeak(true);
+
+      store.onAssistantMessageStart('msg-1');
+      store.onAssistantMessageChunk('msg-1', 'Hello there.');
+      store.onAssistantMessageComplete('msg-1', 'Hello there.');
+      await flush();
+      await flush();
+
+      expect(mockPhononPlayStreaming).toHaveBeenCalledTimes(1);
+      expect(mockGetPhononSupport).toHaveBeenCalledTimes(1);
+      expect(store.currentVoice).toEqual(ZOEY);
+    });
+
     it('keeps a selected Kitten voice when Phonon is unsupported', async () => {
       mockKittenIsInstalled.mockResolvedValue(true);
       mockGetPhononSupport.mockResolvedValue(LOAD_FAILED);
