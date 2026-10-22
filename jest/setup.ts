@@ -169,7 +169,8 @@ jest.mock('../src/services/downloads', () => ({
 }));
 
 jest.mock('uuid', () => ({
-  v4: () => 'mock-uuid-12345' + Math.random(),
+  ...jest.requireActual('uuid'),
+  v4: () => require('crypto').randomUUID(),
 }));
 
 jest.mock('../src/repositories/ChatSessionRepository', () => ({

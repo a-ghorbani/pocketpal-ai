@@ -19,6 +19,7 @@ import {
 } from '../store';
 import {documentKey} from '../render';
 import type {DocumentRef} from '../types';
+import {docId} from '../../../../jest/fixtures/documentIds';
 
 const ROOT = '/path/to/documents/documents';
 const STAGING = '/path/to/caches/staging-uuid';
@@ -395,7 +396,7 @@ describe('loadDocumentTexts / findMissingDocuments', () => {
     pdfPages = ['a', 'b', 'c', 'd', 'e'];
     const all = ready(await importDocument(picked('x.pdf', '%PDF')));
     const narrowed = ready(await setDocumentPageRange(all, 3, 5));
-    const gone: DocumentRef = {...all, id: 'gone-id'};
+    const gone: DocumentRef = {...all, id: docId('gone')};
 
     const texts = await loadDocumentTexts([all, narrowed, gone]);
 
@@ -417,24 +418,26 @@ describe('release and sweep', () => {
   const referenced = (...ids: string[]) => jest.fn(async () => new Set(ids));
 
   it('sweeps an unreferenced, unheld directory', async () => {
-    makeDir('orphan');
-    makeDir('kept');
-    await sweepOrphanDocuments(referenced('kept'));
-    expect(docDirs()).toEqual([`${ROOT}/kept`]);
+    makeDir(docId('orphan'));
+    makeDir(docId('kept'));
+    await sweepOrphanDocuments(referenced(docId('kept')));
+    expect(docDirs()).toEqual([`${ROOT}/${docId('kept')}`]);
   });
 
   it('never sweeps a held id (composer, send or import)', async () => {
-    makeDir('composer');
-    makeDir('sending');
-    setComposerHeld(['composer']);
-    holdForSend(['sending']);
+    makeDir(docId('composer'));
+    makeDir(docId('sending'));
+    setComposerHeld([docId('composer')]);
+    holdForSend([docId('sending')]);
     await sweepOrphanDocuments(referenced());
-    expect(docDirs().sort()).toEqual([`${ROOT}/composer`, `${ROOT}/sending`]);
-    releaseSendHold(['sending']);
+    expect(docDirs().sort()).toEqual(
+      [`${ROOT}/${docId('composer')}`, `${ROOT}/${docId('sending')}`].sort(),
+    );
+    releaseSendHold([docId('sending')]);
   });
 
   it('keeps an import that starts while the sweep runs', async () => {
-    makeDir('old-orphan');
+    makeDir(docId('old-orphan'));
     pdfPages = ['text'];
     let imported: DocumentResult | undefined;
     const getReferenced = jest.fn(async () => {
@@ -449,36 +452,39 @@ describe('release and sweep', () => {
   });
 
   it('re-reads references when a hold is released mid-sweep', async () => {
-    makeDir('a');
-    makeDir('b');
-    holdForSend(['b']);
+    makeDir(docId('a'));
+    makeDir(docId('b'));
+    holdForSend([docId('b')]);
     let persisted = false;
     fs.unlink.mockImplementationOnce(async (p: string) => {
       [...dirs].filter(d => under(d, p)).forEach(d => dirs.delete(d));
       persisted = true;
-      releaseSendHold(['b']);
+      releaseSendHold([docId('b')]);
     });
     const getReferenced = jest.fn(async () =>
-      persisted ? new Set(['b']) : new Set<string>(),
+      persisted ? new Set([docId('b')]) : new Set<string>(),
     );
 
     await sweepOrphanDocuments(getReferenced);
 
-    expect(docDirs()).toEqual([`${ROOT}/b`]);
+    expect(docDirs()).toEqual([`${ROOT}/${docId('b')}`]);
     expect(getReferenced).toHaveBeenCalledTimes(2);
   });
 
   it('release skips ids still referenced and deletes the rest', async () => {
-    makeDir('shared');
-    makeDir('only-here');
-    await releaseDocuments(['shared', 'only-here'], referenced('shared'));
-    expect(docDirs()).toEqual([`${ROOT}/shared`]);
+    makeDir(docId('shared'));
+    makeDir(docId('only-here'));
+    await releaseDocuments(
+      [docId('shared'), docId('only-here')],
+      referenced(docId('shared')),
+    );
+    expect(docDirs()).toEqual([`${ROOT}/${docId('shared')}`]);
   });
 
   it('release skips held ids', async () => {
-    makeDir('editing');
-    setComposerHeld(['editing']);
-    await releaseDocuments(['editing'], referenced());
-    expect(docDirs()).toEqual([`${ROOT}/editing`]);
+    makeDir(docId('editing'));
+    setComposerHeld([docId('editing')]);
+    await releaseDocuments([docId('editing')], referenced());
+    expect(docDirs()).toEqual([`${ROOT}/${docId('editing')}`]);
   });
 });

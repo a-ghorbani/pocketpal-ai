@@ -44,6 +44,7 @@ export const downloadFile = jest.fn();
 let documentDirectoryPath = '/path/to/documents';
 export const DocumentDirectoryPath = documentDirectoryPath;
 export const LibraryDirectoryPath = '/path/to/library';
+export const CachesDirectoryPath = '/path/to/caches';
 export const MainBundlePath = '/path/to/bundle';
 
 // Allow tests to override the path
@@ -78,6 +79,7 @@ const RNFS = {
   downloadFile,
   DocumentDirectoryPath,
   LibraryDirectoryPath,
+  CachesDirectoryPath,
   MainBundlePath,
   copyFile,
   moveFile,

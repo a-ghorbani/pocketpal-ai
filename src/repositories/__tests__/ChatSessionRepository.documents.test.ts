@@ -2,6 +2,9 @@ import {chatSessionRepository} from '../ChatSessionRepository';
 import {releaseDocuments} from '../../services/documents/store';
 import Message from '../../database/models/Message';
 import type {DocumentRef} from '../../services/documents/types';
+import {docId} from '../../../jest/fixtures/documentIds';
+
+const DOC_ID = docId('doc');
 
 type Row = {
   id: string;
@@ -77,7 +80,7 @@ jest.mock('@nozbe/watermelondb', () => ({
 jest.unmock('../ChatSessionRepository');
 
 const ref: DocumentRef = {
-  id: 'doc-1',
+  id: DOC_ID,
   name: 'a.pdf',
   kind: 'pdf',
   byteSize: 1,
@@ -122,13 +125,13 @@ describe('ChatSessionRepository documents', () => {
     const y = [...mockSessions].find(id => id !== x.id)!;
 
     await chatSessionRepository.deleteSession(x.id);
-    expect(release).toHaveBeenCalledWith(['doc-1'], expect.any(Function));
+    expect(release).toHaveBeenCalledWith([DOC_ID], expect.any(Function));
     const referencedAfterX = await release.mock.calls[0][1]();
-    expect(referencedAfterX.has('doc-1')).toBe(true);
+    expect(referencedAfterX.has(DOC_ID)).toBe(true);
 
     await chatSessionRepository.deleteSessions([y]);
     const referencedAfterY = await release.mock.calls[1][1]();
-    expect(referencedAfterY.has('doc-1')).toBe(false);
+    expect(referencedAfterY.has(DOC_ID)).toBe(false);
   });
 
   it('does not release anything for sessions without documents', async () => {
@@ -152,7 +155,7 @@ describe('searched documents', () => {
     await chatSessionRepository.deleteSession(x.id);
 
     const referenced = await release.mock.calls[0][1]();
-    expect(referenced.has('doc-1')).toBe(true);
+    expect(referenced.has(DOC_ID)).toBe(true);
     expect(JSON.parse(mockRows[0].metadata).documents[0].mode).toBe('searched');
   });
 });

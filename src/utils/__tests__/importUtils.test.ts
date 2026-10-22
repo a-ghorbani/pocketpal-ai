@@ -1,6 +1,7 @@
 import * as RNFS from '@dr.pogodin/react-native-fs';
 import {pick} from '@react-native-documents/picker';
 import {palStore} from '../../store';
+import {validate} from 'uuid';
 import {
   readJsonFile,
   validateImportedData,
@@ -67,7 +68,7 @@ describe('importUtils', () => {
       ) as ImportedChatSession;
 
       // Verify
-      expect(result.id).toMatch(/^mock-uuid-12345/); // UUID will have random component
+      expect(validate(result.id)).toBe(true);
       expect(result.date).toBeDefined();
       expect(result.messages).toEqual([]);
       expect(result.completionSettings).toBeDefined();

@@ -15,6 +15,7 @@ import {DOCUMENT_LEAD, EXCERPT_LEAD} from '../../services/documents/render';
 import * as retrieve from '../../services/documents/retrieve';
 import {isHeld, setComposerHeld} from '../../services/documents/store';
 import type {DocumentRef} from '../../services/documents/types';
+import {docId} from '../../../jest/fixtures/documentIds';
 
 import {chatSessionStore, modelStore, palStore} from '../../store';
 import {MessageType} from '../../utils/types';
@@ -33,7 +34,7 @@ const writeText = (id: string, pages: string[], range = 'all', first = 1) =>
   );
 
 const pdf = (id: string, extra: Partial<DocumentRef> = {}): DocumentRef => ({
-  id,
+  id: docId(id),
   name: `${id}.pdf`,
   kind: 'pdf',
   byteSize: 1,
@@ -316,7 +317,7 @@ describe('searched documents at send', () => {
     expect(userMessage.content).toContain('50 pages — searched');
     expect(userMessage.content).toContain(EXCERPT_LEAD);
     expect(userMessage.content).toContain(
-      '<<<BEGIN EXCERPT report-c "report-c.pdf" p.37>>>',
+      `<<<BEGIN EXCERPT ${report.id.slice(0, 8)} "report-c.pdf" p.37>>>`,
     );
     expect(userMessage.content).not.toContain('=== Page 1 ===');
     expect(
