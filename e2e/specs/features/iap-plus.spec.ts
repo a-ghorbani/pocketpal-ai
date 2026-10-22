@@ -17,12 +17,7 @@ import {DrawerPage} from '../../pages/DrawerPage';
 import {ModelsPage} from '../../pages/ModelsPage';
 import {PlusPage} from '../../pages/PlusPage';
 import {TIMEOUTS} from '../../fixtures/models';
-import {
-  byExactTestId,
-  byStaticText,
-  byTestId,
-  Selectors,
-} from '../../helpers/selectors';
+import {byExactTestId, byTestId, Selectors} from '../../helpers/selectors';
 import {saveFailureScreenshot} from '../../helpers/screenshots';
 import {withBridgeElements} from '../../helpers/automation-bridge';
 import {assertMockTraffic, iapMockServer} from '../../helpers/iapMockServer';
@@ -314,8 +309,7 @@ describe('PocketPal Plus', () => {
     const entryContinued = async () =>
       (await shown(byExactTestId('voice-setup-continue'))) ||
       (await shown(byExactTestId('voice-view'))) ||
-      ((await shown(byStaticText('Models'))) &&
-        (await shown(byStaticText('Pals'))));
+      (await shown(byExactTestId('chat-pal-model-picker-tab-models')));
     expect(await entryContinued()).toBe(false);
     const tapVoice = async () => {
       await browser.$(byExactTestId('voice-mode-button')).click();
