@@ -117,4 +117,19 @@ describe('DocumentChip', () => {
     fireEvent.press(getByTestId('document-chip-search-instead'));
     expect(onSearchInstead).toHaveBeenCalled();
   });
+
+  it('wraps the details instead of cutting them when Search instead is shown', () => {
+    const {getByTestId} = render(
+      <DocumentChip
+        name="report.pdf"
+        documentRef={pdf}
+        mode="full"
+        onSearchInstead={jest.fn()}
+      />,
+    );
+    expect(getByTestId('document-chip-details').props.numberOfLines).toBe(2);
+    expect(getByTestId('document-chip-text')).toContainElement(
+      getByTestId('document-chip-search-instead'),
+    );
+  });
 });

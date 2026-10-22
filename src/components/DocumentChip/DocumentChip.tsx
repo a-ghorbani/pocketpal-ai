@@ -87,7 +87,7 @@ export const DocumentChip: React.FC<DocumentChipProps> = ({
     details: {color: theme.colors.onSurfaceVariant},
     remove: {margin: 0},
     searchInstead: {
-      marginLeft: 8,
+      marginTop: 2,
       color: theme.colors.primary,
     },
   });
@@ -113,30 +113,30 @@ export const DocumentChip: React.FC<DocumentChipProps> = ({
           color={theme.colors.onSurfaceVariant}
         />
       )}
-      <View style={styles.text}>
+      <View style={styles.text} testID={`${testID}-text`}>
         <Text variant="labelMedium" numberOfLines={1} style={styles.name}>
           {name}
         </Text>
         {details.length > 0 ? (
           <Text
             variant="labelSmall"
-            numberOfLines={1}
+            numberOfLines={2}
             style={styles.details}
             testID={`${testID}-details`}>
             {details.join(' · ')}
           </Text>
         ) : null}
+        {onSearchInstead ? (
+          <Text
+            variant="labelSmall"
+            style={styles.searchInstead}
+            onPress={onSearchInstead}
+            accessibilityRole="button"
+            testID={`${testID}-search-instead`}>
+            {strings.searchInstead}
+          </Text>
+        ) : null}
       </View>
-      {onSearchInstead ? (
-        <Text
-          variant="labelSmall"
-          style={styles.searchInstead}
-          onPress={onSearchInstead}
-          accessibilityRole="button"
-          testID={`${testID}-search-instead`}>
-          {strings.searchInstead}
-        </Text>
-      ) : null}
       {onRemove ? (
         <IconButton
           icon="close"
