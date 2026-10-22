@@ -40,6 +40,7 @@ const currentSentinel = () =>
         version: PHONON_MODEL_VERSION,
         androidRevision: PHONON_ANDROID_REVISION,
         voicesRevision: PHONON_VOICES_REVISION,
+        voicePins: JSON.stringify(PHONON_VOICE_PINS),
       };
 
 const ANDROID_DIR = '/path/to/documents/tts/phonon';
@@ -342,6 +343,24 @@ describe('PhononEngine', () => {
       'is false on Android when the sentinel %s is stale',
       async key => {
         sentinel({[key]: 'e'.repeat(40)});
+        await expect(new PhononEngine().isInstalled()).resolves.toBe(false);
+      },
+    );
+
+    it.each([
+      ['sha256', 'e'.repeat(64)],
+      ['voiceId', 'stale-voice-id'],
+      ['description', 'An older description'],
+    ])(
+      'is false on Android when a voice pin %s is stale',
+      async (key, value) => {
+        sentinel({
+          voicePins: JSON.stringify(
+            PHONON_VOICE_PINS.map((v, i) =>
+              i === 0 ? {...v, [key]: value} : v,
+            ),
+          ),
+        });
         await expect(new PhononEngine().isInstalled()).resolves.toBe(false);
       },
     );

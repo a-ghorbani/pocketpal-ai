@@ -82,6 +82,7 @@ const currentSentinel = (): Record<string, string | number> =>
         version: PHONON_MODEL_VERSION,
         androidRevision: PHONON_ANDROID_REVISION,
         voicesRevision: PHONON_VOICES_REVISION,
+        voicePins: JSON.stringify(PHONON_VOICE_PINS),
       };
 
 /**
@@ -174,14 +175,14 @@ export class PhononEngine implements NeuralEngine {
           return false;
         }
       }
-      return this.isSentinelAtCurrentVersion();
+      return this.isSentinelCurrent();
     } catch (err) {
       console.warn('[PhononEngine] isInstalled check failed:', err);
       return false;
     }
   }
 
-  private async isSentinelAtCurrentVersion(): Promise<boolean> {
+  private async isSentinelCurrent(): Promise<boolean> {
     try {
       const sentinelPath = this.getFilePath(PHONON_VERSION_SENTINEL_FILENAME);
       if (!(await RNFS.exists(sentinelPath))) {
@@ -201,7 +202,7 @@ export class PhononEngine implements NeuralEngine {
   }
 
   async reclaimLegacySpace(): Promise<void> {
-    if (await this.isSentinelAtCurrentVersion()) {
+    if (await this.isSentinelCurrent()) {
       return;
     }
     const modelDir = this.getModelPath();
