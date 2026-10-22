@@ -62,13 +62,15 @@ export const DocumentRangeSheet: React.FC<DocumentRangeSheetProps> = ({
   const tooManyPages = inBounds && to! - from! + 1 > MAX_RANGE_PAGES;
   const showInvalid = fromText !== '' && toText !== '' && !inBounds;
 
+  const showsFailedRange =
+    documentRef.pageRange !== undefined &&
+    from === documentRef.pageRange.from &&
+    to === documentRef.pageRange.to;
   const limitMessage = tooManyPages
     ? t(strings.tooManyPages, {max: MAX_RANGE_PAGES})
-    : rangeLimit === 'too_many_chars'
+    : rangeLimit === 'too_many_chars' && showsFailedRange
       ? strings.tooManyChars
-      : rangeLimit === 'too_many_pages' && !documentRef.pageRange
-        ? t(strings.tooManyPages, {max: MAX_RANGE_PAGES})
-        : undefined;
+      : undefined;
 
   const styles = StyleSheet.create({
     container: {padding: 16, gap: 12},

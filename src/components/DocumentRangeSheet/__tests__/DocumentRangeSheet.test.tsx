@@ -72,4 +72,30 @@ describe('DocumentRangeSheet', () => {
     );
     expect(getByTestId('document-range-limit')).toBeTruthy();
   });
+
+  it('shows the page limit only after an edit makes the range too long', () => {
+    const {getByTestId, queryByTestId} = renderSheet(doc(1200), jest.fn(), {
+      rangeLimit: 'too_many_pages',
+    });
+    expect(queryByTestId('document-range-limit')).toBeNull();
+
+    fireEvent.changeText(getByTestId('document-range-from'), '1');
+    fireEvent.changeText(getByTestId('document-range-to'), '501');
+    expect(getByTestId('document-range-limit')).toBeTruthy();
+
+    fireEvent.changeText(getByTestId('document-range-to'), '500');
+    expect(queryByTestId('document-range-limit')).toBeNull();
+  });
+
+  it('drops the character-limit message once the failed range is changed', () => {
+    const {getByTestId, queryByTestId} = renderSheet(
+      {...doc(40), pageRange: {from: 1, to: 40}},
+      jest.fn(),
+      {rangeLimit: 'too_many_chars'},
+    );
+    expect(getByTestId('document-range-limit')).toBeTruthy();
+
+    fireEvent.changeText(getByTestId('document-range-to'), '10');
+    expect(queryByTestId('document-range-limit')).toBeNull();
+  });
 });
