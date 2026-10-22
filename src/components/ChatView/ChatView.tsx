@@ -737,6 +737,7 @@ export const ChatView = observer(
     } = l10n.components.chatView.menuItems;
 
     const isStopping = chatSessionStore.isStopping;
+    const voiceModeOpen = voiceModeStore.isOpen;
     const menuItems = React.useMemo((): MenuItem[] => {
       if (
         !selectedMessage ||
@@ -747,7 +748,8 @@ export const ChatView = observer(
       }
 
       const isAuthor = selectedMessage.author.id === user.id;
-      const hasActiveModel = modelStore.activeModelId !== undefined;
+      const canGenerate =
+        modelStore.activeModelId !== undefined && !isStopping && !voiceModeOpen;
       const models = modelStore.availableModels || [];
 
       const baseItems: MenuItem[] = [
@@ -770,13 +772,13 @@ export const ChatView = observer(
             handleMenuDismiss();
           },
           icon: () => <RefreshIcon stroke={theme.colors.primary} />,
-          disabled: !hasActiveModel || isStopping,
+          disabled: !canGenerate,
         });
 
         baseItems.push({
           label: regenerateWithLabel,
           icon: () => <GridIcon stroke={theme.colors.primary} />,
-          disabled: isStopping,
+          disabled: isStopping || voiceModeOpen,
           submenu: models.map(model => ({
             label: model.name,
             width: Math.min(300, size.width),
@@ -796,7 +798,7 @@ export const ChatView = observer(
             handleMenuDismiss();
           },
           icon: () => <PencilLineIcon stroke={theme.colors.primary} />,
-          disabled: !hasActiveModel || isStopping,
+          disabled: !canGenerate,
         });
       }
 
@@ -814,6 +816,7 @@ export const ChatView = observer(
     }, [
       selectedMessage,
       isStopping,
+      voiceModeOpen,
       user.id,
       handleCopy,
       handleTryAgain,
@@ -1262,6 +1265,7 @@ export const ChatView = observer(
                 render as a sibling (no shared background / rounded top). */}
             {messages.length === 0 &&
             !isStreaming &&
+            !voiceModeOpen &&
             modelStore.activeModelId !== undefined &&
             activePal?.greeting?.suggestedPrompts &&
             activePal.greeting.suggestedPrompts.length > 0 ? (
