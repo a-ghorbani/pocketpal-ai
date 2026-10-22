@@ -156,6 +156,15 @@ const validateSingleSession = (session: any): ImportedChatSession => {
       msg.createdAt = Date.now();
     }
 
+    if (
+      msg.metadata !== undefined &&
+      (typeof msg.metadata !== 'object' ||
+        msg.metadata === null ||
+        Array.isArray(msg.metadata))
+    ) {
+      msg.metadata = {};
+    }
+
     if (msg.metadata && 'documents' in msg.metadata) {
       const {documents} = msg.metadata;
       if (Array.isArray(documents)) {

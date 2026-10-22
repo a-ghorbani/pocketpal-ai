@@ -124,6 +124,24 @@ describe('importUtils', () => {
     });
   });
 
+  describe('non-object message metadata', () => {
+    it.each(['x', 42, true, null, [1, 2]])(
+      'imports every session when a message has metadata %j',
+      metadata => {
+        const result = validateImportedData([
+          {
+            title: 'Odd metadata',
+            messages: [{id: 'm1', author: 'user', text: 'hi', metadata}],
+          },
+          {title: 'Plain', messages: [{id: 'm2', author: 'user', text: 'yo'}]},
+        ]) as ImportedChatSession[];
+
+        expect(result).toHaveLength(2);
+        expect(result[0].messages[0].metadata).toEqual({});
+      },
+    );
+  });
+
   describe('Pal Import Functions', () => {
     const mockImportedPal = {
       version: '2.0',
