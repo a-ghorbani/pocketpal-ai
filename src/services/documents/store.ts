@@ -6,6 +6,7 @@ import 'react-native-get-random-values';
 import NativePdfText from '../../specs/NativePdfText';
 
 import {estimateDocTokens} from './estimate';
+import {dropDocumentIndexes} from './retrieve';
 import {
   assertContained,
   docDir,
@@ -432,9 +433,12 @@ const deleteUnlive = async (
     if (!isDocumentId(id) || referenced.has(id) || isHeld(id)) {
       continue;
     }
-    await RNFS.unlink(assertContained(docDir(id))).catch(error =>
-      console.warn('[documents] delete failed', id, error),
-    );
+    try {
+      await RNFS.unlink(assertContained(docDir(id)));
+      dropDocumentIndexes(id);
+    } catch (error) {
+      console.warn('[documents] delete failed', id, error);
+    }
   }
 };
 

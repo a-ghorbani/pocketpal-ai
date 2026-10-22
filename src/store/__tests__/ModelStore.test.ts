@@ -2058,6 +2058,42 @@ describe('ModelStore', () => {
     });
   });
 
+  describe('document index cache', () => {
+    const originalInitContext = modelStore.initContext;
+    const retrieveModule = jest.requireActual(
+      '../../services/documents/retrieve',
+    );
+    const withLoadedContext = () =>
+      runInAction(() => {
+        modelStore.context = {
+          release: jest.fn().mockResolvedValue(undefined),
+          isMultimodalEnabled: jest.fn().mockResolvedValue(false),
+        } as any;
+        modelStore.activeModelId = 'loaded-model';
+      });
+
+    it('releaseContext clears the document index cache', async () => {
+      withLoadedContext();
+      const clear = jest.spyOn(retrieveModule, 'clearDocumentIndexCache');
+
+      await modelStore.releaseContext();
+
+      expect(clear).toHaveBeenCalled();
+      clear.mockRestore();
+    });
+
+    it('switching models clears the document index cache', async () => {
+      withLoadedContext();
+      const clear = jest.spyOn(retrieveModule, 'clearDocumentIndexCache');
+      jest.spyOn(console, 'error').mockImplementation(() => {});
+
+      await originalInitContext(basicModel).catch(() => {});
+
+      expect(clear).toHaveBeenCalled();
+      clear.mockRestore();
+    });
+  });
+
   describe('auto-release across a quick app switch', () => {
     const originalInitContext = modelStore.initContext;
     const initLlama = initializeLlama as jest.Mock;

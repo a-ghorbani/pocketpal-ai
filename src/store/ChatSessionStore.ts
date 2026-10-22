@@ -20,6 +20,7 @@ import {palStore} from './PalStore';
 import {deriveToolSchemas} from '../services/talents';
 import {AgentUiState, initialAgentUiState} from '../services/agent';
 import {sweepOrphanDocuments} from '../services/documents/store';
+import {clearDocumentIndexCache} from '../services/documents/retrieve';
 
 /**
  * Update payload accepted by `updateMessage` / `updateMessageStreaming`.
@@ -358,6 +359,7 @@ class ChatSessionStore {
   }
 
   resetActiveSession() {
+    clearDocumentIndexCache();
     runInAction(() => {
       this.newChatPalId = this.activePalId;
       this.newChatSettingsSource = 'pal'; // Reset to default for new chat
@@ -400,6 +402,7 @@ class ChatSessionStore {
   }
 
   async setActiveSession(sessionId: string): Promise<void> {
+    clearDocumentIndexCache();
     const session = this.sessions.find(s => s.id === sessionId);
 
     // Lazy-load messages if not already loaded

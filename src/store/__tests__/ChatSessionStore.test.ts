@@ -2901,3 +2901,19 @@ describe('chatSessionStore launch sweep', () => {
     sweep.mockRestore();
   });
 });
+
+describe('chatSessionStore document index cache', () => {
+  const retrieveModule = jest.requireActual(
+    '../../services/documents/retrieve',
+  );
+
+  it('switching session clears the document index cache', async () => {
+    const clear = jest.spyOn(retrieveModule, 'clearDocumentIndexCache');
+
+    await chatSessionStore.setActiveSession('any-session');
+    chatSessionStore.resetActiveSession();
+
+    expect(clear).toHaveBeenCalledTimes(2);
+    clear.mockRestore();
+  });
+});

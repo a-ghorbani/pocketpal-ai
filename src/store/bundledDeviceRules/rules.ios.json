@@ -72,11 +72,7 @@
         "label": "8+ GiB"
       }
     ],
-    "soc_classes": [
-      "entry",
-      "mid",
-      "flagship"
-    ],
+    "soc_classes": ["entry", "mid", "flagship"],
     "device_id_to_chip": {
       "iPhone10,1": "A11",
       "iPhone10,2": "A11",

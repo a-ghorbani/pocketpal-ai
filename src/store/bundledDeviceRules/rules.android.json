@@ -65,11 +65,7 @@
         "label": "12+ GiB"
       }
     ],
-    "soc_classes": [
-      "budget",
-      "mid",
-      "flagship"
-    ],
+    "soc_classes": ["budget", "mid", "flagship"],
     "soc_model_to_class": {
       "SM8850": "flagship",
       "SM8750": "flagship",
@@ -173,17 +169,13 @@
       "rules": [
         {
           "match": {
-            "features_any": [
-              "i8mm"
-            ]
+            "features_any": ["i8mm"]
           },
           "class": "flagship"
         },
         {
           "match": {
-            "features_any": [
-              "sve2"
-            ]
+            "features_any": ["sve2"]
           },
           "class": "flagship"
         },
@@ -195,18 +187,14 @@
         },
         {
           "match": {
-            "features_all": [
-              "dotprod"
-            ],
+            "features_all": ["dotprod"],
             "max_freq_mhz_min": 2400
           },
           "class": "mid"
         },
         {
           "match": {
-            "features_all": [
-              "dotprod"
-            ]
+            "features_all": ["dotprod"]
           },
           "class": "mid"
         },

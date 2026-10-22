@@ -598,3 +598,21 @@ describe('picker staging', () => {
     });
   });
 });
+
+describe('release and cached search indexes', () => {
+  it("release drops the id's cached indexes", async () => {
+    const retrieveModule = jest.requireActual('../retrieve');
+    const drop = jest.spyOn(retrieveModule, 'dropDocumentIndexes');
+    const id = docId('dropped');
+    dirs.add(ROOT);
+    dirs.add(`${ROOT}/${id}`);
+
+    await releaseDocuments(
+      [id],
+      jest.fn(async () => new Set<string>()),
+    );
+
+    expect(drop).toHaveBeenCalledWith(id);
+    drop.mockRestore();
+  });
+});

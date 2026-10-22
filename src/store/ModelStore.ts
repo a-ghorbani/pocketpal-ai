@@ -54,6 +54,7 @@ import {downloadManager, DownloadCancelledError} from '../services/downloads';
 import {classify, ClassifyPlatform} from '../services/deviceRules/classify';
 import {deriveUrl, parseDeviceRules} from '../services/deviceRules/parse';
 import {fetchRules} from '../services/deviceRules/rules';
+import {clearDocumentIndexCache} from '../services/documents/retrieve';
 import {readDeviceSignals} from '../services/deviceRules/signals';
 import {
   DeviceRules,
@@ -2481,6 +2482,7 @@ class ModelStore {
   ) => {
     console.log('attempt to release');
     chatSessionStore.exitEditMode();
+    clearDocumentIndexCache();
     this.isReleasingContext = true;
     try {
       await this.generationSlot.abortActive();
