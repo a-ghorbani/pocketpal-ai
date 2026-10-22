@@ -154,6 +154,22 @@ describe('ChatView page ranges', () => {
     });
   };
 
+  it('returns a chip with an invalid id to its prior state after a range change', async () => {
+    const chat = renderChat();
+    await chat.attach(fortyPages);
+
+    await chooseRange(chat, '3', '5');
+
+    await waitFor(() =>
+      expect(chat.screen.getByText('40 pages · ~20.0k tokens')).toBeTruthy(),
+    );
+    chat.type('go');
+    await act(async () => {
+      chat.pressSend();
+    });
+    expect(chat.onSendPress).toHaveBeenCalled();
+  });
+
   it('applies a chosen range to the composer chip', async () => {
     const ranged = {
       ...fortyPages,

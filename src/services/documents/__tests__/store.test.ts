@@ -488,3 +488,58 @@ describe('release and sweep', () => {
     expect(docDirs()).toEqual([`${ROOT}/${docId('editing')}`]);
   });
 });
+
+describe('invalid document ids', () => {
+  const BAD_IDS = ['..', '../..', '../models', '/abs/path', '', 'a/b', 'a\\b'];
+  const badRef = (id: string): DocumentRef => ({
+    id,
+    name: 'bad.pdf',
+    kind: 'pdf',
+    byteSize: 1,
+    pageCount: 3,
+    charCount: 1,
+    tokenEstimate: 1,
+  });
+
+  it('release never unlinks outside documents/<uuid>', async () => {
+    dirs.add(ROOT);
+    await releaseDocuments(
+      BAD_IDS,
+      jest.fn(async () => new Set<string>()),
+    );
+    expect(fs.unlink).not.toHaveBeenCalled();
+  });
+
+  it('the sweep skips entries that are not uuid v4', async () => {
+    dirs.add(ROOT);
+    dirs.add(`${ROOT}/not-a-uuid`);
+    await sweepOrphanDocuments(jest.fn(async () => new Set<string>()));
+    expect(fs.unlink).not.toHaveBeenCalled();
+  });
+
+  it('a range change on an invalid ref resolves refused', async () => {
+    for (const id of BAD_IDS) {
+      await expect(setDocumentPageRange(badRef(id), 1, 2)).resolves.toEqual({
+        status: 'refused',
+        reason: 'pdf_unreadable',
+      });
+    }
+    await expect(
+      setDocumentPageRange(badRef(docId('good')), 1.5, 2),
+    ).resolves.toEqual({status: 'refused', reason: 'pdf_unreadable'});
+  });
+
+  it('missing-file probe resolves for invalid ids', async () => {
+    const refs = BAD_IDS.map(badRef);
+    const missing = await findMissingDocuments(refs);
+    expect(missing.size).toBe(new Set(refs.map(documentKey)).size);
+  });
+
+  it('reads an invalid id or range as missing', async () => {
+    const texts = await loadDocumentTexts([
+      badRef('../x'),
+      {...badRef(docId('ranged')), pageRange: {from: 1.5, to: 2}},
+    ]);
+    expect([...texts.values()]).toEqual(['missing', 'missing']);
+  });
+});

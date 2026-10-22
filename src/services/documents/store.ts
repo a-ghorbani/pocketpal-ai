@@ -6,7 +6,15 @@ import 'react-native-get-random-values';
 import NativePdfText from '../../specs/NativePdfText';
 
 import {estimateDocTokens} from './estimate';
-import {docDir, documentsRoot, sourceFile, textFile} from './paths';
+import {
+  assertContained,
+  docDir,
+  documentsRoot,
+  isDocumentId,
+  isValidPageRange,
+  sourceFile,
+  textFile,
+} from './paths';
 import {documentKey, renderDocumentBlock} from './render';
 import {
   MAX_DOCUMENT_BYTES,
@@ -146,7 +154,7 @@ const copyIntoStore = async (
       throw new Refusal('copy_failed');
     }
     staged = pathOfLocalUri(entry.localUri);
-    await RNFS.moveFile(staged, destination);
+    await RNFS.moveFile(staged, assertContained(destination));
   } catch (error) {
     throw error instanceof Refusal ? error : new Refusal('copy_failed');
   } finally {
@@ -201,7 +209,7 @@ const countedRef = async (
 
 const writeTextFile = (path: string, firstPage: number, pages: string[]) => {
   const file: DocumentTextFile = {version: 1, firstPage, pages};
-  return RNFS.writeFile(path, JSON.stringify(file), 'utf8');
+  return RNFS.writeFile(assertContained(path), JSON.stringify(file), 'utf8');
 };
 
 const readTextFile = async (path: string): Promise<string[]> => {
@@ -283,7 +291,7 @@ export const importDocument = async (
     const extension = extensionOf(stagedName);
     const kind = classify(extension);
 
-    await RNFS.mkdir(docDir(id));
+    await RNFS.mkdir(assertContained(docDir(id)));
     const path = sourceFile(id, extension);
     await copyIntoStore(picked, stagedName, path, virtual?.mimeType);
 
@@ -303,7 +311,7 @@ export const importDocument = async (
       ? await importPdf(ref, path, counting)
       : await importText(ref, path, counting);
   } catch (error) {
-    await RNFS.unlink(docDir(id)).catch(() => {});
+    await RNFS.unlink(assertContained(docDir(id))).catch(() => {});
     releaseImportHold(id);
     if (error instanceof Refusal) {
       return {status: 'refused', reason: error.reason};
@@ -324,6 +332,9 @@ export const setDocumentPageRange = async (
   counting?: DocumentCounting,
 ): Promise<DocumentResult> => {
   const pageRange: PageRange = {from, to};
+  if (!isDocumentId(ref.id) || !isValidPageRange(pageRange)) {
+    return {status: 'refused', reason: 'pdf_unreadable'};
+  }
   const ranged: DocumentRef = {...ref, pageRange, mode: undefined};
   if (to - from + 1 > MAX_RANGE_PAGES) {
     return {status: 'needs_range', ref: ranged, rangeLimit: 'too_many_pages'};
@@ -382,7 +393,10 @@ export const findMissingDocuments = async (
   const missing = new Set<string>();
   await Promise.all(
     uniqueByKey(refs).map(async ref => {
-      if (!(await RNFS.exists(textPathOf(ref)).catch(() => false))) {
+      const exists = await Promise.resolve()
+        .then(() => RNFS.exists(textPathOf(ref)))
+        .catch(() => false);
+      if (!exists) {
         missing.add(documentKey(ref));
       }
     }),
@@ -403,10 +417,10 @@ const deleteUnlive = async (
       epoch = releaseEpoch;
       referenced = await getReferencedIds();
     }
-    if (referenced.has(id) || isHeld(id)) {
+    if (!isDocumentId(id) || referenced.has(id) || isHeld(id)) {
       continue;
     }
-    await RNFS.unlink(docDir(id)).catch(error =>
+    await RNFS.unlink(assertContained(docDir(id))).catch(error =>
       console.warn('[documents] delete failed', id, error),
     );
   }
@@ -418,7 +432,10 @@ export const releaseDocuments = async (
 ): Promise<void> => {
   const existing: string[] = [];
   for (const id of new Set(ids)) {
-    if (await RNFS.exists(docDir(id)).catch(() => false)) {
+    if (
+      isDocumentId(id) &&
+      (await RNFS.exists(docDir(id)).catch(() => false))
+    ) {
       existing.push(id);
     }
   }
@@ -434,7 +451,9 @@ export const sweepOrphanDocuments = async (
     return;
   }
   const entries = await RNFS.readDir(documentsRoot());
-  const dirs = entries.filter(entry => entry.isDirectory()).map(e => e.name);
+  const dirs = entries
+    .filter(entry => entry.isDirectory() && isDocumentId(entry.name))
+    .map(entry => entry.name);
   if (dirs.length > 0) {
     await deleteUnlive(dirs, getReferencedIds);
   }
