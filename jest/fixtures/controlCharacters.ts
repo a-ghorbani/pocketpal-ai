@@ -1,6 +1,11 @@
 export const CONTROL_CHARACTERS = ['\u0000', '\u001f', '\u007f'];
 
-const codePoint = (c: string) =>
+export const EVERY_CONTROL_CHARACTER = [
+  ...Array.from({length: 0x20}, (_, i) => String.fromCharCode(i)),
+  '\u007f',
+];
+
+export const codePoint = (c: string) =>
   `<U+${c.charCodeAt(0).toString(16).padStart(4, '0').toUpperCase()}>`;
 
 /** `[printable form, value]` rows, one per control character and built value. */

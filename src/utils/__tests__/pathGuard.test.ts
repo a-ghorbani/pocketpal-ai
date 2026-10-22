@@ -3,7 +3,11 @@ import {
   isSafePathSegment,
   isSafeRelativePath,
 } from '../pathGuard';
-import {withEachControl} from '../../../jest/fixtures/controlCharacters';
+import {
+  EVERY_CONTROL_CHARACTER,
+  codePoint,
+  withEachControl,
+} from '../../../jest/fixtures/controlCharacters';
 
 const NON_STRINGS: unknown[] = [undefined, null, 7, {}, ['a'], true];
 
@@ -121,6 +125,30 @@ describe('control characters', () => {
     'isContainedPath rejects root %s',
     (_shown, root) => {
       expect(isContainedPath(root, `${root}/x`)).toBe(false);
+    },
+  );
+
+  it.each(withEachControl(c => [`/r/${c}/..`, `/r/a${c}/..`]))(
+    'isContainedPath rejects root %s even when .. drops the segment',
+    (_shown, root) => {
+      expect(isContainedPath(root, '/r/x')).toBe(false);
+    },
+  );
+
+  it.each(withEachControl(c => [`/r/${c}/../x`, `/r/a${c}/../x`]))(
+    'isContainedPath rejects path %s even when .. drops the segment',
+    (_shown, path) => {
+      expect(isContainedPath('/r', path)).toBe(false);
+    },
+  );
+
+  it.each(EVERY_CONTROL_CHARACTER.map(c => [codePoint(c), c]))(
+    'every guard rejects %s',
+    (_shown, c) => {
+      expect(isSafePathSegment(`a${c}b`)).toBe(false);
+      expect(isSafeRelativePath(`Q4/a${c}b`)).toBe(false);
+      expect(isContainedPath('/r', `/r/a${c}b`)).toBe(false);
+      expect(isContainedPath(`/r/a${c}b/..`, '/r/x')).toBe(false);
     },
   );
 
