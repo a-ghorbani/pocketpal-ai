@@ -7,6 +7,8 @@ import {
 } from '../asr/constants';
 import {int16PcmToFloat32} from '../asr/energyVad';
 
+import {vtrace} from '../../utils/voiceTrace';
+
 import {VOICE_ENDPOINT_HANG_MS} from './constants';
 
 const BYTES_PER_MS = (ASR_SAMPLE_RATE * 2) / 1000;
@@ -41,10 +43,17 @@ export class Endpointer {
     return this.voicedBytes >= ASR_MIN_SPEECH_MS * BYTES_PER_MS;
   }
 
+  get voicedMs(): number {
+    return Math.round(this.voicedBytes / BYTES_PER_MS);
+  }
+
   push(chunk: Uint8Array): 'none' | 'endpoint' {
     this.chunks.push(chunk);
     this.bytes += chunk.length;
     if (isVoiced(chunk)) {
+      if (this.voicedBytes === 0) {
+        vtrace('vad.start');
+      }
       this.voicedBytes += chunk.length;
       this.silentBytes = 0;
     } else {
@@ -57,11 +66,16 @@ export class Endpointer {
     }
     const paused = this.silentBytes >= VOICE_ENDPOINT_HANG_MS * BYTES_PER_MS;
     if (paused && !this.hasSpeech) {
+      vtrace('vad.drop', {voicedMs: this.voicedMs});
       this.voicedBytes = 0;
       this.trimLeadIn();
       return 'none';
     }
     if (paused || this.bytes >= ASR_MAX_SEGMENT_MS * BYTES_PER_MS) {
+      vtrace('vad.end', {
+        by: paused ? 'pause' : 'max',
+        ms: Math.round(this.bytes / BYTES_PER_MS),
+      });
       return 'endpoint';
     }
     return 'none';

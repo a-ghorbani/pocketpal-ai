@@ -5,6 +5,7 @@ import {energyVad, int16PcmToFloat32, whisperAsrEngine} from '../asr';
 import type {AsrTranscript} from '../asr';
 import {getEngine, ttsRuntime} from '../tts';
 import {asrStore, chatSessionStore, ttsStore} from '../../store';
+import {vtrace} from '../../utils/voiceTrace';
 
 import type {
   VoiceEngine,
@@ -73,13 +74,14 @@ export class CascadeVoiceEngine implements VoiceEngine {
       }
       interrupting ??= (async () => {
         aborted = true;
+        vtrace('turn.interrupt', {sending: !!sending, turnId});
         if (!sending) {
           await whisperAsrEngine.cancelTranscription().catch(err => {
             console.warn('[voiceMode] cancel transcription failed:', err);
           });
           return;
         }
-        const stopping = ttsStore.stop().catch(() => {});
+        const stopping = ttsStore.stop('interrupt').catch(() => {});
         port.stop();
         await sending.catch(() => {});
         await stopping;
@@ -88,7 +90,13 @@ export class CascadeVoiceEngine implements VoiceEngine {
     };
 
     const run = async (): Promise<VoiceTurnOutcome> => {
-      if (!energyVad(int16PcmToFloat32(utterance)).passed) {
+      const vad = energyVad(int16PcmToFloat32(utterance));
+      vtrace('vad', {
+        passed: vad.passed,
+        voicedMs: vad.voicedMs,
+        ms: Math.round(vad.durationMs),
+      });
+      if (!vad.passed) {
         return 'empty';
       }
       let transcript: AsrTranscript;
@@ -108,6 +116,7 @@ export class CascadeVoiceEngine implements VoiceEngine {
         return 'interrupted';
       }
       const text = transcript.text.trim();
+      vtrace('asr', {chars: text.length, rawChars: transcript.text.length});
       if (!text) {
         return 'empty';
       }
@@ -129,7 +138,9 @@ export class CascadeVoiceEngine implements VoiceEngine {
         console.warn('[voiceMode] reply failed:', err);
         sendFailed = true;
       }
+      vtrace('turn.sent', {turnId, failed: sendFailed});
       await when(() => ttsStore.playbackState.mode === 'idle');
+      vtrace('turn.idle');
       stopWatching();
 
       if (interrupting) {

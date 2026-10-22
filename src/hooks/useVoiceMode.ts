@@ -46,9 +46,10 @@ import {
   voiceEntitlement,
   voiceModeStore,
 } from '../store';
-import type {VoiceError} from '../store';
+import type {VoiceError, VoicePhase} from '../store';
 import {acquireKeepAwake} from '../utils/keepAwake';
 import {ModelOrigin} from '../utils/types';
+import {startVoiceTrace, vtrace} from '../utils/voiceTrace';
 
 export type VoiceModeSheet =
   | {kind: 'teaser'}
@@ -230,12 +231,13 @@ class VoiceModeController {
     this.showSheet(null);
     this.open = true;
     const session = ++this.session;
+    startVoiceTrace();
     ttsStore.setVoiceOutputActive(true, {
       holdFirstChunk: modelStore.activeModel?.origin !== ModelOrigin.REMOTE,
     });
-    ttsStore.stop().catch(() => {});
+    ttsStore.stop('voice_enter').catch(() => {});
     this.releaseAwake = acquireKeepAwake();
-    voiceModeStore.setPhase('starting');
+    this.setPhase('starting', 'enter');
     voiceModeStore.setPresentation('full');
     try {
       await withStartTimeout(this.engine.prepare());
@@ -243,14 +245,14 @@ class VoiceModeController {
       console.warn('[voiceMode] prepare failed:', err);
       if (session === this.session) {
         warn(uiStore.l10n.voiceMode.startFailed);
-        this.exit();
+        this.exit('start_failed');
       }
       return;
     }
     if (session !== this.session) {
       return;
     }
-    voiceModeStore.setPhase('listening');
+    this.setPhase('listening', 'ready');
     this.startCapture(session);
   }
 
@@ -262,23 +264,26 @@ class VoiceModeController {
   /** The chat screen is gone: end any session and start no other until attached. */
   dispose(): void {
     this.disposed = true;
-    this.exit();
+    this.exit('dispose');
   }
 
-  exit(): Promise<void> {
+  exit(reason: string): Promise<void> {
     if (!this.open) {
       return this.exiting ?? Promise.resolve();
     }
     this.open = false;
     this.session++;
     this.micRetried = false;
-    voiceModeStore.setPhase('closed');
+    this.setPhase('closed', reason);
     this.stopCapture();
     const turn = this.turn;
     this.turn = null;
     this.exiting = (async () => {
       try {
-        await turn?.interrupt();
+        if (turn) {
+          vtrace('interrupt', {src: 'exit'});
+          await turn.interrupt();
+        }
       } catch (err) {
         console.warn('[voiceMode] interrupt on exit failed:', err);
       }
@@ -300,13 +305,15 @@ class VoiceModeController {
 
   tapCloud(): void {
     const phase = voiceModeStore.phase;
+    vtrace('tap', {phase, speech: this.endpointer.hasSpeech});
     if (phase === 'listening' && this.endpointer.tap()) {
-      this.endUtterance(this.session);
+      this.endUtterance(this.session, 'tap');
     } else if (
       phase === 'transcribing' ||
       phase === 'thinking' ||
       phase === 'speaking'
     ) {
+      vtrace('interrupt', {src: 'tap', phase, turn: !!this.turn});
       this.turn?.interrupt();
     }
   }
@@ -333,12 +340,13 @@ class VoiceModeController {
       return;
     }
     if (next === 'background') {
-      this.exit();
+      this.exit('background');
     } else if (
       next === 'active' &&
       previous === 'inactive' &&
       voiceModeStore.phase === 'listening'
     ) {
+      vtrace('mic.restart', {why: 'foreground'});
       this.stopCapture();
       this.startCapture(this.session);
     }
@@ -352,12 +360,14 @@ class VoiceModeController {
    * still taken.
    */
   onAudioInterruption({type}: AudioInterruptionProps): void {
+    vtrace('audio.int', {type, open: this.open, phase: voiceModeStore.phase});
     if (!this.open) {
       return;
     }
     if (type === 'began') {
       this.stopCapture();
       if (this.turn) {
+        vtrace('interrupt', {src: 'audio_interruption'});
         this.turn.interrupt();
       } else if (voiceModeStore.phase === 'listening') {
         this.watchMic(this.session);
@@ -365,9 +375,15 @@ class VoiceModeController {
       return;
     }
     if (voiceModeStore.phase === 'listening') {
+      vtrace('mic.restart', {why: 'interruption_ended'});
       this.stopCapture();
       this.startCapture(this.session);
     }
+  }
+
+  private setPhase(phase: VoicePhase, reason: string): void {
+    vtrace('phase', {to: phase, from: voiceModeStore.phase, r: reason});
+    voiceModeStore.setPhase(phase);
   }
 
   private isListening(session: number): boolean {
@@ -381,15 +397,17 @@ class VoiceModeController {
   /** No audio since the mic started: restart it once, then give up. */
   private watchMic(session: number): void {
     this.clearMicWatchdog();
+    vtrace('mic.watch');
     this.micWatchdog = setTimeout(() => {
       this.micWatchdog = null;
       if (session !== this.session) {
         return;
       }
+      vtrace('mic.watch.fire', {retried: this.micRetried});
       if (this.micRetried) {
         console.warn('[voiceMode] microphone delivered no audio');
         warn(uiStore.l10n.voiceMode.micFailed);
-        this.exit();
+        this.exit('mic_silent');
         return;
       }
       this.micRetried = true;
@@ -440,22 +458,25 @@ class VoiceModeController {
         this.clearMicWatchdog();
         this.micRetried = false;
         if (this.endpointer.push(toByteArray(chunk)) === 'endpoint') {
-          this.endUtterance(session);
+          this.endUtterance(session, 'auto');
         }
       });
       AudioRecord.start();
+      vtrace('mic.open');
       this.watchMic(session);
     } catch (err) {
       console.warn('[voiceMode] microphone failed:', err);
+      vtrace('mic.fail', {err: String(err)});
       if (session === this.session) {
         warn(uiStore.l10n.voiceMode.micFailed);
-        this.exit();
+        this.exit('mic_failed');
       }
     }
   }
 
   private clearMicWatchdog(): void {
     if (this.micWatchdog) {
+      vtrace('mic.watch.clear');
       clearTimeout(this.micWatchdog);
       this.micWatchdog = null;
     }
@@ -469,6 +490,7 @@ class VoiceModeController {
     }
     this.listener.remove();
     this.listener = null;
+    vtrace('mic.close');
     Promise.resolve(AudioRecord.stop()).catch(() => {});
     this.holdMic(VOICE_CAPTURE_SETTLE_MS);
   }
@@ -481,19 +503,22 @@ class VoiceModeController {
     );
   }
 
-  private endUtterance(session: number): void {
+  private endUtterance(session: number, by: 'auto' | 'tap'): void {
+    vtrace('utt.end', {by, voicedMs: this.endpointer.voicedMs});
     const utterance = this.endpointer.take();
     this.stopCapture();
-    voiceModeStore.setPhase('transcribing');
+    this.setPhase('transcribing', by);
     const current = () => session === this.session;
     const turn = this.engine.runTurn(utterance, this.turnPort, {
-      transcribed: () => current() && voiceModeStore.setPhase('thinking'),
-      speechStarted: () => current() && voiceModeStore.setPhase('speaking'),
+      transcribed: () => current() && this.setPhase('thinking', 'transcribed'),
+      speechStarted: () =>
+        current() && this.setPhase('speaking', 'speech_started'),
     });
     this.turn = turn;
     turn.done
       .catch((): VoiceTurnOutcome => 'reply_failed')
       .then(outcome => {
+        vtrace('turn.done', {outcome, current: current()});
         if (!current()) {
           return;
         }
@@ -501,7 +526,7 @@ class VoiceModeController {
         if (outcome === 'answered' && Platform.OS === 'ios') {
           this.holdMic(VOICE_PLAYBACK_TAIL_MS);
         }
-        voiceModeStore.setPhase('listening');
+        this.setPhase('listening', outcome);
         const error = FAILURES[outcome];
         if (error) {
           voiceModeStore.setLastError(error);
@@ -544,6 +569,7 @@ export function useVoiceMode({
       (next: AppStateStatus) => {
         const previous = appState;
         appState = next;
+        vtrace('app', {from: previous, to: next});
         controller.onAppStateChange(previous, next);
       },
     );
@@ -564,7 +590,7 @@ export function useVoiceMode({
           contextId === prevContextId &&
           controller.isCreatingChat;
         if (!sessionCreatedBySend) {
-          controller.exit();
+          controller.exit('chat_changed');
         }
       },
       {equals: comparer.structural},
@@ -581,7 +607,7 @@ export function useVoiceMode({
     useCallback(
       () => () => {
         setSheet(current => (current?.kind === 'teaser' ? null : current));
-        controller.exit();
+        controller.exit('blur');
       },
       [controller],
     ),
@@ -613,6 +639,6 @@ export function useVoiceMode({
     dismissSheet: useCallback(() => setSheet(null), []),
     tapCloud: useCallback(() => controller.tapCloud(), [controller]),
     toggleMute: useCallback(() => controller.toggleMute(), [controller]),
-    end: useCallback(() => controller.exit(), [controller]),
+    end: useCallback(() => controller.exit('end'), [controller]),
   };
 }
