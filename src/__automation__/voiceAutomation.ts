@@ -24,7 +24,7 @@ import type {MessageType} from '../utils/types';
  * Marker string for the CI prod-bundle grep: VOICE_AUTOMATION_STATE.
  *
  * Commands (`pocketpal://voice?cmd=...`):
- *   unlock::on|off      the dev entitlement override
+ *   unlock::on|off|plus the dev entitlement override; plus clears it so Plus decides
  *   gate::on|off        device tier inside or below the voice-mode gate
  *   state::listening|muted|thinking|speaking|error|bar|closed
  *   setup::incomplete|complete   whisper base not installed / installed
@@ -55,7 +55,7 @@ export async function runVoiceCommand(cmd: string): Promise<void> {
   console.log(`[${VOICE_AUTOMATION_STATE}] ${cmd}`);
   const [verb, arg] = cmd.split('::');
   if (verb === 'unlock') {
-    voiceModeStore.setUnlockOverride(arg === 'on');
+    voiceModeStore.setUnlockOverride(arg === 'plus' ? null : arg === 'on');
   } else if (verb === 'gate') {
     runInAction(() => {
       modelStore.deviceTier = arg === 'on' ? 'high' : 'low';

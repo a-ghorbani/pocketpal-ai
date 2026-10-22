@@ -36,6 +36,12 @@ describe('runVoiceCommand', () => {
     expect(voiceModeStore.isUnlocked).toBe(unlocked);
   });
 
+  it('unlock::plus clears the override so the Plus entitlement decides', async () => {
+    await runVoiceCommand('unlock::on');
+    await runVoiceCommand('unlock::plus');
+    expect(voiceModeStore.unlockOverride).toBeNull();
+  });
+
   it.each([
     ['gate::on', true],
     ['gate::off', false],

@@ -83,7 +83,7 @@ by deep link only. See `BenchmarkRunnerScreen.tsx` as reference.
 | Adapter | Purpose | Commands |
 |---------|---------|----------|
 | `MemoryAdapter` | Memory profile snapshots for the `memory-profile` spec | `snap::<label>`, `clear::snapshots`, `read::snapshots` |
-| `VoiceAdapter` | Forces voice-mode states on Android for visual captures | `unlock::on\|off`, `gate::on\|off`, `state::listening\|muted\|thinking\|speaking\|error\|bar\|closed`, `setup::incomplete\|complete`, `memory::tight\|wont-fit`, `seed::spoken` |
+| `VoiceAdapter` | Forces voice-mode states on Android for visual captures | `unlock::on\|off\|plus`, `gate::on\|off`, `state::listening\|muted\|thinking\|speaking\|error\|bar\|closed`, `setup::incomplete\|complete`, `memory::tight\|wont-fit`, `seed::spoken` |
 | `IapAdapter` | Scripts the in-app purchase `FakeStore` on Android for the `iap-*` specs | `api::<base>`, `products::<id>=<price>\|...`, `next::<outcome>`, `approve_pending`, `decline_pending`, `refund::<id>`, `entitle::<id>`, `unfinished::<id>`, `unavailable`, `plus_ship::<featureId>[,<featureId>]\|none` (marks Plus features shipped; `reset` clears it), `reset`, `read` |
 
 ## Screens
