@@ -7,6 +7,7 @@ import {
   Image,
   TouchableOpacity,
   Modal,
+  Platform,
 } from 'react-native';
 import {IconButton} from 'react-native-paper';
 
@@ -286,6 +287,7 @@ export const TextMessage = ({
             maxMessageWidth={messageWidth}
             selectable={!isUserRow}
             blockContextMenu={!isUserRow}
+            openLinkOnLongPress={isUserRow && Platform.OS === 'android'}
             streamingAnimation={isActiveRun === true && step?.partial === true}
           />
         </View>

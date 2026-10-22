@@ -1,6 +1,6 @@
 import {render} from '@testing-library/react-native';
 import * as React from 'react';
-import {Animated, Image} from 'react-native';
+import {Animated, Image, Linking, Platform} from 'react-native';
 import {EnrichedMarkdownText} from 'react-native-enriched-markdown';
 import ReactNativeHapticFeedback from 'react-native-haptic-feedback';
 
@@ -153,12 +153,14 @@ describe('message', () => {
       expect(markdownSpy.mock.calls.length).toBe(renders);
     });
 
-    it.each([
-      ['a user', 'user'],
-      ['an assistant', 'assistant'],
-    ])(
-      'leaves link long-press to the renderer on %s text row',
-      (_row, authorId) => {
+    describe('link long-press', () => {
+      const originalOS = Platform.OS;
+      afterEach(() => {
+        (Platform as any).OS = originalOS;
+      });
+
+      const renderLinkRow = (authorId: string, os: string) => {
+        (Platform as any).OS = os;
         renderWithProviders(
           <Message
             {...rowProps}
@@ -170,10 +172,28 @@ describe('message', () => {
             onMessageMenuPress={jest.fn()}
           />,
         );
+        return lastMarkdownProps();
+      };
 
-        expect(lastMarkdownProps().onLinkLongPress).toBeUndefined();
-      },
-    );
+      it('opens the link through the tap handler on a user row on Android', () => {
+        const openURL = jest
+          .spyOn(Linking, 'openURL')
+          .mockResolvedValue(undefined);
+        const props = renderLinkRow(derivedTextMessage.author.id, 'android');
+
+        expect(props.onLinkLongPress).toBe(props.onLinkPress);
+        props.onLinkLongPress({url: 'https://x.y'});
+        expect(openURL).toHaveBeenCalledWith('https://x.y');
+        openURL.mockRestore();
+      });
+
+      it.each([
+        ['a user row on iOS', derivedTextMessage.author.id, 'ios'],
+        ['an assistant row on Android', 'assistant', 'android'],
+      ])('leaves it to the renderer on %s', (_case, authorId, os) => {
+        expect(renderLinkRow(authorId, os).onLinkLongPress).toBeUndefined();
+      });
+    });
 
     const userRowOf = (root: any) =>
       root.find(
