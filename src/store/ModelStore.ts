@@ -1104,6 +1104,7 @@ class ModelStore {
 
   setupAppStateListener = () => {
     AppState.addEventListener('change', this.handleAppStateChange);
+    AppState.addEventListener('memoryWarning', clearDocumentIndexCache);
   };
 
   // Auto-release management methods

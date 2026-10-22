@@ -6,7 +6,7 @@ import {
   initLlama as initializeLlama,
   loadLlamaModelInfo,
 } from 'llama.rn';
-import {Alert, AppStateStatus, Platform} from 'react-native';
+import {Alert, AppState, AppStateStatus, Platform} from 'react-native';
 
 import {
   downloadManager,
@@ -2093,6 +2093,22 @@ describe('ModelStore', () => {
 
       expect(exit).toHaveBeenCalled();
       exit.mockRestore();
+    });
+
+    it('a memory warning clears the document index cache', () => {
+      const addListener = jest.spyOn(AppState, 'addEventListener');
+      const clear = jest.spyOn(retrieveModule, 'clearDocumentIndexCache');
+
+      modelStore.setupAppStateListener();
+      const onMemoryWarning = addListener.mock.calls.find(
+        ([event]) => event === 'memoryWarning',
+      )?.[1] as (() => void) | undefined;
+      onMemoryWarning?.();
+
+      expect(onMemoryWarning).toBeDefined();
+      expect(clear).toHaveBeenCalled();
+      clear.mockRestore();
+      addListener.mockRestore();
     });
 
     it('releaseContext clears the document index cache', async () => {
