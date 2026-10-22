@@ -56,6 +56,20 @@ export const __setDocumentDirectoryPath = path => {
     configurable: true,
   });
 };
+export const CachesDirectoryPath = '/path/to/caches';
+export const TemporaryDirectoryPath = '/path/to/tmp/';
+
+const overridePath = name => path => {
+  Object.defineProperty(exports, name, {
+    value: path,
+    writable: true,
+    configurable: true,
+  });
+};
+export const __setCachesDirectoryPath = overridePath('CachesDirectoryPath');
+export const __setTemporaryDirectoryPath = overridePath(
+  'TemporaryDirectoryPath',
+);
 export const copyFile = jest.fn().mockResolvedValue(true);
 
 // Expose method to reset state for tests
@@ -74,11 +88,15 @@ const RNFS = {
   writeFile,
   downloadFile,
   DocumentDirectoryPath,
+  CachesDirectoryPath,
+  TemporaryDirectoryPath,
   LibraryDirectoryPath,
   MainBundlePath,
   copyFile,
   __resetMockState,
   __setDocumentDirectoryPath,
+  __setCachesDirectoryPath,
+  __setTemporaryDirectoryPath,
 };
 
 export {RNFS};
