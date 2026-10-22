@@ -118,9 +118,17 @@ export const createStyles = (theme: Theme, insets: EdgeInsets) =>
     },
     legalRow: {
       flexDirection: 'row',
+      flexWrap: 'wrap',
       justifyContent: 'center',
       alignItems: 'center',
       paddingVertical: theme.spacing.default * 1.5,
+      paddingHorizontal: theme.spacing.default,
+      columnGap: theme.spacing.default / 2,
+      rowGap: theme.spacing.default / 4,
+    },
+    legalItem: {
+      flexDirection: 'row',
+      alignItems: 'center',
       gap: theme.spacing.default / 2,
     },
     legalLink: {
@@ -131,6 +139,9 @@ export const createStyles = (theme: Theme, insets: EdgeInsets) =>
       ...theme.fonts.bodySmall,
       color: theme.colors.onSurfaceVariant,
       opacity: 0.5,
+    },
+    legalSeparatorHidden: {
+      opacity: 0,
     },
     noticesContent: {
       padding: theme.spacing.default,

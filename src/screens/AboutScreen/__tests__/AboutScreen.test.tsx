@@ -70,6 +70,26 @@ describe('AboutScreen', () => {
     expect(Linking.openURL).not.toHaveBeenCalled();
   });
 
+  it('hides the separator before a legal link that wraps to the next line', () => {
+    const {getByTestId, getAllByText} = render(<AboutScreen />);
+    const layoutAt = (i: number, y: number) =>
+      fireEvent(getByTestId(`about-legal-item-${i}`), 'layout', {
+        nativeEvent: {layout: {x: 0, y, width: 100, height: 16}},
+      });
+
+    act(() => {
+      layoutAt(0, 0);
+      layoutAt(1, 0);
+      layoutAt(2, 20);
+    });
+
+    const [first, second] = getAllByText('·', {
+      includeHiddenElements: true,
+    });
+    expect(first).not.toHaveStyle({opacity: 0});
+    expect(second).toHaveStyle({opacity: 0});
+  });
+
   it('opens GitHub URL when GitHub button is pressed', () => {
     const {getByText} = render(<AboutScreen />);
 

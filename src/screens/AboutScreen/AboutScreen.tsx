@@ -33,6 +33,27 @@ export const AboutScreen: React.FC = () => {
   const l10n = useContext(L10nContext);
   const [showFeedback, setShowFeedback] = useState(false);
   const [showNotices, setShowNotices] = useState(false);
+  const [legalItemTops, setLegalItemTops] = useState<Record<number, number>>(
+    {},
+  );
+
+  const legalLinks = [
+    {
+      label: l10n.about.privacyPolicy,
+      onPress: () => Linking.openURL('https://pocketpal.dev/privacy-policy'),
+      testID: undefined,
+    },
+    {
+      label: l10n.about.termsOfService,
+      onPress: () => Linking.openURL('https://pocketpal.dev/terms'),
+      testID: undefined,
+    },
+    {
+      label: l10n.about.openSourceNotices,
+      onPress: () => setShowNotices(true),
+      testID: 'about-open-source-notices',
+    },
+  ];
 
   const [appInfo, setAppInfo] = React.useState({
     version: '',
@@ -166,26 +187,37 @@ export const AboutScreen: React.FC = () => {
           </View>
 
           <View style={styles.legalRow}>
-            <Text
-              style={styles.legalLink}
-              onPress={() =>
-                Linking.openURL('https://pocketpal.dev/privacy-policy')
-              }>
-              {l10n.about.privacyPolicy}
-            </Text>
-            <Text style={styles.legalSeparator}>·</Text>
-            <Text
-              style={styles.legalLink}
-              onPress={() => Linking.openURL('https://pocketpal.dev/terms')}>
-              {l10n.about.termsOfService}
-            </Text>
-            <Text style={styles.legalSeparator}>·</Text>
-            <Text
-              style={styles.legalLink}
-              onPress={() => setShowNotices(true)}
-              testID="about-open-source-notices">
-              {l10n.about.openSourceNotices}
-            </Text>
+            {legalLinks.map((link, i) => (
+              <View
+                key={link.label}
+                style={styles.legalItem}
+                testID={`about-legal-item-${i}`}
+                onLayout={e => {
+                  const {y} = e.nativeEvent.layout;
+                  setLegalItemTops(tops =>
+                    tops[i] === y ? tops : {...tops, [i]: y},
+                  );
+                }}>
+                <Text
+                  style={styles.legalLink}
+                  onPress={link.onPress}
+                  testID={link.testID}>
+                  {link.label}
+                </Text>
+                {i < legalLinks.length - 1 ? (
+                  <Text
+                    style={[
+                      styles.legalSeparator,
+                      legalItemTops[i] !== legalItemTops[i + 1] &&
+                        styles.legalSeparatorHidden,
+                    ]}
+                    importantForAccessibility="no"
+                    accessibilityElementsHidden>
+                    ·
+                  </Text>
+                ) : null}
+              </View>
+            ))}
           </View>
         </View>
       </ScrollView>
