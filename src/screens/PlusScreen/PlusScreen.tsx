@@ -418,6 +418,9 @@ export const PlusScreen: React.FC<PlusScreenProps> = observer(props => {
 
         {showsGrid && (
           <>
+            <Text testID="plus-free-line" style={styles.priceCaption}>
+              {copy.chatStaysFree}
+            </Text>
             {state.error ? (
               <View style={styles.inlineError}>
                 <AlertIcon width={16} height={16} stroke={theme.colors.error} />

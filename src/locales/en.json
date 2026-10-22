@@ -1780,6 +1780,7 @@
     "optInNote": "Off on this phone. Turn it on in Settings if you're brave.",
     "speedLine": "Speed depends on your phone and model.",
     "inDevelopment": "Features in development may change or not ship.",
+    "chatStaysFree": "Plus is optional. Chatting stays free.",
     "priceCaption": "Pay what you like. Same features at every price.",
     "buyError": "The purchase didn't go through. Try again.",
     "getPlus": "Get Plus · {{price}}",

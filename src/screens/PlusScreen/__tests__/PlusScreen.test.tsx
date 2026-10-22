@@ -132,6 +132,9 @@ describe('PlusScreen', () => {
         'Local API serverComing soon',
       );
       expect(getByText('Speed depends on your phone and model.')).toBeTruthy();
+      expect(getByTestId('plus-free-line')).toHaveTextContent(
+        'Plus is optional. Chatting stays free.',
+      );
       expect(
         getByText('Pay what you like. Same features at every price.'),
       ).toBeTruthy();
@@ -239,6 +242,7 @@ describe('PlusScreen', () => {
     expect(
       queryByText('Pay what you like. Same features at every price.'),
     ).toBeNull();
+    expect(getByTestId('plus-free-line')).toBeTruthy();
     expect(getByTestId('plus-tile-plus.1').props.accessibilityState).toEqual({
       checked: true,
       disabled: false,
@@ -263,6 +267,7 @@ describe('PlusScreen', () => {
     expect(queryByTestId('plus-tile-plus.1')).toBeNull();
     expect(queryByTestId('plus-restore')).toBeNull();
     expect(queryByTestId('plus-cta')).toBeNull();
+    expect(queryByTestId('plus-free-line')).toBeNull();
     expect(getByTestId('plus-done').props.accessibilityLabel).toBe('Done');
 
     fireEvent.press(getByTestId('plus-done'));
@@ -763,13 +768,15 @@ describe('PlusScreen', () => {
     };
 
     it.each([667, 923])(
-      'puts the prices right after the speed line at %i dp',
+      'puts the free line, then the prices, right after the speed line at %i dp',
       height => {
         mockWindow.height = height;
         const tree = renderScreen().toJSON() as ReactTestRendererJSON;
         const next = nodeAfter(tree, 'Speed depends on your phone and model.');
+        const free = 'Plus is optional. Chatting stays free.';
 
-        expect(textOf(next!)).toBe(
+        expect(textOf(next!)).toBe(free);
+        expect(textOf(nodeAfter(tree, free)!)).toBe(
           'Pay what you like. Same features at every price.',
         );
       },
