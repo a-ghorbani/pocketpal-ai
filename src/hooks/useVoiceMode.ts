@@ -1,5 +1,5 @@
 import {useCallback, useEffect, useState} from 'react';
-import {AppState, type AppStateStatus} from 'react-native';
+import {AppState, Platform, type AppStateStatus} from 'react-native';
 
 import {toByteArray} from 'base64-js';
 import {comparer, reaction} from 'mobx';
@@ -23,6 +23,7 @@ import {
   Endpointer,
   VOICE_CAPTURE_SETTLE_MS,
   VOICE_MIC_WATCHDOG_MS,
+  VOICE_PLAYBACK_TAIL_MS,
   VOICE_START_TIMEOUT_MS,
   isMicGranted,
   isVoiceModeVoice,
@@ -469,8 +470,14 @@ class VoiceModeController {
     this.listener.remove();
     this.listener = null;
     Promise.resolve(AudioRecord.stop()).catch(() => {});
-    this.captureSettled = new Promise(resolve =>
-      setTimeout(resolve, VOICE_CAPTURE_SETTLE_MS),
+    this.holdMic(VOICE_CAPTURE_SETTLE_MS);
+  }
+
+  /** The next mic start waits at least `ms` from now. */
+  private holdMic(ms: number): void {
+    const held = new Promise<void>(resolve => setTimeout(resolve, ms));
+    this.captureSettled = Promise.all([this.captureSettled, held]).then(
+      () => {},
     );
   }
 
@@ -491,6 +498,9 @@ class VoiceModeController {
           return;
         }
         this.turn = null;
+        if (outcome === 'answered' && Platform.OS === 'ios') {
+          this.holdMic(VOICE_PLAYBACK_TAIL_MS);
+        }
         voiceModeStore.setPhase('listening');
         const error = FAILURES[outcome];
         if (error) {

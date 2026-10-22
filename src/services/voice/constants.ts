@@ -16,6 +16,14 @@ export const VOICE_ENDPOINT_HANG_MS = 600;
 export const VOICE_CAPTURE_SETTLE_MS = 150;
 
 /**
+ * Wait after a spoken reply ends on iOS before the mic opens (ms): up to
+ * 300 ms of output latency plus margin. The speech library resolves a chunk
+ * when its buffer is consumed, not heard, and the recorder's session switch
+ * cuts what is still in the output path.
+ */
+export const VOICE_PLAYBACK_TAIL_MS = 400;
+
+/**
  * A started mic that delivers no audio within this long (ms) is restarted
  * once, then voice mode ends. iOS reports a failed recorder start only in
  * its log. Bringing up a Bluetooth headset's mic route takes 1–3 s.

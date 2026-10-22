@@ -28,6 +28,7 @@ import {ModelOrigin} from '../../utils/types';
 import {
   VOICE_CAPTURE_SETTLE_MS,
   VOICE_MIC_WATCHDOG_MS,
+  VOICE_PLAYBACK_TAIL_MS,
   VOICE_START_TIMEOUT_MS,
 } from '../../services/voice';
 import type {VoiceTurnEvents, VoiceTurnOutcome} from '../../services/voice';
@@ -671,6 +672,7 @@ describe('useVoiceMode', () => {
       expect(voiceModeStore.phase).toBe('speaking');
       expect(AudioRecord.start).toHaveBeenCalledTimes(1);
 
+      Platform.OS = 'android';
       turns[0].finish('answered');
       await flush();
       await settleMic();
@@ -774,6 +776,96 @@ describe('useVoiceMode', () => {
 
       expect(AudioRecord.init).not.toHaveBeenCalled();
       expect(AudioRecord.start).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('the playback tail after a spoken reply', () => {
+    afterEach(() => {
+      jest.useRealTimers();
+    });
+
+    const advance = (ms: number) =>
+      act(async () => {
+        jest.advanceTimersByTime(ms);
+      });
+
+    const answer = async (
+      outcome: VoiceTurnOutcome = 'answered',
+      os: typeof Platform.OS = 'ios',
+    ) => {
+      jest.useFakeTimers();
+      const voice = renderVoiceMode();
+      await voice.enter();
+      speak(500);
+      speak(600, SILENT);
+      act(() => voice.turns[0].on.transcribed('hi'));
+      act(() => voice.turns[0].on.speechStarted());
+      await advance(VOICE_CAPTURE_SETTLE_MS);
+      Platform.OS = os;
+      voice.turns[0].finish(outcome);
+      await flush();
+      return voice;
+    };
+
+    it('on iOS, opens the mic only once the tail has passed', async () => {
+      await answer();
+      expect(voiceModeStore.phase).toBe('listening');
+
+      await advance(VOICE_PLAYBACK_TAIL_MS - 1);
+      expect(AudioRecord.init).toHaveBeenCalledTimes(1);
+
+      await advance(1);
+      expect(AudioRecord.init).toHaveBeenCalledTimes(2);
+      expect(AudioRecord.start).toHaveBeenCalledTimes(2);
+    });
+
+    it.each(['interrupted', 'speech_failed', 'empty'] as const)(
+      'adds no tail after an %s turn',
+      async outcome => {
+        await answer(outcome);
+        await advance(0);
+        expect(AudioRecord.init).toHaveBeenCalledTimes(2);
+      },
+    );
+
+    it('End during the tail closes at once and never opens the mic', async () => {
+      const {hook, engine} = await answer();
+
+      await act(async () => {
+        await hook.result.current.end();
+      });
+      expect(voiceModeStore.phase).toBe('closed');
+      expect(engine.release).toHaveBeenCalledTimes(1);
+
+      await advance(VOICE_PLAYBACK_TAIL_MS);
+      expect(AudioRecord.init).toHaveBeenCalledTimes(1);
+    });
+
+    it('a tap during the tail starts no turn and the mic opens when it ends', async () => {
+      const {hook, engine} = await answer();
+
+      act(() => hook.result.current.tapCloud());
+      expect(engine.runTurn).toHaveBeenCalledTimes(1);
+      expect(voiceModeStore.phase).toBe('listening');
+
+      await advance(VOICE_PLAYBACK_TAIL_MS);
+      expect(AudioRecord.start).toHaveBeenCalledTimes(2);
+    });
+
+    it('mute during the tail keeps the mic closed after it', async () => {
+      const {hook} = await answer();
+
+      act(() => hook.result.current.toggleMute());
+      await advance(VOICE_PLAYBACK_TAIL_MS);
+
+      expect(voiceModeStore.micMuted).toBe(true);
+      expect(AudioRecord.init).toHaveBeenCalledTimes(1);
+    });
+
+    it('is not added on Android, where completion means played', async () => {
+      await answer('answered', 'android');
+      await advance(0);
+      expect(AudioRecord.init).toHaveBeenCalledTimes(2);
     });
   });
 
