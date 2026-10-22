@@ -63,7 +63,11 @@ async function cameraItemEnabled(): Promise<boolean> {
   const camera = browser.$(byTestId('attach-camera'));
   await camera.waitForExist({timeout: 5000});
   const enabled = await camera.isEnabled();
-  await driver.back();
+  if (driver.isAndroid) {
+    await driver.back();
+  } else {
+    await browser.$(Selectors.chat.input).click();
+  }
   return enabled;
 }
 
