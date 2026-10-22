@@ -1,10 +1,12 @@
 export {default as AlertIcon} from './alert.svg';
 export {default as AppInfoIcon} from './app-info.svg';
+export {default as InfoCircleIcon} from './info-circle.svg';
 export {default as AtomIcon} from './atom.svg';
 export {default as BenchmarkIcon} from './benchmark.svg';
 export {default as BrowserIcon} from './browser.svg';
 export {default as CameraIcon} from './camera.svg';
 export {default as ChatIcon} from './chat.svg';
+export {default as CheckBoldIcon} from './check-bold.svg';
 export {default as CheckCircleIcon} from './check-circle.svg';
 export {default as ChevronDownIcon} from './chevron-down.svg';
 // Design-system chevron-left exported directly from the canonical Figma
@@ -56,6 +58,8 @@ export {default as SendIcon} from './send.svg';
 export {default as SettingsIcon} from './settings.svg';
 export {default as SpeakerIcon} from './speaker.svg';
 export {default as ShoppingCartIcon} from './shopping-cart.svg';
+export {default as SparkleIcon} from './sparkle.svg';
+export {default as SparkleFilledIcon} from './sparkle-filled.svg';
 export {default as StarIcon} from './star.svg';
 export {default as StopIcon} from './stop.svg';
 export {default as ShareIcon} from './share.svg';

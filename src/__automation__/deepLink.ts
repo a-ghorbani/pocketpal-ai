@@ -13,6 +13,8 @@
  *                              error-blocked|error-memory|error-disk>
  *   pocketpal://voice?cmd=<verb>::<arg>   (voice mode, see voiceAutomation.ts)
  *   pocketpal://iap?cmd=<verb>::<arg>   (FakeStore script, see fakeStore.ts)
+ *   pocketpal://e2e/plus-feature   (locked feature behind Plus; Android
+ *                                   routes it in useDeepLinking.ts too)
  *   pocketpal://e2e/benchmark   (Android: cold-launch path lives in
  *                                useDeepLinking.ts since RN's Android side
  *                                doesn't deliver the URL via DeepLinkService)
@@ -20,6 +22,7 @@
 import type {DeepLinkParams} from '../services/DeepLinkService';
 import {ROUTES} from '../utils/navigationConstants';
 import {isBenchmarkRunnerUrl, parseBenchmarkAutostart} from './benchmarkRoute';
+import {isPlusFeatureUrl} from './plusFeatureRoute';
 
 interface NavigationLike {
   navigate: (route: string, params?: Record<string, unknown>) => void;
@@ -74,6 +77,10 @@ export async function dispatchAutomationDeepLink(
     navigation?.navigate(ROUTES.BENCHMARK_RUNNER, {
       autostart: parseBenchmarkAutostart(params.url),
     });
+    return true;
+  }
+  if (isPlusFeatureUrl(params.url)) {
+    navigation?.navigate(ROUTES.PLUS_TEST_FEATURE);
     return true;
   }
   return false;
