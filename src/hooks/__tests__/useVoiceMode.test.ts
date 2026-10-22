@@ -1054,6 +1054,32 @@ describe('useVoiceMode', () => {
       expect(voiceModeStore.phase).toBe('listening');
     });
 
+    it('while listening with no ended event, the watchdog reopens the mic, then gives up', async () => {
+      jest.useFakeTimers();
+      try {
+        const {enter} = renderVoiceMode();
+        await enter();
+        interruption('began');
+        expect(AudioRecord.stop).toHaveBeenCalledTimes(1);
+
+        await act(async () => {
+          jest.advanceTimersByTime(VOICE_MIC_WATCHDOG_MS);
+        });
+        await act(async () => {
+          jest.advanceTimersByTime(VOICE_CAPTURE_SETTLE_MS);
+        });
+        expect(AudioRecord.start).toHaveBeenCalledTimes(2);
+        expect(voiceModeStore.phase).toBe('listening');
+
+        await act(async () => {
+          jest.advanceTimersByTime(VOICE_MIC_WATCHDOG_MS);
+        });
+        expect(voiceModeStore.phase).toBe('closed');
+      } finally {
+        jest.useRealTimers();
+      }
+    });
+
     it('interrupt a spoken reply, and the mic opens again with no ended event', async () => {
       const {enter, turns} = renderVoiceMode();
       await enter();

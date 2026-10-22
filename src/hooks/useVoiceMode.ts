@@ -314,8 +314,9 @@ class VoiceModeController {
   /**
    * A call, alarm or Siri took the audio session: stop the mic and any turn.
    * `ended` may never come (Android only holds focus while a chunk plays),
-   * so the next move into listening opens the mic again, and the watchdog
-   * ends the session if the mic is still taken.
+   * so the next move into listening opens the mic again; while already
+   * listening, the watchdog retries it, then ends the session if it is
+   * still taken.
    */
   onAudioInterruption({type}: AudioInterruptionProps): void {
     if (!this.open) {
@@ -323,7 +324,11 @@ class VoiceModeController {
     }
     if (type === 'began') {
       this.stopCapture();
-      this.turn?.interrupt();
+      if (this.turn) {
+        this.turn.interrupt();
+      } else if (voiceModeStore.phase === 'listening') {
+        this.watchMic(this.session);
+      }
       return;
     }
     if (voiceModeStore.phase === 'listening') {
