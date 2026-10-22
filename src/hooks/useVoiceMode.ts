@@ -250,6 +250,7 @@ class VoiceModeController {
       } catch (err) {
         console.warn('[voiceMode] interrupt on exit failed:', err);
       }
+      ttsStore.setVoiceOutputActive(false);
       try {
         // Freeing the models blocks the JS thread; let a scroll start first.
         await new Promise<void>(resolve =>
@@ -261,7 +262,6 @@ class VoiceModeController {
       }
       this.releaseAwake?.();
       this.releaseAwake = null;
-      ttsStore.setVoiceOutputActive(false);
     })();
     return this.exiting;
   }

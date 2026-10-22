@@ -795,6 +795,31 @@ describe('useVoiceMode', () => {
       (global as any).requestIdleCallback = original;
     });
 
+    it('stops speaking replies at End, before the models are freed', async () => {
+      const idle: Array<() => void> = [];
+      const original = (global as any).requestIdleCallback;
+      (global as any).requestIdleCallback = (callback: () => void) =>
+        idle.push(callback);
+      runInAction(() => {
+        tts.autoSpeakEnabled = false;
+      });
+      const {enter, hook, engine} = renderVoiceMode();
+      await enter();
+      expect(ttsStore.streamsReplies).toBe(true);
+
+      act(() => {
+        hook.result.current.end();
+      });
+      await flush();
+
+      expect(engine.release).not.toHaveBeenCalled();
+      expect(ttsStore.streamsReplies).toBe(false);
+      await act(async () => {
+        idle.forEach(callback => callback());
+      });
+      (global as any).requestIdleCallback = original;
+    });
+
     it('a quick re-entry checks memory only once the last session freed its models', async () => {
       const idle: Array<() => void> = [];
       const original = (global as any).requestIdleCallback;
