@@ -16,6 +16,7 @@ import {
   PHONON_IOS_MANIFEST_FILENAME,
   PHONON_IOS_MANIFEST_PATH,
   PHONON_IOS_MANIFEST_SHA256,
+  PHONON_IOS_MODEL_BYTES,
   PHONON_IOS_REPO,
   PHONON_IOS_REVISION,
   PHONON_MODEL_SUBDIR,
@@ -69,6 +70,19 @@ const curatedVoicesJsonl = (): string =>
       description: v.description,
     }),
   ).join('\n') + '\n';
+
+const currentSentinel = (): Record<string, string | number> =>
+  Platform.OS === 'ios'
+    ? {
+        version: PHONON_MODEL_VERSION,
+        iosRevision: PHONON_IOS_REVISION,
+        iosManifestSha256: PHONON_IOS_MANIFEST_SHA256,
+      }
+    : {
+        version: PHONON_MODEL_VERSION,
+        androidRevision: PHONON_ANDROID_REVISION,
+        voicesRevision: PHONON_VOICES_REVISION,
+      };
 
 /**
  * Phonon neural TTS (Gradium Phonon 31m, English), run by the
@@ -173,10 +187,13 @@ export class PhononEngine implements NeuralEngine {
       if (!(await RNFS.exists(sentinelPath))) {
         return false;
       }
-      const parsed = JSON.parse(await RNFS.readFile(sentinelPath)) as {
-        version?: unknown;
-      };
-      return parsed.version === PHONON_MODEL_VERSION;
+      const parsed = JSON.parse(await RNFS.readFile(sentinelPath)) as Record<
+        string,
+        unknown
+      >;
+      return Object.entries(currentSentinel()).every(
+        ([key, value]) => parsed[key] === value,
+      );
     } catch (err) {
       console.warn('[PhononEngine] sentinel check failed:', err);
       return false;
@@ -235,7 +252,7 @@ export class PhononEngine implements NeuralEngine {
       }
       await RNFS.writeFile(
         this.getFilePath(PHONON_VERSION_SENTINEL_FILENAME),
-        JSON.stringify({version: PHONON_MODEL_VERSION}),
+        JSON.stringify(currentSentinel()),
       );
       onProgress?.(1);
     } catch (err) {
@@ -275,7 +292,14 @@ export class PhononEngine implements NeuralEngine {
     if (sha256 !== PHONON_IOS_MANIFEST_SHA256) {
       throw new Error(`Phonon manifest sha256 mismatch: ${sha256}`);
     }
-    return this.readSavedManifest();
+    const manifest = await this.readSavedManifest();
+    const totalBytes = manifest.reduce((sum, f) => sum + f.size, 0);
+    if (totalBytes !== PHONON_IOS_MODEL_BYTES) {
+      throw new Error(
+        `Phonon manifest lists ${totalBytes} bytes, expected ${PHONON_IOS_MODEL_BYTES}`,
+      );
+    }
+    return manifest;
   }
 
   private async downloadVerified(

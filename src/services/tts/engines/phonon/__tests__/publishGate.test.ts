@@ -33,7 +33,9 @@ describe('Phonon release pins', () => {
 
   it('depends on published versions of the speech library and the Phonon add-on', () => {
     const {dependencies} = JSON.parse(read('package.json'));
-    expect(dependencies['@pocketpalai/react-native-speech']).toBe('2.8.0');
+    expect(dependencies['@pocketpalai/react-native-speech']).toMatch(
+      /^\d+\.\d+\.\d+$/,
+    );
     expect(dependencies['@pocketpalai/react-native-speech-phonon']).toMatch(
       /^\d+\.\d+\.\d+$/,
     );
@@ -45,7 +47,9 @@ describe('Phonon release pins', () => {
       'android/build.gradle',
       'ios/Podfile',
     ]) {
-      expect(read(file)).not.toMatch(/RNSpeech_phonon|RN_SPEECH_PHONON/);
+      expect(read(file)).not.toMatch(
+        /RNSpeech_phonon|RN_SPEECH_PHONON|\bphonon(LibDir|Abis|ForceReason|SkipHwcapGate)\b/,
+      );
     }
   });
 });

@@ -6,16 +6,20 @@ import {PhononEngine} from '..';
 import {ttsRuntime} from '../../../runtime';
 import {
   PHONON_ANDROID_FILES,
+  PHONON_ANDROID_REVISION,
   PHONON_IOS_MANIFEST_SHA256,
+  PHONON_IOS_REVISION,
   PHONON_MODEL_VERSION,
   PHONON_VOICE_FILE_SIZE,
   PHONON_VOICE_PINS,
+  PHONON_VOICES_REVISION,
 } from '../../../constants';
 import {PHONON_VOICES} from '../voices';
 
 jest.mock('../../../constants', () => ({
   ...jest.requireActual('../../../constants'),
   PHONON_IOS_MANIFEST_SHA256: 'd'.repeat(64),
+  PHONON_IOS_MODEL_BYTES: 300,
 }));
 
 const setPlatform = (os: 'ios' | 'android') => {
@@ -24,6 +28,19 @@ const setPlatform = (os: 'ios' | 'android') => {
     get: () => os,
   });
 };
+
+const currentSentinel = () =>
+  Platform.OS === 'ios'
+    ? {
+        version: PHONON_MODEL_VERSION,
+        iosRevision: PHONON_IOS_REVISION,
+        iosManifestSha256: PHONON_IOS_MANIFEST_SHA256,
+      }
+    : {
+        version: PHONON_MODEL_VERSION,
+        androidRevision: PHONON_ANDROID_REVISION,
+        voicesRevision: PHONON_VOICES_REVISION,
+      };
 
 const ANDROID_DIR = '/path/to/documents/tts/phonon';
 const IOS_DIR = '/path/to/library/Application Support/tts/phonon';
@@ -150,7 +167,7 @@ describe('PhononEngine', () => {
       });
       expect(writes[writes.length - 1]).toEqual([
         `${ANDROID_DIR}/model-version.json`,
-        JSON.stringify({version: PHONON_MODEL_VERSION}),
+        JSON.stringify(currentSentinel()),
       ]);
       expect(RNFS.unlink).not.toHaveBeenCalled();
     });
@@ -244,7 +261,7 @@ describe('PhononEngine', () => {
       expect(RNFS.writeFile).toHaveBeenCalledTimes(1);
       expect(RNFS.writeFile).toHaveBeenCalledWith(
         `${IOS_DIR}/model-version.json`,
-        JSON.stringify({version: PHONON_MODEL_VERSION}),
+        JSON.stringify(currentSentinel()),
       );
     });
 
@@ -272,26 +289,37 @@ describe('PhononEngine', () => {
       expect(RNFS.downloadFile).toHaveBeenCalledTimes(1);
       expect(RNFS.unlink).toHaveBeenCalledWith(IOS_DIR);
     });
+
+    it('stops before the bundle when the manifest sizes do not add up to the pinned total', async () => {
+      serveFiles(iosPins());
+      (RNFS.readFile as jest.Mock).mockResolvedValue(
+        `bundle.json\t101\t${SHA_A}`,
+      );
+
+      await expect(new PhononEngine().downloadModel()).rejects.toThrow(
+        /manifest lists 101 bytes, expected 300/,
+      );
+      expect(RNFS.downloadFile).toHaveBeenCalledTimes(1);
+      expect(RNFS.unlink).toHaveBeenCalledWith(IOS_DIR);
+      expect(RNFS.writeFile).not.toHaveBeenCalled();
+    });
   });
 
   describe('isInstalled()', () => {
-    const sentinel = (version: number) => {
+    const sentinel = (fields: Record<string, unknown> = {}) => {
+      const json = JSON.stringify({...currentSentinel(), ...fields});
       (RNFS.readFile as jest.Mock).mockImplementation((path: string) =>
-        Promise.resolve(
-          path.endsWith('manifest.tsv')
-            ? IOS_MANIFEST
-            : JSON.stringify({version}),
-        ),
+        Promise.resolve(path.endsWith('manifest.tsv') ? IOS_MANIFEST : json),
       );
     };
 
     it('is true with every pinned file and a current sentinel', async () => {
-      sentinel(PHONON_MODEL_VERSION);
+      sentinel();
       await expect(new PhononEngine().isInstalled()).resolves.toBe(true);
     });
 
     it('is false without the sentinel', async () => {
-      sentinel(PHONON_MODEL_VERSION);
+      sentinel();
       (RNFS.exists as jest.Mock).mockImplementation((path: string) =>
         Promise.resolve(!path.endsWith('model-version.json')),
       );
@@ -299,12 +327,36 @@ describe('PhononEngine', () => {
     });
 
     it('is false with an older sentinel', async () => {
-      sentinel(PHONON_MODEL_VERSION - 1);
+      sentinel({version: PHONON_MODEL_VERSION - 1});
       await expect(new PhononEngine().isInstalled()).resolves.toBe(false);
     });
 
+    it('is false with a sentinel that records no pins', async () => {
+      (RNFS.readFile as jest.Mock).mockResolvedValue(
+        JSON.stringify({version: PHONON_MODEL_VERSION}),
+      );
+      await expect(new PhononEngine().isInstalled()).resolves.toBe(false);
+    });
+
+    it.each(['androidRevision', 'voicesRevision'])(
+      'is false on Android when the sentinel %s is stale',
+      async key => {
+        sentinel({[key]: 'e'.repeat(40)});
+        await expect(new PhononEngine().isInstalled()).resolves.toBe(false);
+      },
+    );
+
+    it.each(['iosRevision', 'iosManifestSha256'])(
+      'is false on iOS when the sentinel %s is stale',
+      async key => {
+        setPlatform('ios');
+        sentinel({[key]: 'e'.repeat(40)});
+        await expect(new PhononEngine().isInstalled()).resolves.toBe(false);
+      },
+    );
+
     it('is false on Android when a voice file is missing', async () => {
-      sentinel(PHONON_MODEL_VERSION);
+      sentinel();
       (RNFS.exists as jest.Mock).mockImplementation((path: string) =>
         Promise.resolve(!path.endsWith('/voices/Alfie.safetensors')),
       );
@@ -313,7 +365,7 @@ describe('PhononEngine', () => {
 
     it('is false on iOS when a manifest-listed file is missing', async () => {
       setPlatform('ios');
-      sentinel(PHONON_MODEL_VERSION);
+      sentinel();
       (RNFS.exists as jest.Mock).mockImplementation((path: string) =>
         Promise.resolve(!path.endsWith('Captain Silas Blackwater.safetensors')),
       );
@@ -322,7 +374,7 @@ describe('PhononEngine', () => {
 
     it('is true on iOS when the saved manifest and every listed file exist', async () => {
       setPlatform('ios');
-      sentinel(PHONON_MODEL_VERSION);
+      sentinel();
       await expect(new PhononEngine().isInstalled()).resolves.toBe(true);
       expect(RNFS.exists).toHaveBeenCalledWith(
         `${IOS_BUNDLE_DIR}/voices/Captain Silas Blackwater.safetensors`,
@@ -333,7 +385,18 @@ describe('PhononEngine', () => {
   describe('reclaimLegacySpace()', () => {
     it('deletes the folder when the sentinel is from another version', async () => {
       (RNFS.readFile as jest.Mock).mockResolvedValue(
-        JSON.stringify({version: PHONON_MODEL_VERSION + 1}),
+        JSON.stringify({
+          ...currentSentinel(),
+          version: PHONON_MODEL_VERSION + 1,
+        }),
+      );
+      await new PhononEngine().reclaimLegacySpace();
+      expect(RNFS.unlink).toHaveBeenCalledWith(ANDROID_DIR);
+    });
+
+    it('deletes the folder when the sentinel records an older pin', async () => {
+      (RNFS.readFile as jest.Mock).mockResolvedValue(
+        JSON.stringify({...currentSentinel(), androidRevision: 'e'.repeat(40)}),
       );
       await new PhononEngine().reclaimLegacySpace();
       expect(RNFS.unlink).toHaveBeenCalledWith(ANDROID_DIR);
@@ -341,7 +404,7 @@ describe('PhononEngine', () => {
 
     it('keeps a current install', async () => {
       (RNFS.readFile as jest.Mock).mockResolvedValue(
-        JSON.stringify({version: PHONON_MODEL_VERSION}),
+        JSON.stringify(currentSentinel()),
       );
       await new PhononEngine().reclaimLegacySpace();
       expect(RNFS.unlink).not.toHaveBeenCalled();
@@ -376,7 +439,7 @@ describe('PhononEngine', () => {
 
   it('speaks through Speech with the voice id after loading', async () => {
     (RNFS.readFile as jest.Mock).mockResolvedValue(
-      JSON.stringify({version: PHONON_MODEL_VERSION}),
+      JSON.stringify(currentSentinel()),
     );
     const voice = PHONON_VOICES[0]!;
     await new PhononEngine().play('hello', voice);
