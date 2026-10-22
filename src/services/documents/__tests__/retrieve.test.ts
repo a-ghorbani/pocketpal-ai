@@ -6,7 +6,7 @@ import {
   terms,
   type RetrieveInput,
 } from '../retrieve';
-import type {DocumentTexts} from '../store';
+
 import {excerptFloor} from '../plan';
 import {EXCERPT_K, PASSAGE_MAX_TOKENS, type DocumentRef} from '../types';
 
@@ -32,13 +32,13 @@ const run = (
   refs: Array<[DocumentRef, string[]]>,
   input: Partial<RetrieveInput> = {},
 ) => {
-  const texts: DocumentTexts = new Map(
+  const texts = new Map<string, string[]>(
     refs.map(([ref, pages]) => [documentKey(ref), pages]),
   );
   return retrieveExcerpts({
     query: 'churn',
     searchedRefs: refs.map(([ref]) => ref),
-    texts,
+    load: async ref => texts.get(documentKey(ref)) ?? 'missing',
     excerptBudget: 2048,
     ...input,
   });
@@ -169,7 +169,7 @@ describe('retrieveExcerpts', () => {
     const result = await retrieveExcerpts({
       query: 'churn',
       searchedRefs: [gone],
-      texts: new Map([[documentKey(gone), 'missing']]),
+      load: async () => 'missing' as const,
       excerptBudget: 2048,
     });
     expect(result).toEqual({kind: 'noMatch'});
@@ -263,5 +263,25 @@ describe('excerpt cost with delimiter lookalikes', () => {
     expect(estimateDocTokens(renderExcerptBlock(result))).toBeLessThanOrEqual(
       budget,
     );
+  });
+});
+
+describe('index cache and loading', () => {
+  it('loads text only on an index cache miss', async () => {
+    const report = doc('cached');
+    const pages = ['Churn rose in spring.', 'Churn fell in autumn.'];
+    const load = jest.fn(async () => pages);
+    const input = {
+      query: 'churn',
+      searchedRefs: [report],
+      load,
+      excerptBudget: 2048,
+    };
+
+    const first = await retrieveExcerpts(input);
+    const second = await retrieveExcerpts(input);
+
+    expect(load).toHaveBeenCalledTimes(1);
+    expect(second).toEqual(first);
   });
 });

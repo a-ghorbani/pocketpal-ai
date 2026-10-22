@@ -673,3 +673,60 @@ describe('plan and send share one prompt', () => {
     ).mockResolvedValue({});
   });
 });
+
+describe('reading document text at send', () => {
+  const textReads = (id: string) =>
+    fs.readFile.mock.calls.filter(([p]: [string]) => p.includes(id)).length;
+
+  beforeEach(() => {
+    retrieve.clearDocumentIndexCache();
+    runInAction(() => {
+      modelStore.activeModelId = modelsList[0].id;
+      modelStore.activeContextSettings = {n_ctx: 32768} as any;
+    });
+  });
+
+  afterEach(() => {
+    runInAction(() => {
+      modelStore.activeContextSettings = undefined;
+    });
+  });
+
+  it('reads text only for full refs and probes searched ones', async () => {
+    const searched = pdf('searched-only', {pageCount: 1, mode: 'searched'});
+    const full = pdf('full-only', {pageCount: 1});
+    writeText(searched.id, ['churn notes']);
+    writeText(full.id, ['small text']);
+    history = [assistantRow('a1', 'ok'), userRow('u1', 'old', [searched])];
+
+    await send({type: 'text', text: 'churn?', documents: [full]});
+
+    expect(textReads(full.id)).toBe(1);
+    expect(textReads(searched.id)).toBeLessThanOrEqual(1);
+    expect(fs.exists).toHaveBeenCalledWith(
+      expect.stringContaining(searched.id),
+    );
+  });
+
+  it('reads no searched text again while its index is cached', async () => {
+    const searched = pdf('warm-cache', {pageCount: 1, mode: 'searched'});
+    writeText(searched.id, ['churn notes']);
+    history = [assistantRow('a1', 'ok'), userRow('u1', 'old', [searched])];
+
+    await send({type: 'text', text: 'churn?'});
+    fs.readFile.mockClear();
+    await send({type: 'text', text: 'churn?'});
+
+    expect(textReads(searched.id)).toBe(0);
+  });
+
+  it('a persisted bad-id ref renders the missing line and the send is not refused', async () => {
+    const bad = {...pdf('ignored'), id: '../models'};
+    history = [assistantRow('a1', 'ok'), userRow('u1', 'old', [bad])];
+
+    await send({type: 'text', text: 'hi'});
+
+    expect(nonSystem(0)[0].content).toContain('is no longer available');
+    expect(nonSystem(0).at(-1)?.content).toBe('hi');
+  });
+});

@@ -57,6 +57,7 @@ import type {ToolDefinition} from '../services/talents/types';
 import {
   DOCUMENT_GROUNDING,
   documentContentFor,
+  documentKey,
   modeOf,
   renderExcerptBlock,
   withDocumentContent,
@@ -139,7 +140,7 @@ const buildPromptMessages = ({
 const excerptBlockFor = async (
   textRows: MessageType.Text[],
   message: MessageType.PartialText,
-  texts: Map<string, string[] | 'missing'>,
+  fullTexts: Map<string, string[] | 'missing'>,
   plan: Plan,
   assistantId: string,
 ): Promise<string> => {
@@ -153,7 +154,14 @@ const excerptBlockFor = async (
       ...[...textRows].reverse().flatMap(row => searched(row.documents)),
       ...searched(message.documents),
     ],
-    texts,
+    load: async ref => {
+      const key = documentKey(ref);
+      const read = fullTexts.get(key);
+      if (read !== undefined) {
+        return read;
+      }
+      return (await loadDocumentTexts([ref])).get(key) ?? 'missing';
+    },
     excerptBudget: plan.excerptBudget,
     measure: counting
       ? async excerpts => {
@@ -211,19 +219,21 @@ const prepareCompletion = async ({
     ...textRows.flatMap(row => row.documents ?? []),
     ...(message.documents ?? []),
   ];
-  const documentTexts =
-    documentRefs.length > 0
-      ? await loadDocumentTexts(documentRefs)
-      : new Map<string, string[] | 'missing'>();
+  const fullTexts = await loadDocumentTexts(
+    documentRefs.filter(ref => modeOf(ref) === 'full'),
+  );
+  const searchedOnly = documentRefs.filter(
+    ref => modeOf(ref) === 'searched' && !fullTexts.has(documentKey(ref)),
+  );
+  const missingSearched = await findMissingDocuments(searchedOnly);
+  const documentTexts = new Map(fullTexts);
+  for (const ref of searchedOnly) {
+    const key = documentKey(ref);
+    documentTexts.set(key, missingSearched.has(key) ? 'missing' : []);
+  }
   const excerptBlock =
     plan && plan.excerptBudget > 0
-      ? await excerptBlockFor(
-          textRows,
-          message,
-          documentTexts,
-          plan,
-          assistant.id,
-        )
+      ? await excerptBlockFor(textRows, message, fullTexts, plan, assistant.id)
       : undefined;
   const newDocumentContent = documentContentFor(
     message.documents,

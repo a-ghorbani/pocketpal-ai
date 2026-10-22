@@ -2,7 +2,6 @@ import {chunkDocument, type Passage} from './chunk';
 import {estimateDocTokens} from './estimate';
 import {EXCERPT_LEAD_TOKENS, excerptCost} from './plan';
 import {documentKey} from './render';
-import type {DocumentTexts} from './store';
 import {
   CHUNKER_VERSION,
   EXCERPT_K,
@@ -161,16 +160,25 @@ const buildIndex = async (
   };
 };
 
+export type DocumentLoader = (
+  ref: DocumentRef,
+) => Promise<string[] | 'missing'>;
+
+/** The cached index for a ref, or a fresh one built from text loaded on a miss. */
 const indexFor = async (
   ref: DocumentRef,
-  pages: string[],
-): Promise<PassageIndex> => {
+  load: DocumentLoader,
+): Promise<PassageIndex | undefined> => {
   const key = cacheKey(ref);
   const cached = indexCache.get(key);
   if (cached) {
     indexCache.delete(key);
     indexCache.set(key, cached);
     return {...cached, ref};
+  }
+  const pages = await load(ref);
+  if (pages === 'missing') {
+    return undefined;
   }
   const index = await buildIndex(ref, pages);
   indexCache.set(key, index);
@@ -228,7 +236,8 @@ export interface RetrieveInput {
   previousQuery?: string;
   /** Searched refs of the chat, in attach order. */
   searchedRefs: DocumentRef[];
-  texts: DocumentTexts;
+  /** Reads a ref's pages; called only when its index is not cached. */
+  load: DocumentLoader;
   excerptBudget: number;
   /** Exact size of a rendered excerpt block, when a local model can count it. */
   measure?: (excerpts: Excerpt[]) => Promise<number | undefined>;
@@ -239,7 +248,7 @@ export const retrieveExcerpts = async ({
   query,
   previousQuery,
   searchedRefs,
-  texts,
+  load,
   excerptBudget,
   measure,
   retriever = bm25Retriever,
@@ -248,12 +257,14 @@ export const retrieveExcerpts = async ({
   const seen = new Set<string>();
   for (const ref of searchedRefs) {
     const key = documentKey(ref);
-    const pages = texts.get(key);
-    if (seen.has(key) || !pages || pages === 'missing') {
+    if (seen.has(key)) {
       continue;
     }
     seen.add(key);
-    corpus.push({index: await indexFor(ref, pages), docOrder: corpus.length});
+    const index = await indexFor(ref, load);
+    if (index) {
+      corpus.push({index, docOrder: corpus.length});
+    }
   }
 
   const effectiveQuery =
