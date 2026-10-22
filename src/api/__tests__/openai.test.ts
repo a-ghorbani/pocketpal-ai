@@ -1007,6 +1007,22 @@ describe('streamChatCompletion', () => {
       expect(RNFS.readFile).not.toHaveBeenCalled();
     });
 
+    it('defers to isAllowedChatImageUri for which local files are read', async () => {
+      const RNFS = require('@dr.pogodin/react-native-fs');
+      (RNFS.readFile as jest.Mock).mockResolvedValue('QUJD');
+      const guard = jest
+        .spyOn(require('../../utils/chatImageUri'), 'isAllowedChatImageUri')
+        .mockImplementation(uri => uri === 'file:///data/local/tmp/a.jpg');
+      try {
+        expect(
+          await sendImages(['file:///data/local/tmp/a.jpg', pickedImage(14)]),
+        ).toEqual(['data:image/jpeg;base64,QUJD', pickedImage(14)]);
+        expect(RNFS.readFile).toHaveBeenCalledTimes(1);
+      } finally {
+        guard.mockRestore();
+      }
+    });
+
     it('inlines an allowed image, skips a disallowed one, leaves a missing allowed one', async () => {
       const RNFS = require('@dr.pogodin/react-native-fs');
       const missing = pickedImage(13);

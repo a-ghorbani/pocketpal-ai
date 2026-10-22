@@ -22,7 +22,8 @@ import {
   isModelFilePath,
   isValidImportedModelRef,
 } from '../../utils/modelPathGuard';
-import {hfStore, modelStore, palStore} from '..';
+import {hfStore, modelStore, palStore, serverStore} from '..';
+import {routerModelsBody} from '../../../jest/fixtures/remoteModelList';
 import {LOOKIE_DEFAULT_MODEL} from '../builtinPalModels';
 import {ONBOARDING_PALS} from '../onboarding/onboardingPals';
 import androidBundledRules from '../bundledDeviceRules/rules.android.json';
@@ -313,6 +314,35 @@ describe('every model kind main persists still downloads and deletes', () => {
         }
       },
     );
+  });
+
+  it('remote models from a captured model list pass the imported ref check', () => {
+    const savedServers = serverStore.servers;
+    const savedSelections = serverStore.userSelectedModels;
+    try {
+      const serverIds = ['192.168.1.20', 'Home/Mac'].map(name =>
+        serverStore.addServer({name, url: 'http://192.168.1.20:8080'}),
+      );
+      for (const serverId of serverIds) {
+        for (const {id} of routerModelsBody.data) {
+          serverStore.addUserSelectedModel(serverId, id);
+        }
+      }
+      const remote = toJS(modelStore.remoteModels).filter(m =>
+        serverIds.includes(m.serverId!),
+      );
+      expect(remote).toHaveLength(2 * routerModelsBody.data.length);
+      expect(remote.some(m => m.remoteModelId!.includes('/'))).toBe(true);
+
+      for (const model of remote) {
+        expect(isValidImportedModelRef(model)).toBe(true);
+      }
+    } finally {
+      runInAction(() => {
+        serverStore.servers = savedServers;
+        serverStore.userSelectedModels = savedSelections;
+      });
+    }
   });
 
   describe('LOCAL picker imports', () => {

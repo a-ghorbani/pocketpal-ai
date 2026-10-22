@@ -135,6 +135,20 @@ describe('importUtils', () => {
       },
     );
 
+    it('defers to isAllowedChatImageUri for which entries are kept', () => {
+      const guard = jest
+        .spyOn(require('../chatImageUri'), 'isAllowedChatImageUri')
+        .mockImplementation(uri => uri === '/etc/hosts');
+      try {
+        expect(
+          importedMessage({imageUris: ['/etc/hosts', pickerUri]}).metadata
+            ?.imageUris,
+        ).toEqual(['/etc/hosts']);
+      } finally {
+        guard.mockRestore();
+      }
+    });
+
     it('leaves metadata without imageUris alone', () => {
       expect(importedMessage({other: 1}).metadata).toEqual({other: 1});
       expect(importedMessage(undefined).metadata).toBeUndefined();

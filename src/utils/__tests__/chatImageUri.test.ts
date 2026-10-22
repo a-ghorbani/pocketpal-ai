@@ -64,6 +64,7 @@ describe('isAllowedChatImageUri', () => {
       `file://${ANDROID_CACHE}/../files/x`,
       `file://${ANDROID_CACHE}/../files/rn_image_picker_lib_temp_x.jpg`,
       `file://${ANDROID_CACHE}/sub/rn_image_picker_lib_temp_x.jpg`,
+      `file://${ANDROID_CACHE}/rn_image_picker_lib_temp_x.jpg/../../files/x`,
       `file://${ANDROID_CACHE}/other.jpg`,
       `file://${ANDROID_CACHE}/notes.json`,
       `file://${ANDROID_CACHE}/chat_my_chat_2024-01-01_12-00-00.json`,
@@ -125,6 +126,12 @@ describe('isAllowedChatImageUri', () => {
       );
     });
 
+    it('rejects everything when the tmp root is unavailable', () => {
+      mockRNFS.__setTemporaryDirectoryPath(undefined);
+      expect(isAllowedChatImageUri(iosPick(false))).toBe(false);
+      expect(isAllowedChatImageUri(iosPick(true))).toBe(false);
+    });
+
     it('allows a root without the trailing slash', () => {
       mockRNFS.__setTemporaryDirectoryPath(`${IOS_CONTAINER}/tmp`);
       expect(isAllowedChatImageUri(iosPick(true))).toBe(true);
@@ -135,6 +142,8 @@ describe('isAllowedChatImageUri', () => {
       iosPick(false, '..'),
       iosPick(false, '../..'),
       iosPick(false, `../Documents/${IOS_UUID}.jpg`),
+      iosPick(false, `${IOS_UUID}.jpg/../../Documents/x`),
+      iosPick(true, `${IOS_UUID}.jpg/../../Documents/x`),
       iosPick(false, `${IOS_UUID}`),
       iosPick(false, `${IOS_UUID}.`),
       iosPick(false, `x${IOS_UUID}.jpg`),
