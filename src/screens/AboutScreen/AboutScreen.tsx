@@ -1,4 +1,4 @@
-import React, {useState, useContext} from 'react';
+import React, {useContext, useMemo, useState} from 'react';
 import {View, ScrollView, TouchableOpacity, Alert, Linking} from 'react-native';
 
 import DeviceInfo from 'react-native-device-info';
@@ -20,8 +20,6 @@ import {L10nContext} from '../../utils';
 import {uiStore} from '../../store';
 import {reflowNotice} from './reflowNotice';
 
-const NOTICE_SECTIONS = phononNotices.map(reflowNotice);
-
 const GithubButtonIcon = ({color}: {color: string}) => (
   <GithubIcon stroke={color} />
 );
@@ -37,6 +35,7 @@ export const AboutScreen: React.FC = () => {
   const l10n = useContext(L10nContext);
   const [showFeedback, setShowFeedback] = useState(false);
   const [showNotices, setShowNotices] = useState(false);
+  const noticeSections = useMemo(() => phononNotices.map(reflowNotice), []);
   const [legalItemTops, setLegalItemTops] = useState<Record<number, number>>(
     {},
   );
@@ -323,7 +322,7 @@ export const AboutScreen: React.FC = () => {
           <Text style={styles.noticesCredit}>
             {l10n.about.phononNoticesCredit}
           </Text>
-          {NOTICE_SECTIONS.map((section, i) => (
+          {noticeSections.map((section, i) => (
             <Text key={i} selectable style={styles.noticesText}>
               {section}
             </Text>
