@@ -6,7 +6,8 @@
  * must see no Plus traffic.
  *
  * Hands-free voice ships, so Plus UI is always present; the setups still
- * pass plus_ship, which can only add shipped features.
+ * pass plus_ship, which can only add shipped features. The locked voice
+ * button reaches Plus through the voice teaser.
  */
 
 import {expect} from '@wdio/globals';
@@ -16,8 +17,9 @@ import {DrawerPage} from '../../pages/DrawerPage';
 import {ModelsPage} from '../../pages/ModelsPage';
 import {PlusPage} from '../../pages/PlusPage';
 import {TIMEOUTS} from '../../fixtures/models';
-import {byExactTestId, Selectors} from '../../helpers/selectors';
+import {byExactTestId, byTestId, Selectors} from '../../helpers/selectors';
 import {saveFailureScreenshot} from '../../helpers/screenshots';
+import {withBridgeElements} from '../../helpers/automation-bridge';
 import {assertMockTraffic, iapMockServer} from '../../helpers/iapMockServer';
 import type {RecordedRequest} from '../../helpers/iapMockServer';
 import {
@@ -55,6 +57,19 @@ const openDeepLink = async (url: string): Promise<void> => {
       ? {url, package: ANDROID_PACKAGE}
       : {url, bundleId: IOS_BUNDLE_ID},
   );
+};
+
+const voiceCommand = async (command: string): Promise<void> => {
+  if (driver.isAndroid) {
+    await withBridgeElements(async () => {
+      const input = await driver.$(byTestId('voice-command-input'));
+      await input.waitForExist({timeout: 15000});
+      await input.setValue(command);
+    });
+  } else {
+    await openDeepLink(`pocketpal://voice?cmd=${encodeURIComponent(command)}`);
+  }
+  await driver.pause(400);
 };
 
 describe('PocketPal Plus', () => {
@@ -282,6 +297,33 @@ describe('PocketPal Plus', () => {
     await plus.done();
 
     await plus.waitFor('plus-test-feature-unlocked');
+  });
+
+  it('shows the voice teaser before Plus from the locked voice button', async () => {
+    await openPlusWith(async () => {
+      await chatPage.waitForReady(TIMEOUTS.appReady);
+    });
+    await voiceCommand('gate::on');
+    await voiceCommand('unlock::plus');
+    const tapVoice = async () => {
+      await browser.$(byExactTestId('voice-mode-button')).click();
+      await plus.waitFor('voice-teaser-keep-typing');
+    };
+
+    await tapVoice();
+    expect(await plus.isShown('plus-close', 500)).toBe(false);
+    await browser.$(byExactTestId('voice-teaser-keep-typing')).click();
+    await plus.waitGone('voice-teaser-keep-typing');
+
+    await tapVoice();
+    await browser.$(byExactTestId('voice-teaser-get-plus')).click();
+    await plus.waitForScreen();
+    await plus.buy();
+    await plus.waitForPurchased();
+    await plus.done();
+
+    expect(await plus.isShown('voice-teaser-keep-typing', 500)).toBe(false);
+    expect(await plus.isShown('voice-mode-lock', 1000)).toBe(false);
   });
 
   it('shows the Plus entry and screen with no override, since hands-free voice ships', async () => {
