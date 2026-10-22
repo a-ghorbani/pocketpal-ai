@@ -259,9 +259,8 @@ export const ChatInput = observer(
           useNativeDriver: false,
           friction: 8,
         }).start();
-        onCancelEdit?.();
       }
-    }, [isEditMode, editBarHeight, onCancelEdit]);
+    }, [isEditMode, editBarHeight]);
 
     React.useEffect(() => {
       Animated.spring(iconRotation, {
@@ -573,6 +572,7 @@ export const ChatInput = observer(
                 icon="close"
                 size={16}
                 onPress={handleCancel}
+                testID="edit-bar-cancel"
                 style={styles.editBarButton}
                 iconColor={theme.colors.onSurfaceVariant}
               />

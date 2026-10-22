@@ -945,6 +945,32 @@ describe('input', () => {
       expect(onCancelEdit).not.toHaveBeenCalled(); // Should not be called on render
     });
 
+    it('does not call onCancelEdit when edit mode ends', () => {
+      const onCancelEdit = jest.fn();
+      runInAction(() => {
+        chatSessionStore.isEditMode = true;
+      });
+      const element = () => (
+        <UserContext.Provider value={user}>
+          <ChatInput
+            {...{
+              onSendPress: jest.fn(),
+              onCancelEdit,
+              sendButtonVisibilityMode: 'editing',
+            }}
+          />
+        </UserContext.Provider>
+      );
+      const {rerender} = render(element());
+
+      runInAction(() => {
+        chatSessionStore.isEditMode = false;
+      });
+      rerender(element());
+
+      expect(onCancelEdit).not.toHaveBeenCalled();
+    });
+
     it('calls onCancelEdit when cancel button is pressed', () => {
       const onSendPress = jest.fn();
       const onCancelEdit = jest.fn();
@@ -967,7 +993,7 @@ describe('input', () => {
       );
 
       // Find and press the cancel button in the edit bar
-      const cancelButton = getByTestId('icon-button');
+      const cancelButton = getByTestId('edit-bar-cancel');
       fireEvent.press(cancelButton);
 
       expect(onCancelEdit).toHaveBeenCalledTimes(1);

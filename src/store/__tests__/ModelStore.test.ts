@@ -36,7 +36,7 @@ import {
 import * as RNFS from '@dr.pogodin/react-native-fs';
 import DeviceInfo from 'react-native-device-info';
 
-import {modelStore, uiStore, serverStore} from '..';
+import {chatSessionStore, modelStore, uiStore, serverStore} from '..';
 import {LOOKIE_DEFAULT_MODEL} from '../builtinPalModels';
 import {classify} from '../../services/deviceRules/classify';
 import {getVisionModelSizeBreakdown} from '../../utils/multimodalHelpers';
@@ -2071,6 +2071,29 @@ describe('ModelStore', () => {
         } as any;
         modelStore.activeModelId = 'loaded-model';
       });
+
+    it('a background auto-release leaves edit mode', async () => {
+      const exit = jest.spyOn(chatSessionStore, 'exitEditMode');
+      modelStore.useAutoRelease = true;
+      withLoadedContext();
+      modelStore.appState = 'active';
+
+      await modelStore.handleAppStateChange('background');
+
+      expect(exit).toHaveBeenCalled();
+      exit.mockRestore();
+    });
+
+    it('selecting another local model leaves edit mode', async () => {
+      const exit = jest.spyOn(chatSessionStore, 'exitEditMode');
+      withLoadedContext();
+      jest.spyOn(console, 'error').mockImplementation(() => {});
+
+      await originalInitContext(basicModel).catch(() => {});
+
+      expect(exit).toHaveBeenCalled();
+      exit.mockRestore();
+    });
 
     it('releaseContext clears the document index cache', async () => {
       withLoadedContext();

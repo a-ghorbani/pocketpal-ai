@@ -136,6 +136,32 @@ const prependText = (first: string, rest: string) =>
 
 type OverVerdict = Extract<BudgetVerdict, {kind: 'over'}>;
 
+/**
+ * The composer chips to bring back after an edit: the pre-edit chips, each as
+ * it is now if it is still there. A removed chip comes back unless it was
+ * still importing, since that import's result has nowhere to land.
+ */
+const restoreChips = (
+  snapshot: ComposerDocument[],
+  live: ComposerDocument[],
+): ComposerDocument[] => {
+  const liveByKey = new Map(live.map(chip => [chip.key, chip]));
+  return snapshot.flatMap(chip => {
+    const now = liveByKey.get(chip.key);
+    if (now) {
+      return [now];
+    }
+    return chip.status === 'importing' ? [] : [chip];
+  });
+};
+
+type EditSnapshot = {
+  sessionId: string;
+  text: string;
+  images: string[];
+  documents: ComposerDocument[];
+};
+
 const readyChips = (refs: DocumentRef[] = []): ComposerDocument[] =>
   refs.map(ref => ({key: randId(), status: 'ready', name: ref.name, ref}));
 
@@ -315,6 +341,10 @@ export const ChatView = observer(
     const inputTextRef = React.useRef(inputText);
     inputTextRef.current = inputText;
     const [inputImages, setInputImages] = React.useState<string[]>([]);
+    const inputImagesRef = React.useRef(inputImages);
+    inputImagesRef.current = inputImages;
+    /** The composer as it was before an edit that kept it; null otherwise. */
+    const editSnapshotRef = React.useRef<EditSnapshot | null>(null);
     const [inputDocuments, setInputDocuments] = React.useState<
       ComposerDocument[]
     >([]);
@@ -549,6 +579,32 @@ export const ChatView = observer(
       }
     }, [initialInputText, onInitialTextConsumed]);
 
+    // ============ EDIT EXIT ============
+    // Every end of edit mode either restores the composer kept by the edit
+    // or clears it. Declared before the draft effect, which takes a snapshot
+    // left for a chat being switched away from.
+    const isEditMode = chatSessionStore.isEditMode;
+    const wasEditMode = usePrevious(isEditMode);
+    React.useEffect(() => {
+      if (!wasEditMode || isEditMode) {
+        return;
+      }
+      const snapshot = editSnapshotRef.current;
+      if (!snapshot) {
+        setInputText('');
+        setInputImages([]);
+        updateComposerDocuments(() => []);
+        return;
+      }
+      setInputImages(snapshot.images);
+      updateComposerDocuments(live => restoreChips(snapshot.documents, live));
+      if (snapshot.sessionId === chatSessionStore.activeSessionId) {
+        setInputText(snapshot.text);
+        editSnapshotRef.current = null;
+      }
+      // eslint-disable-next-line react-hooks/exhaustive-deps -- runs on the edit-mode transition only
+    }, [isEditMode]);
+
     // ============ DRAFT AUTOSAVE ============
     // Save draft on session switch, restore draft for new session
     const prevSessionId = usePrevious(chatSessionStore.activeSessionId);
@@ -559,7 +615,14 @@ export const ChatView = observer(
 
       // This runs after the switch, so a cancelled send may already have put
       // its text into the draft being left: keep it rather than overwrite it.
-      const typed = inputTextRef.current;
+      const snapshot = editSnapshotRef.current;
+      const typed =
+        snapshot && snapshot.sessionId === prevKey
+          ? snapshot.text
+          : inputTextRef.current;
+      if (prevKey !== newKey) {
+        editSnapshotRef.current = null;
+      }
       if (prevKey !== newKey && typed !== syncedDraftRef.current) {
         const stored = chatSessionStore.getDraft(prevKey);
         chatSessionStore.saveDraft(
@@ -747,7 +810,20 @@ export const ChatView = observer(
         if (row.id === chatSessionStore.editingMessageId) {
           return;
         }
+        const wasEditing = chatSessionStore.isEditMode;
+        const pending: EditSnapshot | null =
+          wasEditing || !chatSessionStore.activeSessionId
+            ? null
+            : {
+                sessionId: chatSessionStore.activeSessionId,
+                text: inputTextRef.current,
+                images: inputImagesRef.current,
+                documents: inputDocumentsRef.current,
+              };
         chatSessionStore.enterEditMode(row.id);
+        if (pending && chatSessionStore.editingMessageId === row.id) {
+          editSnapshotRef.current = pending;
+        }
         mergeIntoComposer(
           {text: row.text, images: row.imageUris, documents: row.documents},
           'pendingFirst',
@@ -845,6 +921,7 @@ export const ChatView = observer(
             return;
           }
         }
+        editSnapshotRef.current = null;
         await dispatchSend(message, {clearComposer: true});
       },
       [dispatchSend, evaluateSendBudget, messages],
@@ -860,18 +937,17 @@ export const ChatView = observer(
           return;
         }
         await dispatchSend(message, {
-          clearComposer: chatSessionStore.isEditMode,
+          clearComposer:
+            chatSessionStore.isEditMode && !editSnapshotRef.current,
         });
       },
       [dispatchSend],
     );
 
-    const handleCancelEdit = React.useCallback(() => {
-      setInputText('');
-      setInputImages([]);
-      updateComposerDocuments(() => []);
-      chatSessionStore.exitEditMode();
-    }, [updateComposerDocuments]);
+    const requestEditExit = React.useCallback(
+      () => chatSessionStore.exitEditMode(),
+      [],
+    );
 
     // Voice-input seam: append a transcript to the current composer text.
     // Reuses the prop-driven external-write mechanism of `initialInputText`
@@ -1516,7 +1592,7 @@ export const ChatView = observer(
                   onStopPress,
                   chatInputHeight,
                   inputBackgroundColor,
-                  onCancelEdit: handleCancelEdit,
+                  onCancelEdit: requestEditExit,
                   onPalBtnPress: () => setIsPickerVisible(!isPickerVisible),
                   isStopVisible,
                   isPickerVisible,

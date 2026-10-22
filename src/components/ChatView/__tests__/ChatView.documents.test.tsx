@@ -877,3 +877,351 @@ describe('ChatView edit targets for the budget sheet', () => {
     expect(chat.screen.getByTestId('budget-cancel')).toBeTruthy();
   });
 });
+
+describe('leaving an edit that kept the composer', () => {
+  const menuLabels = l10n.en.components.chatView.menuItems;
+  const store = chatSessionStore as any;
+  let shown: any[] = [];
+  const drafts = new Map<string, string>();
+  const older = ref('older-doc');
+  const pending = ref('pending-doc');
+  const olderRow = {
+    ...textMessage,
+    id: 'older-row',
+    author: user,
+    text: 'Older row',
+    documents: [older],
+  };
+  const secondRow = {
+    ...textMessage,
+    id: 'second-row',
+    author: user,
+    text: 'Second row',
+    documents: [older],
+  };
+  const reply = (id: string, text: string) => ({
+    ...textMessage,
+    id,
+    author: {id: 'assistant'},
+    text,
+  });
+  const plan = (verdict: any) => ({
+    newModes: [],
+    fullLoad: 0,
+    room: 0,
+    excerptBudget: 0,
+    verdict,
+  });
+  const fits = plan({kind: 'fits'});
+  const over = plan({
+    kind: 'over',
+    reason: 'new',
+    needed: 6100,
+    available: 3072,
+    newDocs: [],
+    historyDocTokens: 6000,
+  });
+
+  /**
+   * Resend gates (message = the row's own text) are over for rows in
+   * `overRows`; a composer send is over once after `composerOverOnce`.
+   * Mode predictions always fit.
+   */
+  const overRows = new Set<string>();
+  let composerOverOnce = false;
+  const rowTexts = new Set(['Older row', 'Second row']);
+  const budget = () =>
+    jest.fn(
+      async (
+        message: {text: string},
+        {excludeFromId}: {excludeFromId?: string} = {},
+      ) => {
+        if (rowTexts.has(message.text)) {
+          return overRows.has(excludeFromId ?? '') ? over : fits;
+        }
+        if (composerOverOnce && message.text.includes('\n')) {
+          composerOverOnce = false;
+          return over;
+        }
+        return fits;
+      },
+    );
+
+  beforeEach(() => {
+    overRows.clear();
+    overRows.add('older-row');
+    composerOverOnce = false;
+    drafts.clear();
+    store.isEditMode = false;
+    store.editingMessageId = null;
+    (chatSessionStore.enterEditMode as jest.Mock).mockImplementation(
+      (id: string) =>
+        runInAction(() => {
+          store.isEditMode = true;
+          store.editingMessageId = id;
+        }),
+    );
+    (chatSessionStore.exitEditMode as jest.Mock).mockImplementation(() =>
+      runInAction(() => {
+        store.isEditMode = false;
+        store.editingMessageId = null;
+      }),
+    );
+    store.commitEdit = jest.fn(async () =>
+      runInAction(() => {
+        store.isEditMode = false;
+        store.editingMessageId = null;
+      }),
+    );
+    (chatSessionStore.saveDraft as jest.Mock).mockImplementation(
+      (key: string, text: string) =>
+        text.trim() ? drafts.set(key, text) : drafts.delete(key),
+    );
+    (chatSessionStore.getDraft as jest.Mock).mockImplementation(
+      (key: string) => drafts.get(key) ?? '',
+    );
+  });
+
+  afterEach(() => {
+    store.isEditMode = false;
+    store.editingMessageId = null;
+    delete store.commitEdit;
+    (chatSessionStore.enterEditMode as jest.Mock).mockReset();
+    (chatSessionStore.exitEditMode as jest.Mock).mockReset();
+    (chatSessionStore.saveDraft as jest.Mock).mockReset();
+    (chatSessionStore.getDraft as jest.Mock).mockReset().mockReturnValue('');
+    chatSessionStore.activeSessionId = 'session-1';
+  });
+
+  const composerChips = (chat: ReturnType<typeof renderChat>) =>
+    chat.screen
+      .queryAllByTestId(/^composer-document-[a-z0-9]+$/)
+      .map(node => node.props.accessibilityLabel.split(',')[0]);
+  const images = (chat: ReturnType<typeof renderChat>) =>
+    chat.screen
+      .queryAllByLabelText(/^Image preview/)
+      .map(node => node.props.source.uri);
+
+  const regenerate = async (
+    chat: ReturnType<typeof renderChat>,
+    replyText: string,
+  ) => {
+    fireEvent(chat.screen.getByText(replyText), 'onLongPress', {
+      nativeEvent: {pageX: 0, pageY: 0},
+    });
+    await act(async () => {
+      fireEvent.press(chat.screen.getByText(menuLabels.regenerate));
+    });
+  };
+
+  /** Draft text, an image and a held chip; then a regenerate that no longer fits. */
+  const setUp = async (
+    messages: object[] = [reply('r1', 'reply one'), olderRow],
+  ) => {
+    shown = messages as any[];
+    const chat = renderChat({
+      messages: messages as any,
+      isVisionEnabled: true,
+      evaluateSendBudget: budget(),
+    });
+    await chat.attach(pending);
+    fireEvent.press(chat.screen.getByLabelText('Add attachment'));
+    await waitFor(() => chat.screen.getByTestId('attach-gallery'));
+    await act(async () => {
+      fireEvent.press(chat.screen.getByTestId('attach-gallery'));
+    });
+    chat.type('draft');
+    await regenerate(chat, 'reply one');
+    expect(chat.input().props.value).toBe('draft\nOlder row');
+    expect(composerChips(chat)).toEqual(['pending-doc.pdf', 'older-doc.pdf']);
+    return {chat};
+  };
+
+  /** The mock store is not observable, so a fresh prop stands in for its change. */
+  const rerender = (chat: ReturnType<typeof renderChat>) =>
+    act(() => chat.screen.rerender(chat.element({messages: [...shown]})));
+
+  const expectRestored = (chat: ReturnType<typeof renderChat>) => {
+    expect(store.isEditMode).toBe(false);
+    expect(chat.input().props.value).toBe('draft');
+    expect(images(chat)).toEqual(['file:///staged.jpg']);
+    expect(composerChips(chat)).toEqual(['pending-doc.pdf']);
+    expect(documentStore.isHeld(pending.id)).toBe(true);
+    expect(documentStore.isHeld(older.id)).toBe(false);
+  };
+
+  it('restores the composer when the edit bar is cancelled', async () => {
+    const {chat} = await setUp();
+
+    fireEvent.press(chat.screen.getByTestId('edit-bar-cancel'));
+    rerender(chat);
+
+    expectRestored(chat);
+    expect(chatSessionStore.exitEditMode).toHaveBeenCalledTimes(1);
+  });
+
+  it('restores the composer when edit mode ends from outside', async () => {
+    const {chat} = await setUp();
+
+    chatSessionStore.exitEditMode();
+    rerender(chat);
+
+    expectRestored(chat);
+  });
+
+  it('gives the left chat its draft back on a chat switch and keeps the attachments', async () => {
+    drafts.set('session-2', 'two');
+    const {chat} = await setUp();
+
+    runInAction(() => {
+      store.isEditMode = false;
+      store.editingMessageId = null;
+      chatSessionStore.activeSessionId = 'session-2';
+    });
+    rerender(chat);
+
+    expect(drafts.get('session-1')).toBe('draft');
+    expect(chat.input().props.value).toBe('two');
+    expect(images(chat)).toEqual(['file:///staged.jpg']);
+    expect(composerChips(chat)).toEqual(['pending-doc.pdf']);
+    expect(documentStore.isHeld(pending.id)).toBe(true);
+  });
+
+  it('gives the left chat its draft back on a new chat', async () => {
+    const {chat} = await setUp();
+
+    runInAction(() => {
+      store.isEditMode = false;
+      store.editingMessageId = null;
+      chatSessionStore.activeSessionId = null as any;
+    });
+    rerender(chat);
+
+    expect(drafts.get('session-1')).toBe('draft');
+    expect(chat.input().props.value).toBe('');
+    expect(composerChips(chat)).toEqual(['pending-doc.pdf']);
+    expect(images(chat)).toEqual(['file:///staged.jpg']);
+  });
+
+  it('clears the composer after a composer send that fits', async () => {
+    const {chat} = await setUp();
+
+    await act(async () => {
+      chat.pressSend();
+    });
+    rerender(chat);
+
+    expect(chat.onSendPress).toHaveBeenCalled();
+    expect(chat.input().props.value).toBe('');
+    expect(composerChips(chat)).toEqual([]);
+  });
+
+  it('brings back a chip removed during the edit', async () => {
+    const {chat} = await setUp();
+
+    fireEvent.press(chat.screen.getByLabelText('Remove pending-doc.pdf'));
+    fireEvent.press(chat.screen.getByTestId('edit-bar-cancel'));
+    rerender(chat);
+
+    expectRestored(chat);
+  });
+
+  it('does not bring back a chip that was still importing and was removed', async () => {
+    let finish: (value: any) => void = () => {};
+    shown = [reply('r1', 'reply one'), olderRow];
+    const chat = renderChat({
+      messages: shown,
+      evaluateSendBudget: budget(),
+    });
+    (pick as jest.Mock).mockResolvedValueOnce([
+      {uri: 'content://slow.pdf', name: 'slow.pdf', size: 1},
+    ]);
+    importDocument.mockImplementationOnce(
+      () => new Promise(resolve => (finish = resolve)),
+    );
+    fireEvent.press(chat.screen.getByLabelText('Add attachment'));
+    await waitFor(() => chat.screen.getByTestId('attach-document'));
+    await act(async () => {
+      fireEvent.press(chat.screen.getByTestId('attach-document'));
+    });
+    chat.type('draft');
+    await regenerate(chat, 'reply one');
+
+    fireEvent.press(chat.screen.getByLabelText('Remove slow.pdf'));
+    fireEvent.press(chat.screen.getByTestId('edit-bar-cancel'));
+    rerender(chat);
+
+    expect(composerChips(chat)).toEqual([]);
+    expect(chat.input().props.value).toBe('draft');
+    await act(async () => {
+      chat.pressSend();
+    });
+    expect(chat.onSendPress).toHaveBeenCalled();
+    finish({status: 'refused', reason: 'copy_failed'});
+  });
+
+  it('restores the first pre-edit composer after moving the edit to another row', async () => {
+    const {chat} = await setUp([
+      reply('r2', 'reply two'),
+      secondRow,
+      reply('r1', 'reply one'),
+      olderRow,
+    ]);
+    overRows.add('second-row');
+
+    await regenerate(chat, 'reply two');
+    fireEvent.press(chat.screen.getByTestId('edit-bar-cancel'));
+    rerender(chat);
+
+    expect(chat.input().props.value).toBe('draft');
+  });
+
+  it('clears the composer when a plain Edit is cancelled', async () => {
+    shown = [olderRow];
+    const chat = renderChat({messages: shown});
+    fireEvent(chat.screen.getByText('Older row'), 'onLongPress', {
+      nativeEvent: {pageX: 0, pageY: 0},
+    });
+    await act(async () => {
+      fireEvent.press(chat.screen.getByText(menuLabels.edit));
+    });
+    rerender(chat);
+    expect(chat.input().props.value).toBe('Older row');
+
+    fireEvent.press(chat.screen.getByTestId('edit-bar-cancel'));
+    rerender(chat);
+
+    expect(chat.input().props.value).toBe('');
+    expect(composerChips(chat)).toEqual([]);
+  });
+
+  it('keeps the composer when Try again on a fitting row ends the edit', async () => {
+    const {chat} = await setUp();
+    overRows.clear();
+
+    await regenerate(chat, 'reply one');
+    rerender(chat);
+
+    expect(chat.onSendPress).toHaveBeenCalledWith(
+      expect.objectContaining({text: 'Older row'}),
+    );
+    expectRestored(chat);
+  });
+
+  it('keeps the snapshot through an over-budget composer send, then restores on cancel', async () => {
+    const {chat} = await setUp();
+    composerOverOnce = true;
+
+    await act(async () => {
+      chat.pressSend();
+    });
+    expect(chat.onSendPress).not.toHaveBeenCalled();
+    expect(chat.screen.getByTestId('budget-cancel')).toBeTruthy();
+
+    fireEvent.press(chat.screen.getByTestId('budget-cancel'));
+    fireEvent.press(chat.screen.getByTestId('edit-bar-cancel'));
+    rerender(chat);
+
+    expectRestored(chat);
+  });
+});
