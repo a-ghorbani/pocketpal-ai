@@ -144,7 +144,7 @@ export const documentPlan = ({
   const historyOver =
     available !== undefined && nonDoc + historyLoad > available;
 
-  if (available !== undefined && !historyOver) {
+  if (available !== undefined && !(historyOver && historyLoad > 0)) {
     const exceeds = () => {
       const anySearched = searchedNow().length > 0;
       return (
@@ -195,7 +195,7 @@ export const documentPlan = ({
     },
   });
   if (historyOver) {
-    return over('history');
+    return over(historyLoad > 0 || newRefs.length === 0 ? 'history' : 'new');
   }
   if (anySearched && excerptBudget < floor) {
     return over(newModes.some(mode => mode === 'searched') ? 'new' : 'history');
