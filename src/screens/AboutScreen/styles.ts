@@ -122,7 +122,6 @@ export const createStyles = (theme: Theme, insets: EdgeInsets) =>
       justifyContent: 'center',
       alignItems: 'center',
       paddingVertical: theme.spacing.default * 1.5,
-      paddingHorizontal: theme.spacing.default,
       columnGap: theme.spacing.default / 2,
       rowGap: theme.spacing.default / 4,
     },
