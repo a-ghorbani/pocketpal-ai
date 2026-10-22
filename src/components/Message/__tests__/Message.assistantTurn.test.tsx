@@ -281,7 +281,7 @@ describe('Message — AssistantTurn renderer', () => {
     fireEvent.press(buttons[0], event);
     expect(onMessageMenuPress).toHaveBeenCalledTimes(1);
     expect(onMessageMenuPress.mock.calls[0][0].id).toBe('turn-1');
-    expect(onMessageMenuPress.mock.calls[0][1]).toBe(event);
+    expect(onMessageMenuPress.mock.calls[0][1]).toEqual(event);
   });
 
   it('#12b the active row shows no "…"', () => {

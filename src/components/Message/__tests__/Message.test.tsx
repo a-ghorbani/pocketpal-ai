@@ -13,6 +13,7 @@ import {
   fireEvent,
   render as renderWithProviders,
 } from '../../../../jest/test-utils';
+import {l10n} from '../../../locales';
 import {Message} from '../Message';
 
 const rowProps = {
@@ -222,7 +223,12 @@ describe('message', () => {
 
       expect(row.props.accessible).toBe(true);
       expect(row.props.accessibilityLabel).toBe('my question');
-      expect(row.props.accessibilityActions).toEqual([{name: 'longpress'}]);
+      expect(row.props.accessibilityActions).toEqual([
+        {
+          name: 'longpress',
+          label: l10n.en.components.messageMenuButton.accessibilityLabel,
+        },
+      ]);
 
       fireEvent(row, 'accessibilityAction', {
         nativeEvent: {actionName: 'longpress'},

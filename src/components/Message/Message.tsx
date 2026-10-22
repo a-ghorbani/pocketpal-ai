@@ -2,7 +2,6 @@ import * as React from 'react';
 import {
   AccessibilityActionEvent,
   Animated,
-  GestureResponderEvent,
   type HostInstance,
   Pressable,
   Text,
@@ -29,16 +28,19 @@ import {
 } from '..';
 
 import {MessageType, PressPointEvent} from '../../utils/types';
-import {excludeDerivedMessageProps, UserContext} from '../../utils';
+import {
+  excludeDerivedMessageProps,
+  L10nContext,
+  UserContext,
+} from '../../utils';
 import {markdownToPlainText} from '../../utils/markdownToPlainText';
+import {openAtPressPoint} from '../../utils/pressPoint';
 import {visibleStepContent} from '../../utils/chat';
 
 const hapticOptions = {
   enableVibrateFallback: true,
   ignoreAndroidSystemSettings: false,
 };
-
-const USER_ROW_ACTIONS = [{name: 'longpress'}];
 
 export interface MessageTopLevelProps extends TextMessageTopLevelProps {
   isActiveRun?: boolean;
@@ -134,6 +136,7 @@ export const Message = observer(
     usePreviewData,
   }: MessageProps) => {
     const user = React.useContext(UserContext);
+    const l10n = React.useContext(L10nContext);
     const theme = useTheme();
 
     const currentUserIsAuthor =
@@ -177,17 +180,22 @@ export const Message = observer(
       [currentUserIsAuthor, message],
     );
 
+    const userRowActions = React.useMemo(
+      () => [
+        {
+          name: 'longpress',
+          label: l10n.components.messageMenuButton.accessibilityLabel,
+        },
+      ],
+      [l10n],
+    );
     const userRow = React.useRef<HostInstance>(null);
     const handleUserRowAction = React.useCallback(
       ({nativeEvent}: AccessibilityActionEvent) => {
         if (nativeEvent.actionName !== 'longpress') {
           return;
         }
-        userRow.current?.measure((_x, _y, width, height, pageX, pageY) =>
-          openUserMenu({
-            nativeEvent: {pageX: pageX + width / 2, pageY: pageY + height / 2},
-          }),
-        );
+        openAtPressPoint(undefined, userRow.current, openUserMenu);
       },
       [openUserMenu],
     );
@@ -437,7 +445,7 @@ export const Message = observer(
     const showAssistantFooter =
       !currentUserIsAuthor &&
       (message.type === 'assistant_turn' || message.type === 'text');
-    const openMenu = (event: GestureResponderEvent) =>
+    const openMenu = (event: PressPointEvent) =>
       onMessageMenuPress?.(excludeDerivedMessageProps(message), event);
     const assistantFooter = showAssistantFooter && (
       <AssistantTurnFooter
@@ -481,7 +489,7 @@ export const Message = observer(
             ref={userRow}
             accessible
             accessibilityLabel={userRowLabel}
-            accessibilityActions={USER_ROW_ACTIONS}
+            accessibilityActions={userRowActions}
             onAccessibilityAction={handleUserRowAction}
             style={[pressable, {transform: [{scale}]}]}
             {...userRowTouches}>

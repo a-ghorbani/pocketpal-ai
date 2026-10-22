@@ -44,13 +44,40 @@ describe('MessageMenuButton', () => {
     expect(button.props.hitSlop).toBeUndefined();
   });
 
-  it('calls onPress with the press event', () => {
+  it('calls onPress at the press point', () => {
     const onPress = jest.fn();
     const {getByTestId} = render(<MessageMenuButton onPress={onPress} />);
-    const event = {nativeEvent: {pageX: 1, pageY: 2}};
 
-    fireEvent.press(getByTestId('message-menu-button'), event);
+    fireEvent.press(getByTestId('message-menu-button'), {
+      nativeEvent: {pageX: 1, pageY: 2},
+    });
 
-    expect(onPress).toHaveBeenCalledWith(event);
+    expect(onPress).toHaveBeenCalledWith({nativeEvent: {pageX: 1, pageY: 2}});
   });
+
+  it.each([
+    ['an empty click event', {nativeEvent: {}}],
+    ['no event', undefined],
+  ])(
+    'calls onPress at the button centre for %s (TalkBack, Switch Access, keyboard)',
+    (_case, event) => {
+      const onPress = jest.fn();
+      const {UNSAFE_root, getByTestId} = render(
+        <MessageMenuButton onPress={onPress} />,
+      );
+      const native = UNSAFE_root.find(
+        (n: any) =>
+          typeof n.instance?.measure === 'function' &&
+          n.props.testID === 'message-menu-button',
+      ).instance;
+      native.measure = (cb: (...args: number[]) => void) =>
+        cb(0, 0, 44, 44, 300, 500);
+
+      fireEvent.press(getByTestId('message-menu-button'), event);
+
+      expect(onPress).toHaveBeenCalledWith({
+        nativeEvent: {pageX: 322, pageY: 522},
+      });
+    },
+  );
 });

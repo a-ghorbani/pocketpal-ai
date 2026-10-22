@@ -1,5 +1,5 @@
 import React, {useContext} from 'react';
-import {GestureResponderEvent, TouchableOpacity, View} from 'react-native';
+import {TouchableOpacity, View} from 'react-native';
 
 import {observer} from 'mobx-react';
 import {Text} from 'react-native-paper';
@@ -18,7 +18,7 @@ import {L10nContext} from '../../utils';
 import {derivedText} from '../../utils/chat';
 import type {PersistedTurnTimings} from '../../utils/completionTypes';
 import {finiteNumber} from '../../utils/finite';
-import {MessageType} from '../../utils/types';
+import {MessageType, PressPointEvent} from '../../utils/types';
 import {t} from '../../locales';
 
 const hapticOptions = {
@@ -29,7 +29,7 @@ const hapticOptions = {
 interface AssistantTurnFooterProps {
   message: MessageType.Any;
   isActiveRun?: boolean;
-  onMenuPress?: (event: GestureResponderEvent) => void;
+  onMenuPress?: (event: PressPointEvent) => void;
 }
 
 export const AssistantTurnFooter: React.FC<AssistantTurnFooterProps> = observer(

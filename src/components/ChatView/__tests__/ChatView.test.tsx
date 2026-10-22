@@ -766,7 +766,7 @@ describe('chat', () => {
     it.each([
       ['without a press point', {nativeEvent: {}}],
       ['with a released event', {nativeEvent: null}],
-    ])('keeps the menu closed on a "…" press %s', (_case, event) => {
+    ])('opens the menu at the "…" centre on a press %s', (_case, event) => {
       const utils = render(
         <ChatView
           messages={[{...textMessage, author: assistant}]}
@@ -775,15 +775,19 @@ describe('chat', () => {
         />,
         options,
       );
+      const native = utils.UNSAFE_root.find(
+        (n: any) =>
+          typeof n.instance?.measure === 'function' &&
+          n.props.testID === 'message-menu-button',
+      ).instance;
+      native.measure = (cb: (...args: number[]) => void) =>
+        cb(0, 0, 44, 44, 300, 500);
 
       fireEvent.press(utils.getByTestId('message-menu-button'), event);
 
       const menu = messageMenu(utils);
-      expect(menu.props.visible).toBe(false);
-      expect(menu.props.anchor).toEqual({
-        x: expect.any(Number),
-        y: expect.any(Number),
-      });
+      expect(menu.props.visible).toBe(true);
+      expect(menu.props.anchor).toEqual({x: 322, y: 522});
     });
 
     it('opens nothing on a long-press of an assistant row', () => {
