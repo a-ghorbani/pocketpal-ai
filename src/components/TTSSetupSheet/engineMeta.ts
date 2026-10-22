@@ -14,7 +14,8 @@ import type {EngineId} from '../../services/tts';
  * RAM is the peak resident MB measured during synthesis (E2E memory
  * profile, iPhone 17 Pro simulator and Pixel emulator, Release). Each value
  * is the higher of the two platforms, rounded. Approximate, not disk
- * footprint.
+ * footprint. Phonon can't run on the x86_64 emulator, so its Android figure
+ * comes from a Pixel 9 (whole-app PSS), rounded up to 50.
  */
 export interface EngineMeta {
   /** ~MB on disk after install (0 for system). */
@@ -55,7 +56,7 @@ export const ENGINE_META: Record<EngineId, EngineMeta> = {
   },
   phonon: {
     sizeMb: Platform.OS === 'ios' ? 164 : 64,
-    ramMb: 300, // PLACEHOLDER
+    ramMb: 550,
     voices: 8,
     accent: '#0E9F8E',
     gradientFrom: 'rgba(14, 159, 142, 0.14)',
