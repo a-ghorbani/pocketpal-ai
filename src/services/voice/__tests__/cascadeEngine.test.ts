@@ -124,7 +124,7 @@ describe('CascadeVoiceEngine', () => {
       expect(port.send).not.toHaveBeenCalled();
     });
 
-    it('transcribes with resident base whisper, sends, and speaks the answer', async () => {
+    it('transcribes with resident base whisper without saving the detected language, sends, and speaks the answer', async () => {
       const port = makePort();
       const on = events();
       const turn = engine.runTurn(speech(500), port, on);
@@ -134,7 +134,8 @@ describe('CascadeVoiceEngine', () => {
         tier: 'base',
         language: undefined,
       });
-      expect(asrStore.setSpokenLanguage).toHaveBeenCalledWith('en');
+      expect(asrStore.setSpokenLanguage).not.toHaveBeenCalled();
+      expect(asrStore.spokenLanguage).toBeNull();
       expect(on.transcribed).toHaveBeenCalledWith(
         'What is the capital of France?',
       );
@@ -157,7 +158,7 @@ describe('CascadeVoiceEngine', () => {
       expect(whisperRelease).not.toHaveBeenCalled();
     });
 
-    it('passes the language already detected', async () => {
+    it('passes the language the user already has, and auto-detects otherwise', async () => {
       runInAction(() => {
         (asrStore as any).spokenLanguage = 'fr';
       });

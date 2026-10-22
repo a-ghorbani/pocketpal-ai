@@ -111,10 +111,6 @@ export class CascadeVoiceEngine implements VoiceEngine {
       if (!text) {
         return 'empty';
       }
-      if (!asrStore.spokenLanguage && transcript.language) {
-        asrStore.setSpokenLanguage(transcript.language);
-      }
-
       on.transcribed(text);
       const stopWatching = when(
         () => {
