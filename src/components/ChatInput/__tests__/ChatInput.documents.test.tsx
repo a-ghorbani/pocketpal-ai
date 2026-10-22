@@ -306,4 +306,25 @@ describe('ChatInput documents', () => {
       }),
     ]);
   });
+
+  it('re-enables auto-release before the first import starts', async () => {
+    (pick as jest.Mock).mockResolvedValueOnce([picked('report.pdf')]);
+    let enabledBeforeImport: boolean | undefined;
+    importDocument.mockImplementationOnce(async () => {
+      enabledBeforeImport = (
+        modelStore.enableAutoRelease as jest.Mock
+      ).mock.calls.some(([reason]) => reason === 'document-pick');
+      return {status: 'ready', ref: ref('r1')};
+    });
+    const utils = render(<Harness />);
+    openMenu(utils);
+    await waitFor(() => utils.getByTestId('attach-document'));
+
+    await act(async () => {
+      fireEvent.press(utils.getByTestId('attach-document'));
+    });
+
+    expect(enabledBeforeImport).toBe(true);
+    expect(modelStore.enableAutoRelease).toHaveBeenCalledTimes(1);
+  });
 });

@@ -465,21 +465,13 @@ export const ChatInput = observer(
       if (!onDocumentsChange) {
         return;
       }
+      let picked: Awaited<ReturnType<typeof pick>>;
       modelStore.disableAutoRelease('document-pick');
       try {
-        const picked = await pick({
+        picked = await pick({
           allowMultiSelection: true,
           type: [types.allFiles],
         });
-        const room = Math.max(0, MAX_DOCUMENTS_PER_MESSAGE - documents.length);
-        picked
-          .slice(room)
-          .forEach(file => warnRefused(file.name ?? '', 'too_many_files'));
-        await Promise.all(
-          picked
-            .slice(0, room)
-            .map(file => importPicked(file, onDocumentsChange)),
-        );
       } catch (error) {
         if (
           !(
@@ -489,9 +481,19 @@ export const ChatInput = observer(
         ) {
           console.error('Error picking documents:', error);
         }
+        return;
       } finally {
         modelStore.enableAutoRelease('document-pick');
       }
+      const room = Math.max(0, MAX_DOCUMENTS_PER_MESSAGE - documents.length);
+      picked
+        .slice(room)
+        .forEach(file => warnRefused(file.name ?? '', 'too_many_files'));
+      await Promise.all(
+        picked
+          .slice(0, room)
+          .map(file => importPicked(file, onDocumentsChange)),
+      );
     };
 
     const handleRemoveDocument = (key: string) =>
