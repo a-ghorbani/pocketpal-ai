@@ -9,13 +9,18 @@ import {voiceModeStore} from '../../store';
 export const shippedPlusFeatures = (): PlusFeature[] =>
   shippedFeatures(PLUS_FEATURES, shipOverride.get());
 
-const belowDeviceGate = (): ReadonlySet<string> =>
-  new Set(voiceModeStore.deviceSupported ? [] : ['handsFreeVoice']);
+const needsOptIn = (): ReadonlySet<string> =>
+  new Set(
+    voiceModeStore.deviceSupported ||
+    voiceModeStore.userVoiceModeOverride === true
+      ? []
+      : ['handsFreeVoice'],
+  );
 
 export const plusFeatureRows = (): PlusFeatureRow[] =>
   featureRows(
     PLUS_FEATURES,
     deviceRam.ramBytes,
     shipOverride.get(),
-    belowDeviceGate(),
+    needsOptIn(),
   );
