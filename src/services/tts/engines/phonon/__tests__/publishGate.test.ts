@@ -33,7 +33,7 @@ describe('Phonon release pins', () => {
 
   it('depends on published versions of the speech library and the Phonon add-on', () => {
     const {dependencies} = JSON.parse(read('package.json'));
-    expect(dependencies['@pocketpalai/react-native-speech']).toBe('2.7.0');
+    expect(dependencies['@pocketpalai/react-native-speech']).toBe('2.8.0');
     expect(dependencies['@pocketpalai/react-native-speech-phonon']).toMatch(
       /^\d+\.\d+\.\d+$/,
     );
