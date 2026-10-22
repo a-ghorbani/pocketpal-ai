@@ -602,3 +602,33 @@ describe('ChatView predicted document modes', () => {
     store.editingMessageId = null;
   });
 });
+
+describe('ChatView composer merge', () => {
+  it('restoring an undone send does not duplicate a chip', async () => {
+    const report = ref('restored');
+    let settle!: (undone: UndoneSend | undefined) => void;
+    const chat = renderChat();
+    chat.onSendPress.mockImplementationOnce(
+      () =>
+        new Promise<UndoneSend | undefined>(resolve => {
+          settle = resolve;
+        }),
+    );
+    await chat.attach(report);
+    chat.type('Summarise');
+    await act(async () => {
+      chat.pressSend();
+    });
+    await chat.attach(report);
+
+    await act(async () => {
+      settle({
+        message: {type: 'text', text: 'Summarise', documents: [report]},
+        sessionId: 'session-1',
+      });
+    });
+
+    expect(chat.screen.getAllByText('restored.pdf')).toHaveLength(1);
+    expect(chat.input().props.value).toBe('Summarise');
+  });
+});

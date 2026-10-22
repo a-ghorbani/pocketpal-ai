@@ -700,6 +700,47 @@ export const ChatView = observer(
     const previousChatMessages = usePrevious(chatMessages);
 
     // ============ MESSAGE INPUT HANDLERS ============
+    /** Adds content to the composer; chips sharing a document id keep the first. */
+    const mergeIntoComposer = React.useCallback(
+      (
+        incoming: {text: string; images?: string[]; documents?: DocumentRef[]},
+        order: 'incomingFirst' | 'pendingFirst',
+      ) => {
+        const incomingFirst = order === 'incomingFirst';
+        setInputText(pending =>
+          incomingFirst
+            ? prependText(incoming.text, pending)
+            : pending
+              ? prependText(pending, incoming.text)
+              : incoming.text,
+        );
+        setInputImages(pending => {
+          const images = incoming.images ?? [];
+          return incomingFirst
+            ? [...images, ...pending]
+            : [...pending, ...images];
+        });
+        updateComposerDocuments(pending => {
+          const chips = readyChips(incoming.documents);
+          const ordered = incomingFirst
+            ? [...chips, ...pending]
+            : [...pending, ...chips];
+          const seen = new Set<string>();
+          return ordered.filter(chip => {
+            if (!chip.ref) {
+              return true;
+            }
+            if (seen.has(chip.ref.id)) {
+              return false;
+            }
+            seen.add(chip.ref.id);
+            return true;
+          });
+        });
+      },
+      [updateComposerDocuments],
+    );
+
     const restoreUndone = React.useCallback(
       ({message, sessionId, verdict}: UndoneSend) => {
         const isOpenChat =
@@ -714,12 +755,14 @@ export const ChatView = observer(
           if (verdict) {
             setBudgetVerdict(verdict);
           }
-          setInputText(prev => prependText(message.text, prev));
-          setInputImages(prev => [...(message.imageUris ?? []), ...prev]);
-          updateComposerDocuments(prev => [
-            ...readyChips(message.documents),
-            ...prev,
-          ]);
+          mergeIntoComposer(
+            {
+              text: message.text,
+              images: message.imageUris,
+              documents: message.documents,
+            },
+            'incomingFirst',
+          );
         } else {
           chatSessionStore.saveDraft(
             sessionId,
@@ -727,7 +770,7 @@ export const ChatView = observer(
           );
         }
       },
-      [updateComposerDocuments],
+      [mergeIntoComposer],
     );
 
     const wrappedOnSendPress = React.useCallback(
