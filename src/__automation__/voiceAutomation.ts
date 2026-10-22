@@ -1,4 +1,6 @@
-import {runInAction} from 'mobx';
+import {Platform} from 'react-native';
+
+import {observable, runInAction} from 'mobx';
 
 import {ASR_TIERS, memoryBudget, readDeviceMemory} from '../services/asr';
 import {TTS_ENGINE_RUNTIME_BYTES} from '../services/tts';
@@ -12,6 +14,7 @@ import {
 import type {VoiceError, VoicePhase} from '../store';
 import {assistant, user} from '../utils/chat';
 import type {MessageType} from '../utils/types';
+import {clearVoiceTrace, dumpVoiceTrace} from '../utils/voiceTrace';
 
 /**
  * E2E-only voice-mode driver. Forces the voice-mode stores into the states a
@@ -30,8 +33,16 @@ import type {MessageType} from '../utils/types';
  *   setup::incomplete|complete   whisper base not installed / installed
  *   memory::tight|wont-fit       the chat model's size for that band
  *   seed::spoken        a spoken question and answer in the current chat
+ *   trace::dump         the voice trace, one event per line, into the
+ *                       `voice-trace-result` element's label and
+ *                       voice-trace.txt (iOS Documents, Android external files)
+ *   trace::clear        empties the voice trace
  */
 const VOICE_AUTOMATION_STATE = 'VOICE_AUTOMATION_STATE';
+const VOICE_TRACE_FILE = 'voice-trace.txt';
+
+/** The last `trace::dump`, rendered by `VoiceAdapter`. */
+export const voiceTraceDump = observable.box('');
 
 const STATES: Record<
   string,
@@ -77,7 +88,23 @@ export async function runVoiceCommand(cmd: string): Promise<void> {
     await forceMemoryBand(arg === 'wont-fit');
   } else if (verb === 'seed' && arg === 'spoken') {
     await seedSpokenTurn();
+  } else if (verb === 'trace' && arg === 'dump') {
+    await dumpTrace();
+  } else if (verb === 'trace' && arg === 'clear') {
+    clearVoiceTrace();
+    runInAction(() => voiceTraceDump.set(''));
   }
+}
+
+async function dumpTrace(): Promise<void> {
+  const trace = dumpVoiceTrace();
+  runInAction(() => voiceTraceDump.set(trace));
+  const RNFS = require('@dr.pogodin/react-native-fs');
+  const dir =
+    Platform.OS === 'android'
+      ? RNFS.ExternalDirectoryPath
+      : RNFS.DocumentDirectoryPath;
+  await RNFS.writeFile(`${dir}/${VOICE_TRACE_FILE}`, trace, 'utf8');
 }
 
 async function forceMemoryBand(wontFit: boolean): Promise<void> {

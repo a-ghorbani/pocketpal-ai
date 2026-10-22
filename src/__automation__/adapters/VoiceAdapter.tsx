@@ -1,7 +1,9 @@
 import React, {useCallback, useState} from 'react';
 import {View, TextInput, Text, StyleSheet} from 'react-native';
 
-import {runVoiceCommand} from '../voiceAutomation';
+import {observer} from 'mobx-react';
+
+import {runVoiceCommand, voiceTraceDump} from '../voiceAutomation';
 
 /**
  * Hidden component that drives voice-mode states on Android, where the
@@ -9,9 +11,10 @@ import {runVoiceCommand} from '../voiceAutomation';
  * as `pocketpal://voice?cmd=...`.
  *
  * Protocol: setValue('<verb>::<arg>') runs one command; the result shows
- * `ok` or the error.
+ * `ok` or the error. `voice-trace-result` holds the last `trace::dump` on
+ * both platforms.
  */
-export const VoiceAdapter: React.FC = () => {
+export const VoiceAdapter: React.FC = observer(() => {
   const [resultData, setResultData] = useState('');
 
   const handleChangeText = useCallback((text: string) => {
@@ -36,9 +39,16 @@ export const VoiceAdapter: React.FC = () => {
         style={styles.input}>
         {resultData}
       </Text>
+      <Text
+        testID="voice-trace-result"
+        accessibilityLabel={voiceTraceDump.get()}
+        numberOfLines={1}
+        style={styles.input}>
+        {voiceTraceDump.get()}
+      </Text>
     </View>
   );
-};
+});
 
 const styles = StyleSheet.create({
   container: {

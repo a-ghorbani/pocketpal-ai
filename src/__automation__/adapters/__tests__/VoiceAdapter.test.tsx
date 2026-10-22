@@ -1,12 +1,15 @@
 import React from 'react';
 
-import {render, fireEvent, waitFor} from '../../../../jest/test-utils';
+import {runInAction} from 'mobx';
+
+import {act, render, fireEvent, waitFor} from '../../../../jest/test-utils';
 
 import {VoiceAdapter} from '../VoiceAdapter';
-import {runVoiceCommand} from '../../voiceAutomation';
+import {runVoiceCommand, voiceTraceDump} from '../../voiceAutomation';
 
 jest.mock('../../voiceAutomation', () => ({
   runVoiceCommand: jest.fn(),
+  voiceTraceDump: require('mobx').observable.box(''),
 }));
 
 describe('VoiceAdapter', () => {
@@ -49,6 +52,18 @@ describe('VoiceAdapter', () => {
     expect(runVoiceCommand).not.toHaveBeenCalled();
     expect(getByTestId('voice-command-result').props.accessibilityLabel).toBe(
       '',
+    );
+  });
+
+  it('shows the last trace dump', () => {
+    const {getByTestId} = render(<VoiceAdapter />);
+
+    act(() => {
+      runInAction(() => voiceTraceDump.set('12 phase to=thinking'));
+    });
+
+    expect(getByTestId('voice-trace-result').props.accessibilityLabel).toBe(
+      '12 phase to=thinking',
     );
   });
 });

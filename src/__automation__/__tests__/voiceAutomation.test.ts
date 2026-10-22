@@ -13,7 +13,10 @@ import {
   voiceModeStore,
 } from '../../store';
 
-import {runVoiceCommand} from '../voiceAutomation';
+import * as RNFS from '@dr.pogodin/react-native-fs';
+
+import {vtrace} from '../../utils/voiceTrace';
+import {runVoiceCommand, voiceTraceDump} from '../voiceAutomation';
 
 describe('runVoiceCommand', () => {
   beforeEach(() => {
@@ -103,5 +106,30 @@ describe('runVoiceCommand', () => {
       ['text', true],
       ['assistant_turn', true],
     ]);
+  });
+
+  it('trace::dump publishes the trace and writes it to a file', async () => {
+    Platform.OS = 'ios';
+    await runVoiceCommand('trace::clear');
+    vtrace('phase', {to: 'thinking'});
+
+    await runVoiceCommand('trace::dump');
+
+    expect(voiceTraceDump.get()).toMatch(/^\d+ phase to=thinking$/);
+    expect(RNFS.writeFile).toHaveBeenCalledWith(
+      expect.stringMatching(/\/voice-trace\.txt$/),
+      voiceTraceDump.get(),
+      'utf8',
+    );
+  });
+
+  it('trace::clear empties the trace and the published dump', async () => {
+    vtrace('tap', {phase: 'listening'});
+    await runVoiceCommand('trace::dump');
+
+    await runVoiceCommand('trace::clear');
+    await runVoiceCommand('trace::dump');
+
+    expect(voiceTraceDump.get()).toBe('');
   });
 });

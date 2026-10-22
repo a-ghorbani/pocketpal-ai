@@ -83,8 +83,38 @@ by deep link only. See `BenchmarkRunnerScreen.tsx` as reference.
 | Adapter | Purpose | Commands |
 |---------|---------|----------|
 | `MemoryAdapter` | Memory profile snapshots for the `memory-profile` spec | `snap::<label>`, `clear::snapshots`, `read::snapshots` |
-| `VoiceAdapter` | Forces voice-mode states on Android for visual captures | `unlock::on\|off\|plus`, `gate::on\|off`, `state::listening\|muted\|thinking\|speaking\|error\|bar\|closed`, `setup::incomplete\|complete`, `memory::tight\|wont-fit`, `seed::spoken` |
+| `VoiceAdapter` | Forces voice-mode states on Android for visual captures | `unlock::on\|off\|plus`, `gate::on\|off`, `state::listening\|muted\|thinking\|speaking\|error\|bar\|closed`, `setup::incomplete\|complete`, `memory::tight\|wont-fit`, `seed::spoken`, `trace::dump\|clear` (see Voice trace) |
 | `IapAdapter` | Scripts the in-app purchase `FakeStore` on Android for the `iap-*` specs | `api::<base>`, `products::<id>=<price>\|...`, `next::<outcome>`, `approve_pending`, `decline_pending`, `refund::<id>`, `entitle::<id>`, `unfinished::<id>`, `unavailable`, `plus_ship::<featureId>[,<featureId>]\|none` (marks Plus features shipped; `reset` clears it), `reset`, `read` |
+
+### Voice trace
+
+Dev and E2E builds record voice-mode events in a 300-line ring buffer
+(`src/utils/voiceTrace.ts`); production builds record nothing. Each line is
+`<ms since the session opened> <event> key=value ...`: phase changes with
+their reason, endpointer and VAD results, cloud taps, interrupts and their
+source, mic open/close/watchdog, audio interruptions, app state, lease grants
+and stops, run results with token counts, and the TTS stream (open, chunk
+start, finalize, stop and its caller). In a Release E2E build the speech
+library's `[EngineStream]` lines (chunk played, session end) are copied in as
+`lib` events. Dev builds also log each line as `[voiceTrace]`.
+
+- `trace::clear` empties it; send it before a run.
+- `trace::dump` puts the trace in the label of `voice-trace-result` and
+  writes `voice-trace.txt` (iOS: app Documents; Android: external files dir).
+
+On iOS, after the turns:
+
+```ts
+await driver.execute('mobile: deepLink', {
+  url: 'pocketpal://voice?cmd=trace%3A%3Adump',
+  bundleId: 'ai.pocketpal',
+});
+const trace = await $('~voice-trace-result').getAttribute('label');
+```
+
+The file is the fallback: `xcrun devicectl device copy from --device <udid>
+--domain-type appDataContainer --domain-identifier ai.pocketpal --source
+Documents/voice-trace.txt --destination voice-trace.txt`.
 
 ## Screens
 
