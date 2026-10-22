@@ -138,6 +138,13 @@ const pathOfLocalUri = (uri: string): string =>
 const parentDir = (path: string): string =>
   path.slice(0, path.lastIndexOf('/'));
 
+/** iOS reports the container under /var or /private/var for the same dir. */
+const withoutPrivate = (path: string): string =>
+  path.replace(/^\/private(?=\/)/, '');
+
+const isStagingDir = (dir: string): boolean =>
+  withoutPrivate(parentDir(dir)) === withoutPrivate(RNFS.CachesDirectoryPath);
+
 const copyIntoStore = async (
   picked: PickedDocument,
   fileName: string,
@@ -159,7 +166,12 @@ const copyIntoStore = async (
     throw error instanceof Refusal ? error : new Refusal('copy_failed');
   } finally {
     if (staged) {
-      await RNFS.unlink(parentDir(staged)).catch(() => {});
+      const stagingDir = parentDir(staged);
+      if (isStagingDir(stagingDir)) {
+        await RNFS.unlink(stagingDir).catch(() => {});
+      } else {
+        console.warn('[documents] staging dir outside caches left in place');
+      }
     }
   }
 };
@@ -293,7 +305,7 @@ export const importDocument = async (
 
     await RNFS.mkdir(assertContained(docDir(id)));
     const path = sourceFile(id, extension);
-    await copyIntoStore(picked, stagedName, path, virtual?.mimeType);
+    await copyIntoStore(picked, `source.${extension}`, path, virtual?.mimeType);
 
     const byteSize = Number((await RNFS.stat(path)).size);
     if (byteSize > MAX_DOCUMENT_BYTES) {

@@ -249,7 +249,7 @@ describe('importDocument', () => {
       );
       expect(ref.kind).toBe('pdf');
       expect(keepCopy.mock.calls[0][0].files[0]).toMatchObject({
-        fileName: 'Quarterly plan.pdf',
+        fileName: 'source.pdf',
         convertVirtualFileToType: 'application/pdf',
       });
     });
@@ -264,7 +264,7 @@ describe('importDocument', () => {
         ),
       );
       expect(ref.kind).toBe('text');
-      expect(keepCopy.mock.calls[0][0].files[0].fileName).toBe('Sheet.txt');
+      expect(keepCopy.mock.calls[0][0].files[0].fileName).toBe('source.txt');
     });
 
     it('refuses when neither is offered', async () => {
@@ -541,5 +541,60 @@ describe('invalid document ids', () => {
       {...badRef(docId('ranged')), pageRange: {from: 1.5, to: 2}},
     ]);
     expect([...texts.values()]).toEqual(['missing', 'missing']);
+  });
+});
+
+describe('picker staging', () => {
+  const stageAt = (dir: string) =>
+    keepCopy.mockImplementationOnce(async ({files: toCopy}) => {
+      dirs.add(dir);
+      return toCopy.map((file: {uri: string; fileName: string}) => {
+        const staged = `${dir}/${file.fileName}`;
+        files.set(staged, files.get(file.uri) ?? '');
+        return {
+          status: 'success',
+          sourceUri: file.uri,
+          localUri: `file://${encodeURI(staged)}`,
+        };
+      });
+    });
+
+  it('stages under a fixed name, never the picked display name', async () => {
+    pdfPages = ['text'];
+    ready(await importDocument(picked('../../evil name.pdf', '%PDF')));
+    expect(keepCopy.mock.calls[0][0].files[0].fileName).toBe('source.pdf');
+  });
+
+  it('skips staging cleanup outside the caches dir and still imports', async () => {
+    pdfPages = ['text'];
+    const warn = jest.spyOn(console, 'warn').mockImplementation(() => {});
+    stageAt('/somewhere/else/uuid');
+
+    const ref = ready(await importDocument(picked('a.pdf', '%PDF')));
+
+    expect(ref.kind).toBe('pdf');
+    expect(fs.unlink).not.toHaveBeenCalledWith('/somewhere/else/uuid');
+    expect(warn).toHaveBeenCalled();
+    warn.mockRestore();
+  });
+
+  it('cleans staging when only one side has the /private prefix', async () => {
+    pdfPages = ['text'];
+    const caches = (RNFS as any).CachesDirectoryPath;
+    stageAt(`/private${caches}/uuid-a`);
+    ready(await importDocument(picked('a.pdf', '%PDF')));
+    expect(fs.unlink).toHaveBeenCalledWith(`/private${caches}/uuid-a`);
+
+    Object.defineProperty(RNFS, 'CachesDirectoryPath', {
+      value: `/private${caches}`,
+      configurable: true,
+    });
+    stageAt(`${caches}/uuid-b`);
+    ready(await importDocument(picked('b.pdf', '%PDF')));
+    expect(fs.unlink).toHaveBeenCalledWith(`${caches}/uuid-b`);
+    Object.defineProperty(RNFS, 'CachesDirectoryPath', {
+      value: caches,
+      configurable: true,
+    });
   });
 });
