@@ -570,6 +570,7 @@ export function useVoiceMode({
   useFocusEffect(
     useCallback(
       () => () => {
+        setSheet(null);
         controller.exit();
       },
       [controller],

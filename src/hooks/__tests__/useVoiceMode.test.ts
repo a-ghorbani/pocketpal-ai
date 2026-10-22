@@ -246,6 +246,16 @@ describe('useVoiceMode', () => {
       ).not.toHaveBeenCalled();
     });
 
+    it('leaving the screen closes the teaser', async () => {
+      voiceModeStore.setUnlockOverride(false);
+      const {enter, hook} = renderVoiceMode();
+      await enter();
+
+      act(() => mockBlur?.());
+
+      expect(hook.result.current.sheet).toBeNull();
+    });
+
     it('closing the teaser leaves the composer alone', async () => {
       voiceModeStore.setUnlockOverride(false);
       const {enter, hook} = renderVoiceMode();
