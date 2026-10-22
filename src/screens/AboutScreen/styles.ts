@@ -130,6 +130,10 @@ export const createStyles = (theme: Theme, insets: EdgeInsets) =>
       alignItems: 'center',
       gap: theme.spacing.default / 2,
     },
+    legalHit: {
+      minHeight: 44,
+      justifyContent: 'center',
+    },
     legalLink: {
       ...theme.fonts.bodySmall,
       color: theme.colors.onSurfaceVariant,

@@ -1,5 +1,12 @@
 import React, {useContext, useMemo, useState} from 'react';
-import {View, ScrollView, TouchableOpacity, Alert, Linking} from 'react-native';
+import {
+  View,
+  ScrollView,
+  TouchableOpacity,
+  Alert,
+  Linking,
+  Pressable,
+} from 'react-native';
 
 import DeviceInfo from 'react-native-device-info';
 import Clipboard from '@react-native-clipboard/clipboard';
@@ -40,19 +47,29 @@ export const AboutScreen: React.FC = () => {
     {},
   );
 
-  const legalLinks = [
+  const legalLinks: {
+    id: 'privacy' | 'terms' | 'notices';
+    label: string;
+    role: 'link' | 'button';
+    onPress: () => void;
+    testID?: string;
+  }[] = [
     {
+      id: 'privacy',
       label: l10n.about.privacyPolicy,
+      role: 'link',
       onPress: () => Linking.openURL('https://pocketpal.dev/privacy-policy'),
-      testID: undefined,
     },
     {
+      id: 'terms',
       label: l10n.about.termsOfService,
+      role: 'link',
       onPress: () => Linking.openURL('https://pocketpal.dev/terms'),
-      testID: undefined,
     },
     {
+      id: 'notices',
       label: l10n.about.openSourceNotices,
+      role: 'button',
       onPress: () => setShowNotices(true),
       testID: 'about-open-source-notices',
     },
@@ -190,7 +207,7 @@ export const AboutScreen: React.FC = () => {
           <View style={styles.legalRow}>
             {legalLinks.map((link, i) => (
               <View
-                key={link.label}
+                key={link.id}
                 style={styles.legalItem}
                 testID={`about-legal-item-${i}`}
                 onLayout={e => {
@@ -199,12 +216,13 @@ export const AboutScreen: React.FC = () => {
                     tops[i] === y ? tops : {...tops, [i]: y},
                   );
                 }}>
-                <Text
-                  style={styles.legalLink}
+                <Pressable
+                  accessibilityRole={link.role}
                   onPress={link.onPress}
+                  style={styles.legalHit}
                   testID={link.testID}>
-                  {link.label}
-                </Text>
+                  <Text style={styles.legalLink}>{link.label}</Text>
+                </Pressable>
                 {i < legalLinks.length - 1 ? (
                   <Text
                     style={[
