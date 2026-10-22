@@ -41,6 +41,7 @@ import {
   visibleStepContent,
 } from '../utils/chat';
 import {acquireKeepAwake} from '../utils/keepAwake';
+import {vtrace} from '../utils/voiceTrace';
 import {
   toApiCompletionParams,
   ApiCompletionParams,
@@ -516,6 +517,15 @@ async function applyEventToStore(
       // (not in the runner) because timings are an observability
       // concern of the hook, not the runner.
       const finalResult = event.result.finalResult;
+      vtrace('run.done', {
+        stopped: ctx.stopped,
+        tokens: finalResult.tokens_predicted,
+        chars: finalResult.content?.length,
+        eos: finalResult.stopped_eos,
+        limit: finalResult.stopped_limit,
+        word: finalResult.stopped_word,
+        interrupted: finalResult.interrupted,
+      });
       const snapshot = deriveSnapshotFromResult(
         finalResult,
         modelStore.activeModel?.origin === ModelOrigin.REMOTE,
@@ -562,7 +572,7 @@ async function applyEventToStore(
           playback.mode === 'streaming' &&
           playback.messageId === ctx.messageId
         ) {
-          ttsStore.stop().catch(ttsErr => {
+          ttsStore.stop('run_stopped').catch(ttsErr => {
             console.warn('[useChatSession] TTS stop on abort failed:', ttsErr);
           });
         }
@@ -681,7 +691,9 @@ export const useChatSession = (
       return;
     }
     leaseRef.current = lease;
-    if (stopsBeforeLease.current !== stopsAtSend) {
+    const stopsWhileWaiting = stopsBeforeLease.current - stopsAtSend;
+    vtrace('lease.grant', {spoken: !!opts.spoken, stopsWhileWaiting});
+    if (stopsWhileWaiting !== 0) {
       lease.abort();
     }
 
@@ -953,6 +965,7 @@ export const useChatSession = (
       }
     } catch (error) {
       console.error('Completion error:', error);
+      vtrace('run.error', {aborted: lease.signal.aborted});
       // Send stays blocked until an undone turn's rows are gone.
       if (!(error instanceof RemoteModelRequestWithdrawnError)) {
         runUi.stop();
@@ -960,7 +973,7 @@ export const useChatSession = (
 
       // Stop any in-flight TTS — the completion errored, so buffered
       // audio should not keep playing.
-      ttsStore.stop().catch(ttsErr => {
+      ttsStore.stop('run_error').catch(ttsErr => {
         console.warn('[useChatSession] TTS stop on error failed:', ttsErr);
       });
 
@@ -1126,6 +1139,10 @@ export const useChatSession = (
   };
 
   const handleStopPress = async () => {
+    vtrace('stopPress', {
+      lease: !!leaseRef.current,
+      stopsBeforeLease: stopsBeforeLease.current,
+    });
     if (leaseRef.current) {
       leaseRef.current.abort();
     } else {
@@ -1133,7 +1150,7 @@ export const useChatSession = (
     }
     // Stop any in-flight TTS so buffered audio doesn't keep playing
     // after the user tapped Stop.
-    ttsStore.stop().catch(err => {
+    ttsStore.stop('stop_press').catch(err => {
       console.warn('[useChatSession] TTS stop on user-stop failed:', err);
     });
   };

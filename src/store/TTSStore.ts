@@ -4,7 +4,10 @@ import {makeAutoObservable, reaction, runInAction} from 'mobx';
 import {makePersistable} from 'mobx-persist-store';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import DeviceInfo from 'react-native-device-info';
-import type {SupertonicLanguage} from '@pocketpalai/react-native-speech';
+import type {
+  StreamProgressEvent,
+  SupertonicLanguage,
+} from '@pocketpalai/react-native-speech';
 
 import {
   getEngine,
@@ -29,6 +32,7 @@ import {
   pickThinkingPlaceholder,
 } from '../services/tts/thinkingStripper';
 import {VOICE_FIRST_CHUNK_HOLD_MS} from '../services/voice/constants';
+import {vtrace} from '../utils/voiceTrace';
 import {chatSessionStore} from './ChatSessionStore';
 
 /**
@@ -78,6 +82,7 @@ type VoiceStream = {
   messageId: string;
   held: string[] | null;
   holdTimer: ReturnType<typeof setTimeout> | null;
+  chars: number;
 };
 
 /**
@@ -278,7 +283,7 @@ export class TTSStore {
     this.sessionReactionDispose = reaction(
       () => chatSessionStore.activeSessionId,
       () => {
-        this.stop();
+        this.stop('session_change');
       },
     );
   }
@@ -291,7 +296,7 @@ export class TTSStore {
       // Only react to 'background' — 'inactive' fires for transient
       // interruptions (Control Center, incoming call sheet, notification
       // tap) that shouldn't tear down a 200+ MB engine.
-      this.stop()
+      this.stop('background')
         .then(() => ttsRuntime.release())
         .catch(err => {
           console.warn('[TTSStore] background release failed:', err);
@@ -430,9 +435,10 @@ export class TTSStore {
   /**
    * Stop any in-flight playback and reset state to idle.
    */
-  async stop(): Promise<void> {
+  async stop(by = 'other'): Promise<void> {
     const state = this.playbackState;
     const voice = this.currentVoice;
+    vtrace('tts.stop', {by, mode: state.mode});
     runInAction(() => {
       this.playbackState = {mode: 'idle'};
     });
@@ -580,7 +586,7 @@ export class TTSStore {
     // promise is passed to the streaming handle so it waits for the old
     // `Speech.stop()` to complete before starting synthesis — prevents
     // the old stop flag from killing the new stream's first sentence.
-    const stopDone = this.stop().catch(err => {
+    const stopDone = this.stop('new_stream').catch(err => {
       console.warn('[TTSStore] stop before new stream failed:', err);
     });
 
@@ -605,6 +611,7 @@ export class TTSStore {
     runInAction(() => {
       this.playbackState = {mode: 'streaming', messageId, handle};
     });
+    vtrace('tts.open', {voice: !!voiceOpts, engine: voice.engine});
   }
 
   private openVoiceStream(messageId: string): StreamOptions | undefined {
@@ -618,6 +625,7 @@ export class TTSStore {
       messageId,
       held: this.holdFirstChunk ? [] : null,
       holdTimer: null,
+      chars: 0,
     };
     if (stream.held) {
       stream.holdTimer = setTimeout(
@@ -628,17 +636,25 @@ export class TTSStore {
     this.voiceStream = stream;
     return {
       firstChunk: 'clause',
-      onProgress: () => this.onVoiceProgress(messageId),
+      onProgress: event => this.onVoiceProgress(messageId, event),
     };
   }
 
-  private onVoiceProgress(messageId: string) {
+  private onVoiceProgress(messageId: string, event: StreamProgressEvent) {
+    vtrace('tts.chunk', {
+      i: event.chunkIndex,
+      chars: event.chunkText.length,
+      current: this.voiceStream?.messageId === messageId,
+    });
     if (this.voiceStream?.messageId === messageId) {
       this.voiceSpeechStarted = messageId;
     }
   }
 
   private appendReplyText(handle: StreamingHandle, text: string) {
+    if (this.voiceStream) {
+      this.voiceStream.chars += text.length;
+    }
     const held = this.voiceStream?.held;
     if (held) {
       held.push(text);
@@ -661,6 +677,7 @@ export class TTSStore {
     this.clearVoiceHold();
     const held = stream.held;
     stream.held = null;
+    vtrace('tts.unhold', {parts: held.length});
     if (state.mode !== 'streaming' || state.messageId !== messageId) {
       return;
     }
@@ -734,10 +751,15 @@ export class TTSStore {
         this.releaseHeldVoiceText(this.voiceStream.messageId);
       }
       const isVoiceReply = this.voiceStream?.messageId === messageId;
+      vtrace('tts.finalize', {
+        voice: isVoiceReply,
+        chars: this.voiceStream?.chars,
+      });
       state.handle
         .finalize()
         .catch(err => {
           console.warn('[TTSStore] finalize failed:', err);
+          vtrace('tts.finalize.fail', {err: String(err)});
           if (isVoiceReply) {
             runInAction(() => {
               this.voiceStreamFailed = messageId;
@@ -746,10 +768,11 @@ export class TTSStore {
         })
         .finally(() => {
           runInAction(() => {
-            if (
+            const owns =
               this.playbackState.mode === 'streaming' &&
-              this.playbackState.messageId === messageId
-            ) {
+              this.playbackState.messageId === messageId;
+            vtrace('tts.finalized', {owns});
+            if (owns) {
               this.playbackState = {mode: 'idle'};
               // Only reset stripper if this message still owns it —
               // a new message may have already set its own stripper.
