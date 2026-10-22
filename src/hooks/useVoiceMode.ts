@@ -150,15 +150,7 @@ class VoiceModeController {
       return;
     }
     this.actions = actions;
-    if (!voiceModeStore.isUnlocked) {
-      this.showSheet({kind: 'teaser'});
-      return;
-    }
-    if (!modelStore.activeModelId) {
-      actions.openModelPicker();
-      return;
-    }
-    if (modelStore.isContextLoading) {
+    if (this.entryBlocked()) {
       return;
     }
     if (!(await isSetupComplete())) {
@@ -170,6 +162,9 @@ class VoiceModeController {
 
   async checkMemoryAndEnter(): Promise<void> {
     await this.exiting;
+    if (this.entryBlocked()) {
+      return;
+    }
     const voice = ttsStore.currentVoice;
     if (!isVoiceModeVoice(voice)) {
       this.showSheet({kind: 'setup'});
@@ -186,6 +181,18 @@ class VoiceModeController {
     } else {
       this.showSheet({kind: 'memory', fit});
     }
+  }
+
+  private entryBlocked(): boolean {
+    if (!voiceModeStore.isUnlocked) {
+      this.showSheet({kind: 'teaser'});
+      return true;
+    }
+    if (!modelStore.activeModelId) {
+      this.actions.openModelPicker();
+      return true;
+    }
+    return modelStore.isContextLoading;
   }
 
   /**

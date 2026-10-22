@@ -389,6 +389,63 @@ describe('useVoiceMode', () => {
       expect(voiceModeStore.phase).toBe('listening');
     });
 
+    it.each([
+      [
+        'the model was ejected',
+        () => {
+          model.activeModelId = undefined;
+        },
+        1,
+      ],
+      [
+        'the model is still loading',
+        () => {
+          model.isContextLoading = true;
+        },
+        0,
+      ],
+    ])(
+      'does not enter after setup when %s meanwhile',
+      async (_case, arrange, pickerOpens) => {
+        runInAction(() => {
+          asrStore.downloadStates.base = 'not_installed';
+        });
+        const {enter, hook, engine} = renderVoiceMode();
+        await enter();
+
+        runInAction(() => {
+          asrStore.downloadStates.base = 'ready';
+          arrange();
+        });
+        await act(async () => {
+          await hook.result.current.setupDone();
+        });
+
+        expect(openModelPicker).toHaveBeenCalledTimes(pickerOpens);
+        expect(engine.prepare).not.toHaveBeenCalled();
+        expect(voiceModeStore.phase).toBe('closed');
+      },
+    );
+
+    it('shows the teaser instead of entering after setup when voice mode locked meanwhile', async () => {
+      runInAction(() => {
+        asrStore.downloadStates.base = 'not_installed';
+      });
+      const {enter, hook, engine} = renderVoiceMode();
+      await enter();
+
+      runInAction(() => {
+        asrStore.downloadStates.base = 'ready';
+      });
+      voiceModeStore.setUnlockOverride(false);
+      await act(async () => {
+        await hook.result.current.setupDone();
+      });
+
+      expect(hook.result.current.sheet).toEqual({kind: 'teaser'});
+      expect(engine.prepare).not.toHaveBeenCalled();
+    });
+
     it('enters a local model with a held first chunk, a keep-awake hold and an open mic', async () => {
       const {enter, engine} = renderVoiceMode();
 
