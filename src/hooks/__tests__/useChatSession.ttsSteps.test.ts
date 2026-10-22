@@ -623,4 +623,40 @@ describe('useChatSession — a spoken turn with several tool calls', () => {
     expect(ttsStore.onAssistantMessageComplete).not.toHaveBeenCalled();
     expect(ttsStore.play).not.toHaveBeenCalled();
   });
+
+  it('a run stopped without Stop (model switch) cancels its open stream and plays nothing', async () => {
+    await offerSearchTool();
+    talentRegistry.register({
+      ...searchTalent,
+      execute: (_args, ctx) =>
+        new Promise<TalentResult>(resolve => {
+          ctx?.signal?.addEventListener('abort', () =>
+            resolve({type: 'error', summary: 'cancelled'} as TalentResult),
+          );
+        }),
+    });
+    (ttsStore.onAssistantMessageStart as jest.Mock).mockImplementationOnce(
+      (messageId: string) => {
+        (ttsStore as any).playbackState = {mode: 'streaming', messageId};
+      },
+    );
+    scriptCompletion([
+      {tokens: ['Let me', 'Let me search.'], toolCalls: [searchCall('a')]},
+      {tokens: ['Never spoken.']},
+    ]);
+
+    const {sending} = sendSpoken();
+    await act(async () => {
+      await new Promise(resolve => setImmediate(resolve));
+    });
+    await act(async () => {
+      modelStore.abortActiveGeneration();
+      await sending();
+    });
+
+    expect(ttsStore.stop).toHaveBeenCalled();
+    expect(ttsStore.onAssistantMessageComplete).not.toHaveBeenCalled();
+    expect(ttsStore.play).not.toHaveBeenCalled();
+    (ttsStore as any).playbackState = {mode: 'idle'};
+  });
 });

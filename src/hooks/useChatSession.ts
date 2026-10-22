@@ -553,9 +553,19 @@ async function applyEventToStore(
       // Fire TTS auto-speak after the final text is observable. Store
       // enforces auto-speak / voice / idempotency gating internally.
       // A stopped run ends on whatever step it reached, often a tool-call
-      // step, so it speaks nothing more.
+      // step, so it speaks nothing more; a stop that bypassed
+      // handleStopPress (model switch, video Pal) still left its stream open.
       // Wrapped defensively — UI-path errors must not bubble.
       if (ctx.stopped) {
+        const playback = ttsStore.playbackState;
+        if (
+          playback.mode === 'streaming' &&
+          playback.messageId === ctx.messageId
+        ) {
+          ttsStore.stop().catch(ttsErr => {
+            console.warn('[useChatSession] TTS stop on abort failed:', ttsErr);
+          });
+        }
         return;
       }
       try {
