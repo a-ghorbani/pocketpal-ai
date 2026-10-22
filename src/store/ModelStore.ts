@@ -1162,28 +1162,37 @@ class ModelStore {
       const model = this.models.find(
         m => m.id === this.lastAutoReleasedModelId && m.isDownloaded,
       );
+      this.clearAutoReleaseFlags();
       if (model) {
+        this.pendingModelId = model.id;
+        await this.contextOperationMutex;
+        if (this.pendingModelId !== model.id || this.wasAutoReleased) {
+          return;
+        }
         console.log('Reloading auto-released model:', model.id);
         await this.initContext(model);
       }
-      this.clearAutoReleaseFlags();
     }
   };
 
   handleAppStateChange = async (nextAppState: AppStateStatus) => {
-    console.log(`App state change: ${this.appState} → ${nextAppState}`);
+    const prevAppState = this.appState;
+    runInAction(() => {
+      this.appState = nextAppState;
+    });
+    console.log(`App state change: ${prevAppState} → ${nextAppState}`);
 
     if (
-      this.appState.match(/inactive|background/) &&
+      prevAppState.match(/inactive|background/) &&
       nextAppState === 'active'
     ) {
       // Coming to foreground - check if we need to reload auto-released model
       await this.checkAndReloadAutoReleasedModel();
       this.probeSessionCapsIfUnanswered();
-    } else if (this.appState === 'active' && nextAppState === 'inactive') {
+    } else if (prevAppState === 'active' && nextAppState === 'inactive') {
       // active → inactive: NO action (per requirements)
       console.log('Active → Inactive: No auto-release action');
-    } else if (this.appState === 'inactive' && nextAppState === 'background') {
+    } else if (prevAppState === 'inactive' && nextAppState === 'background') {
       // inactive → background: release if enabled
       // Skip for remote models — no native context to release, and
       // releaseContext() would clear the engine with no reload path.
@@ -1196,7 +1205,7 @@ class ModelStore {
         this.markAutoReleased(this.activeModelId);
         await this.releaseContext();
       }
-    } else if (this.appState === 'active' && nextAppState === 'background') {
+    } else if (prevAppState === 'active' && nextAppState === 'background') {
       // active → background: release if enabled (direct transition)
       // Skip for remote models — same reason as above.
       if (
@@ -1209,10 +1218,6 @@ class ModelStore {
         await this.releaseContext();
       }
     }
-
-    runInAction(() => {
-      this.appState = nextAppState;
-    });
   };
 
   /**
@@ -2591,6 +2596,7 @@ class ModelStore {
   };
 
   manualReleaseContext = async () => {
+    this.pendingModelId = null;
     await this.releaseContext(true); // Clear active model for manual release
   };
 
@@ -2702,6 +2708,8 @@ class ModelStore {
     if (!model.serverId || !model.remoteModelId) {
       throw new Error('Model is missing remote configuration');
     }
+
+    this.pendingModelId = model.id;
 
     // Release any existing context (local or remote)
     await this.releaseContext();

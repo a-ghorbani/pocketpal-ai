@@ -1725,5 +1725,48 @@
     "extraInProgress": "+{{count}} more in progress",
     "failedTitle": "Download didn't finish",
     "retry": "Retry"
+  },
+  "plus": {
+    "eyebrow": "PocketPal Plus",
+    "headline": "Push local AI further.",
+    "subline": "Extra tools for testing what a phone can really do, and a way to fund the work that keeps PocketPal free and open source.",
+    "unsupportedSubline": "Plus features don't run on this phone yet. You can still support PocketPal, and features that reach your phone later are included.",
+    "thanksHeadline": "Thanks for pushing local AI forward with us.",
+    "thanksSubline": "Plus is unlocked on this device. New Plus features appear here automatically.",
+    "features": {
+      "handsFreeVoice": "Hands-free voice",
+      "localApiServer": "Local API server"
+    },
+    "ready": "Ready",
+    "needsRam": "Needs {{gb}} GB RAM",
+    "comingSoon": "Coming soon",
+    "speedLine": "Speed depends on your phone and model.",
+    "inDevelopment": "Features in development may change or not ship.",
+    "priceCaption": "Pay what you like. Same features at every price.",
+    "buyError": "The purchase didn't go through. Try again.",
+    "getPlus": "Get Plus · {{price}}",
+    "getPlusAnyway": "Get Plus anyway · {{price}}",
+    "loading": "Loading",
+    "pending": "Pending",
+    "pendingTitle": "Waiting for the store to confirm your payment.",
+    "pendingBody": "Plus unlocks on its own once it goes through. You can close this screen.",
+    "unavailableTitle": "Purchases aren't available right now.",
+    "unavailableBody": "The store could not be reached. Try again later, or restore a past purchase.",
+    "done": "Done",
+    "oneTimePurchase": "One-time purchase",
+    "restore": "Restore",
+    "openSource": "Open source ↗",
+    "licence": "One-time purchase of a licence to use Plus.",
+    "terms": "Terms",
+    "appleMediaTerms": "Apple Media Services Terms",
+    "noPurchaseFound": "No Plus purchase found.",
+    "restoreFailed": "Couldn't reach the store. Try again.",
+    "sidebar": {
+      "title": "PocketPal Plus",
+      "unlocked": "Unlocked",
+      "subtitleOne": "{{first}}",
+      "subtitleTwo": "{{first}}, {{second}}",
+      "subtitleMore": "{{first}}, {{second}} & more"
+    }
   }
 }
