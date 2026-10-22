@@ -1,5 +1,5 @@
-import React, {useContext, useRef, useState} from 'react';
-import {StyleSheet, View} from 'react-native';
+import React, {useContext, useEffect, useRef, useState} from 'react';
+import {AppState, StyleSheet, View} from 'react-native';
 
 import {observer} from 'mobx-react';
 import {Button, ProgressBar, Text} from 'react-native-paper';
@@ -17,6 +17,7 @@ import {
 import {isVoiceModeVoice} from '../../services/voice';
 import {
   ensureMicPermission,
+  isMicGranted,
   openMicSettings,
   type MicPermissionResult,
 } from '../../utils/asrMicPermission';
@@ -46,6 +47,28 @@ export const VoiceSetupSheet: React.FC<VoiceSetupSheetProps> = observer(
     const [busy, setBusy] = useState(false);
     const visible = useRef(isVisible);
     visible.current = isVisible;
+
+    useEffect(() => {
+      if (!isVisible) {
+        return;
+      }
+      let active = true;
+      const recheckMic = async () => {
+        if ((await isMicGranted()) && active) {
+          setMic('granted');
+        }
+      };
+      recheckMic();
+      const subscription = AppState.addEventListener('change', state => {
+        if (state === 'active') {
+          recheckMic();
+        }
+      });
+      return () => {
+        active = false;
+        subscription.remove();
+      };
+    }, [isVisible]);
 
     const sttState = asrStore.downloadStates.base;
     const voice = ttsStore.currentVoice;

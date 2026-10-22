@@ -1,4 +1,5 @@
 import React from 'react';
+import {AppState} from 'react-native';
 
 import {runInAction} from 'mobx';
 
@@ -8,6 +9,7 @@ import {ASR_INSUFFICIENT_STORAGE} from '../../../services/asr';
 import {asrStore, ttsStore} from '../../../store';
 import {
   ensureMicPermission,
+  isMicGranted,
   openMicSettings,
 } from '../../../utils/asrMicPermission';
 
@@ -25,8 +27,19 @@ jest.mock('../../Sheet', () => {
 
 jest.mock('../../../utils/asrMicPermission', () => ({
   ensureMicPermission: jest.fn(),
+  isMicGranted: jest.fn(),
   openMicSettings: jest.fn(),
 }));
+
+const appStateHandlers: Array<(state: string) => void> = [];
+jest
+  .spyOn(AppState, 'addEventListener')
+  .mockImplementation((event: string, handler: any) => {
+    if (event === 'change') {
+      appStateHandlers.push(handler);
+    }
+    return {remove: jest.fn()} as any;
+  });
 
 const strings = l10n.en.voiceMode;
 const onDone = jest.fn();
@@ -40,6 +53,8 @@ const renderSheet = () =>
 describe('VoiceSetupSheet', () => {
   beforeEach(() => {
     (ensureMicPermission as jest.Mock).mockResolvedValue('granted');
+    (isMicGranted as jest.Mock).mockResolvedValue(false);
+    appStateHandlers.length = 0;
     runInAction(() => {
       asr.downloadStates.base = 'not_installed';
       asr.downloadProgress.base = 0;
@@ -172,5 +187,54 @@ describe('VoiceSetupSheet', () => {
 
     expect(await findByText(strings.micDenied)).toBeTruthy();
     expect(onDone).not.toHaveBeenCalled();
+  });
+
+  describe('a mic granted in Settings', () => {
+    const blockMic = async () => {
+      runInAction(() => {
+        asr.downloadStates.base = 'ready';
+      });
+      (ensureMicPermission as jest.Mock).mockResolvedValue('blocked');
+      const view = render(
+        <VoiceSetupSheet isVisible onClose={onClose} onDone={onDone} />,
+      );
+      fireEvent.press(view.getByTestId('voice-setup-continue'));
+      await view.findByTestId('voice-setup-open-settings');
+      return view;
+    };
+
+    it('brings Continue back when the app returns to the foreground', async () => {
+      const {findByTestId, queryByTestId} = await blockMic();
+
+      (isMicGranted as jest.Mock).mockResolvedValue(true);
+      await act(async () => {
+        appStateHandlers.forEach(handler => handler('active'));
+      });
+
+      expect(await findByTestId('voice-setup-continue')).toBeTruthy();
+      expect(queryByTestId('voice-setup-open-settings')).toBeNull();
+    });
+
+    it('brings Continue back when the sheet opens again', async () => {
+      const {rerender, findByTestId} = await blockMic();
+      rerender(
+        <VoiceSetupSheet isVisible={false} onClose={onClose} onDone={onDone} />,
+      );
+
+      (isMicGranted as jest.Mock).mockResolvedValue(true);
+      rerender(<VoiceSetupSheet isVisible onClose={onClose} onDone={onDone} />);
+
+      expect(await findByTestId('voice-setup-continue')).toBeTruthy();
+    });
+
+    it('keeps offering Settings while the mic stays blocked', async () => {
+      const {getByTestId} = await blockMic();
+
+      await act(async () => {
+        appStateHandlers.forEach(handler => handler('active'));
+      });
+
+      expect(getByTestId('voice-setup-open-settings')).toBeTruthy();
+    });
   });
 });
