@@ -56,7 +56,7 @@ export const ENGINE_META: Record<EngineId, EngineMeta> = {
   },
   phonon: {
     sizeMb: Platform.OS === 'ios' ? 164 : 64,
-    ramMb: 550,
+    ramMb: 500,
     voices: 8,
     accent: '#0E9F8E',
     gradientFrom: 'rgba(14, 159, 142, 0.14)',
