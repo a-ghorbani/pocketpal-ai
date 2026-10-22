@@ -92,9 +92,26 @@ export const DocumentChip: React.FC<DocumentChipProps> = ({
     },
   });
 
+  const handlers: Record<string, (() => void) | undefined> = {
+    activate: onPress,
+    remove: onRemove,
+    searchInstead: onSearchInstead,
+  };
+  const accessibilityActions = [
+    ...(onPress ? [{name: 'activate'}] : []),
+    ...(onRemove ? [{name: 'remove', label: t(strings.remove, {name})}] : []),
+    ...(onSearchInstead
+      ? [{name: 'searchInstead', label: strings.searchInstead}]
+      : []),
+  ];
+
   return (
     <Pressable
       style={styles.chip}
+      accessibilityActions={accessibilityActions}
+      onAccessibilityAction={event =>
+        handlers[event.nativeEvent.actionName]?.()
+      }
       onPress={onPress}
       disabled={!onPress}
       accessibilityRole={onPress ? 'button' : undefined}

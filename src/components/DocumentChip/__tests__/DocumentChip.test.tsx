@@ -132,4 +132,37 @@ describe('DocumentChip', () => {
       getByTestId('document-chip-search-instead'),
     );
   });
+
+  it('exposes remove and search-instead as accessibility actions', () => {
+    const onPress = jest.fn();
+    const onRemove = jest.fn();
+    const onSearchInstead = jest.fn();
+    const {getByTestId, rerender} = render(
+      <DocumentChip
+        name="report.pdf"
+        documentRef={pdf}
+        mode="full"
+        onPress={onPress}
+        onRemove={onRemove}
+        onSearchInstead={onSearchInstead}
+      />,
+    );
+    const chip = getByTestId('document-chip');
+    expect(chip.props.accessibilityActions).toEqual([
+      {name: 'activate'},
+      {name: 'remove', label: 'Remove report.pdf'},
+      {name: 'searchInstead', label: 'Search instead'},
+    ]);
+    for (const actionName of ['activate', 'remove', 'searchInstead']) {
+      fireEvent(chip, 'accessibilityAction', {nativeEvent: {actionName}});
+    }
+    expect(onPress).toHaveBeenCalledTimes(1);
+    expect(onRemove).toHaveBeenCalledTimes(1);
+    expect(onSearchInstead).toHaveBeenCalledTimes(1);
+
+    rerender(<DocumentChip name="report.pdf" documentRef={pdf} />);
+    expect(
+      getByTestId('document-chip').props.accessibilityActions ?? [],
+    ).toEqual([]);
+  });
 });
