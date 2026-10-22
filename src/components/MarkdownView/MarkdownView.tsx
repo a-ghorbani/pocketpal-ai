@@ -1,5 +1,5 @@
-import React, {useCallback, useContext, useMemo, useRef} from 'react';
-import {GestureResponderEvent, Linking, View} from 'react-native';
+import React, {useContext, useMemo} from 'react';
+import {Linking, View} from 'react-native';
 
 import {
   EnrichedMarkdownText,
@@ -15,7 +15,6 @@ import {normalizeBreakTags} from './normalizeBreakTags';
 import {createMarkdownStyle, MarkdownVariant} from './styles';
 
 import {L10nContext} from '../../utils';
-import type {PressPointEvent} from '../../utils/types';
 import {t} from '../../locales';
 
 interface MarkdownViewProps {
@@ -23,8 +22,6 @@ interface MarkdownViewProps {
   maxMessageWidth: number;
   selectable?: boolean;
   blockContextMenu?: boolean;
-  /** Called with the touch that started a long-press on a link */
-  onLinkLongPress?: (event: PressPointEvent) => void;
   streamingAnimation?: boolean;
   variant?: MarkdownVariant;
 }
@@ -45,13 +42,11 @@ export const MarkdownView: React.FC<MarkdownViewProps> = React.memo(
     maxMessageWidth,
     selectable,
     blockContextMenu = true,
-    onLinkLongPress,
     streamingAnimation,
     variant = 'body',
   }) => {
     const theme = useTheme();
     const l10n = useContext(L10nContext);
-    const touchStart = useRef<PressPointEvent | undefined>(undefined);
 
     const markdown = useMemo(
       () => normalizeBreakTags(markdownText),
@@ -94,23 +89,9 @@ export const MarkdownView: React.FC<MarkdownViewProps> = React.memo(
         },
       };
     }, [l10n]);
-    const recordTouch = useCallback(
-      ({nativeEvent: {pageX, pageY}}: GestureResponderEvent) => {
-        touchStart.current = {nativeEvent: {pageX, pageY}};
-      },
-      [],
-    );
-    const handleLinkLongPress = useCallback(() => {
-      if (touchStart.current) {
-        onLinkLongPress?.(touchStart.current);
-      }
-    }, [onLinkLongPress]);
 
     return (
-      <View
-        testID="markdown-content"
-        style={{maxWidth: maxMessageWidth}}
-        onTouchStart={onLinkLongPress ? recordTouch : undefined}>
+      <View testID="markdown-content" style={{maxWidth: maxMessageWidth}}>
         {!isEmptyContent(markdownText) && (
           <EnrichedMarkdownText
             markdown={markdown}
@@ -123,7 +104,6 @@ export const MarkdownView: React.FC<MarkdownViewProps> = React.memo(
             enableTaskListItemToggle={false}
             enableLinkPreview={false}
             onLinkPress={openLink}
-            onLinkLongPress={onLinkLongPress ? handleLinkLongPress : undefined}
             selectionMenuConfig={selectionMenuConfig}
             accessibilityLabels={accessibilityLabels}
           />
@@ -136,7 +116,6 @@ export const MarkdownView: React.FC<MarkdownViewProps> = React.memo(
     prevProps.maxMessageWidth === nextProps.maxMessageWidth &&
     prevProps.selectable === nextProps.selectable &&
     prevProps.blockContextMenu === nextProps.blockContextMenu &&
-    prevProps.onLinkLongPress === nextProps.onLinkLongPress &&
     prevProps.streamingAnimation === nextProps.streamingAnimation &&
     prevProps.variant === nextProps.variant,
 );

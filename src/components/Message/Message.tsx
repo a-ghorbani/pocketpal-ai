@@ -1,5 +1,13 @@
 import * as React from 'react';
-import {GestureResponderEvent, Pressable, Text, View} from 'react-native';
+import {
+  AccessibilityActionEvent,
+  Animated,
+  GestureResponderEvent,
+  type HostInstance,
+  Pressable,
+  Text,
+  View,
+} from 'react-native';
 
 import {oneOf} from '@flyerhq/react-native-link-preview';
 import {observer} from 'mobx-react';
@@ -28,6 +36,8 @@ const hapticOptions = {
   enableVibrateFallback: true,
   ignoreAndroidSystemSettings: false,
 };
+
+const USER_ROW_ACTIONS = [{name: 'longpress'}];
 
 export interface MessageTopLevelProps extends TextMessageTopLevelProps {
   isActiveRun?: boolean;
@@ -128,22 +138,50 @@ export const Message = observer(
     const currentUserIsAuthor =
       message.type !== 'dateHeader' && user?.id === message.author.id;
 
-    const latestMessage = React.useRef(message);
-    React.useEffect(() => {
-      latestMessage.current = message;
-    }, [message]);
     const openUserMenu = React.useCallback(
       (event: PressPointEvent) => {
-        const current = latestMessage.current;
-        if (current.type === 'dateHeader') {
+        if (message.type === 'dateHeader') {
           return;
         }
         ReactNativeHapticFeedback.trigger('impactLight', hapticOptions);
-        onMessageMenuPress?.(excludeDerivedMessageProps(current), event);
+        onMessageMenuPress?.(excludeDerivedMessageProps(message), event);
       },
-      [onMessageMenuPress],
+      [message, onMessageMenuPress],
     );
-    const userLongPress = useTouchLongPress(openUserMenu);
+
+    const scale = React.useRef(new Animated.Value(1)).current;
+    const springScale = React.useCallback(
+      (toValue: number) =>
+        Animated.spring(scale, {
+          toValue,
+          friction: 8,
+          tension: 100,
+          useNativeDriver: true,
+        }).start(),
+      [scale],
+    );
+    const pressIn = React.useCallback(() => springScale(1.01), [springScale]);
+    const pressOut = React.useCallback(() => springScale(1), [springScale]);
+    const userRowTouches = useTouchLongPress({
+      onLongPress: openUserMenu,
+      onPressIn: pressIn,
+      onPressOut: pressOut,
+    });
+
+    const userRow = React.useRef<HostInstance>(null);
+    const handleUserRowAction = React.useCallback(
+      ({nativeEvent}: AccessibilityActionEvent) => {
+        if (nativeEvent.actionName !== 'longpress') {
+          return;
+        }
+        userRow.current?.measure((_x, _y, width, height, pageX, pageY) =>
+          openUserMenu({
+            nativeEvent: {pageX: pageX + width / 2, pageY: pageY + height / 2},
+          }),
+        );
+      },
+      [openUserMenu],
+    );
 
     const {container, contentContainer, dateHeader, pressable} = styles({
       currentUserIsAuthor,
@@ -223,7 +261,6 @@ export const Message = observer(
                 enableAnimation,
                 message,
                 messageWidth,
-                onLinkLongPress: isUserTextRow ? openUserMenu : undefined,
                 onPreviewDataFetched,
                 showName,
                 usePreviewData,
@@ -430,10 +467,19 @@ export const Message = observer(
             theme,
           }}
         />
-        {isTextRow ? (
-          <View style={pressable} {...(isUserTextRow ? userLongPress : {})}>
+        {isUserTextRow ? (
+          <Animated.View
+            ref={userRow}
+            accessible
+            accessibilityLabel={message.text}
+            accessibilityActions={USER_ROW_ACTIONS}
+            onAccessibilityAction={handleUserRowAction}
+            style={[pressable, {transform: [{scale}]}]}
+            {...userRowTouches}>
             {innerContent}
-          </View>
+          </Animated.View>
+        ) : isTextRow ? (
+          <View style={pressable}>{innerContent}</View>
         ) : (
           <Pressable
             onPress={event => {

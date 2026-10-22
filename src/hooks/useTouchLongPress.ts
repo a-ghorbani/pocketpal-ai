@@ -6,37 +6,56 @@ import type {PressPointEvent} from '../utils/types';
 const LONG_PRESS_DELAY_MS = 500;
 const LONG_PRESS_MOVE_TOLERANCE = 10;
 
+type TouchLongPressHandlers = {
+  onLongPress: (event: PressPointEvent) => void;
+  onPressIn?: () => void;
+  onPressOut?: () => void;
+};
+
 /**
  * A long-press built on raw touch events, so the view never becomes the JS
  * responder: on Android the responder's view intercepts the rest of the
  * gesture, which stops a native scroll view inside it from scrolling.
  */
-export const useTouchLongPress = (
-  onLongPress: (event: PressPointEvent) => void,
-) => {
+export const useTouchLongPress = ({
+  onLongPress,
+  onPressIn,
+  onPressOut,
+}: TouchLongPressHandlers) => {
   const start = React.useRef<PressPointEvent['nativeEvent'] | undefined>(
     undefined,
   );
   const timer = React.useRef<ReturnType<typeof setTimeout> | undefined>(
     undefined,
   );
+  const pressed = React.useRef(false);
 
-  const cancel = React.useCallback(() => {
+  const clearHold = React.useCallback(() => {
     clearTimeout(timer.current);
     timer.current = undefined;
     start.current = undefined;
   }, []);
 
-  React.useEffect(() => cancel, [cancel]);
+  const release = React.useCallback(() => {
+    clearHold();
+    if (pressed.current) {
+      pressed.current = false;
+      onPressOut?.();
+    }
+  }, [clearHold, onPressOut]);
+
+  React.useEffect(() => clearHold, [clearHold]);
 
   return React.useMemo(
     () => ({
       onTouchStart: ({nativeEvent: {pageX, pageY}}: GestureResponderEvent) => {
-        cancel();
+        release();
         const point = {pageX, pageY};
         start.current = point;
+        pressed.current = true;
+        onPressIn?.();
         timer.current = setTimeout(() => {
-          cancel();
+          clearHold();
           onLongPress({nativeEvent: point});
         }, LONG_PRESS_DELAY_MS);
       },
@@ -47,12 +66,12 @@ export const useTouchLongPress = (
           Math.hypot(pageX - from.pageX, pageY - from.pageY) >
             LONG_PRESS_MOVE_TOLERANCE
         ) {
-          cancel();
+          release();
         }
       },
-      onTouchEnd: cancel,
-      onTouchCancel: cancel,
+      onTouchEnd: release,
+      onTouchCancel: release,
     }),
-    [cancel, onLongPress],
+    [clearHold, onLongPress, onPressIn, release],
   );
 };

@@ -1,5 +1,6 @@
 import * as React from 'react';
 import {
+  GestureResponderEvent,
   Linking,
   Text,
   View,
@@ -21,7 +22,7 @@ import {useTheme} from '../../hooks';
 import {styles} from './styles';
 import {MarkdownView} from '../MarkdownView';
 
-import {AgentStep, MessageType, PressPointEvent} from '../../utils/types';
+import {AgentStep, MessageType} from '../../utils/types';
 import {
   excludeDerivedMessageProps,
   getUserName,
@@ -52,7 +53,6 @@ export interface TextMessageProps extends TextMessageTopLevelProps {
    */
   message: MessageType.DerivedText | MessageType.DerivedAssistantTurn;
   messageWidth: number;
-  onLinkLongPress?: (event: PressPointEvent) => void;
   showName: boolean;
   /**
    * When provided, the component renders this step's `content` in
@@ -64,12 +64,14 @@ export interface TextMessageProps extends TextMessageTopLevelProps {
   isActiveRun?: boolean;
 }
 
+const keepTouchOnThumbnail = (event: GestureResponderEvent) =>
+  event.stopPropagation();
+
 export const TextMessage = ({
   enableAnimation,
   isActiveRun,
   message,
   messageWidth,
-  onLinkLongPress,
   onPreviewDataFetched,
   showName,
   usePreviewData,
@@ -191,7 +193,7 @@ export const TextMessage = ({
     }
 
     return (
-      <View style={imageContainer}>
+      <View style={imageContainer} onTouchStart={keepTouchOnThumbnail}>
         {imageUris.map((uri: string, index: number) => (
           <TouchableOpacity
             key={index}
@@ -284,7 +286,6 @@ export const TextMessage = ({
             maxMessageWidth={messageWidth}
             selectable={!isUserRow}
             blockContextMenu={!isUserRow}
-            onLinkLongPress={onLinkLongPress}
             streamingAnimation={isActiveRun === true && step?.partial === true}
           />
         </View>

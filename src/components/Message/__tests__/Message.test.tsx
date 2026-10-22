@@ -1,5 +1,6 @@
 import {render} from '@testing-library/react-native';
 import * as React from 'react';
+import {Animated, Image} from 'react-native';
 import {EnrichedMarkdownText} from 'react-native-enriched-markdown';
 import ReactNativeHapticFeedback from 'react-native-haptic-feedback';
 
@@ -140,31 +141,6 @@ describe('message', () => {
       jest.useRealTimers();
     });
 
-    it('opens the menu from a long-press on a link in a user text row', () => {
-      const onMessageMenuPress = jest.fn();
-      const {getByTestId} = renderWithProviders(
-        <Message
-          {...rowProps}
-          message={{...derivedTextMessage, text: '[a](https://x.y)'}}
-          onMessageMenuPress={onMessageMenuPress}
-        />,
-      );
-      const touch = {nativeEvent: {pageX: 3, pageY: 4}};
-      (ReactNativeHapticFeedback.trigger as jest.Mock).mockClear();
-
-      fireEvent(getByTestId('markdown-content'), 'touchStart', touch);
-      act(() => lastMarkdownProps().onLinkLongPress({url: 'https://x.y'}));
-
-      expect(onMessageMenuPress).toHaveBeenCalledWith(
-        expect.objectContaining({id: derivedTextMessage.id, type: 'text'}),
-        touch,
-      );
-      expect(ReactNativeHapticFeedback.trigger).toHaveBeenCalledWith(
-        'impactLight',
-        expect.any(Object),
-      );
-    });
-
     it('keeps a user text row from re-rendering its markdown for a new row object', () => {
       const props = {...rowProps, onMessageMenuPress: jest.fn()};
       const {rerender} = renderWithProviders(
@@ -177,20 +153,110 @@ describe('message', () => {
       expect(markdownSpy.mock.calls.length).toBe(renders);
     });
 
-    it('leaves link long-press to the renderer on an assistant text row', () => {
-      renderWithProviders(
-        <Message
-          {...rowProps}
-          message={{
-            ...derivedTextMessage,
-            author: {id: 'assistant'},
-            text: '[a](https://x.y)',
-          }}
-          onMessageMenuPress={jest.fn()}
-        />,
+    it.each([
+      ['a user', 'user'],
+      ['an assistant', 'assistant'],
+    ])(
+      'leaves link long-press to the renderer on %s text row',
+      (_row, authorId) => {
+        renderWithProviders(
+          <Message
+            {...rowProps}
+            message={{
+              ...derivedTextMessage,
+              author: {id: authorId},
+              text: '[a](https://x.y)',
+            }}
+            onMessageMenuPress={jest.fn()}
+          />,
+        );
+
+        expect(lastMarkdownProps().onLinkLongPress).toBeUndefined();
+      },
+    );
+
+    const userRowOf = (root: any) =>
+      root.find(
+        (n: any) =>
+          typeof n.type === 'string' &&
+          typeof n.props.onTouchCancel === 'function',
       );
 
-      expect(lastMarkdownProps().onLinkLongPress).toBeUndefined();
+    it('makes the user bubble one accessible element whose long-press action opens the menu at its centre', () => {
+      const onMessageMenuPress = jest.fn();
+      const {UNSAFE_root} = renderWithProviders(
+        <Message
+          {...rowProps}
+          message={{...derivedTextMessage, text: 'my question'}}
+          onMessageMenuPress={onMessageMenuPress}
+        />,
+      );
+      const native = UNSAFE_root.find(
+        (n: any) =>
+          typeof n.instance?.measure === 'function' &&
+          typeof n.props.onTouchCancel === 'function',
+      ).instance;
+      native.measure = (cb: (...args: number[]) => void) =>
+        cb(0, 0, 100, 40, 10, 20);
+      const row = userRowOf(UNSAFE_root);
+
+      expect(row.props.accessible).toBe(true);
+      expect(row.props.accessibilityLabel).toBe('my question');
+      expect(row.props.accessibilityActions).toEqual([{name: 'longpress'}]);
+
+      fireEvent(row, 'accessibilityAction', {
+        nativeEvent: {actionName: 'longpress'},
+      });
+
+      expect(onMessageMenuPress).toHaveBeenCalledWith(
+        expect.objectContaining({id: derivedTextMessage.id, type: 'text'}),
+        {nativeEvent: {pageX: 60, pageY: 40}},
+      );
+    });
+
+    it('springs the user bubble to 1.01 on touch start and back on release', () => {
+      const spring = jest.spyOn(Animated, 'spring');
+      const {UNSAFE_root} = renderWithProviders(
+        <Message {...rowProps} message={derivedTextMessage} />,
+      );
+      const row = userRowOf(UNSAFE_root);
+
+      fireEvent(row, 'touchStart', {nativeEvent: {pageX: 1, pageY: 2}});
+      expect(spring).toHaveBeenLastCalledWith(
+        expect.anything(),
+        expect.objectContaining({toValue: 1.01}),
+      );
+      fireEvent(row, 'touchEnd', {nativeEvent: {pageX: 1, pageY: 2}});
+      expect(spring).toHaveBeenLastCalledWith(
+        expect.anything(),
+        expect.objectContaining({toValue: 1}),
+      );
+      spring.mockRestore();
+    });
+
+    it('opens no menu from a long-press on an image thumbnail in a user text row', () => {
+      jest.useFakeTimers();
+      const onMessageMenuPress = jest.fn();
+      const {UNSAFE_getAllByType} = renderWithProviders(
+        <Message
+          {...rowProps}
+          message={{...derivedTextMessage, imageUris: ['file:///a.png']}}
+          onMessageMenuPress={onMessageMenuPress}
+        />,
+      );
+      const stopPropagation = jest.fn();
+
+      fireEvent(UNSAFE_getAllByType(Image)[0], 'touchStart', {
+        nativeEvent: {pageX: 1, pageY: 2},
+        stopPropagation,
+      });
+      act(() => {
+        jest.advanceTimersByTime(500);
+      });
+
+      expect(stopPropagation).toHaveBeenCalled();
+      expect(onMessageMenuPress).not.toHaveBeenCalled();
+      jest.useRealTimers();
     });
 
     it('gives an assistant text row the assistant footer', () => {
