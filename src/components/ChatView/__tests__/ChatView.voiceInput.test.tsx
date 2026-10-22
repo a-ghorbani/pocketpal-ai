@@ -228,13 +228,16 @@ describe('ChatView voice mode', () => {
     });
   });
 
-  it('hands the voice button a way to open the model picker', () => {
+  it('hands the voice button ways to open the model picker and focus the composer', () => {
     const onVoiceModePress = jest.fn();
     const {getByTestId} = renderChat(onVoiceModePress);
 
     fireEvent.press(getByTestId('voice-mode-button'));
 
-    expect(onVoiceModePress).toHaveBeenCalledWith(expect.any(Function));
+    expect(onVoiceModePress).toHaveBeenCalledWith({
+      openModelPicker: expect.any(Function),
+      focusInput: expect.any(Function),
+    });
   });
 
   it('closes the keyboard before voice mode opens a sheet over the chat', () => {

@@ -1,4 +1,5 @@
 import React from 'react';
+import {TextInput} from 'react-native';
 import {runInAction} from 'mobx';
 
 import {act, fireEvent, render} from '../../../../jest/test-utils';
@@ -78,23 +79,74 @@ describe('ChatScreen voice mode entry', () => {
     expect(mockSheetsShown).toEqual([]);
   });
 
-  it('when locked, opens the paywall once and stays closed', async () => {
-    voiceModeStore.setUnlockOverride(false);
-    runInAction(() => {
-      modelStore.models = modelsList as any;
-      modelStore.activeModelId = modelsList[0].id;
-    });
-    const {getByTestId} = renderScreen();
+  describe('when locked', () => {
+    const openPaywall = () =>
+      (voiceEntitlement as any).defaultSource.openPaywall as jest.Mock;
+    const tapLocked = async () => {
+      voiceModeStore.setUnlockOverride(false);
+      runInAction(() => {
+        modelStore.models = modelsList as any;
+        modelStore.activeModelId = modelsList[0].id;
+      });
+      const screen = renderScreen();
+      await act(async () => {
+        fireEvent.press(screen.getByTestId('voice-mode-button'));
+      });
+      return screen;
+    };
 
-    await act(async () => {
-      fireEvent.press(getByTestId('voice-mode-button'));
+    beforeEach(() => {
+      openPaywall().mockClear();
+      (TextInput.prototype.focus as jest.Mock).mockClear();
     });
 
-    expect(
-      (voiceEntitlement as any).defaultSource.openPaywall,
-    ).toHaveBeenCalledTimes(1);
-    expect(voiceModeStore.phase).toBe('closed');
-    expect(pickerOpen()).toBe(false);
+    it('shows the teaser over a hidden chat, not the paywall, every time', async () => {
+      const {getByTestId, queryByTestId} = await tapLocked();
+
+      expect(getByTestId('voice-teaser')).toBeTruthy();
+      expect(queryByTestId('chat-input')).toBeNull();
+      expect(openPaywall()).not.toHaveBeenCalled();
+      expect(voiceModeStore.phase).toBe('closed');
+      expect(pickerOpen()).toBe(false);
+
+      fireEvent.press(getByTestId('voice-teaser-close'));
+      expect(queryByTestId('voice-teaser')).toBeNull();
+      await act(async () => {
+        fireEvent.press(getByTestId('voice-mode-button'));
+      });
+      expect(getByTestId('voice-teaser')).toBeTruthy();
+    });
+
+    it('Get Plus closes the teaser and opens the paywall once', async () => {
+      const {getByTestId, queryByTestId} = await tapLocked();
+
+      fireEvent.press(getByTestId('voice-teaser-get-plus'));
+
+      expect(queryByTestId('voice-teaser')).toBeNull();
+      expect(openPaywall()).toHaveBeenCalledTimes(1);
+      expect(voiceModeStore.phase).toBe('closed');
+    });
+
+    it('Keep typing closes the teaser and focuses the composer', async () => {
+      const {getByTestId, queryByTestId} = await tapLocked();
+
+      fireEvent.press(getByTestId('voice-teaser-keep-typing'));
+
+      expect(queryByTestId('voice-teaser')).toBeNull();
+      expect(TextInput.prototype.focus).toHaveBeenCalledTimes(1);
+      expect(openPaywall()).not.toHaveBeenCalled();
+    });
+
+    it('the close button returns to the chat without focusing it', async () => {
+      const {getByTestId, queryByTestId} = await tapLocked();
+
+      fireEvent.press(getByTestId('voice-teaser-close'));
+
+      expect(queryByTestId('voice-teaser')).toBeNull();
+      expect(getByTestId('chat-input')).toBeTruthy();
+      expect(TextInput.prototype.focus).not.toHaveBeenCalled();
+      expect(openPaywall()).not.toHaveBeenCalled();
+    });
   });
 
   it('with Plus unlocked, shows no lock and goes past the paywall', async () => {

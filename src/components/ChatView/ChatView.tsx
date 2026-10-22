@@ -59,6 +59,7 @@ import {
   voiceModeStore,
 } from '../../store';
 import type {UndoneSend} from '../../hooks/useChatSession';
+import type {VoiceEntryActions} from '../../hooks/useVoiceMode';
 
 import {openMicSettings} from '../../utils/asrMicPermission';
 import type {AsrErrorKind} from '../../services/asr';
@@ -179,8 +180,8 @@ export interface ChatProps extends Omit<ChatTopLevelProps, 'onSendPress'> {
   initialInputText?: string;
   /** Callback when initial text is consumed */
   onInitialTextConsumed?: () => void;
-  /** Opens voice mode; `openModelPicker` opens this chat's model picker. */
-  onVoiceModePress?: (openModelPicker: () => void) => void;
+  /** Opens voice mode with this chat's model picker and composer focus. */
+  onVoiceModePress?: (actions: VoiceEntryActions) => void;
   /**
    * Allows you to customize the time format. IMPORTANT: only for the time,
    * do not return date here. @see {@link ChatProps.dateFormat} to customize the date format.
@@ -1237,9 +1238,12 @@ export const ChatView = observer(
                       : appendTranscript,
                     onVoicePress:
                       onVoiceModePress &&
-                      (() => {
+                      ((focusInput: () => void) => {
                         Keyboard.dismiss();
-                        onVoiceModePress(() => setIsPickerVisible(true));
+                        onVoiceModePress({
+                          openModelPicker: () => setIsPickerVisible(true),
+                          focusInput,
+                        });
                       }),
                     textInputProps: {
                       ...textInputProps,

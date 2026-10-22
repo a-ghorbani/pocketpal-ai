@@ -50,9 +50,18 @@ import {acquireKeepAwake} from '../utils/keepAwake';
 import {ModelOrigin} from '../utils/types';
 
 export type VoiceModeSheet =
+  | {kind: 'teaser'}
   | {kind: 'setup'}
   | {kind: 'memory'; fit: VoiceMemoryFit}
   | null;
+
+/** What the chat hands voice mode for the ways out of entry. */
+export interface VoiceEntryActions {
+  openModelPicker: () => void;
+  focusInput: () => void;
+}
+
+const noop = () => {};
 
 const FAILURES: Partial<Record<VoiceTurnOutcome, VoiceError>> = {
   transcribe_failed: 'transcribe_failed',
@@ -108,7 +117,10 @@ class VoiceModeController {
   private micStarting: Promise<void> | null = null;
   private micWatchdog: ReturnType<typeof setTimeout> | null = null;
   private micRetried = false;
-  private openModelPicker: () => void = () => {};
+  private actions: VoiceEntryActions = {
+    openModelPicker: noop,
+    focusInput: noop,
+  };
   private sendingToNewChat = false;
   private readonly turnPort: VoiceTurnPort = {
     send: (text, onTurnCreated) => {
@@ -133,19 +145,17 @@ class VoiceModeController {
     this.port = port;
   }
 
-  async requestEntry(openModelPicker: () => void): Promise<void> {
+  async requestEntry(actions: VoiceEntryActions): Promise<void> {
     if (this.open || this.disposed) {
       return;
     }
-    this.openModelPicker = openModelPicker;
+    this.actions = actions;
     if (!voiceModeStore.isUnlocked) {
-      voiceEntitlement.source.openPaywall({
-        onUnlocked: () => this.requestEntry(openModelPicker),
-      });
+      this.showSheet({kind: 'teaser'});
       return;
     }
     if (!modelStore.activeModelId) {
-      openModelPicker();
+      actions.openModelPicker();
       return;
     }
     if (modelStore.isContextLoading) {
@@ -186,9 +196,22 @@ class VoiceModeController {
     return this.sendingToNewChat;
   }
 
+  getPlus(): void {
+    this.showSheet(null);
+    const actions = this.actions;
+    voiceEntitlement.source.openPaywall({
+      onUnlocked: () => this.requestEntry(actions),
+    });
+  }
+
+  keepTyping(): void {
+    this.showSheet(null);
+    this.actions.focusInput();
+  }
+
   chooseSmallerModel(): void {
     this.showSheet(null);
-    this.openModelPicker();
+    this.actions.openModelPicker();
   }
 
   async enter(): Promise<void> {
@@ -552,10 +575,11 @@ export function useVoiceMode({
 
   return {
     requestEntry: useCallback(
-      ({openModelPicker}: {openModelPicker: () => void}) =>
-        controller.requestEntry(openModelPicker),
+      (actions: VoiceEntryActions) => controller.requestEntry(actions),
       [controller],
     ),
+    getPlus: useCallback(() => controller.getPlus(), [controller]),
+    keepTyping: useCallback(() => controller.keepTyping(), [controller]),
     sheet,
     setupDone: useCallback(() => {
       setSheet(null);

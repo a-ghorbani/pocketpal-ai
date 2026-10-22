@@ -1,6 +1,6 @@
 import {fireEvent, waitFor} from '@testing-library/react-native';
 import * as React from 'react';
-import {ScrollView, Alert, StyleSheet} from 'react-native';
+import {ScrollView, Alert, StyleSheet, TextInput} from 'react-native';
 import {launchCamera, launchImageLibrary} from 'react-native-image-picker';
 import {runInAction} from 'mobx';
 
@@ -1116,10 +1116,15 @@ describe('voice mode button', () => {
     expect(getByTestId('voice-mode-button')).toBeTruthy();
   });
 
-  it('opens voice mode on press', () => {
+  it('opens voice mode on press, with a way to focus this composer', () => {
+    const focus = TextInput.prototype.focus as jest.Mock;
     const {getByTestId} = renderInput();
     fireEvent.press(getByTestId('voice-mode-button'));
     expect(onVoicePress).toHaveBeenCalledTimes(1);
+
+    focus.mockClear();
+    onVoicePress.mock.calls[0][0]();
+    expect(focus).toHaveBeenCalledTimes(1);
   });
 
   it('shows the lock badge when voice mode is locked', () => {

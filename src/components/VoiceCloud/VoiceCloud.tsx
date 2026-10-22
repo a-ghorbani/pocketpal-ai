@@ -94,25 +94,25 @@ const Blob: React.FC<BlobProps> = ({index, color, scale, animate}) => {
 };
 
 interface VoiceCloudProps {
-  visual: VoiceVisual;
+  visual: VoiceVisual | 'still';
   size: number;
 }
 
 /**
  * The voice-mode cloud: soft blue, periwinkle and peach blobs whose motion
  * shows the state. Listening breathes, thinking turns slowly, speaking
- * pulses; muted is still and grey.
+ * pulses; muted is still and grey; still is in colour without motion.
  */
 export const VoiceCloud: React.FC<VoiceCloudProps> = ({visual, size}) => {
   const theme = useTheme();
   const reduceMotion = useReducedMotion();
-  const animate = !reduceMotion && visual !== 'muted';
+  const animate = !reduceMotion && visual !== 'muted' && visual !== 'still';
   const progress = useSharedValue(0);
 
   useEffect(() => {
     cancelAnimation(progress);
     progress.value = 0;
-    if (reduceMotion || visual === 'muted') {
+    if (reduceMotion || visual === 'muted' || visual === 'still') {
       return;
     }
     const {duration, reverse, easing} = MOTION[visual];

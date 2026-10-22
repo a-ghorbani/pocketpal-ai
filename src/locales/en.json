@@ -1658,7 +1658,11 @@
     "chooseSmallerModelCta": "Choose a smaller model",
     "startLabel": "Start voice mode",
     "startLockedLabel": "Hands-free voice, PocketPal Plus",
-    "startLockedHint": "Opens a short preview. Typing and dictation stay free."
+    "startLockedHint": "Opens a short preview. Typing and dictation stay free.",
+    "teaserTitle": "Voice conversation is a Plus feature",
+    "teaserBody": "Talk hands-free. It answers aloud.",
+    "teaserGetPlus": "Get Plus",
+    "teaserKeepTyping": "Keep typing, free"
   },
   "onboarding": {
     "back": "Back",

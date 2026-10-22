@@ -57,6 +57,12 @@ describe('VoiceCloud', () => {
     expect(withRepeat).not.toHaveBeenCalled();
   });
 
+  it('stays still, in colour, as a still cloud', () => {
+    const {getByTestId} = render(<VoiceCloud visual="still" size={280} />);
+    expect(withRepeat).not.toHaveBeenCalled();
+    expect(getByTestId('voice-cloud-still')).not.toHaveStyle({opacity: 0.4});
+  });
+
   it('stays still when the system asks for reduced motion', () => {
     (Reanimated.useReducedMotion as jest.Mock).mockReturnValueOnce(true);
     render(<VoiceCloud visual="speaking" size={280} />);

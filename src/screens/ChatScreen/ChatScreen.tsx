@@ -13,6 +13,7 @@ import {
   VoiceModeControlsContext,
   VoiceModeView,
   VoiceSetupSheet,
+  VoiceTeaser,
 } from '../../components';
 import {PalSheet} from '../../components/PalsSheets';
 
@@ -282,17 +283,16 @@ export const ChatScreen: React.FC = observer(() => {
     return <VideoPalScreen activePal={activePal} />;
   }
 
-  const voiceViewOpen = voiceModeStore.isFullViewOpen;
+  const teaserOpen = voiceMode.sheet?.kind === 'teaser';
+  const chatCovered = voiceModeStore.isFullViewOpen || teaserOpen;
 
   // Otherwise, show the regular chat view
   return (
     <VoiceModeControlsContext.Provider value={voiceControls}>
       <View
         style={styles.chat}
-        importantForAccessibility={
-          voiceViewOpen ? 'no-hide-descendants' : 'auto'
-        }
-        accessibilityElementsHidden={voiceViewOpen}>
+        importantForAccessibility={chatCovered ? 'no-hide-descendants' : 'auto'}
+        accessibilityElementsHidden={chatCovered}>
         <ChatView
           renderBubble={renderBubble}
           messages={chatSessionStore.currentSessionMessages}
@@ -308,9 +308,7 @@ export const ChatScreen: React.FC = observer(() => {
           isVisionEnabled={visionEnabled}
           initialInputText={pendingMessage || undefined}
           onInitialTextConsumed={clearPendingMessage}
-          onVoiceModePress={openModelPicker =>
-            voiceMode.requestEntry({openModelPicker})
-          }
+          onVoiceModePress={voiceMode.requestEntry}
           inputProps={{
             showThinkingToggle: thinkingSupported,
             isThinkingEnabled: thinkingEnabled,
@@ -329,7 +327,14 @@ export const ChatScreen: React.FC = observer(() => {
           }}
         />
       </View>
-      {voiceViewOpen && <VoiceModeView />}
+      {voiceModeStore.isFullViewOpen && <VoiceModeView />}
+      {teaserOpen && (
+        <VoiceTeaser
+          onGetPlus={voiceMode.getPlus}
+          onKeepTyping={voiceMode.keepTyping}
+          onClose={voiceMode.dismissSheet}
+        />
+      )}
       <VoiceSetupSheet
         isVisible={voiceMode.sheet?.kind === 'setup'}
         onClose={voiceMode.dismissSheet}
