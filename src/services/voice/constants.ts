@@ -9,6 +9,12 @@ export const VOICE_FIRST_CHUNK_HOLD_MS = 1500;
 export const VOICE_ENDPOINT_HANG_MS = 600;
 
 /**
+ * A cloud tap this soon after a silence ended the utterance (ms) is ignored:
+ * it is the user's "done" tap arriving late, not a cancel.
+ */
+export const VOICE_DONE_TAP_GRACE_MS = 1500;
+
+/**
  * Wait after stopping the mic before starting it again (ms): three 50 ms
  * chunks. On Android the recorder's read thread releases the shared
  * recorder when it ends, so a restart sooner can lose the new recorder.
