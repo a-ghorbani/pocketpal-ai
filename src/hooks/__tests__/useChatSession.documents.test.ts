@@ -643,3 +643,33 @@ describe('document grounding instruction', () => {
     spy.mockRestore();
   });
 });
+
+describe('plan and send share one prompt', () => {
+  it('plan prompt strips thinking like the send', async () => {
+    const report = pdf('thinking-doc', {pageCount: 1});
+    writeText(report.id, ['page text']);
+    history = [
+      assistantRow('a1', '<think>secret reasoning</think>The answer.'),
+      userRow('u1', 'Question', [report]),
+    ];
+    (
+      chatSessionStore.getCurrentCompletionSettings as jest.Mock
+    ).mockResolvedValue({include_thinking_in_context: false});
+    const plan = jest.requireActual('../../services/documents/plan');
+    const spy = jest.spyOn(plan, 'documentPlan');
+    const {result} = renderHook(() =>
+      useChatSession({current: null}, user, assistant),
+    );
+
+    await result.current.evaluateSendBudget({type: 'text', text: 'next'});
+
+    const {nonDocText} = spy.mock.calls[0][0] as {nonDocText: string};
+    expect(nonDocText).toContain('The answer.');
+    expect(nonDocText).not.toContain('secret reasoning');
+    spy.mockRestore();
+    (chatSessionStore.getCurrentCompletionSettings as jest.Mock).mockReset();
+    (
+      chatSessionStore.getCurrentCompletionSettings as jest.Mock
+    ).mockResolvedValue({});
+  });
+});

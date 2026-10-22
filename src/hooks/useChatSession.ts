@@ -89,6 +89,53 @@ import {
 const documentGroundingFragment = (refs: DocumentRef[]): string[] =>
   refs.length > 0 ? [DOCUMENT_GROUNDING] : [];
 
+/**
+ * The system message (prompt, talent fragments, document grounding) and the
+ * converted history: one builder for the send and for the budget plan.
+ */
+const buildPromptMessages = ({
+  rows,
+  systemMessages,
+  settings,
+  isMultimodalEnabled,
+  refs,
+  documentContent,
+  tail,
+}: {
+  rows: MessageType.Any[];
+  systemMessages: Array<{role: 'system'; content: string}>;
+  settings: CompletionParams | undefined;
+  isMultimodalEnabled: boolean;
+  refs: DocumentRef[];
+  documentContent?: (row: MessageType.Text) => string | undefined;
+  tail: Parameters<typeof assembleMessages>[2][number];
+}) => {
+  const history = convertToChatMessages(
+    rows.filter(msg => msg.type !== 'image'),
+    isMultimodalEnabled,
+    documentContent,
+  );
+  const chatMessages =
+    settings?.include_thinking_in_context === false
+      ? history.map(msg =>
+          msg.role === 'assistant' && typeof msg.content === 'string'
+            ? {...msg, content: removeThinkingParts(msg.content)}
+            : msg,
+        )
+      : history;
+  const toolNames = (
+    (settings?.tools as ToolDefinition[] | undefined) ?? []
+  ).map(tool => tool.function?.name ?? '');
+  const fragments = [
+    ...collectSystemPromptFragments(toolNames, {
+      now: new Date(),
+      maxToolTurns: DEFAULT_MAX_TURNS,
+    }),
+    ...documentGroundingFragment(refs),
+  ];
+  return assembleMessages(systemMessages, fragments, [...chatMessages, tail]);
+};
+
 const excerptBlockFor = async (
   textRows: MessageType.Text[],
   message: MessageType.PartialText,
@@ -212,50 +259,15 @@ const prepareCompletion = async ({
     }
   }
 
-  // Convert chat session messages to llama.rn format. Filtering
-  // image-typed messages happens here (multimodal user messages carry
-  // their images via imageUris on the Text row, not a separate Image
-  // message). AssistantTurn rows pass through to convertToChatMessages,
-  // which expands each step into assistant + tool API messages.
-  let chatMessages = convertToChatMessages(
-    currentMessages.filter(msg => msg.type !== 'image'),
+  const messages = buildPromptMessages({
+    rows: currentMessages,
+    systemMessages,
+    settings: sessionCompletionSettings as CompletionParams,
     isMultimodalEnabled,
-    row => documentContentFor(row.documents, documentTexts),
-  );
-
-  // Strip thinking parts from assistant context if the user opted out.
-  const includeThinkingInContext =
-    (sessionCompletionSettings as CompletionParams)
-      ?.include_thinking_in_context !== false;
-  if (!includeThinkingInContext) {
-    chatMessages = chatMessages.map(msg => {
-      if (msg.role === 'assistant' && typeof msg.content === 'string') {
-        return {
-          ...msg,
-          content: removeThinkingParts(msg.content),
-        };
-      }
-      return msg;
-    });
-  }
-
-  // Talent-contributed system-prompt fragments (e.g. search grounding). Kept on
-  // the initial messages array so they persist across every follow-up tool turn.
-  const sessionToolNames = (
-    (sessionCompletionSettings?.tools as ToolDefinition[] | undefined) ?? []
-  ).map(tool => tool.function?.name ?? '');
-  const systemPromptFragments = [
-    ...collectSystemPromptFragments(sessionToolNames, {
-      now: new Date(),
-      maxToolTurns: DEFAULT_MAX_TURNS,
-    }),
-    ...documentGroundingFragment(documentRefs),
-  ];
-
-  const messages = assembleMessages(systemMessages, systemPromptFragments, [
-    ...chatMessages,
-    {role: 'user', content: userMessageContent},
-  ]);
+    refs: documentRefs,
+    documentContent: row => documentContentFor(row.documents, documentTexts),
+    tail: {role: 'user', content: userMessageContent},
+  });
 
   // Reseed the read_url exfiltration allowlist for this run; the trust policy
   // (which sources count) lives in the talents module.
@@ -745,24 +757,14 @@ const planInputs = async (
     ...rows.flatMap(row => (row.type === 'text' ? (row.documents ?? []) : [])),
     ...(message.documents ?? []),
   ];
-  const fragments = [
-    ...collectSystemPromptFragments(
-      tools.map(tool => tool.function?.name ?? ''),
-      {now: new Date(), maxToolTurns: DEFAULT_MAX_TURNS},
-    ),
-    ...documentGroundingFragment(refs),
-  ];
-  const promptMessages = assembleMessages(
-    resolveSystemMessages({pal, model: modelStore.activeModel}),
-    fragments,
-    [
-      ...convertToChatMessages(
-        rows.filter(msg => msg.type !== 'image'),
-        modelStore.activeModelCaps.visionActive,
-      ),
-      {role: 'user', content: message.text},
-    ],
-  );
+  const promptMessages = buildPromptMessages({
+    rows,
+    systemMessages: resolveSystemMessages({pal, model: modelStore.activeModel}),
+    settings: settings as CompletionParams,
+    isMultimodalEnabled: modelStore.activeModelCaps.visionActive,
+    refs,
+    tail: {role: 'user', content: message.text},
+  });
   return {
     rows,
     message,
