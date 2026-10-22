@@ -1261,6 +1261,31 @@ describe('useVoiceMode', () => {
       }
     });
 
+    it('a began while the mic is reopening leaves one watchdog, so flowing audio keeps the mic', async () => {
+      jest.useFakeTimers();
+      try {
+        const {enter} = renderVoiceMode();
+        await enter();
+        interruption('began');
+        interruption('ended');
+        interruption('began');
+        await act(async () => {
+          jest.advanceTimersByTime(VOICE_CAPTURE_SETTLE_MS);
+        });
+        expect(AudioRecord.init).toHaveBeenCalledTimes(2);
+
+        speak(100, SILENT);
+        await act(async () => {
+          jest.advanceTimersByTime(VOICE_MIC_WATCHDOG_MS * 2);
+        });
+
+        expect(AudioRecord.init).toHaveBeenCalledTimes(2);
+        expect(voiceModeStore.phase).toBe('listening');
+      } finally {
+        jest.useRealTimers();
+      }
+    });
+
     it('two restarts that overlap open the mic once', async () => {
       const {enter} = renderVoiceMode();
       await enter();

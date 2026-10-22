@@ -379,6 +379,7 @@ class VoiceModeController {
 
   /** No audio since the mic started: restart it once, then give up. */
   private watchMic(session: number): void {
+    this.clearMicWatchdog();
     this.micWatchdog = setTimeout(() => {
       this.micWatchdog = null;
       if (session !== this.session) {
