@@ -54,7 +54,7 @@ export const ENGINE_META: Record<EngineId, EngineMeta> = {
     gradientTo: 'rgba(30, 77, 246, 0.02)',
   },
   phonon: {
-    sizeMb: Platform.OS === 'ios' ? 0 : 64, // PLACEHOLDER (iOS)
+    sizeMb: Platform.OS === 'ios' ? 164 : 64,
     ramMb: 300, // PLACEHOLDER
     voices: 8,
     accent: '#0E9F8E',

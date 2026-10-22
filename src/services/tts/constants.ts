@@ -289,15 +289,16 @@ export const PHONON_VOICES_JSONL_FILENAME = 'voices.jsonl';
  * `path<TAB>size<TAB>sha256` manifest at the repo root.
  */
 export const PHONON_IOS_REPO = 'palshub/phonon-31m-en-coreml';
-export const PHONON_IOS_REVISION = 'PLACEHOLDER';
+export const PHONON_IOS_REVISION = '0222045816b825e8a004013c7158b111245b4aab';
 export const PHONON_IOS_BUNDLE_NAME = 'phonon-31m-en-coreml';
 export const PHONON_IOS_MANIFEST_PATH = 'phonon-31m-en-coreml.manifest.tsv';
-export const PHONON_IOS_MANIFEST_SHA256 = 'PLACEHOLDER';
+export const PHONON_IOS_MANIFEST_SHA256 =
+  '4f91af242637d13a93f38a574e4f99466a3063aa5a7d24fc34a797f53b12599a';
 /** Local copy of the verified manifest, the iOS install file list. */
 export const PHONON_IOS_MANIFEST_FILENAME = 'manifest.tsv';
 
 /** Exact pinned byte totals; they feed the disk-space preflight. */
 export const PHONON_ANDROID_MODEL_BYTES = 67_098_394;
-export const PHONON_IOS_MODEL_BYTES = 0; // PLACEHOLDER
+export const PHONON_IOS_MODEL_BYTES = 171_554_733;
 export const PHONON_MODEL_ESTIMATED_BYTES =
   Platform.OS === 'ios' ? PHONON_IOS_MODEL_BYTES : PHONON_ANDROID_MODEL_BYTES;

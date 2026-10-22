@@ -2497,6 +2497,11 @@
   resolved "https://registry.yarnpkg.com/@pkgr/core/-/core-0.2.9.tgz#d229a7b7f9dac167a156992ef23c7f023653f53b"
   integrity sha512-QNqXyfVS2wm9hweSYD2O7F0G06uurj9kZ96TRQE5Y9hU7+tgdZwIkbAKc5Ocy1HxEY2kuDQa6cQ1WRs/O5LFKA==
 
+"@pocketpalai/react-native-speech-phonon@0.1.0":
+  version "0.1.0"
+  resolved "https://registry.yarnpkg.com/@pocketpalai/react-native-speech-phonon/-/react-native-speech-phonon-0.1.0.tgz#4f5e1a73b21971eacb006d6053060785cf29adea"
+  integrity sha512-Ufe5wdIyg5bwtaRYHHKYfmznATiQbxVTKIQotHBooEcDaHQ3BdqrAPG4vwPewKhjuJRJaw0khgZwkfst6ZoDoQ==
+
 "@pocketpalai/react-native-speech@2.7.0":
   version "2.7.0"
   resolved "https://registry.yarnpkg.com/@pocketpalai/react-native-speech/-/react-native-speech-2.7.0.tgz#f5a7d1e4fcc2767bbdb9f493cff69f025ea752f2"
