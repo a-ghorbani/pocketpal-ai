@@ -17,7 +17,12 @@ import {DrawerPage} from '../../pages/DrawerPage';
 import {ModelsPage} from '../../pages/ModelsPage';
 import {PlusPage} from '../../pages/PlusPage';
 import {TIMEOUTS} from '../../fixtures/models';
-import {byExactTestId, byTestId, Selectors} from '../../helpers/selectors';
+import {
+  byExactTestId,
+  byStaticText,
+  byTestId,
+  Selectors,
+} from '../../helpers/selectors';
 import {saveFailureScreenshot} from '../../helpers/screenshots';
 import {withBridgeElements} from '../../helpers/automation-bridge';
 import {assertMockTraffic, iapMockServer} from '../../helpers/iapMockServer';
@@ -305,6 +310,13 @@ describe('PocketPal Plus', () => {
     });
     await voiceCommand('gate::on');
     await voiceCommand('unlock::plus');
+    const shown = (selector: string) => browser.$(selector).isDisplayed();
+    const entryContinued = async () =>
+      (await shown(byExactTestId('voice-setup-continue'))) ||
+      (await shown(byExactTestId('voice-view'))) ||
+      ((await shown(byStaticText('Models'))) &&
+        (await shown(byStaticText('Pals'))));
+    expect(await entryContinued()).toBe(false);
     const tapVoice = async () => {
       await browser.$(byExactTestId('voice-mode-button')).click();
       await plus.waitFor('voice-teaser-keep-typing');
@@ -322,6 +334,7 @@ describe('PocketPal Plus', () => {
     await plus.waitForPurchased();
     await plus.done();
 
+    await browser.waitUntil(entryContinued, {timeout: 20000});
     expect(await plus.isShown('voice-teaser-keep-typing', 500)).toBe(false);
     expect(await plus.isShown('voice-mode-lock', 1000)).toBe(false);
   });
