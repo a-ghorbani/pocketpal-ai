@@ -158,7 +158,7 @@ describe('CascadeVoiceEngine', () => {
       expect(whisperRelease).not.toHaveBeenCalled();
     });
 
-    it('passes the language the user already has, and auto-detects otherwise', async () => {
+    it('passes the language the user already has', async () => {
       runInAction(() => {
         (asrStore as any).spokenLanguage = 'fr';
       });
