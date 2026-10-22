@@ -14,6 +14,7 @@ import {MessageType} from './types';
 import {CompletionParams} from './completionTypes';
 import {migrateCompletionSettings} from './completionSettingsVersions';
 import {palStore} from '../store';
+import {getAbsoluteThumbnailPath} from './imageUtils';
 import type {Pal, ParameterDefinition} from '../types/pal';
 
 /**
@@ -388,7 +389,10 @@ const saveBase64Image = async (
   // Use same directory and naming convention as imageUtils.ts
   const PAL_IMAGES_DIR = `${RNFS.DocumentDirectoryPath}/pal-images`;
   const fileName = `${palId}_thumbnail.${fileExtension}`;
-  const filePath = `${PAL_IMAGES_DIR}/${fileName}`;
+  const filePath = getAbsoluteThumbnailPath(fileName);
+  if (!filePath) {
+    throw new Error(`Invalid thumbnail filename: ${fileName}`);
+  }
 
   // Ensure directory exists (same as imageUtils.ts)
   const exists = await RNFS.exists(PAL_IMAGES_DIR);

@@ -16,7 +16,9 @@ import {
   localThumbnailExists,
   getLocalThumbnailPath,
   cleanupOrphanedThumbnails,
+  getAbsoluteThumbnailPath,
 } from '../imageUtils';
+import {isSafePathSegment} from '../pathGuard';
 
 const mockRNFS = RNFS as jest.Mocked<typeof RNFS>;
 
@@ -196,6 +198,92 @@ describe('imageUtils', () => {
 
       expect((mockRNFS as any).readDir).not.toHaveBeenCalled();
       expect(mockRNFS.unlink).not.toHaveBeenCalled();
+    });
+  });
+  describe('thumbnail paths stay inside pal-images', () => {
+    const palImagesDir = `${mockDocumentPath}/pal-images`;
+    const UNSAFE_NAMES = [
+      '..',
+      '../..',
+      '/etc/hosts',
+      'file:///data/local/tmp/x',
+      '',
+      '../x',
+    ];
+
+    beforeEach(() => {
+      mockRNFS.exists.mockReset();
+      mockRNFS.mkdir.mockReset();
+      mockRNFS.downloadFile.mockReset();
+      mockRNFS.unlink.mockReset();
+    });
+
+    describe('getAbsoluteThumbnailPath', () => {
+      it.each(UNSAFE_NAMES)('%p → null', name => {
+        expect(getAbsoluteThumbnailPath(name)).toBeNull();
+      });
+
+      it('returns a direct child of pal-images for a plain name', () => {
+        expect(getAbsoluteThumbnailPath(expectedFilename)).toBe(
+          expectedLocalPath,
+        );
+      });
+    });
+
+    describe('deletePalThumbnail', () => {
+      it.each(UNSAFE_NAMES)('%p: no exists and no unlink', async name => {
+        await deletePalThumbnail(name);
+        expect(mockRNFS.exists).not.toHaveBeenCalled();
+        expect(mockRNFS.unlink).not.toHaveBeenCalled();
+      });
+    });
+
+    describe('localThumbnailExists', () => {
+      it.each(UNSAFE_NAMES)('%p → false without touching disk', async name => {
+        mockRNFS.exists.mockResolvedValue(true);
+        expect(await localThumbnailExists(name)).toBe(false);
+        expect(mockRNFS.exists).not.toHaveBeenCalled();
+      });
+    });
+
+    describe('downloadPalThumbnail URL extension', () => {
+      it.each([
+        'https://h/a.b/../x',
+        'https://h/a.b/../../x',
+        'https://h/a.b//etc/hosts',
+        'https://h/a.b/file:/x',
+        'https://h/a.b/c',
+      ])('%s throws before touching disk', async url => {
+        await expect(downloadPalThumbnail(mockPalId, url)).rejects.toThrow(
+          'Invalid thumbnail filename',
+        );
+        expect(mockRNFS.exists).not.toHaveBeenCalled();
+        expect(mockRNFS.mkdir).not.toHaveBeenCalled();
+        expect(mockRNFS.downloadFile).not.toHaveBeenCalled();
+      });
+
+      it.each([
+        ['https://h/a.b/..', 'jpg'],
+        ['https://h/a.b/../..', 'jpg'],
+        ['https://h/a.', 'jpg'],
+        ['https://h/a.png', 'png'],
+      ])('%s downloads to <id>_thumbnail.%s', async (url, extension) => {
+        mockRNFS.exists.mockResolvedValue(false);
+        mockRNFS.downloadFile.mockReturnValue({
+          jobId: 1,
+          promise: Promise.resolve({statusCode: 200}),
+        } as any);
+
+        const result = await downloadPalThumbnail(mockPalId, url);
+
+        const name = `${mockPalId}_thumbnail.${extension}`;
+        const {toFile} = mockRNFS.downloadFile.mock.calls[0][0];
+        expect(result).toBe(name);
+        expect(toFile).toBe(`${palImagesDir}/${name}`);
+        expect(isSafePathSegment(toFile.slice(`${palImagesDir}/`.length))).toBe(
+          true,
+        );
+      });
     });
   });
 });

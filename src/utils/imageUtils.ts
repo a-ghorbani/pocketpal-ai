@@ -1,5 +1,7 @@
 import * as RNFS from '@dr.pogodin/react-native-fs';
 
+import {isSafePathSegment} from './pathGuard';
+
 /**
  * Utility functions for downloading and managing pal thumbnail images
  */
@@ -42,11 +44,10 @@ export const getFullThumbnailUri = (filename: string): string => {
 /**
  * Get the absolute file system path from a thumbnail filename (for file operations)
  * @param filename - Filename like "palId_thumbnail.jpg"
- * @returns Absolute file system path
+ * @returns Absolute file system path, or null when the filename is not a plain file name
  */
-export const getAbsoluteThumbnailPath = (filename: string): string => {
-  return `${PAL_IMAGES_DIR}/${filename}`;
-};
+export const getAbsoluteThumbnailPath = (filename: string): string | null =>
+  isSafePathSegment(filename) ? `${PAL_IMAGES_DIR}/${filename}` : null;
 
 /**
  * Ensure the pal images directory exists
@@ -84,17 +85,6 @@ const generateThumbnailFilename = (
 };
 
 /**
- * Generate the absolute file path for a pal thumbnail (for file operations)
- */
-const getAbsoluteThumbnailPathForPal = (
-  palId: string,
-  originalUrl: string,
-): string => {
-  const filename = generateThumbnailFilename(palId, originalUrl);
-  return `${PAL_IMAGES_DIR}/${filename}`;
-};
-
-/**
  * Download a thumbnail image from a URL and save it locally
  * @param palId - The ID of the pal
  * @param imageUrl - The remote URL of the image
@@ -105,12 +95,13 @@ export const downloadPalThumbnail = async (
   imageUrl: string,
 ): Promise<string> => {
   try {
-    // Ensure directory exists
-    await ensurePalImagesDirectory();
-
-    // Generate filename and absolute path
     const filename = generateThumbnailFilename(palId, imageUrl);
-    const absolutePath = getAbsoluteThumbnailPathForPal(palId, imageUrl);
+    const absolutePath = getAbsoluteThumbnailPath(filename);
+    if (!absolutePath) {
+      throw new Error(`Invalid thumbnail filename: ${filename}`);
+    }
+
+    await ensurePalImagesDirectory();
 
     // Check if file already exists
     const exists = await RNFS.exists(absolutePath);
@@ -150,8 +141,11 @@ export const downloadPalThumbnail = async (
  */
 export const deletePalThumbnail = async (filename: string): Promise<void> => {
   try {
-    // Convert to absolute path for file operations
     const absolutePath = getAbsoluteThumbnailPath(filename);
+    if (!absolutePath) {
+      console.warn('Skipped deleting invalid thumbnail filename:', filename);
+      return;
+    }
 
     const exists = await RNFS.exists(absolutePath);
     if (exists) {
@@ -173,9 +167,8 @@ export const localThumbnailExists = async (
   filename: string,
 ): Promise<boolean> => {
   try {
-    // Convert to absolute path for file operations
     const absolutePath = getAbsoluteThumbnailPath(filename);
-    return await RNFS.exists(absolutePath);
+    return absolutePath ? await RNFS.exists(absolutePath) : false;
   } catch (error) {
     console.error('Failed to check if local thumbnail exists:', error);
     return false;

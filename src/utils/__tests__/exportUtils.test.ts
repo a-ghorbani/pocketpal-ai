@@ -514,6 +514,40 @@ describe('exportUtils', () => {
         expect(exportedData.thumbnail_url).toBeUndefined();
       });
 
+      it.each([
+        '..',
+        '../..',
+        '/etc/hosts',
+        'file:///data/local/tmp/x',
+        '../x',
+      ])(
+        'drops an unsafe local thumbnail %p without reading it',
+        async thumbnail_url => {
+          palStore.pals = [{...mockPal, thumbnail_url} as any];
+
+          await exportPal('pal-1');
+
+          expect(RNFS.readFile).not.toHaveBeenCalled();
+          const exportedData = JSON.parse(
+            (RNFS.writeFile as jest.Mock).mock.calls[0][1],
+          );
+          expect(exportedData.thumbnail_data).toBeUndefined();
+          expect(exportedData.thumbnail_url).toBeUndefined();
+        },
+      );
+
+      it('keeps an empty thumbnail_url without reading', async () => {
+        palStore.pals = [{...mockPal, thumbnail_url: ''} as any];
+
+        await exportPal('pal-1');
+
+        expect(RNFS.readFile).not.toHaveBeenCalled();
+        const exportedData = JSON.parse(
+          (RNFS.writeFile as jest.Mock).mock.calls[0][1],
+        );
+        expect(exportedData.thumbnail_url).toBe('');
+      });
+
       it('should throw error if pal not found', async () => {
         palStore.pals = [];
 
@@ -628,6 +662,10 @@ describe('exportUtils', () => {
       const filename = 'test_thumbnail.jpg';
       const expected = `/mock/document/path/pal-images/test_thumbnail.jpg`;
       expect(getAbsoluteThumbnailPath(filename)).toBe(expected);
+    });
+
+    it('returns null for a name that is not a plain file name', () => {
+      expect(getAbsoluteThumbnailPath('../x')).toBeNull();
     });
   });
 

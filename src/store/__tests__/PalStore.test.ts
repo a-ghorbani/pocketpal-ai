@@ -5,6 +5,7 @@ import {palsHubService} from '../../services';
 import {palRepository} from '../../repositories/PalRepository';
 import type {Pal} from '../../types/pal';
 import type {PalsHubPal} from '../../types/palshub';
+import * as RNFS from '@dr.pogodin/react-native-fs';
 import * as imageUtils from '../../utils/imageUtils';
 import {resolveHFModelForDownload} from '../../utils/hfResolve';
 import {LOOKIE_DEFAULT_MODEL} from '../builtinPalModels';
@@ -744,6 +745,26 @@ describe('PalStore', () => {
 
         expect(result).toEqual(expectedLocalPal);
         expect(palStore.pals).toContainEqual(expectedLocalPal);
+      });
+
+      it('keeps the remote thumbnail URL when its extension would leave pal-images', async () => {
+        const thumbnailUrl = 'https://h/a.b/c';
+        (imageUtils.downloadPalThumbnail as jest.Mock).mockImplementationOnce(
+          jest.requireActual('../../utils/imageUtils').downloadPalThumbnail,
+        );
+        (palRepository.createPal as jest.Mock).mockImplementationOnce(
+          async (data: any) => ({...data, id: 'created-pal-id'}),
+        );
+
+        await palStore.downloadPalsHubPal({
+          ...mockPalsHubPal,
+          thumbnail_url: thumbnailUrl,
+        });
+
+        expect(RNFS.downloadFile).not.toHaveBeenCalled();
+        expect(
+          (palRepository.createPal as jest.Mock).mock.calls[0][0].thumbnail_url,
+        ).toBe(thumbnailUrl);
       });
 
       it('should handle premium pal ownership check before downloading', async () => {

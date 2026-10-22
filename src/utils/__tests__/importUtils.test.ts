@@ -176,6 +176,22 @@ describe('importUtils', () => {
         // Function should still succeed even if thumbnail save fails
       });
 
+      it('does not write a base64 thumbnail whose generated name is unsafe', async () => {
+        jest.spyOn(require('uuid'), 'v4').mockReturnValueOnce('../x');
+        (RNFS.readFile as jest.Mock).mockResolvedValue(
+          JSON.stringify([mockImportedPalWithBase64]),
+        );
+
+        expect(await importPals()).toBe(1);
+
+        expect(RNFS.exists).not.toHaveBeenCalled();
+        expect(RNFS.mkdir).not.toHaveBeenCalled();
+        expect(RNFS.writeFile).not.toHaveBeenCalled();
+        const created = (palStore.createPal as jest.Mock).mock.calls[0][0];
+        expect(created.thumbnail_url).toBeUndefined();
+        expect(created.name).toBe(mockImportedPal.name);
+      });
+
       it('should import multiple pals', async () => {
         const multiplePals = [
           mockImportedPal,
