@@ -250,6 +250,7 @@ describe('useVoiceMode', () => {
       voiceModeStore.setUnlockOverride(false);
       const {enter, hook} = renderVoiceMode();
       await enter();
+      expect(hook.result.current.sheet).toEqual({kind: 'teaser'});
 
       act(() => mockBlur?.());
 
@@ -378,6 +379,19 @@ describe('useVoiceMode', () => {
 
       expect(hook.result.current.sheet).toEqual({kind: 'setup'});
       expect(engine.prepare).not.toHaveBeenCalled();
+    });
+
+    it('leaving the screen keeps the setup sheet open', async () => {
+      runInAction(() => {
+        asrStore.downloadStates.base = 'not_installed';
+      });
+      const {enter, hook} = renderVoiceMode();
+      await enter();
+      expect(hook.result.current.sheet).toEqual({kind: 'setup'});
+
+      act(() => mockBlur?.());
+
+      expect(hook.result.current.sheet).toEqual({kind: 'setup'});
     });
 
     it('enters after setup completes and memory fits', async () => {
