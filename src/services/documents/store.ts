@@ -450,11 +450,18 @@ const deleteUnlive = async (
   getReferencedIds: ReferencedIds,
 ): Promise<void> => {
   let epoch = releaseEpoch;
-  let referenced = await getReferencedIds();
+  const settledReferences = async (): Promise<Set<string>> => {
+    let ids: Set<string>;
+    do {
+      epoch = releaseEpoch;
+      ids = await getReferencedIds();
+    } while (epoch !== releaseEpoch);
+    return ids;
+  };
+  let referenced = await settledReferences();
   for (const id of candidates) {
     if (epoch !== releaseEpoch) {
-      epoch = releaseEpoch;
-      referenced = await getReferencedIds();
+      referenced = await settledReferences();
     }
     if (!isDocumentId(id) || referenced.has(id) || isHeld(id)) {
       continue;

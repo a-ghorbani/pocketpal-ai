@@ -517,6 +517,30 @@ describe('release and sweep', () => {
     expect(getReferenced).toHaveBeenCalledTimes(2);
   });
 
+  it('re-reads references until no hold was released during the read', async () => {
+    makeDir(docId('a'));
+    holdForSend([docId('other'), docId('a')]);
+    let persisted = false;
+    const getReferenced = jest
+      .fn()
+      .mockImplementationOnce(async () => {
+        releaseSendHold([docId('other')]);
+        return new Set<string>();
+      })
+      .mockImplementationOnce(async () => {
+        persisted = true;
+        releaseSendHold([docId('a')]);
+        return new Set<string>();
+      })
+      .mockImplementation(async () =>
+        persisted ? new Set([docId('a')]) : new Set<string>(),
+      );
+
+    await releaseDocuments([docId('a')], getReferenced);
+
+    expect(docDirs()).toEqual([`${ROOT}/${docId('a')}`]);
+  });
+
   it('release skips ids still referenced and deletes the rest', async () => {
     makeDir(docId('shared'));
     makeDir(docId('only-here'));
