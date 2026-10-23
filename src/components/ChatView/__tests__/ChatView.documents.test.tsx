@@ -784,7 +784,7 @@ describe('ChatView resend', () => {
 
     expect(chat.onSendPress).toHaveBeenCalledWith(
       expect.objectContaining({text: 'Earlier question'}),
-      {replaceFromId: 'question-row'},
+      {replaceFromId: 'question-row', resend: true},
     );
     expect(chatSessionStore.removeMessagesFromId).not.toHaveBeenCalled();
     expect(heldDuringSend).toBe(true);
@@ -1388,7 +1388,7 @@ describe('leaving an edit that kept the composer', () => {
 
     expect(chat.onSendPress).toHaveBeenCalledWith(
       expect.objectContaining({text: 'Older row'}),
-      {replaceFromId: 'older-row'},
+      {replaceFromId: 'older-row', resend: true},
     );
     expectRestored(chat);
   });

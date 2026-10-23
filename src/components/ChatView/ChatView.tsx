@@ -940,7 +940,7 @@ export const ChatView = observer(
           const sent =
             replaceFromId === undefined
               ? onSendPress(message)
-              : onSendPress(message, {replaceFromId});
+              : onSendPress(message, {replaceFromId, resend: true});
           if (clear !== 'none') {
             setInputText('');
             syncedDraftRef.current = '';

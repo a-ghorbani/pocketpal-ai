@@ -832,3 +832,175 @@ describe('reading document text at send', () => {
     expect(nonSystem(0).at(-1)?.content).toBe('hi');
   });
 });
+
+describe('removing rows under the lease', () => {
+  const store = chatSessionStore as any;
+  const earlier = pdf('lease-earlier', {tokenEstimate: 6000});
+  const withWindow = (nCtx: number | undefined) =>
+    runInAction(() => {
+      modelStore.activeModelId = modelsList[0].id;
+      modelStore.activeContextSettings =
+        nCtx === undefined ? undefined : ({n_ctx: nCtx} as any);
+    });
+  const userRows = () =>
+    (chatSessionStore.addMessageToCurrentSession as jest.Mock).mock.calls
+      .map(([m]) => m)
+      .filter(m => m.type === 'text' && m.author === user);
+  const callOrder = (fn: unknown) =>
+    (fn as jest.Mock).mock.invocationCallOrder[0];
+
+  beforeEach(() => {
+    writeText(earlier.id, ['x']);
+    history = [
+      assistantRow('a2', 'second answer'),
+      userRow('m', 'second question'),
+      assistantRow('a1', 'first answer'),
+      userRow('u1', 'read', [earlier]),
+    ];
+    store.editingMessageId = null;
+  });
+
+  afterEach(() => {
+    store.editingMessageId = null;
+    runInAction(() => {
+      modelStore.activeContextSettings = undefined;
+    });
+  });
+
+  const sendWith = async (
+    message: MessageType.PartialText,
+    options?: {replaceFromId?: string; resend?: boolean},
+  ) => {
+    const {result} = renderHook(() =>
+      useChatSession({current: null}, user, assistant),
+    );
+    let undone: any;
+    await act(async () => {
+      undone = await result.current.handleSendPress(message, options);
+    });
+    return undone;
+  };
+
+  it('removes nothing when a resend is over under the lease', async () => {
+    withWindow(4096);
+
+    const undone = await sendWith(
+      {type: 'text', text: 'second question'},
+      {replaceFromId: 'm', resend: true},
+    );
+
+    expect(chatSessionStore.removeMessagesFromId).not.toHaveBeenCalled();
+    expect(userRows()).toEqual([]);
+    expect(undone).toMatchObject({
+      sessionId: 'session-1',
+      verdict: {kind: 'over'},
+    });
+  });
+
+  it('keeps the edited row and edit mode when an edited send is over', async () => {
+    withWindow(4096);
+    store.editingMessageId = 'm';
+    const message = {type: 'text' as const, text: 'rewritten'};
+
+    const undone = await sendWith(message, {replaceFromId: 'm'});
+
+    expect(chatSessionStore.removeMessagesFromId).not.toHaveBeenCalled();
+    expect(chatSessionStore.exitEditMode).not.toHaveBeenCalled();
+    expect(undone).toMatchObject({
+      message,
+      sessionId: 'session-1',
+      verdict: {kind: 'over'},
+    });
+  });
+
+  it('ends the edit right before removing from the edited row, then sends', async () => {
+    store.editingMessageId = 'm';
+
+    await sendWith({type: 'text', text: 'rewritten'}, {replaceFromId: 'm'});
+
+    expect(chatSessionStore.removeMessagesFromId).toHaveBeenCalledWith(
+      'm',
+      true,
+    );
+    expect(callOrder(chatSessionStore.exitEditMode)).toBeLessThan(
+      callOrder(chatSessionStore.removeMessagesFromId),
+    );
+    expect(callOrder(chatSessionStore.removeMessagesFromId)).toBeLessThan(
+      callOrder(chatSessionStore.addMessageToCurrentSession),
+    );
+    expect(userRows().map(m => m.text)).toEqual(['rewritten']);
+  });
+
+  it('ends the edit and removes only from the resent row', async () => {
+    store.editingMessageId = 'u1';
+
+    await sendWith(
+      {type: 'text', text: 'second question'},
+      {replaceFromId: 'm', resend: true},
+    );
+
+    expect(chatSessionStore.exitEditMode).toHaveBeenCalled();
+    expect(chatSessionStore.removeMessagesFromId).toHaveBeenCalledTimes(1);
+    expect(chatSessionStore.removeMessagesFromId).toHaveBeenCalledWith(
+      'm',
+      true,
+    );
+  });
+
+  it('hands an edited send back when the edit ended before the lease', async () => {
+    store.editingMessageId = 'm';
+    const settings = chatSessionStore.getCurrentCompletionSettings as jest.Mock;
+    const defaults = await settings();
+    settings.mockImplementationOnce(async () => {
+      store.editingMessageId = null;
+      return defaults;
+    });
+    const message = {type: 'text' as const, text: 'rewritten'};
+
+    const undone = await sendWith(message, {replaceFromId: 'm'});
+
+    expect(chatSessionStore.removeMessagesFromId).not.toHaveBeenCalled();
+    expect(userRows()).toEqual([]);
+    expect(undone).toEqual({message, sessionId: 'session-1'});
+  });
+
+  it.each([
+    [
+      'no model is loaded',
+      () => {
+        modelStore.engine = undefined as any;
+      },
+    ],
+    [
+      'the model has no context',
+      () => {
+        modelStore.context = undefined as any;
+      },
+    ],
+  ])('hands a composer send back when %s', async (_label, unload) => {
+    unload();
+    const message = {
+      type: 'text' as const,
+      text: 'go',
+      documents: [earlier],
+      imageUris: ['file://a.jpg'],
+    };
+
+    const undone = await sendWith(message);
+
+    expect(userRows()).toEqual([]);
+    expect(undone).toEqual({message, sessionId: 'session-1'});
+  });
+
+  it('hands a resend back as nothing when no model is loaded', async () => {
+    modelStore.engine = undefined as any;
+
+    const undone = await sendWith(
+      {type: 'text', text: 'second question'},
+      {replaceFromId: 'm', resend: true},
+    );
+
+    expect(chatSessionStore.removeMessagesFromId).not.toHaveBeenCalled();
+    expect(undone).toBeUndefined();
+  });
+});

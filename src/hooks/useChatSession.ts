@@ -725,8 +725,17 @@ export type UndoneSend = {
 };
 
 export type SendOptions = {
-  /** A resend: the row it replaces, removed with every later row once the send holds the lease. */
+  /** The row this send replaces, removed with every later row once the send holds the lease and fits. */
   replaceFromId?: string;
+  /** Sends an existing row again; a bail touches neither the row nor the composer. */
+  resend?: boolean;
+};
+
+/** What a send knew when it was pressed. */
+type SendOrigin = {
+  sentFrom: string | null;
+  editingAtEntry: string | null;
+  options: SendOptions;
 };
 
 export type EvaluateSendBudget = (
@@ -830,45 +839,52 @@ export const useChatSession = (
   };
 
   /**
-   * Returns a send cancelled by a chat switch: its text to the chat it was
-   * typed in, its attachments to the composer, which stays with the user.
-   * A resend's row was never removed, so nothing comes back.
+   * A send that does not go out. A resend touched nothing, so only an over
+   * verdict comes back. A composer send returns its content: after a chat
+   * switch the text goes to the chat it was typed in and the attachments to
+   * the composer, which stays with the user; otherwise all of it goes back
+   * to the open composer.
    */
   const unsent = (
     message: MessageType.PartialText,
-    sentFrom: string | null,
-    {replaceFromId}: SendOptions,
+    {sentFrom, options}: SendOrigin,
+    verdict?: UndoneSend['verdict'],
   ): UndoneSend | undefined => {
-    if (replaceFromId !== undefined) {
-      return undefined;
+    const sessionId = chatSessionStore.activeSessionId ?? '';
+    if (options.resend) {
+      return verdict ? {message, sessionId, verdict} : undefined;
+    }
+    if (chatSessionStore.activeSessionId === sentFrom) {
+      return verdict ? {message, sessionId, verdict} : {message, sessionId};
     }
     chatSessionStore.restoreUnsentText(sentFrom, message.text);
     if (!message.imageUris?.length && !message.documents?.length) {
       return undefined;
     }
-    return {
-      message: {...message, text: ''},
-      sessionId: chatSessionStore.activeSessionId ?? '',
-    };
+    return {message: {...message, text: ''}, sessionId};
   };
 
   const handleSendPress = async (
     message: MessageType.PartialText,
     options: SendOptions = {},
   ): Promise<UndoneSend | undefined> => {
-    const sentFrom = chatSessionStore.activeSessionId;
+    const origin: SendOrigin = {
+      sentFrom: chatSessionStore.activeSessionId,
+      editingAtEntry: chatSessionStore.editingMessageId,
+      options,
+    };
     if (modelStore.isGenerationBusy) {
       chatSessionStore.setIsStopping(true);
     }
     const lease = await modelStore.acquireGeneration();
     chatSessionStore.setIsStopping(false);
-    if (chatSessionStore.activeSessionId !== sentFrom) {
+    if (chatSessionStore.activeSessionId !== origin.sentFrom) {
       lease?.end();
-      return unsent(message, sentFrom, options);
+      return unsent(message, origin);
     }
     if (!lease) {
       await addSystemMessage(l10n.chat.modelNotLoaded);
-      return;
+      return unsent(message, origin);
     }
     leaseRef.current = lease;
 
@@ -897,7 +913,7 @@ export const useChatSession = (
     }
 
     try {
-      return await sendUnderLease(message, sentFrom, options, lease, {
+      return await sendUnderLease(message, origin, lease, {
         stop: uiStop,
         isStopped: () => uiStopped,
       });
@@ -913,8 +929,7 @@ export const useChatSession = (
 
   const sendUnderLease = async (
     message: MessageType.PartialText,
-    sentFrom: string | null,
-    options: SendOptions,
+    origin: SendOrigin,
     lease: GenerationLease,
     runUi: {stop: () => void; isStopped: () => boolean},
   ): Promise<UndoneSend | undefined> => {
@@ -922,8 +937,9 @@ export const useChatSession = (
     const contextId = modelStore.contextId;
     if (!contextId) {
       await addSystemMessage(l10n.chat.modelNotLoaded);
-      return;
+      return unsent(message, origin);
     }
+    const {replaceFromId, resend} = origin.options;
 
     const imageUris = message.imageUris;
     const hasImages = !!(imageUris && imageUris.length > 0);
@@ -932,24 +948,33 @@ export const useChatSession = (
 
     const currentMessages = rowsBefore(
       toJS(chatSessionStore.currentSessionMessages),
-      options.replaceFromId,
+      replaceFromId,
     );
 
     const plan = hasDocuments(currentMessages, message)
       ? documentPlan(await planInputs(currentMessages, message))
       : undefined;
-    if (chatSessionStore.activeSessionId !== sentFrom) {
-      return unsent(message, sentFrom, options);
+    if (chatSessionStore.activeSessionId !== origin.sentFrom) {
+      return unsent(message, origin);
     }
-    if (options.replaceFromId !== undefined) {
-      await chatSessionStore.removeMessagesFromId(options.replaceFromId, true);
+    if (
+      !resend &&
+      replaceFromId !== undefined &&
+      chatSessionStore.editingMessageId !== replaceFromId
+    ) {
+      return unsent(message, origin);
     }
     if (plan?.verdict.kind === 'over') {
-      return {
-        message,
-        sessionId: chatSessionStore.activeSessionId ?? '',
-        verdict: plan.verdict,
-      };
+      return unsent(message, origin, plan.verdict);
+    }
+    if (
+      origin.editingAtEntry &&
+      chatSessionStore.editingMessageId === origin.editingAtEntry
+    ) {
+      chatSessionStore.exitEditMode();
+    }
+    if (replaceFromId !== undefined) {
+      await chatSessionStore.removeMessagesFromId(replaceFromId, true);
     }
     const documents = message.documents?.map((ref, i) => ({
       ...ref,

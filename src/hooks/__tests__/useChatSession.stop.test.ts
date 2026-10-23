@@ -379,7 +379,7 @@ describe('useChatSession: a resend', () => {
     await act(async () => {
       sending = session.current.handleSendPress(
         {...textMessage, text: 'again'},
-        {replaceFromId: 'row-1'},
+        {replaceFromId: 'row-1', resend: true},
       );
     });
     expect(chatSessionStore.removeMessagesFromId).not.toHaveBeenCalled();
@@ -510,7 +510,7 @@ describe('useChatSession: a send whose chat changed while it waited', () => {
     await act(async () => {
       sending = session.current.handleSendPress(
         {...textMessage, text: 'again', documents},
-        {replaceFromId: 'row-1'},
+        {replaceFromId: 'row-1', resend: true},
       );
     });
     chatSessionStore.activeSessionId = 'session-2';
