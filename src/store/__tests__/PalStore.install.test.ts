@@ -10,6 +10,10 @@ import * as templateParser from '../../utils/palshub-template-parser';
 import type {Pal} from '../../types/pal';
 import type {Model} from '../../utils/types';
 import type {PalsHubPal} from '../../types/palshub';
+import {fetchModelFilesDetails, fetchModelInfo} from '../../api/hf';
+import {hfAsModel} from '../../utils';
+import smolVlmModelInfo from '../../../jest/fixtures/hfApi/ggml-org__SmolVLM-500M-Instruct-GGUF.model.json';
+import smolVlmTree from '../../../jest/fixtures/hfApi/ggml-org__SmolVLM-500M-Instruct-GGUF.tree.json';
 
 jest.mock('@react-native-async-storage/async-storage', () => {
   const values = new Map<string, string>();
@@ -48,6 +52,11 @@ jest.mock('../../repositories/PalRepository', () => ({
 
 jest.mock('../../utils/hfResolve', () => ({
   resolveHFModelForDownload: jest.fn().mockRejectedValue(new Error('offline')),
+}));
+
+jest.mock('../../api/hf', () => ({
+  fetchModelInfo: jest.fn(),
+  fetchModelFilesDetails: jest.fn(),
 }));
 
 jest.mock('../../utils/imageUtils', () => ({
@@ -429,5 +438,147 @@ describe('PalStore owned install', () => {
         era: 'Future',
       });
     });
+  });
+});
+
+describe('PalsHub model reference', () => {
+  const VALID_REF = {
+    repo_id: 'ggml-org/SmolVLM-500M-Instruct-GGUF',
+    filename: 'SmolVLM-500M-Instruct-Q8_0.gguf',
+    author: 'ggml-org',
+    downloadUrl:
+      'https://huggingface.co/ggml-org/SmolVLM-500M-Instruct-GGUF/resolve/main/SmolVLM-500M-Instruct-Q8_0.gguf',
+    size: 436806912,
+  };
+  const BAD = [
+    '..',
+    '../..',
+    '/etc/hosts',
+    'file:///data/local/tmp/x',
+    'a\u0000b',
+  ];
+  const CRAFTED: [string, Record<string, unknown>][] = [
+    ...BAD.map(
+      v =>
+        [`author ${JSON.stringify(v)}`, {author: v}] as [
+          string,
+          Record<string, unknown>,
+        ],
+    ),
+    ...BAD.map(
+      v =>
+        [`filename ${JSON.stringify(v)}`, {filename: v}] as [
+          string,
+          Record<string, unknown>,
+        ],
+    ),
+    ...BAD.map(
+      v =>
+        [`repo_id ${JSON.stringify(v)}`, {repo_id: v}] as [
+          string,
+          Record<string, unknown>,
+        ],
+    ),
+    ['filename "../../Library/x.gguf"', {filename: '../../Library/x.gguf'}],
+    ['filename "Q4/z/.."', {filename: 'Q4/z/..'}],
+    ['an empty filename', {filename: ''}],
+    ['an empty repo_id', {repo_id: ''}],
+  ];
+  const withRef = (overrides: Record<string, unknown>) =>
+    hubPal({model_reference: {...VALID_REF, ...overrides} as any});
+
+  beforeEach(async () => {
+    await palStore.ready;
+    jest.clearAllMocks();
+    mockDb.length = 0;
+    runInAction(() => {
+      palStore.pals = [];
+    });
+    (palsHubService.checkPalOwnership as jest.Mock).mockResolvedValue({
+      owned: true,
+    });
+    (resolveHFModelForDownload as jest.Mock).mockRejectedValue(
+      new Error('offline'),
+    );
+  });
+
+  const createdPal = () =>
+    (palRepository.createPal as jest.Mock).mock.calls.at(-1)[0];
+
+  describe.each(CRAFTED)('%s', (_case, overrides) => {
+    it('install keeps the pal without the model', async () => {
+      const {localPal} = await palStore.installOwnedPal(withRef(overrides));
+      expect(createdPal().defaultModel).toBeUndefined();
+      expect(localPal.systemPrompt).toBe('You tell stories.');
+    });
+
+    it('library download keeps the pal without the model', async () => {
+      await palStore.downloadPalsHubPal(withRef(overrides));
+      expect(createdPal().defaultModel).toBeUndefined();
+      expect(createdPal().name).toBe('Story Pal');
+    });
+
+    it('creator update clears the model', async () => {
+      const {localPal} = await palStore.installOwnedPal(hubPal());
+      await palStore.applyCreatorUpdate(
+        localPal.id,
+        withRef(overrides),
+        new Set<CreatorField>(['model_reference']),
+      );
+      expect(
+        (palRepository.updatePal as jest.Mock).mock.calls.at(-1)[1],
+      ).toEqual({defaultModel: null});
+    });
+  });
+
+  it('an empty author keeps the fallback model', async () => {
+    await palStore.installOwnedPal(withRef({author: ''}));
+    expect(createdPal().defaultModel).toMatchObject({
+      id: `${VALID_REF.repo_id}/${VALID_REF.filename}`,
+    });
+  });
+
+  it('keeps the fallback model unchanged', async () => {
+    const ref = {
+      ...VALID_REF,
+      repo_id: 'a/b',
+      filename: 'f.gguf',
+      author: null,
+    };
+    const expected = (palStore as any).createBasicModelFromReference(ref);
+
+    await palStore.installOwnedPal(hubPal({model_reference: ref as any}));
+
+    expect(createdPal().defaultModel).toEqual(expected);
+  });
+
+  it('keeps a model resolved from the captured HF API response unchanged', async () => {
+    const info: Record<string, unknown> = {...smolVlmModelInfo};
+    for (const strippedByFetchModelInfo of ['spaces', 'cardData', 'config']) {
+      delete info[strippedByFetchModelInfo];
+    }
+    (fetchModelInfo as jest.Mock).mockResolvedValue(info);
+    (fetchModelFilesDetails as jest.Mock).mockResolvedValue(smolVlmTree);
+    const {resolveHFModelForDownload: realResolve} = jest.requireActual(
+      '../../utils/hfResolve',
+    );
+    (resolveHFModelForDownload as jest.Mock).mockImplementation(realResolve);
+    const {hfModel, modelFile} = await realResolve(
+      VALID_REF.repo_id,
+      VALID_REF.filename,
+      undefined,
+      {
+        author: VALID_REF.author,
+        size: VALID_REF.size,
+        downloadUrl: VALID_REF.downloadUrl,
+      },
+    );
+
+    await palStore.installOwnedPal(hubPal({model_reference: VALID_REF}));
+
+    expect(createdPal().defaultModel).toEqual(hfAsModel(hfModel, modelFile));
+    expect(createdPal().defaultModel.hfModel.siblings.length).toBeGreaterThan(
+      0,
+    );
   });
 });

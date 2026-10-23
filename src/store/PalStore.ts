@@ -46,6 +46,7 @@ import type {
 import {ModelOrigin} from '../utils/types';
 import type {Model} from '../utils/types';
 import {downloadPalThumbnail, deletePalThumbnail} from '../utils/imageUtils';
+import {isValidImportedModelRef} from '../utils/modelPathGuard';
 
 // Track each built-in separately so future defaults can still be introduced.
 // TODO: when adding another built-in pal, extract a shared seed-once helper
@@ -514,8 +515,11 @@ class PalStore {
     // If no template found, use empty schema/parameters (assistant-style pal)
 
     // Convert PalsHub model_reference to Model object if available
-    const defaultModel = palsHubPal.model_reference
+    const convertedModel = palsHubPal.model_reference
       ? await this.createLocalModelFromPHModel(palsHubPal.model_reference)
+      : undefined;
+    const defaultModel = isValidImportedModelRef(convertedModel)
+      ? convertedModel
       : undefined;
 
     // Strict-`=== true` so stringly-typed `required` becomes optional.
