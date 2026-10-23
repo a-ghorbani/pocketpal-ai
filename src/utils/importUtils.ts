@@ -15,7 +15,7 @@ import {CompletionParams} from './completionTypes';
 import {migrateCompletionSettings} from './completionSettingsVersions';
 import {palStore} from '../store';
 import {getAbsoluteThumbnailPath, isRemoteThumbnailUrl} from './imageUtils';
-import {isValidImportedModelRef} from './modelPathGuard';
+import {toImportedModelRef} from './modelPathGuard';
 import {isAllowedChatImageUri} from './chatImageUri';
 import type {Pal, ParameterDefinition} from '../types/pal';
 
@@ -418,9 +418,6 @@ const saveBase64Image = async (
 const keepRemoteThumbnailUrl = (url: unknown): string | undefined =>
   typeof url === 'string' && isRemoteThumbnailUrl(url) ? url : undefined;
 
-const keepValidModelRef = <T>(ref: T): T | undefined =>
-  isValidImportedModelRef(ref) ? ref : undefined;
-
 /**
  * Transform imported pal to the format expected by palStore.createPal
  */
@@ -450,8 +447,8 @@ const transformImportPal = async (
     originalSystemPrompt: pal.originalSystemPrompt,
     isSystemPromptChanged: pal.isSystemPromptChanged,
     useAIPrompt: pal.useAIPrompt,
-    defaultModel: keepValidModelRef(pal.defaultModel),
-    promptGenerationModel: keepValidModelRef(pal.promptGenerationModel),
+    defaultModel: toImportedModelRef(pal.defaultModel),
+    promptGenerationModel: toImportedModelRef(pal.promptGenerationModel),
     generatingPrompt: pal.generatingPrompt,
     color: pal.color,
     capabilities: pal.capabilities || {},

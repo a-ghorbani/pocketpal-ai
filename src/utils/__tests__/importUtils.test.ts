@@ -538,14 +538,53 @@ describe('importUtils', () => {
           expectRestKept(created);
         });
 
-        it.each(['/docs/models/local/m.gguf', ''])(
-          '%j is kept',
+        const localModels = `${RNFS.DocumentDirectoryPath}/models/local`;
+
+        it.each([
+          `${localModels}/m.gguf`,
+          `${RNFS.DocumentDirectoryPath}/models/m.gguf`,
+          '',
+        ])('%j is kept as it is', async fullPath => {
+          const ref = localModel(fullPath);
+          const created = await importOne({...basePal, defaultModel: ref});
+          expect(created.defaultModel).toEqual(ref);
+        });
+
+        it.each([
+          '/var/mobile/Containers/Data/Application/5D7C1A2B-3E4F-4A5B-8C9D-0E1F2A3B4C5D/Documents/models/local/m.gguf',
+          '/data/user/0/com.pocketpalai/files/models/local/m.gguf',
+          '/var/mobile/Containers/Data/Application/5D7C1A2B-3E4F-4A5B-8C9D-0E1F2A3B4C5D/Library/models/local/m.gguf',
+          '/tmp/models/local/m.gguf',
+          '/var/mobile/Containers/Data/Application/0A1B2C3D-4E5F-4A6B-8C7D-9E0F1A2B3C4D/Documents/other-app/models/local/m.gguf',
+        ])(
+          '%j is re-anchored onto this device for both model fields',
           async fullPath => {
-            const ref = localModel(fullPath);
-            const created = await importOne({...basePal, defaultModel: ref});
-            expect(created.defaultModel).toEqual(ref);
+            const created = await importOne({
+              ...basePal,
+              defaultModel: localModel(fullPath),
+              promptGenerationModel: localModel(fullPath),
+            });
+            expect(created.defaultModel).toEqual(
+              localModel(`${localModels}/m.gguf`),
+            );
+            expect(created.promptGenerationModel.fullPath).toBe(
+              `${localModels}/m.gguf`,
+            );
           },
         );
+
+        it.each([
+          '/a/models/local/b/models/local/m.gguf',
+          '/x/models/local/a/b',
+          '/x/models/local/..',
+        ])('%j still drops the model', async fullPath => {
+          const created = await importOne({
+            ...basePal,
+            defaultModel: localModel(fullPath),
+          });
+          expect(created.defaultModel).toBeUndefined();
+          expectRestKept(created);
+        });
       });
 
       describe('model filename', () => {
@@ -670,7 +709,10 @@ describe('importUtils', () => {
           });
 
           expect(created.defaultModel).toEqual(hfRef);
-          expect(created.promptGenerationModel).toEqual(localRef);
+          expect(created.promptGenerationModel).toEqual({
+            ...localRef,
+            fullPath: `${RNFS.DocumentDirectoryPath}/models/local/x.gguf`,
+          });
           expect(created.thumbnail_url).toMatch(/_thumbnail\.png$/);
           expect(RNFS.writeFile).toHaveBeenCalledWith(
             expect.stringMatching(/\/pal-images\/[^/]+_thumbnail\.png$/),
@@ -696,6 +738,23 @@ describe('importUtils', () => {
           expect(created.defaultModel).toBeUndefined();
           expect(created.name).toBe(exportablePal.name);
         });
+
+        it.each([
+          '/var/mobile/Containers/Data/Application/5D7C1A2B-3E4F-4A5B-8C9D-0E1F2A3B4C5D/Documents/models/local/x.gguf',
+          '/data/user/0/com.pocketpalai/files/models/local/x.gguf',
+        ])(
+          'an export from another device holding %j re-anchors onto this device',
+          async fullPath => {
+            const created = await exportThenImport({
+              ...exportablePal,
+              defaultModel: {...localRef, fullPath},
+            });
+            expect(created.defaultModel).toEqual({
+              ...localRef,
+              fullPath: `${RNFS.DocumentDirectoryPath}/models/local/x.gguf`,
+            });
+          },
+        );
       });
     });
   });

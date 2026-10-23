@@ -1,6 +1,10 @@
 import * as RNFS from '@dr.pogodin/react-native-fs';
 
-import {isModelFilePath, isValidImportedModelRef} from '../modelPathGuard';
+import {
+  isModelFilePath,
+  isValidImportedModelRef,
+  toImportedModelRef,
+} from '../modelPathGuard';
 import {withEachControl} from '../../../jest/fixtures/controlCharacters';
 
 const DOCS = RNFS.DocumentDirectoryPath;
@@ -537,5 +541,65 @@ describe('dot segments in a local model path', () => {
     `${MODELS}/local/a\\b/.`,
   ])('%p is refused', path => {
     expect(isModelFilePath(path, {local: true})).toBe(false);
+  });
+});
+
+describe('toImportedModelRef', () => {
+  const LOCAL = `${DOCS}/models/local`;
+  const IOS_OTHER =
+    '/var/mobile/Containers/Data/Application/5D7C1A2B-3E4F-4A5B-8C9D-0E1F2A3B4C5D';
+  const localRef = (fullPath: unknown) => ({
+    origin: 'local',
+    isLocal: true,
+    id: 'local-id',
+    author: '',
+    filename: 'x.gguf',
+    fullPath,
+  });
+
+  it.each([
+    `${IOS_OTHER}/Documents/models/local/x.gguf`,
+    '/data/user/0/com.pocketpalai/files/models/local/x.gguf',
+    `${IOS_OTHER}/Library/models/local/x.gguf`,
+    '/tmp/models/local/x.gguf',
+    '/data/user/0/com.otherapp/files/models/local/x.gguf',
+  ])('re-anchors %j onto this device', fullPath => {
+    expect(toImportedModelRef(localRef(fullPath))).toEqual(
+      localRef(`${LOCAL}/x.gguf`),
+    );
+  });
+
+  it.each([`${LOCAL}/x.gguf`, `${DOCS}/models/old.gguf`])(
+    'keeps the same-device path %j as the same ref',
+    fullPath => {
+      const ref = localRef(fullPath);
+      expect(toImportedModelRef(ref)).toBe(ref);
+    },
+  );
+
+  it.each([undefined, null, ''])('keeps an empty fullPath %p', fullPath => {
+    const ref = localRef(fullPath);
+    expect(toImportedModelRef(ref)).toBe(ref);
+  });
+
+  it.each([
+    '/a/models/local/b/models/local/x.gguf',
+    '/x/models/local/a/b',
+    '/x/models/local/..',
+    '/x/models/local/a\u0000b',
+    `${DOCS}/models/hf/a/x.gguf`,
+    '/etc/hosts',
+  ])('drops %j', fullPath => {
+    expect(toImportedModelRef(localRef(fullPath))).toBeUndefined();
+  });
+
+  it('drops a ref that fails the other rules', () => {
+    expect(
+      toImportedModelRef({...localRef(`${LOCAL}/x.gguf`), filename: '..'}),
+    ).toBeUndefined();
+  });
+
+  it('keeps an absent ref absent', () => {
+    expect(toImportedModelRef(undefined)).toBeUndefined();
   });
 });

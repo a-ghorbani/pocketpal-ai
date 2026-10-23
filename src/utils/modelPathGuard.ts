@@ -119,27 +119,26 @@ const hasLoadableFilename = (ref: UnknownRecord): boolean =>
 
 const LOCAL_MODELS_MARKER = '/models/local/';
 
-const isImportableFullPath = (fullPath: unknown): boolean => {
-  if (isEmpty(fullPath)) {
-    return true;
-  }
-  if (
-    typeof fullPath !== 'string' ||
-    !fullPath.startsWith('/') ||
-    !isSafeRelativePath(fullPath.slice(1))
-  ) {
-    return false;
+const rewrittenFullPath = (fullPath: string): string | undefined => {
+  if (!fullPath.startsWith('/') || !isSafeRelativePath(fullPath.slice(1))) {
+    return undefined;
   }
   const [, localName, ...extra] = fullPath.split(LOCAL_MODELS_MARKER);
   if (localName !== undefined) {
-    return extra.length === 0 && isSafePathSegment(localName);
+    return extra.length === 0 && isSafePathSegment(localName)
+      ? `${RNFS.DocumentDirectoryPath}${LOCAL_MODELS_MARKER}${localName}`
+      : undefined;
   }
   const modelsPrefix = `${RNFS.DocumentDirectoryPath}/models/`;
-  return (
-    fullPath.startsWith(modelsPrefix) &&
+  return fullPath.startsWith(modelsPrefix) &&
     isSafePathSegment(fullPath.slice(modelsPrefix.length))
-  );
+    ? fullPath
+    : undefined;
 };
+
+const isImportableFullPath = (fullPath: unknown): boolean =>
+  isEmpty(fullPath) ||
+  (typeof fullPath === 'string' && rewrittenFullPath(fullPath) !== undefined);
 
 export const isValidImportedModelRef = (ref: unknown): boolean => {
   if (isAbsent(ref)) {
@@ -154,4 +153,15 @@ export const isValidImportedModelRef = (ref: unknown): boolean => {
     hasSafeOriginFields(ref) &&
     isImportableFullPath(ref.fullPath)
   );
+};
+
+export const toImportedModelRef = <T>(ref: T): T | undefined => {
+  if (!isValidImportedModelRef(ref)) {
+    return undefined;
+  }
+  if (!isObject(ref) || isEmpty(ref.fullPath)) {
+    return ref;
+  }
+  const fullPath = rewrittenFullPath(ref.fullPath as string);
+  return fullPath === ref.fullPath ? ref : ({...ref, fullPath} as T);
 };
