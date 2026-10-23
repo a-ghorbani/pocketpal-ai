@@ -684,6 +684,53 @@ describe('document grounding instruction', () => {
   });
 });
 
+describe('planning a new chat started from a pal', () => {
+  afterEach(() => {
+    Object.defineProperty(chatSessionStore, 'activePalId', {
+      get: jest.fn(() => null),
+      configurable: true,
+    });
+  });
+
+  it('counts the pal prompt before the chat exists', async () => {
+    palStore.pals = [
+      {
+        id: 'pal-new',
+        type: 'local',
+        name: 'Pal',
+        systemPrompt: 'Long pal prompt for the plan.',
+        parameters: {},
+        parameterSchema: [],
+        isSystemPromptChanged: false,
+        useAIPrompt: false,
+        source: 'local',
+      },
+    ] as any;
+    chatSessionStore.activeSessionId = null as any;
+    Object.defineProperty(chatSessionStore, 'activePalId', {
+      get: jest.fn(() => 'pal-new'),
+      configurable: true,
+    });
+    const report = pdf('pal-doc', {pageCount: 1});
+    const plan = jest.requireActual('../../services/documents/plan');
+    const spy = jest.spyOn(plan, 'documentPlan');
+    const {result} = renderHook(() =>
+      useChatSession({current: null}, user, assistant),
+    );
+
+    await result.current.evaluateSendBudget({
+      type: 'text',
+      text: 'q',
+      documents: [report],
+    });
+
+    expect((spy.mock.calls[0][0] as {nonDocText: string}).nonDocText).toContain(
+      'Long pal prompt for the plan.',
+    );
+    spy.mockRestore();
+  });
+});
+
 describe('plan and send share one prompt', () => {
   it('plan prompt strips thinking like the send', async () => {
     const report = pdf('thinking-doc', {pageCount: 1});

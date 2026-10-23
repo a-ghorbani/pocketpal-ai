@@ -756,12 +756,8 @@ const planInputs = async (
   rows: MessageType.Any[],
   message: MessageType.PartialText,
 ): Promise<PlanInput> => {
-  const activeSession = chatSessionStore.sessions.find(
-    s => s.id === chatSessionStore.activeSessionId,
-  );
-  const pal = activeSession?.activePalId
-    ? palStore.pals.find(p => p.id === activeSession.activePalId)
-    : null;
+  const palId = chatSessionStore.activePalId;
+  const pal = palId ? palStore.pals.find(p => p.id === palId) : null;
   const settings = await chatSessionStore.getCurrentCompletionSettings();
   const tools = (settings?.tools as ToolDefinition[] | undefined) ?? [];
   const refs = [
