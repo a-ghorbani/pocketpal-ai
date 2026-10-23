@@ -999,7 +999,11 @@ export const useChatSession = (
       !!origin.editingAtEntry &&
       chatSessionStore.editingMessageId === origin.editingAtEntry;
     if (replaceFromId !== undefined) {
-      await chatSessionStore.removeMessagesFromId(replaceFromId, true);
+      await chatSessionStore.removeMessagesFromId(
+        replaceFromId,
+        true,
+        origin.sentFrom,
+      );
     }
     if (endsEdit) {
       chatSessionStore.exitEditMode();
@@ -1028,8 +1032,15 @@ export const useChatSession = (
       (chatSessionStore.sessions.find(
         s => s.id === chatSessionStore.activeSessionId,
       )?.title ?? NEW_SESSION_TITLE) === NEW_SESSION_TITLE;
-    await addMessage(textMessage);
-    const rowSessionId = chatSessionStore.activeSessionId!;
+    if (
+      origin.sentFrom !== null &&
+      chatSessionStore.activeSessionId !== origin.sentFrom
+    ) {
+      await chatSessionStore.addMessageToSession(origin.sentFrom, textMessage);
+    } else {
+      await addMessage(textMessage);
+    }
+    const rowSessionId = origin.sentFrom ?? chatSessionStore.activeSessionId!;
     releaseSendHold((message.documents ?? []).map(ref => ref.id));
     if (!lease.signal.aborted) {
       modelStore.setInferencing(true);

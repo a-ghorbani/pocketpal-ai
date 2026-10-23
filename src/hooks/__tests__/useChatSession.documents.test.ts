@@ -961,6 +961,7 @@ describe('removing rows under the lease', () => {
     expect(chatSessionStore.removeMessagesFromId).toHaveBeenCalledWith(
       'm',
       true,
+      'session-1',
     );
     expect(removedAtExit).toBe(true);
     expect(callOrder(chatSessionStore.removeMessagesFromId)).toBeLessThan(
@@ -982,6 +983,7 @@ describe('removing rows under the lease', () => {
     expect(chatSessionStore.removeMessagesFromId).toHaveBeenCalledWith(
       'm',
       true,
+      'session-1',
     );
   });
 
@@ -1061,6 +1063,7 @@ describe('removing rows under the lease', () => {
         expect(chatSessionStore.removeMessagesFromId).toHaveBeenCalledWith(
           resent,
           true,
+          'session-1',
         );
         expect(userRows().map(m => m.text)).toEqual([text]);
       },
@@ -1075,6 +1078,7 @@ describe('removing rows under the lease', () => {
       expect(chatSessionStore.removeMessagesFromId).toHaveBeenCalledWith(
         'm',
         true,
+        'session-1',
       );
       expect(userRows().map(m => m.text)).toEqual(['rewritten']);
     });
@@ -1089,6 +1093,7 @@ describe('removing rows under the lease', () => {
       expect(chatSessionStore.removeMessagesFromId).toHaveBeenCalledWith(
         'm',
         true,
+        'session-1',
       );
     });
   });
@@ -1219,6 +1224,37 @@ describe('removing rows under the lease', () => {
       undefined,
     );
   });
+
+  it.each([
+    ['an edited send', {replaceFromId: 'm'}, 'm'],
+    ['a resend', {replaceFromId: 'm', resend: true}, null],
+  ])(
+    'keeps %s and its reply in its chat when another chat opens during the row removal',
+    async (_label, options, editing) => {
+      store.editingMessageId = editing;
+      (
+        chatSessionStore.removeMessagesFromId as jest.Mock
+      ).mockImplementationOnce(async () => {
+        chatSessionStore.activeSessionId = 'session-2';
+      });
+
+      await sendWith({type: 'text', text: 'second question'}, options);
+
+      expect(chatSessionStore.removeMessagesFromId).toHaveBeenCalledWith(
+        'm',
+        true,
+        'session-1',
+      );
+      expect(userRows()).toEqual([]);
+      const added = (
+        chatSessionStore.addMessageToSession as jest.Mock
+      ).mock.calls.map(([id, m]) => [id, m.type]);
+      expect(added).toEqual([
+        ['session-1', 'text'],
+        ['session-1', 'assistant_turn'],
+      ]);
+    },
+  );
 
   it('hands a resend back as nothing when no model is loaded', async () => {
     modelStore.engine = undefined as any;

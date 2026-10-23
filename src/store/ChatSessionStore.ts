@@ -1290,9 +1290,10 @@ class ChatSessionStore {
   async removeMessagesFromId(
     messageId: string,
     includeMessage: boolean = true,
+    sessionId: string | null = this.activeSessionId,
   ): Promise<void> {
-    if (this.activeSessionId) {
-      const session = this.sessions.find(s => s.id === this.activeSessionId);
+    if (sessionId) {
+      const session = this.sessions.find(s => s.id === sessionId);
       if (session) {
         const messageIndex = session.messages.findIndex(
           msg => msg.id === messageId,
@@ -1308,9 +1309,8 @@ class ChatSessionStore {
             await chatSessionRepository.deleteMessage(msg.id);
           }
 
-          const updatedSession = await chatSessionRepository.getSessionById(
-            this.activeSessionId,
-          );
+          const updatedSession =
+            await chatSessionRepository.getSessionById(sessionId);
 
           // Update local state
           runInAction(() => {

@@ -395,6 +395,7 @@ describe('useChatSession: a resend', () => {
     expect(chatSessionStore.removeMessagesFromId).toHaveBeenCalledWith(
       'row-1',
       true,
+      'session-1',
     );
     expect(
       (chatSessionStore.removeMessagesFromId as jest.Mock).mock

@@ -1246,6 +1246,47 @@ describe('chatSessionStore', () => {
       expect(chatSessionStore.sessions[0].messages[1].id).toBe(mockMessage.id);
     });
 
+    it('removes from and refreshes the given chat even after another chat opens', async () => {
+      const other = {
+        id: 'session2',
+        title: 'Session 2',
+        date: new Date().toISOString(),
+        messages: [{...mockMessage, id: 'other-message'}],
+        completionSettings: defaultCompletionSettings,
+        settingsSource: 'pal' as 'pal' | 'custom',
+      };
+      chatSessionStore.sessions = [...chatSessionStore.sessions, other];
+      const getById = chatSessionRepository.getSessionById as jest.Mock;
+      getById.mockImplementationOnce(async (id: string) => ({
+        session: {id, title: 'Session', date: new Date().toISOString()},
+        messages:
+          id === 'session1'
+            ? [{toMessageObject: () => mockMessage}]
+            : [{toMessageObject: () => ({...mockMessage, id: 'wrong'})}],
+        completionSettings: {getSettings: () => defaultCompletionSettings},
+      }));
+      const deleteMessage = jest
+        .spyOn(chatSessionRepository, 'deleteMessage')
+        .mockImplementation(async () => {
+          chatSessionStore.activeSessionId = 'session2';
+        });
+
+      await chatSessionStore.removeMessagesFromId(
+        mockMessage2.id,
+        true,
+        'session1',
+      );
+
+      expect(getById).toHaveBeenCalledWith('session1');
+      expect(chatSessionStore.sessions[0].messages.map(m => m.id)).toEqual([
+        mockMessage.id,
+      ]);
+      expect(chatSessionStore.sessions[1].messages.map(m => m.id)).toEqual([
+        'other-message',
+      ]);
+      deleteMessage.mockRestore();
+    });
+
     it('does nothing for non-existent message ID', async () => {
       await chatSessionStore.removeMessagesFromId('non-existent');
 
