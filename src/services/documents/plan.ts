@@ -8,6 +8,7 @@ import {
   excerptOpen,
   modeOf,
   renderDocumentStub,
+  renderMissingDocument,
 } from './render';
 import {
   EXCERPT_MAX_TOKENS,
@@ -94,7 +95,7 @@ export const documentPlan = ({
     documentTokens(ref, activeModelId, missingKeys);
   const loadOf = (ref: DocumentRef, mode: DocumentMode) =>
     isMissing(ref)
-      ? 0
+      ? estimateDocTokens(renderMissingDocument(ref))
       : mode === 'searched'
         ? estimateDocTokens(renderDocumentStub(ref))
         : fullTokens(ref);
@@ -109,6 +110,11 @@ export const documentPlan = ({
   const historyLoad =
     LEAD_TOKENS * historyRows.length +
     historyRefs.reduce((sum, ref) => sum + loadOf(ref, modeOf(ref)), 0);
+  const historyNotices = historyRows.reduce((sum, refs) => {
+    const gone = refs.filter(isMissing);
+    const notices = gone.reduce((n, ref) => n + loadOf(ref, 'full'), 0);
+    return sum + notices + (gone.length === refs.length ? LEAD_TOKENS : 0);
+  }, 0);
   const searched = historyRefs.filter(
     ref => modeOf(ref) === 'searched' && !isMissing(ref),
   );
@@ -129,9 +135,9 @@ export const documentPlan = ({
     return 'full';
   });
   const newLoad = () =>
-    (newRefs.length > 0 ? LEAD_TOKENS : 0) +
+    (newRefs.length > 0 || searchedNow().length > 0 ? LEAD_TOKENS : 0) +
     newRefs.reduce((sum, ref, i) => sum + loadOf(ref, newModes[i]), 0);
-  const searchedNow = () => [
+  const searchedNow = (): DocumentRef[] => [
     ...searched,
     ...newRefs.filter(
       (ref, i) => newModes[i] === 'searched' && !isMissing(ref),
@@ -141,6 +147,8 @@ export const documentPlan = ({
   const nonDoc = estimateDocTokens(nonDocText);
   const available =
     windowTokens === undefined ? undefined : windowTokens - REPLY_RESERVE;
+  const textOnly = nonDoc + historyNotices;
+  const textAloneOver = available !== undefined && textOnly > available;
   const historyOver =
     available !== undefined && nonDoc + historyLoad > available;
 
@@ -179,6 +187,9 @@ export const documentPlan = ({
   if (available === undefined) {
     return {...plan, verdict: {kind: 'unknown'}};
   }
+  if (textAloneOver) {
+    return {...plan, verdict: {kind: 'fits'}};
+  }
   const over = (reason: 'history' | 'new'): Plan => ({
     ...plan,
     verdict: {
@@ -195,10 +206,18 @@ export const documentPlan = ({
     },
   });
   if (historyOver) {
-    return over(historyLoad > 0 || newRefs.length === 0 ? 'history' : 'new');
+    return over('history');
   }
   if (anySearched && excerptBudget < floor) {
-    return over(newModes.some(mode => mode === 'searched') ? 'new' : 'history');
+    const withoutHistory =
+      textOnly +
+      (newRefs.length > 0 ? LEAD_TOKENS : 0) +
+      newRefs.reduce((sum, ref, i) => sum + loadOf(ref, newModes[i]), 0);
+    return over(
+      newModes.some(mode => mode === 'searched') || withoutHistory > available
+        ? 'new'
+        : 'history',
+    );
   }
   return {...plan, verdict: {kind: 'fits'}};
 };

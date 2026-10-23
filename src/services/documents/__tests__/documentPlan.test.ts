@@ -1,5 +1,11 @@
 import {documentPlan, type PlanInput} from '../plan';
-import {documentKey} from '../render';
+import {estimateDocTokens} from '../estimate';
+import {
+  DOCUMENT_LEAD,
+  documentKey,
+  renderDocumentStub,
+  renderMissingDocument,
+} from '../render';
 import {
   EXCERPT_MAX_TOKENS,
   FULL_TOTAL_MAX_TOKENS,
@@ -42,6 +48,8 @@ const plan = (overrides: Partial<PlanInput> & {documents?: DocumentRef[]}) => {
     ...rest,
   });
 };
+
+const LEAD = estimateDocTokens(`${DOCUMENT_LEAD}\n\n`);
 
 describe('documentPlan', () => {
   it('fits with no documents anywhere', () => {
@@ -135,7 +143,7 @@ describe('documentPlan', () => {
     const searched = ref('old', 60000, {mode: 'searched'});
     const p = plan({
       windowTokens: 2048,
-      nonDocText: 'x'.repeat(4000),
+      nonDocText: 'x'.repeat(2700),
       rows: [row([searched])],
     });
     expect(p.verdict).toMatchObject({kind: 'over', reason: 'history'});
@@ -158,6 +166,26 @@ describe('documentPlan', () => {
     });
     expect(p.excerptBudget).toBe(0);
     expect(p.verdict.kind).toBe('fits');
+  });
+
+  it('charges the document lead of a message that carries only excerpts', () => {
+    const searched = ref('old', 60000, {mode: 'searched'});
+    const p = plan({rows: [row([searched])]});
+    expect(p.fullLoad).toBe(
+      2 * LEAD + estimateDocTokens(renderDocumentStub(searched)),
+    );
+  });
+
+  it('charges the notice of a document whose files are gone', () => {
+    const gone = ref('gone', 600);
+    const p = plan({
+      rows: [row([gone])],
+      documents: [gone],
+      missingKeys: new Set([documentKey(gone)]),
+    });
+    expect(p.fullLoad).toBe(
+      2 * (LEAD + estimateDocTokens(renderMissingDocument(gone))),
+    );
   });
 
   it('never exceeds the caps', () => {

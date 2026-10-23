@@ -1,5 +1,6 @@
 import {documentPlan} from '../plan';
 import {estimateDocTokens} from '../estimate';
+import {documentKey} from '../render';
 import {type DocumentRef} from '../types';
 import {MessageType} from '../../../utils/types';
 
@@ -22,7 +23,7 @@ const plainRow: MessageType.Text = {
 describe('documentPlan when the chat holds no documents', () => {
   const longChat = 'plain chat text '.repeat(400);
 
-  it('does not blame earlier documents when only plain chat text fills the window', () => {
+  it('raises no document sheet when plain chat text alone fills the window', () => {
     expect(estimateDocTokens(longChat)).toBeGreaterThan(2048 - 1024);
 
     const p = documentPlan({
@@ -34,12 +35,10 @@ describe('documentPlan when the chat holds no documents', () => {
       missingKeys: new Set(),
     });
 
-    expect(p.verdict.kind).toBe('over');
-    expect(p.verdict).toMatchObject({historyDocTokens: 0});
-    expect(p.verdict).toMatchObject({reason: 'new'});
+    expect(p.verdict).toEqual({kind: 'fits'});
   });
 
-  it('blames the new documents in an empty chat whose prompt alone fills the window', () => {
+  it('raises no document sheet in an empty chat whose prompt alone fills the window', () => {
     const p = documentPlan({
       rows: [],
       message: {type: 'text', text: 'q', documents: [notes]},
@@ -49,16 +48,33 @@ describe('documentPlan when the chat holds no documents', () => {
       missingKeys: new Set(),
     });
 
-    expect(p.verdict).toMatchObject({
-      kind: 'over',
-      reason: 'new',
-      historyDocTokens: 0,
-      newDocs: [expect.objectContaining({ref: notes, mode: 'searched'})],
+    expect(p.verdict).toEqual({kind: 'fits'});
+  });
+
+  it('does not blame earlier documents that are a small part of a chat too long anyway', () => {
+    const p = documentPlan({
+      rows: [{...plainRow, documents: [notes]}],
+      message: {type: 'text', text: 'thanks'},
+      windowTokens: 2048,
+      activeModelId: 'm',
+      nonDocText: longChat,
+      missingKeys: new Set(),
     });
-    expect(p.newModes).toEqual(['searched']);
-    if (p.verdict.kind === 'over') {
-      expect(p.verdict.needed).toBeGreaterThan(p.verdict.available);
-    }
+
+    expect(p.verdict).toEqual({kind: 'fits'});
+  });
+
+  it('never blames earlier documents whose files are gone', () => {
+    const p = documentPlan({
+      rows: [{...plainRow, documents: [notes]}],
+      message: {type: 'text', text: 'thanks'},
+      windowTokens: 2048,
+      activeModelId: 'm',
+      nonDocText: 'x'.repeat(3000),
+      missingKeys: new Set([documentKey(notes)]),
+    });
+
+    expect(p.verdict).toEqual({kind: 'fits'});
   });
 
   it('still blames earlier documents when they are part of what overflows', () => {
