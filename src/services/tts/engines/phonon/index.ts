@@ -32,7 +32,12 @@ import {
 import type {PhononPinnedFile} from '../../constants';
 import {ttsRuntime} from '../../runtime';
 import {createEngineStreamingHandle} from '../../streamingHandle';
-import type {NeuralEngine, StreamingHandle, Voice} from '../../types';
+import type {
+  NeuralEngine,
+  StreamOptions,
+  StreamingHandle,
+  Voice,
+} from '../../types';
 import {parseManifest} from './manifest';
 import {PHONON_VOICES} from './voices';
 
@@ -362,8 +367,12 @@ export class PhononEngine implements NeuralEngine {
     await ttsRuntime.acquire(this, () => Speech.speak(text, voice.id));
   }
 
-  playStreaming(voice: Voice, waitFor?: Promise<void>): StreamingHandle {
-    return createEngineStreamingHandle(this, voice.id, undefined, waitFor);
+  playStreaming(
+    voice: Voice,
+    waitFor?: Promise<void>,
+    streamOpts?: StreamOptions,
+  ): StreamingHandle {
+    return createEngineStreamingHandle(this, voice.id, streamOpts, waitFor);
   }
 
   async stop(): Promise<void> {

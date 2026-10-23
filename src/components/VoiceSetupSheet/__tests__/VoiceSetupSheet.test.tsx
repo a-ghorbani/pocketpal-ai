@@ -61,6 +61,7 @@ describe('VoiceSetupSheet', () => {
       asr.downloadError.base = null;
       asr.freeDiskBytes = null;
       tts.currentVoice = {id: 'F1', name: 'Sarah', engine: 'supertonic'};
+      tts.phononSupported = false;
     });
   });
 
@@ -150,6 +151,10 @@ describe('VoiceSetupSheet', () => {
   it.each([
     ['the system voice', {id: 's', name: 'Samantha', engine: 'system'}],
     ['no voice', null],
+    [
+      'an unsupported Phonon voice',
+      {id: 'Zoey', name: 'Zoey', engine: 'phonon'},
+    ],
   ])('with %s, offers to choose a neural voice', (_case, voice) => {
     runInAction(() => {
       tts.currentVoice = voice;
@@ -160,6 +165,17 @@ describe('VoiceSetupSheet', () => {
     expect(queryByTestId('voice-setup-continue')).toBeNull();
     fireEvent.press(getByTestId('voice-setup-choose-voice'));
     expect(ttsStore.openSetupSheet).toHaveBeenCalledTimes(1);
+  });
+
+  it('accepts a Phonon voice on a device that supports it', () => {
+    runInAction(() => {
+      tts.currentVoice = {id: 'Zoey', name: 'Zoey', engine: 'phonon'};
+      tts.phononSupported = true;
+    });
+    const {getByTestId, queryByTestId} = renderSheet();
+
+    expect(getByTestId('voice-setup-continue')).toBeTruthy();
+    expect(queryByTestId('voice-setup-choose-voice')).toBeNull();
   });
 
   it('a blocked mic offers Settings and does not finish', async () => {

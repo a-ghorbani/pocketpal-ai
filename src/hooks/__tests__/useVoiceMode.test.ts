@@ -188,6 +188,7 @@ describe('useVoiceMode', () => {
       model.largestSuccessfulLoad = 4e9;
       asrStore.downloadStates.base = 'ready';
       tts.currentVoice = {id: 'F1', name: 'F1', engine: 'supertonic'};
+      tts.phononSupported = false;
     });
   });
 
@@ -369,6 +370,12 @@ describe('useVoiceMode', () => {
       ],
       ['there is no voice', () => (tts.currentVoice = null)],
       [
+        'the voice is Phonon on a device that does not support it',
+        () => {
+          tts.currentVoice = {id: 'Zoey', name: 'Zoey', engine: 'phonon'};
+        },
+      ],
+      [
         'the microphone is not granted',
         () => (check as jest.Mock).mockResolvedValue('denied'),
       ],
@@ -380,6 +387,19 @@ describe('useVoiceMode', () => {
 
       expect(hook.result.current.sheet).toEqual({kind: 'setup'});
       expect(engine.prepare).not.toHaveBeenCalled();
+    });
+
+    it('enters with a Phonon voice on a device that supports it', async () => {
+      runInAction(() => {
+        tts.currentVoice = {id: 'Zoey', name: 'Zoey', engine: 'phonon'};
+        tts.phononSupported = true;
+      });
+      const {enter, hook, engine} = renderVoiceMode();
+
+      await enter();
+
+      expect(hook.result.current.sheet).toBeNull();
+      expect(engine.prepare).toHaveBeenCalledTimes(1);
     });
 
     it('leaving the screen keeps the setup sheet open', async () => {

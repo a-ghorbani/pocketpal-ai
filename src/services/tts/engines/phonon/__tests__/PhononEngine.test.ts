@@ -503,6 +503,22 @@ describe('PhononEngine', () => {
     );
   });
 
+  it('passes voice stream options to the speech stream', async () => {
+    ttsRuntime._resetForTests();
+    const handle = new PhononEngine().playStreaming(
+      PHONON_VOICES[0]!,
+      undefined,
+      {firstChunk: 'clause', onProgress: jest.fn()},
+    );
+    handle.appendText('Hello there.');
+    await handle.finalize();
+
+    expect(Speech.createSpeechStream).toHaveBeenCalledWith(
+      'Zoey',
+      expect.objectContaining({firstChunk: 'clause'}),
+    );
+  });
+
   it('stops through Speech', async () => {
     await new PhononEngine().stop();
     expect(Speech.stop).toHaveBeenCalledTimes(1);
