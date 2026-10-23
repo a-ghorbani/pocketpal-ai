@@ -419,7 +419,7 @@ describe('chat', () => {
       expect(composer().props.value).toBe('draft');
     });
 
-    it('saves the edit text for the chat left during a plain Edit', async () => {
+    it('saves no edit text for the chat left during a plain Edit', async () => {
       const store = chatSessionStore as any;
       const row = {...textMessage, id: 'row-1', author: user, text: 'Row text'};
       (chatSessionStore.enterEditMode as jest.Mock).mockImplementation(
@@ -446,7 +446,7 @@ describe('chat', () => {
         utils.rerender(<ChatView {...props} messages={[row]} />);
       });
 
-      expect(drafts.get('session-1')).toBe('Row text');
+      expect(drafts.has('session-1')).toBe(false);
       expect(
         utils.getByPlaceholderText(
           l10n.en.components.chatInput.inputPlaceholder,

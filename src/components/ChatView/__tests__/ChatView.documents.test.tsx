@@ -1287,6 +1287,32 @@ describe('leaving an edit that kept the composer', () => {
     expect(composerChips(chat)).toEqual([]);
   });
 
+  it('keeps the left chat draft when a chat switch ends a plain Edit', async () => {
+    drafts.set('session-1', 'earlier');
+    drafts.set('session-2', 'two');
+    shown = [olderRow];
+    const chat = renderChat({messages: shown});
+    expect(chat.input().props.value).toBe('earlier');
+    fireEvent(chat.screen.getByText('Older row'), 'onLongPress', {
+      nativeEvent: {pageX: 0, pageY: 0},
+    });
+    await act(async () => {
+      fireEvent.press(chat.screen.getByText(menuLabels.edit));
+    });
+    rerender(chat);
+    expect(chat.input().props.value).toBe('Older row');
+
+    runInAction(() => {
+      store.isEditMode = false;
+      store.editingMessageId = null;
+      chatSessionStore.activeSessionId = 'session-2';
+    });
+    rerender(chat);
+
+    expect(drafts.get('session-1')).toBe('earlier');
+    expect(chat.input().props.value).toBe('two');
+  });
+
   it('keeps the composer when Try again on a fitting row ends the edit', async () => {
     const {chat} = await setUp();
     overRows.clear();

@@ -341,6 +341,7 @@ export const ChatView = observer(
     const [inputText, setInputText] = React.useState('');
     const inputTextRef = React.useRef(inputText);
     inputTextRef.current = inputText;
+    const syncedDraftRef = React.useRef('');
     const [inputImages, setInputImages] = React.useState<string[]>([]);
     const inputImagesRef = React.useRef(inputImages);
     inputImagesRef.current = inputImages;
@@ -602,6 +603,8 @@ export const ChatView = observer(
       }
       const snapshot = editSnapshotRef.current;
       if (!snapshot) {
+        // The edited text is not a draft: a chat being left keeps its own.
+        inputTextRef.current = syncedDraftRef.current;
         setInputText('');
         setInputImages([]);
         updateComposerDocuments(() => []);
@@ -619,7 +622,6 @@ export const ChatView = observer(
     // ============ DRAFT AUTOSAVE ============
     // Save draft on session switch, restore draft for new session
     const prevSessionId = usePrevious(chatSessionStore.activeSessionId);
-    const syncedDraftRef = React.useRef('');
     React.useEffect(() => {
       const prevKey = prevSessionId ?? NEW_CHAT_DRAFT_KEY;
       const newKey = chatSessionStore.activeSessionId ?? NEW_CHAT_DRAFT_KEY;
