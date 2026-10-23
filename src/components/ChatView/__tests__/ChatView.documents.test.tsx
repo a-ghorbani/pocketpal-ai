@@ -11,6 +11,7 @@ import {chatSessionStore, modelStore} from '../../../store';
 import * as documentStore from '../../../services/documents/store';
 import type {DocumentRef} from '../../../services/documents/types';
 import type {UndoneSend} from '../../../hooks/useChatSession';
+import type {MessageType} from '../../../utils/types';
 
 jest.mock('react-native-image-picker', () => ({
   launchCamera: jest.fn(),
@@ -303,6 +304,28 @@ describe('ChatView send gate', () => {
       expect.objectContaining({documents: [big]}),
     );
     expect(chat.screen.queryByText('big.pdf')).toBeNull();
+  });
+
+  it('sends nothing when the chat changes during the budget check', async () => {
+    const evaluateSendBudget = jest
+      .fn()
+      .mockImplementation(async (message: MessageType.PartialText) => {
+        if (message.text === 'Summarise') {
+          chatSessionStore.activeSessionId = 'session-2';
+        }
+        return {verdict: {kind: 'fits'}, newModes: []};
+      });
+    const chat = renderChat({evaluateSendBudget});
+    await chat.attach(big);
+    chat.type('Summarise');
+
+    await act(async () => {
+      chat.pressSend();
+    });
+
+    expect(chat.onSendPress).not.toHaveBeenCalled();
+    expect(chat.screen.getByText('big.pdf')).toBeTruthy();
+    expect(chat.screen.queryByTestId('budget-cancel')).toBeNull();
   });
 
   it('sends a message without documents in the same tick, without a check', () => {

@@ -85,12 +85,16 @@ export const useMessageActions = ({
       };
       const gated = !!evaluateSendBudget && hasDocuments(messages, message);
       const documentIds = (row.documents ?? []).map(ref => ref.id);
+      const sessionId = chatSessionStore.activeSessionId;
       holdForSend(documentIds);
       try {
         if (gated) {
           const {verdict} = await evaluateSendBudget(message, {
             excludeFromId: row.id,
           });
+          if (sessionId !== chatSessionStore.activeSessionId) {
+            return;
+          }
           if (verdict.kind === 'over') {
             onBudgetOver?.(verdict, row);
             return;

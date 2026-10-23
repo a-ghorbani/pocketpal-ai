@@ -913,6 +913,7 @@ export const ChatView = observer(
             return;
           }
           budgetCheckRef.current = true;
+          const sessionId = chatSessionStore.activeSessionId;
           let verdict: BudgetVerdict;
           try {
             ({verdict} = await evaluateSendBudget(message, {
@@ -920,6 +921,9 @@ export const ChatView = observer(
             }));
           } finally {
             budgetCheckRef.current = false;
+          }
+          if (sessionId !== chatSessionStore.activeSessionId) {
+            return;
           }
           if (verdict.kind === 'over') {
             setBudgetVerdict(verdict);

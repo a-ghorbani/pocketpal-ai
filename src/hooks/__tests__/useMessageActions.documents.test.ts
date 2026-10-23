@@ -182,4 +182,27 @@ describe('useMessageActions with documents', () => {
     expect(t.handleSendPress).not.toHaveBeenCalled();
     (chatSessionStore as any).isStopping = false;
   });
+
+  it.each([
+    ['fits', {kind: 'fits'}],
+    ['no longer fits', over],
+  ])(
+    'drops a resend whose chat changed during the budget check (%s)',
+    async (_label, verdict) => {
+      const t = setup(verdict);
+      t.evaluateSendBudget.mockImplementation(async () => {
+        chatSessionStore.activeSessionId = 'session-2';
+        return {verdict};
+      });
+
+      await act(async () => {
+        await t.result.current.handleTryAgain(assistantRow);
+      });
+
+      expect(chatSessionStore.removeMessagesFromId).not.toHaveBeenCalled();
+      expect(t.handleSendPress).not.toHaveBeenCalled();
+      expect(t.onBudgetOver).not.toHaveBeenCalled();
+      expect(documentStore.isHeld('a-pdf')).toBe(false);
+    },
+  );
 });
