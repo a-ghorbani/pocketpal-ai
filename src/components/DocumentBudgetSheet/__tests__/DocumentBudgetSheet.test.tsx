@@ -119,8 +119,7 @@ describe('DocumentBudgetSheet', () => {
     expect(onEditMessage).toHaveBeenCalled();
   });
 
-  it('offers Search instead on a new full document next to the history actions', () => {
-    const h = handlers();
+  it('offers no Search instead next to the history actions', () => {
     const small = {...text, id: 'small', name: 'small.md', tokenEstimate: 300};
     const {getByTestId, queryByTestId} = render(
       <DocumentBudgetSheet
@@ -133,11 +132,11 @@ describe('DocumentBudgetSheet', () => {
           historyDocTokens: 6000,
           reason: 'history',
         }}
-        {...h}
+        {...handlers()}
       />,
     );
-    fireEvent.press(getByTestId('budget-search-instead'));
-    expect(h.onSearchInstead).toHaveBeenCalledWith(small);
+    expect(queryByTestId('budget-search-instead')).toBeNull();
+    expect(queryByTestId('budget-new-doc')).toBeNull();
     expect(queryByTestId('budget-remove')).toBeNull();
     expect(getByTestId('budget-new-chat')).toBeTruthy();
   });

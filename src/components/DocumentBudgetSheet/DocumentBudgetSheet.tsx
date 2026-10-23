@@ -79,51 +79,44 @@ export const DocumentBudgetSheet: React.FC<DocumentBudgetSheetProps> = ({
           {t(historyOverflow ? strings.historyBody : strings.newBody, amounts)}
         </Text>
 
-        {verdict.newDocs
-          .filter(({mode}) => !historyOverflow || mode === 'full')
-          .map(({ref, tokens, mode}) => (
-            <View key={ref.id} style={styles.doc} testID="budget-new-doc">
-              <Text
-                variant="labelLarge"
-                numberOfLines={1}
-                style={styles.docName}>
-                {mode === 'searched'
-                  ? `${ref.name} · ${l10n.chat.documents.searched}`
-                  : `${ref.name} · ${t(l10n.chat.documents.tokens, {
-                      tokens: formatTokenCount(tokens),
-                    })}`}
-              </Text>
-              <View style={styles.docActions}>
-                {mode === 'full' ? (
-                  <Button
-                    mode="outlined"
-                    compact
-                    onPress={() => onSearchInstead(ref)}
-                    testID="budget-search-instead">
-                    {strings.searchInstead}
-                  </Button>
-                ) : null}
-                {!historyOverflow && ref.kind === 'pdf' ? (
-                  <Button
-                    mode="outlined"
-                    compact
-                    onPress={() => onChoosePages(ref)}
-                    testID="budget-choose-pages">
-                    {strings.choosePages}
-                  </Button>
-                ) : null}
-                {!historyOverflow ? (
-                  <Button
-                    mode="outlined"
-                    compact
-                    onPress={() => onRemove(ref)}
-                    testID="budget-remove">
-                    {strings.remove}
-                  </Button>
-                ) : null}
-              </View>
+        {(historyOverflow ? [] : verdict.newDocs).map(({ref, tokens, mode}) => (
+          <View key={ref.id} style={styles.doc} testID="budget-new-doc">
+            <Text variant="labelLarge" numberOfLines={1} style={styles.docName}>
+              {mode === 'searched'
+                ? `${ref.name} · ${l10n.chat.documents.searched}`
+                : `${ref.name} · ${t(l10n.chat.documents.tokens, {
+                    tokens: formatTokenCount(tokens),
+                  })}`}
+            </Text>
+            <View style={styles.docActions}>
+              {mode === 'full' ? (
+                <Button
+                  mode="outlined"
+                  compact
+                  onPress={() => onSearchInstead(ref)}
+                  testID="budget-search-instead">
+                  {strings.searchInstead}
+                </Button>
+              ) : null}
+              {ref.kind === 'pdf' ? (
+                <Button
+                  mode="outlined"
+                  compact
+                  onPress={() => onChoosePages(ref)}
+                  testID="budget-choose-pages">
+                  {strings.choosePages}
+                </Button>
+              ) : null}
+              <Button
+                mode="outlined"
+                compact
+                onPress={() => onRemove(ref)}
+                testID="budget-remove">
+                {strings.remove}
+              </Button>
             </View>
-          ))}
+          </View>
+        ))}
 
         {verdict.historyDocTokens > 0 ? (
           <Text
