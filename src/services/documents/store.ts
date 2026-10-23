@@ -200,13 +200,21 @@ const copyIntoStore = async (
   }
 };
 
+const requirePdfText = () => {
+  if (!NativePdfText) {
+    throw new Refusal('pdf_unavailable');
+  }
+  return NativePdfText;
+};
+
 const extractPdf = async (
   path: string,
   from: number,
   to: number,
 ): Promise<{pageCount: number; pages: string[]}> => {
+  const pdf = requirePdfText();
   try {
-    return await NativePdfText.extractPages(path, from, to);
+    return await pdf.extractPages(path, from, to);
   } catch (error) {
     throw new Refusal(
       (error as {code?: string})?.code === 'E_PDF_ENCRYPTED'
@@ -329,6 +337,9 @@ export const importDocument = async (
       ? named
       : extensionForType(picked.type) || named;
     const kind = classify(extension);
+    if (kind === 'pdf') {
+      requirePdfText();
+    }
 
     await RNFS.mkdir(assertContained(docDir(id)));
     const path = sourceFile(id, extension);

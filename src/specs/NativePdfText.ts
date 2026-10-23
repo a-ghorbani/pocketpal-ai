@@ -15,4 +15,4 @@ export interface Spec extends TurboModule {
   extractPages(path: string, from: number, to: number): Promise<PdfPages>;
 }
 
-export default TurboModuleRegistry.getEnforcing<Spec>('PdfTextModule');
+export default TurboModuleRegistry.get<Spec>('PdfTextModule');

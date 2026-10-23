@@ -35,6 +35,7 @@ export type DocumentRefusalReason =
   | 'too_large'
   | 'pdf_unreadable'
   | 'pdf_encrypted'
+  | 'pdf_unavailable'
   | 'no_text'
   | 'binary'
   | 'text_too_long'

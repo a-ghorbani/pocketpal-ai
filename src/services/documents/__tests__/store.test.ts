@@ -27,7 +27,7 @@ const STAGING = '/path/to/caches/staging-uuid';
 const files = new Map<string, string>();
 const dirs = new Set<string>();
 const fs = RNFS as unknown as Record<string, jest.Mock>;
-const extractPages = NativePdfText.extractPages as jest.Mock;
+const extractPages = NativePdfText!.extractPages as jest.Mock;
 const keepCopy = keepLocalCopy as jest.Mock;
 
 const under = (path: string, dir: string) =>
