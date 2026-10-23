@@ -65,6 +65,13 @@ describe('terms', () => {
   it('bigrams Thai including its vowel and tone marks', () => {
     expect(terms('ที่นี่')).toEqual(['ที', 'ี่', '่น', 'นี', 'ี่']);
   });
+
+  it('bigrams the other scripts written without spaces between words', () => {
+    expect(terms('ລາວ')).toEqual(['ລາ', 'າວ']);
+    expect(terms('ខ្មែរ')).toEqual(['ខ្', '្ម', 'មែ', 'ែរ']);
+    expect(terms('မြန်')).toEqual(['မြ', 'ြန', 'န်']);
+    expect(terms('བོད')).toEqual(['བོ', 'ོད']);
+  });
 });
 
 describe('retrieveExcerpts', () => {
@@ -241,6 +248,20 @@ describe('unicode normalisation', () => {
     expect(result.kind).toBe('excerpts');
     if (result.kind === 'excerpts') {
       expect(result.excerpts[0].passages[0].page).toBe(1);
+    }
+  });
+});
+
+describe('scripts without word spaces', () => {
+  it.each([
+    ['Khmer', 'ប្រាក់ចំណូលកើនឡើងខ្លាំង', 'ប្រាក់ចំណូល'],
+    ['Lao', 'ລາຍຮັບເພີ່ມຂຶ້ນຫຼາຍ', 'ລາຍຮັບ'],
+  ])('matches a %s query inside a longer run', async (_script, text, query) => {
+    const report = doc(`run-${_script}`);
+    const result = await run([[report, ['Nothing here.', text]]], {query});
+    expect(result.kind).toBe('excerpts');
+    if (result.kind === 'excerpts') {
+      expect(result.excerpts[0].passages[0].page).toBe(2);
     }
   });
 });

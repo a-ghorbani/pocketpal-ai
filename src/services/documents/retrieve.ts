@@ -44,7 +44,9 @@ export interface Retriever {
   rank(query: string, corpus: CorpusEntry[]): ScoredPassage[];
 }
 
-const DENSE_RUN = /[฀-๿぀-ヿ㐀-䶿一-鿿豈-﫿가-힯ᄀ-ᇿ㄰-㆏\u{20000}-\u{2fa1f}]+/u;
+/** Scripts written without spaces between words: Thai, Lao, Tibetan, Myanmar, Khmer, CJK, kana, Hangul. */
+const DENSE_RUN =
+  /[\u0E00-\u109F\u1780-\u17FF\u1100-\u11FF\u3040-\u30FF\u3130-\u318F\u3400-\u4DBF\u4E00-\u9FFF\uAC00-\uD7AF\uF900-\uFAFF\u{20000}-\u{2fa1f}]+/u;
 
 export const terms = (text: string): string[] => {
   const result: string[] = [];
