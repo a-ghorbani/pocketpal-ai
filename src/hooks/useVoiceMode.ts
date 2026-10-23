@@ -377,7 +377,9 @@ class VoiceModeController {
         this.turn.interrupt();
       }
       if (
-        (this.turn || voiceModeStore.phase === 'listening') &&
+        (this.turn ||
+          voiceModeStore.phase === 'listening' ||
+          voiceModeStore.phase === 'starting') &&
         !voiceModeStore.micMuted
       ) {
         this.pausedByInterruption = true;

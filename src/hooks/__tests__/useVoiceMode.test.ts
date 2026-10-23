@@ -1523,7 +1523,7 @@ describe('useVoiceMode', () => {
       expect(AudioRecord.start).toHaveBeenCalledTimes(1);
     });
 
-    it('during starting, the mic still opens once loaded', async () => {
+    const enterSlowly = () => {
       const {engine, hook} = renderVoiceMode();
       let loaded!: () => void;
       engine.prepare.mockReturnValueOnce(
@@ -1535,15 +1535,56 @@ describe('useVoiceMode', () => {
       act(() => {
         entering = hook.result.current.requestEntry(actions);
       });
+      const finishLoading = () =>
+        act(async () => {
+          loaded();
+          await entering;
+        });
+      return {finishLoading};
+    };
+
+    it('during starting, pause; once loaded stay listening with the mic off until ended', async () => {
+      jest.useFakeTimers();
+      try {
+        const {finishLoading} = enterSlowly();
+        await flush();
+
+        interruption('began');
+        await finishLoading();
+
+        expect(voiceModeStore.phase).toBe('listening');
+        expect(voiceModeStore.micMuted).toBe(true);
+        expect(AudioRecord.start).not.toHaveBeenCalled();
+
+        await act(async () => {
+          jest.advanceTimersByTime(60_000);
+        });
+        expect(voiceModeStore.phase).toBe('listening');
+        expect(AudioRecord.start).not.toHaveBeenCalled();
+
+        interruption('ended');
+        await act(async () => {
+          jest.advanceTimersByTime(VOICE_CAPTURE_SETTLE_MS);
+        });
+        expect(voiceModeStore.micMuted).toBe(false);
+        expect(AudioRecord.start).toHaveBeenCalledTimes(1);
+        expect(voiceModeStore.phase).toBe('listening');
+      } finally {
+        jest.useRealTimers();
+      }
+    });
+
+    it('began and ended both during starting open the mic once loaded', async () => {
+      const {finishLoading} = enterSlowly();
       await flush();
 
       interruption('began');
-      await act(async () => {
-        loaded();
-        await entering;
-      });
+      interruption('ended');
+      await finishLoading();
+      await settleMic();
 
       expect(voiceModeStore.phase).toBe('listening');
+      expect(voiceModeStore.micMuted).toBe(false);
       expect(AudioRecord.start).toHaveBeenCalledTimes(1);
     });
 
