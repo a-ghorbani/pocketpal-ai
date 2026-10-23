@@ -260,7 +260,9 @@ export const TextMessage = ({
 
   return (
     <>
-      {linkPreviewEligible ? renderDocuments() : null}
+      {linkPreviewEligible && documents.length > 0 ? (
+        <View style={textContainer}>{renderDocuments()}</View>
+      ) : null}
       {linkPreviewEligible ? (
         <LinkPreview
           containerStyle={{

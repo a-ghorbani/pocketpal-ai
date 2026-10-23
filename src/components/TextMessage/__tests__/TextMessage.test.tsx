@@ -1,7 +1,7 @@
 import * as utils from '@flyerhq/react-native-link-preview/lib/utils';
 import {fireEvent, render, waitFor} from '@testing-library/react-native';
 import * as React from 'react';
-import {Linking} from 'react-native';
+import {Linking, StyleSheet} from 'react-native';
 
 import {derivedTextMessage} from '../../../../jest/fixtures';
 import {render as renderWithProviders} from '../../../../jest/test-utils';
@@ -198,6 +198,31 @@ describe('document chips', () => {
       />,
     );
     expect(getByText('12 pages · searched')).toBeTruthy();
+  });
+
+  it('pads document chips the same way with or without a link preview', () => {
+    const insetOf = (withPreview: boolean) => {
+      const {getByTestId} = renderWithProviders(
+        <TextMessage
+          message={{
+            ...derivedTextMessage,
+            text: 'Read https://example.com',
+            documents: [report],
+          }}
+          messageWidth={440}
+          showName={false}
+          usePreviewData={withPreview}
+          onPreviewDataFetched={withPreview ? jest.fn() : undefined}
+        />,
+      );
+      let node: any = getByTestId('message-document-chip');
+      while (node && !StyleSheet.flatten(node.props.style)?.marginVertical) {
+        node = node.parent;
+      }
+      return StyleSheet.flatten(node?.props.style);
+    };
+    expect(insetOf(false)).toBeDefined();
+    expect(insetOf(true)).toEqual(insetOf(false));
   });
 
   it('renders a stored document whose name is not text', () => {
