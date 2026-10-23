@@ -48,9 +48,17 @@ const run = (
 beforeEach(() => clearDocumentIndexCache());
 
 describe('terms', () => {
-  it('lower-cases word runs and bigrams CJK', () => {
+  it('lower-cases word runs and splits CJK into characters and pairs', () => {
     expect(terms('Churn-rate 2024!')).toEqual(['churn', 'rate', '2024']);
-    expect(terms('顧客離反')).toEqual(['顧客', '客離', '離反']);
+    expect(terms('顧客離反')).toEqual([
+      '顧',
+      '客',
+      '離',
+      '反',
+      '顧客',
+      '客離',
+      '離反',
+    ]);
   });
 
   it('normalises terms so composed and decomposed forms match', () => {
@@ -62,15 +70,18 @@ describe('terms', () => {
     expect(terms('हिन्दी भाषा')).toEqual(['हिन्दी', 'भाषा']);
   });
 
-  it('bigrams Thai including its vowel and tone marks', () => {
-    expect(terms('ที่นี่')).toEqual(['ที', 'ี่', '่น', 'นี', 'ี่']);
+  it('splits Thai into characters and pairs, vowel and tone marks included', () => {
+    expect(terms('ที่นี่')).toEqual([
+      ...'ที่นี่',
+      ...['ที', 'ี่', '่น', 'นี', 'ี่'],
+    ]);
   });
 
-  it('bigrams the other scripts written without spaces between words', () => {
-    expect(terms('ລາວ')).toEqual(['ລາ', 'າວ']);
-    expect(terms('ខ្មែរ')).toEqual(['ខ្', '្ម', 'មែ', 'ែរ']);
-    expect(terms('မြန်')).toEqual(['မြ', 'ြန', 'န်']);
-    expect(terms('བོད')).toEqual(['བོ', 'ོད']);
+  it('splits the other scripts written without spaces into characters and pairs', () => {
+    expect(terms('ລາວ')).toEqual([...'ລາວ', ...['ລາ', 'າວ']]);
+    expect(terms('ខ្មែរ')).toEqual([...'ខ្មែរ', ...['ខ្', '្ម', 'មែ', 'ែរ']]);
+    expect(terms('မြန်')).toEqual([...'မြန်', ...['မြ', 'ြန', 'န်']]);
+    expect(terms('བོད')).toEqual([...'བོད', ...['བོ', 'ོད']]);
   });
 });
 
@@ -259,6 +270,19 @@ describe('scripts without word spaces', () => {
   ])('matches a %s query inside a longer run', async (_script, text, query) => {
     const report = doc(`run-${_script}`);
     const result = await run([[report, ['Nothing here.', text]]], {query});
+    expect(result.kind).toBe('excerpts');
+    if (result.kind === 'excerpts') {
+      expect(result.excerpts[0].passages[0].page).toBe(2);
+    }
+  });
+});
+
+describe('a one-character query in a dense script', () => {
+  it('matches the character inside a longer run', async () => {
+    const report = doc('one-char');
+    const result = await run([[report, ['Nothing here.', '小猫很可爱']]], {
+      query: '猫',
+    });
     expect(result.kind).toBe('excerpts');
     if (result.kind === 'excerpts') {
       expect(result.excerpts[0].passages[0].page).toBe(2);

@@ -63,9 +63,7 @@ export const terms = (text: string): string[] => {
         continue;
       }
       const chars = [...segment];
-      if (chars.length === 1) {
-        result.push(segment);
-      }
+      result.push(...chars);
       for (let i = 0; i + 1 < chars.length; i++) {
         result.push(chars[i] + chars[i + 1]);
       }
