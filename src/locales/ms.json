@@ -189,7 +189,7 @@
       "consentGivenTitle": "Carian web telah didayakan",
       "consentGivenDescription": "Pertanyaan dan bacaan halaman mungkin meninggalkan peranti anda seperti yang diterangkan di atas.",
       "consentRevoke": "Batalkan",
-      "keyOptional": "Tiada kunci diperlukan untuk {{provider}}. Tambah satu untuk had yang lebih tinggi."
+      "keyOptional": "Kunci tidak diperlukan untuk {{provider}}. Tambah kunci untuk had yang lebih tinggi."
     },
     "languageSheetTitle": "Bahasa",
     "languageSearchPlaceholder": "Cari bahasa",
@@ -1676,20 +1676,20 @@
   "voiceInput": {
     "micLabel": "Bercakap untuk menaip",
     "recordingLabel": "Merakam",
-    "stopLabel": "Henti dan tukar kepada teks",
+    "stopLabel": "Hentikan dan tukar kepada teks",
     "cancelLabel": "Batalkan input suara",
     "transcribingLabel": "Menukar kepada teks…",
     "setupLabel": "Sediakan input suara",
     "settingTitle": "Input suara",
     "settingDescription": "Ketik mikrofon dalam sembang untuk bercakap; pertuturan anda ditukar kepada teks pada peranti anda.",
-    "unsupportedDeviceHelper": "Peranti ini di bawah spesifikasi yang disyorkan. Input suara berkemungkinan perlahan atau mungkin gagal.",
+    "unsupportedDeviceHelper": "Peranti ini tidak mencapai spesifikasi yang disyorkan. Input suara mungkin perlahan atau gagal berfungsi.",
     "spokenLanguageLabel": "Bahasa pertuturan",
     "spokenLanguageAuto": "Kesan automatik",
     "spokenLanguageDetected": "Dikesan automatik: {{language}}",
     "resetLanguageCta": "Tetap semula",
     "recordingLanguageAuto": "Bahasa: auto",
     "recordingLanguage": "Bahasa: {{code}} (ketik untuk tetap semula)",
-    "waitingForChatLabel": "Menukar kepada teks selepas balasan selesai…",
+    "waitingForChatLabel": "Akan ditukar kepada teks selepas balasan selesai…",
     "tierBase": "Base (pelbagai bahasa, paling kecil)",
     "tierSmall": "Small (disyorkan)",
     "tierLargeTurbo": "Large Turbo (kualiti terbaik)",
@@ -1699,7 +1699,7 @@
     "retryCta": "Cuba lagi",
     "removeCta": "Buang",
     "errorPermissionDenied": "Capaian mikrofon diperlukan untuk input suara.",
-    "errorPermissionBlocked": "Capaian mikrofon dihalang. Dayakan dalam Tetapan.",
+    "errorPermissionBlocked": "Capaian mikrofon disekat. Dayakannya dalam Tetapan.",
     "errorTranscribeFailed": "Tidak dapat menukar kepada teks — sila cuba lagi.",
     "errorNotInstalled": "Muat turun model suara untuk menggunakan input suara.",
     "errorInsufficientMemory": "Memori tidak mencukupi untuk input suara dengan model sembang ini. Cuba model yang lebih kecil.",
@@ -1711,10 +1711,10 @@
   "plus": {
     "eyebrow": "PocketPal Plus",
     "headline": "Bawa AI tempatan lebih jauh.",
-    "subline": "Alat tambahan untuk menguji sejauh mana kemampuan sebenar sebuah telefon, sekali gus menyokong kerja yang memastikan PocketPal kekal percuma dan sumber terbuka.",
-    "unsupportedSubline": "Ciri Plus belum boleh berjalan pada telefon ini. Anda masih boleh menyokong PocketPal, dan ciri yang sampai ke telefon anda kelak turut disertakan.",
-    "thanksHeadline": "Terima kasih kerana memajukan AI tempatan bersama kami.",
-    "thanksSubline": "Kunci Plus telah dibuka pada peranti ini. Ciri Plus yang baharu akan muncul di sini secara automatik.",
+    "subline": "Plus memastikan PocketPal kekal percuma dan sumber terbuka. Ciri tambahan ialah tanda terima kasih kami.",
+    "unsupportedSubline": "Ciri Plus belum boleh berjalan pada telefon ini. Anda masih boleh menyokong PocketPal.",
+    "thanksHeadline": "Terima kasih kerana memastikan PocketPal terus berjalan.",
+    "thanksSubline": "Kunci Plus telah dibuka pada peranti ini.",
     "features": {
       "handsFreeVoice": "Suara bebas tangan",
       "localApiServer": "Pelayan API tempatan"
@@ -1724,7 +1724,7 @@
     "comingSoon": "Akan datang",
     "speedLine": "Kelajuan bergantung kepada telefon dan model anda.",
     "inDevelopment": "Ciri yang masih dalam pembangunan mungkin berubah atau tidak dikeluarkan.",
-    "priceCaption": "Bayar sesuka hati anda. Ciri yang sama pada setiap harga.",
+    "priceCaption": "Bayar jumlah yang anda rasa sesuai. Setiap jumlah membuka kunci ciri yang sama.",
     "buyError": "Pembelian tidak berjaya. Cuba lagi.",
     "getPlus": "Dapatkan Plus · {{price}}",
     "getPlusAnyway": "Tetap dapatkan Plus · {{price}}",
@@ -1738,7 +1738,7 @@
     "oneTimePurchase": "Pembelian sekali sahaja",
     "restore": "Pulihkan",
     "openSource": "Sumber terbuka ↗",
-    "licence": "Pembelian sekali sahaja bagi lesen untuk menggunakan Plus.",
+    "licence": "Pembelian lesen sekali sahaja untuk menggunakan Plus.",
     "terms": "Terma",
     "appleMediaTerms": "Terma Perkhidmatan Media Apple",
     "noPurchaseFound": "Tiada pembelian Plus ditemui.",
@@ -1748,7 +1748,7 @@
       "unlocked": "Kunci dibuka",
       "subtitleOne": "{{first}}",
       "subtitleTwo": "{{first}}, {{second}}",
-      "subtitleMore": "{{first}}, {{second}} & lain-lain"
+      "subtitleMore": "{{first}}, {{second}} dan lain-lain"
     }
   }
 }
