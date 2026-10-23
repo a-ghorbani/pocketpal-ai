@@ -321,6 +321,8 @@ export const ChatView = observer(
     inputTextRef.current = inputText;
     const syncedDraftRef = React.useRef('');
     const carriedTextRef = React.useRef<string | null>(null);
+    /** The draft key the composer was last loaded for. */
+    const loadedDraftKeyRef = React.useRef<string | null>(null);
     const [inputImages, setInputImages] = React.useState<string[]>([]);
     /** Rows whose edit an in-flight composer send is committing. */
     const editsInFlightRef = React.useRef<string[]>([]);
@@ -616,6 +618,7 @@ export const ChatView = observer(
       // Restore draft for the session we're entering
       const draft = chatSessionStore.getDraft(newKey);
       syncedDraftRef.current = draft;
+      loadedDraftKeyRef.current = newKey;
       setInputText(carried === null ? draft : prependText(carried, draft));
       // eslint-disable-next-line react-hooks/exhaustive-deps -- MobX observer makes activeSessionId reactive
     }, [chatSessionStore.activeSessionId]);
@@ -764,7 +767,15 @@ export const ChatView = observer(
         if (verdict) {
           setBudgetSheet({verdict, resend: false});
         }
-        if (message.text) {
+        const openKey = chatSessionStore.activeSessionId ?? NEW_CHAT_DRAFT_KEY;
+        if (message.text && loadedDraftKeyRef.current !== openKey) {
+          // The send created this chat; its draft is not loaded yet, and
+          // loading it would replace the composer, so the text rides along.
+          carriedTextRef.current = prependText(
+            message.text,
+            carriedTextRef.current ?? '',
+          );
+        } else if (message.text) {
           setInputText(pending => prependText(message.text, pending));
         }
         setInputImages(pending => [...(message.imageUris ?? []), ...pending]);

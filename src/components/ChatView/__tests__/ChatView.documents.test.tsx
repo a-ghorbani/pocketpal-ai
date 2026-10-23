@@ -786,6 +786,32 @@ describe('ChatView composer merge', () => {
     expect(chat.screen.getByText('p.pdf')).toBeTruthy();
     expect(documentStore.isHeld(p.id)).toBe(true);
   });
+
+  it('keeps a new-chat send that found no model when its report creates the chat', async () => {
+    const p = ref('p');
+    chatSessionStore.activeSessionId = null as any;
+    const chat = renderChat({messages: [], isVisionEnabled: true});
+    await chat.attach(p);
+    chat.type('go');
+    (chat.onSendPress as jest.Mock).mockImplementationOnce(
+      async (message: any) => {
+        chatSessionStore.activeSessionId = 'created-by-report';
+        return {message, sessionId: 'created-by-report'};
+      },
+    );
+
+    await act(async () => {
+      chat.pressSend();
+    });
+    act(() => chat.screen.rerender(chat.element({messages: []})));
+
+    expect(chat.input().props.value).toBe('go');
+    expect(chat.screen.getByText('p.pdf')).toBeTruthy();
+    expect(chatSessionStore.saveDraft).not.toHaveBeenCalledWith(
+      '__new_chat__',
+      'go',
+    );
+  });
 });
 
 describe('ChatView resend', () => {
