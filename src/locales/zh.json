@@ -1711,10 +1711,10 @@
   "plus": {
     "eyebrow": "PocketPal Plus",
     "headline": "让本地 AI 更进一步。",
-    "subline": "更多工具，带您试出手机的真正实力；也是一份支持，让 PocketPal 持续免费开源。",
-    "unsupportedSubline": "Plus 功能暂时无法在这部手机上运行。您仍然可以支持 PocketPal，日后适配到您手机的功能也都包含在内。",
-    "thanksHeadline": "感谢您与我们一起推动本地 AI。",
-    "thanksSubline": "Plus 已在本设备解锁。新的 Plus 功能会自动出现在这里。",
+    "subline": "Plus 让 PocketPal 保持免费和开源，额外功能是我们的谢意。",
+    "unsupportedSubline": "Plus 功能暂时无法在这部手机上运行。您仍然可以支持 PocketPal。",
+    "thanksHeadline": "感谢您让 PocketPal 持续走下去。",
+    "thanksSubline": "Plus 已在本设备解锁。",
     "features": {
       "handsFreeVoice": "免提语音",
       "localApiServer": "本地 API 服务器"
