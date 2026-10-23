@@ -4,7 +4,7 @@ import {Platform} from 'react-native';
 import * as RNFS from '@dr.pogodin/react-native-fs';
 
 import {downloadManager} from '../../services/downloads';
-import {fetchModelFilesDetails} from '../../api/hf';
+import {fetchModelFilesDetails, fetchModelInfo} from '../../api/hf';
 import {classify} from '../../services/deviceRules/classify';
 import {parseDeviceRules} from '../../services/deviceRules/parse';
 import {Tier} from '../../services/deviceRules/types';
@@ -17,7 +17,14 @@ import {
   ModelOrigin,
   ModelType,
 } from '../../utils/types';
-import {createModel} from '../../../jest/fixtures/models';
+import {
+  createModel,
+  mockLlamaContextParams,
+} from '../../../jest/fixtures/models';
+import {isHighEndDevice} from '../../utils/deviceCapabilities';
+import {hfAsModel} from '../../utils';
+import {resolveHFModelForDownload} from '../../utils/hfResolve';
+import en from '../../locales/en.json';
 import {
   isModelFilePath,
   isValidImportedModelRef,
@@ -43,6 +50,7 @@ jest.mock('../../utils/deviceCapabilities', () => ({
 
 jest.mock('../../api/hf', () => ({
   fetchModelFilesDetails: jest.fn(),
+  fetchModelInfo: jest.fn(),
 }));
 
 jest.mock('../../services/downloads', () => ({
@@ -627,5 +635,467 @@ describe('model sink guard', () => {
         await expectDeleteSkipped(model);
       },
     );
+  });
+});
+
+describe('model load guard', () => {
+  const {initLlama, loadLlamaModelInfo, LlamaContext} = require('llama.rn');
+  const refused = en.errors.modelPathRefused;
+  const MTP_META = {n_embd: 1024, nextn_predict_layers: 1} as any;
+  const TARGET_META = {n_embd: 1024} as any;
+  const savedOS = Platform.OS;
+  let ctx: any;
+
+  afterEach(() => {
+    Platform.OS = savedOS;
+  });
+
+  beforeEach(() => {
+    jest.clearAllMocks();
+    existingFiles = new Set();
+    (RNFS.exists as jest.Mock).mockImplementation(async (path: string) =>
+      existingFiles.has(path),
+    );
+    (isHighEndDevice as jest.Mock).mockResolvedValue(true);
+    ctx = new LlamaContext(mockLlamaContextParams);
+    ctx.isMultimodalEnabled = jest.fn().mockResolvedValue(true);
+    (initLlama as jest.Mock).mockResolvedValue(ctx);
+    (loadLlamaModelInfo as jest.Mock).mockResolvedValue({});
+    (RNFS.hash as jest.Mock).mockResolvedValue('sha');
+    modelStore.setSpeculativeEnabled(false);
+    runInAction(() => {
+      modelStore.models = [];
+      modelStore.activeModelId = undefined;
+    });
+  });
+
+  const resetLoadState = () => {
+    jest.clearAllMocks();
+    runInAction(() => {
+      modelStore.context = undefined;
+      modelStore.activeModelId = undefined;
+      modelStore.modelLoadError = null;
+      modelStore.isContextLoading = false;
+    });
+  };
+
+  const markDownloaded = () => {
+    runInAction(() => {
+      modelStore.models.forEach(m => {
+        m.isDownloaded = true;
+      });
+    });
+  };
+
+  const expectNativeReads = async (
+    id: string,
+    path: string,
+    extra: {draft?: string; mmproj?: string} = {},
+  ) => {
+    resetLoadState();
+    await modelStore.initContext(storeModel(id));
+    expect(modelStore.modelLoadError).toBeNull();
+    const params = (initLlama as jest.Mock).mock.calls[0][0];
+    expect(params.model).toBe(path);
+    if (extra.draft) {
+      expect(params.model_draft).toBe(extra.draft);
+    }
+    if (extra.mmproj) {
+      expect(ctx.initMultimodal).toHaveBeenCalledWith(
+        expect.objectContaining({path: extra.mmproj}),
+      );
+    }
+
+    await modelStore.fetchAndPersistGGUFMetadata(storeModel(id));
+    expect(loadLlamaModelInfo).toHaveBeenCalledWith(path);
+
+    runInAction(() => {
+      storeModel(id).isDownloaded = true;
+    });
+    await modelStore.updateModelHash(id, true);
+    expect(RNFS.hash).toHaveBeenCalledWith(path, 'sha256');
+  };
+
+  const expectLoadRefused = async (id: string) => {
+    resetLoadState();
+    await expect(modelStore.initContext(storeModel(id))).rejects.toThrow(
+      refused,
+    );
+    expect(initLlama).not.toHaveBeenCalled();
+    expect(ctx.initMultimodal).not.toHaveBeenCalled();
+    expect(modelStore.modelLoadError?.message).toBe(refused);
+  };
+
+  const expectReadsSkipped = async (id: string) => {
+    jest.clearAllMocks();
+    await modelStore.fetchAndPersistGGUFMetadata(storeModel(id));
+    runInAction(() => {
+      storeModel(id).isDownloaded = true;
+    });
+    await modelStore.updateModelHash(id, true).catch(() => {});
+    expect(loadLlamaModelInfo).not.toHaveBeenCalled();
+    expect(RNFS.hash).not.toHaveBeenCalled();
+  };
+
+  const expectRejectedBeforeInit = async (id: string) => {
+    resetLoadState();
+    await expect(modelStore.initContext(storeModel(id))).rejects.toThrow();
+    expect(initLlama).not.toHaveBeenCalled();
+    expect(modelStore.modelLoadError).toBeNull();
+  };
+
+  const craftedHf = (overrides: Partial<Model>): Model =>
+    createModel({
+      id: 'a/r/crafted',
+      author: 'a',
+      repo: 'r',
+      filename: 'x.gguf',
+      origin: ModelOrigin.HF,
+      isDownloaded: true,
+      ...overrides,
+    }) as Model;
+
+  const craftedLocal = (fullPath: string): Model =>
+    createModel({
+      id: 'local-crafted',
+      author: '',
+      filename: fullPath.split('/').pop(),
+      fullPath,
+      isLocal: true,
+      origin: ModelOrigin.LOCAL,
+      isDownloaded: true,
+    }) as Model;
+
+  describe('valid models reach native code with their resolved paths', () => {
+    it('HF browser LLM loads with its projector', async () => {
+      const browsed = await browsedSmolVlm();
+      const [file] = getLLMFiles(browsed.siblings);
+      const llm = (await modelStore.addHFModel(browsed, file))!;
+      markDownloaded();
+      const projector = storeModel(storeModel(llm.id).defaultProjectionModel!);
+
+      await expectNativeReads(llm.id, hfPathOf(storeModel(llm.id)), {
+        mmproj: hfPathOf(projector),
+      });
+      await expectNativeReads(projector.id, hfPathOf(projector));
+    });
+
+    it('HF model at the legacy path without the repo segment', async () => {
+      const browsed = await browsedSmolVlm();
+      const [file] = getLLMFiles(browsed.siblings);
+      const llm = (await modelStore.addHFModel(browsed, file))!;
+      const legacyPath = `${DOCS}/models/hf/ggml-org/${file.rfilename}`;
+      existingFiles.add(legacyPath);
+      markDownloaded();
+      runInAction(() => {
+        storeModel(llm.id).visionEnabled = false;
+      });
+
+      await expectNativeReads(llm.id, legacyPath);
+    });
+
+    it('built-in pal model with its projector', async () => {
+      const llm = (await modelStore.addHFModel(
+        LOOKIE_DEFAULT_MODEL.hfModel!,
+        LOOKIE_DEFAULT_MODEL.hfModelFile!,
+      ))!;
+      markDownloaded();
+      const projector = storeModel(storeModel(llm.id).defaultProjectionModel!);
+
+      await expectNativeReads(llm.id, hfPathOf(storeModel(llm.id)), {
+        mmproj: hfPathOf(projector),
+      });
+    });
+
+    it('onboarding pal models', async () => {
+      for (const entry of ONBOARDING_PALS.flatMap(pal => pal.models)) {
+        await modelStore.registerOnboardingPalModel(entry);
+      }
+      markDownloaded();
+      for (const model of toJS(modelStore.models)) {
+        await expectNativeReads(model.id, hfPathOf(model));
+      }
+    });
+
+    it.each([
+      ['android', androidBundledRules],
+      ['ios', iosBundledRules],
+    ] as const)(
+      '%s rule presets, projectors included',
+      async (os, rawRules) => {
+        Platform.OS = os;
+        setModels(resolvePresets(rawRules, TIERS));
+        markDownloaded();
+        runInAction(() => {
+          modelStore.models.forEach(m => {
+            m.visionEnabled = false;
+          });
+        });
+        for (const model of toJS(modelStore.models)) {
+          await expectNativeReads(model.id, hfPathOf(model));
+        }
+      },
+      60000,
+    );
+
+    it.each<[string, (m: Model) => string, boolean]>([
+      ['Documents root', m => `${DOCS}/${m.filename}`, true],
+      [
+        'preset/<author>',
+        m => `${DOCS}/models/preset/${m.author}/${m.filename}`,
+        true,
+      ],
+      [
+        'preset/<author>/<repo>',
+        m => `${DOCS}/models/preset/${m.author}/${m.repo}/${m.filename}`,
+        false,
+      ],
+    ])(
+      'legacy presets at the %s path',
+      async (_branch, pathOf, fileExists) => {
+        for (const legacy of legacyDefaultModels) {
+          setModels([{...legacy, supportsMultimodal: false}]);
+          markDownloaded();
+          existingFiles = new Set(fileExists ? [pathOf(legacy)] : []);
+          await expectNativeReads(legacy.id, pathOf(legacy));
+        }
+      },
+      30000,
+    );
+
+    it.each([
+      `${DOCS}/models/local/model.gguf`,
+      `${DOCS}/models/local/model.bin`,
+      `${DOCS}/models/model.gguf`,
+    ])('LOCAL import at %s', async path => {
+      existingFiles.add(path);
+      await modelStore.addLocalModel(path);
+      const [model] = toJS(modelStore.models);
+
+      await expectNativeReads(model.id, path);
+    });
+
+    it('LOCAL model from an old iOS container loads at its re-anchored path', async () => {
+      const recovered = `${DOCS}/models/local/m.gguf`;
+      existingFiles.add(recovered);
+      runInAction(() => {
+        modelStore.models = [
+          craftedLocal(
+            '/var/mobile/Containers/Data/Application/5D7C1A2B-3E4F-4A5B-8C9D-0E1F2A3B4C5D/Documents/models/local/m.gguf',
+          ),
+        ];
+      });
+
+      await expectNativeReads('local-crafted', recovered);
+    });
+
+    it('rule draft pairs with its target', async () => {
+      Platform.OS = 'android';
+      const rules = JSON.parse(JSON.stringify(androidBundledRules));
+      const [target, draftSource] = rules.tiers.mid.candidates;
+      target.draft = {
+        hf_repo: draftSource.hf_repo,
+        hf_filename: draftSource.hf_filename,
+        size_bytes: draftSource.size_bytes,
+      };
+      setModels(resolvePresets(rules, ['mid']));
+      markDownloaded();
+      const draft = modelStore.models.find(
+        m => m.modelType === ModelType.DRAFT,
+      )!;
+      const targetModel = modelStore.models.find(
+        m => m.defaultDraftModel === draft.id,
+      )!;
+      runInAction(() => {
+        draft.ggufMetadata = MTP_META;
+        targetModel.ggufMetadata = TARGET_META;
+      });
+      modelStore.setSpeculativeEnabled(true);
+
+      await expectNativeReads(targetModel.id, hfPathOf(targetModel), {
+        draft: hfPathOf(draft),
+      });
+    });
+
+    it('LOCAL non-gguf draft pairs with an HF target', async () => {
+      const draftPath = `${DOCS}/models/local/draft.bin`;
+      existingFiles.add(draftPath);
+      const [entry] = ONBOARDING_PALS[0].models;
+      const target = (await modelStore.registerOnboardingPalModel(entry))!;
+      await modelStore.addLocalModel(draftPath);
+      markDownloaded();
+      const draft = modelStore.models.find(m => m.fullPath === draftPath)!;
+      runInAction(() => {
+        draft.ggufMetadata = MTP_META;
+        storeModel(target.id).ggufMetadata = TARGET_META;
+        storeModel(target.id).defaultDraftModel = draft.id;
+      });
+      modelStore.setSpeculativeEnabled(true);
+
+      await expectNativeReads(target.id, hfPathOf(storeModel(target.id)), {
+        draft: draftPath,
+      });
+    });
+
+    it('an in-root projector that fails to initialize still degrades to text-only', async () => {
+      const llm = (await modelStore.addHFModel(
+        LOOKIE_DEFAULT_MODEL.hfModel!,
+        LOOKIE_DEFAULT_MODEL.hfModelFile!,
+      ))!;
+      markDownloaded();
+      ctx.initMultimodal = jest.fn().mockRejectedValue(new Error('mmproj'));
+      resetLoadState();
+
+      await modelStore.initContext(storeModel(llm.id));
+
+      expect(initLlama).toHaveBeenCalledTimes(1);
+      expect(ctx.initMultimodal).toHaveBeenCalled();
+      expect(modelStore.isMultimodalActive).toBe(false);
+      expect(modelStore.modelLoadError).toBeNull();
+    });
+  });
+
+  describe('crafted paths never reach native code', () => {
+    const MAIN: [string, () => Model][] = [
+      ['HF filename ..', () => craftedHf({filename: '..'})],
+      ['HF filename ../..', () => craftedHf({filename: '../..'})],
+      [
+        'HF filename x<U+0000>.gguf',
+        () => craftedHf({filename: 'x\u0000.gguf'}),
+      ],
+      ['HF filename ../../x.gguf', () => craftedHf({filename: '../../x.gguf'})],
+      [
+        'HF repo <U+0000>',
+        () => craftedHf({repo: '\u0000', filename: 'm.gguf'}),
+      ],
+      ['LOCAL /etc/hosts', () => craftedLocal('/etc/hosts')],
+      [
+        'LOCAL file:///data/local/tmp/x',
+        () => craftedLocal('file:///data/local/tmp/x'),
+      ],
+      ['LOCAL /tmp/x.gguf', () => craftedLocal('/tmp/x.gguf')],
+    ];
+
+    it.each(MAIN)('%s: load refused', async (_case, build) => {
+      const model = build();
+      runInAction(() => {
+        modelStore.models = [model];
+      });
+      await expectLoadRefused(model.id);
+    });
+
+    it.each(MAIN)('%s: model info and hash not read', async (_case, build) => {
+      const model = build();
+      runInAction(() => {
+        modelStore.models = [model];
+      });
+      await expectReadsSkipped(model.id);
+    });
+
+    const PROJECTOR_FILENAMES = [
+      '..',
+      '../..',
+      '/etc/hosts',
+      'file:///data/local/tmp/x',
+      'mmproj-a\u0000b.gguf',
+    ];
+
+    const withProjector = async (filename: string) => {
+      const llm = (await modelStore.addHFModel(
+        LOOKIE_DEFAULT_MODEL.hfModel!,
+        LOOKIE_DEFAULT_MODEL.hfModelFile!,
+      ))!;
+      const projector = craftedHf({
+        id: 'a/r/mmproj-crafted',
+        filename,
+        modelType: ModelType.PROJECTION,
+      });
+      runInAction(() => {
+        modelStore.models.push(projector);
+        storeModel(llm.id).isDownloaded = true;
+        storeModel(llm.id).defaultProjectionModel = projector.id;
+      });
+      return llm.id;
+    };
+
+    it.each(PROJECTOR_FILENAMES)(
+      'projector filename %j: the whole load is refused',
+      async filename => {
+        await expectLoadRefused(await withProjector(filename));
+      },
+    );
+
+    it('an empty projector filename fails before init, as before', async () => {
+      await expectRejectedBeforeInit(await withProjector(''));
+    });
+
+    const withDraft = async (draft: Model) => {
+      const [entry] = ONBOARDING_PALS[0].models;
+      const target = (await modelStore.registerOnboardingPalModel(entry))!;
+      runInAction(() => {
+        modelStore.models.push({...draft, ggufMetadata: MTP_META});
+        storeModel(target.id).isDownloaded = true;
+        storeModel(target.id).ggufMetadata = TARGET_META;
+        storeModel(target.id).defaultDraftModel = draft.id;
+      });
+      modelStore.setSpeculativeEnabled(true);
+      return target.id;
+    };
+
+    it.each<[string, () => Model]>([
+      ['HF draft filename ..', () => craftedHf({filename: '..'})],
+      ['HF draft filename ../..', () => craftedHf({filename: '../..'})],
+      [
+        'HF draft filename x<U+0000>.gguf',
+        () => craftedHf({filename: 'x\u0000.gguf'}),
+      ],
+      ['LOCAL draft /etc/hosts', () => craftedLocal('/etc/hosts')],
+      [
+        'LOCAL draft file:///data/local/tmp/x',
+        () => craftedLocal('file:///data/local/tmp/x'),
+      ],
+    ])('%s: the whole load is refused', async (_case, build) => {
+      await expectLoadRefused(await withDraft(build()));
+    });
+
+    it('an empty draft filename fails before init, as before', async () => {
+      await expectRejectedBeforeInit(
+        await withDraft(craftedHf({filename: ''})),
+      );
+    });
+
+    it('an empty main filename fails before init, as before', async () => {
+      const model = craftedHf({filename: ''});
+      runInAction(() => {
+        modelStore.models = [model];
+      });
+      await expectRejectedBeforeInit(model.id);
+      await expectReadsSkipped(model.id);
+    });
+
+    it('a PalsHub ref whose HF resolve failed is marked downloaded but never loads', async () => {
+      (fetchModelInfo as jest.Mock).mockRejectedValue(new Error('offline'));
+      (fetchModelFilesDetails as jest.Mock).mockRejectedValue(
+        new Error('offline'),
+      );
+      const {hfModel, modelFile} = await resolveHFModelForDownload(
+        'a/r',
+        '../../x.gguf',
+        undefined,
+        {
+          author: 'a',
+          size: 1,
+          downloadUrl: 'https://huggingface.co/a/r/resolve/main/x.gguf',
+        },
+      );
+      const ghost = hfAsModel(hfModel, modelFile);
+      existingFiles.add(hfPathOf(ghost));
+
+      await modelStore.addHFModel(hfModel, modelFile);
+      expect(storeModel(ghost.id).isDownloaded).toBe(true);
+
+      await expectLoadRefused(ghost.id);
+      await expectReadsSkipped(ghost.id);
+    });
   });
 });

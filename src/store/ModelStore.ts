@@ -45,7 +45,7 @@ import {
   parseSizeLabel,
 } from '../utils';
 import {getRecommendedProjectionModel} from '../utils/multimodalHelpers';
-import {isModelFilePath} from '../utils/modelPathGuard';
+import {isModelFilePath, MODEL_PATH_REFUSED} from '../utils/modelPathGuard';
 import {isDraftOnlyModel} from '../utils/mtp';
 import {getOriginalModelName} from '../utils/formatters';
 import {stopQuietly} from '../utils/stopQuietly';
@@ -169,6 +169,9 @@ const answersSession = (
 ): boolean =>
   capsMatchBinding(caps, binding, binding.modelId) &&
   caps?.samplerDefaults !== undefined;
+
+const isLocalModel = (model: Model): boolean =>
+  model.isLocal || model.origin === ModelOrigin.LOCAL;
 
 const pairedDraftModel = (config?: DraftConfig): Model | undefined =>
   config?.mode === 'paired' ? config.draftModel : undefined;
@@ -1881,6 +1884,11 @@ class ModelStore {
         return;
       }
 
+      if (!isModelFilePath(filePath, {local: isLocalModel(model)})) {
+        console.warn(`[ModelStore] ${MODEL_PATH_REFUSED}:`, filePath);
+        return;
+      }
+
       const modelInfo = await loadLlamaModelInfo(filePath);
       if (!modelInfo || typeof modelInfo !== 'object') {
         console.warn('[ModelStore] Invalid model info returned');
@@ -2355,6 +2363,23 @@ class ModelStore {
     );
 
     try {
+      const draftModel = pairedDraftModel(draftConfig);
+      const nativePaths: [string | undefined, boolean][] = [
+        [filePath, isLocalModel(model)],
+        [
+          effectiveSettings.model_draft,
+          !!draftModel && isLocalModel(draftModel),
+        ],
+        [isMultimodalInit ? mmProjPath : undefined, false],
+      ];
+      if (
+        nativePaths.some(
+          ([path, local]) => !!path && !isModelFilePath(path, {local}),
+        )
+      ) {
+        throw new Error(uiStore.l10n.errors.modelPathRefused);
+      }
+
       // Create properly versioned ContextInitParams
       const contextInitParams = createContextInitParams(effectiveSettings);
 
@@ -3986,6 +4011,10 @@ class ModelStore {
         return;
       }
       const filePath = await this.getModelFullPath(model);
+      if (!isModelFilePath(filePath, {local: isLocalModel(model)})) {
+        console.warn(`[ModelStore] ${MODEL_PATH_REFUSED}:`, filePath);
+        return;
+      }
       const hash = await getSHA256Hash(filePath);
       runInAction(() => {
         model.hash = hash;

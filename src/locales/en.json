@@ -1482,6 +1482,7 @@
     "networkError": "Network error: Unable to connect to API",
     "downloadSetupFailedTitle": "Download Setup Failed",
     "downloadSetupFailedMessage": "Failed to prepare model for download: {{message}}",
+    "modelPathRefused": "Can't load this model. Try removing it and downloading it again.",
     "cameraErrorTitle": "Camera Error",
     "cameraErrorMessage": "Failed to take photo",
     "galleryErrorTitle": "Gallery Error",

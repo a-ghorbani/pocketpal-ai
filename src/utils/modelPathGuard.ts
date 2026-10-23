@@ -4,6 +4,8 @@ import {MMProjRegex} from './multimodalPatterns';
 import {isSafePathSegment, isSafeRelativePath} from './pathGuard';
 import {ModelOrigin} from './types';
 
+export const MODEL_PATH_REFUSED = 'Model path is outside the models folder';
+
 const GGUF_SUFFIX = /\.gguf$/i;
 
 const isGgufName = (name: string): boolean => GGUF_SUFFIX.test(name);

@@ -2069,7 +2069,7 @@ describe('ModelStore', () => {
         isDownloaded: true,
         isLocal: true,
         origin: ModelOrigin.LOCAL,
-        fullPath: `/path/to/${name}.gguf`,
+        fullPath: `/path/to/documents/models/local/${name}.gguf`,
       }) as Model;
     const modelA = localModel('a');
     const modelB = localModel('b');
@@ -7250,7 +7250,7 @@ describe('ModelStore', () => {
               isDownloaded: true,
               isLocal: true,
               origin: ModelOrigin.LOCAL,
-              fullPath: '/path/to/t.gguf',
+              fullPath: '/path/to/documents/models/local/t.gguf',
               defaultDraftModel: 'c/d/dr.gguf',
               // Target carries a known width so the draft's matching width passes
               // the paired width gate.
@@ -7263,7 +7263,7 @@ describe('ModelStore', () => {
               isDownloaded: true,
               isLocal: true,
               origin: ModelOrigin.LOCAL,
-              fullPath: '/path/to/dr.gguf',
+              fullPath: '/path/to/documents/models/local/dr.gguf',
               modelType: ModelType.DRAFT,
               // Valid MTP draft: own nextn layers + width matching the target.
               ggufMetadata: specMeta({nextn_predict_layers: 1, n_embd: 1024}),
@@ -7291,7 +7291,9 @@ describe('ModelStore', () => {
         await modelStore.initContext(target);
 
         const params = (initLlama as jest.Mock).mock.calls[0][0];
-        expect(params.model_draft).toBe('/path/to/dr.gguf');
+        expect(params.model_draft).toBe(
+          '/path/to/documents/models/local/dr.gguf',
+        );
         expect(params.is_model_draft_asset).toBe(false);
       });
 
