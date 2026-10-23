@@ -868,7 +868,7 @@ export const ChatView = observer(
     const dispatchSend = React.useCallback(
       async (
         message: MessageType.PartialText,
-        {clearComposer}: {clearComposer: boolean},
+        {clear}: {clear: 'all' | 'text' | 'none'},
       ) => {
         const documentIds = (message.documents ?? []).map(ref => ref.id);
         holdForSend(documentIds);
@@ -879,13 +879,15 @@ export const ChatView = observer(
             await chatSessionStore.commitEdit();
           }
           const sent = onSendPress(message);
-          if (clearComposer) {
+          if (clear !== 'none') {
             setInputText('');
-            setInputImages([]);
-            updateComposerDocuments(() => []);
             syncedDraftRef.current = '';
             chatSessionStore.clearDraft(draftKey);
             Keyboard.dismiss();
+          }
+          if (clear === 'all') {
+            setInputImages([]);
+            updateComposerDocuments(() => []);
           }
           const undone = await sent;
           if (undone) {
@@ -899,7 +901,10 @@ export const ChatView = observer(
     );
 
     const sendFromComposer = React.useCallback(
-      async (message: MessageType.PartialText) => {
+      async (
+        message: MessageType.PartialText,
+        clear: 'all' | 'text' = 'all',
+      ) => {
         if (chatSessionStore.isStopping) {
           return;
         }
@@ -922,7 +927,7 @@ export const ChatView = observer(
           }
         }
         editSnapshotRef.current = null;
-        await dispatchSend(message, {clearComposer: true});
+        await dispatchSend(message, {clear});
       },
       [dispatchSend, evaluateSendBudget, messages],
     );
@@ -937,8 +942,10 @@ export const ChatView = observer(
           return;
         }
         await dispatchSend(message, {
-          clearComposer:
-            chatSessionStore.isEditMode && !editSnapshotRef.current,
+          clear:
+            chatSessionStore.isEditMode && !editSnapshotRef.current
+              ? 'all'
+              : 'none',
         });
       },
       [dispatchSend],
@@ -1637,7 +1644,7 @@ export const ChatView = observer(
                 <SuggestedPromptsRow
                   prompts={activePal.greeting.suggestedPrompts}
                   onSelect={prompt =>
-                    sendFromComposer({type: 'text', text: prompt})
+                    sendFromComposer({type: 'text', text: prompt}, 'text')
                   }
                 />
               </Reanimated.View>

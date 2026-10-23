@@ -1225,3 +1225,29 @@ describe('leaving an edit that kept the composer', () => {
     expectRestored(chat);
   });
 });
+
+describe('ChatView suggested prompts', () => {
+  it('a suggested prompt send keeps staged attachments in the composer', async () => {
+    const staged = ref('staged-for-later');
+    const chat = renderChat({
+      messages: [],
+      activePal: {
+        id: 'pal-with-prompts',
+        name: 'Pal',
+        greeting: {text: '', suggestedPrompts: ['Tell me more']},
+      } as any,
+    });
+    await chat.attach(staged);
+
+    await act(async () => {
+      fireEvent.press(chat.screen.getByTestId('suggested-prompt-chip-0'));
+    });
+
+    expect(chat.onSendPress).toHaveBeenCalledWith({
+      type: 'text',
+      text: 'Tell me more',
+    });
+    expect(chat.screen.getByText('staged-for-later.pdf')).toBeTruthy();
+    expect(documentStore.isHeld(staged.id)).toBe(true);
+  });
+});
