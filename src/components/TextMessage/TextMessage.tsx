@@ -1,5 +1,6 @@
 import * as React from 'react';
 import {
+  GestureResponderEvent,
   Linking,
   Text,
   View,
@@ -60,10 +61,15 @@ export interface TextMessageProps extends TextMessageTopLevelProps {
    * Reasoning is rendered separately via ReasoningBlock.
    */
   step?: AgentStep;
+  isActiveRun?: boolean;
 }
+
+const keepTouchOnThumbnail = (event: GestureResponderEvent) =>
+  event.stopPropagation();
 
 export const TextMessage = ({
   enableAnimation,
+  isActiveRun,
   message,
   messageWidth,
   onPreviewDataFetched,
@@ -82,6 +88,7 @@ export const TextMessage = ({
       : '';
   const theme = useTheme();
   const user = React.useContext(UserContext);
+  const isUserRow = message.author?.id === user?.id;
   const [previewData, setPreviewData] = React.useState(
     'previewData' in message ? message.previewData : undefined,
   );
@@ -186,7 +193,7 @@ export const TextMessage = ({
     }
 
     return (
-      <View style={imageContainer}>
+      <View style={imageContainer} onTouchStart={keepTouchOnThumbnail}>
         {imageUris.map((uri: string, index: number) => (
           <TouchableOpacity
             key={index}
@@ -277,7 +284,9 @@ export const TextMessage = ({
           <MarkdownView
             markdownText={visibleText.trim()}
             maxMessageWidth={messageWidth}
-            selectable={false}
+            selectable={!isUserRow}
+            blockContextMenu={!isUserRow}
+            streamingAnimation={isActiveRun === true && step?.partial === true}
           />
         </View>
       )}

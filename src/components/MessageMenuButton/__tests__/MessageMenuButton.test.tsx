@@ -1,0 +1,83 @@
+import React from 'react';
+import {StyleSheet} from 'react-native';
+
+import {fireEvent, render} from '../../../../jest/test-utils';
+import {l10n} from '../../../locales';
+
+import {MessageMenuButton} from '../MessageMenuButton';
+
+const MIN_TARGET = 44;
+const FOOTPRINT_WIDTH = 25;
+const FOOTPRINT_HEIGHT = 16;
+
+describe('MessageMenuButton', () => {
+  it('is an accessible button with a localized label', () => {
+    const {getByTestId} = render(<MessageMenuButton />);
+    const button = getByTestId('message-menu-button');
+
+    expect(button.props.accessibilityRole).toBe('button');
+    expect(button.props.accessibilityLabel).toBe(
+      l10n.en.components.messageMenuButton.accessibilityLabel,
+    );
+  });
+
+  it('is a 44 dp layout box that keeps the 25 x 16 dp footprint', () => {
+    const {getByTestId} = render(<MessageMenuButton />);
+    const button = getByTestId('message-menu-button');
+    const style = StyleSheet.flatten(button.props.style) ?? {};
+
+    expect(style.minWidth).toBe(MIN_TARGET);
+    expect(style.minHeight).toBe(MIN_TARGET);
+    expect(style.flexShrink).toBe(0);
+    expect(
+      MIN_TARGET + Number(style.marginLeft) + Number(style.marginRight),
+    ).toBe(FOOTPRINT_WIDTH);
+    expect(
+      MIN_TARGET + Number(style.marginTop) + Number(style.marginBottom),
+    ).toBe(FOOTPRINT_HEIGHT);
+    expect(style).toMatchObject({
+      marginLeft: -5,
+      marginTop: -14,
+      marginRight: -14,
+      marginBottom: -14,
+    });
+    expect(button.props.hitSlop).toBeUndefined();
+  });
+
+  it('calls onPress at the press point', () => {
+    const onPress = jest.fn();
+    const {getByTestId} = render(<MessageMenuButton onPress={onPress} />);
+
+    fireEvent.press(getByTestId('message-menu-button'), {
+      nativeEvent: {pageX: 1, pageY: 2},
+    });
+
+    expect(onPress).toHaveBeenCalledWith({nativeEvent: {pageX: 1, pageY: 2}});
+  });
+
+  it.each([
+    ['an empty click event', {nativeEvent: {}}],
+    ['no event', undefined],
+  ])(
+    'calls onPress at the button centre for %s (TalkBack, Switch Access, keyboard)',
+    (_case, event) => {
+      const onPress = jest.fn();
+      const {UNSAFE_root, getByTestId} = render(
+        <MessageMenuButton onPress={onPress} />,
+      );
+      const native = UNSAFE_root.find(
+        (n: any) =>
+          typeof n.instance?.measure === 'function' &&
+          n.props.testID === 'message-menu-button',
+      ).instance;
+      native.measure = (cb: (...args: number[]) => void) =>
+        cb(0, 0, 44, 44, 300, 500);
+
+      fireEvent.press(getByTestId('message-menu-button'), event);
+
+      expect(onPress).toHaveBeenCalledWith({
+        nativeEvent: {pageX: 322, pageY: 522},
+      });
+    },
+  );
+});

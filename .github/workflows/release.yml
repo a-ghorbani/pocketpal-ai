@@ -74,6 +74,11 @@ jobs:
       - name: Install dependencies
         run: yarn install
 
+      - name: Restore enriched-markdown native assets
+        # A cached node_modules can hold a failed download. Run directly, the script
+        # reads the app's "enriched-markdown" config only through INIT_CWD.
+        run: INIT_CWD="$GITHUB_WORKSPACE" node node_modules/react-native-enriched-markdown/postinstall.mjs
+
       # Step 4b: The manifest that the payload gate enforces also decides which
       # rnllama variants are worth compiling — one declaration, both uses.
       - name: Derive the rnllama variant allowlist from the payload manifest
@@ -284,6 +289,11 @@ jobs:
       # Step 3: Install dependencies using Yarn
       - name: Install dependencies
         run: yarn install
+
+      - name: Restore enriched-markdown native assets
+        # A cached node_modules can hold a failed download. Run directly, the script
+        # reads the app's "enriched-markdown" config only through INIT_CWD.
+        run: INIT_CWD="$GITHUB_WORKSPACE" node node_modules/react-native-enriched-markdown/postinstall.mjs
 
       # Step 4: Set up Ruby and Bundler
       - name: Set up Ruby

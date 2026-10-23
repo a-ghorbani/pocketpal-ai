@@ -632,6 +632,30 @@
     "thinkingBubble": {
       "reasoning": "Reasoning"
     },
+    "messageMenuButton": {
+      "accessibilityLabel": "More actions",
+      "openMenuAction": "Open message menu"
+    },
+    "markdownView": {
+      "selectionMenu": {
+        "copy": "Copy",
+        "copyAsMarkdown": "Copy as Markdown",
+        "copyImageUrl": "Copy Image URL",
+        "copyImageUrls": "Copy {{count}} Image URLs"
+      },
+      "accessibility": {
+        "bulletPoint": "Bullet point",
+        "nestedBulletPoint": "Nested bullet point",
+        "orderedItem": "List item {{n}}",
+        "nestedOrderedItem": "Nested list item {{n}}",
+        "quote": "Blockquote",
+        "nestedQuote": "Nested blockquote",
+        "tableRow": "Row {{n}}: {{content}}",
+        "rotorHeadings": "Headings",
+        "rotorLinks": "Links",
+        "rotorImages": "Images"
+      }
+    },
     "pendingIndicator": {
       "preparingTool": "Preparing tool",
       "buildingPage": "Building page",

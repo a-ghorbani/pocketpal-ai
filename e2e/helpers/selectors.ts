@@ -179,7 +179,7 @@ export const Selectors = {
       return byTestId('send-button');
     },
     get menuButton(): string {
-      return byTestId('menu-button');
+      return byExactTestId('menu-button');
     },
     get stopButton(): string {
       return byExactTestId('stop-button');
@@ -223,9 +223,12 @@ export const Selectors = {
     /**
      * Selector for detecting inference completion.
      * Matches any element with "tokens/sec" in its accessibility label/content-desc.
-     * The timing info appears in the message bubble's accessibility label when inference completes.
+     * The timing appears in the assistant footer's timing text when inference completes.
      */
     get inferenceComplete(): string {
+      if (isAndroid()) {
+        return '//*[contains(@content-desc, "tokens/sec") or contains(@text, "tokens/sec")]';
+      }
       return byAccessibilityLabelContains('tokens/sec');
     },
   },
@@ -261,7 +264,7 @@ export const Selectors = {
       return byTestId('flat-list');
     },
     get menuButton(): string {
-      return byTestId('menu-button');
+      return byExactTestId('menu-button');
     },
     // Dynamic: model accordion by type
     modelAccordion: (type: string): string =>

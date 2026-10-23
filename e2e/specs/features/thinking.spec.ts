@@ -17,7 +17,8 @@ import * as fs from 'fs';
 import * as path from 'path';
 import {expect} from '@wdio/globals';
 import {ChatPage} from '../../pages/ChatPage';
-import {Selectors, nativeTextElement} from '../../helpers/selectors';
+import {Selectors} from '../../helpers/selectors';
+import {readReplyText} from '../../helpers/element-text';
 import {
   downloadAndLoadModel,
   waitForInferenceComplete,
@@ -103,10 +104,9 @@ describe('Thinking Model Features', () => {
 
     // Verify there's a text response from the AI
     const aiMessage = browser.$(Selectors.chat.aiMessage);
-    const textView = aiMessage.$(nativeTextElement());
-    const responseText = await textView
-      .getText()
-      .catch(() => 'Unable to extract');
+    const responseText = await readReplyText(aiMessage).catch(
+      () => 'Unable to extract',
+    );
     console.log(`Response: ${responseText}`);
     expect(responseText).not.toBe('Unable to extract');
     expect(responseText.length).toBeGreaterThan(0);

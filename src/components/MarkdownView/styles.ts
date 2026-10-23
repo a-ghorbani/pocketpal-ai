@@ -1,88 +1,85 @@
-import {StyleSheet} from 'react-native';
+import type {MarkdownStyle} from 'react-native-enriched-markdown';
 
 import {Theme} from '../../utils/types';
 
-// Plain object (not via StyleSheet.create) because react-syntax-highlighter's
-// customStyle is merged with Object.assign — a numeric StyleSheet id won't
-// flatten the upstream white PreTag fallback. See MarkdownView for the why.
-export const codeHighlighterPreOverride = {
-  backgroundColor: 'transparent',
-} as const;
+export type MarkdownVariant = 'body' | 'reasoning';
 
-export const createTagsStyles = (theme: Theme) => ({
-  body: {
-    color: theme.colors.text,
-    fontSize: 16,
-    fontFamily:
-      '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif',
-    padding: 0,
-    paddingTop: 0,
-    margin: 0,
-    backgroundColor: 'transparent',
-    // display: 'inline-block',
-  },
-  a: {
-    color: theme.colors.secondary,
-    textDecorationLine: 'underline' as const,
-  },
-  code: {
-    fontFamily: 'Courier', // Change the font for code snippets
-    backgroundColor: theme.colors.surface, // Custom background for code blocks
-    padding: 4,
-    borderRadius: 4,
-    color: theme.colors.onSurface, // Color for code text
-    fontSize: 12,
-    whiteSpace: 'pre' as const,
-  },
-  pre: {
-    backgroundColor: theme.colors.surface, // Background for pre blocks
-    padding: 8,
-    borderRadius: 6,
-    marginVertical: 8,
-    color: theme.colors.onPrimaryContainer,
-    fontFamily: 'Courier',
-    fontSize: 14,
-    whiteSpace: 'pre' as const,
-  },
-  // Styles for thinking tags
-  thinking: {
-    color: theme.colors.thinkingBubbleText,
-    fontSize: 14,
-    lineHeight: 20,
-    fontFamily:
-      '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif',
-  },
-  think: {
-    color: theme.colors.thinkingBubbleText,
-    fontSize: 14,
-    lineHeight: 20,
-    fontFamily:
-      '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif',
-  },
-  thought: {
-    color: theme.colors.thinkingBubbleText,
-    fontSize: 14,
-    lineHeight: 20,
-    fontFamily:
-      '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif',
-  },
+const BLOCK_GAP = 8;
+const blockSpacing = {marginTop: 0, marginBottom: BLOCK_GAP};
+
+const heading = (fontSize: number, lineHeight: number) => ({
+  fontSize,
+  lineHeight,
+  fontWeight: 'bold',
+  marginTop: 4,
+  marginBottom: 4,
 });
 
-export const createStyles = (theme: Theme) =>
-  StyleSheet.create({
-    container: {
-      flex: 1,
+export const createMarkdownStyle = (
+  theme: Theme,
+  variant: MarkdownVariant,
+): MarkdownStyle => {
+  const {colors} = theme;
+  const isReasoning = variant === 'reasoning';
+  const text = isReasoning ? colors.thinkingBubbleText : colors.text;
+  const textBlock = isReasoning
+    ? {color: text, fontSize: 14, lineHeight: 20, ...blockSpacing}
+    : {color: text, fontSize: 16, lineHeight: 22, ...blockSpacing};
+
+  return {
+    paragraph: textBlock,
+    h1: {...heading(22, 28), color: text},
+    h2: {...heading(20, 26), color: text},
+    h3: {...heading(18, 24), color: text},
+    h4: {...heading(17, 22), color: text},
+    h5: {...heading(16, 22), color: text},
+    h6: {...heading(16, 22), color: text},
+    list: {
+      ...textBlock,
+      marginLeft: 16,
+      gapWidth: 6,
+      itemSpacing: 0,
+      bulletColor: text,
+      markerColor: text,
     },
-    markdownContainer: {
-      // Dynamic maxWidth will be applied via style prop
+    blockquote: {
+      ...textBlock,
+      borderWidth: 2,
+      gapWidth: 8,
+      padding: 4,
+      borderColor: colors.outline,
+      backgroundColor: colors.surfaceContainerHigh,
     },
-    codeHighlighterText: {
-      fontFamily: 'Courier',
+    codeBlock: blockSpacing,
+    link: {color: colors.secondary, underline: true},
+    code: {
+      color: colors.onSurface,
+      backgroundColor: colors.surface,
+      borderColor: colors.outline,
     },
-    codeHighlighterScrollContent: {
-      backgroundColor: theme.colors.surface,
-      padding: 8,
-      borderRadius: 6,
-      marginTop: 4,
+    strikethrough: {color: text},
+    underline: {color: text},
+    thematicBreak: {
+      color: colors.outline,
+      height: 1,
+      marginTop: 12,
+      marginBottom: 12,
     },
-  });
+    table: {
+      ...blockSpacing,
+      color: text,
+      headerBackgroundColor: colors.surfaceContainerHigh,
+      headerTextColor: text,
+      rowEvenBackgroundColor: 'transparent',
+      rowOddBackgroundColor: 'transparent',
+      borderColor: colors.outline,
+      cellPaddingHorizontal: 8,
+      cellPaddingVertical: 6,
+    },
+    taskList: {
+      borderColor: text,
+      checkedTextColor: text,
+    },
+    spoiler: {color: colors.surfaceContainerHigh},
+  };
+};

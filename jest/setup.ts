@@ -183,6 +183,17 @@ jest.mock('react-native-share', () => ({
 jest.mock('react-native-image-picker');
 jest.mock('react-native-vision-camera');
 
+// The shipped mock drops every config prop; the jest.fn spy keeps them assertable.
+jest.mock('react-native-enriched-markdown', () => {
+  const actual = jest.requireActual('react-native-enriched-markdown/jest');
+  return {
+    ...actual,
+    EnrichedMarkdownText: jest.fn(props =>
+      require('react').createElement(actual.EnrichedMarkdownText, props),
+    ),
+  };
+});
+
 jest.mock('../src/database', () => {
   return {
     database: require('../__mocks__/database').mockDatabase,

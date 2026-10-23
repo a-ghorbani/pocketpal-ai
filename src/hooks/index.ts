@@ -8,3 +8,4 @@ export * from './useDeepLinking';
 export * from './usePalLoadHint';
 export * from './useVoiceCapture';
 export * from './useMenuStatusBarHeight';
+export * from './useTouchLongPress';

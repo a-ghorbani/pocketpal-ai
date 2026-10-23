@@ -187,6 +187,11 @@ jobs:
       - name: Install dependencies
         run: yarn install
 
+      - name: Restore enriched-markdown native assets
+        # A cached node_modules can hold a failed download. Run directly, the script
+        # reads the app's "enriched-markdown" config only through INIT_CWD.
+        run: INIT_CWD="$GITHUB_WORKSPACE" node node_modules/react-native-enriched-markdown/postinstall.mjs
+
       - name: Derive the rnllama variant allowlist from the payload manifest
         run: |
           set -euo pipefail
@@ -411,6 +416,11 @@ jobs:
 
       - name: Install dependencies
         run: yarn install
+
+      - name: Restore enriched-markdown native assets
+        # A cached node_modules can hold a failed download. Run directly, the script
+        # reads the app's "enriched-markdown" config only through INIT_CWD.
+        run: INIT_CWD="$GITHUB_WORKSPACE" node node_modules/react-native-enriched-markdown/postinstall.mjs
       
       - name: Create Env.xcconfig
         run: |
