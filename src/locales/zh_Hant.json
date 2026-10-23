@@ -12,7 +12,9 @@
     "termsOfService": "服務條款",
     "tourDescription": "重播歡迎畫面，以查看 PocketPal AI 提供的功能。",
     "showIntroButton": "再次顯示介紹",
-    "tour": "導覽"
+    "tour": "導覽",
+    "openSourceNotices": "開源授權公告",
+    "phononNoticesCredit": "由 Gradium 提供並採用 Apache-2.0 授權的 Phonon 語音模型與語音，建構於 Kyutai 的 Pocket TTS 與 Mimi 編碼器之上。"
   },
   "benchmark": {
     "title": "基準",
@@ -1565,7 +1567,10 @@
       "tr": "土耳其語",
       "uk": "烏克蘭語",
       "vi": "越南語"
-    }
+    },
+    "enginePhononTagline": "啟動快速且記憶體佔用低。僅支援英文。",
+    "enginePhononCredit": "模型與語音由 Gradium 提供（採用 Apache-2.0 授權），建構於 Kyutai 的 Mimi 之上。",
+    "engineTierNatural": "自然英語"
   },
   "htmlPreview": {
     "defaultTitle": "預覽",
@@ -1750,5 +1755,13 @@
       "subtitleTwo": "{{first}}、{{second}}",
       "subtitleMore": "{{first}}、{{second}} 等"
     }
+  },
+  "voiceMode": {
+    "settingTitle": "免持語音",
+    "settingDescription": "透過聊天與模型對話並聆聽其回覆。",
+    "unsupportedDeviceHelper": "在此手機上執行可能較慢。",
+    "startingTitle": "啟動中",
+    "startingHint": "正在載入語音辨識與語音模型。第一次執行時可能會花一點時間。",
+    "startFailed": "無法啟動語音模式。請再試一次。"
   }
 }
