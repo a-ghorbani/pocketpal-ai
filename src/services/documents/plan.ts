@@ -149,10 +149,13 @@ export const documentPlan = ({
     windowTokens === undefined ? undefined : windowTokens - REPLY_RESERVE;
   const textOnly = nonDoc + historyNotices;
   const textAloneOver = available !== undefined && textOnly > available;
+  // When text alone overflows, the send fails as it would without documents,
+  // so they are planned as if the window were unknown.
+  const windowed = textAloneOver ? undefined : available;
   const historyOver =
     available !== undefined && nonDoc + historyLoad > available;
 
-  if (available !== undefined && !(historyOver && historyLoad > 0)) {
+  if (windowed !== undefined && !(historyOver && historyLoad > 0)) {
     const exceeds = () => {
       const anySearched = searchedNow().length > 0;
       return (
@@ -160,7 +163,7 @@ export const documentPlan = ({
           historyLoad +
           newLoad() +
           (anySearched ? excerptFloor(searchedNow()) : 0) >
-        available
+        windowed
       );
     };
     for (let i = newRefs.length - 1; i >= 0 && exceeds(); i--) {
@@ -175,7 +178,7 @@ export const documentPlan = ({
   const anySearched = searchedRefs.length > 0;
   const floor = anySearched ? excerptFloor(searchedRefs) : 0;
   const room =
-    available === undefined ? undefined : available - nonDoc - fullLoad;
+    windowed === undefined ? undefined : windowed - nonDoc - fullLoad;
   const excerptBudget = anySearched
     ? Math.max(0, Math.min(EXCERPT_MAX_TOKENS, room ?? EXCERPT_MAX_TOKENS))
     : 0;

@@ -1,7 +1,7 @@
 import {documentPlan} from '../plan';
 import {estimateDocTokens} from '../estimate';
 import {documentKey} from '../render';
-import {type DocumentRef} from '../types';
+import {EXCERPT_MAX_TOKENS, type DocumentRef} from '../types';
 import {MessageType} from '../../../utils/types';
 
 const notes: DocumentRef = {
@@ -94,5 +94,31 @@ describe('documentPlan when the chat holds no documents', () => {
     });
 
     expect(p.verdict).toMatchObject({kind: 'over', reason: 'history'});
+  });
+
+  describe('when plain chat text alone already overflows', () => {
+    const plain = 'x'.repeat(3100);
+    const planFor = (documents: DocumentRef[]) =>
+      documentPlan({
+        rows: [plainRow],
+        message: {type: 'text', text: 'q', documents},
+        windowTokens: 2048,
+        activeModelId: 'm',
+        nonDocText: plain,
+        missingKeys: new Set(),
+      });
+
+    it('keeps a small new document in full', () => {
+      const p = planFor([{...notes, tokenEstimate: 300}]);
+      expect(p.verdict).toEqual({kind: 'fits'});
+      expect(p.newModes).toEqual(['full']);
+    });
+
+    it('gives a searched document the usual excerpt budget', () => {
+      const p = planFor([{...notes, tokenEstimate: 9000}]);
+      expect(p.verdict).toEqual({kind: 'fits'});
+      expect(p.newModes).toEqual(['searched']);
+      expect(p.excerptBudget).toBe(EXCERPT_MAX_TOKENS);
+    });
   });
 });
