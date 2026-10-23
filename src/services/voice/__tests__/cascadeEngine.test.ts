@@ -96,6 +96,9 @@ describe('CascadeVoiceEngine', () => {
       tts.voiceSpeechStarted = null;
       tts.voiceStreamFailed = null;
       tts.autoSpeakEnabled = false;
+      tts.deviceMeetsMemory = false;
+      tts.userTTSOverride = null;
+      tts.voiceOutputActive = false;
       tts.currentVoice = {id: 'F1', name: 'F1', engine: 'supertonic'};
       (asrStore as any).spokenLanguage = null;
     });
@@ -361,13 +364,26 @@ describe('CascadeVoiceEngine', () => {
       log.mockRestore();
     });
 
-    it('release frees whisper, and the voice engine only when auto-speak is off', async () => {
+    it('release frees whisper and the voice engine when auto-speak is off', async () => {
       await engine.release();
       expect(whisperRelease).toHaveBeenCalledTimes(1);
       expect(ttsRelease).toHaveBeenCalledTimes(1);
+    });
 
+    it('release keeps the voice engine when chat auto-speak can use it', async () => {
       runInAction(() => {
         tts.autoSpeakEnabled = true;
+        tts.deviceMeetsMemory = true;
+      });
+      await engine.release();
+      expect(whisperRelease).toHaveBeenCalledTimes(1);
+      expect(ttsRelease).not.toHaveBeenCalled();
+    });
+
+    it('release frees the voice engine when auto-speak is on but TTS is unavailable', async () => {
+      runInAction(() => {
+        tts.autoSpeakEnabled = true;
+        tts.deviceMeetsMemory = false;
       });
       await engine.release();
       expect(ttsRelease).toHaveBeenCalledTimes(1);

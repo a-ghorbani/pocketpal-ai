@@ -52,7 +52,7 @@ export class CascadeVoiceEngine implements VoiceEngine {
 
   async release(): Promise<void> {
     await whisperAsrEngine.release();
-    if (!ttsStore.autoSpeakEnabled) {
+    if (!ttsStore.streamsReplies) {
       await ttsRuntime.release();
     }
   }
