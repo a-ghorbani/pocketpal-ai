@@ -84,6 +84,12 @@ describe('DocumentChip', () => {
     expect(formatTokenCount(20480)).toBe('20.5k');
   });
 
+  it('drops a trailing zero and rolls over to millions', () => {
+    expect(formatTokenCount(2000)).toBe('2k');
+    expect(formatTokenCount(999960)).toBe('1m');
+    expect(formatTokenCount(1250000)).toBe('1.3m');
+  });
+
   it('says in full with the token count', () => {
     const {getByText, getByTestId} = render(
       <DocumentChip name="report.pdf" documentRef={pdf} mode="full" />,

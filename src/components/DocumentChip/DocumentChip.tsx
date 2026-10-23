@@ -6,7 +6,7 @@ import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 
 import {useTheme} from '../../hooks';
 import {t} from '../../locales';
-import {L10nContext} from '../../utils';
+import {L10nContext, formatNumber} from '../../utils';
 import {displayTokens} from '../../services/documents/budget';
 import type {
   ComposerDocumentStatus,
@@ -27,7 +27,7 @@ interface DocumentChipProps {
 }
 
 export const formatTokenCount = (tokens: number): string =>
-  tokens < 1000 ? String(tokens) : `${(tokens / 1000).toFixed(1)}k`;
+  formatNumber(tokens, 1);
 
 export const DocumentChip: React.FC<DocumentChipProps> = ({
   name,

@@ -90,7 +90,7 @@ describe('DocumentBudgetSheet', () => {
     expect(getByTestId('budget-remove')).toBeTruthy();
     expect(queryByTestId('budget-choose-pages')).toBeNull();
     expect(queryByTestId('budget-increase-context')).toBeNull();
-    expect(getByText('Already in this chat: ~6.0k tokens')).toBeTruthy();
+    expect(getByText('Already in this chat: ~6k tokens')).toBeTruthy();
     expect(getByText('notes.txt · searched')).toBeTruthy();
   });
 

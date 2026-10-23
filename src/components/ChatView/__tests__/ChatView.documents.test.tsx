@@ -169,7 +169,7 @@ describe('ChatView page ranges', () => {
     await chooseRange(chat, '3', '5');
 
     await waitFor(() =>
-      expect(chat.screen.getByText('40 pages · ~20.0k tokens')).toBeTruthy(),
+      expect(chat.screen.getByText('40 pages · ~20k tokens')).toBeTruthy(),
     );
     chat.type('go');
     await act(async () => {
