@@ -140,6 +140,10 @@ const prependText = (first: string, rest: string) =>
 
 type OverVerdict = Extract<BudgetVerdict, {kind: 'over'}>;
 
+/** What the composer holds beyond a sent text that it still starts with. */
+const unsentPart = (live: string, sent: string): string =>
+  live.startsWith(sent) ? live.slice(sent.length).trimStart() : live;
+
 const readyChips = (refs: DocumentRef[] = []): ComposerDocument[] =>
   refs.map(ref => ({key: randId(), status: 'ready', name: ref.name, ref}));
 
@@ -841,7 +845,9 @@ export const ChatView = observer(
                     resend ? {replaceFromId, resend} : {replaceFromId},
                   );
             if (clear !== 'none') {
-              setInputText('');
+              setInputText(live =>
+                clear === 'text' ? '' : unsentPart(live, message.text),
+              );
               syncedDraftRef.current = '';
               chatSessionStore.clearDraft(draftKey);
               Keyboard.dismiss();

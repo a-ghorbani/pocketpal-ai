@@ -367,6 +367,39 @@ describe('ChatView send gate', () => {
     expect(chat.screen.queryByTestId('budget-cancel')).toBeNull();
   });
 
+  it.each([
+    ['more after the sent text', 'Summarise and more', 'and more'],
+    ['something else', 'Other words', 'Other words'],
+  ])(
+    'keeps what was typed during the check when it is %s',
+    async (_label, typed, kept) => {
+      let answer: (plan: unknown) => void = () => {};
+      const evaluateSendBudget = jest
+        .fn()
+        .mockImplementation(async (message: {text: string}) =>
+          message.text === 'Summarise'
+            ? new Promise(resolve => (answer = resolve))
+            : {verdict: {kind: 'fits'}, newModes: []},
+        );
+      const chat = renderChat({evaluateSendBudget});
+      await chat.attach(big);
+      chat.type('Summarise');
+      await act(async () => {
+        chat.pressSend();
+      });
+      chat.type(typed);
+
+      await act(async () => {
+        answer({verdict: {kind: 'fits'}, newModes: []});
+      });
+
+      expect(chat.onSendPress).toHaveBeenCalledWith(
+        expect.objectContaining({text: 'Summarise'}),
+      );
+      expect(chat.input().props.value).toBe(kept);
+    },
+  );
+
   it('sends a message without documents in the same tick, without a check', () => {
     const evaluateSendBudget = jest.fn();
     const chat = renderChat({evaluateSendBudget});
