@@ -2,7 +2,7 @@ import React from 'react';
 import {TextInput} from 'react-native';
 import {runInAction} from 'mobx';
 
-import {act, fireEvent, render} from '../../../../jest/test-utils';
+import {act, fireEvent, render, waitFor} from '../../../../jest/test-utils';
 import {modelsList} from '../../../../jest/fixtures/models';
 import {
   asrStore,
@@ -133,7 +133,9 @@ describe('ChatScreen voice mode entry', () => {
       fireEvent.press(getByTestId('voice-teaser-keep-typing'));
 
       expect(queryByTestId('voice-teaser')).toBeNull();
-      expect(TextInput.prototype.focus).toHaveBeenCalledTimes(1);
+      await waitFor(() =>
+        expect(TextInput.prototype.focus).toHaveBeenCalledTimes(1),
+      );
       expect(openPaywall()).not.toHaveBeenCalled();
     });
 

@@ -233,14 +233,18 @@ describe('useVoiceMode', () => {
       ).toHaveBeenCalledTimes(1);
     });
 
-    it('Keep typing closes the teaser and focuses the composer', async () => {
+    it('Keep typing closes the teaser, then focuses the composer', async () => {
       voiceModeStore.setUnlockOverride(false);
       const {enter, hook} = renderVoiceMode();
       await enter();
+      jest.useFakeTimers();
 
       act(() => hook.result.current.keepTyping());
 
       expect(hook.result.current.sheet).toBeNull();
+      expect(focusInput).not.toHaveBeenCalled();
+      act(() => jest.runOnlyPendingTimers());
+      jest.useRealTimers();
       expect(focusInput).toHaveBeenCalledTimes(1);
       expect(
         (voiceEntitlement as any).defaultSource.openPaywall,

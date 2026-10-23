@@ -223,7 +223,8 @@ class VoiceModeController {
 
   keepTyping(): void {
     this.showSheet(null);
-    this.actions.focusInput();
+    const {focusInput} = this.actions;
+    requestAnimationFrame(() => focusInput());
   }
 
   chooseSmallerModel(): void {
