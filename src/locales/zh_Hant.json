@@ -1717,10 +1717,10 @@
   "plus": {
     "eyebrow": "PocketPal Plus",
     "headline": "讓本地 AI 走得更遠。",
-    "subline": "Plus 讓 PocketPal 保持免費且開放原始碼。額外功能是我們的一點謝意。",
-    "unsupportedSubline": "Plus 功能目前還無法在這支手機上執行。您仍然可以支持 PocketPal。",
-    "thanksHeadline": "感謝您讓 PocketPal 持續走下去。",
-    "thanksSubline": "Plus 已在此裝置上解鎖。",
+    "subline": "Plus 讓 PocketPal 維持免費與開源。額外的功能是我們的謝意。",
+    "unsupportedSubline": "Plus 功能尚未能在這台手機上執行。您仍可支持 PocketPal。",
+    "thanksHeadline": "謝謝您支持 PocketPal 的發展。",
+    "thanksSubline": "此裝置已解鎖 Plus 功能。",
     "features": {
       "handsFreeVoice": "免持語音",
       "localApiServer": "本地 API 伺服器"
@@ -1730,7 +1730,7 @@
     "comingSoon": "即將推出",
     "speedLine": "速度取決於您的手機與模型。",
     "inDevelopment": "開發中的功能可能會變更，也可能不會推出。",
-    "priceCaption": "金額隨您決定，每個價格都提供相同功能。",
+    "priceCaption": "按您覺得合適的金額支付。任何金額皆可解鎖相同功能。",
     "buyError": "購買未完成。請再試一次。",
     "getPlus": "取得 Plus · {{price}}",
     "getPlusAnyway": "仍要取得 Plus · {{price}}",
@@ -1755,7 +1755,12 @@
       "subtitleOne": "{{first}}",
       "subtitleTwo": "{{first}}、{{second}}",
       "subtitleMore": "{{first}}、{{second}} 等"
-    }
+    },
+    "optIn": "關閉",
+    "optInNote": "在此手機上處於關閉狀態。如果您夠勇，可以在設定中將其開啟。",
+    "offInSettingsNote": "已在設定中關閉。",
+    "chatStaysFree": "Plus 為選配。對話仍可免費。",
+    "chooseAmount": "選擇金額"
   },
   "voiceMode": {
     "settingTitle": "免持語音",
@@ -1811,6 +1816,9 @@
     "startLabel": "開啟語音模式",
     "startLockedLabel": "免持語音，PocketPal Plus",
     "startLockedHint": "開啟簡短預覽。輸入與語音辨識仍可自由切換。",
-    "teaserTitle": "語音對話 (Plus 功能)"
+    "teaserTitle": "語音對話 (Plus 功能)",
+    "teaserBody": "免持對話。它會以語音回答。",
+    "teaserGetPlus": "獲取 Plus",
+    "teaserKeepTyping": "持續輸入，免費使用"
   }
 }
