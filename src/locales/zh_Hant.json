@@ -1762,6 +1762,8 @@
     "unsupportedDeviceHelper": "在此手機上執行可能較慢。",
     "startingTitle": "啟動中",
     "startingHint": "正在載入語音辨識與語音模型。第一次執行時可能會花一點時間。",
-    "startFailed": "無法啟動語音模式。請再試一次。"
+    "startFailed": "無法啟動語音模式。請再試一次。",
+    "micFailed": "無法使用麥克風，語音模式已結束。",
+    "listeningTitle": "聆聽中"
   }
 }
